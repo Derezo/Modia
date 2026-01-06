@@ -1,0 +1,87 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+Modia is a browser-based MMORPG with tactical turn-based combat and procedural world generation. It's a monorepo with three workspaces: `api/` (Node.js/Express backend), `frontend/` (vanilla JS client with Canvas 2D), and `shared/` (constants used by both).
+
+## Development Commands
+
+```bash
+# Start PostgreSQL (required first)
+docker compose up -d
+
+# Copy environment variables
+cp .env.example .env
+
+# Install dependencies
+npm install
+
+# Run database migrations
+npm run db:migrate
+
+# Seed the world (procedural generation)
+npm run db:seed
+
+# Development (starts both API and frontend)
+npm run dev
+
+# Or run individually:
+npm run dev:api        # API on port 3000
+npm run dev:frontend   # Frontend on port 8080
+
+# Linting
+npm run lint
+
+# Testing
+npm run test                     # All workspaces
+npm run test -w api              # API tests only
+node --test api/src/**/*.test.js # Single test file pattern
+```
+
+## Architecture
+
+### Backend (`api/`)
+- **Entry point:** `src/index.js` - Express server with WebSocket upgrade
+- **Routes:** `src/routes/` - auth, characters, party, world, battle
+- **WebSocket:** `src/websocket/index.js` - Room-based subscriptions for chat, coliseum, marketplace
+- **Database:** PostgreSQL via `pg` pool in `src/config/database.js`
+- **Migrations:** `src/db/migrations/` - Sequential SQL files
+- **Auth:** JWT with 15min access tokens, 7-day refresh tokens
+
+### Frontend (`frontend/public/`)
+- **No build step** - Vanilla ES modules served directly
+- **Entry:** `src/main.js` → `src/core/Game.js`
+- **Scene-based architecture:** `src/scenes/` - Each screen (Login, WorldMap, Battle, etc.) extends base `Scene.js`
+- **Game loop:** RequestAnimationFrame with `update(deltaTime)` → `render(ctx)` cycle
+- **Canvas layers:** Background, Game, HUD, Modal (rendered in order)
+
+### Shared (`shared/`)
+- `constants.js` - Races, classes, stat formulas, `SeededRandom` class (Mulberry32)
+- Imported by both API (CommonJS) and frontend (ES modules)
+
+### Data Flow
+1. Frontend scenes call `api/client.js` for HTTP requests
+2. API routes validate via middleware (`auth.js`, `rateLimiter.js`)
+3. Routes query PostgreSQL with parameterized queries
+4. Real-time updates pushed via WebSocket rooms
+
+## Key Patterns
+
+**Database queries:** Always use parameterized queries (`$1, $2`) via the pool in `src/config/database.js`
+
+**World generation:** Deterministic from `WORLD_SEED` env var using `SeededRandom` - same seed always produces same world layout
+
+**Character stats:** Base stats from race + (class growth × level) - see `calculateStats()` in `shared/constants.js`
+
+**Scene lifecycle:** `enter()` → `update(dt)` / `render(ctx)` loop → `exit()` - scenes manage their own state and cleanup
+
+## Documentation
+
+Detailed specifications are in `docs/`:
+- `TECHNICAL_ARCHITECTURE.md` - Database schemas, system design
+- `API_SPECIFICATION.md` - REST endpoints and WebSocket protocol
+- `GAME_DESIGN.md` - Combat formulas, world structure
+- `CHARACTER_PROGRESSION.md` - Skill trees, guild system
+- `ITEM_SYSTEM.md`, `ECONOMY_SYSTEM.md`, `ENEMY_SYSTEM.md` - Game mechanics
