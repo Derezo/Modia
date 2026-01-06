@@ -1,0 +1,7 @@
+{
+  "name": "modia-dev-tools",
+  "displayName": "Modia Development Tools",
+  "description": "Custom skills and commands for Modia MMORPG development workflow",
+  "version": "1.0.0",
+  "author": "Modia Team"
+}
