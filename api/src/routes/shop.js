@@ -1,0 +1,536 @@
+const express = require('express');
+const router = express.Router();
+const { query, withTransaction } = require('../config/database');
+const { authenticate } = require('../middleware/auth');
+const { asyncHandler, AppError } = require('../middleware/errorHandler');
+
+// Valid shop types and which node types/features support them
+const SHOP_CONFIG = {
+  blacksmith: {
+    nodeTypes: ['castle', 'city'],
+    features: ['blacksmith'],
+    itemTypes: ['weapon', 'armor']
+  },
+  apothecary: {
+    nodeTypes: ['castle', 'city', 'village'],
+    features: ['apothecary'],
+    itemTypes: ['consumable']
+  },
+  farm: {
+    nodeTypes: ['village'],
+    features: ['farm'],
+    itemTypes: ['material', 'consumable']
+  }
+};
+
+// Price modifiers based on supply level
+// Scarce (0-2): 120%, Low (3-5): 100%, Medium (6-10): 85%, High (11-20): 70%, Surplus (21+): 60%
+const SUPPLY_LEVELS = {
+  scarce: { min: 0, max: 2, modifier: 1.20, label: 'Scarce' },
+  low: { min: 3, max: 5, modifier: 1.00, label: 'Low' },
+  medium: { min: 6, max: 10, modifier: 0.85, label: 'Medium' },
+  high: { min: 11, max: 20, modifier: 0.70, label: 'High' },
+  surplus: { min: 21, max: Infinity, modifier: 0.60, label: 'Surplus' }
+};
+
+// Sell price is always 50% of base value
+const SELL_MODIFIER = 0.50;
+
+/**
+ * Get supply level info for a given quantity
+ */
+function getSupplyLevel(quantity) {
+  for (const [key, level] of Object.entries(SUPPLY_LEVELS)) {
+    if (quantity >= level.min && quantity <= level.max) {
+      return { level: key, ...level };
+    }
+  }
+  return { level: 'surplus', ...SUPPLY_LEVELS.surplus };
+}
+
+/**
+ * Calculate buy price based on supply
+ */
+function calculateBuyPrice(basePrice, quantity) {
+  const supply = getSupplyLevel(quantity);
+  return Math.ceil(basePrice * supply.modifier);
+}
+
+/**
+ * Calculate sell price (always 50% of base)
+ */
+function calculateSellPrice(basePrice) {
+  return Math.floor(basePrice * SELL_MODIFIER);
+}
+
+/**
+ * Verify node has the specified shop type
+ */
+async function verifyShopAccess(nodeId, shopType) {
+  const nodeResult = await query(
+    'SELECT id, node_type, features FROM world_nodes WHERE id = $1',
+    [nodeId]
+  );
+
+  if (nodeResult.rows.length === 0) {
+    throw new AppError('Node not found', 404);
+  }
+
+  const node = nodeResult.rows[0];
+  const config = SHOP_CONFIG[shopType];
+
+  if (!config) {
+    throw new AppError('Invalid shop type', 400);
+  }
+
+  // Check if node type supports this shop
+  const nodeTypeSupported = config.nodeTypes.includes(node.node_type);
+
+  // Check if node has the shop feature
+  const features = node.features || [];
+  const hasFeature = config.features.some(f => features.includes(f));
+
+  if (!nodeTypeSupported && !hasFeature) {
+    throw new AppError(`This location does not have a ${shopType}`, 400);
+  }
+
+  return node;
+}
+
+/**
+ * Verify character is at the specified node
+ */
+async function verifyCharacterAtNode(userId, nodeId) {
+  const charResult = await query(
+    `SELECT c.id, c.name, c.current_node_id, c.in_battle
+     FROM characters c
+     WHERE c.user_id = $1 AND c.party_slot IS NOT NULL
+     ORDER BY c.party_slot
+     LIMIT 1`,
+    [userId]
+  );
+
+  if (charResult.rows.length === 0) {
+    throw new AppError('No active character in party', 400);
+  }
+
+  const character = charResult.rows[0];
+
+  if (character.current_node_id !== nodeId) {
+    throw new AppError('You must be at this location to use the shop', 400);
+  }
+
+  if (character.in_battle) {
+    throw new AppError('Cannot use shop during battle', 400);
+  }
+
+  return character;
+}
+
+// ============================================
+// GET /api/shops/:nodeId/:shopType - Get shop inventory
+// ============================================
+router.get('/:nodeId/:shopType', authenticate, asyncHandler(async (req, res) => {
+  const { nodeId, shopType } = req.params;
+  const nodeIdNum = parseInt(nodeId);
+
+  if (isNaN(nodeIdNum)) {
+    throw new AppError('Invalid node ID', 400);
+  }
+
+  // Verify shop exists at this node
+  await verifyShopAccess(nodeIdNum, shopType);
+
+  // Get shop inventory with item details
+  const inventoryResult = await query(
+    `SELECT
+       nsi.id as inventory_id,
+       nsi.quantity,
+       nsi.last_restock,
+       it.id as template_id,
+       it.name,
+       it.description,
+       it.item_type,
+       it.equipment_slot,
+       it.stat_bonuses,
+       it.level_requirement,
+       it.base_price,
+       it.rarity
+     FROM npc_shop_inventory nsi
+     JOIN item_templates it ON nsi.item_template_id = it.id
+     WHERE nsi.node_id = $1 AND nsi.shop_type = $2
+     ORDER BY it.level_requirement, it.item_type, it.name`,
+    [nodeIdNum, shopType]
+  );
+
+  // Format inventory with dynamic pricing
+  const items = inventoryResult.rows.map(item => {
+    const supply = getSupplyLevel(item.quantity);
+    const buyPrice = calculateBuyPrice(item.base_price, item.quantity);
+
+    return {
+      inventoryId: item.inventory_id,
+      templateId: item.template_id,
+      name: item.name,
+      description: item.description,
+      type: item.item_type,
+      equipmentSlot: item.equipment_slot,
+      statBonuses: item.stat_bonuses,
+      levelRequirement: item.level_requirement,
+      rarity: item.rarity,
+      basePrice: item.base_price,
+      buyPrice: buyPrice,
+      quantity: item.quantity,
+      supplyLevel: supply.level,
+      supplyLabel: supply.label,
+      priceModifier: supply.modifier
+    };
+  });
+
+  res.json({
+    nodeId: nodeIdNum,
+    shopType,
+    items
+  });
+}));
+
+// ============================================
+// POST /api/shops/:nodeId/:shopType/buy - Purchase item
+// ============================================
+router.post('/:nodeId/:shopType/buy', authenticate, asyncHandler(async (req, res) => {
+  const { nodeId, shopType } = req.params;
+  const { itemTemplateId, quantity = 1, characterId } = req.body;
+  const nodeIdNum = parseInt(nodeId);
+
+  // Validate inputs
+  if (isNaN(nodeIdNum)) {
+    throw new AppError('Invalid node ID', 400);
+  }
+  if (!itemTemplateId) {
+    throw new AppError('Item template ID required', 400);
+  }
+  if (quantity < 1 || quantity > 99) {
+    throw new AppError('Invalid quantity (1-99)', 400);
+  }
+
+  // Verify shop access
+  await verifyShopAccess(nodeIdNum, shopType);
+
+  // Verify character location
+  const activeChar = await verifyCharacterAtNode(req.user.userId, nodeIdNum);
+  const targetCharId = characterId || activeChar.id;
+
+  // Verify target character belongs to user
+  const targetCharResult = await query(
+    'SELECT id FROM characters WHERE id = $1 AND user_id = $2',
+    [targetCharId, req.user.userId]
+  );
+  if (targetCharResult.rows.length === 0) {
+    throw new AppError('Target character not found', 404);
+  }
+
+  const result = await withTransaction(async (client) => {
+    // Get shop inventory item with lock
+    const invResult = await client.query(
+      `SELECT nsi.id, nsi.quantity, it.base_price, it.name, it.item_type
+       FROM npc_shop_inventory nsi
+       JOIN item_templates it ON nsi.item_template_id = it.id
+       WHERE nsi.node_id = $1 AND nsi.shop_type = $2 AND nsi.item_template_id = $3
+       FOR UPDATE`,
+      [nodeIdNum, shopType, itemTemplateId]
+    );
+
+    if (invResult.rows.length === 0) {
+      throw new AppError('Item not available at this shop', 404);
+    }
+
+    const shopItem = invResult.rows[0];
+
+    if (shopItem.quantity < quantity) {
+      throw new AppError(`Only ${shopItem.quantity} available`, 400);
+    }
+
+    // Calculate price (based on current stock)
+    const unitPrice = calculateBuyPrice(shopItem.base_price, shopItem.quantity);
+    const totalPrice = unitPrice * quantity;
+
+    // Check user gold
+    const userResult = await client.query(
+      'SELECT gold FROM users WHERE id = $1 FOR UPDATE',
+      [req.user.userId]
+    );
+
+    if (userResult.rows[0].gold < totalPrice) {
+      throw new AppError(`Insufficient gold. Need ${totalPrice}, have ${userResult.rows[0].gold}`, 400);
+    }
+
+    // Deduct gold
+    await client.query(
+      'UPDATE users SET gold = gold - $1 WHERE id = $2',
+      [totalPrice, req.user.userId]
+    );
+
+    // Reduce shop inventory
+    await client.query(
+      'UPDATE npc_shop_inventory SET quantity = quantity - $1 WHERE id = $2',
+      [quantity, shopItem.id]
+    );
+
+    // Add item to character inventory (stack if consumable/material)
+    if (['consumable', 'material'].includes(shopItem.item_type)) {
+      // Try to stack with existing item
+      const existingResult = await client.query(
+        `SELECT id, quantity FROM character_items
+         WHERE character_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL`,
+        [targetCharId, itemTemplateId]
+      );
+
+      if (existingResult.rows.length > 0) {
+        await client.query(
+          'UPDATE character_items SET quantity = quantity + $1 WHERE id = $2',
+          [quantity, existingResult.rows[0].id]
+        );
+      } else {
+        await client.query(
+          `INSERT INTO character_items (character_id, item_template_id, quantity)
+           VALUES ($1, $2, $3)`,
+          [targetCharId, itemTemplateId, quantity]
+        );
+      }
+    } else {
+      // Equipment items don't stack - create individual entries
+      for (let i = 0; i < quantity; i++) {
+        await client.query(
+          `INSERT INTO character_items (character_id, item_template_id, quantity)
+           VALUES ($1, $2, 1)`,
+          [targetCharId, itemTemplateId]
+        );
+      }
+    }
+
+    // Log transaction
+    await client.query(
+      `INSERT INTO shop_transactions
+       (user_id, character_id, node_id, shop_type, item_template_id, transaction_type, quantity, price_per_unit, total_price)
+       VALUES ($1, $2, $3, $4, $5, 'buy', $6, $7, $8)`,
+      [req.user.userId, targetCharId, nodeIdNum, shopType, itemTemplateId, quantity, unitPrice, totalPrice]
+    );
+
+    // Get updated user gold
+    const updatedUser = await client.query('SELECT gold FROM users WHERE id = $1', [req.user.userId]);
+
+    return {
+      itemName: shopItem.name,
+      quantity,
+      unitPrice,
+      totalPrice,
+      remainingGold: updatedUser.rows[0].gold
+    };
+  });
+
+  res.json({
+    success: true,
+    message: `Purchased ${result.quantity}x ${result.itemName} for ${result.totalPrice} gold`,
+    ...result
+  });
+}));
+
+// ============================================
+// POST /api/shops/:nodeId/:shopType/sell - Sell item
+// ============================================
+router.post('/:nodeId/:shopType/sell', authenticate, asyncHandler(async (req, res) => {
+  const { nodeId, shopType } = req.params;
+  const { itemInstanceId, quantity = 1 } = req.body;
+  const nodeIdNum = parseInt(nodeId);
+
+  // Validate inputs
+  if (isNaN(nodeIdNum)) {
+    throw new AppError('Invalid node ID', 400);
+  }
+  if (!itemInstanceId) {
+    throw new AppError('Item instance ID required', 400);
+  }
+  if (quantity < 1) {
+    throw new AppError('Invalid quantity', 400);
+  }
+
+  // Verify shop access
+  await verifyShopAccess(nodeIdNum, shopType);
+
+  // Verify character location
+  await verifyCharacterAtNode(req.user.userId, nodeIdNum);
+
+  const result = await withTransaction(async (client) => {
+    // Get item from character inventory with lock
+    const itemResult = await client.query(
+      `SELECT ci.id, ci.character_id, ci.item_template_id, ci.quantity, ci.equipped_slot,
+              it.name, it.base_price, it.item_type, it.is_tradeable,
+              c.user_id
+       FROM character_items ci
+       JOIN item_templates it ON ci.item_template_id = it.id
+       JOIN characters c ON ci.character_id = c.id
+       WHERE ci.id = $1
+       FOR UPDATE`,
+      [itemInstanceId]
+    );
+
+    if (itemResult.rows.length === 0) {
+      throw new AppError('Item not found', 404);
+    }
+
+    const item = itemResult.rows[0];
+
+    // Verify ownership
+    if (item.user_id !== req.user.userId) {
+      throw new AppError('Item not found', 404);
+    }
+
+    // Check if equipped
+    if (item.equipped_slot) {
+      throw new AppError('Cannot sell equipped items. Unequip first.', 400);
+    }
+
+    // Check if tradeable (null defaults to tradeable)
+    if (item.is_tradeable === false) {
+      throw new AppError('This item cannot be sold', 400);
+    }
+
+    // Check quantity
+    const sellQuantity = Math.min(quantity, item.quantity);
+
+    // Calculate sell price (50% of base)
+    const unitPrice = calculateSellPrice(item.base_price);
+    const totalPrice = unitPrice * sellQuantity;
+
+    // Add gold to user
+    await client.query(
+      'UPDATE users SET gold = gold + $1 WHERE id = $2',
+      [totalPrice, req.user.userId]
+    );
+
+    // Remove or reduce item quantity
+    if (sellQuantity >= item.quantity) {
+      await client.query('DELETE FROM character_items WHERE id = $1', [itemInstanceId]);
+    } else {
+      await client.query(
+        'UPDATE character_items SET quantity = quantity - $1 WHERE id = $2',
+        [sellQuantity, itemInstanceId]
+      );
+    }
+
+    // Add to shop inventory (if shop sells this item type)
+    const config = SHOP_CONFIG[shopType];
+    if (config.itemTypes.includes(item.item_type)) {
+      // Check if shop already has this item
+      const shopInvResult = await client.query(
+        `SELECT id FROM npc_shop_inventory
+         WHERE node_id = $1 AND shop_type = $2 AND item_template_id = $3`,
+        [nodeIdNum, shopType, item.item_template_id]
+      );
+
+      if (shopInvResult.rows.length > 0) {
+        await client.query(
+          'UPDATE npc_shop_inventory SET quantity = quantity + $1 WHERE id = $2',
+          [sellQuantity, shopInvResult.rows[0].id]
+        );
+      } else {
+        await client.query(
+          `INSERT INTO npc_shop_inventory (node_id, shop_type, item_template_id, quantity, restock_quantity)
+           VALUES ($1, $2, $3, $4, $4)`,
+          [nodeIdNum, shopType, item.item_template_id, sellQuantity]
+        );
+      }
+    }
+
+    // Log transaction
+    await client.query(
+      `INSERT INTO shop_transactions
+       (user_id, character_id, node_id, shop_type, item_template_id, transaction_type, quantity, price_per_unit, total_price)
+       VALUES ($1, $2, $3, $4, $5, 'sell', $6, $7, $8)`,
+      [req.user.userId, item.character_id, nodeIdNum, shopType, item.item_template_id, sellQuantity, unitPrice, totalPrice]
+    );
+
+    // Get updated user gold
+    const updatedUser = await client.query('SELECT gold FROM users WHERE id = $1', [req.user.userId]);
+
+    return {
+      itemName: item.name,
+      quantity: sellQuantity,
+      unitPrice,
+      totalPrice,
+      newGold: updatedUser.rows[0].gold
+    };
+  });
+
+  res.json({
+    success: true,
+    message: `Sold ${result.quantity}x ${result.itemName} for ${result.totalPrice} gold`,
+    ...result
+  });
+}));
+
+// ============================================
+// GET /api/shops/:nodeId/:shopType/sell-inventory - Get sellable items
+// ============================================
+router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async (req, res) => {
+  const { nodeId, shopType } = req.params;
+  const nodeIdNum = parseInt(nodeId);
+
+  if (isNaN(nodeIdNum)) {
+    throw new AppError('Invalid node ID', 400);
+  }
+
+  // Verify shop access
+  await verifyShopAccess(nodeIdNum, shopType);
+
+  // Verify character location and get party character
+  const activeChar = await verifyCharacterAtNode(req.user.userId, nodeIdNum);
+
+  // Get all user's characters' items that can be sold
+  const itemsResult = await query(
+    `SELECT
+       ci.id as instance_id,
+       ci.character_id,
+       ci.quantity,
+       ci.equipped_slot,
+       c.name as character_name,
+       it.id as template_id,
+       it.name,
+       it.description,
+       it.item_type,
+       it.base_price,
+       it.rarity,
+       it.is_tradeable
+     FROM character_items ci
+     JOIN item_templates it ON ci.item_template_id = it.id
+     JOIN characters c ON ci.character_id = c.id
+     WHERE c.user_id = $1
+       AND ci.equipped_slot IS NULL
+       AND (it.is_tradeable IS NULL OR it.is_tradeable = TRUE)
+     ORDER BY c.name, it.item_type, it.name`,
+    [req.user.userId]
+  );
+
+  // Format items with sell prices
+  const items = itemsResult.rows.map(item => ({
+    instanceId: item.instance_id,
+    characterId: item.character_id,
+    characterName: item.character_name,
+    templateId: item.template_id,
+    name: item.name,
+    description: item.description,
+    type: item.item_type,
+    rarity: item.rarity,
+    quantity: item.quantity,
+    basePrice: item.base_price,
+    sellPrice: calculateSellPrice(item.base_price)
+  }));
+
+  res.json({
+    nodeId: nodeIdNum,
+    shopType,
+    items
+  });
+}));
+
+module.exports = router;

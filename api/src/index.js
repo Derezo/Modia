@@ -14,8 +14,9 @@ const partyRoutes = require('./routes/party');
 const worldRoutes = require('./routes/world');
 const battleRoutes = require('./routes/battle');
 const inventoryRoutes = require('./routes/inventory');
-const skillsRoutes = require('./routes/skills');
+const { router: skillsRoutes } = require('./routes/skills');
 const spritesRoutes = require('./routes/sprites');
+const shopRoutes = require('./routes/shop');
 
 const app = express();
 const server = http.createServer(app);
@@ -44,6 +45,7 @@ app.use('/api/battle', battleRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/skills', skillsRoutes);
 app.use('/api/sprites', spritesRoutes);
+app.use('/api/shops', shopRoutes);
 
 // Error handling
 app.use(errorHandler);

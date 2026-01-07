@@ -6,6 +6,7 @@ import { WorldMapScene } from '../scenes/WorldMapScene.js';
 import { BattleScene } from '../scenes/BattleScene.js';
 import { FormationScene } from '../scenes/FormationScene.js';
 import { InventoryScene } from '../scenes/InventoryScene.js';
+import { ShopScene } from '../scenes/ShopScene.js';
 
 export class SceneManager {
   constructor(game) {
@@ -25,7 +26,8 @@ export class SceneManager {
       worldMap: new WorldMapScene(this.game),
       battle: new BattleScene(this.game),
       formation: new FormationScene(this.game),
-      inventory: new InventoryScene(this.game)
+      inventory: new InventoryScene(this.game),
+      shop: new ShopScene(this.game)
     };
   }
 

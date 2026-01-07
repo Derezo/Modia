@@ -202,4 +202,28 @@ export class ApiClient {
   getGuilds() {
     return this.get('/skills/guilds');
   }
+
+  // Shop endpoints
+  getShopInventory(nodeId, shopType) {
+    return this.get(`/shops/${nodeId}/${shopType}`);
+  }
+
+  buyFromShop(nodeId, shopType, itemTemplateId, quantity = 1, characterId = null) {
+    return this.post(`/shops/${nodeId}/${shopType}/buy`, {
+      itemTemplateId,
+      quantity,
+      characterId
+    });
+  }
+
+  sellToShop(nodeId, shopType, itemInstanceId, quantity = 1) {
+    return this.post(`/shops/${nodeId}/${shopType}/sell`, {
+      itemInstanceId,
+      quantity
+    });
+  }
+
+  getSellableItems(nodeId, shopType) {
+    return this.get(`/shops/${nodeId}/${shopType}/sell-inventory`);
+  }
 }
