@@ -25,6 +25,7 @@
     "generate:characters": "node api/src/scripts/generate-characters.js",
     "generate:enemies": "node api/src/scripts/generate-enemies.js",
     "generate:nodes": "node api/src/scripts/generate-nodes.js",
+    "generate:backdrop": "node api/src/scripts/generate-world-backdrop.js",
     "generate:items": "node api/src/scripts/generate-items.js",
     "generate:all": "node api/src/scripts/generate-all.js",
     "validate:sprites": "node api/src/scripts/validate-prompts.js",

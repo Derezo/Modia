@@ -39,6 +39,13 @@ class SeededRandom {
     }
     return result;
   }
+
+  // Gaussian-like distribution using Box-Muller transform
+  nextGaussian() {
+    const u1 = this.next();
+    const u2 = this.next();
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  }
 }
 
 const NODE_NAME_PREFIXES = {
@@ -74,6 +81,64 @@ async function generateWorld(seed) {
     const prefixes = NODE_NAME_PREFIXES[type] || NODE_NAME_PREFIXES.city;
     const suffixes = NODE_NAME_SUFFIXES[type] || NODE_NAME_SUFFIXES.city;
     return `${rng.pick(prefixes)} ${rng.pick(suffixes)}`;
+  }
+
+  /**
+   * Generate organic offset for node placement
+   * Creates natural-looking variation with clustering bias
+   */
+  function organicOffset(nodeIndex, baseAngle, ringIndex) {
+    // Larger angular variation (wobble)
+    const angularWobble = rng.nextGaussian() * 0.4;
+
+    // Radial jitter - nodes can be closer or further from center
+    const radialNoise = rng.nextGaussian() * 1.5;
+
+    // Clustering bias - creates natural groupings
+    // Use sine wave based on angle to create "clusters" of nodes
+    const clusterFrequency = 2 + ringIndex; // More clusters in outer rings
+    const clusterBias = Math.sin(baseAngle * clusterFrequency + rng.next() * Math.PI) * 0.3;
+
+    return {
+      angleOffset: angularWobble + clusterBias,
+      radiusOffset: radialNoise
+    };
+  }
+
+  /**
+   * Find valid position avoiding collisions with existing nodes
+   * Returns adjusted coordinates that maintain minimum spacing
+   */
+  function findValidPosition(baseX, baseY, minSpacing = 2.0) {
+    let x = Math.round(baseX);
+    let y = Math.round(baseY);
+    let attempts = 0;
+    const maxAttempts = 8;
+
+    while (attempts < maxAttempts) {
+      let collision = false;
+
+      // Check for collision with existing nodes
+      for (const node of nodes) {
+        const dx = node.x_coord - x;
+        const dy = node.y_coord - y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < minSpacing) {
+          collision = true;
+          // Nudge position away from collision
+          const nudgeAngle = Math.atan2(dy, dx) + Math.PI + rng.nextGaussian() * 0.5;
+          x = Math.round(x + Math.cos(nudgeAngle) * (minSpacing - dist + 0.5));
+          y = Math.round(y + Math.sin(nudgeAngle) * (minSpacing - dist + 0.5));
+          break;
+        }
+      }
+
+      if (!collision) break;
+      attempts++;
+    }
+
+    return { x, y };
   }
 
   function addNode(x, y, type, name, features = [], guildClass = null, difficulty = 1) {
@@ -122,13 +187,18 @@ async function generateWorld(seed) {
   const castleIdx = addNode(0, 0, 'castle', 'Royal Castle', CASTLE_FEATURES);
   console.log('Created central Castle');
 
-  // 2. Create ring 1 - close nodes (3-4 distance)
+  // 2. Create ring 1 - close nodes (3-4 distance) with organic placement
   const ring1Types = ['city', 'village', 'forest'];
   for (let i = 0; i < 4; i++) {
-    const angle = (Math.PI * 2 * i / 4) + rng.next() * 0.3;
-    const dist = 3 + rng.nextInt(0, 1);
-    const x = Math.round(Math.cos(angle) * dist);
-    const y = Math.round(Math.sin(angle) * dist);
+    const baseAngle = (Math.PI * 2 * i / 4);
+    const offset = organicOffset(i, baseAngle, 1);
+    const angle = baseAngle + offset.angleOffset;
+    const dist = 3 + rng.nextInt(0, 1) + offset.radiusOffset * 0.5;
+
+    const rawX = Math.cos(angle) * dist;
+    const rawY = Math.sin(angle) * dist;
+    const { x, y } = findValidPosition(rawX, rawY, 2.5);
+
     const type = rng.pick(ring1Types);
     let features = [];
 
@@ -143,15 +213,20 @@ async function generateWorld(seed) {
     const idx = addNode(x, y, type, generateNodeName(type), features, null, 1);
     if (idx !== null) addConnection(castleIdx, idx);
   }
-  console.log('Created ring 1');
+  console.log('Created ring 1 (organic placement)');
 
-  // 3. Create ring 2 (5-7 distance)
+  // 3. Create ring 2 (5-7 distance) with organic placement
   const ring2Types = ['city', 'village', 'forest', 'cave'];
   for (let i = 0; i < 6; i++) {
-    const angle = (Math.PI * 2 * i / 6) + rng.next() * 0.4;
-    const dist = 5 + rng.nextInt(0, 2);
-    const x = Math.round(Math.cos(angle) * dist);
-    const y = Math.round(Math.sin(angle) * dist);
+    const baseAngle = (Math.PI * 2 * i / 6);
+    const offset = organicOffset(i, baseAngle, 2);
+    const angle = baseAngle + offset.angleOffset;
+    const dist = 5 + rng.nextInt(0, 2) + offset.radiusOffset * 0.6;
+
+    const rawX = Math.cos(angle) * dist;
+    const rawY = Math.sin(angle) * dist;
+    const { x, y } = findValidPosition(rawX, rawY, 2.3);
+
     const type = rng.pick(ring2Types);
     let features = [];
 
@@ -169,23 +244,19 @@ async function generateWorld(seed) {
       addConnection(idx, nearest);
     }
   }
-  console.log('Created ring 2');
+  console.log('Created ring 2 (organic placement)');
 
-  // 4. Create Guilds (one per class, distance 5-8)
+  // 4. Create Guilds (one per class, distance 5-8) with organic placement
   const classes = ['warrior', 'wizard', 'monk', 'chemist'];
   for (let i = 0; i < classes.length; i++) {
-    const angle = (Math.PI * 2 * i / classes.length) + Math.PI / 4 + rng.next() * 0.3;
-    const dist = 6 + rng.nextInt(0, 2);
-    const x = Math.round(Math.cos(angle) * dist);
-    const y = Math.round(Math.sin(angle) * dist);
+    const baseAngle = (Math.PI * 2 * i / classes.length) + Math.PI / 4;
+    const offset = organicOffset(i, baseAngle, 2);
+    const angle = baseAngle + offset.angleOffset * 0.5; // Less angular variation for guilds
+    const dist = 6 + rng.nextInt(0, 2) + offset.radiusOffset * 0.4;
 
-    // Find nearby empty spot if occupied
-    let finalX = x, finalY = y;
-    for (let offset = 0; offset < 3; offset++) {
-      if (!nodeMap.has(`${finalX},${finalY}`)) break;
-      finalX = x + rng.nextInt(-1, 1);
-      finalY = y + rng.nextInt(-1, 1);
-    }
+    const rawX = Math.cos(angle) * dist;
+    const rawY = Math.sin(angle) * dist;
+    const { x: finalX, y: finalY } = findValidPosition(rawX, rawY, 2.5);
 
     const guildName = `${classes[i].charAt(0).toUpperCase() + classes[i].slice(1)}s' Guild`;
     const idx = addNode(finalX, finalY, 'guild', guildName, ['guild_hall', 'training_ground'], classes[i], 2);
@@ -194,15 +265,20 @@ async function generateWorld(seed) {
       addConnection(idx, nearest);
     }
   }
-  console.log('Created guilds');
+  console.log('Created guilds (organic placement)');
 
-  // 5. Create ring 3 (8-11 distance)
+  // 5. Create ring 3 (8-11 distance) with organic placement
   const ring3Types = ['village', 'forest', 'cave', 'mountain', 'bridge'];
   for (let i = 0; i < 8; i++) {
-    const angle = (Math.PI * 2 * i / 8) + rng.next() * 0.3;
-    const dist = 8 + rng.nextInt(0, 3);
-    const x = Math.round(Math.cos(angle) * dist);
-    const y = Math.round(Math.sin(angle) * dist);
+    const baseAngle = (Math.PI * 2 * i / 8);
+    const offset = organicOffset(i, baseAngle, 3);
+    const angle = baseAngle + offset.angleOffset;
+    const dist = 8 + rng.nextInt(0, 3) + offset.radiusOffset * 0.7;
+
+    const rawX = Math.cos(angle) * dist;
+    const rawY = Math.sin(angle) * dist;
+    const { x, y } = findValidPosition(rawX, rawY, 2.2);
+
     const type = rng.pick(ring3Types);
     let features = [];
 
@@ -216,7 +292,7 @@ async function generateWorld(seed) {
       const nearest = findNearestNode(x, y, idx);
       addConnection(idx, nearest);
 
-      // Sometimes add second connection
+      // Sometimes add second connection for network variety
       if (rng.next() > 0.6) {
         const secondNearest = findNearestNode(x, y, idx);
         if (secondNearest !== nearest) {
@@ -225,17 +301,21 @@ async function generateWorld(seed) {
       }
     }
   }
-  console.log('Created ring 3');
+  console.log('Created ring 3 (organic placement)');
 
-  // 6. Create outer ring and Palace (12-16 distance)
+  // 6. Create outer ring and Palace (12-16 distance) with organic placement
   const outerTypes = ['forest', 'cave', 'mountain', 'bridge'];
   let palacePlaced = false;
 
   for (let i = 0; i < 10; i++) {
-    const angle = (Math.PI * 2 * i / 10) + rng.next() * 0.3;
-    const dist = 13 + rng.nextInt(0, 3);
-    const x = Math.round(Math.cos(angle) * dist);
-    const y = Math.round(Math.sin(angle) * dist);
+    const baseAngle = (Math.PI * 2 * i / 10);
+    const offset = organicOffset(i, baseAngle, 4);
+    const angle = baseAngle + offset.angleOffset;
+    const dist = 13 + rng.nextInt(0, 3) + offset.radiusOffset * 0.8;
+
+    const rawX = Math.cos(angle) * dist;
+    const rawY = Math.sin(angle) * dist;
+    const { x, y } = findValidPosition(rawX, rawY, 2.0);
 
     let type, name, features = [];
 
@@ -256,7 +336,7 @@ async function generateWorld(seed) {
       addConnection(idx, nearest);
     }
   }
-  console.log('Created outer ring with Palace');
+  console.log('Created outer ring with Palace (organic placement)');
 
   return { nodes, connections };
 }
