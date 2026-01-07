@@ -16,7 +16,7 @@ export class InventoryScene extends Scene {
 
     // Filter/sort state
     this.filterType = 'all'; // 'all', 'weapon', 'armor', 'accessory', 'consumable'
-    this.sortBy = 'name'; // 'name', 'type', 'rarity', 'level'
+    this.sortBy = 'name'; // 'name', 'type', 'rarity'
   }
 
   async enter() {
