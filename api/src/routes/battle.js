@@ -29,28 +29,65 @@ function getSkillDefinition(unitClass, skillId) {
 }
 
 /**
+ * Initialize two-action turn state for a unit if not present (migration support)
+ * @param {Object} unit - The unit to initialize
+ */
+function initializeTurnState(unit) {
+  if (typeof unit.moveUsed !== 'boolean') {
+    unit.moveUsed = false;
+    unit.actUsed = false;
+    unit.turnPhase = 'ready';
+  }
+}
+
+/**
  * Process an action for any unit (player or enemy)
+ * Two-action system: each turn allows 1 move + 1 act (attack/skill), in either order
  * @param {Object} state - Battle state
  * @param {Object} unit - The acting unit
  * @param {string} actionType - 'move' | 'attack' | 'skill' | 'wait'
  * @param {Object} targetTile - { x, y } target position
  * @param {string} skillId - Optional skill ID for skill actions
- * @returns {Object} Action result
+ * @returns {Object} Action result with turnEnded flag
  */
 function processAction(state, unit, actionType, targetTile, skillId = null) {
-  const result = { damage: 0, moved: false };
+  const result = { damage: 0, moved: false, turnEnded: false };
+
+  // Initialize two-action state if missing (migration support)
+  initializeTurnState(unit);
 
   switch (actionType) {
     case 'move':
+      // Check if already moved this turn
+      if (unit.moveUsed) {
+        result.error = 'Already moved this turn';
+        return result;
+      }
+      // Check if status effects prevent movement
+      if (!battleService.canUnitMove(unit)) {
+        result.error = 'Cannot move due to status effect';
+        return result;
+      }
       if (targetTile) {
         unit.tileX = targetTile.x;
         unit.tileY = targetTile.y;
         result.moved = true;
         result.newPosition = { x: targetTile.x, y: targetTile.y };
+        unit.moveUsed = true;
       }
       break;
 
     case 'attack':
+      // Check if already acted this turn
+      if (unit.actUsed) {
+        result.error = 'Already acted this turn';
+        return result;
+      }
+      // Check if status effects prevent acting
+      if (!battleService.canUnitAct(unit)) {
+        result.error = 'Cannot act due to status effect';
+        return result;
+      }
       if (targetTile) {
         const target = state.units.find(u =>
           u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
@@ -74,10 +111,25 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
           result.attackedEmptyTile = true;
           result.targetTile = targetTile;
         }
+        unit.actUsed = true;
       }
       break;
 
     case 'skill':
+      // Check if already acted this turn
+      if (unit.actUsed) {
+        result.error = 'Already acted this turn';
+        return result;
+      }
+      // Check if status effects prevent acting or using skills
+      if (!battleService.canUnitAct(unit)) {
+        result.error = 'Cannot act due to status effect';
+        return result;
+      }
+      if (!battleService.canUnitUseSkills(unit)) {
+        result.error = 'Cannot use skills due to silence';
+        return result;
+      }
       if (targetTile && skillId) {
         const skill = getSkillDefinition(unit.class, skillId);
         if (!skill) {
@@ -116,15 +168,31 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
           result.attackedEmptyTile = true;
           result.targetTile = targetTile;
         }
+        unit.actUsed = true;
       }
       break;
 
     case 'wait':
-      // Do nothing, end turn
+      // Wait ends turn immediately, skipping any remaining actions
+      result.turnEnded = true;
       break;
   }
 
-  unit.hasActed = true;
+  // Determine if turn is complete
+  // Turn ends if: wait was pressed, OR both move and act have been used
+  if (actionType === 'wait' || (unit.moveUsed && unit.actUsed)) {
+    unit.turnPhase = 'done';
+    unit.hasActed = true; // backwards compatibility
+    result.turnEnded = true;
+  } else if (unit.moveUsed || unit.actUsed) {
+    unit.turnPhase = 'partial';
+  }
+
+  // Calculate available actions for response
+  const canMove = battleService.canUnitMove(unit) && !unit.moveUsed;
+  const canAct = battleService.canUnitAct(unit) && !unit.actUsed;
+  result.availableActions = { canMove, canAct };
+
   return result;
 }
 
@@ -161,6 +229,7 @@ function checkBattleEnd(state) {
 /**
  * Process enemy turns until it's a player's turn or battle ends
  * Uses CT system to determine turn order
+ * Two-action system: each enemy gets both a move and an action per turn
  * @param {Object} state - Battle state
  * @param {number} maxIterations - Safety limit to prevent infinite loops
  * @returns {Array} Array of enemy actions for frontend animation
@@ -192,25 +261,41 @@ function processEnemyTurns(state, maxIterations = 50) {
       continue;
     }
 
-    // Get AI decision
-    const decision = aiService.decideAction(activeUnit, state);
+    // Initialize turn state for enemy
+    initializeTurnState(activeUnit);
 
-    // Process the enemy action
-    const result = processAction(state, activeUnit, decision.actionType, decision.targetTile);
+    // Get AI decisions for the full turn (returns array of 1-2 actions)
+    const decisions = aiService.decideTurnActions(activeUnit, state);
 
-    // Record this action for frontend animation
-    enemyActions.push({
-      unitId: activeUnit.id,
-      unitName: activeUnit.name,
-      actionType: decision.actionType,
-      targetTile: decision.targetTile,
-      result
-    });
+    // Process each action in the enemy's turn
+    for (const decision of decisions) {
+      // Skip if wait (ends turn)
+      if (decision.actionType === 'wait') {
+        break;
+      }
 
-    // Check if battle ended
-    const battleStatus = checkBattleEnd(state);
-    if (battleStatus !== 'active') {
-      break;
+      // Process the enemy action
+      const result = processAction(state, activeUnit, decision.actionType, decision.targetTile, decision.skillId);
+
+      // Skip recording if there was an error (shouldn't happen for AI, but safety)
+      if (result.error) {
+        continue;
+      }
+
+      // Record this action for frontend animation
+      enemyActions.push({
+        unitId: activeUnit.id,
+        unitName: activeUnit.name,
+        actionType: decision.actionType,
+        targetTile: decision.targetTile,
+        result
+      });
+
+      // Check if battle ended after this action
+      const battleStatus = checkBattleEnd(state);
+      if (battleStatus !== 'active') {
+        return enemyActions;
+      }
     }
 
     // Advance to next actor using CT system
@@ -450,13 +535,24 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
   // Process player action using helper
   const result = processAction(state, activeUnit, actionType, targetTile, skillId);
 
+  // If there was an error (e.g., already moved, status effect), return early
+  if (result.error) {
+    return res.status(400).json({
+      error: result.error,
+      state,
+      availableActions: result.availableActions
+    });
+  }
+
   // Check if battle ended from player action
   let battleStatus = checkBattleEnd(state);
 
-  // Process enemy turns if battle is still active
+  // Process enemy turns ONLY if turn is complete and battle is still active
   let enemyActions = [];
-  if (battleStatus === 'active') {
-    // Advance to next actor using CT system
+  const turnContinues = !result.turnEnded && battleStatus === 'active';
+
+  if (result.turnEnded && battleStatus === 'active') {
+    // Turn is complete - advance to next actor using CT system
     advanceToNextActorWithCT(state);
 
     // Process all enemy turns until it's a player's turn again
@@ -478,20 +574,22 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
   // Broadcast action executed via WebSocket
   battleWebsocket.broadcastActionExecuted(battleId, unitId, actionType, result, req.user.userId);
 
-  // Broadcast enemy actions if any
+  // Broadcast enemy actions if any (only when turn completed)
   if (enemyActions && enemyActions.length > 0) {
     battleWebsocket.broadcastEnemyActions(battleId, enemyActions, req.user.userId);
   }
 
-  // Broadcast turn changed with CT system data
-  battleWebsocket.broadcastTurnChanged(
-    battleId,
-    state.activeUnitIndex,
-    state.turn,
-    req.user.userId,
-    state.activeUnitId,
-    state.turnPredictions
-  );
+  // Broadcast turn changed only if turn actually ended
+  if (result.turnEnded) {
+    battleWebsocket.broadcastTurnChanged(
+      battleId,
+      state.activeUnitIndex,
+      state.turn,
+      req.user.userId,
+      state.activeUnitId,
+      state.turnPredictions
+    );
+  }
 
   // If battle ended, update characters
   if (battleStatus !== 'active') {
@@ -589,7 +687,10 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
     state,
     actionResult: result,
     enemyActions,
-    battleStatus
+    battleStatus,
+    // Two-action turn system: indicate if turn continues
+    turnContinues,
+    availableActions: result.availableActions
   });
 }));
 

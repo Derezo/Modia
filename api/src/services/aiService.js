@@ -1,9 +1,11 @@
 /**
  * AI Service - Enemy decision making for tactical combat
+ * Two-action system: each turn allows 1 move + 1 act (attack/skill)
  */
 
 /**
- * Main AI decision function
+ * Main AI decision function (legacy - returns single action)
+ * @deprecated Use decideTurnActions instead
  */
 function decideAction(enemy, battleState) {
   const aiType = enemy.aiType || 'aggressive';
@@ -27,6 +29,458 @@ function decideAction(enemy, battleState) {
       return aggressiveAI(enemy, battleState);
   }
 }
+
+/**
+ * Main AI decision function for two-action turns
+ * Returns array of 1-2 actions: [{actionType, targetTile, skillId?}, ...]
+ * @param {Object} enemy - The enemy unit making decisions
+ * @param {Object} battleState - Current battle state
+ * @returns {Array} Array of actions to execute in order
+ */
+function decideTurnActions(enemy, battleState) {
+  const aiType = enemy.aiType || 'aggressive';
+
+  switch (aiType) {
+    case 'aggressive':
+      return aggressiveTurnAI(enemy, battleState);
+    case 'defensive':
+      return defensiveTurnAI(enemy, battleState);
+    case 'support':
+      return supportTurnAI(enemy, battleState);
+    case 'tactical':
+      return tacticalTurnAI(enemy, battleState);
+    case 'pack':
+      return packTurnAI(enemy, battleState);
+    case 'hit-and-run':
+      return hitAndRunTurnAI(enemy, battleState);
+    case 'ambush':
+      return ambushTurnAI(enemy, battleState);
+    default:
+      return aggressiveTurnAI(enemy, battleState);
+  }
+}
+
+// ==================== Two-Action AI Functions ====================
+
+/**
+ * Aggressive Turn AI: Move toward target, then attack
+ * Strategy: Get close and deal damage
+ */
+function aggressiveTurnAI(enemy, battleState) {
+  const actions = [];
+  const players = getAlivePlayers(battleState);
+  if (players.length === 0) return [{ actionType: 'wait' }];
+
+  // Find lowest defense target
+  const target = players.reduce((lowest, p) =>
+    (getDefense(p) < getDefense(lowest)) ? p : lowest
+  );
+
+  const distance = manhattanDistance(enemy, target);
+  const attackRange = enemy.attackRange || 1;
+
+  // If already in attack range: attack first (can reposition after if needed)
+  if (distance <= attackRange) {
+    actions.push({
+      actionType: 'attack',
+      targetTile: { x: target.tileX, y: target.tileY }
+    });
+    // Optionally move to better position after attacking
+    // (For aggressive AI, we typically don't retreat, so just return)
+    return actions;
+  }
+
+  // Not in range: move first, then attack if possible
+  const moveTile = getMoveTowardTarget(enemy, target, battleState);
+  if (moveTile) {
+    actions.push({ actionType: 'move', targetTile: moveTile });
+
+    // Check if we're now in attack range after the move
+    const newDistance = Math.abs(moveTile.x - target.tileX) + Math.abs(moveTile.y - target.tileY);
+    if (newDistance <= attackRange) {
+      actions.push({
+        actionType: 'attack',
+        targetTile: { x: target.tileX, y: target.tileY }
+      });
+    }
+  }
+
+  return actions.length > 0 ? actions : [{ actionType: 'wait' }];
+}
+
+/**
+ * Defensive Turn AI: Protect allies or retreat, then attack if safe
+ * Strategy: Prioritize survival and ally protection
+ */
+function defensiveTurnAI(enemy, battleState) {
+  const actions = [];
+  const players = getAlivePlayers(battleState);
+  const allies = getAliveEnemies(battleState).filter(e => e.id !== enemy.id);
+  const nearestPlayer = findClosestUnit(enemy, players);
+  const attackRange = enemy.attackRange || 1;
+
+  // Low HP: retreat first, then attack if in range after retreat
+  if (enemy.hp < enemy.maxHp * 0.4) {
+    const retreatTile = getRetreatTile(enemy, battleState);
+    if (retreatTile) {
+      actions.push({ actionType: 'move', targetTile: retreatTile });
+
+      // Check if any player is in range after retreat
+      if (nearestPlayer) {
+        const newDist = Math.abs(retreatTile.x - nearestPlayer.tileX) + Math.abs(retreatTile.y - nearestPlayer.tileY);
+        if (newDist <= attackRange) {
+          actions.push({
+            actionType: 'attack',
+            targetTile: { x: nearestPlayer.tileX, y: nearestPlayer.tileY }
+          });
+        }
+      }
+      return actions;
+    }
+  }
+
+  // Protect wounded ally: move to protect position
+  const woundedAlly = allies.find(a => a.hp < a.maxHp * 0.5);
+  if (woundedAlly && nearestPlayer) {
+    const protectTile = getProtectTile(woundedAlly, nearestPlayer, battleState);
+    if (protectTile && manhattanDistance(enemy, protectTile) > 0) {
+      actions.push({ actionType: 'move', targetTile: protectTile });
+    }
+  }
+
+  // Attack if in range (either from original position or after moving)
+  const currentPos = actions.length > 0 && actions[0].actionType === 'move'
+    ? actions[0].targetTile
+    : { x: enemy.tileX, y: enemy.tileY };
+
+  if (nearestPlayer) {
+    const distAfterMove = Math.abs(currentPos.x - nearestPlayer.tileX) + Math.abs(currentPos.y - nearestPlayer.tileY);
+    if (distAfterMove <= attackRange) {
+      actions.push({
+        actionType: 'attack',
+        targetTile: { x: nearestPlayer.tileX, y: nearestPlayer.tileY }
+      });
+    }
+  }
+
+  // If no actions yet, move toward nearest player cautiously
+  if (actions.length === 0 && nearestPlayer) {
+    const moveTile = getMoveTowardTarget(enemy, nearestPlayer, battleState, 2);
+    if (moveTile) {
+      actions.push({ actionType: 'move', targetTile: moveTile });
+      const newDist = Math.abs(moveTile.x - nearestPlayer.tileX) + Math.abs(moveTile.y - nearestPlayer.tileY);
+      if (newDist <= attackRange) {
+        actions.push({
+          actionType: 'attack',
+          targetTile: { x: nearestPlayer.tileX, y: nearestPlayer.tileY }
+        });
+      }
+    }
+  }
+
+  return actions.length > 0 ? actions : [{ actionType: 'wait' }];
+}
+
+/**
+ * Support Turn AI: Heal/debuff first, then maintain distance
+ * Strategy: Support allies and disrupt enemies while staying safe
+ */
+function supportTurnAI(enemy, battleState) {
+  const actions = [];
+  const players = getAlivePlayers(battleState);
+  const allies = getAliveEnemies(battleState);
+  const nearestPlayer = findClosestUnit(enemy, players);
+
+  // Priority 1: Heal wounded ally
+  const woundedAlly = allies.find(a => a.hp < a.maxHp * 0.6);
+  if (woundedAlly && enemy.abilities?.some(a => a.type === 'heal')) {
+    actions.push({
+      actionType: 'skill',
+      skillId: 'heal',
+      targetTile: { x: woundedAlly.tileX, y: woundedAlly.tileY }
+    });
+  }
+
+  // Priority 2: Debuff strongest player (if no heal needed)
+  if (actions.length === 0) {
+    const strongestPlayer = players.reduce((strongest, p) =>
+      (p.strength > strongest.strength) ? p : strongest
+    , players[0]);
+
+    if (strongestPlayer && enemy.abilities?.some(a => a.type === 'debuff')) {
+      const hasDebuff = strongestPlayer.statusEffects?.length > 0;
+      if (!hasDebuff && manhattanDistance(enemy, strongestPlayer) <= 3) {
+        actions.push({
+          actionType: 'skill',
+          skillId: 'debuff',
+          targetTile: { x: strongestPlayer.tileX, y: strongestPlayer.tileY }
+        });
+      }
+    }
+  }
+
+  // After acting (or if no action taken), maintain distance
+  if (nearestPlayer && manhattanDistance(enemy, nearestPlayer) < 3) {
+    const retreatTile = getRetreatTile(enemy, battleState);
+    if (retreatTile) {
+      actions.push({ actionType: 'move', targetTile: retreatTile });
+    }
+  }
+
+  // If no other actions, basic attack if in range
+  if (actions.length === 0 && nearestPlayer && manhattanDistance(enemy, nearestPlayer) <= (enemy.attackRange || 1)) {
+    actions.push({
+      actionType: 'attack',
+      targetTile: { x: nearestPlayer.tileX, y: nearestPlayer.tileY }
+    });
+  }
+
+  return actions.length > 0 ? actions : [{ actionType: 'wait' }];
+}
+
+/**
+ * Tactical Turn AI: Move to optimal position, then attack weakest target
+ * Strategy: Smart positioning and target prioritization
+ */
+function tacticalTurnAI(enemy, battleState) {
+  const actions = [];
+  const players = getAlivePlayers(battleState);
+  if (players.length === 0) return [{ actionType: 'wait' }];
+
+  const attackRange = enemy.attackRange || 1;
+
+  // Find weakened target (lowest HP percentage)
+  const weakenedTarget = players.reduce((weakest, p) => {
+    const currentRatio = p.hp / p.maxHp;
+    const weakestRatio = weakest.hp / weakest.maxHp;
+    return currentRatio < weakestRatio ? p : weakest;
+  });
+
+  // Find best target considering distance and HP
+  let bestTarget = null;
+  let bestScore = -Infinity;
+
+  for (const player of players) {
+    const distance = manhattanDistance(enemy, player);
+    const hpRatio = player.hp / player.maxHp;
+    const score = (1 - hpRatio) * 50 + (10 - distance) * 10;
+    if (score > bestScore) {
+      bestScore = score;
+      bestTarget = player;
+    }
+  }
+
+  const target = bestTarget || weakenedTarget;
+  const distance = manhattanDistance(enemy, target);
+
+  // If in range, attack first
+  if (distance <= attackRange) {
+    actions.push({
+      actionType: 'attack',
+      targetTile: { x: target.tileX, y: target.tileY }
+    });
+    // Move to reposition after attack (tactical repositioning)
+    return actions;
+  }
+
+  // Not in range: move first, then attack
+  const moveTile = getMoveTowardTarget(enemy, target, battleState);
+  if (moveTile) {
+    actions.push({ actionType: 'move', targetTile: moveTile });
+    const newDist = Math.abs(moveTile.x - target.tileX) + Math.abs(moveTile.y - target.tileY);
+    if (newDist <= attackRange) {
+      actions.push({
+        actionType: 'attack',
+        targetTile: { x: target.tileX, y: target.tileY }
+      });
+    }
+  }
+
+  return actions.length > 0 ? actions : [{ actionType: 'wait' }];
+}
+
+/**
+ * Pack Turn AI: Coordinate with allies, move together and attack same target
+ * Strategy: Swarm a single target as a group
+ */
+function packTurnAI(enemy, battleState) {
+  const actions = [];
+  const players = getAlivePlayers(battleState);
+  const allies = getAliveEnemies(battleState).filter(e => e.id !== enemy.id);
+
+  if (players.length === 0) return [{ actionType: 'wait' }];
+
+  const attackRange = enemy.attackRange || 1;
+
+  // Find the player that most allies are attacking/near
+  let targetPlayer = null;
+  let maxAlliesNearby = 0;
+
+  for (const player of players) {
+    const alliesNear = allies.filter(a => manhattanDistance(a, player) <= 2).length;
+    if (alliesNear > maxAlliesNearby) {
+      maxAlliesNearby = alliesNear;
+      targetPlayer = player;
+    }
+  }
+
+  if (!targetPlayer) {
+    targetPlayer = findClosestUnit(enemy, players);
+  }
+
+  if (!targetPlayer) return [{ actionType: 'wait' }];
+
+  const distance = manhattanDistance(enemy, targetPlayer);
+
+  // If in range, attack first
+  if (distance <= attackRange) {
+    actions.push({
+      actionType: 'attack',
+      targetTile: { x: targetPlayer.tileX, y: targetPlayer.tileY }
+    });
+    return actions;
+  }
+
+  // Move toward target, then attack if in range
+  const moveTile = getMoveTowardTarget(enemy, targetPlayer, battleState);
+  if (moveTile) {
+    actions.push({ actionType: 'move', targetTile: moveTile });
+    const newDist = Math.abs(moveTile.x - targetPlayer.tileX) + Math.abs(moveTile.y - targetPlayer.tileY);
+    if (newDist <= attackRange) {
+      actions.push({
+        actionType: 'attack',
+        targetTile: { x: targetPlayer.tileX, y: targetPlayer.tileY }
+      });
+    }
+  }
+
+  return actions.length > 0 ? actions : [{ actionType: 'wait' }];
+}
+
+/**
+ * Hit-and-Run Turn AI: Attack then retreat (key: attack FIRST, then move away)
+ * Strategy: Strike and fade, never stay close
+ */
+function hitAndRunTurnAI(enemy, battleState) {
+  const actions = [];
+  const players = getAlivePlayers(battleState);
+  if (players.length === 0) return [{ actionType: 'wait' }];
+
+  const nearestPlayer = findClosestUnit(enemy, players);
+  const distToNearest = manhattanDistance(enemy, nearestPlayer);
+  const attackRange = enemy.attackRange || 1;
+
+  // If in attack range: ATTACK FIRST, then retreat
+  if (distToNearest <= attackRange) {
+    actions.push({
+      actionType: 'attack',
+      targetTile: { x: nearestPlayer.tileX, y: nearestPlayer.tileY }
+    });
+
+    // Retreat after attacking
+    const retreatTile = getRetreatTile(enemy, battleState);
+    if (retreatTile) {
+      actions.push({ actionType: 'move', targetTile: retreatTile });
+    }
+    return actions;
+  }
+
+  // Not in range: move closer cautiously
+  const moveTile = getMoveTowardTarget(enemy, nearestPlayer, battleState, 2);
+  if (moveTile) {
+    actions.push({ actionType: 'move', targetTile: moveTile });
+    // Check if now in range after move
+    const newDist = Math.abs(moveTile.x - nearestPlayer.tileX) + Math.abs(moveTile.y - nearestPlayer.tileY);
+    if (newDist <= attackRange) {
+      actions.push({
+        actionType: 'attack',
+        targetTile: { x: nearestPlayer.tileX, y: nearestPlayer.tileY }
+      });
+    }
+  }
+
+  return actions.length > 0 ? actions : [{ actionType: 'wait' }];
+}
+
+/**
+ * Ambush Turn AI: Wait hidden, then spring ambush attack
+ * Strategy: High damage surprise attack, then switch to tactical
+ */
+function ambushTurnAI(enemy, battleState) {
+  const actions = [];
+  const players = getAlivePlayers(battleState);
+  if (players.length === 0) return [{ actionType: 'wait' }];
+
+  const nearestPlayer = findClosestUnit(enemy, players);
+  const distToNearest = manhattanDistance(enemy, nearestPlayer);
+  const attackRange = enemy.attackRange || 1;
+
+  // If still hidden (hasn't attacked yet this battle)
+  if (enemy.isHidden && !enemy.hasAmbushed) {
+    // Wait for a player to come within ambush range (2 tiles)
+    if (distToNearest <= 2) {
+      // Move to attack position if needed
+      if (distToNearest > attackRange) {
+        const moveTile = getMoveTowardTarget(enemy, nearestPlayer, battleState);
+        if (moveTile) {
+          actions.push({ actionType: 'move', targetTile: moveTile, stayHidden: true });
+        }
+      }
+
+      // Spring the ambush with attack
+      const currentPos = actions.length > 0 ? actions[0].targetTile : { x: enemy.tileX, y: enemy.tileY };
+      const newDist = Math.abs(currentPos.x - nearestPlayer.tileX) + Math.abs(currentPos.y - nearestPlayer.tileY);
+      if (newDist <= attackRange) {
+        actions.push({
+          actionType: 'attack',
+          targetTile: { x: nearestPlayer.tileX, y: nearestPlayer.tileY },
+          isAmbush: true,
+          revealHidden: true
+        });
+      }
+
+      return actions.length > 0 ? actions : [{ actionType: 'wait', stayHidden: true }];
+    }
+
+    // Stay hidden and wait
+    return [{ actionType: 'wait', stayHidden: true }];
+  }
+
+  // After ambush or if revealed, switch to tactical behavior
+  const weakestPlayer = players.reduce((weakest, p) => {
+    const currentRatio = p.hp / p.maxHp;
+    const weakestRatio = weakest.hp / weakest.maxHp;
+    return currentRatio < weakestRatio ? p : weakest;
+  });
+
+  const target = weakestPlayer;
+  const distance = manhattanDistance(enemy, target);
+
+  if (distance <= attackRange) {
+    actions.push({
+      actionType: 'attack',
+      targetTile: { x: target.tileX, y: target.tileY }
+    });
+    return actions;
+  }
+
+  // Move toward target, then attack if in range
+  const moveTile = getMoveTowardTarget(enemy, target, battleState);
+  if (moveTile) {
+    actions.push({ actionType: 'move', targetTile: moveTile });
+    const newDist = Math.abs(moveTile.x - target.tileX) + Math.abs(moveTile.y - target.tileY);
+    if (newDist <= attackRange) {
+      actions.push({
+        actionType: 'attack',
+        targetTile: { x: target.tileX, y: target.tileY }
+      });
+    }
+  }
+
+  return actions.length > 0 ? actions : [{ actionType: 'wait' }];
+}
+
+// ==================== Legacy Single-Action AI Functions ====================
 
 /**
  * Aggressive AI: Target lowest defense, charge forward
@@ -506,6 +960,16 @@ function isValidMove(x, y, battleState) {
 }
 
 module.exports = {
+  // Two-action turn system (primary)
+  decideTurnActions,
+  aggressiveTurnAI,
+  defensiveTurnAI,
+  supportTurnAI,
+  tacticalTurnAI,
+  packTurnAI,
+  hitAndRunTurnAI,
+  ambushTurnAI,
+  // Legacy single-action (deprecated)
   decideAction,
   aggressiveAI,
   defensiveAI,
@@ -514,6 +978,7 @@ module.exports = {
   packAI,
   hitAndRunAI,
   ambushAI,
+  // Utility functions
   getAlivePlayers,
   getAliveEnemies,
   findClosestUnit,

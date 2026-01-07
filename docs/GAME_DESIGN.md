@@ -435,18 +435,25 @@ Legend:
 
 ### 4.2 Turn Flow
 
+**Two-Action System**: Each unit's turn allows up to TWO actions:
+- **1 MOVE action** - Move to a new position
+- **1 ACT action** - Attack, use skill, or use item
+
+Actions can be performed in **either order** (move-then-act or act-then-move). **Wait** immediately ends the turn, forfeiting any remaining actions.
+
 ```
 Battle Start
      │
      ▼
 ┌─────────────┐
-│ Calculate   │ Initiative = AGI + random(0-9)
-│ Initiative  │ Sort units by initiative (descending)
+│ Calculate   │ CT-based turn order (Charge Time)
+│ Turn Order  │ Higher AGI = faster CT accumulation
 └─────────────┘
      │
      ▼
 ┌─────────────┐
 │ Turn Start  │◀────────────────────────────────┐
+│ (Reset)     │ Reset moveUsed/actUsed flags     │
 └─────────────┘                                  │
      │                                           │
      ▼                                           │
@@ -455,36 +462,52 @@ Battle Start
 └─────────────┘                                  │
      │                                           │
      ▼                                           │
-┌─────────────┐                                  │
-│ Choose      │ Move / Attack / Skill / Item / Wait
-│ Action      │                                  │
-└─────────────┘                                  │
-     │                                           │
-     ▼                                           │
-┌─────────────┐                                  │
-│ Execute     │ Apply damage, effects, movement  │
-│ Action      │                                  │
-└─────────────┘                                  │
-     │                                           │
-     ▼                                           │
-┌─────────────┐    No                            │
-│ All enemies │────────────────────────────────▶│
-│ defeated?   │                                  │
-└─────────────┘                                  │
-     │ Yes                                       │
-     ▼                                           │
-┌─────────────┐    No                            │
-│ All players │────────────────────────────────▶│
-│ defeated?   │                                  │
-└─────────────┘                                  │
-     │ Yes                                       │
-     ▼                                           │
-┌─────────────┐                                  │
-│ Battle End  │ Victory / Defeat                 │
-└─────────────┘                                  │
+┌─────────────┐  ◀──────────────────────┐        │
+│ Choose      │ Move / Attack / Skill / │        │
+│ Action      │ Item / Wait             │        │
+└─────────────┘                          │        │
+     │                                   │        │
+     ▼                                   │        │
+┌─────────────┐                          │        │
+│ Execute     │ Apply damage, effects,   │        │
+│ Action      │ movement                 │        │
+└─────────────┘                          │        │
+     │                                   │        │
+     ▼                                   │        │
+┌─────────────┐  Yes (partial turn)      │        │
+│ Turn        │──────────────────────────┘        │
+│ Complete?   │  (moveUsed AND actUsed)           │
+└─────────────┘  OR Wait pressed                  │
+     │ Yes                                        │
+     ▼                                            │
+┌─────────────┐    No                             │
+│ All enemies │─────────────────────────────────▶│
+│ defeated?   │                                   │
+└─────────────┘                                   │
+     │ Yes                                        │
+     ▼                                            │
+┌─────────────┐    No                             │
+│ All players │─────────────────────────────────▶│
+│ defeated?   │                                   │
+└─────────────┘                                   │
+     │ Yes                                        │
+     ▼                                            │
+┌─────────────┐                                   │
+│ Battle End  │ Victory / Defeat                  │
+└─────────────┘                                   │
 ```
 
 ### 4.3 Actions
+
+Each turn allows **1 MOVE + 1 ACT** in any order.
+
+| Action Type | Category | Notes |
+|-------------|----------|-------|
+| Move | MOVE | One per turn, can be skipped |
+| Attack | ACT | One per turn (mutually exclusive with Skill/Item) |
+| Skill | ACT | One per turn (mutually exclusive with Attack/Item) |
+| Item | ACT | One per turn (mutually exclusive with Attack/Skill) |
+| Wait | END | Immediately ends turn, skips remaining actions |
 
 #### Move
 - Move to any tile within movement range
@@ -492,25 +515,41 @@ Battle Start
 - Cannot move through impassable terrain
 - Base movement: 3 tiles for all classes (bonuses from equipment/passives)
 - Terrain costs: Normal (1), Forest/Water (2)
+- **One move per turn** - grayed out after use
 
 #### Attack (Basic)
 - Deal physical damage to target in range
 - Range varies by class/weapon
 - Damage formula below
+- **Uses ACT slot** - cannot use Skill/Item after attacking
 
 #### Skill
 - Use class-specific ability
 - Costs MP (varies by skill)
 - May have different ranges, areas of effect
+- **Uses ACT slot** - cannot use Attack/Item after using skill
 
 #### Item
 - Use consumable item from inventory
 - Healing, buffs, status cure
 - Consumes the item
+- **Uses ACT slot** - cannot use Attack/Skill after using item
 
 #### Wait
-- End turn without acting
-- May provide small defense bonus (future)
+- **Immediately ends turn**, forfeiting any unused move/act
+- Useful to skip actions strategically
+
+### 4.3.1 Status Effects and Actions
+
+Some status effects restrict which actions are available:
+
+| Status Effect | Blocks |
+|---------------|--------|
+| Stun | Move AND Act (auto-end turn) |
+| Freeze | Move AND Act (auto-end turn) |
+| Sleep | Move AND Act (auto-end turn) |
+| Root | Move only (can still act) |
+| Silence | Skills only (can move and basic attack) |
 
 ### 4.4 Damage Calculation
 

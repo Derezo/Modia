@@ -123,13 +123,52 @@ function processStatusEffects(unit) {
 }
 
 /**
- * Check if unit can act (status effects)
+ * Check if unit can act (status effects only - ignores turn state)
  */
 function canUnitAct(unit) {
   if (!unit.statusEffects) return true;
 
   const preventActing = ['stun', 'freeze', 'sleep'];
   return !unit.statusEffects.some(e => preventActing.includes(e.type));
+}
+
+/**
+ * Check if unit can move (status effects only - ignores turn state)
+ */
+function canUnitMove(unit) {
+  if (!unit.statusEffects) return true;
+
+  const preventMovement = ['stun', 'freeze', 'sleep', 'root'];
+  return !unit.statusEffects.some(e => preventMovement.includes(e.type));
+}
+
+/**
+ * Check if unit can use skills (status effects only)
+ */
+function canUnitUseSkills(unit) {
+  if (!unit.statusEffects) return true;
+
+  const preventSkills = ['stun', 'freeze', 'sleep', 'silence'];
+  return !unit.statusEffects.some(e => preventSkills.includes(e.type));
+}
+
+/**
+ * Reset unit turn state for a new turn (two-action system)
+ */
+function resetTurnState(unit) {
+  unit.moveUsed = false;
+  unit.actUsed = false;
+  unit.turnPhase = 'ready';
+  unit.hasActed = false;
+}
+
+/**
+ * Check if unit's turn should auto-end (cannot do any action)
+ */
+function shouldAutoEndTurn(unit) {
+  const canMove = canUnitMove(unit) && !unit.moveUsed;
+  const canAct = canUnitAct(unit) && !unit.actUsed;
+  return !canMove && !canAct;
 }
 
 /**
@@ -368,7 +407,7 @@ function predictTurnOrder(state, count = 10) {
 
 /**
  * Find the unit that should act next, advancing CT if needed
- * Updates state.activeUnitId to the next actor
+ * Updates state.activeUnitId to the next actor and resets their turn state
  */
 function advanceToNextActor(state) {
   // First, advance CT until someone is ready
@@ -381,6 +420,8 @@ function advanceToNextActor(state) {
     state.activeUnitId = nextActor.id;
     // Also update activeUnitIndex for backwards compatibility
     state.activeUnitIndex = state.units.findIndex(u => u.id === nextActor.id);
+    // Reset turn state for the new actor (two-action system)
+    resetTurnState(nextActor);
   }
 
   return nextActor;
@@ -393,6 +434,10 @@ module.exports = {
   sortByInitiative,
   processStatusEffects,
   canUnitAct,
+  canUnitMove,
+  canUnitUseSkills,
+  resetTurnState,
+  shouldAutoEndTurn,
   applyStatusEffect,
   checkHit,
   calculateExperienceReward,
