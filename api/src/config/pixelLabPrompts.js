@@ -575,6 +575,60 @@ const NODE_PROMPTS = {
 };
 
 // =====================
+// WORLD MAP BACKDROP TILES (Seamless)
+// Prompts optimized for tileable textures - NO focal points, uniform patterns
+// =====================
+
+const WORLD_BACKDROP_PROMPTS = {
+  world_grass: {
+    description: `Seamless grass ground texture, uniform green meadow, NO FOCAL POINT, tileable all edges, continuous pattern, top-down view, fantasy world map, ${STYLE_SUFFIX}`,
+    size: 64
+  },
+  world_forest: {
+    description: `Seamless forest canopy texture, green treetops from above, varied shades, NO FOCAL POINT, tileable all edges, continuous pattern, top-down view, ${STYLE_SUFFIX}`,
+    size: 64
+  },
+  world_mountain: {
+    description: `Seamless rocky mountain texture, gray stone with snow hints, NO FOCAL POINT, tileable all edges, continuous pattern, top-down view, ${STYLE_SUFFIX}`,
+    size: 64
+  },
+  world_water: {
+    description: `Seamless water surface texture, blue with subtle wave pattern, NO FOCAL POINT, tileable all edges, continuous pattern, top-down view, ${STYLE_SUFFIX}`,
+    size: 64
+  },
+  world_desert: {
+    description: `Seamless desert sand texture, golden tan dunes, wind ripples, NO FOCAL POINT, tileable all edges, continuous pattern, top-down view, ${STYLE_SUFFIX}`,
+    size: 64
+  }
+};
+
+// Number of variants per backdrop type for visual variety
+const BACKDROP_VARIANTS = 4;
+
+// =====================
+// WORLD MAP PATH TEXTURES
+// Horizontal segments that tile along path length
+// =====================
+
+const PATH_TEXTURE_PROMPTS = {
+  dirt_road: {
+    description: `Horizontal dirt road segment, packed brown earth, wagon ruts, seamless left-right edges, top-down view, ${STYLE_SUFFIX}`,
+    width: 32,
+    height: 16
+  },
+  stone_path: {
+    description: `Horizontal cobblestone road segment, gray fitted stones, seamless left-right edges, top-down view, ${STYLE_SUFFIX}`,
+    width: 32,
+    height: 16
+  },
+  bridge_planks: {
+    description: `Horizontal wooden bridge planks, weathered wood boards, seamless left-right edges, top-down view, ${STYLE_SUFFIX}`,
+    width: 32,
+    height: 16
+  }
+};
+
+// =====================
 // ITEM ICONS
 // =====================
 
@@ -658,6 +712,9 @@ module.exports = {
   WIZARD_ANIMATION_ACTIONS,
   ENEMY_PROMPTS,
   NODE_PROMPTS,
+  WORLD_BACKDROP_PROMPTS,
+  BACKDROP_VARIANTS,
+  PATH_TEXTURE_PROMPTS,
   ITEM_PROMPTS,
   MATERIAL_MODIFIERS,
   AUGMENT_MODIFIERS,

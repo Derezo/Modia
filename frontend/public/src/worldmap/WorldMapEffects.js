@@ -2,6 +2,36 @@
  * WorldMapEffects - Animated visual effects for the world map
  * Handles node glow effects, ambient particles, and backdrop rendering
  */
+
+// Map node types to their biome terrain
+const NODE_BIOME_MAP = {
+  forest: 'forest',
+  cave: 'mountain',
+  mountain: 'mountain',
+  bridge: 'water',
+  castle: 'grass',
+  city: 'grass',
+  village: 'grass',
+  palace: 'grass',
+  guild: 'grass'
+};
+
+// Influence radius for each node type (in pixels)
+const BIOME_INFLUENCE_RADIUS = {
+  castle: 400,
+  palace: 350,
+  city: 300,
+  forest: 250,
+  mountain: 250,
+  cave: 200,
+  village: 200,
+  bridge: 150,
+  guild: 180
+};
+
+// Number of tile variants per terrain type
+const BACKDROP_VARIANTS = 4;
+
 export class WorldMapEffects {
   constructor(assetLoader) {
     this.assetLoader = assetLoader;
@@ -14,7 +44,7 @@ export class WorldMapEffects {
     this.glowPhase = 0;
     this.glowSpeed = 0.003;
 
-    // Backdrop tiles (cached)
+    // Backdrop tiles (cached) - includes variants
     this.backdropTiles = {};
     this.backdropLoaded = false;
 
@@ -24,6 +54,9 @@ export class WorldMapEffects {
 
     // Biome regions for backdrop rendering
     this.biomeRegions = [];
+
+    // Node spacing (should match WorldMapScene)
+    this.nodeSpacing = 60;
 
     // Animation timing
     this.time = 0;
@@ -40,7 +73,7 @@ export class WorldMapEffects {
   }
 
   /**
-   * Load backdrop tiles for world map regions
+   * Load backdrop tiles for world map regions (including variants)
    */
   async loadBackdropTiles() {
     if (!this.assetLoader) {
@@ -52,15 +85,49 @@ export class WorldMapEffects {
     const basePath = '/assets/sprites/nodes/backdrop';
 
     for (const tileType of tileTypes) {
-      try {
-        const img = await this.assetLoader.loadImage(`${basePath}/${tileType}.png`);
-        this.backdropTiles[tileType] = img;
-      } catch (error) {
-        console.warn(`Failed to load backdrop tile ${tileType}:`, error.message);
+      // Load base tile and variants
+      for (let variant = 0; variant < BACKDROP_VARIANTS; variant++) {
+        const filename = variant === 0 ? `${tileType}.png` : `${tileType}_${variant}.png`;
+        const key = variant === 0 ? tileType : `${tileType}_${variant}`;
+
+        try {
+          const img = await this.assetLoader.loadImage(`${basePath}/${filename}`);
+          this.backdropTiles[key] = img;
+        } catch (error) {
+          // Variants might not all exist, only warn for base tile
+          if (variant === 0) {
+            console.warn(`Failed to load backdrop tile ${tileType}:`, error.message);
+          }
+        }
       }
     }
 
     this.backdropLoaded = Object.keys(this.backdropTiles).length > 0;
+  }
+
+  /**
+   * Calculate biome regions based on node positions
+   * @param {Array} nodes - Array of node objects with x_coord, y_coord, node_type
+   */
+  calculateBiomeRegions(nodes) {
+    this.biomeRegions = [];
+
+    for (const node of nodes) {
+      const biomeType = NODE_BIOME_MAP[node.node_type] || 'grass';
+
+      // Skip grass biomes as they're the base layer
+      if (biomeType === 'grass') continue;
+
+      const radius = BIOME_INFLUENCE_RADIUS[node.node_type] || 200;
+
+      this.biomeRegions.push({
+        centerX: node.x_coord * this.nodeSpacing,
+        centerY: node.y_coord * this.nodeSpacing,
+        radius: radius,
+        biomeType: `world_${biomeType}`,
+        nodeType: node.node_type
+      });
+    }
   }
 
   /**
@@ -230,6 +297,7 @@ export class WorldMapEffects {
 
   /**
    * Render backdrop tiles based on camera position
+   * Multi-layer rendering: dark base → grass tiles → biome regions
    * @param {CanvasRenderingContext2D} ctx
    * @param {number} cameraX
    * @param {number} cameraY
@@ -237,12 +305,23 @@ export class WorldMapEffects {
    * @param {number} canvasHeight
    */
   renderBackdrop(ctx, cameraX, cameraY, canvasWidth, canvasHeight) {
-    // Default dark background if no backdrop tiles
-    ctx.fillStyle = '#0a0a1a';
+    // Layer 1: Dark base color
+    ctx.fillStyle = '#1a2a1a';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
     if (!this.backdropLoaded) return;
 
+    // Layer 2: Base grass terrain with tile variants
+    this.renderBaseTerrain(ctx, cameraX, cameraY, canvasWidth, canvasHeight);
+
+    // Layer 3: Biome influence zones with radial gradients
+    this.renderBiomeRegions(ctx, cameraX, cameraY, canvasWidth, canvasHeight);
+  }
+
+  /**
+   * Render base grass terrain with variant tiles for variety
+   */
+  renderBaseTerrain(ctx, cameraX, cameraY, canvasWidth, canvasHeight) {
     const grassTile = this.backdropTiles['world_grass'];
     if (!grassTile) return;
 
@@ -254,15 +333,109 @@ export class WorldMapEffects {
     const endX = startX + Math.ceil(canvasWidth / tileSize) + 2;
     const endY = startY + Math.ceil(canvasHeight / tileSize) + 2;
 
-    // Render grass backdrop tiles
-    ctx.globalAlpha = 0.3; // Subtle backdrop
+    ctx.globalAlpha = 0.4;
     for (let y = startY; y <= endY; y++) {
       for (let x = startX; x <= endX; x++) {
+        // Select variant based on position for pseudo-random variety
+        const variant = Math.abs((x * 7 + y * 13) % BACKDROP_VARIANTS);
+        const tileKey = variant === 0 ? 'world_grass' : `world_grass_${variant}`;
+        const tile = this.backdropTiles[tileKey] || grassTile;
+
         const screenX = x * tileSize + cameraX;
         const screenY = y * tileSize + cameraY;
-        ctx.drawImage(grassTile, screenX, screenY, tileSize, tileSize);
+        ctx.drawImage(tile, screenX, screenY, tileSize, tileSize);
       }
     }
+    ctx.globalAlpha = 1;
+  }
+
+  /**
+   * Render biome regions with radial gradient falloff
+   */
+  renderBiomeRegions(ctx, cameraX, cameraY, canvasWidth, canvasHeight) {
+    for (const region of this.biomeRegions) {
+      const screenX = region.centerX + cameraX;
+      const screenY = region.centerY + cameraY;
+
+      // Skip if completely off-screen (with margin for radius)
+      if (screenX + region.radius < 0 || screenX - region.radius > canvasWidth ||
+          screenY + region.radius < 0 || screenY - region.radius > canvasHeight) {
+        continue;
+      }
+
+      const biomeTile = this.backdropTiles[region.biomeType];
+      if (!biomeTile) continue;
+
+      // Create a temporary canvas for the biome pattern with gradient mask
+      this.renderBiomeWithGradient(ctx, screenX, screenY, region, biomeTile);
+    }
+  }
+
+  /**
+   * Render a single biome region with radial gradient alpha falloff
+   */
+  renderBiomeWithGradient(ctx, screenX, screenY, region, biomeTile) {
+    const radius = region.radius;
+    const tileSize = 64;
+
+    // Calculate bounds for tiling within the region
+    const left = screenX - radius;
+    const top = screenY - radius;
+    const right = screenX + radius;
+    const bottom = screenY + radius;
+
+    // Tile the biome texture within the region bounds
+    const startTileX = Math.floor(left / tileSize);
+    const startTileY = Math.floor(top / tileSize);
+    const endTileX = Math.ceil(right / tileSize);
+    const endTileY = Math.ceil(bottom / tileSize);
+
+    ctx.save();
+
+    // Clip to circular region
+    ctx.beginPath();
+    ctx.arc(screenX, screenY, radius, 0, Math.PI * 2);
+    ctx.clip();
+
+    // Draw biome tiles with distance-based alpha
+    for (let ty = startTileY; ty <= endTileY; ty++) {
+      for (let tx = startTileX; tx <= endTileX; tx++) {
+        const tileScreenX = tx * tileSize;
+        const tileScreenY = ty * tileSize;
+
+        // Calculate distance from center to tile center
+        const tileCenterX = tileScreenX + tileSize / 2;
+        const tileCenterY = tileScreenY + tileSize / 2;
+        const dx = tileCenterX - screenX;
+        const dy = tileCenterY - screenY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Skip tiles outside radius
+        if (distance > radius + tileSize) continue;
+
+        // Calculate alpha based on distance (smooth falloff)
+        const normalizedDist = distance / radius;
+        let alpha;
+        if (normalizedDist < 0.3) {
+          alpha = 0.5; // Full intensity at center
+        } else if (normalizedDist < 0.7) {
+          alpha = 0.5 - (normalizedDist - 0.3) * 0.625; // Gradual fade
+        } else {
+          alpha = 0.25 - (normalizedDist - 0.7) * 0.833; // Quick fade to edge
+        }
+        alpha = Math.max(0, Math.min(0.5, alpha));
+
+        // Select variant for variety
+        const variant = Math.abs((tx * 11 + ty * 17) % BACKDROP_VARIANTS);
+        const variantKey = variant === 0 ? region.biomeType : `${region.biomeType}_${variant}`;
+        const tile = this.backdropTiles[variantKey] || biomeTile;
+
+        ctx.globalAlpha = alpha;
+        ctx.drawImage(tile, tileScreenX, tileScreenY, tileSize, tileSize);
+      }
+    }
+
+    ctx.restore();
     ctx.globalAlpha = 1;
   }
 

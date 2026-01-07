@@ -97,6 +97,11 @@ export class WorldMapScene extends Scene {
 
       this.game.state.set('worldNodes', this.nodes);
       this.game.state.set('currentNode', this.currentNode);
+
+      // Calculate biome regions for backdrop rendering
+      if (this.effects) {
+        this.effects.calculateBiomeRegions(this.nodes);
+      }
     } catch (err) {
       console.error('Failed to load world:', err);
       this.game.showNotification('Failed to load world data', 'error');
