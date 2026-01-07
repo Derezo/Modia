@@ -1,5 +1,6 @@
 import { Scene } from './Scene.js';
 import { WorldMapEffects } from '../worldmap/WorldMapEffects.js';
+import { WorldMapMinimap } from '../worldmap/WorldMapMinimap.js';
 
 export class WorldMapScene extends Scene {
   constructor(game) {
@@ -28,6 +29,9 @@ export class WorldMapScene extends Scene {
     // Effects system
     this.effects = null;
 
+    // Minimap
+    this.minimap = null;
+
     // Event listener cleanup
     this.abortController = null;
 
@@ -48,6 +52,11 @@ export class WorldMapScene extends Scene {
     this.centerOnCurrentNode();
     this.setupInputHandlers();
     this.setupWebSocketHandlers();
+
+    // Initialize minimap
+    this.minimap = new WorldMapMinimap(this.assetLoader);
+    await this.minimap.init();
+    this.minimap.calculateWorldBounds(this.nodes);
 
     // Preload node sprites in background
     this.preloadNodeSprites();
@@ -101,6 +110,11 @@ export class WorldMapScene extends Scene {
       // Update discovery state for fog of war rendering
       if (this.effects) {
         this.effects.updateDiscoveryState(this.nodes);
+      }
+
+      // Update minimap bounds if nodes changed
+      if (this.minimap) {
+        this.minimap.calculateWorldBounds(this.nodes);
       }
     } catch (err) {
       console.error('Failed to load world:', err);
@@ -395,6 +409,23 @@ export class WorldMapScene extends Scene {
 
     canvas.addEventListener('click', (e) => {
       const pos = this.game.input.getPointerPosition();
+
+      // Check minimap click first
+      if (this.minimap) {
+        const minimapNode = this.minimap.handleClick(
+          pos.x, pos.y,
+          canvas.width, canvas.height,
+          this.nodes,
+          this.currentNode?.id,
+          (node) => this.isNodeAdjacent(node)
+        );
+        if (minimapNode) {
+          this.travelToNode(minimapNode);
+          return;
+        }
+      }
+
+      // Regular map click
       const clickedNode = this.getNodeAtPosition(pos.x, pos.y);
 
       if (clickedNode && clickedNode.id !== this.currentNode?.id) {
@@ -659,6 +690,22 @@ export class WorldMapScene extends Scene {
     }
 
     ctx.restore();
+
+    // Render minimap (on top of everything)
+    if (this.minimap && this.effects) {
+      this.minimap.render(ctx, {
+        nodes: this.nodes,
+        connections: this.connections,
+        currentNode: this.currentNode,
+        discoveredNodes: this.effects.discoveredNodes,
+        visitedNodes: this.effects.visitedNodes,
+        cameraX: this.cameraX,
+        cameraY: this.cameraY,
+        canvasWidth: ctx.canvas.width,
+        canvasHeight: ctx.canvas.height,
+        nodeSpacing: this.nodeSpacing
+      });
+    }
   }
 
   /**
