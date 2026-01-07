@@ -265,6 +265,12 @@ export class WorldMapScene extends Scene {
       return;
     }
 
+    // Marketplace feature opens the marketplace scene
+    if (feature === 'marketplace') {
+      this.game.scenes.switchTo('marketplace');
+      return;
+    }
+
     // Other features not yet implemented
     this.game.showNotification(`${this.capitalize(feature)} - Coming soon!`, 'info');
   }

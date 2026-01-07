@@ -7,6 +7,7 @@ import { BattleScene } from '../scenes/BattleScene.js';
 import { FormationScene } from '../scenes/FormationScene.js';
 import { InventoryScene } from '../scenes/InventoryScene.js';
 import { ShopScene } from '../scenes/ShopScene.js';
+import { MarketplaceScene } from '../scenes/MarketplaceScene.js';
 
 export class SceneManager {
   constructor(game) {
@@ -27,7 +28,8 @@ export class SceneManager {
       battle: new BattleScene(this.game),
       formation: new FormationScene(this.game),
       inventory: new InventoryScene(this.game),
-      shop: new ShopScene(this.game)
+      shop: new ShopScene(this.game),
+      marketplace: new MarketplaceScene(this.game)
     };
   }
 

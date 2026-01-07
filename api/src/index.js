@@ -17,6 +17,7 @@ const inventoryRoutes = require('./routes/inventory');
 const { router: skillsRoutes } = require('./routes/skills');
 const spritesRoutes = require('./routes/sprites');
 const shopRoutes = require('./routes/shop');
+const marketplaceRoutes = require('./routes/marketplace');
 
 const app = express();
 const server = http.createServer(app);
@@ -46,6 +47,7 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/skills', skillsRoutes);
 app.use('/api/sprites', spritesRoutes);
 app.use('/api/shops', shopRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
 
 // Error handling
 app.use(errorHandler);

@@ -226,4 +226,57 @@ export class ApiClient {
   getSellableItems(nodeId, shopType) {
     return this.get(`/shops/${nodeId}/${shopType}/sell-inventory`);
   }
+
+  // Marketplace endpoints
+  getOrderBook(itemTemplateId, depth = 20) {
+    return this.get(`/marketplace/orderbook/${itemTemplateId}?depth=${depth}`);
+  }
+
+  getMyOrders(status = null) {
+    const query = status ? `?status=${status}` : '';
+    return this.get(`/marketplace/orders/mine${query}`);
+  }
+
+  placeLimitOrder(itemTemplateId, side, price, quantity, characterId) {
+    return this.post('/marketplace/orders/limit', {
+      itemTemplateId,
+      side,
+      price,
+      quantity,
+      characterId
+    });
+  }
+
+  placeMarketOrder(itemTemplateId, side, quantity, characterId) {
+    return this.post('/marketplace/orders/market', {
+      itemTemplateId,
+      side,
+      quantity,
+      characterId
+    });
+  }
+
+  cancelOrder(orderId) {
+    return this.delete(`/marketplace/orders/${orderId}`);
+  }
+
+  searchMarketItems(query = '', type = null, limit = 50) {
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    if (type) params.append('type', type);
+    params.append('limit', limit);
+    return this.get(`/marketplace/search?${params.toString()}`);
+  }
+
+  getTradeHistory(itemTemplateId, limit = 50) {
+    return this.get(`/marketplace/history/${itemTemplateId}?limit=${limit}`);
+  }
+
+  getMyTrades(limit = 50) {
+    return this.get(`/marketplace/my-trades?limit=${limit}`);
+  }
+
+  getMarketStats(itemTemplateId) {
+    return this.get(`/marketplace/stats/${itemTemplateId}`);
+  }
 }
