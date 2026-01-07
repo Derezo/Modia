@@ -1,3 +1,5 @@
+import { AnimatedSprite } from '../core/AnimatedSprite.js';
+
 /**
  * BattleUnit - Represents a unit in tactical combat
  */
@@ -7,6 +9,8 @@ export class BattleUnit {
     this.type = unitData.type; // 'player' or 'enemy'
     this.name = unitData.name;
     this.class = unitData.class;
+    this.enemyId = unitData.enemyId || null; // For enemy sprite lookup
+    this.biome = unitData.biome || 'forest'; // For enemy sprite lookup
 
     // Stats
     this.hp = unitData.hp;
@@ -21,6 +25,10 @@ export class BattleUnit {
     this.gridX = unitData.tileX;
     this.gridY = unitData.tileY;
 
+    // Previous grid position (for direction calculation)
+    this.prevGridX = this.gridX;
+    this.prevGridY = this.gridY;
+
     // Screen position (for smooth movement)
     this.screenX = 0;
     this.screenY = 0;
@@ -32,6 +40,17 @@ export class BattleUnit {
     this.moveSpeed = 200; // pixels per second
     this.idleOffset = 0;
     this.idleTimer = Math.random() * Math.PI * 2; // Random start phase
+
+    // Sprite animation state
+    this.animationState = 'idle'; // idle, walk, attack, hit, death
+    this.animatedSprite = null;
+    this.assetLoader = null;
+    // Set initial facing direction based on unit type
+    // Players spawn on left side, face East (toward enemies)
+    // Enemies spawn on right side, face West (toward players)
+    this.direction = this.type === 'player'
+      ? AnimatedSprite.DIRECTIONS.EAST
+      : AnimatedSprite.DIRECTIONS.WEST;
 
     // Battle state
     this.hasActed = unitData.hasActed || false;
@@ -47,10 +66,80 @@ export class BattleUnit {
   }
 
   /**
-   * Update screen position from grid position
+   * Set asset loader for sprite rendering
+   */
+  setAssetLoader(assetLoader) {
+    this.assetLoader = assetLoader;
+    this.initializeSprite();
+  }
+
+  /**
+   * Initialize animated sprite
+   */
+  initializeSprite() {
+    if (!this.assetLoader) return;
+
+    // Get sprite sheet based on unit type
+    let sprite;
+    if (this.type === 'player') {
+      sprite = this.assetLoader.getCharacterSprite(this.class?.toLowerCase(), 'idle', 'player');
+    } else {
+      const enemyId = this.enemyId || this.class?.toLowerCase() || 'monster';
+      sprite = this.assetLoader.getEnemySprite(enemyId, 'idle', this.biome);
+    }
+
+    if (sprite) {
+      this.animatedSprite = new AnimatedSprite(sprite, {
+        frameWidth: sprite.width / 8, // Assuming 8 frames per animation
+        frameHeight: sprite.height / 8, // 8 directions
+        frameCount: 8,
+        frameDuration: 150,
+        loop: true
+      });
+      this.animatedSprite.setDirection(this.direction);
+      this.animatedSprite.play();
+    }
+  }
+
+  /**
+   * Change animation state
+   */
+  setAnimationState(state) {
+    if (this.animationState === state) return;
+    this.animationState = state;
+
+    if (!this.assetLoader) return;
+
+    // Load new sprite for animation state
+    let sprite;
+    if (this.type === 'player') {
+      sprite = this.assetLoader.getCharacterSprite(this.class?.toLowerCase(), state, 'player');
+    } else {
+      const enemyId = this.enemyId || this.class?.toLowerCase() || 'monster';
+      sprite = this.assetLoader.getEnemySprite(enemyId, state, this.biome);
+    }
+
+    if (sprite) {
+      const frameCount = state === 'idle' ? 4 : (state === 'walk' ? 8 : 6);
+      const loop = state === 'idle' || state === 'walk';
+
+      this.animatedSprite = new AnimatedSprite(sprite, {
+        frameWidth: sprite.width / frameCount,
+        frameHeight: sprite.height / 8,
+        frameCount: frameCount,
+        frameDuration: state === 'attack' ? 100 : 150,
+        loop: loop
+      });
+      this.animatedSprite.setDirection(this.direction);
+      this.animatedSprite.play();
+    }
+  }
+
+  /**
+   * Update screen position from grid position (uses world coordinates)
    */
   updateScreenPosition() {
-    const pos = this.grid.gridToScreen(this.gridX, this.gridY);
+    const pos = this.grid.gridToScreenWorld(this.gridX, this.gridY);
     this.screenX = pos.x;
     this.screenY = pos.y;
     this.targetScreenX = pos.x;
@@ -61,12 +150,77 @@ export class BattleUnit {
    * Start moving to a new grid position
    */
   moveTo(gridX, gridY) {
+    // Store previous position for direction calculation
+    this.prevGridX = this.gridX;
+    this.prevGridY = this.gridY;
+
     this.gridX = gridX;
     this.gridY = gridY;
-    const target = this.grid.gridToScreen(gridX, gridY);
+    const target = this.grid.gridToScreenWorld(gridX, gridY);
     this.targetScreenX = target.x;
     this.targetScreenY = target.y;
     this.isMoving = true;
+
+    // Update direction based on movement
+    this.updateDirectionFromMovement();
+    this.setAnimationState('walk');
+  }
+
+  /**
+   * Update facing direction based on movement
+   */
+  updateDirectionFromMovement() {
+    if (this.animatedSprite) {
+      this.direction = this.animatedSprite.setDirectionFromGridMovement(
+        this.prevGridX, this.prevGridY,
+        this.gridX, this.gridY
+      );
+    }
+  }
+
+  /**
+   * Face toward a target position
+   */
+  faceToward(targetX, targetY) {
+    if (this.animatedSprite) {
+      this.direction = this.animatedSprite.setDirectionFromGridMovement(
+        this.gridX, this.gridY,
+        targetX, targetY
+      );
+    } else {
+      // Calculate direction even without sprite for when sprite loads later
+      const dx = targetX - this.gridX;
+      const dy = targetY - this.gridY;
+      this.direction = this.calculateDirection(dx, dy);
+    }
+  }
+
+  /**
+   * Set direction directly
+   * @param {number} direction - Direction constant from AnimatedSprite.DIRECTIONS
+   */
+  setDirection(direction) {
+    this.direction = direction;
+    if (this.animatedSprite) {
+      this.animatedSprite.setDirection(direction);
+    }
+  }
+
+  /**
+   * Calculate direction from grid movement delta
+   * Used when sprite is not yet loaded
+   */
+  calculateDirection(dx, dy) {
+    // For isometric grid: +X is SE, +Y is SW, -X is NW, -Y is NE
+    if (dx > 0 && dy === 0) return AnimatedSprite.DIRECTIONS.SOUTHEAST;
+    if (dx > 0 && dy > 0) return AnimatedSprite.DIRECTIONS.SOUTH;
+    if (dx === 0 && dy > 0) return AnimatedSprite.DIRECTIONS.SOUTHWEST;
+    if (dx < 0 && dy > 0) return AnimatedSprite.DIRECTIONS.WEST;
+    if (dx < 0 && dy === 0) return AnimatedSprite.DIRECTIONS.NORTHWEST;
+    if (dx < 0 && dy < 0) return AnimatedSprite.DIRECTIONS.NORTH;
+    if (dx === 0 && dy < 0) return AnimatedSprite.DIRECTIONS.NORTHEAST;
+    if (dx > 0 && dy < 0) return AnimatedSprite.DIRECTIONS.EAST;
+    return this.direction; // No change if no movement
   }
 
   /**
@@ -83,9 +237,14 @@ export class BattleUnit {
    * Update unit state (called each frame)
    */
   update(deltaTime) {
-    // Idle bobbing animation
+    // Idle bobbing animation (only when not using sprites)
     this.idleTimer += deltaTime * 2;
     this.idleOffset = Math.sin(this.idleTimer) * 2;
+
+    // Update animated sprite
+    if (this.animatedSprite) {
+      this.animatedSprite.update(deltaTime * 1000); // Convert to ms
+    }
 
     // Movement interpolation
     if (this.isMoving) {
@@ -97,11 +256,49 @@ export class BattleUnit {
         this.screenX = this.targetScreenX;
         this.screenY = this.targetScreenY;
         this.isMoving = false;
+        // Return to idle animation when movement completes
+        this.setAnimationState('idle');
       } else {
         this.screenX += (dx / dist) * this.moveSpeed * deltaTime;
         this.screenY += (dy / dist) * this.moveSpeed * deltaTime;
       }
     }
+  }
+
+  /**
+   * Play attack animation
+   */
+  playAttackAnimation(targetX, targetY) {
+    this.faceToward(targetX, targetY);
+    this.setAnimationState('attack');
+
+    // Return to idle after attack animation completes
+    setTimeout(() => {
+      if (this.animationState === 'attack') {
+        this.setAnimationState('idle');
+      }
+    }, 600);
+  }
+
+  /**
+   * Play hit reaction animation
+   */
+  playHitAnimation() {
+    this.setAnimationState('hit');
+
+    // Return to idle after hit animation completes
+    setTimeout(() => {
+      if (this.animationState === 'hit') {
+        this.setAnimationState('idle');
+      }
+    }, 400);
+  }
+
+  /**
+   * Play death animation
+   */
+  playDeathAnimation() {
+    this.setAnimationState('death');
   }
 
   /**
@@ -162,32 +359,68 @@ export class BattleUnit {
 
   /**
    * Render the unit
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {BattleCamera} camera - Optional camera for world-to-screen transform
    */
-  render(ctx) {
-    const renderY = this.screenY - 32 + (this.isMoving ? 0 : this.idleOffset);
+  render(ctx, camera = null) {
+    // Get screen position from world position
+    let drawX = this.screenX;
+    let drawY = this.screenY;
+
+    if (camera) {
+      // Skip rendering if off-screen
+      if (!camera.isVisible(this.screenX, this.screenY, 40, 80)) {
+        return;
+      }
+      const screenPos = camera.worldToScreen(this.screenX, this.screenY);
+      drawX = screenPos.x;
+      drawY = screenPos.y;
+    }
+
     const unitRadius = 16;
 
     // Draw shadow
     ctx.beginPath();
-    ctx.ellipse(this.screenX, this.screenY + 4, unitRadius * 0.8, unitRadius * 0.3, 0, 0, Math.PI * 2);
+    ctx.ellipse(drawX, drawY + 4, unitRadius * 0.8, unitRadius * 0.3, 0, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.fill();
 
-    // Draw unit body (colored circle)
-    ctx.beginPath();
-    ctx.arc(this.screenX, renderY, unitRadius, 0, Math.PI * 2);
-    ctx.fillStyle = this.getColor();
-    ctx.fill();
+    // Try to render animated sprite
+    if (this.animatedSprite && this.animatedSprite.image) {
+      // Draw sprite centered on position, offset upward
+      const spriteHeight = this.animatedSprite.frameHeight || 64;
+      const spriteWidth = this.animatedSprite.frameWidth || 64;
+      this.animatedSprite.draw(ctx, drawX - spriteWidth / 2, drawY - spriteHeight + 16);
+    } else {
+      // Fallback: Draw colored circle with letter
+      const renderY = drawY - 32 + (this.isMoving ? 0 : this.idleOffset);
 
-    // Draw border
-    ctx.strokeStyle = this.getHighlightColor();
-    ctx.lineWidth = this.isSelected ? 3 : 2;
-    ctx.stroke();
+      // Draw unit body (colored circle)
+      ctx.beginPath();
+      ctx.arc(drawX, renderY, unitRadius, 0, Math.PI * 2);
+      ctx.fillStyle = this.getColor();
+      ctx.fill();
+
+      // Draw border
+      ctx.strokeStyle = this.getHighlightColor();
+      ctx.lineWidth = this.isSelected ? 3 : 2;
+      ctx.stroke();
+
+      // Draw class icon
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 14px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(this.getClassIcon(), drawX, renderY);
+    }
+
+    // Calculate renderY for UI elements
+    const renderY = drawY - 32;
 
     // Draw selection ring
     if (this.isSelected) {
       ctx.beginPath();
-      ctx.arc(this.screenX, renderY, unitRadius + 4, 0, Math.PI * 2);
+      ctx.arc(drawX, renderY, unitRadius + 4, 0, Math.PI * 2);
       ctx.strokeStyle = '#ffd700';
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -196,7 +429,7 @@ export class BattleUnit {
     // Draw target indicator
     if (this.isTargeted) {
       ctx.beginPath();
-      ctx.arc(this.screenX, renderY, unitRadius + 6, 0, Math.PI * 2);
+      ctx.arc(drawX, renderY, unitRadius + 6, 0, Math.PI * 2);
       ctx.strokeStyle = '#ff4444';
       ctx.lineWidth = 2;
       ctx.setLineDash([4, 4]);
@@ -204,19 +437,12 @@ export class BattleUnit {
       ctx.setLineDash([]);
     }
 
-    // Draw class icon
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 14px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(this.getClassIcon(), this.screenX, renderY);
-
     // Draw HP bar
-    this.renderHPBar(ctx, this.screenX, renderY - unitRadius - 8);
+    this.renderHPBar(ctx, drawX, renderY - unitRadius - 8);
 
     // Draw status effect icons
     if (this.statusEffects.length > 0) {
-      this.renderStatusEffects(ctx, this.screenX, renderY + unitRadius + 8);
+      this.renderStatusEffects(ctx, drawX, renderY + unitRadius + 8);
     }
 
     // Draw name on hover/select
@@ -224,7 +450,7 @@ export class BattleUnit {
       ctx.fillStyle = '#fff';
       ctx.font = '11px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(this.name, this.screenX, renderY - unitRadius - 20);
+      ctx.fillText(this.name, drawX, renderY - unitRadius - 20);
     }
   }
 

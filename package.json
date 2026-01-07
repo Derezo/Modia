@@ -19,7 +19,17 @@
     "db:seed": "npm run seed -w api",
     "db:reset": "npm run db:migrate && npm run db:seed",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "generate:tiles": "node api/src/scripts/generate-tiles.js",
+    "generate:obstacles": "node api/src/scripts/generate-obstacles.js",
+    "generate:characters": "node api/src/scripts/generate-characters.js",
+    "generate:enemies": "node api/src/scripts/generate-enemies.js",
+    "generate:nodes": "node api/src/scripts/generate-nodes.js",
+    "generate:items": "node api/src/scripts/generate-items.js",
+    "generate:all": "node api/src/scripts/generate-all.js",
+    "validate:sprites": "node api/src/scripts/validate-prompts.js",
+    "validate:enemy": "node api/src/scripts/validate-prompts.js --type=enemy",
+    "validate:character": "node api/src/scripts/validate-prompts.js --type=character"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
@@ -28,5 +38,8 @@
     "node": ">=18.0.0"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "sharp": "^0.34.5"
+  }
 }

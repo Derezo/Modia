@@ -92,7 +92,6 @@ export class BattleUI {
             <button class="btn btn-secondary action-btn" id="btn-move" title="Move to a new position">Move</button>
             <button class="btn btn-primary action-btn" id="btn-attack" title="Attack an enemy">Attack</button>
             <button class="btn btn-secondary action-btn" id="btn-wait" title="End turn without acting">Wait</button>
-            <button class="btn btn-danger action-btn" id="btn-flee" title="Attempt to flee battle">Flee</button>
           </div>
         </div>
       </div>
@@ -260,10 +259,6 @@ export class BattleUI {
       this.actionCallbacks.onWait?.();
     }, opts);
 
-    this.element.querySelector('#btn-flee')?.addEventListener('click', () => {
-      this.actionCallbacks.onFlee?.();
-    }, opts);
-
     this.element.querySelector('#btn-confirm')?.addEventListener('click', () => {
       this.actionCallbacks.onConfirm?.();
     }, opts);
@@ -419,9 +414,6 @@ export class BattleUI {
       } else if (status === 'defeat') {
         title.textContent = 'Defeat';
         title.style.color = '#f44336';
-      } else if (status === 'fled') {
-        title.textContent = 'Escaped!';
-        title.style.color = '#8a8aaa';
       }
     }
 

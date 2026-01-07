@@ -3,6 +3,7 @@ import { SceneManager } from './SceneManager.js';
 import { InputHandler } from './InputHandler.js';
 import { ApiClient } from '../api/client.js';
 import { GameWebSocket } from '../api/websocket.js';
+import { AssetLoader } from './AssetLoader.js';
 
 export class Game {
   constructor() {
@@ -15,6 +16,7 @@ export class Game {
     this.input = null;
     this.api = null;
     this.socket = null;
+    this.assetLoader = null;
 
     this.lastTime = 0;
     this.running = false;
@@ -25,17 +27,22 @@ export class Game {
     this.scale = 1;
   }
 
-  init() {
+  async init() {
     // Get canvas and context
     this.canvas = document.getElementById('game-canvas');
     this.ctx = this.canvas.getContext('2d');
     this.uiOverlay = document.getElementById('ui-overlay');
 
     // Initialize subsystems
-    this.api = new ApiClient('/api');
+    this.api = new ApiClient(this.getApiUrl());
     this.socket = new GameWebSocket(this.getWebSocketUrl());
     this.input = new InputHandler(this.canvas);
     this.scenes = new SceneManager(this);
+
+    // Initialize asset loader
+    this.assetLoader = new AssetLoader();
+    await this.assetLoader.init();
+    console.log('Asset loader initialized');
 
     // Setup canvas sizing
     this.resize();
@@ -55,6 +62,14 @@ export class Game {
     console.log('Modia initialized');
   }
 
+  getApiUrl() {
+    // In development, API runs on port 3000. In production, same origin with /api prefix
+    if (window.location.hostname === 'localhost') {
+      return 'http://localhost:3000/api';
+    }
+    return '/api';
+  }
+
   getWebSocketUrl() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
@@ -69,10 +84,19 @@ export class Game {
       try {
         const response = await this.api.get('/auth/me');
         this.state.set('user', response.user);
-        this.scenes.switchTo('worldMap');
 
         // Connect WebSocket
         this.socket.connect(token);
+
+        // Check if player is in an active battle
+        try {
+          const battleData = await this.api.getCurrentBattle();
+          // Active battle found - restore to battle scene
+          this.scenes.switchTo('battle', battleData);
+        } catch (battleErr) {
+          // No active battle (404) or other error - go to world map
+          this.scenes.switchTo('worldMap');
+        }
       } catch (err) {
         // Token invalid, clear and show login
         this.state.set('token', null);

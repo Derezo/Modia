@@ -161,11 +161,6 @@ export class ApiClient {
     return this.post('/battle/action', { battleId, actionType, unitId, targetTile, skillId });
   }
 
-  fleeBattle(data) {
-    const { battleId } = data;
-    return this.post('/battle/flee', { battleId });
-  }
-
   getBattleRewards(battleId) {
     return this.get(`/battle/rewards/${battleId}`);
   }

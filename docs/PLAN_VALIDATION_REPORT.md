@@ -1,6 +1,131 @@
 # Plan Validation Report
 
 **Generated**: 2026-01-06
+**Current Plan**: Battle Sprite Enhancement Plan (`tender-stirring-wolf.md`)
+**Previous Plan**: Modia MMORPG Implementation Plan
+**Status**: Battle Sprite Enhancement Phase 1-2 Complete
+
+---
+
+# Battle Sprite Enhancement Plan Validation
+
+## Executive Summary
+
+The Battle Sprite Enhancement Plan has been successfully implemented through Phase 2 (Direction Fix). All foundational infrastructure is in place:
+
+- **Direction rendering** is fixed with proper initialization and combat facing
+- **Equipment-aware sprite system** is fully implemented with on-demand generation
+- **Validation system** is ready for testing prompts before batch generation
+- **Documentation** is comprehensive and complete
+
+The implementation is ready for Phase 3-5 (actual sprite generation) which requires PixelLab API calls.
+
+---
+
+## Code Review Results
+
+### Files Created
+
+| File | Status | Notes |
+|------|--------|-------|
+| `docs/PIXELLAB_REFERENCE.md` | **PASS** | 502 lines, comprehensive API documentation |
+| `api/src/scripts/validate-prompts.js` | **PASS** | 377 lines, full CLI with dry-run support |
+| `api/src/services/characterSpriteService.js` | **PASS** | 359 lines, on-demand generation with caching |
+| `api/src/routes/sprites.js` | **PASS** | 255 lines, all CRUD endpoints + auth fixed |
+
+### Files Modified
+
+| File | Status | Notes |
+|------|--------|-------|
+| `api/src/config/pixelLabPrompts.js` | **PASS** | Added RACE_PROMPTS (5 races), EQUIPMENT_PROMPTS, WIZARD_ANIMATION_ACTIONS, ENEMY_ANIMATION_ACTIONS |
+| `frontend/public/src/battle/BattleUnit.js` | **PASS** | Direction initialization, setDirection(), faceToward(), calculateDirection(), animation methods |
+| `frontend/public/src/scenes/BattleScene.js` | **PASS** | setAssetLoader integration, playAttackAnimation/playHitAnimation calls |
+| `frontend/public/src/core/AssetLoader.js` | **PASS** | Equipment-aware methods: generateEquipmentHash, loadEquippedCharacterSprite, etc. |
+| `api/src/index.js` | **PASS** | Registered sprites routes |
+| `package.json` | **PASS** | Added validate:sprites, validate:enemy, validate:character scripts |
+
+### Issues Fixed During Review
+
+1. **Auth middleware import** - Changed `auth` to `authenticate` in sprites.js
+2. **User ID property** - Changed `req.user.id` to `req.user.userId` to match middleware
+
+---
+
+## Gap Analysis - Battle Sprite Enhancement
+
+### Fully Completed
+
+- [x] Part 1: PixelLab Reference Documentation
+- [x] Part 2: Direction Rendering Fix
+  - [x] BattleUnit direction initialization (players EAST, enemies WEST)
+  - [x] faceToward() method for targeting
+  - [x] setDirection() for direct control
+  - [x] calculateDirection() for sprite-less calculation
+- [x] Part 3: Equipment-Aware Character Rendering (Infrastructure)
+  - [x] characterSpriteService.js with hash-based caching
+  - [x] /api/sprites routes
+  - [x] RACE_PROMPTS for all 5 races (Human, Elf, Dwarf, Vampire, Orc)
+  - [x] EQUIPMENT_PROMPTS for weapons/armor
+  - [x] AssetLoader equipment-aware methods
+- [x] Part 4: Animation System Enhancement (Prompts & Callbacks)
+  - [x] ENEMY_ANIMATION_ACTIONS for 7 forest enemies
+  - [x] WIZARD_ANIMATION_ACTIONS for all 5 races
+  - [x] buildWizardAnimationPrompt() helper
+  - [x] buildEnemyAnimationPrompt() helper
+  - [x] playAttackAnimation, playHitAnimation, playDeathAnimation in BattleUnit
+- [x] Part 5: Sample Validation System
+  - [x] validate-prompts.js CLI
+  - [x] npm scripts (validate:sprites, validate:enemy, validate:character)
+  - [x] Dry-run mode
+  - [x] List enemies/races commands
+
+### Not Started (Planned for Phase 3-5)
+
+- [ ] Generate forest enemy sprites via PixelLab API
+- [ ] Generate wizard base sprites for all 5 races
+- [ ] Test equipment variants with on-demand generation
+- [ ] Sync attack animations with damage timing
+
+---
+
+## Success Criteria Status
+
+| Criterion | Status | Notes |
+|-----------|--------|-------|
+| Characters face correct direction when spawning | **DONE** | Players EAST, enemies WEST |
+| Characters face correct direction during combat | **DONE** | faceToward() called on attacks |
+| All 5 Wizard races render with unique visual traits | **READY** | Prompts defined, needs generation |
+| Wizard characters render with equipped weapons/armor | **READY** | Infrastructure complete |
+| Equipment sprites cache correctly | **READY** | Hash-based caching implemented |
+| All 5 animation states work | **READY** | Templates defined, needs generation |
+| Sample validation workflow works | **DONE** | CLI with dry-run available |
+| Race-specific animations reflect personality | **READY** | Unique prompts per race defined |
+
+---
+
+## Next Priority Tasks
+
+1. **Validate sample sprites** - Run `npm run validate:sprites -- --dry-run --type=enemy --name=gray_wolf` to preview prompts
+2. **Generate validation samples** - Test with actual API calls to verify prompt quality
+3. **Generate forest enemy sprites** - Run batch generation for 7 forest enemies
+4. **Generate wizard race sprites** - Create base sprites for all 5 races
+5. **Integration testing** - Verify sprites load correctly in battle scene
+
+---
+
+## Estimated Remaining Costs
+
+| Phase | API Calls | Est. Cost |
+|-------|-----------|-----------|
+| Validation samples | ~20 | ~$0.26 |
+| Forest enemies (7 x 5 animations) | 42 | ~$0.55 |
+| Wizard races (5 x 5 animations) | 30 | ~$0.40 |
+| **Remaining Total** | ~92 | **~$1.21** |
+
+---
+
+# Previous Plan Validation (Modia MMORPG Implementation)
+
 **Plan**: Modia MMORPG Implementation Plan
 **Status**: Phase 1-5 Substantially Complete
 
@@ -46,7 +171,7 @@ The implementation plan has been substantially completed. All 5 phases have been
 |-----------|-------|----------|
 | `auth.test.js` | 12 | Registration, login, token refresh, logout |
 | `characters.test.js` | 12 | CRUD, validation, authorization |
-| `battle.test.js` | 8 | Start, actions, flee |
+| `battle.test.js` | 6 | Start, actions |
 | `inventory.test.js` | 9 | Get, equip, unequip, use, discard |
 | `skills.test.js` | 11 | Skill trees, learning, prerequisites |
 

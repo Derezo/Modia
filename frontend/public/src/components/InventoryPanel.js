@@ -7,6 +7,9 @@ export class InventoryPanel {
     this.inventory = [];
     this.selectedItem = null;
     this.element = null;
+
+    // Asset loader for item sprites
+    this.assetLoader = game.assetLoader || null;
   }
 
   async load(characterId) {
@@ -15,11 +18,33 @@ export class InventoryPanel {
       const data = await this.game.api.getInventory(characterId);
       this.equipped = data.equipped || {};
       this.inventory = data.inventory || [];
+
+      // Preload item sprites in background
+      this.preloadItemSprites();
+
       this.render();
     } catch (err) {
       console.error('Failed to load inventory:', err);
       this.game.showNotification('Failed to load inventory', 'error');
     }
+  }
+
+  /**
+   * Preload sprites for all items
+   */
+  async preloadItemSprites() {
+    if (!this.assetLoader) return;
+
+    const allItems = [
+      ...Object.values(this.equipped).filter(Boolean),
+      ...this.inventory
+    ];
+
+    const loadPromises = allItems.map(item =>
+      this.assetLoader.loadItemIcon(item).catch(() => null)
+    );
+
+    await Promise.allSettled(loadPromises);
   }
 
   render() {
@@ -77,6 +102,28 @@ export class InventoryPanel {
         .equipment-slot .item-icon {
           font-size: 24px;
         }
+        .equipment-slot .item-sprite,
+        .inventory-slot .item-sprite {
+          width: 32px;
+          height: 32px;
+          image-rendering: pixelated;
+          image-rendering: crisp-edges;
+        }
+        .inventory-slot .item-sprite {
+          width: 28px;
+          height: 28px;
+        }
+        .item-details .detail-icon {
+          width: 48px;
+          height: 48px;
+          image-rendering: pixelated;
+          float: left;
+          margin-right: 12px;
+        }
+        .rarity-glow-uncommon { filter: drop-shadow(0 0 3px #1eff00); }
+        .rarity-glow-rare { filter: drop-shadow(0 0 4px #0070dd); }
+        .rarity-glow-epic { filter: drop-shadow(0 0 5px #a335ee); }
+        .rarity-glow-legendary { filter: drop-shadow(0 0 6px #ff8000); }
         .inventory-grid {
           display: grid;
           grid-template-columns: repeat(6, 1fr);
@@ -190,25 +237,42 @@ export class InventoryPanel {
 
   renderEquipmentSlot(slot, label) {
     const item = this.equipped[slot];
-    const icon = item ? this.getItemIcon(item.type) : '';
     const filledClass = item ? 'filled' : '';
+    const iconHtml = item ? this.getItemIconHtml(item, 'equipment') : '';
     return `
       <div class="equipment-slot ${filledClass}" data-slot="${slot}" data-equipped="true">
-        <span class="item-icon">${icon}</span>
+        ${iconHtml}
         <span class="slot-label">${label}</span>
       </div>
     `;
   }
 
   renderInventorySlot(item, index) {
-    const icon = this.getItemIcon(item.type);
+    const iconHtml = this.getItemIconHtml(item, 'inventory');
     const quantity = item.quantity > 1 ? `<span class="quantity">x${item.quantity}</span>` : '';
     return `
       <div class="inventory-slot" data-index="${index}" data-instance-id="${item.instanceId}">
-        <span class="item-icon">${icon}</span>
+        ${iconHtml}
         ${quantity}
       </div>
     `;
+  }
+
+  /**
+   * Get item icon HTML - sprite if available, emoji fallback
+   */
+  getItemIconHtml(item, context = 'inventory') {
+    // Try to get sprite from cache
+    const sprite = this.assetLoader?.getItemIcon(item);
+    const rarityClass = item.rarity && item.rarity !== 'common' ? `rarity-glow-${item.rarity}` : '';
+
+    if (sprite) {
+      return `<img class="item-sprite ${rarityClass}" src="${sprite.src}" alt="${item.name || item.type}" />`;
+    }
+
+    // Fallback to emoji
+    const icon = this.getItemIcon(item.type);
+    return `<span class="item-icon">${icon}</span>`;
   }
 
   renderEmptySlots(count) {
@@ -295,11 +359,16 @@ export class InventoryPanel {
       actionsHtml += `<button class="btn btn-danger btn-sm" data-action="discard" data-instance="${item.instanceId}">Discard</button>`;
     }
 
+    // Get detail icon (sprite or emoji)
+    const detailIconHtml = this.getDetailIconHtml(item);
+
     detailsEl.innerHTML = `
+      ${detailIconHtml}
       <div class="item-name ${item.rarity || 'common'}">${item.name}</div>
       <div class="item-type">${this.capitalize(item.type)} • ${this.capitalize(item.rarity || 'common')}</div>
       <div class="item-description">${item.description || 'No description'}</div>
       <div class="item-stats">${statsHtml || 'No stats'}</div>
+      <div style="clear: both;"></div>
       <div class="item-actions">${actionsHtml}</div>
     `;
 
@@ -307,6 +376,22 @@ export class InventoryPanel {
     detailsEl.querySelectorAll('[data-action]').forEach(btn => {
       btn.addEventListener('click', () => this.handleItemAction(btn.dataset.action, btn.dataset));
     });
+  }
+
+  /**
+   * Get detail icon HTML for item details panel
+   */
+  getDetailIconHtml(item) {
+    const sprite = this.assetLoader?.getItemIcon(item);
+    const rarityClass = item.rarity && item.rarity !== 'common' ? `rarity-glow-${item.rarity}` : '';
+
+    if (sprite) {
+      return `<img class="detail-icon ${rarityClass}" src="${sprite.src}" alt="${item.name || item.type}" />`;
+    }
+
+    // Fallback to large emoji
+    const icon = this.getItemIcon(item.type);
+    return `<span style="font-size: 36px; float: left; margin-right: 12px;">${icon}</span>`;
   }
 
   async handleItemAction(action, data) {

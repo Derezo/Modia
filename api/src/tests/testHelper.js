@@ -82,7 +82,8 @@ async function createTestUser() {
 
 // Create a test character for a user
 async function createTestCharacter(token, name = null) {
-  const charName = name || `TestChar_${Date.now()}`;
+  // Keep name short to fit 2-24 character limit
+  const charName = name || `TC${Date.now().toString(36).slice(-6)}`;
   const races = ['human', 'elf', 'dwarf', 'orc'];
   const classes = ['warrior', 'wizard', 'monk', 'chemist'];
 

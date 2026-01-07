@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "generatedAt": null,
+  "worldSeed": null,
+  "terrain": {
+    "forest": {
+      "grass": { "variants": 4, "walkable": true },
+      "stone": { "variants": 4, "walkable": true },
+      "forest": { "variants": 4, "walkable": false },
+      "rock": { "variants": 4, "walkable": false }
+    },
+    "cave": {
+      "stone": { "variants": 4, "walkable": true },
+      "grass": { "variants": 4, "walkable": true },
+      "rock": { "variants": 4, "walkable": false },
+      "water": { "variants": 4, "walkable": false },
+      "lava": { "variants": 4, "walkable": false }
+    },
+    "mountain": {
+      "mountain_stone": { "variants": 3, "walkable": true },
+      "snow_patch": { "variants": 2, "walkable": true },
+      "rocky_terrain": { "variants": 2, "walkable": false },
+      "cliff_edge": { "variants": 1, "walkable": false },
+      "alpine_grass": { "variants": 2, "walkable": true }
+    },
+    "bridge": {
+      "wooden_planks": { "variants": 2, "walkable": true },
+      "stone_bridge": { "variants": 2, "walkable": true },
+      "bridge_water": { "variants": 1, "walkable": false },
+      "cobblestone": { "variants": 2, "walkable": true }
+    },
+    "castle": {
+      "cobblestone": { "variants": 3, "walkable": true },
+      "marble": { "variants": 2, "walkable": true },
+      "carpet_red": { "variants": 1, "walkable": true },
+      "throne_tile": { "variants": 1, "walkable": true },
+      "stone": { "variants": 2, "walkable": true }
+    }
+  },
+  "obstacles": {
+    "rocks": {
+      "rock_small": { "size": 32, "passable": false },
+      "rock_medium": { "size": 48, "passable": false },
+      "rock_large": { "size": 64, "passable": false },
+      "stalagmite": { "size": 48, "passable": false },
+      "mountain_boulder": { "size": 56, "passable": false }
+    },
+    "trees": {
+      "oak_tree": { "size": 96, "passable": false },
+      "pine_tree": { "size": 80, "passable": false },
+      "dead_tree": { "size": 72, "passable": false },
+      "mushroom_large": { "size": 64, "passable": false },
+      "mountain_pine": { "size": 72, "passable": false }
+    },
+    "decorative": {
+      "grass_tufts": { "size": 24, "passable": true },
+      "wildflowers": { "size": 24, "passable": true },
+      "cave_crystals": { "size": 32, "passable": true },
+      "fallen_log": { "size": 48, "passable": true },
+      "stone_ruins": { "size": 56, "passable": true }
+    }
+  },
+  "characters": {
+    "player": {
+      "classes": ["warrior", "wizard", "monk", "chemist"],
+      "animations": ["idle", "walk", "attack", "hit", "death", "victory"],
+      "directions": 8,
+      "size": 64
+    },
+    "enemies": {
+      "forest": ["gray_wolf", "alpha_wolf", "goblin_warrior", "goblin_archer", "treant", "forest_sprite", "spider"],
+      "cave": ["stone_golem", "skeleton_warrior", "skeleton_mage", "cave_bat", "slime", "ghost"],
+      "mountain": ["mountain_troll", "troll_shaman", "harpy", "ice_elemental", "yeti", "gargoyle"],
+      "bridge": ["bandit_captain", "bandit_archer", "bandit_rogue", "mercenary", "toll_troll"],
+      "bosses": ["troll_king", "frost_wyvern", "dragon"]
+    }
+  },
+  "nodes": {
+    "types": ["castle", "city", "village", "forest", "cave", "mountain", "bridge", "palace"],
+    "guilds": ["guild_warrior", "guild_wizard", "guild_monk", "guild_chemist"],
+    "size": 48
+  },
+  "items": {
+    "weapons": ["sword", "axe", "staff", "dagger", "bow"],
+    "armor": ["helmet", "breastplate", "boots", "shield"],
+    "accessories": ["ring", "amulet", "cloak"],
+    "consumables": ["potion_red", "potion_blue", "potion_green", "scroll"],
+    "size": 32
+  },
+  "animations": {
+    "frameCount": {
+      "idle": 4,
+      "walk": 8,
+      "attack": 6,
+      "hit": 4,
+      "death": 8,
+      "victory": 8
+    },
+    "frameRate": 12
+  }
+}

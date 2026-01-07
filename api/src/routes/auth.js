@@ -183,6 +183,19 @@ router.post('/refresh', asyncHandler(async (req, res) => {
   // Generate new access token
   const accessToken = generateAccessToken(user.id, user.username);
 
+  // Generate new refresh token (refresh token rotation for security)
+  const newRefreshToken = generateRefreshToken(user.id);
+  const newRefreshTokenHash = await bcrypt.hash(newRefreshToken, SALT_ROUNDS);
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+  // Delete old session and create new one
+  await query('DELETE FROM user_sessions WHERE id = $1', [validSession.id]);
+  await query(
+    `INSERT INTO user_sessions (user_id, refresh_token_hash, expires_at)
+     VALUES ($1, $2, $3)`,
+    [user.id, newRefreshTokenHash, expiresAt]
+  );
+
   res.json({
     user: {
       id: user.id,
@@ -190,7 +203,8 @@ router.post('/refresh', asyncHandler(async (req, res) => {
       email: user.email,
       gold: user.gold
     },
-    accessToken
+    accessToken,
+    refreshToken: newRefreshToken
   });
 }));
 

@@ -262,38 +262,65 @@ async function generateWorld(seed) {
 }
 
 async function seedItems() {
+  // Items are seeded in order - templateId corresponds to array index + 1
   const items = [
-    // Weapons
-    { name: 'Rusty Sword', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { strength: 3 }, level_requirement: 1, base_price: 50, rarity: 1 },
-    { name: 'Iron Sword', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { strength: 7 }, level_requirement: 5, base_price: 150, rarity: 2 },
-    { name: 'Steel Blade', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { strength: 12 }, level_requirement: 15, base_price: 400, rarity: 2 },
-    { name: 'Oak Staff', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { intelligence: 5 }, level_requirement: 1, base_price: 60, rarity: 1 },
-    { name: 'Mystic Staff', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { intelligence: 10, mp_max: 20 }, level_requirement: 10, base_price: 300, rarity: 2 },
-    { name: 'Combat Gloves', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { strength: 4, agility: 2 }, level_requirement: 1, base_price: 45, rarity: 1 },
+    // Weapons (templateId 1-6)
+    { name: 'Rusty Sword', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { strength: 3 }, level_requirement: 1, base_price: 50, rarity: 1, description: 'A worn blade, but still sharp enough to cut.' },           // 1
+    { name: 'Iron Sword', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { strength: 7 }, level_requirement: 5, base_price: 150, rarity: 2, description: 'A sturdy iron blade forged by skilled smiths.' },            // 2
+    { name: 'Steel Blade', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { strength: 12, agility: 3 }, level_requirement: 15, base_price: 400, rarity: 3, description: 'High-quality steel, perfectly balanced.' },   // 3
+    { name: 'Oak Staff', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { intelligence: 5 }, level_requirement: 1, base_price: 60, rarity: 1, description: 'A simple staff carved from oak wood.' },                  // 4
+    { name: 'Mystic Staff', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { intelligence: 10, mp_max: 20 }, level_requirement: 10, base_price: 300, rarity: 2, description: 'Imbued with magical essence.' },         // 5
+    { name: 'Combat Gloves', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { strength: 4, agility: 3 }, level_requirement: 1, base_price: 45, rarity: 1, description: 'Reinforced gloves for martial artists.' },     // 6
 
-    // Armor
-    { name: 'Leather Armor', item_type: 'armor', equipment_slot: 'body', stat_bonuses: { vitality: 3, hp_max: 15 }, level_requirement: 1, base_price: 80, rarity: 1 },
-    { name: 'Chain Mail', item_type: 'armor', equipment_slot: 'body', stat_bonuses: { vitality: 6, hp_max: 30 }, level_requirement: 8, base_price: 250, rarity: 2 },
-    { name: 'Cloth Robe', item_type: 'armor', equipment_slot: 'body', stat_bonuses: { intelligence: 3, mp_max: 15 }, level_requirement: 1, base_price: 70, rarity: 1 },
+    // Armor (templateId 7-9)
+    { name: 'Leather Armor', item_type: 'armor', equipment_slot: 'body', stat_bonuses: { vitality: 3, hp_max: 15 }, level_requirement: 1, base_price: 80, rarity: 1, description: 'Light armor that allows free movement.' },           // 7
+    { name: 'Chain Mail', item_type: 'armor', equipment_slot: 'body', stat_bonuses: { vitality: 6, hp_max: 30 }, level_requirement: 8, base_price: 250, rarity: 2, description: 'Interlocking rings provide solid protection.' },       // 8
+    { name: 'Cloth Robe', item_type: 'armor', equipment_slot: 'body', stat_bonuses: { intelligence: 3, mp_max: 15 }, level_requirement: 1, base_price: 70, rarity: 1, description: 'A robe favored by spellcasters.' },                 // 9
 
-    // Accessories
-    { name: 'Lucky Charm', item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { luck: 5 }, level_requirement: 1, base_price: 100, rarity: 2 },
-    { name: 'Ring of Vitality', item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { hp_max: 25 }, level_requirement: 5, base_price: 200, rarity: 2 },
+    // Accessories (templateId 10-11)
+    { name: 'Lucky Charm', item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { luck: 5 }, level_requirement: 1, base_price: 100, rarity: 2, description: 'A four-leaf clover preserved in crystal.' },                 // 10
+    { name: 'Ring of Vitality', item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { hp_max: 25, vitality: 3 }, level_requirement: 5, base_price: 200, rarity: 2, description: 'Pulses with life energy.' },            // 11
 
-    // Consumables
-    { name: 'Health Potion', item_type: 'consumable', effect_type: 'heal_hp', effect_value: 50, base_price: 25, rarity: 1 },
-    { name: 'Mana Potion', item_type: 'consumable', effect_type: 'heal_mp', effect_value: 30, base_price: 30, rarity: 1 },
-    { name: 'Antidote', item_type: 'consumable', effect_type: 'cure_poison', effect_value: 0, base_price: 15, rarity: 1 },
-    { name: 'Phoenix Feather', item_type: 'consumable', effect_type: 'revive', effect_value: 50, base_price: 500, rarity: 4 }
+    // Consumables (templateId 12-15)
+    { name: 'Health Potion', item_type: 'consumable', effect_type: 'heal_hp', effect_value: 50, base_price: 25, rarity: 1, description: 'Restores 50 HP when consumed.' },                                                              // 12
+    { name: 'Mana Potion', item_type: 'consumable', effect_type: 'heal_mp', effect_value: 30, base_price: 30, rarity: 1, description: 'Restores 30 MP when consumed.' },                                                                // 13
+    { name: 'Antidote', item_type: 'consumable', effect_type: 'cure_poison', effect_value: 0, base_price: 15, rarity: 1, description: 'Cures poison status.' },                                                                         // 14
+    { name: 'Phoenix Feather', item_type: 'consumable', effect_type: 'revive', effect_value: 50, base_price: 500, rarity: 4, description: 'Revives a fallen ally with 50% HP.' },                                                       // 15
+
+    // Additional Weapons (templateId 16-20)
+    { name: 'Bronze Axe', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { strength: 5 }, level_requirement: 3, base_price: 90, rarity: 1, description: 'A heavy axe with a bronze head.' },                          // 16
+    { name: 'Iron Axe', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { strength: 9, vitality: 2 }, level_requirement: 8, base_price: 220, rarity: 2, description: 'A brutish weapon favored by warriors.' },         // 17
+    { name: 'Apprentice Wand', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { intelligence: 3, mp_max: 10 }, level_requirement: 1, base_price: 40, rarity: 1, description: 'A basic wand for magic students.' },     // 18
+    { name: 'Steel Fist', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { strength: 7, agility: 5 }, level_requirement: 10, base_price: 180, rarity: 2, description: 'Metal knuckles for devastating punches.' },     // 19
+    { name: 'Throwing Knives', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { agility: 6, luck: 3 }, level_requirement: 5, base_price: 120, rarity: 2, description: 'A set of balanced throwing blades.' },          // 20
+
+    // Additional Armor (templateId 21-25)
+    { name: 'Leather Helm', item_type: 'armor', equipment_slot: 'head', stat_bonuses: { vitality: 2 }, level_requirement: 1, base_price: 40, rarity: 1, description: 'A simple leather cap.' },                                         // 21
+    { name: 'Iron Helm', item_type: 'armor', equipment_slot: 'head', stat_bonuses: { vitality: 4, strength: 1 }, level_requirement: 8, base_price: 120, rarity: 2, description: 'Solid iron protection for the head.' },                // 22
+    { name: 'Leather Boots', item_type: 'armor', equipment_slot: 'feet', stat_bonuses: { agility: 2 }, level_requirement: 1, base_price: 35, rarity: 1, description: 'Comfortable boots for travel.' },                                 // 23
+    { name: 'Iron Greaves', item_type: 'armor', equipment_slot: 'feet', stat_bonuses: { vitality: 3, agility: 1 }, level_requirement: 8, base_price: 100, rarity: 2, description: 'Heavy leg armor.' },                                 // 24
+    { name: 'Wizard Hat', item_type: 'armor', equipment_slot: 'head', stat_bonuses: { intelligence: 4, mp_max: 10 }, level_requirement: 5, base_price: 90, rarity: 2, description: 'A pointy hat imbued with magic.' },                 // 25
+
+    // Additional Accessories (templateId 26-28)
+    { name: 'Iron Ring', item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { strength: 2, vitality: 1 }, level_requirement: 1, base_price: 50, rarity: 1, description: 'A simple iron band.' },                        // 26
+    { name: 'Mage Ring', item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { intelligence: 4, mp_max: 15 }, level_requirement: 5, base_price: 150, rarity: 2, description: 'Enhances magical power.' },                // 27
+    { name: 'Speed Amulet', item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { agility: 5 }, level_requirement: 3, base_price: 130, rarity: 2, description: 'Increases reflexes and speed.' },                        // 28
+
+    // Additional Consumables (templateId 29-32)
+    { name: 'Hi-Potion', item_type: 'consumable', effect_type: 'heal_hp', effect_value: 150, base_price: 100, rarity: 2, description: 'Restores 150 HP when consumed.' },                                                               // 29
+    { name: 'Hi-Ether', item_type: 'consumable', effect_type: 'heal_mp', effect_value: 80, base_price: 120, rarity: 2, description: 'Restores 80 MP when consumed.' },                                                                  // 30
+    { name: 'Elixir', item_type: 'consumable', effect_type: 'heal_both', effect_value: 100, base_price: 300, rarity: 3, description: 'Restores 100 HP and 50 MP.' },                                                                    // 31
+    { name: 'Status Cure', item_type: 'consumable', effect_type: 'cure_all', effect_value: 0, base_price: 75, rarity: 2, description: 'Cures all negative status effects.' }                                                            // 32
   ];
 
   for (const item of items) {
     await pool.query(
-      `INSERT INTO item_templates (name, item_type, equipment_slot, stat_bonuses, level_requirement, effect_type, effect_value, base_price, rarity)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO item_templates (name, description, item_type, equipment_slot, stat_bonuses, level_requirement, effect_type, effect_value, base_price, rarity)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT DO NOTHING`,
       [
         item.name,
+        item.description || null,
         item.item_type,
         item.equipment_slot || null,
         JSON.stringify(item.stat_bonuses || {}),
@@ -311,20 +338,134 @@ async function seedItems() {
 
 async function seedEnemies() {
   const enemies = [
-    { name: 'Forest Goblin', base_hp: 40, base_mp: 10, base_strength: 8, base_intelligence: 4, base_agility: 6, spawn_node_types: ['forest'], experience_reward: 20, gold_reward_max: 15 },
-    { name: 'Wild Wolf', base_hp: 35, base_mp: 5, base_strength: 10, base_intelligence: 2, base_agility: 10, spawn_node_types: ['forest', 'mountain'], experience_reward: 25, gold_reward_max: 10 },
-    { name: 'Cave Bat', base_hp: 25, base_mp: 15, base_strength: 5, base_intelligence: 6, base_agility: 12, spawn_node_types: ['cave'], experience_reward: 15, gold_reward_max: 8 },
-    { name: 'Rock Golem', base_hp: 80, base_mp: 0, base_strength: 15, base_intelligence: 1, base_agility: 2, spawn_node_types: ['cave', 'mountain'], experience_reward: 50, gold_reward_max: 30, min_difficulty_tier: 2 },
-    { name: 'Mountain Troll', base_hp: 100, base_mp: 5, base_strength: 18, base_intelligence: 3, base_agility: 4, spawn_node_types: ['mountain', 'bridge'], experience_reward: 75, gold_reward_max: 50, min_difficulty_tier: 3 },
-    { name: 'Bridge Bandit', base_hp: 45, base_mp: 20, base_strength: 12, base_intelligence: 8, base_agility: 8, spawn_node_types: ['bridge'], experience_reward: 35, gold_reward_max: 40 },
-    { name: 'Slime', base_hp: 30, base_mp: 10, base_strength: 5, base_intelligence: 3, base_agility: 4, spawn_node_types: ['forest', 'cave'], experience_reward: 10, gold_reward_max: 5 },
-    { name: 'Skeleton Warrior', base_hp: 50, base_mp: 0, base_strength: 12, base_intelligence: 2, base_agility: 6, spawn_node_types: ['cave'], experience_reward: 40, gold_reward_max: 25, min_difficulty_tier: 2 }
+    // Tier 1 - Forest (starter area)
+    {
+      name: 'Goblin Warrior',
+      base_hp: 40, base_mp: 10, base_strength: 8, base_intelligence: 4, base_agility: 6,
+      spawn_node_types: ['forest'], ai_type: 'aggressive',
+      experience_reward: 20, gold_reward_min: 5, gold_reward_max: 15, min_difficulty_tier: 1,
+      drop_table: { dropChance: 0.6, minItems: 0, maxItems: 1, rarityWeights: { common: 85, uncommon: 15 }, itemPool: [{ templateId: 1, weight: 50 }, { templateId: 12, weight: 50 }] }
+    },
+    {
+      name: 'Gray Wolf',
+      base_hp: 35, base_mp: 5, base_strength: 10, base_intelligence: 2, base_agility: 10,
+      spawn_node_types: ['forest', 'mountain'], ai_type: 'pack',
+      experience_reward: 25, gold_reward_min: 3, gold_reward_max: 10, min_difficulty_tier: 1,
+      drop_table: { dropChance: 0.5, minItems: 0, maxItems: 1, rarityWeights: { common: 90, uncommon: 10 }, itemPool: [{ templateId: 12, weight: 70 }, { templateId: 13, weight: 30 }] }
+    },
+    {
+      name: 'Forest Slime',
+      base_hp: 30, base_mp: 10, base_strength: 5, base_intelligence: 3, base_agility: 4,
+      spawn_node_types: ['forest', 'cave'], ai_type: 'defensive',
+      experience_reward: 10, gold_reward_min: 1, gold_reward_max: 5, min_difficulty_tier: 1,
+      drop_table: { dropChance: 0.4, minItems: 0, maxItems: 1, rarityWeights: { common: 95, uncommon: 5 }, itemPool: [{ templateId: 12, weight: 100 }] }
+    },
+
+    // Tier 1-2 - Caves
+    {
+      name: 'Cave Bat',
+      base_hp: 25, base_mp: 15, base_strength: 5, base_intelligence: 6, base_agility: 12,
+      spawn_node_types: ['cave'], ai_type: 'hit-and-run',
+      experience_reward: 15, gold_reward_min: 2, gold_reward_max: 8, min_difficulty_tier: 1,
+      drop_table: { dropChance: 0.35, minItems: 0, maxItems: 1, rarityWeights: { common: 90, uncommon: 10 }, itemPool: [{ templateId: 13, weight: 100 }] }
+    },
+    {
+      name: 'Giant Spider',
+      base_hp: 45, base_mp: 20, base_strength: 10, base_intelligence: 5, base_agility: 9,
+      spawn_node_types: ['cave', 'forest'], ai_type: 'ambush',
+      experience_reward: 35, gold_reward_min: 8, gold_reward_max: 20, min_difficulty_tier: 2,
+      drop_table: { dropChance: 0.65, minItems: 0, maxItems: 2, rarityWeights: { common: 70, uncommon: 25, rare: 5 }, itemPool: [{ templateId: 13, weight: 40 }, { templateId: 7, weight: 30 }, { templateId: 12, weight: 30 }] }
+    },
+    {
+      name: 'Skeleton Warrior',
+      base_hp: 50, base_mp: 0, base_strength: 12, base_intelligence: 2, base_agility: 6,
+      spawn_node_types: ['cave'], ai_type: 'tactical',
+      experience_reward: 40, gold_reward_min: 10, gold_reward_max: 25, min_difficulty_tier: 2,
+      drop_table: { dropChance: 0.7, minItems: 0, maxItems: 2, rarityWeights: { common: 60, uncommon: 30, rare: 10 }, itemPool: [{ templateId: 1, weight: 35 }, { templateId: 2, weight: 25 }, { templateId: 7, weight: 40 }] }
+    },
+    {
+      name: 'Stone Golem',
+      base_hp: 80, base_mp: 0, base_strength: 15, base_intelligence: 1, base_agility: 2,
+      spawn_node_types: ['cave', 'mountain'], ai_type: 'defensive',
+      experience_reward: 50, gold_reward_min: 15, gold_reward_max: 30, min_difficulty_tier: 2,
+      drop_table: { dropChance: 0.75, minItems: 1, maxItems: 2, rarityWeights: { common: 50, uncommon: 35, rare: 15 }, itemPool: [{ templateId: 8, weight: 50 }, { templateId: 11, weight: 50 }] }
+    },
+
+    // Tier 2-3 - Mountains
+    {
+      name: 'Mountain Troll',
+      base_hp: 100, base_mp: 5, base_strength: 18, base_intelligence: 3, base_agility: 4,
+      spawn_node_types: ['mountain', 'bridge'], ai_type: 'aggressive',
+      experience_reward: 75, gold_reward_min: 25, gold_reward_max: 50, min_difficulty_tier: 3,
+      drop_table: { dropChance: 0.8, minItems: 1, maxItems: 2, rarityWeights: { common: 40, uncommon: 40, rare: 18, epic: 2 }, itemPool: [{ templateId: 2, weight: 30 }, { templateId: 3, weight: 25 }, { templateId: 8, weight: 25 }, { templateId: 15, weight: 20 }] }
+    },
+    {
+      name: 'Troll Shaman',
+      base_hp: 70, base_mp: 50, base_strength: 10, base_intelligence: 14, base_agility: 6,
+      spawn_node_types: ['mountain'], ai_type: 'support',
+      experience_reward: 65, gold_reward_min: 20, gold_reward_max: 45, min_difficulty_tier: 3,
+      abilities: [{ type: 'heal', power: 30 }, { type: 'debuff', effect: 'slow' }],
+      drop_table: { dropChance: 0.8, minItems: 1, maxItems: 2, rarityWeights: { common: 35, uncommon: 40, rare: 20, epic: 5 }, itemPool: [{ templateId: 4, weight: 35 }, { templateId: 5, weight: 35 }, { templateId: 13, weight: 30 }] }
+    },
+    {
+      name: 'Harpy',
+      base_hp: 55, base_mp: 30, base_strength: 12, base_intelligence: 8, base_agility: 14,
+      spawn_node_types: ['mountain'], ai_type: 'hit-and-run',
+      experience_reward: 55, gold_reward_min: 15, gold_reward_max: 35, min_difficulty_tier: 3,
+      drop_table: { dropChance: 0.7, minItems: 0, maxItems: 2, rarityWeights: { common: 45, uncommon: 40, rare: 15 }, itemPool: [{ templateId: 10, weight: 40 }, { templateId: 6, weight: 30 }, { templateId: 13, weight: 30 }] }
+    },
+
+    // Tier 2 - Bridges
+    {
+      name: 'Bridge Bandit',
+      base_hp: 45, base_mp: 20, base_strength: 12, base_intelligence: 8, base_agility: 8,
+      spawn_node_types: ['bridge'], ai_type: 'tactical',
+      experience_reward: 35, gold_reward_min: 20, gold_reward_max: 40, min_difficulty_tier: 2,
+      drop_table: { dropChance: 0.75, minItems: 1, maxItems: 2, rarityWeights: { common: 55, uncommon: 35, rare: 10 }, itemPool: [{ templateId: 1, weight: 30 }, { templateId: 6, weight: 30 }, { templateId: 10, weight: 20 }, { templateId: 12, weight: 20 }] }
+    },
+    {
+      name: 'Bandit Captain',
+      base_hp: 65, base_mp: 25, base_strength: 14, base_intelligence: 10, base_agility: 10,
+      spawn_node_types: ['bridge'], ai_type: 'tactical',
+      experience_reward: 55, gold_reward_min: 35, gold_reward_max: 60, min_difficulty_tier: 2,
+      drop_table: { dropChance: 0.85, minItems: 1, maxItems: 3, rarityWeights: { common: 40, uncommon: 40, rare: 17, epic: 3 }, itemPool: [{ templateId: 2, weight: 25 }, { templateId: 3, weight: 20 }, { templateId: 8, weight: 25 }, { templateId: 10, weight: 15 }, { templateId: 15, weight: 15 }] }
+    },
+    {
+      name: 'Bridge Troll',
+      base_hp: 90, base_mp: 10, base_strength: 16, base_intelligence: 4, base_agility: 5,
+      spawn_node_types: ['bridge'], ai_type: 'aggressive',
+      experience_reward: 70, gold_reward_min: 30, gold_reward_max: 55, min_difficulty_tier: 3,
+      drop_table: { dropChance: 0.8, minItems: 1, maxItems: 2, rarityWeights: { common: 35, uncommon: 45, rare: 18, epic: 2 }, itemPool: [{ templateId: 3, weight: 35 }, { templateId: 8, weight: 35 }, { templateId: 11, weight: 30 }] }
+    },
+
+    // Tier 4+ - Palace area
+    {
+      name: 'Dark Knight',
+      base_hp: 120, base_mp: 30, base_strength: 20, base_intelligence: 8, base_agility: 10,
+      spawn_node_types: ['palace'], ai_type: 'tactical',
+      experience_reward: 120, gold_reward_min: 50, gold_reward_max: 100, min_difficulty_tier: 4,
+      drop_table: { dropChance: 0.9, minItems: 1, maxItems: 3, rarityWeights: { common: 20, uncommon: 40, rare: 30, epic: 10 }, itemPool: [{ templateId: 3, weight: 30 }, { templateId: 8, weight: 30 }, { templateId: 11, weight: 25 }, { templateId: 15, weight: 15 }] }
+    },
+    {
+      name: 'Shadow Assassin',
+      base_hp: 75, base_mp: 40, base_strength: 16, base_intelligence: 12, base_agility: 18,
+      spawn_node_types: ['palace'], ai_type: 'ambush',
+      experience_reward: 100, gold_reward_min: 40, gold_reward_max: 80, min_difficulty_tier: 4,
+      drop_table: { dropChance: 0.85, minItems: 1, maxItems: 2, rarityWeights: { common: 25, uncommon: 40, rare: 28, epic: 7 }, itemPool: [{ templateId: 6, weight: 40 }, { templateId: 10, weight: 35 }, { templateId: 15, weight: 25 }] }
+    },
+    {
+      name: 'Palace Guard',
+      base_hp: 100, base_mp: 20, base_strength: 16, base_intelligence: 6, base_agility: 8,
+      spawn_node_types: ['palace'], ai_type: 'defensive',
+      experience_reward: 90, gold_reward_min: 35, gold_reward_max: 70, min_difficulty_tier: 4,
+      drop_table: { dropChance: 0.85, minItems: 1, maxItems: 2, rarityWeights: { common: 30, uncommon: 40, rare: 25, epic: 5 }, itemPool: [{ templateId: 2, weight: 30 }, { templateId: 8, weight: 35 }, { templateId: 11, weight: 35 }] }
+    }
   ];
 
   for (const enemy of enemies) {
     await pool.query(
-      `INSERT INTO enemy_templates (name, base_hp, base_mp, base_strength, base_intelligence, base_agility, spawn_node_types, experience_reward, gold_reward_min, gold_reward_max, min_difficulty_tier)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `INSERT INTO enemy_templates (name, base_hp, base_mp, base_strength, base_intelligence, base_agility, spawn_node_types, ai_type, abilities, drop_table, experience_reward, gold_reward_min, gold_reward_max, min_difficulty_tier)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        ON CONFLICT DO NOTHING`,
       [
         enemy.name,
@@ -334,6 +475,9 @@ async function seedEnemies() {
         enemy.base_intelligence,
         enemy.base_agility,
         enemy.spawn_node_types,
+        enemy.ai_type || 'aggressive',
+        JSON.stringify(enemy.abilities || []),
+        JSON.stringify(enemy.drop_table || {}),
         enemy.experience_reward,
         enemy.gold_reward_min || 1,
         enemy.gold_reward_max,

@@ -33,3 +33,6 @@ coverage/
 
 # Database
 *.sql.backup
+
+# PixelLab cache (generated assets cache)
+.pixellab-cache/
