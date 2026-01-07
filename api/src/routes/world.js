@@ -3,6 +3,8 @@ const router = express.Router();
 const { query } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { asyncHandler, AppError } = require('../middleware/errorHandler');
+const presenceService = require('../services/presenceService');
+const { broadcastToRoom, rooms } = require('../websocket/index');
 
 // GET /api/world/seed - Get global world seed
 router.get('/seed', asyncHandler(async (req, res) => {
@@ -119,9 +121,56 @@ router.post('/travel', authenticate, asyncHandler(async (req, res) => {
     [targetNodeId]
   );
 
+  // Get character name for movement events
+  const charNameResult = await query(
+    'SELECT name FROM characters WHERE user_id = $1 AND party_slot = 1',
+    [req.user.userId]
+  );
+  const characterName = charNameResult.rows[0]?.name || 'Unknown';
+
+  // Update node presence tracking and broadcast events
+  const moveResult = presenceService.moveNode(
+    currentNodeId,
+    targetNodeId,
+    req.user.userId,
+    req.user.username,
+    characterName
+  );
+
+  // Broadcast player_left_node to old node room
+  const oldNodeRoom = `node:${currentNodeId}`;
+  if (rooms.has(oldNodeRoom)) {
+    broadcastToRoom(oldNodeRoom, {
+      type: 'player:left_node',
+      payload: {
+        nodeId: currentNodeId,
+        userId: req.user.userId,
+        username: req.user.username,
+        characterName,
+        timestamp: Date.now()
+      }
+    }, req.user.userId);
+  }
+
+  // Broadcast player_entered_node to new node room
+  const newNodeRoom = `node:${targetNodeId}`;
+  if (rooms.has(newNodeRoom)) {
+    broadcastToRoom(newNodeRoom, {
+      type: 'player:entered_node',
+      payload: {
+        nodeId: targetNodeId,
+        userId: req.user.userId,
+        username: req.user.username,
+        characterName,
+        timestamp: Date.now()
+      }
+    }, req.user.userId);
+  }
+
   res.json({
     message: 'Traveled successfully',
-    currentNode: nodeResult.rows[0]
+    currentNode: nodeResult.rows[0],
+    playersAtNode: presenceService.getPlayersAtNode(targetNodeId)
   });
 }));
 
@@ -158,7 +207,32 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
 
   res.json({
     currentNode: node,
-    availableActions: actions
+    availableActions: actions,
+    playersAtNode: presenceService.getPlayersAtNode(node.id)
+  });
+}));
+
+// GET /api/world/nodes/:id/players - Get players at a specific node
+router.get('/nodes/:id/players', authenticate, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // Verify node exists
+  const nodeResult = await query(
+    'SELECT id, name FROM world_nodes WHERE id = $1',
+    [id]
+  );
+
+  if (nodeResult.rows.length === 0) {
+    throw new AppError('Node not found', 404);
+  }
+
+  const players = presenceService.getPlayersAtNode(parseInt(id));
+
+  res.json({
+    nodeId: parseInt(id),
+    nodeName: nodeResult.rows[0].name,
+    players,
+    count: players.length
   });
 }));
 
