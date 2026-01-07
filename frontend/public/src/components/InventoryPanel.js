@@ -179,6 +179,24 @@ export class InventoryPanel {
           margin-bottom: 4px;
           color: #ffd700;
         }
+        /* Drag and drop styles */
+        .inventory-slot.dragging,
+        .equipment-slot.dragging {
+          opacity: 0.5;
+        }
+        .equipment-slot.drag-over {
+          border-color: #4caf50;
+          background: rgba(76, 175, 80, 0.3);
+          box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+        }
+        .equipment-slot.drag-invalid {
+          border-color: #f44336;
+          background: rgba(244, 67, 54, 0.2);
+        }
+        .inventory-section.drag-over {
+          background: rgba(74, 144, 217, 0.1);
+          border-radius: 4px;
+        }
         .inventory-grid {
           display: grid;
           grid-template-columns: repeat(6, 1fr);
@@ -294,8 +312,9 @@ export class InventoryPanel {
     const item = this.equipped[slot];
     const filledClass = item ? 'filled' : '';
     const iconHtml = item ? this.getItemIconHtml(item, 'equipment') : '';
+    const draggable = item ? 'draggable="true"' : '';
     return `
-      <div class="equipment-slot ${filledClass}" data-slot="${slot}" data-equipped="true">
+      <div class="equipment-slot ${filledClass}" data-slot="${slot}" data-equipped="true" ${draggable}>
         ${iconHtml}
         <span class="slot-label">${label}</span>
       </div>
@@ -305,8 +324,9 @@ export class InventoryPanel {
   renderInventorySlot(item, index) {
     const iconHtml = this.getItemIconHtml(item, 'inventory');
     const quantity = item.quantity > 1 ? `<span class="quantity">x${item.quantity}</span>` : '';
+    const draggable = this.isEquippable(item.type) ? 'draggable="true"' : '';
     return `
-      <div class="inventory-slot" data-index="${index}" data-instance-id="${item.instanceId}">
+      <div class="inventory-slot" data-index="${index}" data-instance-id="${item.instanceId}" data-item-type="${item.type}" ${draggable}>
         ${iconHtml}
         ${quantity}
       </div>
@@ -356,18 +376,262 @@ export class InventoryPanel {
   }
 
   setupEventListeners() {
-    // Equipment slots
+    // Equipment slots - click and drag-drop
     this.element.querySelectorAll('.equipment-slot').forEach(slot => {
       slot.addEventListener('click', () => this.handleEquipmentSlotClick(slot));
+
+      // Drag start for equipped items (to unequip)
+      slot.addEventListener('dragstart', (e) => this.handleEquipmentDragStart(e, slot));
+      slot.addEventListener('dragend', (e) => this.handleDragEnd(e, slot));
+
+      // Drop target for inventory items
+      slot.addEventListener('dragover', (e) => this.handleEquipmentDragOver(e, slot));
+      slot.addEventListener('dragenter', (e) => this.handleEquipmentDragEnter(e, slot));
+      slot.addEventListener('dragleave', (e) => this.handleEquipmentDragLeave(e, slot));
+      slot.addEventListener('drop', (e) => this.handleEquipmentDrop(e, slot));
     });
 
-    // Inventory slots - click and hover for tooltips
+    // Inventory slots - click, hover for tooltips, and drag-drop
     this.element.querySelectorAll('.inventory-slot:not(.empty)').forEach(slot => {
       slot.addEventListener('click', () => this.handleInventorySlotClick(slot));
       slot.addEventListener('mouseenter', (e) => this.showStatComparisonTooltip(e, slot));
       slot.addEventListener('mouseleave', () => this.hideTooltip());
       slot.addEventListener('mousemove', (e) => this.updateTooltipPosition(e));
+
+      // Drag start for inventory items (to equip)
+      slot.addEventListener('dragstart', (e) => this.handleInventoryDragStart(e, slot));
+      slot.addEventListener('dragend', (e) => this.handleDragEnd(e, slot));
     });
+
+    // Inventory section as drop target for unequipping
+    const inventorySection = this.element.querySelector('.inventory-section');
+    if (inventorySection) {
+      inventorySection.addEventListener('dragover', (e) => this.handleInventoryDragOver(e));
+      inventorySection.addEventListener('dragenter', (e) => this.handleInventoryDragEnter(e));
+      inventorySection.addEventListener('dragleave', (e) => this.handleInventoryDragLeave(e));
+      inventorySection.addEventListener('drop', (e) => this.handleInventoryDrop(e));
+    }
+  }
+
+  // ==================== Drag-Drop Handlers ====================
+
+  /**
+   * Handle drag start from inventory slot (equipping)
+   */
+  handleInventoryDragStart(e, slot) {
+    const index = parseInt(slot.dataset.index);
+    const item = this.inventory[index];
+
+    if (!item || !this.isEquippable(item.type)) {
+      e.preventDefault();
+      return;
+    }
+
+    // Hide tooltip during drag
+    this.hideTooltip();
+
+    // Store drag data
+    e.dataTransfer.setData('text/plain', JSON.stringify({
+      source: 'inventory',
+      instanceId: item.instanceId,
+      itemType: item.type,
+      index: index
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+
+    slot.classList.add('dragging');
+  }
+
+  /**
+   * Handle drag start from equipment slot (unequipping)
+   */
+  handleEquipmentDragStart(e, slot) {
+    const slotName = slot.dataset.slot;
+    const item = this.equipped[slotName];
+
+    if (!item) {
+      e.preventDefault();
+      return;
+    }
+
+    e.dataTransfer.setData('text/plain', JSON.stringify({
+      source: 'equipment',
+      slot: slotName,
+      itemType: item.type
+    }));
+    e.dataTransfer.effectAllowed = 'move';
+
+    slot.classList.add('dragging');
+  }
+
+  /**
+   * Handle drag end (cleanup)
+   */
+  handleDragEnd(e, slot) {
+    slot.classList.remove('dragging');
+
+    // Clean up any lingering drag-over states
+    this.element.querySelectorAll('.drag-over, .drag-invalid').forEach(el => {
+      el.classList.remove('drag-over', 'drag-invalid');
+    });
+  }
+
+  /**
+   * Handle drag over equipment slot
+   */
+  handleEquipmentDragOver(e, slot) {
+    e.preventDefault();
+
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('text/plain') || '{}');
+      if (data.source === 'inventory') {
+        e.dataTransfer.dropEffect = 'move';
+      }
+    } catch {
+      // Drag data not available during dragover in some browsers
+      e.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  /**
+   * Handle drag enter equipment slot (visual feedback)
+   */
+  handleEquipmentDragEnter(e, slot) {
+    e.preventDefault();
+
+    const slotName = slot.dataset.slot;
+
+    // Check if we can determine item compatibility
+    // During drag, we may not have access to dataTransfer data in some browsers
+    // So we'll show a neutral highlight and validate on drop
+    slot.classList.add('drag-over');
+  }
+
+  /**
+   * Handle drag leave equipment slot
+   */
+  handleEquipmentDragLeave(e, slot) {
+    // Only remove if we're actually leaving the slot (not entering a child)
+    if (!slot.contains(e.relatedTarget)) {
+      slot.classList.remove('drag-over', 'drag-invalid');
+    }
+  }
+
+  /**
+   * Handle drop on equipment slot (equip item)
+   */
+  async handleEquipmentDrop(e, slot) {
+    e.preventDefault();
+    slot.classList.remove('drag-over', 'drag-invalid');
+
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+
+      if (data.source !== 'inventory') {
+        return; // Only handle drops from inventory
+      }
+
+      const slotName = slot.dataset.slot;
+      const item = this.inventory.find(i => i.instanceId === data.instanceId);
+
+      if (!item) return;
+
+      // Validate that item can go in this slot
+      const validSlots = this.getValidSlotsForItem(item.type);
+      if (!validSlots.includes(slotName)) {
+        this.game.showNotification(`Cannot equip ${item.name} in ${slotName} slot`, 'error');
+        return;
+      }
+
+      // Equip the item to this specific slot
+      const result = await this.game.api.equipItem(this.characterId, data.instanceId, slotName);
+      this.equipped = result.equipped;
+      this.inventory = result.inventory;
+      this.render();
+      this.game.showNotification(`Equipped ${item.name}`, 'success');
+
+    } catch (err) {
+      console.error('Drop error:', err);
+      this.game.showNotification(err.message || 'Failed to equip item', 'error');
+    }
+  }
+
+  /**
+   * Handle drag over inventory section
+   */
+  handleInventoryDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }
+
+  /**
+   * Handle drag enter inventory section
+   */
+  handleInventoryDragEnter(e) {
+    e.preventDefault();
+    const section = this.element.querySelector('.inventory-section');
+    if (section) {
+      section.classList.add('drag-over');
+    }
+  }
+
+  /**
+   * Handle drag leave inventory section
+   */
+  handleInventoryDragLeave(e) {
+    const section = this.element.querySelector('.inventory-section');
+    if (section && !section.contains(e.relatedTarget)) {
+      section.classList.remove('drag-over');
+    }
+  }
+
+  /**
+   * Handle drop on inventory section (unequip item)
+   */
+  async handleInventoryDrop(e) {
+    e.preventDefault();
+
+    const section = this.element.querySelector('.inventory-section');
+    if (section) {
+      section.classList.remove('drag-over');
+    }
+
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+
+      if (data.source !== 'equipment') {
+        return; // Only handle drops from equipment
+      }
+
+      // Unequip the item
+      const result = await this.game.api.unequipItem(this.characterId, data.slot);
+      this.equipped = result.equipped;
+      this.inventory = result.inventory;
+      this.render();
+      this.game.showNotification('Item unequipped', 'success');
+
+    } catch (err) {
+      console.error('Drop error:', err);
+      this.game.showNotification(err.message || 'Failed to unequip item', 'error');
+    }
+  }
+
+  /**
+   * Get valid equipment slots for an item type
+   */
+  getValidSlotsForItem(itemType) {
+    const slotMap = {
+      weapon: ['main_hand', 'off_hand'],
+      shield: ['off_hand'],
+      helmet: ['head'],
+      armor: ['body'],
+      legs: ['legs'],
+      boots: ['feet'],
+      accessory: ['accessory'],
+      ring: ['accessory'],
+      necklace: ['accessory']
+    };
+    return slotMap[itemType] || [];
   }
 
   /**
