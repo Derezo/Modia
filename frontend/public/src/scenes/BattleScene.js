@@ -40,6 +40,11 @@ export class BattleScene extends Scene {
     this.movementRange = 3;
     this.attackRange = 1;
 
+    // Two-action turn state
+    this.canMove = true;
+    this.canAct = true;
+    this.turnPhase = 'ready'; // 'ready' | 'partial' | 'done'
+
     // Event cleanup
     this.abortController = null;
 
@@ -469,6 +474,12 @@ export class BattleScene extends Scene {
    * Start move action - show valid movement tiles
    */
   startMoveAction() {
+    // Two-action system: check if move is available
+    if (!this.canMove) {
+      this.game.showNotification?.('Already moved this turn', 'warning');
+      return;
+    }
+
     this.currentAction = 'move';
     const activeUnit = this.getActiveUnit();
 
@@ -488,6 +499,12 @@ export class BattleScene extends Scene {
    * Start attack action - show valid attack targets
    */
   startAttackAction() {
+    // Two-action system: check if act is available
+    if (!this.canAct) {
+      this.game.showNotification?.('Already acted this turn', 'warning');
+      return;
+    }
+
     this.currentAction = 'attack';
     const activeUnit = this.getActiveUnit();
 
@@ -507,6 +524,12 @@ export class BattleScene extends Scene {
    * Show skill selection menu
    */
   showSkillMenu() {
+    // Two-action system: check if act is available
+    if (!this.canAct) {
+      this.game.showNotification?.('Already acted this turn', 'warning');
+      return;
+    }
+
     const activeUnit = this.getActiveUnit();
     if (!activeUnit) return;
 
@@ -619,9 +642,10 @@ export class BattleScene extends Scene {
 
   /**
    * Process action result from server
+   * Handles two-action turn system where turnContinues=true means player has more actions
    */
   async processActionResult(result) {
-    const { state, actionResult, enemyActions, battleStatus } = result;
+    const { state, actionResult, enemyActions, battleStatus, turnContinues, availableActions } = result;
 
     // Handle player movement
     if (actionResult.moved && this.pendingAction?.targetTile) {
@@ -751,10 +775,37 @@ export class BattleScene extends Scene {
     // Check battle end
     if (battleStatus !== 'active') {
       this.handleBattleEnd(battleStatus, actionResult.rewards);
+    } else if (turnContinues) {
+      // Two-action system: turn not complete, update available actions
+      this.canMove = availableActions?.canMove ?? false;
+      this.canAct = availableActions?.canAct ?? false;
+      this.turnPhase = 'partial';
+
+      // Update UI to show remaining options
+      this.updateUIForPartialTurn();
     } else {
+      // Turn complete - reset turn state for next turn
+      this.canMove = true;
+      this.canAct = true;
+      this.turnPhase = 'ready';
+
       // Update UI for next turn
       this.updateUI();
     }
+  }
+
+  /**
+   * Update UI for partial turn (two-action system)
+   * Called when player has completed one action but has another available
+   */
+  updateUIForPartialTurn() {
+    const activeUnit = this.getActiveUnit();
+    if (!activeUnit || activeUnit.type !== 'player') return;
+
+    // Update UI with available actions
+    this.ui.updateAvailableActions(this.canMove, this.canAct);
+    this.ui.showActionMenu();
+    this.ui.setActionsEnabled(true);
   }
 
   /**
@@ -855,6 +906,8 @@ export class BattleScene extends Scene {
 
       // Show action menu only for player units
       if (activeUnit.type === 'player') {
+        // Two-action system: update available actions for new turn
+        this.ui.updateAvailableActions(this.canMove, this.canAct);
         this.ui.showActionMenu();
         this.ui.setActionsEnabled(true);
       } else {

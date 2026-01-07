@@ -88,11 +88,15 @@ export class BattleUI {
         pointer-events: auto;
       ">
         <div class="ui-panel" style="padding: 10px;">
+          <!-- Two-action turn phase indicator -->
+          <div id="action-phase-indicator" style="text-align: center; font-size: 11px; color: #ffd700; margin-bottom: 8px; font-weight: bold;">
+            Choose: Move + Action
+          </div>
           <div style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary action-btn" id="btn-move" title="Move to a new position">Move</button>
-            <button class="btn btn-primary action-btn" id="btn-attack" title="Attack a target">Attack</button>
-            <button class="btn btn-info action-btn" id="btn-skill" title="Use a skill">Skill</button>
-            <button class="btn btn-secondary action-btn" id="btn-wait" title="End turn without acting">Wait</button>
+            <button class="btn btn-secondary action-btn move-action" id="btn-move" title="Move to a new position">Move</button>
+            <button class="btn btn-primary action-btn act-action" id="btn-attack" title="Attack a target">Attack</button>
+            <button class="btn btn-info action-btn act-action" id="btn-skill" title="Use a skill">Skill</button>
+            <button class="btn btn-secondary action-btn" id="btn-wait" title="End turn">Wait</button>
           </div>
           <!-- Cancel button for targeting mode -->
           <div id="targeting-cancel" style="display: none; margin-top: 8px; text-align: center;">
@@ -218,10 +222,18 @@ export class BattleUI {
         min-width: 60px;
         font-size: 12px;
         padding: 8px 12px;
+        transition: opacity 0.2s ease;
       }
       .action-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+      }
+      .action-btn.action-unavailable {
+        background: #333 !important;
+        border-color: #555 !important;
+      }
+      #action-phase-indicator {
+        transition: color 0.3s ease;
       }
       #turn-order-list .turn-unit {
         display: flex;
@@ -441,6 +453,56 @@ export class BattleUI {
     buttons.forEach(btn => {
       btn.disabled = !enabled;
     });
+  }
+
+  /**
+   * Update available actions based on two-action turn state
+   * @param {boolean} canMove - Whether movement is available
+   * @param {boolean} canAct - Whether attack/skill is available
+   */
+  updateAvailableActions(canMove, canAct) {
+    const moveBtn = this.element.querySelector('#btn-move');
+    const attackBtn = this.element.querySelector('#btn-attack');
+    const skillBtn = this.element.querySelector('#btn-skill');
+    const phaseIndicator = this.element.querySelector('#action-phase-indicator');
+
+    // Update move button state
+    if (moveBtn) {
+      moveBtn.disabled = !canMove;
+      moveBtn.style.opacity = canMove ? '1' : '0.4';
+      moveBtn.classList.toggle('action-unavailable', !canMove);
+    }
+
+    // Update attack button state
+    if (attackBtn) {
+      attackBtn.disabled = !canAct;
+      attackBtn.style.opacity = canAct ? '1' : '0.4';
+      attackBtn.classList.toggle('action-unavailable', !canAct);
+    }
+
+    // Update skill button state
+    if (skillBtn) {
+      skillBtn.disabled = !canAct;
+      skillBtn.style.opacity = canAct ? '1' : '0.4';
+      skillBtn.classList.toggle('action-unavailable', !canAct);
+    }
+
+    // Update phase indicator text
+    if (phaseIndicator) {
+      if (canMove && canAct) {
+        phaseIndicator.textContent = 'Choose: Move + Action';
+        phaseIndicator.style.color = '#ffd700';
+      } else if (canMove) {
+        phaseIndicator.textContent = 'Move remaining (or Wait)';
+        phaseIndicator.style.color = '#4a90d9';
+      } else if (canAct) {
+        phaseIndicator.textContent = 'Action remaining (or Wait)';
+        phaseIndicator.style.color = '#d94a4a';
+      } else {
+        phaseIndicator.textContent = 'Turn complete';
+        phaseIndicator.style.color = '#888';
+      }
+    }
   }
 
   /**
