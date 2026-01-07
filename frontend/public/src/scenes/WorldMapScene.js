@@ -655,7 +655,7 @@ export class WorldMapScene extends Scene {
 
     // Render fog of war overlay
     if (this.effects) {
-      this.effects.renderFogOfWar(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height, this.nodes);
+      this.effects.renderFogOfWar(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height, this.nodes, this.connections);
     }
 
     ctx.restore();

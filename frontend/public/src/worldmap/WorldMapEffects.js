@@ -378,8 +378,12 @@ export class WorldMapEffects {
 
   /**
    * Layer 5: Fog of war overlay
+   * - Visited nodes: fully cleared
+   * - Unvisited but discovered nodes: lightened fog (visible but dimmed)
+   * - Paths between visited nodes: fully cleared (curved)
+   * - Paths to unvisited adjacent nodes: lightened fog (curved)
    */
-  renderFogOfWar(ctx, cameraX, cameraY, canvasWidth, canvasHeight, nodes) {
+  renderFogOfWar(ctx, cameraX, cameraY, canvasWidth, canvasHeight, nodes, connections = []) {
     // Create fog canvas at 1/4 resolution for performance
     const scale = 0.25;
     const fogW = Math.ceil(canvasWidth * scale);
@@ -393,12 +397,66 @@ export class WorldMapEffects {
     }
 
     // Fill with dark fog (sepia-toned to match parchment)
-    this.fogCtx.fillStyle = 'rgba(60, 45, 30, 0.75)';
+    this.fogCtx.fillStyle = 'rgba(60, 45, 30, 0.85)';
     this.fogCtx.fillRect(0, 0, fogW, fogH);
+
+    // Build node map for quick lookup
+    const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
     // Cut out discovered areas using destination-out
     this.fogCtx.globalCompositeOperation = 'destination-out';
 
+    // First pass: Draw path reveals with gradient edges (paths should be under node reveals)
+    this.fogCtx.lineCap = 'round';
+    this.fogCtx.lineJoin = 'round';
+
+    for (const conn of connections) {
+      const fromNode = nodeMap.get(conn.from_node_id);
+      const toNode = nodeMap.get(conn.to_node_id);
+
+      if (!fromNode || !toNode) continue;
+
+      // Only draw paths where at least one node is visited
+      const fromVisited = this.visitedNodes.has(fromNode.id);
+      const toVisited = this.visitedNodes.has(toNode.id);
+
+      if (!fromVisited && !toVisited) continue;
+
+      const x1 = (fromNode.x_coord * this.nodeSpacing + cameraX) * scale;
+      const y1 = (fromNode.y_coord * this.nodeSpacing + cameraY) * scale;
+      const x2 = (toNode.x_coord * this.nodeSpacing + cameraX) * scale;
+      const y2 = (toNode.y_coord * this.nodeSpacing + cameraY) * scale;
+
+      // Calculate bezier control point (same algorithm as WorldMapScene)
+      const control = this.getPathControlPoint(x1, y1, x2, y2, conn.from_node_id, conn.to_node_id);
+
+      // Both visited: full clear (opacity 1.0)
+      // One visited, one unvisited: partial clear (opacity 0.6)
+      const bothVisited = fromVisited && toVisited;
+      const baseOpacity = bothVisited ? 1.0 : 0.6;
+      const baseWidth = (bothVisited ? 44 : 32) * scale; // +25% width
+
+      // Draw multiple passes for gradient edge effect (outer to inner)
+      // This creates a soft foggy edge similar to node reveals
+      const passes = [
+        { widthMult: 2.0, opacityMult: 0.15 },  // Outer soft edge
+        { widthMult: 1.5, opacityMult: 0.3 },   // Mid edge
+        { widthMult: 1.0, opacityMult: 0.7 },   // Inner edge
+        { widthMult: 0.6, opacityMult: 1.0 }    // Core
+      ];
+
+      for (const pass of passes) {
+        const opacity = baseOpacity * pass.opacityMult;
+        this.fogCtx.strokeStyle = `rgba(0, 0, 0, ${opacity})`;
+        this.fogCtx.lineWidth = baseWidth * pass.widthMult;
+        this.fogCtx.beginPath();
+        this.fogCtx.moveTo(x1, y1);
+        this.fogCtx.quadraticCurveTo(control.x, control.y, x2, y2);
+        this.fogCtx.stroke();
+      }
+    }
+
+    // Second pass: Draw node reveals
     for (const node of nodes) {
       if (!this.discoveredNodes.has(node.id)) continue;
 
@@ -406,16 +464,20 @@ export class WorldMapEffects {
       const screenY = (node.y_coord * this.nodeSpacing + cameraY) * scale;
       const visited = this.visitedNodes.has(node.id);
 
-      // Larger reveal for visited, smaller for adjacent-discovered
+      // Visited: larger radius, full clear
+      // Unvisited but discovered: smaller radius, partial clear (lightened fog)
+      // +25% radius increase
       const revealRadius = (visited ? 100 : 50) * scale;
+      const centerOpacity = visited ? 1.0 : 0.6;
+      const edgeOpacity = visited ? 0.8 : 0.4;
 
       const gradient = this.fogCtx.createRadialGradient(
         screenX, screenY, 0,
         screenX, screenY, revealRadius
       );
-      gradient.addColorStop(0, 'rgba(0,0,0,1)');
-      gradient.addColorStop(0.6, 'rgba(0,0,0,0.8)');
-      gradient.addColorStop(1, 'rgba(0,0,0,0)');
+      gradient.addColorStop(0, `rgba(0, 0, 0, ${centerOpacity})`);
+      gradient.addColorStop(0.5, `rgba(0, 0, 0, ${edgeOpacity})`);
+      gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
       this.fogCtx.fillStyle = gradient;
       this.fogCtx.beginPath();
@@ -427,6 +489,35 @@ export class WorldMapEffects {
 
     // Draw fog to main canvas
     ctx.drawImage(this.fogCanvas, 0, 0, canvasWidth, canvasHeight);
+  }
+
+  /**
+   * Calculate bezier control point for curved path (matches WorldMapScene algorithm)
+   */
+  getPathControlPoint(x1, y1, x2, y2, fromNodeId, toNodeId) {
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const length = Math.sqrt(dx * dx + dy * dy);
+
+    if (length < 1) return { x: midX, y: midY };
+
+    // Perpendicular vector
+    const perpX = -dy / length;
+    const perpY = dx / length;
+
+    // Curve amount proportional to path length (capped)
+    const curveAmount = Math.min(length * 0.2, 40);
+
+    // Consistent direction based on node ID ordering
+    const direction = fromNodeId < toNodeId ? 1 : -1;
+
+    return {
+      x: midX + perpX * curveAmount * direction,
+      y: midY + perpY * curveAmount * direction
+    };
   }
 
   /**
