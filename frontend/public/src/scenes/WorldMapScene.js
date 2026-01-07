@@ -250,6 +250,22 @@ export class WorldMapScene extends Scene {
   }
 
   handleFeature(feature) {
+    // Shop features open the shop scene
+    const shopFeatures = {
+      blacksmith: 'blacksmith',
+      apothecary: 'apothecary',
+      farm: 'farm'
+    };
+
+    if (shopFeatures[feature]) {
+      this.game.scenes.switchTo('shop', {
+        nodeId: this.currentNode.id,
+        shopType: shopFeatures[feature]
+      });
+      return;
+    }
+
+    // Other features not yet implemented
     this.game.showNotification(`${this.capitalize(feature)} - Coming soon!`, 'info');
   }
 

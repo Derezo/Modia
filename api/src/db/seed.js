@@ -341,6 +341,7 @@ async function seedEnemies() {
     // Tier 1 - Forest (starter area)
     {
       name: 'Goblin Warrior',
+      sprite_id: 'goblin_warrior',
       base_hp: 40, base_mp: 10, base_strength: 8, base_intelligence: 4, base_agility: 6,
       spawn_node_types: ['forest'], ai_type: 'aggressive',
       experience_reward: 20, gold_reward_min: 5, gold_reward_max: 15, min_difficulty_tier: 1,
@@ -348,6 +349,7 @@ async function seedEnemies() {
     },
     {
       name: 'Gray Wolf',
+      sprite_id: 'gray_wolf',
       base_hp: 35, base_mp: 5, base_strength: 10, base_intelligence: 2, base_agility: 10,
       spawn_node_types: ['forest', 'mountain'], ai_type: 'pack',
       experience_reward: 25, gold_reward_min: 3, gold_reward_max: 10, min_difficulty_tier: 1,
@@ -355,6 +357,7 @@ async function seedEnemies() {
     },
     {
       name: 'Forest Slime',
+      sprite_id: 'forest_slime',
       base_hp: 30, base_mp: 10, base_strength: 5, base_intelligence: 3, base_agility: 4,
       spawn_node_types: ['forest', 'cave'], ai_type: 'defensive',
       experience_reward: 10, gold_reward_min: 1, gold_reward_max: 5, min_difficulty_tier: 1,
@@ -364,6 +367,7 @@ async function seedEnemies() {
     // Tier 1-2 - Caves
     {
       name: 'Cave Bat',
+      sprite_id: 'cave_bat',
       base_hp: 25, base_mp: 15, base_strength: 5, base_intelligence: 6, base_agility: 12,
       spawn_node_types: ['cave'], ai_type: 'hit-and-run',
       experience_reward: 15, gold_reward_min: 2, gold_reward_max: 8, min_difficulty_tier: 1,
@@ -371,6 +375,7 @@ async function seedEnemies() {
     },
     {
       name: 'Giant Spider',
+      sprite_id: 'giant_spider',
       base_hp: 45, base_mp: 20, base_strength: 10, base_intelligence: 5, base_agility: 9,
       spawn_node_types: ['cave', 'forest'], ai_type: 'ambush',
       experience_reward: 35, gold_reward_min: 8, gold_reward_max: 20, min_difficulty_tier: 2,
@@ -378,6 +383,7 @@ async function seedEnemies() {
     },
     {
       name: 'Skeleton Warrior',
+      sprite_id: 'skeleton_warrior',
       base_hp: 50, base_mp: 0, base_strength: 12, base_intelligence: 2, base_agility: 6,
       spawn_node_types: ['cave'], ai_type: 'tactical',
       experience_reward: 40, gold_reward_min: 10, gold_reward_max: 25, min_difficulty_tier: 2,
@@ -385,6 +391,7 @@ async function seedEnemies() {
     },
     {
       name: 'Stone Golem',
+      sprite_id: 'stone_golem',
       base_hp: 80, base_mp: 0, base_strength: 15, base_intelligence: 1, base_agility: 2,
       spawn_node_types: ['cave', 'mountain'], ai_type: 'defensive',
       experience_reward: 50, gold_reward_min: 15, gold_reward_max: 30, min_difficulty_tier: 2,
@@ -394,6 +401,7 @@ async function seedEnemies() {
     // Tier 2-3 - Mountains
     {
       name: 'Mountain Troll',
+      sprite_id: 'mountain_troll',
       base_hp: 100, base_mp: 5, base_strength: 18, base_intelligence: 3, base_agility: 4,
       spawn_node_types: ['mountain', 'bridge'], ai_type: 'aggressive',
       experience_reward: 75, gold_reward_min: 25, gold_reward_max: 50, min_difficulty_tier: 3,
@@ -401,6 +409,7 @@ async function seedEnemies() {
     },
     {
       name: 'Troll Shaman',
+      sprite_id: 'troll_shaman',
       base_hp: 70, base_mp: 50, base_strength: 10, base_intelligence: 14, base_agility: 6,
       spawn_node_types: ['mountain'], ai_type: 'support',
       experience_reward: 65, gold_reward_min: 20, gold_reward_max: 45, min_difficulty_tier: 3,
@@ -409,6 +418,7 @@ async function seedEnemies() {
     },
     {
       name: 'Harpy',
+      sprite_id: 'harpy',
       base_hp: 55, base_mp: 30, base_strength: 12, base_intelligence: 8, base_agility: 14,
       spawn_node_types: ['mountain'], ai_type: 'hit-and-run',
       experience_reward: 55, gold_reward_min: 15, gold_reward_max: 35, min_difficulty_tier: 3,
@@ -418,6 +428,7 @@ async function seedEnemies() {
     // Tier 2 - Bridges
     {
       name: 'Bridge Bandit',
+      sprite_id: 'bridge_bandit',
       base_hp: 45, base_mp: 20, base_strength: 12, base_intelligence: 8, base_agility: 8,
       spawn_node_types: ['bridge'], ai_type: 'tactical',
       experience_reward: 35, gold_reward_min: 20, gold_reward_max: 40, min_difficulty_tier: 2,
@@ -425,6 +436,7 @@ async function seedEnemies() {
     },
     {
       name: 'Bandit Captain',
+      sprite_id: 'bandit_captain',
       base_hp: 65, base_mp: 25, base_strength: 14, base_intelligence: 10, base_agility: 10,
       spawn_node_types: ['bridge'], ai_type: 'tactical',
       experience_reward: 55, gold_reward_min: 35, gold_reward_max: 60, min_difficulty_tier: 2,
@@ -432,6 +444,7 @@ async function seedEnemies() {
     },
     {
       name: 'Bridge Troll',
+      sprite_id: 'bridge_troll',
       base_hp: 90, base_mp: 10, base_strength: 16, base_intelligence: 4, base_agility: 5,
       spawn_node_types: ['bridge'], ai_type: 'aggressive',
       experience_reward: 70, gold_reward_min: 30, gold_reward_max: 55, min_difficulty_tier: 3,
@@ -441,6 +454,7 @@ async function seedEnemies() {
     // Tier 4+ - Palace area
     {
       name: 'Dark Knight',
+      sprite_id: 'dark_knight',
       base_hp: 120, base_mp: 30, base_strength: 20, base_intelligence: 8, base_agility: 10,
       spawn_node_types: ['palace'], ai_type: 'tactical',
       experience_reward: 120, gold_reward_min: 50, gold_reward_max: 100, min_difficulty_tier: 4,
@@ -448,6 +462,7 @@ async function seedEnemies() {
     },
     {
       name: 'Shadow Assassin',
+      sprite_id: 'shadow_assassin',
       base_hp: 75, base_mp: 40, base_strength: 16, base_intelligence: 12, base_agility: 18,
       spawn_node_types: ['palace'], ai_type: 'ambush',
       experience_reward: 100, gold_reward_min: 40, gold_reward_max: 80, min_difficulty_tier: 4,
@@ -455,6 +470,7 @@ async function seedEnemies() {
     },
     {
       name: 'Palace Guard',
+      sprite_id: 'palace_guard',
       base_hp: 100, base_mp: 20, base_strength: 16, base_intelligence: 6, base_agility: 8,
       spawn_node_types: ['palace'], ai_type: 'defensive',
       experience_reward: 90, gold_reward_min: 35, gold_reward_max: 70, min_difficulty_tier: 4,
@@ -464,11 +480,12 @@ async function seedEnemies() {
 
   for (const enemy of enemies) {
     await pool.query(
-      `INSERT INTO enemy_templates (name, base_hp, base_mp, base_strength, base_intelligence, base_agility, spawn_node_types, ai_type, abilities, drop_table, experience_reward, gold_reward_min, gold_reward_max, min_difficulty_tier)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      `INSERT INTO enemy_templates (name, sprite_id, base_hp, base_mp, base_strength, base_intelligence, base_agility, spawn_node_types, ai_type, abilities, drop_table, experience_reward, gold_reward_min, gold_reward_max, min_difficulty_tier)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
        ON CONFLICT DO NOTHING`,
       [
         enemy.name,
+        enemy.sprite_id,
         enemy.base_hp,
         enemy.base_mp,
         enemy.base_strength,
@@ -489,6 +506,96 @@ async function seedEnemies() {
   console.log(`Seeded ${enemies.length} enemy templates`);
 }
 
+/**
+ * Seed shop inventory for all nodes with shops
+ * @param {Array} nodeIds - Array of node IDs (index matches nodes array)
+ * @param {Array} nodes - Array of node objects with features
+ */
+async function seedShopInventory(nodeIds, nodes) {
+  // Item template IDs by shop type
+  // Based on seedItems() order: weapons 1-6, armor 7-9, accessories 10-11, consumables 12-15,
+  // more weapons 16-20, more armor 21-25, more accessories 26-28, more consumables 29-32
+
+  const shopStock = {
+    blacksmith: {
+      // Weapons and armor
+      items: [
+        { templateId: 1, qty: 10 },  // Rusty Sword
+        { templateId: 4, qty: 8 },   // Oak Staff
+        { templateId: 6, qty: 8 },   // Combat Gloves
+        { templateId: 7, qty: 10 },  // Leather Armor
+        { templateId: 9, qty: 8 },   // Cloth Robe
+        { templateId: 16, qty: 6 },  // Bronze Axe
+        { templateId: 18, qty: 6 },  // Apprentice Wand
+        { templateId: 21, qty: 10 }, // Leather Helm
+        { templateId: 23, qty: 10 }, // Leather Boots
+        // Higher level items (less stock)
+        { templateId: 2, qty: 4 },   // Iron Sword
+        { templateId: 8, qty: 4 },   // Chain Mail
+        { templateId: 17, qty: 3 },  // Iron Axe
+        { templateId: 19, qty: 3 },  // Steel Fist
+        { templateId: 22, qty: 4 },  // Iron Helm
+        { templateId: 24, qty: 4 },  // Iron Greaves
+        { templateId: 25, qty: 3 },  // Wizard Hat
+      ]
+    },
+    apothecary: {
+      // Consumables
+      items: [
+        { templateId: 12, qty: 20 }, // Health Potion
+        { templateId: 13, qty: 15 }, // Mana Potion
+        { templateId: 14, qty: 10 }, // Antidote
+        { templateId: 29, qty: 8 },  // Hi-Potion
+        { templateId: 30, qty: 6 },  // Hi-Ether
+        { templateId: 31, qty: 3 },  // Elixir
+        { templateId: 32, qty: 5 },  // Status Cure
+        { templateId: 15, qty: 2 },  // Phoenix Feather (rare)
+      ]
+    },
+    farm: {
+      // Basic consumables at lower prices (village economy)
+      items: [
+        { templateId: 12, qty: 15 }, // Health Potion
+        { templateId: 13, qty: 10 }, // Mana Potion
+        { templateId: 14, qty: 8 },  // Antidote
+      ]
+    }
+  };
+
+  // Map features to shop types
+  const featureToShop = {
+    blacksmith: 'blacksmith',
+    apothecary: 'apothecary',
+    farm: 'farm'
+  };
+
+  let insertCount = 0;
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const nodeId = nodeIds[i];
+    const features = JSON.parse(node.features || '[]');
+
+    for (const feature of features) {
+      const shopType = featureToShop[feature];
+      if (!shopType || !shopStock[shopType]) continue;
+
+      const stock = shopStock[shopType];
+      for (const item of stock.items) {
+        await pool.query(
+          `INSERT INTO npc_shop_inventory (node_id, shop_type, item_template_id, quantity, restock_quantity)
+           VALUES ($1, $2, $3, $4, $4)
+           ON CONFLICT (node_id, shop_type, item_template_id) DO NOTHING`,
+          [nodeId, shopType, item.templateId, item.qty]
+        );
+        insertCount++;
+      }
+    }
+  }
+
+  console.log(`Seeded ${insertCount} shop inventory entries`);
+}
+
 async function main() {
   const client = await pool.connect();
 
@@ -500,6 +607,9 @@ async function main() {
     await client.query('TRUNCATE world_node_connections, world_nodes CASCADE');
     await client.query('TRUNCATE item_templates CASCADE');
     await client.query('TRUNCATE enemy_templates CASCADE');
+    // Clear shop inventory (will be re-seeded)
+    await client.query('TRUNCATE npc_shop_inventory CASCADE');
+    await client.query('TRUNCATE shop_transactions CASCADE');
 
     // Generate world
     const worldSeed = parseInt(process.env.WORLD_SEED || '12345');
@@ -544,6 +654,10 @@ async function main() {
     // Seed enemies
     console.log('\nSeeding enemies...');
     await seedEnemies();
+
+    // Seed shop inventory
+    console.log('\nSeeding shop inventory...');
+    await seedShopInventory(nodeIds, nodes);
 
     console.log('\nSeed completed successfully!');
     console.log(`Total nodes: ${nodes.length}`);
