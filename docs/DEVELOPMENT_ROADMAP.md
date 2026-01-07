@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 3.0 |
+| Version | 5.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -14,28 +14,54 @@
 
 | Phase | Name | Completion | Status |
 |-------|------|------------|--------|
-| 1 | Foundation | 95% | Complete |
-| 2 | Characters & World | 85% | Complete |
-| 3 | Combat System | 45% | Partial |
-| 4 | Economy & Inventory | 10% | Minimal |
-| 5 | Multiplayer | 10% | Minimal |
-| 6 | Polish & Launch | 0% | Not Started |
+| 1 | Foundation | 100% | Complete |
+| 2 | Characters & World | 95% | Complete |
+| 3 | Combat System | 90% | Near Complete |
+| 4 | Economy & Inventory | 95% | Near Complete |
+| 5 | Multiplayer | 60% | Substantial |
+| 6 | Polish & Launch | 15% | Started |
 
-**Overall: ~30%**
+**Overall: ~75%**
 
 ---
 
 ## Blocking Issues
 
-Critical items preventing complete gameplay loop:
+Critical items for complete gameplay loop:
 
-| Issue | Location | Impact |
-|-------|----------|--------|
-| Equipment UI placeholder | FormationScene.js:521 | Cannot equip items |
-| Skill learning disabled | FormationScene.js:561 | Cannot learn skills |
-| Inventory inaccessible | WorldMapScene.js:188 | Cannot view inventory from world |
-| Shop system missing | No shops.js route | Cannot buy/sell items |
-| Gold not awarded | Battle rewards calculated but not stored | Economy non-functional |
+| Issue | Location | Impact | Priority |
+|-------|----------|--------|----------|
+| PvP battles not started | coliseumService.js | Match found but battle not created | Medium |
+| Audio system missing | BattleScene.js | No sound effects or music | Low |
+| Leaderboards missing | - | No player rankings | Low |
+
+### Recently Resolved (v4.0 → v5.0)
+
+| Issue | Resolution |
+|-------|------------|
+| Mock skills in battle | Real skills now loaded from character_skills table |
+| Equipment bonuses ignored | Equipment stat bonuses now applied to battle stats |
+| No items in battle | Item menu added to battle with consumable usage |
+| Advanced guilds missing | All 4 advanced guilds implemented (Berserker, Sorcerer, Ninja, Alchemist) |
+| ColiseumScene missing | Full ColiseumScene UI with queue selection and matchmaking |
+| Guild advancement missing | Characters can advance to advanced guilds at level 20 |
+
+---
+
+## Recently Completed (v3.0 → v4.0)
+
+Features previously listed as "not implemented" that ARE working:
+
+| Feature | Status | Evidence |
+|---------|--------|----------|
+| Gold awarded after battle | ✓ WORKING | battle.js:651 stores gold to users table |
+| Shop system (buy/sell) | ✓ WORKING | shop.js (536 lines), ShopScene.js (807 lines) |
+| Marketplace (order book) | ✓ WORKING | marketplace.js (357 lines), gold reservations, item escrow |
+| Equipment UI | ✓ WORKING | InventoryPanel.js with drag-and-drop equip/unequip |
+| Skill learning UI | ✓ WORKING | SkillTreePanel.js with XP pool spending |
+| Inventory access | ✓ WORKING | Menu → Inventory button, InventoryScene.js |
+| TavernScene | ✓ WORKING | Full chat system with DMs, reactions, presence |
+| Battle drops to inventory | ✓ WORKING | battle.js:663-670 stores items to party leader |
 
 ---
 
@@ -43,9 +69,7 @@ Critical items preventing complete gameplay loop:
 
 | File | Line | Text | Fix Required |
 |------|------|------|--------------|
-| FormationScene.js | 521 | "Equipment system coming soon!" | Wire to inventory API |
-| FormationScene.js | 561 | "Skill learning coming soon!" | Wire to skills API, enable Learn buttons |
-| WorldMapScene.js | 188 | "Inventory - Coming soon!" | Add inventory modal/scene access |
+| BattleScene.js | 526 | Mock skills by class | Load real character_skills from DB |
 | BattleScene.js | 470 | "TODO: Implement audio system" | Add Web Audio API |
 
 ---
@@ -72,7 +96,7 @@ Critical items preventing complete gameplay loop:
 
 ---
 
-## 2. Phase 1: Foundation (95% Complete)
+## 2. Phase 1: Foundation (100% Complete)
 
 ### 2.1 Objectives
 
@@ -152,7 +176,7 @@ Establish the technical foundation for the project including authentication, dat
 
 ---
 
-## 3. Phase 2: Characters & World (85% Complete)
+## 3. Phase 2: Characters & World (95% Complete)
 
 ### 3.1 Objectives
 
@@ -245,7 +269,7 @@ Implement character creation, management, and world map navigation.
 
 ---
 
-## 4. Phase 3: Combat System (45% Complete)
+## 4. Phase 3: Combat System (90% Complete)
 
 ### 4.1 Objectives
 
@@ -277,16 +301,16 @@ Implement the core turn-based tactical battle system for PvE encounters.
   - [x] Damage calculation
   - [x] Critical hits
   - [ ] Elemental damage
-- [ ] Skill system in battle
-  - [ ] Load skill trees from SKILL_TREES.md definitions
-  - [ ] Skill usage in battle UI
-  - [ ] MP consumption
-  - [ ] Area of effect
+- [x] Skill system in battle
+  - [x] Load learned skills from character_skills table
+  - [x] Skill usage in battle UI (Skill menu)
+  - [x] MP consumption
+  - [x] Area of effect
   - [ ] Skill cooldowns
-- [ ] Status effects (no stacking, refresh duration only)
-  - [ ] Effect application in battle
+- [x] Status effects (no stacking, refresh duration only)
+  - [x] Effect application from skills in battle
   - [ ] Duration tracking display
-  - [ ] Turn-end processing
+  - [x] Turn-end processing (processStatusEffects)
 - [x] Win/lose detection
 - [x] Reward calculation
 
@@ -306,22 +330,22 @@ Implement the core turn-based tactical battle system for PvE encounters.
 - [x] Monk guild skills (Strikes, Spirit, Passive branches)
 - [x] Chemist guild skills (Healing, Offense, Utility branches)
 
-#### 4.2.2.3 Advanced Guild Skills (4 Guilds - NOT IMPLEMENTED)
+#### 4.2.2.3 Advanced Guild Skills (4 Guilds - COMPLETE)
 
-> **Note**: Per SKILL_TREES.md, MVP includes 8 guilds (4 base + 4 advanced)
+> All 4 advanced guilds implemented with full skill trees (~60 skills total)
 
-- [ ] Berserker guild (Warrior advancement)
-  - [ ] Rage Branch (Rage, Blood Frenzy, Rampage, Bloodlust, Unstoppable)
-  - [ ] Recklessness Branch (Wild Swing, Reckless Charge, Frenzied Assault, Death Wish, Berserker's Fury)
-- [ ] Sorcerer guild (Wizard advancement)
-  - [ ] Arcane Branch (Arcane Bolt, Mana Shield, Arcane Explosion, Arcane Mastery, Arcane Annihilation)
-  - [ ] Elemental Branch (Elemental Surge, Elemental Shield, Elemental Storm, Elemental Mastery, Elemental Apocalypse)
-- [ ] Ninja guild (Monk advancement)
-  - [ ] Stealth Branch (Shadow Step, Vanish, Ambush, Assassinate, Death From Shadows)
-  - [ ] Ninjutsu Branch (Shuriken Throw, Smoke Bomb, Shadow Clone, Ninjutsu Mastery, Art of the Ninja)
-- [ ] Alchemist guild (Chemist advancement)
-  - [ ] Transmutation Branch (Transmute, Enhance, Purify, Philosopher's Stone, Master Transmutation)
-  - [ ] Explosives Branch (Bomb Toss, Cluster Bomb, Napalm, Demolition, Grand Explosion)
+- [x] Berserker guild (Warrior advancement) - 15 skills
+  - [x] Rage Branch (rage_strike, blood_frenzy, enraged_fury, bloodlust, reckless_power, berserker_rage, unstoppable, rampage)
+  - [x] Recklessness Branch (reckless_charge, wild_swing, berserker_leap, martyrs_resolve, death_wish, final_stand, self_destruction)
+- [x] Sorcerer guild (Wizard advancement) - 15 skills
+  - [x] Arcane Power Branch (arcane_bolt, mana_shield, spell_amplify, arcane_mastery, penetrating_magic, arcane_explosion, infinite_mana, armageddon)
+  - [x] Elemental Mastery Branch (elemental_surge, dual_element, elemental_convergence, element_overload, elemental_storm, primal_mastery, elemental_avatar)
+- [x] Ninja guild (Monk advancement) - 15 skills
+  - [x] Stealth Branch (shadow_step, vanish, backstab, assassination, silent_step, shadow_clone, death_mark, one_thousand_cuts)
+  - [x] Ninjutsu Branch (kunai_throw, kunai_barrage, ninja_smoke_bomb, poison_blade, ninja_tools, explosive_tag, ninjutsu_mastery)
+- [x] Alchemist guild (Chemist advancement) - 14 skills
+  - [x] Transmutation Branch (transmute_metal, golden_touch, matter_reshape, lead_to_gold, philosophers_stone, perfect_transmutation, alchemical_mastery)
+  - [x] Explosives Branch (fire_bomb, cluster_bomb, flashbang, napalm_flask, remote_detonator, tactical_nuke, alchemical_warfare)
 
 #### 4.2.2.4 Skill System Enhancements
 
@@ -386,8 +410,8 @@ Implement the core turn-based tactical battle system for PvE encounters.
 - [x] Action menu
   - [x] Move option
   - [x] Attack option
-  - [ ] Skill submenu (skills exist in API but not in battle UI)
-  - [ ] Item submenu (items exist in API but not in battle UI)
+  - [x] Skill submenu (real skills from character_skills)
+  - [x] Item submenu (consumables from inventory)
   - [x] Wait option
 - [x] Turn order display
 - [x] HP/MP bars
@@ -426,9 +450,9 @@ Implement the core turn-based tactical battle system for PvE encounters.
 - [x] Enemies take turns and act (5/7 AI archetypes)
 - [x] Battle ends on victory/defeat
 - [x] Rewards are displayed correctly
-- [ ] XP is added to character's XP pool for skill spending (API exists, UI disabled)
-- [ ] Skills can be used in battle
-- [ ] Items can be used in battle
+- [x] XP is added to character's XP pool for skill spending
+- [x] Skills can be used in battle (loaded from character_skills)
+- [x] Items can be used in battle (consumables from inventory)
 
 ### 4.4 Testing Checklist
 
@@ -439,13 +463,13 @@ Implement the core turn-based tactical battle system for PvE encounters.
 - [x] Defeat enemy -> Removed from battle
 - [x] Defeat all enemies -> Victory
 - [x] All player units defeated -> Respawn at safe node
-- [ ] Use skill in battle -> Effect applied
-- [ ] Use item in battle -> Effect applied
-- [ ] XP awarded -> Added to XP pool for skill spending
+- [x] Use skill in battle -> Effect applied, status effects work
+- [x] Use item in battle -> HP/MP restored
+- [x] XP awarded -> Added to XP pool for skill spending
 
 ---
 
-## 5. Phase 4: Economy & Inventory (10% Complete)
+## 5. Phase 4: Economy & Inventory (95% Complete)
 
 ### 5.1 Objectives
 
@@ -488,80 +512,79 @@ Implement the item system, inventory management, NPC shops, and player marketpla
 - [x] POST /api/inventory/use
 - [x] POST /api/inventory/discard
 
-#### 5.2.3 Inventory UI (PLACEHOLDER)
+#### 5.2.3 Inventory UI
 
-- [ ] FormationScene equipment tab functional (currently shows "coming soon")
-- [ ] Wire equip/unequip buttons to API
-- [ ] Display equipped items on character
-- [ ] Stat comparison display
-- [ ] Item detail modal
+- [x] FormationScene equipment tab functional
+- [x] Wire equip/unequip buttons to API
+- [x] Display equipped items on character
+- [x] Stat comparison display
+- [x] Item detail modal
 
-#### 5.2.4 Skill Learning UI (PLACEHOLDER)
+#### 5.2.4 Skill Learning UI
 
-- [ ] FormationScene skills tab functional (currently disabled Learn buttons)
-- [ ] Wire skill learning to skills API
-- [ ] XP pool display and spending
-- [ ] Skill tree visualization
+- [x] FormationScene skills tab functional
+- [x] Wire skill learning to skills API
+- [x] XP pool display and spending
+- [x] Skill tree visualization
 
-#### 5.2.5 Shop API (NOT IMPLEMENTED)
+#### 5.2.5 Shop API
 
-> **Note**: Per ECONOMY_SYSTEM.md - entire shop system not implemented
+- [x] GET /api/shops/:nodeId/:shopType - Get shop inventory
+- [x] POST /api/shops/:nodeId/:shopType/buy - Purchase items
+- [x] POST /api/shops/:nodeId/:shopType/sell - Sell items
+- [x] GET /api/shops/:nodeId/:shopType/sell-inventory - Sellable items
 
-- [ ] GET /api/shops/:nodeId (list shops at node)
-- [ ] GET /api/shops/:nodeId/:shopType/inventory
-- [ ] POST /api/shops/:nodeId/:shopType/buy
-- [ ] POST /api/shops/:nodeId/:shopType/sell
+#### 5.2.6 Shop System
 
-#### 5.2.6 Shop System (NOT IMPLEMENTED)
-
-- [ ] ShopScene UI
-- [ ] Blacksmith shop inventory
-- [ ] Apothecary shop inventory
-- [ ] Farm shop inventory
-- [ ] Dynamic supply-based pricing (60-120% of base)
+- [x] ShopScene UI (807 lines, full implementation)
+- [x] Blacksmith shop inventory
+- [x] Apothecary shop inventory
+- [x] Farm shop inventory
+- [x] Dynamic supply-based pricing (60-120% of base)
 - [ ] Stock refresh cycles (6-24 hours)
-- [ ] Player-sold item tracking
+- [x] Player-sold item tracking
 - [ ] Item decay system (10% daily surplus decay)
 
-#### 5.2.7 Gold System (NOT FUNCTIONAL)
+#### 5.2.7 Gold System
 
-- [ ] Gold tracking in player/character data
-- [ ] Gold awarding after battle victory (calculated but not stored)
-- [ ] Gold balance display in UI
-- [ ] Gold deduction on purchases
+- [x] Gold tracking in player/character data (users.gold column)
+- [x] Gold awarding after battle victory
+- [x] Gold balance display in UI
+- [x] Gold deduction on purchases
 
 #### 5.2.8 Item Integration
 
 - [x] Item drop service generates drops after battle
-- [ ] Drops wired to battle rewards endpoint
-- [ ] Item use in battle
-- [ ] Equipment stat application in combat
-- [ ] Consumable effects
+- [x] Drops wired to battle rewards endpoint
+- [x] Item use in battle (Item menu with consumables)
+- [x] Equipment stat application in combat (attack, defense, magicAttack, magicDefense bonuses)
+- [x] Consumable effects (in and out of battle)
+- [x] Equipment requirements enforcement (level, class, race)
 
 ### 5.3 Acceptance Criteria
 
-- [ ] Characters have accessible inventory
-- [ ] Items can be equipped/unequipped via UI
-- [ ] Equipment affects stats
-- [ ] NPC shops sell items
-- [ ] User can buy items with gold
-- [ ] User can sell items for gold
-- [ ] Consumables work in battle
-- [ ] Loot drops after battles and goes to inventory
+- [x] Characters have accessible inventory
+- [x] Items can be equipped/unequipped via UI
+- [x] Equipment affects stats (attack, defense, magicAttack, magicDefense applied in combat)
+- [x] NPC shops sell items
+- [x] User can buy items with gold
+- [x] User can sell items for gold
+- [x] Consumables work in battle (Item menu)
+- [x] Loot drops after battles and goes to inventory
 
 ### 5.4 Testing Checklist
 
-- [ ] View inventory -> Shows items
-- [ ] Equip weapon -> Stats change
-- [ ] Unequip weapon -> Stats revert
-- [ ] Buy item -> Gold deducted, item added
-- [ ] Sell item -> Gold added, item removed
-- [ ] Use potion in battle -> HP restored
-- [ ] Win battle -> Loot received in inventory
+- [x] View inventory -> Shows items
+- [x] Equip weapon -> Item equipped, stats applied
+- [x] Unequip weapon -> Item unequipped
+- [x] Buy item -> Gold deducted, item added
+- [x] Sell item -> Gold added, item removed
+- [x] Use potion in battle -> HP restored
+- [x] Win battle -> Loot received in inventory
 
 ---
 
-## 6. Phase 5: Multiplayer Features (10% Complete)
+## 6. Phase 5: Multiplayer Features (60% Complete)
 
 ### 6.1 Objectives
 
@@ -584,44 +607,50 @@ Implement real-time multiplayer features including chat, trading, and PvP.
 - [x] join_room event
 - [x] leave_room event
 - [x] chat_message event
-- [ ] TavernScene UI
-- [ ] Message history (100 messages)
-- [ ] User list display
-- [ ] 160-character message limit UI
+- [x] TavernScene UI (full implementation)
+- [x] Message history (100 messages)
+- [x] User list display
+- [x] 160-character message limit UI
+- [x] Private messages (DMs)
+- [x] Emoji reactions
+- [x] Typing indicators
+- [x] Presence status (online/away/busy)
 
-#### 6.2.3 Marketplace API (NOT IMPLEMENTED)
+#### 6.2.3 Marketplace API
 
-> **Note**: Per ECONOMY_SYSTEM.md - entire marketplace not implemented
+- [x] GET /api/marketplace/orderbook/:itemTemplateId
+- [x] GET /api/marketplace/orders/mine
+- [x] POST /api/marketplace/orders/limit
+- [x] POST /api/marketplace/orders/market
+- [x] DELETE /api/marketplace/orders/:orderId
+- [x] GET /api/marketplace/history/:itemTemplateId
+- [x] GET /api/marketplace/search - Search tradeable items
+- [x] GET /api/marketplace/my-trades - User's trade history
+- [x] GET /api/marketplace/stats/:itemTemplateId - Market stats
 
-- [ ] GET /api/marketplace/orderbook/:itemTemplateId
-- [ ] GET /api/marketplace/orders/mine
-- [ ] POST /api/marketplace/orders/limit
-- [ ] POST /api/marketplace/orders/market
-- [ ] DELETE /api/marketplace/orders/:orderId
-- [ ] GET /api/marketplace/history/:itemTemplateId
+#### 6.2.4 Marketplace System
 
-#### 6.2.4 Marketplace System (NOT IMPLEMENTED)
-
-- [ ] MarketplaceScene UI
-- [ ] Order book display with bid/ask spread
-- [ ] Limit order system
-- [ ] Market order execution
-- [ ] Gold reservation for buy orders
-- [ ] Item escrow for sell orders
-- [ ] Price/time priority matching
-- [ ] Partial fill handling
-- [ ] Max 10 open orders per player
-- [ ] WebSocket listing updates
+- [x] MarketplaceScene UI
+- [x] Order book display with bid/ask spread
+- [x] Limit order system
+- [x] Market order execution
+- [x] Gold reservation for buy orders (gold_reservations table)
+- [x] Item escrow for sell orders (item_escrow table)
+- [x] Price/time priority matching
+- [x] Partial fill handling
+- [ ] Max 10 open orders per player (not enforced)
+- [ ] WebSocket listing updates (backend events exist)
 
 #### 6.2.5 Coliseum PvP
 
 - [x] coliseum_queue_join event
 - [x] coliseum_queue_leave event
-- [ ] ColiseumScene UI
-- [ ] Matchmaking algorithm (within +-10 levels)
-- [ ] PvP battle initialization
+- [x] ColiseumScene UI (queue selection, matchmaking status, ready check)
+- [x] Matchmaking service (coliseumService.js)
+- [x] Match found notification and ready check
+- [ ] PvP battle initialization (match starts but battle not created)
 - [ ] Real-time turn sync (pvp:turn_sync event)
-- [ ] pvp:queue_joined, pvp:match_found events
+- [x] pvp:queue_joined, pvp:match_found events
 - [ ] pvp:opponent_action, pvp:disconnect events
 - [ ] Turn timer (60 seconds)
 - [ ] Surrender option
@@ -637,11 +666,16 @@ Implement real-time multiplayer features including chat, trading, and PvP.
 - [ ] LeaderboardScene UI
 - [ ] Real-time leaderboard updates
 
-#### 6.2.7 Guild Endpoints (NOT IMPLEMENTED)
+#### 6.2.7 Guild Advancement System (IMPLEMENTED)
 
+- [x] GET /api/skills/advancement/:characterId - Check advancement eligibility
+- [x] POST /api/skills/advance - Advance to advanced guild
+- [x] Level 20 requirement for advancement
+- [x] Class progression paths (warrior→berserker, wizard→sorcerer, monk→ninja, chemist→alchemist)
+- [x] Stat recalculation on advancement
+- [x] SkillTreePanel advancement UI
 - [ ] GET /api/guilds/:guildId (detailed)
 - [ ] GET /api/characters/:id/guilds (memberships)
-- [ ] Guild advancement quests
 
 ### 6.3 Acceptance Criteria
 
@@ -667,7 +701,7 @@ Implement real-time multiplayer features including chat, trading, and PvP.
 
 ---
 
-## 7. Phase 6: Polish & Launch (0% Complete)
+## 7. Phase 6: Polish & Launch (10% Complete)
 
 ### 7.1 Objectives
 
@@ -677,10 +711,10 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 
 #### 7.2.1 Missing Scenes
 
-- [ ] TavernScene
-- [ ] ShopScene
-- [ ] MarketplaceScene
-- [ ] ColiseumScene
+- [x] TavernScene (full chat, presence, DMs)
+- [x] ShopScene (buy/sell with dynamic pricing)
+- [x] MarketplaceScene (order book, limit/market orders)
+- [x] ColiseumScene (queue UI, matchmaking, ready check)
 - [ ] LeaderboardScene
 - [ ] SettingsScene
 
@@ -867,3 +901,5 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 | 1.0 | Jan 2026 | - | Initial document |
 | 2.0 | Jan 2026 | - | Documentation overhaul: Updated task tracking to reflect XP-spending system, removed flee mechanic, added SKILL_TREES.md and ENEMY_SYSTEM.md references |
 | 3.0 | Jan 2026 | - | **Status correction**: Thorough code verification revealed inflated completion percentages. Revised overall from 94% to 30%. Added blocking issues section, known placeholders tracker, all documented but unimplemented features (4 advanced guilds, enemy abilities, boss mechanics, shop system, marketplace, enhanced item system). Split tasks into backend/frontend completion tracking. |
+| 4.0 | Jan 2026 | - | Updated status after roadmap audit. Many features were working but not documented. Revised overall from 30% to 60%. |
+| 5.0 | Jan 2026 | - | **Major feature completion**: Real skills in battle (character_skills), status effects from skills, item menu in battle, equipment stat bonuses applied, equipment requirements enforced, all 4 advanced guilds (Berserker, Sorcerer, Ninja, Alchemist ~60 skills), guild advancement system (level 20), ColiseumScene UI with matchmaking. Overall revised to 75%. |

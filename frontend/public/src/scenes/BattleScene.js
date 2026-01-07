@@ -30,11 +30,13 @@ export class BattleScene extends Scene {
     // Interaction state
     this.selectedUnit = null;
     this.hoveredTile = null;
-    this.currentAction = null; // 'move' | 'attack' | 'skill'
+    this.currentAction = null; // 'move' | 'attack' | 'skill' | 'item'
     this.rewardsModal = null;
     this.validTiles = [];
     this.pendingAction = null;
     this.selectedSkillId = null;
+    this.selectedItemId = null;
+    this.selectedInventoryId = null;
 
     // Movement range (base value, could be modified by stats)
     this.movementRange = 3;
@@ -143,6 +145,8 @@ export class BattleScene extends Scene {
       onAttack: () => this.startAttackAction(),
       onSkill: () => this.showSkillMenu(),
       onSelectSkill: (skillId) => this.startSkillAction(skillId),
+      onItem: () => this.showItemMenu(),
+      onSelectItem: (itemData) => this.startItemAction(itemData),
       onWait: () => this.submitAction('wait'),
       onConfirm: () => this.confirmAction(),
       onCancel: () => this.cancelAction(),
@@ -467,6 +471,17 @@ export class BattleScene extends Scene {
       } else {
         this.ui.showConfirmation(`Use ${skill?.name || 'skill'} on tile?`);
       }
+    } else if (this.currentAction === 'item' && isValidTile) {
+      // Item targeting (allies only)
+      const target = this.getUnitAt(x, y);
+      if (!target || target.type !== 'player') {
+        this.game.showNotification?.('Must target an ally', 'warning');
+        return;
+      }
+      const item = (this.battleState.consumables || []).find(i => i.itemId === this.selectedItemId);
+      this.pendingAction = { type: 'item', targetTile: { x, y }, target, itemId: this.selectedItemId };
+
+      this.ui.showConfirmation(`Use ${item?.name || 'item'} on ${target.name}?`);
     }
   }
 
@@ -544,23 +559,63 @@ export class BattleScene extends Scene {
    * @returns {Array} Array of skill objects
    */
   getUnitActiveSkills(unit) {
-    // TODO: Fetch from character_skills table via API
-    // For now, return mock skills based on class
-    const mockSkills = {
-      warrior: [
-        { id: 'power_strike', name: 'Power Strike', mpCost: 5, icon: '⚔️', range: 1, description: '150% damage attack' }
-      ],
-      wizard: [
-        { id: 'fireball', name: 'Fireball', mpCost: 8, icon: '🔥', range: 3, description: 'Fire damage attack' }
-      ],
-      monk: [
-        { id: 'palm_strike', name: 'Palm Strike', mpCost: 4, icon: '🤚', range: 1, description: 'Quick palm attack' }
-      ],
-      chemist: [
-        { id: 'acid_flask', name: 'Acid Flask', mpCost: 6, icon: '⚗️', range: 2, description: 'Corrosive acid damage' }
-      ]
+    // Use skills from battle state (loaded from character_skills)
+    if (unit.skills && unit.skills.length > 0) {
+      // Add icons based on skill type/name for display
+      return unit.skills.filter(s => s.type === 'active').map(skill => ({
+        ...skill,
+        icon: this.getSkillIcon(skill.id, unit.class)
+      }));
+    }
+
+    // Fallback: return empty array if no skills learned
+    // (Character needs to learn skills via Formation → Skills tab)
+    return [];
+  }
+
+  /**
+   * Get icon for a skill based on its ID and class
+   * @param {string} skillId - The skill ID
+   * @param {string} unitClass - The unit's class
+   * @returns {string} Icon emoji
+   */
+  getSkillIcon(skillId, unitClass) {
+    const skillIcons = {
+      // Warrior skills
+      slash: '⚔️', power_strike: '💥', bash: '🛡️', cleave: '🔪', rend: '🩸',
+      crushing_blow: '💪', whirlwind: '🌀', executioner: '☠️', blade_storm: '⚔️',
+      guard: '🛡️', shield_block: '🛡️', parry: '↩️', taunt: '😤', fortify: '🏰',
+      shield_wall: '🧱', aegis: '👼', last_stand: '💀', iron_fortress: '🏯',
+      charge: '🏃', knockback: '👊', war_cry: '📢', intimidate: '😠',
+      ground_slam: '💥', rally: '📣',
+
+      // Wizard skills
+      fire_bolt: '🔥', ignite: '🔥', fireball: '🔥', flame_shield: '🔥',
+      combustion: '💥', wall_of_fire: '🔥', inferno: '🔥', meteor: '☄️',
+      ice_shard: '❄️', frost: '❄️', blizzard: '❄️', ice_armor: '🧊',
+      frozen_prison: '🧊', glacial_spike: '❄️', absolute_zero: '❄️', ice_age: '❄️',
+      spark: '⚡', static: '⚡', lightning_bolt: '⚡', chain_lightning: '⚡',
+      thunder_strike: '⚡', paralysis: '⚡', overcharge: '⚡', tempest: '🌩️',
+
+      // Monk skills
+      palm_strike: '🤚', kick: '🦵', combo: '👊', flying_kick: '🦶',
+      chain_combo: '👊', counter_strike: '↩️', ultimate_combo: '💫', pressure_point: '👆',
+      fists_of_fury: '👊', meditate: '🧘', ki_strike: '✨', ki_shield: '💠',
+      focus: '🎯', ki_burst: '💥', inner_peace: '☮️', ki_storm: '🌊',
+      transcendence: '✨', dash: '💨', dodge: '🏃', swift_strike: '⚡',
+      afterimage: '👤', untouchable: '💫', phantom_step: '👻',
+
+      // Chemist skills
+      potion_throw: '🧪', antidote: '💊', mega_potion: '🧪', elixir: '✨',
+      cure_all: '💚', full_life: '💖', super_potion: '🧪', mass_heal: '💚',
+      panacea: '🌟', acid_flask: '⚗️', poison_vial: '☠️', toxic_cloud: '💨',
+      corrosive: '🧪', plague: '☣️', acid_rain: '🌧️', virulent: '☠️',
+      pandemic: '☣️', bomb_throw: '💣', flash_bomb: '💡', timed_bomb: '⏰',
+      cluster_bomb: '💣', smoke_bomb: '💨', mega_bomb: '💣', minefield: '💣',
+      nuclear_option: '☢️'
     };
-    return mockSkills[unit.class?.toLowerCase()] || [];
+
+    return skillIcons[skillId] || '✨';
   }
 
   /**
@@ -573,6 +628,17 @@ export class BattleScene extends Scene {
     const activeUnit = this.getActiveUnit();
     const skill = this.getUnitActiveSkills(activeUnit).find(s => s.id === skillId);
 
+    if (!skill) {
+      this.game.showNotification?.('Skill not found', 'error');
+      return;
+    }
+
+    // Check if unit has enough MP
+    if (activeUnit.mp < skill.mpCost) {
+      this.game.showNotification?.(`Not enough MP (need ${skill.mpCost})`, 'warning');
+      return;
+    }
+
     if (activeUnit && skill) {
       this.validTiles = this.pathfinding.getAttackableTiles(
         activeUnit.gridX,
@@ -582,6 +648,54 @@ export class BattleScene extends Scene {
     }
 
     this.ui.hideSkillPanel();
+    this.ui.setActionsEnabled(false);
+    this.ui.showTargetingMode();
+  }
+
+  /**
+   * Show item selection menu
+   */
+  showItemMenu() {
+    // Two-action system: check if act is available
+    if (!this.canAct) {
+      this.game.showNotification?.('Already acted this turn', 'warning');
+      return;
+    }
+
+    // Get consumables from battle state
+    const consumables = this.battleState.consumables || [];
+    this.ui.showItemPanel(consumables);
+  }
+
+  /**
+   * Start item action - show valid target tiles for item
+   * @param {Object} itemData - Object with itemId and inventoryId
+   */
+  startItemAction(itemData) {
+    this.currentAction = 'item';
+    this.selectedItemId = itemData.itemId;
+    this.selectedInventoryId = itemData.inventoryId;
+
+    const activeUnit = this.getActiveUnit();
+
+    // Items can target self or allies within range
+    // For now, allow targeting any ally tile (range of map)
+    this.validTiles = this.pathfinding.getAttackableTiles(
+      activeUnit.gridX,
+      activeUnit.gridY,
+      10 // Items have a long range for targeting allies
+    );
+
+    // Filter to only include tiles with ally units (or empty for self-use)
+    const allyPositions = this.battleState.units
+      .filter(u => u.type === 'player' && u.hp > 0)
+      .map(u => ({ x: u.tileX, y: u.tileY }));
+
+    this.validTiles = this.validTiles.filter(tile =>
+      allyPositions.some(pos => pos.x === tile.x && pos.y === tile.y)
+    );
+
+    this.ui.hideItemPanel();
     this.ui.setActionsEnabled(false);
     this.ui.showTargetingMode();
   }
@@ -607,8 +721,11 @@ export class BattleScene extends Scene {
     this.validTiles = [];
     this.pendingAction = null;
     this.selectedSkillId = null;
+    this.selectedItemId = null;
+    this.selectedInventoryId = null;
     this.ui.hideConfirmation();
     this.ui.hideSkillPanel();
+    this.ui.hideItemPanel();
     this.ui.hideTargetingMode();
     this.ui.setActionsEnabled(true);
   }
@@ -623,13 +740,25 @@ export class BattleScene extends Scene {
     try {
       this.ui.setActionsEnabled(false);
 
-      const result = await this.game.api.submitBattleAction({
+      // Build action payload
+      const actionData = {
         battleId: this.battleId,
         actionType,
         unitId: activeUnit.id,
-        targetTile,
-        skillId: this.selectedSkillId
-      });
+        targetTile
+      };
+
+      // Add skill or item ID depending on action type
+      if (actionType === 'skill') {
+        actionData.skillId = this.selectedSkillId;
+      } else if (actionType === 'item') {
+        // For items, we use skillId field to pass the item's itemId
+        // (backend expects skillId for item type lookups)
+        actionData.skillId = this.selectedItemId;
+        actionData.inventoryId = this.selectedInventoryId;
+      }
+
+      const result = await this.game.api.submitBattleAction(actionData);
 
       // Process action result
       await this.processActionResult(result);
@@ -702,6 +831,45 @@ export class BattleScene extends Scene {
       if (target) {
         this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
         await this.waitForAnimation(300);
+      }
+    }
+
+    // Handle item use effects (healing, MP restore, cleanse, revive)
+    if (actionResult.itemUsed && actionResult.itemEffects) {
+      for (const effect of actionResult.itemEffects) {
+        const target = this.units.get(effect.targetId);
+        if (!target) continue;
+
+        if (effect.type === 'heal') {
+          target.hp = Math.min(target.maxHp, target.hp + effect.amount);
+          this.animations.addHealNumber(target.screenX, target.screenY - 40, effect.amount);
+          this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#44ff44');
+          await this.waitForAnimation(300);
+        } else if (effect.type === 'mpRestore') {
+          target.mp = Math.min(target.maxMp, target.mp + effect.amount);
+          this.animations.addHealNumber(target.screenX, target.screenY - 40, effect.amount);
+          this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#4488ff');
+          await this.waitForAnimation(300);
+        } else if (effect.type === 'cleanse') {
+          this.animations.addHealNumber(target.screenX, target.screenY - 40, 'Cleansed');
+          await this.waitForAnimation(300);
+        } else if (effect.type === 'revive') {
+          target.hp = effect.amount;
+          this.animations.addHealNumber(target.screenX, target.screenY - 40, 'Revive!');
+          this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#ffdd44');
+          await this.waitForAnimation(300);
+        }
+      }
+
+      // Update consumables in battle state after using an item
+      if (this.battleState.consumables) {
+        const usedItem = this.battleState.consumables.find(c => c.itemId === actionResult.itemUsed);
+        if (usedItem) {
+          usedItem.quantity--;
+          if (usedItem.quantity <= 0) {
+            this.battleState.consumables = this.battleState.consumables.filter(c => c.itemId !== actionResult.itemUsed);
+          }
+        }
       }
     }
 

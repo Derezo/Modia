@@ -96,6 +96,7 @@ export class BattleUI {
             <button class="btn btn-secondary action-btn move-action" id="btn-move" title="Move to a new position">Move</button>
             <button class="btn btn-primary action-btn act-action" id="btn-attack" title="Attack a target">Attack</button>
             <button class="btn btn-info action-btn act-action" id="btn-skill" title="Use a skill">Skill</button>
+            <button class="btn btn-success action-btn act-action" id="btn-item" title="Use an item">Item</button>
             <button class="btn btn-secondary action-btn" id="btn-wait" title="End turn">Wait</button>
           </div>
           <!-- Cancel button for targeting mode -->
@@ -117,6 +118,22 @@ export class BattleUI {
         <div class="ui-panel" style="padding: 10px; max-width: 400px;">
           <div style="font-size: 12px; color: #888; margin-bottom: 8px;">Select Skill</div>
           <div id="skill-list" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+        </div>
+      </div>
+
+      <!-- Item Selection Panel (hidden by default) -->
+      <div id="item-panel" class="battle-panel" style="
+        position: absolute;
+        bottom: 70px;
+        left: 50%;
+        transform: translateX(-50%);
+        pointer-events: auto;
+        display: none;
+      ">
+        <div class="ui-panel" style="padding: 10px; max-width: 400px;">
+          <div style="font-size: 12px; color: #888; margin-bottom: 8px;">Use Item</div>
+          <div id="item-list" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+          <div id="no-items" style="color: #666; font-style: italic; display: none;">No consumable items</div>
         </div>
       </div>
 
@@ -308,6 +325,10 @@ export class BattleUI {
       this.actionCallbacks.onSkill?.();
     }, opts);
 
+    this.element.querySelector('#btn-item')?.addEventListener('click', () => {
+      this.actionCallbacks.onItem?.();
+    }, opts);
+
     this.element.querySelector('#btn-confirm')?.addEventListener('click', () => {
       this.actionCallbacks.onConfirm?.();
     }, opts);
@@ -464,6 +485,7 @@ export class BattleUI {
     const moveBtn = this.element.querySelector('#btn-move');
     const attackBtn = this.element.querySelector('#btn-attack');
     const skillBtn = this.element.querySelector('#btn-skill');
+    const itemBtn = this.element.querySelector('#btn-item');
     const phaseIndicator = this.element.querySelector('#action-phase-indicator');
 
     // Update move button state
@@ -485,6 +507,13 @@ export class BattleUI {
       skillBtn.disabled = !canAct;
       skillBtn.style.opacity = canAct ? '1' : '0.4';
       skillBtn.classList.toggle('action-unavailable', !canAct);
+    }
+
+    // Update item button state (items use the act action)
+    if (itemBtn) {
+      itemBtn.disabled = !canAct;
+      itemBtn.style.opacity = canAct ? '1' : '0.4';
+      itemBtn.classList.toggle('action-unavailable', !canAct);
     }
 
     // Update phase indicator text
@@ -574,6 +603,70 @@ export class BattleUI {
   hideSkillPanel() {
     const panel = this.element.querySelector('#skill-panel');
     if (panel) panel.style.display = 'none';
+  }
+
+  /**
+   * Show item selection panel
+   * @param {Array} items - Array of item objects with inventoryId, name, quantity, description
+   */
+  showItemPanel(items) {
+    const panel = this.element.querySelector('#item-panel');
+    const list = this.element.querySelector('#item-list');
+    const noItems = this.element.querySelector('#no-items');
+    if (!panel || !list) return;
+
+    if (!items || items.length === 0) {
+      list.innerHTML = '';
+      if (noItems) noItems.style.display = 'block';
+    } else {
+      if (noItems) noItems.style.display = 'none';
+      list.innerHTML = items.map(item => `
+        <button class="btn btn-secondary item-btn"
+                data-item-id="${item.itemId}"
+                data-inventory-id="${item.inventoryId}"
+                title="${item.description || item.name}">
+          ${this.getItemIcon(item.name)} ${item.name}
+          <span style="font-size: 10px; color: #8f8; margin-left: 4px;">x${item.quantity}</span>
+        </button>
+      `).join('');
+
+      // Add click handlers for item buttons
+      list.querySelectorAll('.item-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const itemId = btn.dataset.itemId;
+          const inventoryId = btn.dataset.inventoryId;
+          this.actionCallbacks.onSelectItem?.({ itemId, inventoryId });
+        });
+      });
+    }
+
+    panel.style.display = 'block';
+  }
+
+  /**
+   * Hide item selection panel
+   */
+  hideItemPanel() {
+    const panel = this.element.querySelector('#item-panel');
+    if (panel) panel.style.display = 'none';
+  }
+
+  /**
+   * Get icon for an item based on its name
+   * @param {string} itemName - The item name
+   * @returns {string} Icon emoji
+   */
+  getItemIcon(itemName) {
+    const name = itemName.toLowerCase();
+    if (name.includes('potion')) return '🧪';
+    if (name.includes('ether')) return '💧';
+    if (name.includes('elixir')) return '✨';
+    if (name.includes('antidote')) return '💊';
+    if (name.includes('remedy')) return '💚';
+    if (name.includes('phoenix')) return '🔥';
+    if (name.includes('bomb')) return '💣';
+    if (name.includes('eye')) return '👁️';
+    return '📦';
   }
 
   /**

@@ -16,6 +16,24 @@ export const CLASSES = {
   CHEMIST: 'chemist'
 };
 
+// Advanced classes (require level 20+ and base class)
+export const ADVANCED_CLASSES = {
+  BERSERKER: 'berserker',
+  SORCERER: 'sorcerer',
+  NINJA: 'ninja',
+  ALCHEMIST: 'alchemist'
+};
+
+// Advancement paths: base class -> advanced class
+export const CLASS_ADVANCEMENT = {
+  warrior: 'berserker',
+  wizard: 'sorcerer',
+  monk: 'ninja',
+  chemist: 'alchemist'
+};
+
+export const ADVANCEMENT_LEVEL_REQUIREMENT = 20;
+
 export const NODE_TYPES = {
   CASTLE: 'castle',
   CITY: 'city',
@@ -64,7 +82,12 @@ export const CLASS_GROWTH = {
   [CLASSES.WARRIOR]: { hp: 15, mp: 3, strength: 3, intelligence: 1, agility: 1, vitality: 2 },
   [CLASSES.WIZARD]: { hp: 8, mp: 12, strength: 1, intelligence: 4, agility: 1, vitality: 1 },
   [CLASSES.MONK]: { hp: 10, mp: 6, strength: 2, intelligence: 2, agility: 3, vitality: 1 },
-  [CLASSES.CHEMIST]: { hp: 10, mp: 8, strength: 1, intelligence: 2, agility: 2, vitality: 2 }
+  [CLASSES.CHEMIST]: { hp: 10, mp: 8, strength: 1, intelligence: 2, agility: 2, vitality: 2 },
+  // Advanced classes (higher growth, unlocked at level 20)
+  [ADVANCED_CLASSES.BERSERKER]: { hp: 18, mp: 2, strength: 4, intelligence: 1, agility: 1, vitality: 2 },
+  [ADVANCED_CLASSES.SORCERER]: { hp: 7, mp: 15, strength: 1, intelligence: 5, agility: 1, vitality: 1 },
+  [ADVANCED_CLASSES.NINJA]: { hp: 10, mp: 5, strength: 2, intelligence: 2, agility: 4, vitality: 1 },
+  [ADVANCED_CLASSES.ALCHEMIST]: { hp: 11, mp: 10, strength: 1, intelligence: 3, agility: 2, vitality: 2 }
 };
 
 // Seeded random number generator (Mulberry32)

@@ -137,8 +137,8 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
           break;
         }
 
-        // Calculate MP cost (base cost from skill definition, or default 5)
-        const mpCost = skill.baseCost ? Math.floor(skill.baseCost / 10) : 5;
+        // Calculate MP cost (use mpCost from skill definition, or derive from baseCost)
+        const mpCost = skill.mpCost || (skill.baseCost ? Math.floor(skill.baseCost / 10) : 5);
         if (unit.mp < mpCost) {
           result.error = 'Not enough MP';
           break;
@@ -148,26 +148,194 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
         unit.mp -= mpCost;
         result.skillUsed = skillId;
         result.mpCost = mpCost;
+        result.skillEffects = [];
+
+        // Handle self-targeting skills (buffs, heals)
+        if (skill.selfBuff || skill.healPercent || skill.cleanse) {
+          // Self-buff or self-heal
+          if (skill.selfBuff) {
+            battleService.applyStatusEffect(unit, skill.selfBuff, skill.buffDuration || 3);
+            result.skillEffects.push({ type: 'buff', effect: skill.selfBuff, targetId: unit.id });
+          }
+          if (skill.healPercent) {
+            const healAmount = Math.floor(unit.maxHp * skill.healPercent / 100);
+            unit.hp = Math.min(unit.maxHp, unit.hp + healAmount);
+            result.healing = healAmount;
+            result.targetId = unit.id;
+          }
+          if (skill.mpRestore) {
+            const mpAmount = Math.floor(unit.maxMp * skill.mpRestore / 100);
+            unit.mp = Math.min(unit.maxMp, unit.mp + mpAmount);
+            result.mpRestored = mpAmount;
+          }
+          if (skill.cleanse) {
+            // Remove all negative status effects
+            unit.statusEffects = (unit.statusEffects || []).filter(e =>
+              ['rage', 'fortify', 'haste', 'regen'].includes(e.type)
+            );
+            result.skillEffects.push({ type: 'cleanse', targetId: unit.id });
+          }
+          unit.actUsed = true;
+          break;
+        }
 
         // Find target at tile
         const target = state.units.find(u =>
           u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
         );
 
+        // Handle ally-targeting skills (heals, buffs)
+        if (skill.targetAlly && target && target.type === unit.type) {
+          if (skill.healPercent) {
+            const healAmount = Math.floor(target.maxHp * skill.healPercent / 100);
+            target.hp = Math.min(target.maxHp, target.hp + healAmount);
+            result.healing = healAmount;
+            result.targetId = target.id;
+          }
+          if (skill.effect && skill.effectChance >= Math.random()) {
+            battleService.applyStatusEffect(target, skill.effect, skill.effectDuration || 3);
+            result.skillEffects.push({ type: 'buff', effect: skill.effect, targetId: target.id });
+          }
+          unit.actUsed = true;
+          break;
+        }
+
         if (target) {
-          // Apply skill damage (using power from skill description or default 150%)
+          // Apply skill damage (using power from skill or default 150%)
           const power = skill.power || 150;
-          const damageResult = battleService.calculatePhysicalDamage(unit, target, power);
-          target.hp = Math.max(0, target.hp - damageResult.damage);
-          result.damage = damageResult.damage;
+          const damageType = skill.damageType || 'physical';
+          const damageResult = damageType === 'magical'
+            ? battleService.calculateMagicalDamage(unit, target, power)
+            : battleService.calculatePhysicalDamage(unit, target, power);
+
+          // Apply damage (multiply by hits if multi-hit skill)
+          const hits = skill.hits || 1;
+          let totalDamage = 0;
+          for (let i = 0; i < hits; i++) {
+            totalDamage += damageResult.damage;
+          }
+          target.hp = Math.max(0, target.hp - totalDamage);
+          result.damage = totalDamage;
+          result.hits = hits;
           result.isCritical = damageResult.isCritical;
           result.targetId = target.id;
           result.targetType = target.type;
+
+          // Apply status effect if skill has one and chance succeeds
+          if (skill.effect && skill.effectChance && Math.random() < skill.effectChance) {
+            const effectApplied = battleService.applyStatusEffect(
+              target,
+              skill.effect,
+              skill.effectDuration || 3
+            );
+            if (effectApplied) {
+              result.skillEffects.push({
+                type: 'debuff',
+                effect: skill.effect,
+                duration: skill.effectDuration || 3,
+                targetId: target.id
+              });
+            }
+          }
         } else {
           // Empty tile skill - animation plays but no damage
           result.attackedEmptyTile = true;
           result.targetTile = targetTile;
         }
+        unit.actUsed = true;
+      }
+      break;
+
+    case 'item':
+      // Check if already acted this turn
+      if (unit.actUsed) {
+        result.error = 'Already acted this turn';
+        return result;
+      }
+      // Check if status effects prevent acting
+      if (!battleService.canUnitAct(unit)) {
+        result.error = 'Cannot act due to status effect';
+        return result;
+      }
+      // Item usage requires itemId in skillId parameter (reusing same field)
+      if (skillId) {
+        result.itemUsed = skillId;
+        result.itemEffects = [];
+
+        // Look up item from battle state consumables (loaded from database)
+        const consumables = state.consumables || [];
+        const consumable = consumables.find(c => c.itemId === parseInt(skillId) || c.itemId === skillId);
+
+        if (!consumable || consumable.quantity <= 0) {
+          result.error = 'Item not available';
+          break;
+        }
+
+        // Find target (self or ally at tile)
+        let itemTarget = unit; // Default to self
+        if (targetTile) {
+          const tileTarget = state.units.find(u =>
+            u.tileX === targetTile.x && u.tileY === targetTile.y && u.type === 'player'
+          );
+          if (tileTarget) {
+            itemTarget = tileTarget;
+          }
+        }
+
+        // Apply item effects based on effectType from database
+        const effectType = consumable.effectType || consumable.name?.toLowerCase();
+        const effectValue = consumable.effectValue || 25; // Default to 25% if not specified
+
+        // Handle different effect types
+        if (effectType === 'hp_restore' || consumable.name?.toLowerCase().includes('potion')) {
+          const healAmount = Math.floor(itemTarget.maxHp * effectValue / 100);
+          itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + healAmount);
+          result.healing = healAmount;
+          result.itemEffects.push({ type: 'heal', amount: healAmount, targetId: itemTarget.id });
+        }
+
+        if (effectType === 'mp_restore' || consumable.name?.toLowerCase().includes('ether')) {
+          const mpAmount = Math.floor(itemTarget.maxMp * effectValue / 100);
+          itemTarget.mp = Math.min(itemTarget.maxMp, itemTarget.mp + mpAmount);
+          result.mpRestored = mpAmount;
+          result.itemEffects.push({ type: 'mpRestore', amount: mpAmount, targetId: itemTarget.id });
+        }
+
+        if (effectType === 'elixir' || consumable.name?.toLowerCase().includes('elixir')) {
+          const healAmount = Math.floor(itemTarget.maxHp * effectValue / 100);
+          const mpAmount = Math.floor(itemTarget.maxMp * effectValue / 100);
+          itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + healAmount);
+          itemTarget.mp = Math.min(itemTarget.maxMp, itemTarget.mp + mpAmount);
+          result.itemEffects.push({ type: 'heal', amount: healAmount, targetId: itemTarget.id });
+          result.itemEffects.push({ type: 'mpRestore', amount: mpAmount, targetId: itemTarget.id });
+        }
+
+        if (effectType === 'cleanse' || consumable.name?.toLowerCase().includes('antidote')) {
+          const cleansableEffects = ['poison', 'blind', 'silence', 'slow', 'burn'];
+          itemTarget.statusEffects = (itemTarget.statusEffects || []).filter(e =>
+            !cleansableEffects.includes(e.type)
+          );
+          result.itemEffects.push({ type: 'cleanse', effects: cleansableEffects, targetId: itemTarget.id });
+        }
+
+        if (effectType === 'revive' || consumable.name?.toLowerCase().includes('phoenix')) {
+          if (itemTarget.hp <= 0) {
+            const reviveHp = Math.floor(itemTarget.maxHp * effectValue / 100);
+            itemTarget.hp = reviveHp;
+            result.itemEffects.push({ type: 'revive', amount: reviveHp, targetId: itemTarget.id });
+          }
+        }
+
+        // Consume the item in battle state
+        consumable.quantity--;
+        if (consumable.quantity <= 0) {
+          state.consumables = consumables.filter(c => c.itemId !== consumable.itemId);
+        }
+
+        // Mark inventory item for consumption (will be processed after battle or immediately)
+        result.consumedInventoryId = consumable.inventoryId;
+        result.targetId = itemTarget.id;
+        result.itemName = consumable.name;
         unit.actUsed = true;
       }
       break;
@@ -308,13 +476,41 @@ function processEnemyTurns(state, maxIterations = 50) {
 
 // POST /api/battle/start - Start PvE battle at current node
 router.post('/start', authenticate, asyncHandler(async (req, res) => {
-  // Get user's battle party and current node
+  // Get user's battle party with equipment stat bonuses
   const partyResult = await query(
     `SELECT c.id, c.name, c.race, c.class, c.level,
             c.hp_current, c.hp_max, c.mp_current, c.mp_max,
             c.strength, c.intelligence, c.agility, c.vitality, c.luck,
-            c.current_node_id, c.in_battle
+            c.current_node_id, c.in_battle,
+            COALESCE(eq.equip_strength, 0) as equip_strength,
+            COALESCE(eq.equip_intelligence, 0) as equip_intelligence,
+            COALESCE(eq.equip_agility, 0) as equip_agility,
+            COALESCE(eq.equip_vitality, 0) as equip_vitality,
+            COALESCE(eq.equip_luck, 0) as equip_luck,
+            COALESCE(eq.equip_hp, 0) as equip_hp,
+            COALESCE(eq.equip_mp, 0) as equip_mp,
+            COALESCE(eq.equip_attack, 0) as equip_attack,
+            COALESCE(eq.equip_defense, 0) as equip_defense,
+            COALESCE(eq.equip_magic_attack, 0) as equip_magic_attack,
+            COALESCE(eq.equip_magic_defense, 0) as equip_magic_defense
      FROM characters c
+     LEFT JOIN LATERAL (
+       SELECT
+         SUM(COALESCE((it.stat_bonuses->>'strength')::int, 0) + COALESCE((ci.modifications->>'strength')::int, 0)) as equip_strength,
+         SUM(COALESCE((it.stat_bonuses->>'intelligence')::int, 0) + COALESCE((ci.modifications->>'intelligence')::int, 0)) as equip_intelligence,
+         SUM(COALESCE((it.stat_bonuses->>'agility')::int, 0) + COALESCE((ci.modifications->>'agility')::int, 0)) as equip_agility,
+         SUM(COALESCE((it.stat_bonuses->>'vitality')::int, 0) + COALESCE((ci.modifications->>'vitality')::int, 0)) as equip_vitality,
+         SUM(COALESCE((it.stat_bonuses->>'luck')::int, 0) + COALESCE((ci.modifications->>'luck')::int, 0)) as equip_luck,
+         SUM(COALESCE((it.stat_bonuses->>'hp')::int, 0) + COALESCE((ci.modifications->>'hp_max')::int, 0)) as equip_hp,
+         SUM(COALESCE((it.stat_bonuses->>'mp')::int, 0) + COALESCE((ci.modifications->>'mp_max')::int, 0)) as equip_mp,
+         SUM(COALESCE((it.stat_bonuses->>'attack')::int, 0) + COALESCE((ci.modifications->>'attack')::int, 0)) as equip_attack,
+         SUM(COALESCE((it.stat_bonuses->>'defense')::int, 0) + COALESCE((ci.modifications->>'defense')::int, 0)) as equip_defense,
+         SUM(COALESCE((it.stat_bonuses->>'magic_attack')::int, 0) + COALESCE((ci.modifications->>'magic_attack')::int, 0)) as equip_magic_attack,
+         SUM(COALESCE((it.stat_bonuses->>'magic_defense')::int, 0) + COALESCE((ci.modifications->>'magic_defense')::int, 0)) as equip_magic_defense
+       FROM character_items ci
+       JOIN item_templates it ON ci.item_template_id = it.id
+       WHERE ci.character_id = c.id AND ci.equipped_slot IS NOT NULL
+     ) eq ON true
      WHERE c.user_id = $1 AND c.party_slot <= $2 AND c.party_slot IS NOT NULL
      ORDER BY c.party_slot ASC`,
     [req.user.userId, MAX_BATTLE_PARTY_SIZE]
@@ -325,6 +521,41 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
   }
 
   const party = partyResult.rows;
+
+  // Get learned skills for all party members
+  const characterIds = party.map(c => c.id);
+  const skillsResult = await query(
+    `SELECT character_id, skill_id, level
+     FROM character_skills
+     WHERE character_id = ANY($1)`,
+    [characterIds]
+  );
+
+  // Group skills by character and enhance with skill definitions
+  const characterSkills = {};
+  for (const row of skillsResult.rows) {
+    if (!characterSkills[row.character_id]) {
+      characterSkills[row.character_id] = [];
+    }
+    // Get character class to find skill definition
+    const char = party.find(c => c.id === row.character_id);
+    const skillDef = char ? getSkillDefinition(char.class, row.skill_id) : null;
+
+    if (skillDef) {
+      characterSkills[row.character_id].push({
+        id: row.skill_id,
+        name: skillDef.name,
+        level: row.level,
+        mpCost: skillDef.mpCost || 0,
+        range: skillDef.range || 1,
+        power: skillDef.power || 100,
+        type: skillDef.type || 'active',
+        effect: skillDef.effect || null,
+        aoeRadius: skillDef.aoeRadius || 0,
+        description: skillDef.description || ''
+      });
+    }
+  }
 
   // Check if already in battle - if so, return existing battle data for rejoin
   if (party.some(c => c.in_battle)) {
@@ -403,22 +634,55 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
       type: 'player',
       name: char.name,
       class: char.class,
+      level: char.level,
       hp: char.hp_current,
-      maxHp: char.hp_max,
+      maxHp: char.hp_max + (parseInt(char.equip_hp) || 0),
       mp: char.mp_current,
-      maxMp: char.mp_max,
-      strength: char.strength,
-      intelligence: char.intelligence,
-      agility: char.agility,
-      vitality: char.vitality,
-      luck: char.luck,
+      maxMp: char.mp_max + (parseInt(char.equip_mp) || 0),
+      // Apply equipment stat bonuses to combat stats
+      strength: char.strength + (parseInt(char.equip_strength) || 0),
+      intelligence: char.intelligence + (parseInt(char.equip_intelligence) || 0),
+      agility: char.agility + (parseInt(char.equip_agility) || 0),
+      vitality: char.vitality + (parseInt(char.equip_vitality) || 0),
+      luck: char.luck + (parseInt(char.equip_luck) || 0),
+      // Equipment-only combat bonuses
+      attack: parseInt(char.equip_attack) || 0,
+      defense: parseInt(char.equip_defense) || 0,
+      magicAttack: parseInt(char.equip_magic_attack) || 0,
+      magicDefense: parseInt(char.equip_magic_defense) || 0,
       tileX: 1 + (idx % 3),
       tileY: 13 + Math.floor(idx / 3) * 2,
       ct: 0,
       hasActed: false,
-      statusEffects: []
+      statusEffects: [],
+      // Include learned skills for this character
+      skills: characterSkills[char.id] || []
     }))
   };
+
+  // Get consumable items from party leader's inventory
+  const partyLeaderId = party[0].id;
+  const consumablesResult = await query(
+    `SELECT ci.id as inventory_id, it.id as item_id, it.name, it.item_type,
+            it.effect_type, it.effect_value, it.description, ci.quantity
+     FROM character_items ci
+     JOIN item_templates it ON ci.item_template_id = it.id
+     WHERE ci.character_id = $1 AND it.item_type = 'consumable' AND ci.quantity > 0
+       AND ci.equipped_slot IS NULL
+     ORDER BY it.name`,
+    [partyLeaderId]
+  );
+
+  // Map consumables to battle format
+  initialState.consumables = consumablesResult.rows.map(item => ({
+    inventoryId: item.inventory_id,
+    itemId: item.item_id,
+    name: item.name,
+    quantity: item.quantity,
+    description: item.description,
+    effectType: item.effect_type,
+    effectValue: item.effect_value
+  }));
 
   // Generate enemies from templates
   const enemies = await enemyService.generateEncounter(currentNodeId, party);
@@ -570,6 +834,28 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
     'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
     [JSON.stringify(state), battleStatus, battleId]
   );
+
+  // Consume item from inventory if an item was used
+  if (result.consumedInventoryId) {
+    // Reduce quantity or delete item from character_items
+    const itemCheck = await query(
+      'SELECT quantity FROM character_items WHERE id = $1',
+      [result.consumedInventoryId]
+    );
+    if (itemCheck.rows.length > 0) {
+      if (itemCheck.rows[0].quantity > 1) {
+        await query(
+          'UPDATE character_items SET quantity = quantity - 1 WHERE id = $1',
+          [result.consumedInventoryId]
+        );
+      } else {
+        await query(
+          'DELETE FROM character_items WHERE id = $1',
+          [result.consumedInventoryId]
+        );
+      }
+    }
+  }
 
   // Broadcast action executed via WebSocket
   battleWebsocket.broadcastActionExecuted(battleId, unitId, actionType, result, req.user.userId);
