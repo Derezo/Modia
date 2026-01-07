@@ -6,6 +6,149 @@ const { asyncHandler, AppError } = require('../middleware/errorHandler');
 const { BATTLE_NODE_TYPES, MAX_BATTLE_PARTY_SIZE } = require('../config/constants');
 const battleService = require('../services/battleService');
 const aiService = require('../services/aiService');
+const enemyService = require('../services/enemyService');
+const itemDropService = require('../services/itemDropService');
+
+/**
+ * Process an action for any unit (player or enemy)
+ * @param {Object} state - Battle state
+ * @param {Object} unit - The acting unit
+ * @param {string} actionType - 'move' | 'attack' | 'wait'
+ * @param {Object} targetTile - { x, y } target position
+ * @returns {Object} Action result
+ */
+function processAction(state, unit, actionType, targetTile) {
+  const result = { damage: 0, moved: false };
+
+  switch (actionType) {
+    case 'move':
+      if (targetTile) {
+        unit.tileX = targetTile.x;
+        unit.tileY = targetTile.y;
+        result.moved = true;
+        result.newPosition = { x: targetTile.x, y: targetTile.y };
+      }
+      break;
+
+    case 'attack':
+      if (targetTile) {
+        const target = state.units.find(u =>
+          u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
+        );
+        if (target) {
+          const hits = battleService.checkHit(unit, target);
+          if (hits) {
+            const damageResult = battleService.calculatePhysicalDamage(unit, target);
+            target.hp = Math.max(0, target.hp - damageResult.damage);
+            result.damage = damageResult.damage;
+            result.isCritical = damageResult.isCritical;
+            result.targetId = target.id;
+          } else {
+            result.missed = true;
+            result.targetId = target.id;
+          }
+        }
+      }
+      break;
+
+    case 'wait':
+      // Do nothing, end turn
+      break;
+  }
+
+  unit.hasActed = true;
+  return result;
+}
+
+/**
+ * Advance to the next living unit in turn order
+ * @param {Object} state - Battle state
+ */
+function advanceToNextUnit(state) {
+  const startIndex = state.activeUnitIndex;
+  let nextIndex = (state.activeUnitIndex + 1) % state.units.length;
+
+  // Skip dead units
+  while (state.units[nextIndex].hp <= 0 && nextIndex !== startIndex) {
+    nextIndex = (nextIndex + 1) % state.units.length;
+  }
+
+  // Check for new turn (wrapped around to beginning of order)
+  if (nextIndex <= state.activeUnitIndex) {
+    state.turn++;
+    state.units.forEach(u => u.hasActed = false);
+  }
+
+  state.activeUnitIndex = nextIndex;
+}
+
+/**
+ * Check if battle has ended
+ * @param {Object} state - Battle state
+ * @returns {string} 'active' | 'victory' | 'defeat'
+ */
+function checkBattleEnd(state) {
+  const playerUnitsAlive = state.units.filter(u => u.type === 'player' && u.hp > 0).length;
+  const enemyUnitsAlive = state.units.filter(u => u.type === 'enemy' && u.hp > 0).length;
+
+  if (enemyUnitsAlive === 0) return 'victory';
+  if (playerUnitsAlive === 0) return 'defeat';
+  return 'active';
+}
+
+/**
+ * Process all enemy turns until it's a player's turn or battle ends
+ * @param {Object} state - Battle state
+ * @param {number} maxIterations - Safety limit to prevent infinite loops
+ * @returns {Array} Array of enemy actions for frontend animation
+ */
+function processEnemyTurns(state, maxIterations = 50) {
+  const enemyActions = [];
+  let iterations = 0;
+
+  while (iterations < maxIterations) {
+    const activeUnit = state.units[state.activeUnitIndex];
+
+    // Stop if it's a player's turn
+    if (activeUnit.type === 'player') {
+      break;
+    }
+
+    // Stop if unit is dead (shouldn't happen, but safety check)
+    if (activeUnit.hp <= 0) {
+      advanceToNextUnit(state);
+      iterations++;
+      continue;
+    }
+
+    // Get AI decision
+    const decision = aiService.decideAction(activeUnit, state);
+
+    // Process the enemy action
+    const result = processAction(state, activeUnit, decision.actionType, decision.targetTile);
+
+    // Record this action for frontend animation
+    enemyActions.push({
+      unitId: activeUnit.id,
+      unitName: activeUnit.name,
+      actionType: decision.actionType,
+      targetTile: decision.targetTile,
+      result
+    });
+
+    // Check if battle ended
+    const battleStatus = checkBattleEnd(state);
+    if (battleStatus !== 'active') {
+      break;
+    }
+
+    // Advance to next unit
+    advanceToNextUnit(state);
+    iterations++;
+  }
+
+  return enemyActions;
+}
 
 // POST /api/battle/start - Start PvE battle at current node
 router.post('/start', authenticate, asyncHandler(async (req, res) => {
@@ -27,9 +170,41 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
 
   const party = partyResult.rows;
 
-  // Check if already in battle
+  // Check if already in battle - if so, return existing battle data for rejoin
   if (party.some(c => c.in_battle)) {
-    throw new AppError('Already in a battle', 400);
+    // Look for existing active battle
+    const existingBattle = await query(
+      `SELECT b.id, b.battle_type, b.battle_state, b.map_seed, b.map_width, b.map_height,
+              wn.node_type, wn.name as node_name
+       FROM battles b
+       JOIN world_nodes wn ON b.node_id = wn.id
+       WHERE b.player1_id = $1 AND b.status = 'active'
+       ORDER BY b.started_at DESC
+       LIMIT 1`,
+      [req.user.userId]
+    );
+
+    if (existingBattle.rows.length > 0) {
+      // Return existing battle for rejoin
+      const battle = existingBattle.rows[0];
+      return res.json({
+        battleId: battle.id,
+        battleType: battle.battle_type,
+        mapSeed: battle.map_seed,
+        mapWidth: battle.map_width,
+        mapHeight: battle.map_height,
+        nodeType: battle.node_type,
+        nodeName: battle.node_name,
+        state: battle.battle_state,
+        rejoined: true
+      });
+    }
+
+    // Corrupted state: in_battle=true but no active battle found - reset and continue
+    await query(
+      'UPDATE characters SET in_battle = false WHERE user_id = $1',
+      [req.user.userId]
+    );
   }
 
   // Check if any party member has 0 HP
@@ -76,35 +251,16 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
       strength: char.strength,
       intelligence: char.intelligence,
       agility: char.agility,
-      tileX: idx % 2,
-      tileY: 6 + Math.floor(idx / 2),
+      tileX: 1 + (idx % 3),
+      tileY: 13 + Math.floor(idx / 3) * 2,
       hasActed: false,
       statusEffects: []
     }))
   };
 
-  // Add enemies based on difficulty
-  const enemyCount = Math.min(node.difficulty_tier + 2, 5);
-  for (let i = 0; i < enemyCount; i++) {
-    const baseLevel = Math.max(1, party[0].level - 2 + node.difficulty_tier);
-    initialState.units.push({
-      id: `enemy_${i}`,
-      type: 'enemy',
-      name: `${node.node_type.charAt(0).toUpperCase() + node.node_type.slice(1)} ${['Goblin', 'Wolf', 'Slime', 'Skeleton', 'Bandit'][i % 5]}`,
-      class: 'monster',
-      hp: 50 + baseLevel * 10,
-      maxHp: 50 + baseLevel * 10,
-      mp: 20,
-      maxMp: 20,
-      strength: 8 + baseLevel,
-      intelligence: 5 + baseLevel,
-      agility: 6 + baseLevel,
-      tileX: 6 + (i % 2),
-      tileY: i,
-      hasActed: false,
-      statusEffects: []
-    });
-  }
+  // Generate enemies from templates
+  const enemies = await enemyService.generateEncounter(currentNodeId, party);
+  initialState.units.push(...enemies);
 
   // Sort units by initiative (agility)
   initialState.units.sort((a, b) => b.agility - a.agility);
@@ -112,7 +268,7 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
   // Create battle record
   const battleResult = await query(
     `INSERT INTO battles (battle_type, status, node_id, battle_state, map_seed, map_width, map_height, player1_id)
-     VALUES ('pve', 'active', $1, $2, $3, 8, 8, $4)
+     VALUES ('pve', 'active', $1, $2, $3, 32, 32, $4)
      RETURNING id`,
     [currentNodeId, JSON.stringify(initialState), mapSeed, req.user.userId]
   );
@@ -129,8 +285,8 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
   res.status(201).json({
     battleId,
     mapSeed,
-    mapWidth: 8,
-    mapHeight: 8,
+    mapWidth: 32,
+    mapHeight: 32,
     state: initialState
   });
 }));
@@ -189,70 +345,23 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Not this unit\'s turn', 400);
   }
 
-  // Process action (simplified for MVP)
-  let result = { damage: 0, moved: false };
+  // Process player action using helper
+  const result = processAction(state, activeUnit, actionType, targetTile);
 
-  switch (actionType) {
-    case 'move':
-      if (targetTile) {
-        activeUnit.tileX = targetTile.x;
-        activeUnit.tileY = targetTile.y;
-        result.moved = true;
-      }
-      break;
+  // Check if battle ended from player action
+  let battleStatus = checkBattleEnd(state);
 
-    case 'attack':
-      // Find target at position
-      const target = state.units.find(u =>
-        u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
-      );
-      if (target) {
-        // Check hit
-        const hits = battleService.checkHit(activeUnit, target);
-        if (hits) {
-          // Calculate damage using proper formula
-          const damageResult = battleService.calculatePhysicalDamage(activeUnit, target);
-          target.hp = Math.max(0, target.hp - damageResult.damage);
-          result.damage = damageResult.damage;
-          result.isCritical = damageResult.isCritical;
-          result.targetId = target.id;
-        } else {
-          result.missed = true;
-          result.targetId = target.id;
-        }
-      }
-      break;
+  // Process enemy turns if battle is still active
+  let enemyActions = [];
+  if (battleStatus === 'active') {
+    // Advance to next unit
+    advanceToNextUnit(state);
 
-    case 'wait':
-      // Do nothing, end turn
-      break;
-  }
+    // Process all enemy turns until it's a player's turn again
+    enemyActions = processEnemyTurns(state);
 
-  activeUnit.hasActed = true;
-
-  // Advance to next unit
-  let nextIndex = (state.activeUnitIndex + 1) % state.units.length;
-  while (state.units[nextIndex].hp <= 0 && nextIndex !== state.activeUnitIndex) {
-    nextIndex = (nextIndex + 1) % state.units.length;
-  }
-
-  // Check for new turn
-  if (nextIndex <= state.activeUnitIndex) {
-    state.turn++;
-    state.units.forEach(u => u.hasActed = false);
-  }
-
-  state.activeUnitIndex = nextIndex;
-
-  // Check win/lose conditions
-  const playerUnitsAlive = state.units.filter(u => u.type === 'player' && u.hp > 0).length;
-  const enemyUnitsAlive = state.units.filter(u => u.type === 'enemy' && u.hp > 0).length;
-
-  let battleStatus = 'active';
-  if (enemyUnitsAlive === 0) {
-    battleStatus = 'victory';
-  } else if (playerUnitsAlive === 0) {
-    battleStatus = 'defeat';
+    // Check if battle ended after enemy turns
+    battleStatus = checkBattleEnd(state);
   }
 
   // Update battle state
@@ -272,28 +381,48 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
     // Calculate rewards for victory
     if (battleStatus === 'victory') {
       const enemies = state.units.filter(u => u.type === 'enemy');
+      const players = state.units.filter(u => u.type === 'player');
       const partyLevel = Math.floor(
-        state.units.filter(u => u.type === 'player').reduce((sum, u) => sum + (u.level || 1), 0) /
-        state.units.filter(u => u.type === 'player').length
+        players.reduce((sum, u) => sum + (u.level || 1), 0) / players.length
       ) || 1;
 
-      // Get node difficulty for gold calculation
+      // Get node info for rewards calculation
       const nodeResult = await query(
-        'SELECT difficulty_tier FROM world_nodes WHERE id = (SELECT node_id FROM battles WHERE id = $1)',
+        'SELECT difficulty_tier, node_type FROM world_nodes WHERE id = (SELECT node_id FROM battles WHERE id = $1)',
         [battleId]
       );
       const difficultyTier = nodeResult.rows[0]?.difficulty_tier || 1;
+      const nodeType = nodeResult.rows[0]?.node_type || 'forest';
 
       // Calculate rewards using service
       const gold = battleService.calculateGoldReward(enemies, difficultyTier);
       const exp = battleService.calculateExperienceReward(enemies, partyLevel);
 
+      // Roll item drops from each enemy
+      const droppedItems = [];
+      for (const enemy of enemies) {
+        const drops = await itemDropService.rollDrops(enemy, difficultyTier, nodeType);
+        droppedItems.push(...drops);
+      }
+
+      // Get party leader for item storage
+      const partyLeaderResult = await query(
+        'SELECT id FROM characters WHERE user_id = $1 AND party_slot = 1',
+        [req.user.userId]
+      );
+      const partyLeaderId = partyLeaderResult.rows[0]?.id;
+
       // Use transaction for rewards distribution
       await withTransaction(async (client) => {
         // Update battle record
+        const rewardsData = {
+          gold,
+          experience: exp,
+          items: itemDropService.formatDropsForResponse(droppedItems)
+        };
         await client.query(
           'UPDATE battles SET rewards = $1, ended_at = NOW() WHERE id = $2',
-          [JSON.stringify({ gold, experience: exp }), battleId]
+          [JSON.stringify(rewardsData), battleId]
         );
 
         // Award gold to user
@@ -303,59 +432,36 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
         );
 
         // Distribute XP to battle party characters
-        const xpPerCharacter = Math.floor(exp / state.units.filter(u => u.type === 'player').length);
+        const xpPerCharacter = Math.floor(exp / players.length);
         await client.query(
           `UPDATE characters
            SET experience = experience + $1
            WHERE user_id = $2 AND party_slot <= $3 AND party_slot IS NOT NULL`,
           [xpPerCharacter, req.user.userId, MAX_BATTLE_PARTY_SIZE]
         );
+
+        // Store dropped items in party leader's inventory
+        if (partyLeaderId) {
+          for (const item of droppedItems) {
+            await itemDropService.storeDroppedItem(partyLeaderId, item, client);
+          }
+        }
       });
 
-      result.rewards = { gold, experience: exp };
+      result.rewards = {
+        gold,
+        experience: exp,
+        items: itemDropService.formatDropsForResponse(droppedItems)
+      };
     }
   }
 
   res.json({
     state,
     actionResult: result,
+    enemyActions,
     battleStatus
   });
-}));
-
-// POST /api/battle/flee - Attempt to flee battle
-router.post('/flee', authenticate, asyncHandler(async (req, res) => {
-  const { battleId } = req.body;
-
-  const battleResult = await query(
-    `SELECT id FROM battles
-     WHERE id = $1 AND player1_id = $2 AND status = 'active'`,
-    [battleId, req.user.userId]
-  );
-
-  if (battleResult.rows.length === 0) {
-    throw new AppError('Battle not found or not active', 404);
-  }
-
-  // 50% flee chance (can be made more complex)
-  const fleeSuccess = Math.random() > 0.5;
-
-  if (fleeSuccess) {
-    await query(
-      'UPDATE battles SET status = $1, ended_at = NOW() WHERE id = $2',
-      ['fled', battleId]
-    );
-
-    await query(
-      `UPDATE characters SET in_battle = false
-       WHERE user_id = $1 AND party_slot <= $2`,
-      [req.user.userId, MAX_BATTLE_PARTY_SIZE]
-    );
-
-    res.json({ success: true, message: 'Escaped successfully!' });
-  } else {
-    res.json({ success: false, message: 'Failed to escape!' });
-  }
 }));
 
 // GET /api/battle/rewards - Get rewards after victory

@@ -178,7 +178,7 @@ router.get('/characters/:characterId/skills', authenticate, asyncHandler(async (
   }
 
   res.json({
-    characterId,
+    characterId: parseInt(characterId, 10),
     class: character.class,
     xpPool: character.experience || 0,
     skills

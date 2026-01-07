@@ -163,10 +163,120 @@ html, body {
   background: rgba(217, 74, 74, 0.2);
   border: 1px solid #d94a4a;
   border-radius: 4px;
-  padding: 10px;
+  padding: 10px 10px 10px 36px;
   margin-bottom: 16px;
   color: #ff6b6b;
   font-size: 13px;
+  position: relative;
+  animation: slideIn 0.2s ease-out;
+}
+
+.auth-error::before {
+  content: "!";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background: #d94a4a;
+  border-radius: 50%;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Form validation states */
+.input-field.input-valid {
+  border-color: #4caf50;
+}
+
+.input-field.input-invalid {
+  border-color: #d94a4a;
+}
+
+.input-field.input-valid:focus {
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+.input-field.input-invalid:focus {
+  border-color: #d94a4a;
+  box-shadow: 0 0 0 2px rgba(217, 74, 74, 0.2);
+}
+
+.field-error {
+  color: #ff6b6b;
+  font-size: 11px;
+  margin-top: 4px;
+  display: none;
+}
+
+.field-error.visible {
+  display: block;
+  animation: slideIn 0.15s ease-out;
+}
+
+.field-hint {
+  color: #6a6a8a;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+/* Loading state for buttons */
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.btn-loading::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  top: 50%;
+  left: 50%;
+  margin-left: -8px;
+  margin-top: -8px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* Form loading overlay */
+.form-loading {
+  position: relative;
+  pointer-events: none;
+}
+
+.form-loading::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(22, 33, 62, 0.5);
+  border-radius: 8px;
+}
+
+.form-loading .input-field {
+  opacity: 0.6;
 }
 
 .auth-switch {

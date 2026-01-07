@@ -5,8 +5,48 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 2.0 |
+| Version | 3.0 |
 | Last Updated | January 2026 |
+
+---
+
+## Status Summary
+
+| Phase | Name | Completion | Status |
+|-------|------|------------|--------|
+| 1 | Foundation | 95% | Complete |
+| 2 | Characters & World | 85% | Complete |
+| 3 | Combat System | 45% | Partial |
+| 4 | Economy & Inventory | 10% | Minimal |
+| 5 | Multiplayer | 10% | Minimal |
+| 6 | Polish & Launch | 0% | Not Started |
+
+**Overall: ~30%**
+
+---
+
+## Blocking Issues
+
+Critical items preventing complete gameplay loop:
+
+| Issue | Location | Impact |
+|-------|----------|--------|
+| Equipment UI placeholder | FormationScene.js:521 | Cannot equip items |
+| Skill learning disabled | FormationScene.js:561 | Cannot learn skills |
+| Inventory inaccessible | WorldMapScene.js:188 | Cannot view inventory from world |
+| Shop system missing | No shops.js route | Cannot buy/sell items |
+| Gold not awarded | Battle rewards calculated but not stored | Economy non-functional |
+
+---
+
+## Known Placeholders in Code
+
+| File | Line | Text | Fix Required |
+|------|------|------|--------------|
+| FormationScene.js | 521 | "Equipment system coming soon!" | Wire to inventory API |
+| FormationScene.js | 561 | "Skill learning coming soon!" | Wire to skills API, enable Learn buttons |
+| WorldMapScene.js | 188 | "Inventory - Coming soon!" | Add inventory modal/scene access |
+| BattleScene.js | 470 | "TODO: Implement audio system" | Add Web Audio API |
 
 ---
 
@@ -25,14 +65,14 @@
 |-------|-------|------------------|
 | 1 | Foundation | Auth, DB, Project Setup |
 | 2 | Characters & World | Character CRUD, World Map |
-| 3 | Combat | Battle System, PvE |
-| 4 | Economy | Items, Shops, Inventory |
+| 3 | Combat | Battle System, Skills, PvE |
+| 4 | Economy | Items, Shops, Inventory, Marketplace |
 | 5 | Multiplayer | WebSocket, Chat, PvP, Trading |
 | 6 | Polish & Launch | UI, Balance, Deployment |
 
 ---
 
-## 2. Phase 1: Foundation
+## 2. Phase 1: Foundation (95% Complete)
 
 ### 2.1 Objectives
 
@@ -85,34 +125,34 @@ Establish the technical foundation for the project including authentication, dat
 
 - [x] LoginScene implementation
 - [x] RegisterScene implementation
-- [ ] Form validation feedback
-- [ ] Loading states
-- [ ] Error handling UI
+- [x] Form validation feedback
+- [x] Loading states
+- [x] Error handling UI
 
 ### 2.3 Acceptance Criteria
 
-- [ ] User can register a new account
-- [ ] User can log in with existing credentials
-- [ ] Invalid credentials show error message
-- [ ] JWT tokens are stored and used for API calls
-- [ ] Session persists across page refresh
-- [ ] User can log out
+- [x] User can register a new account
+- [x] User can log in with existing credentials
+- [x] Invalid credentials show error message
+- [x] JWT tokens are stored and used for API calls
+- [x] Session persists across page refresh
+- [x] User can log out
 
 ### 2.4 Testing Checklist
 
-- [ ] Register with valid credentials → Success
-- [ ] Register with duplicate username → Error
-- [ ] Register with invalid email → Error
-- [ ] Login with valid credentials → Success
-- [ ] Login with wrong password → Error
-- [ ] Access protected route without token → 401
-- [ ] Access protected route with valid token → Success
-- [ ] Refresh token before expiry → New access token
-- [ ] Use expired refresh token → Error
+- [x] Register with valid credentials -> Success
+- [x] Register with duplicate username -> Error
+- [x] Register with invalid email -> Error
+- [x] Login with valid credentials -> Success
+- [x] Login with wrong password -> Error
+- [x] Access protected route without token -> 401
+- [x] Access protected route with valid token -> Success
+- [x] Refresh token before expiry -> New access token
+- [x] Use expired refresh token -> Error
 
 ---
 
-## 3. Phase 2: Characters & World
+## 3. Phase 2: Characters & World (85% Complete)
 
 ### 3.1 Objectives
 
@@ -128,15 +168,15 @@ Implement character creation, management, and world map navigation.
 - [x] PUT /api/characters/:id (update)
 - [x] DELETE /api/characters/:id
 - [x] GET /api/characters/:id/stats
-- [ ] Character stat calculation service
-- [ ] Race/class validation
+- [x] Character stat calculation service
+- [x] Race/class validation
 
 #### 3.2.2 Party API
 
 - [x] GET /api/party
 - [x] PUT /api/party (formation)
 - [x] PUT /api/party/battle
-- [ ] Validation for party constraints
+- [x] Validation for party constraints
 
 #### 3.2.3 World API
 
@@ -145,8 +185,8 @@ Implement character creation, management, and world map navigation.
 - [x] GET /api/world/nodes/:id
 - [x] POST /api/world/travel
 - [x] GET /api/world/current
-- [ ] Node adjacency validation
-- [ ] Travel restrictions
+- [x] Node adjacency validation
+- [x] Travel restrictions
 
 #### 3.2.4 World Generation
 
@@ -157,8 +197,8 @@ Implement character creation, management, and world map navigation.
 - [x] Palace placement (1 node)
 - [x] Connection generation
 - [x] Feature assignment
-- [ ] Name generation variety
-- [ ] Difficulty tier calculation
+- [x] Name generation variety
+- [x] Difficulty tier calculation
 
 #### 3.2.5 Character UI
 
@@ -166,9 +206,9 @@ Implement character creation, management, and world map navigation.
 - [x] CharacterCreateScene
 - [x] Race selection interface
 - [x] Class selection interface
-- [ ] Stat preview display
-- [ ] Character card component
-- [ ] FormationScene implementation
+- [x] Stat preview display (in FormationScene)
+- [x] Character card component
+- [x] FormationScene implementation (partial - Stats tab works)
 
 #### 3.2.6 World Map UI
 
@@ -177,35 +217,35 @@ Implement character creation, management, and world map navigation.
 - [x] Connection rendering
 - [x] Current position indicator
 - [x] Travel to adjacent nodes
-- [ ] Pan and zoom controls
+- [x] Pan and zoom controls
 - [ ] Node hover information
-- [ ] Node type icons/colors
+- [x] Node type icons/colors
 - [ ] Mini-map display
 
 ### 3.3 Acceptance Criteria
 
-- [ ] User can create character with name/race/class
-- [ ] Character appears in selection screen
-- [ ] User can delete character
-- [ ] World map displays all nodes
-- [ ] User can travel to adjacent nodes
-- [ ] Cannot travel to non-adjacent nodes
-- [ ] Current location is highlighted
-- [ ] Node features are displayed
+- [x] User can create character with name/race/class
+- [x] Character appears in selection screen
+- [x] User can delete character
+- [x] World map displays all nodes
+- [x] User can travel to adjacent nodes
+- [x] Cannot travel to non-adjacent nodes
+- [x] Current location is highlighted
+- [x] Node features are displayed
 
 ### 3.4 Testing Checklist
 
-- [ ] Create character with all race/class combinations
-- [ ] Attempt to create 13th character → Error
-- [ ] Delete character → Removed from list
-- [ ] View world map → All nodes visible
-- [ ] Click adjacent node → Travel succeeds
-- [ ] Click non-adjacent node → Travel fails
-- [ ] World generation is deterministic (same seed = same world)
+- [x] Create character with all race/class combinations
+- [x] Attempt to create 13th character -> Error
+- [x] Delete character -> Removed from list
+- [x] View world map -> All nodes visible
+- [x] Click adjacent node -> Travel succeeds
+- [x] Click non-adjacent node -> Travel fails
+- [x] World generation is deterministic (same seed = same world)
 
 ---
 
-## 4. Phase 3: Combat System
+## 4. Phase 3: Combat System (45% Complete)
 
 ### 4.1 Objectives
 
@@ -219,211 +259,309 @@ Implement the core turn-based tactical battle system for PvE encounters.
 - [x] GET /api/battle/current
 - [x] POST /api/battle/action
 - [x] GET /api/battle/rewards/:id
-- [ ] Battle state validation
-- [ ] Turn order management
-- [ ] Action resolution
+- [x] Battle state validation
+- [x] Turn order management
+- [x] Action resolution
 
 > **Note**: Flee mechanic removed from design. Characters respawn at last safe node on party wipe.
 
 #### 4.2.2 Battle Engine
 
-- [ ] Battle state machine
-- [ ] Initiative calculation
-- [ ] Movement system
-  - [ ] Base movement: 3 tiles for all classes
-  - [ ] Pathfinding (A*)
-  - [ ] Terrain costs (Forest: 2, Water: 2, Normal: 1)
-- [ ] Attack system
-  - [ ] Damage calculation
-  - [ ] Critical hits
+- [x] Battle state machine
+- [x] Initiative calculation
+- [x] Movement system
+  - [x] Base movement: 3 tiles for all classes
+  - [x] Pathfinding (A*)
+  - [x] Terrain costs (Forest: 2, Water: 2, Normal: 1)
+- [x] Attack system
+  - [x] Damage calculation
+  - [x] Critical hits
   - [ ] Elemental damage
-- [ ] Skill system
+- [ ] Skill system in battle
   - [ ] Load skill trees from SKILL_TREES.md definitions
-  - [ ] XP-spending skill learning
+  - [ ] Skill usage in battle UI
   - [ ] MP consumption
   - [ ] Area of effect
+  - [ ] Skill cooldowns
 - [ ] Status effects (no stacking, refresh duration only)
-  - [ ] Effect application
-  - [ ] Duration tracking
+  - [ ] Effect application in battle
+  - [ ] Duration tracking display
   - [ ] Turn-end processing
-- [ ] Win/lose detection
-- [ ] Reward calculation
+- [x] Win/lose detection
+- [x] Reward calculation
 
-#### 4.2.2.1 Skill Learning API (see API_SPECIFICATION.md Section 8-9)
+#### 4.2.2.1 Skill Learning API
 
-- [ ] POST /api/skills/learn
-- [ ] GET /api/skills/tree/:guildId
-- [ ] GET /api/characters/:id/skills
-- [ ] GET /api/guilds
-- [ ] GET /api/guilds/:guildId
+- [x] POST /api/skills/learn
+- [x] GET /api/skills/tree/:guildId
+- [x] GET /api/characters/:id/skills
+- [x] GET /api/guilds
+- [ ] GET /api/guilds/:guildId (detailed)
 - [ ] GET /api/characters/:id/guilds
 
-> **Note**: MVP includes 8 guilds (4 base + 4 advanced) as defined in SKILL_TREES.md
+#### 4.2.2.2 Base Guild Skills (4 Guilds)
+
+- [x] Warrior guild skills (Offense, Defense, Passive branches)
+- [x] Wizard guild skills (Fire, Ice, Lightning, Passive branches)
+- [x] Monk guild skills (Strikes, Spirit, Passive branches)
+- [x] Chemist guild skills (Healing, Offense, Utility branches)
+
+#### 4.2.2.3 Advanced Guild Skills (4 Guilds - NOT IMPLEMENTED)
+
+> **Note**: Per SKILL_TREES.md, MVP includes 8 guilds (4 base + 4 advanced)
+
+- [ ] Berserker guild (Warrior advancement)
+  - [ ] Rage Branch (Rage, Blood Frenzy, Rampage, Bloodlust, Unstoppable)
+  - [ ] Recklessness Branch (Wild Swing, Reckless Charge, Frenzied Assault, Death Wish, Berserker's Fury)
+- [ ] Sorcerer guild (Wizard advancement)
+  - [ ] Arcane Branch (Arcane Bolt, Mana Shield, Arcane Explosion, Arcane Mastery, Arcane Annihilation)
+  - [ ] Elemental Branch (Elemental Surge, Elemental Shield, Elemental Storm, Elemental Mastery, Elemental Apocalypse)
+- [ ] Ninja guild (Monk advancement)
+  - [ ] Stealth Branch (Shadow Step, Vanish, Ambush, Assassinate, Death From Shadows)
+  - [ ] Ninjutsu Branch (Shuriken Throw, Smoke Bomb, Shadow Clone, Ninjutsu Mastery, Art of the Ninja)
+- [ ] Alchemist guild (Chemist advancement)
+  - [ ] Transmutation Branch (Transmute, Enhance, Purify, Philosopher's Stone, Master Transmutation)
+  - [ ] Explosives Branch (Bomb Toss, Cluster Bomb, Napalm, Demolition, Grand Explosion)
+
+#### 4.2.2.4 Skill System Enhancements
+
+- [ ] 5-tier skill system with guild level requirements
+- [ ] Ultimate skills (Tier 5) for all guilds
+- [ ] Skill scaling formula implementation
+- [ ] Skill levels 1-100 (currently 5-20)
+- [ ] Guild advancement quests
 
 #### 4.2.3 Enemy System
 
 - [x] Enemy template database (see ENEMY_SYSTEM.md)
-- [ ] Enemy spawning by node type and difficulty tier
-- [ ] Level scaling (enemy_level = avg_party_level × tier_multiplier)
-- [ ] Enemy AI (7 archetypes defined in ENEMY_SYSTEM.md)
-  - [ ] Aggressive, Defensive, Support, Tactical
-  - [ ] Pack, Hit-and-Run, Ambush
-  - [ ] Target selection
-  - [ ] Ability usage
-  - [ ] Positioning
+- [x] enemyService.js implementation
+- [x] Enemy spawning by node type and difficulty tier
+- [x] Level scaling (enemy_level = avg_party_level x tier_multiplier)
+- [x] Difficulty tier multipliers (0.9x - 2.15x)
+
+#### 4.2.3.1 Enemy AI Archetypes (5/7 Implemented)
+
+- [x] Aggressive (charge forward, target highest DPS)
+- [x] Defensive (protect allies, retreat at 50% HP)
+- [x] Support (heal/buff allies, avoid frontline)
+- [x] Tactical (control positions, setup combos)
+- [x] Pack Tactics (coordinate with pack members)
+- [ ] Hit-and-Run (attack then retreat, avoid corners)
+- [ ] Ambush (hide until strike, +100% first attack)
+
+#### 4.2.3.2 Enemy Abilities (NOT IMPLEMENTED)
+
+- [ ] Ability execution system (abilities field exists but unused)
+- [ ] Ability cooldowns per enemy
+- [ ] Ability range checking
+- [ ] Ability trigger conditions
+
+#### 4.2.3.3 Boss Mechanics (NOT IMPLEMENTED)
+
+- [ ] Multi-phase boss system
+- [ ] HP threshold phase transitions
+- [ ] Stat modifiers per phase
+- [ ] Phase-specific ability unlocks
+
+#### 4.2.3.4 Enemy Defenses (NOT IMPLEMENTED)
+
+- [ ] Elemental resistance system
+- [ ] Status effect immunities
+- [ ] Special passive abilities (flight, regeneration, etc.)
 
 #### 4.2.4 Battle Map Generation
 
-- [ ] Terrain generation by node type
-- [ ] Spawn point calculation
-- [ ] Passability validation
-- [ ] Path verification
+- [x] Terrain generation by node type
+- [x] Spawn point calculation
+- [x] Passability validation
+- [x] Path verification
 
 #### 4.2.5 Battle UI
 
-- [ ] BattleScene implementation
-- [ ] Isometric tile rendering
-- [ ] Unit sprites
-- [ ] Movement range overlay
-- [ ] Attack range overlay
-- [ ] Action menu
-  - [ ] Move option
-  - [ ] Attack option
-  - [ ] Skill submenu
-  - [ ] Item submenu
-  - [ ] Wait option
-- [ ] Turn order display
-- [ ] HP/MP bars
+- [x] BattleScene implementation
+- [x] Isometric tile rendering
+- [x] Unit sprites
+- [x] Movement range overlay
+- [x] Attack range overlay
+- [x] Action menu
+  - [x] Move option
+  - [x] Attack option
+  - [ ] Skill submenu (skills exist in API but not in battle UI)
+  - [ ] Item submenu (items exist in API but not in battle UI)
+  - [x] Wait option
+- [x] Turn order display
+- [x] HP/MP bars
 - [ ] Battle log
-- [ ] Victory/defeat screens
-- [ ] Reward display
+- [x] Victory/defeat screens
+- [x] Reward display (RewardsModal)
 
 #### 4.2.6 Isometric Rendering
 
-- [ ] Coordinate conversion (screen ↔ tile)
-- [ ] Tile drawing order (depth sort)
-- [ ] Unit positioning
-- [ ] Animation system
-  - [ ] Idle animation
-  - [ ] Attack animation
-  - [ ] Damage animation
-  - [ ] Movement animation
+- [x] Coordinate conversion (screen <-> tile)
+- [x] Tile drawing order (depth sort)
+- [x] Unit positioning
+- [x] Animation system
+  - [x] Idle animation
+  - [x] Attack animation
+  - [x] Damage animation
+  - [x] Movement animation
+  - [x] Damage numbers
+  - [x] Particle effects
+
+#### 4.2.7 Audio System (NOT IMPLEMENTED)
+
+- [ ] Web Audio API integration
+- [ ] Sound effect playback
+- [ ] Battle music
+- [ ] UI sounds
 
 ### 4.3 Acceptance Criteria
 
-- [ ] User can initiate battle at battle nodes
-- [ ] Battle map generates correctly
-- [ ] Units display in correct positions
-- [ ] Player can move units within range (base: 3 tiles)
-- [ ] Player can attack enemies in range
-- [ ] Damage is calculated correctly
-- [ ] Enemies take turns and act (AI archetypes)
-- [ ] Battle ends on victory/defeat
-- [ ] Rewards are distributed correctly
-- [ ] XP is added to character's XP pool for skill spending
+- [x] User can initiate battle at battle nodes
+- [x] Battle map generates correctly
+- [x] Units display in correct positions
+- [x] Player can move units within range (base: 3 tiles)
+- [x] Player can attack enemies in range
+- [x] Damage is calculated correctly
+- [x] Enemies take turns and act (5/7 AI archetypes)
+- [x] Battle ends on victory/defeat
+- [x] Rewards are displayed correctly
+- [ ] XP is added to character's XP pool for skill spending (API exists, UI disabled)
+- [ ] Skills can be used in battle
+- [ ] Items can be used in battle
 
 ### 4.4 Testing Checklist
 
-- [ ] Start battle at Forest node → Forest-themed map
-- [ ] Start battle at Cave node → Cave-themed map
-- [ ] Move unit → Valid positions only (3 tiles base)
-- [ ] Attack enemy → Damage applied
-- [ ] Defeat enemy → Removed from battle
-- [ ] Defeat all enemies → Victory
-- [ ] All player units defeated → Respawn at safe node
-- [ ] XP awarded → Added to XP pool for skill spending
+- [x] Start battle at Forest node -> Forest-themed map
+- [x] Start battle at Cave node -> Cave-themed map
+- [x] Move unit -> Valid positions only (3 tiles base)
+- [x] Attack enemy -> Damage applied
+- [x] Defeat enemy -> Removed from battle
+- [x] Defeat all enemies -> Victory
+- [x] All player units defeated -> Respawn at safe node
+- [ ] Use skill in battle -> Effect applied
+- [ ] Use item in battle -> Effect applied
+- [ ] XP awarded -> Added to XP pool for skill spending
 
 ---
 
-## 5. Phase 4: Economy & Inventory
+## 5. Phase 4: Economy & Inventory (10% Complete)
 
 ### 5.1 Objectives
 
-Implement the item system, inventory management, and NPC shops.
+Implement the item system, inventory management, NPC shops, and player marketplace.
 
 ### 5.2 Tasks
 
-#### 5.2.1 Item System
+#### 5.2.1 Item System Backend
 
 - [x] Item template database
-- [ ] Item type handling
-  - [ ] Weapons
-  - [ ] Armor
-  - [ ] Accessories
-  - [ ] Consumables
-- [ ] Equipment slots
-- [ ] Stat bonuses from equipment
-- [ ] Item rarity system
+- [x] itemDropService.js implementation
+- [x] Rarity rolling (Common 70%, Uncommon 20%, Rare 8%, Epic 1.8%, Legendary 0.2%)
+- [x] Material tier generation (6 material groups by level)
+- [x] Seeded random for deterministic drops
+- [x] Basic item augmentation (8 augments)
 
-#### 5.2.2 Inventory API (see API_SPECIFICATION.md Section 10)
+#### 5.2.1.1 Advanced Item System (Per ITEM_SYSTEM.md - NOT IMPLEMENTED)
 
-- [ ] GET /api/inventory/:characterId
-- [ ] POST /api/inventory/equip
-- [ ] POST /api/inventory/unequip
-- [ ] POST /api/inventory/use
-- [ ] POST /api/inventory/discard
+- [ ] 5 intensity tiers (Minor, Lesser, Standard, Greater, Supreme)
+- [ ] Enemy-type prefixes (Dragonbane, Wyrmslayer, Demonslayer, etc.)
+- [ ] Defensive augments (Physical Defense, Magical Defense, Blocking, Reflection)
+- [ ] Support augments (Health/Mana Regen, Lifesteal, XP/Gold bonuses)
+- [ ] Combat augments (Critical Hit, Attack Speed, Evasion, Armor Penetration)
+- [ ] Unique augments (Whirlwind, Cleave, Riposte, Execute, etc.)
+- [ ] Set item bonuses
+- [ ] Full metal tier progression (12 tiers: Copper -> Celestial)
+- [ ] Wood material tiers (10 tiers: Pine -> Celestial Oak)
+- [ ] Cloth/Leather material tiers (10 tiers: Linen -> Starcloth)
+- [ ] Material special properties (Silver anti-undead, Mythril movement, etc.)
+- [ ] Complex stat scaling formula per docs
+- [ ] Rarity price multipliers as documented (1x-50x)
+- [ ] Priority-based naming system
+- [ ] Terrain-specific drop modifiers
 
-#### 5.2.3 Shop API (see API_SPECIFICATION.md Section 11)
+#### 5.2.2 Inventory API
 
-- [ ] GET /api/shops/:nodeId
+- [x] GET /api/inventory/:characterId
+- [x] POST /api/inventory/equip
+- [x] POST /api/inventory/unequip
+- [x] POST /api/inventory/use
+- [x] POST /api/inventory/discard
+
+#### 5.2.3 Inventory UI (PLACEHOLDER)
+
+- [ ] FormationScene equipment tab functional (currently shows "coming soon")
+- [ ] Wire equip/unequip buttons to API
+- [ ] Display equipped items on character
+- [ ] Stat comparison display
+- [ ] Item detail modal
+
+#### 5.2.4 Skill Learning UI (PLACEHOLDER)
+
+- [ ] FormationScene skills tab functional (currently disabled Learn buttons)
+- [ ] Wire skill learning to skills API
+- [ ] XP pool display and spending
+- [ ] Skill tree visualization
+
+#### 5.2.5 Shop API (NOT IMPLEMENTED)
+
+> **Note**: Per ECONOMY_SYSTEM.md - entire shop system not implemented
+
+- [ ] GET /api/shops/:nodeId (list shops at node)
 - [ ] GET /api/shops/:nodeId/:shopType/inventory
 - [ ] POST /api/shops/:nodeId/:shopType/buy
 - [ ] POST /api/shops/:nodeId/:shopType/sell
-- [ ] Shop inventory by type (weapon, armor, item, guild)
-- [ ] Supply level pricing system
 
-#### 5.2.4 Inventory UI
+#### 5.2.6 Shop System (NOT IMPLEMENTED)
 
-- [ ] InventoryScene implementation
-- [ ] Item grid display
-- [ ] Item detail modal
-- [ ] Equip/unequip interface
-- [ ] Character equipment slots
-- [ ] Stat comparison
-- [ ] Item use confirmation
+- [ ] ShopScene UI
+- [ ] Blacksmith shop inventory
+- [ ] Apothecary shop inventory
+- [ ] Farm shop inventory
+- [ ] Dynamic supply-based pricing (60-120% of base)
+- [ ] Stock refresh cycles (6-24 hours)
+- [ ] Player-sold item tracking
+- [ ] Item decay system (10% daily surplus decay)
 
-#### 5.2.5 Shop UI
+#### 5.2.7 Gold System (NOT FUNCTIONAL)
 
-- [ ] ShopScene implementation
-- [ ] Shop inventory display
-- [ ] Buy interface
-- [ ] Sell interface
-- [ ] Price display
-- [ ] Gold balance display
+- [ ] Gold tracking in player/character data
+- [ ] Gold awarding after battle victory (calculated but not stored)
+- [ ] Gold balance display in UI
+- [ ] Gold deduction on purchases
 
-#### 5.2.6 Item Integration
+#### 5.2.8 Item Integration
 
-- [ ] Loot drops from battles (see ITEM_SYSTEM.md Section 11)
-  - [ ] Regular enemies: 1-3 items
-  - [ ] Boss enemies: 2-4 items, guaranteed rare+
+- [x] Item drop service generates drops after battle
+- [ ] Drops wired to battle rewards endpoint
 - [ ] Item use in battle
-- [ ] Equipment stat application
+- [ ] Equipment stat application in combat
 - [ ] Consumable effects
 
 ### 5.3 Acceptance Criteria
 
-- [ ] Characters have inventory
-- [ ] Items can be equipped/unequipped
+- [ ] Characters have accessible inventory
+- [ ] Items can be equipped/unequipped via UI
 - [ ] Equipment affects stats
 - [ ] NPC shops sell items
 - [ ] User can buy items with gold
 - [ ] User can sell items for gold
 - [ ] Consumables work in battle
-- [ ] Loot drops after battles
+- [ ] Loot drops after battles and goes to inventory
 
 ### 5.4 Testing Checklist
 
-- [ ] View inventory → Shows items
-- [ ] Equip weapon → Stats change
-- [ ] Unequip weapon → Stats revert
-- [ ] Buy item → Gold deducted, item added
-- [ ] Sell item → Gold added, item removed
-- [ ] Use potion in battle → HP restored
-- [ ] Win battle → Loot received
+- [ ] View inventory -> Shows items
+- [ ] Equip weapon -> Stats change
+- [ ] Unequip weapon -> Stats revert
+- [ ] Buy item -> Gold deducted, item added
+- [ ] Sell item -> Gold added, item removed
+- [ ] Use potion in battle -> HP restored
+- [ ] Win battle -> Loot received in inventory
 
 ---
 
-## 6. Phase 5: Multiplayer Features
+## 6. Phase 5: Multiplayer Features (10% Complete)
 
 ### 6.1 Objectives
 
@@ -437,7 +575,7 @@ Implement real-time multiplayer features including chat, trading, and PvP.
 - [x] Connection management
 - [x] Authentication via JWT
 - [x] Room/channel system
-- [ ] Heartbeat/keepalive
+- [x] Heartbeat/keepalive
 - [ ] Reconnection handling
 - [ ] Cross-instance messaging (future)
 
@@ -446,11 +584,14 @@ Implement real-time multiplayer features including chat, trading, and PvP.
 - [x] join_room event
 - [x] leave_room event
 - [x] chat_message event
-- [ ] Message history (recent)
+- [ ] TavernScene UI
+- [ ] Message history (100 messages)
 - [ ] User list display
-- [ ] TavernScene implementation
+- [ ] 160-character message limit UI
 
-#### 6.2.3 Marketplace (see API_SPECIFICATION.md Section 12)
+#### 6.2.3 Marketplace API (NOT IMPLEMENTED)
+
+> **Note**: Per ECONOMY_SYSTEM.md - entire marketplace not implemented
 
 - [ ] GET /api/marketplace/orderbook/:itemTemplateId
 - [ ] GET /api/marketplace/orders/mine
@@ -458,36 +599,49 @@ Implement real-time multiplayer features including chat, trading, and PvP.
 - [ ] POST /api/marketplace/orders/market
 - [ ] DELETE /api/marketplace/orders/:orderId
 - [ ] GET /api/marketplace/history/:itemTemplateId
-- [ ] Max 10 open orders per player (buy + sell combined)
-- [ ] WebSocket listing updates
-- [ ] MarketplaceScene implementation
-- [ ] Order book display
-- [ ] Listing creation UI
-- [ ] Purchase confirmation
 
-#### 6.2.4 Coliseum PvP (see API_SPECIFICATION.md Section 7.7)
+#### 6.2.4 Marketplace System (NOT IMPLEMENTED)
+
+- [ ] MarketplaceScene UI
+- [ ] Order book display with bid/ask spread
+- [ ] Limit order system
+- [ ] Market order execution
+- [ ] Gold reservation for buy orders
+- [ ] Item escrow for sell orders
+- [ ] Price/time priority matching
+- [ ] Partial fill handling
+- [ ] Max 10 open orders per player
+- [ ] WebSocket listing updates
+
+#### 6.2.5 Coliseum PvP
 
 - [x] coliseum_queue_join event
 - [x] coliseum_queue_leave event
-- [ ] Matchmaking algorithm
+- [ ] ColiseumScene UI
+- [ ] Matchmaking algorithm (within +-10 levels)
 - [ ] PvP battle initialization
 - [ ] Real-time turn sync (pvp:turn_sync event)
 - [ ] pvp:queue_joined, pvp:match_found events
 - [ ] pvp:opponent_action, pvp:disconnect events
 - [ ] Turn timer (60 seconds)
 - [ ] Surrender option
-- [ ] Match results
-- [ ] ColiseumScene implementation
-- [ ] Queue status display
-- [ ] Opponent display
-- [ ] PvP battle UI
+- [ ] Match results recording
+- [ ] PvP rewards (50-100g victory)
 
-#### 6.2.5 Leaderboards
+#### 6.2.6 Leaderboards (NOT IMPLEMENTED)
 
 - [ ] GET /api/leaderboard/:category
-- [ ] Leaderboard calculation
-- [ ] Real-time updates
-- [ ] LeaderboardScene implementation
+- [ ] Highest character level leaderboard
+- [ ] Most PvP wins leaderboard
+- [ ] Most gold accumulated leaderboard
+- [ ] LeaderboardScene UI
+- [ ] Real-time leaderboard updates
+
+#### 6.2.7 Guild Endpoints (NOT IMPLEMENTED)
+
+- [ ] GET /api/guilds/:guildId (detailed)
+- [ ] GET /api/characters/:id/guilds (memberships)
+- [ ] Guild advancement quests
 
 ### 6.3 Acceptance Criteria
 
@@ -503,17 +657,17 @@ Implement real-time multiplayer features including chat, trading, and PvP.
 
 ### 6.4 Testing Checklist
 
-- [ ] Two users chat → Messages visible to both
-- [ ] Create marketplace listing → Appears for all
-- [ ] Purchase listing → Item transferred, gold transferred
-- [ ] Queue for PvP → Wait for match
-- [ ] Two users queue → Matched together
-- [ ] Complete PvP battle → Results recorded
-- [ ] Check leaderboard → Rankings correct
+- [ ] Two users chat -> Messages visible to both
+- [ ] Create marketplace listing -> Appears for all
+- [ ] Purchase listing -> Item transferred, gold transferred
+- [ ] Queue for PvP -> Wait for match
+- [ ] Two users queue -> Matched together
+- [ ] Complete PvP battle -> Results recorded
+- [ ] Check leaderboard -> Rankings correct
 
 ---
 
-## 7. Phase 6: Polish & Launch
+## 7. Phase 6: Polish & Launch (0% Complete)
 
 ### 7.1 Objectives
 
@@ -521,7 +675,16 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 
 ### 7.2 Tasks
 
-#### 7.2.1 UI/UX Polish
+#### 7.2.1 Missing Scenes
+
+- [ ] TavernScene
+- [ ] ShopScene
+- [ ] MarketplaceScene
+- [ ] ColiseumScene
+- [ ] LeaderboardScene
+- [ ] SettingsScene
+
+#### 7.2.2 UI/UX Polish
 
 - [ ] Consistent visual theme
 - [ ] Responsive design testing
@@ -533,7 +696,7 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 - [ ] Smooth transitions
 - [ ] Animation polish
 
-#### 7.2.2 Game Balance
+#### 7.2.3 Game Balance
 
 - [ ] Stat curve review
 - [ ] Damage formula tuning
@@ -543,7 +706,7 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 - [ ] Item pricing balance
 - [ ] PvP matchmaking tuning
 
-#### 7.2.3 Performance
+#### 7.2.4 Performance
 
 - [ ] API response time audit
 - [ ] Database query optimization
@@ -552,7 +715,7 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 - [ ] WebSocket efficiency
 - [ ] Asset optimization
 
-#### 7.2.4 Testing
+#### 7.2.5 Testing
 
 - [ ] Full gameplay walkthrough
 - [ ] Edge case testing
@@ -561,7 +724,7 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 - [ ] Load testing (25 users)
 - [ ] Security audit
 
-#### 7.2.5 Deployment
+#### 7.2.6 Deployment
 
 - [ ] VPS server setup
 - [ ] PostgreSQL installation
@@ -574,18 +737,18 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 - [ ] Backup strategy
 - [ ] Deployment documentation
 
-#### 7.2.6 Documentation
+#### 7.2.7 Documentation
 
 - [x] PROJECT_REQUIREMENTS.md (v2.0)
 - [x] TECHNICAL_ARCHITECTURE.md (v2.0)
 - [x] GAME_DESIGN.md (v2.0)
-- [x] DEVELOPMENT_ROADMAP.md (v2.0)
+- [x] DEVELOPMENT_ROADMAP.md (v3.0)
 - [x] API_SPECIFICATION.md (v2.0)
 - [x] CHARACTER_PROGRESSION.md (v2.0)
 - [x] ITEM_SYSTEM.md (v2.0)
 - [x] ECONOMY_SYSTEM.md (v2.0)
-- [x] SKILL_TREES.md (v1.0 - NEW)
-- [x] ENEMY_SYSTEM.md (v1.0 - NEW)
+- [x] SKILL_TREES.md (v1.0)
+- [x] ENEMY_SYSTEM.md (v1.0)
 - [ ] README.md (setup guide)
 - [ ] CONTRIBUTING.md
 - [ ] CHANGELOG.md
@@ -627,7 +790,7 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 
 | Feature | Description |
 |---------|-------------|
-| Guild System | Player guilds |
+| Player Guilds | Player-created guilds |
 | Cooperative Battles | Team vs bosses |
 | Equipment Crafting | Item creation |
 | Achievement System | Milestones and rewards |
@@ -702,4 +865,5 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | Jan 2026 | - | Initial document |
-| 2.0 | Jan 2026 | - | Documentation overhaul: Updated task tracking to reflect XP-spending system, removed flee mechanic, added SKILL_TREES.md and ENEMY_SYSTEM.md references, updated API endpoints to match API_SPECIFICATION.md v2.0, added drop table and enemy AI references, marked all documentation as complete |
+| 2.0 | Jan 2026 | - | Documentation overhaul: Updated task tracking to reflect XP-spending system, removed flee mechanic, added SKILL_TREES.md and ENEMY_SYSTEM.md references |
+| 3.0 | Jan 2026 | - | **Status correction**: Thorough code verification revealed inflated completion percentages. Revised overall from 94% to 30%. Added blocking issues section, known placeholders tracker, all documented but unimplemented features (4 advanced guilds, enemy abilities, boss mechanics, shop system, marketplace, enhanced item system). Split tasks into backend/frontend completion tracking. |

@@ -15,12 +15,18 @@ const worldRoutes = require('./routes/world');
 const battleRoutes = require('./routes/battle');
 const inventoryRoutes = require('./routes/inventory');
 const skillsRoutes = require('./routes/skills');
+const spritesRoutes = require('./routes/sprites');
 
 const app = express();
 const server = http.createServer(app);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:8080', 'http://localhost:3000', 'http://127.0.0.1:8080'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(express.json());
 app.use(rateLimiter);
 
@@ -37,6 +43,7 @@ app.use('/api/world', worldRoutes);
 app.use('/api/battle', battleRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/skills', skillsRoutes);
+app.use('/api/sprites', spritesRoutes);
 
 // Error handling
 app.use(errorHandler);

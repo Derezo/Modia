@@ -163,29 +163,4 @@ describe('Battle API', () => {
       assert.strictEqual(res.status, 401);
     });
   });
-
-  describe('POST /api/battle/flee', () => {
-    it('should attempt to flee battle', async () => {
-      // Start a fresh battle to flee from
-      const startRes = await request('POST', '/api/battle/start', {}, user.accessToken);
-
-      if (startRes.status !== 201) {
-        console.log('Skipping flee test - could not start battle');
-        return;
-      }
-
-      const res = await request('POST', '/api/battle/flee', {
-        battleId: startRes.body.battleId
-      }, user.accessToken);
-
-      // Flee can succeed or fail based on RNG
-      assert.ok([200, 400].includes(res.status));
-    });
-
-    it('should reject flee without battle ID', async () => {
-      const res = await request('POST', '/api/battle/flee', {}, user.accessToken);
-
-      assert.strictEqual(res.status, 400);
-    });
-  });
 });

@@ -34,21 +34,33 @@ npm run dev:frontend   # Frontend on port 8080
 # Linting
 npm run lint
 
-# Testing
-npm run test                     # All workspaces
-npm run test -w api              # API tests only
-node --test api/src/**/*.test.js # Single test file pattern
+# Testing (server must be running - tests hit live endpoints)
+npm run test                            # All workspaces
+npm run test -w api                     # API tests only
+node --test api/src/tests/auth.test.js  # Single test file (Node's built-in test runner)
+
+# Database utilities
+npm run db:reset                        # Re-run migrations + seed
+npm -w api run migrate:rollback         # Roll back last migration
+
+# Asset Generation (requires PIXELLAB_API_KEY in .env)
+npm run generate:all            # Generate all assets
+npm run generate:tiles          # Tileset sprites
+npm run generate:characters     # Character sprites
+npm run generate:enemies        # Enemy sprites
+npm run generate:items          # Item sprites
 ```
 
 ## Architecture
 
 ### Backend (`api/`)
 - **Entry point:** `src/index.js` - Express server with WebSocket upgrade
-- **Routes:** `src/routes/` - auth, characters, party, world, battle
+- **Routes:** `src/routes/` - auth, characters, party, world, battle, inventory, skills
 - **WebSocket:** `src/websocket/index.js` - Room-based subscriptions for chat, coliseum, marketplace
 - **Database:** PostgreSQL via `pg` pool in `src/config/database.js`
-- **Migrations:** `src/db/migrations/` - Sequential SQL files
+- **Migrations:** `src/migrations/` - Sequential SQL files (001_initial_schema.sql, etc.)
 - **Auth:** JWT with 15min access tokens, 7-day refresh tokens
+- **Asset Generation:** `src/scripts/` - PixelLab API integration for procedural sprite generation
 
 ### Frontend (`frontend/public/`)
 - **No build step** - Vanilla ES modules served directly
@@ -76,6 +88,8 @@ node --test api/src/**/*.test.js # Single test file pattern
 **Character stats:** Base stats from race + (class growth × level) - see `calculateStats()` in `shared/constants.js`
 
 **Scene lifecycle:** `enter()` → `update(dt)` / `render(ctx)` loop → `exit()` - scenes manage their own state and cleanup
+
+**Testing:** Tests require the API server to be running. Use `testHelper.js` for test utilities (`createTestUser()`, `createTestCharacter()`, `request()`)
 
 ## Documentation
 

@@ -21,15 +21,41 @@ export class WorldMapScene extends Scene {
     this.nodeSize = 30;
     this.nodeSpacing = 60;
 
+    // Asset loader reference
+    this.assetLoader = null;
+
+    // Backdrop tiles (cached)
+    this.backdropTiles = {};
+
     // Event listener cleanup
     this.abortController = null;
   }
 
   async enter() {
+    // Get asset loader reference from game
+    this.assetLoader = this.game.assetLoader;
+
     await this.loadWorldData();
     this.createUI();
     this.centerOnCurrentNode();
     this.setupInputHandlers();
+
+    // Preload node sprites in background
+    this.preloadNodeSprites();
+  }
+
+  /**
+   * Preload node sprites for faster rendering
+   */
+  async preloadNodeSprites() {
+    if (!this.assetLoader) return;
+
+    try {
+      await this.assetLoader.preloadNodes();
+      console.log('Node sprites preloaded');
+    } catch (error) {
+      console.warn('Failed to preload node sprites:', error);
+    }
   }
 
   exit() {
@@ -338,10 +364,7 @@ export class WorldMapScene extends Scene {
 
     ctx.save();
 
-    // Draw connections
-    ctx.strokeStyle = '#3a3a5a';
-    ctx.lineWidth = 2;
-
+    // Draw connections with curved bezier paths
     for (const conn of this.connections) {
       const fromNode = this.nodes.find(n => n.id === conn.from_node_id);
       const toNode = this.nodes.find(n => n.id === conn.to_node_id);
@@ -352,10 +375,39 @@ export class WorldMapScene extends Scene {
         const x2 = toNode.x_coord * this.nodeSpacing + this.cameraX;
         const y2 = toNode.y_coord * this.nodeSpacing + this.cameraY;
 
+        // Skip if completely off screen
+        const margin = 50;
+        const minX = Math.min(x1, x2) - margin;
+        const maxX = Math.max(x1, x2) + margin;
+        const minY = Math.min(y1, y2) - margin;
+        const maxY = Math.max(y1, y2) + margin;
+        if (maxX < 0 || minX > ctx.canvas.width || maxY < 0 || minY > ctx.canvas.height) {
+          continue;
+        }
+
+        // Calculate control point for bezier curve
+        const control = this.getPathControlPoint(x1, y1, x2, y2, conn.from_node_id, conn.to_node_id);
+        const style = this.getPathStyle(conn.path_type);
+
+        // Draw path shadow for depth
         ctx.beginPath();
         ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
+        ctx.quadraticCurveTo(control.x, control.y, x2, y2);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = style.width + 2;
         ctx.stroke();
+
+        // Draw main path
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.quadraticCurveTo(control.x, control.y, x2, y2);
+        ctx.strokeStyle = style.color;
+        ctx.lineWidth = style.width;
+        if (style.dashed) {
+          ctx.setLineDash([5, 5]);
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
     }
 
@@ -373,40 +425,90 @@ export class WorldMapScene extends Scene {
       const isHovered = this.hoveredNode && node.id === this.hoveredNode.id;
       const isAdjacent = this.isNodeAdjacent(node);
 
-      // Node background
-      ctx.beginPath();
-      ctx.arc(x, y, this.nodeSize, 0, Math.PI * 2);
+      // Try to render node sprite
+      const nodeSprite = this.getNodeSprite(node.node_type);
 
-      if (isCurrent) {
-        ctx.fillStyle = '#ffd700';
-      } else if (isHovered && isAdjacent) {
-        ctx.fillStyle = '#4a90d9';
+      if (nodeSprite) {
+        // Draw sprite with selection/hover effects
+        const spriteSize = 48;
+        const drawSize = isCurrent ? spriteSize + 8 : spriteSize;
+        const offset = drawSize / 2;
+
+        // Draw glow effect for current/hovered nodes
+        if (isCurrent || (isHovered && isAdjacent)) {
+          ctx.shadowColor = isCurrent ? '#ffd700' : '#4a90d9';
+          ctx.shadowBlur = 15;
+        }
+
+        ctx.drawImage(nodeSprite, x - offset, y - offset, drawSize, drawSize);
+        ctx.shadowBlur = 0;
+
+        // Draw selection ring
+        if (isCurrent) {
+          ctx.beginPath();
+          ctx.arc(x, y, drawSize / 2 + 4, 0, Math.PI * 2);
+          ctx.strokeStyle = '#ffd700';
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        } else if (isAdjacent) {
+          ctx.beginPath();
+          ctx.arc(x, y, drawSize / 2 + 2, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(106, 176, 243, 0.5)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
       } else {
-        ctx.fillStyle = this.getNodeColor(node.node_type);
+        // Fallback: Draw colored circle with emoji
+        ctx.beginPath();
+        ctx.arc(x, y, this.nodeSize, 0, Math.PI * 2);
+
+        if (isCurrent) {
+          ctx.fillStyle = '#ffd700';
+        } else if (isHovered && isAdjacent) {
+          ctx.fillStyle = '#4a90d9';
+        } else {
+          ctx.fillStyle = this.getNodeColor(node.node_type);
+        }
+        ctx.fill();
+
+        // Node border
+        ctx.strokeStyle = isCurrent ? '#ffed4a' : isAdjacent ? '#6ab0f3' : '#2a2a4a';
+        ctx.lineWidth = isCurrent ? 3 : 2;
+        ctx.stroke();
+
+        // Node emoji icon
+        ctx.fillStyle = isCurrent ? '#1a1a2e' : '#fff';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.getNodeIcon(node.node_type), x, y);
       }
-      ctx.fill();
-
-      // Node border
-      ctx.strokeStyle = isCurrent ? '#ffed4a' : isAdjacent ? '#6ab0f3' : '#2a2a4a';
-      ctx.lineWidth = isCurrent ? 3 : 2;
-      ctx.stroke();
-
-      // Node icon
-      ctx.fillStyle = isCurrent ? '#1a1a2e' : '#fff';
-      ctx.font = '16px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(this.getNodeIcon(node.node_type), x, y);
 
       // Node name (only for current and hovered)
       if (isCurrent || isHovered) {
         ctx.fillStyle = '#fff';
         ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
         ctx.fillText(node.name, x, y + this.nodeSize + 15);
       }
     }
 
     ctx.restore();
+  }
+
+  /**
+   * Get node sprite from asset loader
+   */
+  getNodeSprite(nodeType) {
+    if (!this.assetLoader) return null;
+
+    // Handle guild nodes specially
+    if (nodeType.startsWith('guild_')) {
+      const guildClass = nodeType.replace('guild_', '');
+      return this.assetLoader.getNodeSprite('guild', guildClass);
+    }
+
+    return this.assetLoader.getNodeSprite(nodeType);
   }
 
   getNodeColor(type) {
@@ -437,5 +539,47 @@ export class WorldMapScene extends Scene {
       palace: '👑'
     };
     return icons[type] || '📍';
+  }
+
+  /**
+   * Calculate bezier control point for curved path between two nodes
+   */
+  getPathControlPoint(x1, y1, x2, y2, fromNodeId, toNodeId) {
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const length = Math.sqrt(dx * dx + dy * dy);
+
+    if (length < 1) return { x: midX, y: midY }; // Avoid division by zero
+
+    // Perpendicular vector
+    const perpX = -dy / length;
+    const perpY = dx / length;
+
+    // Curve amount proportional to path length (capped)
+    const curveAmount = Math.min(length * 0.2, 40);
+
+    // Consistent direction based on node ID ordering
+    const direction = fromNodeId < toNodeId ? 1 : -1;
+
+    return {
+      x: midX + perpX * curveAmount * direction,
+      y: midY + perpY * curveAmount * direction
+    };
+  }
+
+  /**
+   * Get path styling based on path type
+   */
+  getPathStyle(pathType) {
+    const styles = {
+      road: { color: '#5a5a7a', width: 3 },
+      trail: { color: '#3a5a3a', width: 2 },
+      bridge: { color: '#8b7355', width: 4 },
+      tunnel: { color: '#2a2a3a', width: 3, dashed: true }
+    };
+    return styles[pathType] || styles.road;
   }
 }

@@ -19,6 +19,10 @@ function decideAction(enemy, battleState) {
       return tacticalAI(enemy, battleState);
     case 'pack':
       return packAI(enemy, battleState);
+    case 'hit-and-run':
+      return hitAndRunAI(enemy, battleState);
+    case 'ambush':
+      return ambushAI(enemy, battleState);
     default:
       return aggressiveAI(enemy, battleState);
   }
@@ -264,6 +268,115 @@ function packAI(enemy, battleState) {
   return { actionType: 'wait' };
 }
 
+/**
+ * Hit-and-Run AI: Attack then retreat to safe distance
+ * Good for: bats, harpies, fast creatures
+ */
+function hitAndRunAI(enemy, battleState) {
+  const players = getAlivePlayers(battleState);
+  if (players.length === 0) return { actionType: 'wait' };
+
+  const nearestPlayer = findClosestUnit(enemy, players);
+  const distToNearest = manhattanDistance(enemy, nearestPlayer);
+  const attackRange = enemy.attackRange || 1;
+  const preferredDistance = 3; // Wants to stay this far away
+
+  // If close enough to attack, attack then retreat
+  if (distToNearest <= attackRange) {
+    // Check if we just attacked (hasActed would be true after attack)
+    // If we can still move after attacking, we should retreat
+    return {
+      actionType: 'attack',
+      targetTile: { x: nearestPlayer.tileX, y: nearestPlayer.tileY },
+      // Signal to battle handler that we want to retreat after attacking
+      retreatAfter: true
+    };
+  }
+
+  // If too close but can't attack, retreat
+  if (distToNearest < preferredDistance) {
+    const retreatTile = getRetreatTile(enemy, battleState);
+    if (retreatTile) {
+      return { actionType: 'move', targetTile: retreatTile };
+    }
+  }
+
+  // If at good distance or far away, approach cautiously
+  if (distToNearest > attackRange) {
+    // Move toward target but not too aggressively
+    const moveTile = getMoveTowardTarget(enemy, nearestPlayer, battleState, 2);
+    if (moveTile) {
+      // Don't move if it would put us too close
+      const newDist = Math.abs(moveTile.x - nearestPlayer.tileX) + Math.abs(moveTile.y - nearestPlayer.tileY);
+      if (newDist >= attackRange) {
+        return { actionType: 'move', targetTile: moveTile };
+      }
+    }
+  }
+
+  // If nothing else, wait
+  return { actionType: 'wait' };
+}
+
+/**
+ * Ambush AI: Wait hidden, strike with bonus damage when opportunity arises
+ * Good for: spiders, assassins, lurking predators
+ */
+function ambushAI(enemy, battleState) {
+  const players = getAlivePlayers(battleState);
+  if (players.length === 0) return { actionType: 'wait' };
+
+  const nearestPlayer = findClosestUnit(enemy, players);
+  const distToNearest = manhattanDistance(enemy, nearestPlayer);
+  const attackRange = enemy.attackRange || 1;
+
+  // If still hidden (hasn't attacked yet this battle)
+  if (enemy.isHidden && !enemy.hasAmbushed) {
+    // Wait for a player to come within ambush range (2 tiles)
+    if (distToNearest <= 2) {
+      // Spring the ambush! Attack with bonus damage
+      if (distToNearest <= attackRange) {
+        return {
+          actionType: 'attack',
+          targetTile: { x: nearestPlayer.tileX, y: nearestPlayer.tileY },
+          isAmbush: true, // Signal +100% damage
+          revealHidden: true
+        };
+      }
+      // Move to attack position
+      const moveTile = getMoveTowardTarget(enemy, nearestPlayer, battleState);
+      if (moveTile) {
+        return { actionType: 'move', targetTile: moveTile, stayHidden: true };
+      }
+    }
+    // Stay hidden and wait
+    return { actionType: 'wait', stayHidden: true };
+  }
+
+  // After ambush or if revealed, switch to tactical behavior
+  // Find weakest target
+  const weakestPlayer = players.reduce((weakest, p) => {
+    const currentRatio = p.hp / p.maxHp;
+    const weakestRatio = weakest.hp / weakest.maxHp;
+    return currentRatio < weakestRatio ? p : weakest;
+  });
+
+  if (manhattanDistance(enemy, weakestPlayer) <= attackRange) {
+    return {
+      actionType: 'attack',
+      targetTile: { x: weakestPlayer.tileX, y: weakestPlayer.tileY }
+    };
+  }
+
+  // Move toward weakest target
+  const moveTile = getMoveTowardTarget(enemy, weakestPlayer, battleState);
+  if (moveTile) {
+    return { actionType: 'move', targetTile: moveTile };
+  }
+
+  return { actionType: 'wait' };
+}
+
 // ==================== Utility Functions ====================
 
 function getAlivePlayers(battleState) {
@@ -397,6 +510,8 @@ module.exports = {
   supportAI,
   tacticalAI,
   packAI,
+  hitAndRunAI,
+  ambushAI,
   getAlivePlayers,
   getAliveEnemies,
   findClosestUnit,
