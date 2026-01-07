@@ -70,12 +70,300 @@ const NODE_NAME_SUFFIXES = {
 
 const CITY_OPTIONS = ['blacksmith', 'apothecary', 'temple', 'stables'];
 const CASTLE_FEATURES = ['coliseum', 'tavern', 'courtyard', 'throne', 'blacksmith', 'apothecary', 'temple', 'stables', 'marketplace'];
+const PALACE_FEATURES = ['throne_room', 'treasury', 'royal_guard'];
 
+/**
+ * Spatial hash grid for O(1) collision detection
+ */
+class SpatialGrid {
+  constructor(cellSize) {
+    this.cellSize = cellSize;
+    this.cells = new Map();
+  }
+
+  getKey(x, y) {
+    const cx = Math.floor(x / this.cellSize);
+    const cy = Math.floor(y / this.cellSize);
+    return `${cx},${cy}`;
+  }
+
+  insert(point) {
+    const key = this.getKey(point.x, point.y);
+    if (!this.cells.has(key)) this.cells.set(key, []);
+    this.cells.get(key).push(point);
+  }
+
+  getNeighbors(x, y, radius) {
+    const neighbors = [];
+    const cellRadius = Math.ceil(radius / this.cellSize);
+    const cx = Math.floor(x / this.cellSize);
+    const cy = Math.floor(y / this.cellSize);
+
+    for (let dx = -cellRadius; dx <= cellRadius; dx++) {
+      for (let dy = -cellRadius; dy <= cellRadius; dy++) {
+        const key = `${cx + dx},${cy + dy}`;
+        if (this.cells.has(key)) {
+          neighbors.push(...this.cells.get(key));
+        }
+      }
+    }
+    return neighbors;
+  }
+}
+
+/**
+ * Generate node positions using Poisson disk sampling
+ * Creates organic, natural-looking node distribution
+ */
+function generateNodePlacements(rng, targetCount = 300, minDistance = 3.5) {
+  const nodes = [];
+  const grid = new SpatialGrid(minDistance);
+  const activeList = [];
+
+  // Start with castle at center
+  const center = { x: 0, y: 0 };
+  nodes.push(center);
+  grid.insert(center);
+  activeList.push(center);
+
+  // Poisson disk sampling
+  while (activeList.length > 0 && nodes.length < targetCount) {
+    const idx = rng.nextInt(0, activeList.length - 1);
+    const point = activeList[idx];
+    let found = false;
+
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const angle = rng.next() * Math.PI * 2;
+      const distance = minDistance + rng.next() * minDistance;
+      const newX = point.x + Math.cos(angle) * distance;
+      const newY = point.y + Math.sin(angle) * distance;
+
+      // Check distance from all nearby points
+      const neighbors = grid.getNeighbors(newX, newY, minDistance);
+      const valid = neighbors.every(n => {
+        const dx = n.x - newX;
+        const dy = n.y - newY;
+        return Math.sqrt(dx * dx + dy * dy) >= minDistance;
+      });
+
+      if (valid) {
+        const newNode = { x: newX, y: newY };
+        nodes.push(newNode);
+        grid.insert(newNode);
+        activeList.push(newNode);
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      activeList.splice(idx, 1);
+    }
+  }
+
+  return nodes;
+}
+
+/**
+ * Assign node types based on distance from center
+ * Creates natural biome distribution with inner civilization, outer wilderness
+ */
+function assignNodeTypes(rng, nodes) {
+  // Calculate distances and sort
+  const withDist = nodes.map((n, i) => ({
+    ...n,
+    index: i,
+    dist: Math.sqrt(n.x * n.x + n.y * n.y)
+  }));
+
+  // Type distribution by distance bands (no guild/palace here - handled separately)
+  const bands = [
+    { maxDist: 8,  types: ['village', 'forest', 'city'] },
+    { maxDist: 20, types: ['village', 'city', 'forest', 'cave', 'mountain'] },
+    { maxDist: 35, types: ['forest', 'mountain', 'cave', 'city', 'bridge'] },
+    { maxDist: Infinity, types: ['mountain', 'cave', 'forest', 'bridge'] }
+  ];
+
+  // Track guild placement (one per class)
+  const guildClasses = ['warrior', 'wizard', 'monk', 'chemist'];
+  let nextGuildClass = 0;
+  let palacePlaced = false;
+
+  for (const node of withDist) {
+    if (node.index === 0) {
+      node.type = 'castle'; // Center is always castle
+      continue;
+    }
+
+    const band = bands.find(b => node.dist <= b.maxDist);
+
+    // Place guilds in mid-distance band (5-12 distance)
+    if (nextGuildClass < guildClasses.length && node.dist >= 5 && node.dist <= 12) {
+      if (rng.next() < 0.15) { // 15% chance for eligible nodes
+        node.type = 'guild';
+        node.guildClass = guildClasses[nextGuildClass];
+        nextGuildClass++;
+        continue;
+      }
+    }
+
+    // Place palace in outer band (distance 30+) exactly once
+    if (!palacePlaced && node.dist >= 30 && rng.next() < 0.08) {
+      node.type = 'palace';
+      palacePlaced = true;
+      continue;
+    }
+
+    node.type = band.types[rng.nextInt(0, band.types.length - 1)];
+  }
+
+  // Ensure at least one palace exists
+  if (!palacePlaced) {
+    const outerNodes = withDist.filter(n => n.dist >= 25 && n.type !== 'castle' && n.type !== 'guild');
+    if (outerNodes.length > 0) {
+      const palaceNode = outerNodes[rng.nextInt(0, outerNodes.length - 1)];
+      palaceNode.type = 'palace';
+    }
+  }
+
+  // Ensure all guilds are placed
+  while (nextGuildClass < guildClasses.length) {
+    const eligibleNodes = withDist.filter(n =>
+      n.dist >= 5 && n.dist <= 15 &&
+      n.type !== 'castle' && n.type !== 'guild' && n.type !== 'palace'
+    );
+    if (eligibleNodes.length > 0) {
+      const guildNode = eligibleNodes[rng.nextInt(0, eligibleNodes.length - 1)];
+      guildNode.type = 'guild';
+      guildNode.guildClass = guildClasses[nextGuildClass];
+      nextGuildClass++;
+    } else {
+      break; // No more eligible nodes
+    }
+  }
+
+  return withDist;
+}
+
+/**
+ * Build Minimum Spanning Tree using Prim's algorithm
+ * Guarantees all nodes are connected to the castle
+ */
+function buildMinimumSpanningTree(nodes) {
+  const connections = [];
+  const inTree = new Set([0]); // Start with castle (index 0)
+
+  while (inTree.size < nodes.length) {
+    let bestEdge = null;
+    let bestDist = Infinity;
+
+    for (const i of inTree) {
+      for (let j = 0; j < nodes.length; j++) {
+        if (inTree.has(j)) continue;
+
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestEdge = { from: i, to: j };
+        }
+      }
+    }
+
+    if (bestEdge) {
+      connections.push(bestEdge);
+      inTree.add(bestEdge.to);
+    }
+  }
+
+  return connections;
+}
+
+/**
+ * Add extra connections for variety (keeps graph connected)
+ * Creates shortcuts and alternate routes
+ */
+function addLocalConnections(rng, nodes, mstConnections, extraRatio = 0.25) {
+  const connections = [...mstConnections];
+  const connectionSet = new Set(
+    mstConnections.map(c => `${Math.min(c.from, c.to)},${Math.max(c.from, c.to)}`)
+  );
+
+  const extraCount = Math.floor(nodes.length * extraRatio);
+
+  for (let i = 0; i < extraCount; i++) {
+    const nodeIdx = rng.nextInt(0, nodes.length - 1);
+    const node = nodes[nodeIdx];
+
+    // Find nearby nodes
+    const nearby = nodes
+      .map((n, idx) => ({ idx, dist: Math.sqrt((n.x - node.x) ** 2 + (n.y - node.y) ** 2) }))
+      .filter(n => n.idx !== nodeIdx && n.dist < 8)
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 5);
+
+    if (nearby.length > 0) {
+      const target = nearby[rng.nextInt(0, nearby.length - 1)];
+      const key = `${Math.min(nodeIdx, target.idx)},${Math.max(nodeIdx, target.idx)}`;
+
+      if (!connectionSet.has(key)) {
+        connections.push({ from: nodeIdx, to: target.idx });
+        connectionSet.add(key);
+      }
+    }
+  }
+
+  return connections;
+}
+
+/**
+ * Generate features for a node based on its type
+ */
+function generateNodeFeatures(rng, nodeType) {
+  switch (nodeType) {
+    case 'castle':
+      return CASTLE_FEATURES;
+    case 'palace':
+      return PALACE_FEATURES;
+    case 'city': {
+      const shuffled = rng.shuffle(CITY_OPTIONS);
+      return ['tavern', shuffled[0], shuffled[1]];
+    }
+    case 'village': {
+      const features = ['farm'];
+      if (rng.next() > 0.5) features.push('apothecary');
+      return features;
+    }
+    case 'guild':
+      return ['guild_hall', 'training_ground'];
+    default:
+      return [];
+  }
+}
+
+/**
+ * Calculate difficulty tier based on distance from center
+ */
+function getDifficultyTier(dist, nodeType) {
+  if (nodeType === 'castle') return 1;
+  if (nodeType === 'palace') return 5;
+
+  if (dist <= 8) return 1;
+  if (dist <= 15) return 2;
+  if (dist <= 25) return 3;
+  if (dist <= 35) return 4;
+  return 5;
+}
+
+/**
+ * Main world generation function
+ * Uses Poisson disk sampling for organic node placement
+ * Uses MST for guaranteed connectivity to castle
+ */
 async function generateWorld(seed) {
   const rng = new SeededRandom(seed);
-  const nodes = [];
-  const connections = [];
-  const nodeMap = new Map();
 
   function generateNodeName(type) {
     const prefixes = NODE_NAME_PREFIXES[type] || NODE_NAME_PREFIXES.city;
@@ -83,262 +371,40 @@ async function generateWorld(seed) {
     return `${rng.pick(prefixes)} ${rng.pick(suffixes)}`;
   }
 
-  /**
-   * Generate organic offset for node placement
-   * Creates natural-looking variation with clustering bias
-   */
-  function organicOffset(nodeIndex, baseAngle, ringIndex) {
-    // Larger angular variation (wobble)
-    const angularWobble = rng.nextGaussian() * 0.4;
+  console.log('Generating world with 300+ nodes using Poisson disk sampling...');
 
-    // Radial jitter - nodes can be closer or further from center
-    const radialNoise = rng.nextGaussian() * 1.5;
+  // Step 1: Generate node positions
+  const positions = generateNodePlacements(rng, 320, 3.5);
+  console.log(`Generated ${positions.length} node positions`);
 
-    // Clustering bias - creates natural groupings
-    // Use sine wave based on angle to create "clusters" of nodes
-    const clusterFrequency = 2 + ringIndex; // More clusters in outer rings
-    const clusterBias = Math.sin(baseAngle * clusterFrequency + rng.next() * Math.PI) * 0.3;
+  // Step 2: Assign node types based on distance
+  const typedNodes = assignNodeTypes(rng, positions);
 
-    return {
-      angleOffset: angularWobble + clusterBias,
-      radiusOffset: radialNoise
-    };
-  }
+  // Step 3: Build MST for guaranteed connectivity
+  const mstConnections = buildMinimumSpanningTree(typedNodes);
+  console.log(`MST created with ${mstConnections.length} connections`);
 
-  /**
-   * Find valid position avoiding collisions with existing nodes
-   * Returns adjusted coordinates that maintain minimum spacing
-   */
-  function findValidPosition(baseX, baseY, minSpacing = 2.0) {
-    let x = Math.round(baseX);
-    let y = Math.round(baseY);
-    let attempts = 0;
-    const maxAttempts = 8;
+  // Step 4: Add extra connections for variety
+  const allConnections = addLocalConnections(rng, typedNodes, mstConnections, 0.25);
+  console.log(`Total connections: ${allConnections.length}`);
 
-    while (attempts < maxAttempts) {
-      let collision = false;
+  // Step 5: Build final node objects
+  const nodes = typedNodes.map(node => ({
+    node_type: node.type,
+    name: node.type === 'castle' ? 'Royal Castle' :
+          node.type === 'palace' ? 'Ancient Palace' :
+          node.type === 'guild' ? `${node.guildClass.charAt(0).toUpperCase() + node.guildClass.slice(1)}s' Guild` :
+          generateNodeName(node.type),
+    x_coord: Math.round(node.x),
+    y_coord: Math.round(node.y),
+    distance_from_center: Math.round(node.dist),
+    features: JSON.stringify(generateNodeFeatures(rng, node.type)),
+    guild_class: node.guildClass || null,
+    local_seed: rng.nextInt(1, 1000000),
+    difficulty_tier: getDifficultyTier(node.dist, node.type)
+  }));
 
-      // Check for collision with existing nodes
-      for (const node of nodes) {
-        const dx = node.x_coord - x;
-        const dy = node.y_coord - y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < minSpacing) {
-          collision = true;
-          // Nudge position away from collision
-          const nudgeAngle = Math.atan2(dy, dx) + Math.PI + rng.nextGaussian() * 0.5;
-          x = Math.round(x + Math.cos(nudgeAngle) * (minSpacing - dist + 0.5));
-          y = Math.round(y + Math.sin(nudgeAngle) * (minSpacing - dist + 0.5));
-          break;
-        }
-      }
-
-      if (!collision) break;
-      attempts++;
-    }
-
-    return { x, y };
-  }
-
-  function addNode(x, y, type, name, features = [], guildClass = null, difficulty = 1) {
-    const key = `${x},${y}`;
-    if (nodeMap.has(key)) return null;
-
-    const node = {
-      node_type: type,
-      name,
-      x_coord: x,
-      y_coord: y,
-      distance_from_center: Math.round(Math.sqrt(x * x + y * y)),
-      features: JSON.stringify(features),
-      guild_class: guildClass,
-      local_seed: rng.nextInt(1, 1000000),
-      difficulty_tier: difficulty
-    };
-    nodes.push(node);
-    nodeMap.set(key, nodes.length - 1);
-    return nodes.length - 1;
-  }
-
-  function addConnection(idx1, idx2) {
-    if (idx1 === null || idx2 === null) return;
-    connections.push({ from: idx1, to: idx2 });
-  }
-
-  function findNearestNode(x, y, excludeIndex = -1) {
-    let nearest = -1;
-    let nearestDist = Infinity;
-
-    for (let i = 0; i < nodes.length; i++) {
-      if (i === excludeIndex) continue;
-      const dx = nodes[i].x_coord - x;
-      const dy = nodes[i].y_coord - y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearest = i;
-      }
-    }
-    return nearest;
-  }
-
-  // 1. Create central Castle
-  const castleIdx = addNode(0, 0, 'castle', 'Royal Castle', CASTLE_FEATURES);
-  console.log('Created central Castle');
-
-  // 2. Create ring 1 - close nodes (3-4 distance) with organic placement
-  const ring1Types = ['city', 'village', 'forest'];
-  for (let i = 0; i < 4; i++) {
-    const baseAngle = (Math.PI * 2 * i / 4);
-    const offset = organicOffset(i, baseAngle, 1);
-    const angle = baseAngle + offset.angleOffset;
-    const dist = 3 + rng.nextInt(0, 1) + offset.radiusOffset * 0.5;
-
-    const rawX = Math.cos(angle) * dist;
-    const rawY = Math.sin(angle) * dist;
-    const { x, y } = findValidPosition(rawX, rawY, 2.5);
-
-    const type = rng.pick(ring1Types);
-    let features = [];
-
-    if (type === 'city') {
-      const shuffled = rng.shuffle(CITY_OPTIONS);
-      features = ['tavern', shuffled[0], shuffled[1]];
-    } else if (type === 'village') {
-      features = ['farm'];
-      if (rng.next() > 0.5) features.push('apothecary');
-    }
-
-    const idx = addNode(x, y, type, generateNodeName(type), features, null, 1);
-    if (idx !== null) addConnection(castleIdx, idx);
-  }
-  console.log('Created ring 1 (organic placement)');
-
-  // 3. Create ring 2 (5-7 distance) with organic placement
-  const ring2Types = ['city', 'village', 'forest', 'cave'];
-  for (let i = 0; i < 6; i++) {
-    const baseAngle = (Math.PI * 2 * i / 6);
-    const offset = organicOffset(i, baseAngle, 2);
-    const angle = baseAngle + offset.angleOffset;
-    const dist = 5 + rng.nextInt(0, 2) + offset.radiusOffset * 0.6;
-
-    const rawX = Math.cos(angle) * dist;
-    const rawY = Math.sin(angle) * dist;
-    const { x, y } = findValidPosition(rawX, rawY, 2.3);
-
-    const type = rng.pick(ring2Types);
-    let features = [];
-
-    if (type === 'city') {
-      const shuffled = rng.shuffle(CITY_OPTIONS);
-      features = ['tavern', shuffled[0], shuffled[1]];
-    } else if (type === 'village') {
-      features = ['farm'];
-      if (rng.next() > 0.5) features.push('apothecary');
-    }
-
-    const idx = addNode(x, y, type, generateNodeName(type), features, null, 2);
-    if (idx !== null) {
-      const nearest = findNearestNode(x, y, idx);
-      addConnection(idx, nearest);
-    }
-  }
-  console.log('Created ring 2 (organic placement)');
-
-  // 4. Create Guilds (one per class, distance 5-8) with organic placement
-  const classes = ['warrior', 'wizard', 'monk', 'chemist'];
-  for (let i = 0; i < classes.length; i++) {
-    const baseAngle = (Math.PI * 2 * i / classes.length) + Math.PI / 4;
-    const offset = organicOffset(i, baseAngle, 2);
-    const angle = baseAngle + offset.angleOffset * 0.5; // Less angular variation for guilds
-    const dist = 6 + rng.nextInt(0, 2) + offset.radiusOffset * 0.4;
-
-    const rawX = Math.cos(angle) * dist;
-    const rawY = Math.sin(angle) * dist;
-    const { x: finalX, y: finalY } = findValidPosition(rawX, rawY, 2.5);
-
-    const guildName = `${classes[i].charAt(0).toUpperCase() + classes[i].slice(1)}s' Guild`;
-    const idx = addNode(finalX, finalY, 'guild', guildName, ['guild_hall', 'training_ground'], classes[i], 2);
-    if (idx !== null) {
-      const nearest = findNearestNode(finalX, finalY, idx);
-      addConnection(idx, nearest);
-    }
-  }
-  console.log('Created guilds (organic placement)');
-
-  // 5. Create ring 3 (8-11 distance) with organic placement
-  const ring3Types = ['village', 'forest', 'cave', 'mountain', 'bridge'];
-  for (let i = 0; i < 8; i++) {
-    const baseAngle = (Math.PI * 2 * i / 8);
-    const offset = organicOffset(i, baseAngle, 3);
-    const angle = baseAngle + offset.angleOffset;
-    const dist = 8 + rng.nextInt(0, 3) + offset.radiusOffset * 0.7;
-
-    const rawX = Math.cos(angle) * dist;
-    const rawY = Math.sin(angle) * dist;
-    const { x, y } = findValidPosition(rawX, rawY, 2.2);
-
-    const type = rng.pick(ring3Types);
-    let features = [];
-
-    if (type === 'village') {
-      features = ['farm'];
-      if (rng.next() > 0.5) features.push('apothecary');
-    }
-
-    const idx = addNode(x, y, type, generateNodeName(type), features, null, 3);
-    if (idx !== null) {
-      const nearest = findNearestNode(x, y, idx);
-      addConnection(idx, nearest);
-
-      // Sometimes add second connection for network variety
-      if (rng.next() > 0.6) {
-        const secondNearest = findNearestNode(x, y, idx);
-        if (secondNearest !== nearest) {
-          addConnection(idx, secondNearest);
-        }
-      }
-    }
-  }
-  console.log('Created ring 3 (organic placement)');
-
-  // 6. Create outer ring and Palace (12-16 distance) with organic placement
-  const outerTypes = ['forest', 'cave', 'mountain', 'bridge'];
-  let palacePlaced = false;
-
-  for (let i = 0; i < 10; i++) {
-    const baseAngle = (Math.PI * 2 * i / 10);
-    const offset = organicOffset(i, baseAngle, 4);
-    const angle = baseAngle + offset.angleOffset;
-    const dist = 13 + rng.nextInt(0, 3) + offset.radiusOffset * 0.8;
-
-    const rawX = Math.cos(angle) * dist;
-    const rawY = Math.sin(angle) * dist;
-    const { x, y } = findValidPosition(rawX, rawY, 2.0);
-
-    let type, name, features = [];
-
-    // Place Palace exactly once at minimum distance 13
-    if (!palacePlaced && i === 5) {
-      type = 'palace';
-      name = 'Ancient Palace';
-      features = ['throne_room', 'treasury'];
-      palacePlaced = true;
-    } else {
-      type = rng.pick(outerTypes);
-      name = generateNodeName(type);
-    }
-
-    const idx = addNode(x, y, type, name, features, null, type === 'palace' ? 5 : 4);
-    if (idx !== null) {
-      const nearest = findNearestNode(x, y, idx);
-      addConnection(idx, nearest);
-    }
-  }
-  console.log('Created outer ring with Palace (organic placement)');
-
-  return { nodes, connections };
+  return { nodes, connections: allConnections };
 }
 
 async function seedItems() {
@@ -739,6 +805,15 @@ async function main() {
     // Seed shop inventory
     console.log('\nSeeding shop inventory...');
     await seedShopInventory(nodeIds, nodes);
+
+    // Re-initialize user discovery for all existing users (fog of war)
+    console.log('\nRe-initializing user discovery...');
+    const castleId = nodeIds[0]; // First node is always the castle
+    const usersResult = await client.query('SELECT id FROM users');
+    for (const user of usersResult.rows) {
+      await client.query('SELECT discover_node_and_adjacent($1, $2)', [user.id, castleId]);
+    }
+    console.log(`Initialized discovery for ${usersResult.rows.length} users`);
 
     console.log('\nSeed completed successfully!');
     console.log(`Total nodes: ${nodes.length}`);
