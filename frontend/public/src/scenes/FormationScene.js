@@ -1,4 +1,6 @@
 import { Scene } from './Scene.js';
+import { InventoryPanel } from '../components/InventoryPanel.js';
+import { SkillTreePanel } from '../components/SkillTreePanel.js';
 
 /**
  * FormationScene - Party management, equipment, and skills hub
@@ -11,6 +13,8 @@ export class FormationScene extends Scene {
     this.selectedCharacter = null;
     this.activePanel = null; // 'stats' | 'equipment' | 'skills'
     this.abortController = null;
+    this.inventoryPanel = null;
+    this.skillTreePanel = null;
   }
 
   async enter() {
@@ -23,6 +27,14 @@ export class FormationScene extends Scene {
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
+    }
+    if (this.inventoryPanel) {
+      this.inventoryPanel.destroy();
+      this.inventoryPanel = null;
+    }
+    if (this.skillTreePanel) {
+      this.skillTreePanel.destroy();
+      this.skillTreePanel = null;
     }
     if (this.uiElement) {
       this.uiElement.remove();
@@ -386,6 +398,16 @@ export class FormationScene extends Scene {
   switchTab(tabName) {
     this.activePanel = tabName;
 
+    // Cleanup previous panels when switching
+    if (tabName !== 'equipment' && this.inventoryPanel) {
+      this.inventoryPanel.destroy();
+      this.inventoryPanel = null;
+    }
+    if (tabName !== 'skills' && this.skillTreePanel) {
+      this.skillTreePanel.destroy();
+      this.skillTreePanel = null;
+    }
+
     // Update tab buttons
     this.uiElement.querySelectorAll('.tab-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tab === tabName);
@@ -399,9 +421,11 @@ export class FormationScene extends Scene {
         break;
       case 'equipment':
         content.innerHTML = this.renderEquipmentPanel();
+        this.loadEquipmentPanel();
         break;
       case 'skills':
         content.innerHTML = this.renderSkillsPanel();
+        this.loadSkillsPanel();
         break;
     }
   }
@@ -496,98 +520,42 @@ export class FormationScene extends Scene {
   }
 
   renderEquipmentPanel() {
-    const slots = [
-      { key: 'main_hand', name: 'Main Hand', icon: '⚔️' },
-      { key: 'off_hand', name: 'Off Hand', icon: '🛡️' },
-      { key: 'head', name: 'Head', icon: '👒' },
-      { key: 'body', name: 'Body', icon: '👕' },
-      { key: 'feet', name: 'Feet', icon: '👢' },
-      { key: 'accessory1', name: 'Accessory 1', icon: '💍' },
-      { key: 'accessory2', name: 'Accessory 2', icon: '📿' }
-    ];
+    // Return a container div that the InventoryPanel will populate
+    return `<div id="equipment-panel-container" style="height: 100%;"></div>`;
+  }
 
-    return `
-      <div class="ui-panel-header" style="margin-bottom: 12px;">Equipment Slots</div>
-      ${slots.map(slot => `
-        <div class="equipment-slot" data-slot="${slot.key}">
-          <div class="slot-icon">${slot.icon}</div>
-          <div class="slot-info">
-            <div class="slot-name">${slot.name}</div>
-            <div class="slot-item">Empty</div>
-          </div>
-        </div>
-      `).join('')}
-      <div style="margin-top: 16px; padding: 16px; background: rgba(0,0,0,0.2); border-radius: 8px; text-align: center; color: #8a8aaa;">
-        Equipment system coming soon!<br>
-        <span style="font-size: 11px;">Items can be obtained from battle drops and shops.</span>
-      </div>
-    `;
+  async loadEquipmentPanel() {
+    const container = this.uiElement.querySelector('#equipment-panel-container');
+    if (!container || !this.selectedCharacter) return;
+
+    // Destroy previous instance if exists
+    if (this.inventoryPanel) {
+      this.inventoryPanel.destroy();
+    }
+
+    // Create new inventory panel
+    this.inventoryPanel = new InventoryPanel(this.game, container);
+    this.inventoryPanel.setCharacterStats(this.selectedCharacter);
+    await this.inventoryPanel.load(this.selectedCharacter.id);
   }
 
   renderSkillsPanel() {
-    const char = this.selectedCharacter;
-    const guildSkills = this.getClassSkills(char.class);
-
-    return `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-        <div>
-          <div class="ui-panel-header" style="margin-bottom: 4px;">${this.capitalize(char.class)} Guild</div>
-          <div style="font-size: 12px; color: #8a8aaa;">Guild Level: 1</div>
-        </div>
-        <div style="text-align: right;">
-          <div style="color: #8a8aaa; font-size: 12px;">Available XP</div>
-          <div style="color: #4caf50; font-size: 18px; font-weight: bold;">${char.experience || 0}</div>
-        </div>
-      </div>
-
-      <div class="ui-panel-header" style="margin-bottom: 12px;">Skills</div>
-      ${guildSkills.map(skill => `
-        <div class="skill-item">
-          <div class="skill-icon">${skill.icon}</div>
-          <div class="skill-info">
-            <div class="skill-name">${skill.name}</div>
-            <div class="skill-desc">${skill.description}</div>
-          </div>
-          <div style="text-align: right;">
-            <div style="color: #ffd700; font-weight: bold;">Lv. 0</div>
-            <button class="btn btn-secondary" style="font-size: 10px; padding: 4px 8px; margin-top: 4px;" disabled>
-              Learn
-            </button>
-          </div>
-        </div>
-      `).join('')}
-
-      <div style="margin-top: 16px; padding: 16px; background: rgba(0,0,0,0.2); border-radius: 8px; text-align: center; color: #8a8aaa;">
-        Skill learning coming soon!<br>
-        <span style="font-size: 11px;">Spend XP to learn and level up skills.</span>
-      </div>
-    `;
+    // Return a container div that the SkillTreePanel will populate
+    return `<div id="skills-panel-container" style="height: 100%;"></div>`;
   }
 
-  getClassSkills(className) {
-    const skills = {
-      warrior: [
-        { name: 'Power Strike', icon: '⚔️', description: 'A powerful melee attack' },
-        { name: 'Shield Bash', icon: '🛡️', description: 'Stun enemy with shield' },
-        { name: 'Battle Cry', icon: '📣', description: 'Boost party attack' }
-      ],
-      wizard: [
-        { name: 'Fireball', icon: '🔥', description: 'Launch a ball of fire' },
-        { name: 'Ice Shard', icon: '❄️', description: 'Pierce with ice' },
-        { name: 'Lightning', icon: '⚡', description: 'Strike with lightning' }
-      ],
-      monk: [
-        { name: 'Palm Strike', icon: '🤚', description: 'Quick palm attack' },
-        { name: 'Meditation', icon: '🧘', description: 'Recover HP and MP' },
-        { name: 'Flying Kick', icon: '🦶', description: 'Aerial kick attack' }
-      ],
-      chemist: [
-        { name: 'Potion Toss', icon: '🧪', description: 'Throw healing potion' },
-        { name: 'Acid Flask', icon: '⚗️', description: 'Throw corrosive acid' },
-        { name: 'Smoke Bomb', icon: '💨', description: 'Escape or confuse' }
-      ]
-    };
-    return skills[className] || [];
+  async loadSkillsPanel() {
+    const container = this.uiElement.querySelector('#skills-panel-container');
+    if (!container || !this.selectedCharacter) return;
+
+    // Destroy previous instance if exists
+    if (this.skillTreePanel) {
+      this.skillTreePanel.destroy();
+    }
+
+    // Create new skill tree panel
+    this.skillTreePanel = new SkillTreePanel(this.game, container);
+    await this.skillTreePanel.load(this.selectedCharacter.id, this.selectedCharacter.class);
   }
 
   getClassColor(className) {
