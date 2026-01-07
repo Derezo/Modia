@@ -2,31 +2,191 @@
 /**
  * Generate Character Sprites
  * Creates 8-directional animated sprites for player classes using PixelLab API
+ * Downloads all 8 directions and combines into sprite sheets
  */
 
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
+const fs = require('fs').promises;
+const sharp = require('sharp');
 const { getPixelLabClient } = require('../services/pixelLabService');
-const { getAssetCacheManager } = require('../services/assetCacheManager');
-const { CHARACTER_PROMPTS } = require('../config/pixelLabPrompts');
+const { CHARACTER_PROMPTS, CHARACTER_ANIMATION_ACTIONS, buildCharacterAnimationPrompt } = require('../config/pixelLabPrompts');
 
 const ASSETS_DIR = path.join(__dirname, '../../../frontend/public/assets/sprites');
 
-// Animation templates to generate
-const ANIMATIONS = [
-  { name: 'idle', template: 'breathing-idle', frames: 4 },
-  { name: 'walk', template: 'walking', frames: 8 },
-  { name: 'attack', template: 'attack-forward', frames: 6 },
-  { name: 'hit', template: 'hit-react', frames: 4 },
-  { name: 'death', template: 'death-fall', frames: 8 },
-  { name: 'victory', template: 'victory-pose', frames: 8 }
-];
-
+// Character size
 const CHARACTER_SIZE = 64;
 
-async function generateCharacters() {
+// Animations to generate for player characters
+const CHARACTER_ANIMATIONS = ['idle', 'walk', 'attack', 'hit', 'death'];
+
+// Direction order for sprite sheet (matches AnimatedSprite.DIRECTIONS)
+const DIRECTION_ORDER = ['south', 'south-west', 'west', 'north-west', 'north', 'north-east', 'east', 'south-east'];
+
+/**
+ * Download all 8 directions and combine into sprite sheet
+ */
+async function createSpriteSheet(client, rotationUrls, outputPath) {
+  console.log('    Downloading all directions...');
+
+  const directionBuffers = [];
+  for (const direction of DIRECTION_ORDER) {
+    const url = rotationUrls[direction];
+    if (!url) {
+      console.warn(`      Warning: No URL for direction '${direction}'`);
+      continue;
+    }
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const buffer = Buffer.from(await response.arrayBuffer());
+      directionBuffers.push({ direction, buffer });
+      console.log(`      Downloaded: ${direction}`);
+    } catch (error) {
+      console.error(`      Failed to download ${direction}: ${error.message}`);
+    }
+  }
+
+  if (directionBuffers.length === 0) {
+    throw new Error('No direction images downloaded');
+  }
+
+  // Get frame dimensions from first image
+  const firstImage = await sharp(directionBuffers[0].buffer).metadata();
+  const frameWidth = firstImage.width;
+  const frameHeight = firstImage.height;
+
+  // Create sprite sheet: 1 frame wide, 8 directions tall
+  const spriteSheet = await sharp({
+    create: {
+      width: frameWidth,
+      height: frameHeight * 8,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 }
+    }
+  })
+  .composite(
+    directionBuffers.map((item, index) => ({
+      input: item.buffer,
+      top: index * frameHeight,
+      left: 0
+    }))
+  )
+  .png()
+  .toBuffer();
+
+  // Ensure directory exists and save
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
+  await fs.writeFile(outputPath, spriteSheet);
+
+  console.log(`    Saved sprite sheet: ${frameWidth}x${frameHeight * 8} (${directionBuffers.length} directions)`);
+  return { width: frameWidth, height: frameHeight * 8 };
+}
+
+/**
+ * Generate all animations for a character class
+ */
+async function generateCharacterClass(client, charClass, basePrompt, options = {}) {
+  console.log(`\n=== Generating ${charClass} ===`);
+
+  let generated = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  const charDir = path.join(ASSETS_DIR, 'characters', 'player', charClass);
+
+  // Generate each animation
+  for (const animation of CHARACTER_ANIMATIONS) {
+    const outputPath = path.join(charDir, `${charClass}_${animation}.png`);
+
+    // Skip if already exists and not forced
+    if (!options.force) {
+      try {
+        await fs.access(outputPath);
+        console.log(`  [SKIP] ${animation} - already exists`);
+        skipped++;
+        continue;
+      } catch {
+        // File doesn't exist, continue with generation
+      }
+    }
+
+    // Build prompt - use animation-specific prompt if available
+    let prompt = basePrompt;
+    const animationAction = buildCharacterAnimationPrompt(charClass, animation);
+    if (animationAction) {
+      prompt = `${basePrompt.replace(/,\s*$/, '')}, ${animationAction}`;
+    }
+
+    try {
+      console.log(`  Generating ${animation} (${CHARACTER_SIZE}px)...`);
+
+      const result = await client.createCharacterWith8Directions({
+        description: prompt,
+        image_size: CHARACTER_SIZE,
+        outline: 'selective outline',
+        shading: 'medium shading',
+        detail: 'medium detail',
+        isometric: true
+      });
+
+      // Get rotation URLs
+      const rotationUrls = result.rotation_urls || result.character_data?.rotation_urls;
+      if (!rotationUrls) {
+        throw new Error('No rotation_urls in API response');
+      }
+
+      // Create sprite sheet from all directions
+      await createSpriteSheet(client, rotationUrls, outputPath);
+      generated++;
+
+    } catch (error) {
+      console.error(`  [ERROR] ${animation}: ${error.message}`);
+      failed++;
+    }
+  }
+
+  return { generated, skipped, failed };
+}
+
+async function main() {
   console.log('=== Character Sprite Generation ===\n');
 
+  // Parse command line arguments
+  const args = process.argv.slice(2);
+  const options = {
+    charClass: null,
+    force: args.includes('--force'),
+    dryRun: args.includes('--dry-run')
+  };
+
+  for (const arg of args) {
+    if (arg.startsWith('--class=')) {
+      options.charClass = arg.split('=')[1];
+    }
+  }
+
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`
+Usage: node generate-characters.js [options]
+
+Options:
+  --class=NAME    Only generate specific character class
+  --force         Regenerate even if sprite exists
+  --dry-run       Show what would be generated
+  --help, -h      Show this help
+
+Examples:
+  node generate-characters.js --class=wizard
+  node generate-characters.js --force --class=wizard
+`);
+    process.exit(0);
+  }
+
+  // Check API key
   if (!process.env.PIXELLAB_API_KEY && !process.env.PIXELLABS_API_KEY) {
     console.error('Error: PIXELLAB_API_KEY not found in environment');
     console.log('Please add your PixelLab API key to .env file');
@@ -34,7 +194,6 @@ async function generateCharacters() {
   }
 
   const client = getPixelLabClient();
-  const cache = getAssetCacheManager();
 
   // Check credits
   try {
@@ -44,197 +203,55 @@ async function generateCharacters() {
     console.warn('Could not fetch credit balance:', error.message);
   }
 
-  const classes = Object.keys(CHARACTER_PROMPTS);
+  if (options.dryRun) {
+    console.log('DRY RUN - showing what would be generated:\n');
+  }
+
   let totalGenerated = 0;
-  let totalCached = 0;
-  const characterIds = {};
+  let totalSkipped = 0;
+  let totalFailed = 0;
 
-  // Phase 1: Generate base 8-directional sprites
-  console.log('--- Phase 1: Base Character Sprites ---\n');
+  // Filter classes if specified
+  const classes = options.charClass
+    ? { [options.charClass]: CHARACTER_PROMPTS[options.charClass] }
+    : CHARACTER_PROMPTS;
 
-  for (const charClass of classes) {
-    const prompt = CHARACTER_PROMPTS[charClass];
+  if (options.charClass && !CHARACTER_PROMPTS[options.charClass]) {
+    console.error(`Error: Unknown character class '${options.charClass}'`);
+    console.log('Available classes:', Object.keys(CHARACTER_PROMPTS).join(', '));
+    process.exit(1);
+  }
 
-    const params = {
-      description: prompt,
-      image_size: CHARACTER_SIZE,
-      outline: 'medium',
-      shading: 'detailed',
-      detail: 'high',
-      isometric: true,
-      seed: getCharacterSeed(charClass)
-    };
-
-    try {
-      const result = await cache.getOrGenerate(`character_${charClass}`, params, async (p) => {
-        console.log(`  Generating base sprite: ${charClass}`);
-        return await client.createCharacterWith8Directions(p);
-      });
-
-      if (result.cached) {
-        console.log(`  [CACHED] ${charClass} base sprite`);
-        totalCached++;
-      } else {
-        console.log(`  [GENERATED] ${charClass} base sprite`);
-        totalGenerated++;
-
-        // Store character ID for animation generation
-        if (result.result?.character_id) {
-          characterIds[charClass] = result.result.character_id;
-        }
+  for (const [charClass, prompt] of Object.entries(classes)) {
+    if (options.dryRun) {
+      console.log(`\nClass: ${charClass}`);
+      for (const animation of CHARACTER_ANIMATIONS) {
+        console.log(`  - ${animation}`);
       }
-
-      // Copy base sprite
-      const destPath = `characters/player/${charClass}/${charClass}_base.png`;
-      await cache.copyToAssets(result.cacheKey, destPath);
-
-    } catch (error) {
-      console.error(`  [ERROR] ${charClass}: ${error.message}`);
+      continue;
     }
+
+    const result = await generateCharacterClass(client, charClass, prompt, options);
+    totalGenerated += result.generated;
+    totalSkipped += result.skipped;
+    totalFailed += result.failed;
   }
 
-  // Phase 2: Generate animations for each class
-  console.log('\n--- Phase 2: Character Animations ---\n');
-
-  for (const charClass of classes) {
-    console.log(`\nGenerating animations for ${charClass}:`);
-
-    for (const anim of ANIMATIONS) {
-      const params = {
-        character_class: charClass,
-        animation: anim.name,
-        animation_template: anim.template,
-        frames: anim.frames,
-        seed: getAnimationSeed(charClass, anim.name)
-      };
-
-      try {
-        const result = await cache.getOrGenerate(`character_anim_${charClass}_${anim.name}`, params, async (p) => {
-          console.log(`  Generating ${anim.name} animation...`);
-
-          // If we have a character ID from base generation, use it
-          if (characterIds[charClass]) {
-            return await client.createCharacterAnimation({
-              character_id: characterIds[charClass],
-              animation_template: p.animation_template,
-              outline: 'medium',
-              shading: 'detailed'
-            });
-          } else {
-            // Generate animation with text description
-            return await client.animateWithText({
-              character_description: CHARACTER_PROMPTS[charClass],
-              action_description: getActionDescription(charClass, anim.name),
-              image_size: CHARACTER_SIZE,
-              seed: p.seed
-            });
-          }
-        });
-
-        if (result.cached) {
-          console.log(`    [CACHED] ${anim.name}`);
-          totalCached++;
-        } else {
-          console.log(`    [GENERATED] ${anim.name}`);
-          totalGenerated++;
-        }
-
-        // Copy animation sprite sheet
-        const destPath = `characters/player/${charClass}/${charClass}_${anim.name}.png`;
-        await cache.copyToAssets(result.cacheKey, destPath);
-
-      } catch (error) {
-        console.error(`    [ERROR] ${anim.name}: ${error.message}`);
-      }
-    }
+  if (!options.dryRun) {
+    console.log('\n=== Generation Complete ===');
+    console.log(`Generated: ${totalGenerated} sprite sheets`);
+    console.log(`Skipped (existing): ${totalSkipped} sprite sheets`);
+    console.log(`Failed: ${totalFailed} sprite sheets`);
+    console.log(`Total animations: ${totalGenerated + totalSkipped + totalFailed}`);
   }
-
-  console.log('\n=== Generation Complete ===');
-  console.log(`Generated: ${totalGenerated} sprites/animations`);
-  console.log(`From cache: ${totalCached} sprites/animations`);
-  console.log(`Total: ${totalGenerated + totalCached}`);
-}
-
-/**
- * Get action description for animation
- */
-function getActionDescription(charClass, animation) {
-  const actions = {
-    warrior: {
-      idle: 'standing alert with sword and shield ready',
-      walk: 'walking forward in heavy armor',
-      attack: 'powerful sword slash attack',
-      hit: 'recoiling from impact, armor absorbing blow',
-      death: 'falling to knees defeated',
-      victory: 'raising sword triumphantly'
-    },
-    wizard: {
-      idle: 'standing with staff glowing softly',
-      walk: 'walking gracefully with robes flowing',
-      attack: 'casting spell with staff raised, magic energy burst',
-      hit: 'magical shield breaking, recoiling',
-      death: 'collapsing into robes',
-      victory: 'staff raised with magical celebration'
-    },
-    monk: {
-      idle: 'centered breathing in martial arts stance',
-      walk: 'light-footed martial movement',
-      attack: 'rapid punch combo with ki energy',
-      hit: 'nimble dodge attempt, taking hit',
-      death: 'graceful collapse',
-      victory: 'meditation pose, peaceful triumph'
-    },
-    chemist: {
-      idle: 'examining potion flask curiously',
-      walk: 'careful movement protecting potions',
-      attack: 'throwing potion with arc motion',
-      hit: 'potion splash, chemical spill reaction',
-      death: 'flask shattering, collapsing',
-      victory: 'successful brew, flask raised proudly'
-    }
-  };
-
-  return actions[charClass]?.[animation] || `${animation} action`;
-}
-
-/**
- * Generate deterministic seed for character
- */
-function getCharacterSeed(charClass) {
-  const worldSeed = parseInt(process.env.WORLD_SEED || '12345');
-  const classHash = hashString(charClass);
-  return (worldSeed + classHash) % 1000000;
-}
-
-/**
- * Generate deterministic seed for animation
- */
-function getAnimationSeed(charClass, animation) {
-  const worldSeed = parseInt(process.env.WORLD_SEED || '12345');
-  const classHash = hashString(charClass);
-  const animHash = hashString(animation);
-  return (worldSeed + classHash + animHash) % 1000000;
-}
-
-/**
- * Simple string hash
- */
-function hashString(str) {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return Math.abs(hash);
 }
 
 // Run if called directly
 if (require.main === module) {
-  generateCharacters().catch(error => {
+  main().catch(error => {
     console.error('Generation failed:', error);
     process.exit(1);
   });
 }
 
-module.exports = { generateCharacters };
+module.exports = { generateCharacterClass, createSpriteSheet };

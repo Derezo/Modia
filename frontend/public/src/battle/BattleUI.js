@@ -27,11 +27,11 @@ export class BattleUI {
         top: 10px;
         left: 10px;
         pointer-events: auto;
-        min-width: 120px;
+        min-width: 140px;
       ">
         <div class="ui-panel">
           <div class="ui-panel-header" style="font-size: 12px;">Turn Order</div>
-          <div id="turn-order-list" style="max-height: 200px; overflow-y: auto;"></div>
+          <div id="turn-order-list" style="max-height: 320px; overflow-y: auto;"></div>
         </div>
       </div>
 
@@ -90,9 +90,29 @@ export class BattleUI {
         <div class="ui-panel" style="padding: 10px;">
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-secondary action-btn" id="btn-move" title="Move to a new position">Move</button>
-            <button class="btn btn-primary action-btn" id="btn-attack" title="Attack an enemy">Attack</button>
+            <button class="btn btn-primary action-btn" id="btn-attack" title="Attack a target">Attack</button>
+            <button class="btn btn-info action-btn" id="btn-skill" title="Use a skill">Skill</button>
             <button class="btn btn-secondary action-btn" id="btn-wait" title="End turn without acting">Wait</button>
           </div>
+          <!-- Cancel button for targeting mode -->
+          <div id="targeting-cancel" style="display: none; margin-top: 8px; text-align: center;">
+            <button class="btn btn-secondary" id="btn-cancel-targeting">Cancel (Esc)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skill Selection Panel (hidden by default) -->
+      <div id="skill-panel" class="battle-panel" style="
+        position: absolute;
+        bottom: 70px;
+        left: 50%;
+        transform: translateX(-50%);
+        pointer-events: auto;
+        display: none;
+      ">
+        <div class="ui-panel" style="padding: 10px; max-width: 400px;">
+          <div style="font-size: 12px; color: #888; margin-bottom: 8px;">Select Skill</div>
+          <div id="skill-list" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
         </div>
       </div>
 
@@ -225,6 +245,13 @@ export class BattleUI {
         opacity: 0.4;
         text-decoration: line-through;
       }
+      .turn-number {
+        width: 18px;
+        font-size: 10px;
+        color: #666;
+        margin-right: 4px;
+        text-align: right;
+      }
       .turn-unit-icon {
         width: 20px;
         height: 20px;
@@ -236,6 +263,12 @@ export class BattleUI {
         font-size: 10px;
         font-weight: bold;
         color: #fff;
+      }
+      .turn-unit-name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
     `;
     document.head.appendChild(style);
@@ -259,11 +292,19 @@ export class BattleUI {
       this.actionCallbacks.onWait?.();
     }, opts);
 
+    this.element.querySelector('#btn-skill')?.addEventListener('click', () => {
+      this.actionCallbacks.onSkill?.();
+    }, opts);
+
     this.element.querySelector('#btn-confirm')?.addEventListener('click', () => {
       this.actionCallbacks.onConfirm?.();
     }, opts);
 
     this.element.querySelector('#btn-cancel')?.addEventListener('click', () => {
+      this.actionCallbacks.onCancel?.();
+    }, opts);
+
+    this.element.querySelector('#btn-cancel-targeting')?.addEventListener('click', () => {
       this.actionCallbacks.onCancel?.();
     }, opts);
 
@@ -273,27 +314,50 @@ export class BattleUI {
   }
 
   /**
-   * Update turn order display
+   * Update turn order display using predicted turns
    */
   updateTurnOrder(battleState) {
     const list = this.element.querySelector('#turn-order-list');
     if (!list) return;
 
-    list.innerHTML = battleState.units.map((unit, index) => {
-      const isActive = index === battleState.activeUnitIndex;
-      const isDead = unit.hp <= 0;
-      const typeClass = unit.type === 'player' ? 'player' : 'enemy';
-      const bgColor = unit.type === 'player' ? '#4a90d9' : '#d94a4a';
+    // Use turn predictions if available, otherwise fall back to unit list
+    const predictions = battleState.turnPredictions || [];
 
-      return `
-        <div class="turn-unit ${typeClass} ${isActive ? 'active' : ''} ${isDead ? 'dead' : ''}">
-          <div class="turn-unit-icon" style="background: ${bgColor};">
-            ${this.getClassIcon(unit.class)}
+    if (predictions.length > 0) {
+      // New CT-based display: show predicted turn order
+      list.innerHTML = predictions.map((pred, index) => {
+        const isActive = index === 0; // First prediction is current turn
+        const typeClass = pred.type === 'player' ? 'player' : 'enemy';
+        const bgColor = pred.type === 'player' ? '#4a90d9' : '#d94a4a';
+
+        return `
+          <div class="turn-unit ${typeClass} ${isActive ? 'active' : ''}">
+            <span class="turn-number">${index + 1}.</span>
+            <div class="turn-unit-icon" style="background: ${bgColor};">
+              ${this.getClassIcon(pred.class)}
+            </div>
+            <span class="turn-unit-name">${pred.name}</span>
           </div>
-          <span>${unit.name}</span>
-        </div>
-      `;
-    }).join('');
+        `;
+      }).join('');
+    } else {
+      // Fallback: old style unit list
+      list.innerHTML = battleState.units.map((unit, index) => {
+        const isActive = index === battleState.activeUnitIndex;
+        const isDead = unit.hp <= 0;
+        const typeClass = unit.type === 'player' ? 'player' : 'enemy';
+        const bgColor = unit.type === 'player' ? '#4a90d9' : '#d94a4a';
+
+        return `
+          <div class="turn-unit ${typeClass} ${isActive ? 'active' : ''} ${isDead ? 'dead' : ''}">
+            <div class="turn-unit-icon" style="background: ${bgColor};">
+              ${this.getClassIcon(unit.class)}
+            </div>
+            <span class="turn-unit-name">${unit.name}</span>
+          </div>
+        `;
+      }).join('');
+    }
 
     // Update turn counter
     const turnCounter = this.element.querySelector('#turn-counter');
@@ -393,6 +457,61 @@ export class BattleUI {
   showActionMenu() {
     const menu = this.element.querySelector('#action-menu');
     if (menu) menu.style.display = 'block';
+  }
+
+  /**
+   * Show targeting mode UI (cancel button visible)
+   */
+  showTargetingMode() {
+    const cancelDiv = this.element.querySelector('#targeting-cancel');
+    if (cancelDiv) cancelDiv.style.display = 'block';
+  }
+
+  /**
+   * Hide targeting mode UI
+   */
+  hideTargetingMode() {
+    const cancelDiv = this.element.querySelector('#targeting-cancel');
+    if (cancelDiv) cancelDiv.style.display = 'none';
+  }
+
+  /**
+   * Show skill selection panel
+   * @param {Array} skills - Array of skill objects with id, name, mpCost, icon, description
+   * @param {number} currentMp - Current MP of the active unit
+   */
+  showSkillPanel(skills, currentMp) {
+    const panel = this.element.querySelector('#skill-panel');
+    const list = this.element.querySelector('#skill-list');
+    if (!panel || !list) return;
+
+    list.innerHTML = skills.map(skill => `
+      <button class="btn btn-secondary skill-btn"
+              data-skill-id="${skill.id}"
+              ${skill.mpCost > currentMp ? 'disabled' : ''}
+              title="${skill.description} (${skill.mpCost} MP)">
+        ${skill.icon || ''} ${skill.name}
+        <span style="font-size: 10px; color: #6af; margin-left: 4px;">${skill.mpCost}MP</span>
+      </button>
+    `).join('');
+
+    panel.style.display = 'block';
+
+    // Add click handlers for skill buttons
+    list.querySelectorAll('.skill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const skillId = btn.dataset.skillId;
+        this.actionCallbacks.onSelectSkill?.(skillId);
+      });
+    });
+  }
+
+  /**
+   * Hide skill selection panel
+   */
+  hideSkillPanel() {
+    const panel = this.element.querySelector('#skill-panel');
+    if (panel) panel.style.display = 'none';
   }
 
   /**

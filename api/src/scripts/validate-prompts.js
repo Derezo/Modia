@@ -15,6 +15,7 @@
 require('dotenv').config();
 const path = require('path');
 const fs = require('fs').promises;
+const sharp = require('sharp');
 const { getPixelLabClient } = require('../services/pixelLabService');
 const {
   STYLE_SUFFIX,
@@ -149,6 +150,7 @@ function parseArgs() {
     armor: null,
     biome: 'forest',
     dryRun: false,
+    deploy: false,
     listEnemies: false,
     listRaces: false,
     help: false
@@ -161,6 +163,8 @@ function parseArgs() {
       args.help = true;
     } else if (arg === '--dry-run') {
       args.dryRun = true;
+    } else if (arg === '--deploy') {
+      args.deploy = true;
     } else if (arg === '--list-enemies') {
       args.listEnemies = true;
     } else if (arg === '--list-races') {
@@ -207,6 +211,7 @@ Options:
   --armor=ARMOR             Armor to equip
   --biome=BIOME             Enemy biome (default: forest)
   --dry-run                 Show prompt without generating
+  --deploy                  Also copy sprite to game assets folder
   --list-enemies            List all available enemies
   --list-races              List all available races
   --help, -h                Show this help
@@ -214,6 +219,9 @@ Options:
 Examples:
   # Validate a forest enemy
   npm run validate:sprites -- --type=enemy --name=gray_wolf
+
+  # Validate AND deploy to game assets
+  npm run validate:sprites -- --type=enemy --name=gray_wolf --deploy
 
   # Validate a character
   npm run validate:sprites -- --type=character --race=elf --class=wizard
@@ -334,7 +342,127 @@ async function validatePrompt(args) {
   await pixelLab.saveImage(result, outputPath);
 
   console.log(`\nSample saved to: ${outputPath}`);
-  console.log('Review the sample and adjust prompts if needed.');
+
+  // Deploy to game assets if --deploy flag is set
+  if (args.deploy) {
+    const assetsDir = path.join(process.cwd(), 'frontend', 'public', 'assets', 'sprites');
+
+    // Direction order for sprite sheet (matches AnimatedSprite.DIRECTIONS)
+    // Row 0=South, 1=Southwest, 2=West, 3=Northwest, 4=North, 5=Northeast, 6=East, 7=Southeast
+    const directionOrder = ['south', 'south-west', 'west', 'north-west', 'north', 'north-east', 'east', 'south-east'];
+
+    if (args.type === 'enemy') {
+      const enemyDir = path.join(assetsDir, 'characters', 'enemies', args.biome, args.name);
+      await fs.mkdir(enemyDir, { recursive: true });
+
+      if (result.rotation_urls || result.character_data?.rotation_urls) {
+        const urls = result.rotation_urls || result.character_data.rotation_urls;
+        console.log('\nDownloading all directions...');
+
+        // Download all direction images
+        const directionBuffers = [];
+        for (const direction of directionOrder) {
+          const url = urls[direction];
+          if (!url) {
+            console.warn(`  Warning: No URL for direction '${direction}'`);
+            continue;
+          }
+          const response = await fetch(url);
+          const buffer = Buffer.from(await response.arrayBuffer());
+          directionBuffers.push({ direction, buffer });
+          console.log(`  Downloaded: ${direction}`);
+        }
+
+        // Combine into sprite sheet (8 rows, 1 column for single-frame idle)
+        if (directionBuffers.length > 0) {
+          const firstImage = await sharp(directionBuffers[0].buffer).metadata();
+          const frameWidth = firstImage.width;
+          const frameHeight = firstImage.height;
+
+          // Create sprite sheet: 1 frame wide, 8 directions tall
+          const spriteSheet = await sharp({
+            create: {
+              width: frameWidth,
+              height: frameHeight * 8,
+              channels: 4,
+              background: { r: 0, g: 0, b: 0, alpha: 0 }
+            }
+          })
+          .composite(
+            directionBuffers.map((item, index) => ({
+              input: item.buffer,
+              top: index * frameHeight,
+              left: 0
+            }))
+          )
+          .png()
+          .toBuffer();
+
+          const idlePath = path.join(enemyDir, `${args.name}_idle.png`);
+          await fs.writeFile(idlePath, spriteSheet);
+          console.log(`\nCreated sprite sheet: ${idlePath}`);
+          console.log(`  Size: ${frameWidth}x${frameHeight * 8} (${directionBuffers.length} directions)`);
+          console.log('Sprite is now available in the game!');
+        }
+      }
+    } else if (args.type === 'character') {
+      const charDir = path.join(assetsDir, 'characters', 'player', args.class);
+      await fs.mkdir(charDir, { recursive: true });
+
+      if (result.rotation_urls || result.character_data?.rotation_urls) {
+        const urls = result.rotation_urls || result.character_data.rotation_urls;
+        console.log('\nDownloading all directions...');
+
+        // Download all direction images
+        const directionBuffers = [];
+        for (const direction of directionOrder) {
+          const url = urls[direction];
+          if (!url) {
+            console.warn(`  Warning: No URL for direction '${direction}'`);
+            continue;
+          }
+          const response = await fetch(url);
+          const buffer = Buffer.from(await response.arrayBuffer());
+          directionBuffers.push({ direction, buffer });
+          console.log(`  Downloaded: ${direction}`);
+        }
+
+        // Combine into sprite sheet
+        if (directionBuffers.length > 0) {
+          const firstImage = await sharp(directionBuffers[0].buffer).metadata();
+          const frameWidth = firstImage.width;
+          const frameHeight = firstImage.height;
+
+          const spriteSheet = await sharp({
+            create: {
+              width: frameWidth,
+              height: frameHeight * 8,
+              channels: 4,
+              background: { r: 0, g: 0, b: 0, alpha: 0 }
+            }
+          })
+          .composite(
+            directionBuffers.map((item, index) => ({
+              input: item.buffer,
+              top: index * frameHeight,
+              left: 0
+            }))
+          )
+          .png()
+          .toBuffer();
+
+          const idlePath = path.join(charDir, `${args.class}_idle.png`);
+          await fs.writeFile(idlePath, spriteSheet);
+          console.log(`\nCreated sprite sheet: ${idlePath}`);
+          console.log(`  Size: ${frameWidth}x${frameHeight * 8} (${directionBuffers.length} directions)`);
+          console.log('Sprite is now available in the game!');
+        }
+      }
+    }
+  } else {
+    console.log('Review the sample and adjust prompts if needed.');
+    console.log('Use --deploy to copy the sprite to game assets.');
+  }
 
   // Also extract character_id if available for animation testing
   if (result.character_id || result.last_response?.character_id) {

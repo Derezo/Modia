@@ -242,6 +242,150 @@ function getAttackRange(unit) {
   return 1;
 }
 
+// ==================== CT-Based Turn System ====================
+
+const CT_THRESHOLD = 100;
+
+/**
+ * Initialize CT values for all units at battle start
+ * Units start with CT based on their agility for initial variation
+ */
+function initializeCT(units) {
+  for (const unit of units) {
+    // Start with some CT based on agility to add variety to first turns
+    unit.ct = Math.floor(unit.agility * Math.random());
+  }
+}
+
+/**
+ * Advance CT for all alive units until at least one can act
+ * Returns the number of ticks advanced
+ */
+function advanceCTUntilReady(state) {
+  const aliveUnits = state.units.filter(u => u.hp > 0);
+  if (aliveUnits.length === 0) return 0;
+
+  let ticks = 0;
+  const maxTicks = 1000; // Safety limit
+
+  while (ticks < maxTicks) {
+    // Check if any unit can act
+    if (aliveUnits.some(u => u.ct >= CT_THRESHOLD)) {
+      break;
+    }
+
+    // Advance all alive units' CT by their agility
+    for (const unit of aliveUnits) {
+      unit.ct += unit.agility;
+    }
+    ticks++;
+  }
+
+  return ticks;
+}
+
+/**
+ * Get the next unit to act (highest CT >= 100)
+ * Tie-breakers: highest CT, then highest agility, then players before enemies
+ */
+function getNextActor(state) {
+  const ready = state.units.filter(u => u.hp > 0 && u.ct >= CT_THRESHOLD);
+
+  if (ready.length === 0) return null;
+
+  ready.sort((a, b) => {
+    // Highest CT first
+    if (b.ct !== a.ct) return b.ct - a.ct;
+    // Highest agility as tie-breaker
+    if (b.agility !== a.agility) return b.agility - a.agility;
+    // Players before enemies as final tie-breaker
+    return (a.type === 'player' ? 0 : 1) - (b.type === 'player' ? 0 : 1);
+  });
+
+  return ready[0];
+}
+
+/**
+ * Consume CT after a unit acts
+ */
+function consumeCT(unit) {
+  unit.ct -= CT_THRESHOLD;
+  // Ensure CT doesn't go negative
+  if (unit.ct < 0) unit.ct = 0;
+}
+
+/**
+ * Predict the next N turns without modifying actual state
+ * Returns array of { id, name, type, class } for each predicted turn
+ */
+function predictTurnOrder(state, count = 10) {
+  const predictions = [];
+  const aliveUnits = state.units.filter(u => u.hp > 0);
+
+  if (aliveUnits.length === 0) return predictions;
+
+  // Create a simulation copy of CT values
+  const simCT = {};
+  for (const unit of aliveUnits) {
+    simCT[unit.id] = unit.ct || 0;
+  }
+
+  const maxIterations = count * 100; // Safety limit
+  let iterations = 0;
+
+  while (predictions.length < count && iterations < maxIterations) {
+    iterations++;
+
+    // Advance CT until someone is ready
+    while (!aliveUnits.some(u => simCT[u.id] >= CT_THRESHOLD)) {
+      for (const unit of aliveUnits) {
+        simCT[unit.id] += unit.agility;
+      }
+    }
+
+    // Find who acts (same sorting as getNextActor)
+    const ready = aliveUnits.filter(u => simCT[u.id] >= CT_THRESHOLD);
+    ready.sort((a, b) => {
+      if (simCT[b.id] !== simCT[a.id]) return simCT[b.id] - simCT[a.id];
+      if (b.agility !== a.agility) return b.agility - a.agility;
+      return (a.type === 'player' ? 0 : 1) - (b.type === 'player' ? 0 : 1);
+    });
+
+    const actor = ready[0];
+    predictions.push({
+      id: actor.id,
+      name: actor.name,
+      type: actor.type,
+      class: actor.class
+    });
+
+    // Consume CT in simulation
+    simCT[actor.id] -= CT_THRESHOLD;
+  }
+
+  return predictions;
+}
+
+/**
+ * Find the unit that should act next, advancing CT if needed
+ * Updates state.activeUnitId to the next actor
+ */
+function advanceToNextActor(state) {
+  // First, advance CT until someone is ready
+  advanceCTUntilReady(state);
+
+  // Get the next actor
+  const nextActor = getNextActor(state);
+
+  if (nextActor) {
+    state.activeUnitId = nextActor.id;
+    // Also update activeUnitIndex for backwards compatibility
+    state.activeUnitIndex = state.units.findIndex(u => u.id === nextActor.id);
+  }
+
+  return nextActor;
+}
+
 module.exports = {
   calculatePhysicalDamage,
   calculateMagicalDamage,
@@ -254,5 +398,13 @@ module.exports = {
   calculateExperienceReward,
   calculateGoldReward,
   getMovementRange,
-  getAttackRange
+  getAttackRange,
+  // CT-based turn system
+  CT_THRESHOLD,
+  initializeCT,
+  advanceCTUntilReady,
+  getNextActor,
+  consumeCT,
+  predictTurnOrder,
+  advanceToNextActor
 };

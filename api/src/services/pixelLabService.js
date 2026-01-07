@@ -20,9 +20,29 @@ class PixelLabClient {
     this.maxRetries = options.maxRetries || 3;
     this.retryDelayMs = options.retryDelayMs || 1000;
     this.maxConcurrent = options.maxConcurrent || 3;
+    this.debugLogDir = options.debugLogDir || path.join(process.cwd(), '.pixellab-cache', 'debug');
+    this.enableDebugLogging = options.enableDebugLogging ?? (process.env.PIXELLAB_DEBUG === 'true');
 
     if (!this.apiKey) {
       throw new Error('PIXELLAB_API_KEY is required');
+    }
+  }
+
+  /**
+   * Log API response to file for debugging
+   */
+  async logResponse(endpoint, response) {
+    if (!this.enableDebugLogging) return;
+
+    try {
+      await fs.mkdir(this.debugLogDir, { recursive: true });
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const safeName = endpoint.replace(/[^a-zA-Z0-9]/g, '_');
+      const logPath = path.join(this.debugLogDir, `${timestamp}_${safeName}.json`);
+      await fs.writeFile(logPath, JSON.stringify(response, null, 2));
+      console.log(`Debug: Response logged to ${logPath}`);
+    } catch (error) {
+      console.warn('Failed to write debug log:', error.message);
     }
   }
 
@@ -99,7 +119,9 @@ class PixelLabClient {
           throw new Error(`PixelLab API error ${response.status}: ${errorBody}`);
         }
 
-        return await response.json();
+        const jsonResponse = await response.json();
+        await this.logResponse(endpoint, jsonResponse);
+        return jsonResponse;
       } catch (error) {
         if (attempt === this.maxRetries - 1) {
           throw error;
@@ -353,8 +375,22 @@ class PixelLabClient {
     const result = await this.request('/create-character-with-8-directions', 'POST', body);
 
     const jobId = result.job_id || result.background_job_id;
+    const characterId = result.character_id;
+
     if (jobId) {
-      return this.waitForJob(jobId);
+      const jobResult = await this.waitForJob(jobId);
+      // After job completes, fetch the character to get rotation_urls
+      const finalCharacterId = jobResult.last_response?.character_id || characterId;
+      if (finalCharacterId) {
+        const characterData = await this.getCharacter(finalCharacterId);
+        return {
+          ...jobResult,
+          character_id: finalCharacterId,
+          character_data: characterData,
+          rotation_urls: characterData.rotation_urls
+        };
+      }
+      return jobResult;
     }
 
     return result;
@@ -576,22 +612,33 @@ class PixelLabClient {
    * @returns {Object} - { base64, width, height, type }
    */
   extractImageInfo(result) {
-    // Job completion response (from waitForJob)
-    if (result.last_response?.image) {
-      return result.last_response.image;
+    // Check various locations where image data might be
+    const locations = [
+      result.last_response?.images?.[0],
+      result.last_response?.image,
+      result.result?.images?.[0],
+      result.result?.image,
+      result.images?.[0],
+      result.image,
+      result.data?.images?.[0],
+      result.data?.image,
+      result.output?.images?.[0],
+      result.output?.image
+    ];
+
+    for (const loc of locations) {
+      if (loc?.base64) {
+        return loc;
+      }
     }
-    // Direct image response
-    if (result.image) {
-      return result.image;
-    }
-    // Data wrapper
-    if (result.data?.image) {
-      return result.data.image;
-    }
-    // Direct base64
+
+    // Direct base64 at root
     if (result.base64) {
       return { base64: result.base64, type: 'unknown' };
     }
+
+    // Note: For character creation endpoints, use saveImage() which handles rotation_urls
+    // This method is primarily for endpoints that return base64 image data directly
     return null;
   }
 
@@ -650,9 +697,32 @@ class PixelLabClient {
   }
 
   /**
-   * Save image result to file (handles rgba_bytes conversion)
+   * Save image result to file
+   * Handles: rotation_urls (downloads), base64 data, and rgba_bytes conversion
    */
-  async saveImage(result, filePath) {
+  async saveImage(result, filePath, direction = 'south') {
+    const dir = path.dirname(filePath);
+    await fs.mkdir(dir, { recursive: true });
+
+    // Check if result has rotation_urls (from character creation)
+    if (result.rotation_urls) {
+      const url = result.rotation_urls[direction];
+      if (!url) {
+        throw new Error(`No URL found for direction '${direction}'. Available: ${Object.keys(result.rotation_urls).join(', ')}`);
+      }
+      return this.downloadImage(url, filePath);
+    }
+
+    // Check character_data for rotation_urls
+    if (result.character_data?.rotation_urls) {
+      const url = result.character_data.rotation_urls[direction];
+      if (!url) {
+        throw new Error(`No URL found for direction '${direction}'. Available: ${Object.keys(result.character_data.rotation_urls).join(', ')}`);
+      }
+      return this.downloadImage(url, filePath);
+    }
+
+    // Fallback to base64/rgba_bytes extraction
     const pngBuffer = await this.extractPngBuffer(result);
 
     // Validate PNG
@@ -661,11 +731,48 @@ class PixelLabClient {
       throw new Error('Failed to create valid PNG');
     }
 
+    await fs.writeFile(filePath, pngBuffer);
+    return filePath;
+  }
+
+  /**
+   * Download image from URL and save to file
+   */
+  async downloadImage(url, filePath) {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
     const dir = path.dirname(filePath);
     await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(filePath, pngBuffer);
+    await fs.writeFile(filePath, buffer);
 
     return filePath;
+  }
+
+  /**
+   * Save all rotation images from a character result
+   */
+  async saveAllRotations(result, outputDir, baseName) {
+    const urls = result.rotation_urls || result.character_data?.rotation_urls;
+    if (!urls) {
+      throw new Error('No rotation_urls found in result');
+    }
+
+    await fs.mkdir(outputDir, { recursive: true });
+    const saved = [];
+
+    for (const [direction, url] of Object.entries(urls)) {
+      const filePath = path.join(outputDir, `${baseName}_${direction}.png`);
+      await this.downloadImage(url, filePath);
+      saved.push({ direction, path: filePath });
+    }
+
+    return saved;
   }
 
   /**

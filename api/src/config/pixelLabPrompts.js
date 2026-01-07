@@ -359,8 +359,64 @@ const ENEMY_ANIMATION_ACTIONS = {
     attack: 'spider lunging, fangs extended, venom dripping',
     hit: 'spider recoiling, legs curling',
     death: 'spider collapsing, legs curling inward'
+  },
+  forest_slime: {
+    idle: 'slime blob wobbling, gelatinous body pulsing',
+    walk: 'slime oozing forward, leaving trail',
+    attack: 'slime launching acidic spit, stretching',
+    hit: 'slime rippling violently, splashing',
+    death: 'slime dissolving, melting into puddle'
   }
 };
+
+// =====================
+// CHARACTER ANIMATION ACTIONS (BY CLASS)
+// =====================
+
+const CHARACTER_ANIMATION_ACTIONS = {
+  warrior: {
+    idle: 'warrior standing alert, sword and shield ready, defensive stance',
+    walk: 'warrior walking forward, heavy armor clanking, shield raised',
+    attack: 'warrior powerful sword slash, shield forward, aggressive',
+    hit: 'warrior recoiling, shield absorbing blow, staggered',
+    death: 'warrior falling to knees, sword dropping, defeated'
+  },
+  wizard: {
+    idle: 'wizard standing calm, staff resting, robes flowing gently',
+    walk: 'wizard walking steadily, robes billowing, staff in hand',
+    attack: 'wizard casting spell, staff raised high, magical energy burst',
+    hit: 'wizard stumbling back, magical shield flicker, stunned',
+    death: 'wizard collapsing, robes settling, staff falling, defeated'
+  },
+  monk: {
+    idle: 'monk centered breathing, martial arts stance, focused',
+    walk: 'monk light-footed movement, balanced stride, ready',
+    attack: 'monk rapid punch combo, ki energy flowing, fierce',
+    hit: 'monk nimble dodge attempt, taking hit, recovering',
+    death: 'monk graceful collapse, peaceful expression, accepting'
+  },
+  chemist: {
+    idle: 'chemist examining potion flask, curious expression, analyzing',
+    walk: 'chemist careful movement, protecting potions, cautious',
+    attack: 'chemist throwing potion, arc motion, explosive',
+    hit: 'chemist potion splash, chemical spill, stumbling',
+    death: 'chemist flask shattering, collapsing, smoke rising'
+  }
+};
+
+/**
+ * Build animation prompt for a character class
+ * @param {string} charClass - Character class (warrior, wizard, monk, chemist)
+ * @param {string} animation - Animation state (idle, walk, attack, hit, death)
+ * @returns {string} Animation action description or null
+ */
+function buildCharacterAnimationPrompt(charClass, animation) {
+  const classActions = CHARACTER_ANIMATION_ACTIONS[charClass];
+  if (!classActions) {
+    return null;
+  }
+  return classActions[animation] || classActions.idle;
+}
 
 // =====================
 // WIZARD ANIMATION ACTIONS (BY RACE)
@@ -466,7 +522,8 @@ const ENEMY_PROMPTS = {
     goblin_archer: `Goblin archer, leather scraps, shortbow, sneaky pose, ${STYLE_SUFFIX}`,
     treant: `Ancient treant, bark armor, glowing green eyes, tree creature, ${STYLE_SUFFIX}`,
     forest_sprite: `Ethereal forest sprite, glowing wings, nature magic, tiny fey, ${STYLE_SUFFIX}`,
-    spider: `Giant forest spider, dark chitin, venomous fangs, hairy legs, ${STYLE_SUFFIX}`
+    spider: `Giant forest spider, dark chitin, venomous fangs, hairy legs, ${STYLE_SUFFIX}`,
+    forest_slime: `Green forest slime, gelatinous blob body, dripping ooze, transparent, ${STYLE_SUFFIX}`
   },
   cave: {
     stone_golem: `Massive stone golem, rocky body, glowing runes, construct, ${STYLE_SUFFIX}`,
@@ -594,6 +651,7 @@ module.exports = {
   TILE_CONFIG,
   OBSTACLE_PROMPTS,
   CHARACTER_PROMPTS,
+  CHARACTER_ANIMATION_ACTIONS,
   RACE_PROMPTS,
   EQUIPMENT_PROMPTS,
   ENEMY_ANIMATION_ACTIONS,
@@ -606,6 +664,7 @@ module.exports = {
   RARITY_MODIFIERS,
   // Helper functions
   buildEquippedCharacterPrompt,
+  buildCharacterAnimationPrompt,
   buildWizardAnimationPrompt,
   buildEnemyAnimationPrompt
 };
