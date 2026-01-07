@@ -185,7 +185,7 @@ export class WorldMapScene extends Scene {
     });
     container.querySelector('#inventory-btn').addEventListener('click', () => {
       this.toggleMenu();
-      this.game.showNotification('Inventory - Coming soon!', 'info');
+      this.game.scenes.switchTo('inventory');
     });
 
     // Update current node display
