@@ -15,6 +15,24 @@ const CLASSES = {
   CHEMIST: 'chemist'
 };
 
+// Advanced Classes (unlocked at level 20)
+const ADVANCED_CLASSES = {
+  BERSERKER: 'berserker',
+  SORCERER: 'sorcerer',
+  NINJA: 'ninja',
+  ALCHEMIST: 'alchemist'
+};
+
+// Advancement paths: base class -> advanced class
+const CLASS_ADVANCEMENT = {
+  warrior: 'berserker',
+  wizard: 'sorcerer',
+  monk: 'ninja',
+  chemist: 'alchemist'
+};
+
+const ADVANCEMENT_LEVEL_REQUIREMENT = 20;
+
 // Base stats by race
 const RACE_BASE_STATS = {
   [RACES.HUMAN]: {
@@ -44,7 +62,12 @@ const CLASS_GROWTH = {
   [CLASSES.WARRIOR]: { hp: 15, mp: 3, strength: 3, intelligence: 1, agility: 1, vitality: 2 },
   [CLASSES.WIZARD]: { hp: 8, mp: 12, strength: 1, intelligence: 4, agility: 1, vitality: 1 },
   [CLASSES.MONK]: { hp: 10, mp: 6, strength: 2, intelligence: 2, agility: 3, vitality: 1 },
-  [CLASSES.CHEMIST]: { hp: 10, mp: 8, strength: 1, intelligence: 2, agility: 2, vitality: 2 }
+  [CLASSES.CHEMIST]: { hp: 10, mp: 8, strength: 1, intelligence: 2, agility: 2, vitality: 2 },
+  // Advanced classes (higher growth)
+  [ADVANCED_CLASSES.BERSERKER]: { hp: 18, mp: 2, strength: 4, intelligence: 1, agility: 1, vitality: 2 },
+  [ADVANCED_CLASSES.SORCERER]: { hp: 7, mp: 15, strength: 1, intelligence: 5, agility: 1, vitality: 1 },
+  [ADVANCED_CLASSES.NINJA]: { hp: 10, mp: 5, strength: 2, intelligence: 2, agility: 4, vitality: 1 },
+  [ADVANCED_CLASSES.ALCHEMIST]: { hp: 11, mp: 10, strength: 1, intelligence: 3, agility: 2, vitality: 2 }
 };
 
 // Movement range by class
@@ -52,7 +75,12 @@ const CLASS_MOVEMENT = {
   [CLASSES.WARRIOR]: 3,
   [CLASSES.WIZARD]: 2,
   [CLASSES.MONK]: 4,
-  [CLASSES.CHEMIST]: 3
+  [CLASSES.CHEMIST]: 3,
+  // Advanced classes
+  [ADVANCED_CLASSES.BERSERKER]: 3,
+  [ADVANCED_CLASSES.SORCERER]: 2,
+  [ADVANCED_CLASSES.NINJA]: 5,
+  [ADVANCED_CLASSES.ALCHEMIST]: 3
 };
 
 // Node types
@@ -105,6 +133,9 @@ const calculateStats = (race, charClass, level) => {
 module.exports = {
   RACES,
   CLASSES,
+  ADVANCED_CLASSES,
+  CLASS_ADVANCEMENT,
+  ADVANCEMENT_LEVEL_REQUIREMENT,
   RACE_BASE_STATS,
   CLASS_GROWTH,
   CLASS_MOVEMENT,

@@ -203,6 +203,15 @@ export class ApiClient {
     return this.get('/skills/guilds');
   }
 
+  // Guild advancement endpoints
+  checkAdvancement(characterId) {
+    return this.get(`/skills/advancement/${characterId}`);
+  }
+
+  advanceGuild(characterId) {
+    return this.post('/skills/advance', { characterId });
+  }
+
   // Shop endpoints
   getShopInventory(nodeId, shopType) {
     return this.get(`/shops/${nodeId}/${shopType}`);

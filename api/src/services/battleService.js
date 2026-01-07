@@ -4,11 +4,17 @@
 
 /**
  * Calculate physical damage
- * Formula: (ATK * skillPower * variance) - (DEF * 0.5 * 0.3)
+ * Formula: (ATK + equipmentAttack + strength) * skillPower - (DEF + equipmentDefense + vitality * 0.5)
+ * Equipment attack/defense bonuses are additive to base stats
  */
 function calculatePhysicalDamage(attacker, defender, skillPower = 100) {
-  const baseDamage = attacker.strength * (skillPower / 100);
-  const defenseReduction = (defender.vitality || defender.agility / 2) * 0.5 * 0.3;
+  // Base attack = strength + equipment attack bonus
+  const attackPower = attacker.strength + (attacker.attack || 0);
+  const baseDamage = attackPower * (skillPower / 100);
+
+  // Defense = vitality + equipment defense bonus
+  const defensePower = (defender.vitality || defender.agility / 2) + (defender.defense || 0);
+  const defenseReduction = defensePower * 0.5 * 0.3;
   const rawDamage = Math.max(1, baseDamage - defenseReduction);
 
   // Random variance (0.9 - 1.1)
@@ -36,11 +42,17 @@ function calculatePhysicalDamage(attacker, defender, skillPower = 100) {
 
 /**
  * Calculate magical damage
- * Formula: (INT * skillPower * variance) - (INT_DEF * 0.25 * 0.3)
+ * Formula: (INT + equipmentMagicAttack) * skillPower - (INT_DEF + equipmentMagicDefense)
+ * Equipment magic attack/defense bonuses are additive to base stats
  */
 function calculateMagicalDamage(attacker, defender, skillPower = 100) {
-  const baseDamage = attacker.intelligence * (skillPower / 100);
-  const defenseReduction = (defender.intelligence || 10) * 0.25 * 0.3;
+  // Base magic attack = intelligence + equipment magic attack bonus
+  const magicAttackPower = attacker.intelligence + (attacker.magicAttack || 0);
+  const baseDamage = magicAttackPower * (skillPower / 100);
+
+  // Magic defense = intelligence + equipment magic defense bonus
+  const magicDefensePower = (defender.intelligence || 10) + (defender.magicDefense || 0);
+  const defenseReduction = magicDefensePower * 0.25 * 0.3;
   const rawDamage = Math.max(1, baseDamage - defenseReduction);
 
   // Random variance (0.9 - 1.1)

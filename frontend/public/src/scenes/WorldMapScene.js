@@ -257,7 +257,21 @@ export class WorldMapScene extends Scene {
 
     const features = this.currentNode.features || [];
     if (Array.isArray(features)) {
-      features.slice(0, 3).forEach(feature => {
+      // Prioritize essential features (shops, social hubs) over decorative ones
+      const essentialFeatures = ['blacksmith', 'marketplace', 'tavern', 'apothecary', 'coliseum', 'farm'];
+      const decorativeFeatures = ['courtyard', 'throne', 'temple', 'stables', 'guild_hall', 'training_ground'];
+
+      // Sort features: essential first, then others, decorative last
+      const prioritizedFeatures = [
+        ...essentialFeatures.filter(f => features.includes(f)),
+        ...features.filter(f => !essentialFeatures.includes(f) && !decorativeFeatures.includes(f)),
+        ...decorativeFeatures.filter(f => features.includes(f))
+      ];
+
+      // Show up to 4 features for important nodes, 3 for others
+      const maxFeatures = ['castle', 'palace', 'city'].includes(this.currentNode.node_type) ? 4 : 3;
+
+      prioritizedFeatures.slice(0, maxFeatures).forEach(feature => {
         const btn = document.createElement('button');
         btn.className = 'btn btn-secondary';
         btn.textContent = this.capitalize(feature);
@@ -305,6 +319,12 @@ export class WorldMapScene extends Scene {
     // Tavern feature opens the tavern (social hub) scene
     if (feature === 'tavern') {
       this.game.scenes.switchTo('tavern');
+      return;
+    }
+
+    // Coliseum feature opens the PvP arena scene
+    if (feature === 'coliseum') {
+      this.game.scenes.switchTo('coliseum');
       return;
     }
 

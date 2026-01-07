@@ -72,9 +72,9 @@ router.post('/equip', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Invalid equipment slot', 400);
   }
 
-  // Verify character ownership
+  // Verify character ownership and get character info
   const charResult = await query(
-    'SELECT id, in_battle FROM characters WHERE id = $1 AND user_id = $2',
+    'SELECT id, level, class, race, in_battle FROM characters WHERE id = $1 AND user_id = $2',
     [characterId, req.user.userId]
   );
 
@@ -82,13 +82,16 @@ router.post('/equip', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Character not found', 404);
   }
 
-  if (charResult.rows[0].in_battle) {
+  const character = charResult.rows[0];
+
+  if (character.in_battle) {
     throw new AppError('Cannot change equipment during battle', 400);
   }
 
-  // Verify item ownership and get item info
+  // Verify item ownership and get item info including requirements
   const itemResult = await query(
-    `SELECT ci.id, ci.equipped_slot, it.item_type, it.equipment_slot
+    `SELECT ci.id, ci.equipped_slot, it.item_type, it.equipment_slot, it.name,
+            it.level_requirement, it.class_restriction, it.race_restriction
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
      WHERE ci.id = $1 AND ci.character_id = $2`,
@@ -104,6 +107,27 @@ router.post('/equip', authenticate, asyncHandler(async (req, res) => {
   // Check if item is already equipped
   if (item.equipped_slot) {
     throw new AppError('Item is already equipped', 400);
+  }
+
+  // Validate level requirement
+  if (item.level_requirement && character.level < item.level_requirement) {
+    throw new AppError(`Requires level ${item.level_requirement} (you are level ${character.level})`, 400);
+  }
+
+  // Validate class restriction
+  if (item.class_restriction && item.class_restriction.length > 0) {
+    if (!item.class_restriction.includes(character.class)) {
+      const allowedClasses = item.class_restriction.join(', ');
+      throw new AppError(`Only ${allowedClasses} can equip this item`, 400);
+    }
+  }
+
+  // Validate race restriction
+  if (item.race_restriction && item.race_restriction.length > 0) {
+    if (!item.race_restriction.includes(character.race)) {
+      const allowedRaces = item.race_restriction.join(', ');
+      throw new AppError(`Only ${allowedRaces} can equip this item`, 400);
+    }
   }
 
   // Validate item can be equipped in this slot
