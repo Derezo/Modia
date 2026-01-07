@@ -271,6 +271,12 @@ export class WorldMapScene extends Scene {
       return;
     }
 
+    // Tavern feature opens the tavern (social hub) scene
+    if (feature === 'tavern') {
+      this.game.scenes.switchTo('tavern');
+      return;
+    }
+
     // Other features not yet implemented
     this.game.showNotification(`${this.capitalize(feature)} - Coming soon!`, 'info');
   }
