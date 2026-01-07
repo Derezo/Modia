@@ -7,9 +7,18 @@ export class InventoryPanel {
     this.inventory = [];
     this.selectedItem = null;
     this.element = null;
+    this.characterStats = null; // For stat comparison
+    this.tooltipElement = null;
 
     // Asset loader for item sprites
     this.assetLoader = game.assetLoader || null;
+  }
+
+  /**
+   * Set character stats for stat comparison tooltips
+   */
+  setCharacterStats(character) {
+    this.characterStats = character;
   }
 
   async load(characterId) {
@@ -124,6 +133,52 @@ export class InventoryPanel {
         .rarity-glow-rare { filter: drop-shadow(0 0 4px #0070dd); }
         .rarity-glow-epic { filter: drop-shadow(0 0 5px #a335ee); }
         .rarity-glow-legendary { filter: drop-shadow(0 0 6px #ff8000); }
+        .stat-comparison-tooltip {
+          position: fixed;
+          background: rgba(20, 20, 40, 0.95);
+          border: 2px solid #4a4a6a;
+          border-radius: 8px;
+          padding: 12px;
+          min-width: 200px;
+          max-width: 280px;
+          z-index: 1000;
+          pointer-events: none;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+        }
+        .tooltip-item-name {
+          font-weight: bold;
+          margin-bottom: 8px;
+          font-size: 14px;
+        }
+        .tooltip-item-name.common { color: #ccc; }
+        .tooltip-item-name.uncommon { color: #1eff00; }
+        .tooltip-item-name.rare { color: #0070dd; }
+        .tooltip-item-name.epic { color: #a335ee; }
+        .tooltip-item-name.legendary { color: #ff8000; }
+        .tooltip-stats {
+          font-size: 12px;
+          margin-bottom: 8px;
+        }
+        .tooltip-stat-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 2px 0;
+        }
+        .stat-positive { color: #4caf50; }
+        .stat-negative { color: #f44336; }
+        .stat-neutral { color: #8a8aaa; }
+        .tooltip-comparison {
+          border-top: 1px solid #3a3a5a;
+          padding-top: 8px;
+          margin-top: 8px;
+          font-size: 11px;
+          color: #8a8aaa;
+        }
+        .comparison-header {
+          font-weight: bold;
+          margin-bottom: 4px;
+          color: #ffd700;
+        }
         .inventory-grid {
           display: grid;
           grid-template-columns: repeat(6, 1fr);
@@ -208,14 +263,14 @@ export class InventoryPanel {
           <div></div>
           <div></div>
           ${this.renderEquipmentSlot('main_hand', 'Weapon')}
-          ${this.renderEquipmentSlot('body', 'Armor')}
-          ${this.renderEquipmentSlot('off_hand', 'Shield')}
+          ${this.renderEquipmentSlot('body', 'Body')}
+          ${this.renderEquipmentSlot('off_hand', 'Off Hand')}
           <div></div>
-          ${this.renderEquipmentSlot('feet', 'Boots')}
+          ${this.renderEquipmentSlot('legs', 'Legs')}
           <div></div>
-          ${this.renderEquipmentSlot('accessory1', 'Acc 1')}
+          ${this.renderEquipmentSlot('feet', 'Feet')}
           <div></div>
-          ${this.renderEquipmentSlot('accessory2', 'Acc 2')}
+          ${this.renderEquipmentSlot('accessory', 'Accessory')}
         </div>
       </div>
 
@@ -306,10 +361,125 @@ export class InventoryPanel {
       slot.addEventListener('click', () => this.handleEquipmentSlotClick(slot));
     });
 
-    // Inventory slots
+    // Inventory slots - click and hover for tooltips
     this.element.querySelectorAll('.inventory-slot:not(.empty)').forEach(slot => {
       slot.addEventListener('click', () => this.handleInventorySlotClick(slot));
+      slot.addEventListener('mouseenter', (e) => this.showStatComparisonTooltip(e, slot));
+      slot.addEventListener('mouseleave', () => this.hideTooltip());
+      slot.addEventListener('mousemove', (e) => this.updateTooltipPosition(e));
     });
+  }
+
+  /**
+   * Show stat comparison tooltip for equippable items
+   */
+  showStatComparisonTooltip(event, slot) {
+    const index = parseInt(slot.dataset.index);
+    const item = this.inventory[index];
+
+    if (!item || !this.isEquippable(item.type)) return;
+
+    // Get the slot this item would equip to
+    const targetSlot = this.getDefaultSlot(item.type);
+    if (!targetSlot) return;
+
+    // Get currently equipped item in that slot
+    const currentEquipped = this.equipped[targetSlot];
+
+    // Create tooltip element
+    this.tooltipElement = document.createElement('div');
+    this.tooltipElement.className = 'stat-comparison-tooltip';
+
+    // Build tooltip HTML
+    let html = `<div class="tooltip-item-name ${item.rarity || 'common'}">${item.name}</div>`;
+    html += `<div style="font-size: 11px; color: #8a8aaa; margin-bottom: 8px;">${this.capitalize(item.type)} - ${this.capitalize(item.rarity || 'common')}</div>`;
+
+    // Item stats
+    const itemStats = item.baseStats || {};
+    if (Object.keys(itemStats).length > 0) {
+      html += '<div class="tooltip-stats">';
+      for (const [stat, value] of Object.entries(itemStats)) {
+        html += `<div class="tooltip-stat-row"><span>${this.formatStatName(stat)}</span><span class="stat-positive">+${value}</span></div>`;
+      }
+      html += '</div>';
+    }
+
+    // Comparison with equipped item
+    if (currentEquipped) {
+      const equippedStats = currentEquipped.baseStats || {};
+      const comparison = this.calculateStatComparison(itemStats, equippedStats);
+
+      if (comparison.length > 0) {
+        html += '<div class="tooltip-comparison">';
+        html += `<div class="comparison-header">vs. ${currentEquipped.name}</div>`;
+        for (const { stat, diff } of comparison) {
+          const diffClass = diff > 0 ? 'stat-positive' : diff < 0 ? 'stat-negative' : 'stat-neutral';
+          const diffStr = diff > 0 ? `+${diff}` : diff.toString();
+          html += `<div class="tooltip-stat-row"><span>${this.formatStatName(stat)}</span><span class="${diffClass}">${diffStr}</span></div>`;
+        }
+        html += '</div>';
+      }
+    } else {
+      // No equipped item - show that this is a new equip
+      html += '<div class="tooltip-comparison"><div style="color: #4caf50;">Slot is empty - equip for these stats</div></div>';
+    }
+
+    this.tooltipElement.innerHTML = html;
+    document.body.appendChild(this.tooltipElement);
+    this.updateTooltipPosition(event);
+  }
+
+  /**
+   * Calculate stat differences between new item and equipped item
+   */
+  calculateStatComparison(newStats, oldStats) {
+    const allStats = new Set([...Object.keys(newStats), ...Object.keys(oldStats)]);
+    const comparison = [];
+
+    for (const stat of allStats) {
+      const newVal = newStats[stat] || 0;
+      const oldVal = oldStats[stat] || 0;
+      const diff = newVal - oldVal;
+
+      if (diff !== 0) {
+        comparison.push({ stat, diff });
+      }
+    }
+
+    return comparison;
+  }
+
+  /**
+   * Update tooltip position to follow mouse
+   */
+  updateTooltipPosition(event) {
+    if (!this.tooltipElement) return;
+
+    const padding = 15;
+    let x = event.clientX + padding;
+    let y = event.clientY + padding;
+
+    // Keep tooltip on screen
+    const rect = this.tooltipElement.getBoundingClientRect();
+    if (x + rect.width > window.innerWidth) {
+      x = event.clientX - rect.width - padding;
+    }
+    if (y + rect.height > window.innerHeight) {
+      y = event.clientY - rect.height - padding;
+    }
+
+    this.tooltipElement.style.left = `${x}px`;
+    this.tooltipElement.style.top = `${y}px`;
+  }
+
+  /**
+   * Hide and remove tooltip
+   */
+  hideTooltip() {
+    if (this.tooltipElement) {
+      this.tooltipElement.remove();
+      this.tooltipElement = null;
+    }
   }
 
   handleEquipmentSlotClick(slot) {
@@ -461,7 +631,7 @@ export class InventoryPanel {
   }
 
   isEquippable(type) {
-    return ['weapon', 'shield', 'helmet', 'armor', 'boots', 'accessory', 'ring', 'necklace'].includes(type);
+    return ['weapon', 'shield', 'helmet', 'armor', 'legs', 'boots', 'accessory', 'ring', 'necklace'].includes(type);
   }
 
   getDefaultSlot(type) {
@@ -470,10 +640,11 @@ export class InventoryPanel {
       shield: 'off_hand',
       helmet: 'head',
       armor: 'body',
+      legs: 'legs',
       boots: 'feet',
-      accessory: 'accessory1',
-      ring: 'accessory1',
-      necklace: 'accessory1'
+      accessory: 'accessory',
+      ring: 'accessory',
+      necklace: 'accessory'
     };
     return slotMap[type];
   }
@@ -500,6 +671,7 @@ export class InventoryPanel {
   }
 
   destroy() {
+    this.hideTooltip();
     if (this.element) {
       this.element.remove();
       this.element = null;
