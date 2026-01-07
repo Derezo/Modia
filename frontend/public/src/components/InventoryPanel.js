@@ -618,18 +618,13 @@ export class InventoryPanel {
 
   /**
    * Get valid equipment slots for an item type
+   * Must match backend: api/src/routes/inventory.js getValidSlotsForItem()
    */
   getValidSlotsForItem(itemType) {
     const slotMap = {
       weapon: ['main_hand', 'off_hand'],
-      shield: ['off_hand'],
-      helmet: ['head'],
-      armor: ['body'],
-      legs: ['legs'],
-      boots: ['feet'],
-      accessory: ['accessory'],
-      ring: ['accessory'],
-      necklace: ['accessory']
+      armor: ['head', 'body', 'legs', 'feet'],
+      accessory: ['accessory']
     };
     return slotMap[itemType] || [];
   }
@@ -895,20 +890,17 @@ export class InventoryPanel {
   }
 
   isEquippable(type) {
-    return ['weapon', 'shield', 'helmet', 'armor', 'legs', 'boots', 'accessory', 'ring', 'necklace'].includes(type);
+    // Must match backend item_type enum: weapon, armor, accessory
+    return ['weapon', 'armor', 'accessory'].includes(type);
   }
 
   getDefaultSlot(type) {
+    // Default slot for each item type (used for click-to-equip)
+    // Must align with backend item types
     const slotMap = {
       weapon: 'main_hand',
-      shield: 'off_hand',
-      helmet: 'head',
       armor: 'body',
-      legs: 'legs',
-      boots: 'feet',
-      accessory: 'accessory',
-      ring: 'accessory',
-      necklace: 'accessory'
+      accessory: 'accessory'
     };
     return slotMap[type];
   }
