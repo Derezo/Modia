@@ -98,9 +98,9 @@ export class WorldMapScene extends Scene {
       this.game.state.set('worldNodes', this.nodes);
       this.game.state.set('currentNode', this.currentNode);
 
-      // Calculate biome regions for backdrop rendering
+      // Update discovery state for fog of war rendering
       if (this.effects) {
-        this.effects.calculateBiomeRegions(this.nodes);
+        this.effects.updateDiscoveryState(this.nodes);
       }
     } catch (err) {
       console.error('Failed to load world:', err);
@@ -443,6 +443,10 @@ export class WorldMapScene extends Scene {
       const result = await this.game.api.travel(node.id);
       this.currentNode = result.currentNode;
       this.game.state.set('currentNode', this.currentNode);
+
+      // Reload world data to get newly discovered nodes (fog of war reveal)
+      await this.loadWorldData();
+
       this.updateNodeInfo();
       this.game.showNotification(`Traveled to ${result.currentNode.name}`, 'success');
 
@@ -649,9 +653,9 @@ export class WorldMapScene extends Scene {
       }
     }
 
-    // Render ambient particles on top
+    // Render fog of war overlay
     if (this.effects) {
-      this.effects.renderParticles(ctx);
+      this.effects.renderFogOfWar(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height, this.nodes);
     }
 
     ctx.restore();

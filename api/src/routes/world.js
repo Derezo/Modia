@@ -12,19 +12,31 @@ router.get('/seed', asyncHandler(async (req, res) => {
   res.json({ seed });
 }));
 
-// GET /api/world/nodes - Get all discovered nodes for user
+// GET /api/world/nodes - Get discovered nodes for user (fog of war)
 router.get('/nodes', authenticate, asyncHandler(async (req, res) => {
-  // For MVP, return all nodes. Later we can add discovery mechanics.
+  const userId = req.user.userId;
+
+  // Get only discovered nodes for this user
   const result = await query(
-    `SELECT id, node_type, name, x_coord, y_coord, distance_from_center,
-            features, guild_class, local_seed, difficulty_tier
-     FROM world_nodes
-     ORDER BY distance_from_center ASC`
+    `SELECT wn.id, wn.node_type, wn.name, wn.x_coord, wn.y_coord, wn.distance_from_center,
+            wn.features, wn.guild_class, wn.local_seed, wn.difficulty_tier,
+            und.discovered_at,
+            und.discovery_method,
+            CASE WHEN und.discovery_method = 'travel' THEN true ELSE false END as visited
+     FROM world_nodes wn
+     INNER JOIN user_node_discovery und ON wn.id = und.node_id
+     WHERE und.user_id = $1
+     ORDER BY wn.distance_from_center ASC`,
+    [userId]
   );
 
-  // Get connections
+  // Get connections only between discovered nodes
   const connectionsResult = await query(
-    `SELECT from_node_id, to_node_id, path_type FROM world_node_connections`
+    `SELECT wnc.from_node_id, wnc.to_node_id, wnc.path_type
+     FROM world_node_connections wnc
+     WHERE wnc.from_node_id IN (SELECT node_id FROM user_node_discovery WHERE user_id = $1)
+       AND wnc.to_node_id IN (SELECT node_id FROM user_node_discovery WHERE user_id = $1)`,
+    [userId]
   );
 
   res.json({
@@ -113,6 +125,9 @@ router.post('/travel', authenticate, asyncHandler(async (req, res) => {
      WHERE user_id = $2 AND party_slot IS NOT NULL`,
     [targetNodeId, req.user.userId]
   );
+
+  // Discover node and adjacent nodes (fog of war)
+  await query('SELECT discover_node_and_adjacent($1, $2)', [req.user.userId, targetNodeId]);
 
   // Get new node details
   const nodeResult = await query(
@@ -234,6 +249,23 @@ router.get('/nodes/:id/players', authenticate, asyncHandler(async (req, res) => 
     players,
     count: players.length
   });
+}));
+
+// GET /api/world/discovery-stats - Get discovery progress for user
+router.get('/discovery-stats', authenticate, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+
+  const stats = await query(
+    `SELECT
+       COUNT(*) FILTER (WHERE discovery_method = 'travel') as visited_count,
+       COUNT(*) as discovered_count,
+       (SELECT COUNT(*) FROM world_nodes) as total_nodes
+     FROM user_node_discovery
+     WHERE user_id = $1`,
+    [userId]
+  );
+
+  res.json(stats.rows[0]);
 }));
 
 module.exports = router;
