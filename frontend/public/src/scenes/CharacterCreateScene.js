@@ -181,8 +181,11 @@ export class CharacterCreateScene extends Scene {
   }
 
   updateCreateButton() {
-    const name = document.getElementById('char-name').value.trim();
+    const nameEl = document.getElementById('char-name');
     const btn = document.getElementById('create-btn');
+    // Safety check - elements may not exist if scene was exited
+    if (!nameEl || !btn) return;
+    const name = nameEl.value.trim();
     btn.disabled = !name || name.length < 2 || !this.selectedRace || !this.selectedClass || this.loading;
   }
 

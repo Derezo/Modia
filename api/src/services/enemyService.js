@@ -56,9 +56,10 @@ async function selectEnemiesForEncounter(nodeType, difficultyTier, count) {
  * @param {number} partyLevel - Average party level
  * @param {number} difficultyTier - Node difficulty tier
  * @param {number} index - Enemy index for positioning
+ * @param {string} biome - Biome type for sprite loading (forest, cave, mountain, bridge)
  * @returns {Object} Scaled enemy object ready for battle
  */
-function createEnemyInstance(template, partyLevel, difficultyTier, index) {
+function createEnemyInstance(template, partyLevel, difficultyTier, index, biome = 'forest') {
   const tierMult = TIER_MULTIPLIERS[difficultyTier] || 1.0;
 
   // Calculate effective enemy level
@@ -80,7 +81,8 @@ function createEnemyInstance(template, partyLevel, difficultyTier, index) {
     type: 'enemy',
     templateId: template.id,
     name: template.name,
-    spriteId: template.sprite_id,
+    enemyId: template.sprite_id, // Used for sprite lookup in AssetLoader.getEnemySprite()
+    biome, // Biome type for sprite path
     class: 'monster',
     level: enemyLevel,
     hp: scaledHp,
@@ -90,8 +92,11 @@ function createEnemyInstance(template, partyLevel, difficultyTier, index) {
     strength: scaledStrength,
     intelligence: scaledIntelligence,
     agility: scaledAgility,
+    vitality: Math.floor(scaledHp / 10), // Derived from HP for defense calc
+    luck: 10,
     tileX,
     tileY,
+    ct: 0, // Charge time for CT-based turn system
     hasActed: false,
     statusEffects: [],
     aiType: template.ai_type || 'aggressive',
@@ -139,7 +144,7 @@ async function generateEncounter(nodeId, party) {
 
   // Create scaled enemy instances
   const enemies = templates.map((template, index) =>
-    createEnemyInstance(template, partyLevel, difficultyTier, index)
+    createEnemyInstance(template, partyLevel, difficultyTier, index, nodeType)
   );
 
   // If we still don't have enough enemies (empty database), create generic ones
@@ -149,6 +154,8 @@ async function generateEncounter(nodeId, party) {
       id: `enemy_${index}`,
       type: 'enemy',
       templateId: null,
+      enemyId: null, // Generic enemy, no specific sprite
+      biome: nodeType,
       name: `Wild ${nodeType.charAt(0).toUpperCase() + nodeType.slice(1)} Creature`,
       class: 'monster',
       level: partyLevel,
@@ -159,8 +166,11 @@ async function generateEncounter(nodeId, party) {
       strength: 8 + partyLevel,
       intelligence: 5 + partyLevel,
       agility: 6 + partyLevel,
+      vitality: 5 + partyLevel,
+      luck: 10,
       tileX: 6 + (index % 2),
       tileY: index,
+      ct: 0, // Charge time for CT-based turn system
       hasActed: false,
       statusEffects: [],
       aiType: 'aggressive',

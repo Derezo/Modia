@@ -404,7 +404,11 @@ export class BattleScene extends Scene {
    */
   handleRemoteTurnChanged(payload) {
     this.battleState.activeUnitIndex = payload.activeUnitIndex;
+    this.battleState.activeUnitId = payload.activeUnitId;
     this.battleState.turn = payload.turn;
+    if (payload.turnPredictions) {
+      this.battleState.turnPredictions = payload.turnPredictions;
+    }
     this.updateUI();
   }
 
@@ -762,6 +766,7 @@ export class BattleScene extends Scene {
       if (unit) {
         unit.hp = unitData.hp;
         unit.mp = unitData.mp;
+        unit.ct = unitData.ct || 0; // Sync CT for turn order display
         unit.hasActed = unitData.hasActed;
         unit.statusEffects = unitData.statusEffects || [];
 
@@ -807,6 +812,13 @@ export class BattleScene extends Scene {
    */
   getActiveUnit() {
     if (!this.battleState) return null;
+
+    // Prefer activeUnitId (new CT system), fall back to activeUnitIndex
+    if (this.battleState.activeUnitId) {
+      return this.units.get(this.battleState.activeUnitId);
+    }
+
+    // Fallback for old state format
     const unitData = this.battleState.units[this.battleState.activeUnitIndex];
     return unitData ? this.units.get(unitData.id) : null;
   }

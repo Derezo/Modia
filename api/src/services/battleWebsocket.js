@@ -122,8 +122,10 @@ function broadcastActionExecuted(battleId, actorId, actionType, result, excludeU
  * @param {number} activeUnitIndex - New active unit index
  * @param {number} turn - Current turn number
  * @param {number} excludeUserId - Optional user to exclude
+ * @param {string} activeUnitId - ID of the active unit (CT system)
+ * @param {Array} turnPredictions - Predicted next 10 turns
  */
-function broadcastTurnChanged(battleId, activeUnitIndex, turn, excludeUserId = null) {
+function broadcastTurnChanged(battleId, activeUnitIndex, turn, excludeUserId = null, activeUnitId = null, turnPredictions = null) {
   const roomName = `battle:${battleId}`;
 
   broadcastToRoom(roomName, {
@@ -131,7 +133,9 @@ function broadcastTurnChanged(battleId, activeUnitIndex, turn, excludeUserId = n
     payload: {
       battleId,
       activeUnitIndex,
+      activeUnitId,
       turn,
+      turnPredictions,
       timestamp: Date.now()
     }
   }, excludeUserId);

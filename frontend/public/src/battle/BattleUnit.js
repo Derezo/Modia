@@ -2,6 +2,12 @@ import { AnimatedSprite } from '../core/AnimatedSprite.js';
 
 /**
  * BattleUnit - Represents a unit in tactical combat
+ *
+ * Animation Architecture:
+ * - Sprites for each animation state (idle, walk, attack, hit, death) are cached
+ * - Direction is tracked independently and applied when switching animations
+ * - Non-looping animations (attack, hit, death) use onComplete callbacks
+ * - Fallback to colored circle if no sprite is available
  */
 export class BattleUnit {
   constructor(unitData, grid) {
@@ -41,10 +47,13 @@ export class BattleUnit {
     this.idleOffset = 0;
     this.idleTimer = Math.random() * Math.PI * 2; // Random start phase
 
-    // Sprite animation state
+    // Sprite animation system
     this.animationState = 'idle'; // idle, walk, attack, hit, death
-    this.animatedSprite = null;
+    this.spriteCache = {}; // Cache of AnimatedSprite objects by animation state
+    this.animatedSprite = null; // Current active sprite
+    this.animationTimeout = null; // Timer for single-frame animation completion
     this.assetLoader = null;
+
     // Set initial facing direction based on unit type
     // Players spawn on left side, face East (toward enemies)
     // Enemies spawn on right side, face West (toward players)
@@ -70,69 +79,197 @@ export class BattleUnit {
    */
   setAssetLoader(assetLoader) {
     this.assetLoader = assetLoader;
-    this.initializeSprite();
+    this.initializeSprites();
   }
 
   /**
-   * Initialize animated sprite
+   * Initialize all animation sprites and cache them
    */
-  initializeSprite() {
+  initializeSprites() {
     if (!this.assetLoader) return;
 
-    // Get sprite sheet based on unit type
-    let sprite;
-    if (this.type === 'player') {
-      sprite = this.assetLoader.getCharacterSprite(this.class?.toLowerCase(), 'idle', 'player');
-    } else {
-      const enemyId = this.enemyId || this.class?.toLowerCase() || 'monster';
-      sprite = this.assetLoader.getEnemySprite(enemyId, 'idle', this.biome);
+    const animations = ['idle', 'walk', 'attack', 'hit', 'death'];
+
+    for (const anim of animations) {
+      const sprite = this.getSpriteForAnimation(anim);
+      if (sprite) {
+        const animatedSprite = this.createAnimatedSprite(sprite, anim);
+        if (animatedSprite) {
+          this.spriteCache[anim] = animatedSprite;
+        }
+      }
     }
 
-    if (sprite) {
-      this.animatedSprite = new AnimatedSprite(sprite, {
-        frameWidth: sprite.width / 8, // Assuming 8 frames per animation
-        frameHeight: sprite.height / 8, // 8 directions
-        frameCount: 8,
-        frameDuration: 150,
-        loop: true
+    // Set the current sprite to idle
+    this.setAnimationState('idle', true);
+
+    // Log status for debugging
+    const cachedAnims = Object.keys(this.spriteCache);
+    if (cachedAnims.length > 0) {
+      console.log(`[BattleUnit] ${this.name}: cached animations: [${cachedAnims.join(', ')}]`);
+    } else {
+      console.log(`[BattleUnit] ${this.name}: no animations cached, using fallback`);
+    }
+  }
+
+  /**
+   * Get sprite image for a specific animation
+   */
+  getSpriteForAnimation(animation) {
+    if (this.type === 'player') {
+      return this.assetLoader.getCharacterSprite(this.class?.toLowerCase(), animation, 'player');
+    } else {
+      const enemyId = this.enemyId || this.class?.toLowerCase() || 'monster';
+      return this.assetLoader.getEnemySprite(enemyId, animation, this.biome);
+    }
+  }
+
+  /**
+   * Create an AnimatedSprite from a sprite image
+   */
+  createAnimatedSprite(sprite, animationType) {
+    if (!sprite) return null;
+
+    // Detect sprite sheet format
+    const isVerticalSheet = sprite.height >= sprite.width * 7; // 8 directions stacked
+
+    // Animation configuration based on type
+    const animConfigs = {
+      idle: { frameCount: 1, frameRate: 8, loop: true },
+      walk: { frameCount: 1, frameRate: 12, loop: true },
+      attack: { frameCount: 1, frameRate: 12, loop: false },
+      hit: { frameCount: 1, frameRate: 10, loop: false },
+      death: { frameCount: 1, frameRate: 8, loop: false }
+    };
+
+    const config = animConfigs[animationType] || animConfigs.idle;
+
+    if (isVerticalSheet) {
+      // Our generated sprites are vertical: 1 frame, 8 directions (e.g., 64x512)
+      const frameHeight = sprite.height / 8;
+      const animSprite = new AnimatedSprite(sprite, {
+        frameWidth: sprite.width,
+        frameHeight: frameHeight,
+        frameCount: 1, // Single frame per direction
+        frameRate: config.frameRate,
+        loop: config.loop,
+        directions: 8
       });
-      this.animatedSprite.setDirection(this.direction);
-      this.animatedSprite.play();
+      animSprite.setDirection(this.direction);
+      return animSprite;
+    } else if (sprite.width > 128 && sprite.height > 128) {
+      // Full sprite sheet: multiple frames and directions
+      const animSprite = new AnimatedSprite(sprite, {
+        frameWidth: sprite.width / config.frameCount,
+        frameHeight: sprite.height / 8,
+        frameCount: config.frameCount,
+        frameRate: config.frameRate,
+        loop: config.loop,
+        directions: 8
+      });
+      animSprite.setDirection(this.direction);
+      return animSprite;
+    } else {
+      // Single-frame sprite (non-directional)
+      const animSprite = new AnimatedSprite(sprite, {
+        frameWidth: sprite.width,
+        frameHeight: sprite.height,
+        frameCount: 1,
+        frameRate: 8,
+        loop: true,
+        directions: 1
+      });
+      return animSprite;
     }
   }
 
   /**
    * Change animation state
+   * @param {string} state - New animation state (idle, walk, attack, hit, death)
+   * @param {boolean} force - Force the change even if already in this state
    */
-  setAnimationState(state) {
-    if (this.animationState === state) return;
+  setAnimationState(state, force = false) {
+    if (this.animationState === state && !force) return;
+
     this.animationState = state;
 
-    if (!this.assetLoader) return;
-
-    // Load new sprite for animation state
-    let sprite;
-    if (this.type === 'player') {
-      sprite = this.assetLoader.getCharacterSprite(this.class?.toLowerCase(), state, 'player');
-    } else {
-      const enemyId = this.enemyId || this.class?.toLowerCase() || 'monster';
-      sprite = this.assetLoader.getEnemySprite(enemyId, state, this.biome);
+    // Clear any pending animation timeout
+    if (this.animationTimeout) {
+      clearTimeout(this.animationTimeout);
+      this.animationTimeout = null;
     }
 
-    if (sprite) {
-      const frameCount = state === 'idle' ? 4 : (state === 'walk' ? 8 : 6);
-      const loop = state === 'idle' || state === 'walk';
-
-      this.animatedSprite = new AnimatedSprite(sprite, {
-        frameWidth: sprite.width / frameCount,
-        frameHeight: sprite.height / 8,
-        frameCount: frameCount,
-        frameDuration: state === 'attack' ? 100 : 150,
-        loop: loop
-      });
+    // Try to use cached sprite
+    if (this.spriteCache[state]) {
+      this.animatedSprite = this.spriteCache[state];
       this.animatedSprite.setDirection(this.direction);
+      this.animatedSprite.reset();
       this.animatedSprite.play();
+
+      // For non-looping animations, set up completion handling
+      if (!this.animatedSprite.loop) {
+        // For single-frame sprites (our generated sprites), use timer-based completion
+        // For multi-frame sprites, use frame-based completion
+        const isSingleFrame = this.animatedSprite.frameCount <= 1;
+
+        if (isSingleFrame) {
+          // Use duration-based completion for single-frame animations
+          const durations = { attack: 500, hit: 300, death: 800 };
+          const duration = durations[state] || 500;
+
+          this.animationTimeout = setTimeout(() => {
+            this.animationTimeout = null;
+            this.onAnimationComplete(state);
+          }, duration);
+        } else {
+          // Use frame-based completion for multi-frame animations
+          this.animatedSprite.setOnComplete(() => {
+            this.onAnimationComplete(state);
+          });
+        }
+      }
+    } else {
+      // Try to load sprite on-demand if not cached
+      const sprite = this.getSpriteForAnimation(state);
+      if (sprite) {
+        const animSprite = this.createAnimatedSprite(sprite, state);
+        if (animSprite) {
+          this.spriteCache[state] = animSprite;
+          this.animatedSprite = animSprite;
+          this.animatedSprite.setDirection(this.direction);
+          this.animatedSprite.play();
+
+          if (!this.animatedSprite.loop) {
+            const isSingleFrame = this.animatedSprite.frameCount <= 1;
+            if (isSingleFrame) {
+              const durations = { attack: 500, hit: 300, death: 800 };
+              const duration = durations[state] || 500;
+              this.animationTimeout = setTimeout(() => {
+                this.animationTimeout = null;
+                this.onAnimationComplete(state);
+              }, duration);
+            } else {
+              this.animatedSprite.setOnComplete(() => {
+                this.onAnimationComplete(state);
+              });
+            }
+          }
+        }
+      }
+      // If still no sprite, keep the previous one (or null)
+      // The render function will use fallback
     }
+  }
+
+  /**
+   * Called when a non-looping animation completes
+   */
+  onAnimationComplete(completedState) {
+    // After attack or hit, return to idle
+    if (completedState === 'attack' || completedState === 'hit') {
+      this.setAnimationState('idle');
+    }
+    // Death animation stays on last frame (no transition)
   }
 
   /**
@@ -170,28 +307,24 @@ export class BattleUnit {
    * Update facing direction based on movement
    */
   updateDirectionFromMovement() {
-    if (this.animatedSprite) {
-      this.direction = this.animatedSprite.setDirectionFromGridMovement(
-        this.prevGridX, this.prevGridY,
-        this.gridX, this.gridY
-      );
-    }
+    const newDirection = this.calculateDirection(
+      this.gridX - this.prevGridX,
+      this.gridY - this.prevGridY
+    );
+    this.setDirection(newDirection);
   }
 
   /**
    * Face toward a target position
    */
   faceToward(targetX, targetY) {
-    if (this.animatedSprite) {
-      this.direction = this.animatedSprite.setDirectionFromGridMovement(
-        this.gridX, this.gridY,
-        targetX, targetY
-      );
-    } else {
-      // Calculate direction even without sprite for when sprite loads later
-      const dx = targetX - this.gridX;
-      const dy = targetY - this.gridY;
-      this.direction = this.calculateDirection(dx, dy);
+    const dx = targetX - this.gridX;
+    const dy = targetY - this.gridY;
+
+    // Only update if there's an actual direction to face
+    if (dx !== 0 || dy !== 0) {
+      const newDirection = this.calculateDirection(dx, dy);
+      this.setDirection(newDirection);
     }
   }
 
@@ -200,15 +333,26 @@ export class BattleUnit {
    * @param {number} direction - Direction constant from AnimatedSprite.DIRECTIONS
    */
   setDirection(direction) {
-    this.direction = direction;
+    // Validate direction
+    if (typeof direction !== 'number' || isNaN(direction)) {
+      return; // Keep current direction
+    }
+
+    this.direction = Math.floor(Math.abs(direction)) % 8;
+
+    // Update current sprite direction
     if (this.animatedSprite) {
-      this.animatedSprite.setDirection(direction);
+      this.animatedSprite.setDirection(this.direction);
+    }
+
+    // Also update all cached sprites so they're ready when switched to
+    for (const sprite of Object.values(this.spriteCache)) {
+      sprite.setDirection(this.direction);
     }
   }
 
   /**
    * Calculate direction from grid movement delta
-   * Used when sprite is not yet loaded
    */
   calculateDirection(dx, dy) {
     // For isometric grid: +X is SE, +Y is SW, -X is NW, -Y is NE
@@ -237,11 +381,11 @@ export class BattleUnit {
    * Update unit state (called each frame)
    */
   update(deltaTime) {
-    // Idle bobbing animation (only when not using sprites)
+    // Idle bobbing animation (for fallback circle)
     this.idleTimer += deltaTime * 2;
     this.idleOffset = Math.sin(this.idleTimer) * 2;
 
-    // Update animated sprite
+    // Update current animated sprite
     if (this.animatedSprite) {
       this.animatedSprite.update(deltaTime * 1000); // Convert to ms
     }
@@ -267,17 +411,21 @@ export class BattleUnit {
 
   /**
    * Play attack animation
+   * @param {number} targetX - Target grid X to face toward
+   * @param {number} targetY - Target grid Y to face toward
    */
   playAttackAnimation(targetX, targetY) {
     this.faceToward(targetX, targetY);
     this.setAnimationState('attack');
 
-    // Return to idle after attack animation completes
-    setTimeout(() => {
-      if (this.animationState === 'attack') {
-        this.setAnimationState('idle');
-      }
-    }, 600);
+    // If no sprite exists at all, use a timeout to return to idle
+    if (!this.animatedSprite && !this.spriteCache['attack']) {
+      setTimeout(() => {
+        if (this.animationState === 'attack') {
+          this.setAnimationState('idle');
+        }
+      }, 500);
+    }
   }
 
   /**
@@ -286,12 +434,14 @@ export class BattleUnit {
   playHitAnimation() {
     this.setAnimationState('hit');
 
-    // Return to idle after hit animation completes
-    setTimeout(() => {
-      if (this.animationState === 'hit') {
-        this.setAnimationState('idle');
-      }
-    }, 400);
+    // If no sprite exists at all, use a timeout to return to idle
+    if (!this.animatedSprite && !this.spriteCache['hit']) {
+      setTimeout(() => {
+        if (this.animationState === 'hit') {
+          this.setAnimationState('idle');
+        }
+      }, 300);
+    }
   }
 
   /**
@@ -369,7 +519,8 @@ export class BattleUnit {
 
     if (camera) {
       // Skip rendering if off-screen
-      if (!camera.isVisible(this.screenX, this.screenY, 40, 80)) {
+      const visible = camera.isVisible(this.screenX, this.screenY, 40, 80);
+      if (!visible) {
         return;
       }
       const screenPos = camera.worldToScreen(this.screenX, this.screenY);
@@ -386,11 +537,9 @@ export class BattleUnit {
     ctx.fill();
 
     // Try to render animated sprite
-    if (this.animatedSprite && this.animatedSprite.image) {
-      // Draw sprite centered on position, offset upward
-      const spriteHeight = this.animatedSprite.frameHeight || 64;
-      const spriteWidth = this.animatedSprite.frameWidth || 64;
-      this.animatedSprite.draw(ctx, drawX - spriteWidth / 2, drawY - spriteHeight + 16);
+    if (this.animatedSprite && this.animatedSprite.spriteSheet) {
+      // AnimatedSprite.draw() centers on x and draws upward from y
+      this.animatedSprite.draw(ctx, drawX, drawY);
     } else {
       // Fallback: Draw colored circle with letter
       const renderY = drawY - 32 + (this.isMoving ? 0 : this.idleOffset);

@@ -481,8 +481,15 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
     battleWebsocket.broadcastEnemyActions(battleId, enemyActions, req.user.userId);
   }
 
-  // Broadcast turn changed
-  battleWebsocket.broadcastTurnChanged(battleId, state.activeUnitIndex, state.turn, req.user.userId);
+  // Broadcast turn changed with CT system data
+  battleWebsocket.broadcastTurnChanged(
+    battleId,
+    state.activeUnitIndex,
+    state.turn,
+    req.user.userId,
+    state.activeUnitId,
+    state.turnPredictions
+  );
 
   // If battle ended, update characters
   if (battleStatus !== 'active') {

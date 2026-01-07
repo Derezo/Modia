@@ -46,17 +46,22 @@ npm -w api run migrate:rollback         # Roll back last migration
 # Asset Generation (requires PIXELLAB_API_KEY in .env)
 npm run generate:all            # Generate all assets
 npm run generate:tiles          # Tileset sprites
+npm run generate:obstacles      # Obstacle sprites
 npm run generate:characters     # Character sprites
 npm run generate:enemies        # Enemy sprites
 npm run generate:items          # Item sprites
+npm run generate:nodes          # World map node sprites
+npm run validate:sprites        # Validate all sprite prompts
+npm run validate:enemy          # Validate enemy prompts only
+npm run validate:character      # Validate character prompts only
 ```
 
 ## Architecture
 
 ### Backend (`api/`)
 - **Entry point:** `src/index.js` - Express server with WebSocket upgrade
-- **Routes:** `src/routes/` - auth, characters, party, world, battle, inventory, skills
-- **WebSocket:** `src/websocket/index.js` - Room-based subscriptions for chat, coliseum, marketplace
+- **Routes:** `src/routes/` - auth, characters, party, world, battle, inventory, skills, shop, marketplace, chat, sprites
+- **WebSocket:** `src/websocket/index.js` - Room-based subscriptions for chat, tavern presence, marketplace
 - **Database:** PostgreSQL via `pg` pool in `src/config/database.js`
 - **Migrations:** `src/migrations/` - Sequential SQL files (001_initial_schema.sql, etc.)
 - **Auth:** JWT with 15min access tokens, 7-day refresh tokens
@@ -65,7 +70,7 @@ npm run generate:items          # Item sprites
 ### Frontend (`frontend/public/`)
 - **No build step** - Vanilla ES modules served directly
 - **Entry:** `src/main.js` → `src/core/Game.js`
-- **Scene-based architecture:** `src/scenes/` - Each screen (Login, WorldMap, Battle, etc.) extends base `Scene.js`
+- **Scene-based architecture:** `src/scenes/` - Each screen extends base `Scene.js` (Login, Register, CharacterSelect, CharacterCreate, WorldMap, Battle, Inventory, Shop, Marketplace, Tavern, Formation)
 - **Game loop:** RequestAnimationFrame with `update(deltaTime)` → `render(ctx)` cycle
 - **Canvas layers:** Background, Game, HUD, Modal (rendered in order)
 
@@ -97,5 +102,7 @@ Detailed specifications are in `docs/`:
 - `TECHNICAL_ARCHITECTURE.md` - Database schemas, system design
 - `API_SPECIFICATION.md` - REST endpoints and WebSocket protocol
 - `GAME_DESIGN.md` - Combat formulas, world structure
-- `CHARACTER_PROGRESSION.md` - Skill trees, guild system
+- `CHARACTER_PROGRESSION.md`, `SKILL_TREES.md` - Skills and guild system
 - `ITEM_SYSTEM.md`, `ECONOMY_SYSTEM.md`, `ENEMY_SYSTEM.md` - Game mechanics
+- `PIXELLAB_REFERENCE.md` - PixelLab API usage for sprite generation
+- `DEVELOPMENT_ROADMAP.md` - Feature roadmap and implementation status

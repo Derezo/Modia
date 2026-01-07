@@ -102,15 +102,30 @@ export class AnimatedSprite {
   /**
    * Set facing direction (0-7)
    * @param {number} direction - Direction index
+   * @returns {number} The validated direction that was set
    */
   setDirection(direction) {
-    this.currentDirection = Math.floor(direction) % this.directions;
+    // Validate input - default to 0 (South) if invalid
+    if (typeof direction !== 'number' || isNaN(direction)) {
+      direction = 0;
+    }
+    this.currentDirection = Math.floor(Math.abs(direction)) % this.directions;
+    return this.currentDirection;
+  }
+
+  /**
+   * Get current direction
+   * @returns {number} Current direction index
+   */
+  getDirection() {
+    return this.currentDirection;
   }
 
   /**
    * Set direction from angle (radians)
    * Angle 0 = East, increases counter-clockwise
    * @param {number} angle - Angle in radians
+   * @returns {number} The direction that was set
    */
   setDirectionFromAngle(angle) {
     // Normalize angle to 0-2π
@@ -126,19 +141,21 @@ export class AnimatedSprite {
     // Sprite: 0=S, 1=SW, 2=W, 3=NW, 4=N, 5=NE, 6=E, 7=SE
     const mathToSprite = [6, 5, 4, 3, 2, 1, 0, 7];
     this.currentDirection = mathToSprite[directionIndex];
+    return this.currentDirection;
   }
 
   /**
    * Set direction from movement vector
    * @param {number} dx - X movement delta
    * @param {number} dy - Y movement delta
+   * @returns {number} The direction that was set (or current direction if no movement)
    */
   setDirectionFromMovement(dx, dy) {
-    if (dx === 0 && dy === 0) return;
+    if (dx === 0 && dy === 0) return this.currentDirection;
 
     // Calculate angle and convert to direction
     const angle = Math.atan2(-dy, dx); // Negate Y because screen Y is inverted
-    this.setDirectionFromAngle(angle);
+    return this.setDirectionFromAngle(angle);
   }
 
   /**
@@ -147,12 +164,14 @@ export class AnimatedSprite {
    * @param {number} fromY - Start grid Y
    * @param {number} toX - End grid X
    * @param {number} toY - End grid Y
+   * @returns {number} The direction that was set (or current direction if no movement)
    */
   setDirectionFromGridMovement(fromX, fromY, toX, toY) {
     const dx = toX - fromX;
     const dy = toY - fromY;
 
-    if (dx === 0 && dy === 0) return;
+    // No movement - return current direction unchanged
+    if (dx === 0 && dy === 0) return this.currentDirection;
 
     // For isometric: moving +X is SE, +Y is SW, -X is NW, -Y is NE
     // Combine to get 8 directions
@@ -164,6 +183,8 @@ export class AnimatedSprite {
     else if (dx < 0 && dy < 0) this.currentDirection = 4;   // N
     else if (dx === 0 && dy < 0) this.currentDirection = 5; // NE
     else if (dx > 0 && dy < 0) this.currentDirection = 6;   // E
+
+    return this.currentDirection;
   }
 
   /**

@@ -322,4 +322,4 @@ router.get('/guilds', authenticate, asyncHandler(async (req, res) => {
   res.json({ guilds });
 }));
 
-module.exports = router;
+module.exports = { router, SKILL_TREES };

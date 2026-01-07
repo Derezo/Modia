@@ -603,13 +603,14 @@ async function main() {
     console.log('Starting database seed...\n');
 
     // Clear existing data (in reverse dependency order)
+    // RESTART IDENTITY resets auto-increment sequences so IDs start from 1
     console.log('Clearing existing data...');
-    await client.query('TRUNCATE world_node_connections, world_nodes CASCADE');
-    await client.query('TRUNCATE item_templates CASCADE');
-    await client.query('TRUNCATE enemy_templates CASCADE');
+    await client.query('TRUNCATE world_node_connections, world_nodes RESTART IDENTITY CASCADE');
+    await client.query('TRUNCATE item_templates RESTART IDENTITY CASCADE');
+    await client.query('TRUNCATE enemy_templates RESTART IDENTITY CASCADE');
     // Clear shop inventory (will be re-seeded)
-    await client.query('TRUNCATE npc_shop_inventory CASCADE');
-    await client.query('TRUNCATE shop_transactions CASCADE');
+    await client.query('TRUNCATE npc_shop_inventory RESTART IDENTITY CASCADE');
+    await client.query('TRUNCATE shop_transactions RESTART IDENTITY CASCADE');
 
     // Generate world
     const worldSeed = parseInt(process.env.WORLD_SEED || '12345');
