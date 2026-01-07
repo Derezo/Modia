@@ -311,6 +311,8 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
     phase: 'active',
     activeUnitIndex: 0,
     activeUnitId: null,
+    mapWidth: 32,
+    mapHeight: 32,
     units: party.map((char, idx) => ({
       id: char.id,
       type: 'player',

@@ -492,8 +492,10 @@ function getProtectTile(ally, threat, battleState) {
 }
 
 function isValidMove(x, y, battleState) {
-  // Check bounds (8x8 grid)
-  if (x < 0 || x >= 8 || y < 0 || y >= 8) return false;
+  // Check bounds (use map dimensions from state, default to 32x32)
+  const mapWidth = battleState.mapWidth || 32;
+  const mapHeight = battleState.mapHeight || 32;
+  if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) return false;
 
   // Check if tile is occupied by living unit
   const occupied = battleState.units.some(u =>
