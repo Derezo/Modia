@@ -158,4 +158,56 @@ export class GameWebSocket {
   removeReaction(messageId, emoji, room = null) {
     this.send('remove_reaction', { messageId, emoji, room });
   }
+
+  // Battle methods
+  joinBattleRoom(battleId) {
+    this.send('join_battle', { battleId });
+  }
+
+  leaveBattleRoom(battleId) {
+    this.send('leave_battle', { battleId });
+  }
+
+  // Party methods
+  sendPartyInvite(targetUserId, characterId) {
+    this.send('party_invite', { targetUserId, characterId });
+  }
+
+  acceptPartyInvite(inviteId) {
+    this.send('party_invite_accept', { inviteId });
+  }
+
+  declinePartyInvite(inviteId) {
+    this.send('party_invite_decline', { inviteId });
+  }
+
+  leaveParty() {
+    this.send('party_leave', {});
+  }
+
+  kickPartyMember(userId) {
+    this.send('party_kick', { userId });
+  }
+
+  // Node presence methods
+  joinNodeRoom(nodeId) {
+    this.send('join_node', { nodeId });
+  }
+
+  leaveNodeRoom(nodeId) {
+    this.send('leave_node', { nodeId });
+  }
+
+  // Coliseum queue methods (enhanced)
+  joinColiseumQueueWithDetails(queueType, partyLevel, partySize) {
+    this.send('coliseum_queue_join', { queueType, partyLevel, partySize });
+  }
+
+  leaveColiseumQueueByType(queueType) {
+    this.send('coliseum_queue_leave', { queueType });
+  }
+
+  coliseumReady(matchId) {
+    this.send('coliseum_ready', { matchId });
+  }
 }

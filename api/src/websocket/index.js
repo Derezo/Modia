@@ -2,6 +2,8 @@ const WebSocket = require('ws');
 const { verifyAccessToken } = require('../config/jwt');
 const chatService = require('../services/chatService');
 const presenceService = require('../services/presenceService');
+const coliseumService = require('../services/coliseumService');
+const partyWebsocket = require('../services/partyWebsocket');
 
 // Active connections mapped by userId
 const connections = new Map();
@@ -162,20 +164,50 @@ function setupWebSocket(server) {
 
           case 'coliseum_queue_join':
             if (!userId) break;
-            // Coliseum matchmaking handled here
-            // For MVP, just acknowledge
-            ws.send(JSON.stringify({
-              type: 'coliseum_queue_update',
-              payload: { position: 1, estimatedWait: 30 }
-            }));
+            try {
+              const { queueType, partyLevel, partySize } = payload;
+              const result = coliseumService.joinQueue(
+                queueType || '1v1',
+                userId,
+                username,
+                partyLevel || 1,
+                partySize || 1
+              );
+              if (!result.success) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  payload: { message: result.error }
+                }));
+              }
+            } catch (err) {
+              console.error('Coliseum queue join error:', err);
+            }
             break;
 
           case 'coliseum_queue_leave':
             if (!userId) break;
-            ws.send(JSON.stringify({
-              type: 'coliseum_queue_left',
-              payload: {}
-            }));
+            try {
+              const { queueType: leaveQueueType } = payload;
+              coliseumService.leaveQueue(leaveQueueType, userId);
+            } catch (err) {
+              console.error('Coliseum queue leave error:', err);
+            }
+            break;
+
+          case 'coliseum_ready':
+            if (!userId) break;
+            try {
+              const { matchId } = payload;
+              const readyResult = coliseumService.playerReady(matchId, userId);
+              if (!readyResult.success) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  payload: { message: readyResult.error }
+                }));
+              }
+            } catch (err) {
+              console.error('Coliseum ready error:', err);
+            }
             break;
 
           case 'private_message':
@@ -400,6 +432,190 @@ function setupWebSocket(server) {
             }
             break;
 
+          // Battle room handlers
+          case 'join_battle':
+            if (!userId) break;
+            try {
+              const { battleId } = payload;
+              const battleRoom = `battle:${battleId}`;
+              if (!rooms.has(battleRoom)) {
+                rooms.set(battleRoom, new Set());
+              }
+              rooms.get(battleRoom).add(userId);
+              ws.send(JSON.stringify({
+                type: 'battle_room_joined',
+                payload: { battleId }
+              }));
+            } catch (err) {
+              console.error('Join battle room error:', err);
+            }
+            break;
+
+          case 'leave_battle':
+            if (!userId) break;
+            try {
+              const { battleId: leaveBattleId } = payload;
+              const leaveBattleRoom = `battle:${leaveBattleId}`;
+              if (rooms.has(leaveBattleRoom)) {
+                rooms.get(leaveBattleRoom).delete(userId);
+                if (rooms.get(leaveBattleRoom).size === 0) {
+                  rooms.delete(leaveBattleRoom);
+                }
+              }
+            } catch (err) {
+              console.error('Leave battle room error:', err);
+            }
+            break;
+
+          // Party handlers
+          case 'party_invite':
+            if (!userId) break;
+            try {
+              const { targetUserId, characterId } = payload;
+              if (!targetUserId) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  payload: { message: 'Target user required' }
+                }));
+                break;
+              }
+              const inviteResult = await partyWebsocket.sendInvite(
+                userId,
+                username,
+                targetUserId,
+                characterId
+              );
+              if (inviteResult.success) {
+                ws.send(JSON.stringify({
+                  type: 'party:invite_sent',
+                  payload: { inviteId: inviteResult.inviteId, targetUserId }
+                }));
+              } else {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  payload: { message: inviteResult.error }
+                }));
+              }
+            } catch (err) {
+              console.error('Party invite error:', err);
+            }
+            break;
+
+          case 'party_invite_accept':
+            if (!userId) break;
+            try {
+              const { inviteId: acceptInviteId } = payload;
+              const acceptResult = await partyWebsocket.acceptInvite(
+                acceptInviteId,
+                userId,
+                username
+              );
+              if (!acceptResult.success) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  payload: { message: acceptResult.error }
+                }));
+              }
+            } catch (err) {
+              console.error('Party invite accept error:', err);
+            }
+            break;
+
+          case 'party_invite_decline':
+            if (!userId) break;
+            try {
+              const { inviteId: declineInviteId } = payload;
+              const declineResult = partyWebsocket.declineInvite(declineInviteId, userId);
+              if (!declineResult.success) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  payload: { message: declineResult.error }
+                }));
+              }
+            } catch (err) {
+              console.error('Party invite decline error:', err);
+            }
+            break;
+
+          case 'party_leave':
+            if (!userId) break;
+            try {
+              // In a full implementation, this would:
+              // 1. Get user's party from database
+              // 2. Remove user from party
+              // 3. Broadcast party:member_left
+              // 4. Handle leader succession if needed
+              ws.send(JSON.stringify({
+                type: 'party:left',
+                payload: { userId }
+              }));
+            } catch (err) {
+              console.error('Party leave error:', err);
+            }
+            break;
+
+          // Node room handlers (for player presence at nodes)
+          case 'join_node':
+            if (!userId) break;
+            try {
+              const { nodeId } = payload;
+              const nodeRoom = `node:${nodeId}`;
+              if (!rooms.has(nodeRoom)) {
+                rooms.set(nodeRoom, new Set());
+              }
+              rooms.get(nodeRoom).add(userId);
+
+              // Get players at this node
+              const playersAtNode = presenceService.getPlayersAtNode(nodeId);
+
+              ws.send(JSON.stringify({
+                type: 'node_room_joined',
+                payload: { nodeId, playersAtNode }
+              }));
+
+              // Notify others
+              broadcastToRoom(nodeRoom, {
+                type: 'player:entered_node',
+                payload: {
+                  nodeId,
+                  userId,
+                  username,
+                  timestamp: Date.now()
+                }
+              }, userId);
+            } catch (err) {
+              console.error('Join node room error:', err);
+            }
+            break;
+
+          case 'leave_node':
+            if (!userId) break;
+            try {
+              const { nodeId: leaveNodeId } = payload;
+              const leaveNodeRoom = `node:${leaveNodeId}`;
+
+              // Notify others before leaving
+              if (rooms.has(leaveNodeRoom)) {
+                broadcastToRoom(leaveNodeRoom, {
+                  type: 'player:left_node',
+                  payload: {
+                    nodeId: leaveNodeId,
+                    userId,
+                    username,
+                    timestamp: Date.now()
+                  }
+                }, userId);
+
+                rooms.get(leaveNodeRoom).delete(userId);
+                if (rooms.get(leaveNodeRoom).size === 0) {
+                  rooms.delete(leaveNodeRoom);
+                }
+              }
+            } catch (err) {
+              console.error('Leave node room error:', err);
+            }
+            break;
+
           default:
             ws.send(JSON.stringify({
               type: 'error',
@@ -423,6 +639,30 @@ function setupWebSocket(server) {
         presenceService.setOffline(userId).catch(err => {
           console.error('Failed to set offline:', err);
         });
+
+        // Clean up node presence
+        const removedNodes = presenceService.clearUserFromAllNodes(userId);
+        removedNodes.forEach(nodeId => {
+          const nodeRoom = `node:${nodeId}`;
+          if (rooms.has(nodeRoom)) {
+            broadcastToRoom(nodeRoom, {
+              type: 'player:left_node',
+              payload: {
+                nodeId,
+                userId,
+                username,
+                reason: 'disconnected',
+                timestamp: Date.now()
+              }
+            });
+          }
+        });
+
+        // Clean up coliseum state
+        coliseumService.cleanupPlayer(userId);
+
+        // Clean up party invites
+        partyWebsocket.cleanupUserInvites(userId);
 
         // Broadcast presence change
         broadcastPresenceChange(userId, username, 'offline');

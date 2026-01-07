@@ -30,10 +30,11 @@ export class BattleScene extends Scene {
     // Interaction state
     this.selectedUnit = null;
     this.hoveredTile = null;
-    this.currentAction = null; // 'move' | 'attack'
+    this.currentAction = null; // 'move' | 'attack' | 'skill'
     this.rewardsModal = null;
     this.validTiles = [];
     this.pendingAction = null;
+    this.selectedSkillId = null;
 
     // Movement range (base value, could be modified by stats)
     this.movementRange = 3;
@@ -41,12 +42,15 @@ export class BattleScene extends Scene {
 
     // Event cleanup
     this.abortController = null;
+
+    // WebSocket event unsubscribers
+    this.wsUnsubscribers = [];
   }
 
   /**
    * Enter the battle scene
    */
-  async enter(data) {
+  enter(data) {
     // data = { battleId, mapSeed, mapWidth, mapHeight, state }
     this.battleId = data.battleId;
     this.mapSeed = data.mapSeed;
@@ -57,17 +61,6 @@ export class BattleScene extends Scene {
     this.grid.setAssetLoader(this.game.assetLoader);
     this.grid.generateTerrain(this.mapSeed, this.getNodeType());
 
-    // Preload terrain tiles and obstacles for this biome
-    const nodeType = this.getNodeType();
-    Promise.all([
-      this.game.assetLoader.preloadTerrainSet(nodeType),
-      this.game.assetLoader.preloadObstacles()
-    ]).then(() => {
-      console.log(`Preloaded terrain tiles and obstacles for ${nodeType}`);
-    }).catch(err => {
-      console.warn('Failed to preload assets:', err.message);
-    });
-
     // Initialize animations
     this.animations = new BattleAnimations();
 
@@ -76,6 +69,45 @@ export class BattleScene extends Scene {
 
     // Create units from battle state
     this.initializeUnits(data.state.units);
+
+    // Preload terrain tiles, obstacles, and enemy sprites in background
+    // Units will get sprites when preloading completes
+    const nodeType = this.getNodeType();
+
+    // Debug: log unit data to see enemyId values
+    console.log('[BattleScene] Unit data from server:', data.state.units.map(u => ({
+      id: u.id, name: u.name, type: u.type, enemyId: u.enemyId, biome: u.biome
+    })));
+
+    const enemyIds = [...new Set(
+      data.state.units
+        .filter(u => u.type === 'enemy' && u.enemyId)
+        .map(u => u.enemyId)
+    )];
+    console.log(`[BattleScene] Enemy IDs to preload: [${enemyIds.join(', ')}]`);
+
+    // Also collect player character classes to preload
+    const playerClasses = [...new Set(
+      data.state.units
+        .filter(u => u.type === 'player' && u.class)
+        .map(u => u.class.toLowerCase())
+    )];
+    console.log(`[BattleScene] Player classes to preload: [${playerClasses.join(', ')}]`);
+
+    Promise.all([
+      this.game.assetLoader.preloadTerrainSet(nodeType),
+      this.game.assetLoader.preloadObstacles(),
+      this.game.assetLoader.preloadEnemies(nodeType, enemyIds),
+      ...playerClasses.map(cls => this.game.assetLoader.preloadCharacter(cls))
+    ]).then(() => {
+      console.log(`Preloaded terrain, obstacles, ${enemyIds.length} enemy types, and ${playerClasses.length} player classes for ${nodeType}`);
+      // Reinitialize unit sprites now that assets are loaded
+      for (const unit of this.units.values()) {
+        unit.initializeSprites();
+      }
+    }).catch(err => {
+      console.warn('Failed to preload assets:', err.message);
+    });
 
     // Initialize camera after units so we can center on first player
     this.camera = new BattleCamera(this.game.canvas.width, this.game.canvas.height);
@@ -104,6 +136,8 @@ export class BattleScene extends Scene {
     this.ui.create(this.battleState, {
       onMove: () => this.startMoveAction(),
       onAttack: () => this.startAttackAction(),
+      onSkill: () => this.showSkillMenu(),
+      onSelectSkill: (skillId) => this.startSkillAction(skillId),
       onWait: () => this.submitAction('wait'),
       onConfirm: () => this.confirmAction(),
       onCancel: () => this.cancelAction(),
@@ -112,6 +146,9 @@ export class BattleScene extends Scene {
 
     // Setup input handlers
     this.setupInputHandlers();
+
+    // Setup WebSocket handlers for real-time events
+    this.setupWebSocketHandlers();
 
     // Update UI with initial state
     this.updateUI();
@@ -125,6 +162,9 @@ export class BattleScene extends Scene {
       this.abortController.abort();
       this.abortController = null;
     }
+
+    // Clean up WebSocket handlers
+    this.cleanupWebSocketHandlers();
 
     if (this.ui) {
       this.ui.destroy();
@@ -219,14 +259,170 @@ export class BattleScene extends Scene {
       }
     }, opts);
 
-    // Keyboard input for camera
+    // Keyboard input for camera and actions
     window.addEventListener('keydown', (e) => {
       // Spacebar - return to follow mode
       if (e.code === 'Space') {
         e.preventDefault();
         this.camera.returnToFollowMode();
       }
+
+      // Escape - cancel current action and return to action menu
+      if (e.code === 'Escape' && this.currentAction !== null) {
+        e.preventDefault();
+        this.cancelAction();
+      }
     }, opts);
+  }
+
+  /**
+   * Setup WebSocket handlers for real-time battle events
+   */
+  setupWebSocketHandlers() {
+    const socket = this.game.socket;
+    if (!socket) return;
+
+    // Join battle room
+    socket.joinBattleRoom(this.battleId);
+
+    // Handle battle state updates (for multiplayer sync)
+    const stateUpdateUnsub = socket.on('battle:state_update', (payload) => {
+      console.log('[Battle WS] State update received:', payload.battleId);
+      if (payload.battleId === this.battleId) {
+        this.handleRemoteStateUpdate(payload);
+      }
+    });
+    this.wsUnsubscribers.push(stateUpdateUnsub);
+
+    // Handle unit movement from other players
+    const unitMovedUnsub = socket.on('battle:unit_moved', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleRemoteUnitMoved(payload);
+      }
+    });
+    this.wsUnsubscribers.push(unitMovedUnsub);
+
+    // Handle action execution from other players
+    const actionExecutedUnsub = socket.on('battle:action_executed', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleRemoteActionExecuted(payload);
+      }
+    });
+    this.wsUnsubscribers.push(actionExecutedUnsub);
+
+    // Handle turn changes
+    const turnChangedUnsub = socket.on('battle:turn_changed', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleRemoteTurnChanged(payload);
+      }
+    });
+    this.wsUnsubscribers.push(turnChangedUnsub);
+
+    // Handle battle end
+    const battleEndUnsub = socket.on('battle:end', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleRemoteBattleEnd(payload);
+      }
+    });
+    this.wsUnsubscribers.push(battleEndUnsub);
+
+    // Handle enemy actions batch
+    const enemyActionsUnsub = socket.on('battle:enemy_actions', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleRemoteEnemyActions(payload);
+      }
+    });
+    this.wsUnsubscribers.push(enemyActionsUnsub);
+  }
+
+  /**
+   * Clean up WebSocket handlers
+   */
+  cleanupWebSocketHandlers() {
+    // Unsubscribe from all WebSocket events
+    for (const unsub of this.wsUnsubscribers) {
+      if (typeof unsub === 'function') {
+        unsub();
+      }
+    }
+    this.wsUnsubscribers = [];
+
+    // Leave battle room
+    if (this.game.socket && this.battleId) {
+      this.game.socket.leaveBattleRoom(this.battleId);
+    }
+  }
+
+  /**
+   * Handle remote state update (for rejoins or full sync)
+   */
+  handleRemoteStateUpdate(payload) {
+    console.log('[Battle WS] Processing state update');
+    this.battleState = payload.state;
+    this.syncUnitsWithState(payload.state.units);
+    this.updateUI();
+  }
+
+  /**
+   * Handle remote unit movement
+   */
+  handleRemoteUnitMoved(payload) {
+    const unit = this.units.get(payload.unitId);
+    if (unit) {
+      unit.moveTo(payload.to.x, payload.to.y);
+    }
+  }
+
+  /**
+   * Handle remote action execution
+   */
+  async handleRemoteActionExecuted(payload) {
+    const { actorId, actionType, result } = payload;
+
+    // Show damage animation if applicable
+    if (result.damage > 0 && result.targetId) {
+      const target = this.units.get(result.targetId);
+      if (target) {
+        target.playHitAnimation();
+        this.animations.addDamageNumber(target.screenX, target.screenY - 40, result.damage, result.isCritical);
+        this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
+        target.hp = Math.max(0, target.hp - result.damage);
+      }
+    }
+
+    // Show miss animation
+    if (result.missed && result.targetId) {
+      const target = this.units.get(result.targetId);
+      if (target) {
+        this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
+      }
+    }
+  }
+
+  /**
+   * Handle remote turn change
+   */
+  handleRemoteTurnChanged(payload) {
+    this.battleState.activeUnitIndex = payload.activeUnitIndex;
+    this.battleState.turn = payload.turn;
+    this.updateUI();
+  }
+
+  /**
+   * Handle remote battle end
+   */
+  handleRemoteBattleEnd(payload) {
+    console.log('[Battle WS] Battle ended:', payload.status);
+    this.handleBattleEnd(payload.status, payload.rewards);
+  }
+
+  /**
+   * Handle batch of enemy actions from server
+   */
+  async handleRemoteEnemyActions(payload) {
+    // These are typically already processed by the server response
+    // This handler is for multiplayer scenarios
+    console.log('[Battle WS] Enemy actions received:', payload.actions?.length || 0);
   }
 
   /**
@@ -239,11 +435,28 @@ export class BattleScene extends Scene {
     if (this.currentAction === 'move' && isValidTile) {
       this.pendingAction = { type: 'move', targetTile: { x, y } };
       this.ui.showConfirmation(`Move to (${x}, ${y})?`);
-    } else if (this.currentAction === 'attack') {
+    } else if (this.currentAction === 'attack' && isValidTile) {
+      // Tile-based targeting: allow attacking any valid tile
       const target = this.getUnitAt(x, y);
-      if (target && target.type === 'enemy' && target.isAlive() && isValidTile) {
-        this.pendingAction = { type: 'attack', targetTile: { x, y }, target };
+      this.pendingAction = { type: 'attack', targetTile: { x, y }, target };
+
+      // Confirm message based on target
+      if (target) {
         this.ui.showConfirmation(`Attack ${target.name}?`);
+      } else {
+        this.ui.showConfirmation(`Attack empty tile?`);
+      }
+    } else if (this.currentAction === 'skill' && isValidTile) {
+      // Tile-based skill targeting
+      const target = this.getUnitAt(x, y);
+      const skill = this.getUnitActiveSkills(this.getActiveUnit()).find(s => s.id === this.selectedSkillId);
+      this.pendingAction = { type: 'skill', targetTile: { x, y }, target, skillId: this.selectedSkillId };
+
+      // Confirm message based on target
+      if (target) {
+        this.ui.showConfirmation(`Use ${skill?.name || 'skill'} on ${target.name}?`);
+      } else {
+        this.ui.showConfirmation(`Use ${skill?.name || 'skill'} on tile?`);
       }
     }
   }
@@ -264,6 +477,7 @@ export class BattleScene extends Scene {
     }
 
     this.ui.setActionsEnabled(false);
+    this.ui.showTargetingMode();
   }
 
   /**
@@ -282,6 +496,67 @@ export class BattleScene extends Scene {
     }
 
     this.ui.setActionsEnabled(false);
+    this.ui.showTargetingMode();
+  }
+
+  /**
+   * Show skill selection menu
+   */
+  showSkillMenu() {
+    const activeUnit = this.getActiveUnit();
+    if (!activeUnit) return;
+
+    // Get active skills for this unit
+    const skills = this.getUnitActiveSkills(activeUnit);
+    this.ui.showSkillPanel(skills, activeUnit.mp);
+  }
+
+  /**
+   * Get active (usable in combat) skills for a unit
+   * @param {Object} unit - The unit to get skills for
+   * @returns {Array} Array of skill objects
+   */
+  getUnitActiveSkills(unit) {
+    // TODO: Fetch from character_skills table via API
+    // For now, return mock skills based on class
+    const mockSkills = {
+      warrior: [
+        { id: 'power_strike', name: 'Power Strike', mpCost: 5, icon: '⚔️', range: 1, description: '150% damage attack' }
+      ],
+      wizard: [
+        { id: 'fireball', name: 'Fireball', mpCost: 8, icon: '🔥', range: 3, description: 'Fire damage attack' }
+      ],
+      monk: [
+        { id: 'palm_strike', name: 'Palm Strike', mpCost: 4, icon: '🤚', range: 1, description: 'Quick palm attack' }
+      ],
+      chemist: [
+        { id: 'acid_flask', name: 'Acid Flask', mpCost: 6, icon: '⚗️', range: 2, description: 'Corrosive acid damage' }
+      ]
+    };
+    return mockSkills[unit.class?.toLowerCase()] || [];
+  }
+
+  /**
+   * Start skill action - show valid target tiles for skill
+   * @param {string} skillId - The skill to use
+   */
+  startSkillAction(skillId) {
+    this.currentAction = 'skill';
+    this.selectedSkillId = skillId;
+    const activeUnit = this.getActiveUnit();
+    const skill = this.getUnitActiveSkills(activeUnit).find(s => s.id === skillId);
+
+    if (activeUnit && skill) {
+      this.validTiles = this.pathfinding.getAttackableTiles(
+        activeUnit.gridX,
+        activeUnit.gridY,
+        skill.range || this.attackRange
+      );
+    }
+
+    this.ui.hideSkillPanel();
+    this.ui.setActionsEnabled(false);
+    this.ui.showTargetingMode();
   }
 
   /**
@@ -304,7 +579,10 @@ export class BattleScene extends Scene {
     this.currentAction = null;
     this.validTiles = [];
     this.pendingAction = null;
+    this.selectedSkillId = null;
     this.ui.hideConfirmation();
+    this.ui.hideSkillPanel();
+    this.ui.hideTargetingMode();
     this.ui.setActionsEnabled(true);
   }
 
@@ -322,7 +600,8 @@ export class BattleScene extends Scene {
         battleId: this.battleId,
         actionType,
         unitId: activeUnit.id,
-        targetTile
+        targetTile,
+        skillId: this.selectedSkillId
       });
 
       // Process action result
@@ -346,6 +625,19 @@ export class BattleScene extends Scene {
       if (unit) {
         unit.moveTo(this.pendingAction.targetTile.x, this.pendingAction.targetTile.y);
         await this.waitForAnimation(500);
+      }
+    }
+
+    // Handle empty tile attack (no target)
+    if (actionResult.attackedEmptyTile) {
+      const attacker = this.units.get(this.getActiveUnit()?.id);
+      if (attacker && this.pendingAction?.targetTile) {
+        // Play attack animation toward empty tile
+        attacker.playAttackAnimation?.(
+          this.pendingAction.targetTile.x,
+          this.pendingAction.targetTile.y
+        );
+        await this.waitForAnimation(300);
       }
     }
 
@@ -577,6 +869,9 @@ export class BattleScene extends Scene {
    * Update game logic
    */
   update(deltaTime) {
+    // Safety check - don't update if not fully initialized
+    if (!this.camera || !this.grid) return;
+
     // Handle keyboard camera movement
     const input = this.game.input;
     let dx = 0, dy = 0;
@@ -613,6 +908,9 @@ export class BattleScene extends Scene {
     ctx.fillStyle = '#0a0a1a';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
+    // Safety check - don't render if not fully initialized
+    if (!this.camera || !this.grid) return;
+
     // Build tile highlights
     const highlights = {};
 
@@ -623,14 +921,30 @@ export class BattleScene extends Scene {
       }
     }
 
-    // Attack range highlights
+    // Attack range highlights (tile-based targeting)
     if (this.currentAction === 'attack') {
       for (const tile of this.validTiles) {
         const unit = this.getUnitAt(tile.x, tile.y);
         if (unit && unit.type === 'enemy') {
-          highlights[`${tile.x},${tile.y}`] = 'rgba(217, 74, 74, 0.6)';
+          highlights[`${tile.x},${tile.y}`] = 'rgba(217, 74, 74, 0.6)';  // Bright red for enemies
+        } else if (unit && unit.type === 'player') {
+          highlights[`${tile.x},${tile.y}`] = 'rgba(217, 174, 74, 0.5)'; // Orange for allies
         } else {
-          highlights[`${tile.x},${tile.y}`] = 'rgba(217, 74, 74, 0.3)';
+          highlights[`${tile.x},${tile.y}`] = 'rgba(217, 74, 74, 0.3)';  // Dim red for empty tiles
+        }
+      }
+    }
+
+    // Skill range highlights (tile-based targeting)
+    if (this.currentAction === 'skill') {
+      for (const tile of this.validTiles) {
+        const unit = this.getUnitAt(tile.x, tile.y);
+        if (unit && unit.type === 'enemy') {
+          highlights[`${tile.x},${tile.y}`] = 'rgba(148, 74, 217, 0.6)';  // Purple for enemies
+        } else if (unit && unit.type === 'player') {
+          highlights[`${tile.x},${tile.y}`] = 'rgba(74, 144, 217, 0.5)';  // Blue for allies
+        } else {
+          highlights[`${tile.x},${tile.y}`] = 'rgba(148, 74, 217, 0.3)';  // Dim purple for empty tiles
         }
       }
     }
@@ -647,7 +961,8 @@ export class BattleScene extends Scene {
     this.grid.render(ctx, highlights, this.camera);
 
     // Sort and render units (by Y position for depth)
-    const sortedUnits = Array.from(this.units.values())
+    const allUnits = Array.from(this.units.values());
+    const sortedUnits = allUnits
       .filter(u => u.isAlive())
       .sort((a, b) => (a.gridX + a.gridY) - (b.gridX + b.gridY));
 

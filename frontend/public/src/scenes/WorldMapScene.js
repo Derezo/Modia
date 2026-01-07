@@ -30,6 +30,9 @@ export class WorldMapScene extends Scene {
 
     // Event listener cleanup
     this.abortController = null;
+
+    // WebSocket unsubscribers
+    this.wsUnsubscribers = [];
   }
 
   async enter() {
@@ -44,6 +47,7 @@ export class WorldMapScene extends Scene {
     this.createUI();
     this.centerOnCurrentNode();
     this.setupInputHandlers();
+    this.setupWebSocketHandlers();
 
     // Preload node sprites in background
     this.preloadNodeSprites();
@@ -69,6 +73,9 @@ export class WorldMapScene extends Scene {
       this.abortController.abort();
       this.abortController = null;
     }
+
+    // Clean up WebSocket handlers
+    this.cleanupWebSocketHandlers();
 
     if (this.uiElement) {
       this.uiElement.remove();
@@ -295,6 +302,60 @@ export class WorldMapScene extends Scene {
     }
   }
 
+  /**
+   * Setup WebSocket handlers for player movement events
+   */
+  setupWebSocketHandlers() {
+    const socket = this.game.socket;
+    if (!socket) return;
+
+    // Join current node room
+    if (this.currentNode?.id) {
+      socket.joinNodeRoom(this.currentNode.id);
+    }
+
+    // Handle player entering current node
+    const enteredUnsub = socket.on('player:entered_node', (payload) => {
+      if (payload.nodeId === this.currentNode?.id) {
+        this.game.showNotification(`${payload.username} arrived`, 'info');
+      }
+    });
+    this.wsUnsubscribers.push(enteredUnsub);
+
+    // Handle player leaving current node
+    const leftUnsub = socket.on('player:left_node', (payload) => {
+      if (payload.nodeId === this.currentNode?.id) {
+        this.game.showNotification(`${payload.username} departed`, 'info');
+      }
+    });
+    this.wsUnsubscribers.push(leftUnsub);
+
+    // Handle party invites
+    const inviteUnsub = socket.on('party:invite_received', (payload) => {
+      this.game.showNotification(`Party invite from ${payload.fromUsername}`, 'info');
+      // TODO: Show invite modal
+    });
+    this.wsUnsubscribers.push(inviteUnsub);
+  }
+
+  /**
+   * Clean up WebSocket handlers
+   */
+  cleanupWebSocketHandlers() {
+    // Unsubscribe from all events
+    for (const unsub of this.wsUnsubscribers) {
+      if (typeof unsub === 'function') {
+        unsub();
+      }
+    }
+    this.wsUnsubscribers = [];
+
+    // Leave current node room
+    if (this.game.socket && this.currentNode?.id) {
+      this.game.socket.leaveNodeRoom(this.currentNode.id);
+    }
+  }
+
   setupInputHandlers() {
     const canvas = this.game.canvas;
 
@@ -372,11 +433,21 @@ export class WorldMapScene extends Scene {
     }
 
     try {
+      const previousNodeId = this.currentNode?.id;
+
       const result = await this.game.api.travel(node.id);
       this.currentNode = result.currentNode;
       this.game.state.set('currentNode', this.currentNode);
       this.updateNodeInfo();
       this.game.showNotification(`Traveled to ${result.currentNode.name}`, 'success');
+
+      // Switch node rooms for WebSocket presence
+      if (this.game.socket) {
+        if (previousNodeId) {
+          this.game.socket.leaveNodeRoom(previousNodeId);
+        }
+        this.game.socket.joinNodeRoom(this.currentNode.id);
+      }
     } catch (err) {
       this.game.showNotification(err.message, 'error');
     }

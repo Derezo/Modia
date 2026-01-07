@@ -1,7 +1,7 @@
 const { query } = require('../config/database');
 
 /**
- * Presence Service - Handles player online status tracking
+ * Presence Service - Handles player online status tracking and node presence
  */
 
 // In-memory cache for faster presence lookups (synced with DB)
@@ -9,6 +9,9 @@ const presenceCache = new Map();
 
 // Typing indicators (in-memory only, no persistence needed)
 const typingUsers = new Map(); // roomKey -> Set of { userId, username, timestamp }
+
+// Node presence tracking: nodeId -> Map of userId -> { username, characterName, timestamp }
+const nodePresence = new Map();
 
 /**
  * Set a user's presence status
@@ -288,6 +291,155 @@ function getPresenceCache() {
   return presenceCache;
 }
 
+// ============================================
+// Node Presence Tracking
+// ============================================
+
+/**
+ * Track a player entering a node
+ * @param {number} nodeId - Node ID
+ * @param {number} userId - User ID
+ * @param {string} username - Username
+ * @param {string} characterName - Active character name
+ * @returns {Object} Entry info
+ */
+function enterNode(nodeId, userId, username, characterName = null) {
+  if (!nodePresence.has(nodeId)) {
+    nodePresence.set(nodeId, new Map());
+  }
+
+  const nodeUsers = nodePresence.get(nodeId);
+  const entry = {
+    userId,
+    username,
+    characterName,
+    enteredAt: Date.now()
+  };
+
+  nodeUsers.set(userId, entry);
+
+  // Also update presence cache with current node
+  if (presenceCache.has(userId)) {
+    presenceCache.get(userId).currentNodeId = nodeId;
+  }
+
+  return entry;
+}
+
+/**
+ * Track a player leaving a node
+ * @param {number} nodeId - Node ID
+ * @param {number} userId - User ID
+ * @returns {Object|null} Exit info or null if not found
+ */
+function leaveNode(nodeId, userId) {
+  if (!nodePresence.has(nodeId)) {
+    return null;
+  }
+
+  const nodeUsers = nodePresence.get(nodeId);
+  const userData = nodeUsers.get(userId);
+
+  if (userData) {
+    nodeUsers.delete(userId);
+
+    // Clean up empty node
+    if (nodeUsers.size === 0) {
+      nodePresence.delete(nodeId);
+    }
+
+    return userData;
+  }
+
+  return null;
+}
+
+/**
+ * Move a player from one node to another
+ * @param {number} fromNodeId - Previous node ID
+ * @param {number} toNodeId - New node ID
+ * @param {number} userId - User ID
+ * @param {string} username - Username
+ * @param {string} characterName - Active character name
+ * @returns {Object} Movement info with left and entered data
+ */
+function moveNode(fromNodeId, toNodeId, userId, username, characterName = null) {
+  const leftData = leaveNode(fromNodeId, userId);
+  const enteredData = enterNode(toNodeId, userId, username, characterName);
+
+  return {
+    left: leftData,
+    entered: enteredData,
+    fromNodeId,
+    toNodeId
+  };
+}
+
+/**
+ * Get all players at a node
+ * @param {number} nodeId - Node ID
+ * @returns {Array} Array of player info
+ */
+function getPlayersAtNode(nodeId) {
+  if (!nodePresence.has(nodeId)) {
+    return [];
+  }
+
+  const nodeUsers = nodePresence.get(nodeId);
+  return Array.from(nodeUsers.values());
+}
+
+/**
+ * Get count of players at a node
+ * @param {number} nodeId - Node ID
+ * @returns {number} Player count
+ */
+function getNodePlayerCount(nodeId) {
+  if (!nodePresence.has(nodeId)) {
+    return 0;
+  }
+  return nodePresence.get(nodeId).size;
+}
+
+/**
+ * Get current node for a user from cache
+ * @param {number} userId - User ID
+ * @returns {number|null} Node ID or null
+ */
+function getUserCurrentNode(userId) {
+  const presence = presenceCache.get(userId);
+  return presence?.currentNodeId || null;
+}
+
+/**
+ * Clear a user from all nodes (on disconnect)
+ * @param {number} userId - User ID
+ * @returns {Array} Array of nodeIds the user was removed from
+ */
+function clearUserFromAllNodes(userId) {
+  const removedFrom = [];
+
+  nodePresence.forEach((nodeUsers, nodeId) => {
+    if (nodeUsers.has(userId)) {
+      nodeUsers.delete(userId);
+      removedFrom.push(nodeId);
+
+      if (nodeUsers.size === 0) {
+        nodePresence.delete(nodeId);
+      }
+    }
+  });
+
+  return removedFrom;
+}
+
+/**
+ * Get the node presence map (for debugging/monitoring)
+ */
+function getNodePresenceMap() {
+  return nodePresence;
+}
+
 module.exports = {
   setPresence,
   getPresence,
@@ -298,5 +450,14 @@ module.exports = {
   clearTypingIndicator,
   getTypingUsers,
   cleanupStalePresence,
-  getPresenceCache
+  getPresenceCache,
+  // Node tracking
+  enterNode,
+  leaveNode,
+  moveNode,
+  getPlayersAtNode,
+  getNodePlayerCount,
+  getUserCurrentNode,
+  clearUserFromAllNodes,
+  getNodePresenceMap
 };

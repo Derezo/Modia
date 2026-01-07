@@ -8,16 +8,36 @@ const battleService = require('../services/battleService');
 const aiService = require('../services/aiService');
 const enemyService = require('../services/enemyService');
 const itemDropService = require('../services/itemDropService');
+const battleWebsocket = require('../services/battleWebsocket');
+const { SKILL_TREES } = require('./skills');
+
+/**
+ * Get skill definition from SKILL_TREES
+ * @param {string} unitClass - The unit's class (warrior, wizard, etc.)
+ * @param {string} skillId - The skill ID to find
+ * @returns {Object|null} Skill definition or null if not found
+ */
+function getSkillDefinition(unitClass, skillId) {
+  const classTree = SKILL_TREES[unitClass?.toLowerCase()];
+  if (!classTree) return null;
+
+  for (const branch of classTree.branches) {
+    const skill = branch.skills.find(s => s.id === skillId);
+    if (skill) return skill;
+  }
+  return null;
+}
 
 /**
  * Process an action for any unit (player or enemy)
  * @param {Object} state - Battle state
  * @param {Object} unit - The acting unit
- * @param {string} actionType - 'move' | 'attack' | 'wait'
+ * @param {string} actionType - 'move' | 'attack' | 'skill' | 'wait'
  * @param {Object} targetTile - { x, y } target position
+ * @param {string} skillId - Optional skill ID for skill actions
  * @returns {Object} Action result
  */
-function processAction(state, unit, actionType, targetTile) {
+function processAction(state, unit, actionType, targetTile, skillId = null) {
   const result = { damage: 0, moved: false };
 
   switch (actionType) {
@@ -36,6 +56,7 @@ function processAction(state, unit, actionType, targetTile) {
           u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
         );
         if (target) {
+          // Attack target at tile
           const hits = battleService.checkHit(unit, target);
           if (hits) {
             const damageResult = battleService.calculatePhysicalDamage(unit, target);
@@ -43,10 +64,57 @@ function processAction(state, unit, actionType, targetTile) {
             result.damage = damageResult.damage;
             result.isCritical = damageResult.isCritical;
             result.targetId = target.id;
+            result.targetType = target.type; // 'player' or 'enemy'
           } else {
             result.missed = true;
             result.targetId = target.id;
           }
+        } else {
+          // Empty tile attack - animation plays but no effect
+          result.attackedEmptyTile = true;
+          result.targetTile = targetTile;
+        }
+      }
+      break;
+
+    case 'skill':
+      if (targetTile && skillId) {
+        const skill = getSkillDefinition(unit.class, skillId);
+        if (!skill) {
+          result.error = 'Invalid skill';
+          break;
+        }
+
+        // Calculate MP cost (base cost from skill definition, or default 5)
+        const mpCost = skill.baseCost ? Math.floor(skill.baseCost / 10) : 5;
+        if (unit.mp < mpCost) {
+          result.error = 'Not enough MP';
+          break;
+        }
+
+        // Deduct MP
+        unit.mp -= mpCost;
+        result.skillUsed = skillId;
+        result.mpCost = mpCost;
+
+        // Find target at tile
+        const target = state.units.find(u =>
+          u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
+        );
+
+        if (target) {
+          // Apply skill damage (using power from skill description or default 150%)
+          const power = skill.power || 150;
+          const damageResult = battleService.calculatePhysicalDamage(unit, target, power);
+          target.hp = Math.max(0, target.hp - damageResult.damage);
+          result.damage = damageResult.damage;
+          result.isCritical = damageResult.isCritical;
+          result.targetId = target.id;
+          result.targetType = target.type;
+        } else {
+          // Empty tile skill - animation plays but no damage
+          result.attackedEmptyTile = true;
+          result.targetTile = targetTile;
         }
       }
       break;
@@ -61,25 +129,19 @@ function processAction(state, unit, actionType, targetTile) {
 }
 
 /**
- * Advance to the next living unit in turn order
+ * Advance to the next actor using CT system
+ * Consumes the current actor's CT and finds the next one
  * @param {Object} state - Battle state
  */
-function advanceToNextUnit(state) {
-  const startIndex = state.activeUnitIndex;
-  let nextIndex = (state.activeUnitIndex + 1) % state.units.length;
-
-  // Skip dead units
-  while (state.units[nextIndex].hp <= 0 && nextIndex !== startIndex) {
-    nextIndex = (nextIndex + 1) % state.units.length;
+function advanceToNextActorWithCT(state) {
+  // Consume CT for the unit that just acted
+  const currentActor = state.units.find(u => u.id === state.activeUnitId);
+  if (currentActor) {
+    battleService.consumeCT(currentActor);
   }
 
-  // Check for new turn (wrapped around to beginning of order)
-  if (nextIndex <= state.activeUnitIndex) {
-    state.turn++;
-    state.units.forEach(u => u.hasActed = false);
-  }
-
-  state.activeUnitIndex = nextIndex;
+  // Find the next actor
+  battleService.advanceToNextActor(state);
 }
 
 /**
@@ -97,7 +159,8 @@ function checkBattleEnd(state) {
 }
 
 /**
- * Process all enemy turns until it's a player's turn or battle ends
+ * Process enemy turns until it's a player's turn or battle ends
+ * Uses CT system to determine turn order
  * @param {Object} state - Battle state
  * @param {number} maxIterations - Safety limit to prevent infinite loops
  * @returns {Array} Array of enemy actions for frontend animation
@@ -107,7 +170,15 @@ function processEnemyTurns(state, maxIterations = 50) {
   let iterations = 0;
 
   while (iterations < maxIterations) {
-    const activeUnit = state.units[state.activeUnitIndex];
+    // Get the current active unit
+    const activeUnit = state.units.find(u => u.id === state.activeUnitId);
+
+    // Safety check
+    if (!activeUnit) {
+      battleService.advanceToNextActor(state);
+      iterations++;
+      continue;
+    }
 
     // Stop if it's a player's turn
     if (activeUnit.type === 'player') {
@@ -116,7 +187,7 @@ function processEnemyTurns(state, maxIterations = 50) {
 
     // Stop if unit is dead (shouldn't happen, but safety check)
     if (activeUnit.hp <= 0) {
-      advanceToNextUnit(state);
+      advanceToNextActorWithCT(state);
       iterations++;
       continue;
     }
@@ -142,8 +213,8 @@ function processEnemyTurns(state, maxIterations = 50) {
       break;
     }
 
-    // Advance to next unit
-    advanceToNextUnit(state);
+    // Advance to next actor using CT system
+    advanceToNextActorWithCT(state);
     iterations++;
   }
 
@@ -237,8 +308,9 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
   // Create initial battle state
   const initialState = {
     turn: 1,
-    phase: 'player_turn',
+    phase: 'active',
     activeUnitIndex: 0,
+    activeUnitId: null,
     units: party.map((char, idx) => ({
       id: char.id,
       type: 'player',
@@ -251,8 +323,11 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
       strength: char.strength,
       intelligence: char.intelligence,
       agility: char.agility,
+      vitality: char.vitality,
+      luck: char.luck,
       tileX: 1 + (idx % 3),
       tileY: 13 + Math.floor(idx / 3) * 2,
+      ct: 0,
       hasActed: false,
       statusEffects: []
     }))
@@ -262,8 +337,14 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
   const enemies = await enemyService.generateEncounter(currentNodeId, party);
   initialState.units.push(...enemies);
 
-  // Sort units by initiative (agility)
-  initialState.units.sort((a, b) => b.agility - a.agility);
+  // Initialize CT values for all units (adds initial variation)
+  battleService.initializeCT(initialState.units);
+
+  // Advance CT and find the first actor
+  battleService.advanceToNextActor(initialState);
+
+  // Generate turn predictions
+  initialState.turnPredictions = battleService.predictTurnOrder(initialState, 10);
 
   // Create battle record
   const battleResult = await query(
@@ -281,6 +362,9 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
      WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL`,
     [req.user.userId, MAX_BATTLE_PARTY_SIZE]
   );
+
+  // Join battle WebSocket room
+  battleWebsocket.joinBattle(battleId, req.user.userId);
 
   res.status(201).json({
     battleId,
@@ -338,15 +422,31 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
   }
 
   const state = battleResult.rows[0].battle_state;
-  const activeUnit = state.units[state.activeUnitIndex];
+
+  // Migration: ensure all units have CT field (for existing battles)
+  for (const unit of state.units) {
+    if (typeof unit.ct !== 'number') {
+      unit.ct = 0;
+    }
+  }
+
+  // Get active unit using activeUnitId (or fall back to index for migration)
+  let activeUnit;
+  if (state.activeUnitId) {
+    activeUnit = state.units.find(u => u.id === state.activeUnitId);
+  }
+  if (!activeUnit) {
+    activeUnit = state.units[state.activeUnitIndex];
+    state.activeUnitId = activeUnit?.id;
+  }
 
   // Validate it's the player's turn
-  if (activeUnit.type !== 'player' || activeUnit.id !== unitId) {
+  if (!activeUnit || activeUnit.type !== 'player' || activeUnit.id !== unitId) {
     throw new AppError('Not this unit\'s turn', 400);
   }
 
   // Process player action using helper
-  const result = processAction(state, activeUnit, actionType, targetTile);
+  const result = processAction(state, activeUnit, actionType, targetTile, skillId);
 
   // Check if battle ended from player action
   let battleStatus = checkBattleEnd(state);
@@ -354,8 +454,8 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
   // Process enemy turns if battle is still active
   let enemyActions = [];
   if (battleStatus === 'active') {
-    // Advance to next unit
-    advanceToNextUnit(state);
+    // Advance to next actor using CT system
+    advanceToNextActorWithCT(state);
 
     // Process all enemy turns until it's a player's turn again
     enemyActions = processEnemyTurns(state);
@@ -364,11 +464,25 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
     battleStatus = checkBattleEnd(state);
   }
 
+  // Update turn predictions
+  state.turnPredictions = battleService.predictTurnOrder(state, 10);
+
   // Update battle state
   await query(
     'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
     [JSON.stringify(state), battleStatus, battleId]
   );
+
+  // Broadcast action executed via WebSocket
+  battleWebsocket.broadcastActionExecuted(battleId, unitId, actionType, result, req.user.userId);
+
+  // Broadcast enemy actions if any
+  if (enemyActions && enemyActions.length > 0) {
+    battleWebsocket.broadcastEnemyActions(battleId, enemyActions, req.user.userId);
+  }
+
+  // Broadcast turn changed
+  battleWebsocket.broadcastTurnChanged(battleId, state.activeUnitIndex, state.turn, req.user.userId);
 
   // If battle ended, update characters
   if (battleStatus !== 'active') {
@@ -454,6 +568,12 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
         items: itemDropService.formatDropsForResponse(droppedItems)
       };
     }
+
+    // Broadcast battle end via WebSocket
+    battleWebsocket.broadcastBattleEnd(battleId, battleStatus, result.rewards);
+
+    // Leave battle room
+    battleWebsocket.leaveBattle(battleId, req.user.userId);
   }
 
   res.json({
