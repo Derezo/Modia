@@ -137,4 +137,25 @@ export class GameWebSocket {
   leaveColiseumQueue() {
     this.send('coliseum_queue_leave');
   }
+
+  // Chat methods
+  sendPrivateMessage(targetUserId, message, characterId = null) {
+    this.send('private_message', { targetUserId, message, characterId });
+  }
+
+  updatePresence(status, customMessage = null) {
+    this.send('presence_update', { status, customMessage });
+  }
+
+  sendTypingIndicator(room, isTyping = true) {
+    this.send('typing_indicator', { room, isTyping });
+  }
+
+  addReaction(messageId, emoji, room = null) {
+    this.send('add_reaction', { messageId, emoji, room });
+  }
+
+  removeReaction(messageId, emoji, room = null) {
+    this.send('remove_reaction', { messageId, emoji, room });
+  }
 }

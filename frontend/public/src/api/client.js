@@ -279,4 +279,51 @@ export class ApiClient {
   getMarketStats(itemTemplateId) {
     return this.get(`/marketplace/stats/${itemTemplateId}`);
   }
+
+  // Chat endpoints
+  getChatHistory(roomType, options = {}) {
+    const params = new URLSearchParams();
+    if (options.before) params.append('before', options.before);
+    if (options.limit) params.append('limit', options.limit);
+    if (options.nodeId) params.append('nodeId', options.nodeId);
+    if (options.partyId) params.append('partyId', options.partyId);
+    const query = params.toString();
+    return this.get(`/chat/history/${roomType}${query ? '?' + query : ''}`);
+  }
+
+  getDMHistory(targetUserId, options = {}) {
+    const params = new URLSearchParams();
+    if (options.before) params.append('before', options.before);
+    if (options.limit) params.append('limit', options.limit);
+    const query = params.toString();
+    return this.get(`/chat/dm/${targetUserId}${query ? '?' + query : ''}`);
+  }
+
+  getDMConversations(limit = 20) {
+    return this.get(`/chat/conversations?limit=${limit}`);
+  }
+
+  addReaction(messageId, emoji) {
+    return this.post('/chat/reaction', { messageId, emoji });
+  }
+
+  removeReaction(messageId, emoji) {
+    return this.delete('/chat/reaction', { data: { messageId, emoji } });
+  }
+
+  getOnlinePlayers(options = {}) {
+    const params = new URLSearchParams();
+    if (options.nodeId) params.append('nodeId', options.nodeId);
+    if (options.limit) params.append('limit', options.limit);
+    const query = params.toString();
+    return this.get(`/chat/online${query ? '?' + query : ''}`);
+  }
+
+  updatePresence(status, customMessage = null) {
+    return this.put('/chat/presence', { status, customMessage });
+  }
+
+  getPresence(userId) {
+    return this.get(`/chat/presence/${userId}`);
+  }
 }
