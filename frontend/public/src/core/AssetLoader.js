@@ -521,6 +521,65 @@ export class AssetLoader {
   }
 
   /**
+   * Load world map backdrop tile
+   * @param {string} tileName - Tile name (world_grass, world_water, etc.)
+   */
+  async loadBackdropTile(tileName) {
+    const path = `${this.basePath}/nodes/backdrop/${tileName}.png`;
+    try {
+      return await this.loadImage(path);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get backdrop tile (sync)
+   */
+  getBackdropTile(tileName) {
+    return this.cache.get(`${this.basePath}/nodes/backdrop/${tileName}.png`) || null;
+  }
+
+  /**
+   * Load world map path texture
+   * @param {string} pathType - Path type (dirt_road, stone_path, bridge_planks)
+   */
+  async loadPathTexture(pathType) {
+    const path = `${this.basePath}/nodes/paths/${pathType}.png`;
+    try {
+      return await this.loadImage(path);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Get path texture (sync)
+   */
+  getPathTexture(pathType) {
+    return this.cache.get(`${this.basePath}/nodes/paths/${pathType}.png`) || null;
+  }
+
+  /**
+   * Preload world map backdrop and path textures
+   */
+  async preloadWorldMapAssets() {
+    const backdropTiles = ['world_grass', 'world_water', 'world_forest', 'world_mountain', 'world_desert'];
+    const pathTextures = ['dirt_road', 'stone_path', 'bridge_planks'];
+
+    const promises = [
+      ...backdropTiles.map(tile => this.loadBackdropTile(tile)),
+      ...pathTextures.map(path => this.loadPathTexture(path)),
+      this.preloadNodes()
+    ];
+
+    const results = await Promise.allSettled(promises);
+    const loaded = results.filter(r => r.status === 'fulfilled' && r.value).length;
+    console.log(`Preloaded ${loaded}/${results.length} world map assets`);
+    return results;
+  }
+
+  /**
    * Preload obstacle sprites for all categories
    * This should be called before battles to ensure obstacles render correctly
    */

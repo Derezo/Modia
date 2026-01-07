@@ -1,4 +1,5 @@
 import { Scene } from './Scene.js';
+import { WorldMapEffects } from '../worldmap/WorldMapEffects.js';
 
 export class WorldMapScene extends Scene {
   constructor(game) {
@@ -24,8 +25,8 @@ export class WorldMapScene extends Scene {
     // Asset loader reference
     this.assetLoader = null;
 
-    // Backdrop tiles (cached)
-    this.backdropTiles = {};
+    // Effects system
+    this.effects = null;
 
     // Event listener cleanup
     this.abortController = null;
@@ -34,6 +35,10 @@ export class WorldMapScene extends Scene {
   async enter() {
     // Get asset loader reference from game
     this.assetLoader = this.game.assetLoader;
+
+    // Initialize effects system
+    this.effects = new WorldMapEffects(this.assetLoader);
+    await this.effects.init();
 
     await this.loadWorldData();
     this.createUI();
@@ -383,16 +388,38 @@ export class WorldMapScene extends Scene {
 
   update(deltaTime) {
     this.game.input.clearFrameState();
+
+    // Update effects
+    if (this.effects) {
+      this.effects.update(deltaTime);
+
+      // Spawn ambient particles near visible nodes
+      for (const node of this.nodes) {
+        const x = node.x_coord * this.nodeSpacing + this.cameraX;
+        const y = node.y_coord * this.nodeSpacing + this.cameraY;
+
+        // Only spawn for visible nodes
+        if (x >= -100 && x <= this.game.canvas.width + 100 &&
+            y >= -100 && y <= this.game.canvas.height + 100) {
+          this.effects.spawnAmbientParticles(x, y, node.node_type);
+        }
+      }
+    }
   }
 
   render(ctx) {
-    // Background
-    ctx.fillStyle = '#0a0a1a';
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    // Render backdrop with effects system
+    if (this.effects) {
+      this.effects.renderBackdrop(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height);
+    } else {
+      // Fallback background
+      ctx.fillStyle = '#0a0a1a';
+      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    }
 
     ctx.save();
 
-    // Draw connections with curved bezier paths
+    // Draw connections with curved bezier paths (using textured paths when available)
     for (const conn of this.connections) {
       const fromNode = this.nodes.find(n => n.id === conn.from_node_id);
       const toNode = this.nodes.find(n => n.id === conn.to_node_id);
@@ -415,27 +442,34 @@ export class WorldMapScene extends Scene {
 
         // Calculate control point for bezier curve
         const control = this.getPathControlPoint(x1, y1, x2, y2, conn.from_node_id, conn.to_node_id);
-        const style = this.getPathStyle(conn.path_type);
 
-        // Draw path shadow for depth
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.quadraticCurveTo(control.x, control.y, x2, y2);
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-        ctx.lineWidth = style.width + 2;
-        ctx.stroke();
+        // Use textured path rendering if effects available
+        if (this.effects && this.effects.pathsLoaded) {
+          this.effects.renderTexturedPath(ctx, x1, y1, x2, y2, conn.path_type, control);
+        } else {
+          // Fallback to simple path
+          const style = this.getPathStyle(conn.path_type);
 
-        // Draw main path
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.quadraticCurveTo(control.x, control.y, x2, y2);
-        ctx.strokeStyle = style.color;
-        ctx.lineWidth = style.width;
-        if (style.dashed) {
-          ctx.setLineDash([5, 5]);
+          // Draw path shadow for depth
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.quadraticCurveTo(control.x, control.y, x2, y2);
+          ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+          ctx.lineWidth = style.width + 2;
+          ctx.stroke();
+
+          // Draw main path
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.quadraticCurveTo(control.x, control.y, x2, y2);
+          ctx.strokeStyle = style.color;
+          ctx.lineWidth = style.width;
+          if (style.dashed) {
+            ctx.setLineDash([5, 5]);
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
         }
-        ctx.stroke();
-        ctx.setLineDash([]);
       }
     }
 
@@ -452,24 +486,32 @@ export class WorldMapScene extends Scene {
       const isCurrent = this.currentNode && node.id === this.currentNode.id;
       const isHovered = this.hoveredNode && node.id === this.hoveredNode.id;
       const isAdjacent = this.isNodeAdjacent(node);
+      const isImportant = ['castle', 'palace', 'city'].includes(node.node_type);
+
+      // Render glow effect for important/selected nodes
+      if (this.effects && (isCurrent || isImportant)) {
+        const glowColor = isCurrent ? '#ffd700' : this.getNodeGlowColor(node.node_type);
+        this.effects.renderNodeGlow(ctx, x, y, this.nodeSize, glowColor, isCurrent || isImportant);
+      }
 
       // Try to render node sprite
       const nodeSprite = this.getNodeSprite(node.node_type);
 
       if (nodeSprite) {
         // Draw sprite with selection/hover effects
-        const spriteSize = 48;
+        const spriteSize = this.getNodeSpriteSize(node.node_type);
         const drawSize = isCurrent ? spriteSize + 8 : spriteSize;
         const offset = drawSize / 2;
 
-        // Draw glow effect for current/hovered nodes
-        if (isCurrent || (isHovered && isAdjacent)) {
-          ctx.shadowColor = isCurrent ? '#ffd700' : '#4a90d9';
-          ctx.shadowBlur = 15;
-        }
+        // Draw shadow under sprite
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.filter = 'blur(4px)';
+        ctx.drawImage(nodeSprite, x - offset + 3, y - offset + 3, drawSize, drawSize);
+        ctx.restore();
 
+        // Draw main sprite
         ctx.drawImage(nodeSprite, x - offset, y - offset, drawSize, drawSize);
-        ctx.shadowBlur = 0;
 
         // Draw selection ring
         if (isCurrent) {
@@ -481,9 +523,11 @@ export class WorldMapScene extends Scene {
         } else if (isAdjacent) {
           ctx.beginPath();
           ctx.arc(x, y, drawSize / 2 + 2, 0, Math.PI * 2);
-          ctx.strokeStyle = 'rgba(106, 176, 243, 0.5)';
+          ctx.strokeStyle = 'rgba(106, 176, 243, 0.6)';
           ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
           ctx.stroke();
+          ctx.setLineDash([]);
         }
       } else {
         // Fallback: Draw colored circle with emoji
@@ -514,14 +558,66 @@ export class WorldMapScene extends Scene {
 
       // Node name (only for current and hovered)
       if (isCurrent || isHovered) {
-        ctx.fillStyle = '#fff';
-        ctx.font = '12px Arial';
+        // Draw name with background for better readability
+        const nodeName = node.name;
+        ctx.font = 'bold 12px Arial';
+        const textWidth = ctx.measureText(nodeName).width;
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(x - textWidth / 2 - 4, y + this.nodeSize + 8, textWidth + 8, 18);
+
+        ctx.fillStyle = isCurrent ? '#ffd700' : '#fff';
         ctx.textAlign = 'center';
-        ctx.fillText(node.name, x, y + this.nodeSize + 15);
+        ctx.textBaseline = 'top';
+        ctx.fillText(nodeName, x, y + this.nodeSize + 10);
       }
     }
 
+    // Render ambient particles on top
+    if (this.effects) {
+      this.effects.renderParticles(ctx);
+    }
+
     ctx.restore();
+  }
+
+  /**
+   * Get glow color for node type
+   */
+  getNodeGlowColor(nodeType) {
+    const colors = {
+      castle: '#c0c0c0',
+      city: '#4a90d9',
+      village: '#4a7c4a',
+      forest: '#2d5a2d',
+      cave: '#5a5a7a',
+      mountain: '#7a7a9a',
+      bridge: '#8b7355',
+      guild: '#9a6acd',
+      palace: '#ffd700'
+    };
+    return colors[nodeType] || '#4a4a6a';
+  }
+
+  /**
+   * Get sprite size based on node type (important nodes are larger)
+   */
+  getNodeSpriteSize(nodeType) {
+    const sizes = {
+      castle: 56,
+      city: 52,
+      village: 44,
+      forest: 44,
+      cave: 44,
+      mountain: 52,
+      bridge: 44,
+      palace: 64,
+      guild_warrior: 44,
+      guild_wizard: 44,
+      guild_monk: 44,
+      guild_chemist: 44
+    };
+    return sizes[nodeType] || 44;
   }
 
   /**
