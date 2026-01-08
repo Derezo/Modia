@@ -1,3 +1,5 @@
+import { GlassCharacterCard } from '../components/GlassCharacterCard.js';
+
 /**
  * BattleUI - User interface for tactical combat
  */
@@ -8,7 +10,7 @@ export class BattleUI {
     this.actionCallbacks = {};
     this.abortController = null;
     this.isVisible = true;
-    this.activeCardTimeout = null;
+    this.activeUnitCard = null;  // GlassCharacterCard component
   }
 
   /**
@@ -101,28 +103,18 @@ export class BattleUI {
         </div>
       </div>
 
-      <!-- Action Menu (bottom center) -->
+      <!-- Action Menu - DEPRECATED: Replaced by RadialMenu, kept for targeting cancel only -->
       <div id="action-menu" class="battle-panel" style="
         position: absolute;
         bottom: 10px;
         left: 50%;
         transform: translateX(-50%);
         pointer-events: auto;
+        display: none;
       ">
         <div class="ui-panel" style="padding: 10px;">
-          <!-- Two-action turn phase indicator -->
-          <div id="action-phase-indicator" style="text-align: center; font-size: 11px; color: #ffd700; margin-bottom: 8px; font-weight: bold;">
-            Choose: Move + Action
-          </div>
-          <div style="display: flex; gap: 8px;">
-            <button class="btn btn-secondary action-btn move-action" id="btn-move" title="Move to a new position">Move</button>
-            <button class="btn btn-primary action-btn act-action" id="btn-attack" title="Attack a target">Attack</button>
-            <button class="btn btn-info action-btn act-action" id="btn-skill" title="Use a skill">Skill</button>
-            <button class="btn btn-success action-btn act-action" id="btn-item" title="Use an item">Item</button>
-            <button class="btn btn-secondary action-btn" id="btn-wait" title="End turn">Wait</button>
-          </div>
           <!-- Cancel button for targeting mode -->
-          <div id="targeting-cancel" style="display: none; margin-top: 8px; text-align: center;">
+          <div id="targeting-cancel" style="margin-top: 0; text-align: center;">
             <button class="btn btn-secondary" id="btn-cancel-targeting">Cancel (Esc)</button>
           </div>
         </div>
@@ -217,37 +209,14 @@ export class BattleUI {
         </div>
       </div>
 
-      <!-- Active Unit Detail Card (shown after turn transition) -->
-      <div id="active-unit-card" style="
+      <!-- Active Unit Detail Card Container (glass morphism - no panel wrapper) -->
+      <div id="active-unit-card-container" style="
         position: absolute;
         bottom: 100px;
         right: 20px;
         pointer-events: none;
-        display: none;
-        opacity: 0;
-        transition: opacity 0.3s ease-out;
       ">
-        <div class="ui-panel" style="display: flex; gap: 10px; padding: 10px; min-width: 180px;">
-          <img class="auc-portrait" src="" alt="" style="
-            width: 48px;
-            height: 48px;
-            border-radius: 4px;
-            image-rendering: pixelated;
-            background: #333;
-          ">
-          <div class="auc-info" style="flex: 1;">
-            <div class="auc-name" style="font-weight: bold; color: #fff; font-size: 13px; margin-bottom: 2px;"></div>
-            <div class="auc-class" style="color: #aaa; font-size: 11px; margin-bottom: 6px;"></div>
-            <div class="auc-bars">
-              <div class="auc-hp-bar" style="height: 6px; background: #333; border-radius: 3px; margin-bottom: 3px;">
-                <div class="auc-hp-fill" style="height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s ease;"></div>
-              </div>
-              <div class="auc-mp-bar" style="height: 6px; background: #333; border-radius: 3px;">
-                <div class="auc-mp-fill" style="height: 100%; background: #2196f3; border-radius: 3px; transition: width 0.3s ease;"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- GlassCharacterCard component will be inserted directly -->
       </div>
     `;
 
@@ -259,6 +228,19 @@ export class BattleUI {
 
     // Setup event listeners
     this.setupEventListeners();
+
+    // Initialize GlassCharacterCard component for active unit display
+    this.activeUnitCard = new GlassCharacterCard({
+      mode: 'compact',
+      autoHide: true,
+      autoHideDelay: 2000
+    });
+    const cardContainer = container.querySelector('#active-unit-card-container');
+    if (cardContainer) {
+      cardContainer.appendChild(this.activeUnitCard.element);
+      // Start hidden
+      this.activeUnitCard.hide();
+    }
 
     // Initial update
     this.updateTurnOrder(battleState);
@@ -508,75 +490,18 @@ export class BattleUI {
    * @param {Object} unit - The active unit to display
    */
   showActiveUnitCard(unit) {
-    const card = this.element.querySelector('#active-unit-card');
-    if (!card) return;
+    if (!this.activeUnitCard) return;
 
-    // Set portrait (with fallback to class icon)
-    const portrait = card.querySelector('.auc-portrait');
-    if (portrait) {
-      const gender = unit.gender || 'other';
-      const portraitUrl = `/assets/sprites/portraits/${unit.race}_${gender}_${unit.class}.png`;
-      portrait.src = portraitUrl;
-      portrait.onerror = () => {
-        // Fallback to colored placeholder
-        portrait.style.display = 'none';
-      };
-      portrait.style.display = 'block';
-    }
-
-    // Set name and class
-    const nameEl = card.querySelector('.auc-name');
-    const classEl = card.querySelector('.auc-class');
-    if (nameEl) nameEl.textContent = unit.name;
-    if (classEl) {
-      const levelText = unit.level ? `Lv.${unit.level}` : '';
-      const classText = unit.class ? this.capitalize(unit.class) : '';
-      classEl.textContent = [levelText, classText].filter(Boolean).join(' ');
-    }
-
-    // Set HP/MP bars
-    const hpFill = card.querySelector('.auc-hp-fill');
-    const mpFill = card.querySelector('.auc-mp-fill');
-    const hpPercent = (unit.hp / unit.maxHp) * 100;
-    const mpPercent = (unit.mp / unit.maxMp) * 100;
-
-    if (hpFill) hpFill.style.width = `${hpPercent}%`;
-    if (mpFill) mpFill.style.width = `${mpPercent}%`;
-
-    // Show card with fade-in
-    card.style.display = 'block';
-    // Use requestAnimationFrame to ensure display:block is applied before opacity transition
-    requestAnimationFrame(() => {
-      card.style.opacity = '1';
-    });
-
-    // Auto-hide after 2 seconds
-    clearTimeout(this.activeCardTimeout);
-    this.activeCardTimeout = setTimeout(() => {
-      this.hideActiveUnitCard();
-    }, 2000);
+    this.activeUnitCard.setCharacter(unit);
+    this.activeUnitCard.show();
   }
 
   /**
    * Hide active unit detail card
    */
   hideActiveUnitCard() {
-    const card = this.element.querySelector('#active-unit-card');
-    if (!card) return;
-
-    card.style.opacity = '0';
-    // Hide after fade-out transition
-    setTimeout(() => {
-      card.style.display = 'none';
-    }, 300);
-  }
-
-  /**
-   * Capitalize a string
-   */
-  capitalize(str) {
-    if (!str) return '';
-    return str.charAt(0).toUpperCase() + str.slice(1);
+    if (!this.activeUnitCard) return;
+    this.activeUnitCard.hide();
   }
 
   /**
@@ -666,7 +591,8 @@ export class BattleUI {
   }
 
   /**
-   * Hide action menu (during enemy turn)
+   * Hide action menu (during enemy turn or when not needed)
+   * Note: Old action buttons removed - RadialMenu now handles actions
    */
   hideActionMenu() {
     const menu = this.element.querySelector('#action-menu');
@@ -675,26 +601,27 @@ export class BattleUI {
 
   /**
    * Show action menu (player turn)
+   * Note: RadialMenu now handles action selection - this is a no-op
    */
   showActionMenu() {
-    const menu = this.element.querySelector('#action-menu');
-    if (menu) menu.style.display = 'block';
+    // RadialMenu handles action selection now
+    // This method is kept for API compatibility
   }
 
   /**
    * Show targeting mode UI (cancel button visible)
    */
   showTargetingMode() {
-    const cancelDiv = this.element.querySelector('#targeting-cancel');
-    if (cancelDiv) cancelDiv.style.display = 'block';
+    const menu = this.element.querySelector('#action-menu');
+    if (menu) menu.style.display = 'block';
   }
 
   /**
    * Hide targeting mode UI
    */
   hideTargetingMode() {
-    const cancelDiv = this.element.querySelector('#targeting-cancel');
-    if (cancelDiv) cancelDiv.style.display = 'none';
+    const menu = this.element.querySelector('#action-menu');
+    if (menu) menu.style.display = 'none';
   }
 
   /**
@@ -860,9 +787,9 @@ export class BattleUI {
       this.abortController.abort();
       this.abortController = null;
     }
-    if (this.activeCardTimeout) {
-      clearTimeout(this.activeCardTimeout);
-      this.activeCardTimeout = null;
+    if (this.activeUnitCard) {
+      this.activeUnitCard.destroy();
+      this.activeUnitCard = null;
     }
     if (this.element) {
       this.element.remove();

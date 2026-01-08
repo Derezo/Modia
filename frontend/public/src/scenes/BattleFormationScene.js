@@ -1,5 +1,5 @@
 import { Scene } from './Scene.js';
-import { CharacterCard } from '../components/CharacterCard.js';
+import { GlassCharacterCard } from '../components/GlassCharacterCard.js';
 
 /**
  * BattleFormationScene - Pre-battle character placement on isometric grid
@@ -35,6 +35,7 @@ export class BattleFormationScene extends Scene {
     this.longPressTimer = null;
     this.longPressThreshold = 500;  // ms for long press
     this.pressedTile = null;
+    this.justRemovedByLongPress = false;  // Prevents re-adding after long-press removal
 
     // DOM elements
     this.uiElement = null;
@@ -58,8 +59,9 @@ export class BattleFormationScene extends Scene {
     this.createUI();
     this.setupEventListeners();
 
-    // Auto-place characters in default positions
-    this.autoPlaceCharacters();
+    // Start with empty grid - let player choose positions
+    this.renderGrid();
+    this.updateUnplacedRoster();
   }
 
   exit() {
@@ -129,14 +131,14 @@ export class BattleFormationScene extends Scene {
     const nodeType = this.battleContext?.type || 'pve';
 
     container.innerHTML = `
-      <!-- Header -->
+      <!-- Header with animated title -->
       <div style="
         padding: 16px 24px;
         background: rgba(0,0,0,0.4);
         border-bottom: 2px solid #3a3a5a;
         text-align: center;
       ">
-        <h2 style="margin: 0 0 4px 0; color: #ffd700; font-size: 20px;">Battle Formation</h2>
+        <h2 class="battle-title-animated" style="margin: 0 0 4px 0; font-size: 24px;">Prepare for Battle!</h2>
         <div style="color: #8a8aaa; font-size: 14px;">${nodeName}</div>
       </div>
 
@@ -168,15 +170,14 @@ export class BattleFormationScene extends Scene {
           </div>
         </div>
 
-        <!-- Character Detail Card Container -->
-        <div id="character-card-container" class="ui-panel" style="
-          width: 200px;
+        <!-- Character Detail Card Container (glass morphism - no panel wrapper) -->
+        <div id="character-card-container" style="
+          width: 210px;
           display: flex;
           flex-direction: column;
         ">
-          <div class="ui-panel-header" style="font-size: 12px;">Character Info</div>
-          <div id="card-content" style="padding: 12px; flex: 1;">
-            <!-- CharacterCard component will be inserted here -->
+          <div id="card-content">
+            <!-- GlassCharacterCard component will be inserted here -->
           </div>
         </div>
       </div>
@@ -200,7 +201,6 @@ export class BattleFormationScene extends Scene {
           padding: 12px 32px;
           font-size: 16px;
         ">Start Battle</button>
-        <button id="back-btn" class="btn btn-secondary" style="padding: 12px 16px;">Back</button>
       </div>
     `;
 
@@ -210,12 +210,15 @@ export class BattleFormationScene extends Scene {
     // Get canvas reference
     this.gridCanvas = container.querySelector('#formation-grid-canvas');
 
-    // Initialize CharacterCard component
-    this.characterCard = new CharacterCard({ mode: 'detailed' });
+    // Initialize GlassCharacterCard component
+    this.characterCard = new GlassCharacterCard({ mode: 'detailed' });
     const cardContainer = container.querySelector('#card-content');
     if (cardContainer) {
       cardContainer.appendChild(this.characterCard.element);
     }
+
+    // Add animated title styles
+    this.addTitleStyles();
 
     // Initial render
     this.renderGrid();
@@ -340,9 +343,8 @@ export class BattleFormationScene extends Scene {
       }
     }, opts);
 
-    // Buttons
+    // Start battle button (no back button - can't flee from battle)
     this.uiElement.querySelector('#start-battle-btn').addEventListener('click', () => this.startBattle(), opts);
-    this.uiElement.querySelector('#back-btn').addEventListener('click', () => this.goBack(), opts);
 
     // Unplaced character clicks
     this.uiElement.querySelectorAll('.unplaced-char').forEach(el => {
@@ -385,6 +387,12 @@ export class BattleFormationScene extends Scene {
   }
 
   handleGridClick(e) {
+    // Skip click if character was just removed by long-press
+    if (this.justRemovedByLongPress) {
+      this.justRemovedByLongPress = false;
+      return;
+    }
+
     const tile = this.screenToGrid(e.offsetX, e.offsetY);
     if (!tile) return;
 
@@ -394,8 +402,8 @@ export class BattleFormationScene extends Scene {
       // Cycle character on occupied tile
       this.cycleCharacterOnTile(key);
     } else {
-      // Place next available character
-      this.placeNextCharacter(key);
+      // Place character on empty tile (handles all cases)
+      this.placeCharacterOnTile(key);
     }
 
     this.renderGrid();
@@ -425,11 +433,14 @@ export class BattleFormationScene extends Scene {
     if (!this.placedCharacters.has(key)) return;
 
     this.pressedTile = key;
+    this.justRemovedByLongPress = false;  // Reset flag
+
     this.longPressTimer = setTimeout(() => {
       this.removeCharacter(key);
       this.renderGrid();
       this.updateUnplacedRoster();
       this.longPressTimer = null;
+      this.justRemovedByLongPress = true;  // Mark removal happened
     }, this.longPressThreshold);
   }
 
@@ -441,26 +452,61 @@ export class BattleFormationScene extends Scene {
     this.pressedTile = null;
   }
 
-  placeNextCharacter(gridKey) {
+  /**
+   * Place a character on an empty tile with improved logic:
+   * - If unplaced characters exist, place the next one
+   * - If only 1 character and already placed, move it to clicked tile
+   * - If all placed or grid full, FIFO replacement (move oldest to new tile)
+   */
+  placeCharacterOnTile(gridKey) {
     const placedIds = new Set(
       Array.from(this.placedCharacters.values()).map(c => c.id)
     );
     const unplaced = this.battleParty.filter(c => !placedIds.has(c.id));
 
-    if (unplaced.length === 0) return;
+    // Case 1: Have unplaced characters - place next one
+    if (unplaced.length > 0) {
+      const nextChar = unplaced[0];
 
-    const nextChar = unplaced[0];
+      // Enforce max 5 placement - FIFO removal
+      if (this.placedCharacters.size >= 5) {
+        const oldestKey = this.placementOrder.shift();
+        this.placedCharacters.delete(oldestKey);
+      }
 
-    // Enforce max 5 placement - FIFO removal
-    if (this.placedCharacters.size >= 5) {
-      const oldestKey = this.placementOrder.shift();
-      this.placedCharacters.delete(oldestKey);
+      this.placedCharacters.set(gridKey, nextChar);
+      this.placementOrder.push(gridKey);
+      this.selectedCharacter = nextChar;
+      this.updateDetailCard();
+      return;
     }
 
-    this.placedCharacters.set(gridKey, nextChar);
-    this.placementOrder.push(gridKey);
-    this.selectedCharacter = nextChar;
-    this.updateDetailCard();
+    // Case 2: Only 1 character in party and already placed - MOVE it
+    if (this.battleParty.length === 1 && this.placedCharacters.size === 1) {
+      const [existingKey, char] = this.placedCharacters.entries().next().value;
+      this.placedCharacters.delete(existingKey);
+      this.placementOrder = this.placementOrder.filter(k => k !== existingKey);
+
+      this.placedCharacters.set(gridKey, char);
+      this.placementOrder.push(gridKey);
+      this.selectedCharacter = char;
+      this.updateDetailCard();
+      return;
+    }
+
+    // Case 3: All characters placed - FIFO replacement (move oldest to new tile)
+    if (this.placedCharacters.size > 0 && this.placementOrder.length > 0) {
+      const oldestKey = this.placementOrder.shift();
+      const charToMove = this.placedCharacters.get(oldestKey);
+      this.placedCharacters.delete(oldestKey);
+
+      this.placedCharacters.set(gridKey, charToMove);
+      this.placementOrder.push(gridKey);
+      this.selectedCharacter = charToMove;
+      this.updateDetailCard();
+
+      this.game.showNotification?.(`Moved ${charToMove.name}`, 'info');
+    }
   }
 
   cycleCharacterOnTile(gridKey) {
@@ -612,11 +658,6 @@ export class BattleFormationScene extends Scene {
   }
 
   updateDetailCard() {
-    const container = this.uiElement.querySelector('#character-card-container');
-    if (container) {
-      container.style.opacity = this.selectedCharacter ? '1' : '0.5';
-    }
-
     if (this.characterCard) {
       this.characterCard.setCharacter(this.selectedCharacter);
     }
@@ -674,9 +715,41 @@ export class BattleFormationScene extends Scene {
     }
   }
 
-  goBack() {
-    // Return to world map or previous scene
-    this.game.scenes.switchTo('worldMap');
+  /**
+   * Add CSS styles for animated title
+   */
+  addTitleStyles() {
+    if (document.getElementById('battle-title-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'battle-title-styles';
+    style.textContent = `
+      /* Animated gradient title */
+      .battle-title-animated {
+        background: linear-gradient(
+          90deg,
+          #ffd700 0%,
+          #ff6b35 25%,
+          #ffd700 50%,
+          #ff6b35 75%,
+          #ffd700 100%
+        );
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: shimmer-gold 3s linear infinite;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      @keyframes shimmer-gold {
+        0% { background-position: 0% center; }
+        100% { background-position: 200% center; }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   getClassColor(className) {
