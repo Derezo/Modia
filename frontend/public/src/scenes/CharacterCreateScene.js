@@ -15,18 +15,26 @@ const CLASSES = [
   { id: 'chemist', name: 'Chemist', emoji: '⚗️', desc: 'Support/Healer, balanced' }
 ];
 
+const GENDERS = [
+  { id: 'male', name: 'Male', emoji: '♂️' },
+  { id: 'female', name: 'Female', emoji: '♀️' },
+  { id: 'other', name: 'Other', emoji: '⚧️' }
+];
+
 export class CharacterCreateScene extends Scene {
   constructor(game) {
     super(game);
     this.uiElement = null;
     this.selectedRace = null;
     this.selectedClass = null;
+    this.selectedGender = null;
     this.loading = false;
   }
 
   enter() {
     this.selectedRace = null;
     this.selectedClass = null;
+    this.selectedGender = null;
     this.loading = false;
     this.createUI();
   }
@@ -104,6 +112,42 @@ export class CharacterCreateScene extends Scene {
           <div id="class-desc" style="font-size: 12px; color: #8a8aaa; margin-top: 8px; min-height: 18px;"></div>
         </div>
 
+        <div class="form-group" style="display: flex; gap: 16px; align-items: flex-start;">
+          <div style="flex: 1;">
+            <label>Gender</label>
+            <div id="gender-select" style="display: flex; gap: 8px;">
+              ${GENDERS.map(gender => `
+                <div class="gender-option" data-gender="${gender.id}" style="
+                  flex: 1;
+                  padding: 12px 8px;
+                  background: #0f0f1a;
+                  border: 2px solid #4a4a6a;
+                  border-radius: 4px;
+                  text-align: center;
+                  cursor: pointer;
+                  transition: all 0.2s;
+                ">
+                  <div style="font-size: 20px;">${gender.emoji}</div>
+                  <div style="font-size: 11px; margin-top: 4px;">${gender.name}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          <div id="portrait-preview" style="
+            width: 80px;
+            height: 80px;
+            background: #0f0f1a;
+            border: 2px solid #4a4a6a;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+          ">
+            <span style="color: #4a4a6a; font-size: 11px; text-align: center;">Select all<br>options</span>
+          </div>
+        </div>
+
         <div style="display: flex; gap: 8px; margin-top: 16px;">
           <button class="btn btn-secondary" id="back-btn">Back</button>
           <button class="btn btn-primary" id="create-btn" style="flex: 1;" disabled>Create Character</button>
@@ -127,6 +171,14 @@ export class CharacterCreateScene extends Scene {
       option.addEventListener('click', () => {
         this.selectedClass = option.dataset.class;
         this.updateClassSelection();
+      });
+    });
+
+    // Gender selection
+    container.querySelectorAll('.gender-option').forEach(option => {
+      option.addEventListener('click', () => {
+        this.selectedGender = option.dataset.gender;
+        this.updateGenderSelection();
       });
     });
 
@@ -161,6 +213,7 @@ export class CharacterCreateScene extends Scene {
 
     const race = RACES.find(r => r.id === this.selectedRace);
     document.getElementById('race-desc').textContent = race ? race.desc : '';
+    this.updatePortraitPreview();
     this.updateCreateButton();
   }
 
@@ -177,7 +230,44 @@ export class CharacterCreateScene extends Scene {
 
     const cls = CLASSES.find(c => c.id === this.selectedClass);
     document.getElementById('class-desc').textContent = cls ? cls.desc : '';
+    this.updatePortraitPreview();
     this.updateCreateButton();
+  }
+
+  updateGenderSelection() {
+    this.uiElement.querySelectorAll('.gender-option').forEach(option => {
+      if (option.dataset.gender === this.selectedGender) {
+        option.style.borderColor = '#ffd700';
+        option.style.background = '#1e1e3f';
+      } else {
+        option.style.borderColor = '#4a4a6a';
+        option.style.background = '#0f0f1a';
+      }
+    });
+
+    this.updatePortraitPreview();
+    this.updateCreateButton();
+  }
+
+  updatePortraitPreview() {
+    const previewEl = document.getElementById('portrait-preview');
+    if (!previewEl) return;
+
+    if (this.selectedRace && this.selectedClass && this.selectedGender) {
+      const portraitUrl = `/assets/sprites/portraits/${this.selectedRace}_${this.selectedGender}_${this.selectedClass}.png`;
+      previewEl.innerHTML = `
+        <img
+          src="${portraitUrl}"
+          alt="Portrait Preview"
+          style="width: 64px; height: 64px; image-rendering: pixelated;"
+          onerror="this.parentElement.innerHTML = '<span style=\\'color: #8a8aaa; font-size: 10px; text-align: center;\\'>Portrait<br>pending</span>'"
+        >
+      `;
+      previewEl.style.borderColor = '#ffd700';
+    } else {
+      previewEl.innerHTML = '<span style="color: #4a4a6a; font-size: 11px; text-align: center;">Select all<br>options</span>';
+      previewEl.style.borderColor = '#4a4a6a';
+    }
   }
 
   updateCreateButton() {
@@ -186,19 +276,19 @@ export class CharacterCreateScene extends Scene {
     // Safety check - elements may not exist if scene was exited
     if (!nameEl || !btn) return;
     const name = nameEl.value.trim();
-    btn.disabled = !name || name.length < 2 || !this.selectedRace || !this.selectedClass || this.loading;
+    btn.disabled = !name || name.length < 2 || !this.selectedRace || !this.selectedClass || !this.selectedGender || this.loading;
   }
 
   async handleCreate() {
     const name = document.getElementById('char-name').value.trim();
 
-    if (!name || !this.selectedRace || !this.selectedClass) return;
+    if (!name || !this.selectedRace || !this.selectedClass || !this.selectedGender) return;
 
     this.loading = true;
     this.updateCreateButton();
 
     try {
-      const result = await this.game.api.createCharacter(name, this.selectedRace, this.selectedClass);
+      const result = await this.game.api.createCharacter(name, this.selectedRace, this.selectedClass, this.selectedGender);
 
       // Update characters list
       const characters = this.game.state.get('characters') || [];

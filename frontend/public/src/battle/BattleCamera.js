@@ -269,4 +269,75 @@ export class BattleCamera {
       this.y = this.targetY;
     }
   }
+
+  /**
+   * Start a smooth turn transition to focus on a new active unit
+   * @param {number} targetX - World X coordinate to pan to
+   * @param {number} targetY - World Y coordinate to pan to
+   * @param {Function} onComplete - Optional callback when pan completes
+   * @param {number} duration - Transition duration in ms (default 800)
+   */
+  startTurnTransition(targetX, targetY, onComplete = null, duration = 800) {
+    this.turnTransitionActive = true;
+    this.turnTransitionStart = { x: this.x, y: this.y };
+    this.turnTransitionTarget = { x: targetX, y: targetY };
+    this.turnTransitionTimer = 0;
+    this.turnTransitionDuration = duration;
+    this.onTurnTransitionComplete = onComplete;
+    this.mode = 'follow'; // Ensure follow mode
+  }
+
+  /**
+   * Update turn transition animation (called from update)
+   * @param {number} deltaTime - Time since last frame (seconds)
+   * @returns {boolean} True if transition is active
+   */
+  updateTurnTransition(deltaTime) {
+    if (!this.turnTransitionActive) return false;
+
+    this.turnTransitionTimer += deltaTime * 1000;
+    const progress = Math.min(1, this.turnTransitionTimer / this.turnTransitionDuration);
+
+    // Ease-out cubic for smooth deceleration
+    const easedProgress = this.easeOutCubic(progress);
+
+    // Interpolate camera position
+    const startX = this.turnTransitionStart.x;
+    const startY = this.turnTransitionStart.y;
+    const endX = this.turnTransitionTarget.x;
+    const endY = this.turnTransitionTarget.y;
+
+    this.targetX = startX + (endX - startX) * easedProgress;
+    this.targetY = startY + (endY - startY) * easedProgress;
+    this.clampTarget();
+
+    // Also update actual position for smoother feel during transition
+    this.x = this.targetX;
+    this.y = this.targetY;
+
+    // Check completion
+    if (progress >= 1) {
+      this.turnTransitionActive = false;
+      if (this.onTurnTransitionComplete) {
+        this.onTurnTransitionComplete();
+        this.onTurnTransitionComplete = null;
+      }
+    }
+
+    return this.turnTransitionActive;
+  }
+
+  /**
+   * Check if a turn transition is currently active
+   */
+  isTurnTransitioning() {
+    return this.turnTransitionActive || false;
+  }
+
+  /**
+   * Ease-out cubic easing function
+   */
+  easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+  }
 }

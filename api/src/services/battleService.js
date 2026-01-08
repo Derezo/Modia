@@ -293,6 +293,186 @@ function getAttackRange(unit) {
   return 1;
 }
 
+// ==================== AoE (Area of Effect) System ====================
+
+/**
+ * Get all tiles affected by an AoE skill
+ * @param {number} targetX - Center tile X
+ * @param {number} targetY - Center tile Y
+ * @param {number} radius - AoE radius (Manhattan distance)
+ * @param {string} pattern - AoE pattern: 'circle', 'cross', 'line'
+ * @param {number} direction - Direction for directional patterns (0-7)
+ * @returns {Array} Array of { x, y, isCenter } objects
+ */
+function getAoETiles(targetX, targetY, radius = 1, pattern = 'circle', direction = 0) {
+  const tiles = [];
+
+  switch (pattern) {
+    case 'cross':
+      // Center + 4 cardinal directions
+      tiles.push({ x: targetX, y: targetY, isCenter: true });
+      for (let i = 1; i <= radius; i++) {
+        // North, South, East, West
+        tiles.push({ x: targetX, y: targetY - i, isCenter: false });
+        tiles.push({ x: targetX, y: targetY + i, isCenter: false });
+        tiles.push({ x: targetX - i, y: targetY, isCenter: false });
+        tiles.push({ x: targetX + i, y: targetY, isCenter: false });
+      }
+      break;
+
+    case 'line':
+      // Line in specified direction
+      const dirOffsets = [
+        { dx: 0, dy: -1 },  // N
+        { dx: 1, dy: -1 },  // NE
+        { dx: 1, dy: 0 },   // E
+        { dx: 1, dy: 1 },   // SE
+        { dx: 0, dy: 1 },   // S
+        { dx: -1, dy: 1 },  // SW
+        { dx: -1, dy: 0 },  // W
+        { dx: -1, dy: -1 }  // NW
+      ];
+      const offset = dirOffsets[direction % 8];
+      for (let i = 0; i <= radius; i++) {
+        const x = targetX + offset.dx * i;
+        const y = targetY + offset.dy * i;
+        tiles.push({ x, y, isCenter: i === 0 });
+      }
+      break;
+
+    case 'circle':
+    default:
+      // All tiles within Manhattan distance
+      for (let dx = -radius; dx <= radius; dx++) {
+        for (let dy = -radius; dy <= radius; dy++) {
+          const distance = Math.abs(dx) + Math.abs(dy);
+          if (distance <= radius) {
+            tiles.push({
+              x: targetX + dx,
+              y: targetY + dy,
+              isCenter: dx === 0 && dy === 0
+            });
+          }
+        }
+      }
+      break;
+  }
+
+  return tiles;
+}
+
+/**
+ * Get all units in the AoE area from a list of units
+ * @param {Array} units - Array of all units in battle
+ * @param {number} targetX - Center tile X
+ * @param {number} targetY - Center tile Y
+ * @param {number} radius - AoE radius
+ * @param {string} pattern - AoE pattern
+ * @returns {Array} Array of { unit, isCenter } for units in the AoE
+ */
+function getUnitsInAoE(units, targetX, targetY, radius = 1, pattern = 'circle') {
+  const aoeTiles = getAoETiles(targetX, targetY, radius, pattern);
+  const affectedUnits = [];
+
+  for (const tile of aoeTiles) {
+    const unit = units.find(u => u.tileX === tile.x && u.tileY === tile.y && u.hp > 0);
+    if (unit) {
+      affectedUnits.push({
+        unit,
+        isCenter: tile.isCenter
+      });
+    }
+  }
+
+  return affectedUnits;
+}
+
+// ==================== Charge Time System ====================
+
+/**
+ * Calculate charge time for an MP skill
+ * Base CT = MP cost * 2, reduced by agility, intelligence, and skill level
+ * @param {Object} unit - The unit using the skill
+ * @param {Object} skill - The skill being used
+ * @returns {number} Charge time in CT ticks (10-50)
+ */
+function calculateChargeTime(unit, skill) {
+  if (!skill.mpCost || skill.mpCost <= 0) return 0;
+
+  const baseCT = skill.mpCost * 2;
+  const agilityBonus = Math.floor((unit.agility || 10) / 10);
+  const intBonus = Math.floor((unit.intelligence || 10) / 10);
+  const levelBonus = ((skill.level || 1) - 1) * 2;
+
+  const chargeTime = baseCT - agilityBonus - intBonus - levelBonus;
+
+  // Clamp between 10 and 50
+  return Math.max(10, Math.min(50, chargeTime));
+}
+
+/**
+ * Check if a charging skill is interrupted when the unit takes damage
+ * @returns {boolean} True if the skill is interrupted (10% chance)
+ */
+function checkChargeInterrupt() {
+  return Math.random() < 0.10;
+}
+
+/**
+ * Get damage multiplier for physical damage against a charging unit
+ * @returns {number} Damage multiplier (1.25 = 25% extra damage)
+ */
+function getChargingDamageMultiplier() {
+  return 1.25;
+}
+
+/**
+ * Start charging a skill for a unit
+ * @param {Object} unit - The unit starting to charge
+ * @param {string} skillId - The skill being charged
+ * @param {Object} targetTile - The target tile for the skill
+ * @param {number} chargeTime - The charge time in CT ticks
+ */
+function startCharging(unit, skillId, targetTile, chargeTime) {
+  unit.isCharging = true;
+  unit.chargingSkill = {
+    skillId,
+    targetTile,
+    chargeTime,
+    chargeRemaining: chargeTime
+  };
+  unit.chargeStartCT = unit.ct;
+}
+
+/**
+ * Cancel a charging skill (due to interrupt or death)
+ * @param {Object} unit - The unit whose charge to cancel
+ */
+function cancelCharging(unit) {
+  unit.isCharging = false;
+  unit.chargingSkill = null;
+  unit.chargeStartCT = null;
+}
+
+/**
+ * Update charge progress when CT advances
+ * Returns true if charge is complete and ready to execute
+ * @param {Object} unit - The charging unit
+ * @param {number} ctAdvanced - Amount of CT advanced
+ * @returns {boolean} True if charge is complete
+ */
+function updateChargeProgress(unit, ctAdvanced) {
+  if (!unit.isCharging || !unit.chargingSkill) return false;
+
+  unit.chargingSkill.chargeRemaining -= ctAdvanced;
+
+  if (unit.chargingSkill.chargeRemaining <= 0) {
+    return true; // Charge complete
+  }
+
+  return false;
+}
+
 // ==================== CT-Based Turn System ====================
 
 const CT_THRESHOLD = 100;
@@ -456,6 +636,16 @@ module.exports = {
   calculateGoldReward,
   getMovementRange,
   getAttackRange,
+  // AoE system
+  getAoETiles,
+  getUnitsInAoE,
+  // Charge time system
+  calculateChargeTime,
+  checkChargeInterrupt,
+  getChargingDamageMultiplier,
+  startCharging,
+  cancelCharging,
+  updateChargeProgress,
   // CT-based turn system
   CT_THRESHOLD,
   initializeCT,

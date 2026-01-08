@@ -24,6 +24,13 @@ export const ADVANCED_CLASSES = {
   ALCHEMIST: 'alchemist'
 };
 
+// Character genders for portrait generation
+export const GENDERS = {
+  MALE: 'male',
+  FEMALE: 'female',
+  OTHER: 'other'
+};
+
 // Advancement paths: base class -> advanced class
 export const CLASS_ADVANCEMENT = {
   warrior: 'berserker',

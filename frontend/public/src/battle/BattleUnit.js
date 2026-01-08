@@ -67,6 +67,10 @@ export class BattleUnit {
     this.isSelected = false;
     this.isTargeted = false;
 
+    // Charging state
+    this.isCharging = unitData.isCharging || false;
+    this.chargingSkill = unitData.chargingSkill || null;
+
     // Reference to grid for coordinate conversion
     this.grid = grid;
 
@@ -589,6 +593,11 @@ export class BattleUnit {
     // Draw HP bar
     this.renderHPBar(ctx, drawX, renderY - unitRadius - 8);
 
+    // Draw charging bar if charging
+    if (this.isCharging && this.chargingSkill) {
+      this.renderChargingBar(ctx, drawX, renderY - unitRadius - 16);
+    }
+
     // Draw status effect icons
     if (this.statusEffects.length > 0) {
       this.renderStatusEffects(ctx, drawX, renderY + unitRadius + 8);
@@ -627,6 +636,40 @@ export class BattleUnit {
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 1;
     ctx.strokeRect(x - width / 2, y, width, height);
+  }
+
+  /**
+   * Render charging bar above HP bar
+   */
+  renderChargingBar(ctx, x, y) {
+    if (!this.chargingSkill) return;
+
+    const width = 32;
+    const height = 4;
+    const chargeProgress = 1 - (this.chargingSkill.chargeRemaining / this.chargingSkill.chargeTime);
+    const clampedProgress = Math.max(0, Math.min(1, chargeProgress));
+
+    // Background
+    ctx.fillStyle = '#1a1a3a';
+    ctx.fillRect(x - width / 2, y, width, height);
+
+    // Charge fill (purple gradient effect)
+    const gradient = ctx.createLinearGradient(x - width / 2, y, x + width / 2, y);
+    gradient.addColorStop(0, '#7c3aed');
+    gradient.addColorStop(1, '#a855f7');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x - width / 2, y, width * clampedProgress, height);
+
+    // Border
+    ctx.strokeStyle = '#9333ea';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x - width / 2, y, width, height);
+
+    // "Charging..." text
+    ctx.fillStyle = '#d8b4fe';
+    ctx.font = '8px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Charging...', x, y - 2);
   }
 
   /**
