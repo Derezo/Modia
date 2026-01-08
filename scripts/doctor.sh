@@ -6,8 +6,6 @@
 # Exit code 0 = all checks pass, 1 = one or more checks failed.
 #
 
-set -e
-
 # Colors and symbols
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -16,6 +14,7 @@ NC='\033[0m' # No Color
 CHECK="${GREEN}✓${NC}"
 CROSS="${RED}✗${NC}"
 ARROW="${YELLOW}→${NC}"
+WARN="${YELLOW}!${NC}"
 
 # Track failures
 FAILED=0
@@ -52,7 +51,7 @@ check_node() {
     NODE_VERSION=$(node -v | sed 's/v//')
     NODE_MAJOR=$(echo "$NODE_VERSION" | cut -d. -f1)
 
-    if [ "$NODE_MAJOR" -ge 18 ]; then
+    if [[ "$NODE_MAJOR" =~ ^[0-9]+$ ]] && [ "$NODE_MAJOR" -ge 18 ]; then
         pass "Node.js v${NODE_VERSION} (>=18 required)"
     else
         fail "Node.js v${NODE_VERSION} is too old (>=18 required)" "Install Node 18+ via nvm: nvm install 18 && nvm use 18"
@@ -161,7 +160,7 @@ check_db_connection() {
     fi
 
     # Can't check without tools
-    echo -e "${YELLOW}!${NC} Cannot verify database connection (pg_isready/nc not available)"
+    echo -e "${WARN} Cannot verify database connection (pg_isready/nc not available)"
 }
 
 # =============================================================================
@@ -189,7 +188,7 @@ check_env_vars() {
     source <(grep -v '^#' .env | grep -v '^$' | sed 's/\r$//')
     set +a
 
-    REQUIRED_VARS="DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD JWT_SECRET"
+    REQUIRED_VARS="DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD JWT_SECRET WORLD_SEED"
     MISSING_VARS=""
 
     for var in $REQUIRED_VARS; do
@@ -266,7 +265,7 @@ check_port() {
         return
     fi
 
-    echo -e "${YELLOW}!${NC} Cannot check port ${PORT} (no lsof/ss/netstat/nc available)"
+    echo -e "${WARN} Cannot check port ${PORT} (no lsof/ss/netstat/nc available)"
 }
 
 # =============================================================================
