@@ -35,10 +35,12 @@
     "validate:enemy": "node api/src/scripts/validate-prompts.js --type=enemy",
     "validate:character": "node api/src/scripts/validate-prompts.js --type=character",
     "doctor": "bash scripts/doctor.sh",
-    "dev:setup": "bash scripts/dev-setup.sh"
+    "dev:setup": "bash scripts/dev-setup.sh",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "husky": "^9.1.7"
   },
   "engines": {
     "node": ">=18.0.0"
