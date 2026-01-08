@@ -625,7 +625,7 @@ Implement real-time multiplayer features including chat, trading, and PvP.
 - [x] Authentication via JWT
 - [x] Room/channel system
 - [x] Heartbeat/keepalive
-- [ ] Reconnection handling
+- [x] Reconnection handling (documented in BATTLE_RECONNECTION.md)
 - [ ] Cross-instance messaging (future)
 
 #### 6.2.2 Tavern Chat
@@ -815,6 +815,10 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 - [x] ECONOMY_SYSTEM.md (v2.0)
 - [x] SKILL_TREES.md (v1.0)
 - [x] ENEMY_SYSTEM.md (v1.0)
+- [x] BATTLE_TURN_SYSTEM.md (v1.0) - CT system, turn state machine, WebSocket protocol
+- [x] BATTLE_MESSAGING_PROTOCOL.md (v1.0) - Hybrid HTTP/WebSocket protocol, state sync, timing constants
+- [x] BATTLE_RECONNECTION.md (v1.0) - Reconnection flow, state persistence, anti-abuse
+- [x] BATTLE_ANIMATIONS.md (v1.0) - Animation system, intent visualization, timing constants
 - [ ] README.md (setup guide)
 - [ ] CONTRIBUTING.md
 - [ ] CHANGELOG.md

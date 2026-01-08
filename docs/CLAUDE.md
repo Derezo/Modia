@@ -18,6 +18,9 @@ This directory (`docs/`) contains **pure markdown documentation only** — no co
 - **ECONOMY_SYSTEM.md** — NPC shops, player marketplace, gold flow, pricing systems
 - **SKILL_TREES.md** — Skill definitions for 8 MVP guilds (4 base + 4 advanced)
 - **ENEMY_SYSTEM.md** — Enemy templates, AI archetypes, level scaling, drop tables
+- **BATTLE_TURN_SYSTEM.md** — CT-based turn order, two-action system, turn state machine
+- **BATTLE_MESSAGING_PROTOCOL.md** — Hybrid HTTP/WebSocket protocol, message specs, state sync
+- **BATTLE_ANIMATIONS.md** — Visual feedback system, intent visualization, animation timing
 
 ## Parent Project Context
 

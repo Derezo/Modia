@@ -52,6 +52,12 @@ export class BattleIntro {
     this.phase = 'title_hold';
     this.timer = 0;
 
+    // Store starting camera position BEFORE calculating waypoints
+    this.cameraStartPos = {
+      x: this.scene.camera.targetX,
+      y: this.scene.camera.targetY
+    };
+
     // Build DOM elements for cards
     this.createDOMElements();
 
@@ -65,12 +71,6 @@ export class BattleIntro {
     this.totalDuration = this.titleFadeInDuration + this.titleHoldDuration +
                          this.cameraPanDuration + this.postPanPauseDuration +
                          this.cardsFadeOutDuration;
-
-    // Store starting camera position
-    this.cameraStartPos = {
-      x: this.scene.camera.targetX,
-      y: this.scene.camera.targetY
-    };
   }
 
   /**
@@ -214,8 +214,13 @@ export class BattleIntro {
     const players = state.units.filter(u => u.type === 'player');
     const activeUnit = state.units.find(u => u.id === state.activeUnitId);
 
-    // Build waypoints: each enemy -> player lead -> active unit
+    // Build waypoints: start position -> each enemy -> player lead -> active unit
     this.cameraWaypoints = [];
+
+    // Add starting camera position for smooth transition
+    if (this.cameraStartPos) {
+      this.cameraWaypoints.push({ x: this.cameraStartPos.x, y: this.cameraStartPos.y });
+    }
 
     // Add each enemy as a waypoint
     for (const enemy of enemies) {

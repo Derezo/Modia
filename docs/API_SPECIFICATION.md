@@ -893,7 +893,7 @@ GET /api/battle/current
 
 ### 6.3 Submit Action
 
-Submit a battle action for the active unit.
+Submit a battle action for the active unit. The HTTP response provides immediate acknowledgment, while detailed action results are broadcast to all participants via WebSocket.
 
 ```
 POST /api/battle/action
@@ -915,33 +915,18 @@ POST /api/battle/action
 **Response (200 OK):**
 ```json
 {
-  "state": { ... },
-  "actionResult": {
-    "moved": true,
-    "damage": 0,
-    "targetId": null
-  },
-  "battleStatus": "active"
+  "success": true,
+  "actionId": "act_abc123",
+  "message": "Action queued, results will be broadcast via WebSocket"
 }
 ```
 
-**Battle Status Values:**
+> **Note:** Action results including damage calculations, status effects, unit state changes, and battle outcome are delivered via WebSocket events (`battle:action_result`, `battle:state_update`, `battle:end`). See Section 7.6 and 7.8 for WebSocket event schemas.
+
+**Battle Status Values (via WebSocket):**
 - `active` - Battle continues
 - `victory` - All enemies defeated
 - `defeat` - All player units defeated
-
-**Response on Victory:**
-```json
-{
-  "state": { ... },
-  "actionResult": { ... },
-  "battleStatus": "victory",
-  "rewards": {
-    "gold": 75,
-    "experience": 125
-  }
-}
-```
 
 **Errors:**
 | Code | Message |
@@ -978,6 +963,44 @@ GET /api/battle/rewards/:battleId
 | Code | Message |
 |------|---------|
 | 404 | Battle not found or not a victory |
+
+---
+
+### 6.5 Rejoin Battle
+
+Rejoin an active battle after disconnection.
+
+```
+GET /api/battle/:battleId/rejoin
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "battleId": 123,
+  "canRejoin": true,
+  "state": {
+    "turn": 5,
+    "activeUnitId": 3,
+    "units": [...],
+    "log": [...]
+  },
+  "yourUnits": [1, 2, 3],
+  "currentTurnUnit": 5,
+  "sequence": 47,
+  "gracePeriodRemaining": 25000
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 404 | Battle not found |
+| 400 | Battle has ended |
+| 400 | Grace period expired |
+| 403 | Not a participant in this battle |
 
 ---
 
@@ -1264,6 +1287,103 @@ Production:    wss://modia.example.com/ws
   "payload": {
     "timeout": 120,
     "autoForfeitIn": 60
+  }
+}
+```
+
+### 7.8 Battle Turn Events
+
+**Turn Start (Server → Client):**
+```json
+{
+  "type": "battle:turn_start",
+  "payload": {
+    "battleId": 123,
+    "unitId": 5,
+    "unitType": "enemy",
+    "unitName": "Forest Goblin",
+    "turnPredictions": [5, 1, 3, 2]
+  }
+}
+```
+
+**Intent Highlight (Server → Client):**
+```json
+{
+  "type": "battle:intent_highlight",
+  "payload": {
+    "battleId": 123,
+    "unitId": 5,
+    "highlightType": "movement_range",
+    "tiles": [[2,3], [2,4], [3,3], [3,4]],
+    "duration": 500
+  }
+}
+```
+
+**Your Turn (Server → Client, player only):**
+```json
+{
+  "type": "battle:your_turn",
+  "payload": {
+    "battleId": 123,
+    "unitId": 1,
+    "state": {...},
+    "availableActions": ["move", "attack", "skill", "item", "wait"],
+    "timeout": 60000
+  }
+}
+```
+
+**Player Action (Client → Server):**
+```json
+{
+  "type": "battle:player_action",
+  "payload": {
+    "battleId": 123,
+    "actionType": "move",
+    "unitId": 1,
+    "targetTile": {"x": 3, "y": 4}
+  }
+}
+```
+
+**State Sync (Server → Client):**
+```json
+{
+  "type": "battle:state_sync",
+  "payload": {
+    "battleId": 123,
+    "state": {...},
+    "sequence": 47,
+    "reason": "reconnection"
+  }
+}
+```
+
+### 7.9 Battle Connection Events
+
+**Player Disconnected:**
+```json
+{
+  "type": "battle:player_disconnected",
+  "payload": {
+    "battleId": 123,
+    "playerId": 5,
+    "playerName": "Hero123",
+    "gracePeriod": 30000
+  }
+}
+```
+
+**Player Reconnected:**
+```json
+{
+  "type": "battle:player_reconnected",
+  "payload": {
+    "battleId": 123,
+    "playerId": 5,
+    "playerName": "Hero123"
   }
 }
 ```
@@ -2027,3 +2147,4 @@ GET /api/marketplace/history/:itemTemplateId
 |---------|------|--------|---------|
 | 1.0 | Jan 2026 | - | Initial document |
 | 2.0 | Jan 2026 | - | Removed flee endpoint; added skill, guild, inventory, shop, marketplace endpoints; added battle and PvP WebSocket events |
+| 2.1 | Jan 2026 | - | Added battle rejoin endpoint (6.5); updated submit action to show async WebSocket delivery (6.3); added battle turn events (7.8) and battle connection events (7.9) |

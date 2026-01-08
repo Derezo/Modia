@@ -106,7 +106,9 @@ api/
     │   ├── authService.js       # Authentication business logic
     │   ├── characterService.js  # Character management logic
     │   ├── worldService.js      # World generation and navigation
-    │   └── battleService.js     # Combat system logic
+    │   ├── battleService.js     # Combat system logic
+    │   ├── battleTurnManager.js # Server-side turn loop manager
+    │   └── battleReconnection.js # Reconnection handling
     │
     ├── websocket/
     │   └── index.js             # WebSocket server and handlers
@@ -229,18 +231,71 @@ Token Refresh:
 └─────────────────────────────────────────────────────────────────┘
 
 Message Types:
-┌──────────────────┬─────────────────────────────────────────────┐
-│ Type             │ Description                                  │
-├──────────────────┼─────────────────────────────────────────────┤
-│ auth             │ Authenticate WebSocket with JWT              │
-│ join_room        │ Subscribe to room updates                    │
-│ leave_room       │ Unsubscribe from room                        │
-│ chat_message     │ Send/receive chat messages                   │
-│ coliseum_*       │ PvP matchmaking and battle events            │
-│ marketplace_*    │ Trading listing updates                      │
-│ leaderboard_*    │ Ranking changes                              │
-└──────────────────┴─────────────────────────────────────────────┘
+┌────────────────────────────┬─────────────────────────────────────────────┐
+│ Type                       │ Description                                  │
+├────────────────────────────┼─────────────────────────────────────────────┤
+│ auth                       │ Authenticate WebSocket with JWT              │
+│ join_room                  │ Subscribe to room updates                    │
+│ leave_room                 │ Unsubscribe from room                        │
+│ chat_message               │ Send/receive chat messages                   │
+│ coliseum_*                 │ PvP matchmaking and battle events            │
+│ marketplace_*              │ Trading listing updates                      │
+│ leaderboard_*              │ Ranking changes                              │
+├────────────────────────────┼─────────────────────────────────────────────┤
+│ battle:turn_start          │ Broadcast when any unit's turn begins        │
+│ battle:intent_highlight    │ Enemy movement/attack range preview          │
+│ battle:action_result       │ Results of battle actions for animation      │
+│ battle:turn_end            │ Turn complete, announce next unit            │
+│ battle:your_turn           │ Sent to controlling player when turn starts  │
+│ battle:player_disconnected │ Player disconnected from battle              │
+│ battle:player_reconnected  │ Player reconnected to battle                 │
+│ battle:state_sync          │ Full battle state synchronization            │
+│ battle:end                 │ Battle complete with rewards                 │
+└────────────────────────────┴─────────────────────────────────────────────┘
 ```
+
+### 2.5 Battle Turn Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   Battle Turn Manager                            │
+│                                                                  │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐      │
+│  │   CT Loop    │    │  Turn State  │    │  Broadcast   │      │
+│  │  accumulate  │───▶│   Machine    │───▶│   Events     │      │
+│  │  until 100   │    │              │    │              │      │
+│  └──────────────┘    └──────────────┘    └──────────────┘      │
+│                             │                                   │
+│                             ▼                                   │
+│  ┌────────────────────────────────────────────────────────────┐│
+│  │  Player Turn: Wait for HTTP POST or WS action              ││
+│  │  Enemy Turn: Calculate AI, broadcast intent, execute       ││
+│  └────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Components:**
+
+| File | Purpose |
+|------|---------|
+| `battleTurnManager.js` | Server-side async turn loop that accumulates CT, determines turn order, and coordinates turn execution |
+| `battleWebsocket.js` | Broadcast functions for all battle events (turn_start, action_result, state_sync, etc.) |
+| `battleReconnection.js` | Handle player disconnect/reconnect during active battles, preserving battle state |
+
+**Turn Flow:**
+
+1. **CT Accumulation**: Each unit accumulates CT based on agility until one reaches 100
+2. **Turn Start**: Server broadcasts `battle:turn_start` to all clients in battle room
+3. **Player Turn**: Server sends `battle:your_turn` to controlling player, waits for HTTP POST action or WebSocket action
+4. **Enemy Turn**: Server calculates AI decision, broadcasts `battle:intent_highlight` for visual preview, then executes action
+5. **Action Execution**: Server validates action, applies effects, broadcasts `battle:action_result`
+6. **Turn End**: Server broadcasts `battle:turn_end`, advances to next unit
+
+**Reconnection Handling:**
+
+- On disconnect: Server broadcasts `battle:player_disconnected`, battle continues with AI controlling disconnected player's units
+- On reconnect: Server sends `battle:state_sync` with full battle state, broadcasts `battle:player_reconnected`
+- Timeout: After configurable period (default 5 minutes), disconnected player forfeits
 
 ---
 
@@ -1120,3 +1175,4 @@ If database becomes bottleneck:
 |---------|------|--------|---------|
 | 1.0 | Jan 2026 | - | Initial document |
 | 2.0 | Jan 2026 | - | Added character_xp, character_guilds, character_skills, enemy_templates tables; removed experience column; updated max level to 100; removed 'fled' status |
+| 2.1 | Jan 2026 | - | Added battle WebSocket events (turn_start, intent_highlight, action_result, turn_end, your_turn, player_disconnected, player_reconnected, state_sync, end); added Section 2.5 Battle Turn Architecture; added battleTurnManager.js and battleReconnection.js to services directory |

@@ -1076,6 +1076,13 @@ export class BattleScene extends Scene {
         const enemyUnit = this.units.get(enemyAction.unitId);
         if (!enemyUnit) continue;
 
+        // Pan camera to the acting enemy
+        const targetPos = this.grid.gridToScreenWorld(enemyUnit.gridX, enemyUnit.gridY);
+        console.log(`[Camera] Panning to enemy: ${enemyUnit.name} at (${targetPos.x}, ${targetPos.y})`);
+        await new Promise(resolve => {
+          this.camera.startTurnTransition(targetPos.x, targetPos.y, resolve);
+        });
+
         // Highlight the acting enemy
         this.selectedUnit = enemyUnit;
 
@@ -1122,9 +1129,21 @@ export class BattleScene extends Scene {
         // Deselect enemy
         this.selectedUnit = null;
       }
+
+      // After all enemy actions, pan camera to the next active unit (player)
+      // This ensures smooth transition back to player's turn
+      const nextActiveUnit = state.units.find(u => u.id === state.activeUnitId);
+      if (nextActiveUnit) {
+        const playerPos = this.grid.gridToScreenWorld(nextActiveUnit.tileX, nextActiveUnit.tileY);
+        console.log(`[Camera] Panning back to player: ${nextActiveUnit.name}`);
+        await new Promise(resolve => {
+          this.camera.startTurnTransition(playerPos.x, playerPos.y, resolve);
+        });
+      }
     }
 
     // Update battle state from server (sync all units)
+    console.log('[Camera] processActionResult - old activeUnitId:', this.battleState?.activeUnitId, 'new activeUnitId:', state?.activeUnitId);
     this.battleState = state;
     this.syncUnitsWithState(state.units);
 
@@ -1151,6 +1170,7 @@ export class BattleScene extends Scene {
       this.turnPhase = 'ready';
 
       // Update UI for next turn
+      console.log('[Camera] Turn complete, calling updateUI()');
       this.updateUI();
     }
   }
@@ -1350,11 +1370,14 @@ export class BattleScene extends Scene {
   updateUI() {
     if (!this.ui || !this.battleState) return;
 
+    console.log('[Camera] updateUI called - battleState.activeUnitId:', this.battleState.activeUnitId, 'lastActiveUnitId:', this.lastActiveUnitId);
+
     // Update turn order
     this.ui.updateTurnOrder(this.battleState);
 
     // Update active unit
     const activeUnit = this.getActiveUnit();
+    console.log('[Camera] activeUnit:', activeUnit?.id, activeUnit?.name, '| lastActiveUnitId:', this.lastActiveUnitId);
     if (activeUnit) {
       this.ui.updateActiveUnit(activeUnit);
       activeUnit.isSelected = true;
@@ -1364,6 +1387,7 @@ export class BattleScene extends Scene {
 
       // Check if active unit changed - trigger camera transition
       if (this.lastActiveUnitId !== activeUnit.id) {
+        console.log(`[Camera] Turn change detected: ${this.lastActiveUnitId} -> ${activeUnit.id}`);
         const previousUnitId = this.lastActiveUnitId;
         this.lastActiveUnitId = activeUnit.id;
 
@@ -1371,6 +1395,7 @@ export class BattleScene extends Scene {
         if (previousUnitId !== null) {
           // Get target position for camera
           const targetPos = this.grid.gridToScreenWorld(activeUnit.gridX, activeUnit.gridY);
+          console.log(`[Camera] Starting transition to (${targetPos.x}, ${targetPos.y})`);
 
           // Start camera transition to new active unit
           this.camera.startTurnTransition(targetPos.x, targetPos.y, () => {

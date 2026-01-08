@@ -172,7 +172,7 @@ export class BattleFormationScene extends Scene {
 
         <!-- Character Detail Card Container (glass morphism - no panel wrapper) -->
         <div id="character-card-container" style="
-          width: 210px;
+          min-width: 280px;
           display: flex;
           flex-direction: column;
           margin-right: 10px;
