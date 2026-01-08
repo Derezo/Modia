@@ -1,1 +1,1 @@
-./scripts/check-secrets.sh
+$(git rev-parse --show-toplevel)/scripts/check-secrets.sh
