@@ -303,6 +303,106 @@ function getManhattanDistance(x1, y1, x2, y2) {
   return Math.abs(x2 - x1) + Math.abs(y2 - y1);
 }
 
+// ==================== Terrain Cost Pathfinding ====================
+
+/**
+ * Get movement cost for a terrain type
+ * @param {string} terrain - Terrain type (grass, stone, forest, water, etc.)
+ * @returns {number} Movement cost (1-3, or Infinity for impassable)
+ */
+function getTerrainMovementCost(terrain) {
+  const costs = { grass: 1, stone: 1, forest: 2, water: 3 };
+  if (['rock', 'tree', 'lava', 'cliff'].includes(terrain)) {
+    return Infinity; // Impassable
+  }
+  return costs[terrain] || 1;
+}
+
+/**
+ * Calculate minimum movement cost to reach target tile using Dijkstra's algorithm
+ * This matches the frontend pathfinding logic for consistent validation
+ *
+ * @param {number} startX - Starting X position
+ * @param {number} startY - Starting Y position
+ * @param {number} targetX - Target X position
+ * @param {number} targetY - Target Y position
+ * @param {Object} state - Battle state with terrain and units
+ * @param {number} maxCost - Maximum movement cost (movement range)
+ * @returns {number} Path cost to reach target, or Infinity if unreachable
+ */
+function calculatePathCost(startX, startY, targetX, targetY, state, maxCost) {
+  // If no terrain data, fall back to Manhattan distance for backwards compatibility
+  if (!state.terrain) {
+    return getManhattanDistance(startX, startY, targetX, targetY);
+  }
+
+  const mapWidth = state.mapWidth || 32;
+  const mapHeight = state.mapHeight || 32;
+  const costs = new Map();
+  const visited = new Set();
+  const queue = [{ x: startX, y: startY, cost: 0 }];
+
+  costs.set(`${startX},${startY}`, 0);
+
+  while (queue.length > 0) {
+    // Sort by cost (simple priority queue)
+    queue.sort((a, b) => a.cost - b.cost);
+    const current = queue.shift();
+    const currentKey = `${current.x},${current.y}`;
+
+    // Skip if already processed
+    if (visited.has(currentKey)) continue;
+    visited.add(currentKey);
+
+    // Found target - return the cost
+    if (current.x === targetX && current.y === targetY) {
+      return current.cost;
+    }
+
+    // Get 4-directional neighbors
+    const neighbors = [
+      { x: current.x - 1, y: current.y },
+      { x: current.x + 1, y: current.y },
+      { x: current.x, y: current.y - 1 },
+      { x: current.x, y: current.y + 1 }
+    ];
+
+    for (const neighbor of neighbors) {
+      // Check bounds
+      if (neighbor.x < 0 || neighbor.y < 0 ||
+          neighbor.x >= mapWidth || neighbor.y >= mapHeight) continue;
+
+      // Get terrain and cost
+      const terrain = state.terrain?.[neighbor.y]?.[neighbor.x] || 'grass';
+      const terrainCost = getTerrainMovementCost(terrain);
+
+      // Skip impassable terrain
+      if (terrainCost === Infinity) continue;
+
+      // Check for other units (can't move through them, except target tile)
+      const isTargetTile = neighbor.x === targetX && neighbor.y === targetY;
+      if (!isTargetTile) {
+        const occupied = state.units.some(u =>
+          u.hp > 0 && u.tileX === neighbor.x && u.tileY === neighbor.y
+        );
+        if (occupied) continue;
+      }
+
+      const newCost = current.cost + terrainCost;
+      const key = `${neighbor.x},${neighbor.y}`;
+
+      // Only add if within range and (not seen OR found cheaper path)
+      if (newCost <= maxCost && (!costs.has(key) || costs.get(key) > newCost)) {
+        costs.set(key, newCost);
+        queue.push({ x: neighbor.x, y: neighbor.y, cost: newCost });
+      }
+    }
+  }
+
+  // Target not reachable within movement range
+  return Infinity;
+}
+
 /**
  * Get skill definition from SKILL_TREES
  * @param {string} unitClass - The unit's class (warrior, wizard, etc.)
@@ -690,11 +790,16 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
       }
       if (targetTile) {
         // SECURITY: Validate movement range server-side (anti-cheat)
+        // Uses terrain-cost pathfinding to match frontend highlighting
         const movementRange = getMovementRange(unit);
-        const moveDistance = getManhattanDistance(unit.tileX, unit.tileY, targetTile.x, targetTile.y);
+        const moveCost = calculatePathCost(
+          unit.tileX, unit.tileY,
+          targetTile.x, targetTile.y,
+          state, movementRange
+        );
 
-        if (moveDistance > movementRange) {
-          result.error = `Target out of movement range (max: ${movementRange}, attempted: ${moveDistance})`;
+        if (moveCost > movementRange || moveCost === Infinity) {
+          result.error = `Target out of movement range (max: ${movementRange}, cost: ${moveCost === Infinity ? 'unreachable' : moveCost})`;
           return result;
         }
 

@@ -111,7 +111,7 @@ const CLASS_GROWTH = {
 // Movement range by class
 const CLASS_MOVEMENT = {
   [CLASSES.WARRIOR]: 3,
-  [CLASSES.WIZARD]: 2,
+  [CLASSES.WIZARD]: 3,
   [CLASSES.MONK]: 4,
   [CLASSES.CHEMIST]: 3,
   // Advanced classes
