@@ -34,7 +34,8 @@
     "validate:sprites": "node api/src/scripts/validate-prompts.js",
     "validate:enemy": "node api/src/scripts/validate-prompts.js --type=enemy",
     "validate:character": "node api/src/scripts/validate-prompts.js --type=character",
-    "doctor": "bash scripts/doctor.sh"
+    "doctor": "bash scripts/doctor.sh",
+    "dev:setup": "bash scripts/dev-setup.sh"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
