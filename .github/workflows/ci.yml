@@ -5,9 +5,14 @@ on:
     branches: [main, master]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -48,5 +53,13 @@ jobs:
       - name: Start server and run tests
         run: |
           npm run dev:api &
-          sleep 5
+          SERVER_PID=$!
+          # Wait for server to be ready (up to 30 seconds)
+          for i in {1..30}; do
+            curl -sf http://localhost:3000/api/health >/dev/null 2>&1 && break
+            sleep 1
+          done
           npm run test
+          EXIT_CODE=$?
+          kill $SERVER_PID 2>/dev/null || true
+          exit $EXIT_CODE
