@@ -165,6 +165,10 @@ export class ApiClient {
     return this.get(`/battle/rewards/${battleId}`);
   }
 
+  getEncounterPreview(nodeId) {
+    return this.get(`/battle/preview/${nodeId}`);
+  }
+
   // Inventory endpoints
   getInventory(characterId) {
     return this.get(`/inventory/${characterId}`);

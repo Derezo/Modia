@@ -1,4 +1,5 @@
 import { Scene } from './Scene.js';
+import { CharacterCard } from '../components/CharacterCard.js';
 
 /**
  * BattleFormationScene - Pre-battle character placement on isometric grid
@@ -38,6 +39,9 @@ export class BattleFormationScene extends Scene {
     // DOM elements
     this.uiElement = null;
     this.abortController = null;
+
+    // Shared components
+    this.characterCard = null;
   }
 
   async enter(data = {}) {
@@ -47,8 +51,8 @@ export class BattleFormationScene extends Scene {
     // Load battle party (characters in slots 1-5)
     await this.loadBattleParty();
 
-    // Load enemy data
-    this.loadEnemies(data);
+    // Load enemy preview data from server
+    await this.loadEnemies(data);
 
     // Create UI
     this.createUI();
@@ -62,6 +66,10 @@ export class BattleFormationScene extends Scene {
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
+    }
+    if (this.characterCard) {
+      this.characterCard.destroy();
+      this.characterCard = null;
     }
     if (this.uiElement) {
       this.uiElement.remove();
@@ -86,44 +94,20 @@ export class BattleFormationScene extends Scene {
     }
   }
 
-  loadEnemies(data) {
-    // Load enemy data from context
-    if (data.enemies) {
-      this.enemies = data.enemies;
-    } else if (data.node) {
-      // Generate enemy preview based on node type/biome
-      this.enemies = this.generateEnemyPreview(data.node);
+  async loadEnemies(data) {
+    // Fetch possible enemies from server API
+    if (data.node?.id) {
+      try {
+        const preview = await this.game.api.getEncounterPreview(data.node.id);
+        this.enemies = preview.possibleEnemies || [];
+        this.nodeType = preview.nodeType;
+      } catch (err) {
+        console.error('Failed to load encounter preview:', err);
+        this.enemies = [];
+      }
     } else {
       this.enemies = [];
     }
-  }
-
-  generateEnemyPreview(node) {
-    // Generate placeholder enemies based on node
-    const biome = node.node_type || 'forest';
-    const count = Math.floor(Math.random() * 3) + 2; // 2-4 enemies
-    const enemies = [];
-
-    const enemyTypes = {
-      forest: ['Goblin', 'Wolf', 'Bandit', 'Slime'],
-      cave: ['Bat', 'Spider', 'Skeleton', 'Golem'],
-      mountain: ['Orc', 'Troll', 'Harpy', 'Wyvern'],
-      bridge: ['Brigand', 'Troll', 'River Spirit']
-    };
-
-    const types = enemyTypes[biome] || enemyTypes.forest;
-
-    for (let i = 0; i < count; i++) {
-      const type = types[Math.floor(Math.random() * types.length)];
-      enemies.push({
-        name: type,
-        level: node.level || 1,
-        biome,
-        enemyId: type.toLowerCase().replace(/\s+/g, '_')
-      });
-    }
-
-    return enemies;
   }
 
   createUI() {
@@ -162,7 +146,7 @@ export class BattleFormationScene extends Scene {
         background: rgba(139, 0, 0, 0.2);
         border-bottom: 1px solid #5a3a3a;
       ">
-        <div style="color: #ff6b6b; font-size: 12px; margin-bottom: 8px;">Enemy Forces</div>
+        <div style="color: #ff6b6b; font-size: 12px; margin-bottom: 8px;">Possible Enemies</div>
         <div id="enemy-roster" style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;">
           ${this.renderEnemyRoster()}
         </div>
@@ -184,18 +168,15 @@ export class BattleFormationScene extends Scene {
           </div>
         </div>
 
-        <!-- Character Detail Card -->
-        <div id="character-detail-card" class="ui-panel" style="
+        <!-- Character Detail Card Container -->
+        <div id="character-card-container" class="ui-panel" style="
           width: 200px;
           display: flex;
           flex-direction: column;
-          opacity: 0.5;
         ">
           <div class="ui-panel-header" style="font-size: 12px;">Character Info</div>
           <div id="card-content" style="padding: 12px; flex: 1;">
-            <div style="color: #6a6a8a; text-align: center; padding: 20px;">
-              Select a character
-            </div>
+            <!-- CharacterCard component will be inserted here -->
           </div>
         </div>
       </div>
@@ -229,6 +210,13 @@ export class BattleFormationScene extends Scene {
     // Get canvas reference
     this.gridCanvas = container.querySelector('#formation-grid-canvas');
 
+    // Initialize CharacterCard component
+    this.characterCard = new CharacterCard({ mode: 'detailed' });
+    const cardContainer = container.querySelector('#card-content');
+    if (cardContainer) {
+      cardContainer.appendChild(this.characterCard.element);
+    }
+
     // Initial render
     this.renderGrid();
   }
@@ -261,7 +249,6 @@ export class BattleFormationScene extends Scene {
           margin-bottom: 4px;
         ">${enemy.name.charAt(0)}</div>
         <div style="color: #fff; font-size: 11px;">${enemy.name}</div>
-        <div style="color: #8a8aaa; font-size: 10px;">Lv.${enemy.level}</div>
       </div>
     `).join('');
   }
@@ -625,106 +612,14 @@ export class BattleFormationScene extends Scene {
   }
 
   updateDetailCard() {
-    const card = this.uiElement.querySelector('#character-detail-card');
-    const content = this.uiElement.querySelector('#card-content');
-
-    if (!this.selectedCharacter) {
-      card.style.opacity = '0.5';
-      content.innerHTML = `
-        <div style="color: #6a6a8a; text-align: center; padding: 20px;">
-          Select a character
-        </div>
-      `;
-      return;
+    const container = this.uiElement.querySelector('#character-card-container');
+    if (container) {
+      container.style.opacity = this.selectedCharacter ? '1' : '0.5';
     }
 
-    card.style.opacity = '1';
-    const c = this.selectedCharacter;
-    const gender = c.gender || 'other';
-    const portraitUrl = `/assets/sprites/portraits/${c.race}_${gender}_${c.class}.png`;
-
-    const hpPercent = (c.hp_current / c.hp_max) * 100;
-    const mpPercent = (c.mp_current / c.mp_max) * 100;
-
-    content.innerHTML = `
-      <div style="text-align: center; margin-bottom: 12px;">
-        <div style="
-          width: 64px;
-          height: 64px;
-          margin: 0 auto 8px;
-          border-radius: 8px;
-          overflow: hidden;
-          border: 2px solid #ffd700;
-        ">
-          <img
-            src="${portraitUrl}"
-            alt="${c.name}"
-            style="width: 100%; height: 100%; image-rendering: pixelated;"
-            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-          >
-          <div style="
-            display: none;
-            width: 100%;
-            height: 100%;
-            background: ${this.getClassColor(c.class)};
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-size: 24px;
-          ">${this.getClassIcon(c.class)}</div>
-        </div>
-        <div style="color: #fff; font-weight: bold;">${c.name}</div>
-        <div style="color: #8a8aaa; font-size: 11px;">
-          Lv.${c.level} ${this.capitalize(c.race)} ${this.capitalize(c.class)}
-        </div>
-      </div>
-
-      <!-- HP Bar -->
-      <div style="margin-bottom: 8px;">
-        <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 2px;">
-          <span style="color: #f44336;">HP</span>
-          <span style="color: #fff;">${c.hp_current}/${c.hp_max}</span>
-        </div>
-        <div style="height: 6px; background: #2a2a4a; border-radius: 3px; overflow: hidden;">
-          <div style="height: 100%; width: ${hpPercent}%; background: linear-gradient(90deg, #f44336, #4caf50);"></div>
-        </div>
-      </div>
-
-      <!-- MP Bar -->
-      <div style="margin-bottom: 12px;">
-        <div style="display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 2px;">
-          <span style="color: #2196f3;">MP</span>
-          <span style="color: #fff;">${c.mp_current}/${c.mp_max}</span>
-        </div>
-        <div style="height: 6px; background: #2a2a4a; border-radius: 3px; overflow: hidden;">
-          <div style="height: 100%; width: ${mpPercent}%; background: #2196f3;"></div>
-        </div>
-      </div>
-
-      <!-- Stats -->
-      <div style="font-size: 10px;">
-        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #2a2a4a;">
-          <span style="color: #8a8aaa;">STR</span>
-          <span style="color: #fff;">${c.strength}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #2a2a4a;">
-          <span style="color: #8a8aaa;">INT</span>
-          <span style="color: #fff;">${c.intelligence}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #2a2a4a;">
-          <span style="color: #8a8aaa;">AGI</span>
-          <span style="color: #fff;">${c.agility}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #2a2a4a;">
-          <span style="color: #8a8aaa;">VIT</span>
-          <span style="color: #fff;">${c.vitality}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-          <span style="color: #8a8aaa;">LCK</span>
-          <span style="color: #fff;">${c.luck}</span>
-        </div>
-      </div>
-    `;
+    if (this.characterCard) {
+      this.characterCard.setCharacter(this.selectedCharacter);
+    }
   }
 
   updateUnplacedRoster() {

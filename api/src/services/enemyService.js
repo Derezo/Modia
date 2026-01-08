@@ -13,6 +13,50 @@ const TIER_MULTIPLIERS = {
   5: 2.15
 };
 
+// Enemy count ranges by difficulty tier (weighted randomization)
+const ENEMY_COUNT_RANGES = {
+  1: { min: 3, max: 4 },
+  2: { min: 3, max: 5 },
+  3: { min: 4, max: 6 },
+  4: { min: 5, max: 7 },
+  5: { min: 5, max: 7 }
+};
+
+// Enemy spawn zone on right side of 32x32 map
+const ENEMY_SPAWN_ZONE = {
+  minX: 25,
+  maxX: 30,
+  minY: 10,
+  maxY: 21
+};
+
+/**
+ * Generate unique random positions for enemies
+ * @param {number} count - Number of positions to generate
+ * @returns {Array<{x: number, y: number}>} Array of position objects
+ */
+function generateEnemyPositions(count) {
+  const positions = [];
+  const usedPositions = new Set();
+
+  for (let i = 0; i < count; i++) {
+    let attempts = 0;
+    let x, y, key;
+
+    do {
+      x = Math.floor(Math.random() * (ENEMY_SPAWN_ZONE.maxX - ENEMY_SPAWN_ZONE.minX + 1)) + ENEMY_SPAWN_ZONE.minX;
+      y = Math.floor(Math.random() * (ENEMY_SPAWN_ZONE.maxY - ENEMY_SPAWN_ZONE.minY + 1)) + ENEMY_SPAWN_ZONE.minY;
+      key = `${x},${y}`;
+      attempts++;
+    } while (usedPositions.has(key) && attempts < 50);
+
+    usedPositions.add(key);
+    positions.push({ x, y });
+  }
+
+  return positions;
+}
+
 /**
  * Select enemy templates matching node type and difficulty
  * @param {string} nodeType - The node type (forest, cave, mountain, etc.)
@@ -55,11 +99,12 @@ async function selectEnemiesForEncounter(nodeType, difficultyTier, count) {
  * @param {Object} template - The enemy template from database
  * @param {number} partyLevel - Average party level
  * @param {number} difficultyTier - Node difficulty tier
- * @param {number} index - Enemy index for positioning
+ * @param {number} index - Enemy index for ID generation
+ * @param {{x: number, y: number}} position - Pre-calculated spawn position
  * @param {string} biome - Biome type for sprite loading (forest, cave, mountain, bridge)
  * @returns {Object} Scaled enemy object ready for battle
  */
-function createEnemyInstance(template, partyLevel, difficultyTier, index, biome = 'forest') {
+function createEnemyInstance(template, partyLevel, difficultyTier, index, position, biome = 'forest') {
   const tierMult = TIER_MULTIPLIERS[difficultyTier] || 1.0;
 
   // Calculate effective enemy level
@@ -71,10 +116,6 @@ function createEnemyInstance(template, partyLevel, difficultyTier, index, biome 
   const scaledStrength = Math.floor(template.base_strength * (1 + enemyLevel * 0.05));
   const scaledIntelligence = Math.floor(template.base_intelligence * (1 + enemyLevel * 0.05));
   const scaledAgility = Math.floor(template.base_agility * (1 + enemyLevel * 0.05));
-
-  // Calculate position (enemies spawn on right side of 32x32 map)
-  const tileX = 28 + (index % 3);
-  const tileY = 13 + Math.floor(index / 3) * 2;
 
   return {
     id: `enemy_${index}`,
@@ -94,8 +135,8 @@ function createEnemyInstance(template, partyLevel, difficultyTier, index, biome 
     agility: scaledAgility,
     vitality: Math.floor(scaledHp / 10), // Derived from HP for defense calc
     luck: 10,
-    tileX,
-    tileY,
+    tileX: position.x,
+    tileY: position.y,
     ct: 0, // Charge time for CT-based turn system
     hasActed: false,
     statusEffects: [],
@@ -115,9 +156,10 @@ function createEnemyInstance(template, partyLevel, difficultyTier, index, biome 
  * Main entry point - Generate full encounter for a node
  * @param {number} nodeId - The world node ID
  * @param {Array} party - Array of party characters
+ * @param {Array<number>|null} formationCharacterIds - Optional array of character IDs in formation (for level calculation)
  * @returns {Promise<Array>} Array of enemy unit objects
  */
-async function generateEncounter(nodeId, party) {
+async function generateEncounter(nodeId, party, formationCharacterIds = null) {
   // Get node info
   const nodeResult = await query(
     'SELECT node_type, difficulty_tier FROM world_nodes WHERE id = $1',
@@ -130,26 +172,35 @@ async function generateEncounter(nodeId, party) {
 
   const { node_type: nodeType, difficulty_tier: difficultyTier } = nodeResult.rows[0];
 
-  // Calculate average party level
+  // Filter to formation characters if provided (for accurate level scaling)
+  const activeParty = formationCharacterIds
+    ? party.filter(c => formationCharacterIds.includes(c.id))
+    : party;
+
+  // Calculate average party level from active formation
   const partyLevel = Math.floor(
-    party.reduce((sum, char) => sum + (char.level || 1), 0) / party.length
+    activeParty.reduce((sum, char) => sum + (char.level || 1), 0) / activeParty.length
   ) || 1;
 
-  // Determine enemy count based on difficulty and party size
-  const baseEnemyCount = Math.min(difficultyTier + 2, 5);
-  const enemyCount = Math.min(baseEnemyCount, Math.max(party.length + 1, 3));
+  // Determine enemy count based on difficulty tier (randomized within range)
+  const range = ENEMY_COUNT_RANGES[difficultyTier] || ENEMY_COUNT_RANGES[1];
+  const enemyCount = Math.floor(Math.random() * (range.max - range.min + 1)) + range.min;
 
   // Select templates from database
   const templates = await selectEnemiesForEncounter(nodeType, difficultyTier, enemyCount);
 
-  // Create scaled enemy instances
+  // Generate randomized positions for all enemies
+  const positions = generateEnemyPositions(enemyCount);
+
+  // Create scaled enemy instances with random positions
   const enemies = templates.map((template, index) =>
-    createEnemyInstance(template, partyLevel, difficultyTier, index, nodeType)
+    createEnemyInstance(template, partyLevel, difficultyTier, index, positions[index], nodeType)
   );
 
   // If we still don't have enough enemies (empty database), create generic ones
   while (enemies.length < enemyCount) {
     const index = enemies.length;
+    const pos = positions[index] || { x: 28, y: 13 + index };
     enemies.push({
       id: `enemy_${index}`,
       type: 'enemy',
@@ -168,8 +219,8 @@ async function generateEncounter(nodeId, party) {
       agility: 6 + partyLevel,
       vitality: 5 + partyLevel,
       luck: 10,
-      tileX: 6 + (index % 2),
-      tileY: index,
+      tileX: pos.x,
+      tileY: pos.y,
       ct: 0, // Charge time for CT-based turn system
       hasActed: false,
       statusEffects: [],
@@ -189,11 +240,11 @@ async function generateEncounter(nodeId, party) {
 
 /**
  * Get encounter preview info without creating actual battle
+ * Returns possible enemy types for a node without counts or levels (those are calculated at battle start)
  * @param {number} nodeId - The world node ID
- * @param {number} partyLevel - Average party level
- * @returns {Promise<Object>} Preview info about the encounter
+ * @returns {Promise<Object>} Preview info about possible enemies
  */
-async function getEncounterPreview(nodeId, partyLevel) {
+async function getEncounterPreview(nodeId) {
   const nodeResult = await query(
     'SELECT node_type, difficulty_tier, name FROM world_nodes WHERE id = $1',
     [nodeId]
@@ -205,30 +256,25 @@ async function getEncounterPreview(nodeId, partyLevel) {
 
   const { node_type: nodeType, difficulty_tier: difficultyTier, name: nodeName } = nodeResult.rows[0];
 
-  // Get possible enemies for this area
+  // Get possible enemies for this area (distinct names, no counts or levels)
   const enemyResult = await query(
-    `SELECT name, ai_type, min_difficulty_tier
+    `SELECT DISTINCT name, sprite_id, ai_type
      FROM enemy_templates
      WHERE $1 = ANY(spawn_node_types) AND min_difficulty_tier <= $2
-     ORDER BY min_difficulty_tier DESC
-     LIMIT 5`,
+     ORDER BY name
+     LIMIT 6`,
     [nodeType, difficultyTier]
   );
-
-  const tierMult = TIER_MULTIPLIERS[difficultyTier] || 1.0;
-  const estimatedEnemyLevel = Math.floor(partyLevel * tierMult);
 
   return {
     nodeName,
     nodeType,
     difficultyTier,
-    estimatedEnemyLevel,
     possibleEnemies: enemyResult.rows.map(e => ({
       name: e.name,
-      aiType: e.ai_type,
-      tier: e.min_difficulty_tier
-    })),
-    enemyCount: Math.min(difficultyTier + 2, 5)
+      spriteId: e.sprite_id,
+      aiType: e.ai_type
+    }))
   };
 }
 
