@@ -623,6 +623,9 @@ function advanceCTUntilReady(state) {
   const aliveUnits = state.units.filter(u => u.hp > 0);
   if (aliveUnits.length === 0) return 0;
 
+  // Log CT values before advancing
+  console.log('[CT DEBUG] advanceCTUntilReady - before:', aliveUnits.map(u => `${u.name}(${u.type}): CT=${u.ct}, AGI=${u.agility}`).join(', '));
+
   let ticks = 0;
   const maxTicks = 1000; // Safety limit
 
@@ -639,6 +642,9 @@ function advanceCTUntilReady(state) {
     ticks++;
   }
 
+  // Log CT values after advancing
+  console.log('[CT DEBUG] advanceCTUntilReady - after', ticks, 'ticks:', aliveUnits.map(u => `${u.name}: CT=${u.ct}`).join(', '));
+
   return ticks;
 }
 
@@ -648,6 +654,7 @@ function advanceCTUntilReady(state) {
  */
 function getNextActor(state) {
   const ready = state.units.filter(u => u.hp > 0 && u.ct >= CT_THRESHOLD);
+  console.log('[CT DEBUG] getNextActor - ready units:', ready.map(u => `${u.name}(${u.type}): CT=${u.ct}`).join(', ') || 'NONE');
 
   if (ready.length === 0) return null;
 
@@ -660,6 +667,7 @@ function getNextActor(state) {
     return (a.type === 'player' ? 0 : 1) - (b.type === 'player' ? 0 : 1);
   });
 
+  console.log('[CT DEBUG] getNextActor - selected:', ready[0]?.name, ready[0]?.type);
   return ready[0];
 }
 
@@ -1259,8 +1267,10 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
 function advanceToNextActorWithCT(state) {
   // Consume CT for the unit that just acted
   const currentActor = state.units.find(u => u.id === state.activeUnitId);
+  console.log('[CT DEBUG] advanceToNextActorWithCT - current actor:', currentActor?.name, 'CT before:', currentActor?.ct);
   if (currentActor) {
     consumeCT(currentActor);
+    console.log('[CT DEBUG] After consumeCT, actor CT:', currentActor.ct);
 
     // Decrement skill cooldowns for the actor whose turn just ended
     if (currentActor.skillCooldowns) {
@@ -1273,7 +1283,8 @@ function advanceToNextActorWithCT(state) {
   }
 
   // Find the next actor
-  advanceToNextActor(state);
+  const nextActor = advanceToNextActor(state);
+  console.log('[CT DEBUG] Next actor:', nextActor?.name, nextActor?.type, 'CT:', nextActor?.ct, '| New activeUnitId:', state.activeUnitId);
 }
 
 /**
@@ -1302,13 +1313,16 @@ function checkBattleEnd(state) {
 function processEnemyTurns(state, aiService, maxIterations = 50) {
   const enemyActions = [];
   let iterations = 0;
+  console.log('[CT DEBUG] processEnemyTurns START - activeUnitId:', state.activeUnitId);
 
   while (iterations < maxIterations) {
     // Get the current active unit
     const activeUnit = state.units.find(u => u.id === state.activeUnitId);
+    console.log('[CT DEBUG] Loop iteration', iterations, '- activeUnit:', activeUnit?.name, activeUnit?.type, 'CT:', activeUnit?.ct);
 
     // Safety check
     if (!activeUnit) {
+      console.log('[CT DEBUG] No active unit found, advancing');
       advanceToNextActor(state);
       iterations++;
       continue;
@@ -1316,6 +1330,7 @@ function processEnemyTurns(state, aiService, maxIterations = 50) {
 
     // Stop if it's a player's turn
     if (activeUnit.type === 'player') {
+      console.log('[CT DEBUG] Player turn detected, breaking loop');
       break;
     }
 

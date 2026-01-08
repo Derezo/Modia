@@ -414,6 +414,8 @@ The world is a **node-based graph** procedurally generated from a global seed. A
 
 Combat is **turn-based tactical** on an **8×8 isometric grid**. Each unit acts once per turn in initiative order.
 
+Combat supports multiple modes including PvE Solo (current), PvE Co-op, PvP Duel, PvP Team, and Free-for-All. See [BATTLE_MODES.md](BATTLE_MODES.md) for detailed mode configurations.
+
 ```
   0   1   2   3   4   5   6   7
 0 [E] [E] [ ] [ ] [ ] [ ] [ ] [ ]
@@ -434,6 +436,8 @@ Legend:
 ```
 
 ### 4.2 Turn Flow
+
+Turn order is determined by the Charge Time (CT) system. Each unit accumulates CT based on their AGI stat, and acts when CT reaches 100. See [BATTLE_TURN_SYSTEM.md](BATTLE_TURN_SYSTEM.md) for complete details.
 
 **Two-Action System**: Each unit's turn allows up to TWO actions:
 - **1 MOVE action** - Move to a new position
@@ -682,6 +686,33 @@ Experience is added to each participating character's **XP Pool**.
 - All characters restored to full HP/MP automatically
 - No between-battle healing mechanics needed
 
+### 4.9 Battle Modes Overview
+
+Modia supports multiple battle modes to accommodate different play styles:
+
+| Mode | Players | Description |
+|------|---------|-------------|
+| PVE_SOLO | 1 | Single player vs AI enemies (current MVP) |
+| PVE_COOP | 2-4 | Multiple players cooperating vs enemies |
+| PVP_DUEL | 2 | 1v1 competitive PvP |
+| PVP_TEAM | 4-8 | Team-based PvP (2v2, 3v3, 4v4) |
+| PVP_FFA | 3-8 | Free-for-all, last player standing |
+
+See [BATTLE_MODES.md](BATTLE_MODES.md) for complete configuration details.
+
+#### Mode-Specific Rules
+
+**Turn Timers:**
+- PVE_SOLO: No time limit
+- All other modes: 60 seconds per turn
+
+**Reconnection:**
+- PVE_SOLO: Battle pauses, unlimited reconnect
+- PVE_COOP: 60 second grace period
+- PVP modes: 30 second grace period
+
+See [BATTLE_RECONNECTION.md](BATTLE_RECONNECTION.md) for reconnection handling details.
+
 ---
 
 ## 5. Economy
@@ -733,6 +764,8 @@ Experience is added to each participating character's **XP Pool**.
 ## 6. Multiplayer Features
 
 ### 6.1 Coliseum PvP
+
+The Coliseum uses the PVP_DUEL mode for 1v1 battles. Team battles (PVP_TEAM) and Free-for-All (PVP_FFA) will be added in future updates. See [BATTLE_MODES.md](BATTLE_MODES.md) for mode configurations.
 
 #### Matchmaking
 - Queue with battle party (1-5 characters)
@@ -927,6 +960,11 @@ The marketplace is an open exchange system at Castle nodes where players trade d
 | [ENEMY_SYSTEM.md](ENEMY_SYSTEM.md) | Enemy templates, AI behaviors, drop tables |
 | [ITEM_SYSTEM.md](ITEM_SYSTEM.md) | Item generation, equipment slots, rarity system, item templates |
 | [ECONOMY_SYSTEM.md](ECONOMY_SYSTEM.md) | NPC shops, dynamic pricing, marketplace order book system |
+| [BATTLE_TURN_SYSTEM.md](BATTLE_TURN_SYSTEM.md) | CT system, turn state machine, WebSocket turn protocol |
+| [BATTLE_MESSAGING_PROTOCOL.md](BATTLE_MESSAGING_PROTOCOL.md) | Hybrid HTTP/WebSocket protocol, message specs, state sync |
+| [BATTLE_MODES.md](BATTLE_MODES.md) | PvE/PvP mode configurations, matchmaking, spawn zones, rewards |
+| [BATTLE_RECONNECTION.md](BATTLE_RECONNECTION.md) | Reconnection handling, grace periods, state restoration |
+| [BATTLE_ANIMATIONS.md](BATTLE_ANIMATIONS.md) | Visual feedback system, intent visualization, animation timing |
 | [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) | Database schemas, API infrastructure |
 | [API_SPECIFICATION.md](API_SPECIFICATION.md) | REST and WebSocket endpoint documentation |
 | [DEVELOPMENT_ROADMAP.md](DEVELOPMENT_ROADMAP.md) | Development phases and task tracking |
@@ -939,3 +977,4 @@ The marketplace is an open exchange system at Castle nodes where players trade d
 |---------|------|--------|---------|
 | 1.0 | Jan 2026 | - | Initial document |
 | 2.0 | Jan 2026 | - | Major update: XP-spending system, racial traits, status effects, removed flee/temple revival, HP/MP regeneration rules, movement standardization |
+| 2.1 | Jan 2026 | - | Added battle modes overview (Section 4.9), CT-based turn system references, updated Related Documents with battle system docs |
