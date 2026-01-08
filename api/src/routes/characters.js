@@ -3,7 +3,7 @@ const router = express.Router();
 const { query } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { asyncHandler, AppError } = require('../middleware/errorHandler');
-const { RACES, CLASSES, MAX_PARTY_SIZE, calculateStats } = require('../config/constants');
+const { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats } = require('../config/constants');
 
 // Starter equipment by class (weapon, armor, accessory)
 const STARTER_EQUIPMENT = {
@@ -16,7 +16,7 @@ const STARTER_EQUIPMENT = {
 // GET /api/characters - List all user's characters
 router.get('/', authenticate, asyncHandler(async (req, res) => {
   const result = await query(
-    `SELECT id, name, race, class, level, experience,
+    `SELECT id, name, race, class, gender, level, experience,
             hp_current, hp_max, mp_current, mp_max,
             strength, intelligence, agility, vitality, luck,
             party_slot, current_node_id, in_battle, created_at
@@ -31,7 +31,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
 
 // POST /api/characters - Create new character
 router.post('/', authenticate, asyncHandler(async (req, res) => {
-  const { name, race, characterClass } = req.body;
+  const { name, race, characterClass, gender = 'other' } = req.body;
 
   // Validation
   if (!name || !race || !characterClass) {
@@ -48,6 +48,10 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
 
   if (!Object.values(CLASSES).includes(characterClass)) {
     throw new AppError(`Invalid class. Must be one of: ${Object.values(CLASSES).join(', ')}`, 400);
+  }
+
+  if (!Object.values(GENDERS).includes(gender)) {
+    throw new AppError(`Invalid gender. Must be one of: ${Object.values(GENDERS).join(', ')}`, 400);
   }
 
   // Check character limit
@@ -74,16 +78,16 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
   // Insert character
   const result = await query(
     `INSERT INTO characters (
-       user_id, name, race, class, level, experience,
+       user_id, name, race, class, gender, level, experience,
        hp_current, hp_max, mp_current, mp_max,
        strength, intelligence, agility, vitality, luck,
        party_slot, current_node_id
      )
-     VALUES ($1, $2, $3, $4, 1, 0, $5, $5, $6, $6, $7, $8, $9, $10, $11, $12,
+     VALUES ($1, $2, $3, $4, $5, 1, 0, $6, $6, $7, $7, $8, $9, $10, $11, $12, $13,
              (SELECT id FROM world_nodes WHERE node_type = 'castle' LIMIT 1))
      RETURNING *`,
     [
-      req.user.userId, name, race, characterClass,
+      req.user.userId, name, race, characterClass, gender,
       stats.hpMax, stats.mpMax,
       stats.strength, stats.intelligence, stats.agility, stats.vitality, stats.luck,
       nextSlot <= MAX_PARTY_SIZE ? nextSlot : null

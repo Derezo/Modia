@@ -4,6 +4,7 @@ import { CharacterSelectScene } from '../scenes/CharacterSelectScene.js';
 import { CharacterCreateScene } from '../scenes/CharacterCreateScene.js';
 import { WorldMapScene } from '../scenes/WorldMapScene.js';
 import { BattleScene } from '../scenes/BattleScene.js';
+import { BattleFormationScene } from '../scenes/BattleFormationScene.js';
 import { FormationScene } from '../scenes/FormationScene.js';
 import { InventoryScene } from '../scenes/InventoryScene.js';
 import { ShopScene } from '../scenes/ShopScene.js';
@@ -28,6 +29,7 @@ export class SceneManager {
       characterCreate: new CharacterCreateScene(this.game),
       worldMap: new WorldMapScene(this.game),
       battle: new BattleScene(this.game),
+      battleFormation: new BattleFormationScene(this.game),
       formation: new FormationScene(this.game),
       inventory: new InventoryScene(this.game),
       shop: new ShopScene(this.game),

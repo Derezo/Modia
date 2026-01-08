@@ -697,6 +697,61 @@ const RARITY_MODIFIERS = {
   legendary: 'golden particles, radiant glow'
 };
 
+// =====================
+// CHARACTER PORTRAITS (64x64 head shots)
+// By race, gender, and class
+// =====================
+
+const PORTRAIT_GENDER_MODIFIERS = {
+  male: {
+    human: 'male human, strong jaw, short hair, determined expression',
+    elf: 'male elf, pointed ears, angular features, long flowing hair, wise expression',
+    dwarf: 'male dwarf, thick braided beard, broad nose, rugged features',
+    vampire: 'male vampire, pale skin, fangs visible, crimson eyes, elegant aristocratic features',
+    orc: 'male orc, green skin, prominent tusks, battle scars, fierce expression'
+  },
+  female: {
+    human: 'female human, soft features, flowing hair, determined expression',
+    elf: 'female elf, pointed ears, delicate features, long graceful hair, serene expression',
+    dwarf: 'female dwarf, braided hair with beads, strong features, practical look',
+    vampire: 'female vampire, pale skin, fangs visible, crimson eyes, elegant beautiful features',
+    orc: 'female orc, green skin, smaller tusks, fierce expression, braided warrior hair'
+  },
+  other: {
+    human: 'androgynous human, neutral features, determined expression',
+    elf: 'androgynous elf, pointed ears, ethereal features, mysterious expression',
+    dwarf: 'androgynous dwarf, strong features, practical hairstyle with runes',
+    vampire: 'androgynous vampire, pale skin, fangs visible, crimson eyes, elegant haunting features',
+    orc: 'androgynous orc, green skin, tusks, fierce expression'
+  }
+};
+
+const PORTRAIT_CLASS_MODIFIERS = {
+  warrior: 'wearing warrior helm glimpse, battle-hardened, confident',
+  wizard: 'wearing wizard hat hint, arcane knowledge in eyes, thoughtful',
+  monk: 'serene centered expression, inner strength, disciplined',
+  chemist: 'brass goggles on forehead, curious intelligent expression, vials visible',
+  berserker: 'war paint markings, wild fierce eyes, battle rage',
+  sorcerer: 'glowing magical eyes, arcane energy visible, powerful',
+  ninja: 'face mask pulled down, alert watchful expression, deadly calm',
+  alchemist: 'multiple lenses on goggles, chemical stains, brilliant expression'
+};
+
+/**
+ * Build a portrait prompt for a character
+ * @param {string} race - Character race
+ * @param {string} gender - Character gender (male, female, other)
+ * @param {string} charClass - Character class
+ * @returns {string} Portrait generation prompt
+ */
+function buildPortraitPrompt(race, gender, charClass) {
+  const genderPrompts = PORTRAIT_GENDER_MODIFIERS[gender] || PORTRAIT_GENDER_MODIFIERS.other;
+  const basePrompt = genderPrompts[race] || genderPrompts.human;
+  const classModifier = PORTRAIT_CLASS_MODIFIERS[charClass] || PORTRAIT_CLASS_MODIFIERS.warrior;
+
+  return `Close-up portrait, head and shoulders, ${basePrompt}, ${classModifier}, facing forward, fantasy RPG character portrait, 64x64, ${STYLE_SUFFIX}`;
+}
+
 module.exports = {
   STYLE_SUFFIX,
   ISOMETRIC_SUFFIX,
@@ -719,9 +774,12 @@ module.exports = {
   MATERIAL_MODIFIERS,
   AUGMENT_MODIFIERS,
   RARITY_MODIFIERS,
+  PORTRAIT_GENDER_MODIFIERS,
+  PORTRAIT_CLASS_MODIFIERS,
   // Helper functions
   buildEquippedCharacterPrompt,
   buildCharacterAnimationPrompt,
   buildWizardAnimationPrompt,
-  buildEnemyAnimationPrompt
+  buildEnemyAnimationPrompt,
+  buildPortraitPrompt
 };

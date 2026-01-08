@@ -5,6 +5,8 @@ import { BattleUI } from '../battle/BattleUI.js';
 import { BattleAnimations } from '../battle/BattleAnimations.js';
 import { BattlePathfinding } from '../battle/BattlePathfinding.js';
 import { BattleCamera } from '../battle/BattleCamera.js';
+import { BattleIntro } from '../battle/BattleIntro.js';
+import { RadialMenu } from '../battle/RadialMenu.js';
 import RewardsModal from '../components/RewardsModal.js';
 
 /**
@@ -26,6 +28,9 @@ export class BattleScene extends Scene {
     this.animations = null;
     this.pathfinding = null;
     this.camera = null;
+    this.intro = null;
+    this.isIntroPlaying = false;
+    this.radialMenu = null;
 
     // Interaction state
     this.selectedUnit = null;
@@ -46,6 +51,9 @@ export class BattleScene extends Scene {
     this.canMove = true;
     this.canAct = true;
     this.turnPhase = 'ready'; // 'ready' | 'partial' | 'done'
+
+    // Turn transition tracking
+    this.lastActiveUnitId = null;
 
     // Event cleanup
     this.abortController = null;
@@ -153,13 +161,32 @@ export class BattleScene extends Scene {
       onContinue: () => this.endBattle()
     });
 
+    // Initialize radial action menu
+    this.radialMenu = new RadialMenu(this.game);
+    this.radialMenu.create({
+      onMove: () => this.startMoveAction(),
+      onAttack: () => this.startAttackAction(),
+      onWait: () => this.submitAction('wait'),
+      onCancel: () => this.cancelAction(),
+      onSkillSelect: (skillId) => this.startSkillAction(skillId),
+      onItemSelect: (itemData) => this.startItemAction(itemData),
+      getSkills: () => this.getActiveUnitSkillsForRadial(),
+      getItems: () => this.getActiveUnitItemsForRadial()
+    });
+
     // Setup input handlers
     this.setupInputHandlers();
 
     // Setup WebSocket handlers for real-time events
     this.setupWebSocketHandlers();
 
-    // Update UI with initial state
+    // Start battle intro sequence
+    this.intro = new BattleIntro(this);
+    this.intro.start();
+    this.isIntroPlaying = true;
+    this.ui.hide(); // Hide action menu during intro
+
+    // Update UI with initial state (will show after intro)
     this.updateUI();
   }
 
@@ -178,6 +205,11 @@ export class BattleScene extends Scene {
     if (this.ui) {
       this.ui.destroy();
       this.ui = null;
+    }
+
+    if (this.radialMenu) {
+      this.radialMenu.destroy();
+      this.radialMenu = null;
     }
 
     if (this.rewardsModal) {
@@ -442,6 +474,15 @@ export class BattleScene extends Scene {
    * Handle click on a tile
    */
   handleTileClick(x, y) {
+    // Check if clicking on active player unit - show radial menu
+    const activeUnit = this.getActiveUnit();
+    if (!this.currentAction && activeUnit && activeUnit.type === 'player') {
+      if (x === activeUnit.gridX && y === activeUnit.gridY) {
+        this.showRadialMenu();
+        return;
+      }
+    }
+
     // Check if click is on a valid tile for current action
     const isValidTile = this.validTiles.some(t => t.x === x && t.y === y);
 
@@ -495,6 +536,7 @@ export class BattleScene extends Scene {
       return;
     }
 
+    this.hideRadialMenu();
     this.currentAction = 'move';
     const activeUnit = this.getActiveUnit();
 
@@ -520,6 +562,7 @@ export class BattleScene extends Scene {
       return;
     }
 
+    this.hideRadialMenu();
     this.currentAction = 'attack';
     const activeUnit = this.getActiveUnit();
 
@@ -619,10 +662,67 @@ export class BattleScene extends Scene {
   }
 
   /**
+   * Get active unit skills formatted for radial menu
+   * @returns {Array} Array of skill objects for radial menu
+   */
+  getActiveUnitSkillsForRadial() {
+    const activeUnit = this.getActiveUnit();
+    if (!activeUnit) return [];
+
+    return this.getUnitActiveSkills(activeUnit);
+  }
+
+  /**
+   * Get active unit items formatted for radial menu
+   * @returns {Array} Array of item objects for radial menu
+   */
+  getActiveUnitItemsForRadial() {
+    const consumables = this.battleState?.consumables || [];
+    return consumables.map(item => ({
+      ...item,
+      name: item.name,
+      quantity: item.quantity,
+      itemId: item.itemId,
+      inventoryId: item.inventoryId
+    }));
+  }
+
+  /**
+   * Show radial menu for active unit
+   */
+  showRadialMenu() {
+    const activeUnit = this.getActiveUnit();
+    if (!activeUnit || activeUnit.type !== 'player') return;
+
+    // Get unit's screen position
+    const worldPos = this.grid.gridToScreenWorld(activeUnit.gridX, activeUnit.gridY);
+    const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
+
+    // Update radial menu segment availability
+    this.radialMenu.setSegmentEnabled('move', this.canMove);
+    this.radialMenu.setSegmentEnabled('attack', this.canAct);
+    this.radialMenu.setSegmentEnabled('skill', this.canAct);
+    this.radialMenu.setSegmentEnabled('item', this.canAct);
+
+    // Show radial menu above the unit
+    this.radialMenu.show(screenPos.x, screenPos.y - 40, activeUnit.mp);
+  }
+
+  /**
+   * Hide radial menu
+   */
+  hideRadialMenu() {
+    if (this.radialMenu) {
+      this.radialMenu.hide();
+    }
+  }
+
+  /**
    * Start skill action - show valid target tiles for skill
    * @param {string} skillId - The skill to use
    */
   startSkillAction(skillId) {
+    this.hideRadialMenu();
     this.currentAction = 'skill';
     this.selectedSkillId = skillId;
     const activeUnit = this.getActiveUnit();
@@ -672,6 +772,7 @@ export class BattleScene extends Scene {
    * @param {Object} itemData - Object with itemId and inventoryId
    */
   startItemAction(itemData) {
+    this.hideRadialMenu();
     this.currentAction = 'item';
     this.selectedItemId = itemData.itemId;
     this.selectedInventoryId = itemData.inventoryId;
@@ -717,6 +818,7 @@ export class BattleScene extends Scene {
    * Cancel current action
    */
   cancelAction() {
+    this.hideRadialMenu();
     this.currentAction = null;
     this.validTiles = [];
     this.pendingAction = null;
@@ -734,6 +836,7 @@ export class BattleScene extends Scene {
    * Submit action to server
    */
   async submitAction(actionType, targetTile = null) {
+    this.hideRadialMenu();
     const activeUnit = this.getActiveUnit();
     if (!activeUnit) return;
 
@@ -798,8 +901,82 @@ export class BattleScene extends Scene {
       }
     }
 
-    // Handle player damage
-    if (actionResult.damage > 0 && actionResult.targetId) {
+    // Handle AoE skill damage (hits multiple units)
+    if (actionResult.isAoE && actionResult.aoeTargets) {
+      const attacker = this.units.get(this.getActiveUnit()?.id);
+
+      // Play attacker animation toward target tile
+      if (attacker && this.pendingAction?.targetTile) {
+        attacker.playAttackAnimation(
+          this.pendingAction.targetTile.x,
+          this.pendingAction.targetTile.y
+        );
+        await this.waitForAnimation(200);
+      }
+
+      // Flash all AoE tiles
+      if (actionResult.aoeTiles) {
+        for (const tile of actionResult.aoeTiles) {
+          const tilePos = this.grid.gridToScreenWorld(tile.x, tile.y);
+          const color = tile.isCenter ? '#ff8800' : '#ffaa44';
+          this.animations.addFlash(tilePos.x, tilePos.y, color);
+        }
+      }
+
+      // Apply damage to each affected unit simultaneously
+      const deathAnimations = [];
+      for (const targetInfo of actionResult.aoeTargets) {
+        const target = this.units.get(targetInfo.targetId);
+        if (!target) continue;
+
+        // Play hit animation
+        target.playHitAnimation();
+
+        // Show damage number
+        this.animations.addDamageNumber(
+          target.screenX,
+          target.screenY - 40,
+          targetInfo.damage,
+          targetInfo.isCritical
+        );
+
+        // Particle effect (different color for allies hit by friendly fire)
+        const isAllyHit = targetInfo.targetType === 'player';
+        const particleColor = isAllyHit ? '#ff8844' : '#ff4444';
+        this.animations.addParticleBurst(target.screenX, target.screenY - 32, particleColor);
+
+        // Update unit HP
+        target.hp = Math.max(0, target.hp - targetInfo.damage);
+
+        // Track deaths for animation later
+        if (!target.isAlive()) {
+          deathAnimations.push(target);
+        }
+
+        // Show status effect if applied
+        if (targetInfo.effectApplied) {
+          this.animations.addDamageNumber(
+            target.screenX,
+            target.screenY - 60,
+            targetInfo.effectApplied.toUpperCase(),
+            false
+          );
+        }
+      }
+
+      await this.waitForAnimation(300);
+
+      // Play death animations for killed units
+      for (const target of deathAnimations) {
+        target.playDeathAnimation();
+      }
+      if (deathAnimations.length > 0) {
+        await this.waitForAnimation(400);
+      }
+    }
+
+    // Handle single-target player damage (non-AoE)
+    if (!actionResult.isAoE && actionResult.damage > 0 && actionResult.targetId) {
       const attacker = this.units.get(this.getActiveUnit()?.id);
       const target = this.units.get(actionResult.targetId);
       if (target) {
@@ -1069,8 +1246,29 @@ export class BattleScene extends Scene {
       this.ui.updateActiveUnit(activeUnit);
       activeUnit.isSelected = true;
 
-      // Set camera to follow active unit
-      this.camera.setFollowTarget(activeUnit);
+      // Check if active unit changed - trigger camera transition
+      if (this.lastActiveUnitId !== activeUnit.id) {
+        const previousUnitId = this.lastActiveUnitId;
+        this.lastActiveUnitId = activeUnit.id;
+
+        // Only do camera transition if this isn't the first active unit (battle start)
+        if (previousUnitId !== null) {
+          // Get target position for camera
+          const targetPos = this.grid.gridToScreenWorld(activeUnit.gridX, activeUnit.gridY);
+
+          // Start camera transition to new active unit
+          this.camera.startTurnTransition(targetPos.x, targetPos.y, () => {
+            // After camera pan completes, show active unit detail card
+            this.ui.showActiveUnitCard(activeUnit);
+          });
+        } else {
+          // First unit of battle - just set follow target without transition
+          this.camera.setFollowTarget(activeUnit);
+        }
+      } else {
+        // Same unit, just update follow target
+        this.camera.setFollowTarget(activeUnit);
+      }
 
       // Show action menu only for player units
       if (activeUnit.type === 'player') {
@@ -1105,6 +1303,18 @@ export class BattleScene extends Scene {
     // Safety check - don't update if not fully initialized
     if (!this.camera || !this.grid) return;
 
+    // Update intro if playing
+    if (this.isIntroPlaying && this.intro) {
+      this.intro.update(deltaTime);
+      if (this.intro.isComplete()) {
+        this.isIntroPlaying = false;
+        this.ui.show(); // Show action menu after intro
+        this.updateUI();
+      }
+      // Don't process input during intro
+      return;
+    }
+
     // Handle keyboard camera movement
     const input = this.game.input;
     let dx = 0, dy = 0;
@@ -1117,6 +1327,9 @@ export class BattleScene extends Scene {
     if (dx !== 0 || dy !== 0) {
       this.camera.moveByKeys(dx, dy, deltaTime);
     }
+
+    // Update turn transition animation
+    this.camera.updateTurnTransition(deltaTime);
 
     // Update camera (smooth interpolation)
     this.camera.update(deltaTime);
@@ -1170,6 +1383,9 @@ export class BattleScene extends Scene {
 
     // Skill range highlights (tile-based targeting)
     if (this.currentAction === 'skill') {
+      const activeUnit = this.getActiveUnit();
+      const skill = activeUnit ? this.getUnitActiveSkills(activeUnit).find(s => s.id === this.selectedSkillId) : null;
+
       for (const tile of this.validTiles) {
         const unit = this.getUnitAt(tile.x, tile.y);
         if (unit && unit.type === 'enemy') {
@@ -1178,6 +1394,30 @@ export class BattleScene extends Scene {
           highlights[`${tile.x},${tile.y}`] = 'rgba(74, 144, 217, 0.5)';  // Blue for allies
         } else {
           highlights[`${tile.x},${tile.y}`] = 'rgba(148, 74, 217, 0.3)';  // Dim purple for empty tiles
+        }
+      }
+
+      // Show AoE preview when hovering over a valid tile
+      if (this.hoveredTile && skill && skill.aoeRadius) {
+        const isValidHover = this.validTiles.some(t => t.x === this.hoveredTile.x && t.y === this.hoveredTile.y);
+        if (isValidHover) {
+          const aoeTiles = this.pathfinding.getAoETiles(
+            this.hoveredTile.x,
+            this.hoveredTile.y,
+            skill.aoeRadius,
+            skill.aoePattern || 'circle'
+          );
+
+          for (const aoeTile of aoeTiles) {
+            const key = `${aoeTile.x},${aoeTile.y}`;
+            if (aoeTile.isCenter) {
+              // Bright orange for center tile
+              highlights[key] = 'rgba(255, 140, 0, 0.8)';
+            } else {
+              // Softer orange for adjacent AoE tiles
+              highlights[key] = 'rgba(255, 165, 0, 0.5)';
+            }
+          }
         }
       }
     }
@@ -1215,8 +1455,15 @@ export class BattleScene extends Scene {
     // Render animations with camera transform
     this.renderAnimationsWithCamera(ctx);
 
-    // Render minimap
-    this.renderMinimap(ctx);
+    // Render minimap (hide during intro)
+    if (!this.isIntroPlaying) {
+      this.renderMinimap(ctx);
+    }
+
+    // Render intro overlay on top
+    if (this.isIntroPlaying && this.intro) {
+      this.intro.render(ctx);
+    }
   }
 
   /**

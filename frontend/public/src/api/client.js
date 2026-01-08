@@ -105,8 +105,8 @@ export class ApiClient {
     return this.get(`/characters/${id}`);
   }
 
-  createCharacter(name, race, characterClass) {
-    return this.post('/characters', { name, race, characterClass });
+  createCharacter(name, race, characterClass, gender = 'other') {
+    return this.post('/characters', { name, race, characterClass, gender });
   }
 
   deleteCharacter(id) {
@@ -148,8 +148,8 @@ export class ApiClient {
   }
 
   // Battle endpoints
-  startBattle() {
-    return this.post('/battle/start');
+  startBattle(options = {}) {
+    return this.post('/battle/start', options);
   }
 
   getCurrentBattle() {

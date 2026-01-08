@@ -7,6 +7,28 @@ export class BattleUI {
     this.element = null;
     this.actionCallbacks = {};
     this.abortController = null;
+    this.isVisible = true;
+    this.activeCardTimeout = null;
+  }
+
+  /**
+   * Show the battle UI
+   */
+  show() {
+    this.isVisible = true;
+    if (this.element) {
+      this.element.style.display = '';
+    }
+  }
+
+  /**
+   * Hide the battle UI
+   */
+  hide() {
+    this.isVisible = false;
+    if (this.element) {
+      this.element.style.display = 'none';
+    }
   }
 
   /**
@@ -192,6 +214,39 @@ export class BattleUI {
           <div id="result-title" style="font-size: 24px; font-weight: bold; margin-bottom: 16px;"></div>
           <div id="result-rewards" style="margin-bottom: 16px;"></div>
           <button class="btn btn-primary" id="btn-continue">Continue</button>
+        </div>
+      </div>
+
+      <!-- Active Unit Detail Card (shown after turn transition) -->
+      <div id="active-unit-card" style="
+        position: absolute;
+        bottom: 100px;
+        right: 20px;
+        pointer-events: none;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease-out;
+      ">
+        <div class="ui-panel" style="display: flex; gap: 10px; padding: 10px; min-width: 180px;">
+          <img class="auc-portrait" src="" alt="" style="
+            width: 48px;
+            height: 48px;
+            border-radius: 4px;
+            image-rendering: pixelated;
+            background: #333;
+          ">
+          <div class="auc-info" style="flex: 1;">
+            <div class="auc-name" style="font-weight: bold; color: #fff; font-size: 13px; margin-bottom: 2px;"></div>
+            <div class="auc-class" style="color: #aaa; font-size: 11px; margin-bottom: 6px;"></div>
+            <div class="auc-bars">
+              <div class="auc-hp-bar" style="height: 6px; background: #333; border-radius: 3px; margin-bottom: 3px;">
+                <div class="auc-hp-fill" style="height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s ease;"></div>
+              </div>
+              <div class="auc-mp-bar" style="height: 6px; background: #333; border-radius: 3px;">
+                <div class="auc-mp-fill" style="height: 100%; background: #2196f3; border-radius: 3px; transition: width 0.3s ease;"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -446,6 +501,82 @@ export class BattleUI {
   hideTargetInfo() {
     const panel = this.element.querySelector('#target-panel');
     if (panel) panel.style.display = 'none';
+  }
+
+  /**
+   * Show active unit detail card (after turn transition)
+   * @param {Object} unit - The active unit to display
+   */
+  showActiveUnitCard(unit) {
+    const card = this.element.querySelector('#active-unit-card');
+    if (!card) return;
+
+    // Set portrait (with fallback to class icon)
+    const portrait = card.querySelector('.auc-portrait');
+    if (portrait) {
+      const gender = unit.gender || 'other';
+      const portraitUrl = `/assets/sprites/portraits/${unit.race}_${gender}_${unit.class}.png`;
+      portrait.src = portraitUrl;
+      portrait.onerror = () => {
+        // Fallback to colored placeholder
+        portrait.style.display = 'none';
+      };
+      portrait.style.display = 'block';
+    }
+
+    // Set name and class
+    const nameEl = card.querySelector('.auc-name');
+    const classEl = card.querySelector('.auc-class');
+    if (nameEl) nameEl.textContent = unit.name;
+    if (classEl) {
+      const levelText = unit.level ? `Lv.${unit.level}` : '';
+      const classText = unit.class ? this.capitalize(unit.class) : '';
+      classEl.textContent = [levelText, classText].filter(Boolean).join(' ');
+    }
+
+    // Set HP/MP bars
+    const hpFill = card.querySelector('.auc-hp-fill');
+    const mpFill = card.querySelector('.auc-mp-fill');
+    const hpPercent = (unit.hp / unit.maxHp) * 100;
+    const mpPercent = (unit.mp / unit.maxMp) * 100;
+
+    if (hpFill) hpFill.style.width = `${hpPercent}%`;
+    if (mpFill) mpFill.style.width = `${mpPercent}%`;
+
+    // Show card with fade-in
+    card.style.display = 'block';
+    // Use requestAnimationFrame to ensure display:block is applied before opacity transition
+    requestAnimationFrame(() => {
+      card.style.opacity = '1';
+    });
+
+    // Auto-hide after 2 seconds
+    clearTimeout(this.activeCardTimeout);
+    this.activeCardTimeout = setTimeout(() => {
+      this.hideActiveUnitCard();
+    }, 2000);
+  }
+
+  /**
+   * Hide active unit detail card
+   */
+  hideActiveUnitCard() {
+    const card = this.element.querySelector('#active-unit-card');
+    if (!card) return;
+
+    card.style.opacity = '0';
+    // Hide after fade-out transition
+    setTimeout(() => {
+      card.style.display = 'none';
+    }, 300);
+  }
+
+  /**
+   * Capitalize a string
+   */
+  capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
   /**
@@ -728,6 +859,10 @@ export class BattleUI {
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
+    }
+    if (this.activeCardTimeout) {
+      clearTimeout(this.activeCardTimeout);
+      this.activeCardTimeout = null;
     }
     if (this.element) {
       this.element.remove();

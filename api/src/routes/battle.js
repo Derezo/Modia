@@ -200,8 +200,97 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
           break;
         }
 
-        if (target) {
-          // Apply skill damage (using power from skill or default 150%)
+        // Check if this is an AoE skill
+        if (skill.aoeRadius && skill.aoeRadius > 0) {
+          // Get all units in the AoE area (includes allies - friendly fire!)
+          const affectedUnits = battleService.getUnitsInAoE(
+            state.units,
+            targetTile.x,
+            targetTile.y,
+            skill.aoeRadius,
+            skill.aoePattern || 'circle'
+          );
+
+          // Track AoE results
+          result.isAoE = true;
+          result.aoeTargets = [];
+          result.aoeTiles = battleService.getAoETiles(
+            targetTile.x,
+            targetTile.y,
+            skill.aoeRadius,
+            skill.aoePattern || 'circle'
+          );
+
+          // Apply damage/effects to each unit in the AoE
+          const power = skill.power || 150;
+          const damageType = skill.damageType || 'physical';
+          const hits = skill.hits || 1;
+
+          for (const { unit: affectedUnit, isCenter } of affectedUnits) {
+            // Calculate damage for this target
+            const damageResult = damageType === 'magical'
+              ? battleService.calculateMagicalDamage(unit, affectedUnit, power)
+              : battleService.calculatePhysicalDamage(unit, affectedUnit, power);
+
+            // Apply damage (multiply by hits if multi-hit skill)
+            let totalDamage = 0;
+            for (let i = 0; i < hits; i++) {
+              totalDamage += damageResult.damage;
+            }
+
+            // Reduce damage for non-center targets (75% damage at edges)
+            if (!isCenter) {
+              totalDamage = Math.floor(totalDamage * 0.75);
+            }
+
+            affectedUnit.hp = Math.max(0, affectedUnit.hp - totalDamage);
+
+            const targetResult = {
+              targetId: affectedUnit.id,
+              targetName: affectedUnit.name,
+              targetType: affectedUnit.type,
+              damage: totalDamage,
+              isCritical: damageResult.isCritical,
+              isCenter,
+              tileX: affectedUnit.tileX,
+              tileY: affectedUnit.tileY
+            };
+
+            // Apply status effect if skill has one and chance succeeds
+            if (skill.effect && skill.effectChance && Math.random() < skill.effectChance) {
+              const effectApplied = battleService.applyStatusEffect(
+                affectedUnit,
+                skill.effect,
+                skill.effectDuration || 3
+              );
+              if (effectApplied) {
+                targetResult.effectApplied = skill.effect;
+                targetResult.effectDuration = skill.effectDuration || 3;
+                result.skillEffects.push({
+                  type: affectedUnit.type === unit.type ? 'debuff' : 'debuff',
+                  effect: skill.effect,
+                  duration: skill.effectDuration || 3,
+                  targetId: affectedUnit.id
+                });
+              }
+            }
+
+            result.aoeTargets.push(targetResult);
+          }
+
+          // Set primary target info for backwards compatibility
+          if (result.aoeTargets.length > 0) {
+            const primaryTarget = result.aoeTargets.find(t => t.isCenter) || result.aoeTargets[0];
+            result.damage = result.aoeTargets.reduce((sum, t) => sum + t.damage, 0);
+            result.targetId = primaryTarget.targetId;
+            result.targetType = primaryTarget.targetType;
+          } else {
+            // No units hit - still show AoE animation on tiles
+            result.attackedEmptyTile = true;
+            result.targetTile = targetTile;
+          }
+        } else if (target) {
+          // Single-target skill: Apply skill damage (using power from skill or default 150%)
           const power = skill.power || 150;
           const damageType = skill.damageType || 'physical';
           const damageResult = damageType === 'magical'
@@ -476,6 +565,9 @@ function processEnemyTurns(state, maxIterations = 50) {
 
 // POST /api/battle/start - Start PvE battle at current node
 router.post('/start', authenticate, asyncHandler(async (req, res) => {
+  // Get optional formation from request
+  const { formation } = req.body || {};
+
   // Get user's battle party with equipment stat bonuses
   const partyResult = await query(
     `SELECT c.id, c.name, c.race, c.class, c.level,
@@ -629,35 +721,42 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
     activeUnitId: null,
     mapWidth: 32,
     mapHeight: 32,
-    units: party.map((char, idx) => ({
-      id: char.id,
-      type: 'player',
-      name: char.name,
-      class: char.class,
-      level: char.level,
-      hp: char.hp_current,
-      maxHp: char.hp_max + (parseInt(char.equip_hp) || 0),
-      mp: char.mp_current,
-      maxMp: char.mp_max + (parseInt(char.equip_mp) || 0),
-      // Apply equipment stat bonuses to combat stats
-      strength: char.strength + (parseInt(char.equip_strength) || 0),
-      intelligence: char.intelligence + (parseInt(char.equip_intelligence) || 0),
-      agility: char.agility + (parseInt(char.equip_agility) || 0),
-      vitality: char.vitality + (parseInt(char.equip_vitality) || 0),
-      luck: char.luck + (parseInt(char.equip_luck) || 0),
-      // Equipment-only combat bonuses
-      attack: parseInt(char.equip_attack) || 0,
-      defense: parseInt(char.equip_defense) || 0,
-      magicAttack: parseInt(char.equip_magic_attack) || 0,
-      magicDefense: parseInt(char.equip_magic_defense) || 0,
-      tileX: 1 + (idx % 3),
-      tileY: 13 + Math.floor(idx / 3) * 2,
-      ct: 0,
-      hasActed: false,
-      statusEffects: [],
-      // Include learned skills for this character
-      skills: characterSkills[char.id] || []
-    }))
+    units: party.map((char, idx) => {
+      // Use formation position if provided, otherwise default layout
+      const formationPos = formation?.[char.id];
+      const tileX = formationPos ? formationPos.tileX : 1 + (idx % 3);
+      const tileY = formationPos ? formationPos.tileY + 12 : 13 + Math.floor(idx / 3) * 2;
+
+      return {
+        id: char.id,
+        type: 'player',
+        name: char.name,
+        class: char.class,
+        level: char.level,
+        hp: char.hp_current,
+        maxHp: char.hp_max + (parseInt(char.equip_hp) || 0),
+        mp: char.mp_current,
+        maxMp: char.mp_max + (parseInt(char.equip_mp) || 0),
+        // Apply equipment stat bonuses to combat stats
+        strength: char.strength + (parseInt(char.equip_strength) || 0),
+        intelligence: char.intelligence + (parseInt(char.equip_intelligence) || 0),
+        agility: char.agility + (parseInt(char.equip_agility) || 0),
+        vitality: char.vitality + (parseInt(char.equip_vitality) || 0),
+        luck: char.luck + (parseInt(char.equip_luck) || 0),
+        // Equipment-only combat bonuses
+        attack: parseInt(char.equip_attack) || 0,
+        defense: parseInt(char.equip_defense) || 0,
+        magicAttack: parseInt(char.equip_magic_attack) || 0,
+        magicDefense: parseInt(char.equip_magic_defense) || 0,
+        tileX,
+        tileY,
+        ct: 0,
+        hasActed: false,
+        statusEffects: [],
+        // Include learned skills for this character
+        skills: characterSkills[char.id] || []
+      };
+    })
   };
 
   // Get consumable items from party leader's inventory

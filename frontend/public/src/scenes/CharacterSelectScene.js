@@ -28,10 +28,21 @@ export class CharacterSelectScene extends Scene {
     this.characters.forEach((char, index) => {
       const hpPercent = (char.hp_current / char.hp_max) * 100;
       const mpPercent = (char.mp_current / char.mp_max) * 100;
+      const gender = char.gender || 'other';
+      const portraitUrl = `/assets/sprites/portraits/${char.race}_${gender}_${char.class}.png`;
+      const fallbackEmoji = this.getRaceEmoji(char.race);
 
       charactersHtml += `
         <div class="character-card" data-id="${char.id}">
-          <div class="character-avatar">${this.getRaceEmoji(char.race)}</div>
+          <div class="character-avatar" style="overflow: hidden;">
+            <img
+              src="${portraitUrl}"
+              alt="${char.name}"
+              style="width: 48px; height: 48px; image-rendering: pixelated; object-fit: cover;"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+            >
+            <span style="display: none; font-size: 32px;">${fallbackEmoji}</span>
+          </div>
           <div class="character-info">
             <div class="character-name">${char.name}</div>
             <div class="character-details">Lv.${char.level} ${this.capitalize(char.race)} ${this.capitalize(char.class)}</div>

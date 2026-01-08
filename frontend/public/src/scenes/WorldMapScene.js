@@ -333,12 +333,11 @@ export class WorldMapScene extends Scene {
   }
 
   async startBattle() {
-    try {
-      const result = await this.game.api.startBattle();
-      this.game.scenes.switchTo('battle', result);
-    } catch (err) {
-      this.game.showNotification(err.message, 'error');
-    }
+    // Go to battle formation scene to let player arrange their party
+    this.game.scenes.switchTo('battleFormation', {
+      type: 'pve',
+      node: this.currentNode
+    });
   }
 
   /**
