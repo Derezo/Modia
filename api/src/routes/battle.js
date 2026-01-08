@@ -563,6 +563,18 @@ function processEnemyTurns(state, maxIterations = 50) {
   return enemyActions;
 }
 
+// GET /api/battle/preview/:nodeId - Get encounter preview for formation screen
+router.get('/preview/:nodeId', authenticate, asyncHandler(async (req, res) => {
+  const nodeId = parseInt(req.params.nodeId, 10);
+
+  if (isNaN(nodeId)) {
+    throw new AppError('Invalid node ID', 400);
+  }
+
+  const preview = await enemyService.getEncounterPreview(nodeId);
+  res.json(preview);
+}));
+
 // POST /api/battle/start - Start PvE battle at current node
 router.post('/start', authenticate, asyncHandler(async (req, res) => {
   // Get optional formation from request
@@ -783,8 +795,11 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
     effectValue: item.effect_value
   }));
 
-  // Generate enemies from templates
-  const enemies = await enemyService.generateEncounter(currentNodeId, party);
+  // Extract character IDs from formation (only placed characters count for enemy scaling)
+  const formationCharacterIds = formation ? Object.keys(formation).map(id => parseInt(id, 10)) : null;
+
+  // Generate enemies from templates (scaled to formation characters)
+  const enemies = await enemyService.generateEncounter(currentNodeId, party, formationCharacterIds);
   initialState.units.push(...enemies);
 
   // Initialize CT values for all units (adds initial variation)
