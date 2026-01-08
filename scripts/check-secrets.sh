@@ -21,10 +21,8 @@ FOUND_SECRETS=0
 echo "Checking staged files for secrets..."
 echo ""
 
-# Get staged files (only existing files, not deleted)
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=d 2>/dev/null)
-
-if [ -z "$STAGED_FILES" ]; then
+# Check if there are any staged files (only existing files, not deleted)
+if ! git diff --cached --name-only --diff-filter=d -z 2>/dev/null | grep -qz .; then
     echo -e "${CHECK} No staged files to check"
     exit 0
 fi
@@ -132,12 +130,22 @@ check_file() {
 }
 
 # Check each staged file
-for file in $STAGED_FILES; do
+while IFS= read -r -d '' file; do
+    # Skip .env.example files
+    if [[ "$file" == *".env.example"* ]]; then
+        continue
+    fi
+
+    # Skip binary files
+    if file "$file" 2>/dev/null | grep -q 'binary\|executable\|image\|archive'; then
+        continue
+    fi
+
     check_file "$file"
     if [ $? -eq 1 ]; then
         FOUND_SECRETS=1
     fi
-done
+done < <(git diff --cached --name-only --diff-filter=d -z 2>/dev/null)
 
 # Summary
 echo ""
