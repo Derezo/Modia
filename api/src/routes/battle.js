@@ -255,6 +255,14 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
   // Advance CT and find the first actor
   battleService.advanceToNextActor(initialState);
 
+  // Check if the first actor is an enemy - if so, process their turns immediately
+  let initialEnemyActions = [];
+  const firstActor = initialState.units.find(u => u.id === initialState.activeUnitId);
+  if (firstActor && firstActor.type === 'enemy') {
+    // Process enemy turns until a player's turn
+    initialEnemyActions = battleService.processEnemyTurns(initialState, aiService);
+  }
+
   // Generate turn predictions
   initialState.turnPredictions = battleService.predictTurnOrder(initialState, 10);
 
@@ -283,7 +291,8 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
     mapSeed,
     mapWidth: 32,
     mapHeight: 32,
-    state: initialState
+    state: initialState,
+    initialEnemyActions: initialEnemyActions.length > 0 ? initialEnemyActions : undefined
   });
 }));
 

@@ -175,6 +175,7 @@ export class BattleFormationScene extends Scene {
           width: 210px;
           display: flex;
           flex-direction: column;
+          margin-right: 10px;
         ">
           <div id="card-content">
             <!-- ParchmentCard component will be inserted here -->

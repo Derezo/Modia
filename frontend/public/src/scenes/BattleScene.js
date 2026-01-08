@@ -66,10 +66,11 @@ export class BattleScene extends Scene {
    * Enter the battle scene
    */
   enter(data) {
-    // data = { battleId, mapSeed, mapWidth, mapHeight, state }
+    // data = { battleId, mapSeed, mapWidth, mapHeight, state, initialEnemyActions }
     this.battleId = data.battleId;
     this.mapSeed = data.mapSeed;
     this.battleState = data.state;
+    this.initialEnemyActions = data.initialEnemyActions || null;
 
     // Initialize grid with asset loader for sprite rendering
     this.grid = new BattleGrid(this.game.canvas, data.mapWidth || 32, data.mapHeight || 32);
@@ -1143,6 +1144,78 @@ export class BattleScene extends Scene {
   }
 
   /**
+   * Process initial enemy actions when enemy goes first at battle start
+   * Called after intro completes if the server returned initialEnemyActions
+   */
+  async processInitialEnemyActions() {
+    const enemyActions = this.initialEnemyActions;
+    this.initialEnemyActions = null; // Clear so we don't process again
+
+    // Hide action menu while enemy acts
+    this.ui.hideActionMenu();
+
+    // Process each enemy action with animations
+    for (const enemyAction of enemyActions) {
+      await this.waitForAnimation(300);
+
+      const enemyUnit = this.units.get(enemyAction.unitId);
+      if (!enemyUnit) continue;
+
+      // Highlight the acting enemy
+      this.selectedUnit = enemyUnit;
+
+      // Animate movement
+      if (enemyAction.result.moved && enemyAction.targetTile) {
+        enemyUnit.moveTo(enemyAction.targetTile.x, enemyAction.targetTile.y);
+        await this.waitForAnimation(400);
+      }
+
+      // Animate attack damage
+      if (enemyAction.result.damage > 0 && enemyAction.result.targetId) {
+        const target = this.units.get(enemyAction.result.targetId);
+        if (target) {
+          // Enemy faces target and plays attack animation
+          enemyUnit.playAttackAnimation(target.gridX, target.gridY);
+          this.animations.addSlash(enemyUnit.screenX, enemyUnit.screenY - 32, target.screenX, target.screenY - 32);
+          await this.waitForAnimation(200);
+
+          // Target plays hit animation
+          target.playHitAnimation();
+          this.animations.addDamageNumber(target.screenX, target.screenY - 40, enemyAction.result.damage, enemyAction.result.isCritical);
+          this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
+          this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#ff4444');
+          target.hp = Math.max(0, target.hp - enemyAction.result.damage);
+          await this.waitForAnimation(300);
+
+          // Death animation if target died
+          if (!target.isAlive()) {
+            target.playDeathAnimation();
+            await this.waitForAnimation(400);
+          }
+        }
+      }
+
+      // Handle enemy miss
+      if (enemyAction.result.missed && enemyAction.result.targetId) {
+        const target = this.units.get(enemyAction.result.targetId);
+        if (target) {
+          this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
+          await this.waitForAnimation(200);
+        }
+      }
+    }
+
+    // Brief pause then show player UI
+    await this.waitForAnimation(300);
+
+    // Reset turn state and update UI for player's turn
+    this.canMove = true;
+    this.canAct = true;
+    this.turnPhase = 'ready';
+    this.updateUI();
+  }
+
+  /**
    * Update UI for partial turn (two-action system)
    * Called when player has completed one action but has another available
    */
@@ -1319,7 +1392,13 @@ export class BattleScene extends Scene {
       if (this.intro.isComplete()) {
         this.isIntroPlaying = false;
         this.ui.show(); // Show action menu after intro
-        this.updateUI();
+
+        // If there are initial enemy actions (enemy went first), process them
+        if (this.initialEnemyActions && this.initialEnemyActions.length > 0) {
+          this.processInitialEnemyActions();
+        } else {
+          this.updateUI();
+        }
       }
       // Don't process input during intro
       return;
