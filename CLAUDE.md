@@ -41,7 +41,13 @@ node --test api/src/tests/auth.test.js  # Single test file (Node's built-in test
 
 # Database utilities
 npm run db:reset                        # Re-run migrations + seed
+npm run db:status                       # Show applied vs pending migrations
+npm run db:fresh                        # Drop all tables, re-migrate, re-seed
 npm -w api run migrate:rollback         # Roll back last migration
+
+# Development environment
+npm run dev:setup                       # Smart startup: checks ports, Docker, migrations, seeds, launches
+npm run doctor                          # Validate dev environment (Node, Docker, DB, ports, .env)
 
 # Asset Generation (requires PIXELLAB_API_KEY in .env)
 npm run generate:all            # Generate all assets
