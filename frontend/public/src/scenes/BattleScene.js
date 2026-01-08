@@ -9,6 +9,18 @@ import { BattleIntro } from '../battle/BattleIntro.js';
 import { RadialMenu } from '../battle/RadialMenu.js';
 import RewardsModal from '../components/RewardsModal.js';
 
+// Movement range by class (mirrored from shared/constants.js)
+const CLASS_MOVEMENT = {
+  warrior: 3,
+  wizard: 2,
+  monk: 4,
+  chemist: 3,
+  berserker: 3,
+  sorcerer: 2,
+  ninja: 5,
+  alchemist: 3
+};
+
 /**
  * BattleScene - Tactical turn-based combat on an isometric grid with camera
  */
@@ -1223,6 +1235,9 @@ export class BattleScene extends Scene {
     const activeUnit = this.getActiveUnit();
     if (!activeUnit || activeUnit.type !== 'player') return;
 
+    // Update active unit card (HP/MP may have changed from skill use)
+    this.ui.updateActiveUnit(activeUnit);
+
     // Update UI with available actions
     this.ui.updateAvailableActions(this.canMove, this.canAct);
     this.ui.showActionMenu();
@@ -1296,6 +1311,28 @@ export class BattleScene extends Scene {
   }
 
   /**
+   * Get movement range for a unit based on class and status effects
+   * Mirrors server-side logic in battleService.getMovementRange()
+   */
+  getUnitMovementRange(unit) {
+    if (!unit) return 3;
+
+    // Look up class-based movement range
+    const unitClass = unit.class?.toLowerCase() || 'warrior';
+    let baseRange = CLASS_MOVEMENT[unitClass] || 3;
+
+    // Apply status effects (must match server-side logic)
+    if (unit.statusEffects?.some(e => e.type === 'slow')) {
+      baseRange = Math.max(1, baseRange - 1);
+    }
+    if (unit.statusEffects?.some(e => e.type === 'haste')) {
+      baseRange += 1;
+    }
+
+    return baseRange;
+  }
+
+  /**
    * Get unit at position
    */
   getUnitAt(x, y) {
@@ -1321,6 +1358,9 @@ export class BattleScene extends Scene {
     if (activeUnit) {
       this.ui.updateActiveUnit(activeUnit);
       activeUnit.isSelected = true;
+
+      // Update movement range based on unit's class and status effects
+      this.movementRange = this.getUnitMovementRange(activeUnit);
 
       // Check if active unit changed - trigger camera transition
       if (this.lastActiveUnitId !== activeUnit.id) {
