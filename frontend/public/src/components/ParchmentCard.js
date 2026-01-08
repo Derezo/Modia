@@ -167,7 +167,7 @@ export class ParchmentCard {
         display: flex;
         align-items: center;
         gap: 6px;
-        height: 14px;
+        height: 16px;
       }
 
       .pc-bar-label {
@@ -182,17 +182,19 @@ export class ParchmentCard {
 
       .pc-bar-wrapper {
         flex: 1;
-        height: 10px;
-        background: rgba(0, 0, 0, 0.25);
-        border-radius: 2px;
-        border: 1px solid rgba(0, 0, 0, 0.3);
+        height: 14px;
+        max-width: 120px;
+        background: rgba(0, 0, 0, 0.35);
+        border-radius: 3px;
+        border: 1px solid rgba(0, 0, 0, 0.4);
         overflow: hidden;
-        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+        position: relative;
       }
 
       .pc-bar-fill {
         height: 100%;
-        border-radius: 1px;
+        border-radius: 2px;
         transition: width 0.3s ease;
       }
 
@@ -214,36 +216,38 @@ export class ParchmentCard {
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
-      .pc-bar-value {
-        width: 50px;
-        font-size: 10px;
-        color: #3d2f1f;
-        text-align: right;
+      .pc-bar-value-inside {
+        position: absolute;
+        right: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 9px;
         font-family: 'Consolas', 'Monaco', monospace;
         font-weight: bold;
+        color: #fff;
+        text-shadow:
+          -1px -1px 0 #000,
+          1px -1px 0 #000,
+          -1px 1px 0 #000,
+          1px 1px 0 #000;
+        white-space: nowrap;
       }
 
-      /* Stats Section - Right */
+      /* Stats Section - Right (Vertical Layout) */
       .pc-stats {
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 1px;
         padding-left: 8px;
         border-left: 1px solid rgba(0, 0, 0, 0.15);
-        min-width: 70px;
-      }
-
-      .pc-stats-row {
-        display: flex;
-        gap: 8px;
-        justify-content: flex-end;
+        min-width: 55px;
       }
 
       .pc-stat {
         display: flex;
-        gap: 2px;
+        gap: 3px;
         font-size: 10px;
-        min-width: 32px;
+        justify-content: flex-end;
       }
 
       .pc-stat-label {
@@ -261,6 +265,8 @@ export class ParchmentCard {
         color: #2d2418;
         font-family: 'Consolas', 'Monaco', monospace;
         font-weight: bold;
+        min-width: 24px;
+        text-align: right;
       }
 
       /* Empty State */
@@ -302,6 +308,16 @@ export class ParchmentCard {
   }
 
   setCharacter(character) {
+    // Skip if same character (prevent flicker on mouse move)
+    if (this.character && character && this.character.id === character.id) {
+      // Only update if HP/MP changed
+      const needsUpdate =
+        this.character.hp !== character.hp ||
+        this.character.mp !== character.mp ||
+        this.character.hp_current !== character.hp_current ||
+        this.character.mp_current !== character.mp_current;
+      if (!needsUpdate) return;
+    }
     this.character = character;
     this.render();
   }
@@ -401,15 +417,15 @@ export class ParchmentCard {
           <span class="pc-bar-label hp">HP</span>
           <div class="pc-bar-wrapper">
             <div class="pc-bar-fill hp ${hpStatus}" style="width: ${hpPercent}%;"></div>
+            <span class="pc-bar-value-inside">${hpCurrent}/${hpMax}</span>
           </div>
-          <span class="pc-bar-value">${hpCurrent}/${hpMax}</span>
         </div>
         <div class="pc-bar-row">
           <span class="pc-bar-label mp">MP</span>
           <div class="pc-bar-wrapper">
             <div class="pc-bar-fill mp" style="width: ${mpPercent}%;"></div>
+            <span class="pc-bar-value-inside">${mpCurrent}/${mpMax}</span>
           </div>
-          <span class="pc-bar-value">${mpCurrent}/${mpMax}</span>
         </div>
       </div>
     `;
@@ -424,17 +440,11 @@ export class ParchmentCard {
 
       html += `
         <div class="pc-stats">
-          <div class="pc-stats-row">
-            <div class="pc-stat"><span class="pc-stat-label str">STR</span><span class="pc-stat-value">${str}</span></div>
-            <div class="pc-stat"><span class="pc-stat-label int">INT</span><span class="pc-stat-value">${int}</span></div>
-          </div>
-          <div class="pc-stats-row">
-            <div class="pc-stat"><span class="pc-stat-label agi">AGI</span><span class="pc-stat-value">${agi}</span></div>
-            <div class="pc-stat"><span class="pc-stat-label vit">VIT</span><span class="pc-stat-value">${vit}</span></div>
-          </div>
-          <div class="pc-stats-row">
-            <div class="pc-stat"><span class="pc-stat-label lck">LCK</span><span class="pc-stat-value">${lck}</span></div>
-          </div>
+          <div class="pc-stat"><span class="pc-stat-label str">STR</span><span class="pc-stat-value">${str}</span></div>
+          <div class="pc-stat"><span class="pc-stat-label agi">AGI</span><span class="pc-stat-value">${agi}</span></div>
+          <div class="pc-stat"><span class="pc-stat-label int">INT</span><span class="pc-stat-value">${int}</span></div>
+          <div class="pc-stat"><span class="pc-stat-label vit">VIT</span><span class="pc-stat-value">${vit}</span></div>
+          <div class="pc-stat"><span class="pc-stat-label lck">LCK</span><span class="pc-stat-value">${lck}</span></div>
         </div>
       `;
     }
