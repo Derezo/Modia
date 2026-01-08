@@ -151,6 +151,134 @@ function broadcastTurnChanged(battleId, activeUnitIndex, turn, excludeUserId = n
 }
 
 /**
+ * Broadcast turn start event (new protocol - triggers camera pan)
+ * @param {number} battleId - Battle ID
+ * @param {Object} unit - Active unit info { id, name, type, position }
+ * @param {string} unitType - 'player_local' | 'player_remote' | 'enemy'
+ * @param {Array} turnPredictions - Predicted next 10 turns
+ */
+function broadcastTurnStart(battleId, unit, unitType, turnPredictions = null) {
+  const roomName = `battle:${battleId}`;
+
+  getWebsocket().broadcastToRoom(roomName, {
+    type: 'battle:turn_start',
+    payload: {
+      battleId,
+      unitId: unit.id,
+      unitName: unit.name,
+      unitType,
+      position: unit.position,
+      turnPredictions,
+      timestamp: Date.now()
+    }
+  });
+}
+
+/**
+ * Broadcast intent highlight for enemy visualization
+ * @param {number} battleId - Battle ID
+ * @param {string} unitId - Unit showing intent
+ * @param {string} highlightType - 'movement_range' | 'attack_range' | 'target_path' | 'target_tile' | 'aoe'
+ * @param {Array} tiles - Array of { x, y } tile positions
+ * @param {number} duration - How long to show highlight (ms)
+ */
+function broadcastIntentHighlight(battleId, unitId, highlightType, tiles, duration = 500) {
+  const roomName = `battle:${battleId}`;
+
+  getWebsocket().broadcastToRoom(roomName, {
+    type: 'battle:intent_highlight',
+    payload: {
+      battleId,
+      unitId,
+      highlightType,
+      tiles,
+      duration,
+      timestamp: Date.now()
+    }
+  });
+}
+
+/**
+ * Send "your turn" notification to a specific player
+ * @param {number} userId - User whose turn it is
+ * @param {number} battleId - Battle ID
+ * @param {string} unitId - Active unit ID
+ * @param {Object} state - Current battle state
+ * @param {Array} availableActions - List of available actions
+ */
+function sendYourTurn(userId, battleId, unitId, state, availableActions = ['move', 'attack', 'skill', 'item', 'wait']) {
+  getWebsocket().sendToUser(userId, {
+    type: 'battle:your_turn',
+    payload: {
+      battleId,
+      unitId,
+      state,
+      availableActions,
+      timestamp: Date.now()
+    }
+  });
+}
+
+/**
+ * Broadcast player disconnection
+ * @param {number} battleId - Battle ID
+ * @param {number} playerId - Disconnected player's user ID
+ * @param {string} playerName - Disconnected player's name
+ */
+function broadcastPlayerDisconnected(battleId, playerId, playerName) {
+  const roomName = `battle:${battleId}`;
+
+  getWebsocket().broadcastToRoom(roomName, {
+    type: 'battle:player_disconnected',
+    payload: {
+      battleId,
+      playerId,
+      playerName,
+      timestamp: Date.now()
+    }
+  }, playerId);  // Don't send to the disconnected player
+}
+
+/**
+ * Broadcast player reconnection
+ * @param {number} battleId - Battle ID
+ * @param {number} playerId - Reconnected player's user ID
+ * @param {string} playerName - Reconnected player's name
+ */
+function broadcastPlayerReconnected(battleId, playerId, playerName) {
+  const roomName = `battle:${battleId}`;
+
+  getWebsocket().broadcastToRoom(roomName, {
+    type: 'battle:player_reconnected',
+    payload: {
+      battleId,
+      playerId,
+      playerName,
+      timestamp: Date.now()
+    }
+  });
+}
+
+/**
+ * Send full state sync to a specific user (for reconnection)
+ * @param {number} userId - User to sync
+ * @param {number} battleId - Battle ID
+ * @param {Object} state - Full battle state
+ * @param {string} reason - 'reconnect' | 'resync' | 'initial'
+ */
+function sendStateSync(userId, battleId, state, reason = 'reconnect') {
+  getWebsocket().sendToUser(userId, {
+    type: 'battle:state_sync',
+    payload: {
+      battleId,
+      state,
+      reason,
+      timestamp: Date.now()
+    }
+  });
+}
+
+/**
  * Broadcast battle end event
  * @param {number} battleId - Battle ID
  * @param {string} status - 'victory' | 'defeat'
@@ -239,15 +367,30 @@ function getBattleParticipants(battleId) {
 }
 
 module.exports = {
+  // Room management
   joinBattle,
   leaveBattle,
+  cleanupBattleRoom,
+  getBattleParticipants,
+
+  // State updates
   broadcastStateUpdate,
+  sendBattleState,
+  sendStateSync,
+
+  // Turn-based protocol (new)
+  broadcastTurnStart,
+  broadcastTurnChanged,
+  broadcastIntentHighlight,
+  sendYourTurn,
+
+  // Action events
   broadcastUnitMoved,
   broadcastActionExecuted,
-  broadcastTurnChanged,
-  broadcastBattleEnd,
-  sendBattleState,
   broadcastEnemyActions,
-  cleanupBattleRoom,
-  getBattleParticipants
+
+  // Battle lifecycle
+  broadcastBattleEnd,
+  broadcastPlayerDisconnected,
+  broadcastPlayerReconnected
 };

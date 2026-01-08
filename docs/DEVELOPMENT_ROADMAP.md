@@ -31,9 +31,28 @@ Critical items for complete gameplay loop:
 
 | Issue | Location | Impact | Priority |
 |-------|----------|--------|----------|
+| **PvP action endpoint broken** | battle.js:action | Player2 cannot submit actions (only validates player1_id) | **CRITICAL** |
 | PvP battles not started | coliseumService.js | Match found but battle not created | Medium |
+| No multi-player party tables | Database schema | Cannot form parties with other players | Medium |
+| Database 2-player limit | battles table | Schema only supports player1_id, player2_id | Medium |
 | Audio system missing | BattleScene.js | No sound effects or music | Low |
 | Leaderboards missing | - | No player rankings | Low |
+
+### Battle System Architecture Overhaul (In Progress)
+
+Phase 2 implementation of the hybrid HTTP/WebSocket battle system. See plan file: `/home/wizard/.claude/plans/drifting-soaring-quasar.md`
+
+| Task | Status | Files |
+|------|--------|-------|
+| Documentation (Phase 1) | ✅ Complete | BATTLE_TURN_SYSTEM.md, BATTLE_MESSAGING_PROTOCOL.md, BATTLE_MODES.md, BATTLE_RECONNECTION.md, BATTLE_ANIMATIONS.md |
+| Fix PvP action endpoint | ✅ Complete | api/src/routes/battle.js |
+| Database migrations for multiplayer | ✅ Complete | 009_multiplayer_support.sql (parties, party_members, battle_players, pvp_ratings, coliseum_matches) |
+| Backend WebSocket infrastructure | ✅ Complete | battleWebsocket.js (new message types) |
+| Backend async turn processing | ✅ Complete | battleTurnManager.js (new), battle.js (async mode) |
+| Frontend WebSocket handlers | ⏳ Pending | BattleScene.js, websocket.js |
+| Frontend intent visualization | ⏳ Pending | BattleUI.js, BattleGrid.js |
+| Reconnection system | ⏳ Pending | battleReconnection.js |
+| Multi-player party system | ⏳ Pending | New routes and services |
 
 ### Security Audit Completed (v5.0 → v6.0)
 
