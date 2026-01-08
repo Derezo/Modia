@@ -2,7 +2,15 @@
  * Party WebSocket Service - Handles real-time party invite and membership events
  */
 
-const { sendToUser, broadcastToRoom, rooms } = require('../websocket/index');
+// Lazy-load websocket to avoid circular dependency
+// websocket/index.js imports this file, so we can't destructure at top level
+let _websocket = null;
+function getWebsocket() {
+  if (!_websocket) {
+    _websocket = require('../websocket/index');
+  }
+  return _websocket;
+}
 const { query } = require('../config/database');
 
 // Pending invites: inviteId -> { fromUserId, toUserId, fromUsername, characterId, expiresAt }
@@ -49,7 +57,7 @@ async function sendInvite(fromUserId, fromUsername, toUserId, characterId) {
   pendingInvites.set(inviteId, invite);
 
   // Send invite to target user
-  sendToUser(toUserId, {
+  getWebsocket().sendToUser(toUserId, {
     type: 'party:invite_received',
     payload: {
       inviteId,
@@ -94,7 +102,7 @@ async function acceptInvite(inviteId, userId, username) {
   pendingInvites.delete(inviteId);
 
   // Notify the inviter
-  sendToUser(invite.fromUserId, {
+  getWebsocket().sendToUser(invite.fromUserId, {
     type: 'party:invite_accepted',
     payload: {
       inviteId,
@@ -104,7 +112,7 @@ async function acceptInvite(inviteId, userId, username) {
   });
 
   // Notify the new member
-  sendToUser(userId, {
+  getWebsocket().sendToUser(userId, {
     type: 'party:joined',
     payload: {
       inviteId,
@@ -142,7 +150,7 @@ function declineInvite(inviteId, userId) {
   pendingInvites.delete(inviteId);
 
   // Notify the inviter
-  sendToUser(invite.fromUserId, {
+  getWebsocket().sendToUser(invite.fromUserId, {
     type: 'party:invite_declined',
     payload: {
       inviteId,
@@ -163,12 +171,12 @@ function expireInvite(inviteId) {
   pendingInvites.delete(inviteId);
 
   // Notify both parties
-  sendToUser(invite.fromUserId, {
+  getWebsocket().sendToUser(invite.fromUserId, {
     type: 'party:invite_expired',
     payload: { inviteId }
   });
 
-  sendToUser(invite.toUserId, {
+  getWebsocket().sendToUser(invite.toUserId, {
     type: 'party:invite_expired',
     payload: { inviteId }
   });
@@ -184,7 +192,7 @@ function expireInvite(inviteId) {
 function broadcastMemberJoined(partyId, userId, username, characterName) {
   const roomName = `party:${partyId}`;
 
-  broadcastToRoom(roomName, {
+  getWebsocket().broadcastToRoom(roomName, {
     type: 'party:member_joined',
     payload: {
       partyId,
@@ -206,7 +214,7 @@ function broadcastMemberJoined(partyId, userId, username, characterName) {
 function broadcastMemberLeft(partyId, userId, username, reason = 'left') {
   const roomName = `party:${partyId}`;
 
-  broadcastToRoom(roomName, {
+  getWebsocket().broadcastToRoom(roomName, {
     type: 'party:member_left',
     payload: {
       partyId,
@@ -226,7 +234,7 @@ function broadcastMemberLeft(partyId, userId, username, reason = 'left') {
 function broadcastPartyDisbanded(partyId, reason = 'Leader left') {
   const roomName = `party:${partyId}`;
 
-  broadcastToRoom(roomName, {
+  getWebsocket().broadcastToRoom(roomName, {
     type: 'party:disbanded',
     payload: {
       partyId,
@@ -250,7 +258,7 @@ function broadcastPartyDisbanded(partyId, reason = 'Leader left') {
 function broadcastLeaderChanged(partyId, newLeaderId, newLeaderUsername) {
   const roomName = `party:${partyId}`;
 
-  broadcastToRoom(roomName, {
+  getWebsocket().broadcastToRoom(roomName, {
     type: 'party:leader_changed',
     payload: {
       partyId,
@@ -330,7 +338,7 @@ function cleanupUserInvites(userId) {
 
   toCancel.forEach(({ inviteId, toUserId }) => {
     pendingInvites.delete(inviteId);
-    sendToUser(toUserId, {
+    getWebsocket().sendToUser(toUserId, {
       type: 'party:invite_expired',
       payload: { inviteId, reason: 'Inviter disconnected' }
     });

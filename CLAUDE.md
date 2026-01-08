@@ -51,6 +51,8 @@ npm run generate:characters     # Character sprites
 npm run generate:enemies        # Enemy sprites
 npm run generate:items          # Item sprites
 npm run generate:nodes          # World map node sprites
+npm run generate:portraits      # Character portraits
+npm run generate:backdrop       # World map backdrop
 npm run validate:sprites        # Validate all sprite prompts
 npm run validate:enemy          # Validate enemy prompts only
 npm run validate:character      # Validate character prompts only
@@ -83,6 +85,19 @@ npm run validate:character      # Validate character prompts only
 2. API routes validate via middleware (`auth.js`, `rateLimiter.js`)
 3. Routes query PostgreSQL with parameterized queries
 4. Real-time updates pushed via WebSocket rooms
+
+### Battle System (`api/src/services/` + `frontend/public/src/battle/`)
+Multi-file system spanning backend and frontend:
+- **Backend:** `battleService.js` (damage formulas, status effects), `battleWebsocket.js` (real-time battle sync)
+- **Frontend:** `BattleScene.js` orchestrates `BattleGrid.js` (tactical grid), `BattleUnit.js` (unit rendering), `BattleUI.js` (HUD), `BattleAnimations.js`, `BattlePathfinding.js`, `BattleCamera.js`, `BattleIntro.js`
+- Damage formulas: Physical = `(STR + equipment) * skillPower - (VIT + defense) * 0.15`; Magic = `(INT + magicAttack) * skillPower - (INT + magicDefense) * 0.075`
+- Turn order based on agility + random variance
+
+### WebSocket Protocol
+Room-based subscriptions at `/ws`:
+- **Message types:** `auth`, `join_room`, `leave_room`, `chat_message`, `party_*`, `battle_*`, `coliseum_*`
+- **Rooms:** `chat:global`, `tavern:{nodeId}`, `marketplace`, `party:{partyId}`, `battle:{battleId}`, `coliseum:{matchId}`
+- Services: `chatService.js`, `presenceService.js`, `partyWebsocket.js`, `battleWebsocket.js`, `coliseumService.js`
 
 ## Key Patterns
 

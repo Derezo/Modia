@@ -22,7 +22,8 @@ const CLASSES = ['warrior', 'wizard', 'monk', 'chemist', 'berserker', 'sorcerer'
 class PortraitService {
   constructor() {
     this.pixelLab = null;
-    this.portraitDir = path.join(process.cwd(), 'frontend', 'public', 'assets', 'sprites', 'portraits');
+    // Go up from api/ to project root, then into frontend/
+    this.portraitDir = path.join(__dirname, '../../../frontend', 'public', 'assets', 'sprites', 'portraits');
     this.generationQueue = new Map();
   }
 
@@ -134,12 +135,9 @@ class PortraitService {
     console.log(`Prompt: ${prompt}`);
 
     try {
-      const result = await this.pixelLab.generateSprite({
+      const result = await this.pixelLab.generateImageV2({
         description: prompt,
-        image_size: 64,
-        outline: 'selective outline',
-        shading: 'medium shading',
-        detail: 'high detail',
+        image_size: { width: 64, height: 64 },
         no_background: true
       });
 

@@ -2,7 +2,15 @@
  * Coliseum Service - Handles PvP matchmaking and queue management
  */
 
-const { sendToUser, broadcastToRoom, rooms } = require('../websocket/index');
+// Lazy-load websocket to avoid circular dependency
+// websocket/index.js imports this file, so we can't destructure at top level
+let _websocket = null;
+function getWebsocket() {
+  if (!_websocket) {
+    _websocket = require('../websocket/index');
+  }
+  return _websocket;
+}
 
 // Matchmaking queue: Map of queueType -> Array of { userId, username, partyLevel, partySize, queuedAt }
 const matchmakingQueues = new Map();
@@ -71,13 +79,14 @@ function joinQueue(queueType, userId, username, partyLevel, partySize) {
 
   // Join coliseum room for updates
   const roomName = `coliseum:${queueType}`;
+  const { rooms } = getWebsocket();
   if (!rooms.has(roomName)) {
     rooms.set(roomName, new Set());
   }
   rooms.get(roomName).add(userId);
 
   // Send queue update to player
-  sendToUser(userId, {
+  getWebsocket().sendToUser(userId, {
     type: 'coliseum:queue_joined',
     payload: {
       queueType,
@@ -134,12 +143,13 @@ function removeFromQueue(queueType, userId) {
 
     // Leave coliseum room
     const roomName = `coliseum:${queueType}`;
+    const { rooms } = getWebsocket();
     if (rooms.has(roomName)) {
       rooms.get(roomName).delete(userId);
     }
 
     // Send confirmation
-    sendToUser(userId, {
+    getWebsocket().sendToUser(userId, {
       type: 'coliseum:queue_left',
       payload: { queueType }
     });
@@ -210,7 +220,7 @@ function tryMatchmaking(queueType) {
     readyDeadline: match.readyDeadline
   };
 
-  sendToUser(player1.userId, {
+  getWebsocket().sendToUser(player1.userId, {
     type: 'coliseum:match_found',
     payload: {
       ...matchPayload,
@@ -221,7 +231,7 @@ function tryMatchmaking(queueType) {
     }
   });
 
-  sendToUser(player2.userId, {
+  getWebsocket().sendToUser(player2.userId, {
     type: 'coliseum:match_found',
     payload: {
       ...matchPayload,
@@ -277,12 +287,12 @@ function playerReady(matchId, userId) {
       startIn: 3000 // 3 second countdown
     };
 
-    sendToUser(match.player1.userId, {
+    getWebsocket().sendToUser(match.player1.userId, {
       type: 'coliseum:match_ready',
       payload: readyPayload
     });
 
-    sendToUser(match.player2.userId, {
+    getWebsocket().sendToUser(match.player2.userId, {
       type: 'coliseum:match_ready',
       payload: readyPayload
     });
@@ -295,7 +305,7 @@ function playerReady(matchId, userId) {
       ? match.player2.userId
       : match.player1.userId;
 
-    sendToUser(opponentId, {
+    getWebsocket().sendToUser(opponentId, {
       type: 'coliseum:opponent_ready',
       payload: { matchId }
     });
@@ -319,7 +329,7 @@ function checkMatchReady(matchId) {
 
   // Notify and return ready player to queue
   if (match.player1.ready && !match.player2.ready) {
-    sendToUser(match.player1.userId, {
+    getWebsocket().sendToUser(match.player1.userId, {
       type: 'coliseum:match_cancelled',
       payload: { matchId, reason: 'Opponent did not ready' }
     });
@@ -337,7 +347,7 @@ function checkMatchReady(matchId) {
   }
 
   if (match.player2.ready && !match.player1.ready) {
-    sendToUser(match.player2.userId, {
+    getWebsocket().sendToUser(match.player2.userId, {
       type: 'coliseum:match_cancelled',
       payload: { matchId, reason: 'Opponent did not ready' }
     });
@@ -355,7 +365,7 @@ function checkMatchReady(matchId) {
 
   // Notify non-ready players
   for (const user of notReadyUsers) {
-    sendToUser(user.userId, {
+    getWebsocket().sendToUser(user.userId, {
       type: 'coliseum:match_cancelled',
       payload: { matchId, reason: 'Failed to ready in time' }
     });
@@ -383,12 +393,12 @@ function startMatch(matchId) {
     // battleId would come from database
   };
 
-  sendToUser(match.player1.userId, {
+  getWebsocket().sendToUser(match.player1.userId, {
     type: 'coliseum:match_started',
     payload: battlePayload
   });
 
-  sendToUser(match.player2.userId, {
+  getWebsocket().sendToUser(match.player2.userId, {
     type: 'coliseum:match_started',
     payload: battlePayload
   });
@@ -412,7 +422,7 @@ function broadcastQueueUpdate(queueType) {
 
   // Send position updates to each player
   queue.forEach((player, index) => {
-    sendToUser(player.userId, {
+    getWebsocket().sendToUser(player.userId, {
       type: 'coliseum:queue_update',
       payload: {
         queueType,
@@ -461,7 +471,7 @@ function cleanupPlayer(userId) {
           ? match.player2.userId
           : match.player1.userId;
 
-        sendToUser(opponentId, {
+        getWebsocket().sendToUser(opponentId, {
           type: 'coliseum:match_cancelled',
           payload: { matchId, reason: 'Opponent disconnected' }
         });

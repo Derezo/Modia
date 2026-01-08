@@ -15,6 +15,13 @@ const CLASSES = {
   CHEMIST: 'chemist'
 };
 
+// Character Genders
+const GENDERS = {
+  MALE: 'male',
+  FEMALE: 'female',
+  OTHER: 'other'
+};
+
 // Advanced Classes (unlocked at level 20)
 const ADVANCED_CLASSES = {
   BERSERKER: 'berserker',
@@ -133,6 +140,7 @@ const calculateStats = (race, charClass, level) => {
 module.exports = {
   RACES,
   CLASSES,
+  GENDERS,
   ADVANCED_CLASSES,
   CLASS_ADVANCEMENT,
   ADVANCEMENT_LEVEL_REQUIREMENT,

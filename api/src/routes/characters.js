@@ -13,6 +13,14 @@ const STARTER_EQUIPMENT = {
   chemist: ['Mixing Rod', 'Alchemist Coat', 'Reagent Pouch']
 };
 
+// Starter skills by class (first skill in each class tree)
+const STARTER_SKILLS = {
+  warrior: ['power_strike'],
+  wizard: ['fireball'],
+  monk: ['palm_strike'],
+  chemist: ['brew_potion']
+};
+
 // GET /api/characters - List all user's characters
 router.get('/', authenticate, asyncHandler(async (req, res) => {
   const result = await query(
@@ -105,6 +113,19 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
          SELECT $1, id, 1, true, equipment_slot
          FROM item_templates WHERE name = $2`,
         [character.id, itemName]
+      );
+    }
+  }
+
+  // Grant starter skills
+  const starterSkills = STARTER_SKILLS[characterClass];
+  if (starterSkills) {
+    for (const skillId of starterSkills) {
+      await query(
+        `INSERT INTO character_skills (character_id, skill_id, level)
+         VALUES ($1, $2, 1)
+         ON CONFLICT (character_id, skill_id) DO NOTHING`,
+        [character.id, skillId]
       );
     }
   }

@@ -91,9 +91,15 @@ export class BattleCamera {
 
   /**
    * Switch to manual mode (player broke free)
+   * Cancels any active turn transition
    */
   enterManualMode() {
     this.mode = 'manual';
+    // Cancel turn transition if user takes manual control
+    if (this.turnTransitionActive) {
+      this.turnTransitionActive = false;
+      this.onTurnTransitionComplete = null;
+    }
   }
 
   /**
@@ -175,7 +181,8 @@ export class BattleCamera {
    */
   update(deltaTime) {
     // In follow mode, update target to follow unit
-    if (this.mode === 'follow' && this.followTarget) {
+    // Skip during turn transition to avoid overwriting transition target
+    if (this.mode === 'follow' && this.followTarget && !this.turnTransitionActive) {
       this.targetX = this.followTarget.screenX;
       this.targetY = this.followTarget.screenY;
       this.clampTarget();

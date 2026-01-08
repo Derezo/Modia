@@ -691,6 +691,9 @@ export class BattleScene extends Scene {
    * Show radial menu for active unit
    */
   showRadialMenu() {
+    // Don't show radial menu during battle intro
+    if (this.isIntroPlaying) return;
+
     const activeUnit = this.getActiveUnit();
     if (!activeUnit || activeUnit.type !== 'player') return;
 
@@ -1270,13 +1273,20 @@ export class BattleScene extends Scene {
         this.camera.setFollowTarget(activeUnit);
       }
 
-      // Show action menu only for player units
+      // Show radial menu for player units
       if (activeUnit.type === 'player') {
         // Two-action system: update available actions for new turn
         this.ui.updateAvailableActions(this.canMove, this.canAct);
-        this.ui.showActionMenu();
         this.ui.setActionsEnabled(true);
+
+        // Show radial menu automatically on player's turn (after short delay for camera)
+        setTimeout(() => {
+          if (this.getActiveUnit()?.id === activeUnit.id && !this.currentAction) {
+            this.showRadialMenu();
+          }
+        }, 300);
       } else {
+        this.hideRadialMenu();
         this.ui.hideActionMenu();
       }
     }
@@ -1422,11 +1432,16 @@ export class BattleScene extends Scene {
       }
     }
 
-    // Hovered tile highlight
+    // Hovered tile highlight - always show hover indicator
     if (this.hoveredTile) {
       const key = `${this.hoveredTile.x},${this.hoveredTile.y}`;
-      if (!highlights[key]) {
-        highlights[key] = 'rgba(255, 255, 255, 0.2)';
+      // If tile is already highlighted for targeting, make it brighter on hover
+      if (highlights[key]) {
+        // Intensify existing highlight on hover
+        highlights[key] = highlights[key].replace(/[\d.]+\)$/, '0.8)');
+      } else {
+        // Show white hover indicator for non-highlighted tiles
+        highlights[key] = 'rgba(255, 255, 255, 0.4)';
       }
     }
 
