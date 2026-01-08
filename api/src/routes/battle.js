@@ -111,6 +111,117 @@ function generateTerrain(seed, nodeType, width = 32, height = 32) {
 }
 
 // ============================================================================
+// BATTLE END HELPER (for async processing)
+// ============================================================================
+
+/**
+ * Handle battle end - calculate rewards and update database
+ * @param {number} battleId - Battle ID
+ * @param {string} status - 'victory' | 'defeat'
+ * @param {Object} state - Final battle state
+ * @param {number} userId - User ID who owns the battle
+ * @returns {Object} Rewards data if victory
+ */
+async function handleBattleEnd(battleId, status, state, userId) {
+  // Update characters to no longer be in battle
+  await query(
+    `UPDATE characters SET in_battle = false
+     WHERE user_id = $1 AND party_slot <= $2`,
+    [userId, MAX_BATTLE_PARTY_SIZE]
+  );
+
+  let rewards = null;
+
+  // Calculate rewards for victory
+  if (status === 'victory') {
+    const enemies = state.units.filter(u => u.type === 'enemy');
+    const players = state.units.filter(u => u.type === 'player');
+    const partyLevel = Math.floor(
+      players.reduce((sum, u) => sum + (u.level || 1), 0) / players.length
+    ) || 1;
+
+    // Get node info for rewards calculation
+    const nodeResult = await query(
+      'SELECT difficulty_tier, node_type FROM world_nodes WHERE id = (SELECT node_id FROM battles WHERE id = $1)',
+      [battleId]
+    );
+    const difficultyTier = nodeResult.rows[0]?.difficulty_tier || 1;
+    const nodeType = nodeResult.rows[0]?.node_type || 'forest';
+
+    // Calculate rewards using service
+    const gold = battleService.calculateGoldReward(enemies, difficultyTier);
+    const exp = battleService.calculateExperienceReward(enemies, partyLevel);
+
+    // Roll item drops from each enemy
+    const droppedItems = [];
+    for (const enemy of enemies) {
+      const drops = await itemDropService.rollDrops(enemy, difficultyTier, nodeType);
+      droppedItems.push(...drops);
+    }
+
+    // Get party leader for item storage
+    const partyLeaderResult = await query(
+      'SELECT id FROM characters WHERE user_id = $1 AND party_slot = 1',
+      [userId]
+    );
+    const partyLeaderId = partyLeaderResult.rows[0]?.id;
+
+    // Use transaction for rewards distribution
+    await withTransaction(async (client) => {
+      // Update battle record
+      const rewardsData = {
+        gold,
+        experience: exp,
+        items: itemDropService.formatDropsForResponse(droppedItems)
+      };
+      await client.query(
+        'UPDATE battles SET rewards = $1, ended_at = NOW() WHERE id = $2',
+        [JSON.stringify(rewardsData), battleId]
+      );
+
+      // Award gold to user (capped at MAX_GOLD to prevent overflow)
+      await client.query(
+        'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
+        [gold, MAX_GOLD, userId]
+      );
+
+      // Distribute XP to battle party characters
+      const xpPerCharacter = Math.floor(exp / players.length);
+      await client.query(
+        `UPDATE characters
+         SET experience = experience + $1
+         WHERE user_id = $2 AND party_slot <= $3 AND party_slot IS NOT NULL`,
+        [xpPerCharacter, userId, MAX_BATTLE_PARTY_SIZE]
+      );
+
+      // Store dropped items in party leader's inventory
+      if (partyLeaderId) {
+        for (const item of droppedItems) {
+          await itemDropService.storeDroppedItem(partyLeaderId, item, client);
+        }
+      }
+    });
+
+    rewards = {
+      gold,
+      experience: exp,
+      items: itemDropService.formatDropsForResponse(droppedItems)
+    };
+  }
+
+  // Broadcast battle end via WebSocket
+  battleWebsocket.broadcastBattleEnd(battleId, status, rewards);
+
+  // Leave battle room (for all users in battle)
+  const participants = battleWebsocket.getBattleParticipants(battleId);
+  for (const participantId of participants) {
+    battleWebsocket.leaveBattle(battleId, participantId);
+  }
+
+  return rewards;
+}
+
+// ============================================================================
 
 // GET /api/battle/preview/:nodeId - Get encounter preview for formation screen
 router.get('/preview/:nodeId', authenticate, asyncHandler(async (req, res) => {
@@ -437,10 +548,10 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
 router.post('/action', authenticate, asyncHandler(async (req, res) => {
   const { battleId, actionType, unitId, targetTile, skillId } = req.body;
 
-  // Get battle
+  // Get battle - allow both player1 AND player2 to submit actions (for PvP)
   const battleResult = await query(
-    `SELECT id, battle_state FROM battles
-     WHERE id = $1 AND player1_id = $2 AND status = 'active'`,
+    `SELECT id, battle_state, player1_id, player2_id FROM battles
+     WHERE id = $1 AND (player1_id = $2 OR player2_id = $2) AND status = 'active'`,
     [battleId, req.user.userId]
   );
 
@@ -448,7 +559,8 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Battle not found or not active', 404);
   }
 
-  const state = battleResult.rows[0].battle_state;
+  const battle = battleResult.rows[0];
+  const state = battle.battle_state;
 
   // Migration: ensure all units have CT field (for existing battles)
   for (const unit of state.units) {
@@ -472,6 +584,12 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Not this unit\'s turn', 400);
   }
 
+  // For PvP/co-op: validate unit ownership (ownerId field)
+  // If ownerId is set, only the owning player can control that unit
+  if (activeUnit.ownerId && activeUnit.ownerId !== req.user.userId) {
+    throw new AppError('You do not control this unit', 403);
+  }
+
   // Process player action using service
   const result = battleService.processAction(state, activeUnit, actionType, targetTile, skillId);
 
@@ -491,25 +609,66 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
   let enemyActions = [];
   const turnContinues = !result.turnEnded && battleStatus === 'active';
 
+  // Check if async mode is enabled (for new WebSocket-driven turn processing)
+  const useAsyncTurns = req.body.asyncMode === true || battle.battle_type === 'pvp_coliseum';
+
   if (result.turnEnded && battleStatus === 'active') {
     // Turn is complete - advance to next actor using CT system
     battleService.advanceToNextActorWithCT(state);
 
-    // Process all enemy turns until it's a player's turn again
-    enemyActions = battleService.processEnemyTurns(state, aiService);
+    if (useAsyncTurns) {
+      // Async mode: spawn enemy turn processing in background
+      // Response returns immediately, enemy actions sent via WebSocket
+      const battleTurnManager = require('../services/battleTurnManager');
 
-    // Check if battle ended after enemy turns
-    battleStatus = battleService.checkBattleEnd(state);
+      // Save state first, then spawn async processing
+      await query(
+        'UPDATE battles SET battle_state = $1 WHERE id = $2',
+        [JSON.stringify(state), battleId]
+      );
+
+      // Process enemy turns asynchronously (don't await)
+      setImmediate(async () => {
+        try {
+          const { state: updatedState, battleStatus: finalStatus } =
+            await battleTurnManager.processEnemyTurnsAsync(battleId, state, aiService, battleService);
+
+          // Update final state and status
+          await query(
+            'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
+            [JSON.stringify(updatedState), finalStatus, battleId]
+          );
+
+          // Handle battle end
+          if (finalStatus !== 'active') {
+            await handleBattleEnd(battleId, finalStatus, updatedState, req.user.userId);
+          } else {
+            // Notify next player it's their turn
+            battleTurnManager.notifyPlayerTurn(battleId, updatedState);
+          }
+        } catch (error) {
+          console.error('Async enemy turn processing error:', error);
+        }
+      });
+    } else {
+      // Sync mode: process all enemy turns before returning (backward compatible)
+      enemyActions = battleService.processEnemyTurns(state, aiService);
+
+      // Check if battle ended after enemy turns
+      battleStatus = battleService.checkBattleEnd(state);
+    }
   }
 
   // Update turn predictions
   state.turnPredictions = battleService.predictTurnOrder(state, 10);
 
-  // Update battle state
-  await query(
-    'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
-    [JSON.stringify(state), battleStatus, battleId]
-  );
+  // Update battle state (skip if async mode already saved it)
+  if (!useAsyncTurns || !result.turnEnded) {
+    await query(
+      'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
+      [JSON.stringify(state), battleStatus, battleId]
+    );
+  }
 
   // Consume item from inventory if an item was used (with FOR UPDATE to prevent race conditions)
   if (result.consumedInventoryId) {
@@ -538,113 +697,30 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
   // Broadcast action executed via WebSocket
   battleWebsocket.broadcastActionExecuted(battleId, unitId, actionType, result, req.user.userId);
 
-  // Broadcast enemy actions if any (only when turn completed)
-  if (enemyActions && enemyActions.length > 0) {
-    battleWebsocket.broadcastEnemyActions(battleId, enemyActions, req.user.userId);
-  }
-
-  // Broadcast turn changed only if turn actually ended
-  if (result.turnEnded) {
-    battleWebsocket.broadcastTurnChanged(
-      battleId,
-      state.activeUnitIndex,
-      state.turn,
-      req.user.userId,
-      state.activeUnitId,
-      state.turnPredictions
-    );
-  }
-
-  // If battle ended, update characters
-  if (battleStatus !== 'active') {
-    await query(
-      `UPDATE characters SET in_battle = false
-       WHERE user_id = $1 AND party_slot <= $2`,
-      [req.user.userId, MAX_BATTLE_PARTY_SIZE]
-    );
-
-    // Calculate rewards for victory
-    if (battleStatus === 'victory') {
-      const enemies = state.units.filter(u => u.type === 'enemy');
-      const players = state.units.filter(u => u.type === 'player');
-      const partyLevel = Math.floor(
-        players.reduce((sum, u) => sum + (u.level || 1), 0) / players.length
-      ) || 1;
-
-      // Get node info for rewards calculation
-      const nodeResult = await query(
-        'SELECT difficulty_tier, node_type FROM world_nodes WHERE id = (SELECT node_id FROM battles WHERE id = $1)',
-        [battleId]
-      );
-      const difficultyTier = nodeResult.rows[0]?.difficulty_tier || 1;
-      const nodeType = nodeResult.rows[0]?.node_type || 'forest';
-
-      // Calculate rewards using service
-      const gold = battleService.calculateGoldReward(enemies, difficultyTier);
-      const exp = battleService.calculateExperienceReward(enemies, partyLevel);
-
-      // Roll item drops from each enemy
-      const droppedItems = [];
-      for (const enemy of enemies) {
-        const drops = await itemDropService.rollDrops(enemy, difficultyTier, nodeType);
-        droppedItems.push(...drops);
-      }
-
-      // Get party leader for item storage
-      const partyLeaderResult = await query(
-        'SELECT id FROM characters WHERE user_id = $1 AND party_slot = 1',
-        [req.user.userId]
-      );
-      const partyLeaderId = partyLeaderResult.rows[0]?.id;
-
-      // Use transaction for rewards distribution
-      await withTransaction(async (client) => {
-        // Update battle record
-        const rewardsData = {
-          gold,
-          experience: exp,
-          items: itemDropService.formatDropsForResponse(droppedItems)
-        };
-        await client.query(
-          'UPDATE battles SET rewards = $1, ended_at = NOW() WHERE id = $2',
-          [JSON.stringify(rewardsData), battleId]
-        );
-
-        // Award gold to user (capped at MAX_GOLD to prevent overflow)
-        await client.query(
-          'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
-          [gold, MAX_GOLD, req.user.userId]
-        );
-
-        // Distribute XP to battle party characters
-        const xpPerCharacter = Math.floor(exp / players.length);
-        await client.query(
-          `UPDATE characters
-           SET experience = experience + $1
-           WHERE user_id = $2 AND party_slot <= $3 AND party_slot IS NOT NULL`,
-          [xpPerCharacter, req.user.userId, MAX_BATTLE_PARTY_SIZE]
-        );
-
-        // Store dropped items in party leader's inventory
-        if (partyLeaderId) {
-          for (const item of droppedItems) {
-            await itemDropService.storeDroppedItem(partyLeaderId, item, client);
-          }
-        }
-      });
-
-      result.rewards = {
-        gold,
-        experience: exp,
-        items: itemDropService.formatDropsForResponse(droppedItems)
-      };
+  // For sync mode only: broadcast enemy actions and turn changed
+  // (Async mode handles these in the background via battleTurnManager)
+  if (!useAsyncTurns) {
+    // Broadcast enemy actions if any (only when turn completed)
+    if (enemyActions && enemyActions.length > 0) {
+      battleWebsocket.broadcastEnemyActions(battleId, enemyActions, req.user.userId);
     }
 
-    // Broadcast battle end via WebSocket
-    battleWebsocket.broadcastBattleEnd(battleId, battleStatus, result.rewards);
+    // Broadcast turn changed only if turn actually ended
+    if (result.turnEnded) {
+      battleWebsocket.broadcastTurnChanged(
+        battleId,
+        state.activeUnitIndex,
+        state.turn,
+        req.user.userId,
+        state.activeUnitId,
+        state.turnPredictions
+      );
+    }
+  }
 
-    // Leave battle room
-    battleWebsocket.leaveBattle(battleId, req.user.userId);
+  // If battle ended in sync mode, handle end (async mode handles this in background)
+  if (battleStatus !== 'active' && !useAsyncTurns) {
+    result.rewards = await handleBattleEnd(battleId, battleStatus, state, req.user.userId);
   }
 
   res.json({
@@ -662,9 +738,10 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
 router.get('/rewards/:battleId', authenticate, asyncHandler(async (req, res) => {
   const { battleId } = req.params;
 
+  // Allow both player1 AND player2 to get rewards (for PvP)
   const result = await query(
-    `SELECT rewards FROM battles
-     WHERE id = $1 AND player1_id = $2 AND status = 'victory'`,
+    `SELECT rewards, player1_id, player2_id FROM battles
+     WHERE id = $1 AND (player1_id = $2 OR player2_id = $2) AND status = 'victory'`,
     [battleId, req.user.userId]
   );
 
