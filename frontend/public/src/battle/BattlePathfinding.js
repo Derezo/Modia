@@ -19,8 +19,8 @@ export class BattlePathfinding {
    * Uses Dijkstra's algorithm with terrain costs
    */
   getReachableTiles(startX, startY, movementRange) {
-    const reachable = [];
     const costs = new Map();
+    const visited = new Set();  // Track processed tiles to prevent duplicates
     const queue = [{ x: startX, y: startY, cost: 0 }];
 
     costs.set(`${startX},${startY}`, 0);
@@ -29,6 +29,11 @@ export class BattlePathfinding {
       // Sort by cost (simple priority queue)
       queue.sort((a, b) => a.cost - b.cost);
       const current = queue.shift();
+      const currentKey = `${current.x},${current.y}`;
+
+      // Skip if already processed (CRITICAL: prevents duplicate processing)
+      if (visited.has(currentKey)) continue;
+      visited.add(currentKey);
 
       // Get neighbors (4-directional)
       const neighbors = [
@@ -45,21 +50,20 @@ export class BattlePathfinding {
         const newCost = current.cost + terrainCost;
         const key = `${neighbor.x},${neighbor.y}`;
 
+        // Only add if within range AND (not seen OR found cheaper path)
         if (newCost <= movementRange && (!costs.has(key) || costs.get(key) > newCost)) {
           costs.set(key, newCost);
           queue.push({ x: neighbor.x, y: neighbor.y, cost: newCost });
-
-          // Add to reachable list (excluding start position)
-          if (neighbor.x !== startX || neighbor.y !== startY) {
-            // Remove existing entry if we found a better path
-            const existingIndex = reachable.findIndex(t => t.x === neighbor.x && t.y === neighbor.y);
-            if (existingIndex >= 0) {
-              reachable.splice(existingIndex, 1);
-            }
-            reachable.push({ x: neighbor.x, y: neighbor.y, cost: newCost });
-          }
         }
       }
+    }
+
+    // Build reachable array from costs map (excluding start position)
+    const reachable = [];
+    for (const [key, cost] of costs) {
+      if (key === `${startX},${startY}`) continue;
+      const [x, y] = key.split(',').map(Number);
+      reachable.push({ x, y, cost });
     }
 
     return reachable;

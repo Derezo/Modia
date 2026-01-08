@@ -3,15 +3,15 @@ import { ParchmentCard } from '../components/ParchmentCard.js';
 /**
  * BattleIntro - Dramatic battle introduction sequence with ParchmentCard components
  *
- * Timeline (example with 3 waypoints = 3000ms pan):
+ * Timeline (example with 3 enemies + player = 4 waypoints = 4000ms pan):
  * 0-500ms:      Title fades in, overlay appears
  * 500-1500ms:   Title holds, dramatic pause
- * 1500-4500ms:  Camera pans through waypoints
+ * 1500-5500ms:  Camera pans through waypoints
  *               - Player cards fade in sequentially (staggered, during first 60%)
- *               - Enemy cards slide in from right (arriving as pan completes)
- * 4500-5000ms:  Post-pan pause, all cards visible
- * 5000-5500ms:  Cards and overlay fade out
- * 5500ms+:      Complete, battle begins
+ *               - Enemy cards slide in from right as camera reaches each enemy waypoint
+ * 5500-6000ms:  Post-pan pause, all cards visible
+ * 6000-6500ms:  Cards and overlay fade out
+ * 6500ms+:      Complete, battle begins
  */
 export class BattleIntro {
   constructor(battleScene) {
@@ -38,7 +38,7 @@ export class BattleIntro {
 
     // Card animation states
     this.playerCardStates = [];  // { shown: boolean }
-    this.enemyCardStates = [];   // { targetX: number }
+    this.enemyCardStates = [];   // { shown: boolean }
 
     // Camera waypoints for pan
     this.cameraWaypoints = [];
@@ -77,8 +77,6 @@ export class BattleIntro {
    * Create DOM container for cards overlay
    */
   createDOMElements() {
-    const canvas = this.scene.game.canvas;
-
     // Create overlay
     this.overlayElement = document.createElement('div');
     this.overlayElement.id = 'battle-intro-overlay';
@@ -86,8 +84,8 @@ export class BattleIntro {
       position: absolute;
       top: 0;
       left: 0;
-      width: ${canvas.width}px;
-      height: ${canvas.height}px;
+      width: 100%;
+      height: 100%;
       background: rgba(0, 0, 0, 0);
       pointer-events: none;
       z-index: 100;
@@ -144,8 +142,6 @@ export class BattleIntro {
     const state = this.scene.battleState;
     if (!state || !state.units) return;
 
-    const canvasWidth = this.scene.game.canvas.width;
-
     // Player cards on LEFT side (stacked vertically)
     const players = state.units.filter(u => u.type === 'player');
     const playerCardHeight = 85;
@@ -189,22 +185,20 @@ export class BattleIntro {
       });
       card.setCharacter(unit);
 
-      // Position card starting off-screen right
+      // Position card starting off-screen right (using CSS right positioning)
       const targetY = enemyStartY + i * (enemyCardHeight + 10);
-      const targetX = canvasWidth - 280; // 10px gap from right edge
-      const startX = canvasWidth + 50;   // Start off-screen
 
       card.element.style.cssText = `
         position: absolute;
-        left: ${startX}px;
+        right: -320px;
         top: ${targetY}px;
         opacity: 0;
-        transition: left 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease;
+        transition: right 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease;
         pointer-events: none;
       `;
 
       this.cardContainer.appendChild(card.element);
-      this.enemyCardStates.push({ currentX: startX, targetX, shown: false });
+      this.enemyCardStates.push({ shown: false });
       return card;
     });
   }
@@ -338,30 +332,29 @@ export class BattleIntro {
 
   /**
    * Animate enemy cards sliding in from right
-   * All cards arrive together as camera pan ends
+   * Each card slides in when camera reaches that enemy's waypoint
    */
   updateEnemyCardAnimations(panElapsed) {
     const cardCount = this.enemyCardInstances.length;
-    if (cardCount === 0) return;
+    if (cardCount === 0 || this.cameraWaypoints.length === 0) return;
 
-    // Cards should all arrive at end of camera pan
-    // Start staggered but arrive together
-    const arrivalTime = this.cameraPanDuration;
-    const baseSlideTime = 600;  // Base slide duration
-    const staggerAmount = 100;  // Stagger between cards
+    // Calculate current camera position in waypoint sequence
+    const panProgress = Math.min(1, panElapsed / this.cameraPanDuration);
+    const easedProgress = this.easeInOutCubic(panProgress);
 
+    const waypointCount = this.cameraWaypoints.length;
+    const segmentProgress = easedProgress * (waypointCount - 1);
+    const currentSegment = Math.floor(segmentProgress);
+
+    // Enemies occupy waypoints 0 through (cardCount - 1)
     this.enemyCardInstances.forEach((card, i) => {
       const state = this.enemyCardStates[i];
 
-      // Calculate when this card should start sliding
-      // Later cards start earlier and slide longer to arrive together
-      const extraTime = (cardCount - 1 - i) * staggerAmount;
-      const cardStartTime = arrivalTime - baseSlideTime - extraTime;
-
-      if (panElapsed >= cardStartTime && !state.shown) {
+      // Trigger slide when camera reaches or passes this enemy's waypoint
+      if (currentSegment >= i && !state.shown) {
         state.shown = true;
-        // Trigger CSS transition to target position
-        card.element.style.left = `${state.targetX}px`;
+        // Trigger CSS transition to target position (right: 10px)
+        card.element.style.right = '10px';
         card.element.style.opacity = '1';
       }
     });
@@ -385,7 +378,7 @@ export class BattleIntro {
       const state = this.enemyCardStates[i];
       if (!state.shown) {
         state.shown = true;
-        card.element.style.left = `${state.targetX}px`;
+        card.element.style.right = '10px';
         card.element.style.opacity = '1';
       }
     });

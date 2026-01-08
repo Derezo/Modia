@@ -12,7 +12,7 @@ import RewardsModal from '../components/RewardsModal.js';
 // Movement range by class (mirrored from shared/constants.js)
 const CLASS_MOVEMENT = {
   warrior: 3,
-  wizard: 2,
+  wizard: 3,
   monk: 4,
   chemist: 3,
   berserker: 3,
@@ -1444,17 +1444,20 @@ export class BattleScene extends Scene {
       return;
     }
 
-    // Handle keyboard camera movement
-    const input = this.game.input;
-    let dx = 0, dy = 0;
+    // Handle keyboard camera movement - skip if turn transition is active
+    // This prevents accidental interruption of camera pans during turn changes
+    if (!this.camera.isTurnTransitioning()) {
+      const input = this.game.input;
+      let dx = 0, dy = 0;
 
-    if (input.isKeyDown('KeyW') || input.isKeyDown('ArrowUp')) dy = -1;
-    if (input.isKeyDown('KeyS') || input.isKeyDown('ArrowDown')) dy = 1;
-    if (input.isKeyDown('KeyA') || input.isKeyDown('ArrowLeft')) dx = -1;
-    if (input.isKeyDown('KeyD') || input.isKeyDown('ArrowRight')) dx = 1;
+      if (input.isKeyDown('KeyW') || input.isKeyDown('ArrowUp')) dy = -1;
+      if (input.isKeyDown('KeyS') || input.isKeyDown('ArrowDown')) dy = 1;
+      if (input.isKeyDown('KeyA') || input.isKeyDown('ArrowLeft')) dx = -1;
+      if (input.isKeyDown('KeyD') || input.isKeyDown('ArrowRight')) dx = 1;
 
-    if (dx !== 0 || dy !== 0) {
-      this.camera.moveByKeys(dx, dy, deltaTime);
+      if (dx !== 0 || dy !== 0) {
+        this.camera.moveByKeys(dx, dy, deltaTime);
+      }
     }
 
     // Update turn transition animation
