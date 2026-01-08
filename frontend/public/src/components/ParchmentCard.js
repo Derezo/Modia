@@ -30,6 +30,8 @@ export class ParchmentCard {
 
     this.character = null;
     this.element = null;
+    // Track last known values for change detection (objects may be mutated in place)
+    this.lastKnownValues = { hp: null, mp: null, hp_current: null, mp_current: null };
 
     this.createElement();
   }
@@ -308,18 +310,22 @@ export class ParchmentCard {
   }
 
   setCharacter(character) {
-    // Skip if same character (prevent flicker on mouse move)
+    // Skip if same character AND no HP/MP changes (prevent flicker on mouse move)
     if (this.character && character && this.character.id === character.id) {
-      // Only update if HP/MP changed
+      // Compare against lastKnownValues, not the object itself (object may be mutated in place)
+      const currentHp = character.hp_current ?? character.hp ?? 0;
+      const currentMp = character.mp_current ?? character.mp ?? 0;
       const needsUpdate =
-        this.character.hp !== character.hp ||
-        this.character.mp !== character.mp ||
-        this.character.hp_current !== character.hp_current ||
-        this.character.mp_current !== character.mp_current;
+        this.lastKnownValues.hp !== currentHp ||
+        this.lastKnownValues.mp !== currentMp;
       if (!needsUpdate) return;
     }
     this.character = character;
     this.render();
+
+    // Store current values for future comparison
+    this.lastKnownValues.hp = character?.hp_current ?? character?.hp ?? 0;
+    this.lastKnownValues.mp = character?.mp_current ?? character?.mp ?? 0;
   }
 
   update(updates) {
