@@ -18,6 +18,8 @@
     "db:migrate": "npm run migrate -w api",
     "db:seed": "npm run seed -w api",
     "db:reset": "npm run db:migrate && npm run db:seed",
+    "db:status": "bash scripts/db-status.sh",
+    "db:fresh": "bash scripts/db-fresh.sh",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "generate:tiles": "node api/src/scripts/generate-tiles.js",
