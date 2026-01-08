@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: modia
+          POSTGRES_PASSWORD: modia_dev_password
+          POSTGRES_DB: modia
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup environment
+        run: cp .env.example .env
+
+      - name: Run migrations
+        run: npm run db:migrate
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Start server and run tests
+        run: |
+          npm run dev:api &
+          sleep 5
+          npm run test

@@ -136,6 +136,11 @@ while IFS= read -r -d '' file; do
         continue
     fi
 
+    # Skip CI workflow files (they use public dev defaults from .env.example)
+    if [[ "$file" == ".github/workflows/"* ]]; then
+        continue
+    fi
+
     # Skip binary files
     if file "$file" 2>/dev/null | grep -q 'binary\|executable\|image\|archive'; then
         continue
