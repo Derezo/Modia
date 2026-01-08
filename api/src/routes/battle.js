@@ -10,6 +10,108 @@ const enemyService = require('../services/enemyService');
 const itemDropService = require('../services/itemDropService');
 const battleWebsocket = require('../services/battleWebsocket');
 
+// ============================================================================
+// TERRAIN GENERATION (Server-side mirror of frontend BattleGrid logic)
+// ============================================================================
+
+/**
+ * Seeded random number generator (Mulberry32) - matches frontend exactly
+ */
+function seededRandom(seed) {
+  return function() {
+    let t = seed += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Get terrain distribution weights by node type
+ */
+function getTerrainWeights(nodeType) {
+  const weights = {
+    forest: { grass: 0.6, forest: 0.25, stone: 0.1, rock: 0.05 },
+    cave: { stone: 0.5, rock: 0.2, water: 0.15, lava: 0.05, grass: 0.1 },
+    mountain: { stone: 0.4, rock: 0.3, grass: 0.2, cliff: 0.1 },
+    bridge: { stone: 0.6, water: 0.3, grass: 0.1 },
+    castle: { stone: 0.7, grass: 0.3 },
+    default: { grass: 0.7, stone: 0.2, forest: 0.1 }
+  };
+  return weights[nodeType] || weights.default;
+}
+
+/**
+ * Check if terrain is impassable
+ */
+function isImpassable(terrain) {
+  return ['rock', 'tree', 'lava', 'cliff', 'water'].includes(terrain);
+}
+
+/**
+ * Generate terrain grid from seed (matches frontend exactly)
+ */
+function generateTerrain(seed, nodeType, width = 32, height = 32) {
+  const random = seededRandom(seed);
+  const terrain = [];
+  const terrainWeights = getTerrainWeights(nodeType);
+
+  for (let y = 0; y < height; y++) {
+    const row = [];
+    for (let x = 0; x < width; x++) {
+      const roll = random();
+      let cumulative = 0;
+      let selectedTerrain = 'grass';
+
+      for (const [terrainType, weight] of Object.entries(terrainWeights)) {
+        cumulative += weight;
+        if (roll < cumulative) {
+          selectedTerrain = terrainType;
+          break;
+        }
+      }
+      row.push(selectedTerrain);
+
+      // Skip variant generation (not needed server-side) but consume random state
+      random(); // variant
+      // Skip obstacle generation - consume 0-2 random calls based on terrain
+      if (!isImpassable(selectedTerrain)) {
+        if (nodeType === 'forest' && selectedTerrain === 'grass') {
+          const treeRoll = random();
+          if (treeRoll < 0.15) {
+            random(); // tree variant
+          } else if (random() < 0.05) {
+            random(); // decorative variant
+          }
+        } else if (random() < 0.05) {
+          random(); // decorative variant
+        }
+      } else {
+        random(); // obstacle variant
+      }
+    }
+    terrain.push(row);
+  }
+
+  // Clear spawn areas (left 5 columns, right 5 columns)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < 5; x++) {
+      if (isImpassable(terrain[y][x])) {
+        terrain[y][x] = 'grass';
+      }
+    }
+    for (let x = width - 5; x < width; x++) {
+      if (isImpassable(terrain[y][x])) {
+        terrain[y][x] = 'grass';
+      }
+    }
+  }
+
+  return terrain;
+}
+
+// ============================================================================
+
 // GET /api/battle/preview/:nodeId - Get encounter preview for formation screen
 router.get('/preview/:nodeId', authenticate, asyncHandler(async (req, res) => {
   const nodeId = parseInt(req.params.nodeId, 10);
@@ -172,6 +274,9 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
   // Generate battle map seed
   const mapSeed = Math.floor(Math.random() * 1000000);
 
+  // Generate terrain (server-side mirror of frontend for validation)
+  const terrain = generateTerrain(mapSeed, node.node_type, 32, 32);
+
   // Create initial battle state
   const initialState = {
     turn: 1,
@@ -180,6 +285,7 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
     activeUnitId: null,
     mapWidth: 32,
     mapHeight: 32,
+    terrain, // Store terrain for server-side movement validation
     units: party.map((char, idx) => {
       // Use formation position if provided, otherwise default layout
       const formationPos = formation?.[char.id];
