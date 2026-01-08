@@ -14,6 +14,9 @@ NC='\033[0m' # No Color
 CHECK="${GREEN}✓${NC}"
 WARN="${YELLOW}!${NC}"
 
+# Initialize USE_DOCKER flag
+USE_DOCKER=0
+
 # Change to project root directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -39,8 +42,12 @@ echo ""
 echo "Database: ${DB_NAME} at ${DB_HOST}:${DB_PORT}"
 echo ""
 
-# Prompt for confirmation
-read -p "Are you sure? Type 'yes' to continue: " CONFIRM
+# Prompt for confirmation (skip with --force or -y for CI)
+if [ "${1:-}" == "--force" ] || [ "${1:-}" == "-y" ]; then
+    CONFIRM="yes"
+else
+    read -p "Are you sure? Type 'yes' to continue: " CONFIRM
+fi
 
 if [ "$CONFIRM" != "yes" ]; then
     echo ""
@@ -49,26 +56,6 @@ if [ "$CONFIRM" != "yes" ]; then
 fi
 
 echo ""
-
-# Function to run SQL command
-run_sql() {
-    local SQL="$1"
-    export PGPASSWORD="$DB_PASSWORD"
-
-    # Try direct psql first
-    if psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "$SQL" &>/dev/null; then
-        return 0
-    fi
-
-    # Fallback to docker exec
-    if docker ps --filter "name=modia-postgres" --format "{{.Names}}" 2>/dev/null | grep -q "modia-postgres"; then
-        if docker exec modia-postgres psql -U "$DB_USER" -d "$DB_NAME" -c "$SQL" &>/dev/null; then
-            return 0
-        fi
-    fi
-
-    return 1
-}
 
 # Check database connection first
 export PGPASSWORD="$DB_PASSWORD"
