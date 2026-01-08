@@ -45,6 +45,7 @@ Critical items for complete gameplay loop:
 | Advanced guilds missing | All 4 advanced guilds implemented (Berserker, Sorcerer, Ninja, Alchemist) |
 | ColiseumScene missing | Full ColiseumScene UI with queue selection and matchmaking |
 | Guild advancement missing | Characters can advance to advanced guilds at level 20 |
+| Battle Formation UX issues | Glass morphism cards, empty grid start, long-press bug fixed, animated title |
 
 ---
 
@@ -725,6 +726,12 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 
 #### 7.2.2 UI/UX Polish
 
+- [x] Glass morphism character detail cards (GlassCharacterCard component)
+- [x] Unified character card rendering (BattleFormationScene + BattleUI)
+- [x] Animated title text with gradient shimmer effect
+- [x] 64x64 portraits (upgraded from 48x48)
+- [x] HP/MP bars with inline current/max values
+- [x] Battle formation UX improvements (empty grid start, FIFO placement, long-press fix)
 - [ ] Consistent visual theme
 - [ ] Responsive design testing
 - [ ] Mobile touch optimization
