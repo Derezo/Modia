@@ -49,7 +49,6 @@ load_env() {
 # =============================================================================
 check_and_kill_port() {
     local PORT=$1
-    local SERVICE=$2
 
     echo -ne "[Ports] Checking port ${PORT}... "
 
@@ -116,8 +115,8 @@ check_and_kill_port() {
 }
 
 cleanup_ports() {
-    check_and_kill_port 3000 "API"
-    check_and_kill_port 8080 "Frontend"
+    check_and_kill_port 3000
+    check_and_kill_port 8080
     echo ""
 }
 
@@ -239,11 +238,12 @@ check_migrations() {
     echo -e "${YELLOW}${PENDING_COUNT} pending${NC}"
     echo -ne "[Migrations] Running migrations... "
 
-    if npm run db:migrate &>/dev/null; then
+    MIGRATE_OUTPUT=$(npm run db:migrate 2>&1)
+    if [ $? -eq 0 ]; then
         echo -e "${GREEN}done${NC} ${CHECK}"
     else
         echo -e "${CROSS} ${RED}failed${NC}"
-        echo "       Run 'npm run db:migrate' manually to see errors"
+        echo "$MIGRATE_OUTPUT" | tail -20
         exit 1
     fi
 
@@ -279,11 +279,12 @@ check_seed() {
     echo -e "${YELLOW}database is empty${NC}"
     echo -ne "[Seed] Running seed script... "
 
-    if npm run db:seed &>/dev/null; then
+    SEED_OUTPUT=$(npm run db:seed 2>&1)
+    if [ $? -eq 0 ]; then
         echo -e "${GREEN}done${NC} ${CHECK}"
     else
         echo -e "${CROSS} ${RED}failed${NC}"
-        echo "       Run 'npm run db:seed' manually to see errors"
+        echo "$SEED_OUTPUT" | tail -20
         exit 1
     fi
 
