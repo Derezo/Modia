@@ -21,9 +21,9 @@ router.get('/history/:roomType', authenticate, asyncHandler(async (req, res) => 
 
   const messages = await chatService.getHistory(roomType, {
     before: before ? new Date(before) : null,
-    limit: Math.min(parseInt(limit) || 50, 100),
-    nodeId: nodeId ? parseInt(nodeId) : null,
-    partyId: partyId ? parseInt(partyId) : null
+    limit: Math.min(parseInt(limit, 10) || 50, 100),
+    nodeId: nodeId ? parseInt(nodeId, 10) : null,
+    partyId: partyId ? parseInt(partyId, 10) : null
   });
 
   res.json({ messages });
@@ -37,14 +37,14 @@ router.get('/dm/:targetUserId', authenticate, asyncHandler(async (req, res) => {
   const { targetUserId } = req.params;
   const { before, limit = 50 } = req.query;
 
-  const targetId = parseInt(targetUserId);
+  const targetId = parseInt(targetUserId, 10);
   if (isNaN(targetId)) {
     throw new AppError('Invalid target user ID', 400);
   }
 
   const messages = await chatService.getDMHistory(req.user.userId, targetId, {
     before: before ? new Date(before) : null,
-    limit: Math.min(parseInt(limit) || 50, 100)
+    limit: Math.min(parseInt(limit, 10) || 50, 100)
   });
 
   res.json({ messages });
@@ -59,7 +59,7 @@ router.get('/conversations', authenticate, asyncHandler(async (req, res) => {
 
   const conversations = await chatService.getRecentDMConversations(
     req.user.userId,
-    Math.min(parseInt(limit) || 20, 50)
+    Math.min(parseInt(limit, 10) || 20, 50)
   );
 
   res.json({ conversations });
@@ -118,8 +118,8 @@ router.get('/online', authenticate, asyncHandler(async (req, res) => {
   const { nodeId, limit = 100 } = req.query;
 
   const players = await presenceService.getOnlinePlayers({
-    nodeId: nodeId ? parseInt(nodeId) : null,
-    limit: Math.min(parseInt(limit) || 100, 200)
+    nodeId: nodeId ? parseInt(nodeId, 10) : null,
+    limit: Math.min(parseInt(limit, 10) || 100, 200)
   });
 
   res.json({ players });
@@ -157,7 +157,7 @@ router.put('/presence', authenticate, asyncHandler(async (req, res) => {
 router.get('/presence/:userId', authenticate, asyncHandler(async (req, res) => {
   const { userId } = req.params;
 
-  const presence = await presenceService.getPresence(parseInt(userId));
+  const presence = await presenceService.getPresence(parseInt(userId, 10));
 
   if (!presence) {
     throw new AppError('User presence not found', 404);

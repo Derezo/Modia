@@ -31,7 +31,8 @@
     "generate:all": "node api/src/scripts/generate-all.js",
     "validate:sprites": "node api/src/scripts/validate-prompts.js",
     "validate:enemy": "node api/src/scripts/validate-prompts.js --type=enemy",
-    "validate:character": "node api/src/scripts/validate-prompts.js --type=character"
+    "validate:character": "node api/src/scripts/validate-prompts.js --type=character",
+    "doctor": "bash scripts/doctor.sh"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

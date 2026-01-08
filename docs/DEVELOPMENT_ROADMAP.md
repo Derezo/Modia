@@ -35,6 +35,26 @@ Critical items for complete gameplay loop:
 | Audio system missing | BattleScene.js | No sound effects or music | Low |
 | Leaderboards missing | - | No player rankings | Low |
 
+### Security Audit Completed (v5.0 → v6.0)
+
+A comprehensive security audit was performed in January 2026. See `docs/TECHNICAL_IMPROVEMENTS.md` for full details.
+
+**Critical Security Fixes Applied:**
+| Fix | Location | Status |
+|-----|----------|--------|
+| JWT secret validation in production | `api/src/config/jwt.js` | FIXED |
+| Rate limiting enabled by default | `api/src/middleware/rateLimiter.js` | FIXED |
+| Battle range validation (anti-cheat) | `api/src/routes/battle.js` | FIXED |
+| Negative quantity exploit prevention | `shop.js`, `marketplace.js`, `inventory.js` | FIXED |
+| Maximum marketplace price limits | `api/src/routes/marketplace.js` | FIXED |
+| WebSocket room authorization | `api/src/websocket/index.js` | FIXED |
+| Security headers (helmet) | `api/src/index.js` | FIXED |
+| partyWebsocket.js reference error | `api/src/services/partyWebsocket.js` | FIXED |
+
+**New Documentation:**
+- `docs/TECHNICAL_IMPROVEMENTS.md` - Security, networking, code quality guide
+- `docs/GAME_MECHANICS_IMPROVEMENTS.md` - Balance and feature improvement suggestions
+
 ### Recently Resolved (v4.0 → v5.0)
 
 | Issue | Resolution |

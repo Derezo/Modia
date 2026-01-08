@@ -12,7 +12,7 @@ router.get('/orderbook/:itemTemplateId', authenticate, asyncHandler(async (req, 
   const { itemTemplateId } = req.params;
   const { depth = 20 } = req.query;
 
-  const templateId = parseInt(itemTemplateId);
+  const templateId = parseInt(itemTemplateId, 10);
   if (isNaN(templateId)) {
     throw new AppError('Invalid item template ID', 400);
   }
@@ -33,7 +33,7 @@ router.get('/orderbook/:itemTemplateId', authenticate, asyncHandler(async (req, 
 
   const client = await getClient();
   try {
-    const orderBook = await marketplaceService.getOrderBook(client, templateId, parseInt(depth));
+    const orderBook = await marketplaceService.getOrderBook(client, templateId, parseInt(depth, 10));
     orderBook.itemName = itemResult.rows[0].name;
     res.json(orderBook);
   } finally {
@@ -56,11 +56,25 @@ router.get('/orders/mine', authenticate, asyncHandler(async (req, res) => {
   }
 }));
 
+// Maximum price limit to prevent economic manipulation
+const MAX_PRICE = 999999999;
+
 // ============================================
 // POST /api/marketplace/orders/limit - Place limit order
 // ============================================
 router.post('/orders/limit', authenticate, asyncHandler(async (req, res) => {
-  const { itemTemplateId, side, price, quantity, characterId } = req.body;
+  const { itemTemplateId, side, characterId } = req.body;
+
+  // SECURITY: Strict price and quantity validation to prevent exploits
+  const price = parseInt(req.body.price, 10);
+  const quantity = parseInt(req.body.quantity, 10);
+
+  if (!Number.isInteger(price) || isNaN(price)) {
+    throw new AppError('Price must be a valid integer', 400);
+  }
+  if (!Number.isInteger(quantity) || isNaN(quantity)) {
+    throw new AppError('Quantity must be a valid integer', 400);
+  }
 
   // Validate inputs
   if (!itemTemplateId) {
@@ -69,11 +83,20 @@ router.post('/orders/limit', authenticate, asyncHandler(async (req, res) => {
   if (!['buy', 'sell'].includes(side)) {
     throw new AppError('Side must be "buy" or "sell"', 400);
   }
-  if (!price || price < 1) {
+  if (price < 1) {
     throw new AppError('Price must be at least 1', 400);
   }
-  if (!quantity || quantity < 1 || quantity > 9999) {
+  if (price > MAX_PRICE) {
+    throw new AppError(`Price cannot exceed ${MAX_PRICE}`, 400);
+  }
+  if (quantity < 1 || quantity > 9999) {
     throw new AppError('Quantity must be between 1 and 9999', 400);
+  }
+
+  // SECURITY: Validate total order value doesn't overflow
+  const totalValue = price * quantity;
+  if (totalValue > Number.MAX_SAFE_INTEGER) {
+    throw new AppError('Total order value too large', 400);
   }
 
   // Verify character belongs to user
@@ -91,10 +114,10 @@ router.post('/orders/limit', authenticate, asyncHandler(async (req, res) => {
       client,
       req.user.userId,
       characterId,
-      parseInt(itemTemplateId),
+      parseInt(itemTemplateId, 10),
       side,
-      parseInt(price),
-      parseInt(quantity)
+      parseInt(price, 10),
+      parseInt(quantity, 10)
     );
   });
 
@@ -107,9 +130,9 @@ router.post('/orders/limit', authenticate, asyncHandler(async (req, res) => {
     order: {
       id: result.order.id,
       side: result.order.side,
-      price: parseInt(result.order.price),
-      quantity: parseInt(result.order.quantity),
-      quantityFilled: parseInt(result.order.quantity_filled),
+      price: parseInt(result.order.price, 10),
+      quantity: parseInt(result.order.quantity, 10),
+      quantityFilled: parseInt(result.order.quantity_filled, 10),
       status: result.order.status,
       itemName: result.itemName
     },
@@ -124,7 +147,13 @@ router.post('/orders/limit', authenticate, asyncHandler(async (req, res) => {
 // POST /api/marketplace/orders/market - Execute market order
 // ============================================
 router.post('/orders/market', authenticate, asyncHandler(async (req, res) => {
-  const { itemTemplateId, side, quantity, characterId } = req.body;
+  const { itemTemplateId, side, characterId } = req.body;
+
+  // SECURITY: Strict quantity validation to prevent exploits
+  const quantity = parseInt(req.body.quantity, 10);
+  if (!Number.isInteger(quantity) || isNaN(quantity)) {
+    throw new AppError('Quantity must be a valid integer', 400);
+  }
 
   // Validate inputs
   if (!itemTemplateId) {
@@ -133,7 +162,7 @@ router.post('/orders/market', authenticate, asyncHandler(async (req, res) => {
   if (!['buy', 'sell'].includes(side)) {
     throw new AppError('Side must be "buy" or "sell"', 400);
   }
-  if (!quantity || quantity < 1 || quantity > 9999) {
+  if (quantity < 1 || quantity > 9999) {
     throw new AppError('Quantity must be between 1 and 9999', 400);
   }
 
@@ -152,9 +181,9 @@ router.post('/orders/market', authenticate, asyncHandler(async (req, res) => {
       client,
       req.user.userId,
       characterId,
-      parseInt(itemTemplateId),
+      parseInt(itemTemplateId, 10),
       side,
-      parseInt(quantity)
+      parseInt(quantity, 10)
     );
   });
 
@@ -178,7 +207,7 @@ router.post('/orders/market', authenticate, asyncHandler(async (req, res) => {
 router.delete('/orders/:orderId', authenticate, asyncHandler(async (req, res) => {
   const { orderId } = req.params;
 
-  const orderIdNum = parseInt(orderId);
+  const orderIdNum = parseInt(orderId, 10);
   if (isNaN(orderIdNum)) {
     throw new AppError('Invalid order ID', 400);
   }
@@ -210,7 +239,7 @@ router.get('/search', authenticate, asyncHandler(async (req, res) => {
       client,
       q,
       type || null,
-      parseInt(limit)
+      parseInt(limit, 10)
     );
     res.json({ items });
   } finally {
@@ -225,7 +254,7 @@ router.get('/history/:itemTemplateId', authenticate, asyncHandler(async (req, re
   const { itemTemplateId } = req.params;
   const { limit = 50 } = req.query;
 
-  const templateId = parseInt(itemTemplateId);
+  const templateId = parseInt(itemTemplateId, 10);
   if (isNaN(templateId)) {
     throw new AppError('Invalid item template ID', 400);
   }
@@ -242,7 +271,7 @@ router.get('/history/:itemTemplateId', authenticate, asyncHandler(async (req, re
 
   const client = await getClient();
   try {
-    const history = await marketplaceService.getTradeHistory(client, templateId, parseInt(limit));
+    const history = await marketplaceService.getTradeHistory(client, templateId, parseInt(limit, 10));
     res.json({
       itemTemplateId: templateId,
       itemName: itemResult.rows[0].name,
@@ -274,7 +303,7 @@ router.get('/my-trades', authenticate, asyncHandler(async (req, res) => {
      WHERE mt.buyer_id = $1 OR mt.seller_id = $1
      ORDER BY mt.executed_at DESC
      LIMIT $2`,
-    [req.user.userId, parseInt(limit)]
+    [req.user.userId, parseInt(limit, 10)]
   );
 
   res.json({
@@ -283,9 +312,9 @@ router.get('/my-trades', authenticate, asyncHandler(async (req, res) => {
       itemTemplateId: row.item_template_id,
       itemName: row.item_name,
       side: row.side,
-      price: parseInt(row.price),
-      quantity: parseInt(row.quantity),
-      totalGold: parseInt(row.total_gold),
+      price: parseInt(row.price, 10),
+      quantity: parseInt(row.quantity, 10),
+      totalGold: parseInt(row.total_gold, 10),
       executedAt: row.executed_at
     }))
   });
@@ -297,7 +326,7 @@ router.get('/my-trades', authenticate, asyncHandler(async (req, res) => {
 router.get('/stats/:itemTemplateId', authenticate, asyncHandler(async (req, res) => {
   const { itemTemplateId } = req.params;
 
-  const templateId = parseInt(itemTemplateId);
+  const templateId = parseInt(itemTemplateId, 10);
   if (isNaN(templateId)) {
     throw new AppError('Invalid item template ID', 400);
   }
@@ -343,14 +372,14 @@ router.get('/stats/:itemTemplateId', authenticate, asyncHandler(async (req, res)
     itemName: itemResult.rows[0].name,
     basePrice: itemResult.rows[0].base_price,
     stats24h: {
-      tradeCount: parseInt(stats.trade_count) || 0,
-      volume: parseInt(stats.volume) || 0,
-      goldVolume: parseInt(stats.gold_volume) || 0,
-      lowPrice: stats.low_price ? parseInt(stats.low_price) : null,
-      highPrice: stats.high_price ? parseInt(stats.high_price) : null,
+      tradeCount: parseInt(stats.trade_count, 10) || 0,
+      volume: parseInt(stats.volume, 10) || 0,
+      goldVolume: parseInt(stats.gold_volume, 10) || 0,
+      lowPrice: stats.low_price ? parseInt(stats.low_price, 10) : null,
+      highPrice: stats.high_price ? parseInt(stats.high_price, 10) : null,
       avgPrice: stats.avg_price ? Math.round(parseFloat(stats.avg_price)) : null
     },
-    lastTradePrice: lastTradeResult.rows[0]?.price ? parseInt(lastTradeResult.rows[0].price) : null
+    lastTradePrice: lastTradeResult.rows[0]?.price ? parseInt(lastTradeResult.rows[0].price, 10) : null
   });
 }));
 

@@ -159,7 +159,7 @@ async function generateWorldBackdrop() {
  * @param {number} variant - Variant index (0-3)
  */
 function getBackdropSeed(terrainName, variant) {
-  const worldSeed = parseInt(process.env.WORLD_SEED || '12345');
+  const worldSeed = parseInt(process.env.WORLD_SEED || '12345', 10);
   const terrainHash = hashString(terrainName);
   // Add variant offset to get different but deterministic results per variant
   return (worldSeed + terrainHash + variant * 7919) % 1000000;

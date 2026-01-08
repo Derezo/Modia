@@ -1,52 +1,15 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.env') });
 
 const { Pool } = require('pg');
+const { SeededRandom, CITY_OPTIONS, CASTLE_FEATURES } = require('../config/constants');
 
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
+  port: parseInt(process.env.DB_PORT || '5432', 10),
   database: process.env.DB_NAME || 'modia',
   user: process.env.DB_USER || 'modia',
   password: process.env.DB_PASSWORD || '',
 });
-
-// Seeded random number generator (Mulberry32)
-class SeededRandom {
-  constructor(seed) {
-    this.seed = seed;
-  }
-
-  next() {
-    let t = this.seed += 0x6D2B79F5;
-    t = Math.imul(t ^ t >>> 15, t | 1);
-    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  }
-
-  nextInt(min, max) {
-    return Math.floor(this.next() * (max - min + 1)) + min;
-  }
-
-  pick(array) {
-    return array[Math.floor(this.next() * array.length)];
-  }
-
-  shuffle(array) {
-    const result = [...array];
-    for (let i = result.length - 1; i > 0; i--) {
-      const j = Math.floor(this.next() * (i + 1));
-      [result[i], result[j]] = [result[j], result[i]];
-    }
-    return result;
-  }
-
-  // Gaussian-like distribution using Box-Muller transform
-  nextGaussian() {
-    const u1 = this.next();
-    const u2 = this.next();
-    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-  }
-}
 
 const NODE_NAME_PREFIXES = {
   city: ['New', 'Old', 'Port', 'Fort', 'North', 'South', 'East', 'West'],
@@ -68,8 +31,6 @@ const NODE_NAME_SUFFIXES = {
   guild: ['Hall', 'Sanctum', 'Lodge', 'Academy', 'Tower', 'Keep']
 };
 
-const CITY_OPTIONS = ['blacksmith', 'apothecary', 'temple', 'stables'];
-const CASTLE_FEATURES = ['coliseum', 'tavern', 'courtyard', 'throne', 'blacksmith', 'apothecary', 'temple', 'stables', 'marketplace'];
 const PALACE_FEATURES = ['throne_room', 'treasury', 'royal_guard'];
 
 /**
@@ -780,7 +741,7 @@ async function main() {
     await client.query('TRUNCATE shop_transactions RESTART IDENTITY CASCADE');
 
     // Generate world
-    const worldSeed = parseInt(process.env.WORLD_SEED || '12345');
+    const worldSeed = parseInt(process.env.WORLD_SEED || '12345', 10);
     console.log(`\nGenerating world with seed: ${worldSeed}`);
     const { nodes, connections } = await generateWorld(worldSeed);
 

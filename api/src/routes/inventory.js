@@ -285,7 +285,20 @@ router.post('/use', authenticate, asyncHandler(async (req, res) => {
 
 // POST /api/inventory/discard - Discard an item
 router.post('/discard', authenticate, asyncHandler(async (req, res) => {
-  const { characterId, itemInstanceId, quantity } = req.body;
+  const { characterId, itemInstanceId } = req.body;
+
+  // SECURITY: Strict quantity validation to prevent exploits
+  // If quantity not provided, we'll discard all after checking ownership
+  let discardQty;
+  if (req.body.quantity !== undefined) {
+    discardQty = parseInt(req.body.quantity, 10);
+    if (!Number.isInteger(discardQty) || isNaN(discardQty)) {
+      throw new AppError('Quantity must be a valid integer', 400);
+    }
+    if (discardQty < 1) {
+      throw new AppError('Quantity must be at least 1', 400);
+    }
+  }
 
   // Verify character ownership
   const charResult = await query(
@@ -297,37 +310,47 @@ router.post('/discard', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Character not found', 404);
   }
 
-  // Get item info
-  const itemResult = await query(
-    'SELECT id, quantity, equipped_slot FROM character_items WHERE id = $1 AND character_id = $2',
-    [itemInstanceId, characterId]
-  );
-
-  if (itemResult.rows.length === 0) {
-    throw new AppError('Item not found in inventory', 404);
-  }
-
-  const item = itemResult.rows[0];
-
-  // Can't discard equipped items
-  if (item.equipped_slot) {
-    throw new AppError('Unequip item before discarding', 400);
-  }
-
-  const discardQty = quantity || item.quantity;
-
-  if (discardQty >= item.quantity) {
-    // Remove entire stack
-    await query('DELETE FROM character_items WHERE id = $1', [itemInstanceId]);
-  } else {
-    // Reduce quantity
-    await query(
-      'UPDATE character_items SET quantity = quantity - $1 WHERE id = $2',
-      [discardQty, itemInstanceId]
+  // Use transaction with FOR UPDATE to prevent race conditions
+  const result = await withTransaction(async (client) => {
+    // Get item info with lock
+    const itemResult = await client.query(
+      'SELECT id, quantity, equipped_slot FROM character_items WHERE id = $1 AND character_id = $2 FOR UPDATE',
+      [itemInstanceId, characterId]
     );
-  }
 
-  res.json({ success: true, discarded: discardQty });
+    if (itemResult.rows.length === 0) {
+      throw new AppError('Item not found in inventory', 404);
+    }
+
+    const item = itemResult.rows[0];
+
+    // Can't discard equipped items
+    if (item.equipped_slot) {
+      throw new AppError('Unequip item before discarding', 400);
+    }
+
+    // If no quantity specified, discard all; otherwise validate against owned amount
+    const finalDiscardQty = discardQty !== undefined ? discardQty : item.quantity;
+
+    if (finalDiscardQty > item.quantity) {
+      throw new AppError(`Cannot discard ${finalDiscardQty} items, only have ${item.quantity}`, 400);
+    }
+
+    if (finalDiscardQty >= item.quantity) {
+      // Remove entire stack
+      await client.query('DELETE FROM character_items WHERE id = $1', [itemInstanceId]);
+    } else {
+      // Reduce quantity
+      await client.query(
+        'UPDATE character_items SET quantity = quantity - $1 WHERE id = $2',
+        [finalDiscardQty, itemInstanceId]
+      );
+    }
+
+    return finalDiscardQty;
+  });
+
+  res.json({ success: true, discarded: result });
 }));
 
 // Helper: Get valid equipment slots for item type

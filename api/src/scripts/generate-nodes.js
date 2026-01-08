@@ -139,7 +139,7 @@ async function generateNodes() {
  * Generate deterministic seed for node
  */
 function getNodeSeed(nodeType) {
-  const worldSeed = parseInt(process.env.WORLD_SEED || '12345');
+  const worldSeed = parseInt(process.env.WORLD_SEED || '12345', 10);
   const nodeHash = hashString(nodeType);
   return (worldSeed + nodeHash) % 1000000;
 }

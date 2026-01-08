@@ -111,7 +111,7 @@ async function generateObstacles() {
  * Generate deterministic seed for obstacle
  */
 function getObstacleSeed(category, obstacleName) {
-  const worldSeed = parseInt(process.env.WORLD_SEED || '12345');
+  const worldSeed = parseInt(process.env.WORLD_SEED || '12345', 10);
   const categoryHash = hashString(category);
   const nameHash = hashString(obstacleName);
   return (worldSeed + categoryHash + nameHash) % 1000000;

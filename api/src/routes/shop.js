@@ -3,6 +3,7 @@ const router = express.Router();
 const { query, withTransaction } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { asyncHandler, AppError } = require('../middleware/errorHandler');
+const { MAX_GOLD } = require('../config/constants');
 
 // Valid shop types and which node types/features support them
 const SHOP_CONFIG = {
@@ -132,7 +133,7 @@ async function verifyCharacterAtNode(userId, nodeId) {
 // ============================================
 router.get('/:nodeId/:shopType', authenticate, asyncHandler(async (req, res) => {
   const { nodeId, shopType } = req.params;
-  const nodeIdNum = parseInt(nodeId);
+  const nodeIdNum = parseInt(nodeId, 10);
 
   if (isNaN(nodeIdNum)) {
     throw new AppError('Invalid node ID', 400);
@@ -199,8 +200,14 @@ router.get('/:nodeId/:shopType', authenticate, asyncHandler(async (req, res) => 
 // ============================================
 router.post('/:nodeId/:shopType/buy', authenticate, asyncHandler(async (req, res) => {
   const { nodeId, shopType } = req.params;
-  const { itemTemplateId, quantity = 1, characterId } = req.body;
-  const nodeIdNum = parseInt(nodeId);
+  const { itemTemplateId, characterId } = req.body;
+  const nodeIdNum = parseInt(nodeId, 10);
+
+  // SECURITY: Strict quantity validation to prevent negative quantity exploits
+  const quantity = parseInt(req.body.quantity, 10);
+  if (!Number.isInteger(quantity) || isNaN(quantity)) {
+    throw new AppError('Quantity must be a valid integer', 400);
+  }
 
   // Validate inputs
   if (isNaN(nodeIdNum)) {
@@ -340,8 +347,14 @@ router.post('/:nodeId/:shopType/buy', authenticate, asyncHandler(async (req, res
 // ============================================
 router.post('/:nodeId/:shopType/sell', authenticate, asyncHandler(async (req, res) => {
   const { nodeId, shopType } = req.params;
-  const { itemInstanceId, quantity = 1 } = req.body;
-  const nodeIdNum = parseInt(nodeId);
+  const { itemInstanceId } = req.body;
+  const nodeIdNum = parseInt(nodeId, 10);
+
+  // SECURITY: Strict quantity validation to prevent negative quantity exploits
+  const quantity = req.body.quantity !== undefined ? parseInt(req.body.quantity, 10) : 1;
+  if (!Number.isInteger(quantity) || isNaN(quantity)) {
+    throw new AppError('Quantity must be a valid integer', 400);
+  }
 
   // Validate inputs
   if (isNaN(nodeIdNum)) {
@@ -350,8 +363,8 @@ router.post('/:nodeId/:shopType/sell', authenticate, asyncHandler(async (req, re
   if (!itemInstanceId) {
     throw new AppError('Item instance ID required', 400);
   }
-  if (quantity < 1) {
-    throw new AppError('Invalid quantity', 400);
+  if (quantity < 1 || quantity > 9999) {
+    throw new AppError('Invalid quantity (1-9999)', 400);
   }
 
   // Verify shop access
@@ -395,17 +408,20 @@ router.post('/:nodeId/:shopType/sell', authenticate, asyncHandler(async (req, re
       throw new AppError('This item cannot be sold', 400);
     }
 
-    // Check quantity
-    const sellQuantity = Math.min(quantity, item.quantity);
+    // SECURITY: Validate quantity doesn't exceed owned amount (already validated as positive integer above)
+    if (quantity > item.quantity) {
+      throw new AppError(`Insufficient items. You have ${item.quantity}, tried to sell ${quantity}`, 400);
+    }
+    const sellQuantity = quantity;
 
     // Calculate sell price (50% of base)
     const unitPrice = calculateSellPrice(item.base_price);
     const totalPrice = unitPrice * sellQuantity;
 
-    // Add gold to user
+    // Add gold to user (capped at MAX_GOLD to prevent overflow)
     await client.query(
-      'UPDATE users SET gold = gold + $1 WHERE id = $2',
-      [totalPrice, req.user.userId]
+      'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
+      [totalPrice, MAX_GOLD, req.user.userId]
     );
 
     // Remove or reduce item quantity
@@ -474,7 +490,7 @@ router.post('/:nodeId/:shopType/sell', authenticate, asyncHandler(async (req, re
 // ============================================
 router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async (req, res) => {
   const { nodeId, shopType } = req.params;
-  const nodeIdNum = parseInt(nodeId);
+  const nodeIdNum = parseInt(nodeId, 10);
 
   if (isNaN(nodeIdNum)) {
     throw new AppError('Invalid node ID', 400);

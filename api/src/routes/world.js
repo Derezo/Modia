@@ -8,7 +8,7 @@ const { broadcastToRoom, rooms } = require('../websocket/index');
 
 // GET /api/world/seed - Get global world seed
 router.get('/seed', asyncHandler(async (req, res) => {
-  const seed = parseInt(process.env.WORLD_SEED || '12345');
+  const seed = parseInt(process.env.WORLD_SEED || '12345', 10);
   res.json({ seed });
 }));
 
@@ -241,10 +241,10 @@ router.get('/nodes/:id/players', authenticate, asyncHandler(async (req, res) => 
     throw new AppError('Node not found', 404);
   }
 
-  const players = presenceService.getPlayersAtNode(parseInt(id));
+  const players = presenceService.getPlayersAtNode(parseInt(id, 10));
 
   res.json({
-    nodeId: parseInt(id),
+    nodeId: parseInt(id, 10),
     nodeName: nodeResult.rows[0].name,
     players,
     count: players.length

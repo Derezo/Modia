@@ -3,565 +3,12 @@ const router = express.Router();
 const { query, withTransaction } = require('../config/database');
 const { authenticate } = require('../middleware/auth');
 const { asyncHandler, AppError } = require('../middleware/errorHandler');
-const { BATTLE_NODE_TYPES, MAX_BATTLE_PARTY_SIZE } = require('../config/constants');
+const { BATTLE_NODE_TYPES, MAX_BATTLE_PARTY_SIZE, MAX_GOLD } = require('../config/constants');
 const battleService = require('../services/battleService');
 const aiService = require('../services/aiService');
 const enemyService = require('../services/enemyService');
 const itemDropService = require('../services/itemDropService');
 const battleWebsocket = require('../services/battleWebsocket');
-const { SKILL_TREES } = require('./skills');
-
-/**
- * Get skill definition from SKILL_TREES
- * @param {string} unitClass - The unit's class (warrior, wizard, etc.)
- * @param {string} skillId - The skill ID to find
- * @returns {Object|null} Skill definition or null if not found
- */
-function getSkillDefinition(unitClass, skillId) {
-  const classTree = SKILL_TREES[unitClass?.toLowerCase()];
-  if (!classTree) return null;
-
-  for (const branch of classTree.branches) {
-    const skill = branch.skills.find(s => s.id === skillId);
-    if (skill) return skill;
-  }
-  return null;
-}
-
-/**
- * Initialize two-action turn state for a unit if not present (migration support)
- * @param {Object} unit - The unit to initialize
- */
-function initializeTurnState(unit) {
-  if (typeof unit.moveUsed !== 'boolean') {
-    unit.moveUsed = false;
-    unit.actUsed = false;
-    unit.turnPhase = 'ready';
-  }
-}
-
-/**
- * Process an action for any unit (player or enemy)
- * Two-action system: each turn allows 1 move + 1 act (attack/skill), in either order
- * @param {Object} state - Battle state
- * @param {Object} unit - The acting unit
- * @param {string} actionType - 'move' | 'attack' | 'skill' | 'wait'
- * @param {Object} targetTile - { x, y } target position
- * @param {string} skillId - Optional skill ID for skill actions
- * @returns {Object} Action result with turnEnded flag
- */
-function processAction(state, unit, actionType, targetTile, skillId = null) {
-  const result = { damage: 0, moved: false, turnEnded: false };
-
-  // Initialize two-action state if missing (migration support)
-  initializeTurnState(unit);
-
-  switch (actionType) {
-    case 'move':
-      // Check if already moved this turn
-      if (unit.moveUsed) {
-        result.error = 'Already moved this turn';
-        return result;
-      }
-      // Check if status effects prevent movement
-      if (!battleService.canUnitMove(unit)) {
-        result.error = 'Cannot move due to status effect';
-        return result;
-      }
-      if (targetTile) {
-        unit.tileX = targetTile.x;
-        unit.tileY = targetTile.y;
-        result.moved = true;
-        result.newPosition = { x: targetTile.x, y: targetTile.y };
-        unit.moveUsed = true;
-      }
-      break;
-
-    case 'attack':
-      // Check if already acted this turn
-      if (unit.actUsed) {
-        result.error = 'Already acted this turn';
-        return result;
-      }
-      // Check if status effects prevent acting
-      if (!battleService.canUnitAct(unit)) {
-        result.error = 'Cannot act due to status effect';
-        return result;
-      }
-      if (targetTile) {
-        const target = state.units.find(u =>
-          u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
-        );
-        if (target) {
-          // Attack target at tile
-          const hits = battleService.checkHit(unit, target);
-          if (hits) {
-            const damageResult = battleService.calculatePhysicalDamage(unit, target);
-            target.hp = Math.max(0, target.hp - damageResult.damage);
-            result.damage = damageResult.damage;
-            result.isCritical = damageResult.isCritical;
-            result.targetId = target.id;
-            result.targetType = target.type; // 'player' or 'enemy'
-          } else {
-            result.missed = true;
-            result.targetId = target.id;
-          }
-        } else {
-          // Empty tile attack - animation plays but no effect
-          result.attackedEmptyTile = true;
-          result.targetTile = targetTile;
-        }
-        unit.actUsed = true;
-      }
-      break;
-
-    case 'skill':
-      // Check if already acted this turn
-      if (unit.actUsed) {
-        result.error = 'Already acted this turn';
-        return result;
-      }
-      // Check if status effects prevent acting or using skills
-      if (!battleService.canUnitAct(unit)) {
-        result.error = 'Cannot act due to status effect';
-        return result;
-      }
-      if (!battleService.canUnitUseSkills(unit)) {
-        result.error = 'Cannot use skills due to silence';
-        return result;
-      }
-      if (targetTile && skillId) {
-        const skill = getSkillDefinition(unit.class, skillId);
-        if (!skill) {
-          result.error = 'Invalid skill';
-          break;
-        }
-
-        // Calculate MP cost (use mpCost from skill definition, or derive from baseCost)
-        const mpCost = skill.mpCost || (skill.baseCost ? Math.floor(skill.baseCost / 10) : 5);
-        if (unit.mp < mpCost) {
-          result.error = 'Not enough MP';
-          break;
-        }
-
-        // Deduct MP
-        unit.mp -= mpCost;
-        result.skillUsed = skillId;
-        result.mpCost = mpCost;
-        result.skillEffects = [];
-
-        // Handle self-targeting skills (buffs, heals)
-        if (skill.selfBuff || skill.healPercent || skill.cleanse) {
-          // Self-buff or self-heal
-          if (skill.selfBuff) {
-            battleService.applyStatusEffect(unit, skill.selfBuff, skill.buffDuration || 3);
-            result.skillEffects.push({ type: 'buff', effect: skill.selfBuff, targetId: unit.id });
-          }
-          if (skill.healPercent) {
-            const healAmount = Math.floor(unit.maxHp * skill.healPercent / 100);
-            unit.hp = Math.min(unit.maxHp, unit.hp + healAmount);
-            result.healing = healAmount;
-            result.targetId = unit.id;
-          }
-          if (skill.mpRestore) {
-            const mpAmount = Math.floor(unit.maxMp * skill.mpRestore / 100);
-            unit.mp = Math.min(unit.maxMp, unit.mp + mpAmount);
-            result.mpRestored = mpAmount;
-          }
-          if (skill.cleanse) {
-            // Remove all negative status effects
-            unit.statusEffects = (unit.statusEffects || []).filter(e =>
-              ['rage', 'fortify', 'haste', 'regen'].includes(e.type)
-            );
-            result.skillEffects.push({ type: 'cleanse', targetId: unit.id });
-          }
-          unit.actUsed = true;
-          break;
-        }
-
-        // Find target at tile
-        const target = state.units.find(u =>
-          u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
-        );
-
-        // Handle ally-targeting skills (heals, buffs)
-        if (skill.targetAlly && target && target.type === unit.type) {
-          if (skill.healPercent) {
-            const healAmount = Math.floor(target.maxHp * skill.healPercent / 100);
-            target.hp = Math.min(target.maxHp, target.hp + healAmount);
-            result.healing = healAmount;
-            result.targetId = target.id;
-          }
-          if (skill.effect && skill.effectChance >= Math.random()) {
-            battleService.applyStatusEffect(target, skill.effect, skill.effectDuration || 3);
-            result.skillEffects.push({ type: 'buff', effect: skill.effect, targetId: target.id });
-          }
-          unit.actUsed = true;
-          break;
-        }
-
-        // Check if this is an AoE skill
-        if (skill.aoeRadius && skill.aoeRadius > 0) {
-          // Get all units in the AoE area (includes allies - friendly fire!)
-          const affectedUnits = battleService.getUnitsInAoE(
-            state.units,
-            targetTile.x,
-            targetTile.y,
-            skill.aoeRadius,
-            skill.aoePattern || 'circle'
-          );
-
-          // Track AoE results
-          result.isAoE = true;
-          result.aoeTargets = [];
-          result.aoeTiles = battleService.getAoETiles(
-            targetTile.x,
-            targetTile.y,
-            skill.aoeRadius,
-            skill.aoePattern || 'circle'
-          );
-
-          // Apply damage/effects to each unit in the AoE
-          const power = skill.power || 150;
-          const damageType = skill.damageType || 'physical';
-          const hits = skill.hits || 1;
-
-          for (const { unit: affectedUnit, isCenter } of affectedUnits) {
-            // Calculate damage for this target
-            const damageResult = damageType === 'magical'
-              ? battleService.calculateMagicalDamage(unit, affectedUnit, power)
-              : battleService.calculatePhysicalDamage(unit, affectedUnit, power);
-
-            // Apply damage (multiply by hits if multi-hit skill)
-            let totalDamage = 0;
-            for (let i = 0; i < hits; i++) {
-              totalDamage += damageResult.damage;
-            }
-
-            // Reduce damage for non-center targets (75% damage at edges)
-            if (!isCenter) {
-              totalDamage = Math.floor(totalDamage * 0.75);
-            }
-
-            affectedUnit.hp = Math.max(0, affectedUnit.hp - totalDamage);
-
-            const targetResult = {
-              targetId: affectedUnit.id,
-              targetName: affectedUnit.name,
-              targetType: affectedUnit.type,
-              damage: totalDamage,
-              isCritical: damageResult.isCritical,
-              isCenter,
-              tileX: affectedUnit.tileX,
-              tileY: affectedUnit.tileY
-            };
-
-            // Apply status effect if skill has one and chance succeeds
-            if (skill.effect && skill.effectChance && Math.random() < skill.effectChance) {
-              const effectApplied = battleService.applyStatusEffect(
-                affectedUnit,
-                skill.effect,
-                skill.effectDuration || 3
-              );
-              if (effectApplied) {
-                targetResult.effectApplied = skill.effect;
-                targetResult.effectDuration = skill.effectDuration || 3;
-                result.skillEffects.push({
-                  type: affectedUnit.type === unit.type ? 'debuff' : 'debuff',
-                  effect: skill.effect,
-                  duration: skill.effectDuration || 3,
-                  targetId: affectedUnit.id
-                });
-              }
-            }
-
-            result.aoeTargets.push(targetResult);
-          }
-
-          // Set primary target info for backwards compatibility
-          if (result.aoeTargets.length > 0) {
-            const primaryTarget = result.aoeTargets.find(t => t.isCenter) || result.aoeTargets[0];
-            result.damage = result.aoeTargets.reduce((sum, t) => sum + t.damage, 0);
-            result.targetId = primaryTarget.targetId;
-            result.targetType = primaryTarget.targetType;
-          } else {
-            // No units hit - still show AoE animation on tiles
-            result.attackedEmptyTile = true;
-            result.targetTile = targetTile;
-          }
-        } else if (target) {
-          // Single-target skill: Apply skill damage (using power from skill or default 150%)
-          const power = skill.power || 150;
-          const damageType = skill.damageType || 'physical';
-          const damageResult = damageType === 'magical'
-            ? battleService.calculateMagicalDamage(unit, target, power)
-            : battleService.calculatePhysicalDamage(unit, target, power);
-
-          // Apply damage (multiply by hits if multi-hit skill)
-          const hits = skill.hits || 1;
-          let totalDamage = 0;
-          for (let i = 0; i < hits; i++) {
-            totalDamage += damageResult.damage;
-          }
-          target.hp = Math.max(0, target.hp - totalDamage);
-          result.damage = totalDamage;
-          result.hits = hits;
-          result.isCritical = damageResult.isCritical;
-          result.targetId = target.id;
-          result.targetType = target.type;
-
-          // Apply status effect if skill has one and chance succeeds
-          if (skill.effect && skill.effectChance && Math.random() < skill.effectChance) {
-            const effectApplied = battleService.applyStatusEffect(
-              target,
-              skill.effect,
-              skill.effectDuration || 3
-            );
-            if (effectApplied) {
-              result.skillEffects.push({
-                type: 'debuff',
-                effect: skill.effect,
-                duration: skill.effectDuration || 3,
-                targetId: target.id
-              });
-            }
-          }
-        } else {
-          // Empty tile skill - animation plays but no damage
-          result.attackedEmptyTile = true;
-          result.targetTile = targetTile;
-        }
-        unit.actUsed = true;
-      }
-      break;
-
-    case 'item':
-      // Check if already acted this turn
-      if (unit.actUsed) {
-        result.error = 'Already acted this turn';
-        return result;
-      }
-      // Check if status effects prevent acting
-      if (!battleService.canUnitAct(unit)) {
-        result.error = 'Cannot act due to status effect';
-        return result;
-      }
-      // Item usage requires itemId in skillId parameter (reusing same field)
-      if (skillId) {
-        result.itemUsed = skillId;
-        result.itemEffects = [];
-
-        // Look up item from battle state consumables (loaded from database)
-        const consumables = state.consumables || [];
-        const consumable = consumables.find(c => c.itemId === parseInt(skillId) || c.itemId === skillId);
-
-        if (!consumable || consumable.quantity <= 0) {
-          result.error = 'Item not available';
-          break;
-        }
-
-        // Find target (self or ally at tile)
-        let itemTarget = unit; // Default to self
-        if (targetTile) {
-          const tileTarget = state.units.find(u =>
-            u.tileX === targetTile.x && u.tileY === targetTile.y && u.type === 'player'
-          );
-          if (tileTarget) {
-            itemTarget = tileTarget;
-          }
-        }
-
-        // Apply item effects based on effectType from database
-        const effectType = consumable.effectType || consumable.name?.toLowerCase();
-        const effectValue = consumable.effectValue || 25; // Default to 25% if not specified
-
-        // Handle different effect types
-        if (effectType === 'hp_restore' || consumable.name?.toLowerCase().includes('potion')) {
-          const healAmount = Math.floor(itemTarget.maxHp * effectValue / 100);
-          itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + healAmount);
-          result.healing = healAmount;
-          result.itemEffects.push({ type: 'heal', amount: healAmount, targetId: itemTarget.id });
-        }
-
-        if (effectType === 'mp_restore' || consumable.name?.toLowerCase().includes('ether')) {
-          const mpAmount = Math.floor(itemTarget.maxMp * effectValue / 100);
-          itemTarget.mp = Math.min(itemTarget.maxMp, itemTarget.mp + mpAmount);
-          result.mpRestored = mpAmount;
-          result.itemEffects.push({ type: 'mpRestore', amount: mpAmount, targetId: itemTarget.id });
-        }
-
-        if (effectType === 'elixir' || consumable.name?.toLowerCase().includes('elixir')) {
-          const healAmount = Math.floor(itemTarget.maxHp * effectValue / 100);
-          const mpAmount = Math.floor(itemTarget.maxMp * effectValue / 100);
-          itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + healAmount);
-          itemTarget.mp = Math.min(itemTarget.maxMp, itemTarget.mp + mpAmount);
-          result.itemEffects.push({ type: 'heal', amount: healAmount, targetId: itemTarget.id });
-          result.itemEffects.push({ type: 'mpRestore', amount: mpAmount, targetId: itemTarget.id });
-        }
-
-        if (effectType === 'cleanse' || consumable.name?.toLowerCase().includes('antidote')) {
-          const cleansableEffects = ['poison', 'blind', 'silence', 'slow', 'burn'];
-          itemTarget.statusEffects = (itemTarget.statusEffects || []).filter(e =>
-            !cleansableEffects.includes(e.type)
-          );
-          result.itemEffects.push({ type: 'cleanse', effects: cleansableEffects, targetId: itemTarget.id });
-        }
-
-        if (effectType === 'revive' || consumable.name?.toLowerCase().includes('phoenix')) {
-          if (itemTarget.hp <= 0) {
-            const reviveHp = Math.floor(itemTarget.maxHp * effectValue / 100);
-            itemTarget.hp = reviveHp;
-            result.itemEffects.push({ type: 'revive', amount: reviveHp, targetId: itemTarget.id });
-          }
-        }
-
-        // Consume the item in battle state
-        consumable.quantity--;
-        if (consumable.quantity <= 0) {
-          state.consumables = consumables.filter(c => c.itemId !== consumable.itemId);
-        }
-
-        // Mark inventory item for consumption (will be processed after battle or immediately)
-        result.consumedInventoryId = consumable.inventoryId;
-        result.targetId = itemTarget.id;
-        result.itemName = consumable.name;
-        unit.actUsed = true;
-      }
-      break;
-
-    case 'wait':
-      // Wait ends turn immediately, skipping any remaining actions
-      result.turnEnded = true;
-      break;
-  }
-
-  // Determine if turn is complete
-  // Turn ends if: wait was pressed, OR both move and act have been used
-  if (actionType === 'wait' || (unit.moveUsed && unit.actUsed)) {
-    unit.turnPhase = 'done';
-    unit.hasActed = true; // backwards compatibility
-    result.turnEnded = true;
-  } else if (unit.moveUsed || unit.actUsed) {
-    unit.turnPhase = 'partial';
-  }
-
-  // Calculate available actions for response
-  const canMove = battleService.canUnitMove(unit) && !unit.moveUsed;
-  const canAct = battleService.canUnitAct(unit) && !unit.actUsed;
-  result.availableActions = { canMove, canAct };
-
-  return result;
-}
-
-/**
- * Advance to the next actor using CT system
- * Consumes the current actor's CT and finds the next one
- * @param {Object} state - Battle state
- */
-function advanceToNextActorWithCT(state) {
-  // Consume CT for the unit that just acted
-  const currentActor = state.units.find(u => u.id === state.activeUnitId);
-  if (currentActor) {
-    battleService.consumeCT(currentActor);
-  }
-
-  // Find the next actor
-  battleService.advanceToNextActor(state);
-}
-
-/**
- * Check if battle has ended
- * @param {Object} state - Battle state
- * @returns {string} 'active' | 'victory' | 'defeat'
- */
-function checkBattleEnd(state) {
-  const playerUnitsAlive = state.units.filter(u => u.type === 'player' && u.hp > 0).length;
-  const enemyUnitsAlive = state.units.filter(u => u.type === 'enemy' && u.hp > 0).length;
-
-  if (enemyUnitsAlive === 0) return 'victory';
-  if (playerUnitsAlive === 0) return 'defeat';
-  return 'active';
-}
-
-/**
- * Process enemy turns until it's a player's turn or battle ends
- * Uses CT system to determine turn order
- * Two-action system: each enemy gets both a move and an action per turn
- * @param {Object} state - Battle state
- * @param {number} maxIterations - Safety limit to prevent infinite loops
- * @returns {Array} Array of enemy actions for frontend animation
- */
-function processEnemyTurns(state, maxIterations = 50) {
-  const enemyActions = [];
-  let iterations = 0;
-
-  while (iterations < maxIterations) {
-    // Get the current active unit
-    const activeUnit = state.units.find(u => u.id === state.activeUnitId);
-
-    // Safety check
-    if (!activeUnit) {
-      battleService.advanceToNextActor(state);
-      iterations++;
-      continue;
-    }
-
-    // Stop if it's a player's turn
-    if (activeUnit.type === 'player') {
-      break;
-    }
-
-    // Stop if unit is dead (shouldn't happen, but safety check)
-    if (activeUnit.hp <= 0) {
-      advanceToNextActorWithCT(state);
-      iterations++;
-      continue;
-    }
-
-    // Initialize turn state for enemy
-    initializeTurnState(activeUnit);
-
-    // Get AI decisions for the full turn (returns array of 1-2 actions)
-    const decisions = aiService.decideTurnActions(activeUnit, state);
-
-    // Process each action in the enemy's turn
-    for (const decision of decisions) {
-      // Skip if wait (ends turn)
-      if (decision.actionType === 'wait') {
-        break;
-      }
-
-      // Process the enemy action
-      const result = processAction(state, activeUnit, decision.actionType, decision.targetTile, decision.skillId);
-
-      // Skip recording if there was an error (shouldn't happen for AI, but safety)
-      if (result.error) {
-        continue;
-      }
-
-      // Record this action for frontend animation
-      enemyActions.push({
-        unitId: activeUnit.id,
-        unitName: activeUnit.name,
-        actionType: decision.actionType,
-        targetTile: decision.targetTile,
-        result
-      });
-
-      // Check if battle ended after this action
-      const battleStatus = checkBattleEnd(state);
-      if (battleStatus !== 'active') {
-        return enemyActions;
-      }
-    }
-
-    // Advance to next actor using CT system
-    advanceToNextActorWithCT(state);
-    iterations++;
-  }
-
-  return enemyActions;
-}
 
 // GET /api/battle/preview/:nodeId - Get encounter preview for formation screen
 router.get('/preview/:nodeId', authenticate, asyncHandler(async (req, res) => {
@@ -643,7 +90,7 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
     }
     // Get character class to find skill definition
     const char = party.find(c => c.id === row.character_id);
-    const skillDef = char ? getSkillDefinition(char.class, row.skill_id) : null;
+    const skillDef = char ? battleService.getSkillDefinition(char.class, row.skill_id) : null;
 
     if (skillDef) {
       characterSkills[row.character_id].push({
@@ -746,20 +193,20 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
         class: char.class,
         level: char.level,
         hp: char.hp_current,
-        maxHp: char.hp_max + (parseInt(char.equip_hp) || 0),
+        maxHp: char.hp_max + (parseInt(char.equip_hp, 10) || 0),
         mp: char.mp_current,
-        maxMp: char.mp_max + (parseInt(char.equip_mp) || 0),
+        maxMp: char.mp_max + (parseInt(char.equip_mp, 10) || 0),
         // Apply equipment stat bonuses to combat stats
-        strength: char.strength + (parseInt(char.equip_strength) || 0),
-        intelligence: char.intelligence + (parseInt(char.equip_intelligence) || 0),
-        agility: char.agility + (parseInt(char.equip_agility) || 0),
-        vitality: char.vitality + (parseInt(char.equip_vitality) || 0),
-        luck: char.luck + (parseInt(char.equip_luck) || 0),
+        strength: char.strength + (parseInt(char.equip_strength, 10) || 0),
+        intelligence: char.intelligence + (parseInt(char.equip_intelligence, 10) || 0),
+        agility: char.agility + (parseInt(char.equip_agility, 10) || 0),
+        vitality: char.vitality + (parseInt(char.equip_vitality, 10) || 0),
+        luck: char.luck + (parseInt(char.equip_luck, 10) || 0),
         // Equipment-only combat bonuses
-        attack: parseInt(char.equip_attack) || 0,
-        defense: parseInt(char.equip_defense) || 0,
-        magicAttack: parseInt(char.equip_magic_attack) || 0,
-        magicDefense: parseInt(char.equip_magic_defense) || 0,
+        attack: parseInt(char.equip_attack, 10) || 0,
+        defense: parseInt(char.equip_defense, 10) || 0,
+        magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
+        magicDefense: parseInt(char.equip_magic_defense, 10) || 0,
         tileX,
         tileY,
         ct: 0,
@@ -910,8 +357,8 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Not this unit\'s turn', 400);
   }
 
-  // Process player action using helper
-  const result = processAction(state, activeUnit, actionType, targetTile, skillId);
+  // Process player action using service
+  const result = battleService.processAction(state, activeUnit, actionType, targetTile, skillId);
 
   // If there was an error (e.g., already moved, status effect), return early
   if (result.error) {
@@ -923,7 +370,7 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
   }
 
   // Check if battle ended from player action
-  let battleStatus = checkBattleEnd(state);
+  let battleStatus = battleService.checkBattleEnd(state);
 
   // Process enemy turns ONLY if turn is complete and battle is still active
   let enemyActions = [];
@@ -931,13 +378,13 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
 
   if (result.turnEnded && battleStatus === 'active') {
     // Turn is complete - advance to next actor using CT system
-    advanceToNextActorWithCT(state);
+    battleService.advanceToNextActorWithCT(state);
 
     // Process all enemy turns until it's a player's turn again
-    enemyActions = processEnemyTurns(state);
+    enemyActions = battleService.processEnemyTurns(state, aiService);
 
     // Check if battle ended after enemy turns
-    battleStatus = checkBattleEnd(state);
+    battleStatus = battleService.checkBattleEnd(state);
   }
 
   // Update turn predictions
@@ -949,26 +396,28 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
     [JSON.stringify(state), battleStatus, battleId]
   );
 
-  // Consume item from inventory if an item was used
+  // Consume item from inventory if an item was used (with FOR UPDATE to prevent race conditions)
   if (result.consumedInventoryId) {
-    // Reduce quantity or delete item from character_items
-    const itemCheck = await query(
-      'SELECT quantity FROM character_items WHERE id = $1',
-      [result.consumedInventoryId]
-    );
-    if (itemCheck.rows.length > 0) {
-      if (itemCheck.rows[0].quantity > 1) {
-        await query(
-          'UPDATE character_items SET quantity = quantity - 1 WHERE id = $1',
-          [result.consumedInventoryId]
-        );
-      } else {
-        await query(
-          'DELETE FROM character_items WHERE id = $1',
-          [result.consumedInventoryId]
-        );
+    await withTransaction(async (client) => {
+      // Lock the row to prevent race condition with rapid item usage
+      const itemCheck = await client.query(
+        'SELECT quantity FROM character_items WHERE id = $1 FOR UPDATE',
+        [result.consumedInventoryId]
+      );
+      if (itemCheck.rows.length > 0) {
+        if (itemCheck.rows[0].quantity > 1) {
+          await client.query(
+            'UPDATE character_items SET quantity = quantity - 1 WHERE id = $1',
+            [result.consumedInventoryId]
+          );
+        } else {
+          await client.query(
+            'DELETE FROM character_items WHERE id = $1',
+            [result.consumedInventoryId]
+          );
+        }
       }
-    }
+    });
   }
 
   // Broadcast action executed via WebSocket
@@ -1046,10 +495,10 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
           [JSON.stringify(rewardsData), battleId]
         );
 
-        // Award gold to user
+        // Award gold to user (capped at MAX_GOLD to prevent overflow)
         await client.query(
-          'UPDATE users SET gold = gold + $1 WHERE id = $2',
-          [gold, req.user.userId]
+          'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
+          [gold, MAX_GOLD, req.user.userId]
         );
 
         // Distribute XP to battle party characters

@@ -2,6 +2,11 @@
  * Coliseum Service - Handles PvP matchmaking and queue management
  */
 
+const { query } = require('../config/database');
+const battleService = require('./battleService');
+const battleWebsocket = require('./battleWebsocket');
+const { MAX_BATTLE_PARTY_SIZE } = require('../config/constants');
+
 // Lazy-load websocket to avoid circular dependency
 // websocket/index.js imports this file, so we can't destructure at top level
 let _websocket = null;
@@ -376,32 +381,253 @@ function checkMatchReady(matchId) {
 }
 
 /**
- * Start the match (create battle)
+ * Start the match (create PvP battle)
  */
-function startMatch(matchId) {
+async function startMatch(matchId) {
   const match = activeMatches.get(matchId);
   if (!match || match.status !== 'ready') return;
 
-  match.status = 'started';
+  match.status = 'starting';
 
-  // Notify both players with battle info
-  // In a real implementation, this would create a PvP battle in the database
-  const battlePayload = {
-    matchId,
-    status: 'started',
-    battleType: 'pvp',
-    // battleId would come from database
-  };
+  try {
+    // Get battle party characters for both players
+    const [player1Party, player2Party] = await Promise.all([
+      getPlayerBattleParty(match.player1.userId),
+      getPlayerBattleParty(match.player2.userId)
+    ]);
+
+    if (player1Party.length === 0 || player2Party.length === 0) {
+      // Cancel match if either player has no characters
+      cancelMatch(matchId, 'No battle party available');
+      return;
+    }
+
+    // Generate map seed
+    const mapSeed = Math.floor(Math.random() * 2147483647);
+
+    // Build initial battle state
+    const initialState = {
+      turn: 1,
+      phase: 'action',
+      activeUnit: null,
+      status: 'active',
+      battleType: 'pvp',
+      player1Id: match.player1.userId,
+      player2Id: match.player2.userId,
+      units: [],
+      consumables: [],
+      log: [{ type: 'battle_start', message: 'PvP Battle begins!', timestamp: Date.now() }]
+    };
+
+    // Add player 1's units (bottom side of map)
+    player1Party.forEach((char, idx) => {
+      initialState.units.push({
+        id: char.id,
+        type: 'player',
+        ownerId: match.player1.userId,
+        name: char.name,
+        class: char.class,
+        level: char.level,
+        hp: char.hp_current,
+        maxHp: char.hp_max + (parseInt(char.equip_hp, 10) || 0),
+        mp: char.mp_current,
+        maxMp: char.mp_max + (parseInt(char.equip_mp, 10) || 0),
+        strength: char.strength + (parseInt(char.equip_strength, 10) || 0),
+        intelligence: char.intelligence + (parseInt(char.equip_intelligence, 10) || 0),
+        agility: char.agility + (parseInt(char.equip_agility, 10) || 0),
+        vitality: char.vitality + (parseInt(char.equip_vitality, 10) || 0),
+        luck: char.luck + (parseInt(char.equip_luck, 10) || 0),
+        attack: parseInt(char.equip_attack, 10) || 0,
+        defense: parseInt(char.equip_defense, 10) || 0,
+        magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
+        magicDefense: parseInt(char.equip_magic_defense, 10) || 0,
+        tileX: 4 + (idx % 3) * 2,
+        tileY: 26 - Math.floor(idx / 3) * 2,  // Bottom side
+        ct: 0,
+        hasActed: false,
+        statusEffects: [],
+        skills: char.skills || []
+      });
+    });
+
+    // Add player 2's units (top side of map)
+    player2Party.forEach((char, idx) => {
+      initialState.units.push({
+        id: char.id,
+        type: 'player',
+        ownerId: match.player2.userId,
+        name: char.name,
+        class: char.class,
+        level: char.level,
+        hp: char.hp_current,
+        maxHp: char.hp_max + (parseInt(char.equip_hp, 10) || 0),
+        mp: char.mp_current,
+        maxMp: char.mp_max + (parseInt(char.equip_mp, 10) || 0),
+        strength: char.strength + (parseInt(char.equip_strength, 10) || 0),
+        intelligence: char.intelligence + (parseInt(char.equip_intelligence, 10) || 0),
+        agility: char.agility + (parseInt(char.equip_agility, 10) || 0),
+        vitality: char.vitality + (parseInt(char.equip_vitality, 10) || 0),
+        luck: char.luck + (parseInt(char.equip_luck, 10) || 0),
+        attack: parseInt(char.equip_attack, 10) || 0,
+        defense: parseInt(char.equip_defense, 10) || 0,
+        magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
+        magicDefense: parseInt(char.equip_magic_defense, 10) || 0,
+        tileX: 4 + (idx % 3) * 2,
+        tileY: 5 + Math.floor(idx / 3) * 2,  // Top side
+        ct: 0,
+        hasActed: false,
+        statusEffects: [],
+        skills: char.skills || []
+      });
+    });
+
+    // Initialize CT values for all units
+    battleService.initializeCT(initialState.units);
+
+    // Advance CT and find the first actor
+    battleService.advanceToNextActor(initialState);
+
+    // Generate turn predictions
+    initialState.turnPredictions = battleService.predictTurnOrder(initialState, 10);
+
+    // Create battle record in database
+    const battleResult = await query(
+      `INSERT INTO battles (battle_type, status, battle_state, map_seed, map_width, map_height, player1_id, player2_id)
+       VALUES ('pvp', 'active', $1, $2, 32, 32, $3, $4)
+       RETURNING id`,
+      [JSON.stringify(initialState), mapSeed, match.player1.userId, match.player2.userId]
+    );
+
+    const battleId = battleResult.rows[0].id;
+
+    // Mark characters as in battle for both players
+    await Promise.all([
+      query(
+        `UPDATE characters SET in_battle = true
+         WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL`,
+        [match.player1.userId, MAX_BATTLE_PARTY_SIZE]
+      ),
+      query(
+        `UPDATE characters SET in_battle = true
+         WHERE user_id = $1 AND party_slot <= $2 AND party_slot IS NOT NULL`,
+        [match.player2.userId, MAX_BATTLE_PARTY_SIZE]
+      )
+    ]);
+
+    // Join both players to battle WebSocket room
+    battleWebsocket.joinBattle(battleId, match.player1.userId);
+    battleWebsocket.joinBattle(battleId, match.player2.userId);
+
+    match.status = 'started';
+    match.battleId = battleId;
+
+    // Notify both players with battle info
+    const battlePayload = {
+      matchId,
+      status: 'started',
+      battleType: 'pvp',
+      battleId,
+      mapSeed
+    };
+
+    getWebsocket().sendToUser(match.player1.userId, {
+      type: 'coliseum:match_started',
+      payload: {
+        ...battlePayload,
+        opponentUsername: match.player2.username
+      }
+    });
+
+    getWebsocket().sendToUser(match.player2.userId, {
+      type: 'coliseum:match_started',
+      payload: {
+        ...battlePayload,
+        opponentUsername: match.player1.username
+      }
+    });
+
+    console.log(`PvP Battle ${battleId} started: ${match.player1.username} vs ${match.player2.username}`);
+
+  } catch (error) {
+    console.error('Failed to create PvP battle:', error);
+    cancelMatch(matchId, 'Failed to create battle');
+  }
+}
+
+/**
+ * Get a player's battle party characters with stats and equipment
+ * Uses LATERAL JOIN to properly extract equipment bonuses from stat_bonuses JSON field
+ */
+async function getPlayerBattleParty(userId) {
+  const result = await query(
+    `SELECT c.id, c.name, c.class, c.level,
+            c.hp_current, c.hp_max, c.mp_current, c.mp_max,
+            c.strength, c.intelligence, c.agility, c.vitality, c.luck,
+            COALESCE(eq.equip_strength, 0) as equip_strength,
+            COALESCE(eq.equip_intelligence, 0) as equip_intelligence,
+            COALESCE(eq.equip_agility, 0) as equip_agility,
+            COALESCE(eq.equip_vitality, 0) as equip_vitality,
+            COALESCE(eq.equip_luck, 0) as equip_luck,
+            COALESCE(eq.equip_hp, 0) as equip_hp,
+            COALESCE(eq.equip_mp, 0) as equip_mp,
+            COALESCE(eq.equip_attack, 0) as equip_attack,
+            COALESCE(eq.equip_defense, 0) as equip_defense,
+            COALESCE(eq.equip_magic_attack, 0) as equip_magic_attack,
+            COALESCE(eq.equip_magic_defense, 0) as equip_magic_defense
+     FROM characters c
+     LEFT JOIN LATERAL (
+       SELECT
+         SUM(COALESCE((it.stat_bonuses->>'strength')::int, 0) + COALESCE((ci.modifications->>'strength')::int, 0)) as equip_strength,
+         SUM(COALESCE((it.stat_bonuses->>'intelligence')::int, 0) + COALESCE((ci.modifications->>'intelligence')::int, 0)) as equip_intelligence,
+         SUM(COALESCE((it.stat_bonuses->>'agility')::int, 0) + COALESCE((ci.modifications->>'agility')::int, 0)) as equip_agility,
+         SUM(COALESCE((it.stat_bonuses->>'vitality')::int, 0) + COALESCE((ci.modifications->>'vitality')::int, 0)) as equip_vitality,
+         SUM(COALESCE((it.stat_bonuses->>'luck')::int, 0) + COALESCE((ci.modifications->>'luck')::int, 0)) as equip_luck,
+         SUM(COALESCE((it.stat_bonuses->>'hp')::int, 0) + COALESCE((ci.modifications->>'hp_max')::int, 0)) as equip_hp,
+         SUM(COALESCE((it.stat_bonuses->>'mp')::int, 0) + COALESCE((ci.modifications->>'mp_max')::int, 0)) as equip_mp,
+         SUM(COALESCE((it.stat_bonuses->>'attack')::int, 0) + COALESCE((ci.modifications->>'attack')::int, 0)) as equip_attack,
+         SUM(COALESCE((it.stat_bonuses->>'defense')::int, 0) + COALESCE((ci.modifications->>'defense')::int, 0)) as equip_defense,
+         SUM(COALESCE((it.stat_bonuses->>'magic_attack')::int, 0) + COALESCE((ci.modifications->>'magic_attack')::int, 0)) as equip_magic_attack,
+         SUM(COALESCE((it.stat_bonuses->>'magic_defense')::int, 0) + COALESCE((ci.modifications->>'magic_defense')::int, 0)) as equip_magic_defense
+       FROM character_items ci
+       JOIN item_templates it ON ci.item_template_id = it.id
+       WHERE ci.character_id = c.id AND ci.equipped_slot IS NOT NULL
+     ) eq ON true
+     WHERE c.user_id = $1 AND c.party_slot IS NOT NULL AND c.party_slot <= $2
+     ORDER BY c.party_slot`,
+    [userId, MAX_BATTLE_PARTY_SIZE]
+  );
+
+  // Get skills for each character
+  const characters = result.rows;
+  for (const char of characters) {
+    const skillsResult = await query(
+      `SELECT skill_id, skill_level FROM character_skills WHERE character_id = $1`,
+      [char.id]
+    );
+    char.skills = skillsResult.rows.map(s => ({ id: s.skill_id, level: s.skill_level }));
+  }
+
+  return characters;
+}
+
+/**
+ * Cancel a match and notify players
+ */
+function cancelMatch(matchId, reason) {
+  const match = activeMatches.get(matchId);
+  if (!match) return;
 
   getWebsocket().sendToUser(match.player1.userId, {
-    type: 'coliseum:match_started',
-    payload: battlePayload
+    type: 'coliseum:match_cancelled',
+    payload: { matchId, reason }
   });
 
   getWebsocket().sendToUser(match.player2.userId, {
-    type: 'coliseum:match_started',
-    payload: battlePayload
+    type: 'coliseum:match_cancelled',
+    payload: { matchId, reason }
   });
+
+  activeMatches.delete(matchId);
 }
 
 /**

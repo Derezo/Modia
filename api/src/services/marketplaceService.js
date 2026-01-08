@@ -9,6 +9,7 @@
  */
 
 const { AppError } = require('../middleware/errorHandler');
+const { MAX_GOLD } = require('../config/constants');
 
 /**
  * Get the order book for an item (aggregated by price level)
@@ -54,17 +55,17 @@ async function getOrderBook(client, itemTemplateId, depth = 20) {
   return {
     itemTemplateId,
     bids: bidsResult.rows.map(r => ({
-      price: parseInt(r.price),
-      quantity: parseInt(r.total_quantity),
-      orderCount: parseInt(r.order_count)
+      price: parseInt(r.price, 10),
+      quantity: parseInt(r.total_quantity, 10),
+      orderCount: parseInt(r.order_count, 10)
     })),
     asks: asksResult.rows.map(r => ({
-      price: parseInt(r.price),
-      quantity: parseInt(r.total_quantity),
-      orderCount: parseInt(r.order_count)
+      price: parseInt(r.price, 10),
+      quantity: parseInt(r.total_quantity, 10),
+      orderCount: parseInt(r.order_count, 10)
     })),
-    bestBid: parseInt(bestBid),
-    bestAsk: parseInt(bestAsk),
+    bestBid: parseInt(bestBid, 10),
+    bestAsk: parseInt(bestAsk, 10),
     spread
   };
 }
@@ -157,10 +158,10 @@ async function releaseGold(client, orderId, amount = null) {
   const reservation = reservationResult.rows[0];
   const releaseAmount = amount || reservation.amount;
 
-  // Return gold to user
+  // Return gold to user (capped at MAX_GOLD to prevent overflow)
   await client.query(
-    'UPDATE users SET gold = gold + $1 WHERE id = $2',
-    [releaseAmount, reservation.user_id]
+    'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
+    [releaseAmount, MAX_GOLD, reservation.user_id]
   );
 
   if (amount && amount < reservation.amount) {
@@ -360,10 +361,10 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
     [totalGold, buyOrder.id]
   );
 
-  // Add gold to seller
+  // Add gold to seller (capped at MAX_GOLD to prevent overflow)
   await client.query(
-    'UPDATE users SET gold = gold + $1 WHERE id = $2',
-    [totalGold, sellOrder.user_id]
+    'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
+    [totalGold, MAX_GOLD, sellOrder.user_id]
   );
 
   // Reduce seller's item escrow
@@ -440,7 +441,7 @@ async function placeLimitOrder(client, userId, characterId, itemTemplateId, side
     const tradeQty = Math.min(remainingQuantity, availableQty);
 
     // Execution price is the resting order's price (price-time priority)
-    const executionPrice = parseInt(matchOrder.price);
+    const executionPrice = parseInt(matchOrder.price, 10);
 
     let buyOrder, sellOrder;
     if (side === 'buy') {
@@ -540,7 +541,7 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
 
     ordersToMatch.push({ order, matchQty });
     totalAvailable += matchQty;
-    totalCost += parseInt(order.price) * matchQty;
+    totalCost += parseInt(order.price, 10) * matchQty;
   }
 
   if (totalAvailable < quantity) {
@@ -575,7 +576,7 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
       [characterId, itemTemplateId]
     );
 
-    if (parseInt(itemCheck.rows[0].total) < quantity) {
+    if (parseInt(itemCheck.rows[0].total, 10) < quantity) {
       throw new AppError(`Insufficient items. Have ${itemCheck.rows[0].total}, need ${quantity}`, 400);
     }
 
@@ -613,7 +614,7 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
   let totalProceeds = 0;
 
   for (const { order, matchQty } of ordersToMatch) {
-    const executionPrice = parseInt(order.price);
+    const executionPrice = parseInt(order.price, 10);
 
     // Record trade
     await client.query(
@@ -639,10 +640,10 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
     );
 
     if (side === 'buy') {
-      // Transfer gold to seller and reduce their reservation
+      // Transfer gold to seller and reduce their reservation (capped at MAX_GOLD)
       await client.query(
-        'UPDATE users SET gold = gold + $1 WHERE id = $2',
-        [executionPrice * matchQty, order.user_id]
+        'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
+        [executionPrice * matchQty, MAX_GOLD, order.user_id]
       );
 
       // Reduce seller's escrow
@@ -677,11 +678,11 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
     });
   }
 
-  // For sell orders: give gold to seller
+  // For sell orders: give gold to seller (capped at MAX_GOLD)
   if (side === 'sell') {
     await client.query(
-      'UPDATE users SET gold = gold + $1 WHERE id = $2',
-      [totalProceeds, userId]
+      'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
+      [totalProceeds, MAX_GOLD, userId]
     );
   }
 
@@ -801,10 +802,10 @@ async function getUserOrders(client, userId, status = null) {
     itemType: row.item_type,
     rarity: row.rarity,
     side: row.side,
-    price: parseInt(row.price),
-    quantity: parseInt(row.quantity),
-    quantityFilled: parseInt(row.quantity_filled),
-    quantityRemaining: parseInt(row.quantity) - parseInt(row.quantity_filled),
+    price: parseInt(row.price, 10),
+    quantity: parseInt(row.quantity, 10),
+    quantityFilled: parseInt(row.quantity_filled, 10),
+    quantityRemaining: parseInt(row.quantity, 10) - parseInt(row.quantity_filled, 10),
     status: row.status,
     createdAt: row.created_at
   }));
@@ -830,9 +831,9 @@ async function getTradeHistory(client, itemTemplateId, limit = 50) {
   );
 
   return result.rows.map(row => ({
-    price: parseInt(row.price),
-    quantity: parseInt(row.quantity),
-    totalGold: parseInt(row.total_gold),
+    price: parseInt(row.price, 10),
+    quantity: parseInt(row.quantity, 10),
+    totalGold: parseInt(row.total_gold, 10),
     executedAt: row.executed_at,
     itemName: row.item_name
   }));
@@ -910,9 +911,9 @@ async function searchItems(client, searchTerm = '', itemType = null, limit = 50)
     levelRequirement: row.level_requirement,
     basePrice: row.base_price,
     rarity: row.rarity,
-    bestAsk: row.best_ask ? parseInt(row.best_ask) : null,
-    bestBid: row.best_bid ? parseInt(row.best_bid) : null,
-    volume24h: parseInt(row.volume_24h) || 0
+    bestAsk: row.best_ask ? parseInt(row.best_ask, 10) : null,
+    bestBid: row.best_bid ? parseInt(row.best_bid, 10) : null,
+    volume24h: parseInt(row.volume_24h, 10) || 0
   }));
 }
 
