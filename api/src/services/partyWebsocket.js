@@ -243,9 +243,10 @@ function broadcastPartyDisbanded(partyId, reason = 'Leader left') {
     }
   });
 
-  // Clean up room
-  if (rooms.has(roomName)) {
-    rooms.delete(roomName);
+  // Clean up room via websocket module
+  const ws = getWebsocket();
+  if (ws.rooms && ws.rooms.has(roomName)) {
+    ws.rooms.delete(roomName);
   }
 }
 
@@ -276,6 +277,10 @@ function broadcastLeaderChanged(partyId, newLeaderId, newLeaderUsername) {
  */
 function joinPartyRoom(partyId, userId) {
   const roomName = `party:${partyId}`;
+  const ws = getWebsocket();
+  const rooms = ws.rooms;
+
+  if (!rooms) return;
 
   if (!rooms.has(roomName)) {
     rooms.set(roomName, new Set());
@@ -290,6 +295,10 @@ function joinPartyRoom(partyId, userId) {
  */
 function leavePartyRoom(partyId, userId) {
   const roomName = `party:${partyId}`;
+  const ws = getWebsocket();
+  const rooms = ws.rooms;
+
+  if (!rooms) return;
 
   if (rooms.has(roomName)) {
     rooms.get(roomName).delete(userId);

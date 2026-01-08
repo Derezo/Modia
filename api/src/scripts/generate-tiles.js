@@ -33,7 +33,7 @@ function getTileShape(terrainType) {
  * Generate deterministic seed for terrain
  */
 function getTerrainSeed(biome, terrainType, variant) {
-  const worldSeed = parseInt(process.env.WORLD_SEED || '12345');
+  const worldSeed = parseInt(process.env.WORLD_SEED || '12345', 10);
   const biomeHash = hashString(biome);
   const terrainHash = hashString(terrainType);
   return (worldSeed + biomeHash + terrainHash + variant * 1000) % 1000000;
@@ -216,7 +216,7 @@ function parseArgs() {
   // --max=N (max tiles per biome)
   const maxArg = args.find(arg => arg.startsWith('--max='));
   if (maxArg) {
-    options.maxTilesPerBiome = parseInt(maxArg.split('=')[1]);
+    options.maxTilesPerBiome = parseInt(maxArg.split('=')[1], 10);
   }
 
   // --no-clear (don't clear existing tiles)

@@ -2,6 +2,7 @@ require('dotenv').config({ path: '../.env' });
 
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const http = require('http');
 const { setupWebSocket } = require('./websocket');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -23,14 +24,27 @@ const chatRoutes = require('./routes/chat');
 const app = express();
 const server = http.createServer(app);
 
+// SECURITY: Parse CORS origins from environment variable or use defaults
+const corsOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
+  : ['http://localhost:8080', 'http://localhost:3000', 'http://127.0.0.1:8080'];
+
+// SECURITY: Helmet middleware for security headers
+// Configured for API-only server (no CSP needed for API responses)
+app.use(helmet({
+  contentSecurityPolicy: false, // Not needed for API-only server
+  crossOriginEmbedderPolicy: false, // Allows CORS to work properly
+  crossOriginResourcePolicy: { policy: 'cross-origin' } // Allows sprites to be loaded cross-origin
+}));
+
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:8080', 'http://localhost:3000', 'http://127.0.0.1:8080'],
+  origin: corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' })); // SECURITY: Limit request body size
 app.use(rateLimiter);
 
 // Health check

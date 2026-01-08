@@ -1,6 +1,12 @@
 /**
- * Battle Service - Damage calculations, status effects, and battle utilities
+ * Battle Service - Damage calculations, status effects, action processing, and battle utilities
  */
+
+const { CLASS_MOVEMENT } = require('../config/constants');
+const { SKILL_TREES } = require('../config/skillTrees');
+
+// Default attack range for melee (1 tile adjacent)
+const DEFAULT_ATTACK_RANGE = 1;
 
 /**
  * Calculate physical damage
@@ -251,20 +257,17 @@ function calculateGoldReward(enemies, difficultyTier = 1) {
   return totalGold;
 }
 
+// ==================== Movement and Range Functions ====================
+
 /**
- * Get movement range based on class and status
+ * Get movement range for a unit based on class
+ * Uses CLASS_MOVEMENT from constants for authoritative class movement values
+ * @param {Object} unit - The unit
+ * @returns {number} Maximum movement distance (Manhattan distance)
  */
 function getMovementRange(unit) {
-  let baseRange = 3;
-
-  // Class-based adjustments
-  if (unit.class === 'monk' || unit.class === 'ninja') {
-    baseRange = 4;
-  } else if (unit.class === 'warrior' || unit.class === 'berserker') {
-    baseRange = 3;
-  } else if (unit.class === 'wizard' || unit.class === 'sorcerer') {
-    baseRange = 2;
-  }
+  // Use class-specific movement range from constants, default to 3 if class not found
+  let baseRange = CLASS_MOVEMENT[unit.class?.toLowerCase()] || 3;
 
   // Status effect adjustments
   if (unit.statusEffects?.some(e => e.type === 'slow')) {
@@ -278,19 +281,43 @@ function getMovementRange(unit) {
 }
 
 /**
- * Get attack range based on class
+ * Get attack range for a unit (melee = 1, ranged classes may have more)
+ * @param {Object} unit - The unit
+ * @returns {number} Maximum attack distance (Manhattan distance)
  */
 function getAttackRange(unit) {
-  // Ranged classes
-  if (unit.class === 'wizard' || unit.class === 'sorcerer' || unit.class === 'chemist') {
-    return 3;
+  // For now, all basic attacks are melee range 1
+  // This can be extended based on equipped weapon type in the future
+  return DEFAULT_ATTACK_RANGE;
+}
+
+/**
+ * Calculate Manhattan distance between two positions
+ * @param {number} x1 - Source X
+ * @param {number} y1 - Source Y
+ * @param {number} x2 - Target X
+ * @param {number} y2 - Target Y
+ * @returns {number} Manhattan distance
+ */
+function getManhattanDistance(x1, y1, x2, y2) {
+  return Math.abs(x2 - x1) + Math.abs(y2 - y1);
+}
+
+/**
+ * Get skill definition from SKILL_TREES
+ * @param {string} unitClass - The unit's class (warrior, wizard, etc.)
+ * @param {string} skillId - The skill ID to find
+ * @returns {Object|null} Skill definition or null if not found
+ */
+function getSkillDefinition(unitClass, skillId) {
+  const classTree = SKILL_TREES[unitClass?.toLowerCase()];
+  if (!classTree) return null;
+
+  for (const branch of classTree.branches) {
+    const skill = branch.skills.find(s => s.id === skillId);
+    if (skill) return skill;
   }
-  // Melee with extended reach
-  if (unit.class === 'monk' || unit.class === 'ninja') {
-    return 2;
-  }
-  // Standard melee
-  return 1;
+  return null;
 }
 
 // ==================== AoE (Area of Effect) System ====================
@@ -619,11 +646,633 @@ function advanceToNextActor(state) {
   return nextActor;
 }
 
+// ==================== Action Processing ====================
+
+/**
+ * Initialize two-action turn state for a unit if not present (migration support)
+ * @param {Object} unit - The unit to initialize
+ */
+function initializeTurnState(unit) {
+  if (typeof unit.moveUsed !== 'boolean') {
+    unit.moveUsed = false;
+    unit.actUsed = false;
+    unit.turnPhase = 'ready';
+  }
+}
+
+/**
+ * Process an action for any unit (player or enemy)
+ * Two-action system: each turn allows 1 move + 1 act (attack/skill), in either order
+ * @param {Object} state - Battle state
+ * @param {Object} unit - The acting unit
+ * @param {string} actionType - 'move' | 'attack' | 'skill' | 'item' | 'wait'
+ * @param {Object} targetTile - { x, y } target position
+ * @param {string} skillId - Optional skill ID for skill actions, or item ID for item actions
+ * @returns {Object} Action result with turnEnded flag
+ */
+function processAction(state, unit, actionType, targetTile, skillId = null) {
+  const result = { damage: 0, moved: false, turnEnded: false };
+
+  // Initialize two-action state if missing (migration support)
+  initializeTurnState(unit);
+
+  switch (actionType) {
+    case 'move':
+      // Check if already moved this turn
+      if (unit.moveUsed) {
+        result.error = 'Already moved this turn';
+        return result;
+      }
+      // Check if status effects prevent movement
+      if (!canUnitMove(unit)) {
+        result.error = 'Cannot move due to status effect';
+        return result;
+      }
+      if (targetTile) {
+        // SECURITY: Validate movement range server-side (anti-cheat)
+        const movementRange = getMovementRange(unit);
+        const moveDistance = getManhattanDistance(unit.tileX, unit.tileY, targetTile.x, targetTile.y);
+
+        if (moveDistance > movementRange) {
+          result.error = `Target out of movement range (max: ${movementRange}, attempted: ${moveDistance})`;
+          return result;
+        }
+
+        // Validate target tile is within map bounds
+        if (targetTile.x < 0 || targetTile.y < 0 ||
+            targetTile.x >= (state.mapWidth || 32) || targetTile.y >= (state.mapHeight || 32)) {
+          result.error = 'Target tile is outside map bounds';
+          return result;
+        }
+
+        // Check if target tile is occupied by another unit
+        const occupyingUnit = state.units.find(u =>
+          u.id !== unit.id && u.hp > 0 && u.tileX === targetTile.x && u.tileY === targetTile.y
+        );
+        if (occupyingUnit) {
+          result.error = 'Target tile is occupied';
+          return result;
+        }
+
+        unit.tileX = targetTile.x;
+        unit.tileY = targetTile.y;
+        result.moved = true;
+        result.newPosition = { x: targetTile.x, y: targetTile.y };
+        unit.moveUsed = true;
+      }
+      break;
+
+    case 'attack':
+      // Check if already acted this turn
+      if (unit.actUsed) {
+        result.error = 'Already acted this turn';
+        return result;
+      }
+      // Check if status effects prevent acting
+      if (!canUnitAct(unit)) {
+        result.error = 'Cannot act due to status effect';
+        return result;
+      }
+      if (targetTile) {
+        // SECURITY: Validate attack range server-side (anti-cheat)
+        const attackRange = getAttackRange(unit);
+        const attackDistance = getManhattanDistance(unit.tileX, unit.tileY, targetTile.x, targetTile.y);
+
+        if (attackDistance > attackRange) {
+          result.error = `Target out of attack range (max: ${attackRange}, attempted: ${attackDistance})`;
+          return result;
+        }
+
+        if (attackDistance === 0) {
+          result.error = 'Cannot attack own tile';
+          return result;
+        }
+
+        const target = state.units.find(u =>
+          u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
+        );
+        if (target) {
+          // Attack target at tile
+          const hits = checkHit(unit, target);
+          if (hits) {
+            const damageResult = calculatePhysicalDamage(unit, target);
+            target.hp = Math.max(0, target.hp - damageResult.damage);
+            result.damage = damageResult.damage;
+            result.isCritical = damageResult.isCritical;
+            result.targetId = target.id;
+            result.targetType = target.type; // 'player' or 'enemy'
+          } else {
+            result.missed = true;
+            result.targetId = target.id;
+          }
+        } else {
+          // Empty tile attack - animation plays but no effect
+          result.attackedEmptyTile = true;
+          result.targetTile = targetTile;
+        }
+        unit.actUsed = true;
+      }
+      break;
+
+    case 'skill':
+      // Check if already acted this turn
+      if (unit.actUsed) {
+        result.error = 'Already acted this turn';
+        return result;
+      }
+      // Check if status effects prevent acting or using skills
+      if (!canUnitAct(unit)) {
+        result.error = 'Cannot act due to status effect';
+        return result;
+      }
+      if (!canUnitUseSkills(unit)) {
+        result.error = 'Cannot use skills due to silence';
+        return result;
+      }
+      if (targetTile && skillId) {
+        const skill = getSkillDefinition(unit.class, skillId);
+        if (!skill) {
+          result.error = 'Invalid skill';
+          break;
+        }
+
+        // SECURITY: Enforce skill cooldown server-side
+        if (!unit.skillCooldowns) {
+          unit.skillCooldowns = {};
+        }
+        if (unit.skillCooldowns[skillId] && unit.skillCooldowns[skillId] > 0) {
+          result.error = `Skill on cooldown (${unit.skillCooldowns[skillId]} turns remaining)`;
+          return result;
+        }
+
+        // SECURITY: Validate skill range server-side (anti-cheat)
+        // Self-targeting skills (selfBuff, cleanse, healPercent without targetAlly) don't need range check
+        const isSelfTargetingSkill = skill.selfBuff || skill.cleanse || (skill.healPercent && !skill.targetAlly);
+        if (!isSelfTargetingSkill) {
+          const skillRange = skill.range || 1; // Default range of 1 if not specified
+          const skillDistance = getManhattanDistance(unit.tileX, unit.tileY, targetTile.x, targetTile.y);
+
+          if (skillDistance > skillRange) {
+            result.error = `Target out of skill range (max: ${skillRange}, attempted: ${skillDistance})`;
+            return result;
+          }
+        }
+
+        // Calculate MP cost (use mpCost from skill definition, or derive from baseCost)
+        const mpCost = skill.mpCost || (skill.baseCost ? Math.floor(skill.baseCost / 10) : 5);
+        if (unit.mp < mpCost) {
+          result.error = 'Not enough MP';
+          break;
+        }
+
+        // Deduct MP
+        unit.mp -= mpCost;
+        result.skillUsed = skillId;
+        result.mpCost = mpCost;
+        result.skillEffects = [];
+
+        // Handle self-targeting skills (buffs, heals)
+        if (skill.selfBuff || skill.healPercent || skill.cleanse) {
+          // Self-buff or self-heal
+          if (skill.selfBuff) {
+            applyStatusEffect(unit, skill.selfBuff, skill.buffDuration || 3);
+            result.skillEffects.push({ type: 'buff', effect: skill.selfBuff, targetId: unit.id });
+          }
+          if (skill.healPercent) {
+            const healAmount = Math.floor(unit.maxHp * skill.healPercent / 100);
+            unit.hp = Math.min(unit.maxHp, unit.hp + healAmount);
+            result.healing = healAmount;
+            result.targetId = unit.id;
+          }
+          if (skill.mpRestore) {
+            const mpAmount = Math.floor(unit.maxMp * skill.mpRestore / 100);
+            unit.mp = Math.min(unit.maxMp, unit.mp + mpAmount);
+            result.mpRestored = mpAmount;
+          }
+          if (skill.cleanse) {
+            // Remove all negative status effects
+            unit.statusEffects = (unit.statusEffects || []).filter(e =>
+              ['rage', 'fortify', 'haste', 'regen'].includes(e.type)
+            );
+            result.skillEffects.push({ type: 'cleanse', targetId: unit.id });
+          }
+          // Set skill cooldown if defined
+          if (skill.cooldown && skill.cooldown > 0) {
+            unit.skillCooldowns[skillId] = skill.cooldown;
+          }
+          unit.actUsed = true;
+          break;
+        }
+
+        // Find target at tile
+        const target = state.units.find(u =>
+          u.tileX === targetTile.x && u.tileY === targetTile.y && u.hp > 0
+        );
+
+        // Handle ally-targeting skills (heals, buffs)
+        if (skill.targetAlly && target && target.type === unit.type) {
+          if (skill.healPercent) {
+            const healAmount = Math.floor(target.maxHp * skill.healPercent / 100);
+            target.hp = Math.min(target.maxHp, target.hp + healAmount);
+            result.healing = healAmount;
+            result.targetId = target.id;
+          }
+          if (skill.effect && skill.effectChance >= Math.random()) {
+            applyStatusEffect(target, skill.effect, skill.effectDuration || 3);
+            result.skillEffects.push({ type: 'buff', effect: skill.effect, targetId: target.id });
+          }
+          // Set skill cooldown if defined
+          if (skill.cooldown && skill.cooldown > 0) {
+            unit.skillCooldowns[skillId] = skill.cooldown;
+          }
+          unit.actUsed = true;
+          break;
+        }
+
+        // Check if this is an AoE skill
+        if (skill.aoeRadius && skill.aoeRadius > 0) {
+          // Get all units in the AoE area (includes allies - friendly fire!)
+          const affectedUnits = getUnitsInAoE(
+            state.units,
+            targetTile.x,
+            targetTile.y,
+            skill.aoeRadius,
+            skill.aoePattern || 'circle'
+          );
+
+          // Track AoE results
+          result.isAoE = true;
+          result.aoeTargets = [];
+          result.aoeTiles = getAoETiles(
+            targetTile.x,
+            targetTile.y,
+            skill.aoeRadius,
+            skill.aoePattern || 'circle'
+          );
+
+          // Apply damage/effects to each unit in the AoE
+          const power = skill.power || 150;
+          const damageType = skill.damageType || 'physical';
+          const hits = skill.hits || 1;
+
+          for (const { unit: affectedUnit, isCenter } of affectedUnits) {
+            // Calculate damage for this target
+            const damageResult = damageType === 'magical'
+              ? calculateMagicalDamage(unit, affectedUnit, power)
+              : calculatePhysicalDamage(unit, affectedUnit, power);
+
+            // Apply damage (multiply by hits if multi-hit skill)
+            let totalDamage = 0;
+            for (let i = 0; i < hits; i++) {
+              totalDamage += damageResult.damage;
+            }
+
+            // Reduce damage for non-center targets (75% damage at edges)
+            if (!isCenter) {
+              totalDamage = Math.floor(totalDamage * 0.75);
+            }
+
+            affectedUnit.hp = Math.max(0, affectedUnit.hp - totalDamage);
+
+            const targetResult = {
+              targetId: affectedUnit.id,
+              targetName: affectedUnit.name,
+              targetType: affectedUnit.type,
+              damage: totalDamage,
+              isCritical: damageResult.isCritical,
+              isCenter,
+              tileX: affectedUnit.tileX,
+              tileY: affectedUnit.tileY
+            };
+
+            // Apply status effect if skill has one and chance succeeds
+            if (skill.effect && skill.effectChance && Math.random() < skill.effectChance) {
+              const effectApplied = applyStatusEffect(
+                affectedUnit,
+                skill.effect,
+                skill.effectDuration || 3
+              );
+              if (effectApplied) {
+                targetResult.effectApplied = skill.effect;
+                targetResult.effectDuration = skill.effectDuration || 3;
+                result.skillEffects.push({
+                  type: affectedUnit.type === unit.type ? 'debuff' : 'debuff',
+                  effect: skill.effect,
+                  duration: skill.effectDuration || 3,
+                  targetId: affectedUnit.id
+                });
+              }
+            }
+
+            result.aoeTargets.push(targetResult);
+          }
+
+          // Set primary target info for backwards compatibility
+          if (result.aoeTargets.length > 0) {
+            const primaryTarget = result.aoeTargets.find(t => t.isCenter) || result.aoeTargets[0];
+            result.damage = result.aoeTargets.reduce((sum, t) => sum + t.damage, 0);
+            result.targetId = primaryTarget.targetId;
+            result.targetType = primaryTarget.targetType;
+          } else {
+            // No units hit - still show AoE animation on tiles
+            result.attackedEmptyTile = true;
+            result.targetTile = targetTile;
+          }
+        } else if (target) {
+          // Single-target skill: Apply skill damage (using power from skill or default 150%)
+          const power = skill.power || 150;
+          const damageType = skill.damageType || 'physical';
+          const damageResult = damageType === 'magical'
+            ? calculateMagicalDamage(unit, target, power)
+            : calculatePhysicalDamage(unit, target, power);
+
+          // Apply damage (multiply by hits if multi-hit skill)
+          const hits = skill.hits || 1;
+          let totalDamage = 0;
+          for (let i = 0; i < hits; i++) {
+            totalDamage += damageResult.damage;
+          }
+          target.hp = Math.max(0, target.hp - totalDamage);
+          result.damage = totalDamage;
+          result.hits = hits;
+          result.isCritical = damageResult.isCritical;
+          result.targetId = target.id;
+          result.targetType = target.type;
+
+          // Apply status effect if skill has one and chance succeeds
+          if (skill.effect && skill.effectChance && Math.random() < skill.effectChance) {
+            const effectApplied = applyStatusEffect(
+              target,
+              skill.effect,
+              skill.effectDuration || 3
+            );
+            if (effectApplied) {
+              result.skillEffects.push({
+                type: 'debuff',
+                effect: skill.effect,
+                duration: skill.effectDuration || 3,
+                targetId: target.id
+              });
+            }
+          }
+        } else {
+          // Empty tile skill - animation plays but no damage
+          result.attackedEmptyTile = true;
+          result.targetTile = targetTile;
+        }
+        // Set skill cooldown if defined (applies to both hit and miss)
+        if (skill.cooldown && skill.cooldown > 0) {
+          unit.skillCooldowns[skillId] = skill.cooldown;
+        }
+        unit.actUsed = true;
+      }
+      break;
+
+    case 'item':
+      // Check if already acted this turn
+      if (unit.actUsed) {
+        result.error = 'Already acted this turn';
+        return result;
+      }
+      // Check if status effects prevent acting
+      if (!canUnitAct(unit)) {
+        result.error = 'Cannot act due to status effect';
+        return result;
+      }
+      // Item usage requires itemId in skillId parameter (reusing same field)
+      if (skillId) {
+        result.itemUsed = skillId;
+        result.itemEffects = [];
+
+        // Look up item from battle state consumables (loaded from database)
+        const consumables = state.consumables || [];
+        const consumable = consumables.find(c => c.itemId === parseInt(skillId, 10) || c.itemId === skillId);
+
+        if (!consumable || consumable.quantity <= 0) {
+          result.error = 'Item not available';
+          break;
+        }
+
+        // Find target (self or ally at tile)
+        let itemTarget = unit; // Default to self
+        if (targetTile) {
+          const tileTarget = state.units.find(u =>
+            u.tileX === targetTile.x && u.tileY === targetTile.y && u.type === 'player'
+          );
+          if (tileTarget) {
+            itemTarget = tileTarget;
+          }
+        }
+
+        // Apply item effects based on effectType from database
+        const effectType = consumable.effectType || consumable.name?.toLowerCase();
+        const effectValue = consumable.effectValue || 25; // Default to 25% if not specified
+
+        // Handle different effect types
+        if (effectType === 'hp_restore' || consumable.name?.toLowerCase().includes('potion')) {
+          const healAmount = Math.floor(itemTarget.maxHp * effectValue / 100);
+          itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + healAmount);
+          result.healing = healAmount;
+          result.itemEffects.push({ type: 'heal', amount: healAmount, targetId: itemTarget.id });
+        }
+
+        if (effectType === 'mp_restore' || consumable.name?.toLowerCase().includes('ether')) {
+          const mpAmount = Math.floor(itemTarget.maxMp * effectValue / 100);
+          itemTarget.mp = Math.min(itemTarget.maxMp, itemTarget.mp + mpAmount);
+          result.mpRestored = mpAmount;
+          result.itemEffects.push({ type: 'mpRestore', amount: mpAmount, targetId: itemTarget.id });
+        }
+
+        if (effectType === 'elixir' || consumable.name?.toLowerCase().includes('elixir')) {
+          const healAmount = Math.floor(itemTarget.maxHp * effectValue / 100);
+          const mpAmount = Math.floor(itemTarget.maxMp * effectValue / 100);
+          itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + healAmount);
+          itemTarget.mp = Math.min(itemTarget.maxMp, itemTarget.mp + mpAmount);
+          result.itemEffects.push({ type: 'heal', amount: healAmount, targetId: itemTarget.id });
+          result.itemEffects.push({ type: 'mpRestore', amount: mpAmount, targetId: itemTarget.id });
+        }
+
+        if (effectType === 'cleanse' || consumable.name?.toLowerCase().includes('antidote')) {
+          const cleansableEffects = ['poison', 'blind', 'silence', 'slow', 'burn'];
+          itemTarget.statusEffects = (itemTarget.statusEffects || []).filter(e =>
+            !cleansableEffects.includes(e.type)
+          );
+          result.itemEffects.push({ type: 'cleanse', effects: cleansableEffects, targetId: itemTarget.id });
+        }
+
+        if (effectType === 'revive' || consumable.name?.toLowerCase().includes('phoenix')) {
+          if (itemTarget.hp <= 0) {
+            const reviveHp = Math.floor(itemTarget.maxHp * effectValue / 100);
+            itemTarget.hp = reviveHp;
+            result.itemEffects.push({ type: 'revive', amount: reviveHp, targetId: itemTarget.id });
+          }
+        }
+
+        // Consume the item in battle state
+        consumable.quantity--;
+        if (consumable.quantity <= 0) {
+          state.consumables = consumables.filter(c => c.itemId !== consumable.itemId);
+        }
+
+        // Mark inventory item for consumption (will be processed after battle or immediately)
+        result.consumedInventoryId = consumable.inventoryId;
+        result.targetId = itemTarget.id;
+        result.itemName = consumable.name;
+        unit.actUsed = true;
+      }
+      break;
+
+    case 'wait':
+      // Wait ends turn immediately, skipping any remaining actions
+      result.turnEnded = true;
+      break;
+  }
+
+  // Determine if turn is complete
+  // Turn ends if: wait was pressed, OR both move and act have been used
+  if (actionType === 'wait' || (unit.moveUsed && unit.actUsed)) {
+    unit.turnPhase = 'done';
+    unit.hasActed = true; // backwards compatibility
+    result.turnEnded = true;
+  } else if (unit.moveUsed || unit.actUsed) {
+    unit.turnPhase = 'partial';
+  }
+
+  // Calculate available actions for response
+  const canMove = canUnitMove(unit) && !unit.moveUsed;
+  const canAct = canUnitAct(unit) && !unit.actUsed;
+  result.availableActions = { canMove, canAct };
+
+  return result;
+}
+
+/**
+ * Advance to the next actor using CT system
+ * Consumes the current actor's CT and finds the next one
+ * @param {Object} state - Battle state
+ */
+function advanceToNextActorWithCT(state) {
+  // Consume CT for the unit that just acted
+  const currentActor = state.units.find(u => u.id === state.activeUnitId);
+  if (currentActor) {
+    consumeCT(currentActor);
+
+    // Decrement skill cooldowns for the actor whose turn just ended
+    if (currentActor.skillCooldowns) {
+      for (const skillId in currentActor.skillCooldowns) {
+        if (currentActor.skillCooldowns[skillId] > 0) {
+          currentActor.skillCooldowns[skillId]--;
+        }
+      }
+    }
+  }
+
+  // Find the next actor
+  advanceToNextActor(state);
+}
+
+/**
+ * Check if battle has ended
+ * @param {Object} state - Battle state
+ * @returns {string} 'active' | 'victory' | 'defeat'
+ */
+function checkBattleEnd(state) {
+  const playerUnitsAlive = state.units.filter(u => u.type === 'player' && u.hp > 0).length;
+  const enemyUnitsAlive = state.units.filter(u => u.type === 'enemy' && u.hp > 0).length;
+
+  if (enemyUnitsAlive === 0) return 'victory';
+  if (playerUnitsAlive === 0) return 'defeat';
+  return 'active';
+}
+
+/**
+ * Process enemy turns until it's a player's turn or battle ends
+ * Uses CT system to determine turn order
+ * Two-action system: each enemy gets both a move and an action per turn
+ * @param {Object} state - Battle state
+ * @param {Object} aiService - AI service for enemy decisions
+ * @param {number} maxIterations - Safety limit to prevent infinite loops
+ * @returns {Array} Array of enemy actions for frontend animation
+ */
+function processEnemyTurns(state, aiService, maxIterations = 50) {
+  const enemyActions = [];
+  let iterations = 0;
+
+  while (iterations < maxIterations) {
+    // Get the current active unit
+    const activeUnit = state.units.find(u => u.id === state.activeUnitId);
+
+    // Safety check
+    if (!activeUnit) {
+      advanceToNextActor(state);
+      iterations++;
+      continue;
+    }
+
+    // Stop if it's a player's turn
+    if (activeUnit.type === 'player') {
+      break;
+    }
+
+    // Stop if unit is dead (shouldn't happen, but safety check)
+    if (activeUnit.hp <= 0) {
+      advanceToNextActorWithCT(state);
+      iterations++;
+      continue;
+    }
+
+    // Initialize turn state for enemy
+    initializeTurnState(activeUnit);
+
+    // Get AI decisions for the full turn (returns array of 1-2 actions)
+    const decisions = aiService.decideTurnActions(activeUnit, state);
+
+    // Process each action in the enemy's turn
+    for (const decision of decisions) {
+      // Skip if wait (ends turn)
+      if (decision.actionType === 'wait') {
+        break;
+      }
+
+      // Process the enemy action
+      const result = processAction(state, activeUnit, decision.actionType, decision.targetTile, decision.skillId);
+
+      // Skip recording if there was an error (shouldn't happen for AI, but safety)
+      if (result.error) {
+        continue;
+      }
+
+      // Record this action for frontend animation
+      enemyActions.push({
+        unitId: activeUnit.id,
+        unitName: activeUnit.name,
+        actionType: decision.actionType,
+        targetTile: decision.targetTile,
+        result
+      });
+
+      // Check if battle ended after this action
+      const battleStatus = checkBattleEnd(state);
+      if (battleStatus !== 'active') {
+        return enemyActions;
+      }
+    }
+
+    // Advance to next actor using CT system
+    advanceToNextActorWithCT(state);
+    iterations++;
+  }
+
+  return enemyActions;
+}
+
 module.exports = {
+  // Damage calculations
   calculatePhysicalDamage,
   calculateMagicalDamage,
   calculateInitiative,
   sortByInitiative,
+  // Status effects
   processStatusEffects,
   canUnitAct,
   canUnitMove,
@@ -632,10 +1281,14 @@ module.exports = {
   shouldAutoEndTurn,
   applyStatusEffect,
   checkHit,
+  // Rewards
   calculateExperienceReward,
   calculateGoldReward,
+  // Movement and range
   getMovementRange,
   getAttackRange,
+  getManhattanDistance,
+  getSkillDefinition,
   // AoE system
   getAoETiles,
   getUnitsInAoE,
@@ -653,5 +1306,11 @@ module.exports = {
   getNextActor,
   consumeCT,
   predictTurnOrder,
-  advanceToNextActor
+  advanceToNextActor,
+  // Action processing
+  initializeTurnState,
+  processAction,
+  advanceToNextActorWithCT,
+  checkBattleEnd,
+  processEnemyTurns
 };

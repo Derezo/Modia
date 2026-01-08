@@ -149,7 +149,7 @@ async function generateItemVariant(client, cache, category, itemName, basePrompt
  * Generate deterministic seed for item
  */
 function getItemSeed(category, itemName, material, rarity) {
-  const worldSeed = parseInt(process.env.WORLD_SEED || '12345');
+  const worldSeed = parseInt(process.env.WORLD_SEED || '12345', 10);
   const categoryHash = hashString(category);
   const itemHash = hashString(itemName);
   const materialHash = material ? hashString(material) : 0;

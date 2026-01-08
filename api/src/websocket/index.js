@@ -4,6 +4,7 @@ const chatService = require('../services/chatService');
 const presenceService = require('../services/presenceService');
 const coliseumService = require('../services/coliseumService');
 const partyWebsocket = require('../services/partyWebsocket');
+const { query } = require('../config/database');
 
 // Active connections mapped by userId
 const connections = new Map();
@@ -11,14 +12,121 @@ const connections = new Map();
 // Room subscriptions: roomName -> Set of userIds
 const rooms = new Map();
 
+/**
+ * SECURITY: Validate that a user has authorization to join a specific room
+ * @param {number} userId - The user's ID
+ * @param {string} roomName - The room name to validate
+ * @returns {Promise<{authorized: boolean, error?: string}>}
+ */
+async function validateRoomAccess(userId, roomName) {
+  // Global chat is allowed for all authenticated users
+  if (roomName === 'global' || roomName === 'chat:global') {
+    return { authorized: true };
+  }
+
+  // Coliseum queues are allowed for authenticated users
+  if (roomName.startsWith('coliseum:')) {
+    return { authorized: true };
+  }
+
+  // Battle rooms: verify user is a participant
+  if (roomName.startsWith('battle:')) {
+    const battleId = parseInt(roomName.split(':')[1], 10);
+    if (isNaN(battleId)) {
+      return { authorized: false, error: 'Invalid battle ID' };
+    }
+
+    try {
+      const result = await query(
+        `SELECT id FROM battles
+         WHERE id = $1 AND (player1_id = $2 OR player2_id = $2) AND status = 'active'`,
+        [battleId, userId]
+      );
+      if (result.rows.length === 0) {
+        return { authorized: false, error: 'Not a participant in this battle' };
+      }
+      return { authorized: true };
+    } catch {
+      return { authorized: false, error: 'Failed to verify battle access' };
+    }
+  }
+
+  // Party rooms: verify user is a member of the party
+  if (roomName.startsWith('party:')) {
+    const partyId = parseInt(roomName.split(':')[1], 10);
+    if (isNaN(partyId)) {
+      return { authorized: false, error: 'Invalid party ID' };
+    }
+
+    try {
+      const result = await query(
+        `SELECT id FROM party_members
+         WHERE party_id = $1 AND user_id = $2`,
+        [partyId, userId]
+      );
+      if (result.rows.length === 0) {
+        return { authorized: false, error: 'Not a member of this party' };
+      }
+      return { authorized: true };
+    } catch {
+      return { authorized: false, error: 'Failed to verify party access' };
+    }
+  }
+
+  // Node/tavern rooms: verify user's character is at that node
+  if (roomName.startsWith('node:') || roomName.startsWith('tavern:')) {
+    const nodeId = parseInt(roomName.split(':')[1], 10);
+    if (isNaN(nodeId)) {
+      return { authorized: false, error: 'Invalid node ID' };
+    }
+
+    try {
+      const result = await query(
+        `SELECT c.id FROM characters c
+         WHERE c.user_id = $1 AND c.current_node_id = $2 AND c.party_slot IS NOT NULL
+         LIMIT 1`,
+        [userId, nodeId]
+      );
+      if (result.rows.length === 0) {
+        return { authorized: false, error: 'Character not at this location' };
+      }
+      return { authorized: true };
+    } catch {
+      return { authorized: false, error: 'Failed to verify location access' };
+    }
+  }
+
+  // Marketplace room is allowed for all authenticated users
+  if (roomName === 'marketplace') {
+    return { authorized: true };
+  }
+
+  // Unknown room type - deny by default (security)
+  return { authorized: false, error: 'Unknown room type' };
+}
+
 function setupWebSocket(server) {
   const wss = new WebSocket.Server({ server, path: '/ws' });
+
+  // Authentication timeout duration (10 seconds)
+  const AUTH_TIMEOUT_MS = 10000;
 
   wss.on('connection', (ws) => {
     let userId = null;
     let username = null;
 
     ws.isAlive = true;
+
+    // SECURITY: Set authentication timeout - close if not authenticated within 10 seconds
+    const authTimeout = setTimeout(() => {
+      if (!userId) {
+        ws.send(JSON.stringify({
+          type: 'auth_timeout',
+          payload: { message: 'Authentication required within 10 seconds' }
+        }));
+        ws.close(1008, 'Authentication timeout'); // 1008 = Policy Violation
+      }
+    }, AUTH_TIMEOUT_MS);
 
     ws.on('pong', () => {
       ws.isAlive = true;
@@ -35,7 +143,21 @@ function setupWebSocket(server) {
               const decoded = verifyAccessToken(payload.token);
               userId = decoded.userId;
               username = decoded.username;
+
+              // SECURITY: Limit to 1 connection per user - close old connection if exists
+              const existingConnection = connections.get(userId);
+              if (existingConnection && existingConnection !== ws && existingConnection.readyState === WebSocket.OPEN) {
+                existingConnection.send(JSON.stringify({
+                  type: 'session_replaced',
+                  payload: { message: 'Another session has connected' }
+                }));
+                existingConnection.close(1000, 'Session replaced by new connection');
+              }
+
               connections.set(userId, ws);
+
+              // Clear authentication timeout on successful auth
+              clearTimeout(authTimeout);
 
               // Set user presence to online
               presenceService.setPresence(userId, 'online').catch(err => {
@@ -67,6 +189,26 @@ function setupWebSocket(server) {
             }
 
             const roomName = payload.room;
+
+            // SECURITY: Validate user has authorization to join this room
+            try {
+              const accessResult = await validateRoomAccess(userId, roomName);
+              if (!accessResult.authorized) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  payload: { message: accessResult.error || 'Access denied to room' }
+                }));
+                break;
+              }
+            } catch (err) {
+              console.error('Room access validation error:', err);
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { message: 'Failed to validate room access' }
+              }));
+              break;
+            }
+
             if (!rooms.has(roomName)) {
               rooms.set(roomName, new Set());
             }
@@ -136,7 +278,7 @@ function setupWebSocket(server) {
               // Save to database for global/party rooms
               if (chatRoom === 'global' || chatRoom.startsWith('party:')) {
                 const roomType = chatRoom === 'global' ? 'global' : 'party';
-                const partyId = chatRoom.startsWith('party:') ? parseInt(chatRoom.split(':')[1]) : null;
+                const partyId = chatRoom.startsWith('party:') ? parseInt(chatRoom.split(':')[1], 10) : null;
 
                 await chatService.saveMessage({
                   characterId: payload.characterId || null,
@@ -438,6 +580,17 @@ function setupWebSocket(server) {
             try {
               const { battleId } = payload;
               const battleRoom = `battle:${battleId}`;
+
+              // SECURITY: Validate user is a participant in this battle
+              const battleAccessResult = await validateRoomAccess(userId, battleRoom);
+              if (!battleAccessResult.authorized) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  payload: { message: battleAccessResult.error || 'Access denied to battle' }
+                }));
+                break;
+              }
+
               if (!rooms.has(battleRoom)) {
                 rooms.set(battleRoom, new Set());
               }
@@ -560,6 +713,17 @@ function setupWebSocket(server) {
             try {
               const { nodeId } = payload;
               const nodeRoom = `node:${nodeId}`;
+
+              // SECURITY: Validate user's character is at this node
+              const nodeAccessResult = await validateRoomAccess(userId, nodeRoom);
+              if (!nodeAccessResult.authorized) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  payload: { message: nodeAccessResult.error || 'Access denied to node' }
+                }));
+                break;
+              }
+
               if (!rooms.has(nodeRoom)) {
                 rooms.set(nodeRoom, new Set());
               }
@@ -632,6 +796,9 @@ function setupWebSocket(server) {
     });
 
     ws.on('close', () => {
+      // Clear auth timeout if still pending
+      clearTimeout(authTimeout);
+
       if (userId) {
         connections.delete(userId);
 

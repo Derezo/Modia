@@ -68,7 +68,7 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
     [req.user.userId]
   );
 
-  if (parseInt(countResult.rows[0].count) >= MAX_PARTY_SIZE) {
+  if (parseInt(countResult.rows[0].count, 10) >= MAX_PARTY_SIZE) {
     throw new AppError(`Cannot have more than ${MAX_PARTY_SIZE} characters`, 400);
   }
 
@@ -278,25 +278,25 @@ router.get('/:id/stats', authenticate, asyncHandler(async (req, res) => {
     experience: char.experience,
     hp: {
       current: char.hp_current,
-      max: char.hp_max + (parseInt(char.equip_hp) || 0),
+      max: char.hp_max + (parseInt(char.equip_hp, 10) || 0),
       base: char.hp_max,
-      bonus: parseInt(char.equip_hp) || 0
+      bonus: parseInt(char.equip_hp, 10) || 0
     },
     mp: {
       current: char.mp_current,
-      max: char.mp_max + (parseInt(char.equip_mp) || 0),
+      max: char.mp_max + (parseInt(char.equip_mp, 10) || 0),
       base: char.mp_max,
-      bonus: parseInt(char.equip_mp) || 0
+      bonus: parseInt(char.equip_mp, 10) || 0
     },
-    strength: char.strength + (parseInt(char.equip_strength) || 0),
-    intelligence: char.intelligence + (parseInt(char.equip_intelligence) || 0),
-    agility: char.agility + (parseInt(char.equip_agility) || 0),
-    vitality: char.vitality + (parseInt(char.equip_vitality) || 0),
-    luck: char.luck + (parseInt(char.equip_luck) || 0),
-    attack: parseInt(char.equip_attack) || 0,
-    defense: parseInt(char.equip_defense) || 0,
-    magicAttack: parseInt(char.equip_magic_attack) || 0,
-    magicDefense: parseInt(char.equip_magic_defense) || 0,
+    strength: char.strength + (parseInt(char.equip_strength, 10) || 0),
+    intelligence: char.intelligence + (parseInt(char.equip_intelligence, 10) || 0),
+    agility: char.agility + (parseInt(char.equip_agility, 10) || 0),
+    vitality: char.vitality + (parseInt(char.equip_vitality, 10) || 0),
+    luck: char.luck + (parseInt(char.equip_luck, 10) || 0),
+    attack: parseInt(char.equip_attack, 10) || 0,
+    defense: parseInt(char.equip_defense, 10) || 0,
+    magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
+    magicDefense: parseInt(char.equip_magic_defense, 10) || 0,
     // Include base stats for comparison
     base: {
       strength: char.strength,
@@ -309,17 +309,17 @@ router.get('/:id/stats', authenticate, asyncHandler(async (req, res) => {
     },
     // Include equipment bonuses breakdown
     equipmentBonuses: {
-      strength: parseInt(char.equip_strength) || 0,
-      intelligence: parseInt(char.equip_intelligence) || 0,
-      agility: parseInt(char.equip_agility) || 0,
-      vitality: parseInt(char.equip_vitality) || 0,
-      luck: parseInt(char.equip_luck) || 0,
-      hp: parseInt(char.equip_hp) || 0,
-      mp: parseInt(char.equip_mp) || 0,
-      attack: parseInt(char.equip_attack) || 0,
-      defense: parseInt(char.equip_defense) || 0,
-      magicAttack: parseInt(char.equip_magic_attack) || 0,
-      magicDefense: parseInt(char.equip_magic_defense) || 0
+      strength: parseInt(char.equip_strength, 10) || 0,
+      intelligence: parseInt(char.equip_intelligence, 10) || 0,
+      agility: parseInt(char.equip_agility, 10) || 0,
+      vitality: parseInt(char.equip_vitality, 10) || 0,
+      luck: parseInt(char.equip_luck, 10) || 0,
+      hp: parseInt(char.equip_hp, 10) || 0,
+      mp: parseInt(char.equip_mp, 10) || 0,
+      attack: parseInt(char.equip_attack, 10) || 0,
+      defense: parseInt(char.equip_defense, 10) || 0,
+      magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
+      magicDefense: parseInt(char.equip_magic_defense, 10) || 0
     }
   };
 

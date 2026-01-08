@@ -100,7 +100,7 @@ class PixelLabClient {
         // Handle rate limiting
         if (response.status === 429) {
           const retryAfter = response.headers.get('Retry-After');
-          const delay = retryAfter ? parseInt(retryAfter) * 1000 : this.retryDelayMs * Math.pow(2, attempt);
+          const delay = retryAfter ? parseInt(retryAfter, 10) * 1000 : this.retryDelayMs * Math.pow(2, attempt);
           console.log(`Rate limited. Waiting ${delay}ms before retry ${attempt + 1}/${this.maxRetries}`);
           await this.sleep(delay);
           continue;
