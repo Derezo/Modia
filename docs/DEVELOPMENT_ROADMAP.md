@@ -362,6 +362,11 @@ Implement the core turn-based tactical battle system for PvE encounters.
 - [x] Enemy spawning by node type and difficulty tier
 - [x] Level scaling (enemy_level = avg_party_level x tier_multiplier)
 - [x] Difficulty tier multipliers (0.9x - 2.15x)
+- [x] Enemy encounter variety (commit 1f8ad4f, 2026-01-07)
+  - [x] Randomized enemy count (3-7) weighted by difficulty tier
+  - [x] Level scaling based on formation characters only
+  - [x] Randomized enemy positions on right side of map
+  - [x] Server-driven encounter preview API
 
 #### 4.2.3.1 Enemy AI Archetypes (5/7 Implemented)
 
