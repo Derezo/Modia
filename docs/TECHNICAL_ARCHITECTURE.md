@@ -443,7 +443,7 @@ Tracks learned skills and their levels.
 | character_id | INTEGER | FK → characters.id | Character |
 | guild_id | VARCHAR(50) | NOT NULL | Guild this skill belongs to |
 | skill_id | VARCHAR(100) | NOT NULL | Skill identifier |
-| skill_level | INTEGER | NOT NULL DEFAULT 1, CHECK 1-100 | Current skill level |
+| level | INTEGER | NOT NULL DEFAULT 1, CHECK >= 1 | Current skill level |
 | xp_invested | BIGINT | NOT NULL DEFAULT 0 | Total XP spent on this skill |
 | is_frozen | BOOLEAN | NOT NULL DEFAULT FALSE | Cannot upgrade (guild frozen) |
 | learned_at | TIMESTAMP | DEFAULT NOW() | When skill was first learned |

@@ -1,5 +1,5 @@
 import { Scene } from './Scene.js';
-import { GlassCharacterCard } from '../components/GlassCharacterCard.js';
+import { ParchmentCard } from '../components/ParchmentCard.js';
 
 /**
  * BattleFormationScene - Pre-battle character placement on isometric grid
@@ -177,7 +177,7 @@ export class BattleFormationScene extends Scene {
           flex-direction: column;
         ">
           <div id="card-content">
-            <!-- GlassCharacterCard component will be inserted here -->
+            <!-- ParchmentCard component will be inserted here -->
           </div>
         </div>
       </div>
@@ -210,8 +210,8 @@ export class BattleFormationScene extends Scene {
     // Get canvas reference
     this.gridCanvas = container.querySelector('#formation-grid-canvas');
 
-    // Initialize GlassCharacterCard component
-    this.characterCard = new GlassCharacterCard({ mode: 'detailed' });
+    // Initialize ParchmentCard component for character detail
+    this.characterCard = new ParchmentCard({ mode: 'detailed', type: 'player' });
     const cardContainer = container.querySelector('#card-content');
     if (cardContainer) {
       cardContainer.appendChild(this.characterCard.element);

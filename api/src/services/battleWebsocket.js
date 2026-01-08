@@ -2,7 +2,14 @@
  * Battle WebSocket Service - Handles real-time battle event broadcasting
  */
 
-const { broadcastToRoom, sendToUser, connections, rooms } = require('../websocket/index');
+// Lazy-load websocket to avoid circular dependency
+let _websocket = null;
+function getWebsocket() {
+  if (!_websocket) {
+    _websocket = require('../websocket/index');
+  }
+  return _websocket;
+}
 
 // Track battle rooms: battleId -> Set of userIds
 const battleRooms = new Map();
@@ -21,6 +28,7 @@ function joinBattle(battleId, userId) {
   battleRooms.get(battleId).add(userId);
 
   // Also add to WebSocket room system
+  const { rooms } = getWebsocket();
   if (!rooms.has(roomName)) {
     rooms.set(roomName, new Set());
   }
@@ -43,6 +51,7 @@ function leaveBattle(battleId, userId) {
   }
 
   // Remove from WebSocket room
+  const { rooms } = getWebsocket();
   if (rooms.has(roomName)) {
     rooms.get(roomName).delete(userId);
     if (rooms.get(roomName).size === 0) {
@@ -60,7 +69,7 @@ function leaveBattle(battleId, userId) {
 function broadcastStateUpdate(battleId, state, excludeUserId = null) {
   const roomName = `battle:${battleId}`;
 
-  broadcastToRoom(roomName, {
+  getWebsocket().broadcastToRoom(roomName, {
     type: 'battle:state_update',
     payload: {
       battleId,
@@ -81,7 +90,7 @@ function broadcastStateUpdate(battleId, state, excludeUserId = null) {
 function broadcastUnitMoved(battleId, unitId, from, to, excludeUserId = null) {
   const roomName = `battle:${battleId}`;
 
-  broadcastToRoom(roomName, {
+  getWebsocket().broadcastToRoom(roomName, {
     type: 'battle:unit_moved',
     payload: {
       battleId,
@@ -104,7 +113,7 @@ function broadcastUnitMoved(battleId, unitId, from, to, excludeUserId = null) {
 function broadcastActionExecuted(battleId, actorId, actionType, result, excludeUserId = null) {
   const roomName = `battle:${battleId}`;
 
-  broadcastToRoom(roomName, {
+  getWebsocket().broadcastToRoom(roomName, {
     type: 'battle:action_executed',
     payload: {
       battleId,
@@ -128,7 +137,7 @@ function broadcastActionExecuted(battleId, actorId, actionType, result, excludeU
 function broadcastTurnChanged(battleId, activeUnitIndex, turn, excludeUserId = null, activeUnitId = null, turnPredictions = null) {
   const roomName = `battle:${battleId}`;
 
-  broadcastToRoom(roomName, {
+  getWebsocket().broadcastToRoom(roomName, {
     type: 'battle:turn_changed',
     payload: {
       battleId,
@@ -150,7 +159,7 @@ function broadcastTurnChanged(battleId, activeUnitIndex, turn, excludeUserId = n
 function broadcastBattleEnd(battleId, status, rewards = null) {
   const roomName = `battle:${battleId}`;
 
-  broadcastToRoom(roomName, {
+  getWebsocket().broadcastToRoom(roomName, {
     type: 'battle:end',
     payload: {
       battleId,
@@ -173,7 +182,7 @@ function broadcastBattleEnd(battleId, status, rewards = null) {
  * @param {Object} state - Battle state
  */
 function sendBattleState(userId, battleId, state) {
-  sendToUser(userId, {
+  getWebsocket().sendToUser(userId, {
     type: 'battle:state_update',
     payload: {
       battleId,
@@ -193,7 +202,7 @@ function sendBattleState(userId, battleId, state) {
 function broadcastEnemyActions(battleId, enemyActions, excludeUserId = null) {
   const roomName = `battle:${battleId}`;
 
-  broadcastToRoom(roomName, {
+  getWebsocket().broadcastToRoom(roomName, {
     type: 'battle:enemy_actions',
     payload: {
       battleId,
@@ -214,6 +223,7 @@ function cleanupBattleRoom(battleId) {
     battleRooms.delete(battleId);
   }
 
+  const { rooms } = getWebsocket();
   if (rooms.has(roomName)) {
     rooms.delete(roomName);
   }

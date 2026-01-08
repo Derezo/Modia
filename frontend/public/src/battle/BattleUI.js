@@ -1,4 +1,4 @@
-import { GlassCharacterCard } from '../components/GlassCharacterCard.js';
+import { ParchmentCard } from '../components/ParchmentCard.js';
 
 /**
  * BattleUI - User interface for tactical combat
@@ -10,7 +10,8 @@ export class BattleUI {
     this.actionCallbacks = {};
     this.abortController = null;
     this.isVisible = true;
-    this.activeUnitCard = null;  // GlassCharacterCard component
+    this.activeUnitCard = null;  // ParchmentCard for active unit
+    this.targetCard = null;      // ParchmentCard for target/enemy
   }
 
   /**
@@ -72,35 +73,14 @@ export class BattleUI {
         </div>
       </div>
 
-      <!-- Active Unit Panel (bottom left) -->
-      <div id="active-unit-panel" class="battle-panel" style="
+      <!-- Active Unit Panel (bottom left) - ParchmentCard container -->
+      <div id="active-unit-panel" style="
         position: absolute;
         bottom: 10px;
         left: 10px;
         pointer-events: auto;
-        min-width: 180px;
       ">
-        <div class="ui-panel">
-          <div id="active-unit-name" style="font-weight: bold; color: #ffd700; margin-bottom: 8px;"></div>
-          <div style="margin-bottom: 6px;">
-            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;">
-              <span>HP</span>
-              <span id="active-unit-hp">0/0</span>
-            </div>
-            <div id="active-hp-bar" class="stat-bar">
-              <div id="active-hp-fill" class="stat-bar-fill hp"></div>
-            </div>
-          </div>
-          <div>
-            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;">
-              <span>MP</span>
-              <span id="active-unit-mp">0/0</span>
-            </div>
-            <div id="active-mp-bar" class="stat-bar">
-              <div id="active-mp-fill" class="stat-bar-fill mp"></div>
-            </div>
-          </div>
-        </div>
+        <!-- ParchmentCard will be inserted here -->
       </div>
 
       <!-- Action Menu - DEPRECATED: Replaced by RadialMenu, kept for targeting cancel only -->
@@ -151,28 +131,15 @@ export class BattleUI {
         </div>
       </div>
 
-      <!-- Target Info (bottom right) -->
-      <div id="target-panel" class="battle-panel" style="
+      <!-- Target Info (bottom right) - ParchmentCard container -->
+      <div id="target-panel" style="
         position: absolute;
         bottom: 10px;
         right: 10px;
         pointer-events: auto;
-        min-width: 180px;
         display: none;
       ">
-        <div class="ui-panel">
-          <div id="target-name" style="font-weight: bold; color: #ff6b6b; margin-bottom: 8px;"></div>
-          <div style="margin-bottom: 6px;">
-            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px;">
-              <span>HP</span>
-              <span id="target-hp">0/0</span>
-            </div>
-            <div class="stat-bar">
-              <div id="target-hp-fill" class="stat-bar-fill hp"></div>
-            </div>
-          </div>
-          <div id="target-effects" style="font-size: 11px; color: #8a8aaa;"></div>
-        </div>
+        <!-- ParchmentCard for target/enemy will be inserted here -->
       </div>
 
       <!-- Confirmation Panel (hidden by default) -->
@@ -209,15 +176,6 @@ export class BattleUI {
         </div>
       </div>
 
-      <!-- Active Unit Detail Card Container (glass morphism - no panel wrapper) -->
-      <div id="active-unit-card-container" style="
-        position: absolute;
-        bottom: 100px;
-        right: 20px;
-        pointer-events: none;
-      ">
-        <!-- GlassCharacterCard component will be inserted directly -->
-      </div>
     `;
 
     // Add custom styles
@@ -229,17 +187,26 @@ export class BattleUI {
     // Setup event listeners
     this.setupEventListeners();
 
-    // Initialize GlassCharacterCard component for active unit display
-    this.activeUnitCard = new GlassCharacterCard({
+    // Initialize ParchmentCard for active unit (bottom left)
+    this.activeUnitCard = new ParchmentCard({
       mode: 'compact',
-      autoHide: true,
-      autoHideDelay: 2000
+      type: 'player',
+      showStats: true
     });
-    const cardContainer = container.querySelector('#active-unit-card-container');
-    if (cardContainer) {
-      cardContainer.appendChild(this.activeUnitCard.element);
-      // Start hidden
-      this.activeUnitCard.hide();
+    const activePanel = container.querySelector('#active-unit-panel');
+    if (activePanel) {
+      activePanel.appendChild(this.activeUnitCard.element);
+    }
+
+    // Initialize ParchmentCard for target/enemy (bottom right)
+    this.targetCard = new ParchmentCard({
+      mode: 'compact',
+      type: 'enemy',
+      showStats: true
+    });
+    const targetPanel = container.querySelector('#target-panel');
+    if (targetPanel) {
+      targetPanel.appendChild(this.targetCard.element);
     }
 
     // Initial update
@@ -437,44 +404,53 @@ export class BattleUI {
   }
 
   /**
-   * Update active unit panel
+   * Update active unit panel using ParchmentCard
    */
   updateActiveUnit(unit) {
-    const name = this.element.querySelector('#active-unit-name');
-    const hp = this.element.querySelector('#active-unit-hp');
-    const mp = this.element.querySelector('#active-unit-mp');
-    const hpFill = this.element.querySelector('#active-hp-fill');
-    const mpFill = this.element.querySelector('#active-mp-fill');
+    if (!this.activeUnitCard) return;
 
-    if (name) name.textContent = unit.name;
-    if (hp) hp.textContent = `${unit.hp}/${unit.maxHp}`;
-    if (mp) mp.textContent = `${unit.mp}/${unit.maxMp}`;
-    if (hpFill) hpFill.style.width = `${(unit.hp / unit.maxHp) * 100}%`;
-    if (mpFill) mpFill.style.width = `${(unit.mp / unit.maxMp) * 100}%`;
+    // Determine card type based on unit type
+    const isEnemy = unit.type === 'enemy';
+    if (isEnemy !== (this.activeUnitCard.type === 'enemy')) {
+      // Recreate card with correct type if needed
+      const panel = this.element.querySelector('#active-unit-panel');
+      if (panel) {
+        this.activeUnitCard.destroy();
+        this.activeUnitCard = new ParchmentCard({
+          mode: 'compact',
+          type: isEnemy ? 'enemy' : 'player',
+          showStats: true
+        });
+        panel.appendChild(this.activeUnitCard.element);
+      }
+    }
+
+    this.activeUnitCard.setCharacter(unit);
   }
 
   /**
-   * Show target info panel
+   * Show target info panel using ParchmentCard
    */
   showTargetInfo(unit) {
     const panel = this.element.querySelector('#target-panel');
-    if (!panel) return;
+    if (!panel || !this.targetCard) return;
 
     panel.style.display = 'block';
 
-    const name = this.element.querySelector('#target-name');
-    const hp = this.element.querySelector('#target-hp');
-    const hpFill = this.element.querySelector('#target-hp-fill');
-    const effects = this.element.querySelector('#target-effects');
-
-    if (name) name.textContent = unit.name;
-    if (hp) hp.textContent = `${unit.hp}/${unit.maxHp}`;
-    if (hpFill) hpFill.style.width = `${(unit.hp / unit.maxHp) * 100}%`;
-    if (effects) {
-      effects.textContent = unit.statusEffects?.length > 0
-        ? `Effects: ${unit.statusEffects.map(e => e.type).join(', ')}`
-        : '';
+    // Determine card type based on unit type
+    const isEnemy = unit.type === 'enemy';
+    if (isEnemy !== (this.targetCard.type === 'enemy')) {
+      // Recreate card with correct type if needed
+      this.targetCard.destroy();
+      this.targetCard = new ParchmentCard({
+        mode: 'compact',
+        type: isEnemy ? 'enemy' : 'player',
+        showStats: true
+      });
+      panel.appendChild(this.targetCard.element);
     }
+
+    this.targetCard.setCharacter(unit);
   }
 
   /**
@@ -487,21 +463,20 @@ export class BattleUI {
 
   /**
    * Show active unit detail card (after turn transition)
+   * Now uses the main ParchmentCard - just updates it
    * @param {Object} unit - The active unit to display
    */
   showActiveUnitCard(unit) {
-    if (!this.activeUnitCard) return;
-
-    this.activeUnitCard.setCharacter(unit);
-    this.activeUnitCard.show();
+    // The active unit card is always visible, just update it
+    this.updateActiveUnit(unit);
   }
 
   /**
    * Hide active unit detail card
+   * Note: With ParchmentCard, we keep the card visible but could hide if needed
    */
   hideActiveUnitCard() {
-    if (!this.activeUnitCard) return;
-    this.activeUnitCard.hide();
+    // No-op - the active unit card stays visible in battle
   }
 
   /**
@@ -790,6 +765,10 @@ export class BattleUI {
     if (this.activeUnitCard) {
       this.activeUnitCard.destroy();
       this.activeUnitCard = null;
+    }
+    if (this.targetCard) {
+      this.targetCard.destroy();
+      this.targetCard = null;
     }
     if (this.element) {
       this.element.remove();

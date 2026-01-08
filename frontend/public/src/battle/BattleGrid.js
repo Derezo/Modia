@@ -238,8 +238,18 @@ export class BattleGrid {
       worldY = screenY - 120;
     }
 
-    const gridX = Math.floor((worldX / (this.tileWidth / 2) + worldY / (this.tileHeight / 2)) / 2);
-    const gridY = Math.floor((worldY / (this.tileHeight / 2) - worldX / (this.tileWidth / 2)) / 2);
+    // Isometric to grid conversion with proper rounding
+    // Use round instead of floor for better centering on tile diamonds
+    const halfTileWidth = this.tileWidth / 2;
+    const halfTileHeight = this.tileHeight / 2;
+
+    // Convert world coords to isometric grid coords
+    const isoX = worldX / halfTileWidth;
+    const isoY = worldY / halfTileHeight;
+
+    // Grid coords from isometric (with rounding for center-of-tile detection)
+    const gridX = Math.round((isoX + isoY) / 2);
+    const gridY = Math.round((isoY - isoX) / 2);
 
     return { x: gridX, y: gridY };
   }
@@ -394,8 +404,19 @@ export class BattleGrid {
       ctx.lineTo(screenX, screenY + this.tileHeight / 2);
       ctx.lineTo(screenX - this.tileWidth / 2, screenY);
       ctx.closePath();
+
+      // First darken the tile for contrast
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+      ctx.fill();
+
+      // Then apply the colored highlight
       ctx.fillStyle = highlight;
       ctx.fill();
+
+      // Add a subtle border for better visibility
+      ctx.strokeStyle = highlight.replace(/[\d.]+\)$/, '0.8)');
+      ctx.lineWidth = 2;
+      ctx.stroke();
     }
   }
 

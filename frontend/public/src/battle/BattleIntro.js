@@ -86,6 +86,7 @@ export class BattleIntro {
 
   /**
    * Calculate camera waypoints for the pan sequence
+   * Pans to each enemy individually, then player lead, then active unit
    */
   calculateCameraWaypoints() {
     const state = this.scene.battleState;
@@ -95,18 +96,35 @@ export class BattleIntro {
     const players = state.units.filter(u => u.type === 'player');
     const activeUnit = state.units.find(u => u.id === state.activeUnitId);
 
-    // Waypoint 1: Enemy centroid
-    const enemyCentroid = this.getCentroid(enemies);
+    // Build waypoints: each enemy → player lead → active unit
+    this.cameraWaypoints = [];
 
-    // Waypoint 2: Player centroid
-    const playerCentroid = this.getCentroid(players);
+    // Add each enemy as a waypoint (pan to each one)
+    for (const enemy of enemies) {
+      this.cameraWaypoints.push(this.getUnitScreenPos(enemy));
+    }
 
-    // Waypoint 3: Active unit position (or player centroid if no active)
-    const activePos = activeUnit
-      ? this.getUnitScreenPos(activeUnit)
-      : playerCentroid;
+    // Add player lead character (first player in formation order)
+    if (players.length > 0) {
+      this.cameraWaypoints.push(this.getUnitScreenPos(players[0]));
+    }
 
-    this.cameraWaypoints = [enemyCentroid, playerCentroid, activePos];
+    // Add active unit if different from player lead
+    if (activeUnit) {
+      const activePos = this.getUnitScreenPos(activeUnit);
+      const lastWaypoint = this.cameraWaypoints[this.cameraWaypoints.length - 1];
+      // Only add if different position than last waypoint
+      if (!lastWaypoint || activePos.x !== lastWaypoint.x || activePos.y !== lastWaypoint.y) {
+        this.cameraWaypoints.push(activePos);
+      }
+    }
+
+    // Adjust camera pan duration based on number of waypoints (~1s per waypoint)
+    const waypointCount = this.cameraWaypoints.length;
+    this.cameraPanDuration = Math.max(2000, waypointCount * 1000);
+    // Update total duration accordingly
+    this.totalDuration = this.cardsFadeInDuration + this.cardsHoldDuration +
+                         this.cameraPanDuration + this.cardsFadeOutDuration;
   }
 
   /**
@@ -185,6 +203,18 @@ export class BattleIntro {
 
     if (this.cameraWaypoints.length === 0) return;
 
+    // Handle single waypoint case - just hold on that position
+    if (this.cameraWaypoints.length === 1) {
+      const pos = this.cameraWaypoints[0];
+      if (this.scene.camera) {
+        this.scene.camera.targetX = pos.x;
+        this.scene.camera.targetY = pos.y;
+        this.scene.camera.x = pos.x;
+        this.scene.camera.y = pos.y;
+      }
+      return;
+    }
+
     // Ease in-out for smooth camera movement
     const easedProgress = this.easeInOutCubic(panProgress);
 
@@ -200,10 +230,13 @@ export class BattleIntro {
     const targetX = from.x + (to.x - from.x) * segmentT;
     const targetY = from.y + (to.y - from.y) * segmentT;
 
-    // Update camera
+    // Update camera - set both target and actual position directly
+    // (BattleScene returns early during intro so camera.update() doesn't run)
     if (this.scene.camera) {
       this.scene.camera.targetX = targetX;
       this.scene.camera.targetY = targetY;
+      this.scene.camera.x = targetX;
+      this.scene.camera.y = targetY;
     }
   }
 
