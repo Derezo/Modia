@@ -350,20 +350,35 @@ async function generateWorld(seed) {
   console.log(`Total connections: ${allConnections.length}`);
 
   // Step 5: Build final node objects
-  const nodes = typedNodes.map(node => ({
-    node_type: node.type,
-    name: node.type === 'castle' ? 'Royal Castle' :
-          node.type === 'palace' ? 'Ancient Palace' :
-          node.type === 'guild' ? `${node.guildClass.charAt(0).toUpperCase() + node.guildClass.slice(1)}s' Guild` :
-          generateNodeName(node.type),
-    x_coord: Math.round(node.x),
-    y_coord: Math.round(node.y),
-    distance_from_center: Math.round(node.dist),
-    features: JSON.stringify(generateNodeFeatures(rng, node.type)),
-    guild_class: node.guildClass || null,
-    local_seed: rng.nextInt(1, 1000000),
-    difficulty_tier: getDifficultyTier(node.dist, node.type)
-  }));
+  // Track guild index for staggered refresh hours (0, 6, 12, 18 hours)
+  let guildIndex = 0;
+  const GUILD_REFRESH_HOURS = [0, 6, 12, 18]; // Staggered across the day
+
+  const nodes = typedNodes.map(node => {
+    const nodeObj = {
+      node_type: node.type,
+      name: node.type === 'castle' ? 'Royal Castle' :
+            node.type === 'palace' ? 'Ancient Palace' :
+            node.type === 'guild' ? `${node.guildClass.charAt(0).toUpperCase() + node.guildClass.slice(1)}s' Guild` :
+            generateNodeName(node.type),
+      x_coord: Math.round(node.x),
+      y_coord: Math.round(node.y),
+      distance_from_center: Math.round(node.dist),
+      features: JSON.stringify(generateNodeFeatures(rng, node.type)),
+      guild_class: node.guildClass || null,
+      local_seed: rng.nextInt(1, 1000000),
+      difficulty_tier: getDifficultyTier(node.dist, node.type),
+      recruit_refresh_hour: null
+    };
+
+    // Assign staggered refresh hours to guild nodes
+    if (node.type === 'guild') {
+      nodeObj.recruit_refresh_hour = GUILD_REFRESH_HOURS[guildIndex % GUILD_REFRESH_HOURS.length];
+      guildIndex++;
+    }
+
+    return nodeObj;
+  });
 
   return { nodes, connections: allConnections };
 }
@@ -750,10 +765,10 @@ async function main() {
     const nodeIds = [];
     for (const node of nodes) {
       const result = await client.query(
-        `INSERT INTO world_nodes (node_type, name, x_coord, y_coord, distance_from_center, features, guild_class, local_seed, difficulty_tier)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `INSERT INTO world_nodes (node_type, name, x_coord, y_coord, distance_from_center, features, guild_class, local_seed, difficulty_tier, recruit_refresh_hour)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING id`,
-        [node.node_type, node.name, node.x_coord, node.y_coord, node.distance_from_center, node.features, node.guild_class, node.local_seed, node.difficulty_tier]
+        [node.node_type, node.name, node.x_coord, node.y_coord, node.distance_from_center, node.features, node.guild_class, node.local_seed, node.difficulty_tier, node.recruit_refresh_hour]
       );
       nodeIds.push(result.rows[0].id);
     }

@@ -479,6 +479,55 @@ async function generateRecruitWithClient(client, nodeId, guildClass, isEmergency
 }
 
 /**
+ * Check if guild recruits need refreshing and refresh if needed
+ * Uses lazy refresh - checks on access rather than scheduled job
+ * @param {number} nodeId - The guild node ID
+ * @returns {Promise<boolean>} True if refresh was performed, false otherwise
+ */
+async function checkAndRefreshIfNeeded(nodeId) {
+  // Get guild node refresh info
+  const nodeResult = await query(
+    'SELECT recruit_refresh_hour, last_recruit_refresh FROM world_nodes WHERE id = $1 AND node_type = $2',
+    [nodeId, 'guild']
+  );
+
+  if (nodeResult.rows.length === 0) {
+    return false; // Not a guild node
+  }
+
+  const { recruit_refresh_hour, last_recruit_refresh } = nodeResult.rows[0];
+  const now = new Date();
+
+  // If never refreshed, needs refresh (first access)
+  if (!last_recruit_refresh) {
+    await refreshGuildRecruits(nodeId);
+    return true;
+  }
+
+  // Calculate today's refresh time
+  const lastRefresh = new Date(last_recruit_refresh);
+  const todayRefreshTime = new Date(now);
+  todayRefreshTime.setUTCHours(recruit_refresh_hour || 0, 0, 0, 0);
+
+  // If we're past today's refresh time and last refresh was before it
+  if (now >= todayRefreshTime && lastRefresh < todayRefreshTime) {
+    await refreshGuildRecruits(nodeId);
+    return true;
+  }
+
+  // Also check for yesterday's missed refresh (handles case where server was down)
+  const yesterdayRefreshTime = new Date(todayRefreshTime);
+  yesterdayRefreshTime.setUTCDate(yesterdayRefreshTime.getUTCDate() - 1);
+
+  if (lastRefresh < yesterdayRefreshTime) {
+    await refreshGuildRecruits(nodeId);
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Spawn emergency recruits when pool is empty
  * @param {number} nodeId - The guild node ID
  * @returns {Promise<Array>} Array of emergency recruits
@@ -780,6 +829,7 @@ module.exports = {
   generateRecruit,
   refreshGuildRecruits,
   spawnEmergencyRecruits,
+  checkAndRefreshIfNeeded,
   calculateRecruitPrice,
   getAvailableRecruits,
   purchaseRecruit,
