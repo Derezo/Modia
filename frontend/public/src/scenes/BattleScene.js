@@ -7,6 +7,10 @@ import { BattlePathfinding } from '../battle/BattlePathfinding.js';
 import { BattleCamera } from '../battle/BattleCamera.js';
 import { BattleIntro } from '../battle/BattleIntro.js';
 import { RadialMenu } from '../battle/RadialMenu.js';
+import { BattleActionBar } from '../battle/BattleActionBar.js';
+import { BattleContextMenu } from '../battle/BattleContextMenu.js';
+import { GridCursor } from '../battle/GridCursor.js';
+import { DamagePreview } from '../battle/DamagePreview.js';
 import RewardsModal from '../components/RewardsModal.js';
 
 // Movement range by class (mirrored from shared/constants.js)
@@ -186,7 +190,7 @@ export class BattleScene extends Scene {
       onContinue: () => this.endBattle()
     });
 
-    // Initialize radial action menu
+    // Initialize radial action menu (contextual, shown on unit click)
     this.radialMenu = new RadialMenu(this.game);
     this.radialMenu.create({
       onMove: () => this.startMoveAction(),
@@ -198,6 +202,44 @@ export class BattleScene extends Scene {
       getSkills: () => this.getActiveUnitSkillsForRadial(),
       getItems: () => this.getActiveUnitItemsForRadial()
     });
+
+    // Initialize persistent action bar (always visible during player turn)
+    this.actionBar = new BattleActionBar(this.game);
+    this.actionBar.create({
+      onMove: () => this.startMoveAction(),
+      onAttack: () => this.startAttackAction(),
+      onWait: () => this.submitAction('wait'),
+      onCancel: () => this.cancelAction(),
+      onSkillSelect: (skillId) => this.startSkillAction(skillId),
+      onItemSelect: (itemData) => this.startItemAction(itemData),
+      getSkills: () => this.getActiveUnitSkillsForRadial(),
+      getItems: () => this.getActiveUnitItemsForRadial()
+    });
+
+    // Initialize FFT-style context menu (shown on right-click or unit click on desktop)
+    this.contextMenu = new BattleContextMenu(this.game);
+    this.contextMenu.create({
+      onMove: () => this.startMoveAction(),
+      onAttack: () => this.startAttackAction(),
+      onWait: () => this.submitAction('wait'),
+      onCancel: () => this.cancelAction(),
+      onSkillSelect: (skillId) => this.startSkillAction(skillId),
+      onItemSelect: (itemData) => this.startItemAction(itemData),
+      getSkills: () => this.getActiveUnitSkillsForRadial(),
+      getItems: () => this.getActiveUnitItemsForRadial()
+    });
+
+    // Initialize grid cursor for keyboard navigation
+    this.gridCursor = new GridCursor(this.game, this.grid);
+    this.gridCursor.create({
+      onMove: (x, y) => this.handleCursorMove(x, y),
+      onSelect: (x, y) => this.handleCursorSelect(x, y),
+      onCycleUnit: (direction) => this.handleCycleUnit(direction),
+      isMenuOpen: () => this.isAnyMenuOpen()
+    });
+
+    // Initialize damage preview system
+    this.damagePreview = new DamagePreview(this.game);
 
     // Setup input handlers
     this.setupInputHandlers();
@@ -235,6 +277,25 @@ export class BattleScene extends Scene {
     if (this.radialMenu) {
       this.radialMenu.destroy();
       this.radialMenu = null;
+    }
+
+    if (this.actionBar) {
+      this.actionBar.destroy();
+      this.actionBar = null;
+    }
+
+    if (this.contextMenu) {
+      this.contextMenu.destroy();
+      this.contextMenu = null;
+    }
+
+    if (this.gridCursor) {
+      this.gridCursor.destroy();
+      this.gridCursor = null;
+    }
+
+    if (this.damagePreview) {
+      this.damagePreview = null;
     }
 
     if (this.rewardsModal) {
@@ -301,6 +362,14 @@ export class BattleScene extends Scene {
         } else {
           this.ui.hideTargetInfo();
         }
+
+        // Show damage preview when hovering over valid targets during attack/skill mode
+        this.updateDamagePreview(this.hoveredTile, pos);
+      } else {
+        // Hide damage preview when not hovering a tile
+        if (this.damagePreview) {
+          this.damagePreview.hide();
+        }
       }
     }, opts);
 
@@ -323,6 +392,29 @@ export class BattleScene extends Scene {
           this.handleTileClick(tile.x, tile.y);
         }
       }
+    }, opts);
+
+    // Right-click - show FFT-style context menu (desktop only)
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+
+      // Only show context menu if it's player's turn and no action in progress
+      const activeUnit = this.getActiveUnit();
+      if (!activeUnit || activeUnit.type !== 'player' || this.currentAction) {
+        return;
+      }
+
+      // Hide radial menu if visible
+      this.hideRadialMenu();
+
+      // Show context menu at mouse position
+      this.contextMenu.show(
+        e.clientX,
+        e.clientY,
+        this.canMove,
+        this.canAct,
+        activeUnit.mp
+      );
     }, opts);
 
     // Keyboard input for camera and actions
@@ -1254,6 +1346,134 @@ export class BattleScene extends Scene {
   }
 
   /**
+   * Check if any menu is currently open
+   */
+  isAnyMenuOpen() {
+    return (this.radialMenu?.isVisible) ||
+           (this.contextMenu?.isVisible) ||
+           (this.actionBar?.activeDropdown);
+  }
+
+  /**
+   * Handle grid cursor movement
+   */
+  handleCursorMove(x, y) {
+    // Update hovered tile to cursor position
+    this.hoveredTile = { x, y };
+
+    // Show target info if hovering over enemy
+    const unit = this.getUnitAt(x, y);
+    if (unit && unit.type === 'enemy') {
+      this.ui.showTargetInfo(unit);
+    } else {
+      this.ui.hideTargetInfo();
+    }
+
+    // Update damage preview for keyboard navigation
+    const worldPos = this.grid.gridToScreenWorld(x, y);
+    const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
+    this.updateDamagePreview({ x, y }, screenPos);
+  }
+
+  /**
+   * Handle grid cursor selection
+   */
+  handleCursorSelect(x, y) {
+    const activeUnit = this.getActiveUnit();
+    if (!activeUnit || activeUnit.type !== 'player') return;
+
+    // If no action is in progress, check what's at cursor
+    if (!this.currentAction) {
+      const unit = this.getUnitAt(x, y);
+
+      // If clicking on active unit, show context menu
+      if (unit && unit.id === activeUnit.id) {
+        const worldPos = this.grid.gridToScreenWorld(x, y);
+        const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
+        this.contextMenu.show(
+          screenPos.x,
+          screenPos.y - 40,
+          this.canMove,
+          this.canAct,
+          activeUnit.mp
+        );
+      }
+    } else {
+      // Action in progress - treat as tile click
+      this.handleTileClick(x, y);
+    }
+  }
+
+  /**
+   * Handle cycling through units with Tab
+   */
+  handleCycleUnit(direction) {
+    const unitArray = Array.from(this.units.values());
+    if (unitArray.length === 0) return;
+
+    this.gridCursor.cycleToUnit(unitArray, direction);
+
+    // Pan camera to new cursor position
+    const pos = this.gridCursor.getPosition();
+    const worldPos = this.grid.gridToScreenWorld(pos.x, pos.y);
+    this.camera.panTo(worldPos.x, worldPos.y);
+  }
+
+  /**
+   * Update damage preview based on current hover and action mode
+   */
+  updateDamagePreview(hoveredTile, screenPos) {
+    if (!this.damagePreview) return;
+
+    const activeUnit = this.getActiveUnit();
+    if (!activeUnit || activeUnit.type !== 'player') {
+      this.damagePreview.hide();
+      return;
+    }
+
+    // Only show preview during attack or skill targeting
+    if (this.currentAction !== 'attack' && this.currentAction !== 'skill') {
+      this.damagePreview.hide();
+      return;
+    }
+
+    // Check if hovered tile is a valid target
+    const isValidTarget = this.validTiles.some(
+      t => t.x === hoveredTile.x && t.y === hoveredTile.y
+    );
+    if (!isValidTarget) {
+      this.damagePreview.hide();
+      return;
+    }
+
+    // Get target unit at hovered tile
+    const targetUnit = this.getUnitAt(hoveredTile.x, hoveredTile.y);
+    if (!targetUnit) {
+      this.damagePreview.hide();
+      return;
+    }
+
+    // Get world position for preview display
+    const worldPos = this.grid.gridToScreenWorld(hoveredTile.x, hoveredTile.y);
+    const displayPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
+
+    // Get skill info for damage calculation
+    let skill = null;
+    if (this.currentAction === 'skill' && this.selectedSkillId) {
+      skill = this.getUnitActiveSkills(activeUnit).find(s => s.id === this.selectedSkillId);
+    }
+
+    // Show the appropriate preview
+    this.damagePreview.showDamagePreview(
+      activeUnit,
+      targetUnit,
+      skill,
+      displayPos.x,
+      displayPos.y
+    );
+  }
+
+  /**
    * Start skill action - show valid target tiles for skill
    * @param {string} skillId - The skill to use
    */
@@ -1380,6 +1600,11 @@ export class BattleScene extends Scene {
     this.ui.hideItemPanel();
     this.ui.hideTargetingMode();
     this.ui.setActionsEnabled(true);
+
+    // Hide damage preview when action cancelled
+    if (this.damagePreview) {
+      this.damagePreview.hide();
+    }
   }
 
   /**
@@ -1640,6 +1865,11 @@ export class BattleScene extends Scene {
     this.validTiles = [];
     this.pendingAction = null;
 
+    // Hide damage preview when action completes
+    if (this.damagePreview) {
+      this.damagePreview.hide();
+    }
+
     // Store full availableActions for use in action methods
     this.serverAvailableActions = availableActions || null;
 
@@ -1758,6 +1988,19 @@ export class BattleScene extends Scene {
     this.ui.updateAvailableActions(this.canMove, this.canAct);
     this.ui.showActionMenu();
     this.ui.setActionsEnabled(true);
+
+    // Update persistent action bar with new turn state
+    if (this.actionBar) {
+      this.actionBar.updateTurnState(this.canMove, this.canAct, activeUnit.mp);
+    }
+
+    // Show radial menu after partial turn so player can select remaining action
+    // Short delay allows any action animations to settle
+    setTimeout(() => {
+      if (this.getActiveUnit()?.id === activeUnit.id && !this.currentAction) {
+        this.showRadialMenu();
+      }
+    }, 200);
   }
 
   /**
@@ -1915,11 +2158,22 @@ export class BattleScene extends Scene {
         }
       }
 
-      // Show radial menu for player units
+      // Show action UI for player units
       if (activeUnit.type === 'player') {
         // Two-action system: update available actions for new turn
         this.ui.updateAvailableActions(this.canMove, this.canAct);
         this.ui.setActionsEnabled(true);
+
+        // Show persistent action bar for player turn
+        if (this.actionBar) {
+          this.actionBar.show(this.canMove, this.canAct, activeUnit.mp);
+        }
+
+        // Enable grid cursor for player turn
+        if (this.gridCursor) {
+          this.gridCursor.centerOnUnit(activeUnit);
+          this.gridCursor.show();
+        }
 
         // Show radial menu automatically on player's turn (after short delay for camera)
         setTimeout(() => {
@@ -1930,6 +2184,14 @@ export class BattleScene extends Scene {
       } else {
         this.hideRadialMenu();
         this.ui.hideActionMenu();
+        // Hide action bar during enemy turns
+        if (this.actionBar) {
+          this.actionBar.hide();
+        }
+        // Hide grid cursor during enemy turns
+        if (this.gridCursor) {
+          this.gridCursor.hide();
+        }
       }
     }
 
@@ -2001,6 +2263,16 @@ export class BattleScene extends Scene {
     // Update units
     for (const unit of this.units.values()) {
       unit.update(deltaTime);
+    }
+
+    // Update grid cursor animation
+    if (this.gridCursor) {
+      this.gridCursor.update(deltaTime);
+    }
+
+    // Update damage preview animation
+    if (this.damagePreview) {
+      this.damagePreview.update(deltaTime);
     }
 
     // Clear input state
@@ -2109,6 +2381,11 @@ export class BattleScene extends Scene {
     // Render grid with highlights and camera (includes intent highlights from WebSocket)
     this.grid.renderWithIntentHighlights(ctx, highlights, this.camera);
 
+    // Render grid cursor (keyboard navigation)
+    if (this.gridCursor) {
+      this.gridCursor.render(ctx, this.camera);
+    }
+
     // Render terrain tooltip when hovering during move action
     this.renderTerrainTooltip(ctx);
 
@@ -2133,6 +2410,11 @@ export class BattleScene extends Scene {
 
     // Render animations with camera transform
     this.renderAnimationsWithCamera(ctx);
+
+    // Render damage preview (above units, below UI)
+    if (this.damagePreview) {
+      this.damagePreview.render(ctx);
+    }
 
     // Render minimap (hide during intro)
     if (!this.isIntroPlaying) {
