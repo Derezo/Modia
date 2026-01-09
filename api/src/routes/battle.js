@@ -668,8 +668,9 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
   let enemyActions = [];
   const turnContinues = !result.turnEnded && battleStatus === 'active';
 
-  // Check if async mode is enabled (for new WebSocket-driven turn processing)
-  const useAsyncTurns = req.body.asyncMode === true || battle.battle_type === 'pvp_coliseum';
+  // Async mode is now DEFAULT for all battles (new WebSocket-driven turn processing)
+  // Use syncMode: true in request body to opt out (for backward compatibility testing)
+  const useAsyncTurns = req.body.syncMode !== true;
 
   if (result.turnEnded && battleStatus === 'active') {
     // Turn is complete - advance to next actor using CT system
