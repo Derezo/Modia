@@ -579,9 +579,15 @@ export class BattleScene extends Scene {
    * Handle remote unit movement
    */
   handleRemoteUnitMoved(payload) {
-    const unit = this.units.get(payload.unitId);
+    const { unitId, from, to } = payload;
+    console.log(`[Battle WS] Unit moved: ${unitId} from (${from?.x},${from?.y}) to (${to?.x},${to?.y})`);
+
+    const unit = this.units.get(unitId);
     if (unit) {
-      unit.moveTo(payload.to.x, payload.to.y);
+      console.log(`[Battle WS] Moving unit ${unit.name} to (${to.x}, ${to.y})`);
+      unit.moveTo(to.x, to.y);
+    } else {
+      console.warn(`[Battle WS] Unit ${unitId} not found in units map`);
     }
   }
 
@@ -667,7 +673,7 @@ export class BattleScene extends Scene {
     this.wsHandledTurnTransition = true;
 
     // Intelligent camera panning:
-    // - Always pan when it becomes player's turn
+    // - Always pan when it becomes player's turn (with delay after enemy sequence)
     // - Only pan to FIRST enemy of an enemy sequence (not every enemy)
     // - This prevents rapid camera bouncing during enemy turns
     const isEnemy = unitType === 'enemy';
@@ -676,9 +682,19 @@ export class BattleScene extends Scene {
 
     if (position && this.camera && this.grid) {
       if (isPlayerTurn) {
-        // Always pan to player when it's their turn
+        // When returning to player after enemy sequence, delay to let last enemy action complete
+        const delayMs = this.inEnemySequence ? 1200 : 0;
         const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
-        this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 300);
+
+        if (delayMs > 0) {
+          // Clear any pending intent highlights before panning
+          setTimeout(() => {
+            if (this.grid) this.grid.clearIntentHighlights();
+            this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 300);
+          }, delayMs);
+        } else {
+          this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 300);
+        }
         this.inEnemySequence = false;
       } else if (isFirstEnemyAfterPlayer) {
         // Pan to first enemy of the sequence
@@ -1431,15 +1447,9 @@ export class BattleScene extends Scene {
           }
         }
 
-        // Sync enemy position if they moved
-        if (enemyAction.result?.moved && enemyAction.targetTile) {
-          const enemyUnit = this.units.get(enemyAction.unitId);
-          if (enemyUnit) {
-            enemyUnit.gridX = enemyAction.targetTile.x;
-            enemyUnit.gridY = enemyAction.targetTile.y;
-            enemyUnit.updateScreenPosition();
-          }
-        }
+        // NOTE: Enemy position sync removed - WebSocket unit_moved handles animated movement
+        // The syncUnitsWithState call below will catch any missed position updates
+        // Direct position snapping here was canceling movement animations
       }
     }
 
@@ -1585,9 +1595,18 @@ export class BattleScene extends Scene {
         unit.hasActed = unitData.hasActed;
         unit.statusEffects = unitData.statusEffects || [];
 
-        // Update position if changed
+        // Update position if changed - but DON'T interrupt ongoing movement animations
+        // WebSocket unit_moved calls moveTo() for smooth animation; we only snap if unit is stationary
         if (unit.gridX !== unitData.tileX || unit.gridY !== unitData.tileY) {
-          unit.setPosition(unitData.tileX, unitData.tileY);
+          if (unit.isMoving) {
+            // Unit is animating - update target grid position but let animation continue
+            // The animation will reach the correct destination
+            unit.gridX = unitData.tileX;
+            unit.gridY = unitData.tileY;
+          } else {
+            // Unit is stationary - safe to snap to new position (fallback for missed WebSocket)
+            unit.setPosition(unitData.tileX, unitData.tileY);
+          }
         }
       }
     }
