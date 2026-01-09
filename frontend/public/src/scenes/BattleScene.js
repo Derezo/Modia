@@ -55,6 +55,10 @@ export class BattleScene extends Scene {
     this.selectedItemId = null;
     this.selectedInventoryId = null;
 
+    // Mobile/touch support for terrain preview
+    this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    this.selectedMoveTile = null; // For two-tap movement on mobile
+
     // Movement range (base value, could be modified by stats)
     this.movementRange = 3;
     this.attackRange = 1;
@@ -655,8 +659,9 @@ export class BattleScene extends Scene {
     this.battleState.activeUnitId = unitId;
 
     // Pan camera to the active unit
-    if (position && this.camera) {
-      this.camera.panToTile(position.x, position.y, 300);
+    if (position && this.camera && this.grid) {
+      const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
+      this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 300);
     }
 
     // Update UI to show whose turn it is
@@ -668,7 +673,7 @@ export class BattleScene extends Scene {
     if (unitType === 'enemy') {
       const unit = this.units.get(unitId);
       if (unit) {
-        unit.showThinkingIndicator(true);
+        unit.setThinking(true);
       }
     }
   }
@@ -683,7 +688,7 @@ export class BattleScene extends Scene {
     // Hide thinking indicator when intent is shown
     const unit = this.units.get(unitId);
     if (unit) {
-      unit.showThinkingIndicator(false);
+      unit.setThinking(false);
     }
 
     // Show the highlight on the grid
@@ -796,8 +801,29 @@ export class BattleScene extends Scene {
     const isValidTile = this.validTiles.some(t => t.x === x && t.y === y);
 
     if (this.currentAction === 'move' && isValidTile) {
-      this.pendingAction = { type: 'move', targetTile: { x, y } };
-      this.ui.showConfirmation(`Move to (${x}, ${y})?`);
+      // Two-tap support for mobile: first tap selects, second tap confirms
+      if (this.isTouchDevice) {
+        const isSameTile = this.selectedMoveTile &&
+          this.selectedMoveTile.x === x && this.selectedMoveTile.y === y;
+
+        if (isSameTile) {
+          // Second tap on same tile - confirm move
+          this.selectedMoveTile = null;
+          this.pendingAction = { type: 'move', targetTile: { x, y } };
+          this.ui.showConfirmation(`Move to (${x}, ${y})?`);
+        } else {
+          // First tap or different tile - select for preview
+          this.selectedMoveTile = { x, y };
+          // Don't show confirmation yet, just show tooltip
+        }
+      } else {
+        // Desktop: immediate confirmation dialog
+        this.pendingAction = { type: 'move', targetTile: { x, y } };
+        this.ui.showConfirmation(`Move to (${x}, ${y})?`);
+      }
+    } else if (this.currentAction === 'move' && !isValidTile && this.isTouchDevice) {
+      // Tapped outside valid area on mobile - clear selection
+      this.selectedMoveTile = null;
     } else if (this.currentAction === 'attack' && isValidTile) {
       // Tile-based targeting: allow attacking any valid tile
       const target = this.getUnitAt(x, y);
@@ -1137,6 +1163,7 @@ export class BattleScene extends Scene {
     this.selectedSkillId = null;
     this.selectedItemId = null;
     this.selectedInventoryId = null;
+    this.selectedMoveTile = null; // Clear mobile two-tap selection
     this.ui.hideConfirmation();
     this.ui.hideSkillPanel();
     this.ui.hideItemPanel();
@@ -1813,10 +1840,20 @@ export class BattleScene extends Scene {
     // Build tile highlights
     const highlights = {};
 
-    // Movement range highlights
+    // Movement range highlights with opacity gradient based on terrain cost
     if (this.currentAction === 'move') {
       for (const tile of this.validTiles) {
-        highlights[`${tile.x},${tile.y}`] = 'rgba(74, 144, 217, 0.4)';
+        // Calculate opacity: tiles that cost more to reach are dimmer
+        // Formula: 0.2 (min) + (remaining movement / max range) * 0.5
+        const remainingMovement = this.movementRange - tile.cost;
+        const opacity = 0.2 + (remainingMovement / this.movementRange) * 0.5;
+        highlights[`${tile.x},${tile.y}`] = `rgba(74, 144, 217, ${opacity.toFixed(2)})`;
+      }
+
+      // Mobile: highlight selected tile brighter for two-tap feedback
+      if (this.selectedMoveTile) {
+        const key = `${this.selectedMoveTile.x},${this.selectedMoveTile.y}`;
+        highlights[key] = 'rgba(100, 180, 255, 0.75)'; // Brighter blue for selected
       }
     }
 
@@ -1891,6 +1928,9 @@ export class BattleScene extends Scene {
     // Render grid with highlights and camera
     this.grid.render(ctx, highlights, this.camera);
 
+    // Render terrain tooltip when hovering during move action
+    this.renderTerrainTooltip(ctx);
+
     // Sort and render units (by Y position for depth)
     const allUnits = Array.from(this.units.values());
     const sortedUnits = allUnits
@@ -1922,6 +1962,60 @@ export class BattleScene extends Scene {
     if (this.isIntroPlaying && this.intro) {
       this.intro.render(ctx);
     }
+  }
+
+  /**
+   * Render terrain tooltip when hovering over tiles during move action
+   */
+  renderTerrainTooltip(ctx) {
+    // Only show during move action
+    if (this.currentAction !== 'move') return;
+
+    // Determine which tile to show tooltip for (hovered or selected on mobile)
+    const tooltipTile = this.isTouchDevice ? this.selectedMoveTile : this.hoveredTile;
+    if (!tooltipTile) return;
+
+    // Get terrain info
+    const terrain = this.grid.getTerrain(tooltipTile.x, tooltipTile.y);
+    const moveCost = this.grid.getMovementCost(tooltipTile.x, tooltipTile.y);
+
+    // Format terrain name nicely (capitalize first letter)
+    const terrainName = terrain.charAt(0).toUpperCase() + terrain.slice(1);
+    const tooltipText = `${terrainName} (${moveCost} mov)`;
+
+    // Get position for tooltip
+    let tooltipX, tooltipY;
+    if (this.isTouchDevice && this.selectedMoveTile) {
+      // On mobile, position tooltip above the selected tile
+      const worldPos = this.grid.gridToWorld(tooltipTile.x, tooltipTile.y);
+      const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
+      tooltipX = screenPos.x;
+      tooltipY = screenPos.y - 50;
+    } else {
+      // On desktop, position near cursor
+      const pos = this.game.input.getPointerPosition();
+      tooltipX = pos.x + 15;
+      tooltipY = pos.y - 25;
+    }
+
+    // Measure text for background
+    ctx.font = '12px monospace';
+    const textMetrics = ctx.measureText(tooltipText);
+    const padding = 6;
+    const bgWidth = textMetrics.width + padding * 2;
+    const bgHeight = 18;
+
+    // Keep tooltip on screen
+    tooltipX = Math.min(tooltipX, ctx.canvas.width - bgWidth - 5);
+    tooltipY = Math.max(tooltipY, bgHeight + 5);
+
+    // Draw background
+    ctx.fillStyle = 'rgba(20, 20, 30, 0.85)';
+    ctx.fillRect(tooltipX, tooltipY - bgHeight + 4, bgWidth, bgHeight);
+
+    // Draw text
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(tooltipText, tooltipX + padding, tooltipY);
   }
 
   /**
