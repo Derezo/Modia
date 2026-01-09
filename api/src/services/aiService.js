@@ -131,22 +131,43 @@ function convertSingleAction(action, enemy, battleState) {
       };
 
     case 'attack':
+      // Handle both target formats: {x, y} from getTargetsInRange or {tileX, tileY} from full unit
       return {
         actionType: 'attack',
-        targetTile: { x: action.target.tileX, y: action.target.tileY }
+        targetTile: {
+          x: action.target.x ?? action.target.tileX,
+          y: action.target.y ?? action.target.tileY
+        }
       };
 
     case 'skill':
+      // Handle both target formats: {x, y} from getTargetsInRange or {tileX, tileY} from full unit
       return {
         actionType: 'skill',
         skillId: action.skillId || action.skill?.id,
         targetTile: action.target
-          ? { x: action.target.tileX, y: action.target.tileY }
+          ? {
+              x: action.target.x ?? action.target.tileX,
+              y: action.target.y ?? action.target.tileY
+            }
           : { x: enemy.tileX, y: enemy.tileY }
       };
 
     case 'wait':
       return { actionType: 'wait' };
+
+    case 'item':
+      // Handle item usage (for NPCs with consumables)
+      return {
+        actionType: 'item',
+        itemId: action.itemId || action.item?.itemId,
+        targetTile: action.target
+          ? {
+              x: action.target.x ?? action.target.tileX,
+              y: action.target.y ?? action.target.tileY
+            }
+          : { x: enemy.tileX, y: enemy.tileY }
+      };
 
     default:
       return null;

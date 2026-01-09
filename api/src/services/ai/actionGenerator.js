@@ -82,6 +82,27 @@ function generateAllActions(unit, state) {
     }
   }
 
+  // Generate item actions (NPCs can use items too)
+  if (available.canAct && available.items && available.items.length > 0) {
+    for (const item of available.items) {
+      // Self-use healing/MP items when low
+      if (item.effectType === 'hp_restore' || item.effectType === 'mp_restore' || item.effectType === 'elixir') {
+        actions.push({
+          type: 'item',
+          item: item,
+          itemId: item.itemId,
+          target: {
+            x: unit.tileX,
+            y: unit.tileY,
+            unitId: unit.id,
+            unitName: unit.name
+          },
+          targetId: unit.id
+        });
+      }
+    }
+  }
+
   // Always add wait option
   actions.push({ type: 'wait' });
 
@@ -163,9 +184,15 @@ function generateActionsAtPosition(unit, state) {
   );
 
   for (const target of attackTargets) {
+    // Normalize target format to match getTargetsInRange: {x, y, unitId, unitName}
     actions.push({
       type: 'attack',
-      target: target,
+      target: {
+        x: target.tileX,
+        y: target.tileY,
+        unitId: target.id,
+        unitName: target.name
+      },
       targetId: target.id
     });
   }
@@ -194,11 +221,17 @@ function generateActionsAtPosition(unit, state) {
     );
 
     for (const target of skillTargets) {
+      // Normalize target format to match getTargetsInRange: {x, y, unitId, unitName}
       actions.push({
         type: 'skill',
         skill: skill,
         skillId: skill.id,
-        target: target,
+        target: {
+          x: target.tileX,
+          y: target.tileY,
+          unitId: target.id,
+          unitName: target.name
+        },
         targetId: target.id
       });
     }

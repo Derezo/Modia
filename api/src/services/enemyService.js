@@ -4,6 +4,7 @@
 
 const { query } = require('../config/database');
 const { generateEnemySkills } = require('./npcSkillService');
+const { generateNpcItems } = require('./npcItemService');
 
 // Difficulty tier multipliers for stat scaling
 const TIER_MULTIPLIERS = {
@@ -125,6 +126,9 @@ async function createEnemyInstance(template, partyLevel, difficultyTier, index, 
   // Generate skills for this enemy based on archetype/guild
   const skills = await generateEnemySkills(template, enemyLevel, partyLevel, difficultyTier);
 
+  // Generate consumable items for this enemy (tier-based)
+  const consumables = generateNpcItems(template, enemyLevel, difficultyTier);
+
   // Get movement and attack range from template (with defaults)
   const movement = template.movement || 3;
   const attackRange = template.attack_range || 1;
@@ -163,6 +167,8 @@ async function createEnemyInstance(template, partyLevel, difficultyTier, index, 
     skillCooldowns: {}, // Track skill cooldowns
     // Skills generated from archetype/guild
     skills,
+    // Consumable items (tier-based generation)
+    consumables,
     aiType: template.ai_type || 'aggressive',
     archetype: template.archetype || 'beast',
     abilities: template.abilities || [],
