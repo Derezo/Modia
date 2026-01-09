@@ -1,6 +1,6 @@
 # Terrain Cost Visibility Design
 
-**Status:** Ready for implementation
+**Status:** Implemented (commit ea96311)
 **Date:** 2026-01-08
 
 ## Problem
@@ -80,7 +80,7 @@ const costs = {
 
 ## Success Criteria
 
-- [ ] Distant/costly tiles visibly dimmer than nearby/cheap tiles
-- [ ] Hovering tile shows "Terrain (X mov)" tooltip
-- [ ] Mobile players can preview terrain before confirming move
-- [ ] Players understand why some tiles are reachable and others aren't
+- [x] Distant/costly tiles visibly dimmer than nearby/cheap tiles
+- [x] Hovering tile shows "Terrain (X mov)" tooltip
+- [x] Mobile players can preview terrain before confirming move
+- [x] Players understand why some tiles are reachable and others aren't
