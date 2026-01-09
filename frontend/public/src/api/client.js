@@ -339,4 +339,17 @@ export class ApiClient {
   getPresence(userId) {
     return this.get(`/chat/presence/${userId}`);
   }
+
+  // Guild recruitment endpoints
+  getGuildRecruits(nodeId) {
+    return this.get(`/guild/${nodeId}/recruits`);
+  }
+
+  purchaseRecruit(nodeId, recruitId) {
+    return this.post(`/guild/${nodeId}/recruit/${recruitId}/purchase`);
+  }
+
+  getGuildInfo(nodeId) {
+    return this.get(`/guild/${nodeId}/info`);
+  }
 }
