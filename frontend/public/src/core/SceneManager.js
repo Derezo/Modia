@@ -11,6 +11,7 @@ import { ShopScene } from '../scenes/ShopScene.js';
 import { MarketplaceScene } from '../scenes/MarketplaceScene.js';
 import { TavernScene } from '../scenes/TavernScene.js';
 import { ColiseumScene } from '../scenes/ColiseumScene.js';
+import { RecruitmentScene } from '../scenes/RecruitmentScene.js';
 
 export class SceneManager {
   constructor(game) {
@@ -35,7 +36,8 @@ export class SceneManager {
       shop: new ShopScene(this.game),
       marketplace: new MarketplaceScene(this.game),
       tavern: new TavernScene(this.game),
-      coliseum: new ColiseumScene(this.game)
+      coliseum: new ColiseumScene(this.game),
+      recruitment: new RecruitmentScene(this.game)
     };
   }
 
