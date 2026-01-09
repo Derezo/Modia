@@ -68,10 +68,10 @@ ON CONFLICT (skill_id) DO NOTHING;
 -- Dragon archetype - Breath branch
 INSERT INTO npc_skill_templates (skill_id, archetype, branch, name, description, power, range, mp_cost, damage_type, effect, effect_chance, effect_duration, aoe_radius, priority)
 VALUES
-  ('dragon_fire_breath', 'dragon', 'breath', 'Fire Breath', 'Cone of searing flames', 130, 3, 15, 'fire', 'burn', 0.40, 3, 9),
-  ('dragon_frost_breath', 'dragon', 'breath', 'Frost Breath', 'Cone of freezing cold', 120, 3, 15, 'ice', 'slow', 0.50, 2, 8),
-  ('dragon_lightning_breath', 'dragon', 'breath', 'Lightning Breath', 'Arc of electricity', 140, 3, 20, 'lightning', 'paralyze', 0.25, 1, 9),
-  ('dragon_poison_breath', 'dragon', 'breath', 'Poison Breath', 'Cloud of toxic gas', 100, 3, 12, 'poison', 'poison', 0.60, 4, 7),
+  ('dragon_fire_breath', 'dragon', 'breath', 'Fire Breath', 'Cone of searing flames', 130, 3, 15, 'fire', 'burn', 0.40, 3, 1, 9),
+  ('dragon_frost_breath', 'dragon', 'breath', 'Frost Breath', 'Cone of freezing cold', 120, 3, 15, 'ice', 'slow', 0.50, 2, 1, 8),
+  ('dragon_lightning_breath', 'dragon', 'breath', 'Lightning Breath', 'Arc of electricity', 140, 3, 20, 'lightning', 'paralyze', 0.25, 1, 1, 9),
+  ('dragon_poison_breath', 'dragon', 'breath', 'Poison Breath', 'Cloud of toxic gas', 100, 3, 12, 'poison', 'poison', 0.60, 4, 1, 7),
   ('dragon_inferno', 'dragon', 'breath', 'Inferno', 'Massive fire explosion', 180, 4, 35, 'fire', 'burn', 0.60, 3, 2, 10)
 ON CONFLICT (skill_id) DO NOTHING;
 
