@@ -31,14 +31,14 @@ Critical items for complete gameplay loop:
 
 | Issue | Location | Impact | Priority |
 |-------|----------|--------|----------|
-| **PvP action endpoint broken** | battle.js:action | Player2 cannot submit actions (only validates player1_id) | **CRITICAL** |
+| ~~**PvP action endpoint broken**~~ | ~~battle.js:action~~ | ~~Player2 cannot submit actions~~ | ✅ FIXED |
 | PvP battles not started | coliseumService.js | Match found but battle not created | Medium |
-| No multi-player party tables | Database schema | Cannot form parties with other players | Medium |
-| Database 2-player limit | battles table | Schema only supports player1_id, player2_id | Medium |
+| ~~No multi-player party tables~~ | ~~Database schema~~ | ~~Cannot form parties~~ | ✅ FIXED (009_multiplayer_support.sql) |
+| ~~Database 2-player limit~~ | ~~battles table~~ | ~~Schema only supports 2 players~~ | ✅ FIXED (battle_players table) |
 | Audio system missing | BattleScene.js | No sound effects or music | Low |
 | Leaderboards missing | - | No player rankings | Low |
 
-### Battle System Architecture Overhaul (In Progress)
+### Battle System Architecture Overhaul (Complete)
 
 Phase 2 implementation of the hybrid HTTP/WebSocket battle system. See plan file: `/home/wizard/.claude/plans/drifting-soaring-quasar.md`
 
@@ -48,11 +48,14 @@ Phase 2 implementation of the hybrid HTTP/WebSocket battle system. See plan file
 | Fix PvP action endpoint | ✅ Complete | api/src/routes/battle.js |
 | Database migrations for multiplayer | ✅ Complete | 009_multiplayer_support.sql (parties, party_members, battle_players, pvp_ratings, coliseum_matches) |
 | Backend WebSocket infrastructure | ✅ Complete | battleWebsocket.js (new message types) |
-| Backend async turn processing | ✅ Complete | battleTurnManager.js (new), battle.js (async mode) |
-| Frontend WebSocket handlers | ⏳ Pending | BattleScene.js, websocket.js |
-| Frontend intent visualization | ⏳ Pending | BattleUI.js, BattleGrid.js |
-| Reconnection system | ⏳ Pending | battleReconnection.js |
-| Multi-player party system | ⏳ Pending | New routes and services |
+| Backend async turn processing | ✅ Complete | battleTurnManager.js (new), battle.js (async-only) |
+| Frontend WebSocket handlers | ✅ Complete | BattleScene.js (all handlers) |
+| Frontend intent visualization | ✅ Complete | BattleUI.js, BattleGrid.js (highlight types, colors, pulsing) |
+| Reconnection system | ✅ Complete | battleReconnection.js, rejoin endpoint, BattleScene handlers |
+| Multi-player party system | ✅ Complete | party.js routes (create, join, invite, leave) |
+| Remove deprecated sync mode | ✅ Complete | battle.js, battleService.js (async-only architecture) |
+
+**Architecture Summary:** All enemy turns now processed asynchronously via WebSocket. Server sends intent highlights (movement range, attack range, target tile) with timing delays before executing actions. Deprecated sync mode completely removed for cleaner codebase.
 
 ### Security Audit Completed (v5.0 → v6.0)
 
