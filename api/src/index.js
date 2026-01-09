@@ -20,6 +20,7 @@ const spritesRoutes = require('./routes/sprites');
 const shopRoutes = require('./routes/shop');
 const marketplaceRoutes = require('./routes/marketplace');
 const chatRoutes = require('./routes/chat');
+const guildRoutes = require('./routes/guild');
 
 const app = express();
 const server = http.createServer(app);
@@ -64,6 +65,7 @@ app.use('/api/sprites', spritesRoutes);
 app.use('/api/shops', shopRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/guild', guildRoutes);
 
 // Error handling
 app.use(errorHandler);
