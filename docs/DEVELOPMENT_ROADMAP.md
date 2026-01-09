@@ -57,6 +57,21 @@ Phase 2 implementation of the hybrid HTTP/WebSocket battle system. See plan file
 
 **Architecture Summary:** All enemy turns now processed asynchronously via WebSocket. Server sends intent highlights (movement range, attack range, target tile) with timing delays before executing actions. Deprecated sync mode completely removed for cleaner codebase.
 
+### Turn Event Queue & Camera Fixes (Complete - January 2026)
+
+Resolved critical camera bouncing and enemy movement issues in the async battle system. See plan: `/home/wizard/.claude/plans/serialized-moseying-milner.md`
+
+| Task | Status | Files |
+|------|--------|-------|
+| Turn event queue system | ✅ Complete | BattleScene.js (queueTurnEvent, processTurnEventQueue) |
+| Camera transition timing | ✅ Complete | BattleCamera.js (updateTurnTransition in update loop) |
+| Follow target tracking | ✅ Complete | BattleScene.js (setFollowTarget in processTurnStartEvent) |
+| Enemy resetTurnState fix | ✅ Complete | battleTurnManager.js (resetTurnState vs initializeTurnState) |
+| AI pathfinding obstacles | ✅ Complete | aiService.js (isReachable using calculatePathCost) |
+| Handler queue bypass fixes | ✅ Complete | BattleScene.js (handleRemoteYourTurn, handleRemoteStateUpdate) |
+
+**Root Cause:** HTTP responses arrived before WebSocket events, causing multiple camera control systems to fight. Fixed by implementing a sequential turn event queue where all camera transitions wait for completion before advancing.
+
 ### Security Audit Completed (v5.0 → v6.0)
 
 A comprehensive security audit was performed in January 2026. See `docs/TECHNICAL_IMPROVEMENTS.md` for full details.
@@ -961,3 +976,4 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 | 3.0 | Jan 2026 | - | **Status correction**: Thorough code verification revealed inflated completion percentages. Revised overall from 94% to 30%. Added blocking issues section, known placeholders tracker, all documented but unimplemented features (4 advanced guilds, enemy abilities, boss mechanics, shop system, marketplace, enhanced item system). Split tasks into backend/frontend completion tracking. |
 | 4.0 | Jan 2026 | - | Updated status after roadmap audit. Many features were working but not documented. Revised overall from 30% to 60%. |
 | 5.0 | Jan 2026 | - | **Major feature completion**: Real skills in battle (character_skills), status effects from skills, item menu in battle, equipment stat bonuses applied, equipment requirements enforced, all 4 advanced guilds (Berserker, Sorcerer, Ninja, Alchemist ~60 skills), guild advancement system (level 20), ColiseumScene UI with matchmaking. Overall revised to 75%. |
+| 5.1 | Jan 2026 | - | **Turn event queue & camera fixes**: Implemented sequential turn event queue to resolve HTTP/WebSocket race conditions causing camera bounce. Fixed enemy movement (resetTurnState), AI pathfinding (obstacle-aware isReachable), and camera transition timing (updateTurnTransition in update loop). |
