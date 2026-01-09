@@ -9,6 +9,7 @@ const aiService = require('../services/aiService');
 const enemyService = require('../services/enemyService');
 const itemDropService = require('../services/itemDropService');
 const battleWebsocket = require('../services/battleWebsocket');
+const { createPlayerBattleUnit } = require('../services/battleUnitFactory');
 
 // ============================================================================
 // TERRAIN GENERATION (Server-side mirror of frontend BattleGrid logic)
@@ -400,38 +401,34 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
     units: party.map((char, idx) => {
       // Use formation position if provided, otherwise default layout
       const formationPos = formation?.[char.id];
-      const tileX = formationPos ? formationPos.tileX : 1 + (idx % 3);
-      const tileY = formationPos ? formationPos.tileY + 12 : 13 + Math.floor(idx / 3) * 2;
+      const defaultX = 1 + (idx % 3);
+      const defaultY = 13 + Math.floor(idx / 3) * 2;
 
-      return {
-        id: char.id,
-        type: 'player',
-        name: char.name,
-        class: char.class,
-        level: char.level,
-        hp: char.hp_current,
-        maxHp: char.hp_max + (parseInt(char.equip_hp, 10) || 0),
-        mp: char.mp_current,
-        maxMp: char.mp_max + (parseInt(char.equip_mp, 10) || 0),
-        // Apply equipment stat bonuses to combat stats
-        strength: char.strength + (parseInt(char.equip_strength, 10) || 0),
-        intelligence: char.intelligence + (parseInt(char.equip_intelligence, 10) || 0),
-        agility: char.agility + (parseInt(char.equip_agility, 10) || 0),
-        vitality: char.vitality + (parseInt(char.equip_vitality, 10) || 0),
-        luck: char.luck + (parseInt(char.equip_luck, 10) || 0),
-        // Equipment-only combat bonuses
-        attack: parseInt(char.equip_attack, 10) || 0,
-        defense: parseInt(char.equip_defense, 10) || 0,
-        magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
-        magicDefense: parseInt(char.equip_magic_defense, 10) || 0,
-        tileX,
-        tileY,
-        ct: 0,
-        hasActed: false,
-        statusEffects: [],
-        // Include learned skills for this character
-        skills: characterSkills[char.id] || []
-      };
+      // Use BattleUnit factory for unified unit creation
+      return createPlayerBattleUnit(
+        {
+          ...char,
+          user_id: req.user.userId,
+          hp_current: char.hp_current,
+          hp_max: char.hp_max,
+          mp_current: char.mp_current,
+          mp_max: char.mp_max,
+          equip_hp: parseInt(char.equip_hp, 10) || 0,
+          equip_mp: parseInt(char.equip_mp, 10) || 0,
+          equip_strength: parseInt(char.equip_strength, 10) || 0,
+          equip_intelligence: parseInt(char.equip_intelligence, 10) || 0,
+          equip_agility: parseInt(char.equip_agility, 10) || 0,
+          equip_vitality: parseInt(char.equip_vitality, 10) || 0,
+          equip_luck: parseInt(char.equip_luck, 10) || 0,
+          equip_attack: parseInt(char.equip_attack, 10) || 0,
+          equip_defense: parseInt(char.equip_defense, 10) || 0,
+          equip_magic_attack: parseInt(char.equip_magic_attack, 10) || 0,
+          equip_magic_defense: parseInt(char.equip_magic_defense, 10) || 0
+        },
+        formationPos ? { tileX: formationPos.tileX, tileY: formationPos.tileY + 12 } : null,
+        characterSkills[char.id] || [],
+        { defaultX, defaultY }
+      );
     })
   };
 
@@ -522,12 +519,19 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
     });
   }
 
+  // Get available actions for the first player unit (if their turn)
+  const firstPlayerUnit = initialState.units.find(u => u.id === initialState.activeUnitId && u.type === 'player');
+  const availableActions = firstPlayerUnit
+    ? battleService.getAvailableActions(firstPlayerUnit, initialState)
+    : null;
+
   res.status(201).json({
     battleId,
     mapSeed,
     mapWidth: 32,
     mapHeight: 32,
-    state: initialState
+    state: initialState,
+    availableActions
   });
 }));
 
@@ -549,6 +553,13 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
   }
 
   const battle = result.rows[0];
+  const state = battle.battle_state;
+
+  // Get available actions for active player unit
+  const activePlayerUnit = state.units?.find(u => u.id === state.activeUnitId && u.type === 'player');
+  const availableActions = activePlayerUnit
+    ? battleService.getAvailableActions(activePlayerUnit, state)
+    : null;
 
   res.json({
     battleId: battle.id,
@@ -558,7 +569,8 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
     mapHeight: battle.map_height,
     nodeType: battle.node_type,
     nodeName: battle.node_name,
-    state: battle.battle_state
+    state: state,
+    availableActions
   });
 }));
 
@@ -606,6 +618,13 @@ router.get('/:battleId/rejoin', authenticate, asyncHandler(async (req, res) => {
   // Get disconnected players info
   const disconnectedPlayers = battleReconnection.getDisconnectedPlayers(parseInt(battleId));
 
+  // Get available actions for active player unit
+  const battleState = battle.battle_state;
+  const activePlayerUnit = battleState.units?.find(u => u.id === battleState.activeUnitId && u.type === 'player');
+  const availableActions = activePlayerUnit
+    ? battleService.getAvailableActions(activePlayerUnit, battleState)
+    : null;
+
   res.json({
     success: true,
     battleId: battle.id,
@@ -615,9 +634,10 @@ router.get('/:battleId/rejoin', authenticate, asyncHandler(async (req, res) => {
     mapHeight: battle.map_height,
     nodeType: battle.node_type,
     nodeName: battle.node_name,
-    state: battle.battle_state,
+    state: battleState,
     gracePeriod: reconnectResult?.gracePeriod || 0,
-    disconnectedPlayers
+    disconnectedPlayers,
+    availableActions
   });
 }));
 

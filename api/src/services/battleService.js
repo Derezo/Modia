@@ -303,6 +303,235 @@ function getManhattanDistance(x1, y1, x2, y2) {
   return Math.abs(x2 - x1) + Math.abs(y2 - y1);
 }
 
+// ==================== Unified Tile/Action Availability ====================
+
+/**
+ * Get all tiles reachable within a unit's movement range
+ * Uses Dijkstra's algorithm with terrain costs
+ * This is the authoritative server-side implementation
+ *
+ * @param {Object} unit - The unit to calculate movement for
+ * @param {Object} state - Battle state with terrain and units
+ * @returns {Array<{x, y, cost}>} Array of reachable tile positions with movement costs
+ */
+function getReachableTiles(unit, state) {
+  // Check if unit can move (status effects)
+  if (!canUnitMove(unit)) {
+    return [];
+  }
+
+  const maxCost = getMovementRange(unit);
+  const startX = unit.tileX;
+  const startY = unit.tileY;
+  const mapWidth = state.mapWidth || 32;
+  const mapHeight = state.mapHeight || 32;
+
+  const costs = new Map();
+  const visited = new Set();
+  const queue = [{ x: startX, y: startY, cost: 0 }];
+
+  costs.set(`${startX},${startY}`, 0);
+
+  while (queue.length > 0) {
+    queue.sort((a, b) => a.cost - b.cost);
+    const current = queue.shift();
+    const currentKey = `${current.x},${current.y}`;
+
+    if (visited.has(currentKey)) continue;
+    visited.add(currentKey);
+
+    const neighbors = [
+      { x: current.x - 1, y: current.y },
+      { x: current.x + 1, y: current.y },
+      { x: current.x, y: current.y - 1 },
+      { x: current.x, y: current.y + 1 }
+    ];
+
+    for (const neighbor of neighbors) {
+      // Check bounds
+      if (neighbor.x < 0 || neighbor.y < 0 ||
+          neighbor.x >= mapWidth || neighbor.y >= mapHeight) continue;
+
+      // Get terrain cost
+      const terrain = state.terrain?.[neighbor.y]?.[neighbor.x] || 'grass';
+      const terrainCost = getTerrainMovementCost(terrain);
+
+      if (terrainCost === Infinity) continue;
+
+      // Check occupancy (can't move through other units)
+      const occupied = state.units.some(u =>
+        u.hp > 0 && u.tileX === neighbor.x && u.tileY === neighbor.y
+      );
+      if (occupied) continue;
+
+      const newCost = current.cost + terrainCost;
+      const key = `${neighbor.x},${neighbor.y}`;
+
+      if (newCost <= maxCost && (!costs.has(key) || costs.get(key) > newCost)) {
+        costs.set(key, newCost);
+        queue.push({ x: neighbor.x, y: neighbor.y, cost: newCost });
+      }
+    }
+  }
+
+  // Build result array (excluding start position)
+  const reachable = [];
+  for (const [key, cost] of costs) {
+    if (key === `${startX},${startY}`) continue;
+    const [x, y] = key.split(',').map(Number);
+    reachable.push({ x, y, cost });
+  }
+
+  return reachable;
+}
+
+/**
+ * Get targets in range for attacks or skills
+ * @param {Object} unit - The acting unit
+ * @param {Object} state - Battle state
+ * @param {number} range - Maximum range (Manhattan distance)
+ * @param {string} targetType - 'enemy' or 'player' or 'ally' (same type as unit)
+ * @returns {Array} Array of valid targets with positions
+ */
+function getTargetsInRange(unit, state, range, targetType) {
+  const targets = [];
+  const actualTargetType = targetType === 'ally' ? unit.type : targetType;
+
+  for (const other of state.units) {
+    if (other.hp <= 0) continue;
+    if (other.id === unit.id) continue; // Can't target self for attacks
+
+    // Check type matching
+    if (targetType === 'ally' && other.type !== unit.type) continue;
+    if (targetType !== 'ally' && other.type !== actualTargetType) continue;
+
+    const distance = getManhattanDistance(unit.tileX, unit.tileY, other.tileX, other.tileY);
+    if (distance > 0 && distance <= range) {
+      targets.push({
+        x: other.tileX,
+        y: other.tileY,
+        unitId: other.id,
+        unitName: other.name,
+        distance
+      });
+    }
+  }
+
+  return targets;
+}
+
+/**
+ * Get the opposite unit type
+ * @param {string} type - 'player' or 'enemy'
+ * @returns {string}
+ */
+function getOppositeType(type) {
+  return type === 'player' ? 'enemy' : 'player';
+}
+
+/**
+ * Get all available actions for a unit in the current battle state
+ * This is used by both player UI (sent to client) and AI decision making
+ *
+ * @param {Object} unit - The unit to get actions for
+ * @param {Object} state - Battle state
+ * @returns {Object} Available actions with targets
+ */
+function getAvailableActions(unit, state) {
+  const actions = {
+    canMove: false,
+    canAct: false,
+    movement: null,
+    attacks: null,
+    skills: null,
+    items: null
+  };
+
+  // Check two-action system state
+  if (!unit.moveUsed && canUnitMove(unit)) {
+    actions.canMove = true;
+    actions.movement = {
+      range: getMovementRange(unit),
+      reachableTiles: getReachableTiles(unit, state)
+    };
+  }
+
+  if (!unit.actUsed && canUnitAct(unit)) {
+    actions.canAct = true;
+
+    // Basic attack
+    const attackRange = unit.attackRange || getAttackRange(unit);
+    const attackTargets = getTargetsInRange(unit, state, attackRange, getOppositeType(unit.type));
+    actions.attacks = {
+      range: attackRange,
+      targets: attackTargets
+    };
+
+    // Skills (if unit can use skills)
+    if (canUnitUseSkills(unit) && unit.skills && unit.skills.length > 0) {
+      actions.skills = unit.skills
+        .filter(skill => {
+          // Only active skills
+          if (skill.type === 'passive') return false;
+          // Check MP cost
+          const mpCost = skill.mpCost || 0;
+          if (mpCost > unit.mp) return false;
+          // Check cooldown
+          if (unit.skillCooldowns?.[skill.id] > 0) return false;
+          return true;
+        })
+        .map(skill => {
+          // Determine targets based on skill type
+          let targets;
+          const skillRange = skill.range || 1;
+
+          if (skill.selfBuff || skill.cleanse || (skill.healPercent && !skill.targetAlly)) {
+            // Self-targeting
+            targets = [{ x: unit.tileX, y: unit.tileY, unitId: unit.id }];
+          } else if (skill.targetAlly || skill.targetAllAllies) {
+            // Ally-targeting
+            targets = getTargetsInRange(unit, state, skillRange, 'ally');
+            // Add self as valid target for ally skills
+            targets.unshift({ x: unit.tileX, y: unit.tileY, unitId: unit.id, distance: 0 });
+          } else {
+            // Enemy-targeting (default)
+            targets = getTargetsInRange(unit, state, skillRange, getOppositeType(unit.type));
+          }
+
+          return {
+            id: skill.id,
+            name: skill.name,
+            mpCost: skill.mpCost || 0,
+            range: skillRange,
+            cooldown: skill.cooldown || 0,
+            currentCooldown: unit.skillCooldowns?.[skill.id] || 0,
+            power: skill.power,
+            damageType: skill.damageType,
+            aoeRadius: skill.aoeRadius,
+            effect: skill.effect,
+            targets
+          };
+        });
+    }
+
+    // Items (only for players with consumables)
+    if (unit.type === 'player' && state.consumables) {
+      actions.items = state.consumables
+        .filter(item => item.quantity > 0)
+        .map(item => ({
+          itemId: item.itemId,
+          inventoryId: item.inventoryId,
+          name: item.name,
+          quantity: item.quantity,
+          effectType: item.effectType,
+          effectValue: item.effectValue
+        }));
+    }
+  }
+
+  return actions;
+}
+
 // ==================== Terrain Cost Pathfinding ====================
 
 /**
@@ -1324,6 +1553,11 @@ module.exports = {
   getAttackRange,
   getManhattanDistance,
   getSkillDefinition,
+  // Unified tile/action availability
+  getReachableTiles,
+  getTargetsInRange,
+  getAvailableActions,
+  getOppositeType,
   // AoE system
   getAoETiles,
   getUnitsInAoE,
