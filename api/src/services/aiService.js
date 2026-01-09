@@ -1,10 +1,20 @@
 /**
  * AI Service - Enemy decision making for tactical combat
  * Two-action system: each turn allows 1 move + 1 act (attack/skill)
+ *
+ * This service now uses utility-based AI with multi-actor lookahead
+ * for sophisticated tactical decision making.
  */
 
 // Import pathfinding for obstacle-aware movement decisions
 const battleService = require('./battleService');
+
+// Import new utility AI system
+const { UtilityAI, createAIForUnit, quickDecision } = require('./ai');
+
+// Configuration for utility AI usage
+const USE_UTILITY_AI = true;
+const UTILITY_AI_TIME_BUDGET = 450; // ms
 
 /**
  * Main AI decision function (legacy - returns single action)
@@ -41,6 +51,115 @@ function decideAction(enemy, battleState) {
  * @returns {Array} Array of actions to execute in order
  */
 function decideTurnActions(enemy, battleState) {
+  // Try utility AI first if enabled
+  if (USE_UTILITY_AI) {
+    try {
+      const actions = utilityAIDecision(enemy, battleState);
+      if (actions && actions.length > 0) {
+        return actions;
+      }
+    } catch (error) {
+      console.error('[AI] Utility AI failed, falling back to legacy:', error.message);
+    }
+  }
+
+  // Fall back to legacy AI patterns
+  return legacyDecideTurnActions(enemy, battleState);
+}
+
+/**
+ * Utility AI decision making
+ * Uses sophisticated utility-based scoring with multi-actor lookahead
+ * @param {Object} enemy - The enemy unit
+ * @param {Object} battleState - Current battle state
+ * @returns {Array} Actions array in legacy format
+ */
+function utilityAIDecision(enemy, battleState) {
+  const ai = createAIForUnit(enemy, {
+    timeBudgetMs: UTILITY_AI_TIME_BUDGET,
+    maxRounds: 2, // 2 rounds lookahead for performance
+    useLookahead: true
+  });
+
+  const decision = ai.decideTurnActions(enemy, battleState);
+
+  if (!decision || !decision.action) {
+    return null;
+  }
+
+  // Convert utility AI action format to legacy format
+  return convertToLegacyFormat(decision.action, enemy, battleState);
+}
+
+/**
+ * Convert utility AI action to legacy action format
+ * @param {Object} action - Utility AI action
+ * @param {Object} enemy - Acting unit
+ * @param {Object} battleState - Battle state
+ * @returns {Array} Legacy format actions
+ */
+function convertToLegacyFormat(action, enemy, battleState) {
+  const actions = [];
+
+  // Handle array of actions (move + act sequence)
+  if (Array.isArray(action)) {
+    for (const a of action) {
+      const converted = convertSingleAction(a, enemy, battleState);
+      if (converted) actions.push(converted);
+    }
+    return actions.length > 0 ? actions : [{ actionType: 'wait' }];
+  }
+
+  // Single action
+  const converted = convertSingleAction(action, enemy, battleState);
+  return converted ? [converted] : [{ actionType: 'wait' }];
+}
+
+/**
+ * Convert a single utility AI action to legacy format
+ * @param {Object} action - Single utility AI action
+ * @param {Object} enemy - Acting unit
+ * @param {Object} battleState - Battle state
+ * @returns {Object} Legacy format action
+ */
+function convertSingleAction(action, enemy, battleState) {
+  switch (action.type) {
+    case 'move':
+      return {
+        actionType: 'move',
+        targetTile: action.position
+      };
+
+    case 'attack':
+      return {
+        actionType: 'attack',
+        targetTile: { x: action.target.tileX, y: action.target.tileY }
+      };
+
+    case 'skill':
+      return {
+        actionType: 'skill',
+        skillId: action.skillId || action.skill?.id,
+        targetTile: action.target
+          ? { x: action.target.tileX, y: action.target.tileY }
+          : { x: enemy.tileX, y: enemy.tileY }
+      };
+
+    case 'wait':
+      return { actionType: 'wait' };
+
+    default:
+      return null;
+  }
+}
+
+/**
+ * Legacy AI decision function (fallback)
+ * @param {Object} enemy - The enemy unit
+ * @param {Object} battleState - Current battle state
+ * @returns {Array} Actions array
+ */
+function legacyDecideTurnActions(enemy, battleState) {
   const aiType = enemy.aiType || 'aggressive';
 
   switch (aiType) {
@@ -993,8 +1112,13 @@ function isReachable(enemy, targetX, targetY, battleState) {
 }
 
 module.exports = {
-  // Two-action turn system (primary)
+  // Primary entry point (uses utility AI with fallback)
   decideTurnActions,
+  // Utility AI specific
+  utilityAIDecision,
+  convertToLegacyFormat,
+  // Two-action turn system (legacy patterns)
+  legacyDecideTurnActions,
   aggressiveTurnAI,
   defensiveTurnAI,
   supportTurnAI,
@@ -1017,5 +1141,7 @@ module.exports = {
   findClosestUnit,
   manhattanDistance,
   isValidMove,
-  isReachable
+  isReachable,
+  // Configuration
+  USE_UTILITY_AI
 };

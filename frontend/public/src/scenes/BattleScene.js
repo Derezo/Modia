@@ -883,6 +883,9 @@ export class BattleScene extends Scene {
     const { unitId, availableActions } = payload;
     console.log('[Battle WS] Your turn:', unitId, '(input enabled, queue handles camera)');
 
+    // Store server-provided available actions for use in action methods
+    this.serverAvailableActions = availableActions || null;
+
     // Enable player input (but don't set activeUnitId - queue handles that)
     this.inputEnabled = true;
     this.currentAction = null;
@@ -1047,11 +1050,17 @@ export class BattleScene extends Scene {
     const activeUnit = this.getActiveUnit();
 
     if (activeUnit) {
-      this.validTiles = this.pathfinding.getReachableTiles(
-        activeUnit.gridX,
-        activeUnit.gridY,
-        this.movementRange
-      );
+      // Prefer server-provided reachable tiles if available
+      if (this.serverAvailableActions?.movement?.reachableTiles) {
+        this.validTiles = this.serverAvailableActions.movement.reachableTiles;
+      } else {
+        // Fall back to client-side pathfinding
+        this.validTiles = this.pathfinding.getReachableTiles(
+          activeUnit.gridX,
+          activeUnit.gridY,
+          this.movementRange
+        );
+      }
     }
 
     this.ui.setActionsEnabled(false);
@@ -1073,11 +1082,23 @@ export class BattleScene extends Scene {
     const activeUnit = this.getActiveUnit();
 
     if (activeUnit) {
-      this.validTiles = this.pathfinding.getAttackableTiles(
-        activeUnit.gridX,
-        activeUnit.gridY,
-        this.attackRange
-      );
+      // Prefer server-provided attack targets if available
+      if (this.serverAvailableActions?.attacks?.targets) {
+        // Convert server targets to tile format
+        this.validTiles = this.serverAvailableActions.attacks.targets.map(t => ({
+          x: t.tileX ?? t.x,
+          y: t.tileY ?? t.y,
+          unitId: t.id,
+          distance: t.distance
+        }));
+      } else {
+        // Fall back to client-side calculation
+        this.validTiles = this.pathfinding.getAttackableTiles(
+          activeUnit.gridX,
+          activeUnit.gridY,
+          this.attackRange
+        );
+      }
     }
 
     this.ui.setActionsEnabled(false);
@@ -1249,11 +1270,24 @@ export class BattleScene extends Scene {
     }
 
     if (activeUnit && skill) {
-      this.validTiles = this.pathfinding.getAttackableTiles(
-        activeUnit.gridX,
-        activeUnit.gridY,
-        skill.range || this.attackRange
-      );
+      // Prefer server-provided skill targets if available
+      const serverSkill = this.serverAvailableActions?.skills?.find(s => s.id === skillId);
+      if (serverSkill?.targets) {
+        // Convert server targets to tile format
+        this.validTiles = serverSkill.targets.map(t => ({
+          x: t.tileX ?? t.x,
+          y: t.tileY ?? t.y,
+          unitId: t.unitId ?? t.id,
+          distance: t.distance
+        }));
+      } else {
+        // Fall back to client-side calculation
+        this.validTiles = this.pathfinding.getAttackableTiles(
+          activeUnit.gridX,
+          activeUnit.gridY,
+          skill.range || this.attackRange
+        );
+      }
     }
 
     this.ui.hideSkillPanel();
@@ -1599,6 +1633,9 @@ export class BattleScene extends Scene {
     this.currentAction = null;
     this.validTiles = [];
     this.pendingAction = null;
+
+    // Store full availableActions for use in action methods
+    this.serverAvailableActions = availableActions || null;
 
     // Check battle end
     if (battleStatus !== 'active') {

@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 5.0 |
+| Version | 6.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -57,6 +57,30 @@ Phase 2 implementation of the hybrid HTTP/WebSocket battle system. See plan file
 
 **Architecture Summary:** All enemy turns now processed asynchronously via WebSocket. Server sends intent highlights (movement range, attack range, target tile) with timing delays before executing actions. Deprecated sync mode completely removed for cleaner codebase.
 
+### Battle Formation Scene Enhancement (Complete - January 2026)
+
+Major visual and UX overhaul of the BattleFormationScene with context-aware theming, responsive layout, and immersive ambient effects. See plan: `/home/wizard/.claude/plans/composed-riding-newell.md`
+
+| Task | Status | Files |
+|------|--------|-------|
+| Refactored layout (side drawer, fixed structure) | ✅ Complete | BattleFormationScene.js |
+| FormationTheme base class | ✅ Complete | formation/FormationTheme.js |
+| Theme detection (coliseum vs guild vs standard) | ✅ Complete | BattleFormationScene.js |
+| Mobile responsive layout with bottom sheet | ✅ Complete | BattleFormationScene.js |
+| Diorama grid with biome terrain | ✅ Complete | formation/FormationGrid.js |
+| Placement slot highlighting (pulsing gold) | ✅ Complete | FormationGrid.js |
+| Themed Start Battle buttons (6 SVG variants) | ✅ Complete | formation/StartBattleButton.js |
+| Environmental animations (per-biome particles) | ✅ Complete | BattlefieldTheme.js |
+| Rising tension system | ✅ Complete | FormationTheme.js |
+| Battlefield Overview theme (standard battles) | ✅ Complete | themes/BattlefieldTheme.js |
+| Pit Fighter's Circle theme (Coliseum) | ✅ Complete | themes/PitFighterTheme.js |
+| Arcane Circle Chamber theme (Wizard Guild) | ✅ Complete | themes/ArcaneChamberTheme.js |
+| Armory Staging Ground theme (Warrior Guild) | ✅ Complete | themes/ArmoryTheme.js |
+| Traditional Dojo theme (Monk Guild) | ✅ Complete | themes/DojoTheme.js |
+| Clockwork Factory theme (Chemist Guild) | ✅ Complete | themes/ClockworkTheme.js |
+
+**Key Fixes:** Fixed layout shift bug (side drawer with fixed 280px width), added mobile-first responsive design with bottom sheet for party roster, created 6 unique themed environments with distinct ambient effects, particles, and Start Battle button variants.
+
 ### Turn Event Queue & Camera Fixes (Complete - January 2026)
 
 Resolved critical camera bouncing and enemy movement issues in the async battle system. See plan: `/home/wizard/.claude/plans/serialized-moseying-milner.md`
@@ -71,6 +95,35 @@ Resolved critical camera bouncing and enemy movement issues in the async battle 
 | Handler queue bypass fixes | ✅ Complete | BattleScene.js (handleRemoteYourTurn, handleRemoteStateUpdate) |
 
 **Root Cause:** HTTP responses arrived before WebSocket events, causing multiple camera control systems to fight. Fixed by implementing a sequential turn event queue where all camera transitions wait for completion before advancing.
+
+### Advanced AI System (Complete - January 2026)
+
+Major overhaul of NPC AI with utility-based scoring and multi-actor lookahead. See plan: `/home/wizard/.claude/plans/merry-dreaming-stallman.md` and documentation: `docs/AI_SYSTEM.md`
+
+| Task | Status | Files |
+|------|--------|-------|
+| Unified BattleUnit factory | ✅ Complete | battleUnitFactory.js |
+| Server-side pathfinding (getReachableTiles) | ✅ Complete | battleService.js |
+| Server-provided availableActions | ✅ Complete | battleService.js, battle.js |
+| Database migration (unified units) | ✅ Complete | 010_unified_unit_system.sql |
+| Monster skill trees config | ✅ Complete | config/monsterSkillTrees.js |
+| NPC skill database migration | ✅ Complete | 011_npc_skills.sql |
+| NPC skill generation service | ✅ Complete | npcSkillService.js |
+| Utility AI module (7 files) | ✅ Complete | services/ai/*.js |
+| Multi-actor lookahead (2-3 rounds) | ✅ Complete | ai/lookahead.js |
+| AI pattern weights (9 patterns) | ✅ Complete | ai/patternWeights.js |
+| Transposition table & caching | ✅ Complete | ai/cache.js |
+| aiService.js integration | ✅ Complete | aiService.js |
+| Frontend server-action integration | ✅ Complete | BattleScene.js |
+| AI_SYSTEM.md documentation | ✅ Complete | docs/AI_SYSTEM.md |
+
+**Key Features:**
+- **Utility-Based Scoring**: 9 weighted factors (damage dealt/received, kill potential, position quality, etc.)
+- **Multi-Actor Lookahead**: Simulates 2-3 turns ahead considering ALL characters (allies and enemies)
+- **9 AI Patterns**: aggressive, defensive, support, tactical, pack, ambush, berserker, ranged, boss
+- **Monster Skill Trees**: 9 archetypes (beast, dragon, undead, elemental, humanoid, construct, demon, insect, plant) with themed skill branches
+- **Humanoid NPC Skills**: NPCs with humanoid archetype use player guild skill trees
+- **Performance Optimized**: Alpha-beta pruning, transposition table, killer moves, iterative deepening with 450ms time budget
 
 ### Security Audit Completed (v5.0 → v6.0)
 
@@ -426,15 +479,19 @@ Implement the core turn-based tactical battle system for PvE encounters.
   - [x] Randomized enemy positions on right side of map
   - [x] Server-driven encounter preview API
 
-#### 4.2.3.1 Enemy AI Archetypes (5/7 Implemented)
+#### 4.2.3.1 Enemy AI Archetypes (9/9 Implemented - Utility AI)
 
-- [x] Aggressive (charge forward, target highest DPS)
-- [x] Defensive (protect allies, retreat at 50% HP)
-- [x] Support (heal/buff allies, avoid frontline)
-- [x] Tactical (control positions, setup combos)
-- [x] Pack Tactics (coordinate with pack members)
-- [ ] Hit-and-Run (attack then retreat, avoid corners)
-- [ ] Ambush (hide until strike, +100% first attack)
+> **Note:** All AI patterns now use the new utility-based AI system with multi-actor lookahead. See `docs/AI_SYSTEM.md` for details.
+
+- [x] Aggressive (high damage dealt weight, low survival priority)
+- [x] Defensive (high survival priority, safe positioning)
+- [x] Support (prioritizes healing, maintains distance)
+- [x] Tactical (balanced weights, high kill potential focus)
+- [x] Pack (high ally support, swarm behavior)
+- [x] Ambush (position-focused, waits for optimal strikes)
+- [x] Berserker (extreme aggression, minimal self-preservation)
+- [x] Ranged (maintains safe distance, kiting behavior)
+- [x] Boss (adaptive, balanced across all factors)
 
 #### 4.2.3.2 Enemy Abilities (NOT IMPLEMENTED)
 
@@ -856,6 +913,7 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 - [x] BATTLE_MESSAGING_PROTOCOL.md (v1.0) - Hybrid HTTP/WebSocket protocol, state sync, timing constants
 - [x] BATTLE_RECONNECTION.md (v1.0) - Reconnection flow, state persistence, anti-abuse
 - [x] BATTLE_ANIMATIONS.md (v1.0) - Animation system, intent visualization, timing constants
+- [x] AI_SYSTEM.md (v1.0) - Utility-based AI, multi-actor lookahead, NPC skill system, monster archetypes
 - [ ] README.md (setup guide)
 - [ ] CONTRIBUTING.md
 - [ ] CHANGELOG.md
@@ -977,3 +1035,4 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 | 4.0 | Jan 2026 | - | Updated status after roadmap audit. Many features were working but not documented. Revised overall from 30% to 60%. |
 | 5.0 | Jan 2026 | - | **Major feature completion**: Real skills in battle (character_skills), status effects from skills, item menu in battle, equipment stat bonuses applied, equipment requirements enforced, all 4 advanced guilds (Berserker, Sorcerer, Ninja, Alchemist ~60 skills), guild advancement system (level 20), ColiseumScene UI with matchmaking. Overall revised to 75%. |
 | 5.1 | Jan 2026 | - | **Turn event queue & camera fixes**: Implemented sequential turn event queue to resolve HTTP/WebSocket race conditions causing camera bounce. Fixed enemy movement (resetTurnState), AI pathfinding (obstacle-aware isReachable), and camera transition timing (updateTurnTransition in update loop). |
+| 6.0 | Jan 2026 | - | **Advanced AI System overhaul**: Complete rewrite of NPC AI with utility-based scoring, multi-actor lookahead (2-3 rounds), 9 AI patterns (aggressive, defensive, support, tactical, pack, ambush, berserker, ranged, boss), monster skill trees (9 archetypes with themed skill branches), unified BattleUnit factory, server-provided availableActions, NPC skill generation service. New AI module in `api/src/services/ai/` with 7 core files. Added `docs/AI_SYSTEM.md` documentation. |
