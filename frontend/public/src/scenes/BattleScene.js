@@ -71,6 +71,8 @@ export class BattleScene extends Scene {
     // Turn transition tracking
     this.lastActiveUnitId = null;
     this.wsHandledTurnTransition = false; // Prevents duplicate camera pan when WebSocket already handled it
+    this.inEnemySequence = false; // Track if we're in a sequence of enemy turns
+    this.lastTurnWasEnemy = false; // Track if previous turn was enemy
 
     // Event cleanup
     this.abortController = null;
@@ -645,6 +647,17 @@ export class BattleScene extends Scene {
     // Update active unit
     this.battleState.activeUnitId = unitId;
 
+    // Update selection to active unit (fixes yellow circle staying on wrong unit)
+    const activeUnit = this.units.get(unitId);
+    if (activeUnit) {
+      // Clear previous selection
+      if (this.selectedUnit) {
+        this.selectedUnit.isSelected = false;
+      }
+      this.selectedUnit = activeUnit;
+      activeUnit.isSelected = true;
+    }
+
     // Update turn order UI immediately (fixes stale turn order display)
     if (this.ui) {
       this.ui.updateTurnOrder(this.battleState);
@@ -653,11 +666,31 @@ export class BattleScene extends Scene {
     // Mark that WebSocket is handling this turn transition (prevents duplicate camera pan in updateUI)
     this.wsHandledTurnTransition = true;
 
-    // Pan camera to the active unit
+    // Intelligent camera panning:
+    // - Always pan when it becomes player's turn
+    // - Only pan to FIRST enemy of an enemy sequence (not every enemy)
+    // - This prevents rapid camera bouncing during enemy turns
+    const isEnemy = unitType === 'enemy';
+    const isFirstEnemyAfterPlayer = isEnemy && !this.lastTurnWasEnemy;
+    const isPlayerTurn = unitType === 'player' || unitType === 'player_local';
+
     if (position && this.camera && this.grid) {
-      const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
-      this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 300);
+      if (isPlayerTurn) {
+        // Always pan to player when it's their turn
+        const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
+        this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 300);
+        this.inEnemySequence = false;
+      } else if (isFirstEnemyAfterPlayer) {
+        // Pan to first enemy of the sequence
+        const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
+        this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 300);
+        this.inEnemySequence = true;
+      }
+      // For subsequent enemies in sequence, don't pan - let camera follow the action via unit movement
     }
+
+    // Track turn type for next turn
+    this.lastTurnWasEnemy = isEnemy;
 
     // Update UI to show whose turn it is
     if (this.ui) {
@@ -665,11 +698,8 @@ export class BattleScene extends Scene {
     }
 
     // If it's an enemy turn, show "thinking" indicator
-    if (unitType === 'enemy') {
-      const unit = this.units.get(unitId);
-      if (unit) {
-        unit.setThinking(true);
-      }
+    if (isEnemy && activeUnit) {
+      activeUnit.setThinking(true);
     }
   }
 
@@ -1884,8 +1914,8 @@ export class BattleScene extends Scene {
       }
     }
 
-    // Render grid with highlights and camera
-    this.grid.render(ctx, highlights, this.camera);
+    // Render grid with highlights and camera (includes intent highlights from WebSocket)
+    this.grid.renderWithIntentHighlights(ctx, highlights, this.camera);
 
     // Render terrain tooltip when hovering during move action
     this.renderTerrainTooltip(ctx);
