@@ -6,6 +6,7 @@
  */
 
 const { CLASS_MOVEMENT } = require('../config/constants');
+const traitService = require('./traitService');
 
 /**
  * BattleUnit interface (documented for reference):
@@ -56,14 +57,15 @@ const { CLASS_MOVEMENT } = require('../config/constants');
  * @param {Object} character - Character from database
  * @param {Object} formation - Formation position data (optional)
  * @param {Array} skills - Loaded skills array
- * @param {Object} options - Additional options
+ * @param {Object} options - Additional options (defaultX, defaultY, traits)
  * @returns {Object} BattleUnit object
  */
 function createPlayerBattleUnit(character, formation = null, skills = [], options = {}) {
   const defaultX = options.defaultX ?? 3;
   const defaultY = options.defaultY ?? 15;
+  const traits = options.traits || [];
 
-  return {
+  const unit = {
     // Identity
     id: character.id,
     type: 'player',
@@ -107,6 +109,9 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
     // Skills
     skills: skills,
 
+    // Traits (innate bonuses from guild recruits)
+    traits: traits,
+
     // Movement/Range (from class)
     movement: CLASS_MOVEMENT[character.class?.toLowerCase()] || 3,
     attackRange: 1, // Default melee, can be extended by equipment
@@ -115,8 +120,16 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
     ownerId: character.user_id,
 
     // Equipment info for rendering/display
-    equipment: character.equipment || null
+    equipment: character.equipment || null,
+
+    // Death save tracking (for Second Wind trait)
+    deathSaveUsed: false
   };
+
+  // Apply battle-start trait effects (HP/MP bonuses, movement/range bonuses)
+  traitService.applyBattleStartTraits(unit);
+
+  return unit;
 }
 
 /**
