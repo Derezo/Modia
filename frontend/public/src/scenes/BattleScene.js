@@ -387,6 +387,70 @@ export class BattleScene extends Scene {
       }
     });
     this.wsUnsubscribers.push(enemyActionsUnsub);
+
+    // NEW: Handle turn start (camera pan trigger)
+    const turnStartUnsub = socket.on('battle:turn_start', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleRemoteTurnStart(payload);
+      }
+    });
+    this.wsUnsubscribers.push(turnStartUnsub);
+
+    // NEW: Handle intent highlights (enemy visualization)
+    const intentHighlightUnsub = socket.on('battle:intent_highlight', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleRemoteIntentHighlight(payload);
+      }
+    });
+    this.wsUnsubscribers.push(intentHighlightUnsub);
+
+    // NEW: Handle "your turn" notification
+    const yourTurnUnsub = socket.on('battle:your_turn', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleRemoteYourTurn(payload);
+      }
+    });
+    this.wsUnsubscribers.push(yourTurnUnsub);
+
+    // NEW: Handle player disconnection
+    const playerDisconnectedUnsub = socket.on('battle:player_disconnected', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleRemotePlayerDisconnected(payload);
+      }
+    });
+    this.wsUnsubscribers.push(playerDisconnectedUnsub);
+
+    // NEW: Handle player reconnection
+    const playerReconnectedUnsub = socket.on('battle:player_reconnected', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleRemotePlayerReconnected(payload);
+      }
+    });
+    this.wsUnsubscribers.push(playerReconnectedUnsub);
+
+    // NEW: Handle full state sync (for reconnection)
+    const stateSyncUnsub = socket.on('battle:state_sync', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleRemoteStateSync(payload);
+      }
+    });
+    this.wsUnsubscribers.push(stateSyncUnsub);
+
+    // Handle socket disconnect - trigger auto-reconnect
+    const disconnectUnsub = socket.on('disconnect', () => {
+      this.handleSocketDisconnect();
+    });
+    this.wsUnsubscribers.push(disconnectUnsub);
+
+    // Handle socket reconnect - rejoin battle room
+    const reconnectUnsub = socket.on('connect', () => {
+      if (this.battleId) {
+        console.log('[Battle WS] Socket reconnected, rejoining battle room');
+        socket.joinBattleRoom(this.battleId);
+        this.attemptRejoin();
+      }
+    });
+    this.wsUnsubscribers.push(reconnectUnsub);
   }
 
   /**
@@ -405,6 +469,98 @@ export class BattleScene extends Scene {
     if (this.game.socket && this.battleId) {
       this.game.socket.leaveBattleRoom(this.battleId);
     }
+  }
+
+  /**
+   * Attempt to rejoin battle after disconnect
+   * @returns {Promise<boolean>} Whether rejoin was successful
+   */
+  async attemptRejoin() {
+    if (!this.battleId) {
+      console.error('[Battle] Cannot rejoin - no battle ID');
+      return false;
+    }
+
+    try {
+      console.log('[Battle] Attempting to rejoin battle', this.battleId);
+
+      // Show reconnecting notification
+      if (this.ui) {
+        this.ui.showNotification('Reconnecting...', 'info', 5000);
+      }
+
+      const response = await this.game.api.request(`/battle/${this.battleId}/rejoin`);
+
+      if (response.success) {
+        console.log('[Battle] Rejoin successful');
+
+        // Update local state with server state
+        this.battleState = response.state;
+        this.syncUnitsWithState(response.state.units);
+        this.updateUI();
+
+        // Rejoin WebSocket room
+        if (this.game.socket) {
+          this.game.socket.joinBattleRoom(this.battleId);
+        }
+
+        // Show reconnection notification
+        if (this.ui) {
+          this.ui.showNotification('Reconnected!', 'success', 2000);
+        }
+
+        // Handle grace period (brief delay before turn timer resumes)
+        if (response.gracePeriod > 0) {
+          console.log(`[Battle] Grace period: ${response.gracePeriod}ms`);
+        }
+
+        // Show any disconnected players
+        if (response.disconnectedPlayers?.length > 0) {
+          for (const player of response.disconnectedPlayers) {
+            this.ui?.showNotification(
+              `${player.playerName} is disconnected`,
+              'warning',
+              5000
+            );
+          }
+        }
+
+        return true;
+      }
+    } catch (error) {
+      console.error('[Battle] Rejoin failed:', error);
+
+      if (this.ui) {
+        this.ui.showNotification('Reconnection failed', 'error', 3000);
+      }
+
+      // If battle is no longer active, return to world map
+      if (error.message?.includes('no longer active')) {
+        this.game.changeScene('WorldMap');
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Setup auto-reconnect on WebSocket disconnect
+   * Called from the main socket connection logic
+   */
+  handleSocketDisconnect() {
+    console.log('[Battle] WebSocket disconnected during battle');
+
+    if (this.ui) {
+      this.ui.showNotification('Connection lost - attempting reconnect...', 'warning', 5000);
+    }
+
+    // Attempt reconnect after a brief delay
+    setTimeout(() => {
+      if (this.battleId && this.game.currentScene === this) {
+        this.attemptRejoin();
+      }
+    }, 1000);
   }
 
   /**
@@ -481,6 +637,146 @@ export class BattleScene extends Scene {
     // These are typically already processed by the server response
     // This handler is for multiplayer scenarios
     console.log('[Battle WS] Enemy actions received:', payload.actions?.length || 0);
+  }
+
+  /**
+   * Handle turn start event (camera pan and UI update)
+   */
+  handleRemoteTurnStart(payload) {
+    const { unitId, unitName, unitType, position, turnPredictions } = payload;
+    console.log(`[Battle WS] Turn start: ${unitName} (${unitType})`);
+
+    // Update turn predictions if provided
+    if (turnPredictions) {
+      this.battleState.turnPredictions = turnPredictions;
+    }
+
+    // Update active unit
+    this.battleState.activeUnitId = unitId;
+
+    // Pan camera to the active unit
+    if (position && this.camera) {
+      this.camera.panToTile(position.x, position.y, 300);
+    }
+
+    // Update UI to show whose turn it is
+    if (this.ui) {
+      this.ui.showTurnIndicator(unitName, unitType);
+    }
+
+    // If it's an enemy turn, show "thinking" indicator
+    if (unitType === 'enemy') {
+      const unit = this.units.get(unitId);
+      if (unit) {
+        unit.showThinkingIndicator(true);
+      }
+    }
+  }
+
+  /**
+   * Handle intent highlight event (enemy visualization)
+   */
+  handleRemoteIntentHighlight(payload) {
+    const { unitId, highlightType, tiles, duration } = payload;
+    console.log(`[Battle WS] Intent highlight: ${highlightType} (${tiles?.length || 0} tiles)`);
+
+    // Hide thinking indicator when intent is shown
+    const unit = this.units.get(unitId);
+    if (unit) {
+      unit.showThinkingIndicator(false);
+    }
+
+    // Show the highlight on the grid
+    if (this.grid && tiles && tiles.length > 0) {
+      this.grid.showIntentHighlight(highlightType, tiles, duration);
+    }
+  }
+
+  /**
+   * Handle "your turn" notification
+   */
+  handleRemoteYourTurn(payload) {
+    const { unitId, availableActions } = payload;
+    console.log('[Battle WS] Your turn:', unitId);
+
+    // Update state
+    this.battleState.activeUnitId = unitId;
+
+    // Enable player input
+    this.inputEnabled = true;
+    this.currentAction = null;
+    this.validTiles = [];
+
+    // Update UI
+    this.updateUI();
+
+    // Flash the unit or play a sound to indicate it's player's turn
+    const unit = this.units.get(unitId);
+    if (unit) {
+      unit.playTurnStartAnimation();
+    }
+  }
+
+  /**
+   * Handle player disconnection notification
+   */
+  handleRemotePlayerDisconnected(payload) {
+    const { playerId, playerName } = payload;
+    console.log(`[Battle WS] Player disconnected: ${playerName}`);
+
+    // Show notification
+    if (this.ui) {
+      this.ui.showNotification(`${playerName} disconnected`, 'warning', 3000);
+    }
+
+    // Mark player's units as disconnected (visual indicator)
+    for (const unit of this.units.values()) {
+      if (unit.ownerId === playerId) {
+        unit.setDisconnected(true);
+      }
+    }
+  }
+
+  /**
+   * Handle player reconnection notification
+   */
+  handleRemotePlayerReconnected(payload) {
+    const { playerId, playerName } = payload;
+    console.log(`[Battle WS] Player reconnected: ${playerName}`);
+
+    // Show notification
+    if (this.ui) {
+      this.ui.showNotification(`${playerName} reconnected`, 'success', 3000);
+    }
+
+    // Clear disconnected state from player's units
+    for (const unit of this.units.values()) {
+      if (unit.ownerId === playerId) {
+        unit.setDisconnected(false);
+      }
+    }
+  }
+
+  /**
+   * Handle full state sync (for reconnection)
+   */
+  handleRemoteStateSync(payload) {
+    const { state, reason } = payload;
+    console.log(`[Battle WS] State sync: ${reason}`);
+
+    // Update battle state
+    this.battleState = state;
+
+    // Resync all units
+    this.syncUnitsWithState(state.units);
+
+    // Update UI
+    this.updateUI();
+
+    // Show reconnect notification if applicable
+    if (reason === 'reconnect' && this.ui) {
+      this.ui.showNotification('Reconnected to battle', 'success', 2000);
+    }
   }
 
   /**

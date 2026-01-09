@@ -544,6 +544,65 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
   });
 }));
 
+// GET /api/battle/:battleId/rejoin - Rejoin an active battle after disconnect
+router.get('/:battleId/rejoin', authenticate, asyncHandler(async (req, res) => {
+  const { battleId } = req.params;
+  const battleReconnection = require('../services/battleReconnection');
+
+  // Verify player has access to this battle
+  const result = await query(
+    `SELECT b.id, b.battle_type, b.battle_state, b.status, b.map_seed, b.map_width, b.map_height,
+            wn.node_type, wn.name as node_name
+     FROM battles b
+     JOIN world_nodes wn ON b.node_id = wn.id
+     WHERE b.id = $1
+       AND (b.player1_id = $2 OR b.player2_id = $2 OR
+            EXISTS (SELECT 1 FROM battle_players bp WHERE bp.battle_id = b.id AND bp.player_id = $2))`,
+    [battleId, req.user.userId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new AppError('Battle not found or you do not have access', 404);
+  }
+
+  const battle = result.rows[0];
+
+  if (battle.status !== 'active') {
+    throw new AppError('Battle is no longer active', 400);
+  }
+
+  // Get username for reconnection notification
+  const userResult = await query(
+    'SELECT username FROM users WHERE id = $1',
+    [req.user.userId]
+  );
+  const playerName = userResult.rows[0]?.username || 'Unknown';
+
+  // Handle reconnection (clears timeout, notifies other players)
+  const reconnectResult = await battleReconnection.handleReconnect(
+    parseInt(battleId),
+    req.user.userId,
+    playerName
+  );
+
+  // Get disconnected players info
+  const disconnectedPlayers = battleReconnection.getDisconnectedPlayers(parseInt(battleId));
+
+  res.json({
+    success: true,
+    battleId: battle.id,
+    battleType: battle.battle_type,
+    mapSeed: battle.map_seed,
+    mapWidth: battle.map_width,
+    mapHeight: battle.map_height,
+    nodeType: battle.node_type,
+    nodeName: battle.node_name,
+    state: battle.battle_state,
+    gracePeriod: reconnectResult?.gracePeriod || 0,
+    disconnectedPlayers
+  });
+}));
+
 // POST /api/battle/action - Submit battle action
 router.post('/action', authenticate, asyncHandler(async (req, res) => {
   const { battleId, actionType, unitId, targetTile, skillId } = req.body;

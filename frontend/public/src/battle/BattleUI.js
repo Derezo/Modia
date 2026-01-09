@@ -176,6 +176,34 @@ export class BattleUI {
         </div>
       </div>
 
+      <!-- Turn Indicator (shown briefly when turn changes) -->
+      <div id="turn-indicator" style="
+        position: absolute;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        pointer-events: none;
+        display: none;
+        z-index: 100;
+      ">
+        <div class="turn-indicator-content">
+          <span id="turn-indicator-text"></span>
+        </div>
+      </div>
+
+      <!-- Notification Container (for temporary messages) -->
+      <div id="notification-container" style="
+        position: absolute;
+        top: 120px;
+        right: 10px;
+        pointer-events: none;
+        z-index: 99;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-width: 300px;
+      "></div>
+
     `;
 
     // Add custom styles
@@ -302,6 +330,73 @@ export class BattleUI {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      /* Turn Indicator Styles */
+      .turn-indicator-content {
+        background: rgba(0, 0, 0, 0.85);
+        border: 2px solid #ffd700;
+        border-radius: 8px;
+        padding: 12px 24px;
+        font-size: 18px;
+        font-weight: bold;
+        text-align: center;
+        animation: turnIndicatorPulse 0.5s ease-out;
+      }
+      .turn-indicator-content.player {
+        border-color: #4a90d9;
+        color: #4a90d9;
+      }
+      .turn-indicator-content.player_local {
+        border-color: #4aff4a;
+        color: #4aff4a;
+      }
+      .turn-indicator-content.player_remote {
+        border-color: #d9d94a;
+        color: #d9d94a;
+      }
+      .turn-indicator-content.enemy {
+        border-color: #d94a4a;
+        color: #d94a4a;
+      }
+      @keyframes turnIndicatorPulse {
+        0% { transform: scale(0.8); opacity: 0; }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); opacity: 1; }
+      }
+
+      /* Notification Styles */
+      .battle-notification {
+        background: rgba(0, 0, 0, 0.9);
+        border-radius: 6px;
+        padding: 10px 16px;
+        font-size: 13px;
+        animation: notificationSlideIn 0.3s ease-out;
+        border-left: 4px solid #888;
+      }
+      .battle-notification.info {
+        border-left-color: #4a90d9;
+        color: #4a90d9;
+      }
+      .battle-notification.warning {
+        border-left-color: #d9a54a;
+        color: #d9a54a;
+      }
+      .battle-notification.error {
+        border-left-color: #d94a4a;
+        color: #d94a4a;
+      }
+      .battle-notification.success {
+        border-left-color: #4ad94a;
+        color: #4ad94a;
+      }
+      @keyframes notificationSlideIn {
+        0% { transform: translateX(100%); opacity: 0; }
+        100% { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes notificationFadeOut {
+        0% { opacity: 1; }
+        100% { opacity: 0; transform: translateX(50%); }
       }
     `;
     document.head.appendChild(style);
@@ -755,9 +850,118 @@ export class BattleUI {
   }
 
   /**
+   * Show turn indicator (displays whose turn it is)
+   * @param {string} unitName - Name of the unit whose turn it is
+   * @param {string} unitType - Type of unit: 'player', 'player_local', 'player_remote', 'enemy'
+   * @param {number} duration - How long to show the indicator (ms), default 2000
+   */
+  showTurnIndicator(unitName, unitType, duration = 2000) {
+    const indicator = this.element?.querySelector('#turn-indicator');
+    const content = this.element?.querySelector('.turn-indicator-content');
+    const text = this.element?.querySelector('#turn-indicator-text');
+
+    if (!indicator || !content || !text) return;
+
+    // Clear any existing timeout
+    if (this.turnIndicatorTimeout) {
+      clearTimeout(this.turnIndicatorTimeout);
+    }
+
+    // Set text and style based on unit type
+    let displayText = '';
+    if (unitType === 'player_local') {
+      displayText = 'Your Turn!';
+    } else if (unitType === 'player_remote') {
+      displayText = `${unitName}'s Turn`;
+    } else if (unitType === 'enemy') {
+      displayText = `Enemy: ${unitName}`;
+    } else {
+      displayText = `${unitName}'s Turn`;
+    }
+
+    text.textContent = displayText;
+
+    // Remove old type classes and add new one
+    content.classList.remove('player', 'player_local', 'player_remote', 'enemy');
+    content.classList.add(unitType || 'player');
+
+    // Reset animation by forcing reflow
+    indicator.style.display = 'none';
+    void indicator.offsetWidth; // Force reflow
+    indicator.style.display = 'block';
+
+    // Hide after duration
+    this.turnIndicatorTimeout = setTimeout(() => {
+      indicator.style.display = 'none';
+    }, duration);
+  }
+
+  /**
+   * Hide turn indicator immediately
+   */
+  hideTurnIndicator() {
+    const indicator = this.element?.querySelector('#turn-indicator');
+    if (indicator) {
+      indicator.style.display = 'none';
+    }
+    if (this.turnIndicatorTimeout) {
+      clearTimeout(this.turnIndicatorTimeout);
+      this.turnIndicatorTimeout = null;
+    }
+  }
+
+  /**
+   * Show a temporary notification message
+   * @param {string} message - The message to display
+   * @param {string} type - Notification type: 'info', 'warning', 'error', 'success'
+   * @param {number} duration - How long to show (ms), default 3000
+   */
+  showNotification(message, type = 'info', duration = 3000) {
+    const container = this.element?.querySelector('#notification-container');
+    if (!container) return;
+
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `battle-notification ${type}`;
+    notification.textContent = message;
+
+    container.appendChild(notification);
+
+    // Remove after duration with fade-out animation
+    setTimeout(() => {
+      notification.style.animation = 'notificationFadeOut 0.3s ease-out forwards';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.remove();
+        }
+      }, 300);
+    }, duration);
+
+    // Limit number of notifications shown (remove oldest if > 5)
+    const notifications = container.querySelectorAll('.battle-notification');
+    if (notifications.length > 5) {
+      notifications[0].remove();
+    }
+  }
+
+  /**
+   * Clear all notifications
+   */
+  clearNotifications() {
+    const container = this.element?.querySelector('#notification-container');
+    if (container) {
+      container.innerHTML = '';
+    }
+  }
+
+  /**
    * Destroy the UI
    */
   destroy() {
+    if (this.turnIndicatorTimeout) {
+      clearTimeout(this.turnIndicatorTimeout);
+      this.turnIndicatorTimeout = null;
+    }
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
