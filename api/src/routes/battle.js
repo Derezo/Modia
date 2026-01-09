@@ -472,14 +472,6 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
   // Advance CT and find the first actor
   battleService.advanceToNextActor(initialState);
 
-  // Check if the first actor is an enemy - if so, process their turns immediately
-  let initialEnemyActions = [];
-  const firstActor = initialState.units.find(u => u.id === initialState.activeUnitId);
-  if (firstActor && firstActor.type === 'enemy') {
-    // Process enemy turns until a player's turn
-    initialEnemyActions = battleService.processEnemyTurns(initialState, aiService);
-  }
-
   // Generate turn predictions
   initialState.turnPredictions = battleService.predictTurnOrder(initialState, 10);
 
@@ -503,13 +495,39 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
   // Join battle WebSocket room
   battleWebsocket.joinBattle(battleId, req.user.userId);
 
+  // Check if the first actor is an enemy - if so, process their turns asynchronously
+  const firstActor = initialState.units.find(u => u.id === initialState.activeUnitId);
+  if (firstActor && firstActor.type === 'enemy') {
+    // Async enemy turn processing - starts after response is sent via WebSocket
+    const battleTurnManager = require('../services/battleTurnManager');
+    setImmediate(async () => {
+      try {
+        const { state: updatedState, battleStatus } =
+          await battleTurnManager.processEnemyTurnsAsync(battleId, initialState, aiService, battleService);
+
+        // Update final state
+        await query(
+          'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
+          [JSON.stringify(updatedState), battleStatus, battleId]
+        );
+
+        if (battleStatus !== 'active') {
+          await handleBattleEnd(battleId, battleStatus, updatedState, req.user.userId);
+        } else {
+          battleTurnManager.notifyPlayerTurn(battleId, updatedState);
+        }
+      } catch (error) {
+        console.error('Initial enemy turn processing error:', error);
+      }
+    });
+  }
+
   res.status(201).json({
     battleId,
     mapSeed,
     mapWidth: 32,
     mapHeight: 32,
-    state: initialState,
-    initialEnemyActions: initialEnemyActions.length > 0 ? initialEnemyActions : undefined
+    state: initialState
   });
 }));
 
@@ -664,66 +682,53 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
   // Check if battle ended from player action
   let battleStatus = battleService.checkBattleEnd(state);
 
-  // Process enemy turns ONLY if turn is complete and battle is still active
-  let enemyActions = [];
+  // Track if turn continues (two-action system: move + act)
   const turnContinues = !result.turnEnded && battleStatus === 'active';
-
-  // Async mode is now DEFAULT for all battles (new WebSocket-driven turn processing)
-  // Use syncMode: true in request body to opt out (for backward compatibility testing)
-  const useAsyncTurns = req.body.syncMode !== true;
 
   if (result.turnEnded && battleStatus === 'active') {
     // Turn is complete - advance to next actor using CT system
     battleService.advanceToNextActorWithCT(state);
 
-    if (useAsyncTurns) {
-      // Async mode: spawn enemy turn processing in background
-      // Response returns immediately, enemy actions sent via WebSocket
-      const battleTurnManager = require('../services/battleTurnManager');
+    // Async mode: spawn enemy turn processing in background
+    // Response returns immediately, enemy actions sent via WebSocket
+    const battleTurnManager = require('../services/battleTurnManager');
 
-      // Save state first, then spawn async processing
-      await query(
-        'UPDATE battles SET battle_state = $1 WHERE id = $2',
-        [JSON.stringify(state), battleId]
-      );
+    // Save state first, then spawn async processing
+    await query(
+      'UPDATE battles SET battle_state = $1 WHERE id = $2',
+      [JSON.stringify(state), battleId]
+    );
 
-      // Process enemy turns asynchronously (don't await)
-      setImmediate(async () => {
-        try {
-          const { state: updatedState, battleStatus: finalStatus } =
-            await battleTurnManager.processEnemyTurnsAsync(battleId, state, aiService, battleService);
+    // Process enemy turns asynchronously (don't await)
+    setImmediate(async () => {
+      try {
+        const { state: updatedState, battleStatus: finalStatus } =
+          await battleTurnManager.processEnemyTurnsAsync(battleId, state, aiService, battleService);
 
-          // Update final state and status
-          await query(
-            'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
-            [JSON.stringify(updatedState), finalStatus, battleId]
-          );
+        // Update final state and status
+        await query(
+          'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
+          [JSON.stringify(updatedState), finalStatus, battleId]
+        );
 
-          // Handle battle end
-          if (finalStatus !== 'active') {
-            await handleBattleEnd(battleId, finalStatus, updatedState, req.user.userId);
-          } else {
-            // Notify next player it's their turn
-            battleTurnManager.notifyPlayerTurn(battleId, updatedState);
-          }
-        } catch (error) {
-          console.error('Async enemy turn processing error:', error);
+        // Handle battle end
+        if (finalStatus !== 'active') {
+          await handleBattleEnd(battleId, finalStatus, updatedState, req.user.userId);
+        } else {
+          // Notify next player it's their turn
+          battleTurnManager.notifyPlayerTurn(battleId, updatedState);
         }
-      });
-    } else {
-      // Sync mode: process all enemy turns before returning (backward compatible)
-      enemyActions = battleService.processEnemyTurns(state, aiService);
-
-      // Check if battle ended after enemy turns
-      battleStatus = battleService.checkBattleEnd(state);
-    }
+      } catch (error) {
+        console.error('Async enemy turn processing error:', error);
+      }
+    });
   }
 
   // Update turn predictions
   state.turnPredictions = battleService.predictTurnOrder(state, 10);
 
-  // Update battle state (skip if async mode already saved it)
-  if (!useAsyncTurns || !result.turnEnded) {
+  // Update battle state if turn didn't end (async processing already saved state when turn ended)
+  if (!result.turnEnded) {
     await query(
       'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
       [JSON.stringify(state), battleStatus, battleId]
@@ -757,36 +762,15 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
   // Broadcast action executed via WebSocket
   battleWebsocket.broadcastActionExecuted(battleId, unitId, actionType, result, req.user.userId);
 
-  // For sync mode only: broadcast enemy actions and turn changed
-  // (Async mode handles these in the background via battleTurnManager)
-  if (!useAsyncTurns) {
-    // Broadcast enemy actions if any (only when turn completed)
-    if (enemyActions && enemyActions.length > 0) {
-      battleWebsocket.broadcastEnemyActions(battleId, enemyActions, req.user.userId);
-    }
-
-    // Broadcast turn changed only if turn actually ended
-    if (result.turnEnded) {
-      battleWebsocket.broadcastTurnChanged(
-        battleId,
-        state.activeUnitIndex,
-        state.turn,
-        req.user.userId,
-        state.activeUnitId,
-        state.turnPredictions
-      );
-    }
-  }
-
-  // If battle ended in sync mode, handle end (async mode handles this in background)
-  if (battleStatus !== 'active' && !useAsyncTurns) {
+  // Handle battle end if player's action ended the battle
+  // (Enemy turn processing handles its own battle ends via async manager)
+  if (battleStatus !== 'active') {
     result.rewards = await handleBattleEnd(battleId, battleStatus, state, req.user.userId);
   }
 
   res.json({
     state,
     actionResult: result,
-    enemyActions,
     battleStatus,
     // Two-action turn system: indicate if turn continues
     turnContinues,

@@ -1301,91 +1301,6 @@ function checkBattleEnd(state) {
   return 'active';
 }
 
-/**
- * Process enemy turns until it's a player's turn or battle ends
- * Uses CT system to determine turn order
- * Two-action system: each enemy gets both a move and an action per turn
- * @param {Object} state - Battle state
- * @param {Object} aiService - AI service for enemy decisions
- * @param {number} maxIterations - Safety limit to prevent infinite loops
- * @returns {Array} Array of enemy actions for frontend animation
- */
-function processEnemyTurns(state, aiService, maxIterations = 50) {
-  const enemyActions = [];
-  let iterations = 0;
-  console.log('[CT DEBUG] processEnemyTurns START - activeUnitId:', state.activeUnitId);
-
-  while (iterations < maxIterations) {
-    // Get the current active unit
-    const activeUnit = state.units.find(u => u.id === state.activeUnitId);
-    console.log('[CT DEBUG] Loop iteration', iterations, '- activeUnit:', activeUnit?.name, activeUnit?.type, 'CT:', activeUnit?.ct);
-
-    // Safety check
-    if (!activeUnit) {
-      console.log('[CT DEBUG] No active unit found, advancing');
-      advanceToNextActor(state);
-      iterations++;
-      continue;
-    }
-
-    // Stop if it's a player's turn
-    if (activeUnit.type === 'player') {
-      console.log('[CT DEBUG] Player turn detected, breaking loop');
-      break;
-    }
-
-    // Stop if unit is dead (shouldn't happen, but safety check)
-    if (activeUnit.hp <= 0) {
-      advanceToNextActorWithCT(state);
-      iterations++;
-      continue;
-    }
-
-    // Initialize turn state for enemy
-    initializeTurnState(activeUnit);
-
-    // Get AI decisions for the full turn (returns array of 1-2 actions)
-    const decisions = aiService.decideTurnActions(activeUnit, state);
-
-    // Process each action in the enemy's turn
-    for (const decision of decisions) {
-      // Skip if wait (ends turn)
-      if (decision.actionType === 'wait') {
-        break;
-      }
-
-      // Process the enemy action
-      const result = processAction(state, activeUnit, decision.actionType, decision.targetTile, decision.skillId);
-
-      // Skip recording if there was an error (shouldn't happen for AI, but safety)
-      if (result.error) {
-        continue;
-      }
-
-      // Record this action for frontend animation
-      enemyActions.push({
-        unitId: activeUnit.id,
-        unitName: activeUnit.name,
-        actionType: decision.actionType,
-        targetTile: decision.targetTile,
-        result
-      });
-
-      // Check if battle ended after this action
-      const battleStatus = checkBattleEnd(state);
-      if (battleStatus !== 'active') {
-        return enemyActions;
-      }
-    }
-
-    // Advance to next actor using CT system
-    advanceToNextActorWithCT(state);
-    iterations++;
-  }
-
-  return enemyActions;
-}
-
 module.exports = {
   // Damage calculations
   calculatePhysicalDamage,
@@ -1431,6 +1346,5 @@ module.exports = {
   initializeTurnState,
   processAction,
   advanceToNextActorWithCT,
-  checkBattleEnd,
-  processEnemyTurns
+  checkBattleEnd
 };
