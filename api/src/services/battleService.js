@@ -1346,5 +1346,7 @@ module.exports = {
   initializeTurnState,
   processAction,
   advanceToNextActorWithCT,
-  checkBattleEnd
+  checkBattleEnd,
+  // Pathfinding (for AI movement validation)
+  calculatePathCost
 };

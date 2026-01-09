@@ -3,6 +3,9 @@
  * Two-action system: each turn allows 1 move + 1 act (attack/skill)
  */
 
+// Import pathfinding for obstacle-aware movement decisions
+const battleService = require('./battleService');
+
 /**
  * Main AI decision function (legacy - returns single action)
  * @deprecated Use decideTurnActions instead
@@ -878,12 +881,16 @@ function getMoveTowardTarget(enemy, target, battleState, maxMove = 3) {
       const x = enemy.tileX + dx;
       const y = enemy.tileY + dy;
 
-      if (isValidMove(x, y, battleState)) {
-        const dist = Math.abs(x - target.tileX) + Math.abs(y - target.tileY);
-        if (dist < bestDistance) {
-          bestDistance = dist;
-          bestTile = { x, y };
-        }
+      // Check if tile is valid (bounds, not occupied, passable terrain)
+      if (!isValidMove(x, y, battleState)) continue;
+
+      // Check if tile is actually reachable via pathfinding (considers obstacles in path)
+      if (!isReachable(enemy, x, y, battleState)) continue;
+
+      const dist = Math.abs(x - target.tileX) + Math.abs(y - target.tileY);
+      if (dist < bestDistance) {
+        bestDistance = dist;
+        bestTile = { x, y };
       }
     }
   }
@@ -908,15 +915,17 @@ function getRetreatTile(enemy, battleState) {
       const x = enemy.tileX + dx;
       const y = enemy.tileY + dy;
 
-      if (isValidMove(x, y, battleState)) {
-        const minDistToPlayer = Math.min(...players.map(p =>
-          Math.abs(x - p.tileX) + Math.abs(y - p.tileY)
-        ));
+      // Check if tile is valid and reachable via pathfinding
+      if (!isValidMove(x, y, battleState)) continue;
+      if (!isReachable(enemy, x, y, battleState)) continue;
 
-        if (minDistToPlayer > bestDistance) {
-          bestDistance = minDistToPlayer;
-          bestTile = { x, y };
-        }
+      const minDistToPlayer = Math.min(...players.map(p =>
+        Math.abs(x - p.tileX) + Math.abs(y - p.tileY)
+      ));
+
+      if (minDistToPlayer > bestDistance) {
+        bestDistance = minDistToPlayer;
+        bestTile = { x, y };
       }
     }
   }
@@ -955,8 +964,32 @@ function isValidMove(x, y, battleState) {
   const occupied = battleState.units.some(u =>
     u.tileX === x && u.tileY === y && u.hp > 0
   );
+  if (occupied) return false;
 
-  return !occupied;
+  // Check if terrain is passable
+  if (battleState.terrain) {
+    const terrain = battleState.terrain[y]?.[x];
+    if (terrain && ['rock', 'tree', 'lava', 'cliff'].includes(terrain)) {
+      return false; // Impassable terrain
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Check if a path exists from enemy position to target tile
+ * Uses actual pathfinding to account for obstacles
+ */
+function isReachable(enemy, targetX, targetY, battleState) {
+  const movementRange = enemy.movement || 3;
+  const pathCost = battleService.calculatePathCost(
+    enemy.tileX, enemy.tileY,
+    targetX, targetY,
+    battleState,
+    movementRange
+  );
+  return pathCost !== Infinity && pathCost <= movementRange;
 }
 
 module.exports = {
@@ -983,5 +1016,6 @@ module.exports = {
   getAliveEnemies,
   findClosestUnit,
   manhattanDistance,
-  isValidMove
+  isValidMove,
+  isReachable
 };

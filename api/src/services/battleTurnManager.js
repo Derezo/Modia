@@ -125,8 +125,8 @@ async function processEnemyTurnsAsync(battleId, state, aiService, battleService)
 async function processEnemyTurnWithVisualization(battleId, state, enemy, aiService, battleService) {
   const actionResults = [];
 
-  // Initialize turn state for enemy
-  battleService.initializeTurnState(enemy);
+  // Reset turn state for enemy (allows move + act this turn)
+  battleService.resetTurnState(enemy);
 
   // Get AI decisions for the full turn (returns array of 1-2 actions)
   const decisions = aiService.decideTurnActions(enemy, state);
@@ -185,7 +185,12 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
         null
       );
 
-      if (!moveResult.error) {
+      if (moveResult.error) {
+        console.log('[AsyncTurnManager] Move FAILED:', moveResult.error,
+          'from:', oldPosition, 'to:', decision.targetTile,
+          'moveUsed:', enemy.moveUsed, 'range:', battleService.getMovementRange(enemy));
+      } else {
+        console.log('[AsyncTurnManager] Move SUCCESS:', oldPosition, '->', decision.targetTile);
         // Broadcast unit moved (using saved old position)
         battleWebsocket.broadcastUnitMoved(
           battleId,
