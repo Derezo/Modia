@@ -10,6 +10,7 @@ const enemyService = require('../services/enemyService');
 const itemDropService = require('../services/itemDropService');
 const battleWebsocket = require('../services/battleWebsocket');
 const { createPlayerBattleUnit } = require('../services/battleUnitFactory');
+const traitService = require('../services/traitService');
 
 // ============================================================================
 // TERRAIN GENERATION (Server-side mirror of frontend BattleGrid logic)
@@ -389,6 +390,9 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
   // Generate terrain (server-side mirror of frontend for validation)
   const terrain = generateTerrain(mapSeed, node.node_type, 32, 32);
 
+  // Load character traits for all party members
+  const characterTraits = await traitService.loadCharacterTraits(characterIds);
+
   // Create initial battle state
   const initialState = {
     turn: 1,
@@ -427,7 +431,11 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
         },
         formationPos ? { tileX: formationPos.tileX, tileY: formationPos.tileY + 12 } : null,
         characterSkills[char.id] || [],
-        { defaultX, defaultY }
+        {
+          defaultX,
+          defaultY,
+          traits: characterTraits[char.id] || []
+        }
       );
     })
   };

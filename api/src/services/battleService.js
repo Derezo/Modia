@@ -4,6 +4,7 @@
 
 const { CLASS_MOVEMENT } = require('../config/constants');
 const { SKILL_TREES } = require('../config/skillTrees');
+const traitService = require('./traitService');
 
 // Default attack range for melee (1 tile adjacent)
 const DEFAULT_ATTACK_RANGE = 1;
@@ -12,6 +13,7 @@ const DEFAULT_ATTACK_RANGE = 1;
  * Calculate physical damage
  * Formula: (ATK + equipmentAttack + strength) * skillPower - (DEF + equipmentDefense + vitality * 0.5)
  * Equipment attack/defense bonuses are additive to base stats
+ * Trait bonuses are applied as multipliers after base calculation
  */
 function calculatePhysicalDamage(attacker, defender, skillPower = 100) {
   // Base attack = strength + equipment attack bonus
@@ -26,8 +28,10 @@ function calculatePhysicalDamage(attacker, defender, skillPower = 100) {
   // Random variance (0.9 - 1.1)
   const variance = 0.9 + Math.random() * 0.2;
 
-  // Critical hit check (luck-based)
-  const critChance = (attacker.luck || 10) / 200;
+  // Critical hit check (luck-based) with trait bonus
+  const baseCritChance = (attacker.luck || 10) / 200;
+  const traitCritBonus = traitService.getCritChanceBonus(attacker);
+  const critChance = baseCritChance + traitCritBonus;
   const isCritical = Math.random() < critChance;
   const critMultiplier = isCritical ? 1.5 : 1.0;
 
@@ -37,12 +41,17 @@ function calculatePhysicalDamage(attacker, defender, skillPower = 100) {
     raceMultiplier = 1.1; // +10% crit damage for orcs
   }
 
-  const finalDamage = Math.floor(rawDamage * variance * critMultiplier * raceMultiplier);
+  // Apply trait damage multipliers
+  const traitDamageMultiplier = traitService.getPhysicalDamageMultiplier(attacker, defender, isCritical);
+  const traitDefenseMultiplier = traitService.getDamageReductionMultiplier(defender, 'physical');
+
+  const finalDamage = Math.floor(rawDamage * variance * critMultiplier * raceMultiplier * traitDamageMultiplier * traitDefenseMultiplier);
 
   return {
     damage: Math.max(1, finalDamage),
     isCritical,
-    variance
+    variance,
+    traitBonusApplied: traitDamageMultiplier > 1.0 || traitDefenseMultiplier < 1.0
   };
 }
 
@@ -50,6 +59,7 @@ function calculatePhysicalDamage(attacker, defender, skillPower = 100) {
  * Calculate magical damage
  * Formula: (INT + equipmentMagicAttack) * skillPower - (INT_DEF + equipmentMagicDefense)
  * Equipment magic attack/defense bonuses are additive to base stats
+ * Trait bonuses are applied as multipliers after base calculation
  */
 function calculateMagicalDamage(attacker, defender, skillPower = 100) {
   // Base magic attack = intelligence + equipment magic attack bonus
@@ -64,25 +74,35 @@ function calculateMagicalDamage(attacker, defender, skillPower = 100) {
   // Random variance (0.9 - 1.1)
   const variance = 0.9 + Math.random() * 0.2;
 
-  // Critical hit check
-  const critChance = (attacker.luck || 10) / 200;
+  // Critical hit check with trait bonus
+  const baseCritChance = (attacker.luck || 10) / 200;
+  const traitCritBonus = traitService.getCritChanceBonus(attacker);
+  const critChance = baseCritChance + traitCritBonus;
   const isCritical = Math.random() < critChance;
   const critMultiplier = isCritical ? 1.5 : 1.0;
 
-  const finalDamage = Math.floor(rawDamage * variance * critMultiplier);
+  // Apply trait damage multipliers
+  const traitDamageMultiplier = traitService.getMagicalDamageMultiplier(attacker, defender, isCritical);
+  const traitDefenseMultiplier = traitService.getDamageReductionMultiplier(defender, 'magical');
+
+  const finalDamage = Math.floor(rawDamage * variance * critMultiplier * traitDamageMultiplier * traitDefenseMultiplier);
 
   return {
     damage: Math.max(1, finalDamage),
     isCritical,
-    variance
+    variance,
+    traitBonusApplied: traitDamageMultiplier > 1.0 || traitDefenseMultiplier < 1.0
   };
 }
 
 /**
  * Calculate initiative for turn order
+ * Includes trait bonus for initiative
  */
 function calculateInitiative(unit) {
-  return unit.agility + Math.floor(Math.random() * 10);
+  const baseInitiative = unit.agility + Math.floor(Math.random() * 10);
+  const initiativeBonus = traitService.getInitiativeBonus(unit);
+  return Math.floor(baseInitiative * (1 + initiativeBonus));
 }
 
 /**
@@ -97,9 +117,17 @@ function sortByInitiative(units) {
 
 /**
  * Process status effects at turn start
+ * Also processes trait-based HP regeneration
  */
 function processStatusEffects(unit) {
   const results = [];
+
+  // Process trait-based HP regen (Regeneration trait: 2% per turn)
+  const traitHPRegen = traitService.calculateHPRegen(unit);
+  if (traitHPRegen > 0) {
+    unit.hp = Math.min(unit.maxHp, unit.hp + traitHPRegen);
+    results.push({ type: 'trait_regen', amount: traitHPRegen });
+  }
 
   if (!unit.statusEffects || unit.statusEffects.length === 0) {
     return results;
@@ -210,25 +238,33 @@ function applyStatusEffect(unit, effectType, duration = 3) {
 }
 
 /**
- * Check miss chance based on agility
+ * Check miss chance based on agility and traits
  */
 function checkHit(attacker, defender) {
   const baseHitChance = 0.95;
   const agilityDiff = defender.agility - attacker.agility;
   const dodgeBonus = Math.max(0, agilityDiff) * 0.01;
 
+  // Apply trait bonuses
+  const accuracyBonus = traitService.getAccuracyBonus(attacker);
+  const evasionBonus = traitService.getEvasionBonus(defender);
+
   // Check for blind status
   const isBlinded = attacker.statusEffects?.some(e => e.type === 'blind');
   const blindPenalty = isBlinded ? 0.3 : 0;
 
-  const hitChance = Math.max(0.5, baseHitChance - dodgeBonus - blindPenalty);
+  const hitChance = Math.max(0.5, baseHitChance - dodgeBonus - blindPenalty + accuracyBonus - evasionBonus);
   return Math.random() < hitChance;
 }
 
 /**
  * Calculate experience reward from battle
+ * Includes trait bonus (Fast Learner: +10% XP)
+ * @param {Array} enemies - Enemy units defeated
+ * @param {number} partyLevel - Average party level
+ * @param {Array} partyUnits - Player units (for trait bonuses)
  */
-function calculateExperienceReward(enemies, partyLevel) {
+function calculateExperienceReward(enemies, partyLevel, partyUnits = []) {
   let totalXP = 0;
 
   for (const enemy of enemies) {
@@ -239,13 +275,26 @@ function calculateExperienceReward(enemies, partyLevel) {
     totalXP += Math.floor(baseXP * levelMultiplier);
   }
 
-  return totalXP;
+  // Apply trait XP bonuses from all party members (use highest bonus)
+  let traitXPBonus = 0;
+  for (const unit of partyUnits) {
+    const unitBonus = traitService.getXPBonus(unit);
+    if (unitBonus > traitXPBonus) {
+      traitXPBonus = unitBonus;
+    }
+  }
+
+  return Math.floor(totalXP * (1 + traitXPBonus));
 }
 
 /**
  * Calculate gold reward from battle
+ * Includes trait bonus (Treasure Hunter: +15% gold)
+ * @param {Array} enemies - Enemy units defeated
+ * @param {number} difficultyTier - Difficulty tier multiplier
+ * @param {Array} partyUnits - Player units (for trait bonuses)
  */
-function calculateGoldReward(enemies, difficultyTier = 1) {
+function calculateGoldReward(enemies, difficultyTier = 1, partyUnits = []) {
   let totalGold = 0;
 
   for (const enemy of enemies) {
@@ -254,13 +303,22 @@ function calculateGoldReward(enemies, difficultyTier = 1) {
     totalGold += Math.floor(minGold + Math.random() * (maxGold - minGold));
   }
 
-  return totalGold;
+  // Apply trait gold bonuses from all party members (use highest bonus)
+  let traitGoldBonus = 0;
+  for (const unit of partyUnits) {
+    const unitBonus = traitService.getGoldBonus(unit);
+    if (unitBonus > traitGoldBonus) {
+      traitGoldBonus = unitBonus;
+    }
+  }
+
+  return Math.floor(totalGold * (1 + traitGoldBonus));
 }
 
 // ==================== Movement and Range Functions ====================
 
 /**
- * Get movement range for a unit based on class
+ * Get movement range for a unit based on class and traits
  * Uses CLASS_MOVEMENT from constants for authoritative class movement values
  * @param {Object} unit - The unit
  * @returns {number} Maximum movement distance (Manhattan distance)
@@ -268,6 +326,10 @@ function calculateGoldReward(enemies, difficultyTier = 1) {
 function getMovementRange(unit) {
   // Use class-specific movement range from constants, default to 3 if class not found
   let baseRange = CLASS_MOVEMENT[unit.class?.toLowerCase()] || 3;
+
+  // Apply trait movement bonus (Swift Feet: +1 tile)
+  const traitMovementBonus = traitService.getMovementBonus(unit);
+  baseRange += traitMovementBonus;
 
   // Status effect adjustments
   if (unit.statusEffects?.some(e => e.type === 'slow')) {
@@ -282,13 +344,19 @@ function getMovementRange(unit) {
 
 /**
  * Get attack range for a unit (melee = 1, ranged classes may have more)
+ * Includes trait bonus (Eagle Eye: +1 range)
  * @param {Object} unit - The unit
  * @returns {number} Maximum attack distance (Manhattan distance)
  */
 function getAttackRange(unit) {
-  // For now, all basic attacks are melee range 1
-  // This can be extended based on equipped weapon type in the future
-  return DEFAULT_ATTACK_RANGE;
+  // Base attack range (can be extended based on equipped weapon type)
+  let baseRange = unit.attackRange || DEFAULT_ATTACK_RANGE;
+
+  // Apply trait range bonus (Eagle Eye: +1 tile)
+  const traitRangeBonus = traitService.getRangeBonus(unit);
+  baseRange += traitRangeBonus;
+
+  return baseRange;
 }
 
 /**
@@ -1099,11 +1167,30 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
           const hits = checkHit(unit, target);
           if (hits) {
             const damageResult = calculatePhysicalDamage(unit, target);
-            target.hp = Math.max(0, target.hp - damageResult.damage);
-            result.damage = damageResult.damage;
+            let actualDamage = damageResult.damage;
+
+            // Apply damage to target (check for death save first)
+            const wouldKill = target.hp - actualDamage <= 0;
+            if (wouldKill && traitService.checkDeathSave(target)) {
+              // Death save triggered - survive with 1 HP
+              target.hp = 1;
+              result.deathSaveTrigger = true;
+              result.deathSaveUnitId = target.id;
+            } else {
+              target.hp = Math.max(0, target.hp - actualDamage);
+            }
+
+            result.damage = actualDamage;
             result.isCritical = damageResult.isCritical;
             result.targetId = target.id;
             result.targetType = target.type; // 'player' or 'enemy'
+
+            // Apply lifesteal trait (heal attacker for % of damage dealt)
+            const lifestealAmount = traitService.calculateLifesteal(unit, actualDamage);
+            if (lifestealAmount > 0) {
+              unit.hp = Math.min(unit.maxHp, unit.hp + lifestealAmount);
+              result.lifestealAmount = lifestealAmount;
+            }
           } else {
             result.missed = true;
             result.targetId = target.id;
@@ -1258,6 +1345,8 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
           const damageType = skill.damageType || 'physical';
           const hits = skill.hits || 1;
 
+          let totalAoEDamage = 0; // Track total AoE damage for lifesteal
+
           for (const { unit: affectedUnit, isCenter } of affectedUnits) {
             // Calculate damage for this target
             const damageResult = damageType === 'magical'
@@ -1275,7 +1364,16 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
               totalDamage = Math.floor(totalDamage * 0.75);
             }
 
-            affectedUnit.hp = Math.max(0, affectedUnit.hp - totalDamage);
+            // Apply damage with death save check
+            const wouldKill = affectedUnit.hp - totalDamage <= 0;
+            if (wouldKill && traitService.checkDeathSave(affectedUnit)) {
+              // Death save triggered - survive with 1 HP
+              affectedUnit.hp = 1;
+            } else {
+              affectedUnit.hp = Math.max(0, affectedUnit.hp - totalDamage);
+            }
+
+            totalAoEDamage += totalDamage;
 
             const targetResult = {
               targetId: affectedUnit.id,
@@ -1285,7 +1383,8 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
               isCritical: damageResult.isCritical,
               isCenter,
               tileX: affectedUnit.tileX,
-              tileY: affectedUnit.tileY
+              tileY: affectedUnit.tileY,
+              deathSaveTrigger: wouldKill && affectedUnit.hp === 1
             };
 
             // Apply status effect if skill has one and chance succeeds
@@ -1308,6 +1407,13 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
             }
 
             result.aoeTargets.push(targetResult);
+          }
+
+          // Apply lifesteal for total AoE damage dealt
+          const lifestealAmount = traitService.calculateLifesteal(unit, totalAoEDamage);
+          if (lifestealAmount > 0) {
+            unit.hp = Math.min(unit.maxHp, unit.hp + lifestealAmount);
+            result.lifestealAmount = lifestealAmount;
           }
 
           // Set primary target info for backwards compatibility
@@ -1335,12 +1441,30 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
           for (let i = 0; i < hits; i++) {
             totalDamage += damageResult.damage;
           }
-          target.hp = Math.max(0, target.hp - totalDamage);
+
+          // Apply damage with death save check
+          const wouldKill = target.hp - totalDamage <= 0;
+          if (wouldKill && traitService.checkDeathSave(target)) {
+            // Death save triggered - survive with 1 HP
+            target.hp = 1;
+            result.deathSaveTrigger = true;
+            result.deathSaveUnitId = target.id;
+          } else {
+            target.hp = Math.max(0, target.hp - totalDamage);
+          }
+
           result.damage = totalDamage;
           result.hits = hits;
           result.isCritical = damageResult.isCritical;
           result.targetId = target.id;
           result.targetType = target.type;
+
+          // Apply lifesteal trait (heal attacker for % of damage dealt)
+          const lifestealAmount = traitService.calculateLifesteal(unit, totalDamage);
+          if (lifestealAmount > 0) {
+            unit.hp = Math.min(unit.maxHp, unit.hp + lifestealAmount);
+            result.lifestealAmount = lifestealAmount;
+          }
 
           // Apply status effect if skill has one and chance succeeds
           if (skill.effect && skill.effectChance && Math.random() < skill.effectChance) {

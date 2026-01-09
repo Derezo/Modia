@@ -64,6 +64,7 @@ export class BattleUnit {
     // Battle state
     this.hasActed = unitData.hasActed || false;
     this.statusEffects = unitData.statusEffects || [];
+    this.traits = unitData.traits || [];
     this.isSelected = false;
     this.isTargeted = false;
 
@@ -634,6 +635,11 @@ export class BattleUnit {
       ctx.font = '11px Arial';
       ctx.textAlign = 'center';
       ctx.fillText(this.name, drawX, renderY - unitRadius - 20);
+
+      // Draw trait indicators when selected/targeted
+      if (this.traits && this.traits.length > 0) {
+        this.renderTraitIndicators(ctx, drawX, renderY - unitRadius - 32);
+      }
     }
   }
 
@@ -724,6 +730,45 @@ export class BattleUnit {
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 1;
       ctx.stroke();
+    });
+  }
+
+  /**
+   * Render trait indicators (small icons above the unit)
+   * Shows only when selected or targeted to avoid clutter
+   */
+  renderTraitIndicators(ctx, x, y) {
+    if (!this.traits || this.traits.length === 0) return;
+
+    const iconSize = 8;
+    const spacing = 10;
+    const startX = x - ((this.traits.length - 1) * spacing) / 2;
+
+    // Rarity colors matching game design
+    const rarityColors = {
+      common: '#a0a0a0',
+      uncommon: '#4caf50',
+      rare: '#2196f3',
+      legendary: '#ff9800'
+    };
+
+    this.traits.forEach((trait, i) => {
+      const traitX = startX + i * spacing;
+
+      // Draw small diamond shape for traits
+      ctx.save();
+      ctx.translate(traitX, y);
+      ctx.rotate(Math.PI / 4);
+
+      ctx.beginPath();
+      ctx.rect(-iconSize / 2, -iconSize / 2, iconSize, iconSize);
+      ctx.fillStyle = rarityColors[trait.rarity] || '#888';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.restore();
     });
   }
 
