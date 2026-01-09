@@ -28,6 +28,10 @@ export class BattleGrid {
 
     // Tile variant mapping for visual variety (seeded per-tile)
     this.tileVariants = [];
+
+    // Intent highlight state (for enemy visualization)
+    this.intentHighlights = new Map();  // key -> { color, endTime, pulsePhase }
+    this.intentHighlightTimer = null;
   }
 
   /**
@@ -553,5 +557,137 @@ export class BattleGrid {
       return { x, y };
     }
     return null;
+  }
+
+  // =========================================================================
+  // INTENT HIGHLIGHT SYSTEM (for enemy turn visualization)
+  // =========================================================================
+
+  /**
+   * Get highlight color for intent type
+   */
+  getIntentHighlightColor(highlightType) {
+    const colors = {
+      movement_range: 'rgba(64, 128, 255, 0.4)',    // Blue - movement options
+      attack_range: 'rgba(255, 64, 64, 0.4)',       // Red - attack options
+      target_path: 'rgba(255, 200, 64, 0.5)',       // Gold - selected path
+      target_tile: 'rgba(255, 64, 64, 0.6)',        // Bright red - attack target
+      aoe: 'rgba(200, 64, 255, 0.5)'                // Purple - area of effect
+    };
+    return colors[highlightType] || 'rgba(255, 255, 255, 0.3)';
+  }
+
+  /**
+   * Show intent highlight for enemy visualization
+   * @param {string} highlightType - Type of highlight (movement_range, attack_range, etc.)
+   * @param {Array} tiles - Array of { x, y } tile positions
+   * @param {number} duration - Duration to show highlight (ms)
+   */
+  showIntentHighlight(highlightType, tiles, duration = 500) {
+    const color = this.getIntentHighlightColor(highlightType);
+    const endTime = Date.now() + duration;
+    const isPulsing = highlightType === 'target_tile';
+
+    // Clear existing highlights of same type
+    this.clearIntentHighlightsByType(highlightType);
+
+    // Add new highlights
+    for (const tile of tiles) {
+      const key = `${tile.x},${tile.y}`;
+      this.intentHighlights.set(key, {
+        type: highlightType,
+        color,
+        endTime,
+        isPulsing,
+        pulsePhase: 0
+      });
+    }
+
+    // Start cleanup timer if not already running
+    if (!this.intentHighlightTimer) {
+      this.intentHighlightTimer = setInterval(() => this.updateIntentHighlights(), 50);
+    }
+  }
+
+  /**
+   * Clear intent highlights of a specific type
+   */
+  clearIntentHighlightsByType(highlightType) {
+    for (const [key, highlight] of this.intentHighlights.entries()) {
+      if (highlight.type === highlightType) {
+        this.intentHighlights.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Clear all intent highlights
+   */
+  clearIntentHighlights() {
+    this.intentHighlights.clear();
+    if (this.intentHighlightTimer) {
+      clearInterval(this.intentHighlightTimer);
+      this.intentHighlightTimer = null;
+    }
+  }
+
+  /**
+   * Update intent highlights (remove expired, update pulse)
+   */
+  updateIntentHighlights() {
+    const now = Date.now();
+    let hasActiveHighlights = false;
+
+    for (const [key, highlight] of this.intentHighlights.entries()) {
+      if (now >= highlight.endTime) {
+        this.intentHighlights.delete(key);
+      } else {
+        hasActiveHighlights = true;
+        // Update pulse phase for pulsing highlights
+        if (highlight.isPulsing) {
+          highlight.pulsePhase = (highlight.pulsePhase + 0.15) % (Math.PI * 2);
+        }
+      }
+    }
+
+    // Stop timer if no active highlights
+    if (!hasActiveHighlights && this.intentHighlightTimer) {
+      clearInterval(this.intentHighlightTimer);
+      this.intentHighlightTimer = null;
+    }
+  }
+
+  /**
+   * Get combined highlights (merges intent highlights with passed highlights)
+   */
+  getCombinedHighlights(passedHighlights = {}) {
+    const combined = { ...passedHighlights };
+
+    for (const [key, highlight] of this.intentHighlights.entries()) {
+      // Intent highlights take precedence over regular highlights
+      let color = highlight.color;
+
+      // Apply pulse effect for pulsing highlights
+      if (highlight.isPulsing) {
+        const pulse = (Math.sin(highlight.pulsePhase) + 1) / 2;  // 0-1
+        const alpha = 0.4 + pulse * 0.4;  // 0.4-0.8
+        color = color.replace(/[\d.]+\)$/, `${alpha})`);
+      }
+
+      combined[key] = color;
+    }
+
+    return combined;
+  }
+
+  /**
+   * Render with intent highlights
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {Object} highlights - Regular highlights
+   * @param {Object} camera - Camera for screen transforms
+   */
+  renderWithIntentHighlights(ctx, highlights = {}, camera = null) {
+    const combinedHighlights = this.getCombinedHighlights(highlights);
+    this.render(ctx, combinedHighlights, camera);
   }
 }
