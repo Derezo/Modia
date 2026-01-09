@@ -40,7 +40,7 @@ function generateAllActions(unit, state) {
       actions.push({
         type: 'attack',
         target: target,
-        targetId: target.id
+        targetId: target.unitId  // battleService returns unitId, not id
       });
     }
   }
@@ -229,9 +229,9 @@ function getTargetsFromPosition(fromX, fromY, range, state, targetType) {
 
     const dx = Math.abs(unit.tileX - fromX);
     const dy = Math.abs(unit.tileY - fromY);
-    const distance = Math.max(dx, dy); // Chebyshev distance
+    const distance = dx + dy; // Manhattan distance (matches battleService)
 
-    if (distance <= range) {
+    if (distance > 0 && distance <= range) {
       targets.push(unit);
     }
   }
@@ -346,7 +346,7 @@ function generateThreatResponseActions(unit, state) {
   // Attack threats if in range
   if (available.canAct && available.attacks.targets) {
     for (const threat of threats) {
-      const inRange = available.attacks.targets.some(t => t.id === threat.id);
+      const inRange = available.attacks.targets.some(t => t.unitId === threat.id);
       if (inRange) {
         actions.push({
           type: 'attack',
@@ -389,7 +389,7 @@ function findImmediateThreats(unit, state) {
 
     const dx = Math.abs(enemy.tileX - unit.tileX);
     const dy = Math.abs(enemy.tileY - unit.tileY);
-    const distance = Math.max(dx, dy);
+    const distance = dx + dy; // Manhattan distance (matches battleService)
 
     // Enemy can attack us
     const attackRange = enemy.attackRange || 1;
@@ -422,7 +422,7 @@ function findSaferTiles(unit, threats, reachableTiles) {
     for (const threat of threats) {
       const dx = Math.abs(threat.tileX - tile.x);
       const dy = Math.abs(threat.tileY - tile.y);
-      const distance = Math.max(dx, dy);
+      const distance = dx + dy; // Manhattan distance (matches battleService)
       threatScore += distance; // Higher distance = safer
     }
 

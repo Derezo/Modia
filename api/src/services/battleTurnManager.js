@@ -341,29 +341,14 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
 
 /**
  * Get movement range tiles for visualization
+ * Uses terrain-aware pathfinding from battleService
  */
 function getMovementRangeTiles(unit, state, battleService) {
-  const range = battleService.getMovementRange(unit);
-  const tiles = [];
+  // Use terrain-aware Dijkstra pathfinding from battleService
+  const reachableTiles = battleService.getReachableTiles(unit, state);
 
-  for (let dx = -range; dx <= range; dx++) {
-    for (let dy = -range; dy <= range; dy++) {
-      if (Math.abs(dx) + Math.abs(dy) <= range && (dx !== 0 || dy !== 0)) {
-        const x = unit.tileX + dx;
-        const y = unit.tileY + dy;
-        // Check bounds and occupancy
-        if (x >= 0 && x < (state.mapWidth || 32) &&
-            y >= 0 && y < (state.mapHeight || 32)) {
-          const occupied = state.units.some(u => u.tileX === x && u.tileY === y && u.hp > 0);
-          if (!occupied) {
-            tiles.push({ x, y });
-          }
-        }
-      }
-    }
-  }
-
-  return tiles;
+  // getReachableTiles returns [{x, y, cost}, ...] - we just need {x, y}
+  return reachableTiles.map(tile => ({ x: tile.x, y: tile.y }));
 }
 
 /**

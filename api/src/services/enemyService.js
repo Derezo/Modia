@@ -3,6 +3,7 @@
  */
 
 const { query } = require('../config/database');
+const { generateEnemySkills } = require('./npcSkillService');
 
 // Difficulty tier multipliers for stat scaling
 const TIER_MULTIPLIERS = {
@@ -68,7 +69,9 @@ async function selectEnemiesForEncounter(nodeType, difficultyTier, count) {
   // Query templates that can spawn at this node type and difficulty
   const result = await query(
     `SELECT id, name, sprite_id, base_hp, base_mp, base_strength, base_intelligence, base_agility,
-            ai_type, abilities, drop_table, experience_reward, gold_reward_min, gold_reward_max
+            ai_type, abilities, drop_table, experience_reward, gold_reward_min, gold_reward_max,
+            archetype, guild, guild_level, enemy_class, movement, attack_range,
+            attack_bonus, defense_bonus, magic_attack_bonus, magic_defense_bonus
      FROM enemy_templates
      WHERE $1 = ANY(spawn_node_types) AND min_difficulty_tier <= $2
      ORDER BY RANDOM()
@@ -81,7 +84,9 @@ async function selectEnemiesForEncounter(nodeType, difficultyTier, count) {
     // Fallback to any templates at or below current difficulty
     const fallbackResult = await query(
       `SELECT id, name, sprite_id, base_hp, base_mp, base_strength, base_intelligence, base_agility,
-              ai_type, abilities, drop_table, experience_reward, gold_reward_min, gold_reward_max
+              ai_type, abilities, drop_table, experience_reward, gold_reward_min, gold_reward_max,
+              archetype, guild, guild_level, enemy_class, movement, attack_range,
+              attack_bonus, defense_bonus, magic_attack_bonus, magic_defense_bonus
        FROM enemy_templates
        WHERE min_difficulty_tier <= $1
        ORDER BY RANDOM()
@@ -102,9 +107,9 @@ async function selectEnemiesForEncounter(nodeType, difficultyTier, count) {
  * @param {number} index - Enemy index for ID generation
  * @param {{x: number, y: number}} position - Pre-calculated spawn position
  * @param {string} biome - Biome type for sprite loading (forest, cave, mountain, bridge)
- * @returns {Object} Scaled enemy object ready for battle
+ * @returns {Promise<Object>} Scaled enemy object ready for battle
  */
-function createEnemyInstance(template, partyLevel, difficultyTier, index, position, biome = 'forest') {
+async function createEnemyInstance(template, partyLevel, difficultyTier, index, position, biome = 'forest') {
   const tierMult = TIER_MULTIPLIERS[difficultyTier] || 1.0;
 
   // Calculate effective enemy level
@@ -117,6 +122,13 @@ function createEnemyInstance(template, partyLevel, difficultyTier, index, positi
   const scaledIntelligence = Math.floor(template.base_intelligence * (1 + enemyLevel * 0.05));
   const scaledAgility = Math.floor(template.base_agility * (1 + enemyLevel * 0.05));
 
+  // Generate skills for this enemy based on archetype/guild
+  const skills = await generateEnemySkills(template, enemyLevel, partyLevel, difficultyTier);
+
+  // Get movement and attack range from template (with defaults)
+  const movement = template.movement || 3;
+  const attackRange = template.attack_range || 1;
+
   return {
     id: `enemy_${index}`,
     type: 'enemy',
@@ -124,7 +136,7 @@ function createEnemyInstance(template, partyLevel, difficultyTier, index, positi
     name: template.name,
     enemyId: template.sprite_id, // Used for sprite lookup in AssetLoader.getEnemySprite()
     biome, // Biome type for sprite path
-    class: 'monster',
+    class: template.enemy_class || 'monster',
     level: enemyLevel,
     hp: scaledHp,
     maxHp: scaledHp,
@@ -135,12 +147,24 @@ function createEnemyInstance(template, partyLevel, difficultyTier, index, positi
     agility: scaledAgility,
     vitality: Math.floor(scaledHp / 10), // Derived from HP for defense calc
     luck: 10,
+    // Combat bonuses from template
+    attack: template.attack_bonus || 0,
+    defense: template.defense_bonus || 0,
+    magicAttack: template.magic_attack_bonus || 0,
+    magicDefense: template.magic_defense_bonus || 0,
+    // Movement and range
+    movement,
+    attackRange,
     tileX: position.x,
     tileY: position.y,
     ct: 0, // Charge time for CT-based turn system
     hasActed: false,
     statusEffects: [],
+    skillCooldowns: {}, // Track skill cooldowns
+    // Skills generated from archetype/guild
+    skills,
     aiType: template.ai_type || 'aggressive',
+    archetype: template.archetype || 'beast',
     abilities: template.abilities || [],
     dropTable: template.drop_table || {},
     experienceReward: template.experience_reward || 10,
@@ -192,9 +216,11 @@ async function generateEncounter(nodeId, party, formationCharacterIds = null) {
   // Generate randomized positions for all enemies
   const positions = generateEnemyPositions(enemyCount);
 
-  // Create scaled enemy instances with random positions
-  const enemies = templates.map((template, index) =>
-    createEnemyInstance(template, partyLevel, difficultyTier, index, positions[index], nodeType)
+  // Create scaled enemy instances with random positions (async for skill generation)
+  const enemies = await Promise.all(
+    templates.map((template, index) =>
+      createEnemyInstance(template, partyLevel, difficultyTier, index, positions[index], nodeType)
+    )
   );
 
   // If we still don't have enough enemies (empty database), create generic ones
@@ -219,12 +245,24 @@ async function generateEncounter(nodeId, party, formationCharacterIds = null) {
       agility: 6 + partyLevel,
       vitality: 5 + partyLevel,
       luck: 10,
+      // Combat bonuses (generic enemy has none)
+      attack: 0,
+      defense: 0,
+      magicAttack: 0,
+      magicDefense: 0,
+      // Movement and range
+      movement: 3,
+      attackRange: 1,
       tileX: pos.x,
       tileY: pos.y,
       ct: 0, // Charge time for CT-based turn system
       hasActed: false,
       statusEffects: [],
+      skillCooldowns: {},
+      // Generic enemies have no skills
+      skills: [],
       aiType: 'aggressive',
+      archetype: 'beast',
       abilities: [],
       dropTable: {},
       experienceReward: 10 + partyLevel * 5,

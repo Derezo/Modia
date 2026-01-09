@@ -857,6 +857,12 @@ export class BattleScene extends Scene {
   async processActionExecutedEvent(event) {
     const { actorId, actionType, result } = event;
 
+    // Clear thinking indicator when action is executed (especially important for 'wait')
+    const actor = this.units.get(actorId);
+    if (actor) {
+      actor.setThinking(false);
+    }
+
     // Play attack/skill animation
     if (actionType === 'attack' || actionType === 'skill') {
       // Find target and play damage animation
@@ -1771,10 +1777,16 @@ export class BattleScene extends Scene {
         // WebSocket unit_moved calls moveTo() for smooth animation; we only snap if unit is stationary
         if (unit.gridX !== unitData.tileX || unit.gridY !== unitData.tileY) {
           if (unit.isMoving) {
-            // Unit is animating - update target grid position but let animation continue
-            // The animation will reach the correct destination
+            // Unit is animating - update target grid position AND animation target
+            // so the animation reaches the correct destination
             unit.gridX = unitData.tileX;
             unit.gridY = unitData.tileY;
+            // Update animation target to match new grid position
+            if (this.grid) {
+              const target = this.grid.gridToScreenWorld(unitData.tileX, unitData.tileY);
+              unit.targetScreenX = target.x;
+              unit.targetScreenY = target.y;
+            }
           } else {
             // Unit is stationary - safe to snap to new position (fallback for missed WebSocket)
             unit.setPosition(unitData.tileX, unitData.tileY);
