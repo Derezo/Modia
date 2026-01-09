@@ -99,8 +99,17 @@ router.get('/:nodeId/recruits', authenticate, asyncHandler(async (req, res) => {
   // Verify it's a guild node
   await verifyGuildNode(nodeIdNum);
 
+  // Check if refresh is needed (lazy refresh on access)
+  await recruitService.checkAndRefreshIfNeeded(nodeIdNum);
+
   // Get available recruits from service
-  const recruits = await recruitService.getAvailableRecruits(nodeIdNum);
+  let recruits = await recruitService.getAvailableRecruits(nodeIdNum);
+
+  // Emergency restock: if all recruits have been purchased, spawn emergency recruits
+  if (recruits.length === 0) {
+    await recruitService.spawnEmergencyRecruits(nodeIdNum);
+    recruits = await recruitService.getAvailableRecruits(nodeIdNum);
+  }
 
   res.json({
     nodeId: nodeIdNum,
@@ -190,7 +199,10 @@ router.get('/:nodeId/info', authenticate, asyncHandler(async (req, res) => {
   // Verify user has discovered this node
   await verifyNodeDiscovery(req.user.userId, nodeIdNum);
 
-  // Get guild node info
+  // Check if refresh is needed (lazy refresh on access)
+  await recruitService.checkAndRefreshIfNeeded(nodeIdNum);
+
+  // Get guild node info (re-fetch after potential refresh to get updated last_recruit_refresh)
   const guild = await verifyGuildNode(nodeIdNum);
 
   // Count available recruits
