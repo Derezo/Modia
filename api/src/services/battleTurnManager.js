@@ -173,6 +173,9 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
         await delay(TIMING.INTENT_PATH);
       }
 
+      // Save old position BEFORE processAction updates it
+      const oldPosition = { x: enemy.tileX, y: enemy.tileY };
+
       // Execute movement via processAction
       const moveResult = battleService.processAction(
         state,
@@ -183,11 +186,11 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       );
 
       if (!moveResult.error) {
-        // Broadcast unit moved
+        // Broadcast unit moved (using saved old position)
         battleWebsocket.broadcastUnitMoved(
           battleId,
           enemy.id,
-          { x: moveResult.oldPosition?.x || enemy.tileX, y: moveResult.oldPosition?.y || enemy.tileY },
+          oldPosition,
           { x: decision.targetTile.x, y: decision.targetTile.y }
         );
 

@@ -673,7 +673,7 @@ export class BattleScene extends Scene {
     this.wsHandledTurnTransition = true;
 
     // Intelligent camera panning:
-    // - Always pan when it becomes player's turn (with delay after enemy sequence)
+    // - Always pan when it becomes player's turn
     // - Only pan to FIRST enemy of an enemy sequence (not every enemy)
     // - This prevents rapid camera bouncing during enemy turns
     const isEnemy = unitType === 'enemy';
@@ -681,24 +681,16 @@ export class BattleScene extends Scene {
     const isPlayerTurn = unitType === 'player' || unitType === 'player_local';
 
     if (position && this.camera && this.grid) {
-      if (isPlayerTurn) {
-        // When returning to player after enemy sequence, delay to let last enemy action complete
-        const delayMs = this.inEnemySequence ? 1200 : 0;
-        const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
+      const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
 
-        if (delayMs > 0) {
-          // Clear any pending intent highlights before panning
-          setTimeout(() => {
-            if (this.grid) this.grid.clearIntentHighlights();
-            this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 300);
-          }, delayMs);
-        } else {
-          this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 300);
-        }
+      if (isPlayerTurn) {
+        // Clear intent highlights when returning to player
+        if (this.grid) this.grid.clearIntentHighlights();
+        // Pan to player immediately - server timing handles delays
+        this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 300);
         this.inEnemySequence = false;
       } else if (isFirstEnemyAfterPlayer) {
         // Pan to first enemy of the sequence
-        const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
         this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 300);
         this.inEnemySequence = true;
       }
