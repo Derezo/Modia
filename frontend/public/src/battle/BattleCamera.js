@@ -180,6 +180,11 @@ export class BattleCamera {
    * Update camera position (call each frame)
    */
   update(deltaTime) {
+    // Process turn transition if active (MUST be first - updates target position)
+    if (this.turnTransitionActive) {
+      this.updateTurnTransition(deltaTime);
+    }
+
     // In follow mode, update target to follow unit
     // Skip during turn transition to avoid overwriting transition target
     if (this.mode === 'follow' && this.followTarget && !this.turnTransitionActive) {

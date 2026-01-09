@@ -74,6 +74,11 @@ export class BattleScene extends Scene {
     this.inEnemySequence = false; // Track if we're in a sequence of enemy turns
     this.lastTurnWasEnemy = false; // Track if previous turn was enemy
 
+    // Turn event queue - processes WebSocket events in sequence with proper animation timing
+    this.turnEventQueue = [];
+    this.isProcessingQueue = false;
+    this.playerTurnPending = false; // True when player's turn is queued but not yet shown
+
     // Event cleanup
     this.abortController = null;
 
@@ -567,32 +572,43 @@ export class BattleScene extends Scene {
 
   /**
    * Handle remote state update (for rejoins or full sync)
+   * NOTE: Only updates unit positions/HP, doesn't control camera during active play.
+   * Camera is controlled by the turn event queue.
    */
   handleRemoteStateUpdate(payload) {
-    console.log('[Battle WS] Processing state update');
+    console.log('[Battle WS] Processing state update (sync only, no camera control)');
+    // Sync unit data but preserve activeUnitId if queue is processing
+    const preserveActiveUnit = this.isProcessingQueue || this.inEnemySequence;
+    const currentActiveId = this.battleState?.activeUnitId;
+
     this.battleState = payload.state;
     this.syncUnitsWithState(payload.state.units);
-    this.updateUI();
+
+    // Restore activeUnitId if we should preserve it (queue handles transitions)
+    if (preserveActiveUnit && currentActiveId) {
+      this.battleState.activeUnitId = currentActiveId;
+    }
+    // Don't call updateUI() - let queue system handle camera and UI updates
   }
 
   /**
-   * Handle remote unit movement
+   * Handle remote unit movement - queue for sequential processing
    */
   handleRemoteUnitMoved(payload) {
     const { unitId, from, to } = payload;
     console.log(`[Battle WS] Unit moved: ${unitId} from (${from?.x},${from?.y}) to (${to?.x},${to?.y})`);
 
-    const unit = this.units.get(unitId);
-    if (unit) {
-      console.log(`[Battle WS] Moving unit ${unit.name} to (${to.x}, ${to.y})`);
-      unit.moveTo(to.x, to.y);
-    } else {
-      console.warn(`[Battle WS] Unit ${unitId} not found in units map`);
-    }
+    // Queue the movement for sequential processing
+    this.queueTurnEvent({
+      type: 'unit_moved',
+      unitId,
+      from,
+      to
+    });
   }
 
   /**
-   * Handle remote action execution
+   * Handle remote action execution - queue for sequential processing
    */
   async handleRemoteActionExecuted(payload) {
     const { actorId, actionType, result } = payload;
@@ -639,11 +655,97 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Handle turn start event (camera pan and UI update)
+   * Handle turn start event - queue for sequential processing
    */
   handleRemoteTurnStart(payload) {
     const { unitId, unitName, unitType, position, turnPredictions } = payload;
     console.log(`[Battle WS] Turn start: ${unitName} (${unitType})`);
+
+    // Queue the turn start for sequential processing
+    // This ensures animations complete before transitioning to next turn
+    this.queueTurnEvent({
+      type: 'turn_start',
+      unitId,
+      unitName,
+      unitType,
+      position,
+      turnPredictions
+    });
+  }
+
+  /**
+   * Handle intent highlight event (enemy visualization)
+   */
+  handleRemoteIntentHighlight(payload) {
+    const { unitId, highlightType, tiles, duration } = payload;
+    console.log(`[Battle WS] Intent highlight: ${highlightType} (${tiles?.length || 0} tiles)`);
+
+    // Queue the intent highlight for sequential processing
+    this.queueTurnEvent({
+      type: 'intent_highlight',
+      unitId,
+      highlightType,
+      tiles,
+      duration
+    });
+  }
+
+  /**
+   * Queue a turn event for sequential processing
+   * This ensures animations play in order without interruption
+   */
+  queueTurnEvent(event) {
+    this.turnEventQueue.push(event);
+    this.processTurnEventQueue();
+  }
+
+  /**
+   * Process turn events sequentially with proper animation timing
+   * Only one event processes at a time - each waits for its animation to complete
+   */
+  async processTurnEventQueue() {
+    // Don't start processing if already processing
+    if (this.isProcessingQueue) return;
+    this.isProcessingQueue = true;
+
+    while (this.turnEventQueue.length > 0) {
+      const event = this.turnEventQueue.shift();
+      await this.processSingleTurnEvent(event);
+    }
+
+    this.isProcessingQueue = false;
+  }
+
+  /**
+   * Process a single turn event with appropriate animation timing
+   */
+  async processSingleTurnEvent(event) {
+    switch (event.type) {
+      case 'turn_start':
+        await this.processTurnStartEvent(event);
+        break;
+
+      case 'intent_highlight':
+        await this.processIntentHighlightEvent(event);
+        break;
+
+      case 'unit_moved':
+        await this.processUnitMovedEvent(event);
+        break;
+
+      case 'action_executed':
+        await this.processActionExecutedEvent(event);
+        break;
+    }
+  }
+
+  /**
+   * Process turn_start event from queue
+   */
+  async processTurnStartEvent(event) {
+    const { unitId, unitName, unitType, position, turnPredictions } = event;
+    const isEnemy = unitType === 'enemy';
+    const isPlayerTurn = unitType === 'player' || unitType === 'player_local';
 
     // Update turn predictions if provided
     if (turnPredictions) {
@@ -653,10 +755,9 @@ export class BattleScene extends Scene {
     // Update active unit
     this.battleState.activeUnitId = unitId;
 
-    // Update selection to active unit (fixes yellow circle staying on wrong unit)
+    // Update selection to active unit
     const activeUnit = this.units.get(unitId);
     if (activeUnit) {
-      // Clear previous selection
       if (this.selectedUnit) {
         this.selectedUnit.isSelected = false;
       }
@@ -664,59 +765,55 @@ export class BattleScene extends Scene {
       activeUnit.isSelected = true;
     }
 
-    // Update turn order UI immediately (fixes stale turn order display)
+    // Update turn order UI
     if (this.ui) {
       this.ui.updateTurnOrder(this.battleState);
-    }
-
-    // Mark that WebSocket is handling this turn transition (prevents duplicate camera pan in updateUI)
-    this.wsHandledTurnTransition = true;
-
-    // Intelligent camera panning:
-    // - Always pan when it becomes player's turn
-    // - Only pan to FIRST enemy of an enemy sequence (not every enemy)
-    // - This prevents rapid camera bouncing during enemy turns
-    const isEnemy = unitType === 'enemy';
-    const isFirstEnemyAfterPlayer = isEnemy && !this.lastTurnWasEnemy;
-    const isPlayerTurn = unitType === 'player' || unitType === 'player_local';
-
-    if (position && this.camera && this.grid) {
-      const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
-
-      if (isPlayerTurn) {
-        // Clear intent highlights when returning to player
-        if (this.grid) this.grid.clearIntentHighlights();
-        // Pan to player immediately - server timing handles delays
-        this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 300);
-        this.inEnemySequence = false;
-      } else if (isFirstEnemyAfterPlayer) {
-        // Pan to first enemy of the sequence
-        this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 300);
-        this.inEnemySequence = true;
-      }
-      // For subsequent enemies in sequence, don't pan - let camera follow the action via unit movement
-    }
-
-    // Track turn type for next turn
-    this.lastTurnWasEnemy = isEnemy;
-
-    // Update UI to show whose turn it is
-    if (this.ui) {
       this.ui.showTurnIndicator(unitName, unitType);
     }
 
-    // If it's an enemy turn, show "thinking" indicator
-    if (isEnemy && activeUnit) {
-      activeUnit.setThinking(true);
+    // Camera handling - pan to EVERY active unit (queue handles timing)
+    if (position && this.camera && this.grid) {
+      const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
+
+      // Clear intent highlights at start of each turn
+      if (this.grid) this.grid.clearIntentHighlights();
+
+      // CRITICAL: Set follow target to current active unit BEFORE panning
+      // This prevents camera from drifting back to player after transition ends
+      if (activeUnit) {
+        this.camera.setFollowTarget(activeUnit);
+      }
+
+      // Pan to active unit and wait for animation to complete
+      console.log(`[Queue] Panning to ${unitName} at (${position.x}, ${position.y})`);
+      await new Promise(resolve => {
+        this.camera.startTurnTransition(worldPos.x, worldPos.y, resolve, 300);
+      });
+
+      if (isPlayerTurn) {
+        this.inEnemySequence = false;
+        this.lastTurnWasEnemy = false;
+
+        // Enable player controls after camera pan
+        this.updateUI();
+      } else {
+        // Enemy turn
+        this.inEnemySequence = true;
+        this.lastTurnWasEnemy = true;
+
+        // Show thinking indicator for enemy
+        if (activeUnit) {
+          activeUnit.setThinking(true);
+        }
+      }
     }
   }
 
   /**
-   * Handle intent highlight event (enemy visualization)
+   * Process intent_highlight event from queue
    */
-  handleRemoteIntentHighlight(payload) {
-    const { unitId, highlightType, tiles, duration } = payload;
-    console.log(`[Battle WS] Intent highlight: ${highlightType} (${tiles?.length || 0} tiles)`);
+  async processIntentHighlightEvent(event) {
+    const { unitId, highlightType, tiles, duration } = event;
 
     // Hide thinking indicator when intent is shown
     const unit = this.units.get(unitId);
@@ -728,31 +825,72 @@ export class BattleScene extends Scene {
     if (this.grid && tiles && tiles.length > 0) {
       this.grid.showIntentHighlight(highlightType, tiles, duration);
     }
+
+    // Wait for the highlight duration before processing next event
+    // This ensures intent visualization is visible before the action happens
+    if (duration && duration > 0) {
+      await this.waitForAnimation(duration);
+    }
+  }
+
+  /**
+   * Process unit_moved event from queue
+   */
+  async processUnitMovedEvent(event) {
+    const { unitId, from, to } = event;
+    const unit = this.units.get(unitId);
+
+    if (unit) {
+      // Start the movement animation
+      unit.moveTo(to.x, to.y);
+
+      // Wait for movement animation to complete (estimate based on distance)
+      const distance = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
+      const moveDuration = Math.max(300, distance * 150); // 150ms per tile, minimum 300ms
+      await this.waitForAnimation(moveDuration);
+    }
+  }
+
+  /**
+   * Process action_executed event from queue
+   */
+  async processActionExecutedEvent(event) {
+    const { actorId, actionType, result } = event;
+
+    // Play attack/skill animation
+    if (actionType === 'attack' || actionType === 'skill') {
+      // Find target and play damage animation
+      if (result?.targetId) {
+        const target = this.units.get(result.targetId);
+        if (target && result.damage) {
+          target.showDamage(result.damage);
+          target.hp = Math.max(0, target.hp - result.damage);
+        }
+      }
+
+      // Wait for attack animation
+      await this.waitForAnimation(600);
+    }
   }
 
   /**
    * Handle "your turn" notification
+   * NOTE: This is redundant with turn_start for player turns.
+   * The queue system handles camera and UI via processTurnStartEvent.
+   * This handler only enables input - doesn't touch camera or call updateUI.
    */
   handleRemoteYourTurn(payload) {
     const { unitId, availableActions } = payload;
-    console.log('[Battle WS] Your turn:', unitId);
+    console.log('[Battle WS] Your turn:', unitId, '(input enabled, queue handles camera)');
 
-    // Update state
-    this.battleState.activeUnitId = unitId;
-
-    // Enable player input
+    // Enable player input (but don't set activeUnitId - queue handles that)
     this.inputEnabled = true;
     this.currentAction = null;
     this.validTiles = [];
 
-    // Update UI
-    this.updateUI();
-
-    // Flash the unit or play a sound to indicate it's player's turn
-    const unit = this.units.get(unitId);
-    if (unit) {
-      unit.playTurnStartAnimation();
-    }
+    // NOTE: Don't call updateUI() - the queue's processTurnStartEvent handles that
+    // NOTE: Don't set activeUnitId - the queue's processTurnStartEvent handles that
+    // This prevents camera bounce when your_turn arrives before queue processes turn_start
   }
 
   /**
@@ -1479,9 +1617,14 @@ export class BattleScene extends Scene {
       this.canAct = true;
       this.turnPhase = 'ready';
 
-      // Update UI for next turn
-      console.log('[Camera] Turn complete, calling updateUI()');
-      this.updateUI();
+      // Mark that we're entering enemy sequence (prevents camera drift to player)
+      // This flag is set BEFORE WebSocket events arrive, preventing the race condition
+      this.inEnemySequence = true;
+      console.log('[Camera] Turn complete, entering enemy sequence (camera will wait for queue)');
+
+      // Don't call updateUI() here - let the queue system handle turn transitions
+      // The queue will process enemy turn_start events, then player turn_start,
+      // which will call updateUI() at the appropriate time
     }
   }
 
@@ -1704,34 +1847,23 @@ export class BattleScene extends Scene {
       // Update movement range based on unit's class and status effects
       this.movementRange = this.getUnitMovementRange(activeUnit);
 
-      // Check if active unit changed - trigger camera transition
+      // Check if active unit changed
       if (this.lastActiveUnitId !== activeUnit.id) {
         console.log(`[Camera] Turn change detected: ${this.lastActiveUnitId} -> ${activeUnit.id}`);
         const previousUnitId = this.lastActiveUnitId;
         this.lastActiveUnitId = activeUnit.id;
 
-        // Only do camera transition if:
-        // 1. This isn't the first active unit (battle start)
-        // 2. WebSocket hasn't already handled the camera pan (prevents duplicate)
-        if (previousUnitId !== null && !this.wsHandledTurnTransition) {
-          // Get target position for camera
-          const targetPos = this.grid.gridToScreenWorld(activeUnit.gridX, activeUnit.gridY);
-          console.log(`[Camera] Starting transition to (${targetPos.x}, ${targetPos.y})`);
-
-          // Start camera transition to new active unit
-          this.camera.startTurnTransition(targetPos.x, targetPos.y, () => {
-            // After camera pan completes, show active unit detail card
-            this.ui.showActiveUnitCard(activeUnit);
-          });
-        } else if (previousUnitId === null) {
-          // First unit of battle - just set follow target without transition
+        // First unit of battle - set follow target without transition
+        if (previousUnitId === null) {
           this.camera.setFollowTarget(activeUnit);
         }
-        // Reset the flag for next turn
-        this.wsHandledTurnTransition = false;
+        // NOTE: Camera pan REMOVED from updateUI() - WebSocket queue system handles camera transitions
       } else {
-        // Same unit, just update follow target
-        this.camera.setFollowTarget(activeUnit);
+        // Same unit's turn continues - only update follow target if NOT in enemy sequence
+        // During enemy sequences, camera should stay put (not drift back to player)
+        if (!this.inEnemySequence && !this.isProcessingQueue) {
+          this.camera.setFollowTarget(activeUnit);
+        }
       }
 
       // Show radial menu for player units
