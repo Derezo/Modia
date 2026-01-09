@@ -70,6 +70,7 @@ export class BattleScene extends Scene {
 
     // Turn transition tracking
     this.lastActiveUnitId = null;
+    this.wsHandledTurnTransition = false; // Prevents duplicate camera pan when WebSocket already handled it
 
     // Event cleanup
     this.abortController = null;
@@ -368,13 +369,8 @@ export class BattleScene extends Scene {
     });
     this.wsUnsubscribers.push(actionExecutedUnsub);
 
-    // Handle turn changes
-    const turnChangedUnsub = socket.on('battle:turn_changed', (payload) => {
-      if (payload.battleId === this.battleId) {
-        this.handleRemoteTurnChanged(payload);
-      }
-    });
-    this.wsUnsubscribers.push(turnChangedUnsub);
+    // NOTE: battle:turn_changed is DEPRECATED - use battle:turn_start instead
+    // The turn_start event includes position data for camera panning and is the authoritative turn notification
 
     // Handle battle end
     const battleEndUnsub = socket.on('battle:end', (payload) => {
@@ -613,18 +609,9 @@ export class BattleScene extends Scene {
     }
   }
 
-  /**
-   * Handle remote turn change
-   */
-  handleRemoteTurnChanged(payload) {
-    this.battleState.activeUnitIndex = payload.activeUnitIndex;
-    this.battleState.activeUnitId = payload.activeUnitId;
-    this.battleState.turn = payload.turn;
-    if (payload.turnPredictions) {
-      this.battleState.turnPredictions = payload.turnPredictions;
-    }
-    this.updateUI();
-  }
+  // NOTE: handleRemoteTurnChanged removed - DEPRECATED
+  // Use handleRemoteTurnStart instead (battle:turn_start event)
+  // The turn_start event is authoritative and includes position for camera panning
 
   /**
    * Handle remote battle end
@@ -657,6 +644,14 @@ export class BattleScene extends Scene {
 
     // Update active unit
     this.battleState.activeUnitId = unitId;
+
+    // Update turn order UI immediately (fixes stale turn order display)
+    if (this.ui) {
+      this.ui.updateTurnOrder(this.battleState);
+    }
+
+    // Mark that WebSocket is handling this turn transition (prevents duplicate camera pan in updateUI)
+    this.wsHandledTurnTransition = true;
 
     // Pan camera to the active unit
     if (position && this.camera && this.grid) {
@@ -1389,86 +1384,46 @@ export class BattleScene extends Scene {
       }
     }
 
-    // Process enemy actions with animations
+    // Sync enemy action results from HTTP response
+    // NOTE: Camera panning and animations are handled by WebSocket events (turn_start, intent_highlight, action_executed)
+    // This block only syncs final HP state to ensure consistency if WebSocket events are delayed
     if (enemyActions && enemyActions.length > 0) {
       this.ui.hideActionMenu();
+      console.log(`[Battle] Syncing ${enemyActions.length} enemy action results from HTTP response`);
 
       for (const enemyAction of enemyActions) {
-        await this.waitForAnimation(300);
-
-        const enemyUnit = this.units.get(enemyAction.unitId);
-        if (!enemyUnit) continue;
-
-        // Pan camera to the acting enemy
-        const targetPos = this.grid.gridToScreenWorld(enemyUnit.gridX, enemyUnit.gridY);
-        console.log(`[Camera] Panning to enemy: ${enemyUnit.name} at (${targetPos.x}, ${targetPos.y})`);
-        await new Promise(resolve => {
-          this.camera.startTurnTransition(targetPos.x, targetPos.y, resolve);
-        });
-
-        // Highlight the acting enemy
-        this.selectedUnit = enemyUnit;
-
-        // Animate movement
-        if (enemyAction.result.moved && enemyAction.targetTile) {
-          enemyUnit.moveTo(enemyAction.targetTile.x, enemyAction.targetTile.y);
-          await this.waitForAnimation(400);
-        }
-
-        // Animate attack damage
-        if (enemyAction.result.damage > 0 && enemyAction.result.targetId) {
+        // Sync HP changes from enemy attacks
+        if (enemyAction.result?.damage > 0 && enemyAction.result?.targetId) {
           const target = this.units.get(enemyAction.result.targetId);
           if (target) {
-            // Enemy faces target and plays attack animation
-            enemyUnit.playAttackAnimation(target.gridX, target.gridY);
-            this.animations.addSlash(enemyUnit.screenX, enemyUnit.screenY - 32, target.screenX, target.screenY - 32);
-            await this.waitForAnimation(200);
-
-            // Target plays hit animation
-            target.playHitAnimation();
-            this.animations.addDamageNumber(target.screenX, target.screenY - 40, enemyAction.result.damage, enemyAction.result.isCritical);
-            this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
-            this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#ff4444');
+            // Sync HP (WebSocket handlers will animate this)
             target.hp = Math.max(0, target.hp - enemyAction.result.damage);
-            await this.waitForAnimation(300);
-
-            // Play death animation if target died
-            if (!target.isAlive()) {
-              target.playDeathAnimation();
-              await this.waitForAnimation(400);
-            }
           }
         }
 
-        // Animate miss
-        if (enemyAction.result.missed && enemyAction.result.targetId) {
-          const target = this.units.get(enemyAction.result.targetId);
-          if (target) {
-            this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
-            await this.waitForAnimation(300);
+        // Sync enemy position if they moved
+        if (enemyAction.result?.moved && enemyAction.targetTile) {
+          const enemyUnit = this.units.get(enemyAction.unitId);
+          if (enemyUnit) {
+            enemyUnit.gridX = enemyAction.targetTile.x;
+            enemyUnit.gridY = enemyAction.targetTile.y;
+            enemyUnit.updateScreenPosition();
           }
         }
-
-        // Deselect enemy
-        this.selectedUnit = null;
-      }
-
-      // After all enemy actions, pan camera to the next active unit (player)
-      // This ensures smooth transition back to player's turn
-      const nextActiveUnit = state.units.find(u => u.id === state.activeUnitId);
-      if (nextActiveUnit) {
-        const playerPos = this.grid.gridToScreenWorld(nextActiveUnit.tileX, nextActiveUnit.tileY);
-        console.log(`[Camera] Panning back to player: ${nextActiveUnit.name}`);
-        await new Promise(resolve => {
-          this.camera.startTurnTransition(playerPos.x, playerPos.y, resolve);
-        });
       }
     }
 
-    // Update battle state from server (sync all units)
-    console.log('[Camera] processActionResult - old activeUnitId:', this.battleState?.activeUnitId, 'new activeUnitId:', state?.activeUnitId);
-    this.battleState = state;
+    // Update battle state SELECTIVELY - don't override activeUnitId from HTTP response
+    // WebSocket turn_start is authoritative for turn transitions (prevents duplicate camera panning)
+    // HTTP response arrives before WebSocket, so if we set activeUnitId here, updateUI() triggers
+    // camera pan, then turn_start arrives and triggers it AGAIN
+    console.log('[Camera] processActionResult - syncing unit data only (activeUnitId stays:', this.battleState?.activeUnitId, ')');
     this.syncUnitsWithState(state.units);
+
+    // Update turn predictions if available (for turn order display)
+    if (state.turnPredictions) {
+      this.battleState.turnPredictions = state.turnPredictions;
+    }
 
     // Clear action state
     this.currentAction = null;
@@ -1714,8 +1669,10 @@ export class BattleScene extends Scene {
         const previousUnitId = this.lastActiveUnitId;
         this.lastActiveUnitId = activeUnit.id;
 
-        // Only do camera transition if this isn't the first active unit (battle start)
-        if (previousUnitId !== null) {
+        // Only do camera transition if:
+        // 1. This isn't the first active unit (battle start)
+        // 2. WebSocket hasn't already handled the camera pan (prevents duplicate)
+        if (previousUnitId !== null && !this.wsHandledTurnTransition) {
           // Get target position for camera
           const targetPos = this.grid.gridToScreenWorld(activeUnit.gridX, activeUnit.gridY);
           console.log(`[Camera] Starting transition to (${targetPos.x}, ${targetPos.y})`);
@@ -1725,10 +1682,12 @@ export class BattleScene extends Scene {
             // After camera pan completes, show active unit detail card
             this.ui.showActiveUnitCard(activeUnit);
           });
-        } else {
+        } else if (previousUnitId === null) {
           // First unit of battle - just set follow target without transition
           this.camera.setFollowTarget(activeUnit);
         }
+        // Reset the flag for next turn
+        this.wsHandledTurnTransition = false;
       } else {
         // Same unit, just update follow target
         this.camera.setFollowTarget(activeUnit);

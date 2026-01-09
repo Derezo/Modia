@@ -71,6 +71,10 @@ export class BattleUnit {
     this.isCharging = unitData.isCharging || false;
     this.chargingSkill = unitData.chargingSkill || null;
 
+    // Thinking indicator (for enemy turns)
+    this.isThinking = false;
+    this.thinkingTimer = 0;
+
     // Reference to grid for coordinate conversion
     this.grid = grid;
 
@@ -389,6 +393,11 @@ export class BattleUnit {
     this.idleTimer += deltaTime * 2;
     this.idleOffset = Math.sin(this.idleTimer) * 2;
 
+    // Update thinking indicator animation (tracks seconds for 600ms cycle)
+    if (this.isThinking) {
+      this.thinkingTimer += deltaTime;
+    }
+
     // Update current animated sprite
     if (this.animatedSprite) {
       this.animatedSprite.update(deltaTime * 1000); // Convert to ms
@@ -453,6 +462,17 @@ export class BattleUnit {
    */
   playDeathAnimation() {
     this.setAnimationState('death');
+  }
+
+  /**
+   * Set thinking indicator state (shown during enemy turn)
+   * @param {boolean} isThinking - Whether to show the thinking indicator
+   */
+  setThinking(isThinking) {
+    this.isThinking = isThinking;
+    if (isThinking) {
+      this.thinkingTimer = 0;
+    }
   }
 
   /**
@@ -603,6 +623,11 @@ export class BattleUnit {
       this.renderStatusEffects(ctx, drawX, renderY + unitRadius + 8);
     }
 
+    // Draw thinking indicator (20px above sprite per BATTLE_ANIMATIONS.md)
+    if (this.isThinking) {
+      this.renderThinkingIndicator(ctx, drawX, renderY - 20);
+    }
+
     // Draw name on hover/select
     if (this.isSelected || this.isTargeted) {
       ctx.fillStyle = '#fff';
@@ -700,6 +725,36 @@ export class BattleUnit {
       ctx.lineWidth = 1;
       ctx.stroke();
     });
+  }
+
+  /**
+   * Render thinking indicator (animated dots)
+   * Spec: BATTLE_ANIMATIONS.md Section 5
+   * - 3 bouncing dots, white with 80% opacity
+   * - 4px radius, 8px spacing, 6px bounce height
+   * - 600ms cycle (200ms per dot, staggered)
+   */
+  renderThinkingIndicator(ctx, x, y) {
+    const dotCount = 3;
+    const dotRadius = 4;
+    const spacing = 8;
+    const bounceHeight = 6;
+    const cycleDuration = 0.6; // 600ms
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+
+    for (let i = 0; i < dotCount; i++) {
+      // Staggered phase: each dot is 1/3 of cycle behind the previous
+      const phase = (this.thinkingTimer / cycleDuration + i / dotCount) % 1;
+      // Sin wave from 0 to PI gives smooth up-and-down bounce
+      const bounce = Math.sin(phase * Math.PI) * bounceHeight;
+      const dotX = x + (i - 1) * spacing;
+      const dotY = y - bounce;
+
+      ctx.beginPath();
+      ctx.arc(dotX, dotY, dotRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   /**
