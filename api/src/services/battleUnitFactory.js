@@ -130,7 +130,7 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
  * @returns {Object} BattleUnit object
  */
 function createEnemyBattleUnit(template, partyLevel, difficultyTier, index, position, options = {}) {
-  const { biome = 'forest', skills = [] } = options;
+  const { biome = 'forest', skills = [], consumables = [] } = options;
 
   // Difficulty tier multipliers
   const TIER_MULTIPLIERS = {
@@ -196,6 +196,9 @@ function createEnemyBattleUnit(template, partyLevel, difficultyTier, index, posi
 
     // Skills (from NPC skill service or template abilities)
     skills: skills.length > 0 ? skills : (template.abilities || []),
+
+    // Consumables (from NPC item service)
+    consumables: consumables,
 
     // Movement/Range
     movement: template.movement || CLASS_MOVEMENT[enemyClass?.toLowerCase()] || 3,

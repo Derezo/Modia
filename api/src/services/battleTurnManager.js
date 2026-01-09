@@ -216,6 +216,14 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       // === ATTACK PHASE ===
       console.log('[AsyncTurnManager]', enemy.name, 'attacking', decision.targetTile);
 
+      // Debug: Validate targetTile has valid coordinates
+      if (decision.targetTile.x === undefined || decision.targetTile.y === undefined) {
+        console.error('[AsyncTurnManager] INVALID targetTile - x or y is undefined!', {
+          decision,
+          enemyPos: { x: enemy.tileX, y: enemy.tileY }
+        });
+      }
+
       // Show attack range highlight
       const attackRange = getAttackRangeTiles(enemy, state, battleService);
       if (attackRange.length > 0) {
@@ -248,7 +256,18 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
         null
       );
 
-      if (!attackResult.error) {
+      if (attackResult.error) {
+        console.error('[AsyncTurnManager] Attack FAILED:', attackResult.error, {
+          enemyName: enemy.name,
+          enemyPos: { x: enemy.tileX, y: enemy.tileY },
+          targetTile: decision.targetTile,
+          attackRange: enemy.attackRange || 1
+        });
+      } else {
+        console.log('[AsyncTurnManager] Attack SUCCESS:', {
+          damage: attackResult.damage,
+          target: attackResult.targetName || decision.targetTile
+        });
         // Broadcast action executed
         battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'attack', {
           targetTile: decision.targetTile,
@@ -332,6 +351,40 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       const battleStatus = battleService.checkBattleEnd(state);
       if (battleStatus !== 'active') {
         break;
+      }
+
+    } else if (decision.actionType === 'item' && decision.itemId) {
+      // === ITEM PHASE ===
+      console.log('[AsyncTurnManager]', enemy.name, 'using item', decision.itemId);
+
+      // Execute item via processAction
+      const itemResult = battleService.processAction(
+        state,
+        enemy,
+        'item',
+        decision.targetTile || { x: enemy.tileX, y: enemy.tileY },
+        decision.itemId
+      );
+
+      if (!itemResult.error) {
+        battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'item', {
+          itemId: decision.itemId,
+          targetTile: decision.targetTile,
+          ...itemResult
+        });
+
+        actionResults.push({
+          unitId: enemy.id,
+          unitName: enemy.name,
+          actionType: 'item',
+          targetTile: decision.targetTile,
+          itemId: decision.itemId,
+          result: itemResult
+        });
+
+        await delay(TIMING.ATTACK_ANIMATION);
+      } else {
+        console.error('[AsyncTurnManager] Item use FAILED:', itemResult.error);
       }
     }
   }
