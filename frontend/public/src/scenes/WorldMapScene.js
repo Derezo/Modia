@@ -2,6 +2,14 @@ import { Scene } from './Scene.js';
 import { WorldMapEffects } from '../worldmap/WorldMapEffects.js';
 import { WorldMapMinimap } from '../worldmap/WorldMapMinimap.js';
 
+// Class-specific action labels for guild recruitment buttons
+const GUILD_ACTION_LABELS = {
+  warrior: 'Recruit Soldier',
+  wizard: 'Take on Apprentice',
+  monk: 'Accept Initiate',
+  chemist: 'Hire Assistant'
+};
+
 export class WorldMapScene extends Scene {
   constructor(game) {
     super(game);
@@ -258,8 +266,8 @@ export class WorldMapScene extends Scene {
     const features = this.currentNode.features || [];
     if (Array.isArray(features)) {
       // Prioritize essential features (shops, social hubs) over decorative ones
-      const essentialFeatures = ['blacksmith', 'marketplace', 'tavern', 'apothecary', 'coliseum', 'farm'];
-      const decorativeFeatures = ['courtyard', 'throne', 'temple', 'stables', 'guild_hall', 'training_ground'];
+      const essentialFeatures = ['blacksmith', 'marketplace', 'tavern', 'apothecary', 'coliseum', 'farm', 'guild_hall'];
+      const decorativeFeatures = ['courtyard', 'throne', 'temple', 'stables', 'training_ground'];
 
       // Sort features: essential first, then others, decorative last
       const prioritizedFeatures = [
@@ -274,7 +282,14 @@ export class WorldMapScene extends Scene {
       prioritizedFeatures.slice(0, maxFeatures).forEach(feature => {
         const btn = document.createElement('button');
         btn.className = 'btn btn-secondary';
-        btn.textContent = this.capitalize(feature);
+
+        // Use class-specific label for guild_hall feature
+        if (feature === 'guild_hall' && this.currentNode.guild_class) {
+          btn.textContent = GUILD_ACTION_LABELS[this.currentNode.guild_class] || 'Guild Hall';
+        } else {
+          btn.textContent = this.capitalize(feature);
+        }
+
         btn.style.fontSize = '11px';
         btn.style.padding = '6px 10px';
         btn.addEventListener('click', () => this.handleFeature(feature));
@@ -325,6 +340,15 @@ export class WorldMapScene extends Scene {
     // Coliseum feature opens the PvP arena scene
     if (feature === 'coliseum') {
       this.game.scenes.switchTo('coliseum');
+      return;
+    }
+
+    // Guild hall feature opens the recruitment scene
+    if (feature === 'guild_hall') {
+      this.game.scenes.switchTo('recruitment', {
+        nodeId: this.currentNode.id,
+        guildClass: this.currentNode.guild_class
+      });
       return;
     }
 
