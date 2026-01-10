@@ -210,4 +210,34 @@ export class GameWebSocket {
   coliseumReady(matchId) {
     this.send('coliseum_ready', { matchId });
   }
+
+  // Marketplace methods
+
+  /**
+   * Join the marketplace room for general updates
+   */
+  joinMarketplace() {
+    this.send('join_room', { room: 'marketplace' });
+  }
+
+  /**
+   * Leave the marketplace room
+   */
+  leaveMarketplace() {
+    this.send('leave_room', { room: 'marketplace' });
+  }
+
+  /**
+   * Subscribe to a specific item's order book updates
+   */
+  subscribeToItem(itemTemplateId) {
+    this.send('marketplace_subscribe', { itemTemplateId });
+  }
+
+  /**
+   * Unsubscribe from item order book updates
+   */
+  unsubscribeFromItem(itemTemplateId) {
+    this.send('marketplace_unsubscribe', { itemTemplateId });
+  }
 }

@@ -4,6 +4,7 @@ import chatService from '../services/chatService.js';
 import presenceService from '../services/presenceService.js';
 import coliseumService from '../services/coliseumService.js';
 import * as partyWebsocket from '../services/partyWebsocket.js';
+import * as marketplaceWebsocket from '../services/marketplaceWebsocket.js';
 import { query } from '../config/database.js';
 
 // Active connections mapped by userId
@@ -101,12 +102,25 @@ async function validateRoomAccess(userId, roomName) {
     return { authorized: true };
   }
 
+  // Marketplace item-specific rooms - allow subscribing to any item
+  if (roomName.startsWith('marketplace:item:')) {
+    return { authorized: true };
+  }
+
+  // Courtyard room is allowed for all authenticated users (social hub)
+  if (roomName === 'courtyard') {
+    return { authorized: true };
+  }
+
   // Unknown room type - deny by default (security)
   return { authorized: false, error: 'Unknown room type' };
 }
 
 function setupWebSocket(server) {
   const wss = new WebSocketServer({ server, path: '/ws' });
+
+  // Initialize marketplace WebSocket service with server references
+  marketplaceWebsocket.initialize(wss, rooms, connections);
 
   // Authentication timeout duration (10 seconds)
   const AUTH_TIMEOUT_MS = 10000;
@@ -780,6 +794,46 @@ function setupWebSocket(server) {
             }
             break;
 
+          // Marketplace subscription handlers
+          case 'marketplace_subscribe': {
+            // Subscribe to specific item's order book updates
+            if (!userId) break;
+            const { itemTemplateId } = payload;
+            if (!itemTemplateId) break;
+
+            const itemRoom = `marketplace:item:${itemTemplateId}`;
+            if (!rooms.has(itemRoom)) {
+              rooms.set(itemRoom, new Set());
+            }
+            rooms.get(itemRoom).add(userId);
+
+            ws.send(JSON.stringify({
+              type: 'marketplace:subscribed',
+              payload: { itemTemplateId }
+            }));
+            break;
+          }
+
+          case 'marketplace_unsubscribe': {
+            if (!userId) break;
+            const { itemTemplateId: unsubId } = payload;
+            if (!unsubId) break;
+
+            const unsubRoom = `marketplace:item:${unsubId}`;
+            if (rooms.has(unsubRoom)) {
+              rooms.get(unsubRoom).delete(userId);
+              if (rooms.get(unsubRoom).size === 0) {
+                rooms.delete(unsubRoom);
+              }
+            }
+
+            ws.send(JSON.stringify({
+              type: 'marketplace:unsubscribed',
+              payload: { itemTemplateId: unsubId }
+            }));
+            break;
+          }
+
           default:
             ws.send(JSON.stringify({
               type: 'error',
@@ -830,6 +884,9 @@ function setupWebSocket(server) {
 
         // Clean up party invites
         partyWebsocket.cleanupUserInvites(userId);
+
+        // Clean up marketplace item subscriptions
+        marketplaceWebsocket.cleanupUserSubscriptions(userId);
 
         // Broadcast presence change
         broadcastPresenceChange(userId, username, 'offline');

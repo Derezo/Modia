@@ -30,6 +30,7 @@ const errorHandler = (err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
     error: err.message || 'Internal Server Error',
+    ...(err.data && { ...err.data }),
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 };
@@ -39,12 +40,13 @@ const asyncHandler = (fn) => (req, res, next) => {
   Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-// Custom error class with status code
+// Custom error class with status code and optional data
 class AppError extends Error {
-  constructor(message, statusCode = 500) {
+  constructor(message, statusCode = 500, data = null) {
     super(message);
     this.statusCode = statusCode;
     this.name = 'AppError';
+    this.data = data;
   }
 }
 
