@@ -210,6 +210,9 @@ export class RegisterScene extends Scene {
       // Connect WebSocket
       this.game.socket.connect(result.accessToken);
 
+      // Load user settings (will create defaults for new user)
+      await this.game.loadSettings();
+
       // New user, go to character creation
       this.game.scenes.switchTo('characterCreate');
     } catch (err) {
