@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 6.0 |
+| Version | 6.1 |
 | Last Updated | January 2026 |
 
 ---
@@ -18,8 +18,8 @@
 | 2 | Characters & World | 95% | Complete |
 | 3 | Combat System | 90% | Near Complete |
 | 4 | Economy & Inventory | 95% | Near Complete |
-| 5 | Multiplayer | 60% | Substantial |
-| 6 | Polish & Launch | 15% | Started |
+| 5 | Multiplayer | 50% | Partial |
+| 6 | Polish & Launch | 20% | Started |
 
 **Overall: ~75%**
 
@@ -32,11 +32,13 @@ Critical items for complete gameplay loop:
 | Issue | Location | Impact | Priority |
 |-------|----------|--------|----------|
 | ~~**PvP action endpoint broken**~~ | ~~battle.js:action~~ | ~~Player2 cannot submit actions~~ | ✅ FIXED |
-| PvP battles not started | coliseumService.js | Match found but battle not created | Medium |
+| PvP battle transition incomplete | ColiseumScene.js:634 | Match found but UI doesn't transition | High |
+| Party invite modal missing | WorldMapScene.js:398 | No accept/decline UI for invites | Medium |
 | ~~No multi-player party tables~~ | ~~Database schema~~ | ~~Cannot form parties~~ | ✅ FIXED (009_multiplayer_support.sql) |
 | ~~Database 2-player limit~~ | ~~battles table~~ | ~~Schema only supports 2 players~~ | ✅ FIXED (battle_players table) |
-| Audio system missing | BattleScene.js | No sound effects or music | Low |
+| Audio system missing | BattleScene.js:2060 | No sound effects or music | Low |
 | Leaderboards missing | - | No player rankings | Low |
+| Skill-based matchmaking | coliseumService.js:185 | Matches not balanced by level | Low |
 
 ### Battle System Architecture Overhaul (Complete)
 
@@ -95,6 +97,42 @@ Resolved critical camera bouncing and enemy movement issues in the async battle 
 | Handler queue bypass fixes | ✅ Complete | BattleScene.js (handleRemoteYourTurn, handleRemoteStateUpdate) |
 
 **Root Cause:** HTTP responses arrived before WebSocket events, causing multiple camera control systems to fight. Fixed by implementing a sequential turn event queue where all camera transitions wait for completion before advancing.
+
+### Guild Recruitment System (Complete - January 2026)
+
+Implemented party expansion via guild node recruitment. See documentation: `docs/GUILD_RECRUITMENT_SYSTEM.md`
+
+| Task | Status | Files |
+|------|--------|-------|
+| Database schema (5 tables) | ✅ Complete | 012_guild_recruitment.sql |
+| Trait seed data (31 traits) | ✅ Complete | 012_guild_recruitment.sql |
+| Procedural name generator | ✅ Complete | nameGenerator.js, nameData.js |
+| Recruit generation service | ✅ Complete | recruitService.js |
+| Trait effect calculations | ✅ Complete | traitService.js |
+| Guild API endpoints (3) | ✅ Complete | guild.js (info, recruits, purchase) |
+| Lazy refresh system | ✅ Complete | recruitService.js |
+| RecruitmentScene UI | ✅ Complete | RecruitmentScene.js |
+| WorldMapScene integration | ✅ Complete | WorldMapScene.js |
+| Battle trait application | ✅ Complete | traitService.js, battleService.js |
+
+**Key Features:**
+- **Recruit Uniqueness**: ±15% stat variance, 1-2 traits, 0-2 starting skills, 50-150 XP pool
+- **Pricing**: 2,000g base + stat variance + 8,000g per extra trait + 750g per skill
+- **Pool System**: 10 recruits per guild, shared pool, daily refresh per node
+- **Emergency Restock**: 3 basic recruits (1-trait cap) when pool empties
+- **Trait System**: 31 traits in 4 categories (combat, survival, utility, situational)
+- **Battle Integration**: Traits apply to damage, crit, HP/MP, movement, initiative, regen, lifesteal
+
+**Suggested Improvements (TODO):**
+- [ ] Class-weighted trait selection (warriors more likely to get combat traits)
+- [ ] Limit emergency restocks (cooldown between restocks)
+- [ ] Scale recruit level with player progression
+- [ ] Exponential pricing for high stat variance
+- [ ] Recruit comparison tools (compare to existing party)
+- [ ] Buff situational traits (currently too weak)
+- [ ] Tier trait pricing by rarity
+
+---
 
 ### Advanced AI System (Complete - January 2026)
 
@@ -182,6 +220,32 @@ Features previously listed as "not implemented" that ARE working:
 |------|------|------|--------------|
 | BattleScene.js | 526 | Mock skills by class | Load real character_skills from DB |
 | BattleScene.js | 470 | "TODO: Implement audio system" | Add Web Audio API |
+
+---
+
+## Code TODOs
+
+Active TODO comments found in codebase (January 2026 audit):
+
+| File | Line | TODO | Priority |
+|------|------|------|----------|
+| ColiseumScene.js | 634 | Transition to BattleScene with PvP battle data | High |
+| WorldMapScene.js | 398 | Show party invite modal | Medium |
+| BattleScene.js | 2060 | Implement audio system | Low |
+| coliseumService.js | 185 | Add skill-based matchmaking using partyLevel | Low |
+
+---
+
+## Unused Database Tables
+
+Tables created but not fully wired to application logic:
+
+| Table | Status | Issue |
+|-------|--------|-------|
+| coliseum_matches | Schema exists | startMatch() creates matches but battle transition incomplete |
+| leaderboard_cache | Seeded | No API endpoints implemented |
+| pvp_ratings | Created | Never populated with player ratings |
+| party_members | Created | Party system uses direct character queries instead |
 
 ---
 
@@ -1036,3 +1100,4 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 | 5.0 | Jan 2026 | - | **Major feature completion**: Real skills in battle (character_skills), status effects from skills, item menu in battle, equipment stat bonuses applied, equipment requirements enforced, all 4 advanced guilds (Berserker, Sorcerer, Ninja, Alchemist ~60 skills), guild advancement system (level 20), ColiseumScene UI with matchmaking. Overall revised to 75%. |
 | 5.1 | Jan 2026 | - | **Turn event queue & camera fixes**: Implemented sequential turn event queue to resolve HTTP/WebSocket race conditions causing camera bounce. Fixed enemy movement (resetTurnState), AI pathfinding (obstacle-aware isReachable), and camera transition timing (updateTurnTransition in update loop). |
 | 6.0 | Jan 2026 | - | **Advanced AI System overhaul**: Complete rewrite of NPC AI with utility-based scoring, multi-actor lookahead (2-3 rounds), 9 AI patterns (aggressive, defensive, support, tactical, pack, ambush, berserker, ranged, boss), monster skill trees (9 archetypes with themed skill branches), unified BattleUnit factory, server-provided availableActions, NPC skill generation service. New AI module in `api/src/services/ai/` with 7 core files. Added `docs/AI_SYSTEM.md` documentation. |
+| 6.1 | Jan 2026 | - | **Guild Recruitment System**: Party expansion via guild node recruitment. 5 new database tables (traits, guild_recruits, recruit_traits, recruit_skills, character_traits), 31 seeded traits across 4 categories, procedural name generator (300 names), recruit generation with ±15% stat variance and 1-2 traits, lazy refresh system, RecruitmentScene UI, trait integration in battle calculations. New documentation: `docs/GUILD_RECRUITMENT_SYSTEM.md`. Updated GAME_DESIGN.md, CHARACTER_PROGRESSION.md, ECONOMY_SYSTEM.md, TECHNICAL_ARCHITECTURE.md, API_SPECIFICATION.md. |
