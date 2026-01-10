@@ -66,16 +66,20 @@ export class BattleContextMenu {
     const style = document.createElement('style');
     style.id = 'battle-context-menu-styles';
     style.textContent = `
+      /* Parchment-themed context menu */
       .battle-context-menu {
         position: absolute;
         z-index: 150;
         pointer-events: auto;
         min-width: 140px;
-        background: linear-gradient(to bottom, rgba(30, 30, 45, 0.98), rgba(20, 20, 35, 0.98));
-        border: 2px solid #ffd700;
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 50%, #bfae8a 100%);
+        border: 2px solid #8b7355;
         border-radius: 4px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 215, 0, 0.15);
-        font-family: 'Segoe UI', Tahoma, sans-serif;
+        box-shadow:
+          0 3px 8px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.3),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+        font-family: 'Georgia', 'Times New Roman', serif;
         overflow: hidden;
       }
 
@@ -85,17 +89,17 @@ export class BattleContextMenu {
         justify-content: space-between;
         padding: 10px 14px;
         cursor: pointer;
-        transition: background 0.1s ease;
+        transition: background 0.15s ease;
         border-left: 3px solid transparent;
       }
 
       .context-menu-item:hover:not(.disabled),
       .context-menu-item.selected:not(.disabled) {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(139, 115, 85, 0.2);
       }
 
       .context-menu-item.disabled {
-        opacity: 0.4;
+        opacity: 0.5;
         cursor: not-allowed;
       }
 
@@ -105,27 +109,32 @@ export class BattleContextMenu {
 
       .context-menu-item[data-action="move"]:hover:not(.disabled),
       .context-menu-item[data-action="move"].selected:not(.disabled) {
-        border-left-color: #4a90d9;
+        border-left-color: #4080a0;
+        background: rgba(64, 128, 160, 0.15);
       }
 
       .context-menu-item[data-action="attack"]:hover:not(.disabled),
       .context-menu-item[data-action="attack"].selected:not(.disabled) {
-        border-left-color: #d94a4a;
+        border-left-color: #8b4444;
+        background: rgba(139, 68, 68, 0.15);
       }
 
       .context-menu-item[data-action="skill"]:hover:not(.disabled),
       .context-menu-item[data-action="skill"].selected:not(.disabled) {
-        border-left-color: #9c27b0;
+        border-left-color: #6b4488;
+        background: rgba(107, 68, 136, 0.15);
       }
 
       .context-menu-item[data-action="item"]:hover:not(.disabled),
       .context-menu-item[data-action="item"].selected:not(.disabled) {
-        border-left-color: #4caf50;
+        border-left-color: #448844;
+        background: rgba(68, 136, 68, 0.15);
       }
 
       .context-menu-item[data-action="wait"]:hover:not(.disabled),
       .context-menu-item[data-action="wait"].selected:not(.disabled) {
-        border-left-color: #607d8b;
+        border-left-color: #6b5344;
+        background: rgba(107, 83, 68, 0.15);
       }
 
       .item-left {
@@ -136,42 +145,47 @@ export class BattleContextMenu {
 
       .item-label {
         font-size: 13px;
-        font-weight: 500;
-        color: #fff;
+        font-weight: bold;
+        color: #2d2418;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
       .item-key {
         font-size: 11px;
-        font-family: monospace;
-        color: rgba(255, 255, 255, 0.4);
-        background: rgba(255, 255, 255, 0.1);
+        font-family: 'Consolas', 'Monaco', monospace;
+        color: #5a4a3a;
+        background: rgba(139, 115, 85, 0.2);
         padding: 2px 6px;
         border-radius: 3px;
+        border: 1px solid rgba(139, 115, 85, 0.3);
       }
 
       .item-arrow {
         font-size: 10px;
-        color: rgba(255, 255, 255, 0.5);
+        color: #5a4a3a;
         margin-left: 8px;
       }
 
       .context-menu-divider {
         height: 1px;
-        background: rgba(255, 255, 255, 0.1);
-        margin: 4px 0;
+        background: #8b7355;
+        margin: 4px 8px;
+        opacity: 0.4;
       }
 
-      /* Submenu */
+      /* Parchment-themed submenu */
       .context-submenu {
         position: absolute;
         top: 0;
         min-width: 180px;
         max-width: 240px;
         max-height: 280px;
-        background: linear-gradient(to bottom, rgba(30, 30, 45, 0.98), rgba(20, 20, 35, 0.98));
-        border: 2px solid rgba(255, 215, 0, 0.7);
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 50%, #bfae8a 100%);
+        border: 2px solid #8b7355;
         border-radius: 4px;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+        box-shadow:
+          0 3px 8px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.3);
         overflow: hidden;
         animation: submenu-slide 0.12s ease-out;
       }
@@ -204,11 +218,12 @@ export class BattleContextMenu {
         padding: 8px 12px;
         font-size: 11px;
         font-weight: bold;
-        color: #ffd700;
+        color: #2d2418;
         text-transform: uppercase;
         letter-spacing: 1px;
-        background: rgba(0, 0, 0, 0.3);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+        border-bottom: 1px solid #8b7355;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
       .submenu-content {
@@ -222,15 +237,15 @@ export class BattleContextMenu {
         gap: 8px;
         padding: 8px 12px;
         cursor: pointer;
-        transition: background 0.1s ease;
+        transition: background 0.15s ease;
       }
 
       .submenu-item:hover:not(.disabled) {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(139, 115, 85, 0.2);
       }
 
       .submenu-item.disabled {
-        opacity: 0.4;
+        opacity: 0.5;
         cursor: not-allowed;
       }
 
@@ -247,8 +262,8 @@ export class BattleContextMenu {
 
       .submenu-item-name {
         font-size: 12px;
-        font-weight: 500;
-        color: #fff;
+        font-weight: bold;
+        color: #2d2418;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -256,23 +271,24 @@ export class BattleContextMenu {
 
       .submenu-item-cost {
         font-size: 11px;
-        color: #4a90d9;
-        font-weight: 500;
+        color: #4080a0;
+        font-weight: bold;
         white-space: nowrap;
       }
 
       .submenu-item-cost.insufficient {
-        color: #d94a4a;
+        color: #8b4444;
       }
 
       .submenu-empty {
         padding: 16px;
         text-align: center;
-        color: rgba(255, 255, 255, 0.5);
+        color: #7a6a5a;
         font-size: 11px;
+        font-style: italic;
       }
 
-      /* Mobile: Convert to bottom sheet */
+      /* Mobile: Convert to bottom sheet with parchment style */
       @media (max-width: 768px) {
         .battle-context-menu {
           position: fixed !important;
@@ -282,7 +298,7 @@ export class BattleContextMenu {
           top: auto !important;
           min-width: 100%;
           max-height: 60vh;
-          border-radius: 16px 16px 0 0;
+          border-radius: 12px 12px 0 0;
           border-bottom: none;
           animation: sheet-slide-up 0.2s ease-out;
         }
@@ -316,7 +332,7 @@ export class BattleContextMenu {
           min-width: 100%;
           max-width: 100%;
           max-height: 70vh;
-          border-radius: 16px 16px 0 0;
+          border-radius: 12px 12px 0 0;
           animation: sheet-slide-up 0.2s ease-out;
         }
 
@@ -349,9 +365,10 @@ export class BattleContextMenu {
           display: block;
           width: 40px;
           height: 4px;
-          background: rgba(255, 255, 255, 0.3);
+          background: #8b7355;
           border-radius: 2px;
           margin: 10px auto 6px;
+          opacity: 0.5;
         }
 
         .context-submenu::before {
@@ -359,9 +376,10 @@ export class BattleContextMenu {
           display: block;
           width: 40px;
           height: 4px;
-          background: rgba(255, 255, 255, 0.3);
+          background: #8b7355;
           border-radius: 2px;
           margin: 10px auto 6px;
+          opacity: 0.5;
         }
       }
     `;

@@ -21,6 +21,7 @@ const shopRoutes = require('./routes/shop');
 const marketplaceRoutes = require('./routes/marketplace');
 const chatRoutes = require('./routes/chat');
 const guildRoutes = require('./routes/guild');
+const settingsRoutes = require('./routes/settings');
 
 const app = express();
 const server = http.createServer(app);
@@ -66,6 +67,7 @@ app.use('/api/shops', shopRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/guild', guildRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Error handling
 app.use(errorHandler);

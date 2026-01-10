@@ -119,6 +119,7 @@ export class BattleActionBar {
     const style = document.createElement('style');
     style.id = 'battle-action-bar-styles';
     style.textContent = `
+      /* Parchment-themed action bar */
       .battle-action-bar {
         position: fixed;
         bottom: 0;
@@ -133,12 +134,15 @@ export class BattleActionBar {
         flex-direction: column;
         align-items: center;
         padding: 8px 16px 12px;
-        background: linear-gradient(to top, rgba(20, 20, 30, 0.95), rgba(30, 30, 45, 0.9));
-        border-top: 2px solid #4a90d9;
-        border-left: 1px solid rgba(74, 144, 217, 0.3);
-        border-right: 1px solid rgba(74, 144, 217, 0.3);
-        border-radius: 12px 12px 0 0;
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 50%, #bfae8a 100%);
+        border: 2px solid #8b7355;
+        border-bottom: none;
+        border-radius: 8px 8px 0 0;
+        box-shadow:
+          0 -4px 16px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.3),
+          inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+        font-family: 'Georgia', 'Times New Roman', serif;
       }
 
       .turn-state-indicator {
@@ -147,16 +151,18 @@ export class BattleActionBar {
         gap: 12px;
         margin-bottom: 8px;
         padding: 4px 12px;
-        background: rgba(0, 0, 0, 0.3);
+        background: rgba(139, 115, 85, 0.2);
+        border: 1px solid rgba(139, 115, 85, 0.3);
         border-radius: 12px;
       }
 
       .turn-state-text {
         font-size: 12px;
         font-weight: bold;
-        color: #ffd700;
+        color: #2d2418;
         text-transform: uppercase;
         letter-spacing: 1px;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
       .action-pips {
@@ -168,19 +174,20 @@ export class BattleActionBar {
         width: 12px;
         height: 12px;
         border-radius: 50%;
-        border: 2px solid rgba(255, 255, 255, 0.3);
+        border: 2px solid #8b7355;
+        background: #f0e8d8;
         transition: all 0.2s ease;
       }
 
       .pip.available {
-        background: #4caf50;
-        border-color: #4caf50;
-        box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+        background: #5a9e4a;
+        border-color: #4a8c3a;
+        box-shadow: 0 0 6px rgba(90, 158, 74, 0.5);
       }
 
       .pip.used {
-        background: #607d8b;
-        border-color: #607d8b;
+        background: #bfae8a;
+        border-color: #8b7355;
         opacity: 0.5;
       }
 
@@ -189,8 +196,8 @@ export class BattleActionBar {
       }
 
       @keyframes pip-pulse {
-        0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(76, 175, 80, 0.6); }
-        50% { transform: scale(1.2); box-shadow: 0 0 16px rgba(76, 175, 80, 0.9); }
+        0%, 100% { transform: scale(1); box-shadow: 0 0 6px rgba(90, 158, 74, 0.5); }
+        50% { transform: scale(1.2); box-shadow: 0 0 12px rgba(90, 158, 74, 0.8); }
       }
 
       .action-buttons {
@@ -207,34 +214,41 @@ export class BattleActionBar {
         min-width: 60px;
         height: 56px;
         padding: 6px 10px;
-        background: linear-gradient(to bottom, rgba(60, 60, 80, 0.9), rgba(40, 40, 60, 0.9));
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        color: #fff;
+        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+        border: 2px solid #8b7355;
+        border-radius: 4px;
+        color: #2d2418;
         cursor: pointer;
         transition: all 0.15s ease;
         position: relative;
+        box-shadow:
+          0 2px 4px rgba(0, 0, 0, 0.2),
+          inset 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
       .action-btn:hover:not(:disabled) {
-        background: linear-gradient(to bottom, rgba(80, 80, 110, 0.95), rgba(60, 60, 90, 0.95));
-        border-color: rgba(255, 255, 255, 0.4);
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
         transform: translateY(-2px);
+        box-shadow:
+          0 4px 8px rgba(0, 0, 0, 0.25),
+          inset 0 1px 0 rgba(255, 255, 255, 0.4);
       }
 
       .action-btn:active:not(:disabled) {
         transform: translateY(0);
+        box-shadow:
+          0 1px 2px rgba(0, 0, 0, 0.2),
+          inset 0 1px 2px rgba(0, 0, 0, 0.1);
       }
 
       .action-btn:disabled {
-        opacity: 0.4;
+        opacity: 0.5;
         cursor: not-allowed;
-        filter: grayscale(0.5);
       }
 
       .action-btn.used {
-        opacity: 0.5;
-        background: linear-gradient(to bottom, rgba(40, 40, 50, 0.9), rgba(30, 30, 40, 0.9));
+        opacity: 0.6;
+        background: linear-gradient(to bottom, #bfae8a 0%, #b0a080 100%);
       }
 
       .action-btn.used::after {
@@ -243,23 +257,23 @@ export class BattleActionBar {
         top: 2px;
         right: 4px;
         font-size: 10px;
-        color: #4caf50;
+        color: #5a9e4a;
       }
 
-      .action-btn[data-action="move"] { border-color: rgba(74, 144, 217, 0.5); }
-      .action-btn[data-action="move"]:hover:not(:disabled) { border-color: #4a90d9; box-shadow: 0 0 10px rgba(74, 144, 217, 0.4); }
+      .action-btn[data-action="move"] { border-color: #4080a0; }
+      .action-btn[data-action="move"]:hover:not(:disabled) { border-color: #4080a0; background: linear-gradient(to bottom, #d4c4a8 0%, rgba(64, 128, 160, 0.15) 50%, #c9b899 100%); }
 
-      .action-btn[data-action="attack"] { border-color: rgba(217, 74, 74, 0.5); }
-      .action-btn[data-action="attack"]:hover:not(:disabled) { border-color: #d94a4a; box-shadow: 0 0 10px rgba(217, 74, 74, 0.4); }
+      .action-btn[data-action="attack"] { border-color: #8b4444; }
+      .action-btn[data-action="attack"]:hover:not(:disabled) { border-color: #8b4444; background: linear-gradient(to bottom, #d4c4a8 0%, rgba(139, 68, 68, 0.15) 50%, #c9b899 100%); }
 
-      .action-btn[data-action="skill"] { border-color: rgba(156, 39, 176, 0.5); }
-      .action-btn[data-action="skill"]:hover:not(:disabled) { border-color: #9c27b0; box-shadow: 0 0 10px rgba(156, 39, 176, 0.4); }
+      .action-btn[data-action="skill"] { border-color: #6b4488; }
+      .action-btn[data-action="skill"]:hover:not(:disabled) { border-color: #6b4488; background: linear-gradient(to bottom, #d4c4a8 0%, rgba(107, 68, 136, 0.15) 50%, #c9b899 100%); }
 
-      .action-btn[data-action="item"] { border-color: rgba(76, 175, 80, 0.5); }
-      .action-btn[data-action="item"]:hover:not(:disabled) { border-color: #4caf50; box-shadow: 0 0 10px rgba(76, 175, 80, 0.4); }
+      .action-btn[data-action="item"] { border-color: #448844; }
+      .action-btn[data-action="item"]:hover:not(:disabled) { border-color: #448844; background: linear-gradient(to bottom, #d4c4a8 0%, rgba(68, 136, 68, 0.15) 50%, #c9b899 100%); }
 
-      .action-btn-wait { border-color: rgba(96, 125, 139, 0.5); }
-      .action-btn-wait:hover:not(:disabled) { border-color: #607d8b; box-shadow: 0 0 10px rgba(96, 125, 139, 0.4); }
+      .action-btn-wait { border-color: #6b5344; }
+      .action-btn-wait:hover:not(:disabled) { border-color: #6b5344; background: linear-gradient(to bottom, #d4c4a8 0%, rgba(107, 83, 68, 0.15) 50%, #c9b899 100%); }
 
       .btn-icon {
         font-size: 18px;
@@ -268,8 +282,9 @@ export class BattleActionBar {
 
       .btn-label {
         font-size: 11px;
-        font-weight: 500;
+        font-weight: bold;
         margin-top: 2px;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
       .btn-key {
@@ -277,8 +292,8 @@ export class BattleActionBar {
         bottom: 2px;
         right: 4px;
         font-size: 9px;
-        color: rgba(255, 255, 255, 0.4);
-        font-family: monospace;
+        color: #5a4a3a;
+        font-family: 'Consolas', 'Monaco', monospace;
       }
 
       .has-dropdown .dropdown-arrow {
@@ -286,16 +301,18 @@ export class BattleActionBar {
         top: 2px;
         right: 4px;
         font-size: 8px;
-        color: rgba(255, 255, 255, 0.4);
+        color: #5a4a3a;
       }
 
       .action-divider {
         width: 1px;
         height: 40px;
-        background: rgba(255, 255, 255, 0.2);
+        background: #8b7355;
         margin: 0 4px;
+        opacity: 0.4;
       }
 
+      /* Parchment-themed dropdown */
       .dropdown-panel {
         position: absolute;
         bottom: 100%;
@@ -305,10 +322,12 @@ export class BattleActionBar {
         max-width: 280px;
         max-height: 300px;
         margin-bottom: 8px;
-        background: rgba(20, 20, 30, 0.98);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 50%, #bfae8a 100%);
+        border: 2px solid #8b7355;
+        border-radius: 4px;
+        box-shadow:
+          0 4px 16px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.3);
         display: none;
         overflow: hidden;
       }
@@ -327,11 +346,12 @@ export class BattleActionBar {
         padding: 8px 12px;
         font-size: 12px;
         font-weight: bold;
-        color: #ffd700;
+        color: #2d2418;
         text-transform: uppercase;
         letter-spacing: 1px;
-        background: rgba(0, 0, 0, 0.3);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+        border-bottom: 1px solid #8b7355;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
       .dropdown-content {
@@ -347,15 +367,15 @@ export class BattleActionBar {
         padding: 10px 12px;
         cursor: pointer;
         border-radius: 4px;
-        transition: background 0.1s ease;
+        transition: background 0.15s ease;
       }
 
       .dropdown-item:hover:not(.disabled) {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(139, 115, 85, 0.2);
       }
 
       .dropdown-item.disabled {
-        opacity: 0.4;
+        opacity: 0.5;
         cursor: not-allowed;
       }
 
@@ -372,8 +392,8 @@ export class BattleActionBar {
 
       .dropdown-item-name {
         font-size: 13px;
-        font-weight: 500;
-        color: #fff;
+        font-weight: bold;
+        color: #2d2418;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -381,7 +401,7 @@ export class BattleActionBar {
 
       .dropdown-item-desc {
         font-size: 10px;
-        color: rgba(255, 255, 255, 0.5);
+        color: #5a4a3a;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -389,34 +409,35 @@ export class BattleActionBar {
 
       .dropdown-item-cost {
         font-size: 11px;
-        color: #4a90d9;
-        font-weight: 500;
+        color: #4080a0;
+        font-weight: bold;
         white-space: nowrap;
       }
 
       .dropdown-item-cost.insufficient {
-        color: #d94a4a;
+        color: #8b4444;
       }
 
       .dropdown-empty {
         padding: 20px;
         text-align: center;
-        color: rgba(255, 255, 255, 0.5);
+        color: #7a6a5a;
         font-size: 12px;
+        font-style: italic;
       }
 
       /* Mobile responsive - larger touch targets */
       @media (max-width: 768px) {
         .action-bar-container {
           padding: 10px 12px 16px;
-          border-radius: 16px 16px 0 0;
+          border-radius: 12px 12px 0 0;
         }
 
         .action-btn {
           min-width: 60px;
           height: 50px;
           padding: 6px 8px;
-          border-radius: 10px;
+          border-radius: 6px;
         }
 
         .btn-icon { font-size: 18px; }
@@ -437,7 +458,7 @@ export class BattleActionBar {
           transform: none;
           max-width: none;
           max-height: 50vh;
-          border-radius: 12px;
+          border-radius: 8px;
         }
 
         .dropdown-item {
