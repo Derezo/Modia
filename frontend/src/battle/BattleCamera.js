@@ -158,7 +158,7 @@ export class BattleCamera {
   }
 
   /**
-   * Move camera with keyboard (WASD/arrows)
+   * Move camera with keyboard (arrow keys only - WASD reserved for action hotkeys)
    */
   moveByKeys(dx, dy, deltaTime) {
     const speed = 400; // pixels per second

@@ -11,6 +11,7 @@ import { BattleActionBar } from '../battle/BattleActionBar.js';
 import { BattleContextMenu } from '../battle/BattleContextMenu.js';
 import { GridCursor } from '../battle/GridCursor.js';
 import RewardsModal from '../components/RewardsModal.js';
+import { calculateDamagePreview } from '@shared/battleMath.js';
 
 // Movement range by class (mirrored from shared/constants.js)
 const CLASS_MOVEMENT = {
@@ -1539,108 +1540,10 @@ export class BattleScene extends Scene {
 
   /**
    * Calculate damage preview data for UI display
+   * Uses shared battleMath module for consistent calculations with server
    */
   calculateDamagePreviewData(attacker, defender, skill) {
-    const skillPower = skill?.power || 100;
-    const damageType = skill?.damageType || 'physical';
-
-    // Calculate based on type
-    if (skill?.effect === 'heal' || skill?.type === 'heal') {
-      return this.calculateHealingPreview(attacker, defender, skillPower);
-    } else if (damageType === 'magical' || damageType === 'magic') {
-      return this.calculateMagicalDamagePreview(attacker, defender, skillPower);
-    } else {
-      return this.calculatePhysicalDamagePreview(attacker, defender, skillPower);
-    }
-  }
-
-  /**
-   * Calculate physical damage preview
-   */
-  calculatePhysicalDamagePreview(attacker, defender, skillPower) {
-    const attackPower = attacker.strength + (attacker.attack || 0);
-    const baseDamage = attackPower * (skillPower / 100);
-    const defensePower = (defender.vitality || defender.agility / 2) + (defender.defense || 0);
-    const defenseReduction = defensePower * 0.5 * 0.3;
-    const rawDamage = Math.max(1, baseDamage - defenseReduction);
-
-    const minDamage = Math.floor(rawDamage * 0.9);
-    const maxDamage = Math.floor(rawDamage * 1.1);
-    const critChance = Math.min(0.30, (attacker.luck || 10) / 200);
-    const critMultiplier = attacker.race === 'orc' ? 1.5 * 1.1 : 1.5;
-    const critDamage = Math.floor(maxDamage * critMultiplier);
-
-    const hitChance = this.calculateHitChance(attacker, defender);
-    const willKill = maxDamage >= defender.hp;
-
-    return {
-      minDamage: Math.max(1, minDamage),
-      maxDamage: Math.max(1, maxDamage),
-      hitChance,
-      critChance,
-      critDamage,
-      willKill,
-      type: 'physical'
-    };
-  }
-
-  /**
-   * Calculate magical damage preview
-   */
-  calculateMagicalDamagePreview(attacker, defender, skillPower) {
-    const magicAttackPower = attacker.intelligence + (attacker.magicAttack || 0);
-    const baseDamage = magicAttackPower * (skillPower / 100);
-    const magicDefensePower = (defender.intelligence || 10) + (defender.magicDefense || 0);
-    const defenseReduction = magicDefensePower * 0.25 * 0.3;
-    const rawDamage = Math.max(1, baseDamage - defenseReduction);
-
-    const minDamage = Math.floor(rawDamage * 0.9);
-    const maxDamage = Math.floor(rawDamage * 1.1);
-    const critChance = Math.min(0.30, (attacker.luck || 10) / 200);
-    const critDamage = Math.floor(maxDamage * 1.5);
-
-    const hitChance = this.calculateHitChance(attacker, defender);
-    const willKill = maxDamage >= defender.hp;
-
-    return {
-      minDamage: Math.max(1, minDamage),
-      maxDamage: Math.max(1, maxDamage),
-      hitChance,
-      critChance,
-      critDamage,
-      willKill,
-      type: 'magical'
-    };
-  }
-
-  /**
-   * Calculate healing preview
-   */
-  calculateHealingPreview(caster, target, skillPower) {
-    const baseHeal = (caster.intelligence || 10) * (skillPower / 100);
-    const minHeal = Math.floor(baseHeal * 0.9);
-    const maxHeal = Math.floor(baseHeal * 1.1);
-    const targetMissingHp = target.maxHp - target.hp;
-
-    return {
-      minHeal: Math.max(1, minHeal),
-      maxHeal: Math.max(1, maxHeal),
-      hitChance: 1.0,
-      isOverheal: maxHeal > targetMissingHp,
-      type: 'heal'
-    };
-  }
-
-  /**
-   * Calculate hit chance for damage preview
-   */
-  calculateHitChance(attacker, defender) {
-    const baseHitChance = 0.95;
-    const agilityDiff = (defender.agility || 10) - (attacker.agility || 10);
-    const dodgeBonus = Math.max(0, agilityDiff) * 0.01;
-    const isBlinded = attacker.statusEffects?.some(e => e.type === 'blind');
-    const blindPenalty = isBlinded ? 0.3 : 0;
-    return Math.max(0.5, Math.min(1.0, baseHitChance - dodgeBonus - blindPenalty));
+    return calculateDamagePreview(attacker, defender, skill);
   }
 
   /**

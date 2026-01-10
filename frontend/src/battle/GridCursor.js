@@ -53,9 +53,8 @@ export class GridCursor {
    */
   setPosition(x, y) {
     // Clamp to grid bounds
-    const bounds = this.grid.getBounds();
-    this.x = Math.max(0, Math.min(bounds.width - 1, x));
-    this.y = Math.max(0, Math.min(bounds.height - 1, y));
+    this.x = Math.max(0, Math.min(this.grid.width - 1, x));
+    this.y = Math.max(0, Math.min(this.grid.height - 1, y));
   }
 
   /**
@@ -119,7 +118,7 @@ export class GridCursor {
 
     let handled = false;
 
-    // Grid cursor uses arrow keys only (WASD is for camera panning)
+    // Grid cursor and camera both use arrow keys (WASD reserved for action hotkeys)
     switch (e.key) {
       case 'ArrowUp':
         handled = this.move(0, -1);

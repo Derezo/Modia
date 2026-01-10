@@ -15,10 +15,13 @@ export class BattleUnit {
     this.type = unitData.type; // 'player' or 'enemy'
     this.name = unitData.name;
     this.class = unitData.class;
+    this.race = unitData.race || null; // For portrait lookup
+    this.gender = unitData.gender || 'other'; // For portrait lookup
     this.enemyId = unitData.enemyId || null; // For enemy sprite lookup
     this.biome = unitData.biome || 'forest'; // For enemy sprite lookup
 
     // Stats
+    this.level = unitData.level || 1;
     this.hp = unitData.hp;
     this.maxHp = unitData.maxHp;
     this.mp = unitData.mp || 0;
@@ -26,6 +29,8 @@ export class BattleUnit {
     this.strength = unitData.strength;
     this.intelligence = unitData.intelligence;
     this.agility = unitData.agility;
+    this.vitality = unitData.vitality || 0;
+    this.luck = unitData.luck || 0;
 
     // Grid position
     this.gridX = unitData.tileX;

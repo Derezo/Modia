@@ -30,6 +30,7 @@ export class ParchmentCard {
 
     this.character = null;
     this.element = null;
+    this.damagePreviewElement = null;
     // Track last known values for change detection (objects may be mutated in place)
     this.lastKnownValues = { hp: null, mp: null, hp_current: null, mp_current: null };
 
@@ -301,6 +302,117 @@ export class ParchmentCard {
       .parchment-card--detailed .pc-bar-wrapper {
         height: 12px;
       }
+
+      /* Damage Preview Overlay */
+      .pc-damage-preview {
+        position: absolute;
+        top: -8px;
+        left: -8px;
+        background:
+          linear-gradient(135deg, rgba(180, 160, 130, 0.15) 0%, transparent 50%),
+          linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 50%, #cfc0a8 100%);
+        border: 2px solid #7a6548;
+        border-radius: 4px;
+        padding: 6px 10px;
+        box-shadow:
+          0 2px 6px rgba(0, 0, 0, 0.25),
+          inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        font-family: 'Georgia', 'Times New Roman', serif;
+        z-index: 10;
+        min-width: 90px;
+        opacity: 0;
+        transform: translateY(-4px);
+        transition: opacity 0.15s ease, transform 0.15s ease;
+        pointer-events: none;
+      }
+
+      .pc-damage-preview.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .pc-damage-preview--kill {
+        border-color: #8b4444;
+        background:
+          linear-gradient(135deg, rgba(180, 130, 130, 0.2) 0%, transparent 50%),
+          linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 50%, #cfc0a8 100%);
+      }
+
+      .pc-damage-preview--heal {
+        border-color: #4a7548;
+        background:
+          linear-gradient(135deg, rgba(130, 180, 130, 0.15) 0%, transparent 50%),
+          linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 50%, #cfc0a8 100%);
+      }
+
+      .pc-dmg-row {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+        margin-bottom: 3px;
+      }
+
+      .pc-dmg-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .pc-dmg-range {
+        font-size: 15px;
+        font-weight: bold;
+        color: #5a3a28;
+        font-family: 'Consolas', 'Monaco', monospace;
+        letter-spacing: -0.5px;
+      }
+
+      .pc-dmg-range--kill {
+        color: #8b3030;
+      }
+
+      .pc-dmg-range--heal {
+        color: #3a6830;
+      }
+
+      .pc-dmg-label {
+        font-size: 9px;
+        color: #6a5a48;
+        text-transform: uppercase;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+      }
+
+      .pc-dmg-kill {
+        font-size: 9px;
+        font-weight: bold;
+        color: #8b3030;
+        text-transform: uppercase;
+        margin-left: auto;
+        padding: 1px 4px;
+        background: rgba(139, 48, 48, 0.15);
+        border-radius: 2px;
+      }
+
+      .pc-dmg-secondary {
+        display: flex;
+        gap: 10px;
+        font-size: 10px;
+        color: #5a4a38;
+      }
+
+      .pc-dmg-hit {
+        color: #4a6040;
+      }
+
+      .pc-dmg-hit.warning {
+        color: #8a6a30;
+      }
+
+      .pc-dmg-hit.low {
+        color: #8a4a30;
+      }
+
+      .pc-dmg-crit {
+        color: #6a4a68;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -467,6 +579,93 @@ export class ParchmentCard {
     this.element.classList.add('hidden');
   }
 
+  /**
+   * Show damage preview overlay on the card
+   * @param {Object} data - Preview data from DamagePreview calculations
+   * @param {number} data.minDamage - Minimum damage (or minHeal for healing)
+   * @param {number} data.maxDamage - Maximum damage (or maxHeal for healing)
+   * @param {number} data.hitChance - Hit chance (0-1)
+   * @param {number} data.critChance - Critical hit chance (0-1)
+   * @param {number} data.critDamage - Damage on critical hit
+   * @param {boolean} data.willKill - Whether this would kill the target
+   * @param {string} data.type - 'physical', 'magical', or 'heal'
+   */
+  showDamagePreview(data) {
+    if (!data) return;
+
+    // Create damage preview element if it doesn't exist
+    if (!this.damagePreviewElement) {
+      this.damagePreviewElement = document.createElement('div');
+      this.damagePreviewElement.className = 'pc-damage-preview';
+      this.element.style.position = 'relative';
+      this.element.appendChild(this.damagePreviewElement);
+    }
+
+    const isHeal = data.type === 'heal';
+    const min = isHeal ? data.minHeal : data.minDamage;
+    const max = isHeal ? data.maxHeal : data.maxDamage;
+    const hitPercent = Math.round(data.hitChance * 100);
+    const critPercent = Math.round((data.critChance || 0) * 100);
+
+    // Determine hit chance styling
+    let hitClass = '';
+    if (hitPercent < 70) hitClass = 'low';
+    else if (hitPercent < 90) hitClass = 'warning';
+
+    // Build HTML
+    let html = '<div class="pc-dmg-row">';
+
+    if (isHeal) {
+      html += `<span class="pc-dmg-range pc-dmg-range--heal">+${min}-${max}</span>`;
+      html += `<span class="pc-dmg-label">HP</span>`;
+      if (data.isOverheal) {
+        html += `<span class="pc-dmg-label" style="color: #8a7a60;">(overheal)</span>`;
+      }
+    } else {
+      html += `<span class="pc-dmg-range ${data.willKill ? 'pc-dmg-range--kill' : ''}">${min}-${max}</span>`;
+      html += `<span class="pc-dmg-label">dmg</span>`;
+      if (data.willKill) {
+        html += `<span class="pc-dmg-kill">Kill</span>`;
+      }
+    }
+
+    html += '</div>';
+
+    // Secondary row: hit chance and crit info
+    if (!isHeal) {
+      html += '<div class="pc-dmg-secondary">';
+      html += `<span class="pc-dmg-hit ${hitClass}">${hitPercent}% hit</span>`;
+      if (critPercent > 0) {
+        html += `<span class="pc-dmg-crit">${critPercent}% crit \u2192 ${data.critDamage}</span>`;
+      }
+      html += '</div>';
+    }
+
+    this.damagePreviewElement.innerHTML = html;
+
+    // Update modifier classes
+    this.damagePreviewElement.classList.remove('pc-damage-preview--kill', 'pc-damage-preview--heal');
+    if (isHeal) {
+      this.damagePreviewElement.classList.add('pc-damage-preview--heal');
+    } else if (data.willKill) {
+      this.damagePreviewElement.classList.add('pc-damage-preview--kill');
+    }
+
+    // Show with animation
+    requestAnimationFrame(() => {
+      this.damagePreviewElement.classList.add('visible');
+    });
+  }
+
+  /**
+   * Hide damage preview overlay
+   */
+  hideDamagePreview() {
+    if (this.damagePreviewElement) {
+      this.damagePreviewElement.classList.remove('visible');
+    }
+  }
+
   capitalize(str) {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
@@ -484,6 +683,7 @@ export class ParchmentCard {
       this.element.parentNode.removeChild(this.element);
     }
     this.element = null;
+    this.damagePreviewElement = null;
     this.character = null;
   }
 }
