@@ -13,6 +13,8 @@
 5. [Guild System](#5-guild-system)
 6. [Skill Tree JSON Schema](#6-skill-tree-json-schema)
 7. [Example Skill Trees](#7-example-skill-trees)
+8. [Trait System](#8-trait-system)
+9. [Guild Recruitment](#9-guild-recruitment)
 
 ---
 
@@ -1292,6 +1294,123 @@ Advanced guilds reference their `baseGuild` and have their own unique skill tree
 
 ---
 
+## 8. Trait System
+
+Traits are permanent passive bonuses that characters can acquire through the guild recruitment system. Unlike skills, traits cannot be leveled - they provide fixed bonuses that apply automatically in battle.
+
+### 8.1 Trait Overview
+
+| Aspect | Description |
+|--------|-------------|
+| **Acquisition** | Obtained when recruiting characters at guild nodes |
+| **Permanence** | Cannot be removed or changed |
+| **Count** | Characters have 1-2 traits (2 traits is rare ~8%) |
+| **Application** | Automatic during battle calculations |
+
+### 8.2 Trait Categories
+
+Traits are organized into four categories:
+
+| Category | Focus | Examples |
+|----------|-------|----------|
+| **Combat** | Damage and critical hits | Physical/magic damage %, crit chance, crit damage |
+| **Survival** | Health and defense | HP bonus, regeneration, damage resistance, death saves |
+| **Utility** | Movement and resources | Movement range, initiative, XP/gold bonuses, evasion |
+| **Situational** | Conditional bonuses | Damage vs enemy types, terrain bonuses, low-HP triggers |
+
+### 8.3 Trait Rarities
+
+| Rarity | Probability | Power Level |
+|--------|-------------|-------------|
+| Common | 70% | Minor bonuses (+3-5%) |
+| Uncommon | 20% | Moderate bonuses (+5-10%) |
+| Rare | 8% | Significant bonuses (+10-15% or special effects) |
+| Legendary | 2% | Powerful bonuses (lifesteal, death saves, +12-15%) |
+
+### 8.4 Trait Effects in Battle
+
+Traits are applied at specific points during battle:
+
+| Effect Type | When Applied |
+|-------------|--------------|
+| Damage bonuses | During damage calculation |
+| HP/MP bonuses | Battle start |
+| Regeneration | Each turn during status effects |
+| Movement | When calculating movement range |
+| Initiative | Turn order calculation |
+| Lifesteal | After dealing damage |
+| Death save | When damage would kill unit |
+
+### 8.5 Trait Display
+
+Traits appear on character cards with rarity-colored indicators:
+- **Gray**: Common
+- **Green**: Uncommon
+- **Blue**: Rare
+- **Orange**: Legendary
+
+For the full trait list and implementation details, see [GUILD_RECRUITMENT_SYSTEM.md](GUILD_RECRUITMENT_SYSTEM.md).
+
+---
+
+## 9. Guild Recruitment
+
+Guild nodes offer a recruitment feature that allows players to expand their party with new permanent members.
+
+### 9.1 Recruitment Overview
+
+| Feature | Description |
+|---------|-------------|
+| **Location** | Guild nodes (Warriors', Wizards', Monks', Chemists') |
+| **Pool Size** | 10 recruits per guild |
+| **Pool Type** | Shared among all players (first-come-first-served) |
+| **Refresh** | Daily at guild-specific times |
+| **Class Restriction** | Each guild offers only its class |
+
+### 9.2 Recruit Uniqueness
+
+Each recruit is procedurally generated with:
+
+| Factor | Range |
+|--------|-------|
+| **Stat Variance** | ±15% from race/class baseline |
+| **Traits** | 1-2 innate traits |
+| **Starting Skills** | 0-2 pre-learned class skills |
+| **Starting XP** | 50-150 XP in pool |
+
+### 9.3 Recruitment Pricing
+
+Base price is 2,000g, with modifiers:
+
+| Component | Value |
+|-----------|-------|
+| Base Price | 2,000g |
+| Stat Modifier | +300g per 1% above average |
+| Second Trait | +8,000g |
+| Pre-learned Skills | +750g per skill |
+
+**Price Range**: 1,700g (basic) to ~12,000g (exceptional)
+
+### 9.4 Emergency Restock
+
+When all 10 recruits are purchased:
+- 3 emergency recruits spawn immediately
+- Emergency recruits are capped at 1 trait
+- No further emergency restocks until daily refresh
+
+### 9.5 Class-Specific Action Labels
+
+| Guild | Action Button |
+|-------|---------------|
+| Warriors' Guild | "Recruit Soldier" |
+| Wizards' Guild | "Take on Apprentice" |
+| Monks' Guild | "Accept Initiate" |
+| Chemists' Guild | "Hire Assistant" |
+
+For complete recruitment system details, see [GUILD_RECRUITMENT_SYSTEM.md](GUILD_RECRUITMENT_SYSTEM.md).
+
+---
+
 ## Related Documents
 
 | Document | Description |
@@ -1301,3 +1420,4 @@ Advanced guilds reference their `baseGuild` and have their own unique skill tree
 | [ECONOMY_SYSTEM.md](ECONOMY_SYSTEM.md) | NPC shops, marketplace, gold economy |
 | [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) | Database schemas |
 | [API_SPECIFICATION.md](API_SPECIFICATION.md) | Character and skill endpoints |
+| [GUILD_RECRUITMENT_SYSTEM.md](GUILD_RECRUITMENT_SYSTEM.md) | Guild recruitment and trait system |

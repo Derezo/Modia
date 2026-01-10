@@ -342,10 +342,11 @@ The world is a **node-based graph** procedurally generated from a global seed. A
 - **Difficulty**: Variable
 
 #### Guild
-- **Features**: Class-specific training, quests (future)
+- **Features**: Class-specific training, recruitment, quests (future)
 - **Types**: Warriors' Guild, Wizards' Guild, Monks' Guild, Chemists' Guild
 - **Count**: 4 total (one per class)
 - **Distance**: 5-8 nodes from center
+- **Recruitment**: Recruit permanent party members with randomized stats, traits, and skills (see [GUILD_RECRUITMENT_SYSTEM.md](GUILD_RECRUITMENT_SYSTEM.md))
 
 #### Palace
 - **Features**: End-game content (TBD)

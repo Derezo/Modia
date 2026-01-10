@@ -1,25 +1,35 @@
 import { Scene } from './Scene.js';
 import { ParchmentCard } from '../components/ParchmentCard.js';
+import { FormationGrid } from './formation/FormationGrid.js';
+import { StartBattleButton } from './formation/StartBattleButton.js';
+import { BattlefieldTheme } from './formation/themes/BattlefieldTheme.js';
+import { PitFighterTheme } from './formation/themes/PitFighterTheme.js';
+import { ArcaneChamberTheme } from './formation/themes/ArcaneChamberTheme.js';
+import { ArmoryTheme } from './formation/themes/ArmoryTheme.js';
+import { DojoTheme } from './formation/themes/DojoTheme.js';
+import { ClockworkTheme } from './formation/themes/ClockworkTheme.js';
 
 /**
  * BattleFormationScene - Pre-battle character placement on isometric grid
  *
  * Players place up to 5 characters from their battle party on a 5x4 isometric grid
- * before starting combat. Shows enemy roster preview and character detail cards.
+ * before starting combat. Features context-aware theming, responsive layout,
+ * and immersive ambient effects.
  */
 export class BattleFormationScene extends Scene {
   constructor(game) {
     super(game);
 
     // Scene context (from enter() data)
-    this.battleContext = null;  // { type: 'pve'|'pvp', node, enemies, opponent }
+    this.battleContext = null;  // { type: 'pve'|'pvp'|'guild', node, enemies, guildClass }
 
-    // Grid configuration
-    this.gridWidth = 5;
-    this.gridHeight = 4;
-    this.tileWidth = 64;       // Isometric diamond width
-    this.tileHeight = 32;      // Isometric diamond height
-    this.gridCanvas = null;    // Separate canvas for grid
+    // Theme system
+    this.theme = null;
+    this.nodeType = 'forest';
+
+    // Grid component
+    this.formationGrid = null;
+    this.gridCanvas = null;
 
     // Character placement state
     this.placedCharacters = new Map();  // "x,y" -> character object
@@ -31,40 +41,64 @@ export class BattleFormationScene extends Scene {
     this.enemies = [];         // Enemy preview data
 
     // Interaction state
-    this.hoveredTile = null;   // { x, y } or null
+    this.hoveredTile = null;
     this.longPressTimer = null;
-    this.longPressThreshold = 500;  // ms for long press
+    this.longPressThreshold = 500;
     this.pressedTile = null;
-    this.justRemovedByLongPress = false;  // Prevents re-adding after long-press removal
+    this.justRemovedByLongPress = false;
+
+    // Layout state
+    this.isMobile = false;
+    this.isDrawerOpen = true;
+    this.isBottomSheetExpanded = false;
 
     // DOM elements
     this.uiElement = null;
     this.abortController = null;
 
-    // Shared components
+    // Components
     this.characterCard = null;
+    this.startButton = null;
+
+    // Animation
+    this.lastTime = 0;
+    this.animationId = null;
   }
 
   async enter(data = {}) {
     this.battleContext = data;
     this.abortController = new AbortController();
 
-    // Load battle party (characters in slots 1-5)
+    // Determine node type and battle context
+    this.nodeType = data.node?.node_type || 'forest';
+    this.battleType = this.determineBattleType(data);
+
+    // Initialize theme based on battle context
+    this.initializeTheme();
+
+    // Load battle party
     await this.loadBattleParty();
 
-    // Load enemy preview data from server
+    // Load enemy preview data
     await this.loadEnemies(data);
+
+    // Detect mobile layout
+    this.isMobile = window.innerWidth < 768;
 
     // Create UI
     this.createUI();
     this.setupEventListeners();
 
-    // Start with empty grid - let player choose positions
-    this.renderGrid();
+    // Start animation loop
+    this.startAnimationLoop();
+
+    // Initial render
     this.updateUnplacedRoster();
   }
 
   exit() {
+    this.stopAnimationLoop();
+
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -73,20 +107,88 @@ export class BattleFormationScene extends Scene {
       this.characterCard.destroy();
       this.characterCard = null;
     }
+    if (this.startButton) {
+      this.startButton.destroy();
+      this.startButton = null;
+    }
+    if (this.theme) {
+      this.theme.destroy();
+      this.theme = null;
+    }
     if (this.uiElement) {
       this.uiElement.remove();
       this.uiElement = null;
     }
+    this.formationGrid = null;
     this.gridCanvas = null;
     this.placedCharacters.clear();
     this.placementOrder = [];
+  }
+
+  /**
+   * Determine battle type for theming
+   */
+  determineBattleType(data) {
+    // Coliseum PvP battles
+    if (data.type === 'pvp' || data.type === 'coliseum') {
+      return 'coliseum';
+    }
+
+    // Guild advancement battles
+    if (data.type === 'guild' || data.guildClass) {
+      return `guild_${data.guildClass || 'warrior'}`;
+    }
+
+    // Standard PvE node battles
+    return 'battlefield';
+  }
+
+  /**
+   * Initialize theme based on battle type
+   */
+  initializeTheme() {
+    switch (this.battleType) {
+      case 'coliseum':
+        this.theme = new PitFighterTheme(this);
+        break;
+      case 'guild_wizard':
+        this.theme = new ArcaneChamberTheme(this);
+        break;
+      case 'guild_warrior':
+        this.theme = new ArmoryTheme(this);
+        break;
+      case 'guild_monk':
+        this.theme = new DojoTheme(this);
+        break;
+      case 'guild_chemist':
+        this.theme = new ClockworkTheme(this);
+        break;
+      default:
+        // Standard battlefield theme for all node types
+        this.theme = new BattlefieldTheme(this, this.nodeType);
+    }
+
+    this.theme.init();
+  }
+
+  /**
+   * Get button type based on battle context
+   */
+  getButtonType() {
+    switch (this.battleType) {
+      case 'coliseum': return 'fist';
+      case 'guild_wizard': return 'spellbook';
+      case 'guild_warrior': return 'axe';
+      case 'guild_monk': return 'palm';
+      case 'guild_chemist': return 'lever';
+      default: return 'swords';
+    }
   }
 
   async loadBattleParty() {
     try {
       const result = await this.game.api.getCharacters();
       const characters = result.characters || [];
-      // Get characters in slots 1-5 (battle party)
       this.battleParty = characters
         .filter(c => c.party_slot >= 1 && c.party_slot <= 5)
         .sort((a, b) => a.party_slot - b.party_slot);
@@ -97,12 +199,10 @@ export class BattleFormationScene extends Scene {
   }
 
   async loadEnemies(data) {
-    // Fetch possible enemies from server API
     if (data.node?.id) {
       try {
         const preview = await this.game.api.getEncounterPreview(data.node.id);
         this.enemies = preview.possibleEnemies || [];
-        this.nodeType = preview.nodeType;
       } catch (err) {
         console.error('Failed to load encounter preview:', err);
         this.enemies = [];
@@ -115,310 +215,332 @@ export class BattleFormationScene extends Scene {
   createUI() {
     const container = document.createElement('div');
     container.id = 'battle-formation-scene';
-    container.style.cssText = `
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    `;
+    container.className = this.isMobile ? 'formation-mobile' : 'formation-desktop';
+    container.style.cssText = this.theme.getContainerStyles();
 
     const nodeName = this.battleContext?.node?.name || 'Battle Zone';
-    const nodeType = this.battleContext?.type || 'pve';
+    const themeTitle = this.theme.getTitle();
 
-    container.innerHTML = `
-      <!-- Header with animated title -->
-      <div style="
-        padding: 16px 24px;
-        background: rgba(0,0,0,0.4);
-        border-bottom: 2px solid #3a3a5a;
-        text-align: center;
-      ">
-        <h2 class="battle-title-animated" style="margin: 0 0 4px 0; font-size: 24px;">Prepare for Battle!</h2>
-        <div style="color: #8a8aaa; font-size: 14px;">${nodeName}</div>
-      </div>
-
-      <!-- Enemy Roster -->
-      <div style="
-        padding: 12px 24px;
-        background: rgba(139, 0, 0, 0.2);
-        border-bottom: 1px solid #5a3a3a;
-      ">
-        <div style="color: #ff6b6b; font-size: 12px; margin-bottom: 8px;">Possible Enemies</div>
-        <div id="enemy-roster" style="display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;">
-          ${this.renderEnemyRoster()}
-        </div>
-      </div>
-
-      <!-- Main Content: Grid + Detail Card -->
-      <div style="
-        flex: 1;
-        display: flex;
-        padding: 16px;
-        gap: 16px;
-        overflow: hidden;
-      ">
-        <!-- Grid Area -->
-        <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-          <canvas id="formation-grid-canvas" width="400" height="200"></canvas>
-          <div style="color: #8a8aaa; font-size: 11px; margin-top: 12px; text-align: center;">
-            Click empty tile to place • Click occupied tile to cycle • Long press to remove
-          </div>
-        </div>
-
-        <!-- Character Detail Card Container (glass morphism - no panel wrapper) -->
-        <div id="character-card-container" style="
-          min-width: 280px;
-          display: flex;
-          flex-direction: column;
-          margin-right: 10px;
-        ">
-          <div id="card-content">
-            <!-- ParchmentCard component will be inserted here -->
-          </div>
-        </div>
-      </div>
-
-      <!-- Unplaced Characters + Start Button -->
-      <div style="
-        padding: 12px 24px;
-        background: rgba(0,0,0,0.4);
-        border-top: 2px solid #3a3a5a;
-        display: flex;
-        align-items: center;
-        gap: 16px;
-      ">
-        <div style="flex: 1;">
-          <div style="color: #8a8aaa; font-size: 11px; margin-bottom: 8px;">Available Characters</div>
-          <div id="unplaced-roster" style="display: flex; gap: 8px;">
-            ${this.renderUnplacedRoster()}
-          </div>
-        </div>
-        <button id="start-battle-btn" class="btn btn-primary" style="
-          padding: 12px 32px;
-          font-size: 16px;
-        ">Start Battle</button>
-      </div>
-    `;
+    if (this.isMobile) {
+      container.innerHTML = this.getMobileLayout(nodeName, themeTitle);
+    } else {
+      container.innerHTML = this.getDesktopLayout(nodeName, themeTitle);
+    }
 
     this.game.uiOverlay.appendChild(container);
     this.uiElement = container;
 
-    // Get canvas reference
+    // Initialize grid canvas
     this.gridCanvas = container.querySelector('#formation-grid-canvas');
+    this.initializeGrid();
 
-    // Initialize ParchmentCard component for character detail
+    // Initialize ParchmentCard component
     this.characterCard = new ParchmentCard({ mode: 'detailed', type: 'player' });
     const cardContainer = container.querySelector('#card-content');
     if (cardContainer) {
       cardContainer.appendChild(this.characterCard.element);
     }
 
-    // Add animated title styles
-    this.addTitleStyles();
+    // Initialize Start Battle button
+    const buttonContainer = container.querySelector('#start-button-container');
+    if (buttonContainer) {
+      this.startButton = new StartBattleButton({
+        type: this.getButtonType(),
+        disabled: true,
+        onClick: () => this.startBattle()
+      });
+      buttonContainer.appendChild(this.startButton.element);
+    }
 
-    // Initial render
-    this.renderGrid();
+    // Add styles
+    this.addStyles();
+  }
+
+  getDesktopLayout(nodeName, themeTitle) {
+    return `
+      <!-- Header -->
+      <div class="formation-header">
+        <button class="back-btn" id="back-btn">
+          <span class="back-icon">&#8592;</span>
+        </button>
+        <div class="header-titles">
+          <h2 class="battle-title-animated">${themeTitle}</h2>
+          <div class="node-name">${nodeName}</div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="formation-main">
+        <!-- Side Drawer (fixed width) -->
+        <div class="formation-drawer" id="party-drawer">
+          <div class="drawer-header">
+            <span class="drawer-title">Your Party</span>
+          </div>
+          <div class="drawer-roster" id="unplaced-roster">
+            <!-- Character cards go here -->
+          </div>
+          <div class="drawer-divider"></div>
+          <div class="drawer-detail" id="card-content">
+            <!-- ParchmentCard goes here -->
+          </div>
+        </div>
+
+        <!-- Center Content -->
+        <div class="formation-center">
+          <!-- Enemy Roster -->
+          <div class="enemy-section">
+            <div class="enemy-label">Enemies Ahead</div>
+            <div class="enemy-roster" id="enemy-roster">
+              ${this.renderEnemyRoster()}
+            </div>
+          </div>
+
+          <!-- Grid Area -->
+          <div class="grid-area">
+            <canvas id="formation-grid-canvas" width="400" height="220"></canvas>
+            <div class="grid-instructions">
+              Click to place &bull; Long press to remove
+            </div>
+          </div>
+
+          <!-- Start Button -->
+          <div class="start-section">
+            <div id="start-button-container"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  getMobileLayout(nodeName, themeTitle) {
+    return `
+      <!-- Header (compact) -->
+      <div class="formation-header formation-header--mobile">
+        <button class="back-btn" id="back-btn">
+          <span class="back-icon">&#8592;</span>
+        </button>
+        <div class="header-titles">
+          <h2 class="battle-title-animated battle-title--mobile">${themeTitle}</h2>
+        </div>
+      </div>
+
+      <!-- Enemy Roster (horizontal scroll) -->
+      <div class="enemy-section enemy-section--mobile">
+        <div class="enemy-roster enemy-roster--mobile" id="enemy-roster">
+          ${this.renderEnemyRoster()}
+        </div>
+      </div>
+
+      <!-- Grid Area (full width) -->
+      <div class="grid-area grid-area--mobile">
+        <canvas id="formation-grid-canvas" width="360" height="200"></canvas>
+      </div>
+
+      <!-- Start Button (fixed) -->
+      <div class="start-section start-section--mobile">
+        <div id="start-button-container"></div>
+      </div>
+
+      <!-- Bottom Sheet -->
+      <div class="bottom-sheet ${this.isBottomSheetExpanded ? 'expanded' : ''}" id="bottom-sheet">
+        <div class="sheet-handle" id="sheet-handle">
+          <div class="handle-bar"></div>
+          <span class="sheet-title">Party (${this.battleParty.length})</span>
+        </div>
+        <div class="sheet-content">
+          <div class="drawer-roster" id="unplaced-roster">
+            <!-- Character cards go here -->
+          </div>
+          <div class="drawer-detail" id="card-content">
+            <!-- ParchmentCard goes here -->
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   renderEnemyRoster() {
     if (this.enemies.length === 0) {
-      return '<div style="color: #8a8aaa;">Unknown enemies</div>';
+      return '<div class="enemy-unknown">Unknown enemies await...</div>';
     }
 
-    return this.enemies.map(enemy => `
-      <div style="
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 8px;
-        background: rgba(0,0,0,0.3);
-        border-radius: 8px;
-        min-width: 60px;
-      ">
-        <div style="
-          width: 48px;
-          height: 48px;
-          background: rgba(139, 0, 0, 0.4);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #ff6b6b;
-          font-size: 20px;
-          margin-bottom: 4px;
-        ">${enemy.name.charAt(0)}</div>
-        <div style="color: #fff; font-size: 11px;">${enemy.name}</div>
-      </div>
-    `).join('');
-  }
-
-  renderUnplacedRoster() {
-    const placedIds = new Set(
-      Array.from(this.placedCharacters.values()).map(c => c.id)
-    );
-    const unplaced = this.battleParty.filter(c => !placedIds.has(c.id));
-
-    if (unplaced.length === 0) {
-      return '<div style="color: #4caf50; font-size: 12px;">All characters placed!</div>';
-    }
-
-    return unplaced.map(char => {
-      const gender = char.gender || 'other';
-      const portraitUrl = `/assets/sprites/portraits/${char.race}_${gender}_${char.class}.png`;
+    return this.enemies.map((enemy, index) => {
+      const isBoss = enemy.isBoss || enemy.level > 10;
+      const threatClass = isBoss ? 'threat-boss' : '';
 
       return `
-        <div class="unplaced-char" data-char-id="${char.id}" style="
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding: 6px;
-          background: rgba(0,0,0,0.3);
-          border: 2px solid #4a4a6a;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s;
-        ">
-          <div style="
-            width: 40px;
-            height: 40px;
-            overflow: hidden;
-            border-radius: 4px;
-            margin-bottom: 4px;
-          ">
-            <img
-              src="${portraitUrl}"
-              alt="${char.name}"
-              style="width: 100%; height: 100%; image-rendering: pixelated; object-fit: cover;"
-              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-            >
-            <div style="
-              display: none;
-              width: 100%;
-              height: 100%;
-              background: ${this.getClassColor(char.class)};
-              align-items: center;
-              justify-content: center;
-              color: #fff;
-              font-size: 16px;
-            ">${this.getClassIcon(char.class)}</div>
+        <div class="enemy-card ${threatClass}" data-enemy-index="${index}">
+          <div class="enemy-portrait">
+            <div class="enemy-icon">${enemy.name.charAt(0)}</div>
+            ${isBoss ? '<div class="boss-indicator">&#9760;</div>' : ''}
           </div>
-          <div style="color: #fff; font-size: 10px; max-width: 50px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${char.name}</div>
+          <div class="enemy-info">
+            <div class="enemy-name">${enemy.name}</div>
+            <div class="enemy-level">Lv.${enemy.level || '?'}</div>
+          </div>
+          ${isBoss ? '<div class="threat-aura"></div>' : ''}
         </div>
       `;
     }).join('');
   }
 
-  setupEventListeners() {
-    const opts = { signal: this.abortController.signal };
-
-    // Grid canvas interactions
-    this.gridCanvas.addEventListener('click', (e) => this.handleGridClick(e), opts);
-    this.gridCanvas.addEventListener('mousemove', (e) => this.handleGridHover(e), opts);
-    this.gridCanvas.addEventListener('mouseleave', () => {
-      this.hoveredTile = null;
-      this.renderGrid();
-    }, opts);
-
-    // Long press for removal
-    this.gridCanvas.addEventListener('mousedown', (e) => this.handleGridMouseDown(e), opts);
-    this.gridCanvas.addEventListener('mouseup', () => this.handleGridMouseUp(), opts);
-
-    // Touch support
-    this.gridCanvas.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      this.handleGridMouseDown({ offsetX: touch.clientX - this.gridCanvas.getBoundingClientRect().left, offsetY: touch.clientY - this.gridCanvas.getBoundingClientRect().top });
-    }, opts);
-    this.gridCanvas.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      this.handleGridMouseUp();
-      if (!this.longPressTimer) {
-        // Was a tap, not long press
-        const touch = e.changedTouches[0];
-        this.handleGridClick({ offsetX: touch.clientX - this.gridCanvas.getBoundingClientRect().left, offsetY: touch.clientY - this.gridCanvas.getBoundingClientRect().top });
-      }
-    }, opts);
-
-    // Start battle button (no back button - can't flee from battle)
-    this.uiElement.querySelector('#start-battle-btn').addEventListener('click', () => this.startBattle(), opts);
-
-    // Unplaced character clicks
-    this.uiElement.querySelectorAll('.unplaced-char').forEach(el => {
-      el.addEventListener('click', () => {
-        const charId = parseInt(el.dataset.charId);
-        const char = this.battleParty.find(c => c.id === charId);
-        if (char) {
-          this.selectedCharacter = char;
-          this.updateDetailCard();
-        }
-      }, opts);
+  initializeGrid() {
+    this.formationGrid = new FormationGrid({
+      canvas: this.gridCanvas,
+      assetLoader: this.game.assetLoader,
+      theme: this.theme,
+      nodeType: this.nodeType,
+      gridWidth: 5,
+      gridHeight: 4
     });
   }
 
-  // Grid coordinate conversions
-  gridToScreen(gridX, gridY) {
-    const centerX = this.gridCanvas.width / 2;
-    const startY = 30;
+  setupEventListeners() {
+    const opts = { signal: this.abortController.signal };
 
-    const screenX = centerX + (gridX - gridY) * (this.tileWidth / 2);
-    const screenY = startY + (gridX + gridY) * (this.tileHeight / 2);
-    return { x: screenX, y: screenY };
-  }
-
-  screenToGrid(screenX, screenY) {
-    const centerX = this.gridCanvas.width / 2;
-    const startY = 30;
-
-    const worldX = screenX - centerX;
-    const worldY = screenY - startY;
-
-    const gridX = Math.floor((worldX / (this.tileWidth / 2) + worldY / (this.tileHeight / 2)) / 2);
-    const gridY = Math.floor((worldY / (this.tileHeight / 2) - worldX / (this.tileWidth / 2)) / 2);
-
-    // Bounds check
-    if (gridX >= 0 && gridX < this.gridWidth && gridY >= 0 && gridY < this.gridHeight) {
-      return { x: gridX, y: gridY };
+    // Back button
+    const backBtn = this.uiElement.querySelector('#back-btn');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => this.goBack(), opts);
     }
-    return null;
+
+    // Grid canvas interactions
+    if (this.gridCanvas) {
+      this.gridCanvas.addEventListener('click', (e) => this.handleGridClick(e), opts);
+      this.gridCanvas.addEventListener('mousemove', (e) => this.handleGridHover(e), opts);
+      this.gridCanvas.addEventListener('mouseleave', () => {
+        this.hoveredTile = null;
+        this.formationGrid?.setHoveredTile(null);
+      }, opts);
+
+      // Long press for removal
+      this.gridCanvas.addEventListener('mousedown', (e) => this.handleGridMouseDown(e), opts);
+      this.gridCanvas.addEventListener('mouseup', () => this.handleGridMouseUp(), opts);
+
+      // Touch support
+      this.gridCanvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const rect = this.gridCanvas.getBoundingClientRect();
+        this.handleGridMouseDown({
+          offsetX: touch.clientX - rect.left,
+          offsetY: touch.clientY - rect.top
+        });
+      }, opts);
+
+      this.gridCanvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        this.handleGridMouseUp();
+        if (!this.longPressTimer) {
+          const touch = e.changedTouches[0];
+          const rect = this.gridCanvas.getBoundingClientRect();
+          this.handleGridClick({
+            offsetX: touch.clientX - rect.left,
+            offsetY: touch.clientY - rect.top
+          });
+        }
+      }, opts);
+    }
+
+    // Mobile bottom sheet
+    if (this.isMobile) {
+      const sheetHandle = this.uiElement.querySelector('#sheet-handle');
+      if (sheetHandle) {
+        sheetHandle.addEventListener('click', () => this.toggleBottomSheet(), opts);
+      }
+    }
+
+    // Window resize
+    window.addEventListener('resize', () => this.handleResize(), opts);
   }
 
+  goBack() {
+    // Return to world map
+    this.game.scenes.switchTo('worldMap');
+  }
+
+  handleResize() {
+    const wasMobile = this.isMobile;
+    this.isMobile = window.innerWidth < 768;
+
+    if (wasMobile !== this.isMobile) {
+      // Layout changed, need to rebuild UI
+      this.rebuildUI();
+    }
+  }
+
+  rebuildUI() {
+    // Save state
+    const savedPlaced = new Map(this.placedCharacters);
+    const savedOrder = [...this.placementOrder];
+    const savedSelected = this.selectedCharacter;
+
+    // Cleanup
+    if (this.characterCard) {
+      this.characterCard.destroy();
+      this.characterCard = null;
+    }
+    if (this.startButton) {
+      this.startButton.destroy();
+      this.startButton = null;
+    }
+    if (this.uiElement) {
+      this.uiElement.remove();
+    }
+
+    // Rebuild
+    this.createUI();
+    this.setupEventListeners();
+
+    // Restore state
+    this.placedCharacters = savedPlaced;
+    this.placementOrder = savedOrder;
+    this.selectedCharacter = savedSelected;
+
+    this.updateUnplacedRoster();
+    this.updateDetailCard();
+    this.updateStartButton();
+  }
+
+  toggleBottomSheet() {
+    this.isBottomSheetExpanded = !this.isBottomSheetExpanded;
+    const sheet = this.uiElement.querySelector('#bottom-sheet');
+    if (sheet) {
+      sheet.classList.toggle('expanded', this.isBottomSheetExpanded);
+    }
+  }
+
+  // Grid interactions
   handleGridClick(e) {
-    // Skip click if character was just removed by long-press
     if (this.justRemovedByLongPress) {
       this.justRemovedByLongPress = false;
       return;
     }
 
-    const tile = this.screenToGrid(e.offsetX, e.offsetY);
+    const tile = this.formationGrid?.screenToGrid(e.offsetX, e.offsetY);
     if (!tile) return;
 
     const key = `${tile.x},${tile.y}`;
 
     if (this.placedCharacters.has(key)) {
-      // Cycle character on occupied tile
       this.cycleCharacterOnTile(key);
     } else {
-      // Place character on empty tile (handles all cases)
       this.placeCharacterOnTile(key);
     }
 
-    this.renderGrid();
+    this.updateGrid();
     this.updateUnplacedRoster();
+    this.updateStartButton();
+    this.updateTension();
   }
 
   handleGridHover(e) {
-    const tile = this.screenToGrid(e.offsetX, e.offsetY);
+    const tile = this.formationGrid?.screenToGrid(e.offsetX, e.offsetY);
     if (!tile || (this.hoveredTile?.x === tile.x && this.hoveredTile?.y === tile.y)) return;
 
     this.hoveredTile = tile;
-    this.renderGrid();
+    this.formationGrid?.setHoveredTile(tile);
 
-    // Show character info on hover
     const key = `${tile.x},${tile.y}`;
     if (this.placedCharacters.has(key)) {
       this.selectedCharacter = this.placedCharacters.get(key);
@@ -427,21 +549,24 @@ export class BattleFormationScene extends Scene {
   }
 
   handleGridMouseDown(e) {
-    const tile = this.screenToGrid(e.offsetX, e.offsetY);
+    const tile = this.formationGrid?.screenToGrid(e.offsetX, e.offsetY);
     if (!tile) return;
 
     const key = `${tile.x},${tile.y}`;
     if (!this.placedCharacters.has(key)) return;
 
     this.pressedTile = key;
-    this.justRemovedByLongPress = false;  // Reset flag
+    this.formationGrid?.setPressedTile(key);
+    this.justRemovedByLongPress = false;
 
     this.longPressTimer = setTimeout(() => {
       this.removeCharacter(key);
-      this.renderGrid();
+      this.updateGrid();
       this.updateUnplacedRoster();
+      this.updateStartButton();
+      this.updateTension();
       this.longPressTimer = null;
-      this.justRemovedByLongPress = true;  // Mark removal happened
+      this.justRemovedByLongPress = true;
     }, this.longPressThreshold);
   }
 
@@ -451,25 +576,19 @@ export class BattleFormationScene extends Scene {
       this.longPressTimer = null;
     }
     this.pressedTile = null;
+    this.formationGrid?.setPressedTile(null);
   }
 
-  /**
-   * Place a character on an empty tile with improved logic:
-   * - If unplaced characters exist, place the next one
-   * - If only 1 character and already placed, move it to clicked tile
-   * - If all placed or grid full, FIFO replacement (move oldest to new tile)
-   */
+  // Character placement logic
   placeCharacterOnTile(gridKey) {
     const placedIds = new Set(
       Array.from(this.placedCharacters.values()).map(c => c.id)
     );
     const unplaced = this.battleParty.filter(c => !placedIds.has(c.id));
 
-    // Case 1: Have unplaced characters - place next one
     if (unplaced.length > 0) {
       const nextChar = unplaced[0];
 
-      // Enforce max 5 placement - FIFO removal
       if (this.placedCharacters.size >= 5) {
         const oldestKey = this.placementOrder.shift();
         this.placedCharacters.delete(oldestKey);
@@ -482,7 +601,6 @@ export class BattleFormationScene extends Scene {
       return;
     }
 
-    // Case 2: Only 1 character in party and already placed - MOVE it
     if (this.battleParty.length === 1 && this.placedCharacters.size === 1) {
       const [existingKey, char] = this.placedCharacters.entries().next().value;
       this.placedCharacters.delete(existingKey);
@@ -495,7 +613,6 @@ export class BattleFormationScene extends Scene {
       return;
     }
 
-    // Case 3: All characters placed - FIFO replacement (move oldest to new tile)
     if (this.placedCharacters.size > 0 && this.placementOrder.length > 0) {
       const oldestKey = this.placementOrder.shift();
       const charToMove = this.placedCharacters.get(oldestKey);
@@ -514,11 +631,9 @@ export class BattleFormationScene extends Scene {
     const currentChar = this.placedCharacters.get(gridKey);
     const currentIdx = this.battleParty.findIndex(c => c.id === currentChar.id);
 
-    // Find next character (wrap around)
     let nextIdx = (currentIdx + 1) % this.battleParty.length;
     let nextChar = this.battleParty[nextIdx];
 
-    // Check if next char is already placed elsewhere - swap them
     for (const [key, char] of this.placedCharacters) {
       if (char.id === nextChar.id && key !== gridKey) {
         this.placedCharacters.set(key, currentChar);
@@ -544,118 +659,14 @@ export class BattleFormationScene extends Scene {
       }
     }
 
-    this.game.showNotification('Character removed', 'info');
+    this.game.showNotification?.('Character removed', 'info');
   }
 
-  autoPlaceCharacters() {
-    // Auto-place battle party in default positions
-    const defaultPositions = [
-      { x: 2, y: 0 },  // Front center
-      { x: 1, y: 1 },  // Left
-      { x: 3, y: 1 },  // Right
-      { x: 0, y: 2 },  // Back left
-      { x: 4, y: 2 }   // Back right
-    ];
-
-    this.battleParty.slice(0, 5).forEach((char, i) => {
-      if (i < defaultPositions.length) {
-        const pos = defaultPositions[i];
-        const key = `${pos.x},${pos.y}`;
-        this.placedCharacters.set(key, char);
-        this.placementOrder.push(key);
-      }
-    });
-
-    this.renderGrid();
-    this.updateUnplacedRoster();
-  }
-
-  renderGrid() {
-    if (!this.gridCanvas) return;
-
-    const ctx = this.gridCanvas.getContext('2d');
-    ctx.clearRect(0, 0, this.gridCanvas.width, this.gridCanvas.height);
-
-    // Render tiles
-    for (let y = 0; y < this.gridHeight; y++) {
-      for (let x = 0; x < this.gridWidth; x++) {
-        this.renderTile(ctx, x, y);
-      }
+  // UI updates
+  updateGrid() {
+    if (this.formationGrid) {
+      this.formationGrid.setPlacedCharacters(this.placedCharacters);
     }
-
-    // Render placed characters on top
-    for (const [key, char] of this.placedCharacters) {
-      const [x, y] = key.split(',').map(Number);
-      this.renderCharacterOnTile(ctx, x, y, char);
-    }
-  }
-
-  renderTile(ctx, gridX, gridY) {
-    const { x, y } = this.gridToScreen(gridX, gridY);
-    const key = `${gridX},${gridY}`;
-    const isOccupied = this.placedCharacters.has(key);
-    const isHovered = this.hoveredTile?.x === gridX && this.hoveredTile?.y === gridY;
-    const isPressed = this.pressedTile === key;
-
-    // Draw isometric diamond
-    ctx.beginPath();
-    ctx.moveTo(x, y - this.tileHeight / 2);                    // Top
-    ctx.lineTo(x + this.tileWidth / 2, y);                     // Right
-    ctx.lineTo(x, y + this.tileHeight / 2);                    // Bottom
-    ctx.lineTo(x - this.tileWidth / 2, y);                     // Left
-    ctx.closePath();
-
-    // Fill based on state
-    if (isPressed) {
-      ctx.fillStyle = '#8b0000';      // Dark red - being removed
-    } else if (isOccupied) {
-      ctx.fillStyle = '#2a4a2a';      // Dark green - occupied
-    } else if (isHovered) {
-      ctx.fillStyle = '#3a4a5a';      // Light gray - hover
-    } else {
-      ctx.fillStyle = '#252535';      // Base dark
-    }
-    ctx.fill();
-
-    // Border
-    if (isOccupied) {
-      ctx.strokeStyle = '#4caf50';
-    } else if (isHovered) {
-      ctx.strokeStyle = '#6ab0f3';
-    } else {
-      ctx.strokeStyle = '#3a3a5a';
-    }
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-
-  renderCharacterOnTile(ctx, gridX, gridY, char) {
-    const { x, y } = this.gridToScreen(gridX, gridY);
-
-    // Draw character icon
-    const color = this.getClassColor(char.class);
-    const icon = this.getClassIcon(char.class);
-
-    // Circle background
-    ctx.beginPath();
-    ctx.arc(x, y - 8, 14, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Icon text
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 12px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(icon, x, y - 8);
-
-    // Name below
-    ctx.font = '9px Arial';
-    ctx.fillStyle = '#fff';
-    ctx.fillText(char.name.substring(0, 8), x, y + 10);
   }
 
   updateDetailCard() {
@@ -664,38 +675,107 @@ export class BattleFormationScene extends Scene {
     }
   }
 
-  updateUnplacedRoster() {
-    const roster = this.uiElement.querySelector('#unplaced-roster');
-    if (roster) {
-      roster.innerHTML = this.renderUnplacedRoster();
-
-      // Re-attach event listeners
-      roster.querySelectorAll('.unplaced-char').forEach(el => {
-        el.addEventListener('click', () => {
-          const charId = parseInt(el.dataset.charId);
-          const char = this.battleParty.find(c => c.id === charId);
-          if (char) {
-            this.selectedCharacter = char;
-            this.updateDetailCard();
-          }
-        }, { signal: this.abortController.signal });
-      });
-    }
-
-    // Update start button state
-    const startBtn = this.uiElement.querySelector('#start-battle-btn');
-    if (startBtn) {
-      startBtn.disabled = this.placedCharacters.size === 0;
+  updateStartButton() {
+    if (this.startButton) {
+      this.startButton.setDisabled(this.placedCharacters.size === 0);
     }
   }
 
+  updateTension() {
+    if (this.theme) {
+      this.theme.updateTension(this.placedCharacters.size, this.battleParty.length);
+    }
+  }
+
+  updateUnplacedRoster() {
+    const roster = this.uiElement?.querySelector('#unplaced-roster');
+    if (!roster) return;
+
+    const placedIds = new Set(
+      Array.from(this.placedCharacters.values()).map(c => c.id)
+    );
+    const unplaced = this.battleParty.filter(c => !placedIds.has(c.id));
+
+    if (unplaced.length === 0 && this.placedCharacters.size > 0) {
+      roster.innerHTML = '<div class="all-placed">All characters placed!</div>';
+      return;
+    }
+
+    roster.innerHTML = this.battleParty.map(char => {
+      const isPlaced = placedIds.has(char.id);
+      const isSelected = this.selectedCharacter?.id === char.id;
+      const gender = char.gender || 'other';
+      const portraitUrl = `/assets/sprites/portraits/${char.race}_${gender}_${char.class}.png`;
+
+      return `
+        <div class="roster-char ${isPlaced ? 'placed' : ''} ${isSelected ? 'selected' : ''}"
+             data-char-id="${char.id}">
+          <div class="roster-portrait">
+            <img src="${portraitUrl}" alt="${char.name}"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="roster-fallback" style="display:none; background:${this.getClassColor(char.class)}">
+              ${this.getClassIcon(char.class)}
+            </div>
+            ${isPlaced ? '<div class="placed-check">&#10003;</div>' : ''}
+          </div>
+          <div class="roster-name">${char.name}</div>
+        </div>
+      `;
+    }).join('');
+
+    // Attach click handlers
+    roster.querySelectorAll('.roster-char').forEach(el => {
+      el.addEventListener('click', () => {
+        const charId = parseInt(el.dataset.charId);
+        const char = this.battleParty.find(c => c.id === charId);
+        if (char) {
+          this.selectedCharacter = char;
+          this.updateDetailCard();
+          this.updateUnplacedRoster();
+        }
+      }, { signal: this.abortController.signal });
+    });
+  }
+
+  // Animation loop
+  startAnimationLoop() {
+    this.lastTime = performance.now();
+    this.animate();
+  }
+
+  stopAnimationLoop() {
+    if (this.animationId) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+  }
+
+  animate() {
+    const now = performance.now();
+    const deltaTime = now - this.lastTime;
+    this.lastTime = now;
+
+    // Update theme animations
+    if (this.theme) {
+      this.theme.update(deltaTime);
+    }
+
+    // Update grid animations
+    if (this.formationGrid) {
+      this.formationGrid.update(deltaTime);
+      this.formationGrid.render();
+    }
+
+    this.animationId = requestAnimationFrame(() => this.animate());
+  }
+
+  // Battle start
   async startBattle() {
     if (this.placedCharacters.size === 0) {
       this.game.showNotification('Place at least one character!', 'warning');
       return;
     }
 
-    // Build formation: { characterId: { tileX, tileY } }
     const formation = {};
     for (const [key, char] of this.placedCharacters) {
       const [x, y] = key.split(',').map(Number);
@@ -703,10 +783,8 @@ export class BattleFormationScene extends Scene {
     }
 
     try {
-      // Start battle with formation positions
       const battleData = await this.game.api.startBattle({ formation });
 
-      // Transition to battle scene
       this.game.scenes.switchTo('battle', {
         ...battleData,
         playerFormation: formation
@@ -716,43 +794,7 @@ export class BattleFormationScene extends Scene {
     }
   }
 
-  /**
-   * Add CSS styles for animated title
-   */
-  addTitleStyles() {
-    if (document.getElementById('battle-title-styles')) return;
-
-    const style = document.createElement('style');
-    style.id = 'battle-title-styles';
-    style.textContent = `
-      /* Animated gradient title */
-      .battle-title-animated {
-        background: linear-gradient(
-          90deg,
-          #ffd700 0%,
-          #ff6b35 25%,
-          #ffd700 50%,
-          #ff6b35 75%,
-          #ffd700 100%
-        );
-        background-size: 200% auto;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        animation: shimmer-gold 3s linear infinite;
-        font-weight: bold;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-      }
-
-      @keyframes shimmer-gold {
-        0% { background-position: 0% center; }
-        100% { background-position: 200% center; }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
+  // Utility methods
   getClassColor(className) {
     const colors = {
       warrior: '#c62828',
@@ -781,16 +823,462 @@ export class BattleFormationScene extends Scene {
     return icons[className] || '?';
   }
 
-  capitalize(str) {
-    return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+  addStyles() {
+    if (document.getElementById('formation-scene-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'formation-scene-styles';
+    style.textContent = `
+      /* ========== LAYOUT ========== */
+
+      .formation-header {
+        padding: 12px 16px;
+        background: rgba(0,0,0,0.5);
+        border-bottom: 2px solid #4a4a6a;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .formation-header--mobile {
+        padding: 8px 12px;
+      }
+
+      .back-btn {
+        background: rgba(0,0,0,0.3);
+        border: 2px solid #4a4a6a;
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: #ccc;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .back-btn:hover {
+        background: rgba(74, 74, 106, 0.5);
+        color: #fff;
+      }
+
+      .back-icon {
+        font-size: 18px;
+      }
+
+      .header-titles {
+        flex: 1;
+      }
+
+      .battle-title-animated {
+        margin: 0;
+        font-size: 20px;
+        background: linear-gradient(90deg, #ffd700 0%, #ff6b35 25%, #ffd700 50%, #ff6b35 75%, #ffd700 100%);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: shimmer-gold 3s linear infinite;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      .battle-title--mobile {
+        font-size: 16px;
+      }
+
+      @keyframes shimmer-gold {
+        0% { background-position: 0% center; }
+        100% { background-position: 200% center; }
+      }
+
+      .node-name {
+        color: #8a8aaa;
+        font-size: 12px;
+        margin-top: 4px;
+      }
+
+      /* ========== MAIN CONTENT (DESKTOP) ========== */
+
+      .formation-main {
+        flex: 1;
+        display: flex;
+        overflow: hidden;
+      }
+
+      /* Side Drawer */
+      .formation-drawer {
+        width: 280px;
+        min-width: 280px;
+        max-width: 280px;
+        background: rgba(0,0,0,0.4);
+        border-right: 2px solid #4a4a6a;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .drawer-header {
+        padding: 12px 16px;
+        border-bottom: 1px solid #3a3a5a;
+      }
+
+      .drawer-title {
+        color: #ffd700;
+        font-size: 14px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .drawer-roster {
+        flex: 1;
+        padding: 12px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .drawer-divider {
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #4a4a6a, transparent);
+        margin: 8px 0;
+      }
+
+      .drawer-detail {
+        padding: 12px;
+        min-height: 120px;
+      }
+
+      /* Center Content */
+      .formation-center {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* ========== ENEMY SECTION ========== */
+
+      .enemy-section {
+        padding: 12px 16px;
+        background: rgba(139, 0, 0, 0.15);
+        border-bottom: 1px solid #5a3a3a;
+      }
+
+      .enemy-section--mobile {
+        padding: 8px 12px;
+        overflow-x: auto;
+      }
+
+      .enemy-label {
+        color: #ff6b6b;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+      }
+
+      .enemy-roster {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .enemy-roster--mobile {
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+      }
+
+      .enemy-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 8px;
+        background: rgba(0,0,0,0.3);
+        border: 2px solid #5a3a3a;
+        border-radius: 8px;
+        min-width: 70px;
+        transition: all 0.2s;
+      }
+
+      .enemy-card.threat-boss {
+        border-color: #8b0000;
+        box-shadow: 0 0 10px rgba(139, 0, 0, 0.4);
+      }
+
+      .enemy-portrait {
+        position: relative;
+        width: 40px;
+        height: 40px;
+        background: rgba(139, 0, 0, 0.4);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 4px;
+      }
+
+      .enemy-icon {
+        color: #ff6b6b;
+        font-size: 18px;
+        font-weight: bold;
+      }
+
+      .boss-indicator {
+        position: absolute;
+        top: -4px;
+        right: -4px;
+        font-size: 14px;
+        color: #ff0000;
+      }
+
+      .enemy-info {
+        text-align: center;
+      }
+
+      .enemy-name {
+        color: #fff;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      .enemy-level {
+        color: #aaa;
+        font-size: 9px;
+      }
+
+      .threat-aura {
+        position: absolute;
+        inset: -4px;
+        border-radius: 12px;
+        border: 2px solid rgba(255, 0, 0, 0.3);
+        animation: threat-pulse 2s ease-in-out infinite;
+        pointer-events: none;
+      }
+
+      @keyframes threat-pulse {
+        0%, 100% { opacity: 0.3; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.05); }
+      }
+
+      .enemy-unknown {
+        color: #8a8aaa;
+        font-style: italic;
+        padding: 12px;
+      }
+
+      /* ========== GRID AREA ========== */
+
+      .grid-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+      }
+
+      .grid-area--mobile {
+        padding: 8px;
+      }
+
+      #formation-grid-canvas {
+        border-radius: 8px;
+      }
+
+      .grid-instructions {
+        color: #6a6a8a;
+        font-size: 11px;
+        margin-top: 12px;
+        text-align: center;
+      }
+
+      /* ========== START SECTION ========== */
+
+      .start-section {
+        padding: 16px;
+        display: flex;
+        justify-content: center;
+        background: rgba(0,0,0,0.3);
+        border-top: 1px solid #3a3a5a;
+      }
+
+      .start-section--mobile {
+        padding: 12px;
+        position: sticky;
+        bottom: 0;
+      }
+
+      /* ========== ROSTER CHARACTERS ========== */
+
+      .roster-char {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        background: rgba(0,0,0,0.3);
+        border: 2px solid #4a4a6a;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .roster-char:hover {
+        background: rgba(74, 74, 106, 0.3);
+        border-color: #6a6a8a;
+      }
+
+      .roster-char.selected {
+        border-color: #ffd700;
+        background: rgba(255, 215, 0, 0.1);
+      }
+
+      .roster-char.placed {
+        opacity: 0.6;
+      }
+
+      .roster-char.placed .roster-portrait {
+        filter: grayscale(0.5);
+      }
+
+      .roster-portrait {
+        position: relative;
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+        overflow: hidden;
+        border: 2px solid #4a4a6a;
+      }
+
+      .roster-portrait img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        image-rendering: pixelated;
+      }
+
+      .roster-fallback {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: bold;
+        font-size: 16px;
+      }
+
+      .placed-check {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 16px;
+        height: 16px;
+        background: #4caf50;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 10px;
+        font-weight: bold;
+      }
+
+      .roster-name {
+        flex: 1;
+        color: #fff;
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .all-placed {
+        color: #4caf50;
+        text-align: center;
+        padding: 16px;
+        font-size: 13px;
+      }
+
+      /* ========== MOBILE BOTTOM SHEET ========== */
+
+      .bottom-sheet {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(20, 20, 35, 0.95);
+        border-top: 2px solid #4a4a6a;
+        border-radius: 16px 16px 0 0;
+        transform: translateY(calc(100% - 48px));
+        transition: transform 0.3s ease;
+        max-height: 60vh;
+        z-index: 100;
+      }
+
+      .bottom-sheet.expanded {
+        transform: translateY(0);
+      }
+
+      .sheet-handle {
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+      }
+
+      .handle-bar {
+        width: 40px;
+        height: 4px;
+        background: #4a4a6a;
+        border-radius: 2px;
+        margin: 0 auto;
+      }
+
+      .sheet-title {
+        flex: 1;
+        color: #ffd700;
+        font-size: 14px;
+        font-weight: bold;
+        text-align: center;
+      }
+
+      .sheet-content {
+        padding: 0 16px 16px;
+        overflow-y: auto;
+        max-height: calc(60vh - 48px);
+      }
+
+      /* ========== RESPONSIVE ========== */
+
+      @media (max-width: 768px) {
+        .formation-drawer {
+          display: none;
+        }
+
+        .enemy-roster {
+          justify-content: flex-start;
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          padding-bottom: 8px;
+        }
+
+        .enemy-card {
+          flex-shrink: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   update(deltaTime) {
-    // No per-frame updates needed
+    // Main update handled by animation loop
   }
 
   render(ctx) {
-    // UI is HTML-based, just fill background
+    // UI is HTML-based
     ctx.fillStyle = '#1a1a2e';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   }

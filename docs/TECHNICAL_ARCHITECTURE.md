@@ -541,6 +541,95 @@ Templates for enemy generation with player-level scaling.
 **Indexes:**
 - `idx_enemy_templates_terrain` on `(terrain_type, difficulty_tier)`
 
+#### 3.2.10 traits
+
+Permanent passive bonuses acquired through guild recruitment.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY | Unique identifier |
+| name | VARCHAR(50) | UNIQUE NOT NULL | Trait name |
+| description | TEXT | NOT NULL | Display description |
+| category | VARCHAR(20) | NOT NULL | combat, survival, utility, situational |
+| rarity | VARCHAR(20) | NOT NULL | common, uncommon, rare, legendary |
+| effect_type | VARCHAR(50) | NOT NULL | Type of effect to apply |
+| effect_value | DECIMAL(5,2) | NOT NULL | Magnitude of effect |
+| created_at | TIMESTAMP | DEFAULT NOW() | Creation time |
+
+**Categories:**
+- `combat`: Damage bonuses, crit chance/damage
+- `survival`: HP/MP bonuses, regeneration, damage resistance
+- `utility`: Movement, initiative, XP/gold bonuses
+- `situational`: Conditional bonuses (vs enemy types, terrain, low HP)
+
+#### 3.2.11 guild_recruits
+
+Guild recruitment pool (shared across all players).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY | Unique identifier |
+| node_id | INTEGER | FK → world_nodes.id NOT NULL | Guild node |
+| name | VARCHAR(50) | NOT NULL | Recruit name |
+| race | race_type | NOT NULL | Character race |
+| gender | VARCHAR(20) | NOT NULL | male, female, other |
+| class | class_type | NOT NULL | Character class |
+| level | INTEGER | DEFAULT 1 | Starting level |
+| hp_max | INTEGER | NOT NULL | Maximum HP |
+| mp_max | INTEGER | NOT NULL | Maximum MP |
+| strength | INTEGER | NOT NULL | STR stat |
+| intelligence | INTEGER | NOT NULL | INT stat |
+| agility | INTEGER | NOT NULL | AGI stat |
+| vitality | INTEGER | NOT NULL | VIT stat |
+| luck | INTEGER | NOT NULL | LUK stat |
+| stat_variance_percent | DECIMAL(5,2) | DEFAULT 0 | Variance from baseline |
+| xp_pool | INTEGER | NOT NULL | Starting XP |
+| price | INTEGER | NOT NULL | Gold cost |
+| is_emergency_restock | BOOLEAN | DEFAULT FALSE | Emergency spawn flag |
+| purchased_by | INTEGER | FK → users.id | Buyer (null if available) |
+| purchased_at | TIMESTAMP | | Purchase time |
+| created_at | TIMESTAMP | DEFAULT NOW() | Generation time |
+
+#### 3.2.12 recruit_traits
+
+Junction table for recruit traits.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY | Unique identifier |
+| recruit_id | INTEGER | FK → guild_recruits.id CASCADE | Recruit |
+| trait_id | INTEGER | FK → traits.id | Trait |
+
+**Constraints:**
+- `UNIQUE (recruit_id, trait_id)` - No duplicate traits
+
+#### 3.2.13 recruit_skills
+
+Junction table for recruit starting skills.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY | Unique identifier |
+| recruit_id | INTEGER | FK → guild_recruits.id CASCADE | Recruit |
+| skill_id | VARCHAR(50) | NOT NULL | Skill identifier |
+
+**Constraints:**
+- `UNIQUE (recruit_id, skill_id)` - No duplicate skills
+
+#### 3.2.14 character_traits
+
+Permanent traits attached to characters.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY | Unique identifier |
+| character_id | INTEGER | FK → characters.id CASCADE | Character |
+| trait_id | INTEGER | FK → traits.id | Trait |
+| acquired_at | TIMESTAMP | DEFAULT NOW() | When trait was gained |
+
+**Constraints:**
+- `UNIQUE (character_id, trait_id)` - No duplicate traits per character
+
 **Enemy Level Scaling Formula:**
 ```
 enemy_level = floor(avg_party_level × tier_multiplier)
