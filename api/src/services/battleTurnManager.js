@@ -7,8 +7,8 @@
  * - Async processing so HTTP responses return immediately
  */
 
-const battleWebsocket = require('./battleWebsocket');
-const { query } = require('../config/database');
+import battleWebsocket from './battleWebsocket.js';
+import { query } from '../config/database.js';
 
 // Animation timing constants (ms) - sync with BATTLE_ANIMATIONS.md
 const TIMING = {
@@ -477,11 +477,11 @@ function delay(ms) {
  * @param {number} battleId - Battle ID
  * @param {Object} state - Battle state
  */
-function notifyPlayerTurn(battleId, state) {
+async function notifyPlayerTurn(battleId, state) {
   const activeUnit = state.units.find(u => u.id === state.activeUnitId);
 
   if (activeUnit && activeUnit.type === 'player') {
-    const battleService = require('./battleService');
+    const battleService = await import('./battleService.js');
     const turnPredictions = battleService.predictTurnOrder(state, 10);
 
     // Broadcast turn start to all
@@ -509,7 +509,7 @@ function notifyPlayerTurn(battleId, state) {
   }
 }
 
-module.exports = {
+export {
   processEnemyTurnsAsync,
   processEnemyTurnWithVisualization,
   notifyPlayerTurn,

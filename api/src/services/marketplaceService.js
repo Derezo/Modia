@@ -8,8 +8,8 @@
  * - Partial fills allowed
  */
 
-const { AppError } = require('../middleware/errorHandler');
-const { MAX_GOLD } = require('../config/constants');
+import { AppError } from '../middleware/errorHandler.js';
+import { MAX_GOLD } from '../config/constants.js';
 
 /**
  * Get the order book for an item (aggregated by price level)
@@ -917,7 +917,7 @@ async function searchItems(client, searchTerm = '', itemType = null, limit = 50)
   }));
 }
 
-module.exports = {
+export {
   getOrderBook,
   getMatchingOrders,
   reserveGold,

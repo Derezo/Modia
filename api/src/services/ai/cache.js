@@ -407,7 +407,7 @@ function estimateActionDamage(attacker, target, action) {
   return Math.max(1, Math.floor(baseDamage - defense));
 }
 
-module.exports = {
+export {
   TranspositionTable,
   KillerMoves,
   HistoryHeuristic,

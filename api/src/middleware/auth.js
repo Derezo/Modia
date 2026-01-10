@@ -1,4 +1,4 @@
-const { verifyAccessToken } = require('../config/jwt');
+import { verifyAccessToken } from '../config/jwt.js';
 
 const authenticate = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -47,4 +47,4 @@ const optionalAuth = (req, res, next) => {
   next();
 };
 
-module.exports = { authenticate, optionalAuth };
+export { authenticate, optionalAuth };

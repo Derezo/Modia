@@ -8,8 +8,8 @@
  * - Handles turn timeout for disconnected players
  */
 
-const battleWebsocket = require('./battleWebsocket');
-const { query } = require('../config/database');
+import battleWebsocket from './battleWebsocket.js';
+import { query } from '../config/database.js';
 
 // Track disconnected players: Map<battleId, Map<playerId, { disconnectTime, timeout }>>
 const disconnectedPlayers = new Map();
@@ -154,7 +154,7 @@ async function handleAbandonTimeout(battleId, playerId) {
 
   if (activeUnit?.ownerId === playerId) {
     // Auto-wait for the disconnected player's unit
-    const battleService = require('./battleService');
+    const battleService = await import('./battleService.js');
 
     // Execute wait action
     activeUnit.hasActed = true;
@@ -322,7 +322,7 @@ function cleanupBattle(battleId) {
   }
 }
 
-module.exports = {
+export {
   handleDisconnect,
   handleReconnect,
   handleAbandonTimeout,

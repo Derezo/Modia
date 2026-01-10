@@ -192,3 +192,33 @@ export default defineConfig({
 | Vite changes dev workflow | Proxy config maintains same ports/URLs |
 | Large PR | Can split into 4 PRs per phase |
 | Import path issues | Use workspace protocol in package.json |
+
+## Completed
+
+All four phases have been implemented as of 2026-01-09:
+
+### Phase 1: Shared Module (foundation)
+- Converted shared/package.json to ESM with `"type": "module"`
+- Converted constants.js and nameData.js to ESM exports
+- Created terrain.js, mapGeneration.js, pathfinding.js, battleMath.js
+- Created index.js with re-exports
+
+### Phase 2: API Migration (backend)
+- Updated api/package.json to ESM
+- Converted all require/module.exports to import/export across ~40 files
+- Fixed __dirname usages with `import.meta.url` pattern
+- Replaced duplicated terrain/pathfinding code with shared imports
+
+### Phase 3: Frontend Migration (client)
+- Installed Vite and configured dev server with API proxy
+- Moved index.html to root, public/src/ to src/
+- Created vite.config.js with `@shared` alias for shared workspace imports
+- Replaced duplicated code in BattleGrid.js, BattlePathfinding.js with shared imports
+- Updated BattleScene.js to use shared battleMath.js for damage previews
+
+### Phase 4: Cleanup
+- Deleted unused DamagePreview.js (replaced by shared/battleMath.js + ParchmentCard UI)
+- Removed duplicated CLASS_MOVEMENT constant from BattleScene.js (now imports from shared)
+- Removed debug console.log statements ([CT DEBUG]) from battleService.js
+- Removed unused imports (isImpassable, getTerrainWeights) from battle.js route
+- Updated CLAUDE.md with new architecture documentation

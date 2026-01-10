@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
 // Security: Fail startup if JWT secrets are not set in production
 const isProduction = process.env.NODE_ENV === 'production';
@@ -48,7 +48,7 @@ const verifyRefreshToken = (token) => {
   return jwt.verify(token, JWT_REFRESH_SECRET);
 };
 
-module.exports = {
+export {
   JWT_SECRET,
   JWT_REFRESH_SECRET,
   generateAccessToken,

@@ -7,10 +7,10 @@
  */
 
 // Import pathfinding for obstacle-aware movement decisions
-const battleService = require('./battleService');
+import * as battleService from './battleService.js';
 
 // Import new utility AI system
-const { UtilityAI, createAIForUnit, quickDecision } = require('./ai');
+import { UtilityAI, createAIForUnit, quickDecision } from './ai/index.js';
 
 // Configuration for utility AI usage
 const USE_UTILITY_AI = true;
@@ -1132,7 +1132,7 @@ function isReachable(enemy, targetX, targetY, battleState) {
   return pathCost !== Infinity && pathCost <= movementRange;
 }
 
-module.exports = {
+export {
   // Primary entry point (uses utility AI with fallback)
   decideTurnActions,
   // Utility AI specific
@@ -1164,5 +1164,34 @@ module.exports = {
   isValidMove,
   isReachable,
   // Configuration
+  USE_UTILITY_AI
+};
+
+export default {
+  decideTurnActions,
+  utilityAIDecision,
+  convertToLegacyFormat,
+  legacyDecideTurnActions,
+  aggressiveTurnAI,
+  defensiveTurnAI,
+  supportTurnAI,
+  tacticalTurnAI,
+  packTurnAI,
+  hitAndRunTurnAI,
+  ambushTurnAI,
+  decideAction,
+  aggressiveAI,
+  defensiveAI,
+  supportAI,
+  tacticalAI,
+  packAI,
+  hitAndRunAI,
+  ambushAI,
+  getAlivePlayers,
+  getAliveEnemies,
+  findClosestUnit,
+  manhattanDistance,
+  isValidMove,
+  isReachable,
   USE_UTILITY_AI
 };

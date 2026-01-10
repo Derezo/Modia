@@ -5,13 +5,17 @@
  * Uses improved prompts for cohesive visual style
  */
 
-const path = require('path');
-const fs = require('fs').promises;
-require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
+import path from 'path';
+import { promises as fs } from 'fs';
+import { fileURLToPath } from 'url';
+import 'dotenv/config';
 
-const { getPixelLabClient } = require('../services/pixelLabService');
-const { getAssetCacheManager } = require('../services/assetCacheManager');
-const { TERRAIN_PROMPTS, TILE_CONFIG } = require('../config/pixelLabPrompts');
+import { getPixelLabClient } from '../services/pixelLabService.js';
+import { getAssetCacheManager } from '../services/assetCacheManager.js';
+import { TERRAIN_PROMPTS, TILE_CONFIG } from '../config/pixelLabPrompts.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const ASSETS_DIR = path.join(__dirname, '../../../frontend/public/assets/sprites');
 
@@ -247,12 +251,10 @@ Examples:
 }
 
 // Run if called directly
-if (require.main === module) {
-  const options = parseArgs();
-  generateTiles(options).catch(error => {
-    console.error('Generation failed:', error);
-    process.exit(1);
-  });
-}
+const options = parseArgs();
+generateTiles(options).catch(error => {
+  console.error('Generation failed:', error);
+  process.exit(1);
+});
 
-module.exports = { generateTiles };
+export { generateTiles };

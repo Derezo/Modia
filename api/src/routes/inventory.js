@@ -1,8 +1,9 @@
-const express = require('express');
+import express from 'express';
+import { query, withTransaction } from '../config/database.js';
+import { authenticate } from '../middleware/auth.js';
+import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+
 const router = express.Router();
-const { query, withTransaction } = require('../config/database');
-const { authenticate } = require('../middleware/auth');
-const { asyncHandler, AppError } = require('../middleware/errorHandler');
 
 // Valid equipment slots (matches database enum)
 const EQUIPMENT_SLOTS = ['main_hand', 'off_hand', 'head', 'body', 'legs', 'feet', 'accessory'];
@@ -403,4 +404,4 @@ async function getCharacterInventory(characterId) {
   return { equipped, inventory };
 }
 
-module.exports = router;
+export default router;

@@ -1,10 +1,11 @@
-const express = require('express');
+import express from 'express';
+import { query, withTransaction } from '../config/database.js';
+import { authenticate } from '../middleware/auth.js';
+import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import { MAX_PARTY_SIZE, MAX_BATTLE_PARTY_SIZE } from '../config/constants.js';
+import partyWebsocket from '../services/partyWebsocket.js';
+
 const router = express.Router();
-const { query, withTransaction } = require('../config/database');
-const { authenticate } = require('../middleware/auth');
-const { asyncHandler, AppError } = require('../middleware/errorHandler');
-const { MAX_PARTY_SIZE, MAX_BATTLE_PARTY_SIZE } = require('../config/constants');
-const partyWebsocket = require('../services/partyWebsocket');
 
 // GET /api/party - Get current party formation
 router.get('/', authenticate, asyncHandler(async (req, res) => {
@@ -596,7 +597,7 @@ router.put('/multiplayer/:partyId/ready', authenticate, asyncHandler(async (req,
 
   // Broadcast ready status change
   const roomName = `party:${partyId}`;
-  const websocket = require('../websocket/index');
+  const websocket = await import('../websocket/index.js');
   websocket.broadcastToRoom(roomName, {
     type: 'party:member_ready',
     payload: {
@@ -684,7 +685,7 @@ router.post('/multiplayer/:partyId/start', authenticate, asyncHandler(async (req
 
   // Broadcast battle starting
   const roomName = `party:${partyId}`;
-  const websocket = require('../websocket/index');
+  const websocket = await import('../websocket/index.js');
   websocket.broadcastToRoom(roomName, {
     type: 'party:battle_starting',
     payload: {
@@ -743,4 +744,4 @@ router.post('/multiplayer/decline/:inviteId', authenticate, asyncHandler(async (
   res.json({ success: true });
 }));
 
-module.exports = router;
+export default router;

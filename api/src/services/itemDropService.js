@@ -2,8 +2,8 @@
  * Item Drop Service - Procedural item generation and drop rolling
  */
 
-const { query } = require('../config/database');
-const { SeededRandom } = require('../config/constants');
+import { query } from '../config/database.js';
+import { SeededRandom } from '../config/constants.js';
 
 // Rarity definitions
 const RARITIES = {
@@ -327,7 +327,7 @@ function formatDropsForResponse(drops) {
   }));
 }
 
-module.exports = {
+export {
   rollDrops,
   generateItem,
   storeDroppedItem,

@@ -1,6 +1,10 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.env') });
+import 'dotenv/config';
+import http from 'http';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const http = require('http');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const BASE_URL = `http://localhost:${process.env.PORT || 3000}`;
 
@@ -100,7 +104,7 @@ async function createTestCharacter(token, name = null) {
   return res.body.character;
 }
 
-module.exports = {
+export {
   request,
   uniqueUsername,
   uniqueEmail,

@@ -1,9 +1,10 @@
-const express = require('express');
+import express from 'express';
+import { query, withTransaction, getClient } from '../config/database.js';
+import { authenticate } from '../middleware/auth.js';
+import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import * as marketplaceService from '../services/marketplaceService.js';
+
 const router = express.Router();
-const { query, withTransaction, getClient } = require('../config/database');
-const { authenticate } = require('../middleware/auth');
-const { asyncHandler, AppError } = require('../middleware/errorHandler');
-const marketplaceService = require('../services/marketplaceService');
 
 // ============================================
 // GET /api/marketplace/orderbook/:itemTemplateId - Get order book
@@ -383,4 +384,4 @@ router.get('/stats/:itemTemplateId', authenticate, asyncHandler(async (req, res)
   });
 }));
 
-module.exports = router;
+export default router;

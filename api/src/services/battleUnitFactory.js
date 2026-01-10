@@ -5,8 +5,8 @@
  * unified logic for movement, actions, skills, and AI decision-making.
  */
 
-const { CLASS_MOVEMENT } = require('../config/constants');
-const traitService = require('./traitService');
+import { CLASS_MOVEMENT } from '../config/constants.js';
+import traitService from './traitService.js';
 
 /**
  * BattleUnit interface (documented for reference):
@@ -73,6 +73,7 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
     class: character.class,
     level: character.level || 1,
     race: character.race,
+    gender: character.gender || 'other',
 
     // Core Stats (with equipment bonuses applied)
     hp: character.hp_current ?? character.hp_max,
@@ -313,7 +314,18 @@ function getAliveUnitsOfType(units, type) {
   return units.filter(u => u.type === type && u.hp > 0);
 }
 
-module.exports = {
+export {
+  createPlayerBattleUnit,
+  createEnemyBattleUnit,
+  normalizeUnit,
+  isPlayerUnit,
+  isEnemyUnit,
+  getOppositeType,
+  isAlive,
+  getAliveUnitsOfType
+};
+
+export default {
   createPlayerBattleUnit,
   createEnemyBattleUnit,
   normalizeUnit,

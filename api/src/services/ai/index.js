@@ -12,7 +12,7 @@
  *
  * Usage:
  * ```javascript
- * const { UtilityAI, createAIForUnit } = require('./services/ai');
+ * import { UtilityAI, createAIForUnit } from './services/ai/index.js';
  *
  * // Create AI for a unit
  * const ai = createAIForUnit(enemy);
@@ -23,17 +23,17 @@
  * ```
  */
 
-const { UtilityAI, createAIForUnit, quickDecision, batchDecisions } = require('./utilityAI');
-const { StateEvaluator } = require('./stateEvaluator');
-const { PATTERN_WEIGHTS, OPTIMAL_PLAYER_WEIGHTS, getWeights, getAvailablePatterns, patternExists } = require('./patternWeights');
-const {
+import { UtilityAI, createAIForUnit, quickDecision, batchDecisions } from './utilityAI.js';
+import { StateEvaluator } from './stateEvaluator.js';
+import { PATTERN_WEIGHTS, OPTIMAL_PLAYER_WEIGHTS, getWeights, getAvailablePatterns, patternExists } from './patternWeights.js';
+import {
   generateAllActions,
   generateMoveActionSequences,
   pruneActions,
   orderActionsForPruning,
   generateThreatResponseActions
-} = require('./actionGenerator');
-const {
+} from './actionGenerator.js';
+import {
   calculateDamageDealt,
   calculateDamageReceived,
   calculateKillPotential,
@@ -43,18 +43,18 @@ const {
   calculateSurvivalPriority,
   calculateMpEfficiency,
   calculateTargetPriority
-} = require('./utilityFactors');
-const { Lookahead, quickEvaluate } = require('./lookahead');
-const {
+} from './utilityFactors.js';
+import { Lookahead, quickEvaluate } from './lookahead.js';
+import {
   TranspositionTable,
   KillerMoves,
   HistoryHeuristic,
   PerformanceTracker,
   cloneState,
   applyActionToState
-} = require('./cache');
+} from './cache.js';
 
-module.exports = {
+export {
   // Main AI classes
   UtilityAI,
   StateEvaluator,

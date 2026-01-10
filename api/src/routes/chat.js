@@ -1,9 +1,10 @@
-const express = require('express');
+import express from 'express';
+import { authenticate } from '../middleware/auth.js';
+import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import chatService from '../services/chatService.js';
+import presenceService from '../services/presenceService.js';
+
 const router = express.Router();
-const { authenticate } = require('../middleware/auth');
-const { asyncHandler, AppError } = require('../middleware/errorHandler');
-const chatService = require('../services/chatService');
-const presenceService = require('../services/presenceService');
 
 /**
  * GET /api/chat/history/:roomType
@@ -166,4 +167,4 @@ router.get('/presence/:userId', authenticate, asyncHandler(async (req, res) => {
   res.json({ presence });
 }));
 
-module.exports = router;
+export default router;

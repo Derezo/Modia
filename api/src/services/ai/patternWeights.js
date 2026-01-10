@@ -245,7 +245,7 @@ function patternExists(pattern) {
   return pattern?.toLowerCase() in PATTERN_WEIGHTS;
 }
 
-module.exports = {
+export {
   PATTERN_WEIGHTS,
   OPTIMAL_PLAYER_WEIGHTS,
   getWeights,

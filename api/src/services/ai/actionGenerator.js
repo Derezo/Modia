@@ -5,8 +5,8 @@
  * including moves, attacks, skills, and composite actions.
  */
 
-const { getReachableTiles, getAvailableActions, getTargetsInRange } = require('../battleService');
-const { canUseSkill } = require('../npcSkillService');
+import { getReachableTiles, getAvailableActions, getTargetsInRange } from '../battleService.js';
+import { canUseSkill } from '../npcSkillService.js';
 
 /**
  * Generate all possible actions for a unit
@@ -465,7 +465,7 @@ function findSaferTiles(unit, threats, reachableTiles) {
   return scored.sort((a, b) => b.safetyScore - a.safetyScore);
 }
 
-module.exports = {
+export {
   generateAllActions,
   generateMoveActionSequences,
   generateActionsAtPosition,

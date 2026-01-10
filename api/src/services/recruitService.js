@@ -3,10 +3,10 @@
  * Handles generating, refreshing, and purchasing recruits from guild nodes
  */
 
-const { query, withTransaction } = require('../config/database');
-const { RACES, GENDERS, CLASSES, calculateStats, MAX_PARTY_SIZE } = require('../config/constants');
-const { generateName } = require('../utils/nameGenerator');
-const { SKILL_TREES } = require('../config/skillTrees');
+import { query, withTransaction } from '../config/database.js';
+import { RACES, GENDERS, CLASSES, calculateStats, MAX_PARTY_SIZE } from '../config/constants.js';
+import { generateName } from '../utils/nameGenerator.js';
+import { SKILL_TREES } from '../config/skillTrees.js';
 
 // Base price for recruits
 const BASE_RECRUIT_PRICE = 2000;
@@ -825,7 +825,7 @@ async function purchaseRecruit(recruitId, userId) {
   });
 }
 
-module.exports = {
+export {
   generateRecruit,
   refreshGuildRecruits,
   spawnEmergencyRecruits,

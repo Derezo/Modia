@@ -1,12 +1,13 @@
-const express = require('express');
+import express from 'express';
+import bcrypt from 'bcrypt';
+import { query } from '../config/database.js';
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../config/jwt.js';
+import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import { authLimiter } from '../middleware/rateLimiter.js';
+import { authenticate } from '../middleware/auth.js';
+import { STARTING_GOLD } from '../config/constants.js';
+
 const router = express.Router();
-const bcrypt = require('bcrypt');
-const { query } = require('../config/database');
-const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require('../config/jwt');
-const { asyncHandler, AppError } = require('../middleware/errorHandler');
-const { authLimiter } = require('../middleware/rateLimiter');
-const { authenticate } = require('../middleware/auth');
-const { STARTING_GOLD } = require('../config/constants');
 
 const SALT_ROUNDS = 12;
 
@@ -248,4 +249,4 @@ router.get('/me', authenticate, asyncHandler(async (req, res) => {
   res.json({ user: result.rows[0] });
 }));
 
-module.exports = router;
+export default router;

@@ -90,7 +90,7 @@ npm run validate:character      # Validate character prompts only
 - `mapGeneration.js` - Seeded terrain and obstacle generation for battle maps
 - `pathfinding.js` - Dijkstra and A* algorithms for movement/pathing
 - `battleMath.js` - Damage formulas, hit/crit calculations for combat previews
-- Imported by both API (CommonJS) and frontend (via Vite `@shared` alias)
+- All modules use ESM; imported by API (direct imports) and frontend (via Vite `@shared` alias)
 
 ### Data Flow
 1. Frontend scenes call `api/client.js` for HTTP requests

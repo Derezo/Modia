@@ -752,7 +752,7 @@ function buildPortraitPrompt(race, gender, charClass) {
   return `Close-up portrait, head and shoulders, ${basePrompt}, ${classModifier}, facing forward, fantasy RPG character portrait, 64x64, ${STYLE_SUFFIX}`;
 }
 
-module.exports = {
+export {
   STYLE_SUFFIX,
   ISOMETRIC_SUFFIX,
   TERRAIN_STYLE,

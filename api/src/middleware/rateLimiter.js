@@ -1,4 +1,4 @@
-const rateLimit = require('express-rate-limit');
+import rateLimit from 'express-rate-limit';
 
 // Security: Rate limiting is ENABLED by default
 // Only explicitly disable in test environment
@@ -46,4 +46,4 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { rateLimiter, authLimiter };
+export { rateLimiter, authLimiter };

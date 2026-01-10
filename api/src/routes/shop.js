@@ -1,9 +1,10 @@
-const express = require('express');
+import express from 'express';
+import { query, withTransaction } from '../config/database.js';
+import { authenticate } from '../middleware/auth.js';
+import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import { MAX_GOLD } from '../config/constants.js';
+
 const router = express.Router();
-const { query, withTransaction } = require('../config/database');
-const { authenticate } = require('../middleware/auth');
-const { asyncHandler, AppError } = require('../middleware/errorHandler');
-const { MAX_GOLD } = require('../config/constants');
 
 // Valid shop types and which node types/features support them
 const SHOP_CONFIG = {
@@ -549,4 +550,4 @@ router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async
   });
 }));
 
-module.exports = router;
+export default router;

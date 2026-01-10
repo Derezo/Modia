@@ -5,7 +5,7 @@
  * potential actions and board states.
  */
 
-const {
+import {
   calculateDamageDealt,
   calculateDamageReceived,
   calculateKillPotential,
@@ -15,7 +15,7 @@ const {
   calculateSurvivalPriority,
   calculateMpEfficiency,
   calculateTargetPriority
-} = require('./utilityFactors');
+} from './utilityFactors.js';
 
 /**
  * StateEvaluator class - scores actions and states using weighted utility factors
@@ -267,4 +267,4 @@ class StateEvaluator {
   }
 }
 
-module.exports = { StateEvaluator };
+export { StateEvaluator };

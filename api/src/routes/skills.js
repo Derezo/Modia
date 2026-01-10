@@ -1,10 +1,11 @@
-const express = require('express');
+import express from 'express';
+import { query, withTransaction } from '../config/database.js';
+import { authenticate } from '../middleware/auth.js';
+import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import { CLASS_ADVANCEMENT, ADVANCEMENT_LEVEL_REQUIREMENT, calculateStats } from '../config/constants.js';
+import { SKILL_TREES } from '../config/skillTrees.js';
+
 const router = express.Router();
-const { query, withTransaction } = require('../config/database');
-const { authenticate } = require('../middleware/auth');
-const { asyncHandler, AppError } = require('../middleware/errorHandler');
-const { CLASS_ADVANCEMENT, ADVANCEMENT_LEVEL_REQUIREMENT, calculateStats } = require('../config/constants');
-const { SKILL_TREES } = require('../config/skillTrees');
 
 // GET /api/skills/tree/:guildId - Get skill tree for a guild
 router.get('/tree/:guildId', authenticate, asyncHandler(async (req, res) => {
@@ -326,4 +327,5 @@ router.post('/advance', authenticate, asyncHandler(async (req, res) => {
   });
 }));
 
-module.exports = { router, SKILL_TREES };
+export { router, SKILL_TREES };
+export default router;
