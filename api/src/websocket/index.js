@@ -1,4 +1,4 @@
-import { WebSocketServer } from 'ws';
+import { WebSocketServer, WebSocket } from 'ws';
 import { verifyAccessToken } from '../config/jwt.js';
 import chatService from '../services/chatService.js';
 import presenceService from '../services/presenceService.js';
