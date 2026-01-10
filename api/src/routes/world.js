@@ -1,10 +1,10 @@
-const express = require('express');
+import express from 'express';
+import { query } from '../config/database.js';
+import { authenticate } from '../middleware/auth.js';
+import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import presenceService from '../services/presenceService.js';
+
 const router = express.Router();
-const { query } = require('../config/database');
-const { authenticate } = require('../middleware/auth');
-const { asyncHandler, AppError } = require('../middleware/errorHandler');
-const presenceService = require('../services/presenceService');
-const { broadcastToRoom, rooms } = require('../websocket/index');
 
 // GET /api/world/seed - Get global world seed
 router.get('/seed', asyncHandler(async (req, res) => {
@@ -152,6 +152,9 @@ router.post('/travel', authenticate, asyncHandler(async (req, res) => {
     characterName
   );
 
+  // Dynamic import to avoid circular dependency
+  const { broadcastToRoom, rooms } = await import('../websocket/index.js');
+
   // Broadcast player_left_node to old node room
   const oldNodeRoom = `node:${currentNodeId}`;
   if (rooms.has(oldNodeRoom)) {
@@ -268,4 +271,4 @@ router.get('/discovery-stats', authenticate, asyncHandler(async (req, res) => {
   res.json(stats.rows[0]);
 }));
 
-module.exports = router;
+export default router;

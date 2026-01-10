@@ -1,8 +1,8 @@
 // Name generator for procedural recruit names
 // Uses race and gender to select from appropriate name pools
 
-const { NAME_POOLS } = require('../../../shared/nameData');
-const { RACES, GENDERS, SeededRandom } = require('../../../shared/constants');
+import { NAME_POOLS } from '../../../shared/nameData.js';
+import { RACES, GENDERS, SeededRandom } from '../../../shared/constants.js';
 
 /**
  * Generate a random name based on race and gender
@@ -115,13 +115,13 @@ function generateUniqueNames(race, gender, count, rng = null) {
   return Array.from(names);
 }
 
-module.exports = {
+export {
   generateName,
   generateUniqueNames
 };
 
 // Self-test when run directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('=== Name Generator Tests ===\n');
 
   const testCases = [

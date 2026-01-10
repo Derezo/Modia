@@ -1,8 +1,9 @@
-const express = require('express');
+import express from 'express';
+import { query } from '../config/database.js';
+import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import { authenticate } from '../middleware/auth.js';
+
 const router = express.Router();
-const { query } = require('../config/database');
-const { asyncHandler, AppError } = require('../middleware/errorHandler');
-const { authenticate } = require('../middleware/auth');
 
 // Default settings structure
 const DEFAULT_SETTINGS = {
@@ -121,4 +122,4 @@ router.put('/', authenticate, asyncHandler(async (req, res) => {
   res.json({ settings: result.rows[0].settings });
 }));
 
-module.exports = router;
+export default router;

@@ -301,7 +301,7 @@ function useNpcItem(item, unit) {
   }
 }
 
-module.exports = {
+export {
   generateNpcItems,
   generateIntelligentNpcItems,
   generateBeastItems,

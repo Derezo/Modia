@@ -5,7 +5,7 @@
  * When applied in battle, they modify damage, stats, and provide special effects.
  */
 
-const { query } = require('../config/database');
+import { query } from '../config/database.js';
 
 /**
  * Load traits for a list of character IDs
@@ -430,7 +430,30 @@ function formatTraitsForClient(traits) {
   }));
 }
 
-module.exports = {
+export {
+  loadCharacterTraits,
+  getTraitEffectValue,
+  hasTraitEffect,
+  applyBattleStartTraits,
+  getPhysicalDamageMultiplier,
+  getMagicalDamageMultiplier,
+  getDamageReductionMultiplier,
+  getCritChanceBonus,
+  getAccuracyBonus,
+  getEvasionBonus,
+  getInitiativeBonus,
+  getMPCostReduction,
+  calculateLifesteal,
+  calculateHPRegen,
+  checkDeathSave,
+  getXPBonus,
+  getGoldBonus,
+  getMovementBonus,
+  getRangeBonus,
+  formatTraitsForClient
+};
+
+export default {
   loadCharacterTraits,
   getTraitEffectValue,
   hasTraitEffect,

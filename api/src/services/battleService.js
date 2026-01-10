@@ -2,9 +2,14 @@
  * Battle Service - Damage calculations, status effects, action processing, and battle utilities
  */
 
-const { CLASS_MOVEMENT } = require('../config/constants');
-const { SKILL_TREES } = require('../config/skillTrees');
-const traitService = require('./traitService');
+import { CLASS_MOVEMENT } from '../config/constants.js';
+import { SKILL_TREES } from '../config/skillTrees.js';
+import * as traitService from './traitService.js';
+import { getTerrainMovementCost } from '../../../shared/terrain.js';
+import {
+  getReachableTiles as sharedGetReachableTiles,
+  calculatePathCost as sharedCalculatePathCost
+} from '../../../shared/pathfinding.js';
 
 // Default attack range for melee (1 tile adjacent)
 const DEFAULT_ATTACK_RANGE = 1;
@@ -375,8 +380,7 @@ function getManhattanDistance(x1, y1, x2, y2) {
 
 /**
  * Get all tiles reachable within a unit's movement range
- * Uses Dijkstra's algorithm with terrain costs
- * This is the authoritative server-side implementation
+ * Wrapper around shared pathfinding module for server-side use
  *
  * @param {Object} unit - The unit to calculate movement for
  * @param {Object} state - Battle state with terrain and units
@@ -389,68 +393,19 @@ function getReachableTiles(unit, state) {
   }
 
   const maxCost = getMovementRange(unit);
-  const startX = unit.tileX;
-  const startY = unit.tileY;
   const mapWidth = state.mapWidth || 32;
   const mapHeight = state.mapHeight || 32;
 
-  const costs = new Map();
-  const visited = new Set();
-  const queue = [{ x: startX, y: startY, cost: 0 }];
-
-  costs.set(`${startX},${startY}`, 0);
-
-  while (queue.length > 0) {
-    queue.sort((a, b) => a.cost - b.cost);
-    const current = queue.shift();
-    const currentKey = `${current.x},${current.y}`;
-
-    if (visited.has(currentKey)) continue;
-    visited.add(currentKey);
-
-    const neighbors = [
-      { x: current.x - 1, y: current.y },
-      { x: current.x + 1, y: current.y },
-      { x: current.x, y: current.y - 1 },
-      { x: current.x, y: current.y + 1 }
-    ];
-
-    for (const neighbor of neighbors) {
-      // Check bounds
-      if (neighbor.x < 0 || neighbor.y < 0 ||
-          neighbor.x >= mapWidth || neighbor.y >= mapHeight) continue;
-
-      // Get terrain cost
-      const terrain = state.terrain?.[neighbor.y]?.[neighbor.x] || 'grass';
-      const terrainCost = getTerrainMovementCost(terrain);
-
-      if (terrainCost === Infinity) continue;
-
-      // Check occupancy (can't move through other units)
-      const occupied = state.units.some(u =>
-        u.hp > 0 && u.tileX === neighbor.x && u.tileY === neighbor.y
-      );
-      if (occupied) continue;
-
-      const newCost = current.cost + terrainCost;
-      const key = `${neighbor.x},${neighbor.y}`;
-
-      if (newCost <= maxCost && (!costs.has(key) || costs.get(key) > newCost)) {
-        costs.set(key, newCost);
-        queue.push({ x: neighbor.x, y: neighbor.y, cost: newCost });
-      }
-    }
-  }
-
-  // Build result array (excluding start position)
-  const reachable = [];
-  for (const [key, cost] of costs) {
-    if (key === `${startX},${startY}`) continue;
-    const [x, y] = key.split(',').map(Number);
-    reachable.push({ x, y, cost });
-  }
-
-  return reachable;
+  // Use shared pathfinding module
+  return sharedGetReachableTiles(
+    unit.tileX,
+    unit.tileY,
+    maxCost,
+    state.terrain,
+    state.units,
+    mapWidth,
+    mapHeight
+  );
 }
 
 /**
@@ -602,23 +557,11 @@ function getAvailableActions(unit, state) {
 }
 
 // ==================== Terrain Cost Pathfinding ====================
+// Note: getTerrainMovementCost is imported from shared/terrain.js
 
 /**
- * Get movement cost for a terrain type
- * @param {string} terrain - Terrain type (grass, stone, forest, water, etc.)
- * @returns {number} Movement cost (1-3, or Infinity for impassable)
- */
-function getTerrainMovementCost(terrain) {
-  const costs = { grass: 1, stone: 1, forest: 2, water: 3 };
-  if (['rock', 'tree', 'lava', 'cliff'].includes(terrain)) {
-    return Infinity; // Impassable
-  }
-  return costs[terrain] || 1;
-}
-
-/**
- * Calculate minimum movement cost to reach target tile using Dijkstra's algorithm
- * This matches the frontend pathfinding logic for consistent validation
+ * Calculate minimum movement cost to reach target tile
+ * Wrapper around shared pathfinding module for server-side use
  *
  * @param {number} startX - Starting X position
  * @param {number} startY - Starting Y position
@@ -636,69 +579,19 @@ function calculatePathCost(startX, startY, targetX, targetY, state, maxCost) {
 
   const mapWidth = state.mapWidth || 32;
   const mapHeight = state.mapHeight || 32;
-  const costs = new Map();
-  const visited = new Set();
-  const queue = [{ x: startX, y: startY, cost: 0 }];
 
-  costs.set(`${startX},${startY}`, 0);
-
-  while (queue.length > 0) {
-    // Sort by cost (simple priority queue)
-    queue.sort((a, b) => a.cost - b.cost);
-    const current = queue.shift();
-    const currentKey = `${current.x},${current.y}`;
-
-    // Skip if already processed
-    if (visited.has(currentKey)) continue;
-    visited.add(currentKey);
-
-    // Found target - return the cost
-    if (current.x === targetX && current.y === targetY) {
-      return current.cost;
-    }
-
-    // Get 4-directional neighbors
-    const neighbors = [
-      { x: current.x - 1, y: current.y },
-      { x: current.x + 1, y: current.y },
-      { x: current.x, y: current.y - 1 },
-      { x: current.x, y: current.y + 1 }
-    ];
-
-    for (const neighbor of neighbors) {
-      // Check bounds
-      if (neighbor.x < 0 || neighbor.y < 0 ||
-          neighbor.x >= mapWidth || neighbor.y >= mapHeight) continue;
-
-      // Get terrain and cost
-      const terrain = state.terrain?.[neighbor.y]?.[neighbor.x] || 'grass';
-      const terrainCost = getTerrainMovementCost(terrain);
-
-      // Skip impassable terrain
-      if (terrainCost === Infinity) continue;
-
-      // Check for other units (can't move through them, except target tile)
-      const isTargetTile = neighbor.x === targetX && neighbor.y === targetY;
-      if (!isTargetTile) {
-        const occupied = state.units.some(u =>
-          u.hp > 0 && u.tileX === neighbor.x && u.tileY === neighbor.y
-        );
-        if (occupied) continue;
-      }
-
-      const newCost = current.cost + terrainCost;
-      const key = `${neighbor.x},${neighbor.y}`;
-
-      // Only add if within range and (not seen OR found cheaper path)
-      if (newCost <= maxCost && (!costs.has(key) || costs.get(key) > newCost)) {
-        costs.set(key, newCost);
-        queue.push({ x: neighbor.x, y: neighbor.y, cost: newCost });
-      }
-    }
-  }
-
-  // Target not reachable within movement range
-  return Infinity;
+  // Use shared pathfinding module
+  return sharedCalculatePathCost(
+    startX,
+    startY,
+    targetX,
+    targetY,
+    state.terrain,
+    state.units,
+    maxCost,
+    mapWidth,
+    mapHeight
+  );
 }
 
 /**
@@ -921,9 +814,6 @@ function advanceCTUntilReady(state) {
   const aliveUnits = state.units.filter(u => u.hp > 0);
   if (aliveUnits.length === 0) return 0;
 
-  // Log CT values before advancing
-  console.log('[CT DEBUG] advanceCTUntilReady - before:', aliveUnits.map(u => `${u.name}(${u.type}): CT=${u.ct}, AGI=${u.agility}`).join(', '));
-
   let ticks = 0;
   const maxTicks = 1000; // Safety limit
 
@@ -940,9 +830,6 @@ function advanceCTUntilReady(state) {
     ticks++;
   }
 
-  // Log CT values after advancing
-  console.log('[CT DEBUG] advanceCTUntilReady - after', ticks, 'ticks:', aliveUnits.map(u => `${u.name}: CT=${u.ct}`).join(', '));
-
   return ticks;
 }
 
@@ -952,7 +839,6 @@ function advanceCTUntilReady(state) {
  */
 function getNextActor(state) {
   const ready = state.units.filter(u => u.hp > 0 && u.ct >= CT_THRESHOLD);
-  console.log('[CT DEBUG] getNextActor - ready units:', ready.map(u => `${u.name}(${u.type}): CT=${u.ct}`).join(', ') || 'NONE');
 
   if (ready.length === 0) return null;
 
@@ -965,7 +851,6 @@ function getNextActor(state) {
     return (a.type === 'player' ? 0 : 1) - (b.type === 'player' ? 0 : 1);
   });
 
-  console.log('[CT DEBUG] getNextActor - selected:', ready[0]?.name, ready[0]?.type);
   return ready[0];
 }
 
@@ -1624,10 +1509,8 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
 function advanceToNextActorWithCT(state) {
   // Consume CT for the unit that just acted
   const currentActor = state.units.find(u => u.id === state.activeUnitId);
-  console.log('[CT DEBUG] advanceToNextActorWithCT - current actor:', currentActor?.name, 'CT before:', currentActor?.ct);
   if (currentActor) {
     consumeCT(currentActor);
-    console.log('[CT DEBUG] After consumeCT, actor CT:', currentActor.ct);
 
     // Decrement skill cooldowns for the actor whose turn just ended
     if (currentActor.skillCooldowns) {
@@ -1640,8 +1523,7 @@ function advanceToNextActorWithCT(state) {
   }
 
   // Find the next actor
-  const nextActor = advanceToNextActor(state);
-  console.log('[CT DEBUG] Next actor:', nextActor?.name, nextActor?.type, 'CT:', nextActor?.ct, '| New activeUnitId:', state.activeUnitId);
+  advanceToNextActor(state);
 }
 
 /**
@@ -1658,7 +1540,7 @@ function checkBattleEnd(state) {
   return 'active';
 }
 
-module.exports = {
+export {
   // Damage calculations
   calculatePhysicalDamage,
   calculateMagicalDamage,

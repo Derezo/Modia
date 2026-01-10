@@ -8,9 +8,9 @@
  * Skills are procedurally selected and scaled based on enemy level and difficulty.
  */
 
-const MONSTER_SKILL_TREES = require('../config/monsterSkillTrees');
-const SKILL_TREES = require('../config/skillTrees');
-const pool = require('../config/database');
+import MONSTER_SKILL_TREES from '../config/monsterSkillTrees.js';
+import { SKILL_TREES } from '../config/skillTrees.js';
+import { pool } from '../config/database.js';
 
 /**
  * Calculate the maximum number of skill slots for an enemy
@@ -427,7 +427,7 @@ function tickSkillCooldowns(unit) {
   }
 }
 
-module.exports = {
+export {
   // Main generation functions
   generateEnemySkills,
   generateEnemySkillsFromDb,

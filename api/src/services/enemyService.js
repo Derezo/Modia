@@ -2,9 +2,9 @@
  * Enemy Service - Template-based procedural enemy generation
  */
 
-const { query } = require('../config/database');
-const { generateEnemySkills } = require('./npcSkillService');
-const { generateNpcItems } = require('./npcItemService');
+import { query } from '../config/database.js';
+import { generateEnemySkills } from './npcSkillService.js';
+import { generateNpcItems } from './npcItemService.js';
 
 // Difficulty tier multipliers for stat scaling
 const TIER_MULTIPLIERS = {
@@ -322,7 +322,7 @@ async function getEncounterPreview(nodeId) {
   };
 }
 
-module.exports = {
+export {
   selectEnemiesForEncounter,
   createEnemyInstance,
   generateEncounter,

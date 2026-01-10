@@ -5,10 +5,10 @@
  * @see https://api.pixellab.ai/v2/docs
  */
 
-const fs = require('fs').promises;
-const path = require('path');
-const crypto = require('crypto');
-const sharp = require('sharp');
+import { promises as fs } from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import sharp from 'sharp';
 
 class PixelLabClient {
   constructor(options = {}) {
@@ -797,7 +797,7 @@ function getPixelLabClient(options = {}) {
   return instance;
 }
 
-module.exports = {
+export {
   PixelLabClient,
   getPixelLabClient
 };

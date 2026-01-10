@@ -5,11 +5,11 @@
  * to produce intelligent tactical decisions for NPCs.
  */
 
-const { StateEvaluator } = require('./stateEvaluator');
-const { getWeights, patternExists } = require('./patternWeights');
-const { generateAllActions, generateThreatResponseActions } = require('./actionGenerator');
-const { Lookahead, quickEvaluate } = require('./lookahead');
-const { PerformanceTracker } = require('./cache');
+import { StateEvaluator } from './stateEvaluator.js';
+import { getWeights, patternExists } from './patternWeights.js';
+import { generateAllActions, generateThreatResponseActions } from './actionGenerator.js';
+import { Lookahead, quickEvaluate } from './lookahead.js';
+import { PerformanceTracker } from './cache.js';
 
 /**
  * UtilityAI - Main AI decision-making class
@@ -253,7 +253,7 @@ function batchDecisions(units, state, options = {}) {
   return decisions;
 }
 
-module.exports = {
+export {
   UtilityAI,
   createAIForUnit,
   quickDecision,

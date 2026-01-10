@@ -317,9 +317,11 @@ function getHighPrioritySkills(archetype, minPriority = 7) {
   return getAllMonsterSkills(archetype).filter(s => s.priority >= minPriority);
 }
 
-module.exports = {
+export {
   MONSTER_SKILL_TREES,
   getMonsterSkillDefinition,
   getAllMonsterSkills,
   getHighPrioritySkills
 };
+
+export default MONSTER_SKILL_TREES;

@@ -1,4 +1,4 @@
-const { query } = require('../config/database');
+import { query } from '../config/database.js';
 
 /**
  * Presence Service - Handles player online status tracking and node presence
@@ -440,7 +440,7 @@ function getNodePresenceMap() {
   return nodePresence;
 }
 
-module.exports = {
+export {
   setPresence,
   getPresence,
   getOnlinePlayers,
@@ -452,6 +452,27 @@ module.exports = {
   cleanupStalePresence,
   getPresenceCache,
   // Node tracking
+  enterNode,
+  leaveNode,
+  moveNode,
+  getPlayersAtNode,
+  getNodePlayerCount,
+  getUserCurrentNode,
+  clearUserFromAllNodes,
+  getNodePresenceMap
+};
+
+export default {
+  setPresence,
+  getPresence,
+  getOnlinePlayers,
+  updateActivity,
+  setOffline,
+  setTypingIndicator,
+  clearTypingIndicator,
+  getTypingUsers,
+  cleanupStalePresence,
+  getPresenceCache,
   enterNode,
   leaveNode,
   moveNode,

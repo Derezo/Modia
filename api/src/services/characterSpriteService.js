@@ -6,19 +6,19 @@
  * to avoid regenerating the same equipment combinations.
  */
 
-const crypto = require('crypto');
-const path = require('path');
-const fs = require('fs').promises;
-const { getPixelLabClient } = require('./pixelLabService');
-const { getAssetCacheManager } = require('./assetCacheManager');
-const {
+import crypto from 'crypto';
+import path from 'path';
+import { promises as fs } from 'fs';
+import { getPixelLabClient } from './pixelLabService.js';
+import { getAssetCacheManager } from './assetCacheManager.js';
+import {
   RACE_PROMPTS,
   EQUIPMENT_PROMPTS,
   WIZARD_ANIMATION_ACTIONS,
   STYLE_SUFFIX,
   buildEquippedCharacterPrompt,
   buildWizardAnimationPrompt
-} = require('../config/pixelLabPrompts');
+} from '../config/pixelLabPrompts.js';
 
 // Animation states and their PixelLab templates
 const ANIMATION_TEMPLATES = {
@@ -353,7 +353,7 @@ function getCharacterSpriteService() {
   return instance;
 }
 
-module.exports = {
+export {
   CharacterSpriteService,
   getCharacterSpriteService
 };

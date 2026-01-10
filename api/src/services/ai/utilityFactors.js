@@ -5,7 +5,7 @@
  * Each factor returns a numeric value that gets multiplied by its weight.
  */
 
-const { calculatePhysicalDamage, calculateMagicalDamage } = require('../battleService');
+import { calculatePhysicalDamage, calculateMagicalDamage } from '../battleService.js';
 
 /**
  * Calculate expected damage from an action
@@ -466,7 +466,7 @@ function getTargetValue(target, state) {
   return Math.min(100, value);
 }
 
-module.exports = {
+export {
   calculateDamageDealt,
   calculateDamageReceived,
   calculateKillPotential,

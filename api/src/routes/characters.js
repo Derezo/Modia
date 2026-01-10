@@ -1,9 +1,10 @@
-const express = require('express');
+import express from 'express';
+import { query } from '../config/database.js';
+import { authenticate } from '../middleware/auth.js';
+import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats } from '../config/constants.js';
+
 const router = express.Router();
-const { query } = require('../config/database');
-const { authenticate } = require('../middleware/auth');
-const { asyncHandler, AppError } = require('../middleware/errorHandler');
-const { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats } = require('../config/constants');
 
 // Starter equipment by class (weapon, armor, accessory)
 const STARTER_EQUIPMENT = {
@@ -326,4 +327,4 @@ router.get('/:id/stats', authenticate, asyncHandler(async (req, res) => {
   res.json({ stats: finalStats });
 }));
 
-module.exports = router;
+export default router;

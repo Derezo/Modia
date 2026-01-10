@@ -1,6 +1,14 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.env') });
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+import { config } from 'dotenv';
+import pg from 'pg';
 
-const { Pool } = require('pg');
+const { Pool } = pg;
+
+// Load .env from project root
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+config({ path: resolve(__dirname, '../../../.env') });
 
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
@@ -55,7 +63,7 @@ const withTransaction = async (callback) => {
   }
 };
 
-module.exports = {
+export {
   pool,
   query,
   getClient,

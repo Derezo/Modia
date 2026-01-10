@@ -9,10 +9,14 @@
  * 120 total combinations: 5 races × 3 genders × 8 classes
  */
 
-const path = require('path');
-const fs = require('fs').promises;
-const { getPixelLabClient } = require('./pixelLabService');
-const { buildPortraitPrompt } = require('../config/pixelLabPrompts');
+import path from 'path';
+import { promises as fs } from 'fs';
+import { fileURLToPath } from 'url';
+import { getPixelLabClient } from './pixelLabService.js';
+import { buildPortraitPrompt } from '../config/pixelLabPrompts.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // All possible combinations
 const RACES = ['human', 'elf', 'dwarf', 'vampire', 'orc'];
@@ -300,7 +304,7 @@ function getPortraitService() {
   return instance;
 }
 
-module.exports = {
+export {
   PortraitService,
   getPortraitService,
   RACES,

@@ -1,10 +1,10 @@
-const WebSocket = require('ws');
-const { verifyAccessToken } = require('../config/jwt');
-const chatService = require('../services/chatService');
-const presenceService = require('../services/presenceService');
-const coliseumService = require('../services/coliseumService');
-const partyWebsocket = require('../services/partyWebsocket');
-const { query } = require('../config/database');
+import { WebSocketServer } from 'ws';
+import { verifyAccessToken } from '../config/jwt.js';
+import chatService from '../services/chatService.js';
+import presenceService from '../services/presenceService.js';
+import coliseumService from '../services/coliseumService.js';
+import * as partyWebsocket from '../services/partyWebsocket.js';
+import { query } from '../config/database.js';
 
 // Active connections mapped by userId
 const connections = new Map();
@@ -106,7 +106,7 @@ async function validateRoomAccess(userId, roomName) {
 }
 
 function setupWebSocket(server) {
-  const wss = new WebSocket.Server({ server, path: '/ws' });
+  const wss = new WebSocketServer({ server, path: '/ws' });
 
   // Authentication timeout duration (10 seconds)
   const AUTH_TIMEOUT_MS = 10000;
@@ -678,7 +678,7 @@ function setupWebSocket(server) {
             if (!userId) break;
             try {
               const { inviteId: declineInviteId } = payload;
-              const declineResult = partyWebsocket.declineInvite(declineInviteId, userId);
+              const declineResult = await partyWebsocket.declineInvite(declineInviteId, userId);
               if (!declineResult.success) {
                 ws.send(JSON.stringify({
                   type: 'error',
@@ -940,7 +940,18 @@ function isUserOnline(userId) {
   return connections.has(userId);
 }
 
-module.exports = {
+export {
+  setupWebSocket,
+  broadcastToRoom,
+  sendToUser,
+  broadcastPresenceChange,
+  getOnlineCount,
+  isUserOnline,
+  connections,
+  rooms
+};
+
+export default {
   setupWebSocket,
   broadcastToRoom,
   sendToUser,

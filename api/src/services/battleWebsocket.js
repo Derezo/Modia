@@ -4,9 +4,9 @@
 
 // Lazy-load websocket to avoid circular dependency
 let _websocket = null;
-function getWebsocket() {
+async function getWebsocket() {
   if (!_websocket) {
-    _websocket = require('../websocket/index');
+    _websocket = await import('../websocket/index.js');
   }
   return _websocket;
 }
@@ -19,7 +19,7 @@ const battleRooms = new Map();
  * @param {number} battleId - Battle ID
  * @param {number} userId - User ID
  */
-function joinBattle(battleId, userId) {
+async function joinBattle(battleId, userId) {
   const roomName = `battle:${battleId}`;
 
   if (!battleRooms.has(battleId)) {
@@ -28,7 +28,8 @@ function joinBattle(battleId, userId) {
   battleRooms.get(battleId).add(userId);
 
   // Also add to WebSocket room system
-  const { rooms } = getWebsocket();
+  const ws = await getWebsocket();
+  const { rooms } = ws;
   if (!rooms.has(roomName)) {
     rooms.set(roomName, new Set());
   }
@@ -40,7 +41,7 @@ function joinBattle(battleId, userId) {
  * @param {number} battleId - Battle ID
  * @param {number} userId - User ID
  */
-function leaveBattle(battleId, userId) {
+async function leaveBattle(battleId, userId) {
   const roomName = `battle:${battleId}`;
 
   if (battleRooms.has(battleId)) {
@@ -51,7 +52,8 @@ function leaveBattle(battleId, userId) {
   }
 
   // Remove from WebSocket room
-  const { rooms } = getWebsocket();
+  const ws = await getWebsocket();
+  const { rooms } = ws;
   if (rooms.has(roomName)) {
     rooms.get(roomName).delete(userId);
     if (rooms.get(roomName).size === 0) {
@@ -66,10 +68,11 @@ function leaveBattle(battleId, userId) {
  * @param {Object} state - Full battle state
  * @param {number} excludeUserId - Optional user to exclude from broadcast
  */
-function broadcastStateUpdate(battleId, state, excludeUserId = null) {
+async function broadcastStateUpdate(battleId, state, excludeUserId = null) {
   const roomName = `battle:${battleId}`;
 
-  getWebsocket().broadcastToRoom(roomName, {
+  const ws = await getWebsocket();
+  ws.broadcastToRoom(roomName, {
     type: 'battle:state_update',
     payload: {
       battleId,
@@ -87,10 +90,11 @@ function broadcastStateUpdate(battleId, state, excludeUserId = null) {
  * @param {Object} to - New position { x, y }
  * @param {number} excludeUserId - Optional user to exclude
  */
-function broadcastUnitMoved(battleId, unitId, from, to, excludeUserId = null) {
+async function broadcastUnitMoved(battleId, unitId, from, to, excludeUserId = null) {
   const roomName = `battle:${battleId}`;
 
-  getWebsocket().broadcastToRoom(roomName, {
+  const ws = await getWebsocket();
+  ws.broadcastToRoom(roomName, {
     type: 'battle:unit_moved',
     payload: {
       battleId,
@@ -110,10 +114,11 @@ function broadcastUnitMoved(battleId, unitId, from, to, excludeUserId = null) {
  * @param {Object} result - Action result (damage, missed, etc.)
  * @param {number} excludeUserId - Optional user to exclude
  */
-function broadcastActionExecuted(battleId, actorId, actionType, result, excludeUserId = null) {
+async function broadcastActionExecuted(battleId, actorId, actionType, result, excludeUserId = null) {
   const roomName = `battle:${battleId}`;
 
-  getWebsocket().broadcastToRoom(roomName, {
+  const ws = await getWebsocket();
+  ws.broadcastToRoom(roomName, {
     type: 'battle:action_executed',
     payload: {
       battleId,
@@ -134,10 +139,11 @@ function broadcastActionExecuted(battleId, actorId, actionType, result, excludeU
  * @param {string} activeUnitId - ID of the active unit (CT system)
  * @param {Array} turnPredictions - Predicted next 10 turns
  */
-function broadcastTurnChanged(battleId, activeUnitIndex, turn, excludeUserId = null, activeUnitId = null, turnPredictions = null) {
+async function broadcastTurnChanged(battleId, activeUnitIndex, turn, excludeUserId = null, activeUnitId = null, turnPredictions = null) {
   const roomName = `battle:${battleId}`;
 
-  getWebsocket().broadcastToRoom(roomName, {
+  const ws = await getWebsocket();
+  ws.broadcastToRoom(roomName, {
     type: 'battle:turn_changed',
     payload: {
       battleId,
@@ -157,10 +163,11 @@ function broadcastTurnChanged(battleId, activeUnitIndex, turn, excludeUserId = n
  * @param {string} unitType - 'player_local' | 'player_remote' | 'enemy'
  * @param {Array} turnPredictions - Predicted next 10 turns
  */
-function broadcastTurnStart(battleId, unit, unitType, turnPredictions = null) {
+async function broadcastTurnStart(battleId, unit, unitType, turnPredictions = null) {
   const roomName = `battle:${battleId}`;
 
-  getWebsocket().broadcastToRoom(roomName, {
+  const ws = await getWebsocket();
+  ws.broadcastToRoom(roomName, {
     type: 'battle:turn_start',
     payload: {
       battleId,
@@ -182,10 +189,11 @@ function broadcastTurnStart(battleId, unit, unitType, turnPredictions = null) {
  * @param {Array} tiles - Array of { x, y } tile positions
  * @param {number} duration - How long to show highlight (ms)
  */
-function broadcastIntentHighlight(battleId, unitId, highlightType, tiles, duration = 500) {
+async function broadcastIntentHighlight(battleId, unitId, highlightType, tiles, duration = 500) {
   const roomName = `battle:${battleId}`;
 
-  getWebsocket().broadcastToRoom(roomName, {
+  const ws = await getWebsocket();
+  ws.broadcastToRoom(roomName, {
     type: 'battle:intent_highlight',
     payload: {
       battleId,
@@ -206,8 +214,9 @@ function broadcastIntentHighlight(battleId, unitId, highlightType, tiles, durati
  * @param {Object} state - Current battle state
  * @param {Array} availableActions - List of available actions
  */
-function sendYourTurn(userId, battleId, unitId, state, availableActions = ['move', 'attack', 'skill', 'item', 'wait']) {
-  getWebsocket().sendToUser(userId, {
+async function sendYourTurn(userId, battleId, unitId, state, availableActions = ['move', 'attack', 'skill', 'item', 'wait']) {
+  const ws = await getWebsocket();
+  ws.sendToUser(userId, {
     type: 'battle:your_turn',
     payload: {
       battleId,
@@ -225,10 +234,11 @@ function sendYourTurn(userId, battleId, unitId, state, availableActions = ['move
  * @param {number} playerId - Disconnected player's user ID
  * @param {string} playerName - Disconnected player's name
  */
-function broadcastPlayerDisconnected(battleId, playerId, playerName) {
+async function broadcastPlayerDisconnected(battleId, playerId, playerName) {
   const roomName = `battle:${battleId}`;
 
-  getWebsocket().broadcastToRoom(roomName, {
+  const ws = await getWebsocket();
+  ws.broadcastToRoom(roomName, {
     type: 'battle:player_disconnected',
     payload: {
       battleId,
@@ -245,10 +255,11 @@ function broadcastPlayerDisconnected(battleId, playerId, playerName) {
  * @param {number} playerId - Reconnected player's user ID
  * @param {string} playerName - Reconnected player's name
  */
-function broadcastPlayerReconnected(battleId, playerId, playerName) {
+async function broadcastPlayerReconnected(battleId, playerId, playerName) {
   const roomName = `battle:${battleId}`;
 
-  getWebsocket().broadcastToRoom(roomName, {
+  const ws = await getWebsocket();
+  ws.broadcastToRoom(roomName, {
     type: 'battle:player_reconnected',
     payload: {
       battleId,
@@ -266,8 +277,9 @@ function broadcastPlayerReconnected(battleId, playerId, playerName) {
  * @param {Object} state - Full battle state
  * @param {string} reason - 'reconnect' | 'resync' | 'initial'
  */
-function sendStateSync(userId, battleId, state, reason = 'reconnect') {
-  getWebsocket().sendToUser(userId, {
+async function sendStateSync(userId, battleId, state, reason = 'reconnect') {
+  const ws = await getWebsocket();
+  ws.sendToUser(userId, {
     type: 'battle:state_sync',
     payload: {
       battleId,
@@ -284,10 +296,11 @@ function sendStateSync(userId, battleId, state, reason = 'reconnect') {
  * @param {string} status - 'victory' | 'defeat'
  * @param {Object} rewards - Rewards data (gold, exp, items)
  */
-function broadcastBattleEnd(battleId, status, rewards = null) {
+async function broadcastBattleEnd(battleId, status, rewards = null) {
   const roomName = `battle:${battleId}`;
 
-  getWebsocket().broadcastToRoom(roomName, {
+  const ws = await getWebsocket();
+  ws.broadcastToRoom(roomName, {
     type: 'battle:end',
     payload: {
       battleId,
@@ -309,8 +322,9 @@ function broadcastBattleEnd(battleId, status, rewards = null) {
  * @param {number} battleId - Battle ID
  * @param {Object} state - Battle state
  */
-function sendBattleState(userId, battleId, state) {
-  getWebsocket().sendToUser(userId, {
+async function sendBattleState(userId, battleId, state) {
+  const ws = await getWebsocket();
+  ws.sendToUser(userId, {
     type: 'battle:state_update',
     payload: {
       battleId,
@@ -327,10 +341,11 @@ function sendBattleState(userId, battleId, state) {
  * @param {Array} enemyActions - Array of enemy action results
  * @param {number} excludeUserId - Optional user to exclude
  */
-function broadcastEnemyActions(battleId, enemyActions, excludeUserId = null) {
+async function broadcastEnemyActions(battleId, enemyActions, excludeUserId = null) {
   const roomName = `battle:${battleId}`;
 
-  getWebsocket().broadcastToRoom(roomName, {
+  const ws = await getWebsocket();
+  ws.broadcastToRoom(roomName, {
     type: 'battle:enemy_actions',
     payload: {
       battleId,
@@ -344,14 +359,15 @@ function broadcastEnemyActions(battleId, enemyActions, excludeUserId = null) {
  * Clean up battle room
  * @param {number} battleId - Battle ID
  */
-function cleanupBattleRoom(battleId) {
+async function cleanupBattleRoom(battleId) {
   const roomName = `battle:${battleId}`;
 
   if (battleRooms.has(battleId)) {
     battleRooms.delete(battleId);
   }
 
-  const { rooms } = getWebsocket();
+  const ws = await getWebsocket();
+  const { rooms } = ws;
   if (rooms.has(roomName)) {
     rooms.delete(roomName);
   }
@@ -366,7 +382,7 @@ function getBattleParticipants(battleId) {
   return battleRooms.get(battleId) || new Set();
 }
 
-module.exports = {
+export {
   // Room management
   joinBattle,
   leaveBattle,
@@ -390,6 +406,26 @@ module.exports = {
   broadcastEnemyActions,
 
   // Battle lifecycle
+  broadcastBattleEnd,
+  broadcastPlayerDisconnected,
+  broadcastPlayerReconnected
+};
+
+export default {
+  joinBattle,
+  leaveBattle,
+  cleanupBattleRoom,
+  getBattleParticipants,
+  broadcastStateUpdate,
+  sendBattleState,
+  sendStateSync,
+  broadcastTurnStart,
+  broadcastTurnChanged,
+  broadcastIntentHighlight,
+  sendYourTurn,
+  broadcastUnitMoved,
+  broadcastActionExecuted,
+  broadcastEnemyActions,
   broadcastBattleEnd,
   broadcastPlayerDisconnected,
   broadcastPlayerReconnected

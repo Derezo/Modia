@@ -1,4 +1,4 @@
-const { query } = require('../config/database');
+import { query } from '../config/database.js';
 
 /**
  * Chat Service - Handles all chat-related database operations
@@ -273,7 +273,17 @@ async function getRecentDMConversations(userId, limit = 20) {
   return result.rows;
 }
 
-module.exports = {
+export {
+  saveMessage,
+  getHistory,
+  getDMHistory,
+  addReaction,
+  removeReaction,
+  getMessageById,
+  getRecentDMConversations
+};
+
+export default {
   saveMessage,
   getHistory,
   getDMHistory,

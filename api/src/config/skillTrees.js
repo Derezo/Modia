@@ -268,4 +268,4 @@ const SKILL_TREES = {
   }
 };
 
-module.exports = { SKILL_TREES };
+export { SKILL_TREES };

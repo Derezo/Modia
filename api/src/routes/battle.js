@@ -1,116 +1,18 @@
-const express = require('express');
+import express from 'express';
+import { query, withTransaction } from '../config/database.js';
+import { authenticate } from '../middleware/auth.js';
+import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import { BATTLE_NODE_TYPES, MAX_BATTLE_PARTY_SIZE, MAX_GOLD } from '../config/constants.js';
+import * as battleService from '../services/battleService.js';
+import * as aiService from '../services/aiService.js';
+import * as enemyService from '../services/enemyService.js';
+import * as itemDropService from '../services/itemDropService.js';
+import battleWebsocket from '../services/battleWebsocket.js';
+import { createPlayerBattleUnit } from '../services/battleUnitFactory.js';
+import * as traitService from '../services/traitService.js';
+import { generateTerrainOnly } from '../../../shared/mapGeneration.js';
+
 const router = express.Router();
-const { query, withTransaction } = require('../config/database');
-const { authenticate } = require('../middleware/auth');
-const { asyncHandler, AppError } = require('../middleware/errorHandler');
-const { BATTLE_NODE_TYPES, MAX_BATTLE_PARTY_SIZE, MAX_GOLD } = require('../config/constants');
-const battleService = require('../services/battleService');
-const aiService = require('../services/aiService');
-const enemyService = require('../services/enemyService');
-const itemDropService = require('../services/itemDropService');
-const battleWebsocket = require('../services/battleWebsocket');
-const { createPlayerBattleUnit } = require('../services/battleUnitFactory');
-const traitService = require('../services/traitService');
-
-// ============================================================================
-// TERRAIN GENERATION (Server-side mirror of frontend BattleGrid logic)
-// ============================================================================
-
-/**
- * Seeded random number generator (Mulberry32) - matches frontend exactly
- */
-function seededRandom(seed) {
-  return function() {
-    let t = seed += 0x6D2B79F5;
-    t = Math.imul(t ^ t >>> 15, t | 1);
-    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-
-/**
- * Get terrain distribution weights by node type
- */
-function getTerrainWeights(nodeType) {
-  const weights = {
-    forest: { grass: 0.6, forest: 0.25, stone: 0.1, rock: 0.05 },
-    cave: { stone: 0.5, rock: 0.2, water: 0.15, lava: 0.05, grass: 0.1 },
-    mountain: { stone: 0.4, rock: 0.3, grass: 0.2, cliff: 0.1 },
-    bridge: { stone: 0.6, water: 0.3, grass: 0.1 },
-    castle: { stone: 0.7, grass: 0.3 },
-    default: { grass: 0.7, stone: 0.2, forest: 0.1 }
-  };
-  return weights[nodeType] || weights.default;
-}
-
-/**
- * Check if terrain is impassable
- */
-function isImpassable(terrain) {
-  return ['rock', 'tree', 'lava', 'cliff', 'water'].includes(terrain);
-}
-
-/**
- * Generate terrain grid from seed (matches frontend exactly)
- */
-function generateTerrain(seed, nodeType, width = 32, height = 32) {
-  const random = seededRandom(seed);
-  const terrain = [];
-  const terrainWeights = getTerrainWeights(nodeType);
-
-  for (let y = 0; y < height; y++) {
-    const row = [];
-    for (let x = 0; x < width; x++) {
-      const roll = random();
-      let cumulative = 0;
-      let selectedTerrain = 'grass';
-
-      for (const [terrainType, weight] of Object.entries(terrainWeights)) {
-        cumulative += weight;
-        if (roll < cumulative) {
-          selectedTerrain = terrainType;
-          break;
-        }
-      }
-      row.push(selectedTerrain);
-
-      // Skip variant generation (not needed server-side) but consume random state
-      random(); // variant
-      // Skip obstacle generation - consume 0-2 random calls based on terrain
-      if (!isImpassable(selectedTerrain)) {
-        if (nodeType === 'forest' && selectedTerrain === 'grass') {
-          const treeRoll = random();
-          if (treeRoll < 0.15) {
-            random(); // tree variant
-          } else if (random() < 0.05) {
-            random(); // decorative variant
-          }
-        } else if (random() < 0.05) {
-          random(); // decorative variant
-        }
-      } else {
-        random(); // obstacle variant
-      }
-    }
-    terrain.push(row);
-  }
-
-  // Clear spawn areas (left 5 columns, right 5 columns)
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < 5; x++) {
-      if (isImpassable(terrain[y][x])) {
-        terrain[y][x] = 'grass';
-      }
-    }
-    for (let x = width - 5; x < width; x++) {
-      if (isImpassable(terrain[y][x])) {
-        terrain[y][x] = 'grass';
-      }
-    }
-  }
-
-  return terrain;
-}
 
 // ============================================================================
 // BATTLE END HELPER (for async processing)
@@ -244,7 +146,7 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
 
   // Get user's battle party with equipment stat bonuses
   const partyResult = await query(
-    `SELECT c.id, c.name, c.race, c.class, c.level,
+    `SELECT c.id, c.name, c.race, c.gender, c.class, c.level,
             c.hp_current, c.hp_max, c.mp_current, c.mp_max,
             c.strength, c.intelligence, c.agility, c.vitality, c.luck,
             c.current_node_id, c.in_battle,
@@ -387,8 +289,8 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
   // Generate battle map seed
   const mapSeed = Math.floor(Math.random() * 1000000);
 
-  // Generate terrain (server-side mirror of frontend for validation)
-  const terrain = generateTerrain(mapSeed, node.node_type, 32, 32);
+  // Generate terrain using shared module (server-side mirror of frontend for validation)
+  const terrain = generateTerrainOnly(mapSeed, node.node_type, 32, 32);
 
   // Load character traits for all party members
   const characterTraits = await traitService.loadCharacterTraits(characterIds);
@@ -504,7 +406,7 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
   const firstActor = initialState.units.find(u => u.id === initialState.activeUnitId);
   if (firstActor && firstActor.type === 'enemy') {
     // Async enemy turn processing - starts after response is sent via WebSocket
-    const battleTurnManager = require('../services/battleTurnManager');
+    const battleTurnManager = await import('../services/battleTurnManager.js');
     setImmediate(async () => {
       try {
         const { state: updatedState, battleStatus } =
@@ -585,7 +487,7 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
 // GET /api/battle/:battleId/rejoin - Rejoin an active battle after disconnect
 router.get('/:battleId/rejoin', authenticate, asyncHandler(async (req, res) => {
   const { battleId } = req.params;
-  const battleReconnection = require('../services/battleReconnection');
+  const battleReconnection = await import('../services/battleReconnection.js');
 
   // Verify player has access to this battle
   const result = await query(
@@ -719,7 +621,7 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
 
     // Async mode: spawn enemy turn processing in background
     // Response returns immediately, enemy actions sent via WebSocket
-    const battleTurnManager = require('../services/battleTurnManager');
+    const battleTurnManager = await import('../services/battleTurnManager.js');
 
     // Save state first, then spawn async processing
     await query(
@@ -824,4 +726,4 @@ router.get('/rewards/:battleId', authenticate, asyncHandler(async (req, res) => 
   res.json({ rewards: result.rows[0].rewards });
 }));
 
-module.exports = router;
+export default router;

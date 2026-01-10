@@ -3,11 +3,12 @@
  * Handles character sprite generation and retrieval
  */
 
-const express = require('express');
+import express from 'express';
+import { authenticate } from '../middleware/auth.js';
+import { pool } from '../config/database.js';
+import { getCharacterSpriteService } from '../services/characterSpriteService.js';
+
 const router = express.Router();
-const { authenticate } = require('../middleware/auth');
-const { pool } = require('../config/database');
-const { getCharacterSpriteService } = require('../services/characterSpriteService');
 
 /**
  * GET /api/sprites/character/:characterId
@@ -251,4 +252,4 @@ router.get('/list', authenticate, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

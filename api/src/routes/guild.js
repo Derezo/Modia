@@ -3,12 +3,13 @@
  * Endpoints for viewing and purchasing recruits from guild nodes
  */
 
-const express = require('express');
+import express from 'express';
+import { query } from '../config/database.js';
+import { authenticate } from '../middleware/auth.js';
+import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import * as recruitService from '../services/recruitService.js';
+
 const router = express.Router();
-const { query } = require('../config/database');
-const { authenticate } = require('../middleware/auth');
-const { asyncHandler, AppError } = require('../middleware/errorHandler');
-const recruitService = require('../services/recruitService');
 
 // Class-specific action labels for guild UI
 const ACTION_LABELS = {
@@ -233,4 +234,4 @@ router.get('/:nodeId/info', authenticate, asyncHandler(async (req, res) => {
   });
 }));
 
-module.exports = router;
+export default router;

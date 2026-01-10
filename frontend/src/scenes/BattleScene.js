@@ -12,18 +12,7 @@ import { BattleContextMenu } from '../battle/BattleContextMenu.js';
 import { GridCursor } from '../battle/GridCursor.js';
 import RewardsModal from '../components/RewardsModal.js';
 import { calculateDamagePreview } from '@shared/battleMath.js';
-
-// Movement range by class (mirrored from shared/constants.js)
-const CLASS_MOVEMENT = {
-  warrior: 3,
-  wizard: 3,
-  monk: 4,
-  chemist: 3,
-  berserker: 3,
-  sorcerer: 2,
-  ninja: 5,
-  alchemist: 3
-};
+import { CLASS_MOVEMENT } from '@shared/constants.js';
 
 /**
  * BattleScene - Tactical turn-based combat on an isometric grid with camera

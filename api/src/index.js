@@ -1,27 +1,35 @@
-require('dotenv').config({ path: '../.env' });
+import 'dotenv/config';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+import { config } from 'dotenv';
 
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const http = require('http');
-const { setupWebSocket } = require('./websocket');
-const { errorHandler } = require('./middleware/errorHandler');
-const { rateLimiter } = require('./middleware/rateLimiter');
+// Load .env from parent directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+config({ path: resolve(__dirname, '../../.env') });
+
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import http from 'http';
+import { setupWebSocket } from './websocket/index.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import { rateLimiter } from './middleware/rateLimiter.js';
 
 // Routes
-const authRoutes = require('./routes/auth');
-const characterRoutes = require('./routes/characters');
-const partyRoutes = require('./routes/party');
-const worldRoutes = require('./routes/world');
-const battleRoutes = require('./routes/battle');
-const inventoryRoutes = require('./routes/inventory');
-const { router: skillsRoutes } = require('./routes/skills');
-const spritesRoutes = require('./routes/sprites');
-const shopRoutes = require('./routes/shop');
-const marketplaceRoutes = require('./routes/marketplace');
-const chatRoutes = require('./routes/chat');
-const guildRoutes = require('./routes/guild');
-const settingsRoutes = require('./routes/settings');
+import authRoutes from './routes/auth.js';
+import characterRoutes from './routes/characters.js';
+import partyRoutes from './routes/party.js';
+import worldRoutes from './routes/world.js';
+import battleRoutes from './routes/battle.js';
+import inventoryRoutes from './routes/inventory.js';
+import { router as skillsRoutes } from './routes/skills.js';
+import spritesRoutes from './routes/sprites.js';
+import shopRoutes from './routes/shop.js';
+import marketplaceRoutes from './routes/marketplace.js';
+import chatRoutes from './routes/chat.js';
+import guildRoutes from './routes/guild.js';
+import settingsRoutes from './routes/settings.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -82,4 +90,4 @@ server.listen(PORT, () => {
   console.log(`WebSocket server ready`);
 });
 
-module.exports = { app, server };
+export { app, server };

@@ -6,16 +6,16 @@
  * (allies and enemies) will do.
  */
 
-const { StateEvaluator } = require('./stateEvaluator');
-const { getWeights, OPTIMAL_PLAYER_WEIGHTS } = require('./patternWeights');
-const { generateAllActions, pruneActions, orderActionsForPruning } = require('./actionGenerator');
-const {
+import { StateEvaluator } from './stateEvaluator.js';
+import { getWeights, OPTIMAL_PLAYER_WEIGHTS } from './patternWeights.js';
+import { generateAllActions, pruneActions, orderActionsForPruning } from './actionGenerator.js';
+import {
   TranspositionTable,
   KillerMoves,
   HistoryHeuristic,
   cloneState,
   applyActionToState
-} = require('./cache');
+} from './cache.js';
 
 /**
  * Lookahead - Multi-actor minimax search
@@ -368,7 +368,7 @@ function quickEvaluate(state, unit, evaluator) {
   return evaluator.getBestAction(unit, actions, state);
 }
 
-module.exports = {
+export {
   Lookahead,
   quickEvaluate
 };

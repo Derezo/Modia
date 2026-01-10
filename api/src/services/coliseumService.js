@@ -2,17 +2,17 @@
  * Coliseum Service - Handles PvP matchmaking and queue management
  */
 
-const { query } = require('../config/database');
-const battleService = require('./battleService');
-const battleWebsocket = require('./battleWebsocket');
-const { MAX_BATTLE_PARTY_SIZE } = require('../config/constants');
+import { query } from '../config/database.js';
+import * as battleService from './battleService.js';
+import * as battleWebsocket from './battleWebsocket.js';
+import { MAX_BATTLE_PARTY_SIZE } from '../config/constants.js';
 
 // Lazy-load websocket to avoid circular dependency
 // websocket/index.js imports this file, so we can't destructure at top level
 let _websocket = null;
-function getWebsocket() {
+async function getWebsocket() {
   if (!_websocket) {
-    _websocket = require('../websocket/index');
+    _websocket = await import('../websocket/index.js');
   }
   return _websocket;
 }
@@ -82,24 +82,26 @@ function joinQueue(queueType, userId, username, partyLevel, partySize) {
 
   queue.push(queueEntry);
 
-  // Join coliseum room for updates
-  const roomName = `coliseum:${queueType}`;
-  const { rooms } = getWebsocket();
-  if (!rooms.has(roomName)) {
-    rooms.set(roomName, new Set());
-  }
-  rooms.get(roomName).add(userId);
-
-  // Send queue update to player
-  getWebsocket().sendToUser(userId, {
-    type: 'coliseum:queue_joined',
-    payload: {
-      queueType,
-      position: queue.length,
-      estimatedWait: calculateEstimatedWait(queue.length, queue.length - 1),
-      queueSize: queue.length
+  // Join coliseum room for updates (async, fire and forget)
+  getWebsocket().then(ws => {
+    const roomName = `coliseum:${queueType}`;
+    const { rooms } = ws;
+    if (!rooms.has(roomName)) {
+      rooms.set(roomName, new Set());
     }
-  });
+    rooms.get(roomName).add(userId);
+
+    // Send queue update to player
+    ws.sendToUser(userId, {
+      type: 'coliseum:queue_joined',
+      payload: {
+        queueType,
+        position: queue.length,
+        estimatedWait: calculateEstimatedWait(queue.length, queue.length - 1),
+        queueSize: queue.length
+      }
+    });
+  }).catch(err => console.error('Failed to join coliseum room:', err));
 
   // Try to create a match
   const matchResult = tryMatchmaking(queueType);
@@ -146,21 +148,23 @@ function removeFromQueue(queueType, userId) {
   if (index >= 0) {
     queue.splice(index, 1);
 
-    // Leave coliseum room
-    const roomName = `coliseum:${queueType}`;
-    const { rooms } = getWebsocket();
-    if (rooms.has(roomName)) {
-      rooms.get(roomName).delete(userId);
-    }
+    // Leave coliseum room (async, fire and forget)
+    getWebsocket().then(ws => {
+      const roomName = `coliseum:${queueType}`;
+      const { rooms } = ws;
+      if (rooms.has(roomName)) {
+        rooms.get(roomName).delete(userId);
+      }
 
-    // Send confirmation
-    getWebsocket().sendToUser(userId, {
-      type: 'coliseum:queue_left',
-      payload: { queueType }
-    });
+      // Send confirmation
+      ws.sendToUser(userId, {
+        type: 'coliseum:queue_left',
+        payload: { queueType }
+      });
 
-    // Notify others of queue size change
-    broadcastQueueUpdate(queueType);
+      // Notify others of queue size change
+      broadcastQueueUpdate(queueType);
+    }).catch(err => console.error('Failed to leave coliseum room:', err));
 
     return true;
   }
@@ -218,37 +222,39 @@ function tryMatchmaking(queueType) {
 
   activeMatches.set(matchId, match);
 
-  // Notify both players of match found
-  const matchPayload = {
-    matchId,
-    queueType,
-    readyDeadline: match.readyDeadline
-  };
+  // Notify both players of match found (async, fire and forget)
+  getWebsocket().then(ws => {
+    const matchPayload = {
+      matchId,
+      queueType,
+      readyDeadline: match.readyDeadline
+    };
 
-  getWebsocket().sendToUser(player1.userId, {
-    type: 'coliseum:match_found',
-    payload: {
-      ...matchPayload,
-      opponent: {
-        username: player2.username,
-        partyLevel: player2.partyLevel
+    ws.sendToUser(player1.userId, {
+      type: 'coliseum:match_found',
+      payload: {
+        ...matchPayload,
+        opponent: {
+          username: player2.username,
+          partyLevel: player2.partyLevel
+        }
       }
-    }
-  });
+    });
 
-  getWebsocket().sendToUser(player2.userId, {
-    type: 'coliseum:match_found',
-    payload: {
-      ...matchPayload,
-      opponent: {
-        username: player1.username,
-        partyLevel: player1.partyLevel
+    ws.sendToUser(player2.userId, {
+      type: 'coliseum:match_found',
+      payload: {
+        ...matchPayload,
+        opponent: {
+          username: player1.username,
+          partyLevel: player1.partyLevel
+        }
       }
-    }
-  });
+    });
 
-  // Update queue for remaining players
-  broadcastQueueUpdate(queueType);
+    // Update queue for remaining players
+    broadcastQueueUpdate(queueType);
+  }).catch(err => console.error('Failed to notify match found:', err));
 
   // Set timeout for ready check
   setTimeout(() => checkMatchReady(matchId), 31000);
@@ -285,35 +291,39 @@ function playerReady(matchId, userId) {
   if (match.player1.ready && match.player2.ready) {
     match.status = 'ready';
 
-    // Notify both players match is ready to start
-    const readyPayload = {
-      matchId,
-      status: 'ready',
-      startIn: 3000 // 3 second countdown
-    };
+    // Notify both players match is ready to start (async)
+    getWebsocket().then(ws => {
+      const readyPayload = {
+        matchId,
+        status: 'ready',
+        startIn: 3000 // 3 second countdown
+      };
 
-    getWebsocket().sendToUser(match.player1.userId, {
-      type: 'coliseum:match_ready',
-      payload: readyPayload
-    });
+      ws.sendToUser(match.player1.userId, {
+        type: 'coliseum:match_ready',
+        payload: readyPayload
+      });
 
-    getWebsocket().sendToUser(match.player2.userId, {
-      type: 'coliseum:match_ready',
-      payload: readyPayload
-    });
+      ws.sendToUser(match.player2.userId, {
+        type: 'coliseum:match_ready',
+        payload: readyPayload
+      });
+    }).catch(err => console.error('Failed to notify match ready:', err));
 
     // Schedule match start
     setTimeout(() => startMatch(matchId), 3000);
   } else {
-    // Notify opponent that player is ready
-    const opponentId = match.player1.userId === userId
-      ? match.player2.userId
-      : match.player1.userId;
+    // Notify opponent that player is ready (async)
+    getWebsocket().then(ws => {
+      const opponentId = match.player1.userId === userId
+        ? match.player2.userId
+        : match.player1.userId;
 
-    getWebsocket().sendToUser(opponentId, {
-      type: 'coliseum:opponent_ready',
-      payload: { matchId }
-    });
+      ws.sendToUser(opponentId, {
+        type: 'coliseum:opponent_ready',
+        payload: { matchId }
+      });
+    }).catch(err => console.error('Failed to notify opponent ready:', err));
   }
 
   return { success: true, bothReady: match.player1.ready && match.player2.ready };
@@ -332,49 +342,51 @@ function checkMatchReady(matchId) {
   if (!match.player1.ready) notReadyUsers.push(match.player1);
   if (!match.player2.ready) notReadyUsers.push(match.player2);
 
-  // Notify and return ready player to queue
-  if (match.player1.ready && !match.player2.ready) {
-    getWebsocket().sendToUser(match.player1.userId, {
-      type: 'coliseum:match_cancelled',
-      payload: { matchId, reason: 'Opponent did not ready' }
-    });
-    // Re-queue ready player at front
-    const queue = matchmakingQueues.get(match.queueType) || [];
-    queue.unshift({
-      userId: match.player1.userId,
-      username: match.player1.username,
-      partyLevel: match.player1.partyLevel,
-      queuedAt: Date.now()
-    });
-    if (!matchmakingQueues.has(match.queueType)) {
-      matchmakingQueues.set(match.queueType, queue);
+  getWebsocket().then(ws => {
+    // Notify and return ready player to queue
+    if (match.player1.ready && !match.player2.ready) {
+      ws.sendToUser(match.player1.userId, {
+        type: 'coliseum:match_cancelled',
+        payload: { matchId, reason: 'Opponent did not ready' }
+      });
+      // Re-queue ready player at front
+      const queue = matchmakingQueues.get(match.queueType) || [];
+      queue.unshift({
+        userId: match.player1.userId,
+        username: match.player1.username,
+        partyLevel: match.player1.partyLevel,
+        queuedAt: Date.now()
+      });
+      if (!matchmakingQueues.has(match.queueType)) {
+        matchmakingQueues.set(match.queueType, queue);
+      }
     }
-  }
 
-  if (match.player2.ready && !match.player1.ready) {
-    getWebsocket().sendToUser(match.player2.userId, {
-      type: 'coliseum:match_cancelled',
-      payload: { matchId, reason: 'Opponent did not ready' }
-    });
-    const queue = matchmakingQueues.get(match.queueType) || [];
-    queue.unshift({
-      userId: match.player2.userId,
-      username: match.player2.username,
-      partyLevel: match.player2.partyLevel,
-      queuedAt: Date.now()
-    });
-    if (!matchmakingQueues.has(match.queueType)) {
-      matchmakingQueues.set(match.queueType, queue);
+    if (match.player2.ready && !match.player1.ready) {
+      ws.sendToUser(match.player2.userId, {
+        type: 'coliseum:match_cancelled',
+        payload: { matchId, reason: 'Opponent did not ready' }
+      });
+      const queue = matchmakingQueues.get(match.queueType) || [];
+      queue.unshift({
+        userId: match.player2.userId,
+        username: match.player2.username,
+        partyLevel: match.player2.partyLevel,
+        queuedAt: Date.now()
+      });
+      if (!matchmakingQueues.has(match.queueType)) {
+        matchmakingQueues.set(match.queueType, queue);
+      }
     }
-  }
 
-  // Notify non-ready players
-  for (const user of notReadyUsers) {
-    getWebsocket().sendToUser(user.userId, {
-      type: 'coliseum:match_cancelled',
-      payload: { matchId, reason: 'Failed to ready in time' }
-    });
-  }
+    // Notify non-ready players
+    for (const user of notReadyUsers) {
+      ws.sendToUser(user.userId, {
+        type: 'coliseum:match_cancelled',
+        payload: { matchId, reason: 'Failed to ready in time' }
+      });
+    }
+  }).catch(err => console.error('Failed to handle match ready check:', err));
 
   // Remove match
   activeMatches.delete(matchId);
@@ -515,13 +527,14 @@ async function startMatch(matchId) {
     ]);
 
     // Join both players to battle WebSocket room
-    battleWebsocket.joinBattle(battleId, match.player1.userId);
-    battleWebsocket.joinBattle(battleId, match.player2.userId);
+    await battleWebsocket.joinBattle(battleId, match.player1.userId);
+    await battleWebsocket.joinBattle(battleId, match.player2.userId);
 
     match.status = 'started';
     match.battleId = battleId;
 
     // Notify both players with battle info
+    const ws = await getWebsocket();
     const battlePayload = {
       matchId,
       status: 'started',
@@ -530,7 +543,7 @@ async function startMatch(matchId) {
       mapSeed
     };
 
-    getWebsocket().sendToUser(match.player1.userId, {
+    ws.sendToUser(match.player1.userId, {
       type: 'coliseum:match_started',
       payload: {
         ...battlePayload,
@@ -538,7 +551,7 @@ async function startMatch(matchId) {
       }
     });
 
-    getWebsocket().sendToUser(match.player2.userId, {
+    ws.sendToUser(match.player2.userId, {
       type: 'coliseum:match_started',
       payload: {
         ...battlePayload,
@@ -613,16 +626,18 @@ async function getPlayerBattleParty(userId) {
 /**
  * Cancel a match and notify players
  */
-function cancelMatch(matchId, reason) {
+async function cancelMatch(matchId, reason) {
   const match = activeMatches.get(matchId);
   if (!match) return;
 
-  getWebsocket().sendToUser(match.player1.userId, {
+  const ws = await getWebsocket();
+
+  ws.sendToUser(match.player1.userId, {
     type: 'coliseum:match_cancelled',
     payload: { matchId, reason }
   });
 
-  getWebsocket().sendToUser(match.player2.userId, {
+  ws.sendToUser(match.player2.userId, {
     type: 'coliseum:match_cancelled',
     payload: { matchId, reason }
   });
@@ -642,13 +657,14 @@ function calculateEstimatedWait(queueSize, position) {
 /**
  * Broadcast queue update to all waiting players
  */
-function broadcastQueueUpdate(queueType) {
-  const roomName = `coliseum:${queueType}`;
+async function broadcastQueueUpdate(queueType) {
   const queue = matchmakingQueues.get(queueType) || [];
+
+  const ws = await getWebsocket();
 
   // Send position updates to each player
   queue.forEach((player, index) => {
-    getWebsocket().sendToUser(player.userId, {
+    ws.sendToUser(player.userId, {
       type: 'coliseum:queue_update',
       payload: {
         queueType,
@@ -685,9 +701,11 @@ function getAllQueueStatuses() {
  * Clean up player from all coliseum state (on disconnect)
  * @param {number} userId - User ID
  */
-function cleanupPlayer(userId) {
+async function cleanupPlayer(userId) {
   // Remove from all queues
   leaveQueue(null, userId);
+
+  const ws = await getWebsocket();
 
   // Cancel any pending matches
   activeMatches.forEach((match, matchId) => {
@@ -697,7 +715,7 @@ function cleanupPlayer(userId) {
           ? match.player2.userId
           : match.player1.userId;
 
-        getWebsocket().sendToUser(opponentId, {
+        ws.sendToUser(opponentId, {
           type: 'coliseum:match_cancelled',
           payload: { matchId, reason: 'Opponent disconnected' }
         });
@@ -718,7 +736,17 @@ function cleanupPlayer(userId) {
   });
 }
 
-module.exports = {
+export {
+  joinQueue,
+  leaveQueue,
+  playerReady,
+  getQueueStatus,
+  getAllQueueStatuses,
+  cleanupPlayer,
+  QUEUE_SETTINGS
+};
+
+export default {
   joinQueue,
   leaveQueue,
   playerReady,
