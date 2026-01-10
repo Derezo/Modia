@@ -1608,6 +1608,148 @@ GET /api/characters/:id/guilds
 
 ---
 
+### 9.4 Get Guild Node Info
+
+Get guild information and recruitment details for a node.
+
+```
+GET /api/guild/:nodeId/info
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "nodeId": 5,
+  "nodeName": "Warriors Guild Hall",
+  "guildClass": "warrior",
+  "recruitRefreshHour": 12,
+  "lastRefresh": "2026-01-09T12:00:00.000Z",
+  "nextRefresh": "2026-01-10T12:00:00.000Z",
+  "recruitCount": 8,
+  "actionLabel": "Recruit Soldier"
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 404 | Node not found |
+| 400 | This node is not a guild |
+| 403 | You have not discovered this node |
+
+---
+
+### 9.5 Get Guild Recruits
+
+Get available recruits for a guild node.
+
+```
+GET /api/guild/:nodeId/recruits
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "nodeId": 5,
+  "recruits": [
+    {
+      "id": 123,
+      "name": "Roland",
+      "race": "human",
+      "gender": "male",
+      "class": "warrior",
+      "level": 1,
+      "hp_max": 115,
+      "mp_max": 52,
+      "strength": 12,
+      "intelligence": 10,
+      "agility": 11,
+      "vitality": 11,
+      "luck": 10,
+      "stat_variance_percent": 8.5,
+      "xp_pool": 87,
+      "price": 2170,
+      "traits": [
+        {
+          "id": 5,
+          "name": "Tough Skin",
+          "description": "+5% HP",
+          "category": "survival",
+          "rarity": "common",
+          "effect_type": "hp_bonus",
+          "effect_value": 5.0
+        }
+      ],
+      "skills": ["power_slash"]
+    }
+  ],
+  "nextRefresh": "2026-01-10T12:00:00.000Z"
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 404 | Node not found |
+| 400 | This node is not a guild |
+| 403 | You have not discovered this node |
+
+---
+
+### 9.6 Purchase Recruit
+
+Purchase a recruit from a guild node.
+
+```
+POST /api/guild/:nodeId/recruit/:recruitId/purchase
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Successfully recruited Roland",
+  "character": {
+    "id": 456,
+    "name": "Roland",
+    "race": "human",
+    "class": "warrior",
+    "level": 1,
+    "hp_current": 115,
+    "hp_max": 115,
+    "mp_current": 52,
+    "mp_max": 52,
+    "strength": 12,
+    "intelligence": 10,
+    "agility": 11,
+    "vitality": 11,
+    "luck": 10,
+    "traits": [...],
+    "skills": [...]
+  },
+  "goldSpent": 2170,
+  "remainingGold": 5830
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 404 | Node not found |
+| 400 | This node is not a guild |
+| 403 | You have not discovered this node |
+| 400 | Insufficient gold |
+| 400 | Party is full (max 12 characters) |
+| 404 | Recruit not found or already purchased |
+
+---
+
 ## 10. Inventory Endpoints
 
 ### 10.1 Get Inventory

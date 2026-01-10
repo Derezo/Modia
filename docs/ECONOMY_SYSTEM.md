@@ -62,16 +62,16 @@ Modia's economy consists of two primary trading systems:
                            ▼
 ┌──────────────────────────────────────────────────────┐
 │                   PLAYER GOLD                         │
-└───────┬──────────────────┬───────────────────┬───────┘
-        │                  │                   │
-        ▼                  ▼                   ▼
-┌───────────────┐  ┌───────────────┐   ┌───────────────┐
-│  NPC SHOPS    │  │  MARKETPLACE  │   │    FUTURE     │
-│ (Gold Sink)   │  │ (Gold Neutral)│   │   SINKS       │
-│               │  │               │   │  (Repair,etc) │
-│ Buy at 50%    │  │ Player ↔ Player│   │               │
-│ Sell at 60-120%│ │ No fees       │   │               │
-└───────────────┘  └───────────────┘   └───────────────┘
+└───────┬──────────────────┬──────────────────┬────────┘
+        │                  │                  │
+        ▼                  ▼                  ▼
+┌───────────────┐  ┌───────────────┐  ┌────────────────┐
+│  NPC SHOPS    │  │  MARKETPLACE  │  │ GUILD RECRUITS │
+│ (Gold Sink)   │  │ (Gold Neutral)│  │  (Gold Sink)   │
+│               │  │               │  │                │
+│ Buy at 50%    │  │ Player ↔ Player│  │ 2,000-12,000g │
+│ Sell at 60-120%│ │ No fees       │  │  per recruit   │
+└───────────────┘  └───────────────┘  └────────────────┘
 ```
 
 ---
@@ -1102,8 +1102,22 @@ Response:
 |------|------|-------|
 | NPC Buy Rate | 50% loss | Player sells at 50%, buys at 60-120% |
 | NPC Stock Purchases | 60-120% | Base stock is gold creation |
+| Guild Recruitment | 2,000-12,000g | Major gold sink for party expansion |
 | Stables (future) | Variable | Fast travel costs |
 | Repair (future) | 10-20% value | Equipment durability |
+
+#### Guild Recruitment Pricing
+
+Guild recruitment is a significant gold sink. Price ranges:
+
+| Recruit Type | Price Range | Factors |
+|--------------|-------------|---------|
+| Basic (1 trait, avg stats) | 1,700-2,300g | Stat variance only |
+| Good (1 trait, +skills) | 2,500-4,000g | +skills, better stats |
+| Premium (2 traits) | 8,000-10,000g | Extra trait adds 8,000g |
+| Exceptional (2 traits, +skills, +15% stats) | 10,000-12,000g | Maximum quality |
+
+See [GUILD_RECRUITMENT_SYSTEM.md](GUILD_RECRUITMENT_SYSTEM.md) for detailed pricing formula.
 
 ### 7.3 Gold Flow Analysis
 
@@ -1136,6 +1150,7 @@ Response:
 | [ITEM_SYSTEM.md](ITEM_SYSTEM.md) | Item generation, materials, augments |
 | [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) | Database design, API infrastructure |
 | [API_SPECIFICATION.md](API_SPECIFICATION.md) | Full API documentation |
+| [GUILD_RECRUITMENT_SYSTEM.md](GUILD_RECRUITMENT_SYSTEM.md) | Guild recruitment and pricing |
 
 ---
 
