@@ -81,4 +81,12 @@ export class SceneManager {
       this.currentScene.render(ctx);
     }
   }
+
+  /**
+   * Get the currently active scene
+   * @returns {Object|null} The current scene instance
+   */
+  getCurrentScene() {
+    return this.currentScene;
+  }
 }
