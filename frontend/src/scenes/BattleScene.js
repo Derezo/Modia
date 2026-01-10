@@ -1348,6 +1348,42 @@ export class BattleScene extends Scene {
   }
 
   /**
+   * Convert canvas logical coordinates to UI overlay screen coordinates
+   * The canvas uses a 800x600 logical coordinate system, but is scaled and centered
+   * via CSS. DOM elements in the UI overlay need screen pixel coordinates.
+   * @param {number} canvasX - X coordinate in canvas logical space
+   * @param {number} canvasY - Y coordinate in canvas logical space
+   * @returns {Object} { x, y } in screen pixels relative to UI overlay
+   */
+  canvasToOverlayCoords(canvasX, canvasY) {
+    const canvas = this.game.canvas;
+    const canvasRect = canvas.getBoundingClientRect();
+    const overlayRect = this.game.uiOverlay.getBoundingClientRect();
+
+    // Canvas logical size
+    const logicalWidth = canvas.width;
+    const logicalHeight = canvas.height;
+
+    // Convert logical coords to screen coords
+    // Scale factor: canvasRect.width / logicalWidth
+    const scaleX = canvasRect.width / logicalWidth;
+    const scaleY = canvasRect.height / logicalHeight;
+
+    // Position in screen pixels relative to canvas
+    const canvasScreenX = canvasX * scaleX;
+    const canvasScreenY = canvasY * scaleY;
+
+    // Add canvas offset relative to overlay
+    const offsetX = canvasRect.left - overlayRect.left;
+    const offsetY = canvasRect.top - overlayRect.top;
+
+    return {
+      x: offsetX + canvasScreenX,
+      y: offsetY + canvasScreenY
+    };
+  }
+
+  /**
    * Show context menu for active unit
    * @param {Object} unit - The unit to show menu for
    * @param {Object} mousePos - Optional mouse position { mouseX, mouseY }
@@ -1365,8 +1401,10 @@ export class BattleScene extends Scene {
       // Fall back to unit's screen position (for keyboard navigation)
       const worldPos = this.grid.gridToScreenWorld(unit.gridX, unit.gridY);
       const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
-      menuX = screenPos.x;
-      menuY = screenPos.y - 40;
+      // Convert canvas coords to overlay coords
+      const overlayPos = this.canvasToOverlayCoords(screenPos.x, screenPos.y - 40);
+      menuX = overlayPos.x;
+      menuY = overlayPos.y;
     }
 
     this.contextMenu.show(
@@ -1388,9 +1426,12 @@ export class BattleScene extends Scene {
     const activeUnit = this.getActiveUnit();
     if (!activeUnit || activeUnit.type !== 'player') return;
 
-    // Get unit's screen position
+    // Get unit's screen position in canvas coordinates
     const worldPos = this.grid.gridToScreenWorld(activeUnit.gridX, activeUnit.gridY);
     const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
+
+    // Convert canvas coords to overlay coords for DOM positioning
+    const overlayPos = this.canvasToOverlayCoords(screenPos.x, screenPos.y - 40);
 
     // Update radial menu segment availability
     this.radialMenu.setSegmentEnabled('move', this.canMove);
@@ -1399,7 +1440,7 @@ export class BattleScene extends Scene {
     this.radialMenu.setSegmentEnabled('item', this.canAct);
 
     // Show radial menu above the unit
-    this.radialMenu.show(screenPos.x, screenPos.y - 40, activeUnit.mp);
+    this.radialMenu.show(overlayPos.x, overlayPos.y, activeUnit.mp);
   }
 
   /**

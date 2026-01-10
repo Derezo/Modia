@@ -628,11 +628,43 @@ export class ColiseumScene extends Scene {
         this.game.showNotification('Match starting in 3 seconds!', 'success');
       },
 
-      'coliseum:match_started': (payload) => {
+      'coliseum:match_started': async (payload) => {
         // Transition to battle scene
         this.game.showNotification('Battle begins!', 'success');
-        // TODO: Transition to BattleScene with PvP battle data
-        // this.game.sceneManager.changeScene('battle', { battleId: payload.battleId, isPvP: true });
+
+        // Clear match state before transitioning
+        this.currentMatch = null;
+        this.isReady = false;
+        this.opponentReady = false;
+        if (this.matchCountdown) {
+          clearInterval(this.matchCountdown);
+          this.matchCountdown = null;
+        }
+
+        try {
+          // Fetch full battle state from the rejoin endpoint
+          const response = await this.game.api.request(`/battle/${payload.battleId}/rejoin`);
+
+          if (response.success !== false) {
+            // Transition to BattleScene with full battle data
+            this.game.sceneManager.changeScene('battle', {
+              battleId: response.battleId || payload.battleId,
+              battleType: 'pvp',
+              mapSeed: response.mapSeed || payload.mapSeed,
+              mapWidth: response.mapWidth || 32,
+              mapHeight: response.mapHeight || 32,
+              state: response.state,
+              opponentUsername: payload.opponentUsername
+            });
+          } else {
+            throw new Error(response.message || 'Failed to load battle');
+          }
+        } catch (error) {
+          console.error('[Coliseum] Failed to load PvP battle:', error);
+          this.game.showNotification('Failed to load battle. Please try again.', 'error');
+          // Reset to queue view
+          this.updateContent();
+        }
       },
 
       'coliseum:match_cancelled': (payload) => {

@@ -1,8 +1,8 @@
-const { describe, it } = require('node:test');
-const assert = require('node:assert');
+import { describe, it } from 'node:test';
+import assert from 'node:assert';
 
 // Import the service
-const itemDropService = require('../services/itemDropService');
+import * as itemDropService from '../services/itemDropService.js';
 
 describe('itemDropService', () => {
   describe('RARITIES', () => {

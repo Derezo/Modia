@@ -2267,7 +2267,75 @@ GET /api/marketplace/history/:itemTemplateId
 
 ---
 
-## 14. Error Codes
+## 14. Settings Endpoints
+
+### 14.1 Get User Settings
+
+Get current user's settings.
+
+```
+GET /api/settings
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "settings": {
+    "battle": {
+      "actionMenuStyle": "radial"
+    }
+  }
+}
+```
+
+**Notes:**
+- Returns default settings if user has no saved settings
+- Default `actionMenuStyle`: "radial"
+- Valid styles: "radial", "context", "actionbar"
+
+---
+
+### 14.2 Update User Settings
+
+Update user settings (deep merge with existing settings).
+
+```
+PUT /api/settings
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "battle": {
+    "actionMenuStyle": "context"
+  }
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "settings": {
+    "battle": {
+      "actionMenuStyle": "context"
+    }
+  }
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Settings must be an object |
+| 400 | Invalid actionMenuStyle value |
+
+---
+
+## 15. Error Codes
 
 | Code | HTTP Status | Description |
 |------|-------------|-------------|
@@ -2283,7 +2351,7 @@ GET /api/marketplace/history/:itemTemplateId
 
 ---
 
-## 15. Document History
+## 16. Document History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|

@@ -1,6 +1,6 @@
-const { describe, it, before } = require('node:test');
-const assert = require('node:assert');
-const { request, createTestUser, createTestCharacter } = require('./testHelper');
+import { describe, it, before } from 'node:test';
+import assert from 'node:assert';
+import { request, createTestUser, createTestCharacter } from './testHelper.js';
 
 describe('Characters API', () => {
   let user = null;

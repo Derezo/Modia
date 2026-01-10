@@ -32,7 +32,7 @@ Critical items for complete gameplay loop:
 | Issue | Location | Impact | Priority |
 |-------|----------|--------|----------|
 | ~~**PvP action endpoint broken**~~ | ~~battle.js:action~~ | ~~Player2 cannot submit actions~~ | ✅ FIXED |
-| PvP battle transition incomplete | ColiseumScene.js:634 | Match found but UI doesn't transition | High |
+| ~~PvP battle transition incomplete~~ | ~~ColiseumScene.js:634~~ | ~~Match found but UI doesn't transition~~ | ✅ FIXED |
 | Party invite modal missing | WorldMapScene.js:398 | No accept/decline UI for invites | Medium |
 | ~~No multi-player party tables~~ | ~~Database schema~~ | ~~Cannot form parties~~ | ✅ FIXED (009_multiplayer_support.sql) |
 | ~~Database 2-player limit~~ | ~~battles table~~ | ~~Schema only supports 2 players~~ | ✅ FIXED (battle_players table) |

@@ -1,6 +1,6 @@
-const { describe, it, before, after } = require('node:test');
-const assert = require('node:assert');
-const { request, uniqueUsername, uniqueEmail } = require('./testHelper');
+import { describe, it, before, after } from 'node:test';
+import assert from 'node:assert';
+import { request, uniqueUsername, uniqueEmail } from './testHelper.js';
 
 describe('Auth API', () => {
   let testUser = null;
@@ -13,7 +13,7 @@ describe('Auth API', () => {
       const res = await request('POST', '/api/auth/register', {
         username,
         email,
-        password: 'SecurePassword123!'
+        password: 'TestPassword123!'
       });
 
       assert.strictEqual(res.status, 201);
@@ -26,7 +26,7 @@ describe('Auth API', () => {
       testUser = {
         username,
         email,
-        password: 'SecurePassword123!',
+        password: 'TestPassword123!',
         accessToken: res.body.accessToken,
         refreshToken: res.body.refreshToken,
         userId: res.body.user.id
@@ -36,7 +36,7 @@ describe('Auth API', () => {
     it('should reject registration with missing username', async () => {
       const res = await request('POST', '/api/auth/register', {
         email: uniqueEmail(),
-        password: 'SecurePassword123!'
+        password: 'TestPassword123!'
       });
 
       assert.strictEqual(res.status, 400);
@@ -46,7 +46,7 @@ describe('Auth API', () => {
     it('should reject registration with missing email', async () => {
       const res = await request('POST', '/api/auth/register', {
         username: uniqueUsername(),
-        password: 'SecurePassword123!'
+        password: 'TestPassword123!'
       });
 
       assert.strictEqual(res.status, 400);
@@ -65,7 +65,7 @@ describe('Auth API', () => {
       const res = await request('POST', '/api/auth/register', {
         username: uniqueUsername(),
         email: uniqueEmail(),
-        password: '123'
+        password: 'test'
       });
 
       assert.strictEqual(res.status, 400);
@@ -80,14 +80,14 @@ describe('Auth API', () => {
       await request('POST', '/api/auth/register', {
         username,
         email: email1,
-        password: 'SecurePassword123!'
+        password: 'TestPassword123!'
       });
 
       // Second registration with same username
       const res = await request('POST', '/api/auth/register', {
         username,
         email: email2,
-        password: 'SecurePassword123!'
+        password: 'TestPassword123!'
       });
 
       assert.strictEqual(res.status, 409);
@@ -102,14 +102,14 @@ describe('Auth API', () => {
       await request('POST', '/api/auth/register', {
         username: username1,
         email,
-        password: 'SecurePassword123!'
+        password: 'TestPassword123!'
       });
 
       // Second registration with same email
       const res = await request('POST', '/api/auth/register', {
         username: username2,
         email,
-        password: 'SecurePassword123!'
+        password: 'TestPassword123!'
       });
 
       assert.strictEqual(res.status, 409);
@@ -138,7 +138,7 @@ describe('Auth API', () => {
     it('should reject login with incorrect password', async () => {
       const res = await request('POST', '/api/auth/login', {
         username: testUser.username,
-        password: 'wrongpassword'
+        password: 'wrongTestPassword'
       });
 
       assert.strictEqual(res.status, 401);
@@ -147,7 +147,7 @@ describe('Auth API', () => {
     it('should reject login with non-existent username', async () => {
       const res = await request('POST', '/api/auth/login', {
         username: 'nonexistentuser12345',
-        password: 'somepassword'
+        password: 'someTestPassword'
       });
 
       assert.strictEqual(res.status, 401);
@@ -225,7 +225,7 @@ describe('Auth API', () => {
       const regRes = await request('POST', '/api/auth/register', {
         username,
         email,
-        password: 'SecurePassword123!'
+        password: 'TestPassword123!'
       });
 
       assert.strictEqual(regRes.status, 201);
