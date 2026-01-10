@@ -1,6 +1,16 @@
 /**
  * BattlePathfinding - Movement and targeting calculations
+ *
+ * Uses shared pathfinding module for core algorithms to ensure server/client consistency.
+ * This class provides a game-specific interface for the BattleScene.
  */
+import {
+  getReachableTiles,
+  findPath,
+  getAttackableTiles,
+  getManhattanDistance
+} from '@shared/pathfinding.js';
+
 export class BattlePathfinding {
   constructor(grid, units) {
     this.grid = grid;
@@ -16,79 +26,35 @@ export class BattlePathfinding {
 
   /**
    * Get all tiles reachable within movement range
-   * Uses Dijkstra's algorithm with terrain costs
+   * Uses shared Dijkstra's algorithm with terrain costs
    */
   getReachableTiles(startX, startY, movementRange) {
-    const costs = new Map();
-    const visited = new Set();  // Track processed tiles to prevent duplicates
-    const queue = [{ x: startX, y: startY, cost: 0 }];
+    // Convert Map to array format expected by shared module
+    const unitsArray = this._getUnitsArray();
 
-    costs.set(`${startX},${startY}`, 0);
-
-    while (queue.length > 0) {
-      // Sort by cost (simple priority queue)
-      queue.sort((a, b) => a.cost - b.cost);
-      const current = queue.shift();
-      const currentKey = `${current.x},${current.y}`;
-
-      // Skip if already processed (CRITICAL: prevents duplicate processing)
-      if (visited.has(currentKey)) continue;
-      visited.add(currentKey);
-
-      // Get neighbors (4-directional)
-      const neighbors = [
-        { x: current.x - 1, y: current.y },
-        { x: current.x + 1, y: current.y },
-        { x: current.x, y: current.y - 1 },
-        { x: current.x, y: current.y + 1 }
-      ];
-
-      for (const neighbor of neighbors) {
-        if (!this.isValidMove(neighbor.x, neighbor.y, startX, startY)) continue;
-
-        const terrainCost = this.grid.getMovementCost(neighbor.x, neighbor.y);
-        const newCost = current.cost + terrainCost;
-        const key = `${neighbor.x},${neighbor.y}`;
-
-        // Only add if within range AND (not seen OR found cheaper path)
-        if (newCost <= movementRange && (!costs.has(key) || costs.get(key) > newCost)) {
-          costs.set(key, newCost);
-          queue.push({ x: neighbor.x, y: neighbor.y, cost: newCost });
-        }
-      }
-    }
-
-    // Build reachable array from costs map (excluding start position)
-    const reachable = [];
-    for (const [key, cost] of costs) {
-      if (key === `${startX},${startY}`) continue;
-      const [x, y] = key.split(',').map(Number);
-      reachable.push({ x, y, cost });
-    }
-
-    return reachable;
+    return getReachableTiles(
+      startX,
+      startY,
+      movementRange,
+      this.grid.terrain,
+      unitsArray,
+      this.grid.width,
+      this.grid.height
+    );
   }
 
   /**
    * Get tiles within attack range (Manhattan distance)
+   * Uses shared pathfinding module
    */
   getAttackableTiles(startX, startY, attackRange) {
-    const attackable = [];
-
-    for (let dx = -attackRange; dx <= attackRange; dx++) {
-      for (let dy = -attackRange; dy <= attackRange; dy++) {
-        const distance = Math.abs(dx) + Math.abs(dy);
-        if (distance > 0 && distance <= attackRange) {
-          const x = startX + dx;
-          const y = startY + dy;
-          if (this.grid.isInBounds(x, y)) {
-            attackable.push({ x, y, distance });
-          }
-        }
-      }
-    }
-
-    return attackable;
+    return getAttackableTiles(
+      startX,
+      startY,
+      attackRange,
+      this.grid.width,
+      this.grid.height
+    );
   }
 
   /**
@@ -178,100 +144,30 @@ export class BattlePathfinding {
 
   /**
    * Find path between two points using A*
+   * Uses shared pathfinding module
    */
   findPath(startX, startY, endX, endY) {
-    const openSet = [{ x: startX, y: startY, g: 0, f: 0, parent: null }];
-    const closedSet = new Set();
-    const gScores = new Map();
+    // Convert Map to array format expected by shared module
+    const unitsArray = this._getUnitsArray();
 
-    gScores.set(`${startX},${startY}`, 0);
-
-    while (openSet.length > 0) {
-      // Get node with lowest f score
-      openSet.sort((a, b) => a.f - b.f);
-      const current = openSet.shift();
-      const currentKey = `${current.x},${current.y}`;
-
-      // Reached goal
-      if (current.x === endX && current.y === endY) {
-        return this.reconstructPath(current);
-      }
-
-      closedSet.add(currentKey);
-
-      // Check neighbors
-      const neighbors = [
-        { x: current.x - 1, y: current.y },
-        { x: current.x + 1, y: current.y },
-        { x: current.x, y: current.y - 1 },
-        { x: current.x, y: current.y + 1 }
-      ];
-
-      for (const neighbor of neighbors) {
-        const neighborKey = `${neighbor.x},${neighbor.y}`;
-
-        if (closedSet.has(neighborKey)) continue;
-        if (!this.isValidMove(neighbor.x, neighbor.y, startX, startY)) {
-          // Allow moving to destination even if occupied (for pathfinding calculation)
-          if (neighbor.x !== endX || neighbor.y !== endY) continue;
-        }
-
-        const terrainCost = this.grid.getMovementCost(neighbor.x, neighbor.y);
-        const tentativeG = current.g + terrainCost;
-
-        if (!gScores.has(neighborKey) || tentativeG < gScores.get(neighborKey)) {
-          gScores.set(neighborKey, tentativeG);
-
-          const h = this.heuristic(neighbor.x, neighbor.y, endX, endY);
-          const f = tentativeG + h;
-
-          const existingIndex = openSet.findIndex(n => n.x === neighbor.x && n.y === neighbor.y);
-          if (existingIndex >= 0) {
-            openSet.splice(existingIndex, 1);
-          }
-
-          openSet.push({
-            x: neighbor.x,
-            y: neighbor.y,
-            g: tentativeG,
-            f: f,
-            parent: current
-          });
-        }
-      }
-    }
-
-    // No path found
-    return null;
-  }
-
-  /**
-   * Heuristic function for A* (Manhattan distance)
-   */
-  heuristic(x1, y1, x2, y2) {
-    return Math.abs(x1 - x2) + Math.abs(y1 - y2);
-  }
-
-  /**
-   * Reconstruct path from A* result
-   */
-  reconstructPath(node) {
-    const path = [];
-    let current = node;
-
-    while (current) {
-      path.unshift({ x: current.x, y: current.y });
-      current = current.parent;
-    }
-
-    return path;
+    return findPath(
+      startX,
+      startY,
+      endX,
+      endY,
+      this.grid.terrain,
+      unitsArray,
+      this.grid.width,
+      this.grid.height
+    );
   }
 
   /**
    * Get the Manhattan distance between two points
+   * Uses shared pathfinding module
    */
   getDistance(x1, y1, x2, y2) {
-    return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+    return getManhattanDistance(x1, y1, x2, y2);
   }
 
   /**
@@ -418,5 +314,23 @@ export class BattlePathfinding {
     }
 
     return affectedUnits;
+  }
+
+  /**
+   * Convert units Map to array format for shared pathfinding module
+   * @private
+   */
+  _getUnitsArray() {
+    const unitsArray = [];
+    for (const unit of this.units.values()) {
+      if (unit.isAlive()) {
+        unitsArray.push({
+          gridX: unit.gridX,
+          gridY: unit.gridY,
+          hp: unit.hp
+        });
+      }
+    }
+    return unitsArray;
   }
 }

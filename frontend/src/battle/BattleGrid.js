@@ -1,6 +1,11 @@
 /**
  * BattleGrid - Isometric grid rendering for tactical combat (supports 32x32 with camera)
+ *
+ * Uses shared modules for terrain generation to ensure server/client consistency.
  */
+import { generateTerrain } from '@shared/mapGeneration.js';
+import { isImpassable, getTerrainMovementCost, getTerrainColor } from '@shared/terrain.js';
+
 export class BattleGrid {
   constructor(canvas, width = 32, height = 32) {
     this.canvas = canvas;
@@ -8,7 +13,7 @@ export class BattleGrid {
     this.height = height;
     this.tileWidth = 64;   // Visual diamond width (for grid spacing)
     this.tileHeight = 32;  // Visual diamond height (for grid spacing)
-    this.spriteSize = 64;  // Sprite canvas size (64×64 with diamond inscribed)
+    this.spriteSize = 64;  // Sprite canvas size (64x64 with diamond inscribed)
 
     // World-space origin offset (for centering the isometric diamond)
     this.offsetX = 0;
@@ -42,163 +47,18 @@ export class BattleGrid {
   }
 
   /**
-   * Generate terrain from a seed value
+   * Generate terrain from a seed value using shared mapGeneration module
+   * This ensures server/client terrain is identical for the same seed
    */
   generateTerrain(seed, nodeType = 'forest') {
-    const random = this.seededRandom(seed);
-    this.terrain = [];
-    this.tileVariants = [];
-    this.obstacles = [];
     this.nodeType = nodeType;
 
-    const terrainWeights = this.getTerrainWeights(nodeType);
+    // Use shared generateTerrain for deterministic map generation
+    const mapData = generateTerrain(seed, nodeType, this.width, this.height);
 
-    for (let y = 0; y < this.height; y++) {
-      const row = [];
-      const variantRow = [];
-      const obstacleRow = [];
-
-      for (let x = 0; x < this.width; x++) {
-        const roll = random();
-        let cumulative = 0;
-        let selectedTerrain = 'grass';
-
-        for (const [terrain, weight] of Object.entries(terrainWeights)) {
-          cumulative += weight;
-          if (roll < cumulative) {
-            selectedTerrain = terrain;
-            break;
-          }
-        }
-        row.push(selectedTerrain);
-
-        // Generate tile variant (0-3 for visual variety)
-        variantRow.push(Math.floor(random() * 4));
-
-        // Generate obstacles for impassable terrain
-        obstacleRow.push(this.generateObstacleForTerrain(selectedTerrain, nodeType, random));
-      }
-      this.terrain.push(row);
-      this.tileVariants.push(variantRow);
-      this.obstacles.push(obstacleRow);
-    }
-
-    // Ensure spawn areas are walkable
-    this.clearSpawnAreas();
-  }
-
-  /**
-   * Generate obstacle type for terrain
-   */
-  generateObstacleForTerrain(terrain, nodeType, random) {
-    if (!this.isImpassable(terrain)) {
-      // In forest biome, add trees on grass tiles for a more forested look
-      if (nodeType === 'forest' && terrain === 'grass') {
-        // 15% chance for a tree on grass
-        if (random() < 0.15) {
-          const treeOptions = ['oak_tree', 'pine_tree'];
-          return { type: 'trees', variant: treeOptions[Math.floor(random() * treeOptions.length)] };
-        }
-        // 5% chance for other decoratives
-        if (random() < 0.05) {
-          return { type: 'decorative', variant: this.getRandomDecorativeObstacle(nodeType, random) };
-        }
-      } else {
-        // Other biomes: small chance for decorative obstacles on walkable terrain
-        if (random() < 0.05) {
-          return { type: 'decorative', variant: this.getRandomDecorativeObstacle(nodeType, random) };
-        }
-      }
-      return null;
-    }
-
-    const obstacleMap = {
-      rock: { category: 'rocks', options: ['rock_small', 'rock_medium', 'rock_large'] },
-      tree: { category: 'trees', options: ['oak_tree', 'pine_tree', 'dead_tree'] },
-      forest: { category: 'trees', options: ['oak_tree', 'pine_tree'] },
-      cliff: { category: 'rocks', options: ['rock_large', 'mountain_boulder'] },
-      lava: null, // No obstacle, just lava tile
-      water: null  // No obstacle, just water tile
-    };
-
-    const config = obstacleMap[terrain];
-    if (!config) return null;
-
-    const variant = config.options[Math.floor(random() * config.options.length)];
-    return { type: config.category, variant };
-  }
-
-  /**
-   * Get random decorative obstacle for biome
-   */
-  getRandomDecorativeObstacle(nodeType, random) {
-    const decoratives = {
-      forest: ['grass_tufts', 'wildflowers', 'fallen_log'],
-      cave: ['cave_crystals', 'stalagmite'],
-      mountain: ['grass_tufts', 'stone_ruins'],
-      bridge: ['grass_tufts'],
-      castle: ['stone_ruins']
-    };
-
-    const options = decoratives[nodeType] || decoratives.forest;
-    return options[Math.floor(random() * options.length)];
-  }
-
-  /**
-   * Get terrain distribution weights by node type
-   */
-  getTerrainWeights(nodeType) {
-    const weights = {
-      forest: { grass: 0.6, forest: 0.25, stone: 0.1, rock: 0.05 },
-      cave: { stone: 0.5, rock: 0.2, water: 0.15, lava: 0.05, grass: 0.1 },
-      mountain: { stone: 0.4, rock: 0.3, grass: 0.2, cliff: 0.1 },
-      bridge: { stone: 0.6, water: 0.3, grass: 0.1 },
-      castle: { stone: 0.7, grass: 0.3 },
-      default: { grass: 0.7, stone: 0.2, forest: 0.1 }
-    };
-    return weights[nodeType] || weights.default;
-  }
-
-  /**
-   * Clear spawn areas for players (left) and enemies (right)
-   */
-  clearSpawnAreas() {
-    // Player spawn area (left side, columns 0-4)
-    for (let y = 0; y < this.height; y++) {
-      for (let x = 0; x < 5; x++) {
-        if (this.terrain[y] && this.isImpassable(this.terrain[y][x])) {
-          this.terrain[y][x] = 'grass';
-        }
-        // Clear obstacles in spawn areas
-        if (this.obstacles[y]) {
-          this.obstacles[y][x] = null;
-        }
-      }
-    }
-    // Enemy spawn area (right side, last 5 columns)
-    for (let y = 0; y < this.height; y++) {
-      for (let x = this.width - 5; x < this.width; x++) {
-        if (this.terrain[y] && this.isImpassable(this.terrain[y][x])) {
-          this.terrain[y][x] = 'grass';
-        }
-        // Clear obstacles in spawn areas
-        if (this.obstacles[y]) {
-          this.obstacles[y][x] = null;
-        }
-      }
-    }
-  }
-
-  /**
-   * Seeded random number generator (Mulberry32)
-   */
-  seededRandom(seed) {
-    return function() {
-      let t = seed += 0x6D2B79F5;
-      t = Math.imul(t ^ t >>> 15, t | 1);
-      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    };
+    this.terrain = mapData.terrain;
+    this.obstacles = mapData.obstacles;
+    this.tileVariants = mapData.variants;
   }
 
   /**
@@ -274,10 +134,10 @@ export class BattleGrid {
   }
 
   /**
-   * Check if terrain is impassable
+   * Check if terrain is impassable (uses shared terrain module)
    */
   isImpassable(terrain) {
-    return ['rock', 'tree', 'lava', 'cliff', 'water'].includes(terrain);
+    return isImpassable(terrain);
   }
 
   /**
@@ -286,37 +146,22 @@ export class BattleGrid {
   isWalkable(x, y) {
     if (!this.isInBounds(x, y)) return false;
     const terrain = this.getTerrain(x, y);
-    return !this.isImpassable(terrain);
+    return !isImpassable(terrain);
   }
 
   /**
-   * Get terrain movement cost
+   * Get terrain movement cost (uses shared terrain module)
    */
   getMovementCost(x, y) {
     const terrain = this.getTerrain(x, y);
-    const costs = {
-      grass: 1,
-      stone: 1,
-      forest: 2,
-      water: 3
-    };
-    return costs[terrain] || 1;
+    return getTerrainMovementCost(terrain);
   }
 
   /**
-   * Get terrain color for rendering
+   * Get terrain color for rendering (uses shared terrain module)
    */
   getTerrainColor(terrain) {
-    const colors = {
-      grass: '#3d5c3d',
-      stone: '#5a5a5a',
-      forest: '#2d4a2d',
-      water: '#3d5c7a',
-      rock: '#4a4a4a',
-      lava: '#7a3d3d',
-      cliff: '#3a3a3a'
-    };
-    return colors[terrain] || '#3d5c3d';
+    return getTerrainColor(terrain);
   }
 
   /**
@@ -372,7 +217,7 @@ export class BattleGrid {
     const sprite = this.assetLoader?.getTile(terrain, this.nodeType, this.getTileVariant(gridX, gridY));
 
     if (sprite) {
-      // Draw 64×64 sprite centered on tile position
+      // Draw 64x64 sprite centered on tile position
       // Diamond center is at canvas center, so offset by half sprite size
       ctx.drawImage(
         sprite,

@@ -5,13 +5,15 @@
   "description": "Modia Game Client",
   "type": "module",
   "scripts": {
-    "dev": "npx serve public -l 8080",
-    "build": "echo 'No build step needed for vanilla JS'",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "lint": "eslint src/"
   },
   "devDependencies": {
     "eslint": "^8.56.0",
-    "serve": "^14.2.1"
+    "serve": "^14.2.1",
+    "vite": "^5.4.21"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -75,16 +75,22 @@ npm run validate:character      # Validate character prompts only
 - **Auth:** JWT with 15min access tokens, 7-day refresh tokens
 - **Asset Generation:** `src/scripts/` - PixelLab API integration for procedural sprite generation
 
-### Frontend (`frontend/public/`)
-- **No build step** - Vanilla ES modules served directly
+### Frontend (`frontend/`)
+- **Build tool:** Vite for dev server and bundling
 - **Entry:** `src/main.js` → `src/core/Game.js`
 - **Scene-based architecture:** `src/scenes/` - Each screen extends base `Scene.js` (Login, Register, CharacterSelect, CharacterCreate, WorldMap, Battle, Inventory, Shop, Marketplace, Tavern, Formation)
 - **Game loop:** RequestAnimationFrame with `update(deltaTime)` → `render(ctx)` cycle
 - **Canvas layers:** Background, Game, HUD, Modal (rendered in order)
+- **Static assets:** `public/assets/` - sprites, images served at `/assets/`
+- **Shared imports:** Uses `@shared/` alias to import from shared workspace
 
 ### Shared (`shared/`)
 - `constants.js` - Races, classes, stat formulas, `SeededRandom` class (Mulberry32)
-- Imported by both API (CommonJS) and frontend (ES modules)
+- `terrain.js` - Terrain types, movement costs, passability checks
+- `mapGeneration.js` - Seeded terrain and obstacle generation for battle maps
+- `pathfinding.js` - Dijkstra and A* algorithms for movement/pathing
+- `battleMath.js` - Damage formulas, hit/crit calculations for combat previews
+- Imported by both API (CommonJS) and frontend (via Vite `@shared` alias)
 
 ### Data Flow
 1. Frontend scenes call `api/client.js` for HTTP requests
@@ -92,7 +98,7 @@ npm run validate:character      # Validate character prompts only
 3. Routes query PostgreSQL with parameterized queries
 4. Real-time updates pushed via WebSocket rooms
 
-### Battle System (`api/src/services/` + `frontend/public/src/battle/`)
+### Battle System (`api/src/services/` + `frontend/src/battle/`)
 Multi-file system spanning backend and frontend:
 - **Backend:** `battleService.js` (damage formulas, status effects), `battleWebsocket.js` (real-time battle sync)
 - **Frontend:** `BattleScene.js` orchestrates `BattleGrid.js` (tactical grid), `BattleUnit.js` (unit rendering), `BattleUI.js` (HUD), `BattleAnimations.js`, `BattlePathfinding.js`, `BattleCamera.js`, `BattleIntro.js`
