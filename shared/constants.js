@@ -1,9 +1,8 @@
 // Shared constants between frontend and backend
-// This file uses CommonJS format for Node.js compatibility
-// Frontend can use these via script tag or bundler that supports CommonJS
+// This file uses ESM format for modern JavaScript compatibility
 
 // Character Races
-const RACES = {
+export const RACES = {
   HUMAN: 'human',
   ELF: 'elf',
   DWARF: 'dwarf',
@@ -12,7 +11,7 @@ const RACES = {
 };
 
 // Character Classes
-const CLASSES = {
+export const CLASSES = {
   WARRIOR: 'warrior',
   WIZARD: 'wizard',
   MONK: 'monk',
@@ -20,7 +19,7 @@ const CLASSES = {
 };
 
 // Advanced classes (require level 20+ and base class)
-const ADVANCED_CLASSES = {
+export const ADVANCED_CLASSES = {
   BERSERKER: 'berserker',
   SORCERER: 'sorcerer',
   NINJA: 'ninja',
@@ -28,24 +27,24 @@ const ADVANCED_CLASSES = {
 };
 
 // Character genders for portrait generation
-const GENDERS = {
+export const GENDERS = {
   MALE: 'male',
   FEMALE: 'female',
   OTHER: 'other'
 };
 
 // Advancement paths: base class -> advanced class
-const CLASS_ADVANCEMENT = {
+export const CLASS_ADVANCEMENT = {
   warrior: 'berserker',
   wizard: 'sorcerer',
   monk: 'ninja',
   chemist: 'alchemist'
 };
 
-const ADVANCEMENT_LEVEL_REQUIREMENT = 20;
+export const ADVANCEMENT_LEVEL_REQUIREMENT = 20;
 
 // Node types
-const NODE_TYPES = {
+export const NODE_TYPES = {
   CASTLE: 'castle',
   CITY: 'city',
   VILLAGE: 'village',
@@ -58,21 +57,21 @@ const NODE_TYPES = {
 };
 
 // Battle node types (where PvE battles occur)
-const BATTLE_NODE_TYPES = [NODE_TYPES.FOREST, NODE_TYPES.CAVE, NODE_TYPES.MOUNTAIN, NODE_TYPES.BRIDGE];
+export const BATTLE_NODE_TYPES = [NODE_TYPES.FOREST, NODE_TYPES.CAVE, NODE_TYPES.MOUNTAIN, NODE_TYPES.BRIDGE];
 
 // Node features
-const CASTLE_FEATURES = ['coliseum', 'tavern', 'courtyard', 'throne', 'blacksmith', 'apothecary', 'temple', 'stables', 'marketplace'];
-const CITY_OPTIONS = ['blacksmith', 'apothecary', 'temple', 'stables'];
+export const CASTLE_FEATURES = ['coliseum', 'tavern', 'courtyard', 'throne', 'blacksmith', 'apothecary', 'temple', 'stables', 'marketplace'];
+export const CITY_OPTIONS = ['blacksmith', 'apothecary', 'temple', 'stables'];
 
 // Game limits
-const MAX_PARTY_SIZE = 12;
-const MAX_BATTLE_PARTY_SIZE = 5;
-const MAX_CHARACTER_LEVEL = 256;
-const STARTING_GOLD = 100;
-const MAX_GOLD = 2147483647; // PostgreSQL INT max - prevents overflow
+export const MAX_PARTY_SIZE = 12;
+export const MAX_BATTLE_PARTY_SIZE = 5;
+export const MAX_CHARACTER_LEVEL = 256;
+export const STARTING_GOLD = 100;
+export const MAX_GOLD = 2147483647; // PostgreSQL INT max - prevents overflow
 
 // Base stats by race
-const RACE_BASE_STATS = {
+export const RACE_BASE_STATS = {
   [RACES.HUMAN]: {
     hp: 100, mp: 50, strength: 10, intelligence: 10, agility: 10, vitality: 10, luck: 10,
     trait: 'exp_bonus', traitValue: 0.10
@@ -96,7 +95,7 @@ const RACE_BASE_STATS = {
 };
 
 // Stat growth per level by class
-const CLASS_GROWTH = {
+export const CLASS_GROWTH = {
   [CLASSES.WARRIOR]: { hp: 15, mp: 3, strength: 3, intelligence: 1, agility: 1, vitality: 2 },
   [CLASSES.WIZARD]: { hp: 8, mp: 12, strength: 1, intelligence: 4, agility: 1, vitality: 1 },
   [CLASSES.MONK]: { hp: 10, mp: 6, strength: 2, intelligence: 2, agility: 3, vitality: 1 },
@@ -109,7 +108,7 @@ const CLASS_GROWTH = {
 };
 
 // Movement range by class
-const CLASS_MOVEMENT = {
+export const CLASS_MOVEMENT = {
   [CLASSES.WARRIOR]: 3,
   [CLASSES.WIZARD]: 3,
   [CLASSES.MONK]: 4,
@@ -122,7 +121,7 @@ const CLASS_MOVEMENT = {
 };
 
 // Seeded random number generator (Mulberry32)
-class SeededRandom {
+export class SeededRandom {
   constructor(seed) {
     this.seed = seed;
   }
@@ -160,12 +159,12 @@ class SeededRandom {
 }
 
 // Experience formula: exp required for level N
-function expForLevel(level) {
+export function expForLevel(level) {
   return Math.floor(100 * Math.pow(level, 1.8));
 }
 
 // Calculate total stats for a character
-function calculateStats(race, charClass, level) {
+export function calculateStats(race, charClass, level) {
   const baseStats = RACE_BASE_STATS[race];
   const growth = CLASS_GROWTH[charClass];
 
@@ -179,28 +178,3 @@ function calculateStats(race, charClass, level) {
     luck: baseStats.luck
   };
 }
-
-// CommonJS exports
-module.exports = {
-  RACES,
-  CLASSES,
-  ADVANCED_CLASSES,
-  GENDERS,
-  CLASS_ADVANCEMENT,
-  ADVANCEMENT_LEVEL_REQUIREMENT,
-  NODE_TYPES,
-  BATTLE_NODE_TYPES,
-  CASTLE_FEATURES,
-  CITY_OPTIONS,
-  MAX_PARTY_SIZE,
-  MAX_BATTLE_PARTY_SIZE,
-  MAX_CHARACTER_LEVEL,
-  STARTING_GOLD,
-  MAX_GOLD,
-  RACE_BASE_STATS,
-  CLASS_GROWTH,
-  CLASS_MOVEMENT,
-  SeededRandom,
-  expForLevel,
-  calculateStats
-};

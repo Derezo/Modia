@@ -1,8 +1,8 @@
 // Name pools for procedural character name generation
 // Organized by race and gender type
-// This file uses CommonJS format for Node.js compatibility
+// This file uses ESM format for modern JavaScript compatibility
 
-const NAME_POOLS = {
+export const NAME_POOLS = {
   human: {
     male: [
       'William', 'Marcus', 'Roland', 'Geoffrey', 'Edmund',
@@ -107,9 +107,4 @@ const NAME_POOLS = {
       'Ruk', 'Skar', 'Tusk', 'Uzg', 'Vrok'
     ]
   }
-};
-
-// CommonJS exports
-module.exports = {
-  NAME_POOLS
 };
