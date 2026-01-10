@@ -12,6 +12,7 @@ export class BattleUI {
     this.isVisible = true;
     this.activeUnitCard = null;  // ParchmentCard for active unit
     this.targetCard = null;      // ParchmentCard for target/enemy
+    this.targetSticky = false;   // Keep target panel visible during targeting
   }
 
   /**
@@ -57,19 +58,6 @@ export class BattleUI {
         <div class="ui-panel">
           <div class="ui-panel-header" style="font-size: 12px;">Turn Order</div>
           <div id="turn-order-list" style="max-height: 320px; overflow-y: auto;"></div>
-        </div>
-      </div>
-
-      <!-- Battle Info (top center) -->
-      <div id="battle-info" style="
-        position: absolute;
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        pointer-events: auto;
-      ">
-        <div class="ui-panel" style="padding: 8px 16px; text-align: center;">
-          <div id="turn-counter" style="font-size: 14px; color: #ffd700;">Turn 1</div>
         </div>
       </div>
 
@@ -150,6 +138,7 @@ export class BattleUI {
         transform: translateX(-50%);
         pointer-events: auto;
         display: none;
+        z-index: 200;
       ">
         <div class="ui-panel" style="padding: 10px;">
           <div id="confirm-text" style="margin-bottom: 10px; text-align: center;"></div>
@@ -490,12 +479,6 @@ export class BattleUI {
         `;
       }).join('');
     }
-
-    // Update turn counter
-    const turnCounter = this.element.querySelector('#turn-counter');
-    if (turnCounter) {
-      turnCounter.textContent = `Turn ${battleState.turn}`;
-    }
   }
 
   /**
@@ -552,8 +535,57 @@ export class BattleUI {
    * Hide target info panel
    */
   hideTargetInfo() {
+    // Don't hide if sticky mode is active
+    if (this.targetSticky) return;
+
     const panel = this.element.querySelector('#target-panel');
     if (panel) panel.style.display = 'none';
+
+    // Also hide damage preview when target info is hidden
+    if (this.targetCard) {
+      this.targetCard.hideDamagePreview();
+    }
+  }
+
+  /**
+   * Make target panel sticky (stays visible during targeting)
+   * @param {Object} unit - The unit to show
+   */
+  setTargetSticky(unit) {
+    this.targetSticky = true;
+    if (unit) {
+      this.showTargetInfo(unit);
+    }
+  }
+
+  /**
+   * Clear sticky mode and hide target panel
+   */
+  clearTargetSticky() {
+    this.targetSticky = false;
+    this.hideTargetInfo();
+    if (this.targetCard) {
+      this.targetCard.hideDamagePreview();
+    }
+  }
+
+  /**
+   * Show damage preview on the target card
+   * @param {Object} data - Damage preview data
+   */
+  showDamagePreview(data) {
+    if (this.targetCard) {
+      this.targetCard.showDamagePreview(data);
+    }
+  }
+
+  /**
+   * Hide damage preview on the target card
+   */
+  hideDamagePreview() {
+    if (this.targetCard) {
+      this.targetCard.hideDamagePreview();
+    }
   }
 
   /**

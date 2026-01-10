@@ -4,6 +4,7 @@ import { InputHandler } from './InputHandler.js';
 import { ApiClient } from '../api/client.js';
 import { GameWebSocket } from '../api/websocket.js';
 import { AssetLoader } from './AssetLoader.js';
+import SettingsModal from '../components/SettingsModal.js';
 
 export class Game {
   constructor() {
@@ -25,6 +26,9 @@ export class Game {
     this.targetWidth = 800;
     this.targetHeight = 600;
     this.scale = 1;
+
+    // Settings modal
+    this.settingsModal = null;
   }
 
   async init() {
@@ -47,6 +51,9 @@ export class Game {
     // Setup canvas sizing
     this.resize();
     window.addEventListener('resize', () => this.resize());
+
+    // Setup global ESC handler for settings modal
+    this.setupGlobalKeyHandler();
 
     // Hydrate state from localStorage
     this.state.hydrate();
@@ -84,6 +91,9 @@ export class Game {
       try {
         const response = await this.api.get('/auth/me');
         this.state.set('user', response.user);
+
+        // Load user settings
+        await this.loadSettings();
 
         // Connect WebSocket
         this.socket.connect(token);
@@ -181,5 +191,87 @@ export class Game {
       notification.style.animation = 'slideOut 0.3s ease';
       setTimeout(() => notification.remove(), 300);
     }, 3000);
+  }
+
+  /**
+   * Setup global ESC key handler for settings modal
+   */
+  setupGlobalKeyHandler() {
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        // Check if settings modal is already open
+        if (this.settingsModal?.isVisible) {
+          return; // Let the modal handle its own ESC
+        }
+
+        // Check if current scene wants to handle ESC
+        const currentScene = this.scenes?.getCurrentScene();
+        if (currentScene?.handleEscape?.()) {
+          return; // Scene handled the escape
+        }
+
+        // Only show settings if user is logged in
+        if (this.state.get('token')) {
+          this.showSettings();
+        }
+      }
+    });
+  }
+
+  /**
+   * Load user settings from the server
+   */
+  async loadSettings() {
+    try {
+      const result = await this.api.getSettings();
+      this.state.set('userSettings', result.settings);
+      console.log('User settings loaded:', result.settings);
+    } catch (err) {
+      console.error('Failed to load settings:', err);
+      // Set defaults if load fails
+      this.state.set('userSettings', {
+        battle: { actionMenuStyle: 'radial' }
+      });
+    }
+  }
+
+  /**
+   * Get a user setting by path (e.g., 'battle.actionMenuStyle')
+   * @param {string} path - Dot-notation path to setting
+   * @param {*} defaultValue - Default value if setting not found
+   * @returns {*} The setting value
+   */
+  getUserSetting(path, defaultValue = null) {
+    const settings = this.state.get('userSettings') || {};
+    const keys = path.split('.');
+    let value = settings;
+
+    for (const key of keys) {
+      if (value === undefined || value === null) {
+        return defaultValue;
+      }
+      value = value[key];
+    }
+
+    return value !== undefined ? value : defaultValue;
+  }
+
+  /**
+   * Show the settings modal
+   */
+  showSettings() {
+    if (this.settingsModal?.isVisible) {
+      return;
+    }
+
+    this.settingsModal = new SettingsModal(this);
+    this.settingsModal.show({
+      onClose: (saved) => {
+        this.settingsModal = null;
+        if (saved) {
+          console.log('Settings saved');
+        }
+      }
+    });
   }
 }

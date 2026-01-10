@@ -352,4 +352,13 @@ export class ApiClient {
   getGuildInfo(nodeId) {
     return this.get(`/guild/${nodeId}/info`);
   }
+
+  // Settings endpoints
+  getSettings() {
+    return this.get('/settings');
+  }
+
+  updateSettings(settings) {
+    return this.put('/settings', settings);
+  }
 }
