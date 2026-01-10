@@ -160,6 +160,9 @@ export class LoginScene extends Scene {
       // Connect WebSocket
       this.game.socket.connect(result.accessToken);
 
+      // Load user settings
+      await this.game.loadSettings();
+
       // Load characters and go to appropriate screen
       const charResult = await this.game.api.getCharacters();
       this.game.state.set('characters', charResult.characters);
