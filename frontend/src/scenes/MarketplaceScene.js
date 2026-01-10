@@ -47,12 +47,11 @@ export class MarketplaceScene extends Scene {
     this.playerGold = this.game.state.get('user')?.gold || 0;
 
     // Get active character for trading
-    const party = this.game.state.get('party') || [];
-    this.activeCharacter = party.find(c => c.party_slot === 1) || party[0];
+    this.activeCharacter = this.game.state.get('activeCharacter');
 
     if (!this.activeCharacter) {
-      this.game.showNotification('No character available for trading', 'error');
-      this.game.scenes.switchTo('worldMap');
+      this.game.showNotification('No character available for trading. Please select a character first.', 'error');
+      this.game.scenes.switchTo('characterSelect');
       return;
     }
 

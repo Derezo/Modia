@@ -5,6 +5,11 @@ import { ApiClient } from '../api/client.js';
 import { GameWebSocket } from '../api/websocket.js';
 import { AssetLoader } from './AssetLoader.js';
 import SettingsModal from '../components/SettingsModal.js';
+import { ToastManager } from '../components/ToastManager.js';
+import { NotificationBell } from '../components/NotificationBell.js';
+import { NotificationCenter } from '../components/NotificationCenter.js';
+import { PartyStatusBar } from '../components/PartyStatusBar.js';
+import { PartyInviteModal } from '../components/PartyInviteModal.js';
 
 export class Game {
   constructor() {
@@ -29,6 +34,15 @@ export class Game {
 
     // Settings modal
     this.settingsModal = null;
+
+    // Notification system
+    this.toastManager = null;
+    this.notificationBell = null;
+    this.notificationCenter = null;
+
+    // Party system
+    this.partyStatusBar = null;
+    this.partyInviteModal = null;
   }
 
   async init() {
@@ -97,6 +111,9 @@ export class Game {
 
         // Connect WebSocket
         this.socket.connect(token);
+
+        // Initialize notification system after WebSocket is ready
+        this.initNotificationSystem();
 
         // Check if player is in an active battle
         try {
@@ -273,5 +290,119 @@ export class Game {
         }
       }
     });
+  }
+
+  /**
+   * Initialize the notification system components
+   * Called after successful login and WebSocket connection
+   */
+  initNotificationSystem() {
+    // Clean up existing instances if any
+    this.destroyNotificationSystem();
+
+    // Create notification components
+    this.toastManager = new ToastManager(this);
+    this.notificationBell = new NotificationBell(this);
+    this.notificationCenter = new NotificationCenter(this);
+
+    // Create party components
+    this.partyStatusBar = new PartyStatusBar(this);
+
+    // Show the notification bell
+    this.notificationBell.show();
+
+    // Check if user is already in a party
+    this.partyStatusBar.checkPartyStatus();
+
+    // Setup party invite handler for notifications
+    this.setupPartyInviteHandler();
+
+    console.log('Notification system initialized');
+  }
+
+  /**
+   * Setup handler for party invite notifications
+   */
+  setupPartyInviteHandler() {
+    if (!this.socket) return;
+
+    this.socket.on('party:invite', (data) => {
+      // Show toast notification
+      this.toastManager?.info(
+        'Party Invite',
+        `${data.inviterUsername} invited you to join their party`
+      );
+
+      // Show party invite modal
+      this.showPartyInviteModal({
+        inviteId: data.inviteId,
+        partyId: data.partyId,
+        partyName: data.partyName,
+        leaderUsername: data.inviterUsername,
+        expiresAt: data.expiresAt
+      });
+    });
+  }
+
+  /**
+   * Show party invite modal
+   * @param {Object} inviteData - Invite details
+   */
+  showPartyInviteModal(inviteData) {
+    // Close existing modal if open
+    if (this.partyInviteModal) {
+      this.partyInviteModal.destroy();
+    }
+
+    this.partyInviteModal = new PartyInviteModal(this);
+    this.partyInviteModal.show({
+      ...inviteData,
+      onClose: (accepted) => {
+        this.partyInviteModal = null;
+
+        // If accepted, refresh party status bar
+        if (accepted && this.partyStatusBar) {
+          this.partyStatusBar.refresh();
+        }
+      }
+    });
+  }
+
+  /**
+   * Destroy notification system components
+   * Called on logout or cleanup
+   */
+  destroyNotificationSystem() {
+    this.toastManager?.destroy();
+    this.notificationBell?.destroy();
+    this.notificationCenter?.destroy();
+    this.partyStatusBar?.destroy();
+    this.partyInviteModal?.destroy();
+
+    this.toastManager = null;
+    this.notificationBell = null;
+    this.notificationCenter = null;
+    this.partyStatusBar = null;
+    this.partyInviteModal = null;
+  }
+
+  /**
+   * Show/hide notification bell based on current scene
+   * @param {string} sceneName - Name of the current scene
+   */
+  updateNotificationVisibility(sceneName) {
+    const hiddenScenes = ['login', 'register'];
+
+    if (hiddenScenes.includes(sceneName)) {
+      this.notificationBell?.hide();
+      this.partyStatusBar?.hide();
+    } else {
+      this.notificationBell?.show();
+      // Party status bar visibility is managed by its own state
+      // Only refresh if there might be a party
+      if (this.partyStatusBar?.party) {
+        this.partyStatusBar.show();
+      }
+    }
   }
 }

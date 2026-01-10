@@ -180,6 +180,88 @@ export class BattleUI {
         </div>
       </div>
 
+      <!-- PvP Turn Timer (shown only in PvP battles) -->
+      <div id="pvp-turn-timer" style="
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        pointer-events: none;
+        display: none;
+        z-index: 101;
+      ">
+        <div class="pvp-timer-container">
+          <svg class="pvp-timer-svg" viewBox="0 0 100 100">
+            <circle class="pvp-timer-bg" cx="50" cy="50" r="45" />
+            <circle class="pvp-timer-progress" cx="50" cy="50" r="45" />
+          </svg>
+          <span class="pvp-timer-text" id="pvp-timer-text">60</span>
+        </div>
+      </div>
+
+      <!-- PvP Surrender Button (shown only in PvP battles) -->
+      <div id="pvp-surrender-panel" style="
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        pointer-events: auto;
+        display: none;
+      ">
+        <button class="btn btn-danger pvp-surrender-btn" id="btn-surrender">
+          Surrender
+        </button>
+      </div>
+
+      <!-- PvP Surrender Confirmation Modal -->
+      <div id="surrender-confirm-modal" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        pointer-events: auto;
+        z-index: 1000;
+      ">
+        <div class="ui-panel surrender-confirm-content">
+          <h3 style="color: #f44336; margin: 0 0 16px 0;">Confirm Surrender</h3>
+          <p style="color: #ccc; margin-bottom: 16px;">
+            Are you sure you want to surrender?<br>
+            <span style="color: #f44336; font-size: 12px;">
+              You will receive a 25% rating penalty.
+            </span>
+          </p>
+          <div style="display: flex; gap: 12px; justify-content: center;">
+            <button class="btn btn-danger" id="btn-confirm-surrender">Surrender</button>
+            <button class="btn btn-secondary" id="btn-cancel-surrender">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PvP Opponent Disconnected Overlay -->
+      <div id="opponent-disconnected-overlay" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        z-index: 999;
+      ">
+        <div class="ui-panel disconnect-content">
+          <h3 style="color: #ffd700; margin: 0 0 12px 0;">Opponent Disconnected</h3>
+          <p style="color: #aaa; margin-bottom: 8px;">Waiting for reconnection...</p>
+          <div class="disconnect-countdown" id="disconnect-countdown">5:00</div>
+        </div>
+      </div>
+
       <!-- Notification Container (for temporary messages) -->
       <div id="notification-container" style="
         position: absolute;
@@ -387,6 +469,87 @@ export class BattleUI {
         0% { opacity: 1; }
         100% { opacity: 0; transform: translateX(50%); }
       }
+
+      /* PvP Turn Timer Styles */
+      .pvp-timer-container {
+        position: relative;
+        width: 80px;
+        height: 80px;
+      }
+      .pvp-timer-svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+      }
+      .pvp-timer-bg {
+        fill: none;
+        stroke: rgba(0, 0, 0, 0.5);
+        stroke-width: 8;
+      }
+      .pvp-timer-progress {
+        fill: none;
+        stroke: #4caf50;
+        stroke-width: 8;
+        stroke-linecap: round;
+        stroke-dasharray: 283;
+        stroke-dashoffset: 0;
+        transition: stroke-dashoffset 0.5s linear, stroke 0.3s ease;
+      }
+      .pvp-timer-progress.warning {
+        stroke: #ff9800;
+        animation: timerPulse 1s ease-in-out infinite;
+      }
+      .pvp-timer-progress.critical {
+        stroke: #f44336;
+        animation: timerPulse 0.5s ease-in-out infinite;
+      }
+      @keyframes timerPulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+      }
+      .pvp-timer-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 24px;
+        font-weight: bold;
+        color: #fff;
+        text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
+      }
+
+      /* PvP Surrender Button Styles */
+      .pvp-surrender-btn {
+        background: linear-gradient(180deg, #c62828, #8b1c1c) !important;
+        border-color: #e53935 !important;
+        padding: 8px 16px !important;
+        font-size: 12px !important;
+        opacity: 0.8;
+        transition: opacity 0.2s ease, transform 0.2s ease;
+      }
+      .pvp-surrender-btn:hover {
+        opacity: 1;
+        transform: scale(1.05);
+      }
+
+      /* Surrender Confirmation Modal */
+      .surrender-confirm-content {
+        padding: 24px;
+        max-width: 320px;
+        text-align: center;
+      }
+
+      /* Opponent Disconnected Overlay */
+      .disconnect-content {
+        padding: 24px;
+        text-align: center;
+      }
+      .disconnect-countdown {
+        font-size: 32px;
+        font-weight: bold;
+        color: #ffd700;
+        margin-top: 8px;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -432,6 +595,142 @@ export class BattleUI {
     this.element.querySelector('#btn-continue')?.addEventListener('click', () => {
       this.actionCallbacks.onContinue?.();
     }, opts);
+
+    // PvP Surrender button
+    this.element.querySelector('#btn-surrender')?.addEventListener('click', () => {
+      this.showSurrenderModal();
+    }, opts);
+
+    // Surrender modal confirm
+    this.element.querySelector('#btn-confirm-surrender')?.addEventListener('click', () => {
+      this.hideSurrenderModal();
+      this.actionCallbacks.onSurrender?.();
+    }, opts);
+
+    // Surrender modal cancel
+    this.element.querySelector('#btn-cancel-surrender')?.addEventListener('click', () => {
+      this.hideSurrenderModal();
+    }, opts);
+  }
+
+  // ==========================================
+  // PvP-Specific Methods
+  // ==========================================
+
+  /**
+   * Enable PvP mode - shows PvP-specific UI elements
+   */
+  enablePvPMode() {
+    this.isPvPMode = true;
+
+    // Show surrender button
+    const surrenderPanel = this.element.querySelector('#pvp-surrender-panel');
+    if (surrenderPanel) {
+      surrenderPanel.style.display = 'block';
+    }
+
+    // Show turn timer
+    const timerPanel = this.element.querySelector('#pvp-turn-timer');
+    if (timerPanel) {
+      timerPanel.style.display = 'block';
+    }
+  }
+
+  /**
+   * Update PvP turn timer
+   * @param {number} remainingSeconds - Seconds remaining in turn
+   * @param {number} totalSeconds - Total turn time (default 60)
+   */
+  updateTurnTimer(remainingSeconds, totalSeconds = 60) {
+    const timerText = this.element.querySelector('#pvp-timer-text');
+    const timerProgress = this.element.querySelector('.pvp-timer-progress');
+
+    if (!timerText || !timerProgress) return;
+
+    // Update text
+    timerText.textContent = Math.ceil(remainingSeconds);
+
+    // Update progress circle (283 is the circumference of r=45 circle)
+    const circumference = 283;
+    const progress = remainingSeconds / totalSeconds;
+    const offset = circumference * (1 - progress);
+    timerProgress.style.strokeDashoffset = offset;
+
+    // Update color based on remaining time
+    timerProgress.classList.remove('warning', 'critical');
+    if (remainingSeconds <= 10) {
+      timerProgress.classList.add('critical');
+    } else if (remainingSeconds <= 15) {
+      timerProgress.classList.add('warning');
+    }
+  }
+
+  /**
+   * Hide turn timer (during opponent's turn in PvP)
+   */
+  hideTurnTimer() {
+    const timerPanel = this.element.querySelector('#pvp-turn-timer');
+    if (timerPanel) {
+      timerPanel.style.display = 'none';
+    }
+  }
+
+  /**
+   * Show turn timer (during player's turn in PvP)
+   */
+  showTurnTimer() {
+    if (!this.isPvPMode) return;
+
+    const timerPanel = this.element.querySelector('#pvp-turn-timer');
+    if (timerPanel) {
+      timerPanel.style.display = 'block';
+    }
+  }
+
+  /**
+   * Show surrender confirmation modal
+   */
+  showSurrenderModal() {
+    const modal = this.element.querySelector('#surrender-confirm-modal');
+    if (modal) {
+      modal.style.display = 'flex';
+    }
+  }
+
+  /**
+   * Hide surrender confirmation modal
+   */
+  hideSurrenderModal() {
+    const modal = this.element.querySelector('#surrender-confirm-modal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  }
+
+  /**
+   * Show opponent disconnected overlay
+   * @param {number} remainingSeconds - Seconds until forfeit
+   */
+  showDisconnectedOverlay(remainingSeconds) {
+    const overlay = this.element.querySelector('#opponent-disconnected-overlay');
+    const countdown = this.element.querySelector('#disconnect-countdown');
+
+    if (overlay && countdown) {
+      overlay.style.display = 'flex';
+      const minutes = Math.floor(remainingSeconds / 60);
+      const seconds = remainingSeconds % 60;
+      countdown.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+  }
+
+  /**
+   * Hide opponent disconnected overlay
+   */
+  hideDisconnectedOverlay() {
+    const overlay = this.element.querySelector('#opponent-disconnected-overlay');
+    if (overlay) {
+      overlay.style.display = 'none';
+    }
   }
 
   /**

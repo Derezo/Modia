@@ -493,14 +493,15 @@ router.get('/:battleId/rejoin', authenticate, asyncHandler(async (req, res) => {
   const battleReconnection = await import('../services/battleReconnection.js');
 
   // Verify player has access to this battle
+  // Use LEFT JOIN for world_nodes since PvP battles have NULL node_id
   const result = await query(
     `SELECT b.id, b.battle_type, b.battle_state, b.status, b.map_seed, b.map_width, b.map_height,
             wn.node_type, wn.name as node_name
      FROM battles b
-     JOIN world_nodes wn ON b.node_id = wn.id
+     LEFT JOIN world_nodes wn ON b.node_id = wn.id
      WHERE b.id = $1
        AND (b.player1_id = $2 OR b.player2_id = $2 OR
-            EXISTS (SELECT 1 FROM battle_players bp WHERE bp.battle_id = b.id AND bp.player_id = $2))`,
+            EXISTS (SELECT 1 FROM battle_players bp WHERE bp.battle_id = b.id AND bp.user_id = $2))`,
     [battleId, req.user.userId]
   );
 
