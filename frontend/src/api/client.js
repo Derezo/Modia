@@ -361,4 +361,219 @@ export class ApiClient {
   updateSettings(settings) {
     return this.put('/settings', settings);
   }
+
+  // Multiplayer Party endpoints
+
+  /**
+   * Create a new multiplayer party
+   * @param {string} name - Party name
+   * @param {string} partyType - Type: 'pve_coop', 'pvp_team', 'pvp_ffa'
+   * @param {number} maxMembers - Maximum members (default 4, max 8)
+   * @returns {Promise<{party: Object}>}
+   */
+  createMultiplayerParty(name, partyType = 'pve_coop', maxMembers = 4) {
+    return this.post('/party/multiplayer', { name, partyType, maxMembers });
+  }
+
+  /**
+   * Get current multiplayer party (if in one)
+   * @returns {Promise<{party: Object|null}>}
+   */
+  getMultiplayerParty() {
+    return this.get('/party/multiplayer/current');
+  }
+
+  /**
+   * Get party details by ID
+   * @param {number} partyId - Party ID
+   * @returns {Promise<{party: Object}>}
+   */
+  getMultiplayerPartyById(partyId) {
+    return this.get(`/party/multiplayer/${partyId}`);
+  }
+
+  /**
+   * Invite a player to party by username
+   * @param {number} partyId - Party ID
+   * @param {string} username - Username to invite
+   * @returns {Promise<{success: boolean, invite: Object}>}
+   */
+  inviteToParty(partyId, username) {
+    return this.post(`/party/multiplayer/${partyId}/invite`, { username });
+  }
+
+  /**
+   * Accept a party invite and join the party
+   * @param {number} inviteId - Invite ID
+   * @returns {Promise<{success: boolean, party: Object}>}
+   */
+  acceptPartyInvite(inviteId) {
+    return this.post(`/party/multiplayer/join/${inviteId}`);
+  }
+
+  /**
+   * Decline a party invite
+   * @param {number} inviteId - Invite ID
+   * @returns {Promise<{success: boolean}>}
+   */
+  declinePartyInvite(inviteId) {
+    return this.post(`/party/multiplayer/decline/${inviteId}`);
+  }
+
+  /**
+   * Leave a party
+   * @param {number} partyId - Party ID
+   * @returns {Promise<{success: boolean}>}
+   */
+  leaveParty(partyId) {
+    return this.post(`/party/multiplayer/${partyId}/leave`);
+  }
+
+  /**
+   * Set ready status in party
+   * @param {number} partyId - Party ID
+   * @param {boolean} ready - Ready state
+   * @returns {Promise<{success: boolean, isReady: boolean, allReady: boolean}>}
+   */
+  setReady(partyId, ready) {
+    return this.put(`/party/multiplayer/${partyId}/ready`, { isReady: ready });
+  }
+
+  /**
+   * Get pending party invites for current user
+   * @returns {Promise<{invites: Array}>}
+   */
+  getPartyInvites() {
+    return this.get('/party/multiplayer/invites');
+  }
+
+  /**
+   * Start party battle (leader only)
+   * @param {number} partyId - Party ID
+   * @param {number} nodeId - Node ID for battle
+   * @returns {Promise<{success: boolean, nodeId: number, memberIds: Array}>}
+   */
+  startPartyBattle(partyId, nodeId) {
+    return this.post(`/party/multiplayer/${partyId}/start`, { nodeId });
+  }
+
+  // LFG (Looking For Group) endpoints
+
+  /**
+   * Get active LFG posts
+   * @param {Object} options - Filter options
+   * @returns {Promise<{posts: Array}>}
+   */
+  getLFGPosts(options = {}) {
+    const params = new URLSearchParams();
+    if (options.minLevel) params.append('minLevel', options.minLevel);
+    if (options.maxLevel) params.append('maxLevel', options.maxLevel);
+    if (options.contentTier) params.append('contentTier', options.contentTier);
+    if (options.limit) params.append('limit', options.limit);
+    const query = params.toString();
+    return this.get(`/lfg${query ? '?' + query : ''}`);
+  }
+
+  /**
+   * Get current user's active LFG post
+   * @returns {Promise<{post: Object|null}>}
+   */
+  getMyLFGPost() {
+    return this.get('/lfg/my-post');
+  }
+
+  /**
+   * Create a new LFG post
+   * @param {Object} postData - Post data
+   * @returns {Promise<{post: Object}>}
+   */
+  createLFGPost(postData) {
+    return this.post('/lfg', postData);
+  }
+
+  /**
+   * Delete own LFG post
+   * @param {number} postId - Post ID
+   * @returns {Promise<{success: boolean}>}
+   */
+  deleteLFGPost(postId) {
+    return this.delete(`/lfg/${postId}`);
+  }
+
+  /**
+   * Apply to join an LFG post
+   * @param {number} postId - Post ID
+   * @param {string} message - Optional message
+   * @returns {Promise<{success: boolean, message: string}>}
+   */
+  applyToLFGPost(postId, message = null) {
+    return this.post(`/lfg/${postId}/apply`, { message });
+  }
+
+  // Player search endpoint
+
+  /**
+   * Search for players by username
+   * @param {string} query - Search query
+   * @param {number} limit - Max results
+   * @returns {Promise<{players: Array}>}
+   */
+  searchPlayers(query, limit = 20) {
+    const params = new URLSearchParams();
+    params.append('q', query);
+    params.append('limit', limit);
+    return this.get(`/players/search?${params.toString()}`);
+  }
+
+  // Coliseum / PvP endpoints
+
+  /**
+   * Get coliseum leaderboard
+   * @param {string} queueType - Queue type: '1v1', '3v3', '5v5'
+   * @param {number} limit - Max results (default 100)
+   * @param {string} timeFilter - Time filter: 'all', 'week', 'today'
+   * @returns {Promise<{leaderboard: Array, userRank: number|null}>}
+   */
+  getColiseumLeaderboard(queueType = '1v1', limit = 100, timeFilter = 'all') {
+    const params = new URLSearchParams();
+    params.append('queue', queueType);
+    params.append('limit', limit);
+    if (timeFilter !== 'all') {
+      params.append('time', timeFilter);
+    }
+    return this.get(`/coliseum/leaderboard?${params.toString()}`);
+  }
+
+  /**
+   * Get coliseum match history
+   * @param {string} filter - Filter: 'all' or 'mine'
+   * @param {number} limit - Max results
+   * @param {number} offset - Pagination offset
+   * @returns {Promise<{matches: Array}>}
+   */
+  getColiseumMatches(filter = 'all', limit = 20, offset = 0) {
+    const params = new URLSearchParams();
+    params.append('filter', filter);
+    params.append('limit', limit);
+    params.append('offset', offset);
+    return this.get(`/coliseum/matches?${params.toString()}`);
+  }
+
+  /**
+   * Get detailed match information
+   * @param {number} matchId - Match ID
+   * @returns {Promise<{match: Object}>}
+   */
+  getColiseumMatchDetails(matchId) {
+    return this.get(`/coliseum/matches/${matchId}`);
+  }
+
+  /**
+   * Surrender from current PvP battle
+   * @param {number} battleId - Battle ID
+   * @returns {Promise<{success: boolean}>}
+   */
+  surrenderPvPBattle(battleId) {
+    return this.post(`/coliseum/surrender`, { battleId });
+  }
 }

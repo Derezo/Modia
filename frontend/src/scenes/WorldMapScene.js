@@ -266,8 +266,8 @@ export class WorldMapScene extends Scene {
     const features = this.currentNode.features || [];
     if (Array.isArray(features)) {
       // Prioritize essential features (shops, social hubs) over decorative ones
-      const essentialFeatures = ['blacksmith', 'marketplace', 'tavern', 'apothecary', 'coliseum', 'farm', 'guild_hall'];
-      const decorativeFeatures = ['courtyard', 'throne', 'temple', 'stables', 'training_ground'];
+      const essentialFeatures = ['blacksmith', 'marketplace', 'tavern', 'apothecary', 'coliseum', 'farm', 'guild_hall', 'courtyard'];
+      const decorativeFeatures = ['throne', 'temple', 'stables', 'training_ground'];
 
       // Sort features: essential first, then others, decorative last
       const prioritizedFeatures = [
@@ -349,6 +349,12 @@ export class WorldMapScene extends Scene {
         nodeId: this.currentNode.id,
         guildClass: this.currentNode.guild_class
       });
+      return;
+    }
+
+    // Courtyard feature opens the social hub / LFG scene
+    if (feature === 'courtyard') {
+      this.game.scenes.switchTo('courtyard', { nodeId: this.currentNode.id });
       return;
     }
 

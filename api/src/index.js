@@ -30,6 +30,10 @@ import marketplaceRoutes from './routes/marketplace.js';
 import chatRoutes from './routes/chat.js';
 import guildRoutes from './routes/guild.js';
 import settingsRoutes from './routes/settings.js';
+import notificationRoutes from './routes/notifications.js';
+import lfgRoutes from './routes/lfg.js';
+import friendRoutes from './routes/friends.js';
+import coliseumRoutes from './routes/coliseum.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -76,6 +80,11 @@ app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/guild', guildRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/lfg', lfgRoutes);
+app.use('/api/friends', friendRoutes);
+app.use('/api/players', friendRoutes); // Player search endpoint
+app.use('/api/coliseum', coliseumRoutes);
 
 // Error handling
 app.use(errorHandler);

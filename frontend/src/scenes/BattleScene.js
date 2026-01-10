@@ -83,11 +83,18 @@ export class BattleScene extends Scene {
    * Enter the battle scene
    */
   enter(data) {
-    // data = { battleId, mapSeed, mapWidth, mapHeight, state, initialEnemyActions }
+    // data = { battleId, mapSeed, mapWidth, mapHeight, state, initialEnemyActions, battleType, opponentUsername }
     this.battleId = data.battleId;
     this.mapSeed = data.mapSeed;
     this.battleState = data.state;
     this.initialEnemyActions = data.initialEnemyActions || null;
+    this.battleType = data.battleType || 'pve'; // 'pve', 'pvp', 'pve_coop'
+    this.opponentUsername = data.opponentUsername || null;
+    this.isPvP = this.battleType === 'pvp';
+
+    // PvP turn timer state
+    this.pvpTurnTimer = null;
+    this.pvpTurnDeadline = null;
 
     // Initialize grid with asset loader for sprite rendering
     this.grid = new BattleGrid(this.game.canvas, data.mapWidth || 32, data.mapHeight || 32);
@@ -176,8 +183,14 @@ export class BattleScene extends Scene {
       onWait: () => this.submitAction('wait'),
       onConfirm: () => this.confirmAction(),
       onCancel: () => this.cancelAction(),
-      onContinue: () => this.endBattle()
+      onContinue: () => this.endBattle(),
+      onSurrender: () => this.handleSurrender()
     });
+
+    // Enable PvP mode if this is a PvP battle
+    if (this.isPvP) {
+      this.ui.enablePvPMode();
+    }
 
     // Initialize radial action menu (contextual, shown on unit click)
     this.radialMenu = new RadialMenu(this.game);
@@ -250,6 +263,12 @@ export class BattleScene extends Scene {
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
+    }
+
+    // Clean up PvP turn timer
+    if (this.pvpTurnTimer) {
+      clearInterval(this.pvpTurnTimer);
+      this.pvpTurnTimer = null;
     }
 
     // Clean up WebSocket handlers
@@ -2192,7 +2211,70 @@ export class BattleScene extends Scene {
    * End battle and return to world map
    */
   endBattle() {
+    // Clear PvP timer if running
+    if (this.pvpTurnTimer) {
+      clearInterval(this.pvpTurnTimer);
+      this.pvpTurnTimer = null;
+    }
     this.game.scenes.switchTo('worldMap');
+  }
+
+  /**
+   * Handle player surrender in PvP battle
+   */
+  handleSurrender() {
+    if (!this.isPvP || !this.battleId) return;
+
+    // Send surrender via WebSocket
+    this.game.socket.send('battle:surrender', {
+      battleId: this.battleId
+    });
+
+    // Show notification
+    this.game.showNotification('You surrendered the battle.', 'warning');
+  }
+
+  /**
+   * Start PvP turn timer
+   * @param {number} durationSeconds - Total turn duration
+   */
+  startPvPTurnTimer(durationSeconds = 60) {
+    if (!this.isPvP || !this.ui) return;
+
+    // Clear existing timer
+    if (this.pvpTurnTimer) {
+      clearInterval(this.pvpTurnTimer);
+    }
+
+    this.pvpTurnDeadline = Date.now() + (durationSeconds * 1000);
+
+    // Show timer
+    this.ui.showTurnTimer();
+    this.ui.updateTurnTimer(durationSeconds, durationSeconds);
+
+    // Update timer every 100ms for smooth countdown
+    this.pvpTurnTimer = setInterval(() => {
+      const remaining = Math.max(0, (this.pvpTurnDeadline - Date.now()) / 1000);
+      this.ui.updateTurnTimer(remaining, durationSeconds);
+
+      if (remaining <= 0) {
+        clearInterval(this.pvpTurnTimer);
+        this.pvpTurnTimer = null;
+      }
+    }, 100);
+  }
+
+  /**
+   * Stop PvP turn timer (opponent's turn)
+   */
+  stopPvPTurnTimer() {
+    if (this.pvpTurnTimer) {
+      clearInterval(this.pvpTurnTimer);
+      this.pvpTurnTimer = null;
+    }
+    if (this.ui) {
+      this.ui.hideTurnTimer();
+    }
   }
 
   /**

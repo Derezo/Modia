@@ -1,11 +1,41 @@
 /**
- * Coliseum Service - Handles PvP matchmaking and queue management
+ * Coliseum Service - Handles PvP matchmaking, turn timers, and match completion
  */
 
 import { query } from '../config/database.js';
 import * as battleService from './battleService.js';
 import * as battleWebsocket from './battleWebsocket.js';
 import { MAX_BATTLE_PARTY_SIZE } from '../config/constants.js';
+import { calculatePlayerPower, calculateBattlePartyPower } from './characterValuationService.js';
+import {
+  calculateRatingChange,
+  updatePvpRating,
+  getPlayerRating,
+  ensureRating,
+  applyForfeitPenalty,
+  checkAndUseWeeklyGrace,
+  recordDisconnect as recordDisconnectEvent,
+  forgiveDisconnect
+} from './ratingService.js';
+
+// PvP Turn Timer Constants
+const PVP_TURN_TIMEOUT = 60000;          // 60 seconds per turn
+const DISCONNECT_FORFEIT_TIME = 300000;  // 5 minutes to reconnect
+const MAX_TURN_TIMEOUTS = 3;             // 3 timeouts = forfeit
+
+// PPR Matchmaking Constants
+const INITIAL_PPR_RANGE = 0.15;          // Initial +/- 15% PPR range
+const PPR_RANGE_EXPANSION = 0.05;        // Expand by 5% every 30 seconds
+const PPR_EXPANSION_INTERVAL = 30000;    // 30 seconds
+
+// Turn timer tracking: battleId -> { timerId, startTime }
+const turnTimers = new Map();
+
+// Turn timeout counts: battleId -> { [playerId]: count }
+const turnTimeoutCounts = new Map();
+
+// Disconnect tracking: battleId -> { [playerId]: { disconnectTime, timerId } }
+const disconnectTracking = new Map();
 
 // Lazy-load websocket to avoid circular dependency
 // websocket/index.js imports this file, so we can't destructure at top level
@@ -17,7 +47,7 @@ async function getWebsocket() {
   return _websocket;
 }
 
-// Matchmaking queue: Map of queueType -> Array of { userId, username, partyLevel, partySize, queuedAt }
+// Matchmaking queue: Map of queueType -> Array of { userId, username, partyLevel, partySize, ppr, queuedAt }
 const matchmakingQueues = new Map();
 
 // Active matches: matchId -> { player1, player2, status, createdAt }
@@ -40,9 +70,9 @@ let matchIdCounter = 1;
  * @param {string} username - Username
  * @param {number} partyLevel - Average party level
  * @param {number} partySize - Number of characters in battle party
- * @returns {Object} Queue status
+ * @returns {Promise<Object>} Queue status
  */
-function joinQueue(queueType, userId, username, partyLevel, partySize) {
+async function joinQueue(queueType, userId, username, partyLevel, partySize) {
   const settings = QUEUE_SETTINGS[queueType];
   if (!settings) {
     return { success: false, error: 'Invalid queue type' };
@@ -67,16 +97,24 @@ function joinQueue(queueType, userId, username, partyLevel, partySize) {
       success: true,
       position: existingIndex + 1,
       estimatedWait: calculateEstimatedWait(queue.length, existingIndex),
+      ppr: queue[existingIndex].ppr,
       alreadyInQueue: true
     };
   }
 
-  // Add to queue
+  // Calculate Player Power Rating for matchmaking
+  const ppr = await calculateBattlePartyPower(userId);
+
+  // Ensure the player has a rating record
+  await ensureRating(userId, queueType);
+
+  // Add to queue with PPR
   const queueEntry = {
     userId,
     username,
     partyLevel,
     partySize,
+    ppr,
     queuedAt: Date.now()
   };
 
@@ -98,19 +136,21 @@ function joinQueue(queueType, userId, username, partyLevel, partySize) {
         queueType,
         position: queue.length,
         estimatedWait: calculateEstimatedWait(queue.length, queue.length - 1),
-        queueSize: queue.length
+        queueSize: queue.length,
+        ppr
       }
     });
   }).catch(err => console.error('Failed to join coliseum room:', err));
 
-  // Try to create a match
-  const matchResult = tryMatchmaking(queueType);
+  // Try to create a match (now async due to PPR-based matching)
+  const matchResult = await tryMatchmaking(queueType);
 
   return {
     success: true,
     position: queue.length,
     estimatedWait: calculateEstimatedWait(queue.length, queue.length - 1),
     queueSize: queue.length,
+    ppr,
     matchFound: matchResult.matched
   };
 }
@@ -173,11 +213,43 @@ function removeFromQueue(queueType, userId) {
 }
 
 /**
- * Try to create a match from queued players
- * @param {string} queueType - Queue type
- * @returns {Object} Match result
+ * Check if two players are matchable based on PPR
+ * @param {Object} player1 - First player queue entry
+ * @param {Object} player2 - Second player queue entry
+ * @returns {boolean} True if players can be matched
  */
-function tryMatchmaking(queueType) {
+function arePlayersMatchable(player1, player2) {
+  const now = Date.now();
+
+  // Calculate expanded PPR range based on wait time
+  // Start at 15%, expand by 5% every 30 seconds
+  const getExpandedRange = (queuedAt) => {
+    const waitTime = now - queuedAt;
+    const expansions = Math.floor(waitTime / PPR_EXPANSION_INTERVAL);
+    return INITIAL_PPR_RANGE + (expansions * PPR_RANGE_EXPANSION);
+  };
+
+  const p1Range = getExpandedRange(player1.queuedAt);
+  const p2Range = getExpandedRange(player2.queuedAt);
+
+  // Use the more generous range (longer wait time = wider range)
+  const effectiveRange = Math.max(p1Range, p2Range);
+
+  // Check if PPRs are within range of each other
+  const pprDiff = Math.abs(player1.ppr - player2.ppr);
+  const avgPPR = (player1.ppr + player2.ppr) / 2;
+  const maxDiff = avgPPR * effectiveRange;
+
+  return pprDiff <= maxDiff;
+}
+
+/**
+ * Try to create a match from queued players
+ * Uses PPR-based matchmaking with expanding range over time
+ * @param {string} queueType - Queue type
+ * @returns {Promise<Object>} Match result
+ */
+async function tryMatchmaking(queueType) {
   const settings = QUEUE_SETTINGS[queueType];
   const queue = matchmakingQueues.get(queueType);
 
@@ -185,20 +257,38 @@ function tryMatchmaking(queueType) {
     return { matched: false };
   }
 
-  // Simple matchmaking: match first two players in queue
-  // TODO: Add skill-based matchmaking using partyLevel
+  // Sort queue by wait time (longest waiting first)
+  queue.sort((a, b) => a.queuedAt - b.queuedAt);
 
-  const player1 = queue.shift();
-  const player2 = queue.shift();
+  // Try to find a match for the longest-waiting player
+  let player1 = null;
+  let player2 = null;
+  let player1Index = -1;
+  let player2Index = -1;
+
+  // Find first matchable pair
+  for (let i = 0; i < queue.length; i++) {
+    for (let j = i + 1; j < queue.length; j++) {
+      if (arePlayersMatchable(queue[i], queue[j])) {
+        player1 = queue[i];
+        player2 = queue[j];
+        player1Index = i;
+        player2Index = j;
+        break;
+      }
+    }
+    if (player1 && player2) break;
+  }
 
   if (!player1 || !player2) {
-    // Put player back if only one available
-    if (player1) queue.unshift(player1);
-    if (player2) queue.unshift(player2);
     return { matched: false };
   }
 
-  // Create match
+  // Remove matched players from queue (remove higher index first to preserve indices)
+  queue.splice(player2Index, 1);
+  queue.splice(player1Index, 1);
+
+  // Create match with PPR info
   const matchId = matchIdCounter++;
   const match = {
     id: matchId,
@@ -207,12 +297,14 @@ function tryMatchmaking(queueType) {
       userId: player1.userId,
       username: player1.username,
       partyLevel: player1.partyLevel,
+      ppr: player1.ppr,
       ready: false
     },
     player2: {
       userId: player2.userId,
       username: player2.username,
       partyLevel: player2.partyLevel,
+      ppr: player2.ppr,
       ready: false
     },
     status: 'pending',
@@ -234,9 +326,11 @@ function tryMatchmaking(queueType) {
       type: 'coliseum:match_found',
       payload: {
         ...matchPayload,
+        yourPPR: player1.ppr,
         opponent: {
           username: player2.username,
-          partyLevel: player2.partyLevel
+          partyLevel: player2.partyLevel,
+          ppr: player2.ppr
         }
       }
     });
@@ -245,9 +339,11 @@ function tryMatchmaking(queueType) {
       type: 'coliseum:match_found',
       payload: {
         ...matchPayload,
+        yourPPR: player2.ppr,
         opponent: {
           username: player1.username,
-          partyLevel: player1.partyLevel
+          partyLevel: player1.partyLevel,
+          ppr: player1.ppr
         }
       }
     });
@@ -349,12 +445,13 @@ function checkMatchReady(matchId) {
         type: 'coliseum:match_cancelled',
         payload: { matchId, reason: 'Opponent did not ready' }
       });
-      // Re-queue ready player at front
+      // Re-queue ready player at front (preserve PPR)
       const queue = matchmakingQueues.get(match.queueType) || [];
       queue.unshift({
         userId: match.player1.userId,
         username: match.player1.username,
         partyLevel: match.player1.partyLevel,
+        ppr: match.player1.ppr,
         queuedAt: Date.now()
       });
       if (!matchmakingQueues.has(match.queueType)) {
@@ -372,6 +469,7 @@ function checkMatchReady(matchId) {
         userId: match.player2.userId,
         username: match.player2.username,
         partyLevel: match.player2.partyLevel,
+        ppr: match.player2.ppr,
         queuedAt: Date.now()
       });
       if (!matchmakingQueues.has(match.queueType)) {
@@ -720,38 +818,761 @@ async function cleanupPlayer(userId) {
           payload: { matchId, reason: 'Opponent disconnected' }
         });
 
-        // Re-queue opponent
+        // Re-queue opponent (preserve PPR)
         const queue = matchmakingQueues.get(match.queueType) || [];
         const opponent = match.player1.userId === userId ? match.player2 : match.player1;
         queue.unshift({
           userId: opponent.userId,
           username: opponent.username,
           partyLevel: opponent.partyLevel,
+          ppr: opponent.ppr,
           queuedAt: Date.now()
         });
 
         activeMatches.delete(matchId);
+      } else if (match.status === 'started' && match.battleId) {
+        // Handle disconnect during active battle
+        handlePlayerDisconnect(match.battleId, userId);
       }
     }
   });
 }
 
+// =============================================================================
+// TURN TIMER SYSTEM
+// =============================================================================
+
+/**
+ * Start the turn timer for a PvP battle
+ * @param {number} battleId - Battle ID
+ * @param {number} playerId - Current player's user ID
+ */
+function startTurnTimer(battleId, playerId) {
+  // Cancel any existing timer
+  cancelTurnTimer(battleId);
+
+  const timerId = setTimeout(() => {
+    handleTurnTimeout(battleId, playerId);
+  }, PVP_TURN_TIMEOUT);
+
+  turnTimers.set(battleId, {
+    timerId,
+    startTime: Date.now(),
+    playerId
+  });
+
+  // Initialize timeout counts if needed
+  if (!turnTimeoutCounts.has(battleId)) {
+    turnTimeoutCounts.set(battleId, {});
+  }
+
+  // Broadcast timer started
+  getWebsocket().then(ws => {
+    ws.broadcastToRoom(`battle:${battleId}`, {
+      type: 'battle:turn_timer_started',
+      payload: {
+        battleId,
+        playerId,
+        timeout: PVP_TURN_TIMEOUT,
+        startTime: Date.now()
+      }
+    });
+  }).catch(err => console.error('Failed to broadcast turn timer:', err));
+}
+
+/**
+ * Cancel the turn timer for a battle
+ * @param {number} battleId - Battle ID
+ */
+function cancelTurnTimer(battleId) {
+  const timer = turnTimers.get(battleId);
+  if (timer) {
+    clearTimeout(timer.timerId);
+    turnTimers.delete(battleId);
+  }
+}
+
+/**
+ * Handle turn timeout (player didn't act in time)
+ * @param {number} battleId - Battle ID
+ * @param {number} playerId - Player who timed out
+ */
+async function handleTurnTimeout(battleId, playerId) {
+  const counts = turnTimeoutCounts.get(battleId) || {};
+  counts[playerId] = (counts[playerId] || 0) + 1;
+  turnTimeoutCounts.set(battleId, counts);
+
+  const timeoutsRemaining = MAX_TURN_TIMEOUTS - counts[playerId];
+
+  if (counts[playerId] >= MAX_TURN_TIMEOUTS) {
+    // Third timeout = forfeit
+    console.log(`[Coliseum] Player ${playerId} forfeited battle ${battleId} due to timeout`);
+    await endMatchByForfeit(battleId, playerId, 'timeout_forfeit');
+  } else {
+    // Skip turn and notify
+    console.log(`[Coliseum] Skipping turn for player ${playerId} in battle ${battleId} (${timeoutsRemaining} remaining)`);
+
+    // Skip the turn by ending it
+    await skipPlayerTurn(battleId, playerId);
+
+    // Notify players
+    const ws = await getWebsocket();
+    ws.broadcastToRoom(`battle:${battleId}`, {
+      type: 'battle:turn_skipped',
+      payload: {
+        battleId,
+        playerId,
+        timeoutsRemaining,
+        reason: 'timeout'
+      }
+    });
+  }
+}
+
+/**
+ * Skip a player's turn (used for timeout)
+ * @param {number} battleId - Battle ID
+ * @param {number} playerId - Player whose turn to skip
+ */
+async function skipPlayerTurn(battleId, playerId) {
+  // Get battle state and advance to next actor
+  const result = await query(
+    `SELECT battle_state FROM battles WHERE id = $1`,
+    [battleId]
+  );
+
+  if (result.rows.length === 0) return;
+
+  const state = result.rows[0].battle_state;
+  const activeUnit = state.units.find(u => u.id === state.activeUnitId);
+
+  if (activeUnit && activeUnit.ownerId === playerId) {
+    // End this unit's turn
+    battleService.advanceToNextActorWithCT(state);
+
+    // Save updated state
+    await query(
+      `UPDATE battles SET battle_state = $1 WHERE id = $2`,
+      [JSON.stringify(state), battleId]
+    );
+
+    // Broadcast turn advanced
+    const ws = await getWebsocket();
+    const nextUnit = state.units.find(u => u.id === state.activeUnitId);
+    if (nextUnit) {
+      battleWebsocket.broadcastTurnStart(battleId, {
+        id: nextUnit.id,
+        name: nextUnit.name,
+        position: { x: nextUnit.tileX, y: nextUnit.tileY }
+      }, nextUnit.type, battleService.predictTurnOrder(state, 10));
+
+      // Start new turn timer if it's a player's turn
+      if (nextUnit.type === 'player' && nextUnit.ownerId) {
+        startTurnTimer(battleId, nextUnit.ownerId);
+      }
+    }
+  }
+}
+
+/**
+ * Handle player disconnect during battle
+ * @param {number} battleId - Battle ID
+ * @param {number} playerId - Player who disconnected
+ */
+function handlePlayerDisconnect(battleId, playerId) {
+  // Cancel turn timer
+  cancelTurnTimer(battleId);
+
+  // Record disconnect
+  recordDisconnectEvent(playerId, null).then(disconnect => {
+    // Initialize disconnect tracking
+    if (!disconnectTracking.has(battleId)) {
+      disconnectTracking.set(battleId, {});
+    }
+
+    const tracking = disconnectTracking.get(battleId);
+
+    // Set forfeit timer
+    const timerId = setTimeout(async () => {
+      if (tracking[playerId] && !tracking[playerId].reconnected) {
+        // Check if they can use weekly grace
+        const usedGrace = await checkAndUseWeeklyGrace(playerId);
+        if (usedGrace) {
+          await forgiveDisconnect(disconnect.id);
+        }
+        await endMatchByForfeit(battleId, playerId, 'disconnect_forfeit', !usedGrace);
+      }
+    }, DISCONNECT_FORFEIT_TIME);
+
+    tracking[playerId] = {
+      disconnectTime: Date.now(),
+      disconnectId: disconnect.id,
+      timerId,
+      reconnected: false
+    };
+
+    // Notify opponent
+    getWebsocket().then(ws => {
+      ws.broadcastToRoom(`battle:${battleId}`, {
+        type: 'battle:opponent_disconnected',
+        payload: {
+          battleId,
+          playerId,
+          forfeitIn: DISCONNECT_FORFEIT_TIME
+        }
+      });
+    }).catch(err => console.error('Failed to notify disconnect:', err));
+  });
+}
+
+/**
+ * Handle player reconnection during battle
+ * @param {number} battleId - Battle ID
+ * @param {number} playerId - Player who reconnected
+ */
+function handlePlayerReconnect(battleId, playerId) {
+  const tracking = disconnectTracking.get(battleId);
+  if (tracking && tracking[playerId]) {
+    // Clear forfeit timer
+    clearTimeout(tracking[playerId].timerId);
+    tracking[playerId].reconnected = true;
+
+    // Notify opponent
+    getWebsocket().then(ws => {
+      ws.broadcastToRoom(`battle:${battleId}`, {
+        type: 'battle:opponent_reconnected',
+        payload: { battleId, playerId }
+      });
+    }).catch(err => console.error('Failed to notify reconnect:', err));
+
+    // Restart turn timer if it's this player's turn
+    query(
+      `SELECT battle_state FROM battles WHERE id = $1`,
+      [battleId]
+    ).then(result => {
+      if (result.rows.length > 0) {
+        const state = result.rows[0].battle_state;
+        const activeUnit = state.units.find(u => u.id === state.activeUnitId);
+        if (activeUnit && activeUnit.ownerId === playerId) {
+          startTurnTimer(battleId, playerId);
+        }
+      }
+    });
+  }
+}
+
+/**
+ * End match by forfeit (surrender, timeout, or disconnect)
+ * @param {number} battleId - Battle ID
+ * @param {number} forfeiterId - Player who forfeited
+ * @param {string} reason - Reason for forfeit
+ * @param {boolean} applyPenalty - Whether to apply rating penalty
+ */
+async function endMatchByForfeit(battleId, forfeiterId, reason, applyPenalty = true) {
+  // Get battle info
+  const result = await query(
+    `SELECT player1_id, player2_id, battle_state FROM battles WHERE id = $1`,
+    [battleId]
+  );
+
+  if (result.rows.length === 0) return;
+
+  const { player1_id, player2_id, battle_state } = result.rows[0];
+  const winnerId = forfeiterId === player1_id ? player2_id : player1_id;
+  const loserId = forfeiterId;
+
+  // Clean up timers
+  cancelTurnTimer(battleId);
+  turnTimeoutCounts.delete(battleId);
+  disconnectTracking.delete(battleId);
+
+  // Complete the match with forfeit reason
+  await completeMatch(battleId, winnerId, loserId, reason, applyPenalty);
+}
+
+// =============================================================================
+// MATCH COMPLETION AND SNAPSHOTS
+// =============================================================================
+
+/**
+ * Capture team snapshots for match history
+ * @param {number} winnerId - Winner user ID
+ * @param {number} loserId - Loser user ID
+ * @returns {Promise<Object>} Team snapshots
+ */
+async function captureTeamSnapshots(winnerId, loserId) {
+  const captureTeam = async (userId) => {
+    const chars = await query(
+      `SELECT
+         c.id, c.name, c.class, c.race, c.level, c.party_slot,
+         c.strength, c.vitality, c.agility, c.intelligence, c.luck,
+         c.hp_current, c.hp_max, c.mp_current, c.mp_max
+       FROM characters c
+       WHERE c.user_id = $1 AND c.party_slot IS NOT NULL AND c.party_slot <= $2
+       ORDER BY c.party_slot`,
+      [userId, MAX_BATTLE_PARTY_SIZE]
+    );
+
+    // Get equipment for each character
+    const team = await Promise.all(chars.rows.map(async (char) => {
+      const equip = await query(
+        `SELECT ci.equipped_slot, it.name, it.rarity, it.slot_type
+         FROM character_items ci
+         JOIN item_templates it ON ci.item_template_id = it.id
+         WHERE ci.character_id = $1 AND ci.equipped_slot IS NOT NULL`,
+        [char.id]
+      );
+
+      return {
+        ...char,
+        equipment: equip.rows
+      };
+    }));
+
+    return team;
+  };
+
+  const [winnerTeam, loserTeam] = await Promise.all([
+    captureTeam(winnerId),
+    captureTeam(loserId)
+  ]);
+
+  return {
+    winner: { userId: winnerId, team: winnerTeam },
+    loser: { userId: loserId, team: loserTeam }
+  };
+}
+
+/**
+ * Calculate match statistics from battle state
+ * @param {number} battleId - Battle ID
+ * @returns {Promise<Object>} Match statistics
+ */
+async function calculateMatchStats(battleId) {
+  const result = await query(
+    `SELECT battle_state, created_at FROM battles WHERE id = $1`,
+    [battleId]
+  );
+
+  if (result.rows.length === 0) return null;
+
+  const { battle_state, created_at } = result.rows[0];
+  const state = battle_state;
+
+  // Calculate stats from battle log
+  const stats = {
+    totalTurns: state.turn || 0,
+    duration: Math.floor((Date.now() - new Date(created_at).getTime()) / 1000),
+    player1: { damageDealt: 0, healingDone: 0, unitsLost: 0 },
+    player2: { damageDealt: 0, healingDone: 0, unitsLost: 0 }
+  };
+
+  // Count units lost
+  for (const unit of state.units) {
+    if (unit.hp <= 0) {
+      if (unit.ownerId === state.player1Id) {
+        stats.player1.unitsLost++;
+      } else if (unit.ownerId === state.player2Id) {
+        stats.player2.unitsLost++;
+      }
+    }
+  }
+
+  // Parse battle log for damage/healing (if available)
+  if (state.log) {
+    for (const entry of state.log) {
+      if (entry.damage) {
+        // Determine which player dealt damage
+        const actor = state.units.find(u => u.id === entry.actorId);
+        if (actor?.ownerId === state.player1Id) {
+          stats.player1.damageDealt += entry.damage;
+        } else if (actor?.ownerId === state.player2Id) {
+          stats.player2.damageDealt += entry.damage;
+        }
+      }
+      if (entry.healing) {
+        const actor = state.units.find(u => u.id === entry.actorId);
+        if (actor?.ownerId === state.player1Id) {
+          stats.player1.healingDone += entry.healing;
+        } else if (actor?.ownerId === state.player2Id) {
+          stats.player2.healingDone += entry.healing;
+        }
+      }
+    }
+  }
+
+  return stats;
+}
+
+/**
+ * Complete a PvP match and record results
+ * @param {number} battleId - Battle ID
+ * @param {number} winnerId - Winner user ID
+ * @param {number} loserId - Loser user ID
+ * @param {string} reason - Victory reason: 'victory', 'surrender', 'timeout_forfeit', 'disconnect_forfeit'
+ * @param {boolean} applyPenalty - Whether to apply forfeit penalty (default true for forfeits)
+ */
+async function completeMatch(battleId, winnerId, loserId, reason = 'victory', applyPenalty = true) {
+  try {
+    // Get match info
+    const matchResult = await query(
+      `SELECT b.id, b.battle_state, b.created_at,
+              am.queue_type, am.id as active_match_id
+       FROM battles b
+       LEFT JOIN LATERAL (
+         SELECT am.id, am.queue_type
+         FROM (SELECT * FROM (VALUES (1)) AS dummy) d
+         CROSS JOIN LATERAL (
+           SELECT id, 'coliseum_match' as queue_type FROM battles WHERE id = $1
+         ) am
+       ) am ON true
+       WHERE b.id = $1`,
+      [battleId]
+    );
+
+    if (matchResult.rows.length === 0) {
+      console.error(`[Coliseum] Battle ${battleId} not found for match completion`);
+      return;
+    }
+
+    // Find the match in activeMatches
+    let queueType = '1v1';
+    let match = null;
+    activeMatches.forEach((m, matchId) => {
+      if (m.battleId === battleId) {
+        match = m;
+        queueType = m.queueType;
+      }
+    });
+
+    // Capture team snapshots
+    const snapshot = await captureTeamSnapshots(winnerId, loserId);
+
+    // Calculate match stats
+    const stats = await calculateMatchStats(battleId);
+
+    // Get current ratings
+    const [winnerRating, loserRating] = await Promise.all([
+      getPlayerRating(winnerId, queueType),
+      getPlayerRating(loserId, queueType)
+    ]);
+
+    // Ensure ratings exist
+    await Promise.all([
+      ensureRating(winnerId, queueType),
+      ensureRating(loserId, queueType)
+    ]);
+
+    const winnerCurrentRating = winnerRating?.rating || 1000;
+    const loserCurrentRating = loserRating?.rating || 1000;
+
+    // Get PPR values from match or calculate
+    const winnerPPR = match?.player1?.userId === winnerId
+      ? match.player1.ppr
+      : (match?.player2?.ppr || await calculateBattlePartyPower(winnerId));
+    const loserPPR = match?.player1?.userId === loserId
+      ? match.player1.ppr
+      : (match?.player2?.ppr || await calculateBattlePartyPower(loserId));
+
+    // Calculate rating changes
+    let ratingChange = calculateRatingChange(
+      winnerCurrentRating,
+      loserCurrentRating,
+      winnerPPR,
+      loserPPR
+    );
+
+    // Apply forfeit penalty if applicable
+    const isForfeit = reason === 'surrender' || reason === 'timeout_forfeit' || reason === 'disconnect_forfeit';
+    if (isForfeit && applyPenalty) {
+      ratingChange.loserLoss = applyForfeitPenalty(ratingChange.loserLoss);
+    }
+
+    // Update ratings
+    await Promise.all([
+      updatePvpRating(winnerId, queueType, ratingChange.winnerGain, true),
+      updatePvpRating(loserId, queueType, -ratingChange.loserLoss, false)
+    ]);
+
+    // Record match in database
+    await query(
+      `INSERT INTO coliseum_matches
+         (battle_id, queue_type, winner_user_id, loser_user_id,
+          winner_rating_change, loser_rating_change,
+          match_duration_seconds, match_snapshot, match_stats)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        battleId,
+        queueType,
+        winnerId,
+        loserId,
+        ratingChange.winnerGain,
+        -ratingChange.loserLoss,
+        stats?.duration || 0,
+        JSON.stringify(snapshot),
+        JSON.stringify(stats)
+      ]
+    );
+
+    // Update battle status
+    await query(
+      `UPDATE battles SET status = 'completed', winner_id = $2 WHERE id = $1`,
+      [battleId, winnerId]
+    );
+
+    // Clean up active match
+    if (match) {
+      activeMatches.forEach((m, matchId) => {
+        if (m.battleId === battleId) {
+          activeMatches.delete(matchId);
+        }
+      });
+    }
+
+    // Notify both players of match result
+    const ws = await getWebsocket();
+    const resultPayload = {
+      battleId,
+      winnerId,
+      loserId,
+      reason,
+      winnerRatingChange: ratingChange.winnerGain,
+      loserRatingChange: -ratingChange.loserLoss,
+      winnerNewRating: winnerCurrentRating + ratingChange.winnerGain,
+      loserNewRating: Math.max(0, loserCurrentRating - ratingChange.loserLoss)
+    };
+
+    ws.sendToUser(winnerId, {
+      type: 'coliseum:match_result',
+      payload: { ...resultPayload, isWinner: true }
+    });
+
+    ws.sendToUser(loserId, {
+      type: 'coliseum:match_result',
+      payload: { ...resultPayload, isWinner: false }
+    });
+
+    console.log(`[Coliseum] Match completed: Battle ${battleId}, Winner: ${winnerId} (+${ratingChange.winnerGain}), Loser: ${loserId} (-${ratingChange.loserLoss}), Reason: ${reason}`);
+
+  } catch (error) {
+    console.error('[Coliseum] Failed to complete match:', error);
+  }
+}
+
+/**
+ * Handle player surrender
+ * @param {number} battleId - Battle ID
+ * @param {number} surrenderingPlayerId - Player who is surrendering
+ */
+async function handleSurrender(battleId, surrenderingPlayerId) {
+  console.log(`[Coliseum] Player ${surrenderingPlayerId} surrendering battle ${battleId}`);
+  await endMatchByForfeit(battleId, surrenderingPlayerId, 'surrender', true);
+}
+
+// =============================================================================
+// LEADERBOARD AND MATCH HISTORY
+// =============================================================================
+
+/**
+ * Get leaderboard for a queue type
+ * @param {string} queueType - Queue type (1v1, 3v3, 5v5)
+ * @param {number} limit - Number of entries to return
+ * @returns {Promise<Array>} Leaderboard entries
+ */
+async function getLeaderboard(queueType = '1v1', limit = 100) {
+  const result = await query(
+    `SELECT
+       pr.user_id,
+       u.username,
+       pr.rating,
+       pr.peak_rating,
+       pr.wins,
+       pr.losses,
+       pr.draws,
+       pr.win_streak,
+       pr.best_win_streak,
+       pr.last_match_at,
+       ROW_NUMBER() OVER (ORDER BY pr.rating DESC) as rank
+     FROM pvp_ratings pr
+     JOIN users u ON pr.user_id = u.id
+     WHERE pr.queue_type = $1 AND (pr.wins + pr.losses) > 0
+     ORDER BY pr.rating DESC
+     LIMIT $2`,
+    [queueType, limit]
+  );
+
+  return result.rows;
+}
+
+/**
+ * Get match history
+ * @param {string} filter - 'all' for global, 'mine' for user's matches
+ * @param {number} userId - User ID (required if filter is 'mine')
+ * @param {number} limit - Number of matches to return
+ * @param {number} offset - Offset for pagination
+ * @returns {Promise<Array>} Match history
+ */
+async function getMatchHistory(filter = 'all', userId = null, limit = 50, offset = 0) {
+  let queryStr;
+  let params;
+
+  if (filter === 'mine' && userId) {
+    queryStr = `
+      SELECT
+        cm.id,
+        cm.battle_id,
+        cm.queue_type,
+        cm.winner_user_id,
+        cm.loser_user_id,
+        winner.username as winner_username,
+        loser.username as loser_username,
+        cm.winner_rating_change,
+        cm.loser_rating_change,
+        cm.match_duration_seconds,
+        cm.created_at
+      FROM coliseum_matches cm
+      JOIN users winner ON cm.winner_user_id = winner.id
+      JOIN users loser ON cm.loser_user_id = loser.id
+      WHERE cm.winner_user_id = $1 OR cm.loser_user_id = $1
+      ORDER BY cm.created_at DESC
+      LIMIT $2 OFFSET $3`;
+    params = [userId, limit, offset];
+  } else {
+    queryStr = `
+      SELECT
+        cm.id,
+        cm.battle_id,
+        cm.queue_type,
+        cm.winner_user_id,
+        cm.loser_user_id,
+        winner.username as winner_username,
+        loser.username as loser_username,
+        cm.winner_rating_change,
+        cm.loser_rating_change,
+        cm.match_duration_seconds,
+        cm.created_at
+      FROM coliseum_matches cm
+      JOIN users winner ON cm.winner_user_id = winner.id
+      JOIN users loser ON cm.loser_user_id = loser.id
+      ORDER BY cm.created_at DESC
+      LIMIT $1 OFFSET $2`;
+    params = [limit, offset];
+  }
+
+  const result = await query(queryStr, params);
+  return result.rows;
+}
+
+/**
+ * Get detailed match information
+ * @param {number} matchId - Coliseum match ID
+ * @returns {Promise<Object>} Match details with snapshots and stats
+ */
+async function getMatchDetails(matchId) {
+  const result = await query(
+    `SELECT
+       cm.*,
+       winner.username as winner_username,
+       loser.username as loser_username
+     FROM coliseum_matches cm
+     JOIN users winner ON cm.winner_user_id = winner.id
+     JOIN users loser ON cm.loser_user_id = loser.id
+     WHERE cm.id = $1`,
+    [matchId]
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return result.rows[0];
+}
+
+/**
+ * Get a player's rank in the leaderboard
+ * @param {number} userId - User ID
+ * @param {string} queueType - Queue type
+ * @returns {Promise<Object>} Player's rank and rating info
+ */
+async function getPlayerRank(userId, queueType = '1v1') {
+  const result = await query(
+    `SELECT
+       user_id,
+       rating,
+       wins,
+       losses,
+       (SELECT COUNT(*) + 1 FROM pvp_ratings
+        WHERE queue_type = $2 AND rating > pr.rating) as rank
+     FROM pvp_ratings pr
+     WHERE user_id = $1 AND queue_type = $2`,
+    [userId, queueType]
+  );
+
+  if (result.rows.length === 0) {
+    return { rank: null, rating: 1000, wins: 0, losses: 0 };
+  }
+
+  return result.rows[0];
+}
+
 export {
+  // Queue management
   joinQueue,
   leaveQueue,
   playerReady,
   getQueueStatus,
   getAllQueueStatuses,
   cleanupPlayer,
-  QUEUE_SETTINGS
+  QUEUE_SETTINGS,
+  // Turn timer system
+  startTurnTimer,
+  cancelTurnTimer,
+  handleTurnTimeout,
+  handlePlayerDisconnect,
+  handlePlayerReconnect,
+  // Match completion
+  completeMatch,
+  handleSurrender,
+  captureTeamSnapshots,
+  calculateMatchStats,
+  // Leaderboard and history
+  getLeaderboard,
+  getMatchHistory,
+  getMatchDetails,
+  getPlayerRank,
+  // Constants
+  PVP_TURN_TIMEOUT,
+  DISCONNECT_FORFEIT_TIME,
+  MAX_TURN_TIMEOUTS
 };
 
 export default {
+  // Queue management
   joinQueue,
   leaveQueue,
   playerReady,
   getQueueStatus,
   getAllQueueStatuses,
   cleanupPlayer,
-  QUEUE_SETTINGS
+  QUEUE_SETTINGS,
+  // Turn timer system
+  startTurnTimer,
+  cancelTurnTimer,
+  handleTurnTimeout,
+  handlePlayerDisconnect,
+  handlePlayerReconnect,
+  // Match completion
+  completeMatch,
+  handleSurrender,
+  captureTeamSnapshots,
+  calculateMatchStats,
+  // Leaderboard and history
+  getLeaderboard,
+  getMatchHistory,
+  getMatchDetails,
+  getPlayerRank,
+  // Constants
+  PVP_TURN_TIMEOUT,
+  DISCONNECT_FORFEIT_TIME,
+  MAX_TURN_TIMEOUTS
 };
