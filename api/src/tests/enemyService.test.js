@@ -1,8 +1,8 @@
-const { describe, it, before, after } = require('node:test');
-const assert = require('node:assert');
+import { describe, it, before, after } from 'node:test';
+import assert from 'node:assert';
 
 // Import the service
-const enemyService = require('../services/enemyService');
+import * as enemyService from '../services/enemyService.js';
 
 describe('enemyService', () => {
   describe('TIER_MULTIPLIERS', () => {

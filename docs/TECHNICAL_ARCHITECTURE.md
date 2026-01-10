@@ -712,6 +712,34 @@ CREATE TYPE listing_status AS ENUM ('active', 'sold', 'cancelled', 'expired');
 }
 ```
 
+### 3.3 Migration Index
+
+All database migrations are located in `api/src/migrations/` and run sequentially.
+
+| # | File | Tables Created/Modified | Description |
+|---|------|-------------------------|-------------|
+| 001 | 001_initial_schema.sql | users, user_sessions, characters, world_nodes, world_node_connections, battles, item_templates, character_items | Core schema: auth, characters, world, battles, items |
+| 002 | 002_character_skills.sql | character_skills | XP-based skill learning system |
+| 003 | 003_shop_inventory.sql | shop_inventory, shop_transactions | NPC shop system with dynamic pricing |
+| 004 | 004_marketplace.sql | marketplace_orders, marketplace_trades, gold_reservations, item_escrow | Player marketplace with order book |
+| 005 | 005_chat_presence.sql | chat_messages, presence_status | Tavern chat and online presence |
+| 006 | 006_fog_of_war.sql | discovered_nodes | Per-player world discovery tracking |
+| 007 | 007_advanced_guilds.sql | (class enum extension) | Added berserker, sorcerer, ninja, alchemist classes |
+| 008 | 008_character_gender.sql | characters.gender | Added gender column for portraits |
+| 009 | 009_multiplayer_support.sql | parties, party_members, battle_players, pvp_ratings, coliseum_matches, leaderboard_cache | Multi-player parties and PvP infrastructure |
+| 010 | 010_unified_unit_system.sql | enemy_templates, npc_skills | Unified enemy templates with AI config |
+| 011 | 011_npc_skills.sql | (skill data) | NPC skill trees and monster archetypes |
+| 012 | 012_guild_recruitment.sql | traits, guild_recruits, recruit_traits, recruit_skills, character_traits, world_nodes.recruit_refresh_hour | Trait system and guild recruitment pools |
+| 013 | 013_user_settings.sql | user_settings | User preference storage (action menu style, etc.) |
+
+**Migration Commands:**
+```bash
+npm run db:migrate        # Apply pending migrations
+npm run db:status         # Show migration status
+npm run db:rollback       # Roll back last migration (use with caution)
+npm run db:fresh          # Drop all tables, re-migrate, re-seed
+```
+
 ---
 
 ## 4. Frontend Architecture

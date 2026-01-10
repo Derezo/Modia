@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 1.0 |
+| Version | 2.0 |
 | Last Updated | January 2026 |
 | Purpose | Track unfinished work and planned features |
 
@@ -15,12 +15,12 @@
 
 Active TODO comments found in codebase:
 
-| File | Line | Description | Priority |
-|------|------|-------------|----------|
-| ColiseumScene.js | 634 | Transition to BattleScene with PvP battle data | High |
-| WorldMapScene.js | 398 | Show party invite modal | Medium |
-| BattleScene.js | 2060 | Implement audio system | Low |
-| coliseumService.js | 185 | Add skill-based matchmaking using partyLevel | Low |
+| File | Line | Description | Priority | Status |
+|------|------|-------------|----------|--------|
+| ~~ColiseumScene.js~~ | ~~634~~ | ~~Transition to BattleScene with PvP battle data~~ | ~~High~~ | FIXED (Jan 2026) |
+| WorldMapScene.js | 398 | Show party invite modal | Medium | Pending |
+| BattleScene.js | 2060 | Implement audio system | Low | Pending |
+| coliseumService.js | 185 | Add skill-based matchmaking using partyLevel | Low | Pending |
 
 ---
 
@@ -41,13 +41,13 @@ Tables created but not fully integrated:
 
 ### 3.1 High Priority (Blocking Gameplay)
 
-#### PvP Battle Transition
-- **Location**: ColiseumScene.js:634, coliseumService.js
-- **Status**: Match found notification works, but UI doesn't transition to BattleScene
-- **Dependencies**:
-  - ColiseumScene needs to call BattleScene.start() with PvP data
-  - battle.js needs PvP-specific initialization
-- **Estimated Scope**: Medium (frontend-heavy)
+#### ~~PvP Battle Transition~~ - COMPLETED
+- **Location**: ColiseumScene.js:631-668
+- **Status**: FIXED (January 2026)
+- **Resolution**:
+  - ColiseumScene now fetches battle state via `/battle/:id/rejoin` endpoint
+  - Transitions to BattleScene with full battle data
+  - Also fixed `/battle/current` endpoint to handle player2 in PvP matches
 
 #### Party Invite Modal
 - **Location**: WorldMapScene.js:398
@@ -125,10 +125,10 @@ Tables created but not fully integrated:
 
 ```
 PvP System Completion
-├── PvP Battle Transition (HIGH)
-│   └── Requires: ColiseumScene → BattleScene integration
+├── ✅ PvP Battle Transition (COMPLETED)
+│   └── ColiseumScene → BattleScene integration working
 ├── PvP Rewards System
-│   └── Requires: PvP battles working
+│   └── Requires: PvP battles working (now unblocked)
 ├── Leaderboard System (MEDIUM)
 │   └── Requires: pvp_ratings populated
 └── Skill-Based Matchmaking (LOW)
@@ -183,3 +183,4 @@ psql -U modia -d modia -c "SELECT 'coliseum_matches' as table_name, COUNT(*) FRO
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | Jan 2026 | - | Initial document from codebase audit |
+| 2.0 | Jan 2026 | - | Marked PvP Battle Transition as COMPLETED; updated feature dependencies |

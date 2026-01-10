@@ -447,12 +447,15 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
 
 // GET /api/battle/current - Get current battle state
 router.get('/current', authenticate, asyncHandler(async (req, res) => {
+  // Check for active battle where user is player1, player2, or in battle_players (for PvP/coop)
   const result = await query(
     `SELECT b.id, b.battle_type, b.battle_state, b.map_seed, b.map_width, b.map_height,
             wn.node_type, wn.name as node_name
      FROM battles b
      JOIN world_nodes wn ON b.node_id = wn.id
-     WHERE b.player1_id = $1 AND b.status = 'active'
+     WHERE b.status = 'active'
+       AND (b.player1_id = $1 OR b.player2_id = $1 OR
+            EXISTS (SELECT 1 FROM battle_players bp WHERE bp.battle_id = b.id AND bp.player_id = $1))
      ORDER BY b.started_at DESC
      LIMIT 1`,
     [req.user.userId]
