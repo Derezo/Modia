@@ -369,18 +369,24 @@ export class BattleScene extends Scene {
         const pos = this.game.input.getPointerPosition();
         const tile = this.grid.getTileAtScreen(pos.x, pos.y, this.camera);
         if (tile) {
-          this.handleTileClick(tile.x, tile.y);
+          this.handleTileClick(tile.x, tile.y, { mouseX: e.clientX, mouseY: e.clientY });
         }
       }
     }, opts);
 
-    // Right-click - show FFT-style context menu (desktop only)
+    // Right-click - cancel pending action or show FFT-style context menu (desktop only)
     canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
 
+      // If there's a pending action, right-click cancels it
+      if (this.pendingAction || this.currentAction) {
+        this.cancelAction();
+        return;
+      }
+
       // Only show context menu if it's player's turn and no action in progress
       const activeUnit = this.getActiveUnit();
-      if (!activeUnit || activeUnit.type !== 'player' || this.currentAction) {
+      if (!activeUnit || activeUnit.type !== 'player') {
         return;
       }
 
@@ -1035,13 +1041,30 @@ export class BattleScene extends Scene {
 
   /**
    * Handle click on a tile
+   * @param {number} x - Tile X coordinate
+   * @param {number} y - Tile Y coordinate
+   * @param {Object} mousePos - Optional mouse position { mouseX, mouseY } for context menu
    */
-  handleTileClick(x, y) {
+  handleTileClick(x, y, mousePos = null) {
+    // If there's a pending action awaiting confirmation
+    if (this.pendingAction) {
+      const target = this.pendingAction.targetTile;
+      if (target.x === x && target.y === y) {
+        // Clicking the same target tile again = confirm
+        this.confirmAction();
+        return;
+      } else {
+        // Clicking elsewhere = cancel
+        this.cancelAction();
+        return;
+      }
+    }
+
     // Check if clicking on active player unit - show action menu
     const activeUnit = this.getActiveUnit();
     if (!this.currentAction && activeUnit && activeUnit.type === 'player') {
       if (x === activeUnit.gridX && y === activeUnit.gridY) {
-        this.showActionMenu();
+        this.showActionMenu(mousePos);
         return;
       }
     }
@@ -1299,8 +1322,9 @@ export class BattleScene extends Scene {
 
   /**
    * Show the appropriate action menu based on user preference
+   * @param {Object} mousePos - Optional mouse position { mouseX, mouseY } for context menu
    */
-  showActionMenu() {
+  showActionMenu(mousePos = null) {
     // Don't show menu during battle intro
     if (this.isIntroPlaying) return;
 
@@ -1311,7 +1335,7 @@ export class BattleScene extends Scene {
 
     switch (style) {
       case 'context':
-        this.showContextMenuForUnit(activeUnit);
+        this.showContextMenuForUnit(activeUnit, mousePos);
         break;
       case 'actionbar':
         // Action bar is already shown via updateUI, no additional action needed
@@ -1325,17 +1349,29 @@ export class BattleScene extends Scene {
 
   /**
    * Show context menu for active unit
+   * @param {Object} unit - The unit to show menu for
+   * @param {Object} mousePos - Optional mouse position { mouseX, mouseY }
    */
-  showContextMenuForUnit(unit) {
+  showContextMenuForUnit(unit, mousePos = null) {
     if (!unit) return;
 
-    // Get unit's screen position
-    const worldPos = this.grid.gridToScreenWorld(unit.gridX, unit.gridY);
-    const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
+    let menuX, menuY;
+
+    if (mousePos) {
+      // Use actual mouse position (from left-click)
+      menuX = mousePos.mouseX;
+      menuY = mousePos.mouseY;
+    } else {
+      // Fall back to unit's screen position (for keyboard navigation)
+      const worldPos = this.grid.gridToScreenWorld(unit.gridX, unit.gridY);
+      const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
+      menuX = screenPos.x;
+      menuY = screenPos.y - 40;
+    }
 
     this.contextMenu.show(
-      screenPos.x,
-      screenPos.y - 40,
+      menuX,
+      menuY,
       this.canMove,
       this.canAct,
       unit.mp
@@ -1445,17 +1481,9 @@ export class BattleScene extends Scene {
     if (!this.currentAction) {
       const unit = this.getUnitAt(x, y);
 
-      // If clicking on active unit, show context menu
+      // If selecting active unit, show action menu (respects user preference)
       if (unit && unit.id === activeUnit.id) {
-        const worldPos = this.grid.gridToScreenWorld(x, y);
-        const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
-        this.contextMenu.show(
-          screenPos.x,
-          screenPos.y - 40,
-          this.canMove,
-          this.canAct,
-          activeUnit.mp
-        );
+        this.showActionMenu(); // No mousePos - will use unit position fallback
       }
     } else {
       // Action in progress - treat as tile click
