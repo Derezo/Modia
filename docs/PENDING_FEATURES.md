@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 2.0 |
+| Version | 3.0 |
 | Last Updated | January 2026 |
 | Purpose | Track unfinished work and planned features |
 
@@ -178,9 +178,61 @@ psql -U modia -d modia -c "SELECT 'coliseum_matches' as table_name, COUNT(*) FRO
 
 ---
 
-## 7. Document History
+## 7. Code Review Discoveries (v3.0)
+
+Issues discovered during comprehensive multi-agent code review in January 2026.
+
+### 7.1 Critical Issues (Security/Stability)
+
+| Issue | Location | Impact | Priority |
+|-------|----------|--------|----------|
+| ~~Rate limiting missing on marketplace batch~~ | ~~marketplace.js~~ | ~~DoS vulnerability~~ | ✅ FIXED (marketplaceRateLimiter.js) |
+| Rate limiting missing on battle actions | battle.js | Action spam | **Critical** |
+| Rate limiting missing on WebSocket messages | websocket/index.js | Message flood | **Critical** |
+| Event listener leak in Game.js | Game.js:resize | Memory leak | **Critical** |
+| Event listener leak in InputHandler.js | InputHandler.js | Memory leak | **Critical** |
+
+### 7.2 High Priority Issues
+
+| Issue | Location | Impact |
+|-------|----------|--------|
+| Inline listeners without cleanup | LoginScene.js | Memory leak potential |
+| Inline listeners without cleanup | WorldMapScene.js | Memory leak potential |
+| Asset loading race conditions | AssetLoader.js | Rendering issues |
+| asyncHandler missing | sprites.js | Unhandled promise rejections |
+| Input validation gaps | Multiple routes | Security risk |
+| Transaction isolation issues | shop.js | Race conditions (marketplace fixed with audit logging) |
+
+### 7.3 Documentation Discrepancies
+
+| Document | Issue | Code Reality |
+|----------|-------|--------------|
+| GAME_DESIGN.md | Race traits completely wrong | Human: +2 VIT/+1 INT not +1 STR/+1 INT |
+| GAME_DESIGN.md | Critical chance cap 50% | Actually 30% in constants.js |
+| GAME_DESIGN.md | XP formula exponent 2.2 | Actually 1.8 in constants.js |
+| GAME_DESIGN.md | Level cap 100 | Actually 256 in constants.js |
+| API_SPECIFICATION.md | Missing guild endpoints | /api/guild/* undocumented |
+| ITEM_SYSTEM.md | Equipment slots differ | Code has different slot names |
+
+### 7.4 Test Coverage Improvements Made
+
+New test files created with 225+ tests:
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| chatService.test.js | 21 | Chat persistence, DMs, reactions |
+| presenceService.test.js | 27 | Typing, presence, node tracking |
+| coliseumService.test.js | 28 | Queue, matchmaking, cleanup |
+| partyWebsocket.test.js | 31 | Invites, broadcasts, rooms |
+| websocketIndex.test.js | 44 | Core WS module, utilities |
+| battleMechanics.test.js | 75+ | CT system, AI, damage formulas |
+
+---
+
+## 8. Document History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | Jan 2026 | - | Initial document from codebase audit |
 | 2.0 | Jan 2026 | - | Marked PvP Battle Transition as COMPLETED; updated feature dependencies |
+| 3.0 | Jan 2026 | - | Added code review discoveries: 5 critical issues, 6 high priority issues, 6 documentation discrepancies. Documented 225+ new tests across 6 test files. |

@@ -1,4 +1,6 @@
 import { Scene } from './Scene.js';
+import { marketConfirmDialog } from '../components/MarketConfirmDialog.js';
+import { marketToast } from '../components/MarketToast.js';
 
 /**
  * MarketplaceScene - Full Order Book Trading Interface
@@ -27,9 +29,21 @@ export class MarketplaceScene extends Scene {
     this.orderQuantity = 1;
     this.searchQuery = '';
     this.searchType = '';
+
+    // WebSocket handlers
+    this.wsHandlers = null;
   }
 
   async enter(data = {}) {
+    // Check if character is at a node with marketplace feature
+    const currentNode = this.game.state.get('currentNode');
+    const features = currentNode?.features || [];
+
+    if (!features.includes('marketplace')) {
+      this.showTravelPrompt(currentNode);
+      return;
+    }
+
     this.playerGold = this.game.state.get('user')?.gold || 0;
 
     // Get active character for trading
@@ -45,10 +59,98 @@ export class MarketplaceScene extends Scene {
     this.addStyles();
     this.createUI();
     this.setupEventListeners();
+    this.setupWebSocketHandlers();
+    this.game.socket?.joinMarketplace();
     await this.loadInitialData();
   }
 
+  showTravelPrompt(currentNode) {
+    // Create modal overlay
+    const modal = document.createElement('div');
+    modal.className = 'marketplace-travel-modal';
+    modal.innerHTML = `
+      <div class="modal-backdrop" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      "></div>
+      <div class="modal-content" style="
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 50%, #bfae8a 100%);
+        border: 3px solid #6b5344;
+        border-radius: 8px;
+        padding: 24px;
+        max-width: 400px;
+        text-align: center;
+        z-index: 1001;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      ">
+        <h3 style="
+          color: #2d2418;
+          font-family: Georgia, serif;
+          font-size: 20px;
+          margin: 0 0 16px 0;
+        ">Marketplace Access Required</h3>
+        <p style="
+          color: #5a4a3a;
+          margin: 0 0 8px 0;
+        ">The marketplace is located at the <strong>Castle</strong>.</p>
+        <p style="
+          color: #7a6a5a;
+          font-size: 14px;
+          margin: 0 0 24px 0;
+        ">Current location: <strong>${currentNode?.name || 'Unknown'}</strong></p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button id="marketplace-back-btn" style="
+            padding: 10px 20px;
+            background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+            border: 2px solid #8b7355;
+            border-radius: 4px;
+            color: #2d2418;
+            font-family: Georgia, serif;
+            cursor: pointer;
+          ">Back to Map</button>
+        </div>
+      </div>
+    `;
+
+    this.game.uiOverlay.appendChild(modal);
+
+    // Handle back button
+    modal.querySelector('#marketplace-back-btn')?.addEventListener('click', () => {
+      modal.remove();
+      this.game.scenes.switchTo('worldMap');
+    });
+
+    // Handle backdrop click
+    modal.querySelector('.modal-backdrop')?.addEventListener('click', () => {
+      modal.remove();
+      this.game.scenes.switchTo('worldMap');
+    });
+  }
+
   exit() {
+    // Leave marketplace WebSocket room
+    this.game.socket?.leaveMarketplace();
+
+    // Unsubscribe from item updates
+    if (this.selectedItem) {
+      this.game.socket?.unsubscribeFromItem(this.selectedItem.id);
+    }
+
+    // Clean up WebSocket handlers
+    this.cleanupWebSocketHandlers();
+
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -56,6 +158,103 @@ export class MarketplaceScene extends Scene {
     if (this.uiElement) {
       this.uiElement.remove();
       this.uiElement = null;
+    }
+  }
+
+  setupWebSocketHandlers() {
+    if (!this.game.socket) return;
+
+    this.wsHandlers = {
+      'marketplace:orderbook_update': (payload) => {
+        if (this.selectedItem?.id === payload.itemTemplateId) {
+          // Update local order book data
+          this.orderBook = {
+            ...this.orderBook,
+            bids: payload.bids,
+            asks: payload.asks,
+            bestBid: payload.bestBid,
+            bestAsk: payload.bestAsk,
+            spread: payload.spread
+          };
+          // Re-render order book panel
+          const sidePanel = this.uiElement?.querySelector('#side-panel');
+          if (sidePanel) {
+            this.renderOrderBookAndTrade(sidePanel);
+          }
+        }
+      },
+
+      'marketplace:order_filled': (payload) => {
+        const action = payload.side === 'buy' ? 'Bought' : 'Sold';
+        this.game.showNotification(
+          `${action} ${payload.quantity}x ${payload.itemName} @ ${payload.price}g`,
+          'success'
+        );
+
+        // Update gold display
+        if (payload.newGoldBalance !== undefined) {
+          this.playerGold = payload.newGoldBalance;
+          this.updateGoldDisplay();
+        }
+
+        // Refresh orders tab if viewing
+        if (this.activeTab === 'orders') {
+          this.loadMyOrders();
+        }
+      },
+
+      'marketplace:trade_executed': (payload) => {
+        // Add to local trade history if viewing this item
+        if (this.selectedItem?.id === payload.itemTemplateId) {
+          if (!this.tradeHistory) this.tradeHistory = [];
+          this.tradeHistory.unshift({
+            price: payload.price,
+            quantity: payload.quantity,
+            executedAt: new Date(payload.timestamp)
+          });
+          // Keep only last 20 trades
+          this.tradeHistory = this.tradeHistory.slice(0, 20);
+        }
+      },
+
+      'marketplace:order_cancelled': (payload) => {
+        this.game.showNotification('Order cancelled successfully', 'info');
+
+        // Refresh orders list
+        if (this.activeTab === 'orders') {
+          this.loadMyOrders();
+        }
+      },
+
+      'marketplace:subscribed': (payload) => {
+        console.log(`Subscribed to item ${payload.itemTemplateId} updates`);
+      }
+    };
+
+    // Register all handlers
+    Object.entries(this.wsHandlers).forEach(([type, handler]) => {
+      this.game.socket.on(type, handler);
+    });
+  }
+
+  cleanupWebSocketHandlers() {
+    if (!this.game.socket || !this.wsHandlers) return;
+
+    // Unregister all handlers
+    Object.entries(this.wsHandlers).forEach(([type, handler]) => {
+      this.game.socket.off(type, handler);
+    });
+    this.wsHandlers = null;
+  }
+
+  async loadMyOrders() {
+    try {
+      const ordersData = await this.game.api.getMyOrders();
+      this.myOrders = ordersData.orders || [];
+      this.updateTabs();
+      this.renderContent();
+    } catch (err) {
+      console.error('Failed to load orders:', err);
     }
   }
 
@@ -82,24 +281,37 @@ export class MarketplaceScene extends Scene {
     const style = document.createElement('style');
     style.id = 'marketplace-scene-styles';
     style.textContent = `
+      /* ========================================
+         MARKETPLACE - Medieval Market Theme
+         ======================================== */
+
       .marketplace-container {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        background:
+          linear-gradient(135deg, rgba(180, 160, 130, 0.1) 0%, transparent 50%),
+          linear-gradient(225deg, rgba(100, 80, 60, 0.1) 0%, transparent 50%),
+          linear-gradient(to bottom, #d4c4a8 0%, #c9b899 50%, #bfae8a 100%);
+        border: 4px solid #6b5344;
+        box-shadow:
+          inset 0 0 30px rgba(139, 115, 85, 0.3),
+          0 8px 24px rgba(0, 0, 0, 0.4);
         display: flex;
         flex-direction: column;
       }
 
+      /* Header - Wooden Beam Style */
       .marketplace-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 12px 20px;
-        background: rgba(0,0,0,0.3);
-        border-bottom: 1px solid #3a3a5a;
+        background: linear-gradient(to bottom, #a0845c 0%, #8b7355 50%, #6b5344 100%);
+        border-bottom: 3px solid #4a3a2a;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
       }
 
       .marketplace-title {
@@ -110,48 +322,61 @@ export class MarketplaceScene extends Scene {
 
       .marketplace-title h2 {
         margin: 0;
-        color: #ffd700;
+        color: #f0e8d8;
+        font-family: Georgia, serif;
         font-size: 20px;
+        text-shadow: 2px 2px 0 #4a3a2a;
+      }
+
+      .marketplace-title span {
+        color: #d4c4a8;
+        font-family: Georgia, serif;
       }
 
       .marketplace-gold {
         display: flex;
         align-items: center;
         gap: 8px;
-        color: #ffd700;
+        color: #c9a227;
+        font-family: Consolas, monospace;
         font-size: 16px;
         font-weight: bold;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
       }
 
+      /* Tabs - Parchment Style */
       .marketplace-tabs {
         display: flex;
         gap: 4px;
         padding: 10px 20px;
-        background: rgba(0,0,0,0.2);
-        border-bottom: 1px solid #3a3a5a;
+        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+        border-bottom: 2px solid #8b7355;
       }
 
       .marketplace-tab {
         padding: 8px 20px;
-        background: rgba(0,0,0,0.3);
-        border: 2px solid transparent;
+        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+        border: 2px solid #8b7355;
+        border-bottom: none;
         border-radius: 6px 6px 0 0;
-        color: #8a8aaa;
+        color: #5a4a3a;
+        font-family: Georgia, serif;
+        font-size: 13px;
+        font-weight: normal;
         cursor: pointer;
         transition: all 0.2s;
-        font-size: 13px;
-        font-weight: bold;
+        margin-bottom: -2px;
       }
 
       .marketplace-tab:hover {
-        background: rgba(74, 144, 217, 0.2);
-        color: #6ab0f3;
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 50%, #bfae8a 100%);
+        color: #2d2418;
       }
 
       .marketplace-tab.active {
-        background: rgba(255, 215, 0, 0.2);
-        border-color: #ffd700;
-        color: #ffd700;
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
+        color: #2d2418;
+        font-weight: bold;
       }
 
       .marketplace-content {
@@ -176,40 +401,55 @@ export class MarketplaceScene extends Scene {
         gap: 12px;
       }
 
+      /* Search Bar */
       .search-bar {
         display: flex;
         gap: 8px;
         padding: 10px;
-        background: rgba(0,0,0,0.2);
-        border-radius: 6px;
+        background: linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 100%);
+        border: 2px solid #8b7355;
+        border-radius: 4px;
         margin-bottom: 12px;
       }
 
       .search-bar input {
         flex: 1;
         padding: 8px 12px;
-        background: rgba(0,0,0,0.4);
-        border: 1px solid #3a3a5a;
+        background: #f5edd8;
+        border: 2px solid #8b7355;
         border-radius: 4px;
-        color: #fff;
+        color: #2d2418;
+        font-family: Georgia, serif;
         font-size: 14px;
       }
 
       .search-bar input:focus {
         outline: none;
-        border-color: #6ab0f3;
+        border-color: #6b5344;
+        box-shadow: 0 0 0 2px rgba(139, 115, 85, 0.3);
+      }
+
+      .search-bar input::placeholder {
+        color: #7a6a5a;
       }
 
       .search-bar select {
         padding: 8px 12px;
-        background: rgba(0,0,0,0.4);
-        border: 1px solid #3a3a5a;
+        background: #f5edd8;
+        border: 2px solid #8b7355;
         border-radius: 4px;
-        color: #fff;
+        color: #2d2418;
+        font-family: Georgia, serif;
         font-size: 14px;
         cursor: pointer;
       }
 
+      .search-bar select:focus {
+        outline: none;
+        border-color: #6b5344;
+      }
+
+      /* Items Grid */
       .items-grid {
         flex: 1;
         overflow-y: auto;
@@ -219,28 +459,34 @@ export class MarketplaceScene extends Scene {
         padding: 4px;
       }
 
+      /* Item Cards - Parchment Pieces */
       .market-item {
-        background: rgba(0,0,0,0.3);
-        border: 2px solid #3a3a5a;
-        border-radius: 6px;
+        background: linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 50%, #cfc0a8 100%);
+        border: 2px solid #8b7355;
+        border-radius: 4px;
         padding: 10px;
         cursor: pointer;
         transition: all 0.2s;
+        position: relative;
+        color: #2d2418;
+        font-family: Georgia, serif;
       }
 
       .market-item:hover {
-        border-color: #6ab0f3;
-        background: rgba(74, 144, 217, 0.1);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        border-color: #6b5344;
       }
 
       .market-item.selected {
-        border-color: #ffd700;
-        background: rgba(255, 215, 0, 0.1);
+        border-color: #4a3a2a;
+        background: linear-gradient(to bottom, #f0e8d8 0%, #e8dcc8 50%, #d9ccb8 100%);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 0 8px rgba(139, 115, 85, 0.3);
       }
 
       .market-item-name {
         font-weight: bold;
-        color: #fff;
+        color: #2d2418;
         font-size: 13px;
         margin-bottom: 4px;
         white-space: nowrap;
@@ -252,7 +498,7 @@ export class MarketplaceScene extends Scene {
         display: flex;
         justify-content: space-between;
         font-size: 11px;
-        color: #8a8aaa;
+        color: #5a4a3a;
         margin-bottom: 4px;
       }
 
@@ -260,35 +506,52 @@ export class MarketplaceScene extends Scene {
         display: flex;
         justify-content: space-between;
         font-size: 12px;
+        font-family: Consolas, monospace;
       }
 
       .bid-price {
-        color: #4caf50;
+        color: #3d6b35;
       }
 
       .ask-price {
-        color: #f44336;
+        color: #8b4444;
       }
 
       .no-price {
-        color: #666;
+        color: #7a6a5a;
       }
 
+      /* Order Book - Ledger Style */
       .order-book-panel {
         flex: 1;
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        background: linear-gradient(to bottom, #f0e8d8 0%, #e8dcc8 100%);
+        border: 3px solid #6b5344;
+        border-radius: 4px;
+      }
+
+      .order-book-panel .ui-panel-header {
+        background: linear-gradient(to bottom, #8b7355 0%, #7a6345 100%);
+        color: #f0e8d8;
+        padding: 8px 12px;
+        font-family: Georgia, serif;
+        font-weight: bold;
+        border-bottom: 2px solid #4a3a2a;
       }
 
       .order-book-header {
         display: flex;
         justify-content: space-between;
         padding: 8px 12px;
-        background: rgba(0,0,0,0.3);
+        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+        font-family: Georgia, serif;
         font-size: 11px;
-        color: #8a8aaa;
-        border-bottom: 1px solid #3a3a5a;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: #2d2418;
+        border-bottom: 2px solid #8b7355;
       }
 
       .order-book-content {
@@ -296,6 +559,7 @@ export class MarketplaceScene extends Scene {
         overflow-y: auto;
         display: flex;
         flex-direction: column;
+        background: linear-gradient(to bottom, #f5edd8 0%, #f0e8d8 100%);
       }
 
       .order-book-asks, .order-book-bids {
@@ -313,20 +577,24 @@ export class MarketplaceScene extends Scene {
         justify-content: space-between;
         padding: 4px 12px;
         font-size: 12px;
+        font-family: Consolas, monospace;
         cursor: pointer;
         position: relative;
+        transition: background 0.15s;
       }
 
       .order-book-row:hover {
-        background: rgba(255,255,255,0.05);
+        background: rgba(139, 115, 85, 0.15);
       }
 
       .order-book-row.ask {
-        color: #f44336;
+        color: #8b4444;
+        border-left: 3px solid #8b5555;
       }
 
       .order-book-row.bid {
-        color: #4caf50;
+        color: #3d6b35;
+        border-left: 3px solid #4a7548;
       }
 
       .order-book-row .depth-bar {
@@ -334,68 +602,99 @@ export class MarketplaceScene extends Scene {
         top: 0;
         bottom: 0;
         right: 0;
-        opacity: 0.15;
+        opacity: 0.12;
       }
 
       .order-book-row.ask .depth-bar {
-        background: #f44336;
+        background: #8b5555;
       }
 
       .order-book-row.bid .depth-bar {
-        background: #4caf50;
+        background: #4a7548;
       }
 
       .order-book-spread {
         text-align: center;
         padding: 6px;
-        background: rgba(0,0,0,0.3);
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
+        font-family: Consolas, monospace;
         font-size: 11px;
-        color: #8a8aaa;
-        border-top: 1px solid #3a3a5a;
-        border-bottom: 1px solid #3a3a5a;
+        color: #5a4a3a;
+        border-top: 2px solid #8b7355;
+        border-bottom: 2px solid #8b7355;
       }
 
+      /* Trade Panel */
       .trade-panel {
-        background: rgba(0,0,0,0.2);
-        border-radius: 6px;
-        padding: 12px;
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
+        border: 2px solid #8b7355;
+        border-radius: 4px;
+        padding: 16px;
       }
 
       .trade-panel-header {
         font-weight: bold;
-        color: #ffd700;
+        font-family: Georgia, serif;
+        color: #2d2418;
         margin-bottom: 12px;
         text-align: center;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
       }
 
+      /* Side Toggle - Wax Seal Style */
       .side-toggle {
         display: flex;
-        gap: 4px;
+        gap: 8px;
         margin-bottom: 12px;
+        justify-content: center;
       }
 
       .side-btn {
-        flex: 1;
-        padding: 10px;
-        border: 2px solid #3a3a5a;
-        border-radius: 6px;
-        background: rgba(0,0,0,0.3);
-        color: #8a8aaa;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        border: 3px solid #4a3a2a;
+        font-family: Georgia, serif;
         font-weight: bold;
+        font-size: 11px;
         cursor: pointer;
         transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-transform: uppercase;
+      }
+
+      .side-btn.buy {
+        background: linear-gradient(to bottom, #c9b899, #bfae8a);
+        color: #5a4a3a;
+      }
+
+      .side-btn.buy:hover {
+        background: linear-gradient(to bottom, #d4c4a8, #c9b899);
       }
 
       .side-btn.buy.active {
-        background: rgba(76, 175, 80, 0.3);
-        border-color: #4caf50;
-        color: #4caf50;
+        background: radial-gradient(circle at 30% 30%, #5a9e4a 0%, #3d7530 100%);
+        color: white;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      .side-btn.sell {
+        background: linear-gradient(to bottom, #c9b899, #bfae8a);
+        color: #5a4a3a;
+      }
+
+      .side-btn.sell:hover {
+        background: linear-gradient(to bottom, #d4c4a8, #c9b899);
       }
 
       .side-btn.sell.active {
-        background: rgba(244, 67, 54, 0.3);
-        border-color: #f44336;
-        color: #f44336;
+        background: radial-gradient(circle at 30% 30%, #c45a5a 0%, #8b3030 100%);
+        color: white;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
       }
 
       .order-type-toggle {
@@ -407,51 +706,65 @@ export class MarketplaceScene extends Scene {
       .order-type-btn {
         flex: 1;
         padding: 6px;
-        border: 1px solid #3a3a5a;
+        border: 2px solid #8b7355;
         border-radius: 4px;
-        background: rgba(0,0,0,0.2);
-        color: #8a8aaa;
+        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+        color: #5a4a3a;
+        font-family: Georgia, serif;
         font-size: 12px;
         cursor: pointer;
         transition: all 0.2s;
       }
 
-      .order-type-btn.active {
-        background: rgba(74, 144, 217, 0.3);
-        border-color: #6ab0f3;
-        color: #6ab0f3;
+      .order-type-btn:hover {
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
       }
 
+      .order-type-btn.active {
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
+        border-color: #6b5344;
+        color: #2d2418;
+        font-weight: bold;
+      }
+
+      /* Trade Inputs */
       .trade-input-group {
         margin-bottom: 10px;
       }
 
       .trade-input-group label {
         display: block;
+        font-family: Georgia, serif;
         font-size: 11px;
-        color: #8a8aaa;
+        color: #5a4a3a;
         margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
 
       .trade-input-group input {
         width: 100%;
         padding: 8px 10px;
-        background: rgba(0,0,0,0.4);
-        border: 1px solid #3a3a5a;
+        background: #f5edd8;
+        border: 2px solid #8b7355;
         border-radius: 4px;
-        color: #fff;
+        color: #2d2418;
+        font-family: Consolas, monospace;
         font-size: 14px;
         box-sizing: border-box;
       }
 
       .trade-input-group input:focus {
         outline: none;
-        border-color: #6ab0f3;
+        border-color: #6b5344;
+        box-shadow: 0 0 0 2px rgba(139, 115, 85, 0.3);
       }
 
+      /* Trade Summary */
       .trade-summary {
         padding: 10px;
-        background: rgba(0,0,0,0.3);
+        background: linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 100%);
+        border: 1px solid #8b7355;
         border-radius: 4px;
         margin-bottom: 12px;
       }
@@ -466,70 +779,82 @@ export class MarketplaceScene extends Scene {
       .trade-summary-row:last-child {
         margin-bottom: 0;
         padding-top: 6px;
-        border-top: 1px solid #3a3a5a;
+        border-top: 1px solid #8b7355;
         font-weight: bold;
       }
 
       .trade-summary-label {
-        color: #8a8aaa;
+        font-family: Georgia, serif;
+        color: #5a4a3a;
       }
 
       .trade-summary-value {
-        color: #fff;
+        font-family: Consolas, monospace;
+        color: #2d2418;
       }
 
       .trade-summary-value.buy {
-        color: #4caf50;
+        color: #3d6b35;
       }
 
       .trade-summary-value.sell {
-        color: #f44336;
+        color: #8b4444;
       }
 
+      /* Trade Button */
       .trade-btn {
         width: 100%;
         padding: 12px;
+        font-family: Georgia, serif;
         font-size: 14px;
         font-weight: bold;
-        border-radius: 6px;
+        border-radius: 4px;
         cursor: pointer;
         transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
       }
 
       .trade-btn.buy {
-        background: #4caf50;
-        border: none;
-        color: #fff;
+        background: linear-gradient(to bottom, #5a9e4a 0%, #4a8c3a 100%);
+        border: 2px solid #3d7530;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
       }
 
       .trade-btn.buy:hover {
-        background: #43a047;
+        background: linear-gradient(to bottom, #6aae5a 0%, #5a9e4a 100%);
+        transform: translateY(-1px);
       }
 
       .trade-btn.sell {
-        background: #f44336;
-        border: none;
-        color: #fff;
+        background: linear-gradient(to bottom, #c45a5a 0%, #a84040 100%);
+        border: 2px solid #8b3030;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
       }
 
       .trade-btn.sell:hover {
-        background: #e53935;
+        background: linear-gradient(to bottom, #d46a6a 0%, #c45a5a 100%);
+        transform: translateY(-1px);
       }
 
       .trade-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+        transform: none;
       }
 
+      /* My Orders List */
       .my-orders-list {
         flex: 1;
         overflow-y: auto;
       }
 
       .my-order {
-        background: rgba(0,0,0,0.3);
-        border: 1px solid #3a3a5a;
-        border-radius: 6px;
+        background: linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 100%);
+        border: 2px solid #8b7355;
+        border-radius: 4px;
         padding: 10px;
         margin-bottom: 8px;
       }
@@ -543,65 +868,73 @@ export class MarketplaceScene extends Scene {
 
       .my-order-item {
         font-weight: bold;
-        color: #fff;
+        font-family: Georgia, serif;
+        color: #2d2418;
         font-size: 13px;
       }
 
       .my-order-side {
         padding: 2px 8px;
         border-radius: 4px;
+        font-family: Georgia, serif;
         font-size: 11px;
         font-weight: bold;
       }
 
       .my-order-side.buy {
-        background: rgba(76, 175, 80, 0.3);
-        color: #4caf50;
+        background: linear-gradient(to bottom, #5a9e4a, #4a8c3a);
+        color: white;
       }
 
       .my-order-side.sell {
-        background: rgba(244, 67, 54, 0.3);
-        color: #f44336;
+        background: linear-gradient(to bottom, #c45a5a, #a84040);
+        color: white;
       }
 
       .my-order-info {
         display: flex;
         justify-content: space-between;
+        font-family: Consolas, monospace;
         font-size: 12px;
-        color: #8a8aaa;
+        color: #5a4a3a;
         margin-bottom: 8px;
       }
 
       .my-order-progress {
         height: 4px;
-        background: rgba(0,0,0,0.4);
+        background: rgba(0, 0, 0, 0.2);
         border-radius: 2px;
         margin-bottom: 8px;
         overflow: hidden;
+        border: 1px solid #8b7355;
       }
 
       .my-order-progress-bar {
         height: 100%;
-        background: #6ab0f3;
+        background: linear-gradient(to right, #8b7355, #a0845c);
         transition: width 0.3s;
       }
 
       .cancel-order-btn {
         width: 100%;
         padding: 6px;
-        background: rgba(244, 67, 54, 0.2);
-        border: 1px solid #f44336;
+        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+        border: 2px solid #8b5555;
         border-radius: 4px;
-        color: #f44336;
+        color: #8b4444;
+        font-family: Georgia, serif;
         font-size: 12px;
         cursor: pointer;
         transition: all 0.2s;
       }
 
       .cancel-order-btn:hover {
-        background: rgba(244, 67, 54, 0.4);
+        background: linear-gradient(to bottom, #c45a5a 0%, #a84040 100%);
+        color: white;
+        border-color: #8b3030;
       }
 
+      /* Trade History */
       .trade-history-list {
         flex: 1;
         overflow-y: auto;
@@ -611,27 +944,113 @@ export class MarketplaceScene extends Scene {
         display: flex;
         justify-content: space-between;
         padding: 8px 12px;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
+        border-bottom: 1px solid #c9b899;
         font-size: 12px;
+        color: #2d2418;
+      }
+
+      .trade-row:hover {
+        background: rgba(139, 115, 85, 0.1);
       }
 
       .trade-row-time {
-        color: #666;
+        color: #7a6a5a;
         font-size: 10px;
+        font-family: Consolas, monospace;
       }
 
       .empty-message {
         text-align: center;
-        color: #666;
+        color: #7a6a5a;
+        font-family: Georgia, serif;
         padding: 30px;
         font-size: 13px;
+        font-style: italic;
       }
 
-      .rarity-1 { border-left: 3px solid #9e9e9e; }
-      .rarity-2 { border-left: 3px solid #4caf50; }
-      .rarity-3 { border-left: 3px solid #2196f3; }
-      .rarity-4 { border-left: 3px solid #9c27b0; }
-      .rarity-5 { border-left: 3px solid #ff9800; }
+      /* Rarity Indicators */
+      .rarity-1 { border-left: 3px solid #7a6a5a; }
+      .rarity-2 { border-left: 3px solid #4a7548; }
+      .rarity-3 { border-left: 3px solid #4a6a8b; }
+      .rarity-4 { border-left: 3px solid #6b4488; }
+      .rarity-5 { border-left: 3px solid #aa8833; }
+
+      /* UI Panel Overrides for Parchment Theme */
+      .marketplace-container .ui-panel {
+        background: linear-gradient(to bottom, #f0e8d8 0%, #e8dcc8 100%);
+        border: 2px solid #8b7355;
+        border-radius: 4px;
+      }
+
+      .marketplace-container .ui-panel-header {
+        background: linear-gradient(to bottom, #8b7355 0%, #7a6345 100%);
+        color: #f0e8d8;
+        padding: 8px 12px;
+        font-family: Georgia, serif;
+        font-weight: bold;
+        border-bottom: 2px solid #4a3a2a;
+        border-radius: 2px 2px 0 0;
+      }
+
+      /* Scrollbar Styling */
+      .marketplace-container ::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      .marketplace-container ::-webkit-scrollbar-track {
+        background: #c9b899;
+        border-radius: 4px;
+      }
+
+      .marketplace-container ::-webkit-scrollbar-thumb {
+        background: #8b7355;
+        border-radius: 4px;
+      }
+
+      .marketplace-container ::-webkit-scrollbar-thumb:hover {
+        background: #6b5344;
+      }
+
+      /* Button Override for Back Button */
+      .marketplace-header .btn-secondary {
+        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+        border: 2px solid #8b7355;
+        border-radius: 4px;
+        color: #2d2418;
+        font-family: Georgia, serif;
+        padding: 8px 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .marketplace-header .btn-secondary:hover {
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
+        transform: translateY(-1px);
+      }
+
+      .marketplace-header .btn-primary {
+        background: linear-gradient(to bottom, #5a9e4a 0%, #4a8c3a 100%);
+        border: 2px solid #3d7530;
+        border-radius: 4px;
+        color: white;
+        font-family: Georgia, serif;
+        padding: 8px 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .marketplace-header .btn-primary:hover {
+        background: linear-gradient(to bottom, #6aae5a 0%, #5a9e4a 100%);
+        transform: translateY(-1px);
+      }
+
+      /* Gold Display */
+      .gold-display {
+        color: #c9a227;
+        font-family: Consolas, monospace;
+        font-weight: bold;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      }
     `;
     document.head.appendChild(style);
   }
@@ -644,12 +1063,12 @@ export class MarketplaceScene extends Scene {
       <div class="marketplace-header">
         <div class="marketplace-title">
           <h2>Marketplace</h2>
-          <span style="color: #8a8aaa; font-size: 12px;">Trading as: ${this.activeCharacter?.name || 'Unknown'}</span>
+          <span style="font-size: 12px;">Trading as: ${this.activeCharacter?.name || 'Unknown'}</span>
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
           <div class="marketplace-gold">
             <span>Gold:</span>
-            <span id="player-gold">${this.playerGold}</span>
+            <span id="player-gold">${this.playerGold.toLocaleString()}</span>
           </div>
           <button class="btn btn-secondary" id="back-btn">Back to Map</button>
         </div>
@@ -806,9 +1225,18 @@ export class MarketplaceScene extends Scene {
         const itemId = parseInt(el.dataset.itemId);
         const item = this.searchResults.find(i => i.id === itemId);
         if (item) {
+          // Unsubscribe from previous item
+          if (this.selectedItem && this.selectedItem.id !== itemId) {
+            this.game.socket?.unsubscribeFromItem(this.selectedItem.id);
+          }
+
           this.selectedItem = item;
           this.orderPrice = item.bestAsk || item.bestBid || item.basePrice || 10;
           this.orderQuantity = 1;
+
+          // Subscribe to new item updates
+          this.game.socket?.subscribeToItem(itemId);
+
           await this.loadOrderBook(itemId);
           this.renderContent();
         }
@@ -942,20 +1370,20 @@ export class MarketplaceScene extends Scene {
           <span class="trade-summary-label">${this.orderType === 'market' ? 'Est. Price' : 'Price'}</span>
           <span class="trade-summary-value">
             ${this.orderType === 'limit'
-              ? this.orderPrice + 'g'
+              ? this.orderPrice.toLocaleString() + 'g'
               : (this.orderSide === 'buy'
-                  ? (this.orderBook?.bestAsk || '-') + 'g'
-                  : (this.orderBook?.bestBid || '-') + 'g')}
+                  ? (this.orderBook?.bestAsk ? this.orderBook.bestAsk.toLocaleString() : '-') + 'g'
+                  : (this.orderBook?.bestBid ? this.orderBook.bestBid.toLocaleString() : '-') + 'g')}
           </span>
         </div>
         <div class="trade-summary-row">
           <span class="trade-summary-label">Quantity</span>
-          <span class="trade-summary-value">${this.orderQuantity}</span>
+          <span class="trade-summary-value">${this.orderQuantity.toLocaleString()}</span>
         </div>
         <div class="trade-summary-row">
           <span class="trade-summary-label">Total</span>
-          <span class="trade-summary-value ${this.orderSide}" style="${!canAfford ? 'color: #f44336;' : ''}">
-            ${total > 0 ? total + 'g' : '-'}
+          <span class="trade-summary-value ${this.orderSide}" style="${!canAfford ? 'color: #8b4444;' : ''}">
+            ${total > 0 ? total.toLocaleString() + 'g' : '-'}
             ${!canAfford ? ' (Insufficient)' : ''}
           </span>
         </div>
@@ -1019,6 +1447,49 @@ export class MarketplaceScene extends Scene {
   async handlePlaceOrder() {
     if (!this.selectedItem || !this.activeCharacter) return;
 
+    // Calculate price and total for confirmation
+    const price = this.orderType === 'limit'
+      ? this.orderPrice
+      : (this.orderSide === 'buy'
+          ? (this.orderBook?.bestAsk || 0)
+          : (this.orderBook?.bestBid || 0));
+
+    const total = price * this.orderQuantity;
+
+    // Validate before showing dialog
+    if (this.orderSide === 'buy' && this.playerGold < total) {
+      marketToast.error('Insufficient Gold', `You need ${total.toLocaleString()}g but only have ${this.playerGold.toLocaleString()}g`);
+      return;
+    }
+
+    if (this.orderType === 'market' && price === 0) {
+      marketToast.warning('No Orders Available', `No ${this.orderSide === 'buy' ? 'sell' : 'buy'} orders available for market execution`);
+      return;
+    }
+
+    // Show confirmation dialog
+    const dialogTitle = this.orderSide === 'buy'
+      ? `Confirm Purchase`
+      : `Confirm Sale`;
+
+    marketConfirmDialog.show({
+      title: dialogTitle,
+      action: this.orderSide,
+      item: this.selectedItem,
+      quantity: this.orderQuantity,
+      price: price,
+      total: total,
+      currentGold: this.playerGold,
+      onConfirm: () => this.executeOrder(),
+      onCancel: () => {
+        // User cancelled, do nothing
+      }
+    });
+  }
+
+  async executeOrder() {
+    if (!this.selectedItem || !this.activeCharacter) return;
+
     try {
       let result;
       if (this.orderType === 'limit') {
@@ -1043,7 +1514,13 @@ export class MarketplaceScene extends Scene {
       this.updateGoldDisplay();
       this.game.state.set('user', { ...this.game.state.get('user'), gold: result.gold });
 
-      this.game.showNotification(result.message, 'success');
+      // Show success toast
+      const action = this.orderSide === 'buy' ? 'Buy' : 'Sell';
+      const orderTypeLabel = this.orderType === 'limit' ? 'limit' : 'market';
+      marketToast.success(
+        `${action} Order Placed`,
+        `${orderTypeLabel.charAt(0).toUpperCase() + orderTypeLabel.slice(1)} order for ${this.orderQuantity}x ${this.selectedItem.name}`
+      );
 
       // Refresh data
       await this.loadOrderBook(this.selectedItem.id);
@@ -1053,7 +1530,7 @@ export class MarketplaceScene extends Scene {
       this.renderContent();
 
     } catch (err) {
-      this.game.showNotification(err.message, 'error');
+      marketToast.error('Order Failed', err.message);
     }
   }
 
@@ -1080,25 +1557,25 @@ export class MarketplaceScene extends Scene {
     sidePanel.innerHTML = `
       <div class="ui-panel" style="flex: 1;">
         <div class="ui-panel-header">Order Summary</div>
-        <div style="padding: 16px;">
+        <div style="padding: 16px; font-family: Georgia, serif;">
           <div style="margin-bottom: 12px;">
-            <div style="color: #8a8aaa; font-size: 12px; margin-bottom: 4px;">Buy Orders</div>
-            <div style="font-size: 18px; color: #4caf50;">
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Buy Orders</div>
+            <div style="font-size: 18px; color: #3d6b35; font-family: Consolas, monospace;">
               ${this.myOrders.filter(o => o.side === 'buy').length}
             </div>
           </div>
           <div style="margin-bottom: 12px;">
-            <div style="color: #8a8aaa; font-size: 12px; margin-bottom: 4px;">Sell Orders</div>
-            <div style="font-size: 18px; color: #f44336;">
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Sell Orders</div>
+            <div style="font-size: 18px; color: #8b4444; font-family: Consolas, monospace;">
               ${this.myOrders.filter(o => o.side === 'sell').length}
             </div>
           </div>
           <div>
-            <div style="color: #8a8aaa; font-size: 12px; margin-bottom: 4px;">Gold Reserved</div>
-            <div style="font-size: 18px; color: #ffd700;">
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Gold Reserved</div>
+            <div style="font-size: 18px; color: #c9a227; font-family: Consolas, monospace; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
               ${this.myOrders
                 .filter(o => o.side === 'buy')
-                .reduce((sum, o) => sum + (o.price * o.quantityRemaining), 0)}g
+                .reduce((sum, o) => sum + (o.price * o.quantityRemaining), 0).toLocaleString()}g
             </div>
           </div>
         </div>
@@ -1136,7 +1613,8 @@ export class MarketplaceScene extends Scene {
       this.updateGoldDisplay();
       this.game.state.set('user', { ...this.game.state.get('user'), gold: result.gold });
 
-      this.game.showNotification(result.message, 'success');
+      // Show success toast
+      marketToast.success('Order Cancelled', 'Your order has been cancelled and funds returned');
 
       // Refresh orders
       const ordersData = await this.game.api.getMyOrders();
@@ -1145,7 +1623,7 @@ export class MarketplaceScene extends Scene {
       this.renderContent();
 
     } catch (err) {
-      this.game.showNotification(err.message, 'error');
+      marketToast.error('Cancel Failed', err.message);
     }
   }
 
@@ -1171,10 +1649,10 @@ export class MarketplaceScene extends Scene {
                     <span class="my-order-side ${trade.side}" style="margin-right: 8px; padding: 2px 6px;">
                       ${trade.side.toUpperCase()}
                     </span>
-                    <span style="color: #fff;">${trade.itemName}</span>
+                    <span style="color: #2d2418; font-family: Georgia, serif;">${trade.itemName}</span>
                   </div>
                   <div style="text-align: right;">
-                    <div style="color: #ffd700;">${trade.totalGold}g (${trade.price}g x ${trade.quantity})</div>
+                    <div style="color: #c9a227; font-family: Consolas, monospace;">${trade.totalGold.toLocaleString()}g (${trade.price.toLocaleString()}g x ${trade.quantity})</div>
                     <div class="trade-row-time">${this.formatTime(trade.executedAt)}</div>
                   </div>
                 </div>
@@ -1190,23 +1668,23 @@ export class MarketplaceScene extends Scene {
     sidePanel.innerHTML = `
       <div class="ui-panel" style="flex: 1;">
         <div class="ui-panel-header">Trading Stats</div>
-        <div style="padding: 16px;">
+        <div style="padding: 16px; font-family: Georgia, serif;">
           <div style="margin-bottom: 12px;">
-            <div style="color: #8a8aaa; font-size: 12px; margin-bottom: 4px;">Total Trades</div>
-            <div style="font-size: 18px; color: #fff;">${myTrades.length}</div>
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Total Trades</div>
+            <div style="font-size: 18px; color: #2d2418; font-family: Consolas, monospace;">${myTrades.length}</div>
           </div>
           <div style="margin-bottom: 12px;">
-            <div style="color: #8a8aaa; font-size: 12px; margin-bottom: 4px;">Gold Spent</div>
-            <div style="font-size: 18px; color: #f44336;">${buyTotal}g</div>
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Gold Spent</div>
+            <div style="font-size: 18px; color: #8b4444; font-family: Consolas, monospace;">${buyTotal.toLocaleString()}g</div>
           </div>
           <div style="margin-bottom: 12px;">
-            <div style="color: #8a8aaa; font-size: 12px; margin-bottom: 4px;">Gold Earned</div>
-            <div style="font-size: 18px; color: #4caf50;">${sellTotal}g</div>
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Gold Earned</div>
+            <div style="font-size: 18px; color: #3d6b35; font-family: Consolas, monospace;">${sellTotal.toLocaleString()}g</div>
           </div>
           <div>
-            <div style="color: #8a8aaa; font-size: 12px; margin-bottom: 4px;">Net P/L</div>
-            <div style="font-size: 18px; color: ${sellTotal - buyTotal >= 0 ? '#4caf50' : '#f44336'};">
-              ${sellTotal - buyTotal >= 0 ? '+' : ''}${sellTotal - buyTotal}g
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Net P/L</div>
+            <div style="font-size: 18px; color: ${sellTotal - buyTotal >= 0 ? '#3d6b35' : '#8b4444'}; font-family: Consolas, monospace;">
+              ${sellTotal - buyTotal >= 0 ? '+' : ''}${(sellTotal - buyTotal).toLocaleString()}g
             </div>
           </div>
         </div>
@@ -1217,7 +1695,7 @@ export class MarketplaceScene extends Scene {
   updateGoldDisplay() {
     const goldEl = this.uiElement?.querySelector('#player-gold');
     if (goldEl) {
-      goldEl.textContent = this.playerGold;
+      goldEl.textContent = this.playerGold.toLocaleString();
     }
   }
 
@@ -1245,8 +1723,8 @@ export class MarketplaceScene extends Scene {
   }
 
   render(ctx) {
-    // UI is HTML-based
-    ctx.fillStyle = '#1a1a2e';
+    // UI is HTML-based - draw parchment background
+    ctx.fillStyle = '#c9b899';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   }
 }

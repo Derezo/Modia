@@ -2,6 +2,14 @@ import express from 'express';
 import { query, withTransaction, getClient } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import { requireMarketplaceAccess } from '../middleware/marketplaceAccess.js';
+import {
+  orderLimiter,
+  marketOrderLimiter,
+  cancelLimiter,
+  readLimiter,
+  searchLimiter
+} from '../middleware/marketplaceRateLimiter.js';
 import * as marketplaceService from '../services/marketplaceService.js';
 
 const router = express.Router();
@@ -9,7 +17,7 @@ const router = express.Router();
 // ============================================
 // GET /api/marketplace/orderbook/:itemTemplateId - Get order book
 // ============================================
-router.get('/orderbook/:itemTemplateId', authenticate, asyncHandler(async (req, res) => {
+router.get('/orderbook/:itemTemplateId', authenticate, readLimiter, asyncHandler(async (req, res) => {
   const { itemTemplateId } = req.params;
   const { depth = 20 } = req.query;
 
@@ -45,7 +53,7 @@ router.get('/orderbook/:itemTemplateId', authenticate, asyncHandler(async (req, 
 // ============================================
 // GET /api/marketplace/orders/mine - Get player's open orders
 // ============================================
-router.get('/orders/mine', authenticate, asyncHandler(async (req, res) => {
+router.get('/orders/mine', authenticate, readLimiter, asyncHandler(async (req, res) => {
   const { status } = req.query;
 
   const client = await getClient();
@@ -63,7 +71,7 @@ const MAX_PRICE = 999999999;
 // ============================================
 // POST /api/marketplace/orders/limit - Place limit order
 // ============================================
-router.post('/orders/limit', authenticate, asyncHandler(async (req, res) => {
+router.post('/orders/limit', authenticate, requireMarketplaceAccess, orderLimiter, asyncHandler(async (req, res) => {
   const { itemTemplateId, side, characterId } = req.body;
 
   // SECURITY: Strict price and quantity validation to prevent exploits
@@ -147,7 +155,7 @@ router.post('/orders/limit', authenticate, asyncHandler(async (req, res) => {
 // ============================================
 // POST /api/marketplace/orders/market - Execute market order
 // ============================================
-router.post('/orders/market', authenticate, asyncHandler(async (req, res) => {
+router.post('/orders/market', authenticate, requireMarketplaceAccess, marketOrderLimiter, asyncHandler(async (req, res) => {
   const { itemTemplateId, side, characterId } = req.body;
 
   // SECURITY: Strict quantity validation to prevent exploits
@@ -205,7 +213,7 @@ router.post('/orders/market', authenticate, asyncHandler(async (req, res) => {
 // ============================================
 // DELETE /api/marketplace/orders/:orderId - Cancel order
 // ============================================
-router.delete('/orders/:orderId', authenticate, asyncHandler(async (req, res) => {
+router.delete('/orders/:orderId', authenticate, requireMarketplaceAccess, cancelLimiter, asyncHandler(async (req, res) => {
   const { orderId } = req.params;
 
   const orderIdNum = parseInt(orderId, 10);
@@ -231,7 +239,7 @@ router.delete('/orders/:orderId', authenticate, asyncHandler(async (req, res) =>
 // ============================================
 // GET /api/marketplace/search - Search tradeable items
 // ============================================
-router.get('/search', authenticate, asyncHandler(async (req, res) => {
+router.get('/search', authenticate, searchLimiter, asyncHandler(async (req, res) => {
   const { q = '', type, limit = 50 } = req.query;
 
   const client = await getClient();
@@ -251,7 +259,7 @@ router.get('/search', authenticate, asyncHandler(async (req, res) => {
 // ============================================
 // GET /api/marketplace/history/:itemTemplateId - Trade history
 // ============================================
-router.get('/history/:itemTemplateId', authenticate, asyncHandler(async (req, res) => {
+router.get('/history/:itemTemplateId', authenticate, readLimiter, asyncHandler(async (req, res) => {
   const { itemTemplateId } = req.params;
   const { limit = 50 } = req.query;
 
@@ -286,7 +294,7 @@ router.get('/history/:itemTemplateId', authenticate, asyncHandler(async (req, re
 // ============================================
 // GET /api/marketplace/my-trades - User's trade history
 // ============================================
-router.get('/my-trades', authenticate, asyncHandler(async (req, res) => {
+router.get('/my-trades', authenticate, readLimiter, asyncHandler(async (req, res) => {
   const { limit = 50 } = req.query;
 
   const result = await query(
@@ -324,7 +332,7 @@ router.get('/my-trades', authenticate, asyncHandler(async (req, res) => {
 // ============================================
 // GET /api/marketplace/stats/:itemTemplateId - Item market stats
 // ============================================
-router.get('/stats/:itemTemplateId', authenticate, asyncHandler(async (req, res) => {
+router.get('/stats/:itemTemplateId', authenticate, readLimiter, asyncHandler(async (req, res) => {
   const { itemTemplateId } = req.params;
 
   const templateId = parseInt(itemTemplateId, 10);

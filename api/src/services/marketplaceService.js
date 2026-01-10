@@ -10,6 +10,9 @@
 
 import { AppError } from '../middleware/errorHandler.js';
 import { MAX_GOLD } from '../config/constants.js';
+import { MAX_OPEN_ORDERS_PER_USER } from '../../../shared/constants.js';
+import * as marketplaceWebsocket from './marketplaceWebsocket.js';
+import * as marketplaceAudit from './marketplaceAuditService.js';
 
 /**
  * Get the order book for an item (aggregated by price level)
@@ -323,7 +326,9 @@ async function addItemToCharacter(client, characterId, itemTemplateId, quantity)
 /**
  * Execute a trade between two orders
  */
-async function executeTrade(client, buyOrder, sellOrder, quantity, executionPrice) {
+async function executeTrade(client, buyOrder, sellOrder, quantity, executionPrice, itemName = null) {
+  const itemTemplateId = buyOrder.item_template_id || sellOrder.item_template_id;
+
   // Record the trade
   await client.query(
     `INSERT INTO market_trades
@@ -332,7 +337,7 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
     [
       buyOrder.id,
       sellOrder.id,
-      buyOrder.item_template_id || sellOrder.item_template_id,
+      itemTemplateId,
       buyOrder.user_id,
       sellOrder.user_id,
       executionPrice,
@@ -385,6 +390,78 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
     quantity
   );
 
+  // Get updated order statuses for notifications
+  const buyOrderStatusResult = await client.query(
+    'SELECT quantity, quantity_filled, status FROM market_orders WHERE id = $1',
+    [buyOrder.id]
+  );
+  const sellOrderStatusResult = await client.query(
+    'SELECT quantity, quantity_filled, status FROM market_orders WHERE id = $1',
+    [sellOrder.id]
+  );
+
+  const buyOrderStatus = buyOrderStatusResult.rows[0];
+  const sellOrderStatus = sellOrderStatusResult.rows[0];
+
+  const newBuyStatus = buyOrderStatus.status;
+  const newSellStatus = sellOrderStatus.status;
+  const buyRemainingQty = buyOrderStatus.quantity - buyOrderStatus.quantity_filled;
+  const sellRemainingQty = sellOrderStatus.quantity - sellOrderStatus.quantity_filled;
+
+  // WebSocket notifications (wrapped in try-catch to not break the transaction)
+  try {
+    // Notify buyer
+    marketplaceWebsocket.notifyOrderFilled(buyOrder.user_id, {
+      orderId: buyOrder.id,
+      side: 'buy',
+      itemTemplateId: itemTemplateId,
+      itemName: itemName,
+      price: executionPrice,
+      quantity: quantity,
+      totalGold: totalGold,
+      remainingQuantity: buyRemainingQty,
+      orderStatus: newBuyStatus, // 'filled' or 'partial'
+      newGoldBalance: null // Will be updated in caller if needed
+    });
+
+    // Notify seller
+    marketplaceWebsocket.notifyOrderFilled(sellOrder.user_id, {
+      orderId: sellOrder.id,
+      side: 'sell',
+      itemTemplateId: itemTemplateId,
+      itemName: itemName,
+      price: executionPrice,
+      quantity: quantity,
+      totalGold: totalGold,
+      remainingQuantity: sellRemainingQty,
+      orderStatus: newSellStatus
+    });
+
+    // Broadcast trade to item subscribers
+    marketplaceWebsocket.broadcastTrade({
+      itemTemplateId: itemTemplateId,
+      itemName: itemName,
+      price: executionPrice,
+      quantity: quantity
+    });
+  } catch (wsError) {
+    console.error('WebSocket notification failed in executeTrade:', wsError);
+  }
+
+  // Audit log (wrapped in try-catch to not break the transaction)
+  try {
+    await marketplaceAudit.logTradeExecution(buyOrder.user_id, sellOrder.user_id, {
+      buyOrderId: buyOrder.id,
+      sellOrderId: sellOrder.id,
+      itemTemplateId: itemTemplateId,
+      price: executionPrice,
+      quantity: quantity,
+      totalGold: totalGold
+    });
+  } catch (auditError) {
+    console.error('Audit logging failed in executeTrade:', auditError);
+  }
+
   return {
     quantity,
     price: executionPrice,
@@ -396,6 +473,16 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
  * Place a limit order with automatic matching
  */
 async function placeLimitOrder(client, userId, characterId, itemTemplateId, side, price, quantity) {
+  // Check open order count - max per user
+  const orderCountResult = await client.query(
+    `SELECT COUNT(*) as count FROM market_orders
+     WHERE user_id = $1 AND status IN ('open', 'partial')`,
+    [userId]
+  );
+  if (parseInt(orderCountResult.rows[0].count, 10) >= MAX_OPEN_ORDERS_PER_USER) {
+    throw new AppError(`Maximum of ${MAX_OPEN_ORDERS_PER_USER} open orders allowed. Cancel existing orders first.`, 400);
+  }
+
   // Validate item is tradeable
   const itemResult = await client.query(
     'SELECT id, name, is_tradeable FROM item_templates WHERE id = $1',
@@ -431,6 +518,7 @@ async function placeLimitOrder(client, userId, characterId, itemTemplateId, side
   // Try to match with existing orders
   const trades = [];
   let remainingQuantity = quantity;
+  const itemName = itemResult.rows[0].name;
 
   const matchingOrders = await getMatchingOrders(client, itemTemplateId, side, price, userId);
 
@@ -452,7 +540,7 @@ async function placeLimitOrder(client, userId, characterId, itemTemplateId, side
       sellOrder = { id: order.id, user_id: userId, item_template_id: itemTemplateId };
     }
 
-    const trade = await executeTrade(client, buyOrder, sellOrder, tradeQty, executionPrice);
+    const trade = await executeTrade(client, buyOrder, sellOrder, tradeQty, executionPrice, itemName);
     trades.push(trade);
 
     remainingQuantity -= tradeQty;
@@ -473,10 +561,34 @@ async function placeLimitOrder(client, userId, characterId, itemTemplateId, side
     [order.id]
   );
 
+  const updatedOrder = updatedOrderResult.rows[0];
+
+  // Broadcast order book update after order is placed/filled
+  try {
+    const updatedOrderBook = await getOrderBook(client, itemTemplateId, 20);
+    marketplaceWebsocket.broadcastOrderBookUpdate(itemTemplateId, updatedOrderBook);
+  } catch (wsError) {
+    console.error('WebSocket order book broadcast failed in placeLimitOrder:', wsError);
+  }
+
+  // Audit log for order placement
+  try {
+    await marketplaceAudit.logOrderPlacement(userId, characterId, order.id, {
+      itemTemplateId,
+      side,
+      price,
+      quantity,
+      immediatelyFilled: updatedOrder.status === 'filled',
+      partiallyFilled: updatedOrder.status === 'partial'
+    });
+  } catch (auditError) {
+    console.error('Audit logging failed in placeLimitOrder:', auditError);
+  }
+
   return {
-    order: updatedOrderResult.rows[0],
+    order: updatedOrder,
     trades,
-    itemName: itemResult.rows[0].name
+    itemName: itemName
   };
 }
 
@@ -692,12 +804,77 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
     await client.query('DELETE FROM item_escrow WHERE order_id = $1 AND quantity <= 0', [order.id]);
   }
 
+  const itemName = itemResult.rows[0].name;
+
+  // WebSocket notifications for filled orders and trades
+  try {
+    // Notify counterparties of their filled orders
+    for (const { order, matchQty } of ordersToMatch) {
+      const executionPrice = parseInt(order.price, 10);
+      const orderStatusResult = await client.query(
+        'SELECT quantity, quantity_filled, status FROM market_orders WHERE id = $1',
+        [order.id]
+      );
+      const orderStatus = orderStatusResult.rows[0];
+
+      // Notify the counterparty (the resting order owner)
+      marketplaceWebsocket.notifyOrderFilled(order.user_id, {
+        orderId: order.id,
+        side: side === 'buy' ? 'sell' : 'buy', // Counterparty has opposite side
+        itemTemplateId: itemTemplateId,
+        itemName: itemName,
+        price: executionPrice,
+        quantity: matchQty,
+        totalGold: executionPrice * matchQty,
+        remainingQuantity: orderStatus.quantity - orderStatus.quantity_filled,
+        orderStatus: orderStatus.status
+      });
+
+      // Broadcast trade to item subscribers
+      marketplaceWebsocket.broadcastTrade({
+        itemTemplateId: itemTemplateId,
+        itemName: itemName,
+        price: executionPrice,
+        quantity: matchQty
+      });
+    }
+
+    // Broadcast order book update
+    const updatedOrderBook = await getOrderBook(client, itemTemplateId, 20);
+    marketplaceWebsocket.broadcastOrderBookUpdate(itemTemplateId, updatedOrderBook);
+  } catch (wsError) {
+    console.error('WebSocket notification failed in executeMarketOrder:', wsError);
+  }
+
+  // Audit log for market order execution
+  try {
+    if (side === 'buy') {
+      await marketplaceAudit.logMarketBuy(userId, characterId, {
+        itemTemplateId,
+        quantity,
+        totalGold: totalCost,
+        averagePrice: totalCost / quantity,
+        tradesCount: trades.length
+      });
+    } else {
+      await marketplaceAudit.logMarketSell(userId, characterId, {
+        itemTemplateId,
+        quantity,
+        totalGold: totalProceeds,
+        averagePrice: totalProceeds / quantity,
+        tradesCount: trades.length
+      });
+    }
+  } catch (auditError) {
+    console.error('Audit logging failed in executeMarketOrder:', auditError);
+  }
+
   return {
     trades,
     totalQuantity: quantity,
     totalGold: side === 'buy' ? totalCost : totalProceeds,
     averagePrice: (side === 'buy' ? totalCost : totalProceeds) / quantity,
-    itemName: itemResult.rows[0].name
+    itemName: itemName
   };
 }
 
@@ -751,11 +928,42 @@ async function cancelOrder(client, orderId, userId) {
     [order.item_template_id]
   );
 
+  const refundedGold = order.side === 'buy' ? order.price * remainingQuantity : 0;
+  const returnedItems = order.side === 'sell' ? remainingQuantity : 0;
+
+  // Notify user of cancellation
+  try {
+    marketplaceWebsocket.notifyOrderCancelled(userId, {
+      orderId: orderId,
+      itemTemplateId: order.item_template_id,
+      refundedGold: refundedGold,
+      returnedItems: returnedItems
+    });
+
+    // Broadcast order book update
+    const updatedOrderBook = await getOrderBook(client, order.item_template_id, 20);
+    marketplaceWebsocket.broadcastOrderBookUpdate(order.item_template_id, updatedOrderBook);
+  } catch (wsError) {
+    console.error('WebSocket notification failed in cancelOrder:', wsError);
+  }
+
+  // Audit log
+  try {
+    await marketplaceAudit.logOrderCancellation(userId, orderId, {
+      itemTemplateId: order.item_template_id,
+      side: order.side,
+      remainingQuantity: remainingQuantity,
+      price: order.price
+    });
+  } catch (auditError) {
+    console.error('Audit logging failed in cancelOrder:', auditError);
+  }
+
   return {
     orderId,
     side: order.side,
     returnedQuantity: remainingQuantity,
-    returnedGold: order.side === 'buy' ? order.price * remainingQuantity : 0,
+    returnedGold: refundedGold,
     itemName: itemResult.rows[0].name
   };
 }

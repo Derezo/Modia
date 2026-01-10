@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 6.1 |
+| Version | 7.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -16,12 +16,12 @@
 |-------|------|------------|--------|
 | 1 | Foundation | 100% | Complete |
 | 2 | Characters & World | 95% | Complete |
-| 3 | Combat System | 90% | Near Complete |
+| 3 | Combat System | 95% | Near Complete |
 | 4 | Economy & Inventory | 95% | Near Complete |
-| 5 | Multiplayer | 50% | Partial |
-| 6 | Polish & Launch | 20% | Started |
+| 5 | Multiplayer | 85% | Near Complete |
+| 6 | Polish & Launch | 25% | In Progress |
 
-**Overall: ~75%**
+**Overall: ~85%**
 
 ---
 
@@ -33,12 +33,27 @@ Critical items for complete gameplay loop:
 |-------|----------|--------|----------|
 | ~~**PvP action endpoint broken**~~ | ~~battle.js:action~~ | ~~Player2 cannot submit actions~~ | ✅ FIXED |
 | ~~PvP battle transition incomplete~~ | ~~ColiseumScene.js:634~~ | ~~Match found but UI doesn't transition~~ | ✅ FIXED |
-| Party invite modal missing | WorldMapScene.js:398 | No accept/decline UI for invites | Medium |
+| ~~Party invite modal missing~~ | ~~WorldMapScene.js:398~~ | ~~No accept/decline UI for invites~~ | ✅ FIXED (PartyInviteModal.js) |
 | ~~No multi-player party tables~~ | ~~Database schema~~ | ~~Cannot form parties~~ | ✅ FIXED (009_multiplayer_support.sql) |
 | ~~Database 2-player limit~~ | ~~battles table~~ | ~~Schema only supports 2 players~~ | ✅ FIXED (battle_players table) |
 | Audio system missing | BattleScene.js:2060 | No sound effects or music | Low |
-| Leaderboards missing | - | No player rankings | Low |
-| Skill-based matchmaking | coliseumService.js:185 | Matches not balanced by level | Low |
+| ~~Leaderboards missing~~ | ~~-~~ | ~~No player rankings~~ | ✅ FIXED (ColiseumScene.js) |
+| ~~Skill-based matchmaking~~ | ~~coliseumService.js:185~~ | ~~Matches not balanced by level~~ | ✅ FIXED (PPR-based matchmaking) |
+
+### Code Review Discoveries (v6.2)
+
+**Critical Issues (Security/Stability):**
+
+| Issue | Location | Impact | Priority |
+|-------|----------|--------|----------|
+| ~~Rate limiting missing on marketplace batch~~ | ~~marketplace.js~~ | ~~DoS vulnerability~~ | ✅ FIXED (marketplaceRateLimiter.js) |
+| Rate limiting missing on battle actions | battle.js | Can spam actions | High |
+| Rate limiting missing on WebSocket messages | websocket/index.js | Message flood attack | High |
+| Event listener leak in Game.js | Game.js:resize | Memory leak over time | High |
+| Event listener leak in InputHandler.js | InputHandler.js | Memory leak over time | High |
+| Doc: Race traits mismatch | GAME_DESIGN.md vs constants.js | Incorrect documentation | Medium |
+| Doc: Critical chance cap | GAME_DESIGN.md (50% vs 30%) | Incorrect documentation | Medium |
+| Doc: XP formula exponent | GAME_DESIGN.md (2.2 vs 1.8) | Incorrect documentation | Medium |
 
 ### Battle System Architecture Overhaul (Complete)
 
@@ -134,6 +149,34 @@ Implemented party expansion via guild node recruitment. See documentation: `docs
 
 ---
 
+### Marketplace Security & UI Enhancement (Complete - January 2026)
+
+Comprehensive marketplace improvements: security hardening, medieval UI theme, castle node integration, and real-time WebSocket updates. See plan: `/home/wizard/.claude/plans/nifty-greeting-cosmos.md`
+
+| Task | Status | Files |
+|------|--------|-------|
+| Rate limiting middleware | ✅ Complete | api/src/middleware/marketplaceRateLimiter.js |
+| Order count enforcement (max 10) | ✅ Complete | marketplaceService.js, shared/constants.js |
+| Audit logging system | ✅ Complete | 015_marketplace_audit.sql, marketplaceAuditService.js |
+| Castle node access middleware | ✅ Complete | api/src/middleware/marketplaceAccess.js |
+| Frontend location validation | ✅ Complete | MarketplaceScene.js (enter(), showTravelPrompt()) |
+| WebSocket service | ✅ Complete | api/src/services/marketplaceWebsocket.js |
+| WebSocket message handlers | ✅ Complete | api/src/websocket/index.js (marketplace_subscribe/unsubscribe) |
+| Service layer WebSocket integration | ✅ Complete | marketplaceService.js (broadcasts on trades/orders) |
+| Frontend WebSocket integration | ✅ Complete | MarketplaceScene.js, api/websocket.js |
+| Medieval parchment UI theme | ✅ Complete | MarketplaceScene.js (addStyles()) |
+| MarketConfirmDialog component | ✅ Complete | frontend/src/components/MarketConfirmDialog.js |
+| MarketToast component | ✅ Complete | frontend/src/components/MarketToast.js |
+
+**Key Features:**
+- **Security**: Endpoint-specific rate limits (5-60 req/min), max 10 open orders per user, comprehensive audit logging
+- **Castle-Only Access**: Marketplace restricted to castle node, travel prompts for users at other locations
+- **Real-Time Updates**: WebSocket broadcasts for order book changes, trade notifications, fill alerts
+- **Medieval Theme**: Parchment backgrounds, wooden frames, wax seal buttons, ledger-style order book
+- **UX Components**: Confirmation dialogs for all trades, toast notifications for events
+
+---
+
 ### Advanced AI System (Complete - January 2026)
 
 Major overhaul of NPC AI with utility-based scoring and multi-actor lookahead. See plan: `/home/wizard/.claude/plans/merry-dreaming-stallman.md` and documentation: `docs/AI_SYSTEM.md`
@@ -163,6 +206,56 @@ Major overhaul of NPC AI with utility-based scoring and multi-actor lookahead. S
 - **Humanoid NPC Skills**: NPCs with humanoid archetype use player guild skill trees
 - **Performance Optimized**: Alpha-beta pruning, transposition table, killer moves, iterative deepening with 450ms time budget
 
+### Comprehensive Code Review (v6.1 → v6.2)
+
+A systematic multi-agent code review was performed in January 2026, covering backend, frontend, tests, and documentation.
+
+#### Test Coverage Enhancement (225+ New Tests)
+
+| Test File | Tests Added | Coverage Area |
+|-----------|-------------|---------------|
+| chatService.test.js | 21 | Message persistence, history, DMs, reactions |
+| presenceService.test.js | 27 | Typing indicators, node presence, cache |
+| coliseumService.test.js | 28 | Queue management, matchmaking, cleanup |
+| partyWebsocket.test.js | 31 | Invites, broadcasts, room management |
+| websocketIndex.test.js | 44 | Core WebSocket module, utilities, rooms |
+| battleMechanics.test.js | 75+ | CT turn order, AI patterns, damage formulas, status effects |
+
+**Total New Tests:** 225+ across 6 new test files. All tests passing.
+
+#### Code Quality Findings
+
+**Backend Issues Identified (24 total):**
+- 3 Critical: Rate limiting missing on marketplace batch operations, battle actions, WebSocket messages
+- 8 High: Input validation gaps, transaction isolation, asyncHandler missing in sprites route
+- 9 Medium: Hardcoded values, inconsistent error handling, typing indicator memory leak
+- 4 Low: Documentation gaps, dead code removal, console.log statements
+
+**Frontend Issues Identified (15 total):**
+- 2 Critical: Event listener leaks in Game.js resize and InputHandler.js
+- 4 High: Inline listeners without cleanup in LoginScene.js, WorldMapScene.js, asset loading race conditions
+- 5 Medium: BattleActionBar cleanup needed, StateManager stale reference warnings, hardcoded animation timings
+- 4 Low: JSDoc missing, console.log statements, magic numbers
+
+**Positives Identified:**
+- Backend: Excellent SQL injection prevention, strong auth system, proper transaction handling
+- Frontend: Good AbortController usage pattern, WebSocket unsubscriber pattern, clean component composition
+
+#### Documentation vs Code Discrepancies (21 total)
+
+**Critical (Must Fix):**
+1. Race traits in GAME_DESIGN.md differ significantly from shared/constants.js
+2. Critical chance cap is 30% in code, documented as 50%
+3. XP formula exponent is 1.8 in code, documented as 2.2
+
+**Medium (Should Fix):**
+- Level cap is 256 in code, 100 in docs
+- XP pool skill learning tables missing actual values
+- Equipment slots differ between docs and code
+- Several API endpoints undocumented
+
+**See:** `docs/TECHNICAL_IMPROVEMENTS.md` for full details.
+
 ### Security Audit Completed (v5.0 → v6.0)
 
 A comprehensive security audit was performed in January 2026. See `docs/TECHNICAL_IMPROVEMENTS.md` for full details.
@@ -182,6 +275,52 @@ A comprehensive security audit was performed in January 2026. See `docs/TECHNICA
 **New Documentation:**
 - `docs/TECHNICAL_IMPROVEMENTS.md` - Security, networking, code quality guide
 - `docs/GAME_MECHANICS_IMPROVEMENTS.md` - Balance and feature improvement suggestions
+
+### Social & PvP Systems (Complete - January 2026)
+
+Major implementation of multiplayer social features and complete PvP system. See plan: `/home/wizard/.claude/plans/twinkly-yawning-crown.md`
+
+| Task | Status | Files |
+|------|--------|-------|
+| Notification system (service, API, components) | ✅ Complete | notificationService.js, notifications.js, ToastManager.js, NotificationBell.js, NotificationCenter.js |
+| Friend system (requests, blocking, favorites) | ✅ Complete | friendService.js, friends.js, TavernScene.js |
+| Party system fixes (schema, invite modal) | ✅ Complete | 014_social_pvp_systems.sql, PartyInviteModal.js, PartyStatusBar.js |
+| Courtyard scene (Palace social hub) | ✅ Complete | CourtyardScene.js, lfg.js |
+| LFG (Looking For Group) system | ✅ Complete | lfg.js routes, CourtyardScene.js |
+| Player search by username | ✅ Complete | friends.js (/api/players/search) |
+| Character valuation algorithm (PPR) | ✅ Complete | characterValuationService.js |
+| PPR-based matchmaking | ✅ Complete | coliseumService.js |
+| Weighted ELO rating system | ✅ Complete | ratingService.js |
+| PvP turn timer (60s) | ✅ Complete | coliseumService.js, BattleUI.js |
+| Surrender with rating penalty | ✅ Complete | coliseumService.js, BattleScene.js |
+| Disconnect forfeit (5 min, weekly grace) | ✅ Complete | coliseumService.js, ratingService.js |
+| Match snapshots for history | ✅ Complete | coliseumService.js |
+| Leaderboards UI | ✅ Complete | ColiseumScene.js, coliseum.js routes |
+| Match history UI | ✅ Complete | ColiseumScene.js, coliseum.js routes |
+
+**Key Features:**
+- **Notification System**: Toast popups + persistent notification center with type-specific actions
+- **Friend System**: Friend requests with approval, blocking, favorites, notes, player search
+- **Party System**: Invite modal with countdown, party status bar in HUD
+- **Courtyard Scene**: Real-time player lobby + persistent LFG board at Palace nodes
+- **PPR Matchmaking**: Character Power Rating = stats + level + skills + equipment value (top 5 characters)
+- **Rating System**: Weighted ELO with underdog bonus based on PPR ratio
+- **Turn Timer**: 60s per turn, progressive penalty (2 skips = forfeit on 3rd)
+- **Match Recording**: Full team snapshots (characters + equipment) for detailed history
+
+**Database Migration:** `014_social_pvp_systems.sql`
+- notifications table
+- friendships table
+- lfg_posts table
+- pvp_disconnects table
+- Party schema fixes (column renames, missing columns)
+- coliseum_matches snapshot columns
+
+**Future Roadmap (Documented):**
+- Battle replay system (store action log, playback viewer)
+- Spectator mode (observe live battles)
+- Tournament brackets
+- Seasonal rankings
 
 ### Recently Resolved (v4.0 → v5.0)
 
@@ -768,7 +907,7 @@ Implement the item system, inventory management, NPC shops, and player marketpla
 
 ---
 
-## 6. Phase 5: Multiplayer Features (60% Complete)
+## 6. Phase 5: Multiplayer Features (85% Complete)
 
 ### 6.1 Objectives
 
@@ -832,21 +971,24 @@ Implement real-time multiplayer features including chat, trading, and PvP.
 - [x] ColiseumScene UI (queue selection, matchmaking status, ready check)
 - [x] Matchmaking service (coliseumService.js)
 - [x] Match found notification and ready check
-- [ ] PvP battle initialization (match starts but battle not created)
-- [ ] Real-time turn sync (pvp:turn_sync event)
+- [x] PvP battle initialization (coliseumService.startMatch())
+- [x] Real-time turn sync (battle WebSocket events)
 - [x] pvp:queue_joined, pvp:match_found events
-- [ ] pvp:opponent_action, pvp:disconnect events
-- [ ] Turn timer (60 seconds)
-- [ ] Surrender option
-- [ ] Match results recording
-- [ ] PvP rewards (50-100g victory)
+- [x] pvp:opponent_action, pvp:disconnect events
+- [x] Turn timer (60 seconds with progressive penalty)
+- [x] Surrender option (with 25% rating penalty)
+- [x] Match results recording (with snapshots)
+- [x] PvP rewards (rating-based)
+- [x] PPR-based matchmaking (±15% range, expanding)
+- [x] Weighted ELO with underdog bonus
+- [x] Disconnect forfeit (5 min, weekly grace)
 
-#### 6.2.6 Leaderboards (NOT IMPLEMENTED)
+#### 6.2.6 Leaderboards (IMPLEMENTED)
 
-- [ ] GET /api/leaderboard/:category
-- [ ] Highest character level leaderboard
-- [ ] Most PvP wins leaderboard
-- [ ] Most gold accumulated leaderboard
+- [x] GET /api/coliseum/leaderboard
+- [x] PvP rating leaderboard (by queue type)
+- [x] Win/loss tracking and streaks
+- [x] Leaderboards UI in ColiseumScene
 - [ ] LeaderboardScene UI
 - [ ] Real-time leaderboard updates
 
@@ -861,31 +1003,72 @@ Implement real-time multiplayer features including chat, trading, and PvP.
 - [ ] GET /api/guilds/:guildId (detailed)
 - [ ] GET /api/characters/:id/guilds (memberships)
 
+#### 6.2.8 Friend System (IMPLEMENTED)
+
+- [x] GET /api/friends - List friends with online status
+- [x] GET /api/friends/requests - Pending incoming requests
+- [x] POST /api/friends/request/:username - Send friend request
+- [x] POST /api/friends/accept/:requestId - Accept request
+- [x] POST /api/friends/decline/:requestId - Decline request
+- [x] DELETE /api/friends/:friendId - Unfriend
+- [x] POST /api/friends/:friendId/block - Block user
+- [x] DELETE /api/friends/:friendId/block - Unblock user
+- [x] PUT /api/friends/:friendId - Update favorite/note
+- [x] GET /api/players/search?q= - Search by username
+- [x] Friend notifications via notification system
+
+#### 6.2.9 Notification System (IMPLEMENTED)
+
+- [x] GET /api/notifications - List notifications
+- [x] GET /api/notifications/unread-count - Badge count
+- [x] POST /api/notifications/:id/read - Mark as read
+- [x] DELETE /api/notifications/:id - Dismiss
+- [x] Real-time WebSocket delivery
+- [x] ToastManager component (popup notifications)
+- [x] NotificationBell component (HUD icon with badge)
+- [x] NotificationCenter component (slide-out drawer)
+
+#### 6.2.10 LFG System (IMPLEMENTED)
+
+- [x] GET /api/lfg - List active LFG posts
+- [x] POST /api/lfg - Create LFG post
+- [x] DELETE /api/lfg/:postId - Remove own post
+- [x] POST /api/lfg/:postId/apply - Apply to join
+- [x] CourtyardScene UI (Palace social hub)
+- [x] Real-time player lobby
+- [x] Persistent LFG board
+
 ### 6.3 Acceptance Criteria
 
-- [ ] Users can chat in Tavern
-- [ ] Chat messages appear in real-time
-- [ ] Users can list items for sale
-- [ ] Users can purchase listings
+- [x] Users can chat in Tavern
+- [x] Chat messages appear in real-time
+- [x] Users can list items for sale
+- [x] Users can purchase listings
 - [ ] Listings update in real-time
-- [ ] Users can queue for PvP
-- [ ] Matched players enter battle
-- [ ] PvP battles work correctly
-- [ ] Leaderboards display rankings
+- [x] Users can queue for PvP
+- [x] Matched players enter battle
+- [x] PvP battles work correctly
+- [x] Leaderboards display rankings
+- [x] Users can add/remove friends
+- [x] Users can search for other players
+- [x] Users receive notifications in real-time
+- [x] Party invites can be accepted/declined
 
 ### 6.4 Testing Checklist
 
-- [ ] Two users chat -> Messages visible to both
-- [ ] Create marketplace listing -> Appears for all
-- [ ] Purchase listing -> Item transferred, gold transferred
-- [ ] Queue for PvP -> Wait for match
-- [ ] Two users queue -> Matched together
-- [ ] Complete PvP battle -> Results recorded
-- [ ] Check leaderboard -> Rankings correct
+- [x] Two users chat -> Messages visible to both
+- [x] Create marketplace listing -> Appears for all
+- [x] Purchase listing -> Item transferred, gold transferred
+- [x] Queue for PvP -> Wait for match
+- [x] Two users queue -> Matched together
+- [x] Complete PvP battle -> Results recorded
+- [x] Check leaderboard -> Rankings correct
+- [x] Send friend request -> Recipient receives notification
+- [x] Accept party invite -> Joins party
 
 ---
 
-## 7. Phase 6: Polish & Launch (10% Complete)
+## 7. Phase 6: Polish & Launch (25% Complete)
 
 ### 7.1 Objectives
 
@@ -898,8 +1081,10 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 - [x] TavernScene (full chat, presence, DMs)
 - [x] ShopScene (buy/sell with dynamic pricing)
 - [x] MarketplaceScene (order book, limit/market orders)
-- [x] ColiseumScene (queue UI, matchmaking, ready check)
-- [ ] LeaderboardScene
+- [x] ColiseumScene (queue UI, matchmaking, leaderboards, match history)
+- [x] CourtyardScene (Palace social hub, LFG board)
+- [x] RecruitmentScene (Guild NPC recruitment)
+- [ ] LeaderboardScene (general leaderboards - level, gold, etc.)
 - [ ] SettingsScene
 
 #### 7.2.2 UI/UX Polish
@@ -1101,3 +1286,5 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 | 5.1 | Jan 2026 | - | **Turn event queue & camera fixes**: Implemented sequential turn event queue to resolve HTTP/WebSocket race conditions causing camera bounce. Fixed enemy movement (resetTurnState), AI pathfinding (obstacle-aware isReachable), and camera transition timing (updateTurnTransition in update loop). |
 | 6.0 | Jan 2026 | - | **Advanced AI System overhaul**: Complete rewrite of NPC AI with utility-based scoring, multi-actor lookahead (2-3 rounds), 9 AI patterns (aggressive, defensive, support, tactical, pack, ambush, berserker, ranged, boss), monster skill trees (9 archetypes with themed skill branches), unified BattleUnit factory, server-provided availableActions, NPC skill generation service. New AI module in `api/src/services/ai/` with 7 core files. Added `docs/AI_SYSTEM.md` documentation. |
 | 6.1 | Jan 2026 | - | **Guild Recruitment System**: Party expansion via guild node recruitment. 5 new database tables (traits, guild_recruits, recruit_traits, recruit_skills, character_traits), 31 seeded traits across 4 categories, procedural name generator (300 names), recruit generation with ±15% stat variance and 1-2 traits, lazy refresh system, RecruitmentScene UI, trait integration in battle calculations. New documentation: `docs/GUILD_RECRUITMENT_SYSTEM.md`. Updated GAME_DESIGN.md, CHARACTER_PROGRESSION.md, ECONOMY_SYSTEM.md, TECHNICAL_ARCHITECTURE.md, API_SPECIFICATION.md. |
+| 6.2 | Jan 2026 | - | **Comprehensive Code Review**: Multi-agent systematic review of entire codebase. Added 225+ new tests across 6 test files (chatService, presenceService, coliseumService, partyWebsocket, websocketIndex, battleMechanics). Identified 24 backend issues (3 critical), 15 frontend issues (2 critical), and 21 documentation discrepancies (3 critical). Full test coverage now for WebSocket services and battle mechanics. |
+| 7.0 | Jan 2026 | - | **Social & PvP Systems**: Complete multiplayer social features and PvP system. Notification system (service, API, ToastManager, NotificationBell, NotificationCenter). Friend system (requests, blocking, favorites, search). Party system fixes (schema corrections, PartyInviteModal, PartyStatusBar). CourtyardScene (Palace social hub with LFG board). Character Power Rating (PPR) valuation algorithm. PPR-based matchmaking with ±15% range. Weighted ELO rating system with underdog bonus. PvP turn timer (60s, progressive penalty). Surrender/forfeit with rating penalties. Disconnect handling (5 min forfeit, weekly grace). Match snapshots for history. Leaderboards and match history UI in ColiseumScene. Database migration 014_social_pvp_systems.sql. Overall revised to 85%. |
