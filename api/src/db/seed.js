@@ -1,7 +1,14 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.env') });
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+import pg from 'pg';
+import { SeededRandom, CITY_OPTIONS, CASTLE_FEATURES } from '../config/constants.js';
 
-const { Pool } = require('pg');
-const { SeededRandom, CITY_OPTIONS, CASTLE_FEATURES } = require('../config/constants');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: resolve(__dirname, '../../../.env') });
+
+const { Pool } = pg;
 
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
