@@ -14,7 +14,9 @@ import {
   calculateHealingValue,
   calculateSurvivalPriority,
   calculateMpEfficiency,
-  calculateTargetPriority
+  calculateTargetPriority,
+  strategicPathProgress,
+  waitingPenalty
 } from './utilityFactors.js';
 
 /**
@@ -85,6 +87,8 @@ class StateEvaluator {
         factors.HEALING_VALUE = 0;
         factors.SURVIVAL_PRIORITY = calculateSurvivalPriority(unit, unit.tileX, unit.tileY, state);
         factors.MP_EFFICIENCY = 100; // Basic attacks are free
+        factors.strategicPathProgress = 0; // N/A for attack
+        factors.waitingPenalty = 0; // N/A for attack
         break;
       }
 
@@ -101,6 +105,8 @@ class StateEvaluator {
         factors.HEALING_VALUE = calculateHealingValue(unit, resolvedTarget, skill, state);
         factors.SURVIVAL_PRIORITY = calculateSurvivalPriority(unit, unit.tileX, unit.tileY, state);
         factors.MP_EFFICIENCY = calculateMpEfficiency(unit, skill);
+        factors.strategicPathProgress = 0; // N/A for skill
+        factors.waitingPenalty = 0; // N/A for skill
         break;
       }
 
@@ -114,6 +120,8 @@ class StateEvaluator {
         factors.HEALING_VALUE = 0;
         factors.SURVIVAL_PRIORITY = calculateSurvivalPriority(unit, action.position.x, action.position.y, state);
         factors.MP_EFFICIENCY = 50; // Neutral
+        factors.strategicPathProgress = strategicPathProgress({ unit, action, state });
+        factors.waitingPenalty = 0; // No waiting penalty for move actions
         break;
 
       case 'wait':
@@ -126,6 +134,8 @@ class StateEvaluator {
         factors.HEALING_VALUE = 0;
         factors.SURVIVAL_PRIORITY = calculateSurvivalPriority(unit, unit.tileX, unit.tileY, state);
         factors.MP_EFFICIENCY = 100; // Perfect efficiency (no cost)
+        factors.strategicPathProgress = 0; // No path progress when waiting
+        factors.waitingPenalty = waitingPenalty({ unit, action, state });
         break;
 
       default:

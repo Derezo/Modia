@@ -9,9 +9,6 @@ ALTER TABLE enemy_templates
 -- Create index for boss lookups
 CREATE INDEX IF NOT EXISTS idx_enemy_templates_is_boss ON enemy_templates(is_boss) WHERE is_boss = TRUE;
 
--- Create unique constraint for upsert operations
-CREATE UNIQUE INDEX IF NOT EXISTS idx_boss_encounters_unique ON boss_encounters(battle_id, unit_id);
-
 -- Add comments for documentation
 COMMENT ON COLUMN enemy_templates.is_boss IS 'Whether this enemy is a boss with special mechanics';
 COMMENT ON COLUMN enemy_templates.phases IS 'Phase configuration JSON: [{threshold: 0.75, abilities: [...], statMods: {...}}]';
@@ -28,6 +25,9 @@ CREATE TABLE IF NOT EXISTS boss_encounters (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Create unique constraint for upsert operations (after table exists)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_boss_encounters_unique ON boss_encounters(battle_id, unit_id);
+
 -- Index for looking up boss state by battle
 CREATE INDEX IF NOT EXISTS idx_boss_encounters_battle ON boss_encounters(battle_id);
 CREATE INDEX IF NOT EXISTS idx_boss_encounters_unit ON boss_encounters(unit_id);
@@ -35,6 +35,9 @@ CREATE INDEX IF NOT EXISTS idx_boss_encounters_unit ON boss_encounters(unit_id);
 COMMENT ON TABLE boss_encounters IS 'Tracks phase state for active boss encounters';
 COMMENT ON COLUMN boss_encounters.unit_id IS 'The enemy_X unit ID in the battle';
 COMMENT ON COLUMN boss_encounters.current_phase IS 'Current phase number (1-indexed)';
+
+-- Add unique constraint on enemy_templates.name for upserts
+CREATE UNIQUE INDEX IF NOT EXISTS idx_enemy_templates_name ON enemy_templates(name);
 
 -- Seed initial boss templates
 -- Forest Guardian (2-phase boss for forest biome)
@@ -46,7 +49,7 @@ INSERT INTO enemy_templates (
   is_boss, phases
 ) VALUES (
   'Forest Guardian', 'forest_guardian', 500, 100, 25, 15, 12,
-  'defensive', 'plant', ARRAY['forest'], 3,
+  'defensive', 'plant', ARRAY['forest']::node_type[], 3,
   500, 100, 200,
   2, 2, 10, 15,
   TRUE,
@@ -78,7 +81,7 @@ INSERT INTO enemy_templates (
   is_boss, phases
 ) VALUES (
   'Cave Troll King', 'cave_troll_king', 700, 50, 35, 8, 8,
-  'aggressive', 'beast', ARRAY['cave'], 4,
+  'aggressive', 'beast', ARRAY['cave']::node_type[], 4,
   750, 150, 300,
   2, 1, 20, 20,
   TRUE,
@@ -117,7 +120,7 @@ INSERT INTO enemy_templates (
   is_boss, phases
 ) VALUES (
   'Skeleton Lord', 'skeleton_lord', 400, 150, 20, 30, 15,
-  'tactical', 'undead', ARRAY['ruins', 'dungeon'], 4,
+  'tactical', 'undead', ARRAY['cave', 'castle']::node_type[], 4,
   600, 120, 250,
   3, 3, 5, 25,
   TRUE,
@@ -148,7 +151,7 @@ INSERT INTO enemy_templates (
   movement, attack_range
 ) VALUES (
   'Cave Troll Minion', 'cave_troll', 100, 20, 15, 5, 10,
-  'aggressive', 'beast', ARRAY['cave'], 4,
+  'aggressive', 'beast', ARRAY['cave']::node_type[], 4,
   50, 10, 30,
   3, 1
 ) ON CONFLICT (name) DO NOTHING;

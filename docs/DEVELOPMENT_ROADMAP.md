@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 7.3 |
+| Version | 7.5 |
 | Last Updated | January 2026 |
 
 ---
@@ -1427,3 +1427,4 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 | 7.2 | Jan 2026 | - | **UI/UX Parchment Theme Overhaul**: Complete parchment component library (Panel, Button, Input, Dropdown, Modal, Toast, ProfileDropdown) in `frontend/src/ui/parchment/`. Responsive framework with 3 breakpoints and CSS variable injection (`frontend/src/core/Responsive.js`). SVG icon system with 6 categories and PNG build script. Scene lifecycle `onBreakpointChange()` method. Migrated 6 scenes (WorldMap, Formation, Inventory, Tavern, Shop, SettingsModal). World map enhancements: Catmull-Rom spline paths, progressive fog-of-war, mystery nodes. Updated `docs/DESIGN_SYSTEM.md` and `docs/FRONTEND_TECHNICAL_PATTERNS.md`. |
 | 7.3 | Jan 2026 | - | **World Map Path System Overhaul**: Fixed duplicate path rendering (single row per connection with normalized ID ordering), added dynamic curve variance system (5% extreme, 20% significant, 75% soft), character now follows visual Catmull-Rom spline curves instead of straight lines, node labels render above fog of war. Files: seed.js, PathRenderer.js, WorldMapCharacter.js, WorldMapScene.js. |
 | 7.4 | Jan 2026 | - | **Boss Mechanics & Phase 6 Progress**: Implemented multi-phase boss system with HP threshold transitions, stat modifications, ability unlocks, and entry effects (buffs, summons, auras). Created bossService.js with 16 unit tests, database migration 018_boss_mechanics.sql with 3 boss templates (Forest Guardian, Cave Troll King, Skeleton Lord). Dynamic enemy abilities verified as already complete via npcSkillService (procedural + database-driven). Fixed duplicate export syntax error in utilityFactors.js. Phase 6 updated to 45%. |
+| 7.5 | Jan 2026 | - | **Map Generation & AI Strategic Pathfinding**: Fixed mountain terrain creating impassable maps. Added path validation (`hasValidPath`, `analyzeMapConnectivity`) in `shared/pathfinding.js`. Added deterministic path carving (`ensureMapConnectivity`) in `shared/mapGeneration.js` with corridor pre-computation for seeded consistency. Rebalanced mountain terrain weights (40% → 25% impassable). Created strategic pathfinding system in `api/src/services/ai/strategicPathfinding.js` for multi-turn AI movement toward enemies. Added `strategicPathProgress` and `waitingPenalty` factors to utility AI with pattern weights for all 9 AI types. Added 51 new tests (26 map generation, 25 AI pathfinding). Fixed BattleScene.js nodeType handling causing client/server terrain mismatch. |
