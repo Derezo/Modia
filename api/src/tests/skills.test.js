@@ -75,7 +75,8 @@ describe('Skills API', () => {
     });
 
     it('should return 404 for invalid guild', async () => {
-      const res = await request('GET', '/api/skills/tree/ninja', null, user.accessToken);
+      // Note: 'ninja' is a valid advanced guild, use truly invalid name
+      const res = await request('GET', '/api/skills/tree/nonexistent_guild', null, user.accessToken);
 
       assert.strictEqual(res.status, 404);
     });
