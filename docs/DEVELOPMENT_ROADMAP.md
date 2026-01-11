@@ -19,7 +19,7 @@
 | 3 | Combat System | 95% | Near Complete |
 | 4 | Economy & Inventory | 95% | Near Complete |
 | 5 | Multiplayer | 85% | Near Complete |
-| 6 | Polish & Launch | 40% | In Progress |
+| 6 | Polish & Launch | 45% | In Progress |
 
 **Overall: ~85%**
 
@@ -1238,8 +1238,15 @@ Finalize the game for initial release with UI polish, balance, and deployment.
   - Exp rewards may be too low vs exp curve (see balance test warnings)
   - DPS variance across classes ~3.6x (document or tune)
   - Gold economy needs review for consumable sustainability
-- [ ] Dynamic enemy abilities (database-driven skills per archetype)
-- [ ] Boss mechanics (phase system, HP thresholds, special abilities)
+- [x] Dynamic enemy abilities (implemented via npcSkillService - procedural + database-driven)
+- [~] Boss mechanics (phase system, HP thresholds, special abilities)
+  - [x] bossService.js with phase transitions, stat mods, ability unlocks
+  - [x] Database migration (018_boss_mechanics.sql)
+  - [x] 3 boss templates: Forest Guardian, Cave Troll King, Skeleton Lord
+  - [x] 16 unit tests for boss mechanics
+  - [ ] Integration with enemyService encounter generation
+  - [ ] Integration with battleService damage processing
+  - [ ] Frontend phase indicators
 - [ ] PvP matchmaking tuning (already using PPR, may need refinement)
 
 #### 7.2.4 Performance
@@ -1419,3 +1426,4 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 | 7.1 | Jan 2026 | - | **Item Naming Convention System**: Implemented full procedural item naming with category-based augment deduplication. 17 prefix augments + 17 suffix augments for equipment, 20 consumable-specific augments. Inventory API now returns generated names, bonus stats, and augment effects. Frontend displays augments in tooltips. Developer seed data (derezo/password user). **Marketplace Item Augments Integration**: Added design document for hybrid browse-and-select marketplace UI with augment filtering and price suggestions. See `docs/plans/2026-01-11-marketplace-item-augments-design.md`. |
 | 7.2 | Jan 2026 | - | **UI/UX Parchment Theme Overhaul**: Complete parchment component library (Panel, Button, Input, Dropdown, Modal, Toast, ProfileDropdown) in `frontend/src/ui/parchment/`. Responsive framework with 3 breakpoints and CSS variable injection (`frontend/src/core/Responsive.js`). SVG icon system with 6 categories and PNG build script. Scene lifecycle `onBreakpointChange()` method. Migrated 6 scenes (WorldMap, Formation, Inventory, Tavern, Shop, SettingsModal). World map enhancements: Catmull-Rom spline paths, progressive fog-of-war, mystery nodes. Updated `docs/DESIGN_SYSTEM.md` and `docs/FRONTEND_TECHNICAL_PATTERNS.md`. |
 | 7.3 | Jan 2026 | - | **World Map Path System Overhaul**: Fixed duplicate path rendering (single row per connection with normalized ID ordering), added dynamic curve variance system (5% extreme, 20% significant, 75% soft), character now follows visual Catmull-Rom spline curves instead of straight lines, node labels render above fog of war. Files: seed.js, PathRenderer.js, WorldMapCharacter.js, WorldMapScene.js. |
+| 7.4 | Jan 2026 | - | **Boss Mechanics & Phase 6 Progress**: Implemented multi-phase boss system with HP threshold transitions, stat modifications, ability unlocks, and entry effects (buffs, summons, auras). Created bossService.js with 16 unit tests, database migration 018_boss_mechanics.sql with 3 boss templates (Forest Guardian, Cave Troll King, Skeleton Lord). Dynamic enemy abilities verified as already complete via npcSkillService (procedural + database-driven). Fixed duplicate export syntax error in utilityFactors.js. Phase 6 updated to 45%. |
