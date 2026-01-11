@@ -3,8 +3,86 @@ import { query } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import presenceService from '../services/presenceService.js';
+import * as staminaService from '../services/staminaService.js';
 
 const router = express.Router();
+
+/**
+ * Build adjacency map from world node connections
+ * @param {Object[]} connections - Array of {from_node_id, to_node_id} pairs
+ * @returns {Map<number, Set<number>>} Adjacency map
+ */
+function buildAdjacencyMap(connections) {
+  const adj = new Map();
+  for (const conn of connections) {
+    const from = conn.from_node_id;
+    const to = conn.to_node_id;
+    if (!adj.has(from)) adj.set(from, new Set());
+    if (!adj.has(to)) adj.set(to, new Set());
+    adj.get(from).add(to);
+    adj.get(to).add(from);
+  }
+  return adj;
+}
+
+/**
+ * Find shortest path between two nodes using BFS
+ * @param {number} fromNodeId - Starting node ID
+ * @param {number} toNodeId - Destination node ID
+ * @param {Map<number, Set<number>>} adjacency - Adjacency map
+ * @returns {number[]|null} Array of node IDs forming the path, or null if no path
+ */
+function bfsPath(fromNodeId, toNodeId, adjacency) {
+  if (fromNodeId === toNodeId) {
+    return [fromNodeId];
+  }
+
+  const visited = new Set([fromNodeId]);
+  const queue = [[fromNodeId]];
+
+  while (queue.length > 0) {
+    const path = queue.shift();
+    const current = path[path.length - 1];
+
+    const neighbors = adjacency.get(current) || new Set();
+    for (const neighbor of neighbors) {
+      if (neighbor === toNodeId) {
+        return [...path, neighbor];
+      }
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        queue.push([...path, neighbor]);
+      }
+    }
+  }
+
+  return null; // No path found
+}
+
+/**
+ * Find shortest path between two world nodes
+ * @param {number} fromNodeId - Starting node ID
+ * @param {number} toNodeId - Destination node ID
+ * @returns {Promise<{path: number[], distance: number}|null>}
+ */
+async function findWorldPath(fromNodeId, toNodeId) {
+  // Load all connections
+  const result = await query(
+    'SELECT from_node_id, to_node_id FROM world_node_connections'
+  );
+
+  const adjacency = buildAdjacencyMap(result.rows);
+  const path = bfsPath(fromNodeId, toNodeId, adjacency);
+
+  if (!path) {
+    return null;
+  }
+
+  return {
+    path,
+    distance: path.length - 1 // Number of edges, not nodes
+  };
+}
 
 // GET /api/world/seed - Get global world seed
 router.get('/seed', asyncHandler(async (req, res) => {
@@ -76,7 +154,65 @@ router.get('/nodes/:id', authenticate, asyncHandler(async (req, res) => {
   });
 }));
 
-// POST /api/world/travel - Move party to adjacent node
+// GET /api/world/path/:targetNodeId - Preview path to a node (without traveling)
+router.get('/path/:targetNodeId', authenticate, asyncHandler(async (req, res) => {
+  const { targetNodeId } = req.params;
+
+  // Get user's current position
+  const charResult = await query(
+    `SELECT c.current_node_id, c.id as character_id
+     FROM characters c
+     WHERE c.user_id = $1 AND c.party_slot = 1`,
+    [req.user.userId]
+  );
+
+  if (charResult.rows.length === 0) {
+    throw new AppError('No active party character', 400);
+  }
+
+  const currentNodeId = charResult.rows[0].current_node_id;
+  const characterId = charResult.rows[0].character_id;
+
+  // Check if destination is discovered
+  const discoveryCheck = await query(
+    'SELECT 1 FROM user_node_discovery WHERE user_id = $1 AND node_id = $2',
+    [req.user.userId, targetNodeId]
+  );
+
+  if (discoveryCheck.rows.length === 0) {
+    throw new AppError('Destination node has not been discovered', 400);
+  }
+
+  // Find path
+  const pathResult = await findWorldPath(currentNodeId, parseInt(targetNodeId, 10));
+
+  if (!pathResult) {
+    throw new AppError('No path found to destination', 400);
+  }
+
+  // Get current stamina
+  const staminaInfo = await staminaService.getStaminaInfo(characterId);
+  const cost = pathResult.distance;
+  const affordable = staminaInfo.current >= cost;
+
+  // Get node names along the path
+  const pathNodesResult = await query(
+    `SELECT id, name, node_type FROM world_nodes WHERE id = ANY($1) ORDER BY array_position($1, id)`,
+    [pathResult.path]
+  );
+
+  res.json({
+    path: pathResult.path,
+    pathNodes: pathNodesResult.rows,
+    distance: pathResult.distance,
+    cost,
+    affordable,
+    currentStamina: staminaInfo.current,
+    maxStamina: staminaInfo.max
+  });
+}));
+
+// POST /api/world/travel - Move party to any discovered node
 router.post('/travel', authenticate, asyncHandler(async (req, res) => {
   const { targetNodeId } = req.body;
 
@@ -84,9 +220,9 @@ router.post('/travel', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('targetNodeId is required', 400);
   }
 
-  // Get user's current position (from first character)
+  // Get user's current position and party leader character
   const charResult = await query(
-    `SELECT current_node_id FROM characters
+    `SELECT current_node_id, id as character_id FROM characters
      WHERE user_id = $1 AND party_slot = 1`,
     [req.user.userId]
   );
@@ -96,6 +232,12 @@ router.post('/travel', authenticate, asyncHandler(async (req, res) => {
   }
 
   const currentNodeId = charResult.rows[0].current_node_id;
+  const characterId = charResult.rows[0].character_id;
+
+  // Already at destination
+  if (currentNodeId === targetNodeId) {
+    throw new AppError('Already at destination', 400);
+  }
 
   // Check if in battle
   const battleCheck = await query(
@@ -107,33 +249,73 @@ router.post('/travel', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Cannot travel while in battle', 400);
   }
 
-  // Verify target node is connected
-  const connectionResult = await query(
-    `SELECT 1 FROM world_node_connections
-     WHERE (from_node_id = $1 AND to_node_id = $2)
-        OR (from_node_id = $2 AND to_node_id = $1)`,
-    [currentNodeId, targetNodeId]
+  // Check if destination is discovered
+  const discoveryCheck = await query(
+    'SELECT 1 FROM user_node_discovery WHERE user_id = $1 AND node_id = $2',
+    [req.user.userId, targetNodeId]
   );
 
-  if (connectionResult.rows.length === 0) {
-    throw new AppError('Target node is not connected to current location', 400);
+  if (discoveryCheck.rows.length === 0) {
+    throw new AppError('Destination node has not been discovered', 400);
   }
 
-  // Move all party characters
+  // Find shortest path
+  const pathResult = await findWorldPath(currentNodeId, targetNodeId);
+
+  if (!pathResult) {
+    throw new AppError('No path found to destination', 400);
+  }
+
+  const travelCost = pathResult.distance;
+
+  // Check and deduct stamina
+  const hasStamina = await staminaService.hasEnoughStamina(characterId, travelCost);
+  if (!hasStamina) {
+    const staminaInfo = await staminaService.getStaminaInfo(characterId);
+    throw new AppError(
+      `Insufficient stamina: have ${staminaInfo.current}, need ${travelCost}`,
+      400
+    );
+  }
+
+  // Deduct stamina
+  await staminaService.deductStamina(characterId, travelCost);
+
+  // Move all party characters to destination
   await query(
     `UPDATE characters SET current_node_id = $1
      WHERE user_id = $2 AND party_slot IS NOT NULL`,
     [targetNodeId, req.user.userId]
   );
 
-  // Discover node and adjacent nodes (fog of war)
-  await query('SELECT discover_node_and_adjacent($1, $2)', [req.user.userId, targetNodeId]);
+  // Discover all intermediate nodes and their adjacents (player "travels through")
+  const newDiscoveries = [];
+  for (const nodeId of pathResult.path) {
+    const beforeCount = await query(
+      'SELECT COUNT(*) as count FROM user_node_discovery WHERE user_id = $1',
+      [req.user.userId]
+    );
+    await query('SELECT discover_node_and_adjacent($1, $2)', [req.user.userId, nodeId]);
+    const afterCount = await query(
+      'SELECT COUNT(*) as count FROM user_node_discovery WHERE user_id = $1',
+      [req.user.userId]
+    );
+    if (parseInt(afterCount.rows[0].count) > parseInt(beforeCount.rows[0].count)) {
+      newDiscoveries.push(nodeId);
+    }
+  }
 
   // Get new node details
   const nodeResult = await query(
     `SELECT id, node_type, name, features, guild_class, local_seed, difficulty_tier
      FROM world_nodes WHERE id = $1`,
     [targetNodeId]
+  );
+
+  // Get path node details for animation
+  const pathNodesResult = await query(
+    `SELECT id, name, node_type, x_coord, y_coord FROM world_nodes WHERE id = ANY($1) ORDER BY array_position($1, id)`,
+    [pathResult.path]
   );
 
   // Get character name for movement events
@@ -144,7 +326,7 @@ router.post('/travel', authenticate, asyncHandler(async (req, res) => {
   const characterName = charNameResult.rows[0]?.name || 'Unknown';
 
   // Update node presence tracking and broadcast events
-  const moveResult = presenceService.moveNode(
+  presenceService.moveNode(
     currentNodeId,
     targetNodeId,
     req.user.userId,
@@ -185,9 +367,17 @@ router.post('/travel', authenticate, asyncHandler(async (req, res) => {
     }, req.user.userId);
   }
 
+  // Get updated stamina info
+  const staminaInfo = await staminaService.getStaminaInfo(characterId);
+
   res.json({
     message: 'Traveled successfully',
+    path: pathResult.path,
+    pathNodes: pathNodesResult.rows,
+    cost: travelCost,
     currentNode: nodeResult.rows[0],
+    stamina: staminaInfo,
+    newDiscoveries,
     playersAtNode: presenceService.getPlayersAtNode(targetNodeId)
   });
 }));

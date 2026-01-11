@@ -143,8 +143,17 @@ export class ApiClient {
     return this.post('/world/travel', { targetNodeId });
   }
 
+  getPathPreview(targetNodeId) {
+    return this.get(`/world/path/${targetNodeId}`);
+  }
+
   getCurrentNode() {
     return this.get('/world/current');
+  }
+
+  // Stamina endpoints
+  getCharacterStamina(characterId) {
+    return this.get(`/characters/${characterId}/stamina`);
   }
 
   // Battle endpoints

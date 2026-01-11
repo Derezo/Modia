@@ -3,6 +3,7 @@ import { query } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats } from '../config/constants.js';
+import * as staminaService from '../services/staminaService.js';
 
 const router = express.Router();
 
@@ -28,14 +29,21 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     `SELECT id, name, race, class, gender, level, experience,
             hp_current, hp_max, mp_current, mp_max,
             strength, intelligence, agility, vitality, luck,
-            party_slot, current_node_id, in_battle, created_at
+            party_slot, current_node_id, in_battle, created_at,
+            stamina, stamina_updated_at, max_stamina
      FROM characters
      WHERE user_id = $1
      ORDER BY party_slot ASC NULLS LAST, created_at ASC`,
     [req.user.userId]
   );
 
-  res.json({ characters: result.rows });
+  // Calculate current stamina with regeneration for each character
+  const characters = result.rows.map(char => ({
+    ...char,
+    stamina_current: staminaService.calculateCurrentStamina(char)
+  }));
+
+  res.json({ characters });
 }));
 
 // POST /api/characters - Create new character
@@ -150,7 +158,30 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Character not found', 404);
   }
 
-  res.json({ character: result.rows[0] });
+  const character = {
+    ...result.rows[0],
+    stamina_current: staminaService.calculateCurrentStamina(result.rows[0])
+  };
+
+  res.json({ character });
+}));
+
+// GET /api/characters/:id/stamina - Get detailed stamina info for a character
+router.get('/:id/stamina', authenticate, asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // Verify ownership
+  const ownership = await query(
+    'SELECT id FROM characters WHERE id = $1 AND user_id = $2',
+    [id, req.user.userId]
+  );
+
+  if (ownership.rows.length === 0) {
+    throw new AppError('Character not found', 404);
+  }
+
+  const staminaInfo = await staminaService.getStaminaInfo(parseInt(id, 10));
+  res.json({ stamina: staminaInfo });
 }));
 
 // PUT /api/characters/:id - Update character (name only for now)
