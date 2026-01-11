@@ -1,4 +1,20 @@
 import { Scene } from './Scene.js';
+import {
+  PARCHMENT_COLORS,
+  PARCHMENT_TYPOGRAPHY,
+  PARCHMENT_SPACING,
+  PARCHMENT_RADIUS,
+  getParchmentGradient,
+  getParchmentBorder,
+  getParchmentShadow,
+  getParchmentInputCSS,
+  getParchmentButtonCSS
+} from '../ui/parchment/index.js';
+
+// Local alias for cleaner access
+const P = PARCHMENT_COLORS;
+
+const STYLE_ID = 'register-scene-styles';
 
 export class RegisterScene extends Scene {
   constructor(game) {
@@ -21,6 +37,7 @@ export class RegisterScene extends Scene {
       password: false,
       'confirm-password': false
     };
+    this.addStyles();
     this.createUI();
   }
 
@@ -29,40 +46,231 @@ export class RegisterScene extends Scene {
       this.formElement.remove();
       this.formElement = null;
     }
+    // Clean up styles
+    const styleEl = document.getElementById(STYLE_ID);
+    if (styleEl) styleEl.remove();
+  }
+
+  addStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = `
+      .register-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 340px;
+        max-width: 90%;
+        text-align: center;
+      }
+
+      .register-title {
+        color: ${P.text.primary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: 42px;
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        margin-bottom: ${PARCHMENT_SPACING.xl};
+        letter-spacing: 2px;
+      }
+
+      .register-panel {
+        background: ${getParchmentGradient()};
+        border: ${getParchmentBorder()};
+        box-shadow: ${getParchmentShadow(true)};
+        border-radius: ${PARCHMENT_RADIUS.lg};
+        padding: ${PARCHMENT_SPACING.xl};
+      }
+
+      .register-panel-header {
+        color: ${P.text.primary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.lg};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        margin-bottom: ${PARCHMENT_SPACING.lg};
+        padding-bottom: ${PARCHMENT_SPACING.sm};
+        border-bottom: 1px solid ${P.border};
+      }
+
+      .register-form-group {
+        margin-bottom: ${PARCHMENT_SPACING.md};
+        text-align: left;
+      }
+
+      .register-label {
+        display: block;
+        color: ${P.text.primary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        margin-bottom: ${PARCHMENT_SPACING.xs};
+      }
+
+      .register-input {
+        width: 100%;
+        box-sizing: border-box;
+        ${getParchmentInputCSS()}
+      }
+
+      .register-input:focus {
+        border-color: ${P.borderDark};
+        box-shadow: 0 0 0 2px rgba(139, 115, 85, 0.2);
+      }
+
+      .register-input::placeholder {
+        color: ${P.text.muted};
+      }
+
+      .register-input.input-valid {
+        border-color: ${P.state.success};
+      }
+
+      .register-input.input-invalid {
+        border-color: ${P.state.error};
+      }
+
+      .register-input.input-valid:focus {
+        box-shadow: 0 0 0 2px rgba(74, 117, 72, 0.2);
+      }
+
+      .register-input.input-invalid:focus {
+        box-shadow: 0 0 0 2px rgba(139, 68, 68, 0.2);
+      }
+
+      .register-field-error {
+        color: ${P.state.error};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        min-height: 16px;
+        margin-top: 4px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+
+      .register-field-error.visible {
+        opacity: 1;
+      }
+
+      .register-error {
+        background: rgba(139, 68, 68, 0.15);
+        border: 1px solid ${P.state.error};
+        border-radius: ${PARCHMENT_RADIUS.sm};
+        color: ${P.state.error};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
+        margin-bottom: ${PARCHMENT_SPACING.md};
+        animation: registerShake 0.4s ease;
+      }
+
+      .register-btn {
+        width: 100%;
+        margin-top: ${PARCHMENT_SPACING.sm};
+        ${getParchmentButtonCSS('primary')}
+      }
+
+      .register-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      }
+
+      .register-btn:active:not(:disabled) {
+        transform: translateY(0);
+      }
+
+      .register-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      .register-btn.btn-loading {
+        background: ${P.border};
+      }
+
+      .register-switch {
+        margin-top: ${PARCHMENT_SPACING.lg};
+        color: ${P.text.secondary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+      }
+
+      .register-switch a {
+        color: ${P.accent.gold};
+        cursor: pointer;
+        text-decoration: underline;
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      }
+
+      .register-switch a:hover {
+        color: ${P.border};
+      }
+
+      .register-panel.form-loading .register-input {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      @keyframes registerShake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+      }
+
+      @media (max-width: 600px) {
+        .register-container {
+          width: 90%;
+          max-width: 320px;
+        }
+
+        .register-input {
+          min-height: 44px;
+          padding: 12px 14px;
+        }
+
+        .register-btn {
+          min-height: 44px;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
   }
 
   createUI() {
     const container = document.createElement('div');
-    container.className = 'auth-container';
+    container.className = 'register-container';
     container.innerHTML = `
-      <h1 class="auth-title">Modia</h1>
-      <div class="ui-panel" id="register-panel">
-        <div class="ui-panel-header">Create Account</div>
-        <div id="auth-error" class="auth-error" style="display: none;"></div>
+      <h1 class="register-title">Modia</h1>
+      <div class="register-panel" id="register-panel">
+        <div class="register-panel-header">Create Account</div>
+        <div id="auth-error" class="register-error" style="display: none;"></div>
         <form id="register-form">
-          <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" class="input-field" placeholder="3-32 characters" autocomplete="username" required minlength="3" maxlength="32">
-            <div class="field-error" id="username-error"></div>
+          <div class="register-form-group">
+            <label for="username" class="register-label">Username</label>
+            <input type="text" id="username" class="register-input" placeholder="3-32 characters" autocomplete="username" required minlength="3" maxlength="32">
+            <div class="register-field-error" id="username-error"></div>
           </div>
-          <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" class="input-field" placeholder="your@email.com" autocomplete="email" required>
-            <div class="field-error" id="email-error"></div>
+          <div class="register-form-group">
+            <label for="email" class="register-label">Email</label>
+            <input type="email" id="email" class="register-input" placeholder="your@email.com" autocomplete="email" required>
+            <div class="register-field-error" id="email-error"></div>
           </div>
-          <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" class="input-field" placeholder="8+ characters" autocomplete="new-password" required minlength="8">
-            <div class="field-error" id="password-error"></div>
+          <div class="register-form-group">
+            <label for="password" class="register-label">Password</label>
+            <input type="password" id="password" class="register-input" placeholder="8+ characters" autocomplete="new-password" required minlength="8">
+            <div class="register-field-error" id="password-error"></div>
           </div>
-          <div class="form-group">
-            <label for="confirm-password">Confirm Password</label>
-            <input type="password" id="confirm-password" class="input-field" placeholder="Repeat password" autocomplete="new-password" required>
-            <div class="field-error" id="confirm-password-error"></div>
+          <div class="register-form-group">
+            <label for="confirm-password" class="register-label">Confirm Password</label>
+            <input type="password" id="confirm-password" class="register-input" placeholder="Repeat password" autocomplete="new-password" required>
+            <div class="register-field-error" id="confirm-password-error"></div>
           </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%;" id="register-btn">Register</button>
+          <button type="submit" class="register-btn" id="register-btn">Register</button>
         </form>
-        <div class="auth-switch">
+        <div class="register-switch">
           Already have an account? <a id="login-link">Login</a>
         </div>
       </div>
@@ -277,10 +485,53 @@ export class RegisterScene extends Scene {
   update(deltaTime) {}
 
   render(ctx) {
+    // Draw parchment-themed background gradient
     const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
-    gradient.addColorStop(0, '#16213e');
-    gradient.addColorStop(1, '#1a1a2e');
+    gradient.addColorStop(0, P.light);
+    gradient.addColorStop(0.5, P.mid);
+    gradient.addColorStop(1, P.dark);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    // Draw subtle decorative elements with gold accents
+    ctx.fillStyle = 'rgba(201, 162, 39, 0.08)';
+    for (let i = 0; i < 5; i++) {
+      const x = 100 + i * 150;
+      const y = 450 + Math.sin(Date.now() / 1000 + i) * 20;
+      ctx.beginPath();
+      ctx.arc(x, y, 30 + i * 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Add subtle corner flourishes
+    ctx.strokeStyle = P.border;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.3;
+
+    // Top-left flourish
+    ctx.beginPath();
+    ctx.moveTo(20, 60);
+    ctx.quadraticCurveTo(20, 20, 60, 20);
+    ctx.stroke();
+
+    // Top-right flourish
+    ctx.beginPath();
+    ctx.moveTo(ctx.canvas.width - 20, 60);
+    ctx.quadraticCurveTo(ctx.canvas.width - 20, 20, ctx.canvas.width - 60, 20);
+    ctx.stroke();
+
+    // Bottom-left flourish
+    ctx.beginPath();
+    ctx.moveTo(20, ctx.canvas.height - 60);
+    ctx.quadraticCurveTo(20, ctx.canvas.height - 20, 60, ctx.canvas.height - 20);
+    ctx.stroke();
+
+    // Bottom-right flourish
+    ctx.beginPath();
+    ctx.moveTo(ctx.canvas.width - 20, ctx.canvas.height - 60);
+    ctx.quadraticCurveTo(ctx.canvas.width - 20, ctx.canvas.height - 20, ctx.canvas.width - 60, ctx.canvas.height - 20);
+    ctx.stroke();
+
+    ctx.globalAlpha = 1.0;
   }
 }

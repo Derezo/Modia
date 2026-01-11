@@ -1,4 +1,37 @@
 import { Scene } from './Scene.js';
+import {
+  PARCHMENT_COLORS,
+  PARCHMENT_TYPOGRAPHY,
+  PARCHMENT_SPACING,
+  PARCHMENT_RADIUS,
+  getParchmentGradient,
+  getParchmentBorder,
+  getParchmentShadow,
+  getParchmentButtonCSS,
+  getParchmentPanelCSS
+} from '../ui/parchment/index.js';
+
+// Alias for concise color access
+const P = PARCHMENT_COLORS;
+
+// Arena-specific colors for the blood/gold PvP aesthetic
+const ARENA_COLORS = {
+  blood: '#ff4444',
+  bloodLight: '#ff6666',
+  bloodDark: '#cc0000',
+  bloodDeep: '#8b0000',
+  gold: '#ffd700',
+  goldLight: '#ffe44d',
+  goldDark: '#c9a227',
+  backgroundDark: '#1a0a0a',
+  backgroundMid: '#2a1a1a',
+  victory: '#4caf50',
+  victoryDark: '#388e3c',
+  defeat: '#f44336',
+  defeatDark: '#d32f2f',
+  readyGreen: '#00ff00',
+  readyGreenDark: '#00cc00'
+};
 
 /**
  * ColiseumScene - PvP Arena for matchmaking and battles
@@ -90,38 +123,41 @@ export class ColiseumScene extends Scene {
     const style = document.createElement('style');
     style.id = 'coliseum-scene-styles';
     style.textContent = `
+      /* Arena-themed container background */
       .coliseum-container {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(135deg, #2a1a1a 0%, #1a0a0a 100%);
+        background: linear-gradient(135deg, ${ARENA_COLORS.backgroundMid} 0%, ${ARENA_COLORS.backgroundDark} 100%);
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 20px;
+        padding: ${PARCHMENT_SPACING.xl};
         box-sizing: border-box;
       }
 
+      /* Header with arena accent */
       .coliseum-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         width: 100%;
         max-width: 900px;
-        margin-bottom: 20px;
+        margin-bottom: ${PARCHMENT_SPACING.xl};
       }
 
       .coliseum-title {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: ${PARCHMENT_SPACING.md};
       }
 
       .coliseum-title h2 {
         margin: 0;
-        color: #ff4444;
+        color: ${ARENA_COLORS.blood};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         text-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
       }
 
@@ -129,41 +165,42 @@ export class ColiseumScene extends Scene {
         font-size: 32px;
       }
 
-      /* Tab Navigation */
+      /* Tab Navigation - Parchment styled */
       .coliseum-tabs {
         display: flex;
-        gap: 4px;
+        gap: ${PARCHMENT_SPACING.xs};
         width: 100%;
         max-width: 900px;
-        margin-bottom: 20px;
-        background: rgba(0, 0, 0, 0.3);
-        padding: 8px;
-        border-radius: 12px;
+        margin-bottom: ${PARCHMENT_SPACING.xl};
+        ${getParchmentPanelCSS()}
+        padding: ${PARCHMENT_SPACING.sm};
       }
 
       .coliseum-tab {
-        padding: 12px 24px;
-        background: rgba(0, 0, 0, 0.3);
-        border: 2px solid transparent;
-        border-radius: 8px;
-        color: #888;
+        padding: ${PARCHMENT_SPACING.md} ${PARCHMENT_SPACING.xl};
+        background: ${P.light};
+        border: 1px solid ${P.border};
+        border-radius: ${PARCHMENT_RADIUS.md};
+        color: ${P.text.secondary};
         cursor: pointer;
         transition: all 0.2s;
-        font-size: 14px;
-        font-weight: bold;
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         flex: 1;
         text-align: center;
       }
 
       .coliseum-tab:hover {
-        background: rgba(255, 68, 68, 0.1);
-        color: #ff6666;
+        background: ${P.mid};
+        color: ${P.text.primary};
+        border-color: ${P.borderDark};
       }
 
       .coliseum-tab.active {
-        background: rgba(255, 68, 68, 0.2);
-        border-color: #ff4444;
-        color: #ff4444;
+        background: linear-gradient(to bottom, ${P.border} 0%, ${P.borderDark} 100%);
+        border-color: ${P.borderDark};
+        color: ${P.text.inverse};
       }
 
       .coliseum-content {
@@ -176,790 +213,823 @@ export class ColiseumScene extends Scene {
         overflow-y: auto;
       }
 
-      .queue-selection {
+      /* Queue Selection Cards - Parchment themed */
+      .coliseum-queue-selection {
         display: flex;
-        gap: 20px;
-        margin-bottom: 30px;
+        gap: ${PARCHMENT_SPACING.xl};
+        margin-bottom: ${PARCHMENT_SPACING.xxl};
         flex-wrap: wrap;
         justify-content: center;
       }
 
-      .queue-card {
-        background: rgba(0, 0, 0, 0.4);
-        border: 2px solid #444;
-        border-radius: 12px;
-        padding: 20px;
+      .coliseum-queue-card {
+        ${getParchmentPanelCSS()}
+        padding: ${PARCHMENT_SPACING.xl};
         min-width: 180px;
         text-align: center;
         cursor: pointer;
         transition: all 0.3s;
       }
 
-      .queue-card:hover {
-        border-color: #ff4444;
+      .coliseum-queue-card:hover {
+        border-color: ${P.accent.gold};
         transform: translateY(-4px);
-        box-shadow: 0 8px 20px rgba(255, 68, 68, 0.3);
+        box-shadow: ${getParchmentShadow(true)}, 0 0 12px rgba(201, 162, 39, 0.3);
       }
 
-      .queue-card.selected {
-        border-color: #ff4444;
-        background: rgba(255, 68, 68, 0.1);
+      .coliseum-queue-card.selected {
+        border-color: ${P.accent.gold};
+        box-shadow: ${getParchmentShadow(true)}, 0 0 0 2px ${P.accent.gold};
       }
 
-      .queue-card.disabled {
+      .coliseum-queue-card.disabled {
         opacity: 0.5;
         cursor: not-allowed;
       }
 
-      .queue-card-title {
-        font-size: 24px;
-        font-weight: bold;
-        color: #ff6666;
-        margin-bottom: 8px;
+      .coliseum-queue-card-title {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xxl};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${P.text.primary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-bottom: ${PARCHMENT_SPACING.sm};
       }
 
-      .queue-card-desc {
-        font-size: 13px;
-        color: #aaa;
-        margin-bottom: 12px;
+      .coliseum-queue-card-desc {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        color: ${P.text.secondary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-bottom: ${PARCHMENT_SPACING.md};
       }
 
-      .queue-card-status {
-        font-size: 12px;
-        color: #888;
+      .coliseum-queue-card-status {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .queue-card-players {
-        color: #4a90d9;
+      .coliseum-queue-card-players {
+        color: ${P.state.info};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       }
 
-      .queue-panel {
-        background: rgba(0, 0, 0, 0.5);
-        border: 2px solid #444;
-        border-radius: 12px;
-        padding: 30px;
+      /* Queue Panel - Parchment themed */
+      .coliseum-queue-panel {
+        ${getParchmentPanelCSS()}
+        padding: ${PARCHMENT_SPACING.xxl};
         text-align: center;
         width: 100%;
         max-width: 400px;
       }
 
-      .queue-panel-title {
-        font-size: 18px;
-        color: #fff;
-        margin-bottom: 20px;
+      .coliseum-queue-panel-title {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+        color: ${P.text.primary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-bottom: ${PARCHMENT_SPACING.xl};
       }
 
-      .queue-btn {
-        padding: 15px 40px;
-        font-size: 18px;
-        font-weight: bold;
+      /* Queue Buttons */
+      .coliseum-queue-btn {
+        padding: ${PARCHMENT_SPACING.lg} 40px;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         border: none;
-        border-radius: 8px;
+        border-radius: ${PARCHMENT_RADIUS.md};
         cursor: pointer;
         transition: all 0.2s;
       }
 
-      .queue-btn.join {
-        background: linear-gradient(180deg, #ff4444, #cc0000);
+      .coliseum-queue-btn.join {
+        background: linear-gradient(180deg, ${ARENA_COLORS.blood}, ${ARENA_COLORS.bloodDark});
         color: white;
+        border: 1px solid ${ARENA_COLORS.bloodDeep};
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
       }
 
-      .queue-btn.join:hover:not(:disabled) {
-        background: linear-gradient(180deg, #ff6666, #dd2222);
+      .coliseum-queue-btn.join:hover:not(:disabled) {
+        background: linear-gradient(180deg, ${ARENA_COLORS.bloodLight}, ${ARENA_COLORS.blood});
         transform: scale(1.05);
       }
 
-      .queue-btn.leave {
-        background: linear-gradient(180deg, #666, #444);
-        color: white;
+      .coliseum-queue-btn.leave {
+        ${getParchmentButtonCSS('secondary')}
+        padding: ${PARCHMENT_SPACING.lg} 40px;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
       }
 
-      .queue-btn.leave:hover {
-        background: linear-gradient(180deg, #888, #666);
+      .coliseum-queue-btn.leave:hover {
+        background: ${P.mid};
       }
 
-      .queue-btn:disabled {
+      .coliseum-queue-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
       }
 
-      .queue-status {
-        margin-top: 20px;
-        padding: 20px;
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 8px;
+      /* Queue Status - Parchment panel */
+      .coliseum-queue-status {
+        margin-top: ${PARCHMENT_SPACING.xl};
+        padding: ${PARCHMENT_SPACING.xl};
+        background: ${P.dark};
+        border: 1px solid ${P.border};
+        border-radius: ${PARCHMENT_RADIUS.md};
       }
 
-      .queue-position {
+      .coliseum-queue-position {
         font-size: 36px;
-        font-weight: bold;
-        color: #ff4444;
-        margin-bottom: 8px;
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${ARENA_COLORS.blood};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-bottom: ${PARCHMENT_SPACING.sm};
       }
 
-      .queue-label {
-        font-size: 14px;
-        color: #888;
-        margin-bottom: 16px;
+      .coliseum-queue-label {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-bottom: ${PARCHMENT_SPACING.lg};
       }
 
-      .queue-waiting {
+      .coliseum-queue-waiting {
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 10px;
-        color: #aaa;
+        color: ${P.text.secondary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .queue-spinner {
+      .coliseum-queue-spinner {
         width: 20px;
         height: 20px;
-        border: 3px solid #444;
-        border-top-color: #ff4444;
+        border: 3px solid ${P.border};
+        border-top-color: ${ARENA_COLORS.blood};
         border-radius: 50%;
-        animation: spin 1s linear infinite;
+        animation: coliseum-spin 1s linear infinite;
       }
 
-      @keyframes spin {
+      @keyframes coliseum-spin {
         to { transform: rotate(360deg); }
       }
 
-      .match-found-panel {
-        background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.2));
-        border: 3px solid #ffd700;
-        border-radius: 12px;
-        padding: 30px;
+      /* Match Found Panel - Arena themed (gold/excitement) */
+      .coliseum-match-found-panel {
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 140, 0, 0.1));
+        border: 3px solid ${ARENA_COLORS.gold};
+        border-radius: ${PARCHMENT_RADIUS.lg};
+        padding: ${PARCHMENT_SPACING.xxl};
         text-align: center;
         width: 100%;
         max-width: 500px;
-        animation: pulse 2s ease-in-out infinite;
+        animation: coliseum-pulse 2s ease-in-out infinite;
       }
 
-      @keyframes pulse {
+      @keyframes coliseum-pulse {
         0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
         50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.6); }
       }
 
-      .match-found-title {
+      .coliseum-match-found-title {
         font-size: 28px;
-        font-weight: bold;
-        color: #ffd700;
-        margin-bottom: 20px;
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${ARENA_COLORS.gold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-bottom: ${PARCHMENT_SPACING.xl};
         text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
       }
 
-      .opponent-info {
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 20px;
+      /* Opponent Info - Parchment panel inside match found */
+      .coliseum-opponent-info {
+        ${getParchmentPanelCSS()}
+        padding: ${PARCHMENT_SPACING.lg};
+        margin-bottom: ${PARCHMENT_SPACING.xl};
       }
 
-      .opponent-label {
-        font-size: 12px;
-        color: #888;
-        margin-bottom: 8px;
+      .coliseum-opponent-label {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-bottom: ${PARCHMENT_SPACING.sm};
       }
 
-      .opponent-name {
-        font-size: 20px;
-        color: #ff4444;
-        font-weight: bold;
+      .coliseum-opponent-name {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+        color: ${ARENA_COLORS.blood};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .opponent-level {
-        font-size: 14px;
-        color: #aaa;
-        margin-top: 4px;
+      .coliseum-opponent-level {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+        color: ${P.text.secondary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-top: ${PARCHMENT_SPACING.xs};
       }
 
-      .ready-section {
-        margin-top: 20px;
+      .coliseum-ready-section {
+        margin-top: ${PARCHMENT_SPACING.xl};
       }
 
-      .ready-btn {
-        padding: 15px 50px;
-        font-size: 20px;
-        font-weight: bold;
-        background: linear-gradient(180deg, #00aa00, #008800);
+      .coliseum-ready-btn {
+        padding: ${PARCHMENT_SPACING.lg} 50px;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        background: linear-gradient(180deg, ${ARENA_COLORS.victory}, ${ARENA_COLORS.victoryDark});
         color: white;
         border: none;
-        border-radius: 8px;
+        border-radius: ${PARCHMENT_RADIUS.md};
         cursor: pointer;
         transition: all 0.2s;
       }
 
-      .ready-btn:hover:not(:disabled) {
-        background: linear-gradient(180deg, #00cc00, #00aa00);
+      .coliseum-ready-btn:hover:not(:disabled) {
+        background: linear-gradient(180deg, #5dbf5d, ${ARENA_COLORS.victory});
         transform: scale(1.05);
       }
 
-      .ready-btn.ready {
-        background: linear-gradient(180deg, #888, #666);
+      .coliseum-ready-btn.ready {
+        ${getParchmentButtonCSS('secondary')}
+        padding: ${PARCHMENT_SPACING.lg} 50px;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
       }
 
-      .ready-btn:disabled {
+      .coliseum-ready-btn:disabled {
         cursor: not-allowed;
       }
 
-      .ready-status {
+      .coliseum-ready-status {
         display: flex;
         justify-content: center;
-        gap: 30px;
-        margin-top: 16px;
+        gap: ${PARCHMENT_SPACING.xxl};
+        margin-top: ${PARCHMENT_SPACING.lg};
       }
 
-      .ready-indicator {
+      .coliseum-ready-indicator {
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-size: 14px;
+        gap: ${PARCHMENT_SPACING.sm};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        color: ${P.text.inverse};
       }
 
-      .ready-indicator .dot {
+      .coliseum-ready-indicator .dot {
         width: 12px;
         height: 12px;
         border-radius: 50%;
-        background: #444;
+        background: ${P.border};
       }
 
-      .ready-indicator .dot.ready {
-        background: #00ff00;
+      .coliseum-ready-indicator .dot.ready {
+        background: ${ARENA_COLORS.readyGreen};
         box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
       }
 
-      .countdown {
-        font-size: 18px;
-        color: #ff4444;
-        margin-top: 16px;
+      .coliseum-countdown {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+        color: ${ARENA_COLORS.blood};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-top: ${PARCHMENT_SPACING.lg};
       }
 
-      .countdown-number {
+      .coliseum-countdown-number {
         font-size: 36px;
-        font-weight: bold;
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       }
 
-      .match-starting {
+      .coliseum-match-starting {
         background: rgba(0, 255, 0, 0.1);
-        border-color: #00ff00;
+        border-color: ${ARENA_COLORS.readyGreen};
       }
 
-      .match-starting .match-found-title {
-        color: #00ff00;
+      .coliseum-match-starting .coliseum-match-found-title {
+        color: ${ARENA_COLORS.readyGreen};
       }
 
-      /* Leaderboard Styles */
-      .leaderboard-container {
+      /* Leaderboard Styles - Parchment themed */
+      .coliseum-leaderboard-container {
         width: 100%;
         max-width: 800px;
       }
 
-      .leaderboard-filters {
+      .coliseum-leaderboard-filters {
         display: flex;
-        gap: 16px;
-        margin-bottom: 20px;
+        gap: ${PARCHMENT_SPACING.lg};
+        margin-bottom: ${PARCHMENT_SPACING.xl};
         flex-wrap: wrap;
       }
 
-      .filter-group {
+      .coliseum-filter-group {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: ${PARCHMENT_SPACING.sm};
       }
 
-      .filter-group label {
-        color: #888;
-        font-size: 14px;
+      .coliseum-filter-group label {
+        color: ${P.text.inverse};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .filter-group select {
-        padding: 8px 12px;
-        background: rgba(0, 0, 0, 0.5);
-        border: 1px solid #444;
-        border-radius: 6px;
-        color: #fff;
-        font-size: 14px;
+      .coliseum-filter-group select {
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
+        background: ${P.light};
+        border: 1px solid ${P.border};
+        border-radius: ${PARCHMENT_RADIUS.sm};
+        color: ${P.text.primary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
         cursor: pointer;
       }
 
-      .filter-group select:hover {
-        border-color: #ff4444;
+      .coliseum-filter-group select:hover {
+        border-color: ${P.borderDark};
       }
 
-      .leaderboard-table {
+      .coliseum-leaderboard-table {
         width: 100%;
         border-collapse: collapse;
-        background: rgba(0, 0, 0, 0.4);
-        border-radius: 12px;
+        ${getParchmentPanelCSS()}
         overflow: hidden;
       }
 
-      .leaderboard-table th,
-      .leaderboard-table td {
-        padding: 14px 16px;
+      .coliseum-leaderboard-table th,
+      .coliseum-leaderboard-table td {
+        padding: ${PARCHMENT_SPACING.md} ${PARCHMENT_SPACING.lg};
         text-align: left;
-        border-bottom: 1px solid #333;
+        border-bottom: 1px solid ${P.border};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .leaderboard-table th {
-        background: rgba(255, 68, 68, 0.2);
-        color: #ff6666;
-        font-weight: bold;
-        font-size: 13px;
+      .coliseum-leaderboard-table th {
+        background: linear-gradient(to bottom, ${P.border} 0%, ${P.borderDark} 100%);
+        color: ${P.text.inverse};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
         text-transform: uppercase;
       }
 
-      .leaderboard-table tr:hover {
-        background: rgba(255, 68, 68, 0.1);
+      .coliseum-leaderboard-table tr:hover {
+        background: ${P.mid};
       }
 
-      .leaderboard-table tr.current-user {
-        background: rgba(255, 215, 0, 0.15);
-        border-left: 3px solid #ffd700;
+      .coliseum-leaderboard-table tr.current-user {
+        background: rgba(201, 162, 39, 0.2);
+        border-left: 3px solid ${P.accent.gold};
       }
 
-      .leaderboard-table tr.current-user td:first-child::before {
+      .coliseum-leaderboard-table tr.current-user td:first-child::before {
         content: '';
         margin-right: 6px;
       }
 
-      .rank-cell {
-        font-weight: bold;
-        color: #fff;
+      .coliseum-rank-cell {
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${P.text.primary};
         min-width: 60px;
       }
 
-      .rank-1 { color: #ffd700; }
-      .rank-2 { color: #c0c0c0; }
-      .rank-3 { color: #cd7f32; }
+      .coliseum-rank-1 { color: ${ARENA_COLORS.gold}; }
+      .coliseum-rank-2 { color: #c0c0c0; }
+      .coliseum-rank-3 { color: #cd7f32; }
 
-      .crown-icon {
+      .coliseum-crown-icon {
         font-size: 18px;
-        margin-left: 4px;
+        margin-left: ${PARCHMENT_SPACING.xs};
       }
 
-      .player-name {
-        color: #4a90d9;
+      .coliseum-player-name {
+        color: ${P.state.info};
         font-weight: 500;
       }
 
-      .rating-cell {
-        color: #ff4444;
-        font-weight: bold;
+      .coliseum-rating-cell {
+        color: ${ARENA_COLORS.blood};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       }
 
-      .winloss-cell {
-        color: #aaa;
+      .coliseum-winloss-cell {
+        color: ${P.text.secondary};
       }
 
-      .winloss-cell .wins { color: #4caf50; }
-      .winloss-cell .losses { color: #f44336; }
+      .coliseum-winloss-cell .wins { color: ${P.state.success}; }
+      .coliseum-winloss-cell .losses { color: ${P.state.error}; }
 
-      .streak-cell {
-        color: #ffd700;
+      .coliseum-streak-cell {
+        color: ${P.accent.gold};
       }
 
-      .user-rank-banner {
-        margin-top: 20px;
-        padding: 16px;
-        background: rgba(255, 215, 0, 0.1);
-        border: 1px solid #ffd700;
-        border-radius: 8px;
+      .coliseum-user-rank-banner {
+        margin-top: ${PARCHMENT_SPACING.xl};
+        padding: ${PARCHMENT_SPACING.lg};
+        ${getParchmentPanelCSS()}
+        border-color: ${P.accent.gold};
         text-align: center;
       }
 
-      .user-rank-banner .rank-label {
-        color: #888;
-        font-size: 14px;
-        margin-bottom: 4px;
+      .coliseum-user-rank-banner .rank-label {
+        color: ${P.text.secondary};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-bottom: ${PARCHMENT_SPACING.xs};
       }
 
-      .user-rank-banner .rank-value {
-        color: #ffd700;
-        font-size: 24px;
-        font-weight: bold;
+      .coliseum-user-rank-banner .rank-value {
+        color: ${P.accent.gold};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xxl};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .loading-spinner {
+      .coliseum-loading-spinner {
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 40px;
-        color: #888;
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .no-data-message {
+      .coliseum-no-data-message {
         padding: 40px;
         text-align: center;
-        color: #666;
+        color: ${P.text.muted};
         font-style: italic;
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      /* Match History Styles */
-      .history-container {
+      /* Match History Styles - Parchment themed */
+      .coliseum-history-container {
         width: 100%;
         max-width: 800px;
       }
 
-      .history-filters {
+      .coliseum-history-filters {
         display: flex;
-        gap: 16px;
-        margin-bottom: 20px;
+        gap: ${PARCHMENT_SPACING.lg};
+        margin-bottom: ${PARCHMENT_SPACING.xl};
       }
 
-      .history-list {
+      .coliseum-history-list {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: ${PARCHMENT_SPACING.md};
       }
 
-      .match-card {
-        background: rgba(0, 0, 0, 0.4);
-        border: 1px solid #333;
-        border-radius: 10px;
-        padding: 16px;
+      .coliseum-match-card {
+        ${getParchmentPanelCSS()}
+        padding: ${PARCHMENT_SPACING.lg};
         display: flex;
         justify-content: space-between;
         align-items: center;
         transition: all 0.2s;
       }
 
-      .match-card:hover {
-        border-color: #ff4444;
-        background: rgba(255, 68, 68, 0.1);
+      .coliseum-match-card:hover {
+        border-color: ${P.borderDark};
+        box-shadow: ${getParchmentShadow(true)};
       }
 
-      .match-card.victory {
-        border-left: 4px solid #4caf50;
+      .coliseum-match-card.victory {
+        border-left: 4px solid ${P.state.success};
       }
 
-      .match-card.defeat {
-        border-left: 4px solid #f44336;
+      .coliseum-match-card.defeat {
+        border-left: 4px solid ${P.state.error};
       }
 
-      .match-info {
+      .coliseum-match-info {
         flex: 1;
       }
 
-      .match-result {
-        font-size: 16px;
-        color: #fff;
+      .coliseum-match-result {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.lg};
+        color: ${P.text.primary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         margin-bottom: 6px;
       }
 
-      .match-result .winner {
-        color: #4caf50;
-        font-weight: bold;
+      .coliseum-match-result .winner {
+        color: ${P.state.success};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       }
 
-      .match-result .loser {
-        color: #f44336;
+      .coliseum-match-result .loser {
+        color: ${P.state.error};
       }
 
-      .match-meta {
+      .coliseum-match-meta {
         display: flex;
-        gap: 16px;
-        font-size: 12px;
-        color: #888;
+        gap: ${PARCHMENT_SPACING.lg};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .match-meta span {
+      .coliseum-match-meta span {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: ${PARCHMENT_SPACING.xs};
       }
 
-      .rating-change {
-        font-weight: bold;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 14px;
+      .coliseum-rating-change {
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        padding: ${PARCHMENT_SPACING.xs} ${PARCHMENT_SPACING.sm};
+        border-radius: ${PARCHMENT_RADIUS.sm};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
       }
 
-      .rating-change.positive {
-        background: rgba(76, 175, 80, 0.2);
-        color: #4caf50;
+      .coliseum-rating-change.positive {
+        background: rgba(74, 117, 72, 0.2);
+        color: ${P.state.success};
       }
 
-      .rating-change.negative {
-        background: rgba(244, 67, 54, 0.2);
-        color: #f44336;
+      .coliseum-rating-change.negative {
+        background: rgba(139, 68, 68, 0.2);
+        color: ${P.state.error};
       }
 
-      .details-btn {
-        padding: 8px 16px;
-        background: rgba(74, 144, 217, 0.2);
-        border: 1px solid #4a90d9;
-        border-radius: 6px;
-        color: #4a90d9;
-        cursor: pointer;
-        font-size: 13px;
-        transition: all 0.2s;
-        margin-left: 16px;
+      .coliseum-details-btn {
+        ${getParchmentButtonCSS('secondary')}
+        margin-left: ${PARCHMENT_SPACING.lg};
       }
 
-      .details-btn:hover {
-        background: rgba(74, 144, 217, 0.4);
+      .coliseum-details-btn:hover {
+        background: ${P.mid};
+        border-color: ${P.borderDark};
       }
 
-      .load-more-btn {
-        margin-top: 20px;
-        padding: 12px 32px;
-        background: rgba(255, 68, 68, 0.2);
-        border: 1px solid #ff4444;
-        border-radius: 8px;
-        color: #ff4444;
-        cursor: pointer;
-        font-size: 14px;
-        transition: all 0.2s;
+      .coliseum-load-more-btn {
+        margin-top: ${PARCHMENT_SPACING.xl};
+        ${getParchmentButtonCSS('primary')}
       }
 
-      .load-more-btn:hover:not(:disabled) {
-        background: rgba(255, 68, 68, 0.4);
+      .coliseum-load-more-btn:hover:not(:disabled) {
+        background: linear-gradient(to bottom, ${P.borderLight} 0%, ${P.border} 100%);
       }
 
-      .load-more-btn:disabled {
+      .coliseum-load-more-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
       }
 
-      /* Match Details Modal */
-      .match-details-modal {
+      /* Match Details Modal - Parchment themed */
+      .coliseum-match-details-modal {
         position: fixed;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.8);
+        background: ${P.overlay};
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 1000;
       }
 
-      .match-details-content {
-        background: linear-gradient(135deg, #2a1a1a, #1a0a0a);
-        border: 2px solid #ff4444;
-        border-radius: 16px;
-        padding: 24px;
+      .coliseum-match-details-content {
+        ${getParchmentPanelCSS()}
+        padding: ${PARCHMENT_SPACING.xl};
         max-width: 800px;
         width: 90%;
         max-height: 80vh;
         overflow-y: auto;
       }
 
-      .modal-header {
+      .coliseum-modal-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 24px;
-        padding-bottom: 16px;
-        border-bottom: 1px solid #444;
+        margin-bottom: ${PARCHMENT_SPACING.xl};
+        padding-bottom: ${PARCHMENT_SPACING.lg};
+        border-bottom: 1px solid ${P.border};
       }
 
-      .modal-header h3 {
+      .coliseum-modal-header h3 {
         margin: 0;
-        color: #ff4444;
+        color: ${P.text.primary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         font-size: 22px;
       }
 
-      .modal-close-btn {
+      .coliseum-modal-close-btn {
         background: none;
         border: none;
-        color: #888;
+        color: ${P.text.muted};
         font-size: 28px;
         cursor: pointer;
         padding: 0;
         line-height: 1;
       }
 
-      .modal-close-btn:hover {
-        color: #ff4444;
+      .coliseum-modal-close-btn:hover {
+        color: ${P.text.primary};
       }
 
-      .match-details-result {
+      .coliseum-match-details-result {
         text-align: center;
-        padding: 20px;
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 12px;
-        margin-bottom: 24px;
+        padding: ${PARCHMENT_SPACING.xl};
+        background: ${P.dark};
+        border: 1px solid ${P.border};
+        border-radius: ${PARCHMENT_RADIUS.lg};
+        margin-bottom: ${PARCHMENT_SPACING.xl};
       }
 
-      .result-text {
-        font-size: 24px;
-        font-weight: bold;
-        margin-bottom: 8px;
+      .coliseum-result-text {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xxl};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-bottom: ${PARCHMENT_SPACING.sm};
       }
 
-      .result-text.victory { color: #4caf50; }
-      .result-text.defeat { color: #f44336; }
+      .coliseum-result-text.victory { color: ${P.state.success}; }
+      .coliseum-result-text.defeat { color: ${P.state.error}; }
 
-      .rating-changes {
+      .coliseum-rating-changes {
         display: flex;
         justify-content: center;
-        gap: 32px;
-        margin-top: 12px;
+        gap: ${PARCHMENT_SPACING.xxl};
+        margin-top: ${PARCHMENT_SPACING.md};
       }
 
-      .rating-change-item {
+      .coliseum-rating-change-item {
         text-align: center;
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .rating-change-item .label {
-        font-size: 12px;
-        color: #888;
-        margin-bottom: 4px;
+      .coliseum-rating-change-item .label {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        color: ${P.text.muted};
+        margin-bottom: ${PARCHMENT_SPACING.xs};
       }
 
-      .rating-change-item .value {
-        font-size: 18px;
-        font-weight: bold;
+      .coliseum-rating-change-item .value {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       }
 
-      .teams-section {
+      .coliseum-teams-section {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 24px;
-        margin-bottom: 24px;
+        gap: ${PARCHMENT_SPACING.xl};
+        margin-bottom: ${PARCHMENT_SPACING.xl};
       }
 
-      .team-panel {
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 12px;
-        padding: 16px;
+      .coliseum-team-panel {
+        background: ${P.dark};
+        border: 1px solid ${P.border};
+        border-radius: ${PARCHMENT_RADIUS.lg};
+        padding: ${PARCHMENT_SPACING.lg};
       }
 
-      .team-panel.winner {
-        border: 2px solid #4caf50;
+      .coliseum-team-panel.winner {
+        border: 2px solid ${P.state.success};
       }
 
-      .team-panel.loser {
-        border: 2px solid #f44336;
+      .coliseum-team-panel.loser {
+        border: 2px solid ${P.state.error};
       }
 
-      .team-header {
-        font-size: 14px;
-        font-weight: bold;
-        margin-bottom: 12px;
-        padding-bottom: 8px;
-        border-bottom: 1px solid #333;
+      .coliseum-team-header {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-bottom: ${PARCHMENT_SPACING.md};
+        padding-bottom: ${PARCHMENT_SPACING.sm};
+        border-bottom: 1px solid ${P.border};
       }
 
-      .team-header.winner { color: #4caf50; }
-      .team-header.loser { color: #f44336; }
+      .coliseum-team-header.winner { color: ${P.state.success}; }
+      .coliseum-team-header.loser { color: ${P.state.error}; }
 
-      .character-list {
+      .coliseum-character-list {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: ${PARCHMENT_SPACING.sm};
       }
 
-      .character-item {
+      .coliseum-character-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px;
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 6px;
+        padding: ${PARCHMENT_SPACING.sm};
+        background: ${P.mid};
+        border-radius: ${PARCHMENT_RADIUS.sm};
       }
 
-      .character-name {
-        color: #fff;
+      .coliseum-character-name {
+        color: ${P.text.primary};
         font-weight: 500;
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .character-class {
-        font-size: 12px;
-        color: #888;
+      .coliseum-character-class {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .character-level {
-        color: #ffd700;
-        font-size: 13px;
+      .coliseum-character-level {
+        color: ${P.accent.gold};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .equipment-list {
+      .coliseum-equipment-list {
         margin-top: 6px;
-        padding-left: 12px;
-        font-size: 11px;
+        padding-left: ${PARCHMENT_SPACING.md};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .equipment-item {
-        color: #888;
+      .coliseum-equipment-item {
+        color: ${P.text.muted};
         margin-bottom: 2px;
       }
 
-      .equipment-item.common { color: #aaa; }
-      .equipment-item.uncommon { color: #2ecc71; }
-      .equipment-item.rare { color: #3498db; }
-      .equipment-item.epic { color: #9b59b6; }
-      .equipment-item.legendary { color: #f39c12; }
+      .coliseum-equipment-item.common { color: ${P.text.secondary}; }
+      .coliseum-equipment-item.uncommon { color: ${P.state.success}; }
+      .coliseum-equipment-item.rare { color: ${P.state.info}; }
+      .coliseum-equipment-item.epic { color: #9b59b6; }
+      .coliseum-equipment-item.legendary { color: ${P.accent.gold}; }
 
-      .stats-section {
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 24px;
+      .coliseum-stats-section {
+        background: ${P.dark};
+        border: 1px solid ${P.border};
+        border-radius: ${PARCHMENT_RADIUS.lg};
+        padding: ${PARCHMENT_SPACING.lg};
+        margin-bottom: ${PARCHMENT_SPACING.xl};
       }
 
-      .stats-header {
-        font-size: 14px;
-        font-weight: bold;
-        color: #ff6666;
-        margin-bottom: 12px;
+      .coliseum-stats-header {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        color: ${P.text.primary};
+        margin-bottom: ${PARCHMENT_SPACING.md};
       }
 
-      .stats-grid {
+      .coliseum-stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 12px;
+        gap: ${PARCHMENT_SPACING.md};
       }
 
-      .stat-item {
-        background: rgba(0, 0, 0, 0.2);
-        padding: 12px;
-        border-radius: 6px;
+      .coliseum-stat-item {
+        background: ${P.mid};
+        padding: ${PARCHMENT_SPACING.md};
+        border-radius: ${PARCHMENT_RADIUS.sm};
         text-align: center;
       }
 
-      .stat-item .stat-value {
-        font-size: 20px;
-        font-weight: bold;
-        color: #fff;
+      .coliseum-stat-item .stat-value {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        color: ${P.text.primary};
       }
 
-      .stat-item .stat-label {
-        font-size: 11px;
-        color: #888;
-        margin-top: 4px;
+      .coliseum-stat-item .stat-label {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-top: ${PARCHMENT_SPACING.xs};
       }
 
-      .mvp-section {
-        background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.1));
-        border: 2px solid #ffd700;
-        border-radius: 12px;
-        padding: 16px;
+      /* MVP Section - Arena gold accent */
+      .coliseum-mvp-section {
+        background: linear-gradient(135deg, rgba(201, 162, 39, 0.2), rgba(184, 115, 51, 0.1));
+        border: 2px solid ${P.accent.gold};
+        border-radius: ${PARCHMENT_RADIUS.lg};
+        padding: ${PARCHMENT_SPACING.lg};
         text-align: center;
       }
 
-      .mvp-header {
-        font-size: 12px;
-        color: #ffd700;
-        margin-bottom: 8px;
+      .coliseum-mvp-header {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        color: ${P.accent.gold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-bottom: ${PARCHMENT_SPACING.sm};
         text-transform: uppercase;
         letter-spacing: 1px;
       }
 
-      .mvp-name {
-        font-size: 20px;
-        font-weight: bold;
-        color: #fff;
+      .coliseum-mvp-name {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        color: ${P.text.primary};
       }
 
-      .mvp-stats {
-        font-size: 13px;
-        color: #aaa;
-        margin-top: 8px;
+      .coliseum-mvp-stats {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        color: ${P.text.secondary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        margin-top: ${PARCHMENT_SPACING.sm};
       }
     `;
     document.head.appendChild(style);
@@ -1027,31 +1097,31 @@ export class ColiseumScene extends Scene {
     ];
 
     return `
-      <h3 style="color: #ccc; margin-bottom: 24px;">Select Arena Type</h3>
+      <h3 style="color: ${P.text.inverse}; font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily}; margin-bottom: ${PARCHMENT_SPACING.xl};">Select Arena Type</h3>
 
-      <div class="queue-selection">
+      <div class="coliseum-queue-selection">
         ${queueTypes.map(q => {
           const status = this.queueStatuses.find(s => s.queueType === q.id);
           const playersInQueue = status?.queueSize || 0;
           const isSelected = this.selectedQueue === q.id;
 
           return `
-            <div class="queue-card ${isSelected ? 'selected' : ''}" data-queue="${q.id}">
-              <div class="queue-card-title">${q.name}</div>
-              <div class="queue-card-desc">${q.desc}</div>
-              <div class="queue-card-status">
-                <span class="queue-card-players">${playersInQueue}</span> in queue
+            <div class="coliseum-queue-card ${isSelected ? 'selected' : ''}" data-queue="${q.id}">
+              <div class="coliseum-queue-card-title">${q.name}</div>
+              <div class="coliseum-queue-card-desc">${q.desc}</div>
+              <div class="coliseum-queue-card-status">
+                <span class="coliseum-queue-card-players">${playersInQueue}</span> in queue
               </div>
             </div>
           `;
         }).join('')}
       </div>
 
-      <div class="queue-panel">
-        <div class="queue-panel-title">
+      <div class="coliseum-queue-panel">
+        <div class="coliseum-queue-panel-title">
           ${this.selectedQueue ? `Join ${this.selectedQueue} Queue` : 'Select an arena type above'}
         </div>
-        <button class="queue-btn join" id="join-queue-btn" ${!this.selectedQueue ? 'disabled' : ''}>
+        <button class="coliseum-queue-btn join" id="join-queue-btn" ${!this.selectedQueue ? 'disabled' : ''}>
           Enter Queue
         </button>
       </div>
@@ -1064,20 +1134,20 @@ export class ColiseumScene extends Scene {
     const waitTime = this.formatWaitTime(this.queueStatus?.estimatedWait || 0);
 
     return `
-      <div class="queue-panel" style="max-width: 500px;">
-        <div class="queue-panel-title">Searching for ${this.selectedQueue} Match...</div>
+      <div class="coliseum-queue-panel" style="max-width: 500px;">
+        <div class="coliseum-queue-panel-title">Searching for ${this.selectedQueue} Match...</div>
 
-        <div class="queue-status">
-          <div class="queue-position">#${position}</div>
-          <div class="queue-label">Position in Queue (${queueSize} players waiting)</div>
+        <div class="coliseum-queue-status">
+          <div class="coliseum-queue-position">#${position}</div>
+          <div class="coliseum-queue-label">Position in Queue (${queueSize} players waiting)</div>
 
-          <div class="queue-waiting">
-            <div class="queue-spinner"></div>
+          <div class="coliseum-queue-waiting">
+            <div class="coliseum-queue-spinner"></div>
             <span>Estimated wait: ${waitTime}</span>
           </div>
         </div>
 
-        <button class="queue-btn leave" id="leave-queue-btn" style="margin-top: 20px;">
+        <button class="coliseum-queue-btn leave" id="leave-queue-btn" style="margin-top: ${PARCHMENT_SPACING.xl};">
           Leave Queue
         </button>
       </div>
@@ -1089,34 +1159,34 @@ export class ColiseumScene extends Scene {
     const isStarting = this.isReady && this.opponentReady;
 
     return `
-      <div class="match-found-panel ${isStarting ? 'match-starting' : ''}">
-        <div class="match-found-title">
+      <div class="coliseum-match-found-panel ${isStarting ? 'coliseum-match-starting' : ''}">
+        <div class="coliseum-match-found-title">
           ${isStarting ? 'MATCH STARTING!' : 'MATCH FOUND!'}
         </div>
 
-        <div class="opponent-info">
-          <div class="opponent-label">Your Opponent</div>
-          <div class="opponent-name">${match.opponent?.username || 'Unknown'}</div>
-          <div class="opponent-level">Avg Level: ${match.opponent?.partyLevel || '?'}</div>
+        <div class="coliseum-opponent-info">
+          <div class="coliseum-opponent-label">Your Opponent</div>
+          <div class="coliseum-opponent-name">${match.opponent?.username || 'Unknown'}</div>
+          <div class="coliseum-opponent-level">Avg Level: ${match.opponent?.partyLevel || '?'}</div>
         </div>
 
-        <div class="ready-section">
-          <button class="ready-btn ${this.isReady ? 'ready' : ''}" id="ready-btn" ${this.isReady ? 'disabled' : ''}>
+        <div class="coliseum-ready-section">
+          <button class="coliseum-ready-btn ${this.isReady ? 'ready' : ''}" id="ready-btn" ${this.isReady ? 'disabled' : ''}>
             ${this.isReady ? 'READY!' : 'Click to Ready'}
           </button>
 
-          <div class="ready-status">
-            <div class="ready-indicator">
+          <div class="coliseum-ready-status">
+            <div class="coliseum-ready-indicator">
               <div class="dot ${this.isReady ? 'ready' : ''}"></div>
               <span>You</span>
             </div>
-            <div class="ready-indicator">
+            <div class="coliseum-ready-indicator">
               <div class="dot ${this.opponentReady ? 'ready' : ''}"></div>
               <span>Opponent</span>
             </div>
           </div>
 
-          <div class="countdown" id="ready-countdown"></div>
+          <div class="coliseum-countdown" id="ready-countdown"></div>
         </div>
       </div>
     `;
@@ -1125,9 +1195,9 @@ export class ColiseumScene extends Scene {
   renderLeaderboard() {
     if (this.loadingLeaderboard) {
       return `
-        <div class="leaderboard-container">
-          <div class="loading-spinner">
-            <div class="queue-spinner"></div>
+        <div class="coliseum-leaderboard-container">
+          <div class="coliseum-loading-spinner">
+            <div class="coliseum-queue-spinner"></div>
             <span style="margin-left: 10px;">Loading leaderboard...</span>
           </div>
         </div>
@@ -1135,9 +1205,9 @@ export class ColiseumScene extends Scene {
     }
 
     return `
-      <div class="leaderboard-container">
-        <div class="leaderboard-filters">
-          <div class="filter-group">
+      <div class="coliseum-leaderboard-container">
+        <div class="coliseum-leaderboard-filters">
+          <div class="coliseum-filter-group">
             <label>Queue Type:</label>
             <select id="leaderboard-queue-filter">
               <option value="1v1" ${this.leaderboardQueueType === '1v1' ? 'selected' : ''}>1v1 Duel</option>
@@ -1145,7 +1215,7 @@ export class ColiseumScene extends Scene {
               <option value="5v5" ${this.leaderboardQueueType === '5v5' ? 'selected' : ''}>5v5 Battle</option>
             </select>
           </div>
-          <div class="filter-group">
+          <div class="coliseum-filter-group">
             <label>Time Period:</label>
             <select id="leaderboard-time-filter">
               <option value="all" ${this.leaderboardTimeFilter === 'all' ? 'selected' : ''}>All Time</option>
@@ -1156,9 +1226,9 @@ export class ColiseumScene extends Scene {
         </div>
 
         ${this.leaderboardData.length === 0 ? `
-          <div class="no-data-message">No rankings available yet. Be the first to compete!</div>
+          <div class="coliseum-no-data-message">No rankings available yet. Be the first to compete!</div>
         ` : `
-          <table class="leaderboard-table">
+          <table class="coliseum-leaderboard-table">
             <thead>
               <tr>
                 <th>Rank</th>
@@ -1172,17 +1242,17 @@ export class ColiseumScene extends Scene {
               ${this.leaderboardData.map((entry, index) => {
                 const rank = index + 1;
                 const isCurrentUser = entry.userId === this.game.userId;
-                const crownIcon = rank === 1 ? '<span class="crown-icon">&#128081;</span>' : '';
+                const crownIcon = rank === 1 ? '<span class="coliseum-crown-icon">&#128081;</span>' : '';
 
                 return `
                   <tr class="${isCurrentUser ? 'current-user' : ''}">
-                    <td class="rank-cell rank-${rank <= 3 ? rank : ''}">#${rank}${crownIcon}</td>
-                    <td class="player-name">${entry.username}</td>
-                    <td class="rating-cell">${entry.rating}</td>
-                    <td class="winloss-cell">
+                    <td class="coliseum-rank-cell coliseum-rank-${rank <= 3 ? rank : ''}">#${rank}${crownIcon}</td>
+                    <td class="coliseum-player-name">${entry.username}</td>
+                    <td class="coliseum-rating-cell">${entry.rating}</td>
+                    <td class="coliseum-winloss-cell">
                       <span class="wins">${entry.wins}</span> / <span class="losses">${entry.losses}</span>
                     </td>
-                    <td class="streak-cell">${entry.winStreak > 0 ? entry.winStreak + ' wins' : '-'}</td>
+                    <td class="coliseum-streak-cell">${entry.winStreak > 0 ? entry.winStreak + ' wins' : '-'}</td>
                   </tr>
                 `;
               }).join('')}
@@ -1190,7 +1260,7 @@ export class ColiseumScene extends Scene {
           </table>
 
           ${this.userRank && this.userRank > 100 ? `
-            <div class="user-rank-banner">
+            <div class="coliseum-user-rank-banner">
               <div class="rank-label">Your Rank</div>
               <div class="rank-value">#${this.userRank}</div>
             </div>
@@ -1203,9 +1273,9 @@ export class ColiseumScene extends Scene {
   renderMatchHistory() {
     if (this.loadingHistory && this.matchHistoryData.length === 0) {
       return `
-        <div class="history-container">
-          <div class="loading-spinner">
-            <div class="queue-spinner"></div>
+        <div class="coliseum-history-container">
+          <div class="coliseum-loading-spinner">
+            <div class="coliseum-queue-spinner"></div>
             <span style="margin-left: 10px;">Loading match history...</span>
           </div>
         </div>
@@ -1213,9 +1283,9 @@ export class ColiseumScene extends Scene {
     }
 
     return `
-      <div class="history-container">
-        <div class="history-filters">
-          <div class="filter-group">
+      <div class="coliseum-history-container">
+        <div class="coliseum-history-filters">
+          <div class="coliseum-filter-group">
             <label>Filter:</label>
             <select id="history-filter">
               <option value="all" ${this.matchHistoryFilter === 'all' ? 'selected' : ''}>All Matches</option>
@@ -1225,9 +1295,9 @@ export class ColiseumScene extends Scene {
         </div>
 
         ${this.matchHistoryData.length === 0 ? `
-          <div class="no-data-message">No matches found. Start battling to build your history!</div>
+          <div class="coliseum-no-data-message">No matches found. Start battling to build your history!</div>
         ` : `
-          <div class="history-list">
+          <div class="coliseum-history-list">
             ${this.matchHistoryData.map(match => {
               const isWinner = match.winnerId === this.game.userId;
               const isLoser = match.loserId === this.game.userId;
@@ -1236,32 +1306,32 @@ export class ColiseumScene extends Scene {
               const ratingChange = isWinner ? match.winnerRatingChange : (isLoser ? match.loserRatingChange : null);
 
               return `
-                <div class="match-card ${resultClass}">
-                  <div class="match-info">
-                    <div class="match-result">
+                <div class="coliseum-match-card ${resultClass}">
+                  <div class="coliseum-match-info">
+                    <div class="coliseum-match-result">
                       <span class="winner">${match.winnerUsername}</span>
-                      <span style="color: #666;"> defeated </span>
+                      <span style="color: ${P.text.muted};"> defeated </span>
                       <span class="loser">${match.loserUsername}</span>
                     </div>
-                    <div class="match-meta">
+                    <div class="coliseum-match-meta">
                       <span>${match.queueType}</span>
                       <span>${match.turnCount || '?'} turns</span>
                       <span>${this.formatTimestamp(match.createdAt)}</span>
                     </div>
                   </div>
                   ${ratingChange !== null ? `
-                    <div class="rating-change ${ratingChange >= 0 ? 'positive' : 'negative'}">
+                    <div class="coliseum-rating-change ${ratingChange >= 0 ? 'positive' : 'negative'}">
                       ${ratingChange >= 0 ? '+' : ''}${ratingChange}
                     </div>
                   ` : ''}
-                  <button class="details-btn" data-match-id="${match.id}">Details</button>
+                  <button class="coliseum-details-btn" data-match-id="${match.id}">Details</button>
                 </div>
               `;
             }).join('')}
           </div>
 
           ${this.hasMoreMatches ? `
-            <button class="load-more-btn" id="load-more-matches" ${this.loadingHistory ? 'disabled' : ''}>
+            <button class="coliseum-load-more-btn" id="load-more-matches" ${this.loadingHistory ? 'disabled' : ''}>
               ${this.loadingHistory ? 'Loading...' : 'Load More'}
             </button>
           ` : ''}
@@ -1277,10 +1347,10 @@ export class ColiseumScene extends Scene {
 
     if (this.loadingMatchDetails) {
       return `
-        <div class="match-details-modal">
-          <div class="match-details-content">
-            <div class="loading-spinner">
-              <div class="queue-spinner"></div>
+        <div class="coliseum-match-details-modal">
+          <div class="coliseum-match-details-content">
+            <div class="coliseum-loading-spinner">
+              <div class="coliseum-queue-spinner"></div>
               <span style="margin-left: 10px;">Loading match details...</span>
             </div>
           </div>
@@ -1300,79 +1370,79 @@ export class ColiseumScene extends Scene {
     const mvp = stats.mvp || null;
 
     return `
-      <div class="match-details-modal" id="match-details-modal">
-        <div class="match-details-content">
-          <div class="modal-header">
+      <div class="coliseum-match-details-modal" id="match-details-modal">
+        <div class="coliseum-match-details-content">
+          <div class="coliseum-modal-header">
             <h3>Match Details</h3>
-            <button class="modal-close-btn" id="close-match-details">&times;</button>
+            <button class="coliseum-modal-close-btn" id="close-match-details">&times;</button>
           </div>
 
-          <div class="match-details-result">
+          <div class="coliseum-match-details-result">
             ${isMyMatch ? `
-              <div class="result-text ${isWinner ? 'victory' : 'defeat'}">
+              <div class="coliseum-result-text ${isWinner ? 'victory' : 'defeat'}">
                 ${isWinner ? 'VICTORY!' : 'DEFEAT'}
               </div>
             ` : `
-              <div class="result-text" style="color: #fff;">
+              <div class="coliseum-result-text" style="color: ${P.text.primary};">
                 ${details.winnerUsername} defeated ${details.loserUsername}
               </div>
             `}
 
-            <div class="rating-changes">
-              <div class="rating-change-item">
+            <div class="coliseum-rating-changes">
+              <div class="coliseum-rating-change-item">
                 <div class="label">${details.winnerUsername}</div>
-                <div class="value" style="color: #4caf50;">+${details.winnerRatingChange || 0}</div>
+                <div class="value" style="color: ${P.state.success};">+${details.winnerRatingChange || 0}</div>
               </div>
-              <div class="rating-change-item">
+              <div class="coliseum-rating-change-item">
                 <div class="label">${details.loserUsername}</div>
-                <div class="value" style="color: #f44336;">${details.loserRatingChange || 0}</div>
+                <div class="value" style="color: ${P.state.error};">${details.loserRatingChange || 0}</div>
               </div>
             </div>
           </div>
 
-          <div class="teams-section">
-            <div class="team-panel winner">
-              <div class="team-header winner">${details.winnerUsername}'s Team</div>
-              <div class="character-list">
+          <div class="coliseum-teams-section">
+            <div class="coliseum-team-panel winner">
+              <div class="coliseum-team-header winner">${details.winnerUsername}'s Team</div>
+              <div class="coliseum-character-list">
                 ${winnerTeam.length > 0 ? winnerTeam.map(char => this.renderCharacterItem(char)).join('') : `
-                  <div class="no-data-message" style="padding: 10px;">Team data not available</div>
+                  <div class="coliseum-no-data-message" style="padding: 10px;">Team data not available</div>
                 `}
               </div>
             </div>
-            <div class="team-panel loser">
-              <div class="team-header loser">${details.loserUsername}'s Team</div>
-              <div class="character-list">
+            <div class="coliseum-team-panel loser">
+              <div class="coliseum-team-header loser">${details.loserUsername}'s Team</div>
+              <div class="coliseum-character-list">
                 ${loserTeam.length > 0 ? loserTeam.map(char => this.renderCharacterItem(char)).join('') : `
-                  <div class="no-data-message" style="padding: 10px;">Team data not available</div>
+                  <div class="coliseum-no-data-message" style="padding: 10px;">Team data not available</div>
                 `}
               </div>
             </div>
           </div>
 
           ${Object.keys(stats).length > 0 ? `
-            <div class="stats-section">
-              <div class="stats-header">Battle Statistics</div>
-              <div class="stats-grid">
+            <div class="coliseum-stats-section">
+              <div class="coliseum-stats-header">Battle Statistics</div>
+              <div class="coliseum-stats-grid">
                 ${stats.totalDamage ? `
-                  <div class="stat-item">
+                  <div class="coliseum-stat-item">
                     <div class="stat-value">${stats.totalDamage}</div>
                     <div class="stat-label">Total Damage</div>
                   </div>
                 ` : ''}
                 ${stats.totalHealing ? `
-                  <div class="stat-item">
+                  <div class="coliseum-stat-item">
                     <div class="stat-value">${stats.totalHealing}</div>
                     <div class="stat-label">Total Healing</div>
                   </div>
                 ` : ''}
                 ${stats.turnCount ? `
-                  <div class="stat-item">
+                  <div class="coliseum-stat-item">
                     <div class="stat-value">${stats.turnCount}</div>
                     <div class="stat-label">Turns</div>
                   </div>
                 ` : ''}
                 ${stats.duration ? `
-                  <div class="stat-item">
+                  <div class="coliseum-stat-item">
                     <div class="stat-value">${this.formatDuration(stats.duration)}</div>
                     <div class="stat-label">Duration</div>
                   </div>
@@ -1382,10 +1452,10 @@ export class ColiseumScene extends Scene {
           ` : ''}
 
           ${mvp ? `
-            <div class="mvp-section">
-              <div class="mvp-header">Most Valuable Player</div>
-              <div class="mvp-name">${mvp.name}</div>
-              <div class="mvp-stats">
+            <div class="coliseum-mvp-section">
+              <div class="coliseum-mvp-header">Most Valuable Player</div>
+              <div class="coliseum-mvp-name">${mvp.name}</div>
+              <div class="coliseum-mvp-stats">
                 ${mvp.damage ? `Damage: ${mvp.damage}` : ''}
                 ${mvp.kills ? ` | Kills: ${mvp.kills}` : ''}
                 ${mvp.healing ? ` | Healing: ${mvp.healing}` : ''}
@@ -1399,19 +1469,19 @@ export class ColiseumScene extends Scene {
 
   renderCharacterItem(char) {
     return `
-      <div class="character-item">
+      <div class="coliseum-character-item">
         <div>
-          <div class="character-name">${char.name}</div>
-          <div class="character-class">${char.class}</div>
+          <div class="coliseum-character-name">${char.name}</div>
+          <div class="coliseum-character-class">${char.class}</div>
           ${char.equipment && char.equipment.length > 0 ? `
-            <div class="equipment-list">
+            <div class="coliseum-equipment-list">
               ${char.equipment.map(item => `
-                <div class="equipment-item ${item.rarity || 'common'}">${item.name}</div>
+                <div class="coliseum-equipment-item ${item.rarity || 'common'}">${item.name}</div>
               `).join('')}
             </div>
           ` : ''}
         </div>
-        <div class="character-level">Lv.${char.level}</div>
+        <div class="coliseum-character-level">Lv.${char.level}</div>
       </div>
     `;
   }
@@ -1459,7 +1529,7 @@ export class ColiseumScene extends Scene {
     if (!content) return;
 
     // Queue selection cards
-    content.querySelectorAll('.queue-card').forEach(card => {
+    content.querySelectorAll('.coliseum-queue-card').forEach(card => {
       card.addEventListener('click', () => {
         if (!this.isInQueue && !this.currentMatch) {
           this.selectedQueue = card.dataset.queue;
@@ -1513,7 +1583,7 @@ export class ColiseumScene extends Scene {
     });
 
     // Match details buttons
-    content.querySelectorAll('.details-btn').forEach(btn => {
+    content.querySelectorAll('.coliseum-details-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const matchId = parseInt(btn.dataset.matchId, 10);
         this.loadMatchDetails(matchId);
@@ -1788,7 +1858,7 @@ export class ColiseumScene extends Scene {
 
       if (countdownEl) {
         if (remaining > 0) {
-          countdownEl.innerHTML = `Time to ready: <span class="countdown-number">${remaining}s</span>`;
+          countdownEl.innerHTML = `Time to ready: <span class="coliseum-countdown-number">${remaining}s</span>`;
         } else {
           countdownEl.innerHTML = 'Time expired!';
         }
@@ -1864,6 +1934,6 @@ export class ColiseumScene extends Scene {
   }
 
   render(ctx) {
-    // UI-only scene
+    // UI-only scene - arena background is CSS-based
   }
 }

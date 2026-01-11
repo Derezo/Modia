@@ -1,5 +1,21 @@
 import { Scene } from './Scene.js';
 import { ParchmentCard } from '../components/ParchmentCard.js';
+import {
+  PARCHMENT_COLORS,
+  PARCHMENT_TYPOGRAPHY,
+  PARCHMENT_SPACING,
+  PARCHMENT_RADIUS,
+  getParchmentGradient,
+  getParchmentBorder,
+  getParchmentShadow,
+  getParchmentButtonCSS,
+  getParchmentPanelCSS
+} from '../ui/parchment/index.js';
+
+// Local alias for cleaner access
+const P = PARCHMENT_COLORS;
+
+const STYLE_ID = 'recruitment-scene-styles';
 
 /**
  * RecruitmentScene - Guild recruitment interface
@@ -67,6 +83,9 @@ export class RecruitmentScene extends Scene {
       this.uiElement.remove();
       this.uiElement = null;
     }
+    // Clean up styles
+    const styleEl = document.getElementById(STYLE_ID);
+    if (styleEl) styleEl.remove();
   }
 
   async loadData() {
@@ -122,133 +141,158 @@ export class RecruitmentScene extends Scene {
       }
     }
 
-    const countdownEl = this.uiElement?.querySelector('#refresh-countdown');
+    const countdownEl = this.uiElement?.querySelector('#recruit-refresh-countdown');
     if (countdownEl) {
       countdownEl.textContent = this.refreshCountdown;
     }
   }
 
   addStyles() {
-    if (document.getElementById('recruitment-scene-styles')) return;
+    if (document.getElementById(STYLE_ID)) return;
 
     const style = document.createElement('style');
-    style.id = 'recruitment-scene-styles';
+    style.id = STYLE_ID;
     style.textContent = `
-      .recruitment-container {
+      .recruit-container {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
         display: flex;
         flex-direction: column;
       }
 
       /* Header */
-      .recruitment-header {
+      .recruit-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px 20px;
-        background: rgba(0,0,0,0.4);
-        border-bottom: 2px solid #4a4a6a;
+        padding: ${PARCHMENT_SPACING.md} ${PARCHMENT_SPACING.lg};
+        background: ${getParchmentGradient()};
+        border-bottom: ${getParchmentBorder()};
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
       }
 
-      .recruitment-title-section {
+      .recruit-title-section {
         display: flex;
         flex-direction: column;
         gap: 4px;
       }
 
-      .recruitment-title {
+      .recruit-title {
         margin: 0;
-        font-size: 20px;
-        color: #ffd700;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${P.accent.gold};
         text-transform: capitalize;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
       }
 
-      .recruitment-subtitle {
-        color: #8a8aaa;
-        font-size: 12px;
+      .recruit-subtitle {
+        color: ${P.text.secondary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
       }
 
-      .recruitment-header-right {
+      .recruit-header-right {
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: ${PARCHMENT_SPACING.lg};
       }
 
-      .recruitment-gold {
+      .recruit-gold {
         display: flex;
         align-items: center;
-        gap: 8px;
-        color: #ffd700;
-        font-size: 16px;
-        font-weight: bold;
+        gap: ${PARCHMENT_SPACING.sm};
+        color: ${P.accent.gold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.md};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       }
 
-      .recruitment-refresh {
+      .recruit-refresh {
         display: flex;
         align-items: center;
-        gap: 8px;
-        color: #8a8aaa;
-        font-size: 13px;
+        gap: ${PARCHMENT_SPACING.sm};
+        color: ${P.text.secondary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
       }
 
-      .recruitment-refresh-icon {
-        color: #6ab0f3;
+      .recruit-refresh-icon {
+        color: ${P.accent.blue};
+      }
+
+      .recruit-back-btn {
+        ${getParchmentButtonCSS('secondary')}
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+      }
+
+      .recruit-back-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
       }
 
       /* Main Content */
-      .recruitment-content {
+      .recruit-content {
         flex: 1;
         display: flex;
-        padding: 16px;
-        gap: 16px;
+        padding: ${PARCHMENT_SPACING.md};
+        gap: ${PARCHMENT_SPACING.md};
         overflow: hidden;
       }
 
       /* Recruits Panel */
-      .recruits-panel {
+      .recruit-panel {
         flex: 1;
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        ${getParchmentPanelCSS()}
       }
 
-      .recruits-grid {
+      .recruit-panel-header {
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
+        border-bottom: 1px solid ${P.border};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${P.text.primary};
+        background: rgba(139, 115, 85, 0.1);
+      }
+
+      .recruit-grid {
         flex: 1;
         overflow-y: auto;
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 12px;
-        padding: 8px;
+        gap: ${PARCHMENT_SPACING.md};
+        padding: ${PARCHMENT_SPACING.md};
       }
 
       /* Recruit Card */
       .recruit-card {
-        background:
-          linear-gradient(135deg, rgba(180, 160, 130, 0.1) 0%, transparent 50%),
-          linear-gradient(225deg, rgba(100, 80, 60, 0.1) 0%, transparent 50%),
-          linear-gradient(to bottom, #d4c4a8 0%, #c9b899 50%, #bfae8a 100%);
-        border: 2px solid #8b7355;
-        border-radius: 6px;
-        padding: 12px;
+        background: ${getParchmentGradient()};
+        border: ${getParchmentBorder()};
+        border-radius: ${PARCHMENT_RADIUS.md};
+        padding: ${PARCHMENT_SPACING.md};
         cursor: pointer;
         transition: all 0.2s;
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+        box-shadow: ${getParchmentShadow()};
       }
 
       .recruit-card:hover {
-        border-color: #a08060;
+        border-color: ${P.borderDark};
         transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        box-shadow: ${getParchmentShadow(true)};
       }
 
       .recruit-card.selected {
-        border-color: #ffd700;
-        box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+        border-color: ${P.accent.gold};
+        box-shadow: 0 0 15px rgba(201, 162, 39, 0.3);
       }
 
       .recruit-card.sold {
@@ -259,18 +303,18 @@ export class RecruitmentScene extends Scene {
 
       .recruit-card-header {
         display: flex;
-        gap: 12px;
-        margin-bottom: 10px;
+        gap: ${PARCHMENT_SPACING.md};
+        margin-bottom: ${PARCHMENT_SPACING.sm};
       }
 
       .recruit-portrait {
         width: 56px;
         height: 56px;
-        border: 2px solid #6b5344;
-        border-radius: 4px;
+        border: 2px solid ${P.borderDark};
+        border-radius: ${PARCHMENT_RADIUS.sm};
         overflow: hidden;
         flex-shrink: 0;
-        background: rgba(0, 0, 0, 0.2);
+        background: rgba(0, 0, 0, 0.1);
       }
 
       .recruit-portrait img {
@@ -298,30 +342,32 @@ export class RecruitmentScene extends Scene {
       }
 
       .recruit-name {
-        font-size: 14px;
-        font-weight: bold;
-        color: #2d2418;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${P.text.primary};
         margin-bottom: 2px;
-        font-family: 'Georgia', serif;
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .recruit-subtitle {
-        font-size: 11px;
-        color: #5a4a3a;
+      .recruit-class-info {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        color: ${P.text.secondary};
         margin-bottom: 4px;
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
       .recruit-price {
         display: flex;
         align-items: center;
         gap: 4px;
-        font-size: 13px;
-        font-weight: bold;
-        color: #8b6914;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${P.accent.gold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
       .recruit-price.cannot-afford {
-        color: #8b4444;
+        color: ${P.state.error};
       }
 
       /* Stats Row */
@@ -329,10 +375,10 @@ export class RecruitmentScene extends Scene {
         display: flex;
         justify-content: space-between;
         gap: 4px;
-        margin-bottom: 8px;
+        margin-bottom: ${PARCHMENT_SPACING.sm};
         padding: 4px 0;
-        border-top: 1px solid rgba(0, 0, 0, 0.1);
-        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        border-top: 1px solid ${P.border};
+        border-bottom: 1px solid ${P.border};
       }
 
       .recruit-stat {
@@ -340,10 +386,11 @@ export class RecruitmentScene extends Scene {
         flex-direction: column;
         align-items: center;
         font-size: 10px;
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
       .recruit-stat-label {
-        font-weight: bold;
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         text-transform: uppercase;
       }
 
@@ -356,8 +403,8 @@ export class RecruitmentScene extends Scene {
       .recruit-stat-label.lck { color: #aa8833; }
 
       .recruit-stat-value {
-        color: #2d2418;
-        font-weight: bold;
+        color: ${P.text.primary};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       }
 
       /* Traits/Skills badges */
@@ -369,199 +416,196 @@ export class RecruitmentScene extends Scene {
 
       .recruit-badge {
         padding: 2px 6px;
-        border-radius: 3px;
+        border-radius: ${PARCHMENT_RADIUS.xs};
         font-size: 10px;
-        font-weight: bold;
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
       .recruit-badge.trait {
         background: rgba(139, 90, 43, 0.3);
-        color: #5a3d1a;
-        border: 1px solid rgba(139, 90, 43, 0.5);
+        color: ${P.text.primary};
+        border: 1px solid ${P.border};
       }
 
       .recruit-badge.trait.uncommon {
-        background: rgba(76, 175, 80, 0.2);
-        color: #2d5a30;
-        border-color: rgba(76, 175, 80, 0.4);
+        background: rgba(74, 117, 72, 0.2);
+        color: ${P.state.success};
+        border-color: ${P.state.success};
       }
 
       .recruit-badge.trait.rare {
-        background: rgba(33, 150, 243, 0.2);
-        color: #1565c0;
-        border-color: rgba(33, 150, 243, 0.4);
+        background: rgba(66, 133, 183, 0.2);
+        color: ${P.accent.blue};
+        border-color: ${P.accent.blue};
       }
 
       .recruit-badge.trait.legendary {
-        background: rgba(255, 152, 0, 0.2);
-        color: #bf6c00;
-        border-color: rgba(255, 152, 0, 0.4);
+        background: rgba(201, 162, 39, 0.2);
+        color: ${P.accent.gold};
+        border-color: ${P.accent.gold};
       }
 
       .recruit-badge.skill {
-        background: rgba(106, 90, 205, 0.2);
-        color: #483d8b;
-        border: 1px solid rgba(106, 90, 205, 0.4);
+        background: rgba(106, 90, 155, 0.2);
+        color: #6b5a9b;
+        border: 1px solid rgba(106, 90, 155, 0.4);
       }
 
       /* Detail Panel */
-      .detail-panel {
+      .recruit-detail-panel {
         width: 340px;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: ${PARCHMENT_SPACING.md};
       }
 
-      .detail-card-container {
+      .recruit-detail-container {
         min-height: 100px;
       }
 
-      .detail-section {
-        background: rgba(0, 0, 0, 0.3);
-        border-radius: 8px;
-        padding: 12px;
+      .recruit-detail-section {
+        ${getParchmentPanelCSS()}
+        padding: ${PARCHMENT_SPACING.md};
       }
 
-      .detail-section-title {
-        color: #ffd700;
-        font-size: 12px;
-        font-weight: bold;
+      .recruit-detail-section-title {
+        color: ${P.accent.gold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         text-transform: uppercase;
-        margin-bottom: 8px;
-        border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+        margin-bottom: ${PARCHMENT_SPACING.sm};
+        border-bottom: 1px solid ${P.border};
         padding-bottom: 4px;
       }
 
-      .detail-traits-list, .detail-skills-list {
+      .recruit-traits-list, .recruit-skills-list {
         display: flex;
         flex-direction: column;
         gap: 6px;
       }
 
-      .detail-trait, .detail-skill {
-        padding: 8px;
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 4px;
-        border-left: 3px solid #8b7355;
+      .recruit-detail-trait, .recruit-detail-skill {
+        padding: ${PARCHMENT_SPACING.sm};
+        background: rgba(139, 115, 85, 0.1);
+        border-radius: ${PARCHMENT_RADIUS.sm};
+        border-left: 3px solid ${P.border};
       }
 
-      .detail-trait.uncommon { border-left-color: #4caf50; }
-      .detail-trait.rare { border-left-color: #2196f3; }
-      .detail-trait.legendary { border-left-color: #ff9800; }
+      .recruit-detail-trait.uncommon { border-left-color: ${P.state.success}; }
+      .recruit-detail-trait.rare { border-left-color: ${P.accent.blue}; }
+      .recruit-detail-trait.legendary { border-left-color: ${P.accent.gold}; }
 
-      .detail-trait-name, .detail-skill-name {
-        font-weight: bold;
-        color: #fff;
-        font-size: 12px;
+      .recruit-trait-name, .recruit-skill-name {
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${P.text.primary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
         margin-bottom: 2px;
       }
 
-      .detail-trait-desc, .detail-skill-desc {
-        color: #8a8aaa;
-        font-size: 11px;
+      .recruit-trait-desc, .recruit-skill-desc {
+        color: ${P.text.secondary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
         line-height: 1.3;
       }
 
       /* Purchase Section */
-      .purchase-section {
+      .recruit-purchase-section {
         margin-top: auto;
-        padding: 12px;
-        background: rgba(0, 0, 0, 0.4);
-        border-radius: 8px;
-        border: 1px solid #4a4a6a;
+        ${getParchmentPanelCSS()}
+        padding: ${PARCHMENT_SPACING.md};
+        border: 2px solid ${P.border};
       }
 
-      .purchase-price-row {
+      .recruit-purchase-price-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 12px;
+        margin-bottom: ${PARCHMENT_SPACING.md};
       }
 
-      .purchase-label {
-        color: #8a8aaa;
-        font-size: 12px;
+      .recruit-purchase-label {
+        color: ${P.text.secondary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
       }
 
-      .purchase-price {
-        font-size: 18px;
-        font-weight: bold;
-        color: #ffd700;
+      .recruit-purchase-price {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.lg};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        color: ${P.accent.gold};
       }
 
-      .purchase-price.cannot-afford {
-        color: #f44336;
+      .recruit-purchase-price.cannot-afford {
+        color: ${P.state.error};
       }
 
-      .purchase-btn {
+      .recruit-purchase-btn {
         width: 100%;
-        padding: 12px;
-        font-size: 14px;
-        font-weight: bold;
-        background: linear-gradient(to bottom, #4caf50 0%, #388e3c 100%);
-        border: 2px solid #2e7d32;
-        border-radius: 6px;
-        color: #fff;
-        cursor: pointer;
-        transition: all 0.2s;
+        ${getParchmentButtonCSS('primary')}
         text-transform: uppercase;
         letter-spacing: 1px;
       }
 
-      .purchase-btn:hover:not(:disabled) {
-        background: linear-gradient(to bottom, #66bb6a 0%, #43a047 100%);
-        transform: translateY(-1px);
+      .recruit-purchase-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
       }
 
-      .purchase-btn:disabled {
-        background: linear-gradient(to bottom, #666 0%, #555 100%);
-        border-color: #444;
-        cursor: not-allowed;
+      .recruit-purchase-btn:disabled {
         opacity: 0.7;
+        cursor: not-allowed;
+        background: ${P.border};
       }
 
       /* Empty States */
-      .empty-state {
+      .recruit-empty-state {
         text-align: center;
-        color: #8a8aaa;
-        padding: 40px 20px;
-        font-size: 14px;
+        color: ${P.text.secondary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        padding: ${PARCHMENT_SPACING.xxl} ${PARCHMENT_SPACING.lg};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
       }
 
-      .empty-state-icon {
+      .recruit-empty-state-icon {
         font-size: 48px;
-        margin-bottom: 12px;
+        margin-bottom: ${PARCHMENT_SPACING.md};
         opacity: 0.5;
       }
 
-      .loading-state {
+      .recruit-loading-state {
         display: flex;
         align-items: center;
         justify-content: center;
         height: 100%;
-        color: #8a8aaa;
-        font-size: 14px;
+        color: ${P.text.secondary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
       }
 
-      .loading-spinner {
+      .recruit-loading-spinner {
         display: inline-block;
         width: 20px;
         height: 20px;
-        border: 2px solid #4a4a6a;
-        border-top-color: #ffd700;
+        border: 2px solid ${P.border};
+        border-top-color: ${P.accent.gold};
         border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-        margin-right: 8px;
+        animation: recruit-spin 0.8s linear infinite;
+        margin-right: ${PARCHMENT_SPACING.sm};
       }
 
-      @keyframes spin {
+      @keyframes recruit-spin {
         to { transform: rotate(360deg); }
       }
 
       /* Empty Slot Card */
       .recruit-card.empty-slot {
-        background: rgba(0, 0, 0, 0.2);
-        border: 2px dashed #4a4a6a;
+        background: rgba(139, 115, 85, 0.1);
+        border: 2px dashed ${P.border};
         display: flex;
         align-items: center;
         justify-content: center;
@@ -569,34 +613,35 @@ export class RecruitmentScene extends Scene {
         cursor: default;
       }
 
-      .empty-slot-text {
-        color: #5a5a7a;
-        font-size: 12px;
+      .recruit-empty-slot-text {
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
         text-align: center;
       }
 
       /* Stat variance indicator */
-      .variance-indicator {
+      .recruit-variance-indicator {
         font-size: 10px;
         margin-left: 4px;
       }
 
-      .variance-positive { color: #4caf50; }
-      .variance-negative { color: #f44336; }
+      .recruit-variance-positive { color: ${P.state.success}; }
+      .recruit-variance-negative { color: ${P.state.error}; }
 
       /* Responsive */
       @media (max-width: 900px) {
-        .recruitment-content {
+        .recruit-content {
           flex-direction: column;
         }
 
-        .detail-panel {
+        .recruit-detail-panel {
           width: 100%;
           max-height: 300px;
           overflow-y: auto;
         }
 
-        .recruits-grid {
+        .recruit-grid {
           grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
         }
       }
@@ -606,62 +651,62 @@ export class RecruitmentScene extends Scene {
 
   createUI() {
     const container = document.createElement('div');
-    container.className = 'recruitment-container';
+    container.className = 'recruit-container';
 
     const guildTitle = this.guildInfo?.nodeName || `${this.capitalize(this.guildClass || 'Guild')}s Guild`;
     const actionLabel = this.guildInfo?.actionLabel || 'Recruit Member';
 
     container.innerHTML = `
-      <div class="recruitment-header">
-        <div class="recruitment-title-section">
-          <h2 class="recruitment-title">${guildTitle}</h2>
-          <div class="recruitment-subtitle">${actionLabel}</div>
+      <div class="recruit-header">
+        <div class="recruit-title-section">
+          <h2 class="recruit-title">${guildTitle}</h2>
+          <div class="recruit-subtitle">${actionLabel}</div>
         </div>
-        <div class="recruitment-header-right">
-          <div class="recruitment-refresh">
-            <span class="recruitment-refresh-icon">&#8635;</span>
-            <span>Next refresh: <span id="refresh-countdown">--:--</span></span>
+        <div class="recruit-header-right">
+          <div class="recruit-refresh">
+            <span class="recruit-refresh-icon">&#8635;</span>
+            <span>Next refresh: <span id="recruit-refresh-countdown">--:--</span></span>
           </div>
-          <div class="recruitment-gold">
+          <div class="recruit-gold">
             <span>Gold:</span>
-            <span id="player-gold">${this.playerGold}</span>
+            <span id="recruit-player-gold">${this.playerGold}</span>
           </div>
-          <button class="btn btn-secondary" id="back-btn">Back to Map</button>
+          <button class="recruit-back-btn" id="recruit-back-btn">Back to Map</button>
         </div>
       </div>
 
-      <div class="recruitment-content">
-        <div class="recruits-panel ui-panel">
-          <div class="ui-panel-header">Available Recruits (${this.recruits.length}/10)</div>
-          <div class="recruits-grid" id="recruits-grid">
-            ${this.isLoading ? '<div class="loading-state"><span class="loading-spinner"></span>Loading recruits...</div>' : ''}
+      <div class="recruit-content">
+        <div class="recruit-panel">
+          <div class="recruit-panel-header">Available Recruits (${this.recruits.length}/10)</div>
+          <div class="recruit-grid" id="recruit-grid">
+            ${this.isLoading ? '<div class="recruit-loading-state"><span class="recruit-loading-spinner"></span>Loading recruits...</div>' : ''}
           </div>
         </div>
 
-        <div class="detail-panel">
-          <div class="ui-panel">
-            <div class="ui-panel-header">Recruit Details</div>
-            <div class="detail-card-container" id="detail-card-container">
-              <div class="empty-state">Select a recruit to view details</div>
+        <div class="recruit-detail-panel">
+          <div class="recruit-detail-section">
+            <div class="recruit-detail-section-title">Recruit Details</div>
+            <div class="recruit-detail-container" id="recruit-detail-container">
+              <div class="recruit-empty-state">Select a recruit to view details</div>
             </div>
           </div>
 
-          <div class="detail-section" id="traits-section" style="display: none;">
-            <div class="detail-section-title">Traits</div>
-            <div class="detail-traits-list" id="traits-list"></div>
+          <div class="recruit-detail-section" id="recruit-traits-section" style="display: none;">
+            <div class="recruit-detail-section-title">Traits</div>
+            <div class="recruit-traits-list" id="recruit-traits-list"></div>
           </div>
 
-          <div class="detail-section" id="skills-section" style="display: none;">
-            <div class="detail-section-title">Pre-learned Skills</div>
-            <div class="detail-skills-list" id="skills-list"></div>
+          <div class="recruit-detail-section" id="recruit-skills-section" style="display: none;">
+            <div class="recruit-detail-section-title">Pre-learned Skills</div>
+            <div class="recruit-skills-list" id="recruit-skills-list"></div>
           </div>
 
-          <div class="purchase-section" id="purchase-section" style="display: none;">
-            <div class="purchase-price-row">
-              <span class="purchase-label">Recruitment Cost</span>
-              <span class="purchase-price" id="purchase-price">0g</span>
+          <div class="recruit-purchase-section" id="recruit-purchase-section" style="display: none;">
+            <div class="recruit-purchase-price-row">
+              <span class="recruit-purchase-label">Recruitment Cost</span>
+              <span class="recruit-purchase-price" id="recruit-purchase-price">0g</span>
             </div>
-            <button class="purchase-btn" id="purchase-btn" disabled>Recruit</button>
+            <button class="recruit-purchase-btn" id="recruit-purchase-btn" disabled>Recruit</button>
           </div>
         </div>
       </div>
@@ -678,12 +723,12 @@ export class RecruitmentScene extends Scene {
     const opts = { signal: this.abortController.signal };
 
     // Back button
-    this.uiElement.querySelector('#back-btn')?.addEventListener('click', () => {
+    this.uiElement.querySelector('#recruit-back-btn')?.addEventListener('click', () => {
       this.game.scenes.switchTo('worldMap');
     }, opts);
 
     // Purchase button
-    this.uiElement.querySelector('#purchase-btn')?.addEventListener('click', () => {
+    this.uiElement.querySelector('#recruit-purchase-btn')?.addEventListener('click', () => {
       this.handlePurchase();
     }, opts);
   }
@@ -698,9 +743,9 @@ export class RecruitmentScene extends Scene {
     const guildTitle = this.guildInfo?.nodeName || `${this.capitalize(this.guildClass || 'Guild')}s Guild`;
     const actionLabel = this.guildInfo?.actionLabel || 'Recruit Member';
 
-    const titleEl = this.uiElement?.querySelector('.recruitment-title');
-    const subtitleEl = this.uiElement?.querySelector('.recruitment-subtitle');
-    const countEl = this.uiElement?.querySelector('.ui-panel-header');
+    const titleEl = this.uiElement?.querySelector('.recruit-title');
+    const subtitleEl = this.uiElement?.querySelector('.recruit-subtitle');
+    const countEl = this.uiElement?.querySelector('.recruit-panel-header');
 
     if (titleEl) titleEl.textContent = guildTitle;
     if (subtitleEl) subtitleEl.textContent = actionLabel;
@@ -708,18 +753,18 @@ export class RecruitmentScene extends Scene {
   }
 
   renderRecruitGrid() {
-    const grid = this.uiElement?.querySelector('#recruits-grid');
+    const grid = this.uiElement?.querySelector('#recruit-grid');
     if (!grid) return;
 
     if (this.isLoading) {
-      grid.innerHTML = '<div class="loading-state"><span class="loading-spinner"></span>Loading recruits...</div>';
+      grid.innerHTML = '<div class="recruit-loading-state"><span class="recruit-loading-spinner"></span>Loading recruits...</div>';
       return;
     }
 
     if (this.recruits.length === 0) {
       grid.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">&#x1F6D2;</div>
+        <div class="recruit-empty-state">
+          <div class="recruit-empty-state-icon">&#x1F6D2;</div>
           <div>No recruits available</div>
           <div style="font-size: 12px; margin-top: 8px;">Check back after the next refresh</div>
         </div>
@@ -734,7 +779,7 @@ export class RecruitmentScene extends Scene {
     const emptySlots = Math.max(0, 10 - this.recruits.length);
     const emptySlotsHtml = Array(emptySlots).fill(0).map(() => `
       <div class="recruit-card empty-slot">
-        <div class="empty-slot-text">Sold</div>
+        <div class="recruit-empty-slot-text">Sold</div>
       </div>
     `).join('');
 
@@ -766,7 +811,7 @@ export class RecruitmentScene extends Scene {
     // Variance indicator
     const variance = recruit.statVariancePercent || 0;
     const varianceHtml = variance !== 0
-      ? `<span class="variance-indicator ${variance > 0 ? 'variance-positive' : 'variance-negative'}">${variance > 0 ? '+' : ''}${variance.toFixed(0)}%</span>`
+      ? `<span class="recruit-variance-indicator ${variance > 0 ? 'recruit-variance-positive' : 'recruit-variance-negative'}">${variance > 0 ? '+' : ''}${variance.toFixed(0)}%</span>`
       : '';
 
     return `
@@ -781,7 +826,7 @@ export class RecruitmentScene extends Scene {
           </div>
           <div class="recruit-info">
             <div class="recruit-name">${recruit.name}${varianceHtml}</div>
-            <div class="recruit-subtitle">${this.capitalize(recruit.race)} ${this.capitalize(recruit.class)}</div>
+            <div class="recruit-class-info">${this.capitalize(recruit.race)} ${this.capitalize(recruit.class)}</div>
             <div class="recruit-price ${canAfford ? '' : 'cannot-afford'}">${recruit.price}g</div>
           </div>
         </div>
@@ -830,19 +875,19 @@ export class RecruitmentScene extends Scene {
   }
 
   updateDetailPanel() {
-    const cardContainer = this.uiElement?.querySelector('#detail-card-container');
-    const traitsSection = this.uiElement?.querySelector('#traits-section');
-    const skillsSection = this.uiElement?.querySelector('#skills-section');
-    const purchaseSection = this.uiElement?.querySelector('#purchase-section');
-    const traitsList = this.uiElement?.querySelector('#traits-list');
-    const skillsList = this.uiElement?.querySelector('#skills-list');
-    const purchasePrice = this.uiElement?.querySelector('#purchase-price');
-    const purchaseBtn = this.uiElement?.querySelector('#purchase-btn');
+    const cardContainer = this.uiElement?.querySelector('#recruit-detail-container');
+    const traitsSection = this.uiElement?.querySelector('#recruit-traits-section');
+    const skillsSection = this.uiElement?.querySelector('#recruit-skills-section');
+    const purchaseSection = this.uiElement?.querySelector('#recruit-purchase-section');
+    const traitsList = this.uiElement?.querySelector('#recruit-traits-list');
+    const skillsList = this.uiElement?.querySelector('#recruit-skills-list');
+    const purchasePrice = this.uiElement?.querySelector('#recruit-purchase-price');
+    const purchaseBtn = this.uiElement?.querySelector('#recruit-purchase-btn');
 
     if (!this.selectedRecruit) {
       // Clear and hide detail sections
       if (cardContainer) {
-        cardContainer.innerHTML = '<div class="empty-state">Select a recruit to view details</div>';
+        cardContainer.innerHTML = '<div class="recruit-empty-state">Select a recruit to view details</div>';
       }
       if (traitsSection) traitsSection.style.display = 'none';
       if (skillsSection) skillsSection.style.display = 'none';
@@ -885,9 +930,9 @@ export class RecruitmentScene extends Scene {
     }
     if (traitsList) {
       traitsList.innerHTML = traits.map(t => `
-        <div class="detail-trait ${t.rarity}">
-          <div class="detail-trait-name">${t.name}</div>
-          <div class="detail-trait-desc">${t.description || 'No description'}</div>
+        <div class="recruit-detail-trait ${t.rarity}">
+          <div class="recruit-trait-name">${t.name}</div>
+          <div class="recruit-trait-desc">${t.description || 'No description'}</div>
         </div>
       `).join('');
     }
@@ -899,9 +944,9 @@ export class RecruitmentScene extends Scene {
     }
     if (skillsList) {
       skillsList.innerHTML = skills.map(s => `
-        <div class="detail-skill">
-          <div class="detail-skill-name">${this.formatSkillId(s)}</div>
-          <div class="detail-skill-desc">Pre-learned at level 1</div>
+        <div class="recruit-detail-skill">
+          <div class="recruit-skill-name">${this.formatSkillId(s)}</div>
+          <div class="recruit-skill-desc">Pre-learned at level 1</div>
         </div>
       `).join('');
     }
@@ -953,7 +998,7 @@ export class RecruitmentScene extends Scene {
   }
 
   updateGoldDisplay() {
-    const goldEl = this.uiElement?.querySelector('#player-gold');
+    const goldEl = this.uiElement?.querySelector('#recruit-player-gold');
     if (goldEl) {
       goldEl.textContent = this.playerGold;
     }
@@ -999,8 +1044,53 @@ export class RecruitmentScene extends Scene {
   }
 
   render(ctx) {
-    // UI is HTML-based
-    ctx.fillStyle = '#1a1a2e';
+    // Draw parchment-themed background gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+    gradient.addColorStop(0, P.light);
+    gradient.addColorStop(0.5, P.mid);
+    gradient.addColorStop(1, P.dark);
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    // Draw subtle decorative elements with gold accents
+    ctx.fillStyle = 'rgba(201, 162, 39, 0.08)';
+    for (let i = 0; i < 5; i++) {
+      const x = 100 + i * 150;
+      const y = 450 + Math.sin(Date.now() / 1000 + i) * 20;
+      ctx.beginPath();
+      ctx.arc(x, y, 30 + i * 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Add subtle corner flourishes
+    ctx.strokeStyle = P.border;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.3;
+
+    // Top-left flourish
+    ctx.beginPath();
+    ctx.moveTo(20, 60);
+    ctx.quadraticCurveTo(20, 20, 60, 20);
+    ctx.stroke();
+
+    // Top-right flourish
+    ctx.beginPath();
+    ctx.moveTo(ctx.canvas.width - 20, 60);
+    ctx.quadraticCurveTo(ctx.canvas.width - 20, 20, ctx.canvas.width - 60, 20);
+    ctx.stroke();
+
+    // Bottom-left flourish
+    ctx.beginPath();
+    ctx.moveTo(20, ctx.canvas.height - 60);
+    ctx.quadraticCurveTo(20, ctx.canvas.height - 20, 60, ctx.canvas.height - 20);
+    ctx.stroke();
+
+    // Bottom-right flourish
+    ctx.beginPath();
+    ctx.moveTo(ctx.canvas.width - 20, ctx.canvas.height - 60);
+    ctx.quadraticCurveTo(ctx.canvas.width - 20, ctx.canvas.height - 20, ctx.canvas.width - 60, ctx.canvas.height - 20);
+    ctx.stroke();
+
+    ctx.globalAlpha = 1.0;
   }
 }
