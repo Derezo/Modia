@@ -70,6 +70,7 @@ export class BattleUnit {
     this.hasActed = unitData.hasActed || false;
     this.statusEffects = unitData.statusEffects || [];
     this.traits = unitData.traits || [];
+    this.skills = unitData.skills || [];
     this.isSelected = false;
     this.isTargeted = false;
 

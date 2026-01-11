@@ -2,11 +2,152 @@ import 'dotenv/config';
 import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { pool, getClient, withTransaction, query } from '../config/database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const BASE_URL = `http://localhost:${process.env.PORT || 3000}`;
+
+// ============================================================================
+// Test Isolation Utilities
+// ============================================================================
+
+/**
+ * Track test data for cleanup
+ * Each test file can register cleanup callbacks
+ */
+const cleanupCallbacks = [];
+
+/**
+ * Register a cleanup callback to be run after tests
+ * @param {Function} callback - Async cleanup function
+ */
+function registerCleanup(callback) {
+  cleanupCallbacks.push(callback);
+}
+
+/**
+ * Run all registered cleanup callbacks
+ * Call this in after() hooks
+ */
+async function runCleanup() {
+  for (const callback of cleanupCallbacks) {
+    try {
+      await callback();
+    } catch (err) {
+      console.warn('Cleanup callback failed:', err.message);
+    }
+  }
+  cleanupCallbacks.length = 0;
+}
+
+/**
+ * Delete test user and all associated data by user ID
+ * Cascades through characters, inventory, party, etc.
+ * @param {number} userId - User ID to delete
+ */
+async function cleanupTestUser(userId) {
+  if (!userId) return;
+
+  try {
+    // Delete in dependency order (most dependent first)
+    // Get character IDs first
+    const chars = await query(
+      'SELECT id FROM characters WHERE user_id = $1',
+      [userId]
+    );
+    const charIds = chars.rows.map(c => c.id);
+
+    if (charIds.length > 0) {
+      // Clean up character-related data
+      await query('DELETE FROM character_skills WHERE character_id = ANY($1)', [charIds]);
+      await query('DELETE FROM character_traits WHERE character_id = ANY($1)', [charIds]);
+      await query('DELETE FROM inventory_items WHERE character_id = ANY($1)', [charIds]);
+      await query('DELETE FROM equipped_items WHERE character_id = ANY($1)', [charIds]);
+      await query('DELETE FROM party_members WHERE character_id = ANY($1)', [charIds]);
+    }
+
+    // Clean up user-related data
+    await query('DELETE FROM notifications WHERE user_id = $1', [userId]);
+    await query('DELETE FROM friendships WHERE user_id = $1 OR friend_id = $1', [userId]);
+    await query('DELETE FROM user_settings WHERE user_id = $1', [userId]);
+    await query('DELETE FROM gold_reservations WHERE user_id = $1', [userId]);
+    await query('DELETE FROM refresh_tokens WHERE user_id = $1', [userId]);
+    await query('DELETE FROM characters WHERE user_id = $1', [userId]);
+    await query('DELETE FROM users WHERE id = $1', [userId]);
+  } catch (err) {
+    console.warn(`Failed to cleanup test user ${userId}:`, err.message);
+  }
+}
+
+/**
+ * Create an isolated test transaction context
+ * All operations within the callback will be rolled back after completion
+ * @param {Function} callback - Async function receiving (client, query) helpers
+ * @returns {Promise<any>} Result of the callback (before rollback)
+ */
+async function withTestTransaction(callback) {
+  const client = await getClient();
+  let result;
+
+  try {
+    await client.query('BEGIN');
+
+    // Create a scoped query function that uses this transaction
+    const scopedQuery = async (text, params) => {
+      return client.query(text, params);
+    };
+
+    result = await callback(client, scopedQuery);
+  } finally {
+    // Always rollback - this is for testing only
+    await client.query('ROLLBACK');
+    client.release();
+  }
+
+  return result;
+}
+
+/**
+ * Create a test context that tracks all created resources
+ * and cleans them up automatically
+ */
+function createTestContext() {
+  const userIds = [];
+  const characterIds = [];
+
+  return {
+    /**
+     * Create a test user and track for cleanup
+     */
+    async createUser() {
+      const user = await createTestUser();
+      userIds.push(user.userId);
+      return user;
+    },
+
+    /**
+     * Create a test character and track for cleanup
+     */
+    async createCharacter(token, name = null) {
+      const character = await createTestCharacter(token, name);
+      characterIds.push(character.id);
+      return character;
+    },
+
+    /**
+     * Clean up all tracked resources
+     */
+    async cleanup() {
+      for (const userId of userIds) {
+        await cleanupTestUser(userId);
+      }
+      userIds.length = 0;
+      characterIds.length = 0;
+    }
+  };
+}
 
 // Simple HTTP client for testing
 async function request(method, path, body = null, token = null) {
@@ -105,10 +246,26 @@ async function createTestCharacter(token, name = null) {
 }
 
 export {
+  // HTTP client
   request,
+  BASE_URL,
+
+  // Data generators
   uniqueUsername,
   uniqueEmail,
   createTestUser,
   createTestCharacter,
-  BASE_URL
+
+  // Test isolation
+  registerCleanup,
+  runCleanup,
+  cleanupTestUser,
+  withTestTransaction,
+  createTestContext,
+
+  // Database access for direct testing
+  pool,
+  query,
+  getClient,
+  withTransaction
 };

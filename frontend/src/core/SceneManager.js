@@ -13,6 +13,8 @@ import { TavernScene } from '../scenes/TavernScene.js';
 import { ColiseumScene } from '../scenes/ColiseumScene.js';
 import { RecruitmentScene } from '../scenes/RecruitmentScene.js';
 import { CourtyardScene } from '../scenes/CourtyardScene.js';
+import { LeaderboardScene } from '../scenes/LeaderboardScene.js';
+import { SettingsScene } from '../scenes/SettingsScene.js';
 
 export class SceneManager {
   constructor(game) {
@@ -39,7 +41,9 @@ export class SceneManager {
       tavern: new TavernScene(this.game),
       coliseum: new ColiseumScene(this.game),
       recruitment: new RecruitmentScene(this.game),
-      courtyard: new CourtyardScene(this.game)
+      courtyard: new CourtyardScene(this.game),
+      leaderboard: new LeaderboardScene(this.game),
+      settings: new SettingsScene(this.game)
     };
   }
 

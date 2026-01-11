@@ -11,6 +11,9 @@ import { generateAllActions, generateThreatResponseActions } from './actionGener
 import { Lookahead, quickEvaluate } from './lookahead.js';
 import { PerformanceTracker } from './cache.js';
 
+// Enable AI debug logging via environment variable
+const AI_DEBUG = process.env.AI_DEBUG === 'true' || process.env.AI_DEBUG === '1';
+
 /**
  * UtilityAI - Main AI decision-making class
  */
@@ -75,13 +78,24 @@ class UtilityAI {
 
       this.performanceTracker.endDecision(decision);
 
-      if (this.options.debug) {
-        console.log(`[AI ${this.pattern}] Unit ${unit.name} decides:`, {
-          action: decision.action.type,
-          target: decision.action.targetId || decision.action.position,
-          score: decision.score.toFixed(1),
-          timeMs: result.stats?.timeMs
-        });
+      // Debug logging (enabled via AI_DEBUG env var or options.debug)
+      if (AI_DEBUG || this.options.debug) {
+        const actionType = Array.isArray(decision.action)
+          ? decision.action.map(a => a.type).join('+')
+          : decision.action.type;
+        const actionTarget = Array.isArray(decision.action)
+          ? decision.action.find(a => a.targetId)?.targetId
+          : decision.action.targetId || decision.action.position;
+
+        console.log(`[AI] ${unit.name} (${this.pattern}): ${actionType} → ${JSON.stringify(actionTarget)} | score: ${typeof decision.score === 'number' ? decision.score.toFixed(1) : decision.score}`);
+
+        // Log top 3 alternative actions for debugging
+        if (result.alternatives && result.alternatives.length > 0) {
+          console.log('[AI] Top alternatives:');
+          result.alternatives.slice(0, 3).forEach((alt, i) => {
+            console.log(`  ${i + 1}. ${alt.action.type}: ${alt.score.toFixed(1)}`);
+          });
+        }
       }
 
       return decision;

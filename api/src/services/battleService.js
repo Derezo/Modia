@@ -8,7 +8,8 @@ import * as traitService from './traitService.js';
 import { getTerrainMovementCost } from '../../../shared/terrain.js';
 import {
   getReachableTiles as sharedGetReachableTiles,
-  calculatePathCost as sharedCalculatePathCost
+  calculatePathCost as sharedCalculatePathCost,
+  getManhattanDistance
 } from '../../../shared/pathfinding.js';
 
 // Default attack range for melee (1 tile adjacent)
@@ -364,17 +365,7 @@ function getAttackRange(unit) {
   return baseRange;
 }
 
-/**
- * Calculate Manhattan distance between two positions
- * @param {number} x1 - Source X
- * @param {number} y1 - Source Y
- * @param {number} x2 - Target X
- * @param {number} y2 - Target Y
- * @returns {number} Manhattan distance
- */
-function getManhattanDistance(x1, y1, x2, y2) {
-  return Math.abs(x2 - x1) + Math.abs(y2 - y1);
-}
+// getManhattanDistance is now imported from shared/pathfinding.js
 
 // ==================== Unified Tile/Action Availability ====================
 
@@ -441,6 +432,78 @@ function getTargetsInRange(unit, state, range, targetType) {
   }
 
   return targets;
+}
+
+/**
+ * Find an unoccupied tile adjacent to the target for leap attacks
+ * Used by movement skills like Pounce and Charge Rush
+ * @param {Object} state - Battle state
+ * @param {Object} unit - The leaping unit
+ * @param {Object} targetTile - The target's tile {x, y}
+ * @returns {Object|null} Adjacent tile {x, y} or null if none available
+ */
+function findAdjacentTileToTarget(state, unit, targetTile) {
+  const mapWidth = state.mapWidth || 32;
+  const mapHeight = state.mapHeight || 32;
+
+  // Cardinal directions first (most natural landing spots), then diagonals
+  const directions = [
+    { x: 0, y: -1 },  // Up
+    { x: 0, y: 1 },   // Down
+    { x: -1, y: 0 },  // Left
+    { x: 1, y: 0 },   // Right
+    { x: -1, y: -1 }, // Up-Left
+    { x: 1, y: -1 },  // Up-Right
+    { x: -1, y: 1 },  // Down-Left
+    { x: 1, y: 1 }    // Down-Right
+  ];
+
+  // Sort directions to prefer tiles closer to unit's starting position
+  // This makes the leap feel more natural (lands on the side they came from)
+  const sortedDirs = directions.slice().sort((a, b) => {
+    const distA = getManhattanDistance(
+      targetTile.x + a.x, targetTile.y + a.y,
+      unit.tileX, unit.tileY
+    );
+    const distB = getManhattanDistance(
+      targetTile.x + b.x, targetTile.y + b.y,
+      unit.tileX, unit.tileY
+    );
+    return distA - distB;
+  });
+
+  for (const dir of sortedDirs) {
+    const adjX = targetTile.x + dir.x;
+    const adjY = targetTile.y + dir.y;
+
+    // Check bounds
+    if (adjX < 0 || adjX >= mapWidth || adjY < 0 || adjY >= mapHeight) {
+      continue;
+    }
+
+    // Check if tile is occupied by another unit
+    const isOccupied = state.units.some(u =>
+      u.hp > 0 && u.id !== unit.id &&
+      u.tileX === adjX && u.tileY === adjY
+    );
+    if (isOccupied) continue;
+
+    // Check if tile is passable (no obstacles)
+    const tile = state.terrain?.find(t => t.x === adjX && t.y === adjY);
+    if (tile && tile.passable === false) continue;
+
+    // Check obstacles
+    const hasObstacle = state.obstacles?.some(o =>
+      o.x === adjX && o.y === adjY && o.passable === false
+    );
+    if (hasObstacle) continue;
+
+    return { x: adjX, y: adjY };
+  }
+
+  // No valid adjacent tile found - unit can't complete the leap
+  // In this case, the attack will still happen from the original position
+  return null;
 }
 
 /**
@@ -1177,6 +1240,20 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
           }
           unit.actUsed = true;
           break;
+        }
+
+        // Handle movement skills (like Pounce, Charge Rush)
+        // These skills teleport the unit to an adjacent tile of the target before attacking
+        if (skill.movement) {
+          const adjacentTile = findAdjacentTileToTarget(state, unit, targetTile);
+          if (adjacentTile) {
+            result.leapedFrom = { x: unit.tileX, y: unit.tileY };
+            unit.tileX = adjacentTile.x;
+            unit.tileY = adjacentTile.y;
+            result.leapedTo = { x: adjacentTile.x, y: adjacentTile.y };
+            result.isLeapAttack = true;
+          }
+          // Note: Movement skills don't consume the move action - they're part of the skill
         }
 
         // Find target at tile

@@ -8,6 +8,7 @@
 
 // Import pathfinding for obstacle-aware movement decisions
 import * as battleService from './battleService.js';
+import { getManhattanDistance } from '../../../shared/pathfinding.js';
 
 // Import new utility AI system
 import { UtilityAI, createAIForUnit, quickDecision } from './ai/index.js';
@@ -51,44 +52,83 @@ function decideAction(enemy, battleState) {
  * @returns {Array} Array of actions to execute in order
  */
 function decideTurnActions(enemy, battleState) {
+  console.log('[AI] decideTurnActions for', enemy.name, 'aiType:', enemy.aiType, 'pos:', enemy.tileX, enemy.tileY);
+
   // Try utility AI first if enabled
   if (USE_UTILITY_AI) {
     try {
       const actions = utilityAIDecision(enemy, battleState);
+      console.log('[AI] Utility AI returned:', JSON.stringify(actions));
       if (actions && actions.length > 0) {
         return actions;
       }
     } catch (error) {
-      console.error('[AI] Utility AI failed, falling back to legacy:', error.message);
+      console.error('[AI] Utility AI failed, falling back to legacy:', error.message, error.stack);
     }
   }
 
   // Fall back to legacy AI patterns
-  return legacyDecideTurnActions(enemy, battleState);
+  const legacyActions = legacyDecideTurnActions(enemy, battleState);
+  console.log('[AI] Legacy AI returned:', JSON.stringify(legacyActions));
+  return legacyActions;
 }
 
 /**
  * Utility AI decision making
- * Uses sophisticated utility-based scoring with multi-actor lookahead
+ * Uses sophisticated utility-based scoring with multi-actor lookahead.
+ * Falls back to quick (no-lookahead) decision if lookahead gives suboptimal results.
  * @param {Object} enemy - The enemy unit
  * @param {Object} battleState - Current battle state
  * @returns {Array} Actions array in legacy format
  */
 function utilityAIDecision(enemy, battleState) {
+  // First get a quick decision without lookahead as baseline
+  const quickResult = quickDecision(enemy, battleState, enemy.aiType || 'aggressive');
+
+  // Then try lookahead for potentially better multi-turn planning
   const ai = createAIForUnit(enemy, {
     timeBudgetMs: UTILITY_AI_TIME_BUDGET,
     maxRounds: 2, // 2 rounds lookahead for performance
     useLookahead: true
   });
 
-  const decision = ai.decideTurnActions(enemy, battleState);
+  const lookaheadDecision = ai.decideTurnActions(enemy, battleState);
 
-  if (!decision || !decision.action) {
+  // Choose between quick and lookahead results
+  let bestDecision;
+
+  if (!lookaheadDecision || !lookaheadDecision.action) {
+    // Lookahead failed, use quick decision
+    bestDecision = { action: quickResult.bestAction, score: quickResult.score };
+  } else if (!quickResult.bestAction || quickResult.score === undefined) {
+    // Quick decision failed, use lookahead
+    bestDecision = lookaheadDecision;
+  } else {
+    // Both succeeded - compare action types
+    // Prefer attacking/using skills over moving/waiting when targets are in range
+    const quickType = quickResult.bestAction?.type;
+    const lookaheadType = lookaheadDecision.action?.type;
+
+    // If quick chose attack/skill but lookahead chose move/wait, prefer quick
+    // This prevents the issue where lookahead overthinks and misses obvious attacks
+    const isQuickOffensive = quickType === 'attack' || quickType === 'skill';
+    const isLookaheadPassive = lookaheadType === 'move' || lookaheadType === 'wait';
+
+    if (isQuickOffensive && isLookaheadPassive && quickResult.score > 100) {
+      // Quick found a good offensive action, prefer it over passive lookahead
+      bestDecision = { action: quickResult.bestAction, score: quickResult.score };
+    } else {
+      // Trust lookahead's multi-turn planning
+      bestDecision = lookaheadDecision;
+    }
+  }
+
+  if (!bestDecision || !bestDecision.action) {
     return null;
   }
 
   // Convert utility AI action format to legacy format
-  return convertToLegacyFormat(decision.action, enemy, battleState);
+  return convertToLegacyFormat(bestDecision.action, enemy, battleState);
 }
 
 /**
@@ -239,7 +279,7 @@ function aggressiveTurnAI(enemy, battleState) {
     actions.push({ actionType: 'move', targetTile: moveTile });
 
     // Check if we're now in attack range after the move
-    const newDistance = Math.abs(moveTile.x - target.tileX) + Math.abs(moveTile.y - target.tileY);
+    const newDistance = getManhattanDistance(moveTile.x, moveTile.y, target.tileX, target.tileY);
     if (newDistance <= attackRange) {
       actions.push({
         actionType: 'attack',
@@ -262,6 +302,8 @@ function defensiveTurnAI(enemy, battleState) {
   const nearestPlayer = findClosestUnit(enemy, players);
   const attackRange = enemy.attackRange || 1;
 
+  console.log('[AI:defensive]', enemy.name, 'players:', players.length, 'nearest:', nearestPlayer?.name, 'attackRange:', attackRange, 'movement:', enemy.movement);
+
   // Low HP: retreat first, then attack if in range after retreat
   if (enemy.hp < enemy.maxHp * 0.4) {
     const retreatTile = getRetreatTile(enemy, battleState);
@@ -270,7 +312,7 @@ function defensiveTurnAI(enemy, battleState) {
 
       // Check if any player is in range after retreat
       if (nearestPlayer) {
-        const newDist = Math.abs(retreatTile.x - nearestPlayer.tileX) + Math.abs(retreatTile.y - nearestPlayer.tileY);
+        const newDist = getManhattanDistance(retreatTile.x, retreatTile.y, nearestPlayer.tileX, nearestPlayer.tileY);
         if (newDist <= attackRange) {
           actions.push({
             actionType: 'attack',
@@ -297,7 +339,7 @@ function defensiveTurnAI(enemy, battleState) {
     : { x: enemy.tileX, y: enemy.tileY };
 
   if (nearestPlayer) {
-    const distAfterMove = Math.abs(currentPos.x - nearestPlayer.tileX) + Math.abs(currentPos.y - nearestPlayer.tileY);
+    const distAfterMove = getManhattanDistance(currentPos.x, currentPos.y, nearestPlayer.tileX, nearestPlayer.tileY);
     if (distAfterMove <= attackRange) {
       actions.push({
         actionType: 'attack',
@@ -311,7 +353,7 @@ function defensiveTurnAI(enemy, battleState) {
     const moveTile = getMoveTowardTarget(enemy, nearestPlayer, battleState, 2);
     if (moveTile) {
       actions.push({ actionType: 'move', targetTile: moveTile });
-      const newDist = Math.abs(moveTile.x - nearestPlayer.tileX) + Math.abs(moveTile.y - nearestPlayer.tileY);
+      const newDist = getManhattanDistance(moveTile.x, moveTile.y, nearestPlayer.tileX, nearestPlayer.tileY);
       if (newDist <= attackRange) {
         actions.push({
           actionType: 'attack',
@@ -430,7 +472,7 @@ function tacticalTurnAI(enemy, battleState) {
   const moveTile = getMoveTowardTarget(enemy, target, battleState);
   if (moveTile) {
     actions.push({ actionType: 'move', targetTile: moveTile });
-    const newDist = Math.abs(moveTile.x - target.tileX) + Math.abs(moveTile.y - target.tileY);
+    const newDist = getManhattanDistance(moveTile.x, moveTile.y, target.tileX, target.tileY);
     if (newDist <= attackRange) {
       actions.push({
         actionType: 'attack',
@@ -488,7 +530,7 @@ function packTurnAI(enemy, battleState) {
   const moveTile = getMoveTowardTarget(enemy, targetPlayer, battleState);
   if (moveTile) {
     actions.push({ actionType: 'move', targetTile: moveTile });
-    const newDist = Math.abs(moveTile.x - targetPlayer.tileX) + Math.abs(moveTile.y - targetPlayer.tileY);
+    const newDist = getManhattanDistance(moveTile.x, moveTile.y, targetPlayer.tileX, targetPlayer.tileY);
     if (newDist <= attackRange) {
       actions.push({
         actionType: 'attack',
@@ -533,7 +575,7 @@ function hitAndRunTurnAI(enemy, battleState) {
   if (moveTile) {
     actions.push({ actionType: 'move', targetTile: moveTile });
     // Check if now in range after move
-    const newDist = Math.abs(moveTile.x - nearestPlayer.tileX) + Math.abs(moveTile.y - nearestPlayer.tileY);
+    const newDist = getManhattanDistance(moveTile.x, moveTile.y, nearestPlayer.tileX, nearestPlayer.tileY);
     if (newDist <= attackRange) {
       actions.push({
         actionType: 'attack',
@@ -572,7 +614,7 @@ function ambushTurnAI(enemy, battleState) {
 
       // Spring the ambush with attack
       const currentPos = actions.length > 0 ? actions[0].targetTile : { x: enemy.tileX, y: enemy.tileY };
-      const newDist = Math.abs(currentPos.x - nearestPlayer.tileX) + Math.abs(currentPos.y - nearestPlayer.tileY);
+      const newDist = getManhattanDistance(currentPos.x, currentPos.y, nearestPlayer.tileX, nearestPlayer.tileY);
       if (newDist <= attackRange) {
         actions.push({
           actionType: 'attack',
@@ -611,7 +653,7 @@ function ambushTurnAI(enemy, battleState) {
   const moveTile = getMoveTowardTarget(enemy, target, battleState);
   if (moveTile) {
     actions.push({ actionType: 'move', targetTile: moveTile });
-    const newDist = Math.abs(moveTile.x - target.tileX) + Math.abs(moveTile.y - target.tileY);
+    const newDist = getManhattanDistance(moveTile.x, moveTile.y, target.tileX, target.tileY);
     if (newDist <= attackRange) {
       actions.push({
         actionType: 'attack',
@@ -904,7 +946,7 @@ function hitAndRunAI(enemy, battleState) {
     const moveTile = getMoveTowardTarget(enemy, nearestPlayer, battleState, 2);
     if (moveTile) {
       // Don't move if it would put us too close
-      const newDist = Math.abs(moveTile.x - nearestPlayer.tileX) + Math.abs(moveTile.y - nearestPlayer.tileY);
+      const newDist = getManhattanDistance(moveTile.x, moveTile.y, nearestPlayer.tileX, nearestPlayer.tileY);
       if (newDist >= attackRange) {
         return { actionType: 'move', targetTile: moveTile };
       }
@@ -988,8 +1030,15 @@ function getDefense(unit) {
   return unit.vitality || unit.agility / 2 || 10;
 }
 
+/**
+ * Calculate Manhattan distance between two units
+ * Wrapper around shared getManhattanDistance for object-based calls
+ * @param {Object} a - First unit with tileX, tileY properties
+ * @param {Object} b - Second unit with tileX, tileY properties
+ * @returns {number} Manhattan distance
+ */
 function manhattanDistance(a, b) {
-  return Math.abs(a.tileX - b.tileX) + Math.abs(a.tileY - b.tileY);
+  return getManhattanDistance(a.tileX, a.tileY, b.tileX, b.tileY);
 }
 
 function findClosestUnit(from, targets) {
@@ -1027,7 +1076,7 @@ function getMoveTowardTarget(enemy, target, battleState, maxMove = 3) {
       // Check if tile is actually reachable via pathfinding (considers obstacles in path)
       if (!isReachable(enemy, x, y, battleState)) continue;
 
-      const dist = Math.abs(x - target.tileX) + Math.abs(y - target.tileY);
+      const dist = getManhattanDistance(x, y, target.tileX, target.tileY);
       if (dist < bestDistance) {
         bestDistance = dist;
         bestTile = { x, y };
@@ -1060,7 +1109,7 @@ function getRetreatTile(enemy, battleState) {
       if (!isReachable(enemy, x, y, battleState)) continue;
 
       const minDistToPlayer = Math.min(...players.map(p =>
-        Math.abs(x - p.tileX) + Math.abs(y - p.tileY)
+        getManhattanDistance(x, y, p.tileX, p.tileY)
       ));
 
       if (minDistToPlayer > bestDistance) {

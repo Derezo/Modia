@@ -32,23 +32,34 @@ export class SeededRandom {
  * Create a mock player unit
  */
 export function createMockPlayerUnit(overrides = {}) {
+  const x = overrides.x ?? overrides.tileX ?? 5;
+  const y = overrides.y ?? overrides.tileY ?? 5;
   return {
     id: overrides.id ?? 'player_1',
     name: overrides.name ?? 'Test Hero',
     type: 'player',
     characterId: overrides.characterId ?? 1,
-    x: overrides.x ?? 5,
-    y: overrides.y ?? 5,
+    x,
+    y,
+    tileX: x,  // AI code uses tileX/tileY
+    tileY: y,
     hp: overrides.hp ?? 100,
     maxHp: overrides.maxHp ?? 100,
     mp: overrides.mp ?? 50,
     maxMp: overrides.maxMp ?? 50,
     level: overrides.level ?? 10,
-    str: overrides.str ?? 15,
-    vit: overrides.vit ?? 12,
-    int: overrides.int ?? 10,
-    agi: overrides.agi ?? 11,
-    luk: overrides.luk ?? 8,
+    // Abbreviated stat names
+    str: overrides.str ?? overrides.strength ?? 15,
+    vit: overrides.vit ?? overrides.vitality ?? 12,
+    int: overrides.int ?? overrides.intelligence ?? 10,
+    agi: overrides.agi ?? overrides.agility ?? 11,
+    luk: overrides.luk ?? overrides.luck ?? 8,
+    // Full stat names (AI code uses these)
+    strength: overrides.strength ?? overrides.str ?? 15,
+    vitality: overrides.vitality ?? overrides.vit ?? 12,
+    intelligence: overrides.intelligence ?? overrides.int ?? 10,
+    agility: overrides.agility ?? overrides.agi ?? 11,
+    luck: overrides.luck ?? overrides.luk ?? 8,
     attack: overrides.attack ?? 20,
     defense: overrides.defense ?? 15,
     magicAttack: overrides.magicAttack ?? 10,
@@ -56,13 +67,17 @@ export function createMockPlayerUnit(overrides = {}) {
     class: overrides.class ?? 'warrior',
     race: overrides.race ?? 'human',
     movementRange: overrides.movementRange ?? 3,
+    movement: overrides.movement ?? overrides.movementRange ?? 3,  // AI uses 'movement'
     attackRange: overrides.attackRange ?? 1,
     statusEffects: overrides.statusEffects ?? [],
     skills: overrides.skills ?? [],
     traits: overrides.traits ?? [],
     hasMoved: overrides.hasMoved ?? false,
     hasActed: overrides.hasActed ?? false,
+    moveUsed: overrides.moveUsed ?? overrides.hasMoved ?? false,  // AI uses 'moveUsed'
+    actUsed: overrides.actUsed ?? overrides.hasActed ?? false,    // AI uses 'actUsed'
     ct: overrides.ct ?? 0,
+    aiType: overrides.aiType ?? 'aggressive',
     ...overrides
   };
 }
@@ -71,34 +86,49 @@ export function createMockPlayerUnit(overrides = {}) {
  * Create a mock enemy unit
  */
 export function createMockEnemyUnit(overrides = {}) {
+  const x = overrides.x ?? overrides.tileX ?? 10;
+  const y = overrides.y ?? overrides.tileY ?? 10;
   return {
     id: overrides.id ?? 'enemy_1',
     name: overrides.name ?? 'Test Goblin',
     type: 'enemy',
     enemyId: overrides.enemyId ?? 1,
-    x: overrides.x ?? 10,
-    y: overrides.y ?? 10,
+    x,
+    y,
+    tileX: x,  // AI code uses tileX/tileY
+    tileY: y,
     hp: overrides.hp ?? 50,
     maxHp: overrides.maxHp ?? 50,
     mp: overrides.mp ?? 20,
     maxMp: overrides.maxMp ?? 20,
     level: overrides.level ?? 5,
-    str: overrides.str ?? 10,
-    vit: overrides.vit ?? 8,
-    int: overrides.int ?? 5,
-    agi: overrides.agi ?? 12,
-    luk: overrides.luk ?? 5,
+    // Abbreviated stat names
+    str: overrides.str ?? overrides.strength ?? 10,
+    vit: overrides.vit ?? overrides.vitality ?? 8,
+    int: overrides.int ?? overrides.intelligence ?? 5,
+    agi: overrides.agi ?? overrides.agility ?? 12,
+    luk: overrides.luk ?? overrides.luck ?? 5,
+    // Full stat names (AI code uses these)
+    strength: overrides.strength ?? overrides.str ?? 10,
+    vitality: overrides.vitality ?? overrides.vit ?? 8,
+    intelligence: overrides.intelligence ?? overrides.int ?? 5,
+    agility: overrides.agility ?? overrides.agi ?? 12,
+    luck: overrides.luck ?? overrides.luk ?? 5,
     attack: overrides.attack ?? 12,
     defense: overrides.defense ?? 6,
     magicAttack: overrides.magicAttack ?? 5,
     magicDefense: overrides.magicDefense ?? 4,
     movementRange: overrides.movementRange ?? 4,
+    movement: overrides.movement ?? overrides.movementRange ?? 4,  // AI uses 'movement'
     attackRange: overrides.attackRange ?? 1,
     archetype: overrides.archetype ?? 'aggressive',
+    aiType: overrides.aiType ?? overrides.archetype ?? 'aggressive',  // AI uses 'aiType'
     statusEffects: overrides.statusEffects ?? [],
     skills: overrides.skills ?? [],
     hasMoved: overrides.hasMoved ?? false,
     hasActed: overrides.hasActed ?? false,
+    moveUsed: overrides.moveUsed ?? overrides.hasMoved ?? false,  // AI uses 'moveUsed'
+    actUsed: overrides.actUsed ?? overrides.hasActed ?? false,    // AI uses 'actUsed'
     ct: overrides.ct ?? 0,
     ...overrides
   };

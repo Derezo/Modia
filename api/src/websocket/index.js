@@ -395,11 +395,20 @@ function setupWebSocket(server) {
 
               // Save to database for global/party rooms
               if (chatRoom === 'global' || chatRoom.startsWith('party:')) {
+                // Validate characterId is provided (required by database)
+                if (!payload.characterId) {
+                  ws.send(JSON.stringify({
+                    type: 'error',
+                    payload: { message: 'Character ID required for chat messages' }
+                  }));
+                  break;
+                }
+
                 const roomType = chatRoom === 'global' ? 'global' : 'party';
                 const partyId = chatRoom.startsWith('party:') ? parseInt(chatRoom.split(':')[1], 10) : null;
 
                 await chatService.saveMessage({
-                  characterId: payload.characterId || null,
+                  characterId: payload.characterId,
                   senderUserId: userId,
                   roomType,
                   message: truncatedMessage,

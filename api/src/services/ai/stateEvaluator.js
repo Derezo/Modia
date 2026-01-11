@@ -18,6 +18,38 @@ import {
 } from './utilityFactors.js';
 
 /**
+ * Resolve a target from an action to get the full unit object
+ * Actions store targets as {x, y, unitId, unitName} but utility functions need full unit stats
+ * @param {Object} action - Action with target/targetId
+ * @param {Object} state - Battle state with units array
+ * @returns {Object|null} Full unit object or null if not found
+ */
+function resolveTarget(action, state) {
+  // If no target or targetId, return null
+  if (!action.targetId && !action.target) return null;
+
+  // Look up unit by targetId first (most reliable)
+  if (action.targetId) {
+    const unit = state.units.find(u => u.id === action.targetId);
+    if (unit) return unit;
+  }
+
+  // Fall back to looking up by target.unitId
+  if (action.target?.unitId) {
+    const unit = state.units.find(u => u.id === action.target.unitId);
+    if (unit) return unit;
+  }
+
+  // If target is already a full unit object (has hp property), use it directly
+  if (action.target?.hp !== undefined) {
+    return action.target;
+  }
+
+  // Could not resolve - return null
+  return null;
+}
+
+/**
  * StateEvaluator class - scores actions and states using weighted utility factors
  */
 class StateEvaluator {
@@ -41,10 +73,12 @@ class StateEvaluator {
     let totalScore = 0;
 
     switch (action.type) {
-      case 'attack':
-        factors.DAMAGE_DEALT = calculateDamageDealt(unit, action.target, null, state);
-        factors.KILL_POTENTIAL = calculateKillPotential(unit, action.target, null, state);
-        factors.TARGET_PRIORITY = calculateTargetPriority(action.target, state);
+      case 'attack': {
+        // Resolve target to full unit object for accurate damage calculation
+        const resolvedTarget = resolveTarget(action, state);
+        factors.DAMAGE_DEALT = calculateDamageDealt(unit, resolvedTarget, null, state);
+        factors.KILL_POTENTIAL = calculateKillPotential(unit, resolvedTarget, null, state);
+        factors.TARGET_PRIORITY = calculateTargetPriority(resolvedTarget, state);
         factors.DAMAGE_RECEIVED = calculateDamageReceived(unit, unit.tileX, unit.tileY, state);
         factors.POSITION_QUALITY = 0; // No movement in attack
         factors.ALLY_SUPPORT = calculateAllySupport(unit, unit.tileX, unit.tileY, state);
@@ -52,19 +86,23 @@ class StateEvaluator {
         factors.SURVIVAL_PRIORITY = calculateSurvivalPriority(unit, unit.tileX, unit.tileY, state);
         factors.MP_EFFICIENCY = 100; // Basic attacks are free
         break;
+      }
 
-      case 'skill':
+      case 'skill': {
+        // Resolve target to full unit object for accurate damage calculation
+        const resolvedTarget = resolveTarget(action, state);
         const skill = action.skill;
-        factors.DAMAGE_DEALT = calculateDamageDealt(unit, action.target, skill, state);
-        factors.KILL_POTENTIAL = calculateKillPotential(unit, action.target, skill, state);
-        factors.TARGET_PRIORITY = calculateTargetPriority(action.target, state);
+        factors.DAMAGE_DEALT = calculateDamageDealt(unit, resolvedTarget, skill, state);
+        factors.KILL_POTENTIAL = calculateKillPotential(unit, resolvedTarget, skill, state);
+        factors.TARGET_PRIORITY = calculateTargetPriority(resolvedTarget, state);
         factors.DAMAGE_RECEIVED = calculateDamageReceived(unit, unit.tileX, unit.tileY, state);
         factors.POSITION_QUALITY = 0;
         factors.ALLY_SUPPORT = calculateAllySupport(unit, unit.tileX, unit.tileY, state);
-        factors.HEALING_VALUE = calculateHealingValue(unit, action.target, skill, state);
+        factors.HEALING_VALUE = calculateHealingValue(unit, resolvedTarget, skill, state);
         factors.SURVIVAL_PRIORITY = calculateSurvivalPriority(unit, unit.tileX, unit.tileY, state);
         factors.MP_EFFICIENCY = calculateMpEfficiency(unit, skill);
         break;
+      }
 
       case 'move':
         factors.DAMAGE_DEALT = 0;
@@ -113,21 +151,38 @@ class StateEvaluator {
    * @returns {number} Bonus value
    */
   getActionTypeBonus(actionType) {
-    // Aggressive patterns slightly prefer attacking
+    // Aggressive patterns strongly prefer attacking, heavily penalize waiting
     if (this.patternName === 'Aggressive' || this.patternName === 'Berserker') {
-      if (actionType === 'attack' || actionType === 'skill') return 10;
-      if (actionType === 'wait') return -50;
+      if (actionType === 'attack' || actionType === 'skill') return 50;
+      if (actionType === 'move') return 10; // Moving toward enemies is good
+      if (actionType === 'wait') return -150; // Strong penalty for doing nothing
     }
 
-    // Defensive patterns don't mind waiting
+    // Defensive patterns prefer repositioning, neutral on waiting
     if (this.patternName === 'Defensive') {
-      if (actionType === 'move') return 5;
+      if (actionType === 'move') return 20;
+      if (actionType === 'attack' || actionType === 'skill') return 10;
       if (actionType === 'wait') return 0;
+    }
+
+    // Hit-and-run patterns prefer attacking then moving (action order handled elsewhere)
+    if (this.patternName === 'HitAndRun') {
+      if (actionType === 'attack' || actionType === 'skill') return 40;
+      if (actionType === 'move') return 30; // Moving away after attack is good
+      if (actionType === 'wait') return -100; // Shouldn't wait when can hit-and-run
+    }
+
+    // Tactical patterns favor calculated attacks
+    if (this.patternName === 'Tactical') {
+      if (actionType === 'attack' || actionType === 'skill') return 30;
+      if (actionType === 'move') return 15;
+      if (actionType === 'wait') return -50;
     }
 
     // Ambush patterns prefer to wait if hidden
     if (this.patternName === 'Ambush') {
       if (actionType === 'wait') return 20;
+      if (actionType === 'attack') return 10; // Springing the ambush is fine
     }
 
     return 0;

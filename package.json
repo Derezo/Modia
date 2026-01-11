@@ -22,6 +22,10 @@
     "db:fresh": "bash scripts/db-fresh.sh",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
     "generate:tiles": "node api/src/scripts/generate-tiles.js",
     "generate:obstacles": "node api/src/scripts/generate-obstacles.js",
     "generate:characters": "node api/src/scripts/generate-characters.js",
@@ -40,6 +44,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@playwright/test": "^1.40.0",
     "concurrently": "^8.2.2",
     "husky": "^9.1.7"
   },

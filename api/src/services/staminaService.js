@@ -5,7 +5,10 @@
 import { query } from '../config/database.js';
 
 // Constants
-const REGEN_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes per stamina point
+const IS_DEVELOPMENT = process.env.NODE_ENV !== 'production';
+const REGEN_INTERVAL_MS = IS_DEVELOPMENT
+  ? 5 * 1000           // 5 seconds in development
+  : 2 * 60 * 1000;     // 2 minutes in production
 const DEFAULT_MAX_STAMINA = 8;
 
 /**
@@ -197,3 +200,6 @@ export async function getPartyStaminaInfo(characterIds) {
 
   return staminaMap;
 }
+
+// Export constants for testing
+export { REGEN_INTERVAL_MS, DEFAULT_MAX_STAMINA };
