@@ -311,3 +311,171 @@ if (screenX < -margin || screenX > canvas.width + margin ||
   return; // Skip rendering
 }
 ```
+
+---
+
+## 8. Responsive Design Pattern
+
+### 8.1 The Responsive Singleton
+
+The game uses a centralized responsive utility in `frontend/src/core/Responsive.js`:
+
+```javascript
+import { responsive } from './core/Responsive.js';
+
+// Check breakpoints
+responsive.isMobile()   // < 600px
+responsive.isTablet()   // 600-900px
+responsive.isDesktop()  // > 900px
+
+// Get responsive values
+responsive.getGridColumns()   // 3, 4, or 6
+responsive.getTouchTarget()   // 44, 40, or 36 px
+responsive.showLabels()       // false on mobile
+```
+
+### 8.2 Scene Lifecycle: onBreakpointChange()
+
+Scenes can override `onBreakpointChange()` to respond to viewport changes:
+
+```javascript
+class MyScene extends Scene {
+  enter() {
+    // Subscribe to responsive changes
+    this.responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
+    this.buildUI();
+  }
+
+  onBreakpointChange() {
+    // Rebuild UI for new breakpoint
+    this.destroyUI();
+    this.buildUI();
+  }
+
+  exit() {
+    // Clean up subscription
+    if (this.responsiveUnsubscribe) {
+      this.responsiveUnsubscribe();
+      this.responsiveUnsubscribe = null;
+    }
+  }
+}
+```
+
+### 8.3 CSS Variable Integration
+
+The responsive system injects CSS variables that update automatically:
+
+```css
+/* Use in inline styles or CSS */
+.panel {
+  padding: var(--space-md);           /* 12px */
+  min-height: var(--touch-target);    /* 44/40/36px based on breakpoint */
+}
+
+.grid {
+  grid-template-columns: repeat(var(--grid-columns), 1fr);
+}
+```
+
+### 8.4 Scenes Using Responsive Pattern
+
+| Scene | Pattern | Notes |
+|-------|---------|-------|
+| `FormationScene` | Full rebuild | Destroys and recreates DOM on breakpoint change |
+| `InventoryScene` | Full rebuild | Grid columns adjust to breakpoint |
+| `ShopScene` | Full rebuild | Tab layout changes for mobile |
+| `TavernScene` | Layout swap | Switches between mobile and desktop layouts |
+| `WorldMapScene` | Partial update | Updates HUD elements only |
+
+---
+
+## 9. Parchment Component Pattern
+
+### 9.1 Component Structure
+
+All parchment components follow this pattern:
+
+```javascript
+import { ParchmentPanel } from '../ui/parchment/index.js';
+
+class MyScene extends Scene {
+  enter() {
+    // Create component
+    this.panel = new ParchmentPanel({
+      title: 'My Panel',
+      closeable: true,
+      onClose: () => this.panel.hide()
+    });
+
+    // Append to DOM
+    this.game.uiContainer.appendChild(this.panel.render());
+  }
+
+  exit() {
+    // Remove from DOM
+    if (this.panel) {
+      this.panel.destroy();
+      this.panel = null;
+    }
+  }
+}
+```
+
+### 9.2 Toast Notifications
+
+Use the singleton toast manager for notifications:
+
+```javascript
+import { parchmentToast } from '../ui/parchment/index.js';
+
+// Success (green)
+parchmentToast.success('Item equipped!');
+
+// Error (red)
+parchmentToast.error('Not enough gold');
+
+// Info (blue)
+parchmentToast.info('New quest available');
+
+// Warning (yellow)
+parchmentToast.warning('Low health!');
+
+// Custom duration (ms)
+parchmentToast.success('Done!', 5000);
+```
+
+### 9.3 Modal Dialogs
+
+For confirmations and complex dialogs:
+
+```javascript
+import { ParchmentModal } from '../ui/parchment/index.js';
+
+const modal = new ParchmentModal({
+  title: 'Confirm Action',
+  content: 'Are you sure?',
+  buttons: [
+    { label: 'Cancel', variant: 'secondary', onClick: () => modal.hide() },
+    { label: 'Confirm', variant: 'primary', onClick: () => {
+      handleConfirm();
+      modal.hide();
+    }}
+  ]
+});
+
+document.body.appendChild(modal.render());
+modal.show();
+
+// Cleanup
+modal.destroy();
+```
+
+### 9.4 Button Variants
+
+| Variant | Use Case | Appearance |
+|---------|----------|------------|
+| `primary` | Main actions | Dark brown fill |
+| `secondary` | Cancel, back | Light parchment fill |
+| `danger` | Delete, remove | Red-tinted fill |
+| `ghost` | Minimal emphasis | Transparent, text only |

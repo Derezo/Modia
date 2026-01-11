@@ -364,3 +364,234 @@ const itemHoverStyles = `
   background: rgba(139, 115, 85, 0.15);
 `;
 ```
+
+---
+
+## Parchment Component Library
+
+A complete set of DOM-based UI components with the medieval parchment theme. Located in `frontend/src/ui/parchment/`.
+
+### Installation
+
+```javascript
+import {
+  ParchmentPanel,
+  ParchmentButton,
+  ParchmentInput,
+  ParchmentDropdown,
+  ParchmentModal,
+  parchmentToast,
+  ProfileDropdown,
+  injectParchmentTheme,
+  PARCHMENT_COLORS
+} from './ui/parchment/index.js';
+
+// Inject CSS variables (call once at app startup)
+injectParchmentTheme();
+```
+
+### Components
+
+| Component | Description | Key Features |
+|-----------|-------------|--------------|
+| `ParchmentPanel` | Base container | Configurable header, close button, padding |
+| `ParchmentButton` | Button variants | `primary`, `secondary`, `danger`, `ghost` |
+| `ParchmentInput` | Text inputs | Label, placeholder, validation styling |
+| `ParchmentDropdown` | Select menus | Options array, onChange callback |
+| `ParchmentModal` | Modal dialogs | Title, content, backdrop, close on escape |
+| `ParchmentToastManager` | Toast system | `success`, `error`, `info`, `warning` types |
+| `ProfileDropdown` | HUD dropdown | Combines user info, notifications, settings |
+
+### Usage Examples
+
+```javascript
+// Panel with header
+const panel = new ParchmentPanel({
+  title: 'Inventory',
+  closeable: true,
+  onClose: () => panel.hide()
+});
+document.body.appendChild(panel.render());
+
+// Button variants
+const primary = new ParchmentButton({
+  label: 'Confirm',
+  variant: 'primary',
+  onClick: () => handleConfirm()
+});
+
+const danger = new ParchmentButton({
+  label: 'Delete',
+  variant: 'danger',
+  onClick: () => handleDelete()
+});
+
+// Toast notifications
+import { parchmentToast } from './ui/parchment/index.js';
+
+parchmentToast.success('Item equipped successfully!');
+parchmentToast.error('Not enough gold');
+parchmentToast.info('New quest available');
+parchmentToast.warning('Low health!');
+
+// Modal dialog
+const modal = new ParchmentModal({
+  title: 'Confirm Purchase',
+  content: 'Buy Iron Sword for 500g?',
+  buttons: [
+    { label: 'Cancel', variant: 'secondary', onClick: () => modal.hide() },
+    { label: 'Buy', variant: 'primary', onClick: () => handleBuy() }
+  ]
+});
+modal.show();
+```
+
+### Theme Utilities
+
+```javascript
+import {
+  PARCHMENT_COLORS,
+  getParchmentGradient,
+  getParchmentBorder,
+  getParchmentShadow
+} from './ui/parchment/index.js';
+
+// Color palette
+PARCHMENT_COLORS.light      // #d4c4a8
+PARCHMENT_COLORS.mid        // #c9b899
+PARCHMENT_COLORS.dark       // #bfae8a
+PARCHMENT_COLORS.border     // #8b7355
+PARCHMENT_COLORS.text       // #2d2418
+PARCHMENT_COLORS.textMuted  // #5a4a3a
+
+// CSS helpers
+element.style.background = getParchmentGradient();  // linear-gradient(...)
+element.style.border = getParchmentBorder();        // 2px solid #8b7355
+element.style.boxShadow = getParchmentShadow();     // 0 3px 8px rgba(...)
+```
+
+---
+
+## Responsive System
+
+Viewport-aware utilities for responsive game UI. Located in `frontend/src/core/Responsive.js`.
+
+### Breakpoints
+
+| Breakpoint | Width | Touch Target | Grid Columns |
+|------------|-------|--------------|--------------|
+| Mobile | < 600px | 44px | 3 |
+| Tablet | 600-900px | 40px | 4 |
+| Desktop | > 900px | 36px | 6 |
+
+### Usage
+
+```javascript
+import { responsive } from './core/Responsive.js';
+
+// Check breakpoint
+if (responsive.isMobile()) {
+  // Mobile-specific layout
+}
+
+// Get responsive values
+const columns = responsive.getGridColumns();  // 3, 4, or 6
+const touchSize = responsive.getTouchTarget(); // 44, 40, or 36
+
+// Check features
+const showLabels = responsive.showLabels();  // false on mobile
+const hasTouch = responsive.hasTouch();
+
+// Subscribe to changes
+const unsubscribe = responsive.onChange((breakpoint, info) => {
+  console.log('Now:', breakpoint, info.isMobile, info.isTouchDevice);
+});
+```
+
+### CSS Variables
+
+The system injects CSS variables on `:root` that update with breakpoint:
+
+```css
+/* Available CSS variables */
+var(--touch-target)      /* 44px / 40px / 36px */
+var(--grid-columns)      /* 3 / 4 / 6 */
+var(--grid-item-size)    /* 64px / 56px / 48px */
+var(--icon-size-sm)      /* 20px / 18px / 16px */
+var(--icon-size-md)      /* 24px / 22px / 20px */
+var(--icon-size-lg)      /* 32px / 28px / 24px */
+var(--space-xs)          /* 4px */
+var(--space-sm)          /* 8px */
+var(--space-md)          /* 12px */
+var(--space-lg)          /* 16px */
+var(--space-xl)          /* 24px */
+var(--button-height)     /* 44px / 40px / 36px */
+var(--input-height)      /* 44px / 40px / 36px */
+var(--is-touch-device)   /* 1 or 0 */
+```
+
+---
+
+## Icon System
+
+Medieval woodcut-style SVG icons with responsive sizing. Build generates PNG variants at 16/24/32/48px.
+
+### Directory Structure
+
+```
+frontend/public/assets/icons/
+  svg/
+    menu/       # formation.svg, inventory.svg, settings.svg, ...
+    nodes/      # tavern.svg, shop.svg, castle.svg, ...
+    actions/    # attack.svg, move.svg, skill.svg, ...
+    stats/      # health.svg, mana.svg, strength.svg, ...
+    resources/  # gold.svg, stamina.svg, xp.svg, ...
+    slots/      # weapon.svg, armor.svg, accessory.svg, ...
+  png/
+    16/         # 16x16 PNG variants
+    24/         # 24x24 PNG variants
+    32/         # 32x32 PNG variants
+    48/         # 48x48 PNG variants
+```
+
+### Icon Component
+
+```javascript
+import { Icon } from './components/Icon.js';
+
+// As DOM element (responsive)
+const icon = new Icon('menu', 'formation', {
+  label: 'Formation',
+  size: 'md'  // sm, md, lg, xl
+});
+container.appendChild(icon.render());
+
+// Update state
+icon.setActive(true);
+icon.setDisabled(false);
+
+// As HTML string (static)
+button.innerHTML = Icon.html('actions', 'attack', { label: 'Attack' });
+
+// Cleanup
+icon.destroy();
+```
+
+### Size Mapping
+
+| Size | Mobile | Tablet | Desktop |
+|------|--------|--------|---------|
+| sm | 20px | 18px | 16px |
+| md | 24px | 22px | 20px |
+| lg | 32px | 28px | 24px |
+| xl | 48px | 40px | 32px |
+
+### Build Script
+
+```bash
+# Generate PNG variants from SVG sources
+node scripts/generate-icons.js
+
+# Included in dev setup
+npm run dev:setup
+```

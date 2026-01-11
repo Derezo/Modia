@@ -1052,10 +1052,14 @@ async function searchItems(client, searchTerm = '', itemType = null, limit = 50)
       it.level_requirement,
       it.base_price,
       it.rarity,
+      it.is_stackable,
       COALESCE(ask.best_ask, 0) as best_ask,
       COALESCE(bid.best_bid, 0) as best_bid,
       COALESCE(vol.volume_24h, 0) as volume_24h,
-      COALESCE(ord.open_orders, 0) as open_orders
+      COALESCE(ord.open_orders, 0) as open_orders,
+      COALESCE(listings.listing_count, 0) as listing_count,
+      listings.min_listing_price,
+      listings.max_listing_price
     FROM item_templates it
     LEFT JOIN LATERAL (
       SELECT MIN(price) as best_ask
@@ -1083,6 +1087,15 @@ async function searchItems(client, searchTerm = '', itemType = null, limit = 50)
       WHERE item_template_id = it.id
         AND status IN ('open', 'partial')
     ) ord ON true
+    LEFT JOIN LATERAL (
+      SELECT
+        COUNT(*) as listing_count,
+        MIN(price) as min_listing_price,
+        MAX(price) as max_listing_price
+      FROM item_listings
+      WHERE item_template_id = it.id
+        AND status = 'active'
+    ) listings ON true
     WHERE (it.is_tradeable IS NULL OR it.is_tradeable = TRUE)
   `;
 
@@ -1117,10 +1130,589 @@ async function searchItems(client, searchTerm = '', itemType = null, limit = 50)
     levelRequirement: row.level_requirement,
     basePrice: row.base_price,
     rarity: row.rarity,
+    isStackable: row.is_stackable || false,
     bestAsk: row.best_ask ? parseInt(row.best_ask, 10) : null,
     bestBid: row.best_bid ? parseInt(row.best_bid, 10) : null,
     volume24h: parseInt(row.volume_24h, 10) || 0,
-    openOrders: parseInt(row.open_orders, 10) || 0
+    openOrders: parseInt(row.open_orders, 10) || 0,
+    listingCount: parseInt(row.listing_count, 10) || 0,
+    minListingPrice: row.min_listing_price ? parseInt(row.min_listing_price, 10) : null,
+    maxListingPrice: row.max_listing_price ? parseInt(row.max_listing_price, 10) : null
+  }));
+}
+
+// ============================================
+// ITEM LISTINGS - For unique items with modifications
+// ============================================
+
+/**
+ * Augment value multipliers by category
+ */
+const AUGMENT_VALUES = {
+  // Elemental
+  fire: 0.8,
+  ice: 0.8,
+  lightning: 0.8,
+  poison: 0.6,
+  holy: 0.9,
+  dark: 0.9,
+  // Stats
+  strength: 1.0,
+  intelligence: 1.0,
+  agility: 1.0,
+  vitality: 1.0,
+  luck: 0.8,
+  // Combat
+  critical: 1.0,
+  speed: 0.9,
+  damage: 1.1,
+  power: 1.0,
+  // Defense
+  defense: 0.9,
+  magic_defense: 0.9,
+  armor: 0.8,
+  block: 0.9,
+  spell_resist: 0.8,
+  protection: 1.0,
+  // Enemy-slayer
+  dragon_slayer: 1.2,
+  undead_slayer: 1.1,
+  demon_slayer: 1.2,
+  // Support
+  hp: 0.9,
+  mp: 0.9,
+  regen: 0.7,
+  mp_regen: 0.7,
+  accuracy: 0.8,
+  crit: 1.0,
+  // Consumable
+  effect_multiplier: 1.0,
+  hot: 0.8,
+  hot_percent: 1.0,
+  mp_bonus: 0.7,
+  mp_regen: 0.8,
+  spell_cost_reduction: 0.9,
+  cleanse: 1.2,
+  buff: 0.8,
+  revive_hp_bonus: 0.6,
+  revive_full: 1.5,
+  revive_immunity: 1.0,
+  instant: 1.5,
+  aoe: 1.2
+};
+
+/**
+ * Rarity multipliers for price calculation
+ */
+const RARITY_MULTIPLIERS = {
+  common: 1.0,
+  uncommon: 1.5,
+  rare: 2.5,
+  epic: 5.0,
+  legendary: 10.0
+};
+
+/**
+ * Calculate suggested price for an item based on its properties
+ */
+function calculateSuggestedPrice(item) {
+  const basePrice = item.basePrice || item.base_price || 10;
+  const rarity = item.rarity || 'common';
+  const augments = item.augments || [];
+
+  // Get rarity multiplier
+  const rarityMult = RARITY_MULTIPLIERS[rarity] || 1.0;
+
+  // Calculate augment value
+  let augmentValue = 0;
+  for (const augment of augments) {
+    const category = augment.category || 'default';
+    augmentValue += AUGMENT_VALUES[category] || 0.5;
+  }
+
+  // Augment multiplier: 1.0 + (augmentValue * 0.15)
+  const augmentMult = 1.0 + (augmentValue * 0.15);
+
+  // Calculate final price
+  const suggestedPrice = Math.floor(basePrice * rarityMult * augmentMult);
+
+  return {
+    suggestedPrice,
+    breakdown: {
+      basePrice,
+      rarityMultiplier: rarityMult,
+      augmentMultiplier: parseFloat(augmentMult.toFixed(2)),
+      augmentCount: augments.length
+    }
+  };
+}
+
+/**
+ * Get all active listings for a specific item template
+ * Returns full modification data for each listing
+ */
+async function getItemListings(client, itemTemplateId) {
+  const result = await client.query(
+    `SELECT
+       il.id as listing_id,
+       il.price,
+       il.suggested_price,
+       il.seller_id,
+       il.created_at,
+       il.modifications_snapshot as modifications,
+       ci.id as character_item_id,
+       it.name as template_name,
+       it.base_price,
+       it.item_type,
+       it.stat_bonuses as template_stats,
+       u.username as seller_name
+     FROM item_listings il
+     JOIN character_items ci ON il.character_item_id = ci.id
+     JOIN item_templates it ON il.item_template_id = it.id
+     JOIN users u ON il.seller_id = u.id
+     WHERE il.item_template_id = $1 AND il.status = 'active'
+     ORDER BY il.price ASC, il.created_at ASC`,
+    [itemTemplateId]
+  );
+
+  return result.rows.map(row => {
+    const mods = row.modifications || {};
+    return {
+      listingId: row.listing_id,
+      characterItemId: row.character_item_id,
+      generatedName: mods.generatedName || row.template_name,
+      templateName: row.template_name,
+      rarity: mods.rarity || 'common',
+      material: mods.material || null,
+      baseStats: mods.baseStats || row.template_stats || {},
+      bonusStats: mods.bonusStats || {},
+      augments: mods.augments || [],
+      askPrice: parseInt(row.price, 10),
+      suggestedPrice: row.suggested_price ? parseInt(row.suggested_price, 10) : null,
+      sellerId: row.seller_id,
+      sellerName: row.seller_name,
+      createdAt: row.created_at
+    };
+  });
+}
+
+/**
+ * Get aggregate listing info for search results
+ * Returns count, price range, and rarity range for templates with listings
+ */
+async function getListingAggregates(client, templateIds) {
+  if (!templateIds || templateIds.length === 0) return {};
+
+  const result = await client.query(
+    `SELECT
+       il.item_template_id,
+       COUNT(*) as listing_count,
+       MIN(il.price) as min_price,
+       MAX(il.price) as max_price,
+       array_agg(DISTINCT il.modifications_snapshot->>'rarity') as rarities
+     FROM item_listings il
+     WHERE il.item_template_id = ANY($1) AND il.status = 'active'
+     GROUP BY il.item_template_id`,
+    [templateIds]
+  );
+
+  const aggregates = {};
+  for (const row of result.rows) {
+    const rarities = (row.rarities || []).filter(r => r).sort((a, b) => {
+      const order = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+      return order.indexOf(a) - order.indexOf(b);
+    });
+    aggregates[row.item_template_id] = {
+      listingCount: parseInt(row.listing_count, 10),
+      minPrice: parseInt(row.min_price, 10),
+      maxPrice: parseInt(row.max_price, 10),
+      minRarity: rarities[0] || 'common',
+      maxRarity: rarities[rarities.length - 1] || 'common'
+    };
+  }
+
+  return aggregates;
+}
+
+/**
+ * Create a new item listing
+ */
+async function createItemListing(client, userId, characterId, characterItemId, price) {
+  // Get the item and verify ownership
+  const itemResult = await client.query(
+    `SELECT ci.id, ci.item_template_id, ci.modifications, ci.equipped_slot,
+            it.name, it.base_price, it.item_type, it.is_tradeable, it.is_stackable,
+            it.stat_bonuses
+     FROM character_items ci
+     JOIN item_templates it ON ci.item_template_id = it.id
+     JOIN characters c ON ci.character_id = c.id
+     WHERE ci.id = $1 AND ci.character_id = $2 AND c.user_id = $3
+     FOR UPDATE`,
+    [characterItemId, characterId, userId]
+  );
+
+  if (itemResult.rows.length === 0) {
+    throw new AppError('Item not found or not owned by this character', 404);
+  }
+
+  const item = itemResult.rows[0];
+
+  if (item.is_tradeable === false) {
+    throw new AppError('This item cannot be traded', 400);
+  }
+
+  if (item.equipped_slot) {
+    throw new AppError('Cannot list equipped items. Unequip first.', 400);
+  }
+
+  if (item.is_stackable) {
+    throw new AppError('Stackable items should use the order book system', 400);
+  }
+
+  // Check if item is already listed
+  const existingResult = await client.query(
+    `SELECT id FROM item_listings WHERE character_item_id = $1 AND status = 'active'`,
+    [characterItemId]
+  );
+
+  if (existingResult.rows.length > 0) {
+    throw new AppError('This item is already listed for sale', 400);
+  }
+
+  // Calculate suggested price
+  const mods = item.modifications || {};
+  const { suggestedPrice } = calculateSuggestedPrice({
+    basePrice: item.base_price,
+    rarity: mods.rarity || 'common',
+    augments: mods.augments || []
+  });
+
+  // Create listing with modification snapshot
+  const listingResult = await client.query(
+    `INSERT INTO item_listings
+     (seller_id, character_id, character_item_id, item_template_id, price, suggested_price, modifications_snapshot)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, created_at`,
+    [userId, characterId, characterItemId, item.item_template_id, price, suggestedPrice, item.modifications]
+  );
+
+  const listing = listingResult.rows[0];
+
+  // Mark the item as "listed" in modifications to prevent other operations
+  await client.query(
+    `UPDATE character_items SET modifications = modifications || '{"listed": true}'::jsonb WHERE id = $1`,
+    [characterItemId]
+  );
+
+  return {
+    listingId: listing.id,
+    itemTemplateId: item.item_template_id,
+    itemName: mods.generatedName || item.name,
+    price,
+    suggestedPrice,
+    createdAt: listing.created_at
+  };
+}
+
+/**
+ * Buy an item from a listing
+ */
+async function buyItemListing(client, buyerUserId, buyerCharacterId, listingId) {
+  // Get and lock the listing
+  const listingResult = await client.query(
+    `SELECT il.*, ci.id as ci_id, ci.modifications, it.name as template_name
+     FROM item_listings il
+     JOIN character_items ci ON il.character_item_id = ci.id
+     JOIN item_templates it ON il.item_template_id = it.id
+     WHERE il.id = $1 AND il.status = 'active'
+     FOR UPDATE`,
+    [listingId]
+  );
+
+  if (listingResult.rows.length === 0) {
+    throw new AppError('Listing not found or no longer available', 404);
+  }
+
+  const listing = listingResult.rows[0];
+
+  // Can't buy your own listing
+  if (listing.seller_id === buyerUserId) {
+    throw new AppError('Cannot buy your own listing', 400);
+  }
+
+  // Check buyer has enough gold
+  const buyerResult = await client.query(
+    'SELECT gold FROM users WHERE id = $1 FOR UPDATE',
+    [buyerUserId]
+  );
+
+  if (buyerResult.rows.length === 0) {
+    throw new AppError('Buyer not found', 404);
+  }
+
+  const buyerGold = buyerResult.rows[0].gold;
+  const price = parseInt(listing.price, 10);
+
+  if (buyerGold < price) {
+    throw new AppError(`Insufficient gold. Need ${price}, have ${buyerGold}`, 400);
+  }
+
+  // Transfer gold: buyer pays
+  await client.query(
+    'UPDATE users SET gold = gold - $1 WHERE id = $2',
+    [price, buyerUserId]
+  );
+
+  // Transfer gold: seller receives (capped)
+  await client.query(
+    'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
+    [price, MAX_GOLD, listing.seller_id]
+  );
+
+  // Transfer item: update character_id and remove "listed" flag
+  const mods = listing.modifications || {};
+  delete mods.listed;
+
+  await client.query(
+    `UPDATE character_items
+     SET character_id = $1, modifications = $2
+     WHERE id = $3`,
+    [buyerCharacterId, mods, listing.character_item_id]
+  );
+
+  // Update listing status
+  await client.query(
+    `UPDATE item_listings SET status = 'sold', updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+    [listingId]
+  );
+
+  // Record the sale
+  await client.query(
+    `INSERT INTO item_listing_sales
+     (listing_id, buyer_id, buyer_character_id, seller_id, item_template_id, price, modifications)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [listingId, buyerUserId, buyerCharacterId, listing.seller_id, listing.item_template_id, price, listing.modifications]
+  );
+
+  const itemName = mods.generatedName || listing.template_name;
+
+  return {
+    listingId,
+    itemTemplateId: listing.item_template_id,
+    itemName,
+    price,
+    sellerId: listing.seller_id,
+    buyerId: buyerUserId,
+    characterItemId: listing.character_item_id
+  };
+}
+
+/**
+ * Cancel an item listing
+ */
+async function cancelItemListing(client, userId, listingId) {
+  // Get and lock the listing
+  const listingResult = await client.query(
+    `SELECT il.*, ci.modifications, it.name as template_name
+     FROM item_listings il
+     JOIN character_items ci ON il.character_item_id = ci.id
+     JOIN item_templates it ON il.item_template_id = it.id
+     WHERE il.id = $1 AND il.status = 'active'
+     FOR UPDATE`,
+    [listingId]
+  );
+
+  if (listingResult.rows.length === 0) {
+    throw new AppError('Listing not found or already cancelled/sold', 404);
+  }
+
+  const listing = listingResult.rows[0];
+
+  if (listing.seller_id !== userId) {
+    throw new AppError('Not authorized to cancel this listing', 403);
+  }
+
+  // Remove "listed" flag from item
+  const mods = listing.modifications || {};
+  delete mods.listed;
+
+  await client.query(
+    `UPDATE character_items SET modifications = $1 WHERE id = $2`,
+    [mods, listing.character_item_id]
+  );
+
+  // Update listing status
+  await client.query(
+    `UPDATE item_listings SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+    [listingId]
+  );
+
+  const itemName = mods.generatedName || listing.template_name;
+
+  return {
+    listingId,
+    itemTemplateId: listing.item_template_id,
+    itemName,
+    characterItemId: listing.character_item_id
+  };
+}
+
+/**
+ * Get user's active listings
+ */
+async function getUserListings(client, userId) {
+  const result = await client.query(
+    `SELECT
+       il.id as listing_id,
+       il.price,
+       il.suggested_price,
+       il.created_at,
+       il.modifications_snapshot as modifications,
+       il.item_template_id,
+       it.name as template_name,
+       it.item_type
+     FROM item_listings il
+     JOIN item_templates it ON il.item_template_id = it.id
+     WHERE il.seller_id = $1 AND il.status = 'active'
+     ORDER BY il.created_at DESC`,
+    [userId]
+  );
+
+  return result.rows.map(row => {
+    const mods = row.modifications || {};
+    return {
+      listingId: row.listing_id,
+      itemTemplateId: row.item_template_id,
+      generatedName: mods.generatedName || row.template_name,
+      templateName: row.template_name,
+      itemType: row.item_type,
+      rarity: mods.rarity || 'common',
+      price: parseInt(row.price, 10),
+      suggestedPrice: row.suggested_price ? parseInt(row.suggested_price, 10) : null,
+      createdAt: row.created_at
+    };
+  });
+}
+
+/**
+ * Search items with augment category filter
+ * Extends the base searchItems to include augment filtering
+ */
+async function searchItemsWithAugments(client, searchTerm = '', itemType = null, augmentCategory = null, limit = 50) {
+  let query = `
+    SELECT
+      it.id,
+      it.name,
+      it.description,
+      it.item_type,
+      it.equipment_slot,
+      it.stat_bonuses,
+      it.level_requirement,
+      it.base_price,
+      it.rarity,
+      it.is_stackable,
+      COALESCE(ask.best_ask, 0) as best_ask,
+      COALESCE(bid.best_bid, 0) as best_bid,
+      COALESCE(vol.volume_24h, 0) as volume_24h,
+      COALESCE(ord.open_orders, 0) as open_orders,
+      COALESCE(listings.listing_count, 0) as listing_count,
+      listings.min_listing_price,
+      listings.max_listing_price
+    FROM item_templates it
+    LEFT JOIN LATERAL (
+      SELECT MIN(price) as best_ask
+      FROM market_orders
+      WHERE item_template_id = it.id
+        AND side = 'sell'
+        AND status IN ('open', 'partial')
+    ) ask ON true
+    LEFT JOIN LATERAL (
+      SELECT MAX(price) as best_bid
+      FROM market_orders
+      WHERE item_template_id = it.id
+        AND side = 'buy'
+        AND status IN ('open', 'partial')
+    ) bid ON true
+    LEFT JOIN LATERAL (
+      SELECT SUM(quantity) as volume_24h
+      FROM market_trades
+      WHERE item_template_id = it.id
+        AND executed_at > CURRENT_TIMESTAMP - INTERVAL '24 hours'
+    ) vol ON true
+    LEFT JOIN LATERAL (
+      SELECT COUNT(*) as open_orders
+      FROM market_orders
+      WHERE item_template_id = it.id
+        AND status IN ('open', 'partial')
+    ) ord ON true
+    LEFT JOIN LATERAL (
+      SELECT
+        COUNT(*) as listing_count,
+        MIN(price) as min_listing_price,
+        MAX(price) as max_listing_price
+      FROM item_listings
+      WHERE item_template_id = it.id
+        AND status = 'active'
+  `;
+
+  // Add augment filter to listings subquery
+  if (augmentCategory) {
+    query += `
+        AND modifications_snapshot->'augments' @> $augmentParam::jsonb
+    `;
+  }
+
+  query += `
+    ) listings ON true
+    WHERE (it.is_tradeable IS NULL OR it.is_tradeable = TRUE)
+  `;
+
+  const params = [];
+  let paramIndex = 1;
+
+  // Build augment filter parameter
+  if (augmentCategory) {
+    params.push(JSON.stringify([{ category: augmentCategory }]));
+    query = query.replace('$augmentParam', `$${paramIndex}`);
+    paramIndex++;
+  }
+
+  if (searchTerm) {
+    query += ` AND it.name ILIKE $${paramIndex}`;
+    params.push(`%${searchTerm}%`);
+    paramIndex++;
+  }
+
+  if (itemType) {
+    query += ` AND it.item_type = $${paramIndex}`;
+    params.push(itemType);
+    paramIndex++;
+  }
+
+  // Sort by activity (orders + listings), then alphabetically
+  query += ` ORDER BY (COALESCE(ord.open_orders, 0) + COALESCE(listings.listing_count, 0)) DESC, it.name ASC LIMIT $${paramIndex}`;
+  params.push(limit);
+
+  const result = await client.query(query, params);
+
+  return result.rows.map(row => ({
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    itemType: row.item_type,
+    equipmentSlot: row.equipment_slot,
+    statBonuses: row.stat_bonuses,
+    levelRequirement: row.level_requirement,
+    basePrice: row.base_price,
+    rarity: row.rarity,
+    isStackable: row.is_stackable,
+    bestAsk: row.best_ask ? parseInt(row.best_ask, 10) : null,
+    bestBid: row.best_bid ? parseInt(row.best_bid, 10) : null,
+    volume24h: parseInt(row.volume_24h, 10) || 0,
+    openOrders: parseInt(row.open_orders, 10) || 0,
+    listingCount: parseInt(row.listing_count, 10) || 0,
+    minListingPrice: row.min_listing_price ? parseInt(row.min_listing_price, 10) : null,
+    maxListingPrice: row.max_listing_price ? parseInt(row.max_listing_price, 10) : null
   }));
 }
 
@@ -1138,5 +1730,14 @@ export {
   cancelOrder,
   getUserOrders,
   getTradeHistory,
-  searchItems
+  searchItems,
+  // Item listings for unique items
+  calculateSuggestedPrice,
+  getItemListings,
+  getListingAggregates,
+  createItemListing,
+  buyItemListing,
+  cancelItemListing,
+  getUserListings,
+  searchItemsWithAugments
 };

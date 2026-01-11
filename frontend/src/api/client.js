@@ -282,10 +282,11 @@ export class ApiClient {
     return this.delete(`/marketplace/orders/${orderId}`);
   }
 
-  searchMarketItems(query = '', type = null, limit = 50) {
+  searchMarketItems(query = '', type = null, augment = null, limit = 50) {
     const params = new URLSearchParams();
     if (query) params.append('q', query);
     if (type) params.append('type', type);
+    if (augment) params.append('augment', augment);
     params.append('limit', limit);
     return this.get(`/marketplace/search?${params.toString()}`);
   }
@@ -300,6 +301,35 @@ export class ApiClient {
 
   getMarketStats(itemTemplateId) {
     return this.get(`/marketplace/stats/${itemTemplateId}`);
+  }
+
+  // Item listings for unique items with augments
+  getItemListings(templateId) {
+    return this.get(`/marketplace/items/${templateId}`);
+  }
+
+  getMyListings() {
+    return this.get('/marketplace/listings/mine');
+  }
+
+  createItemListing(characterId, characterItemId, price) {
+    return this.post('/marketplace/listings', {
+      characterId,
+      characterItemId,
+      price
+    });
+  }
+
+  buyItemListing(listingId, characterId) {
+    return this.post(`/marketplace/listings/${listingId}/buy`, { characterId });
+  }
+
+  cancelItemListing(listingId) {
+    return this.delete(`/marketplace/listings/${listingId}`);
+  }
+
+  getPriceSuggestion(characterId, characterItemId) {
+    return this.get(`/marketplace/price-suggestion?characterId=${characterId}&characterItemId=${characterItemId}`);
   }
 
   // Chat endpoints
