@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 7.2 |
+| Version | 7.3 |
 | Last Updated | January 2026 |
 
 ---
@@ -255,6 +255,26 @@ Enhanced world map navigation with multi-node travel, stamina system, and charac
 - **Animated Travel**: Character walks along bezier paths between nodes with dust particles
 - **Camera Follow**: Smooth camera tracking during travel animation
 - **Intermediate Discovery**: All nodes along travel path are discovered automatically
+
+---
+
+### World Map Path System Overhaul (Complete - January 2026)
+
+Fixed duplicate path rendering, added dynamic curve variance, and made character follow visual spline curves. See plan: `/home/wizard/.claude/plans/ticklish-conjuring-lovelace.md`
+
+| Task | Status | Files |
+|------|--------|-------|
+| Single path storage (normalized IDs) | ✅ Complete | api/src/db/seed.js |
+| Path variance system (3 levels) | ✅ Complete | frontend/src/worldmap/PathRenderer.js |
+| Character follows spline curves | ✅ Complete | frontend/src/worldmap/WorldMapCharacter.js |
+| Connection deduplication | ✅ Complete | frontend/src/scenes/WorldMapScene.js |
+| Node labels above fog of war | ✅ Complete | frontend/src/scenes/WorldMapScene.js |
+
+**Key Features:**
+- **Single Path Per Connection**: Database stores one row per bidirectional path (normalized ID ordering)
+- **Dynamic Curve Variance**: 5% extreme curves, 20% significant curves, 75% soft curves (deterministic from seed)
+- **Character Curve Following**: Character walks along visual Catmull-Rom spline paths instead of straight lines
+- **Proper Fog Layering**: Node labels (including "Undiscovered") render above fog of war overlay
 
 ---
 
@@ -1394,3 +1414,4 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 | 7.0 | Jan 2026 | - | **Social & PvP Systems**: Complete multiplayer social features and PvP system. Notification system (service, API, ToastManager, NotificationBell, NotificationCenter). Friend system (requests, blocking, favorites, search). Party system fixes (schema corrections, PartyInviteModal, PartyStatusBar). CourtyardScene (Palace social hub with LFG board). Character Power Rating (PPR) valuation algorithm. PPR-based matchmaking with ±15% range. Weighted ELO rating system with underdog bonus. PvP turn timer (60s, progressive penalty). Surrender/forfeit with rating penalties. Disconnect handling (5 min forfeit, weekly grace). Match snapshots for history. Leaderboards and match history UI in ColiseumScene. Database migration 014_social_pvp_systems.sql. Overall revised to 85%. |
 | 7.1 | Jan 2026 | - | **Item Naming Convention System**: Implemented full procedural item naming with category-based augment deduplication. 17 prefix augments + 17 suffix augments for equipment, 20 consumable-specific augments. Inventory API now returns generated names, bonus stats, and augment effects. Frontend displays augments in tooltips. Developer seed data (derezo/password user). **Marketplace Item Augments Integration**: Added design document for hybrid browse-and-select marketplace UI with augment filtering and price suggestions. See `docs/plans/2026-01-11-marketplace-item-augments-design.md`. |
 | 7.2 | Jan 2026 | - | **UI/UX Parchment Theme Overhaul**: Complete parchment component library (Panel, Button, Input, Dropdown, Modal, Toast, ProfileDropdown) in `frontend/src/ui/parchment/`. Responsive framework with 3 breakpoints and CSS variable injection (`frontend/src/core/Responsive.js`). SVG icon system with 6 categories and PNG build script. Scene lifecycle `onBreakpointChange()` method. Migrated 6 scenes (WorldMap, Formation, Inventory, Tavern, Shop, SettingsModal). World map enhancements: Catmull-Rom spline paths, progressive fog-of-war, mystery nodes. Updated `docs/DESIGN_SYSTEM.md` and `docs/FRONTEND_TECHNICAL_PATTERNS.md`. |
+| 7.3 | Jan 2026 | - | **World Map Path System Overhaul**: Fixed duplicate path rendering (single row per connection with normalized ID ordering), added dynamic curve variance system (5% extreme, 20% significant, 75% soft), character now follows visual Catmull-Rom spline curves instead of straight lines, node labels render above fog of war. Files: seed.js, PathRenderer.js, WorldMapCharacter.js, WorldMapScene.js. |

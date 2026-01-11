@@ -1,7 +1,10 @@
 /**
  * WorldMapCharacter - Displays the party leader's character on the world map
  * Handles idle display, walking animations, and travel animations
+ * Character follows spline curves matching the visual path rendering
  */
+
+import { generatePathControlPoints, generateSplinePoints } from './PathRenderer.js';
 
 export class WorldMapCharacter {
   constructor(assetLoader) {
@@ -27,14 +30,18 @@ export class WorldMapCharacter {
 
     // Walking animation
     this.isWalking = false;
-    this.walkPath = []; // Array of {x, y} positions
+    this.walkPath = []; // Array of {x, y, id} positions
     this.walkPathIndex = 0;
-    this.walkProgress = 0; // 0-1 progress between current and next position
+    this.walkProgress = 0; // 0-1 progress along current spline segment
     this.walkSpeed = 200; // Pixels per second
     this.walkFrame = 0;
     this.walkFrameTime = 0;
     this.walkFrameDuration = 150; // ms per walk frame
     this.facingRight = true;
+
+    // Spline-following data
+    this.splineSegments = []; // Array of {points: [], lengths: [], totalLength: number}
+    this.currentSegmentIndex = 0;
 
     // Travel completion callback
     this.onTravelComplete = null;
@@ -97,6 +104,10 @@ export class WorldMapCharacter {
     this.isWalking = true;
     this.onTravelComplete = onComplete;
 
+    // Precompute spline segments for smooth curve following
+    this.precomputeSplineSegments(pathNodes);
+    this.currentSegmentIndex = 0;
+
     // Set initial position
     this.x = pathNodes[0].x;
     this.y = pathNodes[0].y;
@@ -105,6 +116,59 @@ export class WorldMapCharacter {
     if (pathNodes.length > 1) {
       this.facingRight = pathNodes[1].x >= pathNodes[0].x;
     }
+  }
+
+  /**
+   * Precompute spline segments for the entire walk path
+   * @param {Array} pathNodes - Array of {x, y, id} positions
+   */
+  precomputeSplineSegments(pathNodes) {
+    this.splineSegments = [];
+
+    for (let i = 0; i < pathNodes.length - 1; i++) {
+      const fromNode = pathNodes[i];
+      const toNode = pathNodes[i + 1];
+
+      // Generate spline using PathRenderer functions (same as visual path)
+      const controlPoints = generatePathControlPoints(
+        fromNode.x, fromNode.y,
+        toNode.x, toNode.y,
+        fromNode.id, toNode.id
+      );
+
+      // Generate smooth spline points
+      let splinePoints = generateSplinePoints(controlPoints, 10);
+
+      // Handle direction: if traveling from higher ID to lower ID, reverse the points
+      // This ensures we travel along the same curve path in both directions
+      if (fromNode.id > toNode.id) {
+        splinePoints = [...splinePoints].reverse();
+      }
+
+      // Calculate arc lengths for constant-speed interpolation
+      const lengths = this.calculateSegmentLengths(splinePoints);
+
+      this.splineSegments.push({
+        points: splinePoints,
+        lengths: lengths,
+        totalLength: lengths.reduce((a, b) => a + b, 0)
+      });
+    }
+  }
+
+  /**
+   * Calculate distances between consecutive spline points
+   * @param {Array} points - Array of {x, y} points
+   * @returns {Array} Array of distances
+   */
+  calculateSegmentLengths(points) {
+    const lengths = [];
+    for (let i = 0; i < points.length - 1; i++) {
+      const dx = points[i + 1].x - points[i].x;
+      const dy = points[i + 1].y - points[i].y;
+      lengths.push(Math.sqrt(dx * dx + dy * dy));
+    }
+    return lengths;
   }
 
   /**
@@ -128,17 +192,16 @@ export class WorldMapCharacter {
   }
 
   /**
-   * Update walking animation
+   * Update walking animation - follows spline curves
    */
   updateWalking(deltaTime) {
-    const currentNode = this.walkPath[this.walkPathIndex];
-    const nextNode = this.walkPath[this.walkPathIndex + 1];
-
-    if (!nextNode) {
+    // Check if we've completed all segments
+    if (this.currentSegmentIndex >= this.splineSegments.length) {
       // Reached end of path
       this.isWalking = false;
-      this.x = currentNode.x;
-      this.y = currentNode.y;
+      const lastNode = this.walkPath[this.walkPath.length - 1];
+      this.x = lastNode.x;
+      this.y = lastNode.y;
       if (this.onTravelComplete) {
         this.onTravelComplete();
         this.onTravelComplete = null;
@@ -146,42 +209,93 @@ export class WorldMapCharacter {
       return;
     }
 
-    // Calculate distance between nodes
-    const dx = nextNode.x - currentNode.x;
-    const dy = nextNode.y - currentNode.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
+    const segment = this.splineSegments[this.currentSegmentIndex];
 
-    // Update progress based on speed
-    const progressDelta = (this.walkSpeed * deltaTime / 1000) / distance;
+    // Handle zero-length segments (shouldn't happen, but be safe)
+    if (segment.totalLength < 1) {
+      this.walkProgress = 0;
+      this.currentSegmentIndex++;
+      this.walkPathIndex++;
+      return;
+    }
+
+    // Calculate distance to travel this frame
+    const distanceToTravel = this.walkSpeed * deltaTime / 1000;
+
+    // Update progress along current segment (0-1)
+    const progressDelta = distanceToTravel / segment.totalLength;
     this.walkProgress += progressDelta;
 
-    // Update facing direction
-    this.facingRight = dx >= 0;
-
-    // Update walk frame
+    // Update walk frame animation
     this.walkFrameTime += deltaTime;
     if (this.walkFrameTime >= this.walkFrameDuration) {
       this.walkFrameTime = 0;
       this.walkFrame = (this.walkFrame + 1) % 4;
-
-      // Spawn dust particle
       this.spawnDustParticle();
     }
 
-    // Check if reached next node
+    // Check if we've completed current segment
     if (this.walkProgress >= 1) {
       this.walkProgress = 0;
+      this.currentSegmentIndex++;
       this.walkPathIndex++;
-
-      // Brief pause at intermediate nodes
-      if (this.walkPathIndex < this.walkPath.length - 1) {
-        // Could add pause logic here if desired
-      }
+      return; // Will continue next frame from new segment
     }
 
-    // Interpolate position
-    this.x = currentNode.x + dx * this.walkProgress;
-    this.y = currentNode.y + dy * this.walkProgress;
+    // Get interpolated position and angle along the spline
+    const { x, y, angle } = this.getSplinePosition(segment, this.walkProgress);
+    this.x = x;
+    this.y = y;
+
+    // Update facing direction based on movement angle
+    this.facingRight = Math.cos(angle) >= 0;
+  }
+
+  /**
+   * Get position and angle at a given progress along a spline segment
+   * @param {Object} segment - Spline segment with points, lengths, totalLength
+   * @param {number} progress - Progress along segment (0-1)
+   * @returns {{x: number, y: number, angle: number}}
+   */
+  getSplinePosition(segment, progress) {
+    const { points, lengths, totalLength } = segment;
+
+    if (points.length < 2) {
+      return { x: points[0]?.x || 0, y: points[0]?.y || 0, angle: 0 };
+    }
+
+    // Target distance along the spline
+    const targetDistance = progress * totalLength;
+
+    // Find which sub-segment we're in
+    let accumulatedLength = 0;
+    let subSegmentIndex = 0;
+
+    for (let i = 0; i < lengths.length; i++) {
+      if (accumulatedLength + lengths[i] >= targetDistance) {
+        subSegmentIndex = i;
+        break;
+      }
+      accumulatedLength += lengths[i];
+      subSegmentIndex = i;
+    }
+
+    // Clamp to valid range
+    subSegmentIndex = Math.min(subSegmentIndex, points.length - 2);
+
+    // Interpolate within sub-segment
+    const remainingDistance = targetDistance - accumulatedLength;
+    const segmentLength = lengths[subSegmentIndex] || 1;
+    const subProgress = Math.min(1, Math.max(0, remainingDistance / segmentLength));
+
+    const p1 = points[subSegmentIndex];
+    const p2 = points[subSegmentIndex + 1] || p1;
+
+    const x = p1.x + (p2.x - p1.x) * subProgress;
+    const y = p1.y + (p2.y - p1.y) * subProgress;
+    const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+
+    return { x, y, angle };
   }
 
   /**
@@ -376,9 +490,10 @@ export class WorldMapCharacter {
    */
   getTravelProgress() {
     if (!this.isWalking || this.walkPath.length === 0) return 0;
-    const nodeProgress = this.walkPathIndex / (this.walkPath.length - 1);
-    const segmentProgress = this.walkProgress / (this.walkPath.length - 1);
-    return Math.min(1, nodeProgress + segmentProgress);
+    const totalSegments = this.walkPath.length - 1;
+    if (totalSegments <= 0) return 0;
+    // walkPathIndex is the completed segment count, walkProgress is 0-1 within current segment
+    return Math.min(1, (this.walkPathIndex + this.walkProgress) / totalSegments);
   }
 
   /**

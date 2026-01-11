@@ -785,6 +785,12 @@ async function seedDeveloperTestData(castleId) {
     characterId = existingChar.rows[0].id;
     console.log('  Developer character already exists, updating items...');
 
+    // Ensure party_slot is set (may be missing from older seeds)
+    await pool.query(
+      'UPDATE characters SET party_slot = 1 WHERE id = $1 AND party_slot IS NULL',
+      [characterId]
+    );
+
     // Clear existing items for fresh test data
     await pool.query('DELETE FROM character_items WHERE character_id = $1', [characterId]);
   } else {
@@ -792,9 +798,9 @@ async function seedDeveloperTestData(castleId) {
     const charResult = await pool.query(
       `INSERT INTO characters (user_id, name, race, class, gender, level, experience,
        current_node_id, hp_current, hp_max, mp_current, mp_max,
-       strength, intelligence, agility, vitality, luck)
+       strength, intelligence, agility, vitality, luck, party_slot)
        VALUES ($1, 'Derezo', 'elf', 'wizard', 'male', 25, 50000,
-       $2, 200, 200, 300, 300, 12, 35, 18, 14, 15)
+       $2, 200, 200, 300, 300, 12, 35, 18, 14, 15, 1)
        RETURNING id`,
       [userId, castleId]
     );
@@ -898,21 +904,17 @@ async function main() {
       nodeIds.push(result.rows[0].id);
     }
 
-    // Insert connections
+    // Insert connections (single row per connection, normalized with smaller ID first)
     console.log(`Inserting ${connections.length} node connections...`);
     for (const conn of connections) {
+      // Normalize connection to always have smaller ID first (bidirectional paths)
+      const fromId = Math.min(nodeIds[conn.from], nodeIds[conn.to]);
+      const toId = Math.max(nodeIds[conn.from], nodeIds[conn.to]);
       await client.query(
         `INSERT INTO world_node_connections (from_node_id, to_node_id, path_type)
          VALUES ($1, $2, 'road')
          ON CONFLICT DO NOTHING`,
-        [nodeIds[conn.from], nodeIds[conn.to]]
-      );
-      // Add reverse connection
-      await client.query(
-        `INSERT INTO world_node_connections (from_node_id, to_node_id, path_type)
-         VALUES ($1, $2, 'road')
-         ON CONFLICT DO NOTHING`,
-        [nodeIds[conn.to], nodeIds[conn.from]]
+        [fromId, toId]
       );
     }
 
@@ -942,7 +944,7 @@ async function main() {
 
     console.log('\nSeed completed successfully!');
     console.log(`Total nodes: ${nodes.length}`);
-    console.log(`Total connections: ${connections.length * 2} (bidirectional)`);
+    console.log(`Total connections: ${connections.length} (single-row, bidirectional travel)`);
 
   } catch (err) {
     console.error('Seed failed:', err);
