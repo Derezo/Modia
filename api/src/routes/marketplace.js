@@ -332,20 +332,245 @@ router.delete('/orders/:orderId', authenticate, requireMarketplaceAccess, cancel
 // GET /api/marketplace/search - Search tradeable items
 // ============================================
 router.get('/search', authenticate, searchLimiter, asyncHandler(async (req, res) => {
-  const { q = '', type, limit = 50 } = req.query;
+  const { q = '', type, augment, limit = 50 } = req.query;
 
   const client = await getClient();
   try {
-    const items = await marketplaceService.searchItems(
-      client,
-      q,
-      type || null,
-      parseInt(limit, 10)
-    );
+    // Use enhanced search if augment filter is provided
+    const items = augment
+      ? await marketplaceService.searchItemsWithAugments(
+          client,
+          q,
+          type || null,
+          augment,
+          parseInt(limit, 10)
+        )
+      : await marketplaceService.searchItems(
+          client,
+          q,
+          type || null,
+          parseInt(limit, 10)
+        );
     res.json({ items });
   } finally {
     client.release();
   }
+}));
+
+// ============================================
+// ITEM LISTINGS - For unique items with augments
+// ============================================
+
+// ============================================
+// GET /api/marketplace/items/:templateId - Get all listings for a template
+// ============================================
+router.get('/items/:templateId', authenticate, readLimiter, asyncHandler(async (req, res) => {
+  const { templateId } = req.params;
+
+  const templateIdNum = parseInt(templateId, 10);
+  if (isNaN(templateIdNum)) {
+    throw new AppError('Invalid template ID', 400);
+  }
+
+  // Get template info
+  const templateResult = await query(
+    'SELECT id, name, item_type, base_price, is_stackable FROM item_templates WHERE id = $1',
+    [templateIdNum]
+  );
+
+  if (templateResult.rows.length === 0) {
+    throw new AppError('Item template not found', 404);
+  }
+
+  const template = templateResult.rows[0];
+
+  const client = await getClient();
+  try {
+    const listings = await marketplaceService.getItemListings(client, templateIdNum);
+
+    res.json({
+      templateId: templateIdNum,
+      templateName: template.name,
+      itemType: template.item_type,
+      basePrice: template.base_price,
+      isStackable: template.is_stackable,
+      listings
+    });
+  } finally {
+    client.release();
+  }
+}));
+
+// ============================================
+// GET /api/marketplace/listings/mine - Get user's active listings
+// ============================================
+router.get('/listings/mine', authenticate, readLimiter, asyncHandler(async (req, res) => {
+  const client = await getClient();
+  try {
+    const listings = await marketplaceService.getUserListings(client, req.user.userId);
+    res.json({ listings });
+  } finally {
+    client.release();
+  }
+}));
+
+// ============================================
+// POST /api/marketplace/listings - Create a new item listing
+// ============================================
+router.post('/listings', authenticate, requireMarketplaceAccess, orderLimiter, asyncHandler(async (req, res) => {
+  const { characterId, characterItemId, price } = req.body;
+
+  // Validate inputs
+  if (!characterId) {
+    throw new AppError('Character ID required', 400);
+  }
+  if (!characterItemId) {
+    throw new AppError('Character item ID required', 400);
+  }
+
+  const priceNum = parseInt(price, 10);
+  if (!Number.isInteger(priceNum) || isNaN(priceNum)) {
+    throw new AppError('Price must be a valid integer', 400);
+  }
+  if (priceNum < 1) {
+    throw new AppError('Price must be at least 1', 400);
+  }
+  if (priceNum > MAX_PRICE) {
+    throw new AppError(`Price cannot exceed ${MAX_PRICE}`, 400);
+  }
+
+  // Verify character belongs to user
+  const charResult = await query(
+    'SELECT id FROM characters WHERE id = $1 AND user_id = $2',
+    [characterId, req.user.userId]
+  );
+
+  if (charResult.rows.length === 0) {
+    throw new AppError('Character not found', 404);
+  }
+
+  const result = await withTransaction(async (client) => {
+    return marketplaceService.createItemListing(
+      client,
+      req.user.userId,
+      parseInt(characterId, 10),
+      parseInt(characterItemId, 10),
+      priceNum
+    );
+  });
+
+  res.json({
+    success: true,
+    message: `Listed ${result.itemName} for ${result.price}g`,
+    listing: result
+  });
+}));
+
+// ============================================
+// POST /api/marketplace/listings/:listingId/buy - Buy an item listing
+// ============================================
+router.post('/listings/:listingId/buy', authenticate, requireMarketplaceAccess, marketOrderLimiter, asyncHandler(async (req, res) => {
+  const { listingId } = req.params;
+  const { characterId } = req.body;
+
+  const listingIdNum = parseInt(listingId, 10);
+  if (isNaN(listingIdNum)) {
+    throw new AppError('Invalid listing ID', 400);
+  }
+
+  if (!characterId) {
+    throw new AppError('Character ID required', 400);
+  }
+
+  // Verify character belongs to user
+  const charResult = await query(
+    'SELECT id FROM characters WHERE id = $1 AND user_id = $2',
+    [characterId, req.user.userId]
+  );
+
+  if (charResult.rows.length === 0) {
+    throw new AppError('Character not found', 404);
+  }
+
+  const result = await withTransaction(async (client) => {
+    return marketplaceService.buyItemListing(
+      client,
+      req.user.userId,
+      parseInt(characterId, 10),
+      listingIdNum
+    );
+  });
+
+  // Get updated user gold
+  const userResult = await query('SELECT gold FROM users WHERE id = $1', [req.user.userId]);
+
+  res.json({
+    success: true,
+    message: `Purchased ${result.itemName} for ${result.price}g`,
+    purchase: result,
+    gold: userResult.rows[0].gold
+  });
+}));
+
+// ============================================
+// DELETE /api/marketplace/listings/:listingId - Cancel a listing
+// ============================================
+router.delete('/listings/:listingId', authenticate, requireMarketplaceAccess, cancelLimiter, asyncHandler(async (req, res) => {
+  const { listingId } = req.params;
+
+  const listingIdNum = parseInt(listingId, 10);
+  if (isNaN(listingIdNum)) {
+    throw new AppError('Invalid listing ID', 400);
+  }
+
+  const result = await withTransaction(async (client) => {
+    return marketplaceService.cancelItemListing(client, req.user.userId, listingIdNum);
+  });
+
+  res.json({
+    success: true,
+    message: `Listing for ${result.itemName} cancelled`,
+    cancelled: result
+  });
+}));
+
+// ============================================
+// GET /api/marketplace/price-suggestion - Get suggested price for an item
+// ============================================
+router.get('/price-suggestion', authenticate, readLimiter, asyncHandler(async (req, res) => {
+  const { characterItemId, characterId } = req.query;
+
+  if (!characterItemId || !characterId) {
+    throw new AppError('Character item ID and character ID required', 400);
+  }
+
+  // Get item with modifications
+  const itemResult = await query(
+    `SELECT ci.modifications, it.base_price, it.name
+     FROM character_items ci
+     JOIN item_templates it ON ci.item_template_id = it.id
+     JOIN characters c ON ci.character_id = c.id
+     WHERE ci.id = $1 AND ci.character_id = $2 AND c.user_id = $3`,
+    [characterItemId, characterId, req.user.userId]
+  );
+
+  if (itemResult.rows.length === 0) {
+    throw new AppError('Item not found or not owned', 404);
+  }
+
+  const item = itemResult.rows[0];
+  const mods = item.modifications || {};
+
+  const result = marketplaceService.calculateSuggestedPrice({
+    basePrice: item.base_price,
+    rarity: mods.rarity || 'common',
+    augments: mods.augments || []
+  });
+
+  res.json({
+    itemName: mods.generatedName || item.name,
+    ...result
+  });
 }));
 
 // ============================================

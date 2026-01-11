@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 7.0 |
+| Version | 7.2 |
 | Last Updated | January 2026 |
 
 ---
@@ -174,6 +174,44 @@ Comprehensive marketplace improvements: security hardening, medieval UI theme, c
 - **Real-Time Updates**: WebSocket broadcasts for order book changes, trade notifications, fill alerts
 - **Medieval Theme**: Parchment backgrounds, wooden frames, wax seal buttons, ledger-style order book
 - **UX Components**: Confirmation dialogs for all trades, toast notifications for events
+
+---
+
+### UI/UX Parchment Theme Overhaul (Complete - January 2026)
+
+Comprehensive UI modernization with a unified parchment component library, responsive framework, and SVG icon system.
+
+| Task | Status | Files |
+|------|--------|-------|
+| ParchmentTheme (colors, CSS variables) | COMPLETE | frontend/src/ui/parchment/ParchmentTheme.js |
+| ParchmentPanel component | COMPLETE | frontend/src/ui/parchment/ParchmentPanel.js |
+| ParchmentButton component | COMPLETE | frontend/src/ui/parchment/ParchmentButton.js |
+| ParchmentInput component | COMPLETE | frontend/src/ui/parchment/ParchmentInput.js |
+| ParchmentDropdown component | COMPLETE | frontend/src/ui/parchment/ParchmentDropdown.js |
+| ParchmentModal component | COMPLETE | frontend/src/ui/parchment/ParchmentModal.js |
+| ParchmentToast (unified toast system) | COMPLETE | frontend/src/ui/parchment/ParchmentToast.js |
+| ProfileDropdown (HUD element) | COMPLETE | frontend/src/ui/parchment/ProfileDropdown.js |
+| Responsive framework | COMPLETE | frontend/src/core/Responsive.js |
+| Scene.onBreakpointChange() lifecycle | COMPLETE | frontend/src/scenes/Scene.js |
+| SVG icon system (6 categories) | COMPLETE | frontend/public/assets/icons/svg/ |
+| Icon build script (PNG generation) | COMPLETE | scripts/generate-icons.js |
+| Icon component | COMPLETE | frontend/src/components/Icon.js |
+| WorldMapScene migration | COMPLETE | PathRenderer.js, FogOfWarState.js, mystery nodes |
+| FormationScene migration | COMPLETE | frontend/src/scenes/FormationScene.js |
+| InventoryScene migration | COMPLETE | frontend/src/scenes/InventoryScene.js |
+| TavernScene migration | COMPLETE | frontend/src/scenes/TavernScene.js |
+| ShopScene migration | COMPLETE | frontend/src/scenes/ShopScene.js |
+| SettingsModal migration | COMPLETE | frontend/src/components/SettingsModal.js |
+| Game.js HUD integration | COMPLETE | ProfileDropdown, parchmentToast |
+
+**Key Features:**
+- **Component Library**: 7 reusable parchment-styled DOM components with consistent medieval theme
+- **Responsive System**: 3 breakpoints (Mobile <600px, Tablet 600-900px, Desktop >900px) with CSS variable injection
+- **Icon System**: Medieval woodcut SVG icons in 6 categories, auto-generated PNGs at 4 sizes
+- **World Map Enhancements**: Catmull-Rom spline paths, progressive fog-of-war reveal, mystery node system
+- **Scene Migrations**: 6 scenes updated to use parchment components with responsive layouts
+
+**Documentation:** See `docs/DESIGN_SYSTEM.md` for component usage and `docs/FRONTEND_TECHNICAL_PATTERNS.md` for responsive patterns.
 
 ---
 
@@ -995,6 +1033,20 @@ Implement real-time multiplayer features including chat, trading, and PvP.
 - [ ] Max 10 open orders per player (not enforced)
 - [ ] WebSocket listing updates (backend events exist)
 
+#### 6.2.4.1 Marketplace Item Augments Integration (NOT IMPLEMENTED)
+
+> **Design Document:** `docs/plans/2026-01-11-marketplace-item-augments-design.md`
+
+Integrate the procedural item generation system with the marketplace to display and trade items with their full properties (augments, bonus stats, materials, generated names).
+
+- [ ] Backend: `GET /api/marketplace/items/:templateId` - Individual item listings with modifications
+- [ ] Backend: Augment category filter on search endpoint
+- [ ] Backend: Price suggestion helper (formula-based)
+- [ ] Frontend: Hybrid browse-and-select UI (template cards → side panel drill-down)
+- [ ] Frontend: Side panel showing item variants with augments, bonus stats, materials
+- [ ] Frontend: Augment category filter dropdown
+- [ ] Frontend: Enhanced seller dialog with suggested pricing
+
 #### 6.2.5 Coliseum PvP
 
 - [x] coliseum_queue_join event
@@ -1126,14 +1178,22 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 - [x] 64x64 portraits (upgraded from 48x48)
 - [x] HP/MP bars with inline current/max values
 - [x] Battle formation UX improvements (empty grid start, FIFO placement, long-press fix)
-- [ ] Consistent visual theme
-- [ ] Responsive design testing
+- [x] Parchment component library (Panel, Button, Input, Dropdown, Modal, Toast)
+- [x] Responsive framework with breakpoints (Mobile/Tablet/Desktop)
+- [x] SVG icon system with PNG generation (16/24/32/48px)
+- [x] ProfileDropdown HUD component
+- [x] WorldMapScene parchment migration
+- [x] FormationScene parchment migration
+- [x] InventoryScene + InventoryPanel parchment migration
+- [x] TavernScene parchment migration
+- [x] ShopScene parchment migration
+- [x] SettingsModal parchment migration
+- [x] MarketplaceScene toast integration (parchmentToast)
+- [x] Game.js HUD integration (ProfileDropdown, parchmentToast)
+- [ ] Remaining scene migrations (Login, Register, CharacterSelect, CharacterCreate, Battle, Coliseum, Courtyard, Recruitment)
 - [ ] Mobile touch optimization
 - [ ] Loading indicators
-- [ ] Error messages
-- [ ] Success feedback
 - [ ] Tooltips and help text
-- [ ] Smooth transitions
 - [ ] Animation polish
 
 #### 7.2.3 Game Balance
@@ -1320,3 +1380,5 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 | 6.1 | Jan 2026 | - | **Guild Recruitment System**: Party expansion via guild node recruitment. 5 new database tables (traits, guild_recruits, recruit_traits, recruit_skills, character_traits), 31 seeded traits across 4 categories, procedural name generator (300 names), recruit generation with ±15% stat variance and 1-2 traits, lazy refresh system, RecruitmentScene UI, trait integration in battle calculations. New documentation: `docs/GUILD_RECRUITMENT_SYSTEM.md`. Updated GAME_DESIGN.md, CHARACTER_PROGRESSION.md, ECONOMY_SYSTEM.md, TECHNICAL_ARCHITECTURE.md, API_SPECIFICATION.md. |
 | 6.2 | Jan 2026 | - | **Comprehensive Code Review**: Multi-agent systematic review of entire codebase. Added 225+ new tests across 6 test files (chatService, presenceService, coliseumService, partyWebsocket, websocketIndex, battleMechanics). Identified 24 backend issues (3 critical), 15 frontend issues (2 critical), and 21 documentation discrepancies (3 critical). Full test coverage now for WebSocket services and battle mechanics. |
 | 7.0 | Jan 2026 | - | **Social & PvP Systems**: Complete multiplayer social features and PvP system. Notification system (service, API, ToastManager, NotificationBell, NotificationCenter). Friend system (requests, blocking, favorites, search). Party system fixes (schema corrections, PartyInviteModal, PartyStatusBar). CourtyardScene (Palace social hub with LFG board). Character Power Rating (PPR) valuation algorithm. PPR-based matchmaking with ±15% range. Weighted ELO rating system with underdog bonus. PvP turn timer (60s, progressive penalty). Surrender/forfeit with rating penalties. Disconnect handling (5 min forfeit, weekly grace). Match snapshots for history. Leaderboards and match history UI in ColiseumScene. Database migration 014_social_pvp_systems.sql. Overall revised to 85%. |
+| 7.1 | Jan 2026 | - | **Item Naming Convention System**: Implemented full procedural item naming with category-based augment deduplication. 17 prefix augments + 17 suffix augments for equipment, 20 consumable-specific augments. Inventory API now returns generated names, bonus stats, and augment effects. Frontend displays augments in tooltips. Developer seed data (derezo/password user). **Marketplace Item Augments Integration**: Added design document for hybrid browse-and-select marketplace UI with augment filtering and price suggestions. See `docs/plans/2026-01-11-marketplace-item-augments-design.md`. |
+| 7.2 | Jan 2026 | - | **UI/UX Parchment Theme Overhaul**: Complete parchment component library (Panel, Button, Input, Dropdown, Modal, Toast, ProfileDropdown) in `frontend/src/ui/parchment/`. Responsive framework with 3 breakpoints and CSS variable injection (`frontend/src/core/Responsive.js`). SVG icon system with 6 categories and PNG build script. Scene lifecycle `onBreakpointChange()` method. Migrated 6 scenes (WorldMap, Formation, Inventory, Tavern, Shop, SettingsModal). World map enhancements: Catmull-Rom spline paths, progressive fog-of-war, mystery nodes. Updated `docs/DESIGN_SYSTEM.md` and `docs/FRONTEND_TECHNICAL_PATTERNS.md`. |

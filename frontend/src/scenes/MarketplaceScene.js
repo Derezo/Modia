@@ -1,6 +1,7 @@
 import { Scene } from './Scene.js';
 import { marketConfirmDialog } from '../components/MarketConfirmDialog.js';
-import { marketToast } from '../components/MarketToast.js';
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { MarketplaceItemPanel } from '../components/MarketplaceItemPanel.js';
 
 /**
  * MarketplaceScene - Full Order Book Trading Interface
@@ -18,17 +19,22 @@ export class MarketplaceScene extends Scene {
     this.orderBook = null;
     this.tradeHistory = [];
     this.myOrders = [];
+    this.myListings = [];
     this.playerGold = 0;
     this.activeCharacter = null;
 
     // UI state
-    this.activeTab = 'search'; // 'search', 'orders', 'history'
+    this.activeTab = 'search'; // 'search', 'orders', 'history', 'listings'
     this.orderSide = 'buy'; // 'buy' or 'sell'
     this.orderType = 'limit'; // 'limit' or 'market'
     this.orderPrice = 0;
     this.orderQuantity = 1;
     this.searchQuery = '';
     this.searchType = '';
+    this.searchAugment = ''; // Augment category filter
+
+    // Item panel for viewing unique item listings
+    this.itemPanel = null;
 
     // WebSocket handlers
     this.wsHandlers = null;
@@ -60,6 +66,10 @@ export class MarketplaceScene extends Scene {
     this.setupEventListeners();
     this.setupWebSocketHandlers();
     this.game.socket?.joinMarketplace();
+
+    // Initialize item panel for viewing unique item listings
+    this.itemPanel = new MarketplaceItemPanel(this.game);
+
     await this.loadInitialData();
   }
 
@@ -149,6 +159,12 @@ export class MarketplaceScene extends Scene {
 
     // Clean up WebSocket handlers
     this.cleanupWebSocketHandlers();
+
+    // Close item panel if open
+    if (this.itemPanel) {
+      this.itemPanel.close();
+      this.itemPanel = null;
+    }
 
     if (this.abortController) {
       this.abortController.abort();
@@ -259,13 +275,15 @@ export class MarketplaceScene extends Scene {
 
   async loadInitialData() {
     try {
-      const [searchData, ordersData] = await Promise.all([
-        this.game.api.searchMarketItems('', null, 30),
-        this.game.api.getMyOrders()
+      const [searchData, ordersData, listingsData] = await Promise.all([
+        this.game.api.searchMarketItems('', null, null, 30),
+        this.game.api.getMyOrders(),
+        this.game.api.getMyListings()
       ]);
 
       this.searchResults = searchData.items || [];
       this.myOrders = ordersData.orders || [];
+      this.myListings = listingsData.listings || [];
 
       this.renderContent();
     } catch (err) {
@@ -1149,6 +1167,21 @@ export class MarketplaceScene extends Scene {
           <option value="consumable" ${this.searchType === 'consumable' ? 'selected' : ''}>Consumables</option>
           <option value="material" ${this.searchType === 'material' ? 'selected' : ''}>Materials</option>
         </select>
+        <select id="augment-filter">
+          <option value="">Any Augment</option>
+          <option value="fire" ${this.searchAugment === 'fire' ? 'selected' : ''}>Fire</option>
+          <option value="ice" ${this.searchAugment === 'ice' ? 'selected' : ''}>Ice</option>
+          <option value="lightning" ${this.searchAugment === 'lightning' ? 'selected' : ''}>Lightning</option>
+          <option value="poison" ${this.searchAugment === 'poison' ? 'selected' : ''}>Poison</option>
+          <option value="holy" ${this.searchAugment === 'holy' ? 'selected' : ''}>Holy</option>
+          <option value="dark" ${this.searchAugment === 'dark' ? 'selected' : ''}>Dark</option>
+          <option value="strength" ${this.searchAugment === 'strength' ? 'selected' : ''}>Strength</option>
+          <option value="intelligence" ${this.searchAugment === 'intelligence' ? 'selected' : ''}>Intelligence</option>
+          <option value="agility" ${this.searchAugment === 'agility' ? 'selected' : ''}>Agility</option>
+          <option value="vitality" ${this.searchAugment === 'vitality' ? 'selected' : ''}>Vitality</option>
+          <option value="critical" ${this.searchAugment === 'critical' ? 'selected' : ''}>Critical</option>
+          <option value="defense" ${this.searchAugment === 'defense' ? 'selected' : ''}>Defense</option>
+        </select>
         <button class="btn btn-primary" id="search-btn">Search</button>
       </div>
       <div class="items-grid" id="items-grid">
@@ -1159,13 +1192,19 @@ export class MarketplaceScene extends Scene {
     // Search handlers
     const searchInput = mainContent.querySelector('#search-input');
     const typeFilter = mainContent.querySelector('#type-filter');
+    const augmentFilter = mainContent.querySelector('#augment-filter');
     const searchBtn = mainContent.querySelector('#search-btn');
 
     const doSearch = async () => {
       this.searchQuery = searchInput.value;
       this.searchType = typeFilter.value;
+      this.searchAugment = augmentFilter.value;
       try {
-        const result = await this.game.api.searchMarketItems(this.searchQuery, this.searchType || null);
+        const result = await this.game.api.searchMarketItems(
+          this.searchQuery,
+          this.searchType || null,
+          this.searchAugment || null
+        );
         this.searchResults = result.items || [];
         mainContent.querySelector('#items-grid').innerHTML = this.renderItemsGrid();
         this.attachItemClickHandlers(mainContent);
@@ -1198,32 +1237,72 @@ export class MarketplaceScene extends Scene {
       return '<div class="empty-message">No items found</div>';
     }
 
-    return this.searchResults.map(item => `
-      <div class="market-item rarity-${item.rarity} ${this.selectedItem?.id === item.id ? 'selected' : ''}"
-           data-item-id="${item.id}">
-        <div class="market-item-name">${item.name}</div>
-        <div class="market-item-info">
-          <span>${this.capitalize(item.itemType)}</span>
-          <span>Vol: ${item.volume24h}</span>
+    return this.searchResults.map(item => {
+      // For non-stackable items, show listing info instead of order book info
+      const hasListings = item.listingCount > 0;
+      const isEquipment = !item.isStackable;
+
+      // Price display: for equipment show listing prices, for consumables show order book
+      let priceHtml;
+      if (isEquipment && hasListings) {
+        const priceRange = item.minListingPrice === item.maxListingPrice
+          ? `${item.minListingPrice}g`
+          : `${item.minListingPrice} - ${item.maxListingPrice}g`;
+        priceHtml = `
+          <div class="market-item-listings" style="color: #c9a227; font-size: 12px; font-family: Consolas, monospace;">
+            ${item.listingCount} listing${item.listingCount !== 1 ? 's' : ''} • ${priceRange}
+          </div>
+        `;
+      } else if (isEquipment) {
+        priceHtml = `
+          <div class="market-item-listings" style="color: #7a6a5a; font-size: 11px; font-style: italic;">
+            No listings available
+          </div>
+        `;
+      } else {
+        // Stackable items - show order book prices
+        priceHtml = `
+          <div class="market-item-prices">
+            <span class="${item.bestBid ? 'bid-price' : 'no-price'}">
+              Bid: ${item.bestBid ? item.bestBid + 'g' : '-'}
+            </span>
+            <span class="${item.bestAsk ? 'ask-price' : 'no-price'}">
+              Ask: ${item.bestAsk ? item.bestAsk + 'g' : '-'}
+            </span>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="market-item rarity-${item.rarity} ${this.selectedItem?.id === item.id ? 'selected' : ''}"
+             data-item-id="${item.id}"
+             data-is-equipment="${isEquipment}">
+          <div class="market-item-name">${item.name}</div>
+          <div class="market-item-info">
+            <span>${this.capitalize(item.itemType)}</span>
+            <span>${isEquipment ? (hasListings ? 'Unique' : '') : 'Vol: ' + item.volume24h}</span>
+          </div>
+          ${priceHtml}
         </div>
-        <div class="market-item-prices">
-          <span class="${item.bestBid ? 'bid-price' : 'no-price'}">
-            Bid: ${item.bestBid ? item.bestBid + 'g' : '-'}
-          </span>
-          <span class="${item.bestAsk ? 'ask-price' : 'no-price'}">
-            Ask: ${item.bestAsk ? item.bestAsk + 'g' : '-'}
-          </span>
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
 
   attachItemClickHandlers(container) {
     container.querySelectorAll('.market-item').forEach(el => {
       el.addEventListener('click', async () => {
         const itemId = parseInt(el.dataset.itemId);
+        const isEquipment = el.dataset.isEquipment === 'true';
         const item = this.searchResults.find(i => i.id === itemId);
+
         if (item) {
+          // For equipment items, open the item panel to show individual listings
+          if (isEquipment) {
+            this.openItemPanel(item);
+            return;
+          }
+
+          // For stackable items, use the order book system
           // Unsubscribe from previous item
           if (this.selectedItem && this.selectedItem.id !== itemId) {
             this.game.socket?.unsubscribeFromItem(this.selectedItem.id);
@@ -1240,6 +1319,73 @@ export class MarketplaceScene extends Scene {
           this.renderContent();
         }
       });
+    });
+  }
+
+  /**
+   * Open the item panel to show individual listings for equipment items
+   */
+  openItemPanel(item) {
+    if (!this.itemPanel) {
+      this.itemPanel = new MarketplaceItemPanel(this.game);
+    }
+
+    this.itemPanel.open(
+      item.id,
+      item.name,
+      // onBuy callback
+      (listing) => this.handleBuyListing(listing),
+      // onClose callback
+      () => {
+        // Panel closed
+      }
+    );
+  }
+
+  /**
+   * Handle buying an individual item listing
+   */
+  async handleBuyListing(listing) {
+    if (!this.activeCharacter) {
+      this.game.showNotification('No character selected', 'error');
+      return;
+    }
+
+    // Show confirmation dialog
+    marketConfirmDialog.show({
+      title: 'Confirm Purchase',
+      action: 'buy',
+      item: {
+        name: listing.generatedName,
+        rarity: listing.rarity
+      },
+      quantity: 1,
+      price: listing.askPrice,
+      total: listing.askPrice,
+      currentGold: this.playerGold,
+      onConfirm: async () => {
+        try {
+          const result = await this.game.api.buyItemListing(
+            listing.listingId,
+            this.activeCharacter.id
+          );
+
+          // Update gold
+          this.playerGold = result.gold;
+          this.updateGoldDisplay();
+          this.game.state.set('user', { ...this.game.state.get('user'), gold: result.gold });
+
+          parchmentToast.success('Purchase Complete', `Bought ${result.purchase.itemName} for ${result.purchase.price}g`);
+
+          // Close panel and refresh
+          this.itemPanel?.close();
+          await this.loadInitialData();
+
+        } catch (err) {
+          parchmentToast.error('Purchase Failed', err.message);
+        }
+      },
+      onCancel: () => {}
     });
   }
 
@@ -1457,12 +1603,12 @@ export class MarketplaceScene extends Scene {
 
     // Validate before showing dialog
     if (this.orderSide === 'buy' && this.playerGold < total) {
-      marketToast.error('Insufficient Gold', `You need ${total.toLocaleString()}g but only have ${this.playerGold.toLocaleString()}g`);
+      parchmentToast.error('Insufficient Gold', `You need ${total.toLocaleString()}g but only have ${this.playerGold.toLocaleString()}g`);
       return;
     }
 
     if (this.orderType === 'market' && price === 0) {
-      marketToast.warning('No Orders Available', `No ${this.orderSide === 'buy' ? 'sell' : 'buy'} orders available for market execution`);
+      parchmentToast.warning('No Orders Available', `No ${this.orderSide === 'buy' ? 'sell' : 'buy'} orders available for market execution`);
       return;
     }
 
@@ -1533,7 +1679,7 @@ export class MarketplaceScene extends Scene {
       // Show success toast
       const action = this.orderSide === 'buy' ? 'Buy' : 'Sell';
       const orderTypeLabel = this.orderType === 'limit' ? 'limit' : 'market';
-      marketToast.success(
+      parchmentToast.success(
         `${action} Order Placed`,
         `${orderTypeLabel.charAt(0).toUpperCase() + orderTypeLabel.slice(1)} order for ${this.orderQuantity}x ${this.selectedItem.name}`
       );
@@ -1550,7 +1696,7 @@ export class MarketplaceScene extends Scene {
 
     } catch (err) {
       console.error('[MarketplaceScene] Order failed:', err);
-      marketToast.error('Order Failed', err.message);
+      parchmentToast.error('Order Failed', err.message);
     }
   }
 
@@ -1634,7 +1780,7 @@ export class MarketplaceScene extends Scene {
       this.game.state.set('user', { ...this.game.state.get('user'), gold: result.gold });
 
       // Show success toast
-      marketToast.success('Order Cancelled', 'Your order has been cancelled and funds returned');
+      parchmentToast.success('Order Cancelled', 'Your order has been cancelled and funds returned');
 
       // Refresh orders
       const ordersData = await this.game.api.getMyOrders();
@@ -1643,7 +1789,7 @@ export class MarketplaceScene extends Scene {
       this.renderContent();
 
     } catch (err) {
-      marketToast.error('Cancel Failed', err.message);
+      parchmentToast.error('Cancel Failed', err.message);
     }
   }
 

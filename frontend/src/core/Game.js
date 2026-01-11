@@ -6,9 +6,9 @@ import { GameWebSocket } from '../api/websocket.js';
 import { AssetLoader } from './AssetLoader.js';
 import { responsive } from './Responsive.js';
 import { injectParchmentTheme } from '../ui/parchment/ParchmentTheme.js';
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { ProfileDropdown } from '../ui/parchment/ProfileDropdown.js';
 import SettingsModal from '../components/SettingsModal.js';
-import { ToastManager } from '../components/ToastManager.js';
-import { NotificationBell } from '../components/NotificationBell.js';
 import { NotificationCenter } from '../components/NotificationCenter.js';
 import { PartyStatusBar } from '../components/PartyStatusBar.js';
 import { PartyInviteModal } from '../components/PartyInviteModal.js';
@@ -38,8 +38,8 @@ export class Game {
     this.settingsModal = null;
 
     // Notification system
-    this.toastManager = null;
-    this.notificationBell = null;
+    this.toast = parchmentToast;  // Unified toast system
+    this.profileDropdown = null;  // Profile/menu dropdown (replaces NotificationBell)
     this.notificationCenter = null;
 
     // Party system
@@ -341,16 +341,15 @@ export class Game {
     // Clean up existing instances if any
     this.destroyNotificationSystem();
 
-    // Create notification components
-    this.toastManager = new ToastManager(this);
-    this.notificationBell = new NotificationBell(this);
+    // Create notification components (parchment-styled)
+    this.profileDropdown = new ProfileDropdown(this);
     this.notificationCenter = new NotificationCenter(this);
 
     // Create party components
     this.partyStatusBar = new PartyStatusBar(this);
 
-    // Show the notification bell
-    this.notificationBell.show();
+    // Show the profile dropdown (replaces old notification bell + menu)
+    this.profileDropdown.show();
 
     // Check if user is already in a party
     this.partyStatusBar.checkPartyStatus();
@@ -369,7 +368,7 @@ export class Game {
 
     this.socket.on('party:invite', (data) => {
       // Show toast notification
-      this.toastManager?.info(
+      this.toast.info(
         'Party Invite',
         `${data.inviterUsername} invited you to join their party`
       );
@@ -414,14 +413,12 @@ export class Game {
    * Called on logout or cleanup
    */
   destroyNotificationSystem() {
-    this.toastManager?.destroy();
-    this.notificationBell?.destroy();
+    this.profileDropdown?.destroy();
     this.notificationCenter?.destroy();
     this.partyStatusBar?.destroy();
     this.partyInviteModal?.destroy();
 
-    this.toastManager = null;
-    this.notificationBell = null;
+    this.profileDropdown = null;
     this.notificationCenter = null;
     this.partyStatusBar = null;
     this.partyInviteModal = null;
@@ -457,17 +454,17 @@ export class Game {
   }
 
   /**
-   * Show/hide notification bell based on current scene
+   * Show/hide profile dropdown and party bar based on current scene
    * @param {string} sceneName - Name of the current scene
    */
   updateNotificationVisibility(sceneName) {
     const hiddenScenes = ['login', 'register'];
 
     if (hiddenScenes.includes(sceneName)) {
-      this.notificationBell?.hide();
+      this.profileDropdown?.hide();
       this.partyStatusBar?.hide();
     } else {
-      this.notificationBell?.show();
+      this.profileDropdown?.show();
       // Party status bar visibility is managed by its own state
       // Only refresh if there might be a party
       if (this.partyStatusBar?.party) {

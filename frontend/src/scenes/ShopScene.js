@@ -1,14 +1,29 @@
 import { Scene } from './Scene.js';
+import { responsive } from '../core/Responsive.js';
+import {
+  PARCHMENT_COLORS,
+  getParchmentGradient,
+  getParchmentGradientTextured,
+  getParchmentBorder,
+  getParchmentShadow
+} from '../ui/parchment/index.js';
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+
+// Local alias for cleaner access
+const P = PARCHMENT_COLORS;
 
 /**
  * ShopScene - Buy and sell items at NPC shops
  * Supports blacksmith, apothecary, and farm shop types
+ *
+ * Uses the parchment UI theme for a medieval manuscript aesthetic.
  */
 export class ShopScene extends Scene {
   constructor(game) {
     super(game);
     this.uiElement = null;
     this.abortController = null;
+    this.responsiveUnsubscribe = null;
 
     // Shop data
     this.nodeId = null;
@@ -31,7 +46,7 @@ export class ShopScene extends Scene {
     this.playerGold = this.game.state.get('user')?.gold || 0;
 
     if (!this.nodeId || !this.shopType) {
-      this.game.showNotification('Invalid shop data', 'error');
+      parchmentToast.error('Invalid Shop', 'Could not open this shop');
       this.game.scenes.switchTo('worldMap');
       return;
     }
@@ -39,10 +54,18 @@ export class ShopScene extends Scene {
     this.addStyles();
     this.createUI();
     this.setupEventListeners();
+
+    // Subscribe to responsive breakpoint changes
+    this.responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
+
     await this.loadShopData();
   }
 
   exit() {
+    if (this.responsiveUnsubscribe) {
+      this.responsiveUnsubscribe();
+      this.responsiveUnsubscribe = null;
+    }
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -50,6 +73,33 @@ export class ShopScene extends Scene {
     if (this.uiElement) {
       this.uiElement.remove();
       this.uiElement = null;
+    }
+  }
+
+  /**
+   * Handle responsive breakpoint changes - rebuild UI for new screen size
+   */
+  onBreakpointChange() {
+    if (this.uiElement) {
+      const selectedId = this.activeTab === 'buy'
+        ? this.selectedItem?.templateId
+        : this.selectedItem?.instanceId;
+      const prevTab = this.activeTab;
+      const prevQty = this.purchaseQuantity;
+
+      this.uiElement.remove();
+      this.createUI();
+      this.setupEventListeners();
+      this.renderInventory();
+
+      // Restore state
+      this.activeTab = prevTab;
+      this.purchaseQuantity = prevQty;
+      this.updateTabs();
+
+      if (selectedId) {
+        this.selectItem(selectedId);
+      }
     }
   }
 
@@ -84,12 +134,15 @@ export class ShopScene extends Scene {
       this.renderInventory();
     } catch (err) {
       console.error('Failed to load shop data:', err);
-      this.game.showNotification('Failed to load shop', 'error');
+      parchmentToast.error('Shop Error', 'Failed to load shop inventory');
     }
   }
 
   addStyles() {
     if (document.getElementById('shop-scene-styles')) return;
+
+    const _isMobile = responsive.isMobile();
+    const _isTablet = responsive.isTablet();
 
     const style = document.createElement('style');
     style.id = 'shop-scene-styles';
@@ -100,9 +153,11 @@ export class ShopScene extends Scene {
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        background: ${getParchmentGradientTextured()};
         display: flex;
         flex-direction: column;
+        font-family: Georgia, 'Times New Roman', serif;
+        color: ${P.text.primary};
       }
 
       .shop-header {
@@ -110,8 +165,9 @@ export class ShopScene extends Scene {
         justify-content: space-between;
         align-items: center;
         padding: 16px 24px;
-        background: rgba(0,0,0,0.3);
-        border-bottom: 1px solid #3a3a5a;
+        background: linear-gradient(to bottom, ${P.dark}, ${P.mid});
+        border-bottom: ${getParchmentBorder(3)};
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
       }
 
       .shop-title {
@@ -122,47 +178,62 @@ export class ShopScene extends Scene {
 
       .shop-title h2 {
         margin: 0;
-        color: #ffd700;
+        color: ${P.accent.gold};
+        font-size: 22px;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
       .shop-gold {
         display: flex;
         align-items: center;
         gap: 8px;
-        color: #ffd700;
+        color: ${P.accent.gold};
         font-size: 18px;
         font-weight: bold;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+      }
+
+      .shop-gold-icon {
+        width: 20px;
+        height: 20px;
+        background: radial-gradient(circle at 30% 30%, #ffd700, #b8860b);
+        border-radius: 50%;
+        border: 1px solid ${P.borderDark};
+        box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.3);
       }
 
       .shop-tabs {
         display: flex;
         gap: 4px;
         padding: 12px 24px;
-        background: rgba(0,0,0,0.2);
-        border-bottom: 1px solid #3a3a5a;
+        background: linear-gradient(to bottom, ${P.mid}, ${P.light});
+        border-bottom: ${getParchmentBorder()};
       }
 
       .shop-tab {
         padding: 10px 24px;
-        background: rgba(0,0,0,0.3);
-        border: 2px solid transparent;
+        background: linear-gradient(to bottom, ${P.light}, ${P.mid});
+        border: 2px solid ${P.border};
+        border-bottom: none;
         border-radius: 8px 8px 0 0;
-        color: #8a8aaa;
+        color: ${P.text.secondary};
         cursor: pointer;
         transition: all 0.2s;
         font-size: 14px;
         font-weight: bold;
+        font-family: Georgia, serif;
       }
 
       .shop-tab:hover {
-        background: rgba(74, 144, 217, 0.2);
-        color: #6ab0f3;
+        background: linear-gradient(to bottom, ${P.mid}, ${P.dark});
+        color: ${P.text.primary};
       }
 
       .shop-tab.active {
-        background: rgba(255, 215, 0, 0.2);
-        border-color: #ffd700;
-        color: #ffd700;
+        background: linear-gradient(to bottom, #e8d9a8, #d4c498);
+        border-color: ${P.accent.gold};
+        color: ${P.accent.gold};
+        box-shadow: 0 -2px 6px rgba(201, 162, 39, 0.3);
       }
 
       .shop-content {
@@ -173,10 +244,35 @@ export class ShopScene extends Scene {
         overflow: hidden;
       }
 
+      @media (max-width: 768px) {
+        .shop-content {
+          flex-direction: column;
+        }
+        .shop-detail-panel {
+          width: 100% !important;
+          max-height: 280px;
+        }
+      }
+
       .shop-items-panel {
         flex: 1;
         display: flex;
         flex-direction: column;
+        background: ${getParchmentGradient()};
+        border: ${getParchmentBorder()};
+        border-radius: 6px;
+        box-shadow: ${getParchmentShadow()};
+      }
+
+      .shop-panel-header {
+        padding: 12px 16px;
+        background: linear-gradient(to bottom, ${P.dark}, ${P.mid});
+        border-bottom: ${getParchmentBorder()};
+        border-radius: 4px 4px 0 0;
+        color: ${P.accent.gold};
+        font-weight: bold;
+        font-size: 14px;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
       .shop-items-list {
@@ -185,26 +281,37 @@ export class ShopScene extends Scene {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: 12px;
-        padding: 8px;
+        padding: 12px;
+        background: linear-gradient(to bottom, ${P.light}, ${P.mid});
+      }
+
+      @media (max-width: 600px) {
+        .shop-items-list {
+          grid-template-columns: 1fr;
+        }
       }
 
       .shop-item {
-        background: rgba(0,0,0,0.3);
-        border: 2px solid #3a3a5a;
-        border-radius: 8px;
+        background: ${getParchmentGradient()};
+        border: 2px solid ${P.border};
+        border-radius: 6px;
         padding: 12px;
         cursor: pointer;
         transition: all 0.2s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
       }
 
       .shop-item:hover {
-        border-color: #6ab0f3;
-        background: rgba(74, 144, 217, 0.1);
+        border-color: ${P.accent.gold};
+        background: linear-gradient(to bottom, #e8d9a8, #d4c498);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
       }
 
       .shop-item.selected {
-        border-color: #ffd700;
-        background: rgba(255, 215, 0, 0.1);
+        border-color: ${P.accent.gold};
+        background: linear-gradient(to bottom, #e8d9a8, #d4c498);
+        box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
       }
 
       .shop-item.out-of-stock {
@@ -221,21 +328,24 @@ export class ShopScene extends Scene {
 
       .shop-item-name {
         font-weight: bold;
-        color: #fff;
+        color: ${P.text.primary};
         font-size: 14px;
       }
 
       .shop-item-price {
-        color: #ffd700;
+        color: ${P.accent.gold};
         font-weight: bold;
         font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
       }
 
       .shop-item-info {
         display: flex;
         gap: 12px;
         font-size: 12px;
-        color: #8a8aaa;
+        color: ${P.text.secondary};
         margin-bottom: 6px;
       }
 
@@ -250,20 +360,20 @@ export class ShopScene extends Scene {
         font-weight: bold;
       }
 
-      .supply-scarce { background: #c62828; color: #fff; }
-      .supply-low { background: #f57c00; color: #fff; }
-      .supply-medium { background: #fbc02d; color: #000; }
-      .supply-high { background: #388e3c; color: #fff; }
-      .supply-surplus { background: #1976d2; color: #fff; }
+      .supply-scarce { background: ${P.state.error}; color: #fff; }
+      .supply-low { background: #b86f00; color: #fff; }
+      .supply-medium { background: ${P.state.warning}; color: ${P.text.primary}; }
+      .supply-high { background: ${P.state.success}; color: #fff; }
+      .supply-surplus { background: ${P.state.info}; color: #fff; }
 
       .shop-item-stats {
         font-size: 11px;
-        color: #6ab0f3;
+        color: ${P.state.info};
       }
 
       .shop-item-desc {
         font-size: 11px;
-        color: #666;
+        color: ${P.text.muted};
         margin-top: 4px;
         font-style: italic;
       }
@@ -272,30 +382,37 @@ export class ShopScene extends Scene {
         width: 300px;
         display: flex;
         flex-direction: column;
+        background: ${getParchmentGradient()};
+        border: ${getParchmentBorder()};
+        border-radius: 6px;
+        box-shadow: ${getParchmentShadow()};
       }
 
       .detail-content {
         flex: 1;
         display: flex;
         flex-direction: column;
+        padding: 16px;
+        overflow-y: auto;
       }
 
       .detail-header {
         text-align: center;
         padding-bottom: 16px;
-        border-bottom: 1px solid #3a3a5a;
+        border-bottom: 1px solid ${P.border};
         margin-bottom: 16px;
       }
 
       .detail-name {
         font-size: 18px;
         font-weight: bold;
-        color: #ffd700;
+        color: ${P.accent.gold};
         margin-bottom: 4px;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
       .detail-type {
-        color: #8a8aaa;
+        color: ${P.text.secondary};
         font-size: 13px;
         text-transform: capitalize;
       }
@@ -308,36 +425,37 @@ export class ShopScene extends Scene {
         display: flex;
         justify-content: space-between;
         padding: 6px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
+        border-bottom: 1px solid rgba(139, 115, 85, 0.3);
       }
 
       .detail-stat-label {
-        color: #8a8aaa;
+        color: ${P.text.secondary};
       }
 
       .detail-stat-value {
-        color: #6ab0f3;
+        color: ${P.state.info};
         font-weight: bold;
       }
 
       .detail-stat-value.positive {
-        color: #4caf50;
+        color: ${P.state.success};
       }
 
       .detail-desc {
-        color: #8a8aaa;
+        color: ${P.text.secondary};
         font-size: 13px;
         font-style: italic;
         padding: 12px;
-        background: rgba(0,0,0,0.2);
-        border-radius: 6px;
+        background: linear-gradient(to bottom, ${P.mid}, ${P.dark});
+        border: 1px solid ${P.border};
+        border-radius: 4px;
         margin-bottom: 16px;
       }
 
       .detail-actions {
         margin-top: auto;
         padding-top: 16px;
-        border-top: 1px solid #3a3a5a;
+        border-top: 1px solid ${P.border};
       }
 
       .quantity-selector {
@@ -349,20 +467,22 @@ export class ShopScene extends Scene {
       }
 
       .quantity-btn {
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
         border-radius: 6px;
-        background: rgba(0,0,0,0.4);
-        border: 1px solid #3a3a5a;
-        color: #fff;
+        background: linear-gradient(to bottom, ${P.light}, ${P.mid});
+        border: 2px solid ${P.border};
+        color: ${P.text.primary};
         font-size: 18px;
+        font-weight: bold;
         cursor: pointer;
         transition: all 0.2s;
+        font-family: Georgia, serif;
       }
 
-      .quantity-btn:hover {
-        background: rgba(74, 144, 217, 0.3);
-        border-color: #6ab0f3;
+      .quantity-btn:hover:not(:disabled) {
+        background: linear-gradient(to bottom, ${P.mid}, ${P.dark});
+        border-color: ${P.accent.gold};
       }
 
       .quantity-btn:disabled {
@@ -373,7 +493,7 @@ export class ShopScene extends Scene {
       .quantity-value {
         font-size: 18px;
         font-weight: bold;
-        color: #fff;
+        color: ${P.text.primary};
         min-width: 40px;
         text-align: center;
       }
@@ -384,18 +504,19 @@ export class ShopScene extends Scene {
       }
 
       .total-label {
-        color: #8a8aaa;
+        color: ${P.text.secondary};
         font-size: 12px;
       }
 
       .total-value {
-        color: #ffd700;
+        color: ${P.accent.gold};
         font-size: 20px;
         font-weight: bold;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
       }
 
       .total-value.cannot-afford {
-        color: #c62828;
+        color: ${P.state.error};
       }
 
       .action-btn {
@@ -403,28 +524,82 @@ export class ShopScene extends Scene {
         padding: 12px;
         font-size: 16px;
         font-weight: bold;
+        font-family: Georgia, serif;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .action-btn.buy-btn {
+        background: linear-gradient(to bottom, ${P.state.info}, #3a5068);
+        border: 2px solid ${P.borderDark};
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      }
+
+      .action-btn.buy-btn:hover:not(:disabled) {
+        background: linear-gradient(to bottom, #3a5068, ${P.state.info});
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .action-btn.sell-btn {
+        background: linear-gradient(to bottom, ${P.state.success}, #3a5538);
+        border: 2px solid ${P.borderDark};
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      }
+
+      .action-btn.sell-btn:hover:not(:disabled) {
+        background: linear-gradient(to bottom, #3a5538, ${P.state.success});
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      }
+
+      .action-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
 
       .empty-message {
         text-align: center;
-        color: #8a8aaa;
+        color: ${P.text.muted};
         padding: 40px;
         font-size: 14px;
+        font-style: italic;
       }
 
+      /* Rarity borders - preserved for item distinction */
       .rarity-common { border-left: 3px solid #9e9e9e; }
-      .rarity-uncommon { border-left: 3px solid #4caf50; }
-      .rarity-rare { border-left: 3px solid #2196f3; }
-      .rarity-epic { border-left: 3px solid #9c27b0; }
-      .rarity-legendary { border-left: 3px solid #ff9800; }
+      .rarity-uncommon { border-left: 3px solid #1eff00; }
+      .rarity-rare { border-left: 3px solid #0070dd; }
+      .rarity-epic { border-left: 3px solid #a335ee; }
+      .rarity-legendary { border-left: 3px solid #ff8000; }
 
       .character-tag {
         font-size: 10px;
-        color: #ffd700;
-        background: rgba(255, 215, 0, 0.2);
+        color: ${P.accent.gold};
+        background: rgba(201, 162, 39, 0.2);
         padding: 2px 6px;
         border-radius: 4px;
         margin-left: 8px;
+        border: 1px solid rgba(201, 162, 39, 0.4);
+      }
+
+      .back-btn {
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: bold;
+        font-family: Georgia, serif;
+        background: linear-gradient(to bottom, ${P.light}, ${P.mid});
+        border: 2px solid ${P.border};
+        border-radius: 6px;
+        color: ${P.text.primary};
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .back-btn:hover {
+        background: linear-gradient(to bottom, ${P.mid}, ${P.dark});
+        border-color: ${P.borderDark};
       }
     `;
     document.head.appendChild(style);
@@ -441,10 +616,10 @@ export class ShopScene extends Scene {
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
           <div class="shop-gold">
-            <span>Gold:</span>
-            <span id="player-gold">${this.playerGold}</span>
+            <div class="shop-gold-icon"></div>
+            <span id="player-gold">${this.playerGold.toLocaleString()}</span>
           </div>
-          <button class="btn btn-secondary" id="back-btn">Back to Map</button>
+          <button class="back-btn" id="back-btn">Back to Map</button>
         </div>
       </div>
 
@@ -454,8 +629,8 @@ export class ShopScene extends Scene {
       </div>
 
       <div class="shop-content">
-        <div class="shop-items-panel ui-panel">
-          <div class="ui-panel-header" id="items-header">
+        <div class="shop-items-panel">
+          <div class="shop-panel-header" id="items-header">
             ${this.activeTab === 'buy' ? 'Shop Inventory' : 'Your Items'}
           </div>
           <div class="shop-items-list" id="items-list">
@@ -463,8 +638,8 @@ export class ShopScene extends Scene {
           </div>
         </div>
 
-        <div class="shop-detail-panel ui-panel">
-          <div class="ui-panel-header">Item Details</div>
+        <div class="shop-detail-panel">
+          <div class="shop-panel-header">Item Details</div>
           <div class="detail-content" id="detail-content">
             <div class="empty-message">Select an item to view details</div>
           </div>
@@ -512,7 +687,7 @@ export class ShopScene extends Scene {
 
     if (items.length === 0) {
       listEl.innerHTML = `<div class="empty-message">
-        ${this.activeTab === 'buy' ? 'No items available' : 'No items to sell'}
+        ${this.activeTab === 'buy' ? 'No items available for purchase' : 'No items to sell'}
       </div>`;
       return;
     }
@@ -557,7 +732,7 @@ export class ShopScene extends Scene {
            data-instance-id="${item.instanceId || ''}">
         <div class="shop-item-header">
           <div class="shop-item-name">${item.name}${charTag}</div>
-          <div class="shop-item-price">${price}g</div>
+          <div class="shop-item-price">${price.toLocaleString()}g</div>
         </div>
         <div class="shop-item-info">
           <span class="shop-item-type">${item.type}</span>
@@ -617,13 +792,13 @@ export class ShopScene extends Scene {
 
         <div class="total-price">
           <div class="total-label">${isBuyMode ? 'Total Cost' : 'Total Value'}</div>
-          <div class="total-value ${!canAfford ? 'cannot-afford' : ''}">${totalPrice}g</div>
+          <div class="total-value ${!canAfford ? 'cannot-afford' : ''}">${totalPrice.toLocaleString()}g</div>
         </div>
 
-        <button class="btn ${isBuyMode ? 'btn-primary' : 'btn-success'} action-btn"
+        <button class="action-btn ${isBuyMode ? 'buy-btn' : 'sell-btn'}"
                 id="action-btn"
                 ${(!canAfford || maxQty <= 0) ? 'disabled' : ''}>
-          ${isBuyMode ? 'Buy' : 'Sell'}
+          ${isBuyMode ? 'Purchase' : 'Sell'}
         </button>
       </div>
     `;
@@ -705,7 +880,7 @@ export class ShopScene extends Scene {
       this.updateGoldDisplay();
       this.game.state.set('user', { ...this.game.state.get('user'), gold: this.playerGold });
 
-      this.game.showNotification(result.message, 'success');
+      parchmentToast.success('Purchase Complete', result.message);
 
       // Refresh shop data
       await this.loadShopData();
@@ -714,7 +889,7 @@ export class ShopScene extends Scene {
       this.renderDetailPanel();
 
     } catch (err) {
-      this.game.showNotification(err.message, 'error');
+      parchmentToast.error('Purchase Failed', err.message);
     }
   }
 
@@ -733,7 +908,7 @@ export class ShopScene extends Scene {
       this.updateGoldDisplay();
       this.game.state.set('user', { ...this.game.state.get('user'), gold: this.playerGold });
 
-      this.game.showNotification(result.message, 'success');
+      parchmentToast.success('Item Sold', result.message);
 
       // Refresh shop data
       await this.loadShopData();
@@ -742,14 +917,14 @@ export class ShopScene extends Scene {
       this.renderDetailPanel();
 
     } catch (err) {
-      this.game.showNotification(err.message, 'error');
+      parchmentToast.error('Sale Failed', err.message);
     }
   }
 
   updateGoldDisplay() {
     const goldEl = this.uiElement.querySelector('#player-gold');
     if (goldEl) {
-      goldEl.textContent = this.playerGold;
+      goldEl.textContent = this.playerGold.toLocaleString();
     }
   }
 
@@ -794,13 +969,17 @@ export class ShopScene extends Scene {
     return `rarity-${classes[rarityNum - 1] || 'common'}`;
   }
 
-  update(deltaTime) {
+  update(_deltaTime) {
     // No per-frame updates needed
   }
 
   render(ctx) {
-    // UI is HTML-based
-    ctx.fillStyle = '#1a1a2e';
+    // UI is HTML-based, but draw a subtle parchment background on canvas
+    const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+    gradient.addColorStop(0, P.light);
+    gradient.addColorStop(0.5, P.mid);
+    gradient.addColorStop(1, P.dark);
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   }
 }
