@@ -47,13 +47,13 @@ Critical items for complete gameplay loop:
 | Issue | Location | Impact | Priority |
 |-------|----------|--------|----------|
 | ~~Rate limiting missing on marketplace batch~~ | ~~marketplace.js~~ | ~~DoS vulnerability~~ | ✅ FIXED (marketplaceRateLimiter.js) |
-| Rate limiting missing on battle actions | battle.js | Can spam actions | High |
-| Rate limiting missing on WebSocket messages | websocket/index.js | Message flood attack | High |
-| Event listener leak in Game.js | Game.js:resize | Memory leak over time | High |
-| Event listener leak in InputHandler.js | InputHandler.js | Memory leak over time | High |
-| Doc: Race traits mismatch | GAME_DESIGN.md vs constants.js | Incorrect documentation | Medium |
-| Doc: Critical chance cap | GAME_DESIGN.md (50% vs 30%) | Incorrect documentation | Medium |
-| Doc: XP formula exponent | GAME_DESIGN.md (2.2 vs 1.8) | Incorrect documentation | Medium |
+| ~~Rate limiting missing on battle actions~~ | ~~battle.js~~ | ~~Can spam actions~~ | ✅ FIXED (battleRateLimiter.js) |
+| ~~Rate limiting missing on WebSocket messages~~ | ~~websocket/index.js~~ | ~~Message flood attack~~ | ✅ FIXED (checkRateLimit) |
+| ~~Event listener leak in Game.js~~ | ~~Game.js:resize~~ | ~~Memory leak over time~~ | ✅ FIXED (destroy method) |
+| ~~Event listener leak in InputHandler.js~~ | ~~InputHandler.js~~ | ~~Memory leak over time~~ | ✅ FIXED (destroy method) |
+| ~~Doc: Race traits mismatch~~ | ~~GAME_DESIGN.md vs constants.js~~ | ~~Incorrect documentation~~ | ✅ FIXED |
+| ~~Doc: Critical chance cap~~ | ~~GAME_DESIGN.md (50% vs 30%)~~ | ~~Incorrect documentation~~ | ✅ FIXED |
+| ~~Doc: XP formula exponent~~ | ~~GAME_DESIGN.md (2.2 vs 1.8)~~ | ~~Incorrect documentation~~ | ✅ FIXED |
 
 ### Battle System Architecture Overhaul (Complete)
 
@@ -1248,6 +1248,7 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 | New Races/Classes | More character options |
 | Seasonal Events | Limited-time content |
 | Mobile App | Native mobile clients |
+| Bot Detection | Advanced WebSocket abuse pattern detection algorithm |
 
 ---
 

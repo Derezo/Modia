@@ -4,6 +4,8 @@ import { InputHandler } from './InputHandler.js';
 import { ApiClient } from '../api/client.js';
 import { GameWebSocket } from '../api/websocket.js';
 import { AssetLoader } from './AssetLoader.js';
+import { responsive } from './Responsive.js';
+import { injectParchmentTheme } from '../ui/parchment/ParchmentTheme.js';
 import SettingsModal from '../components/SettingsModal.js';
 import { ToastManager } from '../components/ToastManager.js';
 import { NotificationBell } from '../components/NotificationBell.js';
@@ -43,6 +45,14 @@ export class Game {
     // Party system
     this.partyStatusBar = null;
     this.partyInviteModal = null;
+
+    // Bound handler references for cleanup (window-level listeners)
+    this._boundResize = null;
+    this._boundKeyHandler = null;
+
+    // Responsive utility reference
+    this.responsive = responsive;
+    this._responsiveUnsubscribe = null;
   }
 
   async init() {
@@ -62,9 +72,24 @@ export class Game {
     await this.assetLoader.init();
     console.log('Asset loader initialized');
 
+    // Inject parchment theme CSS variables
+    injectParchmentTheme();
+    console.log('Parchment theme injected');
+
+    // Subscribe to responsive breakpoint changes
+    this._responsiveUnsubscribe = this.responsive.onChange((breakpoint, info) => {
+      console.log(`Breakpoint changed: ${info.previous} → ${breakpoint}`);
+      // Notify current scene of breakpoint change
+      const currentScene = this.scenes?.getCurrentScene();
+      if (currentScene?.onBreakpointChange) {
+        currentScene.onBreakpointChange(breakpoint, info.previous);
+      }
+    });
+
     // Setup canvas sizing
     this.resize();
-    window.addEventListener('resize', () => this.resize());
+    this._boundResize = () => this.resize();
+    window.addEventListener('resize', this._boundResize);
 
     // Setup global ESC handler for settings modal
     this.setupGlobalKeyHandler();
@@ -228,7 +253,7 @@ export class Game {
    * Setup global ESC key handler for settings modal
    */
   setupGlobalKeyHandler() {
-    window.addEventListener('keydown', (e) => {
+    this._boundKeyHandler = (e) => {
       if (e.key === 'Escape') {
         // Check if settings modal is already open
         if (this.settingsModal?.isVisible) {
@@ -246,7 +271,9 @@ export class Game {
           this.showSettings();
         }
       }
-    });
+    };
+
+    window.addEventListener('keydown', this._boundKeyHandler);
   }
 
   /**
@@ -398,6 +425,35 @@ export class Game {
     this.notificationCenter = null;
     this.partyStatusBar = null;
     this.partyInviteModal = null;
+  }
+
+  /**
+   * Clean up all resources and event listeners
+   * Call this before creating a new Game instance to prevent memory leaks
+   */
+  destroy() {
+    this.running = false;
+
+    // Remove window-level event listeners
+    if (this._boundResize) {
+      window.removeEventListener('resize', this._boundResize);
+      this._boundResize = null;
+    }
+    if (this._boundKeyHandler) {
+      window.removeEventListener('keydown', this._boundKeyHandler);
+      this._boundKeyHandler = null;
+    }
+
+    // Clean up responsive subscription
+    if (this._responsiveUnsubscribe) {
+      this._responsiveUnsubscribe();
+      this._responsiveUnsubscribe = null;
+    }
+
+    // Clean up subsystems
+    this.input?.destroy();
+    this.socket?.disconnect();
+    this.destroyNotificationSystem();
   }
 
   /**
