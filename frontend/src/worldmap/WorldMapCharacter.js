@@ -226,14 +226,35 @@ export class WorldMapCharacter {
    * @param {number} cameraY - Camera Y offset
    */
   render(ctx, cameraX, cameraY) {
-    if (!this.character) return;
+    if (!this.character) {
+      // Only log once to avoid spam
+      if (!this._noCharacterLogged) {
+        console.warn('WorldMapCharacter.render: No character set');
+        this._noCharacterLogged = true;
+      }
+      return;
+    }
+    this._noCharacterLogged = false;
 
     const screenX = this.x + cameraX;
     const screenY = this.y + cameraY;
 
+    // Debug: Log position once per second (throttled)
+    if (!this._lastLogTime || Date.now() - this._lastLogTime > 1000) {
+      console.log('Character render:', {
+        worldPos: { x: this.x, y: this.y },
+        screenPos: { x: Math.round(screenX), y: Math.round(screenY) },
+        hasSprite: !!this.characterSprite,
+        canvasSize: { w: ctx.canvas.width, h: ctx.canvas.height },
+        isWalking: this.isWalking
+      });
+      this._lastLogTime = Date.now();
+    }
+
     // Check if on screen
     if (screenX < -50 || screenX > ctx.canvas.width + 50 ||
         screenY < -50 || screenY > ctx.canvas.height + 50) {
+      console.warn('Character off-screen, skipping render:', { screenX, screenY });
       return;
     }
 

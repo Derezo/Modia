@@ -2,8 +2,18 @@ import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
 import { config } from 'dotenv';
 import pg from 'pg';
+import { logger } from '../utils/logger.js';
 
 const { Pool } = pg;
+
+// Fix TIMESTAMP parsing: PostgreSQL TIMESTAMP (without timezone) returns strings
+// like "2026-01-11 02:58:37.278" which JavaScript interprets as LOCAL time.
+// This causes bugs when server timezone differs from UTC.
+// Type OID 1114 = TIMESTAMP WITHOUT TIME ZONE
+pg.types.setTypeParser(1114, (val) => {
+  // Append 'Z' to indicate UTC, preventing local time interpretation
+  return val === null ? null : new Date(val + 'Z');
+});
 
 // Load .env from project root
 const __filename = fileURLToPath(import.meta.url);
@@ -30,9 +40,8 @@ const query = async (text, params) => {
   const result = await pool.query(text, params);
   const duration = Date.now() - start;
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Executed query', { text: text.substring(0, 50), duration, rows: result.rowCount });
-  }
+  // Use structured logger - shows full SQL and params in single line
+  logger.query(text, params, duration, result.rowCount);
 
   return result;
 };
@@ -52,11 +61,14 @@ const withTransaction = async (callback) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    logger.debug('withTransaction', 'BEGIN');
     const result = await callback(client);
     await client.query('COMMIT');
+    logger.debug('withTransaction', 'COMMIT');
     return result;
   } catch (err) {
     await client.query('ROLLBACK');
+    logger.debug('withTransaction', `ROLLBACK: ${err.message}`);
     throw err;
   } finally {
     client.release();
