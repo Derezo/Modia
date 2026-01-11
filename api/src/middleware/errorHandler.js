@@ -1,6 +1,15 @@
+import { logger } from '../utils/logger.js';
+
 const errorHandler = (err, req, res, next) => {
-  console.error('Error:', err.message);
-  console.error('Stack:', err.stack);
+  const statusCode = err.statusCode || 500;
+
+  // Only log actual errors (5xx), not expected client errors (4xx)
+  if (statusCode >= 500) {
+    logger.error(`${req.method} ${req.path}`, err);
+  } else if (logger.isDebug()) {
+    // In debug mode, log 4xx as debug info, not errors
+    logger.debug('errorHandler', `${statusCode} ${err.message}`, { path: req.path });
+  }
 
   // Handle specific error types
   if (err.name === 'ValidationError') {
@@ -27,7 +36,6 @@ const errorHandler = (err, req, res, next) => {
   }
 
   // Default error response
-  const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
     error: err.message || 'Internal Server Error',
     ...(err.data && { ...err.data }),
