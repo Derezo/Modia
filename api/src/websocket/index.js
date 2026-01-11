@@ -7,6 +7,94 @@ import * as partyWebsocket from '../services/partyWebsocket.js';
 import * as marketplaceWebsocket from '../services/marketplaceWebsocket.js';
 import { query } from '../config/database.js';
 
+// ============================================================
+// WebSocket Rate Limiting
+// ============================================================
+
+const WS_RATE_LIMITS = {
+  global: { limit: 100, windowMs: 5 * 60 * 1000 },    // 100 per 5 min
+  chat: { limit: 30, windowMs: 60 * 1000 },           // 30 per min
+  reactions: { limit: 20, windowMs: 60 * 1000 },      // 20 per min
+  typing: { limit: 60, windowMs: 60 * 1000 },         // 60 per min
+  roomJoins: { limit: 30, windowMs: 60 * 1000 }       // 30 per min
+};
+
+const MESSAGE_CATEGORIES = {
+  chat_message: 'chat',
+  private_message: 'chat',
+  add_reaction: 'reactions',
+  remove_reaction: 'reactions',
+  typing_indicator: 'typing',
+  join_room: 'roomJoins',
+  join_battle: 'roomJoins',
+  join_node: 'roomJoins'
+};
+
+// Per-user rate tracking: userId -> { global: [timestamps], chat: [timestamps], ... }
+const userRateLimits = new Map();
+
+/**
+ * Check if a user's message should be rate limited
+ * @param {number} userId - User ID
+ * @param {string} messageType - WebSocket message type
+ * @returns {{ limited: boolean, category?: string, retryAfter?: number }}
+ */
+function checkRateLimit(userId, messageType) {
+  // Skip in test environment
+  if (process.env.NODE_ENV === 'test') {
+    return { limited: false };
+  }
+
+  const now = Date.now();
+
+  if (!userRateLimits.has(userId)) {
+    userRateLimits.set(userId, {
+      global: [],
+      chat: [],
+      reactions: [],
+      typing: [],
+      roomJoins: []
+    });
+  }
+
+  const userLimits = userRateLimits.get(userId);
+  const category = MESSAGE_CATEGORIES[messageType];
+
+  // Check global limit first
+  const globalConfig = WS_RATE_LIMITS.global;
+  userLimits.global = userLimits.global.filter(t => now - t < globalConfig.windowMs);
+  if (userLimits.global.length >= globalConfig.limit) {
+    const oldestTimestamp = userLimits.global[0];
+    const retryAfter = globalConfig.windowMs - (now - oldestTimestamp);
+    return { limited: true, category: 'global', retryAfter };
+  }
+  userLimits.global.push(now);
+
+  // Check category-specific limit if applicable
+  if (category && WS_RATE_LIMITS[category]) {
+    const catConfig = WS_RATE_LIMITS[category];
+    userLimits[category] = userLimits[category].filter(t => now - t < catConfig.windowMs);
+    if (userLimits[category].length >= catConfig.limit) {
+      const oldestTimestamp = userLimits[category][0];
+      const retryAfter = catConfig.windowMs - (now - oldestTimestamp);
+      return { limited: true, category, retryAfter };
+    }
+    userLimits[category].push(now);
+  }
+
+  return { limited: false };
+}
+
+/**
+ * Clean up rate limit tracking for a disconnected user
+ * @param {number} userId - User ID
+ */
+function cleanupUserRateLimits(userId) {
+  userRateLimits.delete(userId);
+}
+
+// ============================================================
+
 // Active connections mapped by userId
 const connections = new Map();
 
@@ -150,6 +238,22 @@ function setupWebSocket(server) {
       try {
         const message = JSON.parse(data);
         const { type, payload } = message;
+
+        // Rate limit check (skip for auth which happens before userId is set)
+        if (userId && type !== 'auth') {
+          const rateCheck = checkRateLimit(userId, type);
+          if (rateCheck.limited) {
+            ws.send(JSON.stringify({
+              type: 'rate_limited',
+              payload: {
+                message: 'Too many messages. Please slow down.',
+                category: rateCheck.category,
+                retryAfter: rateCheck.retryAfter
+              }
+            }));
+            return;
+          }
+        }
 
         switch (type) {
           case 'auth':
@@ -855,6 +959,9 @@ function setupWebSocket(server) {
 
       if (userId) {
         connections.delete(userId);
+
+        // Clean up rate limit tracking
+        cleanupUserRateLimits(userId);
 
         // Set user offline
         presenceService.setOffline(userId).catch(err => {

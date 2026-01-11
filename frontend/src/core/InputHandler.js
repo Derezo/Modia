@@ -19,6 +19,10 @@ export class InputHandler {
     this.keys = new Set();
     this.keysPressed = new Set();
 
+    // Bound handler references for cleanup (window-level listeners)
+    this._boundKeyDown = null;
+    this._boundKeyUp = null;
+
     // Event listeners
     this.setupMouseEvents();
     this.setupTouchEvents();
@@ -91,16 +95,34 @@ export class InputHandler {
   }
 
   setupKeyboardEvents() {
-    window.addEventListener('keydown', (e) => {
+    this._boundKeyDown = (e) => {
       if (!this.keys.has(e.code)) {
         this.keysPressed.add(e.code);
       }
       this.keys.add(e.code);
-    });
+    };
 
-    window.addEventListener('keyup', (e) => {
+    this._boundKeyUp = (e) => {
       this.keys.delete(e.code);
-    });
+    };
+
+    window.addEventListener('keydown', this._boundKeyDown);
+    window.addEventListener('keyup', this._boundKeyUp);
+  }
+
+  /**
+   * Clean up window-level event listeners to prevent memory leaks
+   * Note: Canvas listeners are automatically cleaned up when the canvas is removed from DOM
+   */
+  destroy() {
+    if (this._boundKeyDown) {
+      window.removeEventListener('keydown', this._boundKeyDown);
+      this._boundKeyDown = null;
+    }
+    if (this._boundKeyUp) {
+      window.removeEventListener('keyup', this._boundKeyUp);
+      this._boundKeyUp = null;
+    }
   }
 
   // Check if a point is within a rectangle

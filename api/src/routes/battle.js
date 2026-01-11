@@ -2,6 +2,7 @@ import express from 'express';
 import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import { actionLimiter, startLimiter, readLimiter, rejoinLimiter, rewardsLimiter } from '../middleware/battleRateLimiter.js';
 import { BATTLE_NODE_TYPES, MAX_BATTLE_PARTY_SIZE, MAX_GOLD } from '../config/constants.js';
 import * as battleService from '../services/battleService.js';
 import * as aiService from '../services/aiService.js';
@@ -128,7 +129,7 @@ async function handleBattleEnd(battleId, status, state, userId) {
 // ============================================================================
 
 // GET /api/battle/preview/:nodeId - Get encounter preview for formation screen
-router.get('/preview/:nodeId', authenticate, asyncHandler(async (req, res) => {
+router.get('/preview/:nodeId', authenticate, readLimiter, asyncHandler(async (req, res) => {
   const nodeId = parseInt(req.params.nodeId, 10);
 
   if (isNaN(nodeId)) {
@@ -140,7 +141,7 @@ router.get('/preview/:nodeId', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/battle/start - Start PvE battle at current node
-router.post('/start', authenticate, asyncHandler(async (req, res) => {
+router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) => {
   // Get optional formation from request
   const { formation } = req.body || {};
 
@@ -446,7 +447,7 @@ router.post('/start', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/battle/current - Get current battle state
-router.get('/current', authenticate, asyncHandler(async (req, res) => {
+router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) => {
   // Check for active battle where user is player1, player2, or in battle_players (for PvP/coop)
   const result = await query(
     `SELECT b.id, b.battle_type, b.battle_state, b.map_seed, b.map_width, b.map_height,
@@ -488,7 +489,7 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/battle/:battleId/rejoin - Rejoin an active battle after disconnect
-router.get('/:battleId/rejoin', authenticate, asyncHandler(async (req, res) => {
+router.get('/:battleId/rejoin', authenticate, rejoinLimiter, asyncHandler(async (req, res) => {
   const { battleId } = req.params;
   const battleReconnection = await import('../services/battleReconnection.js');
 
@@ -556,7 +557,7 @@ router.get('/:battleId/rejoin', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/battle/action - Submit battle action
-router.post('/action', authenticate, asyncHandler(async (req, res) => {
+router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res) => {
   const { battleId, actionType, unitId, targetTile, skillId } = req.body;
 
   // Get battle - allow both player1 AND player2 to submit actions (for PvP)
@@ -713,7 +714,7 @@ router.post('/action', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/battle/rewards - Get rewards after victory
-router.get('/rewards/:battleId', authenticate, asyncHandler(async (req, res) => {
+router.get('/rewards/:battleId', authenticate, rewardsLimiter, asyncHandler(async (req, res) => {
   const { battleId } = req.params;
 
   // Allow both player1 AND player2 to get rewards (for PvP)

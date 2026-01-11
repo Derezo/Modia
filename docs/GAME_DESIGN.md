@@ -46,10 +46,10 @@ Each race provides unique base statistics and a racial trait.
 | HP | 100 | | VIT | 10 |
 | MP | 50 | | LUK | 10 |
 | STR | 10 | | | |
-| INT | 10 | | **Trait** | +10 MDEF, +10 MATK, -10% Max MP |
+| INT | 10 | | **Trait** | +10% XP bonus |
 | AGI | 10 | | | |
 
-**Lore**: Versatile and adaptable, humans possess balanced magical aptitude at the cost of smaller mana reserves.
+**Lore**: Versatile and adaptable, humans learn quickly from every encounter, gaining bonus experience from battles.
 
 #### Elf
 | Stat | Value | | Stat | Value |
@@ -187,7 +187,7 @@ Each class determines stat growth per level, combat role, and available skills. 
 | Magic Attack | INT + (weapon bonus) |
 | Physical Defense | VIT × 0.5 |
 | Magic Defense | INT × 0.25 |
-| Critical Chance | LUK / 200 (max 50%) |
+| Critical Chance | LUK / 200 |
 | Critical Damage | 150% (+ racial bonuses) |
 | Evasion | AGI / 200 (max 25%) |
 | Initiative | AGI + random(0-9) |
@@ -235,22 +235,22 @@ Characters earn XP from battles which is added to their **XP Pool**. This XP is 
 
 Character level is determined by total XP spent:
 ```
-XP Required for Level N = 100 × N^2.2
+XP Required for Level N = 100 × N^1.8
 ```
 
 #### Level Thresholds
 
-| Level | Total XP Spent | XP to Next Level |
-|-------|----------------|------------------|
-| 1 | 0 | 459 |
-| 5 | 3,400 | 1,100 |
-| 10 | 15,800 | 2,800 |
-| 25 | 158,000 | 9,500 |
-| 50 | 794,000 | 25,000 |
-| 100 | 3,981,000 | 65,000 |
-| 150 | 10,900,000 | 115,000 |
-| 200 | 22,000,000 | 175,000 |
-| 256 | ~39,000,000 | MAX |
+| Level | XP for Level | Approx. Cumulative |
+|-------|--------------|-------------------|
+| 1 | 100 | 100 |
+| 5 | 1,493 | ~3,500 |
+| 10 | 6,310 | ~25,000 |
+| 25 | 31,623 | ~250,000 |
+| 50 | 125,893 | ~1,700,000 |
+| 100 | 398,107 | ~11,000,000 |
+| 150 | 718,105 | ~31,000,000 |
+| 200 | 1,096,478 | ~64,000,000 |
+| 256 | 1,584,893 | MAX |
 
 #### Level Up Effects
 
