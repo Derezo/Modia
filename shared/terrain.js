@@ -20,7 +20,7 @@ export const TERRAIN_COSTS = {
 export const TERRAIN_WEIGHTS = {
   forest: { grass: 0.6, forest: 0.25, stone: 0.1, rock: 0.05 },
   cave: { stone: 0.5, rock: 0.2, water: 0.15, lava: 0.05, grass: 0.1 },
-  mountain: { stone: 0.4, rock: 0.3, grass: 0.2, cliff: 0.1 },
+  mountain: { stone: 0.45, rock: 0.15, grass: 0.30, cliff: 0.10 },
   bridge: { stone: 0.6, water: 0.3, grass: 0.1 },
   castle: { stone: 0.7, grass: 0.3 },
   default: { grass: 0.7, stone: 0.2, forest: 0.1 }

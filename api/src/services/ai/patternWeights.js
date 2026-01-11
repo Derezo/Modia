@@ -14,6 +14,8 @@
  * - SURVIVAL_PRIORITY: Self-preservation importance (0-200)
  * - MP_EFFICIENCY: Value of conserving MP (0-100)
  * - TARGET_PRIORITY: Preference for specific targets (0-100)
+ * - strategicPathProgress: Reward for following optimal path to enemies (0-1)
+ * - waitingPenalty: Penalty for waiting when enemies are far (use negative weight)
  */
 
 const PATTERN_WEIGHTS = {
@@ -33,7 +35,9 @@ const PATTERN_WEIGHTS = {
       HEALING_VALUE: 0.3,
       SURVIVAL_PRIORITY: 0.3,
       MP_EFFICIENCY: 0.5,
-      TARGET_PRIORITY: 1.2
+      TARGET_PRIORITY: 1.2,
+      strategicPathProgress: 0.25,
+      waitingPenalty: -0.3
     }
   },
 
@@ -53,7 +57,9 @@ const PATTERN_WEIGHTS = {
       HEALING_VALUE: 1.5,
       SURVIVAL_PRIORITY: 2.5,
       MP_EFFICIENCY: 1.0,
-      TARGET_PRIORITY: 0.8
+      TARGET_PRIORITY: 0.8,
+      strategicPathProgress: 0.10,
+      waitingPenalty: -0.1
     }
   },
 
@@ -73,7 +79,9 @@ const PATTERN_WEIGHTS = {
       HEALING_VALUE: 3.0,
       SURVIVAL_PRIORITY: 2.0,
       MP_EFFICIENCY: 1.5,
-      TARGET_PRIORITY: 0.5
+      TARGET_PRIORITY: 0.5,
+      strategicPathProgress: 0.15,
+      waitingPenalty: -0.1
     }
   },
 
@@ -93,7 +101,9 @@ const PATTERN_WEIGHTS = {
       HEALING_VALUE: 1.0,
       SURVIVAL_PRIORITY: 1.5,
       MP_EFFICIENCY: 1.2,
-      TARGET_PRIORITY: 2.0
+      TARGET_PRIORITY: 2.0,
+      strategicPathProgress: 0.20,
+      waitingPenalty: -0.2
     }
   },
 
@@ -113,7 +123,9 @@ const PATTERN_WEIGHTS = {
       HEALING_VALUE: 1.2,
       SURVIVAL_PRIORITY: 1.0,
       MP_EFFICIENCY: 0.8,
-      TARGET_PRIORITY: 1.5
+      TARGET_PRIORITY: 1.5,
+      strategicPathProgress: 0.20,
+      waitingPenalty: -0.25
     }
   },
 
@@ -133,7 +145,9 @@ const PATTERN_WEIGHTS = {
       HEALING_VALUE: 0.2,
       SURVIVAL_PRIORITY: 1.8,
       MP_EFFICIENCY: 1.0,
-      TARGET_PRIORITY: 2.5
+      TARGET_PRIORITY: 2.5,
+      strategicPathProgress: 0.10,
+      waitingPenalty: -0.05
     }
   },
 
@@ -153,7 +167,9 @@ const PATTERN_WEIGHTS = {
       HEALING_VALUE: 0.0,
       SURVIVAL_PRIORITY: 0.0,
       MP_EFFICIENCY: 0.0,
-      TARGET_PRIORITY: 1.0
+      TARGET_PRIORITY: 1.0,
+      strategicPathProgress: 0.35,
+      waitingPenalty: -0.5
     }
   },
 
@@ -173,7 +189,9 @@ const PATTERN_WEIGHTS = {
       HEALING_VALUE: 0.5,
       SURVIVAL_PRIORITY: 1.8,
       MP_EFFICIENCY: 1.5,
-      TARGET_PRIORITY: 1.5
+      TARGET_PRIORITY: 1.5,
+      strategicPathProgress: 0.15,
+      waitingPenalty: -0.15
     }
   },
 
@@ -193,7 +211,9 @@ const PATTERN_WEIGHTS = {
       HEALING_VALUE: 1.5,
       SURVIVAL_PRIORITY: 1.5,
       MP_EFFICIENCY: 1.0,
-      TARGET_PRIORITY: 1.8
+      TARGET_PRIORITY: 1.8,
+      strategicPathProgress: 0.20,
+      waitingPenalty: -0.2
     }
   }
 };

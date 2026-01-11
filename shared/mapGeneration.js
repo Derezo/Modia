@@ -157,6 +157,10 @@ export function generateTerrain(seed, nodeType, width = 32, height = 32) {
   // Clear spawn areas (left 5 columns for players, right 5 columns for enemies)
   clearSpawnAreas(terrain, obstacles, width, height);
 
+  // Ensure connectivity between spawn areas, carve paths if needed
+  // CRITICAL: Pass obstacles so carved paths clear obstacles too
+  ensureMapConnectivity(terrain, obstacles, width, height, random);
+
   return { terrain, obstacles, variants };
 }
 
@@ -192,6 +196,129 @@ function clearSpawnAreas(terrain, obstacles, width, height) {
         obstacles[y][x] = null;
       }
     }
+  }
+}
+
+/**
+ * Pre-compute corridor data to ensure consistent random consumption
+ * CRITICAL: This must always be called to maintain seeded determinism
+ *
+ * @param {number} width - Map width
+ * @param {number} height - Map height
+ * @param {function} random - Seeded random function
+ * @returns {Array} Corridor data with positions and wander decisions
+ */
+function precomputeCorridorData(width, height, random) {
+  const playerSpawnX = 4;
+  const enemySpawnX = width - 5;
+  const corridorCount = 2 + Math.floor(random() * 2); // 2-3 corridors
+  const corridors = [];
+
+  for (let i = 0; i < corridorCount; i++) {
+    const baseY = Math.floor((height / (corridorCount + 1)) * (i + 1));
+    const offsetY = Math.floor(random() * 5) - 2;
+    const startY = Math.max(2, Math.min(height - 3, baseY + offsetY));
+
+    // Pre-compute wander decisions for each column
+    const wanderData = [];
+    for (let x = playerSpawnX; x <= enemySpawnX; x++) {
+      const shouldWander = random() < 0.15;
+      const wanderDir = random() < 0.5 ? -1 : 1;
+      wanderData.push({ shouldWander, wanderDir });
+    }
+
+    corridors.push({ startY, wanderData, playerSpawnX, enemySpawnX });
+  }
+
+  return corridors;
+}
+
+/**
+ * Apply pre-computed corridor data to terrain and obstacles
+ *
+ * @param {string[][]} terrain - Terrain grid to modify
+ * @param {Object[][]} obstacles - Obstacles grid to modify
+ * @param {number} height - Map height
+ * @param {Array} corridorData - Pre-computed corridor data
+ */
+function applyCorridorCarving(terrain, obstacles, height, corridorData) {
+  for (const corridor of corridorData) {
+    let currentY = corridor.startY;
+
+    for (let i = 0; i < corridor.wanderData.length; i++) {
+      const x = corridor.playerSpawnX + i;
+      const { shouldWander, wanderDir } = corridor.wanderData[i];
+
+      // Carve a 3-tile wide corridor
+      for (let dy = -1; dy <= 1; dy++) {
+        const y = currentY + dy;
+        if (y >= 0 && y < height && isImpassable(terrain[y]?.[x])) {
+          terrain[y][x] = 'stone';
+          // Also clear any obstacles on carved tiles
+          if (obstacles?.[y]) {
+            obstacles[y][x] = null;
+          }
+        }
+      }
+
+      // Apply wander if needed
+      if (shouldWander) {
+        currentY = Math.max(2, Math.min(height - 3, currentY + wanderDir));
+      }
+    }
+  }
+}
+
+/**
+ * Ensure map has valid paths between spawn areas, carve if needed
+ * Uses BFS to check connectivity and carves paths if disconnected
+ *
+ * CRITICAL: Always pre-computes corridor data to maintain consistent random
+ * consumption, regardless of whether carving is needed. This ensures
+ * server/client terrain sync with identical seeds.
+ *
+ * @param {string[][]} terrain - Terrain grid to modify in place
+ * @param {Object[][]} obstacles - Obstacles grid to modify in place
+ * @param {number} width - Map width
+ * @param {number} height - Map height
+ * @param {function} random - Seeded random function
+ */
+function ensureMapConnectivity(terrain, obstacles, width, height, random) {
+  // ALWAYS pre-compute corridor data to consume random values consistently
+  // This ensures determinism regardless of whether we need to carve
+  const corridorData = precomputeCorridorData(width, height, random);
+
+  const playerSpawnX = 2;
+  const enemySpawnX = width - 3;
+  const midY = Math.floor(height / 2);
+
+  // Quick connectivity check using BFS
+  const visited = new Set();
+  const queue = [{ x: playerSpawnX, y: midY }];
+  visited.add(`${playerSpawnX},${midY}`);
+  let reachedEnemy = false;
+
+  while (queue.length > 0 && !reachedEnemy) {
+    const current = queue.shift();
+    if (current.x >= enemySpawnX) {
+      reachedEnemy = true;
+      break;
+    }
+
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = current.x + dx;
+      const ny = current.y + dy;
+      const key = `${nx},${ny}`;
+      if (visited.has(key) || nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+      if (isImpassable(terrain[ny]?.[nx])) continue;
+      visited.add(key);
+      queue.push({ x: nx, y: ny });
+    }
+  }
+
+  // Only apply carving if path doesn't exist (corridorData already computed)
+  if (!reachedEnemy) {
+    applyCorridorCarving(terrain, obstacles, height, corridorData);
   }
 }
 

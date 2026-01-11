@@ -357,3 +357,87 @@ export function getAttackableTiles(startX, startY, attackRange, mapWidth, mapHei
 
   return attackable;
 }
+
+/**
+ * Check if a valid path exists between two areas (ignoring units)
+ * Used for map validation to ensure playable terrain
+ *
+ * @param {number} startX - Starting X position
+ * @param {number} startY - Starting Y position
+ * @param {number} endX - Destination X position
+ * @param {number} endY - Destination Y position
+ * @param {string[][]} terrain - 2D terrain grid
+ * @param {number} mapWidth - Map width in tiles
+ * @param {number} mapHeight - Map height in tiles
+ * @returns {boolean} True if a path exists between start and end
+ */
+export function hasValidPath(startX, startY, endX, endY, terrain, mapWidth, mapHeight) {
+  // Use BFS for simple reachability check
+  const visited = new Set();
+  const queue = [{ x: startX, y: startY }];
+  visited.add(`${startX},${startY}`);
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (current.x === endX && current.y === endY) return true;
+
+    const neighbors = [
+      { x: current.x - 1, y: current.y },
+      { x: current.x + 1, y: current.y },
+      { x: current.x, y: current.y - 1 },
+      { x: current.x, y: current.y + 1 }
+    ];
+
+    for (const neighbor of neighbors) {
+      const key = `${neighbor.x},${neighbor.y}`;
+      if (visited.has(key)) continue;
+      if (neighbor.x < 0 || neighbor.y < 0 || neighbor.x >= mapWidth || neighbor.y >= mapHeight) continue;
+
+      const tileTerrain = terrain?.[neighbor.y]?.[neighbor.x] || 'grass';
+      if (isImpassable(tileTerrain)) continue;
+
+      visited.add(key);
+      queue.push(neighbor);
+    }
+  }
+  return false;
+}
+
+/**
+ * Analyze map connectivity between spawn areas
+ * Tests multiple paths from player spawn to enemy spawn
+ *
+ * @param {string[][]} terrain - 2D terrain grid
+ * @param {number} mapWidth - Map width in tiles
+ * @param {number} mapHeight - Map height in tiles
+ * @returns {Object} { pathCount, hasMinimumPaths, bottlenecks }
+ */
+export function analyzeMapConnectivity(terrain, mapWidth, mapHeight) {
+  const playerSpawnX = 2;
+  const enemySpawnX = mapWidth - 3;
+  const testRows = [
+    Math.floor(mapHeight * 0.25),
+    Math.floor(mapHeight * 0.5),
+    Math.floor(mapHeight * 0.75)
+  ];
+
+  let pathCount = 0;
+  const bottlenecks = [];
+
+  for (const row of testRows) {
+    if (hasValidPath(playerSpawnX, row, enemySpawnX, row, terrain, mapWidth, mapHeight)) {
+      pathCount++;
+    }
+  }
+
+  // Check for bottlenecks (columns with very few passable tiles)
+  for (let x = 5; x < mapWidth - 5; x++) {
+    let passableCount = 0;
+    for (let y = 0; y < mapHeight; y++) {
+      if (!isImpassable(terrain[y]?.[x])) passableCount++;
+    }
+    if (passableCount < 4) bottlenecks.push({ x, passableCount });
+  }
+
+  return { pathCount, hasMinimumPaths: pathCount >= 2, bottlenecks };
+}
