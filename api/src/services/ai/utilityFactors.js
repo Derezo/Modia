@@ -7,6 +7,7 @@
 
 import { calculatePhysicalDamage, calculateMagicalDamage } from '../battleService.js';
 import { getManhattanDistance } from '../../../../shared/pathfinding.js';
+import { calculateStrategicPath, scoreStrategicMovement } from './strategicPathfinding.js';
 
 /**
  * Calculate expected damage from an action
@@ -467,6 +468,54 @@ function getTargetValue(target, state) {
   return Math.min(100, value);
 }
 
+/**
+ * Strategic path progress factor - rewards following optimal path toward enemies
+ * Used to prevent AI from getting stuck when enemies are far away
+ *
+ * @param {Object} context - { unit, action, state }
+ * @returns {number} 0-1 normalized score for path progress
+ */
+export function strategicPathProgress(context) {
+  const { unit, action, state } = context;
+  if (action.type !== 'move') return 0;
+
+  const strategicInfo = calculateStrategicPath(unit, state);
+  if (!strategicInfo.path) return 0;
+
+  const score = scoreStrategicMovement(action.position, strategicInfo, unit);
+  return Math.min(1, score / 100);
+}
+
+/**
+ * Waiting penalty - discourages waiting when enemies are out of range
+ * Returns a penalty value (0-1) that should be applied with negative weight
+ *
+ * @param {Object} context - { unit, action, state }
+ * @returns {number} 0-1 penalty value (higher = more penalty for waiting)
+ */
+export function waitingPenalty(context) {
+  const { unit, action, state } = context;
+  if (action.type !== 'wait') return 0;
+
+  const enemies = state.units.filter(u => u.type !== unit.type && u.hp > 0);
+  const attackRange = unit.attackRange || 1;
+
+  // Check if any enemy is in attack range
+  const enemyInRange = enemies.some(enemy => {
+    const dist = getManhattanDistance(unit.tileX, unit.tileY, enemy.tileX, enemy.tileY);
+    return dist <= attackRange;
+  });
+
+  // No penalty if enemy is in range (waiting might be valid tactical choice)
+  if (enemyInRange) return 0;
+
+  // Calculate how far away the nearest enemy is
+  const strategicInfo = calculateStrategicPath(unit, state);
+
+  // Higher penalty when enemies are multiple turns away
+  return strategicInfo.turnsToReach > 1 ? 0.8 : 0.3;
+}
+
 export {
   calculateDamageDealt,
   calculateDamageReceived,
@@ -485,4 +534,5 @@ export {
   countNearbyEnemies,
   countNearbyAllies,
   hasSkillType
+  // strategicPathProgress and waitingPenalty are exported via 'export function' above
 };
