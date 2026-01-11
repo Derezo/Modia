@@ -160,7 +160,13 @@ export class Game {
         this.scenes.switchTo('login');
       }
     } else {
-      this.scenes.switchTo('login');
+      // Check if intro has been seen before
+      const introSeen = localStorage.getItem('modia_intro_seen');
+      if (introSeen) {
+        this.scenes.switchTo('login');
+      } else {
+        this.scenes.switchTo('titleIntro');
+      }
     }
   }
 
@@ -458,7 +464,7 @@ export class Game {
    * @param {string} sceneName - Name of the current scene
    */
   updateNotificationVisibility(sceneName) {
-    const hiddenScenes = ['login', 'register'];
+    const hiddenScenes = ['login', 'register', 'titleIntro'];
 
     if (hiddenScenes.includes(sceneName)) {
       this.profileDropdown?.hide();
