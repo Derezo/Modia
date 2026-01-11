@@ -468,6 +468,37 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
 
   const battle = result.rows[0];
   const state = battle.battle_state;
+  const battleId = battle.id;
+
+  // Join battle WebSocket room for updates
+  battleWebsocket.joinBattle(battleId, req.user.userId);
+
+  // Check if it's an enemy's turn - if so, resume enemy turn processing
+  const activeUnit = state.units?.find(u => u.id === state.activeUnitId);
+  if (activeUnit && activeUnit.type === 'enemy' && activeUnit.hp > 0) {
+    console.log('[Battle] Resuming enemy turn processing for battle', battleId, '- active unit:', activeUnit.name);
+    const battleTurnManager = await import('../services/battleTurnManager.js');
+    setImmediate(async () => {
+      try {
+        const { state: updatedState, battleStatus } =
+          await battleTurnManager.processEnemyTurnsAsync(battleId, state, aiService, battleService);
+
+        // Update final state
+        await query(
+          'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
+          [JSON.stringify(updatedState), battleStatus, battleId]
+        );
+
+        if (battleStatus !== 'active') {
+          await handleBattleEnd(battleId, battleStatus, updatedState, req.user.userId);
+        } else {
+          battleTurnManager.notifyPlayerTurn(battleId, updatedState);
+        }
+      } catch (error) {
+        console.error('Resume enemy turn processing error:', error);
+      }
+    });
+  }
 
   // Get available actions for active player unit
   const activePlayerUnit = state.units?.find(u => u.id === state.activeUnitId && u.type === 'player');
@@ -476,7 +507,7 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
     : null;
 
   res.json({
-    battleId: battle.id,
+    battleId: battleId,
     battleType: battle.battle_type,
     mapSeed: battle.map_seed,
     mapWidth: battle.map_width,

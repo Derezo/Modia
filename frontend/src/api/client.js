@@ -613,6 +613,30 @@ export class ApiClient {
    * @returns {Promise<{success: boolean}>}
    */
   surrenderPvPBattle(battleId) {
-    return this.post(`/coliseum/surrender`, { battleId });
+    return this.post('/coliseum/surrender', { battleId });
+  }
+
+  // ============================================
+  // LEADERBOARD METHODS
+  // ============================================
+
+  /**
+   * Get leaderboard for a category
+   * @param {string} category - 'pvp', 'level', 'gold', or 'battles'
+   * @param {Object} options - Query options
+   * @param {string} options.time - 'all', 'week', or 'today'
+   * @param {number} options.limit - Number of entries (max 100)
+   * @param {number} options.offset - Offset for pagination
+   * @param {string} options.queue - Queue type for PvP ('1v1', '3v3', '5v5')
+   * @returns {Promise<{category, timeFilter, leaderboard, userEntry, pagination}>}
+   */
+  getLeaderboard(category, options = {}) {
+    const params = new URLSearchParams();
+    if (options.time) params.append('time', options.time);
+    if (options.limit) params.append('limit', options.limit);
+    if (options.offset) params.append('offset', options.offset);
+    if (options.queue) params.append('queue', options.queue);
+    const queryString = params.toString();
+    return this.get(`/leaderboard/${category}${queryString ? '?' + queryString : ''}`);
   }
 }

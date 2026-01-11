@@ -19,7 +19,7 @@
 | 3 | Combat System | 95% | Near Complete |
 | 4 | Economy & Inventory | 95% | Near Complete |
 | 5 | Multiplayer | 85% | Near Complete |
-| 6 | Polish & Launch | 25% | In Progress |
+| 6 | Polish & Launch | 40% | In Progress |
 
 **Overall: ~85%**
 
@@ -1199,8 +1199,8 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 - [x] ColiseumScene (queue UI, matchmaking, leaderboards, match history)
 - [x] CourtyardScene (Palace social hub, LFG board)
 - [x] RecruitmentScene (Guild NPC recruitment)
-- [ ] LeaderboardScene (general leaderboards - level, gold, etc.)
-- [ ] SettingsScene
+- [x] LeaderboardScene (multi-category: PvP, Level, Gold, Battles with time filters)
+- [x] SettingsScene (Battle, Audio, Display, Accessibility tabs)
 
 #### 7.2.2 UI/UX Polish
 
@@ -1230,13 +1230,17 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 
 #### 7.2.3 Game Balance
 
-- [ ] Stat curve review
-- [ ] Damage formula tuning
-- [ ] Enemy difficulty scaling
-- [ ] Gold economy balance
-- [ ] Experience curve review
-- [ ] Item pricing balance
-- [ ] PvP matchmaking tuning
+- [x] Balance Testing Framework (`api/src/tests/balance/`)
+  - damageScaling.test.js - Physical/magical damage, skill power, tier scaling
+  - classBalance.test.js - Class viability, race balance, stat growth
+  - economyBalance.test.js - Gold income, exp curves, time investment
+- [ ] Apply balance findings (framework identifies issues, not yet tuned):
+  - Exp rewards may be too low vs exp curve (see balance test warnings)
+  - DPS variance across classes ~3.6x (document or tune)
+  - Gold economy needs review for consumable sustainability
+- [ ] Dynamic enemy abilities (database-driven skills per archetype)
+- [ ] Boss mechanics (phase system, HP thresholds, special abilities)
+- [ ] PvP matchmaking tuning (already using PPR, may need refinement)
 
 #### 7.2.4 Performance
 
@@ -1286,9 +1290,9 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 - [x] BATTLE_RECONNECTION.md (v1.0) - Reconnection flow, state persistence, anti-abuse
 - [x] BATTLE_ANIMATIONS.md (v1.0) - Animation system, intent visualization, timing constants
 - [x] AI_SYSTEM.md (v1.0) - Utility-based AI, multi-actor lookahead, NPC skill system, monster archetypes
-- [ ] README.md (setup guide)
-- [ ] CONTRIBUTING.md
-- [ ] CHANGELOG.md
+- [x] README.md (setup guide, tech stack, features)
+- [x] CONTRIBUTING.md (dev setup, code style, git workflow)
+- [x] CHANGELOG.md (version history from 5.0 to 7.3)
 
 ### 7.3 Launch Checklist
 

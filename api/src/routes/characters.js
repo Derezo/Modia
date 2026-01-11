@@ -37,6 +37,17 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     [req.user.userId]
   );
 
+  // Auto-repair: Ensure at least one character has party_slot = 1
+  // This handles legacy characters created before auto-assignment was added
+  if (result.rows.length > 0 && !result.rows.some(c => c.party_slot === 1)) {
+    const firstChar = result.rows[0];
+    await query(
+      'UPDATE characters SET party_slot = 1 WHERE id = $1',
+      [firstChar.id]
+    );
+    firstChar.party_slot = 1;
+  }
+
   // Calculate current stamina with regeneration for each character
   const characters = result.rows.map(char => ({
     ...char,

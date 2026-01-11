@@ -6,11 +6,11 @@ import { BattleAnimations } from '../battle/BattleAnimations.js';
 import { BattlePathfinding } from '../battle/BattlePathfinding.js';
 import { BattleCamera } from '../battle/BattleCamera.js';
 import { BattleIntro } from '../battle/BattleIntro.js';
+import { BattleOutroSequence } from '../battle/BattleOutroSequence.js';
 import { RadialMenu } from '../battle/RadialMenu.js';
 import { BattleActionBar } from '../battle/BattleActionBar.js';
 import { BattleContextMenu } from '../battle/BattleContextMenu.js';
 import { GridCursor } from '../battle/GridCursor.js';
-import RewardsModal from '../components/RewardsModal.js';
 import { calculateDamagePreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
 
@@ -25,6 +25,7 @@ export class BattleScene extends Scene {
     this.battleId = null;
     this.battleState = null;
     this.mapSeed = null;
+    this.nodeType = null; // Node type for terrain generation (forest, mountain, etc.)
 
     // Components
     this.grid = null;
@@ -72,6 +73,10 @@ export class BattleScene extends Scene {
     this.isProcessingQueue = false;
     this.playerTurnPending = false; // True when player's turn is queued but not yet shown
 
+    // Battle end state
+    this.battleEnded = false;
+    this.outroSequence = null;
+
     // Event cleanup
     this.abortController = null;
 
@@ -83,10 +88,11 @@ export class BattleScene extends Scene {
    * Enter the battle scene
    */
   enter(data) {
-    // data = { battleId, mapSeed, mapWidth, mapHeight, state, initialEnemyActions, battleType, opponentUsername }
+    // data = { battleId, mapSeed, mapWidth, mapHeight, state, initialEnemyActions, battleType, opponentUsername, nodeType }
     this.battleId = data.battleId;
     this.mapSeed = data.mapSeed;
     this.battleState = data.state;
+    this.nodeType = data.nodeType || null; // Store nodeType from server for terrain generation
     this.initialEnemyActions = data.initialEnemyActions || null;
     this.battleType = data.battleType || 'pve'; // 'pve', 'pvp', 'pve_coop'
     this.opponentUsername = data.opponentUsername || null;
@@ -311,9 +317,15 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Get node type from game state for terrain generation
+   * Get node type for terrain generation
+   * Prioritizes nodeType from battle data over game state
    */
   getNodeType() {
+    // Prefer nodeType from server (set in enter())
+    if (this.nodeType) {
+      return this.nodeType;
+    }
+    // Fall back to game state for backwards compatibility
     const currentNode = this.game.state.get('currentNode');
     return currentNode?.node_type || 'forest';
   }
@@ -726,11 +738,16 @@ export class BattleScene extends Scene {
   // The turn_start event is authoritative and includes position for camera panning
 
   /**
-   * Handle remote battle end
+   * Handle remote battle end - queue as turn event so it plays after animations
    */
   handleRemoteBattleEnd(payload) {
     console.log('[Battle WS] Battle ended:', payload.status);
-    this.handleBattleEnd(payload.status, payload.rewards);
+    // Queue battle end so it waits for death animations to complete
+    this.queueTurnEvent({
+      type: 'battle_end',
+      status: payload.status,
+      rewards: payload.rewards
+    });
   }
 
   /**
@@ -824,6 +841,12 @@ export class BattleScene extends Scene {
       case 'action_executed':
         await this.processActionExecutedEvent(event);
         break;
+
+      case 'battle_end':
+        // Wait extra time after death animation before showing victory/defeat
+        await this.waitForAnimation(800);
+        this.handleBattleEnd(event.status, event.rewards);
+        break;
     }
   }
 
@@ -882,6 +905,12 @@ export class BattleScene extends Scene {
         this.inEnemySequence = false;
         this.lastTurnWasEnemy = false;
 
+        // Clear sticky target card from enemy turn
+        if (this.ui) {
+          this.ui.clearTargetSticky();
+          this.ui.hideTargetInfo();
+        }
+
         // Enable player controls after camera pan
         this.updateUI();
       } else {
@@ -892,6 +921,12 @@ export class BattleScene extends Scene {
         // Show thinking indicator for enemy
         if (activeUnit) {
           activeUnit.setThinking(true);
+        }
+
+        // Show enemy's parchment card during their turn
+        if (activeUnit && this.ui) {
+          this.ui.showTargetInfo(activeUnit);
+          this.ui.setTargetSticky(activeUnit);
         }
       }
     }
@@ -2019,9 +2054,13 @@ export class BattleScene extends Scene {
     // Store full availableActions for use in action methods
     this.serverAvailableActions = availableActions || null;
 
-    // Check battle end
+    // Check battle end - queue so it waits for death animations
     if (battleStatus !== 'active') {
-      this.handleBattleEnd(battleStatus, actionResult.rewards);
+      this.queueTurnEvent({
+        type: 'battle_end',
+        status: battleStatus,
+        rewards: actionResult.rewards
+      });
     } else if (turnContinues) {
       // Two-action system: turn not complete, update available actions
       this.canMove = availableActions?.canMove ?? false;
@@ -2189,13 +2228,18 @@ export class BattleScene extends Scene {
    * Handle battle end (victory or defeat)
    */
   handleBattleEnd(status, rewards = null) {
+    // Guard against double-trigger from both HTTP response and WebSocket
+    if (this.battleEnded) return;
+    this.battleEnded = true;
+
     this.ui.hideActionMenu();
 
-    // Use RewardsModal for animated display
-    this.rewardsModal = new RewardsModal(this.game);
-    this.rewardsModal.show(status, rewards, {
-      onClose: () => this.endBattle(),
-      onSound: (soundId) => this.playSound(soundId)
+    // Use BattleOutroSequence for animated victory/defeat display
+    this.outroSequence = new BattleOutroSequence(this);
+    this.outroSequence.start(status, rewards, {
+      isPvP: this.isPvP,
+      opponentName: this.opponentUsername,
+      onComplete: () => this.endBattle()
     });
   }
 
@@ -2208,7 +2252,7 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * End battle and return to world map
+   * End battle and return to appropriate scene
    */
   endBattle() {
     // Clear PvP timer if running
@@ -2216,7 +2260,10 @@ export class BattleScene extends Scene {
       clearInterval(this.pvpTurnTimer);
       this.pvpTurnTimer = null;
     }
-    this.game.scenes.switchTo('worldMap');
+
+    // Return to coliseum for PvP battles, world map otherwise
+    const returnScene = this.isPvP ? 'coliseum' : 'worldMap';
+    this.game.scenes.switchTo(returnScene);
   }
 
   /**
@@ -2487,6 +2534,11 @@ export class BattleScene extends Scene {
       this.gridCursor.update(deltaTime);
     }
 
+    // Update outro sequence if active
+    if (this.outroSequence && !this.outroSequence.isComplete()) {
+      this.outroSequence.update(deltaTime);
+    }
+
     // Clear input state
     this.game.input.clearFrameState();
   }
@@ -2631,6 +2683,11 @@ export class BattleScene extends Scene {
     // Render intro overlay on top
     if (this.isIntroPlaying && this.intro) {
       this.intro.render(ctx);
+    }
+
+    // Render outro sequence on top of everything
+    if (this.outroSequence && !this.outroSequence.isComplete()) {
+      this.outroSequence.render(ctx);
     }
   }
 

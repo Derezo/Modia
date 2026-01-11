@@ -126,8 +126,8 @@ export class GameWebSocket {
     this.send('leave_room', { room });
   }
 
-  sendChatMessage(room, message) {
-    this.send('chat_message', { room, message });
+  sendChatMessage(room, message, characterId = null) {
+    this.send('chat_message', { room, message, characterId });
   }
 
   joinColiseumQueue(partyCharacterIds) {

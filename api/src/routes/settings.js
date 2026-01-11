@@ -9,6 +9,22 @@ const router = express.Router();
 const DEFAULT_SETTINGS = {
   battle: {
     actionMenuStyle: 'radial' // 'radial' | 'context' | 'actionbar'
+  },
+  audio: {
+    masterVolume: 80,
+    musicVolume: 70,
+    sfxVolume: 80,
+    muted: false
+  },
+  display: {
+    animationSpeed: 'normal', // 'slow' | 'normal' | 'fast'
+    showDamageNumbers: true,
+    showBattleGrid: true
+  },
+  accessibility: {
+    highContrast: false,
+    reducedMotion: false,
+    textSize: 'medium' // 'small' | 'medium' | 'large'
   }
 };
 
@@ -52,6 +68,69 @@ function validateSettings(settings) {
       const validStyles = ['radial', 'context', 'actionbar'];
       if (!validStyles.includes(settings.battle.actionMenuStyle)) {
         return { valid: false, error: `actionMenuStyle must be one of: ${validStyles.join(', ')}` };
+      }
+    }
+  }
+
+  // Validate audio settings if present
+  if (settings.audio) {
+    if (typeof settings.audio !== 'object') {
+      return { valid: false, error: 'audio settings must be an object' };
+    }
+
+    const volumeFields = ['masterVolume', 'musicVolume', 'sfxVolume'];
+    for (const field of volumeFields) {
+      if (settings.audio[field] !== undefined) {
+        const value = settings.audio[field];
+        if (typeof value !== 'number' || value < 0 || value > 100) {
+          return { valid: false, error: `${field} must be a number between 0 and 100` };
+        }
+      }
+    }
+
+    if (settings.audio.muted !== undefined && typeof settings.audio.muted !== 'boolean') {
+      return { valid: false, error: 'muted must be a boolean' };
+    }
+  }
+
+  // Validate display settings if present
+  if (settings.display) {
+    if (typeof settings.display !== 'object') {
+      return { valid: false, error: 'display settings must be an object' };
+    }
+
+    if (settings.display.animationSpeed !== undefined) {
+      const validSpeeds = ['slow', 'normal', 'fast'];
+      if (!validSpeeds.includes(settings.display.animationSpeed)) {
+        return { valid: false, error: `animationSpeed must be one of: ${validSpeeds.join(', ')}` };
+      }
+    }
+
+    const booleanFields = ['showDamageNumbers', 'showBattleGrid'];
+    for (const field of booleanFields) {
+      if (settings.display[field] !== undefined && typeof settings.display[field] !== 'boolean') {
+        return { valid: false, error: `${field} must be a boolean` };
+      }
+    }
+  }
+
+  // Validate accessibility settings if present
+  if (settings.accessibility) {
+    if (typeof settings.accessibility !== 'object') {
+      return { valid: false, error: 'accessibility settings must be an object' };
+    }
+
+    const booleanFields = ['highContrast', 'reducedMotion'];
+    for (const field of booleanFields) {
+      if (settings.accessibility[field] !== undefined && typeof settings.accessibility[field] !== 'boolean') {
+        return { valid: false, error: `${field} must be a boolean` };
+      }
+    }
+
+    if (settings.accessibility.textSize !== undefined) {
+      const validSizes = ['small', 'medium', 'large'];
+      if (!validSizes.includes(settings.accessibility.textSize)) {
+        return { valid: false, error: `textSize must be one of: ${validSizes.join(', ')}` };
       }
     }
   }

@@ -6,6 +6,7 @@
  */
 
 import { calculatePhysicalDamage, calculateMagicalDamage } from '../battleService.js';
+import { getManhattanDistance } from '../../../../shared/pathfinding.js';
 
 /**
  * Calculate expected damage from an action
@@ -20,8 +21,9 @@ function calculateDamageDealt(attacker, target, skill, state) {
 
   let damage;
   if (!skill) {
-    // Basic attack
-    damage = calculatePhysicalDamage(attacker, target, 100);
+    // Basic attack - calculatePhysicalDamage returns {damage, isCritical, variance}
+    const result = calculatePhysicalDamage(attacker, target, 100);
+    damage = result.damage;
   } else {
     const damageType = skill.damageType || 'physical';
     const power = skill.power || 100;
@@ -29,15 +31,22 @@ function calculateDamageDealt(attacker, target, skill, state) {
     if (damageType === 'magical' || damageType === 'magic' ||
         damageType === 'fire' || damageType === 'ice' ||
         damageType === 'lightning' || damageType === 'dark') {
-      damage = calculateMagicalDamage(attacker, target, power);
+      const result = calculateMagicalDamage(attacker, target, power);
+      damage = result.damage;
     } else {
-      damage = calculatePhysicalDamage(attacker, target, power);
+      const result = calculatePhysicalDamage(attacker, target, power);
+      damage = result.damage;
     }
 
     // AoE multiplier - value AoE skills hitting multiple targets
     if (skill.aoeRadius && skill.aoeRadius > 0) {
-      const potentialTargets = countTargetsInAoe(target.tileX, target.tileY, skill.aoeRadius, state, attacker.type);
-      damage *= Math.sqrt(potentialTargets); // Diminishing returns for multiple targets
+      // Handle both coordinate formats: {x, y} from action targets or {tileX, tileY} from unit objects
+      const centerX = target.x ?? target.tileX;
+      const centerY = target.y ?? target.tileY;
+      if (centerX !== undefined && centerY !== undefined) {
+        const potentialTargets = countTargetsInAoe(centerX, centerY, skill.aoeRadius, state, attacker.type);
+        damage *= Math.sqrt(potentialTargets); // Diminishing returns for multiple targets
+      }
     }
   }
 
@@ -62,7 +71,7 @@ function countTargetsInAoe(centerX, centerY, radius, state, attackerType) {
 
     const dx = Math.abs(unit.tileX - centerX);
     const dy = Math.abs(unit.tileY - centerY);
-    const distance = Math.max(dx, dy); // Chebyshev distance
+    const distance = dx + dy; // Manhattan distance (matches server validation)
 
     if (distance <= radius) {
       count++;
@@ -89,18 +98,19 @@ function calculateDamageReceived(unit, tileX, tileY, state) {
 
     const dx = Math.abs(enemy.tileX - tileX);
     const dy = Math.abs(enemy.tileY - tileY);
-    const distance = Math.max(dx, dy);
+    const distance = dx + dy; // Manhattan distance (matches server validation)
 
     // Basic threat from melee range
     if (distance <= (enemy.attackRange || 1)) {
-      const damage = calculatePhysicalDamage(enemy, unit, 100);
-      totalThreat += damage;
+      const damageResult = calculatePhysicalDamage(enemy, unit, 100);
+      totalThreat += damageResult.damage;
     }
 
     // Additional threat from skills
     for (const skill of (enemy.skills || [])) {
       if (skill.range && distance <= skill.range) {
-        const skillDamage = skill.power ? (skill.power / 100) * calculatePhysicalDamage(enemy, unit, 100) : 0;
+        const damageResult = calculatePhysicalDamage(enemy, unit, 100);
+        const skillDamage = skill.power ? (skill.power / 100) * damageResult.damage : 0;
         // Weight by how likely they are to use this skill
         totalThreat += skillDamage * 0.3;
       }
@@ -152,10 +162,7 @@ function calculatePositionQuality(unit, tileX, tileY, state) {
   // Distance to nearest enemy
   const nearestEnemy = findNearestEnemy(unit, tileX, tileY, state);
   if (nearestEnemy) {
-    const distance = Math.max(
-      Math.abs(nearestEnemy.tileX - tileX),
-      Math.abs(nearestEnemy.tileY - tileY)
-    );
+    const distance = getManhattanDistance(tileX, tileY, nearestEnemy.tileX, nearestEnemy.tileY);
 
     // Melee units want to be close
     if ((unit.attackRange || 1) <= 1) {
@@ -207,9 +214,7 @@ function findNearestEnemy(unit, fromX, fromY, state) {
   for (const enemy of state.units) {
     if (enemy.type !== enemyType || enemy.hp <= 0) continue;
 
-    const dx = Math.abs(enemy.tileX - fromX);
-    const dy = Math.abs(enemy.tileY - fromY);
-    const distance = Math.max(dx, dy);
+    const distance = getManhattanDistance(fromX, fromY, enemy.tileX, enemy.tileY);
 
     if (distance < nearestDistance) {
       nearestDistance = distance;
@@ -263,9 +268,7 @@ function calculateAllySupport(unit, tileX, tileY, state) {
   for (const ally of state.units) {
     if (ally.type !== allyType || ally.hp <= 0 || ally.id === unit.id) continue;
 
-    const dx = Math.abs(ally.tileX - tileX);
-    const dy = Math.abs(ally.tileY - tileY);
-    const distance = Math.max(dx, dy);
+    const distance = getManhattanDistance(tileX, tileY, ally.tileX, ally.tileY);
 
     // Closer allies provide more support
     if (distance <= 2) {
@@ -368,9 +371,8 @@ function countNearbyEnemies(tileX, tileY, state, unitType) {
   for (const unit of state.units) {
     if (unit.type !== enemyType || unit.hp <= 0) continue;
 
-    const dx = Math.abs(unit.tileX - tileX);
-    const dy = Math.abs(unit.tileY - tileY);
-    if (Math.max(dx, dy) <= 2) count++;
+    const distance = getManhattanDistance(tileX, tileY, unit.tileX, unit.tileY);
+    if (distance <= 2) count++;
   }
 
   return count;
@@ -385,9 +387,8 @@ function countNearbyAllies(tileX, tileY, state, unitType, excludeId) {
   for (const unit of state.units) {
     if (unit.type !== unitType || unit.hp <= 0 || unit.id === excludeId) continue;
 
-    const dx = Math.abs(unit.tileX - tileX);
-    const dy = Math.abs(unit.tileY - tileY);
-    if (Math.max(dx, dy) <= 2) count++;
+    const distance = getManhattanDistance(tileX, tileY, unit.tileX, unit.tileY);
+    if (distance <= 2) count++;
   }
 
   return count;

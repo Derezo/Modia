@@ -1,11 +1,18 @@
 /**
  * Unit tests for stamina service
  * Tests the calculateCurrentStamina function with various edge cases
+ *
+ * Note: REGEN_INTERVAL_MS varies by environment:
+ * - Development: 5 seconds
+ * - Production: 2 minutes
  */
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { calculateCurrentStamina } from '../services/staminaService.js';
+import { calculateCurrentStamina, REGEN_INTERVAL_MS } from '../services/staminaService.js';
+
+// Helper to create elapsed time for N regen points
+const regenTime = (points) => points * REGEN_INTERVAL_MS;
 
 describe('calculateCurrentStamina', () => {
   it('returns stored stamina when at max', () => {
@@ -26,35 +33,35 @@ describe('calculateCurrentStamina', () => {
     assert.strictEqual(calculateCurrentStamina(character), 8);
   });
 
-  it('adds regen points for elapsed time (2 minutes = 1 point)', () => {
-    const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+  it('adds regen points for elapsed time (1 interval = 1 point)', () => {
+    const oneIntervalAgo = new Date(Date.now() - regenTime(1));
     const character = {
       stamina: 5,
       max_stamina: 8,
-      stamina_updated_at: twoMinutesAgo
+      stamina_updated_at: oneIntervalAgo
     };
     assert.strictEqual(calculateCurrentStamina(character), 6);
   });
 
   it('adds multiple regen points for longer elapsed time', () => {
-    const sixMinutesAgo = new Date(Date.now() - 6 * 60 * 1000);
+    const threeIntervalsAgo = new Date(Date.now() - regenTime(3));
     const character = {
       stamina: 3,
       max_stamina: 8,
-      stamina_updated_at: sixMinutesAgo
+      stamina_updated_at: threeIntervalsAgo
     };
-    // 6 minutes = 3 regen points, 3 + 3 = 6
+    // 3 intervals = 3 regen points, 3 + 3 = 6
     assert.strictEqual(calculateCurrentStamina(character), 6);
   });
 
   it('caps regen at max stamina', () => {
-    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+    const fiveIntervalsAgo = new Date(Date.now() - regenTime(5));
     const character = {
       stamina: 5,
       max_stamina: 8,
-      stamina_updated_at: tenMinutesAgo
+      stamina_updated_at: fiveIntervalsAgo
     };
-    // 10 minutes = 5 regen points, 5 + 5 = 10, but capped at 8
+    // 5 intervals = 5 regen points, 5 + 5 = 10, but capped at 8
     assert.strictEqual(calculateCurrentStamina(character), 8);
   });
 
@@ -113,25 +120,25 @@ describe('calculateCurrentStamina', () => {
     assert.strictEqual(result, 8);
   });
 
-  it('does not add partial regen for time less than 2 minutes', () => {
-    const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
+  it('does not add partial regen for time less than 1 interval', () => {
+    const halfIntervalAgo = new Date(Date.now() - regenTime(0.5));
     const character = {
       stamina: 5,
       max_stamina: 8,
-      stamina_updated_at: oneMinuteAgo
+      stamina_updated_at: halfIntervalAgo
     };
-    // 1 minute is not enough for 1 regen point
+    // Half an interval is not enough for 1 regen point
     assert.strictEqual(calculateCurrentStamina(character), 5);
   });
 
-  it('correctly handles exactly 2 minute boundary', () => {
-    const exactlyTwoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+  it('correctly handles exactly 1 interval boundary', () => {
+    const exactlyOneIntervalAgo = new Date(Date.now() - regenTime(1));
     const character = {
       stamina: 5,
       max_stamina: 8,
-      stamina_updated_at: exactlyTwoMinutesAgo
+      stamina_updated_at: exactlyOneIntervalAgo
     };
-    // Exactly 2 minutes = 1 regen point
+    // Exactly 1 interval = 1 regen point
     assert.strictEqual(calculateCurrentStamina(character), 6);
   });
 });

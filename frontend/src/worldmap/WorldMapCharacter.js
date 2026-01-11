@@ -129,19 +129,27 @@ export class WorldMapCharacter {
       const fromNode = pathNodes[i];
       const toNode = pathNodes[i + 1];
 
-      // Generate spline using PathRenderer functions (same as visual path)
+      // CRITICAL: Always generate the spline in NORMALIZED direction (smaller ID first)
+      // This ensures both travel directions use the exact same visual curve.
+      // The S-curve offset direction depends on the tangent vector, which would flip
+      // if we generated from the opposite direction, creating a different curve.
+      const needsReverse = fromNode.id > toNode.id;
+      const startNode = needsReverse ? toNode : fromNode;
+      const endNode = needsReverse ? fromNode : toNode;
+
+      // Generate spline using PathRenderer functions (same as visual path rendering)
       const controlPoints = generatePathControlPoints(
-        fromNode.x, fromNode.y,
-        toNode.x, toNode.y,
-        fromNode.id, toNode.id
+        startNode.x, startNode.y,
+        endNode.x, endNode.y,
+        startNode.id, endNode.id
       );
 
       // Generate smooth spline points
       let splinePoints = generateSplinePoints(controlPoints, 10);
 
-      // Handle direction: if traveling from higher ID to lower ID, reverse the points
-      // This ensures we travel along the same curve path in both directions
-      if (fromNode.id > toNode.id) {
+      // If traveling from higher ID to lower ID, reverse the points
+      // so we walk from fromNode to toNode along the same curve
+      if (needsReverse) {
         splinePoints = [...splinePoints].reverse();
       }
 

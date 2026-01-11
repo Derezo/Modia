@@ -322,14 +322,28 @@ export class WorldMapScene extends Scene {
 
       this.nodes = worldData.nodes;
 
-      // Deduplicate connections (keep only one per node pair for bidirectional paths)
+      // Deduplicate and NORMALIZE connections
+      // All connections must have from_node_id < to_node_id for consistent path rendering.
+      // This ensures paths look identical regardless of travel direction.
       const seenPairs = new Set();
-      this.connections = worldData.connections.filter(conn => {
-        const key = `${Math.min(conn.from_node_id, conn.to_node_id)}-${Math.max(conn.from_node_id, conn.to_node_id)}`;
-        if (seenPairs.has(key)) return false;
-        seenPairs.add(key);
-        return true;
-      });
+      this.connections = worldData.connections
+        .filter(conn => {
+          const key = `${Math.min(conn.from_node_id, conn.to_node_id)}-${Math.max(conn.from_node_id, conn.to_node_id)}`;
+          if (seenPairs.has(key)) return false;
+          seenPairs.add(key);
+          return true;
+        })
+        .map(conn => {
+          // Normalize: ensure from_node_id < to_node_id
+          if (conn.from_node_id > conn.to_node_id) {
+            return {
+              ...conn,
+              from_node_id: conn.to_node_id,
+              to_node_id: conn.from_node_id
+            };
+          }
+          return conn;
+        });
 
       this.currentNode = currentData.currentNode;
 
@@ -1194,10 +1208,15 @@ export class WorldMapScene extends Scene {
 
       if (!fromNode || !toNode) continue;
 
-      const x1 = fromNode.x_coord * this.nodeSpacing + this.cameraX;
-      const y1 = fromNode.y_coord * this.nodeSpacing + this.cameraY;
-      const x2 = toNode.x_coord * this.nodeSpacing + this.cameraX;
-      const y2 = toNode.y_coord * this.nodeSpacing + this.cameraY;
+      // CRITICAL: Normalize node ordering for spline generation
+      // Always generate spline with smaller ID first for consistent curves
+      const startNode = fromNode.id < toNode.id ? fromNode : toNode;
+      const endNode = fromNode.id < toNode.id ? toNode : fromNode;
+
+      const x1 = startNode.x_coord * this.nodeSpacing + this.cameraX;
+      const y1 = startNode.y_coord * this.nodeSpacing + this.cameraY;
+      const x2 = endNode.x_coord * this.nodeSpacing + this.cameraX;
+      const y2 = endNode.y_coord * this.nodeSpacing + this.cameraY;
 
       // Skip if off screen
       const margin = 100;
@@ -1206,8 +1225,8 @@ export class WorldMapScene extends Scene {
         continue;
       }
 
-      // Generate organic spline points
-      const controlPoints = generatePathControlPoints(x1, y1, x2, y2, fromNode.id, toNode.id);
+      // Generate organic spline points (using normalized node IDs)
+      const controlPoints = generatePathControlPoints(x1, y1, x2, y2, startNode.id, endNode.id);
       const splinePoints = generateSplinePoints(controlPoints, 10);
 
       if (splinePoints.length < 2) continue;

@@ -504,6 +504,10 @@ export class ProfileDropdown {
           <span class="profile-dropdown__menu-icon">🤝</span>
           <span class="profile-dropdown__menu-label">Friends</span>
         </div>
+        <div class="profile-dropdown__menu-item" data-action="leaderboard">
+          <span class="profile-dropdown__menu-icon">🏆</span>
+          <span class="profile-dropdown__menu-label">Leaderboards</span>
+        </div>
       </div>
 
       <!-- Settings and Logout -->
@@ -928,8 +932,11 @@ export class ProfileDropdown {
         // Navigate to friends/social scene if exists, or show friends panel
         this.game.toastManager?.info('Friends', 'Friends list coming soon!');
         break;
+      case 'leaderboard':
+        this.game.scenes.switchTo('leaderboard');
+        break;
       case 'settings':
-        this.game.showSettings();
+        this.game.scenes.switchTo('settings');
         break;
       case 'logout':
         this.handleLogout();

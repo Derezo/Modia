@@ -1,4 +1,8 @@
 import { Scene } from './Scene.js';
+import { PARCHMENT_COLORS, injectParchmentTheme } from '../ui/parchment/index.js';
+
+// Shorthand for colors in CSS template
+const P = PARCHMENT_COLORS;
 
 /**
  * TavernScene - Social hub for chat, online players, and direct messages
@@ -79,6 +83,9 @@ export class TavernScene extends Scene {
   }
 
   addStyles() {
+    // Ensure parchment CSS variables are available
+    injectParchmentTheme();
+
     if (document.getElementById('tavern-scene-styles')) return;
 
     const style = document.createElement('style');
@@ -86,8 +93,7 @@ export class TavernScene extends Scene {
     style.textContent = `
       /* ============================================
          Tavern Scene - Parchment Theme
-         Colors: Light #d4c4a8, Mid #c9b899, Dark #bfae8a
-         Border: #8b7355, Text: #2d2418, Gold: #c9a227
+         Uses CSS variables from ParchmentTheme.js
          ============================================ */
 
       .tavern-container {
@@ -96,33 +102,33 @@ export class TavernScene extends Scene {
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 50%, #bfae8a 100%);
+        background: linear-gradient(to bottom, var(--parchment-light) 0%, var(--parchment-mid) 50%, var(--parchment-dark) 100%);
         display: flex;
         flex-direction: column;
-        font-family: 'Georgia', 'Times New Roman', serif;
-        color: #2d2418;
+        font-family: var(--parchment-font);
+        color: var(--parchment-text-primary);
       }
 
       .tavern-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 16px 24px;
-        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
-        border-bottom: 2px solid #8b7355;
+        padding: var(--parchment-spacing-lg) var(--parchment-spacing-xxl);
+        background: linear-gradient(to bottom, var(--parchment-mid) 0%, var(--parchment-dark) 100%);
+        border-bottom: 2px solid var(--parchment-border);
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }
 
       .tavern-title {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: var(--parchment-spacing-md);
       }
 
       .tavern-title h2 {
         margin: 0;
-        color: #c9a227;
-        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+        color: var(--parchment-gold);
+        text-shadow: 0 1px 0 var(--parchment-highlight);
         font-size: 22px;
       }
 
@@ -145,44 +151,44 @@ export class TavernScene extends Scene {
 
       .tavern-tabs {
         display: flex;
-        gap: 4px;
-        padding: 12px 16px 0;
-        background: linear-gradient(to bottom, #bfae8a 0%, #b0a07a 100%);
-        border-bottom: 2px solid #8b7355;
+        gap: var(--parchment-spacing-xs);
+        padding: var(--parchment-spacing-md) var(--parchment-spacing-lg) 0;
+        background: linear-gradient(to bottom, var(--parchment-dark) 0%, ${P.dark}dd 100%);
+        border-bottom: 2px solid var(--parchment-border);
       }
 
       .tavern-tab {
         padding: 10px 20px;
-        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
-        border: 2px solid #8b7355;
+        background: linear-gradient(to bottom, var(--parchment-mid) 0%, var(--parchment-dark) 100%);
+        border: 2px solid var(--parchment-border);
         border-bottom: none;
-        border-radius: 6px 6px 0 0;
-        color: #5a4a3a;
+        border-radius: var(--parchment-radius-lg) var(--parchment-radius-lg) 0 0;
+        color: var(--parchment-text-secondary);
         cursor: pointer;
         transition: all 0.2s;
-        font-family: 'Georgia', 'Times New Roman', serif;
+        font-family: var(--parchment-font);
         font-size: 14px;
         font-weight: bold;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: var(--parchment-spacing-sm);
         margin-bottom: -2px;
       }
 
       .tavern-tab:hover:not(.active) {
-        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
-        color: #2d2418;
+        background: linear-gradient(to bottom, var(--parchment-light) 0%, var(--parchment-mid) 100%);
+        color: var(--parchment-text-primary);
       }
 
       .tavern-tab.active {
-        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
-        color: #c9a227;
-        border-color: #8b7355;
+        background: linear-gradient(to bottom, var(--parchment-light) 0%, var(--parchment-mid) 100%);
+        color: var(--parchment-gold);
+        border-color: var(--parchment-border);
       }
 
       .tab-badge {
-        background: #8b4513;
-        color: #f0e8d8;
+        background: ${P.copper};
+        color: var(--parchment-text-inverse);
         font-size: 10px;
         padding: 2px 6px;
         border-radius: 10px;
@@ -194,27 +200,27 @@ export class TavernScene extends Scene {
         flex: 1;
         display: flex;
         flex-direction: column;
-        padding: 16px;
+        padding: var(--parchment-spacing-lg);
         overflow: hidden;
       }
 
       .chat-messages {
         flex: 1;
         overflow-y: auto;
-        padding: 12px;
-        background: linear-gradient(to bottom, #e8dcc8 0%, #dfd0b8 100%);
-        border: 2px solid #8b7355;
-        border-radius: 6px;
-        margin-bottom: 12px;
+        padding: var(--parchment-spacing-md);
+        background: linear-gradient(to bottom, ${P.text.inverse} 0%, ${P.light}ee 100%);
+        border: 2px solid var(--parchment-border);
+        border-radius: var(--parchment-radius-lg);
+        margin-bottom: var(--parchment-spacing-md);
         box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
       }
 
       .chat-message {
         padding: 10px 14px;
         margin-bottom: 6px;
-        border-radius: 6px;
+        border-radius: var(--parchment-radius-lg);
         transition: background 0.2s;
-        background: rgba(255, 255, 255, 0.15);
+        background: var(--parchment-highlight);
         border: 1px solid transparent;
       }
 
@@ -231,26 +237,26 @@ export class TavernScene extends Scene {
       .chat-message-header {
         display: flex;
         align-items: center;
-        gap: 8px;
-        margin-bottom: 4px;
+        gap: var(--parchment-spacing-sm);
+        margin-bottom: var(--parchment-spacing-xs);
       }
 
       .chat-message-author {
         font-weight: bold;
-        color: #6b4423;
+        color: var(--parchment-border-dark);
       }
 
       .chat-message-author.self {
-        color: #c9a227;
+        color: var(--parchment-gold);
       }
 
       .chat-message-time {
         font-size: 11px;
-        color: #7a6a5a;
+        color: var(--parchment-text-muted);
       }
 
       .chat-message-text {
-        color: #2d2418;
+        color: var(--parchment-text-primary);
         word-wrap: break-word;
         line-height: 1.5;
       }
@@ -258,17 +264,17 @@ export class TavernScene extends Scene {
       .chat-message-reactions {
         display: flex;
         flex-wrap: wrap;
-        gap: 4px;
+        gap: var(--parchment-spacing-xs);
         margin-top: 6px;
       }
 
       .chat-reaction {
         display: flex;
         align-items: center;
-        gap: 4px;
-        padding: 2px 8px;
-        background: rgba(255, 255, 255, 0.3);
-        border: 1px solid #8b7355;
+        gap: var(--parchment-spacing-xs);
+        padding: 2px var(--parchment-spacing-sm);
+        background: var(--parchment-highlight);
+        border: 1px solid var(--parchment-border);
         border-radius: 12px;
         font-size: 12px;
         cursor: pointer;
@@ -277,46 +283,46 @@ export class TavernScene extends Scene {
 
       .chat-reaction:hover {
         background: rgba(139, 115, 85, 0.2);
-        border-color: #6b5344;
+        border-color: var(--parchment-border-dark);
       }
 
       .chat-reaction.user-reacted {
         background: rgba(201, 162, 39, 0.25);
-        border-color: #c9a227;
+        border-color: var(--parchment-gold);
       }
 
       .chat-reaction-count {
-        color: #5a4a3a;
+        color: var(--parchment-text-secondary);
       }
 
       .add-reaction-btn {
-        padding: 2px 8px;
+        padding: 2px var(--parchment-spacing-sm);
         background: transparent;
-        border: 1px dashed #8b7355;
+        border: 1px dashed var(--parchment-border);
         border-radius: 12px;
         cursor: pointer;
-        color: #7a6a5a;
+        color: var(--parchment-text-muted);
         font-size: 12px;
         transition: all 0.2s;
       }
 
       .add-reaction-btn:hover {
-        border-color: #6b5344;
-        color: #2d2418;
+        border-color: var(--parchment-border-dark);
+        color: var(--parchment-text-primary);
         background: rgba(139, 115, 85, 0.1);
       }
 
       .typing-indicator {
         height: 20px;
-        padding: 0 12px;
+        padding: 0 var(--parchment-spacing-md);
         font-size: 12px;
-        color: #7a6a5a;
+        color: var(--parchment-text-muted);
         font-style: italic;
       }
 
       .chat-input-area {
         display: flex;
-        gap: 8px;
+        gap: var(--parchment-spacing-sm);
         align-items: flex-end;
         position: relative;
       }
@@ -328,12 +334,12 @@ export class TavernScene extends Scene {
 
       .chat-input {
         width: 100%;
-        padding: 12px 40px 12px 12px;
-        background: linear-gradient(to bottom, #f0e8d8 0%, #e8dcc8 100%);
-        border: 2px solid #8b7355;
-        border-radius: 6px;
-        color: #2d2418;
-        font-family: 'Georgia', 'Times New Roman', serif;
+        padding: var(--parchment-spacing-md) 40px var(--parchment-spacing-md) var(--parchment-spacing-md);
+        background: linear-gradient(to bottom, var(--parchment-text-inverse) 0%, ${P.light}ee 100%);
+        border: 2px solid var(--parchment-border);
+        border-radius: var(--parchment-radius-lg);
+        color: var(--parchment-text-primary);
+        font-family: var(--parchment-font);
         font-size: 14px;
         resize: none;
         min-height: 44px;
@@ -342,18 +348,18 @@ export class TavernScene extends Scene {
       }
 
       .chat-input::placeholder {
-        color: #7a6a5a;
+        color: var(--parchment-text-muted);
       }
 
       .chat-input:focus {
         outline: none;
-        border-color: #c9a227;
+        border-color: var(--parchment-gold);
         box-shadow: inset 0 1px 3px rgba(0,0,0,0.1), 0 0 0 2px rgba(201, 162, 39, 0.2);
       }
 
       .emoji-btn {
         position: absolute;
-        right: 8px;
+        right: var(--parchment-spacing-sm);
         bottom: 10px;
         background: transparent;
         border: none;
@@ -371,14 +377,14 @@ export class TavernScene extends Scene {
         position: absolute;
         bottom: 100%;
         right: 0;
-        margin-bottom: 8px;
-        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
-        border: 2px solid #8b7355;
-        border-radius: 6px;
-        padding: 12px;
+        margin-bottom: var(--parchment-spacing-sm);
+        background: linear-gradient(to bottom, var(--parchment-light) 0%, var(--parchment-mid) 100%);
+        border: 2px solid var(--parchment-border);
+        border-radius: var(--parchment-radius-lg);
+        padding: var(--parchment-spacing-md);
         display: grid;
         grid-template-columns: repeat(8, 1fr);
-        gap: 4px;
+        gap: var(--parchment-spacing-xs);
         max-width: 300px;
         box-shadow: 0 4px 16px rgba(0,0,0,0.25);
         z-index: 100;
@@ -389,7 +395,7 @@ export class TavernScene extends Scene {
         height: 32px;
         background: transparent;
         border: none;
-        border-radius: 4px;
+        border-radius: var(--parchment-radius-md);
         font-size: 20px;
         cursor: pointer;
         transition: background 0.2s;
@@ -400,13 +406,13 @@ export class TavernScene extends Scene {
       }
 
       .send-btn {
-        padding: 12px 24px;
+        padding: var(--parchment-spacing-md) var(--parchment-spacing-xxl);
         font-weight: bold;
-        background: linear-gradient(to bottom, #8b7355 0%, #7a6345 100%);
-        color: #f0e8d8;
-        border: 2px solid #6b5344;
-        border-radius: 6px;
-        font-family: 'Georgia', 'Times New Roman', serif;
+        background: linear-gradient(to bottom, var(--parchment-border) 0%, var(--parchment-border-dark) 100%);
+        color: var(--parchment-text-inverse);
+        border: 2px solid var(--parchment-border-dark);
+        border-radius: var(--parchment-radius-lg);
+        font-family: var(--parchment-font);
         font-size: 14px;
         cursor: pointer;
         transition: all 0.15s;
@@ -414,7 +420,7 @@ export class TavernScene extends Scene {
       }
 
       .send-btn:hover {
-        background: linear-gradient(to bottom, #9b8365 0%, #8a7355 100%);
+        background: linear-gradient(to bottom, var(--parchment-border-light) 0%, var(--parchment-border) 100%);
       }
 
       .send-btn:active {
@@ -423,33 +429,33 @@ export class TavernScene extends Scene {
 
       .sidebar {
         width: 280px;
-        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
-        border-left: 2px solid #8b7355;
+        background: linear-gradient(to bottom, var(--parchment-mid) 0%, var(--parchment-dark) 100%);
+        border-left: 2px solid var(--parchment-border);
         display: flex;
         flex-direction: column;
       }
 
       .sidebar-section {
-        padding: 16px;
-        border-bottom: 2px solid #8b7355;
+        padding: var(--parchment-spacing-lg);
+        border-bottom: 2px solid var(--parchment-border);
       }
 
       .sidebar-header {
         font-weight: bold;
-        color: #c9a227;
-        margin-bottom: 12px;
+        color: var(--parchment-gold);
+        margin-bottom: var(--parchment-spacing-md);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+        text-shadow: 0 1px 0 var(--parchment-highlight);
       }
 
       .online-count {
         font-size: 12px;
-        color: #5a4a3a;
+        color: var(--parchment-text-secondary);
         font-weight: normal;
         background: rgba(139, 115, 85, 0.2);
-        padding: 2px 8px;
+        padding: 2px var(--parchment-spacing-sm);
         border-radius: 10px;
       }
 
@@ -462,8 +468,8 @@ export class TavernScene extends Scene {
         display: flex;
         align-items: center;
         gap: 10px;
-        padding: 8px 12px;
-        border-radius: 6px;
+        padding: var(--parchment-spacing-sm) var(--parchment-spacing-md);
+        border-radius: var(--parchment-radius-lg);
         cursor: pointer;
         transition: all 0.2s;
         border: 1px solid transparent;
@@ -476,7 +482,7 @@ export class TavernScene extends Scene {
 
       .player-item.active {
         background: rgba(201, 162, 39, 0.2);
-        border-color: #c9a227;
+        border-color: var(--parchment-gold);
       }
 
       .player-status {
@@ -487,13 +493,13 @@ export class TavernScene extends Scene {
         border: 1px solid rgba(0,0,0,0.2);
       }
 
-      .status-online { background: #4caf50; }
-      .status-away { background: #ff9800; }
-      .status-busy { background: #c62828; }
-      .status-offline { background: #7a6a5a; }
+      .status-online { background: ${P.state.success}; }
+      .status-away { background: ${P.state.warning}; }
+      .status-busy { background: ${P.state.error}; }
+      .status-offline { background: var(--parchment-text-muted); }
 
       .player-name {
-        color: #2d2418;
+        color: var(--parchment-text-primary);
         flex: 1;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -501,19 +507,19 @@ export class TavernScene extends Scene {
       }
 
       .player-name.self {
-        color: #c9a227;
+        color: var(--parchment-gold);
         font-weight: bold;
       }
 
       .dm-btn {
-        padding: 4px 10px;
+        padding: var(--parchment-spacing-xs) 10px;
         font-size: 11px;
         opacity: 0;
         transition: all 0.2s;
-        background: linear-gradient(to bottom, #8b7355 0%, #7a6345 100%);
-        color: #f0e8d8;
-        border: 1px solid #6b5344;
-        border-radius: 4px;
+        background: linear-gradient(to bottom, var(--parchment-border) 0%, var(--parchment-border-dark) 100%);
+        color: var(--parchment-text-inverse);
+        border: 1px solid var(--parchment-border-dark);
+        border-radius: var(--parchment-radius-md);
         cursor: pointer;
       }
 
@@ -522,7 +528,7 @@ export class TavernScene extends Scene {
       }
 
       .dm-btn:hover {
-        background: linear-gradient(to bottom, #9b8365 0%, #8a7355 100%);
+        background: linear-gradient(to bottom, var(--parchment-border-light) 0%, var(--parchment-border) 100%);
       }
 
       .dm-list {
@@ -534,8 +540,8 @@ export class TavernScene extends Scene {
         display: flex;
         align-items: center;
         gap: 10px;
-        padding: 10px 12px;
-        border-radius: 6px;
+        padding: 10px var(--parchment-spacing-md);
+        border-radius: var(--parchment-radius-lg);
         cursor: pointer;
         transition: all 0.2s;
         border: 1px solid transparent;
@@ -548,7 +554,7 @@ export class TavernScene extends Scene {
 
       .dm-item.active {
         background: rgba(201, 162, 39, 0.2);
-        border-color: #c9a227;
+        border-color: var(--parchment-gold);
       }
 
       .dm-item-info {
@@ -558,12 +564,12 @@ export class TavernScene extends Scene {
 
       .dm-item-name {
         font-weight: bold;
-        color: #2d2418;
+        color: var(--parchment-text-primary);
       }
 
       .dm-item-preview {
         font-size: 12px;
-        color: #5a4a3a;
+        color: var(--parchment-text-secondary);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -571,73 +577,73 @@ export class TavernScene extends Scene {
 
       .dm-item-time {
         font-size: 11px;
-        color: #7a6a5a;
+        color: var(--parchment-text-muted);
       }
 
       .load-more-btn {
         width: 100%;
-        padding: 8px;
+        padding: var(--parchment-spacing-sm);
         background: transparent;
-        border: 1px dashed #8b7355;
-        border-radius: 6px;
-        color: #5a4a3a;
+        border: 1px dashed var(--parchment-border);
+        border-radius: var(--parchment-radius-lg);
+        color: var(--parchment-text-secondary);
         cursor: pointer;
-        margin-bottom: 8px;
+        margin-bottom: var(--parchment-spacing-sm);
         transition: all 0.2s;
-        font-family: 'Georgia', 'Times New Roman', serif;
+        font-family: var(--parchment-font);
       }
 
       .load-more-btn:hover {
-        border-color: #6b5344;
+        border-color: var(--parchment-border-dark);
         background: rgba(139, 115, 85, 0.1);
-        color: #2d2418;
+        color: var(--parchment-text-primary);
       }
 
       .empty-state {
         text-align: center;
-        color: #5a4a3a;
+        color: var(--parchment-text-secondary);
         padding: 40px 20px;
       }
 
       .empty-state-icon {
         font-size: 48px;
-        margin-bottom: 12px;
+        margin-bottom: var(--parchment-spacing-md);
         opacity: 0.5;
       }
 
       .system-message {
         text-align: center;
-        color: #5a4a3a;
+        color: var(--parchment-text-secondary);
         font-style: italic;
-        padding: 8px;
+        padding: var(--parchment-spacing-sm);
         font-size: 12px;
       }
 
       /* Presence select styling */
       .presence-select {
-        padding: 8px 12px;
-        background: linear-gradient(to bottom, #f0e8d8 0%, #e8dcc8 100%);
-        border: 2px solid #8b7355;
-        border-radius: 6px;
-        color: #2d2418;
-        font-family: 'Georgia', 'Times New Roman', serif;
+        padding: var(--parchment-spacing-sm) var(--parchment-spacing-md);
+        background: linear-gradient(to bottom, var(--parchment-text-inverse) 0%, ${P.light}ee 100%);
+        border: 2px solid var(--parchment-border);
+        border-radius: var(--parchment-radius-lg);
+        color: var(--parchment-text-primary);
+        font-family: var(--parchment-font);
         font-size: 13px;
         cursor: pointer;
       }
 
       .presence-select:focus {
         outline: none;
-        border-color: #c9a227;
+        border-color: var(--parchment-gold);
       }
 
       /* Back button styling */
       .tavern-back-btn {
-        padding: 8px 16px;
-        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
-        border: 2px solid #8b7355;
-        border-radius: 6px;
-        color: #2d2418;
-        font-family: 'Georgia', 'Times New Roman', serif;
+        padding: var(--parchment-spacing-sm) var(--parchment-spacing-lg);
+        background: linear-gradient(to bottom, var(--parchment-mid) 0%, var(--parchment-dark) 100%);
+        border: 2px solid var(--parchment-border);
+        border-radius: var(--parchment-radius-lg);
+        color: var(--parchment-text-primary);
+        font-family: var(--parchment-font);
         font-size: 13px;
         font-weight: bold;
         cursor: pointer;
@@ -645,7 +651,7 @@ export class TavernScene extends Scene {
       }
 
       .tavern-back-btn:hover {
-        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
+        background: linear-gradient(to bottom, var(--parchment-light) 0%, var(--parchment-mid) 100%);
       }
 
       .tavern-back-btn:active {
@@ -663,33 +669,33 @@ export class TavernScene extends Scene {
         .sidebar {
           width: 100%;
           border-left: none;
-          border-top: 2px solid #8b7355;
+          border-top: 2px solid var(--parchment-border);
           max-height: 200px;
         }
 
         .tavern-header {
-          padding: 12px 16px;
+          padding: var(--parchment-spacing-md) var(--parchment-spacing-lg);
           flex-wrap: wrap;
-          gap: 12px;
+          gap: var(--parchment-spacing-md);
         }
 
         .tavern-tabs {
-          padding: 8px 12px 0;
+          padding: var(--parchment-spacing-sm) var(--parchment-spacing-md) 0;
           overflow-x: auto;
         }
 
         .tavern-tab {
-          padding: 8px 14px;
+          padding: var(--parchment-spacing-sm) 14px;
           font-size: 13px;
           white-space: nowrap;
         }
 
         .chat-panel {
-          padding: 12px;
+          padding: var(--parchment-spacing-md);
         }
 
         .chat-messages {
-          padding: 8px;
+          padding: var(--parchment-spacing-sm);
         }
       }
 
@@ -1249,11 +1255,17 @@ export class TavernScene extends Scene {
     const userId = this.game.state.get('user')?.id;
     const username = this.game.state.get('user')?.username;
 
+    // Get party leader character ID for chat messages
+    const characters = this.game.state.get('characters') || [];
+    const partyLeader = characters.find(c => c.party_slot === 1) || characters[0];
+    const characterId = partyLeader?.id || null;
+
     if (this.activeTab === 'dm' && this.activeDMUser) {
       // Send DM via WebSocket
       this.game.socket.send('private_message', {
         targetUserId: this.activeDMUser.userId,
-        message
+        message,
+        characterId
       });
 
       // Add to local messages immediately
@@ -1267,10 +1279,10 @@ export class TavernScene extends Scene {
       });
     } else if (this.activeTab === 'global') {
       // Send to global room
-      this.game.socket.sendChatMessage('global', message);
+      this.game.socket.sendChatMessage('global', message, characterId);
     } else if (this.activeTab === 'party') {
       // Send to party room
-      this.game.socket.sendChatMessage('party', message);
+      this.game.socket.sendChatMessage('party', message, characterId);
     }
   }
 
@@ -1456,7 +1468,7 @@ export class TavernScene extends Scene {
 
   render(ctx) {
     // UI is HTML-based, canvas shows parchment background
-    ctx.fillStyle = '#d4c4a8';
+    ctx.fillStyle = P.light;
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   }
 
