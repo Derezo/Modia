@@ -177,86 +177,10 @@ ctx.restore(); // CRITICAL
 
 ## Subagents
 
-This project has specialized subagents in `.claude/agents/` that should be used when planning or implementing features. **Use the Task tool with the appropriate `subagent_type` to invoke these agents.**
-
-### When to Use Subagents
-
-| Agent | Use When |
-|-------|----------|
-| `fullstack-developer` | Building end-to-end features spanning database, API, and UI |
-| `game-developer` | Working on game mechanics, Canvas rendering, scene management |
-| `battle-systems-developer` | Implementing combat, AI patterns, damage formulas, pathfinding |
-| `backend-developer` | Creating REST endpoints, server logic, authentication |
-| `frontend-developer` | Building scenes, Canvas UI, vanilla JS components |
-| `websocket-engineer` | Adding real-time features, battle sync, chat, party coordination |
-| `postgres-pro` | Database schema design, query optimization, migrations |
-| `ui-ux-specialist` | UI components, medieval theme styling, player experience |
-| `performance-engineer` | Optimizing FPS, API response times, database queries |
-| `security-auditor` | Reviewing auth, SQL injection, game economy exploits |
-| `code-reviewer` | Code quality review, pattern enforcement, security checks |
-| `qa-expert` | Test coverage analysis, game mechanics validation |
-| `debugger` | Investigating bugs, rendering issues, state sync problems |
-| `architect-reviewer` | Architecture decisions, scalability assessment, technical debt |
-
-### Agent Selection by Task Type
-
-**New Features:**
-- Simple feature: `fullstack-developer`
-- Battle/combat feature: `battle-systems-developer` + `websocket-engineer`
-- UI-heavy feature: `frontend-developer` + `ui-ux-specialist`
-- Real-time feature: `websocket-engineer` + `backend-developer`
-
-**Bug Fixes:**
-- General debugging: `debugger`
-- Performance issues: `performance-engineer`
-- Database/query issues: `postgres-pro`
-- WebSocket issues: `websocket-engineer`
-
-**Code Quality:**
-- Pre-commit review: `code-reviewer`
-- Security audit: `security-auditor`
-- Architecture review: `architect-reviewer`
-- Test coverage: `qa-expert`
-
-**Planning:**
-- New game system: `game-developer` + `architect-reviewer`
-- API design: `backend-developer`
-- Database schema: `postgres-pro`
-
-### Example Invocations
-
-```javascript
-// For a new marketplace feature
-Task(subagent_type="fullstack-developer", prompt="Implement auction system for marketplace")
-
-// For battle AI improvements
-Task(subagent_type="battle-systems-developer", prompt="Add flanking bonus to AI tactical pattern")
-
-// For performance issues
-Task(subagent_type="performance-engineer", prompt="Optimize BattleScene render loop")
-
-// For security review
-Task(subagent_type="security-auditor", prompt="Audit marketplace transaction endpoints")
-```
-
-### Parallel Agent Usage
-
-For complex tasks, run multiple agents in parallel:
-- Feature implementation: `fullstack-developer` + `qa-expert` (implement then test)
-- Security-critical changes: `backend-developer` + `security-auditor`
-- Performance work: `performance-engineer` + `postgres-pro` (frontend + database)
+This project has specialized subagents in `.claude/agents/` for different domains (frontend, backend, battle systems, debugging, etc.). **Using subagents is strongly encouraged** - they have domain-specific context and produce better results than working without them. Use the Task tool with the appropriate `subagent_type` to invoke them.
 
 ## Documentation
 
-Detailed specifications are in `docs/`:
-- `TECHNICAL_ARCHITECTURE.md` - Database schemas, system design
-- `FRONTEND_TECHNICAL_PATTERNS.md` - DeltaTime, sprite sheets, camera, debugging gotchas
-- `API_SPECIFICATION.md` - REST endpoints and WebSocket protocol
-- `GAME_DESIGN.md` - Combat formulas, world structure
-- `CHARACTER_PROGRESSION.md`, `SKILL_TREES.md` - Skills and guild system
-- `ITEM_SYSTEM.md`, `ECONOMY_SYSTEM.md`, `ENEMY_SYSTEM.md` - Game mechanics
-- `AI_SYSTEM.md` - Utility-based AI with multi-actor lookahead
-- `BATTLE_*.md` - Turn system, messaging protocol, animations, reconnection
-- `GUILD_RECRUITMENT_SYSTEM.md` - NPC recruitment at guild nodes
-- `PIXELLAB_REFERENCE.md` - PixelLab API usage for sprite generation
-- `DEVELOPMENT_ROADMAP.md` - Feature roadmap and implementation status
+Detailed specifications, game design docs, and API references are in `docs/`.
+
+**Roadmap maintenance:** Keep `docs/DEVELOPMENT_ROADMAP.md` fresh by removing completed items consistently and adding new todo or deferred items as they arise during development.
