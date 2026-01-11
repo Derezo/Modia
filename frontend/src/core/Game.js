@@ -103,6 +103,9 @@ export class Game {
 
     if (token) {
       try {
+        // Set token on API client before validating
+        this.api.setToken(token);
+
         const response = await this.api.get('/auth/me');
         this.state.set('user', response.user);
 
@@ -160,13 +163,24 @@ export class Game {
     }
   }
 
+  /**
+   * Main game loop - called via requestAnimationFrame
+   *
+   * IMPORTANT: deltaTime is passed in MILLISECONDS to all scenes/components.
+   * Components that need seconds for physics calculations should convert internally:
+   *   const dt = deltaTime / 1000;
+   *
+   * See docs/FRONTEND_TECHNICAL_PATTERNS.md for the full convention.
+   */
   gameLoop(currentTime) {
     if (!this.running) return;
 
-    const deltaTime = (currentTime - this.lastTime) / 1000;
+    // deltaTime in MILLISECONDS - this is the project convention
+    // Components convert to seconds internally where needed for physics
+    const deltaTime = currentTime - this.lastTime;
     this.lastTime = currentTime;
 
-    // Update current scene
+    // Update current scene (passes deltaTime in ms)
     this.scenes.update(deltaTime);
 
     // Render

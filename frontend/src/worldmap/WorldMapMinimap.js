@@ -543,10 +543,37 @@ export class WorldMapMinimap {
     const topLeft = this.worldToMinimap(viewLeft, viewTop);
     const bottomRight = this.worldToMinimap(viewRight, viewBottom);
 
-    const rectX = minimapX + topLeft.x;
-    const rectY = minimapY + topLeft.y;
-    const rectW = bottomRight.x - topLeft.x;
-    const rectH = bottomRight.y - topLeft.y;
+    let rectX = minimapX + topLeft.x;
+    let rectY = minimapY + topLeft.y;
+    let rectW = bottomRight.x - topLeft.x;
+    let rectH = bottomRight.y - topLeft.y;
+
+    // Clamp viewport rectangle to minimap bounds
+    const minX = minimapX;
+    const minY = minimapY;
+    const maxX = minimapX + this.size;
+    const maxY = minimapY + this.size;
+
+    // Adjust rectangle to stay within minimap
+    if (rectX < minX) {
+      rectW -= (minX - rectX);
+      rectX = minX;
+    }
+    if (rectY < minY) {
+      rectH -= (minY - rectY);
+      rectY = minY;
+    }
+    if (rectX + rectW > maxX) {
+      rectW = maxX - rectX;
+    }
+    if (rectY + rectH > maxY) {
+      rectH = maxY - rectY;
+    }
+
+    // Don't draw if viewport covers entire minimap or is invalid
+    if (rectW <= 0 || rectH <= 0 || (rectW >= this.size - 4 && rectH >= this.size - 4)) {
+      return;
+    }
 
     // Draw viewport rectangle
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';

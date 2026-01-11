@@ -455,7 +455,7 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
      JOIN world_nodes wn ON b.node_id = wn.id
      WHERE b.status = 'active'
        AND (b.player1_id = $1 OR b.player2_id = $1 OR
-            EXISTS (SELECT 1 FROM battle_players bp WHERE bp.battle_id = b.id AND bp.player_id = $1))
+            EXISTS (SELECT 1 FROM battle_players bp WHERE bp.battle_id = b.id AND bp.user_id = $1))
      ORDER BY b.started_at DESC
      LIMIT 1`,
     [req.user.userId]

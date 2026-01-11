@@ -395,18 +395,20 @@ export class BattleUnit {
    * Update unit state (called each frame)
    */
   update(deltaTime) {
+    const dt = deltaTime / 1000; // Convert ms to seconds for physics
+
     // Idle bobbing animation (for fallback circle)
-    this.idleTimer += deltaTime * 2;
+    this.idleTimer += dt * 2;
     this.idleOffset = Math.sin(this.idleTimer) * 2;
 
     // Update thinking indicator animation (tracks seconds for 600ms cycle)
     if (this.isThinking) {
-      this.thinkingTimer += deltaTime;
+      this.thinkingTimer += dt;
     }
 
-    // Update current animated sprite
+    // Update current animated sprite (expects seconds)
     if (this.animatedSprite) {
-      this.animatedSprite.update(deltaTime * 1000); // Convert to ms
+      this.animatedSprite.update(dt); // AnimatedSprite expects seconds
     }
 
     // Movement interpolation
@@ -415,15 +417,15 @@ export class BattleUnit {
       const dy = this.targetScreenY - this.screenY;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      if (dist < this.moveSpeed * deltaTime) {
+      if (dist < this.moveSpeed * dt) {
         this.screenX = this.targetScreenX;
         this.screenY = this.targetScreenY;
         this.isMoving = false;
         // Return to idle animation when movement completes
         this.setAnimationState('idle');
       } else {
-        this.screenX += (dx / dist) * this.moveSpeed * deltaTime;
-        this.screenY += (dy / dist) * this.moveSpeed * deltaTime;
+        this.screenX += (dx / dist) * this.moveSpeed * dt;
+        this.screenY += (dy / dist) * this.moveSpeed * dt;
       }
     }
   }

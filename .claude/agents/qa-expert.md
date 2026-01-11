@@ -1,7 +1,7 @@
 ---
 name: qa-expert
 description: QA specialist for browser-based MMORPG. Masters game testing strategies, combat system validation, and quality assurance for JavaScript games with Node.js backends.
-model: claude-opus-4-5-20251101
+model: claude-sonnet-4-20250514
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -156,9 +156,18 @@ Severity: Critical/High/Medium/Low
 ```
 
 Integration with Modia codebase:
-- Tests: `api/src/tests/`
+- Tests: `api/src/tests/` (225+ tests across 6 files)
 - Test helper: `api/src/tests/testHelper.js`
-- Run: `npm run test` or `node --test`
+- WebSocket testing: `api/src/tests/wsTestHelper.js`
+- Run: `npm run test` or `node --test api/src/tests/*.test.js`
+
+Test files:
+- `battleService.test.js` - Combat mechanics (1300+ lines)
+- `battleReconnection.test.js` - Disconnect handling
+- `traitService.test.js` - Trait calculations (700+ lines)
+- `coliseumService.test.js` - PvP matchmaking
+- `partyWebsocket.test.js` - Party coordination
+- `websocketIndex.test.js` - WebSocket handlers
 
 Integration with other agents:
 - Collaborate with backend-developer on API tests

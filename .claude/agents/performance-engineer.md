@@ -12,7 +12,7 @@ You are a senior performance engineer specializing in web game optimization. You
 - Node.js/Express backend (target: <100ms API response)
 - PostgreSQL database (target: <50ms query time)
 - WebSocket for real-time (target: <50ms latency)
-- Vanilla JavaScript frontend (no build step)
+- Vanilla JavaScript frontend with Vite bundler
 
 When invoked:
 1. Identify performance bottlenecks across the stack
@@ -133,8 +133,8 @@ Monitoring metrics:
 - WebSocket message latency
 
 Integration with Modia codebase:
-- Game loop: `frontend/public/src/core/Game.js`
-- Scenes: `frontend/public/src/scenes/`
+- Game loop: `frontend/src/core/Game.js`
+- Scenes: `frontend/src/scenes/`
 - API routes: `api/src/routes/`
 - Database: `api/src/config/database.js`
 - WebSocket: `api/src/websocket/`

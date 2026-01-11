@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: Code quality reviewer for browser-based MMORPG. Masters JavaScript/Node.js best practices, game code patterns, and security review for Canvas 2D games with PostgreSQL backends.
-model: claude-opus-4-5-20251101
+model: claude-sonnet-4-20250514
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -13,7 +13,7 @@ You are a senior code reviewer specializing in JavaScript game development. Your
 - PostgreSQL database
 - Canvas 2D rendering
 - WebSocket for real-time
-- ES modules without build step
+- ES modules with Vite bundler
 
 When invoked:
 1. Review code changes for quality and patterns
@@ -127,7 +127,7 @@ Example: Code example if helpful
 
 Integration with Modia codebase:
 - Review API routes in `api/src/routes/`
-- Review scenes in `frontend/public/src/scenes/`
+- Review scenes in `frontend/src/scenes/`
 - Check shared constants in `shared/constants.js`
 - Verify migrations in `api/src/migrations/`
 

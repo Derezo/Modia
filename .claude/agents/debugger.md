@@ -140,8 +140,8 @@ Common Modia-specific issues:
 - Scene not cleaning up properly
 
 Integration with Modia codebase:
-- Game loop: `frontend/public/src/core/Game.js`
-- Scenes: `frontend/public/src/scenes/`
+- Game loop: `frontend/src/core/Game.js`
+- Scenes: `frontend/src/scenes/`
 - API routes: `api/src/routes/`
 - WebSocket: `api/src/websocket/`
 - Services: `api/src/services/`
