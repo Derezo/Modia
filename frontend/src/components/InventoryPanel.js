@@ -1,3 +1,5 @@
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+
 // Parchment theme colors for consistent styling
 const PARCHMENT = {
   light: '#d4c4a8',
@@ -57,7 +59,7 @@ export class InventoryPanel {
       this.render();
     } catch (err) {
       console.error('Failed to load inventory:', err);
-      this.game.showNotification('Failed to load inventory', 'error');
+      parchmentToast.error('Load Failed', 'Failed to load inventory');
     }
   }
 
@@ -631,7 +633,7 @@ export class InventoryPanel {
       // Validate that item can go in this slot
       const validSlots = this.getValidSlotsForItem(item.type);
       if (!validSlots.includes(slotName)) {
-        this.game.showNotification(`Cannot equip ${item.name} in ${slotName} slot`, 'error');
+        parchmentToast.error('Cannot Equip', `Cannot equip ${item.name} in ${slotName} slot`);
         return;
       }
 
@@ -640,11 +642,11 @@ export class InventoryPanel {
       this.equipped = result.equipped;
       this.inventory = result.inventory;
       this.render();
-      this.game.showNotification(`Equipped ${item.name}`, 'success');
+      parchmentToast.success('Equipped', `Equipped ${item.name}`);
 
     } catch (err) {
       console.error('Drop error:', err);
-      this.game.showNotification(err.message || 'Failed to equip item', 'error');
+      parchmentToast.error('Equip Failed', err.message || 'Failed to equip item');
     }
   }
 
@@ -700,11 +702,11 @@ export class InventoryPanel {
       this.equipped = result.equipped;
       this.inventory = result.inventory;
       this.render();
-      this.game.showNotification('Item unequipped', 'success');
+      parchmentToast.success('Unequipped', 'Item unequipped');
 
     } catch (err) {
       console.error('Drop error:', err);
-      this.game.showNotification(err.message || 'Failed to unequip item', 'error');
+      parchmentToast.error('Unequip Failed', err.message || 'Failed to unequip item');
     }
   }
 
@@ -1044,7 +1046,7 @@ export class InventoryPanel {
           break;
       }
     } catch (err) {
-      this.game.showNotification(err.message, 'error');
+      parchmentToast.error('Action Failed', err.message);
     }
   }
 
@@ -1054,7 +1056,7 @@ export class InventoryPanel {
 
     const slot = this.getDefaultSlot(item.type);
     if (!slot) {
-      this.game.showNotification('Cannot equip this item', 'error');
+      parchmentToast.error('Cannot Equip', 'Cannot equip this item');
       return;
     }
 
@@ -1062,7 +1064,7 @@ export class InventoryPanel {
     this.equipped = result.equipped;
     this.inventory = result.inventory;
     this.render();
-    this.game.showNotification(`Equipped ${item.name}`, 'success');
+    parchmentToast.success('Equipped', `Equipped ${item.name}`);
   }
 
   async unequipItem(slot) {
@@ -1070,7 +1072,7 @@ export class InventoryPanel {
     this.equipped = result.equipped;
     this.inventory = result.inventory;
     this.render();
-    this.game.showNotification('Item unequipped', 'success');
+    parchmentToast.success('Unequipped', 'Item unequipped');
   }
 
   async useItem(instanceId) {
@@ -1078,7 +1080,7 @@ export class InventoryPanel {
     if (!item) return;
 
     const result = await this.game.api.useItem(this.characterId, instanceId);
-    this.game.showNotification(result.message, 'success');
+    parchmentToast.success('Used Item', result.message);
     await this.load(this.characterId);
   }
 
@@ -1089,7 +1091,7 @@ export class InventoryPanel {
     if (!confirm(`Discard ${item.name}?`)) return;
 
     await this.game.api.discardItem(this.characterId, instanceId);
-    this.game.showNotification('Item discarded', 'success');
+    parchmentToast.success('Discarded', 'Item discarded');
     await this.load(this.characterId);
   }
 

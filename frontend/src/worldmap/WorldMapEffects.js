@@ -105,20 +105,34 @@ export class WorldMapEffects {
    * Update discovery state from node data
    * @param {Array} nodes - Array of node objects
    * @param {Array} connections - Array of connection objects (optional, for polygon detection)
+   * @param {Set} reachableNodes - Set of reachable node IDs (optional, for filtering fog of war)
    */
-  updateDiscoveryState(nodes, connections = []) {
+  updateDiscoveryState(nodes, connections = [], reachableNodes = null) {
     this.discoveredNodes.clear();
     this.visitedNodes.clear();
 
-    for (const node of nodes) {
+    // Filter nodes by reachability if provided
+    // This ensures fog of war only reveals nodes that are actually reachable
+    const filteredNodes = reachableNodes
+      ? nodes.filter(node => reachableNodes.has(node.id))
+      : nodes;
+
+    for (const node of filteredNodes) {
       this.discoveredNodes.add(node.id);
       if (node.visited) {
         this.visitedNodes.add(node.id);
       }
     }
 
+    // Filter connections to only include those between reachable nodes
+    const filteredConnections = reachableNodes
+      ? connections.filter(conn =>
+        reachableNodes.has(conn.from_node_id) && reachableNodes.has(conn.to_node_id)
+      )
+      : connections;
+
     // Update enhanced fog state with polygon detection
-    this.fogState.updateFromNodes(nodes, connections);
+    this.fogState.updateFromNodes(filteredNodes, filteredConnections);
   }
 
   /**

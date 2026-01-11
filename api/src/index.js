@@ -24,7 +24,6 @@ import worldRoutes from './routes/world.js';
 import battleRoutes from './routes/battle.js';
 import inventoryRoutes from './routes/inventory.js';
 import { router as skillsRoutes } from './routes/skills.js';
-import spritesRoutes from './routes/sprites.js';
 import shopRoutes from './routes/shop.js';
 import marketplaceRoutes from './routes/marketplace.js';
 import chatRoutes from './routes/chat.js';
@@ -50,7 +49,7 @@ const corsOrigins = process.env.CORS_ORIGINS
 app.use(helmet({
   contentSecurityPolicy: false, // Not needed for API-only server
   crossOriginEmbedderPolicy: false, // Allows CORS to work properly
-  crossOriginResourcePolicy: { policy: 'cross-origin' } // Allows sprites to be loaded cross-origin
+  crossOriginResourcePolicy: { policy: 'cross-origin' } // Allows assets to be loaded cross-origin
 }));
 
 // Middleware
@@ -76,7 +75,6 @@ app.use('/api/world', worldRoutes);
 app.use('/api/battle', battleRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/skills', skillsRoutes);
-app.use('/api/sprites', spritesRoutes);
 app.use('/api/shops', shopRoutes);
 app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/chat', chatRoutes);

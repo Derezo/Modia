@@ -11,6 +11,7 @@ import {
   getParchmentButtonCSS,
   getParchmentPanelCSS
 } from '../ui/parchment/index.js';
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
@@ -53,7 +54,7 @@ export class RecruitmentScene extends Scene {
     this.selectedRecruit = null;
 
     if (!this.nodeId) {
-      this.game.showNotification('Invalid guild data', 'error');
+      parchmentToast.error('Error', 'Invalid guild data');
       this.game.scenes.switchTo('worldMap');
       return;
     }
@@ -103,7 +104,7 @@ export class RecruitmentScene extends Scene {
       this.updateUI();
     } catch (err) {
       console.error('Failed to load recruitment data:', err);
-      this.game.showNotification('Failed to load guild recruits', 'error');
+      parchmentToast.error('Load Failed', 'Failed to load guild recruits');
       this.isLoading = false;
       this.updateUI();
     }
@@ -968,7 +969,7 @@ export class RecruitmentScene extends Scene {
 
     const recruit = this.selectedRecruit;
     if (this.playerGold < recruit.price) {
-      this.game.showNotification('Not enough gold', 'error');
+      parchmentToast.error('Insufficient Gold', 'Not enough gold');
       return;
     }
 
@@ -985,7 +986,7 @@ export class RecruitmentScene extends Scene {
       this.updateGoldDisplay();
 
       // Show success
-      this.game.showNotification(result.message || `Successfully recruited ${recruit.name}!`, 'success');
+      parchmentToast.success('Recruited!', result.message || `Successfully recruited ${recruit.name}!`);
 
       // Remove from local list and refresh
       this.recruits = this.recruits.filter(r => r.id !== recruit.id);
@@ -993,7 +994,7 @@ export class RecruitmentScene extends Scene {
       this.updateUI();
 
     } catch (err) {
-      this.game.showNotification(err.message || 'Failed to purchase recruit', 'error');
+      parchmentToast.error('Recruit Failed', err.message || 'Failed to purchase recruit');
     }
   }
 

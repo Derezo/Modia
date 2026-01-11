@@ -1,61 +1,48 @@
-import rateLimit from 'express-rate-limit';
-
-// Security: Rate limiting is ENABLED by default
-// Only explicitly disable in test environment
-// In development, use higher limits but still enforce them
-const isTest = process.env.NODE_ENV === 'test';
-const isDev = process.env.NODE_ENV === 'development';
-
-// Create rate limiter with environment-aware settings
-const createLimiter = (windowMs, maxRequests, message) => {
-  return rateLimit({
-    windowMs,
-    max: isTest ? 0 : (isDev ? maxRequests * 5 : maxRequests),
-    skip: () => isTest,
-    message: { error: message },
-    standardHeaders: true,
-    legacyHeaders: false,
-  });
-};
+import { createLimiter } from './rateLimiterFactory.js';
 
 // Order placement (limit orders) - 10 per minute
 // More restrictive to prevent order book spam
-const orderLimiter = createLimiter(
-  60 * 1000, // 1 minute
-  10,
-  'Too many orders placed. Please wait before placing more orders.'
-);
+const orderLimiter = createLimiter({
+  name: 'marketplace:order',
+  windowMs: 60 * 1000,
+  maxRequests: 5, // Base: 5, actual: 10 prod, 25 dev
+  message: 'Too many orders placed. Please wait before placing more orders.'
+});
 
 // Market order placement - 5 per minute
 // Most restrictive as market orders execute immediately
-const marketOrderLimiter = createLimiter(
-  60 * 1000, // 1 minute
-  5,
-  'Too many market orders. Please wait before placing more orders.'
-);
+const marketOrderLimiter = createLimiter({
+  name: 'marketplace:marketOrder',
+  windowMs: 60 * 1000,
+  maxRequests: 2, // Base: 2, actual: 4 prod (rounded), 10 dev
+  message: 'Too many market orders. Please wait before placing more orders.'
+});
 
 // Order cancellation - 20 per minute
 // More lenient to allow users to manage their orders
-const cancelLimiter = createLimiter(
-  60 * 1000, // 1 minute
-  20,
-  'Too many cancellations. Please wait before cancelling more orders.'
-);
+const cancelLimiter = createLimiter({
+  name: 'marketplace:cancel',
+  windowMs: 60 * 1000,
+  maxRequests: 10, // Base: 10, actual: 20 prod, 50 dev
+  message: 'Too many cancellations. Please wait before cancelling more orders.'
+});
 
 // Read operations (order book, history, stats, my orders) - 60 per minute
 // Most lenient as these are read-only
-const readLimiter = createLimiter(
-  60 * 1000, // 1 minute
-  60,
-  'Too many requests. Please wait before making more requests.'
-);
+const readLimiter = createLimiter({
+  name: 'marketplace:read',
+  windowMs: 60 * 1000,
+  maxRequests: 30, // Base: 30, actual: 60 prod, 150 dev
+  message: 'Too many requests. Please wait before making more requests.'
+});
 
 // Search operations - 30 per minute
 // Moderate limit as search can be resource-intensive
-const searchLimiter = createLimiter(
-  60 * 1000, // 1 minute
-  30,
-  'Too many search requests. Please wait before searching again.'
-);
+const searchLimiter = createLimiter({
+  name: 'marketplace:search',
+  windowMs: 60 * 1000,
+  maxRequests: 15, // Base: 15, actual: 30 prod, 75 dev
+  message: 'Too many search requests. Please wait before searching again.'
+});
 
 export { orderLimiter, marketOrderLimiter, cancelLimiter, readLimiter, searchLimiter };

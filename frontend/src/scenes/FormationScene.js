@@ -118,7 +118,7 @@ export class FormationScene extends Scene {
         background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark});
         border-bottom: 2px solid ${PARCHMENT_COLORS.borderDark};
       ">
-        <h2 style="margin: 0; color: ${PARCHMENT_COLORS.accent.gold}; font-size: 20px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">
+        <h2 style="margin: 0; color: ${PARCHMENT_COLORS.text.inverse}; font-size: 20px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
           ${Icon.html('menu', 'formation', { size: 'lg' })}
           ${responsive.showLabels() ? 'Party Formation' : ''}
         </h2>
@@ -213,10 +213,11 @@ export class FormationScene extends Scene {
         padding: 10px 14px;
         background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark});
         border-bottom: 1px solid ${PARCHMENT_COLORS.borderDark};
-        color: ${PARCHMENT_COLORS.accent.gold};
+        border-left: 3px solid ${PARCHMENT_COLORS.accent.gold};
+        color: ${PARCHMENT_COLORS.text.primary};
         font-weight: bold;
         font-size: 14px;
-        text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
       /* Parchment Button Styles */
@@ -583,7 +584,7 @@ export class FormationScene extends Scene {
           <div>
             <div style="font-size: 18px; font-weight: bold; color: ${PARCHMENT_COLORS.text.primary};">${char.name}</div>
             <div style="color: ${PARCHMENT_COLORS.text.secondary};">${this.capitalize(char.race)} ${this.capitalize(char.class)}</div>
-            <div style="color: ${PARCHMENT_COLORS.accent.gold}; font-weight: bold;">Level ${char.level}</div>
+            <div style="color: ${PARCHMENT_COLORS.text.primary}; font-weight: bold;">Level ${char.level}</div>
           </div>
         </div>
 
@@ -621,7 +622,7 @@ export class FormationScene extends Scene {
         </div>
       </div>
 
-      <div style="padding: 10px 14px; background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark}); border-radius: 4px; margin-bottom: 12px; color: ${PARCHMENT_COLORS.accent.gold}; font-weight: bold; text-shadow: 1px 1px 1px rgba(0,0,0,0.3);">Base Stats</div>
+      <div style="padding: 10px 14px; background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark}); border-radius: 4px; margin-bottom: 12px; border-left: 3px solid ${PARCHMENT_COLORS.accent.gold}; color: ${PARCHMENT_COLORS.text.primary}; font-weight: bold; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);">Base Stats</div>
       <div class="stat-row">
         <span class="stat-label">Strength</span>
         <span class="stat-value">${char.strength}</span>

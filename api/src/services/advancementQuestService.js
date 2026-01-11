@@ -115,7 +115,7 @@ export async function getAvailableQuests(characterId) {
  * @returns {Object} Created quest record
  */
 export async function acceptQuest(characterId, questTemplateId) {
-  // Verify quest is available for this character
+  // First, check quest availability outside transaction (non-blocking read)
   const availableQuests = await getAvailableQuests(characterId);
   const questTemplate = availableQuests.find(q => q.id === questTemplateId);
 
@@ -123,18 +123,43 @@ export async function acceptQuest(characterId, questTemplateId) {
     throw new Error('Quest not available for this character');
   }
 
-  // Create the quest record
-  const result = await query(
-    `INSERT INTO character_quests (character_id, quest_template_id, status)
-     VALUES ($1, $2, 'active')
-     RETURNING *`,
-    [characterId, questTemplateId]
-  );
+  // Use transaction with row locking to prevent race conditions
+  return await withTransaction(async (client) => {
+    // Lock character row to serialize concurrent quest acceptances
+    const lockResult = await client.query(
+      'SELECT id FROM characters WHERE id = $1 FOR UPDATE',
+      [characterId]
+    );
 
-  return {
-    quest: result.rows[0],
-    template: questTemplate
-  };
+    if (lockResult.rows.length === 0) {
+      throw new Error('Character not found');
+    }
+
+    // Re-check for existing active quest within transaction (critical check)
+    const activeCheck = await client.query(
+      `SELECT id FROM character_quests
+       WHERE character_id = $1 AND status IN ('active', 'boss_ready')
+       FOR UPDATE`,
+      [characterId]
+    );
+
+    if (activeCheck.rows.length > 0) {
+      throw new Error('Character already has an active quest');
+    }
+
+    // Create the quest record
+    const result = await client.query(
+      `INSERT INTO character_quests (character_id, quest_template_id, status)
+       VALUES ($1, $2, 'active')
+       RETURNING *`,
+      [characterId, questTemplateId]
+    );
+
+    return {
+      quest: result.rows[0],
+      template: questTemplate
+    };
+  });
 }
 
 /**

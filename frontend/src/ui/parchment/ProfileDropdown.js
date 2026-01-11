@@ -67,6 +67,7 @@ export class ProfileDropdown {
 
     // Cleanup
     this.abortController = new AbortController();
+    this.wsUnsubscribers = []; // WebSocket handler cleanup functions
 
     this.injectStyles();
     this.create();
@@ -143,19 +144,34 @@ export class ProfileDropdown {
         color: ${PARCHMENT_COLORS.text.secondary};
       }
 
-      /* Gold Display */
-      .profile-dropdown__gold {
+      /* Gold Display - Floating below profile button */
+      .profile-dropdown__gold-float {
         display: flex;
         align-items: center;
-        gap: 4px;
+        justify-content: center;
+        gap: 6px;
+        padding: 6px 12px;
+        margin-top: 8px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid ${PARCHMENT_COLORS.border};
+        border-radius: ${PARCHMENT_RADIUS.md};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      }
+
+      .profile-dropdown__gold-float .profile-dropdown__gold-icon {
+        font-size: 16px;
+      }
+
+      .profile-dropdown__gold-float .profile-dropdown__gold-value {
         color: ${PARCHMENT_COLORS.accent.gold};
         font-weight: bold;
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
-        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
-      }
-
-      .profile-dropdown__gold-icon {
-        font-size: 14px;
+        text-shadow:
+          -1px -1px 0 #000,
+          1px -1px 0 #000,
+          -1px 1px 0 #000,
+          1px 1px 0 #000,
+          0 0 3px rgba(0, 0, 0, 0.8);
       }
 
       /* Notification Badge */
@@ -426,23 +442,27 @@ export class ProfileDropdown {
     container.className = 'profile-dropdown';
     container.style.display = 'none';
 
-    // Trigger button
+    // Trigger button (avatar and badge only)
     this.triggerElement = document.createElement('div');
     this.triggerElement.className = 'profile-dropdown__trigger';
     this.triggerElement.innerHTML = `
       <div class="profile-dropdown__avatar">
         <span class="profile-dropdown__avatar-fallback">👤</span>
       </div>
-      <div class="profile-dropdown__gold">
-        <span class="profile-dropdown__gold-icon">🪙</span>
-        <span class="profile-dropdown__gold-value">0</span>
-      </div>
       <div class="profile-dropdown__badge">0</div>
     `;
 
     this.avatarElement = this.triggerElement.querySelector('.profile-dropdown__avatar');
-    this.goldElement = this.triggerElement.querySelector('.profile-dropdown__gold-value');
     this.badgeElement = this.triggerElement.querySelector('.profile-dropdown__badge');
+
+    // Floating gold display (below trigger)
+    this.goldFloatElement = document.createElement('div');
+    this.goldFloatElement.className = 'profile-dropdown__gold-float';
+    this.goldFloatElement.innerHTML = `
+      <span class="profile-dropdown__gold-icon">🪙</span>
+      <span class="profile-dropdown__gold-value">0</span>
+    `;
+    this.goldElement = this.goldFloatElement.querySelector('.profile-dropdown__gold-value');
 
     // Dropdown menu
     this.dropdownElement = document.createElement('div');
@@ -451,6 +471,7 @@ export class ProfileDropdown {
     this.renderDropdownContent();
 
     container.appendChild(this.triggerElement);
+    container.appendChild(this.goldFloatElement);
     container.appendChild(this.dropdownElement);
 
     this.element = container;
@@ -669,7 +690,7 @@ export class ProfileDropdown {
     if (!this.game.socket) return;
 
     // New notification received
-    this.game.socket.on('notification:new', (notification) => {
+    const unsub1 = this.game.socket.on('notification:new', (notification) => {
       this.unreadCount++;
       this.notifications.unshift(notification);
       this.updateBadge();
@@ -680,9 +701,10 @@ export class ProfileDropdown {
         this.bindDropdownItemEvents();
       }
     });
+    this.wsUnsubscribers.push(unsub1);
 
     // Notification cancelled/expired
-    this.game.socket.on('notification:cancelled', (data) => {
+    const unsub2 = this.game.socket.on('notification:cancelled', (data) => {
       this.unreadCount = Math.max(0, this.unreadCount - 1);
       this.notifications = this.notifications.filter(n => n.id !== data.id);
       this.updateBadge();
@@ -692,19 +714,22 @@ export class ProfileDropdown {
         this.bindDropdownItemEvents();
       }
     });
+    this.wsUnsubscribers.push(unsub2);
 
     // Gold update
-    this.game.socket.on('gold:update', (data) => {
+    const unsub3 = this.game.socket.on('gold:update', (data) => {
       this.setGold(data.gold);
     });
+    this.wsUnsubscribers.push(unsub3);
 
     // Party update
-    this.game.socket.on('party:update', () => {
+    const unsub4 = this.game.socket.on('party:update', () => {
       if (this.isOpen) {
         this.renderDropdownContent();
         this.bindDropdownItemEvents();
       }
     });
+    this.wsUnsubscribers.push(unsub4);
   }
 
   /**
@@ -762,17 +787,17 @@ export class ProfileDropdown {
    */
   async fetchGold() {
     try {
-      // Try to get gold from party or current character
-      const party = this.game.state?.get('party');
-      if (party?.gold !== undefined) {
-        this.setGold(party.gold);
+      // Get gold from user state (authoritative source)
+      const user = this.game.state?.get('user');
+      if (user?.gold !== undefined) {
+        this.setGold(user.gold);
         return;
       }
 
-      // Fallback to party API
-      const response = await this.game.api.getParty();
-      if (response.success && response.party) {
-        this.setGold(response.party.gold || 0);
+      // Fallback to auth/me API if not in state
+      const response = await this.game.api.get('/auth/me');
+      if (response.user) {
+        this.setGold(response.user.gold || 0);
       }
     } catch (error) {
       // Silently fail - gold display is non-critical
@@ -1117,6 +1142,12 @@ export class ProfileDropdown {
       this.abortController.abort();
       this.abortController = null;
     }
+
+    // Clean up WebSocket handlers
+    for (const unsub of this.wsUnsubscribers) {
+      if (typeof unsub === 'function') unsub();
+    }
+    this.wsUnsubscribers = [];
 
     // Remove from DOM
     if (this.element && this.element.parentNode) {

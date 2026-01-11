@@ -26,6 +26,7 @@ This document archives all completed features, resolved issues, and historical d
 | 7.4 | Jan 2026 | Boss mechanics, Phase 6 progress |
 | 7.5 | Jan 2026 | Map generation validation, AI strategic pathfinding |
 | 7.6 | Jan 2026 | Title screen canvas animation |
+| 7.7 | Jan 2026 | Comprehensive UI/UX styling overhaul |
 
 ---
 
@@ -121,6 +122,19 @@ All critical blocking issues have been resolved:
 - 15 new files in frontend/src/title/
 - 8-phase state machine, 6.5s timeline
 - Skip detection with localStorage persistence
+
+### UI/UX Styling Overhaul (v7.7)
+- Element color system in ParchmentTheme (fire, ice, lightning, passive, physical, nature, dark, light, arcane)
+- Gold display fix: ProfileDropdown now uses user.gold instead of party.gold
+- Gold display redesigned with floating element below profile button, black text outline for readability
+- Profile button visibility restricted to WorldMapScene only
+- Blocked node display: undiscovered blocked nodes show "Mystery Location", lock icon only on visited blocked nodes
+- Locked path indicator: red tint + lock icon on paths leading to undiscovered blocked nodes
+- SkillTreePanel color corrections: dark brown text, element icons with muted backgrounds
+- FormationScene widget titles fixed: dark brown text with gold left border accent
+- Progress bar text readability: dark outline + shadow on stamina bar and skill panels
+- Toast consolidation: BattleUI, RecruitmentScene, InventoryPanel migrated to parchmentToast
+- Icon component fix: empty alt attribute when label exists to prevent duplication
 
 ---
 

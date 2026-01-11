@@ -1,4 +1,5 @@
 import { ParchmentCard } from '../components/ParchmentCard.js';
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 
 /**
  * BattleUI - User interface for tactical combat
@@ -1248,31 +1249,9 @@ export class BattleUI {
    * @param {number} duration - How long to show (ms), default 3000
    */
   showNotification(message, type = 'info', duration = 3000) {
-    const container = this.element?.querySelector('#notification-container');
-    if (!container) return;
-
-    // Create notification element
-    const notification = document.createElement('div');
-    notification.className = `battle-notification ${type}`;
-    notification.textContent = message;
-
-    container.appendChild(notification);
-
-    // Remove after duration with fade-out animation
-    setTimeout(() => {
-      notification.style.animation = 'notificationFadeOut 0.3s ease-out forwards';
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.remove();
-        }
-      }, 300);
-    }, duration);
-
-    // Limit number of notifications shown (remove oldest if > 5)
-    const notifications = container.querySelectorAll('.battle-notification');
-    if (notifications.length > 5) {
-      notifications[0].remove();
-    }
+    // Use unified parchment toast system for consistent styling
+    const toastMethod = parchmentToast[type] || parchmentToast.info;
+    toastMethod.call(parchmentToast, message, '', duration);
   }
 
   /**

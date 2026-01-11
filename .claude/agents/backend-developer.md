@@ -46,7 +46,6 @@ Core routes:
 - `shop.js` - NPC shop transactions
 - `marketplace.js` - Player trading
 - `chat.js` - Chat messages, history
-- `sprites.js` - Asset generation
 
 New routes:
 - `friends.js` - Friend system (add, remove, block)

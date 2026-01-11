@@ -1,9 +1,77 @@
 # Plan Validation Report
 
 **Generated**: 2026-01-06
-**Current Plan**: Battle Sprite Enhancement Plan (`tender-stirring-wolf.md`)
+**Updated**: 2026-01-11
 **Previous Plan**: Modia MMORPG Implementation Plan
-**Status**: Battle Sprite Enhancement Phase 1-2 Complete
+**Status**: Phase 1-5 Complete; AI sprite generation deprecated; UI/UX overhaul complete
+
+---
+
+# Latest Validation (2026-01-11)
+
+## Plans Validated
+
+### 1. PixelLab Removal Plan
+**Status**: ✅ Complete
+
+| Phase | Status | Details |
+|-------|--------|---------|
+| Phase 1: Archive Content | ✅ Done | `docs/archive/IMAGE_GENERATION_PROMPTS.md` created |
+| Phase 2: Remove Code | ✅ Done | 17 files deleted (services, scripts, routes) |
+| Phase 3: Remove References | ✅ Done | index.js cleaned |
+| Phase 4: Environment Variables | ✅ Done | .env.example updated |
+| Phase 5: Update Documentation | ✅ Done | CLAUDE.md updated |
+| Phase 6: Claude Config | ✅ Done | backend-developer.md updated |
+| Phase 7: Cleanup | ✅ Done | .gitignore updated |
+
+### 2. UI/UX Styling Overhaul Plan
+**Status**: ✅ Complete
+
+| Item | Status | Files Modified |
+|------|--------|----------------|
+| Gold display fix (user.gold) | ✅ Done | ProfileDropdown.js |
+| Gold floating design with outline | ✅ Done | ProfileDropdown.js |
+| Profile button world map only | ✅ Done | Game.js |
+| Blocked node "Mystery Location" | ✅ Done | WorldMapScene.js |
+| Locked path indicator | ✅ Done | WorldMapScene.js |
+| Element colors in ParchmentTheme | ✅ Done | ParchmentTheme.js |
+| SkillTreePanel color fixes | ✅ Done | SkillTreePanel.js |
+| FormationScene widget titles | ✅ Done | FormationScene.js |
+| Progress bar readability | ✅ Done | StaminaBar.js, SkillTreePanel.js |
+| Toast consolidation | ✅ Done | BattleUI.js, RecruitmentScene.js, InventoryPanel.js |
+| Icon doubling fix | ✅ Done | Icon.js |
+
+## Code Review Findings Addressed
+
+| Issue | Severity | Status |
+|-------|----------|--------|
+| Path preview race condition | High | ✅ Fixed (request ID tracking) |
+| Path preview error logging | High | ✅ Fixed (console.warn) |
+| WebSocket handler memory leak | High | ✅ Fixed (unsubscribe cleanup) |
+| Dynamic imports in battle.js | High | ✅ Fixed (static import) |
+| Test NODE_ENV not set | Medium | ✅ Fixed (package.json scripts) |
+
+## Test Results
+
+| Suite | Pass | Fail | Total |
+|-------|------|------|-------|
+| Unit Tests | 50 | 0 | 50 |
+| Balance Tests | Included in unit | - | - |
+| Integration Tests | Running* | - | - |
+| Rate Limit Tests | Pending** | - | - |
+
+\* Integration tests require test server with NODE_ENV=test
+\*\* Rate limit tests require TEST_RATE_LIMITS=true
+
+## Verification Checklist
+
+- [x] No remaining PixelLab references in active code
+- [x] Gold displays correctly using user.gold source
+- [x] Profile button only visible on WorldMapScene
+- [x] Undiscovered blocked nodes show "Mystery Location"
+- [x] Path preview handles race conditions
+- [x] WebSocket handlers properly cleaned up
+- [x] All unit tests pass (50/50)
 
 ---
 
@@ -11,116 +79,39 @@
 
 ## Executive Summary
 
-The Battle Sprite Enhancement Plan has been successfully implemented through Phase 2 (Direction Fix). All foundational infrastructure is in place:
+The Battle Sprite Enhancement Plan was implemented through Phase 2 (Direction Fix). The direction rendering and animation callback systems are complete.
 
-- **Direction rendering** is fixed with proper initialization and combat facing
-- **Equipment-aware sprite system** is fully implemented with on-demand generation
-- **Validation system** is ready for testing prompts before batch generation
-- **Documentation** is comprehensive and complete
-
-The implementation is ready for Phase 3-5 (actual sprite generation) which requires PixelLab API calls.
+**Note (2026-01-11):** The AI sprite generation integration was deprecated and removed from the codebase due to poor results, slow performance, and high costs. Existing generated sprite assets have been retained. Prompt templates have been archived to `docs/archive/IMAGE_GENERATION_PROMPTS.md` for potential future use with a different service.
 
 ---
 
-## Code Review Results
+## Completed Work (Retained)
 
-### Files Created
+### Direction Rendering Fix
+- BattleUnit direction initialization (players EAST, enemies WEST)
+- `faceToward()` method for targeting
+- `setDirection()` for direct control
+- `calculateDirection()` for sprite-less calculation
 
-| File | Status | Notes |
-|------|--------|-------|
-| `docs/PIXELLAB_REFERENCE.md` | **PASS** | 502 lines, comprehensive API documentation |
-| `api/src/scripts/validate-prompts.js` | **PASS** | 377 lines, full CLI with dry-run support |
-| `api/src/services/characterSpriteService.js` | **PASS** | 359 lines, on-demand generation with caching |
-| `api/src/routes/sprites.js` | **PASS** | 255 lines, all CRUD endpoints + auth fixed |
-
-### Files Modified
-
-| File | Status | Notes |
-|------|--------|-------|
-| `api/src/config/pixelLabPrompts.js` | **PASS** | Added RACE_PROMPTS (5 races), EQUIPMENT_PROMPTS, WIZARD_ANIMATION_ACTIONS, ENEMY_ANIMATION_ACTIONS |
-| `frontend/public/src/battle/BattleUnit.js` | **PASS** | Direction initialization, setDirection(), faceToward(), calculateDirection(), animation methods |
-| `frontend/public/src/scenes/BattleScene.js` | **PASS** | setAssetLoader integration, playAttackAnimation/playHitAnimation calls |
-| `frontend/public/src/core/AssetLoader.js` | **PASS** | Equipment-aware methods: generateEquipmentHash, loadEquippedCharacterSprite, etc. |
-| `api/src/index.js` | **PASS** | Registered sprites routes |
-| `package.json` | **PASS** | Added validate:sprites, validate:enemy, validate:character scripts |
-
-### Issues Fixed During Review
-
-1. **Auth middleware import** - Changed `auth` to `authenticate` in sprites.js
-2. **User ID property** - Changed `req.user.id` to `req.user.userId` to match middleware
+### Animation System
+- `playAttackAnimation`, `playHitAnimation`, `playDeathAnimation` in BattleUnit
+- Animation callback system in BattleScene
 
 ---
 
-## Gap Analysis - Battle Sprite Enhancement
+## Deprecated Work (Removed 2026-01-11)
 
-### Fully Completed
+The following AI sprite generation infrastructure was removed:
+- `api/src/services/characterSpriteService.js`
+- `api/src/services/pixelLabService.js`
+- `api/src/services/portraitService.js`
+- `api/src/services/assetCacheManager.js`
+- `api/src/config/pixelLabPrompts.js`
+- `api/src/routes/sprites.js`
+- `api/src/scripts/generate-*.js` (11 scripts)
+- `docs/PIXELLAB_REFERENCE.md`
 
-- [x] Part 1: PixelLab Reference Documentation
-- [x] Part 2: Direction Rendering Fix
-  - [x] BattleUnit direction initialization (players EAST, enemies WEST)
-  - [x] faceToward() method for targeting
-  - [x] setDirection() for direct control
-  - [x] calculateDirection() for sprite-less calculation
-- [x] Part 3: Equipment-Aware Character Rendering (Infrastructure)
-  - [x] characterSpriteService.js with hash-based caching
-  - [x] /api/sprites routes
-  - [x] RACE_PROMPTS for all 5 races (Human, Elf, Dwarf, Vampire, Orc)
-  - [x] EQUIPMENT_PROMPTS for weapons/armor
-  - [x] AssetLoader equipment-aware methods
-- [x] Part 4: Animation System Enhancement (Prompts & Callbacks)
-  - [x] ENEMY_ANIMATION_ACTIONS for 7 forest enemies
-  - [x] WIZARD_ANIMATION_ACTIONS for all 5 races
-  - [x] buildWizardAnimationPrompt() helper
-  - [x] buildEnemyAnimationPrompt() helper
-  - [x] playAttackAnimation, playHitAnimation, playDeathAnimation in BattleUnit
-- [x] Part 5: Sample Validation System
-  - [x] validate-prompts.js CLI
-  - [x] npm scripts (validate:sprites, validate:enemy, validate:character)
-  - [x] Dry-run mode
-  - [x] List enemies/races commands
-
-### Not Started (Planned for Phase 3-5)
-
-- [ ] Generate forest enemy sprites via PixelLab API
-- [ ] Generate wizard base sprites for all 5 races
-- [ ] Test equipment variants with on-demand generation
-- [ ] Sync attack animations with damage timing
-
----
-
-## Success Criteria Status
-
-| Criterion | Status | Notes |
-|-----------|--------|-------|
-| Characters face correct direction when spawning | **DONE** | Players EAST, enemies WEST |
-| Characters face correct direction during combat | **DONE** | faceToward() called on attacks |
-| All 5 Wizard races render with unique visual traits | **READY** | Prompts defined, needs generation |
-| Wizard characters render with equipped weapons/armor | **READY** | Infrastructure complete |
-| Equipment sprites cache correctly | **READY** | Hash-based caching implemented |
-| All 5 animation states work | **READY** | Templates defined, needs generation |
-| Sample validation workflow works | **DONE** | CLI with dry-run available |
-| Race-specific animations reflect personality | **READY** | Unique prompts per race defined |
-
----
-
-## Next Priority Tasks
-
-1. **Validate sample sprites** - Run `npm run validate:sprites -- --dry-run --type=enemy --name=gray_wolf` to preview prompts
-2. **Generate validation samples** - Test with actual API calls to verify prompt quality
-3. **Generate forest enemy sprites** - Run batch generation for 7 forest enemies
-4. **Generate wizard race sprites** - Create base sprites for all 5 races
-5. **Integration testing** - Verify sprites load correctly in battle scene
-
----
-
-## Estimated Remaining Costs
-
-| Phase | API Calls | Est. Cost |
-|-------|-----------|-----------|
-| Validation samples | ~20 | ~$0.26 |
-| Forest enemies (7 x 5 animations) | 42 | ~$0.55 |
-| Wizard races (5 x 5 animations) | 30 | ~$0.40 |
-| **Remaining Total** | ~92 | **~$1.21** |
+**Archived:** Prompt templates preserved in `docs/archive/IMAGE_GENERATION_PROMPTS.md`
 
 ---
 

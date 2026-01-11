@@ -9,82 +9,51 @@ Modia is a browser-based MMORPG with tactical turn-based combat and procedural w
 ## Development Commands
 
 ```bash
-# Start PostgreSQL (required first)
-docker compose up -d
+# Quick start (after initial setup)
+npm run dev:setup                       # Smart startup: checks ports, Docker, migrations, seeds, launches
 
-# Copy environment variables
-cp .env.example .env
+# Manual startup
+docker compose up -d                    # Start PostgreSQL (required first)
+npm run dev                             # Start both API (port 3000) and frontend (port 8080)
 
-# Install dependencies
-npm install
+# Individual services
+npm run dev:api                         # API only
+npm run dev:frontend                    # Frontend only
 
-# Run database migrations
-npm run db:migrate
-
-# Seed the world (procedural generation)
-npm run db:seed
-
-# Development (starts both API and frontend)
-npm run dev
-
-# Or run individually:
-npm run dev:api        # API on port 3000
-npm run dev:frontend   # Frontend on port 8080
-
-# Linting
-npm run lint
-
-# Testing (server must be running - tests hit live endpoints)
-npm run test                            # All workspaces
+# Testing (server must be running - integration tests hit live endpoints)
+npm run test                            # All workspaces (unit + integration + ratelimit)
 npm run test -w api                     # API tests only
-node --test api/src/tests/auth.test.js  # Single test file (Node's built-in test runner)
+npm run test:unit -w api                # Unit tests + balance tests (fast, no server needed)
+npm run test:integration -w api         # Integration tests (requires running server)
+npm run test:ratelimit -w api           # Rate limit tests (TEST_RATE_LIMITS=true)
+npm run test:quick -w api               # Alias for test:unit
+node --test api/src/tests/integration/auth.integration.test.js  # Single test file
 
 # E2E Testing (Playwright - auto-starts servers)
 npx playwright test                     # Run all E2E tests
 npx playwright test e2e/auth.spec.js    # Single spec file
-npx playwright test --ui                # Interactive UI mode
-npx playwright show-report              # View HTML report
-
-# Balance Testing (game balance validation)
-node --test api/src/tests/balance/damageScaling.test.js
-node --test api/src/tests/balance/classBalance.test.js
-node --test api/src/tests/balance/economyBalance.test.js
 
 # Database utilities
+npm run db:migrate                      # Run pending migrations
+npm run db:seed                         # Seed the world (procedural generation)
 npm run db:reset                        # Re-run migrations + seed
-npm run db:status                       # Show applied vs pending migrations
 npm run db:fresh                        # Drop all tables, re-migrate, re-seed
 npm -w api run migrate:rollback         # Roll back last migration
 
-# Development environment
-npm run dev:setup                       # Smart startup: checks ports, Docker, migrations, seeds, launches
-npm run doctor                          # Validate dev environment (Node, Docker, DB, ports, .env)
-
-# Asset Generation (requires PIXELLAB_API_KEY in .env)
-npm run generate:all            # Generate all assets
-npm run generate:tiles          # Tileset sprites
-npm run generate:obstacles      # Obstacle sprites
-npm run generate:characters     # Character sprites
-npm run generate:enemies        # Enemy sprites
-npm run generate:items          # Item sprites
-npm run generate:nodes          # World map node sprites
-npm run generate:portraits      # Character portraits
-npm run generate:backdrop       # World map backdrop
-npm run validate:sprites        # Validate all sprite prompts
-npm run validate:enemy          # Validate enemy prompts only
-npm run validate:character      # Validate character prompts only
+# Other
+npm run lint                            # Run ESLint
+npm run doctor                          # Validate dev environment
 ```
 
 ## Architecture
 
 ### Backend (`api/`)
 - **Entry point:** `src/index.js` - Express server with WebSocket upgrade
-- **Routes:** `src/routes/` - auth, characters, party, world, battle, inventory, skills, shop, marketplace, chat, sprites, guild, coliseum, friends, lfg, notifications, settings
+- **Routes:** `src/routes/` - auth, characters, party, world, battle, inventory, skills, shop, marketplace, chat, guild, coliseum, friends, lfg, notifications, settings
 - **WebSocket:** `src/websocket/index.js` - Room-based subscriptions for chat, tavern presence, marketplace
 - **Database:** PostgreSQL via `pg` pool in `src/config/database.js`
 - **Migrations:** `src/migrations/` - Sequential SQL files (001_initial_schema.sql, etc.)
 - **Auth:** JWT with 15min access tokens, 7-day refresh tokens
-- **Asset Generation:** `src/scripts/` - PixelLab API integration for procedural sprite generation
 
 ### Frontend (`frontend/`)
 - **Build tool:** Vite for dev server and bundling
@@ -133,7 +102,19 @@ Room-based subscriptions at `/ws`:
 
 **Scene lifecycle:** `enter()` → `update(dt)` / `render(ctx)` loop → `exit()` - scenes manage their own state and cleanup
 
-**Testing:** Tests require the API server to be running. Use `testHelper.js` for test utilities (`createTestUser()`, `createTestCharacter()`, `request()`). For WebSocket tests, use `wsTestHelper.js` (`createWsClient()`, `waitForMessage()`). Balance tests in `api/src/tests/balance/` validate damage formulas, class viability, and economy curves.
+**Testing:** Tests are organized into subdirectories:
+- `integration/` - Require API server running (hit live endpoints)
+- `unit/` - Fast tests, no server required
+- `balance/` - Damage formulas, class viability, economy curves (runs with unit tests)
+- `ratelimit/` - Rate limiter validation (requires `TEST_RATE_LIMITS=true`)
+
+Use `testHelper.js` for utilities:
+- `createTestUser()`, `createTestCharacter()` - Create test data
+- `cleanupTestUser(userId)` - Delete user and cascade (characters, inventory, etc.)
+- `registerCleanup(callback)` / `runCleanup()` - Test isolation
+- `request()` - HTTP helper for API calls
+
+For WebSocket tests, use `testUtils/wsTestHelper.js` (`createWsClient()`, `waitForMessage()`).
 
 ## Critical Technical Gotchas
 
@@ -188,10 +169,33 @@ ctx.restore(); // CRITICAL
 
 ## Subagents
 
-This project has specialized subagents in `.claude/agents/` for different domains (frontend, backend, battle systems, debugging, etc.). **Using subagents is strongly encouraged** - they have domain-specific context and produce better results than working without them. Use the Task tool with the appropriate `subagent_type` to invoke them.
+This project has specialized subagents in `.claude/agents/`. **Using subagents is strongly encouraged** - they have domain-specific context and produce better results. Use the Task tool with the appropriate `subagent_type`:
+
+| Agent | Use Case |
+|-------|----------|
+| `frontend-developer` | Canvas 2D, scenes, vanilla JS UI |
+| `backend-developer` | Express routes, services, PostgreSQL |
+| `battle-systems-developer` | Combat, AI, damage formulas |
+| `websocket-engineer` | Real-time features, room subscriptions |
+| `postgres-pro` | Database optimization, queries |
+| `debugger` | Bug investigation, state sync issues |
+| `game-developer` | Game loop, procedural generation |
+| `qa-expert` | Testing strategies, validation |
+| `code-reviewer` | Code quality review |
+| `architect-reviewer` | System design review |
+| `performance-engineer` | Optimization, profiling |
+
+## CI Pipeline
+
+Pull requests run: lint → API tests → E2E tests (Playwright) → build. The pipeline requires PostgreSQL and auto-starts servers for testing.
 
 ## Documentation
 
-Detailed specifications, game design docs, and API references are in `docs/`.
+Detailed specifications in `docs/`. Key files:
+- `DEVELOPMENT_ROADMAP.md` - Links to `ROADMAP_TECHNICAL.md` and `ROADMAP_GAMEPLAY.md`
+- `TECHNICAL_ARCHITECTURE.md` - System design, database schemas
+- `API_SPECIFICATION.md` - REST and WebSocket endpoints
+- `FRONTEND_TECHNICAL_PATTERNS.md` - Critical gotchas and component patterns
+- `archive/COMPLETED_MILESTONES.md` - Archived completed work
 
-**Roadmap maintenance:** Keep `docs/DEVELOPMENT_ROADMAP.md` fresh by removing completed items consistently and adding new todo or deferred items as they arise during development.
+**Roadmap maintenance:** Keep roadmaps fresh by moving completed items to `docs/archive/`.

@@ -13,6 +13,7 @@ import { createPlayerBattleUnit } from '../services/battleUnitFactory.js';
 import * as traitService from '../services/traitService.js';
 import * as advancementQuestService from '../services/advancementQuestService.js';
 import * as bossService from '../services/bossService.js';
+import * as battleTurnManager from '../services/battleTurnManager.js';
 import { generateTerrainOnly } from '../../../shared/mapGeneration.js';
 
 const router = express.Router();
@@ -57,6 +58,15 @@ async function handleBattleEnd(battleId, status, state, userId) {
     const nodeId = nodeResult.rows[0]?.node_id;
     const difficultyTier = nodeResult.rows[0]?.difficulty_tier || 1;
     const nodeType = nodeResult.rows[0]?.node_type || 'forest';
+
+    // Check if this is an advancement battle (guild boss trial)
+    const advancementCheck = await query(
+      `SELECT is_advancement_battle, challenger_character_id
+       FROM battles WHERE id = $1`,
+      [battleId]
+    );
+    const isAdvancementBattle = advancementCheck.rows[0]?.is_advancement_battle;
+    const challengerCharacterId = advancementCheck.rows[0]?.challenger_character_id;
 
     // Calculate rewards using service
     const gold = battleService.calculateGoldReward(enemies, difficultyTier);
@@ -158,10 +168,26 @@ async function handleBattleEnd(battleId, status, state, userId) {
       }
     }
 
+    // Handle advancement battle quest completion
+    let advancementResult = null;
+    if (isAdvancementBattle && challengerCharacterId) {
+      try {
+        advancementResult = await advancementQuestService.completeQuest(
+          challengerCharacterId,
+          battleId
+        );
+        console.log(`[Battle] Advancement quest completed for character ${challengerCharacterId}`);
+      } catch (err) {
+        console.error('[Battle] Advancement quest completion failed:', err);
+        advancementResult = { error: err.message };
+      }
+    }
+
     rewards = {
       gold,
       experience: exp,
-      items: itemDropService.formatDropsForResponse(droppedItems)
+      items: itemDropService.formatDropsForResponse(droppedItems),
+      advancementComplete: advancementResult
     };
   }
 
@@ -490,7 +516,6 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   const firstActor = initialState.units.find(u => u.id === initialState.activeUnitId);
   if (firstActor && firstActor.type === 'enemy') {
     // Async enemy turn processing - starts after response is sent via WebSocket
-    const battleTurnManager = await import('../services/battleTurnManager.js');
     setImmediate(async () => {
       try {
         const { state: updatedState, battleStatus } =
@@ -560,7 +585,6 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
   const activeUnit = state.units?.find(u => u.id === state.activeUnitId);
   if (activeUnit && activeUnit.type === 'enemy' && activeUnit.hp > 0) {
     console.log('[Battle] Resuming enemy turn processing for battle', battleId, '- active unit:', activeUnit.name);
-    const battleTurnManager = await import('../services/battleTurnManager.js');
     setImmediate(async () => {
       try {
         const { state: updatedState, battleStatus } =
@@ -763,10 +787,6 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   if (result.turnEnded && battleStatus === 'active') {
     // Turn is complete - advance to next actor using CT system
     battleService.advanceToNextActorWithCT(state);
-
-    // Async mode: spawn enemy turn processing in background
-    // Response returns immediately, enemy actions sent via WebSocket
-    const battleTurnManager = await import('../services/battleTurnManager.js');
 
     // Save state first, then spawn async processing
     await query(
