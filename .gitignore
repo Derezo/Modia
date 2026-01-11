@@ -34,8 +34,5 @@ coverage/
 # Database
 *.sql.backup
 
-# PixelLab cache (generated assets cache)
-.pixellab-cache/
-
 # Generated icon PNGs (SVG sources tracked, PNGs generated at build time)
 frontend/public/assets/icons/png/

@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.0 |
+| Version | 2.1 |
 | Last Updated | January 2026 |
 | Focus | Features, mechanics, UX, content |
 
@@ -17,7 +17,7 @@
 | Core Mechanics | 95% | Near Complete |
 | Combat System | 95% | Near Complete |
 | Economy & Items | 85% | Near Complete |
-| User Experience | 70% | In Progress |
+| User Experience | 75% | In Progress |
 | Social Features | 90% | Near Complete |
 | World & Progression | 90% | Near Complete |
 
@@ -215,7 +215,11 @@ Per ITEM_SYSTEM.md specifications:
 - [ ] Loading indicators
 - [ ] Tooltips and help text
 - [ ] Animation polish
-- [ ] Error feedback
+- [x] Error feedback (parchment toast consolidation)
+- [x] Color scheme corrections (dark brown text, gold accents only)
+- [x] Element color system (skill type icons with muted backgrounds)
+- [x] Progress bar readability (text outlines)
+- [x] Icon component doubling fix
 
 ---
 
@@ -276,7 +280,6 @@ Per ITEM_SYSTEM.md specifications:
 | Document | Purpose | Status |
 |----------|---------|--------|
 | `docs/plans/2026-01-11-marketplace-item-augments-design.md` | Marketplace augment display | Approved |
-| `/home/wizard/.claude/plans/robust-discovering-alpaca.md` | Quest system, node blocking, settings | Approved |
 
 ---
 
@@ -295,5 +298,6 @@ Per ITEM_SYSTEM.md specifications:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.1 | Jan 2026 | UI/UX styling overhaul complete (v7.7). Color scheme corrections, toast consolidation, element colors, progress bar readability. |
 | 2.0 | Jan 2026 | Quest system complete (7 API endpoints, GuildAdvancementScene). Node blocking complete (visuals, BFS blocking). Boss integration complete (BossPhaseIndicator, WebSocket events). |
 | 1.0 | Jan 2026 | Initial split from DEVELOPMENT_ROADMAP.md. Added quest system, node blocking, settings expansion. |

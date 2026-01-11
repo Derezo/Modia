@@ -46,6 +46,20 @@ export const PARCHMENT_COLORS = {
     ink: '#1a1a2e'
   },
 
+  // Element/skill type colors (muted to fit parchment aesthetic)
+  element: {
+    fire: { bg: 'rgba(180, 80, 60, 0.15)', border: '#a85040', text: '#8b4030', icon: '🔥' },
+    ice: { bg: 'rgba(70, 130, 180, 0.15)', border: '#4080a0', text: '#305070', icon: '❄️' },
+    lightning: { bg: 'rgba(180, 160, 60, 0.15)', border: '#a09030', text: '#706020', icon: '⚡' },
+    wind: { bg: 'rgba(120, 180, 160, 0.15)', border: '#609080', text: '#406050', icon: '💨' },
+    earth: { bg: 'rgba(140, 120, 80, 0.15)', border: '#8a7040', text: '#604830', icon: '🪨' },
+    water: { bg: 'rgba(70, 130, 160, 0.15)', border: '#407090', text: '#305060', icon: '💧' },
+    light: { bg: 'rgba(200, 180, 100, 0.15)', border: '#b0a050', text: '#807030', icon: '✨' },
+    dark: { bg: 'rgba(80, 70, 100, 0.15)', border: '#504060', text: '#403050', icon: '🌑' },
+    passive: { bg: 'rgba(70, 140, 90, 0.15)', border: '#4a8050', text: '#3a6040', icon: '🛡️' },
+    physical: { bg: 'rgba(140, 100, 70, 0.15)', border: '#8a6040', text: '#604030', icon: '⚔️' }
+  },
+
   // Shadow and overlay
   shadow: 'rgba(0, 0, 0, 0.3)',
   overlay: 'rgba(0, 0, 0, 0.5)',

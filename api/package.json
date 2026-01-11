@@ -12,7 +12,13 @@
     "migrate:rollback": "node src/db/migrate.js rollback",
     "seed": "node src/db/seed.js",
     "lint": "eslint src/",
-    "test": "node --test src/tests/*.test.js"
+    "test": "npm run test:all",
+    "test:unit": "NODE_ENV=test node --test src/tests/unit/*.test.js src/tests/balance/*.test.js",
+    "test:integration": "NODE_ENV=test node --test src/tests/integration/*.test.js",
+    "test:ratelimit": "NODE_ENV=test TEST_RATE_LIMITS=true node --test src/tests/ratelimit/*.test.js",
+    "test:quick": "npm run test:unit",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:ratelimit",
+    "test:ci": "npm run test:unit && npm run test:integration"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",

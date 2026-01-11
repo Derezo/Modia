@@ -1,3 +1,6 @@
+import { PARCHMENT_COLORS } from '../ui/parchment/ParchmentTheme.js';
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+
 export class SkillTreePanel {
   constructor(game, container) {
     this.game = game;
@@ -27,7 +30,7 @@ export class SkillTreePanel {
       this.render();
     } catch (err) {
       console.error('Failed to load skill tree:', err);
-      this.game.showNotification('Failed to load skills', 'error');
+      parchmentToast.error('Load Failed', 'Failed to load skills');
     }
   }
 
@@ -59,9 +62,11 @@ export class SkillTreePanel {
         }
         .branch-name {
           font-weight: bold;
-          color: #ffd700;
+          color: ${PARCHMENT_COLORS.text.primary};
           margin-bottom: 12px;
           font-size: 14px;
+          border-bottom: 1px solid ${PARCHMENT_COLORS.border};
+          padding-bottom: 6px;
         }
         .branch-skills {
           display: flex;
@@ -129,12 +134,12 @@ export class SkillTreePanel {
         }
         .xp-label {
           font-size: 12px;
-          color: #8a8aaa;
+          color: ${PARCHMENT_COLORS.text.secondary};
         }
         .xp-value {
           font-size: 24px;
           font-weight: bold;
-          color: #4a90d9;
+          color: ${PARCHMENT_COLORS.text.primary};
         }
         .skill-name {
           font-weight: bold;
@@ -142,12 +147,42 @@ export class SkillTreePanel {
           margin-bottom: 4px;
         }
         .skill-type {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
           font-size: 12px;
-          color: #8a8aaa;
+          color: ${PARCHMENT_COLORS.text.primary};
           margin-bottom: 8px;
+          padding: 3px 8px;
+          border-radius: 3px;
         }
-        .skill-type.active { color: #ff7b00; }
-        .skill-type.passive { color: #00ff88; }
+        .skill-type-icon {
+          font-size: 14px;
+        }
+        .skill-type.active {
+          background: ${PARCHMENT_COLORS.element.fire.bg};
+          border: 1px solid ${PARCHMENT_COLORS.element.fire.border};
+        }
+        .skill-type.passive {
+          background: ${PARCHMENT_COLORS.element.passive.bg};
+          border: 1px solid ${PARCHMENT_COLORS.element.passive.border};
+        }
+        .skill-type.fire {
+          background: ${PARCHMENT_COLORS.element.fire.bg};
+          border: 1px solid ${PARCHMENT_COLORS.element.fire.border};
+        }
+        .skill-type.ice {
+          background: ${PARCHMENT_COLORS.element.ice.bg};
+          border: 1px solid ${PARCHMENT_COLORS.element.ice.border};
+        }
+        .skill-type.lightning {
+          background: ${PARCHMENT_COLORS.element.lightning.bg};
+          border: 1px solid ${PARCHMENT_COLORS.element.lightning.border};
+        }
+        .skill-type.physical {
+          background: ${PARCHMENT_COLORS.element.physical.bg};
+          border: 1px solid ${PARCHMENT_COLORS.element.physical.border};
+        }
         .skill-description {
           font-size: 13px;
           color: #ccc;
@@ -174,22 +209,29 @@ export class SkillTreePanel {
         }
         .progress-text {
           font-size: 12px;
-          color: #8a8aaa;
+          color: ${PARCHMENT_COLORS.text.primary};
           min-width: 50px;
           text-align: right;
+          font-weight: bold;
+          text-shadow:
+            -1px -1px 0 rgba(255, 255, 255, 0.5),
+            1px -1px 0 rgba(255, 255, 255, 0.5),
+            -1px 1px 0 rgba(255, 255, 255, 0.5),
+            1px 1px 0 rgba(255, 255, 255, 0.5);
         }
         .skill-cost {
           font-size: 12px;
           margin-bottom: 8px;
+          color: ${PARCHMENT_COLORS.text.secondary};
         }
-        .skill-cost.affordable { color: #4a90d9; }
-        .skill-cost.expensive { color: #ff4444; }
+        .skill-cost.affordable { color: ${PARCHMENT_COLORS.state.info}; }
+        .skill-cost.expensive { color: ${PARCHMENT_COLORS.state.error}; }
         .skill-requires {
           font-size: 11px;
-          color: #ff7b00;
+          color: ${PARCHMENT_COLORS.state.warning};
           margin-bottom: 12px;
         }
-        .skill-requires.met { color: #00ff88; }
+        .skill-requires.met { color: ${PARCHMENT_COLORS.state.success}; }
         .learn-button {
           width: 100%;
         }
@@ -342,14 +384,21 @@ export class SkillTreePanel {
         <button class="btn btn-primary learn-button" data-action="max" ${this.xpPool < this.calculateCost(skill, currentLevel, skill.maxLevel) ? 'disabled' : ''}>Max Out (${this.calculateCost(skill, currentLevel, skill.maxLevel).toLocaleString()} XP)</button>
       `;
     } else if (isMaxed) {
-      actionsHtml = '<div style="text-align: center; color: #ffd700; font-weight: bold;">MASTERED</div>';
+      actionsHtml = `<div style="text-align: center; color: ${PARCHMENT_COLORS.accent.gold}; font-weight: bold;">MASTERED</div>`;
     } else if (!meetsRequirements) {
-      actionsHtml = '<div style="text-align: center; color: #ff4444;">Requirements not met</div>';
+      actionsHtml = `<div style="text-align: center; color: ${PARCHMENT_COLORS.state.error};">Requirements not met</div>`;
     }
+
+    // Determine element class and icon for skill type
+    const elementClass = skill.element ? skill.element.toLowerCase() : skill.type;
+    const elementIcon = this.getSkillTypeIcon(skill.element || skill.type);
 
     detailsEl.innerHTML = `
       <div class="skill-name">${skill.icon} ${skill.name}</div>
-      <div class="skill-type ${skill.type}">${skill.type.toUpperCase()}</div>
+      <div class="skill-type ${elementClass}">
+        <span class="skill-type-icon">${elementIcon}</span>
+        ${skill.type.charAt(0).toUpperCase() + skill.type.slice(1)}${skill.element ? ` (${skill.element})` : ''}
+      </div>
       <div class="skill-description">${skill.description}</div>
       <div class="skill-progress">
         <div class="progress-bar">
@@ -401,13 +450,30 @@ export class SkillTreePanel {
       this.render();
       this.selectSkill(skill.id);
 
-      this.game.showNotification(
-        `Learned ${skill.name} (Lv.${result.skill.level})! Spent ${result.xpSpent.toLocaleString()} XP`,
-        'success'
-      );
+      parchmentToast.success('Skill Learned', `Learned ${skill.name} (Lv.${result.skill.level})! Spent ${result.xpSpent.toLocaleString()} XP`);
     } catch (err) {
-      this.game.showNotification(err.message, 'error');
+      parchmentToast.error('Learn Failed', err.message);
     }
+  }
+
+  /**
+   * Get icon for skill type/element
+   */
+  getSkillTypeIcon(type) {
+    const icons = {
+      fire: PARCHMENT_COLORS.element.fire.icon,
+      ice: PARCHMENT_COLORS.element.ice.icon,
+      lightning: PARCHMENT_COLORS.element.lightning.icon,
+      wind: PARCHMENT_COLORS.element.wind.icon,
+      earth: PARCHMENT_COLORS.element.earth.icon,
+      water: PARCHMENT_COLORS.element.water.icon,
+      light: PARCHMENT_COLORS.element.light.icon,
+      dark: PARCHMENT_COLORS.element.dark.icon,
+      passive: PARCHMENT_COLORS.element.passive.icon,
+      physical: PARCHMENT_COLORS.element.physical.icon,
+      active: PARCHMENT_COLORS.element.physical.icon
+    };
+    return icons[type?.toLowerCase()] || '✦';
   }
 
   destroy() {

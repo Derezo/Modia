@@ -3,6 +3,13 @@ import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { pool, getClient, withTransaction, query } from '../config/database.js';
+import {
+  getLimiterStats,
+  getAllLimiterStats,
+  resetLimiterStats,
+  resetAllLimiterStats,
+  isRateLimitingEnabled
+} from '../middleware/rateLimiterFactory.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -245,6 +252,61 @@ async function createTestCharacter(token, name = null) {
   return res.body.character;
 }
 
+// ============================================================================
+// Rate Limit Testing Utilities
+// ============================================================================
+
+/**
+ * Fire multiple requests in rapid succession
+ * Useful for testing rate limits
+ * @param {number} count - Number of requests to fire
+ * @param {string} method - HTTP method
+ * @param {string} path - API path
+ * @param {Object|null} body - Request body
+ * @param {string|null} token - Auth token
+ * @returns {Promise<Array>} Array of response objects
+ */
+async function fireRequests(count, method, path, body = null, token = null) {
+  const results = [];
+  for (let i = 0; i < count; i++) {
+    results.push(await request(method, path, body, token));
+  }
+  return results;
+}
+
+/**
+ * Fire requests in parallel (more aggressive than sequential)
+ * @param {number} count - Number of requests to fire
+ * @param {string} method - HTTP method
+ * @param {string} path - API path
+ * @param {Object|null} body - Request body
+ * @param {string|null} token - Auth token
+ * @returns {Promise<Array>} Array of response objects
+ */
+async function fireRequestsParallel(count, method, path, body = null, token = null) {
+  const promises = [];
+  for (let i = 0; i < count; i++) {
+    promises.push(request(method, path, body, token));
+  }
+  return Promise.all(promises);
+}
+
+/**
+ * Wait for rate limit window to reset
+ * @param {number} ms - Milliseconds to wait
+ * @returns {Promise<void>}
+ */
+function waitForRateLimitReset(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Get rate limiter stats wrapper (re-exported from factory)
+ */
+function getRateLimiterStats(name) {
+  return getLimiterStats(name);
+}
+
 export {
   // HTTP client
   request,
@@ -267,5 +329,15 @@ export {
   pool,
   query,
   getClient,
-  withTransaction
+  withTransaction,
+
+  // Rate limit testing utilities
+  fireRequests,
+  fireRequestsParallel,
+  waitForRateLimitReset,
+  getRateLimiterStats,
+  getAllLimiterStats,
+  resetLimiterStats,
+  resetAllLimiterStats,
+  isRateLimitingEnabled
 };

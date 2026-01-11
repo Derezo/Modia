@@ -133,11 +133,18 @@ export class StaminaBar {
     ctx.textBaseline = 'top';
     ctx.fillText('Stamina', x + 8, y + 5);
 
-    // Stamina value
-    ctx.fillStyle = '#ffd700';
+    // Stamina value with outline for readability
     ctx.font = 'bold 12px serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`${Math.floor(this.displayCurrent)}/${this.max}`, x + width - 8, y + 4);
+    ctx.textBaseline = 'top';
+    const staminaText = `${Math.floor(this.displayCurrent)}/${this.max}`;
+    // Draw outline
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.strokeText(staminaText, x + width - 8, y + 4);
+    // Draw fill
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText(staminaText, x + width - 8, y + 4);
 
     // Progress bar
     const barX = x + 8;

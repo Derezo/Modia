@@ -17,6 +17,8 @@ export class BossPhaseIndicator {
     this.bossData = null;
     this.isTransitioning = false;
     this.transitionTimeout = null;
+    this.shakeAnimationId = null;
+    this.shakeTimeoutId = null;
   }
 
   /**
@@ -271,6 +273,9 @@ export class BossPhaseIndicator {
     const canvas = this.game.canvas;
     if (!canvas) return;
 
+    // Cancel any existing shake animation
+    this.cancelShakeAnimation();
+
     // Add shake class or trigger shake animation
     const originalTransform = canvas.style.transform;
     let shakeCount = 0;
@@ -280,6 +285,8 @@ export class BossPhaseIndicator {
     const shake = () => {
       if (shakeCount >= maxShakes) {
         canvas.style.transform = originalTransform;
+        this.shakeAnimationId = null;
+        this.shakeTimeoutId = null;
         return;
       }
 
@@ -288,10 +295,26 @@ export class BossPhaseIndicator {
       canvas.style.transform = `translate(${x}px, ${y}px)`;
       shakeCount++;
 
-      requestAnimationFrame(() => setTimeout(shake, 50));
+      this.shakeAnimationId = requestAnimationFrame(() => {
+        this.shakeTimeoutId = setTimeout(shake, 50);
+      });
     };
 
     shake();
+  }
+
+  /**
+   * Cancel ongoing shake animation
+   */
+  cancelShakeAnimation() {
+    if (this.shakeAnimationId) {
+      cancelAnimationFrame(this.shakeAnimationId);
+      this.shakeAnimationId = null;
+    }
+    if (this.shakeTimeoutId) {
+      clearTimeout(this.shakeTimeoutId);
+      this.shakeTimeoutId = null;
+    }
   }
 
   /**
@@ -323,6 +346,9 @@ export class BossPhaseIndicator {
    * Destroy the indicator
    */
   destroy() {
+    // Cancel any ongoing shake animation
+    this.cancelShakeAnimation();
+
     if (this.transitionTimeout) {
       clearTimeout(this.transitionTimeout);
       this.transitionTimeout = null;

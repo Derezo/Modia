@@ -102,6 +102,20 @@ async function getClearedNodes(userId) {
 }
 
 /**
+ * Get nodes that user has physically traveled to (not just discovered via adjacency)
+ * @param {number} userId - User ID
+ * @returns {Promise<Set<number>>} Set of visited node IDs
+ */
+async function getVisitedNodes(userId) {
+  const result = await query(
+    `SELECT node_id FROM user_node_discovery
+     WHERE user_id = $1 AND discovery_method = 'travel'`,
+    [userId]
+  );
+  return new Set(result.rows.map(r => r.node_id));
+}
+
+/**
  * Find shortest path between two world nodes
  * @param {number} fromNodeId - Starting node ID
  * @param {number} toNodeId - Destination node ID
@@ -270,18 +284,31 @@ router.get('/path/:targetNodeId', authenticate, asyncHandler(async (req, res) =>
   // Check if destination is a blocked node (player wants to fight there)
   const destinationBlocked = pathResult.blockedInPath.includes(parseInt(targetNodeId, 10));
 
+  // Check if traveling FROM a blocked node to a non-visited destination
+  const blockedNodes = await getBlockedNodes(userId);
+  const originBlocked = blockedNodes.has(currentNodeId);
+  let cannotReachFromOrigin = false;
+
+  if (originBlocked) {
+    const visitedNodes = await getVisitedNodes(userId);
+    cannotReachFromOrigin = !visitedNodes.has(parseInt(targetNodeId, 10));
+  }
+
   res.json({
     path: pathResult.path,
     pathNodes: pathNodesResult.rows,
     distance: pathResult.distance,
     cost,
-    affordable,
+    affordable: affordable && !cannotReachFromOrigin,
     currentStamina: staminaInfo.current,
     maxStamina: staminaInfo.max,
     // Blocking info
     blockedNodes: pathResult.blockedInPath,
     destinationBlocked,
-    pathBlocked: false // Path was found, so it's not completely blocked
+    pathBlocked: false, // Path was found, so it's not completely blocked
+    // Origin blocking info (when at a blocked node)
+    originBlocked,
+    cannotReachFromOrigin
   });
 }));
 
@@ -360,6 +387,19 @@ router.post('/travel', authenticate, asyncHandler(async (req, res) => {
       `Path is blocked by uncleared nodes: ${blockedNames}. Clear them in battle first.`,
       400
     );
+  }
+
+  // Check if traveling FROM a blocked node to a non-visited destination
+  // From a blocked node, player can only retreat to previously visited nodes
+  const blockedNodes = await getBlockedNodes(req.user.userId);
+  if (blockedNodes.has(currentNodeId)) {
+    const visitedNodes = await getVisitedNodes(req.user.userId);
+    if (!visitedNodes.has(targetNodeId)) {
+      throw new AppError(
+        'You must defeat the enemies here before exploring further, or retreat to a previously visited location.',
+        400
+      );
+    }
   }
 
   const travelCost = pathResult.distance;

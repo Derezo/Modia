@@ -103,7 +103,8 @@ export class Icon {
     // Create image element
     this.imgElement = document.createElement('img');
     this.imgElement.className = 'modia-icon__img';
-    this.imgElement.alt = this.label || `${this.category}-${this.name}`;
+    // Empty alt when label exists to avoid duplication if image fails to load
+    this.imgElement.alt = this.label ? '' : `${this.category}-${this.name}`;
     this.imgElement.draggable = false;
     this.updateImageSource();
     this.element.appendChild(this.imgElement);
@@ -315,8 +316,11 @@ export class Icon {
     const optimalSize = iconLoader.getOptimalSize(pixelSize);
     const imgPath = `/assets/icons/png/${optimalSize}/${category}-${name}.png`;
 
+    // Use descriptive alt for screen readers, but avoid label duplication when image fails
+    const altText = label ? '' : `${category}-${name}`;
+
     return `<span class="${classes.join(' ')}" ${style} title="${escapeHtml(title)}">
-      <img class="modia-icon__img" src="${imgPath}" alt="${escapeHtml(label || `${category}-${name}`)}"
+      <img class="modia-icon__img" src="${imgPath}" alt="${escapeHtml(altText)}"
            style="width: ${pixelSize}px; height: ${pixelSize}px;" draggable="false">
       ${labelHtml}
     </span>`;

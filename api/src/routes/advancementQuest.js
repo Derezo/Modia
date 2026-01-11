@@ -19,6 +19,7 @@ import * as questService from '../services/advancementQuestService.js';
 import * as guildmasterBattleService from '../services/guildmasterBattleService.js';
 import * as battleService from '../services/battleService.js';
 import battleWebsocket from '../services/battleWebsocket.js';
+import { actionLimiter, startLimiter, readLimiter } from '../middleware/battleRateLimiter.js';
 
 const router = express.Router();
 
@@ -50,7 +51,7 @@ async function verifyCharacterOwnership(req, res, next) {
 }
 
 // GET /api/advancement/available/:characterId - Get available quests for character
-router.get('/available/:characterId', authenticate, asyncHandler(verifyCharacterOwnership), asyncHandler(async (req, res) => {
+router.get('/available/:characterId', authenticate, readLimiter, asyncHandler(verifyCharacterOwnership), asyncHandler(async (req, res) => {
   const quests = await questService.getAvailableQuests(req.characterId);
 
   res.json({
@@ -77,7 +78,7 @@ router.get('/available/:characterId', authenticate, asyncHandler(verifyCharacter
 }));
 
 // GET /api/advancement/current/:characterId - Get active quest progress
-router.get('/current/:characterId', authenticate, asyncHandler(verifyCharacterOwnership), asyncHandler(async (req, res) => {
+router.get('/current/:characterId', authenticate, readLimiter, asyncHandler(verifyCharacterOwnership), asyncHandler(async (req, res) => {
   const progress = await questService.getQuestProgress(req.characterId);
 
   if (!progress) {
@@ -96,7 +97,7 @@ router.get('/current/:characterId', authenticate, asyncHandler(verifyCharacterOw
 }));
 
 // POST /api/advancement/accept - Accept a quest
-router.post('/accept', authenticate, asyncHandler(async (req, res) => {
+router.post('/accept', authenticate, actionLimiter, asyncHandler(async (req, res) => {
   const { characterId, questTemplateId } = req.body;
 
   if (!characterId || !questTemplateId) {
@@ -137,7 +138,7 @@ router.post('/accept', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/advancement/abandon/:characterId - Abandon current quest
-router.post('/abandon/:characterId', authenticate, asyncHandler(verifyCharacterOwnership), asyncHandler(async (req, res) => {
+router.post('/abandon/:characterId', authenticate, actionLimiter, asyncHandler(verifyCharacterOwnership), asyncHandler(async (req, res) => {
   const abandoned = await questService.abandonQuest(req.characterId);
 
   if (!abandoned) {
@@ -151,7 +152,7 @@ router.post('/abandon/:characterId', authenticate, asyncHandler(verifyCharacterO
 }));
 
 // GET /api/advancement/boss/:characterId - Check boss trial eligibility
-router.get('/boss/:characterId', authenticate, asyncHandler(verifyCharacterOwnership), asyncHandler(async (req, res) => {
+router.get('/boss/:characterId', authenticate, readLimiter, asyncHandler(verifyCharacterOwnership), asyncHandler(async (req, res) => {
   const eligibility = await questService.canStartBossTrial(req.characterId);
 
   res.json({
@@ -161,7 +162,7 @@ router.get('/boss/:characterId', authenticate, asyncHandler(verifyCharacterOwner
 }));
 
 // POST /api/advancement/boss/start - Start boss trial battle
-router.post('/boss/start', authenticate, asyncHandler(async (req, res) => {
+router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, res) => {
   const { characterId } = req.body;
 
   if (!characterId) {
@@ -170,7 +171,7 @@ router.post('/boss/start', authenticate, asyncHandler(async (req, res) => {
 
   // Verify ownership
   const charResult = await query(
-    'SELECT id, user_id, name, current_node_id FROM characters WHERE id = $1',
+    'SELECT id, user_id, name, level, current_node_id FROM characters WHERE id = $1',
     [characterId]
   );
 
@@ -182,6 +183,22 @@ router.post('/boss/start', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Not authorized to access this character', 403);
   }
 
+  const character = charResult.rows[0];
+
+  // Validate character is at a guild node
+  const nodeCheck = await query(
+    'SELECT id, node_type FROM world_nodes WHERE id = $1',
+    [character.current_node_id]
+  );
+
+  if (nodeCheck.rows.length === 0) {
+    throw new AppError('Character location not found', 400);
+  }
+
+  if (nodeCheck.rows[0].node_type !== 'guild') {
+    throw new AppError('You must be at a guild to start the boss trial', 400);
+  }
+
   // Check eligibility
   const eligibility = await questService.canStartBossTrial(characterId);
 
@@ -189,7 +206,6 @@ router.post('/boss/start', authenticate, asyncHandler(async (req, res) => {
     throw new AppError(eligibility.reason, 400);
   }
 
-  const character = charResult.rows[0];
   const targetClass = eligibility.targetClass;
 
   // Generate guildmaster battle
@@ -237,7 +253,7 @@ router.post('/boss/start', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // GET /api/advancement/history/:characterId - Get completed quests
-router.get('/history/:characterId', authenticate, asyncHandler(verifyCharacterOwnership), asyncHandler(async (req, res) => {
+router.get('/history/:characterId', authenticate, readLimiter, asyncHandler(verifyCharacterOwnership), asyncHandler(async (req, res) => {
   const completed = await questService.getCompletedQuests(req.characterId);
 
   res.json({

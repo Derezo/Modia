@@ -460,18 +460,20 @@ export class Game {
    * @param {string} sceneName - Name of the current scene
    */
   updateNotificationVisibility(sceneName) {
-    const hiddenScenes = ['login', 'register', 'titleIntro'];
-
-    if (hiddenScenes.includes(sceneName)) {
-      this.profileDropdown?.hide();
-      this.partyStatusBar?.hide();
-    } else {
+    // Profile dropdown should ONLY be visible on the world map
+    const profileVisibleScenes = ['worldMap'];
+    if (profileVisibleScenes.includes(sceneName)) {
       this.profileDropdown?.show();
-      // Party status bar visibility is managed by its own state
-      // Only refresh if there might be a party
-      if (this.partyStatusBar?.party) {
-        this.partyStatusBar.show();
-      }
+    } else {
+      this.profileDropdown?.hide();
+    }
+
+    // Party status bar visibility is separate from profile dropdown
+    const partyHiddenScenes = ['login', 'register', 'titleIntro'];
+    if (partyHiddenScenes.includes(sceneName)) {
+      this.partyStatusBar?.hide();
+    } else if (this.partyStatusBar?.party) {
+      this.partyStatusBar.show();
     }
   }
 }

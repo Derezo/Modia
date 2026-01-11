@@ -69,7 +69,13 @@ export class WorldMapScene extends Scene {
     this.previewAffordable = true;
     this.previewBlockedNodes = []; // Node IDs that are blocked in the path
     this.previewPathBlocked = false; // True if path is blocked by intermediate nodes
+    this.previewOriginBlocked = false; // True if current node is blocked
+    this.previewCannotReach = false; // True if destination cannot be reached from origin
     this.pathPreviewCache = new Map(); // Cache path calculations
+    this._pathPreviewRequestId = 0; // Track async requests to prevent stale updates
+
+    // Reachability state (for node blocking system)
+    this.reachableNodes = new Set(); // Set of node IDs reachable from current position
 
     // Event listener cleanup
     this.abortController = null;
@@ -220,11 +226,16 @@ export class WorldMapScene extends Scene {
    * Update path preview when hovering over a node
    */
   async updatePathPreview(node) {
+    // Track request ID to handle race conditions from rapid mouse movements
+    const requestId = ++this._pathPreviewRequestId;
+
     // Clear preview if no node hovered, traveling, or hovering current node
     if (!node || this.isTraveling || !this.currentNode || node.id === this.currentNode.id) {
       this.previewPath = null;
       this.previewCost = 0;
       this.previewAffordable = true;
+      this.previewOriginBlocked = false;
+      this.previewCannotReach = false;
       return;
     }
 
@@ -233,6 +244,8 @@ export class WorldMapScene extends Scene {
       this.previewPath = null;
       this.previewCost = 0;
       this.previewAffordable = false;
+      this.previewOriginBlocked = false;
+      this.previewCannotReach = false;
       return;
     }
 
@@ -245,32 +258,49 @@ export class WorldMapScene extends Scene {
       this.previewAffordable = this.staminaBar ? this.staminaBar.current >= cached.cost : true;
       this.previewBlockedNodes = cached.blockedNodes || [];
       this.previewPathBlocked = cached.pathBlocked || false;
+      this.previewOriginBlocked = cached.originBlocked || false;
+      this.previewCannotReach = cached.cannotReachFromOrigin || false;
       return;
     }
 
     // Fetch path from server
     try {
       const result = await this.game.api.getPathPreview(node.id);
+
+      // Discard stale response if a newer request was made
+      if (requestId !== this._pathPreviewRequestId) return;
+
       this.previewPath = result.path;
       this.previewCost = result.cost;
       this.previewAffordable = result.affordable;
       this.previewBlockedNodes = result.blockedNodes || [];
       this.previewPathBlocked = result.pathBlocked || false;
+      this.previewOriginBlocked = result.originBlocked || false;
+      this.previewCannotReach = result.cannotReachFromOrigin || false;
 
       // Cache the result
       this.pathPreviewCache.set(cacheKey, {
         path: result.path,
         cost: result.cost,
         blockedNodes: result.blockedNodes || [],
-        pathBlocked: result.pathBlocked || false
+        pathBlocked: result.pathBlocked || false,
+        originBlocked: result.originBlocked || false,
+        cannotReachFromOrigin: result.cannotReachFromOrigin || false
       });
     } catch (err) {
-      // Silently fail - just don't show preview
+      // Log for debugging but don't show user-facing error
+      console.warn('Path preview fetch failed:', err.message);
+
+      // Discard if stale request
+      if (requestId !== this._pathPreviewRequestId) return;
+
       this.previewPath = null;
       this.previewCost = 0;
       this.previewAffordable = false;
       this.previewBlockedNodes = [];
       this.previewPathBlocked = false;
+      this.previewOriginBlocked = false;
+      this.previewCannotReach = false;
     }
   }
 
@@ -279,6 +309,80 @@ export class WorldMapScene extends Scene {
    */
   clearPathCache() {
     this.pathPreviewCache.clear();
+  }
+
+  /**
+   * Calculate which nodes are reachable from the current position.
+   * Uses BFS traversal through connections, considering node blocking.
+   *
+   * Rules:
+   * - Can reach adjacent nodes including blocked ones (to show them as potential targets)
+   * - Cannot traverse THROUGH blocked nodes (they block further paths)
+   * - Only considers discovered nodes
+   *
+   * @returns {Set<number>} Set of reachable node IDs
+   */
+  calculateReachableNodes() {
+    this.reachableNodes = new Set();
+
+    if (!this.currentNode || !this.nodes.length || !this.connections.length) {
+      return this.reachableNodes;
+    }
+
+    // Build adjacency map from connections
+    const adjacency = new Map();
+    for (const conn of this.connections) {
+      if (!adjacency.has(conn.from_node_id)) {
+        adjacency.set(conn.from_node_id, []);
+      }
+      if (!adjacency.has(conn.to_node_id)) {
+        adjacency.set(conn.to_node_id, []);
+      }
+      adjacency.get(conn.from_node_id).push(conn.to_node_id);
+      adjacency.get(conn.to_node_id).push(conn.from_node_id);
+    }
+
+    // Create node lookup for quick access to blocked status
+    const nodeMap = new Map();
+    for (const node of this.nodes) {
+      nodeMap.set(node.id, node);
+    }
+
+    // BFS from current node
+    const visited = new Set();
+    const queue = [this.currentNode.id];
+    visited.add(this.currentNode.id);
+    this.reachableNodes.add(this.currentNode.id);
+
+    while (queue.length > 0) {
+      const currentId = queue.shift();
+      const currentNodeData = nodeMap.get(currentId);
+
+      // If this node is blocked (and not the starting node), we can reach it but not traverse through it
+      const isBlocked = currentNodeData?.blocked && currentId !== this.currentNode.id;
+
+      const neighbors = adjacency.get(currentId) || [];
+      for (const neighborId of neighbors) {
+        if (visited.has(neighborId)) continue;
+
+        const neighborNode = nodeMap.get(neighborId);
+        if (!neighborNode) continue;
+
+        // Only consider discovered nodes
+        if (!this.isNodeDiscovered(neighborNode)) continue;
+
+        visited.add(neighborId);
+        this.reachableNodes.add(neighborId);
+
+        // Only continue BFS from this neighbor if the current node is not blocked
+        // (we can reach neighbors of a blocked node, but we can't traverse through it)
+        if (!isBlocked) {
+          queue.push(neighborId);
+        }
+      }
+    }
+
+    return this.reachableNodes;
   }
 
   /**
@@ -360,9 +464,12 @@ export class WorldMapScene extends Scene {
       this.game.state.set('worldNodes', this.nodes);
       this.game.state.set('currentNode', this.currentNode);
 
-      // Update discovery state for fog of war rendering (with connections for polygon detection)
+      // Calculate reachable nodes first (needed for filtering)
+      this.calculateReachableNodes();
+
+      // Update discovery state for fog of war rendering (filtered by reachability)
       if (this.effects) {
-        this.effects.updateDiscoveryState(this.nodes, this.connections);
+        this.effects.updateDiscoveryState(this.nodes, this.connections, this.reachableNodes);
       }
 
       // Update minimap bounds if nodes changed
@@ -391,43 +498,8 @@ export class WorldMapScene extends Scene {
 
     const isMobile = responsive.isMobile();
 
-    // Parchment-styled player info panel (top-left)
+    // Current node info panel (bottom center) - Parchment styled
     container.innerHTML = `
-      <div style="
-        position: absolute;
-        top: 16px;
-        left: 16px;
-        pointer-events: auto;
-      ">
-        <div style="
-          padding: ${isMobile ? '8px 12px' : '10px 16px'};
-          background: ${getParchmentGradient('to bottom')};
-          border: ${getParchmentBorder()};
-          border-radius: 6px;
-          box-shadow: ${getParchmentShadow(false)};
-          font-family: Georgia, serif;
-        ">
-          <div style="
-            font-weight: bold;
-            color: ${PARCHMENT_COLORS.accent.gold};
-            font-size: ${isMobile ? '13px' : '14px'};
-            text-shadow: 0 1px 0 rgba(0,0,0,0.2);
-          ">${this.game.state.get('user')?.username || 'Adventurer'}</div>
-          <div style="
-            font-size: ${isMobile ? '11px' : '12px'};
-            color: ${PARCHMENT_COLORS.text.secondary};
-            margin-top: 2px;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-          ">
-            <span style="color: ${PARCHMENT_COLORS.accent.gold};">Gold:</span>
-            <span>${(this.game.state.get('user')?.gold || 0).toLocaleString()}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Current node info panel (bottom center) - Parchment styled -->
       <div id="node-info" style="
         position: absolute;
         bottom: ${isMobile ? '12px' : '20px'};
@@ -825,6 +897,11 @@ export class WorldMapScene extends Scene {
 
   getNodeAtPosition(screenX, screenY) {
     for (const node of this.nodes) {
+      // Skip nodes that are not reachable from current position
+      if (this.reachableNodes.size > 0 && !this.reachableNodes.has(node.id)) {
+        continue;
+      }
+
       const nodeX = node.x_coord * this.nodeSpacing + this.cameraX;
       const nodeY = node.y_coord * this.nodeSpacing + this.cameraY;
       const dist = Math.sqrt((screenX - nodeX) ** 2 + (screenY - nodeY) ** 2);
@@ -1020,6 +1097,13 @@ export class WorldMapScene extends Scene {
       const toNode = this.nodes.find(n => n.id === conn.to_node_id);
 
       if (fromNode && toNode) {
+        // Skip connections where either endpoint is not reachable
+        if (this.reachableNodes.size > 0 &&
+            !this.reachableNodes.has(fromNode.id) &&
+            !this.reachableNodes.has(toNode.id)) {
+          continue;
+        }
+
         const x1 = fromNode.x_coord * this.nodeSpacing + this.cameraX;
         const y1 = fromNode.y_coord * this.nodeSpacing + this.cameraY;
         const x2 = toNode.x_coord * this.nodeSpacing + this.cameraX;
@@ -1069,6 +1153,69 @@ export class WorldMapScene extends Scene {
       }
     }
 
+    // Draw locked path indicators for paths leading to undiscovered blocked nodes
+    for (const conn of this.connections) {
+      const fromNode = this.nodes.find(n => n.id === conn.from_node_id);
+      const toNode = this.nodes.find(n => n.id === conn.to_node_id);
+
+      if (fromNode && toNode) {
+        // Check if either endpoint is an undiscovered blocked node
+        const isCombatNodeFrom = ['forest', 'cave', 'mountain', 'bridge'].includes(fromNode.node_type);
+        const isCombatNodeTo = ['forest', 'cave', 'mountain', 'bridge'].includes(toNode.node_type);
+        const isFromMystery = !fromNode.visited && (!this.currentNode || fromNode.id !== this.currentNode.id);
+        const isToMystery = !toNode.visited && (!this.currentNode || toNode.id !== this.currentNode.id);
+
+        // Show lock indicator if path leads to an undiscovered blocked node
+        const showLockIndicator =
+          (isCombatNodeFrom && fromNode.blocked && isFromMystery) ||
+          (isCombatNodeTo && toNode.blocked && isToMystery);
+
+        if (showLockIndicator) {
+          const x1 = fromNode.x_coord * this.nodeSpacing + this.cameraX;
+          const y1 = fromNode.y_coord * this.nodeSpacing + this.cameraY;
+          const x2 = toNode.x_coord * this.nodeSpacing + this.cameraX;
+          const y2 = toNode.y_coord * this.nodeSpacing + this.cameraY;
+
+          // Skip if off screen
+          if (Math.max(x1, x2) >= 0 && Math.min(x1, x2) <= ctx.canvas.width &&
+              Math.max(y1, y2) >= 0 && Math.min(y1, y2) <= ctx.canvas.height) {
+
+            // Calculate midpoint of path
+            const control = this.getPathControlPoint(x1, y1, x2, y2, conn.from_node_id, conn.to_node_id);
+            // Bezier midpoint at t=0.5
+            const midX = 0.25 * x1 + 0.5 * control.x + 0.25 * x2;
+            const midY = 0.25 * y1 + 0.5 * control.y + 0.25 * y2;
+
+            // Draw path tint (red/orange overlay)
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.quadraticCurveTo(control.x, control.y, x2, y2);
+            ctx.strokeStyle = 'rgba(180, 80, 60, 0.5)';
+            ctx.lineWidth = 6;
+            ctx.stroke();
+            ctx.restore();
+
+            // Draw lock icon background
+            ctx.beginPath();
+            ctx.arc(midX, midY, 12, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(60, 40, 30, 0.85)';
+            ctx.fill();
+            ctx.strokeStyle = '#a85040';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Draw lock icon
+            ctx.fillStyle = '#c9a227';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('\u{1F512}', midX, midY);
+          }
+        }
+      }
+    }
+
     // Draw path preview (golden glow along the path)
     if (this.previewPath && this.previewPath.length > 1) {
       this.renderPathPreview(ctx);
@@ -1076,6 +1223,11 @@ export class WorldMapScene extends Scene {
 
     // Draw nodes
     for (const node of this.nodes) {
+      // Skip nodes that are not reachable from current position
+      if (this.reachableNodes.size > 0 && !this.reachableNodes.has(node.id)) {
+        continue;
+      }
+
       const x = node.x_coord * this.nodeSpacing + this.cameraX;
       const y = node.y_coord * this.nodeSpacing + this.cameraY;
 
@@ -1127,9 +1279,10 @@ export class WorldMapScene extends Scene {
           ctx.setLineDash([]);
         }
 
-        // Draw blocked/cleared indicator for combat nodes
+        // Draw blocked/cleared indicator for combat nodes (only for VISITED nodes)
+        // Mystery/undiscovered nodes should not reveal blocked status
         const isCombatNode = ['forest', 'cave', 'mountain', 'bridge'].includes(node.node_type);
-        if (isCombatNode && !isCurrent) {
+        if (isCombatNode && !isCurrent && !isMystery) {
           if (node.blocked) {
             // Red tint overlay for blocked nodes
             ctx.save();
@@ -1216,6 +1369,11 @@ export class WorldMapScene extends Scene {
 
     // Second pass: Render node tooltips AFTER fog of war so they're always visible
     for (const node of this.nodes) {
+      // Skip nodes that are not reachable from current position
+      if (this.reachableNodes.size > 0 && !this.reachableNodes.has(node.id)) {
+        continue;
+      }
+
       const x = node.x_coord * this.nodeSpacing + this.cameraX;
       const y = node.y_coord * this.nodeSpacing + this.cameraY;
 
@@ -1264,15 +1422,22 @@ export class WorldMapScene extends Scene {
 
   /**
    * Render path preview (golden glow along the path) using organic curves
-   * Color coding: gold = affordable, red = not affordable, orange = path blocked by intermediate node
+   * Color coding:
+   * - gold = affordable path
+   * - red = not affordable (insufficient stamina)
+   * - orange = path blocked by intermediate node
+   * - maroon = cannot reach from origin (origin is blocked)
    */
   renderPathPreview(ctx) {
     if (!this.previewPath || this.previewPath.length < 2) return;
 
-    // Determine path color: blocked intermediate nodes = orange, not affordable = red, else = gold
+    // Determine path color based on blocking/affordability state
     let pathColor, glowColor;
-    if (this.previewPathBlocked) {
-      pathColor = 'rgba(255, 140, 0, 0.6)'; // Orange for blocked
+    if (this.previewCannotReach) {
+      pathColor = 'rgba(128, 0, 64, 0.6)'; // Maroon for unreachable from origin
+      glowColor = 'rgba(128, 0, 64, 0.2)';
+    } else if (this.previewPathBlocked) {
+      pathColor = 'rgba(255, 140, 0, 0.6)'; // Orange for blocked intermediate
       glowColor = 'rgba(255, 140, 0, 0.2)';
     } else if (!this.previewAffordable) {
       pathColor = 'rgba(180, 80, 80, 0.6)'; // Red for not affordable
@@ -1361,6 +1526,9 @@ export class WorldMapScene extends Scene {
       } else if (!isVisited) {
         // Mystery node - discovered but not visited
         costLine = { text: 'Mystery location', color: '#6a6a8a' };
+      } else if (this.previewCannotReach) {
+        // Cannot reach from origin (origin is blocked)
+        costLine = { text: 'Clear area first', color: '#800040' };
       } else if (this.previewPathBlocked) {
         // Path is blocked by intermediate node
         costLine = { text: 'Path blocked', color: '#ff8c00' };
@@ -1374,9 +1542,10 @@ export class WorldMapScene extends Scene {
       }
     }
 
-    // Add blocked indicator if destination is blocked
+    // Add blocked indicator if destination is blocked (only for VISITED nodes)
+    // Undiscovered blocked nodes should still show "Mystery location"
     const isCombatNode = ['forest', 'cave', 'mountain', 'bridge'].includes(node.node_type);
-    if (isCombatNode && node.blocked && !isCurrent) {
+    if (isCombatNode && node.blocked && !isCurrent && isVisited) {
       costLine = { text: 'Blocked - defeat enemies first', color: '#ff4444' };
     }
 

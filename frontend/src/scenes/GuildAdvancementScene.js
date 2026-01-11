@@ -107,6 +107,13 @@ export class GuildAdvancementScene extends Scene {
     if (this.uiElement) {
       const prevTab = this.activeTab;
       const prevSelected = this.selectedQuest;
+
+      // Abort existing event listeners before recreating UI
+      if (this.abortController) {
+        this.abortController.abort();
+      }
+      this.abortController = new AbortController();
+
       this.uiElement.remove();
       this.createUI();
       this.setupEventListeners();
@@ -990,9 +997,10 @@ export class GuildAdvancementScene extends Scene {
       </div>
     `;
 
-    // Add event listeners
-    detailEl.querySelector('#start-boss-btn')?.addEventListener('click', () => this.handleStartBossTrial());
-    detailEl.querySelector('#abandon-btn')?.addEventListener('click', () => this.handleAbandonQuest());
+    // Add event listeners with abort signal for cleanup
+    const opts = { signal: this.abortController.signal };
+    detailEl.querySelector('#start-boss-btn')?.addEventListener('click', () => this.handleStartBossTrial(), opts);
+    detailEl.querySelector('#abandon-btn')?.addEventListener('click', () => this.handleAbandonQuest(), opts);
   }
 
   renderQuestDetail(quest) {
@@ -1074,7 +1082,9 @@ export class GuildAdvancementScene extends Scene {
       </div>
     `;
 
-    detailEl.querySelector('#accept-btn')?.addEventListener('click', () => this.handleAcceptQuest(quest));
+    // Add event listener with abort signal for cleanup
+    const opts = { signal: this.abortController.signal };
+    detailEl.querySelector('#accept-btn')?.addEventListener('click', () => this.handleAcceptQuest(quest), opts);
   }
 
   renderGuildmaster() {
@@ -1173,13 +1183,14 @@ export class GuildAdvancementScene extends Scene {
       </div>
     `;
 
-    // Add event listeners
-    listEl.querySelector('#gm-boss-btn')?.addEventListener('click', () => this.handleStartBossTrial());
-    detailEl.querySelector('#gm-boss-btn')?.addEventListener('click', () => this.handleStartBossTrial());
+    // Add event listeners with abort signal for cleanup
+    const opts = { signal: this.abortController.signal };
+    listEl.querySelector('#gm-boss-btn')?.addEventListener('click', () => this.handleStartBossTrial(), opts);
+    detailEl.querySelector('#gm-boss-btn')?.addEventListener('click', () => this.handleStartBossTrial(), opts);
     detailEl.querySelector('#gm-quests-btn')?.addEventListener('click', () => {
       this.activeTab = 'quests';
       this.updateUI();
-    });
+    }, opts);
   }
 
   async handleAcceptQuest(quest) {
