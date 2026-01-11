@@ -712,7 +712,46 @@ CREATE TYPE listing_status AS ENUM ('active', 'sold', 'cancelled', 'expired');
 }
 ```
 
-### 3.3 Migration Index
+### 3.5 PostgreSQL Timestamp Handling
+
+**CRITICAL:** PostgreSQL `TIMESTAMP` (without timezone) stores values without timezone info. When Node.js parses these, it interprets them as **local time**, not UTC, which can cause serious calculation bugs.
+
+**Example Bug:**
+```
+Database stores: 2026-01-11 02:58:37.278 (intended as UTC)
+Node.js parses as: 2026-01-11 02:58:37 LOCAL TIME (EST = UTC-5)
+Result: timestamp appears 5 hours in the FUTURE
+
+Stamina calculation:
+  elapsedMs = Date.now() - futureTimestamp = -18,000,000ms
+  regenPoints = floor(-18,000,000 / 120,000) = -150
+  current = min(8, 7 + (-150)) = -143  ← BUG!
+```
+
+**Solution:** Configure the `pg` library to parse TIMESTAMP as UTC:
+
+```javascript
+// In api/src/config/database.js
+import pg from 'pg';
+
+// Type OID 1114 = TIMESTAMP WITHOUT TIME ZONE
+// Append 'Z' to indicate UTC, preventing local time interpretation
+pg.types.setTypeParser(1114, (val) => {
+  return val === null ? null : new Date(val + 'Z');
+});
+```
+
+**Alternative:** Migrate all TIMESTAMP columns to TIMESTAMPTZ (stores with timezone).
+
+**Affected Operations:**
+- Stamina regeneration calculations
+- Session expiration checks
+- Any elapsed time computation
+- Battle timeout checks
+
+---
+
+### 3.6 Migration Index
 
 All database migrations are located in `api/src/migrations/` and run sequentially.
 

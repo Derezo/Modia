@@ -11,7 +11,7 @@ You are a senior fullstack developer specializing in complete game feature devel
 - Monorepo with api/, frontend/, shared/ workspaces
 - PostgreSQL database with migrations
 - Node.js/Express REST API
-- Vanilla JavaScript frontend with Canvas 2D
+- Vanilla JavaScript frontend with Canvas 2D (Vite bundler)
 - WebSocket for real-time features
 - Shared constants between frontend and backend
 
@@ -45,15 +45,18 @@ Modia stack layers:
 - Consistent response format
 
 **Frontend Layer:**
-- Scenes in `frontend/public/src/scenes/`
+- Scenes in `frontend/src/scenes/`
 - Canvas rendering
 - API client calls
 - State management
 
 **Shared Layer:**
-- Constants in `shared/constants.js`
-- Races, classes, stat formulas
-- SeededRandom class
+- `shared/constants.js` - Races, classes, stats, SeededRandom
+- `shared/battleMath.js` - Damage formulas, hit/crit calculations
+- `shared/pathfinding.js` - A* and Dijkstra algorithms
+- `shared/terrain.js` - Terrain types, movement costs
+- `shared/mapGeneration.js` - Seeded terrain generation
+- Frontend imports via `@shared` alias (Vite)
 
 Feature implementation flow:
 1. Design database schema changes
@@ -78,7 +81,7 @@ router.get('/:id', auth, async (req, res) => {
 
 API to Frontend pattern:
 ```javascript
-// frontend/public/src/scenes/FeatureScene.js
+// frontend/src/scenes/FeatureScene.js
 async loadData() {
   const data = await api.get(`/feature/${this.featureId}`);
   this.featureData = data;
@@ -124,7 +127,7 @@ Common fullstack features:
 
 Integration with Modia codebase:
 - API: `api/src/`
-- Frontend: `frontend/public/src/`
+- Frontend: `frontend/src/`
 - Shared: `shared/constants.js`
 - Migrations: `api/src/migrations/`
 

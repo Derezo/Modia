@@ -1487,7 +1487,23 @@ export class MarketplaceScene extends Scene {
   }
 
   async executeOrder() {
-    if (!this.selectedItem || !this.activeCharacter) return;
+    if (!this.selectedItem || !this.activeCharacter) {
+      console.error('[MarketplaceScene] Cannot execute order - missing:', {
+        selectedItem: !!this.selectedItem,
+        activeCharacter: !!this.activeCharacter
+      });
+      return;
+    }
+
+    console.log('[MarketplaceScene] Executing order:', {
+      itemId: this.selectedItem.id,
+      itemName: this.selectedItem.name,
+      side: this.orderSide,
+      type: this.orderType,
+      price: this.orderPrice,
+      quantity: this.orderQuantity,
+      characterId: this.activeCharacter.id
+    });
 
     try {
       let result;
@@ -1499,6 +1515,7 @@ export class MarketplaceScene extends Scene {
           this.orderQuantity,
           this.activeCharacter.id
         );
+        console.log('[MarketplaceScene] Order placed, result:', result);
       } else {
         result = await this.game.api.placeMarketOrder(
           this.selectedItem.id,
@@ -1522,13 +1539,17 @@ export class MarketplaceScene extends Scene {
       );
 
       // Refresh data
+      console.log('[MarketplaceScene] Refreshing data...');
       await this.loadOrderBook(this.selectedItem.id);
       const ordersData = await this.game.api.getMyOrders();
+      console.log('[MarketplaceScene] My orders:', ordersData);
       this.myOrders = ordersData.orders || [];
       this.updateTabs();
       this.renderContent();
+      console.log('[MarketplaceScene] Order flow complete, myOrders count:', this.myOrders.length);
 
     } catch (err) {
+      console.error('[MarketplaceScene] Order failed:', err);
       marketToast.error('Order Failed', err.message);
     }
   }

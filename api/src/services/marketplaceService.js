@@ -12,7 +12,8 @@ import { AppError } from '../middleware/errorHandler.js';
 import { MAX_GOLD } from '../config/constants.js';
 import { MAX_OPEN_ORDERS_PER_USER } from '../../../shared/constants.js';
 import * as marketplaceWebsocket from './marketplaceWebsocket.js';
-import * as marketplaceAudit from './marketplaceAuditService.js';
+// Note: marketplaceAudit is imported dynamically in route handlers (after transaction commits)
+// to avoid deadlocks caused by FK checks on locked rows
 
 /**
  * Get the order book for an item (aggregated by price level)
@@ -448,24 +449,21 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
     console.error('WebSocket notification failed in executeTrade:', wsError);
   }
 
-  // Audit log (wrapped in try-catch to not break the transaction)
-  try {
-    await marketplaceAudit.logTradeExecution(buyOrder.user_id, sellOrder.user_id, {
-      buyOrderId: buyOrder.id,
-      sellOrderId: sellOrder.id,
-      itemTemplateId: itemTemplateId,
-      price: executionPrice,
-      quantity: quantity,
-      totalGold: totalGold
-    });
-  } catch (auditError) {
-    console.error('Audit logging failed in executeTrade:', auditError);
-  }
+  // NOTE: Audit logging moved to route handler (after transaction commits) to avoid deadlocks
+  // The audit service uses a separate DB connection which causes FK check deadlocks
 
   return {
     quantity,
     price: executionPrice,
-    totalGold
+    totalGold,
+    // Include trade info for post-transaction audit logging
+    _auditInfo: {
+      buyerId: buyOrder.user_id,
+      sellerId: sellOrder.user_id,
+      buyOrderId: buyOrder.id,
+      sellOrderId: sellOrder.id,
+      itemTemplateId: itemTemplateId
+    }
   };
 }
 
@@ -473,12 +471,15 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
  * Place a limit order with automatic matching
  */
 async function placeLimitOrder(client, userId, characterId, itemTemplateId, side, price, quantity) {
+  console.log('[placeLimitOrder] Starting', { userId, characterId, itemTemplateId, side, price, quantity });
+
   // Check open order count - max per user
   const orderCountResult = await client.query(
     `SELECT COUNT(*) as count FROM market_orders
      WHERE user_id = $1 AND status IN ('open', 'partial')`,
     [userId]
   );
+  console.log('[placeLimitOrder] Order count:', orderCountResult.rows[0].count);
   if (parseInt(orderCountResult.rows[0].count, 10) >= MAX_OPEN_ORDERS_PER_USER) {
     throw new AppError(`Maximum of ${MAX_OPEN_ORDERS_PER_USER} open orders allowed. Cancel existing orders first.`, 400);
   }
@@ -488,6 +489,7 @@ async function placeLimitOrder(client, userId, characterId, itemTemplateId, side
     'SELECT id, name, is_tradeable FROM item_templates WHERE id = $1',
     [itemTemplateId]
   );
+  console.log('[placeLimitOrder] Item found:', itemResult.rows[0]);
 
   if (itemResult.rows.length === 0) {
     throw new AppError('Item not found', 404);
@@ -498,6 +500,7 @@ async function placeLimitOrder(client, userId, characterId, itemTemplateId, side
   }
 
   // Create the order
+  console.log('[placeLimitOrder] Inserting order...');
   const orderResult = await client.query(
     `INSERT INTO market_orders (user_id, character_id, item_template_id, side, price, quantity)
      VALUES ($1, $2, $3, $4, $5, $6)
@@ -506,13 +509,18 @@ async function placeLimitOrder(client, userId, characterId, itemTemplateId, side
   );
 
   const order = orderResult.rows[0];
+  console.log('[placeLimitOrder] Order created:', order);
 
   // Reserve gold for buy orders or escrow items for sell orders
   if (side === 'buy') {
     const totalCost = price * quantity;
+    console.log('[placeLimitOrder] Reserving gold:', totalCost);
     await reserveGold(client, userId, order.id, totalCost);
+    console.log('[placeLimitOrder] Gold reserved successfully');
   } else {
+    console.log('[placeLimitOrder] Escrowing items');
     await escrowItems(client, order.id, characterId, itemTemplateId, quantity);
+    console.log('[placeLimitOrder] Items escrowed successfully');
   }
 
   // Try to match with existing orders
@@ -563,33 +571,28 @@ async function placeLimitOrder(client, userId, characterId, itemTemplateId, side
 
   const updatedOrder = updatedOrderResult.rows[0];
 
-  // Broadcast order book update after order is placed/filled
-  try {
-    const updatedOrderBook = await getOrderBook(client, itemTemplateId, 20);
-    marketplaceWebsocket.broadcastOrderBookUpdate(itemTemplateId, updatedOrderBook);
-  } catch (wsError) {
-    console.error('WebSocket order book broadcast failed in placeLimitOrder:', wsError);
-  }
+  console.log('[placeLimitOrder] Preparing return value...');
 
-  // Audit log for order placement
-  try {
-    await marketplaceAudit.logOrderPlacement(userId, characterId, order.id, {
-      itemTemplateId,
-      side,
-      price,
-      quantity,
-      immediatelyFilled: updatedOrder.status === 'filled',
-      partiallyFilled: updatedOrder.status === 'partial'
-    });
-  } catch (auditError) {
-    console.error('Audit logging failed in placeLimitOrder:', auditError);
-  }
-
-  return {
+  // Prepare return value - WebSocket and audit logging will happen AFTER transaction commits
+  // to avoid deadlocks (audit service uses separate connection that can't see uncommitted data)
+  const result = {
     order: updatedOrder,
     trades,
-    itemName: itemName
+    itemName: itemName,
+    // Include info for post-transaction operations
+    _postCommit: {
+      itemTemplateId,
+      userId,
+      characterId,
+      orderId: order.id,
+      side,
+      price,
+      quantity
+    }
   };
+
+  console.log('[placeLimitOrder] Returning result, order id:', result.order.id);
+  return result;
 }
 
 /**
@@ -846,35 +849,24 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
     console.error('WebSocket notification failed in executeMarketOrder:', wsError);
   }
 
-  // Audit log for market order execution
-  try {
-    if (side === 'buy') {
-      await marketplaceAudit.logMarketBuy(userId, characterId, {
-        itemTemplateId,
-        quantity,
-        totalGold: totalCost,
-        averagePrice: totalCost / quantity,
-        tradesCount: trades.length
-      });
-    } else {
-      await marketplaceAudit.logMarketSell(userId, characterId, {
-        itemTemplateId,
-        quantity,
-        totalGold: totalProceeds,
-        averagePrice: totalProceeds / quantity,
-        tradesCount: trades.length
-      });
-    }
-  } catch (auditError) {
-    console.error('Audit logging failed in executeMarketOrder:', auditError);
-  }
+  // NOTE: Audit logging moved to route handler (after transaction commits) to avoid deadlocks
 
   return {
     trades,
     totalQuantity: quantity,
     totalGold: side === 'buy' ? totalCost : totalProceeds,
     averagePrice: (side === 'buy' ? totalCost : totalProceeds) / quantity,
-    itemName: itemName
+    itemName: itemName,
+    // Include info for post-transaction audit logging
+    _postCommit: {
+      userId,
+      characterId,
+      itemTemplateId,
+      side,
+      quantity,
+      totalGold: side === 'buy' ? totalCost : totalProceeds,
+      tradesCount: trades.length
+    }
   };
 }
 
@@ -947,24 +939,20 @@ async function cancelOrder(client, orderId, userId) {
     console.error('WebSocket notification failed in cancelOrder:', wsError);
   }
 
-  // Audit log
-  try {
-    await marketplaceAudit.logOrderCancellation(userId, orderId, {
-      itemTemplateId: order.item_template_id,
-      side: order.side,
-      remainingQuantity: remainingQuantity,
-      price: order.price
-    });
-  } catch (auditError) {
-    console.error('Audit logging failed in cancelOrder:', auditError);
-  }
+  // NOTE: Audit logging moved to route handler (after transaction commits) to avoid deadlocks
 
   return {
     orderId,
     side: order.side,
     returnedQuantity: remainingQuantity,
     returnedGold: refundedGold,
-    itemName: itemResult.rows[0].name
+    itemName: itemResult.rows[0].name,
+    // Include info for post-transaction audit logging
+    _postCommit: {
+      userId,
+      itemTemplateId: order.item_template_id,
+      price: order.price
+    }
   };
 }
 
@@ -972,6 +960,7 @@ async function cancelOrder(client, orderId, userId) {
  * Get user's open orders
  */
 async function getUserOrders(client, userId, status = null) {
+  console.log('[getUserOrders] Fetching orders for userId:', userId, 'status:', status);
   let query = `
     SELECT
       mo.id,
@@ -1002,6 +991,7 @@ async function getUserOrders(client, userId, status = null) {
   query += ' ORDER BY mo.created_at DESC';
 
   const result = await client.query(query, params);
+  console.log('[getUserOrders] Found', result.rows.length, 'orders');
 
   return result.rows.map(row => ({
     id: row.id,
@@ -1064,7 +1054,8 @@ async function searchItems(client, searchTerm = '', itemType = null, limit = 50)
       it.rarity,
       COALESCE(ask.best_ask, 0) as best_ask,
       COALESCE(bid.best_bid, 0) as best_bid,
-      COALESCE(vol.volume_24h, 0) as volume_24h
+      COALESCE(vol.volume_24h, 0) as volume_24h,
+      COALESCE(ord.open_orders, 0) as open_orders
     FROM item_templates it
     LEFT JOIN LATERAL (
       SELECT MIN(price) as best_ask
@@ -1086,6 +1077,12 @@ async function searchItems(client, searchTerm = '', itemType = null, limit = 50)
       WHERE item_template_id = it.id
         AND executed_at > CURRENT_TIMESTAMP - INTERVAL '24 hours'
     ) vol ON true
+    LEFT JOIN LATERAL (
+      SELECT COUNT(*) as open_orders
+      FROM market_orders
+      WHERE item_template_id = it.id
+        AND status IN ('open', 'partial')
+    ) ord ON true
     WHERE (it.is_tradeable IS NULL OR it.is_tradeable = TRUE)
   `;
 
@@ -1104,7 +1101,8 @@ async function searchItems(client, searchTerm = '', itemType = null, limit = 50)
     paramIndex++;
   }
 
-  query += ` ORDER BY COALESCE(vol.volume_24h, 0) DESC, it.name ASC LIMIT $${paramIndex}`;
+  // Sort by open orders (most active first), then alphabetically
+  query += ` ORDER BY COALESCE(ord.open_orders, 0) DESC, it.name ASC LIMIT $${paramIndex}`;
   params.push(limit);
 
   const result = await client.query(query, params);
@@ -1121,7 +1119,8 @@ async function searchItems(client, searchTerm = '', itemType = null, limit = 50)
     rarity: row.rarity,
     bestAsk: row.best_ask ? parseInt(row.best_ask, 10) : null,
     bestBid: row.best_bid ? parseInt(row.best_bid, 10) : null,
-    volume24h: parseInt(row.volume_24h, 10) || 0
+    volume24h: parseInt(row.volume_24h, 10) || 0,
+    openOrders: parseInt(row.open_orders, 10) || 0
   }));
 }
 

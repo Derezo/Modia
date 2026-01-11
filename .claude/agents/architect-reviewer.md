@@ -43,14 +43,19 @@ Modia/
 │       ├── websocket/   # Real-time handlers
 │       ├── migrations/  # Database schema
 │       └── config/      # Configuration
-├── frontend/      # Vanilla JS client
-│   └── public/src/
-│       ├── scenes/      # Game scenes
+├── frontend/      # Vanilla JS client (Vite bundler)
+│   └── src/
+│       ├── scenes/      # Game scenes (15 total)
 │       ├── battle/      # Battle system
-│       ├── core/        # Game loop
-│       └── api/         # HTTP client
-└── shared/        # Shared constants
-    └── constants.js
+│       ├── core/        # Game loop, SceneManager
+│       ├── components/  # UI components
+│       └── api/         # HTTP & WebSocket clients
+└── shared/        # Shared modules
+    ├── constants.js     # Races, classes, stats
+    ├── battleMath.js    # Damage formulas
+    ├── pathfinding.js   # A*, Dijkstra
+    ├── terrain.js       # Terrain costs
+    └── mapGeneration.js # Map generation
 ```
 
 **Scene-based frontend:**

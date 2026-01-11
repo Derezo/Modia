@@ -72,6 +72,8 @@ const MAX_PRICE = 999999999;
 // POST /api/marketplace/orders/limit - Place limit order
 // ============================================
 router.post('/orders/limit', authenticate, requireMarketplaceAccess, orderLimiter, asyncHandler(async (req, res) => {
+  console.log('[/orders/limit] Request body:', req.body);
+  console.log('[/orders/limit] User:', req.user.userId);
   const { itemTemplateId, side, characterId } = req.body;
 
   // SECURITY: Strict price and quantity validation to prevent exploits
@@ -118,6 +120,8 @@ router.post('/orders/limit', authenticate, requireMarketplaceAccess, orderLimite
     throw new AppError('Character not found', 404);
   }
 
+  console.log('[/orders/limit] Character validated, starting transaction...');
+
   const result = await withTransaction(async (client) => {
     return marketplaceService.placeLimitOrder(
       client,
@@ -130,8 +134,49 @@ router.post('/orders/limit', authenticate, requireMarketplaceAccess, orderLimite
     );
   });
 
+  console.log('[/orders/limit] Transaction completed, result:', result?.order?.id);
+
   // Get updated user gold
   const userResult = await query('SELECT gold FROM users WHERE id = $1', [req.user.userId]);
+
+  // Post-transaction operations (non-blocking, don't affect response)
+  // These happen AFTER commit to avoid deadlocks with the transaction
+  if (result._postCommit) {
+    const pc = result._postCommit;
+
+    // WebSocket broadcast - get fresh order book data
+    setImmediate(async () => {
+      try {
+        const client = await getClient();
+        try {
+          const updatedOrderBook = await marketplaceService.getOrderBook(client, pc.itemTemplateId, 20);
+          const { broadcastOrderBookUpdate } = await import('../services/marketplaceWebsocket.js');
+          broadcastOrderBookUpdate(pc.itemTemplateId, updatedOrderBook);
+        } finally {
+          client.release();
+        }
+      } catch (wsError) {
+        console.error('WebSocket order book broadcast failed:', wsError);
+      }
+    });
+
+    // Audit logging
+    setImmediate(async () => {
+      try {
+        const marketplaceAudit = await import('../services/marketplaceAuditService.js');
+        await marketplaceAudit.logOrderPlacement(pc.userId, pc.characterId, pc.orderId, {
+          itemTemplateId: pc.itemTemplateId,
+          side: pc.side,
+          price: pc.price,
+          quantity: pc.quantity,
+          immediatelyFilled: result.order.status === 'filled',
+          partiallyFilled: result.order.status === 'partial'
+        }, req);
+      } catch (auditError) {
+        console.error('Audit logging failed:', auditError);
+      }
+    });
+  }
 
   res.json({
     success: true,
@@ -199,6 +244,35 @@ router.post('/orders/market', authenticate, requireMarketplaceAccess, marketOrde
   // Get updated user gold
   const userResult = await query('SELECT gold FROM users WHERE id = $1', [req.user.userId]);
 
+  // Post-transaction audit logging
+  if (result._postCommit) {
+    const pc = result._postCommit;
+    setImmediate(async () => {
+      try {
+        const marketplaceAudit = await import('../services/marketplaceAuditService.js');
+        if (pc.side === 'buy') {
+          await marketplaceAudit.logMarketBuy(pc.userId, pc.characterId, {
+            itemTemplateId: pc.itemTemplateId,
+            quantity: pc.quantity,
+            totalGold: pc.totalGold,
+            averagePrice: pc.totalGold / pc.quantity,
+            tradesCount: pc.tradesCount
+          }, req);
+        } else {
+          await marketplaceAudit.logMarketSell(pc.userId, pc.characterId, {
+            itemTemplateId: pc.itemTemplateId,
+            quantity: pc.quantity,
+            totalGold: pc.totalGold,
+            averagePrice: pc.totalGold / pc.quantity,
+            tradesCount: pc.tradesCount
+          }, req);
+        }
+      } catch (auditError) {
+        console.error('Audit logging failed:', auditError);
+      }
+    });
+  }
+
   res.json({
     success: true,
     message: `Market ${side} executed: ${result.totalQuantity}x ${result.itemName} @ avg ${Math.round(result.averagePrice)}g`,
@@ -227,6 +301,24 @@ router.delete('/orders/:orderId', authenticate, requireMarketplaceAccess, cancel
 
   // Get updated user gold
   const userResult = await query('SELECT gold FROM users WHERE id = $1', [req.user.userId]);
+
+  // Post-transaction audit logging
+  if (result._postCommit) {
+    const pc = result._postCommit;
+    setImmediate(async () => {
+      try {
+        const marketplaceAudit = await import('../services/marketplaceAuditService.js');
+        await marketplaceAudit.logOrderCancellation(pc.userId, orderIdNum, {
+          itemTemplateId: pc.itemTemplateId,
+          side: result.side,
+          remainingQuantity: result.returnedQuantity,
+          price: pc.price
+        }, req);
+      } catch (auditError) {
+        console.error('Audit logging failed:', auditError);
+      }
+    });
+  }
 
   res.json({
     success: true,

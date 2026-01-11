@@ -153,9 +153,23 @@ export class AssetLoader {
 
   /**
    * Load character sprite sheet
+   *
+   * SPRITE SHEET FORMAT: Vertical strip, 64x512 pixels (8 frames stacked vertically)
+   * - Each frame is 64x64 pixels
+   * - Frames 0-3: Idle animation cycle
+   * - Frames 4-7: Walk/action animation cycle
+   *
+   * To extract a frame:
+   *   const frameHeight = sprite.height / 8;
+   *   const sourceY = frameIndex * frameHeight;
+   *   ctx.drawImage(sprite, 0, sourceY, sprite.width, frameHeight, ...);
+   *
+   * See docs/FRONTEND_TECHNICAL_PATTERNS.md for full sprite documentation.
+   *
    * @param {string} charClass - Character class (warrior, wizard, monk, chemist)
    * @param {string} animation - Animation type (idle, walk, attack, hit, death, victory)
    * @param {string} [type='player'] - 'player' or 'enemy'
+   * @returns {Promise<HTMLImageElement|null>} Loaded sprite or null if failed
    */
   async loadCharacterSprite(charClass, animation, type = 'player') {
     const basePath = type === 'player'

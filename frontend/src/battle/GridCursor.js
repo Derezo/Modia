@@ -158,8 +158,9 @@ export class GridCursor {
   update(deltaTime) {
     if (!this.isVisible) return;
 
+    const dt = deltaTime / 1000; // Convert ms to seconds
     // Pulse animation
-    this.pulsePhase += deltaTime * 3;
+    this.pulsePhase += dt * 3;
     this.opacity = 0.5 + Math.sin(this.pulsePhase) * 0.2;
 
     // Fade out if inactive

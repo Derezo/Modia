@@ -162,8 +162,9 @@ export class BattleCamera {
    */
   moveByKeys(dx, dy, deltaTime) {
     const speed = 400; // pixels per second
-    this.targetX += dx * speed * deltaTime;
-    this.targetY += dy * speed * deltaTime;
+    const dt = deltaTime / 1000; // Convert ms to seconds
+    this.targetX += dx * speed * dt;
+    this.targetY += dy * speed * dt;
     this.clampTarget();
     this.enterManualMode();
   }
@@ -194,7 +195,8 @@ export class BattleCamera {
     }
 
     // Smooth interpolation (lerp)
-    const t = 1 - Math.exp(-this.lerpSpeed * deltaTime);
+    const dt = deltaTime / 1000; // Convert ms to seconds
+    const t = 1 - Math.exp(-this.lerpSpeed * dt);
 
     const dx = this.targetX - this.x;
     const dy = this.targetY - this.y;
@@ -307,7 +309,7 @@ export class BattleCamera {
   updateTurnTransition(deltaTime) {
     if (!this.turnTransitionActive) return false;
 
-    this.turnTransitionTimer += deltaTime * 1000;
+    this.turnTransitionTimer += deltaTime; // deltaTime already in ms
     const progress = Math.min(1, this.turnTransitionTimer / this.turnTransitionDuration);
 
     // Ease-out cubic for smooth deceleration

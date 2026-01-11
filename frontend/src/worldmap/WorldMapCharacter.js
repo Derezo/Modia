@@ -226,35 +226,14 @@ export class WorldMapCharacter {
    * @param {number} cameraY - Camera Y offset
    */
   render(ctx, cameraX, cameraY) {
-    if (!this.character) {
-      // Only log once to avoid spam
-      if (!this._noCharacterLogged) {
-        console.warn('WorldMapCharacter.render: No character set');
-        this._noCharacterLogged = true;
-      }
-      return;
-    }
-    this._noCharacterLogged = false;
+    if (!this.character) return;
 
     const screenX = this.x + cameraX;
     const screenY = this.y + cameraY;
 
-    // Debug: Log position once per second (throttled)
-    if (!this._lastLogTime || Date.now() - this._lastLogTime > 1000) {
-      console.log('Character render:', {
-        worldPos: { x: this.x, y: this.y },
-        screenPos: { x: Math.round(screenX), y: Math.round(screenY) },
-        hasSprite: !!this.characterSprite,
-        canvasSize: { w: ctx.canvas.width, h: ctx.canvas.height },
-        isWalking: this.isWalking
-      });
-      this._lastLogTime = Date.now();
-    }
-
-    // Check if on screen
+    // Skip if off screen
     if (screenX < -50 || screenX > ctx.canvas.width + 50 ||
         screenY < -50 || screenY > ctx.canvas.height + 50) {
-      console.warn('Character off-screen, skipping render:', { screenX, screenY });
       return;
     }
 
@@ -280,37 +259,57 @@ export class WorldMapCharacter {
     ctx.fill();
     ctx.restore();
 
-    // Draw character sprite or fallback
+    // Try to render sprite, fall back to colored circle if not available
     if (this.characterSprite) {
-      // Determine which frame to use (simple 4-frame walk cycle)
-      const frameWidth = this.characterSprite.width / 4;
-      const frameHeight = this.characterSprite.height;
-      const frame = this.isWalking ? this.walkFrame : 0;
-
-      ctx.save();
-
-      // Flip horizontally if facing left
-      if (!this.facingRight) {
-        ctx.translate(screenX, 0);
-        ctx.scale(-1, 1);
-        ctx.translate(-screenX, 0);
-      }
-
-      // Draw sprite frame
-      ctx.drawImage(
-        this.characterSprite,
-        frame * frameWidth, 0, frameWidth, frameHeight,
-        screenX - this.size / 2,
-        renderY - this.size / 2,
-        this.size,
-        this.size
-      );
-
-      ctx.restore();
+      this.renderSprite(ctx, screenX, renderY);
     } else {
-      // Fallback: draw a simple colored circle with class initial
       this.renderFallback(ctx, screenX, renderY);
     }
+  }
+
+  /**
+   * Render the character sprite
+   */
+  renderSprite(ctx, screenX, screenY) {
+    const sprite = this.characterSprite;
+
+    // Sprite sheets are vertical strips (64x512 = 8 frames stacked vertically)
+    const frameWidth = sprite.width; // Full width (64px)
+    const frameCount = 8;
+    const frameHeight = sprite.height / frameCount; // 64px per frame
+
+    // Calculate current frame based on animation
+    let frameIndex = 0;
+    if (this.isWalking) {
+      frameIndex = this.walkFrame % frameCount;
+    } else {
+      // Idle animation - gentle breathing cycle (use first 4 frames for idle)
+      frameIndex = Math.floor((this.idlePhase / (Math.PI * 2)) * 4) % 4;
+    }
+
+    const sourceX = 0;
+    const sourceY = frameIndex * frameHeight;
+
+    ctx.save();
+
+    // Flip sprite if facing left
+    if (!this.facingRight) {
+      ctx.translate(screenX, screenY);
+      ctx.scale(-1, 1);
+      ctx.drawImage(
+        sprite,
+        sourceX, sourceY, frameWidth, frameHeight,
+        -this.size / 2, -this.size / 2, this.size, this.size
+      );
+    } else {
+      ctx.drawImage(
+        sprite,
+        sourceX, sourceY, frameWidth, frameHeight,
+        screenX - this.size / 2, screenY - this.size / 2, this.size, this.size
+      );
+    }
+
+    ctx.restore();
   }
 
   /**

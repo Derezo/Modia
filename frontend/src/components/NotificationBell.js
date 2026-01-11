@@ -112,7 +112,7 @@ export class NotificationBell {
    */
   async fetchUnreadCount() {
     try {
-      const response = await this.game.api.request('/notifications/unread-count');
+      const response = await this.game.api.get('/notifications/unread-count');
       if (response.success) {
         this.unreadCount = response.count;
         this.updateBadge();

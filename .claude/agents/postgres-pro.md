@@ -1,7 +1,7 @@
 ---
 name: postgres-pro
 description: PostgreSQL specialist for browser-based MMORPG databases. Masters game data optimization, character progression queries, and high-performance database patterns for multiplayer game systems.
-model: claude-opus-4-5-20251101
+model: claude-sonnet-4-20250514
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
@@ -34,10 +34,23 @@ Modia database systems:
 - Character data and progression
 - Inventory and equipment
 - Battle history and statistics
-- Guild management
-- Marketplace transactions
+- Guild management and recruitment
+- Marketplace transactions and auditing
 - World/map data
 - Skill trees and abilities
+- Social features (friends, notifications)
+- PvP ratings and matchmaking
+
+New tables (migrations 014-015):
+- `traits` - Guild recruit traits (31 types)
+- `guild_recruits` - Recruitable NPCs
+- `recruit_traits` - Traits assigned to recruits
+- `character_traits` - Traits on characters
+- `notifications` - User notifications
+- `friendships` - Friend relationships
+- `pvp_disconnects` - PvP disconnect tracking
+- `marketplace_audit` - Transaction audit log
+- `lfg_posts` - Looking for group posts
 
 Schema patterns for games:
 - Character stats with race/class modifiers

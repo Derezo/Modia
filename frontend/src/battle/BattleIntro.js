@@ -267,7 +267,7 @@ export class BattleIntro {
   update(deltaTime) {
     if (this.phase === 'complete' || this.phase === 'idle') return;
 
-    this.timer += deltaTime * 1000;  // Convert to ms
+    this.timer += deltaTime; // deltaTime already in ms
     const t = this.timer;
 
     // Calculate phase boundaries

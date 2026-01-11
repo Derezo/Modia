@@ -50,6 +50,7 @@ export class WorldMapScene extends Scene {
 
     // Travel state
     this.isTraveling = false;
+    this.cameraSettling = false; // Camera continues smooth follow after travel ends
 
     // Path preview state
     this.previewPath = null; // Array of node IDs for hover path preview
@@ -703,10 +704,7 @@ export class WorldMapScene extends Scene {
    */
   async travelToNode(node) {
     // Block travel if already traveling
-    if (this.isTraveling) {
-      console.log('Travel blocked - already traveling');
-      return;
-    }
+    if (this.isTraveling) return;
 
     // Check if this is the current node
     if (this.currentNode && node.id === this.currentNode.id) {
@@ -724,14 +722,10 @@ export class WorldMapScene extends Scene {
 
       // Call the travel API (now supports multi-node travel)
       const result = await this.game.api.travel(node.id);
-      console.log('Travel API result:', result);
-      console.log('Stamina from API:', result.stamina);
 
       // Ensure map character is initialized for animation
       if (this.mapCharacter && !this.mapCharacter.character) {
-        console.log('Character not set, initializing...');
         await this.initMapCharacter();
-        console.log('After init, character:', this.mapCharacter?.character);
       }
 
       // Check if we can animate (have path and character)
@@ -740,15 +734,9 @@ export class WorldMapScene extends Scene {
                          this.mapCharacter &&
                          this.mapCharacter.character;
 
-      console.log('Can animate:', canAnimate, {
-        hasPathNodes: !!result.pathNodes,
-        pathLength: result.pathNodes?.length,
-        hasMapCharacter: !!this.mapCharacter,
-        hasCharacter: !!this.mapCharacter?.character
-      });
-
       if (canAnimate) {
         this.isTraveling = true;
+        this.cameraSettling = true; // Keep camera following smoothly after travel ends
 
         // Convert path nodes to screen positions
         const walkPath = result.pathNodes.map(n => ({
@@ -758,11 +746,8 @@ export class WorldMapScene extends Scene {
           name: n.name
         }));
 
-        console.log('Starting walk animation with path:', walkPath);
-
         // Start walking animation
         this.mapCharacter.startWalking(walkPath, () => {
-          console.log('Walk animation complete');
           this.onTravelComplete(result, previousNodeId);
         });
 
@@ -770,12 +755,10 @@ export class WorldMapScene extends Scene {
         this.game.showNotification(`Traveling to ${result.currentNode.name}... (${result.cost} stamina)`, 'info');
       } else {
         // No animation - complete immediately
-        console.log('No animation, completing immediately');
         this.onTravelComplete(result, previousNodeId);
         this.game.showNotification(`Arrived at ${result.currentNode.name}`, 'success');
       }
     } catch (err) {
-      console.error('Travel error:', err);
       this.game.showNotification(err.message, 'error');
     }
   }
@@ -784,7 +767,6 @@ export class WorldMapScene extends Scene {
    * Handle travel completion (after animation finishes)
    */
   async onTravelComplete(result, previousNodeId) {
-    console.log('onTravelComplete called');
     this.isTraveling = false;
 
     // Update state
@@ -793,11 +775,7 @@ export class WorldMapScene extends Scene {
 
     // Update stamina from travel result
     if (result.stamina && this.staminaBar) {
-      console.log('Updating stamina bar with:', result.stamina);
       this.staminaBar.setStamina(result.stamina);
-      console.log('Stamina bar current after update:', this.staminaBar.current);
-    } else {
-      console.warn('No stamina in result or no stamina bar:', { stamina: result.stamina, hasBar: !!this.staminaBar });
     }
 
     // Reload world data to get newly discovered nodes (fog of war reveal)
@@ -832,9 +810,20 @@ export class WorldMapScene extends Scene {
     if (this.mapCharacter) {
       this.mapCharacter.update(deltaTime);
 
-      // Follow camera during travel
-      if (this.mapCharacter.isTraveling()) {
+      // Follow camera during travel and smoothly settle after
+      if (this.mapCharacter.isTraveling() || this.cameraSettling) {
         this.followCharacter();
+
+        // Check if camera has settled (close enough to target)
+        if (!this.mapCharacter.isTraveling()) {
+          const targetX = -this.mapCharacter.x + this.game.canvas.width / 2;
+          const targetY = -this.mapCharacter.y + this.game.canvas.height / 2;
+          const dx = targetX - this.cameraX;
+          const dy = targetY - this.cameraY;
+          if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+            this.cameraSettling = false;
+          }
+        }
       }
     }
 

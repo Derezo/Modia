@@ -1,8 +1,15 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '../../../.env') });
+import { config } from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join, resolve } from 'path';
+import { readdirSync, readFileSync, existsSync } from 'fs';
+import pg from 'pg';
 
-const fs = require('fs');
-const path = require('path');
-const { Pool } = require('pg');
+const { Pool } = pg;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+config({ path: resolve(__dirname, '../../../.env') });
 
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
@@ -12,7 +19,7 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD || '',
 });
 
-const migrationsDir = path.join(__dirname, '..', 'migrations');
+const migrationsDir = join(__dirname, '..', 'migrations');
 
 async function ensureMigrationsTable() {
   await pool.query(`
@@ -33,8 +40,8 @@ async function runMigrations() {
   await ensureMigrationsTable();
 
   const applied = await getAppliedMigrations();
-  const files = fs.readdirSync(migrationsDir)
-    .filter(f => f.endsWith('.sql'))
+  const files = readdirSync(migrationsDir)
+    .filter(f => f.endsWith('.sql') && !f.includes('.rollback.'))
     .sort();
 
   console.log(`Found ${files.length} migration files`);
@@ -46,7 +53,7 @@ async function runMigrations() {
     }
 
     console.log(`Applying ${file}...`);
-    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+    const sql = readFileSync(join(migrationsDir, file), 'utf8');
 
     const client = await pool.connect();
     try {
@@ -84,10 +91,10 @@ async function rollback() {
 
   // Look for corresponding rollback file
   const rollbackFile = lastMigration.replace('.sql', '.rollback.sql');
-  const rollbackPath = path.join(migrationsDir, rollbackFile);
+  const rollbackPath = join(migrationsDir, rollbackFile);
 
-  if (fs.existsSync(rollbackPath)) {
-    const sql = fs.readFileSync(rollbackPath, 'utf8');
+  if (existsSync(rollbackPath)) {
+    const sql = readFileSync(rollbackPath, 'utf8');
 
     const client = await pool.connect();
     try {

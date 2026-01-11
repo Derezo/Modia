@@ -127,9 +127,10 @@ export class BattleAnimations {
    * Update all animations
    */
   update(deltaTime) {
+    const dt = deltaTime / 1000; // Convert ms to seconds for physics
     for (let i = this.animations.length - 1; i >= 0; i--) {
       const anim = this.animations[i];
-      anim.timer += deltaTime;
+      anim.timer += dt;
 
       // Update position based on type
       switch (anim.type) {
@@ -140,9 +141,9 @@ export class BattleAnimations {
           anim.y = anim.startY + (anim.velocityY * anim.timer);
           break;
         case 'particle':
-          anim.x += anim.velocityX * deltaTime;
-          anim.y += anim.velocityY * deltaTime;
-          anim.velocityY += 100 * deltaTime; // Gravity
+          anim.x += anim.velocityX * dt;
+          anim.y += anim.velocityY * dt;
+          anim.velocityY += 100 * dt; // Gravity
           break;
       }
 

@@ -6,33 +6,41 @@
 export class StaminaBar {
   constructor() {
     // Stamina state
-    this.current = 0;
+    this.current = 8;
     this.max = 8;
     this.nextRegenAt = null;
     this.regenIntervalSeconds = 120; // 2 minutes
 
     // Position and size
-    this.x = 20;
-    this.y = 120; // Below party info
-    this.width = 180;
-    this.height = 50;
+    this.x = 10;
+    this.y = 70; // Below player info panel
+    this.width = 160;
+    this.height = 34; // Compact - no timer text
 
     // Animation
-    this.displayCurrent = 0; // For smooth animation
-    this.animationSpeed = 5; // Points per second
+    this.displayCurrent = 8; // For smooth animation - start at max
+    this.animationSpeed = 8; // Points per second
   }
 
   /**
    * Update stamina from API response
    * @param {Object} staminaInfo - {current, max, nextRegenAt, regenIntervalSeconds}
+   * @param {boolean} instant - If true, skip animation and show immediately
    */
-  setStamina(staminaInfo) {
+  setStamina(staminaInfo, instant = false) {
     if (!staminaInfo) return;
 
-    this.current = staminaInfo.current ?? this.current;
+    const isFirstLoad = this.current === this.max && this.displayCurrent === this.max;
+    // Clamp to 0 minimum in case server returns negative (safety net)
+    this.current = Math.max(0, staminaInfo.current ?? this.current);
     this.max = staminaInfo.max ?? this.max;
     this.nextRegenAt = staminaInfo.nextRegenAt ? new Date(staminaInfo.nextRegenAt) : null;
     this.regenIntervalSeconds = staminaInfo.regenIntervalSeconds ?? this.regenIntervalSeconds;
+
+    // On first load or if instant, set display to match current immediately
+    if (isFirstLoad || instant) {
+      this.displayCurrent = this.current;
+    }
   }
 
   /**
@@ -49,7 +57,7 @@ export class StaminaBar {
       this.displayCurrent = this.current;
     }
 
-    // Check if regeneration should have occurred
+    // Check if regeneration should have occurred (client-side prediction)
     if (this.nextRegenAt && this.current < this.max) {
       const now = new Date();
       if (now >= this.nextRegenAt) {
@@ -76,18 +84,16 @@ export class StaminaBar {
   }
 
   /**
-   * Format time for display
-   * @param {number} seconds
-   * @returns {string}
+   * Get regen progress (0-1) for visual display
+   * @returns {number}
    */
-  formatTime(seconds) {
-    if (seconds === null) return '';
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    if (mins > 0) {
-      return `${mins}m ${secs}s`;
-    }
-    return `${secs}s`;
+  getRegenProgress() {
+    if (!this.nextRegenAt || this.current >= this.max) return 0;
+    const now = new Date();
+    const msUntilRegen = this.nextRegenAt.getTime() - now.getTime();
+    const totalMs = this.regenIntervalSeconds * 1000;
+    const elapsed = totalMs - msUntilRegen;
+    return Math.max(0, Math.min(1, elapsed / totalMs));
   }
 
   /**
@@ -105,7 +111,7 @@ export class StaminaBar {
     ctx.lineWidth = 2;
 
     // Rounded rectangle
-    const radius = 8;
+    const radius = 6;
     ctx.beginPath();
     ctx.moveTo(x + radius, y);
     ctx.lineTo(x + width - radius, y);
@@ -120,33 +126,27 @@ export class StaminaBar {
     ctx.fill();
     ctx.stroke();
 
-    // Inner border for depth
-    ctx.strokeStyle = 'rgba(139, 115, 85, 0.5)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x + radius + 2, y + 2);
-    ctx.lineTo(x + width - radius - 2, y + 2);
-    ctx.stroke();
-
     // Stamina label
     ctx.fillStyle = '#c4a574';
-    ctx.font = 'bold 12px serif';
+    ctx.font = 'bold 11px serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText('Stamina', x + 10, y + 8);
+    ctx.fillText('Stamina', x + 8, y + 5);
 
     // Stamina value
     ctx.fillStyle = '#ffd700';
-    ctx.font = 'bold 14px serif';
+    ctx.font = 'bold 12px serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`${Math.floor(this.displayCurrent)}/${this.max}`, x + width - 10, y + 6);
+    ctx.fillText(`${Math.floor(this.displayCurrent)}/${this.max}`, x + width - 8, y + 4);
+
+    // Progress bar
+    const barX = x + 8;
+    const barY = y + 20;
+    const barWidth = width - 16;
+    const barHeight = 10;
+    const segmentWidth = barWidth / this.max;
 
     // Progress bar background
-    const barX = x + 10;
-    const barY = y + 26;
-    const barWidth = width - 20;
-    const barHeight = 12;
-
     ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
     ctx.fillRect(barX, barY, barWidth, barHeight);
 
@@ -155,38 +155,44 @@ export class StaminaBar {
     ctx.lineWidth = 1;
     ctx.strokeRect(barX, barY, barWidth, barHeight);
 
-    // Progress bar fill
-    const fillWidth = (this.displayCurrent / this.max) * barWidth;
-    const gradient = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
-    gradient.addColorStop(0, '#ffd700');
-    gradient.addColorStop(0.5, '#daa520');
-    gradient.addColorStop(1, '#b8860b');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(barX + 1, barY + 1, Math.max(0, fillWidth - 2), barHeight - 2);
+    // Create gradient for filled segments
+    const filledGradient = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
+    filledGradient.addColorStop(0, '#ffd700');
+    filledGradient.addColorStop(0.5, '#daa520');
+    filledGradient.addColorStop(1, '#b8860b');
 
-    // Progress bar segments (visual divisions)
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+    // Draw filled segments (current stamina)
+    const filledSegments = Math.floor(this.displayCurrent);
+    if (filledSegments > 0) {
+      ctx.fillStyle = filledGradient;
+      ctx.fillRect(barX + 1, barY + 1, filledSegments * segmentWidth - 2, barHeight - 2);
+    }
+
+    // Draw regenerating segment progress (if regenerating)
+    const regenProgress = this.getRegenProgress();
+    if (regenProgress > 0 && this.current < this.max) {
+      const regenSegmentX = barX + this.current * segmentWidth;
+      const regenFillWidth = regenProgress * segmentWidth;
+
+      // Dimmer gradient for regenerating portion
+      const regenGradient = ctx.createLinearGradient(barX, barY, barX, barY + barHeight);
+      regenGradient.addColorStop(0, 'rgba(255, 215, 0, 0.4)');
+      regenGradient.addColorStop(0.5, 'rgba(218, 165, 32, 0.4)');
+      regenGradient.addColorStop(1, 'rgba(184, 134, 11, 0.4)');
+
+      ctx.fillStyle = regenGradient;
+      ctx.fillRect(regenSegmentX + 1, barY + 1, Math.max(0, regenFillWidth - 1), barHeight - 2);
+    }
+
+    // Draw segment dividers
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
     ctx.lineWidth = 1;
     for (let i = 1; i < this.max; i++) {
-      const segX = barX + (i / this.max) * barWidth;
+      const segX = barX + i * segmentWidth;
       ctx.beginPath();
       ctx.moveTo(segX, barY);
       ctx.lineTo(segX, barY + barHeight);
       ctx.stroke();
-    }
-
-    // Regen timer
-    const secondsUntilRegen = this.getSecondsUntilRegen();
-    if (secondsUntilRegen !== null) {
-      ctx.fillStyle = '#8a9a6a';
-      ctx.font = '11px serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`+1 in ${this.formatTime(secondsUntilRegen)}`, x + width / 2, y + height - 10);
-    } else if (this.current >= this.max) {
-      ctx.fillStyle = '#6a8a6a';
-      ctx.font = '11px serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('Full', x + width / 2, y + height - 10);
     }
 
     ctx.restore();
