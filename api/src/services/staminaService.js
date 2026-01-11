@@ -14,7 +14,8 @@ const DEFAULT_MAX_STAMINA = 8;
  * @returns {number} Current stamina after applying regeneration
  */
 export function calculateCurrentStamina(character) {
-  const storedStamina = character.stamina ?? DEFAULT_MAX_STAMINA;
+  // Clamp to 0 in case of race condition that caused negative value
+  const storedStamina = Math.max(0, character.stamina ?? DEFAULT_MAX_STAMINA);
   const maxStamina = character.max_stamina ?? DEFAULT_MAX_STAMINA;
 
   // If already at max, no regen needed
@@ -24,7 +25,10 @@ export function calculateCurrentStamina(character) {
 
   const updatedAt = new Date(character.stamina_updated_at || Date.now());
   const elapsedMs = Date.now() - updatedAt.getTime();
-  const regenPoints = Math.floor(elapsedMs / REGEN_INTERVAL_MS);
+
+  // Safeguard: If elapsed time is negative (clock skew/timezone issues),
+  // treat as no time passed - don't add negative regen points
+  const regenPoints = elapsedMs < 0 ? 0 : Math.floor(elapsedMs / REGEN_INTERVAL_MS);
 
   return Math.min(maxStamina, storedStamina + regenPoints);
 }
@@ -62,7 +66,8 @@ export async function getStaminaInfo(characterId) {
     current,
     max,
     nextRegenAt,
-    regenIntervalSeconds: REGEN_INTERVAL_MS / 1000
+    regenIntervalSeconds: REGEN_INTERVAL_MS / 1000,
+    storedStamina: character.stamina  // Raw DB value for atomic updates
   };
 }
 
@@ -78,13 +83,16 @@ export async function getCurrentStamina(characterId) {
 
 /**
  * Deduct stamina from a character atomically
- * Applies any pending regeneration first, then deducts
+ * Uses optimistic locking to prevent race conditions
  * @param {number} characterId - Character ID
  * @param {number} amount - Amount to deduct
+ * @param {number} retryCount - Internal retry counter
  * @returns {Promise<Object>} Updated stamina info
- * @throws {Error} If insufficient stamina
+ * @throws {Error} If insufficient stamina or max retries exceeded
  */
-export async function deductStamina(characterId, amount) {
+export async function deductStamina(characterId, amount, retryCount = 0) {
+  const MAX_RETRIES = 3;
+
   if (amount <= 0) {
     throw new Error('Deduction amount must be positive');
   }
@@ -98,13 +106,23 @@ export async function deductStamina(characterId, amount) {
 
   const newStamina = info.current - amount;
 
-  // Update in database with new timestamp
-  await query(
+  // Atomic update: only succeeds if stored stamina hasn't changed
+  // This prevents race conditions where two requests both pass validation
+  const result = await query(
     `UPDATE characters
      SET stamina = $1, stamina_updated_at = CURRENT_TIMESTAMP
-     WHERE id = $2`,
-    [newStamina, characterId]
+     WHERE id = $2 AND stamina = $3
+     RETURNING id`,
+    [newStamina, characterId, info.storedStamina]
   );
+
+  // If no rows updated, another request modified stamina - retry
+  if (result.rowCount === 0) {
+    if (retryCount >= MAX_RETRIES) {
+      throw new Error('Unable to deduct stamina: too many concurrent requests');
+    }
+    return deductStamina(characterId, amount, retryCount + 1);
+  }
 
   // Return new stamina info
   return getStaminaInfo(characterId);

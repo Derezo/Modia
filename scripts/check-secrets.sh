@@ -106,8 +106,8 @@ check_file() {
             if echo "$content" | grep -qE '^\s*(#|//|\*|<!--)'; then
                 continue
             fi
-            # Skip placeholder values
-            if echo "$content" | grep -qiE '(your[_-]?password|password[_-]?here|example|placeholder|xxx|replace[_-]?me|changeme|todo|\$\{|\$\()'; then
+            # Skip placeholder values and environment variable reads
+            if echo "$content" | grep -qiE '(your[_-]?password|password[_-]?here|example|placeholder|xxx|replace[_-]?me|changeme|todo|\$\{|\$\(|process\.env\.)'; then
                 continue
             fi
             # Skip empty or null values
