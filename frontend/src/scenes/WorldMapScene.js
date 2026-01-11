@@ -1,6 +1,8 @@
 import { Scene } from './Scene.js';
 import { WorldMapEffects } from '../worldmap/WorldMapEffects.js';
 import { WorldMapMinimap } from '../worldmap/WorldMapMinimap.js';
+import { WorldMapCharacter } from '../worldmap/WorldMapCharacter.js';
+import { StaminaBar } from '../worldmap/StaminaBar.js';
 
 // Class-specific action labels for guild recruitment buttons
 const GUILD_ACTION_LABELS = {
@@ -40,6 +42,21 @@ export class WorldMapScene extends Scene {
     // Minimap
     this.minimap = null;
 
+    // Character display on map
+    this.mapCharacter = null;
+
+    // Stamina bar
+    this.staminaBar = null;
+
+    // Travel state
+    this.isTraveling = false;
+
+    // Path preview state
+    this.previewPath = null; // Array of node IDs for hover path preview
+    this.previewCost = 0;
+    this.previewAffordable = true;
+    this.pathPreviewCache = new Map(); // Cache path calculations
+
     // Event listener cleanup
     this.abortController = null;
 
@@ -66,8 +83,135 @@ export class WorldMapScene extends Scene {
     await this.minimap.init();
     this.minimap.calculateWorldBounds(this.nodes);
 
+    // Initialize character display
+    this.mapCharacter = new WorldMapCharacter(this.assetLoader);
+    await this.initMapCharacter();
+
+    // Initialize stamina bar
+    this.staminaBar = new StaminaBar();
+    await this.refreshStamina();
+
     // Preload node sprites in background
     this.preloadNodeSprites();
+  }
+
+  /**
+   * Refresh stamina from the server
+   */
+  async refreshStamina() {
+    try {
+      const characters = this.game.state.get('characters') || [];
+      const partyLeader = characters.find(c => c.party_slot === 1);
+
+      if (partyLeader) {
+        const result = await this.game.api.getCharacterStamina(partyLeader.id);
+        if (result.stamina) {
+          this.staminaBar.setStamina(result.stamina);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to fetch stamina:', err);
+    }
+  }
+
+  /**
+   * Initialize the map character with the party leader
+   */
+  async initMapCharacter() {
+    const characters = this.game.state.get('characters') || [];
+    const partyLeader = characters.find(c => c.party_slot === 1);
+
+    if (partyLeader) {
+      await this.mapCharacter.setCharacter(partyLeader);
+      this.updateCharacterPosition();
+    }
+  }
+
+  /**
+   * Update character position to current node
+   */
+  updateCharacterPosition() {
+    if (!this.mapCharacter || !this.currentNode) return;
+
+    const node = this.nodes.find(n => n.id === this.currentNode.id);
+    if (node) {
+      this.mapCharacter.setPosition(
+        node.x_coord * this.nodeSpacing,
+        node.y_coord * this.nodeSpacing
+      );
+    }
+  }
+
+  /**
+   * Smoothly follow the character during travel
+   */
+  followCharacter() {
+    if (!this.mapCharacter) return;
+
+    const targetX = -this.mapCharacter.x + this.game.canvas.width / 2;
+    const targetY = -this.mapCharacter.y + this.game.canvas.height / 2;
+
+    // Smooth interpolation
+    const smoothing = 0.1;
+    this.cameraX += (targetX - this.cameraX) * smoothing;
+    this.cameraY += (targetY - this.cameraY) * smoothing;
+  }
+
+  /**
+   * Update path preview when hovering over a node
+   */
+  async updatePathPreview(node) {
+    // Clear preview if no node hovered, traveling, or hovering current node
+    if (!node || this.isTraveling || !this.currentNode || node.id === this.currentNode.id) {
+      this.previewPath = null;
+      this.previewCost = 0;
+      this.previewAffordable = true;
+      return;
+    }
+
+    // Check if node is discovered
+    if (!this.isNodeDiscovered(node)) {
+      this.previewPath = null;
+      this.previewCost = 0;
+      this.previewAffordable = false;
+      return;
+    }
+
+    // Check cache first
+    const cacheKey = `${this.currentNode.id}-${node.id}`;
+    if (this.pathPreviewCache.has(cacheKey)) {
+      const cached = this.pathPreviewCache.get(cacheKey);
+      this.previewPath = cached.path;
+      this.previewCost = cached.cost;
+      this.previewAffordable = this.staminaBar ? this.staminaBar.current >= cached.cost : true;
+      return;
+    }
+
+    // Fetch path from server
+    try {
+      const result = await this.game.api.getPathPreview(node.id);
+      this.previewPath = result.path;
+      this.previewCost = result.cost;
+      this.previewAffordable = result.affordable;
+
+      // Cache the result
+      this.pathPreviewCache.set(cacheKey, {
+        path: result.path,
+        cost: result.cost
+      });
+    } catch (err) {
+      // Silently fail - just don't show preview
+      this.previewPath = null;
+      this.previewCost = 0;
+      this.previewAffordable = false;
+    }
+  }
+
+  /**
+   * Clear path cache (called after travel or world data reload)
+   */
+  clearPathCache() {
+    this.pathPreviewCache.clear();
   }
 
   /**
@@ -449,7 +593,13 @@ export class WorldMapScene extends Scene {
 
       // Update hovered node
       const pos = this.game.input.getPointerPosition();
-      this.hoveredNode = this.getNodeAtPosition(pos.x, pos.y);
+      const newHoveredNode = this.getNodeAtPosition(pos.x, pos.y);
+
+      // If hovered node changed, update path preview
+      if (newHoveredNode?.id !== this.hoveredNode?.id) {
+        this.hoveredNode = newHoveredNode;
+        this.updatePathPreview(newHoveredNode);
+      }
     }, opts);
 
     canvas.addEventListener('mouseup', () => {
@@ -511,34 +661,100 @@ export class WorldMapScene extends Scene {
     );
   }
 
+  /**
+   * Check if a node has been discovered
+   */
+  isNodeDiscovered(node) {
+    return node.visited || node.discovery_method;
+  }
+
+  /**
+   * Travel to a node with walking animation
+   */
   async travelToNode(node) {
-    if (!this.isNodeAdjacent(node)) {
-      this.game.showNotification('You can only travel to adjacent nodes', 'error');
+    // Block travel if already traveling
+    if (this.isTraveling) {
+      return;
+    }
+
+    // Check if this is the current node
+    if (this.currentNode && node.id === this.currentNode.id) {
+      return;
+    }
+
+    // Check if destination is discovered
+    if (!this.isNodeDiscovered(node)) {
+      this.game.showNotification('You have not discovered this location yet', 'error');
       return;
     }
 
     try {
       const previousNodeId = this.currentNode?.id;
 
+      // Call the travel API (now supports multi-node travel)
       const result = await this.game.api.travel(node.id);
-      this.currentNode = result.currentNode;
-      this.game.state.set('currentNode', this.currentNode);
 
-      // Reload world data to get newly discovered nodes (fog of war reveal)
-      await this.loadWorldData();
+      // If we have a path, animate the travel
+      if (result.pathNodes && result.pathNodes.length > 1) {
+        this.isTraveling = true;
 
-      this.updateNodeInfo();
-      this.game.showNotification(`Traveled to ${result.currentNode.name}`, 'success');
+        // Convert path nodes to screen positions
+        const walkPath = result.pathNodes.map(n => ({
+          x: n.x_coord * this.nodeSpacing,
+          y: n.y_coord * this.nodeSpacing,
+          id: n.id,
+          name: n.name
+        }));
 
-      // Switch node rooms for WebSocket presence
-      if (this.game.socket) {
-        if (previousNodeId) {
-          this.game.socket.leaveNodeRoom(previousNodeId);
-        }
-        this.game.socket.joinNodeRoom(this.currentNode.id);
+        // Start walking animation
+        this.mapCharacter.startWalking(walkPath, () => {
+          this.onTravelComplete(result, previousNodeId);
+        });
+
+        // Show travel message
+        this.game.showNotification(`Traveling to ${result.currentNode.name}... (${result.cost} stamina)`, 'info');
+      } else {
+        // No animation needed, complete immediately
+        this.onTravelComplete(result, previousNodeId);
       }
     } catch (err) {
       this.game.showNotification(err.message, 'error');
+    }
+  }
+
+  /**
+   * Handle travel completion (after animation finishes)
+   */
+  async onTravelComplete(result, previousNodeId) {
+    this.isTraveling = false;
+
+    // Update state
+    this.currentNode = result.currentNode;
+    this.game.state.set('currentNode', this.currentNode);
+
+    // Update stamina from travel result
+    if (result.stamina && this.staminaBar) {
+      this.staminaBar.setStamina(result.stamina);
+    }
+
+    // Reload world data to get newly discovered nodes (fog of war reveal)
+    await this.loadWorldData();
+
+    // Clear path cache since we're at a new position
+    this.clearPathCache();
+
+    // Update character position to final node
+    this.updateCharacterPosition();
+
+    this.updateNodeInfo();
+    this.game.showNotification(`Arrived at ${result.currentNode.name}`, 'success');
+
+    // Switch node rooms for WebSocket presence
+    if (this.game.socket) {
+      if (previousNodeId) {
+        this.game.socket.leaveNodeRoom(previousNodeId);
+      }
+      this.game.socket.joinNodeRoom(this.currentNode.id);
     }
   }
 
@@ -548,6 +764,21 @@ export class WorldMapScene extends Scene {
 
   update(deltaTime) {
     this.game.input.clearFrameState();
+
+    // Update character animation
+    if (this.mapCharacter) {
+      this.mapCharacter.update(deltaTime);
+
+      // Follow camera during travel
+      if (this.mapCharacter.isTraveling()) {
+        this.followCharacter();
+      }
+    }
+
+    // Update stamina bar
+    if (this.staminaBar) {
+      this.staminaBar.update(deltaTime);
+    }
 
     // Update effects
     if (this.effects) {
@@ -633,6 +864,11 @@ export class WorldMapScene extends Scene {
       }
     }
 
+    // Draw path preview (golden glow along the path)
+    if (this.previewPath && this.previewPath.length > 1) {
+      this.renderPathPreview(ctx);
+    }
+
     // Draw nodes
     for (const node of this.nodes) {
       const x = node.x_coord * this.nodeSpacing + this.cameraX;
@@ -716,21 +952,15 @@ export class WorldMapScene extends Scene {
         ctx.fillText(this.getNodeIcon(node.node_type), x, y);
       }
 
-      // Node name (only for current and hovered)
+      // Node tooltip (for current and hovered nodes)
       if (isCurrent || isHovered) {
-        // Draw name with background for better readability
-        const nodeName = node.name;
-        ctx.font = 'bold 12px Arial';
-        const textWidth = ctx.measureText(nodeName).width;
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(x - textWidth / 2 - 4, y + this.nodeSize + 8, textWidth + 8, 18);
-
-        ctx.fillStyle = isCurrent ? '#ffd700' : '#fff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText(nodeName, x, y + this.nodeSize + 10);
+        this.renderNodeTooltip(ctx, node, x, y, isCurrent);
       }
+    }
+
+    // Render character on map
+    if (this.mapCharacter) {
+      this.mapCharacter.render(ctx, this.cameraX, this.cameraY);
     }
 
     // Render fog of war overlay
@@ -739,6 +969,11 @@ export class WorldMapScene extends Scene {
     }
 
     ctx.restore();
+
+    // Render stamina bar (UI layer)
+    if (this.staminaBar) {
+      this.staminaBar.render(ctx);
+    }
 
     // Render minimap (on top of everything)
     if (this.minimap && this.effects) {
@@ -754,6 +989,133 @@ export class WorldMapScene extends Scene {
         canvasHeight: ctx.canvas.height,
         nodeSpacing: this.nodeSpacing
       });
+    }
+  }
+
+  /**
+   * Render path preview (golden glow along the path)
+   */
+  renderPathPreview(ctx) {
+    if (!this.previewPath || this.previewPath.length < 2) return;
+
+    const pathColor = this.previewAffordable ? 'rgba(255, 215, 0, 0.6)' : 'rgba(180, 80, 80, 0.6)';
+    const glowColor = this.previewAffordable ? 'rgba(255, 215, 0, 0.2)' : 'rgba(180, 80, 80, 0.2)';
+
+    ctx.save();
+
+    // Draw glow effect along the path
+    for (let i = 0; i < this.previewPath.length - 1; i++) {
+      const fromNode = this.nodes.find(n => n.id === this.previewPath[i]);
+      const toNode = this.nodes.find(n => n.id === this.previewPath[i + 1]);
+
+      if (!fromNode || !toNode) continue;
+
+      const x1 = fromNode.x_coord * this.nodeSpacing + this.cameraX;
+      const y1 = fromNode.y_coord * this.nodeSpacing + this.cameraY;
+      const x2 = toNode.x_coord * this.nodeSpacing + this.cameraX;
+      const y2 = toNode.y_coord * this.nodeSpacing + this.cameraY;
+
+      // Skip if off screen
+      const margin = 100;
+      if (Math.max(x1, x2) < -margin || Math.min(x1, x2) > ctx.canvas.width + margin ||
+          Math.max(y1, y2) < -margin || Math.min(y1, y2) > ctx.canvas.height + margin) {
+        continue;
+      }
+
+      const control = this.getPathControlPoint(x1, y1, x2, y2, fromNode.id, toNode.id);
+
+      // Draw glow (wider, semi-transparent)
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.quadraticCurveTo(control.x, control.y, x2, y2);
+      ctx.strokeStyle = glowColor;
+      ctx.lineWidth = 12;
+      ctx.stroke();
+
+      // Draw main path highlight
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.quadraticCurveTo(control.x, control.y, x2, y2);
+      ctx.strokeStyle = pathColor;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Render node tooltip with name and travel info
+   */
+  renderNodeTooltip(ctx, node, x, y, isCurrent) {
+    const nodeName = node.name;
+    const isDiscovered = this.isNodeDiscovered(node);
+
+    // Calculate tooltip content
+    let lines = [nodeName];
+    let costLine = null;
+
+    if (!isCurrent) {
+      if (!isDiscovered) {
+        lines.push('Undiscovered');
+      } else if (this.previewCost > 0) {
+        if (this.previewAffordable) {
+          costLine = { text: `${this.previewCost} stamina`, color: '#6a8a6a' };
+        } else {
+          const currentStamina = this.staminaBar?.current || 0;
+          costLine = { text: `Need ${this.previewCost - currentStamina} more stamina`, color: '#c54545' };
+        }
+      }
+    }
+
+    // Measure text
+    ctx.font = 'bold 12px Arial';
+    const nameWidth = ctx.measureText(nodeName).width;
+    let tooltipWidth = nameWidth + 16;
+
+    if (costLine) {
+      ctx.font = '11px Arial';
+      const costWidth = ctx.measureText(costLine.text).width;
+      tooltipWidth = Math.max(tooltipWidth, costWidth + 16);
+    }
+
+    const tooltipHeight = costLine ? 36 : 22;
+    const tooltipY = y + this.nodeSize + 8;
+
+    // Draw background
+    ctx.fillStyle = 'rgba(40, 30, 20, 0.9)';
+    const radius = 4;
+    const tx = x - tooltipWidth / 2;
+    ctx.beginPath();
+    ctx.moveTo(tx + radius, tooltipY);
+    ctx.lineTo(tx + tooltipWidth - radius, tooltipY);
+    ctx.quadraticCurveTo(tx + tooltipWidth, tooltipY, tx + tooltipWidth, tooltipY + radius);
+    ctx.lineTo(tx + tooltipWidth, tooltipY + tooltipHeight - radius);
+    ctx.quadraticCurveTo(tx + tooltipWidth, tooltipY + tooltipHeight, tx + tooltipWidth - radius, tooltipY + tooltipHeight);
+    ctx.lineTo(tx + radius, tooltipY + tooltipHeight);
+    ctx.quadraticCurveTo(tx, tooltipY + tooltipHeight, tx, tooltipY + tooltipHeight - radius);
+    ctx.lineTo(tx, tooltipY + radius);
+    ctx.quadraticCurveTo(tx, tooltipY, tx + radius, tooltipY);
+    ctx.closePath();
+    ctx.fill();
+
+    // Draw border
+    ctx.strokeStyle = 'rgba(139, 115, 85, 0.6)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Draw name
+    ctx.font = 'bold 12px Arial';
+    ctx.fillStyle = isCurrent ? '#ffd700' : '#e0d0b0';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(nodeName, x, tooltipY + 4);
+
+    // Draw cost line
+    if (costLine) {
+      ctx.font = '11px Arial';
+      ctx.fillStyle = costLine.color;
+      ctx.fillText(costLine.text, x, tooltipY + 20);
     }
   }
 

@@ -177,6 +177,37 @@ Comprehensive marketplace improvements: security hardening, medieval UI theme, c
 
 ---
 
+### World Map Travel System Enhancement (Complete - January 2026)
+
+Enhanced world map navigation with multi-node travel, stamina system, and character visualization. See plan: `/home/wizard/.claude/plans/keen-stirring-island.md`
+
+| Task | Status | Files |
+|------|--------|-------|
+| Stamina database migration | ✅ Complete | 016_stamina_system.sql |
+| Stamina service | ✅ Complete | api/src/services/staminaService.js |
+| Character route stamina integration | ✅ Complete | api/src/routes/characters.js |
+| BFS world pathfinding | ✅ Complete | api/src/routes/world.js |
+| Multi-node travel endpoint | ✅ Complete | api/src/routes/world.js |
+| Path preview endpoint | ✅ Complete | api/src/routes/world.js |
+| WorldMapCharacter component | ✅ Complete | frontend/src/worldmap/WorldMapCharacter.js |
+| StaminaBar component | ✅ Complete | frontend/src/worldmap/StaminaBar.js |
+| Walking animation system | ✅ Complete | WorldMapCharacter.js, WorldMapScene.js |
+| Path preview rendering | ✅ Complete | WorldMapScene.js |
+| Enhanced node tooltips | ✅ Complete | WorldMapScene.js |
+| API client methods | ✅ Complete | frontend/src/api/client.js |
+
+**Key Features:**
+- **Multi-Node Travel**: Players can travel to any previously discovered node (not just adjacent)
+- **Stamina System**: 8 max stamina, 1 per node traveled, regenerates 1 every 2 minutes
+- **Character Visualization**: Party leader sprite displayed on world map with walking animation
+- **Path Preview**: Golden highlight on hover showing route to destination with stamina cost
+- **Server-Side Pathfinding**: BFS algorithm finds shortest path between nodes
+- **Animated Travel**: Character walks along bezier paths between nodes with dust particles
+- **Camera Follow**: Smooth camera tracking during travel animation
+- **Intermediate Discovery**: All nodes along travel path are discovered automatically
+
+---
+
 ### Advanced AI System (Complete - January 2026)
 
 Major overhaul of NPC AI with utility-based scoring and multi-actor lookahead. See plan: `/home/wizard/.claude/plans/merry-dreaming-stallman.md` and documentation: `docs/AI_SYSTEM.md`
