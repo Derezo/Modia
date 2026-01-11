@@ -18,12 +18,28 @@ export const CLASSES = {
   CHEMIST: 'chemist'
 };
 
-// Advanced classes (require level 20+ and base class)
+// Advanced classes (require level 10+ and quest completion)
 export const ADVANCED_CLASSES = {
+  // Warrior advancements (T1-T4)
   BERSERKER: 'berserker',
+  PALADIN: 'paladin',
+  GUARDIAN: 'guardian',
+  WARLORD: 'warlord',
+  // Wizard advancements (T1-T4)
   SORCERER: 'sorcerer',
+  SUMMONER: 'summoner',
+  CONJURER: 'conjurer',
+  ORACLE: 'oracle',
+  // Monk advancements (T1-T4)
   NINJA: 'ninja',
-  ALCHEMIST: 'alchemist'
+  MARTIAL_ARTIST: 'martial_artist',
+  BRAWLER: 'brawler',
+  ASCETIC: 'ascetic',
+  // Chemist advancements (T1-T4)
+  ALCHEMIST: 'alchemist',
+  MEDIC: 'medic',
+  PLAGUE_DOCTOR: 'plague_doctor',
+  ARTIFICER: 'artificer'
 };
 
 // Character genders for portrait generation
@@ -33,7 +49,27 @@ export const GENDERS = {
   OTHER: 'other'
 };
 
-// Advancement paths: base class -> advanced class
+// Guild advancement tiers: ordered by difficulty (T1 easiest -> T4 hardest)
+export const GUILD_ADVANCEMENT_TIERS = {
+  warrior: ['berserker', 'paladin', 'guardian', 'warlord'],
+  wizard: ['sorcerer', 'summoner', 'conjurer', 'oracle'],
+  monk: ['ninja', 'martial_artist', 'brawler', 'ascetic'],
+  chemist: ['alchemist', 'medic', 'plague_doctor', 'artificer']
+};
+
+// Quest requirements by tier
+export const TIER_REQUIREMENTS = {
+  1: { materials: 5, enemies: 10, nodes: 2, bossPhases: 1 },
+  2: { materials: 8, enemies: 15, nodes: 3, bossPhases: 2 },
+  3: { materials: 12, enemies: 20, nodes: 4, bossPhases: 2, hasSummons: true },
+  4: { materialsRare: 15, materialsEpic: 3, enemies: 25, nodes: 5, bossPhases: 3, hasAuras: true }
+};
+
+// Minimum level to start advancement quests
+export const ADVANCEMENT_QUEST_MIN_LEVEL = 10;
+
+// Legacy: Direct advancement paths (deprecated - use GUILD_ADVANCEMENT_TIERS)
+// Kept for backwards compatibility during transition
 export const CLASS_ADVANCEMENT = {
   warrior: 'berserker',
   wizard: 'sorcerer',
@@ -41,6 +77,7 @@ export const CLASS_ADVANCEMENT = {
   chemist: 'alchemist'
 };
 
+// Legacy: Old level requirement (deprecated - use ADVANCEMENT_QUEST_MIN_LEVEL)
 export const ADVANCEMENT_LEVEL_REQUIREMENT = 20;
 
 // Node types
@@ -97,28 +134,68 @@ export const RACE_BASE_STATS = {
 
 // Stat growth per level by class
 export const CLASS_GROWTH = {
+  // Base classes
   [CLASSES.WARRIOR]: { hp: 15, mp: 3, strength: 3, intelligence: 1, agility: 1, vitality: 2 },
   [CLASSES.WIZARD]: { hp: 8, mp: 12, strength: 1, intelligence: 4, agility: 1, vitality: 1 },
   [CLASSES.MONK]: { hp: 10, mp: 6, strength: 2, intelligence: 2, agility: 3, vitality: 1 },
   [CLASSES.CHEMIST]: { hp: 10, mp: 8, strength: 1, intelligence: 2, agility: 2, vitality: 2 },
-  // Advanced classes (higher growth, unlocked at level 20)
+
+  // Warrior advanced classes (T1-T4)
   [ADVANCED_CLASSES.BERSERKER]: { hp: 18, mp: 2, strength: 4, intelligence: 1, agility: 1, vitality: 2 },
+  [ADVANCED_CLASSES.PALADIN]: { hp: 16, mp: 6, strength: 3, intelligence: 2, agility: 1, vitality: 3 },
+  [ADVANCED_CLASSES.GUARDIAN]: { hp: 20, mp: 4, strength: 2, intelligence: 1, agility: 1, vitality: 4 },
+  [ADVANCED_CLASSES.WARLORD]: { hp: 17, mp: 5, strength: 3, intelligence: 2, agility: 2, vitality: 2 },
+
+  // Wizard advanced classes (T1-T4)
   [ADVANCED_CLASSES.SORCERER]: { hp: 7, mp: 15, strength: 1, intelligence: 5, agility: 1, vitality: 1 },
+  [ADVANCED_CLASSES.SUMMONER]: { hp: 9, mp: 14, strength: 1, intelligence: 4, agility: 1, vitality: 2 },
+  [ADVANCED_CLASSES.CONJURER]: { hp: 8, mp: 13, strength: 1, intelligence: 4, agility: 2, vitality: 1 },
+  [ADVANCED_CLASSES.ORACLE]: { hp: 8, mp: 14, strength: 1, intelligence: 5, agility: 1, vitality: 1 },
+
+  // Monk advanced classes (T1-T4)
   [ADVANCED_CLASSES.NINJA]: { hp: 10, mp: 5, strength: 2, intelligence: 2, agility: 4, vitality: 1 },
-  [ADVANCED_CLASSES.ALCHEMIST]: { hp: 11, mp: 10, strength: 1, intelligence: 3, agility: 2, vitality: 2 }
+  [ADVANCED_CLASSES.MARTIAL_ARTIST]: { hp: 12, mp: 5, strength: 3, intelligence: 1, agility: 4, vitality: 1 },
+  [ADVANCED_CLASSES.BRAWLER]: { hp: 14, mp: 4, strength: 3, intelligence: 1, agility: 3, vitality: 2 },
+  [ADVANCED_CLASSES.ASCETIC]: { hp: 11, mp: 8, strength: 2, intelligence: 3, agility: 3, vitality: 1 },
+
+  // Chemist advanced classes (T1-T4)
+  [ADVANCED_CLASSES.ALCHEMIST]: { hp: 11, mp: 10, strength: 1, intelligence: 3, agility: 2, vitality: 2 },
+  [ADVANCED_CLASSES.MEDIC]: { hp: 12, mp: 12, strength: 1, intelligence: 4, agility: 1, vitality: 2 },
+  [ADVANCED_CLASSES.PLAGUE_DOCTOR]: { hp: 10, mp: 11, strength: 1, intelligence: 4, agility: 2, vitality: 1 },
+  [ADVANCED_CLASSES.ARTIFICER]: { hp: 11, mp: 9, strength: 2, intelligence: 3, agility: 2, vitality: 2 }
 };
 
 // Movement range by class
 export const CLASS_MOVEMENT = {
+  // Base classes
   [CLASSES.WARRIOR]: 3,
   [CLASSES.WIZARD]: 3,
   [CLASSES.MONK]: 4,
   [CLASSES.CHEMIST]: 3,
-  // Advanced classes
+
+  // Warrior advanced classes
   [ADVANCED_CLASSES.BERSERKER]: 3,
+  [ADVANCED_CLASSES.PALADIN]: 3,
+  [ADVANCED_CLASSES.GUARDIAN]: 2,  // Heavy armor restricts movement
+  [ADVANCED_CLASSES.WARLORD]: 3,
+
+  // Wizard advanced classes
   [ADVANCED_CLASSES.SORCERER]: 2,
+  [ADVANCED_CLASSES.SUMMONER]: 3,
+  [ADVANCED_CLASSES.CONJURER]: 3,
+  [ADVANCED_CLASSES.ORACLE]: 3,
+
+  // Monk advanced classes
   [ADVANCED_CLASSES.NINJA]: 5,
-  [ADVANCED_CLASSES.ALCHEMIST]: 3
+  [ADVANCED_CLASSES.MARTIAL_ARTIST]: 4,
+  [ADVANCED_CLASSES.BRAWLER]: 3,   // Slower, more defensive
+  [ADVANCED_CLASSES.ASCETIC]: 4,
+
+  // Chemist advanced classes
+  [ADVANCED_CLASSES.ALCHEMIST]: 3,
+  [ADVANCED_CLASSES.MEDIC]: 3,
+  [ADVANCED_CLASSES.PLAGUE_DOCTOR]: 3,
+  [ADVANCED_CLASSES.ARTIFICER]: 2  // Carries heavy equipment
 };
 
 // Seeded random number generator (Mulberry32)

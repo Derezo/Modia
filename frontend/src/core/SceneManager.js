@@ -1,6 +1,5 @@
 import { TitleIntroScene } from '../scenes/TitleIntroScene.js';
-import { LoginScene } from '../scenes/LoginScene.js';
-import { RegisterScene } from '../scenes/RegisterScene.js';
+import { AuthScene } from '../scenes/AuthScene.js';
 import { CharacterSelectScene } from '../scenes/CharacterSelectScene.js';
 import { CharacterCreateScene } from '../scenes/CharacterCreateScene.js';
 import { WorldMapScene } from '../scenes/WorldMapScene.js';
@@ -16,6 +15,7 @@ import { RecruitmentScene } from '../scenes/RecruitmentScene.js';
 import { CourtyardScene } from '../scenes/CourtyardScene.js';
 import { LeaderboardScene } from '../scenes/LeaderboardScene.js';
 import { SettingsScene } from '../scenes/SettingsScene.js';
+import { GuildAdvancementScene } from '../scenes/GuildAdvancementScene.js';
 
 export class SceneManager {
   constructor(game) {
@@ -27,10 +27,13 @@ export class SceneManager {
   }
 
   registerScenes() {
+    // Single AuthScene handles both login and register modes
+    const authScene = new AuthScene(this.game);
+
     this.scenes = {
       titleIntro: new TitleIntroScene(this.game),
-      login: new LoginScene(this.game),
-      register: new RegisterScene(this.game),
+      login: authScene,
+      register: authScene,
       characterSelect: new CharacterSelectScene(this.game),
       characterCreate: new CharacterCreateScene(this.game),
       worldMap: new WorldMapScene(this.game),
@@ -45,7 +48,8 @@ export class SceneManager {
       recruitment: new RecruitmentScene(this.game),
       courtyard: new CourtyardScene(this.game),
       leaderboard: new LeaderboardScene(this.game),
-      settings: new SettingsScene(this.game)
+      settings: new SettingsScene(this.game),
+      guildAdvancement: new GuildAdvancementScene(this.game)
     };
   }
 
@@ -68,12 +72,21 @@ export class SceneManager {
     // Clear UI overlay
     this.game.uiOverlay.innerHTML = '';
 
-    // Enter new scene
+    // Enter new scene with mode for auth scenes
     this.currentScene = this.scenes[sceneName];
+
+    // Pass mode for login/register scenes
+    if (sceneName === 'login' || sceneName === 'register') {
+      data = { ...data, mode: sceneName };
+    }
+
     this.currentScene.enter(data);
 
     // Update state
     this.game.state.set('currentScene', sceneName);
+
+    // Update notification visibility based on scene
+    this.game.updateNotificationVisibility(sceneName);
 
     console.log(`Switched to scene: ${sceneName}`);
   }

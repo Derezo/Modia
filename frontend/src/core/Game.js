@@ -160,13 +160,8 @@ export class Game {
         this.scenes.switchTo('login');
       }
     } else {
-      // Check if intro has been seen before
-      const introSeen = localStorage.getItem('modia_intro_seen');
-      if (introSeen) {
-        this.scenes.switchTo('login');
-      } else {
-        this.scenes.switchTo('titleIntro');
-      }
+      // Always show the title intro animation
+      this.scenes.switchTo('titleIntro');
     }
   }
 
@@ -372,11 +367,12 @@ export class Game {
   setupPartyInviteHandler() {
     if (!this.socket) return;
 
-    this.socket.on('party:invite', (data) => {
+    this.socket.on('party:invite_received', (data) => {
       // Show toast notification
+      const partyText = data.partyName ? ` (${data.partyName})` : '';
       this.toast.info(
         'Party Invite',
-        `${data.inviterUsername} invited you to join their party`
+        `${data.fromUsername} invited you to join their party${partyText}`
       );
 
       // Show party invite modal
@@ -384,7 +380,7 @@ export class Game {
         inviteId: data.inviteId,
         partyId: data.partyId,
         partyName: data.partyName,
-        leaderUsername: data.inviterUsername,
+        leaderUsername: data.fromUsername,
         expiresAt: data.expiresAt
       });
     });

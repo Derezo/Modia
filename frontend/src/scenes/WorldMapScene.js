@@ -67,6 +67,8 @@ export class WorldMapScene extends Scene {
     this.previewPath = null; // Array of node IDs for hover path preview
     this.previewCost = 0;
     this.previewAffordable = true;
+    this.previewBlockedNodes = []; // Node IDs that are blocked in the path
+    this.previewPathBlocked = false; // True if path is blocked by intermediate nodes
     this.pathPreviewCache = new Map(); // Cache path calculations
 
     // Event listener cleanup
@@ -241,6 +243,8 @@ export class WorldMapScene extends Scene {
       this.previewPath = cached.path;
       this.previewCost = cached.cost;
       this.previewAffordable = this.staminaBar ? this.staminaBar.current >= cached.cost : true;
+      this.previewBlockedNodes = cached.blockedNodes || [];
+      this.previewPathBlocked = cached.pathBlocked || false;
       return;
     }
 
@@ -250,17 +254,23 @@ export class WorldMapScene extends Scene {
       this.previewPath = result.path;
       this.previewCost = result.cost;
       this.previewAffordable = result.affordable;
+      this.previewBlockedNodes = result.blockedNodes || [];
+      this.previewPathBlocked = result.pathBlocked || false;
 
       // Cache the result
       this.pathPreviewCache.set(cacheKey, {
         path: result.path,
-        cost: result.cost
+        cost: result.cost,
+        blockedNodes: result.blockedNodes || [],
+        pathBlocked: result.pathBlocked || false
       });
     } catch (err) {
       // Silently fail - just don't show preview
       this.previewPath = null;
       this.previewCost = 0;
       this.previewAffordable = false;
+      this.previewBlockedNodes = [];
+      this.previewPathBlocked = false;
     }
   }
 
@@ -485,10 +495,14 @@ export class WorldMapScene extends Scene {
     // Add action buttons based on node type and features
     nodeActions.innerHTML = '';
 
-    const features = this.currentNode.features || [];
+    let features = this.currentNode.features || [];
+    // Auto-add guild_advancement feature for guild nodes
+    if (this.currentNode.guild_class && !features.includes('guild_advancement')) {
+      features = [...features, 'guild_advancement'];
+    }
     if (Array.isArray(features)) {
       // Prioritize essential features (shops, social hubs) over decorative ones
-      const essentialFeatures = ['blacksmith', 'marketplace', 'tavern', 'apothecary', 'coliseum', 'farm', 'guild_hall', 'courtyard'];
+      const essentialFeatures = ['blacksmith', 'marketplace', 'tavern', 'apothecary', 'coliseum', 'farm', 'guild_hall', 'guild_advancement', 'courtyard'];
       const decorativeFeatures = ['throne', 'temple', 'stables', 'training_ground'];
 
       // Sort features: essential first, then others, decorative last
@@ -533,6 +547,7 @@ export class WorldMapScene extends Scene {
       coliseum: { category: 'action', name: 'battle' },
       farm: { category: 'action', name: 'harvest' },
       guild_hall: { category: 'action', name: 'recruit' },
+      guild_advancement: { category: 'action', name: 'advance' },
       courtyard: { category: 'action', name: 'social' },
       battle: { category: 'action', name: 'battle' }
     };
@@ -541,6 +556,9 @@ export class WorldMapScene extends Scene {
     let label = this.capitalize(feature);
     if (feature === 'guild_hall' && this.currentNode.guild_class) {
       label = GUILD_ACTION_LABELS[this.currentNode.guild_class] || 'Guild Hall';
+    }
+    if (feature === 'guild_advancement') {
+      label = 'Advancement';
     }
 
     // Parchment button styling
@@ -646,6 +664,15 @@ export class WorldMapScene extends Scene {
     // Guild hall feature opens the recruitment scene
     if (feature === 'guild_hall') {
       this.game.scenes.switchTo('recruitment', {
+        nodeId: this.currentNode.id,
+        guildClass: this.currentNode.guild_class
+      });
+      return;
+    }
+
+    // Guild advancement feature opens the advancement quest scene
+    if (feature === 'guild_advancement') {
+      this.game.scenes.switchTo('guildAdvancement', {
         nodeId: this.currentNode.id,
         guildClass: this.currentNode.guild_class
       });
@@ -1099,6 +1126,35 @@ export class WorldMapScene extends Scene {
           ctx.stroke();
           ctx.setLineDash([]);
         }
+
+        // Draw blocked/cleared indicator for combat nodes
+        const isCombatNode = ['forest', 'cave', 'mountain', 'bridge'].includes(node.node_type);
+        if (isCombatNode && !isCurrent) {
+          if (node.blocked) {
+            // Red tint overlay for blocked nodes
+            ctx.save();
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = '#ff4444';
+            ctx.beginPath();
+            ctx.arc(x, y, drawSize / 2 + 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            // Lock icon
+            ctx.fillStyle = '#ff4444';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('\u{1F512}', x, y - drawSize / 2 - 2); // Lock emoji
+          } else if (node.cleared) {
+            // Green checkmark for cleared nodes
+            ctx.fillStyle = '#44ff44';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('\u2713', x, y - drawSize / 2 - 2); // Checkmark
+          }
+        }
       } else {
         // Fallback: Draw colored circle with icon
         // Mystery nodes get grayed style
@@ -1130,6 +1186,24 @@ export class WorldMapScene extends Scene {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(this.getNodeIcon(node.node_type, isVisited), x, y);
+
+        // Draw blocked/cleared indicator for combat nodes (fallback style)
+        const isCombatNode = ['forest', 'cave', 'mountain', 'bridge'].includes(node.node_type);
+        if (isCombatNode && !isCurrent && !isMystery) {
+          if (node.blocked) {
+            // Red border for blocked
+            ctx.strokeStyle = '#ff4444';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+          } else if (node.cleared) {
+            // Green checkmark above
+            ctx.fillStyle = '#44ff44';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('\u2713', x, y - this.nodeSize - 4);
+          }
+        }
       }
 
       // Note: tooltips are rendered after fog of war for visibility
@@ -1190,12 +1264,23 @@ export class WorldMapScene extends Scene {
 
   /**
    * Render path preview (golden glow along the path) using organic curves
+   * Color coding: gold = affordable, red = not affordable, orange = path blocked by intermediate node
    */
   renderPathPreview(ctx) {
     if (!this.previewPath || this.previewPath.length < 2) return;
 
-    const pathColor = this.previewAffordable ? 'rgba(255, 215, 0, 0.6)' : 'rgba(180, 80, 80, 0.6)';
-    const glowColor = this.previewAffordable ? 'rgba(255, 215, 0, 0.2)' : 'rgba(180, 80, 80, 0.2)';
+    // Determine path color: blocked intermediate nodes = orange, not affordable = red, else = gold
+    let pathColor, glowColor;
+    if (this.previewPathBlocked) {
+      pathColor = 'rgba(255, 140, 0, 0.6)'; // Orange for blocked
+      glowColor = 'rgba(255, 140, 0, 0.2)';
+    } else if (!this.previewAffordable) {
+      pathColor = 'rgba(180, 80, 80, 0.6)'; // Red for not affordable
+      glowColor = 'rgba(180, 80, 80, 0.2)';
+    } else {
+      pathColor = 'rgba(255, 215, 0, 0.6)'; // Gold for affordable
+      glowColor = 'rgba(255, 215, 0, 0.2)';
+    }
 
     ctx.save();
     ctx.lineCap = 'round';
@@ -1276,6 +1361,9 @@ export class WorldMapScene extends Scene {
       } else if (!isVisited) {
         // Mystery node - discovered but not visited
         costLine = { text: 'Mystery location', color: '#6a6a8a' };
+      } else if (this.previewPathBlocked) {
+        // Path is blocked by intermediate node
+        costLine = { text: 'Path blocked', color: '#ff8c00' };
       } else if (this.previewCost > 0) {
         if (this.previewAffordable) {
           costLine = { text: `${this.previewCost} stamina`, color: '#6a8a6a' };
@@ -1284,6 +1372,12 @@ export class WorldMapScene extends Scene {
           costLine = { text: `Need ${this.previewCost - currentStamina} more stamina`, color: '#c54545' };
         }
       }
+    }
+
+    // Add blocked indicator if destination is blocked
+    const isCombatNode = ['forest', 'cave', 'mountain', 'bridge'].includes(node.node_type);
+    if (isCombatNode && node.blocked && !isCurrent) {
+      costLine = { text: 'Blocked - defeat enemies first', color: '#ff4444' };
     }
 
     // Measure text

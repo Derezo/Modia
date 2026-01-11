@@ -39,6 +39,17 @@ npm run test                            # All workspaces
 npm run test -w api                     # API tests only
 node --test api/src/tests/auth.test.js  # Single test file (Node's built-in test runner)
 
+# E2E Testing (Playwright - auto-starts servers)
+npx playwright test                     # Run all E2E tests
+npx playwright test e2e/auth.spec.js    # Single spec file
+npx playwright test --ui                # Interactive UI mode
+npx playwright show-report              # View HTML report
+
+# Balance Testing (game balance validation)
+node --test api/src/tests/balance/damageScaling.test.js
+node --test api/src/tests/balance/classBalance.test.js
+node --test api/src/tests/balance/economyBalance.test.js
+
 # Database utilities
 npm run db:reset                        # Re-run migrations + seed
 npm run db:status                       # Show applied vs pending migrations
@@ -122,7 +133,7 @@ Room-based subscriptions at `/ws`:
 
 **Scene lifecycle:** `enter()` → `update(dt)` / `render(ctx)` loop → `exit()` - scenes manage their own state and cleanup
 
-**Testing:** Tests require the API server to be running. Use `testHelper.js` for test utilities (`createTestUser()`, `createTestCharacter()`, `request()`)
+**Testing:** Tests require the API server to be running. Use `testHelper.js` for test utilities (`createTestUser()`, `createTestCharacter()`, `request()`). For WebSocket tests, use `wsTestHelper.js` (`createWsClient()`, `waitForMessage()`). Balance tests in `api/src/tests/balance/` validate damage formulas, class viability, and economy curves.
 
 ## Critical Technical Gotchas
 

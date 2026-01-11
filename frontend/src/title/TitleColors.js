@@ -132,6 +132,22 @@ export const TITLE_COLORS = {
   flag: {
     primary: '#c9a227',
     secondary: '#8b0000'
+  },
+
+  // Stormy sky colors
+  storm: {
+    skyDark: '#2a2a3a',
+    skyMid: '#3a3a4a',
+    skyLight: '#4a4a5a',
+    cloudDark: '#3c3c46',
+    cloudMid: '#5a5a6a',
+    cloudLight: '#6a6a7a',
+    lightning: '#ffffff',
+    lightningGlow: '#eeeeff',
+    rain: '#8a9aaa',
+    groundDark: '#1a2a1a',
+    groundMid: '#2a3a2a',
+    groundLight: '#3a4a3a'
   }
 };
 

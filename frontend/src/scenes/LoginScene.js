@@ -60,13 +60,24 @@ export class LoginScene extends Scene {
       }
 
       .login-title {
-        color: ${P.text.primary};
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
-        font-size: 42px;
+        color: ${P.light};
+        font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: 52px;
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        font-style: italic;
         margin-bottom: ${PARCHMENT_SPACING.xl};
-        letter-spacing: 2px;
+        letter-spacing: 4px;
+        /* Multi-layer text outline effect */
+        text-shadow:
+          -2px -2px 0 ${P.borderDark},
+          2px -2px 0 ${P.borderDark},
+          -2px 2px 0 ${P.borderDark},
+          2px 2px 0 ${P.borderDark},
+          -3px 0 0 ${P.borderDark},
+          3px 0 0 ${P.borderDark},
+          0 -3px 0 ${P.borderDark},
+          0 3px 0 ${P.borderDark},
+          4px 4px 8px rgba(0, 0, 0, 0.5);
       }
 
       .login-panel {
@@ -180,14 +191,14 @@ export class LoginScene extends Scene {
       }
 
       .login-switch a {
-        color: ${P.accent.gold};
+        color: ${P.borderDark};
         cursor: pointer;
         text-decoration: underline;
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       }
 
       .login-switch a:hover {
-        color: ${P.border};
+        color: ${P.text.primary};
       }
 
       .login-panel.form-loading .login-input {
@@ -428,53 +439,101 @@ export class LoginScene extends Scene {
   }
 
   render(ctx) {
-    // Draw parchment-themed background gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
-    gradient.addColorStop(0, P.light);
-    gradient.addColorStop(0.5, P.mid);
-    gradient.addColorStop(1, P.dark);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    // Draw stone wall background
+    this.renderStoneWall(ctx);
+  }
 
-    // Draw subtle decorative elements with gold accents
-    ctx.fillStyle = 'rgba(201, 162, 39, 0.08)';
-    for (let i = 0; i < 5; i++) {
-      const x = 100 + i * 150;
-      const y = 450 + Math.sin(Date.now() / 1000 + i) * 20;
-      ctx.beginPath();
-      ctx.arc(x, y, 30 + i * 5, 0, Math.PI * 2);
-      ctx.fill();
+  /**
+   * Render a pixel-art style stone wall background.
+   */
+  renderStoneWall(ctx) {
+    const w = ctx.canvas.width;
+    const h = ctx.canvas.height;
+
+    // Stone colors
+    const stoneColors = ['#7a7a6a', '#8a8a7a', '#6a6a5a', '#9a9a8a', '#5a5a4a'];
+    const mortarColor = '#4a4a3a';
+
+    // Fill with mortar color first
+    ctx.fillStyle = mortarColor;
+    ctx.fillRect(0, 0, w, h);
+
+    // Stone block dimensions
+    const blockWidth = 64;
+    const blockHeight = 32;
+    const mortarGap = 3;
+
+    // Draw stone blocks in a brick pattern
+    const rows = Math.ceil(h / blockHeight) + 1;
+    const cols = Math.ceil(w / blockWidth) + 1;
+
+    for (let row = 0; row < rows; row++) {
+      // Offset every other row for brick pattern
+      const offsetX = (row % 2) * (blockWidth / 2);
+
+      for (let col = -1; col < cols; col++) {
+        const x = col * blockWidth + offsetX;
+        const y = row * blockHeight;
+
+        // Use seeded random for consistent stone colors (ensure positive index)
+        const seed = Math.abs(row * 31 + col * 17) % stoneColors.length;
+        const baseColor = stoneColors[seed];
+
+        // Draw the stone block
+        this.drawStoneBlock(ctx, x + mortarGap / 2, y + mortarGap / 2,
+          blockWidth - mortarGap, blockHeight - mortarGap, baseColor, row, col);
+      }
     }
 
-    // Add subtle corner flourishes
-    ctx.strokeStyle = P.border;
-    ctx.lineWidth = 2;
-    ctx.globalAlpha = 0.3;
+    // Add subtle vignette for depth
+    const vignette = ctx.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.7);
+    vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    vignette.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, w, h);
+  }
 
-    // Top-left flourish
-    ctx.beginPath();
-    ctx.moveTo(20, 60);
-    ctx.quadraticCurveTo(20, 20, 60, 20);
-    ctx.stroke();
+  /**
+   * Draw a single stone block with texture.
+   */
+  drawStoneBlock(ctx, x, y, width, height, baseColor, row, col) {
+    // Parse base color to create variations
+    const r = parseInt(baseColor.slice(1, 3), 16);
+    const g = parseInt(baseColor.slice(3, 5), 16);
+    const b = parseInt(baseColor.slice(5, 7), 16);
 
-    // Top-right flourish
-    ctx.beginPath();
-    ctx.moveTo(ctx.canvas.width - 20, 60);
-    ctx.quadraticCurveTo(ctx.canvas.width - 20, 20, ctx.canvas.width - 60, 20);
-    ctx.stroke();
+    // Main stone fill with subtle gradient
+    const gradient = ctx.createLinearGradient(x, y, x, y + height);
+    gradient.addColorStop(0, `rgb(${r + 15}, ${g + 15}, ${b + 10})`);
+    gradient.addColorStop(0.5, baseColor);
+    gradient.addColorStop(1, `rgb(${r - 20}, ${g - 20}, ${b - 15})`);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x, y, width, height);
 
-    // Bottom-left flourish
-    ctx.beginPath();
-    ctx.moveTo(20, ctx.canvas.height - 60);
-    ctx.quadraticCurveTo(20, ctx.canvas.height - 20, 60, ctx.canvas.height - 20);
-    ctx.stroke();
+    // Add stone texture (small pixel variations)
+    const seed = row * 100 + col;
+    for (let i = 0; i < 8; i++) {
+      const px = x + ((seed + i * 7) % (width - 4)) + 2;
+      const py = y + ((seed + i * 11) % (height - 4)) + 2;
+      const shade = ((seed + i) % 3) - 1;
+      ctx.fillStyle = `rgba(${shade > 0 ? 255 : 0}, ${shade > 0 ? 255 : 0}, ${shade > 0 ? 255 : 0}, 0.1)`;
+      ctx.fillRect(px, py, 2, 2);
+    }
 
-    // Bottom-right flourish
-    ctx.beginPath();
-    ctx.moveTo(ctx.canvas.width - 20, ctx.canvas.height - 60);
-    ctx.quadraticCurveTo(ctx.canvas.width - 20, ctx.canvas.height - 20, ctx.canvas.width - 60, ctx.canvas.height - 20);
-    ctx.stroke();
+    // Top highlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.fillRect(x, y, width, 2);
 
-    ctx.globalAlpha = 1.0;
+    // Bottom shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillRect(x, y + height - 2, width, 2);
+
+    // Left highlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.fillRect(x, y, 2, height);
+
+    // Right shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.12)';
+    ctx.fillRect(x + width - 2, y, 2, height);
   }
 }

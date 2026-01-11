@@ -29,9 +29,10 @@ const INVITE_EXPIRATION_MS = 5 * 60 * 1000;
  * @param {string} fromUsername - Inviting user's username
  * @param {number} toUserId - Target user ID
  * @param {number} characterId - Character initiating invite
+ * @param {Object} partyInfo - Optional party information { partyId, partyName }
  * @returns {Object} Invite result
  */
-async function sendInvite(fromUserId, fromUsername, toUserId, characterId) {
+async function sendInvite(fromUserId, fromUsername, toUserId, characterId, partyInfo = null) {
   // Check if target is already in a party
   const partyCheck = await query(
     `SELECT p.id FROM parties p
@@ -51,6 +52,8 @@ async function sendInvite(fromUserId, fromUsername, toUserId, characterId) {
     fromUsername,
     toUserId,
     characterId,
+    partyId: partyInfo?.partyId || null,
+    partyName: partyInfo?.partyName || null,
     createdAt: Date.now(),
     expiresAt: Date.now() + INVITE_EXPIRATION_MS
   };
@@ -65,6 +68,8 @@ async function sendInvite(fromUserId, fromUsername, toUserId, characterId) {
       inviteId,
       fromUserId,
       fromUsername,
+      partyId: invite.partyId,
+      partyName: invite.partyName,
       expiresAt: invite.expiresAt
     }
   });

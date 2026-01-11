@@ -216,13 +216,42 @@ export class ApiClient {
     return this.get('/skills/guilds');
   }
 
-  // Guild advancement endpoints
+  // Guild advancement endpoints (legacy)
   checkAdvancement(characterId) {
     return this.get(`/skills/advancement/${characterId}`);
   }
 
   advanceGuild(characterId) {
     return this.post('/skills/advance', { characterId });
+  }
+
+  // Advancement Quest endpoints
+  getAvailableAdvancementQuests(characterId) {
+    return this.get(`/advancement/available/${characterId}`);
+  }
+
+  getCurrentAdvancementQuest(characterId) {
+    return this.get(`/advancement/current/${characterId}`);
+  }
+
+  acceptAdvancementQuest(characterId, questTemplateId) {
+    return this.post('/advancement/accept', { characterId, questTemplateId });
+  }
+
+  abandonAdvancementQuest(characterId) {
+    return this.post(`/advancement/abandon/${characterId}`);
+  }
+
+  checkBossTrialEligibility(characterId) {
+    return this.get(`/advancement/boss/${characterId}`);
+  }
+
+  startBossTrial(characterId) {
+    return this.post('/advancement/boss/start', { characterId });
+  }
+
+  getAdvancementHistory(characterId) {
+    return this.get(`/advancement/history/${characterId}`);
   }
 
   // Shop endpoints

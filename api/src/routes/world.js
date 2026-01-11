@@ -7,6 +7,9 @@ import * as staminaService from '../services/staminaService.js';
 
 const router = express.Router();
 
+// Combat node types that require clearance (forest, cave, mountain, bridge)
+const COMBAT_NODE_TYPES = ['forest', 'cave', 'mountain', 'bridge'];
+
 /**
  * Build adjacency map from world node connections
  * @param {Object[]} connections - Array of {from_node_id, to_node_id} pairs
@@ -27,12 +30,14 @@ function buildAdjacencyMap(connections) {
 
 /**
  * Find shortest path between two nodes using BFS
+ * Respects node blocking: cannot pass THROUGH blocked nodes, but CAN travel TO them
  * @param {number} fromNodeId - Starting node ID
  * @param {number} toNodeId - Destination node ID
  * @param {Map<number, Set<number>>} adjacency - Adjacency map
+ * @param {Set<number>} blockedNodes - Set of blocked node IDs (cannot pass through)
  * @returns {number[]|null} Array of node IDs forming the path, or null if no path
  */
-function bfsPath(fromNodeId, toNodeId, adjacency) {
+function bfsPath(fromNodeId, toNodeId, adjacency, blockedNodes = new Set()) {
   if (fromNodeId === toNodeId) {
     return [fromNodeId];
   }
@@ -46,8 +51,13 @@ function bfsPath(fromNodeId, toNodeId, adjacency) {
 
     const neighbors = adjacency.get(current) || new Set();
     for (const neighbor of neighbors) {
+      // Destination is always reachable (can travel TO blocked node to fight)
       if (neighbor === toNodeId) {
         return [...path, neighbor];
+      }
+      // Skip blocked intermediate nodes (cannot pass THROUGH)
+      if (blockedNodes.has(neighbor)) {
+        continue;
       }
       if (!visited.has(neighbor)) {
         visited.add(neighbor);
@@ -60,27 +70,68 @@ function bfsPath(fromNodeId, toNodeId, adjacency) {
 }
 
 /**
+ * Get set of blocked node IDs for a user
+ * Combat nodes (forest, cave, mountain, bridge) are blocked until cleared
+ * @param {number} userId - User ID
+ * @returns {Promise<Set<number>>} Set of blocked node IDs
+ */
+async function getBlockedNodes(userId) {
+  const result = await query(
+    `SELECT wn.id FROM world_nodes wn
+     WHERE wn.node_type IN ('forest', 'cave', 'mountain', 'bridge')
+     AND NOT EXISTS (
+       SELECT 1 FROM user_node_clearance unc
+       WHERE unc.user_id = $1 AND unc.node_id = wn.id
+     )`,
+    [userId]
+  );
+  return new Set(result.rows.map(r => r.id));
+}
+
+/**
+ * Get cleared nodes for a user
+ * @param {number} userId - User ID
+ * @returns {Promise<Set<number>>} Set of cleared node IDs
+ */
+async function getClearedNodes(userId) {
+  const result = await query(
+    'SELECT node_id FROM user_node_clearance WHERE user_id = $1',
+    [userId]
+  );
+  return new Set(result.rows.map(r => r.node_id));
+}
+
+/**
  * Find shortest path between two world nodes
  * @param {number} fromNodeId - Starting node ID
  * @param {number} toNodeId - Destination node ID
- * @returns {Promise<{path: number[], distance: number}|null>}
+ * @param {number|null} userId - User ID for blocking check (null to ignore blocking)
+ * @returns {Promise<{path: number[], distance: number, blockedInPath: number[]}|null>}
  */
-async function findWorldPath(fromNodeId, toNodeId) {
+async function findWorldPath(fromNodeId, toNodeId, userId = null) {
   // Load all connections
   const result = await query(
     'SELECT from_node_id, to_node_id FROM world_node_connections'
   );
 
   const adjacency = buildAdjacencyMap(result.rows);
-  const path = bfsPath(fromNodeId, toNodeId, adjacency);
+
+  // Get blocked nodes if userId provided
+  const blockedNodes = userId ? await getBlockedNodes(userId) : new Set();
+
+  const path = bfsPath(fromNodeId, toNodeId, adjacency, blockedNodes);
 
   if (!path) {
     return null;
   }
 
+  // Find which nodes in the path are blocked (for UI display)
+  const blockedInPath = path.filter(nodeId => blockedNodes.has(nodeId));
+
   return {
     path,
-    distance: path.length - 1 // Number of edges, not nodes
+    distance: path.length - 1, // Number of edges, not nodes
+    blockedInPath
   };
 }
 
@@ -90,19 +141,25 @@ router.get('/seed', asyncHandler(async (req, res) => {
   res.json({ seed });
 }));
 
-// GET /api/world/nodes - Get discovered nodes for user (fog of war)
+// GET /api/world/nodes - Get discovered nodes for user (fog of war + clearance status)
 router.get('/nodes', authenticate, asyncHandler(async (req, res) => {
   const userId = req.user.userId;
 
-  // Get only discovered nodes for this user
+  // Get only discovered nodes for this user, including clearance status
   const result = await query(
     `SELECT wn.id, wn.node_type, wn.name, wn.x_coord, wn.y_coord, wn.distance_from_center,
             wn.features, wn.guild_class, wn.local_seed, wn.difficulty_tier,
             und.discovered_at,
             und.discovery_method,
-            CASE WHEN und.discovery_method = 'travel' THEN true ELSE false END as visited
+            CASE WHEN und.discovery_method = 'travel' THEN true ELSE false END as visited,
+            -- Clearance status: combat nodes need clearing
+            CASE WHEN unc.node_id IS NOT NULL THEN true ELSE false END as cleared,
+            -- Blocked status: combat nodes that aren't cleared
+            CASE WHEN wn.node_type IN ('forest', 'cave', 'mountain', 'bridge')
+                  AND unc.node_id IS NULL THEN true ELSE false END as blocked
      FROM world_nodes wn
      INNER JOIN user_node_discovery und ON wn.id = und.node_id
+     LEFT JOIN user_node_clearance unc ON wn.id = unc.node_id AND unc.user_id = $1
      WHERE und.user_id = $1
      ORDER BY wn.distance_from_center ASC`,
     [userId]
@@ -157,13 +214,14 @@ router.get('/nodes/:id', authenticate, asyncHandler(async (req, res) => {
 // GET /api/world/path/:targetNodeId - Preview path to a node (without traveling)
 router.get('/path/:targetNodeId', authenticate, asyncHandler(async (req, res) => {
   const { targetNodeId } = req.params;
+  const userId = req.user.userId;
 
   // Get user's current position
   const charResult = await query(
     `SELECT c.current_node_id, c.id as character_id
      FROM characters c
      WHERE c.user_id = $1 AND c.party_slot = 1`,
-    [req.user.userId]
+    [userId]
   );
 
   if (charResult.rows.length === 0) {
@@ -176,18 +234,19 @@ router.get('/path/:targetNodeId', authenticate, asyncHandler(async (req, res) =>
   // Check if destination is discovered
   const discoveryCheck = await query(
     'SELECT 1 FROM user_node_discovery WHERE user_id = $1 AND node_id = $2',
-    [req.user.userId, targetNodeId]
+    [userId, targetNodeId]
   );
 
   if (discoveryCheck.rows.length === 0) {
     throw new AppError('Destination node has not been discovered', 400);
   }
 
-  // Find path
-  const pathResult = await findWorldPath(currentNodeId, parseInt(targetNodeId, 10));
+  // Find path (with blocking awareness)
+  const pathResult = await findWorldPath(currentNodeId, parseInt(targetNodeId, 10), userId);
 
   if (!pathResult) {
-    throw new AppError('No path found to destination', 400);
+    // Path might be blocked - provide helpful error
+    throw new AppError('No path found. Clear blocked nodes to reach destination.', 400);
   }
 
   // Get current stamina
@@ -195,11 +254,21 @@ router.get('/path/:targetNodeId', authenticate, asyncHandler(async (req, res) =>
   const cost = pathResult.distance;
   const affordable = staminaInfo.current >= cost;
 
-  // Get node names along the path
+  // Get node names along the path with clearance info
   const pathNodesResult = await query(
-    `SELECT id, name, node_type FROM world_nodes WHERE id = ANY($1) ORDER BY array_position($1, id)`,
-    [pathResult.path]
+    `SELECT wn.id, wn.name, wn.node_type,
+            CASE WHEN unc.node_id IS NOT NULL THEN true ELSE false END as cleared,
+            CASE WHEN wn.node_type IN ('forest', 'cave', 'mountain', 'bridge')
+                  AND unc.node_id IS NULL THEN true ELSE false END as blocked
+     FROM world_nodes wn
+     LEFT JOIN user_node_clearance unc ON wn.id = unc.node_id AND unc.user_id = $2
+     WHERE wn.id = ANY($1)
+     ORDER BY array_position($1, wn.id)`,
+    [pathResult.path, userId]
   );
+
+  // Check if destination is a blocked node (player wants to fight there)
+  const destinationBlocked = pathResult.blockedInPath.includes(parseInt(targetNodeId, 10));
 
   res.json({
     path: pathResult.path,
@@ -208,7 +277,11 @@ router.get('/path/:targetNodeId', authenticate, asyncHandler(async (req, res) =>
     cost,
     affordable,
     currentStamina: staminaInfo.current,
-    maxStamina: staminaInfo.max
+    maxStamina: staminaInfo.max,
+    // Blocking info
+    blockedNodes: pathResult.blockedInPath,
+    destinationBlocked,
+    pathBlocked: false // Path was found, so it's not completely blocked
   });
 }));
 
@@ -259,11 +332,34 @@ router.post('/travel', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Destination node has not been discovered', 400);
   }
 
-  // Find shortest path
-  const pathResult = await findWorldPath(currentNodeId, targetNodeId);
+  // Find shortest path with blocking awareness
+  const pathResult = await findWorldPath(currentNodeId, targetNodeId, req.user.userId);
 
   if (!pathResult) {
     throw new AppError('No path found to destination', 400);
+  }
+
+  // Check for blocked intermediate nodes (can travel TO a blocked node, but not THROUGH)
+  // blockedInPath contains all blocked nodes in the path including destination
+  // We allow:
+  // - Leaving from current node (even if blocked) - player can always leave their position
+  // - Traveling TO a blocked node (destination) - to initiate battle
+  // We block: traveling THROUGH other blocked nodes to reach destination
+  const blockedIntermediates = pathResult.blockedInPath.filter(
+    nodeId => nodeId !== targetNodeId && nodeId !== currentNodeId
+  );
+
+  if (blockedIntermediates.length > 0) {
+    // Get names of blocked nodes for better error message
+    const blockedNamesResult = await query(
+      `SELECT name FROM world_nodes WHERE id = ANY($1)`,
+      [blockedIntermediates]
+    );
+    const blockedNames = blockedNamesResult.rows.map(r => r.name).join(', ');
+    throw new AppError(
+      `Path is blocked by uncleared nodes: ${blockedNames}. Clear them in battle first.`,
+      400
+    );
   }
 
   const travelCost = pathResult.distance;

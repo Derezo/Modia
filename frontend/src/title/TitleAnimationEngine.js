@@ -2,8 +2,9 @@ import { TITLE_COLORS } from './TitleColors.js';
 import { CastleRenderer } from './components/CastleRenderer.js';
 import { RiverRenderer } from './components/RiverRenderer.js';
 import { ForestRenderer } from './components/ForestRenderer.js';
-import { PathRenderer } from './components/PathRenderer.js';
-import { DrawbridgeRenderer } from './components/DrawbridgeRenderer.js';
+import { BridgeRenderer } from './components/BridgeRenderer.js';
+import { CastleGateRenderer } from './components/CastleGateRenderer.js';
+import { StormyBackgroundRenderer } from './components/StormyBackgroundRenderer.js';
 import { Soldier } from './entities/Soldier.js';
 import { Goblin } from './entities/Goblin.js';
 import { Bat } from './entities/Bat.js';
@@ -14,19 +15,21 @@ import { TransitionOverlay } from './effects/TransitionOverlay.js';
 
 /**
  * Timeline markers for animation phases (in milliseconds).
+ * Revised layout: castle left, vertical river center, forest right
+ * Collision happens on the bridge spanning the river
  */
 const TIMELINE = {
   fadeIn: 0,
   fadeInEnd: 800,
-  castleReveal: 800,
-  castleRevealEnd: 1400,
-  drawbridgeDrop: 1400,
-  drawbridgeEnd: 2400,
-  soldiersEmerge: 2400,
-  soldiersEnd: 3600,
-  monstersEmerge: 3600,
-  monstersEnd: 4600,
-  collision: 4600,
+  sceneReveal: 800,
+  sceneRevealEnd: 1400,
+  gateOpen: 1400,
+  gateOpenEnd: 2200,
+  soldiersEmerge: 2200,
+  soldiersEnd: 3400,
+  monstersEmerge: 3400,
+  monstersEnd: 4400,
+  collision: 4400,
   lightBurst: 5000,
   fadeToLogin: 5800,
   complete: 6500
@@ -47,11 +50,12 @@ export class TitleAnimationEngine {
     this.complete = false;
 
     // Scene components
+    this.background = null;
     this.castle = null;
     this.river = null;
     this.forest = null;
-    this.path = null;
-    this.drawbridge = null;
+    this.bridge = null;
+    this.gate = null;
 
     // Entities
     this.soldiers = [];
@@ -64,15 +68,21 @@ export class TitleAnimationEngine {
     this.lightBurst = null;
     this.transition = null;
 
-    // Entity spawn tracking
+    // Spawn tracking
+    this.gateOpened = false;
     this.soldiersSpawned = false;
     this.monstersSpawned = false;
     this.lightBurstTriggered = false;
     this.transitionStarted = false;
 
+    // Staggered soldier spawning
+    this.soldierSpawnQueue = [];
+    this.soldierSpawnTimer = 0;
+    this.soldierSpawnIndex = 0;
+
     // Dust emission tracking
     this.lastDustTime = 0;
-    this.dustInterval = 120; // ms between dust emissions
+    this.dustInterval = 120;
   }
 
   /**
@@ -82,38 +92,58 @@ export class TitleAnimationEngine {
     const w = this.width;
     const h = this.height;
 
-    // Position calculations (scaled to canvas size)
+    // Scale calculations
     const scaleX = w / 800;
     const scaleY = h / 600;
     const scale = Math.min(scaleX, scaleY);
 
-    // Castle position (left-center)
-    const castleX = w * 0.25;
-    const castleY = h * 0.58;
+    // Layout positions (revised for vertical river)
+    // Castle on left side
+    const castleX = w * 0.12;
+    const castleY = h * 0.50;
 
-    // Forest position (right side)
-    const forestX = w * 0.62;
-    const forestY = h * 0.42;
+    // Vertical river in center
+    const riverX = w * 0.48;
+    const riverY = 0;
+    const riverWidth = 40 * scale;
+    const riverHeight = h;
 
-    // River position (below castle)
-    const riverY = h * 0.68;
+    // Bridge spanning the river (horizontal)
+    const bridgeY = h * 0.55;
+    const bridgeWidth = 80 * scale;
+    const bridgeHeight = 20 * scale;
+    const bridgeX = riverX - bridgeWidth / 2 + riverWidth / 2;
 
-    // Collision point (middle of battlefield)
-    this.collisionX = w * 0.48;
-    this.collisionY = h * 0.60;
+    // Forest on right side
+    const forestX = w * 0.75;
+    const forestY = h * 0.35;
+
+    // Gate position (in front of castle, aligned with bridge)
+    const gateX = castleX + 70 * scale;
+    const gateY = bridgeY + bridgeHeight / 2;
+
+    // Collision point (center of bridge)
+    this.collisionX = riverX + riverWidth / 2;
+    this.collisionY = bridgeY + bridgeHeight / 2;
+
+    // Store spawn positions (soldiers spawn inside the gate doorway)
+    this.soldierSpawnX = gateX - 5 * scale;
+    this.soldierSpawnY = gateY;
+    this.soldierTargetX = this.collisionX - 15;
+    this.soldierTargetY = this.collisionY;
+
+    this.monsterSpawnX = forestX;
+    this.monsterSpawnY = bridgeY + bridgeHeight / 2;
+    this.monsterTargetX = this.collisionX + 15;
+    this.monsterTargetY = this.collisionY;
 
     // Create components
-    this.castle = new CastleRenderer(castleX, castleY, scale * 0.9);
-    this.river = new RiverRenderer(riverY, w, 50 * scale);
-    this.forest = new ForestRenderer(forestX, forestY, 12);
-    this.path = new PathRenderer([
-      { x: castleX + 60 * scale, y: riverY - 8 },
-      { x: w * 0.35, y: h * 0.64 },
-      { x: this.collisionX, y: this.collisionY },
-      { x: w * 0.58, y: h * 0.56 },
-      { x: forestX - 20, y: forestY + 80 }
-    ]);
-    this.drawbridge = new DrawbridgeRenderer(castleX, riverY - 12);
+    this.background = new StormyBackgroundRenderer(w, h);
+    this.castle = new CastleRenderer(castleX, castleY, scale * 0.85);
+    this.river = new RiverRenderer(riverX, riverY, riverWidth, riverHeight, true); // vertical
+    this.forest = new ForestRenderer(forestX, forestY, 10, w, h);
+    this.bridge = new BridgeRenderer(bridgeX, bridgeY, bridgeWidth, bridgeHeight);
+    this.gate = new CastleGateRenderer(gateX, gateY, scale);
 
     // Create effects
     this.dustEmitter = new DustEmitter();
@@ -136,15 +166,19 @@ export class TitleAnimationEngine {
     this.timer += deltaTime;
 
     // Update components
+    this.background.update(deltaTime);
     this.castle.update(deltaTime);
     this.river.update(deltaTime);
-    this.drawbridge.update(deltaTime);
+    this.gate.update(deltaTime);
 
     // Update transition overlay
     this.transition.update(deltaTime);
 
     // Process timeline events
     this.processTimeline();
+
+    // Process staggered soldier spawning
+    this.processStaggeredSpawns(deltaTime);
 
     // Update entities
     this.updateEntities(deltaTime);
@@ -169,14 +203,13 @@ export class TitleAnimationEngine {
   processTimeline() {
     const t = this.timer;
 
-    // Drawbridge drops
-    if (t >= TIMELINE.drawbridgeDrop && this.drawbridge.isRaised()) {
-      this.drawbridge.lower();
-      // Open portcullis as drawbridge lowers
-      this.castle.setPortcullisOpen(0.8);
+    // Gate opens
+    if (t >= TIMELINE.gateOpen && !this.gateOpened) {
+      this.gate.open();
+      this.gateOpened = true;
     }
 
-    // Soldiers emerge
+    // Soldiers emerge (after gate starts opening)
     if (t >= TIMELINE.soldiersEmerge && !this.soldiersSpawned) {
       this.spawnSoldiers();
       this.soldiersSpawned = true;
@@ -203,24 +236,55 @@ export class TitleAnimationEngine {
   }
 
   /**
-   * Spawn soldier entities.
+   * Queue soldier entities to spawn from the gate with staggered timing.
    */
   spawnSoldiers() {
-    const spawnX = this.width * 0.28;
-    const spawnY = this.height * 0.66;
-    const targetX = this.collisionX - 30;
-    const targetY = this.collisionY;
+    // Soldiers emerge one by one with spread formation
+    // Each soldier spawns from gate center and runs to their target position
+    const formations = [
+      { targetOffset: { x: -30, y: -16 } },   // Far left back
+      { targetOffset: { x: 30, y: -16 } },    // Far right back
+      { targetOffset: { x: -38, y: 4 } },     // Far left mid
+      { targetOffset: { x: 38, y: 4 } },      // Far right mid
+      { targetOffset: { x: -24, y: 18 } },    // Left front
+      { targetOffset: { x: 24, y: 18 } }      // Right front
+    ];
 
-    for (let i = 0; i < 6; i++) {
+    // Queue all soldiers for staggered spawning
+    this.soldierSpawnQueue = formations.map(f => ({
+      targetOffset: f.targetOffset
+    }));
+    this.soldierSpawnTimer = 0;
+  }
+
+  /**
+   * Process staggered soldier spawns over time.
+   */
+  processStaggeredSpawns(deltaTime) {
+    if (this.soldierSpawnQueue.length === 0) return;
+
+    this.soldierSpawnTimer += deltaTime;
+
+    // Alternate delays: 250ms for even soldiers, 500ms for odd
+    const currentDelay = this.soldierSpawnIndex % 2 === 0 ? 250 : 500;
+
+    // Spawn next soldier when timer exceeds delay
+    if (this.soldierSpawnTimer >= currentDelay) {
+      this.soldierSpawnTimer = 0;
+
+      const spawnData = this.soldierSpawnQueue.shift();
+      this.soldierSpawnIndex++;
+
+      // Spawn from gate center with slight random offset
       const soldier = new Soldier(
-        spawnX + (i % 2) * 15,
-        spawnY - Math.floor(i / 2) * 12
+        this.soldierSpawnX + (Math.random() - 0.5) * 8,
+        this.soldierSpawnY + (Math.random() - 0.5) * 6
       );
 
-      // Stagger target positions
+      // Run to spread formation position
       soldier.moveTo(
-        targetX + (i % 3) * 18 - 18,
-        targetY + Math.floor(i / 3) * 15 - 8
+        this.soldierTargetX + spawnData.targetOffset.x,
+        this.soldierTargetY + spawnData.targetOffset.y
       );
 
       this.soldiers.push(soldier);
@@ -228,45 +292,40 @@ export class TitleAnimationEngine {
   }
 
   /**
-   * Spawn monster entities (goblins, bats, slimes).
+   * Spawn monster entities from forest toward the bridge.
    */
   spawnMonsters() {
-    const forestX = this.width * 0.72;
-    const forestY = this.height * 0.52;
-    const targetX = this.collisionX + 30;
-    const targetY = this.collisionY;
-
-    // Spawn goblins
+    // Goblins
     for (let i = 0; i < 5; i++) {
       const goblin = new Goblin(
-        forestX + Math.random() * 40,
-        forestY + 60 + Math.random() * 40
+        this.monsterSpawnX + Math.random() * 30,
+        this.monsterSpawnY + 20 + Math.random() * 40 - 20
       );
       goblin.moveTo(
-        targetX - (i % 3) * 18 + 18,
-        targetY + Math.floor(i / 3) * 12 - 6
+        this.monsterTargetX - (i % 3) * 14 + 14,
+        this.monsterTargetY + Math.floor(i / 3) * 10 - 5
       );
       this.goblins.push(goblin);
     }
 
-    // Spawn bats (staggered)
+    // Bats
     for (let i = 0; i < 4; i++) {
       const bat = new Bat(
-        forestX + 30 + i * 25,
-        forestY - 10 + Math.random() * 40
+        this.monsterSpawnX + 20 + i * 20,
+        this.monsterSpawnY - 40 + Math.random() * 20
       );
       this.bats.push(bat);
     }
 
-    // Spawn slimes
+    // Slimes
     for (let i = 0; i < 3; i++) {
       const slime = new Slime(
-        forestX + 20 + i * 30,
-        forestY + 100
+        this.monsterSpawnX + 10 + i * 25,
+        this.monsterSpawnY + 50
       );
       slime.moveTo(
-        targetX + 20 + i * 25,
-        targetY + 15
+        this.monsterTargetX + 10 + i * 16,
+        this.monsterTargetY + 15
       );
       this.slimes.push(slime);
     }
@@ -305,21 +364,18 @@ export class TitleAnimationEngine {
     if (this.lastDustTime >= this.dustInterval) {
       this.lastDustTime = 0;
 
-      // Dust behind soldiers
       for (const soldier of this.soldiers) {
         if (soldier.isMoving) {
           this.dustEmitter.emit(soldier.x - soldier.direction * 8, soldier.y, soldier.direction, 0.5);
         }
       }
 
-      // Dust behind goblins
       for (const goblin of this.goblins) {
         if (goblin.isMoving) {
           this.dustEmitter.emit(goblin.x - goblin.direction * 6, goblin.y, goblin.direction, 0.4);
         }
       }
 
-      // Dust behind slimes (when landing)
       for (const slime of this.slimes) {
         if (slime.isMoving && slime.hopHeight < 3) {
           this.dustEmitter.emit(slime.x, slime.groundY, slime.direction, 0.6);
@@ -333,23 +389,30 @@ export class TitleAnimationEngine {
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   render(ctx) {
-    // Clear with parchment background
-    this.renderBackground(ctx);
+    // Render stormy background (sky, clouds, back rain)
+    this.background.render(ctx);
 
-    // Don't render scene if still in black fade
+    // Don't render scene elements if still in black fade
     if (!this.transition.isFadingIn() || this.timer > 400) {
       // Render layers back to front
-      this.forest.render(ctx);
-      this.path.render(ctx);
-      this.castle.render(ctx);
-      this.drawbridge.render(ctx);
-      this.river.render(ctx);
+      this.forest.renderBackLayer(ctx);  // Distant forest trees (behind everything)
+      this.forest.renderMidLayer(ctx);   // Mid-layer forest trees
+      this.river.render(ctx);            // Vertical river in center
+      this.bridge.render(ctx);           // Bridge over river
+      this.castle.render(ctx);           // Castle on left
+      this.gate.render(ctx);             // Gate in front of castle
 
       // Render entities (sorted by Y for depth)
       this.renderEntities(ctx);
 
+      // Render front forest layer (trees in front of entities for depth)
+      this.forest.renderFrontLayer(ctx);
+
       // Render dust particles
       this.dustEmitter.render(ctx);
+
+      // Render foreground rain
+      this.background.renderRainForeground(ctx);
     }
 
     // Render light burst effect
@@ -363,42 +426,17 @@ export class TitleAnimationEngine {
   }
 
   /**
-   * Render the background gradient.
-   */
-  renderBackground(ctx) {
-    const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
-    gradient.addColorStop(0, TITLE_COLORS.parchment.light);
-    gradient.addColorStop(0.5, TITLE_COLORS.parchment.mid);
-    gradient.addColorStop(1, TITLE_COLORS.parchment.dark);
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, this.width, this.height);
-
-    // Subtle vignette
-    const vignette = ctx.createRadialGradient(
-      this.width / 2, this.height / 2, 0,
-      this.width / 2, this.height / 2, this.width * 0.7
-    );
-    vignette.addColorStop(0, 'rgba(0,0,0,0)');
-    vignette.addColorStop(1, 'rgba(0,0,0,0.12)');
-    ctx.fillStyle = vignette;
-    ctx.fillRect(0, 0, this.width, this.height);
-  }
-
-  /**
    * Render all entities sorted by Y position for depth.
    */
   renderEntities(ctx) {
-    // Collect all entities with their Y positions
     const allEntities = [
       ...this.soldiers.map(e => ({ entity: e, y: e.y })),
       ...this.goblins.map(e => ({ entity: e, y: e.y })),
       ...this.slimes.map(e => ({ entity: e, y: e.groundY }))
     ];
 
-    // Sort by Y (entities further back rendered first)
     allEntities.sort((a, b) => a.y - b.y);
 
-    // Render sorted entities
     for (const { entity } of allEntities) {
       entity.render(ctx);
     }
@@ -413,10 +451,8 @@ export class TitleAnimationEngine {
    * Render the skip hint text.
    */
   renderSkipHint(ctx) {
-    // Only show after 2 seconds
     if (this.timer < 2000) return;
 
-    // Fade out during transition
     let alpha = 0.55;
     if (this.timer > TIMELINE.lightBurst) {
       alpha = Math.max(0, 0.55 - (this.timer - TIMELINE.lightBurst) / 800);
@@ -430,11 +466,9 @@ export class TitleAnimationEngine {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
 
-    // Text shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
     ctx.fillText('Press any key to skip', this.width / 2 + 1, this.height - 19);
 
-    // Main text
     ctx.fillStyle = TITLE_COLORS.ui.textLight;
     ctx.fillText('Press any key to skip', this.width / 2, this.height - 20);
 
@@ -459,25 +493,23 @@ export class TitleAnimationEngine {
    * Clean up all resources.
    */
   destroy() {
-    // Clear entity arrays
     this.soldiers = [];
     this.goblins = [];
     this.bats = [];
     this.slimes = [];
 
-    // Clear effects
     if (this.dustEmitter) {
       this.dustEmitter.clear();
     }
     this.lightBurst = null;
     this.transition = null;
 
-    // Clear component references
+    this.background = null;
     this.castle = null;
     this.river = null;
     this.forest = null;
-    this.path = null;
-    this.drawbridge = null;
+    this.bridge = null;
+    this.gate = null;
 
     this.phase = 'destroyed';
   }

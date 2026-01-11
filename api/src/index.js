@@ -35,6 +35,7 @@ import lfgRoutes from './routes/lfg.js';
 import friendRoutes from './routes/friends.js';
 import coliseumRoutes from './routes/coliseum.js';
 import leaderboardRoutes from './routes/leaderboard.js';
+import advancementQuestRoutes from './routes/advancementQuest.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -87,6 +88,7 @@ app.use('/api/friends', friendRoutes);
 app.use('/api/players', friendRoutes); // Player search endpoint
 app.use('/api/coliseum', coliseumRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/advancement', advancementQuestRoutes);
 
 // Error handling
 app.use(errorHandler);

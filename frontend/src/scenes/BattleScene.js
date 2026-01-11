@@ -11,6 +11,7 @@ import { RadialMenu } from '../battle/RadialMenu.js';
 import { BattleActionBar } from '../battle/BattleActionBar.js';
 import { BattleContextMenu } from '../battle/BattleContextMenu.js';
 import { GridCursor } from '../battle/GridCursor.js';
+import { BossPhaseIndicator } from '../battle/BossPhaseIndicator.js';
 import { calculateDamagePreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
 
@@ -82,6 +83,11 @@ export class BattleScene extends Scene {
 
     // WebSocket event unsubscribers
     this.wsUnsubscribers = [];
+
+    // Boss phase indicator
+    this.bossPhaseIndicator = null;
+    this.isBossBattle = false;
+    this.guildmasterData = null;
   }
 
   /**
@@ -97,6 +103,8 @@ export class BattleScene extends Scene {
     this.battleType = data.battleType || 'pve'; // 'pve', 'pvp', 'pve_coop'
     this.opponentUsername = data.opponentUsername || null;
     this.isPvP = this.battleType === 'pvp';
+    this.isBossBattle = data.isBossBattle || false;
+    this.guildmasterData = data.guildmaster || null;
 
     // PvP turn timer state
     this.pvpTurnTimer = null;
@@ -246,6 +254,9 @@ export class BattleScene extends Scene {
       isMenuOpen: () => this.isAnyMenuOpen()
     });
 
+    // Initialize boss phase indicator if this is a boss battle
+    this.initializeBossIndicator();
+
     // Setup input handlers
     this.setupInputHandlers();
 
@@ -305,6 +316,11 @@ export class BattleScene extends Scene {
       this.gridCursor = null;
     }
 
+    if (this.bossPhaseIndicator) {
+      this.bossPhaseIndicator.destroy();
+      this.bossPhaseIndicator = null;
+    }
+
     if (this.rewardsModal) {
       this.rewardsModal.destroy();
       this.rewardsModal = null;
@@ -328,6 +344,73 @@ export class BattleScene extends Scene {
     // Fall back to game state for backwards compatibility
     const currentNode = this.game.state.get('currentNode');
     return currentNode?.node_type || 'forest';
+  }
+
+  /**
+   * Initialize boss phase indicator if this is a boss battle
+   */
+  initializeBossIndicator() {
+    // Check for boss in battle state
+    const bossUnit = this.battleState.units.find(u => u.isBoss || u.type === 'enemy' && u.maxPhases > 1);
+
+    // Also check guildmaster data from advancement battle
+    if (this.guildmasterData || bossUnit) {
+      const bossData = {
+        name: this.guildmasterData?.name || bossUnit?.name || 'Boss',
+        title: this.guildmasterData?.title || bossUnit?.title || null,
+        currentPhase: this.guildmasterData?.currentPhase || bossUnit?.currentPhase || 1,
+        maxPhases: this.guildmasterData?.maxPhases || bossUnit?.maxPhases || 1,
+        phaseName: bossUnit?.phaseName || `Phase 1`,
+        hp: bossUnit?.hp || 100,
+        maxHp: bossUnit?.maxHp || 100
+      };
+
+      this.bossPhaseIndicator = new BossPhaseIndicator(this.game);
+      this.bossPhaseIndicator.create(bossData);
+      this.isBossBattle = true;
+
+      console.log('[BattleScene] Boss indicator created:', bossData);
+    }
+  }
+
+  /**
+   * Handle boss phase transition from WebSocket
+   * @param {Object} payload - Phase transition data
+   */
+  handleBossPhaseTransition(payload) {
+    console.log('[BattleScene] Boss phase transition:', payload);
+
+    if (this.bossPhaseIndicator) {
+      this.bossPhaseIndicator.playPhaseTransition({
+        newPhase: payload.newPhase,
+        phaseName: payload.phaseName,
+        message: payload.message
+      });
+    }
+
+    // Update the boss unit in our local state
+    const bossUnit = this.units.get(payload.bossId);
+    if (bossUnit) {
+      bossUnit.currentPhase = payload.newPhase;
+      bossUnit.phaseName = payload.phaseName;
+    }
+  }
+
+  /**
+   * Update boss HP display
+   * @param {string} bossId - Boss unit ID
+   * @param {number} newHp - New HP value
+   */
+  updateBossHp(bossId, newHp) {
+    if (this.bossPhaseIndicator) {
+      const bossUnit = this.units.get(bossId);
+      if (bossUnit) {
+        this.bossPhaseIndicator.update({
+          hp: newHp,
+          maxHp: bossUnit.maxHp
+        });
+      }
+    }
   }
 
   /**
@@ -543,6 +626,14 @@ export class BattleScene extends Scene {
       }
     });
     this.wsUnsubscribers.push(playerReconnectedUnsub);
+
+    // NEW: Handle boss phase transition
+    const phaseTransitionUnsub = socket.on('battle:phase_transition', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleBossPhaseTransition(payload);
+      }
+    });
+    this.wsUnsubscribers.push(phaseTransitionUnsub);
 
     // NEW: Handle full state sync (for reconnection)
     const stateSyncUnsub = socket.on('battle:state_sync', (payload) => {
