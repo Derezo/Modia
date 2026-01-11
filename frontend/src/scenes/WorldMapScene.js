@@ -321,7 +321,16 @@ export class WorldMapScene extends Scene {
       ]);
 
       this.nodes = worldData.nodes;
-      this.connections = worldData.connections;
+
+      // Deduplicate connections (keep only one per node pair for bidirectional paths)
+      const seenPairs = new Set();
+      this.connections = worldData.connections.filter(conn => {
+        const key = `${Math.min(conn.from_node_id, conn.to_node_id)}-${Math.max(conn.from_node_id, conn.to_node_id)}`;
+        if (seenPairs.has(key)) return false;
+        seenPairs.add(key);
+        return true;
+      });
+
       this.currentNode = currentData.currentNode;
 
       this.game.state.set('worldNodes', this.nodes);
@@ -1109,15 +1118,31 @@ export class WorldMapScene extends Scene {
         ctx.fillText(this.getNodeIcon(node.node_type, isVisited), x, y);
       }
 
-      // Node tooltip (for current and hovered nodes)
+      // Note: tooltips are rendered after fog of war for visibility
+    }
+
+    // Render fog of war overlay (before character and labels so player/text is always visible)
+    if (this.effects) {
+      this.effects.renderFogOfWar(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height, this.nodes, this.connections);
+    }
+
+    // Second pass: Render node tooltips AFTER fog of war so they're always visible
+    for (const node of this.nodes) {
+      const x = node.x_coord * this.nodeSpacing + this.cameraX;
+      const y = node.y_coord * this.nodeSpacing + this.cameraY;
+
+      // Skip if off screen
+      if (x < -50 || x > ctx.canvas.width + 50 || y < -50 || y > ctx.canvas.height + 50) {
+        continue;
+      }
+
+      const isCurrent = this.currentNode && node.id === this.currentNode.id;
+      const isHovered = this.hoveredNode && node.id === this.hoveredNode.id;
+
+      // Node tooltip (for current and hovered nodes) - now rendered above fog
       if (isCurrent || isHovered) {
         this.renderNodeTooltip(ctx, node, x, y, isCurrent);
       }
-    }
-
-    // Render fog of war overlay (before character so player is always visible)
-    if (this.effects) {
-      this.effects.renderFogOfWar(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height, this.nodes, this.connections);
     }
 
     // Render character on map (after fog so always visible)

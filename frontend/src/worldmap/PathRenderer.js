@@ -1,9 +1,55 @@
 /**
  * PathRenderer - Organic path rendering using Catmull-Rom splines
  * Creates natural S-curves for paths between world map nodes
+ * Supports variance levels for dynamic curve intensity
  */
 
 import { SeededRandom } from '@shared/constants.js';
+
+/**
+ * Path variance configuration for different curve intensities
+ * - extreme (5%): Chaotic, highly bent paths with dramatic curves
+ * - significant (20%): Noticeable bends and curves
+ * - soft (75%): Gentle S-curves (original behavior)
+ */
+const VARIANCE_CONFIG = {
+  extreme: {
+    amplitudeMultiplier: 3.5,    // Much wider curves
+    frequencyMultiplier: 2.0,    // More oscillations in the path
+    controlPointBonus: 2,        // Extra control points for complexity
+    maxAmplitude: 120            // Cap on curve displacement
+  },
+  significant: {
+    amplitudeMultiplier: 2.0,
+    frequencyMultiplier: 1.5,
+    controlPointBonus: 1,
+    maxAmplitude: 80
+  },
+  soft: {
+    amplitudeMultiplier: 1.0,
+    frequencyMultiplier: 1.0,
+    controlPointBonus: 0,
+    maxAmplitude: 40
+  }
+};
+
+/**
+ * Determine path variance level from seed (deterministic)
+ * @param {number} seedValue - The seed value for this path
+ * @returns {'extreme'|'significant'|'soft'} Variance level
+ */
+function getPathVarianceLevel(seedValue) {
+  // Use modulo to deterministically select variance based on seed
+  const selector = seedValue % 100;
+
+  if (selector < 5) {
+    return 'extreme';     // 5% of paths: chaotic curves
+  } else if (selector < 25) {
+    return 'significant'; // 20% of paths: noticeable bends
+  } else {
+    return 'soft';        // 75% of paths: gentle S-curves
+  }
+}
 
 /**
  * Generate organic path control points using seeded noise
@@ -20,11 +66,16 @@ export function generatePathControlPoints(x1, y1, x2, y2, fromNodeId, toNodeId) 
   const seedValue = Math.min(fromNodeId, toNodeId) * 1000000 + Math.max(fromNodeId, toNodeId);
   const rng = new SeededRandom(seedValue);
 
-  // Calculate path length and number of control points (2-5 based on distance)
+  // Determine variance level for this path
+  const varianceLevel = getPathVarianceLevel(seedValue);
+  const variance = VARIANCE_CONFIG[varianceLevel];
+
+  // Calculate path length and number of control points (2-5 based on distance, plus variance bonus)
   const dx = x2 - x1;
   const dy = y2 - y1;
   const length = Math.sqrt(dx * dx + dy * dy);
-  const numPoints = Math.max(2, Math.min(5, Math.floor(length / 80) + 2));
+  const baseNumPoints = Math.max(2, Math.min(5, Math.floor(length / 80) + 2));
+  const numPoints = baseNumPoints + variance.controlPointBonus;
 
   // Handle zero-length paths
   if (length < 1) {
@@ -49,8 +100,12 @@ export function generatePathControlPoints(x1, y1, x2, y2, fromNodeId, toNodeId) 
 
     // Seeded perpendicular offset (creates S-curves)
     // Use sin wave modulated by random to create natural curves
-    const direction = Math.sin(t * Math.PI * 2) * (rng.next() - 0.5);
-    const amplitude = length * 0.15 * (0.5 + rng.next() * 0.5);
+    // Apply frequency multiplier for more oscillations in higher variance paths
+    const direction = Math.sin(t * Math.PI * 2 * variance.frequencyMultiplier) * (rng.next() - 0.5);
+
+    // Calculate amplitude with variance multiplier and cap
+    const baseAmplitude = length * 0.15 * (0.5 + rng.next() * 0.5);
+    const amplitude = Math.min(baseAmplitude * variance.amplitudeMultiplier, variance.maxAmplitude);
 
     points.push({
       x: baseX + perpX * direction * amplitude,
