@@ -278,21 +278,35 @@ export function renderOrganicPath(ctx, x1, y1, x2, y2, fromNodeId, toNodeId, sty
  * Render path with gradient fog reveal effect
  * Used for fog of war cutouts along paths
  * @param {CanvasRenderingContext2D} ctx - Canvas context (should be in destination-out mode)
- * @param {number} x1 - Start X
- * @param {number} y1 - Start Y
- * @param {number} x2 - End X
- * @param {number} y2 - End Y
+ * @param {number} x1 - Start X (in target canvas coordinates)
+ * @param {number} y1 - Start Y (in target canvas coordinates)
+ * @param {number} x2 - End X (in target canvas coordinates)
+ * @param {number} y2 - End Y (in target canvas coordinates)
  * @param {number} fromNodeId - Source node ID
  * @param {number} toNodeId - Destination node ID
  * @param {number} baseWidth - Base path width
  * @param {number} baseOpacity - Base opacity for reveal
+ * @param {number} scale - Scale factor for coordinate transformation (e.g., 0.25 for 1/4 resolution fog canvas)
  */
-export function renderPathReveal(ctx, x1, y1, x2, y2, fromNodeId, toNodeId, baseWidth = 44, baseOpacity = 1.0) {
-  // Generate control points
-  const controlPoints = generatePathControlPoints(x1, y1, x2, y2, fromNodeId, toNodeId);
+export function renderPathReveal(ctx, x1, y1, x2, y2, fromNodeId, toNodeId, baseWidth = 44, baseOpacity = 1.0, scale = 1.0) {
+  // When rendering to a scaled canvas (e.g., fog of war at 1/4 resolution),
+  // we need to generate control points at full scale to match the visible path curves,
+  // then scale the resulting spline points down for the target canvas.
+  const fullX1 = scale !== 1.0 ? x1 / scale : x1;
+  const fullY1 = scale !== 1.0 ? y1 / scale : y1;
+  const fullX2 = scale !== 1.0 ? x2 / scale : x2;
+  const fullY2 = scale !== 1.0 ? y2 / scale : y2;
 
-  // Generate spline points
-  const splinePoints = generateSplinePoints(controlPoints, 10);
+  // Generate control points at full scale for correct curve shape
+  const controlPoints = generatePathControlPoints(fullX1, fullY1, fullX2, fullY2, fromNodeId, toNodeId);
+
+  // Generate spline points at full scale
+  const fullSplinePoints = generateSplinePoints(controlPoints, 10);
+
+  // Scale down spline points for target canvas rendering
+  const splinePoints = scale !== 1.0
+    ? fullSplinePoints.map(p => ({ x: p.x * scale, y: p.y * scale }))
+    : fullSplinePoints;
 
   if (splinePoints.length < 2) return;
 

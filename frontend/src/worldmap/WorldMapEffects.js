@@ -483,12 +483,14 @@ export class WorldMapEffects {
 
       if (this.useOrganicPaths) {
         // Use organic path reveal with Catmull-Rom splines
+        // Pass scale factor so curves are generated at full scale then scaled down
         renderPathReveal(
           this.fogCtx,
           x1, y1, x2, y2,
           conn.from_node_id, conn.to_node_id,
           baseWidth,
-          baseOpacity
+          baseOpacity,
+          scale
         );
       } else {
         // Legacy: bezier curve reveal

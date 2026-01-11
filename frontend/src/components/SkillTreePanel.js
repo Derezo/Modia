@@ -9,7 +9,6 @@ export class SkillTreePanel {
     this.skillTree = null;
     this.selectedSkill = null;
     this.element = null;
-    this.advancementInfo = null;
   }
 
   async load(characterId, characterClass) {
@@ -17,16 +16,14 @@ export class SkillTreePanel {
     this.characterClass = characterClass;
 
     try {
-      const [treeData, skillData, advancementData] = await Promise.all([
+      const [treeData, skillData] = await Promise.all([
         this.game.api.getSkillTree(characterClass),
-        this.game.api.getCharacterSkills(characterId),
-        this.game.api.checkAdvancement(characterId).catch(() => null)
+        this.game.api.getCharacterSkills(characterId)
       ]);
 
       this.skillTree = treeData;
       this.learnedSkills = skillData.skills || {};
       this.xpPool = skillData.xpPool || 0;
-      this.advancementInfo = advancementData;
       this.render();
     } catch (err) {
       console.error('Failed to load skill tree:', err);
@@ -204,63 +201,8 @@ export class SkillTreePanel {
         .level-btn {
           flex: 1;
         }
-        .advancement-banner {
-          background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 140, 0, 0.2));
-          border: 2px solid #ffd700;
-          border-radius: 8px;
-          padding: 16px;
-          margin-bottom: 16px;
-          text-align: center;
-        }
-        .advancement-banner.locked {
-          background: rgba(0, 0, 0, 0.3);
-          border-color: #444;
-        }
-        .advancement-title {
-          font-size: 18px;
-          font-weight: bold;
-          color: #ffd700;
-          margin-bottom: 8px;
-        }
-        .advancement-banner.locked .advancement-title {
-          color: #888;
-        }
-        .advancement-desc {
-          font-size: 13px;
-          color: #ccc;
-          margin-bottom: 12px;
-        }
-        .advancement-req {
-          font-size: 12px;
-          color: #ff4444;
-          margin-bottom: 8px;
-        }
-        .advancement-req.met {
-          color: #00ff88;
-        }
-        .advance-btn {
-          background: linear-gradient(180deg, #ffd700, #ff8c00);
-          color: #000;
-          font-weight: bold;
-          border: none;
-          padding: 10px 24px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-          transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .advance-btn:hover:not(:disabled) {
-          transform: scale(1.05);
-          box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
-        }
-        .advance-btn:disabled {
-          background: #444;
-          color: #888;
-          cursor: not-allowed;
-        }
       </style>
 
-      ${this.renderAdvancementBanner()}
       <div class="skill-branches">
         ${this.renderBranches()}
       </div>
@@ -278,34 +220,6 @@ export class SkillTreePanel {
 
     this.container.appendChild(this.element);
     this.setupEventListeners();
-  }
-
-  renderAdvancementBanner() {
-    const info = this.advancementInfo;
-
-    // No advancement info available or already advanced
-    if (!info || !info.advancedClass) {
-      return '';
-    }
-
-    const isEligible = info.eligible;
-    const bannerClass = isEligible ? 'advancement-banner' : 'advancement-banner locked';
-    const reqClass = isEligible ? 'advancement-req met' : 'advancement-req';
-
-    return `
-      <div class="${bannerClass}" id="advancement-banner">
-        <div class="advancement-title">
-          ${isEligible ? '★ ' : ''}Advance to ${info.advancedGuildName}${isEligible ? ' ★' : ''}
-        </div>
-        <div class="advancement-desc">${info.advancedGuildDescription}</div>
-        <div class="${reqClass}">
-          Level Requirement: ${info.currentLevel}/${info.levelRequired}
-        </div>
-        <button class="advance-btn" id="advance-guild-btn" ${!isEligible ? 'disabled' : ''}>
-          ${isEligible ? 'Advance Guild!' : 'Not Yet Eligible'}
-        </button>
-      </div>
-    `;
   }
 
   renderBranches() {
@@ -366,46 +280,8 @@ export class SkillTreePanel {
         this.selectSkill(skillId);
       });
     });
-
-    // Guild advancement button
-    const advanceBtn = this.element.querySelector('#advance-guild-btn');
-    if (advanceBtn && !advanceBtn.disabled) {
-      advanceBtn.addEventListener('click', () => this.handleAdvancement());
-    }
-  }
-
-  async handleAdvancement() {
-    const info = this.advancementInfo;
-    if (!info || !info.eligible) return;
-
-    // Confirm advancement
-    const confirmed = confirm(
-      `Advance to ${info.advancedGuildName}?\n\n` +
-      `This will:\n` +
-      `• Change your class from ${info.currentClass} to ${info.advancedClass}\n` +
-      `• Unlock new ${info.advancedGuildName} skills\n` +
-      `• Recalculate stats with advanced class growth\n\n` +
-      `This cannot be undone!`
-    );
-
-    if (!confirmed) return;
-
-    try {
-      const result = await this.game.api.advanceGuild(this.characterId);
-
-      this.game.showNotification(result.message, 'success');
-
-      // Reload the skill tree with the new class
-      this.characterClass = result.character.class;
-      await this.load(this.characterId, this.characterClass);
-
-      // Notify parent scene to refresh character data
-      if (this.onAdvancement) {
-        this.onAdvancement(result.character);
-      }
-    } catch (err) {
-      this.game.showNotification(err.message || 'Failed to advance guild', 'error');
-    }
+    // Note: Class advancement is now handled through guild hall quests,
+    // not through the skill tree panel. See ROADMAP_GAMEPLAY.md for details.
   }
 
   selectSkill(skillId) {

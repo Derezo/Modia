@@ -107,11 +107,6 @@ export class TitleIntroScene extends Scene {
     this.skipRequested = true;
 
     console.log('TitleIntroScene: skipping animation');
-
-    // Mark intro as seen
-    this.markIntroSeen();
-
-    // Switch to login scene
     this.game.scenes.switchTo('login');
   }
 
@@ -123,23 +118,7 @@ export class TitleIntroScene extends Scene {
     this.skipRequested = true;
 
     console.log('TitleIntroScene: animation complete');
-
-    // Mark intro as seen
-    this.markIntroSeen();
-
-    // Switch to login scene
     this.game.scenes.switchTo('login');
-  }
-
-  /**
-   * Mark the intro as seen in localStorage.
-   */
-  markIntroSeen() {
-    try {
-      localStorage.setItem('modia_intro_seen', 'true');
-    } catch (e) {
-      console.warn('Could not save intro seen state:', e);
-    }
   }
 
   /**

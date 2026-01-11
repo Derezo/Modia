@@ -2,7 +2,7 @@ import express from 'express';
 import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
-import { CLASS_ADVANCEMENT, ADVANCEMENT_LEVEL_REQUIREMENT, calculateStats } from '../config/constants.js';
+import { GUILD_ADVANCEMENT_TIERS, ADVANCEMENT_QUEST_MIN_LEVEL } from '../config/constants.js';
 import { SKILL_TREES } from '../config/skillTrees.js';
 
 const router = express.Router();
@@ -198,7 +198,8 @@ router.get('/guilds', authenticate, asyncHandler(async (req, res) => {
   res.json({ guilds });
 }));
 
-// GET /api/skills/advancement/:characterId - Check advancement eligibility
+// GET /api/skills/advancement/:characterId - Get advancement tiers for character's guild
+// Advancement now requires completing quests - use /api/advancement/* endpoints
 router.get('/advancement/:characterId', authenticate, asyncHandler(async (req, res) => {
   const { characterId } = req.params;
 
@@ -214,117 +215,76 @@ router.get('/advancement/:characterId', authenticate, asyncHandler(async (req, r
 
   const character = charResult.rows[0];
   const currentClass = character.class;
-  const advancedClass = CLASS_ADVANCEMENT[currentClass];
+  const baseClasses = ['warrior', 'wizard', 'monk', 'chemist'];
 
-  // Check if already advanced (advanced classes don't have further advancement)
-  if (!advancedClass) {
+  // Determine which guild this class belongs to
+  let guildId = null;
+  if (baseClasses.includes(currentClass)) {
+    guildId = currentClass;
+  } else {
+    // Check if current class is in any advancement tier
+    for (const [guild, tiers] of Object.entries(GUILD_ADVANCEMENT_TIERS)) {
+      if (tiers.includes(currentClass)) {
+        guildId = guild;
+        break;
+      }
+    }
+  }
+
+  if (!guildId) {
     return res.json({
       eligible: false,
-      reason: 'Already in an advanced guild or no advancement path available',
+      reason: 'Unknown class - no advancement path available',
       currentClass,
-      advancedClass: null
+      availableTiers: []
     });
   }
 
-  // Check level requirement
-  const meetsLevel = character.level >= ADVANCEMENT_LEVEL_REQUIREMENT;
+  const tiers = GUILD_ADVANCEMENT_TIERS[guildId];
+  const currentTierIndex = tiers.indexOf(currentClass);
 
-  const advancedTree = SKILL_TREES[advancedClass];
+  // Check level requirement for quest eligibility
+  const meetsLevel = character.level >= ADVANCEMENT_QUEST_MIN_LEVEL;
+
+  // Build tier info with skill trees
+  const availableTiers = tiers.map((tierClass, index) => {
+    const tree = SKILL_TREES[tierClass];
+    return {
+      tier: index + 1,
+      classId: tierClass,
+      className: tree?.name || tierClass,
+      description: tree?.description || '',
+      isCompleted: currentTierIndex >= index,
+      isCurrent: currentClass === tierClass
+    };
+  });
 
   res.json({
-    eligible: meetsLevel,
-    reason: meetsLevel ? 'Eligible for advancement' : `Requires level ${ADVANCEMENT_LEVEL_REQUIREMENT} (current: ${character.level})`,
+    eligible: meetsLevel && currentTierIndex < tiers.length - 1,
+    reason: !meetsLevel
+      ? `Requires level ${ADVANCEMENT_QUEST_MIN_LEVEL} (current: ${character.level})`
+      : currentTierIndex >= tiers.length - 1
+        ? 'Already at maximum advancement tier'
+        : 'Visit your guild hall to start an advancement quest',
     currentClass,
-    advancedClass,
-    advancedGuildName: advancedTree?.name || advancedClass,
-    advancedGuildDescription: advancedTree?.description || '',
-    levelRequired: ADVANCEMENT_LEVEL_REQUIREMENT,
-    currentLevel: character.level
+    guildId,
+    currentTier: baseClasses.includes(currentClass) ? 0 : currentTierIndex + 1,
+    maxTier: tiers.length,
+    availableTiers,
+    levelRequired: ADVANCEMENT_QUEST_MIN_LEVEL,
+    currentLevel: character.level,
+    questSystemInfo: 'Class advancement now requires completing guild quests. Visit a guild node to begin.'
   });
 }));
 
-// POST /api/skills/advance - Advance to advanced guild
+// POST /api/skills/advance - DEPRECATED: Use quest-based advancement
+// Advancement now requires completing quests via /api/advancement/* endpoints
 router.post('/advance', authenticate, asyncHandler(async (req, res) => {
-  const { characterId } = req.body;
-
-  // Verify character ownership
-  const charResult = await query(
-    'SELECT id, name, class, level, race, in_battle FROM characters WHERE id = $1 AND user_id = $2',
-    [characterId, req.user.userId]
+  throw new AppError(
+    'Direct advancement has been replaced with quest-based advancement. ' +
+    'Visit your guild hall and complete an advancement quest to advance your class.',
+    400
   );
-
-  if (charResult.rows.length === 0) {
-    throw new AppError('Character not found', 404);
-  }
-
-  const character = charResult.rows[0];
-
-  // Check if in battle
-  if (character.in_battle) {
-    throw new AppError('Cannot advance guild while in battle', 400);
-  }
-
-  const currentClass = character.class;
-  const advancedClass = CLASS_ADVANCEMENT[currentClass];
-
-  // Check if advancement path exists
-  if (!advancedClass) {
-    throw new AppError('No advancement path available for this class', 400);
-  }
-
-  // Check level requirement
-  if (character.level < ADVANCEMENT_LEVEL_REQUIREMENT) {
-    throw new AppError(`Requires level ${ADVANCEMENT_LEVEL_REQUIREMENT} (current: ${character.level})`, 400);
-  }
-
-  // Calculate new stats with advanced class growth
-  const newStats = calculateStats(character.race, advancedClass, character.level);
-
-  await withTransaction(async (client) => {
-    // Update character class and recalculate stats
-    await client.query(
-      `UPDATE characters
-       SET class = $1,
-           hp_max = $2,
-           hp_current = LEAST(hp_current, $2),
-           mp_max = $3,
-           mp_current = LEAST(mp_current, $3),
-           strength = $4,
-           intelligence = $5,
-           agility = $6,
-           vitality = $7
-       WHERE id = $8`,
-      [
-        advancedClass,
-        newStats.hpMax,
-        newStats.mpMax,
-        newStats.strength,
-        newStats.intelligence,
-        newStats.agility,
-        newStats.vitality,
-        characterId
-      ]
-    );
-  });
-
-  // Get updated character
-  const updatedResult = await query(
-    'SELECT * FROM characters WHERE id = $1',
-    [characterId]
-  );
-
-  const advancedTree = SKILL_TREES[advancedClass];
-
-  res.json({
-    success: true,
-    message: `${character.name} has advanced to the ${advancedTree?.name || advancedClass}!`,
-    character: updatedResult.rows[0],
-    newGuild: {
-      id: advancedClass,
-      name: advancedTree?.name || advancedClass,
-      description: advancedTree?.description || ''
-    }
-  });
 }));
 
 export { router, SKILL_TREES };

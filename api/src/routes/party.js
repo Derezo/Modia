@@ -299,7 +299,7 @@ router.post('/multiplayer/:partyId/invite', authenticate, asyncHandler(async (re
 
   // Verify user is party leader
   const partyResult = await query(
-    `SELECT p.id, p.leader_id, p.status, p.max_members,
+    `SELECT p.id, p.name, p.leader_id, p.status, p.max_members,
             (SELECT COUNT(*) FROM party_members WHERE party_id = p.id) as member_count
      FROM parties p
      WHERE p.id = $1`,
@@ -378,7 +378,8 @@ router.post('/multiplayer/:partyId/invite', authenticate, asyncHandler(async (re
     req.user.userId,
     req.user.username,
     targetUser.id,
-    null // No character ID needed for party invites
+    null, // No character ID needed for party invites
+    { partyId: parseInt(partyId), partyName: party.name }
   );
 
   res.json({

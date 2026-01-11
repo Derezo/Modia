@@ -317,6 +317,25 @@ async function broadcastBattleEnd(battleId, status, rewards = null) {
 }
 
 /**
+ * Broadcast boss phase transition to all participants
+ * @param {number} battleId - Battle ID
+ * @param {Object} transition - Phase transition data
+ */
+async function broadcastPhaseTransition(battleId, transition) {
+  const roomName = `battle:${battleId}`;
+
+  const ws = await getWebsocket();
+  ws.broadcastToRoom(roomName, {
+    type: 'battle:phase_transition',
+    payload: {
+      battleId,
+      ...transition,
+      timestamp: Date.now()
+    }
+  });
+}
+
+/**
  * Send battle state to a specific user (for rejoin)
  * @param {number} userId - User ID
  * @param {number} battleId - Battle ID
@@ -407,6 +426,7 @@ export {
 
   // Battle lifecycle
   broadcastBattleEnd,
+  broadcastPhaseTransition,
   broadcastPlayerDisconnected,
   broadcastPlayerReconnected
 };
@@ -427,6 +447,7 @@ export default {
   broadcastActionExecuted,
   broadcastEnemyActions,
   broadcastBattleEnd,
+  broadcastPhaseTransition,
   broadcastPlayerDisconnected,
   broadcastPlayerReconnected
 };

@@ -11,6 +11,8 @@ import * as itemDropService from '../services/itemDropService.js';
 import battleWebsocket from '../services/battleWebsocket.js';
 import { createPlayerBattleUnit } from '../services/battleUnitFactory.js';
 import * as traitService from '../services/traitService.js';
+import * as advancementQuestService from '../services/advancementQuestService.js';
+import * as bossService from '../services/bossService.js';
 import { generateTerrainOnly } from '../../../shared/mapGeneration.js';
 
 const router = express.Router();
@@ -45,11 +47,14 @@ async function handleBattleEnd(battleId, status, state, userId) {
       players.reduce((sum, u) => sum + (u.level || 1), 0) / players.length
     ) || 1;
 
-    // Get node info for rewards calculation
+    // Get node info for rewards calculation and clearance
     const nodeResult = await query(
-      'SELECT difficulty_tier, node_type FROM world_nodes WHERE id = (SELECT node_id FROM battles WHERE id = $1)',
+      `SELECT wn.id as node_id, wn.difficulty_tier, wn.node_type
+       FROM world_nodes wn
+       WHERE wn.id = (SELECT node_id FROM battles WHERE id = $1)`,
       [battleId]
     );
+    const nodeId = nodeResult.rows[0]?.node_id;
     const difficultyTier = nodeResult.rows[0]?.difficulty_tier || 1;
     const nodeType = nodeResult.rows[0]?.node_type || 'forest';
 
@@ -105,7 +110,53 @@ async function handleBattleEnd(battleId, status, state, userId) {
           await itemDropService.storeDroppedItem(partyLeaderId, item, client);
         }
       }
+
+      // Clear combat node on victory (allows player to pass through in future)
+      const combatNodeTypes = ['forest', 'cave', 'mountain', 'bridge'];
+      if (nodeId && combatNodeTypes.includes(nodeType)) {
+        await client.query(
+          `INSERT INTO user_node_clearance (user_id, node_id, battle_id)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (user_id, node_id) DO NOTHING`,
+          [userId, nodeId, battleId]
+        );
+      }
     });
+
+    // Update quest progress (outside transaction for non-critical updates)
+    if (partyLeaderId) {
+      // Track enemy kills
+      for (const enemy of enemies) {
+        const enemyType = enemy.archetype || enemy.type || enemy.name;
+        if (enemyType) {
+          try {
+            await advancementQuestService.updateEnemyProgress(partyLeaderId, enemyType);
+          } catch (err) {
+            console.warn(`Quest progress update failed for enemy ${enemyType}:`, err.message);
+          }
+        }
+      }
+
+      // Track node visits
+      if (nodeId && nodeType) {
+        try {
+          await advancementQuestService.updateNodeProgress(partyLeaderId, nodeId, nodeType);
+        } catch (err) {
+          console.warn(`Quest progress update failed for node ${nodeId}:`, err.message);
+        }
+      }
+
+      // Track material collection from dropped items
+      for (const item of droppedItems) {
+        if (item.templateId) {
+          try {
+            await advancementQuestService.updateMaterialProgress(partyLeaderId, item.templateId);
+          } catch (err) {
+            console.warn(`Quest progress update failed for item ${item.templateId}:`, err.message);
+          }
+        }
+      }
+    }
 
     rewards = {
       gold,
@@ -122,6 +173,11 @@ async function handleBattleEnd(battleId, status, state, userId) {
   for (const participantId of participants) {
     battleWebsocket.leaveBattle(battleId, participantId);
   }
+
+  // Clean up boss encounter records
+  bossService.cleanupBossEncounter(battleId).catch(err => {
+    console.error('[Battle] Failed to cleanup boss encounter:', err);
+  });
 
   return rewards;
 }
@@ -374,6 +430,23 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   const enemies = await enemyService.generateEncounter(currentNodeId, party, formationCharacterIds);
   initialState.units.push(...enemies);
 
+  // Initialize boss states for any boss enemies
+  initialState.bossStates = {};
+  for (const enemy of enemies) {
+    if (bossService.isBoss(enemy)) {
+      // We don't have battleId yet, so we'll use a temporary ID
+      // The actual battle ID will be assigned after insert
+      const bossState = bossService.initializeBossState(enemy, 0);
+      if (bossState) {
+        initialState.bossStates[enemy.id] = bossState;
+        enemy.isBoss = true;
+        enemy.currentPhase = bossState.currentPhase;
+        enemy.maxPhases = bossState.maxPhases;
+        enemy.phaseName = bossState.phaseName;
+      }
+    }
+  }
+
   // Initialize CT values for all units (adds initial variation)
   battleService.initializeCT(initialState.units);
 
@@ -392,6 +465,16 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   );
 
   const battleId = battleResult.rows[0].id;
+
+  // Update boss encounter records with actual battle ID
+  if (Object.keys(initialState.bossStates).length > 0) {
+    for (const [unitId, bossState] of Object.entries(initialState.bossStates)) {
+      bossState.battleId = battleId;
+      bossService.saveBossEncounter(bossState).catch(err => {
+        console.error('[Battle] Failed to save boss encounter:', err);
+      });
+    }
+  }
 
   // Mark characters as in battle
   await query(
@@ -643,6 +726,32 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
       state,
       availableActions: result.availableActions
     });
+  }
+
+  // Check for boss phase transitions after damage dealt
+  if (result.damage && result.targetType === 'enemy' && state.bossStates) {
+    const targetBoss = state.units.find(u => u.id === result.targetId);
+    if (targetBoss && state.bossStates[targetBoss.id]) {
+      const phaseTransition = bossService.processBossDamage(
+        targetBoss,
+        state.bossStates[targetBoss.id],
+        result.damage,
+        state
+      );
+      if (phaseTransition) {
+        result.phaseTransition = phaseTransition;
+        // Update boss display info
+        targetBoss.currentPhase = state.bossStates[targetBoss.id].currentPhase;
+        targetBoss.phaseName = phaseTransition.phaseName;
+
+        // Broadcast phase transition via WebSocket
+        battleWebsocket.broadcastPhaseTransition(battleId, {
+          bossId: targetBoss.id,
+          bossName: targetBoss.name,
+          ...phaseTransition
+        });
+      }
+    }
   }
 
   // Check if battle ended from player action
