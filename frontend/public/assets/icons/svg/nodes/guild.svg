@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Shield with star - guild emblem -->
+  <path class="stroke metallic" d="M12 2L4 5v6c0 5.5 3.5 10 8 11 4.5-1 8-5.5 8-11V5l-8-3z"/>
+  <!-- Star in center -->
+  <path class="stroke" d="M12 7l1.5 3 3.5.5-2.5 2.5.5 3.5-3-1.5-3 1.5.5-3.5L7 10.5l3.5-.5z"/>
+  <!-- Shield border detail -->
+  <path class="stroke" d="M12 4l-6 2v5c0 4 2.5 7.5 6 8.5" style="stroke-width: 1;"/>
+</svg>

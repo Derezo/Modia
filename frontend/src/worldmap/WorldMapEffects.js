@@ -3,6 +3,9 @@
  * Hand-drawn aesthetic with hatching patterns and discovery mechanics
  */
 
+import { FogOfWarState, renderPolygonReveal, expandPolygon } from './FogOfWarState.js';
+import { renderOrganicPath, renderPathReveal } from './PathRenderer.js';
+
 export class WorldMapEffects {
   constructor(assetLoader) {
     this.assetLoader = assetLoader;
@@ -14,7 +17,10 @@ export class WorldMapEffects {
     this.fogCanvas = null;
     this.fogCtx = null;
 
-    // Discovery state
+    // Enhanced fog state with polygon detection
+    this.fogState = new FogOfWarState();
+
+    // Discovery state (legacy - maintained for backward compatibility)
     this.discoveredNodes = new Set();
     this.visitedNodes = new Set();
 
@@ -30,6 +36,9 @@ export class WorldMapEffects {
 
     // Particles (kept for compatibility but simplified)
     this.particles = [];
+
+    // Use organic paths (Catmull-Rom splines)
+    this.useOrganicPaths = true;
   }
 
   /**
@@ -94,8 +103,10 @@ export class WorldMapEffects {
 
   /**
    * Update discovery state from node data
+   * @param {Array} nodes - Array of node objects
+   * @param {Array} connections - Array of connection objects (optional, for polygon detection)
    */
-  updateDiscoveryState(nodes) {
+  updateDiscoveryState(nodes, connections = []) {
     this.discoveredNodes.clear();
     this.visitedNodes.clear();
 
@@ -105,6 +116,9 @@ export class WorldMapEffects {
         this.visitedNodes.add(node.id);
       }
     }
+
+    // Update enhanced fog state with polygon detection
+    this.fogState.updateFromNodes(nodes, connections);
   }
 
   /**
@@ -289,14 +303,10 @@ export class WorldMapEffects {
   }
 
   /**
-   * Layer 3: Hand-drawn style paths
+   * Layer 3: Hand-drawn style paths using Catmull-Rom splines
    */
   renderHandDrawnPaths(ctx, cameraX, cameraY, connections, nodes) {
     const nodeMap = new Map(nodes.map(n => [n.id, n]));
-
-    ctx.strokeStyle = '#5d4e37';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 5]); // Dashed for hand-drawn look
 
     for (const conn of connections) {
       const fromNode = nodeMap.get(conn.from_node_id);
@@ -313,23 +323,40 @@ export class WorldMapEffects {
       const x2 = toNode.x_coord * this.nodeSpacing + cameraX;
       const y2 = toNode.y_coord * this.nodeSpacing + cameraY;
 
-      // Slightly wavy line for hand-drawn effect
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
+      // Check if both nodes are visited for styling
+      const bothVisited = this.visitedNodes.has(fromNode.id) && this.visitedNodes.has(toNode.id);
 
-      const segments = 5;
-      for (let i = 1; i <= segments; i++) {
-        const t = i / segments;
-        const x = x1 + (x2 - x1) * t;
-        const y = y1 + (y2 - y1) * t;
-        const wobble = Math.sin(i * 2.5 + fromNode.id) * 2;
-        ctx.lineTo(x + wobble, y + wobble);
+      if (this.useOrganicPaths) {
+        // Use Catmull-Rom spline for organic curves
+        renderOrganicPath(ctx, x1, y1, x2, y2, fromNode.id, toNode.id, {
+          color: bothVisited ? '#5d4e37' : 'rgba(93, 78, 55, 0.6)',
+          width: bothVisited ? 2 : 1.5,
+          dashed: !bothVisited,
+          shadowColor: 'rgba(0, 0, 0, 0.2)',
+          shadowOffset: 1
+        });
+      } else {
+        // Legacy: wavy line for hand-drawn effect
+        ctx.strokeStyle = bothVisited ? '#5d4e37' : 'rgba(93, 78, 55, 0.6)';
+        ctx.lineWidth = bothVisited ? 2 : 1.5;
+        ctx.setLineDash(bothVisited ? [] : [5, 5]);
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+
+        const segments = 5;
+        for (let i = 1; i <= segments; i++) {
+          const t = i / segments;
+          const x = x1 + (x2 - x1) * t;
+          const y = y1 + (y2 - y1) * t;
+          const wobble = Math.sin(i * 2.5 + fromNode.id) * 2;
+          ctx.lineTo(x + wobble, y + wobble);
+        }
+
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
-
-      ctx.stroke();
     }
-
-    ctx.setLineDash([]);
   }
 
   /**
@@ -378,10 +405,11 @@ export class WorldMapEffects {
 
   /**
    * Layer 5: Fog of war overlay
-   * - Visited nodes: fully cleared
+   * - Visited nodes: fully cleared with progressive radius based on neighbors
    * - Unvisited but discovered nodes: lightened fog (visible but dimmed)
-   * - Paths between visited nodes: fully cleared (curved)
-   * - Paths to unvisited adjacent nodes: lightened fog (curved)
+   * - Paths between visited nodes: fully cleared (organic curves)
+   * - Paths to unvisited adjacent nodes: lightened fog (organic curves)
+   * - Polygons formed by visited nodes: filled for enclosed areas
    */
   renderFogOfWar(ctx, cameraX, cameraY, canvasWidth, canvasHeight, nodes, connections = []) {
     // Create fog canvas at 1/4 resolution for performance
@@ -406,7 +434,27 @@ export class WorldMapEffects {
     // Cut out discovered areas using destination-out
     this.fogCtx.globalCompositeOperation = 'destination-out';
 
-    // First pass: Draw path reveals with gradient edges (paths should be under node reveals)
+    // First pass: Fill detected polygons (enclosed visited areas)
+    const polygons = this.fogState.getPolygons();
+    for (const polygon of polygons) {
+      // Convert polygon node IDs to screen coordinates
+      const vertices = polygon.map(nodeId => {
+        const node = nodeMap.get(nodeId);
+        if (!node) return null;
+        return {
+          x: (node.x_coord * this.nodeSpacing + cameraX) * scale,
+          y: (node.y_coord * this.nodeSpacing + cameraY) * scale
+        };
+      }).filter(v => v !== null);
+
+      if (vertices.length >= 3) {
+        // Expand polygon slightly for softer edges
+        const expanded = expandPolygon(vertices, 8 * scale);
+        renderPolygonReveal(this.fogCtx, expanded, 0.9);
+      }
+    }
+
+    // Second pass: Draw path reveals with gradient edges
     this.fogCtx.lineCap = 'round';
     this.fogCtx.lineJoin = 'round';
 
@@ -427,36 +475,45 @@ export class WorldMapEffects {
       const x2 = (toNode.x_coord * this.nodeSpacing + cameraX) * scale;
       const y2 = (toNode.y_coord * this.nodeSpacing + cameraY) * scale;
 
-      // Calculate bezier control point (same algorithm as WorldMapScene)
-      const control = this.getPathControlPoint(x1, y1, x2, y2, conn.from_node_id, conn.to_node_id);
-
       // Both visited: full clear (opacity 1.0)
       // One visited, one unvisited: partial clear (opacity 0.6)
       const bothVisited = fromVisited && toVisited;
       const baseOpacity = bothVisited ? 1.0 : 0.6;
-      const baseWidth = (bothVisited ? 44 : 32) * scale; // +25% width
+      const baseWidth = (bothVisited ? 44 : 32) * scale;
 
-      // Draw multiple passes for gradient edge effect (outer to inner)
-      // This creates a soft foggy edge similar to node reveals
-      const passes = [
-        { widthMult: 2.0, opacityMult: 0.15 },  // Outer soft edge
-        { widthMult: 1.5, opacityMult: 0.3 },   // Mid edge
-        { widthMult: 1.0, opacityMult: 0.7 },   // Inner edge
-        { widthMult: 0.6, opacityMult: 1.0 }    // Core
-      ];
+      if (this.useOrganicPaths) {
+        // Use organic path reveal with Catmull-Rom splines
+        renderPathReveal(
+          this.fogCtx,
+          x1, y1, x2, y2,
+          conn.from_node_id, conn.to_node_id,
+          baseWidth,
+          baseOpacity
+        );
+      } else {
+        // Legacy: bezier curve reveal
+        const control = this.getPathControlPoint(x1, y1, x2, y2, conn.from_node_id, conn.to_node_id);
 
-      for (const pass of passes) {
-        const opacity = baseOpacity * pass.opacityMult;
-        this.fogCtx.strokeStyle = `rgba(0, 0, 0, ${opacity})`;
-        this.fogCtx.lineWidth = baseWidth * pass.widthMult;
-        this.fogCtx.beginPath();
-        this.fogCtx.moveTo(x1, y1);
-        this.fogCtx.quadraticCurveTo(control.x, control.y, x2, y2);
-        this.fogCtx.stroke();
+        const passes = [
+          { widthMult: 2.0, opacityMult: 0.15 },
+          { widthMult: 1.5, opacityMult: 0.3 },
+          { widthMult: 1.0, opacityMult: 0.7 },
+          { widthMult: 0.6, opacityMult: 1.0 }
+        ];
+
+        for (const pass of passes) {
+          const opacity = baseOpacity * pass.opacityMult;
+          this.fogCtx.strokeStyle = `rgba(0, 0, 0, ${opacity})`;
+          this.fogCtx.lineWidth = baseWidth * pass.widthMult;
+          this.fogCtx.beginPath();
+          this.fogCtx.moveTo(x1, y1);
+          this.fogCtx.quadraticCurveTo(control.x, control.y, x2, y2);
+          this.fogCtx.stroke();
+        }
       }
     }
 
-    // Second pass: Draw node reveals
+    // Third pass: Draw node reveals with progressive radii
     for (const node of nodes) {
       if (!this.discoveredNodes.has(node.id)) continue;
 
@@ -464,10 +521,10 @@ export class WorldMapEffects {
       const screenY = (node.y_coord * this.nodeSpacing + cameraY) * scale;
       const visited = this.visitedNodes.has(node.id);
 
-      // Visited: larger radius, full clear
-      // Unvisited but discovered: smaller radius, partial clear (lightened fog)
-      // +25% radius increase
-      const revealRadius = (visited ? 100 : 50) * scale;
+      // Use progressive reveal radius from fog state
+      const baseRevealRadius = this.fogState.getRevealRadius(node.id);
+      const revealRadius = baseRevealRadius * scale;
+
       const centerOpacity = visited ? 1.0 : 0.6;
       const edgeOpacity = visited ? 0.8 : 0.4;
 
@@ -584,11 +641,11 @@ export class WorldMapEffects {
     this.updateDiscoveryState(nodes);
   }
 
-  renderParticles(ctx) {
+  renderParticles(_ctx) {
     // Simplified - no particles in parchment style
   }
 
-  spawnAmbientParticles(x, y, nodeType) {
+  spawnAmbientParticles(_x, _y, _nodeType) {
     // Disabled for parchment style
   }
 
@@ -596,15 +653,34 @@ export class WorldMapEffects {
     this.particles = [];
   }
 
-  renderTexturedPath(ctx, x1, y1, x2, y2, pathType, controlPoint) {
-    // Not used in parchment style, but keep for compatibility
-    ctx.strokeStyle = '#5d4e37';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.quadraticCurveTo(controlPoint.x, controlPoint.y, x2, y2);
-    ctx.stroke();
-    ctx.setLineDash([]);
+  renderTexturedPath(ctx, x1, y1, x2, y2, pathType, controlPoint, fromNodeId = 0, toNodeId = 0) {
+    // Use organic path rendering if enabled and node IDs provided
+    if (this.useOrganicPaths && fromNodeId && toNodeId) {
+      const style = this.getPathTypeStyle(pathType);
+      renderOrganicPath(ctx, x1, y1, x2, y2, fromNodeId, toNodeId, style);
+    } else {
+      // Fallback to bezier curve
+      ctx.strokeStyle = '#5d4e37';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.quadraticCurveTo(controlPoint.x, controlPoint.y, x2, y2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+
+  /**
+   * Get style configuration for path type
+   */
+  getPathTypeStyle(pathType) {
+    const styles = {
+      road: { color: '#5d4e37', width: 2, dashed: false },
+      trail: { color: '#3a5a3a', width: 1.5, dashed: true },
+      bridge: { color: '#8b7355', width: 3, dashed: false },
+      tunnel: { color: '#2a2a3a', width: 2, dashed: true }
+    };
+    return styles[pathType] || styles.road;
   }
 }

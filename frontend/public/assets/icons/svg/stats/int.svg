@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  </style>
+  <!-- Open book - intelligence symbol -->
+  <path class="stroke" d="M2 4c2-1 5-1 10 1v16c-5-2-8-2-10-1V4z"/>
+  <path class="stroke" d="M22 4c-2-1-5-1-10 1v16c5-2 8-2 10-1V4z"/>
+  <!-- Book spine -->
+  <path class="stroke" d="M12 5v16"/>
+  <!-- Page lines (left) -->
+  <path class="stroke" d="M5 8h5M5 11h5M5 14h5" style="stroke-width: 1;"/>
+  <!-- Page lines (right) -->
+  <path class="stroke" d="M14 8h5M14 11h5M14 14h5" style="stroke-width: 1;"/>
+  <!-- Bookmark ribbon -->
+  <path class="stroke" d="M17 4v5l-1-1-1 1V4" style="stroke-width: 1;"/>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  </style>
+  <!-- Two people silhouette - medieval style -->
+  <!-- Person 1 (left) -->
+  <circle class="stroke" cx="8" cy="6" r="2.5"/>
+  <path class="stroke" d="M3 21v-3c0-2 1.5-3 5-3"/>
+  <!-- Person 2 (right) -->
+  <circle class="stroke" cx="16" cy="6" r="2.5"/>
+  <path class="stroke" d="M21 21v-3c0-2-1.5-3-5-3"/>
+  <!-- Connected at bottom -->
+  <path class="stroke" d="M8 15c2 0 6 0 8 0"/>
+  <path class="stroke" d="M10 18h4"/>
+</svg>

@@ -1,9 +1,14 @@
 import { Scene } from './Scene.js';
 import { InventoryPanel } from '../components/InventoryPanel.js';
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { PARCHMENT_COLORS, getParchmentGradient } from '../ui/parchment/ParchmentTheme.js';
+import { responsive } from '../core/Responsive.js';
+import { Icon } from '../components/Icon.js';
 
 /**
  * InventoryScene - Full-screen inventory management
  * Shows all characters in party with tabs, inventory grid, sorting/filtering
+ * Uses parchment theme for medieval manuscript aesthetic
  */
 export class InventoryScene extends Scene {
   constructor(game) {
@@ -13,6 +18,7 @@ export class InventoryScene extends Scene {
     this.selectedCharacter = null;
     this.inventoryPanel = null;
     this.abortController = null;
+    this.responsiveUnsubscribe = null;
 
     // Filter/sort state
     this.filterType = 'all'; // 'all', 'weapon', 'armor', 'accessory', 'consumable'
@@ -24,6 +30,9 @@ export class InventoryScene extends Scene {
     this.createUI();
     this.setupEventListeners();
 
+    // Subscribe to responsive breakpoint changes
+    this.responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
+
     // Auto-select first character if available
     if (this.characters.length > 0) {
       this.selectCharacter(this.characters[0].id);
@@ -31,6 +40,10 @@ export class InventoryScene extends Scene {
   }
 
   exit() {
+    if (this.responsiveUnsubscribe) {
+      this.responsiveUnsubscribe();
+      this.responsiveUnsubscribe = null;
+    }
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -45,28 +58,51 @@ export class InventoryScene extends Scene {
     }
   }
 
+  /**
+   * Handle responsive breakpoint changes
+   */
+  onBreakpointChange() {
+    if (this.uiElement) {
+      const selectedId = this.selectedCharacter?.id;
+
+      this.uiElement.remove();
+      this.createUI();
+      this.setupEventListeners();
+
+      // Restore selection if there was one
+      if (selectedId) {
+        this.selectCharacter(selectedId);
+      }
+    }
+  }
+
   async loadCharacters() {
     try {
       const result = await this.game.api.getCharacters();
       this.characters = result.characters || [];
     } catch (err) {
       console.error('Failed to load characters:', err);
-      this.game.showNotification('Failed to load characters', 'error');
+      parchmentToast.error('Failed to load characters', err.message);
     }
   }
 
   createUI() {
     const container = document.createElement('div');
     container.id = 'inventory-scene';
+    const isMobile = responsive.isMobile();
+    const leftPanelWidth = isMobile ? '100%' : '200px';
+    const flexDirection = isMobile ? 'column' : 'row';
+
     container.style.cssText = `
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      background: ${getParchmentGradient('135deg')};
       display: flex;
       flex-direction: column;
+      font-family: Georgia, serif;
     `;
 
     container.innerHTML = `
@@ -75,48 +111,55 @@ export class InventoryScene extends Scene {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 16px 24px;
-        background: rgba(0,0,0,0.3);
-        border-bottom: 1px solid #3a3a5a;
+        padding: 12px 20px;
+        background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark});
+        border-bottom: 2px solid ${PARCHMENT_COLORS.borderDark};
       ">
-        <h2 style="margin: 0; color: #ffd700;">Inventory</h2>
-        <button class="btn btn-secondary" id="back-btn">Back to Map</button>
+        <h2 style="margin: 0; color: ${PARCHMENT_COLORS.accent.gold}; font-size: 20px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">
+          ${Icon.html('menu', 'inventory', { size: 'lg' })}
+          ${responsive.showLabels() ? 'Inventory' : ''}
+        </h2>
+        <button class="parchment-btn parchment-btn-secondary" id="back-btn">
+          ${Icon.html('action', 'back', { label: responsive.showLabels() ? 'Back to Map' : '', size: 'md' })}
+        </button>
       </div>
 
       <!-- Main Content -->
       <div style="
         display: flex;
+        flex-direction: ${flexDirection};
         flex: 1;
         padding: 16px;
         gap: 16px;
         overflow: hidden;
       ">
         <!-- Left Panel: Character Tabs -->
-        <div class="ui-panel" style="width: 200px; display: flex; flex-direction: column;">
-          <div class="ui-panel-header">Characters</div>
+        <div class="parchment-panel" style="width: ${leftPanelWidth}; ${isMobile ? 'max-height: 35%;' : ''} display: flex; flex-direction: column;">
+          <div class="parchment-panel-header">Characters</div>
           <div id="character-tabs" style="
             flex: 1;
             overflow-y: auto;
             padding: 8px;
+            background: ${PARCHMENT_COLORS.light};
           ">
             ${this.renderCharacterTabs()}
           </div>
         </div>
 
         <!-- Right Panel: Inventory -->
-        <div class="ui-panel" style="flex: 1; display: flex; flex-direction: column;">
-          <div class="ui-panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="parchment-panel" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+          <div class="parchment-panel-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <span id="inventory-title">Select a Character</span>
             <!-- Filter/Sort Controls -->
             <div id="inventory-controls" style="display: none; gap: 8px;">
-              <select id="filter-select" class="inventory-select">
+              <select id="filter-select" class="parchment-select">
                 <option value="all">All Items</option>
                 <option value="weapon">Weapons</option>
                 <option value="armor">Armor</option>
                 <option value="accessory">Accessories</option>
                 <option value="consumable">Consumables</option>
               </select>
-              <select id="sort-select" class="inventory-select">
+              <select id="sort-select" class="parchment-select">
                 <option value="name">Sort: Name</option>
                 <option value="type">Sort: Type</option>
                 <option value="rarity">Sort: Rarity</option>
@@ -125,8 +168,8 @@ export class InventoryScene extends Scene {
           </div>
 
           <!-- Inventory Content -->
-          <div id="inventory-content" style="flex: 1; overflow-y: auto; padding: 16px;">
-            <div style="color: #8a8aaa; text-align: center; padding: 40px;">
+          <div id="inventory-content" style="flex: 1; overflow-y: auto; padding: 16px; background: ${PARCHMENT_COLORS.light};">
+            <div style="color: ${PARCHMENT_COLORS.text.muted}; text-align: center; padding: 40px;">
               Click a character to view their inventory
             </div>
           </div>
@@ -147,24 +190,68 @@ export class InventoryScene extends Scene {
     const style = document.createElement('style');
     style.id = 'inventory-scene-styles';
     style.textContent = `
+      /* Parchment Panel Styles */
+      #inventory-scene .parchment-panel {
+        background: linear-gradient(to bottom, ${PARCHMENT_COLORS.light}, ${PARCHMENT_COLORS.mid});
+        border: 2px solid ${PARCHMENT_COLORS.border};
+        border-radius: 4px;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        overflow: hidden;
+      }
+      #inventory-scene .parchment-panel-header {
+        padding: 10px 14px;
+        background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark});
+        border-bottom: 1px solid ${PARCHMENT_COLORS.borderDark};
+        color: ${PARCHMENT_COLORS.accent.gold};
+        font-weight: bold;
+        font-size: 14px;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+      }
+
+      /* Parchment Button Styles */
+      #inventory-scene .parchment-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        font-family: Georgia, serif;
+        font-size: 13px;
+        border: 2px solid ${PARCHMENT_COLORS.border};
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+      }
+      #inventory-scene .parchment-btn-secondary {
+        background: linear-gradient(to bottom, ${PARCHMENT_COLORS.light}, ${PARCHMENT_COLORS.mid});
+        color: ${PARCHMENT_COLORS.text.primary};
+      }
+      #inventory-scene .parchment-btn-secondary:hover {
+        background: linear-gradient(to bottom, ${PARCHMENT_COLORS.mid}, ${PARCHMENT_COLORS.dark});
+        border-color: ${PARCHMENT_COLORS.borderDark};
+      }
+
+      /* Character Tab Styles - Parchment Theme */
       .character-tab {
         display: flex;
         align-items: center;
         padding: 10px 12px;
-        background: rgba(0,0,0,0.2);
-        border: 2px solid transparent;
-        border-radius: 8px;
+        background: ${PARCHMENT_COLORS.mid};
+        border: 2px solid ${PARCHMENT_COLORS.border};
+        border-radius: 4px;
         cursor: pointer;
         transition: all 0.2s;
         margin-bottom: 8px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
       }
       .character-tab:hover {
-        border-color: #6ab0f3;
-        background: rgba(74, 144, 217, 0.2);
+        border-color: ${PARCHMENT_COLORS.accent.gold};
+        background: ${PARCHMENT_COLORS.dark};
       }
       .character-tab.selected {
-        border-color: #ffd700;
-        background: rgba(255, 215, 0, 0.2);
+        border-color: ${PARCHMENT_COLORS.accent.gold};
+        background: linear-gradient(to bottom, #e8d9a8, #d4c498);
+        box-shadow: 0 0 8px rgba(201, 162, 39, 0.4);
       }
       .character-tab .char-icon {
         width: 36px;
@@ -177,6 +264,7 @@ export class InventoryScene extends Scene {
         color: #fff;
         margin-right: 10px;
         flex-shrink: 0;
+        border: 2px solid rgba(0,0,0,0.2);
       }
       .character-tab .char-info {
         flex: 1;
@@ -184,7 +272,7 @@ export class InventoryScene extends Scene {
       }
       .character-tab .char-name {
         font-size: 13px;
-        color: #fff;
+        color: ${PARCHMENT_COLORS.text.primary};
         font-weight: bold;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -192,28 +280,33 @@ export class InventoryScene extends Scene {
       }
       .character-tab .char-details {
         font-size: 11px;
-        color: #8a8aaa;
+        color: ${PARCHMENT_COLORS.text.secondary};
       }
-      .inventory-select {
+
+      /* Parchment Select Styles */
+      .parchment-select {
         padding: 6px 10px;
-        background: rgba(0,0,0,0.4);
-        border: 1px solid #3a3a5a;
+        background: ${PARCHMENT_COLORS.light};
+        border: 2px solid ${PARCHMENT_COLORS.border};
         border-radius: 4px;
-        color: #fff;
+        color: ${PARCHMENT_COLORS.text.primary};
+        font-family: Georgia, serif;
         font-size: 12px;
         cursor: pointer;
       }
-      .inventory-select:hover {
-        border-color: #6ab0f3;
+      .parchment-select:hover {
+        border-color: ${PARCHMENT_COLORS.accent.gold};
       }
-      .inventory-select:focus {
+      .parchment-select:focus {
         outline: none;
-        border-color: #ffd700;
+        border-color: ${PARCHMENT_COLORS.accent.gold};
+        box-shadow: 0 0 4px rgba(201, 162, 39, 0.3);
       }
-      .inventory-select option {
-        background: #1a1a2e;
-        color: #fff;
+      .parchment-select option {
+        background: ${PARCHMENT_COLORS.light};
+        color: ${PARCHMENT_COLORS.text.primary};
       }
+
       /* Override inventory panel styles for scene context */
       #inventory-scene .inventory-panel {
         height: 100%;
@@ -232,7 +325,7 @@ export class InventoryScene extends Scene {
 
   renderCharacterTabs() {
     if (this.characters.length === 0) {
-      return '<div style="color: #8a8aaa; text-align: center; padding: 20px;">No characters</div>';
+      return `<div style="color: ${PARCHMENT_COLORS.text.muted}; text-align: center; padding: 20px;">No characters</div>`;
     }
 
     return this.characters.map(char => {
@@ -410,7 +503,8 @@ export class InventoryScene extends Scene {
 
   render(ctx) {
     // UI is HTML-based, no canvas rendering needed
-    ctx.fillStyle = '#1a1a2e';
+    // Draw parchment background for any canvas elements
+    ctx.fillStyle = PARCHMENT_COLORS.mid;
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   }
 }

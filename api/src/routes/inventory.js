@@ -11,6 +11,38 @@ const EQUIPMENT_SLOTS = ['main_hand', 'off_hand', 'head', 'body', 'legs', 'feet'
 // Rarity names by level
 const RARITY_NAMES = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 
+// Helper to get rarity name from ID
+function getRarityName(rarityId) {
+  return RARITY_NAMES[rarityId - 1] || 'common';
+}
+
+// Helper to format item for API response
+function formatItem(item) {
+  const modifications = item.modifications || {};
+
+  return {
+    instanceId: item.instance_id,
+    templateId: item.template_id,
+    // Use generated name if available, fallback to template name
+    name: modifications.generatedName || item.name,
+    displayName: modifications.generatedName || item.name,
+    templateName: item.name,
+    type: item.item_type,
+    // Use rarity from modifications if available, fallback to template
+    rarity: modifications.rarity
+      ? getRarityName(modifications.rarity)
+      : (RARITY_NAMES[item.rarity - 1] || 'common'),
+    quantity: item.quantity,
+    // Use scaled stats from generation, fallback to template
+    baseStats: modifications.baseStats || item.stat_bonuses || {},
+    bonusStats: modifications.bonusStats || {},
+    augments: modifications.augments || [],
+    material: modifications.material || null,
+    itemData: modifications,
+    description: item.description
+  };
+}
+
 // GET /api/inventory/:characterId - Get character's inventory
 router.get('/:characterId', authenticate, asyncHandler(async (req, res) => {
   const { characterId } = req.params;
@@ -42,17 +74,7 @@ router.get('/:characterId', authenticate, asyncHandler(async (req, res) => {
   const inventory = [];
 
   for (const item of itemsResult.rows) {
-    const formattedItem = {
-      instanceId: item.instance_id,
-      templateId: item.template_id,
-      name: item.name,
-      type: item.item_type,
-      rarity: RARITY_NAMES[item.rarity - 1] || 'common',
-      quantity: item.quantity,
-      baseStats: item.stat_bonuses,
-      itemData: item.modifications,
-      description: item.description
-    };
+    const formattedItem = formatItem(item);
 
     if (item.equipped_slot) {
       equipped[item.equipped_slot] = formattedItem;
@@ -382,17 +404,7 @@ async function getCharacterInventory(characterId) {
   const inventory = [];
 
   for (const item of itemsResult.rows) {
-    const formattedItem = {
-      instanceId: item.instance_id,
-      templateId: item.template_id,
-      name: item.name,
-      type: item.item_type,
-      rarity: RARITY_NAMES[item.rarity - 1] || 'common',
-      quantity: item.quantity,
-      baseStats: item.stat_bonuses,
-      itemData: item.modifications,
-      description: item.description
-    };
+    const formattedItem = formatItem(item);
 
     if (item.equipped_slot) {
       equipped[item.equipped_slot] = formattedItem;

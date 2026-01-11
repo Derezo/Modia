@@ -24,17 +24,192 @@ const MATERIAL_TIERS = [
   { minLevel: 90, maxLevel: 256, materials: ['celestial', 'void'], quality: 'Legendary' }
 ];
 
-// Augment definitions
-const AUGMENTS = {
-  fire: { prefix: 'Blazing', suffix: 'of Flames', stat: 'strength', bonus: [2, 8] },
-  ice: { prefix: 'Frozen', suffix: 'of Frost', stat: 'intelligence', bonus: [2, 8] },
-  lightning: { prefix: 'Shocking', suffix: 'of Thunder', stat: 'agility', bonus: [2, 8] },
-  life: { prefix: 'Vital', suffix: 'of Life', stat: 'vitality', bonus: [3, 10] },
-  fortune: { prefix: 'Lucky', suffix: 'of Fortune', stat: 'luck', bonus: [3, 12] },
-  power: { prefix: 'Mighty', suffix: 'of Power', stat: 'strength', bonus: [4, 12] },
-  wisdom: { prefix: 'Wise', suffix: 'of Wisdom', stat: 'intelligence', bonus: [4, 12] },
-  swift: { prefix: 'Swift', suffix: 'of Swiftness', stat: 'agility', bonus: [4, 12] }
+// === EQUIPMENT PREFIX AUGMENTS ===
+const PREFIX_AUGMENTS = {
+  // Elemental Prefixes
+  blazing: { name: 'Blazing', category: 'fire', stat: 'strength', bonus: [2, 8],
+             effect: { type: 'fire_damage', value: 0.10 } },
+  frozen: { name: 'Frozen', category: 'ice', stat: 'intelligence', bonus: [2, 8],
+            effect: { type: 'ice_damage', value: 0.10 } },
+  shocking: { name: 'Shocking', category: 'lightning', stat: 'agility', bonus: [2, 8],
+              effect: { type: 'lightning_damage', value: 0.10 } },
+  venomous: { name: 'Venomous', category: 'poison', stat: 'luck', bonus: [2, 6],
+              effect: { type: 'poison_chance', value: 0.05 } },
+  blessed: { name: 'Blessed', category: 'holy', stat: 'vitality', bonus: [2, 8],
+             effect: { type: 'holy_damage', value: 0.10 } },
+  shadowed: { name: 'Shadowed', category: 'dark', stat: 'agility', bonus: [2, 8],
+              effect: { type: 'dark_damage', value: 0.10 } },
+
+  // Combat Prefixes
+  keen: { name: 'Keen', category: 'critical', stat: 'luck', bonus: [3, 10],
+          effect: { type: 'crit_chance', value: 0.05 } },
+  swift: { name: 'Swift', category: 'speed', stat: 'agility', bonus: [4, 12],
+           effect: { type: 'initiative', value: 0.10 } },
+  deadly: { name: 'Deadly', category: 'damage', stat: 'strength', bonus: [4, 12],
+            effect: { type: 'damage_bonus', value: 0.08 } },
+  mighty: { name: 'Mighty', category: 'power', stat: 'strength', bonus: [4, 12],
+            effect: { type: 'physical_attack', value: 0.10 } },
+
+  // Defensive Prefixes
+  sturdy: { name: 'Sturdy', category: 'defense', stat: 'vitality', bonus: [3, 10],
+            effect: { type: 'physical_defense', value: 0.08 } },
+  warded: { name: 'Warded', category: 'magic_defense', stat: 'intelligence', bonus: [2, 8],
+            effect: { type: 'magic_defense', value: 0.08 } },
+  reinforced: { name: 'Reinforced', category: 'armor', stat: 'vitality', bonus: [3, 8],
+                effect: { type: 'defense', value: 5 } },
+
+  // Enemy-Type Prefixes
+  dragonbane: { name: 'Dragonbane', category: 'dragon_slayer', stat: 'strength', bonus: [5, 15],
+                effect: { type: 'damage_vs', target: 'dragon', value: 0.20 } },
+  undeadbane: { name: 'Undeadbane', category: 'undead_slayer', stat: 'vitality', bonus: [5, 15],
+                effect: { type: 'damage_vs', target: 'undead', value: 0.20 } },
+  demonslayer: { name: 'Demonslayer', category: 'demon_slayer', stat: 'strength', bonus: [5, 15],
+                 effect: { type: 'damage_vs', target: 'demon', value: 0.20 } }
 };
+
+// === EQUIPMENT SUFFIX AUGMENTS ===
+const SUFFIX_AUGMENTS = {
+  // Elemental Suffixes (different effects than prefixes)
+  flames: { name: 'of Flames', category: 'fire', stat: 'strength', bonus: [2, 8],
+            effect: { type: 'burn_chance', value: 0.03, duration: 2 } },
+  frost: { name: 'of Frost', category: 'ice', stat: 'intelligence', bonus: [2, 8],
+           effect: { type: 'slow_chance', value: 0.05, duration: 1 } },
+  thunder: { name: 'of Thunder', category: 'lightning', stat: 'agility', bonus: [2, 8],
+             effect: { type: 'stun_chance', value: 0.03 } },
+  venom: { name: 'of Venom', category: 'poison', stat: 'luck', bonus: [2, 6],
+           effect: { type: 'poison_dot', value: 0.02, duration: 3 } },
+  light: { name: 'of Light', category: 'holy', stat: 'vitality', bonus: [2, 8],
+           effect: { type: 'heal_on_hit', value: 0.02 } },
+  darkness: { name: 'of Darkness', category: 'dark', stat: 'agility', bonus: [2, 8],
+              effect: { type: 'lifesteal', value: 0.03 } },
+
+  // Stat Suffixes
+  might: { name: 'of Might', category: 'strength', stat: 'strength', bonus: [4, 12],
+           effect: { type: 'stat_bonus', stat: 'strength' } },
+  wisdom: { name: 'of Wisdom', category: 'intelligence', stat: 'intelligence', bonus: [4, 12],
+            effect: { type: 'stat_bonus', stat: 'intelligence' } },
+  swiftness: { name: 'of Swiftness', category: 'agility', stat: 'agility', bonus: [4, 12],
+               effect: { type: 'stat_bonus', stat: 'agility' } },
+  fortitude: { name: 'of Fortitude', category: 'vitality', stat: 'vitality', bonus: [4, 12],
+               effect: { type: 'stat_bonus', stat: 'vitality' } },
+  fortune: { name: 'of Fortune', category: 'luck', stat: 'luck', bonus: [3, 10],
+             effect: { type: 'stat_bonus', stat: 'luck' } },
+
+  // Support Suffixes
+  vitality: { name: 'of Vitality', category: 'hp', stat: 'vitality', bonus: [3, 10],
+              effect: { type: 'hp_max_bonus', value: 0.10 } },
+  sorcery: { name: 'of Sorcery', category: 'mp', stat: 'intelligence', bonus: [3, 10],
+             effect: { type: 'mp_max_bonus', value: 0.10 } },
+  mending: { name: 'of Mending', category: 'regen', stat: 'vitality', bonus: [3, 8],
+             effect: { type: 'hp_regen', value: 0.02 } },
+  the_sage: { name: 'of the Sage', category: 'mp_regen', stat: 'intelligence', bonus: [3, 8],
+              effect: { type: 'mp_regen', value: 0.03 } },
+
+  // Combat Suffixes
+  precision: { name: 'of Precision', category: 'accuracy', stat: 'luck', bonus: [3, 10],
+               effect: { type: 'crit_damage', value: 0.15 } },
+  lethality: { name: 'of Lethality', category: 'crit', stat: 'strength', bonus: [4, 12],
+               effect: { type: 'crit_damage', value: 0.25 } },
+
+  // Defensive Suffixes
+  the_bulwark: { name: 'of the Bulwark', category: 'block', stat: 'vitality', bonus: [3, 10],
+                 effect: { type: 'block_chance', value: 0.05 } },
+  warding: { name: 'of Warding', category: 'spell_resist', stat: 'intelligence', bonus: [2, 8],
+             effect: { type: 'magic_resist', value: 0.08 } },
+  the_guardian: { name: 'of the Guardian', category: 'protection', stat: 'vitality', bonus: [4, 10],
+                  effect: { type: 'damage_reduction', value: 0.05 } }
+};
+
+// === CONSUMABLE AUGMENTS ===
+const CONSUMABLE_AUGMENTS = {
+  // Potency Augments (Prefix-only)
+  potent: { prefix: 'Potent', suffix: null, category: 'potency',
+            effect: { type: 'effect_multiplier', value: 1.25 } },
+  concentrated: { prefix: 'Concentrated', suffix: null, category: 'concentration',
+                  effect: { type: 'effect_multiplier', value: 1.50 } },
+  empowered: { prefix: 'Empowered', suffix: null, category: 'empowerment',
+               effect: { type: 'effect_multiplier', value: 2.0 } },
+
+  // Duration Augments (Suffix-only)
+  mending: { prefix: null, suffix: 'of Mending', category: 'hot_minor',
+             effect: { type: 'hot', value: 5, duration: 3 } },
+  restoration: { prefix: null, suffix: 'of Restoration', category: 'hot_major',
+                 effect: { type: 'hot', value: 10, duration: 5 } },
+  regeneration: { prefix: null, suffix: 'of Regeneration', category: 'hot_percent',
+                  effect: { type: 'hot_percent', value: 0.03, duration: 5 } },
+
+  // Mana Augments
+  arcane: { prefix: 'Arcane', suffix: null, category: 'mp_bonus',
+            effect: { type: 'mp_bonus', value: 15 } },
+  sorcery: { prefix: null, suffix: 'of Sorcery', category: 'mp_regen',
+             effect: { type: 'mp_regen', value: 5, duration: 3 } },
+  channeling: { prefix: null, suffix: 'of Channeling', category: 'spell_cost',
+                effect: { type: 'spell_cost_reduction', value: 0.20, duration: 3 } },
+
+  // Cleansing Augments (Prefix-only)
+  purifying: { prefix: 'Purifying', suffix: null, category: 'cleanse_minor',
+               effect: { type: 'cleanse', targets: ['poison', 'burn'] } },
+  sanctified: { prefix: 'Sanctified', suffix: null, category: 'cleanse_major',
+                effect: { type: 'cleanse', targets: ['curse', 'silence', 'blind'] } },
+  absolute: { prefix: 'Absolute', suffix: null, category: 'cleanse_all',
+              effect: { type: 'cleanse', targets: 'all' } },
+
+  // Buff Augments (Suffix-only)
+  fortitude: { prefix: null, suffix: 'of Fortitude', category: 'buff_vit',
+               effect: { type: 'buff', stat: 'vitality', value: 5, duration: 5 } },
+  might: { prefix: null, suffix: 'of Might', category: 'buff_str',
+           effect: { type: 'buff', stat: 'strength', value: 5, duration: 5 } },
+  insight: { prefix: null, suffix: 'of Insight', category: 'buff_int',
+             effect: { type: 'buff', stat: 'intelligence', value: 5, duration: 5 } },
+  alacrity: { prefix: null, suffix: 'of Alacrity', category: 'buff_agi',
+              effect: { type: 'buff', stat: 'agility', value: 5, duration: 5 } },
+
+  // Revival Augments
+  blessed: { prefix: 'Blessed', suffix: null, category: 'revive_bonus',
+             effect: { type: 'revive_hp_bonus', value: 0.25 } },
+  divine: { prefix: 'Divine', suffix: null, category: 'revive_full',
+            effect: { type: 'revive_full', value: true } },
+  grace: { prefix: null, suffix: 'of Grace', category: 'revive_immunity',
+           effect: { type: 'revive_immunity', duration: 2 } },
+
+  // Specialty Augments (Suffix-only)
+  swiftness: { prefix: null, suffix: 'of Swiftness', category: 'instant',
+               effect: { type: 'instant', value: true } },
+  sharing: { prefix: null, suffix: 'of Sharing', category: 'aoe',
+             effect: { type: 'aoe', radius: 1 } }
+};
+
+// Quality prefixes by rarity (equipment)
+const EQUIPMENT_QUALITY_PREFIXES = {
+  common: null,
+  uncommon: 'Fine',
+  rare: 'Superior',
+  epic: 'Exalted',
+  legendary: 'Divine'
+};
+
+// Quality prefixes by rarity (consumables)
+const CONSUMABLE_QUALITY_PREFIXES = {
+  common: null,
+  uncommon: 'Fine',
+  rare: 'Superior',
+  epic: 'Exceptional',
+  legendary: 'Supreme'
+};
+
+// Stat-based suffix fallbacks (when no augment suffix assigned)
+const STAT_SUFFIXES = {
+  strength: 'of Might',
+  intelligence: 'of Wisdom',
+  agility: 'of Swiftness',
+  vitality: 'of Fortitude',
+  luck: 'of Fortune',
+  hp_max: 'of Vitality',
+  mp_max: 'of Sorcery'
+};
+
+// Legacy export for backwards compatibility
+const AUGMENTS = { ...PREFIX_AUGMENTS, ...SUFFIX_AUGMENTS };
 
 /**
  * Roll drops from enemy's drop_table
@@ -125,6 +300,94 @@ function rollRarity(weights) {
 }
 
 /**
+ * Generate augments for an item with category-based duplicate prevention
+ * @param {SeededRandom} rng - Random number generator
+ * @param {number} bonusSlots - Number of augment slots
+ * @param {boolean} isConsumable - Whether this is a consumable item
+ * @returns {Array} Array of augment objects
+ */
+function generateAugments(rng, bonusSlots, isConsumable) {
+  const augments = [];
+  const usedCategories = new Set();
+
+  if (isConsumable) {
+    // Consumable augments use a different system
+    const augmentKeys = Object.keys(CONSUMABLE_AUGMENTS);
+
+    for (let i = 0; i < bonusSlots; i++) {
+      // Filter to augments with unused categories
+      const availableKeys = augmentKeys.filter(key => {
+        return !usedCategories.has(CONSUMABLE_AUGMENTS[key].category);
+      });
+
+      if (availableKeys.length === 0) continue;
+
+      // Slot 0 prefers prefix augments, slot 1+ prefers suffix
+      const preferPrefix = i === 0 ? 0.7 : 0.3;
+
+      // Filter by prefix/suffix preference
+      let filteredKeys = availableKeys;
+      if (rng.next() < preferPrefix) {
+        const prefixKeys = availableKeys.filter(key => CONSUMABLE_AUGMENTS[key].prefix !== null);
+        if (prefixKeys.length > 0) filteredKeys = prefixKeys;
+      } else {
+        const suffixKeys = availableKeys.filter(key => CONSUMABLE_AUGMENTS[key].suffix !== null);
+        if (suffixKeys.length > 0) filteredKeys = suffixKeys;
+      }
+
+      const augmentKey = rng.pick(filteredKeys);
+      const augment = CONSUMABLE_AUGMENTS[augmentKey];
+
+      usedCategories.add(augment.category);
+
+      augments.push({
+        key: augmentKey,
+        type: augment.prefix ? 'prefix' : 'suffix',
+        name: augment.prefix || augment.suffix,
+        category: augment.category,
+        effect: augment.effect
+      });
+    }
+  } else {
+    // Equipment augments use PREFIX_AUGMENTS and SUFFIX_AUGMENTS pools
+    for (let i = 0; i < bonusSlots; i++) {
+      // Slot 0 prefers prefixes (70%), slot 1+ prefers suffixes (70%)
+      const preferPrefix = i === 0 ? 0.7 : 0.3;
+      const isPrefix = rng.next() < preferPrefix;
+
+      const pool = isPrefix ? PREFIX_AUGMENTS : SUFFIX_AUGMENTS;
+      const poolKeys = Object.keys(pool).filter(key => {
+        // Exclude categories already used (prevents "Blazing...of Flames")
+        return !usedCategories.has(pool[key].category);
+      });
+
+      if (poolKeys.length === 0) continue;
+
+      const augmentKey = rng.pick(poolKeys);
+      const augment = pool[augmentKey];
+
+      // Mark this category as used
+      usedCategories.add(augment.category);
+
+      const [minBonus, maxBonus] = augment.bonus;
+      const bonusValue = rng.nextInt(minBonus, maxBonus);
+
+      augments.push({
+        key: augmentKey,
+        type: isPrefix ? 'prefix' : 'suffix',
+        name: augment.name,
+        category: augment.category,
+        stat: augment.stat,
+        value: bonusValue,
+        effect: augment.effect
+      });
+    }
+  }
+
+  return augments;
+}
+
+/**
  * Generate a procedural item from template
  * @param {number} templateId - Item template ID
  * @param {number} seed - Generation seed for deterministic results
@@ -177,30 +440,23 @@ async function generateItem(templateId, seed, targetLevel, forcedRarity) {
     ? rng.nextInt(rarityInfo.bonusSlots[0], rarityInfo.bonusSlots[1])
     : rarityInfo.bonusSlots;
 
-  // Roll augments
-  const augments = [];
-  const augmentKeys = Object.keys(AUGMENTS);
+  // Check if this is a consumable
+  const isConsumable = template.item_type === 'consumable';
 
-  for (let i = 0; i < bonusSlots; i++) {
-    const augmentKey = rng.pick(augmentKeys);
-    const augment = AUGMENTS[augmentKey];
-    const [minBonus, maxBonus] = augment.bonus;
-    const bonusValue = rng.nextInt(minBonus, maxBonus);
+  // Roll augments using appropriate pool
+  const augments = generateAugments(rng, bonusSlots, isConsumable);
 
-    augments.push({
-      type: augmentKey,
-      prefix: augment.prefix,
-      suffix: augment.suffix,
-      stat: augment.stat,
-      value: bonusValue
-    });
-
-    // Add to bonus stats
-    bonusStats[augment.stat] = (bonusStats[augment.stat] || 0) + bonusValue;
+  // Add augment stat bonuses to bonusStats (equipment only)
+  if (!isConsumable) {
+    for (const augment of augments) {
+      if (augment.stat) {
+        bonusStats[augment.stat] = (bonusStats[augment.stat] || 0) + augment.value;
+      }
+    }
   }
 
   // Generate name
-  const generatedName = generateItemName(template.name, material, materialTier.quality, augments);
+  const generatedName = generateItemName(template, material, rarityName, augments, bonusStats, isConsumable);
 
   // Calculate scaled price
   const rarityPriceMultiplier = { common: 1, uncommon: 1.5, rare: 2.5, epic: 5, legendary: 10 };
@@ -247,34 +503,72 @@ function getRarityName(rarityId) {
 
 /**
  * Generate procedural item name
+ * @param {Object} template - Item template with name and item_type
+ * @param {string} material - Material name
+ * @param {string} rarity - Rarity name (common, uncommon, etc.)
+ * @param {Array} augments - Array of augment objects
+ * @param {Object} bonusStats - Bonus stats from augments
+ * @param {boolean} isConsumable - Whether this is a consumable
+ * @returns {string} Generated item name
  */
-function generateItemName(baseName, material, quality, augments) {
+function generateItemName(template, material, rarity, augments, bonusStats, isConsumable) {
   const parts = [];
 
-  // Add quality prefix if rare or above
-  if (quality !== 'Common' && quality !== 'Fine') {
-    parts.push(quality);
+  if (isConsumable) {
+    // Consumable naming: [Quality?] [Prefix Augment?] Base Name [Suffix Augment?]
+    const qualityPrefix = CONSUMABLE_QUALITY_PREFIXES[rarity];
+    if (qualityPrefix) parts.push(qualityPrefix);
+
+    // Find prefix augment
+    const prefixAug = augments.find(a => a.type === 'prefix');
+    if (prefixAug) parts.push(prefixAug.name);
+
+    // Base name (no material for consumables)
+    parts.push(template.name);
+
+    // Find suffix augment
+    const suffixAug = augments.find(a => a.type === 'suffix');
+    if (suffixAug) parts.push(suffixAug.name);
+
+  } else {
+    // Equipment naming: [Quality?] [Prefix Augment?] Material Base Name [Suffix Augment?]
+    const qualityPrefix = EQUIPMENT_QUALITY_PREFIXES[rarity];
+    if (qualityPrefix) parts.push(qualityPrefix);
+
+    // Find prefix augment
+    const prefixAug = augments.find(a => a.type === 'prefix');
+    if (prefixAug) parts.push(prefixAug.name);
+
+    // Material + base name (strip existing material prefixes AND suffixes)
+    parts.push(capitalizeFirst(material));
+    let strippedName = template.name
+      .replace(/^(Rusty|Iron|Steel|Bronze|Silver|Gold|Mythril|Copper)\s+/i, '');
+
+    // Find suffix augment OR fallback to stat suffix
+    const suffixAug = augments.find(a => a.type === 'suffix');
+    const hasSuffixToAdd = suffixAug || (bonusStats && Object.keys(bonusStats).length > 0);
+
+    // Strip existing "of X" suffixes from template name if we're adding our own suffix
+    if (hasSuffixToAdd) {
+      strippedName = strippedName.replace(/\s+of\s+\w+$/i, '');
+    }
+    parts.push(strippedName);
+
+    if (suffixAug) {
+      parts.push(suffixAug.name);
+    } else if (bonusStats && Object.keys(bonusStats).length > 0) {
+      // Fallback: use highest bonus stat's suffix
+      const sortedStats = Object.entries(bonusStats).sort((a, b) => b[1] - a[1]);
+      if (sortedStats.length > 0) {
+        const [highestStat] = sortedStats[0];
+        if (STAT_SUFFIXES[highestStat]) {
+          parts.push(STAT_SUFFIXES[highestStat]);
+        }
+      }
+    }
   }
 
-  // Add first augment prefix
-  if (augments.length > 0) {
-    parts.push(augments[0].prefix);
-  }
-
-  // Add material
-  parts.push(capitalizeFirst(material));
-
-  // Add base name (stripped of generic material references)
-  const strippedName = baseName
-    .replace(/^(Rusty|Iron|Steel|Bronze|Silver|Gold|Mythril)\s+/i, '');
-  parts.push(strippedName);
-
-  // Add last augment suffix
-  if (augments.length > 1) {
-    parts.push(augments[augments.length - 1].suffix);
-  }
-
-  return parts.join(' ');
+  return parts.filter(Boolean).join(' ');
 }
 
 /**

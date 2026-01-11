@@ -80,7 +80,7 @@ export class BattleContextMenu {
           inset 0 1px 0 rgba(255, 255, 255, 0.3),
           inset 0 -1px 0 rgba(0, 0, 0, 0.1);
         font-family: 'Georgia', 'Times New Roman', serif;
-        overflow: hidden;
+        overflow: visible;
       }
 
       .context-menu-item {

@@ -292,6 +292,47 @@ check_seed() {
 }
 
 # =============================================================================
+# Icon Generation Check
+# =============================================================================
+check_icons() {
+    echo -ne "[Icons] Checking for icon assets... "
+
+    SVG_DIR="$PROJECT_ROOT/frontend/public/assets/icons/svg"
+    PNG_DIR="$PROJECT_ROOT/frontend/public/assets/icons/png"
+
+    if [ ! -d "$SVG_DIR" ]; then
+        echo -e "${YELLOW}no SVG icons directory${NC}"
+        echo ""
+        return 0
+    fi
+
+    # Count SVG files
+    SVG_COUNT=$(find "$SVG_DIR" -name "*.svg" 2>/dev/null | wc -l)
+
+    if [ "$SVG_COUNT" -eq 0 ]; then
+        echo -e "${YELLOW}no icons to generate${NC}"
+        echo ""
+        return 0
+    fi
+
+    # Check if PNG directory exists and has files
+    PNG_COUNT=0
+    if [ -d "$PNG_DIR" ]; then
+        PNG_COUNT=$(find "$PNG_DIR" -name "*.png" 2>/dev/null | wc -l)
+    fi
+
+    if [ "$PNG_COUNT" -eq 0 ]; then
+        echo -e "${YELLOW}generating ${SVG_COUNT} icons${NC}"
+        npm run generate:icons --silent
+        echo -e "[Icons] ${GREEN}done${NC} ${CHECK}"
+    else
+        echo -e "${GREEN}${PNG_COUNT} icons cached${NC} ${CHECK}"
+    fi
+
+    echo ""
+}
+
+# =============================================================================
 # Launch Development Servers
 # =============================================================================
 launch_dev() {
@@ -315,4 +356,5 @@ cleanup_ports
 check_docker
 check_migrations
 check_seed
+check_icons
 launch_dev

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Gear/cog with medieval woodcut style -->
+  <circle class="stroke metallic" cx="12" cy="12" r="3"/>
+  <!-- Gear teeth - slightly irregular for woodcut effect -->
+  <path class="stroke" d="M12 2v3M12 19v3"/>
+  <path class="stroke" d="M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12"/>
+  <path class="stroke" d="M2 12h3M19 12h3"/>
+  <path class="stroke" d="M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/>
+  <!-- Inner detail -->
+  <circle class="stroke" cx="12" cy="12" r="1" style="stroke-width: 1.5;"/>
+</svg>

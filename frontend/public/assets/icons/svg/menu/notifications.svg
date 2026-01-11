@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Bell shape - medieval church bell style -->
+  <path class="stroke metallic" d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+  <!-- Bell crown -->
+  <path class="stroke" d="M10 3h4"/>
+  <path class="stroke" d="M12 3v2"/>
+  <!-- Bell clapper -->
+  <circle class="stroke" cx="12" cy="19" r="2"/>
+  <!-- Cross-hatch texture -->
+  <path class="stroke" d="M9 11l1.5 3M13.5 11l1.5 3" style="stroke-width: 1;"/>
+</svg>

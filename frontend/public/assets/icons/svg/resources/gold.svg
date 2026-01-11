@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Gold coin with metallic shading -->
+  <circle class="stroke metallic" cx="12" cy="12" r="9"/>
+  <!-- Outer rim -->
+  <circle class="stroke" cx="12" cy="12" r="7"/>
+  <!-- Crown or royal symbol -->
+  <path class="stroke" d="M8 10v4l1.5-2 2.5 2 2.5-2 1.5 2v-4"/>
+  <!-- Coin edge texture -->
+  <path class="stroke" d="M12 3v1M12 20v1M3 12h1M20 12h1" style="stroke-width: 1;"/>
+  <path class="stroke" d="M5.6 5.6l0.7 0.7M17.7 17.7l0.7 0.7M5.6 18.4l0.7-0.7M17.7 6.3l0.7-0.7" style="stroke-width: 1;"/>
+</svg>

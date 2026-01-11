@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  </style>
+  <!-- Three people silhouette - medieval adventuring party -->
+  <!-- Center person (front) -->
+  <circle class="stroke" cx="12" cy="5" r="2.5"/>
+  <path class="stroke" d="M8 21v-3c0-2 1.5-3 4-3s4 1 4 3v3"/>
+  <!-- Left person (back) -->
+  <circle class="stroke" cx="5" cy="7" r="2"/>
+  <path class="stroke" d="M2 21v-2c0-1.5 1-2.5 3-2.5"/>
+  <!-- Right person (back) -->
+  <circle class="stroke" cx="19" cy="7" r="2"/>
+  <path class="stroke" d="M22 21v-2c0-1.5-1-2.5-3-2.5"/>
+</svg>

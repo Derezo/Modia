@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Chest armor silhouette - medieval breastplate -->
+  <path class="stroke metallic" d="M6 4c2-1 8-1 12 0l1 8c0 4-2 8-7 10-5-2-7-6-7-10L6 4z"/>
+  <!-- Shoulder guards -->
+  <path class="stroke" d="M6 4L3 7v3l3-2"/>
+  <path class="stroke" d="M18 4l3 3v3l-3-2"/>
+  <!-- Center ridge -->
+  <path class="stroke" d="M12 4v14"/>
+  <!-- Plate sections -->
+  <path class="stroke" d="M6 8h12" style="stroke-width: 1;"/>
+  <path class="stroke" d="M7 12h10" style="stroke-width: 1;"/>
+  <path class="stroke" d="M8 16h8" style="stroke-width: 1;"/>
+  <!-- Rivets -->
+  <circle cx="8" cy="6" r="0.5" fill="currentColor"/>
+  <circle cx="16" cy="6" r="0.5" fill="currentColor"/>
+</svg>

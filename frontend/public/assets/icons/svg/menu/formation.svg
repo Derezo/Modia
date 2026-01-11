@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  </style>
+  <!-- 3x3 grid of shield shapes -->
+  <path class="stroke" d="M4 3v4c0 1.5 1.5 2 2 2s2-.5 2-2V3"/>
+  <path class="stroke" d="M10 3v4c0 1.5 1.5 2 2 2s2-.5 2-2V3"/>
+  <path class="stroke" d="M16 3v4c0 1.5 1.5 2 2 2s2-.5 2-2V3"/>
+  <path class="stroke" d="M4 10v4c0 1.5 1.5 2 2 2s2-.5 2-2v-4"/>
+  <path class="stroke" d="M10 10v4c0 1.5 1.5 2 2 2s2-.5 2-2v-4"/>
+  <path class="stroke" d="M16 10v4c0 1.5 1.5 2 2 2s2-.5 2-2v-4"/>
+  <path class="stroke" d="M4 17v4c0 1.5 1.5 2 2 2s2-.5 2-2v-4"/>
+  <path class="stroke" d="M10 17v4c0 1.5 1.5 2 2 2s2-.5 2-2v-4"/>
+  <path class="stroke" d="M16 17v4c0 1.5 1.5 2 2 2s2-.5 2-2v-4"/>
+</svg>

@@ -30,6 +30,7 @@
     "generate:backdrop": "node api/src/scripts/generate-world-backdrop.js",
     "generate:items": "node api/src/scripts/generate-items.js",
     "generate:portraits": "node api/src/scripts/generate-portraits.js",
+    "generate:icons": "node scripts/generate-icons.js",
     "generate:all": "node api/src/scripts/generate-all.js",
     "validate:sprites": "node api/src/scripts/validate-prompts.js",
     "validate:enemy": "node api/src/scripts/validate-prompts.js --type=enemy",

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  </style>
+  <!-- Tree shape - medieval forest style -->
+  <!-- Main tree -->
+  <path class="stroke" d="M12 22v-6"/>
+  <path class="stroke" d="M12 4l-6 8h3l-4 6h14l-4-6h3z"/>
+  <!-- Tree texture/branches -->
+  <path class="stroke" d="M9 10l3-3 3 3" style="stroke-width: 1;"/>
+  <path class="stroke" d="M7 14l5-4 5 4" style="stroke-width: 1;"/>
+  <!-- Small background trees -->
+  <path class="stroke" d="M4 22v-2M4 18l-2 2h4l-2-2z" style="stroke-width: 1.5;"/>
+  <path class="stroke" d="M20 22v-2M20 18l-2 2h4l-2-2z" style="stroke-width: 1.5;"/>
+</svg>

@@ -84,15 +84,23 @@ export class TavernScene extends Scene {
     const style = document.createElement('style');
     style.id = 'tavern-scene-styles';
     style.textContent = `
+      /* ============================================
+         Tavern Scene - Parchment Theme
+         Colors: Light #d4c4a8, Mid #c9b899, Dark #bfae8a
+         Border: #8b7355, Text: #2d2418, Gold: #c9a227
+         ============================================ */
+
       .tavern-container {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 50%, #bfae8a 100%);
         display: flex;
         flex-direction: column;
+        font-family: 'Georgia', 'Times New Roman', serif;
+        color: #2d2418;
       }
 
       .tavern-header {
@@ -100,8 +108,9 @@ export class TavernScene extends Scene {
         justify-content: space-between;
         align-items: center;
         padding: 16px 24px;
-        background: rgba(0,0,0,0.3);
-        border-bottom: 1px solid #3a3a5a;
+        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+        border-bottom: 2px solid #8b7355;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       }
 
       .tavern-title {
@@ -112,7 +121,9 @@ export class TavernScene extends Scene {
 
       .tavern-title h2 {
         margin: 0;
-        color: #ffd700;
+        color: #c9a227;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+        font-size: 22px;
       }
 
       .tavern-title-icon {
@@ -135,40 +146,43 @@ export class TavernScene extends Scene {
       .tavern-tabs {
         display: flex;
         gap: 4px;
-        padding: 12px 16px;
-        background: rgba(0,0,0,0.2);
-        border-bottom: 1px solid #3a3a5a;
+        padding: 12px 16px 0;
+        background: linear-gradient(to bottom, #bfae8a 0%, #b0a07a 100%);
+        border-bottom: 2px solid #8b7355;
       }
 
       .tavern-tab {
         padding: 10px 20px;
-        background: rgba(0,0,0,0.3);
-        border: 2px solid transparent;
-        border-radius: 8px 8px 0 0;
-        color: #8a8aaa;
+        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+        border: 2px solid #8b7355;
+        border-bottom: none;
+        border-radius: 6px 6px 0 0;
+        color: #5a4a3a;
         cursor: pointer;
         transition: all 0.2s;
+        font-family: 'Georgia', 'Times New Roman', serif;
         font-size: 14px;
         font-weight: bold;
         display: flex;
         align-items: center;
         gap: 8px;
+        margin-bottom: -2px;
       }
 
-      .tavern-tab:hover {
-        background: rgba(74, 144, 217, 0.2);
-        color: #6ab0f3;
+      .tavern-tab:hover:not(.active) {
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
+        color: #2d2418;
       }
 
       .tavern-tab.active {
-        background: rgba(255, 215, 0, 0.2);
-        border-color: #ffd700;
-        color: #ffd700;
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
+        color: #c9a227;
+        border-color: #8b7355;
       }
 
       .tab-badge {
-        background: #c62828;
-        color: white;
+        background: #8b4513;
+        color: #f0e8d8;
         font-size: 10px;
         padding: 2px 6px;
         border-radius: 10px;
@@ -187,21 +201,31 @@ export class TavernScene extends Scene {
       .chat-messages {
         flex: 1;
         overflow-y: auto;
-        padding: 8px;
-        background: rgba(0,0,0,0.2);
-        border-radius: 8px;
+        padding: 12px;
+        background: linear-gradient(to bottom, #e8dcc8 0%, #dfd0b8 100%);
+        border: 2px solid #8b7355;
+        border-radius: 6px;
         margin-bottom: 12px;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.08);
       }
 
       .chat-message {
-        padding: 8px 12px;
-        margin-bottom: 4px;
+        padding: 10px 14px;
+        margin-bottom: 6px;
         border-radius: 6px;
         transition: background 0.2s;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid transparent;
       }
 
       .chat-message:hover {
-        background: rgba(255,255,255,0.05);
+        background: rgba(139, 115, 85, 0.12);
+        border-color: rgba(139, 115, 85, 0.2);
+      }
+
+      .chat-message.own-message {
+        background: rgba(201, 162, 39, 0.12);
+        border-color: rgba(201, 162, 39, 0.2);
       }
 
       .chat-message-header {
@@ -213,22 +237,22 @@ export class TavernScene extends Scene {
 
       .chat-message-author {
         font-weight: bold;
-        color: #6ab0f3;
+        color: #6b4423;
       }
 
       .chat-message-author.self {
-        color: #ffd700;
+        color: #c9a227;
       }
 
       .chat-message-time {
         font-size: 11px;
-        color: #666;
+        color: #7a6a5a;
       }
 
       .chat-message-text {
-        color: #e0e0e0;
+        color: #2d2418;
         word-wrap: break-word;
-        line-height: 1.4;
+        line-height: 1.5;
       }
 
       .chat-message-reactions {
@@ -243,8 +267,8 @@ export class TavernScene extends Scene {
         align-items: center;
         gap: 4px;
         padding: 2px 8px;
-        background: rgba(0,0,0,0.3);
-        border: 1px solid #3a3a5a;
+        background: rgba(255, 255, 255, 0.3);
+        border: 1px solid #8b7355;
         border-radius: 12px;
         font-size: 12px;
         cursor: pointer;
@@ -252,40 +276,41 @@ export class TavernScene extends Scene {
       }
 
       .chat-reaction:hover {
-        border-color: #6ab0f3;
-        background: rgba(74, 144, 217, 0.2);
+        background: rgba(139, 115, 85, 0.2);
+        border-color: #6b5344;
       }
 
       .chat-reaction.user-reacted {
-        border-color: #ffd700;
-        background: rgba(255, 215, 0, 0.2);
+        background: rgba(201, 162, 39, 0.25);
+        border-color: #c9a227;
       }
 
       .chat-reaction-count {
-        color: #8a8aaa;
+        color: #5a4a3a;
       }
 
       .add-reaction-btn {
         padding: 2px 8px;
         background: transparent;
-        border: 1px dashed #3a3a5a;
+        border: 1px dashed #8b7355;
         border-radius: 12px;
         cursor: pointer;
-        color: #666;
+        color: #7a6a5a;
         font-size: 12px;
         transition: all 0.2s;
       }
 
       .add-reaction-btn:hover {
-        border-color: #6ab0f3;
-        color: #6ab0f3;
+        border-color: #6b5344;
+        color: #2d2418;
+        background: rgba(139, 115, 85, 0.1);
       }
 
       .typing-indicator {
         height: 20px;
         padding: 0 12px;
         font-size: 12px;
-        color: #8a8aaa;
+        color: #7a6a5a;
         font-style: italic;
       }
 
@@ -304,19 +329,26 @@ export class TavernScene extends Scene {
       .chat-input {
         width: 100%;
         padding: 12px 40px 12px 12px;
-        background: rgba(0,0,0,0.3);
-        border: 2px solid #3a3a5a;
-        border-radius: 8px;
-        color: #fff;
+        background: linear-gradient(to bottom, #f0e8d8 0%, #e8dcc8 100%);
+        border: 2px solid #8b7355;
+        border-radius: 6px;
+        color: #2d2418;
+        font-family: 'Georgia', 'Times New Roman', serif;
         font-size: 14px;
         resize: none;
         min-height: 44px;
         max-height: 120px;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+      }
+
+      .chat-input::placeholder {
+        color: #7a6a5a;
       }
 
       .chat-input:focus {
         outline: none;
-        border-color: #6ab0f3;
+        border-color: #c9a227;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.1), 0 0 0 2px rgba(201, 162, 39, 0.2);
       }
 
       .emoji-btn {
@@ -340,15 +372,15 @@ export class TavernScene extends Scene {
         bottom: 100%;
         right: 0;
         margin-bottom: 8px;
-        background: #1a1a2e;
-        border: 2px solid #3a3a5a;
-        border-radius: 8px;
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
+        border: 2px solid #8b7355;
+        border-radius: 6px;
         padding: 12px;
         display: grid;
         grid-template-columns: repeat(8, 1fr);
         gap: 4px;
         max-width: 300px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
         z-index: 100;
       }
 
@@ -364,40 +396,61 @@ export class TavernScene extends Scene {
       }
 
       .emoji-picker-btn:hover {
-        background: rgba(255,255,255,0.1);
+        background: rgba(139, 115, 85, 0.2);
       }
 
       .send-btn {
         padding: 12px 24px;
         font-weight: bold;
+        background: linear-gradient(to bottom, #8b7355 0%, #7a6345 100%);
+        color: #f0e8d8;
+        border: 2px solid #6b5344;
+        border-radius: 6px;
+        font-family: 'Georgia', 'Times New Roman', serif;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+      }
+
+      .send-btn:hover {
+        background: linear-gradient(to bottom, #9b8365 0%, #8a7355 100%);
+      }
+
+      .send-btn:active {
+        transform: translateY(1px);
       }
 
       .sidebar {
         width: 280px;
-        background: rgba(0,0,0,0.2);
-        border-left: 1px solid #3a3a5a;
+        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+        border-left: 2px solid #8b7355;
         display: flex;
         flex-direction: column;
       }
 
       .sidebar-section {
         padding: 16px;
-        border-bottom: 1px solid #3a3a5a;
+        border-bottom: 2px solid #8b7355;
       }
 
       .sidebar-header {
         font-weight: bold;
-        color: #ffd700;
+        color: #c9a227;
         margin-bottom: 12px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
       .online-count {
         font-size: 12px;
-        color: #8a8aaa;
+        color: #5a4a3a;
         font-weight: normal;
+        background: rgba(139, 115, 85, 0.2);
+        padding: 2px 8px;
+        border-radius: 10px;
       }
 
       .player-list {
@@ -412,15 +465,18 @@ export class TavernScene extends Scene {
         padding: 8px 12px;
         border-radius: 6px;
         cursor: pointer;
-        transition: background 0.2s;
+        transition: all 0.2s;
+        border: 1px solid transparent;
       }
 
       .player-item:hover {
-        background: rgba(74, 144, 217, 0.2);
+        background: rgba(139, 115, 85, 0.15);
+        border-color: rgba(139, 115, 85, 0.2);
       }
 
       .player-item.active {
-        background: rgba(255, 215, 0, 0.2);
+        background: rgba(201, 162, 39, 0.2);
+        border-color: #c9a227;
       }
 
       .player-status {
@@ -428,15 +484,16 @@ export class TavernScene extends Scene {
         height: 10px;
         border-radius: 50%;
         flex-shrink: 0;
+        border: 1px solid rgba(0,0,0,0.2);
       }
 
       .status-online { background: #4caf50; }
       .status-away { background: #ff9800; }
-      .status-busy { background: #f44336; }
-      .status-offline { background: #666; }
+      .status-busy { background: #c62828; }
+      .status-offline { background: #7a6a5a; }
 
       .player-name {
-        color: #e0e0e0;
+        color: #2d2418;
         flex: 1;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -444,18 +501,28 @@ export class TavernScene extends Scene {
       }
 
       .player-name.self {
-        color: #ffd700;
+        color: #c9a227;
+        font-weight: bold;
       }
 
       .dm-btn {
-        padding: 4px 8px;
+        padding: 4px 10px;
         font-size: 11px;
         opacity: 0;
-        transition: opacity 0.2s;
+        transition: all 0.2s;
+        background: linear-gradient(to bottom, #8b7355 0%, #7a6345 100%);
+        color: #f0e8d8;
+        border: 1px solid #6b5344;
+        border-radius: 4px;
+        cursor: pointer;
       }
 
       .player-item:hover .dm-btn {
         opacity: 1;
+      }
+
+      .dm-btn:hover {
+        background: linear-gradient(to bottom, #9b8365 0%, #8a7355 100%);
       }
 
       .dm-list {
@@ -470,17 +537,18 @@ export class TavernScene extends Scene {
         padding: 10px 12px;
         border-radius: 6px;
         cursor: pointer;
-        transition: background 0.2s;
-        border-bottom: 1px solid rgba(255,255,255,0.05);
+        transition: all 0.2s;
+        border: 1px solid transparent;
+        border-bottom: 1px solid rgba(139, 115, 85, 0.2);
       }
 
       .dm-item:hover {
-        background: rgba(74, 144, 217, 0.2);
+        background: rgba(139, 115, 85, 0.15);
       }
 
       .dm-item.active {
-        background: rgba(255, 215, 0, 0.2);
-        border-color: #ffd700;
+        background: rgba(201, 162, 39, 0.2);
+        border-color: #c9a227;
       }
 
       .dm-item-info {
@@ -490,12 +558,12 @@ export class TavernScene extends Scene {
 
       .dm-item-name {
         font-weight: bold;
-        color: #e0e0e0;
+        color: #2d2418;
       }
 
       .dm-item-preview {
         font-size: 12px;
-        color: #8a8aaa;
+        color: #5a4a3a;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -503,29 +571,31 @@ export class TavernScene extends Scene {
 
       .dm-item-time {
         font-size: 11px;
-        color: #666;
+        color: #7a6a5a;
       }
 
       .load-more-btn {
         width: 100%;
         padding: 8px;
         background: transparent;
-        border: 1px dashed #3a3a5a;
+        border: 1px dashed #8b7355;
         border-radius: 6px;
-        color: #8a8aaa;
+        color: #5a4a3a;
         cursor: pointer;
         margin-bottom: 8px;
         transition: all 0.2s;
+        font-family: 'Georgia', 'Times New Roman', serif;
       }
 
       .load-more-btn:hover {
-        border-color: #6ab0f3;
-        color: #6ab0f3;
+        border-color: #6b5344;
+        background: rgba(139, 115, 85, 0.1);
+        color: #2d2418;
       }
 
       .empty-state {
         text-align: center;
-        color: #8a8aaa;
+        color: #5a4a3a;
         padding: 40px 20px;
       }
 
@@ -537,10 +607,99 @@ export class TavernScene extends Scene {
 
       .system-message {
         text-align: center;
-        color: #8a8aaa;
+        color: #5a4a3a;
         font-style: italic;
         padding: 8px;
         font-size: 12px;
+      }
+
+      /* Presence select styling */
+      .presence-select {
+        padding: 8px 12px;
+        background: linear-gradient(to bottom, #f0e8d8 0%, #e8dcc8 100%);
+        border: 2px solid #8b7355;
+        border-radius: 6px;
+        color: #2d2418;
+        font-family: 'Georgia', 'Times New Roman', serif;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      .presence-select:focus {
+        outline: none;
+        border-color: #c9a227;
+      }
+
+      /* Back button styling */
+      .tavern-back-btn {
+        padding: 8px 16px;
+        background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
+        border: 2px solid #8b7355;
+        border-radius: 6px;
+        color: #2d2418;
+        font-family: 'Georgia', 'Times New Roman', serif;
+        font-size: 13px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      .tavern-back-btn:hover {
+        background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
+      }
+
+      .tavern-back-btn:active {
+        transform: translateY(1px);
+      }
+
+      /* ============================================
+         Responsive Layout - Mobile
+         ============================================ */
+      @media (max-width: 768px) {
+        .tavern-content {
+          flex-direction: column;
+        }
+
+        .sidebar {
+          width: 100%;
+          border-left: none;
+          border-top: 2px solid #8b7355;
+          max-height: 200px;
+        }
+
+        .tavern-header {
+          padding: 12px 16px;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .tavern-tabs {
+          padding: 8px 12px 0;
+          overflow-x: auto;
+        }
+
+        .tavern-tab {
+          padding: 8px 14px;
+          font-size: 13px;
+          white-space: nowrap;
+        }
+
+        .chat-panel {
+          padding: 12px;
+        }
+
+        .chat-messages {
+          padding: 8px;
+        }
+      }
+
+      /* ============================================
+         Responsive Layout - Tablet
+         ============================================ */
+      @media (min-width: 769px) and (max-width: 1024px) {
+        .sidebar {
+          width: 240px;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -560,12 +719,12 @@ export class TavernScene extends Scene {
           <h2>The Tavern</h2>
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
-          <select id="presence-select" class="chat-input" style="width: auto; padding: 8px 12px;">
+          <select id="presence-select" class="presence-select">
             <option value="online">Online</option>
             <option value="away">Away</option>
             <option value="busy">Busy</option>
           </select>
-          <button class="btn btn-secondary" id="back-btn">Back to Map</button>
+          <button class="tavern-back-btn" id="back-btn">Back to Map</button>
         </div>
       </div>
 
@@ -609,7 +768,7 @@ export class TavernScene extends Scene {
                   `).join('')}
                 </div>
               </div>
-              <button class="btn btn-primary send-btn" id="send-btn">Send</button>
+              <button class="send-btn" id="send-btn">Send</button>
             </div>
           </div>
         </div>
@@ -912,7 +1071,7 @@ export class TavernScene extends Scene {
     let html = '';
 
     if (this.hasMoreMessages) {
-      html += `<button class="load-more-btn" id="load-more-btn">Load older messages</button>`;
+      html += '<button class="load-more-btn" id="load-more-btn">Load older messages</button>';
     }
 
     html += this.messages.map(msg => this.renderMessage(msg, userId)).join('');
@@ -1296,8 +1455,34 @@ export class TavernScene extends Scene {
   }
 
   render(ctx) {
-    // UI is HTML-based
-    ctx.fillStyle = '#1a1a2e';
+    // UI is HTML-based, canvas shows parchment background
+    ctx.fillStyle = '#d4c4a8';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  }
+
+  /**
+   * Handle responsive breakpoint changes
+   * @param {string} newBreakpoint - 'mobile', 'tablet', or 'desktop'
+   * @param {string} oldBreakpoint - Previous breakpoint
+   */
+  onBreakpointChange(newBreakpoint, oldBreakpoint) {
+    // Rebuild UI for new layout if needed
+    if (!this.uiElement) return;
+
+    // On mobile, sidebar moves to bottom
+    const sidebar = this.uiElement.querySelector('.sidebar');
+    const content = this.uiElement.querySelector('.tavern-content');
+
+    if (newBreakpoint === 'mobile') {
+      // Mobile layout: sidebar at bottom
+      if (sidebar && content) {
+        content.style.flexDirection = 'column';
+      }
+    } else {
+      // Desktop/tablet: sidebar on right
+      if (sidebar && content) {
+        content.style.flexDirection = 'row';
+      }
+    }
   }
 }

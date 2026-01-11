@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  </style>
+  <!-- Door with arrow pointing out - medieval castle door -->
+  <path class="stroke" d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h4"/>
+  <!-- Door arch detail -->
+  <path class="stroke" d="M5 3a8 8 0 004 0" style="stroke-width: 1;"/>
+  <!-- Arrow pointing out -->
+  <path class="stroke" d="M16 17l5-5-5-5"/>
+  <path class="stroke" d="M21 12H9"/>
+  <!-- Door handle -->
+  <circle class="stroke" cx="7" cy="12" r="1" style="stroke-width: 1.5;"/>
+</svg>

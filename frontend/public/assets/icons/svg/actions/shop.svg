@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Coin bag - medieval merchant style -->
+  <path class="stroke metallic" d="M12 21c-5 0-7-4-7-8 0-3 2-5 3-6l-1-3h10l-1 3c1 1 3 3 3 6 0 4-2 8-7 8z"/>
+  <!-- Bag tie -->
+  <path class="stroke" d="M8 7c2-1 6-1 8 0"/>
+  <path class="stroke" d="M9 4l1.5 3M15 4l-1.5 3"/>
+  <!-- Coin symbol on bag -->
+  <circle class="stroke" cx="12" cy="14" r="3"/>
+  <path class="stroke" d="M12 12v4M10.5 13h3M10.5 15h3" style="stroke-width: 1;"/>
+</svg>

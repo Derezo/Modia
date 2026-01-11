@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Mountain peak - rugged medieval style -->
+  <path class="stroke metallic" d="M2 21l7-12 3 4 5-10 5 18H2z"/>
+  <!-- Snow cap -->
+  <path class="stroke" d="M17 3l-3 6 2-1 1 2 2-1 1 2 2-8"/>
+  <!-- Ridge lines for texture -->
+  <path class="stroke" d="M9 9l2 3" style="stroke-width: 1;"/>
+  <path class="stroke" d="M14 11l1.5-3" style="stroke-width: 1;"/>
+  <!-- Cross-hatch shading on dark side -->
+  <path class="stroke" d="M5 18l2-3M7 19l2-3M9 20l1-2" style="stroke-width: 1;"/>
+</svg>

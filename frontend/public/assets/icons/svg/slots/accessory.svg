@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Ring/amulet - medieval jewelry -->
+  <!-- Amulet chain -->
+  <path class="stroke" d="M8 3c2 0 4 0 8 0"/>
+  <path class="stroke" d="M8 3l-1 3M16 3l1 3"/>
+  <path class="stroke" d="M7 6l5 2 5-2"/>
+  <!-- Amulet body -->
+  <path class="stroke metallic" d="M12 8l-4 4v4l4 5 4-5v-4l-4-4z"/>
+  <!-- Gem in center -->
+  <path class="stroke" d="M10 12l2-1 2 1v3l-2 2-2-2v-3z"/>
+  <circle cx="12" cy="14" r="1.5" fill="currentColor" style="fill-opacity: 0.3;"/>
+  <!-- Decorative etching -->
+  <path class="stroke" d="M9 10l1 1M15 10l-1 1" style="stroke-width: 1;"/>
+  <path class="stroke" d="M9 17l1-1M15 17l-1-1" style="stroke-width: 1;"/>
+</svg>
