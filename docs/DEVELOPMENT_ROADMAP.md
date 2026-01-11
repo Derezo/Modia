@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 7.5 |
+| Version | 7.6 |
 | Last Updated | January 2026 |
 
 ---
@@ -1222,6 +1222,7 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 - [x] SettingsModal parchment migration
 - [x] MarketplaceScene toast integration (parchmentToast)
 - [x] Game.js HUD integration (ProfileDropdown, parchmentToast)
+- [x] **Title Screen Animation** (TitleIntroScene) - Canvas pixel art cinematic with castle, soldiers, monsters, light burst
 - [ ] Remaining scene migrations (Login, Register, CharacterSelect, CharacterCreate, Battle, Coliseum, Courtyard, Recruitment)
 - [ ] Mobile touch optimization
 - [ ] Loading indicators
@@ -1428,3 +1429,4 @@ Finalize the game for initial release with UI polish, balance, and deployment.
 | 7.3 | Jan 2026 | - | **World Map Path System Overhaul**: Fixed duplicate path rendering (single row per connection with normalized ID ordering), added dynamic curve variance system (5% extreme, 20% significant, 75% soft), character now follows visual Catmull-Rom spline curves instead of straight lines, node labels render above fog of war. Files: seed.js, PathRenderer.js, WorldMapCharacter.js, WorldMapScene.js. |
 | 7.4 | Jan 2026 | - | **Boss Mechanics & Phase 6 Progress**: Implemented multi-phase boss system with HP threshold transitions, stat modifications, ability unlocks, and entry effects (buffs, summons, auras). Created bossService.js with 16 unit tests, database migration 018_boss_mechanics.sql with 3 boss templates (Forest Guardian, Cave Troll King, Skeleton Lord). Dynamic enemy abilities verified as already complete via npcSkillService (procedural + database-driven). Fixed duplicate export syntax error in utilityFactors.js. Phase 6 updated to 45%. |
 | 7.5 | Jan 2026 | - | **Map Generation & AI Strategic Pathfinding**: Fixed mountain terrain creating impassable maps. Added path validation (`hasValidPath`, `analyzeMapConnectivity`) in `shared/pathfinding.js`. Added deterministic path carving (`ensureMapConnectivity`) in `shared/mapGeneration.js` with corridor pre-computation for seeded consistency. Rebalanced mountain terrain weights (40% → 25% impassable). Created strategic pathfinding system in `api/src/services/ai/strategicPathfinding.js` for multi-turn AI movement toward enemies. Added `strategicPathProgress` and `waitingPenalty` factors to utility AI with pattern weights for all 9 AI types. Added 51 new tests (26 map generation, 25 AI pathfinding). Fixed BattleScene.js nodeType handling causing client/server terrain mismatch. |
+| 7.6 | Jan 2026 | - | **Title Screen Animation**: Canvas-drawn pixel art cinematic intro sequence. 15 new files in `frontend/src/title/`: TitleColors.js (color palette), 5 components (CastleRenderer, RiverRenderer, ForestRenderer, PathRenderer, DrawbridgeRenderer), 4 entities (Soldier, Goblin, Bat, Slime with walk cycles and squash/stretch), 3 effects (DustEmitter, LightBurst, TransitionOverlay), TitleAnimationEngine (8-phase state machine, 6.5s timeline), TitleIntroScene (skip detection, localStorage persistence). Modified SceneManager.js and Game.js for scene registration and first-visit routing. Plan: `/home/wizard/.claude/plans/composed-tinkering-thimble.md`. |

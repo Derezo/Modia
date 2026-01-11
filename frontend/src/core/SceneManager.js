@@ -1,3 +1,4 @@
+import { TitleIntroScene } from '../scenes/TitleIntroScene.js';
 import { LoginScene } from '../scenes/LoginScene.js';
 import { RegisterScene } from '../scenes/RegisterScene.js';
 import { CharacterSelectScene } from '../scenes/CharacterSelectScene.js';
@@ -27,6 +28,7 @@ export class SceneManager {
 
   registerScenes() {
     this.scenes = {
+      titleIntro: new TitleIntroScene(this.game),
       login: new LoginScene(this.game),
       register: new RegisterScene(this.game),
       characterSelect: new CharacterSelectScene(this.game),
