@@ -101,13 +101,18 @@ export class WorldMapScene extends Scene {
   async refreshStamina() {
     try {
       const characters = this.game.state.get('characters') || [];
-      const partyLeader = characters.find(c => c.party_slot === 1);
+      console.log('refreshStamina - characters from state:', characters.length);
+      const partyLeader = characters.find(c => c.party_slot === 1) || characters[0];
 
       if (partyLeader) {
+        console.log('refreshStamina - fetching for character:', partyLeader.id, partyLeader.name);
         const result = await this.game.api.getCharacterStamina(partyLeader.id);
+        console.log('refreshStamina - API result:', result);
         if (result.stamina) {
           this.staminaBar.setStamina(result.stamina);
         }
+      } else {
+        console.warn('refreshStamina - no party leader found');
       }
     } catch (err) {
       console.warn('Failed to fetch stamina:', err);
@@ -118,12 +123,37 @@ export class WorldMapScene extends Scene {
    * Initialize the map character with the party leader
    */
   async initMapCharacter() {
-    const characters = this.game.state.get('characters') || [];
-    const partyLeader = characters.find(c => c.party_slot === 1);
+    let characters = this.game.state.get('characters') || [];
+
+    // Fetch characters from API if not in state
+    if (characters.length === 0) {
+      try {
+        const result = await this.game.api.getCharacters();
+        characters = result.characters || [];
+        this.game.state.set('characters', characters);
+      } catch (err) {
+        console.warn('Failed to fetch characters for map display:', err);
+        return;
+      }
+    }
+
+    if (characters.length === 0) {
+      console.warn('No characters available for map display');
+      return;
+    }
+
+    // Find party leader (party_slot === 1) or use first character
+    let partyLeader = characters.find(c => c.party_slot === 1);
+    if (!partyLeader) {
+      // If no party_slot set, use first character
+      partyLeader = characters[0];
+    }
 
     if (partyLeader) {
+      console.log('Setting map character:', partyLeader.name, partyLeader.class);
       await this.mapCharacter.setCharacter(partyLeader);
       this.updateCharacterPosition();
+      console.log('Map character initialized, position:', this.mapCharacter.x, this.mapCharacter.y);
     }
   }
 
@@ -674,6 +704,7 @@ export class WorldMapScene extends Scene {
   async travelToNode(node) {
     // Block travel if already traveling
     if (this.isTraveling) {
+      console.log('Travel blocked - already traveling');
       return;
     }
 
@@ -693,9 +724,30 @@ export class WorldMapScene extends Scene {
 
       // Call the travel API (now supports multi-node travel)
       const result = await this.game.api.travel(node.id);
+      console.log('Travel API result:', result);
+      console.log('Stamina from API:', result.stamina);
 
-      // If we have a path, animate the travel
-      if (result.pathNodes && result.pathNodes.length > 1) {
+      // Ensure map character is initialized for animation
+      if (this.mapCharacter && !this.mapCharacter.character) {
+        console.log('Character not set, initializing...');
+        await this.initMapCharacter();
+        console.log('After init, character:', this.mapCharacter?.character);
+      }
+
+      // Check if we can animate (have path and character)
+      const canAnimate = result.pathNodes &&
+                         result.pathNodes.length > 1 &&
+                         this.mapCharacter &&
+                         this.mapCharacter.character;
+
+      console.log('Can animate:', canAnimate, {
+        hasPathNodes: !!result.pathNodes,
+        pathLength: result.pathNodes?.length,
+        hasMapCharacter: !!this.mapCharacter,
+        hasCharacter: !!this.mapCharacter?.character
+      });
+
+      if (canAnimate) {
         this.isTraveling = true;
 
         // Convert path nodes to screen positions
@@ -706,18 +758,24 @@ export class WorldMapScene extends Scene {
           name: n.name
         }));
 
+        console.log('Starting walk animation with path:', walkPath);
+
         // Start walking animation
         this.mapCharacter.startWalking(walkPath, () => {
+          console.log('Walk animation complete');
           this.onTravelComplete(result, previousNodeId);
         });
 
         // Show travel message
         this.game.showNotification(`Traveling to ${result.currentNode.name}... (${result.cost} stamina)`, 'info');
       } else {
-        // No animation needed, complete immediately
+        // No animation - complete immediately
+        console.log('No animation, completing immediately');
         this.onTravelComplete(result, previousNodeId);
+        this.game.showNotification(`Arrived at ${result.currentNode.name}`, 'success');
       }
     } catch (err) {
+      console.error('Travel error:', err);
       this.game.showNotification(err.message, 'error');
     }
   }
@@ -726,6 +784,7 @@ export class WorldMapScene extends Scene {
    * Handle travel completion (after animation finishes)
    */
   async onTravelComplete(result, previousNodeId) {
+    console.log('onTravelComplete called');
     this.isTraveling = false;
 
     // Update state
@@ -734,7 +793,11 @@ export class WorldMapScene extends Scene {
 
     // Update stamina from travel result
     if (result.stamina && this.staminaBar) {
+      console.log('Updating stamina bar with:', result.stamina);
       this.staminaBar.setStamina(result.stamina);
+      console.log('Stamina bar current after update:', this.staminaBar.current);
+    } else {
+      console.warn('No stamina in result or no stamina bar:', { stamina: result.stamina, hasBar: !!this.staminaBar });
     }
 
     // Reload world data to get newly discovered nodes (fog of war reveal)
@@ -909,14 +972,8 @@ export class WorldMapScene extends Scene {
         // Draw main sprite
         ctx.drawImage(nodeSprite, x - offset, y - offset, drawSize, drawSize);
 
-        // Draw selection ring
-        if (isCurrent) {
-          ctx.beginPath();
-          ctx.arc(x, y, drawSize / 2 + 4, 0, Math.PI * 2);
-          ctx.strokeStyle = '#ffd700';
-          ctx.lineWidth = 3;
-          ctx.stroke();
-        } else if (isAdjacent) {
+        // Draw selection ring (only for adjacent nodes, not current - character sprite shows current location)
+        if (isAdjacent) {
           ctx.beginPath();
           ctx.arc(x, y, drawSize / 2 + 2, 0, Math.PI * 2);
           ctx.strokeStyle = 'rgba(106, 176, 243, 0.6)';
@@ -926,13 +983,11 @@ export class WorldMapScene extends Scene {
           ctx.setLineDash([]);
         }
       } else {
-        // Fallback: Draw colored circle with emoji
+        // Fallback: Draw colored circle with emoji (no special highlighting for current node - character sprite shows location)
         ctx.beginPath();
         ctx.arc(x, y, this.nodeSize, 0, Math.PI * 2);
 
-        if (isCurrent) {
-          ctx.fillStyle = '#ffd700';
-        } else if (isHovered && isAdjacent) {
+        if (isHovered && isAdjacent) {
           ctx.fillStyle = '#4a90d9';
         } else {
           ctx.fillStyle = this.getNodeColor(node.node_type);
@@ -940,12 +995,12 @@ export class WorldMapScene extends Scene {
         ctx.fill();
 
         // Node border
-        ctx.strokeStyle = isCurrent ? '#ffed4a' : isAdjacent ? '#6ab0f3' : '#2a2a4a';
-        ctx.lineWidth = isCurrent ? 3 : 2;
+        ctx.strokeStyle = isAdjacent ? '#6ab0f3' : '#2a2a4a';
+        ctx.lineWidth = 2;
         ctx.stroke();
 
         // Node emoji icon
-        ctx.fillStyle = isCurrent ? '#1a1a2e' : '#fff';
+        ctx.fillStyle = '#fff';
         ctx.font = '16px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -958,14 +1013,14 @@ export class WorldMapScene extends Scene {
       }
     }
 
-    // Render character on map
-    if (this.mapCharacter) {
-      this.mapCharacter.render(ctx, this.cameraX, this.cameraY);
-    }
-
-    // Render fog of war overlay
+    // Render fog of war overlay (before character so player is always visible)
     if (this.effects) {
       this.effects.renderFogOfWar(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height, this.nodes, this.connections);
+    }
+
+    // Render character on map (after fog so always visible)
+    if (this.mapCharacter) {
+      this.mapCharacter.render(ctx, this.cameraX, this.cameraY);
     }
 
     ctx.restore();
