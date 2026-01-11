@@ -196,20 +196,32 @@ Comprehensive UI modernization with a unified parchment component library, respo
 | SVG icon system (6 categories) | COMPLETE | frontend/public/assets/icons/svg/ |
 | Icon build script (PNG generation) | COMPLETE | scripts/generate-icons.js |
 | Icon component | COMPLETE | frontend/src/components/Icon.js |
-| WorldMapScene migration | COMPLETE | PathRenderer.js, FogOfWarState.js, mystery nodes |
-| FormationScene migration | COMPLETE | frontend/src/scenes/FormationScene.js |
-| InventoryScene migration | COMPLETE | frontend/src/scenes/InventoryScene.js |
-| TavernScene migration | COMPLETE | frontend/src/scenes/TavernScene.js |
-| ShopScene migration | COMPLETE | frontend/src/scenes/ShopScene.js |
-| SettingsModal migration | COMPLETE | frontend/src/components/SettingsModal.js |
-| Game.js HUD integration | COMPLETE | ProfileDropdown, parchmentToast |
+| WorldMapScene migration | ✅ COMPLETE | PathRenderer.js, FogOfWarState.js, mystery nodes |
+| FormationScene migration | ✅ COMPLETE | frontend/src/scenes/FormationScene.js |
+| InventoryScene migration | ✅ COMPLETE | frontend/src/scenes/InventoryScene.js |
+| TavernScene migration | ✅ COMPLETE | frontend/src/scenes/TavernScene.js |
+| ShopScene migration | ✅ COMPLETE | frontend/src/scenes/ShopScene.js |
+| SettingsModal migration | ✅ COMPLETE | frontend/src/components/SettingsModal.js |
+| Game.js HUD integration | ✅ COMPLETE | ProfileDropdown, parchmentToast |
+| CSS utility functions | ✅ COMPLETE | getParchmentPanelCSS, getParchmentInputCSS, getParchmentButtonCSS |
+| LoginScene migration | ✅ COMPLETE | frontend/src/scenes/LoginScene.js |
+| RegisterScene migration | ✅ COMPLETE | frontend/src/scenes/RegisterScene.js |
+| CharacterSelectScene migration | ✅ COMPLETE | frontend/src/scenes/CharacterSelectScene.js |
+| CharacterCreateScene migration | ✅ COMPLETE | frontend/src/scenes/CharacterCreateScene.js |
+| RecruitmentScene migration | ✅ COMPLETE | frontend/src/scenes/RecruitmentScene.js |
+| BattleFormationScene migration | ✅ COMPLETE | frontend/src/scenes/BattleFormationScene.js |
+| CourtyardScene migration | ✅ COMPLETE | frontend/src/scenes/CourtyardScene.js (green ambient + parchment panels) |
+| ColiseumScene migration | ✅ COMPLETE | frontend/src/scenes/ColiseumScene.js (arena aesthetic + parchment panels) |
+| Deprecated file cleanup | ✅ COMPLETE | Removed ToastManager.js, MarketToast.js, NotificationBell.js |
 
 **Key Features:**
-- **Component Library**: 7 reusable parchment-styled DOM components with consistent medieval theme
+- **Component Library**: 8 reusable parchment-styled DOM components with consistent medieval theme
+- **CSS Utility Functions**: Shared CSS generation (getParchmentPanelCSS, getParchmentInputCSS, getParchmentButtonCSS, etc.) for consistent styling
 - **Responsive System**: 3 breakpoints (Mobile <600px, Tablet 600-900px, Desktop >900px) with CSS variable injection
 - **Icon System**: Medieval woodcut SVG icons in 6 categories, auto-generated PNGs at 4 sizes
 - **World Map Enhancements**: Catmull-Rom spline paths, progressive fog-of-war reveal, mystery node system
-- **Scene Migrations**: 6 scenes updated to use parchment components with responsive layouts
+- **Complete Scene Migrations**: All 15 scenes now use parchment theme with responsive layouts
+- **Ambient Themes Preserved**: Courtyard keeps green outdoor feel, Coliseum keeps red/gold arena aesthetic
 
 **Documentation:** See `docs/DESIGN_SYSTEM.md` for component usage and `docs/FRONTEND_TECHNICAL_PATTERNS.md` for responsive patterns.
 

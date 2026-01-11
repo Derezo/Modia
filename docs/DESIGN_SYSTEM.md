@@ -279,6 +279,84 @@ text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 
 ---
 
+## CSS Utility Functions
+
+The parchment theme provides JavaScript utility functions that generate complete CSS property blocks for consistent styling across scenes. Import from `frontend/src/ui/parchment/index.js`.
+
+### Usage Pattern
+
+```javascript
+import {
+  PARCHMENT_COLORS,
+  getParchmentGradient,
+  getParchmentPanelCSS,
+  getParchmentInputCSS,
+  getParchmentButtonCSS
+} from '../ui/parchment/index.js';
+
+const P = PARCHMENT_COLORS;  // Alias for cleaner code
+
+// In addStyles() method:
+style.textContent = `
+  .my-panel {
+    ${getParchmentPanelCSS()}
+  }
+  .my-input {
+    ${getParchmentInputCSS()}
+  }
+  .my-btn {
+    ${getParchmentButtonCSS('primary')}
+  }
+`;
+```
+
+### Available Utilities
+
+| Function | Description |
+|----------|-------------|
+| `getParchmentGradient(direction)` | Background gradient string |
+| `getParchmentBorder(width)` | Border property string |
+| `getParchmentShadow(elevated)` | Box-shadow with inset highlights |
+| `getParchmentPanelCSS()` | Complete panel styles (bg, border, shadow, radius, color, font) |
+| `getParchmentInputCSS(options)` | Complete input styles with focus states |
+| `getParchmentButtonCSS(variant)` | Complete button styles (primary, secondary, danger, ghost) |
+| `getParchmentCardCSS(options)` | Panel + padding with optional hover/selected states |
+| `getParchmentHeaderCSS()` | Section header styles with border-bottom |
+| `getParchmentMutedTextCSS()` | Muted text color and font |
+
+### Color Reference (PARCHMENT_COLORS)
+
+```javascript
+// Background tones
+P.light     // #d4c4a8
+P.mid       // #c9b899
+P.dark      // #bfae8a
+
+// Borders
+P.border      // #8b7355
+P.borderDark  // #6b5344
+
+// Text
+P.text.primary    // #2d2418
+P.text.secondary  // #5a4a3a
+P.text.muted      // #7a6a5a
+
+// State colors
+P.state.success  // #4a7548
+P.state.error    // #8b4444
+P.state.warning  // #c9a227
+
+// Accents
+P.accent.gold    // #c9a227
+P.accent.copper  // #b87333
+
+// Effects
+P.shadow     // rgba(0, 0, 0, 0.3)
+P.overlay    // rgba(0, 0, 0, 0.5)
+```
+
+---
+
 ## Spacing
 
 | Token | Value | Usage |

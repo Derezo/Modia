@@ -19,7 +19,14 @@ export {
   getParchmentBorderDark,
   getParchmentShadow,
   getParchmentInsetShadow,
-  getParchmentTextShadow
+  getParchmentTextShadow,
+  // CSS generation utilities for consistent styling
+  getParchmentPanelCSS,
+  getParchmentInputCSS,
+  getParchmentButtonCSS,
+  getParchmentCardCSS,
+  getParchmentHeaderCSS,
+  getParchmentMutedTextCSS
 } from './ParchmentTheme.js';
 
 export { ParchmentPanel } from './ParchmentPanel.js';

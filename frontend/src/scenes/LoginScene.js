@@ -1,4 +1,20 @@
 import { Scene } from './Scene.js';
+import {
+  PARCHMENT_COLORS,
+  PARCHMENT_TYPOGRAPHY,
+  PARCHMENT_SPACING,
+  PARCHMENT_RADIUS,
+  getParchmentGradient,
+  getParchmentBorder,
+  getParchmentShadow,
+  getParchmentInputCSS,
+  getParchmentButtonCSS
+} from '../ui/parchment/index.js';
+
+// Local alias for cleaner access
+const P = PARCHMENT_COLORS;
+
+const STYLE_ID = 'login-scene-styles';
 
 export class LoginScene extends Scene {
   constructor(game) {
@@ -13,6 +29,7 @@ export class LoginScene extends Scene {
     this.error = null;
     this.loading = false;
     this.fieldsTouched = { username: false, password: false };
+    this.addStyles();
     this.createUI();
   }
 
@@ -21,29 +38,210 @@ export class LoginScene extends Scene {
       this.formElement.remove();
       this.formElement = null;
     }
+    // Clean up styles
+    const styleEl = document.getElementById(STYLE_ID);
+    if (styleEl) styleEl.remove();
+  }
+
+  addStyles() {
+    if (document.getElementById(STYLE_ID)) return;
+
+    const style = document.createElement('style');
+    style.id = STYLE_ID;
+    style.textContent = `
+      .login-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 340px;
+        max-width: 90%;
+        text-align: center;
+      }
+
+      .login-title {
+        color: ${P.text.primary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: 42px;
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        margin-bottom: ${PARCHMENT_SPACING.xl};
+        letter-spacing: 2px;
+      }
+
+      .login-panel {
+        background: ${getParchmentGradient()};
+        border: ${getParchmentBorder()};
+        box-shadow: ${getParchmentShadow(true)};
+        border-radius: ${PARCHMENT_RADIUS.lg};
+        padding: ${PARCHMENT_SPACING.xl};
+      }
+
+      .login-form-group {
+        margin-bottom: ${PARCHMENT_SPACING.md};
+        text-align: left;
+      }
+
+      .login-label {
+        display: block;
+        color: ${P.text.primary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        margin-bottom: ${PARCHMENT_SPACING.xs};
+      }
+
+      .login-input {
+        width: 100%;
+        box-sizing: border-box;
+        ${getParchmentInputCSS()}
+      }
+
+      .login-input:focus {
+        border-color: ${P.borderDark};
+        box-shadow: 0 0 0 2px rgba(139, 115, 85, 0.2);
+      }
+
+      .login-input::placeholder {
+        color: ${P.text.muted};
+      }
+
+      .login-input.input-valid {
+        border-color: ${P.state.success};
+      }
+
+      .login-input.input-invalid {
+        border-color: ${P.state.error};
+      }
+
+      .login-input.input-valid:focus {
+        box-shadow: 0 0 0 2px rgba(74, 117, 72, 0.2);
+      }
+
+      .login-input.input-invalid:focus {
+        box-shadow: 0 0 0 2px rgba(139, 68, 68, 0.2);
+      }
+
+      .login-field-error {
+        color: ${P.state.error};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        min-height: 16px;
+        margin-top: 4px;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+
+      .login-field-error.visible {
+        opacity: 1;
+      }
+
+      .login-error {
+        background: rgba(139, 68, 68, 0.15);
+        border: 1px solid ${P.state.error};
+        border-radius: ${PARCHMENT_RADIUS.sm};
+        color: ${P.state.error};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
+        margin-bottom: ${PARCHMENT_SPACING.md};
+        animation: shake 0.4s ease;
+      }
+
+      .login-btn {
+        width: 100%;
+        margin-top: ${PARCHMENT_SPACING.sm};
+        ${getParchmentButtonCSS('primary')}
+      }
+
+      .login-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      }
+
+      .login-btn:active:not(:disabled) {
+        transform: translateY(0);
+      }
+
+      .login-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      .login-btn.btn-loading {
+        background: ${P.border};
+      }
+
+      .login-switch {
+        margin-top: ${PARCHMENT_SPACING.lg};
+        color: ${P.text.secondary};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+      }
+
+      .login-switch a {
+        color: ${P.accent.gold};
+        cursor: pointer;
+        text-decoration: underline;
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      }
+
+      .login-switch a:hover {
+        color: ${P.border};
+      }
+
+      .login-panel.form-loading .login-input {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-5px); }
+        75% { transform: translateX(5px); }
+      }
+
+      @media (max-width: 600px) {
+        .login-container {
+          width: 90%;
+          max-width: 320px;
+        }
+
+        .login-input {
+          min-height: 44px;
+          padding: 12px 14px;
+        }
+
+        .login-btn {
+          min-height: 44px;
+        }
+      }
+    `;
+
+    document.head.appendChild(style);
   }
 
   createUI() {
     const container = document.createElement('div');
-    container.className = 'auth-container';
+    container.className = 'login-container';
     container.innerHTML = `
-      <h1 class="auth-title">Modia</h1>
-      <div class="ui-panel" id="login-panel">
-        <div id="auth-error" class="auth-error" style="display: none;"></div>
+      <h1 class="login-title">Modia</h1>
+      <div class="login-panel" id="login-panel">
+        <div id="auth-error" class="login-error" style="display: none;"></div>
         <form id="login-form">
-          <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" class="input-field" placeholder="Enter username" autocomplete="username" required>
-            <div class="field-error" id="username-error"></div>
+          <div class="login-form-group">
+            <label for="username" class="login-label">Username</label>
+            <input type="text" id="username" class="login-input" placeholder="Enter username" autocomplete="username" required>
+            <div class="login-field-error" id="username-error"></div>
           </div>
-          <div class="form-group">
-            <label for="password">Password</label>
-            <input type="password" id="password" class="input-field" placeholder="Enter password" autocomplete="current-password" required>
-            <div class="field-error" id="password-error"></div>
+          <div class="login-form-group">
+            <label for="password" class="login-label">Password</label>
+            <input type="password" id="password" class="login-input" placeholder="Enter password" autocomplete="current-password" required>
+            <div class="login-field-error" id="password-error"></div>
           </div>
-          <button type="submit" class="btn btn-primary" style="width: 100%;" id="login-btn">Login</button>
+          <button type="submit" class="login-btn" id="login-btn">Login</button>
         </form>
-        <div class="auth-switch">
+        <div class="login-switch">
           Don't have an account? <a id="register-link">Register</a>
         </div>
       </div>
@@ -230,15 +428,16 @@ export class LoginScene extends Scene {
   }
 
   render(ctx) {
-    // Draw background gradient
+    // Draw parchment-themed background gradient
     const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
-    gradient.addColorStop(0, '#16213e');
-    gradient.addColorStop(1, '#1a1a2e');
+    gradient.addColorStop(0, P.light);
+    gradient.addColorStop(0.5, P.mid);
+    gradient.addColorStop(1, P.dark);
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    // Draw some decorative elements
-    ctx.fillStyle = 'rgba(255, 215, 0, 0.05)';
+    // Draw subtle decorative elements with gold accents
+    ctx.fillStyle = 'rgba(201, 162, 39, 0.08)';
     for (let i = 0; i < 5; i++) {
       const x = 100 + i * 150;
       const y = 450 + Math.sin(Date.now() / 1000 + i) * 20;
@@ -246,5 +445,36 @@ export class LoginScene extends Scene {
       ctx.arc(x, y, 30 + i * 5, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // Add subtle corner flourishes
+    ctx.strokeStyle = P.border;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.3;
+
+    // Top-left flourish
+    ctx.beginPath();
+    ctx.moveTo(20, 60);
+    ctx.quadraticCurveTo(20, 20, 60, 20);
+    ctx.stroke();
+
+    // Top-right flourish
+    ctx.beginPath();
+    ctx.moveTo(ctx.canvas.width - 20, 60);
+    ctx.quadraticCurveTo(ctx.canvas.width - 20, 20, ctx.canvas.width - 60, 20);
+    ctx.stroke();
+
+    // Bottom-left flourish
+    ctx.beginPath();
+    ctx.moveTo(20, ctx.canvas.height - 60);
+    ctx.quadraticCurveTo(20, ctx.canvas.height - 20, 60, ctx.canvas.height - 20);
+    ctx.stroke();
+
+    // Bottom-right flourish
+    ctx.beginPath();
+    ctx.moveTo(ctx.canvas.width - 20, ctx.canvas.height - 60);
+    ctx.quadraticCurveTo(ctx.canvas.width - 20, ctx.canvas.height - 20, ctx.canvas.width - 60, ctx.canvas.height - 20);
+    ctx.stroke();
+
+    ctx.globalAlpha = 1.0;
   }
 }

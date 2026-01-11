@@ -8,6 +8,20 @@ import { ArcaneChamberTheme } from './formation/themes/ArcaneChamberTheme.js';
 import { ArmoryTheme } from './formation/themes/ArmoryTheme.js';
 import { DojoTheme } from './formation/themes/DojoTheme.js';
 import { ClockworkTheme } from './formation/themes/ClockworkTheme.js';
+import {
+  PARCHMENT_COLORS,
+  PARCHMENT_TYPOGRAPHY,
+  PARCHMENT_SPACING,
+  PARCHMENT_RADIUS,
+  getParchmentGradient,
+  getParchmentBorder,
+  getParchmentShadow
+} from '../ui/parchment/index.js';
+
+// Local alias for cleaner access
+const P = PARCHMENT_COLORS;
+
+const STYLE_ID = 'battle-formation-scene-styles';
 
 /**
  * BattleFormationScene - Pre-battle character placement on isometric grid
@@ -119,6 +133,10 @@ export class BattleFormationScene extends Scene {
       this.uiElement.remove();
       this.uiElement = null;
     }
+    // Clean up styles
+    const styleEl = document.getElementById(STYLE_ID);
+    if (styleEl) styleEl.remove();
+
     this.formationGrid = null;
     this.gridCanvas = null;
     this.placedCharacters.clear();
@@ -215,7 +233,7 @@ export class BattleFormationScene extends Scene {
   createUI() {
     const container = document.createElement('div');
     container.id = 'battle-formation-scene';
-    container.className = this.isMobile ? 'formation-mobile' : 'formation-desktop';
+    container.className = this.isMobile ? 'bf-formation-mobile' : 'bf-formation-desktop';
     container.style.cssText = this.theme.getContainerStyles();
 
     const nodeName = this.battleContext?.node?.name || 'Battle Zone';
@@ -231,18 +249,18 @@ export class BattleFormationScene extends Scene {
     this.uiElement = container;
 
     // Initialize grid canvas
-    this.gridCanvas = container.querySelector('#formation-grid-canvas');
+    this.gridCanvas = container.querySelector('#bf-formation-grid-canvas');
     this.initializeGrid();
 
     // Initialize ParchmentCard component
     this.characterCard = new ParchmentCard({ mode: 'detailed', type: 'player' });
-    const cardContainer = container.querySelector('#card-content');
+    const cardContainer = container.querySelector('#bf-card-content');
     if (cardContainer) {
       cardContainer.appendChild(this.characterCard.element);
     }
 
     // Initialize Start Battle button
-    const buttonContainer = container.querySelector('#start-button-container');
+    const buttonContainer = container.querySelector('#bf-start-button-container');
     if (buttonContainer) {
       this.startButton = new StartBattleButton({
         type: this.getButtonType(),
@@ -259,53 +277,53 @@ export class BattleFormationScene extends Scene {
   getDesktopLayout(nodeName, themeTitle) {
     return `
       <!-- Header -->
-      <div class="formation-header">
-        <button class="back-btn" id="back-btn">
-          <span class="back-icon">&#8592;</span>
+      <div class="bf-formation-header">
+        <button class="bf-back-btn" id="bf-back-btn">
+          <span class="bf-back-icon">&#8592;</span>
         </button>
-        <div class="header-titles">
-          <h2 class="battle-title-animated">${themeTitle}</h2>
-          <div class="node-name">${nodeName}</div>
+        <div class="bf-header-titles">
+          <h2 class="bf-battle-title-animated">${themeTitle}</h2>
+          <div class="bf-node-name">${nodeName}</div>
         </div>
       </div>
 
       <!-- Main Content -->
-      <div class="formation-main">
+      <div class="bf-formation-main">
         <!-- Side Drawer (fixed width) -->
-        <div class="formation-drawer" id="party-drawer">
-          <div class="drawer-header">
-            <span class="drawer-title">Your Party</span>
+        <div class="bf-formation-drawer" id="bf-party-drawer">
+          <div class="bf-drawer-header">
+            <span class="bf-drawer-title">Your Party</span>
           </div>
-          <div class="drawer-roster" id="unplaced-roster">
+          <div class="bf-drawer-roster" id="bf-unplaced-roster">
             <!-- Character cards go here -->
           </div>
-          <div class="drawer-divider"></div>
-          <div class="drawer-detail" id="card-content">
+          <div class="bf-drawer-divider"></div>
+          <div class="bf-drawer-detail" id="bf-card-content">
             <!-- ParchmentCard goes here -->
           </div>
         </div>
 
         <!-- Center Content -->
-        <div class="formation-center">
+        <div class="bf-formation-center">
           <!-- Enemy Roster -->
-          <div class="enemy-section">
-            <div class="enemy-label">Enemies Ahead</div>
-            <div class="enemy-roster" id="enemy-roster">
+          <div class="bf-enemy-section">
+            <div class="bf-enemy-label">Enemies Ahead</div>
+            <div class="bf-enemy-roster" id="bf-enemy-roster">
               ${this.renderEnemyRoster()}
             </div>
           </div>
 
           <!-- Grid Area -->
-          <div class="grid-area">
-            <canvas id="formation-grid-canvas" width="400" height="220"></canvas>
-            <div class="grid-instructions">
+          <div class="bf-grid-area">
+            <canvas id="bf-formation-grid-canvas" width="400" height="220"></canvas>
+            <div class="bf-grid-instructions">
               Click to place &bull; Long press to remove
             </div>
           </div>
 
           <!-- Start Button -->
-          <div class="start-section">
-            <div id="start-button-container"></div>
+          <div class="bf-start-section">
+            <div id="bf-start-button-container"></div>
           </div>
         </div>
       </div>
@@ -315,43 +333,43 @@ export class BattleFormationScene extends Scene {
   getMobileLayout(nodeName, themeTitle) {
     return `
       <!-- Header (compact) -->
-      <div class="formation-header formation-header--mobile">
-        <button class="back-btn" id="back-btn">
-          <span class="back-icon">&#8592;</span>
+      <div class="bf-formation-header bf-formation-header--mobile">
+        <button class="bf-back-btn" id="bf-back-btn">
+          <span class="bf-back-icon">&#8592;</span>
         </button>
-        <div class="header-titles">
-          <h2 class="battle-title-animated battle-title--mobile">${themeTitle}</h2>
+        <div class="bf-header-titles">
+          <h2 class="bf-battle-title-animated bf-battle-title--mobile">${themeTitle}</h2>
         </div>
       </div>
 
       <!-- Enemy Roster (horizontal scroll) -->
-      <div class="enemy-section enemy-section--mobile">
-        <div class="enemy-roster enemy-roster--mobile" id="enemy-roster">
+      <div class="bf-enemy-section bf-enemy-section--mobile">
+        <div class="bf-enemy-roster bf-enemy-roster--mobile" id="bf-enemy-roster">
           ${this.renderEnemyRoster()}
         </div>
       </div>
 
       <!-- Grid Area (full width) -->
-      <div class="grid-area grid-area--mobile">
-        <canvas id="formation-grid-canvas" width="360" height="200"></canvas>
+      <div class="bf-grid-area bf-grid-area--mobile">
+        <canvas id="bf-formation-grid-canvas" width="360" height="200"></canvas>
       </div>
 
       <!-- Start Button (fixed) -->
-      <div class="start-section start-section--mobile">
-        <div id="start-button-container"></div>
+      <div class="bf-start-section bf-start-section--mobile">
+        <div id="bf-start-button-container"></div>
       </div>
 
       <!-- Bottom Sheet -->
-      <div class="bottom-sheet ${this.isBottomSheetExpanded ? 'expanded' : ''}" id="bottom-sheet">
-        <div class="sheet-handle" id="sheet-handle">
-          <div class="handle-bar"></div>
-          <span class="sheet-title">Party (${this.battleParty.length})</span>
+      <div class="bf-bottom-sheet ${this.isBottomSheetExpanded ? 'expanded' : ''}" id="bf-bottom-sheet">
+        <div class="bf-sheet-handle" id="bf-sheet-handle">
+          <div class="bf-handle-bar"></div>
+          <span class="bf-sheet-title">Party (${this.battleParty.length})</span>
         </div>
-        <div class="sheet-content">
-          <div class="drawer-roster" id="unplaced-roster">
+        <div class="bf-sheet-content">
+          <div class="bf-drawer-roster" id="bf-unplaced-roster">
             <!-- Character cards go here -->
           </div>
-          <div class="drawer-detail" id="card-content">
+          <div class="bf-drawer-detail" id="bf-card-content">
             <!-- ParchmentCard goes here -->
           </div>
         </div>
@@ -361,24 +379,24 @@ export class BattleFormationScene extends Scene {
 
   renderEnemyRoster() {
     if (this.enemies.length === 0) {
-      return '<div class="enemy-unknown">Unknown enemies await...</div>';
+      return '<div class="bf-enemy-unknown">Unknown enemies await...</div>';
     }
 
     return this.enemies.map((enemy, index) => {
       const isBoss = enemy.isBoss || enemy.level > 10;
-      const threatClass = isBoss ? 'threat-boss' : '';
+      const threatClass = isBoss ? 'bf-threat-boss' : '';
 
       return `
-        <div class="enemy-card ${threatClass}" data-enemy-index="${index}">
-          <div class="enemy-portrait">
-            <div class="enemy-icon">${enemy.name.charAt(0)}</div>
-            ${isBoss ? '<div class="boss-indicator">&#9760;</div>' : ''}
+        <div class="bf-enemy-card ${threatClass}" data-enemy-index="${index}">
+          <div class="bf-enemy-portrait">
+            <div class="bf-enemy-icon">${enemy.name.charAt(0)}</div>
+            ${isBoss ? '<div class="bf-boss-indicator">&#9760;</div>' : ''}
           </div>
-          <div class="enemy-info">
-            <div class="enemy-name">${enemy.name}</div>
-            <div class="enemy-level">Lv.${enemy.level || '?'}</div>
+          <div class="bf-enemy-info">
+            <div class="bf-enemy-name">${enemy.name}</div>
+            <div class="bf-enemy-level">Lv.${enemy.level || '?'}</div>
           </div>
-          ${isBoss ? '<div class="threat-aura"></div>' : ''}
+          ${isBoss ? '<div class="bf-threat-aura"></div>' : ''}
         </div>
       `;
     }).join('');
@@ -399,7 +417,7 @@ export class BattleFormationScene extends Scene {
     const opts = { signal: this.abortController.signal };
 
     // Back button
-    const backBtn = this.uiElement.querySelector('#back-btn');
+    const backBtn = this.uiElement.querySelector('#bf-back-btn');
     if (backBtn) {
       backBtn.addEventListener('click', () => this.goBack(), opts);
     }
@@ -444,7 +462,7 @@ export class BattleFormationScene extends Scene {
 
     // Mobile bottom sheet
     if (this.isMobile) {
-      const sheetHandle = this.uiElement.querySelector('#sheet-handle');
+      const sheetHandle = this.uiElement.querySelector('#bf-sheet-handle');
       if (sheetHandle) {
         sheetHandle.addEventListener('click', () => this.toggleBottomSheet(), opts);
       }
@@ -504,7 +522,7 @@ export class BattleFormationScene extends Scene {
 
   toggleBottomSheet() {
     this.isBottomSheetExpanded = !this.isBottomSheetExpanded;
-    const sheet = this.uiElement.querySelector('#bottom-sheet');
+    const sheet = this.uiElement.querySelector('#bf-bottom-sheet');
     if (sheet) {
       sheet.classList.toggle('expanded', this.isBottomSheetExpanded);
     }
@@ -688,7 +706,7 @@ export class BattleFormationScene extends Scene {
   }
 
   updateUnplacedRoster() {
-    const roster = this.uiElement?.querySelector('#unplaced-roster');
+    const roster = this.uiElement?.querySelector('#bf-unplaced-roster');
     if (!roster) return;
 
     const placedIds = new Set(
@@ -697,7 +715,7 @@ export class BattleFormationScene extends Scene {
     const unplaced = this.battleParty.filter(c => !placedIds.has(c.id));
 
     if (unplaced.length === 0 && this.placedCharacters.size > 0) {
-      roster.innerHTML = '<div class="all-placed">All characters placed!</div>';
+      roster.innerHTML = '<div class="bf-all-placed">All characters placed!</div>';
       return;
     }
 
@@ -708,23 +726,23 @@ export class BattleFormationScene extends Scene {
       const portraitUrl = `/assets/sprites/portraits/${char.race}_${gender}_${char.class}.png`;
 
       return `
-        <div class="roster-char ${isPlaced ? 'placed' : ''} ${isSelected ? 'selected' : ''}"
+        <div class="bf-roster-char ${isPlaced ? 'placed' : ''} ${isSelected ? 'selected' : ''}"
              data-char-id="${char.id}">
-          <div class="roster-portrait">
+          <div class="bf-roster-portrait">
             <img src="${portraitUrl}" alt="${char.name}"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-            <div class="roster-fallback" style="display:none; background:${this.getClassColor(char.class)}">
+            <div class="bf-roster-fallback" style="display:none; background:${this.getClassColor(char.class)}">
               ${this.getClassIcon(char.class)}
             </div>
-            ${isPlaced ? '<div class="placed-check">&#10003;</div>' : ''}
+            ${isPlaced ? '<div class="bf-placed-check">&#10003;</div>' : ''}
           </div>
-          <div class="roster-name">${char.name}</div>
+          <div class="bf-roster-name">${char.name}</div>
         </div>
       `;
     }).join('');
 
     // Attach click handlers
-    roster.querySelectorAll('.roster-char').forEach(el => {
+    roster.querySelectorAll('.bf-roster-char').forEach(el => {
       el.addEventListener('click', () => {
         const charId = parseInt(el.dataset.charId);
         const char = this.battleParty.find(c => c.id === charId);
@@ -824,132 +842,136 @@ export class BattleFormationScene extends Scene {
   }
 
   addStyles() {
-    if (document.getElementById('formation-scene-styles')) return;
+    if (document.getElementById(STYLE_ID)) return;
 
     const style = document.createElement('style');
-    style.id = 'formation-scene-styles';
+    style.id = STYLE_ID;
     style.textContent = `
       /* ========== LAYOUT ========== */
 
-      .formation-header {
-        padding: 12px 16px;
-        background: rgba(0,0,0,0.5);
-        border-bottom: 2px solid #4a4a6a;
+      .bf-formation-header {
+        padding: ${PARCHMENT_SPACING.md} ${PARCHMENT_SPACING.lg};
+        background: ${P.shadow};
+        border-bottom: ${getParchmentBorder()};
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: ${PARCHMENT_SPACING.lg};
       }
 
-      .formation-header--mobile {
-        padding: 8px 12px;
+      .bf-formation-header--mobile {
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
       }
 
-      .back-btn {
-        background: rgba(0,0,0,0.3);
-        border: 2px solid #4a4a6a;
-        border-radius: 8px;
-        padding: 8px 12px;
-        color: #ccc;
+      .bf-back-btn {
+        background: ${P.shadow};
+        border: ${getParchmentBorder()};
+        border-radius: ${PARCHMENT_RADIUS.lg};
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
+        color: ${P.text.muted};
         cursor: pointer;
         transition: all 0.2s;
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      .back-btn:hover {
-        background: rgba(74, 74, 106, 0.5);
-        color: #fff;
+      .bf-back-btn:hover {
+        background: rgba(139, 115, 85, 0.3);
+        color: ${P.text.inverse};
       }
 
-      .back-icon {
-        font-size: 18px;
+      .bf-back-icon {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
       }
 
-      .header-titles {
+      .bf-header-titles {
         flex: 1;
       }
 
-      .battle-title-animated {
+      .bf-battle-title-animated {
         margin: 0;
-        font-size: 20px;
-        background: linear-gradient(90deg, #ffd700 0%, #ff6b35 25%, #ffd700 50%, #ff6b35 75%, #ffd700 100%);
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xxl};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        background: linear-gradient(90deg, ${P.accent.gold} 0%, ${P.accent.copper} 25%, ${P.accent.gold} 50%, ${P.accent.copper} 75%, ${P.accent.gold} 100%);
         background-size: 200% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
-        animation: shimmer-gold 3s linear infinite;
+        animation: bf-shimmer-gold 3s linear infinite;
         text-transform: uppercase;
         letter-spacing: 2px;
       }
 
-      .battle-title--mobile {
-        font-size: 16px;
+      .bf-battle-title--mobile {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.lg};
       }
 
-      @keyframes shimmer-gold {
+      @keyframes bf-shimmer-gold {
         0% { background-position: 0% center; }
         100% { background-position: 200% center; }
       }
 
-      .node-name {
-        color: #8a8aaa;
-        font-size: 12px;
-        margin-top: 4px;
+      .bf-node-name {
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        margin-top: ${PARCHMENT_SPACING.xs};
       }
 
       /* ========== MAIN CONTENT (DESKTOP) ========== */
 
-      .formation-main {
+      .bf-formation-main {
         flex: 1;
         display: flex;
         overflow: hidden;
       }
 
       /* Side Drawer */
-      .formation-drawer {
+      .bf-formation-drawer {
         width: 280px;
         min-width: 280px;
         max-width: 280px;
-        background: rgba(0,0,0,0.4);
-        border-right: 2px solid #4a4a6a;
+        background: rgba(0, 0, 0, 0.4);
+        border-right: ${getParchmentBorder()};
         display: flex;
         flex-direction: column;
         overflow: hidden;
       }
 
-      .drawer-header {
-        padding: 12px 16px;
-        border-bottom: 1px solid #3a3a5a;
+      .bf-drawer-header {
+        padding: ${PARCHMENT_SPACING.md} ${PARCHMENT_SPACING.lg};
+        border-bottom: 1px solid ${P.borderDark};
       }
 
-      .drawer-title {
-        color: #ffd700;
-        font-size: 14px;
-        font-weight: bold;
+      .bf-drawer-title {
+        color: ${P.accent.gold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         text-transform: uppercase;
         letter-spacing: 1px;
       }
 
-      .drawer-roster {
+      .bf-drawer-roster {
         flex: 1;
-        padding: 12px;
+        padding: ${PARCHMENT_SPACING.md};
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: ${PARCHMENT_SPACING.sm};
       }
 
-      .drawer-divider {
+      .bf-drawer-divider {
         height: 2px;
-        background: linear-gradient(90deg, transparent, #4a4a6a, transparent);
-        margin: 8px 0;
+        background: linear-gradient(90deg, transparent, ${P.border}, transparent);
+        margin: ${PARCHMENT_SPACING.sm} 0;
       }
 
-      .drawer-detail {
-        padding: 12px;
+      .bf-drawer-detail {
+        padding: ${PARCHMENT_SPACING.md};
         min-height: 120px;
       }
 
       /* Center Content */
-      .formation-center {
+      .bf-formation-center {
         flex: 1;
         display: flex;
         flex-direction: column;
@@ -958,56 +980,57 @@ export class BattleFormationScene extends Scene {
 
       /* ========== ENEMY SECTION ========== */
 
-      .enemy-section {
-        padding: 12px 16px;
+      .bf-enemy-section {
+        padding: ${PARCHMENT_SPACING.md} ${PARCHMENT_SPACING.lg};
         background: rgba(139, 0, 0, 0.15);
-        border-bottom: 1px solid #5a3a3a;
+        border-bottom: 1px solid ${P.state.error};
       }
 
-      .enemy-section--mobile {
-        padding: 8px 12px;
+      .bf-enemy-section--mobile {
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
         overflow-x: auto;
       }
 
-      .enemy-label {
-        color: #ff6b6b;
-        font-size: 11px;
+      .bf-enemy-label {
+        color: ${P.state.error};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
         text-transform: uppercase;
         letter-spacing: 1px;
-        margin-bottom: 8px;
+        margin-bottom: ${PARCHMENT_SPACING.sm};
       }
 
-      .enemy-roster {
+      .bf-enemy-roster {
         display: flex;
-        gap: 12px;
+        gap: ${PARCHMENT_SPACING.md};
         justify-content: center;
         flex-wrap: wrap;
       }
 
-      .enemy-roster--mobile {
+      .bf-enemy-roster--mobile {
         flex-wrap: nowrap;
         justify-content: flex-start;
       }
 
-      .enemy-card {
+      .bf-enemy-card {
         position: relative;
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 8px;
-        background: rgba(0,0,0,0.3);
-        border: 2px solid #5a3a3a;
-        border-radius: 8px;
+        padding: ${PARCHMENT_SPACING.sm};
+        background: ${P.shadow};
+        border: 2px solid ${P.state.error};
+        border-radius: ${PARCHMENT_RADIUS.lg};
         min-width: 70px;
         transition: all 0.2s;
       }
 
-      .enemy-card.threat-boss {
+      .bf-enemy-card.bf-threat-boss {
         border-color: #8b0000;
         box-shadow: 0 0 10px rgba(139, 0, 0, 0.4);
       }
 
-      .enemy-portrait {
+      .bf-enemy-portrait {
         position: relative;
         width: 40px;
         height: 40px;
@@ -1016,237 +1039,246 @@ export class BattleFormationScene extends Scene {
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 4px;
+        margin-bottom: ${PARCHMENT_SPACING.xs};
       }
 
-      .enemy-icon {
-        color: #ff6b6b;
-        font-size: 18px;
-        font-weight: bold;
+      .bf-enemy-icon {
+        color: ${P.state.error};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       }
 
-      .boss-indicator {
+      .bf-boss-indicator {
         position: absolute;
         top: -4px;
         right: -4px;
-        font-size: 14px;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
         color: #ff0000;
       }
 
-      .enemy-info {
+      .bf-enemy-info {
         text-align: center;
       }
 
-      .enemy-name {
-        color: #fff;
-        font-size: 11px;
+      .bf-enemy-name {
+        color: ${P.text.inverse};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
         white-space: nowrap;
       }
 
-      .enemy-level {
-        color: #aaa;
+      .bf-enemy-level {
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         font-size: 9px;
       }
 
-      .threat-aura {
+      .bf-threat-aura {
         position: absolute;
         inset: -4px;
-        border-radius: 12px;
+        border-radius: ${PARCHMENT_RADIUS.lg};
         border: 2px solid rgba(255, 0, 0, 0.3);
-        animation: threat-pulse 2s ease-in-out infinite;
+        animation: bf-threat-pulse 2s ease-in-out infinite;
         pointer-events: none;
       }
 
-      @keyframes threat-pulse {
+      @keyframes bf-threat-pulse {
         0%, 100% { opacity: 0.3; transform: scale(1); }
         50% { opacity: 0.7; transform: scale(1.05); }
       }
 
-      .enemy-unknown {
-        color: #8a8aaa;
+      .bf-enemy-unknown {
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         font-style: italic;
-        padding: 12px;
+        padding: ${PARCHMENT_SPACING.md};
       }
 
       /* ========== GRID AREA ========== */
 
-      .grid-area {
+      .bf-grid-area {
         flex: 1;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 16px;
+        padding: ${PARCHMENT_SPACING.lg};
       }
 
-      .grid-area--mobile {
-        padding: 8px;
+      .bf-grid-area--mobile {
+        padding: ${PARCHMENT_SPACING.sm};
       }
 
-      #formation-grid-canvas {
-        border-radius: 8px;
+      #bf-formation-grid-canvas {
+        border-radius: ${PARCHMENT_RADIUS.lg};
       }
 
-      .grid-instructions {
-        color: #6a6a8a;
-        font-size: 11px;
-        margin-top: 12px;
+      .bf-grid-instructions {
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        margin-top: ${PARCHMENT_SPACING.md};
         text-align: center;
       }
 
       /* ========== START SECTION ========== */
 
-      .start-section {
-        padding: 16px;
+      .bf-start-section {
+        padding: ${PARCHMENT_SPACING.lg};
         display: flex;
         justify-content: center;
-        background: rgba(0,0,0,0.3);
-        border-top: 1px solid #3a3a5a;
+        background: ${P.shadow};
+        border-top: 1px solid ${P.borderDark};
       }
 
-      .start-section--mobile {
-        padding: 12px;
+      .bf-start-section--mobile {
+        padding: ${PARCHMENT_SPACING.md};
         position: sticky;
         bottom: 0;
       }
 
       /* ========== ROSTER CHARACTERS ========== */
 
-      .roster-char {
+      .bf-roster-char {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 8px 12px;
-        background: rgba(0,0,0,0.3);
-        border: 2px solid #4a4a6a;
-        border-radius: 8px;
+        gap: ${PARCHMENT_SPACING.md};
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
+        background: ${P.shadow};
+        border: ${getParchmentBorder()};
+        border-radius: ${PARCHMENT_RADIUS.lg};
         cursor: pointer;
         transition: all 0.2s;
       }
 
-      .roster-char:hover {
-        background: rgba(74, 74, 106, 0.3);
-        border-color: #6a6a8a;
+      .bf-roster-char:hover {
+        background: rgba(139, 115, 85, 0.3);
+        border-color: ${P.borderLight};
       }
 
-      .roster-char.selected {
-        border-color: #ffd700;
-        background: rgba(255, 215, 0, 0.1);
+      .bf-roster-char.selected {
+        border-color: ${P.accent.gold};
+        background: rgba(201, 162, 39, 0.1);
       }
 
-      .roster-char.placed {
+      .bf-roster-char.placed {
         opacity: 0.6;
       }
 
-      .roster-char.placed .roster-portrait {
+      .bf-roster-char.placed .bf-roster-portrait {
         filter: grayscale(0.5);
       }
 
-      .roster-portrait {
+      .bf-roster-portrait {
         position: relative;
         width: 40px;
         height: 40px;
-        border-radius: 4px;
+        border-radius: ${PARCHMENT_RADIUS.md};
         overflow: hidden;
-        border: 2px solid #4a4a6a;
+        border: ${getParchmentBorder()};
       }
 
-      .roster-portrait img {
+      .bf-roster-portrait img {
         width: 100%;
         height: 100%;
         object-fit: cover;
         image-rendering: pixelated;
       }
 
-      .roster-fallback {
+      .bf-roster-fallback {
         width: 100%;
         height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #fff;
-        font-weight: bold;
-        font-size: 16px;
+        color: ${P.text.inverse};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.lg};
       }
 
-      .placed-check {
+      .bf-placed-check {
         position: absolute;
         bottom: -2px;
         right: -2px;
         width: 16px;
         height: 16px;
-        background: #4caf50;
+        background: ${P.state.success};
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #fff;
-        font-size: 10px;
-        font-weight: bold;
+        color: ${P.text.inverse};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       }
 
-      .roster-name {
+      .bf-roster-name {
         flex: 1;
-        color: #fff;
-        font-size: 13px;
+        color: ${P.text.inverse};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
 
-      .all-placed {
-        color: #4caf50;
+      .bf-all-placed {
+        color: ${P.state.success};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         text-align: center;
-        padding: 16px;
-        font-size: 13px;
+        padding: ${PARCHMENT_SPACING.lg};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
       }
 
       /* ========== MOBILE BOTTOM SHEET ========== */
 
-      .bottom-sheet {
+      .bf-bottom-sheet {
         position: fixed;
         bottom: 0;
         left: 0;
         right: 0;
         background: rgba(20, 20, 35, 0.95);
-        border-top: 2px solid #4a4a6a;
-        border-radius: 16px 16px 0 0;
+        border-top: ${getParchmentBorder()};
+        border-radius: ${PARCHMENT_RADIUS.lg} ${PARCHMENT_RADIUS.lg} 0 0;
         transform: translateY(calc(100% - 48px));
         transition: transform 0.3s ease;
         max-height: 60vh;
         z-index: 100;
       }
 
-      .bottom-sheet.expanded {
+      .bf-bottom-sheet.expanded {
         transform: translateY(0);
       }
 
-      .sheet-handle {
-        padding: 12px 16px;
+      .bf-sheet-handle {
+        padding: ${PARCHMENT_SPACING.md} ${PARCHMENT_SPACING.lg};
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: ${PARCHMENT_SPACING.md};
         cursor: pointer;
       }
 
-      .handle-bar {
+      .bf-handle-bar {
         width: 40px;
         height: 4px;
-        background: #4a4a6a;
-        border-radius: 2px;
+        background: ${P.border};
+        border-radius: ${PARCHMENT_RADIUS.sm};
         margin: 0 auto;
       }
 
-      .sheet-title {
+      .bf-sheet-title {
         flex: 1;
-        color: #ffd700;
-        font-size: 14px;
-        font-weight: bold;
+        color: ${P.accent.gold};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         text-align: center;
       }
 
-      .sheet-content {
-        padding: 0 16px 16px;
+      .bf-sheet-content {
+        padding: 0 ${PARCHMENT_SPACING.lg} ${PARCHMENT_SPACING.lg};
         overflow-y: auto;
         max-height: calc(60vh - 48px);
       }
@@ -1254,18 +1286,18 @@ export class BattleFormationScene extends Scene {
       /* ========== RESPONSIVE ========== */
 
       @media (max-width: 768px) {
-        .formation-drawer {
+        .bf-formation-drawer {
           display: none;
         }
 
-        .enemy-roster {
+        .bf-enemy-roster {
           justify-content: flex-start;
           flex-wrap: nowrap;
           overflow-x: auto;
-          padding-bottom: 8px;
+          padding-bottom: ${PARCHMENT_SPACING.sm};
         }
 
-        .enemy-card {
+        .bf-enemy-card {
           flex-shrink: 0;
         }
       }
@@ -1278,8 +1310,43 @@ export class BattleFormationScene extends Scene {
   }
 
   render(ctx) {
-    // UI is HTML-based
-    ctx.fillStyle = '#1a1a2e';
+    // Draw parchment-themed background gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+    gradient.addColorStop(0, P.light);
+    gradient.addColorStop(0.5, P.mid);
+    gradient.addColorStop(1, P.dark);
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    // Add subtle corner flourishes
+    ctx.strokeStyle = P.border;
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.3;
+
+    // Top-left flourish
+    ctx.beginPath();
+    ctx.moveTo(20, 60);
+    ctx.quadraticCurveTo(20, 20, 60, 20);
+    ctx.stroke();
+
+    // Top-right flourish
+    ctx.beginPath();
+    ctx.moveTo(ctx.canvas.width - 20, 60);
+    ctx.quadraticCurveTo(ctx.canvas.width - 20, 20, ctx.canvas.width - 60, 20);
+    ctx.stroke();
+
+    // Bottom-left flourish
+    ctx.beginPath();
+    ctx.moveTo(20, ctx.canvas.height - 60);
+    ctx.quadraticCurveTo(20, ctx.canvas.height - 20, 60, ctx.canvas.height - 20);
+    ctx.stroke();
+
+    // Bottom-right flourish
+    ctx.beginPath();
+    ctx.moveTo(ctx.canvas.width - 20, ctx.canvas.height - 60);
+    ctx.quadraticCurveTo(ctx.canvas.width - 20, ctx.canvas.height - 20, ctx.canvas.width - 60, ctx.canvas.height - 20);
+    ctx.stroke();
+
+    ctx.globalAlpha = 1.0;
   }
 }

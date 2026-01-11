@@ -234,6 +234,156 @@ export function getParchmentTextShadow() {
   return '0 1px 0 rgba(255, 255, 255, 0.3)';
 }
 
+/**
+ * Get complete CSS properties for a standard parchment panel
+ * Use this for consistent panel styling across scenes
+ * @returns {string} CSS properties block
+ */
+export function getParchmentPanelCSS() {
+  return `
+    background: ${getParchmentGradient()};
+    border: ${getParchmentBorder()};
+    box-shadow: ${getParchmentShadow()};
+    border-radius: ${PARCHMENT_RADIUS.md};
+    color: ${PARCHMENT_COLORS.text.primary};
+    font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+  `.trim();
+}
+
+/**
+ * Get complete CSS properties for a standard parchment input
+ * @param {Object} options - Optional style overrides
+ * @param {boolean} options.focused - Include focus state styles
+ * @returns {string} CSS properties block
+ */
+export function getParchmentInputCSS(options = {}) {
+  const base = `
+    background: ${PARCHMENT_COLORS.light};
+    border: 1px solid ${PARCHMENT_COLORS.border};
+    border-radius: ${PARCHMENT_RADIUS.sm};
+    color: ${PARCHMENT_COLORS.text.primary};
+    padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
+    font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+    font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  `.trim();
+
+  if (options.focused) {
+    return `${base}
+    border-color: ${PARCHMENT_COLORS.borderDark};
+    box-shadow: 0 0 0 2px rgba(139, 115, 85, 0.2);`;
+  }
+
+  return base;
+}
+
+/**
+ * Get complete CSS properties for a parchment button
+ * @param {string} variant - 'primary' | 'secondary' | 'danger' | 'ghost'
+ * @returns {string} CSS properties block
+ */
+export function getParchmentButtonCSS(variant = 'primary') {
+  const base = `
+    font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+    font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+    font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+    border-radius: ${PARCHMENT_RADIUS.md};
+    padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.lg};
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+  `.trim();
+
+  const variants = {
+    primary: `
+      background: linear-gradient(to bottom, ${PARCHMENT_COLORS.border} 0%, ${PARCHMENT_COLORS.borderDark} 100%);
+      color: ${PARCHMENT_COLORS.text.inverse};
+      border: 1px solid ${PARCHMENT_COLORS.borderDark};
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    `.trim(),
+    secondary: `
+      background: ${PARCHMENT_COLORS.light};
+      color: ${PARCHMENT_COLORS.text.primary};
+      border: 1px solid ${PARCHMENT_COLORS.border};
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    `.trim(),
+    danger: `
+      background: linear-gradient(to bottom, ${PARCHMENT_COLORS.state.error} 0%, #6b3333 100%);
+      color: ${PARCHMENT_COLORS.text.inverse};
+      border: 1px solid #6b3333;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    `.trim(),
+    ghost: `
+      background: transparent;
+      color: ${PARCHMENT_COLORS.text.primary};
+      border: 1px solid transparent;
+      box-shadow: none;
+    `.trim()
+  };
+
+  return `${base}\n${variants[variant] || variants.primary}`;
+}
+
+/**
+ * Get CSS for a parchment card (elevated panel with hover effects)
+ * @param {Object} options - Card options
+ * @param {boolean} options.selected - If card is in selected state
+ * @param {boolean} options.hoverable - If card should have hover effects
+ * @returns {string} CSS properties block
+ */
+export function getParchmentCardCSS(options = {}) {
+  let css = `
+    ${getParchmentPanelCSS()}
+    padding: ${PARCHMENT_SPACING.md};
+  `.trim();
+
+  if (options.hoverable) {
+    css += `
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;`;
+  }
+
+  if (options.selected) {
+    css += `
+    border-color: ${PARCHMENT_COLORS.accent.gold};
+    box-shadow: ${getParchmentShadow(true)}, 0 0 0 2px ${PARCHMENT_COLORS.accent.gold};`;
+  }
+
+  return css;
+}
+
+/**
+ * Get CSS for section headers in parchment UI
+ * @returns {string} CSS properties block
+ */
+export function getParchmentHeaderCSS() {
+  return `
+    color: ${PARCHMENT_COLORS.text.primary};
+    font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+    font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+    font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+    text-shadow: ${getParchmentTextShadow()};
+    margin: 0 0 ${PARCHMENT_SPACING.md} 0;
+    padding-bottom: ${PARCHMENT_SPACING.sm};
+    border-bottom: 1px solid ${PARCHMENT_COLORS.border};
+  `.trim();
+}
+
+/**
+ * Get CSS for muted/secondary text
+ * @returns {string} CSS properties block
+ */
+export function getParchmentMutedTextCSS() {
+  return `
+    color: ${PARCHMENT_COLORS.text.muted};
+    font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+    font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+  `.trim();
+}
+
 export default {
   PARCHMENT_COLORS,
   PARCHMENT_TYPOGRAPHY,
@@ -246,5 +396,11 @@ export default {
   getParchmentBorderDark,
   getParchmentShadow,
   getParchmentInsetShadow,
-  getParchmentTextShadow
+  getParchmentTextShadow,
+  getParchmentPanelCSS,
+  getParchmentInputCSS,
+  getParchmentButtonCSS,
+  getParchmentCardCSS,
+  getParchmentHeaderCSS,
+  getParchmentMutedTextCSS
 };
