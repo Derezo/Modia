@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Open chest -->
+  <path class="stroke metallic" d="M3 10h18v10H3z"/>
+  <path class="stroke" d="M3 10l3-6h12l3 6"/>
+  <path class="stroke" d="M6 4h12"/>
+  <!-- Chest lid open -->
+  <path class="stroke" d="M3 10l2-3h14l2 3"/>
+  <!-- Lock plate -->
+  <rect class="stroke" x="10" y="12" width="4" height="3" rx="0.5"/>
+  <!-- Cross-hatch detail -->
+  <path class="stroke" d="M5 14l2 2M5 17l2 2M17 14l2 2M17 17l2 2" style="stroke-width: 1;"/>
+</svg>

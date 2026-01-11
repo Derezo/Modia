@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  </style>
+  <!-- Small cottage/house - medieval peasant dwelling -->
+  <path class="stroke" d="M3 21V11l9-8 9 8v10H3z"/>
+  <!-- Thatched roof texture -->
+  <path class="stroke" d="M3 11l9-8 9 8" style="stroke-width: 2.5;"/>
+  <path class="stroke" d="M6 9l6-5 6 5" style="stroke-width: 1;"/>
+  <!-- Door -->
+  <path class="stroke" d="M10 21v-5h4v5"/>
+  <!-- Window -->
+  <rect class="stroke" x="6" y="13" width="3" height="3"/>
+  <path class="stroke" d="M7.5 13v3M6 14.5h3" style="stroke-width: 1;"/>
+  <!-- Chimney with smoke -->
+  <path class="stroke" d="M17 7V4h2v5"/>
+  <path class="stroke" d="M18 2c0.5-0.5 0.5 0 0 0.5" style="stroke-width: 1;"/>
+</svg>

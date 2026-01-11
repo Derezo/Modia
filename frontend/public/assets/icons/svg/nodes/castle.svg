@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Castle with towers - medieval fortress -->
+  <path class="stroke metallic" d="M4 21V10l2-2V5h2v3l4-3 4 3V5h2v3l2 2v11H4z"/>
+  <!-- Battlements -->
+  <path class="stroke" d="M4 10h2v-2h2v2h8v-2h2v2h2"/>
+  <!-- Central tower -->
+  <path class="stroke" d="M10 21v-6h4v6"/>
+  <!-- Door arch -->
+  <path class="stroke" d="M10 21c0-2 2-4 2-4s2 2 2 4"/>
+  <!-- Windows -->
+  <rect class="stroke" x="6" y="13" width="2" height="2" style="stroke-width: 1;"/>
+  <rect class="stroke" x="16" y="13" width="2" height="2" style="stroke-width: 1;"/>
+  <!-- Flag -->
+  <path class="stroke" d="M12 5V2M12 2l3 1.5L12 5"/>
+</svg>

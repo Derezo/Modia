@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  </style>
+  <!-- Question mark for undiscovered nodes - mysterious medieval style -->
+  <!-- Decorative circle border -->
+  <circle class="stroke" cx="12" cy="12" r="10"/>
+  <!-- Question mark -->
+  <path class="stroke" d="M9 9c0-2 1.5-3 3-3s3 1 3 3c0 1.5-1 2-2 2.5s-1 1-1 1.5"/>
+  <!-- Dot -->
+  <circle cx="12" cy="17" r="1" fill="currentColor"/>
+  <!-- Decorative corner marks -->
+  <path class="stroke" d="M4.5 4.5l1 1M19.5 4.5l-1 1M4.5 19.5l1-1M19.5 19.5l-1-1" style="stroke-width: 1;"/>
+</svg>

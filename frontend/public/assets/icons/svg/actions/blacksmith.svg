@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Hammer and anvil - medieval forge -->
+  <!-- Anvil -->
+  <path class="stroke metallic" d="M4 16h16v2H4z"/>
+  <path class="stroke" d="M6 18v3h12v-3"/>
+  <path class="stroke" d="M2 16h4M18 16h4"/>
+  <!-- Anvil horn -->
+  <path class="stroke" d="M4 16l-2 0"/>
+  <!-- Hammer -->
+  <path class="stroke metallic" d="M14 4h4v5h-4z"/>
+  <path class="stroke" d="M16 9v5"/>
+  <!-- Hammer handle -->
+  <path class="stroke" d="M16 14l-3 2"/>
+  <!-- Sparks -->
+  <path class="stroke" d="M8 12l-1-2M10 11l0-2M12 12l1-2" style="stroke-width: 1;"/>
+  <!-- Hot metal on anvil -->
+  <path class="stroke" d="M8 16h6" style="stroke-width: 2.5;"/>
+</svg>

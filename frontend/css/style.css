@@ -383,20 +383,98 @@ html, body {
   to { transform: rotate(360deg); }
 }
 
-/* Responsive */
-@media (max-width: 480px) {
+/* =============================================================================
+   Responsive Utilities
+   CSS variables are set dynamically by Responsive.js, but we provide fallbacks
+   and media query overrides here for base styles.
+   ============================================================================= */
+
+/* Mobile-first base styles */
+@media (max-width: 599px) {
   .auth-container {
     width: 90%;
     max-width: 320px;
   }
 
   .btn {
+    min-height: 44px;
+    min-width: 44px;
     padding: 12px 20px;
     font-size: 16px;
   }
 
   .input-field {
+    min-height: 44px;
     padding: 12px 14px;
     font-size: 16px;
+  }
+
+  /* Hide labels on mobile, show icons only */
+  .responsive-label {
+    display: none;
+  }
+
+  /* Larger touch targets for grid items */
+  .inventory-slot,
+  .equipment-slot,
+  .character-slot {
+    min-width: 64px;
+    min-height: 64px;
+  }
+
+  /* Icon wrapper touch target */
+  .icon-wrapper {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* Tablet styles */
+@media (min-width: 600px) and (max-width: 899px) {
+  .btn {
+    min-height: 40px;
+  }
+
+  .inventory-slot,
+  .equipment-slot,
+  .character-slot {
+    min-width: 56px;
+    min-height: 56px;
+  }
+}
+
+/* Desktop styles */
+@media (min-width: 900px) {
+  .btn {
+    min-height: 36px;
+  }
+
+  .inventory-slot,
+  .equipment-slot,
+  .character-slot {
+    min-width: 48px;
+    min-height: 48px;
+  }
+}
+
+/* Utility classes for responsive visibility */
+.mobile-only {
+  display: none;
+}
+
+.desktop-only {
+  display: block;
+}
+
+@media (max-width: 599px) {
+  .mobile-only {
+    display: block;
+  }
+
+  .desktop-only {
+    display: none;
   }
 }

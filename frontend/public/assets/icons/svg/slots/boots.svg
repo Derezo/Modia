@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Boot silhouette - medieval riding boot -->
+  <path class="stroke metallic" d="M8 3v10c0 1-1 2-3 3v2c0 2 1 3 3 3h10c2 0 3-1 3-2v-1H11c-1 0-2-1-2-2V3H8z"/>
+  <!-- Boot top cuff -->
+  <path class="stroke" d="M6 3h5"/>
+  <path class="stroke" d="M6 5h5"/>
+  <!-- Buckle strap -->
+  <path class="stroke" d="M8 8h3"/>
+  <rect class="stroke" x="7" y="7" width="2" height="2" style="stroke-width: 1;"/>
+  <!-- Sole detail -->
+  <path class="stroke" d="M5 19h13"/>
+  <!-- Boot toe reinforcement -->
+  <path class="stroke" d="M18 16v2" style="stroke-width: 1;"/>
+  <!-- Stitching -->
+  <path class="stroke" d="M9 11l0 2" style="stroke-width: 1;"/>
+</svg>

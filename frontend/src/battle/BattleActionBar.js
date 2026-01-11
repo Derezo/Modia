@@ -130,6 +130,7 @@ export class BattleActionBar {
       }
 
       .action-bar-container {
+        position: relative;
         display: flex;
         flex-direction: column;
         align-items: center;

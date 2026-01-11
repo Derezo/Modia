@@ -1,3 +1,26 @@
+// Parchment theme colors for consistent styling
+const PARCHMENT = {
+  light: '#d4c4a8',
+  mid: '#c9b899',
+  dark: '#bfae8a',
+  border: '#8b7355',
+  borderDark: '#6b5344',
+  text: {
+    primary: '#2d2418',
+    secondary: '#5a4a3a',
+    muted: '#7a6a5a'
+  },
+  state: {
+    success: '#4a7548',
+    error: '#8b4444',
+    warning: '#c9a227',
+    info: '#4a6088'
+  },
+  accent: {
+    gold: '#c9a227'
+  }
+};
+
 export class InventoryPanel {
   constructor(game, container) {
     this.game = game;
@@ -69,6 +92,7 @@ export class InventoryPanel {
           display: flex;
           gap: 16px;
           height: 100%;
+          font-family: Georgia, serif;
         }
         .equipment-section {
           width: 200px;
@@ -87,26 +111,28 @@ export class InventoryPanel {
         .equipment-slot {
           width: 56px;
           height: 56px;
-          background: rgba(0, 0, 0, 0.4);
-          border: 2px solid #3a3a5a;
+          background: ${PARCHMENT.mid};
+          border: 2px solid ${PARCHMENT.border};
           border-radius: 4px;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           position: relative;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
         }
         .equipment-slot:hover {
-          border-color: #6ab0f3;
+          border-color: ${PARCHMENT.accent.gold};
+          background: ${PARCHMENT.dark};
         }
         .equipment-slot.filled {
-          border-color: #4a90d9;
+          border-color: ${PARCHMENT.state.info};
         }
         .equipment-slot .slot-label {
           position: absolute;
           bottom: 2px;
           font-size: 8px;
-          color: #8a8aaa;
+          color: ${PARCHMENT.text.secondary};
         }
         .equipment-slot .item-icon {
           font-size: 24px;
@@ -135,22 +161,24 @@ export class InventoryPanel {
         .rarity-glow-legendary { filter: drop-shadow(0 0 6px #ff8000); }
         .stat-comparison-tooltip {
           position: fixed;
-          background: rgba(20, 20, 40, 0.95);
-          border: 2px solid #4a4a6a;
-          border-radius: 8px;
+          background: linear-gradient(to bottom, ${PARCHMENT.light}, ${PARCHMENT.mid});
+          border: 2px solid ${PARCHMENT.border};
+          border-radius: 4px;
           padding: 12px;
           min-width: 200px;
           max-width: 280px;
           z-index: 1000;
           pointer-events: none;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+          font-family: Georgia, serif;
+          color: ${PARCHMENT.text.primary};
         }
         .tooltip-item-name {
           font-weight: bold;
           margin-bottom: 8px;
           font-size: 14px;
         }
-        .tooltip-item-name.common { color: #ccc; }
+        .tooltip-item-name.common { color: ${PARCHMENT.text.primary}; }
         .tooltip-item-name.uncommon { color: #1eff00; }
         .tooltip-item-name.rare { color: #0070dd; }
         .tooltip-item-name.epic { color: #a335ee; }
@@ -163,21 +191,22 @@ export class InventoryPanel {
           display: flex;
           justify-content: space-between;
           padding: 2px 0;
+          color: ${PARCHMENT.text.secondary};
         }
-        .stat-positive { color: #4caf50; }
-        .stat-negative { color: #f44336; }
-        .stat-neutral { color: #8a8aaa; }
+        .stat-positive { color: ${PARCHMENT.state.success}; }
+        .stat-negative { color: ${PARCHMENT.state.error}; }
+        .stat-neutral { color: ${PARCHMENT.text.muted}; }
         .tooltip-comparison {
-          border-top: 1px solid #3a3a5a;
+          border-top: 1px solid ${PARCHMENT.border};
           padding-top: 8px;
           margin-top: 8px;
           font-size: 11px;
-          color: #8a8aaa;
+          color: ${PARCHMENT.text.secondary};
         }
         .comparison-header {
           font-weight: bold;
           margin-bottom: 4px;
-          color: #ffd700;
+          color: ${PARCHMENT.accent.gold};
         }
         /* Drag and drop styles */
         .inventory-slot.dragging,
@@ -185,16 +214,16 @@ export class InventoryPanel {
           opacity: 0.5;
         }
         .equipment-slot.drag-over {
-          border-color: #4caf50;
-          background: rgba(76, 175, 80, 0.3);
-          box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+          border-color: ${PARCHMENT.state.success};
+          background: rgba(74, 117, 72, 0.3);
+          box-shadow: 0 0 8px rgba(74, 117, 72, 0.5);
         }
         .equipment-slot.drag-invalid {
-          border-color: #f44336;
-          background: rgba(244, 67, 54, 0.2);
+          border-color: ${PARCHMENT.state.error};
+          background: rgba(139, 68, 68, 0.2);
         }
         .inventory-section.drag-over {
-          background: rgba(74, 144, 217, 0.1);
+          background: rgba(74, 96, 136, 0.15);
           border-radius: 4px;
         }
         .inventory-grid {
@@ -207,34 +236,43 @@ export class InventoryPanel {
         .inventory-slot {
           width: 48px;
           height: 48px;
-          background: rgba(0, 0, 0, 0.3);
-          border: 2px solid #2a2a4a;
+          background: ${PARCHMENT.light};
+          border: 2px solid ${PARCHMENT.border};
           border-radius: 4px;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           position: relative;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
         }
         .inventory-slot:hover {
-          border-color: #6ab0f3;
+          border-color: ${PARCHMENT.accent.gold};
+          background: ${PARCHMENT.mid};
         }
         .inventory-slot.selected {
-          border-color: #ffd700;
-          background: rgba(255, 215, 0, 0.1);
+          border-color: ${PARCHMENT.accent.gold};
+          background: linear-gradient(to bottom, #e8d9a8, #d4c498);
+          box-shadow: 0 0 6px rgba(201, 162, 39, 0.4);
+        }
+        .inventory-slot.empty {
+          background: ${PARCHMENT.dark};
+          opacity: 0.6;
         }
         .inventory-slot .quantity {
           position: absolute;
           bottom: 2px;
           right: 4px;
           font-size: 10px;
-          color: #fff;
-          text-shadow: 1px 1px 1px #000;
+          color: ${PARCHMENT.text.primary};
+          font-weight: bold;
+          text-shadow: 0 1px 0 rgba(255,255,255,0.5);
         }
         .item-details {
           margin-top: 12px;
           padding: 12px;
-          background: rgba(0, 0, 0, 0.3);
+          background: ${PARCHMENT.mid};
+          border: 1px solid ${PARCHMENT.border};
           border-radius: 4px;
           min-height: 120px;
         }
@@ -242,35 +280,89 @@ export class InventoryPanel {
           font-weight: bold;
           margin-bottom: 8px;
         }
-        .item-name.common { color: #ccc; }
+        .item-name.common { color: ${PARCHMENT.text.primary}; }
         .item-name.uncommon { color: #1eff00; }
         .item-name.rare { color: #0070dd; }
         .item-name.epic { color: #a335ee; }
         .item-name.legendary { color: #ff8000; }
         .item-type {
           font-size: 12px;
-          color: #8a8aaa;
+          color: ${PARCHMENT.text.secondary};
           margin-bottom: 8px;
         }
         .item-description {
           font-size: 12px;
-          color: #aaa;
+          color: ${PARCHMENT.text.secondary};
           margin-bottom: 8px;
         }
         .item-stats {
           font-size: 11px;
-          color: #4a90d9;
+          color: ${PARCHMENT.state.info};
+        }
+        .item-stats .stat-line {
+          margin: 2px 0;
+        }
+        .item-stats .bonus-stat {
+          color: ${PARCHMENT.state.success};
+        }
+        .item-augments {
+          margin-top: 8px;
+          padding-top: 8px;
+          border-top: 1px solid ${PARCHMENT.border};
+        }
+        .augment-effect {
+          font-size: 11px;
+          color: #7c5cbf;
+          margin: 2px 0;
+        }
+        .item-material {
+          display: inline;
+          color: ${PARCHMENT.accent.gold};
         }
         .item-actions {
           margin-top: 12px;
           display: flex;
           gap: 8px;
+          flex-wrap: wrap;
+        }
+        .item-actions .btn {
+          padding: 6px 12px;
+          font-family: Georgia, serif;
+          font-size: 12px;
+          border: 2px solid ${PARCHMENT.border};
+          border-radius: 4px;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .item-actions .btn-primary {
+          background: linear-gradient(to bottom, ${PARCHMENT.state.info}, #3a5068);
+          color: #fff;
+          border-color: ${PARCHMENT.borderDark};
+        }
+        .item-actions .btn-primary:hover {
+          background: linear-gradient(to bottom, #3a5068, ${PARCHMENT.state.info});
+        }
+        .item-actions .btn-secondary {
+          background: linear-gradient(to bottom, ${PARCHMENT.light}, ${PARCHMENT.mid});
+          color: ${PARCHMENT.text.primary};
+        }
+        .item-actions .btn-secondary:hover {
+          background: linear-gradient(to bottom, ${PARCHMENT.mid}, ${PARCHMENT.dark});
+        }
+        .item-actions .btn-danger {
+          background: linear-gradient(to bottom, ${PARCHMENT.state.error}, #6b3434);
+          color: #fff;
+          border-color: ${PARCHMENT.borderDark};
+        }
+        .item-actions .btn-danger:hover {
+          background: linear-gradient(to bottom, #6b3434, ${PARCHMENT.state.error});
         }
         .section-title {
           font-weight: bold;
-          color: #ffd700;
+          color: ${PARCHMENT.accent.gold};
           margin-bottom: 8px;
           font-size: 14px;
+          text-shadow: 0 1px 0 rgba(255,255,255,0.3);
         }
       </style>
 
@@ -299,7 +391,7 @@ export class InventoryPanel {
           ${this.renderEmptySlots(24 - this.inventory.length)}
         </div>
         <div class="item-details" id="item-details">
-          <div style="color: #8a8aaa; text-align: center;">Select an item to view details</div>
+          <div style="color: ${PARCHMENT.text.muted}; text-align: center;">Select an item to view details</div>
         </div>
       </div>
     `;
@@ -651,9 +743,9 @@ export class InventoryPanel {
 
     // Build tooltip HTML
     let html = `<div class="tooltip-item-name ${item.rarity || 'common'}">${item.name}</div>`;
-    html += `<div style="font-size: 11px; color: #8a8aaa; margin-bottom: 8px;">${this.capitalize(item.type)} - ${this.capitalize(item.rarity || 'common')}</div>`;
+    html += `<div style="font-size: 11px; color: ${PARCHMENT.text.secondary}; margin-bottom: 8px;">${this.capitalize(item.type)} - ${this.capitalize(item.rarity || 'common')}${item.material ? ' - ' + this.capitalize(item.material) : ''}</div>`;
 
-    // Item stats
+    // Base stats
     const itemStats = item.baseStats || {};
     if (Object.keys(itemStats).length > 0) {
       html += '<div class="tooltip-stats">';
@@ -663,10 +755,41 @@ export class InventoryPanel {
       html += '</div>';
     }
 
-    // Comparison with equipped item
+    // Bonus stats from augments
+    const bonusStats = item.bonusStats || {};
+    if (Object.keys(bonusStats).length > 0) {
+      html += `<div class="tooltip-stats" style="border-top: 1px solid ${PARCHMENT.border}; padding-top: 4px; margin-top: 4px;">`;
+      for (const [stat, value] of Object.entries(bonusStats)) {
+        html += `<div class="tooltip-stat-row"><span style="color: ${PARCHMENT.state.success};">${this.formatStatName(stat)} (Augment)</span><span class="stat-positive">+${value}</span></div>`;
+      }
+      html += '</div>';
+    }
+
+    // Augment effects
+    const augments = item.augments || [];
+    if (augments.length > 0) {
+      html += `<div style="border-top: 1px solid ${PARCHMENT.border}; padding-top: 4px; margin-top: 4px; font-size: 10px;">`;
+      for (const aug of augments) {
+        html += `<div style="color: #7c5cbf;">${this.formatAugmentEffect(aug)}</div>`;
+      }
+      html += '</div>';
+    }
+
+    // Comparison with equipped item (combine base + bonus stats for comparison)
     if (currentEquipped) {
+      const itemTotalStats = { ...itemStats };
+      for (const [stat, value] of Object.entries(bonusStats)) {
+        itemTotalStats[stat] = (itemTotalStats[stat] || 0) + value;
+      }
+
       const equippedStats = currentEquipped.baseStats || {};
-      const comparison = this.calculateStatComparison(itemStats, equippedStats);
+      const equippedBonusStats = currentEquipped.bonusStats || {};
+      const equippedTotalStats = { ...equippedStats };
+      for (const [stat, value] of Object.entries(equippedBonusStats)) {
+        equippedTotalStats[stat] = (equippedTotalStats[stat] || 0) + value;
+      }
+
+      const comparison = this.calculateStatComparison(itemTotalStats, equippedTotalStats);
 
       if (comparison.length > 0) {
         html += '<div class="tooltip-comparison">';
@@ -680,7 +803,7 @@ export class InventoryPanel {
       }
     } else {
       // No equipped item - show that this is a new equip
-      html += '<div class="tooltip-comparison"><div style="color: #4caf50;">Slot is empty - equip for these stats</div></div>';
+      html += `<div class="tooltip-comparison"><div style="color: ${PARCHMENT.state.success};">Slot is empty - equip for these stats</div></div>`;
     }
 
     this.tooltipElement.innerHTML = html;
@@ -770,10 +893,33 @@ export class InventoryPanel {
 
   showItemDetails(item, isEquipped, slot = null) {
     const detailsEl = this.element.querySelector('#item-details');
-    const stats = item.baseStats || {};
-    const statsHtml = Object.entries(stats)
-      .map(([key, val]) => `<div>+${val} ${this.formatStatName(key)}</div>`)
+
+    // Base stats
+    const baseStats = item.baseStats || {};
+    const baseStatsHtml = Object.entries(baseStats)
+      .map(([key, val]) => `<div class="stat-line">+${val} ${this.formatStatName(key)}</div>`)
       .join('');
+
+    // Bonus stats from augments (displayed in green)
+    const bonusStats = item.bonusStats || {};
+    const bonusStatsHtml = Object.keys(bonusStats).length > 0
+      ? Object.entries(bonusStats)
+        .map(([key, val]) => `<div class="stat-line bonus-stat">+${val} ${this.formatStatName(key)}</div>`)
+        .join('')
+      : '';
+
+    // Augment effects
+    const augments = item.augments || [];
+    const augmentsHtml = augments.length > 0
+      ? `<div class="item-augments">
+          ${augments.map(a => `<div class="augment-effect">${this.formatAugmentEffect(a)}</div>`).join('')}
+         </div>`
+      : '';
+
+    // Material info for equipment
+    const materialHtml = item.material
+      ? `<div class="item-material">${this.capitalize(item.material)}</div>`
+      : '';
 
     let actionsHtml = '';
     if (isEquipped) {
@@ -794,9 +940,13 @@ export class InventoryPanel {
     detailsEl.innerHTML = `
       ${detailIconHtml}
       <div class="item-name ${item.rarity || 'common'}">${item.name}</div>
-      <div class="item-type">${this.capitalize(item.type)} • ${this.capitalize(item.rarity || 'common')}</div>
+      <div class="item-type">${this.capitalize(item.type)} • ${this.capitalize(item.rarity || 'common')}${materialHtml ? ' • ' + item.material : ''}</div>
       <div class="item-description">${item.description || 'No description'}</div>
-      <div class="item-stats">${statsHtml || 'No stats'}</div>
+      <div class="item-stats">
+        ${baseStatsHtml || ''}
+        ${bonusStatsHtml}
+      </div>
+      ${augmentsHtml}
       <div style="clear: both;"></div>
       <div class="item-actions">${actionsHtml}</div>
     `;
@@ -805,6 +955,60 @@ export class InventoryPanel {
     detailsEl.querySelectorAll('[data-action]').forEach(btn => {
       btn.addEventListener('click', () => this.handleItemAction(btn.dataset.action, btn.dataset));
     });
+  }
+
+  /**
+   * Format augment effect for display
+   */
+  formatAugmentEffect(augment) {
+    if (!augment.effect) return augment.name || '';
+
+    const effect = augment.effect;
+    switch (effect.type) {
+      case 'fire_damage':
+      case 'ice_damage':
+      case 'lightning_damage':
+      case 'holy_damage':
+      case 'dark_damage':
+        return `+${Math.round(effect.value * 100)}% ${effect.type.replace('_', ' ')}`;
+      case 'poison_chance':
+      case 'crit_chance':
+      case 'block_chance':
+        return `+${Math.round(effect.value * 100)}% ${effect.type.replace('_', ' ')}`;
+      case 'burn_chance':
+      case 'slow_chance':
+      case 'stun_chance':
+        return `${Math.round(effect.value * 100)}% chance to ${effect.type.split('_')[0]}`;
+      case 'lifesteal':
+      case 'heal_on_hit':
+        return `${Math.round(effect.value * 100)}% ${effect.type.replace('_', ' ')}`;
+      case 'damage_bonus':
+      case 'physical_attack':
+      case 'physical_defense':
+      case 'magic_defense':
+      case 'damage_reduction':
+        return `+${Math.round(effect.value * 100)}% ${effect.type.replace(/_/g, ' ')}`;
+      case 'damage_vs':
+        return `+${Math.round(effect.value * 100)}% damage vs ${effect.target}`;
+      case 'stat_bonus':
+        return `${augment.name}`;
+      case 'effect_multiplier':
+        return `${Math.round((effect.value - 1) * 100)}% stronger effect`;
+      case 'hot':
+        return `+${effect.value} HP/turn for ${effect.duration} turns`;
+      case 'hot_percent':
+        return `+${Math.round(effect.value * 100)}% max HP/turn for ${effect.duration} turns`;
+      case 'mp_bonus':
+        return `+${effect.value} MP restored`;
+      case 'mp_regen':
+        return `+${effect.value} MP/turn for ${effect.duration} turns`;
+      case 'cleanse':
+        return effect.targets === 'all' ? 'Cures all debuffs' : `Cures ${effect.targets.join(', ')}`;
+      case 'buff':
+        return `+${effect.value} ${effect.stat.toUpperCase()} for ${effect.duration} turns`;
+      default:
+        return augment.name || '';
+    }
   }
 
   /**

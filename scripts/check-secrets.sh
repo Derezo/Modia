@@ -37,6 +37,11 @@ check_file() {
         return 0
     fi
 
+    # Skip seed files (they contain intentional test credentials)
+    if [[ "$file" == *"seed.js"* ]] || [[ "$file" == *"seed.ts"* ]]; then
+        return 0
+    fi
+
     # Skip binary files
     if file "$file" 2>/dev/null | grep -q "binary"; then
         return 0

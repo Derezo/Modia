@@ -1,9 +1,14 @@
 import { Scene } from './Scene.js';
 import { InventoryPanel } from '../components/InventoryPanel.js';
 import { SkillTreePanel } from '../components/SkillTreePanel.js';
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { PARCHMENT_COLORS, getParchmentGradient } from '../ui/parchment/ParchmentTheme.js';
+import { responsive } from '../core/Responsive.js';
+import { Icon } from '../components/Icon.js';
 
 /**
  * FormationScene - Party management, equipment, and skills hub
+ * Uses parchment theme for medieval manuscript aesthetic
  */
 export class FormationScene extends Scene {
   constructor(game) {
@@ -15,15 +20,23 @@ export class FormationScene extends Scene {
     this.abortController = null;
     this.inventoryPanel = null;
     this.skillTreePanel = null;
+    this.responsiveUnsubscribe = null;
   }
 
   async enter() {
     await this.loadCharacters();
     this.createUI();
     this.setupEventListeners();
+
+    // Subscribe to responsive breakpoint changes
+    this.responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
   }
 
   exit() {
+    if (this.responsiveUnsubscribe) {
+      this.responsiveUnsubscribe();
+      this.responsiveUnsubscribe = null;
+    }
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -42,28 +55,57 @@ export class FormationScene extends Scene {
     }
   }
 
+  /**
+   * Handle responsive breakpoint changes
+   */
+  onBreakpointChange() {
+    // Re-render UI to adapt to new breakpoint
+    if (this.uiElement) {
+      const selectedId = this.selectedCharacter?.id;
+      const activeTab = this.activePanel;
+
+      this.uiElement.remove();
+      this.createUI();
+      this.setupEventListeners();
+
+      // Restore selection if there was one
+      if (selectedId) {
+        this.selectCharacter(selectedId);
+        if (activeTab) {
+          this.switchTab(activeTab);
+        }
+      }
+    }
+  }
+
   async loadCharacters() {
     try {
       const result = await this.game.api.getCharacters();
       this.characters = result.characters || [];
     } catch (err) {
       console.error('Failed to load characters:', err);
-      this.game.showNotification('Failed to load characters', 'error');
+      parchmentToast.error('Failed to load characters', err.message);
     }
   }
 
   createUI() {
     const container = document.createElement('div');
     container.id = 'formation-scene';
+    const isMobile = responsive.isMobile();
+    const gridCols = isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)';
+    const leftPanelWidth = isMobile ? '100%' : '320px';
+    const flexDirection = isMobile ? 'column' : 'row';
+
     container.style.cssText = `
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      background: ${getParchmentGradient('135deg')};
       display: flex;
       flex-direction: column;
+      font-family: Georgia, serif;
     `;
 
     container.innerHTML = `
@@ -72,26 +114,32 @@ export class FormationScene extends Scene {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 16px 24px;
-        background: rgba(0,0,0,0.3);
-        border-bottom: 1px solid #3a3a5a;
+        padding: 12px 20px;
+        background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark});
+        border-bottom: 2px solid ${PARCHMENT_COLORS.borderDark};
       ">
-        <h2 style="margin: 0; color: #ffd700;">Party Formation</h2>
-        <button class="btn btn-secondary" id="back-btn">Back to Map</button>
+        <h2 style="margin: 0; color: ${PARCHMENT_COLORS.accent.gold}; font-size: 20px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">
+          ${Icon.html('menu', 'formation', { size: 'lg' })}
+          ${responsive.showLabels() ? 'Party Formation' : ''}
+        </h2>
+        <button class="parchment-btn parchment-btn-secondary" id="back-btn">
+          ${Icon.html('action', 'back', { label: responsive.showLabels() ? 'Back to Map' : '', size: 'md' })}
+        </button>
       </div>
 
       <!-- Main Content -->
       <div style="
         display: flex;
+        flex-direction: ${flexDirection};
         flex: 1;
         padding: 16px;
         gap: 16px;
         overflow: hidden;
       ">
         <!-- Left Panel: Character Grid -->
-        <div class="ui-panel" style="width: 320px; display: flex; flex-direction: column;">
-          <div class="ui-panel-header">Party (${this.characters.length}/12)</div>
-          <div style="padding: 8px; font-size: 11px; color: #8a8aaa; border-bottom: 1px solid #3a3a5a;">
+        <div class="parchment-panel" style="width: ${leftPanelWidth}; ${isMobile ? 'max-height: 40%;' : ''} display: flex; flex-direction: column;">
+          <div class="parchment-panel-header">Party (${this.characters.length}/12)</div>
+          <div style="padding: 8px; font-size: 11px; color: ${PARCHMENT_COLORS.text.secondary}; border-bottom: 1px solid ${PARCHMENT_COLORS.border}; background: ${PARCHMENT_COLORS.mid};">
             Slots 1-5 are your battle party
           </div>
           <div id="character-grid" style="
@@ -99,33 +147,40 @@ export class FormationScene extends Scene {
             overflow-y: auto;
             padding: 8px;
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: ${gridCols};
             gap: 8px;
+            background: ${PARCHMENT_COLORS.light};
           ">
             ${this.renderCharacterGrid()}
           </div>
         </div>
 
         <!-- Right Panel: Character Details -->
-        <div class="ui-panel" style="flex: 1; display: flex; flex-direction: column;">
-          <div class="ui-panel-header">
+        <div class="parchment-panel" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+          <div class="parchment-panel-header">
             <span id="detail-title">Select a Character</span>
           </div>
 
           <!-- Tab Navigation -->
           <div id="tab-nav" style="
-            display: flex;
-            border-bottom: 1px solid #3a3a5a;
             display: none;
+            border-bottom: 1px solid ${PARCHMENT_COLORS.border};
+            background: ${PARCHMENT_COLORS.mid};
           ">
-            <button class="tab-btn active" data-tab="stats">Stats</button>
-            <button class="tab-btn" data-tab="equipment">Equipment</button>
-            <button class="tab-btn" data-tab="skills">Skills</button>
+            <button class="parchment-tab-btn active" data-tab="stats">
+              ${Icon.html('menu', 'stats', { label: responsive.showLabels() ? 'Stats' : '', size: 'sm' })}
+            </button>
+            <button class="parchment-tab-btn" data-tab="equipment">
+              ${Icon.html('menu', 'inventory', { label: responsive.showLabels() ? 'Equipment' : '', size: 'sm' })}
+            </button>
+            <button class="parchment-tab-btn" data-tab="skills">
+              ${Icon.html('menu', 'skills', { label: responsive.showLabels() ? 'Skills' : '', size: 'sm' })}
+            </button>
           </div>
 
           <!-- Tab Content -->
-          <div id="detail-content" style="flex: 1; overflow-y: auto; padding: 16px;">
-            <div style="color: #8a8aaa; text-align: center; padding: 40px;">
+          <div id="detail-content" style="flex: 1; overflow-y: auto; padding: 16px; background: ${PARCHMENT_COLORS.light};">
+            <div style="color: ${PARCHMENT_COLORS.text.muted}; text-align: center; padding: 40px;">
               Click a character to view details
             </div>
           </div>
@@ -146,11 +201,80 @@ export class FormationScene extends Scene {
     const style = document.createElement('style');
     style.id = 'formation-styles';
     style.textContent = `
+      /* Parchment Panel Styles */
+      .parchment-panel {
+        background: linear-gradient(to bottom, ${PARCHMENT_COLORS.light}, ${PARCHMENT_COLORS.mid});
+        border: 2px solid ${PARCHMENT_COLORS.border};
+        border-radius: 4px;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        overflow: hidden;
+      }
+      .parchment-panel-header {
+        padding: 10px 14px;
+        background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark});
+        border-bottom: 1px solid ${PARCHMENT_COLORS.borderDark};
+        color: ${PARCHMENT_COLORS.accent.gold};
+        font-weight: bold;
+        font-size: 14px;
+        text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
+      }
+
+      /* Parchment Button Styles */
+      .parchment-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        font-family: Georgia, serif;
+        font-size: 13px;
+        border: 2px solid ${PARCHMENT_COLORS.border};
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+      }
+      .parchment-btn-secondary {
+        background: linear-gradient(to bottom, ${PARCHMENT_COLORS.light}, ${PARCHMENT_COLORS.mid});
+        color: ${PARCHMENT_COLORS.text.primary};
+      }
+      .parchment-btn-secondary:hover {
+        background: linear-gradient(to bottom, ${PARCHMENT_COLORS.mid}, ${PARCHMENT_COLORS.dark});
+        border-color: ${PARCHMENT_COLORS.borderDark};
+      }
+
+      /* Parchment Tab Button Styles */
+      .parchment-tab-btn {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 10px 12px;
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: ${PARCHMENT_COLORS.text.secondary};
+        font-family: Georgia, serif;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .parchment-tab-btn:hover {
+        color: ${PARCHMENT_COLORS.text.primary};
+        background: rgba(0, 0, 0, 0.05);
+      }
+      .parchment-tab-btn.active {
+        color: ${PARCHMENT_COLORS.accent.gold};
+        border-bottom-color: ${PARCHMENT_COLORS.accent.gold};
+        font-weight: bold;
+      }
+
+      /* Character Slot Styles - Parchment Theme */
       .character-slot {
         aspect-ratio: 1;
-        background: rgba(0,0,0,0.3);
-        border: 2px solid #3a3a5a;
-        border-radius: 8px;
+        background: ${PARCHMENT_COLORS.mid};
+        border: 2px solid ${PARCHMENT_COLORS.border};
+        border-radius: 4px;
         cursor: pointer;
         display: flex;
         flex-direction: column;
@@ -158,21 +282,24 @@ export class FormationScene extends Scene {
         justify-content: center;
         transition: all 0.2s;
         padding: 4px;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
       }
       .character-slot:hover {
-        border-color: #6ab0f3;
-        background: rgba(74, 144, 217, 0.2);
+        border-color: ${PARCHMENT_COLORS.accent.gold};
+        background: ${PARCHMENT_COLORS.dark};
       }
       .character-slot.selected {
-        border-color: #ffd700;
-        background: rgba(255, 215, 0, 0.2);
+        border-color: ${PARCHMENT_COLORS.accent.gold};
+        background: linear-gradient(to bottom, #e8d9a8, #d4c498);
+        box-shadow: 0 0 8px rgba(201, 162, 39, 0.4);
       }
       .character-slot.battle-party {
-        border-color: #4caf50;
+        border-color: ${PARCHMENT_COLORS.state.success};
       }
       .character-slot.empty {
         border-style: dashed;
-        opacity: 0.5;
+        opacity: 0.6;
+        background: ${PARCHMENT_COLORS.light};
       }
       .character-slot .char-icon {
         width: 36px;
@@ -184,69 +311,60 @@ export class FormationScene extends Scene {
         font-weight: bold;
         color: #fff;
         margin-bottom: 4px;
+        border: 2px solid rgba(0,0,0,0.2);
       }
       .character-slot .char-name {
         font-size: 10px;
-        color: #fff;
+        color: ${PARCHMENT_COLORS.text.primary};
         text-align: center;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         width: 100%;
+        font-weight: bold;
       }
       .character-slot .char-level {
         font-size: 9px;
-        color: #8a8aaa;
+        color: ${PARCHMENT_COLORS.text.secondary};
       }
-      .tab-btn {
-        flex: 1;
-        padding: 10px;
-        background: none;
-        border: none;
-        color: #8a8aaa;
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
-        transition: all 0.2s;
-      }
-      .tab-btn:hover {
-        color: #fff;
-        background: rgba(255,255,255,0.05);
-      }
-      .tab-btn.active {
-        color: #ffd700;
-        border-bottom-color: #ffd700;
-      }
+
+      /* Stats Panel Styles - Parchment Theme */
       .stat-row {
         display: flex;
         justify-content: space-between;
         padding: 8px 0;
-        border-bottom: 1px solid #2a2a4a;
+        border-bottom: 1px solid ${PARCHMENT_COLORS.border};
       }
       .stat-label {
-        color: #8a8aaa;
+        color: ${PARCHMENT_COLORS.text.secondary};
       }
       .stat-value {
-        color: #fff;
+        color: ${PARCHMENT_COLORS.text.primary};
         font-weight: bold;
       }
+
+      /* Equipment Slot Styles - Parchment Theme */
       .equipment-slot {
         display: flex;
         align-items: center;
         padding: 12px;
-        background: rgba(0,0,0,0.2);
-        border-radius: 8px;
+        background: ${PARCHMENT_COLORS.mid};
+        border: 1px solid ${PARCHMENT_COLORS.border};
+        border-radius: 4px;
         margin-bottom: 8px;
         cursor: pointer;
         transition: all 0.2s;
       }
       .equipment-slot:hover {
-        background: rgba(74, 144, 217, 0.2);
+        background: ${PARCHMENT_COLORS.dark};
+        border-color: ${PARCHMENT_COLORS.accent.gold};
       }
       .equipment-slot .slot-icon {
         width: 40px;
         height: 40px;
-        background: rgba(0,0,0,0.3);
-        border-radius: 8px;
+        background: ${PARCHMENT_COLORS.light};
+        border: 1px solid ${PARCHMENT_COLORS.border};
+        border-radius: 4px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -257,26 +375,30 @@ export class FormationScene extends Scene {
         flex: 1;
       }
       .equipment-slot .slot-name {
-        color: #fff;
+        color: ${PARCHMENT_COLORS.text.primary};
         font-weight: bold;
       }
       .equipment-slot .slot-item {
         font-size: 12px;
-        color: #8a8aaa;
+        color: ${PARCHMENT_COLORS.text.secondary};
       }
+
+      /* Skill Item Styles - Parchment Theme */
       .skill-item {
         display: flex;
         align-items: center;
         padding: 12px;
-        background: rgba(0,0,0,0.2);
-        border-radius: 8px;
+        background: ${PARCHMENT_COLORS.mid};
+        border: 1px solid ${PARCHMENT_COLORS.border};
+        border-radius: 4px;
         margin-bottom: 8px;
       }
       .skill-icon {
         width: 40px;
         height: 40px;
-        background: linear-gradient(135deg, #4a90d9, #357abd);
-        border-radius: 8px;
+        background: linear-gradient(135deg, ${PARCHMENT_COLORS.state.info}, #3a5068);
+        border-radius: 4px;
+        border: 1px solid ${PARCHMENT_COLORS.borderDark};
         display: flex;
         align-items: center;
         justify-content: center;
@@ -288,23 +410,26 @@ export class FormationScene extends Scene {
         flex: 1;
       }
       .skill-name {
-        color: #fff;
+        color: ${PARCHMENT_COLORS.text.primary};
         font-weight: bold;
       }
       .skill-desc {
         font-size: 11px;
-        color: #8a8aaa;
+        color: ${PARCHMENT_COLORS.text.secondary};
       }
+
+      /* XP Bar - Parchment Theme */
       .xp-bar {
         height: 6px;
-        background: #2a2a4a;
+        background: ${PARCHMENT_COLORS.borderDark};
         border-radius: 3px;
         margin-top: 8px;
         overflow: hidden;
+        border: 1px solid ${PARCHMENT_COLORS.border};
       }
       .xp-bar-fill {
         height: 100%;
-        background: linear-gradient(90deg, #4caf50, #8bc34a);
+        background: linear-gradient(90deg, ${PARCHMENT_COLORS.state.success}, #6a9548);
         transition: width 0.3s;
       }
     `;
@@ -335,8 +460,8 @@ export class FormationScene extends Scene {
       } else {
         html += `
           <div class="character-slot empty ${isBattleParty ? 'battle-party' : ''}" data-slot="${i + 1}">
-            <div style="color: #5a5a7a; font-size: 20px;">+</div>
-            <div class="char-name" style="color: #5a5a7a;">Empty</div>
+            <div style="color: ${PARCHMENT_COLORS.text.muted}; font-size: 20px;">+</div>
+            <div class="char-name" style="color: ${PARCHMENT_COLORS.text.muted};">Empty</div>
           </div>
         `;
       }
@@ -365,7 +490,7 @@ export class FormationScene extends Scene {
     });
 
     // Tab buttons
-    this.uiElement.querySelectorAll('.tab-btn').forEach(btn => {
+    this.uiElement.querySelectorAll('.parchment-tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         this.switchTab(btn.dataset.tab);
       }, opts);
@@ -409,7 +534,7 @@ export class FormationScene extends Scene {
     }
 
     // Update tab buttons
-    this.uiElement.querySelectorAll('.tab-btn').forEach(btn => {
+    this.uiElement.querySelectorAll('.parchment-tab-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tab === tabName);
     });
 
@@ -451,43 +576,44 @@ export class FormationScene extends Scene {
             justify-content: center;
             color: #fff;
             margin-right: 16px;
+            border: 3px solid ${PARCHMENT_COLORS.border};
           ">
             ${this.getClassIcon(char.class)}
           </div>
           <div>
-            <div style="font-size: 18px; font-weight: bold; color: #fff;">${char.name}</div>
-            <div style="color: #8a8aaa;">${this.capitalize(char.race)} ${this.capitalize(char.class)}</div>
-            <div style="color: #ffd700;">Level ${char.level}</div>
+            <div style="font-size: 18px; font-weight: bold; color: ${PARCHMENT_COLORS.text.primary};">${char.name}</div>
+            <div style="color: ${PARCHMENT_COLORS.text.secondary};">${this.capitalize(char.race)} ${this.capitalize(char.class)}</div>
+            <div style="color: ${PARCHMENT_COLORS.accent.gold}; font-weight: bold;">Level ${char.level}</div>
           </div>
         </div>
 
         <!-- HP Bar -->
         <div style="margin-bottom: 12px;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="color: #8a8aaa;">HP</span>
-            <span style="color: #fff;">${char.hp_current} / ${char.hp_max}</span>
+            <span style="color: ${PARCHMENT_COLORS.text.secondary};">HP</span>
+            <span style="color: ${PARCHMENT_COLORS.text.primary}; font-weight: bold;">${char.hp_current} / ${char.hp_max}</span>
           </div>
-          <div style="height: 8px; background: #2a2a4a; border-radius: 4px; overflow: hidden;">
-            <div style="height: 100%; width: ${hpPercent}%; background: linear-gradient(90deg, #f44336, #4caf50);"></div>
+          <div style="height: 8px; background: ${PARCHMENT_COLORS.borderDark}; border-radius: 4px; overflow: hidden; border: 1px solid ${PARCHMENT_COLORS.border};">
+            <div style="height: 100%; width: ${hpPercent}%; background: linear-gradient(90deg, ${PARCHMENT_COLORS.state.error}, ${PARCHMENT_COLORS.state.success});"></div>
           </div>
         </div>
 
         <!-- MP Bar -->
         <div style="margin-bottom: 12px;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="color: #8a8aaa;">MP</span>
-            <span style="color: #fff;">${char.mp_current} / ${char.mp_max}</span>
+            <span style="color: ${PARCHMENT_COLORS.text.secondary};">MP</span>
+            <span style="color: ${PARCHMENT_COLORS.text.primary}; font-weight: bold;">${char.mp_current} / ${char.mp_max}</span>
           </div>
-          <div style="height: 8px; background: #2a2a4a; border-radius: 4px; overflow: hidden;">
-            <div style="height: 100%; width: ${mpPercent}%; background: #2196f3;"></div>
+          <div style="height: 8px; background: ${PARCHMENT_COLORS.borderDark}; border-radius: 4px; overflow: hidden; border: 1px solid ${PARCHMENT_COLORS.border};">
+            <div style="height: 100%; width: ${mpPercent}%; background: ${PARCHMENT_COLORS.state.info};"></div>
           </div>
         </div>
 
         <!-- XP Bar -->
         <div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="color: #8a8aaa;">Experience</span>
-            <span style="color: #fff;">${char.experience || 0}</span>
+            <span style="color: ${PARCHMENT_COLORS.text.secondary};">Experience</span>
+            <span style="color: ${PARCHMENT_COLORS.text.primary}; font-weight: bold;">${char.experience || 0}</span>
           </div>
           <div class="xp-bar">
             <div class="xp-bar-fill" style="width: ${this.getXPProgress(char)}%;"></div>
@@ -495,7 +621,7 @@ export class FormationScene extends Scene {
         </div>
       </div>
 
-      <div class="ui-panel-header" style="margin-bottom: 12px;">Base Stats</div>
+      <div style="padding: 10px 14px; background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark}); border-radius: 4px; margin-bottom: 12px; color: ${PARCHMENT_COLORS.accent.gold}; font-weight: bold; text-shadow: 1px 1px 1px rgba(0,0,0,0.3);">Base Stats</div>
       <div class="stat-row">
         <span class="stat-label">Strength</span>
         <span class="stat-value">${char.strength}</span>
@@ -521,7 +647,7 @@ export class FormationScene extends Scene {
 
   renderEquipmentPanel() {
     // Return a container div that the InventoryPanel will populate
-    return `<div id="equipment-panel-container" style="height: 100%;"></div>`;
+    return '<div id="equipment-panel-container" style="height: 100%;"></div>';
   }
 
   async loadEquipmentPanel() {
@@ -541,7 +667,7 @@ export class FormationScene extends Scene {
 
   renderSkillsPanel() {
     // Return a container div that the SkillTreePanel will populate
-    return `<div id="skills-panel-container" style="height: 100%;"></div>`;
+    return '<div id="skills-panel-container" style="height: 100%;"></div>';
   }
 
   async loadSkillsPanel() {
@@ -595,7 +721,8 @@ export class FormationScene extends Scene {
 
   render(ctx) {
     // UI is HTML-based, no canvas rendering needed
-    ctx.fillStyle = '#1a1a2e';
+    // Draw parchment background for any canvas elements
+    ctx.fillStyle = PARCHMENT_COLORS.mid;
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   }
 }

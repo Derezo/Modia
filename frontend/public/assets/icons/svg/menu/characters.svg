@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+  </style>
+  <!-- Single person silhouette - medieval style -->
+  <circle class="stroke" cx="12" cy="6" r="3"/>
+  <!-- Shoulders and tunic -->
+  <path class="stroke" d="M7 21v-4c0-2.5 2-4 5-4s5 1.5 5 4v4"/>
+  <!-- Belt detail -->
+  <path class="stroke" d="M9 16h6"/>
+  <!-- Cross-hatch on tunic -->
+  <path class="stroke" d="M10 17l1 3M13 17l1 3" style="stroke-width: 1;"/>
+</svg>

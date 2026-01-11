@@ -3,6 +3,17 @@ import { WorldMapEffects } from '../worldmap/WorldMapEffects.js';
 import { WorldMapMinimap } from '../worldmap/WorldMapMinimap.js';
 import { WorldMapCharacter } from '../worldmap/WorldMapCharacter.js';
 import { StaminaBar } from '../worldmap/StaminaBar.js';
+import { generatePathControlPoints, generateSplinePoints } from '../worldmap/PathRenderer.js';
+import { ProfileDropdown } from '../ui/parchment/ProfileDropdown.js';
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { Icon } from '../components/Icon.js';
+import { responsive } from '../core/Responsive.js';
+import {
+  PARCHMENT_COLORS,
+  getParchmentGradient,
+  getParchmentBorder,
+  getParchmentShadow
+} from '../ui/parchment/ParchmentTheme.js';
 
 // Class-specific action labels for guild recruitment buttons
 const GUILD_ACTION_LABELS = {
@@ -63,6 +74,12 @@ export class WorldMapScene extends Scene {
 
     // WebSocket unsubscribers
     this.wsUnsubscribers = [];
+
+    // ProfileDropdown component
+    this.profileDropdown = null;
+
+    // Responsive subscription
+    this.responsiveUnsubscribe = null;
   }
 
   async enter() {
@@ -94,6 +111,15 @@ export class WorldMapScene extends Scene {
 
     // Preload node sprites in background
     this.preloadNodeSprites();
+
+    // Initialize ProfileDropdown
+    this.profileDropdown = new ProfileDropdown(this.game);
+    this.profileDropdown.show();
+
+    // Subscribe to responsive changes
+    this.responsiveUnsubscribe = responsive.onChange(() => {
+      this.onBreakpointChange();
+    });
   }
 
   /**
@@ -269,6 +295,17 @@ export class WorldMapScene extends Scene {
     // Clean up WebSocket handlers
     this.cleanupWebSocketHandlers();
 
+    // Hide ProfileDropdown
+    if (this.profileDropdown) {
+      this.profileDropdown.hide();
+    }
+
+    // Unsubscribe from responsive changes
+    if (this.responsiveUnsubscribe) {
+      this.responsiveUnsubscribe();
+      this.responsiveUnsubscribe = null;
+    }
+
     if (this.uiElement) {
       this.uiElement.remove();
       this.uiElement = null;
@@ -290,9 +327,9 @@ export class WorldMapScene extends Scene {
       this.game.state.set('worldNodes', this.nodes);
       this.game.state.set('currentNode', this.currentNode);
 
-      // Update discovery state for fog of war rendering
+      // Update discovery state for fog of war rendering (with connections for polygon detection)
       if (this.effects) {
-        this.effects.updateDiscoveryState(this.nodes);
+        this.effects.updateDiscoveryState(this.nodes, this.connections);
       }
 
       // Update minimap bounds if nodes changed
@@ -301,7 +338,7 @@ export class WorldMapScene extends Scene {
       }
     } catch (err) {
       console.error('Failed to load world:', err);
-      this.game.showNotification('Failed to load world data', 'error');
+      parchmentToast.error('World Data Error', 'Failed to load world data. Please try again.');
     }
   }
 
@@ -319,65 +356,84 @@ export class WorldMapScene extends Scene {
     const container = document.createElement('div');
     container.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;';
 
-    // Top bar with player info
+    const isMobile = responsive.isMobile();
+
+    // Parchment-styled player info panel (top-left)
     container.innerHTML = `
       <div style="
         position: absolute;
-        top: 10px;
-        left: 10px;
+        top: 16px;
+        left: 16px;
         pointer-events: auto;
       ">
-        <div class="ui-panel" style="padding: 8px 12px;">
-          <div style="font-weight: bold; color: #ffd700;">${this.game.state.get('user')?.username || 'Player'}</div>
-          <div style="font-size: 12px; color: #8a8aaa;">Gold: ${this.game.state.get('user')?.gold || 0}</div>
+        <div style="
+          padding: ${isMobile ? '8px 12px' : '10px 16px'};
+          background: ${getParchmentGradient('to bottom')};
+          border: ${getParchmentBorder()};
+          border-radius: 6px;
+          box-shadow: ${getParchmentShadow(false)};
+          font-family: Georgia, serif;
+        ">
+          <div style="
+            font-weight: bold;
+            color: ${PARCHMENT_COLORS.accent.gold};
+            font-size: ${isMobile ? '13px' : '14px'};
+            text-shadow: 0 1px 0 rgba(0,0,0,0.2);
+          ">${this.game.state.get('user')?.username || 'Adventurer'}</div>
+          <div style="
+            font-size: ${isMobile ? '11px' : '12px'};
+            color: ${PARCHMENT_COLORS.text.secondary};
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+          ">
+            <span style="color: ${PARCHMENT_COLORS.accent.gold};">Gold:</span>
+            <span>${(this.game.state.get('user')?.gold || 0).toLocaleString()}</span>
+          </div>
         </div>
       </div>
 
-      <!-- Menu button -->
-      <div style="
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        pointer-events: auto;
-      ">
-        <button class="btn btn-secondary" id="menu-btn">Menu</button>
-      </div>
-
-      <!-- Current node info -->
+      <!-- Current node info panel (bottom center) - Parchment styled -->
       <div id="node-info" style="
         position: absolute;
-        bottom: 10px;
+        bottom: ${isMobile ? '12px' : '20px'};
         left: 50%;
         transform: translateX(-50%);
         pointer-events: auto;
         display: none;
+        max-width: calc(100vw - 32px);
       ">
-        <div class="ui-panel" style="text-align: center; min-width: 200px;">
-          <div id="node-name" style="font-weight: bold; color: #ffd700; margin-bottom: 8px;"></div>
-          <div id="node-type" style="font-size: 12px; color: #8a8aaa; margin-bottom: 8px;"></div>
-          <div id="node-actions" style="display: flex; gap: 8px; justify-content: center;"></div>
-        </div>
-      </div>
-
-      <!-- Menu panel (hidden by default) -->
-      <div id="menu-panel" style="
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        pointer-events: auto;
-        display: none;
-      ">
-        <div class="ui-panel" style="min-width: 250px;">
-          <div class="ui-panel-header">Menu</div>
-          <div style="display: flex; flex-direction: column; gap: 8px;">
-            <button class="btn btn-secondary" id="formation-btn">Formation</button>
-            <button class="btn btn-secondary" id="inventory-btn">Inventory</button>
-            <button class="btn btn-secondary" id="characters-btn">Characters</button>
-            <button class="btn btn-secondary" id="settings-btn">Settings</button>
-            <button class="btn btn-danger" id="logout-btn">Logout</button>
-          </div>
-          <button class="btn btn-secondary" id="close-menu" style="width: 100%; margin-top: 12px;">Close</button>
+        <div style="
+          text-align: center;
+          min-width: ${isMobile ? '180px' : '240px'};
+          padding: ${isMobile ? '12px 16px' : '16px 24px'};
+          background: ${getParchmentGradient('to bottom')};
+          border: ${getParchmentBorder()};
+          border-radius: 6px;
+          box-shadow: ${getParchmentShadow(true)};
+          font-family: Georgia, serif;
+        ">
+          <div id="node-name" style="
+            font-weight: bold;
+            color: ${PARCHMENT_COLORS.accent.gold};
+            font-size: ${isMobile ? '15px' : '18px'};
+            margin-bottom: 4px;
+            text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+          "></div>
+          <div id="node-type" style="
+            font-size: ${isMobile ? '11px' : '12px'};
+            color: ${PARCHMENT_COLORS.text.muted};
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          "></div>
+          <div id="node-actions" style="
+            display: flex;
+            gap: ${isMobile ? '6px' : '8px'};
+            justify-content: center;
+            flex-wrap: wrap;
+          "></div>
         </div>
       </div>
     `;
@@ -385,43 +441,11 @@ export class WorldMapScene extends Scene {
     this.game.uiOverlay.appendChild(container);
     this.uiElement = container;
 
-    // Event listeners
-    container.querySelector('#menu-btn').addEventListener('click', () => this.toggleMenu());
-    container.querySelector('#close-menu').addEventListener('click', () => this.toggleMenu());
-    container.querySelector('#logout-btn').addEventListener('click', () => this.handleLogout());
-    container.querySelector('#characters-btn').addEventListener('click', () => {
-      this.toggleMenu();
-      this.game.scenes.switchTo('characterSelect');
-    });
-    container.querySelector('#formation-btn').addEventListener('click', () => {
-      this.toggleMenu();
-      this.game.scenes.switchTo('formation');
-    });
-    container.querySelector('#inventory-btn').addEventListener('click', () => {
-      this.toggleMenu();
-      this.game.scenes.switchTo('inventory');
-    });
-
     // Update current node display
     this.updateNodeInfo();
   }
 
-  toggleMenu() {
-    const panel = document.getElementById('menu-panel');
-    panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-  }
-
-  async handleLogout() {
-    try {
-      await this.game.api.logout(this.game.refreshToken);
-    } catch (err) {
-      console.error('Logout error:', err);
-    }
-
-    this.game.socket.disconnect();
-    this.game.state.clear();
-    this.game.scenes.switchTo('login');
-  }
+  // Menu functionality is now handled by ProfileDropdown
 
   updateNodeInfo() {
     if (!this.currentNode) return;
@@ -455,33 +479,111 @@ export class WorldMapScene extends Scene {
       const maxFeatures = ['castle', 'palace', 'city'].includes(this.currentNode.node_type) ? 4 : 3;
 
       prioritizedFeatures.slice(0, maxFeatures).forEach(feature => {
-        const btn = document.createElement('button');
-        btn.className = 'btn btn-secondary';
-
-        // Use class-specific label for guild_hall feature
-        if (feature === 'guild_hall' && this.currentNode.guild_class) {
-          btn.textContent = GUILD_ACTION_LABELS[this.currentNode.guild_class] || 'Guild Hall';
-        } else {
-          btn.textContent = this.capitalize(feature);
-        }
-
-        btn.style.fontSize = '11px';
-        btn.style.padding = '6px 10px';
-        btn.addEventListener('click', () => this.handleFeature(feature));
+        const btn = this.createParchmentButton(feature, false);
         nodeActions.appendChild(btn);
       });
     }
 
     // Add battle button for battle nodes
     if (['forest', 'cave', 'mountain', 'bridge'].includes(this.currentNode.node_type)) {
-      const battleBtn = document.createElement('button');
-      battleBtn.className = 'btn btn-primary';
-      battleBtn.textContent = 'Battle';
-      battleBtn.style.fontSize = '11px';
-      battleBtn.style.padding = '6px 10px';
-      battleBtn.addEventListener('click', () => this.startBattle());
+      const battleBtn = this.createParchmentButton('battle', true);
       nodeActions.appendChild(battleBtn);
     }
+  }
+
+  /**
+   * Create a parchment-styled action button
+   * @param {string} feature - Feature/action name
+   * @param {boolean} isPrimary - Whether this is a primary (battle) button
+   * @returns {HTMLButtonElement}
+   */
+  createParchmentButton(feature, isPrimary = false) {
+    const isMobile = responsive.isMobile();
+    const btn = document.createElement('button');
+
+    // Get icon mapping for features
+    const iconMap = {
+      blacksmith: { category: 'action', name: 'craft' },
+      marketplace: { category: 'action', name: 'trade' },
+      tavern: { category: 'action', name: 'rest' },
+      apothecary: { category: 'action', name: 'potion' },
+      coliseum: { category: 'action', name: 'battle' },
+      farm: { category: 'action', name: 'harvest' },
+      guild_hall: { category: 'action', name: 'recruit' },
+      courtyard: { category: 'action', name: 'social' },
+      battle: { category: 'action', name: 'battle' }
+    };
+
+    // Get label text
+    let label = this.capitalize(feature);
+    if (feature === 'guild_hall' && this.currentNode.guild_class) {
+      label = GUILD_ACTION_LABELS[this.currentNode.guild_class] || 'Guild Hall';
+    }
+
+    // Parchment button styling
+    const bgGradient = isPrimary
+      ? `linear-gradient(to bottom, ${PARCHMENT_COLORS.accent.copper}, #9a5f23)`
+      : `linear-gradient(to bottom, ${PARCHMENT_COLORS.light}, ${PARCHMENT_COLORS.dark})`;
+
+    const textColor = isPrimary ? PARCHMENT_COLORS.text.inverse : PARCHMENT_COLORS.text.primary;
+    const borderColor = isPrimary ? PARCHMENT_COLORS.borderDark : PARCHMENT_COLORS.border;
+
+    btn.style.cssText = `
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: ${isMobile ? '8px 12px' : '8px 14px'};
+      background: ${bgGradient};
+      border: 2px solid ${borderColor};
+      border-radius: 4px;
+      color: ${textColor};
+      font-family: Georgia, serif;
+      font-size: ${isMobile ? '11px' : '12px'};
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.15s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);
+      white-space: nowrap;
+    `;
+
+    // Hover effects
+    btn.addEventListener('mouseenter', () => {
+      btn.style.transform = 'translateY(-1px)';
+      btn.style.boxShadow = '0 3px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)';
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = 'translateY(0)';
+      btn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3)';
+    });
+    btn.addEventListener('mousedown', () => {
+      btn.style.transform = 'translateY(1px)';
+      btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3)';
+    });
+    btn.addEventListener('mouseup', () => {
+      btn.style.transform = 'translateY(-1px)';
+    });
+
+    // Use Icon component if available, otherwise just text
+    const iconConfig = iconMap[feature];
+    if (iconConfig && !isMobile) {
+      // On desktop, show icon + label
+      btn.innerHTML = Icon.html(iconConfig.category, iconConfig.name, {
+        label: label,
+        size: 'sm'
+      });
+    } else {
+      // On mobile or no icon, show just label
+      btn.textContent = label;
+    }
+
+    // Click handler
+    if (feature === 'battle') {
+      btn.addEventListener('click', () => this.startBattle());
+    } else {
+      btn.addEventListener('click', () => this.handleFeature(feature));
+    }
+
+    return btn;
   }
 
   handleFeature(feature) {
@@ -534,7 +636,7 @@ export class WorldMapScene extends Scene {
     }
 
     // Other features not yet implemented
-    this.game.showNotification(`${this.capitalize(feature)} - Coming soon!`, 'info');
+    parchmentToast.info('Coming Soon', `${this.capitalize(feature)} feature is under development.`);
   }
 
   async startBattle() {
@@ -560,7 +662,7 @@ export class WorldMapScene extends Scene {
     // Handle player entering current node
     const enteredUnsub = socket.on('player:entered_node', (payload) => {
       if (payload.nodeId === this.currentNode?.id) {
-        this.game.showNotification(`${payload.username} arrived`, 'info');
+        parchmentToast.info('Traveler Arrived', `${payload.username} has arrived at ${this.currentNode.name}.`);
       }
     });
     this.wsUnsubscribers.push(enteredUnsub);
@@ -568,14 +670,14 @@ export class WorldMapScene extends Scene {
     // Handle player leaving current node
     const leftUnsub = socket.on('player:left_node', (payload) => {
       if (payload.nodeId === this.currentNode?.id) {
-        this.game.showNotification(`${payload.username} departed`, 'info');
+        parchmentToast.info('Traveler Departed', `${payload.username} has left ${this.currentNode.name}.`);
       }
     });
     this.wsUnsubscribers.push(leftUnsub);
 
     // Handle party invites
     const inviteUnsub = socket.on('party:invite_received', (payload) => {
-      this.game.showNotification(`Party invite from ${payload.fromUsername}`, 'info');
+      parchmentToast.info('Party Invite', `${payload.fromUsername} has invited you to join their party.`);
       // TODO: Show invite modal
     });
     this.wsUnsubscribers.push(inviteUnsub);
@@ -637,7 +739,7 @@ export class WorldMapScene extends Scene {
       this.dragging = false;
     }, opts);
 
-    canvas.addEventListener('click', (e) => {
+    canvas.addEventListener('click', () => {
       const pos = this.game.input.getPointerPosition();
 
       // Check minimap click first
@@ -713,7 +815,7 @@ export class WorldMapScene extends Scene {
 
     // Check if destination is discovered
     if (!this.isNodeDiscovered(node)) {
-      this.game.showNotification('You have not discovered this location yet', 'error');
+      parchmentToast.warning('Unknown Territory', 'You have not discovered this location yet.');
       return;
     }
 
@@ -752,14 +854,14 @@ export class WorldMapScene extends Scene {
         });
 
         // Show travel message
-        this.game.showNotification(`Traveling to ${result.currentNode.name}... (${result.cost} stamina)`, 'info');
+        parchmentToast.info('Traveling', `Journeying to ${result.currentNode.name}... (${result.cost} stamina)`);
       } else {
         // No animation - complete immediately
         this.onTravelComplete(result, previousNodeId);
-        this.game.showNotification(`Arrived at ${result.currentNode.name}`, 'success');
+        parchmentToast.success('Arrived', `You have arrived at ${result.currentNode.name}.`);
       }
     } catch (err) {
-      this.game.showNotification(err.message, 'error');
+      parchmentToast.error('Travel Failed', err.message || 'Unable to travel to this location.');
     }
   }
 
@@ -788,7 +890,7 @@ export class WorldMapScene extends Scene {
     this.updateCharacterPosition();
 
     this.updateNodeInfo();
-    this.game.showNotification(`Arrived at ${result.currentNode.name}`, 'success');
+    parchmentToast.success('Journey Complete', `You have arrived at ${result.currentNode.name}.`);
 
     // Switch node rooms for WebSocket presence
     if (this.game.socket) {
@@ -862,7 +964,7 @@ export class WorldMapScene extends Scene {
 
     ctx.save();
 
-    // Draw connections with curved bezier paths (using textured paths when available)
+    // Draw connections with organic Catmull-Rom spline paths
     for (const conn of this.connections) {
       const fromNode = this.nodes.find(n => n.id === conn.from_node_id);
       const toNode = this.nodes.find(n => n.id === conn.to_node_id);
@@ -883,14 +985,15 @@ export class WorldMapScene extends Scene {
           continue;
         }
 
-        // Calculate control point for bezier curve
+        // Calculate control point for bezier curve (legacy fallback)
         const control = this.getPathControlPoint(x1, y1, x2, y2, conn.from_node_id, conn.to_node_id);
 
-        // Use textured path rendering if effects available
-        if (this.effects && this.effects.pathsLoaded) {
-          this.effects.renderTexturedPath(ctx, x1, y1, x2, y2, conn.path_type, control);
+        // Use effects system for path rendering (organic or textured)
+        if (this.effects) {
+          // Pass node IDs for organic path generation
+          this.effects.renderTexturedPath(ctx, x1, y1, x2, y2, conn.path_type, control, conn.from_node_id, conn.to_node_id);
         } else {
-          // Fallback to simple path
+          // Fallback to simple bezier path
           const style = this.getPathStyle(conn.path_type);
 
           // Draw path shadow for depth
@@ -935,15 +1038,17 @@ export class WorldMapScene extends Scene {
       const isHovered = this.hoveredNode && node.id === this.hoveredNode.id;
       const isAdjacent = this.isNodeAdjacent(node);
       const isImportant = ['castle', 'palace', 'city'].includes(node.node_type);
+      const isVisited = node.visited;
+      const isMystery = !isVisited && !isCurrent;  // Discovered but not visited = mystery
 
-      // Render glow effect for important/selected nodes
-      if (this.effects && (isCurrent || isImportant)) {
+      // Render glow effect for important/selected nodes (skip for mystery nodes)
+      if (this.effects && (isCurrent || isImportant) && !isMystery) {
         const glowColor = isCurrent ? '#ffd700' : this.getNodeGlowColor(node.node_type);
         this.effects.renderNodeGlow(ctx, x, y, this.nodeSize, glowColor, isCurrent || isImportant);
       }
 
-      // Try to render node sprite
-      const nodeSprite = this.getNodeSprite(node.node_type);
+      // Try to render node sprite (but not for mystery nodes - they get a generic marker)
+      const nodeSprite = isMystery ? null : this.getNodeSprite(node.node_type);
 
       if (nodeSprite) {
         // Draw sprite with selection/hover effects
@@ -972,28 +1077,36 @@ export class WorldMapScene extends Scene {
           ctx.setLineDash([]);
         }
       } else {
-        // Fallback: Draw colored circle with emoji (no special highlighting for current node - character sprite shows location)
+        // Fallback: Draw colored circle with icon
+        // Mystery nodes get grayed style
         ctx.beginPath();
         ctx.arc(x, y, this.nodeSize, 0, Math.PI * 2);
 
-        if (isHovered && isAdjacent) {
+        if (isMystery) {
+          // Mystery node: grayed out appearance
+          ctx.fillStyle = isHovered ? '#7a7a8a' : '#5a5a6a';
+        } else if (isHovered && isAdjacent) {
           ctx.fillStyle = '#4a90d9';
         } else {
           ctx.fillStyle = this.getNodeColor(node.node_type);
         }
         ctx.fill();
 
-        // Node border
-        ctx.strokeStyle = isAdjacent ? '#6ab0f3' : '#2a2a4a';
+        // Node border - mystery nodes have purple tint
+        if (isMystery) {
+          ctx.strokeStyle = isAdjacent ? '#8a7ab3' : '#4a4a5a';
+        } else {
+          ctx.strokeStyle = isAdjacent ? '#6ab0f3' : '#2a2a4a';
+        }
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Node emoji icon
-        ctx.fillStyle = '#fff';
-        ctx.font = '16px Arial';
+        // Node icon - mystery nodes show "?"
+        ctx.fillStyle = isMystery ? '#9a9aaa' : '#fff';
+        ctx.font = isMystery ? 'bold 18px Arial' : '16px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(this.getNodeIcon(node.node_type), x, y);
+        ctx.fillText(this.getNodeIcon(node.node_type, isVisited), x, y);
       }
 
       // Node tooltip (for current and hovered nodes)
@@ -1037,7 +1150,7 @@ export class WorldMapScene extends Scene {
   }
 
   /**
-   * Render path preview (golden glow along the path)
+   * Render path preview (golden glow along the path) using organic curves
    */
   renderPathPreview(ctx) {
     if (!this.previewPath || this.previewPath.length < 2) return;
@@ -1046,8 +1159,10 @@ export class WorldMapScene extends Scene {
     const glowColor = this.previewAffordable ? 'rgba(255, 215, 0, 0.2)' : 'rgba(180, 80, 80, 0.2)';
 
     ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
-    // Draw glow effect along the path
+    // Draw glow effect along the path using organic curves
     for (let i = 0; i < this.previewPath.length - 1; i++) {
       const fromNode = this.nodes.find(n => n.id === this.previewPath[i]);
       const toNode = this.nodes.find(n => n.id === this.previewPath[i + 1]);
@@ -1066,20 +1181,28 @@ export class WorldMapScene extends Scene {
         continue;
       }
 
-      const control = this.getPathControlPoint(x1, y1, x2, y2, fromNode.id, toNode.id);
+      // Generate organic spline points
+      const controlPoints = generatePathControlPoints(x1, y1, x2, y2, fromNode.id, toNode.id);
+      const splinePoints = generateSplinePoints(controlPoints, 10);
+
+      if (splinePoints.length < 2) continue;
 
       // Draw glow (wider, semi-transparent)
       ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.quadraticCurveTo(control.x, control.y, x2, y2);
+      ctx.moveTo(splinePoints[0].x, splinePoints[0].y);
+      for (let j = 1; j < splinePoints.length; j++) {
+        ctx.lineTo(splinePoints[j].x, splinePoints[j].y);
+      }
       ctx.strokeStyle = glowColor;
       ctx.lineWidth = 12;
       ctx.stroke();
 
       // Draw main path highlight
       ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.quadraticCurveTo(control.x, control.y, x2, y2);
+      ctx.moveTo(splinePoints[0].x, splinePoints[0].y);
+      for (let j = 1; j < splinePoints.length; j++) {
+        ctx.lineTo(splinePoints[j].x, splinePoints[j].y);
+      }
       ctx.strokeStyle = pathColor;
       ctx.lineWidth = 4;
       ctx.stroke();
@@ -1090,18 +1213,25 @@ export class WorldMapScene extends Scene {
 
   /**
    * Render node tooltip with name and travel info
+   * Shows "Undiscovered" for discovered-but-unvisited mystery nodes
    */
   renderNodeTooltip(ctx, node, x, y, isCurrent) {
-    const nodeName = node.name;
+    const isVisited = node.visited;
     const isDiscovered = this.isNodeDiscovered(node);
 
+    // Mystery nodes show "Undiscovered" instead of actual name
+    const nodeName = (isDiscovered && !isVisited && !isCurrent) ? 'Undiscovered' : node.name;
+
     // Calculate tooltip content
-    let lines = [nodeName];
     let costLine = null;
 
     if (!isCurrent) {
       if (!isDiscovered) {
-        lines.push('Undiscovered');
+        // Completely undiscovered - shouldn't normally be shown
+        costLine = { text: 'Unknown territory', color: '#8a6a6a' };
+      } else if (!isVisited) {
+        // Mystery node - discovered but not visited
+        costLine = { text: 'Mystery location', color: '#6a6a8a' };
       } else if (this.previewCost > 0) {
         if (this.previewAffordable) {
           costLine = { text: `${this.previewCost} stamina`, color: '#6a8a6a' };
@@ -1126,8 +1256,9 @@ export class WorldMapScene extends Scene {
     const tooltipHeight = costLine ? 36 : 22;
     const tooltipY = y + this.nodeSize + 8;
 
-    // Draw background
-    ctx.fillStyle = 'rgba(40, 30, 20, 0.9)';
+    // Draw background - mystery nodes have slightly different style
+    const isMystery = isDiscovered && !isVisited && !isCurrent;
+    ctx.fillStyle = isMystery ? 'rgba(50, 45, 60, 0.9)' : 'rgba(40, 30, 20, 0.9)';
     const radius = 4;
     const tx = x - tooltipWidth / 2;
     ctx.beginPath();
@@ -1143,14 +1274,14 @@ export class WorldMapScene extends Scene {
     ctx.closePath();
     ctx.fill();
 
-    // Draw border
-    ctx.strokeStyle = 'rgba(139, 115, 85, 0.6)';
+    // Draw border - mystery nodes have purple tint
+    ctx.strokeStyle = isMystery ? 'rgba(120, 100, 150, 0.6)' : 'rgba(139, 115, 85, 0.6)';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Draw name
+    // Draw name - mystery nodes are grayed
     ctx.font = 'bold 12px Arial';
-    ctx.fillStyle = isCurrent ? '#ffd700' : '#e0d0b0';
+    ctx.fillStyle = isCurrent ? '#ffd700' : (isMystery ? '#9a9aaa' : '#e0d0b0');
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText(nodeName, x, tooltipY + 4);
@@ -1232,7 +1363,18 @@ export class WorldMapScene extends Scene {
     return colors[type] || '#4a4a6a';
   }
 
-  getNodeIcon(type) {
+  /**
+   * Get node icon for fallback rendering
+   * @param {string} type - Node type
+   * @param {boolean} isVisited - Whether the node has been visited
+   * @returns {string} Icon character
+   */
+  getNodeIcon(type, isVisited = true) {
+    // Mystery nodes show "?" instead of type icon
+    if (!isVisited) {
+      return '?';
+    }
+
     const icons = {
       castle: '🏰',
       city: '🏛️',
@@ -1287,5 +1429,23 @@ export class WorldMapScene extends Scene {
       tunnel: { color: '#2a2a3a', width: 3, dashed: true }
     };
     return styles[pathType] || styles.road;
+  }
+
+  /**
+   * Handle responsive breakpoint changes
+   * Rebuilds UI when viewport size changes significantly
+   */
+  onBreakpointChange() {
+    // Rebuild UI to adjust for new breakpoint
+    if (this.uiElement) {
+      this.uiElement.remove();
+      this.uiElement = null;
+    }
+    this.createUI();
+
+    // Refresh ProfileDropdown
+    if (this.profileDropdown) {
+      this.profileDropdown.refresh();
+    }
   }
 }

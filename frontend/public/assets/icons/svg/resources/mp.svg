@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Water droplet - mana points -->
+  <path class="stroke metallic" d="M12 3c-4 5-7 9-7 13 0 4 3 6 7 6s7-2 7-6c0-4-3-8-7-13z"/>
+  <!-- Inner shine -->
+  <path class="stroke" d="M9 14c0-2 1-4 3-6" style="stroke-width: 1;"/>
+  <!-- Ripple at bottom -->
+  <path class="stroke" d="M8 18c2 1 6 1 8 0" style="stroke-width: 1;"/>
+  <!-- Magic sparkle -->
+  <circle cx="15" cy="12" r="0.5" fill="currentColor"/>
+  <circle cx="14" cy="15" r="0.5" fill="currentColor"/>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Stone bridge - medieval arched style -->
+  <!-- Main arch -->
+  <path class="stroke metallic" d="M2 16c0-6 4-10 10-10s10 4 10 10"/>
+  <!-- Bridge deck -->
+  <path class="stroke" d="M1 14h22"/>
+  <path class="stroke" d="M1 16h22"/>
+  <!-- Stone texture -->
+  <path class="stroke" d="M5 14v2M9 14v2M15 14v2M19 14v2" style="stroke-width: 1;"/>
+  <!-- Arch keystone -->
+  <rect class="stroke" x="11" y="7" width="2" height="2" style="stroke-width: 1;"/>
+  <!-- Water underneath -->
+  <path class="stroke" d="M4 20c2-1 4 1 6 0s4 1 6 0s4 1 6 0" style="stroke-width: 1;"/>
+  <!-- Pillars -->
+  <path class="stroke" d="M4 16v5M20 16v5"/>
+</svg>

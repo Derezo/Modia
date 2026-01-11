@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Shield silhouette - medieval heater shield -->
+  <path class="stroke metallic" d="M12 2L4 5v7c0 5 3.5 9 8 10 4.5-1 8-5 8-10V5l-8-3z"/>
+  <!-- Shield boss (center) -->
+  <circle class="stroke" cx="12" cy="10" r="3"/>
+  <circle cx="12" cy="10" r="1" fill="currentColor"/>
+  <!-- Border detail -->
+  <path class="stroke" d="M12 4L6 6v5c0 4 2.5 7 6 8" style="stroke-width: 1;"/>
+  <!-- Decorative cross -->
+  <path class="stroke" d="M12 7v6M9 10h6" style="stroke-width: 1;"/>
+  <!-- Rivets -->
+  <circle cx="8" cy="7" r="0.5" fill="currentColor"/>
+  <circle cx="16" cy="7" r="0.5" fill="currentColor"/>
+  <circle cx="12" cy="17" r="0.5" fill="currentColor"/>
+</svg>

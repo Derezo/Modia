@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Potion bottle - medieval apothecary flask -->
+  <path class="stroke metallic" d="M9 9V5h6v4l3 9c0 2-2 3-6 3s-6-1-6-3l3-9z"/>
+  <!-- Bottle neck -->
+  <path class="stroke" d="M9 5c0-1 1-2 3-2s3 1 3 2"/>
+  <!-- Cork -->
+  <path class="stroke" d="M10 3h4v2h-4z"/>
+  <!-- Liquid level -->
+  <path class="stroke" d="M7 15c2 1 8 1 10 0"/>
+  <!-- Bubbles -->
+  <circle class="stroke" cx="10" cy="17" r="1" style="stroke-width: 1;"/>
+  <circle class="stroke" cx="14" cy="16" r="0.75" style="stroke-width: 1;"/>
+  <circle class="stroke" cx="12" cy="19" r="0.5" style="stroke-width: 1;"/>
+  <!-- Label -->
+  <rect class="stroke" x="10" y="10" width="4" height="3" style="stroke-width: 1;"/>
+</svg>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Heart - vitality symbol -->
+  <path class="stroke metallic" d="M12 21C6 17 3 13 3 9c0-3 2-5 5-5 2 0 3 1 4 3 1-2 2-3 4-3 3 0 5 2 5 5 0 4-3 8-9 12z"/>
+  <!-- Heart shine -->
+  <path class="stroke" d="M8 8c-1 0-2 1-2 2" style="stroke-width: 1;"/>
+  <!-- Pulse line -->
+  <path class="stroke" d="M6 13l2-2 2 4 2-3 2 3 2-4 2 2" style="stroke-width: 1;"/>
+</svg>

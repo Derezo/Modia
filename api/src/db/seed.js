@@ -746,6 +746,124 @@ async function seedShopInventory(nodeIds, nodes) {
   console.log(`Seeded ${insertCount} shop inventory entries`);
 }
 
+/**
+ * Seed developer test data with derezo user and generated equipment
+ * Only runs in development environment
+ */
+async function seedDeveloperTestData(castleId) {
+  // Skip in production
+  if (process.env.NODE_ENV === 'production') {
+    console.log('Skipping dev seed data in production');
+    return;
+  }
+
+  console.log('\nSeeding developer test data...');
+
+  // Import bcrypt for password hashing
+  const bcrypt = await import('bcrypt');
+  // nosec: Test password for development seed data only
+  const hashedPassword = await bcrypt.default.hash('password', 10);
+
+  // Create or update derezo user with 30,000 gold
+  const userResult = await pool.query(
+    `INSERT INTO users (username, email, password_hash, gold)
+     VALUES ('derezo', 'derezo@test.local', $1, 30000)
+     ON CONFLICT (username) DO UPDATE SET gold = 30000
+     RETURNING id`,
+    [hashedPassword]
+  );
+  const userId = userResult.rows[0].id;
+
+  // Check if character already exists
+  const existingChar = await pool.query(
+    `SELECT id FROM characters WHERE user_id = $1 AND name = 'Derezo'`,
+    [userId]
+  );
+
+  let characterId;
+  if (existingChar.rows.length > 0) {
+    characterId = existingChar.rows[0].id;
+    console.log('  Developer character already exists, updating items...');
+
+    // Clear existing items for fresh test data
+    await pool.query('DELETE FROM character_items WHERE character_id = $1', [characterId]);
+  } else {
+    // Create male elf wizard character at level 25
+    const charResult = await pool.query(
+      `INSERT INTO characters (user_id, name, race, class, gender, level, experience,
+       current_node_id, hp_current, hp_max, mp_current, mp_max,
+       strength, intelligence, agility, vitality, luck)
+       VALUES ($1, 'Derezo', 'elf', 'wizard', 'male', 25, 50000,
+       $2, 200, 200, 300, 300, 12, 35, 18, 14, 15)
+       RETURNING id`,
+      [userId, castleId]
+    );
+    characterId = charResult.rows[0].id;
+    console.log('  Created developer character: Derezo (level 25 elf wizard)');
+  }
+
+  // Import item generation functions
+  const { generateItem, storeDroppedItem } = await import('../services/itemDropService.js');
+
+  // Test items covering various rarities and types
+  const testItems = [
+    // Legendary wizard staff (high level)
+    { templateId: 5, seed: 999001, level: 90, rarity: 'legendary' },
+    // Epic wizard robe
+    { templateId: 9, seed: 999002, level: 80, rarity: 'epic' },
+    // Rare wizard hat
+    { templateId: 25, seed: 999003, level: 60, rarity: 'rare' },
+    // Legendary accessory
+    { templateId: 11, seed: 999004, level: 85, rarity: 'legendary' },
+    // Epic boots
+    { templateId: 24, seed: 999005, level: 70, rarity: 'epic' },
+    // Rare accessory
+    { templateId: 10, seed: 999006, level: 50, rarity: 'rare' },
+    // Rare weapon for testing
+    { templateId: 1, seed: 999007, level: 30, rarity: 'rare' },
+    // Epic weapon
+    { templateId: 2, seed: 999008, level: 40, rarity: 'epic' },
+    // Legendary weapon
+    { templateId: 3, seed: 999009, level: 50, rarity: 'legendary' },
+    // Armor variations
+    { templateId: 7, seed: 999010, level: 35, rarity: 'rare' },
+    { templateId: 8, seed: 999011, level: 45, rarity: 'epic' },
+    // Consumables (should NOT have equipment augments)
+    { templateId: 12, seed: 999012, level: 1, rarity: 'common' },
+    { templateId: 29, seed: 999013, level: 1, rarity: 'uncommon' },
+    { templateId: 15, seed: 999014, level: 1, rarity: 'epic' },
+    // Uncommon items for comparison
+    { templateId: 1, seed: 999015, level: 10, rarity: 'uncommon' },
+    { templateId: 7, seed: 999016, level: 15, rarity: 'uncommon' },
+  ];
+
+  let createdCount = 0;
+  for (const itemDef of testItems) {
+    try {
+      const item = await generateItem(
+        itemDef.templateId,
+        itemDef.seed,
+        itemDef.level,
+        itemDef.rarity
+      );
+      if (item) {
+        await storeDroppedItem(characterId, item);
+        console.log(`  Created: ${item.generatedName} (${item.rarity})`);
+        createdCount++;
+      }
+    } catch (err) {
+      console.error(`  Failed to create item ${itemDef.templateId}:`, err.message);
+    }
+  }
+
+  // Initialize fog of war discovery for the user
+  await pool.query('SELECT discover_node_and_adjacent($1, $2)', [userId, castleId]);
+
+  console.log(`Developer seed data created: user 'derezo' with ${createdCount} items`);
+  console.log('  Login: derezo / password');
+  console.log('  Gold: 30,000');
+}
+
 async function main() {
   const client = await pool.connect();
 
@@ -818,6 +936,9 @@ async function main() {
       await client.query('SELECT discover_node_and_adjacent($1, $2)', [user.id, castleId]);
     }
     console.log(`Initialized discovery for ${usersResult.rows.length} users`);
+
+    // Seed developer test data (derezo user with test items)
+    await seedDeveloperTestData(castleId);
 
     console.log('\nSeed completed successfully!');
     console.log(`Total nodes: ${nodes.length}`);

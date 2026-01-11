@@ -172,7 +172,7 @@ export default class SettingsModal {
           font-size: 15px;
           font-weight: bold;
           margin-bottom: 12px;
-          color: #2d2418;
+          color: #c9a227;
           text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
         }
 
@@ -271,6 +271,142 @@ export default class SettingsModal {
         }
         .settings-btn:active {
           transform: translateY(1px);
+        }
+
+        /* Toggle Switch Styles */
+        .settings-toggle {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 10px 12px;
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid transparent;
+          border-radius: 4px;
+          margin-bottom: 8px;
+        }
+        .settings-toggle:hover {
+          background: rgba(139, 115, 85, 0.15);
+        }
+        .settings-toggle-label {
+          font-size: 14px;
+          color: #2d2418;
+        }
+        .settings-toggle-switch {
+          position: relative;
+          width: 44px;
+          height: 24px;
+          background: #bfae8a;
+          border: 2px solid #8b7355;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .settings-toggle-switch::after {
+          content: '';
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          width: 16px;
+          height: 16px;
+          background: #f0e8d8;
+          border-radius: 50%;
+          transition: transform 0.2s;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .settings-toggle-switch.active {
+          background: #c9a227;
+          border-color: #a08020;
+        }
+        .settings-toggle-switch.active::after {
+          transform: translateX(20px);
+        }
+
+        /* Text Input Styles */
+        .settings-input {
+          width: 100%;
+          padding: 10px 12px;
+          background: linear-gradient(to bottom, #f0e8d8 0%, #e8dcc8 100%);
+          border: 2px solid #8b7355;
+          border-radius: 4px;
+          font-family: 'Georgia', 'Times New Roman', serif;
+          font-size: 14px;
+          color: #2d2418;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .settings-input::placeholder {
+          color: #7a6a5a;
+        }
+        .settings-input:focus {
+          outline: none;
+          border-color: #c9a227;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.1), 0 0 0 2px rgba(201, 162, 39, 0.2);
+        }
+
+        /* Select Dropdown Styles */
+        .settings-select {
+          width: 100%;
+          padding: 10px 12px;
+          background: linear-gradient(to bottom, #f0e8d8 0%, #e8dcc8 100%);
+          border: 2px solid #8b7355;
+          border-radius: 4px;
+          font-family: 'Georgia', 'Times New Roman', serif;
+          font-size: 14px;
+          color: #2d2418;
+          cursor: pointer;
+        }
+        .settings-select:focus {
+          outline: none;
+          border-color: #c9a227;
+        }
+
+        /* Slider Styles */
+        .settings-slider-container {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 12px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 4px;
+          margin-bottom: 8px;
+        }
+        .settings-slider-label {
+          flex: 1;
+          font-size: 14px;
+          color: #2d2418;
+        }
+        .settings-slider {
+          width: 120px;
+          height: 6px;
+          -webkit-appearance: none;
+          appearance: none;
+          background: #bfae8a;
+          border: 1px solid #8b7355;
+          border-radius: 3px;
+          outline: none;
+        }
+        .settings-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 16px;
+          height: 16px;
+          background: linear-gradient(to bottom, #c9a227 0%, #a08020 100%);
+          border: 2px solid #8b7355;
+          border-radius: 50%;
+          cursor: pointer;
+        }
+        .settings-slider::-moz-range-thumb {
+          width: 16px;
+          height: 16px;
+          background: linear-gradient(to bottom, #c9a227 0%, #a08020 100%);
+          border: 2px solid #8b7355;
+          border-radius: 50%;
+          cursor: pointer;
+        }
+        .settings-slider-value {
+          width: 40px;
+          text-align: right;
+          font-size: 13px;
+          color: #5a4a3a;
         }
       </style>
 
