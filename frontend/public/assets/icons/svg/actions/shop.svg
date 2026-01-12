@@ -1,14 +1,41 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Coin bag - medieval merchant style -->
-  <path class="stroke metallic" d="M12 21c-5 0-7-4-7-8 0-3 2-5 3-6l-1-3h10l-1 3c1 1 3 3 3 6 0 4-2 8-7 8z"/>
-  <!-- Bag tie -->
-  <path class="stroke" d="M8 7c2-1 6-1 8 0"/>
-  <path class="stroke" d="M9 4l1.5 3M15 4l-1.5 3"/>
-  <!-- Coin symbol on bag -->
-  <circle class="stroke" cx="12" cy="14" r="3"/>
-  <path class="stroke" d="M12 12v4M10.5 13h3M10.5 15h3" style="stroke-width: 1;"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="12" cy="21" rx="7" ry="1.5" fill="#3d2a00" opacity="0.2"/>
+
+  <!-- Coin bag - dark brown base -->
+  <path d="M12 20c-5 0-7-3.5-7-7 0-2.5 1.5-4.5 2.5-5.5l-0.5-2.5h10l-0.5 2.5c1 1 2.5 3 2.5 5.5 0 3.5-2 7-7 7z" fill="#4a3018"/>
+
+  <!-- Coin bag - mid brown -->
+  <path d="M12 19c-4.5 0-6-3-6-6 0-2 1.5-4 2.3-5l-0.3-2h8l-0.3 2c0.8 1 2.3 3 2.3 5 0 3-1.5 6-6 6z" fill="#6b4423"/>
+
+  <!-- Coin bag - light brown highlight -->
+  <path d="M9 8c0 0 1.5-0.5 3-0.5s3 0.5 3 0.5l1 5c-1 1-2.5 2-4 2s-3-1-4-2l1-5z" fill="#8b5c30"/>
+
+  <!-- Bag tie - dark -->
+  <path d="M8 7.5c1.5-0.8 5-0.8 8 0" fill="none" stroke="#4a3018" stroke-width="1.2"/>
+
+  <!-- Bag tie strings -->
+  <path d="M9 5l1 2.5M15 5l-1 2.5" fill="none" stroke="#6b4423" stroke-width="1"/>
+
+  <!-- Bag top opening -->
+  <path d="M8.5 5h7" fill="none" stroke="#4a3018" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Coin on bag - dark gold rim -->
+  <circle cx="12" cy="14" r="3.5" fill="#8b6914"/>
+
+  <!-- Coin face - gold -->
+  <circle cx="12" cy="14" r="3" fill="#daa520"/>
+
+  <!-- Coin bright center -->
+  <circle cx="11.5" cy="13.5" r="2" fill="#ffd700"/>
+
+  <!-- Coin highlight -->
+  <circle cx="10.5" cy="12.5" r="0.8" fill="#ffe44d" opacity="0.6"/>
+
+  <!-- Crown symbol on coin -->
+  <path d="M10 15l0.5-2 1.5 1 1.5-1 0.5 2" fill="none" stroke="#8b6914" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Bag texture lines -->
+  <path d="M8 12c1 0.5 7 0.5 8 0" fill="none" stroke="#4a3018" stroke-width="0.4" opacity="0.5"/>
+  <path d="M7.5 17c2 0.5 7 0.5 9 0" fill="none" stroke="#4a3018" stroke-width="0.4" opacity="0.5"/>
 </svg>

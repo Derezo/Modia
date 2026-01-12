@@ -1,22 +1,72 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Scales - medieval merchant balance -->
-  <!-- Center post -->
-  <path class="stroke" d="M12 3v15"/>
-  <path class="stroke" d="M8 21h8"/>
-  <!-- Balance beam -->
-  <path class="stroke" d="M4 7h16"/>
-  <!-- Left pan -->
-  <path class="stroke metallic" d="M4 7l-1 6h6l-1-6"/>
-  <path class="stroke" d="M3 13c1 1 3 1 4 0"/>
-  <!-- Right pan -->
-  <path class="stroke metallic" d="M16 7l-1 6h6l-1-6"/>
-  <path class="stroke" d="M15 13c1 1 3 1 4 0"/>
-  <!-- Chains -->
-  <path class="stroke" d="M4 7v0M8 7v0M16 7v0M20 7v0" style="stroke-width: 1;"/>
-  <!-- Fulcrum decoration -->
-  <circle class="stroke" cx="12" cy="5" r="1.5"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="12" cy="21" rx="6" ry="1.5" fill="#3d2a00" opacity="0.2"/>
+
+  <!-- Base platform - dark -->
+  <rect x="8" y="19" width="8" height="2" rx="0.5" fill="#5a4020"/>
+
+  <!-- Base platform - mid -->
+  <rect x="8.5" y="19" width="7" height="1.5" rx="0.3" fill="#8b6914"/>
+
+  <!-- Center post - dark bronze -->
+  <rect x="11" y="6" width="2" height="13" fill="#8b5514"/>
+
+  <!-- Center post - mid bronze -->
+  <rect x="11.3" y="6" width="1.4" height="13" fill="#cd7f32"/>
+
+  <!-- Balance beam - dark bronze -->
+  <rect x="3" y="5" width="18" height="2" rx="0.5" fill="#8b5514"/>
+
+  <!-- Balance beam - mid bronze -->
+  <rect x="3.5" y="5.2" width="17" height="1.3" rx="0.3" fill="#cd7f32"/>
+
+  <!-- Balance beam - highlight -->
+  <rect x="4" y="5.3" width="16" height="0.6" rx="0.2" fill="#e6a852"/>
+
+  <!-- Fulcrum decoration - dark gold -->
+  <circle cx="12" cy="5" r="2" fill="#8b6914"/>
+
+  <!-- Fulcrum - gold -->
+  <circle cx="12" cy="5" r="1.6" fill="#daa520"/>
+
+  <!-- Fulcrum - bright gold -->
+  <circle cx="11.6" cy="4.6" r="0.9" fill="#ffd700"/>
+
+  <!-- Left chain -->
+  <path d="M4 7v4" fill="none" stroke="#8b5514" stroke-width="0.8"/>
+  <path d="M8 7v4" fill="none" stroke="#8b5514" stroke-width="0.8"/>
+
+  <!-- Right chain -->
+  <path d="M16 7v4" fill="none" stroke="#8b5514" stroke-width="0.8"/>
+  <path d="M20 7v4" fill="none" stroke="#8b5514" stroke-width="0.8"/>
+
+  <!-- Left pan - dark bronze -->
+  <path d="M2 11l2 5h6l2-5z" fill="#8b5514"/>
+
+  <!-- Left pan - mid bronze -->
+  <path d="M2.5 11.5l1.8 4h5.4l1.8-4z" fill="#cd7f32"/>
+
+  <!-- Left pan - bright highlight -->
+  <path d="M3.5 12l1 2.5h3l1-2.5z" fill="#e6a852" opacity="0.6"/>
+
+  <!-- Left pan rim -->
+  <ellipse cx="6" cy="16" rx="4" ry="1" fill="#8b5514"/>
+  <ellipse cx="6" cy="15.8" rx="3.5" ry="0.7" fill="#cd7f32"/>
+
+  <!-- Right pan - dark bronze -->
+  <path d="M14 11l2 5h6l2-5z" fill="#8b5514"/>
+
+  <!-- Right pan - mid bronze -->
+  <path d="M14.5 11.5l1.8 4h5.4l1.8-4z" fill="#cd7f32"/>
+
+  <!-- Right pan - bright highlight -->
+  <path d="M15.5 12l1 2.5h3l1-2.5z" fill="#e6a852" opacity="0.6"/>
+
+  <!-- Right pan rim -->
+  <ellipse cx="18" cy="16" rx="4" ry="1" fill="#8b5514"/>
+  <ellipse cx="18" cy="15.8" rx="3.5" ry="0.7" fill="#cd7f32"/>
+
+  <!-- Gold coin accent on left pan -->
+  <circle cx="6" cy="14" r="1.2" fill="#daa520"/>
+  <circle cx="5.8" cy="13.8" r="0.7" fill="#ffd700"/>
 </svg>

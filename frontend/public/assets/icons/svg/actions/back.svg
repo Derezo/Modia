@@ -1,18 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Medieval scroll returning left -->
-  <!-- Scroll body -->
-  <path class="stroke metallic" d="M6 4c-2 0-3 1.5-3 3v10c0 1.5 1 3 3 3h14"/>
-  <!-- Scroll curl at left -->
-  <path class="stroke" d="M6 4c1.5 0 2.5 1 2.5 2v12c0 1-1 2-2.5 2"/>
-  <!-- Arrow pointing left on scroll -->
-  <path class="stroke" d="M18 12H10"/>
-  <path class="stroke" d="M13 8l-4 4 4 4"/>
-  <!-- Scroll detail lines -->
-  <path class="stroke" d="M9 7h9M9 17h9" style="stroke-width: 1;"/>
-  <!-- Decorative dot on curl -->
-  <circle cx="6" cy="12" r="1" fill="currentColor"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="12" cy="21" rx="6" ry="1.5" fill="#3a2510" opacity="0.2"/>
+
+  <!-- Scroll body - dark brown -->
+  <path d="M6 4c-2 0-3 1.5-3 3v10c0 1.5 1 3 3 3h14v-16H6z" fill="#4a3018"/>
+
+  <!-- Scroll body - mid brown -->
+  <path d="M6.5 4.5c-1.5 0-2.5 1.2-2.5 2.5v9.5c0 1.2 0.8 2.5 2.5 2.5H19v-14.5H6.5z" fill="#6b4423"/>
+
+  <!-- Scroll inner - parchment color -->
+  <path d="M8 5h11v14H8c-0.5 0-1-0.3-1-0.8V5.8c0-0.5 0.5-0.8 1-0.8z" fill="#d4c4a4"/>
+
+  <!-- Scroll inner - bright parchment -->
+  <path d="M9 6h9v12H9z" fill="#e8dcc8"/>
+
+  <!-- Left scroll curl shadow -->
+  <path d="M6 4c1.5 0 2.5 1 2.5 2v12c0 1-1 2-2.5 2" fill="#5a3a20"/>
+
+  <!-- Left scroll curl - mid brown -->
+  <path d="M6.2 4.2c1.3 0 2.1 0.9 2.1 1.8v11.6c0 0.9-0.8 1.8-2.1 1.8" fill="#6b4423"/>
+
+  <!-- Left scroll curl - bright highlight -->
+  <path d="M6.5 5c1 0 1.5 0.7 1.5 1.3v11.2c0 0.6-0.5 1.3-1.5 1.3" fill="#8b5c30"/>
+
+  <!-- Curl center decoration dot -->
+  <circle cx="6" cy="12" r="1.2" fill="#4a3018"/>
+  <circle cx="5.8" cy="11.8" r="0.8" fill="#6b4423"/>
+  <circle cx="5.6" cy="11.6" r="0.4" fill="#8b5c30"/>
+
+  <!-- Arrow - dark gold base -->
+  <path d="M17 12H10" fill="none" stroke="#8b6914" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Arrow - bright gold -->
+  <path d="M17 12H10" fill="none" stroke="#daa520" stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- Arrow - gold highlight -->
+  <path d="M16 11.5H11" fill="none" stroke="#ffd700" stroke-width="0.8" stroke-linecap="round"/>
+
+  <!-- Arrowhead - dark gold -->
+  <path d="M13 8.5l-4 3.5 4 3.5" fill="none" stroke="#8b6914" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Arrowhead - bright gold -->
+  <path d="M13 8.5l-4 3.5 4 3.5" fill="none" stroke="#daa520" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Arrowhead - gold highlight -->
+  <path d="M12.5 9l-3 3 3 3" fill="none" stroke="#ffd700" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Scroll edge lines -->
+  <path d="M9 7h8" fill="none" stroke="#c4a47a" stroke-width="0.4" opacity="0.5"/>
+  <path d="M9 17h8" fill="none" stroke="#c4a47a" stroke-width="0.4" opacity="0.5"/>
 </svg>

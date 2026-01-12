@@ -1,18 +1,54 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Trophy with up arrow - advancement/progression -->
-  <!-- Trophy cup -->
-  <path class="stroke metallic" d="M8 4h8v6c0 2-1.5 4-4 4s-4-2-4-4V4z"/>
-  <!-- Handles -->
-  <path class="stroke" d="M8 6H6c-1 0-2 1-2 2s1 2 2 2h2"/>
-  <path class="stroke" d="M16 6h2c1 0 2 1 2 2s-1 2-2 2h-2"/>
-  <!-- Base -->
-  <path class="stroke" d="M12 14v3"/>
-  <path class="stroke metallic" d="M8 17h8v2H8z"/>
-  <!-- Rising arrow in trophy -->
-  <path class="stroke" d="M12 11V6"/>
-  <path class="stroke" d="M10 8l2-2 2 2"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="12" cy="21" rx="7" ry="1.5" fill="#2a2a2a" opacity="0.2"/>
+
+  <!-- Bottom stair - dark stone -->
+  <rect x="2" y="17" width="20" height="4" rx="0.5" fill="#4a4a4a"/>
+  <!-- Bottom stair - mid stone -->
+  <rect x="2.3" y="17.2" width="19.4" height="3.3" rx="0.3" fill="#606060"/>
+  <!-- Bottom stair - bright surface -->
+  <rect x="2.5" y="17.3" width="19" height="1.5" rx="0.2" fill="#808080"/>
+  <!-- Bottom stair - highlight -->
+  <rect x="3" y="17.5" width="18" height="0.6" rx="0.1" fill="#909090"/>
+
+  <!-- Middle stair - dark stone -->
+  <rect x="5" y="12" width="14" height="5" rx="0.5" fill="#4a4a4a"/>
+  <!-- Middle stair - mid stone -->
+  <rect x="5.3" y="12.2" width="13.4" height="4.3" rx="0.3" fill="#606060"/>
+  <!-- Middle stair - bright surface -->
+  <rect x="5.5" y="12.3" width="13" height="1.8" rx="0.2" fill="#808080"/>
+  <!-- Middle stair - highlight -->
+  <rect x="6" y="12.5" width="12" height="0.6" rx="0.1" fill="#909090"/>
+
+  <!-- Top stair - dark stone -->
+  <rect x="8" y="7" width="8" height="5" rx="0.5" fill="#4a4a4a"/>
+  <!-- Top stair - mid stone -->
+  <rect x="8.3" y="7.2" width="7.4" height="4.3" rx="0.3" fill="#606060"/>
+  <!-- Top stair - bright surface -->
+  <rect x="8.5" y="7.3" width="7" height="1.8" rx="0.2" fill="#808080"/>
+  <!-- Top stair - highlight -->
+  <rect x="9" y="7.5" width="6" height="0.6" rx="0.1" fill="#909090"/>
+
+  <!-- Stone texture lines -->
+  <path d="M4 19h3M9 19h4M15 19h4" fill="none" stroke="#4a4a4a" stroke-width="0.4" opacity="0.5"/>
+  <path d="M7 14h4M13 14h3" fill="none" stroke="#4a4a4a" stroke-width="0.4" opacity="0.5"/>
+  <path d="M10 9h4" fill="none" stroke="#4a4a4a" stroke-width="0.4" opacity="0.5"/>
+
+  <!-- Rising arrow shaft - dark gold -->
+  <path d="M12 16V6" fill="none" stroke="#8b6914" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Rising arrow shaft - mid gold -->
+  <path d="M12 16V6" fill="none" stroke="#daa520" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Rising arrow shaft - bright gold -->
+  <path d="M12 15V7" fill="none" stroke="#ffd700" stroke-width="0.8" stroke-linecap="round"/>
+
+  <!-- Arrow head - dark gold -->
+  <path d="M8 7l4-5 4 5" fill="none" stroke="#8b6914" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Arrow head - mid gold -->
+  <path d="M8 7l4-5 4 5" fill="none" stroke="#daa520" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Arrow head - bright gold -->
+  <path d="M9 6.5l3-4 3 4" fill="none" stroke="#ffd700" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Arrow glow effect on stairs -->
+  <ellipse cx="12" cy="8" rx="2" ry="0.5" fill="#ffd700" opacity="0.2"/>
+  <ellipse cx="12" cy="13" rx="1.5" ry="0.4" fill="#ffd700" opacity="0.15"/>
 </svg>
