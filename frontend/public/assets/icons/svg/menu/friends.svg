@@ -1,15 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-  </style>
-  <!-- Two people silhouette - medieval style -->
-  <!-- Person 1 (left) -->
-  <circle class="stroke" cx="8" cy="6" r="2.5"/>
-  <path class="stroke" d="M3 21v-3c0-2 1.5-3 5-3"/>
-  <!-- Person 2 (right) -->
-  <circle class="stroke" cx="16" cy="6" r="2.5"/>
-  <path class="stroke" d="M21 21v-3c0-2-1.5-3-5-3"/>
-  <!-- Connected at bottom -->
-  <path class="stroke" d="M8 15c2 0 6 0 8 0"/>
-  <path class="stroke" d="M10 18h4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="12" cy="21" rx="7" ry="1.5" fill="#3d2a1a" opacity="0.2"/>
+
+  <!-- Person 1 (left) - head -->
+  <circle cx="7" cy="6" r="3" fill="#5a4030"/>
+  <circle cx="7" cy="6" r="2.5" fill="#8b7355"/>
+  <circle cx="7" cy="6" r="1.8" fill="#a89070"/>
+  <ellipse cx="6" cy="5" rx="1" ry="0.6" fill="#c9b899" opacity="0.5"/>
+
+  <!-- Person 1 body -->
+  <path d="M2 20v-5c0-2 2-3.5 5-3.5" fill="#5a4030"/>
+  <path d="M3 19v-4c0-1.5 1.5-3 4-3" fill="#8b7355"/>
+
+  <!-- Person 2 (right) - head -->
+  <circle cx="17" cy="6" r="3" fill="#5a4030"/>
+  <circle cx="17" cy="6" r="2.5" fill="#8b7355"/>
+  <circle cx="17" cy="6" r="1.8" fill="#a89070"/>
+  <ellipse cx="16" cy="5" rx="1" ry="0.6" fill="#c9b899" opacity="0.5"/>
+
+  <!-- Person 2 body -->
+  <path d="M22 20v-5c0-2-2-3.5-5-3.5" fill="#5a4030"/>
+  <path d="M21 19v-4c0-1.5-1.5-3-4-3" fill="#8b7355"/>
+
+  <!-- Handshake (center) - arms meeting -->
+  <path d="M7 11.5c2-0.5 3 1 5 1s3-1.5 5-1" fill="none" stroke="#5a4030" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M7 11.5c2-0.5 3 1 5 1s3-1.5 5-1" fill="none" stroke="#8b7355" stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- Clasped hands (center) -->
+  <ellipse cx="12" cy="12" rx="2.5" ry="2" fill="#5a4030"/>
+  <ellipse cx="12" cy="12" rx="2" ry="1.6" fill="#8b7355"/>
+  <ellipse cx="12" cy="12" rx="1.5" ry="1.2" fill="#a89070"/>
+
+  <!-- Green friendship hint -->
+  <circle cx="12" cy="12" r="0.8" fill="#336633"/>
+  <circle cx="12" cy="12" r="0.5" fill="#448844"/>
+
+  <!-- Small heart above handshake (green tint) -->
+  <path d="M12 8.5c-0.5-1-2-1-2 0.3 0 1 2 2 2 2s2-1 2-2c0-1.3-1.5-1.3-2-0.3z" fill="#336633"/>
+  <path d="M12 9c-0.3-0.7-1.3-0.7-1.3 0.2 0 0.7 1.3 1.3 1.3 1.3s1.3-0.6 1.3-1.3c0-0.9-1-0.9-1.3-0.2z" fill="#448844"/>
+
+  <!-- Edge details -->
+  <circle cx="7" cy="6" r="3" fill="none" stroke="#5a4030" stroke-width="0.3"/>
+  <circle cx="17" cy="6" r="3" fill="none" stroke="#5a4030" stroke-width="0.3"/>
 </svg>
