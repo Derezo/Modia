@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Magical circle with runes - conjurer class -->
+  <!-- Outer magic circle -->
+  <circle class="stroke metallic" cx="12" cy="12" r="9"/>
+  <!-- Inner circle -->
+  <circle class="stroke" cx="12" cy="12" r="5"/>
+  <!-- Pentagram points -->
+  <path class="stroke" d="M12 3l2.8 8.6-7.3-5.3h9l-7.3 5.3z"/>
+  <!-- Rune marks at points -->
+  <circle cx="12" cy="3" r="0.75" fill="currentColor"/>
+  <circle cx="19" cy="9" r="0.75" fill="currentColor"/>
+  <circle cx="17" cy="18" r="0.75" fill="currentColor"/>
+  <circle cx="7" cy="18" r="0.75" fill="currentColor"/>
+  <circle cx="5" cy="9" r="0.75" fill="currentColor"/>
+  <!-- Center focus -->
+  <circle cx="12" cy="12" r="1" fill="currentColor"/>
+</svg>

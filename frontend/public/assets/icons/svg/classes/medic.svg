@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Healing cross with bandage - medic class -->
+  <!-- Cross background -->
+  <path class="stroke metallic" d="M9 3h6v6h6v6h-6v6H9v-6H3V9h6V3z"/>
+  <!-- Cross inner detail -->
+  <path class="stroke" d="M12 5v14M5 12h14"/>
+  <!-- Bandage roll -->
+  <ellipse class="stroke metallic" cx="18" cy="18" rx="3" ry="2" transform="rotate(-45 18 18)"/>
+  <!-- Bandage unrolling -->
+  <path class="stroke" d="M16 16c-2 0-3 1-4 2" style="stroke-width: 1;"/>
+  <!-- Healing sparkles -->
+  <circle cx="6" cy="6" r="0.75" fill="currentColor"/>
+  <circle cx="18" cy="6" r="0.75" fill="currentColor"/>
+  <circle cx="6" cy="18" r="0.75" fill="currentColor"/>
+</svg>

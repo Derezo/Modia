@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Two interlocked shields - friendship confirmed -->
+  <!-- Left shield -->
+  <path class="stroke metallic" d="M8 3l5 2v4c0 3-2 5-5 7-3-2-5-4-5-7V5l5-2z"/>
+  <!-- Right shield (overlapping) -->
+  <path class="stroke metallic" d="M16 3l5 2v4c0 3-2 5-5 7-3-2-5-4-5-7V5l5-2z"/>
+  <!-- Shield emblems -->
+  <path class="stroke" d="M8 7v4" style="stroke-width: 1;"/>
+  <path class="stroke" d="M6 9h4" style="stroke-width: 1;"/>
+  <path class="stroke" d="M16 7v4" style="stroke-width: 1;"/>
+  <path class="stroke" d="M14 9h4" style="stroke-width: 1;"/>
+  <!-- Handshake bond below -->
+  <path class="stroke" d="M8 16l4 3 4-3"/>
+  <!-- Rivets -->
+  <circle cx="5" cy="6" r="0.75" fill="currentColor"/>
+  <circle cx="11" cy="6" r="0.75" fill="currentColor"/>
+  <circle cx="19" cy="6" r="0.75" fill="currentColor"/>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Portal circle with creature - summoner class -->
+  <!-- Summoning circle -->
+  <circle class="stroke metallic" cx="12" cy="14" r="8"/>
+  <circle class="stroke" cx="12" cy="14" r="5"/>
+  <!-- Runes around circle -->
+  <path class="stroke" d="M12 6v2M12 20v2M4 14h2M20 14h2" style="stroke-width: 1;"/>
+  <!-- Creature emerging -->
+  <path class="stroke metallic" d="M10 10c0-2 1-4 2-4s2 2 2 4"/>
+  <circle class="stroke" cx="12" cy="8" r="2"/>
+  <!-- Creature eyes -->
+  <circle cx="11" cy="8" r="0.5" fill="currentColor"/>
+  <circle cx="13" cy="8" r="0.5" fill="currentColor"/>
+  <!-- Portal energy -->
+  <path class="stroke" d="M8 11l-1-1M16 11l1-1" style="stroke-width: 1;"/>
+</svg>

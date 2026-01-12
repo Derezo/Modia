@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Staff with crystal orb - wizard class -->
+  <!-- Staff -->
+  <path class="stroke metallic" d="M8 21l4-18"/>
+  <!-- Crystal orb at top -->
+  <circle class="stroke metallic" cx="12" cy="5" r="3"/>
+  <!-- Orb inner glow -->
+  <circle cx="11" cy="4" r="1" fill="currentColor"/>
+  <!-- Staff grip bands -->
+  <path class="stroke" d="M9 15l.5-.5M9.5 13l.5-.5M10 11l.5-.5" style="stroke-width: 1;"/>
+  <!-- Magic sparkles -->
+  <path class="stroke" d="M16 4l0-2M18 6l1.5-1.5M17 8l2 0" style="stroke-width: 1;"/>
+  <!-- Staff base -->
+  <circle cx="8" cy="21" r="1" fill="currentColor"/>
+</svg>

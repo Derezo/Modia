@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Banner with crown - warlord class -->
+  <!-- Banner flag -->
+  <path class="stroke metallic" d="M8 4h12v10l-6-3-6 3V4z"/>
+  <!-- Banner pole -->
+  <path class="stroke" d="M8 2v20"/>
+  <!-- Crown on banner -->
+  <path class="stroke" d="M11 7l1.5-2 1.5 2-1.5 1.5z"/>
+  <path class="stroke" d="M10.5 9h5" style="stroke-width: 1;"/>
+  <!-- Banner details -->
+  <path class="stroke" d="M10 11h6" style="stroke-width: 1;"/>
+  <!-- Pole finial -->
+  <path class="stroke metallic" d="M7 2l1-1 1 1-1 1z"/>
+  <!-- Pole base -->
+  <circle cx="8" cy="22" r="1" fill="currentColor"/>
+</svg>

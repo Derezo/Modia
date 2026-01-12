@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Shield with question mark - friend request pending -->
+  <!-- Main shield -->
+  <path class="stroke metallic" d="M12 2l7 2.5v5.5c0 4-2.5 7-7 9-4.5-2-7-5-7-9V4.5L12 2z"/>
+  <!-- Inner shield detail -->
+  <path class="stroke" d="M12 4l5 2v4c0 3-2 5-5 6.5" style="stroke-width: 1;"/>
+  <!-- Question mark -->
+  <path class="stroke" d="M10 9c0-1.5 1-2.5 2.5-2.5s2.5 1 2.5 2c0 1.5-1.5 1.5-2.5 2.5"/>
+  <!-- Question dot -->
+  <circle cx="12.5" cy="14" r="1" fill="currentColor"/>
+  <!-- Shield rivets -->
+  <circle cx="8" cy="6" r="0.75" fill="currentColor"/>
+  <circle cx="16" cy="6" r="0.75" fill="currentColor"/>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Icicle cluster - ice augment (medieval object) -->
+  <!-- Main icicle -->
+  <path class="stroke metallic" d="M12 2v18l-2-4v-12l2-2z"/>
+  <path class="stroke metallic" d="M12 2l2 2v12l-2 4z"/>
+  <!-- Left icicle -->
+  <path class="stroke metallic" d="M7 5v11l-1.5-3V7l1.5-2z"/>
+  <path class="stroke metallic" d="M7 5l1.5 2v6l-1.5 3z"/>
+  <!-- Right icicle -->
+  <path class="stroke metallic" d="M17 5v11l1.5-3V7l-1.5-2z"/>
+  <path class="stroke metallic" d="M17 5l-1.5 2v6l1.5 3z"/>
+  <!-- Ice shelf top -->
+  <path class="stroke" d="M4 4c2-1 5-2 8-2s6 1 8 2"/>
+  <!-- Frost texture -->
+  <path class="stroke" d="M10 8h4M9 12h2M13 12h2" style="stroke-width: 1;"/>
+  <!-- Frost crystals -->
+  <circle cx="6" cy="7" r="0.5" fill="currentColor"/>
+  <circle cx="18" cy="7" r="0.5" fill="currentColor"/>
+  <circle cx="12" cy="5" r="0.75" fill="currentColor"/>
+</svg>

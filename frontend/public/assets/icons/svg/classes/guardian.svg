@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Large tower shield - guardian class -->
+  <!-- Shield body -->
+  <path class="stroke metallic" d="M4 3h16v12c0 4-4 6-8 6s-8-2-8-6V3z"/>
+  <!-- Shield rim -->
+  <path class="stroke" d="M4 3h16"/>
+  <!-- Shield cross design -->
+  <path class="stroke" d="M12 5v12"/>
+  <path class="stroke" d="M6 10h12"/>
+  <!-- Corner rivets -->
+  <circle cx="6" cy="5" r="0.75" fill="currentColor"/>
+  <circle cx="18" cy="5" r="0.75" fill="currentColor"/>
+  <circle cx="6" cy="15" r="0.75" fill="currentColor"/>
+  <circle cx="18" cy="15" r="0.75" fill="currentColor"/>
+  <!-- Shield boss -->
+  <circle class="stroke" cx="12" cy="10" r="2"/>
+  <circle cx="12" cy="10" r="0.75" fill="currentColor"/>
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Wheat sheaf with sickle - farming/harvest -->
+  <!-- Central wheat stalks -->
+  <path class="stroke metallic" d="M12 21V10"/>
+  <path class="stroke metallic" d="M9 21V12"/>
+  <path class="stroke metallic" d="M15 21V12"/>
+  <!-- Wheat heads -->
+  <path class="stroke" d="M12 10c0-1.5-.5-3-.5-3s.5.5.5 1.5c0-1 .5-1.5.5-1.5s-.5 1.5-.5 3"/>
+  <path class="stroke" d="M9 12c0-1.5-.5-3-.5-3s.5.5.5 1.5c0-1 .5-1.5.5-1.5s-.5 1.5-.5 3"/>
+  <path class="stroke" d="M15 12c0-1.5-.5-3-.5-3s.5.5.5 1.5c0-1 .5-1.5.5-1.5s-.5 1.5-.5 3"/>
+  <!-- Grain details -->
+  <path class="stroke" d="M11 7l1-2 1 2M8 9l1-2 1 2M14 9l1-2 1 2" style="stroke-width: 1;"/>
+  <!-- Tie/bundle band -->
+  <ellipse class="stroke metallic" cx="12" cy="17" rx="4" ry="1.5"/>
+  <!-- Tie knot decoration -->
+  <circle cx="12" cy="17" r="0.75" fill="currentColor"/>
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Tournament podium with crown -->
+  <!-- Podium blocks -->
+  <rect class="stroke metallic" x="2" y="14" width="6" height="6" rx="0.5"/>
+  <rect class="stroke metallic" x="9" y="8" width="6" height="12" rx="0.5"/>
+  <rect class="stroke metallic" x="16" y="12" width="6" height="8" rx="0.5"/>
+  <!-- Crown on first place -->
+  <path class="stroke metallic" d="M9 6h6l-1 1h-4z"/>
+  <path class="stroke" d="M10 4l2-2 2 2"/>
+  <path class="stroke" d="M9 6l1-2M15 6l-1-2" style="stroke-width: 1;"/>
+  <!-- Podium detail lines -->
+  <path class="stroke" d="M3 17h4M10 11h4M17 15h4" style="stroke-width: 1;"/>
+  <!-- Rank markers -->
+  <circle cx="5" cy="16" r="0.75" fill="currentColor"/>
+  <circle cx="12" cy="10" r="1" fill="currentColor"/>
+  <circle cx="19" cy="14" r="0.75" fill="currentColor"/>
+</svg>

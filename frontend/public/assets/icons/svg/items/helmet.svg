@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Medieval great helm - helmet item type -->
+  <!-- Main helm shape -->
+  <path class="stroke metallic" d="M4 12c0-4.5 3.5-8 8-8s8 3.5 8 8v4c0 2-1.5 3-4 3H8c-2.5 0-4-1-4-3v-4z"/>
+  <!-- Visor slits -->
+  <path class="stroke" d="M7 12h4M13 12h4"/>
+  <!-- Nose guard -->
+  <path class="stroke" d="M12 9v6"/>
+  <!-- Crest mount -->
+  <path class="stroke" d="M12 4v-2"/>
+  <!-- Forehead band detail -->
+  <path class="stroke" d="M6 9c2-1 4-1.5 6-1.5s4 .5 6 1.5" style="stroke-width: 1;"/>
+  <!-- Rivet details -->
+  <circle cx="6" cy="12" r="0.75" fill="currentColor"/>
+  <circle cx="18" cy="12" r="0.75" fill="currentColor"/>
+  <circle cx="12" cy="17" r="0.75" fill="currentColor"/>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Royal throne -->
+  <path class="stroke metallic" d="M6 20V8c0-2 1-4 3-4h6c2 0 3 2 3 4v12"/>
+  <!-- Seat -->
+  <path class="stroke metallic" d="M6 14h12v6H6z"/>
+  <!-- Armrests -->
+  <path class="stroke" d="M6 10H4c-1 0-1 1-1 2v2h3"/>
+  <path class="stroke" d="M18 10h2c1 0 1 1 1 2v2h-3"/>
+  <!-- Crown on back -->
+  <path class="stroke" d="M9 4l1.5-2L12 4l1.5-2L15 4"/>
+  <!-- Cushion detail -->
+  <path class="stroke" d="M8 17h8" style="stroke-width: 1;"/>
+</svg>

@@ -28,18 +28,60 @@ import {
   getParchmentBorder,
   getParchmentShadow
 } from './ParchmentTheme.js';
+import { Icon } from '../../components/Icon.js';
 
 const STYLE_ID = 'profile-dropdown-styles';
 
-// Notification type configuration
+// Notification type configuration - uses Icon component
 const NOTIFICATION_TYPES = {
-  friend_request: { icon: '👤', color: '#4a9eff', label: 'Friend Request' },
-  friend_accepted: { icon: '🤝', color: '#4ade80', label: 'Friend Accepted' },
-  party_invite: { icon: '⚔️', color: '#f59e0b', label: 'Party Invite' },
-  match_found: { icon: '🏟️', color: '#ef4444', label: 'Match Found' },
-  match_result: { icon: '🏆', color: '#a855f7', label: 'Match Result' },
-  lfg_application: { icon: '📋', color: '#06b6d4', label: 'LFG Application' },
-  system: { icon: 'ℹ️', color: '#6b7280', label: 'System' }
+  friend_request: { category: 'notifications', name: 'friend-request', color: '#4a9eff', label: 'Friend Request' },
+  friend_accepted: { category: 'notifications', name: 'friend-accepted', color: '#4ade80', label: 'Friend Accepted' },
+  party_invite: { category: 'notifications', name: 'party-invite', color: '#f59e0b', label: 'Party Invite' },
+  match_found: { category: 'notifications', name: 'match-found', color: '#ef4444', label: 'Match Found' },
+  match_result: { category: 'notifications', name: 'match-result', color: '#a855f7', label: 'Match Result' },
+  lfg_application: { category: 'notifications', name: 'lfg-application', color: '#06b6d4', label: 'LFG Application' },
+  system: { category: 'notifications', name: 'system', color: '#6b7280', label: 'System' }
+};
+
+// Menu item icon mappings
+const MENU_ICONS = {
+  formation: { category: 'menu', name: 'formation' },
+  inventory: { category: 'menu', name: 'inventory' },
+  characters: { category: 'menu', name: 'characters' },
+  party: { category: 'menu', name: 'party' },
+  friends: { category: 'menu', name: 'friends' },
+  leaderboard: { category: 'menu', name: 'leaderboard' },
+  settings: { category: 'menu', name: 'settings' },
+  logout: { category: 'menu', name: 'logout' }
+};
+
+// Class icon mappings for avatar fallback
+const CLASS_ICONS = {
+  // Base classes
+  warrior: { category: 'classes', name: 'warrior' },
+  wizard: { category: 'classes', name: 'wizard' },
+  monk: { category: 'classes', name: 'monk' },
+  chemist: { category: 'classes', name: 'chemist' },
+  // Advanced classes - Warrior line
+  berserker: { category: 'classes', name: 'berserker' },
+  paladin: { category: 'classes', name: 'paladin' },
+  guardian: { category: 'classes', name: 'guardian' },
+  warlord: { category: 'classes', name: 'warlord' },
+  // Advanced classes - Wizard line
+  sorcerer: { category: 'classes', name: 'sorcerer' },
+  summoner: { category: 'classes', name: 'summoner' },
+  conjurer: { category: 'classes', name: 'conjurer' },
+  oracle: { category: 'classes', name: 'oracle' },
+  // Advanced classes - Monk line
+  ninja: { category: 'classes', name: 'ninja' },
+  martial_artist: { category: 'classes', name: 'martial_artist' },
+  brawler: { category: 'classes', name: 'brawler' },
+  ascetic: { category: 'classes', name: 'ascetic' },
+  // Advanced classes - Chemist line
+  alchemist: { category: 'classes', name: 'alchemist' },
+  medic: { category: 'classes', name: 'medic' },
+  plague_doctor: { category: 'classes', name: 'plague_doctor' },
+  artificer: { category: 'classes', name: 'artificer' }
 };
 
 export class ProfileDropdown {
@@ -283,7 +325,7 @@ export class ProfileDropdown {
 
       .profile-dropdown__notification-item {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         gap: 10px;
         padding: 10px 14px;
         border-top: 1px solid ${PARCHMENT_COLORS.borderLight};
@@ -407,7 +449,6 @@ export class ProfileDropdown {
 
       .profile-dropdown__menu-icon {
         font-size: 16px;
-        width: 20px;
         text-align: center;
         flex-shrink: 0;
       }
@@ -459,7 +500,7 @@ export class ProfileDropdown {
     this.goldFloatElement = document.createElement('div');
     this.goldFloatElement.className = 'profile-dropdown__gold-float';
     this.goldFloatElement.innerHTML = `
-      <span class="profile-dropdown__gold-icon">🪙</span>
+      <span class="profile-dropdown__gold-icon">${Icon.html('resources', 'gold', { size: 'sm' })}</span>
       <span class="profile-dropdown__gold-value">0</span>
     `;
     this.goldElement = this.goldFloatElement.querySelector('.profile-dropdown__gold-value');
@@ -504,29 +545,29 @@ export class ProfileDropdown {
       <!-- Main Menu Items -->
       <div class="profile-dropdown__menu-section">
         <div class="profile-dropdown__menu-item" data-action="formation">
-          <span class="profile-dropdown__menu-icon">⚔</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'formation', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Formation</span>
         </div>
         <div class="profile-dropdown__menu-item" data-action="inventory">
-          <span class="profile-dropdown__menu-icon">🎒</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'inventory', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Inventory</span>
         </div>
         <div class="profile-dropdown__menu-item" data-action="characters">
-          <span class="profile-dropdown__menu-icon">👤</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'characters', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Characters</span>
         </div>
         ${hasParty ? `
         <div class="profile-dropdown__menu-item" data-action="party">
-          <span class="profile-dropdown__menu-icon">👥</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'party', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Party</span>
         </div>
         ` : ''}
         <div class="profile-dropdown__menu-item" data-action="friends">
-          <span class="profile-dropdown__menu-icon">🤝</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'friends', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Friends</span>
         </div>
         <div class="profile-dropdown__menu-item" data-action="leaderboard">
-          <span class="profile-dropdown__menu-icon">🏆</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'leaderboard', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Leaderboards</span>
         </div>
       </div>
@@ -534,11 +575,11 @@ export class ProfileDropdown {
       <!-- Settings and Logout -->
       <div class="profile-dropdown__menu-section profile-dropdown__menu-section--divider">
         <div class="profile-dropdown__menu-item" data-action="settings">
-          <span class="profile-dropdown__menu-icon">⚙</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'settings', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Settings</span>
         </div>
         <div class="profile-dropdown__menu-item profile-dropdown__menu-item--danger" data-action="logout">
-          <span class="profile-dropdown__menu-icon">🚪</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'logout', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Logout</span>
         </div>
       </div>
@@ -562,10 +603,11 @@ export class ProfileDropdown {
       const typeConfig = NOTIFICATION_TYPES[notification.type] || NOTIFICATION_TYPES.system;
       const timeAgo = this.getTimeAgo(new Date(notification.created_at));
       const actions = this.getNotificationActions(notification);
+      const notificationIcon = Icon.html(typeConfig.category, typeConfig.name, { size: 'sm' });
 
       return `
         <div class="profile-dropdown__notification-item" data-notification-id="${notification.id}">
-          <span class="profile-dropdown__notification-icon">${typeConfig.icon}</span>
+          <span class="profile-dropdown__notification-icon">${notificationIcon}</span>
           <div class="profile-dropdown__notification-content">
             <div class="profile-dropdown__notification-title">${this.escapeHtml(notification.title)}</div>
             <div class="profile-dropdown__notification-time">${timeAgo}</div>
@@ -814,19 +856,16 @@ export class ProfileDropdown {
     if (leader?.portrait) {
       this.avatarElement.innerHTML = `<img src="${leader.portrait}" alt="Avatar">`;
     } else if (leader?.class) {
-      // Use class icon fallback
-      const classIcons = {
-        warrior: '⚔️',
-        mage: '🔮',
-        rogue: '🗡️',
-        cleric: '✨',
-        ranger: '🏹',
-        paladin: '🛡️'
-      };
-      const icon = classIcons[leader.class.toLowerCase()] || '👤';
-      this.avatarElement.innerHTML = `<span class="profile-dropdown__avatar-fallback">${icon}</span>`;
+      // Use class icon fallback from Icon component
+      const classKey = leader.class.toLowerCase();
+      const classConfig = CLASS_ICONS[classKey];
+      if (classConfig) {
+        this.avatarElement.innerHTML = `<span class="profile-dropdown__avatar-fallback">${Icon.html(classConfig.category, classConfig.name, { size: 'md' })}</span>`;
+      } else {
+        this.avatarElement.innerHTML = `<span class="profile-dropdown__avatar-fallback">${Icon.html('menu', 'characters', { size: 'md' })}</span>`;
+      }
     } else {
-      this.avatarElement.innerHTML = `<span class="profile-dropdown__avatar-fallback">👤</span>`;
+      this.avatarElement.innerHTML = `<span class="profile-dropdown__avatar-fallback">${Icon.html('menu', 'characters', { size: 'md' })}</span>`;
     }
   }
 

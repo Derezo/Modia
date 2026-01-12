@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Raised fists - brawler class -->
+  <!-- Left fist -->
+  <path class="stroke metallic" d="M3 10c0-1 1-2 2-2h3c1 0 2 1 2 2v5c0 1-1 2-2 2H5c-1 0-2-1-2-2v-5z"/>
+  <!-- Right fist -->
+  <path class="stroke metallic" d="M14 10c0-1 1-2 2-2h3c1 0 2 1 2 2v5c0 1-1 2-2 2h-3c-1 0-2-1-2-2v-5z"/>
+  <!-- Knuckle lines -->
+  <path class="stroke" d="M4 12h5M15 12h5" style="stroke-width: 1;"/>
+  <!-- Wrist wraps -->
+  <path class="stroke" d="M4 17h5M15 17h5"/>
+  <!-- Impact stars -->
+  <circle cx="12" cy="6" r="0.75" fill="currentColor"/>
+  <circle cx="9" cy="4" r="0.5" fill="currentColor"/>
+  <circle cx="15" cy="4" r="0.5" fill="currentColor"/>
+  <!-- Motion lines -->
+  <path class="stroke" d="M6 6l0-2M18 6l0-2" style="stroke-width: 1;"/>
+</svg>

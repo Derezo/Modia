@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Meditation pose with aura - ascetic class -->
+  <!-- Seated figure silhouette -->
+  <path class="stroke metallic" d="M12 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/>
+  <path class="stroke metallic" d="M6 20c0-3 2-5 6-5s6 2 6 5"/>
+  <!-- Crossed legs -->
+  <path class="stroke" d="M8 18c2-1 6-1 8 0"/>
+  <!-- Hands in prayer/meditation -->
+  <path class="stroke" d="M10 12l2 3 2-3"/>
+  <!-- Aura rings -->
+  <circle class="stroke" cx="12" cy="12" r="10" style="stroke-width: 1;"/>
+  <circle class="stroke" cx="12" cy="12" r="7" style="stroke-width: 1;"/>
+  <!-- Third eye -->
+  <circle cx="12" cy="4" r="0.75" fill="currentColor"/>
+  <!-- Energy points -->
+  <circle cx="12" cy="10" r="0.5" fill="currentColor"/>
+</svg>

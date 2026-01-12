@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Flame hands - sorcerer class -->
+  <!-- Left hand with fire -->
+  <path class="stroke metallic" d="M4 14c-1 3 0 5 2 7l2-3c0 2 1 3 2 3s2-2 2-4c0-3-2-5-4-5s-4 1-4 2z"/>
+  <!-- Right hand with fire -->
+  <path class="stroke metallic" d="M20 14c1 3 0 5-2 7l-2-3c0 2-1 3-2 3s-2-2-2-4c0-3 2-5 4-5s4 1 4 2z"/>
+  <!-- Fire cores -->
+  <path class="stroke" d="M6 16c0-1 .5-2 1-2M18 16c0-1-.5-2-1-2" style="stroke-width: 1;"/>
+  <!-- Embers -->
+  <circle cx="5" cy="12" r="0.5" fill="currentColor"/>
+  <circle cx="19" cy="12" r="0.5" fill="currentColor"/>
+  <circle cx="12" cy="10" r="0.75" fill="currentColor"/>
+  <!-- Energy arc between hands -->
+  <path class="stroke" d="M8 13c2-2 6-2 8 0" style="stroke-width: 1;"/>
+</svg>

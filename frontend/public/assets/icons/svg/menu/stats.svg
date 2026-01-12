@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Open ledger/tome with stats -->
+  <!-- Left page -->
+  <path class="stroke metallic" d="M3 5c0-1 1-2 2-2h6v18H5c-1 0-2-1-2-2V5z"/>
+  <!-- Right page -->
+  <path class="stroke metallic" d="M21 5c0-1-1-2-2-2h-6v18h6c1 0 2-1 2-2V5z"/>
+  <!-- Spine -->
+  <path class="stroke" d="M12 3v18"/>
+  <!-- Left page text lines -->
+  <path class="stroke" d="M5 7h4M5 10h3M5 13h4" style="stroke-width: 1;"/>
+  <!-- Right page stat bars -->
+  <path class="stroke" d="M15 7h4M15 10h3M15 13h2" style="stroke-width: 1.5;"/>
+  <!-- Page corner decoration -->
+  <circle cx="7" cy="17" r="0.75" fill="currentColor"/>
+  <circle cx="17" cy="17" r="0.75" fill="currentColor"/>
+</svg>

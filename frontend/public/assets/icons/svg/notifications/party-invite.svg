@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Banner with crossed swords - party invite -->
+  <!-- Banner -->
+  <path class="stroke metallic" d="M6 2h12v16l-6-3-6 3V2z"/>
+  <!-- Banner edge detail -->
+  <path class="stroke" d="M6 4h12" style="stroke-width: 1;"/>
+  <!-- Crossed swords on banner -->
+  <path class="stroke" d="M9 7l6 6M15 7l-6 6"/>
+  <!-- Sword pommels -->
+  <circle cx="9" cy="7" r="0.75" fill="currentColor"/>
+  <circle cx="15" cy="7" r="0.75" fill="currentColor"/>
+  <circle cx="9" cy="13" r="0.75" fill="currentColor"/>
+  <circle cx="15" cy="13" r="0.75" fill="currentColor"/>
+  <!-- Banner pole caps -->
+  <path class="stroke" d="M5 2h2M17 2h2"/>
+  <!-- Plus symbol for invite -->
+  <path class="stroke" d="M19 17v4M17 19h4" style="stroke-width: 1.5;"/>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Shield with cross - paladin class -->
+  <path class="stroke metallic" d="M12 2l8 3v7c0 5-3.5 8-8 10-4.5-2-8-5-8-10V5l8-3z"/>
+  <!-- Cross emblem -->
+  <path class="stroke" d="M12 6v10"/>
+  <path class="stroke" d="M8 10h8"/>
+  <!-- Shine -->
+  <path class="stroke" d="M6 4l1 1M18 4l-1 1" style="stroke-width: 1;"/>
+  <!-- Shield rivets -->
+  <circle cx="8" cy="7" r="0.75" fill="currentColor"/>
+  <circle cx="16" cy="7" r="0.75" fill="currentColor"/>
+  <circle cx="12" cy="18" r="0.75" fill="currentColor"/>
+</svg>

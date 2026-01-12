@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Crescent moon with void - dark augment (medieval object) -->
+  <!-- Moon crescent -->
+  <path class="stroke metallic" d="M20 12c0 4.5-3.5 8-8 8-1.5 0-3-.4-4.2-1C10 18 12 15 12 12s-2-6-4.2-7c1.2-.6 2.7-1 4.2-1 4.5 0 8 3.5 8 8z"/>
+  <!-- Moon surface detail -->
+  <path class="stroke" d="M14 8c1 0 2 1 2 2M16 14c0 1-.5 2-1.5 2" style="stroke-width: 1;"/>
+  <!-- Void/eclipse center -->
+  <circle class="stroke" cx="8" cy="12" r="3"/>
+  <!-- Stars in darkness -->
+  <circle cx="4" cy="6" r="1" fill="currentColor"/>
+  <circle cx="6" cy="18" r="0.75" fill="currentColor"/>
+  <circle cx="2" cy="12" r="0.5" fill="currentColor"/>
+  <!-- Star twinkles -->
+  <path class="stroke" d="M4 5v2M3 6h2" style="stroke-width: 1;"/>
+</svg>

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Radiant sun medallion - holy augment (medieval object) -->
+  <!-- Medallion base -->
+  <circle class="stroke metallic" cx="12" cy="12" r="6"/>
+  <!-- Inner circle -->
+  <circle class="stroke" cx="12" cy="12" r="3"/>
+  <!-- Sun rays -->
+  <path class="stroke" d="M12 2v4M12 18v4"/>
+  <path class="stroke" d="M2 12h4M18 12h4"/>
+  <!-- Diagonal rays -->
+  <path class="stroke" d="M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3" style="stroke-width: 1.5;"/>
+  <!-- Ray decorative ends -->
+  <path class="stroke" d="M11 2h2M11 22h2M2 11v2M22 11v2" style="stroke-width: 1;"/>
+  <!-- Center holy symbol -->
+  <path class="stroke" d="M12 10v4M10 12h4" style="stroke-width: 1;"/>
+  <!-- Light sparkles -->
+  <circle cx="12" cy="12" r="0.75" fill="currentColor"/>
+</svg>

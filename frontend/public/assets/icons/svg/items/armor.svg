@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Breastplate - armor item type -->
+  <!-- Main armor shape -->
+  <path class="stroke metallic" d="M12 3L4 6v6c0 5 3 7 8 9 5-2 8-4 8-9V6l-8-3z"/>
+  <!-- Center seam -->
+  <path class="stroke" d="M12 6v10"/>
+  <!-- Chest curve -->
+  <path class="stroke" d="M7 9c2 1 8 1 10 0"/>
+  <!-- Waist band -->
+  <path class="stroke" d="M8 14h8"/>
+  <!-- Plate segment lines -->
+  <path class="stroke" d="M6 11c1 .5 2 .5 3 0M15 11c1 .5 2 .5 3 0" style="stroke-width: 1;"/>
+  <!-- Rivets -->
+  <circle cx="8" cy="7" r="0.75" fill="currentColor"/>
+  <circle cx="16" cy="7" r="0.75" fill="currentColor"/>
+  <circle cx="7" cy="14" r="0.75" fill="currentColor"/>
+  <circle cx="17" cy="14" r="0.75" fill="currentColor"/>
+</svg>

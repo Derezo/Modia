@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Ornate ring with gem - ring item type -->
+  <!-- Ring band (perspective view) -->
+  <ellipse class="stroke metallic" cx="12" cy="15" rx="7" ry="5"/>
+  <ellipse class="stroke" cx="12" cy="15" rx="4" ry="2.5"/>
+  <!-- Gem setting -->
+  <path class="stroke metallic" d="M10 7l2-4 2 4-2 4-2-4z"/>
+  <!-- Setting prongs -->
+  <path class="stroke" d="M10 7l-1 3M14 7l1 3" style="stroke-width: 1;"/>
+  <!-- Gem facet -->
+  <path class="stroke" d="M10 7h4" style="stroke-width: 1;"/>
+  <!-- Band engravings -->
+  <path class="stroke" d="M6 14c0 1 .5 2 1 2.5M18 14c0 1-.5 2-1 2.5" style="stroke-width: 1;"/>
+  <!-- Gem sparkle -->
+  <circle cx="11" cy="5" r="0.75" fill="currentColor"/>
+</svg>

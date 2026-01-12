@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Scroll with quill - LFG application -->
+  <!-- Scroll body -->
+  <path class="stroke metallic" d="M6 4c-1 0-2 .5-2 1.5v13c0 1 1 1.5 2 1.5h10c1 0 2-.5 2-1.5V5.5c0-1-1-1.5-2-1.5H6z"/>
+  <!-- Scroll curls -->
+  <path class="stroke" d="M4 5.5c0-1 .75-1.5 1.5-1.5"/>
+  <path class="stroke" d="M4 18.5c0 1 .75 1.5 1.5 1.5"/>
+  <!-- List lines -->
+  <path class="stroke" d="M8 8h6"/>
+  <path class="stroke" d="M8 12h6"/>
+  <!-- List line details -->
+  <path class="stroke" d="M8 10h4M8 14h3" style="stroke-width: 1;"/>
+  <!-- Quill pen -->
+  <path class="stroke metallic" d="M17 3l4-1-1 4-3 3-2-2 2-4z"/>
+  <path class="stroke" d="M15 7l-1 4"/>
+  <!-- Quill feather detail -->
+  <path class="stroke" d="M19 4l1-1" style="stroke-width: 1;"/>
+  <!-- Ink dots -->
+  <circle cx="7" cy="8" r="0.75" fill="currentColor"/>
+  <circle cx="7" cy="12" r="0.75" fill="currentColor"/>
+</svg>

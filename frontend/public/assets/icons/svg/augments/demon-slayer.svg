@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Demon horn cleaved by blessed blade - demon-slayer augment -->
+  <!-- Demon horn (curved) -->
+  <path class="stroke metallic" d="M6 18c0-3 1-6 3-9 1-2 3-4 5-6"/>
+  <path class="stroke metallic" d="M10 18c0-2 .5-4 1.5-6 .5-1 1.5-2.5 2.5-4"/>
+  <!-- Horn ridges -->
+  <path class="stroke" d="M7 15c1-.5 2-.5 3 0M8 12c1-.5 2-.5 3 0M9 9c.5-.25 1-.25 1.5 0" style="stroke-width: 1;"/>
+  <!-- Blessed sword cleaving -->
+  <path class="stroke metallic" d="M14 6l6 12"/>
+  <!-- Sword hilt -->
+  <path class="stroke" d="M13 5l2 1M15 5l-1 2"/>
+  <!-- Cross guard (holy symbol) -->
+  <path class="stroke" d="M16 9l2-1M16 9l-1 2"/>
+  <!-- Blade edge detail -->
+  <path class="stroke" d="M15 8l4 8" style="stroke-width: 1;"/>
+  <!-- Holy energy at cut point -->
+  <circle cx="12" cy="10" r="1" fill="currentColor"/>
+  <!-- Severed pieces falling -->
+  <circle cx="8" cy="20" r="0.75" fill="currentColor"/>
+  <circle cx="18" cy="20" r="0.75" fill="currentColor"/>
+</svg>

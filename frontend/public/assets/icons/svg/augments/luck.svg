@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Four-leaf clover in decorative frame - luck augment (medieval object) -->
+  <!-- Decorative circular frame -->
+  <circle class="stroke metallic" cx="12" cy="11" r="9"/>
+  <!-- Inner frame ring -->
+  <circle class="stroke" cx="12" cy="11" r="6"/>
+  <!-- Clover leaves -->
+  <path class="stroke metallic" d="M12 11c-1.5-1.5-4-1.5-4 1s2.5 2.5 4 2.5"/>
+  <path class="stroke metallic" d="M12 11c1.5-1.5 4-1.5 4 1s-2.5 2.5-4 2.5"/>
+  <path class="stroke metallic" d="M12 11c-1.5 1.5-4 1.5-4-1s2.5-2.5 4-2.5"/>
+  <path class="stroke metallic" d="M12 11c1.5 1.5 4 1.5 4-1s-2.5-2.5-4-2.5"/>
+  <!-- Stem -->
+  <path class="stroke" d="M12 14.5v5"/>
+  <!-- Leaf vein details -->
+  <path class="stroke" d="M10 10l2 1M14 10l-2 1M10 12l2-1M14 12l-2-1" style="stroke-width: 1;"/>
+  <!-- Frame decoration -->
+  <circle cx="12" cy="2" r="0.75" fill="currentColor"/>
+  <circle cx="3" cy="11" r="0.75" fill="currentColor"/>
+  <circle cx="21" cy="11" r="0.75" fill="currentColor"/>
+</svg>

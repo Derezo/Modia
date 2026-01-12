@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Sword - weapon item type (detailed like slots/weapon) -->
+  <!-- Blade -->
+  <path class="stroke metallic" d="M12 2v14"/>
+  <path class="stroke" d="M9 2l3 2 3-2"/>
+  <!-- Fuller detail lines -->
+  <path class="stroke" d="M10 4v10M14 4v10" style="stroke-width: 1;"/>
+  <!-- Cross guard -->
+  <path class="stroke" d="M6 16h12"/>
+  <path class="stroke" d="M7 15v2M17 15v2"/>
+  <!-- Grip -->
+  <path class="stroke" d="M10 16v5h4v-5"/>
+  <!-- Grip wrapping -->
+  <path class="stroke" d="M10 17.5h4M10 19.5h4" style="stroke-width: 1;"/>
+  <!-- Pommel -->
+  <circle class="stroke metallic" cx="12" cy="22" r="1.5"/>
+  <!-- Guard rivets and pommel gem -->
+  <circle cx="7" cy="16" r="0.75" fill="currentColor"/>
+  <circle cx="17" cy="16" r="0.75" fill="currentColor"/>
+  <circle cx="12" cy="22" r="0.5" fill="currentColor"/>
+</svg>

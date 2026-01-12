@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Gear and wrench - artificer class -->
+  <!-- Main gear -->
+  <circle class="stroke metallic" cx="10" cy="10" r="6"/>
+  <circle class="stroke" cx="10" cy="10" r="3"/>
+  <!-- Gear teeth -->
+  <path class="stroke" d="M10 4v2M10 14v2M4 10h2M14 10h2" style="stroke-width: 1.5;"/>
+  <path class="stroke" d="M5.8 5.8l1.4 1.4M12.8 12.8l1.4 1.4M5.8 14.2l1.4-1.4M12.8 7.2l1.4-1.4" style="stroke-width: 1;"/>
+  <!-- Wrench -->
+  <path class="stroke metallic" d="M16 14l5 5"/>
+  <path class="stroke" d="M19 17c1 0 2 1 2 2s-1 2-2 2-2-1-2-2 1-2 2-2z"/>
+  <!-- Gear center -->
+  <circle cx="10" cy="10" r="1" fill="currentColor"/>
+  <!-- Spark -->
+  <circle cx="17" cy="13" r="0.5" fill="currentColor"/>
+</svg>

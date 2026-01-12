@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Medieval scroll returning left -->
+  <!-- Scroll body -->
+  <path class="stroke metallic" d="M6 4c-2 0-3 1.5-3 3v10c0 1.5 1 3 3 3h14"/>
+  <!-- Scroll curl at left -->
+  <path class="stroke" d="M6 4c1.5 0 2.5 1 2.5 2v12c0 1-1 2-2.5 2"/>
+  <!-- Arrow pointing left on scroll -->
+  <path class="stroke" d="M18 12H10"/>
+  <path class="stroke" d="M13 8l-4 4 4 4"/>
+  <!-- Scroll detail lines -->
+  <path class="stroke" d="M9 7h9M9 17h9" style="stroke-width: 1;"/>
+  <!-- Decorative dot on curl -->
+  <circle cx="6" cy="12" r="1" fill="currentColor"/>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Fist with prayer beads - monk class -->
+  <!-- Clenched fist -->
+  <path class="stroke metallic" d="M8 8c0-1 1-2 2-2h4c1 0 2 1 2 2v6c0 2-2 4-4 4s-4-2-4-4V8z"/>
+  <!-- Knuckle lines -->
+  <path class="stroke" d="M9 10h6M9 12h6" style="stroke-width: 1;"/>
+  <!-- Prayer beads circle -->
+  <circle class="stroke" cx="12" cy="18" r="3"/>
+  <!-- Individual beads -->
+  <circle cx="9" cy="18" r="0.75" fill="currentColor"/>
+  <circle cx="12" cy="15" r="0.75" fill="currentColor"/>
+  <circle cx="15" cy="18" r="0.75" fill="currentColor"/>
+  <circle cx="12" cy="21" r="0.75" fill="currentColor"/>
+  <!-- Wrist wrap -->
+  <path class="stroke" d="M8 6h8" style="stroke-width: 1;"/>
+</svg>
