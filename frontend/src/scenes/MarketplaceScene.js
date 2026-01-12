@@ -461,6 +461,7 @@ export class MarketplaceScene extends Scene {
         padding: 12px;
         gap: 12px;
         overflow: hidden;
+        min-height: 0;
       }
 
       .marketplace-left {
@@ -925,6 +926,7 @@ export class MarketplaceScene extends Scene {
       .my-orders-list {
         flex: 1;
         overflow-y: auto;
+        min-height: 0;
       }
 
       .my-order {
@@ -1157,6 +1159,49 @@ export class MarketplaceScene extends Scene {
       .marketplace-browse-table .item-data-table-row:hover {
         background: rgba(139, 115, 85, 0.2);
       }
+
+      /* Equipment Listing Badges */
+      .stat-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        background: linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 100%);
+        border: 1px solid #8b7355;
+        border-radius: 3px;
+        color: #2d2418;
+        font-family: Consolas, monospace;
+      }
+
+      .stat-badge.bonus {
+        background: linear-gradient(to bottom, #d4e8c8 0%, #c4d8b8 100%);
+        border-color: #5a8b45;
+        color: #2d5a18;
+      }
+
+      .augment-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        background: linear-gradient(to bottom, #e0d0f0 0%, #d0c0e0 100%);
+        border: 1px solid #8b6bbb;
+        border-radius: 3px;
+        color: #4a2a6a;
+        font-family: Georgia, serif;
+        font-style: italic;
+      }
+
+      /* Loading spinner */
+      .loading-spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid #c9b899;
+        border-top-color: #8b7355;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -1236,6 +1281,11 @@ export class MarketplaceScene extends Scene {
   }
 
   renderContent() {
+    // Close slide-out item panel when switching tabs
+    if (this.itemPanel?.isOpen) {
+      this.itemPanel.close();
+    }
+
     const mainContent = this.uiElement.querySelector('#main-content');
     const sidePanel = this.uiElement.querySelector('#side-panel');
 
@@ -1380,14 +1430,7 @@ export class MarketplaceScene extends Scene {
     const originalItem = item._original;
     if (!originalItem) return;
 
-    // For equipment items, open the item panel to show individual listings
-    if (item.isEquipment) {
-      this.openItemPanel(originalItem);
-      return;
-    }
-
-    // For stackable items, use the order book system
-    // Unsubscribe from previous item
+    // Unsubscribe from previous item if different
     if (this.selectedItem && this.selectedItem.id !== originalItem.id) {
       this.game.socket?.unsubscribeFromItem(this.selectedItem.id);
     }
@@ -1399,13 +1442,195 @@ export class MarketplaceScene extends Scene {
     // Subscribe to new item updates
     this.game.socket?.subscribeToItem(originalItem.id);
 
-    // Load order book and re-render
-    this.loadOrderBook(originalItem.id).then(() => {
-      const sidePanel = this.uiElement?.querySelector('#side-panel');
-      if (sidePanel) {
-        this.renderOrderBookAndTrade(sidePanel);
+    // Render unified side panel for ALL items
+    const sidePanel = this.uiElement?.querySelector('#side-panel');
+    if (sidePanel) {
+      this.renderUnifiedItemPanel(sidePanel, originalItem);
+    }
+  }
+
+  /**
+   * Render unified item detail panel for both stackable and equipment items
+   * @param {HTMLElement} sidePanel - The side panel container
+   * @param {Object} item - The selected item
+   */
+  async renderUnifiedItemPanel(sidePanel, item) {
+    const isEquipment = item.isEquipment || !item.isStackable;
+
+    // Show loading state
+    sidePanel.innerHTML = `
+      <div id="market-dashboard-container" class="market-dashboard-container" style="margin-bottom: 12px;"></div>
+      <div class="ui-panel" style="padding: 20px; text-align: center;">
+        <div class="loading-spinner"></div>
+        <div style="margin-top: 10px; color: #5a4a3a;">Loading...</div>
+      </div>
+    `;
+
+    // Initialize MarketDashboard for price chart (works for all items)
+    this.initMarketDashboard(sidePanel, item);
+
+    if (isEquipment) {
+      // Load equipment listings from API
+      try {
+        const data = await this.game.api.getItemListings(item.id);
+        this.equipmentListings = data.listings || [];
+        this.renderEquipmentDetailPanel(sidePanel, item);
+      } catch (err) {
+        console.error('Failed to load equipment listings:', err);
+        this.renderEquipmentDetailPanel(sidePanel, item);
       }
+    } else {
+      // Load order book for stackable items
+      await this.loadOrderBook(item.id);
+      this.renderOrderBookAndTrade(sidePanel);
+    }
+  }
+
+  /**
+   * Initialize MarketDashboard in the given container
+   */
+  initMarketDashboard(sidePanel, item) {
+    const dashboardContainer = sidePanel.querySelector('#market-dashboard-container');
+    if (dashboardContainer) {
+      if (this.marketDashboard) {
+        this.marketDashboard.destroy();
+      }
+      this.marketDashboard = new MarketDashboard(dashboardContainer, {
+        game: this.game,
+        onBuy: (selectedItem, price) => {
+          this.orderSide = 'buy';
+          this.orderType = 'market';
+          this.orderQuantity = 1;
+          this.handlePlaceOrder();
+        }
+      });
+      this.marketDashboard.setItem({
+        ...item,
+        templateId: item.id,
+        itemType: item.type || item.itemType || (item.isStackable ? 'consumable' : 'equipment')
+      });
+    }
+  }
+
+  /**
+   * Render equipment item detail panel with listings
+   */
+  renderEquipmentDetailPanel(sidePanel, item) {
+    const listings = this.equipmentListings || [];
+
+    // Keep the dashboard container, replace the rest
+    const dashboardHtml = sidePanel.querySelector('#market-dashboard-container')?.outerHTML ||
+      '<div id="market-dashboard-container" class="market-dashboard-container" style="margin-bottom: 12px;"></div>';
+
+    sidePanel.innerHTML = `
+      ${dashboardHtml}
+
+      <div class="ui-panel">
+        <div class="ui-panel-header">${item.name} - Available Listings</div>
+        <div class="equipment-listings-container" style="max-height: 400px; overflow-y: auto; padding: 8px;">
+          ${listings.length > 0 ? listings.map(listing => this.renderEquipmentListingCard(listing)).join('') : `
+            <div class="empty-message" style="padding: 20px; text-align: center; color: #7a6a5a; font-style: italic;">
+              No listings available for this item.<br><br>
+              Be the first to list one!
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+
+    // Re-init dashboard if needed
+    if (!sidePanel.querySelector('#market-dashboard-container canvas')) {
+      this.initMarketDashboard(sidePanel, item);
+    }
+
+    // Attach buy handlers
+    sidePanel.querySelectorAll('.equipment-buy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const listingId = parseInt(btn.dataset.listingId);
+        const listing = listings.find(l => l.listingId === listingId);
+        if (listing) {
+          this.handleBuyListing(listing);
+        }
+      });
     });
+  }
+
+  /**
+   * Render a single equipment listing card
+   */
+  renderEquipmentListingCard(listing) {
+    const {
+      listingId,
+      generatedName,
+      rarity,
+      material,
+      baseStats,
+      bonusStats,
+      augments,
+      askPrice,
+      sellerName
+    } = listing;
+
+    // Format stats
+    const formatStatName = (stat) => stat.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase());
+
+    const baseStatsHtml = Object.entries(baseStats || {})
+      .map(([stat, val]) => `<span class="stat-badge">+${val} ${formatStatName(stat)}</span>`)
+      .join('');
+
+    const bonusStatsHtml = Object.entries(bonusStats || {})
+      .map(([stat, val]) => `<span class="stat-badge bonus">+${val} ${formatStatName(stat)}</span>`)
+      .join('');
+
+    // Format augments
+    const augmentsHtml = (augments || []).map(aug => {
+      const augName = aug.category || aug.name || aug;
+      return `<span class="augment-badge">${augName}</span>`;
+    }).join('');
+
+    const rarityColor = {
+      common: '#7a6a5a',
+      uncommon: '#4a7548',
+      rare: '#4a6a8b',
+      epic: '#6b4488',
+      legendary: '#aa8833'
+    }[rarity] || '#7a6a5a';
+
+    return `
+      <div class="equipment-listing-card" style="
+        background: linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 100%);
+        border: 2px solid #8b7355;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        padding: 10px;
+      ">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+          <div>
+            <div style="font-weight: bold; color: ${rarityColor};">${generatedName}</div>
+            <div style="font-size: 11px; color: #5a4a3a;">${[rarity, material].filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' • ')}</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-weight: bold; color: #2d2418;">${askPrice.toLocaleString()}g</div>
+            <div style="font-size: 10px; color: #7a6a5a;">by ${sellerName}</div>
+          </div>
+        </div>
+        ${(baseStatsHtml || bonusStatsHtml || augmentsHtml) ? `
+          <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; font-size: 11px;">
+            ${baseStatsHtml}${bonusStatsHtml}${augmentsHtml}
+          </div>
+        ` : ''}
+        <button class="equipment-buy-btn" data-listing-id="${listingId}" style="
+          width: 100%;
+          padding: 6px 12px;
+          background: linear-gradient(to bottom, #5a9e4a 0%, #4a8e3a 100%);
+          border: 2px solid #3a7e2a;
+          border-radius: 4px;
+          color: white;
+          font-weight: bold;
+          cursor: pointer;
+        ">Buy for ${askPrice.toLocaleString()}g</button>
+      </div>
+    `;
   }
 
   /**
@@ -1413,13 +1638,7 @@ export class MarketplaceScene extends Scene {
    * @param {Object} item - Double-clicked item (transformed)
    */
   handleBrowseItemDoubleClick(item) {
-    // For equipment, open panel
-    if (item.isEquipment) {
-      this.openItemPanel(item._original);
-      return;
-    }
-
-    // For stackable items, select and open order dialog
+    // Use unified selection for all items
     this.handleBrowseItemSelect(item);
   }
 
@@ -1675,7 +1894,7 @@ export class MarketplaceScene extends Scene {
       </div>
 
       ${this.tradeHistory.length > 0 ? `
-        <div class="ui-panel" style="max-height: 150px; overflow: hidden; display: flex; flex-direction: column;">
+        <div class="ui-panel" style="max-height: 150px; overflow-y: auto; display: flex; flex-direction: column;">
           <div class="ui-panel-header">Recent Trades</div>
           <div class="trade-history-list">
             ${this.tradeHistory.slice(0, 10).map(trade => `
