@@ -891,7 +891,7 @@ export class BattleFormationScene extends Scene {
         margin: 0;
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xxl};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
-        background: linear-gradient(90deg, ${P.accent.gold} 0%, ${P.accent.copper} 25%, ${P.accent.gold} 50%, ${P.accent.copper} 75%, ${P.accent.gold} 100%);
+        background: linear-gradient(90deg, ${P.accent.burgundy} 0%, ${P.accent.copper} 25%, ${P.accent.burgundy} 50%, ${P.accent.copper} 75%, ${P.accent.burgundy} 100%);
         background-size: 200% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;

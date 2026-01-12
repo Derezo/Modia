@@ -36,6 +36,10 @@ import coliseumRoutes from './routes/coliseum.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import advancementQuestRoutes from './routes/advancementQuest.js';
 
+// Scheduled services
+import { startRefreshScheduler } from './services/shopRefreshService.js';
+import { startExpirationScheduler } from './services/orderExpirationService.js';
+
 const app = express();
 const server = http.createServer(app);
 
@@ -99,6 +103,10 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Modia API server running on port ${PORT}`);
   console.log(`WebSocket server ready`);
+
+  // Start scheduled services
+  startRefreshScheduler();
+  startExpirationScheduler();
 });
 
 export { app, server };

@@ -872,6 +872,129 @@ async function seedDeveloperTestData(castleId) {
   console.log(`Developer seed data created: user 'derezo' with ${createdCount} items`);
   console.log('  Login: derezo / password');
   console.log('  Gold: 30,000');
+
+  // Seed marketplace data for chart testing
+  await seedMarketplaceData(userId, characterId);
+}
+
+/**
+ * Seed marketplace trade history for chart data
+ * Creates realistic price fluctuations over the past 14 days for common items
+ */
+async function seedMarketplaceData(userId, characterId) {
+  // Skip in production
+  if (process.env.NODE_ENV === 'production') {
+    console.log('Skipping marketplace seed data in production');
+    return;
+  }
+
+  console.log('\nSeeding marketplace trade history...');
+
+  const rng = new SeededRandom(54321);
+
+  // Items to seed trade history for (templateId: basePrice)
+  const tradedItems = [
+    { templateId: 1, basePrice: 50 },   // Rusty Sword
+    { templateId: 2, basePrice: 150 },  // Iron Sword
+    { templateId: 7, basePrice: 80 },   // Leather Armor
+    { templateId: 8, basePrice: 250 },  // Chain Mail
+    { templateId: 12, basePrice: 25 },  // Health Potion (high volume)
+    { templateId: 13, basePrice: 30 },  // Mana Potion (high volume)
+    { templateId: 21, basePrice: 40 },  // Leather Helm
+    { templateId: 29, basePrice: 100 }, // Hi-Potion
+    { templateId: 10, basePrice: 100 }, // Lucky Charm
+    { templateId: 6, basePrice: 45 },   // Combat Gloves
+  ];
+
+  const now = new Date();
+  let totalTrades = 0;
+
+  for (const item of tradedItems) {
+    // Determine trade volume based on item type
+    const isConsumable = item.templateId >= 12 && item.templateId <= 15 || item.templateId >= 29;
+    const tradesPerDay = isConsumable ? rng.nextInt(8, 15) : rng.nextInt(2, 6);
+
+    // Generate trades for the past 14 days
+    for (let daysAgo = 14; daysAgo >= 0; daysAgo--) {
+      const dayTrades = rng.nextInt(Math.floor(tradesPerDay * 0.5), Math.ceil(tradesPerDay * 1.5));
+
+      // Create a price trend (random walk with mean reversion)
+      let priceMultiplier = 1 + (rng.next() - 0.5) * 0.2; // ±10% base variation
+
+      // Add some market events (occasional spikes/dips)
+      if (rng.next() < 0.1) {
+        priceMultiplier *= (0.8 + rng.next() * 0.4); // ±20% event
+      }
+
+      for (let t = 0; t < dayTrades; t++) {
+        // Individual trade price variation
+        const tradeVariation = 1 + (rng.next() - 0.5) * 0.1; // ±5% per trade
+        const price = Math.round(item.basePrice * priceMultiplier * tradeVariation);
+        const quantity = isConsumable ? rng.nextInt(1, 10) : rng.nextInt(1, 3);
+
+        // Calculate trade timestamp within the day
+        const tradeDate = new Date(now);
+        tradeDate.setDate(tradeDate.getDate() - daysAgo);
+        tradeDate.setHours(rng.nextInt(6, 22), rng.nextInt(0, 59), rng.nextInt(0, 59));
+
+        // Insert trade record (null order IDs for seeded data)
+        await pool.query(
+          `INSERT INTO market_trades
+           (buy_order_id, sell_order_id, item_template_id, buyer_id, seller_id, price, quantity, total_gold, executed_at)
+           VALUES (NULL, NULL, $1, $2, $3, $4, $5, $6, $7)`,
+          [
+            item.templateId,
+            userId,        // buyer
+            userId,        // seller (self-trades for seed data)
+            price,
+            quantity,
+            price * quantity,
+            tradeDate
+          ]
+        );
+        totalTrades++;
+      }
+
+      // Evolve price for next day (mean reversion)
+      priceMultiplier = priceMultiplier * 0.9 + 1.0 * 0.1 + (rng.next() - 0.5) * 0.1;
+    }
+  }
+
+  // Also seed some active orders for order book depth
+  console.log('Seeding active market orders...');
+  let orderCount = 0;
+
+  for (const item of tradedItems.slice(0, 5)) { // Top 5 items
+    // Create some buy orders (bids)
+    for (let i = 0; i < rng.nextInt(3, 6); i++) {
+      const bidPrice = Math.round(item.basePrice * (0.85 + rng.next() * 0.1)); // 85-95% of base
+      const quantity = rng.nextInt(1, 5);
+
+      await pool.query(
+        `INSERT INTO market_orders
+         (user_id, character_id, item_template_id, side, price, quantity, status, created_at)
+         VALUES ($1, $2, $3, 'buy', $4, $5, 'open', NOW() - INTERVAL '${rng.nextInt(1, 72)} hours')`,
+        [userId, characterId, item.templateId, bidPrice, quantity]
+      );
+      orderCount++;
+    }
+
+    // Create some sell orders (asks)
+    for (let i = 0; i < rng.nextInt(3, 6); i++) {
+      const askPrice = Math.round(item.basePrice * (1.05 + rng.next() * 0.15)); // 105-120% of base
+      const quantity = rng.nextInt(1, 5);
+
+      await pool.query(
+        `INSERT INTO market_orders
+         (user_id, character_id, item_template_id, side, price, quantity, status, created_at)
+         VALUES ($1, $2, $3, 'sell', $4, $5, 'open', NOW() - INTERVAL '${rng.nextInt(1, 72)} hours')`,
+        [userId, characterId, item.templateId, askPrice, quantity]
+      );
+      orderCount++;
+    }
+  }
+
+  console.log(`Seeded ${totalTrades} market trades and ${orderCount} active orders`);
 }
 
 /**
@@ -917,6 +1040,9 @@ async function main() {
     // Clear shop inventory (will be re-seeded)
     await client.query('TRUNCATE npc_shop_inventory RESTART IDENTITY CASCADE');
     await client.query('TRUNCATE shop_transactions RESTART IDENTITY CASCADE');
+    // Clear marketplace data (will be re-seeded with dev test data)
+    await client.query('TRUNCATE market_trades RESTART IDENTITY CASCADE');
+    await client.query('TRUNCATE market_orders RESTART IDENTITY CASCADE');
 
     // Generate world
     const worldSeed = parseInt(process.env.WORLD_SEED || '12345', 10);

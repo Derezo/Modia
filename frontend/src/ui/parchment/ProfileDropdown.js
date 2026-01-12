@@ -205,7 +205,7 @@ export class ProfileDropdown {
       }
 
       .profile-dropdown__gold-float .profile-dropdown__gold-value {
-        color: ${PARCHMENT_COLORS.accent.gold};
+        color: ${PARCHMENT_COLORS.accent.burgundy};
         font-weight: bold;
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
         text-shadow:

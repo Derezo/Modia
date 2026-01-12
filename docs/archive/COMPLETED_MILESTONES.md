@@ -30,6 +30,47 @@ This document archives all completed features, resolved issues, and historical d
 | 7.8 | Jan 2026 | PixelLab integration removal, rate limiter refactoring |
 | 7.9 | Jan 2026 | Icon system completion - 54 new SVG icons, emoji replacement |
 | 8.0 | Jan 2026 | Roadmap audit, documentation cleanup, code fixes |
+| 8.1 | Jan 2026 | ItemDataTable & Marketplace Enhancement - parchment price chart, order expiration |
+
+---
+
+## 8.1 - ItemDataTable & Marketplace Enhancement (Jan 2026)
+
+Complete marketplace overhaul with modular ItemDataTable component, parchment-themed price charts, and backend scheduling services.
+
+### New Files Created
+- `frontend/src/components/MarketDashboard.js` - Canvas-based price chart with hand-drawn parchment aesthetic
+- `api/src/services/shopRefreshService.js` - Periodic shop restocking (blacksmith 24h, apothecary 12h, farm 6h)
+- `api/src/services/orderExpirationService.js` - 7-day order expiration with gold/item release
+- `api/src/migrations/023_order_expiration.sql` - 'expired' status enum, expiration index
+- `api/src/tests/unit/orderExpirationService.unit.test.js` - 8 unit tests for expiration service
+- `api/src/tests/unit/shopRefreshService.unit.test.js` - 11 unit tests for shop refresh service
+- `api/src/tests/integration/marketplace.integration.test.js` - 21 integration tests for marketplace API
+
+### Frontend Enhancements
+- **ShopScene.js:** ItemDataTable integration for Buy/Sell tabs with supply level badges
+- **MarketplaceScene.js:** ItemDataTable for Browse tab, My Listings tab (fixed), My Inventory tab (new)
+- **MarketDashboard.js:** Price history chart (7-day), bid/ask spread, 24h activity stats
+- **itemDataTableColumns.js:** supplyLevel column, JSDoc documentation for all columns
+- **ParchmentTheme.js:** Button CSS helper for consistent styling
+
+### Backend Features
+- **Order Expiration System:** Hourly scheduler expires orders > 7 days, releases reserved gold (buy orders) or escrowed items (sell orders), WebSocket notifications, audit logging
+- **Shop Refresh Service:** Additive restocking (25% per cycle), transaction-wrapped updates, configurable intervals per shop type
+- **Sellable Inventory API:** `GET /api/marketplace/inventory/sellable` - returns unequipped, tradeable items not already listed
+- **Augment Filter Fix:** Corrected parameter indexing in searchItemsWithAugments()
+
+### Code Quality Fixes
+- SQL injection fixed in orderExpirationService.js (parameterized query)
+- Column reference fixed (item_listings vs marketplace_listings)
+- Canvas save/restore added to MarketDashboard.js
+- Event listener memory leak fixed in MarketDashboard buy button
+- Transaction handling added to shopRefreshService.js
+
+### Tests Added (40 total)
+- Order expiration service: 8 unit tests
+- Shop refresh service: 11 unit tests
+- Marketplace API: 21 integration tests
 
 ---
 

@@ -10,6 +10,7 @@ import {
 } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { Icon } from '../components/Icon.js';
+import { ItemDataTable } from '../components/ItemDataTable/index.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
@@ -39,6 +40,9 @@ export class ShopScene extends Scene {
     this.activeTab = 'buy'; // 'buy' or 'sell'
     this.selectedItem = null;
     this.purchaseQuantity = 1;
+
+    // ItemDataTable instance
+    this.itemTable = null;
   }
 
   async enter(data = {}) {
@@ -72,6 +76,10 @@ export class ShopScene extends Scene {
       this.abortController.abort();
       this.abortController = null;
     }
+    if (this.itemTable) {
+      this.itemTable.destroy();
+      this.itemTable = null;
+    }
     if (this.uiElement) {
       this.uiElement.remove();
       this.uiElement = null;
@@ -88,6 +96,12 @@ export class ShopScene extends Scene {
         : this.selectedItem?.instanceId;
       const prevTab = this.activeTab;
       const prevQty = this.purchaseQuantity;
+
+      // Destroy existing table
+      if (this.itemTable) {
+        this.itemTable.destroy();
+        this.itemTable = null;
+      }
 
       this.uiElement.remove();
       this.createUI();
@@ -189,7 +203,7 @@ export class ShopScene extends Scene {
         display: flex;
         align-items: center;
         gap: 8px;
-        color: ${P.accent.gold};
+        color: ${P.accent.burgundy};
         font-size: 18px;
         font-weight: bold;
         text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
@@ -277,20 +291,22 @@ export class ShopScene extends Scene {
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
-      .shop-items-list {
+      .shop-items-table-container {
         flex: 1;
-        overflow-y: auto;
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 12px;
-        padding: 12px;
+        overflow: hidden;
+        padding: 0;
         background: linear-gradient(to bottom, ${P.light}, ${P.mid});
       }
 
-      @media (max-width: 600px) {
-        .shop-items-list {
-          grid-template-columns: 1fr;
-        }
+      .shop-items-table-container .item-data-table-container {
+        border: none;
+        border-radius: 0;
+        height: 100%;
+      }
+
+      .shop-items-table-container .item-data-table-body {
+        max-height: none;
+        height: calc(100% - 80px); /* Account for filters and header */
       }
 
       .shop-item {
@@ -335,7 +351,7 @@ export class ShopScene extends Scene {
       }
 
       .shop-item-price {
-        color: ${P.accent.gold};
+        color: ${P.accent.burgundy};
         font-weight: bold;
         font-size: 14px;
         display: flex;
@@ -511,7 +527,7 @@ export class ShopScene extends Scene {
       }
 
       .total-value {
-        color: ${P.accent.gold};
+        color: ${P.accent.burgundy};
         font-size: 20px;
         font-weight: bold;
         text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
@@ -640,8 +656,8 @@ export class ShopScene extends Scene {
           <div class="shop-panel-header" id="items-header">
             ${this.activeTab === 'buy' ? 'Shop Inventory' : 'Your Items'}
           </div>
-          <div class="shop-items-list" id="items-list">
-            <div class="empty-message">Loading...</div>
+          <div class="shop-items-table-container" id="items-table-container">
+            <!-- ItemDataTable will be rendered here -->
           </div>
         </div>
 
@@ -689,67 +705,102 @@ export class ShopScene extends Scene {
   }
 
   renderInventory() {
-    const listEl = this.uiElement.querySelector('#items-list');
-    const items = this.activeTab === 'buy' ? this.shopInventory : this.sellableItems;
+    const containerEl = this.uiElement.querySelector('#items-table-container');
+    const rawItems = this.activeTab === 'buy' ? this.shopInventory : this.sellableItems;
+    const isBuyMode = this.activeTab === 'buy';
 
-    if (items.length === 0) {
-      listEl.innerHTML = `<div class="empty-message">
-        ${this.activeTab === 'buy' ? 'No items available for purchase' : 'No items to sell'}
-      </div>`;
-      return;
+    // Destroy existing table if any
+    if (this.itemTable) {
+      this.itemTable.destroy();
+      this.itemTable = null;
     }
 
-    listEl.innerHTML = items.map(item => this.renderItemCard(item)).join('');
+    // Transform items to match ItemDataTable expected format
+    const items = rawItems.map(item => this.transformItemForTable(item, isBuyMode));
 
-    // Add click handlers
-    listEl.querySelectorAll('.shop-item').forEach(itemEl => {
-      itemEl.addEventListener('click', () => {
-        const itemId = this.activeTab === 'buy'
-          ? parseInt(itemEl.dataset.templateId)
-          : parseInt(itemEl.dataset.instanceId);
-        this.selectItem(itemId);
-      });
+    // Create ItemDataTable with appropriate variant
+    this.itemTable = new ItemDataTable(containerEl, {
+      items,
+      variant: isBuyMode ? 'shop' : 'inventory',
+      columns: isBuyMode
+        ? ['rarity', 'iconName', 'supplyLevel', 'quantity', 'price']
+        : ['rarity', 'iconName', 'type', 'quantity', 'price'],
+      filters: {
+        showTypeFilter: true,
+        showRarityFilter: true,
+        showSearch: true,
+        showAugmentFilter: false
+      },
+      selectionMode: 'single',
+      emptyMessage: isBuyMode ? 'No items available for purchase' : 'No items to sell',
+      maxHeight: 600,
+      onRowSelect: (item) => {
+        this.handleTableRowSelect(item, isBuyMode);
+      },
+      onRowDoubleClick: (item) => {
+        // Quick buy/sell on double-click
+        this.handleTableRowSelect(item, isBuyMode);
+        if (isBuyMode) {
+          this.handleBuy();
+        } else {
+          this.handleSell();
+        }
+      }
     });
   }
 
-  renderItemCard(item) {
-    const isBuyMode = this.activeTab === 'buy';
-    const rarityClass = this.getRarityClass(item.rarity);
-    const isSelected = isBuyMode
-      ? (this.selectedItem?.templateId === item.templateId)
-      : (this.selectedItem?.instanceId === item.instanceId);
-    const isOutOfStock = isBuyMode && item.quantity <= 0;
+  /**
+   * Transform raw item data to ItemDataTable format
+   * @param {Object} item - Raw item from API
+   * @param {boolean} isBuyMode - Whether in buy mode
+   * @returns {Object} Transformed item
+   */
+  transformItemForTable(item, isBuyMode) {
+    // Map rarity number to string if needed
+    const rarityMap = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+    const rarity = typeof item.rarity === 'number'
+      ? rarityMap[item.rarity - 1] || 'common'
+      : item.rarity || 'common';
 
-    const price = isBuyMode ? item.buyPrice : item.sellPrice;
-    const stats = this.formatStats(item.statBonuses);
+    return {
+      // Identity
+      templateId: item.templateId,
+      instanceId: item.instanceId,
+      id: isBuyMode ? item.templateId : item.instanceId,
 
-    let supplyHtml = '';
-    if (isBuyMode && item.supplyLevel) {
-      supplyHtml = `<span class="shop-item-supply supply-${item.supplyLevel}">${item.supplyLabel}</span>`;
-    }
+      // Display
+      name: item.name,
+      type: item.type,
+      rarity,
+      description: item.description,
+      quantity: item.quantity,
+      price: isBuyMode ? item.buyPrice : item.sellPrice,
 
-    let charTag = '';
-    if (!isBuyMode && item.characterName) {
-      charTag = `<span class="character-tag">${item.characterName}</span>`;
-    }
+      // Stats
+      baseStats: item.statBonuses || {},
 
-    return `
-      <div class="shop-item ${rarityClass} ${isSelected ? 'selected' : ''} ${isOutOfStock ? 'out-of-stock' : ''}"
-           data-template-id="${item.templateId}"
-           data-instance-id="${item.instanceId || ''}">
-        <div class="shop-item-header">
-          <div class="shop-item-name">${item.name}${charTag}</div>
-          <div class="shop-item-price">${price.toLocaleString()}g</div>
-        </div>
-        <div class="shop-item-info">
-          <span class="shop-item-type">${item.type}</span>
-          ${supplyHtml}
-          ${isBuyMode ? `<span>Qty: ${item.quantity}</span>` : `<span>x${item.quantity}</span>`}
-        </div>
-        ${stats ? `<div class="shop-item-stats">${stats}</div>` : ''}
-        ${item.description ? `<div class="shop-item-desc">${item.description}</div>` : ''}
-      </div>
-    `;
+      // Shop-specific
+      supplyLevel: item.supplyLevel,
+      supplyLabel: item.supplyLabel,
+
+      // Original item reference for detail panel
+      _original: item
+    };
+  }
+
+  /**
+   * Handle row selection from ItemDataTable
+   * @param {Object} item - Selected item (transformed)
+   * @param {boolean} isBuyMode - Whether in buy mode
+   */
+  handleTableRowSelect(item, isBuyMode) {
+    // Get the original item for the detail panel
+    const originalItem = item._original;
+    if (!originalItem) return;
+
+    this.selectedItem = originalItem;
+    this.purchaseQuantity = 1;
+    this.renderDetailPanel();
   }
 
   selectItem(itemId) {
@@ -759,7 +810,11 @@ export class ShopScene extends Scene {
     this.selectedItem = items.find(i => i[idKey] === itemId);
     this.purchaseQuantity = 1;
 
-    this.renderInventory();
+    // Update table selection
+    if (this.itemTable && itemId) {
+      this.itemTable.selectItem(itemId);
+    }
+
     this.renderDetailPanel();
   }
 

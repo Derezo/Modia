@@ -2,6 +2,8 @@ import { Scene } from './Scene.js';
 import { marketConfirmDialog } from '../components/MarketConfirmDialog.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { MarketplaceItemPanel } from '../components/MarketplaceItemPanel.js';
+import { ItemDataTable } from '../components/ItemDataTable/index.js';
+import { MarketDashboard } from '../components/MarketDashboard.js';
 
 /**
  * MarketplaceScene - Full Order Book Trading Interface
@@ -20,6 +22,7 @@ export class MarketplaceScene extends Scene {
     this.tradeHistory = [];
     this.myOrders = [];
     this.myListings = [];
+    this.sellableItems = []; // Items from inventory that can be listed
     this.playerGold = 0;
     this.activeCharacter = null;
 
@@ -35,6 +38,18 @@ export class MarketplaceScene extends Scene {
 
     // Item panel for viewing unique item listings
     this.itemPanel = null;
+
+    // ItemDataTable instance for browse grid
+    this.browseTable = null;
+
+    // ItemDataTable instance for My Listings tab
+    this.listingsTable = null;
+
+    // ItemDataTable instance for My Inventory tab
+    this.inventoryTable = null;
+
+    // MarketDashboard for price charts
+    this.marketDashboard = null;
 
     // WebSocket handlers
     this.wsHandlers = null;
@@ -166,6 +181,30 @@ export class MarketplaceScene extends Scene {
       this.itemPanel = null;
     }
 
+    // Destroy browse table
+    if (this.browseTable) {
+      this.browseTable.destroy();
+      this.browseTable = null;
+    }
+
+    // Destroy listings table
+    if (this.listingsTable) {
+      this.listingsTable.destroy();
+      this.listingsTable = null;
+    }
+
+    // Destroy inventory table
+    if (this.inventoryTable) {
+      this.inventoryTable.destroy();
+      this.inventoryTable = null;
+    }
+
+    // Destroy market dashboard
+    if (this.marketDashboard) {
+      this.marketDashboard.destroy();
+      this.marketDashboard = null;
+    }
+
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -243,6 +282,24 @@ export class MarketplaceScene extends Scene {
 
       'marketplace:subscribed': (payload) => {
         console.log(`Subscribed to item ${payload.itemTemplateId} updates`);
+      },
+
+      'marketplace:order_expired': (payload) => {
+        const action = payload.side === 'buy' ? 'Buy order' : 'Sell order';
+        parchmentToast.warning(
+          'Order Expired',
+          `${action} for ${payload.quantityExpired}x ${payload.itemName} has expired`
+        );
+
+        // Refresh orders list if viewing
+        if (this.activeTab === 'orders') {
+          this.loadMyOrders();
+        }
+
+        // Refresh listings if a sell order expired
+        if (payload.side === 'sell' && this.activeTab === 'listings') {
+          this.loadMyListings();
+        }
       }
     };
 
@@ -275,15 +332,17 @@ export class MarketplaceScene extends Scene {
 
   async loadInitialData() {
     try {
-      const [searchData, ordersData, listingsData] = await Promise.all([
+      const [searchData, ordersData, listingsData, sellableData] = await Promise.all([
         this.game.api.searchMarketItems('', null, null, 30),
         this.game.api.getMyOrders(),
-        this.game.api.getMyListings()
+        this.game.api.getMyListings(),
+        this.game.api.getSellableInventory()
       ]);
 
       this.searchResults = searchData.items || [];
       this.myOrders = ordersData.orders || [];
       this.myListings = listingsData.listings || [];
+      this.sellableItems = sellableData.items || [];
 
       this.renderContent();
     } catch (err) {
@@ -1068,6 +1127,36 @@ export class MarketplaceScene extends Scene {
         font-weight: bold;
         text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
       }
+
+      /* ItemDataTable Container for Browse Tab */
+      .marketplace-browse-table {
+        flex: 1;
+        overflow: hidden;
+        background: linear-gradient(to bottom, #f0e8d8 0%, #e8dcc8 100%);
+        border: 2px solid #8b7355;
+        border-radius: 4px;
+      }
+
+      .marketplace-browse-table .item-data-table-container {
+        border: none;
+        border-radius: 0;
+        height: 100%;
+        background: transparent;
+      }
+
+      .marketplace-browse-table .item-data-table-body {
+        max-height: none;
+        height: calc(100% - 80px);
+      }
+
+      /* Marketplace-specific table styling */
+      .marketplace-browse-table .item-data-table-row {
+        cursor: pointer;
+      }
+
+      .marketplace-browse-table .item-data-table-row:hover {
+        background: rgba(139, 115, 85, 0.2);
+      }
     `;
     document.head.appendChild(style);
   }
@@ -1094,6 +1183,8 @@ export class MarketplaceScene extends Scene {
       <div class="marketplace-tabs">
         <div class="marketplace-tab ${this.activeTab === 'search' ? 'active' : ''}" data-tab="search">Browse Items</div>
         <div class="marketplace-tab ${this.activeTab === 'orders' ? 'active' : ''}" data-tab="orders">My Orders (${this.myOrders.length})</div>
+        <div class="marketplace-tab ${this.activeTab === 'listings' ? 'active' : ''}" data-tab="listings">My Listings (${this.myListings.length})</div>
+        <div class="marketplace-tab ${this.activeTab === 'inventory' ? 'active' : ''}" data-tab="inventory">Sell Items</div>
         <div class="marketplace-tab ${this.activeTab === 'history' ? 'active' : ''}" data-tab="history">Trade History</div>
       </div>
 
@@ -1136,6 +1227,12 @@ export class MarketplaceScene extends Scene {
     if (ordersTab) {
       ordersTab.textContent = `My Orders (${this.myOrders.length})`;
     }
+
+    // Update listings count
+    const listingsTab = this.uiElement.querySelector('[data-tab="listings"]');
+    if (listingsTab) {
+      listingsTab.textContent = `My Listings (${this.myListings.length})`;
+    }
   }
 
   renderContent() {
@@ -1149,6 +1246,12 @@ export class MarketplaceScene extends Scene {
       case 'orders':
         this.renderOrdersTab(mainContent, sidePanel);
         break;
+      case 'listings':
+        this.renderListingsTab(mainContent, sidePanel);
+        break;
+      case 'inventory':
+        this.renderInventoryTab(mainContent, sidePanel);
+        break;
       case 'history':
         this.renderHistoryTab(mainContent, sidePanel);
         break;
@@ -1156,69 +1259,39 @@ export class MarketplaceScene extends Scene {
   }
 
   renderSearchTab(mainContent, sidePanel) {
+    // Destroy existing browse table if any
+    if (this.browseTable) {
+      this.browseTable.destroy();
+      this.browseTable = null;
+    }
+
     mainContent.innerHTML = `
-      <div class="search-bar">
-        <input type="text" id="search-input" placeholder="Search items..." value="${this.searchQuery}">
-        <select id="type-filter">
-          <option value="">All Types</option>
-          <option value="weapon" ${this.searchType === 'weapon' ? 'selected' : ''}>Weapons</option>
-          <option value="armor" ${this.searchType === 'armor' ? 'selected' : ''}>Armor</option>
-          <option value="accessory" ${this.searchType === 'accessory' ? 'selected' : ''}>Accessories</option>
-          <option value="consumable" ${this.searchType === 'consumable' ? 'selected' : ''}>Consumables</option>
-          <option value="material" ${this.searchType === 'material' ? 'selected' : ''}>Materials</option>
-        </select>
-        <select id="augment-filter">
-          <option value="">Any Augment</option>
-          <option value="fire" ${this.searchAugment === 'fire' ? 'selected' : ''}>Fire</option>
-          <option value="ice" ${this.searchAugment === 'ice' ? 'selected' : ''}>Ice</option>
-          <option value="lightning" ${this.searchAugment === 'lightning' ? 'selected' : ''}>Lightning</option>
-          <option value="poison" ${this.searchAugment === 'poison' ? 'selected' : ''}>Poison</option>
-          <option value="holy" ${this.searchAugment === 'holy' ? 'selected' : ''}>Holy</option>
-          <option value="dark" ${this.searchAugment === 'dark' ? 'selected' : ''}>Dark</option>
-          <option value="strength" ${this.searchAugment === 'strength' ? 'selected' : ''}>Strength</option>
-          <option value="intelligence" ${this.searchAugment === 'intelligence' ? 'selected' : ''}>Intelligence</option>
-          <option value="agility" ${this.searchAugment === 'agility' ? 'selected' : ''}>Agility</option>
-          <option value="vitality" ${this.searchAugment === 'vitality' ? 'selected' : ''}>Vitality</option>
-          <option value="critical" ${this.searchAugment === 'critical' ? 'selected' : ''}>Critical</option>
-          <option value="defense" ${this.searchAugment === 'defense' ? 'selected' : ''}>Defense</option>
-        </select>
-        <button class="btn btn-primary" id="search-btn">Search</button>
-      </div>
-      <div class="items-grid" id="items-grid">
-        ${this.renderItemsGrid()}
+      <div class="marketplace-browse-table" id="browse-table-container">
+        <!-- ItemDataTable will be rendered here -->
       </div>
     `;
 
-    // Search handlers
-    const searchInput = mainContent.querySelector('#search-input');
-    const typeFilter = mainContent.querySelector('#type-filter');
-    const augmentFilter = mainContent.querySelector('#augment-filter');
-    const searchBtn = mainContent.querySelector('#search-btn');
+    // Transform search results to ItemDataTable format
+    const items = this.searchResults.map(item => this.transformItemForBrowseTable(item));
 
-    const doSearch = async () => {
-      this.searchQuery = searchInput.value;
-      this.searchType = typeFilter.value;
-      this.searchAugment = augmentFilter.value;
-      try {
-        const result = await this.game.api.searchMarketItems(
-          this.searchQuery,
-          this.searchType || null,
-          this.searchAugment || null
-        );
-        this.searchResults = result.items || [];
-        mainContent.querySelector('#items-grid').innerHTML = this.renderItemsGrid();
-        this.attachItemClickHandlers(mainContent);
-      } catch (err) {
-        parchmentToast.error('Search Failed', 'Unable to search marketplace items');
-      }
-    };
-
-    searchBtn?.addEventListener('click', doSearch);
-    searchInput?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') doSearch();
+    // Create ItemDataTable for browse
+    const tableContainer = mainContent.querySelector('#browse-table-container');
+    this.browseTable = new ItemDataTable(tableContainer, {
+      items,
+      variant: 'marketplace',
+      columns: ['rarity', 'iconName', 'stats', 'augments', 'price', 'seller'],
+      filters: {
+        showTypeFilter: true,
+        showRarityFilter: true,
+        showAugmentFilter: true,
+        showSearch: true
+      },
+      selectionMode: 'single',
+      emptyMessage: 'No items found. Try adjusting your search.',
+      maxHeight: 600,
+      onRowSelect: (item) => this.handleBrowseItemSelect(item),
+      onRowDoubleClick: (item) => this.handleBrowseItemDoubleClick(item)
     });
-
-    this.attachItemClickHandlers(mainContent);
 
     // Side panel
     if (this.selectedItem) {
@@ -1230,6 +1303,124 @@ export class MarketplaceScene extends Scene {
         </div>
       `;
     }
+  }
+
+  /**
+   * Transform raw marketplace item data for ItemDataTable
+   * @param {Object} item - Raw item from search results
+   * @returns {Object} Transformed item for table display
+   */
+  transformItemForBrowseTable(item) {
+    // Map rarity number to string if needed
+    const rarityMap = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+    const rarity = typeof item.rarity === 'number'
+      ? rarityMap[item.rarity - 1] || 'common'
+      : item.rarity || 'common';
+
+    const isEquipment = !item.isStackable;
+    const hasListings = item.listingCount > 0;
+
+    // Determine price to display
+    let displayPrice;
+    if (isEquipment && hasListings) {
+      displayPrice = item.minListingPrice;
+    } else {
+      displayPrice = item.bestAsk || item.bestBid || item.basePrice || null;
+    }
+
+    // Build seller info for equipment listings
+    let sellerInfo = '';
+    if (isEquipment) {
+      sellerInfo = hasListings ? `${item.listingCount} listing${item.listingCount !== 1 ? 's' : ''}` : 'No listings';
+    } else {
+      sellerInfo = `Vol: ${item.volume24h || 0}`;
+    }
+
+    return {
+      // Identity
+      id: item.id,
+      templateId: item.id,
+
+      // Display
+      name: item.name,
+      type: item.itemType,
+      rarity,
+      description: item.description,
+      price: displayPrice,
+
+      // Stats (from base stats if available)
+      baseStats: item.baseStats || {},
+      bonusStats: {},
+
+      // Augments
+      augments: item.augments || [],
+
+      // Marketplace-specific
+      seller: sellerInfo,
+      isEquipment,
+      hasListings,
+      listingCount: item.listingCount,
+      minListingPrice: item.minListingPrice,
+      maxListingPrice: item.maxListingPrice,
+      bestBid: item.bestBid,
+      bestAsk: item.bestAsk,
+      volume24h: item.volume24h,
+      isStackable: item.isStackable,
+
+      // Original item reference
+      _original: item
+    };
+  }
+
+  /**
+   * Handle item selection from browse table
+   * @param {Object} item - Selected item (transformed)
+   */
+  handleBrowseItemSelect(item) {
+    const originalItem = item._original;
+    if (!originalItem) return;
+
+    // For equipment items, open the item panel to show individual listings
+    if (item.isEquipment) {
+      this.openItemPanel(originalItem);
+      return;
+    }
+
+    // For stackable items, use the order book system
+    // Unsubscribe from previous item
+    if (this.selectedItem && this.selectedItem.id !== originalItem.id) {
+      this.game.socket?.unsubscribeFromItem(this.selectedItem.id);
+    }
+
+    this.selectedItem = originalItem;
+    this.orderPrice = originalItem.bestAsk || originalItem.bestBid || originalItem.basePrice || 10;
+    this.orderQuantity = 1;
+
+    // Subscribe to new item updates
+    this.game.socket?.subscribeToItem(originalItem.id);
+
+    // Load order book and re-render
+    this.loadOrderBook(originalItem.id).then(() => {
+      const sidePanel = this.uiElement?.querySelector('#side-panel');
+      if (sidePanel) {
+        this.renderOrderBookAndTrade(sidePanel);
+      }
+    });
+  }
+
+  /**
+   * Handle double-click on browse table item
+   * @param {Object} item - Double-clicked item (transformed)
+   */
+  handleBrowseItemDoubleClick(item) {
+    // For equipment, open panel
+    if (item.isEquipment) {
+      this.openItemPanel(item._original);
+      return;
+    }
+
+    // For stackable items, select and open order dialog
+    this.handleBrowseItemSelect(item);
   }
 
   renderItemsGrid() {
@@ -1416,6 +1607,8 @@ export class MarketplaceScene extends Scene {
     );
 
     sidePanel.innerHTML = `
+      <div id="market-dashboard-container" class="market-dashboard-container" style="margin-bottom: 12px;"></div>
+
       <div class="ui-panel order-book-panel">
         <div class="ui-panel-header">${item.name} - Order Book</div>
         <div class="order-book-header">
@@ -1498,6 +1691,34 @@ export class MarketplaceScene extends Scene {
 
     // Attach trade panel handlers
     this.attachTradePanelHandlers(sidePanel);
+
+    // Initialize MarketDashboard for price chart
+    const dashboardContainer = sidePanel.querySelector('#market-dashboard-container');
+    if (dashboardContainer) {
+      // Destroy existing dashboard if any
+      if (this.marketDashboard) {
+        this.marketDashboard.destroy();
+      }
+
+      // Create new dashboard
+      this.marketDashboard = new MarketDashboard(dashboardContainer, {
+        game: this.game,
+        onBuy: (selectedItem, price) => {
+          // Quick buy at market price
+          this.orderSide = 'buy';
+          this.orderType = 'market';
+          this.orderQuantity = 1;
+          this.handlePlaceOrder();
+        }
+      });
+
+      // Set the selected item to load price history
+      this.marketDashboard.setItem({
+        ...item,
+        templateId: item.id,
+        itemType: item.itemType || 'consumable'
+      });
+    }
   }
 
   renderTradeSummary() {
@@ -1790,6 +2011,425 @@ export class MarketplaceScene extends Scene {
 
     } catch (err) {
       parchmentToast.error('Cancel Failed', err.message);
+    }
+  }
+
+  /**
+   * Render the My Listings tab - shows active item listings
+   * @param {HTMLElement} mainContent - Main content area
+   * @param {HTMLElement} sidePanel - Side panel area
+   */
+  renderListingsTab(mainContent, sidePanel) {
+    // Destroy existing listings table if any
+    if (this.listingsTable) {
+      this.listingsTable.destroy();
+      this.listingsTable = null;
+    }
+
+    // Transform listings to ItemDataTable format
+    const items = this.myListings.map(listing => this.transformListingForTable(listing));
+
+    mainContent.innerHTML = `
+      <div class="marketplace-browse-table" id="listings-table-container">
+        <!-- ItemDataTable will be rendered here -->
+      </div>
+    `;
+
+    // Create ItemDataTable for listings
+    const tableContainer = mainContent.querySelector('#listings-table-container');
+    this.listingsTable = new ItemDataTable(tableContainer, {
+      items,
+      variant: 'marketplace',
+      columns: ['rarity', 'iconName', 'stats', 'augments', 'price'],
+      filters: {
+        showTypeFilter: true,
+        showRarityFilter: true,
+        showSearch: true,
+        showAugmentFilter: false
+      },
+      selectionMode: 'single',
+      emptyMessage: 'You have no active listings. List items from your inventory to start selling!',
+      maxHeight: 600,
+      onRowSelect: (item) => this.showListingDetails(item, sidePanel)
+    });
+
+    // Initial side panel state
+    sidePanel.innerHTML = `
+      <div class="ui-panel" style="flex: 1;">
+        <div class="ui-panel-header">Listing Summary</div>
+        <div style="padding: 16px; font-family: Georgia, serif;">
+          <div style="margin-bottom: 12px;">
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Active Listings</div>
+            <div style="font-size: 18px; color: #2d2418; font-family: Consolas, monospace;">${this.myListings.length}</div>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Total Value</div>
+            <div style="font-size: 18px; color: #2d2418; font-family: Consolas, monospace; font-weight: bold;">
+              ${this.myListings.reduce((sum, l) => sum + (l.askPrice || 0), 0).toLocaleString()}g
+            </div>
+          </div>
+          <div class="empty-message" style="padding: 20px 0; font-size: 12px;">
+            Select a listing to view details or cancel it
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Transform a listing to ItemDataTable format
+   * @param {Object} listing - Raw listing from API
+   * @returns {Object} Transformed item for table
+   */
+  transformListingForTable(listing) {
+    const rarityMap = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+    const rarity = typeof listing.rarity === 'number'
+      ? rarityMap[listing.rarity - 1] || 'common'
+      : listing.rarity || 'common';
+
+    return {
+      // Identity
+      id: listing.listingId,
+      listingId: listing.listingId,
+      instanceId: listing.instanceId,
+
+      // Display
+      name: listing.generatedName || listing.itemName || 'Unknown Item',
+      type: listing.itemType,
+      rarity,
+      price: listing.askPrice,
+
+      // Stats
+      baseStats: listing.baseStats || {},
+      bonusStats: listing.bonusStats || {},
+
+      // Augments
+      augments: listing.augments || [],
+
+      // Listing metadata
+      listedAt: listing.listedAt,
+
+      // Original reference
+      _original: listing
+    };
+  }
+
+  /**
+   * Show listing details in side panel
+   * @param {Object} item - Selected listing (transformed)
+   * @param {HTMLElement} sidePanel - Side panel element
+   */
+  showListingDetails(item, sidePanel) {
+    const listing = item._original;
+    if (!listing) return;
+
+    const listedDate = listing.listedAt ? new Date(listing.listedAt) : null;
+    const statsHtml = this.formatListingStats(listing);
+
+    sidePanel.innerHTML = `
+      <div class="ui-panel" style="flex: 1; display: flex; flex-direction: column;">
+        <div class="ui-panel-header">Listing Details</div>
+        <div style="padding: 16px; font-family: Georgia, serif; flex: 1;">
+          <div style="text-align: center; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: bold; color: #2d2418;">${item.name}</div>
+            <div style="font-size: 12px; color: #5a4a3a; text-transform: capitalize;">${listing.itemType || 'Item'}</div>
+          </div>
+
+          ${statsHtml ? `
+            <div style="margin-bottom: 16px; padding: 10px; background: rgba(139, 115, 85, 0.1); border-radius: 4px;">
+              ${statsHtml}
+            </div>
+          ` : ''}
+
+          <div style="margin-bottom: 16px;">
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase;">Asking Price</div>
+            <div style="font-size: 24px; color: #2d2418; font-family: Consolas, monospace; font-weight: bold;">
+              ${(listing.askPrice || 0).toLocaleString()}g
+            </div>
+          </div>
+
+          ${listedDate ? `
+            <div style="margin-bottom: 16px;">
+              <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase;">Listed</div>
+              <div style="font-size: 14px; color: #2d2418;">${this.formatTime(listedDate)}</div>
+            </div>
+          ` : ''}
+
+          <button class="cancel-listing-btn" data-listing-id="${listing.listingId}" style="
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(to bottom, #c45a5a 0%, #a84040 100%);
+            border: 2px solid #8b3030;
+            border-radius: 4px;
+            color: white;
+            font-family: Georgia, serif;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          ">Cancel Listing</button>
+        </div>
+      </div>
+    `;
+
+    // Attach cancel handler
+    sidePanel.querySelector('.cancel-listing-btn')?.addEventListener('click', async () => {
+      await this.handleCancelListing(listing.listingId);
+    });
+  }
+
+  /**
+   * Format listing stats for display
+   * @param {Object} listing - Listing data
+   * @returns {string} HTML string of stats
+   */
+  formatListingStats(listing) {
+    const stats = { ...(listing.baseStats || {}), ...(listing.bonusStats || {}) };
+    const entries = Object.entries(stats).filter(([, v]) => v && v !== 0);
+
+    if (entries.length === 0) return '';
+
+    const statNames = {
+      strength: 'STR', intelligence: 'INT', agility: 'AGI', vitality: 'VIT',
+      defense: 'DEF', magicDefense: 'MDEF', attack: 'ATK', magicAttack: 'MATK'
+    };
+
+    return entries.map(([k, v]) => {
+      const name = statNames[k] || k.toUpperCase();
+      const sign = v > 0 ? '+' : '';
+      return `<div style="display: flex; justify-content: space-between; padding: 2px 0;">
+        <span style="color: #5a4a3a;">${name}</span>
+        <span style="color: #3d6b35; font-family: Consolas, monospace;">${sign}${v}</span>
+      </div>`;
+    }).join('');
+  }
+
+  /**
+   * Handle cancelling a listing
+   * @param {number} listingId - ID of listing to cancel
+   */
+  async handleCancelListing(listingId) {
+    try {
+      await this.game.api.cancelItemListing(listingId);
+
+      parchmentToast.success('Listing Cancelled', 'Your item has been returned to your inventory');
+
+      // Refresh listings
+      const listingsData = await this.game.api.getMyListings();
+      this.myListings = listingsData.listings || [];
+      this.updateTabs();
+      this.renderContent();
+
+    } catch (err) {
+      parchmentToast.error('Cancel Failed', err.message);
+    }
+  }
+
+  /**
+   * Render the Sell Items (My Inventory) tab - shows items that can be listed
+   * @param {HTMLElement} mainContent - Main content area
+   * @param {HTMLElement} sidePanel - Side panel area
+   */
+  renderInventoryTab(mainContent, sidePanel) {
+    // Destroy existing inventory table if any
+    if (this.inventoryTable) {
+      this.inventoryTable.destroy();
+      this.inventoryTable = null;
+    }
+
+    // Transform sellable items to ItemDataTable format
+    const items = this.sellableItems.map(item => this.transformSellableItemForTable(item));
+
+    mainContent.innerHTML = `
+      <div class="marketplace-browse-table" id="inventory-table-container">
+        <!-- ItemDataTable will be rendered here -->
+      </div>
+    `;
+
+    // Create ItemDataTable for sellable inventory
+    const tableContainer = mainContent.querySelector('#inventory-table-container');
+    this.inventoryTable = new ItemDataTable(tableContainer, {
+      items,
+      variant: 'sellable',
+      columns: ['rarity', 'iconName', 'quantity', 'estimatedPrice'],
+      filters: {
+        showTypeFilter: true,
+        showRarityFilter: true,
+        showSearch: true,
+        showAugmentFilter: false
+      },
+      selectionMode: 'single',
+      emptyMessage: 'No items available to sell. Unequip items or acquire more items to list them here.',
+      maxHeight: 600,
+      onRowSelect: (item) => this.showSellItemPanel(item, sidePanel)
+    });
+
+    // Initial side panel state
+    sidePanel.innerHTML = `
+      <div class="ui-panel" style="flex: 1;">
+        <div class="ui-panel-header">List Item for Sale</div>
+        <div style="padding: 16px; font-family: Georgia, serif;">
+          <div style="margin-bottom: 12px;">
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Available Items</div>
+            <div style="font-size: 18px; color: #2d2418; font-family: Consolas, monospace;">${this.sellableItems.length}</div>
+          </div>
+          <div class="empty-message" style="padding: 20px 0; font-size: 12px;">
+            Select an item to set a price and list it for sale
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Transform a sellable item to ItemDataTable format
+   * @param {Object} item - Raw item from API
+   * @returns {Object} Transformed item for table
+   */
+  transformSellableItemForTable(item) {
+    const rarityMap = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+    const rarity = typeof item.rarity === 'number'
+      ? rarityMap[item.rarity - 1] || 'common'
+      : item.rarity || 'common';
+
+    return {
+      // Identity
+      id: item.instanceId,
+      instanceId: item.instanceId,
+      templateId: item.templateId,
+      characterId: item.characterId,
+
+      // Display
+      name: item.name,
+      type: item.type,
+      rarity,
+      description: item.description,
+      quantity: item.quantity,
+      estimatedPrice: item.estimatedPrice,
+
+      // Stats
+      baseStats: item.baseStats || {},
+      bonusStats: item.bonusStats || {},
+
+      // Augments
+      augments: item.augments || [],
+
+      // Original reference
+      _original: item
+    };
+  }
+
+  /**
+   * Show sell item panel with price input
+   * @param {Object} item - Selected item (transformed)
+   * @param {HTMLElement} sidePanel - Side panel element
+   */
+  showSellItemPanel(item, sidePanel) {
+    const originalItem = item._original;
+    if (!originalItem) return;
+
+    const suggestedPrice = originalItem.estimatedPrice || originalItem.basePrice || 100;
+    const statsHtml = this.formatListingStats(originalItem);
+
+    sidePanel.innerHTML = `
+      <div class="ui-panel" style="flex: 1; display: flex; flex-direction: column;">
+        <div class="ui-panel-header">List for Sale</div>
+        <div style="padding: 16px; font-family: Georgia, serif; flex: 1;">
+          <div style="text-align: center; margin-bottom: 16px;">
+            <div style="font-size: 18px; font-weight: bold; color: #2d2418;">${item.name}</div>
+            <div style="font-size: 12px; color: #5a4a3a; text-transform: capitalize;">${item.type || 'Item'}</div>
+            <div style="font-size: 11px; color: #7a6a5a; margin-top: 4px;">From: ${originalItem.characterName}</div>
+          </div>
+
+          ${statsHtml ? `
+            <div style="margin-bottom: 16px; padding: 10px; background: rgba(139, 115, 85, 0.1); border-radius: 4px;">
+              ${statsHtml}
+            </div>
+          ` : ''}
+
+          <div style="margin-bottom: 16px;">
+            <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase;">Suggested Price</div>
+            <div style="font-size: 16px; color: #7a6a5a; font-family: Consolas, monospace;">
+              ~${suggestedPrice.toLocaleString()}g
+            </div>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; color: #5a4a3a; font-size: 12px; margin-bottom: 6px; text-transform: uppercase;">Your Price</label>
+            <input type="number" id="listing-price" value="${suggestedPrice}" min="1" style="
+              width: 100%;
+              padding: 10px;
+              font-size: 18px;
+              font-family: Consolas, monospace;
+              background: #f5edd8;
+              border: 2px solid #8b7355;
+              border-radius: 4px;
+              color: #2d2418;
+              box-sizing: border-box;
+            " />
+          </div>
+
+          <button id="create-listing-btn" style="
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(to bottom, #5a9e4a 0%, #4a8c3a 100%);
+            border: 2px solid #3d7530;
+            border-radius: 4px;
+            color: white;
+            font-family: Georgia, serif;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          ">List for Sale</button>
+        </div>
+      </div>
+    `;
+
+    // Attach create listing handler
+    sidePanel.querySelector('#create-listing-btn')?.addEventListener('click', async () => {
+      const priceInput = sidePanel.querySelector('#listing-price');
+      const price = parseInt(priceInput?.value, 10);
+
+      if (!price || price < 1) {
+        parchmentToast.error('Invalid Price', 'Please enter a valid price');
+        return;
+      }
+
+      await this.handleCreateListing(originalItem, price);
+    });
+  }
+
+  /**
+   * Handle creating a new listing
+   * @param {Object} item - Item to list
+   * @param {number} price - Listing price
+   */
+  async handleCreateListing(item, price) {
+    try {
+      await this.game.api.createItemListing(
+        item.characterId,
+        item.instanceId,
+        price
+      );
+
+      parchmentToast.success('Listing Created', `${item.name} listed for ${price.toLocaleString()}g`);
+
+      // Refresh data
+      const [listingsData, sellableData] = await Promise.all([
+        this.game.api.getMyListings(),
+        this.game.api.getSellableInventory()
+      ]);
+
+      this.myListings = listingsData.listings || [];
+      this.sellableItems = sellableData.items || [];
+      this.updateTabs();
+      this.renderContent();
+
+    } catch (err) {
+      parchmentToast.error('Listing Failed', err.message);
     }
   }
 

@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.1 |
+| Version | 1.2 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -16,7 +16,7 @@
 |----------|------------|--------|
 | Infrastructure | 0% | Not Started |
 | CI/CD Pipeline | 0% | Not Started |
-| Testing | 65% | In Progress |
+| Testing | 70% | In Progress |
 | Performance | 30% | In Progress |
 | Monitoring | 0% | Not Started |
 
@@ -102,6 +102,8 @@
 - [x] Chat service tests (21)
 - [x] Presence service tests (27)
 - [x] WebSocket tests (44)
+- [x] Order expiration service tests (orderExpirationService.unit.test.js)
+- [x] Shop refresh service tests (shopRefreshService.unit.test.js)
 - [ ] Quest service tests (pending implementation)
 - [ ] Settings service tests
 
@@ -113,6 +115,7 @@
 - [x] Coliseum service tests (coliseumService.integration.test.js)
 - [x] Item drop service tests (itemDropService.integration.test.js)
 - [x] Party WebSocket tests (partyWebsocket.integration.test.js)
+- [x] Marketplace API tests (marketplace.integration.test.js)
 - [ ] Database transaction tests
 - [ ] Migration rollback tests
 
@@ -269,5 +272,6 @@
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2 | Jan 2026 | ItemDataTable & Marketplace plan complete: Added marketplace integration tests, order expiration unit tests, shop refresh unit tests. Testing updated to 70%. |
 | 1.1 | Jan 2026 | Roadmap audit v8.0: Added completed integration tests (battle reconnection, coliseum, item drop, party websocket). Updated testing completion to 65%. |
 | 1.0 | Jan 2026 | Initial split from DEVELOPMENT_ROADMAP.md |

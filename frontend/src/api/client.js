@@ -341,6 +341,14 @@ export class ApiClient {
     return this.get('/marketplace/listings/mine');
   }
 
+  /**
+   * Get sellable items from user's inventory for marketplace
+   * @returns {Promise<{items: Array}>} Items that can be listed
+   */
+  getSellableInventory() {
+    return this.get('/marketplace/inventory/sellable');
+  }
+
   createItemListing(characterId, characterItemId, price) {
     return this.post('/marketplace/listings', {
       characterId,

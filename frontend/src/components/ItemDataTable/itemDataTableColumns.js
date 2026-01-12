@@ -1,5 +1,27 @@
 /**
  * ItemDataTable Columns - Column configuration and render functions
+ *
+ * This module defines the column system for ItemDataTable, including:
+ * - Column renderers that format cell content
+ * - Column configurations with width, sorting, and alignment
+ * - Preset column combinations for common use cases (shop, marketplace, inventory)
+ * - Filter options for dropdown menus
+ *
+ * @module ItemDataTableColumns
+ *
+ * @example
+ * // Using a preset
+ * const columns = COLUMN_PRESETS.shop; // ['rarity', 'iconName', 'supplyLevel', 'quantity', 'price']
+ *
+ * @example
+ * // Custom column selection
+ * const customColumns = ['rarity', 'iconName', 'type', 'stats', 'price'];
+ *
+ * @example
+ * // Accessing column config
+ * const priceConfig = COLUMN_CONFIGS.price;
+ * console.log(priceConfig.width); // '80px'
+ * console.log(priceConfig.sortable); // true
  */
 
 import { Icon } from '../Icon.js';
@@ -50,7 +72,23 @@ function capitalize(str) {
 }
 
 /**
- * Column render functions
+ * Column render functions.
+ *
+ * Each renderer takes an item object and returns an HTML string.
+ * Renderers handle null/undefined values gracefully.
+ *
+ * @type {Object.<string, function(Object): string>}
+ *
+ * @property {function} rarity - Empty renderer (rarity shown via row border)
+ * @property {function} iconName - Icon + item name with rarity coloring
+ * @property {function} quantity - Stack quantity (hidden if <= 1)
+ * @property {function} price - Price in gold with 'g' suffix
+ * @property {function} stats - Top 3 stats abbreviated (e.g., "+5 STR, +3 INT")
+ * @property {function} augments - Augment icons (max 4)
+ * @property {function} seller - Seller character name
+ * @property {function} type - Capitalized item type
+ * @property {function} supplyLevel - Shop supply level badge
+ * @property {function} estimatedPrice - Estimated/suggested price with ~ prefix
  */
 export const COLUMN_RENDERERS = {
   /**
@@ -143,11 +181,58 @@ export const COLUMN_RENDERERS = {
    */
   type: (item) => {
     return `<span class="item-data-table-type">${capitalize(item.type || '')}</span>`;
+  },
+
+  /**
+   * Supply level column - shows stock availability badge for shops
+   * @param {Object} item - Item with supplyLevel and optional supplyLabel
+   * @returns {string} HTML for supply badge
+   */
+  supplyLevel: (item) => {
+    const level = item.supplyLevel || 'medium';
+    const label = item.supplyLabel || capitalize(level);
+    return `<span class="item-data-table-supply-badge supply-${level}">${escapeHtml(label)}</span>`;
+  },
+
+  /**
+   * Estimated price column - shows suggested/estimated price for inventory items
+   * @param {Object} item - Item with estimatedPrice
+   * @returns {string} HTML for estimated price
+   */
+  estimatedPrice: (item) => {
+    if (item.estimatedPrice === undefined || item.estimatedPrice === null) return '-';
+    const priceValue = typeof item.estimatedPrice === 'number' ? item.estimatedPrice.toLocaleString() : item.estimatedPrice;
+    return `
+      <span class="item-data-table-price item-data-table-estimated-price">
+        ~${priceValue}g
+      </span>
+    `;
   }
 };
 
 /**
- * Column configuration definitions
+ * @typedef {Object} ColumnConfig
+ * @property {string} key - Column identifier
+ * @property {string} label - Display header text
+ * @property {string} width - Fixed width (e.g., '80px') or 'flex' for flexible
+ * @property {number} [flex] - Flex ratio (default 1) when width is 'flex'
+ * @property {boolean} sortable - Whether clicking the header sorts the column
+ * @property {string} [sortKey] - Key to sort by (defaults to key)
+ * @property {string} [align] - 'left' | 'center' | 'right'
+ * @property {function(Object): string} render - Function that returns HTML for the cell
+ */
+
+/**
+ * Column configuration definitions.
+ *
+ * Each configuration specifies how a column behaves and renders.
+ *
+ * @type {Object.<string, ColumnConfig>}
+ *
+ * @example
+ * // Get config for a specific column
+ * const config = COLUMN_CONFIGS.price;
+ * // config = { key: 'price', label: 'Price', width: '80px', sortable: true, ... }
  */
 export const COLUMN_CONFIGS = {
   rarity: {
@@ -213,22 +298,70 @@ export const COLUMN_CONFIGS = {
     sortable: true,
     sortKey: 'type',
     render: COLUMN_RENDERERS.type
+  },
+  supplyLevel: {
+    key: 'supplyLevel',
+    label: 'Supply',
+    width: '80px',
+    sortable: true,
+    sortKey: 'supplyLevel',
+    align: 'center',
+    render: COLUMN_RENDERERS.supplyLevel
+  },
+  estimatedPrice: {
+    key: 'estimatedPrice',
+    label: 'Est. Price',
+    width: '90px',
+    sortable: true,
+    sortKey: 'estimatedPrice',
+    align: 'right',
+    render: COLUMN_RENDERERS.estimatedPrice
   }
 };
 
 /**
- * Predefined column presets for different variants
+ * Predefined column presets for different variants.
+ *
+ * @type {Object.<string, string[]>}
+ * @property {string[]} default - Default columns for general use
+ * @property {string[]} shop - Shop variant with supply level indicator
+ * @property {string[]} marketplace - Marketplace variant with seller, stats, augments
+ * @property {string[]} inventory - Personal inventory view
+ * @property {string[]} formation - Equipment selection for formations
+ * @property {string[]} sellable - Items available to list for sale (with estimated prices)
  */
 export const COLUMN_PRESETS = {
   default: ['rarity', 'iconName', 'quantity', 'price'],
-  shop: ['rarity', 'iconName', 'quantity', 'price'],
+  shop: ['rarity', 'iconName', 'supplyLevel', 'quantity', 'price'],
   marketplace: ['rarity', 'iconName', 'stats', 'augments', 'price', 'seller'],
   inventory: ['rarity', 'iconName', 'type', 'quantity'],
-  formation: ['rarity', 'iconName', 'type', 'stats']
+  formation: ['rarity', 'iconName', 'type', 'stats'],
+  sellable: ['rarity', 'iconName', 'quantity', 'estimatedPrice']
 };
 
 /**
- * Filter options for dropdowns
+ * @typedef {Object} FilterOption
+ * @property {string} value - Option value (empty string for "All")
+ * @property {string} label - Display label
+ */
+
+/**
+ * Filter options for dropdown menus.
+ *
+ * Each filter type has an array of options with value/label pairs.
+ * The first option in each array is typically the "All" option with empty value.
+ *
+ * @type {Object.<string, FilterOption[]>}
+ *
+ * @property {FilterOption[]} type - Item type filter options (weapon, armor, etc.)
+ * @property {FilterOption[]} rarity - Rarity filter options (common to legendary)
+ * @property {FilterOption[]} augment - Augment category filter options (fire, ice, etc.)
+ *
+ * @example
+ * // Use in a select element
+ * FILTER_OPTIONS.type.forEach(opt => {
+ *   console.log(`<option value="${opt.value}">${opt.label}</option>`);
+ * });
  */
 export const FILTER_OPTIONS = {
   type: [

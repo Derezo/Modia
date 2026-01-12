@@ -127,7 +127,7 @@ export class TavernScene extends Scene {
 
       .tavern-title h2 {
         margin: 0;
-        color: var(--parchment-gold);
+        color: var(--parchment-burgundy);
         text-shadow: 0 1px 0 var(--parchment-highlight);
         font-size: 22px;
       }
@@ -182,7 +182,7 @@ export class TavernScene extends Scene {
 
       .tavern-tab.active {
         background: linear-gradient(to bottom, var(--parchment-light) 0%, var(--parchment-mid) 100%);
-        color: var(--parchment-gold);
+        color: var(--parchment-text-primary);
         border-color: var(--parchment-border);
       }
 
@@ -247,7 +247,7 @@ export class TavernScene extends Scene {
       }
 
       .chat-message-author.self {
-        color: var(--parchment-gold);
+        color: var(--parchment-burgundy);
       }
 
       .chat-message-time {
@@ -288,7 +288,7 @@ export class TavernScene extends Scene {
 
       .chat-reaction.user-reacted {
         background: rgba(201, 162, 39, 0.25);
-        border-color: var(--parchment-gold);
+        border-color: var(--parchment-burgundy);
       }
 
       .chat-reaction-count {
@@ -353,7 +353,7 @@ export class TavernScene extends Scene {
 
       .chat-input:focus {
         outline: none;
-        border-color: var(--parchment-gold);
+        border-color: var(--parchment-burgundy);
         box-shadow: inset 0 1px 3px rgba(0,0,0,0.1), 0 0 0 2px rgba(201, 162, 39, 0.2);
       }
 
@@ -442,7 +442,7 @@ export class TavernScene extends Scene {
 
       .sidebar-header {
         font-weight: bold;
-        color: var(--parchment-gold);
+        color: var(--parchment-text-primary);
         margin-bottom: var(--parchment-spacing-md);
         display: flex;
         justify-content: space-between;
@@ -482,7 +482,7 @@ export class TavernScene extends Scene {
 
       .player-item.active {
         background: rgba(201, 162, 39, 0.2);
-        border-color: var(--parchment-gold);
+        border-color: var(--parchment-burgundy);
       }
 
       .player-status {
@@ -507,7 +507,7 @@ export class TavernScene extends Scene {
       }
 
       .player-name.self {
-        color: var(--parchment-gold);
+        color: var(--parchment-border-dark);
         font-weight: bold;
       }
 
@@ -554,7 +554,7 @@ export class TavernScene extends Scene {
 
       .dm-item.active {
         background: rgba(201, 162, 39, 0.2);
-        border-color: var(--parchment-gold);
+        border-color: var(--parchment-burgundy);
       }
 
       .dm-item-info {
@@ -633,7 +633,7 @@ export class TavernScene extends Scene {
 
       .presence-select:focus {
         outline: none;
-        border-color: var(--parchment-gold);
+        border-color: var(--parchment-burgundy);
       }
 
       /* Back button styling */

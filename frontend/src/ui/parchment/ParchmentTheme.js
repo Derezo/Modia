@@ -41,10 +41,9 @@ export const PARCHMENT_COLORS = {
 
   // Additional accent colors
   accent: {
-    burgundy: '#6b2d3d',  // Primary accent for highlights and decorations
-    gold: '#c9a227',      // Legacy - use burgundy for new code, gold only for actual gold/currency
-    copper: '#b87333',
-    ink: '#1a1a2e'
+    burgundy: '#6b2d3d',  // Primary accent for text highlights, headers, and decorations
+    copper: '#b87333',    // Secondary accent, good for borders and highlights
+    ink: '#1a1a2e'        // Dark accent for shadows and emphasis
   },
 
   // Element/skill type colors (muted to fit parchment aesthetic)
@@ -151,7 +150,6 @@ export function injectParchmentTheme() {
 
       /* Parchment accents */
       --parchment-burgundy: ${PARCHMENT_COLORS.accent.burgundy};
-      --parchment-gold: ${PARCHMENT_COLORS.accent.gold};
       --parchment-copper: ${PARCHMENT_COLORS.accent.copper};
       --parchment-ink: ${PARCHMENT_COLORS.accent.ink};
 

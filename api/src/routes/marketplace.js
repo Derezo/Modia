@@ -415,6 +415,20 @@ router.get('/listings/mine', authenticate, readLimiter, asyncHandler(async (req,
 }));
 
 // ============================================
+// GET /api/marketplace/inventory/sellable - Get sellable items from user's inventory
+// Returns items that are: unequipped, tradeable, and not already listed
+// ============================================
+router.get('/inventory/sellable', authenticate, readLimiter, asyncHandler(async (req, res) => {
+  const client = await getClient();
+  try {
+    const items = await marketplaceService.getSellableInventory(client, req.user.userId);
+    res.json({ success: true, items });
+  } finally {
+    client.release();
+  }
+}));
+
+// ============================================
 // POST /api/marketplace/listings - Create a new item listing
 // ============================================
 router.post('/listings', authenticate, requireMarketplaceAccess, orderLimiter, asyncHandler(async (req, res) => {
