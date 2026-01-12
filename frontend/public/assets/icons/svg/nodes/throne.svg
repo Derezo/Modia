@@ -1,17 +1,77 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Royal throne -->
-  <path class="stroke metallic" d="M6 20V8c0-2 1-4 3-4h6c2 0 3 2 3 4v12"/>
-  <!-- Seat -->
-  <path class="stroke metallic" d="M6 14h12v6H6z"/>
-  <!-- Armrests -->
-  <path class="stroke" d="M6 10H4c-1 0-1 1-1 2v2h3"/>
-  <path class="stroke" d="M18 10h2c1 0 1 1 1 2v2h-3"/>
-  <!-- Crown on back -->
-  <path class="stroke" d="M9 4l1.5-2L12 4l1.5-2L15 4"/>
-  <!-- Cushion detail -->
-  <path class="stroke" d="M8 17h8" style="stroke-width: 1;"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Throne shadow -->
+  <ellipse cx="12" cy="22" rx="8" ry="2" fill="#3d2a00" opacity="0.3"/>
+
+  <!-- Throne back (dark gold) -->
+  <path d="M5 20V7c0-2 1.5-4 3.5-4h7c2 0 3.5 2 3.5 4v13H5z" fill="#8b6914"/>
+
+  <!-- Throne back (gold) -->
+  <path d="M6 20V8c0-1.5 1-3 2.5-3h7c1.5 0 2.5 1.5 2.5 3v12H6z" fill="#daa520"/>
+
+  <!-- Throne back highlight (light gold) -->
+  <path d="M7 19V9c0-1 0.7-2 1.8-2h3.2v12H7z" fill="#ffd700"/>
+
+  <!-- Top highlight -->
+  <path d="M8 10c0-0.8 0.5-1.5 1.3-1.5h2.7v4H8z" fill="#ffe44d" opacity="0.5"/>
+
+  <!-- Crown decoration on back -->
+  <g fill="#8b6914">
+    <path d="M8 3l1.5-1.5L12 3.5l2.5-2L16 3v2H8z"/>
+  </g>
+  <g fill="#daa520">
+    <path d="M8.5 3.2l1.3-1.2L12 3.8l2.2-1.8 1.3 1.2v1.3H8.5z"/>
+  </g>
+  <g fill="#ffd700">
+    <circle cx="9.5" cy="2.5" r="0.5"/>
+    <circle cx="12" cy="2" r="0.5"/>
+    <circle cx="14.5" cy="2.5" r="0.5"/>
+  </g>
+
+  <!-- Seat base (dark gold) -->
+  <rect x="5" y="13" width="14" height="7" fill="#8b6914"/>
+
+  <!-- Seat front (gold) -->
+  <rect x="5.5" y="13.5" width="13" height="6" fill="#daa520"/>
+
+  <!-- Red cushion -->
+  <rect x="6" y="14" width="12" height="4" rx="0.5" fill="#8b2020"/>
+  <rect x="6.5" y="14.3" width="11" height="3.4" rx="0.3" fill="#b03030"/>
+  <rect x="7" y="14.5" width="6" height="2.5" rx="0.2" fill="#c93030" opacity="0.6"/>
+
+  <!-- Cushion detail lines -->
+  <path d="M8 16.5h8" fill="none" stroke="#6a1515" stroke-width="0.4"/>
+
+  <!-- Armrests (dark gold) -->
+  <path d="M5 10H3c-1 0-1.5 0.8-1.5 1.8v2.2h3.5v-4z" fill="#8b6914"/>
+  <path d="M19 10h2c1 0 1.5 0.8 1.5 1.8v2.2h-3.5v-4z" fill="#8b6914"/>
+
+  <!-- Armrests (gold) -->
+  <path d="M5 10.5H3.3c-0.7 0-1 0.6-1 1.3v1.7H5v-3z" fill="#daa520"/>
+  <path d="M19 10.5h1.7c0.7 0 1 0.6 1 1.3v1.7H19v-3z" fill="#daa520"/>
+
+  <!-- Armrest highlights -->
+  <path d="M3.5 11h1v2h-1z" fill="#ffd700" opacity="0.4"/>
+  <path d="M19.5 11h1v2h-1z" fill="#ffd700" opacity="0.4"/>
+
+  <!-- Armrest ends (spheres) -->
+  <circle cx="2.5" cy="10.5" r="1" fill="#8b6914"/>
+  <circle cx="2.5" cy="10.3" r="0.8" fill="#daa520"/>
+  <circle cx="2.3" cy="10.1" r="0.4" fill="#ffd700" opacity="0.6"/>
+
+  <circle cx="21.5" cy="10.5" r="1" fill="#8b6914"/>
+  <circle cx="21.5" cy="10.3" r="0.8" fill="#daa520"/>
+  <circle cx="21.3" cy="10.1" r="0.4" fill="#ffd700" opacity="0.6"/>
+
+  <!-- Throne legs -->
+  <rect x="5" y="18" width="2" height="3" fill="#8b6914"/>
+  <rect x="17" y="18" width="2" height="3" fill="#8b6914"/>
+  <rect x="5.3" y="18" width="1.4" height="2.7" fill="#daa520"/>
+  <rect x="17.3" y="18" width="1.4" height="2.7" fill="#daa520"/>
+
+  <!-- Decorative trim -->
+  <path d="M6 13h12" fill="none" stroke="#ffd700" stroke-width="0.5"/>
+  <path d="M6 18h12" fill="none" stroke="#ffd700" stroke-width="0.5"/>
+
+  <!-- Bottom depth shadow -->
+  <path d="M5 19h14v2H5z" fill="#5a4010" opacity="0.2"/>
 </svg>
