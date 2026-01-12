@@ -8,8 +8,11 @@ import {
   getParchmentBorder,
   getParchmentShadow,
   getParchmentButtonCSS,
-  getParchmentPanelCSS
+  getParchmentPanelCSS,
+  getParchmentScrollbarCSS,
+  getParchmentSpinnerCSS
 } from '../ui/parchment/index.js';
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 
 // Alias for concise color access
 const P = PARCHMENT_COLORS;
@@ -232,14 +235,14 @@ export class ColiseumScene extends Scene {
       }
 
       .coliseum-queue-card:hover {
-        border-color: ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
         transform: translateY(-4px);
-        box-shadow: ${getParchmentShadow(true)}, 0 0 12px rgba(201, 162, 39, 0.3);
+        box-shadow: ${getParchmentShadow(true)}, 0 0 12px rgba(107, 45, 61, 0.3);
       }
 
       .coliseum-queue-card.selected {
-        border-color: ${P.accent.gold};
-        box-shadow: ${getParchmentShadow(true)}, 0 0 0 2px ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
+        box-shadow: ${getParchmentShadow(true)}, 0 0 0 2px ${P.accent.burgundy};
       }
 
       .coliseum-queue-card.disabled {
@@ -577,8 +580,8 @@ export class ColiseumScene extends Scene {
       }
 
       .coliseum-leaderboard-table tr.current-user {
-        background: rgba(201, 162, 39, 0.2);
-        border-left: 3px solid ${P.accent.gold};
+        background: rgba(107, 45, 61, 0.2);
+        border-left: 3px solid ${P.accent.burgundy};
       }
 
       .coliseum-leaderboard-table tr.current-user td:first-child::before {
@@ -619,14 +622,14 @@ export class ColiseumScene extends Scene {
       .coliseum-winloss-cell .losses { color: ${P.state.error}; }
 
       .coliseum-streak-cell {
-        color: ${P.accent.gold};
+        color: ${P.state.success};
       }
 
       .coliseum-user-rank-banner {
         margin-top: ${PARCHMENT_SPACING.xl};
         padding: ${PARCHMENT_SPACING.lg};
         ${getParchmentPanelCSS()}
-        border-color: ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
         text-align: center;
       }
 
@@ -638,7 +641,7 @@ export class ColiseumScene extends Scene {
       }
 
       .coliseum-user-rank-banner .rank-value {
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xxl};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
@@ -934,7 +937,7 @@ export class ColiseumScene extends Scene {
       }
 
       .coliseum-character-level {
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
@@ -1000,10 +1003,10 @@ export class ColiseumScene extends Scene {
         margin-top: ${PARCHMENT_SPACING.xs};
       }
 
-      /* MVP Section - Arena gold accent */
+      /* MVP Section - Arena accent */
       .coliseum-mvp-section {
-        background: linear-gradient(135deg, rgba(201, 162, 39, 0.2), rgba(184, 115, 51, 0.1));
-        border: 2px solid ${P.accent.gold};
+        background: linear-gradient(135deg, rgba(107, 45, 61, 0.2), rgba(139, 115, 85, 0.1));
+        border: 2px solid ${P.accent.burgundy};
         border-radius: ${PARCHMENT_RADIUS.lg};
         padding: ${PARCHMENT_SPACING.lg};
         text-align: center;
@@ -1011,7 +1014,7 @@ export class ColiseumScene extends Scene {
 
       .coliseum-mvp-header {
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         margin-bottom: ${PARCHMENT_SPACING.sm};
         text-transform: uppercase;
@@ -1031,6 +1034,14 @@ export class ColiseumScene extends Scene {
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         margin-top: ${PARCHMENT_SPACING.sm};
       }
+
+      /* Themed Scrollbars */
+      ${getParchmentScrollbarCSS('.coliseum-content')}
+      ${getParchmentScrollbarCSS('.coliseum-match-details-content')}
+      ${getParchmentScrollbarCSS('.coliseum-history-list')}
+
+      /* Parchment spinner (use alongside coliseum-queue-spinner for consistency) */
+      ${getParchmentSpinnerCSS()}
     `;
     document.head.appendChild(style);
   }
@@ -1645,7 +1656,7 @@ export class ColiseumScene extends Scene {
         this.updateTabs();
         this.updateContent();
         this.startReadyCountdown();
-        this.game.showNotification('Match found! Get ready!', 'success');
+        parchmentToast.success('Match Found', 'Get ready!');
       },
 
       'coliseum:opponent_ready': (payload) => {
@@ -1658,12 +1669,12 @@ export class ColiseumScene extends Scene {
         this.isReady = true;
         this.opponentReady = true;
         this.updateContent();
-        this.game.showNotification('Match starting in 3 seconds!', 'success');
+        parchmentToast.success('Ready', 'Match starting in 3 seconds!');
       },
 
       'coliseum:match_started': async (payload) => {
         // Transition to battle scene
-        this.game.showNotification('Battle begins!', 'success');
+        parchmentToast.success('Battle', 'Battle begins!');
 
         // Clear match state before transitioning
         this.currentMatch = null;
@@ -1694,7 +1705,7 @@ export class ColiseumScene extends Scene {
           }
         } catch (error) {
           console.error('[Coliseum] Failed to load PvP battle:', error);
-          this.game.showNotification('Failed to load battle. Please try again.', 'error');
+          parchmentToast.error('Battle Error', 'Failed to load battle. Please try again.');
           // Reset to queue view
           this.updateContent();
         }
@@ -1709,7 +1720,7 @@ export class ColiseumScene extends Scene {
           this.matchCountdown = null;
         }
         this.updateContent();
-        this.game.showNotification(payload.reason || 'Match cancelled', 'warning');
+        parchmentToast.warning('Match Cancelled', payload.reason || 'Match cancelled');
       }
     };
 
@@ -1749,7 +1760,7 @@ export class ColiseumScene extends Scene {
       this.userRank = data.userRank || null;
     } catch (err) {
       console.error('Failed to load leaderboard:', err);
-      this.game.showNotification('Failed to load leaderboard', 'error');
+      parchmentToast.error('Leaderboard Error', 'Failed to load leaderboard');
       this.leaderboardData = [];
     } finally {
       this.loadingLeaderboard = false;
@@ -1776,7 +1787,7 @@ export class ColiseumScene extends Scene {
       this.hasMoreMatches = newMatches.length === this.matchHistoryLimit;
     } catch (err) {
       console.error('Failed to load match history:', err);
-      this.game.showNotification('Failed to load match history', 'error');
+      parchmentToast.error('History Error', 'Failed to load match history');
     } finally {
       this.loadingHistory = false;
       this.updateContent();
@@ -1793,7 +1804,7 @@ export class ColiseumScene extends Scene {
       this.selectedMatchDetails = data.match || data;
     } catch (err) {
       console.error('Failed to load match details:', err);
-      this.game.showNotification('Failed to load match details', 'error');
+      parchmentToast.error('Details Error', 'Failed to load match details');
       this.selectedMatchDetails = null;
     } finally {
       this.loadingMatchDetails = false;

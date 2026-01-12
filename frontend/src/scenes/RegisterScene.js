@@ -198,7 +198,7 @@ export class RegisterScene extends Scene {
       }
 
       .register-switch a {
-        color: ${P.accent.gold};
+        color: ${P.accent.burgundy};
         cursor: pointer;
         text-decoration: underline;
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};

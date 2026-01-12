@@ -168,9 +168,9 @@ export class CharacterCreateScene extends Scene {
       }
 
       .charcreate-option.selected {
-        border-color: ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
         background: ${P.mid};
-        box-shadow: 0 0 0 2px ${P.accent.gold}, ${getParchmentShadow()};
+        box-shadow: 0 0 0 2px ${P.accent.burgundy}, ${getParchmentShadow()};
       }
 
       .charcreate-option-emoji {
@@ -231,9 +231,9 @@ export class CharacterCreateScene extends Scene {
       }
 
       .charcreate-gender-option.selected {
-        border-color: ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
         background: ${P.mid};
-        box-shadow: 0 0 0 2px ${P.accent.gold};
+        box-shadow: 0 0 0 2px ${P.accent.burgundy};
       }
 
       .charcreate-gender-emoji {
@@ -261,7 +261,7 @@ export class CharacterCreateScene extends Scene {
       }
 
       .charcreate-portrait.has-portrait {
-        border-color: ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
       }
 
       .charcreate-portrait-placeholder {

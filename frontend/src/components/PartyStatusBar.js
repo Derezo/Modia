@@ -3,6 +3,14 @@
  * Displays party name, member avatars, ready status, and leave button
  */
 
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import {
+  PARCHMENT_COLORS,
+  getParchmentGradient,
+  getParchmentBorder,
+  getParchmentShadow
+} from '../ui/parchment/index.js';
+
 export class PartyStatusBar {
   constructor(game) {
     this.game = game;
@@ -26,16 +34,16 @@ export class PartyStatusBar {
       top: 74px;
       right: 20px;
       z-index: 8900;
-      background: linear-gradient(135deg, rgba(20, 20, 30, 0.95), rgba(30, 30, 45, 0.95));
-      border: 2px solid #4a4a6a;
+      background: ${getParchmentGradient('135deg')};
+      border: ${getParchmentBorder()};
       border-radius: 8px;
       padding: 10px 14px;
       display: none;
       align-items: center;
       gap: 12px;
       font-family: 'Georgia', serif;
-      color: #e0e0e0;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+      color: ${PARCHMENT_COLORS.text.primary};
+      box-shadow: ${getParchmentShadow()};
       max-width: 300px;
       transition: transform 0.2s, opacity 0.2s;
     `;
@@ -46,11 +54,11 @@ export class PartyStatusBar {
       style.id = 'party-status-bar-styles';
       style.textContent = `
         @keyframes readyPulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); }
-          50% { box-shadow: 0 0 0 6px rgba(74, 222, 128, 0); }
+          0%, 100% { box-shadow: 0 0 0 0 rgba(74, 117, 72, 0.4); }
+          50% { box-shadow: 0 0 0 6px rgba(74, 117, 72, 0); }
         }
         #party-status-bar.all-ready {
-          border-color: #4ade80;
+          border-color: ${PARCHMENT_COLORS.state.success};
           animation: readyPulse 2s ease-in-out infinite;
         }
         #party-status-bar .member-avatar {
@@ -60,10 +68,10 @@ export class PartyStatusBar {
           transform: scale(1.1);
         }
         #party-status-bar .member-avatar.ready {
-          border-color: #4ade80 !important;
+          border-color: ${PARCHMENT_COLORS.state.success} !important;
         }
         #party-status-bar .member-avatar.not-ready {
-          border-color: #6b7280 !important;
+          border-color: ${PARCHMENT_COLORS.text.muted} !important;
         }
       `;
       document.head.appendChild(style);
@@ -116,7 +124,7 @@ export class PartyStatusBar {
     // Party disbanded
     this.game.socket.on('party:disbanded', (data) => {
       if (this.party && this.party.id === data.partyId) {
-        this.game.toastManager?.warning('Party Disbanded', data.reason || 'The party has been disbanded');
+        parchmentToast.warning('Party Disbanded', data.reason || 'The party has been disbanded');
         this.hide();
         this.party = null;
       }
@@ -134,7 +142,7 @@ export class PartyStatusBar {
     // Battle starting
     this.game.socket.on('party:battle_starting', (data) => {
       if (this.party && this.party.id === data.partyId) {
-        this.game.toastManager?.info('Battle Starting', 'Your party is entering battle!');
+        parchmentToast.info('Battle Starting', 'Your party is entering battle!');
       }
     });
   }
@@ -190,13 +198,13 @@ export class PartyStatusBar {
         <div class="party-name" style="
           font-size: 13px;
           font-weight: bold;
-          color: #f59e0b;
+          color: ${PARCHMENT_COLORS.accent.burgundy};
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
           max-width: 120px;
         ">${this.escapeHtml(this.party.name)}</div>
-        <div class="party-meta" style="font-size: 11px; color: #888;">
+        <div class="party-meta" style="font-size: 11px; color: ${PARCHMENT_COLORS.text.muted};">
           ${members.length}/${this.party.maxMembers || 4} members
         </div>
       </div>
@@ -209,8 +217,8 @@ export class PartyStatusBar {
         ${isLeader ? '' : this.renderReadyButton()}
         <button id="leave-party-btn" title="Leave Party" style="
           background: transparent;
-          border: 1px solid #ef4444;
-          color: #ef4444;
+          border: 1px solid ${PARCHMENT_COLORS.state.error};
+          color: ${PARCHMENT_COLORS.state.error};
           width: 28px;
           height: 28px;
           border-radius: 4px;
@@ -244,8 +252,8 @@ export class PartyStatusBar {
                width: 28px;
                height: 28px;
                border-radius: 50%;
-               background: linear-gradient(135deg, #3a3a5a, #2a2a4a);
-               border: 2px solid ${isReady ? '#4ade80' : '#6b7280'};
+               background: linear-gradient(135deg, ${PARCHMENT_COLORS.mid}, ${PARCHMENT_COLORS.dark});
+               border: 2px solid ${isReady ? PARCHMENT_COLORS.state.success : PARCHMENT_COLORS.text.muted};
                display: flex;
                align-items: center;
                justify-content: center;
@@ -262,14 +270,14 @@ export class PartyStatusBar {
             right: -2px;
             width: 10px;
             height: 10px;
-            background: #4ade80;
+            background: ${PARCHMENT_COLORS.state.success};
             border-radius: 50%;
-            border: 1px solid #16162a;
+            border: 1px solid ${PARCHMENT_COLORS.light};
             font-size: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #000;
+            color: ${PARCHMENT_COLORS.text.inverse};
           ">&#10003;</span>` : ''}
           ${isLeader ? `<span style="
             position: absolute;
@@ -292,9 +300,9 @@ export class PartyStatusBar {
 
     return `
       <button id="toggle-ready-btn" title="${isReady ? 'Not Ready' : 'Ready Up'}" style="
-        background: ${isReady ? '#4ade80' : 'transparent'};
-        border: 1px solid #4ade80;
-        color: ${isReady ? '#000' : '#4ade80'};
+        background: ${isReady ? PARCHMENT_COLORS.state.success : 'transparent'};
+        border: 1px solid ${PARCHMENT_COLORS.state.success};
+        color: ${isReady ? PARCHMENT_COLORS.text.inverse : PARCHMENT_COLORS.state.success};
         padding: 4px 10px;
         border-radius: 4px;
         cursor: pointer;
@@ -315,7 +323,7 @@ export class PartyStatusBar {
     if (leaveBtn) {
       leaveBtn.addEventListener('click', () => this.handleLeave());
       leaveBtn.addEventListener('mouseenter', () => {
-        leaveBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+        leaveBtn.style.background = `rgba(139, 68, 68, 0.2)`;
       });
       leaveBtn.addEventListener('mouseleave', () => {
         leaveBtn.style.background = 'transparent';
@@ -327,8 +335,8 @@ export class PartyStatusBar {
     if (readyBtn) {
       readyBtn.addEventListener('click', () => this.handleToggleReady());
       readyBtn.addEventListener('mouseenter', () => {
-        if (!readyBtn.style.background.includes('#4ade80')) {
-          readyBtn.style.background = 'rgba(74, 222, 128, 0.2)';
+        if (!readyBtn.style.background.includes(PARCHMENT_COLORS.state.success)) {
+          readyBtn.style.background = 'rgba(74, 117, 72, 0.2)';
         }
       });
       readyBtn.addEventListener('mouseleave', () => {
@@ -354,12 +362,12 @@ export class PartyStatusBar {
 
     try {
       await this.game.api.leaveParty(this.party.id);
-      this.game.toastManager?.info('Left Party', 'You have left the party');
+      parchmentToast.info('Left Party', 'You have left the party');
       this.party = null;
       this.hide();
     } catch (error) {
       console.error('Failed to leave party:', error);
-      this.game.toastManager?.error('Error', error.message || 'Failed to leave party');
+      parchmentToast.error('Error', error.message || 'Failed to leave party');
     }
   }
 
@@ -387,11 +395,11 @@ export class PartyStatusBar {
       this.render();
 
       if (response.allReady) {
-        this.game.toastManager?.success('All Ready', 'All party members are ready!');
+        parchmentToast.success('All Ready', 'All party members are ready!');
       }
     } catch (error) {
       console.error('Failed to toggle ready status:', error);
-      this.game.toastManager?.error('Error', error.message || 'Failed to update ready status');
+      parchmentToast.error('Error', error.message || 'Failed to update ready status');
     }
   }
 

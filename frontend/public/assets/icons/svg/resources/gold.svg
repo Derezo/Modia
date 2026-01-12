@@ -1,15 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Gold coin with metallic shading -->
-  <circle class="stroke metallic" cx="12" cy="12" r="9"/>
-  <!-- Outer rim -->
-  <circle class="stroke" cx="12" cy="12" r="7"/>
-  <!-- Crown or royal symbol -->
-  <path class="stroke" d="M8 10v4l1.5-2 2.5 2 2.5-2 1.5 2v-4"/>
-  <!-- Coin edge texture -->
-  <path class="stroke" d="M12 3v1M12 20v1M3 12h1M20 12h1" style="stroke-width: 1;"/>
-  <path class="stroke" d="M5.6 5.6l0.7 0.7M17.7 17.7l0.7 0.7M5.6 18.4l0.7-0.7M17.7 6.3l0.7-0.7" style="stroke-width: 1;"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Coin shadow -->
+  <ellipse cx="13" cy="20" rx="7" ry="2" fill="#3d2a00" opacity="0.3"/>
+
+  <!-- Outer rim (dark gold) -->
+  <circle cx="12" cy="12" r="10" fill="#8b6914"/>
+
+  <!-- Main coin face (gold) -->
+  <circle cx="12" cy="12" r="9" fill="#daa520"/>
+
+  <!-- Inner bright area (light gold) -->
+  <circle cx="11" cy="11" r="7" fill="#ffd700"/>
+
+  <!-- Highlight (very light) -->
+  <circle cx="9" cy="9" r="4" fill="#ffe44d" opacity="0.6"/>
+
+  <!-- Top edge highlight -->
+  <circle cx="8" cy="7" r="2" fill="#fff4a3" opacity="0.5"/>
+
+  <!-- Inner rim detail -->
+  <circle cx="12" cy="12" r="7.5" fill="none" stroke="#b8860b" stroke-width="0.6"/>
+
+  <!-- Crown symbol embossed -->
+  <g fill="none" stroke="#8b6914" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Crown base -->
+    <path d="M7.5 14.5h9"/>
+    <!-- Crown points -->
+    <path d="M7.5 14.5l1-4 2.5 2 1-2 1 2 2.5-2 1 4"/>
+  </g>
+
+  <!-- Bottom shadow for depth -->
+  <path d="M5 15 A9 9 0 0 0 19 15" fill="#8b6914" opacity="0.3"/>
 </svg>

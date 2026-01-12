@@ -41,7 +41,8 @@ export const PARCHMENT_COLORS = {
 
   // Additional accent colors
   accent: {
-    gold: '#c9a227',
+    burgundy: '#6b2d3d',  // Primary accent for highlights and decorations
+    gold: '#c9a227',      // Legacy - use burgundy for new code, gold only for actual gold/currency
     copper: '#b87333',
     ink: '#1a1a2e'
   },
@@ -149,6 +150,7 @@ export function injectParchmentTheme() {
       --parchment-info: ${PARCHMENT_COLORS.state.info};
 
       /* Parchment accents */
+      --parchment-burgundy: ${PARCHMENT_COLORS.accent.burgundy};
       --parchment-gold: ${PARCHMENT_COLORS.accent.gold};
       --parchment-copper: ${PARCHMENT_COLORS.accent.copper};
       --parchment-ink: ${PARCHMENT_COLORS.accent.ink};
@@ -362,8 +364,8 @@ export function getParchmentCardCSS(options = {}) {
 
   if (options.selected) {
     css += `
-    border-color: ${PARCHMENT_COLORS.accent.gold};
-    box-shadow: ${getParchmentShadow(true)}, 0 0 0 2px ${PARCHMENT_COLORS.accent.gold};`;
+    border-color: ${PARCHMENT_COLORS.accent.burgundy};
+    box-shadow: ${getParchmentShadow(true)}, 0 0 0 2px ${PARCHMENT_COLORS.accent.burgundy};`;
   }
 
   return css;
@@ -398,6 +400,56 @@ export function getParchmentMutedTextCSS() {
   `.trim();
 }
 
+/**
+ * Get CSS for themed scrollbars with parchment styling
+ * @param {string} selector - CSS selector prefix for scoped scrollbar styles
+ * @returns {string} CSS block for scrollbar styling
+ */
+export function getParchmentScrollbarCSS(selector = '') {
+  const prefix = selector ? `${selector} ` : '';
+  return `
+    ${prefix}::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ${prefix}::-webkit-scrollbar-track {
+      background: ${PARCHMENT_COLORS.mid};
+      border-radius: 5px;
+    }
+    ${prefix}::-webkit-scrollbar-thumb {
+      background: linear-gradient(to bottom, ${PARCHMENT_COLORS.border}, ${PARCHMENT_COLORS.borderDark});
+      border-radius: 5px;
+      border: 2px solid ${PARCHMENT_COLORS.mid};
+    }
+    ${prefix}::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(to bottom, ${PARCHMENT_COLORS.borderLight}, ${PARCHMENT_COLORS.border});
+    }
+    ${prefix}::-webkit-scrollbar-corner {
+      background: ${PARCHMENT_COLORS.mid};
+    }
+  `.trim();
+}
+
+/**
+ * Get CSS for a parchment loading spinner
+ * @returns {string} CSS block for spinner styling
+ */
+export function getParchmentSpinnerCSS() {
+  return `
+    .parchment-spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid ${PARCHMENT_COLORS.mid};
+      border-top-color: ${PARCHMENT_COLORS.border};
+      border-radius: 50%;
+      animation: parchment-spin 0.8s linear infinite;
+    }
+    @keyframes parchment-spin {
+      to { transform: rotate(360deg); }
+    }
+  `.trim();
+}
+
 export default {
   PARCHMENT_COLORS,
   PARCHMENT_TYPOGRAPHY,
@@ -416,5 +468,7 @@ export default {
   getParchmentButtonCSS,
   getParchmentCardCSS,
   getParchmentHeaderCSS,
-  getParchmentMutedTextCSS
+  getParchmentMutedTextCSS,
+  getParchmentScrollbarCSS,
+  getParchmentSpinnerCSS
 };

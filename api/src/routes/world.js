@@ -522,9 +522,13 @@ router.post('/travel', authenticate, asyncHandler(async (req, res) => {
 router.get('/current', authenticate, asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT wn.id, wn.node_type, wn.name, wn.features, wn.guild_class,
-            wn.local_seed, wn.difficulty_tier
+            wn.local_seed, wn.difficulty_tier,
+            CASE WHEN unc.node_id IS NOT NULL THEN true ELSE false END as cleared,
+            CASE WHEN wn.node_type IN ('forest', 'cave', 'mountain', 'bridge')
+                 AND unc.node_id IS NULL THEN true ELSE false END as blocked
      FROM characters c
      JOIN world_nodes wn ON c.current_node_id = wn.id
+     LEFT JOIN user_node_clearance unc ON wn.id = unc.node_id AND unc.user_id = $1
      WHERE c.user_id = $1 AND c.party_slot = 1`,
     [req.user.userId]
   );

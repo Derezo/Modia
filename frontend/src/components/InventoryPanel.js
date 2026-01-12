@@ -31,11 +31,11 @@ const PARCHMENT = {
   state: {
     success: '#4a7548',
     error: '#8b4444',
-    warning: '#c9a227',
+    warning: '#c9a227',  // Keep warning as gold for toast contrast
     info: '#4a6088'
   },
   accent: {
-    gold: '#c9a227'
+    burgundy: '#6b2d3d'  // New accent color for highlights
   }
 };
 
@@ -140,7 +140,7 @@ export class InventoryPanel {
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
         }
         .equipment-slot:hover {
-          border-color: ${PARCHMENT.accent.gold};
+          border-color: ${PARCHMENT.accent.burgundy};
           background: ${PARCHMENT.dark};
         }
         .equipment-slot.filled {
@@ -224,7 +224,7 @@ export class InventoryPanel {
         .comparison-header {
           font-weight: bold;
           margin-bottom: 4px;
-          color: ${PARCHMENT.accent.gold};
+          color: ${PARCHMENT.accent.burgundy};
         }
         /* Drag and drop styles */
         .inventory-slot.dragging,
@@ -265,11 +265,11 @@ export class InventoryPanel {
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
         }
         .inventory-slot:hover {
-          border-color: ${PARCHMENT.accent.gold};
+          border-color: ${PARCHMENT.accent.burgundy};
           background: ${PARCHMENT.mid};
         }
         .inventory-slot.selected {
-          border-color: ${PARCHMENT.accent.gold};
+          border-color: ${PARCHMENT.accent.burgundy};
           background: linear-gradient(to bottom, #e8d9a8, #d4c498);
           box-shadow: 0 0 6px rgba(201, 162, 39, 0.4);
         }
@@ -335,7 +335,7 @@ export class InventoryPanel {
         }
         .item-material {
           display: inline;
-          color: ${PARCHMENT.accent.gold};
+          color: ${PARCHMENT.accent.burgundy};
         }
         .item-actions {
           margin-top: 12px;
@@ -377,7 +377,7 @@ export class InventoryPanel {
         }
         .section-title {
           font-weight: bold;
-          color: ${PARCHMENT.accent.gold};
+          color: ${PARCHMENT.accent.burgundy};
           margin-bottom: 8px;
           font-size: 14px;
           text-shadow: 0 1px 0 rgba(255,255,255,0.3);

@@ -6,12 +6,17 @@
  * Tests are designed to be independent and fast.
  */
 
-import { describe, test, beforeEach, afterEach } from 'node:test';
+import { describe, test, beforeEach, afterEach, after } from 'node:test';
 import assert from 'node:assert';
 import { createMockBattleState, createMockPlayerUnit, createMockEnemyUnit } from '../testUtils/index.js';
 
 // Import the service once and clean up between tests
 import * as battleReconnection from '../../services/battleReconnection.js';
+
+// Clean up all timeouts after all tests complete to prevent hanging
+after(() => {
+  battleReconnection._clearAllTimeouts();
+});
 
 // Counter for unique IDs to avoid state pollution between tests
 let testBattleIdCounter = 100000;

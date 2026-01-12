@@ -42,7 +42,7 @@ const PARCHMENT = {
     primary: '#2d2418',
     secondary: '#5a4a3a',
     muted: '#7a6a5a',
-    gold: '#c9a227'
+    accent: '#2d2418'  // Use dark brown for readable accented text
   },
   rarity: {
     common: '#7a6a5a',
@@ -240,7 +240,7 @@ export class MarketplaceItemPanel {
         font-family: Consolas, monospace;
         font-size: 16px;
         font-weight: bold;
-        color: ${PARCHMENT.text.gold};
+        color: ${PARCHMENT.text.primary};
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
       }
 

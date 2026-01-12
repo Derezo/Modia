@@ -74,10 +74,10 @@ describe('itemDropService', () => {
   });
 
   describe('AUGMENTS', () => {
-    it('should have prefix and suffix for each augment', () => {
+    it('should have name and stat for each augment', () => {
       for (const [key, augment] of Object.entries(itemDropService.AUGMENTS)) {
-        assert.ok(augment.prefix, `${key} should have prefix`);
-        assert.ok(augment.suffix, `${key} should have suffix`);
+        assert.ok(augment.name, `${key} should have name`);
+        assert.ok(augment.stat, `${key} should have stat`);
       }
     });
 

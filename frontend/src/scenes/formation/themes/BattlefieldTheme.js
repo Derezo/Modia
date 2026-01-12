@@ -37,7 +37,7 @@ export class BattlefieldTheme extends FormationTheme {
       chrome: {
         borderColor: '#5a4a3a',
         backgroundColor: 'rgba(30, 25, 20, 0.6)',
-        accentColor: '#c9a227',
+        accentColor: '#6b2d3d',  // Burgundy accent
         frameTexture: 'wood'
       },
 

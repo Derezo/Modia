@@ -14,7 +14,7 @@ async function getWebsocket() {
   return _websocket;
 }
 
-// Pending invites: inviteId -> { fromUserId, toUserId, fromUsername, characterId, expiresAt }
+// Pending invites: inviteId -> { fromUserId, toUserId, fromUsername, characterId, expiresAt, timeoutId }
 const pendingInvites = new Map();
 
 // Invite ID counter
@@ -22,6 +22,9 @@ let inviteIdCounter = 1;
 
 // Invite expiration time (5 minutes)
 const INVITE_EXPIRATION_MS = 5 * 60 * 1000;
+
+// Track all active timeouts for cleanup (used in tests)
+const activeTimeouts = new Set();
 
 /**
  * Send a party invite to another player
@@ -58,6 +61,14 @@ async function sendInvite(fromUserId, fromUsername, toUserId, characterId, party
     expiresAt: Date.now() + INVITE_EXPIRATION_MS
   };
 
+  // Set expiration timeout and track it
+  const timeoutId = setTimeout(() => {
+    activeTimeouts.delete(timeoutId);
+    expireInvite(inviteId);
+  }, INVITE_EXPIRATION_MS);
+  activeTimeouts.add(timeoutId);
+  invite.timeoutId = timeoutId;
+
   pendingInvites.set(inviteId, invite);
 
   // Send invite to target user
@@ -73,11 +84,6 @@ async function sendInvite(fromUserId, fromUsername, toUserId, characterId, party
       expiresAt: invite.expiresAt
     }
   });
-
-  // Set expiration timeout
-  setTimeout(() => {
-    expireInvite(inviteId);
-  }, INVITE_EXPIRATION_MS);
 
   return { success: true, inviteId };
 }
@@ -101,11 +107,19 @@ async function acceptInvite(inviteId, userId, username) {
   }
 
   if (Date.now() > invite.expiresAt) {
+    if (invite.timeoutId) {
+      clearTimeout(invite.timeoutId);
+      activeTimeouts.delete(invite.timeoutId);
+    }
     pendingInvites.delete(inviteId);
     return { success: false, error: 'Invite has expired' };
   }
 
-  // Remove invite
+  // Clear timeout and remove invite
+  if (invite.timeoutId) {
+    clearTimeout(invite.timeoutId);
+    activeTimeouts.delete(invite.timeoutId);
+  }
   pendingInvites.delete(inviteId);
 
   const ws = await getWebsocket();
@@ -156,6 +170,11 @@ async function declineInvite(inviteId, userId) {
     return { success: false, error: 'This invite is not for you' };
   }
 
+  // Clear timeout and remove invite
+  if (invite.timeoutId) {
+    clearTimeout(invite.timeoutId);
+    activeTimeouts.delete(invite.timeoutId);
+  }
   pendingInvites.delete(inviteId);
 
   const ws = await getWebsocket();
@@ -348,6 +367,18 @@ function getPendingInvitesForUser(userId) {
 }
 
 /**
+ * Clear all active timeouts (for test cleanup)
+ * @private
+ */
+function _clearAllTimeouts() {
+  for (const timeoutId of activeTimeouts) {
+    clearTimeout(timeoutId);
+  }
+  activeTimeouts.clear();
+  pendingInvites.clear();
+}
+
+/**
  * Clean up user's invites on disconnect
  * @param {number} userId - User ID
  */
@@ -383,7 +414,8 @@ export {
   joinPartyRoom,
   leavePartyRoom,
   getPendingInvitesForUser,
-  cleanupUserInvites
+  cleanupUserInvites,
+  _clearAllTimeouts
 };
 
 export default {
@@ -397,5 +429,6 @@ export default {
   joinPartyRoom,
   leavePartyRoom,
   getPendingInvitesForUser,
-  cleanupUserInvites
+  cleanupUserInvites,
+  _clearAllTimeouts
 };

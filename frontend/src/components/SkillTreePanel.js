@@ -384,7 +384,7 @@ export class SkillTreePanel {
         <button class="btn btn-primary learn-button" data-action="max" ${this.xpPool < this.calculateCost(skill, currentLevel, skill.maxLevel) ? 'disabled' : ''}>Max Out (${this.calculateCost(skill, currentLevel, skill.maxLevel).toLocaleString()} XP)</button>
       `;
     } else if (isMaxed) {
-      actionsHtml = `<div style="text-align: center; color: ${PARCHMENT_COLORS.accent.gold}; font-weight: bold;">MASTERED</div>`;
+      actionsHtml = `<div style="text-align: center; color: ${PARCHMENT_COLORS.state.success}; font-weight: bold;">MASTERED</div>`;
     } else if (!meetsRequirements) {
       actionsHtml = `<div style="text-align: center; color: ${PARCHMENT_COLORS.state.error};">Requirements not met</div>`;
     }

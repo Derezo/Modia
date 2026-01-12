@@ -14,6 +14,7 @@ import { GridCursor } from '../battle/GridCursor.js';
 import { BossPhaseIndicator } from '../battle/BossPhaseIndicator.js';
 import { calculateDamagePreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 
 /**
  * BattleScene - Tactical turn-based combat on an isometric grid with camera
@@ -692,9 +693,7 @@ export class BattleScene extends Scene {
       console.log('[Battle] Attempting to rejoin battle', this.battleId);
 
       // Show reconnecting notification
-      if (this.ui) {
-        this.ui.showNotification('Reconnecting...', 'info', 5000);
-      }
+      parchmentToast.info('Connection', 'Reconnecting...');
 
       const response = await this.game.api.request(`/battle/${this.battleId}/rejoin`);
 
@@ -712,9 +711,7 @@ export class BattleScene extends Scene {
         }
 
         // Show reconnection notification
-        if (this.ui) {
-          this.ui.showNotification('Reconnected!', 'success', 2000);
-        }
+        parchmentToast.success('Connection', 'Reconnected!');
 
         // Handle grace period (brief delay before turn timer resumes)
         if (response.gracePeriod > 0) {
@@ -724,11 +721,7 @@ export class BattleScene extends Scene {
         // Show any disconnected players
         if (response.disconnectedPlayers?.length > 0) {
           for (const player of response.disconnectedPlayers) {
-            this.ui?.showNotification(
-              `${player.playerName} is disconnected`,
-              'warning',
-              5000
-            );
+            parchmentToast.warning('Player Status', `${player.playerName} is disconnected`);
           }
         }
 
@@ -737,9 +730,7 @@ export class BattleScene extends Scene {
     } catch (error) {
       console.error('[Battle] Rejoin failed:', error);
 
-      if (this.ui) {
-        this.ui.showNotification('Reconnection failed', 'error', 3000);
-      }
+      parchmentToast.error('Connection', 'Reconnection failed');
 
       // If battle is no longer active, return to world map
       if (error.message?.includes('no longer active')) {
@@ -758,9 +749,7 @@ export class BattleScene extends Scene {
   handleSocketDisconnect() {
     console.log('[Battle] WebSocket disconnected during battle');
 
-    if (this.ui) {
-      this.ui.showNotification('Connection lost - attempting reconnect...', 'warning', 5000);
-    }
+    parchmentToast.warning('Connection', 'Connection lost - attempting reconnect...');
 
     // Attempt reconnect after a brief delay
     setTimeout(() => {
@@ -1130,9 +1119,7 @@ export class BattleScene extends Scene {
     console.log(`[Battle WS] Player disconnected: ${playerName}`);
 
     // Show notification
-    if (this.ui) {
-      this.ui.showNotification(`${playerName} disconnected`, 'warning', 3000);
-    }
+    parchmentToast.warning('Player Status', `${playerName} disconnected`);
 
     // Mark player's units as disconnected (visual indicator)
     for (const unit of this.units.values()) {
@@ -1150,9 +1137,7 @@ export class BattleScene extends Scene {
     console.log(`[Battle WS] Player reconnected: ${playerName}`);
 
     // Show notification
-    if (this.ui) {
-      this.ui.showNotification(`${playerName} reconnected`, 'success', 3000);
-    }
+    parchmentToast.success('Player Status', `${playerName} reconnected`);
 
     // Clear disconnected state from player's units
     for (const unit of this.units.values()) {
@@ -1179,8 +1164,8 @@ export class BattleScene extends Scene {
     this.updateUI();
 
     // Show reconnect notification if applicable
-    if (reason === 'reconnect' && this.ui) {
-      this.ui.showNotification('Reconnected to battle', 'success', 2000);
+    if (reason === 'reconnect') {
+      parchmentToast.success('Connection', 'Reconnected to battle');
     }
   }
 
@@ -1268,7 +1253,7 @@ export class BattleScene extends Scene {
       // Item targeting (allies only)
       const target = this.getUnitAt(x, y);
       if (!target || target.type !== 'player') {
-        this.game.showNotification?.('Must target an ally', 'warning');
+        parchmentToast.warning('Invalid Target', 'Must target an ally');
         return;
       }
       const item = (this.battleState.consumables || []).find(i => i.itemId === this.selectedItemId);
@@ -1284,7 +1269,7 @@ export class BattleScene extends Scene {
   startMoveAction() {
     // Two-action system: check if move is available
     if (!this.canMove) {
-      this.game.showNotification?.('Already moved this turn', 'warning');
+      parchmentToast.warning('Action Used', 'Already moved this turn');
       return;
     }
 
@@ -1316,7 +1301,7 @@ export class BattleScene extends Scene {
   startAttackAction() {
     // Two-action system: check if act is available
     if (!this.canAct) {
-      this.game.showNotification?.('Already acted this turn', 'warning');
+      parchmentToast.warning('Action Used', 'Already acted this turn');
       return;
     }
 
@@ -1354,7 +1339,7 @@ export class BattleScene extends Scene {
   showSkillMenu() {
     // Two-action system: check if act is available
     if (!this.canAct) {
-      this.game.showNotification?.('Already acted this turn', 'warning');
+      parchmentToast.warning('Action Used', 'Already acted this turn');
       return;
     }
 
@@ -1761,13 +1746,13 @@ export class BattleScene extends Scene {
     const skill = this.getUnitActiveSkills(activeUnit).find(s => s.id === skillId);
 
     if (!skill) {
-      this.game.showNotification?.('Skill not found', 'error');
+      parchmentToast.error('Skill Error', 'Skill not found');
       return;
     }
 
     // Check if unit has enough MP
     if (activeUnit.mp < skill.mpCost) {
-      this.game.showNotification?.(`Not enough MP (need ${skill.mpCost})`, 'warning');
+      parchmentToast.warning('Not Enough MP', `Need ${skill.mpCost} MP to use this skill`);
       return;
     }
 
@@ -1803,7 +1788,7 @@ export class BattleScene extends Scene {
   showItemMenu() {
     // Two-action system: check if act is available
     if (!this.canAct) {
-      this.game.showNotification?.('Already acted this turn', 'warning');
+      parchmentToast.warning('Action Used', 'Already acted this turn');
       return;
     }
 
@@ -1916,7 +1901,7 @@ export class BattleScene extends Scene {
       await this.processActionResult(result);
 
     } catch (err) {
-      this.game.showNotification(err.message, 'error');
+      parchmentToast.error('Action Failed', err.message);
       this.ui.setActionsEnabled(true);
     }
   }
@@ -2369,7 +2354,7 @@ export class BattleScene extends Scene {
     });
 
     // Show notification
-    this.game.showNotification('You surrendered the battle.', 'warning');
+    parchmentToast.warning('Surrender', 'You surrendered the battle.');
   }
 
   /**

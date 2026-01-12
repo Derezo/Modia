@@ -2,6 +2,16 @@
  * NotificationCenter - Slide-out drawer showing all notifications
  */
 
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import {
+  PARCHMENT_COLORS,
+  getParchmentGradient,
+  getParchmentBorder,
+  getParchmentButtonCSS,
+  getParchmentScrollbarCSS,
+  getParchmentShadow
+} from '../ui/parchment/index.js';
+
 export class NotificationCenter {
   constructor(game) {
     this.game = game;
@@ -16,6 +26,9 @@ export class NotificationCenter {
   }
 
   create() {
+    // Inject scrollbar styles
+    this.injectScrollbarStyles();
+
     // Overlay
     this.overlay = document.createElement('div');
     this.overlay.id = 'notification-overlay';
@@ -44,8 +57,9 @@ export class NotificationCenter {
       width: 380px;
       max-width: 90vw;
       height: 100%;
-      background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
-      border-left: 2px solid #4a4a6a;
+      background: ${getParchmentGradient()};
+      border-left: ${getParchmentBorder(3)};
+      box-shadow: ${getParchmentShadow(true)};
       z-index: 9600;
       transform: translateX(100%);
       transition: transform 0.3s ease-out;
@@ -58,32 +72,29 @@ export class NotificationCenter {
     const header = document.createElement('div');
     header.style.cssText = `
       padding: 20px;
-      border-bottom: 1px solid #3a3a5a;
+      border-bottom: 1px solid ${PARCHMENT_COLORS.border};
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: linear-gradient(to bottom, ${PARCHMENT_COLORS.light}, ${PARCHMENT_COLORS.mid});
     `;
     header.innerHTML = `
-      <h2 style="margin: 0; color: #e0e0e0; font-size: 18px;">Notifications</h2>
+      <h2 style="margin: 0; color: ${PARCHMENT_COLORS.text.primary}; font-size: 18px; text-shadow: 0 1px 0 rgba(255,255,255,0.3);">Notifications</h2>
       <div style="display: flex; gap: 10px;">
         <button id="mark-all-read" style="
-          background: transparent;
-          border: 1px solid #4a4a6a;
-          color: #a0a0a0;
+          ${getParchmentButtonCSS('secondary')}
           padding: 6px 12px;
-          border-radius: 4px;
-          cursor: pointer;
           font-size: 12px;
-          transition: all 0.2s;
         ">Mark All Read</button>
         <button id="close-notifications" style="
           background: transparent;
           border: none;
-          color: #888;
+          color: ${PARCHMENT_COLORS.text.secondary};
           font-size: 24px;
           cursor: pointer;
           padding: 0;
           line-height: 1;
+          transition: color 0.2s;
         ">&times;</button>
       </div>
     `;
@@ -92,10 +103,12 @@ export class NotificationCenter {
     // Notification list
     this.notificationList = document.createElement('div');
     this.notificationList.id = 'notification-list';
+    this.notificationList.className = 'notification-center-list';
     this.notificationList.style.cssText = `
       flex: 1;
       overflow-y: auto;
       padding: 10px;
+      background: ${PARCHMENT_COLORS.mid};
     `;
     this.element.appendChild(this.notificationList);
 
@@ -107,11 +120,11 @@ export class NotificationCenter {
       align-items: center;
       justify-content: center;
       height: 200px;
-      color: #666;
+      color: ${PARCHMENT_COLORS.text.muted};
       text-align: center;
     `;
     this.emptyState.innerHTML = `
-      <span style="font-size: 48px; margin-bottom: 10px;">🔔</span>
+      <span style="font-size: 48px; margin-bottom: 10px;">&#128276;</span>
       <p style="margin: 0;">No notifications</p>
     `;
 
@@ -120,14 +133,33 @@ export class NotificationCenter {
     // Event listeners
     header.querySelector('#close-notifications').addEventListener('click', () => this.close());
     header.querySelector('#mark-all-read').addEventListener('click', () => this.markAllAsRead());
+    header.querySelector('#close-notifications').addEventListener('mouseenter', (e) => {
+      e.target.style.color = PARCHMENT_COLORS.text.primary;
+    });
+    header.querySelector('#close-notifications').addEventListener('mouseleave', (e) => {
+      e.target.style.color = PARCHMENT_COLORS.text.secondary;
+    });
     header.querySelector('#mark-all-read').addEventListener('mouseenter', (e) => {
-      e.target.style.borderColor = '#6a6a8a';
-      e.target.style.color = '#e0e0e0';
+      e.target.style.borderColor = PARCHMENT_COLORS.borderDark;
+      e.target.style.background = PARCHMENT_COLORS.dark;
     });
     header.querySelector('#mark-all-read').addEventListener('mouseleave', (e) => {
-      e.target.style.borderColor = '#4a4a6a';
-      e.target.style.color = '#a0a0a0';
+      e.target.style.borderColor = PARCHMENT_COLORS.border;
+      e.target.style.background = PARCHMENT_COLORS.light;
     });
+  }
+
+  /**
+   * Inject parchment scrollbar styles for the notification list
+   */
+  injectScrollbarStyles() {
+    const styleId = 'notification-center-scrollbar-styles';
+    if (document.getElementById(styleId)) return;
+
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = getParchmentScrollbarCSS('.notification-center-list');
+    document.head.appendChild(style);
   }
 
   setupWebSocketHandlers() {
@@ -173,14 +205,15 @@ export class NotificationCenter {
       return;
     }
 
+    // Parchment-themed type styles with muted colors
     const typeStyles = {
-      friend_request: { icon: '👤', color: '#4a9eff', label: 'Friend Request' },
-      friend_accepted: { icon: '🤝', color: '#4ade80', label: 'Friend Accepted' },
-      party_invite: { icon: '⚔️', color: '#f59e0b', label: 'Party Invite' },
-      match_found: { icon: '🏟️', color: '#ef4444', label: 'Match Found' },
-      match_result: { icon: '🏆', color: '#a855f7', label: 'Match Result' },
-      lfg_application: { icon: '📋', color: '#06b6d4', label: 'LFG Application' },
-      system: { icon: 'ℹ️', color: '#6b7280', label: 'System' }
+      friend_request: { icon: '&#128100;', color: PARCHMENT_COLORS.state.info, label: 'Friend Request' },
+      friend_accepted: { icon: '&#129309;', color: PARCHMENT_COLORS.state.success, label: 'Friend Accepted' },
+      party_invite: { icon: '&#9876;', color: PARCHMENT_COLORS.accent.copper, label: 'Party Invite' },
+      match_found: { icon: '&#127967;', color: PARCHMENT_COLORS.state.error, label: 'Match Found' },
+      match_result: { icon: '&#127942;', color: PARCHMENT_COLORS.accent.burgundy, label: 'Match Result' },
+      lfg_application: { icon: '&#128203;', color: PARCHMENT_COLORS.state.info, label: 'LFG Application' },
+      system: { icon: '&#8505;', color: PARCHMENT_COLORS.text.muted, label: 'System' }
     };
 
     this.notifications.forEach(notification => {
@@ -192,14 +225,15 @@ export class NotificationCenter {
       item.className = 'notification-item';
       item.dataset.id = notification.id;
       item.style.cssText = `
-        background: ${isUnread ? 'rgba(74, 158, 255, 0.1)' : 'rgba(255, 255, 255, 0.02)'};
-        border: 1px solid ${isUnread ? style.color + '40' : '#3a3a5a'};
+        background: ${isUnread ? PARCHMENT_COLORS.light : PARCHMENT_COLORS.mid};
+        border: 1px solid ${isUnread ? style.color : PARCHMENT_COLORS.border};
         border-left: 3px solid ${style.color};
-        border-radius: 8px;
+        border-radius: 6px;
         padding: 12px;
         margin-bottom: 10px;
         cursor: pointer;
-        transition: background 0.2s, transform 0.2s;
+        transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
       `;
 
       item.innerHTML = `
@@ -207,38 +241,42 @@ export class NotificationCenter {
           <span style="font-size: 24px;">${style.icon}</span>
           <div style="flex: 1; min-width: 0;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <span style="color: ${style.color}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+              <span style="color: ${style.color}; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: bold;">
                 ${style.label}
               </span>
-              <span style="color: #666; font-size: 11px;">${timeAgo}</span>
+              <span style="color: ${PARCHMENT_COLORS.text.muted}; font-size: 11px;">${timeAgo}</span>
             </div>
-            <div style="color: #e0e0e0; font-weight: ${isUnread ? 'bold' : 'normal'}; margin-bottom: 4px;">
+            <div style="color: ${PARCHMENT_COLORS.text.primary}; font-weight: ${isUnread ? 'bold' : 'normal'}; margin-bottom: 4px;">
               ${notification.title}
             </div>
-            ${notification.message ? `<div style="color: #a0a0a0; font-size: 13px;">${notification.message}</div>` : ''}
+            ${notification.message ? `<div style="color: ${PARCHMENT_COLORS.text.secondary}; font-size: 13px;">${notification.message}</div>` : ''}
             ${this.renderActions(notification, style.color)}
           </div>
           <button class="dismiss-btn" style="
             background: none;
             border: none;
-            color: #666;
+            color: ${PARCHMENT_COLORS.text.muted};
             cursor: pointer;
             font-size: 16px;
             padding: 0;
             opacity: 0.5;
-            transition: opacity 0.2s;
+            transition: opacity 0.2s, color 0.2s;
           ">&times;</button>
         </div>
       `;
 
       // Hover effects
       item.addEventListener('mouseenter', () => {
-        item.style.background = isUnread ? 'rgba(74, 158, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)';
+        item.style.background = PARCHMENT_COLORS.light;
+        item.style.boxShadow = '0 2px 6px rgba(0,0,0,0.15)';
         item.querySelector('.dismiss-btn').style.opacity = '1';
+        item.querySelector('.dismiss-btn').style.color = PARCHMENT_COLORS.text.secondary;
       });
       item.addEventListener('mouseleave', () => {
-        item.style.background = isUnread ? 'rgba(74, 158, 255, 0.1)' : 'rgba(255, 255, 255, 0.02)';
+        item.style.background = isUnread ? PARCHMENT_COLORS.light : PARCHMENT_COLORS.mid;
+        item.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
         item.querySelector('.dismiss-btn').style.opacity = '0.5';
+        item.querySelector('.dismiss-btn').style.color = PARCHMENT_COLORS.text.muted;
       });
 
       // Click handler for the whole item
@@ -301,15 +339,17 @@ export class NotificationCenter {
       <div style="display: flex; gap: 8px; margin-top: 10px;">
         ${actions.map(a => `
           <button class="action-btn" data-action="${a.action}" style="
-            background: ${a.primary ? color : 'transparent'};
+            background: ${a.primary ? color : PARCHMENT_COLORS.light};
             border: 1px solid ${color};
-            color: ${a.primary ? '#fff' : color};
+            color: ${a.primary ? PARCHMENT_COLORS.text.inverse : color};
             padding: 6px 14px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 12px;
             font-family: inherit;
+            font-weight: bold;
             transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
           ">${a.label}</button>
         `).join('')}
       </div>
@@ -360,7 +400,7 @@ export class NotificationCenter {
         case 'friend_request':
           if (action === 'accept') {
             await this.game.api.request(`/friends/accept/${notification.payload.requestId}`, { method: 'POST' });
-            this.game.toastManager?.success('Friend Added', 'You are now friends!');
+            parchmentToast.success('Friend Added', 'You are now friends!');
           } else {
             await this.game.api.request(`/friends/decline/${notification.payload.requestId}`, { method: 'POST' });
           }
@@ -369,7 +409,7 @@ export class NotificationCenter {
         case 'party_invite':
           if (action === 'accept') {
             await this.game.api.request(`/party/multiplayer/join/${notification.payload.inviteId}`, { method: 'POST' });
-            this.game.toastManager?.success('Joined Party', 'You have joined the party!');
+            parchmentToast.success('Joined Party', 'You have joined the party!');
           } else {
             await this.game.api.request(`/party/multiplayer/decline/${notification.payload.inviteId}`, { method: 'POST' });
           }
@@ -382,7 +422,7 @@ export class NotificationCenter {
               method: 'POST',
               body: JSON.stringify({ username: notification.payload.applicantUsername })
             });
-            this.game.toastManager?.success('Invite Sent', 'Party invite sent!');
+            parchmentToast.success('Invite Sent', 'Party invite sent!');
           }
           break;
       }
@@ -392,7 +432,7 @@ export class NotificationCenter {
 
     } catch (error) {
       console.error('Action failed:', error);
-      this.game.toastManager?.error('Action Failed', error.message || 'Something went wrong');
+      parchmentToast.error('Action Failed', error.message || 'Something went wrong');
     }
   }
 

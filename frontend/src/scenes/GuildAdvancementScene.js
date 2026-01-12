@@ -5,9 +5,12 @@ import {
   getParchmentGradient,
   getParchmentGradientTextured,
   getParchmentBorder,
-  getParchmentShadow
+  getParchmentShadow,
+  getParchmentScrollbarCSS,
+  getParchmentSpinnerCSS
 } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { Icon } from '../components/Icon.js';
 
 const P = PARCHMENT_COLORS;
 const STYLE_ID = 'guild-advancement-styles';
@@ -189,7 +192,7 @@ export class GuildAdvancementScene extends Scene {
 
       .advancement-title h2 {
         margin: 0;
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         font-size: 22px;
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
@@ -209,7 +212,7 @@ export class GuildAdvancementScene extends Scene {
       }
 
       .character-name {
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         font-weight: bold;
         font-size: 14px;
       }
@@ -249,9 +252,9 @@ export class GuildAdvancementScene extends Scene {
 
       .advancement-tab.active {
         background: linear-gradient(to bottom, #e8d9a8, #d4c498);
-        border-color: ${P.accent.gold};
-        color: ${P.accent.gold};
-        box-shadow: 0 -2px 6px rgba(201, 162, 39, 0.3);
+        border-color: ${P.accent.burgundy};
+        color: ${P.text.primary};
+        box-shadow: 0 -2px 6px rgba(107, 45, 61, 0.3);
       }
 
       .advancement-tab .tab-badge {
@@ -296,7 +299,7 @@ export class GuildAdvancementScene extends Scene {
         padding: 12px 16px;
         background: linear-gradient(to bottom, ${P.dark}, ${P.mid});
         border-bottom: ${getParchmentBorder()};
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         font-weight: bold;
         font-size: 14px;
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
@@ -323,15 +326,15 @@ export class GuildAdvancementScene extends Scene {
       }
 
       .quest-card:hover {
-        border-color: ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
       }
 
       .quest-card.selected {
-        border-color: ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
         background: linear-gradient(to bottom, #e8d9a8, #d4c498);
-        box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.3);
+        box-shadow: 0 0 0 2px rgba(107, 45, 61, 0.3);
       }
 
       .quest-card.locked {
@@ -408,7 +411,7 @@ export class GuildAdvancementScene extends Scene {
       .detail-name {
         font-size: 18px;
         font-weight: bold;
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         margin-bottom: 4px;
       }
 
@@ -478,7 +481,7 @@ export class GuildAdvancementScene extends Scene {
       }
 
       .rewards-title {
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         font-weight: bold;
         font-size: 12px;
         margin-bottom: 8px;
@@ -600,7 +603,7 @@ export class GuildAdvancementScene extends Scene {
       }
 
       .guildmaster-name {
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         font-weight: bold;
         font-size: 18px;
         margin-bottom: 4px;
@@ -628,13 +631,13 @@ export class GuildAdvancementScene extends Scene {
 
       .dialog-text::before {
         content: '"';
-        color: ${P.accent.gold};
+        color: ${P.accent.burgundy};
         font-size: 20px;
       }
 
       .dialog-text::after {
         content: '"';
-        color: ${P.accent.gold};
+        color: ${P.accent.burgundy};
         font-size: 20px;
       }
 
@@ -663,6 +666,14 @@ export class GuildAdvancementScene extends Scene {
         text-align: center;
         font-size: 13px;
       }
+
+      /* Themed Scrollbars */
+      ${getParchmentScrollbarCSS('.quest-list')}
+      ${getParchmentScrollbarCSS('.advancement-list-panel')}
+      ${getParchmentScrollbarCSS('.advancement-detail-panel')}
+
+      /* Parchment Spinner */
+      ${getParchmentSpinnerCSS()}
     `;
     document.head.appendChild(style);
   }
@@ -978,7 +989,7 @@ export class GuildAdvancementScene extends Scene {
       <div class="rewards-section">
         <div class="rewards-title">Rewards</div>
         <div class="reward-item"><span class="reward-icon">⭐</span> Class: ${quest.targetClass.replace('_', ' ')}</div>
-        ${quest.rewards?.gold ? `<div class="reward-item"><span class="reward-icon">💰</span> ${quest.rewards.gold} Gold</div>` : ''}
+        ${quest.rewards?.gold ? `<div class="reward-item"><span class="reward-icon">${Icon.html('resources', 'gold', { size: 'sm' })}</span> ${quest.rewards.gold} Gold</div>` : ''}
         ${quest.rewards?.xp ? `<div class="reward-item"><span class="reward-icon">✨</span> ${quest.rewards.xp} XP</div>` : ''}
         ${quest.rewards?.title ? `<div class="reward-item"><span class="reward-icon">🏆</span> Title: ${quest.rewards.title}</div>` : ''}
       </div>
@@ -1072,7 +1083,7 @@ export class GuildAdvancementScene extends Scene {
       <div class="rewards-section">
         <div class="rewards-title">Rewards</div>
         <div class="reward-item"><span class="reward-icon">⭐</span> Class: ${quest.targetClass.replace('_', ' ')}</div>
-        ${quest.rewards?.gold ? `<div class="reward-item"><span class="reward-icon">💰</span> ${quest.rewards.gold} Gold</div>` : ''}
+        ${quest.rewards?.gold ? `<div class="reward-item"><span class="reward-icon">${Icon.html('resources', 'gold', { size: 'sm' })}</span> ${quest.rewards.gold} Gold</div>` : ''}
         ${quest.rewards?.xp ? `<div class="reward-item"><span class="reward-icon">✨</span> ${quest.rewards.xp} XP</div>` : ''}
         ${quest.rewards?.title ? `<div class="reward-item"><span class="reward-icon">🏆</span> Title: ${quest.rewards.title}</div>` : ''}
       </div>

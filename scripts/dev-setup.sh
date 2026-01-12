@@ -251,32 +251,88 @@ check_migrations() {
 }
 
 # =============================================================================
-# Seed Check
+# Seed Check - Smart detection for when seeding is needed
 # =============================================================================
 check_seed() {
-    echo -ne "[Seed] Checking for world data... "
+    echo -e "[Seed] Checking database state..."
 
     export PGPASSWORD="$DB_PASSWORD"
 
-    # Query for existing world data
-    if psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" &>/dev/null; then
-        REGION_COUNT=$(psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -A -c "SELECT COUNT(*) FROM regions" 2>/dev/null || echo "0")
+    # Helper function to run psql query (tries direct connection first, then docker)
+    run_query() {
+        local query="$1"
+        if psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1" &>/dev/null; then
+            psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -t -A -c "$query" 2>/dev/null
+        else
+            docker exec modia-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -A -c "$query" 2>/dev/null
+        fi
+    }
+
+    # Extract expected SEED_VERSION from seed.js
+    EXPECTED_SEED_VERSION=$(grep "const SEED_VERSION" "$PROJECT_ROOT/api/src/db/seed.js" | grep -oP '\d+' || echo "1")
+    EXPECTED_WORLD_SEED="${WORLD_SEED:-12345}"
+
+    # Check if seed_metadata table exists and has data
+    METADATA_EXISTS=$(run_query "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'seed_metadata')" || echo "f")
+
+    if [ "$METADATA_EXISTS" = "t" ]; then
+        # Get stored metadata
+        STORED_VERSION=$(run_query "SELECT seed_version FROM seed_metadata WHERE id = 1" || echo "")
+        STORED_WORLD_SEED=$(run_query "SELECT world_seed FROM seed_metadata WHERE id = 1" || echo "")
+        STORED_NODE_COUNT=$(run_query "SELECT world_node_count FROM seed_metadata WHERE id = 1" || echo "0")
     else
-        REGION_COUNT=$(docker exec modia-postgres psql -U "$DB_USER" -d "$DB_NAME" -t -A -c "SELECT COUNT(*) FROM regions" 2>/dev/null || echo "0")
+        STORED_VERSION=""
+        STORED_WORLD_SEED=""
+        STORED_NODE_COUNT="0"
     fi
 
-    # Handle potential errors (non-numeric result means table doesn't exist)
-    if ! [[ "$REGION_COUNT" =~ ^[0-9]+$ ]]; then
-        REGION_COUNT=0
+    # Check actual world_nodes count
+    NODE_COUNT=$(run_query "SELECT COUNT(*) FROM world_nodes" 2>/dev/null || echo "0")
+    if ! [[ "$NODE_COUNT" =~ ^[0-9]+$ ]]; then
+        NODE_COUNT=0
     fi
 
-    if [ "$REGION_COUNT" -gt 0 ]; then
-        echo -e "${GREEN}database has data${NC} ${CHECK}"
+    # Decision logic
+    NEEDS_SEED=false
+    SEED_REASON=""
+
+    if [ "$NODE_COUNT" -eq 0 ]; then
+        NEEDS_SEED=true
+        SEED_REASON="database is empty"
+    elif [ -z "$STORED_VERSION" ]; then
+        # Has data but no metadata - legacy database from before tracking
+        echo -e "       ${YELLOW}Legacy database detected${NC} (${NODE_COUNT} nodes, no seed metadata)"
+        echo -e "       ${CYAN}To enable seed tracking, run 'npm run db:fresh' when convenient.${NC}"
+        echo -e "       ${GREEN}Continuing with existing data...${NC} ${CHECK}"
+        echo ""
+        return 0
+    elif [ "$STORED_VERSION" != "$EXPECTED_SEED_VERSION" ]; then
+        # Seed version mismatch
+        echo -e "       ${YELLOW}Seed version mismatch detected${NC}"
+        echo -e "       Stored: v${STORED_VERSION} | Current: v${EXPECTED_SEED_VERSION}"
+        echo -e "       ${CYAN}New seed data is available. Run 'npm run db:fresh' to update.${NC}"
+        echo -e "       ${GREEN}Continuing with existing data...${NC} ${CHECK}"
+        echo ""
+        return 0
+    elif [ "$STORED_WORLD_SEED" != "$EXPECTED_WORLD_SEED" ]; then
+        # World seed mismatch
+        echo -e "       ${YELLOW}World seed mismatch detected${NC}"
+        echo -e "       Stored: ${STORED_WORLD_SEED} | Current: ${EXPECTED_WORLD_SEED}"
+        echo -e "       ${CYAN}Run 'npm run db:fresh' to regenerate world with new seed.${NC}"
+        echo -e "       ${GREEN}Continuing with existing data...${NC} ${CHECK}"
+        echo ""
+        return 0
+    else
+        # Everything matches
+        echo -ne "       World data (${NODE_COUNT} nodes, seed v${STORED_VERSION})... "
+        echo -e "${GREEN}up to date${NC} ${CHECK}"
         echo ""
         return 0
     fi
 
-    echo -e "${YELLOW}database is empty${NC}"
+    # Run seeding if needed
+    echo -ne "       ${SEED_REASON}... "
+    echo -e "${YELLOW}seeding${NC}"
     echo -ne "[Seed] Running seed script... "
 
     SEED_OUTPUT=$(npm run db:seed 2>&1)
