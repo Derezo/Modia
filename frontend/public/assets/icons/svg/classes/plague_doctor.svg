@@ -1,21 +1,66 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Bird mask silhouette - plague doctor class -->
-  <!-- Hood/head -->
-  <path class="stroke metallic" d="M6 6c0-2 3-4 6-4s6 2 6 4v6c0 2-2 4-6 4s-6-2-6-4V6z"/>
-  <!-- Bird beak -->
-  <path class="stroke metallic" d="M12 10c-3 0-5 2-8 4l2 2c2-1 4-2 6-2"/>
-  <!-- Eye lenses -->
-  <circle class="stroke" cx="9" cy="8" r="2"/>
-  <circle class="stroke" cx="15" cy="8" r="2"/>
-  <!-- Lens shine -->
-  <circle cx="8" cy="7" r="0.75" fill="currentColor"/>
-  <circle cx="14" cy="7" r="0.75" fill="currentColor"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="22" rx="7" ry="2" fill="#0a0a0a" opacity="0.3"/>
+
+  <!-- Green smoke/miasma effect -->
+  <ellipse cx="8" cy="18" rx="4" ry="3" fill="#2d5530" opacity="0.2"/>
+  <ellipse cx="16" cy="19" rx="3" ry="2" fill="#448844" opacity="0.15"/>
+
+  <!-- Hood/head - outer dark -->
+  <path d="M5 5c0-2.5 3.5-4.5 7-4.5s7 2 7 4.5v7c0 2.5-2.5 4.5-7 4.5s-7-2-7-4.5V5z" fill="#1a1a1a"/>
+  <!-- Hood - main -->
+  <path d="M6 5.5c0-2 3-4 6-4s6 2 6 4v6.5c0 2-2 4-6 4s-6-2-6-4V5.5z" fill="#2a2a2a"/>
+  <!-- Hood - lighter inner -->
+  <path d="M7 6c0-1.5 2.5-3.5 5-3.5s5 2 5 3.5v5.5c0 1.5-1.5 3.5-5 3.5s-5-2-5-3.5V6z" fill="#3a3a3a"/>
+  <!-- Hood highlight -->
+  <path d="M8 6.5c0-1 2-2.5 3.5-2.5s3 1.2 3 2v3c0 1-1 2-3 2s-3.5-1-3.5-2V6.5z" fill="#4a4a4a" opacity="0.4"/>
+
+  <!-- Bird beak - outer dark -->
+  <path d="M12 9c-4 0-6 2.5-9.5 5l2 2.5c2.5-1.5 5-2.5 7.5-2.5" fill="#1a1a1a"/>
+  <!-- Beak - main -->
+  <path d="M12 10c-3.5 0-5.5 2-8.5 4.5l1.5 2c2-1.2 4.5-2 7-2" fill="#2a2a2a"/>
+  <!-- Beak - highlight edge -->
+  <path d="M12 11c-3 0-5 1.5-7.5 3.8l1 1.2c1.8-1 4-1.5 6.5-1.5" fill="#3a3a3a"/>
+  <!-- Beak ridge -->
+  <path d="M4 14.5c2-1.5 4.5-2.5 8-2.5" fill="none" stroke="#4a4a4a" stroke-width="0.5" opacity="0.6"/>
+
+  <!-- Left eye lens - outer dark -->
+  <circle cx="9" cy="7.5" r="2.5" fill="#1a1a1a"/>
+  <!-- Left lens - green glass -->
+  <circle cx="9" cy="7.5" r="2" fill="#2d5530"/>
+  <circle cx="9" cy="7.5" r="1.5" fill="#448844"/>
+  <circle cx="9" cy="7.5" r="1" fill="#66aa66"/>
+  <!-- Left lens shine -->
+  <circle cx="8.3" cy="6.8" r="0.6" fill="#88cc88" opacity="0.6"/>
+  <circle cx="8" cy="6.5" r="0.3" fill="#aaddaa" opacity="0.5"/>
+
+  <!-- Right eye lens - outer dark -->
+  <circle cx="15" cy="7.5" r="2.5" fill="#1a1a1a"/>
+  <!-- Right lens - green glass -->
+  <circle cx="15" cy="7.5" r="2" fill="#2d5530"/>
+  <circle cx="15" cy="7.5" r="1.5" fill="#448844"/>
+  <circle cx="15" cy="7.5" r="1" fill="#66aa66"/>
+  <!-- Right lens shine -->
+  <circle cx="14.3" cy="6.8" r="0.6" fill="#88cc88" opacity="0.6"/>
+  <circle cx="14" cy="6.5" r="0.3" fill="#aaddaa" opacity="0.5"/>
+
   <!-- Hat brim -->
-  <path class="stroke" d="M4 6c2-1 5-2 8-2s6 1 8 2" style="stroke-width: 1;"/>
+  <path d="M3.5 5c2.5-1.5 5.5-2.5 8.5-2.5s6 1 8.5 2.5" fill="none" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M4 4.7c2.3-1.3 5.2-2.2 8-2.2s5.7.9 8 2.2" fill="none" stroke="#2a2a2a" stroke-width="1" stroke-linecap="round"/>
+
   <!-- Cloak collar -->
-  <path class="stroke" d="M8 16c2 2 6 2 8 0"/>
+  <path d="M7 16c2.5 2.5 7.5 2.5 10 0" fill="none" stroke="#1a1a1a" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M7.5 15.7c2.2 2.2 6.8 2.2 9 0" fill="none" stroke="#2a2a2a" stroke-width="1" stroke-linecap="round"/>
+
+  <!-- Green smoke wisps rising -->
+  <g fill="none" stroke="#448844" stroke-width="0.8" stroke-linecap="round" opacity="0.5">
+    <path d="M6 20c-.5-1 .5-2 0-3"/>
+    <path d="M10 21c.3-1 -.3-2 .2-3"/>
+    <path d="M18 20c.5-1 -.5-2 0-3"/>
+  </g>
+
+  <!-- Smoke particles -->
+  <circle cx="5" cy="17" r="0.5" fill="#66aa66" opacity="0.4"/>
+  <circle cx="8" cy="19" r="0.4" fill="#66aa66" opacity="0.3"/>
+  <circle cx="17" cy="18" r="0.5" fill="#66aa66" opacity="0.4"/>
 </svg>

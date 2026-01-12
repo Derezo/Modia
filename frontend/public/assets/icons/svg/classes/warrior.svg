@@ -1,22 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Sword and shield - warrior class -->
-  <!-- Shield -->
-  <path class="stroke metallic" d="M4 5l6 2v8c0 3-2 5-6 6V5z"/>
-  <!-- Shield band -->
-  <path class="stroke" d="M4 10h6" style="stroke-width: 1;"/>
-  <!-- Sword behind shield -->
-  <path class="stroke metallic" d="M12 3l8 8"/>
-  <path class="stroke" d="M18 3l2 2-8 8"/>
-  <!-- Sword crossguard -->
-  <path class="stroke" d="M14 9l2 2"/>
-  <!-- Sword tip detail -->
-  <path class="stroke" d="M13 4l1-1 1 1" style="stroke-width: 1;"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="8" ry="2" fill="#331111" opacity="0.3"/>
+
+  <!-- Shield - outer dark rim -->
+  <path d="M3 5l7 2v9c0 3.5-2.5 5.5-7 6.5V5z" fill="#662222"/>
+  <!-- Shield - main face -->
+  <path d="M4 6l6 1.7v8c0 3-2 4.5-6 5.3V6z" fill="#884444"/>
+  <!-- Shield - inner bright -->
+  <path d="M5 7.5l4 1.1v6c0 2-1 3-4 3.5V7.5z" fill="#aa5555"/>
+  <!-- Shield - highlight -->
+  <path d="M5.5 8.5l2 .5v3c0 1-.5 1.5-2 1.8V8.5z" fill="#cc7777" opacity="0.5"/>
+  <!-- Shield - band detail -->
+  <path d="M4 11h6" fill="none" stroke="#662222" stroke-width="1" stroke-linecap="round"/>
+  <!-- Shield - rivet -->
+  <circle cx="7" cy="9" r="1" fill="#8b6914"/>
+  <circle cx="6.7" cy="8.7" r="0.4" fill="#daa520" opacity="0.6"/>
+
+  <!-- Sword - blade dark -->
+  <path d="M13 2l8 8-1.5 1.5-8-8z" fill="#5a5a5a"/>
+  <!-- Sword - blade main -->
+  <path d="M13.5 3l6.5 6.5-1 1-6.5-6.5z" fill="#a0a0a0"/>
+  <!-- Sword - blade highlight -->
+  <path d="M14 4l5 5-.5.5-5-5z" fill="#d0d0d0"/>
+  <!-- Sword - edge shine -->
+  <path d="M14.5 4.5l4 4" fill="none" stroke="#e8e8e8" stroke-width="0.5" opacity="0.7"/>
+
+  <!-- Crossguard - dark -->
+  <rect x="12" y="9" width="4" height="1.5" rx="0.3" fill="#8b6914" transform="rotate(45 14 9.75)"/>
+  <!-- Crossguard - main -->
+  <rect x="12.3" y="9.3" width="3.4" height="1" rx="0.2" fill="#daa520" transform="rotate(45 14 9.75)"/>
+
   <!-- Pommel -->
-  <circle cx="11" cy="12" r="1" fill="currentColor"/>
-  <!-- Shield rivet -->
-  <circle cx="7" cy="8" r="0.75" fill="currentColor"/>
+  <circle cx="11.5" cy="12.5" r="1.2" fill="#662222"/>
+  <circle cx="11.5" cy="12.5" r="0.8" fill="#884444"/>
+  <circle cx="11.2" cy="12.2" r="0.3" fill="#aa5555" opacity="0.6"/>
 </svg>

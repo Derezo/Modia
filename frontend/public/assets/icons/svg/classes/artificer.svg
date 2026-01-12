@@ -1,20 +1,81 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Gear and wrench - artificer class -->
-  <!-- Main gear -->
-  <circle class="stroke metallic" cx="10" cy="10" r="6"/>
-  <circle class="stroke" cx="10" cy="10" r="3"/>
-  <!-- Gear teeth -->
-  <path class="stroke" d="M10 4v2M10 14v2M4 10h2M14 10h2" style="stroke-width: 1.5;"/>
-  <path class="stroke" d="M5.8 5.8l1.4 1.4M12.8 12.8l1.4 1.4M5.8 14.2l1.4-1.4M12.8 7.2l1.4-1.4" style="stroke-width: 1;"/>
-  <!-- Wrench -->
-  <path class="stroke metallic" d="M16 14l5 5"/>
-  <path class="stroke" d="M19 17c1 0 2 1 2 2s-1 2-2 2-2-1-2-2 1-2 2-2z"/>
-  <!-- Gear center -->
-  <circle cx="10" cy="10" r="1" fill="currentColor"/>
-  <!-- Spark -->
-  <circle cx="17" cy="13" r="0.5" fill="currentColor"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="11" cy="21" rx="8" ry="2" fill="#1a1a1a" opacity="0.3"/>
+
+  <!-- Main gear - outer dark rim -->
+  <circle cx="10" cy="10" r="7" fill="#5a5a5a"/>
+  <!-- Main gear - main -->
+  <circle cx="10" cy="10" r="6.3" fill="#a0a0a0"/>
+  <!-- Main gear - inner bright -->
+  <circle cx="10" cy="10" r="5.5" fill="#d0d0d0"/>
+  <!-- Main gear - highlight -->
+  <circle cx="8.5" cy="8.5" r="3" fill="#e8e8e8" opacity="0.4"/>
+
+  <!-- Inner gear hole - dark -->
+  <circle cx="10" cy="10" r="3.5" fill="#5a5a5a"/>
+  <!-- Inner gear hole - main -->
+  <circle cx="10" cy="10" r="3" fill="#a0a0a0"/>
+  <!-- Inner gear hole - center -->
+  <circle cx="10" cy="10" r="2.5" fill="#d0d0d0"/>
+
+  <!-- Gear teeth - dark steel -->
+  <!-- Top -->
+  <rect x="8.5" y="2.5" width="3" height="2.5" rx="0.3" fill="#5a5a5a"/>
+  <rect x="8.7" y="2.7" width="2.6" height="2.1" rx="0.2" fill="#a0a0a0"/>
+  <!-- Bottom -->
+  <rect x="8.5" y="15" width="3" height="2.5" rx="0.3" fill="#5a5a5a"/>
+  <rect x="8.7" y="15.2" width="2.6" height="2.1" rx="0.2" fill="#a0a0a0"/>
+  <!-- Left -->
+  <rect x="2.5" y="8.5" width="2.5" height="3" rx="0.3" fill="#5a5a5a"/>
+  <rect x="2.7" y="8.7" width="2.1" height="2.6" rx="0.2" fill="#a0a0a0"/>
+  <!-- Right -->
+  <rect x="15" y="8.5" width="2.5" height="3" rx="0.3" fill="#5a5a5a"/>
+  <rect x="15.2" y="8.7" width="2.1" height="2.6" rx="0.2" fill="#a0a0a0"/>
+
+  <!-- Diagonal teeth -->
+  <!-- Top-right -->
+  <rect x="13.5" y="4" width="2.2" height="2.2" rx="0.3" fill="#5a5a5a" transform="rotate(45 14.6 5.1)"/>
+  <rect x="13.7" y="4.2" width="1.8" height="1.8" rx="0.2" fill="#a0a0a0" transform="rotate(45 14.6 5.1)"/>
+  <!-- Top-left -->
+  <rect x="4.3" y="4" width="2.2" height="2.2" rx="0.3" fill="#5a5a5a" transform="rotate(45 5.4 5.1)"/>
+  <rect x="4.5" y="4.2" width="1.8" height="1.8" rx="0.2" fill="#a0a0a0" transform="rotate(45 5.4 5.1)"/>
+  <!-- Bottom-right -->
+  <rect x="13.5" y="13.8" width="2.2" height="2.2" rx="0.3" fill="#5a5a5a" transform="rotate(45 14.6 14.9)"/>
+  <rect x="13.7" y="14" width="1.8" height="1.8" rx="0.2" fill="#a0a0a0" transform="rotate(45 14.6 14.9)"/>
+  <!-- Bottom-left -->
+  <rect x="4.3" y="13.8" width="2.2" height="2.2" rx="0.3" fill="#5a5a5a" transform="rotate(45 5.4 14.9)"/>
+  <rect x="4.5" y="14" width="1.8" height="1.8" rx="0.2" fill="#a0a0a0" transform="rotate(45 5.4 14.9)"/>
+
+  <!-- Gear center bolt - copper -->
+  <circle cx="10" cy="10" r="1.5" fill="#8b4513"/>
+  <circle cx="10" cy="10" r="1.1" fill="#b87333"/>
+  <circle cx="10" cy="10" r="0.7" fill="#d4956a"/>
+  <circle cx="9.7" cy="9.7" r="0.3" fill="#e8b090" opacity="0.6"/>
+
+  <!-- Wrench handle - dark -->
+  <path d="M15 14l6 6" fill="none" stroke="#5a5a5a" stroke-width="3" stroke-linecap="round"/>
+  <!-- Wrench handle - main -->
+  <path d="M15.2 14.2l5.6 5.6" fill="none" stroke="#a0a0a0" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Wrench handle - highlight -->
+  <path d="M15.4 14.4l5.2 5.2" fill="none" stroke="#d0d0d0" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- Wrench handle - shine -->
+  <path d="M15.5 14.5l5 5" fill="none" stroke="#e8e8e8" stroke-width="0.5" opacity="0.6"/>
+
+  <!-- Wrench head - copper -->
+  <circle cx="19" cy="18" r="2.5" fill="#8b4513"/>
+  <circle cx="19" cy="18" r="2" fill="#b87333"/>
+  <circle cx="19" cy="18" r="1.5" fill="#d4956a"/>
+  <!-- Wrench opening -->
+  <path d="M18 16.5l2 0" fill="none" stroke="#8b4513" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Wrench head highlight -->
+  <circle cx="18.3" cy="17.3" r="0.8" fill="#e8b090" opacity="0.5"/>
+
+  <!-- Spark effects - copper/orange -->
+  <circle cx="17" cy="12" r="0.6" fill="#b87333"/>
+  <circle cx="17" cy="12" r="0.35" fill="#d4956a"/>
+
+  <circle cx="14" cy="15" r="0.5" fill="#b87333"/>
+  <circle cx="14" cy="15" r="0.3" fill="#d4956a"/>
+
+  <circle cx="18" cy="14" r="0.4" fill="#d4956a"/>
 </svg>
