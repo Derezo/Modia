@@ -1,12 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Heart - vitality symbol -->
-  <path class="stroke metallic" d="M12 21C6 17 3 13 3 9c0-3 2-5 5-5 2 0 3 1 4 3 1-2 2-3 4-3 3 0 5 2 5 5 0 4-3 8-9 12z"/>
-  <!-- Heart shine -->
-  <path class="stroke" d="M8 8c-1 0-2 1-2 2" style="stroke-width: 1;"/>
-  <!-- Pulse line -->
-  <path class="stroke" d="M6 13l2-2 2 4 2-3 2 3 2-4 2 2" style="stroke-width: 1;"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="12" cy="21" rx="6" ry="1.5" fill="#775020" opacity="0.25"/>
+
+  <!-- Shield background (darkest) -->
+  <path d="M12 21C6 17 3 13 3 9c0-3 2-5 5-5 2 0 3 1 4 3 1-2 2-3 4-3 3 0 5 2 5 5 0 4-3 8-9 12z" fill="#775020"/>
+
+  <!-- Mid layer (medium orange-brown) -->
+  <path d="M12 19C7 15.5 5 12 5 9.5c0-2.5 1.5-4 4-4 1.5 0 2.5 1 3 2.5 0.5-1.5 1.5-2.5 3-2.5 2.5 0 4 1.5 4 4 0 2.5-2 6-7 9.5z" fill="#aa7733"/>
+
+  <!-- Bright layer - inner heart -->
+  <path d="M12 17C8 14 6.5 11.5 6.5 9.5c0-2 1.2-3 3-3 1.2 0 2 0.8 2.5 2 0.5-1.2 1.3-2 2.5-2 1.8 0 3 1 3 3 0 2-1.5 4.5-5.5 7.5z" fill="#cc9955"/>
+
+  <!-- Shield emblem (inner heart shape - darker for contrast) -->
+  <path d="M12 14C9.5 12 8.5 10.5 8.5 9.5c0-1.2 0.8-2 2-2 0.8 0 1.2 0.5 1.5 1.2 0.3-0.7 0.7-1.2 1.5-1.2 1.2 0 2 0.8 2 2 0 1-1 2.5-3.5 4.5z" fill="#775020" opacity="0.5"/>
+
+  <!-- Defensive aura ring -->
+  <circle cx="12" cy="11" r="6" fill="none" stroke="#ddbb77" stroke-width="0.8" opacity="0.4"/>
+
+  <!-- Top highlight (upper left of heart) -->
+  <ellipse cx="8" cy="8" rx="2" ry="1.5" fill="#ddbb77" opacity="0.5"/>
+
+  <!-- Small sparkle highlight -->
+  <circle cx="7" cy="7" r="1" fill="#ddbb77" opacity="0.6"/>
+
+  <!-- Right side subtle highlight -->
+  <ellipse cx="15" cy="9" rx="1.5" ry="1" fill="#ddbb77" opacity="0.3"/>
+
+  <!-- Edge detail stroke -->
+  <path d="M12 21C6 17 3 13 3 9c0-3 2-5 5-5 2 0 3 1 4 3 1-2 2-3 4-3 3 0 5 2 5 5 0 4-3 8-9 12z" fill="none" stroke="#775020" stroke-width="0.5"/>
+
+  <!-- Inner detail curve -->
+  <path d="M12 6c0 0-1 2-1 3" fill="none" stroke="#775020" stroke-width="0.4" opacity="0.5"/>
 </svg>

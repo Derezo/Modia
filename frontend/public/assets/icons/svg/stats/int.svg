@@ -1,16 +1,40 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-  </style>
-  <!-- Open book - intelligence symbol -->
-  <path class="stroke" d="M2 4c2-1 5-1 10 1v16c-5-2-8-2-10-1V4z"/>
-  <path class="stroke" d="M22 4c-2-1-5-1-10 1v16c5-2 8-2 10-1V4z"/>
-  <!-- Book spine -->
-  <path class="stroke" d="M12 5v16"/>
-  <!-- Page lines (left) -->
-  <path class="stroke" d="M5 8h5M5 11h5M5 14h5" style="stroke-width: 1;"/>
-  <!-- Page lines (right) -->
-  <path class="stroke" d="M14 8h5M14 11h5M14 14h5" style="stroke-width: 1;"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="12" cy="21" rx="7" ry="1.5" fill="#3d2850" opacity="0.25"/>
+
+  <!-- Base layer (darkest) - book outline -->
+  <path d="M2 4c2-1 5-1 10 1v16c-5-2-8-2-10-1V4z" fill="#3d2850"/>
+  <path d="M22 4c-2-1-5-1-10 1v16c5-2 8-2 10-1V4z" fill="#3d2850"/>
+
+  <!-- Mid layer - book pages -->
+  <path d="M3 5c2-0.8 4.5-0.8 9 0.8v14.5c-4.5-1.6-7-1.6-9-0.8V5z" fill="#6b4488"/>
+  <path d="M21 5c-2-0.8-4.5-0.8-9 0.8v14.5c4.5-1.6 7-1.6 9-0.8V5z" fill="#6b4488"/>
+
+  <!-- Bright layer - inner pages -->
+  <path d="M4 6c1.5-0.5 4-0.5 8 0.6v13c-4-1.2-6.5-1.2-8-0.6V6z" fill="#9966bb"/>
+  <path d="M20 6c-1.5-0.5-4-0.5-8 0.6v13c4-1.2 6.5-1.2 8-0.6V6z" fill="#9966bb"/>
+
+  <!-- Book spine (center) -->
+  <path d="M11 6v14h2V6z" fill="#3d2850"/>
+  <path d="M11.5 6.5v13h1v-13z" fill="#6b4488"/>
+
+  <!-- Page highlights (left) -->
+  <path d="M5 8h5M5 11h5M5 14h5" fill="none" stroke="#bb99dd" stroke-width="0.8" opacity="0.6"/>
+
+  <!-- Page highlights (right) -->
+  <path d="M14 8h5M14 11h5M14 14h5" fill="none" stroke="#bb99dd" stroke-width="0.8" opacity="0.6"/>
+
+  <!-- Top highlight (left page) -->
+  <ellipse cx="7" cy="7" rx="2.5" ry="1" fill="#bb99dd" opacity="0.5"/>
+
+  <!-- Small sparkle -->
+  <circle cx="5" cy="6" r="0.8" fill="#bb99dd" opacity="0.6"/>
+
   <!-- Bookmark ribbon -->
-  <path class="stroke" d="M17 4v5l-1-1-1 1V4" style="stroke-width: 1;"/>
+  <path d="M17 4v5l-1-1-1 1V4" fill="#9966bb"/>
+  <path d="M17 4v5l-1-1-1 1V4" fill="none" stroke="#3d2850" stroke-width="0.4"/>
+
+  <!-- Edge detail stroke -->
+  <path d="M2 4c2-1 5-1 10 1v16c-5-2-8-2-10-1V4z" fill="none" stroke="#3d2850" stroke-width="0.4"/>
+  <path d="M22 4c-2-1-5-1-10 1v16c5-2 8-2 10-1V4z" fill="none" stroke="#3d2850" stroke-width="0.4"/>
 </svg>
