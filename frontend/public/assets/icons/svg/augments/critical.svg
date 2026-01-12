@@ -1,23 +1,83 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Sword piercing target - critical augment (medieval object) -->
-  <!-- Target rings -->
-  <circle class="stroke metallic" cx="12" cy="14" r="7"/>
-  <circle class="stroke" cx="12" cy="14" r="4"/>
-  <!-- Sword blade piercing through -->
-  <path class="stroke metallic" d="M12 2v10"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="5" ry="1.5" fill="#331111" opacity="0.3"/>
+
+  <!-- Target outer ring (dark red) -->
+  <circle cx="12" cy="14" r="7" fill="#662222"/>
+
+  <!-- Target mid ring -->
+  <circle cx="12" cy="14" r="6" fill="#884444"/>
+
+  <!-- Target bright ring -->
+  <circle cx="12" cy="14" r="5" fill="#aa5555"/>
+
+  <!-- Target inner ring (darker) -->
+  <circle cx="12" cy="14" r="3.5" fill="#884444"/>
+
+  <!-- Target innermost -->
+  <circle cx="12" cy="14" r="2" fill="#662222"/>
+
+  <!-- Bullseye center -->
+  <circle cx="12" cy="14" r="1" fill="#aa5555"/>
+
+  <!-- Target ring detail lines -->
+  <circle cx="12" cy="14" r="5.5" fill="none" stroke="#552222" stroke-width="0.4"/>
+  <circle cx="12" cy="14" r="3" fill="none" stroke="#552222" stroke-width="0.4"/>
+
+  <!-- Target highlight -->
+  <path d="M8 11c1-1 2.5-1.5 4-1.5" fill="none" stroke="#cc7777" stroke-width="0.8" opacity="0.5"/>
+
+  <!-- Sword blade outer (dark) -->
+  <path d="M12 1v11" fill="none" stroke="#662222" stroke-width="3"/>
+
+  <!-- Sword blade mid -->
+  <path d="M12 1.5v10" fill="none" stroke="#884444" stroke-width="2"/>
+
+  <!-- Sword blade bright -->
+  <path d="M12 2v9" fill="none" stroke="#aa5555" stroke-width="1.2"/>
+
+  <!-- Sword blade highlight -->
+  <path d="M11.5 3v6" fill="none" stroke="#cc7777" stroke-width="0.5" opacity="0.5"/>
+
   <!-- Sword tip -->
-  <path class="stroke" d="M10 3l2-1 2 1"/>
-  <!-- Cross guard -->
-  <path class="stroke" d="M9 10h6"/>
-  <path class="stroke" d="M9 9v2M15 9v2" style="stroke-width: 1;"/>
+  <path d="M10 2.5l2-1.5 2 1.5" fill="#662222"/>
+  <path d="M10.5 2.5l1.5-1 1.5 1" fill="#884444"/>
+
+  <!-- Cross guard outer -->
+  <path d="M8 10h8" fill="none" stroke="#662222" stroke-width="2"/>
+
+  <!-- Cross guard mid -->
+  <path d="M8.5 10h7" fill="none" stroke="#884444" stroke-width="1.5"/>
+
+  <!-- Cross guard bright -->
+  <path d="M9 10h6" fill="none" stroke="#aa5555" stroke-width="1"/>
+
+  <!-- Cross guard ends -->
+  <path d="M8 9v2M16 9v2" fill="none" stroke="#662222" stroke-width="1.5"/>
+  <path d="M8.5 9.2v1.6M15.5 9.2v1.6" fill="none" stroke="#884444" stroke-width="1"/>
+
   <!-- Impact marks -->
-  <path class="stroke" d="M8 11l-2-1M16 11l2-1" style="stroke-width: 1;"/>
-  <!-- Bullseye -->
-  <circle cx="12" cy="14" r="1.5" fill="currentColor"/>
-  <!-- Target ring detail -->
-  <path class="stroke" d="M12 10v1M12 17v1" style="stroke-width: 1;"/>
+  <g fill="none" stroke="#aa5555" stroke-width="1" stroke-linecap="round">
+    <path d="M7 11l-2-1.5"/>
+    <path d="M17 11l2-1.5"/>
+  </g>
+
+  <!-- Critical hit sparkle at impact -->
+  <circle cx="12" cy="12" r="0.8" fill="#ffdd88"/>
+  <g fill="none" stroke="#ffdd88" stroke-width="0.6">
+    <path d="M12 10.5v-.8"/>
+    <path d="M10.5 12h-.8"/>
+    <path d="M13.5 12h.8"/>
+  </g>
+
+  <!-- Target cross lines -->
+  <g fill="none" stroke="#552222" stroke-width="0.5">
+    <path d="M12 10v1"/>
+    <path d="M12 17v1.5"/>
+    <path d="M7 14h1.5"/>
+    <path d="M15.5 14h1.5"/>
+  </g>
+
+  <!-- Bottom shadow -->
+  <path d="M7 18 A6 6 0 0 0 17 18" fill="#662222" opacity="0.25"/>
 </svg>
