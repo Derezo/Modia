@@ -1,15 +1,54 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Mountain peak - rugged medieval style -->
-  <path class="stroke metallic" d="M2 21l7-12 3 4 5-10 5 18H2z"/>
-  <!-- Snow cap -->
-  <path class="stroke" d="M17 3l-3 6 2-1 1 2 2-1 1 2 2-8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Mountain shadow -->
+  <ellipse cx="12" cy="22" rx="10" ry="2" fill="#4a4a4a" opacity="0.3"/>
+
+  <!-- Background mountain (darker, smaller) -->
+  <path d="M0 21l6-10 3 3 3-6 3 6 3-3 6 10H0z" fill="#606060"/>
+
+  <!-- Main mountain base (dark gray) -->
+  <path d="M1 21l6-12 4 5 6-11 6 18H1z" fill="#909090"/>
+
+  <!-- Mountain middle layer (medium gray) -->
+  <path d="M2 21l5.5-11 3.5 4.5 6-10 5 16.5H2z" fill="#b0b0b0"/>
+
+  <!-- Mountain front face (light gray) -->
+  <path d="M3 21l5-9 3 3.5 5-8v13.5H3z" fill="#c0c0c0"/>
+
+  <!-- Highlight on front face -->
+  <path d="M5 19l3-5 2 2 3-5v8H5z" fill="#d0d0d0" opacity="0.6"/>
+
+  <!-- Snow cap layer 1 (base) -->
+  <path d="M17 3l-4 7 2-0.5 2 2.5 2-2 2 1z" fill="#c0c0c0"/>
+
+  <!-- Snow cap layer 2 (middle) -->
+  <path d="M17 4l-3 5 1.5-0.3 1.5 2 1.5-1.5 1.5 0.8z" fill="#e0e0e0"/>
+
+  <!-- Snow cap layer 3 (bright) -->
+  <path d="M17 5l-2 3.5 1 0 1 1.5 1-1 1 0.5z" fill="#f0f0f0"/>
+
+  <!-- Snow highlight -->
+  <path d="M16 6l-1 2.5 1.5 0.5 0.5-1z" fill="#ffffff" opacity="0.7"/>
+
   <!-- Ridge lines for texture -->
-  <path class="stroke" d="M9 9l2 3" style="stroke-width: 1;"/>
-  <path class="stroke" d="M14 11l1.5-3" style="stroke-width: 1;"/>
-  <!-- Cross-hatch shading on dark side -->
-  <path class="stroke" d="M5 18l2-3M7 19l2-3M9 20l1-2" style="stroke-width: 1;"/>
+  <g fill="none" stroke="#7a7a7a" stroke-width="0.5">
+    <path d="M8 11l3 4"/>
+    <path d="M14 10l2 5"/>
+    <path d="M11 13l1 3"/>
+  </g>
+
+  <!-- Shadow side texture (darker lines) -->
+  <g fill="none" stroke="#6a6a6a" stroke-width="0.5">
+    <path d="M4 18l2-3"/>
+    <path d="M5 20l2-3"/>
+    <path d="M7 19l1.5-2"/>
+  </g>
+
+  <!-- Rock outcroppings -->
+  <g fill="#8a8a8a">
+    <path d="M6 15l1-1 1 1.5-2 0.5z"/>
+    <path d="M19 15l1-2 1 2-1 1z"/>
+  </g>
+
+  <!-- Bottom depth -->
+  <path d="M1 20h22v1H1z" fill="#5a5a5a" opacity="0.25"/>
 </svg>
