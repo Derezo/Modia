@@ -1,16 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-  </style>
-  <!-- Four-leaf clover - luck symbol -->
-  <!-- Top leaf -->
-  <path class="stroke" d="M12 4c-2 0-3 1-3 3s1 3 3 3c-2 0-3 1-3 3s1 3 3 3c2 0 3-1 3-3s-1-3-3-3c2 0 3-1 3-3s-1-3-3-3z"/>
-  <!-- Left leaf -->
-  <path class="stroke" d="M4 12c0-2 1-3 3-3s3 1 3 3c0-2 1-3 3-3s3 1 3 3c0 2-1 3-3 3s-3-1-3-3c0 2-1 3-3 3s-3-1-3-3z"/>
-  <!-- Center detail -->
-  <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
-  <!-- Stem -->
-  <path class="stroke" d="M12 16v5"/>
-  <!-- Leaf veins -->
-  <path class="stroke" d="M10 7l2 3M14 7l-2 3M7 10l3 2M17 10l-3 2M10 17l2-3M14 17l-2-3M7 14l3-2M17 14l-3-2" style="stroke-width: 0.75;"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="12" cy="22" rx="5" ry="1.2" fill="#775522" opacity="0.25"/>
+
+  <!-- Stem base (darkest) -->
+  <path d="M11 15v6h2v-6z" fill="#775522"/>
+  <!-- Stem mid -->
+  <path d="M11.3 15.5v5h1.4v-5z" fill="#aa8833"/>
+  <!-- Stem highlight -->
+  <path d="M11.5 16v4" fill="none" stroke="#ddcc77" stroke-width="0.5" opacity="0.5"/>
+
+  <!-- Top leaf (dark) -->
+  <ellipse cx="12" cy="6" rx="3.5" ry="4" fill="#775522"/>
+  <!-- Top leaf (mid) -->
+  <ellipse cx="12" cy="6.2" rx="3" ry="3.5" fill="#aa8833"/>
+  <!-- Top leaf (bright) -->
+  <ellipse cx="12" cy="6.5" rx="2.3" ry="2.8" fill="#ccaa55"/>
+
+  <!-- Bottom leaf (dark) -->
+  <ellipse cx="12" cy="14" rx="3.5" ry="4" fill="#775522"/>
+  <!-- Bottom leaf (mid) -->
+  <ellipse cx="12" cy="13.8" rx="3" ry="3.5" fill="#aa8833"/>
+  <!-- Bottom leaf (bright) -->
+  <ellipse cx="12" cy="13.5" rx="2.3" ry="2.8" fill="#ccaa55"/>
+
+  <!-- Left leaf (dark) -->
+  <ellipse cx="6" cy="10" rx="4" ry="3.5" fill="#775522"/>
+  <!-- Left leaf (mid) -->
+  <ellipse cx="6.2" cy="10" rx="3.5" ry="3" fill="#aa8833"/>
+  <!-- Left leaf (bright) -->
+  <ellipse cx="6.5" cy="10" rx="2.8" ry="2.3" fill="#ccaa55"/>
+
+  <!-- Right leaf (dark) -->
+  <ellipse cx="18" cy="10" rx="4" ry="3.5" fill="#775522"/>
+  <!-- Right leaf (mid) -->
+  <ellipse cx="17.8" cy="10" rx="3.5" ry="3" fill="#aa8833"/>
+  <!-- Right leaf (bright) -->
+  <ellipse cx="17.5" cy="10" rx="2.8" ry="2.3" fill="#ccaa55"/>
+
+  <!-- Center circle (dark) -->
+  <circle cx="12" cy="10" r="2.5" fill="#775522"/>
+  <!-- Center circle (mid) -->
+  <circle cx="12" cy="10" r="2" fill="#aa8833"/>
+  <!-- Center circle (bright) -->
+  <circle cx="12" cy="10" r="1.3" fill="#ccaa55"/>
+
+  <!-- Leaf vein details -->
+  <path d="M12 4v4M12 12v4M8 10h-4M16 10h4" fill="none" stroke="#775522" stroke-width="0.5" opacity="0.6"/>
+
+  <!-- Top left highlight -->
+  <ellipse cx="10.5" cy="5" rx="1" ry="1.2" fill="#ddcc77" opacity="0.5"/>
+
+  <!-- Left leaf highlight -->
+  <ellipse cx="5" cy="9" rx="1.2" ry="1" fill="#ddcc77" opacity="0.5"/>
+
+  <!-- Sparkle -->
+  <circle cx="9" cy="4" r="0.6" fill="#ddcc77" opacity="0.6"/>
+
+  <!-- Edge strokes for definition -->
+  <ellipse cx="12" cy="6" rx="3.5" ry="4" fill="none" stroke="#775522" stroke-width="0.3"/>
+  <ellipse cx="12" cy="14" rx="3.5" ry="4" fill="none" stroke="#775522" stroke-width="0.3"/>
+  <ellipse cx="6" cy="10" rx="4" ry="3.5" fill="none" stroke="#775522" stroke-width="0.3"/>
+  <ellipse cx="18" cy="10" rx="4" ry="3.5" fill="none" stroke="#775522" stroke-width="0.3"/>
 </svg>
