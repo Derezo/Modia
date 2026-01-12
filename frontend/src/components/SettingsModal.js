@@ -2,6 +2,7 @@
  * SettingsModal - Game settings panel with tabbed layout
  * Uses parchment aesthetic from DESIGN_SYSTEM.md
  */
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 
 const ACTION_MENU_OPTIONS = [
   {
@@ -172,7 +173,7 @@ export default class SettingsModal {
           font-size: 15px;
           font-weight: bold;
           margin-bottom: 12px;
-          color: #c9a227;
+          color: #2d2418;  /* Dark brown for readable section titles */
           text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
         }
 
@@ -314,8 +315,8 @@ export default class SettingsModal {
           box-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
         .settings-toggle-switch.active {
-          background: #c9a227;
-          border-color: #a08020;
+          background: #6b2d3d;  /* Burgundy accent for active state */
+          border-color: #5a2433;
         }
         .settings-toggle-switch.active::after {
           transform: translateX(20px);
@@ -338,8 +339,8 @@ export default class SettingsModal {
         }
         .settings-input:focus {
           outline: none;
-          border-color: #c9a227;
-          box-shadow: inset 0 1px 3px rgba(0,0,0,0.1), 0 0 0 2px rgba(201, 162, 39, 0.2);
+          border-color: #6b2d3d;  /* Burgundy accent for focus */
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.1), 0 0 0 2px rgba(107, 45, 61, 0.2);
         }
 
         /* Select Dropdown Styles */
@@ -356,7 +357,7 @@ export default class SettingsModal {
         }
         .settings-select:focus {
           outline: none;
-          border-color: #c9a227;
+          border-color: #6b2d3d;  /* Burgundy accent for focus */
         }
 
         /* Slider Styles */
@@ -389,7 +390,7 @@ export default class SettingsModal {
           appearance: none;
           width: 16px;
           height: 16px;
-          background: linear-gradient(to bottom, #c9a227 0%, #a08020 100%);
+          background: linear-gradient(to bottom, #6b2d3d 0%, #5a2433 100%);  /* Burgundy accent */
           border: 2px solid #8b7355;
           border-radius: 50%;
           cursor: pointer;
@@ -397,7 +398,7 @@ export default class SettingsModal {
         .settings-slider::-moz-range-thumb {
           width: 16px;
           height: 16px;
-          background: linear-gradient(to bottom, #c9a227 0%, #a08020 100%);
+          background: linear-gradient(to bottom, #6b2d3d 0%, #5a2433 100%);  /* Burgundy accent */
           border: 2px solid #8b7355;
           border-radius: 50%;
           cursor: pointer;
@@ -588,7 +589,7 @@ export default class SettingsModal {
       this.close(true);
     } catch (err) {
       console.error('Failed to save settings:', err);
-      this.game.showNotification('Failed to save settings: ' + err.message, 'error');
+      parchmentToast.error('Settings', 'Failed to save settings: ' + err.message);
     }
   }
 

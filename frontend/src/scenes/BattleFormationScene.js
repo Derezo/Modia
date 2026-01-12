@@ -17,6 +17,7 @@ import {
   getParchmentBorder,
   getParchmentShadow
 } from '../ui/parchment/index.js';
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
@@ -641,7 +642,7 @@ export class BattleFormationScene extends Scene {
       this.selectedCharacter = charToMove;
       this.updateDetailCard();
 
-      this.game.showNotification?.(`Moved ${charToMove.name}`, 'info');
+      parchmentToast.info('Formation', `Moved ${charToMove.name}`);
     }
   }
 
@@ -677,7 +678,7 @@ export class BattleFormationScene extends Scene {
       }
     }
 
-    this.game.showNotification?.('Character removed', 'info');
+    parchmentToast.info('Formation', 'Character removed');
   }
 
   // UI updates
@@ -790,7 +791,7 @@ export class BattleFormationScene extends Scene {
   // Battle start
   async startBattle() {
     if (this.placedCharacters.size === 0) {
-      this.game.showNotification('Place at least one character!', 'warning');
+      parchmentToast.warning('Formation', 'Place at least one character!');
       return;
     }
 
@@ -808,7 +809,7 @@ export class BattleFormationScene extends Scene {
         playerFormation: formation
       });
     } catch (err) {
-      this.game.showNotification(err.message || 'Failed to start battle', 'error');
+      parchmentToast.error('Battle Error', err.message || 'Failed to start battle');
     }
   }
 
@@ -942,7 +943,7 @@ export class BattleFormationScene extends Scene {
       }
 
       .bf-drawer-title {
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
@@ -1158,8 +1159,8 @@ export class BattleFormationScene extends Scene {
       }
 
       .bf-roster-char.selected {
-        border-color: ${P.accent.gold};
-        background: rgba(201, 162, 39, 0.1);
+        border-color: ${P.accent.burgundy};
+        background: rgba(107, 45, 61, 0.1);
       }
 
       .bf-roster-char.placed {
@@ -1270,7 +1271,7 @@ export class BattleFormationScene extends Scene {
 
       .bf-sheet-title {
         flex: 1;
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};

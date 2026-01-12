@@ -1,5 +1,5 @@
 import { Scene } from './Scene.js';
-import { PARCHMENT_COLORS, injectParchmentTheme } from '../ui/parchment/index.js';
+import { PARCHMENT_COLORS, injectParchmentTheme, getParchmentScrollbarCSS } from '../ui/parchment/index.js';
 
 // Shorthand for colors in CSS template
 const P = PARCHMENT_COLORS;
@@ -707,6 +707,13 @@ export class TavernScene extends Scene {
           width: 240px;
         }
       }
+
+      /* ============================================
+         Themed Scrollbars
+         ============================================ */
+      ${getParchmentScrollbarCSS('.chat-messages')}
+      ${getParchmentScrollbarCSS('.player-list')}
+      ${getParchmentScrollbarCSS('.dm-list')}
     `;
     document.head.appendChild(style);
   }

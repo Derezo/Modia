@@ -322,6 +322,21 @@ function cleanupBattle(battleId) {
   }
 }
 
+/**
+ * Clear ALL tracking and timeouts (for test cleanup)
+ * @private
+ */
+function _clearAllTimeouts() {
+  for (const battleDisconnects of disconnectedPlayers.values()) {
+    for (const info of battleDisconnects.values()) {
+      if (info.timeout) {
+        clearTimeout(info.timeout);
+      }
+    }
+  }
+  disconnectedPlayers.clear();
+}
+
 export {
   handleDisconnect,
   handleReconnect,
@@ -330,6 +345,7 @@ export {
   getDisconnectedPlayers,
   cleanupBattle,
   getBattleStateForReconnect,
+  _clearAllTimeouts,
   DISCONNECT_TIMEOUT,
   RECONNECT_GRACE_PERIOD
 };

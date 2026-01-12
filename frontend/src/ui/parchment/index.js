@@ -26,7 +26,9 @@ export {
   getParchmentButtonCSS,
   getParchmentCardCSS,
   getParchmentHeaderCSS,
-  getParchmentMutedTextCSS
+  getParchmentMutedTextCSS,
+  getParchmentScrollbarCSS,
+  getParchmentSpinnerCSS
 } from './ParchmentTheme.js';
 
 export { ParchmentPanel } from './ParchmentPanel.js';

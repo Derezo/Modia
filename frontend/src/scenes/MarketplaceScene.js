@@ -56,7 +56,7 @@ export class MarketplaceScene extends Scene {
     this.activeCharacter = this.game.state.get('activeCharacter');
 
     if (!this.activeCharacter) {
-      this.game.showNotification('No character available for trading. Please select a character first.', 'error');
+      parchmentToast.error('No Character', 'No character available for trading. Please select a character first.');
       this.game.scenes.switchTo('characterSelect');
       return;
     }
@@ -201,9 +201,9 @@ export class MarketplaceScene extends Scene {
 
       'marketplace:order_filled': (payload) => {
         const action = payload.side === 'buy' ? 'Bought' : 'Sold';
-        this.game.showNotification(
-          `${action} ${payload.quantity}x ${payload.itemName} @ ${payload.price}g`,
-          'success'
+        parchmentToast.success(
+          'Order Filled',
+          `${action} ${payload.quantity}x ${payload.itemName} @ ${payload.price}g`
         );
 
         // Update gold display
@@ -233,7 +233,7 @@ export class MarketplaceScene extends Scene {
       },
 
       'marketplace:order_cancelled': (payload) => {
-        this.game.showNotification('Order cancelled successfully', 'info');
+        parchmentToast.info('Order Cancelled', 'Your order has been cancelled successfully');
 
         // Refresh orders list
         if (this.activeTab === 'orders') {
@@ -288,7 +288,7 @@ export class MarketplaceScene extends Scene {
       this.renderContent();
     } catch (err) {
       console.error('Failed to load marketplace data:', err);
-      this.game.showNotification('Failed to load marketplace', 'error');
+      parchmentToast.error('Load Failed', 'Failed to load marketplace data');
     }
   }
 
@@ -354,11 +354,11 @@ export class MarketplaceScene extends Scene {
         display: flex;
         align-items: center;
         gap: 8px;
-        color: #c9a227;
+        color: #2d2418;  /* Dark brown for readable gold amounts */
         font-family: Consolas, monospace;
         font-size: 16px;
         font-weight: bold;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
       }
 
       /* Tabs - Parchment Style */
@@ -1063,10 +1063,10 @@ export class MarketplaceScene extends Scene {
 
       /* Gold Display */
       .gold-display {
-        color: #c9a227;
+        color: #2d2418;  /* Dark brown for readable gold amounts */
         font-family: Consolas, monospace;
         font-weight: bold;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        text-shadow: 0 1px 2px rgba(255, 255, 255, 0.3);
       }
     `;
     document.head.appendChild(style);
@@ -1209,7 +1209,7 @@ export class MarketplaceScene extends Scene {
         mainContent.querySelector('#items-grid').innerHTML = this.renderItemsGrid();
         this.attachItemClickHandlers(mainContent);
       } catch (err) {
-        this.game.showNotification('Search failed', 'error');
+        parchmentToast.error('Search Failed', 'Unable to search marketplace items');
       }
     };
 
@@ -1249,7 +1249,7 @@ export class MarketplaceScene extends Scene {
           ? `${item.minListingPrice}g`
           : `${item.minListingPrice} - ${item.maxListingPrice}g`;
         priceHtml = `
-          <div class="market-item-listings" style="color: #c9a227; font-size: 12px; font-family: Consolas, monospace;">
+          <div class="market-item-listings" style="color: #2d2418; font-size: 12px; font-family: Consolas, monospace; font-weight: bold;">
             ${item.listingCount} listing${item.listingCount !== 1 ? 's' : ''} • ${priceRange}
           </div>
         `;
@@ -1347,7 +1347,7 @@ export class MarketplaceScene extends Scene {
    */
   async handleBuyListing(listing) {
     if (!this.activeCharacter) {
-      this.game.showNotification('No character selected', 'error');
+      parchmentToast.error('No Character', 'No character selected for trading');
       return;
     }
 
@@ -1738,7 +1738,7 @@ export class MarketplaceScene extends Scene {
           </div>
           <div>
             <div style="color: #5a4a3a; font-size: 12px; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Gold Reserved</div>
-            <div style="font-size: 18px; color: #c9a227; font-family: Consolas, monospace; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+            <div style="font-size: 18px; color: #2d2418; font-family: Consolas, monospace; font-weight: bold; text-shadow: 0 1px 2px rgba(255,255,255,0.3);">
               ${this.myOrders
                 .filter(o => o.side === 'buy')
                 .reduce((sum, o) => sum + (o.price * o.quantityRemaining), 0).toLocaleString()}g
@@ -1818,7 +1818,7 @@ export class MarketplaceScene extends Scene {
                     <span style="color: #2d2418; font-family: Georgia, serif;">${trade.itemName}</span>
                   </div>
                   <div style="text-align: right;">
-                    <div style="color: #c9a227; font-family: Consolas, monospace;">${trade.totalGold.toLocaleString()}g (${trade.price.toLocaleString()}g x ${trade.quantity})</div>
+                    <div style="color: #2d2418; font-family: Consolas, monospace; font-weight: bold;">${trade.totalGold.toLocaleString()}g (${trade.price.toLocaleString()}g x ${trade.quantity})</div>
                     <div class="trade-row-time">${this.formatTime(trade.executedAt)}</div>
                   </div>
                 </div>

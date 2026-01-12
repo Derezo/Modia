@@ -9,7 +9,9 @@ import {
   getParchmentBorder,
   getParchmentShadow,
   getParchmentButtonCSS,
-  getParchmentPanelCSS
+  getParchmentPanelCSS,
+  getParchmentScrollbarCSS,
+  getParchmentSpinnerCSS
 } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 
@@ -186,7 +188,7 @@ export class RecruitmentScene extends Scene {
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         text-transform: capitalize;
         text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
       }
@@ -292,8 +294,8 @@ export class RecruitmentScene extends Scene {
       }
 
       .recruit-card.selected {
-        border-color: ${P.accent.gold};
-        box-shadow: 0 0 15px rgba(201, 162, 39, 0.3);
+        border-color: ${P.accent.burgundy};
+        box-shadow: 0 0 15px rgba(107, 45, 61, 0.3);
       }
 
       .recruit-card.sold {
@@ -471,7 +473,7 @@ export class RecruitmentScene extends Scene {
       }
 
       .recruit-detail-section-title {
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
@@ -593,7 +595,7 @@ export class RecruitmentScene extends Scene {
         width: 20px;
         height: 20px;
         border: 2px solid ${P.border};
-        border-top-color: ${P.accent.gold};
+        border-top-color: ${P.accent.burgundy};
         border-radius: 50%;
         animation: recruit-spin 0.8s linear infinite;
         margin-right: ${PARCHMENT_SPACING.sm};
@@ -646,6 +648,14 @@ export class RecruitmentScene extends Scene {
           grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
         }
       }
+
+      /* Themed Scrollbars */
+      ${getParchmentScrollbarCSS('.recruit-grid')}
+      ${getParchmentScrollbarCSS('.recruit-detail-panel')}
+      ${getParchmentScrollbarCSS('.recruit-content')}
+
+      /* Parchment Spinner */
+      ${getParchmentSpinnerCSS()}
     `;
     document.head.appendChild(style);
   }

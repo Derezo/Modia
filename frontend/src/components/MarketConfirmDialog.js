@@ -245,7 +245,8 @@ export class MarketConfirmDialog {
       }
 
       .confirm-gold {
-        color: #c9a227;
+        color: #2d2418;  /* Dark brown for readable gold amounts */
+        font-weight: bold;
       }
 
       .confirm-warning {

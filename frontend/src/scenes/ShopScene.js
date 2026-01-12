@@ -5,9 +5,11 @@ import {
   getParchmentGradient,
   getParchmentGradientTextured,
   getParchmentBorder,
-  getParchmentShadow
+  getParchmentShadow,
+  getParchmentScrollbarCSS
 } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { Icon } from '../components/Icon.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
@@ -178,7 +180,7 @@ export class ShopScene extends Scene {
 
       .shop-title h2 {
         margin: 0;
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         font-size: 22px;
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
@@ -194,12 +196,12 @@ export class ShopScene extends Scene {
       }
 
       .shop-gold-icon {
+        display: flex;
+        align-items: center;
+      }
+      .shop-gold-icon img {
         width: 20px;
         height: 20px;
-        background: radial-gradient(circle at 30% 30%, #ffd700, #b8860b);
-        border-radius: 50%;
-        border: 1px solid ${P.borderDark};
-        box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.3);
       }
 
       .shop-tabs {
@@ -231,9 +233,9 @@ export class ShopScene extends Scene {
 
       .shop-tab.active {
         background: linear-gradient(to bottom, #e8d9a8, #d4c498);
-        border-color: ${P.accent.gold};
-        color: ${P.accent.gold};
-        box-shadow: 0 -2px 6px rgba(201, 162, 39, 0.3);
+        border-color: ${P.accent.burgundy};
+        color: ${P.text.primary};
+        box-shadow: 0 -2px 6px rgba(107, 45, 61, 0.3);
       }
 
       .shop-content {
@@ -269,7 +271,7 @@ export class ShopScene extends Scene {
         background: linear-gradient(to bottom, ${P.dark}, ${P.mid});
         border-bottom: ${getParchmentBorder()};
         border-radius: 4px 4px 0 0;
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         font-weight: bold;
         font-size: 14px;
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
@@ -302,16 +304,16 @@ export class ShopScene extends Scene {
       }
 
       .shop-item:hover {
-        border-color: ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
         background: linear-gradient(to bottom, #e8d9a8, #d4c498);
         transform: translateY(-1px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
       }
 
       .shop-item.selected {
-        border-color: ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
         background: linear-gradient(to bottom, #e8d9a8, #d4c498);
-        box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 0 0 2px rgba(107, 45, 61, 0.3), 0 4px 8px rgba(0, 0, 0, 0.2);
       }
 
       .shop-item.out-of-stock {
@@ -406,7 +408,7 @@ export class ShopScene extends Scene {
       .detail-name {
         font-size: 18px;
         font-weight: bold;
-        color: ${P.accent.gold};
+        color: ${P.text.primary};
         margin-bottom: 4px;
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
@@ -482,7 +484,7 @@ export class ShopScene extends Scene {
 
       .quantity-btn:hover:not(:disabled) {
         background: linear-gradient(to bottom, ${P.mid}, ${P.dark});
-        border-color: ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
       }
 
       .quantity-btn:disabled {
@@ -576,12 +578,12 @@ export class ShopScene extends Scene {
 
       .character-tag {
         font-size: 10px;
-        color: ${P.accent.gold};
-        background: rgba(201, 162, 39, 0.2);
+        color: ${P.accent.burgundy};
+        background: rgba(107, 45, 61, 0.15);
         padding: 2px 6px;
         border-radius: 4px;
         margin-left: 8px;
-        border: 1px solid rgba(201, 162, 39, 0.4);
+        border: 1px solid rgba(107, 45, 61, 0.3);
       }
 
       .back-btn {
@@ -601,6 +603,11 @@ export class ShopScene extends Scene {
         background: linear-gradient(to bottom, ${P.mid}, ${P.dark});
         border-color: ${P.borderDark};
       }
+
+      /* Themed Scrollbars */
+      ${getParchmentScrollbarCSS('.shop-inventory-list')}
+      ${getParchmentScrollbarCSS('.shop-panel')}
+      ${getParchmentScrollbarCSS('.shop-content')}
     `;
     document.head.appendChild(style);
   }
@@ -616,7 +623,7 @@ export class ShopScene extends Scene {
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
           <div class="shop-gold">
-            <div class="shop-gold-icon"></div>
+            <div class="shop-gold-icon">${Icon.html('resources', 'gold', { size: 'sm' })}</div>
             <span id="player-gold">${this.playerGold.toLocaleString()}</span>
           </div>
           <button class="back-btn" id="back-btn">Back to Map</button>

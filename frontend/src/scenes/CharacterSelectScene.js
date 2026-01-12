@@ -114,7 +114,7 @@ export class CharacterSelectScene extends Scene {
       .charselect-card:hover {
         transform: translateY(-2px);
         box-shadow: ${getParchmentShadow(true)};
-        border-color: ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
       }
 
       .charselect-card-empty {
@@ -132,7 +132,7 @@ export class CharacterSelectScene extends Scene {
         opacity: 1;
         transform: translateY(-2px);
         box-shadow: ${getParchmentShadow(true)};
-        border-color: ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
       }
 
       .charselect-card-empty span {

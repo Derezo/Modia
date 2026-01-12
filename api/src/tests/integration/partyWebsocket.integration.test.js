@@ -3,11 +3,16 @@
  * Tests party invites, broadcasts, and room management
  */
 
-import { describe, test, beforeEach, afterEach } from 'node:test';
+import { describe, test, beforeEach, afterEach, after } from 'node:test';
 import assert from 'node:assert';
 
 // Import the service
 import * as partyWebsocket from '../../services/partyWebsocket.js';
+
+// Clean up all timeouts after all tests complete to prevent hanging
+after(() => {
+  partyWebsocket._clearAllTimeouts();
+});
 
 // Counter for unique IDs
 let userIdCounter = 30000;

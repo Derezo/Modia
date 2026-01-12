@@ -3,6 +3,14 @@
  * Shows party details and allows accepting/declining invites
  */
 
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import {
+  PARCHMENT_COLORS,
+  getParchmentGradient,
+  getParchmentBorder,
+  getParchmentShadow
+} from '../ui/parchment/index.js';
+
 export class PartyInviteModal {
   constructor(game) {
     this.game = game;
@@ -102,7 +110,7 @@ export class PartyInviteModal {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.7);
+      background: ${PARCHMENT_COLORS.overlay};
       z-index: 9700;
       opacity: 0;
       visibility: hidden;
@@ -116,17 +124,17 @@ export class PartyInviteModal {
     this.element = document.createElement('div');
     this.element.id = 'party-invite-modal';
     this.element.style.cssText = `
-      background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
-      border: 2px solid #4a4a6a;
-      border-radius: 8px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      background: ${getParchmentGradient()};
+      border: ${getParchmentBorder()};
+      border-radius: 6px;
+      box-shadow: ${getParchmentShadow(true)};
       min-width: 350px;
       max-width: 450px;
       transform: scale(0.9);
       opacity: 0;
       transition: transform 0.2s ease-out, opacity 0.2s ease-out;
       font-family: 'Georgia', serif;
-      color: #e0e0e0;
+      color: ${PARCHMENT_COLORS.text.primary};
       overflow: hidden;
     `;
 
@@ -147,23 +155,25 @@ export class PartyInviteModal {
       <style>
         #party-invite-modal .modal-header {
           padding: 16px 20px;
-          border-bottom: 1px solid #3a3a5a;
+          border-bottom: 1px solid ${PARCHMENT_COLORS.border};
           display: flex;
           justify-content: space-between;
           align-items: center;
+          background: linear-gradient(to bottom, ${PARCHMENT_COLORS.light}, ${PARCHMENT_COLORS.mid});
         }
         #party-invite-modal .modal-title {
           margin: 0;
           font-size: 18px;
-          color: #f59e0b;
+          color: ${PARCHMENT_COLORS.accent.burgundy};
           display: flex;
           align-items: center;
           gap: 8px;
+          text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
         }
         #party-invite-modal .countdown {
-          background: rgba(239, 68, 68, 0.2);
-          border: 1px solid #ef4444;
-          color: #ef4444;
+          background: rgba(139, 68, 68, 0.15);
+          border: 1px solid ${PARCHMENT_COLORS.state.error};
+          color: ${PARCHMENT_COLORS.state.error};
           padding: 4px 10px;
           border-radius: 12px;
           font-size: 12px;
@@ -171,31 +181,36 @@ export class PartyInviteModal {
         }
         #party-invite-modal .modal-body {
           padding: 20px;
+          background: ${PARCHMENT_COLORS.mid};
         }
         #party-invite-modal .party-info {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 6px;
+          background: ${PARCHMENT_COLORS.light};
+          border: 1px solid ${PARCHMENT_COLORS.border};
+          border-radius: 4px;
           padding: 12px 16px;
           margin-bottom: 16px;
+          box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
         }
         #party-invite-modal .party-name {
           font-size: 16px;
           font-weight: bold;
           margin-bottom: 4px;
+          color: ${PARCHMENT_COLORS.text.primary};
         }
         #party-invite-modal .party-leader {
           font-size: 13px;
-          color: #a0a0a0;
+          color: ${PARCHMENT_COLORS.text.secondary};
         }
         #party-invite-modal .party-leader span {
-          color: #4ade80;
+          color: ${PARCHMENT_COLORS.state.success};
+          font-weight: bold;
         }
         #party-invite-modal .members-section {
           margin-bottom: 16px;
         }
         #party-invite-modal .members-header {
           font-size: 13px;
-          color: #a0a0a0;
+          color: ${PARCHMENT_COLORS.text.secondary};
           margin-bottom: 10px;
           text-transform: uppercase;
           letter-spacing: 0.5px;
@@ -210,14 +225,14 @@ export class PartyInviteModal {
           align-items: center;
           gap: 10px;
           padding: 8px 12px;
-          background: rgba(255, 255, 255, 0.03);
+          background: ${PARCHMENT_COLORS.light};
           border-radius: 4px;
-          border: 1px solid #3a3a5a;
+          border: 1px solid ${PARCHMENT_COLORS.border};
         }
         #party-invite-modal .member-avatar {
           width: 32px;
           height: 32px;
-          background: linear-gradient(135deg, #4a4a6a, #3a3a5a);
+          background: linear-gradient(135deg, ${PARCHMENT_COLORS.border}, ${PARCHMENT_COLORS.borderDark});
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -229,26 +244,27 @@ export class PartyInviteModal {
         }
         #party-invite-modal .member-name {
           font-size: 14px;
-          color: #e0e0e0;
+          color: ${PARCHMENT_COLORS.text.primary};
         }
         #party-invite-modal .member-details {
           font-size: 12px;
-          color: #888;
+          color: ${PARCHMENT_COLORS.text.muted};
         }
         #party-invite-modal .member-leader-badge {
           font-size: 10px;
-          background: #f59e0b;
-          color: #000;
+          background: ${PARCHMENT_COLORS.accent.burgundy};
+          color: ${PARCHMENT_COLORS.text.inverse};
           padding: 2px 6px;
           border-radius: 3px;
           font-weight: bold;
         }
         #party-invite-modal .modal-footer {
           padding: 16px 20px;
-          border-top: 1px solid #3a3a5a;
+          border-top: 1px solid ${PARCHMENT_COLORS.border};
           display: flex;
           gap: 10px;
           justify-content: flex-end;
+          background: linear-gradient(to bottom, ${PARCHMENT_COLORS.mid}, ${PARCHMENT_COLORS.dark});
         }
         #party-invite-modal .btn {
           padding: 10px 24px;
@@ -260,21 +276,23 @@ export class PartyInviteModal {
           border: none;
         }
         #party-invite-modal .btn-accept {
-          background: linear-gradient(180deg, #4ade80, #22c55e);
-          color: #000;
+          background: linear-gradient(180deg, ${PARCHMENT_COLORS.state.success}, #3a5a38);
+          color: ${PARCHMENT_COLORS.text.inverse};
           font-weight: bold;
+          border: 1px solid #3a5a38;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
         #party-invite-modal .btn-accept:hover {
-          background: linear-gradient(180deg, #5ee891, #34d56b);
+          background: linear-gradient(180deg, #5a8a58, ${PARCHMENT_COLORS.state.success});
           transform: translateY(-1px);
         }
         #party-invite-modal .btn-decline {
-          background: transparent;
-          border: 1px solid #ef4444;
-          color: #ef4444;
+          background: ${PARCHMENT_COLORS.light};
+          border: 1px solid ${PARCHMENT_COLORS.state.error};
+          color: ${PARCHMENT_COLORS.state.error};
         }
         #party-invite-modal .btn-decline:hover {
-          background: rgba(239, 68, 68, 0.1);
+          background: rgba(139, 68, 68, 0.1);
         }
         #party-invite-modal .btn:disabled {
           opacity: 0.5;
@@ -352,16 +370,16 @@ export class PartyInviteModal {
    */
   getClassIcon(characterClass) {
     const icons = {
-      warrior: '🗡️',
-      mage: '🔮',
-      rogue: '🗡️',
-      cleric: '✨',
-      ranger: '🏹',
-      paladin: '🛡️',
-      necromancer: '💀',
-      bard: '🎵'
+      warrior: '',
+      mage: '',
+      rogue: '',
+      cleric: '',
+      ranger: '',
+      paladin: '',
+      necromancer: '',
+      bard: ''
     };
-    return icons[characterClass?.toLowerCase()] || '👤';
+    return icons[characterClass?.toLowerCase()] || '';
   }
 
   /**
@@ -436,7 +454,7 @@ export class PartyInviteModal {
    */
   handleExpired() {
     this.stopCountdown();
-    this.game.toastManager?.warning('Invite Expired', 'The party invite has expired');
+    parchmentToast.warning('Invite Expired', 'The party invite has expired');
     this.close(false);
   }
 
@@ -474,7 +492,7 @@ export class PartyInviteModal {
 
       await this.game.api.acceptPartyInvite(this.inviteId);
 
-      this.game.toastManager?.success('Joined Party', `You have joined ${this.partyName}`);
+      parchmentToast.success('Joined Party', `You have joined ${this.partyName}`);
 
       // Update party status bar if it exists
       if (this.game.partyStatusBar) {
@@ -484,7 +502,7 @@ export class PartyInviteModal {
       this.close(true);
     } catch (error) {
       console.error('Failed to accept invite:', error);
-      this.game.toastManager?.error('Failed to Join', error.message || 'Could not join the party');
+      parchmentToast.error('Failed to Join', error.message || 'Could not join the party');
 
       // Re-enable buttons
       acceptBtn.disabled = false;

@@ -32,7 +32,7 @@ const limiterStats = new Map();
  */
 const getMaxRequests = (prodDefault) => {
   if (isTest && !testRateLimitsEnabled) {
-    return 0; // 0 = unlimited when rate limiting disabled in test
+    return 999999; // Effectively unlimited when rate limiting disabled in test
   }
   if (isTest && testRateLimitsEnabled) {
     return prodDefault; // Use production limits for rate limit tests

@@ -20,15 +20,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 config({ path: resolve(__dirname, '../../../.env') });
 
+const isTestEnv = process.env.NODE_ENV === 'test';
+
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
   database: process.env.DB_NAME || 'modia',
   user: process.env.DB_USER || 'modia',
   password: process.env.DB_PASSWORD || '',
-  max: 20,
-  idleTimeoutMillis: 30000,
+  max: isTestEnv ? 5 : 20,
+  idleTimeoutMillis: isTestEnv ? 1000 : 30000,
   connectionTimeoutMillis: 2000,
+  // Allow Node.js to exit when pool is idle (important for tests)
+  allowExitOnIdle: isTestEnv,
 });
 
 pool.on('error', (err) => {

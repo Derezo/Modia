@@ -1,5 +1,5 @@
 import { Scene } from './Scene.js';
-import { PARCHMENT_COLORS, injectParchmentTheme } from '../ui/parchment/index.js';
+import { PARCHMENT_COLORS, injectParchmentTheme, getParchmentScrollbarCSS, getParchmentSpinnerCSS } from '../ui/parchment/index.js';
 
 // Shorthand for colors in CSS template
 const P = PARCHMENT_COLORS;
@@ -385,18 +385,18 @@ export class LeaderboardScene extends Scene {
         padding: 40px;
       }
 
+      /* Parchment themed loading spinner */
+      ${getParchmentSpinnerCSS()}
+
       .loading-spinner {
         width: 40px;
         height: 40px;
-        border: 3px solid var(--parchment-border);
-        border-top-color: var(--parchment-gold);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: var(--parchment-spacing-md);
       }
 
-      @keyframes spin {
-        to { transform: rotate(360deg); }
+      .loading-spinner.parchment-spinner {
+        width: 40px;
+        height: 40px;
+        margin-bottom: var(--parchment-spacing-md);
       }
 
       .empty-icon {
@@ -458,6 +458,9 @@ export class LeaderboardScene extends Scene {
           padding: var(--parchment-spacing-md);
         }
       }
+
+      /* Themed Scrollbars */
+      ${getParchmentScrollbarCSS('.leaderboard-table-container')}
     `;
     document.head.appendChild(style);
   }
@@ -510,7 +513,7 @@ export class LeaderboardScene extends Scene {
 
         <div class="leaderboard-table-container" id="table-container">
           <div class="loading-state">
-            <div class="loading-spinner"></div>
+            <div class="loading-spinner parchment-spinner"></div>
             <div>Loading leaderboard...</div>
           </div>
         </div>
@@ -651,7 +654,7 @@ export class LeaderboardScene extends Scene {
     if (container) {
       container.innerHTML = `
         <div class="loading-state">
-          <div class="loading-spinner"></div>
+          <div class="loading-spinner parchment-spinner"></div>
           <div>Loading leaderboard...</div>
         </div>
       `;

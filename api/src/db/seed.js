@@ -10,6 +10,10 @@ dotenv.config({ path: resolve(__dirname, '../../../.env') });
 
 const { Pool } = pg;
 
+// Increment this version when seed data changes significantly
+// This allows dev-setup.sh to detect when re-seeding might be needed
+const SEED_VERSION = 1;
+
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
@@ -870,6 +874,34 @@ async function seedDeveloperTestData(castleId) {
   console.log('  Gold: 30,000');
 }
 
+/**
+ * Save seed metadata for smart seeding detection in dev-setup.sh
+ * This allows the setup script to know if:
+ * - The world seed has changed
+ * - The seed version has been updated
+ * - How many items/enemies/nodes were seeded
+ */
+async function saveSeedMetadata(client, worldSeed, nodeCount) {
+  // Get counts from the database
+  const itemCount = await client.query('SELECT COUNT(*) FROM item_templates');
+  const enemyCount = await client.query('SELECT COUNT(*) FROM enemy_templates');
+
+  // Upsert the seed metadata (only one row allowed)
+  await client.query(`
+    INSERT INTO seed_metadata (id, seed_version, world_seed, item_template_count, enemy_template_count, world_node_count, seeded_at)
+    VALUES (1, $1, $2, $3, $4, $5, NOW())
+    ON CONFLICT (id) DO UPDATE SET
+      seed_version = EXCLUDED.seed_version,
+      world_seed = EXCLUDED.world_seed,
+      item_template_count = EXCLUDED.item_template_count,
+      enemy_template_count = EXCLUDED.enemy_template_count,
+      world_node_count = EXCLUDED.world_node_count,
+      seeded_at = NOW()
+  `, [SEED_VERSION, worldSeed, itemCount.rows[0].count, enemyCount.rows[0].count, nodeCount]);
+
+  console.log(`\nSeed metadata saved: version=${SEED_VERSION}, world_seed=${worldSeed}`);
+}
+
 async function main() {
   const client = await pool.connect();
 
@@ -941,6 +973,9 @@ async function main() {
 
     // Seed developer test data (derezo user with test items)
     await seedDeveloperTestData(castleId);
+
+    // Save seed metadata for smart seeding detection
+    await saveSeedMetadata(client, worldSeed, nodes.length);
 
     console.log('\nSeed completed successfully!');
     console.log(`Total nodes: ${nodes.length}`);

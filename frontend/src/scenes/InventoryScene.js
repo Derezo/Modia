@@ -1,7 +1,7 @@
 import { Scene } from './Scene.js';
 import { InventoryPanel } from '../components/InventoryPanel.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
-import { PARCHMENT_COLORS, getParchmentGradient } from '../ui/parchment/ParchmentTheme.js';
+import { PARCHMENT_COLORS, getParchmentGradient, getParchmentScrollbarCSS } from '../ui/parchment/ParchmentTheme.js';
 import { responsive } from '../core/Responsive.js';
 import { Icon } from '../components/Icon.js';
 
@@ -115,12 +115,12 @@ export class InventoryScene extends Scene {
         background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark});
         border-bottom: 2px solid ${PARCHMENT_COLORS.borderDark};
       ">
-        <h2 style="margin: 0; color: ${PARCHMENT_COLORS.accent.gold}; font-size: 20px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">
+        <h2 style="margin: 0; color: ${PARCHMENT_COLORS.text.primary}; font-size: 20px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">
           ${Icon.html('menu', 'inventory', { size: 'lg' })}
           ${responsive.showLabels() ? 'Inventory' : ''}
         </h2>
         <button class="parchment-btn parchment-btn-secondary" id="back-btn">
-          ${Icon.html('action', 'back', { label: responsive.showLabels() ? 'Back to Map' : '', size: 'md' })}
+          ${Icon.html('actions', 'back', { label: responsive.showLabels() ? 'Back to Map' : '', size: 'md' })}
         </button>
       </div>
 
@@ -202,7 +202,7 @@ export class InventoryScene extends Scene {
         padding: 10px 14px;
         background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark});
         border-bottom: 1px solid ${PARCHMENT_COLORS.borderDark};
-        color: ${PARCHMENT_COLORS.accent.gold};
+        color: ${PARCHMENT_COLORS.text.primary};
         font-weight: bold;
         font-size: 14px;
         text-shadow: 1px 1px 1px rgba(0,0,0,0.3);
@@ -245,13 +245,13 @@ export class InventoryScene extends Scene {
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
       }
       .character-tab:hover {
-        border-color: ${PARCHMENT_COLORS.accent.gold};
+        border-color: ${PARCHMENT_COLORS.accent.burgundy};
         background: ${PARCHMENT_COLORS.dark};
       }
       .character-tab.selected {
-        border-color: ${PARCHMENT_COLORS.accent.gold};
+        border-color: ${PARCHMENT_COLORS.accent.burgundy};
         background: linear-gradient(to bottom, #e8d9a8, #d4c498);
-        box-shadow: 0 0 8px rgba(201, 162, 39, 0.4);
+        box-shadow: 0 0 8px rgba(107, 45, 61, 0.4);
       }
       .character-tab .char-icon {
         width: 36px;
@@ -295,12 +295,12 @@ export class InventoryScene extends Scene {
         cursor: pointer;
       }
       .parchment-select:hover {
-        border-color: ${PARCHMENT_COLORS.accent.gold};
+        border-color: ${PARCHMENT_COLORS.accent.burgundy};
       }
       .parchment-select:focus {
         outline: none;
-        border-color: ${PARCHMENT_COLORS.accent.gold};
-        box-shadow: 0 0 4px rgba(201, 162, 39, 0.3);
+        border-color: ${PARCHMENT_COLORS.accent.burgundy};
+        box-shadow: 0 0 4px rgba(107, 45, 61, 0.3);
       }
       .parchment-select option {
         background: ${PARCHMENT_COLORS.light};
@@ -319,6 +319,10 @@ export class InventoryScene extends Scene {
         display: flex;
         flex-direction: column;
       }
+
+      /* Themed Scrollbars */
+      ${getParchmentScrollbarCSS('#inventory-content')}
+      ${getParchmentScrollbarCSS('.inventory-grid')}
     `;
     document.head.appendChild(style);
   }

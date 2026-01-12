@@ -12,6 +12,10 @@ class ParchmentToastManager {
     this.maxToasts = 5;
     this.defaultDuration = 4000;
     this.stylesInjected = false;
+
+    // Duplicate detection
+    this.recentToasts = new Map(); // signature -> timestamp
+    this.dedupeWindow = 2000; // 2 second cooldown for identical toasts
   }
 
   /**
@@ -238,6 +242,26 @@ class ParchmentToastManager {
     if (!title) {
       console.warn('ParchmentToast: title is required');
       return null;
+    }
+
+    // Duplicate detection - skip if identical toast was shown recently
+    const signature = `${type}:${title}:${message}`;
+    const now = Date.now();
+    if (this.recentToasts.has(signature)) {
+      const lastTime = this.recentToasts.get(signature);
+      if (now - lastTime < this.dedupeWindow) {
+        return null; // Skip duplicate
+      }
+    }
+    this.recentToasts.set(signature, now);
+
+    // Clean up old entries periodically (every 10 toasts or so)
+    if (this.recentToasts.size > 20) {
+      for (const [key, time] of this.recentToasts) {
+        if (now - time > this.dedupeWindow) {
+          this.recentToasts.delete(key);
+        }
+      }
     }
 
     this.ensureContainer();
