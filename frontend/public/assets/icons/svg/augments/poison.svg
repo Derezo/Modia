@@ -1,23 +1,57 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Apothecary vial with skull mark - poison augment (medieval object) -->
-  <!-- Vial body -->
-  <path class="stroke metallic" d="M8 9V6h8v3l2 9c.5 1.5-.5 3-2 3H8c-1.5 0-2.5-1.5-2-3l2-9z"/>
-  <!-- Cork stopper -->
-  <path class="stroke metallic" d="M8 6c0-1.5 1-3 4-3s4 1.5 4 3"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="5" ry="1.5" fill="#1a2a1a" opacity="0.3"/>
+
+  <!-- Vial body outer (dark green) -->
+  <path d="M8 8V6h8v2l2 10c.5 2-.5 3.5-2.5 3.5h-7c-2 0-3-1.5-2.5-3.5l2-10z" fill="#2d5530"/>
+
+  <!-- Vial body mid -->
+  <path d="M8.5 8V6.5h7V8l1.8 9.5c.4 1.5-.4 2.5-1.8 2.5h-6c-1.5 0-2.2-1-1.8-2.5L8.5 8z" fill="#448844"/>
+
+  <!-- Vial body bright inner -->
+  <path d="M9 8V7h6v1l1.5 8.5c.3 1.2-.2 2-1.5 2h-5c-1.2 0-1.8-.8-1.5-2L9 8z" fill="#66aa66"/>
+
+  <!-- Liquid level -->
+  <path d="M7.5 13l1 5.5c.3 1 .8 1.5 2 1.5h3c1.2 0 1.7-.5 2-1.5l1-5.5c-1 .5-2.5.8-4.5.8s-3.5-.3-4.5-.8z" fill="#55cc55" opacity="0.6"/>
+
+  <!-- Cork outer -->
+  <path d="M8 6c0-2 1.5-3.5 4-3.5s4 1.5 4 3.5H8z" fill="#5a4020"/>
+
+  <!-- Cork mid -->
+  <path d="M8.5 6c0-1.5 1.2-3 3.5-3s3.5 1.5 3.5 3h-7z" fill="#8b6040"/>
+
+  <!-- Cork bright -->
+  <ellipse cx="12" cy="4.5" rx="2.5" ry="1" fill="#aa8060" opacity="0.6"/>
+
   <!-- Cork texture -->
-  <path class="stroke" d="M9 5h6" style="stroke-width: 1;"/>
+  <path d="M9 5h6" fill="none" stroke="#5a4020" stroke-width="0.5"/>
+
   <!-- Skull warning mark -->
-  <circle class="stroke" cx="12" cy="14" r="2.5"/>
-  <circle cx="11" cy="13.5" r="0.75" fill="currentColor"/>
-  <circle cx="13" cy="13.5" r="0.75" fill="currentColor"/>
-  <path class="stroke" d="M11 15.5h2" style="stroke-width: 1;"/>
-  <!-- Liquid drips -->
-  <path class="stroke" d="M6 17c0 1 .5 2 1 2.5" style="stroke-width: 1;"/>
+  <circle cx="12" cy="13" r="2.5" fill="#2d5530"/>
+  <circle cx="12" cy="13" r="2" fill="#448844"/>
+
+  <!-- Skull eyes -->
+  <circle cx="11" cy="12.5" r="0.7" fill="#1a2a1a"/>
+  <circle cx="13" cy="12.5" r="0.7" fill="#1a2a1a"/>
+
+  <!-- Skull nose -->
+  <path d="M12 13.2v.8" fill="none" stroke="#1a2a1a" stroke-width="0.5"/>
+
+  <!-- Skull mouth -->
+  <path d="M11 14.5h2" fill="none" stroke="#1a2a1a" stroke-width="0.6"/>
+
+  <!-- Purple poison drip -->
+  <path d="M6 16c-.5 1-.5 2 0 3" fill="none" stroke="#6b4488" stroke-width="1" stroke-linecap="round"/>
+  <circle cx="6" cy="19.5" r="0.8" fill="#6b4488"/>
+
   <!-- Bubbles -->
-  <circle cx="10" cy="18" r="0.5" fill="currentColor"/>
-  <circle cx="14" cy="19" r="0.5" fill="currentColor"/>
+  <circle cx="10" cy="17" r="0.5" fill="#88cc88" opacity="0.7"/>
+  <circle cx="14" cy="18" r="0.6" fill="#88cc88" opacity="0.6"/>
+  <circle cx="11" cy="19" r="0.4" fill="#aaddaa" opacity="0.5"/>
+
+  <!-- Vial rim detail -->
+  <path d="M8 6.5h8" fill="none" stroke="#2d5530" stroke-width="0.5"/>
+
+  <!-- Highlight on vial -->
+  <path d="M9.5 9v5" fill="none" stroke="#88cc88" stroke-width="0.6" opacity="0.4"/>
 </svg>

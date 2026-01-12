@@ -1,22 +1,62 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Radiant sun medallion - holy augment (medieval object) -->
-  <!-- Medallion base -->
-  <circle class="stroke metallic" cx="12" cy="12" r="6"/>
-  <!-- Inner circle -->
-  <circle class="stroke" cx="12" cy="12" r="3"/>
-  <!-- Sun rays -->
-  <path class="stroke" d="M12 2v4M12 18v4"/>
-  <path class="stroke" d="M2 12h4M18 12h4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="6" ry="1.5" fill="#3d2a00" opacity="0.3"/>
+
+  <!-- Outer rays (behind medallion) -->
+  <g fill="none" stroke="#daa520" stroke-width="1.5" stroke-linecap="round">
+    <path d="M12 1v4"/>
+    <path d="M12 19v4"/>
+    <path d="M1 12h4"/>
+    <path d="M19 12h4"/>
+  </g>
+
   <!-- Diagonal rays -->
-  <path class="stroke" d="M5 5l3 3M16 16l3 3M19 5l-3 3M8 16l-3 3" style="stroke-width: 1.5;"/>
-  <!-- Ray decorative ends -->
-  <path class="stroke" d="M11 2h2M11 22h2M2 11v2M22 11v2" style="stroke-width: 1;"/>
-  <!-- Center holy symbol -->
-  <path class="stroke" d="M12 10v4M10 12h4" style="stroke-width: 1;"/>
-  <!-- Light sparkles -->
-  <circle cx="12" cy="12" r="0.75" fill="currentColor"/>
+  <g fill="none" stroke="#daa520" stroke-width="1.2" stroke-linecap="round">
+    <path d="M4.5 4.5l3 3"/>
+    <path d="M16.5 16.5l3 3"/>
+    <path d="M19.5 4.5l-3 3"/>
+    <path d="M7.5 16.5l-3 3"/>
+  </g>
+
+  <!-- Ray tips (white glow) -->
+  <circle cx="12" cy="1" r="0.8" fill="#fff4a3"/>
+  <circle cx="12" cy="23" r="0.8" fill="#fff4a3"/>
+  <circle cx="1" cy="12" r="0.8" fill="#fff4a3"/>
+  <circle cx="23" cy="12" r="0.8" fill="#fff4a3"/>
+
+  <!-- Medallion outer rim (dark gold) -->
+  <circle cx="12" cy="12" r="7" fill="#8b6914"/>
+
+  <!-- Medallion main face (gold) -->
+  <circle cx="12" cy="12" r="6" fill="#daa520"/>
+
+  <!-- Medallion inner bright (light gold) -->
+  <circle cx="11" cy="11" r="4.5" fill="#ffd700"/>
+
+  <!-- Medallion highlight -->
+  <circle cx="9.5" cy="9.5" r="2.5" fill="#ffe44d" opacity="0.6"/>
+
+  <!-- Top highlight -->
+  <circle cx="9" cy="8.5" r="1.2" fill="#fff4a3" opacity="0.5"/>
+
+  <!-- Inner rim detail -->
+  <circle cx="12" cy="12" r="5" fill="none" stroke="#b8860b" stroke-width="0.5"/>
+
+  <!-- Holy cross symbol -->
+  <g fill="none" stroke="#8b6914" stroke-width="1.5" stroke-linecap="round">
+    <path d="M12 8v8"/>
+    <path d="M9 12h6"/>
+  </g>
+
+  <!-- Cross center gem -->
+  <circle cx="12" cy="12" r="1" fill="#ffffff" opacity="0.8"/>
+
+  <!-- Light sparkles around rays -->
+  <circle cx="3" cy="5" r="0.5" fill="#ffe44d"/>
+  <circle cx="21" cy="5" r="0.5" fill="#ffe44d"/>
+  <circle cx="3" cy="19" r="0.5" fill="#ffe44d"/>
+  <circle cx="21" cy="19" r="0.5" fill="#ffe44d"/>
+
+  <!-- Bottom shadow for depth -->
+  <path d="M6.5 15 A6 6 0 0 0 17.5 15" fill="#8b6914" opacity="0.3"/>
 </svg>
