@@ -1228,7 +1228,7 @@ export class MarketplaceScene extends Scene {
       <div class="marketplace-tabs">
         <div class="marketplace-tab ${this.activeTab === 'search' ? 'active' : ''}" data-tab="search">Browse Items</div>
         <div class="marketplace-tab ${this.activeTab === 'orders' ? 'active' : ''}" data-tab="orders">My Orders (${this.myOrders.length})</div>
-        <div class="marketplace-tab ${this.activeTab === 'listings' ? 'active' : ''}" data-tab="listings">My Listings (${this.myListings.length})</div>
+        <div class="marketplace-tab ${this.activeTab === 'listings' ? 'active' : ''}" data-tab="listings">Equipment For Sale (${this.myListings.length})</div>
         <div class="marketplace-tab ${this.activeTab === 'inventory' ? 'active' : ''}" data-tab="inventory">Sell Items</div>
         <div class="marketplace-tab ${this.activeTab === 'history' ? 'active' : ''}" data-tab="history">Trade History</div>
       </div>
@@ -1276,7 +1276,7 @@ export class MarketplaceScene extends Scene {
     // Update listings count
     const listingsTab = this.uiElement.querySelector('[data-tab="listings"]');
     if (listingsTab) {
-      listingsTab.textContent = `My Listings (${this.myListings.length})`;
+      listingsTab.textContent = `Equipment For Sale (${this.myListings.length})`;
     }
   }
 
@@ -1497,7 +1497,7 @@ export class MarketplaceScene extends Scene {
       }
       this.marketDashboard = new MarketDashboard(dashboardContainer, {
         game: this.game,
-        onBuy: (selectedItem, price) => {
+        onBuy: (_selectedItem, _price) => {
           this.orderSide = 'buy';
           this.orderType = 'market';
           this.orderQuantity = 1;
@@ -1702,31 +1702,27 @@ export class MarketplaceScene extends Scene {
     container.querySelectorAll('.market-item').forEach(el => {
       el.addEventListener('click', async () => {
         const itemId = parseInt(el.dataset.itemId);
-        const isEquipment = el.dataset.isEquipment === 'true';
         const item = this.searchResults.find(i => i.id === itemId);
 
         if (item) {
-          // For equipment items, open the item panel to show individual listings
-          if (isEquipment) {
-            this.openItemPanel(item);
-            return;
+          // Use unified panel for all items
+          const sidePanel = this.uiElement?.querySelector('#side-panel');
+          if (sidePanel) {
+            // Unsubscribe from previous item if different
+            if (this.selectedItem && this.selectedItem.id !== itemId) {
+              this.game.socket?.unsubscribeFromItem(this.selectedItem.id);
+            }
+
+            this.selectedItem = item;
+            this.orderPrice = item.bestAsk || item.bestBid || item.basePrice || 10;
+            this.orderQuantity = 1;
+
+            // Subscribe to new item updates
+            this.game.socket?.subscribeToItem(itemId);
+
+            // Render unified panel
+            this.renderUnifiedItemPanel(sidePanel, item);
           }
-
-          // For stackable items, use the order book system
-          // Unsubscribe from previous item
-          if (this.selectedItem && this.selectedItem.id !== itemId) {
-            this.game.socket?.unsubscribeFromItem(this.selectedItem.id);
-          }
-
-          this.selectedItem = item;
-          this.orderPrice = item.bestAsk || item.bestBid || item.basePrice || 10;
-          this.orderQuantity = 1;
-
-          // Subscribe to new item updates
-          this.game.socket?.subscribeToItem(itemId);
-
-          await this.loadOrderBook(itemId);
-          this.renderContent();
         }
       });
     });
@@ -1922,7 +1918,7 @@ export class MarketplaceScene extends Scene {
       // Create new dashboard
       this.marketDashboard = new MarketDashboard(dashboardContainer, {
         game: this.game,
-        onBuy: (selectedItem, price) => {
+        onBuy: (_selectedItem, _price) => {
           // Quick buy at market price
           this.orderSide = 'buy';
           this.orderType = 'market';
