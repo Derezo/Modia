@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Temple/church building -->
+  <!-- Roof -->
+  <path class="stroke metallic" d="M12 2l10 6H2l10-6z"/>
+  <!-- Building -->
+  <path class="stroke metallic" d="M4 8h16v12H4z"/>
+  <!-- Columns -->
+  <path class="stroke" d="M6 8v12"/>
+  <path class="stroke" d="M10 8v12"/>
+  <path class="stroke" d="M14 8v12"/>
+  <path class="stroke" d="M18 8v12"/>
+  <!-- Door -->
+  <path class="stroke metallic" d="M9 20v-6c0-1.5 1.5-3 3-3s3 1.5 3 3v6"/>
+  <!-- Cross/symbol -->
+  <path class="stroke" d="M12 4v2"/>
+</svg>

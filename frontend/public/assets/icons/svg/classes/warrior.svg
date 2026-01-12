@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Sword and shield - warrior class -->
+  <!-- Shield -->
+  <path class="stroke metallic" d="M4 5l6 2v8c0 3-2 5-6 6V5z"/>
+  <!-- Shield band -->
+  <path class="stroke" d="M4 10h6" style="stroke-width: 1;"/>
+  <!-- Sword behind shield -->
+  <path class="stroke metallic" d="M12 3l8 8"/>
+  <path class="stroke" d="M18 3l2 2-8 8"/>
+  <!-- Sword crossguard -->
+  <path class="stroke" d="M14 9l2 2"/>
+  <!-- Sword tip detail -->
+  <path class="stroke" d="M13 4l1-1 1 1" style="stroke-width: 1;"/>
+  <!-- Pommel -->
+  <circle cx="11" cy="12" r="1" fill="currentColor"/>
+  <!-- Shield rivet -->
+  <circle cx="7" cy="8" r="0.75" fill="currentColor"/>
+</svg>

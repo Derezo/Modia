@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Herald with banner - recruitment -->
+  <!-- Banner flag -->
+  <path class="stroke metallic" d="M15 3h6v8l-3-2-3 2V3z"/>
+  <!-- Banner pole -->
+  <path class="stroke" d="M15 3v18"/>
+  <!-- Banner detail -->
+  <path class="stroke" d="M17 5v3M19 5v3" style="stroke-width: 1;"/>
+  <!-- Person silhouette -->
+  <circle class="stroke metallic" cx="8" cy="8" r="3"/>
+  <path class="stroke metallic" d="M3 21v-2c0-2 2-3.5 5-3.5s5 1.5 5 3.5v2"/>
+  <!-- Tunic detail -->
+  <path class="stroke" d="M6 15v3M10 15v3" style="stroke-width: 1;"/>
+  <!-- Pole base decoration -->
+  <circle cx="15" cy="21" r="1" fill="currentColor"/>
+</svg>

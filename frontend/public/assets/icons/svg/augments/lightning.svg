@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Ornate lightning bolt - lightning augment -->
+  <!-- Main bolt -->
+  <path class="stroke metallic" d="M13 2L5 12h6l-2 10 10-12h-6l2-8z"/>
+  <!-- Bolt edge detail -->
+  <path class="stroke" d="M11 2l-4 6M7 12l3 4" style="stroke-width: 1;"/>
+  <!-- Decorative forked ends -->
+  <path class="stroke" d="M14 2l2-1M12 2l-1-1" style="stroke-width: 1;"/>
+  <path class="stroke" d="M9 22l-1 1M11 20l1 1" style="stroke-width: 1;"/>
+  <!-- Electric sparks -->
+  <circle cx="4" cy="10" r="0.5" fill="currentColor"/>
+  <circle cx="18" cy="14" r="0.5" fill="currentColor"/>
+  <circle cx="6" cy="14" r="0.75" fill="currentColor"/>
+  <circle cx="16" cy="10" r="0.75" fill="currentColor"/>
+</svg>

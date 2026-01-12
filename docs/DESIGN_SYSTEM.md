@@ -619,18 +619,37 @@ Medieval woodcut-style SVG icons with responsive sizing. Build generates PNG var
 ```
 frontend/public/assets/icons/
   svg/
-    menu/       # formation.svg, inventory.svg, settings.svg, ...
-    nodes/      # tavern.svg, shop.svg, castle.svg, ...
-    actions/    # attack.svg, move.svg, skill.svg, ...
-    stats/      # health.svg, mana.svg, strength.svg, ...
-    resources/  # gold.svg, stamina.svg, xp.svg, ...
-    slots/      # weapon.svg, armor.svg, accessory.svg, ...
+    menu/           # formation, inventory, settings, stats, skills, leaderboard, ...
+    nodes/          # castle, village, forest, cave, mountain, bridge, guild, throne, temple, stables, training
+    actions/        # battle, blacksmith, marketplace, tavern, apothecary, shop, back, harvest, recruit, advance, social
+    stats/          # str, agi, int, vit, lck
+    resources/      # gold, stamina, hp, mp
+    slots/          # weapon, armor, helmet, boots, shield, chest, accessory
+    notifications/  # friend-request, friend-accepted, party-invite, match-found, match-result, lfg-application, system
+    classes/        # Base: warrior, wizard, monk, chemist | Advanced: berserker, paladin, guardian, warlord, sorcerer, summoner, conjurer, oracle, ninja, martial_artist, brawler, ascetic, alchemist, medic, plague_doctor, artificer
+    items/          # weapon, shield, helmet, armor, boots, accessory, ring, necklace, consumable, material, key
+    augments/       # fire, ice, lightning, poison, holy, dark, strength, intelligence, agility, vitality, luck, critical, defense, dragon-slayer, undead-slayer, demon-slayer
   png/
-    16/         # 16x16 PNG variants
-    24/         # 24x24 PNG variants
-    32/         # 32x32 PNG variants
-    48/         # 48x48 PNG variants
+    16/             # 16x16 PNG variants
+    24/             # 24x24 PNG variants
+    32/             # 32x32 PNG variants
+    48/             # 48x48 PNG variants
 ```
+
+### Icon Categories (104 total SVG icons)
+
+| Category | Count | Purpose |
+|----------|-------|---------|
+| `actions` | 11 | Feature buttons (battle, blacksmith, tavern, etc.) |
+| `menu` | 12 | Navigation menu items |
+| `nodes` | 12 | World map location types |
+| `notifications` | 7 | Notification type indicators |
+| `classes` | 20 | Character class emblems (4 base + 16 advanced) |
+| `items` | 11 | Inventory item type fallbacks |
+| `augments` | 16 | Equipment enchantment types |
+| `resources` | 4 | Currency and resource pools |
+| `slots` | 6 | Equipment slot indicators |
+| `stats` | 5 | Character stat icons |
 
 ### Icon Component
 

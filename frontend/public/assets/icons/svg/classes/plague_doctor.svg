@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Bird mask silhouette - plague doctor class -->
+  <!-- Hood/head -->
+  <path class="stroke metallic" d="M6 6c0-2 3-4 6-4s6 2 6 4v6c0 2-2 4-6 4s-6-2-6-4V6z"/>
+  <!-- Bird beak -->
+  <path class="stroke metallic" d="M12 10c-3 0-5 2-8 4l2 2c2-1 4-2 6-2"/>
+  <!-- Eye lenses -->
+  <circle class="stroke" cx="9" cy="8" r="2"/>
+  <circle class="stroke" cx="15" cy="8" r="2"/>
+  <!-- Lens shine -->
+  <circle cx="8" cy="7" r="0.75" fill="currentColor"/>
+  <circle cx="14" cy="7" r="0.75" fill="currentColor"/>
+  <!-- Hat brim -->
+  <path class="stroke" d="M4 6c2-1 5-2 8-2s6 1 8 2" style="stroke-width: 1;"/>
+  <!-- Cloak collar -->
+  <path class="stroke" d="M8 16c2 2 6 2 8 0"/>
+</svg>

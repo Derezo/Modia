@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Ornate skeleton key - key item type -->
+  <!-- Key bow (handle) -->
+  <circle class="stroke metallic" cx="7" cy="7" r="5"/>
+  <circle class="stroke" cx="7" cy="7" r="2"/>
+  <!-- Key shaft -->
+  <path class="stroke metallic" d="M11 11l9 9"/>
+  <!-- Key teeth -->
+  <path class="stroke" d="M16 16l2-2"/>
+  <path class="stroke" d="M18 18l2-2"/>
+  <!-- Decorative bow details -->
+  <path class="stroke" d="M4 4l2 2M10 4l-2 2" style="stroke-width: 1;"/>
+  <path class="stroke" d="M4 10l2-2M10 10l-2-2" style="stroke-width: 1;"/>
+  <!-- Shaft collar detail -->
+  <path class="stroke" d="M12 12l1-1M12 12l-1 1" style="stroke-width: 1;"/>
+  <!-- Center accent -->
+  <circle cx="7" cy="7" r="0.75" fill="currentColor"/>
+</svg>

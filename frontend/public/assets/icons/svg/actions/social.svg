@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Three people gathering - social/courtyard -->
+  <!-- Center person (slightly larger/forward) -->
+  <circle class="stroke metallic" cx="12" cy="6" r="3"/>
+  <path class="stroke metallic" d="M6 21v-3c0-2.5 2.5-4 6-4s6 1.5 6 4v3"/>
+  <!-- Left person -->
+  <circle class="stroke metallic" cx="5" cy="9" r="2.5"/>
+  <path class="stroke" d="M2 21v-2c0-1.5 1.5-2.5 3-2.5"/>
+  <!-- Right person -->
+  <circle class="stroke metallic" cx="19" cy="9" r="2.5"/>
+  <path class="stroke" d="M22 21v-2c0-1.5-1.5-2.5-3-2.5"/>
+  <!-- Tunic details -->
+  <path class="stroke" d="M10 15v3M14 15v3" style="stroke-width: 1;"/>
+  <!-- Connection dots representing gathering -->
+  <circle cx="8" cy="12" r="0.5" fill="currentColor"/>
+  <circle cx="16" cy="12" r="0.5" fill="currentColor"/>
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Winged boot - agility augment (medieval object) -->
+  <!-- Boot body -->
+  <path class="stroke metallic" d="M6 8v8c0 1 1 2 2 3l4 2h5c1 0 2-1 2-2v-2c0-1-1-2-2-2h-3l-2-2V8c0-1-1-2-2-2H8c-1 0-2 1-2 2z"/>
+  <!-- Boot cuff -->
+  <path class="stroke" d="M6 10h4"/>
+  <!-- Wing feathers -->
+  <path class="stroke metallic" d="M4 6c-2-1-3-3-2-4 2 0 4 2 5 4"/>
+  <path class="stroke metallic" d="M3 9c-2 0-3-1-2-2 1-1 3 0 4 2"/>
+  <path class="stroke metallic" d="M4 12c-2 0-3 0-2-1 1-1 3-1 4 1"/>
+  <!-- Wing detail lines -->
+  <path class="stroke" d="M3 5l1 2M2 8l2 1M3 11l1 0" style="stroke-width: 1;"/>
+  <!-- Boot buckle -->
+  <circle cx="8" cy="10" r="0.75" fill="currentColor"/>
+  <!-- Speed lines -->
+  <path class="stroke" d="M19 12h2M18 15h3" style="stroke-width: 1;"/>
+</svg>

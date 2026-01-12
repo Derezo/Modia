@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Brazier with flame - fire augment (medieval object) -->
+  <!-- Brazier bowl -->
+  <path class="stroke metallic" d="M5 16c0 2 3 4 7 4s7-2 7-4l-1-3H6l-1 3z"/>
+  <!-- Brazier legs -->
+  <path class="stroke" d="M7 20v2M17 20v2"/>
+  <path class="stroke" d="M12 20v2"/>
+  <!-- Main flame -->
+  <path class="stroke metallic" d="M12 4c-2 2-4 4-4 7 0 2 2 3 4 3s4-1 4-3c0-3-2-5-4-7z"/>
+  <!-- Inner flame -->
+  <path class="stroke" d="M12 8c-1 1-2 2-2 3.5 0 1 1 1.5 2 1.5s2-.5 2-1.5c0-1.5-1-2.5-2-3.5z"/>
+  <!-- Flame flickers -->
+  <path class="stroke" d="M9 6l-1-2M15 6l1-2" style="stroke-width: 1;"/>
+  <!-- Embers -->
+  <circle cx="8" cy="5" r="0.5" fill="currentColor"/>
+  <circle cx="16" cy="4" r="0.5" fill="currentColor"/>
+  <circle cx="12" cy="2" r="0.75" fill="currentColor"/>
+</svg>

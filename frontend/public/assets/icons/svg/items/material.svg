@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Crate/box - material item type -->
+  <!-- Main crate body (3D box) -->
+  <path class="stroke metallic" d="M4 8l8-4 8 4v8l-8 4-8-4V8z"/>
+  <!-- Top surface -->
+  <path class="stroke" d="M4 8l8 4 8-4"/>
+  <!-- Center seam -->
+  <path class="stroke" d="M12 12v8"/>
+  <!-- Wood plank lines -->
+  <path class="stroke" d="M8 6l-2 5M16 6l2 5" style="stroke-width: 1;"/>
+  <path class="stroke" d="M8 14v4M16 14v4" style="stroke-width: 1;"/>
+  <!-- Top cross planks -->
+  <path class="stroke" d="M7 9l5 2.5M17 9l-5 2.5" style="stroke-width: 1;"/>
+  <!-- Corner nails -->
+  <circle cx="6" cy="9" r="0.75" fill="currentColor"/>
+  <circle cx="18" cy="9" r="0.75" fill="currentColor"/>
+  <circle cx="12" cy="20" r="0.75" fill="currentColor"/>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Apothecary vial with skull mark - poison augment (medieval object) -->
+  <!-- Vial body -->
+  <path class="stroke metallic" d="M8 9V6h8v3l2 9c.5 1.5-.5 3-2 3H8c-1.5 0-2.5-1.5-2-3l2-9z"/>
+  <!-- Cork stopper -->
+  <path class="stroke metallic" d="M8 6c0-1.5 1-3 4-3s4 1.5 4 3"/>
+  <!-- Cork texture -->
+  <path class="stroke" d="M9 5h6" style="stroke-width: 1;"/>
+  <!-- Skull warning mark -->
+  <circle class="stroke" cx="12" cy="14" r="2.5"/>
+  <circle cx="11" cy="13.5" r="0.75" fill="currentColor"/>
+  <circle cx="13" cy="13.5" r="0.75" fill="currentColor"/>
+  <path class="stroke" d="M11 15.5h2" style="stroke-width: 1;"/>
+  <!-- Liquid drips -->
+  <path class="stroke" d="M6 17c0 1 .5 2 1 2.5" style="stroke-width: 1;"/>
+  <!-- Bubbles -->
+  <circle cx="10" cy="18" r="0.5" fill="currentColor"/>
+  <circle cx="14" cy="19" r="0.5" fill="currentColor"/>
+</svg>

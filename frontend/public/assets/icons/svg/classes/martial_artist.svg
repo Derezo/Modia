@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Open palm strike - martial artist class -->
+  <!-- Open hand -->
+  <path class="stroke metallic" d="M8 10c0-1 1-2 2-2h4c1 0 2 1 2 2v8c0 1-1 2-2 2h-4c-1 0-2-1-2-2v-8z"/>
+  <!-- Fingers spread -->
+  <path class="stroke" d="M9 10v-3M11 10v-4M13 10v-4M15 10v-3"/>
+  <!-- Palm lines -->
+  <path class="stroke" d="M9 13h6M9 16c1 1 5 1 6 0" style="stroke-width: 1;"/>
+  <!-- Impact burst -->
+  <path class="stroke" d="M4 8l2 2M4 14l2-1M20 8l-2 2M20 14l-2-1" style="stroke-width: 1;"/>
+  <!-- Energy point -->
+  <circle cx="12" cy="14" r="1" fill="currentColor"/>
+</svg>

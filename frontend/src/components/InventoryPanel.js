@@ -1,4 +1,20 @@
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { Icon } from './Icon.js';
+
+// Item type icon mappings
+const ITEM_TYPE_ICONS = {
+  weapon: { category: 'items', name: 'weapon' },
+  shield: { category: 'items', name: 'shield' },
+  helmet: { category: 'items', name: 'helmet' },
+  armor: { category: 'items', name: 'armor' },
+  boots: { category: 'items', name: 'boots' },
+  accessory: { category: 'items', name: 'accessory' },
+  ring: { category: 'items', name: 'ring' },
+  necklace: { category: 'items', name: 'necklace' },
+  consumable: { category: 'items', name: 'consumable' },
+  material: { category: 'items', name: 'material' },
+  key: { category: 'items', name: 'key' }
+};
 
 // Parchment theme colors for consistent styling
 const PARCHMENT = {
@@ -453,20 +469,12 @@ export class InventoryPanel {
   }
 
   getItemIcon(type) {
-    const icons = {
-      weapon: '⚔️',
-      shield: '🛡️',
-      helmet: '🪖',
-      armor: '🎽',
-      boots: '👢',
-      accessory: '💍',
-      ring: '💍',
-      necklace: '📿',
-      consumable: '🧪',
-      material: '📦',
-      key: '🔑'
-    };
-    return icons[type] || '❓';
+    const iconConfig = ITEM_TYPE_ICONS[type];
+    if (iconConfig) {
+      return Icon.html(iconConfig.category, iconConfig.name, { size: 'md' });
+    }
+    // Fallback to question mark icon
+    return Icon.html('nodes', 'question', { size: 'md' });
   }
 
   setupEventListeners() {

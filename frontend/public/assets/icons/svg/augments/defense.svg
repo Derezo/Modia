@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Tower shield with cross rivets - defense augment (medieval object) -->
+  <!-- Main shield body -->
+  <path class="stroke metallic" d="M12 2l8 3v9c0 4-3.5 7-8 8-4.5-1-8-4-8-8V5l8-3z"/>
+  <!-- Shield border detail -->
+  <path class="stroke" d="M12 4l6 2.5v7c0 3-2.5 5-6 6" style="stroke-width: 1;"/>
+  <!-- Chevron reinforcement bands -->
+  <path class="stroke" d="M7 8l5 4 5-4"/>
+  <path class="stroke" d="M7 13l5 4 5-4"/>
+  <!-- Center boss -->
+  <circle class="stroke" cx="12" cy="11" r="2"/>
+  <!-- Corner rivets -->
+  <circle cx="8" cy="6" r="0.75" fill="currentColor"/>
+  <circle cx="16" cy="6" r="0.75" fill="currentColor"/>
+  <circle cx="6" cy="10" r="0.75" fill="currentColor"/>
+  <circle cx="18" cy="10" r="0.75" fill="currentColor"/>
+  <!-- Center rivet -->
+  <circle cx="12" cy="11" r="0.75" fill="currentColor"/>
+</svg>

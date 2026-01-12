@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- All-seeing eye - oracle class -->
+  <!-- Eye outline -->
+  <path class="stroke metallic" d="M2 12c2-5 5-8 10-8s8 3 10 8c-2 5-5 8-10 8s-8-3-10-8z"/>
+  <!-- Iris -->
+  <circle class="stroke metallic" cx="12" cy="12" r="4"/>
+  <!-- Pupil -->
+  <circle cx="12" cy="12" r="2" fill="currentColor"/>
+  <!-- Light reflection -->
+  <circle cx="10" cy="10" r="1" fill="currentColor" fill-opacity="0.3"/>
+  <!-- Celestial rays -->
+  <path class="stroke" d="M12 2v2M4 5l1.5 1M20 5l-1.5 1" style="stroke-width: 1;"/>
+  <path class="stroke" d="M12 20v2M4 19l1.5-1M20 19l-1.5-1" style="stroke-width: 1;"/>
+</svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Training dummy with sword -->
+  <!-- Dummy post -->
+  <path class="stroke" d="M12 21V10"/>
+  <!-- Dummy body (hay/straw) -->
+  <circle class="stroke metallic" cx="12" cy="7" r="3"/>
+  <!-- Arms/crossbar -->
+  <path class="stroke" d="M6 10h12"/>
+  <!-- Base -->
+  <path class="stroke" d="M8 21h8"/>
+  <!-- Practice sword -->
+  <path class="stroke" d="M18 4l-6 6"/>
+  <path class="stroke" d="M16 2l4 4-1 1-4-4z"/>
+  <!-- Target marks -->
+  <circle cx="12" cy="7" r="0.75" fill="currentColor"/>
+</svg>

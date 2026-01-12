@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Skull with holy sunburst - undead-slayer augment -->
+  <!-- Sunburst rays behind -->
+  <path class="stroke" d="M12 2v3M12 19v3"/>
+  <path class="stroke" d="M4 12h3M17 12h3"/>
+  <path class="stroke" d="M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2" style="stroke-width: 1.5;"/>
+  <!-- Skull -->
+  <circle class="stroke metallic" cx="12" cy="12" r="5"/>
+  <!-- Eye sockets -->
+  <circle cx="10" cy="11" r="1.25" fill="currentColor"/>
+  <circle cx="14" cy="11" r="1.25" fill="currentColor"/>
+  <!-- Nose cavity -->
+  <path class="stroke" d="M12 12v1.5" style="stroke-width: 1;"/>
+  <!-- Jaw/teeth -->
+  <path class="stroke" d="M9 15h6"/>
+  <path class="stroke" d="M10 15v1M12 15v1M14 15v1" style="stroke-width: 1;"/>
+  <!-- Holy light accents -->
+  <circle cx="12" cy="4" r="0.75" fill="currentColor"/>
+  <circle cx="4" cy="12" r="0.75" fill="currentColor"/>
+  <circle cx="20" cy="12" r="0.75" fill="currentColor"/>
+</svg>

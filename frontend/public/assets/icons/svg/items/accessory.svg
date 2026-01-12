@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Ornate brooch/clasp - accessory item type -->
+  <!-- Outer decorative frame -->
+  <circle class="stroke metallic" cx="12" cy="12" r="8"/>
+  <!-- Inner setting -->
+  <circle class="stroke metallic" cx="12" cy="12" r="5"/>
+  <!-- Central gem -->
+  <path class="stroke metallic" d="M12 8l3 4-3 4-3-4 3-4z"/>
+  <!-- Decorative prongs -->
+  <path class="stroke" d="M12 4v2M12 18v2M4 12h2M18 12h2" style="stroke-width: 1;"/>
+  <!-- Filigree details -->
+  <path class="stroke" d="M6 6l2 2M16 6l-2 2M6 18l2-2M16 18l-2-2" style="stroke-width: 1;"/>
+  <!-- Gem facet line -->
+  <path class="stroke" d="M9 12h6" style="stroke-width: 1;"/>
+  <!-- Gem sparkle -->
+  <circle cx="11" cy="10" r="0.75" fill="currentColor"/>
+</svg>

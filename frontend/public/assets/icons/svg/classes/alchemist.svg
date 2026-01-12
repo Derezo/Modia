@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Transmutation circle - alchemist class -->
+  <!-- Outer circle -->
+  <circle class="stroke metallic" cx="12" cy="12" r="9"/>
+  <!-- Inner triangle (philosopher's stone symbol) -->
+  <path class="stroke metallic" d="M12 4l7 12H5z"/>
+  <!-- Inner circle -->
+  <circle class="stroke" cx="12" cy="12" r="4"/>
+  <!-- Alchemical symbols -->
+  <path class="stroke" d="M12 8v8M9 12h6" style="stroke-width: 1;"/>
+  <!-- Corner runes -->
+  <circle cx="12" cy="4" r="0.75" fill="currentColor"/>
+  <circle cx="5" cy="16" r="0.75" fill="currentColor"/>
+  <circle cx="19" cy="16" r="0.75" fill="currentColor"/>
+  <!-- Center stone -->
+  <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Medieval leather boot - boots item type -->
+  <!-- Main boot shape -->
+  <path class="stroke metallic" d="M7 3v11c0 1 0 2 1 3l3 2h7c1 0 2-1 2-2v-2c0-1-1-2-2-2h-3l-2-2V3c0-1-1-2-2-2H9c-1 0-2 1-2 2z"/>
+  <!-- Boot cuff -->
+  <path class="stroke" d="M7 5h4"/>
+  <!-- Buckle straps -->
+  <path class="stroke" d="M7 8h3"/>
+  <path class="stroke" d="M7 11h3"/>
+  <!-- Strap detail lines -->
+  <path class="stroke" d="M8 6.5h2M8 9.5h2" style="stroke-width: 1;"/>
+  <!-- Buckles -->
+  <circle cx="9" cy="8" r="0.75" fill="currentColor"/>
+  <circle cx="9" cy="11" r="0.75" fill="currentColor"/>
+  <!-- Sole detail -->
+  <path class="stroke" d="M11 19h7" style="stroke-width: 1;"/>
+</svg>

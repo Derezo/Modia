@@ -3,6 +3,28 @@
  * Shows full generated names, augments, stats, and allows purchasing
  */
 
+import { Icon } from './Icon.js';
+
+// Augment icon mappings
+const AUGMENT_ICONS = {
+  fire: { category: 'augments', name: 'fire' },
+  ice: { category: 'augments', name: 'ice' },
+  lightning: { category: 'augments', name: 'lightning' },
+  poison: { category: 'augments', name: 'poison' },
+  holy: { category: 'augments', name: 'holy' },
+  dark: { category: 'augments', name: 'dark' },
+  strength: { category: 'augments', name: 'strength' },
+  intelligence: { category: 'augments', name: 'intelligence' },
+  agility: { category: 'augments', name: 'agility' },
+  vitality: { category: 'augments', name: 'vitality' },
+  luck: { category: 'augments', name: 'luck' },
+  critical: { category: 'augments', name: 'critical' },
+  defense: { category: 'augments', name: 'defense' },
+  dragon_slayer: { category: 'augments', name: 'dragon-slayer' },
+  undead_slayer: { category: 'augments', name: 'undead-slayer' },
+  demon_slayer: { category: 'augments', name: 'demon-slayer' }
+};
+
 // Parchment theme colors (shared with marketplace scene)
 const PARCHMENT = {
   bg: {
@@ -487,25 +509,12 @@ export class MarketplaceItemPanel {
    */
   getAugmentIcon(augment) {
     const category = augment.category || augment.effect?.type || '';
-    const icons = {
-      fire: '🔥',
-      ice: '❄️',
-      lightning: '⚡',
-      poison: '☠️',
-      holy: '✨',
-      dark: '🌑',
-      strength: '💪',
-      intelligence: '📖',
-      agility: '💨',
-      vitality: '❤️',
-      luck: '🍀',
-      critical: '🎯',
-      defense: '🛡️',
-      dragon_slayer: '🐉',
-      undead_slayer: '💀',
-      demon_slayer: '👹'
-    };
-    return icons[category] || '✦';
+    const iconConfig = AUGMENT_ICONS[category];
+    if (iconConfig) {
+      return Icon.html(iconConfig.category, iconConfig.name, { size: 'sm' });
+    }
+    // Fallback to holy icon for unknown augments
+    return Icon.html('augments', 'holy', { size: 'sm' });
   }
 
   /**

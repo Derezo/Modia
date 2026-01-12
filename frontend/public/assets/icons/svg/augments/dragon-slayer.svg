@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Dragon head impaled by lance - dragon-slayer augment -->
+  <!-- Dragon head silhouette -->
+  <path class="stroke metallic" d="M6 10c0-2 1-4 3-5l2-1 3 1c2 1 3 3 3 5 0 2-1 3-2 4l-1 1-3 1c-2 0-4-1-4-3l-1-3z"/>
+  <!-- Dragon eye -->
+  <circle cx="13" cy="9" r="1" fill="currentColor"/>
+  <!-- Dragon horns -->
+  <path class="stroke" d="M8 4l-2-2M11 4l1-2"/>
+  <!-- Dragon scales detail -->
+  <path class="stroke" d="M8 8c.5.5 1.5.5 2 0M11 11c.5.5 1.5.5 2 0" style="stroke-width: 1;"/>
+  <!-- Lance impaling -->
+  <path class="stroke metallic" d="M18 4l-8 8"/>
+  <path class="stroke" d="M20 2l-2 2"/>
+  <!-- Lance head -->
+  <path class="stroke" d="M19 3l2-1M19 3l1 2" style="stroke-width: 1.5;"/>
+  <!-- Blood droplets -->
+  <circle cx="12" cy="15" r="0.5" fill="currentColor"/>
+  <circle cx="14" cy="17" r="0.5" fill="currentColor"/>
+  <circle cx="10" cy="18" r="0.75" fill="currentColor"/>
+</svg>

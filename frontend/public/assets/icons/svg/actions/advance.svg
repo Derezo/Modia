@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <style>
+    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
+    .metallic { fill: currentColor; fill-opacity: 0.15; }
+  </style>
+  <!-- Trophy with up arrow - advancement/progression -->
+  <!-- Trophy cup -->
+  <path class="stroke metallic" d="M8 4h8v6c0 2-1.5 4-4 4s-4-2-4-4V4z"/>
+  <!-- Handles -->
+  <path class="stroke" d="M8 6H6c-1 0-2 1-2 2s1 2 2 2h2"/>
+  <path class="stroke" d="M16 6h2c1 0 2 1 2 2s-1 2-2 2h-2"/>
+  <!-- Base -->
+  <path class="stroke" d="M12 14v3"/>
+  <path class="stroke metallic" d="M8 17h8v2H8z"/>
+  <!-- Rising arrow in trophy -->
+  <path class="stroke" d="M12 11V6"/>
+  <path class="stroke" d="M10 8l2-2 2 2"/>
+</svg>
