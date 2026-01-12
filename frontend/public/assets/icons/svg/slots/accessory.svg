@@ -1,19 +1,63 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Ring/amulet - medieval jewelry -->
-  <!-- Amulet chain -->
-  <path class="stroke" d="M8 3c2 0 4 0 8 0"/>
-  <path class="stroke" d="M8 3l-1 3M16 3l1 3"/>
-  <path class="stroke" d="M7 6l5 2 5-2"/>
-  <!-- Amulet body -->
-  <path class="stroke metallic" d="M12 8l-4 4v4l4 5 4-5v-4l-4-4z"/>
-  <!-- Gem in center -->
-  <path class="stroke" d="M10 12l2-1 2 1v3l-2 2-2-2v-3z"/>
-  <circle cx="12" cy="14" r="1.5" fill="currentColor" style="fill-opacity: 0.3;"/>
-  <!-- Decorative etching -->
-  <path class="stroke" d="M9 10l1 1M15 10l-1 1" style="stroke-width: 1;"/>
-  <path class="stroke" d="M9 17l1-1M15 17l-1-1" style="stroke-width: 1;"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="13" cy="20" rx="5" ry="1.2" fill="#3d2a00" opacity="0.3"/>
+
+  <!-- Ring band base (dark gold) -->
+  <ellipse cx="12" cy="14" rx="6" ry="3" fill="none" stroke="#8b6914" stroke-width="3"/>
+
+  <!-- Ring band main (gold) -->
+  <ellipse cx="12" cy="14" rx="6" ry="3" fill="none" stroke="#daa520" stroke-width="2.2"/>
+
+  <!-- Ring band highlight (bright gold) -->
+  <path d="M6.5 13.5 Q12 11 17.5 13.5" fill="none" stroke="#ffd700" stroke-width="1" stroke-linecap="round"/>
+
+  <!-- Ring inner shadow -->
+  <ellipse cx="12" cy="14" rx="4.5" ry="2" fill="none" stroke="#8b6914" stroke-width="0.5"/>
+
+  <!-- Ring top highlight -->
+  <path d="M7 13 Q12 10.5 17 13" fill="none" stroke="#ffe44d" stroke-width="0.6" opacity="0.6"/>
+
+  <!-- Gem setting base (dark gold) -->
+  <path d="M8 6L12 4l4 2v3l-4 3-4-3V6z" fill="#8b6914"/>
+
+  <!-- Gem setting main (gold) -->
+  <path d="M8.5 6.3L12 4.5l3.5 1.8v2.5l-3.5 2.7-3.5-2.7V6.3z" fill="#daa520"/>
+
+  <!-- Gem setting bright -->
+  <path d="M9 6.5L12 5l3 1.5v2l-3 2.2-3-2.2V6.5z" fill="#ffd700"/>
+
+  <!-- Setting prongs -->
+  <path d="M8 6L9 7.5M16 6L15 7.5M8 9L9.5 8.5M16 9L14.5 8.5" stroke="#8b6914" stroke-width="0.6" stroke-linecap="round"/>
+
+  <!-- Gem base (dark blue) -->
+  <path d="M10 6.5L12 5.5l2 1v1.5l-2 1.5-2-1.5V6.5z" fill="#1a3366"/>
+
+  <!-- Gem main (blue) -->
+  <path d="M10.3 6.7L12 5.8l1.7 0.9v1.2l-1.7 1.3-1.7-1.3V6.7z" fill="#3366aa"/>
+
+  <!-- Gem bright facet -->
+  <path d="M10.5 6.8L12 6l1.5 0.8v0.7l-1.5 1-1.5-1V6.8z" fill="#5588cc"/>
+
+  <!-- Gem highlight -->
+  <path d="M11 6.5l1-0.4 0.8 0.4" fill="none" stroke="#99bbee" stroke-width="0.4" opacity="0.8"/>
+
+  <!-- Gem sparkle -->
+  <circle cx="11.3" cy="6.8" r="0.3" fill="#ffffff" opacity="0.7"/>
+
+  <!-- Gem center facet line -->
+  <path d="M12 5.8v2.5" stroke="#1a3366" stroke-width="0.3"/>
+
+  <!-- Setting decorative dots -->
+  <circle cx="9.5" cy="9.5" r="0.4" fill="#8b6914"/>
+  <circle cx="9.5" cy="9.5" r="0.25" fill="#daa520"/>
+
+  <circle cx="14.5" cy="9.5" r="0.4" fill="#8b6914"/>
+  <circle cx="14.5" cy="9.5" r="0.25" fill="#daa520"/>
+
+  <!-- Band decorative etching -->
+  <path d="M7.5 12.5l1 0.8M16.5 12.5l-1 0.8" stroke="#8b6914" stroke-width="0.4" stroke-linecap="round"/>
+  <path d="M6.5 14.5l0.8-0.3M17.5 14.5l-0.8-0.3" stroke="#8b6914" stroke-width="0.4" stroke-linecap="round"/>
+
+  <!-- Bottom band shadow -->
+  <path d="M7 15.5 Q12 17.5 17 15.5" fill="none" stroke="#8b6914" stroke-width="0.8" opacity="0.5"/>
 </svg>
