@@ -1,5 +1,18 @@
 # Modia Technical Improvements Document
 
+> **ARCHIVED:** January 2026 - Roadmap Audit v8.0
+>
+> This document has been consolidated into `docs/ROADMAP_TECHNICAL.md`:
+> - Critical security issues → Section 6.1 Known Issues (trust proxy, rate limiting)
+> - Code quality items → Section 6.2 Refactoring Opportunities
+> - Most security fixes marked as COMPLETE in this document
+>
+> The implementation status section (Section 6) shows Phases 1-4 as COMPLETE.
+> Remaining items are tracked in the technical roadmap.
+> Retained for historical reference and security audit trail.
+
+---
+
 This document contains comprehensive findings from a security audit and code quality analysis of the Modia codebase, along with implemented fixes and remaining recommendations.
 
 ## Table of Contents

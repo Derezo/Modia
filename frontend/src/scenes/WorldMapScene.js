@@ -3,9 +3,11 @@ import { WorldMapEffects } from '../worldmap/WorldMapEffects.js';
 import { WorldMapMinimap } from '../worldmap/WorldMapMinimap.js';
 import { WorldMapCharacter } from '../worldmap/WorldMapCharacter.js';
 import { StaminaBar } from '../worldmap/StaminaBar.js';
+import { TravelProgressBar } from '../worldmap/TravelProgressBar.js';
 import { generatePathControlPoints, generateSplinePoints } from '../worldmap/PathRenderer.js';
 import { ProfileDropdown } from '../ui/parchment/ProfileDropdown.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { PartyInviteModal } from '../components/PartyInviteModal.js';
 import { Icon } from '../components/Icon.js';
 import { responsive } from '../core/Responsive.js';
 import {
@@ -59,6 +61,9 @@ export class WorldMapScene extends Scene {
     // Stamina bar
     this.staminaBar = null;
 
+    // Travel progress bar
+    this.travelProgressBar = null;
+
     // Travel state
     this.isTraveling = false;
     this.cameraSettling = false; // Camera continues smooth follow after travel ends
@@ -85,6 +90,9 @@ export class WorldMapScene extends Scene {
 
     // ProfileDropdown component
     this.profileDropdown = null;
+
+    // Party invite modal
+    this.partyInviteModal = null;
 
     // Responsive subscription
     this.responsiveUnsubscribe = null;
@@ -116,6 +124,9 @@ export class WorldMapScene extends Scene {
     // Initialize stamina bar
     this.staminaBar = new StaminaBar();
     await this.refreshStamina();
+
+    // Initialize travel progress bar
+    this.travelProgressBar = new TravelProgressBar();
 
     // Preload node sprites in background
     this.preloadNodeSprites();
@@ -414,6 +425,12 @@ export class WorldMapScene extends Scene {
       this.profileDropdown.hide();
     }
 
+    // Destroy party invite modal
+    if (this.partyInviteModal) {
+      this.partyInviteModal.destroy();
+      this.partyInviteModal = null;
+    }
+
     // Unsubscribe from responsive changes
     if (this.responsiveUnsubscribe) {
       this.responsiveUnsubscribe();
@@ -521,7 +538,7 @@ export class WorldMapScene extends Scene {
         ">
           <div id="node-name" style="
             font-weight: bold;
-            color: ${PARCHMENT_COLORS.accent.gold};
+            color: ${PARCHMENT_COLORS.text.primary};
             font-size: ${isMobile ? '15px' : '18px'};
             margin-bottom: 4px;
             text-shadow: 0 1px 0 rgba(0,0,0,0.15);
@@ -611,17 +628,18 @@ export class WorldMapScene extends Scene {
     const btn = document.createElement('button');
 
     // Get icon mapping for features
+    // Uses existing icons where available, new icons for farm/guild/courtyard
     const iconMap = {
-      blacksmith: { category: 'action', name: 'craft' },
-      marketplace: { category: 'action', name: 'trade' },
-      tavern: { category: 'action', name: 'rest' },
-      apothecary: { category: 'action', name: 'potion' },
-      coliseum: { category: 'action', name: 'battle' },
-      farm: { category: 'action', name: 'harvest' },
-      guild_hall: { category: 'action', name: 'recruit' },
-      guild_advancement: { category: 'action', name: 'advance' },
-      courtyard: { category: 'action', name: 'social' },
-      battle: { category: 'action', name: 'battle' }
+      blacksmith: { category: 'actions', name: 'blacksmith' },
+      marketplace: { category: 'actions', name: 'marketplace' },
+      tavern: { category: 'actions', name: 'tavern' },
+      apothecary: { category: 'actions', name: 'apothecary' },
+      coliseum: { category: 'actions', name: 'battle' },
+      farm: { category: 'actions', name: 'harvest' },
+      guild_hall: { category: 'actions', name: 'recruit' },
+      guild_advancement: { category: 'actions', name: 'advance' },
+      courtyard: { category: 'actions', name: 'social' },
+      battle: { category: 'actions', name: 'battle' }
     };
 
     // Get label text
@@ -799,8 +817,26 @@ export class WorldMapScene extends Scene {
 
     // Handle party invites
     const inviteUnsub = socket.on('party:invite_received', (payload) => {
-      parchmentToast.info('Party Invite', `${payload.fromUsername} has invited you to join their party.`);
-      // TODO: Show invite modal
+      // Show the party invite modal
+      if (!this.partyInviteModal) {
+        this.partyInviteModal = new PartyInviteModal(this.game);
+      }
+
+      this.partyInviteModal.show({
+        inviteId: payload.inviteId,
+        partyId: payload.partyId,
+        partyName: payload.partyName,
+        leaderUsername: payload.fromUsername,
+        expiresAt: payload.expiresAt,
+        onClose: (accepted) => {
+          if (accepted) {
+            // Refresh party status bar if available
+            if (this.game.partyStatusBar) {
+              this.game.partyStatusBar.refresh();
+            }
+          }
+        }
+      });
     });
     this.wsUnsubscribers.push(inviteUnsub);
   }
@@ -975,17 +1011,28 @@ export class WorldMapScene extends Scene {
           name: n.name
         }));
 
+        // Calculate estimated travel duration from path length
+        let totalDistance = 0;
+        for (let i = 1; i < walkPath.length; i++) {
+          const dx = walkPath[i].x - walkPath[i - 1].x;
+          const dy = walkPath[i].y - walkPath[i - 1].y;
+          totalDistance += Math.sqrt(dx * dx + dy * dy);
+        }
+        // walkSpeed is 200 pixels/second, add buffer for spline curves
+        const estimatedDuration = (totalDistance / 200) * 1.3 * 1000;
+
+        // Start travel progress bar
+        if (this.travelProgressBar) {
+          this.travelProgressBar.startTravel(result.currentNode.name, estimatedDuration);
+        }
+
         // Start walking animation
         this.mapCharacter.startWalking(walkPath, () => {
           this.onTravelComplete(result, previousNodeId);
         });
-
-        // Show travel message
-        parchmentToast.info('Traveling', `Journeying to ${result.currentNode.name}... (${result.cost} stamina)`);
       } else {
         // No animation - complete immediately
         this.onTravelComplete(result, previousNodeId);
-        parchmentToast.success('Arrived', `You have arrived at ${result.currentNode.name}.`);
       }
     } catch (err) {
       parchmentToast.error('Travel Failed', err.message || 'Unable to travel to this location.');
@@ -1017,7 +1064,11 @@ export class WorldMapScene extends Scene {
     this.updateCharacterPosition();
 
     this.updateNodeInfo();
-    parchmentToast.success('Journey Complete', `You have arrived at ${result.currentNode.name}.`);
+
+    // Complete travel progress bar (triggers fade out)
+    if (this.travelProgressBar) {
+      this.travelProgressBar.complete();
+    }
 
     // Switch node rooms for WebSocket presence
     if (this.game.socket) {
@@ -1059,6 +1110,11 @@ export class WorldMapScene extends Scene {
     // Update stamina bar
     if (this.staminaBar) {
       this.staminaBar.update(deltaTime);
+    }
+
+    // Update travel progress bar
+    if (this.travelProgressBar) {
+      this.travelProgressBar.update(deltaTime);
     }
 
     // Update effects
@@ -1153,65 +1209,89 @@ export class WorldMapScene extends Scene {
       }
     }
 
-    // Draw locked path indicators for paths leading to undiscovered blocked nodes
-    for (const conn of this.connections) {
-      const fromNode = this.nodes.find(n => n.id === conn.from_node_id);
-      const toNode = this.nodes.find(n => n.id === conn.to_node_id);
+    // Draw locked path indicators ONLY when player is on a blocked node
+    // and the path leads to an undiscovered destination
+    const isCurrentNodeBlocked = this.currentNode?.blocked === true;
 
-      if (fromNode && toNode) {
-        // Check if either endpoint is an undiscovered blocked node
-        const isCombatNodeFrom = ['forest', 'cave', 'mountain', 'bridge'].includes(fromNode.node_type);
-        const isCombatNodeTo = ['forest', 'cave', 'mountain', 'bridge'].includes(toNode.node_type);
-        const isFromMystery = !fromNode.visited && (!this.currentNode || fromNode.id !== this.currentNode.id);
-        const isToMystery = !toNode.visited && (!this.currentNode || toNode.id !== this.currentNode.id);
+    if (isCurrentNodeBlocked) {
+      for (const conn of this.connections) {
+        const fromNode = this.nodes.find(n => n.id === conn.from_node_id);
+        const toNode = this.nodes.find(n => n.id === conn.to_node_id);
 
-        // Show lock indicator if path leads to an undiscovered blocked node
-        const showLockIndicator =
-          (isCombatNodeFrom && fromNode.blocked && isFromMystery) ||
-          (isCombatNodeTo && toNode.blocked && isToMystery);
+        if (!fromNode || !toNode) continue;
 
-        if (showLockIndicator) {
-          const x1 = fromNode.x_coord * this.nodeSpacing + this.cameraX;
-          const y1 = fromNode.y_coord * this.nodeSpacing + this.cameraY;
-          const x2 = toNode.x_coord * this.nodeSpacing + this.cameraX;
-          const y2 = toNode.y_coord * this.nodeSpacing + this.cameraY;
+        // Check if this connection involves the current node
+        const currentNodeId = this.currentNode.id;
+        const isCurrentNodeInConnection =
+          conn.from_node_id === currentNodeId || conn.to_node_id === currentNodeId;
+
+        if (!isCurrentNodeInConnection) continue;
+
+        // Determine which node is the destination (the one that's not current)
+        const destinationNode = conn.from_node_id === currentNodeId ? toNode : fromNode;
+
+        // Show lock if destination is discovered but not visited
+        // (discovered via adjacency, not by traveling there)
+        const isDestinationUndiscovered =
+          this.isNodeDiscovered(destinationNode) && !destinationNode.visited;
+
+        if (isDestinationUndiscovered) {
+          // Use normalized node ordering for consistent spline generation (smaller ID first)
+          const startNode = fromNode.id < toNode.id ? fromNode : toNode;
+          const endNode = fromNode.id < toNode.id ? toNode : fromNode;
+
+          const x1 = startNode.x_coord * this.nodeSpacing + this.cameraX;
+          const y1 = startNode.y_coord * this.nodeSpacing + this.cameraY;
+          const x2 = endNode.x_coord * this.nodeSpacing + this.cameraX;
+          const y2 = endNode.y_coord * this.nodeSpacing + this.cameraY;
 
           // Skip if off screen
-          if (Math.max(x1, x2) >= 0 && Math.min(x1, x2) <= ctx.canvas.width &&
-              Math.max(y1, y2) >= 0 && Math.min(y1, y2) <= ctx.canvas.height) {
-
-            // Calculate midpoint of path
-            const control = this.getPathControlPoint(x1, y1, x2, y2, conn.from_node_id, conn.to_node_id);
-            // Bezier midpoint at t=0.5
-            const midX = 0.25 * x1 + 0.5 * control.x + 0.25 * x2;
-            const midY = 0.25 * y1 + 0.5 * control.y + 0.25 * y2;
-
-            // Draw path tint (red/orange overlay)
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.quadraticCurveTo(control.x, control.y, x2, y2);
-            ctx.strokeStyle = 'rgba(180, 80, 60, 0.5)';
-            ctx.lineWidth = 6;
-            ctx.stroke();
-            ctx.restore();
-
-            // Draw lock icon background
-            ctx.beginPath();
-            ctx.arc(midX, midY, 12, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(60, 40, 30, 0.85)';
-            ctx.fill();
-            ctx.strokeStyle = '#a85040';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            // Draw lock icon
-            ctx.fillStyle = '#c9a227';
-            ctx.font = 'bold 12px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('\u{1F512}', midX, midY);
+          if (Math.max(x1, x2) < 0 || Math.min(x1, x2) > ctx.canvas.width ||
+              Math.max(y1, y2) < 0 || Math.min(y1, y2) > ctx.canvas.height) {
+            continue;
           }
+
+          // Generate organic spline points matching the actual path curves
+          const controlPoints = generatePathControlPoints(x1, y1, x2, y2, startNode.id, endNode.id);
+          const splinePoints = generateSplinePoints(controlPoints, 10);
+
+          if (splinePoints.length < 2) continue;
+
+          // Draw locked path overlay following the organic curve
+          ctx.save();
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+
+          ctx.beginPath();
+          ctx.moveTo(splinePoints[0].x, splinePoints[0].y);
+          for (let j = 1; j < splinePoints.length; j++) {
+            ctx.lineTo(splinePoints[j].x, splinePoints[j].y);
+          }
+          ctx.strokeStyle = 'rgba(180, 80, 60, 0.5)';
+          ctx.lineWidth = 6;
+          ctx.stroke();
+          ctx.restore();
+
+          // Calculate midpoint along the spline for lock icon
+          const midIndex = Math.floor(splinePoints.length / 2);
+          const midX = splinePoints[midIndex].x;
+          const midY = splinePoints[midIndex].y;
+
+          // Draw lock icon background
+          ctx.beginPath();
+          ctx.arc(midX, midY, 12, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(60, 40, 30, 0.85)';
+          ctx.fill();
+          ctx.strokeStyle = '#a85040';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Draw lock icon
+          ctx.fillStyle = '#6b2d3d';  // Burgundy accent for blocked paths
+          ctx.font = 'bold 12px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('\u{1F512}', midX, midY);
         }
       }
     }
@@ -1401,6 +1481,11 @@ export class WorldMapScene extends Scene {
     // Render stamina bar (UI layer)
     if (this.staminaBar) {
       this.staminaBar.render(ctx);
+    }
+
+    // Render travel progress bar (below stamina bar)
+    if (this.travelProgressBar) {
+      this.travelProgressBar.render(ctx);
     }
 
     // Render minimap (on top of everything)

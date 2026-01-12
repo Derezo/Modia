@@ -770,6 +770,15 @@ All database migrations are located in `api/src/migrations/` and run sequentiall
 | 011 | 011_npc_skills.sql | (skill data) | NPC skill trees and monster archetypes |
 | 012 | 012_guild_recruitment.sql | traits, guild_recruits, recruit_traits, recruit_skills, character_traits, world_nodes.recruit_refresh_hour | Trait system and guild recruitment pools |
 | 013 | 013_user_settings.sql | user_settings | User preference storage (action menu style, etc.) |
+| 014 | 014_social_pvp_systems.sql | notifications, friendships, lfg_posts, parties (fix), battles (pvp cols) | Notifications, friend system, LFG, PvP enhancements |
+| 015 | 015_marketplace_audit.sql | marketplace_audit | Audit logging for marketplace security |
+| 016 | 016_stamina_system.sql | characters (stamina cols) | Stamina tracking for world travel |
+| 017 | 017_item_listings.sql | item_listings, item_listing_history | Unique item marketplace listings |
+| 018 | 018_boss_mechanics.sql | enemy_templates (boss cols), boss_phases | Multi-phase boss encounter system |
+| 019 | 019_node_blocking.sql | user_node_clearance | Combat node blocking until cleared |
+| 020 | 020_guild_quest_system.sql | advancement_quest_templates, character_quests, character_quest_items, character_titles | Guild advancement quest system |
+| 021 | 021_guildmaster_bosses.sql | guildmaster_templates, disciple_templates, advancement_battle_history | Guildmaster boss templates and battle history |
+| 022 | 022_seed_metadata.sql | seed_metadata | Seed versioning for dev-setup |
 
 **Migration Commands:**
 ```bash

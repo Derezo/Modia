@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 9.0 |
+| Version | 10.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -27,9 +27,9 @@ The roadmap is split into two focused documents:
 
 | Track | Completion | Status |
 |-------|------------|--------|
-| Technical | 35% | In Progress |
-| Gameplay | 90% | Near Complete |
-| **Combined** | **~70%** | In Progress |
+| Technical | 30% | In Progress |
+| Gameplay | 85% | Near Complete |
+| **Combined** | **~65%** | In Progress |
 
 ---
 
@@ -39,10 +39,10 @@ The roadmap is split into two focused documents:
 |-------|------|------------|--------|
 | 1 | Foundation | 100% | Complete |
 | 2 | Characters & World | 95% | Near Complete |
-| 3 | Combat System | 90% | Near Complete |
-| 4 | Economy & Inventory | 95% | Near Complete |
-| 5 | Multiplayer | 90% | Near Complete |
-| 6 | Polish & Launch | 45% | In Progress |
+| 3 | Combat System | 85% | In Progress |
+| 4 | Economy & Inventory | 80% | In Progress |
+| 5 | Multiplayer | 80% | In Progress |
+| 6 | Polish & Launch | 40% | In Progress |
 
 ---
 
@@ -52,17 +52,18 @@ The roadmap is split into two focused documents:
 
 | Item | Location | Status |
 |------|----------|--------|
-| Quest System | advancementQuest.js | Complete |
-| Node Blocking | world.js, WorldMapScene.js | Complete |
-| Settings Expansion | SettingsScene.js | Not Started |
+| Friends UI Integration | FriendsScene.js, ProfileDropdown.js | Not Started |
+| Party Invite Modal Wiring | WorldMapScene.js | Not Started |
+| Battle Balance (Defense) | battleService.js | Not Started |
+| Gold Sinks | marketplace.js, world.js | Not Started |
 
 ### High Priority - Technical
 
 | Item | Location | Details |
 |------|----------|---------|
+| Rate Limit Security | rateLimiterFactory.js, auth.js | trust proxy, refresh endpoint |
 | VPS Deployment | Infrastructure | Server setup, Nginx, SSL |
 | E2E Tests | Playwright | Full gameplay coverage |
-| Performance Audit | All | API, DB, frontend profiling |
 
 ---
 
@@ -107,6 +108,7 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 10.0 | Jan 2026 | Roadmap audit v8.0: Corrected completion percentages across all phases. Updated sprint focus with Friends UI, PartyInviteModal, Battle Balance, Gold Sinks. Added rate limit security to technical priorities. |
 | 9.0 | Jan 2026 | Split roadmap into ROADMAP_TECHNICAL.md and ROADMAP_GAMEPLAY.md. Added quest system, node blocking, settings expansion to gameplay track. |
 | 8.0 | Jan 2026 | Major cleanup, archived completed milestones |
 | 7.0-7.6 | Jan 2026 | Social/PvP, parchment UI, world map, boss mechanics, title animation |
