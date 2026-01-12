@@ -1,22 +1,67 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Ornate skeleton key - key item type -->
-  <!-- Key bow (handle) -->
-  <circle class="stroke metallic" cx="7" cy="7" r="5"/>
-  <circle class="stroke" cx="7" cy="7" r="2"/>
-  <!-- Key shaft -->
-  <path class="stroke metallic" d="M11 11l9 9"/>
-  <!-- Key teeth -->
-  <path class="stroke" d="M16 16l2-2"/>
-  <path class="stroke" d="M18 18l2-2"/>
-  <!-- Decorative bow details -->
-  <path class="stroke" d="M4 4l2 2M10 4l-2 2" style="stroke-width: 1;"/>
-  <path class="stroke" d="M4 10l2-2M10 10l-2-2" style="stroke-width: 1;"/>
-  <!-- Shaft collar detail -->
-  <path class="stroke" d="M12 12l1-1M12 12l-1 1" style="stroke-width: 1;"/>
-  <!-- Center accent -->
-  <circle cx="7" cy="7" r="0.75" fill="currentColor"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="14" cy="21" rx="5" ry="1" fill="#2a2a2a" opacity="0.3"/>
+
+  <!-- Key bow (handle) - ornate circular -->
+  <!-- Outer ring base (bronze dark) -->
+  <circle cx="7" cy="7" r="5.5" fill="#8b5514"/>
+
+  <!-- Outer ring main (bronze) -->
+  <circle cx="7" cy="7" r="5" fill="#cd7f32"/>
+
+  <!-- Outer ring highlight -->
+  <circle cx="7" cy="7" r="4.5" fill="#e6a852"/>
+
+  <!-- Bow hole (dark) -->
+  <circle cx="7" cy="7" r="2.5" fill="#8b5514"/>
+  <circle cx="7" cy="7" r="2" fill="#3a3a3a"/>
+
+  <!-- Inner ring detail (gold) -->
+  <circle cx="7" cy="7" r="3" fill="none" stroke="#daa520" stroke-width="0.8"/>
+
+  <!-- Gold bow center decoration -->
+  <circle cx="7" cy="7" r="1" fill="#8b6914"/>
+  <circle cx="7" cy="7" r="0.7" fill="#daa520"/>
+  <circle cx="6.8" cy="6.8" r="0.3" fill="#ffd700"/>
+
+  <!-- Bow top highlight -->
+  <ellipse cx="5.5" cy="4.5" rx="1.5" ry="0.8" fill="#f0c070" opacity="0.5"/>
+
+  <!-- Decorative notches on bow -->
+  <circle cx="4" cy="4" r="0.6" fill="#cd7f32"/>
+  <circle cx="4" cy="4" r="0.35" fill="#e6a852"/>
+  <circle cx="10" cy="4" r="0.6" fill="#cd7f32"/>
+  <circle cx="10" cy="4" r="0.35" fill="#e6a852"/>
+  <circle cx="4" cy="10" r="0.6" fill="#cd7f32"/>
+  <circle cx="4" cy="10" r="0.35" fill="#e6a852"/>
+  <circle cx="10" cy="10" r="0.6" fill="#cd7f32"/>
+  <circle cx="10" cy="10" r="0.35" fill="#e6a852"/>
+
+  <!-- Key shaft base (bronze dark) -->
+  <path d="M11 10l9 9" stroke="#8b5514" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Key shaft main (bronze) -->
+  <path d="M11 10l9 9" stroke="#cd7f32" stroke-width="2.2" stroke-linecap="round"/>
+
+  <!-- Key shaft highlight -->
+  <path d="M11.3 9.7l8.2 8.2" stroke="#e6a852" stroke-width="0.8" stroke-linecap="round"/>
+
+  <!-- Shaft collar (where shaft meets bow) -->
+  <circle cx="10.5" cy="10.5" r="1.2" fill="#8b5514"/>
+  <circle cx="10.5" cy="10.5" r="0.9" fill="#cd7f32"/>
+  <circle cx="10.3" cy="10.3" r="0.4" fill="#e6a852"/>
+
+  <!-- Key teeth (bronze) -->
+  <path d="M16 15l2.5-2.5" stroke="#8b5514" stroke-width="2" stroke-linecap="round"/>
+  <path d="M16 15l2.5-2.5" stroke="#cd7f32" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M16.2 14.8l2-2" stroke="#e6a852" stroke-width="0.5" stroke-linecap="round"/>
+
+  <path d="M18 17l2.5-2.5" stroke="#8b5514" stroke-width="2" stroke-linecap="round"/>
+  <path d="M18 17l2.5-2.5" stroke="#cd7f32" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M18.2 16.8l2-2" stroke="#e6a852" stroke-width="0.5" stroke-linecap="round"/>
+
+  <!-- Key tip -->
+  <circle cx="20" cy="19" r="1" fill="#8b5514"/>
+  <circle cx="20" cy="19" r="0.7" fill="#cd7f32"/>
+  <circle cx="19.85" cy="18.85" r="0.3" fill="#e6a852"/>
 </svg>

@@ -1,21 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Medieval great helm - helmet item type -->
-  <!-- Main helm shape -->
-  <path class="stroke metallic" d="M4 12c0-4.5 3.5-8 8-8s8 3.5 8 8v4c0 2-1.5 3-4 3H8c-2.5 0-4-1-4-3v-4z"/>
-  <!-- Visor slits -->
-  <path class="stroke" d="M7 12h4M13 12h4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="13" cy="21" rx="5.5" ry="1.2" fill="#2a2a2a" opacity="0.3"/>
+
+  <!-- Helmet base (dark steel) -->
+  <path d="M5 11c0-5 3.5-8 7-8s7 3 7 8v5c0 2-1.5 3-3.5 3h-7C6.5 19 5 18 5 16v-5z" fill="#5a5a5a"/>
+
+  <!-- Helmet main (mid steel) -->
+  <path d="M6 11c0-4.5 3-7 6-7s6 2.5 6 7v4.5c0 1.5-1 2-2.5 2h-7c-1.5 0-2.5-0.5-2.5-2V11z" fill="#a0a0a0"/>
+
+  <!-- Helmet bright area -->
+  <path d="M7 10.5c0-3.5 2.5-5.5 5-5.5s5 2 5 5.5v3.5c0 1-0.5 1.5-2 1.5H9c-1.5 0-2-0.5-2-1.5v-3.5z" fill="#d0d0d0"/>
+
+  <!-- Top highlight -->
+  <ellipse cx="10" cy="7.5" rx="2.5" ry="1.2" fill="#e8e8e8" opacity="0.5"/>
+
+  <!-- Visor bar (dark) -->
+  <rect x="7" y="11" width="10" height="1.5" rx="0.3" fill="#3a3a3a"/>
+
+  <!-- Eye slits -->
+  <rect x="7.5" y="9" width="3" height="1" rx="0.2" fill="#2a2a2a"/>
+  <rect x="13.5" y="9" width="3" height="1" rx="0.2" fill="#2a2a2a"/>
+
   <!-- Nose guard -->
-  <path class="stroke" d="M12 9v6"/>
-  <!-- Crest mount -->
-  <path class="stroke" d="M12 4v-2"/>
-  <!-- Forehead band detail -->
-  <path class="stroke" d="M6 9c2-1 4-1.5 6-1.5s4 .5 6 1.5" style="stroke-width: 1;"/>
-  <!-- Rivet details -->
-  <circle cx="6" cy="12" r="0.75" fill="currentColor"/>
-  <circle cx="18" cy="12" r="0.75" fill="currentColor"/>
-  <circle cx="12" cy="17" r="0.75" fill="currentColor"/>
+  <rect x="11.3" y="8" width="1.4" height="5" rx="0.2" fill="#5a5a5a"/>
+  <rect x="11.5" y="8.2" width="1" height="4.6" rx="0.15" fill="#7a7a7a"/>
+
+  <!-- Crown ridge -->
+  <path d="M7 6c2.5-1 7.5-1 10 0" fill="none" stroke="#5a5a5a" stroke-width="0.8" stroke-linecap="round"/>
+
+  <!-- Bronze accent band -->
+  <path d="M6.5 15c2 0.5 9 0.5 11 0" fill="none" stroke="#cd7f32" stroke-width="0.8" stroke-linecap="round"/>
+
+  <!-- Bronze rivets -->
+  <circle cx="6.5" cy="10" r="0.7" fill="#8b5514"/>
+  <circle cx="6.5" cy="10" r="0.45" fill="#cd7f32"/>
+  <circle cx="6.5" cy="9.85" r="0.22" fill="#e6a852"/>
+
+  <circle cx="17.5" cy="10" r="0.7" fill="#8b5514"/>
+  <circle cx="17.5" cy="10" r="0.45" fill="#cd7f32"/>
+  <circle cx="17.5" cy="9.85" r="0.22" fill="#e6a852"/>
+
+  <!-- Bottom shadow -->
+  <path d="M7 17 Q12 19 17 17" fill="#5a5a5a" opacity="0.3"/>
 </svg>

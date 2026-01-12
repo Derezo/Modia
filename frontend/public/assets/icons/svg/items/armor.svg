@@ -1,22 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Breastplate - armor item type -->
-  <!-- Main armor shape -->
-  <path class="stroke metallic" d="M12 3L4 6v6c0 5 3 7 8 9 5-2 8-4 8-9V6l-8-3z"/>
-  <!-- Center seam -->
-  <path class="stroke" d="M12 6v10"/>
-  <!-- Chest curve -->
-  <path class="stroke" d="M7 9c2 1 8 1 10 0"/>
-  <!-- Waist band -->
-  <path class="stroke" d="M8 14h8"/>
-  <!-- Plate segment lines -->
-  <path class="stroke" d="M6 11c1 .5 2 .5 3 0M15 11c1 .5 2 .5 3 0" style="stroke-width: 1;"/>
-  <!-- Rivets -->
-  <circle cx="8" cy="7" r="0.75" fill="currentColor"/>
-  <circle cx="16" cy="7" r="0.75" fill="currentColor"/>
-  <circle cx="7" cy="14" r="0.75" fill="currentColor"/>
-  <circle cx="17" cy="14" r="0.75" fill="currentColor"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="13" cy="21" rx="5.5" ry="1.2" fill="#2a2a2a" opacity="0.3"/>
+
+  <!-- Breastplate base (dark steel) -->
+  <path d="M5 5c2-1 10-1 14 0l1 7c0 4.5-2.5 8-8 10-5.5-2-8-5.5-8-10L5 5z" fill="#5a5a5a"/>
+
+  <!-- Breastplate main (mid steel) -->
+  <path d="M6 5.5c1.8-0.8 9-0.8 12 0l0.8 6.5c0 4-2 7-6.8 9-4.8-2-6.8-5-6.8-9L6 5.5z" fill="#a0a0a0"/>
+
+  <!-- Breastplate bright area -->
+  <path d="M7 6.5c1.5-0.6 8-0.6 10 0l0.6 5.5c0 3.5-1.5 6-5.6 8-4.1-2-5.6-4.5-5.6-8L7 6.5z" fill="#d0d0d0"/>
+
+  <!-- Left chest highlight -->
+  <ellipse cx="10" cy="9" rx="2" ry="1.5" fill="#e8e8e8" opacity="0.5"/>
+
+  <!-- Center ridge -->
+  <rect x="11.3" y="5" width="1.4" height="12" fill="#5a5a5a"/>
+  <rect x="11.5" y="5.2" width="1" height="11.6" fill="#7a7a7a"/>
+
+  <!-- Chest curve line -->
+  <path d="M7.5 9c2 1 7 1 9 0" fill="none" stroke="#5a5a5a" stroke-width="0.6"/>
+
+  <!-- Waist section line -->
+  <path d="M7.8 13h8.4" fill="none" stroke="#5a5a5a" stroke-width="0.6"/>
+
+  <!-- Bronze neckline trim -->
+  <path d="M6.5 5.5c2-0.6 9-0.6 11 0" fill="none" stroke="#cd7f32" stroke-width="1" stroke-linecap="round"/>
+
+  <!-- Bronze rivets top -->
+  <circle cx="8" cy="6.5" r="0.7" fill="#8b5514"/>
+  <circle cx="8" cy="6.5" r="0.45" fill="#cd7f32"/>
+  <circle cx="8" cy="6.35" r="0.22" fill="#e6a852"/>
+
+  <circle cx="16" cy="6.5" r="0.7" fill="#8b5514"/>
+  <circle cx="16" cy="6.5" r="0.45" fill="#cd7f32"/>
+  <circle cx="16" cy="6.35" r="0.22" fill="#e6a852"/>
+
+  <!-- Bronze rivets waist -->
+  <circle cx="7.8" cy="13" r="0.6" fill="#8b5514"/>
+  <circle cx="7.8" cy="13" r="0.38" fill="#cd7f32"/>
+
+  <circle cx="16.2" cy="13" r="0.6" fill="#8b5514"/>
+  <circle cx="16.2" cy="13" r="0.38" fill="#cd7f32"/>
+
+  <!-- Bottom shadow -->
+  <path d="M8 17 Q12 20 16 17" fill="#5a5a5a" opacity="0.35"/>
 </svg>
