@@ -1596,9 +1596,50 @@ async function getUserListings(client, userId) {
 
 /**
  * Search items with augment category filter
- * Extends the base searchItems to include augment filtering
+ * Extends the base searchItems to include augment filtering.
+ *
+ * @param {Object} client - Database client
+ * @param {string} searchTerm - Search term to match item names
+ * @param {string|null} itemType - Filter by item type (weapon, armor, etc.)
+ * @param {string|null} augmentCategory - Filter by augment category (fire, ice, etc.)
+ * @param {number} limit - Maximum results to return
+ * @returns {Promise<Array>} Array of matching items with market data
  */
 async function searchItemsWithAugments(client, searchTerm = '', itemType = null, augmentCategory = null, limit = 50) {
+  // Build parameters array first to ensure proper indexing
+  const params = [];
+  let paramIndex = 1;
+
+  // Pre-calculate parameter indices for augment filter (used in subquery)
+  let augmentParamIndex = null;
+  if (augmentCategory) {
+    augmentParamIndex = paramIndex;
+    params.push(JSON.stringify([{ category: augmentCategory }]));
+    paramIndex++;
+  }
+
+  // Build the listings subquery with proper parameter index
+  const listingsSubquery = augmentCategory
+    ? `
+      SELECT
+        COUNT(*) as listing_count,
+        MIN(price) as min_listing_price,
+        MAX(price) as max_listing_price
+      FROM item_listings
+      WHERE item_template_id = it.id
+        AND status = 'active'
+        AND modifications_snapshot->'augments' @> $${augmentParamIndex}::jsonb
+    `
+    : `
+      SELECT
+        COUNT(*) as listing_count,
+        MIN(price) as min_listing_price,
+        MAX(price) as max_listing_price
+      FROM item_listings
+      WHERE item_template_id = it.id
+        AND status = 'active'
+    `;
+
   let query = `
     SELECT
       it.id,
@@ -1646,37 +1687,12 @@ async function searchItemsWithAugments(client, searchTerm = '', itemType = null,
         AND status IN ('open', 'partial')
     ) ord ON true
     LEFT JOIN LATERAL (
-      SELECT
-        COUNT(*) as listing_count,
-        MIN(price) as min_listing_price,
-        MAX(price) as max_listing_price
-      FROM item_listings
-      WHERE item_template_id = it.id
-        AND status = 'active'
-  `;
-
-  // Add augment filter to listings subquery
-  if (augmentCategory) {
-    query += `
-        AND modifications_snapshot->'augments' @> $augmentParam::jsonb
-    `;
-  }
-
-  query += `
+      ${listingsSubquery}
     ) listings ON true
     WHERE (it.is_tradeable IS NULL OR it.is_tradeable = TRUE)
   `;
 
-  const params = [];
-  let paramIndex = 1;
-
-  // Build augment filter parameter
-  if (augmentCategory) {
-    params.push(JSON.stringify([{ category: augmentCategory }]));
-    query = query.replace('$augmentParam', `$${paramIndex}`);
-    paramIndex++;
-  }
-
+  // Add remaining WHERE filters
   if (searchTerm) {
     query += ` AND it.name ILIKE $${paramIndex}`;
     params.push(`%${searchTerm}%`);
@@ -1716,6 +1732,82 @@ async function searchItemsWithAugments(client, searchTerm = '', itemType = null,
   }));
 }
 
+/**
+ * Get sellable items from user's inventory
+ * Returns items that are: unequipped, tradeable, and not already listed on marketplace
+ * @param {import('pg').PoolClient} client - Database client
+ * @param {number} userId - User ID
+ * @returns {Promise<Array>} List of sellable items with suggested prices
+ */
+async function getSellableInventory(client, userId) {
+  const result = await client.query(`
+    SELECT
+      ci.id as instance_id,
+      ci.character_id,
+      ci.item_template_id as template_id,
+      ci.quantity,
+      ci.modifications,
+      c.name as character_name,
+      it.name,
+      it.description,
+      it.item_type,
+      it.equipment_slot,
+      it.stat_bonuses,
+      it.level_requirement,
+      it.base_price,
+      it.rarity,
+      it.is_stackable
+    FROM character_items ci
+    JOIN characters c ON ci.character_id = c.id
+    JOIN item_templates it ON ci.item_template_id = it.id
+    WHERE c.user_id = $1
+      AND ci.equipped_slot IS NULL
+      AND (it.is_tradeable IS NULL OR it.is_tradeable = TRUE)
+      AND NOT EXISTS (
+        SELECT 1 FROM item_listings il
+        WHERE il.character_item_id = ci.id
+        AND il.status = 'active'
+      )
+    ORDER BY c.name, it.item_type, it.name
+  `, [userId]);
+
+  // Calculate suggested prices for each item
+  const items = await Promise.all(result.rows.map(async (row) => {
+    const suggestedPrice = await calculateSuggestedPrice(client, row.template_id, row.modifications);
+
+    // Extract augments from modifications if present
+    const modifications = row.modifications || {};
+    const augments = modifications.augments || [];
+
+    // Calculate stats from modifications
+    const baseStats = row.stat_bonuses || {};
+    const bonusStats = modifications.bonusStats || {};
+
+    return {
+      instanceId: row.instance_id,
+      characterId: row.character_id,
+      characterName: row.character_name,
+      templateId: row.template_id,
+      name: row.name,
+      description: row.description,
+      type: row.item_type,
+      equipmentSlot: row.equipment_slot,
+      baseStats,
+      bonusStats,
+      levelRequirement: row.level_requirement,
+      basePrice: row.base_price,
+      rarity: row.rarity,
+      isStackable: row.is_stackable,
+      quantity: row.quantity,
+      augments,
+      modifications,
+      estimatedPrice: suggestedPrice
+    };
+  }));
+
+  return items;
+}
+
 export {
   getOrderBook,
   getMatchingOrders,
@@ -1739,5 +1831,6 @@ export {
   buyItemListing,
   cancelItemListing,
   getUserListings,
-  searchItemsWithAugments
+  searchItemsWithAugments,
+  getSellableInventory
 };

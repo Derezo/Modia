@@ -91,7 +91,7 @@ export class LeaderboardScene extends Scene {
 
       .leaderboard-title h2 {
         margin: 0;
-        color: var(--parchment-gold);
+        color: var(--parchment-burgundy);
         text-shadow: 0 1px 0 var(--parchment-highlight);
         font-size: 22px;
       }
@@ -145,8 +145,8 @@ export class LeaderboardScene extends Scene {
 
       .category-tab.active {
         background: linear-gradient(to bottom, var(--parchment-light) 0%, var(--parchment-mid) 100%);
-        color: var(--parchment-gold);
-        border-color: var(--parchment-gold);
+        color: var(--parchment-text-primary);
+        border-color: var(--parchment-burgundy);
       }
 
       .category-tab-icon {
@@ -251,7 +251,7 @@ export class LeaderboardScene extends Scene {
       .leaderboard-table td:last-child {
         text-align: right;
         font-weight: bold;
-        color: var(--parchment-gold);
+        color: var(--parchment-burgundy);
       }
 
       .leaderboard-table tr:hover {
@@ -259,12 +259,12 @@ export class LeaderboardScene extends Scene {
       }
 
       .leaderboard-table tr.current-user {
-        background: rgba(201, 162, 39, 0.15);
-        border-left: 3px solid var(--parchment-gold);
+        background: rgba(107, 45, 61, 0.12);
+        border-left: 3px solid var(--parchment-burgundy);
       }
 
       .leaderboard-table tr.current-user td:first-child {
-        color: var(--parchment-gold);
+        color: var(--parchment-burgundy);
       }
 
       /* Rank badges */
@@ -321,7 +321,7 @@ export class LeaderboardScene extends Scene {
       .user-rank-value {
         font-size: 18px;
         font-weight: bold;
-        color: var(--parchment-gold);
+        color: var(--parchment-burgundy);
       }
 
       .user-score-label {

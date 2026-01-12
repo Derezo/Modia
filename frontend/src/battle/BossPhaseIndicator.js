@@ -67,8 +67,8 @@ export class BossPhaseIndicator {
           width: 12px;
           height: 12px;
           border-radius: 50%;
-          background: ${isComplete ? P.state.success : (isCurrent ? P.accent.gold : P.dark)};
-          border: 2px solid ${isCurrent ? P.accent.gold : P.border};
+          background: ${isComplete ? P.state.success : (isCurrent ? P.accent.burgundy : P.dark)};
+          border: 2px solid ${isCurrent ? P.accent.burgundy : P.border};
           box-shadow: ${isCurrent ? '0 0 6px rgba(201, 162, 39, 0.6)' : 'none'};
           transition: all 0.3s ease;
         "></div>
@@ -156,7 +156,7 @@ export class BossPhaseIndicator {
             ${phaseDots.join('')}
           </div>
           <span style="
-            color: ${P.accent.gold};
+            color: ${P.accent.burgundy};
             font-size: 11px;
             font-weight: bold;
             margin-left: 8px;
@@ -173,7 +173,7 @@ export class BossPhaseIndicator {
         margin-top: 10px;
         padding: 12px 24px;
         background: linear-gradient(to bottom, rgba(139, 0, 0, 0.95), rgba(80, 0, 0, 0.95));
-        border: 2px solid ${P.accent.gold};
+        border: 2px solid ${P.accent.burgundy};
         border-radius: 6px;
         box-shadow: 0 4px 20px rgba(139, 0, 0, 0.6);
         opacity: 0;
@@ -183,7 +183,7 @@ export class BossPhaseIndicator {
         pointer-events: none;
       ">
         <div style="
-          color: ${P.accent.gold};
+          color: ${P.accent.burgundy};
           font-size: 14px;
           font-weight: bold;
           text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);

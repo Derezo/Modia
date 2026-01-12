@@ -306,6 +306,45 @@ export function injectItemDataTableStyles() {
       color: ${PARCHMENT_COLORS.text.secondary};
       font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
     }
+
+    /* Supply level badge */
+    .item-data-table-supply-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: ${PARCHMENT_RADIUS.sm};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: #fff;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+    }
+
+    .item-data-table-supply-badge.supply-scarce {
+      background: linear-gradient(to bottom, #c45a5a, #a04545);
+    }
+
+    .item-data-table-supply-badge.supply-low {
+      background: linear-gradient(to bottom, #d4a056, #b88a45);
+    }
+
+    .item-data-table-supply-badge.supply-medium {
+      background: linear-gradient(to bottom, #8b8b8b, #6e6e6e);
+    }
+
+    .item-data-table-supply-badge.supply-high {
+      background: linear-gradient(to bottom, #5a9e4a, #488a3c);
+    }
+
+    .item-data-table-supply-badge.supply-surplus {
+      background: linear-gradient(to bottom, #4a7eb3, #3c6a99);
+    }
+
+    /* Estimated price styling */
+    .item-data-table-estimated-price {
+      color: ${PARCHMENT_COLORS.text.muted};
+      font-style: italic;
+    }
   `;
 
   document.head.appendChild(style);

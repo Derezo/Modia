@@ -958,7 +958,7 @@ export class ColiseumScene extends Scene {
       .coliseum-equipment-item.uncommon { color: ${P.state.success}; }
       .coliseum-equipment-item.rare { color: ${P.state.info}; }
       .coliseum-equipment-item.epic { color: #9b59b6; }
-      .coliseum-equipment-item.legendary { color: ${P.accent.gold}; }
+      .coliseum-equipment-item.legendary { color: ${P.accent.burgundy}; }
 
       .coliseum-stats-section {
         background: ${P.dark};

@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.2 |
+| Version | 2.3 |
 | Last Updated | January 2026 |
 | Focus | Features, mechanics, UX, content |
 
@@ -16,7 +16,7 @@
 |----------|------------|--------|
 | Core Mechanics | 95% | Near Complete |
 | Combat System | 85% | In Progress |
-| Economy & Items | 80% | In Progress |
+| Economy & Items | 90% | Near Complete |
 | User Experience | 75% | In Progress |
 | Social Features | 75% | In Progress |
 | World & Progression | 90% | Near Complete |
@@ -166,14 +166,20 @@ Per ITEM_SYSTEM.md specifications:
 
 ### 3.2 Marketplace Enhancements
 
-- [ ] Display item augments in listings
-- [ ] Augment category filter
-- [ ] Price suggestion based on augments
+- [x] Display item augments in listings (ItemDataTable integration)
+- [x] Augment category filter (itemDataTableColumns.js)
+- [x] Price suggestion based on augments (calculateSuggestedPrice)
 - [x] Max 10 open orders enforcement (implemented in marketplace.js)
+- [x] Order expiration system (7-day, orderExpirationService.js)
+- [x] Market Dashboard with parchment price chart (MarketDashboard.js)
+- [x] My Listings tab (ItemDataTable integration)
+- [x] My Inventory tab for listing items (getSellableInventory API)
 
 ### 3.3 Shop System
 
-- [ ] Stock refresh cycles (6-24 hours)
+- [x] Stock refresh cycles (6-24 hours) - shopRefreshService.js
+- [x] ItemDataTable integration for Shop Buy/Sell tabs
+- [x] Supply level display with color-coded badges
 - [ ] Item decay system (10% daily)
 
 ### 3.4 Gold Sinks (Not Started)
@@ -361,6 +367,7 @@ Per ITEM_SYSTEM.md specifications:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.3 | Jan 2026 | ItemDataTable & Marketplace Enhancement complete: Shop/Marketplace ItemDataTable integration, MarketDashboard with parchment price chart, order expiration system (7-day), shop stock refresh cycles, sellable inventory API, augment filter, JSDoc documentation. Economy & Items updated to 90%. |
 | 2.2 | Jan 2026 | Roadmap audit v8.0: Added Section 2.4 Battle Balance (defense formula, agility, enemy abilities). Added Section 3.4 Gold Sinks. Added Section 5.3 Social Features (FriendsScene, PartyInviteModal wiring, Tavern 2.0). Corrected completion percentages. Marked max orders as complete. |
 | 2.1 | Jan 2026 | UI/UX styling overhaul complete (v7.7). Color scheme corrections, toast consolidation, element colors, progress bar readability. |
 | 2.0 | Jan 2026 | Quest system complete (7 API endpoints, GuildAdvancementScene). Node blocking complete (visuals, BFS blocking). Boss integration complete (BossPhaseIndicator, WebSocket events). |

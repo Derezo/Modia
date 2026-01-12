@@ -209,7 +209,7 @@ export class RecruitmentScene extends Scene {
         display: flex;
         align-items: center;
         gap: ${PARCHMENT_SPACING.sm};
-        color: ${P.accent.gold};
+        color: ${P.accent.burgundy};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.md};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
@@ -365,7 +365,7 @@ export class RecruitmentScene extends Scene {
         gap: 4px;
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
-        color: ${P.accent.gold};
+        color: ${P.accent.burgundy};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
@@ -444,9 +444,9 @@ export class RecruitmentScene extends Scene {
       }
 
       .recruit-badge.trait.legendary {
-        background: rgba(201, 162, 39, 0.2);
-        color: ${P.accent.gold};
-        border-color: ${P.accent.gold};
+        background: rgba(107, 45, 61, 0.2);
+        color: ${P.accent.burgundy};
+        border-color: ${P.accent.burgundy};
       }
 
       .recruit-badge.skill {
@@ -498,7 +498,7 @@ export class RecruitmentScene extends Scene {
 
       .recruit-detail-trait.uncommon { border-left-color: ${P.state.success}; }
       .recruit-detail-trait.rare { border-left-color: ${P.accent.blue}; }
-      .recruit-detail-trait.legendary { border-left-color: ${P.accent.gold}; }
+      .recruit-detail-trait.legendary { border-left-color: ${P.accent.burgundy}; }
 
       .recruit-trait-name, .recruit-skill-name {
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
@@ -540,7 +540,7 @@ export class RecruitmentScene extends Scene {
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.lg};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
-        color: ${P.accent.gold};
+        color: ${P.accent.burgundy};
       }
 
       .recruit-purchase-price.cannot-afford {

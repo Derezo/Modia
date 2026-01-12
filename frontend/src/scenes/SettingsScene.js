@@ -86,7 +86,7 @@ export class SettingsScene extends Scene {
 
       .settings-title h2 {
         margin: 0;
-        color: var(--parchment-gold);
+        color: var(--parchment-burgundy);
         text-shadow: 0 1px 0 var(--parchment-highlight);
         font-size: 22px;
       }
@@ -141,8 +141,8 @@ export class SettingsScene extends Scene {
 
       .settings-tab.active {
         background: linear-gradient(to bottom, var(--parchment-text-inverse) 0%, var(--parchment-light) 100%);
-        color: var(--parchment-gold);
-        border-color: var(--parchment-gold);
+        color: var(--parchment-text-primary);
+        border-color: var(--parchment-burgundy);
       }
 
       .settings-tab-icon {
@@ -168,7 +168,7 @@ export class SettingsScene extends Scene {
       .settings-panel-title {
         font-size: 20px;
         font-weight: bold;
-        color: var(--parchment-gold);
+        color: var(--parchment-burgundy);
         margin-bottom: var(--parchment-spacing-lg);
         padding-bottom: var(--parchment-spacing-sm);
         border-bottom: 2px solid var(--parchment-border);
@@ -207,7 +207,7 @@ export class SettingsScene extends Scene {
 
       .settings-select:focus {
         outline: none;
-        border-color: var(--parchment-gold);
+        border-color: var(--parchment-burgundy);
       }
 
       .settings-checkbox-group {
@@ -220,7 +220,7 @@ export class SettingsScene extends Scene {
       .settings-checkbox {
         width: 20px;
         height: 20px;
-        accent-color: var(--parchment-gold);
+        accent-color: var(--parchment-burgundy);
         cursor: pointer;
       }
 
@@ -251,7 +251,7 @@ export class SettingsScene extends Scene {
         width: 20px;
         height: 20px;
         border-radius: 50%;
-        background: linear-gradient(to bottom, var(--parchment-gold) 0%, ${P.copper} 100%);
+        background: linear-gradient(to bottom, var(--parchment-border) 0%, var(--parchment-border-dark) 100%);
         border: 2px solid var(--parchment-border-dark);
         cursor: pointer;
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
@@ -261,7 +261,7 @@ export class SettingsScene extends Scene {
         width: 20px;
         height: 20px;
         border-radius: 50%;
-        background: linear-gradient(to bottom, var(--parchment-gold) 0%, ${P.copper} 100%);
+        background: linear-gradient(to bottom, var(--parchment-border) 0%, var(--parchment-border-dark) 100%);
         border: 2px solid var(--parchment-border-dark);
         cursor: pointer;
       }
@@ -298,12 +298,12 @@ export class SettingsScene extends Scene {
       }
 
       .settings-radio-option.selected {
-        border-color: var(--parchment-gold);
+        border-color: var(--parchment-burgundy);
         background: linear-gradient(to bottom, var(--parchment-text-inverse) 0%, var(--parchment-light) 100%);
       }
 
       .settings-radio-option.selected .settings-radio-label {
-        color: var(--parchment-gold);
+        color: var(--parchment-burgundy);
       }
 
       .settings-radio-label {
