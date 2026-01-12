@@ -1,25 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Sword - weapon item type (detailed like slots/weapon) -->
-  <!-- Blade -->
-  <path class="stroke metallic" d="M12 2v14"/>
-  <path class="stroke" d="M9 2l3 2 3-2"/>
-  <!-- Fuller detail lines -->
-  <path class="stroke" d="M10 4v10M14 4v10" style="stroke-width: 1;"/>
-  <!-- Cross guard -->
-  <path class="stroke" d="M6 16h12"/>
-  <path class="stroke" d="M7 15v2M17 15v2"/>
-  <!-- Grip -->
-  <path class="stroke" d="M10 16v5h4v-5"/>
-  <!-- Grip wrapping -->
-  <path class="stroke" d="M10 17.5h4M10 19.5h4" style="stroke-width: 1;"/>
-  <!-- Pommel -->
-  <circle class="stroke metallic" cx="12" cy="22" r="1.5"/>
-  <!-- Guard rivets and pommel gem -->
-  <circle cx="7" cy="16" r="0.75" fill="currentColor"/>
-  <circle cx="17" cy="16" r="0.75" fill="currentColor"/>
-  <circle cx="12" cy="22" r="0.5" fill="currentColor"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="13" cy="22" rx="4" ry="1" fill="#2a2a2a" opacity="0.3"/>
+
+  <!-- Simple sword silhouette - iconic style -->
+  <!-- Blade base (dark steel) -->
+  <path d="M11 2l1 1.5 1-1.5v12h-2V2z" fill="#5a5a5a"/>
+
+  <!-- Blade main (mid steel) -->
+  <path d="M11.3 2.5l0.7 1 0.7-1v11h-1.4V2.5z" fill="#a0a0a0"/>
+
+  <!-- Blade highlight (light steel) -->
+  <path d="M11.7 3l0.3 0.5 0.3-0.5v10h-0.6V3z" fill="#d0d0d0"/>
+
+  <!-- Blade edge highlight -->
+  <path d="M12 4v9" stroke="#e8e8e8" stroke-width="0.4" opacity="0.6"/>
+
+  <!-- Cross guard (bronze dark) -->
+  <rect x="7" y="14" width="10" height="2" rx="0.4" fill="#8b5514"/>
+
+  <!-- Cross guard (bronze mid) -->
+  <rect x="7.3" y="14.3" width="9.4" height="1.5" rx="0.3" fill="#cd7f32"/>
+
+  <!-- Cross guard highlight -->
+  <rect x="7.6" y="14.5" width="8.8" height="0.5" rx="0.2" fill="#e6a852"/>
+
+  <!-- Grip (dark) -->
+  <rect x="10.5" y="16" width="3" height="4" fill="#4a3018"/>
+
+  <!-- Grip (mid) -->
+  <rect x="10.8" y="16" width="2.4" height="4" fill="#6b4423"/>
+
+  <!-- Grip (light side) -->
+  <rect x="11" y="16" width="0.8" height="4" fill="#8b5a30"/>
+
+  <!-- Grip wrap lines -->
+  <path d="M10.5 17.2h3M10.5 18.8h3" stroke="#4a3018" stroke-width="0.5"/>
+
+  <!-- Pommel (bronze dark) -->
+  <ellipse cx="12" cy="20.8" rx="1.5" ry="1" fill="#8b5514"/>
+
+  <!-- Pommel (bronze mid) -->
+  <ellipse cx="12" cy="20.5" rx="1.2" ry="0.8" fill="#cd7f32"/>
+
+  <!-- Pommel highlight -->
+  <ellipse cx="11.6" cy="20.3" rx="0.5" ry="0.35" fill="#e6a852"/>
 </svg>

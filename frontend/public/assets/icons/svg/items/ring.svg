@@ -1,20 +1,51 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Ornate ring with gem - ring item type -->
-  <!-- Ring band (perspective view) -->
-  <ellipse class="stroke metallic" cx="12" cy="15" rx="7" ry="5"/>
-  <ellipse class="stroke" cx="12" cy="15" rx="4" ry="2.5"/>
-  <!-- Gem setting -->
-  <path class="stroke metallic" d="M10 7l2-4 2 4-2 4-2-4z"/>
-  <!-- Setting prongs -->
-  <path class="stroke" d="M10 7l-1 3M14 7l1 3" style="stroke-width: 1;"/>
-  <!-- Gem facet -->
-  <path class="stroke" d="M10 7h4" style="stroke-width: 1;"/>
-  <!-- Band engravings -->
-  <path class="stroke" d="M6 14c0 1 .5 2 1 2.5M18 14c0 1-.5 2-1 2.5" style="stroke-width: 1;"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="13" cy="21" rx="5" ry="1" fill="#2a2a2a" opacity="0.3"/>
+
+  <!-- Ring band outer (dark gold) -->
+  <ellipse cx="12" cy="15" rx="7" ry="4.5" fill="#8b6914"/>
+
+  <!-- Ring band main (gold) -->
+  <ellipse cx="12" cy="15" rx="6.3" ry="4" fill="#daa520"/>
+
+  <!-- Ring band inner bright -->
+  <ellipse cx="12" cy="15" rx="5.6" ry="3.5" fill="#ffd700"/>
+
+  <!-- Ring hole (dark center) -->
+  <ellipse cx="12" cy="15" rx="4" ry="2.5" fill="#8b6914"/>
+
+  <!-- Ring hole inner -->
+  <ellipse cx="12" cy="15" rx="3.3" ry="2" fill="#3a3a3a"/>
+
+  <!-- Ring band top highlight -->
+  <ellipse cx="10" cy="12.5" rx="2" ry="0.8" fill="#ffe44d" opacity="0.5"/>
+
+  <!-- Gem setting base (dark gold) -->
+  <path d="M9 7l3-4 3 4-3 5-3-5z" fill="#8b6914"/>
+
+  <!-- Gem setting inner (gold) -->
+  <path d="M9.5 7l2.5-3.3 2.5 3.3-2.5 4.3-2.5-4.3z" fill="#daa520"/>
+
+  <!-- Gem base (dark) -->
+  <path d="M10 7l2-2.5 2 2.5-2 3.5-2-3.5z" fill="#1a3a5a"/>
+
+  <!-- Gem main -->
+  <path d="M10.5 7l1.5-2 1.5 2-1.5 2.8-1.5-2.8z" fill="#2a5a8a"/>
+
+  <!-- Gem bright facet -->
+  <path d="M11 7l1-1.3 1 1.3-1 2-1-2z" fill="#4a8aba"/>
+
+  <!-- Gem highlight -->
+  <path d="M11.3 6.5l0.7-0.8 0.7 0.8-0.7 1.2-0.7-1.2z" fill="#6aacda" opacity="0.7"/>
+
   <!-- Gem sparkle -->
-  <circle cx="11" cy="5" r="0.75" fill="currentColor"/>
+  <circle cx="11" cy="5.8" r="0.4" fill="#aaddff" opacity="0.8"/>
+
+  <!-- Setting prongs -->
+  <path d="M9.5 8L8 11" stroke="#daa520" stroke-width="0.8" stroke-linecap="round"/>
+  <path d="M14.5 8L16 11" stroke="#daa520" stroke-width="0.8" stroke-linecap="round"/>
+
+  <!-- Band engravings -->
+  <path d="M6.5 14c0.5 1.5 1 2.5 2 3.5" stroke="#b8860b" stroke-width="0.5" fill="none"/>
+  <path d="M17.5 14c-0.5 1.5-1 2.5-2 3.5" stroke="#b8860b" stroke-width="0.5" fill="none"/>
 </svg>

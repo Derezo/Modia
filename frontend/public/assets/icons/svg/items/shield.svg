@@ -1,20 +1,43 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Shield - defense item type -->
-  <!-- Main shield body -->
-  <path class="stroke metallic" d="M12 2l8 3v7c0 5-3.5 8-8 10-4.5-2-8-5-8-10V5l8-3z"/>
-  <!-- Cross emblem -->
-  <path class="stroke" d="M12 7v8"/>
-  <path class="stroke" d="M8 11h8"/>
-  <!-- Edge detail lines -->
-  <path class="stroke" d="M12 4l5 2M12 4l-5 2" style="stroke-width: 1;"/>
-  <!-- Border reinforcement -->
-  <path class="stroke" d="M6 7v7c0 3 2.5 5.5 6 7" style="stroke-width: 1;"/>
-  <!-- Corner rivets -->
-  <circle cx="8" cy="7" r="0.75" fill="currentColor"/>
-  <circle cx="16" cy="7" r="0.75" fill="currentColor"/>
-  <circle cx="12" cy="18" r="0.75" fill="currentColor"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="13" cy="22" rx="6" ry="1.5" fill="#2a2a2a" opacity="0.3"/>
+
+  <!-- Shield body base (dark steel) -->
+  <path d="M12 2L3 5v7c0 5.5 4 9 9 11 5-2 9-5.5 9-11V5L12 2z" fill="#5a5a5a"/>
+
+  <!-- Shield body main (mid steel) -->
+  <path d="M12 3L4 5.5v6.5c0 5 3.5 8 8 10 4.5-2 8-5 8-10V5.5L12 3z" fill="#a0a0a0"/>
+
+  <!-- Shield bright area -->
+  <path d="M12 4.5L6 6.5v5c0 4 2.5 6.5 6 8 3.5-1.5 6-4 6-8v-5L12 4.5z" fill="#d0d0d0"/>
+
+  <!-- Top highlight -->
+  <ellipse cx="10" cy="7" rx="3" ry="1.5" fill="#e8e8e8" opacity="0.4"/>
+
+  <!-- Bronze rim outer -->
+  <path d="M12 2L3 5v7c0 5.5 4 9 9 11 5-2 9-5.5 9-11V5L12 2z" fill="none" stroke="#8b5514" stroke-width="1.2"/>
+
+  <!-- Bronze rim highlight -->
+  <path d="M12 3L4.5 5.5v6" fill="none" stroke="#e6a852" stroke-width="0.5" opacity="0.6"/>
+
+  <!-- Cross emblem (embossed) -->
+  <rect x="11" y="7" width="2" height="8" rx="0.3" fill="#5a5a5a"/>
+  <rect x="8" y="10" width="8" height="2" rx="0.3" fill="#5a5a5a"/>
+
+  <!-- Cross highlight -->
+  <rect x="11.3" y="7.3" width="1.4" height="7.4" rx="0.2" fill="#7a7a7a"/>
+  <rect x="8.3" y="10.3" width="7.4" height="1.4" rx="0.2" fill="#7a7a7a"/>
+
+  <!-- Bronze rivets -->
+  <circle cx="6" cy="7" r="0.8" fill="#8b5514"/>
+  <circle cx="6" cy="7" r="0.5" fill="#cd7f32"/>
+  <circle cx="6" cy="6.8" r="0.25" fill="#e6a852"/>
+
+  <circle cx="18" cy="7" r="0.8" fill="#8b5514"/>
+  <circle cx="18" cy="7" r="0.5" fill="#cd7f32"/>
+  <circle cx="18" cy="6.8" r="0.25" fill="#e6a852"/>
+
+  <circle cx="12" cy="18" r="0.8" fill="#8b5514"/>
+  <circle cx="12" cy="18" r="0.5" fill="#cd7f32"/>
+  <circle cx="12" cy="17.8" r="0.25" fill="#e6a852"/>
 </svg>

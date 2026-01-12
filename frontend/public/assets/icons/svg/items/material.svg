@@ -1,22 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Crate/box - material item type -->
-  <!-- Main crate body (3D box) -->
-  <path class="stroke metallic" d="M4 8l8-4 8 4v8l-8 4-8-4V8z"/>
-  <!-- Top surface -->
-  <path class="stroke" d="M4 8l8 4 8-4"/>
-  <!-- Center seam -->
-  <path class="stroke" d="M12 12v8"/>
-  <!-- Wood plank lines -->
-  <path class="stroke" d="M8 6l-2 5M16 6l2 5" style="stroke-width: 1;"/>
-  <path class="stroke" d="M8 14v4M16 14v4" style="stroke-width: 1;"/>
-  <!-- Top cross planks -->
-  <path class="stroke" d="M7 9l5 2.5M17 9l-5 2.5" style="stroke-width: 1;"/>
-  <!-- Corner nails -->
-  <circle cx="6" cy="9" r="0.75" fill="currentColor"/>
-  <circle cx="18" cy="9" r="0.75" fill="currentColor"/>
-  <circle cx="12" cy="20" r="0.75" fill="currentColor"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="13" cy="21" rx="6" ry="1.2" fill="#2a2a2a" opacity="0.3"/>
+
+  <!-- Metal ingot - trapezoidal shape -->
+  <!-- Ingot base (dark copper/bronze) -->
+  <path d="M4 14l3-8h10l3 8-2 4H6l-2-4z" fill="#8b5514"/>
+
+  <!-- Ingot main body (bronze mid) -->
+  <path d="M5 14l2.7-7h8.6l2.7 7-1.5 3.5H6.5L5 14z" fill="#cd7f32"/>
+
+  <!-- Ingot top face (bright bronze) -->
+  <path d="M7 7h10l1.5 4H5.5L7 7z" fill="#e6a852"/>
+
+  <!-- Top face highlight -->
+  <path d="M8 8h8l0.8 2H7.2L8 8z" fill="#f0c070" opacity="0.6"/>
+
+  <!-- Bright edge highlight -->
+  <path d="M7.5 7.5l0.8 2.5" stroke="#ffd080" stroke-width="0.5" stroke-linecap="round"/>
+
+  <!-- Right face (mid tone) -->
+  <path d="M17 7l2 7-1.5 3.5-1-3.5 0.5-7z" fill="#b87030"/>
+
+  <!-- Left face shadow -->
+  <path d="M7 7L5 14l1.5 3.5 1-3.5-0.5-7z" fill="#8b5514"/>
+
+  <!-- Bottom edge detail -->
+  <path d="M6 17.5h12" stroke="#6a4010" stroke-width="0.6"/>
+
+  <!-- Surface texture lines -->
+  <path d="M8.5 9l-1 4" stroke="#8b5514" stroke-width="0.4" opacity="0.5"/>
+  <path d="M12 8v5" stroke="#8b5514" stroke-width="0.4" opacity="0.5"/>
+  <path d="M15.5 9l1 4" stroke="#8b5514" stroke-width="0.4" opacity="0.5"/>
+
+  <!-- Ingot stamp/mark (embossed) -->
+  <rect x="10.5" y="8.5" width="3" height="2" rx="0.2" fill="#cd7f32"/>
+  <rect x="10.7" y="8.7" width="2.6" height="1.6" rx="0.15" fill="#daa050"/>
+
+  <!-- Stamp symbol (simple crown or M) -->
+  <path d="M11.2 9.3l0.4 0.6 0.4-0.4 0.4 0.4 0.4-0.6" stroke="#8b5514" stroke-width="0.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Small ore chunks around base -->
+  <ellipse cx="4" cy="17" rx="1.5" ry="1" fill="#8b5514"/>
+  <ellipse cx="4" cy="16.8" rx="1.2" ry="0.7" fill="#cd7f32"/>
+  <ellipse cx="3.7" cy="16.6" rx="0.5" ry="0.3" fill="#e6a852"/>
+
+  <ellipse cx="20" cy="17" rx="1.2" ry="0.8" fill="#8b5514"/>
+  <ellipse cx="20" cy="16.8" rx="0.9" ry="0.6" fill="#cd7f32"/>
+  <ellipse cx="19.8" cy="16.6" rx="0.4" ry="0.25" fill="#e6a852"/>
 </svg>
