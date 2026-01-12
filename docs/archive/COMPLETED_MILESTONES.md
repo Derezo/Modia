@@ -27,6 +27,77 @@ This document archives all completed features, resolved issues, and historical d
 | 7.5 | Jan 2026 | Map generation validation, AI strategic pathfinding |
 | 7.6 | Jan 2026 | Title screen canvas animation |
 | 7.7 | Jan 2026 | Comprehensive UI/UX styling overhaul |
+| 7.8 | Jan 2026 | PixelLab integration removal, rate limiter refactoring |
+| 7.9 | Jan 2026 | Icon system completion - 54 new SVG icons, emoji replacement |
+| 8.0 | Jan 2026 | Roadmap audit, documentation cleanup, code fixes |
+
+---
+
+## 8.0 - Roadmap Audit & Documentation Cleanup (Jan 2026)
+
+Comprehensive audit of TODO markers, roadmaps, and documentation to ensure alignment between code and docs.
+
+### Roadmap Updates
+- **ROADMAP_GAMEPLAY.md (v2.2):** Added Section 2.4 Battle Balance (defense formula, agility, enemy abilities), Section 3.4 Gold Sinks, Section 5.3 Social Features (FriendsScene, Tavern 2.0)
+- **ROADMAP_TECHNICAL.md (v1.1):** Added completed integration tests to Section 3.2 (battle reconnection, coliseum, item drop, party WebSocket)
+- **DEVELOPMENT_ROADMAP.md (v10.0):** Updated phase percentages, sprint focus
+
+### Documentation Archived
+- `GAME_MECHANICS_IMPROVEMENTS.md` → `docs/archive/` with consolidation notice
+- `TECHNICAL_IMPROVEMENTS.md` → `docs/archive/` with consolidation notice
+- `pending-features-consolidated.md` updated with completion status (v4.0)
+
+### Code Fixes
+- **WorldMapScene.js:** Wired up PartyInviteModal in `party:invite_received` handler
+- **ProfileDropdown.js:** Friends button now navigates to CourtyardScene (until FriendsScene created)
+- **CourtyardScene.js:** Friend request button now calls `/api/friends/request/:username` API
+
+### New Documentation
+- **QUEST_SYSTEM.md (v1.0):** Comprehensive documentation of guild advancement quest system including database schema, API endpoints, progress tracking, boss mechanics
+
+### Technical Updates
+- **TECHNICAL_ARCHITECTURE.md:** Migration index updated with migrations 014-022
+
+### Findings Summary
+| Category | Finding | Resolution |
+|----------|---------|------------|
+| Code TODO | PartyInviteModal exists but not wired | Wired in WorldMapScene |
+| Code TODO | Friends button shows "coming soon" | Navigates to CourtyardScene |
+| Code TODO | CourtyardScene friend button broken | API call implemented |
+| Documentation | Migration index outdated (013) | Updated to 022 |
+| Documentation | No QUEST_SYSTEM.md | Created from code analysis |
+| Status discrepancy | Boss Mechanics marked "Not started" | Corrected to COMPLETE (v7.4) |
+| Status discrepancy | Friend System marked complete | Clarified: backend only, no FriendsScene |
+
+---
+
+## 7.9 - Icon System Completion (Jan 2026)
+
+Comprehensive icon system overhaul replacing emoji icons with consistent SVG-based icons.
+
+### New Icon Categories Created
+- **notifications/** (7 icons) - friend-request, friend-accepted, party-invite, match-found, match-result, lfg-application, system
+- **classes/** (6 icons) - warrior, mage, rogue, cleric, ranger, paladin
+- **items/** (11 icons) - weapon, shield, helmet, armor, boots, accessory, ring, necklace, consumable, material, key
+- **augments/** (16 icons) - fire, ice, lightning, poison, holy, dark, strength, intelligence, agility, vitality, luck, critical, defense, dragon-slayer, undead-slayer, demon-slayer
+
+### Core Icons Added
+- **actions/** - back, harvest, recruit, advance, social (5 new)
+- **menu/** - stats, skills, leaderboard (3 new)
+- **nodes/** - throne, temple, stables, training (4 new)
+
+### Code Fixes
+- Fixed category naming mismatch (`'action'` → `'actions'`) in FormationScene.js, InventoryScene.js, WorldMapScene.js
+- Updated WorldMapScene iconMap to use existing asset names instead of action-verb names
+
+### Component Updates
+- ProfileDropdown.js - Uses Icon component for menu items, notifications, class avatars, gold display
+- InventoryPanel.js - Uses Icon component for item type fallbacks
+- MarketplaceItemPanel.js - Uses Icon component for augment icons
+
+### Total Icons
+- 90 SVG source files across 10 categories
+- 360 PNG files generated (4 sizes: 16, 24, 32, 48px)
 
 ---
 
@@ -135,6 +206,14 @@ All critical blocking issues have been resolved:
 - Progress bar text readability: dark outline + shadow on stamina bar and skill panels
 - Toast consolidation: BattleUI, RecruitmentScene, InventoryPanel migrated to parchmentToast
 - Icon component fix: empty alt attribute when label exists to prevent duplication
+
+### PixelLab Integration Removal & Rate Limiter Refactoring (v7.8)
+- Removed AI sprite generation integration (17 files deleted, 6000+ lines)
+- Archived prompt templates to `docs/archive/IMAGE_GENERATION_PROMPTS.md` for future use
+- Existing generated sprite assets preserved in `frontend/public/assets/sprites/`
+- Rate limiter factory pattern introduced (`rateLimiterFactory.js`)
+- Test reorganization: moved to `integration/`, `unit/`, `ratelimit/` directories
+- New rate limit tests for auth, battle, and marketplace endpoints
 
 ---
 

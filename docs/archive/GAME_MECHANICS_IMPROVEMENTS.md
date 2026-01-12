@@ -1,5 +1,18 @@
 # Modia Game Mechanics Improvements Document
 
+> **ARCHIVED:** January 2026 - Roadmap Audit v8.0
+>
+> This document has been consolidated into `docs/ROADMAP_GAMEPLAY.md`:
+> - Battle balance items → Section 2.4 Battle Balance
+> - Economy balance items → Section 3.4 Gold Sinks
+> - PvP System → Marked as FIXED (v7.0)
+> - Skill cooldowns → Marked as FIXED (implemented in battle.js)
+> - Quest system → COMPLETE (Section 1.1)
+>
+> Retained for historical reference of original improvement suggestions.
+
+---
+
 This document contains suggestions for improving game balance, progression systems, economy, content, and multiplayer features based on a comprehensive analysis of the codebase.
 
 ## Table of Contents

@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.0 |
+| Version | 1.1 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -16,7 +16,7 @@
 |----------|------------|--------|
 | Infrastructure | 0% | Not Started |
 | CI/CD Pipeline | 0% | Not Started |
-| Testing | 60% | In Progress |
+| Testing | 65% | In Progress |
 | Performance | 30% | In Progress |
 | Monitoring | 0% | Not Started |
 
@@ -109,6 +109,10 @@
 
 - [x] API endpoint tests
 - [x] WebSocket integration tests
+- [x] Battle reconnection tests (battleReconnection.integration.test.js)
+- [x] Coliseum service tests (coliseumService.integration.test.js)
+- [x] Item drop service tests (itemDropService.integration.test.js)
+- [x] Party WebSocket tests (partyWebsocket.integration.test.js)
 - [ ] Database transaction tests
 - [ ] Migration rollback tests
 
@@ -142,7 +146,11 @@
 - [ ] SQL injection verification
 - [ ] XSS prevention verification
 - [ ] JWT token security
-- [ ] Rate limiting verification
+- [x] Rate limiting verification (tests added v7.8)
+- [ ] Configure `trust proxy` for production deployment
+- [ ] Add rate limiter to auth/refresh endpoint
+- [ ] Add rate limiter to world/travel endpoint
+- [ ] Review WebSocket rate limit persistence
 
 ---
 
@@ -224,6 +232,13 @@
 
 | Issue | Location | Priority |
 |-------|----------|----------|
+| Missing `trust proxy` config (IP spoofing risk) | index.js, rateLimiterFactory.js | Critical |
+| Token refresh endpoint not rate limited | auth.js:137 | Critical |
+| In-memory rate limit state (no distributed storage) | rateLimiterFactory.js | High |
+| WebSocket rate limits reset on reconnection | websocket/index.js:92-94 | High |
+| Missing rate limiter on /api/world/travel | world.js:316 | High |
+| Production rate limits 2x multiplier too permissive | rateLimiterFactory.js:33-44 | High |
+| WorldMapScene pathPreviewCache unbounded growth | WorldMapScene.js:74 | Medium |
 | Event name mismatch (party:invite) | Game.js / partyWebsocket.js | Medium |
 | SettingsModal.js orphaned | frontend/src/components/ | Low |
 | Inline listeners without cleanup | LoginScene.js, WorldMapScene.js | Medium |
@@ -254,4 +269,5 @@
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | Jan 2026 | Roadmap audit v8.0: Added completed integration tests (battle reconnection, coliseum, item drop, party websocket). Updated testing completion to 65%. |
 | 1.0 | Jan 2026 | Initial split from DEVELOPMENT_ROADMAP.md |

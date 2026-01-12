@@ -1,13 +1,22 @@
 # Modia - Pending Features
 
+> **ARCHIVED:** January 2026 - Roadmap Audit v8.0
+>
+> This document has been superseded by updates to the main roadmaps:
+> - `docs/ROADMAP_GAMEPLAY.md` - Section 5.3 Social Features
+> - `docs/ROADMAP_TECHNICAL.md` - Section 6.1 Technical Debt
+>
+> Many items in this document have been completed or are now tracked in roadmaps.
+> See status updates inline below.
+
 ## Document Information
 
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 3.0 |
+| Version | 4.0 |
 | Last Updated | January 2026 |
-| Purpose | Track unfinished work and planned features |
+| Purpose | Historical record of pending features (see archive note)
 
 ---
 
@@ -50,23 +59,25 @@ Tables created but not fully integrated:
   - Also fixed `/battle/current` endpoint to handle player2 in PvP matches
 
 #### Party Invite Modal
-- **Location**: WorldMapScene.js:398
-- **Status**: Party invites can be sent via API, but no accept/decline UI
+- **Location**: WorldMapScene.js:811
+- **Status**: ~~Party invites can be sent via API, but no accept/decline UI~~ **PARTIAL - Component exists but not wired**
+- **Update (v8.0 audit)**: PartyInviteModal.js component exists but is NOT wired up in WorldMapScene. Tracked in ROADMAP_GAMEPLAY.md Section 5.3.
 - **Dependencies**:
-  - Modal component for party invites
-  - WebSocket handlers for invite notifications
-- **Estimated Scope**: Small (UI-only)
+  - [x] Modal component for party invites (PartyInviteModal.js)
+  - [x] WebSocket handlers for invite notifications
+  - [ ] Wire up modal in WorldMapScene party:invite_received handler
+- **Estimated Scope**: Small (wiring only)
 
 ### 3.2 Medium Priority (Quality of Life)
 
 #### Leaderboard System
-- **Location**: Not implemented
+- **Location**: ~~Not implemented~~ **COMPLETE (v7.0)**
 - **Tables Ready**: leaderboard_cache, pvp_ratings
 - **Required Work**:
-  - [ ] GET /api/leaderboard/:category endpoint
-  - [ ] LeaderboardScene UI
-  - [ ] Rating calculation on PvP match completion
-  - [ ] Periodic cache refresh
+  - [x] GET /api/leaderboard/:category endpoint
+  - [x] LeaderboardScene UI (LeaderboardScene.js)
+  - [x] Rating calculation on PvP match completion (PPR-based)
+  - [ ] Periodic cache refresh (deferred)
 - **Estimated Scope**: Medium
 
 #### Skill-Based Matchmaking
@@ -112,11 +123,11 @@ Tables created but not fully integrated:
 
 #### Boss Mechanics
 - **Location**: ENEMY_SYSTEM.md
-- **Status**: Not started
+- **Status**: ~~Not started~~ **COMPLETE (v7.4)**
 - **Missing Features**:
-  - [ ] Multi-phase boss system
-  - [ ] HP threshold transitions
-  - [ ] Phase-specific abilities
+  - [x] Multi-phase boss system (bossService.js)
+  - [x] HP threshold transitions (phase detection)
+  - [x] Phase-specific abilities (WebSocket events)
 - **Estimated Scope**: Large
 
 ---
@@ -233,6 +244,7 @@ New test files created with 225+ tests:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | Jan 2026 | - | Initial document from codebase audit |
-| 2.0 | Jan 2026 | - | Marked PvP Battle Transition as COMPLETED; updated feature dependencies |
+| 4.0 | Jan 2026 | - | **ARCHIVED:** Roadmap audit v8.0. Added archive notice. Updated status for Boss Mechanics (COMPLETE v7.4), Leaderboard System (COMPLETE v7.0), Party Invite Modal (PARTIAL - component exists). Consolidated into main roadmaps. |
 | 3.0 | Jan 2026 | - | Added code review discoveries: 5 critical issues, 6 high priority issues, 6 documentation discrepancies. Documented 225+ new tests across 6 test files. |
+| 2.0 | Jan 2026 | - | Marked PvP Battle Transition as COMPLETED; updated feature dependencies |
+| 1.0 | Jan 2026 | - | Initial document from codebase audit |

@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.1 |
+| Version | 2.2 |
 | Last Updated | January 2026 |
 | Focus | Features, mechanics, UX, content |
 
@@ -15,10 +15,10 @@
 | Category | Completion | Status |
 |----------|------------|--------|
 | Core Mechanics | 95% | Near Complete |
-| Combat System | 95% | Near Complete |
-| Economy & Items | 85% | Near Complete |
+| Combat System | 85% | In Progress |
+| Economy & Items | 80% | In Progress |
 | User Experience | 75% | In Progress |
-| Social Features | 90% | Near Complete |
+| Social Features | 75% | In Progress |
 | World & Progression | 90% | Near Complete |
 
 ---
@@ -126,6 +126,28 @@
 - [x] Guildmaster scaled to challenger level + 5
 - [x] Disciple units from lower tier classes
 
+### 2.4 Battle Balance (Not Started)
+
+> **Purpose:** Improve combat balance at high levels
+
+#### Defense Formula Rebalance
+- [ ] Percentage-based damage reduction (defense / (defense + K))
+- [ ] 75% maximum reduction cap
+- [ ] Update GAME_DESIGN.md with new formula
+
+#### Agility Balance
+- [ ] Diminishing returns on CT gain above 50 AGI
+- [ ] Prevent extreme turn imbalance at high levels
+
+#### Status Effects
+- [ ] Status effect resistance system (based on stats)
+- [ ] Status duration display in battle UI
+
+#### Enemy Abilities
+- [ ] Enable ability execution (abilities field currently unused)
+- [ ] Ability cooldowns per enemy
+- [ ] Ability trigger conditions (HP thresholds, etc.)
+
 ---
 
 ## 3. Economy & Items
@@ -147,12 +169,30 @@ Per ITEM_SYSTEM.md specifications:
 - [ ] Display item augments in listings
 - [ ] Augment category filter
 - [ ] Price suggestion based on augments
-- [ ] Max 10 open orders enforcement
+- [x] Max 10 open orders enforcement (implemented in marketplace.js)
 
 ### 3.3 Shop System
 
 - [ ] Stock refresh cycles (6-24 hours)
 - [ ] Item decay system (10% daily)
+
+### 3.4 Gold Sinks (Not Started)
+
+> **Purpose:** Prevent late-game gold inflation
+
+**High Priority:**
+- [ ] Marketplace fee (5% seller fee on sales)
+- [ ] Fast travel costs (50-500g by distance)
+- [ ] Stamina restore for gold (100g per point)
+
+**Medium Priority:**
+- [ ] Skill respec fee (1000-5000g scaling)
+- [ ] Formation slot unlock (2000g per slot)
+- [ ] Storage expansion (5000g per 10 slots)
+
+**Low Priority (Complex):**
+- [ ] Equipment repair system (requires durability)
+- [ ] Guild upgrade costs (player guilds feature)
 
 ---
 
@@ -239,6 +279,29 @@ Per ITEM_SYSTEM.md specifications:
 - [x] Quest chain completion required
 - [ ] Title system (deferred to v1.1)
 
+### 5.3 Social Features (In Progress)
+
+> **Purpose:** Complete social system UI integration
+
+#### Friends System UI (Backend Complete - v7.0)
+- [x] Friend API routes (requests, blocking, favorites, search)
+- [ ] FriendsScene.js - Dedicated friends management UI
+- [ ] Wire ProfileDropdown friends button to FriendsScene
+- [ ] Wire CourtyardScene friend request button to API
+
+#### Party System Integration
+- [x] PartyInviteModal.js component exists
+- [ ] Wire up modal in WorldMapScene party:invite_received handler
+- [ ] Accept/decline UI with party details
+
+#### Tavern 2.0 (New Feature - Design Complete)
+- [ ] Real-time movement in tavern space
+- [ ] Position sync via WebSocket
+- [ ] Proximity-based chat bubbles
+- [ ] Interaction zones (bar, tables, fireplace)
+- [ ] Emote system (/wave, /sit, /dance)
+- [ ] Quest board for daily quests
+
 ---
 
 ## 6. Post-MVP Features
@@ -298,6 +361,7 @@ Per ITEM_SYSTEM.md specifications:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.2 | Jan 2026 | Roadmap audit v8.0: Added Section 2.4 Battle Balance (defense formula, agility, enemy abilities). Added Section 3.4 Gold Sinks. Added Section 5.3 Social Features (FriendsScene, PartyInviteModal wiring, Tavern 2.0). Corrected completion percentages. Marked max orders as complete. |
 | 2.1 | Jan 2026 | UI/UX styling overhaul complete (v7.7). Color scheme corrections, toast consolidation, element colors, progress bar readability. |
 | 2.0 | Jan 2026 | Quest system complete (7 API endpoints, GuildAdvancementScene). Node blocking complete (visuals, BFS blocking). Boss integration complete (BossPhaseIndicator, WebSocket events). |
 | 1.0 | Jan 2026 | Initial split from DEVELOPMENT_ROADMAP.md. Added quest system, node blocking, settings expansion. |

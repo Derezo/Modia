@@ -12,6 +12,7 @@ import {
   getParchmentInputCSS,
   getParchmentCardCSS
 } from '../ui/parchment/index.js';
+import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 
 // Alias for convenient access
 const P = PARCHMENT_COLORS;
@@ -293,8 +294,8 @@ export class CourtyardScene extends Scene {
       }
 
       .courtyard-lfg-post.courtyard-my-post {
-        border-color: ${P.accent.gold};
-        box-shadow: ${getParchmentShadow()}, 0 0 0 1px ${P.accent.gold};
+        border-color: ${P.accent.burgundy};
+        box-shadow: ${getParchmentShadow()}, 0 0 0 1px ${P.accent.burgundy};
       }
 
       .courtyard-lfg-post-header {
@@ -1069,27 +1070,46 @@ export class CourtyardScene extends Scene {
     }
   }
 
-  handlePlayerAction(action, userId) {
+  async handlePlayerAction(action, userId) {
     const player = this.playersHere.find(p => p.userId === userId);
     if (!player) return;
 
     switch (action) {
       case 'inspect':
-        this.game.showNotification(`Inspecting ${player.username} - Coming soon!`, 'info');
+        parchmentToast.info('Coming Soon', `Inspecting ${player.username} - Coming soon!`);
         break;
       case 'invite':
         this.game.socket.send('party_invite', { targetUserId: userId });
-        this.game.showNotification(`Party invite sent to ${player.username}`, 'success');
+        parchmentToast.success('Invite Sent', `Party invite sent to ${player.username}`);
         break;
       case 'friend':
-        this.game.showNotification(`Friend request to ${player.username} - Coming soon!`, 'info');
+        // Send friend request via API
+        try {
+          const response = await fetch(`/api/friends/request/${encodeURIComponent(player.username)}`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${this.game.api.token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            parchmentToast.success('Friend Request Sent', `Sent friend request to ${player.username}`);
+          } else {
+            const data = await response.json();
+            parchmentToast.warning('Request Failed', data.error || 'Could not send friend request');
+          }
+        } catch (error) {
+          console.error('Failed to send friend request:', error);
+          parchmentToast.error('Error', 'Failed to send friend request');
+        }
         break;
     }
   }
 
   openCreateModal() {
     if (this.myPost) {
-      this.game.showNotification('You already have an active LFG post. Delete it first.', 'warning');
+      parchmentToast.warning('Active Post', 'You already have an active LFG post. Delete it first.');
       return;
     }
 
@@ -1137,7 +1157,7 @@ export class CourtyardScene extends Scene {
     });
 
     if (!title || title.length < 3) {
-      this.game.showNotification('Title must be at least 3 characters', 'error');
+      parchmentToast.error('Validation Error', 'Title must be at least 3 characters');
       return;
     }
 
@@ -1156,18 +1176,18 @@ export class CourtyardScene extends Scene {
       this.renderLFGList();
       this.updateCreateButton();
       this.closeCreateModal();
-      this.game.showNotification('LFG post created!', 'success');
+      parchmentToast.success('Post Created', 'LFG post created!');
     } catch (err) {
-      this.game.showNotification(err.message || 'Failed to create post', 'error');
+      parchmentToast.error('Error', err.message || 'Failed to create post');
     }
   }
 
   async applyToPost(postId) {
     try {
       const result = await this.game.api.applyToLFGPost(postId);
-      this.game.showNotification(result.message || 'Application sent!', 'success');
+      parchmentToast.success('Applied', result.message || 'Application sent!');
     } catch (err) {
-      this.game.showNotification(err.message || 'Failed to apply', 'error');
+      parchmentToast.error('Error', err.message || 'Failed to apply');
     }
   }
 
@@ -1178,9 +1198,9 @@ export class CourtyardScene extends Scene {
       this.lfgPosts = this.lfgPosts.filter(p => p.id !== postId);
       this.renderLFGList();
       this.updateCreateButton();
-      this.game.showNotification('LFG post deleted', 'success');
+      parchmentToast.success('Deleted', 'LFG post deleted');
     } catch (err) {
-      this.game.showNotification(err.message || 'Failed to delete post', 'error');
+      parchmentToast.error('Error', err.message || 'Failed to delete post');
     }
   }
 

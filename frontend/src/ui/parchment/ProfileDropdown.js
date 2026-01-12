@@ -993,8 +993,9 @@ export class ProfileDropdown {
         }
         break;
       case 'friends':
-        // Navigate to friends/social scene if exists, or show friends panel
-        this.game.toastManager?.info('Friends', 'Friends list coming soon!');
+        // Navigate to courtyard (social hub) until FriendsScene is implemented
+        // TODO: Create dedicated FriendsScene and change to 'friends' when available
+        this.game.scenes.switchTo('courtyard');
         break;
       case 'leaderboard':
         this.game.scenes.switchTo('leaderboard');
