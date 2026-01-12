@@ -1,13 +1,39 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-  </style>
-  <!-- Single person silhouette - medieval style -->
-  <circle class="stroke" cx="12" cy="6" r="3"/>
-  <!-- Shoulders and tunic -->
-  <path class="stroke" d="M7 21v-4c0-2.5 2-4 5-4s5 1.5 5 4v4"/>
-  <!-- Belt detail -->
-  <path class="stroke" d="M9 16h6"/>
-  <!-- Cross-hatch on tunic -->
-  <path class="stroke" d="M10 17l1 3M13 17l1 3" style="stroke-width: 1;"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="12" cy="21" rx="7" ry="1.5" fill="#3d2a1a" opacity="0.2"/>
+
+  <!-- Back figure (left) -->
+  <circle cx="6" cy="7" r="2.5" fill="#5a4030"/>
+  <circle cx="6" cy="7" r="2" fill="#8b7355"/>
+  <ellipse cx="5.5" cy="6.5" rx="1" ry="0.6" fill="#c9b899" opacity="0.5"/>
+  <path d="M2 20v-4c0-2 1.5-3 4-3s4 1 4 3v4H2z" fill="#5a4030"/>
+  <path d="M3 19v-3c0-1.5 1.2-2.5 3-2.5s3 1 3 2.5v3H3z" fill="#8b7355"/>
+
+  <!-- Back figure (right) -->
+  <circle cx="18" cy="7" r="2.5" fill="#5a4030"/>
+  <circle cx="18" cy="7" r="2" fill="#8b7355"/>
+  <ellipse cx="17.5" cy="6.5" rx="1" ry="0.6" fill="#c9b899" opacity="0.5"/>
+  <path d="M14 20v-4c0-2 1.5-3 4-3s4 1 4 3v4h-8z" fill="#5a4030"/>
+  <path d="M15 19v-3c0-1.5 1.2-2.5 3-2.5s3 1 3 2.5v3h-6z" fill="#8b7355"/>
+
+  <!-- Front figure (center, larger) -->
+  <circle cx="12" cy="5" r="3" fill="#5a4030"/>
+  <circle cx="12" cy="5" r="2.5" fill="#8b7355"/>
+  <circle cx="12" cy="5" r="1.8" fill="#a89070"/>
+  <ellipse cx="11" cy="4" rx="1.2" ry="0.7" fill="#c9b899" opacity="0.5"/>
+  <path d="M6 20v-5c0-2.5 2.5-4 6-4s6 1.5 6 4v5H6z" fill="#5a4030"/>
+  <path d="M7 19v-4c0-2 2-3.5 5-3.5s5 1.5 5 3.5v4H7z" fill="#8b7355"/>
+  <path d="M8 18v-3c0-1.5 1.8-3 4-3s4 1.5 4 3v3H8z" fill="#a89070"/>
+
+  <!-- Belt detail (gold accent) -->
+  <rect x="9" y="14" width="6" height="1" rx="0.3" fill="#8b6914"/>
+  <rect x="9.2" y="14.2" width="5.6" height="0.6" rx="0.2" fill="#daa520"/>
+
+  <!-- Buckle -->
+  <rect x="11" y="13.8" width="2" height="1.4" rx="0.2" fill="#8b6914"/>
+  <rect x="11.3" y="14" width="1.4" height="1" rx="0.1" fill="#ffd700"/>
+
+  <!-- Edge strokes -->
+  <circle cx="12" cy="5" r="3" fill="none" stroke="#5a4030" stroke-width="0.3"/>
+  <path d="M6 20v-5c0-2.5 2.5-4 6-4s6 1.5 6 4v5" fill="none" stroke="#5a4030" stroke-width="0.3"/>
 </svg>

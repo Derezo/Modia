@@ -1,16 +1,57 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-  </style>
-  <!-- Three horizontal lines (hamburger) - slightly wavy for woodcut effect -->
-  <path class="stroke" d="M3 6h18"/>
-  <path class="stroke" d="M3 12h18"/>
-  <path class="stroke" d="M3 18h18"/>
-  <!-- Small decorative notches for medieval scroll feel -->
-  <circle cx="2" cy="6" r="0.5" fill="currentColor"/>
-  <circle cx="22" cy="6" r="0.5" fill="currentColor"/>
-  <circle cx="2" cy="12" r="0.5" fill="currentColor"/>
-  <circle cx="22" cy="12" r="0.5" fill="currentColor"/>
-  <circle cx="2" cy="18" r="0.5" fill="currentColor"/>
-  <circle cx="22" cy="18" r="0.5" fill="currentColor"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="12" cy="21" rx="7" ry="1" fill="#3d2a1a" opacity="0.2"/>
+
+  <!-- Top bar (dark layer) -->
+  <rect x="3" y="4" width="18" height="3" rx="1" fill="#5a4030"/>
+  <!-- Top bar (mid layer) -->
+  <rect x="3.5" y="4.5" width="17" height="2" rx="0.5" fill="#8b7355"/>
+  <!-- Top bar (bright layer) -->
+  <rect x="4" y="5" width="16" height="1" rx="0.3" fill="#a89070"/>
+  <!-- Top bar highlight -->
+  <ellipse cx="7" cy="5.3" rx="2" ry="0.4" fill="#c9b899" opacity="0.5"/>
+
+  <!-- Middle bar (dark layer) -->
+  <rect x="3" y="10.5" width="18" height="3" rx="1" fill="#5a4030"/>
+  <!-- Middle bar (mid layer) -->
+  <rect x="3.5" y="11" width="17" height="2" rx="0.5" fill="#8b7355"/>
+  <!-- Middle bar (bright layer) -->
+  <rect x="4" y="11.5" width="16" height="1" rx="0.3" fill="#a89070"/>
+  <!-- Middle bar highlight -->
+  <ellipse cx="7" cy="11.8" rx="2" ry="0.4" fill="#c9b899" opacity="0.5"/>
+
+  <!-- Bottom bar (dark layer) -->
+  <rect x="3" y="17" width="18" height="3" rx="1" fill="#5a4030"/>
+  <!-- Bottom bar (mid layer) -->
+  <rect x="3.5" y="17.5" width="17" height="2" rx="0.5" fill="#8b7355"/>
+  <!-- Bottom bar (bright layer) -->
+  <rect x="4" y="18" width="16" height="1" rx="0.3" fill="#a89070"/>
+  <!-- Bottom bar highlight -->
+  <ellipse cx="7" cy="18.3" rx="2" ry="0.4" fill="#c9b899" opacity="0.5"/>
+
+  <!-- Gold end dots (left side) -->
+  <circle cx="3" cy="5.5" r="1.2" fill="#8b6914"/>
+  <circle cx="3" cy="5.5" r="0.9" fill="#daa520"/>
+  <circle cx="3" cy="5.5" r="0.5" fill="#ffd700"/>
+
+  <circle cx="3" cy="12" r="1.2" fill="#8b6914"/>
+  <circle cx="3" cy="12" r="0.9" fill="#daa520"/>
+  <circle cx="3" cy="12" r="0.5" fill="#ffd700"/>
+
+  <circle cx="3" cy="18.5" r="1.2" fill="#8b6914"/>
+  <circle cx="3" cy="18.5" r="0.9" fill="#daa520"/>
+  <circle cx="3" cy="18.5" r="0.5" fill="#ffd700"/>
+
+  <!-- Gold end dots (right side) -->
+  <circle cx="21" cy="5.5" r="1.2" fill="#8b6914"/>
+  <circle cx="21" cy="5.5" r="0.9" fill="#daa520"/>
+  <circle cx="21" cy="5.5" r="0.5" fill="#ffd700"/>
+
+  <circle cx="21" cy="12" r="1.2" fill="#8b6914"/>
+  <circle cx="21" cy="12" r="0.9" fill="#daa520"/>
+  <circle cx="21" cy="12" r="0.5" fill="#ffd700"/>
+
+  <circle cx="21" cy="18.5" r="1.2" fill="#8b6914"/>
+  <circle cx="21" cy="18.5" r="0.9" fill="#daa520"/>
+  <circle cx="21" cy="18.5" r="0.5" fill="#ffd700"/>
 </svg>

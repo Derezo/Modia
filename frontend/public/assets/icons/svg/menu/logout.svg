@@ -1,14 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-  </style>
-  <!-- Door with arrow pointing out - medieval castle door -->
-  <path class="stroke" d="M9 3H5a2 2 0 00-2 2v14a2 2 0 002 2h4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="12" cy="21" rx="7" ry="1.5" fill="#3d2a1a" opacity="0.2"/>
+
+  <!-- Door frame (dark) -->
+  <path d="M3 3h8v18H3V3z" fill="#5a4030"/>
+
+  <!-- Door frame (mid) -->
+  <path d="M4 4h6v16H4V4z" fill="#8b7355"/>
+
+  <!-- Door panel (bright) -->
+  <path d="M5 5h4v14H5V5z" fill="#a89070"/>
+
   <!-- Door arch detail -->
-  <path class="stroke" d="M5 3a8 8 0 004 0" style="stroke-width: 1;"/>
-  <!-- Arrow pointing out -->
-  <path class="stroke" d="M16 17l5-5-5-5"/>
-  <path class="stroke" d="M21 12H9"/>
-  <!-- Door handle -->
-  <circle class="stroke" cx="7" cy="12" r="1" style="stroke-width: 1.5;"/>
+  <path d="M5 5h4c0 1-1 2-2 2s-2-1-2-2z" fill="#8b7355"/>
+  <path d="M5.5 5.5h3c0 0.7-0.7 1.3-1.5 1.3s-1.5-0.6-1.5-1.3z" fill="#a89070"/>
+
+  <!-- Door panels carved -->
+  <rect x="5.5" y="8" width="3" height="4" rx="0.3" fill="none" stroke="#8b7355" stroke-width="0.5"/>
+  <rect x="5.5" y="13" width="3" height="4" rx="0.3" fill="none" stroke="#8b7355" stroke-width="0.5"/>
+
+  <!-- Door handle (warning red) -->
+  <circle cx="8" cy="12" r="1" fill="#662222"/>
+  <circle cx="8" cy="12" r="0.7" fill="#884444"/>
+  <circle cx="8" cy="12" r="0.4" fill="#aa5555"/>
+
+  <!-- Highlight on door -->
+  <ellipse cx="6" cy="6" rx="1" ry="0.8" fill="#c9b899" opacity="0.5"/>
+
+  <!-- Arrow pointing out (red warning accent) -->
+  <!-- Arrow shaft -->
+  <path d="M12 12h8" fill="none" stroke="#662222" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M12 12h8" fill="none" stroke="#884444" stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- Arrow head -->
+  <path d="M17 8l5 4-5 4" fill="none" stroke="#662222" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M17 8l5 4-5 4" fill="none" stroke="#884444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Arrow highlight -->
+  <path d="M14 11.5h4" fill="none" stroke="#aa5555" stroke-width="0.8" stroke-linecap="round"/>
+
+  <!-- Edge detail -->
+  <path d="M3 3h8v18H3V3z" fill="none" stroke="#5a4030" stroke-width="0.4"/>
 </svg>
