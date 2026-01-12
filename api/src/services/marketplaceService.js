@@ -1772,12 +1772,17 @@ async function getSellableInventory(client, userId) {
   `, [userId]);
 
   // Calculate suggested prices for each item
-  const items = await Promise.all(result.rows.map(async (row) => {
-    const suggestedPrice = await calculateSuggestedPrice(client, row.template_id, row.modifications);
-
+  const items = result.rows.map((row) => {
     // Extract augments from modifications if present
     const modifications = row.modifications || {};
     const augments = modifications.augments || [];
+
+    // Calculate suggested price using the sync function
+    const { suggestedPrice } = calculateSuggestedPrice({
+      basePrice: row.base_price,
+      rarity: modifications.rarity || row.rarity || 'common',
+      augments
+    });
 
     // Calculate stats from modifications
     const baseStats = row.stat_bonuses || {};
@@ -1803,7 +1808,7 @@ async function getSellableInventory(client, userId) {
       modifications,
       estimatedPrice: suggestedPrice
     };
-  }));
+  });
 
   return items;
 }
