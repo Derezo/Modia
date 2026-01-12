@@ -1,22 +1,63 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Banner with crossed swords - party invite -->
-  <!-- Banner -->
-  <path class="stroke metallic" d="M6 2h12v16l-6-3-6 3V2z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="11" cy="21" rx="5" ry="1.5" fill="#0a1a2a" opacity="0.3"/>
+
+  <!-- Pole (dark brown to gold) -->
+  <rect x="4" y="2" width="2" height="18" fill="#5c4020"/>
+  <rect x="4.5" y="2" width="1" height="18" fill="#8b6914"/>
+  <rect x="4.8" y="2" width="0.4" height="18" fill="#daa520" opacity="0.5"/>
+
+  <!-- Pole finial top (gold) -->
+  <circle cx="5" cy="2" r="1.5" fill="#8b6914"/>
+  <circle cx="5" cy="2" r="1" fill="#daa520"/>
+  <circle cx="4.5" cy="1.5" r="0.4" fill="#ffd700"/>
+
+  <!-- Banner base (dark blue) -->
+  <path d="M6 3h12v14l-6-3-6 3V3z" fill="#1a3a5c"/>
+
+  <!-- Banner mid layer (medium blue) -->
+  <path d="M7 4h10v12l-5-2.5-5 2.5V4z" fill="#3366aa"/>
+
+  <!-- Banner bright area (light blue) -->
+  <path d="M8 5h8v10l-4-2-4 2V5z" fill="#5599dd"/>
+
+  <!-- Banner highlight -->
+  <path d="M8 5h3v6l-1-0.5-2 1V5z" fill="#77bbff" opacity="0.4"/>
+
+  <!-- Crossed swords emblem (gold) -->
+  <g fill="none" stroke="#8b6914" stroke-width="1.8" stroke-linecap="round">
+    <path d="M9 7l6 6"/>
+    <path d="M15 7l-6 6"/>
+  </g>
+  <g fill="none" stroke="#daa520" stroke-width="1" stroke-linecap="round">
+    <path d="M9.5 7.5l5 5"/>
+    <path d="M14.5 7.5l-5 5"/>
+  </g>
+
+  <!-- Sword pommels (gold) -->
+  <circle cx="9" cy="7" r="1.2" fill="#8b6914"/>
+  <circle cx="9" cy="7" r="0.7" fill="#ffd700"/>
+  <circle cx="15" cy="7" r="1.2" fill="#8b6914"/>
+  <circle cx="15" cy="7" r="0.7" fill="#ffd700"/>
+  <circle cx="9" cy="13" r="1.2" fill="#8b6914"/>
+  <circle cx="9" cy="13" r="0.7" fill="#ffd700"/>
+  <circle cx="15" cy="13" r="1.2" fill="#8b6914"/>
+  <circle cx="15" cy="13" r="0.7" fill="#ffd700"/>
+
+  <!-- Gold trim on banner -->
+  <path d="M6 3h12" fill="none" stroke="#daa520" stroke-width="1.5"/>
+  <path d="M6 3h12" fill="none" stroke="#ffd700" stroke-width="0.5"/>
+
+  <!-- Plus symbol for invite (gold) -->
+  <g fill="none" stroke="#8b6914" stroke-width="2.5" stroke-linecap="round">
+    <path d="M20 16v5"/>
+    <path d="M17.5 18.5h5"/>
+  </g>
+  <g fill="none" stroke="#ffd700" stroke-width="1.5" stroke-linecap="round">
+    <path d="M20 16.5v4"/>
+    <path d="M18 18.5h4"/>
+  </g>
+
   <!-- Banner edge detail -->
-  <path class="stroke" d="M6 4h12" style="stroke-width: 1;"/>
-  <!-- Crossed swords on banner -->
-  <path class="stroke" d="M9 7l6 6M15 7l-6 6"/>
-  <!-- Sword pommels -->
-  <circle cx="9" cy="7" r="0.75" fill="currentColor"/>
-  <circle cx="15" cy="7" r="0.75" fill="currentColor"/>
-  <circle cx="9" cy="13" r="0.75" fill="currentColor"/>
-  <circle cx="15" cy="13" r="0.75" fill="currentColor"/>
-  <!-- Banner pole caps -->
-  <path class="stroke" d="M5 2h2M17 2h2"/>
-  <!-- Plus symbol for invite -->
-  <path class="stroke" d="M19 17v4M17 19h4" style="stroke-width: 1.5;"/>
+  <path d="M7 4h10v12l-5-2.5-5 2.5V4z" fill="none" stroke="#1a3a5c" stroke-width="0.5"/>
 </svg>

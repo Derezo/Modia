@@ -1,22 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Two interlocked shields - friendship confirmed -->
-  <!-- Left shield -->
-  <path class="stroke metallic" d="M8 3l5 2v4c0 3-2 5-5 7-3-2-5-4-5-7V5l5-2z"/>
-  <!-- Right shield (overlapping) -->
-  <path class="stroke metallic" d="M16 3l5 2v4c0 3-2 5-5 7-3-2-5-4-5-7V5l5-2z"/>
-  <!-- Shield emblems -->
-  <path class="stroke" d="M8 7v4" style="stroke-width: 1;"/>
-  <path class="stroke" d="M6 9h4" style="stroke-width: 1;"/>
-  <path class="stroke" d="M16 7v4" style="stroke-width: 1;"/>
-  <path class="stroke" d="M14 9h4" style="stroke-width: 1;"/>
-  <!-- Handshake bond below -->
-  <path class="stroke" d="M8 16l4 3 4-3"/>
-  <!-- Rivets -->
-  <circle cx="5" cy="6" r="0.75" fill="currentColor"/>
-  <circle cx="11" cy="6" r="0.75" fill="currentColor"/>
-  <circle cx="19" cy="6" r="0.75" fill="currentColor"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="13" cy="21" rx="7" ry="1.5" fill="#1a2f1a" opacity="0.3"/>
+
+  <!-- Left shield base (dark gold) -->
+  <path d="M8 3l5 2v4c0 3.5-2 6-5 8-3-2-5-4.5-5-8V5l5-2z" fill="#8b6914"/>
+
+  <!-- Left shield mid layer (gold) -->
+  <path d="M8 4l4 1.5v3.5c0 3-1.5 5-4 7-2.5-2-4-4-4-7V5.5L8 4z" fill="#daa520"/>
+
+  <!-- Left shield bright (light gold) -->
+  <path d="M8 5l3 1v3c0 2.5-1 4-3 5.5-2-1.5-3-3-3-5.5V6l3-1z" fill="#ffd700"/>
+
+  <!-- Left shield highlight -->
+  <path d="M6 6l2-0.5v2.5c0 1-.5 2-1 2.5" fill="#ffe44d" opacity="0.5"/>
+
+  <!-- Right shield base (dark gold) -->
+  <path d="M16 3l5 2v4c0 3.5-2 6-5 8-3-2-5-4.5-5-8V5l5-2z" fill="#8b6914"/>
+
+  <!-- Right shield mid layer (gold) -->
+  <path d="M16 4l4 1.5v3.5c0 3-1.5 5-4 7-2.5-2-4-4-4-7V5.5L16 4z" fill="#daa520"/>
+
+  <!-- Right shield bright (light gold) -->
+  <path d="M16 5l3 1v3c0 2.5-1 4-3 5.5-2-1.5-3-3-3-5.5V6l3-1z" fill="#ffd700"/>
+
+  <!-- Right shield highlight -->
+  <path d="M14 6l2-0.5v2.5c0 1-.5 2-1 2.5" fill="#ffe44d" opacity="0.5"/>
+
+  <!-- Link chain between shields (green theme) -->
+  <ellipse cx="12" cy="9" rx="2" ry="1.2" fill="#2d5530" stroke="#448844" stroke-width="0.8"/>
+  <ellipse cx="12" cy="9" rx="1.2" ry="0.6" fill="none" stroke="#66aa66" stroke-width="0.5"/>
+
+  <!-- Checkmark below (green) -->
+  <g fill="none" stroke="#2d5530" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 17l3 3 5-6"/>
+  </g>
+  <g fill="none" stroke="#448844" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8.5 17l2.5 2.5 4.5-5.5"/>
+  </g>
+
+  <!-- Shield rivets -->
+  <circle cx="5" cy="6" r="0.8" fill="#8b6914"/>
+  <circle cx="5" cy="6" r="0.5" fill="#ffd700"/>
+  <circle cx="11" cy="6" r="0.8" fill="#8b6914"/>
+  <circle cx="11" cy="6" r="0.5" fill="#ffd700"/>
+  <circle cx="19" cy="6" r="0.8" fill="#8b6914"/>
+  <circle cx="19" cy="6" r="0.5" fill="#ffd700"/>
+
+  <!-- Shield rim details -->
+  <path d="M8 4l4 1.5v3.5c0 3-1.5 5-4 7-2.5-2-4-4-4-7V5.5L8 4z" fill="none" stroke="#b8860b" stroke-width="0.4"/>
+  <path d="M16 4l4 1.5v3.5c0 3-1.5 5-4 7-2.5-2-4-4-4-7V5.5L16 4z" fill="none" stroke="#b8860b" stroke-width="0.4"/>
 </svg>

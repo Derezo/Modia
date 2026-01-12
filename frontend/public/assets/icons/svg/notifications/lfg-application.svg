@@ -1,25 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
-  <style>
-    .stroke { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; fill: none; }
-    .metallic { fill: currentColor; fill-opacity: 0.15; }
-  </style>
-  <!-- Scroll with quill - LFG application -->
-  <!-- Scroll body -->
-  <path class="stroke metallic" d="M6 4c-1 0-2 .5-2 1.5v13c0 1 1 1.5 2 1.5h10c1 0 2-.5 2-1.5V5.5c0-1-1-1.5-2-1.5H6z"/>
-  <!-- Scroll curls -->
-  <path class="stroke" d="M4 5.5c0-1 .75-1.5 1.5-1.5"/>
-  <path class="stroke" d="M4 18.5c0 1 .75 1.5 1.5 1.5"/>
-  <!-- List lines -->
-  <path class="stroke" d="M8 8h6"/>
-  <path class="stroke" d="M8 12h6"/>
-  <!-- List line details -->
-  <path class="stroke" d="M8 10h4M8 14h3" style="stroke-width: 1;"/>
-  <!-- Quill pen -->
-  <path class="stroke metallic" d="M17 3l4-1-1 4-3 3-2-2 2-4z"/>
-  <path class="stroke" d="M15 7l-1 4"/>
-  <!-- Quill feather detail -->
-  <path class="stroke" d="M19 4l1-1" style="stroke-width: 1;"/>
-  <!-- Ink dots -->
-  <circle cx="7" cy="8" r="0.75" fill="currentColor"/>
-  <circle cx="7" cy="12" r="0.75" fill="currentColor"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="11" cy="21" rx="6" ry="1.5" fill="#2a1a0a" opacity="0.3"/>
+
+  <!-- Scroll body (dark parchment) -->
+  <path d="M5 4c-1.5 0-2.5 1-2.5 2v12c0 1 1 2 2.5 2h12c1.5 0 2.5-1 2.5-2V6c0-1-1-2-2.5-2H5z" fill="#8b7355"/>
+
+  <!-- Scroll body mid layer (parchment) -->
+  <path d="M5.5 4.5c-1.2 0-2 0.8-2 1.5v11.5c0 0.7 0.8 1.5 2 1.5h11c1.2 0 2-0.8 2-1.5V6c0-0.7-0.8-1.5-2-1.5H5.5z" fill="#c4a77d"/>
+
+  <!-- Scroll bright area (light parchment) -->
+  <path d="M6 5c-1 0-1.5 0.6-1.5 1.2v10.6c0 0.6 0.5 1.2 1.5 1.2h10c1 0 1.5-0.6 1.5-1.2V6.2c0-0.6-0.5-1.2-1.5-1.2H6z" fill="#e8d4b8"/>
+
+  <!-- Parchment highlight -->
+  <path d="M6.5 5.5c-0.8 0-1.2 0.4-1.2 0.9v5" fill="none" stroke="#f5ead6" stroke-width="1.5" opacity="0.5"/>
+
+  <!-- Scroll curl top (gold ends) -->
+  <ellipse cx="4" cy="5" rx="1.5" ry="1" fill="#8b6914"/>
+  <ellipse cx="4" cy="5" rx="1" ry="0.6" fill="#daa520"/>
+  <ellipse cx="3.7" cy="4.7" rx="0.4" ry="0.3" fill="#ffd700"/>
+
+  <!-- Scroll curl bottom (gold ends) -->
+  <ellipse cx="4" cy="19" rx="1.5" ry="1" fill="#8b6914"/>
+  <ellipse cx="4" cy="19" rx="1" ry="0.6" fill="#daa520"/>
+  <ellipse cx="3.7" cy="18.7" rx="0.4" ry="0.3" fill="#ffd700"/>
+
+  <!-- Text lines (brown ink) -->
+  <g fill="none" stroke="#5c4020" stroke-width="1.2" stroke-linecap="round">
+    <path d="M7 8h8"/>
+    <path d="M7 11h8"/>
+    <path d="M7 14h5"/>
+  </g>
+
+  <!-- Bullet points (dark brown) -->
+  <circle cx="6" cy="8" r="0.8" fill="#5c4020"/>
+  <circle cx="6" cy="11" r="0.8" fill="#5c4020"/>
+  <circle cx="6" cy="14" r="0.8" fill="#5c4020"/>
+
+  <!-- Quill pen (gold nib, brown feather) -->
+  <path d="M16 2l5-1-1.5 5-3 3-2-2 1.5-5z" fill="#8b6914"/>
+  <path d="M16.5 2.5l4-0.8-1.2 4-2.5 2.5-1.5-1.5 1.2-4.2z" fill="#daa520"/>
+  <path d="M17 3l3-0.5-0.8 3" fill="#ffd700" opacity="0.5"/>
+
+  <!-- Quill shaft -->
+  <path d="M14.5 7.5l-1 5" fill="none" stroke="#5c4020" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M14.8 7.8l-0.8 4" fill="none" stroke="#8b7355" stroke-width="0.8" stroke-linecap="round"/>
+
+  <!-- Quill feather details -->
+  <g fill="none" stroke="#5c4020" stroke-width="0.5" stroke-linecap="round">
+    <path d="M18 3.5l1.5-0.5"/>
+    <path d="M17.5 4.5l2-0.3"/>
+    <path d="M17 5.5l1.8-0.2"/>
+  </g>
+
+  <!-- Ink drop -->
+  <circle cx="13.8" cy="12" r="0.6" fill="#3d2a00"/>
+
+  <!-- Scroll edge detail -->
+  <path d="M5.5 4.5c-1.2 0-2 0.8-2 1.5v11.5c0 0.7 0.8 1.5 2 1.5h11c1.2 0 2-0.8 2-1.5V6c0-0.7-0.8-1.5-2-1.5H5.5z" fill="none" stroke="#6b5344" stroke-width="0.4"/>
 </svg>
