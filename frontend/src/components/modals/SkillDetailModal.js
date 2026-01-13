@@ -51,8 +51,8 @@ const DEFAULT_SCALING_CONFIG = {
   chainTargets: 0
 };
 
-// XP cost per skill level (simple linear for now)
-const XP_COST_PER_LEVEL = 100;
+// Default base cost for skills (matches backend default)
+const DEFAULT_BASE_COST = 50;
 
 export class SkillDetailModal {
   /**
@@ -724,16 +724,16 @@ export class SkillDetailModal {
 
   /**
    * Calculate XP cost for leveling up
+   * Uses exponential formula matching backend: baseCost * 1.2^level
    * @param {number} levels - Number of levels to gain
    * @returns {number} Total XP cost
    */
   calculateXpCost(levels) {
-    // Simple linear cost: 100 XP per level
-    // Could be made progressive in the future
+    const baseCost = this.skill.baseCost || DEFAULT_BASE_COST;
     let total = 0;
     for (let i = 0; i < levels; i++) {
-      const targetLevel = this.currentLevel + i + 1;
-      total += XP_COST_PER_LEVEL * targetLevel;
+      const targetLevel = this.currentLevel + i;
+      total += Math.floor(baseCost * Math.pow(1.2, targetLevel));
     }
     return total;
   }
