@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.4 |
+| Version | 2.6 |
 | Last Updated | January 2026 |
 | Focus | Features, mechanics, UX, content |
 
@@ -18,7 +18,7 @@
 | Combat System | 85% | In Progress |
 | Economy & Items | 90% | Near Complete |
 | User Experience | 80% | In Progress |
-| Social Features | 75% | In Progress |
+| Social Features | 95% | Complete |
 | World & Progression | 90% | Near Complete |
 
 ---
@@ -256,7 +256,46 @@ Per ITEM_SYSTEM.md specifications:
 - [ ] Swipe gestures
 - [ ] Double-tap confirmation
 
-### 4.3 UI Polish
+### 4.3 Formation & Inventory Integration (Not Started)
+
+> **Design Document:** [2026-01-12-formation-inventory-integration-design.md](./plans/2026-01-12-formation-inventory-integration-design.md)
+
+**Goal:** Unify party management into FormationScene, eliminate separate InventoryScene.
+
+#### New Components
+- [ ] Accordion.js - Collapsible panel with state persistence
+- [ ] CharacterCard.js - Parchment-styled party member card with badges
+- [ ] PartyStatsSummary.js - Party composition and stats bar
+- [ ] CharacterPicker.js - Character selection for consumables
+- [ ] ItemsModal.js - Full inventory view with DataTable
+- [ ] ItemDetailModal.js - Item details and use consumable action
+- [ ] CharacterModal.js - Character details with Equipment/Skills accordions
+- [ ] EquipmentSlotModal.js - Equipment slot management with stat comparison
+- [ ] SkillDetailModal.js - Revamped skill view with progression table
+
+#### DataTable Enhancements
+- [ ] statComparison column (show +/- vs current equipment)
+- [ ] equipment-slots variant (for CharacterModal equipment list)
+
+#### FormationScene Redesign
+- [ ] Full-screen character card grid (responsive: 4/3/2 columns)
+- [ ] Party stats summary bar (composition, avg level, power, skill points)
+- [ ] Items button in header → ItemsModal
+- [ ] Character card click → CharacterModal
+- [ ] Remove "Slots 1-5" misleading text
+- [ ] Remove right-side detail panel
+
+#### Extra Features
+- [ ] Character card badges (red: equipment upgrade, yellow: skill points)
+- [ ] Quick Equip Best button (auto-equip optimal items)
+- [ ] Context-dependent accordion states (open if action available)
+
+#### Cleanup
+- [ ] Delete InventoryScene.js
+- [ ] Delete InventoryPanel.js
+- [ ] Remove Inventory from all navigation menus
+
+### 4.4 UI Polish
 
 - [ ] Loading indicators
 - [ ] Tooltips and help text
@@ -288,22 +327,69 @@ Per ITEM_SYSTEM.md specifications:
 - [x] Quest chain completion required
 - [ ] Title system (deferred to v1.1)
 
-### 5.3 Social Features (In Progress)
+### 5.2.1 Skill System Overhaul (Complete - v8.1)
+
+> **Purpose:** Comprehensive skill progression with visual feedback
+
+#### Character Leveling from Spent XP
+- [x] spent_xp column tracking (026_skill_system_overhaul.sql)
+- [x] Level threshold formula: level^2.8 * 100
+- [x] characterLevelService.js with level calculations
+- [x] Level-up stat gains based on CLASS_GROWTH
+- [x] Multiple level-up support in single skill learning
+
+#### Skill Scaling System
+- [x] skillScaling.js config module
+- [x] Linear scaling formula: baseValue + (level - 1) * increment
+- [x] Max skill level 100 for all skills
+- [x] Per-skill scaling overrides via scaling property
+- [x] Scaled attributes in battle (power, effectChance, effectDuration)
+
+#### Visual Effect Categories (13 Categories)
+- [x] SkillEffectCategories.js with color palettes
+- [x] Category-based particle effects (burst, fall, rise, orbit, swirl)
+- [x] Automatic category inference from skill properties
+- [x] Self-targeting skill detection and aura effects
+
+#### UI Updates
+- [x] SkillTreePanel.js XP progress bar
+- [x] Skill attribute preview with scaling comparison
+- [x] Level-up toast notifications with stat gains
+
+#### Files Created/Modified
+- `api/src/migrations/026_skill_system_overhaul.sql` (new)
+- `api/src/services/characterLevelService.js` (new)
+- `api/src/config/skillScaling.js` (new)
+- `frontend/src/battle/SkillEffectCategories.js` (new)
+- `api/src/config/skillTrees.js` (modified)
+- `api/src/routes/skills.js` (modified)
+- `api/src/services/battleService.js` (modified)
+- `frontend/src/battle/BattleAnimations.js` (modified)
+- `frontend/src/scenes/BattleScene.js` (modified)
+- `frontend/src/components/SkillTreePanel.js` (modified)
+
+### 5.3 Social Features (Complete)
 
 > **Purpose:** Complete social system UI integration
 
-#### Friends System UI (Backend Complete - v7.0)
+#### Unified Social Hub (v8.0) - COMPLETE
+- [x] SocialHubScene.js with 5-tab navigation (Friends, Party, Requests, LFG, Clan)
+- [x] FriendsTab.js - Friends list with status, favorites, search
+- [x] FriendCard.js - Compact Discord-like friend display
+- [x] RequestsTab.js - Unified inbox for friend/party/clan invites
+- [x] PartyTab.js - Party management with Quick Party Formation
+- [x] LFGTab.js - Migrated from CourtyardScene
+- [x] ClanTab.js - Clan create/join/chat MVP
+- [x] Clan system (025_clans.sql migration, API routes, service)
+- [x] ProfileDropdown friends button wired to Social Hub
+- [x] CourtyardScene deprecated (redirects to Social Hub LFG tab)
+
+#### Backend (Complete - v7.0)
 - [x] Friend API routes (requests, blocking, favorites, search)
-- [ ] FriendsScene.js - Dedicated friends management UI
-- [ ] Wire ProfileDropdown friends button to FriendsScene
-- [ ] Wire CourtyardScene friend request button to API
+- [x] Party system with invites
+- [x] Clan API routes (create, join, leave, disband, invite, chat)
 
-#### Party System Integration
-- [x] PartyInviteModal.js component exists
-- [ ] Wire up modal in WorldMapScene party:invite_received handler
-- [ ] Accept/decline UI with party details
-
-#### Tavern 2.0 (New Feature - Design Complete)
+#### Tavern 2.0 (Future - Post-MVP)
 - [ ] Real-time movement in tavern space
 - [ ] Position sync via WebSocket
 - [ ] Proximity-based chat bubbles
@@ -351,6 +437,7 @@ Per ITEM_SYSTEM.md specifications:
 
 | Document | Purpose | Status |
 |----------|---------|--------|
+| `docs/plans/2026-01-12-formation-inventory-integration-design.md` | Unified party/inventory management | Approved |
 | `docs/plans/2026-01-11-marketplace-item-augments-design.md` | Marketplace augment display | Approved |
 
 ---
@@ -370,6 +457,8 @@ Per ITEM_SYSTEM.md specifications:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.6 | Jan 2026 | Skill System Overhaul complete (v8.1): Character leveling from spent XP (formula: level^2.8 * 100), skill scaling to level 100, 13 visual effect categories, self-targeting skill handling. New files: characterLevelService.js, skillScaling.js, SkillEffectCategories.js, migration 026. UI: XP progress bar, scaling preview, level-up toasts. |
+| 2.5 | Jan 2026 | Unified Social Hub complete: SocialHubScene with 5 tabs (Friends, Party, Requests, LFG, Clan). FriendsTab with search, FriendCard component, RequestsTab unified inbox, PartyTab with Quick Party Formation, LFGTab migrated from CourtyardScene, ClanTab MVP with create/join/chat. Clan system (025_clans.sql, routes, service). Social Features updated to 95%. |
 | 2.4 | Jan 2026 | Turn Order Panel redesign: collapsed/expanded states, parchment styling, tap-to-preview with camera pan. Programmatic SVG icon generation system for 16 enemy icons. Target panel priority system. |
 | 2.3 | Jan 2026 | ItemDataTable & Marketplace Enhancement complete: Shop/Marketplace ItemDataTable integration, MarketDashboard with parchment price chart, order expiration system (7-day), shop stock refresh cycles, sellable inventory API, augment filter, JSDoc documentation. Economy & Items updated to 90%. |
 | 2.2 | Jan 2026 | Roadmap audit v8.0: Added Section 2.4 Battle Balance (defense formula, agility, enemy abilities). Added Section 3.4 Gold Sinks. Added Section 5.3 Social Features (FriendsScene, PartyInviteModal wiring, Tavern 2.0). Corrected completion percentages. Marked max orders as complete. |

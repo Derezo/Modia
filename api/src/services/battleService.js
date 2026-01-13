@@ -4,6 +4,7 @@
 
 import { CLASS_MOVEMENT } from '../config/constants.js';
 import { SKILL_TREES } from '../config/skillTrees.js';
+import { scaleSkillAttributes } from '../config/skillScaling.js';
 import * as traitService from './traitService.js';
 import { getTerrainMovementCost } from '../../../shared/terrain.js';
 import {
@@ -658,18 +659,25 @@ function calculatePathCost(startX, startY, targetX, targetY, state, maxCost) {
 }
 
 /**
- * Get skill definition from SKILL_TREES
+ * Get skill definition from SKILL_TREES with optional scaling
  * @param {string} unitClass - The unit's class (warrior, wizard, etc.)
  * @param {string} skillId - The skill ID to find
- * @returns {Object|null} Skill definition or null if not found
+ * @param {number} skillLevel - Optional skill level for scaling (1-100)
+ * @returns {Object|null} Skill definition (scaled if level provided) or null if not found
  */
-function getSkillDefinition(unitClass, skillId) {
+function getSkillDefinition(unitClass, skillId, skillLevel = null) {
   const classTree = SKILL_TREES[unitClass?.toLowerCase()];
   if (!classTree) return null;
 
   for (const branch of classTree.branches) {
     const skill = branch.skills.find(s => s.id === skillId);
-    if (skill) return skill;
+    if (skill) {
+      // Apply scaling if skill level is provided
+      if (skillLevel && skillLevel > 1) {
+        return scaleSkillAttributes(skill, skillLevel);
+      }
+      return skill;
+    }
   }
   return null;
 }
@@ -1168,7 +1176,9 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
         return result;
       }
       if (targetTile && skillId) {
-        const skill = getSkillDefinition(unit.class, skillId);
+        // Get the unit's skill level for scaling (from their learned skills)
+        const unitSkillLevel = unit.skills?.[skillId] || 1;
+        const skill = getSkillDefinition(unit.class, skillId, unitSkillLevel);
         if (!skill) {
           result.error = 'Invalid skill';
           break;

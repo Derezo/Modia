@@ -1,9 +1,217 @@
 /**
  * BattleAnimations - Visual effects for tactical combat
  */
+import { SKILL_EFFECT_CATEGORIES, getSkillEffectConfig, getRandomCategoryColor } from './SkillEffectCategories.js';
+
 export class BattleAnimations {
   constructor() {
     this.animations = [];
+  }
+
+  /**
+   * Add skill effect animation based on visual category
+   * @param {number} x - Center X position
+   * @param {number} y - Center Y position
+   * @param {string} categoryName - Visual category (fire, ice, etc.)
+   * @param {Object} skill - Optional skill object for more context
+   */
+  addSkillEffect(x, y, categoryName, skill = null) {
+    const config = SKILL_EFFECT_CATEGORIES[categoryName] || SKILL_EFFECT_CATEGORIES.physical;
+
+    // Flash effect with category color
+    this.addFlash(x, y, config.flashColor);
+
+    // Primary particle burst
+    this.addCategoryParticleBurst(x, y, categoryName, config.particleCount);
+
+    // Secondary particles after delay (handled via animation queue)
+    setTimeout(() => {
+      this.addCategoryParticleBurst(x, y, categoryName, Math.floor(config.particleCount / 2), config.colors.secondary);
+    }, 100);
+
+    // Add glow effect
+    this.addGlow(x, y, config.glowColor, 40);
+  }
+
+  /**
+   * Add category-aware particle burst
+   * @param {number} x - Center X position
+   * @param {number} y - Center Y position
+   * @param {string} categoryName - Visual category
+   * @param {number} count - Number of particles
+   * @param {string} overrideColor - Optional color override
+   */
+  addCategoryParticleBurst(x, y, categoryName, count = 8, overrideColor = null) {
+    const config = SKILL_EFFECT_CATEGORIES[categoryName] || SKILL_EFFECT_CATEGORIES.physical;
+    const style = config.particleStyle || 'burst';
+
+    for (let i = 0; i < count; i++) {
+      const color = overrideColor || getRandomCategoryColor(categoryName);
+      const angle = (Math.PI * 2 / count) * i + Math.random() * 0.3;
+
+      switch (style) {
+        case 'burst':
+          this.addBurstParticle(x, y, angle, color);
+          break;
+        case 'rise':
+          this.addRisingParticle(x, y, color);
+          break;
+        case 'fall':
+          this.addFallingParticle(x, y, color);
+          break;
+        case 'orbit':
+          this.addOrbitParticle(x, y, angle, color);
+          break;
+        case 'swirl':
+          this.addSwirlParticle(x, y, angle, color);
+          break;
+        default:
+          this.addBurstParticle(x, y, angle, color);
+      }
+    }
+  }
+
+  /**
+   * Add a burst particle (outward explosion)
+   */
+  addBurstParticle(x, y, angle, color) {
+    const speed = 60 + Math.random() * 40;
+    this.animations.push({
+      type: 'particle',
+      x,
+      y,
+      velocityX: Math.cos(angle) * speed,
+      velocityY: Math.sin(angle) * speed,
+      color,
+      timer: 0,
+      duration: 0.6,
+      size: 3 + Math.random() * 2
+    });
+  }
+
+  /**
+   * Add a rising particle (floats upward - for healing/buff)
+   */
+  addRisingParticle(x, y, color) {
+    const offsetX = (Math.random() - 0.5) * 30;
+    this.animations.push({
+      type: 'rising',
+      x: x + offsetX,
+      y,
+      velocityY: -40 - Math.random() * 20,
+      color,
+      timer: 0,
+      duration: 1.0,
+      size: 3 + Math.random() * 3,
+      sway: Math.random() * Math.PI * 2
+    });
+  }
+
+  /**
+   * Add a falling particle (falls down - for ice/debuff)
+   */
+  addFallingParticle(x, y, color) {
+    const offsetX = (Math.random() - 0.5) * 40;
+    this.animations.push({
+      type: 'falling',
+      x: x + offsetX,
+      y: y - 40 - Math.random() * 20,
+      velocityY: 30 + Math.random() * 20,
+      color,
+      timer: 0,
+      duration: 0.8,
+      size: 2 + Math.random() * 3
+    });
+  }
+
+  /**
+   * Add an orbiting particle (circles around center - for aura)
+   */
+  addOrbitParticle(centerX, centerY, startAngle, color) {
+    this.animations.push({
+      type: 'orbit',
+      centerX,
+      centerY,
+      angle: startAngle,
+      radius: 25 + Math.random() * 10,
+      color,
+      timer: 0,
+      duration: 1.5,
+      size: 3 + Math.random() * 2,
+      speed: 3 + Math.random() * 2
+    });
+  }
+
+  /**
+   * Add a swirling particle (spirals inward/outward - for shadow/wind)
+   */
+  addSwirlParticle(x, y, startAngle, color) {
+    this.animations.push({
+      type: 'swirl',
+      centerX: x,
+      centerY: y,
+      angle: startAngle,
+      radius: 5,
+      color,
+      timer: 0,
+      duration: 0.8,
+      size: 3 + Math.random() * 2,
+      speed: 4 + Math.random() * 2
+    });
+  }
+
+  /**
+   * Add self-targeting aura effect (orbiting particles)
+   * @param {number} x - Center X position
+   * @param {number} y - Center Y position
+   * @param {string} categoryName - Visual category (default: selfAura)
+   */
+  addSelfAuraEffect(x, y, categoryName = 'selfAura') {
+    const config = SKILL_EFFECT_CATEGORIES[categoryName] || SKILL_EFFECT_CATEGORIES.selfAura;
+    const particleCount = 8;
+
+    // Add glow
+    this.addGlow(x, y, config.glowColor, 50);
+
+    // Add orbiting particles
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 / particleCount) * i;
+      const color = i % 2 === 0 ? config.colors.primary : config.colors.secondary;
+      this.animations.push({
+        type: 'orbit',
+        centerX: x,
+        centerY: y,
+        angle,
+        radius: 30,
+        color,
+        timer: 0,
+        duration: 1.5,
+        size: 4,
+        speed: 3
+      });
+    }
+
+    // Add rising sparkles
+    for (let i = 0; i < 6; i++) {
+      setTimeout(() => {
+        this.addRisingParticle(x, y, config.colors.tertiary);
+      }, i * 100);
+    }
+  }
+
+  /**
+   * Add glow effect
+   */
+  addGlow(x, y, color, radius = 40) {
+    this.animations.push({
+      type: 'glow',
+      x,
+      y,
+      color,
+      timer: 0,
+      duration: 0.5,
+      radius
+    });
   }
 
   /**
@@ -145,6 +353,21 @@ export class BattleAnimations {
           anim.y += anim.velocityY * dt;
           anim.velocityY += 100 * dt; // Gravity
           break;
+        case 'rising':
+          anim.y += anim.velocityY * dt;
+          anim.x += Math.sin(anim.sway + anim.timer * 3) * 0.5; // Gentle sway
+          break;
+        case 'falling':
+          anim.y += anim.velocityY * dt;
+          anim.velocityY += 60 * dt; // Gravity acceleration
+          break;
+        case 'orbit':
+          anim.angle += anim.speed * dt;
+          break;
+        case 'swirl':
+          anim.angle += anim.speed * dt;
+          anim.radius += 40 * dt; // Spiral outward
+          break;
       }
 
       // Remove finished animations
@@ -182,7 +405,18 @@ export class BattleAnimations {
           this.renderFlash(ctx, anim, progress);
           break;
         case 'particle':
+        case 'rising':
+        case 'falling':
           this.renderParticle(ctx, anim);
+          break;
+        case 'orbit':
+          this.renderOrbitParticle(ctx, anim, progress);
+          break;
+        case 'swirl':
+          this.renderSwirlParticle(ctx, anim, progress);
+          break;
+        case 'glow':
+          this.renderGlow(ctx, anim, progress);
           break;
         case 'slash':
           this.renderSlash(ctx, anim, progress);
@@ -309,6 +543,50 @@ export class BattleAnimations {
     ctx.moveTo(anim.startX, anim.startY);
     ctx.lineTo(anim.endX, anim.endY);
     ctx.stroke();
+  }
+
+  /**
+   * Render orbiting particle
+   */
+  renderOrbitParticle(ctx, anim, progress) {
+    const x = anim.centerX + Math.cos(anim.angle) * anim.radius;
+    const y = anim.centerY + Math.sin(anim.angle) * anim.radius;
+    const size = anim.size * (1 - progress * 0.5);
+
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = anim.color;
+    ctx.fill();
+  }
+
+  /**
+   * Render swirling particle
+   */
+  renderSwirlParticle(ctx, anim, progress) {
+    const x = anim.centerX + Math.cos(anim.angle) * anim.radius;
+    const y = anim.centerY + Math.sin(anim.angle) * anim.radius;
+    const size = anim.size * (1 - progress);
+
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fillStyle = anim.color;
+    ctx.fill();
+  }
+
+  /**
+   * Render glow effect
+   */
+  renderGlow(ctx, anim, progress) {
+    const radius = anim.radius * (1 + progress * 0.5);
+    const gradient = ctx.createRadialGradient(anim.x, anim.y, 0, anim.x, anim.y, radius);
+    gradient.addColorStop(0, anim.color);
+    gradient.addColorStop(0.5, anim.color.replace(')', ', 0.3)').replace('rgba', 'rgba').replace('rgb', 'rgba'));
+    gradient.addColorStop(1, 'transparent');
+
+    ctx.beginPath();
+    ctx.arc(anim.x, anim.y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
   }
 
   /**

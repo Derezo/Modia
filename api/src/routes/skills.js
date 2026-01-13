@@ -4,6 +4,12 @@ import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { GUILD_ADVANCEMENT_TIERS, ADVANCEMENT_QUEST_MIN_LEVEL } from '../config/constants.js';
 import { SKILL_TREES } from '../config/skillTrees.js';
+import {
+  calculateLevelFromSpentXP,
+  getLevelProgress,
+  calculateLevelUpStatGains
+} from '../services/characterLevelService.js';
+import { scaleSkillAttributes, getSkillScalingPreview } from '../config/skillScaling.js';
 
 const router = express.Router();
 
@@ -25,7 +31,7 @@ router.get('/characters/:characterId/skills', authenticate, asyncHandler(async (
 
   // Verify character ownership
   const charResult = await query(
-    'SELECT id, class, experience FROM characters WHERE id = $1 AND user_id = $2',
+    'SELECT id, class, level, experience, spent_xp FROM characters WHERE id = $1 AND user_id = $2',
     [characterId, req.user.userId]
   );
 
@@ -34,6 +40,9 @@ router.get('/characters/:characterId/skills', authenticate, asyncHandler(async (
   }
 
   const character = charResult.rows[0];
+  const spentXP = character.spent_xp || 0;
+  const calculatedLevel = calculateLevelFromSpentXP(spentXP);
+  const levelProgress = getLevelProgress(spentXP, calculatedLevel);
 
   // Get learned skills (from character_skills table if it exists, otherwise empty)
   let skills = {};
@@ -54,7 +63,16 @@ router.get('/characters/:characterId/skills', authenticate, asyncHandler(async (
   res.json({
     characterId: parseInt(characterId, 10),
     class: character.class,
+    level: character.level,
     xpPool: character.experience || 0,
+    spentXP,
+    levelProgress: {
+      currentLevel: calculatedLevel,
+      xpIntoLevel: levelProgress.current,
+      xpNeededForNext: levelProgress.needed,
+      percentToNext: Math.round(levelProgress.percent * 100),
+      isMaxLevel: levelProgress.isMaxLevel
+    },
     skills
   });
 }));
@@ -63,9 +81,9 @@ router.get('/characters/:characterId/skills', authenticate, asyncHandler(async (
 router.post('/learn', authenticate, asyncHandler(async (req, res) => {
   const { characterId, skillId, levels = 1 } = req.body;
 
-  // Verify character ownership
+  // Verify character ownership and get full character data
   const charResult = await query(
-    'SELECT id, class, experience, level FROM characters WHERE id = $1 AND user_id = $2',
+    'SELECT id, class, experience, level, spent_xp, strength, intelligence, agility, vitality, luck FROM characters WHERE id = $1 AND user_id = $2',
     [characterId, req.user.userId]
   );
 
@@ -74,6 +92,7 @@ router.post('/learn', authenticate, asyncHandler(async (req, res) => {
   }
 
   const character = charResult.rows[0];
+  const currentSpentXP = character.spent_xp || 0;
   const guildTree = SKILL_TREES[character.class];
 
   if (!guildTree) {
@@ -110,7 +129,7 @@ router.post('/learn', authenticate, asyncHandler(async (req, res) => {
 
   const newLevel = currentLevel + levels;
 
-  // Check max level
+  // Check max level (now 100 for all skills)
   if (newLevel > skillDef.maxLevel) {
     throw new AppError(`Skill is already at max level (${skillDef.maxLevel})`, 400);
   }
@@ -137,11 +156,16 @@ router.post('/learn', authenticate, asyncHandler(async (req, res) => {
     }
   }
 
-  // Calculate XP cost
+  // Calculate XP cost with overflow protection
+  // Cost formula: baseCost * 1.2^level (exponential growth)
+  const MAX_SAFE_COST = Number.MAX_SAFE_INTEGER;
   let totalCost = 0;
   for (let i = currentLevel; i < newLevel; i++) {
-    // Cost increases with each level
-    totalCost += Math.floor(skillDef.baseCost * Math.pow(1.2, i));
+    const levelCost = Math.floor(skillDef.baseCost * Math.pow(1.2, i));
+    if (totalCost + levelCost > MAX_SAFE_COST) {
+      throw new AppError('Cost calculation overflow - please level up in smaller increments', 400);
+    }
+    totalCost += levelCost;
   }
 
   // Check if character has enough XP
@@ -149,12 +173,53 @@ router.post('/learn', authenticate, asyncHandler(async (req, res) => {
     throw new AppError(`Not enough XP. Need ${totalCost}, have ${character.experience}`, 400);
   }
 
+  // Calculate level before and after spending XP
+  const levelBeforeSpending = calculateLevelFromSpentXP(currentSpentXP);
+  const newSpentXP = currentSpentXP + totalCost;
+  const levelAfterSpending = calculateLevelFromSpentXP(newSpentXP);
+
+  // Prepare level-up data if character will level up
+  let levelUpData = null;
+  let statGains = null;
+
+  if (levelAfterSpending > levelBeforeSpending) {
+    statGains = calculateLevelUpStatGains(levelBeforeSpending, levelAfterSpending, character.class);
+    levelUpData = {
+      oldLevel: levelBeforeSpending,
+      newLevel: levelAfterSpending,
+      levelsGained: levelAfterSpending - levelBeforeSpending,
+      statGains
+    };
+  }
+
   await withTransaction(async (client) => {
-    // Deduct XP
+    // Deduct XP from pool and add to spent_xp
     await client.query(
-      'UPDATE characters SET experience = experience - $1 WHERE id = $2',
+      'UPDATE characters SET experience = experience - $1, spent_xp = spent_xp + $1 WHERE id = $2',
       [totalCost, characterId]
     );
+
+    // Apply stat gains if character leveled up
+    if (statGains) {
+      await client.query(`
+        UPDATE characters
+        SET level = $1,
+            strength = strength + $2,
+            intelligence = intelligence + $3,
+            agility = agility + $4,
+            vitality = vitality + $5,
+            luck = luck + $6
+        WHERE id = $7
+      `, [
+        levelAfterSpending,
+        statGains.str,
+        statGains.int,
+        statGains.agi,
+        statGains.vit,
+        statGains.luck,
+        characterId
+      ]);
+    }
 
     // Update or insert skill
     await client.query(`
@@ -167,19 +232,43 @@ router.post('/learn', authenticate, asyncHandler(async (req, res) => {
 
   // Get updated character info
   const updatedChar = await query(
-    'SELECT experience FROM characters WHERE id = $1',
+    'SELECT experience, spent_xp, level, strength, intelligence, agility, vitality, luck FROM characters WHERE id = $1',
     [characterId]
   );
+
+  const updated = updatedChar.rows[0];
+  const newLevelProgress = getLevelProgress(updated.spent_xp, updated.level);
+
+  // Get scaled skill attributes for the new level
+  const scaledSkill = scaleSkillAttributes(skillDef, newLevel);
 
   res.json({
     success: true,
     skill: {
       id: skillId,
       name: skillDef.name,
-      level: newLevel
+      level: newLevel,
+      maxLevel: skillDef.maxLevel,
+      scaledAttributes: {
+        power: scaledSkill.power,
+        effectChance: scaledSkill.effectChance,
+        effectDuration: scaledSkill.effectDuration,
+        healPercent: scaledSkill.healPercent,
+        range: scaledSkill.range,
+        aoeRadius: scaledSkill.aoeRadius
+      }
     },
     xpSpent: totalCost,
-    xpRemaining: updatedChar.rows[0].experience
+    xpRemaining: updated.experience,
+    spentXP: updated.spent_xp,
+    levelProgress: {
+      currentLevel: updated.level,
+      xpIntoLevel: newLevelProgress.current,
+      xpNeededForNext: newLevelProgress.needed,
+      percentToNext: Math.round(newLevelProgress.percent * 100),
+      isMaxLevel: newLevelProgress.isMaxLevel
+    },
+    levelUp: levelUpData
   });
 }));
 
