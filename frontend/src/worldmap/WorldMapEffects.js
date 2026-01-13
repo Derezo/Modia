@@ -146,25 +146,28 @@ export class WorldMapEffects {
   }
 
   /**
-   * Main render function - 6 layer system
+   * Main render function - 7 layer system
    */
-  render(ctx, cameraX, cameraY, canvasWidth, canvasHeight, nodes, connections) {
+  render(ctx, cameraX, cameraY, canvasWidth, canvasHeight, nodes, connections, obstacles = []) {
     // Layer 1: Parchment background
     this.renderParchmentBackground(ctx, canvasWidth, canvasHeight);
 
-    // Layer 2: Region illustrations (hatching patterns)
+    // Layer 2: Terrain obstacles (lakes, mountains, forests)
+    this.renderObstacles(ctx, cameraX, cameraY, obstacles);
+
+    // Layer 3: Region illustrations (hatching patterns)
     this.renderRegionIllustrations(ctx, cameraX, cameraY, nodes);
 
-    // Layer 3: Paths as hand-drawn lines
+    // Layer 4: Paths as hand-drawn lines
     this.renderHandDrawnPaths(ctx, cameraX, cameraY, connections, nodes);
 
-    // Layer 4: Node markers
+    // Layer 5: Node markers
     this.renderNodeMarkers(ctx, cameraX, cameraY, nodes);
 
-    // Layer 5: Fog of war overlay
+    // Layer 6: Fog of war overlay
     this.renderFogOfWar(ctx, cameraX, cameraY, canvasWidth, canvasHeight, nodes);
 
-    // Layer 6: Labels for visited nodes
+    // Layer 7: Labels for visited nodes
     this.renderNodeLabels(ctx, cameraX, cameraY, nodes);
   }
 
@@ -201,7 +204,202 @@ export class WorldMapEffects {
   }
 
   /**
-   * Layer 2: Region illustrations using hatching patterns
+   * Layer 2: Render terrain obstacles (lakes, mountains, dense forests)
+   * Hand-drawn parchment aesthetic
+   */
+  renderObstacles(ctx, cameraX, cameraY, obstacles) {
+    if (!obstacles || obstacles.length === 0) return;
+
+    for (const obs of obstacles) {
+      const screenX = obs.x * this.nodeSpacing + cameraX;
+      const screenY = obs.y * this.nodeSpacing + cameraY;
+
+      // Use obstacle ID or world coordinates for consistent random seed (prevents jitter)
+      const obstacleSeed = obs.id || Math.floor(obs.x * 1000 + obs.y);
+
+      ctx.save();
+
+      switch (obs.obstacle_type) {
+        case 'lake':
+          this.renderLake(ctx, screenX, screenY, obs.radius * this.nodeSpacing, obstacleSeed);
+          break;
+        case 'mountain_range':
+          this.renderMountainRange(ctx, screenX, screenY, obs.length * this.nodeSpacing, obs.angle, obstacleSeed);
+          break;
+        case 'dense_forest':
+          this.renderDenseForest(ctx, screenX, screenY, obs.radius * this.nodeSpacing, obstacleSeed);
+          break;
+      }
+
+      ctx.restore();
+    }
+  }
+
+  /**
+   * Render a lake obstacle with hand-drawn style
+   * @param {number} seed - Consistent seed for random generation (prevents jitter)
+   */
+  renderLake(ctx, x, y, radius, seed) {
+    // Water fill with gradient
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    gradient.addColorStop(0, 'rgba(100, 149, 237, 0.4)');  // Cornflower blue center
+    gradient.addColorStop(0.7, 'rgba(70, 130, 180, 0.35)');  // Steel blue
+    gradient.addColorStop(1, 'rgba(70, 130, 180, 0.1)');  // Fade at edges
+
+    ctx.beginPath();
+    // Draw slightly irregular circle for organic feel
+    const rng = this.seededRandom(seed);
+    const points = 20;
+    for (let i = 0; i <= points; i++) {
+      const angle = (i / points) * Math.PI * 2;
+      const wobble = 1 + (rng() - 0.5) * 0.15;
+      const px = x + Math.cos(angle) * radius * wobble;
+      const py = y + Math.sin(angle) * radius * wobble;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Hand-drawn edge
+    ctx.strokeStyle = 'rgba(70, 100, 140, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Wave lines for water effect
+    ctx.strokeStyle = 'rgba(70, 130, 180, 0.3)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      const waveY = y - radius * 0.3 + i * radius * 0.3;
+      const waveWidth = radius * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(x - waveWidth, waveY);
+      ctx.bezierCurveTo(
+        x - waveWidth * 0.3, waveY - 5,
+        x + waveWidth * 0.3, waveY + 5,
+        x + waveWidth, waveY
+      );
+      ctx.stroke();
+    }
+  }
+
+  /**
+   * Render a mountain range obstacle with hand-drawn style
+   * @param {number} seed - Consistent seed for random generation (prevents jitter)
+   */
+  renderMountainRange(ctx, x, y, length, angle, seed) {
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+
+    const halfLength = length / 2;
+    const peakHeight = length * 0.2;
+    const numPeaks = Math.floor(length / 30) + 2;
+
+    // Draw mountain silhouette
+    ctx.beginPath();
+    ctx.moveTo(-halfLength, 0);
+
+    const rng = this.seededRandom(seed);
+    for (let i = 0; i <= numPeaks; i++) {
+      const peakX = -halfLength + (i / numPeaks) * length;
+      const peakY = -peakHeight * (0.6 + rng() * 0.4);
+
+      if (i < numPeaks) {
+        // Peak
+        ctx.lineTo(peakX, peakY);
+        // Valley
+        const valleyX = peakX + length / numPeaks * 0.5;
+        ctx.lineTo(valleyX, -peakHeight * 0.2 * rng());
+      }
+    }
+    ctx.lineTo(halfLength, 0);
+    ctx.closePath();
+
+    // Mountain fill
+    const gradient = ctx.createLinearGradient(0, -peakHeight, 0, 0);
+    gradient.addColorStop(0, 'rgba(128, 128, 128, 0.4)');  // Gray at peaks
+    gradient.addColorStop(0.3, 'rgba(139, 119, 101, 0.35)');  // Brown-gray
+    gradient.addColorStop(1, 'rgba(139, 119, 101, 0.1)');  // Fade at base
+
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Hand-drawn outline
+    ctx.strokeStyle = 'rgba(100, 80, 60, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Snow caps on peaks
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    for (let i = 0; i < numPeaks; i++) {
+      const peakX = -halfLength + ((i + 0.5) / numPeaks) * length;
+      ctx.beginPath();
+      ctx.arc(peakX, -peakHeight * 0.7, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  /**
+   * Render a dense forest obstacle with hand-drawn style
+   * @param {number} seed - Consistent seed for random generation (prevents jitter)
+   */
+  renderDenseForest(ctx, x, y, radius, seed) {
+    const rng = this.seededRandom(seed);
+
+    // Dark forest fill
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    gradient.addColorStop(0, 'rgba(34, 85, 34, 0.45)');  // Dark green center
+    gradient.addColorStop(0.6, 'rgba(46, 100, 46, 0.35)');
+    gradient.addColorStop(1, 'rgba(46, 100, 46, 0.1)');  // Fade at edges
+
+    ctx.beginPath();
+    // Irregular shape
+    const points = 16;
+    for (let i = 0; i <= points; i++) {
+      const angle = (i / points) * Math.PI * 2;
+      const wobble = 1 + (rng() - 0.5) * 0.2;
+      const px = x + Math.cos(angle) * radius * wobble;
+      const py = y + Math.sin(angle) * radius * wobble;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Tree symbols (simplified triangles)
+    ctx.fillStyle = 'rgba(34, 70, 34, 0.4)';
+    const numTrees = Math.floor(radius / 15) + 3;
+    for (let i = 0; i < numTrees; i++) {
+      const treeAngle = rng() * Math.PI * 2;
+      const treeDist = rng() * radius * 0.7;
+      const treeX = x + Math.cos(treeAngle) * treeDist;
+      const treeY = y + Math.sin(treeAngle) * treeDist;
+      const treeSize = 8 + rng() * 6;
+
+      ctx.beginPath();
+      ctx.moveTo(treeX, treeY - treeSize);
+      ctx.lineTo(treeX - treeSize * 0.5, treeY + treeSize * 0.3);
+      ctx.lineTo(treeX + treeSize * 0.5, treeY + treeSize * 0.3);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Dashed border
+    ctx.strokeStyle = 'rgba(34, 70, 34, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  /**
+   * Layer 3: Region illustrations using hatching patterns
    */
   renderRegionIllustrations(ctx, cameraX, cameraY, nodes) {
     for (const node of nodes) {

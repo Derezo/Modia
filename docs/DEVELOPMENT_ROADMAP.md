@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 14.0 |
+| Version | 16.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -28,8 +28,8 @@ The roadmap is split into two focused documents:
 | Track | Completion | Status |
 |-------|------------|--------|
 | Technical | 30% | In Progress |
-| Gameplay | 85% | Near Complete |
-| **Combined** | **~65%** | In Progress |
+| Gameplay | 90% | Near Complete |
+| **Combined** | **~70%** | In Progress |
 
 ---
 
@@ -109,6 +109,7 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 16.0 | Jan 2026 | World Map Enhancement: Terminator treasure nodes (chest/shrine/discovery), terrain obstacles (lakes, mountains, forests), compact node options panel with type badge, settlement adjacency rules preventing same-type connections, connection count constraints. 6 new API endpoints, 2 new migrations, security hardening (location validation, race condition prevention). |
 | 15.0 | Jan 2026 | Character Portrait Enhancement v2: Comprehensive overhaul of 120 character portraits (5 races × 3 genders × 8 classes). Added gender-specific face rendering (face shapes, eyes, cheekbones). Enhanced race distinctiveness (vampire fangs 4px, elf circlet with gem, orc hair contrast, dwarf female sideburns). Improved class identity (warrior insignia, monk chi glow, sorcerer dark aura, ninja clan symbol/weapons, berserker rage glow). New utils: drawGenderedEyes(), drawCheekbones(), drawEyeGlow(), drawSymbol(), orcHair/darkMagic palettes. |
 | 14.0 | Jan 2026 | Item Detail & Equip Modal Improvements: New statDisplay.js utility for consistent stat/augment formatting. ItemDetailModal shows full stat names and augment effect descriptions. EquipmentSlotModal redesigned with side-by-side comparison cards, stat changes summary, responsive mobile layout. |
 | 13.0 | Jan 2026 | Profile Image Generation System (v8.2): Programmatic SVG portrait generation for 92 missing portraits (76 character + 16 enemy). New races: Dwarf, Vampire, Orc. All enemy types now have portraits. |

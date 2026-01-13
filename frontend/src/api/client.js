@@ -135,6 +135,10 @@ export class ApiClient {
     return this.get('/world/nodes');
   }
 
+  getWorldObstacles() {
+    return this.get('/world/obstacles');
+  }
+
   getNode(id) {
     return this.get(`/world/nodes/${id}`);
   }

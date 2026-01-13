@@ -787,6 +787,184 @@ GET /api/world/current
 
 ---
 
+### 5.6 Get World Obstacles
+
+Get terrain obstacles for world map rendering.
+
+```
+GET /api/world/obstacles
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "obstacles": [
+    { "id": 1, "obstacle_type": "lake", "x": 5.2, "y": -3.1, "radius": 6.5 },
+    { "id": 2, "obstacle_type": "mountain_range", "x": -10, "y": 15, "length": 12, "angle": 0.78 },
+    { "id": 3, "obstacle_type": "dense_forest", "x": 8, "y": 8, "radius": 4.2 }
+  ]
+}
+```
+
+---
+
+### 5.7 Claim Chest (Terminator Node)
+
+Claim one-time loot from a treasure chest node. User must be physically at the node.
+
+```
+POST /api/world/nodes/:id/claim-chest
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "gold_awarded": 250,
+  "items_awarded": [],
+  "new_gold_balance": 5250,
+  "message": "You found 250 gold in the treasure chest!"
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | You must be at this location to claim the treasure |
+| 400 | This node is not a treasure chest |
+| 400 | You have already claimed this treasure |
+| 404 | Node not found |
+
+---
+
+### 5.8 Visit Shrine (Terminator Node)
+
+Receive a timed buff from a shrine node. User must be at the node. 24-hour cooldown per shrine.
+
+```
+POST /api/world/nodes/:id/visit-shrine
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "buff_name": "Pilgrim's Rest",
+  "buff_description": "Stamina regenerates 50% faster",
+  "expires_at": "2026-01-14T12:00:00.000Z",
+  "duration_hours": 4,
+  "message": "You received the blessing: Pilgrim's Rest!"
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | You must be at this location to receive the blessing |
+| 400 | This node is not a shrine |
+| 400 | Shrine is on cooldown. Return in X hour(s). |
+| 404 | Node not found |
+| 500 | Invalid shrine buff type |
+
+---
+
+### 5.9 Discover (Terminator Node)
+
+Unlock lore content at a discovery site. User must be at the node. Can be revisited.
+
+```
+POST /api/world/nodes/:id/discover
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "already_discovered": false,
+  "lore": {
+    "title": "Ancient Monument",
+    "text": "You discovered ancient secrets...",
+    "lore_key": "lore_monument_001"
+  },
+  "message": "You have discovered Ancient Monument!"
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | You must be at this location to explore the discovery |
+| 400 | This node is not a discovery site |
+| 404 | Node not found |
+
+---
+
+### 5.10 Get Active Buffs
+
+Get user's currently active shrine buffs.
+
+```
+GET /api/world/active-buffs
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "buffs": [
+    {
+      "buff_type": "stamina_regen",
+      "buff_info": {
+        "name": "Pilgrim's Rest",
+        "description": "Stamina regenerates 50% faster",
+        "duration": 4
+      },
+      "expires_at": "2026-01-14T12:00:00.000Z",
+      "shrine_name": "Sacred Altar"
+    }
+  ]
+}
+```
+
+---
+
+### 5.11 Get My Discoveries
+
+Get user's discovery progress.
+
+```
+GET /api/world/my-discoveries
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "discoveries": [
+    {
+      "discovered_at": "2026-01-13T10:30:00.000Z",
+      "lore_key": "lore_monument_001",
+      "name": "Ancient Monument",
+      "node_id": 245
+    }
+  ],
+  "discovered_count": 1,
+  "total_count": 12
+}
+```
+
+---
+
 ## 6. Battle Endpoints
 
 ### 6.1 Start Battle
