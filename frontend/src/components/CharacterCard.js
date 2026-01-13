@@ -167,6 +167,21 @@ export class CharacterCard {
         color: white;
         text-shadow: 0 1px 2px rgba(0,0,0,0.3);
         border: 2px solid rgba(255,255,255,0.3);
+        overflow: hidden;
+      }
+
+      .character-card__portrait-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .character-card__portrait-fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
       }
 
       /* Level badge */
@@ -329,6 +344,8 @@ export class CharacterCard {
     const hpClass = hpPercent <= 25 ? 'character-card__hp-fill--critical'
       : hpPercent <= 50 ? 'character-card__hp-fill--low' : '';
 
+    const portraitUrl = this.getPortraitUrl(character);
+
     this.element.innerHTML = `
       ${badges.hasEquipmentUpgrade ? '<span class="character-card__badge character-card__badge--equipment" title="Equipment upgrade available"></span>' : ''}
       ${badges.hasSkillPoints ? '<span class="character-card__badge character-card__badge--skills" title="Skill points available"></span>' : ''}
@@ -336,7 +353,11 @@ export class CharacterCard {
       <div class="character-card__portrait">
         <div class="character-card__portrait-bg" style="background: ${classColor};"></div>
         <div class="character-card__class-icon" style="background: ${classColor};">
-          ${classIcon}
+          ${portraitUrl
+    ? `<img class="character-card__portrait-img" src="${portraitUrl}" alt="${this.escapeHtml(character.name)}"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+             <span class="character-card__portrait-fallback" style="display: none;">${classIcon}</span>`
+    : `<span class="character-card__portrait-fallback">${classIcon}</span>`}
         </div>
         <span class="character-card__level">Lv.${character.level}</span>
       </div>
@@ -469,6 +490,23 @@ export class CharacterCard {
    */
   getClassIcon(className) {
     return CLASS_ICONS[className] || '?';
+  }
+
+  /**
+   * Get portrait URL for character
+   * @param {Object} character - Character data
+   * @returns {string|null} Portrait URL or null if no race/gender
+   */
+  getPortraitUrl(character) {
+    const race = character.race?.toLowerCase();
+    const charClass = character.class?.toLowerCase();
+    // Handle gender with fallback (API may use snake_case or camelCase)
+    let gender = character.gender || 'male';
+    gender = gender.toLowerCase();
+
+    if (!race || !charClass) return null;
+
+    return `/assets/sprites/portraits/${race}_${gender}_${charClass}.png`;
   }
 
   /**

@@ -147,6 +147,21 @@ export class CharacterPicker {
         color: white;
         text-shadow: 0 1px 2px rgba(0,0,0,0.3);
         margin-bottom: ${PARCHMENT_SPACING.xs};
+        overflow: hidden;
+      }
+
+      .character-picker__portrait img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .character-picker__portrait-fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
       }
 
       /* Name */
@@ -257,6 +272,7 @@ export class CharacterPicker {
   renderCard(char, index, isValid) {
     const classColor = getClassColor(char.class);
     const classIcon = getClassIcon(char.class);
+    const portraitUrl = this.getPortraitUrl(char);
     const hpPercent = char.maxHp > 0 ? Math.round((char.currentHp / char.maxHp) * 100) : 100;
     const hpClass = hpPercent <= 25 ? 'character-picker__hp-fill--critical'
       : hpPercent <= 50 ? 'character-picker__hp-fill--low' : '';
@@ -273,7 +289,11 @@ export class CharacterPicker {
            aria-label="${char.name}, Level ${char.level} ${char.class}, ${hpPercent}% HP"
            ${!isValid ? 'aria-disabled="true"' : ''}>
         <div class="character-picker__portrait" style="background: ${classColor};">
-          ${classIcon}
+          ${portraitUrl
+    ? `<img src="${portraitUrl}" alt="${this.escapeHtml(char.name)}"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+             <span class="character-picker__portrait-fallback" style="display: none;">${classIcon}</span>`
+    : `<span class="character-picker__portrait-fallback">${classIcon}</span>`}
         </div>
         <span class="character-picker__name" title="${this.escapeHtml(char.name)}">${this.escapeHtml(char.name)}</span>
         <span class="character-picker__info">Lv.${char.level} ${char.class}</span>
@@ -442,6 +462,23 @@ export class CharacterPicker {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  /**
+   * Get portrait URL for character
+   * @param {Object} character - Character data
+   * @returns {string|null} Portrait URL or null if no race/gender
+   */
+  getPortraitUrl(character) {
+    const race = character.race?.toLowerCase();
+    const charClass = character.class?.toLowerCase();
+    // Handle gender with fallback (API may use snake_case or camelCase)
+    let gender = character.gender || 'male';
+    gender = gender.toLowerCase();
+
+    if (!race || !charClass) return null;
+
+    return `/assets/sprites/portraits/${race}_${gender}_${charClass}.png`;
   }
 
   /**
