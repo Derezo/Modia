@@ -22,6 +22,13 @@ const SVG_DIR = path.join(__dirname, '../frontend/public/assets/icons/svg');
 const PNG_DIR = path.join(__dirname, '../frontend/public/assets/icons/png');
 const SIZES = [16, 24, 32, 48];
 
+// Portrait directories
+const PORTRAIT_SVG_DIR = path.join(__dirname, '../frontend/public/assets/sprites/portraits/svg');
+const PORTRAIT_PNG_DIR = path.join(__dirname, '../frontend/public/assets/sprites/portraits');
+const ENEMY_SVG_DIR = path.join(__dirname, '../frontend/public/assets/sprites/enemies');
+const ENEMY_PNG_DIR = path.join(__dirname, '../frontend/public/assets/sprites/enemies');
+const PORTRAIT_SIZE = 64;
+
 /**
  * Parse command line arguments
  * @returns {Object} Parsed options
@@ -32,7 +39,8 @@ function parseArgs() {
     force: args.includes('--force'),
     clean: args.includes('--clean'),
     help: args.includes('--help') || args.includes('-h'),
-    verbose: args.includes('--verbose') || args.includes('-v')
+    verbose: args.includes('--verbose') || args.includes('-v'),
+    portraits: args.includes('--portraits')
   };
 }
 
@@ -48,19 +56,25 @@ Usage:
   node scripts/generate-icons.js [options]
 
 Options:
-  --force     Regenerate all icons, ignoring timestamps
-  --clean     Remove all existing PNGs before generating
-  --verbose   Show detailed progress
-  --help, -h  Show this help message
+  --force      Regenerate all icons, ignoring timestamps
+  --clean      Remove all existing PNGs before generating
+  --portraits  Also generate portrait PNGs from SVGs
+  --verbose    Show detailed progress
+  --help, -h   Show this help message
 
 Directory Structure:
   Source:  frontend/public/assets/icons/svg/{category}-{name}.svg
   Output:  frontend/public/assets/icons/png/{size}/{category}-{name}.png
 
+Portrait Structure (with --portraits):
+  Source:  frontend/public/assets/sprites/portraits/svg/{name}.svg
+  Output:  frontend/public/assets/sprites/portraits/{name}.png
+
 Examples:
   node scripts/generate-icons.js              # Generate new/updated only
   node scripts/generate-icons.js --force      # Regenerate everything
   node scripts/generate-icons.js --clean      # Clean and regenerate
+  node scripts/generate-icons.js --portraits  # Also convert portrait SVGs
 `);
 }
 
@@ -291,6 +305,103 @@ async function generateIcons(options = {}) {
   return { generated, skipped, failed };
 }
 
+/**
+ * Generate portrait PNGs from SVGs
+ * @param {Object} options - Generation options
+ * @returns {Promise<{generated: number, skipped: number, failed: number}>}
+ */
+async function generatePortraits(options = {}) {
+  const { force = false, verbose = false } = options;
+
+  console.log('\n=== Portrait PNG Generation ===\n');
+
+  let generated = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  // Process character portraits
+  if (fs.existsSync(PORTRAIT_SVG_DIR)) {
+    const svgFiles = fs.readdirSync(PORTRAIT_SVG_DIR).filter(f => f.endsWith('.svg'));
+    console.log(`Found ${svgFiles.length} character portrait SVGs`);
+
+    for (const svgFile of svgFiles) {
+      const baseName = svgFile.replace('.svg', '');
+      const svgPath = path.join(PORTRAIT_SVG_DIR, svgFile);
+      const pngPath = path.join(PORTRAIT_PNG_DIR, `${baseName}.png`);
+
+      // Check if regeneration needed
+      if (!needsRegeneration(svgPath, pngPath, force)) {
+        if (verbose) {
+          console.log(`  [SKIP] ${baseName}.png`);
+        }
+        skipped++;
+        continue;
+      }
+
+      try {
+        await convertSvgToPng(svgPath, pngPath, PORTRAIT_SIZE);
+        if (verbose) {
+          console.log(`  [GEN]  ${baseName}.png`);
+        } else {
+          console.log(`[OK] ${baseName}`);
+        }
+        generated++;
+      } catch (err) {
+        console.error(`  [FAIL] ${baseName}.png: ${err.message}`);
+        failed++;
+      }
+    }
+  } else {
+    console.log('No character portrait SVGs found at:', PORTRAIT_SVG_DIR);
+  }
+
+  // Process enemy portraits
+  if (fs.existsSync(ENEMY_SVG_DIR)) {
+    const svgFiles = fs.readdirSync(ENEMY_SVG_DIR).filter(f => f.endsWith('.svg'));
+    console.log(`\nFound ${svgFiles.length} enemy portrait SVGs`);
+
+    for (const svgFile of svgFiles) {
+      const baseName = svgFile.replace('.svg', '');
+      const svgPath = path.join(ENEMY_SVG_DIR, svgFile);
+      const pngPath = path.join(ENEMY_PNG_DIR, `${baseName}.png`);
+
+      // Check if regeneration needed
+      if (!needsRegeneration(svgPath, pngPath, force)) {
+        if (verbose) {
+          console.log(`  [SKIP] ${baseName}.png`);
+        }
+        skipped++;
+        continue;
+      }
+
+      try {
+        await convertSvgToPng(svgPath, pngPath, PORTRAIT_SIZE);
+        if (verbose) {
+          console.log(`  [GEN]  ${baseName}.png`);
+        } else {
+          console.log(`[OK] ${baseName}`);
+        }
+        generated++;
+      } catch (err) {
+        console.error(`  [FAIL] ${baseName}.png: ${err.message}`);
+        failed++;
+      }
+    }
+  } else {
+    console.log('No enemy portrait SVGs found at:', ENEMY_SVG_DIR);
+  }
+
+  // Summary
+  console.log('\n=== Portrait Generation Complete ===');
+  console.log(`Generated: ${generated} PNG files`);
+  console.log(`Skipped:   ${skipped} up-to-date files`);
+  if (failed > 0) {
+    console.log(`Failed:    ${failed} files`);
+  }
+
+  return { generated, skipped, failed };
+}
+
 // Main entry point
 async function main() {
   const options = parseArgs();
@@ -301,8 +412,19 @@ async function main() {
   }
 
   try {
-    const result = await generateIcons(options);
-    process.exit(result.failed > 0 ? 1 : 0);
+    let totalFailed = 0;
+
+    // Generate icons
+    const iconResult = await generateIcons(options);
+    totalFailed += iconResult.failed;
+
+    // Generate portraits if requested
+    if (options.portraits) {
+      const portraitResult = await generatePortraits(options);
+      totalFailed += portraitResult.failed;
+    }
+
+    process.exit(totalFailed > 0 ? 1 : 0);
   } catch (err) {
     console.error('Generation failed:', err.message);
     process.exit(1);
@@ -311,4 +433,4 @@ async function main() {
 
 main();
 
-module.exports = { generateIcons, SIZES };
+module.exports = { generateIcons, generatePortraits, SIZES, PORTRAIT_SIZE };

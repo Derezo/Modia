@@ -31,6 +31,47 @@ This document archives all completed features, resolved issues, and historical d
 | 7.9 | Jan 2026 | Icon system completion - 54 new SVG icons, emoji replacement |
 | 8.0 | Jan 2026 | Roadmap audit, documentation cleanup, code fixes |
 | 8.1 | Jan 2026 | ItemDataTable & Marketplace Enhancement - parchment price chart, order expiration |
+| 8.2 | Jan 2026 | Profile Image Generation System - 92 programmatic SVG portraits for missing races and enemies |
+
+---
+
+## 8.2 - Profile Image Generation System (Jan 2026)
+
+Programmatic SVG-based portrait generation system for character races and enemies, extending the existing icon generation infrastructure.
+
+### Scope
+- **92 new portraits total:** 76 character portraits + 16 enemy portraits
+- **Character coverage:** Dwarf, Vampire, Orc races (all 8 classes × 3 genders each = 72) + 4 missing Elf other variants
+- **Enemy coverage:** All 16 enemy types (goblin_warrior, gray_wolf, forest_slime, cave_bat, giant_spider, skeleton_warrior, stone_golem, mountain_troll, troll_shaman, harpy, bridge_bandit, bandit_captain, bridge_troll, dark_knight, shadow_assassin, palace_guard)
+
+### New Files Created
+- `scripts/icons/portraits/utils.js` - Pixel-art portrait utilities, color palettes (SKIN_PALETTES, HAIR_PALETTES, EQUIPMENT_PALETTES), helper functions (pixel, fillRect, pixelEllipse, drawEyes, drawNose, drawMouth, drawTusks, etc.)
+- `scripts/icons/portraits/races.js` - Race+gender base template generators for Human, Elf, Dwarf, Vampire, Orc with distinct features (pointed ears, beards, tusks, fangs)
+- `scripts/icons/portraits/classes.js` - Class equipment overlay generators for 8 classes (warrior helmet, wizard hat, monk headband, chemist goggles, berserker horns, sorcerer circlet, ninja mask, alchemist gear)
+- `scripts/icons/portraits/enemies.js` - 16 detailed enemy portrait generators using PALETTES from parent utils
+- `scripts/generate-svg-portraits.js` - Main orchestration script combining race + gender + class layers
+
+### Files Modified
+- `scripts/generate-icons.js` - Added `--portraits` flag and `generatePortraits()` function for SVG→PNG conversion
+- `package.json` - Added `generate:svg-portraits` and `generate:portrait-pngs` npm scripts
+
+### Generated Assets
+- **SVG source files:** `frontend/public/assets/sprites/portraits/svg/` (76 character SVGs)
+- **Character PNGs:** `frontend/public/assets/sprites/portraits/` (120 total: 44 existing + 76 new)
+- **Enemy SVGs/PNGs:** `frontend/public/assets/sprites/enemies/` (16 files)
+
+### Technical Approach
+- **Hybrid SVG rendering:** Rects for pixel details, paths for large fills (efficient file size)
+- **64×64 viewBox:** Matches typical portrait resolution
+- **shape-rendering="crispEdges":** Prevents anti-aliasing for pixel-art style
+- **Layered composition:** Background → shoulders → face → features → hair → equipment
+- **No overwrites:** Generator skips existing files to preserve hand-crafted portraits
+
+### Commands
+```bash
+npm run generate:svg-portraits   # Generate SVG portraits
+npm run generate:portrait-pngs   # Convert to PNG (via generate-icons.js --portraits)
+```
 
 ---
 

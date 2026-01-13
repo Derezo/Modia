@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 10.0 |
+| Version | 13.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -109,6 +109,7 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 13.0 | Jan 2026 | Profile Image Generation System (v8.2): Programmatic SVG portrait generation for 92 missing portraits (76 character + 16 enemy). New races: Dwarf, Vampire, Orc. All enemy types now have portraits. |
 | 12.0 | Jan 2026 | Formation & Inventory Integration complete (v8.2): Modal-based party management with 9 new components (Accordion, CharacterCard, PartyStatsSummary, CharacterPicker, ItemsModal, ItemDetailModal, CharacterModal, EquipmentSlotModal, SkillDetailModal). FormationScene redesigned with character grid. InventoryScene/InventoryPanel deleted. User Experience at 85%. |
 | 11.0 | Jan 2026 | Unified Social Hub complete (v8.0): SocialHubScene with 5 tabs (Friends, Party, Requests, LFG, Clan). Clan system MVP with create/join/invite/chat. CourtyardScene deprecated. Social features at 95%. |
 | 10.0 | Jan 2026 | Roadmap audit v8.0: Corrected completion percentages across all phases. Updated sprint focus with Friends UI, PartyInviteModal, Battle Balance, Gold Sinks. Added rate limit security to technical priorities. |
