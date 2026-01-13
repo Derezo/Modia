@@ -386,11 +386,14 @@ export class BattleFormationScene extends Scene {
     return this.enemies.map((enemy, index) => {
       const isBoss = enemy.isBoss || enemy.level > 10;
       const threatClass = isBoss ? 'bf-threat-boss' : '';
+      const portraitUrl = `/assets/sprites/enemies/${enemy.spriteId || enemy.sprite_id || 'unknown'}.png`;
 
       return `
         <div class="bf-enemy-card ${threatClass}" data-enemy-index="${index}">
           <div class="bf-enemy-portrait">
-            <div class="bf-enemy-icon">${enemy.name.charAt(0)}</div>
+            <img class="bf-enemy-portrait-img" src="${portraitUrl}" alt="${enemy.name}"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="bf-enemy-icon" style="display: none;">${enemy.name.charAt(0)}</div>
             ${isBoss ? '<div class="bf-boss-indicator">&#9760;</div>' : ''}
           </div>
           <div class="bf-enemy-info">
@@ -1041,6 +1044,7 @@ export class BattleFormationScene extends Scene {
         align-items: center;
         justify-content: center;
         margin-bottom: ${PARCHMENT_SPACING.xs};
+        overflow: hidden;
       }
 
       .bf-enemy-icon {
@@ -1048,6 +1052,13 @@ export class BattleFormationScene extends Scene {
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      }
+
+      .bf-enemy-portrait-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
       }
 
       .bf-boss-indicator {
