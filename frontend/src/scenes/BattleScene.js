@@ -199,7 +199,8 @@ export class BattleScene extends Scene {
       onConfirm: () => this.confirmAction(),
       onCancel: () => this.cancelAction(),
       onContinue: () => this.endBattle(),
-      onSurrender: () => this.handleSurrender()
+      onSurrender: () => this.handleSurrender(),
+      onUnitPreview: (unit) => this.handleUnitPreview(unit)
     });
 
     // Enable PvP mode if this is a PvP battle
@@ -2355,6 +2356,24 @@ export class BattleScene extends Scene {
 
     // Show notification
     parchmentToast.warning('Surrender', 'You surrendered the battle.');
+  }
+
+  /**
+   * Handle unit preview from turn order panel - pan camera to unit
+   * @param {Object} prediction - The unit prediction data with id
+   */
+  handleUnitPreview(prediction) {
+    if (!prediction || !prediction.id) return;
+
+    // Find the actual unit in battleUnits
+    const unit = this.units.find(u => u.id === prediction.id);
+    if (!unit) return;
+
+    // Get world position from grid position
+    const worldPos = this.grid.gridToScreenWorld(unit.gridX, unit.gridY);
+
+    // Pan camera to unit with smooth transition
+    this.camera.startTurnTransition(worldPos.x, worldPos.y, null, 500);
   }
 
   /**
