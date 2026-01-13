@@ -473,6 +473,8 @@ export class ParchmentCard {
     const race = c.race || '';
     const charClass = c.class || c.type || 'unknown';
     const gender = c.gender || 'other';
+    // Enemy sprite identifier (sprite_id from database, stored as enemyId on units)
+    const enemySpriteId = c.enemyId || c.sprite_id || '';
 
     // Build subtitle based on type
     let subtitle = '';
@@ -484,9 +486,9 @@ export class ParchmentCard {
         : `Lv.${level} ${this.capitalize(charClass)}`;
     }
 
-    // Portrait URL
+    // Portrait URL - enemies use their sprite_id, players use race_gender_class
     const portraitUrl = this.type === 'enemy'
-      ? `/assets/sprites/enemies/${charClass}.png`
+      ? `/assets/sprites/enemies/${enemySpriteId || charClass}.png`
       : `/assets/sprites/portraits/${race}_${gender}_${charClass}.png`;
 
     // Class colors for fallback
