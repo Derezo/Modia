@@ -609,6 +609,219 @@ export class ApiClient {
     return this.get(`/players/search?${params.toString()}`);
   }
 
+  // Friends API
+
+  /**
+   * Get all friends with online status and activity
+   * @returns {Promise<{success: boolean, friends: Array}>}
+   */
+  getFriends() {
+    return this.get('/friends');
+  }
+
+  /**
+   * Get pending incoming friend requests
+   * @returns {Promise<{success: boolean, requests: Array}>}
+   */
+  getFriendRequests() {
+    return this.get('/friends/requests');
+  }
+
+  /**
+   * Get list of blocked users
+   * @returns {Promise<{success: boolean, blocked: Array}>}
+   */
+  getBlockedUsers() {
+    return this.get('/friends/blocked');
+  }
+
+  /**
+   * Send a friend request to a user by username
+   * @param {string} username - Target username
+   * @returns {Promise<{success: boolean, message: string, request: Object}>}
+   */
+  sendFriendRequest(username) {
+    return this.post(`/friends/request/${encodeURIComponent(username)}`);
+  }
+
+  /**
+   * Accept a pending friend request
+   * @param {number} requestId - Request ID to accept
+   * @returns {Promise<{success: boolean, message: string, friendship: Object}>}
+   */
+  acceptFriendRequest(requestId) {
+    return this.post(`/friends/accept/${requestId}`);
+  }
+
+  /**
+   * Decline a pending friend request
+   * @param {number} requestId - Request ID to decline
+   * @returns {Promise<{success: boolean, message: string}>}
+   */
+  declineFriendRequest(requestId) {
+    return this.post(`/friends/decline/${requestId}`);
+  }
+
+  /**
+   * Remove a friend (unfriend)
+   * @param {number} friendId - Friend's user ID to remove
+   * @returns {Promise<{success: boolean, message: string}>}
+   */
+  removeFriend(friendId) {
+    return this.delete(`/friends/${friendId}`);
+  }
+
+  /**
+   * Block a user
+   * @param {number} userId - User ID to block
+   * @returns {Promise<{success: boolean, message: string, block: Object}>}
+   */
+  blockUser(userId) {
+    return this.post(`/friends/${userId}/block`);
+  }
+
+  /**
+   * Unblock a user
+   * @param {number} userId - User ID to unblock
+   * @returns {Promise<{success: boolean, message: string}>}
+   */
+  unblockUser(userId) {
+    return this.delete(`/friends/${userId}/block`);
+  }
+
+  /**
+   * Update friend metadata (favorite status, note)
+   * @param {number} friendId - Friend's user ID
+   * @param {Object} updates - Update object
+   * @param {boolean} [updates.isFavorite] - Whether friend is a favorite
+   * @param {string|null} [updates.note] - Private note about friend (max 256 chars)
+   * @returns {Promise<{success: boolean, friendship: Object}>}
+   */
+  updateFriend(friendId, updates) {
+    return this.put(`/friends/${friendId}`, updates);
+  }
+
+  // Clans API
+
+  /**
+   * List all clans with optional search
+   * @param {string} [query] - Optional search query
+   * @param {number} [limit=20] - Max results
+   * @returns {Promise<{success: boolean, clans: Array}>}
+   */
+  listClans(query, limit = 20) {
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    params.append('limit', limit);
+    return this.get(`/clans?${params.toString()}`);
+  }
+
+  /**
+   * Create a new clan
+   * @param {string} name - Clan name (3-32 chars)
+   * @param {string} tag - Clan tag (2-6 alphanumeric chars)
+   * @param {string} [description] - Optional description
+   * @returns {Promise<{success: boolean, message: string, clan: Object}>}
+   */
+  createClan(name, tag, description) {
+    return this.post('/clans', { name, tag, description });
+  }
+
+  /**
+   * Get the authenticated user's clan
+   * @returns {Promise<{success: boolean, clan: Object|null}>}
+   */
+  getMyClan() {
+    return this.get('/clans/my');
+  }
+
+  /**
+   * Get pending clan invites for the user
+   * @returns {Promise<{success: boolean, invites: Array}>}
+   */
+  getClanInvites() {
+    return this.get('/clans/invites');
+  }
+
+  /**
+   * Get clan details and members
+   * @param {number} clanId - Clan ID
+   * @returns {Promise<{success: boolean, clan: Object}>}
+   */
+  getClanDetails(clanId) {
+    return this.get(`/clans/${clanId}`);
+  }
+
+  /**
+   * Leave a clan
+   * @param {number} clanId - Clan ID to leave
+   * @returns {Promise<{success: boolean, message: string}>}
+   */
+  leaveClan(clanId) {
+    return this.post(`/clans/${clanId}/leave`);
+  }
+
+  /**
+   * Disband a clan (leader only)
+   * @param {number} clanId - Clan ID to disband
+   * @returns {Promise<{success: boolean, message: string}>}
+   */
+  disbandClan(clanId) {
+    return this.delete(`/clans/${clanId}`);
+  }
+
+  /**
+   * Invite a player to the clan
+   * @param {number} clanId - Clan ID
+   * @param {string} username - Username to invite
+   * @returns {Promise<{success: boolean, message: string, invite: Object}>}
+   */
+  inviteToClan(clanId, username) {
+    return this.post(`/clans/${clanId}/invite/${encodeURIComponent(username)}`);
+  }
+
+  /**
+   * Accept a clan invite
+   * @param {number} inviteId - Invite ID to accept
+   * @returns {Promise<{success: boolean, message: string, membership: Object}>}
+   */
+  acceptClanInvite(inviteId) {
+    return this.post(`/clans/invite/${inviteId}/accept`);
+  }
+
+  /**
+   * Decline a clan invite
+   * @param {number} inviteId - Invite ID to decline
+   * @returns {Promise<{success: boolean, message: string}>}
+   */
+  declineClanInvite(inviteId) {
+    return this.post(`/clans/invite/${inviteId}/decline`);
+  }
+
+  /**
+   * Get clan chat messages
+   * @param {number} clanId - Clan ID
+   * @param {number} [limit=50] - Max messages
+   * @param {number} [before] - Message ID for pagination
+   * @returns {Promise<{success: boolean, messages: Array}>}
+   */
+  getClanMessages(clanId, limit = 50, before) {
+    const params = new URLSearchParams();
+    params.append('limit', limit);
+    if (before) params.append('before', before);
+    return this.get(`/clans/${clanId}/messages?${params.toString()}`);
+  }
+
+  /**
+   * Send a clan chat message
+   * @param {number} clanId - Clan ID
+   * @param {string} message - Message text (max 500 chars)
+   * @returns {Promise<{success: boolean, message: Object}>}
+   */
+  sendClanMessage(clanId, message) {
+    return this.post(`/clans/${clanId}/messages`, { message });
+  }
+
   // Coliseum / PvP endpoints
 
   /**

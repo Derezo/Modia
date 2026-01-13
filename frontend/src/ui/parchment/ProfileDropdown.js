@@ -993,9 +993,8 @@ export class ProfileDropdown {
         }
         break;
       case 'friends':
-        // Navigate to courtyard (social hub) until FriendsScene is implemented
-        // TODO: Create dedicated FriendsScene and change to 'friends' when available
-        this.game.scenes.switchTo('courtyard');
+        // Navigate to Social Hub - unified social features
+        this.game.scenes.switchTo('socialHub');
         break;
       case 'leaderboard':
         this.game.scenes.switchTo('leaderboard');
