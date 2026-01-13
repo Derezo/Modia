@@ -371,8 +371,8 @@ router.post('/:nodeId/:shopType/sell', authenticate, asyncHandler(async (req, re
   // Verify shop access
   await verifyShopAccess(nodeIdNum, shopType);
 
-  // Verify character location
-  await verifyCharacterAtNode(req.user.userId, nodeIdNum);
+  // Verify character location and get active character for transaction logging
+  const activeChar = await verifyCharacterAtNode(req.user.userId, nodeIdNum);
 
   const result = await withTransaction(async (client) => {
     // Get item from shared inventory with lock (shared items have user_id set, character_id NULL)
@@ -457,12 +457,12 @@ router.post('/:nodeId/:shopType/sell', authenticate, asyncHandler(async (req, re
       }
     }
 
-    // Log transaction
+    // Log transaction (use activeChar.id since shared inventory items have NULL character_id)
     await client.query(
       `INSERT INTO shop_transactions
        (user_id, character_id, node_id, shop_type, item_template_id, transaction_type, quantity, price_per_unit, total_price)
        VALUES ($1, $2, $3, $4, $5, 'sell', $6, $7, $8)`,
-      [req.user.userId, item.character_id, nodeIdNum, shopType, item.item_template_id, sellQuantity, unitPrice, totalPrice]
+      [req.user.userId, activeChar.id, nodeIdNum, shopType, item.item_template_id, sellQuantity, unitPrice, totalPrice]
     );
 
     // Get updated user gold
