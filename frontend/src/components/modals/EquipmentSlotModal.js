@@ -26,6 +26,7 @@
 
 import { ParchmentModal } from '../../ui/parchment/ParchmentModal.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
+import { Icon } from '../Icon.js';
 import {
   PARCHMENT_COLORS,
   PARCHMENT_SPACING,
@@ -34,6 +35,12 @@ import {
   getParchmentBorder,
   getParchmentScrollbarCSS
 } from '../../ui/parchment/ParchmentTheme.js';
+import {
+  formatStatName,
+  formatStatValue,
+  formatAugmentEffect,
+  calculateStatChanges
+} from '../../utils/statDisplay.js';
 
 const STYLE_ID = 'equipment-slot-modal-styles';
 
@@ -88,6 +95,7 @@ export class EquipmentSlotModal {
     this.modal = null;
     this.selectedItem = null;
     this.isProcessing = false;
+    this.abortController = null;
 
     this.injectStyles();
   }
@@ -117,61 +125,170 @@ export class EquipmentSlotModal {
         display: flex;
         flex-direction: column;
         gap: ${PARCHMENT_SPACING.md};
-        max-height: 500px;
+        max-height: 70vh;
       }
 
-      /* Currently Equipped Section */
-      .equipment-slot-current {
+      /* Comparison Section - Side by Side */
+      .equipment-slot-comparison-section {
+        display: flex;
+        gap: ${PARCHMENT_SPACING.md};
+      }
+
+      @media (max-width: 600px) {
+        .equipment-slot-comparison-section {
+          flex-direction: column;
+        }
+      }
+
+      /* Item Comparison Card */
+      .equipment-slot-card {
+        flex: 1;
+        min-width: 0;
         padding: ${PARCHMENT_SPACING.md};
         background: linear-gradient(to bottom, ${PARCHMENT_COLORS.mid}, ${PARCHMENT_COLORS.dark});
         border: ${getParchmentBorder()};
         border-radius: ${PARCHMENT_RADIUS.md};
       }
 
-      .equipment-slot-current-header {
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
-        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
-        color: ${PARCHMENT_COLORS.text.secondary};
-        margin-bottom: ${PARCHMENT_SPACING.sm};
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-
-      .equipment-slot-current-item {
+      .equipment-slot-card--empty {
         display: flex;
         align-items: center;
-        gap: ${PARCHMENT_SPACING.md};
+        justify-content: center;
+        min-height: 150px;
+        color: ${PARCHMENT_COLORS.text.muted};
+        font-style: italic;
       }
 
-      .equipment-slot-item-info {
+      .equipment-slot-card-header {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${PARCHMENT_COLORS.text.muted};
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: ${PARCHMENT_SPACING.sm};
+      }
+
+      .equipment-slot-card-item {
+        display: flex;
+        gap: ${PARCHMENT_SPACING.sm};
+        margin-bottom: ${PARCHMENT_SPACING.sm};
+      }
+
+      .equipment-slot-card-icon {
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: ${PARCHMENT_COLORS.dark};
+        border-radius: ${PARCHMENT_RADIUS.sm};
+        border: 2px solid ${PARCHMENT_COLORS.border};
+        flex-shrink: 0;
+      }
+
+      .equipment-slot-card-icon.rarity-uncommon { border-color: #2d6b2d; }
+      .equipment-slot-card-icon.rarity-rare { border-color: #0055aa; }
+      .equipment-slot-card-icon.rarity-epic { border-color: #7722aa; }
+      .equipment-slot-card-icon.rarity-legendary { border-color: #cc6600; }
+
+      .equipment-slot-card-title {
         flex: 1;
         min-width: 0;
       }
 
-      .equipment-slot-item-name {
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.md};
+      .equipment-slot-card-name {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         margin-bottom: 2px;
+        word-wrap: break-word;
       }
 
-      .equipment-slot-item-name.rarity-common { color: #5a4a3a; }
-      .equipment-slot-item-name.rarity-uncommon { color: #2d6b2d; }
-      .equipment-slot-item-name.rarity-rare { color: #0055aa; }
-      .equipment-slot-item-name.rarity-epic { color: #7722aa; }
-      .equipment-slot-item-name.rarity-legendary { color: #cc6600; }
+      .equipment-slot-card-name.rarity-common { color: #5a4a3a; }
+      .equipment-slot-card-name.rarity-uncommon { color: #2d6b2d; }
+      .equipment-slot-card-name.rarity-rare { color: #0055aa; }
+      .equipment-slot-card-name.rarity-epic { color: #7722aa; }
+      .equipment-slot-card-name.rarity-legendary { color: #cc6600; }
 
-      .equipment-slot-item-stats {
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
-        color: ${PARCHMENT_COLORS.state.success};
+      .equipment-slot-card-badges {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
       }
 
-      .equipment-slot-empty {
+      .equipment-slot-card-badge {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        padding: 1px 6px;
+        background: ${PARCHMENT_COLORS.light};
+        border-radius: 8px;
+        color: ${PARCHMENT_COLORS.text.secondary};
+        text-transform: capitalize;
+      }
+
+      .equipment-slot-card-section {
+        margin-top: ${PARCHMENT_SPACING.sm};
+      }
+
+      .equipment-slot-card-section-title {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         color: ${PARCHMENT_COLORS.text.muted};
-        font-style: italic;
-        padding: ${PARCHMENT_SPACING.sm} 0;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+      }
+
+      .equipment-slot-card-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .equipment-slot-card-stat {
+        display: flex;
+        justify-content: space-between;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        padding: 2px ${PARCHMENT_SPACING.xs};
+        background: ${PARCHMENT_COLORS.dark};
+        border-radius: 3px;
+      }
+
+      .equipment-slot-card-stat-label {
+        color: ${PARCHMENT_COLORS.text.secondary};
+      }
+
+      .equipment-slot-card-stat-value {
+        color: ${PARCHMENT_COLORS.state.success};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      }
+
+      .equipment-slot-card-effects {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .equipment-slot-card-effect {
+        display: flex;
+        align-items: center;
+        gap: ${PARCHMENT_SPACING.xs};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        padding: 2px ${PARCHMENT_SPACING.xs};
+        background: ${PARCHMENT_COLORS.dark};
+        border-radius: 3px;
+      }
+
+      .equipment-slot-card-effect-icon {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+      }
+
+      .equipment-slot-card-effect-text {
+        color: ${PARCHMENT_COLORS.text.primary};
       }
 
       .equipment-slot-unequip-btn {
+        margin-top: ${PARCHMENT_SPACING.sm};
+        width: 100%;
         padding: ${PARCHMENT_SPACING.xs} ${PARCHMENT_SPACING.md};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
@@ -181,7 +298,6 @@ export class EquipmentSlotModal {
         border-radius: ${PARCHMENT_RADIUS.sm};
         cursor: pointer;
         transition: all 0.2s ease;
-        flex-shrink: 0;
       }
 
       .equipment-slot-unequip-btn:hover:not(:disabled) {
@@ -193,10 +309,56 @@ export class EquipmentSlotModal {
         cursor: not-allowed;
       }
 
+      /* Stat Changes Summary */
+      .equipment-slot-changes {
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
+        background: ${PARCHMENT_COLORS.light};
+        border: ${getParchmentBorder()};
+        border-radius: ${PARCHMENT_RADIUS.sm};
+      }
+
+      .equipment-slot-changes-title {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${PARCHMENT_COLORS.text.muted};
+        text-transform: uppercase;
+        margin-bottom: ${PARCHMENT_SPACING.xs};
+      }
+
+      .equipment-slot-changes-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: ${PARCHMENT_SPACING.xs} ${PARCHMENT_SPACING.md};
+      }
+
+      @media (max-width: 600px) {
+        .equipment-slot-changes-list {
+          flex-direction: column;
+          gap: 2px;
+        }
+      }
+
+      .equipment-slot-change {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      }
+
+      .equipment-slot-change.stat-positive {
+        color: ${PARCHMENT_COLORS.state.success};
+      }
+
+      .equipment-slot-change.stat-negative {
+        color: ${PARCHMENT_COLORS.state.error};
+      }
+
+      .equipment-slot-changes-empty {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        color: ${PARCHMENT_COLORS.text.muted};
+        font-style: italic;
+      }
+
       /* Available Items Section */
       .equipment-slot-available {
-        flex: 1;
-        min-height: 0;
         display: flex;
         flex-direction: column;
       }
@@ -205,18 +367,17 @@ export class EquipmentSlotModal {
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
         font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
         color: ${PARCHMENT_COLORS.text.secondary};
-        margin-bottom: ${PARCHMENT_SPACING.sm};
+        margin-bottom: ${PARCHMENT_SPACING.xs};
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
 
       .equipment-slot-available-list {
-        flex: 1;
         overflow-y: auto;
         border: ${getParchmentBorder()};
         border-radius: ${PARCHMENT_RADIUS.md};
         background: ${PARCHMENT_COLORS.light};
-        max-height: 300px;
+        max-height: 180px;
       }
 
       ${getParchmentScrollbarCSS('.equipment-slot-available-list')}
@@ -225,7 +386,7 @@ export class EquipmentSlotModal {
         display: flex;
         align-items: center;
         gap: ${PARCHMENT_SPACING.sm};
-        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
+        padding: ${PARCHMENT_SPACING.xs} ${PARCHMENT_SPACING.md};
         border-bottom: 1px solid ${PARCHMENT_COLORS.border};
         cursor: pointer;
         transition: background 0.15s ease;
@@ -260,6 +421,20 @@ export class EquipmentSlotModal {
         border-left: 3px solid #ff8000;
       }
 
+      .equipment-slot-available-radio {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid ${PARCHMENT_COLORS.border};
+        background: ${PARCHMENT_COLORS.light};
+        flex-shrink: 0;
+      }
+
+      .equipment-slot-available-item.selected .equipment-slot-available-radio {
+        border-color: #4a7c4e;
+        background: #4a7c4e;
+      }
+
       .equipment-slot-available-info {
         flex: 1;
         min-width: 0;
@@ -275,25 +450,6 @@ export class EquipmentSlotModal {
 
       .equipment-slot-available-stats {
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
-        color: ${PARCHMENT_COLORS.text.muted};
-      }
-
-      .equipment-slot-comparison {
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
-        white-space: nowrap;
-      }
-
-      .equipment-slot-comparison .stat-positive {
-        color: ${PARCHMENT_COLORS.state.success};
-        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
-      }
-
-      .equipment-slot-comparison .stat-negative {
-        color: ${PARCHMENT_COLORS.state.error};
-        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
-      }
-
-      .equipment-slot-comparison .stat-neutral {
         color: ${PARCHMENT_COLORS.text.muted};
       }
 
@@ -371,11 +527,14 @@ export class EquipmentSlotModal {
 
     contentEl.innerHTML = `
       <div class="equipment-slot-modal-content">
-        <!-- Currently Equipped -->
-        <div class="equipment-slot-current">
-          <div class="equipment-slot-current-header">Currently Equipped</div>
-          ${this.renderCurrentItem()}
+        <!-- Side-by-Side Comparison -->
+        <div class="equipment-slot-comparison-section">
+          ${this.renderComparisonCard(this.currentItem, true)}
+          ${this.renderComparisonCard(this.selectedItem, false)}
         </div>
+
+        <!-- Stat Changes Summary -->
+        ${this.renderStatChanges()}
 
         <!-- Available Items -->
         <div class="equipment-slot-available">
@@ -389,7 +548,7 @@ export class EquipmentSlotModal {
 
         <!-- Actions -->
         <div class="equipment-slot-actions">
-          <button class="equipment-slot-equip-btn" data-action="equip" disabled>
+          <button class="equipment-slot-equip-btn" data-action="equip" ${this.selectedItem ? '' : 'disabled'}>
             Equip Selected
           </button>
         </div>
@@ -400,32 +559,186 @@ export class EquipmentSlotModal {
   }
 
   /**
-   * Render current item section
+   * Render a comparison card for an item
+   * @param {Object|null} item - Item to display
+   * @param {boolean} isCurrentlyEquipped - Whether this is the currently equipped item
    * @returns {string} HTML
    */
-  renderCurrentItem() {
-    if (!this.currentItem) {
+  renderComparisonCard(item, isCurrentlyEquipped) {
+    const headerText = isCurrentlyEquipped ? 'Currently Equipped' : 'Selected Item';
+
+    if (!item) {
+      const emptyText = isCurrentlyEquipped
+        ? 'No item equipped'
+        : 'Select an item to compare';
+
       return `
-        <div class="equipment-slot-empty">
-          No item equipped in this slot
+        <div class="equipment-slot-card equipment-slot-card--empty">
+          <div>
+            <div class="equipment-slot-card-header">${headerText}</div>
+            <div>${emptyText}</div>
+          </div>
         </div>
       `;
     }
 
-    const item = this.currentItem;
-    const stats = this.getItemStatsSummary(item);
+    const rarity = item.rarity || 'common';
+    const iconType = item.type || 'armor';
+    const allStats = this.getAllItemStats(item);
+    const hasStats = Object.keys(allStats).length > 0;
+    const augments = item.augments || [];
 
     return `
-      <div class="equipment-slot-current-item">
-        <div class="equipment-slot-item-info">
-          <div class="equipment-slot-item-name rarity-${item.rarity || 'common'}">
-            ${this.escapeHtml(item.name)}
+      <div class="equipment-slot-card">
+        <div class="equipment-slot-card-header">${headerText}</div>
+
+        <!-- Item Info -->
+        <div class="equipment-slot-card-item">
+          <div class="equipment-slot-card-icon rarity-${rarity}">
+            ${Icon.html('items', iconType, { size: 'md' }) || ''}
           </div>
-          ${stats ? `<div class="equipment-slot-item-stats">${stats}</div>` : ''}
+          <div class="equipment-slot-card-title">
+            <div class="equipment-slot-card-name rarity-${rarity}">
+              ${this.escapeHtml(item.name)}
+            </div>
+            <div class="equipment-slot-card-badges">
+              <span class="equipment-slot-card-badge">${rarity}</span>
+              ${item.material ? `<span class="equipment-slot-card-badge">${item.material}</span>` : ''}
+            </div>
+          </div>
         </div>
-        <button class="equipment-slot-unequip-btn" data-action="unequip">
-          Unequip
-        </button>
+
+        <!-- Stats -->
+        ${hasStats ? `
+          <div class="equipment-slot-card-section">
+            <div class="equipment-slot-card-section-title">Stats</div>
+            <div class="equipment-slot-card-stats">
+              ${this.renderCardStats(allStats)}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Effects (Augments) -->
+        ${augments.length > 0 ? `
+          <div class="equipment-slot-card-section">
+            <div class="equipment-slot-card-section-title">Effects</div>
+            <div class="equipment-slot-card-effects">
+              ${augments.map(aug => this.renderCardAugment(aug)).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Unequip Button (only for currently equipped) -->
+        ${isCurrentlyEquipped ? `
+          <button class="equipment-slot-unequip-btn" data-action="unequip">
+            Unequip
+          </button>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  /**
+   * Render stats for a comparison card
+   * @param {Object} stats - Stats object
+   * @returns {string} HTML
+   */
+  renderCardStats(stats) {
+    return Object.entries(stats)
+      .filter(([, v]) => v && v !== 0)
+      .map(([k, v]) => {
+        const label = formatStatName(k, false);
+        const sign = v > 0 ? '+' : '';
+        return `
+          <div class="equipment-slot-card-stat">
+            <span class="equipment-slot-card-stat-label">${label}</span>
+            <span class="equipment-slot-card-stat-value">${sign}${v}</span>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
+  /**
+   * Render an augment effect for a comparison card
+   * @param {Object} aug - Augment object
+   * @returns {string} HTML
+   */
+  renderCardAugment(aug) {
+    const category = aug.category || aug.type || 'holy';
+    const effectText = formatAugmentEffect(aug);
+
+    return `
+      <div class="equipment-slot-card-effect">
+        <span class="equipment-slot-card-effect-icon">
+          ${Icon.html('augments', category, { size: 'sm' }) || ''}
+        </span>
+        <span class="equipment-slot-card-effect-text">${this.escapeHtml(effectText)}</span>
+      </div>
+    `;
+  }
+
+  /**
+   * Get all stats from an item (attack, defense, baseStats, bonusStats combined)
+   * @param {Object} item - Item data
+   * @returns {Object} Combined stats
+   */
+  getAllItemStats(item) {
+    if (!item) return {};
+
+    const stats = {};
+    if (item.attack) stats.attack = item.attack;
+    if (item.defense) stats.defense = item.defense;
+
+    const baseStats = item.baseStats || {};
+    const bonusStats = item.bonusStats || {};
+
+    Object.entries(baseStats).forEach(([k, v]) => {
+      if (v) stats[k] = (stats[k] || 0) + v;
+    });
+    Object.entries(bonusStats).forEach(([k, v]) => {
+      if (v) stats[k] = (stats[k] || 0) + v;
+    });
+
+    return stats;
+  }
+
+  /**
+   * Render stat changes summary section
+   * @returns {string} HTML
+   */
+  renderStatChanges() {
+    if (!this.selectedItem) {
+      return `
+        <div class="equipment-slot-changes">
+          <div class="equipment-slot-changes-title">Stat Changes</div>
+          <div class="equipment-slot-changes-empty">Select an item to see changes</div>
+        </div>
+      `;
+    }
+
+    const changes = calculateStatChanges(this.currentItem, this.selectedItem);
+
+    if (changes.length === 0) {
+      return `
+        <div class="equipment-slot-changes">
+          <div class="equipment-slot-changes-title">Stat Changes</div>
+          <div class="equipment-slot-changes-empty">No stat changes</div>
+        </div>
+      `;
+    }
+
+    const changesHtml = changes.map(({ stat, diff }) => {
+      const statName = formatStatName(stat, false);
+      const sign = diff > 0 ? '+' : '';
+      const className = diff > 0 ? 'stat-positive' : 'stat-negative';
+      return `<span class="equipment-slot-change ${className}">${statName} ${sign}${diff}</span>`;
+    }).join('');
+
+    return `
+      <div class="equipment-slot-changes">
+        <div class="equipment-slot-changes-title">Stat Changes</div>
+        <div class="equipment-slot-changes-list">${changesHtml}</div>
       </div>
     `;
   }
@@ -498,133 +811,46 @@ export class EquipmentSlotModal {
     return items.map((item, index) => {
       const rarity = item.rarity || 'common';
       const stats = this.getItemStatsSummary(item);
-      const comparison = this.getStatComparison(item);
       const itemId = item.instanceId || item.id || index;
+      const isSelected = this.selectedItem &&
+        (this.selectedItem.instanceId || this.selectedItem.id) === (item.instanceId || item.id);
 
       return `
         <div
-          class="equipment-slot-available-item rarity-${rarity}"
+          class="equipment-slot-available-item rarity-${rarity}${isSelected ? ' selected' : ''}"
           data-item-id="${itemId}"
           data-index="${index}"
         >
+          <div class="equipment-slot-available-radio"></div>
           <div class="equipment-slot-available-info">
-            <div class="equipment-slot-available-name rarity-${rarity}">
+            <div class="equipment-slot-available-name">
               ${this.escapeHtml(item.name)}
             </div>
             ${stats ? `<div class="equipment-slot-available-stats">${stats}</div>` : ''}
           </div>
-          <div class="equipment-slot-comparison">${comparison}</div>
         </div>
       `;
     }).join('');
   }
 
   /**
-   * Get item stats summary string
+   * Get item stats summary string (abbreviated for compact display)
    * @param {Object} item - Item data
    * @returns {string} Stats summary
    */
   getItemStatsSummary(item) {
     const parts = [];
-    if (item.attack) parts.push(`+${item.attack} ATK`);
-    if (item.defense) parts.push(`+${item.defense} DEF`);
+    if (item.attack) parts.push(formatStatValue('attack', item.attack, true));
+    if (item.defense) parts.push(formatStatValue('defense', item.defense, true));
 
     const stats = { ...(item.baseStats || {}), ...(item.bonusStats || {}) };
     Object.entries(stats).slice(0, 2).forEach(([k, v]) => {
       if (v) {
-        const abbrev = this.formatStatAbbrev(k);
-        parts.push(`+${v} ${abbrev}`);
+        parts.push(formatStatValue(k, v, true));
       }
     });
 
     return parts.slice(0, 3).join(', ');
-  }
-
-  /**
-   * Format stat name to abbreviation
-   * @param {string} stat - Stat name
-   * @returns {string} Abbreviation
-   */
-  formatStatAbbrev(stat) {
-    const abbrevMap = {
-      strength: 'STR',
-      intelligence: 'INT',
-      agility: 'AGI',
-      vitality: 'VIT',
-      dexterity: 'DEX',
-      luck: 'LCK',
-      attack: 'ATK',
-      defense: 'DEF',
-      magicAttack: 'MATK',
-      magicDefense: 'MDEF'
-    };
-    return abbrevMap[stat.toLowerCase()] || stat.substring(0, 3).toUpperCase();
-  }
-
-  /**
-   * Get stat comparison HTML vs current item
-   * @param {Object} item - Item to compare
-   * @returns {string} HTML with colored comparison
-   */
-  getStatComparison(item) {
-    const current = this.currentItem;
-
-    // If no current item, show all stats as positive
-    if (!current) {
-      const itemPower = this.calculateItemPower(item);
-      if (itemPower > 0) {
-        return `<span class="stat-positive">+${itemPower}</span>`;
-      }
-      return '<span class="stat-neutral">-</span>';
-    }
-
-    // Get stats from both items
-    const itemStats = { ...(item?.baseStats || {}), ...(item?.bonusStats || {}) };
-    const currentStats = { ...(current?.baseStats || {}), ...(current?.bonusStats || {}) };
-
-    const diffs = [];
-
-    // Check attack/defense first
-    const attackDiff = (item?.attack || 0) - (current?.attack || 0);
-    const defenseDiff = (item?.defense || 0) - (current?.defense || 0);
-
-    if (attackDiff !== 0) {
-      const sign = attackDiff > 0 ? '+' : '';
-      const cls = attackDiff > 0 ? 'stat-positive' : 'stat-negative';
-      diffs.push(`<span class="${cls}">${sign}${attackDiff} ATK</span>`);
-    }
-
-    if (defenseDiff !== 0) {
-      const sign = defenseDiff > 0 ? '+' : '';
-      const cls = defenseDiff > 0 ? 'stat-positive' : 'stat-negative';
-      diffs.push(`<span class="${cls}">${sign}${defenseDiff} DEF</span>`);
-    }
-
-    // Check other stats
-    const allStatKeys = new Set([...Object.keys(itemStats), ...Object.keys(currentStats)]);
-    for (const key of allStatKeys) {
-      if (diffs.length >= 2) break;
-      const diff = (itemStats[key] || 0) - (currentStats[key] || 0);
-      if (diff !== 0) {
-        const sign = diff > 0 ? '+' : '';
-        const cls = diff > 0 ? 'stat-positive' : 'stat-negative';
-        diffs.push(`<span class="${cls}">${sign}${diff} ${this.formatStatAbbrev(key)}</span>`);
-      }
-    }
-
-    if (diffs.length === 0) {
-      // No stat differences, show overall comparison
-      const itemPower = this.calculateItemPower(item);
-      const currentPower = this.calculateItemPower(current);
-      if (itemPower > currentPower) {
-        return '<span class="stat-positive">Better</span>';
-      } else if (itemPower < currentPower) {
-        return '<span class="stat-negative">Worse</span>';
-      }
-      return '<span class="stat-neutral">Same</span>';
-    }
-
-    return diffs.join(' ');
   }
 
   /**
@@ -648,16 +874,23 @@ export class EquipmentSlotModal {
     const contentEl = this.modal?.contentElement;
     if (!contentEl) return;
 
+    // Abort previous listeners before adding new ones (prevents memory leaks on re-render)
+    if (this.abortController) {
+      this.abortController.abort();
+    }
+    this.abortController = new AbortController();
+    const { signal } = this.abortController;
+
     // Unequip button
     const unequipBtn = contentEl.querySelector('[data-action="unequip"]');
     if (unequipBtn) {
-      unequipBtn.addEventListener('click', () => this.handleUnequip());
+      unequipBtn.addEventListener('click', () => this.handleUnequip(), { signal });
     }
 
     // Equip button
     const equipBtn = contentEl.querySelector('[data-action="equip"]');
     if (equipBtn) {
-      equipBtn.addEventListener('click', () => this.handleEquip());
+      equipBtn.addEventListener('click', () => this.handleEquip(), { signal });
     }
 
     // Available item selection
@@ -666,7 +899,7 @@ export class EquipmentSlotModal {
       itemEl.addEventListener('click', () => {
         const index = parseInt(itemEl.dataset.index, 10);
         this.selectItem(index);
-      });
+      }, { signal });
     });
   }
 
@@ -678,20 +911,8 @@ export class EquipmentSlotModal {
     const availableItems = this.getAvailableItems();
     this.selectedItem = availableItems[index] || null;
 
-    const contentEl = this.modal?.contentElement;
-    if (!contentEl) return;
-
-    // Update selection visual
-    const items = contentEl.querySelectorAll('.equipment-slot-available-item');
-    items.forEach((el, i) => {
-      el.classList.toggle('selected', i === index);
-    });
-
-    // Enable/disable equip button
-    const equipBtn = contentEl.querySelector('[data-action="equip"]');
-    if (equipBtn) {
-      equipBtn.disabled = !this.selectedItem;
-    }
+    // Re-render the entire content to update comparison cards and stat changes
+    this.render();
   }
 
   /**
@@ -784,6 +1005,10 @@ export class EquipmentSlotModal {
    * Clean up resources
    */
   cleanup() {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
     this.selectedItem = null;
     this.modal = null;
   }

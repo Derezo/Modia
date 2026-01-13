@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.6 |
+| Version | 2.8 |
 | Last Updated | January 2026 |
 | Focus | Features, mechanics, UX, content |
 
@@ -307,6 +307,10 @@ Per ITEM_SYSTEM.md specifications:
 - [x] Icon component doubling fix
 - [x] Turn Order Panel redesign (collapsed/expanded states, parchment styling)
 - [x] Enemy icon generation system (16 programmatic SVG icons)
+- [x] Stat display formatting (full names in modals, abbreviations in lists)
+- [x] Augment effect descriptions (show actual effects, not augment names)
+- [x] Equipment comparison cards (side-by-side with stat change summary)
+- [x] Responsive equip modal (stacks on mobile <600px)
 - [x] Tap-to-preview in Turn Order (camera pan, target panel preview)
 
 ---
@@ -457,6 +461,7 @@ Per ITEM_SYSTEM.md specifications:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.8 | Jan 2026 | Character Portrait Enhancement v2: 120 portraits enhanced with gender differentiation (face shapes, eye styling, cheekbones), race distinctiveness (vampire fangs, elf circlets, orc hair contrast, dwarf sideburns), and class identity (warrior insignia, monk chi glow, sorcerer dark aura, ninja weapons, berserker rage glow). New utility functions and palettes added. |
 | 2.7 | Jan 2026 | Formation & Inventory Integration complete (v8.2): 9 new components (Accordion, CharacterCard, PartyStatsSummary, CharacterPicker, ItemsModal, ItemDetailModal, CharacterModal, EquipmentSlotModal, SkillDetailModal). FormationScene redesigned with modal architecture. InventoryScene/InventoryPanel deleted. User Experience updated to 85%. |
 | 2.6 | Jan 2026 | Skill System Overhaul complete (v8.1): Character leveling from spent XP (formula: level^2.8 * 100), skill scaling to level 100, 13 visual effect categories, self-targeting skill handling. New files: characterLevelService.js, skillScaling.js, SkillEffectCategories.js, migration 026. UI: XP progress bar, scaling preview, level-up toasts. |
 | 2.5 | Jan 2026 | Unified Social Hub complete: SocialHubScene with 5 tabs (Friends, Party, Requests, LFG, Clan). FriendsTab with search, FriendCard component, RequestsTab unified inbox, PartyTab with Quick Party Formation, LFGTab migrated from CourtyardScene, ClanTab MVP with create/join/chat. Clan system (025_clans.sql, routes, service). Social Features updated to 95%. |

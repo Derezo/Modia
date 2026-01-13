@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 13.0 |
+| Version | 14.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -109,6 +109,8 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 15.0 | Jan 2026 | Character Portrait Enhancement v2: Comprehensive overhaul of 120 character portraits (5 races × 3 genders × 8 classes). Added gender-specific face rendering (face shapes, eyes, cheekbones). Enhanced race distinctiveness (vampire fangs 4px, elf circlet with gem, orc hair contrast, dwarf female sideburns). Improved class identity (warrior insignia, monk chi glow, sorcerer dark aura, ninja clan symbol/weapons, berserker rage glow). New utils: drawGenderedEyes(), drawCheekbones(), drawEyeGlow(), drawSymbol(), orcHair/darkMagic palettes. |
+| 14.0 | Jan 2026 | Item Detail & Equip Modal Improvements: New statDisplay.js utility for consistent stat/augment formatting. ItemDetailModal shows full stat names and augment effect descriptions. EquipmentSlotModal redesigned with side-by-side comparison cards, stat changes summary, responsive mobile layout. |
 | 13.0 | Jan 2026 | Profile Image Generation System (v8.2): Programmatic SVG portrait generation for 92 missing portraits (76 character + 16 enemy). New races: Dwarf, Vampire, Orc. All enemy types now have portraits. |
 | 12.0 | Jan 2026 | Formation & Inventory Integration complete (v8.2): Modal-based party management with 9 new components (Accordion, CharacterCard, PartyStatsSummary, CharacterPicker, ItemsModal, ItemDetailModal, CharacterModal, EquipmentSlotModal, SkillDetailModal). FormationScene redesigned with character grid. InventoryScene/InventoryPanel deleted. User Experience at 85%. |
 | 11.0 | Jan 2026 | Unified Social Hub complete (v8.0): SocialHubScene with 5 tabs (Friends, Party, Requests, LFG, Clan). Clan system MVP with create/join/invite/chat. CourtyardScene deprecated. Social features at 95%. |
