@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.8 |
+| Version | 2.9 |
 | Last Updated | January 2026 |
 | Focus | Features, mechanics, UX, content |
 
@@ -295,6 +295,16 @@ Per ITEM_SYSTEM.md specifications:
 - [x] Delete InventoryPanel.js
 - [x] Remove Inventory from ProfileDropdown menu
 
+#### BattleFormationScene Enhancements (v8.3)
+- [x] Show all 12 party characters (was limited to 5)
+- [x] Click-to-cycle through all 12 characters for placement
+- [x] Direction indicator (red border highlight) showing enemy side
+- [x] Level-based default sorting for character roster
+
+#### FormationScene Enhancements (v8.3)
+- [x] Sorting options (Level, Class, Name) with toggle buttons
+- [x] Remove empty slot placeholders (show only existing characters)
+
 ### 4.4 UI Polish
 
 - [ ] Loading indicators
@@ -461,6 +471,7 @@ Per ITEM_SYSTEM.md specifications:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.9 | Jan 2026 | Formation System Improvements (v8.3): BattleFormationScene now shows all 12 party characters instead of only 5, with click-to-cycle placement and direction indicator (red border highlight) showing enemy side. FormationScene adds sorting options (Level/Class/Name toggle buttons) and removes empty slot placeholders. Code quality: timer cleanup, canvas save/restore, stable sorting. |
 | 2.8 | Jan 2026 | Character Portrait Enhancement v2: 120 portraits enhanced with gender differentiation (face shapes, eye styling, cheekbones), race distinctiveness (vampire fangs, elf circlets, orc hair contrast, dwarf sideburns), and class identity (warrior insignia, monk chi glow, sorcerer dark aura, ninja weapons, berserker rage glow). New utility functions and palettes added. |
 | 2.7 | Jan 2026 | Formation & Inventory Integration complete (v8.2): 9 new components (Accordion, CharacterCard, PartyStatsSummary, CharacterPicker, ItemsModal, ItemDetailModal, CharacterModal, EquipmentSlotModal, SkillDetailModal). FormationScene redesigned with modal architecture. InventoryScene/InventoryPanel deleted. User Experience updated to 85%. |
 | 2.6 | Jan 2026 | Skill System Overhaul complete (v8.1): Character leveling from spent XP (formula: level^2.8 * 100), skill scaling to level 100, 13 visual effect categories, self-targeting skill handling. New files: characterLevelService.js, skillScaling.js, SkillEffectCategories.js, migration 026. UI: XP progress bar, scaling preview, level-up toasts. |

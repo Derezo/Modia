@@ -131,6 +131,9 @@ export class FormationGrid {
       }
     }
 
+    // Render front edge indicator (enemy direction)
+    this.renderFrontEdgeIndicator(ctx);
+
     // Render characters on top (also back to front)
     for (let y = 0; y < this.gridHeight; y++) {
       for (let x = 0; x < this.gridWidth; x++) {
@@ -204,6 +207,52 @@ export class FormationGrid {
     ctx.closePath();
     ctx.fillStyle = midColor;
     ctx.fill();
+
+    ctx.restore();
+  }
+
+  renderFrontEdgeIndicator(ctx) {
+    // Draw a glowing red border on the front (right) edge to indicate enemy direction
+    ctx.save();
+
+    // Get corner positions for the front edge (rightmost column at x = gridWidth - 1)
+    const topCorner = this.gridToScreen(this.gridWidth - 1, 0);
+    const bottomCorner = this.gridToScreen(this.gridWidth - 1, this.gridHeight - 1);
+
+    const hw = this.tileWidth / 2;
+
+    // Pulsing glow effect
+    const pulseOpacity = 0.4 + Math.sin(this.highlightPhase * Math.PI * 2) * 0.2;
+    const glowColor = `rgba(255, 80, 80, ${pulseOpacity})`;
+    const borderColor = `rgba(255, 60, 60, ${pulseOpacity + 0.3})`;
+
+    // Draw glow shadow
+    ctx.shadowColor = 'rgba(255, 50, 50, 0.8)';
+    ctx.shadowBlur = 15;
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+
+    // Draw the front edge line (from top-right corner to bottom-right corner of grid)
+    ctx.beginPath();
+    ctx.moveTo(topCorner.x + hw, topCorner.y);
+    ctx.lineTo(bottomCorner.x + hw, bottomCorner.y);
+    ctx.stroke();
+
+    // Reset shadow for label
+    ctx.shadowBlur = 0;
+
+    // Draw "ENEMY" label
+    const labelX = bottomCorner.x + hw + 20;
+    const labelY = (topCorner.y + bottomCorner.y) / 2;
+
+    ctx.fillStyle = glowColor;
+    ctx.font = 'bold 10px Arial';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+
+    // Arrow pointing right
+    ctx.fillText('→ ENEMY', labelX, labelY);
 
     ctx.restore();
   }
@@ -346,7 +395,6 @@ export class FormationGrid {
 
   renderCharacter(ctx, gridX, gridY, char) {
     const { x, y } = this.gridToScreen(gridX, gridY);
-    const key = `${gridX},${gridY}`;
     const isSelected = this.hoveredTile?.x === gridX && this.hoveredTile?.y === gridY;
 
     ctx.save();

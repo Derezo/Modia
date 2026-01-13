@@ -52,8 +52,8 @@ export class BattleFormationScene extends Scene {
     this.selectedCharacter = null;      // Currently selected (for detail card)
 
     // Party data
-    this.battleParty = [];     // Up to 5 chars from party slots 1-5
-    this.enemies = [];         // Enemy preview data
+    this.selectableCharacters = [];  // All party characters (slots 1-12), sorted by level
+    this.enemies = [];               // Enemy preview data
 
     // Interaction state
     this.hoveredTile = null;
@@ -113,6 +113,12 @@ export class BattleFormationScene extends Scene {
 
   exit() {
     this.stopAnimationLoop();
+
+    // Clear long press timer if active
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
 
     if (this.abortController) {
       this.abortController.abort();
@@ -208,12 +214,13 @@ export class BattleFormationScene extends Scene {
     try {
       const result = await this.game.api.getCharacters();
       const characters = result.characters || [];
-      this.battleParty = characters
-        .filter(c => c.party_slot >= 1 && c.party_slot <= 5)
-        .sort((a, b) => a.party_slot - b.party_slot);
+      // Load all party characters (slots 1-12), sorted by level descending
+      this.selectableCharacters = characters
+        .filter(c => c.party_slot >= 1 && c.party_slot <= 12)
+        .sort((a, b) => b.level - a.level);
     } catch (err) {
-      console.error('Failed to load battle party:', err);
-      this.battleParty = [];
+      console.error('Failed to load party characters:', err);
+      this.selectableCharacters = [];
     }
   }
 
@@ -364,7 +371,7 @@ export class BattleFormationScene extends Scene {
       <div class="bf-bottom-sheet ${this.isBottomSheetExpanded ? 'expanded' : ''}" id="bf-bottom-sheet">
         <div class="bf-sheet-handle" id="bf-sheet-handle">
           <div class="bf-handle-bar"></div>
-          <span class="bf-sheet-title">Party (${this.battleParty.length})</span>
+          <span class="bf-sheet-title">Party (${this.selectableCharacters.length})</span>
         </div>
         <div class="bf-sheet-content">
           <div class="bf-drawer-roster" id="bf-unplaced-roster">
@@ -606,7 +613,7 @@ export class BattleFormationScene extends Scene {
     const placedIds = new Set(
       Array.from(this.placedCharacters.values()).map(c => c.id)
     );
-    const unplaced = this.battleParty.filter(c => !placedIds.has(c.id));
+    const unplaced = this.selectableCharacters.filter(c => !placedIds.has(c.id));
 
     if (unplaced.length > 0) {
       const nextChar = unplaced[0];
@@ -623,7 +630,7 @@ export class BattleFormationScene extends Scene {
       return;
     }
 
-    if (this.battleParty.length === 1 && this.placedCharacters.size === 1) {
+    if (this.selectableCharacters.length === 1 && this.placedCharacters.size === 1) {
       const [existingKey, char] = this.placedCharacters.entries().next().value;
       this.placedCharacters.delete(existingKey);
       this.placementOrder = this.placementOrder.filter(k => k !== existingKey);
@@ -651,10 +658,10 @@ export class BattleFormationScene extends Scene {
 
   cycleCharacterOnTile(gridKey) {
     const currentChar = this.placedCharacters.get(gridKey);
-    const currentIdx = this.battleParty.findIndex(c => c.id === currentChar.id);
+    const currentIdx = this.selectableCharacters.findIndex(c => c.id === currentChar.id);
 
-    let nextIdx = (currentIdx + 1) % this.battleParty.length;
-    let nextChar = this.battleParty[nextIdx];
+    const nextIdx = (currentIdx + 1) % this.selectableCharacters.length;
+    const nextChar = this.selectableCharacters[nextIdx];
 
     for (const [key, char] of this.placedCharacters) {
       if (char.id === nextChar.id && key !== gridKey) {
@@ -705,7 +712,7 @@ export class BattleFormationScene extends Scene {
 
   updateTension() {
     if (this.theme) {
-      this.theme.updateTension(this.placedCharacters.size, this.battleParty.length);
+      this.theme.updateTension(this.placedCharacters.size, this.selectableCharacters.length);
     }
   }
 
@@ -716,14 +723,14 @@ export class BattleFormationScene extends Scene {
     const placedIds = new Set(
       Array.from(this.placedCharacters.values()).map(c => c.id)
     );
-    const unplaced = this.battleParty.filter(c => !placedIds.has(c.id));
+    const unplaced = this.selectableCharacters.filter(c => !placedIds.has(c.id));
 
     if (unplaced.length === 0 && this.placedCharacters.size > 0) {
       roster.innerHTML = '<div class="bf-all-placed">All characters placed!</div>';
       return;
     }
 
-    roster.innerHTML = this.battleParty.map(char => {
+    roster.innerHTML = this.selectableCharacters.map(char => {
       const isPlaced = placedIds.has(char.id);
       const isSelected = this.selectedCharacter?.id === char.id;
       const gender = char.gender || 'other';
@@ -749,7 +756,7 @@ export class BattleFormationScene extends Scene {
     roster.querySelectorAll('.bf-roster-char').forEach(el => {
       el.addEventListener('click', () => {
         const charId = parseInt(el.dataset.charId);
-        const char = this.battleParty.find(c => c.id === charId);
+        const char = this.selectableCharacters.find(c => c.id === charId);
         if (char) {
           this.selectedCharacter = char;
           this.updateDetailCard();
@@ -1331,6 +1338,7 @@ export class BattleFormationScene extends Scene {
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
     // Add subtle corner flourishes
+    ctx.save();
     ctx.strokeStyle = P.border;
     ctx.lineWidth = 2;
     ctx.globalAlpha = 0.3;
@@ -1359,6 +1367,6 @@ export class BattleFormationScene extends Scene {
     ctx.quadraticCurveTo(ctx.canvas.width - 20, ctx.canvas.height - 20, ctx.canvas.width - 60, ctx.canvas.height - 20);
     ctx.stroke();
 
-    ctx.globalAlpha = 1.0;
+    ctx.restore();
   }
 }

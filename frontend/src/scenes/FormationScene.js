@@ -29,6 +29,7 @@ export class FormationScene extends Scene {
     this.partySummary = null;
     this.activeModal = null;
     this.responsiveUnsubscribe = null;
+    this.sortMethod = 'level';  // 'level' | 'class' | 'name'
   }
 
   async enter() {
@@ -142,6 +143,16 @@ export class FormationScene extends Scene {
           <button class="parchment-btn parchment-btn-secondary" id="back-btn">
             ${Icon.html('actions', 'back', { label: responsive.showLabels() ? 'Back' : '', size: 'md' })}
           </button>
+        </div>
+      </div>
+
+      <!-- Sort Controls -->
+      <div class="formation-sort-bar">
+        <span class="formation-sort-label">Sort by:</span>
+        <div class="formation-sort-buttons">
+          <button class="formation-sort-btn ${this.sortMethod === 'level' ? 'active' : ''}" data-sort="level">Level</button>
+          <button class="formation-sort-btn ${this.sortMethod === 'class' ? 'active' : ''}" data-sort="class">Class</button>
+          <button class="formation-sort-btn ${this.sortMethod === 'name' ? 'active' : ''}" data-sort="name">Name</button>
         </div>
       </div>
 
@@ -284,9 +295,56 @@ export class FormationScene extends Scene {
         font-style: italic;
       }
 
+      /* Sort Bar */
+      .formation-sort-bar {
+        display: flex;
+        align-items: center;
+        gap: ${PARCHMENT_SPACING.sm};
+        padding: ${PARCHMENT_SPACING.xs} ${PARCHMENT_SPACING.md};
+        background: ${PARCHMENT_COLORS.mid};
+        border-bottom: 1px solid ${PARCHMENT_COLORS.border};
+      }
+
+      .formation-sort-label {
+        color: ${PARCHMENT_COLORS.text.secondary};
+        font-size: 12px;
+        font-weight: bold;
+      }
+
+      .formation-sort-buttons {
+        display: flex;
+        gap: 4px;
+      }
+
+      .formation-sort-btn {
+        padding: 4px 12px;
+        font-family: Georgia, serif;
+        font-size: 12px;
+        background: ${PARCHMENT_COLORS.light};
+        border: 1px solid ${PARCHMENT_COLORS.border};
+        border-radius: 4px;
+        cursor: pointer;
+        color: ${PARCHMENT_COLORS.text.secondary};
+        transition: all 0.15s ease;
+      }
+
+      .formation-sort-btn:hover {
+        background: ${PARCHMENT_COLORS.dark};
+        color: ${PARCHMENT_COLORS.text.primary};
+      }
+
+      .formation-sort-btn.active {
+        background: linear-gradient(to bottom, #4a7c4e, #3d6940);
+        color: white;
+        border-color: #2d5030;
+      }
+
       /* Responsive adjustments */
       @media (max-width: 600px) {
         .formation-header {
+          padding: ${PARCHMENT_SPACING.xs} ${PARCHMENT_SPACING.sm};
+        }
+        .formation-sort-bar {
           padding: ${PARCHMENT_SPACING.xs} ${PARCHMENT_SPACING.sm};
         }
         .formation-grid-container {
@@ -316,6 +374,26 @@ export class FormationScene extends Scene {
   }
 
   /**
+   * Get sorted characters based on current sort method
+   * @returns {Array} Sorted characters
+   */
+  getSortedCharacters() {
+    const chars = [...this.characters];
+    switch (this.sortMethod) {
+      case 'level':
+        // Primary: level descending, secondary: name ascending for stability
+        return chars.sort((a, b) => b.level - a.level || a.name.localeCompare(b.name));
+      case 'class':
+        // Primary: class alphabetical, secondary: level descending
+        return chars.sort((a, b) => a.class.localeCompare(b.class) || b.level - a.level);
+      case 'name':
+        return chars.sort((a, b) => a.name.localeCompare(b.name));
+      default:
+        return chars;
+    }
+  }
+
+  /**
    * Render character cards in the grid
    */
   renderCharacterCards() {
@@ -326,37 +404,24 @@ export class FormationScene extends Scene {
     this.cleanupCards();
     grid.innerHTML = '';
 
-    // Render 12 slots (first 5 are battle party)
-    for (let i = 0; i < 12; i++) {
-      const slotNumber = i + 1;
-      const isBattleSlot = i < 5;
-      const char = this.characters.find(c => c.party_slot === slotNumber);
+    // Get sorted characters and render only existing ones (no empty slots)
+    const sortedChars = this.getSortedCharacters();
 
-      if (char) {
-        // Check for upgrade indicators
-        const hasEquipmentUpgrade = this.checkHasEquipmentUpgrade(char);
-        const hasSkillPoints = this.checkHasSkillPoints(char);
+    sortedChars.forEach(char => {
+      // Check for upgrade indicators
+      const hasEquipmentUpgrade = this.checkHasEquipmentUpgrade(char);
+      const hasSkillPoints = this.checkHasSkillPoints(char);
 
-        const card = new CharacterCard({
-          character: char,
-          showUpgradeBadge: hasEquipmentUpgrade,
-          showSkillBadge: hasSkillPoints,
-          onClick: () => this.openCharacterModal(char)
-        });
+      const card = new CharacterCard({
+        character: char,
+        showUpgradeBadge: hasEquipmentUpgrade,
+        showSkillBadge: hasSkillPoints,
+        onClick: () => this.openCharacterModal(char)
+      });
 
-        grid.appendChild(card.element);
-        this.characterCards.push(card);
-      } else {
-        // Empty slot
-        const emptySlot = document.createElement('div');
-        emptySlot.className = `formation-empty-slot ${isBattleSlot ? 'battle-slot' : ''}`;
-        emptySlot.innerHTML = `
-          <div class="formation-empty-slot-icon">+</div>
-          <div class="formation-empty-slot-text">${isBattleSlot ? 'Battle Slot' : 'Reserve'}</div>
-        `;
-        grid.appendChild(emptySlot);
-      }
-    }
+      grid.appendChild(card.element);
+      this.characterCards.push(card);
+    });
   }
 
   /**
@@ -453,6 +518,22 @@ export class FormationScene extends Scene {
     this.uiElement?.querySelector('#items-btn')?.addEventListener('click', () => {
       this.openItemsModal();
     }, opts);
+
+    // Sort buttons
+    this.uiElement?.querySelectorAll('.formation-sort-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const newSort = btn.dataset.sort;
+        if (newSort !== this.sortMethod) {
+          this.sortMethod = newSort;
+          // Update button active states
+          this.uiElement?.querySelectorAll('.formation-sort-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.sort === newSort);
+          });
+          // Re-render character cards with new sort
+          this.renderCharacterCards();
+        }
+      }, opts);
+    });
   }
 
   /**
