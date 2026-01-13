@@ -69,6 +69,7 @@ export class EquipmentSlotModal {
    * @param {Object|null} options.currentItem - Currently equipped item
    * @param {Array} options.inventory - Shared inventory items
    * @param {string} options.characterClass - Character's class for filtering
+   * @param {number} [options.characterLevel] - Character's level for requirements
    * @param {Function} [options.onEquipmentChanged] - Callback when equipment changes
    * @param {Function} [options.onClose] - Callback when modal closes
    */
@@ -80,6 +81,7 @@ export class EquipmentSlotModal {
     this.currentItem = options.currentItem;
     this.inventory = options.inventory || [];
     this.characterClass = options.characterClass;
+    this.characterLevel = options.characterLevel || 1;
     this.onEquipmentChanged = options.onEquipmentChanged || (() => {});
     this.onClose = options.onClose || (() => {});
 
@@ -446,6 +448,12 @@ export class EquipmentSlotModal {
   canEquipInSlot(item) {
     if (!item) return false;
 
+    // Check level requirement
+    const levelReq = item.level_requirement || item.levelRequirement || 0;
+    if (levelReq > 0 && this.characterLevel < levelReq) {
+      return false;
+    }
+
     // Check type matches slot
     const validTypes = SLOT_TYPE_MAP[this.slotKey] || [];
     const itemType = (item.type || '').toLowerCase();
@@ -733,7 +741,7 @@ export class EquipmentSlotModal {
 
     try {
       const itemId = this.selectedItem.instanceId || this.selectedItem.id;
-      await this.game.api.equipItem(itemId, this.characterId, this.slotKey);
+      await this.game.api.equipItem(this.characterId, itemId, this.slotKey);
 
       parchmentToast.success(`Equipped ${this.selectedItem.name}`);
       this.onEquipmentChanged();

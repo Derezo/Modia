@@ -316,6 +316,21 @@ export class CharacterModal {
         color: ${PARCHMENT_COLORS.text.muted};
       }
 
+      /* Skill Branch/Category Headers */
+      .character-modal-skill-branch {
+        margin-bottom: ${PARCHMENT_SPACING.md};
+      }
+
+      .character-modal-branch-header {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${PARCHMENT_COLORS.accent.burgundy};
+        margin-bottom: ${PARCHMENT_SPACING.xs};
+        padding-bottom: ${PARCHMENT_SPACING.xs};
+        border-bottom: 1px solid ${PARCHMENT_COLORS.border};
+        text-transform: capitalize;
+      }
+
       .character-modal-loading {
         padding: ${PARCHMENT_SPACING.lg};
         text-align: center;
@@ -358,13 +373,14 @@ export class CharacterModal {
    * Load character, equipment, and skills data
    */
   async loadData() {
-    const [charData, skillsData] = await Promise.all([
+    const [charData, skillsData, equipData] = await Promise.all([
       this.game.api.getCharacter(this.characterId),
-      this.game.api.getCharacterSkills(this.characterId)
+      this.game.api.getCharacterSkills(this.characterId),
+      this.game.api.getInventory(this.characterId)
     ]);
 
     this.character = charData.character || charData;
-    this.equipment = this.character.equipment || {};
+    this.equipment = equipData.equipped || {};
     this.skills = skillsData.skills || skillsData.learnedSkills || {};
     this.availableXp = skillsData.availableXp || skillsData.xpPool ||
       ((this.character.experience || 0) - (this.character.spent_xp || this.character.spentXp || 0));
@@ -396,8 +412,14 @@ export class CharacterModal {
     const classColor = getClassColor(char.class);
     const classIcon = getClassIcon(char.class);
 
-    // Calculate XP progress (simplified)
-    const xpPercent = 50; // Would need level thresholds to calculate properly
+    // Calculate XP progress using level threshold formula: level^2.8 * 100
+    const spentXp = char.spent_xp || char.spentXp || 0;
+    const level = char.level || 1;
+    const currentThreshold = Math.floor(Math.pow(level, 2.8) * 100);
+    const nextThreshold = Math.floor(Math.pow(level + 1, 2.8) * 100);
+    const xpIntoLevel = Math.max(0, spentXp - currentThreshold);
+    const xpNeeded = nextThreshold - currentThreshold;
+    const xpPercent = xpNeeded > 0 ? Math.min(100, Math.max(0, (xpIntoLevel / xpNeeded) * 100)) : 100;
 
     // Check for badges
     const hasEquipmentUpgrade = this.checkHasEquipmentUpgrade();
@@ -416,7 +438,7 @@ export class CharacterModal {
             <div class="character-modal-xp-bar">
               <div class="character-modal-xp-fill" style="width: ${xpPercent}%;"></div>
             </div>
-            <div class="character-modal-xp-text">Available XP: ${this.availableXp.toLocaleString()}</div>
+            <div class="character-modal-xp-text">${xpIntoLevel.toLocaleString()} / ${xpNeeded.toLocaleString()} XP to Level ${level + 1} (${this.availableXp.toLocaleString()} available)</div>
           </div>
         </div>
 
@@ -444,9 +466,13 @@ export class CharacterModal {
    * @returns {string} HTML
    */
   renderStatsSummary(char) {
+    // Use snake_case properties from API - outside battle, show max HP/MP only
+    const maxHp = char.hp_max || char.maxHp || 0;
+    const maxMp = char.mp_max || char.maxMp || 0;
+
     const stats = [
-      { label: 'HP', value: `${char.currentHp || char.maxHp}/${char.maxHp}` },
-      { label: 'MP', value: `${char.currentMp || char.maxMp}/${char.maxMp}` },
+      { label: 'HP', value: maxHp },
+      { label: 'MP', value: maxMp },
       { label: 'STR', value: char.strength },
       { label: 'INT', value: char.intelligence },
       { label: 'AGI', value: char.agility },
@@ -591,20 +617,23 @@ export class CharacterModal {
     const contentEl = this.skillsAccordion?.getContentElement();
     if (!contentEl) return;
 
-    const skills = this.getCharacterSkills();
+    const branches = this.getCharacterSkills();
 
-    if (skills.length === 0) {
+    if (branches.length === 0) {
       contentEl.innerHTML = `
         <div class="character-modal-loading">No skills available</div>
       `;
       return;
     }
 
-    contentEl.innerHTML = `
-      <div class="character-modal-skills-list">
-        ${skills.map(skill => this.renderSkillItem(skill)).join('')}
+    contentEl.innerHTML = branches.map(branch => `
+      <div class="character-modal-skill-branch">
+        <div class="character-modal-branch-header">${this.escapeHtml(branch.name)}</div>
+        <div class="character-modal-skills-list">
+          ${branch.skills.map(skill => this.renderSkillItem(skill)).join('')}
+        </div>
       </div>
-    `;
+    `).join('');
 
     // Event listeners
     const skillItems = contentEl.querySelectorAll('.character-modal-skill:not(.character-modal-skill--locked)');
@@ -617,23 +646,20 @@ export class CharacterModal {
   }
 
   /**
-   * Get character skills from skill tree
-   * @returns {Array} Skills with learned levels
+   * Get character skills from skill tree organized by branch
+   * @returns {Array} Branches with skills that have learned levels
    */
   getCharacterSkills() {
     if (!this.skillTree?.branches) return [];
 
-    const skills = [];
-    for (const branch of this.skillTree.branches) {
-      for (const skill of (branch.skills || [])) {
-        skills.push({
-          ...skill,
-          currentLevel: this.skills[skill.id] || 0,
-          isLocked: !this.checkSkillRequirements(skill)
-        });
-      }
-    }
-    return skills;
+    return this.skillTree.branches.map(branch => ({
+      name: branch.name,
+      skills: (branch.skills || []).map(skill => ({
+        ...skill,
+        currentLevel: this.skills[skill.id] || 0,
+        isLocked: !this.checkSkillRequirements(skill)
+      }))
+    })).filter(branch => branch.skills.length > 0);
   }
 
   /**
@@ -711,6 +737,12 @@ export class CharacterModal {
   canEquipInSlot(item, slotKey) {
     if (!item) return false;
 
+    // Check level requirement
+    const levelReq = item.level_requirement || item.levelRequirement || 0;
+    if (levelReq > 0 && this.character && this.character.level < levelReq) {
+      return false;
+    }
+
     const slotMap = {
       head: ['armor'],
       body: ['armor'],
@@ -748,7 +780,7 @@ export class CharacterModal {
           .sort((a, b) => this.calculateItemPower(b) - this.calculateItemPower(a))[0];
 
         if (bestItem && this.calculateItemPower(bestItem) > currentPower) {
-          await this.game.api.equipItem(bestItem.instanceId || bestItem.id, this.characterId, slot.key);
+          await this.game.api.equipItem(this.characterId, bestItem.instanceId || bestItem.id, slot.key);
           equipped++;
 
           // Remove from available inventory
@@ -795,6 +827,7 @@ export class CharacterModal {
       currentItem,
       inventory: this.inventory,
       characterClass: this.character.class,
+      characterLevel: this.character.level,
       onEquipmentChanged: async () => {
         await this.loadData();
         this.render();

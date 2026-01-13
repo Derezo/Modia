@@ -174,7 +174,7 @@ export class ItemsModal {
       selectionMode: 'single',
       showFilters: true,
       maxHeight: '400px',
-      onSelect: (item) => this.openItemDetail(item)
+      onRowSelect: (item) => this.openItemDetail(item)
     });
 
     this.dataTable.setItems(this.inventory);

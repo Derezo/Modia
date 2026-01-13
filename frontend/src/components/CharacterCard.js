@@ -322,7 +322,10 @@ export class CharacterCard {
 
     const classColor = this.getClassColor(character.class);
     const classIcon = this.getClassIcon(character.class);
-    const hpPercent = character.maxHp > 0 ? (character.currentHp / character.maxHp) * 100 : 100;
+    // Use snake_case properties from API, fallback to camelCase for compatibility
+    const maxHp = character.hp_max || character.maxHp || 0;
+    const currentHp = character.hp_current || character.currentHp || maxHp;
+    const hpPercent = maxHp > 0 ? (currentHp / maxHp) * 100 : 100;
     const hpClass = hpPercent <= 25 ? 'character-card__hp-fill--critical'
       : hpPercent <= 50 ? 'character-card__hp-fill--low' : '';
 
@@ -417,10 +420,12 @@ export class CharacterCard {
   updateCharacter(character) {
     this.options.character = { ...this.options.character, ...character };
 
-    // Update HP bar
+    // Update HP bar - use snake_case with camelCase fallback
     const hpFill = this.element.querySelector('.character-card__hp-fill');
-    if (hpFill && character.maxHp > 0) {
-      const hpPercent = (character.currentHp / character.maxHp) * 100;
+    const maxHp = character.hp_max || character.maxHp || 0;
+    const currentHp = character.hp_current || character.currentHp || maxHp;
+    if (hpFill && maxHp > 0) {
+      const hpPercent = (currentHp / maxHp) * 100;
       hpFill.style.width = `${hpPercent}%`;
       hpFill.className = 'character-card__hp-fill';
       if (hpPercent <= 25) {
