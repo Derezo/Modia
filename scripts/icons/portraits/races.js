@@ -1,6 +1,7 @@
 /**
- * Race Portrait Templates
+ * Race Portrait Templates (Enhanced)
  * Base face/head generators for each race and gender combination
+ * Uses 5-tier shading, texture patterns, and enhanced visual depth
  */
 
 const {
@@ -10,19 +11,31 @@ const {
   fillRect,
   pixel,
   pixelEllipse,
-  drawEyes,
   drawNose,
   drawMouth,
   drawPointedEars,
   drawRoundEars,
   drawTusks,
   drawVampireFangs,
-  drawNeck
+  drawNeck,
+  drawEnhancedEyes,
+  drawTexturedHair,
+  drawBeard,
+  drawWarPaint,
+  furTexture,
+  ditherPattern,
+  // New imports for gender differentiation
+  drawGenderedEyes,
+  drawCheekbones
 } = require('./utils');
 
+// ============================================================================
+// HUMAN - Versatile, balanced features
+// ============================================================================
+
 /**
- * Generate Human base portrait
- * Rounded face, neutral proportions
+ * Generate Human base portrait (Enhanced v2)
+ * Gender-differentiated face shapes and features
  */
 function generateHumanBase(gender) {
   const skin = SKIN_PALETTES.human;
@@ -32,60 +45,116 @@ function generateHumanBase(gender) {
   let result = '';
   const cx = 32;
 
-  // Neck
-  result += drawNeck(cx, 48, 16, skin);
+  // Neck with enhanced shading (thicker for males)
+  const neckWidth = gender === 'male' ? 6 : 5;
+  result += fillRect(cx - neckWidth, 48, neckWidth * 2, 16, skin.outline);
+  result += fillRect(cx - neckWidth + 1, 48, neckWidth * 2 - 2, 16, skin.shadow);
+  result += fillRect(cx - neckWidth + 2, 48, neckWidth * 2 - 4, 16, skin.base);
+  result += fillRect(cx - 2, 48, 3, 16, skin.highlight);
 
-  // Face shape - oval
-  result += pixelEllipse(cx, 32, 14, 18, skin.outline);
-  result += pixelEllipse(cx, 32, 13, 17, skin.shadow);
-  result += pixelEllipse(cx, 31, 12, 16, skin.base);
-  result += pixelEllipse(cx, 30, 10, 14, skin.highlight);
-
-  // Ears
-  result += drawRoundEars(cx - 12, cx + 12, 30, skin);
-
-  // Eyes
-  result += drawEyes(cx - 5, 28, 10, eyes, skin);
-
-  // Eyebrows
-  const browThickness = gender === 'male' ? 2 : 1;
-  result += fillRect(cx - 8, 24, 5, browThickness, hair.dark);
-  result += fillRect(cx + 3, 24, 5, browThickness, hair.dark);
-
-  // Nose
-  result += drawNose(cx, 30, skin, 'medium');
-
-  // Mouth
-  result += drawMouth(cx, 40, skin, 'neutral');
-
-  // Hair base (will be covered by class equipment in most cases)
+  // Face shape varies by gender
   if (gender === 'male') {
-    // Short hair
-    result += fillRect(cx - 12, 12, 24, 6, hair.dark);
-    result += fillRect(cx - 13, 14, 26, 4, hair.base);
-    result += fillRect(cx - 11, 10, 22, 4, hair.dark);
+    // Male: Wider face (+1 rx), squarer jaw
+    result += pixelEllipse(cx, 33, 16, 19, skin.outline);
+    result += pixelEllipse(cx, 32, 15, 18, skin.shadow);
+    result += pixelEllipse(cx, 31, 14, 17, skin.base);
+    result += pixelEllipse(cx, 30, 12, 15, skin.highlight);
+    result += pixelEllipse(cx, 28, 7, 8, skin.bright);
+    // Square jaw corners
+    result += fillRect(cx - 14, 40, 4, 4, skin.base);
+    result += fillRect(cx + 10, 40, 4, 4, skin.base);
+    result += fillRect(cx - 13, 41, 2, 2, skin.highlight);
+    result += fillRect(cx + 11, 41, 2, 2, skin.shadow);
   } else if (gender === 'female') {
-    // Long hair framing face
-    result += fillRect(cx - 14, 10, 28, 8, hair.dark);
-    result += fillRect(cx - 15, 14, 6, 36, hair.base);
-    result += fillRect(cx + 9, 14, 6, 36, hair.base);
-    result += fillRect(cx - 14, 14, 4, 34, hair.dark);
-    result += fillRect(cx + 10, 14, 4, 34, hair.dark);
-    result += fillRect(cx - 12, 10, 24, 6, hair.highlight);
+    // Female: Taller oval face (+1 ry), softer jawline, pointed chin
+    result += pixelEllipse(cx, 33, 14, 20, skin.outline);
+    result += pixelEllipse(cx, 32, 13, 19, skin.shadow);
+    result += pixelEllipse(cx, 31, 12, 18, skin.base);
+    result += pixelEllipse(cx, 30, 10, 16, skin.highlight);
+    result += pixelEllipse(cx, 28, 5, 9, skin.bright);
+    // Pointed chin detail
+    result += fillRect(cx - 2, 47, 4, 2, skin.base);
+    result += pixel(cx, 48, skin.highlight);
   } else {
-    // Medium length hair
-    result += fillRect(cx - 13, 10, 26, 8, hair.dark);
-    result += fillRect(cx - 14, 14, 4, 20, hair.base);
-    result += fillRect(cx + 10, 14, 4, 20, hair.base);
-    result += fillRect(cx - 12, 10, 24, 5, hair.highlight);
+    // Other: Balanced proportions
+    result += pixelEllipse(cx, 33, 15, 19, skin.outline);
+    result += pixelEllipse(cx, 32, 14, 18, skin.shadow);
+    result += pixelEllipse(cx, 31, 13, 17, skin.base);
+    result += pixelEllipse(cx, 30, 11, 15, skin.highlight);
+    result += pixelEllipse(cx, 28, 6, 8, skin.bright);
+  }
+
+  // Cheekbones vary by gender
+  result += drawCheekbones(cx, 32, skin, gender, 'normal');
+
+  // Ears with shading
+  result += drawRoundEars(cx - 13, cx + 13, 30, skin);
+
+  // Gender-aware eyes
+  result += drawGenderedEyes(cx - 5, 28, 10, eyes, 'normal', gender);
+
+  // Eyebrows - thick for male, arched for female
+  if (gender === 'male') {
+    // Thick straight eyebrows
+    result += fillRect(cx - 9, 24, 6, 2, hair.dark);
+    result += fillRect(cx + 3, 24, 6, 2, hair.dark);
+    result += fillRect(cx - 8, 24, 4, 1, hair.base);
+    result += fillRect(cx + 4, 24, 4, 1, hair.base);
+  } else if (gender === 'female') {
+    // Arched thin eyebrows
+    result += fillRect(cx - 9, 24, 6, 1, hair.dark);
+    result += fillRect(cx + 3, 24, 6, 1, hair.dark);
+    result += pixel(cx - 10, 25, hair.dark);
+    result += pixel(cx + 9, 25, hair.dark);
+    // Arch highlight
+    result += pixel(cx - 6, 23, hair.base);
+    result += pixel(cx + 5, 23, hair.base);
+  } else {
+    result += fillRect(cx - 8, 24, 5, 1, hair.dark);
+    result += fillRect(cx + 3, 24, 5, 1, hair.dark);
+  }
+
+  // Nose with highlight
+  result += drawNose(cx, 30, skin, 'medium');
+  result += pixel(cx, 32, skin.bright);
+
+  // Mouth - fuller lips for female
+  if (gender === 'female') {
+    result += fillRect(cx - 3, 40, 6, 2, '#8a4a4a');
+    result += fillRect(cx - 2, 40, 4, 1, '#a05858');
+    result += pixel(cx, 40, '#b06868');
+  } else {
+    result += drawMouth(cx, 40, skin, 'neutral');
+  }
+
+  // Textured hair based on gender
+  if (gender === 'male') {
+    // Short textured hair
+    result += drawTexturedHair(cx - 13, 10, 26, 10, hair, 'straight');
+    result += fillRect(cx - 14, 16, 28, 4, hair.dark);
+  } else if (gender === 'female') {
+    // Long flowing hair with texture
+    result += drawTexturedHair(cx - 14, 8, 28, 10, hair, 'wavy');
+    // Side hair framing face
+    result += drawTexturedHair(cx - 16, 14, 6, 40, hair, 'straight');
+    result += drawTexturedHair(cx + 10, 14, 6, 40, hair, 'straight');
+  } else {
+    // Medium length with gentle waves
+    result += drawTexturedHair(cx - 14, 8, 28, 12, hair, 'wavy');
+    result += drawTexturedHair(cx - 15, 14, 5, 24, hair, 'straight');
+    result += drawTexturedHair(cx + 10, 14, 5, 24, hair, 'straight');
   }
 
   return result;
 }
 
+// ============================================================================
+// ELF - Ethereal, angular, elegant
+// ============================================================================
+
 /**
- * Generate Elf base portrait
- * Narrow face, pointed ears, angular features
+ * Generate Elf base portrait (Enhanced v2)
+ * Gender-differentiated features with elegant ear shimmer and visible ornaments
  */
 function generateElfBase(gender) {
   const skin = SKIN_PALETTES.elf;
@@ -95,61 +164,123 @@ function generateElfBase(gender) {
   let result = '';
   const cx = 32;
 
-  // Neck (slender)
-  result += fillRect(cx - 3, 48, 6, 16, skin.base);
-  result += fillRect(cx - 2, 48, 2, 16, skin.highlight);
+  // Slender neck
+  result += fillRect(cx - 4, 48, 8, 16, skin.outline);
+  result += fillRect(cx - 3, 48, 6, 16, skin.shadow);
+  result += fillRect(cx - 2, 48, 4, 16, skin.base);
+  result += fillRect(cx - 1, 48, 2, 16, skin.highlight);
 
-  // Face shape - narrow, angular
-  result += pixelEllipse(cx, 32, 11, 19, skin.outline);
-  result += pixelEllipse(cx, 32, 10, 18, skin.shadow);
-  result += pixelEllipse(cx, 31, 9, 17, skin.base);
-  result += pixelEllipse(cx, 30, 7, 15, skin.highlight);
-
-  // Pointed ears
-  result += drawPointedEars(cx - 9, cx + 9, 28, skin);
-
-  // Eyes (slightly larger, almond-shaped)
-  result += drawEyes(cx - 5, 27, 10, eyes, skin);
-
-  // Thin elegant eyebrows
-  result += fillRect(cx - 8, 23, 6, 1, hair.dark);
-  result += fillRect(cx + 2, 23, 6, 1, hair.dark);
-
-  // Nose (small, delicate)
-  result += drawNose(cx, 29, skin, 'small');
-
-  // Mouth
-  result += drawMouth(cx, 39, skin, 'neutral');
-
-  // Hair
+  // Face shape varies by gender
   if (gender === 'male') {
-    // Long straight hair, elven style
-    result += fillRect(cx - 12, 8, 24, 10, hair.dark);
-    result += fillRect(cx - 13, 12, 5, 40, hair.base);
-    result += fillRect(cx + 8, 12, 5, 40, hair.base);
-    result += fillRect(cx - 11, 8, 22, 6, hair.highlight);
+    // Male: Slightly stronger jaw while maintaining elegance
+    result += pixelEllipse(cx, 33, 13, 20, skin.outline);
+    result += pixelEllipse(cx, 32, 12, 19, skin.shadow);
+    result += pixelEllipse(cx, 31, 11, 18, skin.base);
+    result += pixelEllipse(cx, 30, 9, 16, skin.highlight);
+    result += pixelEllipse(cx, 28, 5, 10, skin.bright);
+    // Defined jawline
+    result += fillRect(cx - 11, 42, 3, 2, skin.base);
+    result += fillRect(cx + 8, 42, 3, 2, skin.base);
   } else if (gender === 'female') {
-    // Very long flowing hair
-    result += fillRect(cx - 14, 6, 28, 12, hair.dark);
-    result += fillRect(cx - 16, 12, 8, 52, hair.base);
-    result += fillRect(cx + 8, 12, 8, 52, hair.base);
-    result += fillRect(cx - 15, 12, 5, 50, hair.dark);
-    result += fillRect(cx + 10, 12, 5, 50, hair.dark);
-    result += fillRect(cx - 12, 6, 24, 8, hair.highlight);
+    // Female: Heart-shaped face, narrower chin
+    result += pixelEllipse(cx, 33, 11, 20, skin.outline);
+    result += pixelEllipse(cx, 32, 10, 19, skin.shadow);
+    result += pixelEllipse(cx, 31, 9, 18, skin.base);
+    result += pixelEllipse(cx, 30, 7, 16, skin.highlight);
+    result += pixelEllipse(cx, 28, 4, 10, skin.bright);
+    // Pointed chin
+    result += fillRect(cx - 1, 47, 2, 2, skin.base);
+    result += pixel(cx, 48, skin.highlight);
+  } else {
+    // Other: Balanced elven proportions
+    result += pixelEllipse(cx, 33, 12, 20, skin.outline);
+    result += pixelEllipse(cx, 32, 11, 19, skin.shadow);
+    result += pixelEllipse(cx, 31, 10, 18, skin.base);
+    result += pixelEllipse(cx, 30, 8, 16, skin.highlight);
+    result += pixelEllipse(cx, 28, 4, 10, skin.bright);
+  }
+
+  // Enhanced cheekbones - HIGH for female with prominent highlights
+  if (gender === 'female') {
+    result += drawCheekbones(cx, 30, skin, 'female', 'prominent');
+  } else {
+    result += fillRect(cx - 10, 30, 3, 2, skin.shadow);
+    result += fillRect(cx + 7, 30, 3, 2, skin.shadow);
+    result += pixel(cx - 9, 31, skin.highlight);
+    result += pixel(cx + 8, 31, skin.highlight);
+  }
+
+  // Enhanced pointed ears with 'elegant' style for more shimmer
+  result += drawPointedEars(cx - 10, cx + 10, 28, skin, 'elegant');
+
+  // Gender-aware eyes
+  result += drawGenderedEyes(cx - 5, 27, 10, eyes, 'cat', gender);
+
+  // Thin elegant eyebrows - arched for female
+  if (gender === 'female') {
+    result += fillRect(cx - 9, 22, 6, 1, hair.dark);
+    result += fillRect(cx + 3, 22, 6, 1, hair.dark);
+    result += pixel(cx - 10, 23, hair.base);
+    result += pixel(cx + 9, 23, hair.base);
+  } else {
+    result += fillRect(cx - 9, 23, 6, 1, hair.dark);
+    result += fillRect(cx + 3, 23, 6, 1, hair.dark);
+    result += pixel(cx - 9, 22, hair.base);
+    result += pixel(cx + 8, 22, hair.base);
+  }
+
+  // Delicate nose
+  result += drawNose(cx, 29, skin, 'small');
+  result += pixel(cx, 30, skin.bright);
+
+  // Elegant mouth - fuller for female
+  if (gender === 'female') {
+    result += fillRect(cx - 2, 38, 4, 2, '#9a6a70');
+    result += fillRect(cx - 1, 38, 2, 1, '#aa7a80');
+  } else {
+    result += drawMouth(cx, 38, skin, 'neutral');
+  }
+
+  // Long flowing hair with shine
+  if (gender === 'male') {
+    // Long elven warrior style
+    result += drawTexturedHair(cx - 13, 6, 26, 14, hair, 'straight');
+    result += drawTexturedHair(cx - 14, 14, 5, 46, hair, 'straight');
+    result += drawTexturedHair(cx + 9, 14, 5, 46, hair, 'straight');
+  } else if (gender === 'female') {
+    // Very long cascading hair
+    result += drawTexturedHair(cx - 15, 4, 30, 16, hair, 'wavy');
+    result += drawTexturedHair(cx - 18, 14, 8, 50, hair, 'straight');
+    result += drawTexturedHair(cx + 10, 14, 8, 50, hair, 'straight');
+    // VISIBLE HAIR ORNAMENT - Gold circlet with gem (20+ pixels)
+    // Circlet band across forehead
+    result += fillRect(cx - 10, 10, 20, 2, '#c89830');
+    result += fillRect(cx - 9, 10, 18, 1, '#e8b840');
+    // Side decorations
+    result += fillRect(cx - 12, 11, 3, 2, '#c89830');
+    result += fillRect(cx + 9, 11, 3, 2, '#c89830');
+    // Center gem (blue sapphire)
+    result += fillRect(cx - 2, 9, 4, 4, '#3050a0');
+    result += fillRect(cx - 1, 9, 2, 3, '#5080d0');
+    result += pixel(cx, 9, '#80b0f0');
+    result += pixel(cx - 1, 10, '#ffffff');
   } else {
     // Elegant medium-length
-    result += fillRect(cx - 13, 8, 26, 10, hair.dark);
-    result += fillRect(cx - 14, 12, 6, 30, hair.base);
-    result += fillRect(cx + 8, 12, 6, 30, hair.base);
-    result += fillRect(cx - 12, 8, 24, 6, hair.highlight);
+    result += drawTexturedHair(cx - 14, 6, 28, 14, hair, 'wavy');
+    result += drawTexturedHair(cx - 15, 14, 6, 36, hair, 'straight');
+    result += drawTexturedHair(cx + 9, 14, 6, 36, hair, 'straight');
   }
 
   return result;
 }
 
+// ============================================================================
+// DWARF - Stout, rugged, bearded
+// ============================================================================
+
 /**
- * Generate Dwarf base portrait
- * Wide face, prominent brow, thick beard
+ * Generate Dwarf base portrait (Enhanced v2)
+ * Gender-differentiated with female facial hair (sideburns, chin stubble)
  */
 function generateDwarfBase(gender) {
   const skin = SKIN_PALETTES.dwarf;
@@ -159,80 +290,129 @@ function generateDwarfBase(gender) {
   let result = '';
   const cx = 32;
 
-  // Neck (thick)
-  result += fillRect(cx - 6, 46, 12, 18, skin.base);
-  result += fillRect(cx - 5, 46, 4, 18, skin.highlight);
+  // Thick muscular neck (thicker for male)
+  const neckWidth = gender === 'male' ? 7 : 6;
+  result += fillRect(cx - neckWidth, 44, neckWidth * 2, 20, skin.outline);
+  result += fillRect(cx - neckWidth + 1, 44, neckWidth * 2 - 2, 20, skin.shadow);
+  result += fillRect(cx - neckWidth + 2, 44, neckWidth * 2 - 4, 20, skin.base);
+  result += fillRect(cx - 4, 44, 6, 20, skin.highlight);
 
-  // Face shape - wide, blocky
-  result += pixelEllipse(cx, 30, 16, 16, skin.outline);
-  result += pixelEllipse(cx, 30, 15, 15, skin.shadow);
-  result += pixelEllipse(cx, 29, 14, 14, skin.base);
-  result += pixelEllipse(cx, 28, 12, 12, skin.highlight);
-
-  // Heavy brow ridge
-  result += fillRect(cx - 14, 22, 28, 3, skin.shadow);
-  result += fillRect(cx - 13, 21, 26, 2, skin.base);
+  // Face shape varies by gender
+  if (gender === 'male') {
+    // Male: Very wide/blocky, heavy brow ridge
+    result += pixelEllipse(cx, 31, 18, 17, skin.outline);
+    result += pixelEllipse(cx, 30, 17, 16, skin.shadow);
+    result += pixelEllipse(cx, 29, 16, 15, skin.base);
+    result += pixelEllipse(cx, 28, 14, 13, skin.highlight);
+    result += pixelEllipse(cx, 26, 9, 8, skin.bright);
+    // Heavy brow ridge
+    result += fillRect(cx - 16, 20, 32, 5, skin.shadow);
+    result += fillRect(cx - 15, 19, 30, 4, skin.base);
+    result += fillRect(cx - 14, 18, 28, 2, skin.highlight);
+  } else if (gender === 'female') {
+    // Female: Rounder face with rosy cheeks
+    result += pixelEllipse(cx, 31, 16, 16, skin.outline);
+    result += pixelEllipse(cx, 30, 15, 15, skin.shadow);
+    result += pixelEllipse(cx, 29, 14, 14, skin.base);
+    result += pixelEllipse(cx, 28, 12, 12, skin.highlight);
+    result += pixelEllipse(cx, 26, 7, 7, skin.bright);
+    // Moderate brow ridge
+    result += fillRect(cx - 14, 21, 28, 3, skin.shadow);
+    result += fillRect(cx - 13, 20, 26, 2, skin.base);
+    // ROSY CHEEKS
+    result += fillRect(cx - 12, 32, 4, 3, '#c89088');
+    result += fillRect(cx + 8, 32, 4, 3, '#c89088');
+    result += pixel(cx - 11, 33, '#d8a098');
+    result += pixel(cx + 9, 33, '#d8a098');
+  } else {
+    // Other: Moderate build
+    result += pixelEllipse(cx, 31, 17, 17, skin.outline);
+    result += pixelEllipse(cx, 30, 16, 16, skin.shadow);
+    result += pixelEllipse(cx, 29, 15, 15, skin.base);
+    result += pixelEllipse(cx, 28, 13, 13, skin.highlight);
+    result += pixelEllipse(cx, 26, 8, 8, skin.bright);
+    result += fillRect(cx - 15, 21, 30, 4, skin.shadow);
+    result += fillRect(cx - 14, 20, 28, 3, skin.base);
+  }
 
   // Round ears
-  result += drawRoundEars(cx - 14, cx + 14, 28, skin);
+  result += drawRoundEars(cx - 15, cx + 15, 27, skin);
 
-  // Eyes (deep-set under brow)
-  result += drawEyes(cx - 5, 27, 10, eyes, skin);
+  // Gender-aware eyes
+  result += drawGenderedEyes(cx - 5, 27, 10, eyes, 'fierce', gender);
 
-  // Bushy eyebrows
-  result += fillRect(cx - 10, 23, 7, 3, hair.dark);
-  result += fillRect(cx + 3, 23, 7, 3, hair.dark);
+  // Bushy eyebrows with texture
+  const browPalette = { outline: hair.outline, shadow: hair.dark, base: hair.base, highlight: hair.highlight, bright: hair.highlight };
+  const browWidth = gender === 'male' ? 8 : 7;
+  result += furTexture(cx - 11, 22, browWidth, 4, browPalette);
+  result += furTexture(cx + 3, 22, browWidth, 4, browPalette);
 
-  // Nose (large, bulbous)
-  result += drawNose(cx, 28, skin, 'large');
+  // Large bulbous nose
+  result += drawNose(cx, 27, skin, 'large');
+  result += fillRect(cx - 2, 33, 4, 2, skin.bright);
 
   // Mouth (hidden by beard for males)
   if (gender === 'female' || gender === 'other') {
     result += drawMouth(cx, 40, skin, 'neutral');
   }
 
-  // Hair and beard
+  // Hair and beard with textures
   if (gender === 'male') {
-    // Helmet-like hair and massive beard
-    result += fillRect(cx - 14, 10, 28, 12, hair.dark);
-    result += fillRect(cx - 15, 14, 4, 16, hair.base);
-    result += fillRect(cx + 11, 14, 4, 16, hair.base);
-    result += fillRect(cx - 13, 10, 26, 8, hair.highlight);
+    // Helmet-like hair
+    result += drawTexturedHair(cx - 15, 8, 30, 14, hair, 'straight');
+    result += drawTexturedHair(cx - 16, 14, 5, 20, hair, 'straight');
+    result += drawTexturedHair(cx + 11, 14, 5, 20, hair, 'straight');
 
-    // Big bushy beard
-    result += fillRect(cx - 12, 36, 24, 28, hair.dark);
-    result += fillRect(cx - 10, 38, 20, 26, hair.base);
-    result += fillRect(cx - 8, 40, 16, 22, hair.highlight);
-    // Beard detail
-    result += fillRect(cx - 2, 50, 4, 14, hair.dark);
+    // Magnificent braided beard with full coverage
+    result += drawBeard(cx, 36, hair, 'braided');
   } else if (gender === 'female') {
-    // Braided hair, smaller chin beard/stubble
-    result += fillRect(cx - 14, 8, 28, 14, hair.dark);
-    result += fillRect(cx - 16, 14, 8, 36, hair.base);  // Braids
-    result += fillRect(cx + 8, 14, 8, 36, hair.base);
-    result += fillRect(cx - 13, 8, 26, 10, hair.highlight);
+    // Braided hair
+    result += drawTexturedHair(cx - 15, 6, 30, 16, hair, 'curly');
+    result += drawTexturedHair(cx - 17, 14, 8, 40, hair, 'straight');
+    result += drawTexturedHair(cx + 9, 14, 8, 40, hair, 'straight');
 
-    // Small decorative beard braids
-    result += fillRect(cx - 4, 44, 3, 10, hair.base);
-    result += fillRect(cx + 1, 44, 3, 10, hair.base);
+    // SIDEBURNS WITH GOLD RINGS (female dwarves have facial hair!)
+    result += furTexture(cx - 15, 30, 4, 14, browPalette);
+    result += furTexture(cx + 11, 30, 4, 14, browPalette);
+    // Gold rings on sideburns
+    result += fillRect(cx - 16, 36, 4, 2, '#c89830');
+    result += fillRect(cx - 15, 36, 2, 1, '#e8b840');
+    result += fillRect(cx + 12, 36, 4, 2, '#c89830');
+    result += fillRect(cx + 13, 36, 2, 1, '#e8b840');
+    result += fillRect(cx - 16, 40, 4, 2, '#c89830');
+    result += fillRect(cx + 12, 40, 4, 2, '#c89830');
+
+    // LIGHT CHIN STUBBLE via dither pattern
+    result += ditherPattern(cx - 6, 42, 12, 4, skin.base, hair.dark);
+
+    // Decorative chin braids (smaller than male)
+    result += fillRect(cx - 4, 46, 2, 10, hair.dark);
+    result += fillRect(cx + 2, 46, 2, 10, hair.dark);
+    result += fillRect(cx - 3, 46, 1, 8, hair.base);
+    result += fillRect(cx + 2, 46, 1, 8, hair.base);
+    // Braid beads
+    result += fillRect(cx - 4, 52, 2, 2, '#c89830');
+    result += fillRect(cx + 2, 52, 2, 2, '#c89830');
   } else {
-    // Medium hair and modest beard
-    result += fillRect(cx - 14, 10, 28, 12, hair.dark);
-    result += fillRect(cx - 15, 14, 5, 24, hair.base);
-    result += fillRect(cx + 10, 14, 5, 24, hair.base);
-    result += fillRect(cx - 13, 10, 26, 8, hair.highlight);
+    // Other: Medium hair and stylized trimmed beard
+    result += drawTexturedHair(cx - 15, 8, 30, 14, hair, 'straight');
+    result += drawTexturedHair(cx - 16, 14, 6, 28, hair, 'straight');
+    result += drawTexturedHair(cx + 10, 14, 6, 28, hair, 'straight');
 
-    // Moderate beard
-    result += fillRect(cx - 10, 38, 20, 20, hair.dark);
-    result += fillRect(cx - 8, 40, 16, 16, hair.base);
+    // Full beard (trimmed style)
+    result += drawBeard(cx, 38, hair, 'full');
   }
 
   return result;
 }
 
+// ============================================================================
+// VAMPIRE - Pale, predatory, aristocratic
+// ============================================================================
+
 /**
- * Generate Vampire base portrait
- * Pale skin, sharp features, fangs
+ * Generate Vampire base portrait (Enhanced v2)
+ * Elegant pointed ears, prominent fangs, dark lip tint
  */
 function generateVampireBase(gender) {
   const skin = SKIN_PALETTES.vampire;
@@ -242,140 +422,267 @@ function generateVampireBase(gender) {
   let result = '';
   const cx = 32;
 
-  // Neck (elegant)
-  result += drawNeck(cx, 46, 18, skin);
+  // Elegant neck
+  result += fillRect(cx - 4, 46, 8, 18, skin.outline);
+  result += fillRect(cx - 3, 46, 6, 18, skin.shadow);
+  result += fillRect(cx - 2, 46, 4, 18, skin.base);
+  result += fillRect(cx - 1, 46, 2, 18, skin.highlight);
 
-  // Face shape - angular, aristocratic
-  result += pixelEllipse(cx, 32, 12, 18, skin.outline);
-  result += pixelEllipse(cx, 32, 11, 17, skin.shadow);
-  result += pixelEllipse(cx, 31, 10, 16, skin.base);
-  result += pixelEllipse(cx, 30, 8, 14, skin.highlight);
+  // Face shape varies by gender
+  if (gender === 'male') {
+    // Male: Longer face, defined jawline
+    result += pixelEllipse(cx, 33, 13, 20, skin.outline);
+    result += pixelEllipse(cx, 32, 12, 19, skin.shadow);
+    result += pixelEllipse(cx, 31, 11, 18, skin.base);
+    result += pixelEllipse(cx, 30, 9, 16, skin.highlight);
+    result += pixelEllipse(cx, 28, 5, 10, skin.bright);
+    // Defined jawline
+    result += fillRect(cx - 11, 42, 4, 3, skin.base);
+    result += fillRect(cx + 7, 42, 4, 3, skin.base);
+    result += fillRect(cx - 10, 43, 2, 1, skin.highlight);
+    result += fillRect(cx + 8, 43, 2, 1, skin.shadow);
+  } else if (gender === 'female') {
+    // Female: Narrower face, dramatic cheekbones
+    result += pixelEllipse(cx, 33, 11, 19, skin.outline);
+    result += pixelEllipse(cx, 32, 10, 18, skin.shadow);
+    result += pixelEllipse(cx, 31, 9, 17, skin.base);
+    result += pixelEllipse(cx, 30, 7, 15, skin.highlight);
+    result += pixelEllipse(cx, 28, 4, 9, skin.bright);
+    // Pointed chin
+    result += fillRect(cx - 1, 46, 2, 2, skin.base);
+  } else {
+    // Other: Balanced aristocratic proportions
+    result += pixelEllipse(cx, 33, 13, 19, skin.outline);
+    result += pixelEllipse(cx, 32, 12, 18, skin.shadow);
+    result += pixelEllipse(cx, 31, 11, 17, skin.base);
+    result += pixelEllipse(cx, 30, 9, 15, skin.highlight);
+    result += pixelEllipse(cx, 28, 5, 9, skin.bright);
+  }
 
-  // Sharp cheekbones
-  result += fillRect(cx - 12, 32, 4, 2, skin.shadow);
-  result += fillRect(cx + 8, 32, 4, 2, skin.shadow);
+  // Sharp cheekbones - more dramatic for female
+  if (gender === 'female') {
+    result += drawCheekbones(cx, 31, skin, 'female', 'prominent');
+    // Dark eyeliner effect
+    result += fillRect(cx - 8, 25, 6, 1, '#3a3040');
+    result += fillRect(cx + 2, 25, 6, 1, '#3a3040');
+  } else {
+    result += fillRect(cx - 12, 31, 4, 3, skin.shadow);
+    result += fillRect(cx + 8, 31, 4, 3, skin.shadow);
+    result += fillRect(cx - 11, 32, 2, 1, skin.highlight);
+    result += fillRect(cx + 9, 32, 2, 1, skin.highlight);
+  }
 
-  // Slightly pointed ears
-  result += fillRect(cx - 14, 26, 3, 6, skin.base);
-  result += fillRect(cx - 15, 24, 2, 4, skin.base);
-  result += fillRect(cx + 11, 26, 3, 6, skin.base);
-  result += fillRect(cx + 13, 24, 2, 4, skin.base);
+  // ELEGANT POINTED EARS (replacing crude rectangles)
+  result += drawPointedEars(cx - 11, cx + 11, 27, skin, 'elegant');
 
-  // Eyes (intense red)
-  result += drawEyes(cx - 5, 27, 10, eyes, skin);
+  // Gender-aware glowing eyes
+  result += drawGenderedEyes(cx - 5, 27, 10, eyes, 'glowing', gender);
 
   // Sharp arched eyebrows
-  result += fillRect(cx - 9, 23, 6, 1, hair.dark);
-  result += pixel(cx - 10, 24, hair.dark);
-  result += fillRect(cx + 3, 23, 6, 1, hair.dark);
-  result += pixel(cx + 9, 24, hair.dark);
-
-  // Nose (sharp, aquiline)
-  result += drawNose(cx, 29, skin, 'small');
-
-  // Mouth with fangs
-  result += drawMouth(cx, 39, skin, 'neutral');
-  result += drawVampireFangs(cx, 40);
-
-  // Hair
   if (gender === 'male') {
-    // Slicked back aristocratic
-    result += fillRect(cx - 13, 10, 26, 10, hair.dark);
-    result += fillRect(cx - 12, 8, 24, 8, hair.base);
-    result += fillRect(cx - 10, 8, 20, 4, hair.highlight);
-    // Widow's peak
-    result += fillRect(cx - 2, 10, 4, 4, hair.dark);
+    // Widow's peak brow style
+    result += fillRect(cx - 10, 22, 7, 1, hair.dark);
+    result += fillRect(cx + 3, 22, 7, 1, hair.dark);
+    result += pixel(cx - 4, 21, hair.dark);
+    result += pixel(cx + 3, 21, hair.dark);
   } else if (gender === 'female') {
-    // Long dramatic hair
-    result += fillRect(cx - 15, 6, 30, 14, hair.dark);
-    result += fillRect(cx - 17, 14, 8, 50, hair.base);
-    result += fillRect(cx + 9, 14, 8, 50, hair.base);
-    result += fillRect(cx - 16, 14, 5, 48, hair.dark);
-    result += fillRect(cx + 11, 14, 5, 48, hair.dark);
-    result += fillRect(cx - 13, 6, 26, 8, hair.highlight);
+    // High arched dramatic brows
+    result += fillRect(cx - 9, 21, 6, 1, hair.dark);
+    result += fillRect(cx + 3, 21, 6, 1, hair.dark);
+    result += pixel(cx - 10, 22, hair.dark);
+    result += pixel(cx + 9, 22, hair.dark);
+  } else {
+    result += fillRect(cx - 10, 22, 7, 1, hair.dark);
+    result += pixel(cx - 11, 23, hair.dark);
+    result += fillRect(cx + 3, 22, 7, 1, hair.dark);
+    result += pixel(cx + 10, 23, hair.dark);
+  }
+
+  // Sharp aquiline nose
+  result += drawNose(cx, 28, skin, 'small');
+  result += pixel(cx, 30, skin.bright);
+
+  // DARK BURGUNDY LIP TINT - fuller for female
+  const lipColor = '#7a3040';
+  const lipHighlight = '#8a4050';
+  if (gender === 'female') {
+    result += fillRect(cx - 3, 38, 6, 2, lipColor);
+    result += fillRect(cx - 2, 38, 4, 1, lipHighlight);
+    result += pixel(cx, 38, '#9a5060');
+  } else {
+    result += fillRect(cx - 2, 38, 4, 1, lipColor);
+    result += fillRect(cx - 1, 38, 2, 1, lipHighlight);
+  }
+
+  // PROMINENT FANGS (4 pixels tall with gradient)
+  result += drawVampireFangs(cx, 39, 'prominent');
+
+  // Dramatic hair
+  if (gender === 'male') {
+    // Slicked back aristocratic with widow's peak
+    result += drawTexturedHair(cx - 14, 8, 28, 14, hair, 'straight');
+    // WIDOW'S PEAK detail
+    result += fillRect(cx - 4, 8, 8, 8, hair.dark);
+    result += fillRect(cx - 3, 10, 6, 6, hair.base);
+    result += fillRect(cx - 2, 12, 4, 4, hair.highlight);
+    // Side hair
+    result += drawTexturedHair(cx - 15, 16, 4, 20, hair, 'straight');
+    result += drawTexturedHair(cx + 11, 16, 4, 20, hair, 'straight');
+  } else if (gender === 'female') {
+    // Long dramatic black hair
+    result += drawTexturedHair(cx - 16, 4, 32, 18, hair, 'wavy');
+    result += drawTexturedHair(cx - 18, 14, 9, 50, hair, 'straight');
+    result += drawTexturedHair(cx + 9, 14, 9, 50, hair, 'straight');
   } else {
     // Elegant shoulder-length
-    result += fillRect(cx - 14, 8, 28, 12, hair.dark);
-    result += fillRect(cx - 15, 14, 6, 30, hair.base);
-    result += fillRect(cx + 9, 14, 6, 30, hair.base);
-    result += fillRect(cx - 13, 8, 26, 8, hair.highlight);
+    result += drawTexturedHair(cx - 15, 6, 30, 16, hair, 'wavy');
+    result += drawTexturedHair(cx - 16, 14, 7, 34, hair, 'straight');
+    result += drawTexturedHair(cx + 9, 14, 7, 34, hair, 'straight');
   }
 
   return result;
 }
 
+// ============================================================================
+// ORC - Brutal, powerful, war-like
+// ============================================================================
+
 /**
- * Generate Orc base portrait
- * Broad face, tusks, heavy brow, green skin
+ * Generate Orc base portrait (Enhanced v2)
+ * Dark olive hair for contrast, large tusks, gender-specific war paint
  */
 function generateOrcBase(gender) {
   const skin = SKIN_PALETTES.orc;
-  const hair = HAIR_PALETTES.green;
+  // USE NEW DARK OLIVE HAIR for contrast against green skin
+  const hair = HAIR_PALETTES.orcHair;
   const eyes = EYE_COLORS.yellow;
 
   let result = '';
   const cx = 32;
 
-  // Neck (very thick, muscular)
-  result += fillRect(cx - 8, 44, 16, 20, skin.base);
-  result += fillRect(cx - 7, 44, 6, 20, skin.highlight);
-  result += fillRect(cx + 3, 44, 5, 20, skin.shadow);
+  // Very thick muscular neck (thicker for male)
+  const neckWidth = gender === 'male' ? 9 : 8;
+  result += fillRect(cx - neckWidth, 42, neckWidth * 2, 22, skin.outline);
+  result += fillRect(cx - neckWidth + 1, 42, neckWidth * 2 - 2, 22, skin.shadow);
+  result += fillRect(cx - neckWidth + 2, 42, neckWidth * 2 - 4, 22, skin.base);
+  result += fillRect(cx - 5, 42, 8, 22, skin.highlight);
+  result += fillRect(cx + 4, 42, 4, 22, skin.shadow);
 
-  // Face shape - broad, brutish
-  result += pixelEllipse(cx, 30, 17, 16, skin.outline);
-  result += pixelEllipse(cx, 30, 16, 15, skin.shadow);
-  result += pixelEllipse(cx, 29, 15, 14, skin.base);
-  result += pixelEllipse(cx, 28, 13, 12, skin.highlight);
-
-  // Heavy brow ridge
-  result += fillRect(cx - 16, 20, 32, 4, skin.shadow);
-  result += fillRect(cx - 15, 19, 30, 3, skin.base);
+  // Face shape varies by gender
+  if (gender === 'male') {
+    // Male: Very broad, brutish
+    result += pixelEllipse(cx, 31, 19, 17, skin.outline);
+    result += pixelEllipse(cx, 30, 18, 16, skin.shadow);
+    result += pixelEllipse(cx, 29, 17, 15, skin.base);
+    result += pixelEllipse(cx, 28, 15, 13, skin.highlight);
+    result += pixelEllipse(cx, 26, 9, 8, skin.bright);
+    // Heavy brow ridge
+    result += fillRect(cx - 18, 18, 36, 6, skin.shadow);
+    result += fillRect(cx - 17, 17, 34, 5, skin.base);
+    result += fillRect(cx - 16, 16, 32, 2, skin.highlight);
+  } else if (gender === 'female') {
+    // Female: Slightly narrower face, higher cheekbones
+    result += pixelEllipse(cx, 31, 17, 17, skin.outline);
+    result += pixelEllipse(cx, 30, 16, 16, skin.shadow);
+    result += pixelEllipse(cx, 29, 15, 15, skin.base);
+    result += pixelEllipse(cx, 28, 13, 13, skin.highlight);
+    result += pixelEllipse(cx, 26, 7, 8, skin.bright);
+    // Moderate brow ridge
+    result += fillRect(cx - 16, 19, 32, 4, skin.shadow);
+    result += fillRect(cx - 15, 18, 30, 3, skin.base);
+    // Higher cheekbones
+    result += drawCheekbones(cx, 30, skin, 'female', 'normal');
+  } else {
+    // Other: Balanced proportions
+    result += pixelEllipse(cx, 31, 18, 17, skin.outline);
+    result += pixelEllipse(cx, 30, 17, 16, skin.shadow);
+    result += pixelEllipse(cx, 29, 16, 15, skin.base);
+    result += pixelEllipse(cx, 28, 14, 13, skin.highlight);
+    result += pixelEllipse(cx, 26, 8, 8, skin.bright);
+    result += fillRect(cx - 17, 19, 34, 5, skin.shadow);
+    result += fillRect(cx - 16, 18, 32, 4, skin.base);
+    result += fillRect(cx - 15, 17, 30, 2, skin.highlight);
+  }
 
   // Small ears
-  result += fillRect(cx - 17, 26, 3, 5, skin.base);
-  result += fillRect(cx + 14, 26, 3, 5, skin.base);
+  result += fillRect(cx - 18, 25, 4, 6, skin.base);
+  result += fillRect(cx - 17, 26, 2, 4, skin.highlight);
+  result += fillRect(cx + 14, 25, 4, 6, skin.base);
+  result += fillRect(cx + 15, 26, 2, 4, skin.shadow);
 
-  // Small deep-set eyes under brow
-  result += fillRect(cx - 7, 25, 4, 3, '#f0f0e8');
-  result += fillRect(cx + 3, 25, 4, 3, '#f0f0e8');
-  result += fillRect(cx - 6, 25, 2, 2, eyes.iris);
-  result += fillRect(cx + 4, 25, 2, 2, eyes.iris);
-  result += pixel(cx - 5, 25, '#ffffff');
-  result += pixel(cx + 5, 25, '#ffffff');
+  // Gender-aware fierce eyes
+  result += drawGenderedEyes(cx - 5, 25, 10, eyes, 'fierce', gender);
+
+  // Thick brow ridges
+  const browHeight = gender === 'male' ? 3 : 2;
+  result += fillRect(cx - 10, 22, 6, browHeight, skin.shadow);
+  result += fillRect(cx + 4, 22, 6, browHeight, skin.shadow);
 
   // Broad flat nose
-  result += drawNose(cx, 26, skin, 'large');
+  result += drawNose(cx, 25, skin, 'large');
+  result += fillRect(cx - 3, 31, 6, 3, skin.shadow);
 
-  // Wide mouth
-  result += fillRect(cx - 6, 38, 12, 2, '#3a2020');
+  // Wide mouth with tusks - size varies by gender
+  result += fillRect(cx - 7, 37, 14, 3, '#3a2020');
+  if (gender === 'male') {
+    // LARGE PROMINENT TUSKS for male
+    result += drawTusks(cx, 35, 'large');
+  } else if (gender === 'female') {
+    // SMALLER CURVED TUSKS for female
+    result += drawTusks(cx, 36, 'curved');
+  } else {
+    // Normal tusks for other
+    result += drawTusks(cx, 35, 'normal');
+  }
 
-  // Tusks
-  result += drawTusks(cx, 36);
+  // WAR PAINT - DIFFERENT PATTERN PER GENDER
+  if (gender === 'male') {
+    // Tribal zigzag pattern in red
+    result += drawWarPaint(cx, 26, 'tribal', '#802020');
+  } else if (gender === 'female') {
+    // Woad pattern with forehead dot
+    result += drawWarPaint(cx, 26, 'woad', '#204080');
+    // Extra forehead dot
+    result += fillRect(cx - 1, 18, 2, 2, '#204080');
+    result += pixel(cx, 18, '#3060a0');
+  } else {
+    // Stripes pattern
+    result += drawWarPaint(cx, 26, 'stripes', '#802020');
+  }
 
-  // Hair (or bald/mohawk)
+  // Hair styles using NEW DARK OLIVE PALETTE for contrast
   if (gender === 'male') {
     // Mohawk or topknot
-    result += fillRect(cx - 3, 6, 6, 14, hair.dark);
-    result += fillRect(cx - 2, 4, 4, 12, hair.base);
-    result += fillRect(cx - 1, 4, 2, 8, hair.highlight);
+    result += drawTexturedHair(cx - 4, 2, 8, 16, hair, 'spiky');
+    // Shaved sides show scalp
+    result += fillRect(cx - 14, 12, 10, 8, skin.shadow);
+    result += fillRect(cx + 4, 12, 10, 8, skin.shadow);
   } else if (gender === 'female') {
     // Braided warrior style
-    result += fillRect(cx - 12, 8, 24, 10, hair.dark);
-    result += fillRect(cx - 14, 12, 6, 34, hair.base);
-    result += fillRect(cx + 8, 12, 6, 34, hair.base);
-    result += fillRect(cx - 11, 8, 22, 6, hair.highlight);
-    // War braids
-    result += fillRect(cx - 13, 12, 3, 30, hair.dark);
-    result += fillRect(cx + 10, 12, 3, 30, hair.dark);
+    result += drawTexturedHair(cx - 13, 6, 26, 14, hair, 'straight');
+    result += drawTexturedHair(cx - 15, 14, 7, 40, hair, 'straight');
+    result += drawTexturedHair(cx + 8, 14, 7, 40, hair, 'straight');
+    // War braids with BONE BEAD DECORATIONS
+    result += fillRect(cx - 14, 28, 3, 3, '#f0e8d0');
+    result += fillRect(cx + 11, 28, 3, 3, '#f0e8d0');
+    result += fillRect(cx - 14, 36, 3, 3, '#f0e8d0');
+    result += fillRect(cx + 11, 36, 3, 3, '#f0e8d0');
+    // Bone shine
+    result += pixel(cx - 13, 29, '#ffffff');
+    result += pixel(cx + 12, 29, '#ffffff');
   } else {
-    // Side-shaved style
-    result += fillRect(cx - 8, 6, 16, 14, hair.dark);
-    result += fillRect(cx - 6, 4, 12, 10, hair.base);
-    result += fillRect(cx - 4, 4, 8, 6, hair.highlight);
+    // Side-shaved with longer top
+    result += drawTexturedHair(cx - 9, 4, 18, 16, hair, 'spiky');
+    result += fillRect(cx - 15, 14, 6, 8, skin.shadow);
+    result += fillRect(cx + 9, 14, 6, 8, skin.shadow);
   }
 
   return result;
 }
+
+// ============================================================================
+// EXPORTS AND UTILITIES
+// ============================================================================
 
 /**
  * Get the appropriate race generator
@@ -404,7 +711,7 @@ function getDefaultHairColor(race) {
     elf: HAIR_PALETTES.blonde,
     dwarf: HAIR_PALETTES.red,
     vampire: HAIR_PALETTES.black,
-    orc: HAIR_PALETTES.green
+    orc: HAIR_PALETTES.orcHair
   };
   return defaults[race] || HAIR_PALETTES.brown;
 }

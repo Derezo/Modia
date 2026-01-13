@@ -31,6 +31,10 @@ import {
   PARCHMENT_TYPOGRAPHY,
   PARCHMENT_RADIUS
 } from '../../ui/parchment/ParchmentTheme.js';
+import {
+  formatStatName,
+  formatAugmentEffect as formatAugmentEffectUtil
+} from '../../utils/statDisplay.js';
 
 const STYLE_ID = 'item-detail-modal-styles';
 
@@ -359,10 +363,10 @@ export class ItemDetailModal {
           </div>
         ` : ''}
 
-        <!-- Augments -->
+        <!-- Effects -->
         ${item.augments && item.augments.length > 0 ? `
           <div class="item-detail-section">
-            <div class="item-detail-section-title">Augments</div>
+            <div class="item-detail-section-title">Effects</div>
             <div class="item-detail-augments">
               ${item.augments.map(aug => this.renderAugment(aug)).join('')}
             </div>
@@ -391,21 +395,10 @@ export class ItemDetailModal {
    * @returns {string} HTML
    */
   renderStats(stats) {
-    const abbrevs = {
-      strength: 'STR',
-      intelligence: 'INT',
-      agility: 'AGI',
-      vitality: 'VIT',
-      defense: 'DEF',
-      magicDefense: 'MDEF',
-      attack: 'ATK',
-      magicAttack: 'MATK'
-    };
-
     return Object.entries(stats)
       .filter(([, v]) => v && v !== 0)
       .map(([k, v]) => {
-        const label = abbrevs[k] || k.toUpperCase();
+        const label = formatStatName(k, false); // Use full stat names
         const sign = v > 0 ? '+' : '';
         return `
           <div class="item-detail-stat">
@@ -442,26 +435,8 @@ export class ItemDetailModal {
    * @returns {string} Formatted effect text
    */
   formatAugmentEffect(aug) {
-    const name = aug.name || aug.category || 'Unknown';
-    const tier = aug.tier || aug.intensity || '';
-    const tierName = tier ? ` (${tier})` : '';
-
-    // Format effect based on properties
-    if (aug.effectDescription) {
-      return `${name}${tierName}: ${aug.effectDescription}`;
-    }
-
-    if (aug.damageBonus) {
-      return `${name}${tierName}: +${aug.damageBonus}% damage vs ${aug.enemyType || 'enemies'}`;
-    }
-
-    if (aug.statBonus) {
-      const stat = Object.keys(aug.statBonus)[0];
-      const value = aug.statBonus[stat];
-      return `${name}${tierName}: +${value} ${stat.toUpperCase()}`;
-    }
-
-    return `${name}${tierName}`;
+    // Use the centralized utility for consistent formatting
+    return formatAugmentEffectUtil(aug);
   }
 
   /**
