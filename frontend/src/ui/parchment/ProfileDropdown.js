@@ -46,7 +46,6 @@ const NOTIFICATION_TYPES = {
 // Menu item icon mappings
 const MENU_ICONS = {
   formation: { category: 'menu', name: 'formation' },
-  inventory: { category: 'menu', name: 'inventory' },
   characters: { category: 'menu', name: 'characters' },
   party: { category: 'menu', name: 'party' },
   friends: { category: 'menu', name: 'friends' },
@@ -548,10 +547,6 @@ export class ProfileDropdown {
           <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'formation', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Formation</span>
         </div>
-        <div class="profile-dropdown__menu-item" data-action="inventory">
-          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'inventory', { size: 'sm' })}</span>
-          <span class="profile-dropdown__menu-label">Inventory</span>
-        </div>
         <div class="profile-dropdown__menu-item" data-action="characters">
           <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'characters', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Characters</span>
@@ -979,9 +974,6 @@ export class ProfileDropdown {
     switch (action) {
       case 'formation':
         this.game.scenes.switchTo('formation');
-        break;
-      case 'inventory':
-        this.game.scenes.switchTo('inventory');
         break;
       case 'characters':
         this.game.scenes.switchTo('characterSelect');

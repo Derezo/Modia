@@ -40,9 +40,9 @@ The roadmap is split into two focused documents:
 | 1 | Foundation | 100% | Complete |
 | 2 | Characters & World | 95% | Near Complete |
 | 3 | Combat System | 85% | In Progress |
-| 4 | Economy & Inventory | 80% | In Progress |
+| 4 | Economy & Inventory | 90% | Near Complete |
 | 5 | Multiplayer | 80% | In Progress |
-| 6 | Polish & Launch | 40% | In Progress |
+| 6 | Polish & Launch | 50% | In Progress |
 
 ---
 
@@ -52,8 +52,8 @@ The roadmap is split into two focused documents:
 
 | Item | Location | Status |
 |------|----------|--------|
-| Friends UI Integration | FriendsScene.js, ProfileDropdown.js | Not Started |
-| Party Invite Modal Wiring | WorldMapScene.js | Not Started |
+| Social Hub (Friends, Party, Clans) | SocialHubScene.js, social/tabs/* | **COMPLETE** |
+| Formation & Inventory Integration | FormationScene.js, modals/* | **COMPLETE** |
 | Battle Balance (Defense) | battleService.js | Not Started |
 | Gold Sinks | marketplace.js, world.js | Not Started |
 
@@ -75,6 +75,7 @@ The roadmap is split into two focused documents:
 - [Game Design](./GAME_DESIGN.md)
 
 ### Design Documents
+- [Formation & Inventory Integration](./plans/2026-01-12-formation-inventory-integration-design.md)
 - [Marketplace Augments](./plans/2026-01-11-marketplace-item-augments-design.md)
 
 ### Archives
@@ -108,6 +109,8 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 12.0 | Jan 2026 | Formation & Inventory Integration complete (v8.2): Modal-based party management with 9 new components (Accordion, CharacterCard, PartyStatsSummary, CharacterPicker, ItemsModal, ItemDetailModal, CharacterModal, EquipmentSlotModal, SkillDetailModal). FormationScene redesigned with character grid. InventoryScene/InventoryPanel deleted. User Experience at 85%. |
+| 11.0 | Jan 2026 | Unified Social Hub complete (v8.0): SocialHubScene with 5 tabs (Friends, Party, Requests, LFG, Clan). Clan system MVP with create/join/invite/chat. CourtyardScene deprecated. Social features at 95%. |
 | 10.0 | Jan 2026 | Roadmap audit v8.0: Corrected completion percentages across all phases. Updated sprint focus with Friends UI, PartyInviteModal, Battle Balance, Gold Sinks. Added rate limit security to technical priorities. |
 | 9.0 | Jan 2026 | Split roadmap into ROADMAP_TECHNICAL.md and ROADMAP_GAMEPLAY.md. Added quest system, node blocking, settings expansion to gameplay track. |
 | 8.0 | Jan 2026 | Major cleanup, archived completed milestones |

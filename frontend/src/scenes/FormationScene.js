@@ -1,30 +1,38 @@
 import { Scene } from './Scene.js';
-import { InventoryPanel } from '../components/InventoryPanel.js';
-import { SkillTreePanel } from '../components/SkillTreePanel.js';
+import { CharacterCard, getClassColor, getClassIcon } from '../components/CharacterCard.js';
+import { PartyStatsSummary } from '../components/PartyStatsSummary.js';
+import { CharacterModal } from '../components/modals/CharacterModal.js';
+import { ItemsModal } from '../components/modals/ItemsModal.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
-import { PARCHMENT_COLORS, getParchmentGradient, getParchmentScrollbarCSS } from '../ui/parchment/ParchmentTheme.js';
+import { PARCHMENT_COLORS, PARCHMENT_SPACING, getParchmentGradient, getParchmentScrollbarCSS } from '../ui/parchment/ParchmentTheme.js';
 import { responsive } from '../core/Responsive.js';
 import { Icon } from '../components/Icon.js';
 
 /**
- * FormationScene - Party management, equipment, and skills hub
- * Uses parchment theme for medieval manuscript aesthetic
+ * FormationScene - Unified party management hub
+ *
+ * Features:
+ * - Character card grid with badge indicators
+ * - Party stats summary bar
+ * - Items button opens inventory modal
+ * - Click character to open character modal
+ * - Modal-based equipment and skill management
  */
 export class FormationScene extends Scene {
   constructor(game) {
     super(game);
     this.uiElement = null;
     this.characters = [];
-    this.selectedCharacter = null;
-    this.activePanel = null; // 'stats' | 'equipment' | 'skills'
+    this.inventory = [];
     this.abortController = null;
-    this.inventoryPanel = null;
-    this.skillTreePanel = null;
+    this.characterCards = [];
+    this.partySummary = null;
+    this.activeModal = null;
     this.responsiveUnsubscribe = null;
   }
 
   async enter() {
-    await this.loadCharacters();
+    await this.loadData();
     this.createUI();
     this.setupEventListeners();
 
@@ -41,13 +49,10 @@ export class FormationScene extends Scene {
       this.abortController.abort();
       this.abortController = null;
     }
-    if (this.inventoryPanel) {
-      this.inventoryPanel.destroy();
-      this.inventoryPanel = null;
-    }
-    if (this.skillTreePanel) {
-      this.skillTreePanel.destroy();
-      this.skillTreePanel = null;
+    this.cleanupCards();
+    if (this.activeModal) {
+      this.activeModal.close();
+      this.activeModal = null;
     }
     if (this.uiElement) {
       this.uiElement.remove();
@@ -56,45 +61,60 @@ export class FormationScene extends Scene {
   }
 
   /**
+   * Clean up character cards
+   */
+  cleanupCards() {
+    this.characterCards.forEach(card => card.destroy());
+    this.characterCards = [];
+    if (this.partySummary) {
+      this.partySummary.destroy();
+      this.partySummary = null;
+    }
+  }
+
+  /**
    * Handle responsive breakpoint changes
    */
   onBreakpointChange() {
-    // Re-render UI to adapt to new breakpoint
     if (this.uiElement) {
-      const selectedId = this.selectedCharacter?.id;
-      const activeTab = this.activePanel;
-
       this.uiElement.remove();
+      this.cleanupCards();
       this.createUI();
       this.setupEventListeners();
-
-      // Restore selection if there was one
-      if (selectedId) {
-        this.selectCharacter(selectedId);
-        if (activeTab) {
-          this.switchTab(activeTab);
-        }
-      }
     }
   }
 
-  async loadCharacters() {
+  /**
+   * Load characters and inventory data
+   */
+  async loadData() {
     try {
-      const result = await this.game.api.getCharacters();
-      this.characters = result.characters || [];
+      const [charResult, invResult] = await Promise.all([
+        this.game.api.getCharacters(),
+        this.game.api.getSharedInventory()
+      ]);
+      this.characters = charResult.characters || [];
+      this.inventory = invResult.inventory || invResult || [];
     } catch (err) {
-      console.error('Failed to load characters:', err);
-      parchmentToast.error('Failed to load characters', err.message);
+      console.error('Failed to load data:', err);
+      parchmentToast.error('Failed to load party data');
     }
   }
 
+  /**
+   * Create the UI
+   */
   createUI() {
     const container = document.createElement('div');
     container.id = 'formation-scene';
+
     const isMobile = responsive.isMobile();
-    const gridCols = isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)';
-    const leftPanelWidth = isMobile ? '100%' : '320px';
-    const flexDirection = isMobile ? 'column' : 'row';
+    const isTablet = responsive.isTablet();
+
+    // Calculate grid columns based on viewport
+    let gridCols = 'repeat(4, 1fr)';
+    if (isMobile) gridCols = 'repeat(2, 1fr)';
+    else if (isTablet) gridCols = 'repeat(3, 1fr)';
 
     container.style.cssText = `
       position: absolute;
@@ -110,114 +130,74 @@ export class FormationScene extends Scene {
 
     container.innerHTML = `
       <!-- Header -->
-      <div style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 20px;
-        background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark});
-        border-bottom: 2px solid ${PARCHMENT_COLORS.borderDark};
-      ">
-        <h2 style="margin: 0; color: ${PARCHMENT_COLORS.text.inverse}; font-size: 20px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+      <div class="formation-header">
+        <h2 class="formation-title">
           ${Icon.html('menu', 'formation', { size: 'lg' })}
           ${responsive.showLabels() ? 'Party Formation' : ''}
         </h2>
-        <button class="parchment-btn parchment-btn-secondary" id="back-btn">
-          ${Icon.html('actions', 'back', { label: responsive.showLabels() ? 'Back to Map' : '', size: 'md' })}
-        </button>
+        <div class="formation-header-actions">
+          <button class="parchment-btn parchment-btn-primary" id="items-btn">
+            ${Icon.html('menu', 'inventory', { label: responsive.showLabels() ? 'Items' : '', size: 'md' })}
+          </button>
+          <button class="parchment-btn parchment-btn-secondary" id="back-btn">
+            ${Icon.html('actions', 'back', { label: responsive.showLabels() ? 'Back' : '', size: 'md' })}
+          </button>
+        </div>
       </div>
 
-      <!-- Main Content -->
-      <div style="
-        display: flex;
-        flex-direction: ${flexDirection};
-        flex: 1;
-        padding: 16px;
-        gap: 16px;
-        overflow: hidden;
-      ">
-        <!-- Left Panel: Character Grid -->
-        <div class="parchment-panel" style="width: ${leftPanelWidth}; ${isMobile ? 'max-height: 40%;' : ''} display: flex; flex-direction: column;">
-          <div class="parchment-panel-header">Party (${this.characters.length}/12)</div>
-          <div style="padding: 8px; font-size: 11px; color: ${PARCHMENT_COLORS.text.secondary}; border-bottom: 1px solid ${PARCHMENT_COLORS.border}; background: ${PARCHMENT_COLORS.mid};">
-            Slots 1-5 are your battle party
-          </div>
-          <div id="character-grid" style="
-            flex: 1;
-            overflow-y: auto;
-            padding: 8px;
-            display: grid;
-            grid-template-columns: ${gridCols};
-            gap: 8px;
-            background: ${PARCHMENT_COLORS.light};
-          ">
-            ${this.renderCharacterGrid()}
-          </div>
-        </div>
+      <!-- Party Stats Summary -->
+      <div id="party-summary-container"></div>
 
-        <!-- Right Panel: Character Details -->
-        <div class="parchment-panel" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
-          <div class="parchment-panel-header">
-            <span id="detail-title">Select a Character</span>
-          </div>
-
-          <!-- Tab Navigation -->
-          <div id="tab-nav" style="
-            display: none;
-            border-bottom: 1px solid ${PARCHMENT_COLORS.border};
-            background: ${PARCHMENT_COLORS.mid};
-          ">
-            <button class="parchment-tab-btn active" data-tab="stats">
-              ${Icon.html('menu', 'stats', { label: responsive.showLabels() ? 'Stats' : '', size: 'sm' })}
-            </button>
-            <button class="parchment-tab-btn" data-tab="equipment">
-              ${Icon.html('menu', 'inventory', { label: responsive.showLabels() ? 'Equipment' : '', size: 'sm' })}
-            </button>
-            <button class="parchment-tab-btn" data-tab="skills">
-              ${Icon.html('menu', 'skills', { label: responsive.showLabels() ? 'Skills' : '', size: 'sm' })}
-            </button>
-          </div>
-
-          <!-- Tab Content -->
-          <div id="detail-content" style="flex: 1; overflow-y: auto; padding: 16px; background: ${PARCHMENT_COLORS.light};">
-            <div style="color: ${PARCHMENT_COLORS.text.muted}; text-align: center; padding: 40px;">
-              Click a character to view details
-            </div>
-          </div>
+      <!-- Character Grid -->
+      <div class="formation-grid-container">
+        <div id="character-grid" class="formation-character-grid" style="grid-template-columns: ${gridCols};">
         </div>
       </div>
     `;
 
-    // Add styles
     this.addStyles();
-
     this.game.uiOverlay.appendChild(container);
     this.uiElement = container;
+
+    // Render party summary
+    this.renderPartySummary();
+
+    // Render character cards
+    this.renderCharacterCards();
   }
 
+  /**
+   * Add component styles
+   */
   addStyles() {
     if (document.getElementById('formation-styles')) return;
 
     const style = document.createElement('style');
     style.id = 'formation-styles';
     style.textContent = `
-      /* Parchment Panel Styles */
-      .parchment-panel {
-        background: linear-gradient(to bottom, ${PARCHMENT_COLORS.light}, ${PARCHMENT_COLORS.mid});
-        border: 2px solid ${PARCHMENT_COLORS.border};
-        border-radius: 4px;
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        overflow: hidden;
-      }
-      .parchment-panel-header {
-        padding: 10px 14px;
+      /* Header */
+      .formation-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
         background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark});
-        border-bottom: 1px solid ${PARCHMENT_COLORS.borderDark};
-        border-left: 3px solid ${PARCHMENT_COLORS.accent.burgundy};
-        color: ${PARCHMENT_COLORS.text.primary};
-        font-weight: bold;
-        font-size: 14px;
-        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+        border-bottom: 2px solid ${PARCHMENT_COLORS.borderDark};
+      }
+
+      .formation-title {
+        margin: 0;
+        color: ${PARCHMENT_COLORS.text.inverse};
+        font-size: 20px;
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        gap: ${PARCHMENT_SPACING.sm};
+      }
+
+      .formation-header-actions {
+        display: flex;
+        gap: ${PARCHMENT_SPACING.sm};
       }
 
       /* Parchment Button Styles */
@@ -234,490 +214,308 @@ export class FormationScene extends Scene {
         transition: all 0.15s ease;
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
+
+      .parchment-btn-primary {
+        background: linear-gradient(to bottom, #4a7c4e, #3d6940);
+        color: white;
+        border-color: #2d5030;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      }
+
+      .parchment-btn-primary:hover {
+        background: linear-gradient(to bottom, #5a8c5e, #4d7950);
+      }
+
       .parchment-btn-secondary {
         background: linear-gradient(to bottom, ${PARCHMENT_COLORS.light}, ${PARCHMENT_COLORS.mid});
         color: ${PARCHMENT_COLORS.text.primary};
       }
+
       .parchment-btn-secondary:hover {
         background: linear-gradient(to bottom, ${PARCHMENT_COLORS.mid}, ${PARCHMENT_COLORS.dark});
         border-color: ${PARCHMENT_COLORS.borderDark};
       }
 
-      /* Parchment Tab Button Styles */
-      .parchment-tab-btn {
+      /* Grid Container */
+      .formation-grid-container {
         flex: 1;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        padding: 10px 12px;
-        background: transparent;
-        border: none;
-        border-bottom: 3px solid transparent;
-        color: ${PARCHMENT_COLORS.text.secondary};
-        font-family: Georgia, serif;
-        font-size: 13px;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-      .parchment-tab-btn:hover {
-        color: ${PARCHMENT_COLORS.text.primary};
-        background: rgba(0, 0, 0, 0.05);
-      }
-      .parchment-tab-btn.active {
-        color: ${PARCHMENT_COLORS.text.primary};
-        border-bottom-color: ${PARCHMENT_COLORS.accent.burgundy};
-        font-weight: bold;
+        overflow-y: auto;
+        padding: ${PARCHMENT_SPACING.md};
+        background: ${PARCHMENT_COLORS.light};
       }
 
-      /* Character Slot Styles - Parchment Theme */
-      .character-slot {
+      ${getParchmentScrollbarCSS('.formation-grid-container')}
+
+      /* Character Grid */
+      .formation-character-grid {
+        display: grid;
+        gap: ${PARCHMENT_SPACING.md};
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      /* Empty Slot */
+      .formation-empty-slot {
         aspect-ratio: 1;
+        max-width: 160px;
         background: ${PARCHMENT_COLORS.mid};
-        border: 2px solid ${PARCHMENT_COLORS.border};
-        border-radius: 4px;
-        cursor: pointer;
+        border: 2px dashed ${PARCHMENT_COLORS.border};
+        border-radius: 8px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s;
-        padding: 4px;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
-      }
-      .character-slot:hover {
-        border-color: ${PARCHMENT_COLORS.accent.burgundy};
-        background: ${PARCHMENT_COLORS.dark};
-      }
-      .character-slot.selected {
-        border-color: ${PARCHMENT_COLORS.accent.burgundy};
-        background: linear-gradient(to bottom, #e8d9a8, #d4c498);
-        box-shadow: 0 0 8px rgba(107, 45, 61, 0.4);
-      }
-      .character-slot.battle-party {
-        border-color: ${PARCHMENT_COLORS.state.success};
-      }
-      .character-slot.empty {
-        border-style: dashed;
+        color: ${PARCHMENT_COLORS.text.muted};
         opacity: 0.6;
-        background: ${PARCHMENT_COLORS.light};
-      }
-      .character-slot .char-icon {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        color: #fff;
-        margin-bottom: 4px;
-        border: 2px solid rgba(0,0,0,0.2);
-      }
-      .character-slot .char-name {
-        font-size: 10px;
-        color: ${PARCHMENT_COLORS.text.primary};
-        text-align: center;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        width: 100%;
-        font-weight: bold;
-      }
-      .character-slot .char-level {
-        font-size: 9px;
-        color: ${PARCHMENT_COLORS.text.secondary};
       }
 
-      /* Stats Panel Styles - Parchment Theme */
-      .stat-row {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px 0;
-        border-bottom: 1px solid ${PARCHMENT_COLORS.border};
-      }
-      .stat-label {
-        color: ${PARCHMENT_COLORS.text.secondary};
-      }
-      .stat-value {
-        color: ${PARCHMENT_COLORS.text.primary};
-        font-weight: bold;
+      .formation-empty-slot.battle-slot {
+        border-color: ${PARCHMENT_COLORS.state.success};
+        opacity: 0.8;
       }
 
-      /* Equipment Slot Styles - Parchment Theme */
-      .equipment-slot {
-        display: flex;
-        align-items: center;
-        padding: 12px;
-        background: ${PARCHMENT_COLORS.mid};
-        border: 1px solid ${PARCHMENT_COLORS.border};
-        border-radius: 4px;
-        margin-bottom: 8px;
-        cursor: pointer;
-        transition: all 0.2s;
+      .formation-empty-slot-icon {
+        font-size: 32px;
+        margin-bottom: ${PARCHMENT_SPACING.xs};
       }
-      .equipment-slot:hover {
-        background: ${PARCHMENT_COLORS.dark};
-        border-color: ${PARCHMENT_COLORS.accent.burgundy};
-      }
-      .equipment-slot .slot-icon {
-        width: 40px;
-        height: 40px;
-        background: ${PARCHMENT_COLORS.light};
-        border: 1px solid ${PARCHMENT_COLORS.border};
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-size: 20px;
-      }
-      .equipment-slot .slot-info {
-        flex: 1;
-      }
-      .equipment-slot .slot-name {
-        color: ${PARCHMENT_COLORS.text.primary};
-        font-weight: bold;
-      }
-      .equipment-slot .slot-item {
+
+      .formation-empty-slot-text {
         font-size: 12px;
-        color: ${PARCHMENT_COLORS.text.secondary};
+        font-style: italic;
       }
 
-      /* Skill Item Styles - Parchment Theme */
-      .skill-item {
-        display: flex;
-        align-items: center;
-        padding: 12px;
-        background: ${PARCHMENT_COLORS.mid};
-        border: 1px solid ${PARCHMENT_COLORS.border};
-        border-radius: 4px;
-        margin-bottom: 8px;
+      /* Responsive adjustments */
+      @media (max-width: 600px) {
+        .formation-header {
+          padding: ${PARCHMENT_SPACING.xs} ${PARCHMENT_SPACING.sm};
+        }
+        .formation-grid-container {
+          padding: ${PARCHMENT_SPACING.sm};
+        }
+        .formation-character-grid {
+          gap: ${PARCHMENT_SPACING.sm};
+        }
       }
-      .skill-icon {
-        width: 40px;
-        height: 40px;
-        background: linear-gradient(135deg, ${PARCHMENT_COLORS.state.info}, #3a5068);
-        border-radius: 4px;
-        border: 1px solid ${PARCHMENT_COLORS.borderDark};
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 12px;
-        font-size: 18px;
-        color: #fff;
-      }
-      .skill-info {
-        flex: 1;
-      }
-      .skill-name {
-        color: ${PARCHMENT_COLORS.text.primary};
-        font-weight: bold;
-      }
-      .skill-desc {
-        font-size: 11px;
-        color: ${PARCHMENT_COLORS.text.secondary};
-      }
-
-      /* XP Bar - Parchment Theme */
-      .xp-bar {
-        height: 6px;
-        background: ${PARCHMENT_COLORS.borderDark};
-        border-radius: 3px;
-        margin-top: 8px;
-        overflow: hidden;
-        border: 1px solid ${PARCHMENT_COLORS.border};
-      }
-      .xp-bar-fill {
-        height: 100%;
-        background: linear-gradient(90deg, ${PARCHMENT_COLORS.state.success}, #6a9548);
-        transition: width 0.3s;
-      }
-
-      /* Themed Scrollbars */
-      ${getParchmentScrollbarCSS('#character-grid')}
-      ${getParchmentScrollbarCSS('#detail-content')}
     `;
     document.head.appendChild(style);
   }
 
-  renderCharacterGrid() {
-    let html = '';
+  /**
+   * Render party stats summary
+   */
+  renderPartySummary() {
+    const container = this.uiElement?.querySelector('#party-summary-container');
+    if (!container) return;
 
-    // Render existing characters
-    for (let i = 0; i < 12; i++) {
-      const char = this.characters.find(c => c.party_slot === i + 1);
-      const isBattleParty = i < 5;
-      const isSelected = this.selectedCharacter?.id === char?.id;
+    this.partySummary = new PartyStatsSummary({
+      characters: this.characters,
+      inventory: this.inventory
+    });
 
-      if (char) {
-        const classColor = this.getClassColor(char.class);
-        html += `
-          <div class="character-slot ${isBattleParty ? 'battle-party' : ''} ${isSelected ? 'selected' : ''}"
-               data-character-id="${char.id}">
-            <div class="char-icon" style="background: ${classColor};">
-              ${this.getClassIcon(char.class)}
-            </div>
-            <div class="char-name">${char.name}</div>
-            <div class="char-level">Lv.${char.level}</div>
-          </div>
-        `;
-      } else {
-        html += `
-          <div class="character-slot empty ${isBattleParty ? 'battle-party' : ''}" data-slot="${i + 1}">
-            <div style="color: ${PARCHMENT_COLORS.text.muted}; font-size: 20px;">+</div>
-            <div class="char-name" style="color: ${PARCHMENT_COLORS.text.muted};">Empty</div>
-          </div>
-        `;
-      }
-    }
-
-    return html;
+    container.appendChild(this.partySummary.element);
   }
 
+  /**
+   * Render character cards in the grid
+   */
+  renderCharacterCards() {
+    const grid = this.uiElement?.querySelector('#character-grid');
+    if (!grid) return;
+
+    // Clear existing cards
+    this.cleanupCards();
+    grid.innerHTML = '';
+
+    // Render 12 slots (first 5 are battle party)
+    for (let i = 0; i < 12; i++) {
+      const slotNumber = i + 1;
+      const isBattleSlot = i < 5;
+      const char = this.characters.find(c => c.party_slot === slotNumber);
+
+      if (char) {
+        // Check for upgrade indicators
+        const hasEquipmentUpgrade = this.checkHasEquipmentUpgrade(char);
+        const hasSkillPoints = this.checkHasSkillPoints(char);
+
+        const card = new CharacterCard({
+          character: char,
+          showUpgradeBadge: hasEquipmentUpgrade,
+          showSkillBadge: hasSkillPoints,
+          onClick: () => this.openCharacterModal(char)
+        });
+
+        grid.appendChild(card.element);
+        this.characterCards.push(card);
+      } else {
+        // Empty slot
+        const emptySlot = document.createElement('div');
+        emptySlot.className = `formation-empty-slot ${isBattleSlot ? 'battle-slot' : ''}`;
+        emptySlot.innerHTML = `
+          <div class="formation-empty-slot-icon">+</div>
+          <div class="formation-empty-slot-text">${isBattleSlot ? 'Battle Slot' : 'Reserve'}</div>
+        `;
+        grid.appendChild(emptySlot);
+      }
+    }
+  }
+
+  /**
+   * Check if character has equipment upgrades available
+   * @param {Object} character - Character data
+   * @returns {boolean}
+   */
+  checkHasEquipmentUpgrade(character) {
+    const equipment = character.equipment || {};
+    const slots = ['head', 'body', 'main_hand', 'off_hand', 'legs', 'feet', 'accessory'];
+
+    for (const slot of slots) {
+      const current = equipment[slot];
+      const currentPower = this.calculateItemPower(current);
+
+      const better = this.inventory
+        .filter(item => this.canEquipInSlot(item, slot, character.class))
+        .find(item => this.calculateItemPower(item) > currentPower);
+
+      if (better) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Check if character has unspent skill points
+   * @param {Object} character - Character data
+   * @returns {boolean}
+   */
+  checkHasSkillPoints(character) {
+    const experience = character.experience || 0;
+    const spentXp = character.spent_xp || character.spentXp || 0;
+    return (experience - spentXp) > 0;
+  }
+
+  /**
+   * Calculate item power for comparison
+   * @param {Object} item - Item data
+   * @returns {number}
+   */
+  calculateItemPower(item) {
+    if (!item) return 0;
+    let power = (item.attack || 0) + (item.defense || 0);
+    const stats = { ...(item.baseStats || {}), ...(item.bonusStats || {}) };
+    Object.values(stats).forEach(v => { power += v || 0; });
+    return power;
+  }
+
+  /**
+   * Check if item can be equipped in slot
+   * @param {Object} item - Item data
+   * @param {string} slotKey - Slot key
+   * @param {string} charClass - Character class
+   * @returns {boolean}
+   */
+  canEquipInSlot(item, slotKey, charClass) {
+    if (!item) return false;
+
+    const slotMap = {
+      head: ['armor'],
+      body: ['armor'],
+      legs: ['armor'],
+      feet: ['armor'],
+      main_hand: ['weapon'],
+      off_hand: ['weapon', 'shield'],
+      accessory: ['accessory']
+    };
+
+    const validTypes = slotMap[slotKey] || [];
+    if (!validTypes.includes(item.type)) return false;
+
+    // Check class restrictions
+    if (item.classRestrictions?.length > 0) {
+      const allowed = item.classRestrictions.some(c => c.toLowerCase() === charClass?.toLowerCase());
+      if (!allowed) return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Setup event listeners
+   */
   setupEventListeners() {
     this.abortController = new AbortController();
     const opts = { signal: this.abortController.signal };
 
     // Back button
-    this.uiElement.querySelector('#back-btn')?.addEventListener('click', () => {
+    this.uiElement?.querySelector('#back-btn')?.addEventListener('click', () => {
       this.game.scenes.switchTo('worldMap');
     }, opts);
 
-    // Character slots
-    this.uiElement.querySelectorAll('.character-slot').forEach(slot => {
-      slot.addEventListener('click', (e) => {
-        const charId = slot.dataset.characterId;
-        if (charId) {
-          this.selectCharacter(parseInt(charId));
-        }
-      }, opts);
-    });
-
-    // Tab buttons
-    this.uiElement.querySelectorAll('.parchment-tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.switchTab(btn.dataset.tab);
-      }, opts);
-    });
+    // Items button
+    this.uiElement?.querySelector('#items-btn')?.addEventListener('click', () => {
+      this.openItemsModal();
+    }, opts);
   }
 
-  selectCharacter(characterId) {
-    this.selectedCharacter = this.characters.find(c => c.id === characterId);
+  /**
+   * Open items modal
+   */
+  openItemsModal() {
+    if (this.activeModal) {
+      this.activeModal.close();
+    }
 
-    if (!this.selectedCharacter) return;
-
-    // Update grid selection
-    this.uiElement.querySelectorAll('.character-slot').forEach(slot => {
-      slot.classList.remove('selected');
-      if (parseInt(slot.dataset.characterId) === characterId) {
-        slot.classList.add('selected');
+    this.activeModal = new ItemsModal({
+      game: this.game,
+      onItemUsed: async () => {
+        await this.loadData();
+        this.renderPartySummary();
+        this.renderCharacterCards();
+      },
+      onClose: () => {
+        this.activeModal = null;
       }
     });
 
-    // Show tabs
-    this.uiElement.querySelector('#tab-nav').style.display = 'flex';
-
-    // Update title
-    this.uiElement.querySelector('#detail-title').textContent = this.selectedCharacter.name;
-
-    // Show stats tab by default
-    this.switchTab('stats');
+    this.activeModal.open();
   }
 
-  switchTab(tabName) {
-    this.activePanel = tabName;
-
-    // Cleanup previous panels when switching
-    if (tabName !== 'equipment' && this.inventoryPanel) {
-      this.inventoryPanel.destroy();
-      this.inventoryPanel = null;
-    }
-    if (tabName !== 'skills' && this.skillTreePanel) {
-      this.skillTreePanel.destroy();
-      this.skillTreePanel = null;
+  /**
+   * Open character modal
+   * @param {Object} character - Character data
+   */
+  openCharacterModal(character) {
+    if (this.activeModal) {
+      this.activeModal.close();
     }
 
-    // Update tab buttons
-    this.uiElement.querySelectorAll('.parchment-tab-btn').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.tab === tabName);
+    this.activeModal = new CharacterModal({
+      game: this.game,
+      characterId: character.id,
+      inventory: this.inventory,
+      onEquipmentChanged: async () => {
+        await this.loadData();
+        this.renderPartySummary();
+        this.renderCharacterCards();
+      },
+      onSkillLevelUp: async () => {
+        await this.loadData();
+        this.renderPartySummary();
+        this.renderCharacterCards();
+      },
+      onClose: () => {
+        this.activeModal = null;
+      }
     });
 
-    // Render content
-    const content = this.uiElement.querySelector('#detail-content');
-    switch (tabName) {
-      case 'stats':
-        content.innerHTML = this.renderStatsPanel();
-        break;
-      case 'equipment':
-        content.innerHTML = this.renderEquipmentPanel();
-        this.loadEquipmentPanel();
-        break;
-      case 'skills':
-        content.innerHTML = this.renderSkillsPanel();
-        this.loadSkillsPanel();
-        break;
-    }
+    this.activeModal.open();
   }
 
-  renderStatsPanel() {
-    const char = this.selectedCharacter;
-    if (!char) return '';
-
-    const hpPercent = (char.hp_current / char.hp_max) * 100;
-    const mpPercent = (char.mp_current / char.mp_max) * 100;
-
-    return `
-      <div style="margin-bottom: 24px;">
-        <div style="display: flex; align-items: center; margin-bottom: 16px;">
-          <div class="char-icon" style="
-            width: 64px;
-            height: 64px;
-            font-size: 24px;
-            background: ${this.getClassColor(char.class)};
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            margin-right: 16px;
-            border: 3px solid ${PARCHMENT_COLORS.border};
-          ">
-            ${this.getClassIcon(char.class)}
-          </div>
-          <div>
-            <div style="font-size: 18px; font-weight: bold; color: ${PARCHMENT_COLORS.text.primary};">${char.name}</div>
-            <div style="color: ${PARCHMENT_COLORS.text.secondary};">${this.capitalize(char.race)} ${this.capitalize(char.class)}</div>
-            <div style="color: ${PARCHMENT_COLORS.text.primary}; font-weight: bold;">Level ${char.level}</div>
-          </div>
-        </div>
-
-        <!-- HP Bar -->
-        <div style="margin-bottom: 12px;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="color: ${PARCHMENT_COLORS.text.secondary};">HP</span>
-            <span style="color: ${PARCHMENT_COLORS.text.primary}; font-weight: bold;">${char.hp_current} / ${char.hp_max}</span>
-          </div>
-          <div style="height: 8px; background: ${PARCHMENT_COLORS.borderDark}; border-radius: 4px; overflow: hidden; border: 1px solid ${PARCHMENT_COLORS.border};">
-            <div style="height: 100%; width: ${hpPercent}%; background: linear-gradient(90deg, ${PARCHMENT_COLORS.state.error}, ${PARCHMENT_COLORS.state.success});"></div>
-          </div>
-        </div>
-
-        <!-- MP Bar -->
-        <div style="margin-bottom: 12px;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="color: ${PARCHMENT_COLORS.text.secondary};">MP</span>
-            <span style="color: ${PARCHMENT_COLORS.text.primary}; font-weight: bold;">${char.mp_current} / ${char.mp_max}</span>
-          </div>
-          <div style="height: 8px; background: ${PARCHMENT_COLORS.borderDark}; border-radius: 4px; overflow: hidden; border: 1px solid ${PARCHMENT_COLORS.border};">
-            <div style="height: 100%; width: ${mpPercent}%; background: ${PARCHMENT_COLORS.state.info};"></div>
-          </div>
-        </div>
-
-        <!-- XP Bar -->
-        <div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="color: ${PARCHMENT_COLORS.text.secondary};">Experience</span>
-            <span style="color: ${PARCHMENT_COLORS.text.primary}; font-weight: bold;">${char.experience || 0}</span>
-          </div>
-          <div class="xp-bar">
-            <div class="xp-bar-fill" style="width: ${this.getXPProgress(char)}%;"></div>
-          </div>
-        </div>
-      </div>
-
-      <div style="padding: 10px 14px; background: linear-gradient(to bottom, ${PARCHMENT_COLORS.dark}, ${PARCHMENT_COLORS.borderDark}); border-radius: 4px; margin-bottom: 12px; border-left: 3px solid ${PARCHMENT_COLORS.accent.burgundy}; color: ${PARCHMENT_COLORS.text.primary}; font-weight: bold; text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);">Base Stats</div>
-      <div class="stat-row">
-        <span class="stat-label">Strength</span>
-        <span class="stat-value">${char.strength}</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Intelligence</span>
-        <span class="stat-value">${char.intelligence}</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Agility</span>
-        <span class="stat-value">${char.agility}</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Vitality</span>
-        <span class="stat-value">${char.vitality}</span>
-      </div>
-      <div class="stat-row">
-        <span class="stat-label">Luck</span>
-        <span class="stat-value">${char.luck}</span>
-      </div>
-    `;
-  }
-
-  renderEquipmentPanel() {
-    // Return a container div that the InventoryPanel will populate
-    return '<div id="equipment-panel-container" style="height: 100%;"></div>';
-  }
-
-  async loadEquipmentPanel() {
-    const container = this.uiElement.querySelector('#equipment-panel-container');
-    if (!container || !this.selectedCharacter) return;
-
-    // Destroy previous instance if exists
-    if (this.inventoryPanel) {
-      this.inventoryPanel.destroy();
-    }
-
-    // Create new inventory panel
-    this.inventoryPanel = new InventoryPanel(this.game, container);
-    this.inventoryPanel.setCharacterStats(this.selectedCharacter);
-    await this.inventoryPanel.load(this.selectedCharacter.id);
-  }
-
-  renderSkillsPanel() {
-    // Return a container div that the SkillTreePanel will populate
-    return '<div id="skills-panel-container" style="height: 100%;"></div>';
-  }
-
-  async loadSkillsPanel() {
-    const container = this.uiElement.querySelector('#skills-panel-container');
-    if (!container || !this.selectedCharacter) return;
-
-    // Destroy previous instance if exists
-    if (this.skillTreePanel) {
-      this.skillTreePanel.destroy();
-    }
-
-    // Create new skill tree panel
-    this.skillTreePanel = new SkillTreePanel(this.game, container);
-    await this.skillTreePanel.load(this.selectedCharacter.id, this.selectedCharacter.class);
-  }
-
-  getClassColor(className) {
-    const colors = {
-      warrior: '#c62828',
-      wizard: '#1565c0',
-      monk: '#f9a825',
-      chemist: '#2e7d32'
-    };
-    return colors[className] || '#666';
-  }
-
-  getClassIcon(className) {
-    const icons = {
-      warrior: 'W',
-      wizard: 'M',
-      monk: 'K',
-      chemist: 'C'
-    };
-    return icons[className] || '?';
-  }
-
-  getXPProgress(char) {
-    // Simple XP progress calculation
-    const xpForNextLevel = Math.floor(100 * Math.pow(char.level, 2.2));
-    const currentXP = char.experience || 0;
-    return Math.min(100, (currentXP / xpForNextLevel) * 100);
-  }
-
-  capitalize(str) {
-    return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+  /**
+   * Refresh the scene data and UI
+   */
+  async refresh() {
+    await this.loadData();
+    this.renderPartySummary();
+    this.renderCharacterCards();
   }
 
   update(deltaTime) {
@@ -725,8 +523,7 @@ export class FormationScene extends Scene {
   }
 
   render(ctx) {
-    // UI is HTML-based, no canvas rendering needed
-    // Draw parchment background for any canvas elements
+    // UI is HTML-based, fill background for any canvas elements
     ctx.fillStyle = PARCHMENT_COLORS.mid;
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   }

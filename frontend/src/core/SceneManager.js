@@ -6,7 +6,6 @@ import { WorldMapScene } from '../scenes/WorldMapScene.js';
 import { BattleScene } from '../scenes/BattleScene.js';
 import { BattleFormationScene } from '../scenes/BattleFormationScene.js';
 import { FormationScene } from '../scenes/FormationScene.js';
-import { InventoryScene } from '../scenes/InventoryScene.js';
 import { ShopScene } from '../scenes/ShopScene.js';
 import { MarketplaceScene } from '../scenes/MarketplaceScene.js';
 import { TavernScene } from '../scenes/TavernScene.js';
@@ -41,7 +40,6 @@ export class SceneManager {
       battle: new BattleScene(this.game),
       battleFormation: new BattleFormationScene(this.game),
       formation: new FormationScene(this.game),
-      inventory: new InventoryScene(this.game),
       shop: new ShopScene(this.game),
       marketplace: new MarketplaceScene(this.game),
       tavern: new TavernScene(this.game),
