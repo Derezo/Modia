@@ -96,8 +96,8 @@ export async function expireOldOrders() {
           const goldReleased = await releaseGold(client, orderId);
           console.log(`[OrderExpiration] Released ${goldReleased} gold for buy order ${orderId}`);
         } else {
-          // Return escrowed items to character
-          const itemsReturned = await releaseEscrowedItems(client, orderId, order.character_id);
+          // Return escrowed items to user's shared pool
+          const itemsReturned = await releaseEscrowedItems(client, orderId, order.user_id);
           console.log(`[OrderExpiration] Returned ${itemsReturned} items for sell order ${orderId}`);
         }
 

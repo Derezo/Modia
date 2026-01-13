@@ -114,11 +114,9 @@ async function handleBattleEnd(battleId, status, state, userId) {
         [xpPerCharacter, userId, MAX_BATTLE_PARTY_SIZE]
       );
 
-      // Store dropped items in party leader's inventory
-      if (partyLeaderId) {
-        for (const item of droppedItems) {
-          await itemDropService.storeDroppedItem(partyLeaderId, item, client);
-        }
+      // Store dropped items in user's shared inventory
+      for (const item of droppedItems) {
+        await itemDropService.storeDroppedItem(userId, item, client);
       }
 
       // Clear combat node on victory (allows player to pass through in future)
@@ -889,6 +887,60 @@ router.get('/rewards/:battleId', authenticate, rewardsLimiter, asyncHandler(asyn
   }
 
   res.json({ rewards: result.rows[0].rewards });
+}));
+
+// ============================================================================
+// DEBUG: TRAIT VERIFICATION ENDPOINT
+// ============================================================================
+
+/**
+ * GET /api/battle/verify-traits/:characterId
+ * Debug endpoint to verify trait loading for a character
+ * Returns both loaded traits and raw database entries for comparison
+ */
+router.get('/verify-traits/:characterId', authenticate, readLimiter, asyncHandler(async (req, res) => {
+  const characterId = parseInt(req.params.characterId, 10);
+
+  // Verify character ownership
+  const charResult = await query(
+    'SELECT id, name, class, level FROM characters WHERE id = $1 AND user_id = $2',
+    [characterId, req.user.userId]
+  );
+
+  if (charResult.rows.length === 0) {
+    throw new AppError('Character not found', 404);
+  }
+
+  const character = charResult.rows[0];
+
+  // Load traits using the service (what would be used in battle)
+  const traitsLoaded = await traitService.loadCharacterTraits([characterId]);
+
+  // Get raw database entries for comparison
+  const dbTraits = await query(
+    `SELECT ct.id as assignment_id, ct.character_id, ct.trait_id, ct.acquired_at,
+            t.id, t.name, t.description, t.effect_type, t.effect_value, t.rarity, t.category
+     FROM character_traits ct
+     JOIN traits t ON ct.trait_id = t.id
+     WHERE ct.character_id = $1`,
+    [characterId]
+  );
+
+  res.json({
+    character: {
+      id: character.id,
+      name: character.name,
+      class: character.class,
+      level: character.level
+    },
+    traitsLoaded: traitsLoaded[characterId] || [],
+    rawDatabaseEntries: dbTraits.rows,
+    summary: {
+      hasTraits: (traitsLoaded[characterId]?.length || 0) > 0,
+      traitCount: traitsLoaded[characterId]?.length || 0,
+      dbEntryCount: dbTraits.rows.length
+    }
+  });
 }));
 
 export default router;

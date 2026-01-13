@@ -25,6 +25,9 @@ if (!process.env.NODE_ENV) {
 // Stats tracking for test assertions
 const limiterStats = new Map();
 
+// Store references to limiter instances for reset capability
+const limiterInstances = new Map();
+
 /**
  * Get the max requests based on environment
  * @param {number} prodDefault - Default limit for production
@@ -79,6 +82,9 @@ export function createLimiter({ name, windowMs, maxRequests, message }) {
       res.status(options.statusCode).json(options.message);
     }
   });
+
+  // Store the limiter instance for reset capability
+  limiterInstances.set(name, limiter);
 
   // Wrap the limiter to track all calls
   return (req, res, next) => {
@@ -163,6 +169,44 @@ export function resetAllLimiterStats() {
  */
 export function isRateLimitingEnabled() {
   return shouldEnableRateLimiting();
+}
+
+/**
+ * Reset all rate limiter stores (clears hit counts)
+ * Only available in non-production environments
+ * @returns {boolean} - True if reset was performed
+ */
+export async function resetAllRateLimiters() {
+  if (isProduction) {
+    console.warn('Rate limiter reset is not available in production');
+    return false;
+  }
+
+  for (const [name, limiter] of limiterInstances) {
+    try {
+      // express-rate-limit stores have a resetAll method
+      if (limiter.resetKey) {
+        // For newer versions, we need to reset all keys
+        // The limiter doesn't expose a resetAll directly, but we can access the store
+        const store = limiter.options?.store;
+        if (store && typeof store.resetAll === 'function') {
+          await store.resetAll();
+        }
+      }
+    } catch (err) {
+      console.warn(`Failed to reset limiter ${name}:`, err.message);
+    }
+
+    // Also reset our stats tracking
+    const stats = limiterStats.get(name);
+    if (stats) {
+      stats.calls = 0;
+      stats.blocked = 0;
+      stats.lastReset = Date.now();
+    }
+  }
+
+  return true;
 }
 
 // Export environment detection for use in other modules

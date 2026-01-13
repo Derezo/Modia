@@ -307,6 +307,21 @@ function getRateLimiterStats(name) {
   return getLimiterStats(name);
 }
 
+/**
+ * Reset all rate limiters via API endpoint
+ * Call this before running tests that might be affected by rate limiting
+ * @returns {Promise<boolean>} True if reset was successful
+ */
+async function resetRateLimitersViaApi() {
+  try {
+    const res = await request('POST', '/api/test/reset-rate-limiters');
+    return res.status === 200;
+  } catch (err) {
+    console.warn('Failed to reset rate limiters via API:', err.message);
+    return false;
+  }
+}
+
 export {
   // HTTP client
   request,
@@ -339,5 +354,6 @@ export {
   getAllLimiterStats,
   resetLimiterStats,
   resetAllLimiterStats,
+  resetRateLimitersViaApi,
   isRateLimitingEnabled
 };

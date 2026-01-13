@@ -14,8 +14,11 @@ import { query } from '../config/database.js';
  */
 async function loadCharacterTraits(characterIds) {
   if (!characterIds || characterIds.length === 0) {
+    console.log('[TraitService] loadCharacterTraits called with empty/null characterIds');
     return {};
   }
+
+  console.log('[TraitService] Loading traits for characters:', characterIds);
 
   const result = await query(
     `SELECT ct.character_id, t.id, t.name, t.description, t.category,
@@ -26,6 +29,8 @@ async function loadCharacterTraits(characterIds) {
      ORDER BY ct.character_id, t.rarity DESC`,
     [characterIds]
   );
+
+  console.log('[TraitService] Query returned', result.rows.length, 'trait assignments');
 
   // Group traits by character
   const traitsByCharacter = {};
@@ -43,6 +48,14 @@ async function loadCharacterTraits(characterIds) {
       effectValue: parseFloat(row.effect_value)
     });
   }
+
+  // Log summary of what was loaded
+  const summary = Object.entries(traitsByCharacter).map(([charId, traits]) => ({
+    characterId: charId,
+    traitCount: traits.length,
+    traits: traits.map(t => `${t.name} (${t.effectType}: ${t.effectValue})`)
+  }));
+  console.log('[TraitService] Traits by character:', JSON.stringify(summary, null, 2));
 
   return traitsByCharacter;
 }
@@ -394,7 +407,24 @@ function getGoldBonus(unit) {
  * @param {Object} unit - Battle unit to modify
  */
 function applyBattleStartTraits(unit) {
-  if (!unit.traits || unit.traits.length === 0) return;
+  console.log(`[TraitService] applyBattleStartTraits called for "${unit.name}" (${unit.class})`);
+  console.log(`[TraitService] Unit has ${unit.traits?.length || 0} traits:`,
+    unit.traits?.map(t => t.name) || 'none');
+
+  if (!unit.traits || unit.traits.length === 0) {
+    console.log('[TraitService] No traits to apply, returning early');
+    return;
+  }
+
+  // Capture before state
+  const before = {
+    maxHp: unit.maxHp,
+    hp: unit.hp,
+    maxMp: unit.maxMp,
+    mp: unit.mp,
+    movement: unit.movement,
+    attackRange: unit.attackRange
+  };
 
   // Apply HP/MP bonuses
   applyHPBonusTrait(unit);
@@ -404,13 +434,28 @@ function applyBattleStartTraits(unit) {
   const movementBonus = getMovementBonus(unit);
   if (movementBonus > 0) {
     unit.movement = (unit.movement || 3) + movementBonus;
+    console.log(`[TraitService] Applied movement bonus: +${movementBonus}`);
   }
 
   // Apply range bonus
   const rangeBonus = getRangeBonus(unit);
   if (rangeBonus > 0) {
     unit.attackRange = (unit.attackRange || 1) + rangeBonus;
+    console.log(`[TraitService] Applied range bonus: +${rangeBonus}`);
   }
+
+  // Capture after state and log changes
+  const after = {
+    maxHp: unit.maxHp,
+    hp: unit.hp,
+    maxMp: unit.maxMp,
+    mp: unit.mp,
+    movement: unit.movement,
+    attackRange: unit.attackRange
+  };
+
+  console.log('[TraitService] Stats before:', before);
+  console.log('[TraitService] Stats after:', after);
 }
 
 /**
