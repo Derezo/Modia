@@ -36,6 +36,7 @@ import friendRoutes from './routes/friends.js';
 import coliseumRoutes from './routes/coliseum.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import advancementQuestRoutes from './routes/advancementQuest.js';
+import clanRoutes from './routes/clans.js';
 
 // Scheduled services
 import { startRefreshScheduler } from './services/shopRefreshService.js';
@@ -107,6 +108,7 @@ app.use('/api/players', friendRoutes); // Player search endpoint
 app.use('/api/coliseum', coliseumRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/advancement', advancementQuestRoutes);
+app.use('/api/clans', clanRoutes);
 
 // Error handling
 app.use(errorHandler);

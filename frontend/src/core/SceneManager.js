@@ -13,6 +13,7 @@ import { TavernScene } from '../scenes/TavernScene.js';
 import { ColiseumScene } from '../scenes/ColiseumScene.js';
 import { RecruitmentScene } from '../scenes/RecruitmentScene.js';
 import { CourtyardScene } from '../scenes/CourtyardScene.js';
+import { SocialHubScene } from '../scenes/SocialHubScene.js';
 import { LeaderboardScene } from '../scenes/LeaderboardScene.js';
 import { SettingsScene } from '../scenes/SettingsScene.js';
 import { GuildAdvancementScene } from '../scenes/GuildAdvancementScene.js';
@@ -47,6 +48,7 @@ export class SceneManager {
       coliseum: new ColiseumScene(this.game),
       recruitment: new RecruitmentScene(this.game),
       courtyard: new CourtyardScene(this.game),
+      socialHub: new SocialHubScene(this.game),
       leaderboard: new LeaderboardScene(this.game),
       settings: new SettingsScene(this.game),
       guildAdvancement: new GuildAdvancementScene(this.game)
