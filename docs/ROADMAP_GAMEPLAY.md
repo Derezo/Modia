@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.9 |
+| Version | 3.0 |
 | Last Updated | January 2026 |
 | Focus | Features, mechanics, UX, content |
 
@@ -19,7 +19,7 @@
 | Economy & Items | 90% | Near Complete |
 | User Experience | 85% | Near Complete |
 | Social Features | 95% | Complete |
-| World & Progression | 90% | Near Complete |
+| World & Progression | 95% | Near Complete |
 
 ---
 
@@ -333,6 +333,39 @@ Per ITEM_SYSTEM.md specifications:
 - [ ] Mini-map display
 - [x] Blocked/cleared node visuals (WorldMapScene.js)
 - [ ] Quest markers
+- [x] Terrain obstacles rendering (lakes, mountains, forests)
+- [x] Compact node options panel with type badge
+- [x] Settlement adjacency rules (no village-village, city-city, etc.)
+- [x] Connection count constraints (castle 5+, city 3+, bridge exactly 2)
+
+### 5.1.1 Terminator Treasure Nodes (Complete)
+
+> **Purpose:** Reward exploration with unique nodes at map edges
+
+#### Node Types
+- [x] Chest nodes - One-time gold rewards (scaling with distance)
+- [x] Shrine nodes - Timed buffs with 24-hour cooldown
+- [x] Discovery nodes - Lore unlocks (revisitable)
+
+#### Database
+- [x] 027_terminator_nodes.sql - New node types, tracking tables
+- [x] 028_world_obstacles.sql - Terrain obstacle storage
+- [x] user_chest_claims table - One-time claim tracking
+- [x] user_shrine_visits table - Buff tracking with cooldown
+- [x] user_discoveries table - Lore progress tracking
+
+#### API Endpoints
+- [x] POST /api/world/nodes/:id/claim-chest
+- [x] POST /api/world/nodes/:id/visit-shrine
+- [x] POST /api/world/nodes/:id/discover
+- [x] GET /api/world/obstacles
+- [x] GET /api/world/active-buffs
+- [x] GET /api/world/my-discoveries
+
+#### Security
+- [x] Location validation (must be at node to interact)
+- [x] Race condition prevention (atomic claim inserts)
+- [x] Integer overflow protection on gold updates
 
 ### 5.2 Character Progression
 

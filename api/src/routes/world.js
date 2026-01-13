@@ -4,6 +4,7 @@ import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import presenceService from '../services/presenceService.js';
 import * as staminaService from '../services/staminaService.js';
+import { SHRINE_BUFFS, SHRINE_COOLDOWN_HOURS } from '../../../shared/constants.js';
 
 const router = express.Router();
 
@@ -599,6 +600,286 @@ router.get('/discovery-stats', authenticate, asyncHandler(async (req, res) => {
   );
 
   res.json(stats.rows[0]);
+}));
+
+// GET /api/world/obstacles - Get terrain obstacles for world map rendering
+router.get('/obstacles', authenticate, asyncHandler(async (req, res) => {
+  const obstacles = await query(
+    `SELECT id, obstacle_type, x, y, radius, length, angle
+     FROM world_obstacles
+     ORDER BY id`
+  );
+
+  res.json({ obstacles: obstacles.rows });
+}));
+
+// ============================================================================
+// TERMINATOR NODE ENDPOINTS (Chest, Shrine, Discovery)
+// ============================================================================
+
+/**
+ * Verify user is physically at a node
+ * @param {number} userId - User ID
+ * @param {number} nodeId - Node ID to check
+ * @returns {Promise<boolean>} True if user is at the node
+ */
+async function verifyUserAtNode(userId, nodeId) {
+  const result = await query(
+    `SELECT 1 FROM characters
+     WHERE user_id = $1 AND party_slot = 1 AND current_node_id = $2`,
+    [userId, nodeId]
+  );
+  return result.rows.length > 0;
+}
+
+// Maximum gold value to prevent integer overflow
+const MAX_GOLD = 2147483647;
+
+// POST /api/world/nodes/:id/claim-chest - Claim one-time chest loot
+router.post('/nodes/:id/claim-chest', authenticate, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+  const nodeId = parseInt(req.params.id, 10);
+
+  // Verify user is at this node
+  const atNode = await verifyUserAtNode(userId, nodeId);
+  if (!atNode) {
+    throw new AppError('You must be at this location to claim the treasure', 400);
+  }
+
+  // Verify the node exists and is a chest type
+  const nodeResult = await query(
+    'SELECT id, node_type, distance_from_center FROM world_nodes WHERE id = $1',
+    [nodeId]
+  );
+
+  if (nodeResult.rows.length === 0) {
+    throw new AppError('Node not found', 404);
+  }
+
+  const node = nodeResult.rows[0];
+  if (node.node_type !== 'chest') {
+    throw new AppError('This node is not a treasure chest', 400);
+  }
+
+  // Generate loot based on distance (farther = better rewards)
+  const distance = node.distance_from_center;
+  const baseGold = 100 + (distance * 15);
+  const goldVariance = Math.floor(baseGold * 0.2);
+  const goldAwarded = baseGold + Math.floor(Math.random() * goldVariance * 2) - goldVariance;
+
+  // TODO: Add item drops based on distance tier
+  const itemsAwarded = [];
+
+  // Atomically insert claim - prevents race condition via unique constraint
+  // ON CONFLICT DO NOTHING returns 0 rows if already claimed
+  const claimResult = await query(
+    `INSERT INTO user_chest_claims (user_id, node_id, gold_awarded, items_awarded)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (user_id, node_id) DO NOTHING
+     RETURNING id`,
+    [userId, nodeId, goldAwarded, JSON.stringify(itemsAwarded)]
+  );
+
+  if (claimResult.rows.length === 0) {
+    throw new AppError('You have already claimed this treasure', 400);
+  }
+
+  // Award gold to user's active character with overflow protection
+  const charResult = await query(
+    `UPDATE characters SET gold = LEAST(gold + $1, $3)
+     WHERE user_id = $2 AND is_active = true
+     RETURNING id, gold`,
+    [goldAwarded, userId, MAX_GOLD]
+  );
+
+  res.json({
+    success: true,
+    gold_awarded: goldAwarded,
+    items_awarded: itemsAwarded,
+    new_gold_balance: charResult.rows[0]?.gold || null,
+    message: `You found ${goldAwarded} gold in the treasure chest!`
+  });
+}));
+
+// POST /api/world/nodes/:id/visit-shrine - Apply shrine buff
+router.post('/nodes/:id/visit-shrine', authenticate, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+  const nodeId = parseInt(req.params.id, 10);
+
+  // Verify user is at this node
+  const atNode = await verifyUserAtNode(userId, nodeId);
+  if (!atNode) {
+    throw new AppError('You must be at this location to receive the blessing', 400);
+  }
+
+  // Verify the node exists and is a shrine type
+  const nodeResult = await query(
+    'SELECT id, node_type, shrine_buff_type FROM world_nodes WHERE id = $1',
+    [nodeId]
+  );
+
+  if (nodeResult.rows.length === 0) {
+    throw new AppError('Node not found', 404);
+  }
+
+  const node = nodeResult.rows[0];
+  if (node.node_type !== 'shrine') {
+    throw new AppError('This node is not a shrine', 400);
+  }
+
+  const buffType = node.shrine_buff_type;
+  const buffInfo = SHRINE_BUFFS[buffType];
+  if (!buffInfo) {
+    throw new AppError('Invalid shrine buff type', 500);
+  }
+
+  // Check cooldown
+  const visitCheck = await query(
+    `SELECT expires_at, last_visited_at FROM user_shrine_visits
+     WHERE user_id = $1 AND node_id = $2`,
+    [userId, nodeId]
+  );
+
+  const now = new Date();
+  if (visitCheck.rows.length > 0) {
+    const lastVisit = new Date(visitCheck.rows[0].last_visited_at);
+    const cooldownMs = SHRINE_COOLDOWN_HOURS * 60 * 60 * 1000;
+    if (now - lastVisit < cooldownMs) {
+      const remainingMs = cooldownMs - (now - lastVisit);
+      const remainingHours = Math.ceil(remainingMs / (60 * 60 * 1000));
+      throw new AppError(`Shrine is on cooldown. Return in ${remainingHours} hour(s).`, 400);
+    }
+  }
+
+  // Calculate expiration time
+  const expiresAt = new Date(now.getTime() + buffInfo.duration * 60 * 60 * 1000);
+
+  // Upsert the shrine visit
+  await query(
+    `INSERT INTO user_shrine_visits (user_id, node_id, buff_type, expires_at, last_visited_at)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (user_id, node_id) DO UPDATE SET
+       buff_type = $3,
+       expires_at = $4,
+       last_visited_at = $5`,
+    [userId, nodeId, buffType, expiresAt, now]
+  );
+
+  res.json({
+    success: true,
+    buff_name: buffInfo.name,
+    buff_description: buffInfo.description,
+    expires_at: expiresAt,
+    duration_hours: buffInfo.duration,
+    message: `You received the blessing: ${buffInfo.name}!`
+  });
+}));
+
+// GET /api/world/active-buffs - Get user's active shrine buffs
+router.get('/active-buffs', authenticate, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+
+  const buffs = await query(
+    `SELECT usv.buff_type, usv.expires_at, wn.name as shrine_name
+     FROM user_shrine_visits usv
+     JOIN world_nodes wn ON wn.id = usv.node_id
+     WHERE usv.user_id = $1 AND usv.expires_at > NOW()
+     ORDER BY usv.expires_at ASC`,
+    [userId]
+  );
+
+  const activeBuffs = buffs.rows.map(buff => ({
+    buff_type: buff.buff_type,
+    buff_info: SHRINE_BUFFS[buff.buff_type],
+    expires_at: buff.expires_at,
+    shrine_name: buff.shrine_name
+  }));
+
+  res.json({ buffs: activeBuffs });
+}));
+
+// POST /api/world/nodes/:id/discover - Unlock discovery content
+router.post('/nodes/:id/discover', authenticate, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+  const nodeId = parseInt(req.params.id, 10);
+
+  // Verify user is at this node
+  const atNode = await verifyUserAtNode(userId, nodeId);
+  if (!atNode) {
+    throw new AppError('You must be at this location to explore the discovery', 400);
+  }
+
+  // Verify the node exists and is a discovery type
+  const nodeResult = await query(
+    'SELECT id, node_type, lore_key, name FROM world_nodes WHERE id = $1',
+    [nodeId]
+  );
+
+  if (nodeResult.rows.length === 0) {
+    throw new AppError('Node not found', 404);
+  }
+
+  const node = nodeResult.rows[0];
+  if (node.node_type !== 'discovery') {
+    throw new AppError('This node is not a discovery site', 400);
+  }
+
+  // Check if already discovered
+  const discoveryCheck = await query(
+    'SELECT 1 FROM user_discoveries WHERE user_id = $1 AND node_id = $2',
+    [userId, nodeId]
+  );
+
+  const alreadyDiscovered = discoveryCheck.rows.length > 0;
+
+  if (!alreadyDiscovered) {
+    // Record the discovery
+    await query(
+      `INSERT INTO user_discoveries (user_id, node_id, lore_key)
+       VALUES ($1, $2, $3)`,
+      [userId, nodeId, node.lore_key]
+    );
+  }
+
+  // TODO: Return actual lore content based on lore_key
+  const loreContent = {
+    title: node.name,
+    text: `You discovered ancient secrets at ${node.name}. The mysteries of this place have been recorded in your journal.`,
+    lore_key: node.lore_key
+  };
+
+  res.json({
+    success: true,
+    already_discovered: alreadyDiscovered,
+    lore: loreContent,
+    message: alreadyDiscovered
+      ? `You revisit the ${node.name}, recalling its secrets.`
+      : `You have discovered ${node.name}!`
+  });
+}));
+
+// GET /api/world/my-discoveries - Get user's discovery progress
+router.get('/my-discoveries', authenticate, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+
+  const discoveries = await query(
+    `SELECT ud.discovered_at, ud.lore_key, wn.name, wn.id as node_id
+     FROM user_discoveries ud
+     JOIN world_nodes wn ON wn.id = ud.node_id
+     WHERE ud.user_id = $1
+     ORDER BY ud.discovered_at DESC`,
+    [userId]
+  );
+
+  const totalDiscoveries = await query(
+    `SELECT COUNT(*) as total FROM world_nodes WHERE node_type = 'discovery'`
+  );
+
+  res.json({
+    discoveries: discoveries.rows,
+    discovered_count: discoveries.rows.length,
+    total_count: parseInt(totalDiscoveries.rows[0].total, 10)
+  });
 }));
 
 export default router;

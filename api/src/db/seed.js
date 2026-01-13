@@ -29,7 +29,10 @@ const NODE_NAME_PREFIXES = {
   cave: ['Crystal', 'Shadow', 'Echo', 'Deep', 'Forgotten', 'Frost'],
   mountain: ['Storm', 'Iron', 'Snow', 'Thunder', 'Sky', 'Fire'],
   bridge: ['Stone', 'Hanging', 'Old', 'Broken', 'King\'s', 'Troll'],
-  guild: ['Warriors\'', 'Wizards\'', 'Monks\'', 'Chemists\'']
+  guild: ['Warriors\'', 'Wizards\'', 'Monks\'', 'Chemists\''],
+  chest: ['Hidden', 'Ancient', 'Lost', 'Forgotten', 'Buried', 'Legendary'],
+  shrine: ['Sacred', 'Ancient', 'Mystic', 'Holy', 'Blessed', 'Divine'],
+  discovery: ['Ruined', 'Ancient', 'Lost', 'Forgotten', 'Mysterious', 'Legendary']
 };
 
 const NODE_NAME_SUFFIXES = {
@@ -39,10 +42,68 @@ const NODE_NAME_SUFFIXES = {
   cave: ['Caverns', 'Grotto', 'Depths', 'Tunnels', 'Lair', 'Mine'],
   mountain: ['Peak', 'Summit', 'Crag', 'Ridge', 'Heights', 'Pass'],
   bridge: ['Crossing', 'Pass', 'Span', 'Way', 'Arch', 'Ford'],
-  guild: ['Hall', 'Sanctum', 'Lodge', 'Academy', 'Tower', 'Keep']
+  guild: ['Hall', 'Sanctum', 'Lodge', 'Academy', 'Tower', 'Keep'],
+  chest: ['Trove', 'Cache', 'Hoard', 'Vault', 'Treasury', 'Bounty'],
+  shrine: ['Altar', 'Sanctum', 'Temple', 'Monument', 'Obelisk', 'Pillar'],
+  discovery: ['Ruins', 'Monument', 'Archive', 'Relic', 'Artifact', 'Mystery']
 };
 
 const PALACE_FEATURES = ['throne_room', 'treasury', 'royal_guard'];
+
+// Connection count constraints for world generation
+const MIN_CONNECTIONS = {
+  castle: 5,
+  city: 3,
+  village: 2,
+  guild: 2,
+  forest: 2,
+  cave: 2,
+  mountain: 2,
+  bridge: 2,
+  // Terminator nodes have exactly 1 connection
+  chest: 1,
+  shrine: 1,
+  discovery: 1
+};
+
+const MAX_CONNECTIONS = {
+  bridge: 2,  // Bridges act as chokepoints with exactly 2 connections
+  // Terminator nodes are dead ends
+  chest: 1,
+  shrine: 1,
+  discovery: 1
+};
+
+// Terminator node types for edge detection (used in assignTerminatorNodes)
+const _TERMINATOR_TYPES = ['chest', 'shrine', 'discovery'];
+
+// Obstacle types for terrain barriers
+const OBSTACLE_TYPES = {
+  LAKE: 'lake',
+  MOUNTAIN_RANGE: 'mountain_range',
+  DENSE_FOREST: 'dense_forest'
+};
+
+/**
+ * Validate if two node types can be connected
+ * Prevents same-type settlement adjacency
+ */
+function isValidConnection(type1, type2) {
+  const settlements = ['city', 'village', 'castle', 'guild'];
+
+  // Same-type settlements cannot be adjacent
+  if (type1 === type2 && settlements.includes(type1)) {
+    return false;
+  }
+
+  // Castle-city adjacency is also discouraged (too similar in importance)
+  if ((type1 === 'castle' && type2 === 'city') ||
+      (type1 === 'city' && type2 === 'castle')) {
+    return false;
+  }
+
+  return true;
+}
 
 /**
  * Spatial hash grid for O(1) collision detection
@@ -84,10 +145,137 @@ class SpatialGrid {
 }
 
 /**
+ * Generate terrain obstacles (lakes, mountain ranges, dense forests)
+ * These provide visual barriers that nodes are placed around
+ */
+function generateObstacles(rng) {
+  const obstacles = [];
+  const MIN_CENTER_DISTANCE = 8;  // Keep obstacles away from castle area
+
+  // Helper to check if obstacle overlaps with existing ones
+  function overlapsExisting(x, y, radius, existingObstacles) {
+    for (const obs of existingObstacles) {
+      const dist = Math.hypot(x - obs.x, y - obs.y);
+      const minDist = (radius || 5) + (obs.radius || obs.length / 2 || 5) + 2;
+      if (dist < minDist) return true;
+    }
+    return false;
+  }
+
+  // Generate lakes (2-3)
+  const lakeCount = rng.nextInt(2, 4);
+  for (let i = 0; i < lakeCount; i++) {
+    let attempts = 0;
+    while (attempts < 20) {
+      const x = rng.nextInt(-25, 25);
+      const y = rng.nextInt(-25, 25);
+      const radius = rng.nextInt(4, 7);
+
+      if (Math.hypot(x, y) > MIN_CENTER_DISTANCE && !overlapsExisting(x, y, radius, obstacles)) {
+        obstacles.push({
+          obstacle_type: OBSTACLE_TYPES.LAKE,
+          x, y, radius,
+          length: null,
+          angle: null
+        });
+        break;
+      }
+      attempts++;
+    }
+  }
+
+  // Generate mountain ranges (2-4)
+  const mountainCount = rng.nextInt(2, 5);
+  for (let i = 0; i < mountainCount; i++) {
+    let attempts = 0;
+    while (attempts < 20) {
+      const x = rng.nextInt(-30, 30);
+      const y = rng.nextInt(-30, 30);
+      const length = rng.nextInt(8, 14);
+      const angle = rng.next() * Math.PI * 2;
+
+      if (Math.hypot(x, y) > MIN_CENTER_DISTANCE && !overlapsExisting(x, y, length / 2, obstacles)) {
+        obstacles.push({
+          obstacle_type: OBSTACLE_TYPES.MOUNTAIN_RANGE,
+          x, y,
+          radius: null,
+          length,
+          angle
+        });
+        break;
+      }
+      attempts++;
+    }
+  }
+
+  // Generate dense forests (3-5)
+  const forestCount = rng.nextInt(3, 6);
+  for (let i = 0; i < forestCount; i++) {
+    let attempts = 0;
+    while (attempts < 20) {
+      const x = rng.nextInt(-25, 25);
+      const y = rng.nextInt(-25, 25);
+      const radius = rng.nextInt(3, 5);
+
+      if (Math.hypot(x, y) > MIN_CENTER_DISTANCE && !overlapsExisting(x, y, radius, obstacles)) {
+        obstacles.push({
+          obstacle_type: OBSTACLE_TYPES.DENSE_FOREST,
+          x, y, radius,
+          length: null,
+          angle: null
+        });
+        break;
+      }
+      attempts++;
+    }
+  }
+
+  console.log(`Generated ${obstacles.length} terrain obstacles`);
+  return obstacles;
+}
+
+/**
+ * Check if a point is inside any obstacle
+ */
+function isInObstacle(x, y, obstacles) {
+  for (const obs of obstacles) {
+    if (obs.obstacle_type === OBSTACLE_TYPES.LAKE ||
+        obs.obstacle_type === OBSTACLE_TYPES.DENSE_FOREST) {
+      // Circular obstacle
+      const dist = Math.hypot(x - obs.x, y - obs.y);
+      if (dist < obs.radius) return true;
+    } else if (obs.obstacle_type === OBSTACLE_TYPES.MOUNTAIN_RANGE) {
+      // Linear obstacle - check distance to line segment
+      const halfLength = obs.length / 2;
+      const dx = Math.cos(obs.angle) * halfLength;
+      const dy = Math.sin(obs.angle) * halfLength;
+      const x1 = obs.x - dx, y1 = obs.y - dy;
+      const x2 = obs.x + dx, y2 = obs.y + dy;
+
+      // Point to line segment distance
+      const A = x - x1, B = y - y1;
+      const C = x2 - x1, D = y2 - y1;
+      const dot = A * C + B * D;
+      const lenSq = C * C + D * D;
+      let param = lenSq !== 0 ? dot / lenSq : -1;
+      param = Math.max(0, Math.min(1, param));
+
+      const nearX = x1 + param * C;
+      const nearY = y1 + param * D;
+      const dist = Math.hypot(x - nearX, y - nearY);
+
+      if (dist < 2) return true;  // Mountain range has ~2 unit width
+    }
+  }
+  return false;
+}
+
+/**
  * Generate node positions using Poisson disk sampling
  * Creates organic, natural-looking node distribution
+ * Avoids placing nodes inside obstacle zones
  */
-function generateNodePlacements(rng, targetCount = 300, minDistance = 3.5) {
+function generateNodePlacements(rng, targetCount = 300, minDistance = 3.5, obstacles = []) {
   const nodes = [];
   const grid = new SpatialGrid(minDistance);
   const activeList = [];
@@ -109,6 +297,11 @@ function generateNodePlacements(rng, targetCount = 300, minDistance = 3.5) {
       const distance = minDistance + rng.next() * minDistance;
       const newX = point.x + Math.cos(angle) * distance;
       const newY = point.y + Math.sin(angle) * distance;
+
+      // Check if point is inside an obstacle
+      if (isInObstacle(newX, newY, obstacles)) {
+        continue;
+      }
 
       // Check distance from all nearby points
       const neighbors = grid.getNeighbors(newX, newY, minDistance);
@@ -220,14 +413,18 @@ function assignNodeTypes(rng, nodes) {
 /**
  * Build Minimum Spanning Tree using Prim's algorithm
  * Guarantees all nodes are connected to the castle
+ * Penalizes invalid adjacencies (same-type settlements) to prefer valid connections
  */
 function buildMinimumSpanningTree(nodes) {
   const connections = [];
   const inTree = new Set([0]); // Start with castle (index 0)
 
+  // Cost multiplier for invalid connections (makes them last resort)
+  const INVALID_CONNECTION_PENALTY = 1000;
+
   while (inTree.size < nodes.length) {
     let bestEdge = null;
-    let bestDist = Infinity;
+    let bestCost = Infinity;
 
     for (const i of inTree) {
       for (let j = 0; j < nodes.length; j++) {
@@ -237,8 +434,12 @@ function buildMinimumSpanningTree(nodes) {
         const dy = nodes[i].y - nodes[j].y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist < bestDist) {
-          bestDist = dist;
+        // Apply penalty for invalid connections (same-type settlements)
+        const valid = isValidConnection(nodes[i].type, nodes[j].type);
+        const cost = valid ? dist : dist * INVALID_CONNECTION_PENALTY;
+
+        if (cost < bestCost) {
+          bestCost = cost;
           bestEdge = { from: i, to: j };
         }
       }
@@ -254,8 +455,24 @@ function buildMinimumSpanningTree(nodes) {
 }
 
 /**
+ * Count connections for each node
+ */
+function getConnectionCounts(nodes, connections) {
+  const counts = new Map();
+  for (let i = 0; i < nodes.length; i++) {
+    counts.set(i, 0);
+  }
+  for (const conn of connections) {
+    counts.set(conn.from, counts.get(conn.from) + 1);
+    counts.set(conn.to, counts.get(conn.to) + 1);
+  }
+  return counts;
+}
+
+/**
  * Add extra connections for variety (keeps graph connected)
  * Creates shortcuts and alternate routes
+ * Validates adjacency rules and respects connection limits
  */
 function addLocalConnections(rng, nodes, mstConnections, extraRatio = 0.25) {
   const connections = [...mstConnections];
@@ -263,16 +480,34 @@ function addLocalConnections(rng, nodes, mstConnections, extraRatio = 0.25) {
     mstConnections.map(c => `${Math.min(c.from, c.to)},${Math.max(c.from, c.to)}`)
   );
 
+  // Track connection counts for max limit enforcement
+  const connectionCounts = getConnectionCounts(nodes, connections);
+
   const extraCount = Math.floor(nodes.length * extraRatio);
 
   for (let i = 0; i < extraCount; i++) {
     const nodeIdx = rng.nextInt(0, nodes.length - 1);
     const node = nodes[nodeIdx];
 
-    // Find nearby nodes
+    // Check if this node has hit max connections
+    const nodeType = node.type;
+    const maxConn = MAX_CONNECTIONS[nodeType];
+    if (maxConn && connectionCounts.get(nodeIdx) >= maxConn) {
+      continue;
+    }
+
+    // Find nearby nodes that pass adjacency validation
     const nearby = nodes
-      .map((n, idx) => ({ idx, dist: Math.sqrt((n.x - node.x) ** 2 + (n.y - node.y) ** 2) }))
-      .filter(n => n.idx !== nodeIdx && n.dist < 8)
+      .map((n, idx) => ({ idx, dist: Math.sqrt((n.x - node.x) ** 2 + (n.y - node.y) ** 2), type: n.type }))
+      .filter(n => {
+        if (n.idx === nodeIdx) return false;
+        if (n.dist >= 8) return false;
+        // Check max connections for target
+        const targetMax = MAX_CONNECTIONS[n.type];
+        if (targetMax && connectionCounts.get(n.idx) >= targetMax) return false;
+        // Validate adjacency rules
+        return isValidConnection(nodeType, n.type);
+      })
       .sort((a, b) => a.dist - b.dist)
       .slice(0, 5);
 
@@ -283,11 +518,152 @@ function addLocalConnections(rng, nodes, mstConnections, extraRatio = 0.25) {
       if (!connectionSet.has(key)) {
         connections.push({ from: nodeIdx, to: target.idx });
         connectionSet.add(key);
+        connectionCounts.set(nodeIdx, connectionCounts.get(nodeIdx) + 1);
+        connectionCounts.set(target.idx, connectionCounts.get(target.idx) + 1);
       }
     }
   }
 
   return connections;
+}
+
+/**
+ * Ensure minimum connections are met and enforce max connections
+ * Post-processes the connection graph
+ */
+function enforceConnectionConstraints(rng, nodes, connections) {
+  // Build initial connection set (used for deduplication tracking below)
+  const _connectionSet = new Set(
+    connections.map(c => `${Math.min(c.from, c.to)},${Math.max(c.from, c.to)}`)
+  );
+  const connectionCounts = getConnectionCounts(nodes, connections);
+
+  // Remove excess connections from bridge nodes (max 2)
+  const connectionsToRemove = [];
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const maxConn = MAX_CONNECTIONS[node.type];
+    if (maxConn && connectionCounts.get(i) > maxConn) {
+      // Find non-MST connections to remove (preserve connectivity)
+      const nodeConnections = connections
+        .map((c, idx) => ({ ...c, idx }))
+        .filter(c => c.from === i || c.to === i);
+
+      // Sort by distance (remove longer connections first)
+      nodeConnections.sort((a, b) => {
+        const distA = Math.hypot(nodes[a.from].x - nodes[a.to].x, nodes[a.from].y - nodes[a.to].y);
+        const distB = Math.hypot(nodes[b.from].x - nodes[b.to].x, nodes[b.from].y - nodes[b.to].y);
+        return distB - distA;
+      });
+
+      while (connectionCounts.get(i) > maxConn && nodeConnections.length > 0) {
+        const conn = nodeConnections.shift();
+        const other = conn.from === i ? conn.to : conn.from;
+        // Don't remove if it would leave other node with < 2 connections
+        if (connectionCounts.get(other) > 2) {
+          connectionsToRemove.push(conn.idx);
+          connectionCounts.set(i, connectionCounts.get(i) - 1);
+          connectionCounts.set(other, connectionCounts.get(other) - 1);
+        }
+      }
+    }
+  }
+
+  // Remove flagged connections
+  const finalConnections = connections.filter((_, idx) => !connectionsToRemove.includes(idx));
+  const finalConnectionSet = new Set(
+    finalConnections.map(c => `${Math.min(c.from, c.to)},${Math.max(c.from, c.to)}`)
+  );
+  const finalCounts = getConnectionCounts(nodes, finalConnections);
+
+  // Add connections to meet minimums
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const minConn = MIN_CONNECTIONS[node.type] || 2;
+
+    while (finalCounts.get(i) < minConn) {
+      // Find nearest node that can accept a connection (must pass adjacency validation)
+      const candidates = nodes
+        .map((n, idx) => ({
+          idx,
+          dist: Math.hypot(n.x - node.x, n.y - node.y),
+          type: n.type
+        }))
+        .filter(n => {
+          if (n.idx === i) return false;
+          const key = `${Math.min(i, n.idx)},${Math.max(i, n.idx)}`;
+          if (finalConnectionSet.has(key)) return false;
+          // Check max for target
+          const targetMax = MAX_CONNECTIONS[n.type];
+          if (targetMax && finalCounts.get(n.idx) >= targetMax) return false;
+          // Validate adjacency - only allow valid connections
+          if (!isValidConnection(node.type, n.type)) return false;
+          return true;
+        })
+        .sort((a, b) => a.dist - b.dist);
+
+      if (candidates.length === 0) break;
+
+      const target = candidates[0];
+      const key = `${Math.min(i, target.idx)},${Math.max(i, target.idx)}`;
+      finalConnections.push({ from: i, to: target.idx });
+      finalConnectionSet.add(key);
+      finalCounts.set(i, finalCounts.get(i) + 1);
+      finalCounts.set(target.idx, finalCounts.get(target.idx) + 1);
+    }
+  }
+
+  return finalConnections;
+}
+
+/**
+ * Assign terminator nodes at map edges
+ * Converts battle nodes with 1 connection that are far from center
+ */
+function assignTerminatorNodes(rng, nodes, connections) {
+  const connectionCounts = getConnectionCounts(nodes, connections);
+  const MIN_DISTANCE_FOR_TERMINATOR = 25;
+
+  // Find candidates: degree-1 nodes at edge, currently battle nodes
+  const battleTypes = ['forest', 'cave', 'mountain'];
+  const candidates = [];
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (connectionCounts.get(i) === 1 &&
+        node.dist >= MIN_DISTANCE_FOR_TERMINATOR &&
+        battleTypes.includes(node.type)) {
+      candidates.push(i);
+    }
+  }
+
+  // Shuffle and assign terminator types (30% chest, 30% shrine, 40% discovery)
+  const shuffled = rng.shuffle([...candidates]);
+  const targetCount = Math.min(shuffled.length, Math.floor(nodes.length * 0.06)); // ~6% of nodes
+
+  for (let i = 0; i < targetCount; i++) {
+    const nodeIdx = shuffled[i];
+    const rand = rng.next();
+
+    if (rand < 0.3) {
+      nodes[nodeIdx].type = 'chest';
+      nodes[nodeIdx].isTerminator = true;
+    } else if (rand < 0.6) {
+      nodes[nodeIdx].type = 'shrine';
+      nodes[nodeIdx].isTerminator = true;
+      // Assign a random shrine buff type
+      const buffTypes = ['stamina_regen', 'exp_bonus', 'gold_bonus'];
+      nodes[nodeIdx].shrineBuffType = rng.pick(buffTypes);
+    } else {
+      nodes[nodeIdx].type = 'discovery';
+      nodes[nodeIdx].isTerminator = true;
+      // Assign a lore key based on position
+      nodes[nodeIdx].loreKey = `lore_${Math.abs(Math.round(nodes[nodeIdx].x))}_${Math.abs(Math.round(nodes[nodeIdx].y))}`;
+    }
+  }
+
+  console.log(`Assigned ${targetCount} terminator nodes (from ${candidates.length} candidates)`);
+  return nodes;
 }
 
 /**
@@ -345,8 +721,11 @@ async function generateWorld(seed) {
 
   console.log('Generating world with 300+ nodes using Poisson disk sampling...');
 
-  // Step 1: Generate node positions
-  const positions = generateNodePlacements(rng, 320, 3.5);
+  // Step 0: Generate terrain obstacles first
+  const obstacles = generateObstacles(rng);
+
+  // Step 1: Generate node positions (avoiding obstacles)
+  const positions = generateNodePlacements(rng, 320, 3.5, obstacles);
   console.log(`Generated ${positions.length} node positions`);
 
   // Step 2: Assign node types based on distance
@@ -356,11 +735,18 @@ async function generateWorld(seed) {
   const mstConnections = buildMinimumSpanningTree(typedNodes);
   console.log(`MST created with ${mstConnections.length} connections`);
 
-  // Step 4: Add extra connections for variety
-  const allConnections = addLocalConnections(rng, typedNodes, mstConnections, 0.25);
-  console.log(`Total connections: ${allConnections.length}`);
+  // Step 4: Add extra connections for variety (validates adjacency rules)
+  const extraConnections = addLocalConnections(rng, typedNodes, mstConnections, 0.25);
+  console.log(`Connections after local additions: ${extraConnections.length}`);
 
-  // Step 5: Build final node objects
+  // Step 5: Enforce connection constraints (min/max per node type)
+  const allConnections = enforceConnectionConstraints(rng, typedNodes, extraConnections);
+  console.log(`Final connections after constraints: ${allConnections.length}`);
+
+  // Step 6: Assign terminator nodes at map edges
+  assignTerminatorNodes(rng, typedNodes, allConnections);
+
+  // Step 7: Build final node objects
   // Track guild index for staggered refresh hours (0, 6, 12, 18 hours)
   let guildIndex = 0;
   const GUILD_REFRESH_HOURS = [0, 6, 12, 18]; // Staggered across the day
@@ -379,7 +765,10 @@ async function generateWorld(seed) {
       guild_class: node.guildClass || null,
       local_seed: rng.nextInt(1, 1000000),
       difficulty_tier: getDifficultyTier(node.dist, node.type),
-      recruit_refresh_hour: null
+      recruit_refresh_hour: null,
+      is_terminator: node.isTerminator || false,
+      shrine_buff_type: node.shrineBuffType || null,
+      lore_key: node.loreKey || null
     };
 
     // Assign staggered refresh hours to guild nodes
@@ -391,7 +780,7 @@ async function generateWorld(seed) {
     return nodeObj;
   });
 
-  return { nodes, connections: allConnections };
+  return { nodes, connections: allConnections, obstacles };
 }
 
 async function seedItems() {
@@ -1034,7 +1423,7 @@ async function main() {
     // Clear existing data (in reverse dependency order)
     // RESTART IDENTITY resets auto-increment sequences so IDs start from 1
     console.log('Clearing existing data...');
-    await client.query('TRUNCATE world_node_connections, world_nodes RESTART IDENTITY CASCADE');
+    await client.query('TRUNCATE world_obstacles, world_node_connections, world_nodes RESTART IDENTITY CASCADE');
     await client.query('TRUNCATE item_templates RESTART IDENTITY CASCADE');
     await client.query('TRUNCATE enemy_templates RESTART IDENTITY CASCADE');
     // Clear shop inventory (will be re-seeded)
@@ -1047,17 +1436,17 @@ async function main() {
     // Generate world
     const worldSeed = parseInt(process.env.WORLD_SEED || '12345', 10);
     console.log(`\nGenerating world with seed: ${worldSeed}`);
-    const { nodes, connections } = await generateWorld(worldSeed);
+    const { nodes, connections, obstacles } = await generateWorld(worldSeed);
 
     // Insert nodes
     console.log(`\nInserting ${nodes.length} world nodes...`);
     const nodeIds = [];
     for (const node of nodes) {
       const result = await client.query(
-        `INSERT INTO world_nodes (node_type, name, x_coord, y_coord, distance_from_center, features, guild_class, local_seed, difficulty_tier, recruit_refresh_hour)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        `INSERT INTO world_nodes (node_type, name, x_coord, y_coord, distance_from_center, features, guild_class, local_seed, difficulty_tier, recruit_refresh_hour, is_terminator, shrine_buff_type, lore_key)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
          RETURNING id`,
-        [node.node_type, node.name, node.x_coord, node.y_coord, node.distance_from_center, node.features, node.guild_class, node.local_seed, node.difficulty_tier, node.recruit_refresh_hour]
+        [node.node_type, node.name, node.x_coord, node.y_coord, node.distance_from_center, node.features, node.guild_class, node.local_seed, node.difficulty_tier, node.recruit_refresh_hour, node.is_terminator, node.shrine_buff_type, node.lore_key]
       );
       nodeIds.push(result.rows[0].id);
     }
@@ -1073,6 +1462,16 @@ async function main() {
          VALUES ($1, $2, 'road')
          ON CONFLICT DO NOTHING`,
         [fromId, toId]
+      );
+    }
+
+    // Insert terrain obstacles
+    console.log(`\nInserting ${obstacles.length} terrain obstacles...`);
+    for (const obs of obstacles) {
+      await client.query(
+        `INSERT INTO world_obstacles (obstacle_type, x, y, radius, length, angle)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [obs.obstacle_type, obs.x, obs.y, obs.radius, obs.length, obs.angle]
       );
     }
 

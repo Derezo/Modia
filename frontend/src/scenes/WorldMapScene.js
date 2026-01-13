@@ -445,13 +445,15 @@ export class WorldMapScene extends Scene {
 
   async loadWorldData() {
     try {
-      // Get world nodes and current position
-      const [worldData, currentData] = await Promise.all([
+      // Get world nodes, current position, and terrain obstacles
+      const [worldData, currentData, obstaclesData] = await Promise.all([
         this.game.api.getWorldNodes(),
-        this.game.api.getCurrentNode()
+        this.game.api.getCurrentNode(),
+        this.game.api.getWorldObstacles().catch(() => ({ obstacles: [] }))  // Gracefully handle if not yet available
       ]);
 
       this.nodes = worldData.nodes;
+      this.obstacles = obstaclesData.obstacles || [];
 
       // Deduplicate and NORMALIZE connections
       // All connections must have from_node_id < to_node_id for consistent path rendering.
@@ -515,48 +517,52 @@ export class WorldMapScene extends Scene {
 
     const isMobile = responsive.isMobile();
 
-    // Current node info panel (bottom center) - Parchment styled
+    // Current node info panel (bottom center) - Compact parchment styled
     container.innerHTML = `
       <div id="node-info" style="
         position: absolute;
-        bottom: ${isMobile ? '12px' : '20px'};
+        bottom: ${isMobile ? '16px' : '24px'};
         left: 50%;
         transform: translateX(-50%);
         pointer-events: auto;
         display: none;
         max-width: calc(100vw - 32px);
       ">
-        <div style="
+        <div id="node-info-inner" style="
+          position: relative;
           text-align: center;
-          min-width: ${isMobile ? '180px' : '240px'};
-          padding: ${isMobile ? '12px 16px' : '16px 24px'};
+          min-width: ${isMobile ? '140px' : '160px'};
+          padding: ${isMobile ? '8px 12px 14px' : '10px 16px 16px'};
           background: ${getParchmentGradient('to bottom')};
           border: ${getParchmentBorder()};
-          border-radius: 6px;
-          box-shadow: ${getParchmentShadow(true)};
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1);
           font-family: Georgia, serif;
         ">
-          <div id="node-name" style="
-            font-weight: bold;
-            color: ${PARCHMENT_COLORS.text.primary};
-            font-size: ${isMobile ? '15px' : '18px'};
-            margin-bottom: 4px;
-            text-shadow: 0 1px 0 rgba(0,0,0,0.15);
-          "></div>
-          <div id="node-type" style="
-            font-size: ${isMobile ? '11px' : '12px'};
-            color: ${PARCHMENT_COLORS.text.muted};
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-          "></div>
           <div id="node-actions" style="
             display: flex;
-            gap: ${isMobile ? '6px' : '8px'};
-            justify-content: center;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: ${isMobile ? '4px' : '5px'};
+            align-items: stretch;
           "></div>
         </div>
+        <div id="node-type-badge" style="
+          position: absolute;
+          bottom: -10px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(0,0,0,0.8);
+          color: white;
+          padding: 2px 10px;
+          border-radius: 10px;
+          font-family: Georgia, serif;
+          font-size: ${isMobile ? '9px' : '10px'};
+          font-weight: bold;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+          white-space: nowrap;
+        "></div>
       </div>
     `;
 
@@ -573,13 +579,11 @@ export class WorldMapScene extends Scene {
     if (!this.currentNode) return;
 
     const nodeInfo = document.getElementById('node-info');
-    const nodeName = document.getElementById('node-name');
-    const nodeType = document.getElementById('node-type');
+    const nodeTypeBadge = document.getElementById('node-type-badge');
     const nodeActions = document.getElementById('node-actions');
 
     nodeInfo.style.display = 'block';
-    nodeName.textContent = this.currentNode.name;
-    nodeType.textContent = this.capitalize(this.currentNode.node_type);
+    nodeTypeBadge.textContent = this.capitalize(this.currentNode.node_type);
 
     // Add action buttons based on node type and features
     nodeActions.innerHTML = '';
@@ -660,12 +664,13 @@ export class WorldMapScene extends Scene {
     const borderColor = isPrimary ? PARCHMENT_COLORS.borderDark : PARCHMENT_COLORS.border;
 
     btn.style.cssText = `
-      display: inline-flex;
+      display: flex;
       align-items: center;
+      justify-content: flex-start;
       gap: 6px;
-      padding: ${isMobile ? '8px 12px' : '8px 14px'};
+      padding: ${isMobile ? '6px 10px' : '6px 12px'};
       background: ${bgGradient};
-      border: 2px solid ${borderColor};
+      border: 1px solid ${borderColor};
       border-radius: 4px;
       color: ${textColor};
       font-family: Georgia, serif;
@@ -673,37 +678,42 @@ export class WorldMapScene extends Scene {
       font-weight: bold;
       cursor: pointer;
       transition: transform 0.1s, box-shadow 0.15s;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.25);
       white-space: nowrap;
+      width: 100%;
+      text-align: left;
     `;
 
     // Hover effects
     btn.addEventListener('mouseenter', () => {
       btn.style.transform = 'translateY(-1px)';
-      btn.style.boxShadow = '0 3px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)';
+      btn.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.25)';
     });
     btn.addEventListener('mouseleave', () => {
       btn.style.transform = 'translateY(0)';
-      btn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3)';
+      btn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.25)';
     });
     btn.addEventListener('mousedown', () => {
-      btn.style.transform = 'translateY(1px)';
-      btn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3)';
+      btn.style.transform = 'translateY(0)';
+      btn.style.boxShadow = '0 0 2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.25)';
     });
     btn.addEventListener('mouseup', () => {
       btn.style.transform = 'translateY(-1px)';
     });
 
-    // Use Icon component if available, otherwise just text
+    // Use Icon component for visual consistency
     const iconConfig = iconMap[feature];
-    if (iconConfig && !isMobile) {
-      // On desktop, show icon + label
-      btn.innerHTML = Icon.html(iconConfig.category, iconConfig.name, {
-        label: label,
-        size: 'sm'
-      });
+    if (iconConfig) {
+      // Show icon + label with proper alignment
+      const iconSize = isMobile ? 14 : 16;
+      btn.innerHTML = `
+        <span style="display: flex; align-items: center; justify-content: center; width: ${iconSize}px; height: ${iconSize}px; flex-shrink: 0;">
+          ${Icon.html(iconConfig.category, iconConfig.name, { size: 'sm' }).replace(/<span[^>]*>[^<]*<\/span>/g, '')}
+        </span>
+        <span style="flex: 1;">${label}</span>
+      `;
     } else {
-      // On mobile or no icon, show just label
+      // Fallback to just label
       btn.textContent = label;
     }
 
@@ -1143,6 +1153,11 @@ export class WorldMapScene extends Scene {
       // Fallback background
       ctx.fillStyle = '#0a0a1a';
       ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    }
+
+    // Render terrain obstacles (lakes, mountains, forests)
+    if (this.effects && this.obstacles && this.obstacles.length > 0) {
+      this.effects.renderObstacles(ctx, this.cameraX, this.cameraY, this.obstacles);
     }
 
     ctx.save();

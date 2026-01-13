@@ -90,11 +90,46 @@ export const NODE_TYPES = {
   MOUNTAIN: 'mountain',
   BRIDGE: 'bridge',
   GUILD: 'guild',
-  PALACE: 'palace'
+  PALACE: 'palace',
+  // Terminator nodes (edge of map, 1 connection)
+  CHEST: 'chest',
+  SHRINE: 'shrine',
+  DISCOVERY: 'discovery'
 };
 
 // Battle node types (where PvE battles occur)
 export const BATTLE_NODE_TYPES = [NODE_TYPES.FOREST, NODE_TYPES.CAVE, NODE_TYPES.MOUNTAIN, NODE_TYPES.BRIDGE];
+
+// Terminator node types (special reward nodes at map edges)
+export const TERMINATOR_NODE_TYPES = [NODE_TYPES.CHEST, NODE_TYPES.SHRINE, NODE_TYPES.DISCOVERY];
+
+// Shrine buff definitions
+export const SHRINE_BUFFS = {
+  stamina_regen: {
+    name: "Pilgrim's Rest",
+    description: 'Stamina regenerates 50% faster',
+    effect: 'stamina_regen_bonus',
+    value: 0.5,
+    duration: 4  // hours
+  },
+  exp_bonus: {
+    name: "Scholar's Insight",
+    description: '+10% experience from battles',
+    effect: 'exp_bonus',
+    value: 0.1,
+    duration: 4
+  },
+  gold_bonus: {
+    name: "Merchant's Fortune",
+    description: '+15% gold from battles',
+    effect: 'gold_bonus',
+    value: 0.15,
+    duration: 4
+  }
+};
+
+// Shrine visit cooldown in hours
+export const SHRINE_COOLDOWN_HOURS = 6;
 
 // Node features
 export const CASTLE_FEATURES = ['coliseum', 'tavern', 'courtyard', 'throne', 'blacksmith', 'apothecary', 'temple', 'stables', 'marketplace'];
