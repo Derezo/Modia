@@ -1515,64 +1515,24 @@ async function getPlayerRank(userId, queueType = '1v1') {
   return result.rows[0];
 }
 
+// Only export functions used externally - internal functions remain private
 export {
-  // Queue management
+  // Queue management (used by websocket/index.js and tests)
   joinQueue,
   leaveQueue,
   playerReady,
   getQueueStatus,
   getAllQueueStatuses,
   cleanupPlayer,
-  QUEUE_SETTINGS,
-  // Turn timer system
-  startTurnTimer,
-  cancelTurnTimer,
-  handleTurnTimeout,
-  handlePlayerDisconnect,
-  handlePlayerReconnect,
-  // Match completion
-  completeMatch,
-  handleSurrender,
-  captureTeamSnapshots,
-  calculateMatchStats,
-  // Leaderboard and history
-  getLeaderboard,
-  getMatchHistory,
-  getMatchDetails,
-  getPlayerRank,
-  // Constants
-  PVP_TURN_TIMEOUT,
-  DISCONNECT_FORFEIT_TIME,
-  MAX_TURN_TIMEOUTS
+  QUEUE_SETTINGS
 };
 
 export default {
-  // Queue management
   joinQueue,
   leaveQueue,
   playerReady,
   getQueueStatus,
   getAllQueueStatuses,
   cleanupPlayer,
-  QUEUE_SETTINGS,
-  // Turn timer system
-  startTurnTimer,
-  cancelTurnTimer,
-  handleTurnTimeout,
-  handlePlayerDisconnect,
-  handlePlayerReconnect,
-  // Match completion
-  completeMatch,
-  handleSurrender,
-  captureTeamSnapshots,
-  calculateMatchStats,
-  // Leaderboard and history
-  getLeaderboard,
-  getMatchHistory,
-  getMatchDetails,
-  getPlayerRank,
-  // Constants
-  PVP_TURN_TIMEOUT,
-  DISCONNECT_FORFEIT_TIME,
-  MAX_TURN_TIMEOUTS
+  QUEUE_SETTINGS
 };

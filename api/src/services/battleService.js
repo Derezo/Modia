@@ -1647,7 +1647,6 @@ export {
   getOppositeType,
   // AoE system
   getAoETiles,
-  getUnitsInAoE,
   // Charge time system
   calculateChargeTime,
   checkChargeInterrupt,
@@ -1656,7 +1655,6 @@ export {
   cancelCharging,
   updateChargeProgress,
   // CT-based turn system
-  CT_THRESHOLD,
   initializeCT,
   advanceCTUntilReady,
   getNextActor,
@@ -1664,7 +1662,6 @@ export {
   predictTurnOrder,
   advanceToNextActor,
   // Action processing
-  initializeTurnState,
   processAction,
   advanceToNextActorWithCT,
   checkBattleEnd,
