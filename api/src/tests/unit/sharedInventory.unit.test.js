@@ -25,7 +25,8 @@ import {
   request,
   createTestUser,
   createTestCharacter,
-  cleanupTestUser
+  cleanupTestUser,
+  resetRateLimitersViaApi
 } from '../testHelper.js';
 
 describe('Shared Inventory System', () => {
@@ -37,6 +38,9 @@ describe('Shared Inventory System', () => {
   let consumableTemplateId = null;
 
   before(async () => {
+    // Reset rate limiters before running tests
+    await resetRateLimitersViaApi();
+
     // Create test user with two characters
     testUser = await createTestUser();
     testCharacter1 = await createTestCharacter(testUser.accessToken, 'InvTest1');

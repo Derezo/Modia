@@ -75,12 +75,19 @@ async function cleanupTestUser(userId) {
       await query('DELETE FROM party_members WHERE character_id = ANY($1)', [charIds]);
     }
 
-    // Clean up user-related data
-    await query('DELETE FROM notifications WHERE user_id = $1', [userId]);
-    await query('DELETE FROM friendships WHERE user_id = $1 OR friend_id = $1', [userId]);
-    await query('DELETE FROM user_settings WHERE user_id = $1', [userId]);
-    await query('DELETE FROM gold_reservations WHERE user_id = $1', [userId]);
-    await query('DELETE FROM refresh_tokens WHERE user_id = $1', [userId]);
+    // Clean up user-related data (silently ignore missing tables)
+    const safeDelete = async (sql, params) => {
+      try {
+        await query(sql, params);
+      } catch (err) {
+        if (!err.message.includes('does not exist')) throw err;
+      }
+    };
+    await safeDelete('DELETE FROM notifications WHERE user_id = $1', [userId]);
+    await safeDelete('DELETE FROM friendships WHERE user_id = $1 OR friend_id = $1', [userId]);
+    await safeDelete('DELETE FROM user_settings WHERE user_id = $1', [userId]);
+    await safeDelete('DELETE FROM gold_reservations WHERE user_id = $1', [userId]);
+    await safeDelete('DELETE FROM refresh_tokens WHERE user_id = $1', [userId]);
     await query('DELETE FROM characters WHERE user_id = $1', [userId]);
     await query('DELETE FROM users WHERE id = $1', [userId]);
   } catch (err) {
