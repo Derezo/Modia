@@ -17,7 +17,7 @@
 | Core Mechanics | 95% | Near Complete |
 | Combat System | 85% | In Progress |
 | Economy & Items | 90% | Near Complete |
-| User Experience | 80% | In Progress |
+| User Experience | 85% | Near Complete |
 | Social Features | 95% | Complete |
 | World & Progression | 90% | Near Complete |
 
@@ -256,44 +256,44 @@ Per ITEM_SYSTEM.md specifications:
 - [ ] Swipe gestures
 - [ ] Double-tap confirmation
 
-### 4.3 Formation & Inventory Integration (Not Started)
+### 4.3 Formation & Inventory Integration (Complete - v8.2)
 
 > **Design Document:** [2026-01-12-formation-inventory-integration-design.md](./plans/2026-01-12-formation-inventory-integration-design.md)
 
 **Goal:** Unify party management into FormationScene, eliminate separate InventoryScene.
 
 #### New Components
-- [ ] Accordion.js - Collapsible panel with state persistence
-- [ ] CharacterCard.js - Parchment-styled party member card with badges
-- [ ] PartyStatsSummary.js - Party composition and stats bar
-- [ ] CharacterPicker.js - Character selection for consumables
-- [ ] ItemsModal.js - Full inventory view with DataTable
-- [ ] ItemDetailModal.js - Item details and use consumable action
-- [ ] CharacterModal.js - Character details with Equipment/Skills accordions
-- [ ] EquipmentSlotModal.js - Equipment slot management with stat comparison
-- [ ] SkillDetailModal.js - Revamped skill view with progression table
+- [x] Accordion.js - Collapsible panel with state persistence
+- [x] CharacterCard.js - Parchment-styled party member card with badges
+- [x] PartyStatsSummary.js - Party composition and stats bar
+- [x] CharacterPicker.js - Character selection for consumables
+- [x] ItemsModal.js - Full inventory view with DataTable
+- [x] ItemDetailModal.js - Item details and use consumable action
+- [x] CharacterModal.js - Character details with Equipment/Skills accordions
+- [x] EquipmentSlotModal.js - Equipment slot management with stat comparison
+- [x] SkillDetailModal.js - Revamped skill view with progression table
 
 #### DataTable Enhancements
-- [ ] statComparison column (show +/- vs current equipment)
-- [ ] equipment-slots variant (for CharacterModal equipment list)
+- [x] statComparison rendering (integrated directly in EquipmentSlotModal)
+- [x] Equipment slot list rendering (custom implementation in CharacterModal)
 
 #### FormationScene Redesign
-- [ ] Full-screen character card grid (responsive: 4/3/2 columns)
-- [ ] Party stats summary bar (composition, avg level, power, skill points)
-- [ ] Items button in header → ItemsModal
-- [ ] Character card click → CharacterModal
-- [ ] Remove "Slots 1-5" misleading text
-- [ ] Remove right-side detail panel
+- [x] Full-screen character card grid (responsive: 4/3/2 columns)
+- [x] Party stats summary bar (composition, avg level, power, skill points)
+- [x] Items button in header → ItemsModal
+- [x] Character card click → CharacterModal
+- [x] Remove "Slots 1-5" misleading text
+- [x] Remove right-side detail panel
 
 #### Extra Features
-- [ ] Character card badges (red: equipment upgrade, yellow: skill points)
-- [ ] Quick Equip Best button (auto-equip optimal items)
-- [ ] Context-dependent accordion states (open if action available)
+- [x] Character card badges (red: equipment upgrade, yellow: skill points)
+- [x] Quick Equip Best button (auto-equip optimal items)
+- [x] Context-dependent accordion states (open if action available)
 
 #### Cleanup
-- [ ] Delete InventoryScene.js
-- [ ] Delete InventoryPanel.js
-- [ ] Remove Inventory from all navigation menus
+- [x] Delete InventoryScene.js
+- [x] Delete InventoryPanel.js
+- [x] Remove Inventory from ProfileDropdown menu
 
 ### 4.4 UI Polish
 
@@ -457,6 +457,7 @@ Per ITEM_SYSTEM.md specifications:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.7 | Jan 2026 | Formation & Inventory Integration complete (v8.2): 9 new components (Accordion, CharacterCard, PartyStatsSummary, CharacterPicker, ItemsModal, ItemDetailModal, CharacterModal, EquipmentSlotModal, SkillDetailModal). FormationScene redesigned with modal architecture. InventoryScene/InventoryPanel deleted. User Experience updated to 85%. |
 | 2.6 | Jan 2026 | Skill System Overhaul complete (v8.1): Character leveling from spent XP (formula: level^2.8 * 100), skill scaling to level 100, 13 visual effect categories, self-targeting skill handling. New files: characterLevelService.js, skillScaling.js, SkillEffectCategories.js, migration 026. UI: XP progress bar, scaling preview, level-up toasts. |
 | 2.5 | Jan 2026 | Unified Social Hub complete: SocialHubScene with 5 tabs (Friends, Party, Requests, LFG, Clan). FriendsTab with search, FriendCard component, RequestsTab unified inbox, PartyTab with Quick Party Formation, LFGTab migrated from CourtyardScene, ClanTab MVP with create/join/chat. Clan system (025_clans.sql, routes, service). Social Features updated to 95%. |
 | 2.4 | Jan 2026 | Turn Order Panel redesign: collapsed/expanded states, parchment styling, tap-to-preview with camera pan. Programmatic SVG icon generation system for 16 enemy icons. Target panel priority system. |
