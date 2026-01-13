@@ -117,6 +117,21 @@ export class CharacterModal {
         text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         border: 3px solid rgba(255,255,255,0.3);
         flex-shrink: 0;
+        overflow: hidden;
+      }
+
+      .character-modal-portrait img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .character-modal-portrait-fallback {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
       }
 
       .character-modal-info {
@@ -411,6 +426,7 @@ export class CharacterModal {
     const char = this.character;
     const classColor = getClassColor(char.class);
     const classIcon = getClassIcon(char.class);
+    const portraitUrl = this.getPortraitUrl(char);
 
     // Calculate XP progress using level threshold formula: level^2.8 * 100
     const spentXp = char.spent_xp || char.spentXp || 0;
@@ -430,7 +446,11 @@ export class CharacterModal {
         <!-- Header -->
         <div class="character-modal-header">
           <div class="character-modal-portrait" style="background: ${classColor};">
-            ${classIcon}
+            ${portraitUrl
+      ? `<img src="${portraitUrl}" alt="${this.escapeHtml(char.name)}"
+               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+             <span class="character-modal-portrait-fallback" style="display: none;">${classIcon}</span>`
+      : `<span class="character-modal-portrait-fallback">${classIcon}</span>`}
           </div>
           <div class="character-modal-info">
             <h3 class="character-modal-name">${this.escapeHtml(char.name)}</h3>
@@ -904,6 +924,23 @@ export class CharacterModal {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  /**
+   * Get portrait URL for character
+   * @param {Object} character - Character data
+   * @returns {string|null} Portrait URL or null if no race/gender
+   */
+  getPortraitUrl(character) {
+    const race = character.race?.toLowerCase();
+    const charClass = character.class?.toLowerCase();
+    // Handle gender with fallback (API may use snake_case or camelCase)
+    let gender = character.gender || 'male';
+    gender = gender.toLowerCase();
+
+    if (!race || !charClass) return null;
+
+    return `/assets/sprites/portraits/${race}_${gender}_${charClass}.png`;
   }
 
   /**
