@@ -7,6 +7,7 @@ import { query, withTransaction } from '../config/database.js';
 import { RACES, GENDERS, CLASSES, calculateStats, MAX_PARTY_SIZE } from '../config/constants.js';
 import { generateName } from '../utils/nameGenerator.js';
 import { SKILL_TREES } from '../config/skillTrees.js';
+import { findSkillDefinition, validateSkillPrerequisites } from '../utils/skillValidation.js';
 
 // Base price for recruits
 const BASE_RECRUIT_PRICE = 2000;
@@ -80,13 +81,17 @@ function getTier1And2Skills(guildClass) {
     }
   }
 
-  // Second pass: collect tier 2 skills (require only tier 1 skills)
+  // Second pass: collect tier 2 skills (require only tier 1 skills AT LEVEL 1)
+  // Recruits get skills at level 1, so we can only include skills whose
+  // prerequisites can be satisfied at level 1
   for (const branch of classTree.branches) {
     for (const skill of branch.skills) {
       if (skill.type === 'active' && skill.requires) {
-        // Check if all requirements are tier 1 skills
-        const requiresOnlyTier1 = Object.keys(skill.requires).every(reqId => tier1SkillIds.has(reqId));
-        if (requiresOnlyTier1) {
+        // Check if all requirements are tier 1 skills AND require level 1 or less
+        const requiresOnlyTier1AtLevel1 = Object.entries(skill.requires).every(
+          ([reqId, reqLevel]) => tier1SkillIds.has(reqId) && reqLevel <= 1
+        );
+        if (requiresOnlyTier1AtLevel1) {
           skills.push(skill);
         }
       }
@@ -751,12 +756,38 @@ async function purchaseRecruit(recruitId, userId) {
     }
 
     // Copy skills to character_skills (grant at level 1)
+    // With defensive prerequisite validation to catch any invalid assignments
     const recruitSkills = await client.query(
       'SELECT skill_id FROM recruit_skills WHERE recruit_id = $1',
       [recruitId]
     );
 
+    // Build map of all skills being granted (all at level 1) for prerequisite checking
+    const grantedSkillLevels = new Map(
+      recruitSkills.rows.map(s => [s.skill_id, 1])
+    );
+
     for (const skill of recruitSkills.rows) {
+      // Defensive check: validate prerequisites can be met
+      const skillDef = findSkillDefinition(recruit.class, skill.skill_id);
+
+      if (skillDef?.requires) {
+        const validation = validateSkillPrerequisites(
+          recruit.class,
+          skill.skill_id,
+          grantedSkillLevels
+        );
+
+        if (!validation.valid) {
+          // Log warning but skip this skill - don't propagate invalid data
+          console.warn(
+            `[RecruitService] Skipping skill ${skill.skill_id} for recruit ${recruitId}: ` +
+            `unmet prerequisites: ${validation.missing.map(m => `${m.skillId} level ${m.required}`).join(', ')}`
+          );
+          continue;
+        }
+      }
+
       await client.query(
         `INSERT INTO character_skills (character_id, skill_id, level)
          VALUES ($1, $2, 1)

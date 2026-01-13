@@ -579,18 +579,18 @@ function capitalizeFirst(str) {
 }
 
 /**
- * Store dropped item in character inventory
- * @param {number} characterId - Character to receive item
+ * Store dropped item in user's shared inventory
+ * @param {number} userId - User to receive item
  * @param {Object} item - Generated item
  * @param {Object} client - Database client (for transactions)
  */
-async function storeDroppedItem(characterId, item, client) {
+async function storeDroppedItem(userId, item, client) {
   const queryFn = client ? client.query.bind(client) : query;
 
   await queryFn(
-    `INSERT INTO character_items (character_id, item_template_id, quantity, modifications)
+    `INSERT INTO character_items (user_id, item_template_id, quantity, modifications)
      VALUES ($1, $2, 1, $3)`,
-    [characterId, item.templateId, JSON.stringify(item.modifications)]
+    [userId, item.templateId, JSON.stringify(item.modifications)]
   );
 }
 

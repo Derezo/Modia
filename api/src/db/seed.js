@@ -857,7 +857,7 @@ async function seedDeveloperTestData(castleId) {
         itemDef.rarity
       );
       if (item) {
-        await storeDroppedItem(characterId, item);
+        await storeDroppedItem(userId, item);
         console.log(`  Created: ${item.generatedName} (${item.rarity})`);
         createdCount++;
       }

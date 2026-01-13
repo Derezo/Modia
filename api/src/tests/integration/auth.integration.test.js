@@ -1,9 +1,22 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { request, uniqueUsername, uniqueEmail } from '../testHelper.js';
+import { request, uniqueUsername, uniqueEmail, resetRateLimitersViaApi, cleanupTestUser } from '../testHelper.js';
 
 describe('Auth API', () => {
   let testUser = null;
+  const createdUserIds = [];
+
+  // Reset rate limiters before running auth tests to avoid 429 errors
+  before(async () => {
+    await resetRateLimitersViaApi();
+  });
+
+  // Clean up all created test users after tests complete
+  after(async () => {
+    for (const userId of createdUserIds) {
+      await cleanupTestUser(userId);
+    }
+  });
 
   describe('POST /api/auth/register', () => {
     it('should register a new user successfully', async () => {
@@ -31,6 +44,7 @@ describe('Auth API', () => {
         refreshToken: res.body.refreshToken,
         userId: res.body.user.id
       };
+      createdUserIds.push(res.body.user.id);
     });
 
     it('should reject registration with missing username', async () => {
@@ -77,11 +91,12 @@ describe('Auth API', () => {
       const email2 = uniqueEmail();
 
       // First registration
-      await request('POST', '/api/auth/register', {
+      const firstRes = await request('POST', '/api/auth/register', {
         username,
         email: email1,
         password: 'TestPassword123!'
       });
+      if (firstRes.body?.user?.id) createdUserIds.push(firstRes.body.user.id);
 
       // Second registration with same username
       const res = await request('POST', '/api/auth/register', {
@@ -99,11 +114,12 @@ describe('Auth API', () => {
       const username2 = uniqueUsername();
 
       // First registration
-      await request('POST', '/api/auth/register', {
+      const firstRes = await request('POST', '/api/auth/register', {
         username: username1,
         email,
         password: 'TestPassword123!'
       });
+      if (firstRes.body?.user?.id) createdUserIds.push(firstRes.body.user.id);
 
       // Second registration with same email
       const res = await request('POST', '/api/auth/register', {
@@ -229,6 +245,7 @@ describe('Auth API', () => {
       });
 
       assert.strictEqual(regRes.status, 201);
+      if (regRes.body?.user?.id) createdUserIds.push(regRes.body.user.id);
 
       const res = await request('POST', '/api/auth/logout', {
         refreshToken: regRes.body.refreshToken

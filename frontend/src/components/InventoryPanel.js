@@ -44,15 +44,25 @@ export class InventoryPanel {
     this.game = game;
     this.container = container;
     this.characterId = null;
+    this.characters = []; // All party characters for selector
     this.equipped = {};
-    this.inventory = [];
+    this.inventory = []; // Shared inventory pool
     this.selectedItem = null;
     this.element = null;
     this.characterStats = null; // For stat comparison
     this.tooltipElement = null;
+    this.confirmModalElement = null; // For themed confirm dialogs
+    this.isLoading = false; // Loading state for async operations
 
     // Asset loader for item sprites
     this.assetLoader = game.assetLoader || null;
+  }
+
+  /**
+   * Set available characters for the character selector
+   */
+  setCharacters(characters) {
+    this.characters = characters || [];
   }
 
   /**
@@ -65,9 +75,14 @@ export class InventoryPanel {
   async load(characterId) {
     this.characterId = characterId;
     try {
-      const data = await this.game.api.getInventory(characterId);
-      this.equipped = data.equipped || {};
-      this.inventory = data.inventory || [];
+      // Load character's equipped items and shared inventory in parallel
+      const [charData, sharedData] = await Promise.all([
+        this.game.api.getInventory(characterId),
+        this.game.api.getSharedInventory()
+      ]);
+
+      this.equipped = charData.equipped || {};
+      this.inventory = sharedData.inventory || [];
 
       // Preload item sprites in background
       this.preloadItemSprites();
@@ -382,10 +397,116 @@ export class InventoryPanel {
           font-size: 14px;
           text-shadow: 0 1px 0 rgba(255,255,255,0.3);
         }
+        .section-subtitle {
+          font-size: 11px;
+          color: ${PARCHMENT.text.secondary};
+          font-style: italic;
+          margin-left: 4px;
+        }
+        .equipment-section.loading,
+        .inventory-section.loading {
+          opacity: 0.6;
+          pointer-events: none;
+        }
+        .loading-indicator {
+          display: none;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: ${PARCHMENT.mid};
+          padding: 8px 16px;
+          border-radius: 4px;
+          border: 2px solid ${PARCHMENT.border};
+          font-size: 12px;
+          color: ${PARCHMENT.text.secondary};
+          z-index: 10;
+        }
+        .equipment-section.loading .loading-indicator {
+          display: block;
+        }
+        /* Confirm modal styles */
+        .confirm-modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.6);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 2000;
+        }
+        .confirm-modal {
+          background: linear-gradient(to bottom, ${PARCHMENT.light}, ${PARCHMENT.mid});
+          border: 3px solid ${PARCHMENT.border};
+          border-radius: 8px;
+          padding: 20px;
+          min-width: 280px;
+          max-width: 400px;
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+          font-family: Georgia, serif;
+        }
+        .confirm-modal-title {
+          font-weight: bold;
+          font-size: 16px;
+          color: ${PARCHMENT.accent.burgundy};
+          margin-bottom: 12px;
+        }
+        .confirm-modal-message {
+          font-size: 14px;
+          color: ${PARCHMENT.text.primary};
+          margin-bottom: 20px;
+          line-height: 1.4;
+        }
+        .confirm-modal-buttons {
+          display: flex;
+          gap: 12px;
+          justify-content: flex-end;
+        }
+        .confirm-modal-buttons .btn {
+          padding: 8px 20px;
+          font-family: Georgia, serif;
+          font-size: 13px;
+          border: 2px solid ${PARCHMENT.border};
+          border-radius: 4px;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+        .character-tabs {
+          display: flex;
+          gap: 4px;
+          margin-bottom: 8px;
+          flex-wrap: wrap;
+        }
+        .character-tab {
+          padding: 6px 10px;
+          font-family: Georgia, serif;
+          font-size: 11px;
+          background: ${PARCHMENT.light};
+          border: 2px solid ${PARCHMENT.border};
+          border-radius: 4px 4px 0 0;
+          cursor: pointer;
+          color: ${PARCHMENT.text.secondary};
+          transition: all 0.15s;
+        }
+        .character-tab:hover {
+          background: ${PARCHMENT.mid};
+          color: ${PARCHMENT.text.primary};
+        }
+        .character-tab.active {
+          background: ${PARCHMENT.mid};
+          border-bottom-color: ${PARCHMENT.mid};
+          color: ${PARCHMENT.accent.burgundy};
+          font-weight: bold;
+        }
       </style>
 
-      <div class="equipment-section">
-        <div class="section-title">Equipment</div>
+      <div class="equipment-section${this.isLoading ? ' loading' : ''}" style="position: relative;">
+        ${this.renderCharacterTabs()}
+        <div class="section-title">${this.getCharacterName()}'s Equipment</div>
+        <div class="loading-indicator">Loading...</div>
         <div class="equipment-grid">
           ${this.renderEquipmentSlot('head', 'Head')}
           <div></div>
@@ -403,7 +524,8 @@ export class InventoryPanel {
       </div>
 
       <div class="inventory-section">
-        <div class="section-title">Inventory (${this.inventory.length} items)</div>
+        <div class="section-title">Party Inventory<span class="section-subtitle">(Shared)</span></div>
+        <div style="font-size: 11px; color: ${PARCHMENT.text.muted}; margin-bottom: 8px;">${this.inventory.length} items</div>
         <div class="inventory-grid">
           ${this.inventory.map((item, idx) => this.renderInventorySlot(item, idx)).join('')}
           ${this.renderEmptySlots(24 - this.inventory.length)}
@@ -416,6 +538,27 @@ export class InventoryPanel {
 
     this.container.appendChild(this.element);
     this.setupEventListeners();
+  }
+
+  /**
+   * Render character selector tabs
+   */
+  renderCharacterTabs() {
+    if (!this.characters || this.characters.length <= 1) {
+      return ''; // No tabs needed for single character
+    }
+
+    const tabs = this.characters.map(char => {
+      const isActive = char.id === this.characterId;
+      const shortName = char.name.length > 8 ? char.name.slice(0, 7) + '…' : char.name;
+      return `
+        <div class="character-tab ${isActive ? 'active' : ''}" data-character-id="${char.id}">
+          ${shortName}
+        </div>
+      `;
+    }).join('');
+
+    return `<div class="character-tabs">${tabs}</div>`;
   }
 
   renderEquipmentSlot(slot, label) {
@@ -478,6 +621,16 @@ export class InventoryPanel {
   }
 
   setupEventListeners() {
+    // Character tab clicks
+    this.element.querySelectorAll('.character-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const charId = parseInt(tab.dataset.characterId);
+        if (charId && charId !== this.characterId) {
+          this.switchCharacter(charId);
+        }
+      });
+    });
+
     // Equipment slots - click and drag-drop
     this.element.querySelectorAll('.equipment-slot').forEach(slot => {
       slot.addEventListener('click', () => this.handleEquipmentSlotClick(slot));
@@ -648,7 +801,9 @@ export class InventoryPanel {
       // Equip the item to this specific slot
       const result = await this.game.api.equipItem(this.characterId, data.instanceId, slotName);
       this.equipped = result.equipped;
-      this.inventory = result.inventory;
+      // Reload shared inventory since item moved from pool to character
+      const sharedData = await this.game.api.getSharedInventory();
+      this.inventory = sharedData.inventory || [];
       this.render();
       parchmentToast.success('Equipped', `Equipped ${item.name}`);
 
@@ -708,7 +863,9 @@ export class InventoryPanel {
       // Unequip the item
       const result = await this.game.api.unequipItem(this.characterId, data.slot);
       this.equipped = result.equipped;
-      this.inventory = result.inventory;
+      // Reload shared inventory since item moved from character to pool
+      const sharedData = await this.game.api.getSharedInventory();
+      this.inventory = sharedData.inventory || [];
       this.render();
       parchmentToast.success('Unequipped', 'Item unequipped');
 
@@ -1058,6 +1215,28 @@ export class InventoryPanel {
     }
   }
 
+  /**
+   * Switch to viewing a different character's equipment
+   * Shared inventory stays the same, only equipped items change
+   */
+  async switchCharacter(characterId) {
+    this.characterId = characterId;
+    this.isLoading = true;
+    this.render(); // Show loading state immediately
+
+    try {
+      const charData = await this.game.api.getInventory(characterId);
+      this.equipped = charData.equipped || {};
+      this.isLoading = false;
+      this.render();
+    } catch (err) {
+      console.error('Failed to switch character:', err);
+      this.isLoading = false;
+      this.render();
+      parchmentToast.error('Switch Failed', 'Failed to switch character');
+    }
+  }
+
   async equipItem(instanceId) {
     const item = this.inventory.find(i => i.instanceId === instanceId);
     if (!item) return;
@@ -1070,7 +1249,9 @@ export class InventoryPanel {
 
     const result = await this.game.api.equipItem(this.characterId, instanceId, slot);
     this.equipped = result.equipped;
-    this.inventory = result.inventory;
+    // Reload shared inventory since item moved from pool to character
+    const sharedData = await this.game.api.getSharedInventory();
+    this.inventory = sharedData.inventory || [];
     this.render();
     parchmentToast.success('Equipped', `Equipped ${item.name}`);
   }
@@ -1078,7 +1259,9 @@ export class InventoryPanel {
   async unequipItem(slot) {
     const result = await this.game.api.unequipItem(this.characterId, slot);
     this.equipped = result.equipped;
-    this.inventory = result.inventory;
+    // Reload shared inventory since item moved from character to pool
+    const sharedData = await this.game.api.getSharedInventory();
+    this.inventory = sharedData.inventory || [];
     this.render();
     parchmentToast.success('Unequipped', 'Item unequipped');
   }
@@ -1087,7 +1270,8 @@ export class InventoryPanel {
     const item = this.inventory.find(i => i.instanceId === instanceId);
     if (!item) return;
 
-    const result = await this.game.api.useItem(this.characterId, instanceId);
+    // Use item from shared pool on selected character
+    const result = await this.game.api.useItem(instanceId, this.characterId);
     parchmentToast.success('Used Item', result.message);
     await this.load(this.characterId);
   }
@@ -1096,9 +1280,15 @@ export class InventoryPanel {
     const item = this.inventory.find(i => i.instanceId === instanceId);
     if (!item) return;
 
-    if (!confirm(`Discard ${item.name}?`)) return;
+    // Use themed confirm dialog instead of native confirm()
+    const confirmed = await this.showConfirmDialog(
+      'Discard Item',
+      `Are you sure you want to discard ${item.name}${item.quantity > 1 ? ` (x${item.quantity})` : ''}? This action cannot be undone.`
+    );
+    if (!confirmed) return;
 
-    await this.game.api.discardItem(this.characterId, instanceId);
+    // Discard from shared pool
+    await this.game.api.discardItem(instanceId);
     parchmentToast.success('Discarded', 'Item discarded');
     await this.load(this.characterId);
   }
@@ -1140,8 +1330,71 @@ export class InventoryPanel {
     return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
   }
 
+  /**
+   * Get current character's name for display
+   */
+  getCharacterName() {
+    if (!this.characterId || !this.characters.length) return 'Character';
+    const char = this.characters.find(c => c.id === this.characterId);
+    return char ? char.name : 'Character';
+  }
+
+  /**
+   * Show themed confirm dialog (replaces native confirm)
+   * @returns {Promise<boolean>} True if confirmed, false if cancelled
+   */
+  showConfirmDialog(title, message) {
+    return new Promise((resolve) => {
+      // Create modal overlay
+      this.confirmModalElement = document.createElement('div');
+      this.confirmModalElement.className = 'confirm-modal-overlay';
+      this.confirmModalElement.innerHTML = `
+        <div class="confirm-modal">
+          <div class="confirm-modal-title">${title}</div>
+          <div class="confirm-modal-message">${message}</div>
+          <div class="confirm-modal-buttons">
+            <button class="btn btn-secondary" data-action="cancel">Cancel</button>
+            <button class="btn btn-danger" data-action="confirm">Confirm</button>
+          </div>
+        </div>
+      `;
+
+      // Handle button clicks
+      const handleClick = (e) => {
+        const action = e.target.dataset.action;
+        if (action === 'confirm' || action === 'cancel') {
+          this.confirmModalElement.remove();
+          this.confirmModalElement = null;
+          resolve(action === 'confirm');
+        }
+      };
+
+      // Handle escape key
+      const handleKeydown = (e) => {
+        if (e.key === 'Escape') {
+          this.confirmModalElement.remove();
+          this.confirmModalElement = null;
+          document.removeEventListener('keydown', handleKeydown);
+          resolve(false);
+        }
+      };
+
+      this.confirmModalElement.addEventListener('click', handleClick);
+      document.addEventListener('keydown', handleKeydown);
+
+      document.body.appendChild(this.confirmModalElement);
+
+      // Focus the confirm button for keyboard accessibility
+      this.confirmModalElement.querySelector('[data-action="confirm"]').focus();
+    });
+  }
+
   destroy() {
     this.hideTooltip();
+    if (this.confirmModalElement) {
+      this.confirmModalElement.remove();
+      this.confirmModalElement = null;
+    }
     if (this.element) {
       this.element.remove();
       this.element = null;

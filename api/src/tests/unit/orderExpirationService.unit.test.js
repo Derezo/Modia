@@ -259,20 +259,20 @@ describe('Order Expiration Service', () => {
       try {
         await client.query('BEGIN');
 
-        // Create an item for the character to sell
+        // Create an item in user's shared pool to sell
         const itemResult = await client.query(
-          `INSERT INTO character_items (character_id, item_template_id, quantity)
+          `INSERT INTO character_items (user_id, item_template_id, quantity)
            VALUES ($1, $2, 10) RETURNING id`,
-          [testCharacter.id, tradeableItemId]
+          [testUser.userId, tradeableItemId]
         );
         createdItemId = itemResult.rows[0].id;
 
-        // Get initial item quantity
+        // Get initial item quantity from shared pool
         const initialQtyResult = await client.query(
           `SELECT COALESCE(SUM(quantity), 0) as total
            FROM character_items
-           WHERE character_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL`,
-          [testCharacter.id, tradeableItemId]
+           WHERE user_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL`,
+          [testUser.userId, tradeableItemId]
         );
         const initialQuantity = parseInt(initialQtyResult.rows[0].total, 10);
 
@@ -301,12 +301,12 @@ describe('Order Expiration Service', () => {
 
         await client.query('COMMIT');
 
-        // Get quantity before expiration
+        // Get quantity before expiration from shared pool
         const beforeQtyResult = await query(
           `SELECT COALESCE(SUM(quantity), 0) as total
            FROM character_items
-           WHERE character_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL`,
-          [testCharacter.id, tradeableItemId]
+           WHERE user_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL`,
+          [testUser.userId, tradeableItemId]
         );
         const quantityBeforeExpire = parseInt(beforeQtyResult.rows[0].total, 10);
 
@@ -325,19 +325,19 @@ describe('Order Expiration Service', () => {
           'Old sell order should be expired'
         );
 
-        // Verify items were returned
+        // Verify items were returned to shared pool
         const afterQtyResult = await query(
           `SELECT COALESCE(SUM(quantity), 0) as total
            FROM character_items
-           WHERE character_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL`,
-          [testCharacter.id, tradeableItemId]
+           WHERE user_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL`,
+          [testUser.userId, tradeableItemId]
         );
         const quantityAfterExpire = parseInt(afterQtyResult.rows[0].total, 10);
 
         assert.strictEqual(
           quantityAfterExpire,
           quantityBeforeExpire + escrowedQuantity,
-          'Escrowed items should be returned to character'
+          'Escrowed items should be returned to shared pool'
         );
 
         // Verify item escrow was deleted

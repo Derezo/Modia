@@ -186,19 +186,19 @@ async function releaseGold(client, orderId, amount = null) {
 }
 
 /**
- * Escrow items for a sell order
+ * Escrow items for a sell order from user's shared pool
  */
-async function escrowItems(client, orderId, characterId, itemTemplateId, quantity) {
-  // Check character has enough items (not equipped)
+async function escrowItems(client, orderId, userId, characterId, itemTemplateId, quantity) {
+  // Check user has enough items in shared pool (not equipped)
   const itemResult = await client.query(
     `SELECT id, quantity
      FROM character_items
-     WHERE character_id = $1
+     WHERE user_id = $1
        AND item_template_id = $2
        AND equipped_slot IS NULL
      ORDER BY quantity DESC
      FOR UPDATE`,
-    [characterId, itemTemplateId]
+    [userId, itemTemplateId]
   );
 
   let remaining = quantity;
@@ -216,7 +216,7 @@ async function escrowItems(client, orderId, characterId, itemTemplateId, quantit
     throw new AppError(`Insufficient items. Need ${quantity}, have ${quantity - remaining}`, 400);
   }
 
-  // Deduct items from inventory
+  // Deduct items from shared pool
   for (const item of itemsToDeduct) {
     if (item.amount >= item.totalQty) {
       await client.query('DELETE FROM character_items WHERE id = $1', [item.id]);
@@ -228,7 +228,7 @@ async function escrowItems(client, orderId, characterId, itemTemplateId, quantit
     }
   }
 
-  // Create escrow record
+  // Create escrow record (keep character_id for historical context)
   await client.query(
     'INSERT INTO item_escrow (order_id, character_id, item_template_id, quantity) VALUES ($1, $2, $3, $4)',
     [orderId, characterId, itemTemplateId, quantity]
@@ -240,7 +240,7 @@ async function escrowItems(client, orderId, characterId, itemTemplateId, quantit
 /**
  * Release escrowed items (on order cancel)
  */
-async function releaseEscrowedItems(client, orderId, characterId = null) {
+async function releaseEscrowedItems(client, orderId, userId = null) {
   // Get escrow record
   const escrowResult = await client.query(
     'SELECT character_id, item_template_id, quantity FROM item_escrow WHERE order_id = $1',
@@ -252,10 +252,23 @@ async function releaseEscrowedItems(client, orderId, characterId = null) {
   }
 
   const escrow = escrowResult.rows[0];
-  const targetCharId = characterId || escrow.character_id;
 
-  // Return items to character
-  await addItemToCharacter(client, targetCharId, escrow.item_template_id, escrow.quantity);
+  // Get user_id from order if not provided
+  let targetUserId = userId;
+  if (!targetUserId) {
+    const orderResult = await client.query(
+      'SELECT user_id FROM market_orders WHERE id = $1',
+      [orderId]
+    );
+    targetUserId = orderResult.rows[0]?.user_id;
+  }
+
+  if (!targetUserId) {
+    throw new AppError('Cannot determine user for escrow release', 500);
+  }
+
+  // Return items to user's shared pool
+  await addItemToUser(client, targetUserId, escrow.item_template_id, escrow.quantity);
 
   // Delete escrow record
   await client.query('DELETE FROM item_escrow WHERE order_id = $1', [orderId]);
@@ -274,9 +287,9 @@ async function reduceEscrow(client, orderId, quantityFilled) {
 }
 
 /**
- * Add items to a character's inventory (stacking consumables/materials)
+ * Add items to a user's shared inventory (stacking consumables/materials)
  */
-async function addItemToCharacter(client, characterId, itemTemplateId, quantity) {
+async function addItemToUser(client, userId, itemTemplateId, quantity) {
   // Get item type to determine if stackable
   const itemResult = await client.query(
     'SELECT item_type FROM item_templates WHERE id = $1',
@@ -291,11 +304,11 @@ async function addItemToCharacter(client, characterId, itemTemplateId, quantity)
   const stackable = ['consumable', 'material'].includes(itemType);
 
   if (stackable) {
-    // Try to stack with existing item
+    // Try to stack with existing item in shared pool
     const existingResult = await client.query(
       `SELECT id, quantity FROM character_items
-       WHERE character_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL`,
-      [characterId, itemTemplateId]
+       WHERE user_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL`,
+      [userId, itemTemplateId]
     );
 
     if (existingResult.rows.length > 0) {
@@ -307,18 +320,18 @@ async function addItemToCharacter(client, characterId, itemTemplateId, quantity)
     }
   }
 
-  // Create new item entry (or multiple for non-stackable)
+  // Create new item entry in shared pool (or multiple for non-stackable)
   if (stackable) {
     await client.query(
-      'INSERT INTO character_items (character_id, item_template_id, quantity) VALUES ($1, $2, $3)',
-      [characterId, itemTemplateId, quantity]
+      'INSERT INTO character_items (user_id, item_template_id, quantity) VALUES ($1, $2, $3)',
+      [userId, itemTemplateId, quantity]
     );
   } else {
     // Non-stackable items get individual entries
     for (let i = 0; i < quantity; i++) {
       await client.query(
-        'INSERT INTO character_items (character_id, item_template_id, quantity) VALUES ($1, $2, 1)',
-        [characterId, itemTemplateId]
+        'INSERT INTO character_items (user_id, item_template_id, quantity) VALUES ($1, $2, 1)',
+        [userId, itemTemplateId]
       );
     }
   }
@@ -376,17 +389,17 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
   // Reduce seller's item escrow
   await reduceEscrow(client, sellOrder.id, quantity);
 
-  // Get buyer's character for item delivery
+  // Get buyer's user for item delivery
   const buyOrderResult = await client.query(
-    'SELECT character_id, item_template_id FROM market_orders WHERE id = $1',
+    'SELECT user_id, item_template_id FROM market_orders WHERE id = $1',
     [buyOrder.id]
   );
   const buyOrderData = buyOrderResult.rows[0];
 
-  // Deliver items to buyer's character
-  await addItemToCharacter(
+  // Deliver items to buyer's shared pool
+  await addItemToUser(
     client,
-    buyOrderData.character_id,
+    buyOrderData.user_id,
     buyOrderData.item_template_id,
     quantity
   );
@@ -519,7 +532,7 @@ async function placeLimitOrder(client, userId, characterId, itemTemplateId, side
     console.log('[placeLimitOrder] Gold reserved successfully');
   } else {
     console.log('[placeLimitOrder] Escrowing items');
-    await escrowItems(client, order.id, characterId, itemTemplateId, quantity);
+    await escrowItems(client, order.id, userId, characterId, itemTemplateId, quantity);
     console.log('[placeLimitOrder] Items escrowed successfully');
   }
 
@@ -681,30 +694,34 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
     );
   } else {
     // For sell orders: escrow items first
-    // Check character has enough items
+    // Check user has enough items in shared pool (unlisted)
     const itemCheck = await client.query(
       `SELECT COALESCE(SUM(quantity), 0) as total
        FROM character_items
-       WHERE character_id = $1
+       WHERE user_id = $1
          AND item_template_id = $2
-         AND equipped_slot IS NULL`,
-      [characterId, itemTemplateId]
+         AND equipped_slot IS NULL
+         AND character_id IS NULL
+         AND (listed IS NULL OR listed = FALSE)`,
+      [userId, itemTemplateId]
     );
 
     if (parseInt(itemCheck.rows[0].total, 10) < quantity) {
       throw new AppError(`Insufficient items. Have ${itemCheck.rows[0].total}, need ${quantity}`, 400);
     }
 
-    // Deduct items from seller
+    // Deduct items from seller's shared pool (unlisted only)
     const itemResult = await client.query(
       `SELECT id, quantity
        FROM character_items
-       WHERE character_id = $1
+       WHERE user_id = $1
          AND item_template_id = $2
          AND equipped_slot IS NULL
+         AND character_id IS NULL
+         AND (listed IS NULL OR listed = FALSE)
        ORDER BY quantity DESC
        FOR UPDATE`,
-      [characterId, itemTemplateId]
+      [userId, itemTemplateId]
     );
 
     let remaining = quantity;
@@ -764,8 +781,8 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
       // Reduce seller's escrow
       await reduceEscrow(client, order.id, matchQty);
 
-      // Give items to buyer
-      await addItemToCharacter(client, characterId, itemTemplateId, matchQty);
+      // Give items to buyer's shared pool
+      await addItemToUser(client, userId, itemTemplateId, matchQty);
     } else {
       // Buyer pays from their reservation
       const goldCost = executionPrice * matchQty;
@@ -777,12 +794,12 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
       // Seller receives gold
       totalProceeds += goldCost;
 
-      // Buyer receives items
+      // Buyer receives items in their shared pool
       const buyerOrderResult = await client.query(
-        'SELECT character_id FROM market_orders WHERE id = $1',
+        'SELECT user_id FROM market_orders WHERE id = $1',
         [order.id]
       );
-      await addItemToCharacter(client, buyerOrderResult.rows[0].character_id, itemTemplateId, matchQty);
+      await addItemToUser(client, buyerOrderResult.rows[0].user_id, itemTemplateId, matchQty);
     }
 
     trades.push({
@@ -904,8 +921,8 @@ async function cancelOrder(client, orderId, userId) {
     const returnGold = order.price * remainingQuantity;
     await releaseGold(client, orderId);
   } else {
-    // Return remaining escrowed items to the character
-    await releaseEscrowedItems(client, orderId, order.character_id);
+    // Return remaining escrowed items to user's shared pool
+    await releaseEscrowedItems(client, orderId, order.user_id);
   }
 
   // Update order status
@@ -1335,24 +1352,23 @@ async function getListingAggregates(client, templateIds) {
 }
 
 /**
- * Create a new item listing
+ * Create a new item listing from user's shared pool
  */
 async function createItemListing(client, userId, characterId, characterItemId, price) {
-  // Get the item and verify ownership
+  // Get the item and verify ownership from shared pool
   const itemResult = await client.query(
     `SELECT ci.id, ci.item_template_id, ci.modifications, ci.equipped_slot,
             it.name, it.base_price, it.item_type, it.is_tradeable, it.is_stackable,
             it.stat_bonuses
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
-     JOIN characters c ON ci.character_id = c.id
-     WHERE ci.id = $1 AND ci.character_id = $2 AND c.user_id = $3
+     WHERE ci.id = $1 AND ci.user_id = $2 AND ci.equipped_slot IS NULL
      FOR UPDATE`,
-    [characterItemId, characterId, userId]
+    [characterItemId, userId]
   );
 
   if (itemResult.rows.length === 0) {
-    throw new AppError('Item not found or not owned by this character', 404);
+    throw new AppError('Item not found in shared inventory', 404);
   }
 
   const item = itemResult.rows[0];
@@ -1469,15 +1485,15 @@ async function buyItemListing(client, buyerUserId, buyerCharacterId, listingId) 
     [price, MAX_GOLD, listing.seller_id]
   );
 
-  // Transfer item: update character_id and remove "listed" flag
+  // Transfer item to buyer's shared pool and remove "listed" flag
   const mods = listing.modifications || {};
   delete mods.listed;
 
   await client.query(
     `UPDATE character_items
-     SET character_id = $1, modifications = $2
+     SET user_id = $1, character_id = NULL, modifications = $2
      WHERE id = $3`,
-    [buyerCharacterId, mods, listing.character_item_id]
+    [buyerUserId, mods, listing.character_item_id]
   );
 
   // Update listing status
@@ -1740,14 +1756,13 @@ async function searchItemsWithAugments(client, searchTerm = '', itemType = null,
  * @returns {Promise<Array>} List of sellable items with suggested prices
  */
 async function getSellableInventory(client, userId) {
+  // Query user's shared pool for tradeable items
   const result = await client.query(`
     SELECT
       ci.id as instance_id,
-      ci.character_id,
       ci.item_template_id as template_id,
       ci.quantity,
       ci.modifications,
-      c.name as character_name,
       it.name,
       it.description,
       it.item_type,
@@ -1758,9 +1773,8 @@ async function getSellableInventory(client, userId) {
       it.rarity,
       it.is_stackable
     FROM character_items ci
-    JOIN characters c ON ci.character_id = c.id
     JOIN item_templates it ON ci.item_template_id = it.id
-    WHERE c.user_id = $1
+    WHERE ci.user_id = $1
       AND ci.equipped_slot IS NULL
       AND (it.is_tradeable IS NULL OR it.is_tradeable = TRUE)
       AND NOT EXISTS (
@@ -1768,7 +1782,7 @@ async function getSellableInventory(client, userId) {
         WHERE il.character_item_id = ci.id
         AND il.status = 'active'
       )
-    ORDER BY c.name, it.item_type, it.name
+    ORDER BY it.item_type, it.rarity DESC, it.name
   `, [userId]);
 
   // Calculate suggested prices for each item
@@ -1790,8 +1804,6 @@ async function getSellableInventory(client, userId) {
 
     return {
       instanceId: row.instance_id,
-      characterId: row.character_id,
-      characterName: row.character_name,
       templateId: row.template_id,
       name: row.name,
       description: row.description,
@@ -1820,7 +1832,7 @@ export {
   releaseGold,
   escrowItems,
   releaseEscrowedItems,
-  addItemToCharacter,
+  addItemToUser,
   executeTrade,
   placeLimitOrder,
   executeMarketOrder,

@@ -32,6 +32,9 @@ node --test api/src/tests/integration/auth.integration.test.js  # Single test fi
 # E2E Testing (Playwright - auto-starts servers)
 npx playwright test                     # Run all E2E tests
 npx playwright test e2e/auth.spec.js    # Single spec file
+npx playwright test --ui                # Interactive UI mode
+npx playwright test --headed            # Run with visible browser
+npx playwright test --debug             # Debug mode with inspector
 
 # Database utilities
 npm run db:migrate                      # Run pending migrations
@@ -43,6 +46,14 @@ npm -w api run migrate:rollback         # Roll back last migration
 # Other
 npm run lint                            # Run ESLint
 npm run doctor                          # Validate dev environment
+
+# Asset Generation (requires Sharp)
+npm run generate:all                    # Generate all sprite assets
+npm run generate:characters             # Character sprites only
+npm run generate:enemies                # Enemy sprites only
+npm run generate:nodes                  # World map node icons
+npm run generate:items                  # Item/equipment icons
+npm run generate:icons                  # UI icons
 ```
 
 ## Architecture
@@ -101,6 +112,10 @@ Room-based subscriptions at `/ws`:
 **Character stats:** Base stats from race + (class growth × level) - see `calculateStats()` in `shared/constants.js`
 
 **Scene lifecycle:** `enter()` → `update(dt)` / `render(ctx)` loop → `exit()` - scenes manage their own state and cleanup
+
+**Responsive design:** Use `responsive` singleton from `src/core/Responsive.js` for breakpoint detection (`isMobile()`, `isTablet()`, `isDesktop()`). Scenes can override `onBreakpointChange()` and subscribe via `responsive.onChange()`.
+
+**UI components:** Parchment UI system in `src/ui/parchment/` - use `ParchmentPanel`, `ParchmentModal`, `parchmentToast` for consistent game UI. Button variants: `primary`, `secondary`, `danger`, `ghost`.
 
 **Testing:** Tests are organized into subdirectories:
 - `integration/` - Require API server running (hit live endpoints)
@@ -175,15 +190,18 @@ This project has specialized subagents in `.claude/agents/`. **Using subagents i
 |-------|----------|
 | `frontend-developer` | Canvas 2D, scenes, vanilla JS UI |
 | `backend-developer` | Express routes, services, PostgreSQL |
+| `fullstack-developer` | End-to-end features spanning frontend/backend |
 | `battle-systems-developer` | Combat, AI, damage formulas |
 | `websocket-engineer` | Real-time features, room subscriptions |
 | `postgres-pro` | Database optimization, queries |
 | `debugger` | Bug investigation, state sync issues |
 | `game-developer` | Game loop, procedural generation |
+| `ui-ux-specialist` | Canvas UI design, responsive layouts |
 | `qa-expert` | Testing strategies, validation |
 | `code-reviewer` | Code quality review |
 | `architect-reviewer` | System design review |
 | `performance-engineer` | Optimization, profiling |
+| `security-auditor` | Security review, OWASP checks |
 
 ## CI Pipeline
 

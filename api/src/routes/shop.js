@@ -284,13 +284,13 @@ router.post('/:nodeId/:shopType/buy', authenticate, asyncHandler(async (req, res
       [quantity, shopItem.id]
     );
 
-    // Add item to character inventory (stack if consumable/material)
+    // Add item to user's shared inventory (stack if consumable/material)
     if (['consumable', 'material'].includes(shopItem.item_type)) {
-      // Try to stack with existing item
+      // Try to stack with existing item in shared pool
       const existingResult = await client.query(
         `SELECT id, quantity FROM character_items
-         WHERE character_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL`,
-        [targetCharId, itemTemplateId]
+         WHERE user_id = $1 AND item_template_id = $2 AND equipped_slot IS NULL`,
+        [req.user.userId, itemTemplateId]
       );
 
       if (existingResult.rows.length > 0) {
@@ -300,18 +300,18 @@ router.post('/:nodeId/:shopType/buy', authenticate, asyncHandler(async (req, res
         );
       } else {
         await client.query(
-          `INSERT INTO character_items (character_id, item_template_id, quantity)
+          `INSERT INTO character_items (user_id, item_template_id, quantity)
            VALUES ($1, $2, $3)`,
-          [targetCharId, itemTemplateId, quantity]
+          [req.user.userId, itemTemplateId, quantity]
         );
       }
     } else {
-      // Equipment items don't stack - create individual entries
+      // Equipment items don't stack - create individual entries in shared pool
       for (let i = 0; i < quantity; i++) {
         await client.query(
-          `INSERT INTO character_items (character_id, item_template_id, quantity)
+          `INSERT INTO character_items (user_id, item_template_id, quantity)
            VALUES ($1, $2, 1)`,
-          [targetCharId, itemTemplateId]
+          [req.user.userId, itemTemplateId]
         );
       }
     }
@@ -375,17 +375,15 @@ router.post('/:nodeId/:shopType/sell', authenticate, asyncHandler(async (req, re
   await verifyCharacterAtNode(req.user.userId, nodeIdNum);
 
   const result = await withTransaction(async (client) => {
-    // Get item from character inventory with lock
+    // Get item from shared inventory with lock (shared items have user_id set, character_id NULL)
     const itemResult = await client.query(
-      `SELECT ci.id, ci.character_id, ci.item_template_id, ci.quantity, ci.equipped_slot,
-              it.name, it.base_price, it.item_type, it.is_tradeable,
-              c.user_id
+      `SELECT ci.id, ci.character_id, ci.user_id, ci.item_template_id, ci.quantity, ci.equipped_slot, ci.listed,
+              it.name, it.base_price, it.item_type, it.is_tradeable
        FROM character_items ci
        JOIN item_templates it ON ci.item_template_id = it.id
-       JOIN characters c ON ci.character_id = c.id
-       WHERE ci.id = $1
-       FOR UPDATE`,
-      [itemInstanceId]
+       WHERE ci.id = $1 AND ci.user_id = $2
+       FOR UPDATE OF ci`,
+      [itemInstanceId, req.user.userId]
     );
 
     if (itemResult.rows.length === 0) {
@@ -394,9 +392,9 @@ router.post('/:nodeId/:shopType/sell', authenticate, asyncHandler(async (req, re
 
     const item = itemResult.rows[0];
 
-    // Verify ownership
-    if (item.user_id !== req.user.userId) {
-      throw new AppError('Item not found', 404);
+    // Check if listed on marketplace
+    if (item.listed) {
+      throw new AppError('Cannot sell items listed on the marketplace. Cancel the listing first.', 400);
     }
 
     // Check if equipped
@@ -503,14 +501,11 @@ router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async
   // Verify character location and get party character
   const activeChar = await verifyCharacterAtNode(req.user.userId, nodeIdNum);
 
-  // Get all user's characters' items that can be sold
+  // Get all user's shared pool items that can be sold (unequipped, unlisted, tradeable)
   const itemsResult = await query(
     `SELECT
        ci.id as instance_id,
-       ci.character_id,
        ci.quantity,
-       ci.equipped_slot,
-       c.name as character_name,
        it.id as template_id,
        it.name,
        it.description,
@@ -520,19 +515,18 @@ router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async
        it.is_tradeable
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
-     JOIN characters c ON ci.character_id = c.id
-     WHERE c.user_id = $1
+     WHERE ci.user_id = $1
        AND ci.equipped_slot IS NULL
+       AND ci.character_id IS NULL
+       AND (ci.listed IS NULL OR ci.listed = FALSE)
        AND (it.is_tradeable IS NULL OR it.is_tradeable = TRUE)
-     ORDER BY c.name, it.item_type, it.name`,
+     ORDER BY it.item_type, it.name`,
     [req.user.userId]
   );
 
   // Format items with sell prices
   const items = itemsResult.rows.map(item => ({
     instanceId: item.instance_id,
-    characterId: item.character_id,
-    characterName: item.character_name,
     templateId: item.template_id,
     name: item.name,
     description: item.description,

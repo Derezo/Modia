@@ -43,7 +43,28 @@ function formatItem(item) {
   };
 }
 
-// GET /api/inventory/:characterId - Get character's inventory
+// GET /api/inventory/shared - Get user's shared inventory (unequipped items)
+router.get('/shared', authenticate, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+
+  // Get all unequipped items owned by user (shared pool)
+  const itemsResult = await query(
+    `SELECT ci.id as instance_id, ci.quantity, ci.modifications,
+            it.id as template_id, it.name, it.item_type, it.rarity,
+            it.stat_bonuses, it.description
+     FROM character_items ci
+     JOIN item_templates it ON ci.item_template_id = it.id
+     WHERE ci.user_id = $1 AND ci.equipped_slot IS NULL
+     ORDER BY it.item_type, it.rarity DESC, it.name`,
+    [userId]
+  );
+
+  const inventory = itemsResult.rows.map(item => formatItem(item));
+
+  res.json({ inventory });
+}));
+
+// GET /api/inventory/:characterId - Get character's equipped items
 router.get('/:characterId', authenticate, asyncHandler(async (req, res) => {
   const { characterId } = req.params;
 
@@ -111,66 +132,76 @@ router.post('/equip', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Cannot change equipment during battle', 400);
   }
 
-  // Verify item ownership and get item info including requirements
-  const itemResult = await query(
-    `SELECT ci.id, ci.equipped_slot, it.item_type, it.equipment_slot, it.name,
-            it.level_requirement, it.class_restriction, it.race_restriction
-     FROM character_items ci
-     JOIN item_templates it ON ci.item_template_id = it.id
-     WHERE ci.id = $1 AND ci.character_id = $2`,
-    [itemInstanceId, characterId]
-  );
-
-  if (itemResult.rows.length === 0) {
-    throw new AppError('Item not found in inventory', 404);
-  }
-
-  const item = itemResult.rows[0];
-
-  // Check if item is already equipped
-  if (item.equipped_slot) {
-    throw new AppError('Item is already equipped', 400);
-  }
-
-  // Validate level requirement
-  if (item.level_requirement && character.level < item.level_requirement) {
-    throw new AppError(`Requires level ${item.level_requirement} (you are level ${character.level})`, 400);
-  }
-
-  // Validate class restriction
-  if (item.class_restriction && item.class_restriction.length > 0) {
-    if (!item.class_restriction.includes(character.class)) {
-      const allowedClasses = item.class_restriction.join(', ');
-      throw new AppError(`Only ${allowedClasses} can equip this item`, 400);
-    }
-  }
-
-  // Validate race restriction
-  if (item.race_restriction && item.race_restriction.length > 0) {
-    if (!item.race_restriction.includes(character.race)) {
-      const allowedRaces = item.race_restriction.join(', ');
-      throw new AppError(`Only ${allowedRaces} can equip this item`, 400);
-    }
-  }
-
-  // Validate item can be equipped in this slot
-  const validSlots = getValidSlotsForItem(item.item_type);
-  if (!validSlots.includes(slot)) {
-    throw new AppError(`${item.item_type} cannot be equipped in ${slot}`, 400);
-  }
-
   await withTransaction(async (client) => {
-    // Unequip any item currently in this slot
-    await client.query(
-      `UPDATE character_items SET equipped_slot = NULL
-       WHERE character_id = $1 AND equipped_slot = $2`,
-      [characterId, slot]
+    // Verify item ownership with FOR UPDATE lock - check both character inventory and shared pool
+    const itemResult = await client.query(
+      `SELECT ci.id, ci.equipped_slot, ci.character_id, ci.user_id, ci.listed,
+              it.item_type, it.equipment_slot, it.name,
+              it.level_requirement, it.class_restriction, it.race_restriction
+       FROM character_items ci
+       JOIN item_templates it ON ci.item_template_id = it.id
+       WHERE ci.id = $1 AND (ci.character_id = $2 OR ci.user_id = $3)
+       FOR UPDATE OF ci`,
+      [itemInstanceId, characterId, req.user.userId]
     );
 
-    // Equip the new item
+    if (itemResult.rows.length === 0) {
+      throw new AppError('Item not found in inventory', 404);
+    }
+
+    const item = itemResult.rows[0];
+
+    // Check if item is listed on marketplace
+    if (item.listed) {
+      throw new AppError('Cannot equip items listed on the marketplace. Cancel the listing first.', 400);
+    }
+
+    // Check if item is already equipped
+    if (item.equipped_slot) {
+      throw new AppError('Item is already equipped', 400);
+    }
+
+    // Validate level requirement
+    if (item.level_requirement && character.level < item.level_requirement) {
+      throw new AppError(`Requires level ${item.level_requirement} (you are level ${character.level})`, 400);
+    }
+
+    // Validate class restriction
+    if (item.class_restriction && item.class_restriction.length > 0) {
+      if (!item.class_restriction.includes(character.class)) {
+        const allowedClasses = item.class_restriction.join(', ');
+        throw new AppError(`Only ${allowedClasses} can equip this item`, 400);
+      }
+    }
+
+    // Validate race restriction
+    if (item.race_restriction && item.race_restriction.length > 0) {
+      if (!item.race_restriction.includes(character.race)) {
+        const allowedRaces = item.race_restriction.join(', ');
+        throw new AppError(`Only ${allowedRaces} can equip this item`, 400);
+      }
+    }
+
+    // Validate item can be equipped in this slot
+    const validSlotsForItem = getValidSlotsForItem(item.item_type);
+    if (!validSlotsForItem.includes(slot)) {
+      throw new AppError(`${item.item_type} cannot be equipped in ${slot}`, 400);
+    }
+
+    // Unequip any item currently in this slot - move to shared pool
     await client.query(
-      'UPDATE character_items SET equipped_slot = $1 WHERE id = $2',
-      [slot, itemInstanceId]
+      `UPDATE character_items
+       SET equipped_slot = NULL, character_id = NULL, user_id = $3
+       WHERE character_id = $1 AND equipped_slot = $2`,
+      [characterId, slot, req.user.userId]
+    );
+
+    // Equip the new item - transfer ownership from shared pool to character
+    await client.query(
+      `UPDATE character_items
+       SET equipped_slot = $1, character_id = $2, user_id = NULL
+       WHERE id = $3`,
+      [slot, characterId, itemInstanceId]
     );
   });
 
@@ -202,12 +233,13 @@ router.post('/unequip', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Cannot change equipment during battle', 400);
   }
 
-  // Unequip the item
+  // Unequip the item - move to shared pool
   const result = await query(
-    `UPDATE character_items SET equipped_slot = NULL
+    `UPDATE character_items
+     SET equipped_slot = NULL, character_id = NULL, user_id = $3
      WHERE character_id = $1 AND equipped_slot = $2
      RETURNING id`,
-    [characterId, slot]
+    [characterId, slot, req.user.userId]
   );
 
   if (result.rows.length === 0) {
@@ -219,31 +251,22 @@ router.post('/unequip', authenticate, asyncHandler(async (req, res) => {
   res.json(updatedInventory);
 }));
 
-// POST /api/inventory/use - Use a consumable item
+// POST /api/inventory/use - Use a consumable item from shared pool
 router.post('/use', authenticate, asyncHandler(async (req, res) => {
-  const { characterId, itemInstanceId, targetCharacterId } = req.body;
+  const { itemInstanceId, targetCharacterId } = req.body;
+  const userId = req.user.userId;
 
-  // Verify character ownership
-  const charResult = await query(
-    'SELECT id FROM characters WHERE id = $1 AND user_id = $2',
-    [characterId, req.user.userId]
-  );
-
-  if (charResult.rows.length === 0) {
-    throw new AppError('Character not found', 404);
-  }
-
-  // Get item info
+  // Get item info from shared pool
   const itemResult = await query(
     `SELECT ci.id, ci.quantity, it.item_type, it.stat_bonuses, it.effect_type, it.effect_value, it.name
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
-     WHERE ci.id = $1 AND ci.character_id = $2`,
-    [itemInstanceId, characterId]
+     WHERE ci.id = $1 AND ci.user_id = $2`,
+    [itemInstanceId, userId]
   );
 
   if (itemResult.rows.length === 0) {
-    throw new AppError('Item not found in inventory', 404);
+    throw new AppError('Item not found in shared inventory', 404);
   }
 
   const item = itemResult.rows[0];
@@ -253,11 +276,13 @@ router.post('/use', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Item is not consumable', 400);
   }
 
-  // Get target character (default to self)
-  const targetId = targetCharacterId || characterId;
+  // Get target character - must be owned by user
+  if (!targetCharacterId) {
+    throw new AppError('Target character ID is required', 400);
+  }
   const targetResult = await query(
     'SELECT id, hp_current, hp_max, mp_current, mp_max FROM characters WHERE id = $1 AND user_id = $2',
-    [targetId, req.user.userId]
+    [targetCharacterId, userId]
   );
 
   if (targetResult.rows.length === 0) {
@@ -273,7 +298,7 @@ router.post('/use', authenticate, asyncHandler(async (req, res) => {
       const newHp = Math.min(target.hp_max, target.hp_current + stats.hp_restore);
       await client.query(
         'UPDATE characters SET hp_current = $1 WHERE id = $2',
-        [newHp, targetId]
+        [newHp, targetCharacterId]
       );
     }
 
@@ -281,7 +306,7 @@ router.post('/use', authenticate, asyncHandler(async (req, res) => {
       const newMp = Math.min(target.mp_max, target.mp_current + stats.mp_restore);
       await client.query(
         'UPDATE characters SET mp_current = $1 WHERE id = $2',
-        [newMp, targetId]
+        [newMp, targetCharacterId]
       );
     }
 
@@ -306,9 +331,10 @@ router.post('/use', authenticate, asyncHandler(async (req, res) => {
   });
 }));
 
-// POST /api/inventory/discard - Discard an item
+// POST /api/inventory/discard - Discard an item from shared pool
 router.post('/discard', authenticate, asyncHandler(async (req, res) => {
-  const { characterId, itemInstanceId } = req.body;
+  const { itemInstanceId } = req.body;
+  const userId = req.user.userId;
 
   // SECURITY: Strict quantity validation to prevent exploits
   // If quantity not provided, we'll discard all after checking ownership
@@ -323,33 +349,28 @@ router.post('/discard', authenticate, asyncHandler(async (req, res) => {
     }
   }
 
-  // Verify character ownership
-  const charResult = await query(
-    'SELECT id FROM characters WHERE id = $1 AND user_id = $2',
-    [characterId, req.user.userId]
-  );
-
-  if (charResult.rows.length === 0) {
-    throw new AppError('Character not found', 404);
-  }
-
   // Use transaction with FOR UPDATE to prevent race conditions
   const result = await withTransaction(async (client) => {
-    // Get item info with lock
+    // Get item info with lock - check shared pool ownership
     const itemResult = await client.query(
-      'SELECT id, quantity, equipped_slot FROM character_items WHERE id = $1 AND character_id = $2 FOR UPDATE',
-      [itemInstanceId, characterId]
+      'SELECT id, quantity, equipped_slot, listed FROM character_items WHERE id = $1 AND user_id = $2 FOR UPDATE',
+      [itemInstanceId, userId]
     );
 
     if (itemResult.rows.length === 0) {
-      throw new AppError('Item not found in inventory', 404);
+      throw new AppError('Item not found in shared inventory', 404);
     }
 
     const item = itemResult.rows[0];
 
-    // Can't discard equipped items
+    // Check if listed on marketplace
+    if (item.listed) {
+      throw new AppError('Cannot discard items listed on the marketplace. Cancel the listing first.', 400);
+    }
+
+    // Shared pool items should never be equipped, but check anyway
     if (item.equipped_slot) {
-      throw new AppError('Unequip item before discarding', 400);
+      throw new AppError('Cannot discard equipped items', 400);
     }
 
     // If no quantity specified, discard all; otherwise validate against owned amount

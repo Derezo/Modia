@@ -15,6 +15,7 @@ import http from 'http';
 import { setupWebSocket } from './websocket/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { rateLimiter } from './middleware/rateLimiter.js';
+import { resetAllRateLimiters, isProduction } from './middleware/rateLimiterFactory.js';
 
 // Routes
 import authRoutes from './routes/auth.js';
@@ -39,6 +40,9 @@ import advancementQuestRoutes from './routes/advancementQuest.js';
 // Scheduled services
 import { startRefreshScheduler } from './services/shopRefreshService.js';
 import { startExpirationScheduler } from './services/orderExpirationService.js';
+
+// Trait effects system
+import { initializeTraitEffects } from './services/traits/index.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -71,6 +75,18 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Test utility endpoint to reset rate limiters (non-production only)
+if (!isProduction) {
+  app.post('/api/test/reset-rate-limiters', async (req, res) => {
+    const success = await resetAllRateLimiters();
+    if (success) {
+      res.json({ status: 'ok', message: 'Rate limiters reset' });
+    } else {
+      res.status(403).json({ error: 'Rate limiter reset not available' });
+    }
+  });
+}
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/characters', characterRoutes);
@@ -97,6 +113,9 @@ app.use(errorHandler);
 
 // Setup WebSocket
 setupWebSocket(server);
+
+// Initialize trait effects system
+initializeTraitEffects();
 
 // Start server
 const PORT = process.env.PORT || 3000;

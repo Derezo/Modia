@@ -18,7 +18,9 @@
     "test:ratelimit": "NODE_ENV=test TEST_RATE_LIMITS=true node --test src/tests/ratelimit/*.test.js",
     "test:quick": "npm run test:unit",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:ratelimit",
-    "test:ci": "npm run test:unit && npm run test:integration"
+    "test:ci": "npm run test:unit && npm run test:integration",
+    "test:coverage": "c8 --include='src/**/*.js' --exclude='src/tests/**' --exclude='src/migrations/**' --exclude='src/scripts/**' --reporter=text --reporter=html npm run test:unit",
+    "test:coverage:all": "c8 --include='src/**/*.js' --exclude='src/tests/**' --exclude='src/migrations/**' --exclude='src/scripts/**' --reporter=text --reporter=html npm run test:all"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
@@ -32,6 +34,7 @@
     "ws": "^8.14.2"
   },
   "devDependencies": {
+    "c8": "^10.1.3",
     "eslint": "^8.56.0"
   },
   "engines": {

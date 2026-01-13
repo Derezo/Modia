@@ -179,8 +179,14 @@ export class ApiClient {
   }
 
   // Inventory endpoints
+  // Get character's equipped items (shared inventory is separate)
   getInventory(characterId) {
     return this.get(`/inventory/${characterId}`);
+  }
+
+  // Get user's shared inventory pool (unequipped items)
+  getSharedInventory() {
+    return this.get('/inventory/shared');
   }
 
   equipItem(characterId, itemInstanceId, slot) {
@@ -191,12 +197,14 @@ export class ApiClient {
     return this.post('/inventory/unequip', { characterId, slot });
   }
 
-  useItem(characterId, itemInstanceId, targetCharacterId = null) {
-    return this.post('/inventory/use', { characterId, itemInstanceId, targetCharacterId });
+  // Use consumable from shared pool on target character
+  useItem(itemInstanceId, targetCharacterId) {
+    return this.post('/inventory/use', { itemInstanceId, targetCharacterId });
   }
 
-  discardItem(characterId, itemInstanceId, quantity = null) {
-    return this.post('/inventory/discard', { characterId, itemInstanceId, quantity });
+  // Discard item from shared pool
+  discardItem(itemInstanceId, quantity = null) {
+    return this.post('/inventory/discard', { itemInstanceId, quantity });
   }
 
   // Skills endpoints
