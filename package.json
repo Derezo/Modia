@@ -36,6 +36,8 @@
     "generate:portraits": "node api/src/scripts/generate-portraits.js",
     "generate:icons": "node scripts/generate-icons.js",
     "generate:svg-icons": "node scripts/generate-svg-icons.js",
+    "generate:svg-portraits": "node scripts/generate-svg-portraits.js",
+    "generate:portrait-pngs": "node scripts/generate-icons.js --portraits",
     "generate:all": "node api/src/scripts/generate-all.js",
     "validate:sprites": "node api/src/scripts/validate-prompts.js",
     "validate:enemy": "node api/src/scripts/validate-prompts.js --type=enemy",
