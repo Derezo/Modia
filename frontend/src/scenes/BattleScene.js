@@ -12,6 +12,7 @@ import { BattleActionBar } from '../battle/BattleActionBar.js';
 import { BattleContextMenu } from '../battle/BattleContextMenu.js';
 import { GridCursor } from '../battle/GridCursor.js';
 import { BossPhaseIndicator } from '../battle/BossPhaseIndicator.js';
+import { isSelfTargetingSkill, getVisualCategory } from '../battle/SkillEffectCategories.js';
 import { calculateDamagePreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
@@ -1757,6 +1758,12 @@ export class BattleScene extends Scene {
       return;
     }
 
+    // Check if this is a self-targeting skill (meditation, buffs, cleanses, etc.)
+    if (isSelfTargetingSkill(skill)) {
+      this.startSelfTargetSkillAction(skillId, skill, activeUnit);
+      return;
+    }
+
     if (activeUnit && skill) {
       // Prefer server-provided skill targets if available
       const serverSkill = this.serverAvailableActions?.skills?.find(s => s.id === skillId);
@@ -1781,6 +1788,49 @@ export class BattleScene extends Scene {
     this.ui.hideSkillPanel();
     this.ui.setActionsEnabled(false);
     this.ui.showTargetingMode();
+  }
+
+  /**
+   * Start a self-targeting skill action
+   * Self-targeting skills (meditation, buffs, cleanses) target the caster only
+   * @param {string} skillId - The skill ID
+   * @param {Object} skill - The skill definition
+   * @param {Object} activeUnit - The unit using the skill
+   */
+  startSelfTargetSkillAction(skillId, skill, activeUnit) {
+    // Highlight only the caster's tile
+    this.validTiles = [{
+      x: activeUnit.gridX,
+      y: activeUnit.gridY,
+      unitId: activeUnit.id,
+      isSelf: true
+    }];
+
+    // Show aura effect preview on the caster
+    const screenPos = this.grid.tileToScreen(activeUnit.gridX, activeUnit.gridY);
+    const visualCategory = getVisualCategory(skill);
+    this.animations.addSelfAuraEffect(
+      screenPos.x + this.camera.x,
+      screenPos.y + this.camera.y - 32,
+      visualCategory
+    );
+
+    // Set up pending action for immediate confirmation
+    this.pendingAction = {
+      type: 'skill',
+      skillId,
+      targetTile: { x: activeUnit.gridX, y: activeUnit.gridY },
+      target: activeUnit,
+      isSelfTarget: true
+    };
+
+    // Show confirmation UI
+    this.ui.hideSkillPanel();
+    this.ui.setActionsEnabled(false);
+    this.ui.showTargetingMode();
+
+    // Show toast with skill name
+    parchmentToast.info(skill.name, 'Click to confirm or press Escape to cancel');
   }
 
   /**

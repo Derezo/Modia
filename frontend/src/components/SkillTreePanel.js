@@ -1,6 +1,81 @@
 import { PARCHMENT_COLORS } from '../ui/parchment/ParchmentTheme.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 
+/**
+ * Default scaling increments per level for skill attributes
+ * Mirrors api/src/config/skillScaling.js for frontend preview
+ */
+const DEFAULT_SCALING = {
+  power: 0.5,
+  effectChance: 0.005,
+  effectDuration: 0.02,
+  healPercent: 0.1,
+  mpRestore: 0.1,
+  buffDuration: 0.02,
+  range: 0,
+  aoeRadius: 0
+};
+
+/**
+ * Calculate scaled skill attributes at a given level
+ * @param {object} skill - Skill definition
+ * @param {number} level - Level to calculate for
+ * @returns {object} Object with scaled attribute values
+ */
+function getScaledAttributes(skill, level) {
+  if (!skill || level <= 1) {
+    return {
+      power: skill?.power,
+      effectChance: skill?.effectChance,
+      effectDuration: skill?.effectDuration,
+      healPercent: skill?.healPercent,
+      mpRestore: skill?.mpRestore,
+      range: skill?.range,
+      aoeRadius: skill?.aoeRadius
+    };
+  }
+
+  const scaling = skill.scaling || {};
+  const result = {};
+
+  // Helper to scale a value
+  const scale = (attr, base) => {
+    if (base === undefined || base === null) return undefined;
+    const increment = scaling[attr] ?? DEFAULT_SCALING[attr] ?? 0;
+    return base + (level - 1) * increment;
+  };
+
+  result.power = skill.power !== undefined
+    ? Math.round(scale('power', skill.power) * 10) / 10
+    : undefined;
+
+  result.effectChance = skill.effectChance !== undefined
+    ? Math.min(1.0, scale('effectChance', skill.effectChance))
+    : undefined;
+
+  result.effectDuration = skill.effectDuration !== undefined
+    ? Math.floor(scale('effectDuration', skill.effectDuration))
+    : undefined;
+
+  result.healPercent = skill.healPercent !== undefined
+    ? Math.round(scale('healPercent', skill.healPercent) * 10) / 10
+    : undefined;
+
+  result.mpRestore = skill.mpRestore !== undefined
+    ? Math.round(scale('mpRestore', skill.mpRestore) * 10) / 10
+    : undefined;
+
+  result.range = skill.range !== undefined && scaling.range
+    ? Math.floor(scale('range', skill.range))
+    : skill.range;
+
+  result.aoeRadius = skill.aoeRadius !== undefined && scaling.aoeRadius
+    ? Math.floor(scale('aoeRadius', skill.aoeRadius))
+    : skill.aoeRadius;
+
+  return result;
+}
+
 export class SkillTreePanel {
   constructor(game, container) {
     this.game = game;
@@ -8,6 +83,8 @@ export class SkillTreePanel {
     this.characterId = null;
     this.characterClass = null;
     this.xpPool = 0;
+    this.spentXP = 0;
+    this.levelProgress = null;
     this.learnedSkills = {};
     this.skillTree = null;
     this.selectedSkill = null;
@@ -27,6 +104,8 @@ export class SkillTreePanel {
       this.skillTree = treeData;
       this.learnedSkills = skillData.skills || {};
       this.xpPool = skillData.xpPool || 0;
+      this.spentXP = skillData.spentXP || 0;
+      this.levelProgress = skillData.levelProgress || null;
       this.render();
     } catch (err) {
       console.error('Failed to load skill tree:', err);
@@ -141,6 +220,42 @@ export class SkillTreePanel {
           font-weight: bold;
           color: ${PARCHMENT_COLORS.text.primary};
         }
+        .level-progress-section {
+          background: rgba(0, 0, 0, 0.4);
+          border-radius: 4px;
+          padding: 12px;
+          margin-bottom: 12px;
+        }
+        .level-display {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 6px;
+        }
+        .level-value {
+          font-size: 16px;
+          font-weight: bold;
+          color: ${PARCHMENT_COLORS.text.primary};
+        }
+        .level-xp-text {
+          font-size: 11px;
+          color: ${PARCHMENT_COLORS.text.secondary};
+        }
+        .level-progress-bar {
+          height: 10px;
+          background: rgba(0, 0, 0, 0.5);
+          border-radius: 5px;
+          overflow: hidden;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .level-progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #6ab0f3, #4a90d9);
+          transition: width 0.3s;
+        }
+        .level-progress-fill.maxed {
+          background: linear-gradient(90deg, #ffd700, #ffaa00);
+        }
         .skill-name {
           font-weight: bold;
           font-size: 16px;
@@ -243,6 +358,46 @@ export class SkillTreePanel {
         .level-btn {
           flex: 1;
         }
+        .skill-attributes {
+          background: rgba(0, 0, 0, 0.2);
+          border-radius: 4px;
+          padding: 8px;
+          margin-bottom: 12px;
+        }
+        .skill-attributes-title {
+          font-size: 11px;
+          color: ${PARCHMENT_COLORS.text.secondary};
+          margin-bottom: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .skill-attr-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 12px;
+          margin-bottom: 3px;
+        }
+        .skill-attr-name {
+          color: ${PARCHMENT_COLORS.text.secondary};
+        }
+        .skill-attr-values {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .skill-attr-current {
+          color: ${PARCHMENT_COLORS.text.primary};
+          font-weight: bold;
+        }
+        .skill-attr-arrow {
+          color: ${PARCHMENT_COLORS.state.success};
+          font-size: 10px;
+        }
+        .skill-attr-next {
+          color: ${PARCHMENT_COLORS.state.success};
+          font-weight: bold;
+        }
       </style>
 
       <div class="skill-branches">
@@ -250,6 +405,7 @@ export class SkillTreePanel {
       </div>
 
       <div class="skill-details-panel">
+        ${this.renderLevelProgress()}
         <div class="xp-pool-display">
           <div class="xp-label">Available XP</div>
           <div class="xp-value">${this.xpPool.toLocaleString()}</div>
@@ -294,6 +450,32 @@ export class SkillTreePanel {
       <div class="${classes}" data-skill-id="${skill.id}">
         <span class="skill-icon">${skill.icon}</span>
         <span class="skill-level">${currentLevel}/${skill.maxLevel}</span>
+      </div>
+    `;
+  }
+
+  renderLevelProgress() {
+    if (!this.levelProgress) {
+      return '';
+    }
+
+    const { currentLevel, xpIntoLevel, xpNeededForNext, percentToNext, isMaxLevel } = this.levelProgress;
+    const percent = isMaxLevel ? 100 : percentToNext;
+    const fillClass = isMaxLevel ? 'level-progress-fill maxed' : 'level-progress-fill';
+
+    const xpText = isMaxLevel
+      ? 'Max Level'
+      : `${xpIntoLevel.toLocaleString()} / ${xpNeededForNext.toLocaleString()} XP`;
+
+    return `
+      <div class="level-progress-section">
+        <div class="level-display">
+          <span class="level-value">Level ${currentLevel}</span>
+          <span class="level-xp-text">${xpText}</span>
+        </div>
+        <div class="level-progress-bar">
+          <div class="${fillClass}" style="width: ${percent}%"></div>
+        </div>
       </div>
     `;
   }
@@ -406,6 +588,7 @@ export class SkillTreePanel {
         </div>
         <div class="progress-text">${currentLevel} / ${skill.maxLevel}</div>
       </div>
+      ${this.renderSkillAttributes(skill, currentLevel, isMaxed)}
       ${!isMaxed ? `<div class="skill-cost ${costClass}">Next level: ${nextLevelCost.toLocaleString()} XP</div>` : ''}
       ${requiresHtml}
       ${actionsHtml}
@@ -431,6 +614,82 @@ export class SkillTreePanel {
     return null;
   }
 
+  /**
+   * Render skill attributes with current/next level comparison
+   */
+  renderSkillAttributes(skill, currentLevel, isMaxed) {
+    const displayLevel = Math.max(1, currentLevel);
+    const nextLevel = isMaxed ? displayLevel : displayLevel + 1;
+
+    const current = getScaledAttributes(skill, displayLevel);
+    const next = getScaledAttributes(skill, nextLevel);
+
+    const attrs = [];
+
+    // Attribute display config: name, label, format function
+    const attrConfig = [
+      { key: 'power', label: 'Power', format: v => `${v}%` },
+      { key: 'effectChance', label: 'Effect Chance', format: v => `${Math.round(v * 100)}%` },
+      { key: 'effectDuration', label: 'Effect Duration', format: v => `${v} turns` },
+      { key: 'healPercent', label: 'Heal', format: v => `${v}%` },
+      { key: 'mpRestore', label: 'MP Restore', format: v => `${v}%` },
+      { key: 'range', label: 'Range', format: v => `${v} tiles` },
+      { key: 'aoeRadius', label: 'AOE Radius', format: v => `${v} tiles` }
+    ];
+
+    for (const { key, label, format } of attrConfig) {
+      const currVal = current[key];
+      const nextVal = next[key];
+
+      if (currVal !== undefined && currVal !== null && currVal !== 0) {
+        const improved = !isMaxed && nextVal > currVal;
+        attrs.push(`
+          <div class="skill-attr-row">
+            <span class="skill-attr-name">${label}</span>
+            <span class="skill-attr-values">
+              <span class="skill-attr-current">${format(currVal)}</span>
+              ${improved ? `<span class="skill-attr-arrow">→</span><span class="skill-attr-next">${format(nextVal)}</span>` : ''}
+            </span>
+          </div>
+        `);
+      }
+    }
+
+    // Add static attributes (mpCost, cooldown)
+    if (skill.mpCost !== undefined && skill.mpCost > 0) {
+      attrs.push(`
+        <div class="skill-attr-row">
+          <span class="skill-attr-name">MP Cost</span>
+          <span class="skill-attr-values">
+            <span class="skill-attr-current">${skill.mpCost}</span>
+          </span>
+        </div>
+      `);
+    }
+
+    if (skill.cooldown !== undefined && skill.cooldown > 0) {
+      attrs.push(`
+        <div class="skill-attr-row">
+          <span class="skill-attr-name">Cooldown</span>
+          <span class="skill-attr-values">
+            <span class="skill-attr-current">${skill.cooldown} turns</span>
+          </span>
+        </div>
+      `);
+    }
+
+    if (attrs.length === 0) {
+      return '';
+    }
+
+    return `
+      <div class="skill-attributes">
+        <div class="skill-attributes-title">Attributes${!isMaxed && currentLevel > 0 ? ' (Lv.' + displayLevel + ' → ' + nextLevel + ')' : ''}</div>
+        ${attrs.join('')}
+      </div>
+    `;
+  }
+
   async learnSkill(skill, levels) {
     const currentLevel = this.learnedSkills[skill.id] || 0;
     const targetLevel = Math.min(skill.maxLevel, currentLevel + levels);
@@ -444,13 +703,30 @@ export class SkillTreePanel {
       // Update local state
       this.learnedSkills[skill.id] = result.skill.level;
       this.xpPool = result.xpRemaining;
+      this.spentXP = result.spentXP;
+      this.levelProgress = result.levelProgress;
 
       // Update displays
       this.element.querySelector('.xp-value').textContent = this.xpPool.toLocaleString();
       this.render();
       this.selectSkill(skill.id);
 
+      // Show skill learned toast
       parchmentToast.success('Skill Learned', `Learned ${skill.name} (Lv.${result.skill.level})! Spent ${result.xpSpent.toLocaleString()} XP`);
+
+      // Show level-up toast if character leveled up
+      if (result.levelUp) {
+        const { oldLevel, newLevel, statGains } = result.levelUp;
+        const statText = Object.entries(statGains || {})
+          .filter(([, val]) => val > 0)
+          .map(([stat, val]) => `+${val} ${stat.toUpperCase()}`)
+          .join(', ');
+
+        parchmentToast.success(
+          'Level Up!',
+          `Reached Level ${newLevel}!${statText ? ` (${statText})` : ''}`
+        );
+      }
     } catch (err) {
       parchmentToast.error('Learn Failed', err.message);
     }
