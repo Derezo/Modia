@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.3 |
+| Version | 2.4 |
 | Last Updated | January 2026 |
 | Focus | Features, mechanics, UX, content |
 
@@ -17,7 +17,7 @@
 | Core Mechanics | 95% | Near Complete |
 | Combat System | 85% | In Progress |
 | Economy & Items | 90% | Near Complete |
-| User Experience | 75% | In Progress |
+| User Experience | 80% | In Progress |
 | Social Features | 75% | In Progress |
 | World & Progression | 90% | Near Complete |
 
@@ -266,6 +266,9 @@ Per ITEM_SYSTEM.md specifications:
 - [x] Element color system (skill type icons with muted backgrounds)
 - [x] Progress bar readability (text outlines)
 - [x] Icon component doubling fix
+- [x] Turn Order Panel redesign (collapsed/expanded states, parchment styling)
+- [x] Enemy icon generation system (16 programmatic SVG icons)
+- [x] Tap-to-preview in Turn Order (camera pan, target panel preview)
 
 ---
 
@@ -367,6 +370,7 @@ Per ITEM_SYSTEM.md specifications:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.4 | Jan 2026 | Turn Order Panel redesign: collapsed/expanded states, parchment styling, tap-to-preview with camera pan. Programmatic SVG icon generation system for 16 enemy icons. Target panel priority system. |
 | 2.3 | Jan 2026 | ItemDataTable & Marketplace Enhancement complete: Shop/Marketplace ItemDataTable integration, MarketDashboard with parchment price chart, order expiration system (7-day), shop stock refresh cycles, sellable inventory API, augment filter, JSDoc documentation. Economy & Items updated to 90%. |
 | 2.2 | Jan 2026 | Roadmap audit v8.0: Added Section 2.4 Battle Balance (defense formula, agility, enemy abilities). Added Section 3.4 Gold Sinks. Added Section 5.3 Social Features (FriendsScene, PartyInviteModal wiring, Tavern 2.0). Corrected completion percentages. Marked max orders as complete. |
 | 2.1 | Jan 2026 | UI/UX styling overhaul complete (v7.7). Color scheme corrections, toast consolidation, element colors, progress bar readability. |

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="7" ry="2" fill="#1a1a20" opacity="0.3"/>
+
+  <!-- Hat base -->
+  <ellipse cx="12" cy="8" rx="8" ry="3" fill="#2a2a3a"/>
+  <ellipse cx="12" cy="7.5" rx="7.5" ry="2.5" fill="#3a3a4a"/>
+
+  <!-- Hat top -->
+  <path d="M6 8q0-5 6-5t6 5" fill="#2a2a3a"/>
+  <path d="M7 7.5q0-4 5-4t5 4" fill="#3a3a4a"/>
+
+  <!-- Feather -->
+  <path d="M16 3q4 1 5 5" fill="none" stroke="#aa2222" stroke-width="2" stroke-linecap="round"/>
+  <path d="M16.5 3.5q3.5 1 4 4" fill="none" stroke="#cc4444" stroke-width="1" stroke-linecap="round"/>
+
+  <!-- Face -->
+  <ellipse cx="12" cy="13" rx="5" ry="4.5" fill="#6b4a2a"/>
+  <ellipse cx="12" cy="12.8" rx="4.5" ry="4" fill="#9a7a5a"/>
+  <ellipse cx="12" cy="12.5" rx="4" ry="3.5" fill="#c0a080"/>
+
+  <!-- Confident eyes -->
+  <!-- Eyes -->
+  <ellipse cx="9.5" cy="12" rx="1.2" ry="1.44" fill="#fff"/>
+  <ellipse cx="14.5" cy="12" rx="1.2" ry="1.44" fill="#fff"/>
+  <circle cx="9.5" cy="12" r="0.6" fill="#4a3a2a"/>
+  <circle cx="14.5" cy="12" r="0.6" fill="#4a3a2a"/>
+  <circle cx="9.32" cy="11.82" r="0.24" fill="#fff" opacity="0.6"/>
+  <circle cx="14.32" cy="11.82" r="0.24" fill="#fff" opacity="0.6"/>
+
+  <!-- Smirk -->
+  <path d="M10 15q2 1.5 5 0" fill="none" stroke="#6b4a2a" stroke-width="0.7"/>
+
+  <!-- Goatee -->
+  <path d="M11 17l1 2 1-2" fill="#3a2a1a"/>
+
+  <!-- Scar -->
+  <path d="M15 11l1.5 3" stroke="#aa7766" stroke-width="0.6"/>
+
+</svg>

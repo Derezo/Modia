@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="7" ry="2" fill="#1a1a20" opacity="0.3"/>
+
+  <!-- Skull -->
+  <ellipse cx="12" cy="10" rx="5" ry="6" fill="#2a2a30"/>
+  <ellipse cx="12" cy="10" rx="4.5" ry="5.5" fill="#5a5a60"/>
+  <ellipse cx="12" cy="9.5" rx="4" ry="5" fill="#8a8a90"/>
+  <!-- Eye sockets -->
+  <ellipse cx="10.5" cy="9" rx="1.2" ry="1.5" fill="#2a2a30"/>
+  <ellipse cx="13.5" cy="9" rx="1.2" ry="1.5" fill="#2a2a30"/>
+  <!-- Eye glow -->
+  <circle cx="10.5" cy="9" r="0.5" fill="#6b2d4d" opacity="0.7"/>
+  <circle cx="13.5" cy="9" r="0.5" fill="#6b2d4d" opacity="0.7"/>
+  <!-- Nose hole -->
+  <path d="M12 11l-0.5 1l1 0z" fill="#2a2a30"/>
+  <!-- Teeth -->
+  <path d="M9.5 13h5" fill="none" stroke="#b0b0b5" stroke-width="0.6"/>
+  <path d="M10 12.5v1" fill="none" stroke="#2a2a30" stroke-width="0.3"/>
+  <path d="M12 12.5v1" fill="none" stroke="#2a2a30" stroke-width="0.3"/>
+  <path d="M14 12.5v1" fill="none" stroke="#2a2a30" stroke-width="0.3"/>
+
+  <!-- Sword behind -->
+  <line x1="4" y1="18" x2="12" y2="6" stroke="#4a4a4a" stroke-width="2" stroke-linecap="round"/>
+  <line x1="4.3" y1="17.7" x2="11.7" y2="6.3" stroke="#7a7a7a" stroke-width="1" stroke-linecap="round"/>
+
+  <!-- Crossguard -->
+  <ellipse cx="10" cy="9" rx="2" ry="0.8" fill="#8b6914" transform="rotate(-60 10 9)"/>
+  <ellipse cx="10" cy="9" rx="1.5" ry="0.5" fill="#daa520" transform="rotate(-60 10 9)"/>
+
+</svg>

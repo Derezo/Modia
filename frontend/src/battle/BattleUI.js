@@ -1,5 +1,6 @@
 import { ParchmentCard } from '../components/ParchmentCard.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import TurnOrderPanel from './TurnOrderPanel.js';
 
 /**
  * BattleUI - User interface for tactical combat
@@ -14,6 +15,11 @@ export class BattleUI {
     this.activeUnitCard = null;  // ParchmentCard for active unit
     this.targetCard = null;      // ParchmentCard for target/enemy
     this.targetSticky = false;   // Keep target panel visible during targeting
+    this.turnOrderPanel = null;  // TurnOrderPanel for turn order display
+    this.previewUnit = null;     // Unit being previewed from turn order
+    this.hoveredBattleUnit = null; // Unit hovered/tapped on battlefield
+    this.confirmTargetUnit = null; // Unit being targeted for attack confirmation
+    this.activeEnemyUnit = null;   // Active enemy unit (on enemy turn)
   }
 
   /**
@@ -48,19 +54,13 @@ export class BattleUI {
     container.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;';
 
     container.innerHTML = `
-      <!-- Turn Order (left side) -->
-      <div id="turn-order" class="battle-panel" style="
+      <!-- Turn Order Panel Container (left side) -->
+      <div id="turn-order-container" style="
         position: absolute;
         top: 10px;
         left: 10px;
         pointer-events: auto;
-        min-width: 140px;
-      ">
-        <div class="ui-panel">
-          <div class="ui-panel-header" style="font-size: 12px;">Turn Order</div>
-          <div id="turn-order-list" style="max-height: 320px; overflow-y: auto;"></div>
-        </div>
-      </div>
+      "></div>
 
       <!-- Active Unit Panel (bottom left) - ParchmentCard container -->
       <div id="active-unit-panel" style="
@@ -309,8 +309,108 @@ export class BattleUI {
       targetPanel.appendChild(this.targetCard.element);
     }
 
+    // Initialize TurnOrderPanel (top left)
+    this.turnOrderPanel = new TurnOrderPanel({
+      onUnitTap: (unit) => this.handleTurnOrderTap(unit),
+      onPreviewUnit: (unit) => this.handleTurnOrderPreview(unit)
+    });
+    const turnOrderContainer = container.querySelector('#turn-order-container');
+    if (turnOrderContainer) {
+      turnOrderContainer.appendChild(this.turnOrderPanel.element);
+    }
+
     // Initial update
     this.updateTurnOrder(battleState);
+  }
+
+  /**
+   * Handle tap on turn order item - pan camera and show preview
+   * @param {Object} unit - The tapped unit
+   */
+  handleTurnOrderTap(unit) {
+    if (!unit) return;
+
+    // Set as preview unit
+    this.previewUnit = unit;
+
+    // Notify scene to pan camera (via callback)
+    if (this.actionCallbacks.onUnitPreview) {
+      this.actionCallbacks.onUnitPreview(unit);
+    }
+
+    // Update target panel with priority system
+    this.updateTargetPanel();
+  }
+
+  /**
+   * Handle preview from turn order (shows unit in target panel)
+   * @param {Object} _unit - The unit to preview (unused, handled by handleTurnOrderTap)
+   */
+  handleTurnOrderPreview(_unit) {
+    // This is handled by handleTurnOrderTap which calls updateTargetPanel
+  }
+
+  /**
+   * Clear the turn order preview
+   */
+  clearTurnOrderPreview() {
+    this.previewUnit = null;
+    if (this.turnOrderPanel) {
+      this.turnOrderPanel.clearPreview();
+    }
+    this.updateTargetPanel();
+  }
+
+  /**
+   * Set hovered/tapped battlefield unit
+   * @param {Object} unit - The unit on the battlefield
+   */
+  setHoveredBattleUnit(unit) {
+    this.hoveredBattleUnit = unit;
+    // Clear turn order preview if tapping somewhere else
+    if (unit && this.previewUnit) {
+      this.clearTurnOrderPreview();
+    }
+    this.updateTargetPanel();
+  }
+
+  /**
+   * Set confirm target unit (when confirming attack/skill)
+   * @param {Object} unit - The targeted unit
+   */
+  setConfirmTargetUnit(unit) {
+    this.confirmTargetUnit = unit;
+    this.updateTargetPanel();
+  }
+
+  /**
+   * Set active enemy unit (on enemy turn)
+   * @param {Object} unit - The active enemy unit
+   */
+  setActiveEnemyUnit(unit) {
+    this.activeEnemyUnit = unit;
+    this.updateTargetPanel();
+  }
+
+  /**
+   * Update target panel based on priority system
+   * Priority: confirmTarget > hoveredBattle > turnOrderPreview > activeEnemy
+   */
+  updateTargetPanel() {
+    // Don't update if sticky mode is active
+    if (this.targetSticky) return;
+
+    const unitToShow =
+      this.confirmTargetUnit ||
+      this.hoveredBattleUnit ||
+      this.previewUnit ||
+      this.activeEnemyUnit;
+
+    if (unitToShow) {
+      this.showTargetInfo(unitToShow);
+    } else {
+      this.hideTargetInfo();
+    }
   }
 
   /**
@@ -735,50 +835,28 @@ export class BattleUI {
   }
 
   /**
-   * Update turn order display using predicted turns
+   * Update turn order display using TurnOrderPanel
    */
   updateTurnOrder(battleState) {
-    const list = this.element.querySelector('#turn-order-list');
-    if (!list) return;
+    if (!this.turnOrderPanel) return;
 
-    // Use turn predictions if available, otherwise fall back to unit list
-    const predictions = battleState.turnPredictions || [];
+    // Use turn predictions if available, otherwise build from units
+    let predictions = battleState.turnPredictions || [];
 
-    if (predictions.length > 0) {
-      // New CT-based display: show predicted turn order
-      list.innerHTML = predictions.map((pred, index) => {
-        const isActive = index === 0; // First prediction is current turn
-        const typeClass = pred.type === 'player' ? 'player' : 'enemy';
-        const bgColor = pred.type === 'player' ? '#4a90d9' : '#d94a4a';
-
-        return `
-          <div class="turn-unit ${typeClass} ${isActive ? 'active' : ''}">
-            <span class="turn-number">${index + 1}.</span>
-            <div class="turn-unit-icon" style="background: ${bgColor};">
-              ${this.getClassIcon(pred.class)}
-            </div>
-            <span class="turn-unit-name">${pred.name}</span>
-          </div>
-        `;
-      }).join('');
-    } else {
-      // Fallback: old style unit list
-      list.innerHTML = battleState.units.map((unit, index) => {
-        const isActive = index === battleState.activeUnitIndex;
-        const isDead = unit.hp <= 0;
-        const typeClass = unit.type === 'player' ? 'player' : 'enemy';
-        const bgColor = unit.type === 'player' ? '#4a90d9' : '#d94a4a';
-
-        return `
-          <div class="turn-unit ${typeClass} ${isActive ? 'active' : ''} ${isDead ? 'dead' : ''}">
-            <div class="turn-unit-icon" style="background: ${bgColor};">
-              ${this.getClassIcon(unit.class)}
-            </div>
-            <span class="turn-unit-name">${unit.name}</span>
-          </div>
-        `;
-      }).join('');
+    // If no predictions, build from unit list as fallback
+    if (predictions.length === 0 && battleState.units) {
+      predictions = battleState.units
+        .filter(u => u.hp > 0)
+        .map(u => ({
+          id: u.id,
+          name: u.name,
+          type: u.type,
+          class: u.class
+        }));
     }
+
+    // Update the panel
+    this.turnOrderPanel.update(predictions, battleState.activeUnitIndex || 0);
   }
 
   /**
@@ -1283,6 +1361,10 @@ export class BattleUI {
     if (this.targetCard) {
       this.targetCard.destroy();
       this.targetCard = null;
+    }
+    if (this.turnOrderPanel) {
+      this.turnOrderPanel.destroy();
+      this.turnOrderPanel = null;
     }
     if (this.element) {
       this.element.remove();
