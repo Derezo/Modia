@@ -16,7 +16,8 @@ import {
   getClient,
   createTestUser,
   createTestCharacter,
-  cleanupTestUser
+  cleanupTestUser,
+  resetRateLimitersViaApi
 } from '../testHelper.js';
 
 // Import the service being tested
@@ -31,6 +32,9 @@ describe('Order Expiration Service', () => {
   let tradeableItemId = null;
 
   before(async () => {
+    // Reset rate limiters before running tests
+    await resetRateLimitersViaApi();
+
     // Create test user and character
     testUser = await createTestUser();
     testCharacter = await createTestCharacter(testUser.accessToken);

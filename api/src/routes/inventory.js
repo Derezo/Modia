@@ -64,7 +64,8 @@ router.get('/shared', authenticate, asyncHandler(async (req, res) => {
   res.json({ inventory });
 }));
 
-// GET /api/inventory/:characterId - Get character's equipped items
+// GET /api/inventory/:characterId - Get character's equipped items only
+// Note: Use GET /api/inventory/shared for the shared inventory pool
 router.get('/:characterId', authenticate, asyncHandler(async (req, res) => {
   const { characterId } = req.params;
 
@@ -78,33 +79,25 @@ router.get('/:characterId', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Character not found', 404);
   }
 
-  // Get inventory items
+  // Get equipped items only (character_id is set only for equipped items per migration 024)
   const itemsResult = await query(
     `SELECT ci.id as instance_id, ci.quantity, ci.equipped_slot, ci.modifications,
             it.id as template_id, it.name, it.item_type, it.rarity,
             it.stat_bonuses, it.description
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
-     WHERE ci.character_id = $1
-     ORDER BY ci.equipped_slot IS NOT NULL DESC, it.item_type, it.name`,
+     WHERE ci.character_id = $1 AND ci.equipped_slot IS NOT NULL
+     ORDER BY it.item_type, it.name`,
     [characterId]
   );
 
-  // Separate equipped and inventory items
+  // Build equipped map by slot
   const equipped = {};
-  const inventory = [];
-
   for (const item of itemsResult.rows) {
-    const formattedItem = formatItem(item);
-
-    if (item.equipped_slot) {
-      equipped[item.equipped_slot] = formattedItem;
-    } else {
-      inventory.push(formattedItem);
-    }
+    equipped[item.equipped_slot] = formatItem(item);
   }
 
-  res.json({ equipped, inventory });
+  res.json({ equipped });
 }));
 
 // POST /api/inventory/equip - Equip an item

@@ -6,6 +6,11 @@
  */
 
 import { query } from '../config/database.js';
+import {
+  applyEffectsForPhase,
+  EFFECT_PHASES,
+  hasEffectHandler
+} from './traits/traitEffectRegistry.js';
 
 /**
  * Load traits for a list of character IDs
@@ -404,6 +409,7 @@ function getGoldBonus(unit) {
 
 /**
  * Apply all stat-based traits to a unit at battle start
+ * Uses the modular trait effect registry for extensibility.
  * @param {Object} unit - Battle unit to modify
  */
 function applyBattleStartTraits(unit) {
@@ -416,7 +422,7 @@ function applyBattleStartTraits(unit) {
     return;
   }
 
-  // Capture before state
+  // Capture before state for logging
   const before = {
     maxHp: unit.maxHp,
     hp: unit.hp,
@@ -426,22 +432,24 @@ function applyBattleStartTraits(unit) {
     attackRange: unit.attackRange
   };
 
-  // Apply HP/MP bonuses
-  applyHPBonusTrait(unit);
-  applyMPBonusTrait(unit);
+  // Use the modular trait registry to apply effects
+  const results = applyEffectsForPhase(unit, EFFECT_PHASES.BATTLE_START);
 
-  // Apply movement bonus
-  const movementBonus = getMovementBonus(unit);
-  if (movementBonus > 0) {
-    unit.movement = (unit.movement || 3) + movementBonus;
-    console.log(`[TraitService] Applied movement bonus: +${movementBonus}`);
+  // Log applied effects
+  if (results.modified) {
+    console.log(`[TraitService] Applied ${results.effects.length} battle-start effects:`);
+    for (const effect of results.effects) {
+      console.log(`  - ${effect.traitName}: ${effect.type} ${effect.stat || ''} ${effect.amount !== undefined ? '+' + effect.amount : ''}`);
+    }
   }
 
-  // Apply range bonus
-  const rangeBonus = getRangeBonus(unit);
-  if (rangeBonus > 0) {
-    unit.attackRange = (unit.attackRange || 1) + rangeBonus;
-    console.log(`[TraitService] Applied range bonus: +${rangeBonus}`);
+  // Fall back to legacy handlers for any traits not in registry
+  for (const trait of unit.traits) {
+    if (!hasEffectHandler(trait.effectType)) {
+      console.log(`[TraitService] Warning: No registry handler for effect type "${trait.effectType}" (trait: ${trait.name})`);
+      // Legacy fallback for unregistered effect types
+      applyLegacyEffect(unit, trait);
+    }
   }
 
   // Capture after state and log changes
@@ -456,6 +464,29 @@ function applyBattleStartTraits(unit) {
 
   console.log('[TraitService] Stats before:', before);
   console.log('[TraitService] Stats after:', after);
+}
+
+/**
+ * Legacy fallback for trait effect types not yet in the registry
+ * @param {Object} unit - Battle unit
+ * @param {Object} trait - Trait to apply
+ */
+function applyLegacyEffect(unit, trait) {
+  // This handles any effect types that aren't in the modular registry yet
+  // As effect types are migrated to the registry, this fallback will be used less
+  switch (trait.effectType) {
+    case 'hp_bonus':
+    case 'mp_bonus':
+    case 'hp_mp_bonus':
+    case 'movement_bonus':
+    case 'range_bonus':
+    case 'initiative_bonus':
+      // These are handled by the registry, skip
+      break;
+    default:
+      // Unknown effect type - log for debugging
+      console.log(`[TraitService] Unknown effect type: ${trait.effectType}`);
+  }
 }
 
 /**
