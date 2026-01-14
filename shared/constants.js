@@ -10,11 +10,24 @@ export const RACES = {
   ORC: 'orc'
 };
 
-// Racial Regions - each race has a homeland region with dominant terrain
+/**
+ * Racial Regions - each race has a homeland region with dominant terrain
+ *
+ * @typedef {Object} Region
+ * @property {number} id - Unique region identifier (1-5)
+ * @property {string} race - The race that inhabits this region (matches RACES values)
+ * @property {string} name - Display name for the region
+ * @property {string} castleName - Name of the region's capital castle
+ * @property {string} dominantTerrain - Primary terrain type (matches NODE_TYPES: 'forest', 'cave', 'mountain')
+ * @property {string[]} secondaryTerrains - Secondary terrain types in order of prevalence
+ *
+ * Terrain values are strings that match NODE_TYPES.FOREST, NODE_TYPES.CAVE, NODE_TYPES.MOUNTAIN.
+ * They cannot use NODE_TYPES references here because NODE_TYPES is defined later in the file.
+ */
 export const REGIONS = {
   HEARTLANDS: {
     id: 1,
-    race: 'human',
+    race: RACES.HUMAN,
     name: 'Heartlands',
     castleName: "King's Keep",
     dominantTerrain: 'forest',
@@ -22,7 +35,7 @@ export const REGIONS = {
   },
   SYLVAN_REACHES: {
     id: 2,
-    race: 'elf',
+    race: RACES.ELF,
     name: 'Sylvan Reaches',
     castleName: 'Starlight Citadel',
     dominantTerrain: 'forest',
@@ -30,7 +43,7 @@ export const REGIONS = {
   },
   IRON_DEPTHS: {
     id: 3,
-    race: 'dwarf',
+    race: RACES.DWARF,
     name: 'Iron Depths',
     castleName: 'Stone Throne',
     dominantTerrain: 'cave',
@@ -38,7 +51,7 @@ export const REGIONS = {
   },
   SHADOWMERE: {
     id: 4,
-    race: 'vampire',
+    race: RACES.VAMPIRE,
     name: 'Shadowmere',
     castleName: 'Obsidian Spire',
     dominantTerrain: 'cave',
@@ -46,7 +59,7 @@ export const REGIONS = {
   },
   BLOODPLAINS: {
     id: 5,
-    race: 'orc',
+    race: RACES.ORC,
     name: 'Bloodplains',
     castleName: "Warchief's Hold",
     dominantTerrain: 'mountain',
@@ -54,7 +67,14 @@ export const REGIONS = {
   }
 };
 
-// Terrain distribution weights for region generation
+/**
+ * Terrain distribution weights for region generation
+ *
+ * When generating terrain nodes for a region:
+ * - DOMINANT_WEIGHT (70%): Probability of placing the region's dominant terrain
+ * - SECONDARY_WEIGHT (30%): Split evenly among secondary terrains in the order listed
+ *   (e.g., if 2 secondary terrains, each gets 15%)
+ */
 export const TERRAIN_DISTRIBUTION = {
   DOMINANT_WEIGHT: 0.70,
   SECONDARY_WEIGHT: 0.30
