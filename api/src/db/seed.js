@@ -2901,6 +2901,26 @@ function generateInterRegionConnections(voronoiData, nodesByRegion, allNodes, ca
     const bridgeNode = createBridgeNode(border, nodesByRegion, rng);
     if (bridgeNode) {
       interRegionNodes.push(bridgeNode);
+
+      // For bridge_only type, connect bridge directly to frontier nodes in both regions
+      if (border.connectionType === 'bridge_only' && bridgeNode.connectTo) {
+        // Connect to region 1 frontier
+        if (bridgeNode.connectTo.region1 && bridgeNode.connectTo.region1.node) {
+          interRegionConnections.push({
+            from: bridgeNode,
+            to: bridgeNode.connectTo.region1,
+            connectionType: 'bridge_frontier'
+          });
+        }
+        // Connect to region 2 frontier
+        if (bridgeNode.connectTo.region2 && bridgeNode.connectTo.region2.node) {
+          interRegionConnections.push({
+            from: bridgeNode,
+            to: bridgeNode.connectTo.region2,
+            connectionType: 'bridge_frontier'
+          });
+        }
+      }
     }
 
     // 2. Create wilderness zone for medium+ borders
@@ -3196,6 +3216,399 @@ export {
 
 // ============================================================================
 // END INTER-REGION CONNECTIONS
+// ============================================================================
+
+// ============================================================================
+// PHASE 6: VALIDATION & CLEANUP (Final Phase of 5-Region World Generation)
+// ============================================================================
+
+/**
+ * Phase 6 Configuration Constants
+ */
+const PHASE6_CONFIG = {
+  // Terminator distribution: 30% chest, 30% shrine, 40% discovery
+  TERMINATOR_CHEST_RATIO: 0.30,
+  TERMINATOR_SHRINE_RATIO: 0.30,
+  // Note: Discovery gets the remainder (40%)
+
+  // Shrine buff types available
+  SHRINE_BUFF_TYPES: ['stamina_regen', 'exp_bonus', 'gold_bonus'],
+
+  // Minimum ring distance for terminators
+  MIN_RING_FOR_TERMINATOR: 3,
+
+  // Target terminator percentage of total nodes
+  TARGET_TERMINATOR_RATIO: 0.06  // ~6% of nodes become terminators
+};
+
+/**
+ * Calculate difficulty tier based on ring distance
+ *
+ * Tier mapping:
+ * - Ring 0 (castle): Tier 1 (safe)
+ * - Ring 1: Tier 1-2 (beginner)
+ * - Ring 2: Tier 2-3 (intermediate)
+ * - Ring 3: Tier 3-4 (advanced)
+ * - Palace: Tier 5 (endgame)
+ *
+ * @param {Object} node - Node with ringDistance and nodeType
+ * @returns {number} Difficulty tier (1-5)
+ */
+function calculateDifficultyTier(node) {
+  // Special cases
+  if (node.nodeType === 'castle') return 1;
+  if (node.nodeType === 'palace') return 5;
+
+  // Settlements in Ring 0-1 are safe
+  if (['city', 'village', 'guild', 'keep'].includes(node.nodeType)) {
+    if (node.ringDistance <= 1) return 1;
+    if (node.ringDistance === 2) return 2;
+    return 3;
+  }
+
+  // Battle nodes based on ring distance
+  switch (node.ringDistance) {
+    case 0: return 1;  // Castle area
+    case 1: return 2;  // Near castle
+    case 2: return 3;  // Mid region
+    case 3: return 4;  // Outer region
+    default: return 4; // Inter-region/wilderness
+  }
+}
+
+/**
+ * Assign terminator types to dead-end nodes in Ring 3
+ * Dead-end nodes have exactly 1 connection
+ *
+ * Distribution:
+ * - 30% chest (one-time loot)
+ * - 30% shrine (temporary buffs)
+ * - 40% discovery (lore/exploration rewards)
+ *
+ * @param {Array<Object>} allNodes - All nodes (will be mutated)
+ * @param {Array<Object>} allConnections - All connections
+ * @param {SeededRandom} rng - Seeded random generator
+ * @returns {Object} Terminator assignment stats
+ */
+function assignTerminatorNodesRegional(allNodes, allConnections, rng) {
+  console.log('\n  Assigning terminator nodes...');
+
+  // Build connection counts for all nodes
+  const connectionCounts = new Map();
+  for (let i = 0; i < allNodes.length; i++) {
+    connectionCounts.set(i, 0);
+  }
+
+  for (const conn of allConnections) {
+    // Handle both index-based and node reference connections
+    const fromIdx = typeof conn.from === 'number' ? conn.from : allNodes.indexOf(conn.from);
+    const toIdx = typeof conn.to === 'number' ? conn.to : (conn.to.node ? allNodes.indexOf(conn.to.node) : allNodes.indexOf(conn.to));
+
+    if (fromIdx >= 0) connectionCounts.set(fromIdx, connectionCounts.get(fromIdx) + 1);
+    if (toIdx >= 0) connectionCounts.set(toIdx, connectionCounts.get(toIdx) + 1);
+  }
+
+  // Find candidates: Ring 3+ battle nodes with low connectivity (1-2 connections)
+  // These become special terminator nodes (chest/shrine/discovery)
+  const battleTypes = ['forest', 'cave', 'mountain'];
+  const candidates = [];
+
+  for (let i = 0; i < allNodes.length; i++) {
+    const node = allNodes[i];
+    const connCount = connectionCounts.get(i) || 0;
+
+    // Must be Ring 3+ (outer region) or explicitly flagged inter-region nodes
+    const isRing3Plus = (node.ringDistance >= PHASE6_CONFIG.MIN_RING_FOR_TERMINATOR) ||
+                        (node.isWilderness);
+
+    // Must have low connectivity (1-2 connections) - these are peripheral nodes
+    const isLowDegree = connCount <= 2;
+
+    // Must be a battle terrain type (not settlements, bridges, etc.)
+    const isBattleTerrain = battleTypes.includes(node.nodeType);
+
+    if (isRing3Plus && isLowDegree && isBattleTerrain) {
+      candidates.push({ idx: i, connCount });
+    }
+  }
+
+  // Sort candidates by connection count (prefer lower connectivity)
+  candidates.sort((a, b) => a.connCount - b.connCount);
+
+  console.log(`    Found ${candidates.length} low-connectivity candidates in Ring 3+`);
+
+  // Shuffle candidates for random distribution (keeping priority by connectivity)
+  // Take from lowest connectivity first, then shuffle within each tier
+  const shuffled = rng.shuffle([...candidates]);
+
+  // Calculate target count (~6% of total nodes)
+  const targetCount = Math.min(
+    shuffled.length,
+    Math.floor(allNodes.length * PHASE6_CONFIG.TARGET_TERMINATOR_RATIO)
+  );
+
+  const stats = { chest: 0, shrine: 0, discovery: 0 };
+
+  for (let i = 0; i < targetCount; i++) {
+    const nodeIdx = shuffled[i].idx;
+    const node = allNodes[nodeIdx];
+    const rand = rng.next();
+
+    if (rand < PHASE6_CONFIG.TERMINATOR_CHEST_RATIO) {
+      // Chest (30%)
+      node.nodeType = 'chest';
+      node.isTerminator = true;
+      stats.chest++;
+    } else if (rand < PHASE6_CONFIG.TERMINATOR_CHEST_RATIO + PHASE6_CONFIG.TERMINATOR_SHRINE_RATIO) {
+      // Shrine (30%)
+      node.nodeType = 'shrine';
+      node.isTerminator = true;
+      node.shrineBuffType = rng.pick(PHASE6_CONFIG.SHRINE_BUFF_TYPES);
+      stats.shrine++;
+    } else {
+      // Discovery (40%)
+      node.nodeType = 'discovery';
+      node.isTerminator = true;
+      // Generate lore key based on position for consistency
+      node.loreKey = `lore_${Math.abs(Math.round(node.x))}_${Math.abs(Math.round(node.y))}`;
+      stats.discovery++;
+    }
+  }
+
+  console.log(`    Assigned ${targetCount} terminators: ${stats.chest} chest, ${stats.shrine} shrine, ${stats.discovery} discovery`);
+
+  return stats;
+}
+
+/**
+ * Verify all nodes are reachable from any castle using flood fill
+ *
+ * @param {Array<Object>} allNodes - All nodes in the world
+ * @param {Array<Object>} allConnections - All connections
+ * @returns {Object} Reachability check results
+ */
+function verifyConnectivity(allNodes, allConnections) {
+  console.log('\n  Verifying connectivity...');
+
+  // Build adjacency list
+  const adjacency = new Map();
+  for (let i = 0; i < allNodes.length; i++) {
+    adjacency.set(i, new Set());
+  }
+
+  for (const conn of allConnections) {
+    const fromIdx = typeof conn.from === 'number' ? conn.from : allNodes.indexOf(conn.from);
+    const toIdx = typeof conn.to === 'number' ? conn.to : (conn.to.node ? allNodes.indexOf(conn.to.node) : allNodes.indexOf(conn.to));
+
+    if (fromIdx >= 0 && toIdx >= 0) {
+      adjacency.get(fromIdx).add(toIdx);
+      adjacency.get(toIdx).add(fromIdx);
+    }
+  }
+
+  // Find any castle as starting point
+  const castleIdx = allNodes.findIndex(n => n.nodeType === 'castle');
+  if (castleIdx === -1) {
+    console.warn('    WARNING: No castle found!');
+    return { allReachable: false, orphanedNodes: [], castleIdx: -1 };
+  }
+
+  // BFS from castle
+  const visited = new Set();
+  const queue = [castleIdx];
+  visited.add(castleIdx);
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    for (const neighbor of adjacency.get(current)) {
+      if (!visited.has(neighbor)) {
+        visited.add(neighbor);
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  // Check for orphaned nodes
+  const orphanedNodes = [];
+  for (let i = 0; i < allNodes.length; i++) {
+    if (!visited.has(i)) {
+      orphanedNodes.push(i);
+    }
+  }
+
+  const allReachable = orphanedNodes.length === 0;
+  console.log(`    Reachable: ${visited.size}/${allNodes.length}, Orphaned: ${orphanedNodes.length}`);
+
+  return { allReachable, orphanedNodes, castleIdx, visited };
+}
+
+/**
+ * Validate and finalize all world data
+ * Phase 6 orchestration function
+ *
+ * @param {Array<Object>} allNodes - All nodes from Phases 3+5
+ * @param {Array<Object>} regionConnections - Internal connections from Phase 4
+ * @param {Array<Object>} interRegionConnections - Inter-region connections from Phase 5
+ * @param {Array<Object>} castles - Castle positions with region info
+ * @param {SeededRandom} rng - Seeded random generator
+ * @returns {Object} Final validated world data
+ */
+function validateAndCleanup(allNodes, regionConnections, interRegionConnections, castles, rng) {
+  console.log('\n========================================');
+  console.log('PHASE 6: Validation & Cleanup');
+  console.log('========================================');
+
+  // Combine all connections
+  const allConnections = [...regionConnections, ...interRegionConnections];
+  console.log(`  Total nodes: ${allNodes.length}`);
+  console.log(`  Region connections: ${regionConnections.length}`);
+  console.log(`  Inter-region connections: ${interRegionConnections.length}`);
+
+  // Step 1: Calculate difficulty tiers for all nodes
+  console.log('\n  Calculating difficulty tiers...');
+  for (const node of allNodes) {
+    node.difficultyTier = calculateDifficultyTier(node);
+  }
+
+  // Count tier distribution
+  const tierCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  for (const node of allNodes) {
+    tierCounts[node.difficultyTier] = (tierCounts[node.difficultyTier] || 0) + 1;
+  }
+  console.log(`    Tier distribution: T1=${tierCounts[1]}, T2=${tierCounts[2]}, T3=${tierCounts[3]}, T4=${tierCounts[4]}, T5=${tierCounts[5]}`);
+
+  // Step 2: Assign terminators to Ring 3 dead-ends
+  const terminatorStats = assignTerminatorNodesRegional(allNodes, allConnections, rng);
+
+  // Step 3: Verify connectivity
+  const connectivityResult = verifyConnectivity(allNodes, allConnections);
+
+  if (!connectivityResult.allReachable) {
+    console.warn(`    WARNING: ${connectivityResult.orphanedNodes.length} orphaned nodes detected!`);
+    // Mark orphaned nodes for debugging
+    for (const idx of connectivityResult.orphanedNodes) {
+      allNodes[idx].isOrphaned = true;
+    }
+  }
+
+  // Summary
+  console.log('\n  Phase 6 Complete:');
+  console.log(`    Total nodes: ${allNodes.length}`);
+  console.log(`    Terminators: ${terminatorStats.chest + terminatorStats.shrine + terminatorStats.discovery}`);
+  console.log(`    Connectivity: ${connectivityResult.allReachable ? 'PASS' : 'FAIL'}`);
+
+  return {
+    allNodes,
+    allConnections,
+    connectivityResult,
+    terminatorStats
+  };
+}
+
+/**
+ * Validation function for Phase 6: Validation & Cleanup
+ *
+ * @param {number} seed - Random seed for testing
+ * @returns {Object} Validation results
+ */
+function validatePhase6(seed = 12345) {
+  console.log(`\n${'='.repeat(60)}`);
+  console.log('PHASE 6 VALIDATION');
+  console.log(`${'='.repeat(60)}`);
+  console.log(`Testing with seed: ${seed}`);
+
+  const rng = new SeededRandom(seed);
+
+  // Run Phases 1-5
+  const castles = generateCastlePlacements(rng);
+  const voronoiData = createVoronoiRegions(castles);
+  const nodeData = generateAllRegionNodes(castles, voronoiData, rng);
+  const connectionData = generateAllRegionConnections(nodeData, rng);
+  const interRegionData = generateInterRegionConnections(
+    voronoiData,
+    nodeData.nodesByRegion,
+    nodeData.allNodes,
+    castles,
+    rng
+  );
+
+  // Merge all nodes (internal + inter-region)
+  const mergedNodes = [...nodeData.allNodes, ...interRegionData.interRegionNodes];
+
+  // Run Phase 6
+  const phase6Result = validateAndCleanup(
+    mergedNodes,
+    connectionData.allConnections,
+    interRegionData.interRegionConnections,
+    castles,
+    rng
+  );
+
+  // Validation checks
+  const issues = [];
+
+  // Check 1: All nodes have difficulty tier
+  for (let i = 0; i < phase6Result.allNodes.length; i++) {
+    const node = phase6Result.allNodes[i];
+    if (!node.difficultyTier || node.difficultyTier < 1 || node.difficultyTier > 5) {
+      issues.push(`Node ${i} has invalid difficulty tier: ${node.difficultyTier}`);
+    }
+  }
+
+  // Check 2: Terminators exist in Ring 3
+  const terminators = phase6Result.allNodes.filter(n => n.isTerminator);
+  if (terminators.length === 0) {
+    issues.push('No terminator nodes assigned');
+  } else {
+    const ring3Terminators = terminators.filter(n => n.ringDistance >= 3 || n.isWilderness || n.isBridge);
+    if (ring3Terminators.length < terminators.length * 0.8) {
+      issues.push(`Too many terminators outside Ring 3: ${terminators.length - ring3Terminators.length}`);
+    }
+  }
+
+  // Check 3: Connectivity
+  if (!phase6Result.connectivityResult.allReachable) {
+    issues.push(`${phase6Result.connectivityResult.orphanedNodes.length} nodes not reachable from castle`);
+  }
+
+  const passed = issues.length === 0;
+
+  console.log('\n  Summary:');
+  console.log(`    Validation: ${passed ? 'PASSED' : 'FAILED'}`);
+
+  if (!passed) {
+    console.log('\n  Issues:');
+    for (const issue of issues.slice(0, 10)) {
+      console.log(`    - ${issue}`);
+    }
+  }
+
+  console.log(`${'='.repeat(60)}\n`);
+
+  return {
+    castles,
+    voronoiData,
+    nodeData,
+    connectionData,
+    interRegionData,
+    phase6Result,
+    passed,
+    issues
+  };
+}
+
+// Export Phase 6 functions for testing
+export {
+  calculateDifficultyTier,
+  assignTerminatorNodesRegional,
+  verifyConnectivity,
+  validateAndCleanup,
+  validatePhase6,
+  PHASE6_CONFIG
+};
+
+// ============================================================================
+// END PHASE 6: VALIDATION & CLEANUP
 // ============================================================================
 
 /**
@@ -3803,69 +4216,205 @@ function getDifficultyTier(dist, nodeType) {
  * Uses Poisson disk sampling for organic node placement
  * Uses MST for guaranteed connectivity to castle
  */
+/**
+ * NEW Regional World Generation Function
+ *
+ * Orchestrates all 6 phases of the 5-region world generation system:
+ * Phase 1: Castle Placement (force-directed + Lloyd's relaxation)
+ * Phase 2: Voronoi Partitioning (region boundaries)
+ * Phase 3: Internal Node Generation (Poisson disk sampling per region)
+ * Phase 4: Internal Connections (MST + extra connections per region)
+ * Phase 5: Inter-Region Connections (bridges, wilderness, trade routes, palace)
+ * Phase 6: Validation & Cleanup (terminators, difficulty tiers, connectivity)
+ *
+ * @param {number} seed - World seed for deterministic generation
+ * @returns {Object} Database-ready world data { nodes, connections, obstacles, regions }
+ */
 async function generateWorld(seed) {
   const rng = new SeededRandom(seed);
 
-  function generateNodeName(type) {
+  console.log('\n========================================');
+  console.log('5-REGION WORLD GENERATION');
+  console.log(`World Seed: ${seed}`);
+  console.log('========================================\n');
+
+  // Node name generation helper
+  function generateNodeName(type, region = null) {
     const prefixes = NODE_NAME_PREFIXES[type] || NODE_NAME_PREFIXES.city;
     const suffixes = NODE_NAME_SUFFIXES[type] || NODE_NAME_SUFFIXES.city;
-    return `${rng.pick(prefixes)} ${rng.pick(suffixes)}`;
+    const baseName = `${rng.pick(prefixes)} ${rng.pick(suffixes)}`;
+    return baseName;
   }
 
-  console.log('Generating world with 300+ nodes using Poisson disk sampling...');
-
-  // Step 0: Generate terrain obstacles first
+  // Step 0: Generate terrain obstacles first (shared across regions)
+  console.log('Generating terrain obstacles...');
   const obstacles = generateObstacles(rng);
 
-  // Step 1: Generate node positions (avoiding obstacles)
-  const positions = generateNodePlacements(rng, 320, 3.5, obstacles);
-  console.log(`Generated ${positions.length} node positions`);
+  // ========================================
+  // PHASE 1: Castle Placement
+  // ========================================
+  const castles = generateCastlePlacements(rng);
 
-  // Step 2: Assign node types based on distance
-  const typedNodes = assignNodeTypes(rng, positions);
+  // ========================================
+  // PHASE 2: Voronoi Partitioning
+  // ========================================
+  const voronoiData = createVoronoiRegions(castles);
 
-  // Step 3: Build MST for guaranteed connectivity
-  const mstConnections = buildMinimumSpanningTree(typedNodes);
-  console.log(`MST created with ${mstConnections.length} connections`);
+  // ========================================
+  // PHASE 3: Internal Node Generation
+  // ========================================
+  const nodeData = generateAllRegionNodes(castles, voronoiData, rng);
 
-  // Step 4: Add extra connections for variety (validates adjacency rules)
-  const extraConnections = addLocalConnections(rng, typedNodes, mstConnections, 0.25);
-  console.log(`Connections after local additions: ${extraConnections.length}`);
+  // ========================================
+  // PHASE 4: Internal Connections
+  // ========================================
+  const connectionData = generateAllRegionConnections(nodeData, rng);
 
-  // Step 5: Enforce connection constraints (min/max per node type)
-  const allConnections = enforceConnectionConstraints(rng, typedNodes, extraConnections);
-  console.log(`Final connections after constraints: ${allConnections.length}`);
+  // ========================================
+  // PHASE 5: Inter-Region Connections
+  // ========================================
+  const interRegionData = generateInterRegionConnections(
+    voronoiData,
+    nodeData.nodesByRegion,
+    nodeData.allNodes,
+    castles,
+    rng
+  );
 
-  // Step 6: Assign terminator nodes at map edges
-  assignTerminatorNodes(rng, typedNodes, allConnections);
+  // Merge all nodes (internal + inter-region)
+  const mergedNodes = [...nodeData.allNodes, ...interRegionData.interRegionNodes];
 
-  // Step 7: Build final node objects
-  // Track guild index for staggered refresh hours (0, 6, 12, 18 hours)
+  // Build region offset map for local->global index conversion
+  // nodeData.allNodes is ordered by region (based on iteration order of nodesByRegion)
+  const regionOffsetsForPhase6 = new Map();
+  let phase6Offset = 0;
+  for (const [regionId, regionNodes] of nodeData.nodesByRegion) {
+    regionOffsetsForPhase6.set(regionId, phase6Offset);
+    phase6Offset += regionNodes.length;
+  }
+
+  // Convert Phase 4 connections from local to global indices for Phase 6
+  const globalRegionConnections = connectionData.allConnections.map(conn => {
+    const offset = regionOffsetsForPhase6.get(conn.regionId) || 0;
+    return {
+      from: offset + conn.from,
+      to: offset + conn.to,
+      regionId: conn.regionId
+    };
+  });
+
+  // ========================================
+  // PHASE 6: Validation & Cleanup
+  // ========================================
+  const phase6Result = validateAndCleanup(
+    mergedNodes,
+    globalRegionConnections,
+    interRegionData.interRegionConnections,
+    castles,
+    rng
+  );
+
+  // ========================================
+  // Build Database-Ready Output
+  // ========================================
+  console.log('\n========================================');
+  console.log('Building Database-Ready Output');
+  console.log('========================================');
+
+  // Track guild index for staggered refresh hours
   let guildIndex = 0;
-  const GUILD_REFRESH_HOURS = [0, 6, 12, 18]; // Staggered across the day
+  const GUILD_REFRESH_HOURS = [0, 6, 12, 18];
 
-  const nodes = typedNodes.map(node => {
+  // Build node map for inter-region connection resolution
+  const nodeMap = new Map();
+  phase6Result.allNodes.forEach((node, idx) => {
+    nodeMap.set(node, idx);
+  });
+
+  // Track used coordinates to handle duplicates
+  const usedCoords = new Set();
+
+  // Convert nodes to database format
+  const nodes = phase6Result.allNodes.map((node, idx) => {
+    // Generate appropriate name
+    let name;
+    if (node.nodeType === 'castle') {
+      // Use region's castle name if available
+      const regionInfo = castles.find(c => c.region.id === node.regionId);
+      name = regionInfo ? regionInfo.region.castleName : 'Castle';
+    } else if (node.nodeType === 'palace') {
+      name = 'Grand Palace';
+    } else if (node.nodeType === 'guild') {
+      // Guild name based on region's designated class
+      const regionInfo = castles.find(c => c.region.id === node.regionId);
+      const guildClass = regionInfo ? getGuildClassForRace(regionInfo.region.race) : 'warrior';
+      node.guildClass = guildClass;
+      name = `${guildClass.charAt(0).toUpperCase() + guildClass.slice(1)}s' Guild`;
+    } else if (node.nodeType === 'keep') {
+      const regionInfo = castles.find(c => c.region.id === node.regionId);
+      name = regionInfo ? `${regionInfo.region.name} Keep` : 'Keep';
+    } else if (node.name) {
+      name = node.name;
+    } else {
+      name = generateNodeName(node.nodeType, node.regionName);
+    }
+
+    // Calculate distance from center (0,0)
+    const distFromCenter = Math.round(Math.hypot(node.x, node.y));
+
+    // Handle coordinate collisions by offsetting duplicates
+    let x_coord = Math.round(node.x);
+    let y_coord = Math.round(node.y);
+    let coordKey = `${x_coord},${y_coord}`;
+
+    // If coordinate already used, find a nearby available spot
+    let offset = 1;
+    while (usedCoords.has(coordKey)) {
+      // Try offsets in a spiral pattern
+      const offsets = [
+        [offset, 0], [-offset, 0], [0, offset], [0, -offset],
+        [offset, offset], [-offset, -offset], [offset, -offset], [-offset, offset]
+      ];
+      let found = false;
+      for (const [dx, dy] of offsets) {
+        const newX = Math.round(node.x) + dx;
+        const newY = Math.round(node.y) + dy;
+        const newKey = `${newX},${newY}`;
+        if (!usedCoords.has(newKey)) {
+          x_coord = newX;
+          y_coord = newY;
+          coordKey = newKey;
+          found = true;
+          break;
+        }
+      }
+      if (!found) offset++;
+      if (offset > 10) break; // Safety limit
+    }
+    usedCoords.add(coordKey);
+
     const nodeObj = {
-      node_type: node.type,
-      name: node.type === 'castle' ? 'Royal Castle' :
-            node.type === 'palace' ? 'Ancient Palace' :
-            node.type === 'guild' ? `${node.guildClass.charAt(0).toUpperCase() + node.guildClass.slice(1)}s' Guild` :
-            generateNodeName(node.type),
-      x_coord: Math.round(node.x),
-      y_coord: Math.round(node.y),
-      distance_from_center: Math.round(node.dist),
-      features: JSON.stringify(generateNodeFeatures(rng, node.type)),
+      node_type: node.nodeType,
+      name: name,
+      x_coord: x_coord,
+      y_coord: y_coord,
+      distance_from_center: distFromCenter,
+      features: JSON.stringify(generateNodeFeatures(rng, node.nodeType)),
       guild_class: node.guildClass || null,
       local_seed: rng.nextInt(1, 1000000),
-      difficulty_tier: getDifficultyTier(node.dist, node.type),
+      difficulty_tier: node.difficultyTier || calculateDifficultyTier(node),
       recruit_refresh_hour: null,
       is_terminator: node.isTerminator || false,
       shrine_buff_type: node.shrineBuffType || null,
-      lore_key: node.loreKey || null
+      lore_key: node.loreKey || null,
+      // NEW regional columns
+      region_id: node.regionId || null,
+      region_race: getRegionRace(node.regionId, castles),
+      ring_distance: node.ringDistance || null
     };
 
     // Assign staggered refresh hours to guild nodes
-    if (node.type === 'guild') {
+    if (node.nodeType === 'guild') {
       nodeObj.recruit_refresh_hour = GUILD_REFRESH_HOURS[guildIndex % GUILD_REFRESH_HOURS.length];
       guildIndex++;
     }
@@ -3873,7 +4422,146 @@ async function generateWorld(seed) {
     return nodeObj;
   });
 
-  return { nodes, connections: allConnections, obstacles };
+  // Convert connections to index-based format for database insertion
+  const connections = [];
+  const connectionSet = new Set(); // Prevent duplicates
+
+  // Add region internal connections
+  // These are already converted to global indices in globalRegionConnections
+  for (const conn of globalRegionConnections) {
+    const fromIdx = conn.from;
+    const toIdx = conn.to;
+
+    // Validate indices
+    if (fromIdx >= 0 && fromIdx < phase6Result.allNodes.length &&
+        toIdx >= 0 && toIdx < phase6Result.allNodes.length) {
+      const key = `${Math.min(fromIdx, toIdx)},${Math.max(fromIdx, toIdx)}`;
+      if (!connectionSet.has(key)) {
+        connections.push({ from: fromIdx, to: toIdx });
+        connectionSet.add(key);
+      }
+    }
+  }
+
+  console.log(`  Region internal connections: ${connections.length}`);
+
+  // Add inter-region connections
+  // These use node object references, need to find their indices
+  for (const conn of interRegionData.interRegionConnections) {
+    // Handle various connection formats from Phase 5
+    let fromIdx, toIdx;
+
+    // From node - can be node object or number (should be node object from Phase 5)
+    if (typeof conn.from === 'number') {
+      fromIdx = conn.from;
+    } else {
+      fromIdx = nodeMap.get(conn.from);
+    }
+
+    // To node - can be direct node, { node, distance } format, or number
+    if (typeof conn.to === 'number') {
+      toIdx = conn.to;
+    } else if (conn.to && conn.to.node) {
+      toIdx = nodeMap.get(conn.to.node);
+    } else {
+      toIdx = nodeMap.get(conn.to);
+    }
+
+    if (fromIdx !== undefined && toIdx !== undefined &&
+        fromIdx >= 0 && fromIdx < phase6Result.allNodes.length &&
+        toIdx >= 0 && toIdx < phase6Result.allNodes.length) {
+      const key = `${Math.min(fromIdx, toIdx)},${Math.max(fromIdx, toIdx)}`;
+      if (!connectionSet.has(key)) {
+        connections.push({ from: fromIdx, to: toIdx });
+        connectionSet.add(key);
+      }
+    }
+  }
+
+  console.log(`  Total connections after inter-region: ${connections.length}`)
+
+  // Build regions data for world_regions table
+  const regions = castles.map((castle, idx) => {
+    // Find the castle node index
+    const castleNode = nodes.find(n =>
+      n.node_type === 'castle' && n.region_id === castle.region.id
+    );
+    const castleNodeIdx = castleNode ? nodes.indexOf(castleNode) : null;
+
+    // Find keep and guild node indices for this region
+    const keepNode = nodes.find(n =>
+      n.node_type === 'keep' && n.region_id === castle.region.id
+    );
+    const keepNodeIdx = keepNode ? nodes.indexOf(keepNode) : null;
+
+    const guildNode = nodes.find(n =>
+      n.node_type === 'guild' && n.region_id === castle.region.id
+    );
+    const guildNodeIdx = guildNode ? nodes.indexOf(guildNode) : null;
+
+    // Get the Voronoi cell polygon for boundary
+    const cell = voronoiData.cells[idx];
+    const boundaryPolygon = cell ? cell.polygon : null;
+
+    return {
+      id: castle.region.id,
+      race: castle.region.race,
+      castle_node_idx: castleNodeIdx,
+      keep_node_idx: keepNodeIdx,
+      guild_node_idx: guildNodeIdx,
+      dominant_terrain: castle.region.dominantTerrain,
+      secondary_terrains: castle.region.secondaryTerrains,
+      boundary_polygon: boundaryPolygon
+    };
+  });
+
+  // Summary
+  console.log(`\nWorld Generation Complete:`);
+  console.log(`  Total nodes: ${nodes.length}`);
+  console.log(`  Total connections: ${connections.length}`);
+  console.log(`  Regions: ${regions.length}`);
+  console.log(`  Obstacles: ${obstacles.length}`);
+
+  // Count by region
+  const nodeCounts = {};
+  for (const node of nodes) {
+    const regionId = node.region_id || 'inter-region';
+    nodeCounts[regionId] = (nodeCounts[regionId] || 0) + 1;
+  }
+  console.log(`  Nodes by region: ${JSON.stringify(nodeCounts)}`);
+
+  return { nodes, connections, obstacles, regions };
+}
+
+/**
+ * Get the guild class associated with a race's region
+ * Each race has an affinity for a particular class
+ *
+ * @param {string} race - Race identifier
+ * @returns {string} Guild class
+ */
+function getGuildClassForRace(race) {
+  const raceToGuild = {
+    human: 'warrior',
+    elf: 'wizard',
+    dwarf: 'monk',       // Dwarves are disciplined (monk fits)
+    vampire: 'chemist',  // Alchemical nature
+    orc: 'warrior'       // Combat focused
+  };
+  return raceToGuild[race] || 'warrior';
+}
+
+/**
+ * Get the race for a region ID by looking up castle data
+ *
+ * @param {number} regionId - Region ID
+ * @param {Array} castles - Castle data from Phase 1
+ * @returns {string|null} Race identifier or null
+ */
+function getRegionRace(regionId, castles) {
+  if (!regionId) return null;
+  const castle = castles.find(c => c.region.id === regionId);
+  return castle ? castle.region.race : null;
 }
 
 async function seedItems() {
@@ -4516,6 +5204,8 @@ async function main() {
     // Clear existing data (in reverse dependency order)
     // RESTART IDENTITY resets auto-increment sequences so IDs start from 1
     console.log('Clearing existing data...');
+    // Clear world_regions first since it references world_nodes
+    await client.query('TRUNCATE world_regions RESTART IDENTITY CASCADE');
     await client.query('TRUNCATE world_obstacles, world_node_connections, world_nodes RESTART IDENTITY CASCADE');
     await client.query('TRUNCATE item_templates RESTART IDENTITY CASCADE');
     await client.query('TRUNCATE enemy_templates RESTART IDENTITY CASCADE');
@@ -4526,20 +5216,59 @@ async function main() {
     await client.query('TRUNCATE market_trades RESTART IDENTITY CASCADE');
     await client.query('TRUNCATE market_orders RESTART IDENTITY CASCADE');
 
-    // Generate world
+    // Generate world using 5-region system
     const worldSeed = parseInt(process.env.WORLD_SEED || '12345', 10);
     console.log(`\nGenerating world with seed: ${worldSeed}`);
-    const { nodes, connections, obstacles } = await generateWorld(worldSeed);
+    const { nodes, connections, obstacles, regions } = await generateWorld(worldSeed);
 
-    // Insert nodes
+    // Insert world_regions FIRST (without node references) to satisfy foreign key
+    // We'll update with node IDs after nodes are inserted
+    console.log(`\nInserting ${regions.length} world regions (phase 1 - without node refs)...`);
+    for (const region of regions) {
+      await client.query(
+        `INSERT INTO world_regions (id, race, dominant_terrain, secondary_terrains, boundary_polygon)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (id) DO UPDATE SET
+           race = EXCLUDED.race,
+           dominant_terrain = EXCLUDED.dominant_terrain,
+           secondary_terrains = EXCLUDED.secondary_terrains,
+           boundary_polygon = EXCLUDED.boundary_polygon`,
+        [
+          region.id,
+          region.race,
+          region.dominant_terrain,
+          JSON.stringify(region.secondary_terrains),
+          region.boundary_polygon ? JSON.stringify(region.boundary_polygon) : null
+        ]
+      );
+    }
+
+    // Insert nodes with new regional columns
     console.log(`\nInserting ${nodes.length} world nodes...`);
     const nodeIds = [];
     for (const node of nodes) {
       const result = await client.query(
-        `INSERT INTO world_nodes (node_type, name, x_coord, y_coord, distance_from_center, features, guild_class, local_seed, difficulty_tier, recruit_refresh_hour, is_terminator, shrine_buff_type, lore_key)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        `INSERT INTO world_nodes (node_type, name, x_coord, y_coord, distance_from_center, features, guild_class, local_seed, difficulty_tier, recruit_refresh_hour, is_terminator, shrine_buff_type, lore_key, region_id, region_race, ring_distance)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
          RETURNING id`,
-        [node.node_type, node.name, node.x_coord, node.y_coord, node.distance_from_center, node.features, node.guild_class, node.local_seed, node.difficulty_tier, node.recruit_refresh_hour, node.is_terminator, node.shrine_buff_type, node.lore_key]
+        [
+          node.node_type,
+          node.name,
+          node.x_coord,
+          node.y_coord,
+          node.distance_from_center,
+          node.features,
+          node.guild_class,
+          node.local_seed,
+          node.difficulty_tier,
+          node.recruit_refresh_hour,
+          node.is_terminator,
+          node.shrine_buff_type,
+          node.lore_key,
+          node.region_id,
+          node.region_race,
+          node.ring_distance
+        ]
       );
       nodeIds.push(result.rows[0].id);
     }
@@ -4568,6 +5297,30 @@ async function main() {
       );
     }
 
+    // Update world_regions with node ID references (phase 2)
+    console.log(`\nUpdating ${regions.length} world regions with node references...`);
+    for (const region of regions) {
+      // Map node indices to actual node IDs
+      const castleNodeId = region.castle_node_idx !== null ? nodeIds[region.castle_node_idx] : null;
+      const keepNodeId = region.keep_node_idx !== null ? nodeIds[region.keep_node_idx] : null;
+      const guildNodeId = region.guild_node_idx !== null ? nodeIds[region.guild_node_idx] : null;
+
+      await client.query(
+        `UPDATE world_regions SET
+           castle_node_id = $2,
+           keep_node_id = $3,
+           guild_node_id = $4
+         WHERE id = $1`,
+        [
+          region.id,
+          castleNodeId,
+          keepNodeId,
+          guildNodeId
+        ]
+      );
+    }
+    console.log(`Updated ${regions.length} regions with node references`)
+
     // Seed items
     console.log('\nSeeding items...');
     await seedItems();
@@ -4582,7 +5335,11 @@ async function main() {
 
     // Re-initialize user discovery for all existing users (fog of war)
     console.log('\nRe-initializing user discovery...');
-    const castleId = nodeIds[0]; // First node is always the castle
+    // Find the first castle node (Human Heartlands castle by default)
+    const castleIdx = nodes.findIndex(n => n.node_type === 'castle');
+    const castleId = castleIdx >= 0 ? nodeIds[castleIdx] : nodeIds[0];
+    console.log(`  Using castle node ID ${castleId} (index ${castleIdx}) as starting point`);
+
     const usersResult = await client.query('SELECT id FROM users');
     for (const user of usersResult.rows) {
       await client.query('SELECT discover_node_and_adjacent($1, $2)', [user.id, castleId]);

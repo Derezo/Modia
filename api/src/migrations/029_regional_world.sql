@@ -5,6 +5,12 @@
 -- Characters track their home region for spawn/respawn
 
 -- ============================================
+-- NODE TYPE ENUM EXTENSION
+-- ============================================
+-- Add 'keep' node type for regional fortifications
+ALTER TYPE node_type ADD VALUE IF NOT EXISTS 'keep';
+
+-- ============================================
 -- WORLD REGIONS TABLE
 -- ============================================
 -- Stores metadata for each racial homeland region
