@@ -10,11 +10,11 @@ import {
   assignRegionNodeTypes,
   generateRegionNodes,
   generateAllRegionNodes,
-  validateRegionNodeGeneration,
-  generateCastlePlacements,
-  createVoronoiRegions,
-  REGION_NODE_CONFIG
-} from '../../db/seed.js';
+  validateRegionNodeGeneration
+} from '../../db/worldgen/nodeGeneration.js';
+import { generateCastlePlacements } from '../../db/worldgen/castlePlacement.js';
+import { createVoronoiRegions } from '../../db/worldgen/voronoiPartitioning.js';
+import { REGION_NODE_CONFIG } from '../../db/worldgen/constants.js';
 import { SeededRandom, REGIONS } from '../../config/constants.js';
 
 describe('Phase 3: Internal Node Generation', () => {

@@ -4,18 +4,14 @@ import { WorldMapMinimap } from '../worldmap/WorldMapMinimap.js';
 import { WorldMapCharacter } from '../worldmap/WorldMapCharacter.js';
 import { StaminaBar } from '../worldmap/StaminaBar.js';
 import { TravelProgressBar } from '../worldmap/TravelProgressBar.js';
+import { NodeActionMenu } from '../worldmap/NodeActionMenu.js';
 import { generatePathControlPoints, generateSplinePoints } from '../worldmap/PathRenderer.js';
 import { ProfileDropdown } from '../ui/parchment/ProfileDropdown.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { PartyInviteModal } from '../components/PartyInviteModal.js';
 import { Icon } from '../components/Icon.js';
 import { responsive } from '../core/Responsive.js';
-import {
-  PARCHMENT_COLORS,
-  getParchmentGradient,
-  getParchmentBorder,
-  getParchmentShadow
-} from '../ui/parchment/ParchmentTheme.js';
+import { PARCHMENT_COLORS } from '../ui/parchment/ParchmentTheme.js';
 
 // Class-specific action labels for guild recruitment buttons
 const GUILD_ACTION_LABELS = {
@@ -24,6 +20,9 @@ const GUILD_ACTION_LABELS = {
   monk: 'Accept Initiate',
   chemist: 'Hire Assistant'
 };
+
+// Cache size limit for path preview calculations (LRU eviction when exceeded)
+const PATH_CACHE_MAX_SIZE = 100;
 
 // Region colors by race - used for node tinting and boundary rendering
 const REGION_COLORS = {
@@ -106,6 +105,9 @@ export class WorldMapScene extends Scene {
     // Responsive subscription
     this.responsiveUnsubscribe = null;
 
+    // Node action menu (positioned near current node)
+    this.nodeActionMenu = null;
+
     // Region system
     this.regions = [];              // Region data from API
     this.showRegionTint = true;     // Toggle for region color tinting on nodes
@@ -127,6 +129,26 @@ export class WorldMapScene extends Scene {
     this.centerOnCurrentNode();
     this.setupInputHandlers();
     this.setupWebSocketHandlers();
+
+    // Initialize node action menu (positioned near current node)
+    this.nodeActionMenu = new NodeActionMenu({
+      game: this.game,
+      onAction: (feature) => {
+        if (feature === 'battle') {
+          this.startBattle();
+        } else {
+          this.handleFeature(feature);
+        }
+      }
+    });
+    this.game.uiOverlay.appendChild(this.nodeActionMenu.element);
+
+    // Set initial node and expand menu
+    if (this.currentNode) {
+      const position = this.getNodeScreenPosition(this.currentNode);
+      this.nodeActionMenu.setNode(this.currentNode, position);
+      this.nodeActionMenu.expand();
+    }
 
     // Initialize minimap with region data
     this.minimap = new WorldMapMinimap(this.assetLoader);
@@ -306,7 +328,12 @@ export class WorldMapScene extends Scene {
       this.previewOriginBlocked = result.originBlocked || false;
       this.previewCannotReach = result.cannotReachFromOrigin || false;
 
-      // Cache the result
+      // Cache the result with LRU eviction
+      if (this.pathPreviewCache.size >= PATH_CACHE_MAX_SIZE) {
+        // Evict oldest entry (first key in Map maintains insertion order)
+        const firstKey = this.pathPreviewCache.keys().next().value;
+        this.pathPreviewCache.delete(firstKey);
+      }
       this.pathPreviewCache.set(cacheKey, {
         path: result.path,
         cost: result.cost,
@@ -428,6 +455,9 @@ export class WorldMapScene extends Scene {
   }
 
   exit() {
+    // Clear path preview cache to prevent memory buildup
+    this.pathPreviewCache.clear();
+
     // Abort all event listeners
     if (this.abortController) {
       this.abortController.abort();
@@ -446,6 +476,12 @@ export class WorldMapScene extends Scene {
     if (this.partyInviteModal) {
       this.partyInviteModal.destroy();
       this.partyInviteModal = null;
+    }
+
+    // Destroy node action menu
+    if (this.nodeActionMenu) {
+      this.nodeActionMenu.destroy();
+      this.nodeActionMenu = null;
     }
 
     // Unsubscribe from responsive changes
@@ -561,113 +597,56 @@ export class WorldMapScene extends Scene {
   }
 
   createUI() {
+    // Create empty container for any future UI elements
+    // Note: Node action menu is now a separate component (NodeActionMenu)
     const container = document.createElement('div');
     container.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;';
 
-    const isMobile = responsive.isMobile();
-
-    // Current node info panel (bottom center) - Compact parchment styled
-    container.innerHTML = `
-      <div id="node-info" style="
-        position: absolute;
-        bottom: ${isMobile ? '16px' : '24px'};
-        left: 50%;
-        transform: translateX(-50%);
-        pointer-events: auto;
-        display: none;
-        max-width: calc(100vw - 32px);
-      ">
-        <div id="node-info-inner" style="
-          position: relative;
-          text-align: center;
-          min-width: ${isMobile ? '140px' : '160px'};
-          padding: ${isMobile ? '8px 12px 14px' : '10px 16px 16px'};
-          background: ${getParchmentGradient('to bottom')};
-          border: ${getParchmentBorder()};
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.1);
-          font-family: Georgia, serif;
-        ">
-          <div id="node-actions" style="
-            display: flex;
-            flex-direction: column;
-            gap: ${isMobile ? '4px' : '5px'};
-            align-items: stretch;
-          "></div>
-        </div>
-        <div id="node-type-badge" style="
-          position: absolute;
-          bottom: -10px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: rgba(0,0,0,0.8);
-          color: white;
-          padding: 2px 10px;
-          border-radius: 10px;
-          font-family: Georgia, serif;
-          font-size: ${isMobile ? '9px' : '10px'};
-          font-weight: bold;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-          white-space: nowrap;
-        "></div>
-      </div>
-    `;
-
     this.game.uiOverlay.appendChild(container);
     this.uiElement = container;
-
-    // Update current node display
-    this.updateNodeInfo();
   }
 
   // Menu functionality is now handled by ProfileDropdown
 
   updateNodeInfo() {
-    if (!this.currentNode) return;
+    // Legacy method - node info is now handled by NodeActionMenu component
+    // This method is kept for backwards compatibility but does nothing
+  }
 
-    const nodeInfo = document.getElementById('node-info');
-    const nodeTypeBadge = document.getElementById('node-type-badge');
-    const nodeActions = document.getElementById('node-actions');
+  /**
+   * Get viewport position for a node (for positioning DOM elements over canvas)
+   * Converts canvas coordinates to viewport coordinates accounting for:
+   * - Canvas scale factor (internal resolution vs display size)
+   * - Canvas position within viewport (centered with letterboxing)
+   * @param {Object} node - Node object with x_coord and y_coord
+   * @returns {Object} Position object { x, y, nodeSize, canvasHeight }
+   */
+  getNodeScreenPosition(node) {
+    if (!node) return null;
 
-    nodeInfo.style.display = 'block';
-    nodeTypeBadge.textContent = this.capitalize(this.currentNode.node_type);
+    // Find the full node data if we only have partial info
+    const fullNode = this.nodes.find(n => n.id === node.id) || node;
 
-    // Add action buttons based on node type and features
-    nodeActions.innerHTML = '';
+    // Calculate position in canvas coordinate space
+    const canvasX = fullNode.x_coord * this.nodeSpacing + this.cameraX;
+    const canvasY = fullNode.y_coord * this.nodeSpacing + this.cameraY;
 
-    let features = this.currentNode.features || [];
-    // Auto-add guild_advancement feature for guild nodes
-    if (this.currentNode.guild_class && !features.includes('guild_advancement')) {
-      features = [...features, 'guild_advancement'];
-    }
-    if (Array.isArray(features)) {
-      // Prioritize essential features (shops, social hubs) over decorative ones
-      const essentialFeatures = ['blacksmith', 'marketplace', 'tavern', 'apothecary', 'coliseum', 'farm', 'guild_hall', 'guild_advancement', 'courtyard'];
-      const decorativeFeatures = ['throne', 'temple', 'stables', 'training_ground'];
+    // Convert canvas coordinates to viewport coordinates
+    // The canvas is scaled and centered, so we need to account for:
+    // 1. The canvas's position within the viewport (rect.left, rect.top)
+    // 2. The scale factor between internal canvas size and display size
+    const rect = this.game.canvas.getBoundingClientRect();
+    const scale = this.game.scale || 1;
 
-      // Sort features: essential first, then others, decorative last
-      const prioritizedFeatures = [
-        ...essentialFeatures.filter(f => features.includes(f)),
-        ...features.filter(f => !essentialFeatures.includes(f) && !decorativeFeatures.includes(f)),
-        ...decorativeFeatures.filter(f => features.includes(f))
-      ];
+    const viewportX = rect.left + (canvasX * scale);
+    const viewportY = rect.top + (canvasY * scale);
 
-      // Show up to 4 features for important nodes, 3 for others
-      const maxFeatures = ['castle', 'palace', 'city'].includes(this.currentNode.node_type) ? 4 : 3;
-
-      prioritizedFeatures.slice(0, maxFeatures).forEach(feature => {
-        const btn = this.createParchmentButton(feature, false);
-        nodeActions.appendChild(btn);
-      });
-    }
-
-    // Add battle button for battle nodes
-    if (['forest', 'cave', 'mountain', 'bridge'].includes(this.currentNode.node_type)) {
-      const battleBtn = this.createParchmentButton('battle', true);
-      nodeActions.appendChild(battleBtn);
-    }
+    return {
+      x: viewportX,
+      y: viewportY,
+      nodeSize: this.nodeSize * scale,  // Scale the node size too
+      canvasHeight: rect.height  // Use actual display height for edge detection
+    };
   }
 
   /**
@@ -1062,6 +1041,11 @@ export class WorldMapScene extends Scene {
         this.isTraveling = true;
         this.cameraSettling = true; // Keep camera following smoothly after travel ends
 
+        // Collapse node action menu during travel
+        if (this.nodeActionMenu) {
+          this.nodeActionMenu.collapse();
+        }
+
         // Convert path nodes to screen positions
         const walkPath = result.pathNodes.map(n => ({
           x: n.x_coord * this.nodeSpacing,
@@ -1128,6 +1112,18 @@ export class WorldMapScene extends Scene {
     this.updateCharacterPosition();
 
     this.updateNodeInfo();
+
+    // Update node action menu with new node and expand
+    if (this.nodeActionMenu && this.currentNode) {
+      const position = this.getNodeScreenPosition(this.currentNode);
+      this.nodeActionMenu.setNode(this.currentNode, position);
+      // Small delay before expanding for smoother animation sequence
+      setTimeout(() => {
+        if (this.nodeActionMenu) {
+          this.nodeActionMenu.expand();
+        }
+      }, 50);
+    }
 
     // Complete travel progress bar (triggers fade out)
     if (this.travelProgressBar) {
@@ -1552,9 +1548,10 @@ export class WorldMapScene extends Scene {
       const isCurrent = this.currentNode && node.id === this.currentNode.id;
       const isHovered = this.hoveredNode && node.id === this.hoveredNode.id;
 
-      // Node tooltip (for current and hovered nodes) - now rendered above fog
-      if (isCurrent || isHovered) {
-        this.renderNodeTooltip(ctx, node, x, y, isCurrent);
+      // Node tooltip for hovered nodes only (current node uses NodeActionMenu)
+      // Skip if this is the current node - its info is shown in the DOM menu
+      if (isHovered && !isCurrent) {
+        this.renderNodeTooltip(ctx, node, x, y, false);
       }
     }
 
@@ -1589,6 +1586,14 @@ export class WorldMapScene extends Scene {
         canvasHeight: ctx.canvas.height,
         nodeSpacing: this.nodeSpacing
       });
+    }
+
+    // Update node action menu position (DOM element follows current node)
+    if (this.nodeActionMenu && this.currentNode) {
+      const position = this.getNodeScreenPosition(this.currentNode);
+      if (position) {
+        this.nodeActionMenu.updatePosition(position.x, position.y, position.nodeSize, position.canvasHeight);
+      }
     }
   }
 

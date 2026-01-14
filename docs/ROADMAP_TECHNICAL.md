@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.2 |
+| Version | 1.3 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -241,13 +241,15 @@
 | WebSocket rate limits reset on reconnection | websocket/index.js:92-94 | High |
 | Missing rate limiter on /api/world/travel | world.js:316 | High |
 | Production rate limits 2x multiplier too permissive | rateLimiterFactory.js:33-44 | High |
-| WorldMapScene pathPreviewCache unbounded growth | WorldMapScene.js:74 | Medium |
+| ~~WorldMapScene pathPreviewCache unbounded growth~~ | ~~WorldMapScene.js:74~~ | ~~Medium~~ **RESOLVED** |
 | Event name mismatch (party:invite) | Game.js / partyWebsocket.js | Medium |
 | SettingsModal.js orphaned | frontend/src/components/ | Low |
 | Inline listeners without cleanup | LoginScene.js, WorldMapScene.js | Medium |
 
 ### 6.2 Refactoring Opportunities
 
+- [x] **seed.js modularization** - Reduced from 4862 to 918 lines via worldgen/ modules
+- [x] **Database performance indexes** - Composite indexes for regional queries (030_performance_indexes.sql)
 - [ ] Consolidate settings modal and scene
 - [ ] Unify WebSocket event naming
 - [ ] Add TypeScript types (future)
@@ -272,6 +274,7 @@
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.3 | Jan 2026 | Technical debt cleanup: seed.js modularization (4862→918 lines, 12 new modules), WorldMapScene pathPreviewCache LRU limits, composite database indexes (030_performance_indexes.sql). |
 | 1.2 | Jan 2026 | ItemDataTable & Marketplace plan complete: Added marketplace integration tests, order expiration unit tests, shop refresh unit tests. Testing updated to 70%. |
 | 1.1 | Jan 2026 | Roadmap audit v8.0: Added completed integration tests (battle reconnection, coliseum, item drop, party websocket). Updated testing completion to 65%. |
 | 1.0 | Jan 2026 | Initial split from DEVELOPMENT_ROADMAP.md |
