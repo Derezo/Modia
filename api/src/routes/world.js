@@ -156,14 +156,251 @@ router.get('/seed', asyncHandler(async (req, res) => {
   res.json({ seed });
 }));
 
+// ============================================================================
+// REGION ENDPOINTS (Multi-castle support)
+// ============================================================================
+
+// GET /api/world/regions - List all regions with their castles
+router.get('/regions', authenticate, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+
+  // Get all regions with their key node details
+  const regionsResult = await query(
+    `SELECT
+       wr.id,
+       wr.race,
+       wr.dominant_terrain,
+       wr.secondary_terrains,
+       wr.boundary_polygon,
+       wr.castle_node_id,
+       wr.keep_node_id,
+       wr.guild_node_id,
+       -- Castle node details
+       cn.name as castle_name,
+       cn.x_coord as castle_x,
+       cn.y_coord as castle_y,
+       -- Keep node details
+       kn.name as keep_name,
+       kn.x_coord as keep_x,
+       kn.y_coord as keep_y,
+       -- Guild node details
+       gn.name as guild_name,
+       gn.x_coord as guild_x,
+       gn.y_coord as guild_y,
+       gn.guild_class,
+       -- Node counts per region
+       (SELECT COUNT(*) FROM world_nodes WHERE region_id = wr.id) as total_nodes,
+       -- Discovered nodes in this region for the user
+       (SELECT COUNT(*)
+        FROM user_node_discovery und
+        JOIN world_nodes wn ON wn.id = und.node_id
+        WHERE und.user_id = $1 AND wn.region_id = wr.id) as discovered_nodes
+     FROM world_regions wr
+     LEFT JOIN world_nodes cn ON cn.id = wr.castle_node_id
+     LEFT JOIN world_nodes kn ON kn.id = wr.keep_node_id
+     LEFT JOIN world_nodes gn ON gn.id = wr.guild_node_id
+     ORDER BY wr.id`
+    , [userId]
+  );
+
+  // Transform to structured response
+  const regions = regionsResult.rows.map(row => ({
+    id: row.id,
+    race: row.race,
+    dominantTerrain: row.dominant_terrain,
+    secondaryTerrains: row.secondary_terrains,
+    boundaryPolygon: row.boundary_polygon,
+    castle: row.castle_node_id ? {
+      nodeId: row.castle_node_id,
+      name: row.castle_name,
+      x: row.castle_x,
+      y: row.castle_y
+    } : null,
+    keep: row.keep_node_id ? {
+      nodeId: row.keep_node_id,
+      name: row.keep_name,
+      x: row.keep_x,
+      y: row.keep_y
+    } : null,
+    guild: row.guild_node_id ? {
+      nodeId: row.guild_node_id,
+      name: row.guild_name,
+      x: row.guild_x,
+      y: row.guild_y,
+      guildClass: row.guild_class
+    } : null,
+    nodeStats: {
+      total: parseInt(row.total_nodes, 10),
+      discovered: parseInt(row.discovered_nodes, 10)
+    }
+  }));
+
+  res.json({ regions });
+}));
+
+// GET /api/world/regions/:regionId - Get single region details
+router.get('/regions/:regionId', authenticate, asyncHandler(async (req, res) => {
+  const { regionId } = req.params;
+  const userId = req.user.userId;
+
+  if (!regionId || isNaN(parseInt(regionId, 10))) {
+    throw new AppError('Invalid region ID', 400);
+  }
+
+  const regionResult = await query(
+    `SELECT
+       wr.id,
+       wr.race,
+       wr.dominant_terrain,
+       wr.secondary_terrains,
+       wr.boundary_polygon,
+       wr.castle_node_id,
+       wr.keep_node_id,
+       wr.guild_node_id,
+       wr.created_at,
+       -- Castle node details
+       cn.name as castle_name,
+       cn.x_coord as castle_x,
+       cn.y_coord as castle_y,
+       cn.features as castle_features,
+       -- Keep node details
+       kn.name as keep_name,
+       kn.x_coord as keep_x,
+       kn.y_coord as keep_y,
+       kn.features as keep_features,
+       -- Guild node details
+       gn.name as guild_name,
+       gn.x_coord as guild_x,
+       gn.y_coord as guild_y,
+       gn.guild_class,
+       gn.features as guild_features
+     FROM world_regions wr
+     LEFT JOIN world_nodes cn ON cn.id = wr.castle_node_id
+     LEFT JOIN world_nodes kn ON kn.id = wr.keep_node_id
+     LEFT JOIN world_nodes gn ON gn.id = wr.guild_node_id
+     WHERE wr.id = $1`,
+    [regionId]
+  );
+
+  if (regionResult.rows.length === 0) {
+    throw new AppError('Region not found', 404);
+  }
+
+  const row = regionResult.rows[0];
+
+  // Get node counts by type for this region
+  const nodeStatsResult = await query(
+    `SELECT
+       node_type,
+       COUNT(*) as count
+     FROM world_nodes
+     WHERE region_id = $1
+     GROUP BY node_type
+     ORDER BY node_type`,
+    [regionId]
+  );
+
+  // Get ring distribution for this region
+  const ringStatsResult = await query(
+    `SELECT
+       ring_distance,
+       COUNT(*) as count
+     FROM world_nodes
+     WHERE region_id = $1 AND ring_distance IS NOT NULL
+     GROUP BY ring_distance
+     ORDER BY ring_distance`,
+    [regionId]
+  );
+
+  // Get user's discovery progress in this region
+  const discoveryResult = await query(
+    `SELECT
+       COUNT(*) FILTER (WHERE und.discovery_method = 'travel') as visited_count,
+       COUNT(*) as discovered_count,
+       (SELECT COUNT(*) FROM world_nodes WHERE region_id = $2) as total_nodes
+     FROM user_node_discovery und
+     JOIN world_nodes wn ON wn.id = und.node_id
+     WHERE und.user_id = $1 AND wn.region_id = $2`,
+    [userId, regionId]
+  );
+
+  // Get user's clearance progress in this region
+  const clearanceResult = await query(
+    `SELECT
+       COUNT(*) as cleared_count,
+       (SELECT COUNT(*) FROM world_nodes
+        WHERE region_id = $2 AND node_type IN ('forest', 'cave', 'mountain', 'bridge')) as clearable_nodes
+     FROM user_node_clearance unc
+     JOIN world_nodes wn ON wn.id = unc.node_id
+     WHERE unc.user_id = $1 AND wn.region_id = $2`,
+    [userId, regionId]
+  );
+
+  const nodeStats = {};
+  for (const stat of nodeStatsResult.rows) {
+    nodeStats[stat.node_type] = parseInt(stat.count, 10);
+  }
+
+  const ringStats = {};
+  for (const stat of ringStatsResult.rows) {
+    ringStats[`ring${stat.ring_distance}`] = parseInt(stat.count, 10);
+  }
+
+  const discovery = discoveryResult.rows[0];
+  const clearance = clearanceResult.rows[0];
+
+  const region = {
+    id: row.id,
+    race: row.race,
+    dominantTerrain: row.dominant_terrain,
+    secondaryTerrains: row.secondary_terrains,
+    boundaryPolygon: row.boundary_polygon,
+    createdAt: row.created_at,
+    castle: row.castle_node_id ? {
+      nodeId: row.castle_node_id,
+      name: row.castle_name,
+      x: row.castle_x,
+      y: row.castle_y,
+      features: row.castle_features
+    } : null,
+    keep: row.keep_node_id ? {
+      nodeId: row.keep_node_id,
+      name: row.keep_name,
+      x: row.keep_x,
+      y: row.keep_y,
+      features: row.keep_features
+    } : null,
+    guild: row.guild_node_id ? {
+      nodeId: row.guild_node_id,
+      name: row.guild_name,
+      x: row.guild_x,
+      y: row.guild_y,
+      guildClass: row.guild_class,
+      features: row.guild_features
+    } : null,
+    nodeStats,
+    ringStats,
+    userProgress: {
+      visited: parseInt(discovery.visited_count, 10),
+      discovered: parseInt(discovery.discovered_count, 10),
+      total: parseInt(discovery.total_nodes, 10),
+      cleared: parseInt(clearance.cleared_count, 10),
+      clearable: parseInt(clearance.clearable_nodes, 10)
+    }
+  };
+
+  res.json({ region });
+}));
+
 // GET /api/world/nodes - Get discovered nodes for user (fog of war + clearance status)
 router.get('/nodes', authenticate, asyncHandler(async (req, res) => {
   const userId = req.user.userId;
 
-  // Get only discovered nodes for this user, including clearance status
+  // Get only discovered nodes for this user, including clearance status and region info
   const result = await query(
     `SELECT wn.id, wn.node_type, wn.name, wn.x_coord, wn.y_coord, wn.distance_from_center,
             wn.features, wn.guild_class, wn.local_seed, wn.difficulty_tier,
+            wn.region_id, wn.region_race, wn.ring_distance,
             und.discovered_at,
             und.discovery_method,
             CASE WHEN und.discovery_method = 'travel' THEN true ELSE false END as visited,
@@ -200,9 +437,13 @@ router.get('/nodes/:id', authenticate, asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const result = await query(
-    `SELECT id, node_type, name, x_coord, y_coord, distance_from_center,
-            features, guild_class, local_seed, difficulty_tier
-     FROM world_nodes WHERE id = $1`,
+    `SELECT wn.id, wn.node_type, wn.name, wn.x_coord, wn.y_coord, wn.distance_from_center,
+            wn.features, wn.guild_class, wn.local_seed, wn.difficulty_tier,
+            wn.region_id, wn.region_race, wn.ring_distance,
+            wr.race as region_name, wr.dominant_terrain as region_terrain
+     FROM world_nodes wn
+     LEFT JOIN world_regions wr ON wr.id = wn.region_id
+     WHERE wn.id = $1`,
     [id]
   );
 
@@ -210,9 +451,9 @@ router.get('/nodes/:id', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Node not found', 404);
   }
 
-  // Get connected nodes
+  // Get connected nodes with their region info
   const connectionsResult = await query(
-    `SELECT wn.id, wn.node_type, wn.name, wnc.path_type
+    `SELECT wn.id, wn.node_type, wn.name, wn.region_id, wn.region_race, wnc.path_type
      FROM world_node_connections wnc
      JOIN world_nodes wn ON (wnc.to_node_id = wn.id OR wnc.from_node_id = wn.id)
      WHERE (wnc.from_node_id = $1 OR wnc.to_node_id = $1)
@@ -269,9 +510,10 @@ router.get('/path/:targetNodeId', authenticate, asyncHandler(async (req, res) =>
   const cost = pathResult.distance;
   const affordable = staminaInfo.current >= cost;
 
-  // Get node names along the path with clearance info
+  // Get node names along the path with clearance and region info
   const pathNodesResult = await query(
     `SELECT wn.id, wn.name, wn.node_type,
+            wn.region_id, wn.region_race,
             CASE WHEN unc.node_id IS NOT NULL THEN true ELSE false END as cleared,
             CASE WHEN wn.node_type IN ('forest', 'cave', 'mountain', 'bridge')
                   AND unc.node_id IS NULL THEN true ELSE false END as blocked
@@ -295,9 +537,25 @@ router.get('/path/:targetNodeId', authenticate, asyncHandler(async (req, res) =>
     cannotReachFromOrigin = !visitedNodes.has(parseInt(targetNodeId, 10));
   }
 
+  // Detect region crossings in the path
+  const pathNodes = pathNodesResult.rows;
+  const regionsCrossed = [];
+  let prevRegionId = null;
+  for (const node of pathNodes) {
+    if (node.region_id !== prevRegionId && node.region_id !== null) {
+      regionsCrossed.push({
+        regionId: node.region_id,
+        regionRace: node.region_race,
+        entryNodeId: node.id,
+        entryNodeName: node.name
+      });
+      prevRegionId = node.region_id;
+    }
+  }
+
   res.json({
     path: pathResult.path,
-    pathNodes: pathNodesResult.rows,
+    pathNodes,
     distance: pathResult.distance,
     cost,
     affordable: affordable && !cannotReachFromOrigin,
@@ -309,7 +567,10 @@ router.get('/path/:targetNodeId', authenticate, asyncHandler(async (req, res) =>
     pathBlocked: false, // Path was found, so it's not completely blocked
     // Origin blocking info (when at a blocked node)
     originBlocked,
-    cannotReachFromOrigin
+    cannotReachFromOrigin,
+    // Cross-region travel info
+    regionsCrossed,
+    crossesRegions: regionsCrossed.length > 1
   });
 }));
 
@@ -524,11 +785,15 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT wn.id, wn.node_type, wn.name, wn.features, wn.guild_class,
             wn.local_seed, wn.difficulty_tier,
+            wn.region_id, wn.region_race, wn.ring_distance,
+            wr.race as region_name, wr.dominant_terrain as region_terrain,
+            wr.castle_node_id as region_castle_id,
             CASE WHEN unc.node_id IS NOT NULL THEN true ELSE false END as cleared,
             CASE WHEN wn.node_type IN ('forest', 'cave', 'mountain', 'bridge')
                  AND unc.node_id IS NULL THEN true ELSE false END as blocked
      FROM characters c
      JOIN world_nodes wn ON c.current_node_id = wn.id
+     LEFT JOIN world_regions wr ON wr.id = wn.region_id
      LEFT JOIN user_node_clearance unc ON wn.id = unc.node_id AND unc.user_id = $1
      WHERE c.user_id = $1 AND c.party_slot = 1`,
     [req.user.userId]
@@ -554,8 +819,19 @@ router.get('/current', authenticate, asyncHandler(async (req, res) => {
     actions.push({ type: 'battle', name: 'Battle' });
   }
 
+  // Build region info object
+  const regionInfo = node.region_id ? {
+    id: node.region_id,
+    race: node.region_race,
+    name: node.region_name,
+    terrain: node.region_terrain,
+    castleNodeId: node.region_castle_id,
+    ringDistance: node.ring_distance
+  } : null;
+
   res.json({
     currentNode: node,
+    region: regionInfo,
     availableActions: actions,
     playersAtNode: presenceService.getPlayersAtNode(node.id)
   });
@@ -589,6 +865,7 @@ router.get('/nodes/:id/players', authenticate, asyncHandler(async (req, res) => 
 router.get('/discovery-stats', authenticate, asyncHandler(async (req, res) => {
   const userId = req.user.userId;
 
+  // Overall stats
   const stats = await query(
     `SELECT
        COUNT(*) FILTER (WHERE discovery_method = 'travel') as visited_count,
@@ -599,7 +876,32 @@ router.get('/discovery-stats', authenticate, asyncHandler(async (req, res) => {
     [userId]
   );
 
-  res.json(stats.rows[0]);
+  // Per-region stats
+  const regionStats = await query(
+    `SELECT
+       wr.id as region_id,
+       wr.race as region_race,
+       COUNT(und.node_id) FILTER (WHERE und.discovery_method = 'travel') as visited_count,
+       COUNT(und.node_id) as discovered_count,
+       (SELECT COUNT(*) FROM world_nodes WHERE region_id = wr.id) as total_nodes
+     FROM world_regions wr
+     LEFT JOIN world_nodes wn ON wn.region_id = wr.id
+     LEFT JOIN user_node_discovery und ON und.node_id = wn.id AND und.user_id = $1
+     GROUP BY wr.id, wr.race
+     ORDER BY wr.id`,
+    [userId]
+  );
+
+  res.json({
+    ...stats.rows[0],
+    byRegion: regionStats.rows.map(row => ({
+      regionId: row.region_id,
+      regionRace: row.region_race,
+      visitedCount: parseInt(row.visited_count || 0, 10),
+      discoveredCount: parseInt(row.discovered_count || 0, 10),
+      totalNodes: parseInt(row.total_nodes, 10)
+    }))
+  });
 }));
 
 // GET /api/world/obstacles - Get terrain obstacles for world map rendering
