@@ -2550,22 +2550,16 @@ function generateBridgeName(region1Name, region2Name, rng) {
  * @param {SeededRandom} rng - Seeded random generator
  * @returns {Object} Bridge node with connection info
  */
-function createBridgeNode(border, nodesByRegion, allNodes, rng) {
+function createBridgeNode(border, nodesByRegion, rng) {
   const { midpoint, region1, region2, region1Name, region2Name } = border;
 
-  // Get region data
-  const region1Nodes = nodesByRegion.get(region1 + 1); // region indices are 0-based, IDs are 1-based
-  const region2Nodes = nodesByRegion.get(region2 + 1);
+  // border.region1/region2 are 0-indexed, nodesByRegion keys are 1-indexed (regionId)
+  const r1Nodes = nodesByRegion.get(region1 + 1);
+  const r2Nodes = nodesByRegion.get(region2 + 1);
 
-  if (!region1Nodes || !region2Nodes) {
-    // Try with raw indices (for when using regionIndex vs regionId)
-    const r1Nodes = [...nodesByRegion.values()][region1];
-    const r2Nodes = [...nodesByRegion.values()][region2];
-
-    if (!r1Nodes || !r2Nodes) {
-      console.warn(`  Warning: Could not find nodes for regions ${region1}/${region2}`);
-      return null;
-    }
+  if (!r1Nodes || !r2Nodes) {
+    console.warn(`  Warning: Could not find nodes for regions ${region1 + 1}/${region2 + 1}`);
+    return null;
   }
 
   // Create the bridge node
@@ -2584,10 +2578,6 @@ function createBridgeNode(border, nodesByRegion, allNodes, rng) {
     region2Name,
     name: generateBridgeName(region1Name, region2Name, rng)
   };
-
-  // Find nearest frontier nodes in each region
-  const r1Nodes = nodesByRegion.get(region1 + 1) || [...nodesByRegion.values()][region1];
-  const r2Nodes = nodesByRegion.get(region2 + 1) || [...nodesByRegion.values()][region2];
 
   const frontier1 = findFrontierNodes(r1Nodes, midpoint.x, midpoint.y);
   const frontier2 = findFrontierNodes(r2Nodes, midpoint.x, midpoint.y);
@@ -2622,9 +2612,9 @@ function createBridgeNode(border, nodesByRegion, allNodes, rng) {
 function createWildernessZone(border, bridgeNode, nodesByRegion, rng) {
   const { points, midpoint, region1, region2, region1Name, region2Name } = border;
 
-  // Get terrain types from both regions
-  const r1Nodes = nodesByRegion.get(region1 + 1) || [...nodesByRegion.values()][region1];
-  const r2Nodes = nodesByRegion.get(region2 + 1) || [...nodesByRegion.values()][region2];
+  // border.region1/region2 are 0-indexed, nodesByRegion keys are 1-indexed (regionId)
+  const r1Nodes = nodesByRegion.get(region1 + 1);
+  const r2Nodes = nodesByRegion.get(region2 + 1);
 
   // Collect terrain types from each region
   const battleTerrains1 = r1Nodes
@@ -2733,9 +2723,9 @@ function createWildernessZone(border, bridgeNode, nodesByRegion, rng) {
 function createTradeRoute(border, bridgeNode, nodesByRegion, rng) {
   const { midpoint, region1, region2, region1Name, region2Name } = border;
 
-  // Get region nodes
-  const r1Nodes = nodesByRegion.get(region1 + 1) || [...nodesByRegion.values()][region1];
-  const r2Nodes = nodesByRegion.get(region2 + 1) || [...nodesByRegion.values()][region2];
+  // border.region1/region2 are 0-indexed, nodesByRegion keys are 1-indexed (regionId)
+  const r1Nodes = nodesByRegion.get(region1 + 1);
+  const r2Nodes = nodesByRegion.get(region2 + 1);
 
   // Find nearest city in each region
   const city1 = findNearestNodeInRegion(midpoint.x, midpoint.y, r1Nodes, 'city');
@@ -2848,11 +2838,9 @@ function createTradeRoute(border, bridgeNode, nodesByRegion, rng) {
  * The palace is the final destination, connecting multiple regions
  *
  * @param {Object} palacePosition - Position data from findGrandPalacePosition()
- * @param {Array} castles - Castle positions with region info
- * @param {SeededRandom} rng - Seeded random generator
  * @returns {Object} Grand Palace node
  */
-function createGrandPalace(palacePosition, castles, rng) {
+function createGrandPalace(palacePosition) {
   const { x, y, adjacentRegions, regionNames } = palacePosition;
 
   const palace = {
@@ -2905,8 +2893,12 @@ function generateInterRegionConnections(voronoiData, nodesByRegion, allNodes, ca
     console.log(`  Border: ${border.region1Name} <-> ${border.region2Name}`);
     console.log(`    Length: ${border.edgeLength.toFixed(1)}, Type: ${border.connectionType}`);
 
+    // border.region1/region2 are 0-indexed, nodesByRegion keys are 1-indexed
+    const r1Nodes = nodesByRegion.get(border.region1 + 1);
+    const r2Nodes = nodesByRegion.get(border.region2 + 1);
+
     // 1. Always create bridge node
-    const bridgeNode = createBridgeNode(border, nodesByRegion, allNodes, rng);
+    const bridgeNode = createBridgeNode(border, nodesByRegion, rng);
     if (bridgeNode) {
       interRegionNodes.push(bridgeNode);
     }
@@ -2934,6 +2926,31 @@ function generateInterRegionConnections(voronoiData, nodesByRegion, allNodes, ca
             connectionType: 'wilderness'
           });
         }
+
+        // Connect wilderness to frontier nodes in both regions for accessibility
+        if (r1Nodes && r2Nodes) {
+          const centerX = bridgeNode ? bridgeNode.x : border.midpoint.x;
+          const centerY = bridgeNode ? bridgeNode.y : border.midpoint.y;
+          const frontier1 = findFrontierNodes(r1Nodes, centerX, centerY);
+          const frontier2 = findFrontierNodes(r2Nodes, centerX, centerY);
+
+          // Connect last wilderness node to region frontiers
+          const lastWilderness = wildernessNodes[wildernessNodes.length - 1];
+          if (frontier1.length > 0) {
+            interRegionConnections.push({
+              from: lastWilderness,
+              to: frontier1[0],
+              connectionType: 'wilderness_frontier'
+            });
+          }
+          if (frontier2.length > 0) {
+            interRegionConnections.push({
+              from: lastWilderness,
+              to: frontier2[0],
+              connectionType: 'wilderness_frontier'
+            });
+          }
+        }
       }
     }
 
@@ -2952,6 +2969,34 @@ function generateInterRegionConnections(voronoiData, nodesByRegion, allNodes, ca
             connectionType: 'trade'
           });
         }
+
+        // Connect trade route endpoints to their cities
+        const firstNode = tradeRouteNodes[0];
+        const lastNode = tradeRouteNodes[tradeRouteNodes.length - 1];
+
+        if (firstNode.connectToCity1 && r1Nodes) {
+          const cityNode = r1Nodes[firstNode.connectToCity1.cityIndex];
+          if (cityNode) {
+            interRegionConnections.push({
+              from: firstNode,
+              to: { node: cityNode, distance: 0 },
+              connectionType: 'trade_city'
+            });
+            console.log(`      Trade route connected to ${border.region1Name} city`);
+          }
+        }
+
+        if (lastNode.connectToCity2 && r2Nodes) {
+          const cityNode = r2Nodes[lastNode.connectToCity2.cityIndex];
+          if (cityNode) {
+            interRegionConnections.push({
+              from: lastNode,
+              to: { node: cityNode, distance: 0 },
+              connectionType: 'trade_city'
+            });
+            console.log(`      Trade route connected to ${border.region2Name} city`);
+          }
+        }
       }
     }
 
@@ -2960,13 +3005,15 @@ function generateInterRegionConnections(voronoiData, nodesByRegion, allNodes, ca
 
   // 4. Create Grand Palace at the farthest vertex
   const palacePosition = findGrandPalacePosition(voronoiData, castles);
-  const palace = createGrandPalace(palacePosition, castles, rng);
+  const palace = createGrandPalace(palacePosition);
   interRegionNodes.push(palace);
 
   // Connect palace to nearest nodes in adjacent regions
+  // palace.adjacentRegions contains 0-indexed region indices
   if (palace.adjacentRegions && palace.adjacentRegions.length > 0) {
     for (const regionIdx of palace.adjacentRegions) {
-      const regionNodes = [...nodesByRegion.values()][regionIdx];
+      // Use 1-indexed regionId to access nodesByRegion
+      const regionNodes = nodesByRegion.get(regionIdx + 1);
       if (regionNodes) {
         const nearest = findFrontierNodes(regionNodes, palace.x, palace.y);
         if (nearest.length > 0) {
