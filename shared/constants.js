@@ -161,6 +161,7 @@ export const NODE_TYPES = {
   BRIDGE: 'bridge',
   GUILD: 'guild',
   PALACE: 'palace',
+  KEEP: 'keep',
   // Terminator nodes (edge of map, 1 connection)
   CHEST: 'chest',
   SHRINE: 'shrine',
