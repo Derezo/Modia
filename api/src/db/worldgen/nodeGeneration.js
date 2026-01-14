@@ -23,7 +23,13 @@
  * @module worldgen/nodeGeneration
  */
 
-import { REGION_NODE_CONFIG } from './constants.js';
+import {
+  REGION_NODE_CONFIG,
+  GUILD_CONFIG,
+  NODE_DISTRIBUTION,
+  WATCHTOWER_CONFIG,
+  ZODIAC_CONFIG
+} from './constants.js';
 import { SeededRandom, TERRAIN_DISTRIBUTION } from '../../config/constants.js';
 import { generateCastlePlacements } from './castlePlacement.js';
 import { createVoronoiRegions } from './voronoiPartitioning.js';
@@ -206,8 +212,47 @@ export function poissonDiskSampleInPolygon(polygon, minDistance, rng, targetCoun
 }
 
 /**
+ * Get the primary guild type for a region based on its dominant race
+ *
+ * @param {Object} region - Region config
+ * @returns {string} Guild type (warrior, wizard, monk, chemist)
+ */
+function getPrimaryGuildType(region) {
+  const raceToGuild = GUILD_CONFIG.RACE_PRIMARY_GUILD;
+  return raceToGuild[region.race] || 'warrior';
+}
+
+/**
+ * Get secondary guild types (different from primary)
+ *
+ * @param {string} primaryType - Primary guild type to exclude
+ * @param {SeededRandom} rng - Random generator
+ * @param {number} count - Number of secondary types needed
+ * @returns {Array<string>} Array of secondary guild types
+ */
+function getSecondaryGuildTypes(primaryType, rng, count) {
+  const available = GUILD_CONFIG.TYPES.filter(t => t !== primaryType);
+  const result = [];
+
+  // Shuffle and pick
+  for (let i = 0; i < count && available.length > 0; i++) {
+    const idx = rng.nextInt(0, available.length - 1);
+    result.push(available.splice(idx, 1)[0]);
+  }
+
+  return result;
+}
+
+/**
  * Assign node types to generated positions within a region
  * Uses distance from castle as proxy for ring assignment (graph distance computed in Phase 4)
+ *
+ * Updated to support:
+ * - 3 guilds per region (1 primary in Ring 1, 2 secondary in Rings 2-3)
+ * - Activity nodes (fishing_spot, merchant_caravan, ruins)
+ * - Watchtowers (very rare, outer rings only)
+ * - Farms (outer ring settlements)
+ * - Rebalanced node distribution (40-50% battle, 20-30% activity, 20-30% settlement)
  *
  * @param {Array<{x: number, y: number}>} positions - Generated node positions
  * @param {{x: number, y: number}} castle - Castle position
@@ -223,6 +268,7 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
     distFromCastle: Math.hypot(pos.x - castle.x, pos.y - castle.y),
     isCastle: idx === 0 && pos.x === castle.x && pos.y === castle.y,
     nodeType: null,
+    guildType: null,  // For guilds: warrior, wizard, monk, chemist
     regionId: region.id,
     regionName: region.name
   }));
@@ -242,13 +288,29 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
   // Count targets
   const cityCount = rng.nextInt(REGION_NODE_CONFIG.CITY_COUNT_MIN, REGION_NODE_CONFIG.CITY_COUNT_MAX);
   const villageCount = rng.nextInt(REGION_NODE_CONFIG.VILLAGE_COUNT_MIN, REGION_NODE_CONFIG.VILLAGE_COUNT_MAX);
+  const farmCount = rng.nextInt(NODE_DISTRIBUTION.FARM_COUNT_MIN, NODE_DISTRIBUTION.FARM_COUNT_MAX);
   const keepCount = REGION_NODE_CONFIG.KEEP_COUNT;
-  const guildCount = REGION_NODE_CONFIG.GUILD_COUNT;
+
+  // Guild setup: 1 primary (Ring 1) + 2 secondary (Rings 2-3)
+  const primaryGuildType = getPrimaryGuildType(region);
+  const secondaryGuildTypes = getSecondaryGuildTypes(primaryGuildType, rng, GUILD_CONFIG.RING_2_3_COUNT);
 
   let citiesAssigned = 0;
   let villagesAssigned = 0;
+  let farmsAssigned = 0;
   let keepAssigned = 0;
-  let guildAssigned = 0;
+  let primaryGuildAssigned = false;
+  let secondaryGuildsAssigned = 0;
+  let watchtowerAssigned = false;
+
+  // Activity node counters
+  let fishingAssigned = 0;
+  let caravanAssigned = 0;
+  let ruinsAssigned = 0;
+
+  // Target activity node count (20-30% of total)
+  const activityTarget = Math.floor(positions.length * (NODE_DISTRIBUTION.ACTIVITY_PERCENT.min +
+    rng.next() * (NODE_DISTRIBUTION.ACTIVITY_PERCENT.max - NODE_DISTRIBUTION.ACTIVITY_PERCENT.min)));
 
   // Helper to pick battle terrain based on region configuration
   function pickBattleTerrain() {
@@ -257,6 +319,12 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
     } else {
       return rng.pick(region.secondaryTerrains); // 30% secondary
     }
+  }
+
+  // Helper to pick activity node type
+  function pickActivityType() {
+    const types = NODE_DISTRIBUTION.ACTIVITY_TYPES;
+    return types[rng.nextInt(0, types.length - 1)];
   }
 
   // Assign types based on distance bands
@@ -271,18 +339,34 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
       continue;
     }
 
-    // Ring 1 (5-12): Cities, Villages, Battle nodes
+    // Ring 1 (5-12): Primary guild, Cities, Villages, Activity nodes, Battle nodes
     if (dist <= REGION_NODE_CONFIG.RING_1_MAX_DIST) {
+      // Primary guild (race-appropriate, must be in Ring 1)
+      if (!primaryGuildAssigned && dist >= 6 && dist <= 10 && rng.next() < 0.35) {
+        node.nodeType = 'guild';
+        node.guildType = primaryGuildType;
+        primaryGuildAssigned = true;
+        continue;
+      }
       // Cities in mid-ring (prioritize 6-10 distance)
-      if (citiesAssigned < cityCount && dist >= 6 && dist <= 10 && rng.next() < 0.4) {
+      if (citiesAssigned < cityCount && dist >= 6 && dist <= 10 && rng.next() < 0.35) {
         node.nodeType = 'city';
         citiesAssigned++;
         continue;
       }
       // Villages
-      if (villagesAssigned < villageCount / 2 && rng.next() < 0.3) {
+      if (villagesAssigned < villageCount / 2 && rng.next() < 0.25) {
         node.nodeType = 'village';
         villagesAssigned++;
+        continue;
+      }
+      // Activity nodes (in Ring 1)
+      const totalActivity = fishingAssigned + caravanAssigned + ruinsAssigned;
+      if (totalActivity < activityTarget / 2 && rng.next() < 0.2) {
+        node.nodeType = pickActivityType();
+        if (node.nodeType === 'fishing_spot') fishingAssigned++;
+        else if (node.nodeType === 'merchant_caravan') caravanAssigned++;
+        else if (node.nodeType === 'ruins') ruinsAssigned++;
         continue;
       }
       // Default: battle terrain
@@ -290,7 +374,7 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
       continue;
     }
 
-    // Ring 2 (12-20): Keep, Guild, Villages, Battle nodes
+    // Ring 2 (12-20): Keep, Secondary Guilds, Villages, Farms, Activity nodes, Battle nodes
     if (dist <= REGION_NODE_CONFIG.RING_2_MAX_DIST) {
       // Keep (place in 14-18 range)
       if (keepAssigned < keepCount && dist >= 14 && dist <= 18 && rng.next() < 0.25) {
@@ -298,16 +382,32 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
         keepAssigned++;
         continue;
       }
-      // Guild (place in 13-17 range)
-      if (guildAssigned < guildCount && dist >= 13 && dist <= 17 && rng.next() < 0.25) {
+      // Secondary guilds (place in 13-19 range)
+      if (secondaryGuildsAssigned < secondaryGuildTypes.length && dist >= 13 && dist <= 19 && rng.next() < 0.25) {
         node.nodeType = 'guild';
-        guildAssigned++;
+        node.guildType = secondaryGuildTypes[secondaryGuildsAssigned];
+        secondaryGuildsAssigned++;
+        continue;
+      }
+      // Farms (outer ring settlements)
+      if (farmsAssigned < farmCount && dist >= NODE_DISTRIBUTION.FARM_MIN_RING * 5 && rng.next() < 0.2) {
+        node.nodeType = 'farm';
+        farmsAssigned++;
         continue;
       }
       // Remaining villages
-      if (villagesAssigned < villageCount && rng.next() < 0.25) {
+      if (villagesAssigned < villageCount && rng.next() < 0.2) {
         node.nodeType = 'village';
         villagesAssigned++;
+        continue;
+      }
+      // Activity nodes
+      const totalActivity = fishingAssigned + caravanAssigned + ruinsAssigned;
+      if (totalActivity < activityTarget && rng.next() < 0.25) {
+        node.nodeType = pickActivityType();
+        if (node.nodeType === 'fishing_spot') fishingAssigned++;
+        else if (node.nodeType === 'merchant_caravan') caravanAssigned++;
+        else if (node.nodeType === 'ruins') ruinsAssigned++;
         continue;
       }
       // Default: battle terrain
@@ -315,14 +415,48 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
       continue;
     }
 
-    // Ring 3 (20+): Battle nodes, future terminators (converted in Phase 6)
+    // Ring 3 (20+): Watchtower, Activity nodes, Battle nodes (converted to terminators in Phase 6)
+    // Watchtower (very rare, outer rings only)
+    if (!watchtowerAssigned && dist >= WATCHTOWER_CONFIG.MIN_RING * 5 && rng.next() < WATCHTOWER_CONFIG.SPAWN_CHANCE * 0.3) {
+      node.nodeType = 'watchtower';
+      watchtowerAssigned = true;
+      continue;
+    }
+    // Activity nodes in outer ring
+    const totalActivity = fishingAssigned + caravanAssigned + ruinsAssigned;
+    if (totalActivity < activityTarget && rng.next() < 0.2) {
+      node.nodeType = pickActivityType();
+      if (node.nodeType === 'fishing_spot') fishingAssigned++;
+      else if (node.nodeType === 'merchant_caravan') caravanAssigned++;
+      else if (node.nodeType === 'ruins') ruinsAssigned++;
+      continue;
+    }
+    // Default: battle terrain
     node.nodeType = pickBattleTerrain();
   }
 
-  // Ensure required counts are met (pass 2 for any missing)
+  // ============================================================================
+  // Pass 2: Ensure required counts are met
+  // ============================================================================
+
+  // Primary guild (must be in Ring 1)
+  if (!primaryGuildAssigned) {
+    const availableForPrimaryGuild = nodesWithDist.filter(n =>
+      n.nodeType !== 'castle' && n.nodeType !== 'city' && n.nodeType !== 'guild' &&
+      n.distFromCastle >= 5 && n.distFromCastle <= 12
+    );
+    if (availableForPrimaryGuild.length > 0) {
+      const idx = rng.nextInt(0, availableForPrimaryGuild.length - 1);
+      const node = availableForPrimaryGuild[idx];
+      node.nodeType = 'guild';
+      node.guildType = primaryGuildType;
+      primaryGuildAssigned = true;
+    }
+  }
+
   // Cities
   const availableForCity = nodesWithDist.filter(n =>
-    n.nodeType !== 'castle' && n.nodeType !== 'city' &&
+    n.nodeType !== 'castle' && n.nodeType !== 'city' && n.nodeType !== 'guild' &&
     n.distFromCastle >= 6 && n.distFromCastle <= 12
   );
   while (citiesAssigned < cityCount && availableForCity.length > 0) {
@@ -334,7 +468,7 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
 
   // Keep
   const availableForKeep = nodesWithDist.filter(n =>
-    n.nodeType !== 'castle' && n.nodeType !== 'city' && n.nodeType !== 'keep' &&
+    n.nodeType !== 'castle' && n.nodeType !== 'city' && n.nodeType !== 'keep' && n.nodeType !== 'guild' &&
     n.distFromCastle >= 12 && n.distFromCastle <= 20
   );
   while (keepAssigned < keepCount && availableForKeep.length > 0) {
@@ -344,21 +478,23 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
     keepAssigned++;
   }
 
-  // Guild
-  const availableForGuild = nodesWithDist.filter(n =>
-    n.nodeType !== 'castle' && n.nodeType !== 'city' && n.nodeType !== 'keep' && n.nodeType !== 'guild' &&
-    n.distFromCastle >= 12 && n.distFromCastle <= 20
+  // Secondary guilds
+  const availableForSecondaryGuild = nodesWithDist.filter(n =>
+    n.nodeType !== 'castle' && n.nodeType !== 'city' && n.nodeType !== 'keep' &&
+    n.nodeType !== 'guild' && n.nodeType !== 'village' &&
+    n.distFromCastle >= 12 && n.distFromCastle <= 22
   );
-  while (guildAssigned < guildCount && availableForGuild.length > 0) {
-    const idx = rng.nextInt(0, availableForGuild.length - 1);
-    const node = availableForGuild.splice(idx, 1)[0];
+  while (secondaryGuildsAssigned < secondaryGuildTypes.length && availableForSecondaryGuild.length > 0) {
+    const idx = rng.nextInt(0, availableForSecondaryGuild.length - 1);
+    const node = availableForSecondaryGuild.splice(idx, 1)[0];
     node.nodeType = 'guild';
-    guildAssigned++;
+    node.guildType = secondaryGuildTypes[secondaryGuildsAssigned];
+    secondaryGuildsAssigned++;
   }
 
   // Villages (fill to target)
   const availableForVillage = nodesWithDist.filter(n =>
-    n.nodeType !== 'castle' && n.nodeType !== 'city' && n.nodeType !== 'keep' && n.nodeType !== 'guild' && n.nodeType !== 'village' &&
+    !['castle', 'city', 'keep', 'guild', 'village', 'farm', 'watchtower'].includes(n.nodeType) &&
     n.distFromCastle >= 5 && n.distFromCastle <= 18
   );
   while (villagesAssigned < villageCount && availableForVillage.length > 0) {
@@ -366,6 +502,18 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
     const node = availableForVillage.splice(idx, 1)[0];
     node.nodeType = 'village';
     villagesAssigned++;
+  }
+
+  // Farms (fill to target if any remain)
+  const availableForFarm = nodesWithDist.filter(n =>
+    !['castle', 'city', 'keep', 'guild', 'village', 'farm', 'watchtower'].includes(n.nodeType) &&
+    n.distFromCastle >= 10
+  );
+  while (farmsAssigned < farmCount && availableForFarm.length > 0) {
+    const idx = rng.nextInt(0, availableForFarm.length - 1);
+    const node = availableForFarm.splice(idx, 1)[0];
+    node.nodeType = 'farm';
+    farmsAssigned++;
   }
 
   return nodesWithDist;
@@ -454,6 +602,9 @@ export function generateAllRegionNodes(castles, voronoiData, rng) {
 
   console.log(`\nPhase 3 Complete: Generated ${allNodes.length} total nodes across ${nodesByRegion.size} regions`);
 
+  // Assign zodiac shrines globally (one of each type)
+  assignZodiacShrines(allNodes, castles, rng);
+
   // Summary statistics
   const globalTypeCounts = {};
   for (const node of allNodes) {
@@ -465,6 +616,93 @@ export function generateAllRegionNodes(castles, voronoiData, rng) {
     allNodes,
     nodesByRegion
   };
+}
+
+/**
+ * Assign zodiac shrines globally across all regions
+ * Converts 12 eligible 'shrine' nodes (or creates from battle nodes) to zodiac shrines
+ *
+ * @param {Array} allNodes - All generated nodes
+ * @param {Array} castles - Castle positions (to calculate distances)
+ * @param {SeededRandom} rng - Seeded random generator
+ */
+function assignZodiacShrines(allNodes, castles, rng) {
+  console.log('\n  Assigning zodiac shrines...');
+
+  const zodiacTypes = [...ZODIAC_CONFIG.ZODIAC_TYPES];
+  const assignedShrines = [];
+
+  // Find eligible nodes for zodiac shrines:
+  // - Not a settlement (castle, city, village, guild, keep, farm)
+  // - Not already assigned (shrine, watchtower)
+  // - In outer rings (Ring 2+)
+  const settlements = ['castle', 'city', 'village', 'guild', 'keep', 'farm'];
+  const reserved = ['shrine', 'watchtower', 'bridge'];
+
+  // Calculate distance from nearest castle for each node
+  const eligibleNodes = allNodes.filter(node => {
+    if (settlements.includes(node.nodeType) || reserved.includes(node.nodeType)) {
+      return false;
+    }
+
+    // Check distance from nearest castle
+    let minCastleDist = Infinity;
+    for (const castle of castles) {
+      const dist = Math.hypot(node.x - castle.x, node.y - castle.y);
+      minCastleDist = Math.min(minCastleDist, dist);
+    }
+
+    // Must be at least MIN_RING distance (in world units * 5 for ring conversion)
+    return minCastleDist >= ZODIAC_CONFIG.MIN_RING * 5;
+  });
+
+  // Shuffle eligible nodes for random selection
+  for (let i = eligibleNodes.length - 1; i > 0; i--) {
+    const j = Math.floor(rng.next() * (i + 1));
+    [eligibleNodes[i], eligibleNodes[j]] = [eligibleNodes[j], eligibleNodes[i]];
+  }
+
+  // Assign zodiac types to shrines, enforcing minimum spacing
+  for (const zodiacType of zodiacTypes) {
+    let bestNode = null;
+    let bestScore = -Infinity;
+
+    for (const node of eligibleNodes) {
+      // Skip if already assigned a zodiac type
+      if (node.shrineBuffType) continue;
+
+      // Calculate minimum distance to existing zodiac shrines
+      let minShrineDist = Infinity;
+      for (const shrine of assignedShrines) {
+        const dist = Math.hypot(node.x - shrine.x, node.y - shrine.y);
+        minShrineDist = Math.min(minShrineDist, dist);
+      }
+
+      // Skip if too close to another zodiac shrine
+      if (assignedShrines.length > 0 && minShrineDist < ZODIAC_CONFIG.MIN_SPACING) {
+        continue;
+      }
+
+      // Score based on distance from other shrines (prefer spread out)
+      const score = minShrineDist === Infinity ? 1000 : minShrineDist;
+      if (score > bestScore) {
+        bestScore = score;
+        bestNode = node;
+      }
+    }
+
+    if (bestNode) {
+      bestNode.nodeType = 'shrine';
+      bestNode.shrineBuffType = `zodiac_${zodiacType}`;
+      bestNode.name = ZODIAC_CONFIG.SHRINE_NAMES[zodiacType];
+      assignedShrines.push(bestNode);
+    }
+  }
+
+  console.log(`    Assigned ${assignedShrines.length} zodiac shrines`);
+  if (assignedShrines.length < 12) {
+    console.log(`    Warning: Only ${assignedShrines.length}/12 zodiac shrines placed (not enough eligible nodes)`);
+  }
 }
 
 /**
@@ -519,6 +757,10 @@ export function validateRegionNodeGeneration(seed = 12345) {
     const keeps = nodes.filter(n => n.nodeType === 'keep').length;
     const guilds = nodes.filter(n => n.nodeType === 'guild').length;
     const villages = nodes.filter(n => n.nodeType === 'village').length;
+    const farms = nodes.filter(n => n.nodeType === 'farm').length;
+    const activityNodes = nodes.filter(n =>
+      ['fishing_spot', 'merchant_caravan', 'ruins'].includes(n.nodeType)
+    ).length;
 
     if (cities < 2 || cities > 3) {
       issues.push(`Region ${regionId} has ${cities} cities (expected 2-3)`);
@@ -526,11 +768,17 @@ export function validateRegionNodeGeneration(seed = 12345) {
     if (keeps !== 1) {
       issues.push(`Region ${regionId} has ${keeps} keeps (expected 1)`);
     }
-    if (guilds !== 1) {
-      issues.push(`Region ${regionId} has ${guilds} guilds (expected 1)`);
+    if (guilds < 2 || guilds > 3) {
+      issues.push(`Region ${regionId} has ${guilds} guilds (expected 2-3)`);
     }
     if (villages < 6 || villages > 10) {
       issues.push(`Region ${regionId} has ${villages} villages (expected 6-10)`);
+    }
+    if (farms < 1) {
+      issues.push(`Region ${regionId} has no farms (expected at least 1)`);
+    }
+    if (activityNodes < 3) {
+      issues.push(`Region ${regionId} has too few activity nodes: ${activityNodes} (expected at least 3)`);
     }
   }
 

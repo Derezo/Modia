@@ -872,8 +872,14 @@ export class WorldMapEffects {
     if (this.useOrganicPaths && fromNodeId && toNodeId) {
       const style = this.getPathTypeStyle(pathType);
       renderOrganicPath(ctx, x1, y1, x2, y2, fromNodeId, toNodeId, style);
+
+      // Add subtle river/canyon visual hint for bridge paths
+      if (pathType === 'bridge') {
+        this.renderBridgeWaterHint(ctx, x1, y1, x2, y2);
+      }
     } else {
-      // Fallback to bezier curve
+      // Fallback to bezier curve (with proper state isolation)
+      ctx.save();
       ctx.strokeStyle = '#5d4e37';
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 5]);
@@ -882,7 +888,57 @@ export class WorldMapEffects {
       ctx.quadraticCurveTo(controlPoint.x, controlPoint.y, x2, y2);
       ctx.stroke();
       ctx.setLineDash([]);
+      ctx.restore();
     }
+  }
+
+  /**
+   * Render a subtle water/canyon hint at bridge connection midpoint
+   * Creates an implied river or canyon that the bridge crosses
+   */
+  renderBridgeWaterHint(ctx, x1, y1, x2, y2) {
+    const midX = (x1 + x2) / 2;
+    const midY = (y1 + y2) / 2;
+
+    // Calculate perpendicular direction for the "river"
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const length = Math.hypot(dx, dy);
+    if (length < 1) return;
+
+    // Perpendicular unit vector
+    const perpX = -dy / length;
+    const perpY = dx / length;
+
+    // Draw subtle water shimmer perpendicular to the path
+    ctx.save();
+    ctx.globalAlpha = 0.15;
+
+    // River/canyon line (perpendicular to bridge)
+    const riverLength = 25;
+    const riverX1 = midX + perpX * riverLength;
+    const riverY1 = midY + perpY * riverLength;
+    const riverX2 = midX - perpX * riverLength;
+    const riverY2 = midY - perpY * riverLength;
+
+    // Draw soft water line
+    ctx.beginPath();
+    ctx.moveTo(riverX1, riverY1);
+    ctx.lineTo(riverX2, riverY2);
+    ctx.strokeStyle = '#4a7c9b';  // Soft blue-grey for water
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+
+    // Add subtle wave pattern
+    ctx.globalAlpha = 0.1;
+    ctx.strokeStyle = '#6a9cbb';
+    ctx.lineWidth = 4;
+    ctx.setLineDash([3, 6]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.restore();
   }
 
   /**

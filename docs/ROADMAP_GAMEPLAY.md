@@ -418,6 +418,48 @@ Per ITEM_SYSTEM.md specifications:
 - [x] region_id, region_race, ring_distance on world_nodes
 - [x] Foreign keys and indexes
 
+### 5.1.3 World Generation Improvements (In Progress - v8.5)
+
+> **Purpose:** Enhance world variety with new node types, better distribution, and improved connectivity
+> **Migration:** 031_expanded_node_types.sql
+
+#### New Node Types
+- [x] Fishing spots - Resource mini-game locations
+- [x] Merchant caravans - Traveling traders with random inventory
+- [x] Ruins - Puzzle/exploration for treasure
+- [x] Watchtowers - Reveal nearby undiscovered nodes (very rare, outer rings)
+- [x] Farms - Additional settlement type for outer areas
+
+#### Zodiac Shrine System (Placement Complete, Effects Future)
+- [x] 12 zodiac shrines placed (one of each type): Aries, Taurus, Gemini, Cancer, Leo, Virgo, Libra, Scorpio, Sagittarius, Capricorn, Aquarius, Pisces
+- [x] Shrine placement: outer areas, evenly distributed with MIN_SPACING=15
+- [x] shrine_buff_type column for zodiac identification
+- [ ] Zodiac stone collection quest (collect all 12)
+- [ ] Unique blessings per zodiac type
+
+#### Guild Distribution Enhancement
+- [x] 3 guilds per region (up from 1)
+- [x] Primary guild in Ring 1 (race-appropriate type)
+- [x] 2 secondary guilds in Rings 2-3 (different types)
+- [x] Race-to-guild mapping: Orc→Warrior, Elf→Wizard, Human→Monk, Dwarf→Chemist
+
+#### Node Distribution Rebalancing
+- [x] Target: 40-50% battle nodes (down from 60-70%)
+- [x] Target: 20-30% activity/neutral nodes
+- [x] Target: 20-30% settlements
+- [x] Farms in outer areas, not near castles
+
+#### Connection Improvements
+- [x] Max connection distance: 10-12 world units
+- [x] Inter-region bridges with subtle river/canyon visual
+- [ ] Gap infill algorithm for connections >20 units (generates intermediate nodes)
+
+#### Future Activity Node Features
+- [ ] Fishing mini-game implementation
+- [ ] Merchant caravan inventory and trading mechanics
+- [ ] Ruins puzzle system
+- [ ] Watchtower reveal mechanic
+
 ### 5.2 Character Progression
 
 - [x] Remove old auto-advancement from skills.js
@@ -555,6 +597,7 @@ Per ITEM_SYSTEM.md specifications:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.0 | Jan 2026 | World Generation Improvements (v8.5): New node types (fishing spots, merchant caravans, ruins, watchtowers, farms). Guild distribution enhanced (3 per region, race-appropriate primary guild). Node distribution rebalancing (40-50% battle target). Bridge visual enhancement with river/canyon hints. Zodiac shrine system planned (12 unique shrines with collection quest). Migration 031_expanded_node_types.sql. Flickering bug fixed in WorldMapScene.js. |
 | 2.9 | Jan 2026 | Formation System Improvements (v8.3): BattleFormationScene now shows all 12 party characters instead of only 5, with click-to-cycle placement and direction indicator (red border highlight) showing enemy side. FormationScene adds sorting options (Level/Class/Name toggle buttons) and removes empty slot placeholders. Code quality: timer cleanup, canvas save/restore, stable sorting. |
 | 2.8 | Jan 2026 | Character Portrait Enhancement v2: 120 portraits enhanced with gender differentiation (face shapes, eye styling, cheekbones), race distinctiveness (vampire fangs, elf circlets, orc hair contrast, dwarf sideburns), and class identity (warrior insignia, monk chi glow, sorcerer dark aura, ninja weapons, berserker rage glow). New utility functions and palettes added. |
 | 2.7 | Jan 2026 | Formation & Inventory Integration complete (v8.2): 9 new components (Accordion, CharacterCard, PartyStatsSummary, CharacterPicker, ItemsModal, ItemDetailModal, CharacterModal, EquipmentSlotModal, SkillDetailModal). FormationScene redesigned with modal architecture. InventoryScene/InventoryPanel deleted. User Experience updated to 85%. |
