@@ -10,7 +10,7 @@
 -- Stores metadata for each racial homeland region
 CREATE TABLE IF NOT EXISTS world_regions (
   id SERIAL PRIMARY KEY,
-  race VARCHAR(20) NOT NULL,
+  race VARCHAR(20) NOT NULL UNIQUE,
   castle_node_id INTEGER REFERENCES world_nodes(id) ON DELETE SET NULL,
   keep_node_id INTEGER REFERENCES world_nodes(id) ON DELETE SET NULL,
   guild_node_id INTEGER REFERENCES world_nodes(id) ON DELETE SET NULL,
@@ -43,3 +43,20 @@ CREATE INDEX IF NOT EXISTS idx_world_nodes_region_race ON world_nodes(region_rac
 CREATE INDEX IF NOT EXISTS idx_world_nodes_ring ON world_nodes(ring_distance);
 CREATE INDEX IF NOT EXISTS idx_characters_home_region ON characters(home_region_id);
 CREATE INDEX IF NOT EXISTS idx_world_regions_race ON world_regions(race);
+
+-- ============================================
+-- FOREIGN KEY CONSTRAINTS
+-- ============================================
+-- Add foreign key from world_nodes.region_id to world_regions
+-- Using DO block to handle IF NOT EXISTS for constraint (not natively supported)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'fk_world_nodes_region'
+  ) THEN
+    ALTER TABLE world_nodes
+      ADD CONSTRAINT fk_world_nodes_region
+      FOREIGN KEY (region_id) REFERENCES world_regions(id) ON DELETE SET NULL;
+  END IF;
+END $$;
