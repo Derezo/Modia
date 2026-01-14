@@ -27,6 +27,7 @@ npm run test:unit -w api                # Unit tests + balance tests (fast, no s
 npm run test:integration -w api         # Integration tests (requires running server)
 npm run test:ratelimit -w api           # Rate limit tests (TEST_RATE_LIMITS=true)
 npm run test:quick -w api               # Alias for test:unit
+npm run test -w shared                  # Shared module tests (battleMath, pathfinding, etc.)
 node --test api/src/tests/integration/auth.integration.test.js  # Single test file
 
 # E2E Testing (Playwright - auto-starts servers)
@@ -109,6 +110,11 @@ Room-based subscriptions at `/ws`:
 
 **World generation:** Deterministic from `WORLD_SEED` env var using `SeededRandom` - same seed always produces same world layout
 
+**Environment variables:** Key env vars in `.env`:
+- `DEBUG=true` - Enable detailed query logging and debug output
+- `WORLD_SEED` - Seed for deterministic world generation
+- `TEST_RATE_LIMITS=true` - Required to run rate limiter tests
+
 **Character stats:** Base stats from race + (class growth × level) - see `calculateStats()` in `shared/constants.js`
 
 **Scene lifecycle:** `enter()` → `update(dt)` / `render(ctx)` loop → `exit()` - scenes manage their own state and cleanup
@@ -130,6 +136,15 @@ Use `testHelper.js` for utilities:
 - `request()` - HTTP helper for API calls
 
 For WebSocket tests, use `testUtils/wsTestHelper.js` (`createWsClient()`, `waitForMessage()`).
+
+For tests needing multiple users/characters with auto-cleanup, use `createTestContext()`:
+```javascript
+const ctx = createTestContext();
+const user1 = await ctx.createUser();
+const char1 = await ctx.createCharacter(user1.accessToken);
+// ... test logic ...
+await ctx.cleanup(); // Deletes all created users/characters
+```
 
 ## Critical Technical Gotchas
 
@@ -181,6 +196,22 @@ ctx.scale(-1, 1);
 ctx.drawImage(sprite, ...);
 ctx.restore(); // CRITICAL
 ```
+
+### Canvas-to-Viewport Coordinate Conversion
+
+When positioning DOM elements over canvas content, canvas coordinates do NOT equal viewport coordinates due to scaling and centering:
+
+```javascript
+// Convert canvas coords to viewport coords for DOM positioning
+const rect = this.game.canvas.getBoundingClientRect();
+const scale = this.game.scale;
+const viewportX = rect.left + (canvasX * scale);
+const viewportY = rect.top + (canvasY * scale);
+```
+
+**Common mistake:** Using canvas coordinates directly for DOM positioning causes elements to appear in wrong location, especially with non-square viewports.
+
+See `docs/FRONTEND_TECHNICAL_PATTERNS.md` Section 10 for full details and examples.
 
 ## Subagents
 

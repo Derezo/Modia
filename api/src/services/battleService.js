@@ -4,6 +4,7 @@
 
 import { CLASS_MOVEMENT } from '../config/constants.js';
 import { SKILL_TREES } from '../config/skillTrees.js';
+import { MONSTER_SKILL_TREES } from '../config/monsterSkillTrees.js';
 import { scaleSkillAttributes } from '../config/skillScaling.js';
 import * as traitService from './traitService.js';
 import { getTerrainMovementCost } from '../../../shared/terrain.js';
@@ -665,20 +666,60 @@ function calculatePathCost(startX, startY, targetX, targetY, state, maxCost) {
  * @param {number} skillLevel - Optional skill level for scaling (1-100)
  * @returns {Object|null} Skill definition (scaled if level provided) or null if not found
  */
-function getSkillDefinition(unitClass, skillId, skillLevel = null) {
-  const classTree = SKILL_TREES[unitClass?.toLowerCase()];
-  if (!classTree) return null;
-
-  for (const branch of classTree.branches) {
-    const skill = branch.skills.find(s => s.id === skillId);
-    if (skill) {
-      // Apply scaling if skill level is provided
-      if (skillLevel && skillLevel > 1) {
-        return scaleSkillAttributes(skill, skillLevel);
-      }
-      return skill;
+function getSkillDefinition(unitClass, skillId, skillLevel = null, unit = null) {
+  // First, check if the unit has the skill directly in their skills array
+  // This is how enemy units store their skills (from npcSkillService)
+  if (unit && unit.skills && Array.isArray(unit.skills)) {
+    const unitSkill = unit.skills.find(s => s.id === skillId);
+    if (unitSkill) {
+      // Unit's skills are already scaled when generated
+      return unitSkill;
     }
   }
+
+  // Try player class skill trees
+  const classTree = SKILL_TREES[unitClass?.toLowerCase()];
+  if (classTree) {
+    for (const branch of classTree.branches) {
+      const skill = branch.skills.find(s => s.id === skillId);
+      if (skill) {
+        if (skillLevel && skillLevel > 1) {
+          return scaleSkillAttributes(skill, skillLevel);
+        }
+        return skill;
+      }
+    }
+  }
+
+  // Try monster skill trees (check all archetypes)
+  // This handles enemies that use monster archetype skills
+  const archetypeToCheck = unit?.archetype || unitClass;
+  const archetypeTree = MONSTER_SKILL_TREES[archetypeToCheck?.toLowerCase()];
+  if (archetypeTree) {
+    for (const branch of archetypeTree.branches) {
+      const skill = branch.skills.find(s => s.id === skillId);
+      if (skill) {
+        if (skillLevel && skillLevel > 1) {
+          return scaleSkillAttributes(skill, skillLevel);
+        }
+        return skill;
+      }
+    }
+  }
+
+  // Fall back: search ALL monster skill trees
+  for (const [archetype, tree] of Object.entries(MONSTER_SKILL_TREES)) {
+    for (const branch of tree.branches) {
+      const skill = branch.skills.find(s => s.id === skillId);
+      if (skill) {
+        if (skillLevel && skillLevel > 1) {
+          return scaleSkillAttributes(skill, skillLevel);
+        }
+        return skill;
+      }
+    }
+  }
+
   return null;
 }
 
@@ -1176,9 +1217,19 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
         return result;
       }
       if (targetTile && skillId) {
-        // Get the unit's skill level for scaling (from their learned skills)
-        const unitSkillLevel = unit.skills?.[skillId] || 1;
-        const skill = getSkillDefinition(unit.class, skillId, unitSkillLevel);
+        // Get the unit's skill level for scaling
+        // For enemies, skills are stored as array of skill objects with level property
+        // For players, skills may be a map of skillId -> level
+        let unitSkillLevel = 1;
+        if (Array.isArray(unit.skills)) {
+          const unitSkillData = unit.skills.find(s => s.id === skillId);
+          unitSkillLevel = unitSkillData?.level || 1;
+        } else if (unit.skills?.[skillId]) {
+          unitSkillLevel = unit.skills[skillId];
+        }
+
+        // Pass unit to getSkillDefinition so it can check unit's skills array directly
+        const skill = getSkillDefinition(unit.class, skillId, unitSkillLevel, unit);
         if (!skill) {
           result.error = 'Invalid skill';
           break;

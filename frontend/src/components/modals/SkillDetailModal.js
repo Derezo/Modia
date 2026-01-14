@@ -397,6 +397,29 @@ export class SkillDetailModal {
         cursor: not-allowed;
       }
 
+      .skill-detail-level-up-actions {
+        display: flex;
+        gap: ${PARCHMENT_SPACING.sm};
+      }
+
+      .skill-detail-close-btn {
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.lg};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        background: ${PARCHMENT_COLORS.light};
+        color: ${PARCHMENT_COLORS.text.primary};
+        border: 1px solid ${PARCHMENT_COLORS.border};
+        border-radius: ${PARCHMENT_RADIUS.sm};
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .skill-detail-close-btn:hover {
+        background: ${PARCHMENT_COLORS.mid};
+        border-color: ${PARCHMENT_COLORS.borderDark};
+      }
+
       .skill-detail-max-level {
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
         color: ${PARCHMENT_COLORS.text.muted};
@@ -710,13 +733,21 @@ export class SkillDetailModal {
           <div class="skill-detail-xp-cost ${costClass}">
             Cost: ${totalCost.toLocaleString()} XP (${this.availableXp.toLocaleString()} available)
           </div>
-          <button
-            class="skill-detail-level-up-btn"
-            data-action="level-up"
-            ${!canAfford ? 'disabled' : ''}
-          >
-            Level Up
-          </button>
+          <div class="skill-detail-level-up-actions">
+            <button
+              class="skill-detail-level-up-btn"
+              data-action="level-up"
+              ${!canAfford ? 'disabled' : ''}
+            >
+              Level Up
+            </button>
+            <button
+              class="skill-detail-close-btn"
+              data-action="close"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -836,6 +867,12 @@ export class SkillDetailModal {
     if (levelUpBtn) {
       levelUpBtn.addEventListener('click', () => this.handleLevelUp());
     }
+
+    // Close button
+    const closeBtn = contentEl.querySelector('[data-action="close"]');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => this.close());
+    }
   }
 
   /**
@@ -868,13 +905,24 @@ export class SkillDetailModal {
 
     try {
       // Call API to learn/level up skill
-      await this.game.api.learnSkill(this.characterId, this.skill.id, this.selectedLevelUp);
+      const result = await this.game.api.learnSkill(this.characterId, this.skill.id, this.selectedLevelUp);
 
       const newLevel = this.currentLevel + this.selectedLevelUp;
+      const xpCost = this.calculateXpCost(this.selectedLevelUp);
+
       parchmentToast.success(`${this.skill.name} is now Level ${newLevel}!`);
 
+      // Update internal state instead of closing
+      this.currentLevel = newLevel;
+      this.availableXp = result?.availableXp ?? (this.availableXp - xpCost);
+      this.learnedSkills[this.skill.id] = newLevel;
+      this.selectedLevelUp = 1; // Reset to default selection
+
+      // Notify parent to refresh its data
       this.onSkillLevelUp();
-      this.close();
+
+      // Re-render modal with updated state
+      this.render();
 
     } catch (error) {
       console.error('Failed to level up skill:', error);

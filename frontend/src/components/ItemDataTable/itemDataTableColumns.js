@@ -207,6 +207,120 @@ export const COLUMN_RENDERERS = {
         ~${priceValue}g
       </span>
     `;
+  },
+
+  /**
+   * Equipment slot column - shows slot name for equipment slot tables
+   * @param {Object} row - Row with slotName property
+   * @returns {string} HTML for slot name
+   */
+  slot: (row) => {
+    const slotName = row.slotName || capitalize(row.slotKey || '');
+    return `<span class="item-data-table-slot">${escapeHtml(slotName)}</span>`;
+  },
+
+  /**
+   * Equipped item column - shows currently equipped item or "Empty"
+   * @param {Object} row - Row with item property (can be null)
+   * @returns {string} HTML for equipped item
+   */
+  equippedItem: (row) => {
+    if (!row.item) {
+      return '<span class="item-data-table-empty-slot">Empty</span>';
+    }
+
+    const iconType = row.item.type || 'weapon';
+    const iconHtml = Icon.html('items', iconType, { size: 'sm' }) || '';
+    const rarityClass = `rarity-${row.item.rarity || 'common'}`;
+    const name = escapeHtml(row.item.name || 'Unknown');
+
+    return `
+      <div class="item-data-table-icon-name">
+        ${iconHtml}
+        <span class="item-data-table-item-name ${rarityClass}">${name}</span>
+      </div>
+    `;
+  },
+
+  /**
+   * Stat comparison column - shows stat differences vs currently equipped item
+   * Requires options.compareItem to be passed to the renderer
+   * @param {Object} item - Item to compare
+   * @param {Object} options - Options containing compareItem
+   * @returns {string} HTML for stat comparison
+   */
+  statComparison: (item, options = {}) => {
+    const current = options.compareItem;
+
+    // If no comparison item, show dashes
+    if (!current && !item) return '-';
+
+    // Get stats from both items
+    const itemStats = { ...(item?.baseStats || {}), ...(item?.bonusStats || {}) };
+    const currentStats = { ...(current?.baseStats || {}), ...(current?.bonusStats || {}) };
+
+    // Calculate total stats for simple comparison
+    const itemPower = (item?.attack || 0) + (item?.defense || 0) +
+      Object.values(itemStats).reduce((a, b) => a + (b || 0), 0);
+    const currentPower = (current?.attack || 0) + (current?.defense || 0) +
+      Object.values(currentStats).reduce((a, b) => a + (b || 0), 0);
+
+    // If comparing to nothing (empty slot), show all as positive
+    if (!current) {
+      const entries = Object.entries(itemStats).filter(([, v]) => v && v !== 0);
+      if (entries.length === 0 && !item?.attack && !item?.defense) return '-';
+
+      const parts = [];
+      if (item?.attack) parts.push(`<span class="stat-positive">+${item.attack} ATK</span>`);
+      if (item?.defense) parts.push(`<span class="stat-positive">+${item.defense} DEF</span>`);
+      entries.slice(0, 2).forEach(([k, v]) => {
+        parts.push(`<span class="stat-positive">+${v} ${formatStatAbbrev(k)}</span>`);
+      });
+      return parts.slice(0, 3).join(', ');
+    }
+
+    // Calculate differences
+    const diffs = [];
+
+    // Check attack/defense first
+    const attackDiff = (item?.attack || 0) - (current?.attack || 0);
+    const defenseDiff = (item?.defense || 0) - (current?.defense || 0);
+
+    if (attackDiff !== 0) {
+      const sign = attackDiff > 0 ? '+' : '';
+      const cls = attackDiff > 0 ? 'stat-positive' : 'stat-negative';
+      diffs.push(`<span class="${cls}">${sign}${attackDiff} ATK</span>`);
+    }
+
+    if (defenseDiff !== 0) {
+      const sign = defenseDiff > 0 ? '+' : '';
+      const cls = defenseDiff > 0 ? 'stat-positive' : 'stat-negative';
+      diffs.push(`<span class="${cls}">${sign}${defenseDiff} DEF</span>`);
+    }
+
+    // Check other stats
+    const allStatKeys = new Set([...Object.keys(itemStats), ...Object.keys(currentStats)]);
+    for (const key of allStatKeys) {
+      if (diffs.length >= 3) break;
+      const diff = (itemStats[key] || 0) - (currentStats[key] || 0);
+      if (diff !== 0) {
+        const sign = diff > 0 ? '+' : '';
+        const cls = diff > 0 ? 'stat-positive' : 'stat-negative';
+        diffs.push(`<span class="${cls}">${sign}${diff} ${formatStatAbbrev(key)}</span>`);
+      }
+    }
+
+    if (diffs.length === 0) {
+      // No stat differences, show overall comparison
+      if (itemPower > currentPower) {
+        return '<span class="stat-positive">Better</span>';
+      } else if (itemPower < currentPower) {
+        return '<span class="stat-negative">Worse</span>';
+      }
+      return '<span class="stat-neutral">Same</span>';
+    }
+
+    return diffs.join(', ');
   }
 };
 
@@ -316,6 +430,28 @@ export const COLUMN_CONFIGS = {
     sortKey: 'estimatedPrice',
     align: 'right',
     render: COLUMN_RENDERERS.estimatedPrice
+  },
+  slot: {
+    key: 'slot',
+    label: 'Slot',
+    width: '100px',
+    sortable: false,
+    render: COLUMN_RENDERERS.slot
+  },
+  equippedItem: {
+    key: 'equippedItem',
+    label: 'Equipped',
+    width: 'flex',
+    flex: 1,
+    sortable: false,
+    render: COLUMN_RENDERERS.equippedItem
+  },
+  statComparison: {
+    key: 'statComparison',
+    label: 'vs Current',
+    width: '140px',
+    sortable: false,
+    render: COLUMN_RENDERERS.statComparison
   }
 };
 
@@ -336,7 +472,9 @@ export const COLUMN_PRESETS = {
   marketplace: ['rarity', 'iconName', 'stats', 'augments', 'price', 'seller'],
   inventory: ['rarity', 'iconName', 'type', 'quantity'],
   formation: ['rarity', 'iconName', 'type', 'stats'],
-  sellable: ['rarity', 'iconName', 'quantity', 'estimatedPrice']
+  sellable: ['rarity', 'iconName', 'quantity', 'estimatedPrice'],
+  'equipment-slots': ['slot', 'equippedItem', 'stats'],
+  'equipment-available': ['rarity', 'iconName', 'stats', 'statComparison']
 };
 
 /**

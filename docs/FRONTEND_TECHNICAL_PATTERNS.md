@@ -479,3 +479,126 @@ modal.destroy();
 | `secondary` | Cancel, back | Light parchment fill |
 | `danger` | Delete, remove | Red-tinted fill |
 | `ghost` | Minimal emphasis | Transparent, text only |
+
+---
+
+## 10. Canvas-to-Viewport Coordinate Conversion
+
+### 10.1 The Problem
+
+When positioning DOM elements over canvas content, the coordinates don't match because:
+
+1. **Internal vs Display Size:** The canvas has a fixed internal resolution (e.g., 1920x1080) but is scaled to fit the container
+2. **Aspect Ratio Letterboxing:** The canvas maintains aspect ratio, leaving black bars (letterbox/pillarbox) when the viewport doesn't match
+3. **Canvas Centering:** The scaled canvas is centered within its container
+
+```
+┌─────────────────────────────────────┐
+│         Viewport (DOM space)        │
+│  ┌─────────────────────────────┐    │
+│  │                             │    │
+│  │   Canvas (internal coords)  │    │ ← Canvas is centered
+│  │                             │    │
+│  │      (x, y) in canvas       │    │
+│  │                             │    │
+│  └─────────────────────────────┘    │
+│                                     │
+└─────────────────────────────────────┘
+
+DOM element at (x, y) will NOT align with canvas (x, y)!
+```
+
+### 10.2 The Solution
+
+Convert canvas coordinates to viewport coordinates using:
+
+```javascript
+/**
+ * Convert canvas coordinates to viewport coordinates
+ * for positioning DOM elements over canvas content
+ */
+getViewportPosition(canvasX, canvasY) {
+  // Get canvas position and size in viewport
+  const rect = this.game.canvas.getBoundingClientRect();
+
+  // Get scale factor (display size / internal size)
+  const scale = this.game.scale || 1;
+
+  // Convert: viewport = canvasOffset + (canvasCoord * scale)
+  return {
+    x: rect.left + (canvasX * scale),
+    y: rect.top + (canvasY * scale)
+  };
+}
+```
+
+### 10.3 Understanding the Math
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `rect.left` | Canvas X position in viewport (accounts for centering) | 100px |
+| `rect.top` | Canvas Y position in viewport | 0px |
+| `scale` | `displayWidth / internalWidth` | 0.75 |
+| `canvasX/Y` | Coordinates in canvas internal space | (500, 300) |
+| **Result** | `rect.left + canvasX * scale` | 100 + 500*0.75 = 475px |
+
+### 10.4 Reverse Conversion (Viewport to Canvas)
+
+Used by `InputHandler.js` for mouse/touch input:
+
+```javascript
+getCanvasCoords(viewportX, viewportY) {
+  const rect = this.canvas.getBoundingClientRect();
+  return {
+    x: (viewportX - rect.left) / this.scale,
+    y: (viewportY - rect.top) / this.scale
+  };
+}
+```
+
+### 10.5 Complete Example: NodeActionMenu
+
+Positioning a DOM menu element near a canvas-rendered node:
+
+```javascript
+// In WorldMapScene.js
+getNodeScreenPosition(node) {
+  // Calculate position in canvas space
+  const canvasX = node.x_coord * this.nodeSpacing + this.cameraX;
+  const canvasY = node.y_coord * this.nodeSpacing + this.cameraY;
+
+  // Convert to viewport coordinates
+  const rect = this.game.canvas.getBoundingClientRect();
+  const scale = this.game.scale || 1;
+
+  return {
+    x: rect.left + (canvasX * scale),
+    y: rect.top + (canvasY * scale),
+    nodeSize: this.nodeSize * scale,  // Scale sizes too!
+    canvasHeight: rect.height         // Use display height for edge detection
+  };
+}
+
+// In render() - update position every frame
+if (this.nodeActionMenu && this.currentNode) {
+  const pos = this.getNodeScreenPosition(this.currentNode);
+  this.nodeActionMenu.updatePosition(pos.x, pos.y, pos.nodeSize, pos.canvasHeight);
+}
+```
+
+### 10.6 Common Mistakes
+
+| Mistake | Symptom | Fix |
+|---------|---------|-----|
+| Using `canvas.width` instead of `rect.width` | Wrong scale factor | Use `getBoundingClientRect()` |
+| Forgetting to scale node/element sizes | Elements too big/small | Multiply sizes by `scale` |
+| Using `canvas.height` for edge detection | Wrong boundaries | Use `rect.height` (display size) |
+| Not updating position in render loop | Element drifts during pan | Call updatePosition every frame |
+
+### 10.7 Key Classes Using This Pattern
+
+| Class | Purpose | File |
+|-------|---------|------|
+| `NodeActionMenu` | Menu positioned over current world map node | `worldmap/NodeActionMenu.js` |
+| `InputHandler` | Reverse conversion for mouse/touch input | `core/InputHandler.js` |
+| `Game` | Manages scale factor on resize | `core/Game.js` |
