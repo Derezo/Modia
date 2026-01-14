@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 17.0 |
+| Version | 18.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -110,6 +110,7 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 18.0 | Jan 2026 | AI Enemy Skill System Fix: Fixed `getSkillDefinition` to support monster archetype skills (beast, insect, dragon, etc.). Added `getSkillRangeTiles` for accurate skill range visualization. Fixed target ID property mismatch in action generator. New test suite: battleService.unit.test.js (26 tests). Combat System now functional for all enemy types. |
 | 17.0 | Jan 2026 | Technical Debt Cleanup: Modularized seed.js from 4862 to 918 lines into 12 worldgen modules. Added LRU cache limits to WorldMapScene pathPreviewCache. Created composite database indexes for regional queries. Fixed phase3.test.js imports. |
 | 16.0 | Jan 2026 | World Map Enhancement: Terminator treasure nodes (chest/shrine/discovery), terrain obstacles (lakes, mountains, forests), compact node options panel with type badge, settlement adjacency rules preventing same-type connections, connection count constraints. 6 new API endpoints, 2 new migrations, security hardening (location validation, race condition prevention). |
 | 15.0 | Jan 2026 | Character Portrait Enhancement v2: Comprehensive overhaul of 120 character portraits (5 races × 3 genders × 8 classes). Added gender-specific face rendering (face shapes, eyes, cheekbones). Enhanced race distinctiveness (vampire fangs 4px, elf circlet with gem, orc hair contrast, dwarf female sideburns). Improved class identity (warrior insignia, monk chi glow, sorcerer dark aura, ninja clan symbol/weapons, berserker rage glow). New utils: drawGenderedEyes(), drawCheekbones(), drawEyeGlow(), drawSymbol(), orcHair/darkMagic palettes. |
