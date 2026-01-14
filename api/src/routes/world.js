@@ -1,6 +1,7 @@
 import express from 'express';
 import { query } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
+import { travelLimiter } from '../middleware/gameplayRateLimiter.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import presenceService from '../services/presenceService.js';
 import * as staminaService from '../services/staminaService.js';
@@ -575,7 +576,7 @@ router.get('/path/:targetNodeId', authenticate, asyncHandler(async (req, res) =>
 }));
 
 // POST /api/world/travel - Move party to any discovered node
-router.post('/travel', authenticate, asyncHandler(async (req, res) => {
+router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res) => {
   const { targetNodeId } = req.body;
 
   if (!targetNodeId) {

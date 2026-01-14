@@ -50,6 +50,11 @@ import { initializeTraitEffects } from './services/traits/index.js';
 const app = express();
 const server = http.createServer(app);
 
+// SECURITY: Enable trust proxy for proper IP detection behind nginx/reverse proxy
+// Without this, req.ip returns proxy IP (127.0.0.1) instead of real client IP
+// Set to 1 to trust first hop, or 'loopback' for local reverse proxy
+app.set('trust proxy', process.env.TRUST_PROXY || 1);
+
 // SECURITY: Parse CORS origins from environment variable or use defaults
 const corsOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())

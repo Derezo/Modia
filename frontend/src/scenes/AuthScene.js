@@ -645,9 +645,11 @@ export class AuthScene extends Scene {
       // Store auth data
       this.game.state.set('user', result.user);
       this.game.state.set('token', result.accessToken);
+      this.game.state.set('refreshToken', result.refreshToken);
       this.game.state.persist();
 
-      this.game.refreshToken = result.refreshToken;
+      // Start token refresh manager for automatic token refresh
+      this.game.tokenRefreshManager.start(result.accessToken);
 
       // Connect WebSocket
       this.game.socket.connect(result.accessToken);

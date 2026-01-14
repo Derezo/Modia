@@ -3,6 +3,15 @@ export class ApiClient {
     this.baseUrl = baseUrl;
     this.token = null;
     this.onUnauthorized = null;
+    this.tokenRefreshManager = null;
+  }
+
+  /**
+   * Set the token refresh manager for automatic 401 handling
+   * @param {TokenRefreshManager} manager
+   */
+  setTokenRefreshManager(manager) {
+    this.tokenRefreshManager = manager;
   }
 
   setToken(token) {
@@ -30,9 +39,30 @@ export class ApiClient {
     }
 
     try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, fetchOptions);
+      let response = await fetch(`${this.baseUrl}${endpoint}`, fetchOptions);
 
-      // Handle 401 Unauthorized
+      // Handle 401 Unauthorized - attempt token refresh before failing
+      if (response.status === 401 && !options._isRetry && this.tokenRefreshManager) {
+        // Don't retry refresh endpoint itself to avoid infinite loop
+        if (!endpoint.includes('/auth/refresh')) {
+          const refreshed = await this.tokenRefreshManager.handle401();
+
+          if (refreshed) {
+            // Retry the original request with new token
+            const retryHeaders = {
+              ...headers,
+              'Authorization': `Bearer ${this.token}`
+            };
+
+            response = await fetch(`${this.baseUrl}${endpoint}`, {
+              ...fetchOptions,
+              headers: retryHeaders
+            });
+          }
+        }
+      }
+
+      // Still unauthorized after refresh attempt
       if (response.status === 401) {
         if (this.onUnauthorized) {
           this.onUnauthorized();

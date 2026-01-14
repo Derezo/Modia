@@ -2,6 +2,7 @@ import { StateManager } from './StateManager.js';
 import { SceneManager } from './SceneManager.js';
 import { InputHandler } from './InputHandler.js';
 import { ApiClient } from '../api/client.js';
+import { TokenRefreshManager } from '../api/TokenRefreshManager.js';
 import { GameWebSocket } from '../api/websocket.js';
 import { AssetLoader } from './AssetLoader.js';
 import { responsive } from './Responsive.js';
@@ -23,6 +24,7 @@ export class Game {
     this.scenes = null;
     this.input = null;
     this.api = null;
+    this.tokenRefreshManager = null;
     this.socket = null;
     this.assetLoader = null;
 
@@ -63,6 +65,8 @@ export class Game {
 
     // Initialize subsystems
     this.api = new ApiClient(this.getApiUrl());
+    this.tokenRefreshManager = new TokenRefreshManager(this);
+    this.api.setTokenRefreshManager(this.tokenRefreshManager);
     this.socket = new GameWebSocket(this.getWebSocketUrl());
     this.input = new InputHandler(this.canvas);
     this.scenes = new SceneManager(this);
@@ -134,6 +138,9 @@ export class Game {
         const response = await this.api.get('/auth/me');
         this.state.set('user', response.user);
 
+        // Start token refresh manager for automatic token refresh
+        this.tokenRefreshManager.start(token);
+
         // Load user settings
         await this.loadSettings();
 
@@ -153,8 +160,10 @@ export class Game {
           this.scenes.switchTo('worldMap');
         }
       } catch (err) {
-        // Token invalid, clear and show login
+        // Token invalid, stop refresh manager and clear state
+        this.tokenRefreshManager.stop();
         this.state.set('token', null);
+        this.state.set('refreshToken', null);
         this.state.set('user', null);
         this.state.persist();
         this.scenes.switchTo('login');
@@ -451,6 +460,7 @@ export class Game {
 
     // Clean up subsystems
     this.input?.destroy();
+    this.tokenRefreshManager?.stop();
     this.socket?.disconnect();
     this.destroyNotificationSystem();
   }

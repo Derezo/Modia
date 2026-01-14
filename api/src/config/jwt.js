@@ -21,7 +21,7 @@ const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || (() => {
   return 'dev-refresh-secret-change-in-production';
 })();
 
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '1h';  // Extended from 15m for better game UX
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
 
 const generateAccessToken = (userId, username) => {
