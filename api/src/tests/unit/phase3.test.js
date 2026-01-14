@@ -158,7 +158,7 @@ describe('Phase 3: Internal Node Generation', () => {
       assert(typeCounts.city >= 2 && typeCounts.city <= 3,
         `Expected 2-3 cities, got ${typeCounts.city}`);
       assert.strictEqual(typeCounts.keep, 1, 'Should have exactly 1 keep');
-      assert.strictEqual(typeCounts.guild, 1, 'Should have exactly 1 guild');
+      assert.strictEqual(typeCounts.guild, 3, 'Should have exactly 3 guilds (1 primary + 2 secondary)');
       assert(typeCounts.village >= 6 && typeCounts.village <= 10,
         `Expected 6-10 villages, got ${typeCounts.village}`);
     });
@@ -219,6 +219,44 @@ describe('Phase 3: Internal Node Generation', () => {
         assert.strictEqual(result1.allNodes[i].y, result2.allNodes[i].y);
         assert.strictEqual(result1.allNodes[i].nodeType, result2.allNodes[i].nodeType);
       }
+    });
+
+    test('assigns exactly 12 zodiac shrines globally', () => {
+      const result = validateRegionNodeGeneration(12345);
+
+      const zodiacShrines = result.allNodes.filter(node =>
+        node.nodeType === 'shrine' && node.shrineBuffType && node.shrineBuffType.startsWith('zodiac_')
+      );
+
+      assert.strictEqual(zodiacShrines.length, 12, `Expected 12 zodiac shrines, got ${zodiacShrines.length}`);
+
+      // Verify all 12 zodiac types are present
+      const zodiacTypes = new Set(zodiacShrines.map(s => s.shrineBuffType));
+      assert.strictEqual(zodiacTypes.size, 12, 'Should have all 12 unique zodiac types');
+    });
+
+    test('assigns 3 guilds per region with different types', () => {
+      const result = validateRegionNodeGeneration(12345);
+
+      // Check each region has exactly 3 guilds of different types
+      for (const [regionId, regionNodes] of result.nodesByRegion) {
+        const guilds = regionNodes.filter(n => n.nodeType === 'guild');
+        assert.strictEqual(guilds.length, 3, `Region ${regionId} should have exactly 3 guilds`);
+
+        // Verify all 3 guild types are different
+        const guildTypes = new Set(guilds.map(g => g.guildType));
+        assert.strictEqual(guildTypes.size, 3, `Region ${regionId} should have 3 different guild types`);
+      }
+    });
+
+    test('includes activity node types', () => {
+      const result = validateRegionNodeGeneration(12345);
+
+      const activityTypes = ['fishing_spot', 'merchant_caravan', 'ruins'];
+      const activityNodes = result.allNodes.filter(n => activityTypes.includes(n.nodeType));
+
+      // Should have some activity nodes (at least 10% of non-settlement nodes)
+      assert(activityNodes.length >= 20, `Expected at least 20 activity nodes, got ${activityNodes.length}`);
     });
   });
 

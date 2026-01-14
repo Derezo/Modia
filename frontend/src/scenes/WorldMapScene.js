@@ -1253,7 +1253,8 @@ export class WorldMapScene extends Scene {
           // Pass node IDs for organic path generation
           this.effects.renderTexturedPath(ctx, x1, y1, x2, y2, conn.path_type, control, conn.from_node_id, conn.to_node_id);
         } else {
-          // Fallback to simple bezier path
+          // Fallback to simple bezier path (with proper state isolation)
+          ctx.save();
           const style = this.getPathStyle(conn.path_type);
 
           // Draw path shadow for depth
@@ -1274,7 +1275,7 @@ export class WorldMapScene extends Scene {
             ctx.setLineDash([5, 5]);
           }
           ctx.stroke();
-          ctx.setLineDash([]);
+          ctx.restore();
         }
       }
     }
@@ -1315,9 +1316,10 @@ export class WorldMapScene extends Scene {
           const x2 = endNode.x_coord * this.nodeSpacing + this.cameraX;
           const y2 = endNode.y_coord * this.nodeSpacing + this.cameraY;
 
-          // Skip if off screen
-          if (Math.max(x1, x2) < 0 || Math.min(x1, x2) > ctx.canvas.width ||
-              Math.max(y1, y2) < 0 || Math.min(y1, y2) > ctx.canvas.height) {
+          // Skip if off screen (use same 50px margin as regular connections for consistency)
+          const margin = 50;
+          if (Math.max(x1, x2) < -margin || Math.min(x1, x2) > ctx.canvas.width + margin ||
+              Math.max(y1, y2) < -margin || Math.min(y1, y2) > ctx.canvas.height + margin) {
             continue;
           }
 
@@ -1347,7 +1349,8 @@ export class WorldMapScene extends Scene {
           const midX = splinePoints[midIndex].x;
           const midY = splinePoints[midIndex].y;
 
-          // Draw lock icon background
+          // Draw lock icon background and icon (isolated canvas state)
+          ctx.save();
           ctx.beginPath();
           ctx.arc(midX, midY, 12, 0, Math.PI * 2);
           ctx.fillStyle = 'rgba(60, 40, 30, 0.85)';
@@ -1362,6 +1365,7 @@ export class WorldMapScene extends Scene {
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText('\u{1F512}', midX, midY);
+          ctx.restore();
         }
       }
     }
@@ -1433,13 +1437,14 @@ export class WorldMapScene extends Scene {
 
         // Draw selection ring (only for adjacent nodes, not current - character sprite shows current location)
         if (isAdjacent) {
+          ctx.save();
           ctx.beginPath();
           ctx.arc(x, y, drawSize / 2 + 2, 0, Math.PI * 2);
           ctx.strokeStyle = 'rgba(106, 176, 243, 0.6)';
           ctx.lineWidth = 2;
           ctx.setLineDash([4, 4]);
           ctx.stroke();
-          ctx.setLineDash([]);
+          ctx.restore();
         }
 
         // Draw blocked/cleared indicator for combat nodes (only for VISITED nodes)
@@ -1456,19 +1461,23 @@ export class WorldMapScene extends Scene {
             ctx.fill();
             ctx.restore();
 
-            // Lock icon
+            // Lock icon (isolated state)
+            ctx.save();
             ctx.fillStyle = '#ff4444';
             ctx.font = 'bold 16px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
             ctx.fillText('\u{1F512}', x, y - drawSize / 2 - 2); // Lock emoji
+            ctx.restore();
           } else if (node.cleared) {
-            // Green checkmark for cleared nodes
+            // Green checkmark for cleared nodes (isolated state)
+            ctx.save();
             ctx.fillStyle = '#44ff44';
             ctx.font = 'bold 14px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
             ctx.fillText('\u2713', x, y - drawSize / 2 - 2); // Checkmark
+            ctx.restore();
           }
         }
       } else {
@@ -1496,28 +1505,34 @@ export class WorldMapScene extends Scene {
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // Node icon - mystery nodes show "?"
+        // Node icon - mystery nodes show "?" (isolated state for text properties)
+        ctx.save();
         ctx.fillStyle = isMystery ? '#9a9aaa' : '#fff';
         ctx.font = isMystery ? 'bold 18px Arial' : '16px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(this.getNodeIcon(node.node_type, isVisited), x, y);
+        ctx.restore();
 
         // Draw blocked/cleared indicator for combat nodes (fallback style)
         const isCombatNode = ['forest', 'cave', 'mountain', 'bridge'].includes(node.node_type);
         if (isCombatNode && !isCurrent && !isMystery) {
           if (node.blocked) {
             // Red border for blocked
+            ctx.save();
             ctx.strokeStyle = '#ff4444';
             ctx.lineWidth = 3;
             ctx.stroke();
+            ctx.restore();
           } else if (node.cleared) {
-            // Green checkmark above
+            // Green checkmark above (isolated state)
+            ctx.save();
             ctx.fillStyle = '#44ff44';
             ctx.font = 'bold 12px Arial';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'bottom';
             ctx.fillText('\u2713', x, y - this.nodeSize - 4);
+            ctx.restore();
           }
         }
       }

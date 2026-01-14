@@ -41,7 +41,7 @@ import { generateAllRegionNodes } from './nodeGeneration.js';
  * @returns {boolean} True if settlement type
  */
 export function isSettlement(nodeType) {
-  return ['castle', 'city', 'village', 'guild', 'keep', 'palace'].includes(nodeType);
+  return ['castle', 'city', 'village', 'guild', 'keep', 'palace', 'farm'].includes(nodeType);
 }
 
 /**
