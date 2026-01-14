@@ -16,6 +16,7 @@ import { SocialHubScene } from '../scenes/SocialHubScene.js';
 import { LeaderboardScene } from '../scenes/LeaderboardScene.js';
 import { SettingsScene } from '../scenes/SettingsScene.js';
 import { GuildAdvancementScene } from '../scenes/GuildAdvancementScene.js';
+import { FishingScene } from '../scenes/FishingScene.js';
 
 export class SceneManager {
   constructor(game) {
@@ -49,7 +50,8 @@ export class SceneManager {
       socialHub: new SocialHubScene(this.game),
       leaderboard: new LeaderboardScene(this.game),
       settings: new SettingsScene(this.game),
-      guildAdvancement: new GuildAdvancementScene(this.game)
+      guildAdvancement: new GuildAdvancementScene(this.game),
+      fishing: new FishingScene(this.game)
     };
   }
 
