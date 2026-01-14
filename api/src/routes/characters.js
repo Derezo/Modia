@@ -103,22 +103,37 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
   );
   const nextSlot = Math.min(slotResult.rows[0].next_slot, MAX_PARTY_SIZE);
 
-  // Insert character
+  // Look up home region by race for spawn location
+  const regionResult = await query(
+    'SELECT id, castle_node_id FROM world_regions WHERE race = $1',
+    [race]
+  );
+
+  if (regionResult.rows.length === 0) {
+    throw new AppError('Invalid race for spawn location', 400);
+  }
+
+  const region = regionResult.rows[0];
+  const spawnNodeId = region.castle_node_id;
+  const homeRegionId = region.id;
+
+  // Insert character at racial homeland castle
   const result = await query(
     `INSERT INTO characters (
        user_id, name, race, class, gender, level, experience,
        hp_current, hp_max, mp_current, mp_max,
        strength, intelligence, agility, vitality, luck,
-       party_slot, current_node_id
+       party_slot, current_node_id, home_region_id
      )
-     VALUES ($1, $2, $3, $4, $5, 1, 0, $6, $6, $7, $7, $8, $9, $10, $11, $12, $13,
-             (SELECT id FROM world_nodes WHERE node_type = 'castle' LIMIT 1))
+     VALUES ($1, $2, $3, $4, $5, 1, 0, $6, $6, $7, $7, $8, $9, $10, $11, $12, $13, $14, $15)
      RETURNING *`,
     [
       req.user.userId, name, race, characterClass, gender,
       stats.hpMax, stats.mpMax,
       stats.strength, stats.intelligence, stats.agility, stats.vitality, stats.luck,
-      nextSlot <= MAX_PARTY_SIZE ? nextSlot : null
+      nextSlot <= MAX_PARTY_SIZE ? nextSlot : null,
+      spawnNodeId,
+      homeRegionId
     ]
   );
 
@@ -243,6 +258,47 @@ router.delete('/:id', authenticate, asyncHandler(async (req, res) => {
   await query('DELETE FROM characters WHERE id = $1 AND user_id = $2', [id, req.user.userId]);
 
   res.json({ message: 'Character deleted successfully' });
+}));
+
+// POST /api/characters/respawn - Return all party characters to home region castle
+router.post('/respawn', authenticate, asyncHandler(async (req, res) => {
+  // Get party leader to determine home region
+  const leaderResult = await query(
+    `SELECT c.id, c.home_region_id, wr.castle_node_id, c.in_battle
+     FROM characters c
+     LEFT JOIN world_regions wr ON c.home_region_id = wr.id
+     WHERE c.user_id = $1 AND c.party_slot = 1`,
+    [req.user.userId]
+  );
+
+  if (leaderResult.rows.length === 0) {
+    throw new AppError('No party leader found', 404);
+  }
+
+  const leader = leaderResult.rows[0];
+
+  if (leader.in_battle) {
+    throw new AppError('Cannot respawn while in battle', 400);
+  }
+
+  if (!leader.home_region_id || !leader.castle_node_id) {
+    throw new AppError('Character has no home region set', 400);
+  }
+
+  // Move all party members to the party leader's home castle
+  const result = await query(
+    `UPDATE characters
+     SET current_node_id = $1
+     WHERE user_id = $2 AND party_slot IS NOT NULL
+     RETURNING id, name, current_node_id`,
+    [leader.castle_node_id, req.user.userId]
+  );
+
+  res.json({
+    message: 'Party respawned at home castle',
+    nodeId: leader.castle_node_id,
+    characters: result.rows
+  });
 }));
 
 // GET /api/characters/:id/stats - Get computed stats with equipment
