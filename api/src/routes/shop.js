@@ -3,6 +3,11 @@ import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { MAX_GOLD } from '../config/constants.js';
+import {
+  getCaravanInventoryWithStock,
+  processPurchase as processCaravanPurchase
+} from '../services/caravanService.js';
+import { CARAVAN_REFRESH_INTERVAL } from '../db/templates/caravanItems.js';
 
 const router = express.Router();
 
@@ -22,6 +27,11 @@ const SHOP_CONFIG = {
     nodeTypes: ['village'],
     features: ['farm'],
     itemTypes: ['material', 'consumable']
+  },
+  caravan: {
+    nodeTypes: ['merchant_caravan'],
+    features: [],
+    itemTypes: ['consumable', 'material', 'weapon', 'armor', 'accessory']
   }
 };
 
@@ -70,7 +80,7 @@ function calculateSellPrice(basePrice) {
  */
 async function verifyShopAccess(nodeId, shopType) {
   const nodeResult = await query(
-    'SELECT id, node_type, features FROM world_nodes WHERE id = $1',
+    'SELECT id, node_type, features, name FROM world_nodes WHERE id = $1',
     [nodeId]
   );
 
@@ -141,8 +151,58 @@ router.get('/:nodeId/:shopType', authenticate, asyncHandler(async (req, res) => 
   }
 
   // Verify shop exists at this node
-  await verifyShopAccess(nodeIdNum, shopType);
+  const node = await verifyShopAccess(nodeIdNum, shopType);
 
+  // Handle caravan shops separately - they use caravanService
+  if (shopType === 'caravan') {
+    // Verify node is type merchant_caravan
+    if (node.node_type !== 'merchant_caravan') {
+      throw new AppError('This location is not a merchant caravan', 400);
+    }
+
+    // Get caravan inventory with real-time stock levels
+    const caravanData = await getCaravanInventoryWithStock(nodeIdNum);
+
+    if (!caravanData) {
+      throw new AppError('Caravan inventory not available', 404);
+    }
+
+    // Format inventory for response
+    const inventory = caravanData.inventory.map(item => ({
+      itemId: item.itemId,
+      name: item.name,
+      type: item.type,
+      description: item.description,
+      basePrice: item.basePrice,
+      price: item.price, // Already includes 15% premium
+      stock: item.quantity,
+      maxStock: item.maxQuantity,
+      regional: !!item.region,
+      caravanExclusive: true,
+      effect: item.effect || null,
+      equipSlot: item.equipSlot || null,
+      statBonuses: item.statBonuses || null,
+      inStock: item.inStock
+    }));
+
+    // Calculate time until next refresh in milliseconds
+    const now = new Date();
+    const refreshesIn = caravanData.nextRefresh
+      ? Math.max(0, caravanData.nextRefresh.getTime() - now.getTime())
+      : CARAVAN_REFRESH_INTERVAL;
+
+    return res.json({
+      isCaravan: true,
+      shopType: 'caravan',
+      inventory,
+      refreshesIn,
+      lastRefresh: caravanData.lastRefresh,
+      nodeId: nodeIdNum,
+      nodeName: caravanData.nodeName
+    });
+  }
+
+  // Standard shop handling (blacksmith, apothecary, farm)
   // Get shop inventory with item details
   const inventoryResult = await query(
     `SELECT
@@ -201,7 +261,7 @@ router.get('/:nodeId/:shopType', authenticate, asyncHandler(async (req, res) => 
 // ============================================
 router.post('/:nodeId/:shopType/buy', authenticate, asyncHandler(async (req, res) => {
   const { nodeId, shopType } = req.params;
-  const { itemTemplateId, characterId } = req.body;
+  const { itemTemplateId, characterId, itemId } = req.body;
   const nodeIdNum = parseInt(nodeId, 10);
 
   // SECURITY: Strict quantity validation to prevent negative quantity exploits
@@ -214,18 +274,64 @@ router.post('/:nodeId/:shopType/buy', authenticate, asyncHandler(async (req, res
   if (isNaN(nodeIdNum)) {
     throw new AppError('Invalid node ID', 400);
   }
-  if (!itemTemplateId) {
-    throw new AppError('Item template ID required', 400);
-  }
   if (quantity < 1 || quantity > 99) {
     throw new AppError('Invalid quantity (1-99)', 400);
   }
 
   // Verify shop access
-  await verifyShopAccess(nodeIdNum, shopType);
+  const node = await verifyShopAccess(nodeIdNum, shopType);
 
   // Verify character location
   const activeChar = await verifyCharacterAtNode(req.user.userId, nodeIdNum);
+
+  // Handle caravan purchases separately
+  if (shopType === 'caravan') {
+    // Caravan uses itemId (string) instead of itemTemplateId (number)
+    const caravanItemId = itemId || itemTemplateId;
+    if (!caravanItemId) {
+      throw new AppError('Item ID required', 400);
+    }
+
+    // Verify node is type merchant_caravan
+    if (node.node_type !== 'merchant_caravan') {
+      throw new AppError('This location is not a merchant caravan', 400);
+    }
+
+    try {
+      const result = await processCaravanPurchase(
+        req.user.userId,
+        nodeIdNum,
+        caravanItemId,
+        quantity
+      );
+
+      return res.json({
+        success: true,
+        message: `Purchased ${result.quantity}x ${result.itemName} for ${result.totalPrice} gold`,
+        itemId: result.itemId,
+        itemName: result.itemName,
+        quantity: result.quantity,
+        totalPrice: result.totalPrice,
+        remainingGold: result.remainingGold,
+        remainingStock: result.remainingStock
+      });
+    } catch (error) {
+      // Convert service errors to AppErrors
+      if (error.message.includes('Insufficient')) {
+        throw new AppError(error.message, 400);
+      }
+      if (error.message.includes('not found') || error.message.includes('not available')) {
+        throw new AppError(error.message, 404);
+      }
+      throw new AppError(error.message, 400);
+    }
+  }
+
+  // Standard shop handling (blacksmith, apothecary, farm)
+  if (!itemTemplateId) {
+    throw new AppError('Item template ID required', 400);
+  }
+
   const targetCharId = characterId || activeChar.id;
 
   // Verify target character belongs to user

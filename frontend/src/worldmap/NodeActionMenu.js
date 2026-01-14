@@ -345,11 +345,26 @@ export class NodeActionMenu {
       features = [...features, 'guild_advancement'];
     }
 
+    // Add caravan action for merchant_caravan nodes
+    if (node.node_type === 'merchant_caravan' && !features.includes('caravan')) {
+      features = [...features, 'caravan'];
+    }
+
+    // Add explore action for ruins nodes
+    if (node.node_type === 'ruins' && !features.includes('explore_ruins')) {
+      features = [...features, 'explore_ruins'];
+    }
+
+    // Add fishing action for fishing_spot nodes
+    if (node.node_type === 'fishing_spot' && !features.includes('fishing')) {
+      features = [...features, 'fishing'];
+    }
+
     if (Array.isArray(features)) {
       // Prioritize essential features over decorative ones
       const essentialFeatures = [
         'blacksmith', 'marketplace', 'tavern', 'apothecary',
-        'coliseum', 'farm', 'guild_hall', 'guild_advancement', 'courtyard'
+        'coliseum', 'farm', 'guild_hall', 'guild_advancement', 'courtyard', 'caravan', 'explore_ruins', 'fishing'
       ];
       const decorativeFeatures = ['throne', 'temple', 'stables', 'training_ground'];
 
@@ -397,7 +412,10 @@ export class NodeActionMenu {
       guild_hall: { category: 'actions', name: 'recruit' },
       guild_advancement: { category: 'actions', name: 'advance' },
       courtyard: { category: 'actions', name: 'social' },
-      battle: { category: 'actions', name: 'battle' }
+      battle: { category: 'actions', name: 'battle' },
+      caravan: { category: 'actions', name: 'marketplace' },
+      explore_ruins: { category: 'actions', name: 'search' },
+      fishing: { category: 'actions', name: 'harvest' }
     };
 
     // Get label text
@@ -407,6 +425,15 @@ export class NodeActionMenu {
     }
     if (feature === 'guild_advancement') {
       label = 'Advancement';
+    }
+    if (feature === 'caravan') {
+      label = 'Trade';
+    }
+    if (feature === 'explore_ruins') {
+      label = 'Explore';
+    }
+    if (feature === 'fishing') {
+      label = 'Fish';
     }
 
     // Icon

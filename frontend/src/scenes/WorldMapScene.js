@@ -113,6 +113,9 @@ export class WorldMapScene extends Scene {
     this.showRegionTint = true;     // Toggle for region color tinting on nodes
     this.showRegionBoundaries = false; // Toggle for region boundary lines (optional)
     this.castleNodes = [];          // Cache of castle nodes for quick access
+
+    // Watchtower extended view
+    this.watchtowerView = null;     // Extended view data from watchtower node
   }
 
   async enter() {
@@ -551,9 +554,36 @@ export class WorldMapScene extends Scene {
 
       // Cache castle nodes for quick access (all 5 regional castles)
       this.castleNodes = this.nodes.filter(n => n.node_type === 'castle');
+
+      // Check if current node is a watchtower and fetch extended view
+      if (this.currentNode?.node_type === 'watchtower') {
+        await this.fetchWatchtowerView(this.currentNode.id);
+      } else {
+        // Clear watchtower view when not at a watchtower
+        this.watchtowerView = null;
+      }
     } catch (err) {
       console.error('Failed to load world:', err);
       parchmentToast.error('World Data Error', 'Failed to load world data. Please try again.');
+    }
+  }
+
+  /**
+   * Fetch extended view from watchtower
+   * @param {number} nodeId - Watchtower node ID
+   */
+  async fetchWatchtowerView(nodeId) {
+    try {
+      const result = await this.game.api.getWatchtowerView(nodeId);
+      this.watchtowerView = {
+        watchtowerNode: result.watchtowerNode,
+        revealedNodes: result.revealedNodes,
+        revealedConnections: result.revealedConnections
+      };
+      console.log(`Watchtower view loaded: ${result.revealedNodes.length} nodes revealed`);
+    } catch (err) {
+      console.warn('Failed to fetch watchtower view:', err);
+      this.watchtowerView = null;
     }
   }
 
@@ -760,7 +790,8 @@ export class WorldMapScene extends Scene {
     const shopFeatures = {
       blacksmith: 'blacksmith',
       apothecary: 'apothecary',
-      farm: 'farm'
+      farm: 'farm',
+      caravan: 'caravan'
     };
 
     if (shopFeatures[feature]) {
@@ -813,8 +844,41 @@ export class WorldMapScene extends Scene {
       return;
     }
 
+    // Ruins exploration opens the puzzle modal
+    if (feature === 'explore_ruins') {
+      this.openRuinsPuzzle();
+      return;
+    }
+
+    // Fishing opens the fishing scene
+    if (feature === 'fishing') {
+      this.game.scenes.switchTo('fishing', {
+        nodeId: this.currentNode.id,
+        nodeName: this.currentNode.name
+      });
+      return;
+    }
+
     // Other features not yet implemented
     parchmentToast.info('Coming Soon', `${this.capitalize(feature)} feature is under development.`);
+  }
+
+  async openRuinsPuzzle() {
+    // Dynamically import the modal to avoid circular dependencies
+    const { RuinsPuzzleModal } = await import('../modals/RuinsPuzzleModal.js');
+
+    const modal = new RuinsPuzzleModal({
+      game: this.game,
+      onClose: () => {
+        modal.destroy();
+      },
+      onSolve: (result) => {
+        // Could trigger animations or updates here
+        console.log('Ruins solved:', result);
+      }
+    });
+
+    await modal.show(this.currentNode.id);
   }
 
   async startBattle() {
@@ -1217,6 +1281,11 @@ export class WorldMapScene extends Scene {
 
     ctx.save();
 
+    // Draw watchtower-revealed connections with dashed lines at reduced opacity
+    if (this.watchtowerView) {
+      this.renderWatchtowerRevealedConnections(ctx);
+    }
+
     // Draw connections with organic Catmull-Rom spline paths
     for (const conn of this.connections) {
       const fromNode = this.nodes.find(n => n.id === conn.from_node_id);
@@ -1538,6 +1607,23 @@ export class WorldMapScene extends Scene {
       }
 
       // Note: tooltips are rendered after fog of war for visibility
+    }
+
+    // Render watchtower-revealed nodes at reduced opacity
+    if (this.watchtowerView) {
+      this.renderWatchtowerRevealedNodes(ctx);
+    }
+
+    // Render golden glow around active watchtower
+    if (this.watchtowerView && this.currentNode) {
+      const wtNode = this.watchtowerView.watchtowerNode;
+      const x = wtNode.x_coord * this.nodeSpacing + this.cameraX;
+      const y = wtNode.y_coord * this.nodeSpacing + this.cameraY;
+
+      // Render enhanced golden glow for active watchtower
+      if (this.effects) {
+        this.effects.renderNodeGlow(ctx, x, y, this.nodeSize + 10, '#ffd700', true);
+      }
     }
 
     // Render fog of war overlay (before character and labels so player/text is always visible)
@@ -2053,6 +2139,159 @@ export class WorldMapScene extends Scene {
     // Refresh ProfileDropdown
     if (this.profileDropdown) {
       this.profileDropdown.refresh();
+    }
+  }
+
+  /**
+   * Render watchtower-revealed connections with dashed lines at reduced opacity
+   * These are connections that are visible from the watchtower but not yet discovered
+   */
+  renderWatchtowerRevealedConnections(ctx) {
+    if (!this.watchtowerView) return;
+
+    const { revealedNodes, revealedConnections } = this.watchtowerView;
+
+    // Create lookup for revealed nodes (not in main nodes list)
+    const discoveredNodeIds = new Set(this.nodes.map(n => n.id));
+    const revealedNodeMap = new Map(revealedNodes.map(n => [n.id, n]));
+
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+
+    for (const conn of revealedConnections) {
+      // Skip if both nodes are already discovered (connection already rendered)
+      if (discoveredNodeIds.has(conn.from_node_id) && discoveredNodeIds.has(conn.to_node_id)) {
+        continue;
+      }
+
+      // Get node data from either revealed nodes or existing nodes
+      const fromNode = revealedNodeMap.get(conn.from_node_id) ||
+                       this.nodes.find(n => n.id === conn.from_node_id);
+      const toNode = revealedNodeMap.get(conn.to_node_id) ||
+                     this.nodes.find(n => n.id === conn.to_node_id);
+
+      if (!fromNode || !toNode) continue;
+
+      const x1 = fromNode.x_coord * this.nodeSpacing + this.cameraX;
+      const y1 = fromNode.y_coord * this.nodeSpacing + this.cameraY;
+      const x2 = toNode.x_coord * this.nodeSpacing + this.cameraX;
+      const y2 = toNode.y_coord * this.nodeSpacing + this.cameraY;
+
+      // Skip if off screen
+      const margin = 50;
+      if (Math.max(x1, x2) < -margin || Math.min(x1, x2) > ctx.canvas.width + margin ||
+          Math.max(y1, y2) < -margin || Math.min(y1, y2) > ctx.canvas.height + margin) {
+        continue;
+      }
+
+      // Draw dashed connection line
+      const control = this.getPathControlPoint(x1, y1, x2, y2, conn.from_node_id, conn.to_node_id);
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.quadraticCurveTo(control.x, control.y, x2, y2);
+      ctx.strokeStyle = 'rgba(180, 160, 100, 0.6)'; // Golden-brown for watchtower reveal
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Render watchtower-revealed nodes at 50% opacity
+   * Shows node type icon but uses "?" for name unless already discovered
+   */
+  renderWatchtowerRevealedNodes(ctx) {
+    if (!this.watchtowerView) return;
+
+    const { revealedNodes } = this.watchtowerView;
+
+    // Create set of already-discovered node IDs for quick lookup
+    const discoveredNodeIds = new Set(this.nodes.map(n => n.id));
+
+    for (const node of revealedNodes) {
+      // Skip nodes that are already in the main nodes list (already discovered)
+      if (discoveredNodeIds.has(node.id)) {
+        continue;
+      }
+
+      const x = node.x_coord * this.nodeSpacing + this.cameraX;
+      const y = node.y_coord * this.nodeSpacing + this.cameraY;
+
+      // Skip if off screen
+      if (x < -50 || x > ctx.canvas.width + 50 || y < -50 || y > ctx.canvas.height + 50) {
+        continue;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = 0.5;
+
+      // Try to render node sprite at reduced opacity
+      const nodeSprite = this.getNodeSprite(node.node_type);
+
+      if (nodeSprite) {
+        const spriteSize = this.getNodeSpriteSize(node.node_type);
+        const offset = spriteSize / 2;
+
+        // Draw shadow under sprite
+        ctx.save();
+        ctx.globalAlpha = 0.15;
+        ctx.filter = 'blur(4px)';
+        ctx.drawImage(nodeSprite, x - offset + 3, y - offset + 3, spriteSize, spriteSize);
+        ctx.restore();
+
+        // Draw main sprite at 50% opacity
+        ctx.globalAlpha = 0.5;
+        ctx.drawImage(nodeSprite, x - offset, y - offset, spriteSize, spriteSize);
+
+        // Draw watchtower reveal indicator (subtle golden ring)
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(x, y, spriteSize / 2 + 4, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        // Fallback: Draw colored circle with icon
+        ctx.beginPath();
+        ctx.arc(x, y, this.nodeSize, 0, Math.PI * 2);
+        ctx.fillStyle = this.getNodeColor(node.node_type);
+        ctx.fill();
+
+        // Golden border for watchtower-revealed nodes
+        ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Node icon
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.getNodeIcon(node.node_type, true), x, y);
+      }
+
+      // Draw "?" label for undiscovered nodes, actual name only if discovered
+      const displayName = node.discovered ? node.name : '?';
+      ctx.font = 'bold 11px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+
+      // Text shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillText(displayName, x + 1, y + this.nodeSize + 5);
+
+      // Main text
+      ctx.fillStyle = node.discovered ? 'rgba(255, 255, 255, 0.8)' : 'rgba(200, 180, 100, 0.8)';
+      ctx.fillText(displayName, x, y + this.nodeSize + 4);
+
+      ctx.restore();
     }
   }
 }

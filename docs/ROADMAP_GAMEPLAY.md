@@ -454,11 +454,11 @@ Per ITEM_SYSTEM.md specifications:
 - [x] Inter-region bridges with subtle river/canyon visual
 - [ ] Gap infill algorithm for connections >20 units (generates intermediate nodes)
 
-#### Future Activity Node Features
-- [ ] Fishing mini-game implementation
-- [ ] Merchant caravan inventory and trading mechanics
-- [ ] Ruins puzzle system
-- [ ] Watchtower reveal mechanic
+#### Activity Node Features (Complete - v8.6)
+- [x] Fishing mini-game implementation (FishingScene.js, fishingService.js)
+- [x] Merchant caravan inventory and trading mechanics (caravanService.js, ShopScene.js)
+- [x] Ruins sliding tile puzzle system (RuinsPuzzleModal.js, ruins.js)
+- [x] Watchtower reveal mechanic (world.js watchtower-view endpoint)
 
 ### 5.2 Character Progression
 
@@ -597,6 +597,7 @@ Per ITEM_SYSTEM.md specifications:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.1 | Jan 2026 | Activity Node Features (v8.6): All 4 activity node systems implemented. Fishing: FishingScene.js with idle auto-fishing, Big One events, session management (fishingService.js), fish templates (15 types, 5 rarities). Ruins: RuinsPuzzleModal.js with 3x3/4x4/5x5 sliding tile puzzles, regional themes, tier-based rewards, one-time completion. Caravan: Extended ShopScene.js with exclusive items (23 items), 48-hour refresh cycle, seeded inventory, stock tracking. Watchtower: Presence-based fog reveal endpoint. Security: FOR UPDATE locks, MAX_GOLD caps, input validation. |
 | 3.0 | Jan 2026 | World Generation Improvements (v8.5): New node types (fishing spots, merchant caravans, ruins, watchtowers, farms). Guild distribution enhanced (3 per region, race-appropriate primary guild). Node distribution rebalancing (40-50% battle target). Bridge visual enhancement with river/canyon hints. Zodiac shrine system planned (12 unique shrines with collection quest). Migration 031_expanded_node_types.sql. Flickering bug fixed in WorldMapScene.js. |
 | 2.9 | Jan 2026 | Formation System Improvements (v8.3): BattleFormationScene now shows all 12 party characters instead of only 5, with click-to-cycle placement and direction indicator (red border highlight) showing enemy side. FormationScene adds sorting options (Level/Class/Name toggle buttons) and removes empty slot placeholders. Code quality: timer cleanup, canvas save/restore, stable sorting. |
 | 2.8 | Jan 2026 | Character Portrait Enhancement v2: 120 portraits enhanced with gender differentiation (face shapes, eye styling, cheekbones), race distinctiveness (vampire fangs, elf circlets, orc hair contrast, dwarf sideburns), and class identity (warrior insignia, monk chi glow, sorcerer dark aura, ninja weapons, berserker rage glow). New utility functions and palettes added. |

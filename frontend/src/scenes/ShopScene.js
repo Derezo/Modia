@@ -36,6 +36,10 @@ export class ShopScene extends Scene {
     this.sellableItems = [];
     this.playerGold = 0;
 
+    // Caravan-specific data
+    this.caravanRefreshTime = null;
+    this.refreshCountdownInterval = null;
+
     // UI state
     this.activeTab = 'buy'; // 'buy' or 'sell'
     this.selectedItem = null;
@@ -75,6 +79,10 @@ export class ShopScene extends Scene {
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
+    }
+    if (this.refreshCountdownInterval) {
+      clearInterval(this.refreshCountdownInterval);
+      this.refreshCountdownInterval = null;
     }
     if (this.itemTable) {
       this.itemTable.destroy();
@@ -123,7 +131,8 @@ export class ShopScene extends Scene {
     const names = {
       blacksmith: 'Blacksmith',
       apothecary: 'Apothecary',
-      farm: 'Farm Store'
+      farm: 'Farm Store',
+      caravan: 'Merchant Caravan'
     };
     return names[shopType] || 'Shop';
   }
@@ -132,25 +141,74 @@ export class ShopScene extends Scene {
     const icons = {
       blacksmith: 'anvil',
       apothecary: 'flask',
-      farm: 'wheat'
+      farm: 'wheat',
+      caravan: 'cart'
     };
     return icons[shopType] || 'store';
   }
 
+  isCaravan() {
+    return this.shopType === 'caravan';
+  }
+
   async loadShopData() {
     try {
-      const [shopData, sellData] = await Promise.all([
-        this.game.api.getShopInventory(this.nodeId, this.shopType),
-        this.game.api.getSellableItems(this.nodeId, this.shopType)
-      ]);
+      if (this.isCaravan()) {
+        // Caravan uses special endpoint and doesn't support selling
+        const caravanData = await this.game.api.getCaravanInventory(this.nodeId);
+        this.shopInventory = caravanData.items || [];
+        this.sellableItems = []; // Caravans don't buy from players
+        this.caravanRefreshTime = caravanData.nextRefresh ? new Date(caravanData.nextRefresh) : null;
 
-      this.shopInventory = shopData.items || [];
-      this.sellableItems = sellData.items || [];
+        // Start refresh countdown
+        this.startRefreshCountdown();
+      } else {
+        const [shopData, sellData] = await Promise.all([
+          this.game.api.getShopInventory(this.nodeId, this.shopType),
+          this.game.api.getSellableItems(this.nodeId, this.shopType)
+        ]);
+
+        this.shopInventory = shopData.items || [];
+        this.sellableItems = sellData.items || [];
+      }
 
       this.renderInventory();
     } catch (err) {
       console.error('Failed to load shop data:', err);
       parchmentToast.error('Shop Error', 'Failed to load shop inventory');
+    }
+  }
+
+  startRefreshCountdown() {
+    if (this.refreshCountdownInterval) {
+      clearInterval(this.refreshCountdownInterval);
+    }
+
+    this.updateRefreshCountdown();
+    this.refreshCountdownInterval = setInterval(() => {
+      this.updateRefreshCountdown();
+    }, 60000); // Update every minute
+  }
+
+  updateRefreshCountdown() {
+    const countdownEl = this.uiElement?.querySelector('#caravan-countdown');
+    if (!countdownEl || !this.caravanRefreshTime) return;
+
+    const now = new Date();
+    const diff = this.caravanRefreshTime - now;
+
+    if (diff <= 0) {
+      countdownEl.textContent = 'Refreshing soon...';
+      return;
+    }
+
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (hours > 0) {
+      countdownEl.textContent = `Refreshes in ${hours}h ${minutes}m`;
+    } else {
+      countdownEl.textContent = `Refreshes in ${minutes}m`;
     }
   }
 
@@ -592,6 +650,73 @@ export class ShopScene extends Scene {
       .rarity-epic { border-left: 3px solid #a335ee; }
       .rarity-legendary { border-left: 3px solid #ff8000; }
 
+      /* Caravan-specific styles */
+      .caravan-refresh-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: linear-gradient(to right, rgba(139, 90, 43, 0.2), transparent);
+        border-bottom: 1px solid ${P.border};
+        font-size: 13px;
+        color: ${P.text.secondary};
+      }
+
+      .caravan-refresh-icon {
+        font-size: 14px;
+      }
+
+      .caravan-exclusive-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        background: linear-gradient(to bottom, #8B5A2B, #5D3A1A);
+        color: #FFD700;
+        font-size: 10px;
+        font-weight: bold;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border: 1px solid #A0522D;
+        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+        margin-left: 6px;
+      }
+
+      .sold-out-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        background: linear-gradient(to bottom, #8B0000, #4a0000);
+        color: #fff;
+        font-size: 11px;
+        font-weight: bold;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border: 1px solid #5a0000;
+        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+      }
+
+      .shop-item.sold-out {
+        opacity: 0.6;
+        background: linear-gradient(to bottom, #d0c0a0, #bdb39a);
+      }
+
+      .shop-item.sold-out .shop-item-name {
+        text-decoration: line-through;
+        color: ${P.text.muted};
+      }
+
+      .regional-specialty-badge {
+        display: inline-block;
+        padding: 2px 6px;
+        background: linear-gradient(to bottom, ${P.state.info}, #3a5068);
+        color: #fff;
+        font-size: 9px;
+        font-weight: bold;
+        border-radius: 3px;
+        text-transform: uppercase;
+        margin-left: 4px;
+      }
+
       .character-tag {
         font-size: 10px;
         color: ${P.accent.burgundy};
@@ -632,10 +757,13 @@ export class ShopScene extends Scene {
     const container = document.createElement('div');
     container.className = 'shop-container';
 
+    const isCaravan = this.isCaravan();
+
     container.innerHTML = `
       <div class="shop-header">
         <div class="shop-title">
           <h2>${this.shopName}</h2>
+          ${isCaravan ? '<span class="caravan-exclusive-badge">Exclusive Goods</span>' : ''}
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
           <div class="shop-gold">
@@ -646,7 +774,14 @@ export class ShopScene extends Scene {
         </div>
       </div>
 
-      <div class="shop-tabs">
+      ${isCaravan ? `
+        <div class="caravan-refresh-info">
+          <span class="caravan-refresh-icon">⏱</span>
+          <span id="caravan-countdown">Calculating...</span>
+        </div>
+      ` : ''}
+
+      <div class="shop-tabs" ${isCaravan ? 'style="display: none;"' : ''}>
         <div class="shop-tab ${this.activeTab === 'buy' ? 'active' : ''}" data-tab="buy">Buy</div>
         <div class="shop-tab ${this.activeTab === 'sell' ? 'active' : ''}" data-tab="sell">Sell</div>
       </div>
@@ -762,19 +897,21 @@ export class ShopScene extends Scene {
       ? rarityMap[item.rarity - 1] || 'common'
       : item.rarity || 'common';
 
+    const isCaravan = this.isCaravan();
+
     return {
       // Identity
       templateId: item.templateId,
       instanceId: item.instanceId,
-      id: isBuyMode ? item.templateId : item.instanceId,
+      id: isCaravan ? item.id : (isBuyMode ? item.templateId : item.instanceId),
 
       // Display
       name: item.name,
       type: item.type,
       rarity,
       description: item.description,
-      quantity: item.quantity,
-      price: isBuyMode ? item.buyPrice : item.sellPrice,
+      quantity: isCaravan ? item.stock : item.quantity,
+      price: isCaravan ? item.price : (isBuyMode ? item.buyPrice : item.sellPrice),
 
       // Stats
       baseStats: item.statBonuses || {},
@@ -782,6 +919,11 @@ export class ShopScene extends Scene {
       // Shop-specific
       supplyLevel: item.supplyLevel,
       supplyLabel: item.supplyLabel,
+
+      // Caravan-specific
+      caravanExclusive: item.caravanExclusive || isCaravan,
+      soldOut: isCaravan && item.stock <= 0,
+      regionalSpecialty: item.regionalSpecialty,
 
       // Original item reference for detail panel
       _original: item
@@ -828,16 +970,29 @@ export class ShopScene extends Scene {
 
     const item = this.selectedItem;
     const isBuyMode = this.activeTab === 'buy';
-    const unitPrice = isBuyMode ? item.buyPrice : item.sellPrice;
+    const isCaravan = this.isCaravan();
+
+    // Handle caravan items differently
+    const unitPrice = isCaravan ? item.price : (isBuyMode ? item.buyPrice : item.sellPrice);
     const totalPrice = unitPrice * this.purchaseQuantity;
-    const maxQty = item.quantity;
+    const maxQty = isCaravan ? item.stock : item.quantity;
     const canAfford = isBuyMode ? (this.playerGold >= totalPrice) : true;
+    const isSoldOut = isCaravan && maxQty <= 0;
 
     const statsHtml = this.renderDetailStats(item);
 
+    // Build badges HTML
+    let badgesHtml = '';
+    if (isCaravan || item.caravanExclusive) {
+      badgesHtml += '<span class="caravan-exclusive-badge">Exclusive</span>';
+    }
+    if (item.regionalSpecialty) {
+      badgesHtml += `<span class="regional-specialty-badge">${item.regionalSpecialty}</span>`;
+    }
+
     detailEl.innerHTML = `
       <div class="detail-header">
-        <div class="detail-name">${item.name}</div>
+        <div class="detail-name">${item.name}${badgesHtml}</div>
         <div class="detail-type">${item.type}${item.equipmentSlot ? ` - ${this.formatSlot(item.equipmentSlot)}` : ''}</div>
       </div>
 
@@ -845,24 +1000,35 @@ export class ShopScene extends Scene {
 
       ${statsHtml ? `<div class="detail-stats">${statsHtml}</div>` : ''}
 
-      <div class="detail-actions">
-        <div class="quantity-selector">
-          <button class="quantity-btn" id="qty-minus" ${this.purchaseQuantity <= 1 ? 'disabled' : ''}>-</button>
-          <span class="quantity-value">${this.purchaseQuantity}</span>
-          <button class="quantity-btn" id="qty-plus" ${this.purchaseQuantity >= maxQty ? 'disabled' : ''}>+</button>
+      ${isSoldOut ? `
+        <div class="detail-actions">
+          <div style="text-align: center; padding: 20px;">
+            <span class="sold-out-badge">SOLD OUT</span>
+            <p style="margin-top: 12px; color: ${P.text.muted}; font-size: 12px;">
+              Check back after the caravan restocks
+            </p>
+          </div>
         </div>
+      ` : `
+        <div class="detail-actions">
+          <div class="quantity-selector">
+            <button class="quantity-btn" id="qty-minus" ${this.purchaseQuantity <= 1 ? 'disabled' : ''}>-</button>
+            <span class="quantity-value">${this.purchaseQuantity}</span>
+            <button class="quantity-btn" id="qty-plus" ${this.purchaseQuantity >= maxQty ? 'disabled' : ''}>+</button>
+          </div>
 
-        <div class="total-price">
-          <div class="total-label">${isBuyMode ? 'Total Cost' : 'Total Value'}</div>
-          <div class="total-value ${!canAfford ? 'cannot-afford' : ''}">${totalPrice.toLocaleString()}g</div>
+          <div class="total-price">
+            <div class="total-label">${isBuyMode ? 'Total Cost' : 'Total Value'}</div>
+            <div class="total-value ${!canAfford ? 'cannot-afford' : ''}">${totalPrice.toLocaleString()}g</div>
+          </div>
+
+          <button class="action-btn ${isBuyMode ? 'buy-btn' : 'sell-btn'}"
+                  id="action-btn"
+                  ${(!canAfford || maxQty <= 0) ? 'disabled' : ''}>
+            ${isBuyMode ? 'Purchase' : 'Sell'}
+          </button>
         </div>
-
-        <button class="action-btn ${isBuyMode ? 'buy-btn' : 'sell-btn'}"
-                id="action-btn"
-                ${(!canAfford || maxQty <= 0) ? 'disabled' : ''}>
-          ${isBuyMode ? 'Purchase' : 'Sell'}
-        </button>
-      </div>
+      `}
     `;
 
     // Event listeners for detail panel
@@ -931,12 +1097,23 @@ export class ShopScene extends Scene {
     if (!this.selectedItem) return;
 
     try {
-      const result = await this.game.api.buyFromShop(
-        this.nodeId,
-        this.shopType,
-        this.selectedItem.templateId,
-        this.purchaseQuantity
-      );
+      let result;
+
+      if (this.isCaravan()) {
+        // Use caravan-specific API
+        result = await this.game.api.buyFromCaravan(
+          this.nodeId,
+          this.selectedItem.id,
+          this.purchaseQuantity
+        );
+      } else {
+        result = await this.game.api.buyFromShop(
+          this.nodeId,
+          this.shopType,
+          this.selectedItem.templateId,
+          this.purchaseQuantity
+        );
+      }
 
       this.playerGold = result.remainingGold;
       this.updateGoldDisplay();

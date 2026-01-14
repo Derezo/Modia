@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 19.0 |
+| Version | 20.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -110,6 +110,7 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 20.0 | Jan 2026 | Activity Node Systems (v8.6): Complete implementation of all 4 activity node types. Fishing: FishingScene.js with auto-fishing, Big One events, 15 fish types, session management. Ruins: RuinsPuzzleModal.js with 3x3/4x4/5x5 sliding puzzles, regional themes, tier rewards. Caravan: ShopScene.js extension with 23 exclusive items, 48-hour refresh, seeded inventory. Watchtower: Fog reveal endpoint. Security: FOR UPDATE locks, MAX_GOLD caps, advisory locks for race conditions. New files: fishingService.js, caravanService.js, ruins.js, fishing.js, fish.js, caravanItems.js, FishingScene.js, RuinsPuzzleModal.js. |
 | 19.0 | Jan 2026 | World Generation Improvements (v8.5): New node types (fishing_spot, merchant_caravan, ruins, watchtower, farm). Guild distribution: 3 per region with race-appropriate primary guild. Node distribution: 40-50% battle target. 12 zodiac shrines placed globally. Bridge visual enhancement (river/canyon hint). Flickering bug fixed (canvas save/restore). Migration: 031_expanded_node_types.sql. 3 new tests for worldgen validation. |
 | 18.0 | Jan 2026 | AI Enemy Skill System Fix: Fixed `getSkillDefinition` to support monster archetype skills (beast, insect, dragon, etc.). Added `getSkillRangeTiles` for accurate skill range visualization. Fixed target ID property mismatch in action generator. New test suite: battleService.unit.test.js (26 tests). Combat System now functional for all enemy types. |
 | 17.0 | Jan 2026 | Technical Debt Cleanup: Modularized seed.js from 4862 to 918 lines into 12 worldgen modules. Added LRU cache limits to WorldMapScene pathPreviewCache. Created composite database indexes for regional queries. Fixed phase3.test.js imports. |

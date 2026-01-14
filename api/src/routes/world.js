@@ -1160,6 +1160,117 @@ router.post('/nodes/:id/discover', authenticate, asyncHandler(async (req, res) =
   });
 }));
 
+// GET /api/world/watchtower-view/:nodeId - Get extended view from a watchtower
+router.get('/watchtower-view/:nodeId', authenticate, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+  const nodeId = parseInt(req.params.nodeId, 10);
+
+  if (isNaN(nodeId)) {
+    throw new AppError('Invalid node ID', 400);
+  }
+
+  // Verify the node exists and is a watchtower
+  const nodeResult = await query(
+    `SELECT id, node_type, name, x_coord, y_coord, watchtower_reveal_radius,
+            region_id, region_race, ring_distance, features
+     FROM world_nodes WHERE id = $1`,
+    [nodeId]
+  );
+
+  if (nodeResult.rows.length === 0) {
+    throw new AppError('Node not found', 404);
+  }
+
+  const watchtowerNode = nodeResult.rows[0];
+
+  if (watchtowerNode.node_type !== 'watchtower') {
+    throw new AppError('This node is not a watchtower', 400);
+  }
+
+  // Use the watchtower's reveal radius (default 4 if not set)
+  const revealRadius = watchtowerNode.watchtower_reveal_radius ?? 4;
+
+  // Get all connections to build adjacency map
+  const connectionsResult = await query(
+    'SELECT from_node_id, to_node_id FROM world_node_connections'
+  );
+
+  const adjacency = buildAdjacencyMap(connectionsResult.rows);
+
+  // BFS to find all nodes within reveal radius
+  const visited = new Map(); // nodeId -> distance from watchtower
+  visited.set(nodeId, 0);
+  const queue = [{ nodeId, distance: 0 }];
+  const revealedNodeIds = [nodeId];
+
+  while (queue.length > 0) {
+    const { nodeId: currentId, distance } = queue.shift();
+
+    // Don't expand beyond reveal radius
+    if (distance >= revealRadius) {
+      continue;
+    }
+
+    const neighbors = adjacency.get(currentId) || new Set();
+    for (const neighborId of neighbors) {
+      if (!visited.has(neighborId)) {
+        const newDistance = distance + 1;
+        visited.set(neighborId, newDistance);
+        revealedNodeIds.push(neighborId);
+        queue.push({ nodeId: neighborId, distance: newDistance });
+      }
+    }
+  }
+
+  // Fetch node details for all revealed nodes
+  const nodesResult = await query(
+    `SELECT wn.id, wn.x_coord, wn.y_coord, wn.node_type, wn.name,
+            wn.region_id, wn.region_race, wn.ring_distance, wn.difficulty_tier,
+            CASE WHEN und.node_id IS NOT NULL THEN true ELSE false END as discovered
+     FROM world_nodes wn
+     LEFT JOIN user_node_discovery und ON und.node_id = wn.id AND und.user_id = $2
+     WHERE wn.id = ANY($1)`,
+    [revealedNodeIds, userId]
+  );
+
+  // Get connections between revealed nodes
+  const revealedConnectionsResult = await query(
+    `SELECT from_node_id, to_node_id
+     FROM world_node_connections
+     WHERE from_node_id = ANY($1) AND to_node_id = ANY($1)`,
+    [revealedNodeIds]
+  );
+
+  // Format revealed nodes - include name only if discovered
+  const revealedNodes = nodesResult.rows.map(node => ({
+    id: node.id,
+    x_coord: node.x_coord,
+    y_coord: node.y_coord,
+    node_type: node.node_type,
+    name: node.discovered ? node.name : null,
+    discovered: node.discovered,
+    region_id: node.region_id,
+    region_race: node.region_race,
+    difficulty_tier: node.difficulty_tier,
+    distance_from_watchtower: visited.get(node.id)
+  }));
+
+  res.json({
+    watchtowerNode: {
+      id: watchtowerNode.id,
+      name: watchtowerNode.name,
+      x_coord: watchtowerNode.x_coord,
+      y_coord: watchtowerNode.y_coord,
+      node_type: watchtowerNode.node_type,
+      region_id: watchtowerNode.region_id,
+      region_race: watchtowerNode.region_race,
+      reveal_radius: revealRadius
+    },
+    revealedNodes,
+    revealedConnections: revealedConnectionsResult.rows
+  });
+}));
+
 // GET /api/world/my-discoveries - Get user's discovery progress
 router.get('/my-discoveries', authenticate, asyncHandler(async (req, res) => {
   const userId = req.user.userId;

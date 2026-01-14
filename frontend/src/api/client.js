@@ -163,6 +163,10 @@ export class ApiClient {
     return this.get('/world/current');
   }
 
+  getWatchtowerView(nodeId) {
+    return this.get(`/world/watchtower-view/${nodeId}`);
+  }
+
   // Stamina endpoints
   getCharacterStamina(characterId) {
     return this.get(`/characters/${characterId}/stamina`);
@@ -296,6 +300,52 @@ export class ApiClient {
 
   getSellableItems(nodeId, shopType) {
     return this.get(`/shops/${nodeId}/${shopType}/sell-inventory`);
+  }
+
+  // Caravan endpoints
+  getCaravanInventory(nodeId) {
+    return this.get(`/shops/${nodeId}/caravan`);
+  }
+
+  buyFromCaravan(nodeId, itemId, quantity = 1) {
+    return this.post(`/shops/${nodeId}/caravan/buy`, {
+      itemId,
+      quantity
+    });
+  }
+
+  // Ruins endpoints
+  getRuinsPuzzle(nodeId) {
+    return this.get(`/ruins/${nodeId}/puzzle`);
+  }
+
+  solveRuinsPuzzle(nodeId, moveCount) {
+    return this.post(`/ruins/${nodeId}/solve`, { moveCount });
+  }
+
+  getRuinsCompletions() {
+    return this.get('/ruins/completions');
+  }
+
+  // Fishing endpoints
+  startFishing(nodeId) {
+    return this.post(`/fishing/${nodeId}/start`);
+  }
+
+  registerCatch(nodeId) {
+    return this.post(`/fishing/${nodeId}/catch`);
+  }
+
+  claimBigOne(nodeId) {
+    return this.post(`/fishing/${nodeId}/big-one`);
+  }
+
+  endFishing(nodeId) {
+    return this.post(`/fishing/${nodeId}/end`);
+  }
+
+  getFishingStatus(nodeId) {
+    return this.get(`/fishing/${nodeId}/status`);
   }
 
   // Marketplace endpoints
