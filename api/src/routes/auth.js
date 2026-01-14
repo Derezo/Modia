@@ -4,6 +4,7 @@ import { query } from '../config/database.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../config/jwt.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { authLimiter } from '../middleware/rateLimiter.js';
+import { refreshLimiter } from '../middleware/refreshRateLimiter.js';
 import { authenticate } from '../middleware/auth.js';
 import { STARTING_GOLD } from '../config/constants.js';
 
@@ -134,7 +135,7 @@ router.post('/login', authLimiter, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/auth/refresh
-router.post('/refresh', asyncHandler(async (req, res) => {
+router.post('/refresh', refreshLimiter, asyncHandler(async (req, res) => {
   const { refreshToken } = req.body;
 
   if (!refreshToken) {

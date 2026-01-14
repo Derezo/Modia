@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 20.0 |
+| Version | 21.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -27,9 +27,9 @@ The roadmap is split into two focused documents:
 
 | Track | Completion | Status |
 |-------|------------|--------|
-| Technical | 30% | In Progress |
+| Technical | 35% | In Progress |
 | Gameplay | 90% | Near Complete |
-| **Combined** | **~70%** | In Progress |
+| **Combined** | **~72%** | In Progress |
 
 ---
 
@@ -61,8 +61,8 @@ The roadmap is split into two focused documents:
 
 | Item | Location | Details |
 |------|----------|---------|
-| Rate Limit Security | rateLimiterFactory.js, auth.js | trust proxy, refresh endpoint |
-| VPS Deployment | Infrastructure | Server setup, Nginx, SSL |
+| ~~Rate Limit Security~~ | ~~rateLimiterFactory.js, auth.js~~ | **COMPLETE** (v8.7) |
+| ~~VPS Deployment Scripts~~ | ~~Infrastructure~~ | **COMPLETE** (v8.7: setup.sh, deploy.sh, nginx, backup) |
 | E2E Tests | Playwright | Full gameplay coverage |
 
 ---
@@ -110,6 +110,7 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 21.0 | Jan 2026 | Security & Infrastructure (v8.7): Trust proxy for proper IP detection behind nginx. Per-user rate limiting for authenticated requests (tied to userId). New rate limiters: auth/refresh (20/15min IP), world/travel (60/min user), gameplay actions. Global limits increased (300 base, 600 prod, 1500 dev). JWT extended to 1h with automatic refresh 1min before expiry. TokenRefreshManager for seamless token renewal + 401 retry logic. VPS deployment scripts: setup.sh (Node.js 20, PM2, PostgreSQL, Nginx), deploy.sh (zero-downtime with rollback), nginx.conf.template (WebSocket, SSL, caching), backup.sh (pg_dump with 7-day retention). |
 | 20.0 | Jan 2026 | Activity Node Systems (v8.6): Complete implementation of all 4 activity node types. Fishing: FishingScene.js with auto-fishing, Big One events, 15 fish types, session management. Ruins: RuinsPuzzleModal.js with 3x3/4x4/5x5 sliding puzzles, regional themes, tier rewards. Caravan: ShopScene.js extension with 23 exclusive items, 48-hour refresh, seeded inventory. Watchtower: Fog reveal endpoint. Security: FOR UPDATE locks, MAX_GOLD caps, advisory locks for race conditions. New files: fishingService.js, caravanService.js, ruins.js, fishing.js, fish.js, caravanItems.js, FishingScene.js, RuinsPuzzleModal.js. |
 | 19.0 | Jan 2026 | World Generation Improvements (v8.5): New node types (fishing_spot, merchant_caravan, ruins, watchtower, farm). Guild distribution: 3 per region with race-appropriate primary guild. Node distribution: 40-50% battle target. 12 zodiac shrines placed globally. Bridge visual enhancement (river/canyon hint). Flickering bug fixed (canvas save/restore). Migration: 031_expanded_node_types.sql. 3 new tests for worldgen validation. |
 | 18.0 | Jan 2026 | AI Enemy Skill System Fix: Fixed `getSkillDefinition` to support monster archetype skills (beast, insect, dragon, etc.). Added `getSkillRangeTiles` for accurate skill range visualization. Fixed target ID property mismatch in action generator. New test suite: battleService.unit.test.js (26 tests). Combat System now functional for all enemy types. |

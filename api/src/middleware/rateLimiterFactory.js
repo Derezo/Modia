@@ -53,9 +53,10 @@ const getMaxRequests = (prodDefault) => {
  * @param {number} config.windowMs - Time window in milliseconds
  * @param {number} config.maxRequests - Max requests per window (production default)
  * @param {string} config.message - Error message when limit exceeded
+ * @param {boolean} config.useUserKey - If true, use user ID for authenticated requests (falls back to IP)
  * @returns {Function} - Express middleware
  */
-export function createLimiter({ name, windowMs, maxRequests, message }) {
+export function createLimiter({ name, windowMs, maxRequests, message, useUserKey = false }) {
   // Initialize stats for this limiter
   limiterStats.set(name, {
     calls: 0,
@@ -66,9 +67,16 @@ export function createLimiter({ name, windowMs, maxRequests, message }) {
   const rateLimitingEnabled = shouldEnableRateLimiting();
   const max = getMaxRequests(maxRequests);
 
+  // Key generator: use user ID for authenticated requests if useUserKey is enabled
+  // Falls back to IP for unauthenticated requests or when useUserKey is false
+  const keyGenerator = useUserKey
+    ? (req) => (req.user?.userId ? `user:${req.user.userId}` : req.ip)
+    : (req) => req.ip;
+
   const limiter = rateLimit({
     windowMs,
     max,
+    keyGenerator,
     skip: () => !rateLimitingEnabled,
     message: { error: message },
     standardHeaders: true,

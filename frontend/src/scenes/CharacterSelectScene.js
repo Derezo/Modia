@@ -338,10 +338,13 @@ export class CharacterSelectScene extends Scene {
 
   async handleLogout() {
     try {
-      await this.game.api.logout(this.game.refreshToken);
+      await this.game.api.logout(this.game.state.get('refreshToken'));
     } catch (err) {
       console.error('Logout error:', err);
     }
+
+    // Stop token refresh manager
+    this.game.tokenRefreshManager?.stop();
 
     this.game.socket.disconnect();
     this.game.state.clear();

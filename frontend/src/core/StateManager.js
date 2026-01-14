@@ -4,6 +4,7 @@ export class StateManager {
       // Auth
       user: null,
       token: null,
+      refreshToken: null,
 
       // Characters
       characters: [],
@@ -104,6 +105,7 @@ export class StateManager {
   persist() {
     const toPersist = {
       token: this.state.token,
+      refreshToken: this.state.refreshToken,
       user: this.state.user
     };
     try {
@@ -117,8 +119,9 @@ export class StateManager {
     try {
       const saved = localStorage.getItem('modia_state');
       if (saved) {
-        const { token, user } = JSON.parse(saved);
+        const { token, refreshToken, user } = JSON.parse(saved);
         this.state.token = token;
+        this.state.refreshToken = refreshToken;
         this.state.user = user;
       }
     } catch (err) {
@@ -128,6 +131,7 @@ export class StateManager {
 
   clear() {
     this.state.token = null;
+    this.state.refreshToken = null;
     this.state.user = null;
     this.state.characters = [];
     this.state.activeCharacter = null;

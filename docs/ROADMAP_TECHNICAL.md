@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.3 |
+| Version | 1.4 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -14,11 +14,11 @@
 
 | Category | Completion | Status |
 |----------|------------|--------|
-| Infrastructure | 0% | Not Started |
-| CI/CD Pipeline | 0% | Not Started |
+| Infrastructure | 25% | In Progress |
+| CI/CD Pipeline | 20% | In Progress |
 | Testing | 70% | In Progress |
 | Performance | 30% | In Progress |
-| Monitoring | 0% | Not Started |
+| Monitoring | 10% | In Progress |
 
 ---
 
@@ -79,9 +79,9 @@
 
 ### 2.2 Deployment Scripts
 
-- [ ] Zero-downtime deployment
-- [ ] Database migration automation
-- [ ] Rollback procedures
+- [x] Zero-downtime deployment (v8.7: deploy.sh with PM2 reload)
+- [x] Database migration automation (v8.7: deploy.sh runs migrations)
+- [x] Rollback procedures (v8.7: deploy.sh --rollback)
 - [ ] Environment synchronization
 
 ### 2.3 Environment Management
@@ -148,11 +148,11 @@
 - [ ] OWASP Top 10 review
 - [ ] SQL injection verification
 - [ ] XSS prevention verification
-- [ ] JWT token security
+- [x] JWT token security (v8.7: 1h access tokens, auto-refresh, per-user rate limits)
 - [x] Rate limiting verification (tests added v7.8)
-- [ ] Configure `trust proxy` for production deployment
-- [ ] Add rate limiter to auth/refresh endpoint
-- [ ] Add rate limiter to world/travel endpoint
+- [x] Configure `trust proxy` for production deployment (v8.7)
+- [x] Add rate limiter to auth/refresh endpoint (v8.7: 20/15min IP-based)
+- [x] Add rate limiter to world/travel endpoint (v8.7: 60/min per-user)
 - [ ] Review WebSocket rate limit persistence
 
 ---
@@ -222,10 +222,10 @@
 
 ### 5.4 Backup Strategy
 
-- [ ] Database backup schedule
-- [ ] Backup verification
+- [x] Database backup schedule (v8.7: backup.sh with cron)
+- [x] Backup verification (v8.7: pg_restore --list validation)
 - [ ] Point-in-time recovery
-- [ ] Off-site backup storage
+- [ ] Off-site backup storage (v8.7: backup.sh --s3 support ready)
 
 ---
 
@@ -235,12 +235,12 @@
 
 | Issue | Location | Priority |
 |-------|----------|----------|
-| Missing `trust proxy` config (IP spoofing risk) | index.js, rateLimiterFactory.js | Critical |
-| Token refresh endpoint not rate limited | auth.js:137 | Critical |
+| ~~Missing `trust proxy` config (IP spoofing risk)~~ | ~~index.js, rateLimiterFactory.js~~ | ~~Critical~~ **RESOLVED v8.7** |
+| ~~Token refresh endpoint not rate limited~~ | ~~auth.js:137~~ | ~~Critical~~ **RESOLVED v8.7** |
 | In-memory rate limit state (no distributed storage) | rateLimiterFactory.js | High |
 | WebSocket rate limits reset on reconnection | websocket/index.js:92-94 | High |
-| Missing rate limiter on /api/world/travel | world.js:316 | High |
-| Production rate limits 2x multiplier too permissive | rateLimiterFactory.js:33-44 | High |
+| ~~Missing rate limiter on /api/world/travel~~ | ~~world.js:316~~ | ~~High~~ **RESOLVED v8.7** |
+| ~~Production rate limits 2x multiplier too permissive~~ | ~~rateLimiterFactory.js:33-44~~ | ~~High~~ **RESOLVED v8.7: 300 base, per-user limits** |
 | ~~WorldMapScene pathPreviewCache unbounded growth~~ | ~~WorldMapScene.js:74~~ | ~~Medium~~ **RESOLVED** |
 | Event name mismatch (party:invite) | Game.js / partyWebsocket.js | Medium |
 | SettingsModal.js orphaned | frontend/src/components/ | Low |
@@ -274,6 +274,7 @@
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.4 | Jan 2026 | Security & Infrastructure (v8.7): Trust proxy config for proper IP detection. Per-user rate limiting for authenticated requests. New rate limiters: auth/refresh (20/15min), world/travel (60/min), gameplay actions (skill 30/min, inventory 45/min). Increased global limits (300 base). JWT extended to 1h with automatic refresh. TokenRefreshManager for seamless token renewal. VPS deployment scripts: setup.sh, deploy.sh (zero-downtime), nginx.conf.template, backup.sh (7-day retention). |
 | 1.3 | Jan 2026 | Technical debt cleanup: seed.js modularization (4862→918 lines, 12 new modules), WorldMapScene pathPreviewCache LRU limits, composite database indexes (030_performance_indexes.sql). |
 | 1.2 | Jan 2026 | ItemDataTable & Marketplace plan complete: Added marketplace integration tests, order expiration unit tests, shop refresh unit tests. Testing updated to 70%. |
 | 1.1 | Jan 2026 | Roadmap audit v8.0: Added completed integration tests (battle reconnection, coliseum, item drop, party websocket). Updated testing completion to 65%. |

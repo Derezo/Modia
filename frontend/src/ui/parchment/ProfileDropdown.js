@@ -1081,6 +1081,9 @@ export class ProfileDropdown {
       console.error('Logout error:', error);
     }
 
+    // Stop token refresh manager
+    this.game.tokenRefreshManager?.stop();
+
     // Clear state regardless of API success
     this.game.state.set('token', null);
     this.game.state.set('refreshToken', null);
