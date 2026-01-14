@@ -10,6 +10,56 @@ export const RACES = {
   ORC: 'orc'
 };
 
+// Racial Regions - each race has a homeland region with dominant terrain
+export const REGIONS = {
+  HEARTLANDS: {
+    id: 1,
+    race: 'human',
+    name: 'Heartlands',
+    castleName: "King's Keep",
+    dominantTerrain: 'forest',
+    secondaryTerrains: ['cave', 'mountain']
+  },
+  SYLVAN_REACHES: {
+    id: 2,
+    race: 'elf',
+    name: 'Sylvan Reaches',
+    castleName: 'Starlight Citadel',
+    dominantTerrain: 'forest',
+    secondaryTerrains: ['mountain', 'cave']
+  },
+  IRON_DEPTHS: {
+    id: 3,
+    race: 'dwarf',
+    name: 'Iron Depths',
+    castleName: 'Stone Throne',
+    dominantTerrain: 'cave',
+    secondaryTerrains: ['mountain', 'forest']
+  },
+  SHADOWMERE: {
+    id: 4,
+    race: 'vampire',
+    name: 'Shadowmere',
+    castleName: 'Obsidian Spire',
+    dominantTerrain: 'cave',
+    secondaryTerrains: ['forest', 'mountain']
+  },
+  BLOODPLAINS: {
+    id: 5,
+    race: 'orc',
+    name: 'Bloodplains',
+    castleName: "Warchief's Hold",
+    dominantTerrain: 'mountain',
+    secondaryTerrains: ['cave', 'forest']
+  }
+};
+
+// Terrain distribution weights for region generation
+export const TERRAIN_DISTRIBUTION = {
+  DOMINANT_WEIGHT: 0.70,
+  SECONDARY_WEIGHT: 0.30
+};
+
 // Character Classes
 export const CLASSES = {
   WARRIOR: 'warrior',
@@ -290,4 +340,9 @@ export function calculateStats(race, charClass, level) {
     vitality: baseStats.vitality + (growth.vitality * (level - 1)),
     luck: baseStats.luck
   };
+}
+
+// Get region configuration by race
+export function getRegionByRace(race) {
+  return Object.values(REGIONS).find(r => r.race === race);
 }
