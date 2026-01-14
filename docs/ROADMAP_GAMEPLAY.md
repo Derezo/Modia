@@ -367,6 +367,57 @@ Per ITEM_SYSTEM.md specifications:
 - [x] Race condition prevention (atomic claim inserts)
 - [x] Integer overflow protection on gold updates
 
+### 5.1.2 Regional World Generation (Complete - v8.4)
+
+> **Purpose:** Replace single-castle world with 5-region Voronoi-based system
+> **Design Doc:** [Regional World Generation Design](./plans/2026-01-13-regional-world-generation-design.md)
+
+#### 5-Region System
+- [x] Voronoi partitioning from castle positions (d3-delaunay)
+- [x] Force-directed castle placement (25 unit minimum distance)
+- [x] Lloyd's relaxation for even spread
+- [x] Organic region boundaries stored as polygons
+
+#### Racial Regions
+- [x] Heartlands (Human) - Forest dominant
+- [x] Sylvan Reaches (Elf) - Forest dominant
+- [x] Iron Depths (Dwarf) - Cave dominant
+- [x] Shadowmere (Vampire) - Cave dominant
+- [x] Bloodplains (Orc) - Mountain dominant
+
+#### Ring-Based Structure (per region)
+- [x] Ring 0 - Castle core (battle node guards)
+- [x] Ring 1 - Inner civilization (cities, villages)
+- [x] Ring 2 - Frontier (keeps, guilds)
+- [x] Ring 3 - Wilderness edge (terminators)
+
+#### Inter-Region Connections
+- [x] Bridge chokepoints (1-2 per border)
+- [x] Border wilderness zones (mixed terrain)
+- [x] Trade routes (safe corridors between cities)
+- [x] Grand Palace at multi-region vertex
+
+#### Node Generation
+- [x] Poisson disk sampling within Voronoi cells
+- [x] 70/30 terrain distribution (dominant/secondary)
+- [x] MST + extra connections for connectivity
+- [x] Settlement adjacency rules enforced
+
+#### API Endpoints
+- [x] GET /api/world/regions - List all regions
+- [x] GET /api/world/regions/:id - Single region details
+- [x] POST /api/characters/respawn - Return to home castle
+
+#### Character Spawning
+- [x] Race-based spawn at racial homeland castle
+- [x] home_region_id tracking for respawn
+- [x] Updated character creation flow
+
+#### Database (029_regional_world.sql)
+- [x] world_regions table with boundaries
+- [x] region_id, region_race, ring_distance on world_nodes
+- [x] Foreign keys and indexes
+
 ### 5.2 Character Progression
 
 - [x] Remove old auto-advancement from skills.js

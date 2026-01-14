@@ -75,6 +75,7 @@ The roadmap is split into two focused documents:
 - [Game Design](./GAME_DESIGN.md)
 
 ### Design Documents
+- [Regional World Generation](./plans/2026-01-13-regional-world-generation-design.md)
 - [Formation & Inventory Integration](./plans/2026-01-12-formation-inventory-integration-design.md)
 - [Marketplace Augments](./plans/2026-01-11-marketplace-item-augments-design.md)
 

@@ -362,8 +362,3 @@ export function calculateStats(race, charClass, level) {
     luck: baseStats.luck
   };
 }
-
-// Get region configuration by race
-export function getRegionByRace(race) {
-  return Object.values(REGIONS).find(r => r.race === race);
-}
