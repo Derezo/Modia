@@ -25,6 +25,15 @@ const GUILD_ACTION_LABELS = {
   chemist: 'Hire Assistant'
 };
 
+// Region colors by race - used for node tinting and boundary rendering
+const REGION_COLORS = {
+  human: { primary: '#8B7355', secondary: '#A08060', border: '#6B5335' },    // Brown/earth
+  elf: { primary: '#2E8B57', secondary: '#3A9D68', border: '#1E6B40' },      // Forest green
+  dwarf: { primary: '#708090', secondary: '#8090A0', border: '#506070' },    // Slate gray
+  vampire: { primary: '#4B0082', secondary: '#5B1092', border: '#3A0062' },  // Indigo/purple
+  orc: { primary: '#8B0000', secondary: '#9B1010', border: '#6B0000' }       // Dark red
+};
+
 export class WorldMapScene extends Scene {
   constructor(game) {
     super(game);
@@ -96,6 +105,12 @@ export class WorldMapScene extends Scene {
 
     // Responsive subscription
     this.responsiveUnsubscribe = null;
+
+    // Region system
+    this.regions = [];              // Region data from API
+    this.showRegionTint = true;     // Toggle for region color tinting on nodes
+    this.showRegionBoundaries = false; // Toggle for region boundary lines (optional)
+    this.castleNodes = [];          // Cache of castle nodes for quick access
   }
 
   async enter() {
@@ -107,15 +122,17 @@ export class WorldMapScene extends Scene {
     await this.effects.init();
 
     await this.loadWorldData();
+    await this.loadRegionData();  // Load region boundaries and castle info
     this.createUI();
     this.centerOnCurrentNode();
     this.setupInputHandlers();
     this.setupWebSocketHandlers();
 
-    // Initialize minimap
+    // Initialize minimap with region data
     this.minimap = new WorldMapMinimap(this.assetLoader);
     await this.minimap.init();
     this.minimap.calculateWorldBounds(this.nodes);
+    this.minimap.setRegionData(this.regions, this.castleNodes);
 
     // Initialize character display
     this.mapCharacter = new WorldMapCharacter(this.assetLoader);
@@ -495,10 +512,42 @@ export class WorldMapScene extends Scene {
       if (this.minimap) {
         this.minimap.calculateWorldBounds(this.nodes);
       }
+
+      // Cache castle nodes for quick access (all 5 regional castles)
+      this.castleNodes = this.nodes.filter(n => n.node_type === 'castle');
     } catch (err) {
       console.error('Failed to load world:', err);
       parchmentToast.error('World Data Error', 'Failed to load world data. Please try again.');
     }
+  }
+
+  /**
+   * Load region data including boundaries and castle information
+   * Supports the 5-region system with race-based homelands
+   */
+  async loadRegionData() {
+    try {
+      const regionData = await this.game.api.getWorldRegions();
+      this.regions = regionData.regions || [];
+
+      // Store regions in game state for other systems
+      this.game.state.set('worldRegions', this.regions);
+
+      console.log(`Loaded ${this.regions.length} regions with ${this.castleNodes.length} castles`);
+    } catch (err) {
+      // Non-fatal - region boundaries are optional visual enhancement
+      console.warn('Failed to load region data:', err);
+      this.regions = [];
+    }
+  }
+
+  /**
+   * Get region color configuration for a given race
+   * @param {string} race - The region race (human, elf, dwarf, vampire, orc)
+   * @returns {Object} Color configuration with primary, secondary, and border colors
+   */
+  getRegionColor(race) {
+    return REGION_COLORS[race] || REGION_COLORS.human;
   }
 
   centerOnCurrentNode() {
@@ -1067,6 +1116,11 @@ export class WorldMapScene extends Scene {
     // Reload world data to get newly discovered nodes (fog of war reveal)
     await this.loadWorldData();
 
+    // Update minimap with latest castle nodes
+    if (this.minimap) {
+      this.minimap.setRegionData(this.regions, this.castleNodes);
+    }
+
     // Clear path cache since we're at a new position
     this.clearPathCache();
 
@@ -1158,6 +1212,11 @@ export class WorldMapScene extends Scene {
     // Render terrain obstacles (lakes, mountains, forests)
     if (this.effects && this.obstacles && this.obstacles.length > 0) {
       this.effects.renderObstacles(ctx, this.cameraX, this.cameraY, this.obstacles);
+    }
+
+    // Render region boundaries (optional, subtle background layer)
+    if (this.showRegionBoundaries && this.regions.length > 0) {
+      this.renderRegionBoundaries(ctx);
     }
 
     ctx.save();
@@ -1362,6 +1421,19 @@ export class WorldMapScene extends Scene {
 
         // Draw main sprite
         ctx.drawImage(nodeSprite, x - offset, y - offset, drawSize, drawSize);
+
+        // Draw region color tint overlay (subtle ring around node)
+        if (this.showRegionTint && node.region_race && !isCurrent) {
+          const regionColors = this.getRegionColor(node.region_race);
+          ctx.save();
+          ctx.globalAlpha = 0.3;
+          ctx.strokeStyle = regionColors.primary;
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(x, y, drawSize / 2 + 6, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
 
         // Draw selection ring (only for adjacent nodes, not current - character sprite shows current location)
         if (isAdjacent) {
@@ -1699,6 +1771,114 @@ export class WorldMapScene extends Scene {
       ctx.fillStyle = costLine.color;
       ctx.fillText(costLine.text, x, tooltipY + 20);
     }
+  }
+
+  /**
+   * Render region boundaries as subtle colored zones
+   * Uses convex hull approximation based on region castle nodes
+   */
+  renderRegionBoundaries(ctx) {
+    ctx.save();
+
+    for (const region of this.regions) {
+      if (!region.race || !region.castleNodeId) continue;
+
+      // Find all nodes belonging to this region
+      const regionNodes = this.nodes.filter(n =>
+        n.region_race === region.race &&
+        this.reachableNodes.has(n.id)
+      );
+
+      if (regionNodes.length < 3) continue;
+
+      // Get region colors
+      const colors = this.getRegionColor(region.race);
+
+      // Calculate convex hull of region nodes for boundary
+      const points = regionNodes.map(n => ({
+        x: n.x_coord * this.nodeSpacing + this.cameraX,
+        y: n.y_coord * this.nodeSpacing + this.cameraY
+      }));
+
+      const hull = this.computeConvexHull(points);
+      if (hull.length < 3) continue;
+
+      // Draw filled region with low opacity
+      ctx.beginPath();
+      ctx.moveTo(hull[0].x, hull[0].y);
+      for (let i = 1; i < hull.length; i++) {
+        ctx.lineTo(hull[i].x, hull[i].y);
+      }
+      ctx.closePath();
+
+      ctx.fillStyle = colors.primary;
+      ctx.globalAlpha = 0.05;
+      ctx.fill();
+
+      // Draw boundary line
+      ctx.strokeStyle = colors.border;
+      ctx.globalAlpha = 0.15;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([8, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Compute convex hull using Graham scan algorithm
+   * @param {Array<{x: number, y: number}>} points - Points to compute hull for
+   * @returns {Array<{x: number, y: number}>} Convex hull vertices in CCW order
+   */
+  computeConvexHull(points) {
+    if (points.length < 3) return points;
+
+    // Find the bottommost point (or leftmost if tied)
+    let start = 0;
+    for (let i = 1; i < points.length; i++) {
+      if (points[i].y > points[start].y ||
+          (points[i].y === points[start].y && points[i].x < points[start].x)) {
+        start = i;
+      }
+    }
+
+    // Swap start point to beginning
+    [points[0], points[start]] = [points[start], points[0]];
+    const pivot = points[0];
+
+    // Sort by polar angle with respect to pivot
+    const sorted = points.slice(1).sort((a, b) => {
+      const angleA = Math.atan2(a.y - pivot.y, a.x - pivot.x);
+      const angleB = Math.atan2(b.y - pivot.y, b.x - pivot.x);
+      if (angleA !== angleB) return angleA - angleB;
+      // If same angle, sort by distance (closer first)
+      const distA = (a.x - pivot.x) ** 2 + (a.y - pivot.y) ** 2;
+      const distB = (b.x - pivot.x) ** 2 + (b.y - pivot.y) ** 2;
+      return distA - distB;
+    });
+
+    // Build hull using stack
+    const hull = [pivot];
+
+    for (const p of sorted) {
+      // Remove points that make a clockwise turn
+      while (hull.length > 1) {
+        const top = hull[hull.length - 1];
+        const second = hull[hull.length - 2];
+        const cross = (top.x - second.x) * (p.y - second.y) -
+                     (top.y - second.y) * (p.x - second.x);
+        if (cross <= 0) {
+          hull.pop();
+        } else {
+          break;
+        }
+      }
+      hull.push(p);
+    }
+
+    return hull;
   }
 
   /**

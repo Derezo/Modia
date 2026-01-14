@@ -37,6 +37,29 @@ export class WorldMapMinimap {
       bridge:   { shape: 'rect',     color: '#8b7355', size: 3 },
       guild:    { shape: 'star',     color: '#9a6acd', size: 4 }
     };
+
+    // Region data for castle coloring
+    this.regions = [];
+    this.castleNodes = [];
+
+    // Region colors by race (matching WorldMapScene)
+    this.regionColors = {
+      human: '#8B7355',    // Brown/earth
+      elf: '#2E8B57',      // Forest green
+      dwarf: '#708090',    // Slate gray
+      vampire: '#4B0082',  // Indigo/purple
+      orc: '#8B0000'       // Dark red
+    };
+  }
+
+  /**
+   * Set region data for enhanced castle rendering
+   * @param {Array} regions - Region data from API
+   * @param {Array} castleNodes - Array of castle node objects
+   */
+  setRegionData(regions, castleNodes) {
+    this.regions = regions || [];
+    this.castleNodes = castleNodes || [];
   }
 
   /**
@@ -78,13 +101,13 @@ export class WorldMapMinimap {
     // Inner parchment background
     ctx.fillStyle = '#f4e4bc';
     ctx.fillRect(this.frameWidth, this.frameWidth,
-                 this.size, this.size);
+      this.size, this.size);
 
     // Inner border highlight
     ctx.strokeStyle = '#c9a959';
     ctx.lineWidth = 1;
     ctx.strokeRect(this.frameWidth + 0.5, this.frameWidth + 0.5,
-                   this.size - 1, this.size - 1);
+      this.size - 1, this.size - 1);
 
     // Corner decorations (small ornamental dots)
     ctx.fillStyle = '#c9a959';
@@ -261,7 +284,7 @@ export class WorldMapMinimap {
 
     // Draw viewport rectangle (dynamic, on top)
     this.renderViewport(ctx, x + this.frameWidth, y + this.frameWidth,
-                        cameraX, cameraY, canvasWidth, canvasHeight, nodeSpacing);
+      cameraX, cameraY, canvasWidth, canvasHeight, nodeSpacing);
   }
 
   /**
@@ -326,7 +349,7 @@ export class WorldMapMinimap {
       const pos1 = this.worldToMinimap(fromNode.x_coord, fromNode.y_coord);
       const pos2 = this.worldToMinimap(toNode.x_coord, toNode.y_coord);
       const control = this.getPathControlPoint(pos1.x, pos1.y, pos2.x, pos2.y,
-                                                conn.from_node_id, conn.to_node_id);
+        conn.from_node_id, conn.to_node_id);
 
       const bothVisited = fromVisited && toVisited;
       ctx.strokeStyle = bothVisited ? 'rgba(0,0,0,1.0)' : 'rgba(0,0,0,0.6)';
@@ -381,7 +404,7 @@ export class WorldMapMinimap {
       const pos1 = this.worldToMinimap(fromNode.x_coord, fromNode.y_coord);
       const pos2 = this.worldToMinimap(toNode.x_coord, toNode.y_coord);
       const control = this.getPathControlPoint(pos1.x, pos1.y, pos2.x, pos2.y,
-                                                conn.from_node_id, conn.to_node_id);
+        conn.from_node_id, conn.to_node_id);
 
       const fromVisited = visitedNodes.has(fromNode.id);
       const toVisited = visitedNodes.has(toNode.id);
@@ -418,20 +441,35 @@ export class WorldMapMinimap {
       const isCurrent = currentNode && node.id === currentNode.id;
       const isVisited = visitedNodes.has(node.id);
 
-      this.renderNodeSymbol(ctx, pos.x, pos.y, node.node_type, isCurrent, isVisited);
+      this.renderNodeSymbol(ctx, pos.x, pos.y, node, isCurrent, isVisited);
     }
   }
 
   /**
    * Render individual node symbol
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {Object} node - Full node object (for region_race access)
+   * @param {boolean} isCurrent - Whether this is the current node
+   * @param {boolean} isVisited - Whether node has been visited
    */
-  renderNodeSymbol(ctx, x, y, nodeType, isCurrent, isVisited) {
+  renderNodeSymbol(ctx, x, y, node, isCurrent, isVisited) {
+    const nodeType = typeof node === 'object' ? node.node_type : node;
+    const regionRace = typeof node === 'object' ? node.region_race : null;
+
     const symbol = this.nodeSymbols[nodeType] || { shape: 'circle', color: '#4a4a6a', size: 3 };
     const size = isCurrent ? symbol.size + 2 : symbol.size;
     const alpha = isVisited ? 1.0 : 0.7;
 
+    // Use region color for castle nodes (5-region system)
+    let fillColor = symbol.color;
+    if (nodeType === 'castle' && regionRace && this.regionColors[regionRace]) {
+      fillColor = this.regionColors[regionRace];
+    }
+
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = isCurrent ? '#ffd700' : symbol.color;
+    ctx.fillStyle = isCurrent ? '#ffd700' : fillColor;
     ctx.strokeStyle = '#3d2914';
     ctx.lineWidth = 1;
 
