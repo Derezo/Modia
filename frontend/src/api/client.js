@@ -139,6 +139,14 @@ export class ApiClient {
     return this.get('/world/obstacles');
   }
 
+  getWorldRegions() {
+    return this.get('/world/regions');
+  }
+
+  getWorldRegion(regionId) {
+    return this.get(`/world/regions/${regionId}`);
+  }
+
   getNode(id) {
     return this.get(`/world/nodes/${id}`);
   }
