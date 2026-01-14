@@ -345,6 +345,33 @@ export function injectItemDataTableStyles() {
       color: ${PARCHMENT_COLORS.text.muted};
       font-style: italic;
     }
+
+    /* Equipment slot column */
+    .item-data-table-slot {
+      font-weight: 600;
+      color: ${PARCHMENT_COLORS.text.primary};
+    }
+
+    /* Empty slot indicator */
+    .item-data-table-empty-slot {
+      color: ${PARCHMENT_COLORS.text.muted};
+      font-style: italic;
+    }
+
+    /* Stat comparison colors */
+    .stat-positive {
+      color: ${PARCHMENT_COLORS.state.success};
+      font-weight: 600;
+    }
+
+    .stat-negative {
+      color: ${PARCHMENT_COLORS.state.error};
+      font-weight: 600;
+    }
+
+    .stat-neutral {
+      color: ${PARCHMENT_COLORS.text.muted};
+    }
   `;
 
   document.head.appendChild(style);

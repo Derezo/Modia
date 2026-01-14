@@ -858,6 +858,12 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   // Handle battle end if player's action ended the battle
   // (Enemy turn processing handles its own battle ends via async manager)
   if (battleStatus !== 'active') {
+    // Save final battle state and status BEFORE handling rewards
+    // This ensures the battle is marked as ended even if the client disconnects
+    await query(
+      'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
+      [JSON.stringify(state), battleStatus, battleId]
+    );
     result.rewards = await handleBattleEnd(battleId, battleStatus, state, req.user.userId);
   }
 

@@ -296,14 +296,14 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       // === SKILL PHASE ===
       console.log('[AsyncTurnManager]', enemy.name, 'using skill', decision.skillId);
 
-      // Show attack range (skill range)
-      const skillRange = getAttackRangeTiles(enemy, state, battleService);
-      if (skillRange.length > 0) {
+      // Show skill range (use actual skill range, not attack range)
+      const skillRangeTiles = getSkillRangeTiles(enemy, state, decision.skillId);
+      if (skillRangeTiles.length > 0) {
         battleWebsocket.broadcastIntentHighlight(
           battleId,
           enemy.id,
           'attack_range',
-          skillRange,
+          skillRangeTiles,
           TIMING.INTENT_ATTACK
         );
         await delay(TIMING.INTENT_ATTACK);
@@ -411,6 +411,40 @@ function getAttackRangeTiles(unit, state, battleService) {
   const range = battleService.getAttackRange(unit);
   const tiles = [];
 
+  for (let dx = -range; dx <= range; dx++) {
+    for (let dy = -range; dy <= range; dy++) {
+      if (Math.abs(dx) + Math.abs(dy) <= range && (dx !== 0 || dy !== 0)) {
+        const x = unit.tileX + dx;
+        const y = unit.tileY + dy;
+        if (x >= 0 && x < (state.mapWidth || 32) &&
+            y >= 0 && y < (state.mapHeight || 32)) {
+          tiles.push({ x, y });
+        }
+      }
+    }
+  }
+
+  return tiles;
+}
+
+/**
+ * Get skill range tiles for visualization
+ * @param {Object} unit - The unit using the skill
+ * @param {Object} state - Battle state
+ * @param {string} skillId - The skill being used
+ * @returns {Array} Array of {x, y} tiles within skill range
+ */
+function getSkillRangeTiles(unit, state, skillId) {
+  // Get skill range from unit's skills array
+  let range = 1; // Default
+  if (Array.isArray(unit.skills)) {
+    const skill = unit.skills.find(s => s.id === skillId);
+    if (skill) {
+      range = skill.range || 1;
+    }
+  }
+
+  const tiles = [];
   for (let dx = -range; dx <= range; dx++) {
     for (let dy = -range; dy <= range; dy++) {
       if (Math.abs(dx) + Math.abs(dy) <= range && (dx !== 0 || dy !== 0)) {

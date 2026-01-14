@@ -890,8 +890,19 @@ export class CharacterModal {
       availableXp: this.availableXp,
       learnedSkills: this.skills,
       onSkillLevelUp: async () => {
+        // Preserve scroll position before refresh
+        const scrollContainer = this.modal?.contentElement?.querySelector('.character-modal-accordions');
+        const scrollTop = scrollContainer?.scrollTop || 0;
+
         await this.loadData();
         this.render();
+
+        // Restore scroll position after render
+        const newScrollContainer = this.modal?.contentElement?.querySelector('.character-modal-accordions');
+        if (newScrollContainer) {
+          newScrollContainer.scrollTop = scrollTop;
+        }
+
         this.onSkillLevelUp();
       },
       onClose: () => {

@@ -75,7 +75,7 @@ function generateAllActions(unit, state) {
             skill: skill,
             skillId: skill.id,
             target: target,
-            targetId: target.id
+            targetId: target.unitId || target.id  // getTargetsInRange returns unitId, not id
           });
         }
       }
