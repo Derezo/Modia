@@ -164,27 +164,31 @@ describe('Damage Scaling Balance', () => {
   });
 
   describe('Hit and Crit Mechanics', () => {
-    it('should have base 95% hit chance', () => {
+    it('should have hit chance factoring in evasion', () => {
+      // With equal AGI and no LCK: evasion = 2% base
+      // Hit chance = 95% base - 2% evasion = 93%
       const attacker = { agility: 10, statusEffects: [] };
-      const defender = { agility: 10 };
+      const defender = { agility: 10, luck: 0 };
 
       const hitChance = calculateHitChance(attacker, defender);
-      assert.strictEqual(hitChance, 0.95, 'Base hit chance should be 95%');
+      // Use approximate comparison for floating point
+      assert.ok(Math.abs(hitChance - 0.93) < 0.001, `Hit chance should be ~93% (got ${hitChance})`);
     });
 
     it('should reduce hit chance with agility difference', () => {
       const attacker = { agility: 10, statusEffects: [] };
-      const fastDefender = { agility: 30 };
+      const fastDefender = { agility: 30, luck: 0 };
 
       const hitChance = calculateHitChance(attacker, fastDefender);
-      assert.ok(hitChance < 0.95, 'Hit chance should be reduced against faster targets');
+      assert.ok(hitChance < 0.93, 'Hit chance should be reduced against faster targets');
       assert.ok(hitChance >= 0.50, 'Hit chance should not go below 50%');
     });
 
-    it('should cap crit chance at 30%', () => {
-      const highLuckAttacker = { luck: 100 };
+    it('should cap crit chance at 50%', () => {
+      // New formula: 5% base + LCK/300, cap at 50%
+      const highLuckAttacker = { luck: 200 };
       const critChance = calculateCritChance(highLuckAttacker);
-      assert.strictEqual(critChance, 0.30, 'Crit chance should cap at 30%');
+      assert.ok(Math.abs(critChance - 0.50) < 0.001, 'Crit chance should cap at 50%');
     });
 
     it('should scale crit chance with luck', () => {

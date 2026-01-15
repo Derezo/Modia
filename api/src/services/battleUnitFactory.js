@@ -134,7 +134,35 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
 }
 
 /**
- * Create an enemy battle unit from template
+ * Archetype-based stat growth rates that match player class scaling
+ * This ensures enemies at equal level have equivalent stats to players
+ */
+const ARCHETYPE_GROWTH = {
+  beast:     { hp: 8,  str: 2.5, int: 1,   agi: 2,   vit: 2,   lck: 0.5 },
+  humanoid:  { hp: 12, str: 2,   int: 2,   agi: 2,   vit: 2,   lck: 1 },
+  undead:    { hp: 15, str: 2,   int: 1.5, agi: 1,   vit: 3,   lck: 0 },
+  elemental: { hp: 10, str: 1,   int: 3,   agi: 1.5, vit: 1.5, lck: 1 },
+  dragon:    { hp: 20, str: 3,   int: 2.5, agi: 1.5, vit: 3,   lck: 1 },
+  boss:      { hp: 30, str: 3.5, int: 3,   agi: 2,   vit: 4,   lck: 2 },
+  // Fallback for unknown archetypes
+  monster:   { hp: 10, str: 2,   int: 1.5, agi: 1.5, vit: 2,   lck: 0.5 }
+};
+
+/**
+ * Difficulty tier multipliers (adjusted for balanced encounters)
+ * Tier 2 (1.0) means enemies match player level exactly
+ */
+const TIER_MULTIPLIERS = {
+  1: 0.8,   // Starting areas - slightly easier
+  2: 1.0,   // Normal encounters - fair fight
+  3: 1.25,  // Hard content - requires strategy
+  4: 1.5,   // Expert/group content
+  5: 2.0    // Boss/raid encounters
+};
+
+/**
+ * Create an enemy battle unit from template with archetype-based scaling
+ * Enemies now use growth rates similar to player classes for balanced encounters
  * @param {Object} template - Enemy template from database
  * @param {number} partyLevel - Average party level for scaling
  * @param {number} difficultyTier - Node difficulty tier (1-5)
@@ -146,24 +174,22 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
 function createEnemyBattleUnit(template, partyLevel, difficultyTier, index, position, options = {}) {
   const { biome = 'forest', skills = [], consumables = [] } = options;
 
-  // Difficulty tier multipliers
-  const TIER_MULTIPLIERS = {
-    1: 0.9,
-    2: 1.1,
-    3: 1.35,
-    4: 1.75,
-    5: 2.15
-  };
-
   const tierMult = TIER_MULTIPLIERS[difficultyTier] || 1.0;
-  const enemyLevel = Math.floor(partyLevel * tierMult);
+  const enemyLevel = Math.max(1, Math.floor(partyLevel * tierMult));
 
-  // Scale stats based on level
-  const scaledHp = Math.floor(template.base_hp * (1 + enemyLevel * 0.10));
-  const scaledMp = Math.floor(template.base_mp * (1 + enemyLevel * 0.05));
-  const scaledStrength = Math.floor(template.base_strength * (1 + enemyLevel * 0.05));
-  const scaledIntelligence = Math.floor(template.base_intelligence * (1 + enemyLevel * 0.05));
-  const scaledAgility = Math.floor(template.base_agility * (1 + enemyLevel * 0.05));
+  // Get archetype growth rates (defaults to 'monster' if not found)
+  const archetype = (template.archetype || 'monster').toLowerCase();
+  const growth = ARCHETYPE_GROWTH[archetype] || ARCHETYPE_GROWTH.monster;
+
+  // Scale stats using archetype growth (same formula as player classes)
+  // scaledStat = baseStat + (level * growthRate) * tierMultiplier
+  const scaledHp = Math.floor((template.base_hp + (enemyLevel * growth.hp)) * tierMult);
+  const scaledMp = Math.floor((template.base_mp + (enemyLevel * growth.hp * 0.3)) * tierMult); // MP scales slower
+  const scaledStrength = Math.floor((template.base_strength + (enemyLevel * growth.str)) * tierMult);
+  const scaledIntelligence = Math.floor((template.base_intelligence + (enemyLevel * growth.int)) * tierMult);
+  const scaledAgility = Math.floor((template.base_agility + (enemyLevel * growth.agi)) * tierMult);
+  const scaledVitality = Math.floor(((template.base_vitality || template.base_hp / 10) + (enemyLevel * growth.vit)) * tierMult);
+  const scaledLuck = Math.floor(((template.base_luck || 10) + (enemyLevel * growth.lck)) * tierMult);
 
   // Get class from template (new field) or derive from archetype
   const enemyClass = template.enemy_class || template.guild || 'monster';
@@ -176,7 +202,7 @@ function createEnemyBattleUnit(template, partyLevel, difficultyTier, index, posi
     class: enemyClass,
     level: enemyLevel,
 
-    // Core Stats (scaled)
+    // Core Stats (scaled with archetype growth)
     hp: scaledHp,
     maxHp: scaledHp,
     mp: scaledMp,
@@ -184,14 +210,14 @@ function createEnemyBattleUnit(template, partyLevel, difficultyTier, index, posi
     strength: scaledStrength,
     intelligence: scaledIntelligence,
     agility: scaledAgility,
-    vitality: Math.floor(scaledHp / 10), // Derived from HP
-    luck: 10,
+    vitality: scaledVitality,
+    luck: scaledLuck,
 
-    // Combat Bonuses (from template)
-    attack: template.attack_bonus || 0,
-    defense: template.defense_bonus || 0,
-    magicAttack: template.magic_attack_bonus || 0,
-    magicDefense: template.magic_defense_bonus || 0,
+    // Combat Bonuses (from template, also scaled by tier)
+    attack: Math.floor((template.attack_bonus || 0) * tierMult),
+    defense: Math.floor((template.defense_bonus || 0) * tierMult),
+    magicAttack: Math.floor((template.magic_attack_bonus || 0) * tierMult),
+    magicDefense: Math.floor((template.magic_defense_bonus || 0) * tierMult),
 
     // Position
     tileX: position.x,
@@ -222,7 +248,7 @@ function createEnemyBattleUnit(template, partyLevel, difficultyTier, index, posi
     aiType: template.ai_type || 'aggressive',
 
     // Archetype (for monster skill trees)
-    archetype: template.archetype || 'beast',
+    archetype: archetype,
     guild: template.guild || null,
     guildLevel: template.guild_level || 1,
 
@@ -231,10 +257,10 @@ function createEnemyBattleUnit(template, partyLevel, difficultyTier, index, posi
     enemyId: template.sprite_id,
     biome: biome,
 
-    // Rewards
-    experienceReward: template.experience_reward || 10,
-    goldRewardMin: template.gold_reward_min || 1,
-    goldRewardMax: template.gold_reward_max || 10,
+    // Rewards (scaled by tier for harder content)
+    experienceReward: Math.floor((template.experience_reward || 10) * tierMult),
+    goldRewardMin: Math.floor((template.gold_reward_min || 1) * tierMult),
+    goldRewardMax: Math.floor((template.gold_reward_max || 10) * tierMult),
     dropTable: template.drop_table || {},
 
     // Special states (ambush AI, etc.)

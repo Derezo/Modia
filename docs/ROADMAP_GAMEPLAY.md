@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 3.0 |
+| Version | 4.0 |
 | Last Updated | January 2026 |
 | Focus | Features, mechanics, UX, content |
 
@@ -15,7 +15,7 @@
 | Category | Completion | Status |
 |----------|------------|--------|
 | Core Mechanics | 95% | Near Complete |
-| Combat System | 85% | In Progress |
+| Combat System | 95% | Near Complete |
 | Economy & Items | 90% | Near Complete |
 | User Experience | 85% | Near Complete |
 | Social Features | 95% | Complete |
@@ -126,27 +126,47 @@
 - [x] Guildmaster scaled to challenger level + 5
 - [x] Disciple units from lower tier classes
 
-### 2.4 Battle Balance (Not Started)
+### 2.4 Battle Balance (Complete - v8.8)
 
-> **Purpose:** Improve combat balance at high levels
+> **Purpose:** FFT-style tactical combat with meaningful stat choices
 
 #### Defense Formula Rebalance
-- [ ] Percentage-based damage reduction (defense / (defense + K))
-- [ ] 75% maximum reduction cap
-- [ ] Update GAME_DESIGN.md with new formula
+- [x] Percentage-based damage reduction with diminishing returns
+  - Physical: `defense / (defense + 100)`
+  - Magical: `defense / (defense + 80)`
+- [x] Effective cap at ~80% reduction (300+ defense)
+- [x] VIT contributes to physical defense, INT/2 to magic defense
 
-#### Agility Balance
-- [ ] Diminishing returns on CT gain above 50 AGI
-- [ ] Prevent extreme turn imbalance at high levels
+#### CT Turn Order System (FFT-style)
+- [x] CT gain formula: `5 + (AGI / 10)` - diminishing returns
+- [x] Haste/Slow modifiers (1.5x / 0.5x)
+- [x] Action at CT >= 100 threshold
+- [x] Initial CT: `(AGI / 2) + random(0, 20)`
 
-#### Status Effects
-- [ ] Status effect resistance system (based on stats)
+#### LCK Stat Overhaul
+- [x] LCK now grows with level (0.3-1.5 per level by class)
+- [x] Crit chance: `5% base + LCK/300` (cap 50%)
+- [x] Crit damage: `1.5 + LCK/500` (orcs +15% bonus)
+- [x] Evasion: `2% base + agiDiff/400 + LCK/400` (cap 35%)
+- [x] Status resistance: `10% base + LCK/200` (cap 50%)
+
+#### VIT HP Bonus
+- [x] HP formula: `baseHP + floor(level/2 + VIT * 0.5)`
+- [x] High VIT builds have significantly more HP
+
+#### Enemy Scaling
+- [x] Archetype-based growth rates (beast, humanoid, undead, elemental, dragon, boss)
+- [x] Tier multipliers: 0.8x/1.0x/1.25x/1.5x/2.0x
+- [x] Enemies match player power at equivalent levels
+
+#### Skill Progression
+- [x] Polynomial cost: `baseCost * level^1.5` (achievable max level)
+- [x] Power scaling: +0.8%/level for basic, +0.5%/level for advanced
+
+#### Remaining (v8.9)
+- [ ] Variable CT costs (Move+Act: 100, Move OR Act: 80, Wait: 60)
 - [ ] Status duration display in battle UI
-
-#### Enemy Abilities
-- [ ] Enable ability execution (abilities field currently unused)
-- [ ] Ability cooldowns per enemy
-- [ ] Ability trigger conditions (HP thresholds, etc.)
+- [ ] Enemy ability execution system
 
 ---
 
@@ -597,6 +617,7 @@ Per ITEM_SYSTEM.md specifications:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 4.0 | Jan 2026 | Battle System Formula Overhaul (v8.8): Complete FFT-style tactical combat rebalance. Defense now uses diminishing returns formula (DEF/(DEF+100) for physical, MDEF/(MDEF+80) for magical). CT turn order system replaces initiative (ctGain=5+AGI/10, act at CT>=100, haste/slow modifiers). LCK stat now scales with level (0.3-1.5 per level by class) and affects crits (5%+LCK/300), evasion (2%+agiDiff/400+LCK/400), and status resistance (10%+LCK/200). VIT provides HP bonus (level/2+VIT*0.5). Polynomial skill costs (baseCost*level^1.5) make max level achievable. Archetype-based enemy scaling with tier multipliers. New: formulaValidation.test.js (31 tests). Combat System now 95% complete. |
 | 3.1 | Jan 2026 | Activity Node Features (v8.6): All 4 activity node systems implemented. Fishing: FishingScene.js with idle auto-fishing, Big One events, session management (fishingService.js), fish templates (15 types, 5 rarities). Ruins: RuinsPuzzleModal.js with 3x3/4x4/5x5 sliding tile puzzles, regional themes, tier-based rewards, one-time completion. Caravan: Extended ShopScene.js with exclusive items (23 items), 48-hour refresh cycle, seeded inventory, stock tracking. Watchtower: Presence-based fog reveal endpoint. Security: FOR UPDATE locks, MAX_GOLD caps, input validation. |
 | 3.0 | Jan 2026 | World Generation Improvements (v8.5): New node types (fishing spots, merchant caravans, ruins, watchtowers, farms). Guild distribution enhanced (3 per region, race-appropriate primary guild). Node distribution rebalancing (40-50% battle target). Bridge visual enhancement with river/canyon hints. Zodiac shrine system planned (12 unique shrines with collection quest). Migration 031_expanded_node_types.sql. Flickering bug fixed in WorldMapScene.js. |
 | 2.9 | Jan 2026 | Formation System Improvements (v8.3): BattleFormationScene now shows all 12 party characters instead of only 5, with click-to-cycle placement and direction indicator (red border highlight) showing enemy side. FormationScene adds sorting options (Level/Class/Name toggle buttons) and removes empty slot placeholders. Code quality: timer cleanup, canvas save/restore, stable sorting. |

@@ -161,53 +161,61 @@ describe('calculateHealing', () => {
 });
 
 describe('calculateHitChance', () => {
-  it('should have 95% base hit chance', () => {
+  it('should calculate hit chance with evasion factored in', () => {
+    // With equal AGI and no LCK: evasion = 2% base
+    // Hit chance = 95% base - 2% evasion = 93%
     const attacker = { agility: 10, statusEffects: [] };
-    const defender = { agility: 10 };
+    const defender = { agility: 10, luck: 0 };
     const hitChance = calculateHitChance(attacker, defender);
 
-    assert.strictEqual(hitChance, 0.95, 'Base hit chance should be 95%');
+    // Use approximate comparison for floating point
+    assert.ok(Math.abs(hitChance - 0.93) < 0.001, `Hit chance should be ~93% (got ${hitChance})`);
   });
 
   it('should reduce hit chance against faster targets', () => {
     const attacker = { agility: 10, statusEffects: [] };
-    const fastDefender = { agility: 30 };
+    const fastDefender = { agility: 30, luck: 0 };
     const hitChance = calculateHitChance(attacker, fastDefender);
 
-    assert.ok(hitChance < 0.95, 'Hit chance should be reduced against faster target');
+    assert.ok(hitChance < 0.93, 'Hit chance should be reduced against faster target');
   });
 
-  it('should not increase hit chance against slower targets', () => {
-    const attacker = { agility: 30, statusEffects: [] };
-    const slowDefender = { agility: 10 };
+  it('should increase hit chance against slower targets up to 98% cap', () => {
+    // Faster attacker means defender has lower evasion (floored at MIN_EVASION 2%)
+    const attacker = { agility: 100, statusEffects: [] };
+    const slowDefender = { agility: 10, luck: 0 };
     const hitChance = calculateHitChance(attacker, slowDefender);
 
-    assert.strictEqual(hitChance, 0.95, 'Hit chance should not exceed 95% against slow target');
+    // Evasion = 2% base + (10-100)/400 = 2% - 22.5% = 2% (floored at MIN_EVASION)
+    // Hit = 95% - 2% = 93%
+    assert.ok(hitChance <= 0.98, 'Hit chance should not exceed 98%');
+    assert.ok(hitChance >= 0.92, 'Hit chance should be at least ~93% against slow target');
   });
 
   it('should reduce hit chance when blinded', () => {
     const attacker = { agility: 10, statusEffects: [{ type: 'blind' }] };
-    const defender = { agility: 10 };
+    const defender = { agility: 10, luck: 0 };
     const hitChance = calculateHitChance(attacker, defender);
 
-    assert.ok(hitChance < 0.95, 'Blind should reduce hit chance');
+    // Base 95% - 2% evasion - 30% blind = 63%
+    assert.ok(hitChance < 0.93, 'Blind should reduce hit chance');
     assert.ok(hitChance >= 0.5, 'Hit chance should not go below 50%');
   });
 
   it('should have minimum 50% hit chance', () => {
     const attacker = { agility: 1, statusEffects: [{ type: 'blind' }] };
-    const defender = { agility: 100 };
+    const defender = { agility: 100, luck: 100 };
     const hitChance = calculateHitChance(attacker, defender);
 
-    assert.ok(hitChance >= 0.5, 'Hit chance should be at least 50%');
+    assert.ok(Math.abs(hitChance - 0.5) < 0.001, 'Hit chance should be at least 50%');
   });
 
-  it('should have maximum 100% hit chance', () => {
+  it('should cap at maximum 98% hit chance', () => {
     const attacker = { agility: 100, statusEffects: [] };
-    const defender = { agility: 1 };
+    const defender = { agility: 1, luck: 0 };
     const hitChance = calculateHitChance(attacker, defender);
 
-    assert.ok(hitChance <= 1.0, 'Hit chance should not exceed 100%');
+    assert.ok(hitChance <= 0.98, 'Hit chance should not exceed 98%');
   });
 });
 
@@ -222,25 +230,30 @@ describe('calculateCritChance', () => {
     assert.ok(critHigh > critLow, 'Higher luck should mean higher crit chance');
   });
 
-  it('should cap crit chance at 30%', () => {
+  it('should cap crit chance at 50%', () => {
+    // New formula: 5% base + LCK/300, cap at 50%
     const maxLuck = { luck: 200 };
     const critChance = calculateCritChance(maxLuck);
 
-    assert.strictEqual(critChance, 0.30, 'Crit chance should cap at 30%');
+    assert.strictEqual(critChance, 0.50, 'Crit chance should cap at 50%');
   });
 
   it('should have reasonable crit chance at normal luck', () => {
+    // Formula: 5% base + LCK/300
+    // LCK 20: 0.05 + 20/300 = 0.05 + 0.0667 = 0.1167
     const normalLuck = { luck: 20 };
     const critChance = calculateCritChance(normalLuck);
 
-    assert.strictEqual(critChance, 0.10, 'Luck 20 should give 10% crit');
+    const expected = 0.05 + (20 / 300);
+    assert.ok(Math.abs(critChance - expected) < 0.001, `Luck 20 should give ~${(expected * 100).toFixed(1)}% crit`);
   });
 
   it('should handle missing luck stat', () => {
+    // With 0 luck: 5% base + 0/300 = 5%
     const noLuck = {};
     const critChance = calculateCritChance(noLuck);
 
-    assert.strictEqual(critChance, 0.05, 'Default luck 10 should give 5% crit');
+    assert.strictEqual(critChance, 0.05, 'No luck should give base 5% crit');
   });
 });
 
@@ -340,19 +353,22 @@ describe('calculateInitiative', () => {
   });
 
   it('should add random variance', () => {
+    // New formula: (AGI / 2) + random(0, 20)
+    // AGI 20: base = 10
     const unit = { agility: 20 };
 
-    const initLow = calculateInitiative(unit, 0);
-    const initHigh = calculateInitiative(unit, 0.99);
+    const initLow = calculateInitiative(unit, 0);    // 20/2 + floor(0 * 21) = 10 + 0 = 10
+    const initHigh = calculateInitiative(unit, 0.99); // 20/2 + floor(0.99 * 21) = 10 + 20 = 30
 
-    assert.strictEqual(initLow, 20, 'Min variance should be 0');
-    assert.strictEqual(initHigh, 29, 'Max variance should be 9');
+    assert.strictEqual(initLow, 10, 'Min variance should give AGI/2');
+    assert.strictEqual(initHigh, 30, 'Max variance should add up to 20');
   });
 
   it('should handle missing agility', () => {
+    // AGI 0: base = 0/2 = 0, + variance
     const unit = {};
-    const init = calculateInitiative(unit, 0.5);
+    const init = calculateInitiative(unit, 0.5);  // 0/2 + floor(0.5 * 21) = 0 + 10 = 10
 
-    assert.strictEqual(init, 15, 'Default agility 10 + variance 5');
+    assert.strictEqual(init, 10, 'Default agility 0 with middle variance');
   });
 });

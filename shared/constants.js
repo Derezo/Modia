@@ -238,37 +238,37 @@ export const RACE_BASE_STATS = {
   }
 };
 
-// Stat growth per level by class
+// Stat growth per level by class (includes LCK for crit/evasion/status resist scaling)
 export const CLASS_GROWTH = {
   // Base classes
-  [CLASSES.WARRIOR]: { hp: 15, mp: 3, strength: 3, intelligence: 1, agility: 1, vitality: 2 },
-  [CLASSES.WIZARD]: { hp: 8, mp: 12, strength: 1, intelligence: 4, agility: 1, vitality: 1 },
-  [CLASSES.MONK]: { hp: 10, mp: 6, strength: 2, intelligence: 2, agility: 3, vitality: 1 },
-  [CLASSES.CHEMIST]: { hp: 10, mp: 8, strength: 1, intelligence: 2, agility: 2, vitality: 2 },
+  [CLASSES.WARRIOR]: { hp: 15, mp: 3, strength: 3, intelligence: 1, agility: 1, vitality: 2, luck: 0.5 },
+  [CLASSES.WIZARD]: { hp: 8, mp: 12, strength: 1, intelligence: 4, agility: 1, vitality: 1, luck: 0.5 },
+  [CLASSES.MONK]: { hp: 10, mp: 6, strength: 2, intelligence: 2, agility: 3, vitality: 1, luck: 1.0 },
+  [CLASSES.CHEMIST]: { hp: 10, mp: 8, strength: 1, intelligence: 2, agility: 2, vitality: 2, luck: 1.0 },
 
   // Warrior advanced classes (T1-T4)
-  [ADVANCED_CLASSES.BERSERKER]: { hp: 18, mp: 2, strength: 4, intelligence: 1, agility: 1, vitality: 2 },
-  [ADVANCED_CLASSES.PALADIN]: { hp: 16, mp: 6, strength: 3, intelligence: 2, agility: 1, vitality: 3 },
-  [ADVANCED_CLASSES.GUARDIAN]: { hp: 20, mp: 4, strength: 2, intelligence: 1, agility: 1, vitality: 4 },
-  [ADVANCED_CLASSES.WARLORD]: { hp: 17, mp: 5, strength: 3, intelligence: 2, agility: 2, vitality: 2 },
+  [ADVANCED_CLASSES.BERSERKER]: { hp: 18, mp: 2, strength: 4, intelligence: 1, agility: 1, vitality: 2, luck: 0.5 },
+  [ADVANCED_CLASSES.PALADIN]: { hp: 16, mp: 6, strength: 3, intelligence: 2, agility: 1, vitality: 3, luck: 0.5 },
+  [ADVANCED_CLASSES.GUARDIAN]: { hp: 20, mp: 4, strength: 2, intelligence: 1, agility: 1, vitality: 4, luck: 0.3 },
+  [ADVANCED_CLASSES.WARLORD]: { hp: 17, mp: 5, strength: 3, intelligence: 2, agility: 2, vitality: 2, luck: 0.8 },
 
   // Wizard advanced classes (T1-T4)
-  [ADVANCED_CLASSES.SORCERER]: { hp: 7, mp: 15, strength: 1, intelligence: 5, agility: 1, vitality: 1 },
-  [ADVANCED_CLASSES.SUMMONER]: { hp: 9, mp: 14, strength: 1, intelligence: 4, agility: 1, vitality: 2 },
-  [ADVANCED_CLASSES.CONJURER]: { hp: 8, mp: 13, strength: 1, intelligence: 4, agility: 2, vitality: 1 },
-  [ADVANCED_CLASSES.ORACLE]: { hp: 8, mp: 14, strength: 1, intelligence: 5, agility: 1, vitality: 1 },
+  [ADVANCED_CLASSES.SORCERER]: { hp: 7, mp: 15, strength: 1, intelligence: 5, agility: 1, vitality: 1, luck: 0.5 },
+  [ADVANCED_CLASSES.SUMMONER]: { hp: 9, mp: 14, strength: 1, intelligence: 4, agility: 1, vitality: 2, luck: 0.8 },
+  [ADVANCED_CLASSES.CONJURER]: { hp: 8, mp: 13, strength: 1, intelligence: 4, agility: 2, vitality: 1, luck: 0.5 },
+  [ADVANCED_CLASSES.ORACLE]: { hp: 8, mp: 14, strength: 1, intelligence: 5, agility: 1, vitality: 1, luck: 1.5 },
 
   // Monk advanced classes (T1-T4)
-  [ADVANCED_CLASSES.NINJA]: { hp: 10, mp: 5, strength: 2, intelligence: 2, agility: 4, vitality: 1 },
-  [ADVANCED_CLASSES.MARTIAL_ARTIST]: { hp: 12, mp: 5, strength: 3, intelligence: 1, agility: 4, vitality: 1 },
-  [ADVANCED_CLASSES.BRAWLER]: { hp: 14, mp: 4, strength: 3, intelligence: 1, agility: 3, vitality: 2 },
-  [ADVANCED_CLASSES.ASCETIC]: { hp: 11, mp: 8, strength: 2, intelligence: 3, agility: 3, vitality: 1 },
+  [ADVANCED_CLASSES.NINJA]: { hp: 10, mp: 5, strength: 2, intelligence: 2, agility: 4, vitality: 1, luck: 1.5 },
+  [ADVANCED_CLASSES.MARTIAL_ARTIST]: { hp: 12, mp: 5, strength: 3, intelligence: 1, agility: 4, vitality: 1, luck: 1.0 },
+  [ADVANCED_CLASSES.BRAWLER]: { hp: 14, mp: 4, strength: 3, intelligence: 1, agility: 3, vitality: 2, luck: 0.8 },
+  [ADVANCED_CLASSES.ASCETIC]: { hp: 11, mp: 8, strength: 2, intelligence: 3, agility: 3, vitality: 1, luck: 1.0 },
 
   // Chemist advanced classes (T1-T4)
-  [ADVANCED_CLASSES.ALCHEMIST]: { hp: 11, mp: 10, strength: 1, intelligence: 3, agility: 2, vitality: 2 },
-  [ADVANCED_CLASSES.MEDIC]: { hp: 12, mp: 12, strength: 1, intelligence: 4, agility: 1, vitality: 2 },
-  [ADVANCED_CLASSES.PLAGUE_DOCTOR]: { hp: 10, mp: 11, strength: 1, intelligence: 4, agility: 2, vitality: 1 },
-  [ADVANCED_CLASSES.ARTIFICER]: { hp: 11, mp: 9, strength: 2, intelligence: 3, agility: 2, vitality: 2 }
+  [ADVANCED_CLASSES.ALCHEMIST]: { hp: 11, mp: 10, strength: 1, intelligence: 3, agility: 2, vitality: 2, luck: 1.0 },
+  [ADVANCED_CLASSES.MEDIC]: { hp: 12, mp: 12, strength: 1, intelligence: 4, agility: 1, vitality: 2, luck: 0.8 },
+  [ADVANCED_CLASSES.PLAGUE_DOCTOR]: { hp: 10, mp: 11, strength: 1, intelligence: 4, agility: 2, vitality: 1, luck: 1.2 },
+  [ADVANCED_CLASSES.ARTIFICER]: { hp: 11, mp: 9, strength: 2, intelligence: 3, agility: 2, vitality: 2, luck: 0.8 }
 };
 
 // Movement range by class
@@ -348,17 +348,30 @@ export function expForLevel(level) {
 }
 
 // Calculate total stats for a character
+// HP formula: baseHP + classGrowth + vitBonus where vitBonus = (level/2) + (VIT * 0.5)
+// LCK now grows with level based on class growth
 export function calculateStats(race, charClass, level) {
   const baseStats = RACE_BASE_STATS[race];
   const growth = CLASS_GROWTH[charClass];
 
+  // Calculate base stats with level growth
+  const vitality = baseStats.vitality + (growth.vitality * (level - 1));
+  const luck = baseStats.luck + ((growth.luck || 0) * (level - 1));
+
+  // HP formula: base + class growth + VIT bonus
+  // VIT bonus = (level / 2) + (VIT * 0.5)
+  // This ensures low VIT still gains HP but high VIT builds get ~2x HP
+  const baseHP = baseStats.hp + (growth.hp * (level - 1));
+  const vitBonus = Math.floor((level / 2) + (vitality * 0.5));
+  const hpMax = baseHP + vitBonus;
+
   return {
-    hpMax: baseStats.hp + (growth.hp * (level - 1)),
+    hpMax,
     mpMax: baseStats.mp + (growth.mp * (level - 1)),
     strength: baseStats.strength + (growth.strength * (level - 1)),
     intelligence: baseStats.intelligence + (growth.intelligence * (level - 1)),
     agility: baseStats.agility + (growth.agility * (level - 1)),
-    vitality: baseStats.vitality + (growth.vitality * (level - 1)),
-    luck: baseStats.luck
+    vitality,
+    luck: Math.floor(luck)
   };
 }

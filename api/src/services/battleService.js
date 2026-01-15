@@ -1,5 +1,12 @@
 /**
  * Battle Service - Damage calculations, status effects, action processing, and battle utilities
+ *
+ * FORMULA DESIGN (FFT-inspired):
+ * - Defense uses diminishing returns: reduction = DEF / (DEF + 100)
+ * - CT system: ctGain = 5 + (AGI / 10) for diminishing returns on turn frequency
+ * - Crit: 5% base + LCK/300 (max 50%)
+ * - Evasion: 2% base + (defAGI - atkAGI)/400 + defLCK/400 (max 35%)
+ * - Status resistance: 10% base + LCK/200 (max 50%)
  */
 
 import { CLASS_MOVEMENT } from '../config/constants.js';
@@ -13,92 +20,120 @@ import {
   calculatePathCost as sharedCalculatePathCost,
   getManhattanDistance
 } from '../../../shared/pathfinding.js';
+import {
+  PHYSICAL_DEFENSE_CONSTANT,
+  MAGIC_DEFENSE_CONSTANT,
+  CT_THRESHOLD,
+  CT_BASE_GAIN,
+  CT_AGI_DIVISOR,
+  CT_COST,
+  BASE_CRIT_CHANCE,
+  CRIT_LUCK_DIVISOR,
+  MAX_CRIT_CHANCE,
+  BASE_CRIT_MULTIPLIER,
+  CRIT_LUCK_DAMAGE_DIVISOR,
+  ORC_CRIT_BONUS,
+  calculateDefenseReduction,
+  calculateEvasion,
+  calculateCritChance as sharedCalculateCritChance,
+  calculateCritMultiplier as sharedCalculateCritMultiplier,
+  calculateStatusResistance,
+  calculateEffectiveStatusChance,
+  calculateCTGain,
+  calculateInitialCT,
+  applyVariance
+} from '../../../shared/battleMath.js';
 
 // Default attack range for melee (1 tile adjacent)
 const DEFAULT_ATTACK_RANGE = 1;
 
 /**
- * Calculate physical damage
- * Formula: (ATK + equipmentAttack + strength) * skillPower - (DEF + equipmentDefense + vitality * 0.5)
- * Equipment attack/defense bonuses are additive to base stats
- * Trait bonuses are applied as multipliers after base calculation
+ * Calculate physical damage with diminishing returns defense
+ * Formula: (STR + weaponAttack) * skillPower * (1 - defenseReduction) * variance * crit
+ * Defense reduction = (VIT + armorDefense) / ((VIT + armorDefense) + 100)
+ * This creates meaningful defense that never hits 100% (diminishing returns)
  */
 function calculatePhysicalDamage(attacker, defender, skillPower = 100) {
   // Base attack = strength + equipment attack bonus
-  const attackPower = attacker.strength + (attacker.attack || 0);
-  const baseDamage = attackPower * (skillPower / 100);
+  const attackPower = (attacker.strength || 0) + (attacker.attack || 0);
+  const rawDamage = attackPower * (skillPower / 100);
 
-  // Defense = vitality + equipment defense bonus
-  const defensePower = (defender.vitality || defender.agility / 2) + (defender.defense || 0);
-  const defenseReduction = defensePower * 0.5 * 0.3;
-  const rawDamage = Math.max(1, baseDamage - defenseReduction);
+  // Defense with diminishing returns: DEF / (DEF + 100)
+  // 100 defense = 50% reduction, 200 = 66%, 300 = 75%
+  const defensePower = (defender.vitality || 0) + (defender.defense || 0);
+  const defenseReduction = calculateDefenseReduction(defensePower, PHYSICAL_DEFENSE_CONSTANT);
+
+  // Apply defense reduction
+  const reducedDamage = Math.max(1, rawDamage * (1 - defenseReduction));
 
   // Random variance (0.9 - 1.1)
   const variance = 0.9 + Math.random() * 0.2;
 
-  // Critical hit check (luck-based) with trait bonus
-  const baseCritChance = (attacker.luck || 10) / 200;
+  // Critical hit check with new formula: 5% base + LCK/300 (max 50%)
   const traitCritBonus = traitService.getCritChanceBonus(attacker);
-  const critChance = baseCritChance + traitCritBonus;
+  const critChance = sharedCalculateCritChance(attacker, traitCritBonus);
   const isCritical = Math.random() < critChance;
-  const critMultiplier = isCritical ? 1.5 : 1.0;
 
-  // Apply race bonuses
-  let raceMultiplier = 1.0;
-  if (attacker.race === 'orc') {
-    raceMultiplier = 1.1; // +10% crit damage for orcs
-  }
+  // Critical multiplier: 1.5 base + LCK/500 + race bonus (orcs +15%)
+  const critMultiplier = isCritical ? sharedCalculateCritMultiplier(attacker) : 1.0;
 
   // Apply trait damage multipliers
   const traitDamageMultiplier = traitService.getPhysicalDamageMultiplier(attacker, defender, isCritical);
   const traitDefenseMultiplier = traitService.getDamageReductionMultiplier(defender, 'physical');
 
-  const finalDamage = Math.floor(rawDamage * variance * critMultiplier * raceMultiplier * traitDamageMultiplier * traitDefenseMultiplier);
+  const finalDamage = Math.floor(reducedDamage * variance * critMultiplier * traitDamageMultiplier * traitDefenseMultiplier);
 
   return {
     damage: Math.max(1, finalDamage),
     isCritical,
     variance,
+    defenseReduction,
     traitBonusApplied: traitDamageMultiplier > 1.0 || traitDefenseMultiplier < 1.0
   };
 }
 
 /**
- * Calculate magical damage
- * Formula: (INT + equipmentMagicAttack) * skillPower - (INT_DEF + equipmentMagicDefense)
- * Equipment magic attack/defense bonuses are additive to base stats
- * Trait bonuses are applied as multipliers after base calculation
+ * Calculate magical damage with diminishing returns defense
+ * Formula: (INT + magicAttack) * skillPower * (1 - magicDefenseReduction) * variance * crit
+ * Magic defense reduction = (INT/2 + magicDefense) / ((INT/2 + magicDefense) + 80)
+ * INT provides innate magic resistance (half value)
  */
 function calculateMagicalDamage(attacker, defender, skillPower = 100) {
   // Base magic attack = intelligence + equipment magic attack bonus
-  const magicAttackPower = attacker.intelligence + (attacker.magicAttack || 0);
-  const baseDamage = magicAttackPower * (skillPower / 100);
+  const magicAttackPower = (attacker.intelligence || 0) + (attacker.magicAttack || 0);
+  const rawDamage = magicAttackPower * (skillPower / 100);
 
-  // Magic defense = intelligence + equipment magic defense bonus
-  const magicDefensePower = (defender.intelligence || 10) + (defender.magicDefense || 0);
-  const defenseReduction = magicDefensePower * 0.25 * 0.3;
-  const rawDamage = Math.max(1, baseDamage - defenseReduction);
+  // Magic defense with diminishing returns: (INT/2 + MDEF) / (value + 80)
+  // INT provides innate magic resistance at half value
+  const defenderInt = defender.intelligence || 0;
+  const magicDefensePower = Math.floor(defenderInt / 2) + (defender.magicDefense || 0);
+  const defenseReduction = calculateDefenseReduction(magicDefensePower, MAGIC_DEFENSE_CONSTANT);
+
+  // Apply defense reduction
+  const reducedDamage = Math.max(1, rawDamage * (1 - defenseReduction));
 
   // Random variance (0.9 - 1.1)
   const variance = 0.9 + Math.random() * 0.2;
 
-  // Critical hit check with trait bonus
-  const baseCritChance = (attacker.luck || 10) / 200;
+  // Critical hit check with new formula: 5% base + LCK/300 (max 50%)
   const traitCritBonus = traitService.getCritChanceBonus(attacker);
-  const critChance = baseCritChance + traitCritBonus;
+  const critChance = sharedCalculateCritChance(attacker, traitCritBonus);
   const isCritical = Math.random() < critChance;
-  const critMultiplier = isCritical ? 1.5 : 1.0;
+
+  // Critical multiplier: 1.5 base + LCK/500 + race bonus
+  const critMultiplier = isCritical ? sharedCalculateCritMultiplier(attacker) : 1.0;
 
   // Apply trait damage multipliers
   const traitDamageMultiplier = traitService.getMagicalDamageMultiplier(attacker, defender, isCritical);
   const traitDefenseMultiplier = traitService.getDamageReductionMultiplier(defender, 'magical');
 
-  const finalDamage = Math.floor(rawDamage * variance * critMultiplier * traitDamageMultiplier * traitDefenseMultiplier);
+  const finalDamage = Math.floor(reducedDamage * variance * critMultiplier * traitDamageMultiplier * traitDefenseMultiplier);
 
   return {
     damage: Math.max(1, finalDamage),
     isCritical,
     variance,
+    defenseReduction,
     traitBonusApplied: traitDamageMultiplier > 1.0 || traitDefenseMultiplier < 1.0
   };
 }
@@ -246,28 +281,33 @@ function applyStatusEffect(unit, effectType, duration = 3) {
 }
 
 /**
- * Check miss chance based on agility and traits
+ * Check hit/miss using new evasion formula
+ * Evasion: 2% base + (defAGI - atkAGI)/400 + defLCK/400 (max 35%)
+ * Hit chance: 95% base - evasion - blindPenalty + traitBonuses (50% min, 98% max)
  */
 function checkHit(attacker, defender) {
-  const baseHitChance = 0.95;
-  const agilityDiff = defender.agility - attacker.agility;
-  const dodgeBonus = Math.max(0, agilityDiff) * 0.01;
-
   // Apply trait bonuses
   const accuracyBonus = traitService.getAccuracyBonus(attacker);
   const evasionBonus = traitService.getEvasionBonus(defender);
 
+  // Calculate evasion using new formula from battleMath
+  const targetEvasion = calculateEvasion(attacker, defender, evasionBonus);
+
   // Check for blind status
   const isBlinded = attacker.statusEffects?.some(e => e.type === 'blind');
-  const blindPenalty = isBlinded ? 0.3 : 0;
+  const blindPenalty = isBlinded ? 0.30 : 0;
 
-  const hitChance = Math.max(0.5, baseHitChance - dodgeBonus - blindPenalty + accuracyBonus - evasionBonus);
+  // Calculate hit chance: 95% base - evasion - blind + accuracy
+  const baseHitChance = 0.95;
+  const hitChance = Math.max(0.50, Math.min(0.98, baseHitChance - targetEvasion - blindPenalty + accuracyBonus));
+
   return Math.random() < hitChance;
 }
 
 /**
  * Calculate experience reward from battle
- * Includes trait bonus (Fast Learner: +10% XP)
+ * Formula: baseXP * (enemyLevel / 10) * levelMultiplier * traitBonus
+ * Level multiplier: 1 + (levelDiff * 0.05), clamped 0.5-1.5
  * @param {Array} enemies - Enemy units defeated
  * @param {number} partyLevel - Average party level
  * @param {Array} partyUnits - Player units (for trait bonuses)
@@ -276,11 +316,16 @@ function calculateExperienceReward(enemies, partyLevel, partyUnits = []) {
   let totalXP = 0;
 
   for (const enemy of enemies) {
+    // Base XP scales with enemy level
     const baseXP = enemy.xpReward || (50 + (enemy.maxHp / 10));
-    // Scale by level difference
-    const levelDiff = (enemy.level || partyLevel) - partyLevel;
-    const levelMultiplier = Math.max(0.5, Math.min(2.0, 1 + levelDiff * 0.1));
-    totalXP += Math.floor(baseXP * levelMultiplier);
+    const enemyLevel = enemy.level || partyLevel;
+    const scaledBaseXP = baseXP * (enemyLevel / 10);
+
+    // Level difference multiplier: ±5% per level difference
+    const levelDiff = enemyLevel - partyLevel;
+    const levelMultiplier = Math.max(0.5, Math.min(1.5, 1 + levelDiff * 0.05));
+
+    totalXP += Math.floor(scaledBaseXP * levelMultiplier);
   }
 
   // Apply trait XP bonuses from all party members (use highest bonus)
@@ -904,22 +949,25 @@ function updateChargeProgress(unit, ctAdvanced) {
 }
 
 // ==================== CT-Based Turn System ====================
-
-const CT_THRESHOLD = 100;
+// Uses CT_THRESHOLD imported from battleMath.js (100)
+// CT gain formula: 5 + (AGI / 10) - provides diminishing returns on turn frequency
 
 /**
  * Initialize CT values for all units at battle start
- * Units start with CT based on their agility for initial variation
+ * Formula: (AGI / 2) + random(0, 20)
+ * This gives faster units a head start but with some randomness
  */
 function initializeCT(units) {
   for (const unit of units) {
-    // Start with some CT based on agility to add variety to first turns
-    unit.ct = Math.floor(unit.agility * Math.random());
+    // Use new formula: (AGI / 2) + random(0, 20)
+    unit.ct = calculateInitialCT(unit);
   }
 }
 
 /**
  * Advance CT for all alive units until at least one can act
+ * CT gain formula: 5 + (AGI / 10) - provides diminishing returns
+ * AGI 10 = 6 CT/tick, AGI 50 = 10 CT/tick, AGI 100 = 15 CT/tick
  * Returns the number of ticks advanced
  */
 function advanceCTUntilReady(state) {
@@ -935,9 +983,10 @@ function advanceCTUntilReady(state) {
       break;
     }
 
-    // Advance all alive units' CT by their agility
+    // Advance all alive units' CT using new formula with diminishing returns
     for (const unit of aliveUnits) {
-      unit.ct += unit.agility;
+      const ctGain = calculateCTGain(unit); // 5 + (AGI / 10), affected by haste/slow
+      unit.ct += ctGain;
     }
     ticks++;
   }
@@ -977,6 +1026,7 @@ function consumeCT(unit) {
 
 /**
  * Predict the next N turns without modifying actual state
+ * Uses new CT gain formula: 5 + (AGI / 10)
  * Returns array of { id, name, type, class } for each predicted turn
  */
 function predictTurnOrder(state, count = 10) {
@@ -997,10 +1047,12 @@ function predictTurnOrder(state, count = 10) {
   while (predictions.length < count && iterations < maxIterations) {
     iterations++;
 
-    // Advance CT until someone is ready
+    // Advance CT until someone is ready using new formula
     while (!aliveUnits.some(u => simCT[u.id] >= CT_THRESHOLD)) {
       for (const unit of aliveUnits) {
-        simCT[unit.id] += unit.agility;
+        // Use new CT gain formula with diminishing returns
+        const ctGain = calculateCTGain(unit);
+        simCT[unit.id] += ctGain;
       }
     }
 
