@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 21.0 |
+| Version | 22.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -39,7 +39,7 @@ The roadmap is split into two focused documents:
 |-------|------|------------|--------|
 | 1 | Foundation | 100% | Complete |
 | 2 | Characters & World | 95% | Near Complete |
-| 3 | Combat System | 85% | In Progress |
+| 3 | Combat System | 95% | Near Complete |
 | 4 | Economy & Inventory | 90% | Near Complete |
 | 5 | Multiplayer | 80% | In Progress |
 | 6 | Polish & Launch | 50% | In Progress |
@@ -54,7 +54,7 @@ The roadmap is split into two focused documents:
 |------|----------|--------|
 | Social Hub (Friends, Party, Clans) | SocialHubScene.js, social/tabs/* | **COMPLETE** |
 | Formation & Inventory Integration | FormationScene.js, modals/* | **COMPLETE** |
-| Battle Balance (Defense) | battleService.js | Not Started |
+| ~~Battle Balance (Defense)~~ | ~~battleService.js~~ | **COMPLETE** (v8.8) |
 | Gold Sinks | marketplace.js, world.js | Not Started |
 
 ### High Priority - Technical
@@ -110,6 +110,7 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 22.0 | Jan 2026 | Battle System Formula Overhaul (v8.8): FFT-style tactical combat rebalance. Defense with diminishing returns (DEF/(DEF+100)). CT turn order system (ctGain=5+AGI/10, act at CT>=100). LCK now scales with level and affects crits/evasion/status resist. VIT provides HP bonus (level/2 + VIT*0.5). Polynomial skill costs (baseCost*level^1.5) for achievable max level. Archetype-based enemy scaling matching player growth. New files: formulaValidation.test.js. Modified: battleMath.js, constants.js, battleService.js, battleUnitFactory.js, skills.js, skillScaling.js, enemies.js, test files. Combat System now 95% complete. |
 | 21.0 | Jan 2026 | Security & Infrastructure (v8.7): Trust proxy for proper IP detection behind nginx. Per-user rate limiting for authenticated requests (tied to userId). New rate limiters: auth/refresh (20/15min IP), world/travel (60/min user), gameplay actions. Global limits increased (300 base, 600 prod, 1500 dev). JWT extended to 1h with automatic refresh 1min before expiry. TokenRefreshManager for seamless token renewal + 401 retry logic. VPS deployment scripts: setup.sh (Node.js 20, PM2, PostgreSQL, Nginx), deploy.sh (zero-downtime with rollback), nginx.conf.template (WebSocket, SSL, caching), backup.sh (pg_dump with 7-day retention). |
 | 20.0 | Jan 2026 | Activity Node Systems (v8.6): Complete implementation of all 4 activity node types. Fishing: FishingScene.js with auto-fishing, Big One events, 15 fish types, session management. Ruins: RuinsPuzzleModal.js with 3x3/4x4/5x5 sliding puzzles, regional themes, tier rewards. Caravan: ShopScene.js extension with 23 exclusive items, 48-hour refresh, seeded inventory. Watchtower: Fog reveal endpoint. Security: FOR UPDATE locks, MAX_GOLD caps, advisory locks for race conditions. New files: fishingService.js, caravanService.js, ruins.js, fishing.js, fish.js, caravanItems.js, FishingScene.js, RuinsPuzzleModal.js. |
 | 19.0 | Jan 2026 | World Generation Improvements (v8.5): New node types (fishing_spot, merchant_caravan, ruins, watchtower, farm). Guild distribution: 3 per region with race-appropriate primary guild. Node distribution: 40-50% battle target. 12 zodiac shrines placed globally. Bridge visual enhancement (river/canyon hint). Flickering bug fixed (canvas save/restore). Migration: 031_expanded_node_types.sql. 3 new tests for worldgen validation. |

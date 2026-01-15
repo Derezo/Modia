@@ -13,13 +13,20 @@
 /**
  * Default scaling increments per level for each attribute type
  * Skills can override these with custom values in their `scaling` property
+ *
+ * BALANCE NOTE (FFT-style):
+ * - Basic offensive skills: growth 0.8 (120% at L1 → 199% at L100)
+ * - Advanced skills: growth 0.5 (150% at L1 → 200% at L100)
+ * - Effect chance: +0.3% per level to reach near-100% at high levels
+ * - Duration: +1 turn per 50 levels
  */
 const DEFAULT_SCALING_CONFIG = {
-  // Damage/power scaling: +0.5% per level (150% at L1 -> ~200% at L100)
-  power: 0.5,
+  // Damage/power scaling: +0.8% per level (120% at L1 -> ~199% at L100)
+  // Advanced skills should override with 0.5 for slower scaling
+  power: 0.8,
 
-  // Effect chance scaling: +0.5% per level (caps at 100%)
-  effectChance: 0.005,
+  // Effect chance scaling: +0.3% per level (50% at L1 -> ~80% at L100, can reach 100%)
+  effectChance: 0.003,
 
   // Effect duration scaling: +0.02 turns per level (2 turns at L1 -> ~4 turns at L100)
   effectDuration: 0.02,
@@ -30,8 +37,8 @@ const DEFAULT_SCALING_CONFIG = {
   // AOE radius scaling: 0 by default (opt-in only)
   aoeRadius: 0,
 
-  // Heal percent scaling: +0.1% per level (15% at L1 -> ~25% at L100)
-  healPercent: 0.1,
+  // Heal percent scaling: +0.15% per level (20% at L1 -> ~35% at L100)
+  healPercent: 0.15,
 
   // MP restore scaling: +0.1% per level
   mpRestore: 0.1,
@@ -42,7 +49,7 @@ const DEFAULT_SCALING_CONFIG = {
   // Chain targets scaling: 0 by default (opt-in only)
   chainTargets: 0,
 
-  // Buff duration scaling: +0.02 turns per level
+  // Buff duration scaling: +0.02 turns per level (3 turns at L1 -> ~5 turns at L100)
   buffDuration: 0.02
 };
 

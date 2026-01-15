@@ -263,11 +263,15 @@ describe('expForLevel', () => {
 });
 
 describe('calculateStats', () => {
-  it('should calculate stats at level 1 using base stats only', () => {
+  it('should calculate stats at level 1 using base stats with VIT bonus', () => {
     const stats = calculateStats(RACES.HUMAN, CLASSES.WARRIOR, 1);
 
-    // At level 1, should be exactly base stats
-    assert.strictEqual(stats.hpMax, RACE_BASE_STATS.human.hp);
+    // At level 1, HP includes VIT bonus: vitBonus = floor((level/2) + (VIT * 0.5))
+    // Human base VIT = 10, so vitBonus = floor(0.5 + 5) = 5
+    const baseHP = RACE_BASE_STATS.human.hp;
+    const baseVIT = RACE_BASE_STATS.human.vitality;
+    const expectedVitBonus = Math.floor((1 / 2) + (baseVIT * 0.5));
+    assert.strictEqual(stats.hpMax, baseHP + expectedVitBonus, 'HP should include VIT bonus');
     assert.strictEqual(stats.strength, RACE_BASE_STATS.human.strength);
   });
 
@@ -326,10 +330,17 @@ describe('calculateStats', () => {
     assert.ok(berserker.strength > 0);
   });
 
-  it('should have consistent luck (no level scaling)', () => {
+  it('should scale luck with level based on class growth', () => {
+    // Luck now scales with level - warrior has 0.5 luck growth
     const stats1 = calculateStats(RACES.HUMAN, CLASSES.WARRIOR, 1);
     const stats50 = calculateStats(RACES.HUMAN, CLASSES.WARRIOR, 50);
 
-    assert.strictEqual(stats1.luck, stats50.luck, 'Luck should not scale with level');
+    // Luck at level 50 should be higher than level 1
+    assert.ok(stats50.luck > stats1.luck, 'Luck should scale with level');
+
+    // Check the formula: baseLuck + (growth * (level - 1))
+    // Human base luck = 10, warrior luck growth = 0.5
+    const expectedLuck50 = RACE_BASE_STATS.human.luck + Math.floor(0.5 * (50 - 1));
+    assert.strictEqual(stats50.luck, expectedLuck50, 'Luck should follow growth formula');
   });
 });

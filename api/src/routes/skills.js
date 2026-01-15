@@ -156,12 +156,15 @@ router.post('/learn', authenticate, asyncHandler(async (req, res) => {
     }
   }
 
-  // Calculate XP cost with overflow protection
-  // Cost formula: baseCost * 1.2^level (exponential growth)
+  // Calculate XP cost with polynomial growth (more achievable than exponential)
+  // Cost formula: baseCost * level^1.5 (polynomial growth)
+  // Example: baseCost 50 → L10: 1,581 XP, L50: 17,678 XP, L100: 50,000 XP
   const MAX_SAFE_COST = Number.MAX_SAFE_INTEGER;
   let totalCost = 0;
   for (let i = currentLevel; i < newLevel; i++) {
-    const levelCost = Math.floor(skillDef.baseCost * Math.pow(1.2, i));
+    // Polynomial: baseCost * (level + 1)^1.5
+    // Using (i + 1) so level 0→1 costs baseCost * 1^1.5 = baseCost
+    const levelCost = Math.floor(skillDef.baseCost * Math.pow(i + 1, 1.5));
     if (totalCost + levelCost > MAX_SAFE_COST) {
       throw new AppError('Cost calculation overflow - please level up in smaller increments', 400);
     }

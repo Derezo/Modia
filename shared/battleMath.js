@@ -6,143 +6,375 @@
  * The SERVER remains authoritative for actual damage - it uses these same
  * formulas but adds random variance and trait bonuses during execution.
  *
- * Client uses these for damage preview tooltips; server uses for validation.
+ * FORMULA DESIGN (FFT-inspired):
+ * - Defense uses diminishing returns: reduction = DEF / (DEF + 100)
+ * - CT system: ctGain = 5 + (AGI / 10) for diminishing returns on turn frequency
+ * - Crit: 5% base + LCK/300 (max 50%)
+ * - Evasion: 2% base + (defAGI - atkAGI)/400 + defLCK/400 (max 35%)
+ * - Status resistance: 10% base + LCK/200 (max 50%)
  */
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+// Defense scaling constants (diminishing returns)
+export const PHYSICAL_DEFENSE_CONSTANT = 100;  // 100 DEF = 50% reduction
+export const MAGIC_DEFENSE_CONSTANT = 80;      // 80 MDEF = 50% reduction
+
+// CT system constants
+export const CT_THRESHOLD = 100;
+export const CT_BASE_GAIN = 5;
+export const CT_AGI_DIVISOR = 10;
+
+// Action CT costs (FFT-style)
+export const CT_COST = {
+  MOVE_AND_ACT: 100,
+  MOVE_OR_ACT: 80,
+  WAIT: 60
+};
+
+// Crit constants
+export const BASE_CRIT_CHANCE = 0.05;          // 5% base
+export const CRIT_LUCK_DIVISOR = 300;          // +1% per 3 LCK
+export const MAX_CRIT_CHANCE = 0.50;           // 50% cap
+export const BASE_CRIT_MULTIPLIER = 1.5;
+export const CRIT_LUCK_DAMAGE_DIVISOR = 500;   // +0.2% crit damage per LCK
+export const ORC_CRIT_BONUS = 0.15;            // Orcs get +15% crit damage
+
+// Evasion/accuracy constants
+export const BASE_EVASION = 0.02;              // 2% base dodge
+export const EVASION_AGI_DIVISOR = 400;        // ±0.25% per AGI difference
+export const EVASION_LUCK_DIVISOR = 400;       // +0.25% per defender LCK
+export const MAX_EVASION = 0.35;               // 35% cap
+export const MIN_EVASION = 0.02;               // 2% floor
+export const BASE_ACCURACY = 0.95;             // 95% base hit
+export const MIN_HIT_CHANCE = 0.50;            // 50% minimum hit
+export const MAX_HIT_CHANCE = 0.98;            // 98% maximum hit
+export const BLIND_PENALTY = 0.30;             // -30% accuracy when blinded
+
+// Status resistance constants
+export const BASE_STATUS_RESIST = 0.10;        // 10% base
+export const STATUS_LUCK_DIVISOR = 200;        // +0.5% per LCK
+export const MAX_STATUS_RESIST = 0.50;         // 50% cap
+
+// Damage variance
+export const DAMAGE_VARIANCE_MIN = 0.9;
+export const DAMAGE_VARIANCE_MAX = 1.1;
+
+// ============================================================================
+// DAMAGE FORMULAS
+// ============================================================================
+
+/**
+ * Calculate defense reduction using diminishing returns formula
+ * Formula: reduction = defense / (defense + constant)
+ *
+ * @param {number} defense - Total defense value (stat + equipment)
+ * @param {number} constant - Defense constant (100 for physical, 80 for magic)
+ * @returns {number} Damage reduction as decimal (0 to ~0.8)
+ */
+export function calculateDefenseReduction(defense, constant) {
+  if (defense <= 0) return 0;
+  return defense / (defense + constant);
+}
 
 /**
  * Calculate physical damage preview (deterministic, no random variance)
- * Formula: (STR + equipmentAttack) * skillPower - (VIT + equipmentDefense) * 0.5 * 0.3
+ * Formula: (STR + weaponAttack) * skillPower * (1 - defenseReduction)
+ * Defense reduction = (VIT + armorDefense) / ((VIT + armorDefense) + 100)
  *
- * @param {Object} attacker - Attacker unit with { strength, attack, luck, race }
- * @param {Object} defender - Defender unit with { vitality, agility, defense }
+ * @param {Object} attacker - Attacker unit with { strength, attack }
+ * @param {Object} defender - Defender unit with { vitality, defense }
  * @param {number} skillPower - Skill power percentage (default 100)
- * @returns {Object} { minDamage, maxDamage, avgDamage }
+ * @returns {Object} { minDamage, maxDamage, avgDamage, defenseReduction }
  */
 export function calculatePhysicalDamage(attacker, defender, skillPower = 100) {
   // Base attack = strength + equipment attack bonus
   const attackPower = (attacker.strength || 0) + (attacker.attack || 0);
-  const baseDamage = attackPower * (skillPower / 100);
+  const rawDamage = attackPower * (skillPower / 100);
 
-  // Defense = vitality (or agility/2 fallback) + equipment defense bonus
-  const defensePower = (defender.vitality || defender.agility / 2 || 0) + (defender.defense || 0);
-  const defenseReduction = defensePower * 0.5 * 0.3;
+  // Defense with diminishing returns
+  const defensePower = (defender.vitality || 0) + (defender.defense || 0);
+  const defenseReduction = calculateDefenseReduction(defensePower, PHYSICAL_DEFENSE_CONSTANT);
 
-  const rawDamage = Math.max(1, baseDamage - defenseReduction);
+  // Apply defense reduction
+  const reducedDamage = Math.max(1, rawDamage * (1 - defenseReduction));
 
   // Variance range is 0.9 - 1.1 (10% either way)
-  const minDamage = Math.max(1, Math.floor(rawDamage * 0.9));
-  const maxDamage = Math.max(1, Math.floor(rawDamage * 1.1));
+  const minDamage = Math.max(1, Math.floor(reducedDamage * DAMAGE_VARIANCE_MIN));
+  const maxDamage = Math.max(1, Math.floor(reducedDamage * DAMAGE_VARIANCE_MAX));
   const avgDamage = Math.floor((minDamage + maxDamage) / 2);
 
-  return { minDamage, maxDamage, avgDamage };
+  return { minDamage, maxDamage, avgDamage, defenseReduction };
 }
 
 /**
  * Calculate magical damage preview (deterministic, no random variance)
- * Formula: (INT + magicAttack) * skillPower - (INT_DEF + magicDefense) * 0.25 * 0.3
+ * Formula: (INT + magicAttack) * skillPower * (1 - magicDefenseReduction)
+ * Magic defense reduction = (INT/2 + magicDefense) / ((INT/2 + magicDefense) + 80)
  *
- * @param {Object} attacker - Attacker unit with { intelligence, magicAttack, luck }
+ * @param {Object} attacker - Attacker unit with { intelligence, magicAttack }
  * @param {Object} defender - Defender unit with { intelligence, magicDefense }
  * @param {number} skillPower - Skill power percentage (default 100)
- * @returns {Object} { minDamage, maxDamage, avgDamage }
+ * @returns {Object} { minDamage, maxDamage, avgDamage, defenseReduction }
  */
 export function calculateMagicalDamage(attacker, defender, skillPower = 100) {
   // Base magic attack = intelligence + equipment magic attack bonus
   const magicAttackPower = (attacker.intelligence || 0) + (attacker.magicAttack || 0);
-  const baseDamage = magicAttackPower * (skillPower / 100);
+  const rawDamage = magicAttackPower * (skillPower / 100);
 
-  // Magic defense = intelligence + equipment magic defense bonus
-  const magicDefensePower = (defender.intelligence || 10) + (defender.magicDefense || 0);
-  const defenseReduction = magicDefensePower * 0.25 * 0.3;
+  // Magic defense: INT/2 + equipment magic defense (INT provides some innate magic resist)
+  const defenderInt = defender.intelligence || 0;
+  const magicDefensePower = Math.floor(defenderInt / 2) + (defender.magicDefense || 0);
+  const defenseReduction = calculateDefenseReduction(magicDefensePower, MAGIC_DEFENSE_CONSTANT);
 
-  const rawDamage = Math.max(1, baseDamage - defenseReduction);
+  // Apply defense reduction
+  const reducedDamage = Math.max(1, rawDamage * (1 - defenseReduction));
 
   // Variance range is 0.9 - 1.1 (10% either way)
-  const minDamage = Math.max(1, Math.floor(rawDamage * 0.9));
-  const maxDamage = Math.max(1, Math.floor(rawDamage * 1.1));
+  const minDamage = Math.max(1, Math.floor(reducedDamage * DAMAGE_VARIANCE_MIN));
+  const maxDamage = Math.max(1, Math.floor(reducedDamage * DAMAGE_VARIANCE_MAX));
   const avgDamage = Math.floor((minDamage + maxDamage) / 2);
 
-  return { minDamage, maxDamage, avgDamage };
+  return { minDamage, maxDamage, avgDamage, defenseReduction };
 }
 
 /**
  * Calculate healing preview
- * Formula: INT * skillPower
+ * Formula: (INT + magicAttack) * skillPower
  *
- * @param {Object} caster - Healer unit with { intelligence }
+ * @param {Object} caster - Healer unit with { intelligence, magicAttack }
  * @param {Object} target - Target unit with { hp, maxHp }
  * @param {number} skillPower - Skill power percentage (default 100)
  * @returns {Object} { minHeal, maxHeal, effectiveHeal, isOverheal }
  */
 export function calculateHealing(caster, target, skillPower = 100) {
-  const baseHeal = (caster.intelligence || 10) * (skillPower / 100);
+  const healPower = (caster.intelligence || 0) + (caster.magicAttack || 0);
+  const baseHeal = healPower * (skillPower / 100);
 
   // Variance range is 0.9 - 1.1 (10% either way)
-  const minHeal = Math.max(1, Math.floor(baseHeal * 0.9));
-  const maxHeal = Math.max(1, Math.floor(baseHeal * 1.1));
+  const minHeal = Math.max(1, Math.floor(baseHeal * DAMAGE_VARIANCE_MIN));
+  const maxHeal = Math.max(1, Math.floor(baseHeal * DAMAGE_VARIANCE_MAX));
 
   // Calculate how much HP target is missing
-  const targetMissingHp = (target.maxHp || target.hpMax || 100) - (target.hp || 0);
+  const targetMaxHp = target.maxHp || target.hpMax || 100;
+  const targetCurrentHp = target.hp || target.currentHp || 0;
+  const targetMissingHp = targetMaxHp - targetCurrentHp;
   const effectiveHeal = Math.min(maxHeal, targetMissingHp);
   const isOverheal = maxHeal > targetMissingHp;
 
   return { minHeal, maxHeal, effectiveHeal, isOverheal };
 }
 
-/**
- * Calculate hit chance (accuracy vs evasion)
- * Base 95%, reduced by target agility advantage, affected by blind status
- *
- * @param {Object} attacker - Attacker unit with { agility, statusEffects }
- * @param {Object} defender - Defender unit with { agility }
- * @returns {number} Hit chance from 0 to 1
- */
-export function calculateHitChance(attacker, defender) {
-  const baseHitChance = 0.95;
-
-  // Agility difference affects dodge
-  const attackerAgility = attacker.agility || 10;
-  const defenderAgility = defender.agility || 10;
-  const agilityDiff = defenderAgility - attackerAgility;
-  const dodgeBonus = Math.max(0, agilityDiff) * 0.01;
-
-  // Blind status penalty
-  const isBlinded = attacker.statusEffects?.some(e => e.type === 'blind');
-  const blindPenalty = isBlinded ? 0.3 : 0;
-
-  // Clamp between 50% and 100%
-  return Math.max(0.5, Math.min(1.0, baseHitChance - dodgeBonus - blindPenalty));
-}
+// ============================================================================
+// CRITICAL HIT FORMULAS
+// ============================================================================
 
 /**
  * Calculate critical hit chance
- * Based on luck stat, capped at 30%
+ * Formula: 5% base + LCK/300, capped at 50%
  *
  * @param {Object} attacker - Attacker unit with { luck }
- * @returns {number} Crit chance from 0 to 0.30
+ * @param {number} traitBonus - Additional crit chance from traits (default 0)
+ * @returns {number} Crit chance from 0 to 0.50
  */
-export function calculateCritChance(attacker) {
-  const luck = attacker.luck || 10;
-  return Math.min(0.30, luck / 200);
+export function calculateCritChance(attacker, traitBonus = 0) {
+  const luck = attacker.luck || 0;
+  const luckBonus = luck / CRIT_LUCK_DIVISOR;
+  return Math.min(MAX_CRIT_CHANCE, BASE_CRIT_CHANCE + luckBonus + traitBonus);
 }
 
 /**
  * Calculate critical hit damage multiplier
- * Base 1.5x, orcs get +10% crit damage (1.65x total)
+ * Formula: 1.5 base + LCK/500 + race bonuses
+ * Orcs get +15% crit damage base
  *
- * @param {Object} attacker - Attacker unit with { race }
- * @returns {number} Critical multiplier (1.5 or 1.65 for orcs)
+ * @param {Object} attacker - Attacker unit with { race, luck }
+ * @returns {number} Critical multiplier (1.5+)
  */
 export function calculateCritMultiplier(attacker) {
-  const baseCritMultiplier = 1.5;
+  const luck = attacker.luck || 0;
+  const luckBonus = luck / CRIT_LUCK_DAMAGE_DIVISOR;
 
-  // Orcs get +10% crit damage bonus
+  let multiplier = BASE_CRIT_MULTIPLIER + luckBonus;
+
+  // Orcs get +15% crit damage bonus
   if (attacker.race === 'orc') {
-    return baseCritMultiplier * 1.1; // 1.65
+    multiplier += ORC_CRIT_BONUS;
   }
 
-  return baseCritMultiplier;
+  return multiplier;
 }
+
+// ============================================================================
+// HIT/EVASION FORMULAS
+// ============================================================================
+
+/**
+ * Calculate evasion (dodge chance)
+ * Formula: 2% base + (defAGI - atkAGI)/400 + defLCK/400
+ * Clamped between 2% and 35%
+ *
+ * @param {Object} attacker - Attacker unit with { agility }
+ * @param {Object} defender - Defender unit with { agility, luck }
+ * @param {number} traitBonus - Additional evasion from traits (default 0)
+ * @returns {number} Evasion chance from 0.02 to 0.35
+ */
+export function calculateEvasion(attacker, defender, traitBonus = 0) {
+  const attackerAgility = attacker.agility || 0;
+  const defenderAgility = defender.agility || 0;
+  const defenderLuck = defender.luck || 0;
+
+  // AGI difference bonus (can be negative if attacker faster)
+  const agilityDiff = defenderAgility - attackerAgility;
+  const agiBonus = agilityDiff / EVASION_AGI_DIVISOR;
+
+  // Luck bonus for defender
+  const luckBonus = defenderLuck / EVASION_LUCK_DIVISOR;
+
+  // Total evasion
+  const evasion = BASE_EVASION + agiBonus + luckBonus + traitBonus;
+
+  return Math.max(MIN_EVASION, Math.min(MAX_EVASION, evasion));
+}
+
+/**
+ * Calculate hit chance (accuracy vs evasion)
+ * Formula: 95% base - evasion - blindPenalty + accuracyBonus
+ * Clamped between 50% and 98%
+ *
+ * @param {Object} attacker - Attacker unit with { agility, statusEffects }
+ * @param {Object} defender - Defender unit with { agility, luck }
+ * @param {number} accuracyBonus - Additional accuracy from traits (default 0)
+ * @param {number} evasionBonus - Additional evasion from traits (default 0)
+ * @returns {number} Hit chance from 0.50 to 0.98
+ */
+export function calculateHitChance(attacker, defender, accuracyBonus = 0, evasionBonus = 0) {
+  // Calculate target's evasion
+  const targetEvasion = calculateEvasion(attacker, defender, evasionBonus);
+
+  // Blind status penalty
+  const isBlinded = attacker.statusEffects?.some(e => e.type === 'blind');
+  const blindPenalty = isBlinded ? BLIND_PENALTY : 0;
+
+  // Calculate hit chance
+  const hitChance = BASE_ACCURACY - targetEvasion - blindPenalty + accuracyBonus;
+
+  return Math.max(MIN_HIT_CHANCE, Math.min(MAX_HIT_CHANCE, hitChance));
+}
+
+// ============================================================================
+// STATUS EFFECT FORMULAS
+// ============================================================================
+
+/**
+ * Calculate status effect resistance
+ * Formula: 10% base + LCK/200, capped at 50%
+ *
+ * @param {Object} defender - Defender unit with { luck }
+ * @param {number} traitBonus - Additional resist from traits (default 0)
+ * @returns {number} Status resistance from 0 to 0.50
+ */
+export function calculateStatusResistance(defender, traitBonus = 0) {
+  const luck = defender.luck || 0;
+  const luckBonus = luck / STATUS_LUCK_DIVISOR;
+  return Math.min(MAX_STATUS_RESIST, BASE_STATUS_RESIST + luckBonus + traitBonus);
+}
+
+/**
+ * Calculate effective status effect chance after resistance
+ * Formula: baseChance * (1 - resistance)
+ *
+ * @param {number} baseChance - Base chance to apply status (0 to 1)
+ * @param {Object} defender - Defender unit with { luck }
+ * @param {number} traitBonus - Additional resist from traits (default 0)
+ * @returns {number} Effective chance after resistance
+ */
+export function calculateEffectiveStatusChance(baseChance, defender, traitBonus = 0) {
+  const resistance = calculateStatusResistance(defender, traitBonus);
+  return baseChance * (1 - resistance);
+}
+
+// ============================================================================
+// CT/TURN ORDER FORMULAS
+// ============================================================================
+
+/**
+ * Calculate CT gain per tick (FFT-style with diminishing returns)
+ * Formula: 5 + (AGI / 10)
+ * This means AGI 10 = 6 CT/tick, AGI 50 = 10 CT/tick, AGI 100 = 15 CT/tick
+ * Doubling AGI doesn't double turn frequency.
+ *
+ * @param {Object} unit - Unit with { agility, statusEffects }
+ * @returns {number} CT gain per tick
+ */
+export function calculateCTGain(unit) {
+  const agility = unit.agility || 0;
+  let ctGain = CT_BASE_GAIN + (agility / CT_AGI_DIVISOR);
+
+  // Haste increases CT gain by 50%
+  const hasHaste = unit.statusEffects?.some(e => e.type === 'haste');
+  if (hasHaste) {
+    ctGain *= 1.5;
+  }
+
+  // Slow decreases CT gain by 50%
+  const hasSlow = unit.statusEffects?.some(e => e.type === 'slow');
+  if (hasSlow) {
+    ctGain *= 0.5;
+  }
+
+  return ctGain;
+}
+
+/**
+ * Calculate initial CT at battle start
+ * Formula: (AGI / 2) + random(0, 20)
+ *
+ * @param {Object} unit - Unit with { agility }
+ * @param {number} randomValue - Optional fixed random value (0-1) for deterministic testing
+ * @returns {number} Initial CT value
+ */
+export function calculateInitialCT(unit, randomValue = null) {
+  const agility = unit.agility || 0;
+  const baseInitial = agility / 2;
+  const variance = randomValue !== null
+    ? Math.floor(randomValue * 21)  // 0-20
+    : Math.floor(Math.random() * 21);
+  return Math.floor(baseInitial + variance);
+}
+
+/**
+ * Calculate initiative for turn order (legacy - for backwards compatibility)
+ * Now returns initial CT value
+ *
+ * @param {Object} unit - Unit with { agility }
+ * @param {number} randomValue - Optional fixed random value (0-1) for deterministic testing
+ * @returns {number} Initiative value
+ */
+export function calculateInitiative(unit, randomValue = null) {
+  return calculateInitialCT(unit, randomValue);
+}
+
+/**
+ * Predict number of ticks until a unit reaches CT threshold
+ *
+ * @param {Object} unit - Unit with current CT and agility
+ * @param {number} currentCT - Current CT value
+ * @returns {number} Number of ticks until CT >= 100
+ */
+export function predictTicksToAct(unit, currentCT = 0) {
+  const ctNeeded = CT_THRESHOLD - currentCT;
+  if (ctNeeded <= 0) return 0;
+
+  const ctGain = calculateCTGain(unit);
+  return Math.ceil(ctNeeded / ctGain);
+}
+
+// ============================================================================
+// DAMAGE PREVIEW (UI)
+// ============================================================================
 
 /**
  * Calculate full damage preview for UI display
@@ -172,7 +404,8 @@ export function calculateDamagePreview(attacker, defender, skill) {
       critDamage: null,
       willKill: false,
       isOverheal: healData.isOverheal,
-      type: 'heal'
+      type: 'heal',
+      defenseReduction: 0
     };
   }
 
@@ -188,7 +421,8 @@ export function calculateDamagePreview(attacker, defender, skill) {
   const critDamage = Math.floor(damageData.maxDamage * critMultiplier);
 
   // Will this kill the target at max damage?
-  const willKill = damageData.maxDamage >= (defender.hp || defender.currentHp || 0);
+  const targetHp = defender.hp || defender.currentHp || 0;
+  const willKill = damageData.maxDamage >= targetHp;
 
   return {
     minDamage: damageData.minDamage,
@@ -201,22 +435,37 @@ export function calculateDamagePreview(attacker, defender, skill) {
     critDamage,
     willKill,
     isOverheal: false,
-    type: isMagical ? 'magical' : 'physical'
+    type: isMagical ? 'magical' : 'physical',
+    defenseReduction: damageData.defenseReduction
   };
 }
 
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
 /**
- * Calculate initiative for turn order
- * Agility + random variance (0-9)
+ * Apply random variance to a base value
+ * Returns a value between base * 0.9 and base * 1.1
  *
- * @param {Object} unit - Unit with { agility }
- * @param {number} randomValue - Optional fixed random value (0-1) for deterministic testing
- * @returns {number} Initiative value
+ * @param {number} base - Base value
+ * @param {number} randomValue - Optional fixed random value (0-1) for testing
+ * @returns {number} Value with variance applied
  */
-export function calculateInitiative(unit, randomValue = null) {
-  const agility = unit.agility || 10;
-  const variance = randomValue !== null
-    ? Math.floor(randomValue * 10)
-    : Math.floor(Math.random() * 10);
-  return agility + variance;
+export function applyVariance(base, randomValue = null) {
+  const random = randomValue !== null ? randomValue : Math.random();
+  const variance = DAMAGE_VARIANCE_MIN + (random * (DAMAGE_VARIANCE_MAX - DAMAGE_VARIANCE_MIN));
+  return Math.floor(base * variance);
+}
+
+/**
+ * Clamp a value between min and max
+ *
+ * @param {number} value - Value to clamp
+ * @param {number} min - Minimum value
+ * @param {number} max - Maximum value
+ * @returns {number} Clamped value
+ */
+export function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }

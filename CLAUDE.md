@@ -61,16 +61,17 @@ npm run generate:icons                  # UI icons
 
 ### Backend (`api/`)
 - **Entry point:** `src/index.js` - Express server with WebSocket upgrade
-- **Routes:** `src/routes/` - auth, characters, party, world, battle, inventory, skills, shop, marketplace, chat, guild, coliseum, friends, lfg, notifications, settings
+- **Routes:** `src/routes/` - auth, characters, party, world, battle, inventory, skills, shop, marketplace, chat, guild, coliseum, friends, lfg, notifications, settings, fishing, ruins
 - **WebSocket:** `src/websocket/index.js` - Room-based subscriptions for chat, tavern presence, marketplace
 - **Database:** PostgreSQL via `pg` pool in `src/config/database.js`
 - **Migrations:** `src/migrations/` - Sequential SQL files (001_initial_schema.sql, etc.)
-- **Auth:** JWT with 15min access tokens, 7-day refresh tokens
+- **Templates:** `src/db/templates/` - Data templates (items.js, enemies.js, fish.js, caravanItems.js)
+- **Auth:** JWT with 1h access tokens, 7-day refresh tokens, auto-refresh 1min before expiry
 
 ### Frontend (`frontend/`)
 - **Build tool:** Vite for dev server and bundling
 - **Entry:** `src/main.js` → `src/core/Game.js`
-- **Scene-based architecture:** `src/scenes/` - Each screen extends base `Scene.js` (Login, Register, CharacterSelect, CharacterCreate, WorldMap, Battle, Inventory, Shop, Marketplace, Tavern, Formation)
+- **Scene-based architecture:** `src/scenes/` - Each screen extends base `Scene.js` (Auth, CharacterSelect, CharacterCreate, WorldMap, Battle, Shop, Marketplace, Tavern, Formation, SocialHub, Coliseum, Recruitment, GuildAdvancement, Fishing, Leaderboard, Settings)
 - **Game loop:** RequestAnimationFrame with `update(deltaTime)` → `render(ctx)` cycle
 - **Canvas layers:** Background, Game, HUD, Modal (rendered in order)
 - **Static assets:** `public/assets/` - sprites, images served at `/assets/`
@@ -98,6 +99,13 @@ Multi-file system spanning backend and frontend:
 - Damage formulas: Physical = `(STR + equipment) * skillPower - (VIT + defense) * 0.15`; Magic = `(INT + magicAttack) * skillPower - (INT + magicDefense) * 0.075`
 - Turn order based on agility + random variance
 
+### Activity Nodes
+Four activity node types with dedicated routes and services:
+- **Fishing** (`fishingService.js`, `FishingScene.js`) - Auto-fishing with Big One events, 15 fish types
+- **Ruins** (`ruins.js`, `RuinsPuzzleModal.js`) - 3x3/4x4/5x5 sliding puzzles with regional themes
+- **Caravan** (`caravanService.js`, `ShopScene.js`) - 23 exclusive items with 48-hour seeded refresh
+- **Watchtower** (`world.js`) - Fog reveal endpoint for map exploration
+
 ### WebSocket Protocol
 Room-based subscriptions at `/ws`:
 - **Message types:** `auth`, `join_room`, `leave_room`, `chat_message`, `party_*`, `battle_*`, `coliseum_*`
@@ -108,12 +116,24 @@ Room-based subscriptions at `/ws`:
 
 **Database queries:** Always use parameterized queries (`$1, $2`) via the pool in `src/config/database.js`
 
-**World generation:** Deterministic from `WORLD_SEED` env var using `SeededRandom` - same seed always produces same world layout
+**World generation:** Deterministic from `WORLD_SEED` env var using `SeededRandom` - same seed always produces same world layout. The system uses a 5-region structure with Voronoi partitioning. Worldgen modules in `api/src/db/worldgen/`:
+- `castlePlacement.js` - Force-directed + Lloyd's relaxation for castle positions
+- `voronoiPartitioning.js` - Region boundaries from castle positions
+- `nodeGeneration.js` - Poisson disk sampling within each region
+- `internalConnections.js` - MST + extra connections per region
+- `interRegionConnections.js` - Bridges, wilderness zones, trade routes, palace
+- `validation.js` - Terminators, difficulty tiers, connectivity checks
 
 **Environment variables:** Key env vars in `.env`:
 - `DEBUG=true` - Enable detailed query logging and debug output
 - `WORLD_SEED` - Seed for deterministic world generation
 - `TEST_RATE_LIMITS=true` - Required to run rate limiter tests
+- `NODE_ENV=production` - Enables stricter rate limits (600 base vs 1500 dev)
+
+**Rate limiting:** Per-user rate limiting via `rateLimiterFactory.js`. Key limiters:
+- `auth/refresh` - 20/15min per IP (unauthenticated)
+- `world/travel` - 60/min per user (authenticated)
+- Global limits scale by environment (300 base, 600 prod, 1500 dev)
 
 **Character stats:** Base stats from race + (class growth × level) - see `calculateStats()` in `shared/constants.js`
 
