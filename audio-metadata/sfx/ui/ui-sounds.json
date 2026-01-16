@@ -1,0 +1,272 @@
+{
+  "category": "ui",
+  "subcategory": "interface",
+  "description": "User interface and notification sound effects",
+  "totalEffects": 24,
+  "effects": [
+    {
+      "id": "ui_button_click",
+      "name": "Button Click",
+      "category": "ui",
+      "subcategory": "buttons",
+      "prompt": "Clean UI button click, soft tactile press, subtle satisfying tap, interface interaction, brief responsive sound",
+      "path": "/assets/audio/sfx/ui/button_click.mp3",
+      "duration": 0.3,
+      "volume": 0.6,
+      "generated": false
+    },
+    {
+      "id": "ui_button_hover",
+      "name": "Button Hover",
+      "category": "ui",
+      "subcategory": "buttons",
+      "prompt": "Subtle UI hover sound, gentle highlight, soft attention indicator, mouse over feedback, very brief whisper",
+      "path": "/assets/audio/sfx/ui/button_hover.mp3",
+      "duration": 0.2,
+      "volume": 0.4,
+      "generated": false
+    },
+    {
+      "id": "ui_menu_open",
+      "name": "Menu Open",
+      "category": "ui",
+      "subcategory": "navigation",
+      "prompt": "UI menu opening, panel sliding in, interface revealing, smooth transition sound, welcoming whoosh",
+      "path": "/assets/audio/sfx/ui/menu_open.mp3",
+      "duration": 0.5,
+      "volume": 0.6,
+      "generated": false
+    },
+    {
+      "id": "ui_menu_close",
+      "name": "Menu Close",
+      "category": "ui",
+      "subcategory": "navigation",
+      "prompt": "UI menu closing, panel sliding away, interface hiding, smooth closing sound, departing whoosh",
+      "path": "/assets/audio/sfx/ui/menu_close.mp3",
+      "duration": 0.4,
+      "volume": 0.5,
+      "generated": false
+    },
+    {
+      "id": "ui_tab_switch",
+      "name": "Tab Switch",
+      "category": "ui",
+      "subcategory": "navigation",
+      "prompt": "UI tab switch, category changing, navigation click, brief selection sound, tab activated",
+      "path": "/assets/audio/sfx/ui/tab_switch.mp3",
+      "duration": 0.3,
+      "volume": 0.55,
+      "generated": false
+    },
+    {
+      "id": "ui_panel_open",
+      "name": "Panel Open",
+      "category": "ui",
+      "subcategory": "navigation",
+      "prompt": "UI panel opening, information revealing, detailed view expanding, smooth unfold sound, panel appearing",
+      "path": "/assets/audio/sfx/ui/panel_open.mp3",
+      "duration": 0.5,
+      "volume": 0.6,
+      "generated": false
+    },
+    {
+      "id": "ui_panel_close",
+      "name": "Panel Close",
+      "category": "ui",
+      "subcategory": "navigation",
+      "prompt": "UI panel closing, information hiding, view collapsing, smooth fold sound, panel departing",
+      "path": "/assets/audio/sfx/ui/panel_close.mp3",
+      "duration": 0.4,
+      "volume": 0.5,
+      "generated": false
+    },
+    {
+      "id": "ui_error",
+      "name": "Error",
+      "category": "ui",
+      "subcategory": "feedback",
+      "prompt": "UI error sound, action failed, negative feedback, brief warning buzz, something went wrong",
+      "path": "/assets/audio/sfx/ui/error.mp3",
+      "duration": 0.5,
+      "volume": 0.65,
+      "generated": false
+    },
+    {
+      "id": "ui_success",
+      "name": "Success",
+      "category": "ui",
+      "subcategory": "feedback",
+      "prompt": "UI success sound, action completed, positive feedback, brief triumphant chime, operation successful",
+      "path": "/assets/audio/sfx/ui/success.mp3",
+      "duration": 0.6,
+      "volume": 0.65,
+      "generated": false
+    },
+    {
+      "id": "ui_warning",
+      "name": "Warning",
+      "category": "ui",
+      "subcategory": "feedback",
+      "prompt": "UI warning sound, caution alert, attention needed, brief cautionary tone, important notice",
+      "path": "/assets/audio/sfx/ui/warning.mp3",
+      "duration": 0.5,
+      "volume": 0.65,
+      "generated": false
+    },
+    {
+      "id": "ui_notification_general",
+      "name": "General Notification",
+      "category": "ui",
+      "subcategory": "notifications",
+      "prompt": "General UI notification, attention getter, soft alert chime, new information sound, gentle ping",
+      "path": "/assets/audio/sfx/ui/notification_general.mp3",
+      "duration": 0.6,
+      "volume": 0.6,
+      "generated": false
+    },
+    {
+      "id": "ui_notification_chat",
+      "name": "Chat Notification",
+      "category": "ui",
+      "subcategory": "notifications",
+      "prompt": "Chat message notification, new message alert, social interaction ping, brief chat sound, message received",
+      "path": "/assets/audio/sfx/ui/notification_chat.mp3",
+      "duration": 0.5,
+      "volume": 0.55,
+      "generated": false
+    },
+    {
+      "id": "ui_notification_party",
+      "name": "Party Notification",
+      "category": "ui",
+      "subcategory": "notifications",
+      "prompt": "Party notification, group activity alert, team event sound, cooperative ping, party update",
+      "path": "/assets/audio/sfx/ui/notification_party.mp3",
+      "duration": 0.6,
+      "volume": 0.6,
+      "generated": false
+    },
+    {
+      "id": "ui_notification_trade",
+      "name": "Trade Notification",
+      "category": "ui",
+      "subcategory": "notifications",
+      "prompt": "Trade notification, marketplace alert, commerce ping, transaction attention, trading activity",
+      "path": "/assets/audio/sfx/ui/notification_trade.mp3",
+      "duration": 0.6,
+      "volume": 0.6,
+      "generated": false
+    },
+    {
+      "id": "ui_notification_battle",
+      "name": "Battle Notification",
+      "category": "ui",
+      "subcategory": "notifications",
+      "prompt": "Battle notification, combat alert, urgent action needed, combat ping, battle attention",
+      "path": "/assets/audio/sfx/ui/notification_battle.mp3",
+      "duration": 0.7,
+      "volume": 0.7,
+      "generated": false
+    },
+    {
+      "id": "ui_notification_guild",
+      "name": "Guild Notification",
+      "category": "ui",
+      "subcategory": "notifications",
+      "prompt": "Guild notification, organization alert, guild activity sound, community ping, guild update",
+      "path": "/assets/audio/sfx/ui/notification_guild.mp3",
+      "duration": 0.6,
+      "volume": 0.6,
+      "generated": false
+    },
+    {
+      "id": "ui_countdown_tick",
+      "name": "Countdown Tick",
+      "category": "ui",
+      "subcategory": "timing",
+      "prompt": "Countdown tick, timer counting, time passing, rhythmic clock sound, brief tick",
+      "path": "/assets/audio/sfx/ui/countdown_tick.mp3",
+      "duration": 0.3,
+      "volume": 0.5,
+      "generated": false
+    },
+    {
+      "id": "ui_countdown_complete",
+      "name": "Countdown Complete",
+      "category": "ui",
+      "subcategory": "timing",
+      "prompt": "Countdown complete, timer finished, time's up alert, action moment sound, countdown ended",
+      "path": "/assets/audio/sfx/ui/countdown_complete.mp3",
+      "duration": 0.8,
+      "volume": 0.7,
+      "generated": false
+    },
+    {
+      "id": "ui_toggle_on",
+      "name": "Toggle On",
+      "category": "ui",
+      "subcategory": "controls",
+      "prompt": "UI toggle activated, switch enabled, option turned on, brief enabling click, setting activated",
+      "path": "/assets/audio/sfx/ui/toggle_on.mp3",
+      "duration": 0.3,
+      "volume": 0.55,
+      "generated": false
+    },
+    {
+      "id": "ui_toggle_off",
+      "name": "Toggle Off",
+      "category": "ui",
+      "subcategory": "controls",
+      "prompt": "UI toggle deactivated, switch disabled, option turned off, brief disabling click, setting deactivated",
+      "path": "/assets/audio/sfx/ui/toggle_off.mp3",
+      "duration": 0.3,
+      "volume": 0.5,
+      "generated": false
+    },
+    {
+      "id": "ui_scroll",
+      "name": "Scroll",
+      "category": "ui",
+      "subcategory": "controls",
+      "prompt": "UI scrolling, list moving, content sliding, subtle scroll sound, very brief movement",
+      "path": "/assets/audio/sfx/ui/scroll.mp3",
+      "duration": 0.2,
+      "volume": 0.35,
+      "generated": false
+    },
+    {
+      "id": "ui_confirm",
+      "name": "Confirm",
+      "category": "ui",
+      "subcategory": "feedback",
+      "prompt": "UI confirmation, action approved, choice accepted, affirmative chime, decision confirmed",
+      "path": "/assets/audio/sfx/ui/confirm.mp3",
+      "duration": 0.5,
+      "volume": 0.65,
+      "generated": false
+    },
+    {
+      "id": "ui_cancel",
+      "name": "Cancel",
+      "category": "ui",
+      "subcategory": "feedback",
+      "prompt": "UI cancellation, action aborted, choice rejected, brief cancel sound, backing out",
+      "path": "/assets/audio/sfx/ui/cancel.mp3",
+      "duration": 0.4,
+      "volume": 0.55,
+      "generated": false
+    },
+    {
+      "id": "ui_typing",
+      "name": "Typing",
+      "category": "ui",
+      "subcategory": "controls",
+      "prompt": "UI typing sound, keyboard input, text entry, brief key press, character entered",
+      "path": "/assets/audio/sfx/ui/typing.mp3",
+      "duration": 0.15,
+      "volume": 0.35,
+      "generated": false
+    }
+  ]
+}
