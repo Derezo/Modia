@@ -182,9 +182,13 @@ export class WorldMapScene extends Scene {
       this.onBreakpointChange();
     });
 
-    // Start world exploration music
-    if (this.game.audio) {
-      this.game.audio.playMusic('world_exploration');
+    // Start world exploration music (region-aware)
+    if (this.game.musicContext) {
+      // Set region based on current node's region
+      if (this.currentNode?.region) {
+        this.game.musicContext.setRegion(this.currentNode.region);
+      }
+      this.game.musicContext.playExplorationMusic();
     }
   }
 
@@ -1320,6 +1324,11 @@ export class WorldMapScene extends Scene {
     // Update state
     this.currentNode = result.currentNode;
     this.game.state.set('currentNode', this.currentNode);
+
+    // Update music region if changed
+    if (this.game.musicContext && this.currentNode?.region) {
+      this.game.musicContext.setRegion(this.currentNode.region);
+    }
 
     // Update stamina from travel result
     if (result.stamina && this.staminaBar) {

@@ -547,12 +547,14 @@ export class LeaderboardScene extends Scene {
 
     // Back button
     this.uiElement.querySelector('#back-btn')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       this.game.scenes.switchTo('worldMap');
     }, opts);
 
     // Category tabs
     this.uiElement.querySelectorAll('.category-tab').forEach(tab => {
       tab.addEventListener('click', () => {
+        this.game.audio?.playUI('button_click');
         this.switchCategory(tab.dataset.category);
       }, opts);
     });
@@ -560,6 +562,7 @@ export class LeaderboardScene extends Scene {
     // Time filters
     this.uiElement.querySelectorAll('.time-filter-btn').forEach(btn => {
       btn.addEventListener('click', () => {
+        this.game.audio?.playUI('button_click');
         this.switchTimeFilter(btn.dataset.time);
       }, opts);
     });
@@ -573,6 +576,7 @@ export class LeaderboardScene extends Scene {
 
     // Pagination
     this.uiElement.querySelector('#prev-page')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       if (this.pagination.offset >= this.pagination.limit) {
         this.pagination.offset -= this.pagination.limit;
         this.loadLeaderboard();
@@ -580,6 +584,7 @@ export class LeaderboardScene extends Scene {
     }, opts);
 
     this.uiElement.querySelector('#next-page')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       if (this.pagination.hasMore) {
         this.pagination.offset += this.pagination.limit;
         this.loadLeaderboard();

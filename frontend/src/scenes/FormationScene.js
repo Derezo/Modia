@@ -39,6 +39,11 @@ export class FormationScene extends Scene {
 
     // Subscribe to responsive breakpoint changes
     this.responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
+
+    // Continue exploration music (same as world map)
+    if (this.game.musicContext) {
+      this.game.musicContext.playExplorationMusic();
+    }
   }
 
   exit() {
@@ -511,17 +516,20 @@ export class FormationScene extends Scene {
 
     // Back button
     this.uiElement?.querySelector('#back-btn')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       this.game.scenes.switchTo('worldMap');
     }, opts);
 
     // Items button
     this.uiElement?.querySelector('#items-btn')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       this.openItemsModal();
     }, opts);
 
     // Sort buttons
     this.uiElement?.querySelectorAll('.formation-sort-btn').forEach(btn => {
       btn.addEventListener('click', () => {
+        this.game.audio?.playUI('button_click');
         const newSort = btn.dataset.sort;
         if (newSort !== this.sortMethod) {
           this.sortMethod = newSort;

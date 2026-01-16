@@ -55,6 +55,11 @@ export class CharacterCreateScene extends Scene {
     this.loading = false;
     this.addStyles();
     this.createUI();
+
+    // Continue character select music (don't restart if already playing)
+    if (this.game.musicContext) {
+      this.game.musicContext.playCharacterSelect();
+    }
   }
 
   exit() {
@@ -433,6 +438,7 @@ export class CharacterCreateScene extends Scene {
     // Race selection
     container.querySelectorAll('.charcreate-option[data-race]').forEach(option => {
       option.addEventListener('click', () => {
+        this.game.audio?.playUI('button_click');
         this.selectedRace = option.dataset.race;
         this.updateRaceSelection();
       });
@@ -441,6 +447,7 @@ export class CharacterCreateScene extends Scene {
     // Class selection
     container.querySelectorAll('.charcreate-option[data-class]').forEach(option => {
       option.addEventListener('click', () => {
+        this.game.audio?.playUI('button_click');
         this.selectedClass = option.dataset.class;
         this.updateClassSelection();
       });
@@ -449,6 +456,7 @@ export class CharacterCreateScene extends Scene {
     // Gender selection
     container.querySelectorAll('.charcreate-gender-option').forEach(option => {
       option.addEventListener('click', () => {
+        this.game.audio?.playUI('button_click');
         this.selectedGender = option.dataset.gender;
         this.updateGenderSelection();
       });
@@ -456,6 +464,7 @@ export class CharacterCreateScene extends Scene {
 
     // Buttons
     container.querySelector('#back-btn').addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       const characters = this.game.state.get('characters') || [];
       if (characters.length > 0) {
         this.game.scenes.switchTo('characterSelect');
@@ -464,7 +473,10 @@ export class CharacterCreateScene extends Scene {
       }
     });
 
-    container.querySelector('#create-btn').addEventListener('click', () => this.handleCreate());
+    container.querySelector('#create-btn').addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
+      this.handleCreate();
+    });
 
     // Name input validation
     container.querySelector('#char-name').addEventListener('input', () => this.updateCreateButton());

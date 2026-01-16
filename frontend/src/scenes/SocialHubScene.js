@@ -80,6 +80,11 @@ export class SocialHubScene extends Scene {
     // Join social hub room for presence updates
     this.game.socket.joinRoom('socialHub');
 
+    // Play social hub theme music
+    if (this.game.musicContext) {
+      this.game.musicContext.playSocialHubTheme();
+    }
+
     // Set initial tab from data or default
     const initialTab = data.tab || 'friends';
     await this.switchTab(initialTab);
@@ -533,6 +538,7 @@ export class SocialHubScene extends Scene {
     // Tab clicks
     this.uiElement.querySelectorAll('.social-hub-tab').forEach(tab => {
       tab.addEventListener('click', () => {
+        this.game.audio?.playUI('button_click');
         const tabKey = tab.dataset.tab;
         this.switchTab(tabKey);
       }, { signal });
@@ -540,6 +546,7 @@ export class SocialHubScene extends Scene {
 
     // Back button
     this.uiElement.querySelector('[data-action="back"]').addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       this.game.scenes.switchTo('worldMap');
     }, { signal });
   }

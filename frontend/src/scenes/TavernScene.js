@@ -53,6 +53,14 @@ export class TavernScene extends Scene {
     this.game.socket.joinRoom('tavern');
     this.game.socket.joinRoom('global');
 
+    // Play regional tavern music and ambient sounds
+    if (this.game.musicContext) {
+      this.game.musicContext.playNodeMusic('tavern');
+    }
+    if (this.game.audio) {
+      this.game.audio.playAmbient('tavern_chatter');
+    }
+
     // Load initial data
     await Promise.all([
       this.loadChatHistory(),
@@ -65,6 +73,11 @@ export class TavernScene extends Scene {
     // Leave rooms
     this.game.socket.leaveRoom('tavern');
     this.game.socket.leaveRoom('global');
+
+    // Stop ambient sounds
+    if (this.game.audio) {
+      this.game.audio.stopAmbient();
+    }
 
     // Remove WebSocket handlers
     Object.entries(this.wsHandlers).forEach(([type, handler]) => {
@@ -815,6 +828,7 @@ export class TavernScene extends Scene {
 
     // Back button
     this.uiElement.querySelector('#back-btn')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       this.game.scenes.switchTo('worldMap');
     }, opts);
 
@@ -841,6 +855,7 @@ export class TavernScene extends Scene {
 
     // Send button
     this.uiElement.querySelector('#send-btn')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       this.sendMessage();
     }, opts);
 
