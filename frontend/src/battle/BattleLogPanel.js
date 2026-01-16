@@ -602,22 +602,12 @@ export default class BattleLogPanel {
    * Destroy the panel and clean up
    */
   destroy() {
-    // Remove event listeners
     const header = this.element.querySelector('.battle-log-panel__header');
     if (header) {
       header.removeEventListener('click', this.boundToggle);
     }
-
-    // Remove element
     this.element.remove();
-
-    // Clear entries
     this.entries = [];
-
-    // Remove injected styles (only if no other instances exist)
-    const styleElement = document.getElementById('battle-log-panel-styles');
-    if (styleElement) {
-      styleElement.remove();
-    }
+    // Styles are static and shared - leave them in place
   }
 }
