@@ -294,6 +294,9 @@ export class Game {
       const result = await this.api.getSettings();
       this.state.set('userSettings', result.settings);
       console.log('User settings loaded:', result.settings);
+
+      // Apply accessibility settings immediately
+      this.applyAccessibilitySettings(result.settings);
     } catch (err) {
       console.error('Failed to load settings:', err);
       // Set defaults if load fails
@@ -301,6 +304,123 @@ export class Game {
         battle: { actionMenuStyle: 'radial' }
       });
     }
+  }
+
+  /**
+   * Apply accessibility settings to the game
+   * @param {Object} settings - Full settings object
+   */
+  applyAccessibilitySettings(settings) {
+    const accessibility = settings?.accessibility;
+    if (!accessibility) return;
+
+    // Apply colorblind filter
+    this.applyColorBlindFilter(accessibility.colorBlindMode);
+
+    // Apply text size
+    this.applyTextSize(accessibility.textSize);
+
+    // Apply font family
+    this.applyFontFamily(accessibility.fontFamily);
+
+    // Apply line spacing
+    this.applyLineSpacing(accessibility.lineSpacing);
+
+    // Store reduced motion preference in state
+    this.state.set('reducedMotion', accessibility.reducedMotion);
+  }
+
+  /**
+   * Apply colorblind filter via SVG feColorMatrix
+   * @param {string} mode - 'none', 'protanopia', 'deuteranopia', 'tritanopia'
+   */
+  applyColorBlindFilter(mode) {
+    if (!mode || mode === 'none') {
+      this.canvas.style.filter = 'none';
+      return;
+    }
+
+    // Create SVG filters if not present
+    let filterSvg = document.getElementById('colorblind-filters');
+    if (!filterSvg) {
+      filterSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      filterSvg.id = 'colorblind-filters';
+      filterSvg.setAttribute('style', 'position: absolute; width: 0; height: 0;');
+      filterSvg.innerHTML = `
+        <defs>
+          <filter id="protanopia-filter">
+            <feColorMatrix type="matrix" values="
+              0.567, 0.433, 0,     0, 0
+              0.558, 0.442, 0,     0, 0
+              0,     0.242, 0.758, 0, 0
+              0,     0,     0,     1, 0"/>
+          </filter>
+          <filter id="deuteranopia-filter">
+            <feColorMatrix type="matrix" values="
+              0.625, 0.375, 0,   0, 0
+              0.7,   0.3,   0,   0, 0
+              0,     0.3,   0.7, 0, 0
+              0,     0,     0,   1, 0"/>
+          </filter>
+          <filter id="tritanopia-filter">
+            <feColorMatrix type="matrix" values="
+              0.95, 0.05,  0,     0, 0
+              0,    0.433, 0.567, 0, 0
+              0,    0.475, 0.525, 0, 0
+              0,    0,     0,     1, 0"/>
+          </filter>
+        </defs>
+      `;
+      document.body.appendChild(filterSvg);
+    }
+
+    // Apply filter to canvas
+    const filterMap = {
+      protanopia: 'url(#protanopia-filter)',
+      deuteranopia: 'url(#deuteranopia-filter)',
+      tritanopia: 'url(#tritanopia-filter)'
+    };
+
+    this.canvas.style.filter = filterMap[mode] || 'none';
+  }
+
+  /**
+   * Apply text size setting via CSS custom property
+   * @param {string} size - 'small', 'medium', 'large'
+   */
+  applyTextSize(size) {
+    const sizeMap = {
+      small: '12px',
+      medium: '14px',
+      large: '18px'
+    };
+    document.documentElement.style.setProperty('--game-text-size', sizeMap[size] || '14px');
+  }
+
+  /**
+   * Apply font family setting via CSS custom property
+   * @param {string} family - 'default', 'dyslexic', 'monospace'
+   */
+  applyFontFamily(family) {
+    const fontMap = {
+      default: 'Georgia, serif',
+      dyslexic: 'OpenDyslexic, Comic Sans MS, sans-serif',
+      monospace: 'Consolas, Monaco, monospace'
+    };
+    document.documentElement.style.setProperty('--game-font-family', fontMap[family] || fontMap.default);
+  }
+
+  /**
+   * Apply line spacing setting via CSS custom property
+   * @param {string} spacing - 'compact', 'normal', 'relaxed'
+   */
+  applyLineSpacing(spacing) {
+    const spacingMap = {
+      compact: '1.2',
+      normal: '1.5',
+      relaxed: '1.8'
+    };
+    document.documentElement.style.setProperty('--game-line-height', spacingMap[spacing] || '1.5');
   }
 
   /**
