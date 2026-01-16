@@ -1,0 +1,337 @@
+/**
+ * Suno API Client
+ * Wrapper for the Suno music generation API via sunoapi.org
+ *
+ * API Documentation: https://api.sunoapi.org
+ * Rate limits: 20 requests per 10 seconds
+ */
+
+const fs = require('fs');
+const path = require('path');
+const https = require('https');
+const { delay, ensureDirectoryExists, log } = require('./audioUtils');
+
+// Default configuration
+const DEFAULT_CONFIG = {
+  baseUrl: 'https://api.sunoapi.org',
+  webhookUrl: null,
+  pollInterval: 5000,    // 5 seconds between status checks
+  maxPollAttempts: 120,  // 10 minutes max wait time
+  rateLimitDelay: 500    // 500ms between requests to stay under rate limit
+};
+
+// Generation status values
+const STATUS = {
+  PENDING: 'PENDING',
+  PROCESSING: 'PROCESSING',
+  SUCCESS: 'SUCCESS',
+  FAILED: 'FAILED',
+  TIMEOUT: 'TIMEOUT'
+};
+
+/**
+ * Suno API Client for music generation
+ */
+class SunoClient {
+  /**
+   * Create a new SunoClient instance
+   * @param {Object} config - Configuration options
+   * @param {string} config.apiKey - API key for authentication
+   * @param {string} [config.baseUrl] - Base URL for the API
+   * @param {string} [config.webhookUrl] - Webhook URL for completion notifications
+   */
+  constructor(config) {
+    if (!config.apiKey) {
+      throw new Error('SunoClient requires an API key');
+    }
+
+    this.apiKey = config.apiKey;
+    this.baseUrl = config.baseUrl || DEFAULT_CONFIG.baseUrl;
+    this.webhookUrl = config.webhookUrl || DEFAULT_CONFIG.webhookUrl;
+    this.pollInterval = DEFAULT_CONFIG.pollInterval;
+    this.maxPollAttempts = DEFAULT_CONFIG.maxPollAttempts;
+    this.rateLimitDelay = DEFAULT_CONFIG.rateLimitDelay;
+    this.lastRequestTime = 0;
+  }
+
+  /**
+   * Make an HTTP request with rate limiting
+   * @private
+   * @param {string} method - HTTP method
+   * @param {string} endpoint - API endpoint
+   * @param {Object} [data] - Request body data
+   * @returns {Promise<Object>} Response data
+   */
+  async _request(method, endpoint, data = null) {
+    // Enforce rate limiting
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    if (timeSinceLastRequest < this.rateLimitDelay) {
+      await delay(this.rateLimitDelay - timeSinceLastRequest);
+    }
+    this.lastRequestTime = Date.now();
+
+    return new Promise((resolve, reject) => {
+      const url = new URL(endpoint, this.baseUrl);
+      const options = {
+        hostname: url.hostname,
+        port: url.port || 443,
+        path: url.pathname + url.search,
+        method: method,
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      };
+
+      const req = https.request(options, (res) => {
+        let body = '';
+
+        res.on('data', (chunk) => {
+          body += chunk;
+        });
+
+        res.on('end', () => {
+          try {
+            const response = JSON.parse(body);
+
+            if (res.statusCode === 429) {
+              reject(new Error('Rate limit exceeded. Please wait before making more requests.'));
+              return;
+            }
+
+            if (res.statusCode >= 400) {
+              reject(new Error(response.message || `HTTP ${res.statusCode}: ${body}`));
+              return;
+            }
+
+            resolve(response);
+          } catch (error) {
+            reject(new Error(`Failed to parse response: ${body}`));
+          }
+        });
+      });
+
+      req.on('error', (error) => {
+        reject(new Error(`Request failed: ${error.message}`));
+      });
+
+      if (data) {
+        req.write(JSON.stringify(data));
+      }
+
+      req.end();
+    });
+  }
+
+  /**
+   * Generate a music track
+   * @param {string} prompt - Text prompt describing the desired music
+   * @param {Object} [options] - Generation options
+   * @param {string} [options.title] - Track title
+   * @param {string} [options.tags] - Style tags (e.g., "orchestral, epic, fantasy")
+   * @param {boolean} [options.makeInstrumental] - Generate instrumental only (no vocals)
+   * @param {number} [options.duration] - Desired duration in seconds
+   * @param {boolean} [options.waitForCompletion] - Wait for generation to complete
+   * @returns {Promise<Object>} Generation task info or completed track
+   */
+  async generateTrack(prompt, options = {}) {
+    const {
+      title = '',
+      tags = '',
+      makeInstrumental = true,
+      duration = null,
+      waitForCompletion = false
+    } = options;
+
+    log(`Starting track generation: "${prompt.substring(0, 50)}..."`, 'info');
+
+    const requestBody = {
+      prompt: prompt,
+      make_instrumental: makeInstrumental
+    };
+
+    if (title) {
+      requestBody.title = title;
+    }
+
+    if (tags) {
+      requestBody.tags = tags;
+    }
+
+    if (this.webhookUrl) {
+      requestBody.webhook_url = this.webhookUrl;
+    }
+
+    try {
+      const response = await this._request('POST', '/api/v1/generate', requestBody);
+
+      if (!response.taskId) {
+        throw new Error('No taskId returned from generation request');
+      }
+
+      log(`Generation started: taskId=${response.taskId}`, 'info');
+
+      if (waitForCompletion) {
+        return await this.waitForCompletion(response.taskId);
+      }
+
+      return {
+        taskId: response.taskId,
+        status: STATUS.PENDING,
+        prompt: prompt,
+        createdAt: new Date().toISOString()
+      };
+    } catch (error) {
+      log(`Generation failed: ${error.message}`, 'error');
+      throw error;
+    }
+  }
+
+  /**
+   * Check the status of a generation task
+   * @param {string} taskId - The task ID to check
+   * @returns {Promise<Object>} Task status and details
+   */
+  async checkStatus(taskId) {
+    if (!taskId) {
+      throw new Error('taskId is required');
+    }
+
+    try {
+      const response = await this._request(
+        'GET',
+        `/api/v1/generate/record-info?taskId=${encodeURIComponent(taskId)}`
+      );
+
+      return {
+        taskId: taskId,
+        status: response.status || STATUS.PENDING,
+        progress: response.progress || 0,
+        audioUrl: response.audio_url || null,
+        title: response.title || null,
+        duration: response.duration || null,
+        error: response.error || null,
+        raw: response
+      };
+    } catch (error) {
+      log(`Status check failed for ${taskId}: ${error.message}`, 'error');
+      throw error;
+    }
+  }
+
+  /**
+   * Wait for a generation task to complete
+   * @param {string} taskId - The task ID to wait for
+   * @returns {Promise<Object>} Completed task details
+   */
+  async waitForCompletion(taskId) {
+    log(`Waiting for completion: taskId=${taskId}`, 'info');
+
+    for (let attempt = 0; attempt < this.maxPollAttempts; attempt++) {
+      const status = await this.checkStatus(taskId);
+
+      if (status.status === STATUS.SUCCESS) {
+        log(`Generation completed: ${taskId}`, 'success');
+        return status;
+      }
+
+      if (status.status === STATUS.FAILED) {
+        throw new Error(`Generation failed: ${status.error || 'Unknown error'}`);
+      }
+
+      // Log progress periodically
+      if (attempt % 6 === 0) {
+        log(`Still processing... (${status.progress || 0}%)`, 'info');
+      }
+
+      await delay(this.pollInterval);
+    }
+
+    throw new Error(`Generation timed out after ${this.maxPollAttempts * this.pollInterval / 1000} seconds`);
+  }
+
+  /**
+   * Download a completed track to a file
+   * @param {string} taskId - The task ID of the completed track
+   * @param {string} outputPath - Path where the file should be saved
+   * @returns {Promise<Object>} Download result with file path and size
+   */
+  async downloadTrack(taskId, outputPath) {
+    // First get the track status to get the audio URL
+    const status = await this.checkStatus(taskId);
+
+    if (status.status !== STATUS.SUCCESS) {
+      throw new Error(`Track is not ready for download. Status: ${status.status}`);
+    }
+
+    if (!status.audioUrl) {
+      throw new Error('No audio URL available for download');
+    }
+
+    log(`Downloading track to ${outputPath}`, 'info');
+
+    // Ensure output directory exists
+    const outputDir = path.dirname(outputPath);
+    ensureDirectoryExists(outputDir);
+
+    return new Promise((resolve, reject) => {
+      const url = new URL(status.audioUrl);
+      const protocol = url.protocol === 'https:' ? https : require('http');
+
+      const file = fs.createWriteStream(outputPath);
+
+      protocol.get(status.audioUrl, (response) => {
+        if (response.statusCode === 302 || response.statusCode === 301) {
+          // Handle redirect
+          protocol.get(response.headers.location, (redirectRes) => {
+            redirectRes.pipe(file);
+          }).on('error', reject);
+          return;
+        }
+
+        if (response.statusCode !== 200) {
+          reject(new Error(`Download failed with status ${response.statusCode}`));
+          return;
+        }
+
+        response.pipe(file);
+
+        file.on('finish', () => {
+          file.close();
+          const stats = fs.statSync(outputPath);
+          log(`Download complete: ${outputPath} (${stats.size} bytes)`, 'success');
+          resolve({
+            path: outputPath,
+            size: stats.size,
+            taskId: taskId,
+            title: status.title,
+            duration: status.duration
+          });
+        });
+      }).on('error', (error) => {
+        fs.unlink(outputPath, () => {}); // Delete partial file
+        reject(new Error(`Download failed: ${error.message}`));
+      });
+    });
+  }
+
+  /**
+   * Generate and download a track in one call
+   * @param {string} prompt - Text prompt describing the desired music
+   * @param {string} outputPath - Path where the file should be saved
+   * @param {Object} [options] - Generation options (same as generateTrack)
+   * @returns {Promise<Object>} Download result
+   */
+  async generateAndDownload(prompt, outputPath, options = {}) {
+    const result = await this.generateTrack(prompt, { ...options, waitForCompletion: true });
+    return await this.downloadTrack(result.taskId, outputPath);
+  }
+}
+
+module.exports = {
+  SunoClient,
+  STATUS,
+  DEFAULT_CONFIG
+};
