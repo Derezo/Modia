@@ -52,6 +52,11 @@ export class AuthScene extends Scene {
 
     // Add styles (but don't create modal yet)
     this.addStyles();
+
+    // Continue title theme music (don't restart if already playing)
+    if (this.game.musicContext) {
+      this.game.musicContext.playTitleTheme();
+    }
   }
 
   exit() {
@@ -408,8 +413,14 @@ export class AuthScene extends Scene {
     const form = container.querySelector('#auth-form');
     const modeToggle = container.querySelector('#mode-toggle');
 
-    form.addEventListener('submit', (e) => this.handleSubmit(e));
-    modeToggle.addEventListener('click', () => this.toggleMode());
+    form.addEventListener('submit', (e) => {
+      this.game.audio?.playUI('button_click');
+      this.handleSubmit(e);
+    });
+    modeToggle.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
+      this.toggleMode();
+    });
 
     // Setup field validation
     this.setupValidation(container);
