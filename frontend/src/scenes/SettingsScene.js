@@ -93,7 +93,7 @@ export class SettingsScene extends Scene {
     } catch (err) {
       console.error('Failed to enter SettingsScene:', err);
       // Show error UI
-      this.game.toastManager?.error('Settings Error', 'Failed to load settings. Please try again.');
+      this.game.toast?.error('Settings Error', 'Failed to load settings. Please try again.');
       this.game.scenes.switchTo('worldMap');
     }
   }
@@ -1472,119 +1472,71 @@ export class SettingsScene extends Scene {
     }
   }
 
+  /**
+   * Apply colorblind filter - delegates to Game.js
+   * @param {string} mode - 'none', 'protanopia', 'deuteranopia', 'tritanopia'
+   */
   applyColorBlindFilter(mode) {
-    // Remove existing filter
-    let filterSvg = document.getElementById('colorblind-filters');
-
-    if (mode === 'none') {
-      this.game.canvas.style.filter = 'none';
-      return;
+    if (this.game.applyColorBlindFilter) {
+      this.game.applyColorBlindFilter(mode);
     }
-
-    // Create SVG filters if not present
-    if (!filterSvg) {
-      filterSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      filterSvg.id = 'colorblind-filters';
-      filterSvg.setAttribute('style', 'position: absolute; width: 0; height: 0;');
-      filterSvg.innerHTML = `
-        <defs>
-          <filter id="protanopia-filter">
-            <feColorMatrix type="matrix" values="
-              0.567, 0.433, 0,     0, 0
-              0.558, 0.442, 0,     0, 0
-              0,     0.242, 0.758, 0, 0
-              0,     0,     0,     1, 0"/>
-          </filter>
-          <filter id="deuteranopia-filter">
-            <feColorMatrix type="matrix" values="
-              0.625, 0.375, 0,   0, 0
-              0.7,   0.3,   0,   0, 0
-              0,     0.3,   0.7, 0, 0
-              0,     0,     0,   1, 0"/>
-          </filter>
-          <filter id="tritanopia-filter">
-            <feColorMatrix type="matrix" values="
-              0.95, 0.05,  0,     0, 0
-              0,    0.433, 0.567, 0, 0
-              0,    0.475, 0.525, 0, 0
-              0,    0,     0,     1, 0"/>
-          </filter>
-        </defs>
-      `;
-      document.body.appendChild(filterSvg);
-    }
-
-    // Apply filter to canvas
-    const filterMap = {
-      protanopia: 'url(#protanopia-filter)',
-      deuteranopia: 'url(#deuteranopia-filter)',
-      tritanopia: 'url(#tritanopia-filter)'
-    };
-
-    this.game.canvas.style.filter = filterMap[mode] || 'none';
-  }
-
-  applyTextSize(size) {
-    const sizeMap = {
-      small: '12px',
-      medium: '14px',
-      large: '18px'
-    };
-
-    document.documentElement.style.setProperty('--game-text-size', sizeMap[size] || '14px');
-  }
-
-  applyFontFamily(family) {
-    const fontMap = {
-      default: 'Georgia, serif',
-      dyslexic: 'OpenDyslexic, Comic Sans MS, sans-serif',
-      monospace: 'Consolas, Monaco, monospace'
-    };
-
-    document.documentElement.style.setProperty('--game-font-family', fontMap[family] || fontMap.default);
-  }
-
-  applyLineSpacing(spacing) {
-    const spacingMap = {
-      compact: '1.2',
-      normal: '1.5',
-      relaxed: '1.8'
-    };
-
-    document.documentElement.style.setProperty('--game-line-height', spacingMap[spacing] || '1.5');
   }
 
   /**
-   * Apply high contrast mode
-   * Increases text contrast and applies darker backgrounds for better visibility
+   * Apply text size setting - delegates to Game.js
+   * @param {string} size - 'small', 'medium', 'large'
+   */
+  applyTextSize(size) {
+    if (this.game.applyTextSize) {
+      this.game.applyTextSize(size);
+    }
+  }
+
+  /**
+   * Apply font family setting - delegates to Game.js
+   * @param {string} family - 'default', 'dyslexic', 'monospace'
+   */
+  applyFontFamily(family) {
+    if (this.game.applyFontFamily) {
+      this.game.applyFontFamily(family);
+    }
+  }
+
+  /**
+   * Apply line spacing setting - delegates to Game.js
+   * @param {string} spacing - 'compact', 'normal', 'relaxed'
+   */
+  applyLineSpacing(spacing) {
+    if (this.game.applyLineSpacing) {
+      this.game.applyLineSpacing(spacing);
+    }
+  }
+
+  /**
+   * Apply high contrast mode - delegates to Game.js
    * @param {boolean} enabled - Whether high contrast mode is enabled
    */
   applyHighContrast(enabled) {
-    // Delegate to Game.js implementation for consistency
     if (this.game.applyHighContrast) {
       this.game.applyHighContrast(enabled);
     }
   }
 
   /**
-   * Apply cursor size setting
-   * Changes the cursor size via CSS
+   * Apply cursor size setting - delegates to Game.js
    * @param {string} size - 'small', 'normal', 'large'
    */
   applyCursorSize(size) {
-    // Delegate to Game.js implementation for consistency
     if (this.game.applyCursorSize) {
       this.game.applyCursorSize(size);
     }
   }
 
   /**
-   * Apply screen reader hints setting
-   * Adds aria-live regions and enhanced ARIA labels when enabled
+   * Apply screen reader hints setting - delegates to Game.js
    * @param {boolean} enabled - Whether screen reader hints are enabled
    */
   applyScreenReaderHints(enabled) {
-    // Delegate to Game.js implementation for consistency
     if (this.game.applyScreenReaderHints) {
       this.game.applyScreenReaderHints(enabled);
     }
