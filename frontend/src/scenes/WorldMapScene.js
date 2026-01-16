@@ -181,6 +181,11 @@ export class WorldMapScene extends Scene {
     this.responsiveUnsubscribe = responsive.onChange(() => {
       this.onBreakpointChange();
     });
+
+    // Start world exploration music
+    if (this.game.audio) {
+      this.game.audio.playMusic('world_exploration');
+    }
   }
 
   /**
@@ -1151,6 +1156,11 @@ export class WorldMapScene extends Scene {
    */
   async onTravelComplete(result, previousNodeId) {
     this.isTraveling = false;
+
+    // Play arrival sound
+    if (this.game.audio) {
+      this.game.audio.playSFX('footstep');
+    }
 
     // Update state
     this.currentNode = result.currentNode;

@@ -5,6 +5,7 @@ import { ApiClient } from '../api/client.js';
 import { TokenRefreshManager } from '../api/TokenRefreshManager.js';
 import { GameWebSocket } from '../api/websocket.js';
 import { AssetLoader } from './AssetLoader.js';
+import { AudioManager } from '../audio/AudioManager.js';
 import { responsive } from './Responsive.js';
 import { injectParchmentTheme } from '../ui/parchment/ParchmentTheme.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
@@ -89,6 +90,7 @@ export class Game {
     this.tokenRefreshManager = null;
     this.socket = null;
     this.assetLoader = null;
+    this.audio = null;
 
     this.lastTime = 0;
     this.running = false;
@@ -137,6 +139,11 @@ export class Game {
     this.assetLoader = new AssetLoader();
     await this.assetLoader.init();
     console.log('Asset loader initialized');
+
+    // Initialize audio system
+    this.audio = new AudioManager(this);
+    await this.audio.init();
+    console.log('Audio system initialized');
 
     // Inject parchment theme CSS variables
     injectParchmentTheme();
@@ -884,6 +891,7 @@ export class Game {
     this.input?.destroy();
     this.tokenRefreshManager?.stop();
     this.socket?.disconnect();
+    this.audio?.destroy();
     this.destroyNotificationSystem();
   }
 
