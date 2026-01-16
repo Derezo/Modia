@@ -274,11 +274,18 @@ export class SFXPlayer {
   }
 
   /**
-   * Stop all currently playing sounds
+   * Clear sound tracking state
+   *
+   * Note: This does NOT actually stop playing sounds. Web Audio API
+   * BufferSourceNodes cannot be stopped without keeping references to
+   * each active source. This method only resets the concurrent sound
+   * tracking, allowing new sounds to play even if the limit was reached.
+   *
+   * Currently playing sounds will continue until they finish naturally.
+   * For a full audio cutoff, use AudioManager.destroy() which disconnects
+   * all gain nodes from the audio destination.
    */
   stopAll() {
-    // Web Audio API doesn't allow stopping arbitrary sources,
-    // but we can reset the tracking
     this.activeSounds.clear();
   }
 

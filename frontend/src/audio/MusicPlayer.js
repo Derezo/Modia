@@ -322,36 +322,45 @@ export class MusicPlayer {
   _stopCurrentTrack(fadeOutMs) {
     if (!this.currentSource) return;
 
-    if (fadeOutMs > 0 && this.currentGain) {
+    // Capture references before timeout to prevent race conditions
+    // (a new track could start before the timeout fires)
+    const sourceToStop = this.currentSource;
+    const gainToDisconnect = this.currentGain;
+    const trackToStop = this.currentTrack;
+
+    if (fadeOutMs > 0 && gainToDisconnect) {
       // Fade out
       const timeConstant = fadeOutMs / 1000 / 3;
-      this.currentGain.gain.setTargetAtTime(0, this.context.currentTime, timeConstant);
+      gainToDisconnect.gain.setTargetAtTime(0, this.context.currentTime, timeConstant);
 
       // Stop after fade completes
       setTimeout(() => {
         try {
-          if (this.currentSource) {
-            this.currentSource.stop();
+          if (sourceToStop) {
+            sourceToStop.stop();
           }
         } catch (e) {
           // Already stopped
         }
-        if (this.currentGain) {
-          this.currentGain.disconnect();
+        if (gainToDisconnect) {
+          gainToDisconnect.disconnect();
         }
-        this.currentSource = null;
-        this.currentGain = null;
-        this.currentTrack = null;
+        // Only clear refs if they haven't changed (no new track started)
+        if (this.currentSource === sourceToStop) {
+          this.currentSource = null;
+          this.currentGain = null;
+          this.currentTrack = null;
+        }
       }, fadeOutMs);
     } else {
       // Stop immediately
       try {
-        this.currentSource.stop();
+        sourceToStop.stop();
       } catch (e) {
         // Already stopped
       }
-      if (this.currentGain) {
-        this.currentGain.disconnect();
+      if (gainToDisconnect) {
+        gainToDisconnect.disconnect();
       }
       this.currentSource = null;
       this.currentGain = null;
