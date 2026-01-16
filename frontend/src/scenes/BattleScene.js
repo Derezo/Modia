@@ -13,6 +13,7 @@ import { BattleContextMenu } from '../battle/BattleContextMenu.js';
 import { GridCursor } from '../battle/GridCursor.js';
 import { BossPhaseIndicator } from '../battle/BossPhaseIndicator.js';
 import { isSelfTargetingSkill, getVisualCategory } from '../battle/SkillEffectCategories.js';
+import { getSkillSoundKey } from '../audio/AudioAssets.js';
 import { calculateDamagePreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
@@ -275,10 +276,8 @@ export class BattleScene extends Scene {
     this.isIntroPlaying = true;
     this.ui.hide(); // Hide action menu during intro
 
-    // Start battle music
-    if (this.game.audio) {
-      this.game.audio.playMusic('battle_combat');
-    }
+    // Start battle music using MusicContext for region-aware playback
+    this.playBattleMusic();
 
     // Update UI with initial state (will show after intro)
     this.updateUI();
@@ -948,6 +947,9 @@ export class BattleScene extends Scene {
     const isEnemy = unitType === 'enemy';
     const isPlayerTurn = unitType === 'player' || unitType === 'player_local';
 
+    // Note: Turn start sound is played in handleRemoteYourTurn for player turns
+    // to provide immediate audio feedback when the server signals your turn
+
     // Increment battle log turn counter
     this.battleLogTurnCounter++;
 
@@ -1090,16 +1092,30 @@ export class BattleScene extends Scene {
 
     // Play attack/skill animation
     if (actionType === 'attack' || actionType === 'skill') {
+      // Play skill sound if this is a skill action
+      if (actionType === 'skill' && result.skillId) {
+        this.playSkillSound({ id: result.skillId }, actor);
+      }
+
       // Find target and play damage animation
       if (target) {
         if (result.damage > 0) {
           target.playHitAnimation();
+          // Play impact sound based on result
+          this.playImpactSound(result);
           this.animations.addDamageNumber(target.screenX, target.screenY - 40, result.damage, result.isCritical);
           this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
           target.hp = Math.max(0, target.hp - result.damage);
         } else if (result.missed) {
+          // Play miss sound
+          this.playImpactSound({ missed: true });
           this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
         }
+      }
+
+      // Play status effect sound if effect was applied
+      if (result.effectApplied || result.statusApplied) {
+        this.playStatusEffectSound(result.effectApplied || result.statusApplied);
       }
 
       // Wait for attack animation
@@ -2083,6 +2099,11 @@ export class BattleScene extends Scene {
     if (actionResult.isAoE && actionResult.aoeTargets) {
       const attacker = this.units.get(this.getActiveUnit()?.id);
 
+      // Play skill sound for AoE skill
+      if (actionResult.skillId) {
+        this.playSkillSound({ id: actionResult.skillId }, attacker);
+      }
+
       // Play attacker animation toward target tile
       if (attacker && this.pendingAction?.targetTile) {
         attacker.playAttackAnimation(
@@ -2107,9 +2128,9 @@ export class BattleScene extends Scene {
         const target = this.units.get(targetInfo.targetId);
         if (!target) continue;
 
-        // Play hit animation and sound
+        // Play hit animation and impact sound
         target.playHitAnimation();
-        this.playSound(targetInfo.isCritical ? 'critical_hit' : 'attack_hit');
+        this.playImpactSound({ damage: targetInfo.damage, isCritical: targetInfo.isCritical });
 
         // Show damage number
         this.animations.addDamageNumber(
@@ -2132,8 +2153,9 @@ export class BattleScene extends Scene {
           deathAnimations.push(target);
         }
 
-        // Show status effect if applied
+        // Show status effect if applied and play sound
         if (targetInfo.effectApplied) {
+          this.playStatusEffectSound(targetInfo.effectApplied);
           this.animations.addDamageNumber(
             target.screenX,
             target.screenY - 60,
@@ -2158,6 +2180,12 @@ export class BattleScene extends Scene {
     if (!actionResult.isAoE && actionResult.damage > 0 && actionResult.targetId) {
       const attacker = this.units.get(this.getActiveUnit()?.id);
       const target = this.units.get(actionResult.targetId);
+
+      // Play skill sound if this was a skill action
+      if (actionResult.skillId) {
+        this.playSkillSound({ id: actionResult.skillId }, attacker);
+      }
+
       if (target) {
         // Attacker faces target and plays attack animation
         if (attacker) {
@@ -2167,11 +2195,18 @@ export class BattleScene extends Scene {
 
         // Target plays hit animation
         target.playHitAnimation();
-        this.playSound(actionResult.isCritical ? 'critical_hit' : 'attack_hit');
+        // Use impact sound system
+        this.playImpactSound(actionResult);
         this.animations.addDamageNumber(target.screenX, target.screenY - 40, actionResult.damage, actionResult.isCritical);
         this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
         this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#ff4444');
         target.hp = Math.max(0, target.hp - actionResult.damage);
+
+        // Play status effect sound if effect was applied
+        if (actionResult.effectApplied || actionResult.statusApplied) {
+          this.playStatusEffectSound(actionResult.effectApplied || actionResult.statusApplied);
+        }
+
         await this.waitForAnimation(300);
 
         // Play death animation if target died
@@ -2186,7 +2221,7 @@ export class BattleScene extends Scene {
     if (actionResult.missed && actionResult.targetId) {
       const target = this.units.get(actionResult.targetId);
       if (target) {
-        this.playSound('miss');
+        this.playImpactSound({ missed: true });
         this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
         await this.waitForAnimation(300);
       }
@@ -2461,8 +2496,15 @@ export class BattleScene extends Scene {
 
     this.ui.hideActionMenu();
 
-    // Play victory or defeat music
-    if (this.game.audio) {
+    // Play victory or defeat fanfare via MusicContext
+    if (this.game.musicContext) {
+      if (status === 'victory') {
+        this.game.musicContext.playVictory();
+      } else {
+        this.game.musicContext.playDefeat();
+      }
+    } else if (this.game.audio) {
+      // Fallback to direct audio playback
       const track = status === 'victory' ? 'victory_fanfare' : 'defeat_jingle';
       this.game.audio.playMusic(track, { crossfade: false });
     }
@@ -2489,6 +2531,126 @@ export class BattleScene extends Scene {
     this.game.audio.playCombat(soundId, options);
   }
 
+  // ===========================================================================
+  // BATTLE AUDIO SYSTEM
+  // ===========================================================================
+
+  /**
+   * Determine the battle type for music selection
+   * @returns {string} Battle type: 'regular', 'boss', 'pvp', or 'story'
+   */
+  getBattleType() {
+    if (this.isPvP || this.battleType === 'pvp') return 'pvp';
+    if (this.isBossBattle || this.guildmasterData) return 'boss';
+    // Could add story battle detection here if implemented
+    return 'regular';
+  }
+
+  /**
+   * Get the current region for music selection
+   * @returns {string} Region ID (e.g., 'heartlands', 'sylvan_reaches')
+   */
+  getCurrentRegion() {
+    // Try to get region from current node in game state
+    const currentNode = this.game.state.get('currentNode');
+    if (currentNode?.region) {
+      return currentNode.region;
+    }
+    // Fallback to musicContext's current region if available
+    if (this.game.musicContext?.getRegion()) {
+      return this.game.musicContext.getRegion();
+    }
+    // Default fallback
+    return 'heartlands';
+  }
+
+  /**
+   * Play battle music based on battle type and current region
+   * Uses MusicContext for region-aware playback
+   */
+  playBattleMusic() {
+    if (this.game.musicContext) {
+      // Ensure region is set for music context
+      const region = this.getCurrentRegion();
+      if (!this.game.musicContext.getRegion()) {
+        this.game.musicContext.setRegion(region);
+      }
+      // Play region-appropriate battle music
+      const battleType = this.getBattleType();
+      this.game.musicContext.playBattleMusic(battleType);
+    } else if (this.game.audio) {
+      // Fallback to generic battle music
+      this.game.audio.playMusic('battle_combat');
+    }
+  }
+
+  /**
+   * Play sound for a skill execution
+   * Tries specific skill sound first, falls back to visual category
+   * @param {Object} skill - The skill being used
+   * @param {Object} attacker - The unit using the skill
+   */
+  playSkillSound(skill, attacker) {
+    if (!this.game.audio) return;
+
+    const isMonster = attacker?.type === 'enemy';
+    const skillId = skill.id || skill.skillId;
+
+    // Get the skill sound key using AudioAssets helper
+    const soundKey = getSkillSoundKey(skillId, isMonster);
+
+    // Try to play the specific skill sound
+    // The audio system will handle fallback if the sound doesn't exist
+    this.game.audio.playCombat(soundKey);
+
+    // Log for debugging
+    console.debug(`[BattleAudio] Playing skill sound: ${soundKey}`);
+  }
+
+  /**
+   * Play sound for a status effect being applied
+   * @param {string} effectType - The status effect type (burn, freeze, poison, etc.)
+   */
+  playStatusEffectSound(effectType) {
+    if (!this.game.audio || !effectType) return;
+
+    // Map effect types to sound keys
+    const soundKey = `status_${effectType.toLowerCase()}`;
+    this.game.audio.playCombat(soundKey);
+  }
+
+  /**
+   * Play combat impact sound based on attack result
+   * @param {Object} result - The attack result containing damage, isCritical, missed
+   */
+  playImpactSound(result) {
+    if (!this.game.audio) return;
+
+    if (result.missed) {
+      this.game.audio.playCombat('impact_miss');
+    } else if (result.isCritical) {
+      this.game.audio.playCombat('impact_critical');
+    } else if (result.blocked) {
+      this.game.audio.playCombat('impact_block');
+    } else if (result.damage > 0) {
+      this.game.audio.playCombat('impact_hit');
+    }
+  }
+
+  /**
+   * Play sound when a unit's turn starts
+   * @param {Object} unit - The unit whose turn is starting
+   */
+  playTurnStartSound(unit) {
+    if (!this.game.audio) return;
+
+    // Different sounds for player vs enemy turns
+    if (unit.type === 'player' || unit.type === 'player_local') {
+      this.game.audio.playSFX('turn_start');
+    }
+    // Note: We don't play enemy turn sounds to avoid audio clutter during fast enemy sequences
+  }
+
   /**
    * End battle and return to appropriate scene
    */
@@ -2498,6 +2660,13 @@ export class BattleScene extends Scene {
       clearInterval(this.pvpTurnTimer);
       this.pvpTurnTimer = null;
     }
+
+    // Resume previous music after a short delay (after victory/defeat fanfare)
+    setTimeout(() => {
+      if (this.game.musicContext) {
+        this.game.musicContext.resumeAfterBattle();
+      }
+    }, 3000);
 
     // Return to coliseum for PvP battles, world map otherwise
     const returnScene = this.isPvP ? 'coliseum' : 'worldMap';
