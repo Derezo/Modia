@@ -4,7 +4,7 @@
  * Defines all music tracks, sound effects, and UI sounds used in the game.
  * Supports placeholder audio generation via Web Audio API oscillators.
  *
- * Total: 55 music tracks + 239 sound effects = 294 audio assets
+ * Total: 55 music tracks + 244 sound effects = 299 audio assets
  */
 
 // =============================================================================
@@ -644,7 +644,7 @@ export const AUDIO_MANIFEST = {
   },
 
   // ===========================================================================
-  // SFX - 185 effects (combat: 45, skills: 140)
+  // SFX - 187 effects (combat: 47, skills: 140)
   // ===========================================================================
   sfx: {
     // -------------------------------------------------------------------------
@@ -931,6 +931,22 @@ export const AUDIO_MANIFEST = {
       volume: 0.75,
       category: 'combat',
       subcategory: 'death'
+    },
+
+    // -------------------------------------------------------------------------
+    // Turn Indicators (2)
+    // -------------------------------------------------------------------------
+    turn_start: {
+      path: '/assets/audio/sfx/combat/turn_start.mp3',
+      volume: 0.6,
+      category: 'combat',
+      subcategory: 'turn'
+    },
+    enemy_turn: {
+      path: '/assets/audio/sfx/combat/enemy_turn.mp3',
+      volume: 0.5,
+      category: 'combat',
+      subcategory: 'turn'
     },
 
     // -------------------------------------------------------------------------
@@ -2078,7 +2094,7 @@ export const AUDIO_MANIFEST = {
   },
 
   // ===========================================================================
-  // INTERACTIONS - 22 effects
+  // INTERACTIONS - 25 effects
   // ===========================================================================
   interactions: {
     // -------------------------------------------------------------------------
@@ -2243,6 +2259,32 @@ export const AUDIO_MANIFEST = {
       volume: 0.8,
       category: 'interaction',
       subcategory: 'activity'
+    },
+
+    // -------------------------------------------------------------------------
+    // Movement (1)
+    // -------------------------------------------------------------------------
+    footstep: {
+      path: '/assets/audio/sfx/interactions/footstep.mp3',
+      volume: 0.4,
+      category: 'interaction',
+      subcategory: 'movement'
+    },
+
+    // -------------------------------------------------------------------------
+    // Matchmaking (2)
+    // -------------------------------------------------------------------------
+    match_found: {
+      path: '/assets/audio/sfx/interactions/match_found.mp3',
+      volume: 0.7,
+      category: 'interaction',
+      subcategory: 'matchmaking'
+    },
+    gold_receive: {
+      path: '/assets/audio/sfx/interactions/gold_receive.mp3',
+      volume: 0.6,
+      category: 'interaction',
+      subcategory: 'currency'
     }
   }
 };
@@ -2375,7 +2417,17 @@ export const PLACEHOLDER_CONFIG = {
     fishing_cast: { frequency: 300, type: 'triangle', duration: 0.2, silent: false },
     fishing_reel: { frequency: 400, type: 'triangle', duration: 0.25, silent: false },
     fishing_big_one: { frequency: 700, type: 'square', duration: 0.2, silent: false },
-    puzzle_solve: { frequency: 660, type: 'sine', duration: 0.25, silent: false }
+    puzzle_solve: { frequency: 660, type: 'sine', duration: 0.25, silent: false },
+    // Movement
+    footstep: { frequency: 100, type: 'triangle', duration: 0.05, silent: false },
+    // Matchmaking
+    match_found: { frequency: 880, type: 'sine', duration: 0.3, silent: false },
+    gold_receive: { frequency: 700, type: 'sine', duration: 0.15, silent: false }
+  },
+  sfx: {
+    // Turn indicators
+    turn_start: { frequency: 600, type: 'sine', duration: 0.15, silent: false },
+    enemy_turn: { frequency: 350, type: 'triangle', duration: 0.12, silent: false }
   }
 };
 

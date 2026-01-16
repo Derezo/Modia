@@ -67,6 +67,11 @@ export class RecruitmentScene extends Scene {
     this.setupEventListeners();
     await this.loadData();
     this.startCountdownTimer();
+
+    // Play guild advancement music (same as guild advancement scene)
+    if (this.game.musicContext) {
+      this.game.musicContext.playGuildAdvancement();
+    }
   }
 
   exit() {

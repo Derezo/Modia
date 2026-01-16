@@ -86,6 +86,11 @@ export class GuildAdvancementScene extends Scene {
 
     this.responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
 
+    // Play guild advancement music
+    if (this.game.musicContext) {
+      this.game.musicContext.playGuildAdvancement();
+    }
+
     await this.loadData();
   }
 

@@ -109,6 +109,18 @@ export class BattleFormationScene extends Scene {
 
     // Initial render
     this.updateUnplacedRoster();
+
+    // Play appropriate music based on battle type
+    if (this.game.musicContext) {
+      if (this.battleType === 'coliseum') {
+        this.game.musicContext.playColiseumTheme();
+      } else if (this.battleType.startsWith('guild_')) {
+        this.game.musicContext.playGuildAdvancement();
+      } else {
+        // Standard battle formation - keep exploration music
+        this.game.musicContext.playExplorationMusic();
+      }
+    }
   }
 
   exit() {
