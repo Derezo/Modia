@@ -326,6 +326,15 @@ export class Game {
     // Apply line spacing
     this.applyLineSpacing(accessibility.lineSpacing);
 
+    // Apply high contrast mode
+    this.applyHighContrast(accessibility.highContrast);
+
+    // Apply cursor size
+    this.applyCursorSize(accessibility.cursorSize);
+
+    // Apply screen reader hints
+    this.applyScreenReaderHints(accessibility.screenReaderHints);
+
     // Store reduced motion preference in state
     this.state.set('reducedMotion', accessibility.reducedMotion);
   }
@@ -421,6 +430,239 @@ export class Game {
       relaxed: '1.8'
     };
     document.documentElement.style.setProperty('--game-line-height', spacingMap[spacing] || '1.5');
+  }
+
+  /**
+   * Apply high contrast mode
+   * Increases text contrast and applies darker backgrounds for better visibility
+   * @param {boolean} enabled - Whether high contrast mode is enabled
+   */
+  applyHighContrast(enabled) {
+    const root = document.documentElement;
+
+    if (enabled) {
+      root.classList.add('high-contrast');
+
+      // Inject high contrast styles if not present
+      if (!document.getElementById('high-contrast-styles')) {
+        const style = document.createElement('style');
+        style.id = 'high-contrast-styles';
+        style.textContent = `
+          .high-contrast {
+            --parchment-text-primary: #000000;
+            --parchment-text-secondary: #1a1a1a;
+            --parchment-text-muted: #333333;
+            --parchment-light: #ffffff;
+            --parchment-mid: #f5f5f5;
+            --parchment-dark: #e0e0e0;
+            --parchment-border: #000000;
+            --parchment-border-dark: #000000;
+          }
+
+          .high-contrast .settings-container,
+          .high-contrast .parchment-panel,
+          .high-contrast .parchment-modal {
+            background: #ffffff !important;
+            color: #000000 !important;
+          }
+
+          .high-contrast button,
+          .high-contrast .settings-btn,
+          .high-contrast .parchment-button {
+            border-width: 3px !important;
+            font-weight: bold !important;
+          }
+
+          .high-contrast input[type="checkbox"],
+          .high-contrast input[type="radio"] {
+            outline: 2px solid #000000;
+          }
+
+          .high-contrast a,
+          .high-contrast .link {
+            text-decoration: underline !important;
+            color: #0000cc !important;
+          }
+
+          .high-contrast .settings-radio-option.selected {
+            background: #ffff00 !important;
+            border-color: #000000 !important;
+          }
+
+          .high-contrast .settings-tab.active {
+            background: #ffff00 !important;
+            border-color: #000000 !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    } else {
+      root.classList.remove('high-contrast');
+    }
+
+    // Store in state for canvas rendering code to check
+    this.state.set('highContrast', enabled);
+  }
+
+  /**
+   * Apply cursor size setting
+   * Changes the cursor size via CSS custom property
+   * @param {string} size - 'small', 'normal', 'large'
+   */
+  applyCursorSize(size) {
+    const sizeMap = {
+      small: '16px',
+      normal: '24px',
+      large: '32px'
+    };
+
+    const cursorSize = sizeMap[size] || '24px';
+    document.documentElement.style.setProperty('--cursor-size', cursorSize);
+
+    // Inject cursor styles if not present
+    if (!document.getElementById('cursor-size-styles')) {
+      const style = document.createElement('style');
+      style.id = 'cursor-size-styles';
+      style.textContent = `
+        :root {
+          --cursor-size: 24px;
+        }
+
+        .cursor-large #game-canvas,
+        .cursor-large .settings-container,
+        .cursor-large .parchment-panel,
+        .cursor-large .parchment-modal {
+          cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><polygon points="0,0 0,24 6,18 12,28 16,26 10,16 18,16" fill="black" stroke="white" stroke-width="1"/></svg>') 0 0, auto;
+        }
+
+        .cursor-small #game-canvas,
+        .cursor-small .settings-container,
+        .cursor-small .parchment-panel,
+        .cursor-small .parchment-modal {
+          cursor: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16"><polygon points="0,0 0,12 3,9 6,14 8,13 5,8 9,8" fill="black" stroke="white" stroke-width="0.5"/></svg>') 0 0, auto;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    // Apply cursor class to root element
+    const root = document.documentElement;
+    root.classList.remove('cursor-small', 'cursor-normal', 'cursor-large');
+
+    if (size === 'small') {
+      root.classList.add('cursor-small');
+    } else if (size === 'large') {
+      root.classList.add('cursor-large');
+    }
+    // Normal size uses default cursor
+
+    // Store in state
+    this.state.set('cursorSize', size);
+  }
+
+  /**
+   * Apply screen reader hints setting
+   * Adds aria-live regions and enhanced ARIA labels when enabled
+   * @param {boolean} enabled - Whether screen reader hints are enabled
+   */
+  applyScreenReaderHints(enabled) {
+    const root = document.documentElement;
+
+    if (enabled) {
+      root.setAttribute('data-screen-reader-hints', 'true');
+
+      // Create or update the live region for announcements
+      let liveRegion = document.getElementById('game-announcements');
+      if (!liveRegion) {
+        liveRegion = document.createElement('div');
+        liveRegion.id = 'game-announcements';
+        liveRegion.setAttribute('aria-live', 'polite');
+        liveRegion.setAttribute('aria-atomic', 'true');
+        liveRegion.setAttribute('role', 'status');
+        liveRegion.className = 'sr-only';
+        document.body.appendChild(liveRegion);
+      }
+
+      // Create assertive live region for urgent announcements
+      let urgentRegion = document.getElementById('game-alerts');
+      if (!urgentRegion) {
+        urgentRegion = document.createElement('div');
+        urgentRegion.id = 'game-alerts';
+        urgentRegion.setAttribute('aria-live', 'assertive');
+        urgentRegion.setAttribute('aria-atomic', 'true');
+        urgentRegion.setAttribute('role', 'alert');
+        urgentRegion.className = 'sr-only';
+        document.body.appendChild(urgentRegion);
+      }
+
+      // Inject screen reader styles if not present
+      if (!document.getElementById('screen-reader-styles')) {
+        const style = document.createElement('style');
+        style.id = 'screen-reader-styles';
+        style.textContent = `
+          .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+          }
+
+          [data-screen-reader-hints="true"] #game-canvas {
+            outline-offset: 2px;
+          }
+
+          [data-screen-reader-hints="true"] .focusable:focus {
+            outline: 3px solid #4a90d9;
+            outline-offset: 2px;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      // Add ARIA label to canvas
+      if (this.canvas) {
+        this.canvas.setAttribute('aria-label', 'Modia game canvas - Use keyboard shortcuts for navigation');
+        this.canvas.setAttribute('role', 'application');
+      }
+    } else {
+      root.removeAttribute('data-screen-reader-hints');
+
+      // Remove ARIA attributes from canvas
+      if (this.canvas) {
+        this.canvas.removeAttribute('aria-label');
+        this.canvas.removeAttribute('role');
+      }
+    }
+
+    // Store in state for components to check
+    this.state.set('screenReaderHints', enabled);
+  }
+
+  /**
+   * Announce a message to screen readers
+   * Only announces if screen reader hints are enabled
+   * @param {string} message - The message to announce
+   * @param {boolean} urgent - If true, uses assertive announcement
+   */
+  announceToScreenReader(message, urgent = false) {
+    if (!this.state.get('screenReaderHints')) return;
+
+    const regionId = urgent ? 'game-alerts' : 'game-announcements';
+    const region = document.getElementById(regionId);
+
+    if (region) {
+      // Clear and set message to trigger announcement
+      region.textContent = '';
+      // Use setTimeout to ensure the clear takes effect before new content
+      setTimeout(() => {
+        region.textContent = message;
+      }, 50);
+    }
   }
 
   /**

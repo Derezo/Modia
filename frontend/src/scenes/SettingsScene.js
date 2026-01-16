@@ -1457,6 +1457,15 @@ export class SettingsScene extends Scene {
     // Apply line spacing
     this.applyLineSpacing(accessibility.lineSpacing);
 
+    // Apply high contrast mode
+    this.applyHighContrast(accessibility.highContrast);
+
+    // Apply cursor size
+    this.applyCursorSize(accessibility.cursorSize);
+
+    // Apply screen reader hints
+    this.applyScreenReaderHints(accessibility.screenReaderHints);
+
     // Notify game of reduced motion preference
     if (this.game.state) {
       this.game.state.set('reducedMotion', accessibility.reducedMotion);
@@ -1543,6 +1552,42 @@ export class SettingsScene extends Scene {
     };
 
     document.documentElement.style.setProperty('--game-line-height', spacingMap[spacing] || '1.5');
+  }
+
+  /**
+   * Apply high contrast mode
+   * Increases text contrast and applies darker backgrounds for better visibility
+   * @param {boolean} enabled - Whether high contrast mode is enabled
+   */
+  applyHighContrast(enabled) {
+    // Delegate to Game.js implementation for consistency
+    if (this.game.applyHighContrast) {
+      this.game.applyHighContrast(enabled);
+    }
+  }
+
+  /**
+   * Apply cursor size setting
+   * Changes the cursor size via CSS
+   * @param {string} size - 'small', 'normal', 'large'
+   */
+  applyCursorSize(size) {
+    // Delegate to Game.js implementation for consistency
+    if (this.game.applyCursorSize) {
+      this.game.applyCursorSize(size);
+    }
+  }
+
+  /**
+   * Apply screen reader hints setting
+   * Adds aria-live regions and enhanced ARIA labels when enabled
+   * @param {boolean} enabled - Whether screen reader hints are enabled
+   */
+  applyScreenReaderHints(enabled) {
+    // Delegate to Game.js implementation for consistency
+    if (this.game.applyScreenReaderHints) {
+      this.game.applyScreenReaderHints(enabled);
+    }
   }
 
   update(_deltaTime) {
