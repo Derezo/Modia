@@ -266,5 +266,100 @@ export async function restoreStaminaForGold(userId, characterId, amount, costPer
   };
 }
 
+/**
+ * Restore stamina to a character by paying gold (transaction-safe version)
+ * Uses an existing database client for transaction support
+ * @param {Object} client - Database client from pool.connect()
+ * @param {number} userId - User ID (for gold deduction)
+ * @param {number} characterId - Character ID (for stamina restore)
+ * @param {number} amount - Amount of stamina to restore
+ * @param {number} costPerPoint - Gold cost per stamina point (default 100)
+ * @returns {Promise<Object>} Result with stamina and gold info
+ */
+export async function restoreStaminaForGoldWithClient(client, userId, characterId, amount, costPerPoint = STAMINA_RESTORE_GOLD_COST) {
+  if (amount <= 0) {
+    throw new Error('Restore amount must be positive');
+  }
+
+  // Get current stamina info using client
+  const staminaResult = await client.query(
+    `SELECT stamina, stamina_updated_at, max_stamina
+     FROM characters WHERE id = $1`,
+    [characterId]
+  );
+
+  if (staminaResult.rows.length === 0) {
+    throw new Error('Character not found');
+  }
+
+  const character = staminaResult.rows[0];
+  const currentStamina = calculateCurrentStamina(character);
+  const maxStamina = character.max_stamina ?? DEFAULT_MAX_STAMINA;
+
+  // Calculate how much stamina can actually be restored (up to max)
+  const maxRestorable = maxStamina - currentStamina;
+  if (maxRestorable <= 0) {
+    throw new Error('Stamina is already full');
+  }
+
+  const actualAmount = Math.min(amount, maxRestorable);
+  const goldCost = actualAmount * costPerPoint;
+
+  // Check and deduct gold from user atomically
+  const goldResult = await client.query(
+    `UPDATE users
+     SET gold = gold - $1
+     WHERE id = $2 AND gold >= $1
+     RETURNING gold`,
+    [goldCost, userId]
+  );
+
+  if (goldResult.rows.length === 0) {
+    // Check actual gold for better error message
+    const userGold = await client.query('SELECT gold FROM users WHERE id = $1', [userId]);
+    const currentGold = userGold.rows[0]?.gold || 0;
+    throw new Error(`Insufficient gold. Need ${goldCost}, have ${currentGold}`);
+  }
+
+  // Restore stamina
+  const newStamina = Math.min(maxStamina, currentStamina + actualAmount);
+  await client.query(
+    `UPDATE characters
+     SET stamina = $1, stamina_updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2`,
+    [newStamina, characterId]
+  );
+
+  // Get updated stamina info (using client for consistency within transaction)
+  const updatedResult = await client.query(
+    `SELECT stamina, stamina_updated_at, max_stamina
+     FROM characters WHERE id = $1`,
+    [characterId]
+  );
+  const updatedChar = updatedResult.rows[0];
+  const updatedCurrent = calculateCurrentStamina(updatedChar);
+  const updatedMax = updatedChar.max_stamina ?? DEFAULT_MAX_STAMINA;
+
+  let nextRegenAt = null;
+  if (updatedCurrent < updatedMax) {
+    const updatedAt = new Date(updatedChar.stamina_updated_at || Date.now());
+    const elapsedMs = Date.now() - updatedAt.getTime();
+    const msUntilNextRegen = REGEN_INTERVAL_MS - (elapsedMs % REGEN_INTERVAL_MS);
+    nextRegenAt = new Date(Date.now() + msUntilNextRegen).toISOString();
+  }
+
+  return {
+    staminaRestored: actualAmount,
+    goldSpent: goldCost,
+    newGold: goldResult.rows[0].gold,
+    stamina: {
+      current: updatedCurrent,
+      max: updatedMax,
+      nextRegenAt,
+      regenIntervalSeconds: REGEN_INTERVAL_MS / 1000
+    }
+  };
+}
+
 // Export constants for testing
 export { REGEN_INTERVAL_MS, DEFAULT_MAX_STAMINA, STAMINA_RESTORE_GOLD_COST };
