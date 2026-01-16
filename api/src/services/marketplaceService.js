@@ -337,17 +337,22 @@ async function addItemToUser(client, userId, itemTemplateId, quantity) {
   }
 }
 
+// Default marketplace tax rate (5%)
+const DEFAULT_TAX_RATE = 0.05;
+
 /**
  * Execute a trade between two orders
+ * Applies a 5% seller fee which is logged to marketplace_tax_ledger
  */
-async function executeTrade(client, buyOrder, sellOrder, quantity, executionPrice, itemName = null) {
+async function executeTrade(client, buyOrder, sellOrder, quantity, executionPrice, itemName = null, sellerTaxRate = DEFAULT_TAX_RATE) {
   const itemTemplateId = buyOrder.item_template_id || sellOrder.item_template_id;
 
   // Record the trade
-  await client.query(
+  const tradeResult = await client.query(
     `INSERT INTO market_trades
      (buy_order_id, sell_order_id, item_template_id, buyer_id, seller_id, price, quantity, total_gold)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING id`,
     [
       buyOrder.id,
       sellOrder.id,
@@ -359,6 +364,7 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
       executionPrice * quantity
     ]
   );
+  const tradeId = tradeResult.rows[0].id;
 
   // Update order fill quantities (triggers will update status)
   await client.query(
@@ -371,20 +377,32 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
     [quantity, sellOrder.id]
   );
 
-  // Transfer gold from buyer's reservation to seller
-  const totalGold = executionPrice * quantity;
+  // Calculate marketplace fee (5% seller fee by default)
+  const grossAmount = executionPrice * quantity;
+  const taxAmount = Math.floor(grossAmount * sellerTaxRate);
+  const netAmount = grossAmount - taxAmount;
 
-  // Reduce buyer's gold reservation
+  // Reduce buyer's gold reservation (full amount)
   await client.query(
     'UPDATE gold_reservations SET amount = amount - $1 WHERE order_id = $2',
-    [totalGold, buyOrder.id]
+    [grossAmount, buyOrder.id]
   );
 
-  // Add gold to seller (capped at MAX_GOLD to prevent overflow)
+  // Add gold to seller (NET amount after fee, capped at MAX_GOLD)
   await client.query(
     'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
-    [totalGold, MAX_GOLD, sellOrder.user_id]
+    [netAmount, MAX_GOLD, sellOrder.user_id]
   );
+
+  // Log the tax to marketplace_tax_ledger for audit trail
+  if (taxAmount > 0) {
+    await client.query(
+      `INSERT INTO marketplace_tax_ledger
+       (order_id, trade_id, seller_id, buyer_id, item_template_id, gross_amount, tax_amount, net_amount, tax_rate)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [sellOrder.id, tradeId, sellOrder.user_id, buyOrder.user_id, itemTemplateId, grossAmount, taxAmount, netAmount, sellerTaxRate]
+    );
+  }
 
   // Reduce seller's item escrow
   await reduceEscrow(client, sellOrder.id, quantity);
@@ -424,7 +442,7 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
 
   // WebSocket notifications (wrapped in try-catch to not break the transaction)
   try {
-    // Notify buyer
+    // Notify buyer (pays gross amount)
     marketplaceWebsocket.notifyOrderFilled(buyOrder.user_id, {
       orderId: buyOrder.id,
       side: 'buy',
@@ -432,13 +450,13 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
       itemName: itemName,
       price: executionPrice,
       quantity: quantity,
-      totalGold: totalGold,
+      totalGold: grossAmount,
       remainingQuantity: buyRemainingQty,
       orderStatus: newBuyStatus, // 'filled' or 'partial'
       newGoldBalance: null // Will be updated in caller if needed
     });
 
-    // Notify seller
+    // Notify seller (receives net amount after fee)
     marketplaceWebsocket.notifyOrderFilled(sellOrder.user_id, {
       orderId: sellOrder.id,
       side: 'sell',
@@ -446,7 +464,10 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
       itemName: itemName,
       price: executionPrice,
       quantity: quantity,
-      totalGold: totalGold,
+      totalGold: netAmount, // Net amount after 5% fee
+      grossGold: grossAmount,
+      taxAmount: taxAmount,
+      taxRate: sellerTaxRate,
       remainingQuantity: sellRemainingQty,
       orderStatus: newSellStatus
     });
@@ -468,7 +489,10 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
   return {
     quantity,
     price: executionPrice,
-    totalGold,
+    totalGold: grossAmount,
+    netGold: netAmount,
+    taxAmount,
+    taxRate: sellerTaxRate,
     // Include trade info for post-transaction audit logging
     _auditInfo: {
       buyerId: buyOrder.user_id,
@@ -772,11 +796,26 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
     );
 
     if (side === 'buy') {
-      // Transfer gold to seller and reduce their reservation (capped at MAX_GOLD)
+      // Calculate marketplace fee for seller (5% fee)
+      const grossGold = executionPrice * matchQty;
+      const taxAmount = Math.floor(grossGold * DEFAULT_TAX_RATE);
+      const netGold = grossGold - taxAmount;
+
+      // Transfer NET gold to seller after fee (capped at MAX_GOLD)
       await client.query(
         'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
-        [executionPrice * matchQty, MAX_GOLD, order.user_id]
+        [netGold, MAX_GOLD, order.user_id]
       );
+
+      // Log the tax
+      if (taxAmount > 0) {
+        await client.query(
+          `INSERT INTO marketplace_tax_ledger
+           (order_id, seller_id, buyer_id, item_template_id, gross_amount, tax_amount, net_amount, tax_rate)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [order.id, order.user_id, userId, itemTemplateId, grossGold, taxAmount, netGold, DEFAULT_TAX_RATE]
+        );
+      }
 
       // Reduce seller's escrow
       await reduceEscrow(client, order.id, matchQty);
@@ -784,14 +823,14 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
       // Give items to buyer's shared pool
       await addItemToUser(client, userId, itemTemplateId, matchQty);
     } else {
-      // Buyer pays from their reservation
+      // Buyer pays from their reservation (full amount)
       const goldCost = executionPrice * matchQty;
       await client.query(
         'UPDATE gold_reservations SET amount = amount - $1 WHERE order_id = $2',
         [goldCost, order.id]
       );
 
-      // Seller receives gold
+      // Track gross proceeds; tax will be applied when seller receives
       totalProceeds += goldCost;
 
       // Buyer receives items in their shared pool
@@ -810,12 +849,27 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
     });
   }
 
-  // For sell orders: give gold to seller (capped at MAX_GOLD)
-  if (side === 'sell') {
+  // For sell orders: give gold to seller (after 5% fee, capped at MAX_GOLD)
+  let totalTax = 0;
+  let netProceeds = totalProceeds;
+  if (side === 'sell' && totalProceeds > 0) {
+    totalTax = Math.floor(totalProceeds * DEFAULT_TAX_RATE);
+    netProceeds = totalProceeds - totalTax;
+
     await client.query(
       'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
-      [totalProceeds, MAX_GOLD, userId]
+      [netProceeds, MAX_GOLD, userId]
     );
+
+    // Log the tax for the market sell order
+    if (totalTax > 0) {
+      await client.query(
+        `INSERT INTO marketplace_tax_ledger
+         (seller_id, item_template_id, gross_amount, tax_amount, net_amount, tax_rate)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, itemTemplateId, totalProceeds, totalTax, netProceeds, DEFAULT_TAX_RATE]
+      );
+    }
   }
 
   // Clean up empty reservations/escrow
@@ -872,6 +926,9 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
     trades,
     totalQuantity: quantity,
     totalGold: side === 'buy' ? totalCost : totalProceeds,
+    netGold: side === 'sell' ? netProceeds : totalCost,
+    taxAmount: side === 'sell' ? totalTax : 0,
+    taxRate: DEFAULT_TAX_RATE,
     averagePrice: (side === 'buy' ? totalCost : totalProceeds) / quantity,
     itemName: itemName,
     // Include info for post-transaction audit logging
@@ -881,7 +938,7 @@ async function executeMarketOrder(client, userId, characterId, itemTemplateId, s
       itemTemplateId,
       side,
       quantity,
-      totalGold: side === 'buy' ? totalCost : totalProceeds,
+      totalGold: side === 'buy' ? totalCost : netProceeds,
       tradesCount: trades.length
     }
   };
@@ -1432,8 +1489,9 @@ async function createItemListing(client, userId, characterId, characterItemId, p
 
 /**
  * Buy an item from a listing
+ * Applies a 5% seller fee
  */
-async function buyItemListing(client, buyerUserId, buyerCharacterId, listingId) {
+async function buyItemListing(client, buyerUserId, buyerCharacterId, listingId, sellerTaxRate = DEFAULT_TAX_RATE) {
   // Get and lock the listing
   const listingResult = await client.query(
     `SELECT il.*, ci.id as ci_id, ci.modifications, it.name as template_name
@@ -1467,23 +1525,37 @@ async function buyItemListing(client, buyerUserId, buyerCharacterId, listingId) 
   }
 
   const buyerGold = buyerResult.rows[0].gold;
-  const price = parseInt(listing.price, 10);
+  const grossPrice = parseInt(listing.price, 10);
 
-  if (buyerGold < price) {
-    throw new AppError(`Insufficient gold. Need ${price}, have ${buyerGold}`, 400);
+  if (buyerGold < grossPrice) {
+    throw new AppError(`Insufficient gold. Need ${grossPrice}, have ${buyerGold}`, 400);
   }
 
-  // Transfer gold: buyer pays
+  // Calculate marketplace fee (5% seller fee)
+  const taxAmount = Math.floor(grossPrice * sellerTaxRate);
+  const netPrice = grossPrice - taxAmount;
+
+  // Transfer gold: buyer pays full amount
   await client.query(
     'UPDATE users SET gold = gold - $1 WHERE id = $2',
-    [price, buyerUserId]
+    [grossPrice, buyerUserId]
   );
 
-  // Transfer gold: seller receives (capped)
+  // Transfer gold: seller receives NET amount after fee (capped)
   await client.query(
     'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
-    [price, MAX_GOLD, listing.seller_id]
+    [netPrice, MAX_GOLD, listing.seller_id]
   );
+
+  // Log the tax to marketplace_tax_ledger
+  if (taxAmount > 0) {
+    await client.query(
+      `INSERT INTO marketplace_tax_ledger
+       (listing_id, seller_id, buyer_id, item_template_id, gross_amount, tax_amount, net_amount, tax_rate)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [listingId, listing.seller_id, buyerUserId, listing.item_template_id, grossPrice, taxAmount, netPrice, sellerTaxRate]
+    );
+  }
 
   // Transfer item to buyer's shared pool and remove "listed" flag
   const mods = listing.modifications || {};
@@ -1507,7 +1579,7 @@ async function buyItemListing(client, buyerUserId, buyerCharacterId, listingId) 
     `INSERT INTO item_listing_sales
      (listing_id, buyer_id, buyer_character_id, seller_id, item_template_id, price, modifications)
      VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [listingId, buyerUserId, buyerCharacterId, listing.seller_id, listing.item_template_id, price, listing.modifications]
+    [listingId, buyerUserId, buyerCharacterId, listing.seller_id, listing.item_template_id, grossPrice, listing.modifications]
   );
 
   const itemName = mods.generatedName || listing.template_name;
@@ -1516,7 +1588,10 @@ async function buyItemListing(client, buyerUserId, buyerCharacterId, listingId) 
     listingId,
     itemTemplateId: listing.item_template_id,
     itemName,
-    price,
+    price: grossPrice,
+    netPrice,
+    taxAmount,
+    taxRate: sellerTaxRate,
     sellerId: listing.seller_id,
     buyerId: buyerUserId,
     characterItemId: listing.character_item_id

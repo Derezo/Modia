@@ -864,6 +864,18 @@ export class WorldMapScene extends Scene {
       return;
     }
 
+    // Fast travel opens the fast travel modal (requires Wayfarer's Compass relic)
+    if (feature === 'fast_travel') {
+      this.openFastTravelModal();
+      return;
+    }
+
+    // Stamina restore at town nodes (requires Vitality Charm relic)
+    if (feature === 'stamina_restore') {
+      this.openStaminaRestoreModal();
+      return;
+    }
+
     // Other features not yet implemented
     parchmentToast.info('Coming Soon', `${this.capitalize(feature)} feature is under development.`);
   }
@@ -892,6 +904,149 @@ export class WorldMapScene extends Scene {
       type: 'pve',
       node: this.currentNode
     });
+  }
+
+  /**
+   * Open the fast travel modal to select a destination castle
+   */
+  async openFastTravelModal() {
+    try {
+      // Fetch available destinations and relic status
+      const result = await this.game.api.getFastTravelDestinations();
+
+      if (!result.hasRelic) {
+        parchmentToast.warning(
+          'Relic Required',
+          'You need the Wayfarer\'s Compass relic to use fast travel.'
+        );
+        return;
+      }
+
+      // Import and show the modal
+      const { FastTravelModal } = await import('../modals/FastTravelModal.js');
+      const modal = new FastTravelModal({
+        game: this.game,
+        destinations: result.destinations,
+        currentRegionId: result.currentRegionId,
+        onTravel: async (destination) => {
+          try {
+            const travelResult = await this.game.api.fastTravel(destination.nodeId);
+            parchmentToast.success(
+              'Fast Travel Complete',
+              `Arrived at ${travelResult.destination.name} (${travelResult.goldSpent}g spent)`
+            );
+
+            // Update gold in state
+            this.game.state.set('gold', travelResult.newGold);
+
+            // Reload world data to update position
+            await this.loadWorldData();
+            this.centerOnCurrentNode();
+            this.clearPathCache();
+
+            // Update stamina display
+            if (travelResult.stamina) {
+              this.staminaBar.setStamina(travelResult.stamina);
+            }
+
+            // Update node action menu
+            if (this.currentNode) {
+              const position = this.getNodeScreenPosition(this.currentNode);
+              this.nodeActionMenu.setNode(this.currentNode, position);
+              this.nodeActionMenu.expand();
+            }
+
+            modal.destroy();
+          } catch (err) {
+            parchmentToast.error('Fast Travel Failed', err.message);
+          }
+        },
+        onClose: () => {
+          modal.destroy();
+        }
+      });
+
+      modal.show();
+    } catch (err) {
+      parchmentToast.error('Error', err.message);
+    }
+  }
+
+  /**
+   * Open the stamina restore modal to purchase stamina
+   */
+  async openStaminaRestoreModal() {
+    try {
+      // Check if user has the relic
+      const relicCheck = await this.game.api.checkRelic('vitality_charm');
+
+      if (!relicCheck.owned) {
+        parchmentToast.warning(
+          'Relic Required',
+          'You need the Vitality Charm relic to restore stamina for gold.'
+        );
+        return;
+      }
+
+      // Get current stamina info
+      const characters = this.game.state.get('characters') || [];
+      const partyLeader = characters.find(c => c.party_slot === 1) || characters[0];
+
+      if (!partyLeader) {
+        parchmentToast.error('Error', 'No active character found.');
+        return;
+      }
+
+      const staminaResult = await this.game.api.getCharacterStamina(partyLeader.id);
+      const stamina = staminaResult.stamina;
+      const missingStamina = stamina.max - stamina.current;
+
+      if (missingStamina <= 0) {
+        parchmentToast.info('Stamina Full', 'Your stamina is already at maximum.');
+        return;
+      }
+
+      const costPerPoint = relicCheck.effects?.cost_per_point || 100;
+      const userGold = this.game.state.get('gold') || 0;
+
+      // Import and show the modal
+      const { StaminaRestoreModal } = await import('../modals/StaminaRestoreModal.js');
+      const modal = new StaminaRestoreModal({
+        game: this.game,
+        currentStamina: stamina.current,
+        maxStamina: stamina.max,
+        costPerPoint,
+        userGold,
+        onRestore: async (amount) => {
+          try {
+            const result = await this.game.api.restoreStaminaForGold(amount);
+            parchmentToast.success(
+              'Stamina Restored',
+              `Restored ${result.staminaRestored} stamina for ${result.goldSpent}g`
+            );
+
+            // Update gold in state
+            this.game.state.set('gold', result.newGold);
+
+            // Update stamina display
+            if (result.stamina) {
+              this.staminaBar.setStamina(result.stamina);
+            }
+
+            modal.destroy();
+          } catch (err) {
+            parchmentToast.error('Restore Failed', err.message);
+          }
+        },
+        onClose: () => {
+          modal.destroy();
+        }
+      });
+
+      modal.show();
+    } catch (err) {
+      parchmentToast.error('Error', err.message);
+    }
   }
 
   /**

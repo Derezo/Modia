@@ -1296,4 +1296,278 @@ router.get('/my-discoveries', authenticate, asyncHandler(async (req, res) => {
   });
 }));
 
+// ============================================================================
+// GOLD SINK ENDPOINTS (Fast Travel, Stamina Restore)
+// ============================================================================
+
+// GET /api/world/fast-travel/destinations - Get available fast travel destinations
+router.get('/fast-travel/destinations', authenticate, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+
+  // Check if user has the Wayfarer's Compass relic
+  const relicCheck = await query(
+    `SELECT 1 FROM user_relics ur
+     JOIN relic_templates rt ON rt.id = ur.relic_id
+     WHERE ur.user_id = $1 AND rt.key = 'wayfarers_compass'`,
+    [userId]
+  );
+
+  const hasRelic = relicCheck.rows.length > 0;
+
+  // Get user's current location
+  const charResult = await query(
+    `SELECT c.current_node_id, wn.region_id as current_region_id
+     FROM characters c
+     JOIN world_nodes wn ON wn.id = c.current_node_id
+     WHERE c.user_id = $1 AND c.party_slot = 1`,
+    [userId]
+  );
+
+  if (charResult.rows.length === 0) {
+    throw new AppError('No active party character', 400);
+  }
+
+  const currentRegionId = charResult.rows[0].current_region_id;
+
+  // Get all region castles as potential destinations
+  const castlesResult = await query(
+    `SELECT
+       wr.id as region_id,
+       wr.race as region_race,
+       wn.id as node_id,
+       wn.name,
+       wn.x_coord,
+       wn.y_coord
+     FROM world_regions wr
+     JOIN world_nodes wn ON wn.id = wr.castle_node_id
+     ORDER BY wr.id`
+  );
+
+  // Calculate costs for each destination
+  const baseCost = 100;
+  const costPerRegion = 50;
+
+  const destinations = castlesResult.rows.map(castle => {
+    const regionDistance = Math.abs(castle.region_id - currentRegionId);
+    const cost = baseCost + (regionDistance * costPerRegion);
+
+    return {
+      nodeId: castle.node_id,
+      name: castle.name,
+      regionId: castle.region_id,
+      regionRace: castle.region_race,
+      x: castle.x_coord,
+      y: castle.y_coord,
+      cost,
+      isCurrentRegion: castle.region_id === currentRegionId
+    };
+  });
+
+  res.json({
+    hasRelic,
+    currentRegionId,
+    destinations
+  });
+}));
+
+// POST /api/world/fast-travel - Fast travel to a region castle
+router.post('/fast-travel', authenticate, travelLimiter, asyncHandler(async (req, res) => {
+  const { targetNodeId } = req.body;
+  const userId = req.user.userId;
+
+  if (!targetNodeId) {
+    throw new AppError('targetNodeId is required', 400);
+  }
+
+  // Check if user has the Wayfarer's Compass relic
+  const relicCheck = await query(
+    `SELECT rt.effects FROM user_relics ur
+     JOIN relic_templates rt ON rt.id = ur.relic_id
+     WHERE ur.user_id = $1 AND rt.key = 'wayfarers_compass'`,
+    [userId]
+  );
+
+  if (relicCheck.rows.length === 0) {
+    throw new AppError('You need the Wayfarer\'s Compass to use fast travel', 400);
+  }
+
+  // Verify target is a castle node
+  const targetCheck = await query(
+    `SELECT wn.id, wn.name, wn.region_id, wr.id as castle_region_id
+     FROM world_nodes wn
+     JOIN world_regions wr ON wr.castle_node_id = wn.id
+     WHERE wn.id = $1`,
+    [targetNodeId]
+  );
+
+  if (targetCheck.rows.length === 0) {
+    throw new AppError('Fast travel is only available to region castles', 400);
+  }
+
+  const targetCastle = targetCheck.rows[0];
+
+  // Get user's current position and check if in battle
+  const charResult = await query(
+    `SELECT c.id as character_id, c.current_node_id, wn.region_id as current_region_id, c.in_battle
+     FROM characters c
+     JOIN world_nodes wn ON wn.id = c.current_node_id
+     WHERE c.user_id = $1 AND c.party_slot = 1`,
+    [userId]
+  );
+
+  if (charResult.rows.length === 0) {
+    throw new AppError('No active party character', 400);
+  }
+
+  const character = charResult.rows[0];
+
+  if (character.in_battle) {
+    throw new AppError('Cannot fast travel while in battle', 400);
+  }
+
+  // Already at destination
+  if (character.current_node_id === targetNodeId) {
+    throw new AppError('Already at destination', 400);
+  }
+
+  // Calculate cost
+  const baseCost = 100;
+  const costPerRegion = 50;
+  const regionDistance = Math.abs(targetCastle.castle_region_id - character.current_region_id);
+  const goldCost = baseCost + (regionDistance * costPerRegion);
+
+  // Check and deduct gold
+  const goldResult = await query(
+    `UPDATE users
+     SET gold = gold - $1
+     WHERE id = $2 AND gold >= $1
+     RETURNING gold`,
+    [goldCost, userId]
+  );
+
+  if (goldResult.rows.length === 0) {
+    const userGold = await query('SELECT gold FROM users WHERE id = $1', [userId]);
+    const currentGold = userGold.rows[0]?.gold || 0;
+    throw new AppError(`Insufficient gold. Need ${goldCost}, have ${currentGold}`, 400);
+  }
+
+  // Move all party characters to destination
+  await query(
+    `UPDATE characters SET current_node_id = $1
+     WHERE user_id = $2 AND party_slot IS NOT NULL`,
+    [targetNodeId, userId]
+  );
+
+  // Discover the destination node (if not already discovered)
+  await query('SELECT discover_node_and_adjacent($1, $2)', [userId, targetNodeId]);
+
+  // Log the fast travel
+  await query(
+    `INSERT INTO fast_travel_log (user_id, character_id, from_node_id, to_node_id, gold_cost)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [userId, character.character_id, character.current_node_id, targetNodeId, goldCost]
+  );
+
+  // Get character name for presence update
+  const charNameResult = await query(
+    'SELECT name FROM characters WHERE user_id = $1 AND party_slot = 1',
+    [userId]
+  );
+  const characterName = charNameResult.rows[0]?.name || 'Unknown';
+
+  // Update presence
+  presenceService.moveNode(
+    character.current_node_id,
+    targetNodeId,
+    userId,
+    req.user.username,
+    characterName
+  );
+
+  // Get updated stamina info
+  const staminaInfo = await staminaService.getStaminaInfo(character.character_id);
+
+  res.json({
+    success: true,
+    message: `Traveled to ${targetCastle.name}`,
+    goldSpent: goldCost,
+    newGold: goldResult.rows[0].gold,
+    destination: {
+      nodeId: targetNodeId,
+      name: targetCastle.name,
+      regionId: targetCastle.castle_region_id
+    },
+    stamina: staminaInfo
+  });
+}));
+
+// POST /api/world/stamina/restore - Restore stamina at a town for gold
+router.post('/stamina/restore', authenticate, asyncHandler(async (req, res) => {
+  const { amount } = req.body;
+  const userId = req.user.userId;
+
+  if (!amount || amount <= 0) {
+    throw new AppError('amount must be a positive number', 400);
+  }
+
+  // Check if user has the Vitality Charm relic
+  const relicCheck = await query(
+    `SELECT rt.effects FROM user_relics ur
+     JOIN relic_templates rt ON rt.id = ur.relic_id
+     WHERE ur.user_id = $1 AND rt.key = 'vitality_charm'`,
+    [userId]
+  );
+
+  if (relicCheck.rows.length === 0) {
+    throw new AppError('You need the Vitality Charm to restore stamina for gold', 400);
+  }
+
+  const relicEffects = relicCheck.rows[0].effects || {};
+  const costPerPoint = relicEffects.cost_per_point || 100;
+
+  // Get user's current location and character
+  const charResult = await query(
+    `SELECT c.id as character_id, c.current_node_id, wn.node_type
+     FROM characters c
+     JOIN world_nodes wn ON wn.id = c.current_node_id
+     WHERE c.user_id = $1 AND c.party_slot = 1`,
+    [userId]
+  );
+
+  if (charResult.rows.length === 0) {
+    throw new AppError('No active party character', 400);
+  }
+
+  const character = charResult.rows[0];
+
+  // Verify character is at a town node
+  if (character.node_type !== 'town') {
+    throw new AppError('Stamina restore is only available at town nodes', 400);
+  }
+
+  // Restore stamina for gold
+  const result = await staminaService.restoreStaminaForGold(
+    userId,
+    character.character_id,
+    parseInt(amount, 10),
+    costPerPoint
+  );
+
+  // Log the stamina restore
+  await query(
+    `INSERT INTO stamina_restore_log (user_id, character_id, node_id, stamina_amount, gold_cost)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [userId, character.character_id, character.current_node_id, result.staminaRestored, result.goldSpent]
+  );
+
+  res.json({
+    success: true,
+    message: `Restored ${result.staminaRestored} stamina for ${result.goldSpent} gold`,
+    staminaRestored: result.staminaRestored,
+    goldSpent: result.goldSpent,
+    newGold: result.newGold,
+    stamina: result.stamina
+  });
+}));
+
 export default router;

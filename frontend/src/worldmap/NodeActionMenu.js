@@ -360,11 +360,22 @@ export class NodeActionMenu {
       features = [...features, 'fishing'];
     }
 
+    // Add fast travel action for castle nodes (requires relic, checked in handler)
+    if (node.node_type === 'castle' && !features.includes('fast_travel')) {
+      features = [...features, 'fast_travel'];
+    }
+
+    // Add stamina restore action for town nodes (requires relic, checked in handler)
+    if (node.node_type === 'town' && !features.includes('stamina_restore')) {
+      features = [...features, 'stamina_restore'];
+    }
+
     if (Array.isArray(features)) {
       // Prioritize essential features over decorative ones
       const essentialFeatures = [
         'blacksmith', 'marketplace', 'tavern', 'apothecary',
-        'coliseum', 'farm', 'guild_hall', 'guild_advancement', 'courtyard', 'caravan', 'explore_ruins', 'fishing'
+        'coliseum', 'farm', 'guild_hall', 'guild_advancement', 'courtyard', 'caravan', 'explore_ruins', 'fishing',
+        'fast_travel', 'stamina_restore'
       ];
       const decorativeFeatures = ['throne', 'temple', 'stables', 'training_ground'];
 
@@ -415,7 +426,9 @@ export class NodeActionMenu {
       battle: { category: 'actions', name: 'battle' },
       caravan: { category: 'actions', name: 'marketplace' },
       explore_ruins: { category: 'actions', name: 'search' },
-      fishing: { category: 'actions', name: 'harvest' }
+      fishing: { category: 'actions', name: 'harvest' },
+      fast_travel: { category: 'actions', name: 'travel' },
+      stamina_restore: { category: 'actions', name: 'rest' }
     };
 
     // Get label text
@@ -434,6 +447,12 @@ export class NodeActionMenu {
     }
     if (feature === 'fishing') {
       label = 'Fish';
+    }
+    if (feature === 'fast_travel') {
+      label = 'Fast Travel';
+    }
+    if (feature === 'stamina_restore') {
+      label = 'Rest';
     }
 
     // Icon
