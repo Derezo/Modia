@@ -1,0 +1,102 @@
+{
+  "region": "sylvan_reaches",
+  "name": "Sylvan Reaches",
+  "race": "Elf",
+  "description": "The ancient elven forests, featuring mystical groves, moonlit clearings, and timeless wisdom",
+  "musicalTheme": {
+    "style": "Ethereal, mystical, moonlit serenity",
+    "instruments": "Flutes, harps, celeste, soft strings, choral pads",
+    "mood": "Magical, ancient wisdom, forest sanctuary",
+    "keys": {
+      "exploration": "A major",
+      "battle": "A minor"
+    }
+  },
+  "tracks": [
+    {
+      "id": "sylvan_reaches_exploration",
+      "name": "Whispers of the Ancient Wood",
+      "category": "region",
+      "region": "sylvan_reaches",
+      "nodeType": "exploration",
+      "battleType": null,
+      "sunoPrompt": "Ethereal elven forest exploration theme, A major, flowing harp arpeggios with soft flute melody, mystical and serene, ancient trees and moonlit clearings, celeste accents, classic JRPG, gentle and graceful, timeless wisdom",
+      "style": "Ethereal elven fantasy",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/sylvan_reaches_exploration.mp3",
+      "loop": true,
+      "volume": 0.7,
+      "fadeIn": 2500,
+      "fadeOut": 2000,
+      "generated": false
+    },
+    {
+      "id": "sylvan_reaches_tavern",
+      "name": "The Moonlit Glade Inn",
+      "category": "region",
+      "region": "sylvan_reaches",
+      "nodeType": "tavern",
+      "battleType": null,
+      "sunoPrompt": "Elegant elven tavern music, soft harp and wooden flute, refined and peaceful, starlit canopy overhead, gentle conversation, honey mead and ancient songs, warm yet mystical, delicate string accompaniment",
+      "style": "Elven gathering hall",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/sylvan_reaches_tavern.mp3",
+      "loop": true,
+      "volume": 0.6,
+      "fadeIn": 2000,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "sylvan_reaches_shop",
+      "name": "The Artisan's Bower",
+      "category": "region",
+      "region": "sylvan_reaches",
+      "nodeType": "shop",
+      "battleType": null,
+      "sunoPrompt": "Magical elven shop music, crystalline chimes and soft harp, enchanted wares and ancient crafts, serene trading atmosphere, gentle wonder, artifacts of ages past, celeste sparkles, peaceful commerce",
+      "style": "Enchanted marketplace",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/sylvan_reaches_shop.mp3",
+      "loop": true,
+      "volume": 0.55,
+      "fadeIn": 1500,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "sylvan_reaches_fishing",
+      "name": "Crystal Stream Meditation",
+      "category": "region",
+      "region": "sylvan_reaches",
+      "nodeType": "fishing",
+      "battleType": null,
+      "sunoPrompt": "Tranquil elven fishing music, gentle harp and pan flute, crystal clear forest stream, meditative and peaceful, leaves rustling, nature in harmony, very slow tempo, contemplative serenity, soft string pads",
+      "style": "Nature meditation",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/sylvan_reaches_fishing.mp3",
+      "loop": true,
+      "volume": 0.5,
+      "fadeIn": 2500,
+      "fadeOut": 2500,
+      "generated": false
+    },
+    {
+      "id": "sylvan_reaches_ruins",
+      "name": "Memories of the First Age",
+      "category": "region",
+      "region": "sylvan_reaches",
+      "nodeType": "ruins",
+      "battleType": null,
+      "sunoPrompt": "Ancient elven ruins music, A minor, haunting choir and ethereal strings, overgrown temples of forgotten gods, mystical and melancholic, puzzle atmosphere, echoes of ancient power, flowing time",
+      "style": "Ancient elven mystery",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/sylvan_reaches_ruins.mp3",
+      "loop": true,
+      "volume": 0.6,
+      "fadeIn": 2000,
+      "fadeOut": 2000,
+      "generated": false
+    }
+  ]
+}

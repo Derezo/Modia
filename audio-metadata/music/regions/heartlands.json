@@ -1,0 +1,102 @@
+{
+  "region": "heartlands",
+  "name": "Heartlands",
+  "race": "Human",
+  "description": "The noble kingdom of humanity, featuring rolling hills, medieval castles, and bustling villages",
+  "musicalTheme": {
+    "style": "Heroic orchestral JRPG, Nobuo Uematsu inspired",
+    "instruments": "French horns, strings, timpani, flutes, folk guitar",
+    "mood": "Adventurous, hopeful, medieval village atmosphere",
+    "keys": {
+      "exploration": "D major",
+      "battle": "D minor"
+    }
+  },
+  "tracks": [
+    {
+      "id": "heartlands_exploration",
+      "name": "Heartlands Journey",
+      "category": "region",
+      "region": "heartlands",
+      "nodeType": "exploration",
+      "battleType": null,
+      "sunoPrompt": "Heroic orchestral JRPG exploration theme, Nobuo Uematsu inspired, D major, French horns and sweeping strings with folk guitar accents, adventurous and hopeful, rolling green hills and medieval castles, moderate tempo, classic 16-bit nostalgia feel",
+      "style": "Heroic orchestral JRPG",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/heartlands_exploration.mp3",
+      "loop": true,
+      "volume": 0.7,
+      "fadeIn": 2000,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "heartlands_tavern",
+      "name": "The Wanderer's Rest",
+      "category": "region",
+      "region": "heartlands",
+      "nodeType": "tavern",
+      "battleType": null,
+      "sunoPrompt": "Cozy medieval tavern music, warm acoustic guitar and fiddle, patrons chatting ambience, upbeat folk jig, welcoming inn atmosphere, merry and relaxed, tankards clinking, crackling fireplace warmth",
+      "style": "Medieval folk tavern",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/heartlands_tavern.mp3",
+      "loop": true,
+      "volume": 0.65,
+      "fadeIn": 1500,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "heartlands_shop",
+      "name": "Merchant's Square",
+      "category": "region",
+      "region": "heartlands",
+      "nodeType": "shop",
+      "battleType": null,
+      "sunoPrompt": "Pleasant medieval marketplace music, light strings and recorder, bustling market atmosphere, cheerful and inviting, coins jingling, trade and commerce, warm village square ambience, moderate tempo",
+      "style": "Medieval marketplace",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/heartlands_shop.mp3",
+      "loop": true,
+      "volume": 0.6,
+      "fadeIn": 1500,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "heartlands_fishing",
+      "name": "Riverside Serenity",
+      "category": "region",
+      "region": "heartlands",
+      "nodeType": "fishing",
+      "battleType": null,
+      "sunoPrompt": "Peaceful fishing spot music, gentle acoustic guitar, soft flute melody, tranquil riverside atmosphere, lazy afternoon, birds chirping, relaxing and contemplative, slow tempo, pastoral serenity",
+      "style": "Pastoral relaxation",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/heartlands_fishing.mp3",
+      "loop": true,
+      "volume": 0.55,
+      "fadeIn": 2000,
+      "fadeOut": 2000,
+      "generated": false
+    },
+    {
+      "id": "heartlands_ruins",
+      "name": "Echoes of the Fallen Kingdom",
+      "category": "region",
+      "region": "heartlands",
+      "nodeType": "ruins",
+      "battleType": null,
+      "sunoPrompt": "Mysterious ancient ruins music, haunting strings and solo flute, crumbling stone halls, faded glory and lost history, D minor, melancholic yet curious, puzzle-solving atmosphere, echoing chambers",
+      "style": "Ancient mystery",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/heartlands_ruins.mp3",
+      "loop": true,
+      "volume": 0.6,
+      "fadeIn": 2000,
+      "fadeOut": 1500,
+      "generated": false
+    }
+  ]
+}
