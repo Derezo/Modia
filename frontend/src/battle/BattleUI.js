@@ -1,6 +1,7 @@
 import { ParchmentCard } from '../components/ParchmentCard.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import TurnOrderPanel from './TurnOrderPanel.js';
+import BattleLogPanel from './BattleLogPanel.js';
 
 /**
  * BattleUI - User interface for tactical combat
@@ -16,6 +17,7 @@ export class BattleUI {
     this.targetCard = null;      // ParchmentCard for target/enemy
     this.targetSticky = false;   // Keep target panel visible during targeting
     this.turnOrderPanel = null;  // TurnOrderPanel for turn order display
+    this.battleLogPanel = null;  // BattleLogPanel for combat history
     this.previewUnit = null;     // Unit being previewed from turn order
     this.hoveredBattleUnit = null; // Unit hovered/tapped on battlefield
     this.confirmTargetUnit = null; // Unit being targeted for attack confirmation
@@ -276,6 +278,14 @@ export class BattleUI {
         max-width: 300px;
       "></div>
 
+      <!-- Battle Log Panel Container (right side, below notifications) -->
+      <div id="battle-log-container" style="
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        pointer-events: auto;
+      "></div>
+
     `;
 
     // Add custom styles
@@ -317,6 +327,29 @@ export class BattleUI {
     const turnOrderContainer = container.querySelector('#turn-order-container');
     if (turnOrderContainer) {
       turnOrderContainer.appendChild(this.turnOrderPanel.element);
+    }
+
+    // Initialize BattleLogPanel (top right)
+    const battleSettings = this.game.state?.settings?.battle || {};
+    const logPosition = battleSettings.battleLogPosition || 'right';
+    const logVisible = battleSettings.battleLogVisible !== false; // Default to true
+
+    this.battleLogPanel = new BattleLogPanel({
+      position: logPosition,
+      maxEntries: 50
+    });
+    const battleLogContainer = container.querySelector('#battle-log-container');
+    if (battleLogContainer) {
+      battleLogContainer.appendChild(this.battleLogPanel.element);
+      // Update position based on settings
+      if (logPosition === 'left') {
+        battleLogContainer.style.right = 'auto';
+        battleLogContainer.style.left = '180px'; // After turn order panel
+      }
+      // Hide if settings say so
+      if (!logVisible) {
+        this.battleLogPanel.hide();
+      }
     }
 
     // Initial update
@@ -1366,9 +1399,66 @@ export class BattleUI {
       this.turnOrderPanel.destroy();
       this.turnOrderPanel = null;
     }
+    if (this.battleLogPanel) {
+      this.battleLogPanel.destroy();
+      this.battleLogPanel = null;
+    }
     if (this.element) {
       this.element.remove();
       this.element = null;
+    }
+  }
+
+  /**
+   * Add entry to battle log
+   * @param {Object} entry - Log entry data
+   */
+  addBattleLogEntry(entry) {
+    if (this.battleLogPanel) {
+      this.battleLogPanel.addEntry(entry);
+    }
+  }
+
+  /**
+   * Clear battle log (for new battle)
+   */
+  clearBattleLog() {
+    if (this.battleLogPanel) {
+      this.battleLogPanel.clear();
+    }
+  }
+
+  /**
+   * Show/hide battle log based on settings
+   * @param {boolean} visible - Whether to show the log
+   */
+  setBattleLogVisible(visible) {
+    if (this.battleLogPanel) {
+      if (visible) {
+        this.battleLogPanel.show();
+      } else {
+        this.battleLogPanel.hide();
+      }
+    }
+  }
+
+  /**
+   * Update battle log position
+   * @param {string} position - 'left' or 'right'
+   */
+  setBattleLogPosition(position) {
+    if (this.battleLogPanel) {
+      this.battleLogPanel.setPosition(position);
+      const container = this.element?.querySelector('#battle-log-container');
+      if (container) {
+        if (position === 'left') {
+          container.style.right = 'auto';
+          container.style.left = '180px';
+        } else {
+          container.style.left = 'auto';
+          container.style.right = '10px';
+        }
+      }
     }
   }
 }
