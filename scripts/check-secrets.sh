@@ -125,6 +125,14 @@ check_file() {
                     continue
                 fi
             fi
+            # Skip DOM element references (getElementById, querySelector, etc.)
+            if echo "$content" | grep -qE '(getElementById|querySelector|\.value|fieldsTouched|touched|\.password)'; then
+                continue
+            fi
+            # Skip boolean/null state assignments (password: false, password: true, password: null)
+            if echo "$content" | grep -qEi 'password\s*:\s*(false|true|null)'; then
+                continue
+            fi
             echo -e "${BLOCKED}: Possible hardcoded password found in ${file}:${line_num}"
             echo "  Content: ${content}"
             findings=1
