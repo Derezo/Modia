@@ -2,6 +2,7 @@
  * BattleAnimations - Visual effects for tactical combat
  */
 import { SKILL_EFFECT_CATEGORIES, getSkillEffectConfig, getRandomCategoryColor } from './SkillEffectCategories.js';
+import { ELEMENT_COLORS } from '@shared/battleMath.js';
 
 export class BattleAnimations {
   constructor() {
@@ -216,18 +217,10 @@ export class BattleAnimations {
 
   /**
    * Element-to-color mapping for damage numbers
+   * Imported from @shared/battleMath.js - this static property provides
+   * backwards compatibility for any code referencing BattleAnimations.ELEMENT_COLORS
    */
-  static ELEMENT_COLORS = {
-    physical: '#ff4444',    // Red (default damage)
-    fire: '#ff4400',        // Orange-red
-    ice: '#88ccff',         // Light blue
-    lightning: '#ffff44',   // Yellow
-    earth: '#886644',       // Brown
-    wind: '#aaccaa',        // Sage green
-    water: '#4488ff',       // Blue
-    holy: '#ffff88',        // Bright yellow
-    dark: '#aa66cc'         // Purple
-  };
+  static ELEMENT_COLORS = ELEMENT_COLORS;
 
   /**
    * Add a damage number animation
@@ -250,7 +243,9 @@ export class BattleAnimations {
     // Determine effectiveness text
     let effectivenessText = null;
     if (elementalModifier !== null && elementalModifier !== 1.0) {
-      if (elementalModifier >= 1.5) {
+      if (elementalModifier === 0) {
+        effectivenessText = 'IMMUNE';
+      } else if (elementalModifier >= 1.5) {
         effectivenessText = 'WEAK!';
       } else if (elementalModifier > 1.0) {
         effectivenessText = 'Weak';
@@ -529,7 +524,14 @@ export class BattleAnimations {
     // Elemental effectiveness indicator (below critical if both exist)
     else if (anim.effectivenessText) {
       ctx.font = '11px Arial';
-      ctx.fillStyle = anim.elementalModifier > 1.0 ? '#ff6644' : '#4488ff';
+      // Color based on effectiveness: weak=red, resist=blue, immune=gray
+      if (anim.elementalModifier > 1.0) {
+        ctx.fillStyle = '#ff6644'; // Red/orange for weakness
+      } else if (anim.elementalModifier === 0) {
+        ctx.fillStyle = '#888888'; // Gray for immunity
+      } else {
+        ctx.fillStyle = '#4488ff'; // Blue for resistance
+      }
       ctx.fillText(anim.effectivenessText, anim.x, anim.y - 18);
     }
   }
