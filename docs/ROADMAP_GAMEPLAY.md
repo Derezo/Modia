@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 4.0 |
+| Version | 4.1 |
 | Last Updated | January 2026 |
 | Focus | Features, mechanics, UX, content |
 
@@ -105,16 +105,17 @@
 
 ### 2.1 Battle Engine
 
-- [ ] Elemental damage system (fire/ice/lightning)
+- [ ] Battle log panel (scrollable combat history with damage/healing/status events)
+- [ ] Elemental damage system (fire/ice/lightning weaknesses for tactical depth)
 - [ ] Skill cooldowns
 - [ ] Status effect duration display
-- [ ] Battle log panel
 
 ### 2.2 Enemy System
 
-- [ ] Ability execution system
+- [ ] Ability execution system (use defined abilities array in enemy templates)
 - [ ] Ability cooldowns per enemy
 - [ ] Ability trigger conditions
+- [ ] New enemy types (Tier 5+ for endgame content)
 
 ### 2.3 Advancement Trial Bosses (Complete)
 
@@ -271,10 +272,12 @@ Per ITEM_SYSTEM.md specifications:
 
 ### 4.2 Mobile Optimization
 
-- [ ] Touch-friendly controls
-- [ ] Responsive layouts
-- [ ] Swipe gestures
+- [ ] Touch gesture improvements (momentum pan, pinch-to-zoom)
+- [ ] Minimum 44px tap targets for accessibility
+- [ ] Swipe gestures for navigation
 - [ ] Double-tap confirmation
+- [ ] Responsive layouts (already partial via Responsive.js)
+- [ ] Portrait/landscape adaptation for battle UI
 
 ### 4.3 Formation & Inventory Integration (Complete - v8.2)
 
@@ -327,8 +330,10 @@ Per ITEM_SYSTEM.md specifications:
 
 ### 4.4 UI Polish
 
-- [ ] Loading indicators
-- [ ] Tooltips and help text
+- [ ] Loading state indicators (spinners, skeleton screens)
+- [ ] Tooltips for terrain costs, skill descriptions, stat explanations
+- [ ] Keyboard navigation system (focus indicators, tab navigation)
+- [ ] Canvas object pooling (reduce GC pressure for animations)
 - [ ] Animation polish
 - [x] Error feedback (parchment toast consolidation)
 - [x] Color scheme corrections (dark brown text, gold accents only)
@@ -565,10 +570,10 @@ Per ITEM_SYSTEM.md specifications:
 
 | Feature | Description | Priority |
 |---------|-------------|----------|
+| Daily/Weekly Quest System | Repeatable content loop for player retention | **High** |
 | Remaining Advanced Guilds | 12 additional beyond MVP 4 | Medium |
 | Guild Quest System | Non-advancement quests | Medium |
-| Daily/Weekly Quests | Repeatable content | High |
-| New Enemies | Additional enemy types | Medium |
+| New Enemies | Additional enemy types (Tier 5+) | Medium |
 
 ### 6.2 Version 1.2
 
@@ -595,10 +600,13 @@ Per ITEM_SYSTEM.md specifications:
 
 ## Active Design Documents
 
-| Document | Purpose | Status |
-|----------|---------|--------|
-| `docs/plans/2026-01-12-formation-inventory-integration-design.md` | Unified party/inventory management | Approved |
-| `docs/plans/2026-01-11-marketplace-item-augments-design.md` | Marketplace augment display | Approved |
+*All design documents have been implemented and moved to `docs/archive/`.*
+
+Recent implementations:
+- `2026-01-13-regional-world-generation-design.md` → v8.4
+- `2026-01-12-formation-inventory-integration-design.md` → v8.2
+- `2026-01-12-icon-quality-redesign.md` → v7.9
+- `2026-01-11-marketplace-item-augments-design.md` → v8.1
 
 ---
 
@@ -617,6 +625,7 @@ Per ITEM_SYSTEM.md specifications:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 4.1 | Jan 2026 | Project cleanup audit: Added battle log panel, elemental damage system to Battle Engine. Added Tier 5+ enemies to Enemy System. Enhanced Mobile Optimization with touch gestures, 44px tap targets. Added loading indicators, keyboard navigation, tooltips, object pooling to UI Polish. Elevated Daily/Weekly Quests priority. Archived all design documents (regional world gen, formation integration, icon quality, marketplace augments). |
 | 4.0 | Jan 2026 | Battle System Formula Overhaul (v8.8): Complete FFT-style tactical combat rebalance. Defense now uses diminishing returns formula (DEF/(DEF+100) for physical, MDEF/(MDEF+80) for magical). CT turn order system replaces initiative (ctGain=5+AGI/10, act at CT>=100, haste/slow modifiers). LCK stat now scales with level (0.3-1.5 per level by class) and affects crits (5%+LCK/300), evasion (2%+agiDiff/400+LCK/400), and status resistance (10%+LCK/200). VIT provides HP bonus (level/2+VIT*0.5). Polynomial skill costs (baseCost*level^1.5) make max level achievable. Archetype-based enemy scaling with tier multipliers. New: formulaValidation.test.js (31 tests). Combat System now 95% complete. |
 | 3.1 | Jan 2026 | Activity Node Features (v8.6): All 4 activity node systems implemented. Fishing: FishingScene.js with idle auto-fishing, Big One events, session management (fishingService.js), fish templates (15 types, 5 rarities). Ruins: RuinsPuzzleModal.js with 3x3/4x4/5x5 sliding tile puzzles, regional themes, tier-based rewards, one-time completion. Caravan: Extended ShopScene.js with exclusive items (23 items), 48-hour refresh cycle, seeded inventory, stock tracking. Watchtower: Presence-based fog reveal endpoint. Security: FOR UPDATE locks, MAX_GOLD caps, input validation. |
 | 3.0 | Jan 2026 | World Generation Improvements (v8.5): New node types (fishing spots, merchant caravans, ruins, watchtowers, farms). Guild distribution enhanced (3 per region, race-appropriate primary guild). Node distribution rebalancing (40-50% battle target). Bridge visual enhancement with river/canyon hints. Zodiac shrine system planned (12 unique shrines with collection quest). Migration 031_expanded_node_types.sql. Flickering bug fixed in WorldMapScene.js. |

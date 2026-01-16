@@ -32,6 +32,237 @@ This document archives all completed features, resolved issues, and historical d
 | 8.0 | Jan 2026 | Roadmap audit, documentation cleanup, code fixes |
 | 8.1 | Jan 2026 | ItemDataTable & Marketplace Enhancement - parchment price chart, order expiration |
 | 8.2 | Jan 2026 | Profile Image Generation System - 92 programmatic SVG portraits for missing races and enemies |
+| 8.3 | Jan 2026 | Formation System Improvements - BattleFormationScene shows all 12 characters, sorting options |
+| 8.4 | Jan 2026 | Regional World Generation - 5-region Voronoi system with racial homelands |
+| 8.5 | Jan 2026 | World Generation Improvements - New node types, guild distribution, zodiac shrines |
+| 8.6 | Jan 2026 | Activity Nodes - Fishing, ruins puzzles, caravan merchants, watchtowers |
+| 8.7 | Jan 2026 | Security Hardening - Trust proxy, per-user rate limiting, VPS deployment scripts |
+| 8.8 | Jan 2026 | FFT-Style Formula Overhaul - CT turn system, defense diminishing returns, LCK scaling |
+
+---
+
+## 8.8 - FFT-Style Formula Overhaul (Jan 2026)
+
+Complete tactical combat rebalance implementing FFT-style mechanics with meaningful stat choices.
+
+### Defense Formula Rebalance
+- Percentage-based damage reduction with diminishing returns
+- Physical: `defense / (defense + 100)`
+- Magical: `defense / (defense + 80)`
+- Effective cap at ~80% reduction (300+ defense)
+- VIT contributes to physical defense, INT/2 to magic defense
+
+### CT Turn Order System
+- CT gain formula: `5 + (AGI / 10)` - diminishing returns
+- Haste/Slow modifiers (1.5x / 0.5x)
+- Action at CT >= 100 threshold
+- Initial CT: `(AGI / 2) + random(0, 20)`
+
+### LCK Stat Overhaul
+- LCK now grows with level (0.3-1.5 per level by class)
+- Crit chance: `5% base + LCK/300` (cap 50%)
+- Crit damage: `1.5 + LCK/500` (orcs +15% bonus)
+- Evasion: `2% base + agiDiff/400 + LCK/400` (cap 35%)
+- Status resistance: `10% base + LCK/200` (cap 50%)
+
+### VIT HP Bonus
+- HP formula: `baseHP + floor(level/2 + VIT * 0.5)`
+- High VIT builds have significantly more HP
+
+### Enemy Scaling
+- Archetype-based growth rates (beast, humanoid, undead, elemental, dragon, boss)
+- Tier multipliers: 0.8x/1.0x/1.25x/1.5x/2.0x
+
+### Skill Progression
+- Polynomial cost: `baseCost * level^1.5` (achievable max level)
+- Power scaling: +0.8%/level for basic, +0.5%/level for advanced
+
+### Files Modified
+- `shared/battleMath.js` - Core damage and CT formulas
+- `api/src/services/battleService.js` - Damage calculation integration
+- `api/src/config/skillScaling.js` - Skill cost and power curves
+- `api/src/db/templates/enemies.js` - Archetype-based scaling
+
+### Tests Added
+- `api/src/tests/unit/formulaValidation.test.js` - 31 balance tests
+
+---
+
+## 8.7 - Security Hardening & VPS Deployment (Jan 2026)
+
+Comprehensive security improvements and production deployment infrastructure.
+
+### Trust Proxy Configuration
+- Express `trust proxy` properly configured for reverse proxy IP detection
+- X-Forwarded-For header parsing for real client IPs
+- Per-user rate limiting now works correctly behind Nginx
+
+### Rate Limiting Improvements
+- Per-user rate limiting for authenticated requests
+- New rate limiters:
+  - `auth/refresh`: 20 requests / 15 minutes (IP-based)
+  - `world/travel`: 60 requests / minute (per-user)
+  - Gameplay actions: skill 30/min, inventory 45/min
+- Increased global limits (300 base, 600 production, 1500 development)
+
+### JWT Token Security
+- Access tokens extended to 1 hour (from 15 minutes)
+- Automatic refresh 1 minute before expiry
+- `TokenRefreshManager` for seamless token renewal
+- 7-day refresh token rotation
+
+### VPS Deployment Scripts
+- `deploy/setup.sh` - Node.js 20 LTS, PM2, PostgreSQL, Nginx installation
+- `deploy/deploy.sh` - Zero-downtime deployment with PM2 reload, rollback support
+- `deploy/nginx.conf.template` - WebSocket upgrade, SSL, compression, caching
+- `deploy/backup.sh` - Automated pg_dump with 7-day retention, S3 support ready
+
+### Files Created
+- `deploy/setup.sh`
+- `deploy/deploy.sh`
+- `deploy/nginx.conf.template`
+- `deploy/backup.sh`
+- `api/src/utils/tokenRefreshManager.js`
+
+---
+
+## 8.6 - Activity Nodes Implementation (Jan 2026)
+
+Complete implementation of all 4 activity node systems providing non-combat content.
+
+### Fishing System
+- `FishingScene.js` - Auto-fishing UI with idle mechanics
+- `fishingService.js` - Session management, catch calculation
+- 15 fish types across 5 rarity tiers
+- "Big One" events with weight multipliers
+- Regional fish distribution
+
+### Ruins Puzzle System
+- `RuinsPuzzleModal.js` - Sliding tile puzzle minigame
+- 3x3 / 4x4 / 5x5 grid sizes by difficulty tier
+- Regional themes (forest ruins, mountain ruins, etc.)
+- One-time completion per ruins node
+- Gold and item rewards by tier
+
+### Caravan Merchant System
+- Extended `ShopScene.js` with caravan tab
+- `caravanService.js` - Exclusive item management
+- 23 exclusive items not available in regular shops
+- 48-hour seeded refresh cycle
+- Stock tracking per caravan
+
+### Watchtower System
+- `world.js` watchtower-view endpoint
+- Fog reveal for nearby undiscovered nodes
+- One-time activation per watchtower
+- Reveal radius based on watchtower tier
+
+### Security
+- FOR UPDATE locks on concurrent access
+- MAX_GOLD caps preventing overflow
+- Input validation on all endpoints
+
+---
+
+## 8.5 - World Generation Improvements (Jan 2026)
+
+Enhanced world variety with new node types and better distribution.
+
+### New Node Types
+- Fishing spots - Resource mini-game locations
+- Merchant caravans - Traveling traders with exclusive inventory
+- Ruins - Puzzle/exploration for treasure
+- Watchtowers - Reveal nearby undiscovered nodes
+- Farms - Additional settlement type for outer areas
+
+### Guild Distribution Enhancement
+- 3 guilds per region (up from 1)
+- Primary guild in Ring 1 (race-appropriate type)
+- 2 secondary guilds in Rings 2-3 (different types)
+- Race-to-guild mapping: Orc→Warrior, Elf→Wizard, Human→Monk, Dwarf→Chemist
+
+### Zodiac Shrine System
+- 12 zodiac shrines placed (one of each type)
+- Shrine placement: outer areas, MIN_SPACING=15
+- `shrine_buff_type` column for zodiac identification
+- Future: Unique blessings per zodiac type
+
+### Node Distribution Rebalancing
+- Target: 40-50% battle nodes (down from 60-70%)
+- Target: 20-30% activity/neutral nodes
+- Target: 20-30% settlements
+- Farms in outer areas, not near castles
+
+### Migration
+- `031_expanded_node_types.sql`
+
+---
+
+## 8.4 - Regional World Generation (Jan 2026)
+
+Major world generation overhaul replacing single-castle world with 5-region Voronoi-based system.
+
+### 5-Region System
+- Voronoi partitioning from castle positions (d3-delaunay)
+- Force-directed castle placement (25 unit minimum distance)
+- Lloyd's relaxation for even spread
+- Organic region boundaries stored as polygons
+
+### Racial Regions
+- Heartlands (Human) - Forest dominant
+- Sylvan Reaches (Elf) - Forest dominant
+- Iron Depths (Dwarf) - Cave dominant
+- Shadowmere (Vampire) - Cave dominant
+- Bloodplains (Orc) - Mountain dominant
+
+### Ring-Based Structure
+- Ring 0 - Castle core (battle node guards)
+- Ring 1 - Inner civilization (cities, villages)
+- Ring 2 - Frontier (keeps, guilds)
+- Ring 3 - Wilderness edge (terminators)
+
+### Inter-Region Connections
+- Bridge chokepoints (1-2 per border)
+- Border wilderness zones (mixed terrain)
+- Trade routes (safe corridors between cities)
+- Grand Palace at multi-region vertex
+
+### Character Spawning
+- Race-based spawn at racial homeland castle
+- `home_region_id` tracking for respawn
+- Updated character creation flow
+
+### Worldgen Modules
+- `api/src/db/worldgen/castlePlacement.js`
+- `api/src/db/worldgen/voronoiPartitioning.js`
+- `api/src/db/worldgen/nodeGeneration.js`
+- `api/src/db/worldgen/internalConnections.js`
+- `api/src/db/worldgen/interRegionConnections.js`
+- `api/src/db/worldgen/validation.js`
+
+### Migration
+- `029_regional_world.sql`
+
+---
+
+## 8.3 - Formation System Improvements (Jan 2026)
+
+Enhanced BattleFormationScene and FormationScene with better character management.
+
+### BattleFormationScene Enhancements
+- Show all 12 party characters (was limited to 5)
+- Click-to-cycle through all 12 characters for placement
+- Direction indicator (red border highlight) showing enemy side
+- Level-based default sorting for character roster
+
+### FormationScene Improvements
+- Sorting options (Level, Class, Name) with toggle buttons
+- Remove empty slot placeholders (show only existing characters)
+
+### Code Quality
+- Timer cleanup on scene exit
+- Canvas save/restore for proper state management
+- Stable sorting algorithm for consistent ordering
 
 ---
 

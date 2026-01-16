@@ -11,6 +11,7 @@ import {
   searchLimiter
 } from '../middleware/marketplaceRateLimiter.js';
 import * as marketplaceService from '../services/marketplaceService.js';
+import { logger } from '../utils/logger.js';
 
 const router = express.Router();
 
@@ -72,8 +73,7 @@ const MAX_PRICE = 999999999;
 // POST /api/marketplace/orders/limit - Place limit order
 // ============================================
 router.post('/orders/limit', authenticate, requireMarketplaceAccess, orderLimiter, asyncHandler(async (req, res) => {
-  console.log('[/orders/limit] Request body:', req.body);
-  console.log('[/orders/limit] User:', req.user.userId);
+  logger.debug('marketplace', 'Limit order request', { body: req.body, userId: req.user.userId });
   const { itemTemplateId, side, characterId } = req.body;
 
   // SECURITY: Strict price and quantity validation to prevent exploits
@@ -120,7 +120,7 @@ router.post('/orders/limit', authenticate, requireMarketplaceAccess, orderLimite
     throw new AppError('Character not found', 404);
   }
 
-  console.log('[/orders/limit] Character validated, starting transaction...');
+  logger.debug('marketplace', 'Character validated, starting transaction');
 
   const result = await withTransaction(async (client) => {
     return marketplaceService.placeLimitOrder(
@@ -134,7 +134,7 @@ router.post('/orders/limit', authenticate, requireMarketplaceAccess, orderLimite
     );
   });
 
-  console.log('[/orders/limit] Transaction completed, result:', result?.order?.id);
+  logger.debug('marketplace', 'Transaction completed', { orderId: result?.order?.id });
 
   // Get updated user gold
   const userResult = await query('SELECT gold FROM users WHERE id = $1', [req.user.userId]);

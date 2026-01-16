@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 22.0 |
+| Version | 23.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -27,9 +27,9 @@ The roadmap is split into two focused documents:
 
 | Track | Completion | Status |
 |-------|------------|--------|
-| Technical | 35% | In Progress |
-| Gameplay | 90% | Near Complete |
-| **Combined** | **~72%** | In Progress |
+| Technical | 45% | In Progress |
+| Gameplay | 92% | Near Complete |
+| **Combined** | **~75%** | In Progress |
 
 ---
 
@@ -74,10 +74,11 @@ The roadmap is split into two focused documents:
 - [API Specification](./API_SPECIFICATION.md)
 - [Game Design](./GAME_DESIGN.md)
 
-### Design Documents
-- [Regional World Generation](./plans/2026-01-13-regional-world-generation-design.md)
-- [Formation & Inventory Integration](./plans/2026-01-12-formation-inventory-integration-design.md)
-- [Marketplace Augments](./plans/2026-01-11-marketplace-item-augments-design.md)
+### Design Documents (Archived)
+*All design documents have been implemented and archived.*
+- [Regional World Generation](./archive/2026-01-13-regional-world-generation-design.md) - v8.4
+- [Formation & Inventory Integration](./archive/2026-01-12-formation-inventory-integration-design.md) - v8.2
+- [Marketplace Augments](./archive/2026-01-11-marketplace-item-augments-design.md) - v8.1
 
 ### Archives
 - [Completed Milestones](./archive/COMPLETED_MILESTONES.md)
@@ -110,6 +111,7 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 23.0 | Jan 2026 | Project cleanup audit: Installed knip for dead code analysis. Removed unused 'serve' dependency. Fixed console.log statements in marketplace.js (now uses logger). Archived 4 design documents (regional world gen, formation, icons, marketplace). Added v8.3-v8.8 to COMPLETED_MILESTONES.md. Updated ROADMAP_TECHNICAL.md v1.5 (marked infrastructure complete, added known issues). Updated ROADMAP_GAMEPLAY.md v4.1 (added battle log, elemental damage, touch gestures, keyboard nav). Technical track now 45%, Gameplay 92%. |
 | 22.0 | Jan 2026 | Battle System Formula Overhaul (v8.8): FFT-style tactical combat rebalance. Defense with diminishing returns (DEF/(DEF+100)). CT turn order system (ctGain=5+AGI/10, act at CT>=100). LCK now scales with level and affects crits/evasion/status resist. VIT provides HP bonus (level/2 + VIT*0.5). Polynomial skill costs (baseCost*level^1.5) for achievable max level. Archetype-based enemy scaling matching player growth. New files: formulaValidation.test.js. Modified: battleMath.js, constants.js, battleService.js, battleUnitFactory.js, skills.js, skillScaling.js, enemies.js, test files. Combat System now 95% complete. |
 | 21.0 | Jan 2026 | Security & Infrastructure (v8.7): Trust proxy for proper IP detection behind nginx. Per-user rate limiting for authenticated requests (tied to userId). New rate limiters: auth/refresh (20/15min IP), world/travel (60/min user), gameplay actions. Global limits increased (300 base, 600 prod, 1500 dev). JWT extended to 1h with automatic refresh 1min before expiry. TokenRefreshManager for seamless token renewal + 401 retry logic. VPS deployment scripts: setup.sh (Node.js 20, PM2, PostgreSQL, Nginx), deploy.sh (zero-downtime with rollback), nginx.conf.template (WebSocket, SSL, caching), backup.sh (pg_dump with 7-day retention). |
 | 20.0 | Jan 2026 | Activity Node Systems (v8.6): Complete implementation of all 4 activity node types. Fishing: FishingScene.js with auto-fishing, Big One events, 15 fish types, session management. Ruins: RuinsPuzzleModal.js with 3x3/4x4/5x5 sliding puzzles, regional themes, tier rewards. Caravan: ShopScene.js extension with 23 exclusive items, 48-hour refresh, seeded inventory. Watchtower: Fog reveal endpoint. Security: FOR UPDATE locks, MAX_GOLD caps, advisory locks for race conditions. New files: fishingService.js, caravanService.js, ruins.js, fishing.js, fish.js, caravanItems.js, FishingScene.js, RuinsPuzzleModal.js. |

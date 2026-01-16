@@ -897,12 +897,16 @@ router.get('/rewards/:battleId', authenticate, rewardsLimiter, asyncHandler(asyn
 
 // ============================================================================
 // DEBUG: TRAIT VERIFICATION ENDPOINT
+// TODO: Remove before production or restrict to admin users only
+// This endpoint exposes internal data structures for debugging purposes.
 // ============================================================================
 
 /**
  * GET /api/battle/verify-traits/:characterId
  * Debug endpoint to verify trait loading for a character
  * Returns both loaded traits and raw database entries for comparison
+ *
+ * @deprecated Remove or gate behind admin auth before production deployment
  */
 router.get('/verify-traits/:characterId', authenticate, readLimiter, asyncHandler(async (req, res) => {
   const characterId = parseInt(req.params.characterId, 10);

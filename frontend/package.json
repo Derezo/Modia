@@ -12,7 +12,6 @@
   },
   "devDependencies": {
     "eslint": "^8.56.0",
-    "serve": "^14.2.1",
     "vite": "^5.4.21"
   },
   "engines": {
