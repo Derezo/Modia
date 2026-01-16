@@ -30,6 +30,11 @@ export class LeaderboardScene extends Scene {
       this.createUI();
       this.setupEventListeners();
       await this.loadLeaderboard();
+
+      // Play exploration music (maintains regional context)
+      if (this.game.musicContext) {
+        this.game.musicContext.playExplorationMusic();
+      }
     } catch (err) {
       console.error('Failed to enter LeaderboardScene:', err);
       this.showError('Failed to load leaderboard. Please try again.');

@@ -210,6 +210,24 @@ export class MusicContext {
   }
 
   /**
+   * Play guild advancement theme
+   * Used in guild halls and advancement quests
+   */
+  playGuildAdvancement() {
+    this.currentNodeType = 'guild';
+    this.isInBattle = false;
+    this.currentBattleType = null;
+    this.audio.playMusic('guild_advancement');
+  }
+
+  /**
+   * Alias for playGuildAdvancement() - for consistency with scene naming
+   */
+  playGuildAdvancementTheme() {
+    this.playGuildAdvancement();
+  }
+
+  /**
    * Stop all music
    * @param {boolean} fadeOut - Whether to fade out (default: true)
    */
