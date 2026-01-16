@@ -201,5 +201,70 @@ export async function getPartyStaminaInfo(characterIds) {
   return staminaMap;
 }
 
+// Gold cost per stamina point when restoring for gold
+const STAMINA_RESTORE_GOLD_COST = 100;
+
+/**
+ * Restore stamina to a character by paying gold
+ * Requires the Vitality Charm relic and being at a town node
+ * @param {number} userId - User ID (for gold deduction)
+ * @param {number} characterId - Character ID (for stamina restore)
+ * @param {number} amount - Amount of stamina to restore
+ * @param {number} costPerPoint - Gold cost per stamina point (default 100)
+ * @returns {Promise<Object>} Result with stamina and gold info
+ */
+export async function restoreStaminaForGold(userId, characterId, amount, costPerPoint = STAMINA_RESTORE_GOLD_COST) {
+  if (amount <= 0) {
+    throw new Error('Restore amount must be positive');
+  }
+
+  // Get current stamina info
+  const staminaInfo = await getStaminaInfo(characterId);
+
+  // Calculate how much stamina can actually be restored (up to max)
+  const maxRestorable = staminaInfo.max - staminaInfo.current;
+  if (maxRestorable <= 0) {
+    throw new Error('Stamina is already full');
+  }
+
+  const actualAmount = Math.min(amount, maxRestorable);
+  const goldCost = actualAmount * costPerPoint;
+
+  // Check and deduct gold from user atomically
+  const goldResult = await query(
+    `UPDATE users
+     SET gold = gold - $1
+     WHERE id = $2 AND gold >= $1
+     RETURNING gold`,
+    [goldCost, userId]
+  );
+
+  if (goldResult.rows.length === 0) {
+    // Check actual gold for better error message
+    const userGold = await query('SELECT gold FROM users WHERE id = $1', [userId]);
+    const currentGold = userGold.rows[0]?.gold || 0;
+    throw new Error(`Insufficient gold. Need ${goldCost}, have ${currentGold}`);
+  }
+
+  // Restore stamina
+  const newStamina = Math.min(staminaInfo.max, staminaInfo.current + actualAmount);
+  await query(
+    `UPDATE characters
+     SET stamina = $1, stamina_updated_at = CURRENT_TIMESTAMP
+     WHERE id = $2`,
+    [newStamina, characterId]
+  );
+
+  // Get updated stamina info
+  const updatedStamina = await getStaminaInfo(characterId);
+
+  return {
+    staminaRestored: actualAmount,
+    goldSpent: goldCost,
+    newGold: goldResult.rows[0].gold,
+    stamina: updatedStamina
+  };
+}
+
 // Export constants for testing
-export { REGEN_INTERVAL_MS, DEFAULT_MAX_STAMINA };
+export { REGEN_INTERVAL_MS, DEFAULT_MAX_STAMINA, STAMINA_RESTORE_GOLD_COST };

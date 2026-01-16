@@ -39,6 +39,7 @@ import advancementQuestRoutes from './routes/advancementQuest.js';
 import clanRoutes from './routes/clans.js';
 import ruinsRoutes from './routes/ruins.js';
 import fishingRoutes from './routes/fishing.js';
+import relicRoutes from './routes/relics.js';
 
 // Scheduled services
 import { startRefreshScheduler } from './services/shopRefreshService.js';
@@ -118,6 +119,7 @@ app.use('/api/advancement', advancementQuestRoutes);
 app.use('/api/clans', clanRoutes);
 app.use('/api/ruins', ruinsRoutes);
 app.use('/api/fishing', fishingRoutes);
+app.use('/api/relics', relicRoutes);
 
 // Error handling
 app.use(errorHandler);

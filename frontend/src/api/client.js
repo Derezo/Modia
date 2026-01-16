@@ -967,6 +967,88 @@ export class ApiClient {
   }
 
   // ============================================
+  // RELIC METHODS
+  // ============================================
+
+  /**
+   * Get all available relics with ownership status
+   * @returns {Promise<{success: boolean, relics: Array}>}
+   */
+  getRelics() {
+    return this.get('/relics');
+  }
+
+  /**
+   * Get user's owned relics
+   * @returns {Promise<{success: boolean, relics: Array, count: number}>}
+   */
+  getOwnedRelics() {
+    return this.get('/relics/owned');
+  }
+
+  /**
+   * Check if user owns a specific relic
+   * @param {string} relicKey - Relic key (e.g., 'wayfarers_compass')
+   * @returns {Promise<{success: boolean, relicKey: string, owned: boolean, effects: Object|null}>}
+   */
+  checkRelic(relicKey) {
+    return this.get(`/relics/check/${encodeURIComponent(relicKey)}`);
+  }
+
+  /**
+   * Claim a relic (validates acquisition requirements)
+   * @param {number} relicId - Relic template ID
+   * @param {Object} context - Validation context
+   * @returns {Promise<{success: boolean, message: string, relic: Object}>}
+   */
+  claimRelic(relicId, context = {}) {
+    return this.post(`/relics/${relicId}/claim`, { context });
+  }
+
+  /**
+   * Grant a relic (admin/quest reward)
+   * @param {string} relicKey - Relic key to grant
+   * @returns {Promise<{success: boolean, message: string, relic: Object}>}
+   */
+  grantRelic(relicKey) {
+    return this.post(`/relics/grant/${encodeURIComponent(relicKey)}`);
+  }
+
+  // ============================================
+  // FAST TRAVEL METHODS
+  // ============================================
+
+  /**
+   * Get available fast travel destinations
+   * @returns {Promise<{hasRelic: boolean, currentRegionId: number, destinations: Array}>}
+   */
+  getFastTravelDestinations() {
+    return this.get('/world/fast-travel/destinations');
+  }
+
+  /**
+   * Fast travel to a region castle
+   * @param {number} targetNodeId - Castle node ID to travel to
+   * @returns {Promise<{success: boolean, goldSpent: number, newGold: number, destination: Object}>}
+   */
+  fastTravel(targetNodeId) {
+    return this.post('/world/fast-travel', { targetNodeId });
+  }
+
+  // ============================================
+  // STAMINA RESTORE METHODS
+  // ============================================
+
+  /**
+   * Restore stamina at a town for gold (requires Vitality Charm relic)
+   * @param {number} amount - Amount of stamina to restore
+   * @returns {Promise<{success: boolean, staminaRestored: number, goldSpent: number, newGold: number, stamina: Object}>}
+   */
+  restoreStaminaForGold(amount) {
+    return this.post('/world/stamina/restore', { amount });
+  }
+
+  // ============================================
   // LEADERBOARD METHODS
   // ============================================
 
