@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 23.0 |
+| Version | 24.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -28,8 +28,8 @@ The roadmap is split into two focused documents:
 | Track | Completion | Status |
 |-------|------------|--------|
 | Technical | 45% | In Progress |
-| Gameplay | 92% | Near Complete |
-| **Combined** | **~75%** | In Progress |
+| Gameplay | 98% | Near Complete |
+| **Combined** | **~78%** | In Progress |
 
 ---
 
@@ -55,7 +55,13 @@ The roadmap is split into two focused documents:
 | Social Hub (Friends, Party, Clans) | SocialHubScene.js, social/tabs/* | **COMPLETE** |
 | Formation & Inventory Integration | FormationScene.js, modals/* | **COMPLETE** |
 | ~~Battle Balance (Defense)~~ | ~~battleService.js~~ | **COMPLETE** (v8.8) |
-| Gold Sinks | marketplace.js, world.js | Not Started |
+| ~~Gold Sinks~~ | ~~marketplace.js, world.js~~ | **COMPLETE** (v9.0) |
+| ~~Audio System~~ | ~~AudioManager.js~~ | **COMPLETE** (v9.0) |
+| ~~Settings Expansion~~ | ~~SettingsScene.js~~ | **COMPLETE** (v9.0) |
+| ~~Elemental Damage~~ | ~~battleService.js, elements.js~~ | **COMPLETE** (v9.0) |
+| ~~Battle Log Panel~~ | ~~BattleLogPanel.js~~ | **COMPLETE** (v9.0) |
+| Skill Cooldowns | battleService.js | Not Started |
+| Daily/Weekly Quests | questService.js | Not Started |
 
 ### High Priority - Technical
 
@@ -111,6 +117,7 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 24.0 | Jan 2026 | Gameplay Features v9.0: Audio System (Web Audio API, scene-based music, SFX, volume controls). Settings Expansion (7 categories, ~44 settings, colorblind modes). Elemental Damage System (8 elements, resistances, enemy/racial templates). Battle Log Panel (scrollable combat history, color-coded entries). Gold Sinks (marketplace 5% fee, fast travel, stamina restore). Relic System (rare collectibles, permanent bonuses). Gameplay track now 98%. Sprint focus updated with remaining high-priority items. |
 | 23.0 | Jan 2026 | Project cleanup audit: Installed knip for dead code analysis. Removed unused 'serve' dependency. Fixed console.log statements in marketplace.js (now uses logger). Archived 4 design documents (regional world gen, formation, icons, marketplace). Added v8.3-v8.8 to COMPLETED_MILESTONES.md. Updated ROADMAP_TECHNICAL.md v1.5 (marked infrastructure complete, added known issues). Updated ROADMAP_GAMEPLAY.md v4.1 (added battle log, elemental damage, touch gestures, keyboard nav). Technical track now 45%, Gameplay 92%. |
 | 22.0 | Jan 2026 | Battle System Formula Overhaul (v8.8): FFT-style tactical combat rebalance. Defense with diminishing returns (DEF/(DEF+100)). CT turn order system (ctGain=5+AGI/10, act at CT>=100). LCK now scales with level and affects crits/evasion/status resist. VIT provides HP bonus (level/2 + VIT*0.5). Polynomial skill costs (baseCost*level^1.5) for achievable max level. Archetype-based enemy scaling matching player growth. New files: formulaValidation.test.js. Modified: battleMath.js, constants.js, battleService.js, battleUnitFactory.js, skills.js, skillScaling.js, enemies.js, test files. Combat System now 95% complete. |
 | 21.0 | Jan 2026 | Security & Infrastructure (v8.7): Trust proxy for proper IP detection behind nginx. Per-user rate limiting for authenticated requests (tied to userId). New rate limiters: auth/refresh (20/15min IP), world/travel (60/min user), gameplay actions. Global limits increased (300 base, 600 prod, 1500 dev). JWT extended to 1h with automatic refresh 1min before expiry. TokenRefreshManager for seamless token renewal + 401 retry logic. VPS deployment scripts: setup.sh (Node.js 20, PM2, PostgreSQL, Nginx), deploy.sh (zero-downtime with rollback), nginx.conf.template (WebSocket, SSL, caching), backup.sh (pg_dump with 7-day retention). |

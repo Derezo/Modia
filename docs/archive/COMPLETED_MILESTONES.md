@@ -10,6 +10,7 @@ This document archives all completed features, resolved issues, and historical d
 
 | Version | Date | Major Accomplishments |
 |---------|------|----------------------|
+| 9.0 | Jan 2026 | Gameplay Features - Audio system, settings expansion, elemental damage, battle log, gold sinks, relics |
 | 1.0 | Jan 2026 | Initial project setup |
 | 2.0 | Jan 2026 | XP-spending system, SKILL_TREES.md, ENEMY_SYSTEM.md |
 | 3.0 | Jan 2026 | Status correction and blocking issues audit |
@@ -38,6 +39,87 @@ This document archives all completed features, resolved issues, and historical d
 | 8.6 | Jan 2026 | Activity Nodes - Fishing, ruins puzzles, caravan merchants, watchtowers |
 | 8.7 | Jan 2026 | Security Hardening - Trust proxy, per-user rate limiting, VPS deployment scripts |
 | 8.8 | Jan 2026 | FFT-Style Formula Overhaul - CT turn system, defense diminishing returns, LCK scaling |
+
+---
+
+## 9.0 - Gameplay Features (Jan 2026)
+
+Major gameplay feature release implementing 5 key systems for enhanced player experience.
+
+### Settings Expansion (7 Categories, ~44 Settings)
+
+Complete settings system overhaul with 7 organized categories:
+
+- **Battle Settings:** Camera follow mode, pan speed, lerp speed, movement/attack previews, terrain costs, confirm actions, auto-end turn, skip enemy animations, turn order display, health bars, status icons, battle log verbosity
+- **Audio Settings:** Master volume, music volume, SFX volume, individual mute toggles
+- **Display Settings:** Animation quality, damage numbers, grid overlay, health bar visibility
+- **Accessibility Settings:** Colorblind modes (protanopia, deuteranopia, tritanopia), high contrast mode, reduced motion, text size scaling
+- **Gameplay Settings:** Tutorial toggles, auto-save settings, purchase confirmations
+- **Social Settings:** Online status visibility, party invite preferences, chat settings
+- **Controls Settings:** Keybind customization, mouse sensitivity, touch gesture settings
+
+### Audio System (Web Audio API)
+
+Complete audio implementation using Web Audio API:
+
+- **AudioManager.js:** Centralized audio control with volume management
+- **Scene-based music:** Different tracks for world map, battle, menus
+- **SFX system:** UI sounds (clicks, hovers), battle sounds (attacks, damage, healing)
+- **Volume controls:** Master, music, and SFX sliders wired to settings
+- **Mute toggles:** Individual channel muting with visual feedback
+
+### Elemental Damage System (8 Elements)
+
+Tactical depth through elemental interactions:
+
+- **8 Elements:** Fire, Ice, Lightning, Earth, Wind, Water, Light, Dark
+- **Resistance system:** Enemies and races have elemental resistances/weaknesses
+- **Enemy templates:** Elemental affinities per enemy type (e.g., fire slimes weak to ice)
+- **Racial templates:** Player races have innate elemental modifiers
+- **Skill integration:** Skills can have elemental types affecting damage calculation
+
+### Battle Log Panel
+
+Scrollable combat history for tactical awareness:
+
+- **BattleLogPanel.js:** Dedicated UI component in battle scene
+- **Color-coded entries:** Damage (red), healing (green), status effects (yellow), movement (blue)
+- **Auto-scroll:** Follows latest action with manual scroll override
+- **Verbosity settings:** Configurable detail level (minimal, normal, detailed)
+- **Entry persistence:** Full battle history preserved during combat
+
+### Gold Sinks + Relic System
+
+Economy balancing with valuable collectibles:
+
+**Gold Sinks:**
+- Marketplace fee: 5% seller fee on all sales
+- Fast travel costs: 50-500g based on distance
+- Stamina restore: 100g per stamina point
+
+**Relic System:**
+- Relic item category with unique templates
+- Discovery through ruins exploration and special events
+- Permanent stat bonuses from owned relics
+- Collection UI showing owned relics and effects
+
+### Files Created/Modified
+
+**New Files:**
+- `frontend/src/audio/AudioManager.js`
+- `frontend/src/battle/BattleLogPanel.js`
+- `frontend/src/config/elements.js`
+- `api/src/config/elements.js`
+- `api/src/db/templates/relics.js`
+
+**Modified Files:**
+- `frontend/src/scenes/SettingsScene.js` - Complete redesign with 7 tabs
+- `frontend/src/core/SettingsManager.js` - Event-driven settings updates
+- `api/src/services/battleService.js` - Elemental damage calculation
+- `api/src/db/templates/enemies.js` - Elemental resistances
+- `shared/constants.js` - Racial elemental modifiers
+- `api/src/routes/marketplace.js` - 5% seller fee
+- `api/src/routes/world.js` - Fast travel costs, stamina purchase
 
 ---
 
