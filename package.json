@@ -42,6 +42,12 @@
     "validate:sprites": "node api/src/scripts/validate-prompts.js",
     "validate:enemy": "node api/src/scripts/validate-prompts.js --type=enemy",
     "validate:character": "node api/src/scripts/validate-prompts.js --type=character",
+    "audio:generate": "node scripts/audio/generate-all.js",
+    "audio:generate:music": "node scripts/audio/generate-music.js",
+    "audio:generate:sfx": "node scripts/audio/generate-sfx.js",
+    "audio:download": "node scripts/audio/download-audio.js",
+    "audio:validate": "node scripts/audio/validate-audio.js",
+    "audio:status": "node scripts/audio/validate-audio.js --status",
     "doctor": "bash scripts/doctor.sh",
     "dev:setup": "bash scripts/dev-setup.sh",
     "prepare": "husky"
