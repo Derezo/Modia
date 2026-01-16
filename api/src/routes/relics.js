@@ -80,13 +80,15 @@ router.post('/:id/claim', authenticate, asyncHandler(async (req, res) => {
 // ============================================
 // POST /api/relics/grant/:key - Grant a relic (admin/quest reward)
 // For use by quest completion handlers, achievements, etc.
+// SECURITY: Only available in development mode
 // ============================================
 router.post('/grant/:key', authenticate, asyncHandler(async (req, res) => {
   const { key } = req.params;
 
-  // This endpoint would typically be called internally by quest/achievement handlers
-  // For now, we allow it for testing purposes
-  // TODO: Add admin check or internal-only access
+  // Only allow in development - production grants should use internal service calls
+  if (process.env.NODE_ENV === 'production') {
+    throw new AppError('This endpoint is disabled in production', 403);
+  }
 
   try {
     const result = await relicService.grantRelic(req.user.userId, key);

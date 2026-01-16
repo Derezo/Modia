@@ -1,5 +1,5 @@
 import express from 'express';
-import { query } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { travelLimiter } from '../middleware/gameplayRateLimiter.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
@@ -1408,7 +1408,7 @@ router.post('/fast-travel', authenticate, travelLimiter, asyncHandler(async (req
 
   // Get user's current position and check if in battle
   const charResult = await query(
-    `SELECT c.id as character_id, c.current_node_id, wn.region_id as current_region_id, c.in_battle
+    `SELECT c.id as character_id, c.current_node_id, c.name, wn.region_id as current_region_id, c.in_battle
      FROM characters c
      JOIN world_nodes wn ON wn.id = c.current_node_id
      WHERE c.user_id = $1 AND c.party_slot = 1`,
@@ -1436,52 +1436,50 @@ router.post('/fast-travel', authenticate, travelLimiter, asyncHandler(async (req
   const regionDistance = Math.abs(targetCastle.castle_region_id - character.current_region_id);
   const goldCost = baseCost + (regionDistance * costPerRegion);
 
-  // Check and deduct gold
-  const goldResult = await query(
-    `UPDATE users
-     SET gold = gold - $1
-     WHERE id = $2 AND gold >= $1
-     RETURNING gold`,
-    [goldCost, userId]
-  );
+  // Perform all database mutations in a transaction
+  const { newGold } = await withTransaction(async (client) => {
+    // Check and deduct gold
+    const goldResult = await client.query(
+      `UPDATE users
+       SET gold = gold - $1
+       WHERE id = $2 AND gold >= $1
+       RETURNING gold`,
+      [goldCost, userId]
+    );
 
-  if (goldResult.rows.length === 0) {
-    const userGold = await query('SELECT gold FROM users WHERE id = $1', [userId]);
-    const currentGold = userGold.rows[0]?.gold || 0;
-    throw new AppError(`Insufficient gold. Need ${goldCost}, have ${currentGold}`, 400);
-  }
+    if (goldResult.rows.length === 0) {
+      const userGold = await client.query('SELECT gold FROM users WHERE id = $1', [userId]);
+      const currentGold = userGold.rows[0]?.gold || 0;
+      throw new AppError(`Insufficient gold. Need ${goldCost}, have ${currentGold}`, 400);
+    }
 
-  // Move all party characters to destination
-  await query(
-    `UPDATE characters SET current_node_id = $1
-     WHERE user_id = $2 AND party_slot IS NOT NULL`,
-    [targetNodeId, userId]
-  );
+    // Move all party characters to destination
+    await client.query(
+      `UPDATE characters SET current_node_id = $1
+       WHERE user_id = $2 AND party_slot IS NOT NULL`,
+      [targetNodeId, userId]
+    );
 
-  // Discover the destination node (if not already discovered)
-  await query('SELECT discover_node_and_adjacent($1, $2)', [userId, targetNodeId]);
+    // Discover the destination node (if not already discovered)
+    await client.query('SELECT discover_node_and_adjacent($1, $2)', [userId, targetNodeId]);
 
-  // Log the fast travel
-  await query(
-    `INSERT INTO fast_travel_log (user_id, character_id, from_node_id, to_node_id, gold_cost)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [userId, character.character_id, character.current_node_id, targetNodeId, goldCost]
-  );
+    // Log the fast travel
+    await client.query(
+      `INSERT INTO fast_travel_log (user_id, character_id, from_node_id, to_node_id, gold_cost)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, character.character_id, character.current_node_id, targetNodeId, goldCost]
+    );
 
-  // Get character name for presence update
-  const charNameResult = await query(
-    'SELECT name FROM characters WHERE user_id = $1 AND party_slot = 1',
-    [userId]
-  );
-  const characterName = charNameResult.rows[0]?.name || 'Unknown';
+    return { newGold: goldResult.rows[0].gold };
+  });
 
-  // Update presence
+  // Update presence (outside transaction - non-critical)
   presenceService.moveNode(
     character.current_node_id,
     targetNodeId,
     userId,
     req.user.username,
-    characterName
+    character.name || 'Unknown'
   );
 
   // Get updated stamina info
@@ -1491,7 +1489,7 @@ router.post('/fast-travel', authenticate, travelLimiter, asyncHandler(async (req
     success: true,
     message: `Traveled to ${targetCastle.name}`,
     goldSpent: goldCost,
-    newGold: goldResult.rows[0].gold,
+    newGold,
     destination: {
       nodeId: targetNodeId,
       name: targetCastle.name,
@@ -1506,8 +1504,10 @@ router.post('/stamina/restore', authenticate, asyncHandler(async (req, res) => {
   const { amount } = req.body;
   const userId = req.user.userId;
 
-  if (!amount || amount <= 0) {
-    throw new AppError('amount must be a positive number', 400);
+  // Improved input validation
+  const parsedAmount = parseInt(amount, 10);
+  if (isNaN(parsedAmount) || parsedAmount <= 0 || parsedAmount > 100) {
+    throw new AppError('amount must be a positive integer (1-100)', 400);
   }
 
   // Check if user has the Vitality Charm relic
@@ -1545,20 +1545,26 @@ router.post('/stamina/restore', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('Stamina restore is only available at town nodes', 400);
   }
 
-  // Restore stamina for gold
-  const result = await staminaService.restoreStaminaForGold(
-    userId,
-    character.character_id,
-    parseInt(amount, 10),
-    costPerPoint
-  );
+  // Perform stamina restore and logging in a transaction
+  const result = await withTransaction(async (client) => {
+    // Restore stamina for gold (service handles gold deduction and stamina update)
+    const restoreResult = await staminaService.restoreStaminaForGoldWithClient(
+      client,
+      userId,
+      character.character_id,
+      parsedAmount,
+      costPerPoint
+    );
 
-  // Log the stamina restore
-  await query(
-    `INSERT INTO stamina_restore_log (user_id, character_id, node_id, stamina_amount, gold_cost)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [userId, character.character_id, character.current_node_id, result.staminaRestored, result.goldSpent]
-  );
+    // Log the stamina restore
+    await client.query(
+      `INSERT INTO stamina_restore_log (user_id, character_id, node_id, stamina_amount, gold_cost)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [userId, character.character_id, character.current_node_id, restoreResult.staminaRestored, restoreResult.goldSpent]
+    );
+
+    return restoreResult;
+  });
 
   res.json({
     success: true,
