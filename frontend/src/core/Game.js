@@ -14,6 +14,68 @@ import { NotificationCenter } from '../components/NotificationCenter.js';
 import { PartyStatusBar } from '../components/PartyStatusBar.js';
 import { PartyInviteModal } from '../components/PartyInviteModal.js';
 
+// Default settings structure (mirrors backend and SettingsScene)
+const DEFAULT_SETTINGS = {
+  battle: {
+    actionMenuStyle: 'radial',
+    showDamageNumbers: true,
+    showBattleGrid: true,
+    autoEndTurn: false,
+    confirmEndTurn: true,
+    showDamagePreview: true,
+    showMissChance: true,
+    battleLogPosition: 'right',
+    battleLogVisible: true
+  },
+  audio: {
+    masterVolume: 80,
+    musicVolume: 70,
+    sfxVolume: 80,
+    uiVolume: 70,
+    muted: false,
+    musicEnabled: true,
+    sfxEnabled: true,
+    ambientEnabled: true
+  },
+  display: {
+    animationSpeed: 'normal',
+    cameraZoom: 1.0,
+    uiScale: 1.0,
+    showFloatingText: true,
+    particleQuality: 'high',
+    screenShake: true
+  },
+  accessibility: {
+    highContrast: false,
+    reducedMotion: false,
+    textSize: 'medium',
+    colorBlindMode: 'none',
+    fontFamily: 'default',
+    lineSpacing: 'normal',
+    cursorSize: 'normal',
+    screenReaderHints: false
+  },
+  gameplay: {
+    autoSave: true,
+    confirmTravel: false,
+    showTutorialHints: true,
+    questMarkerStyle: 'icon'
+  },
+  controls: {
+    keybindScheme: 'wasd',
+    touchGesturesEnabled: true,
+    doubleTapConfirm: true,
+    holdToCancel: true
+  },
+  social: {
+    showOnlineStatus: true,
+    allowPartyInvites: true,
+    allowFriendRequests: true,
+    chatTimestamps: true,
+    profanityFilter: true
+  }
+};
+
 export class Game {
   constructor() {
     this.canvas = null;
@@ -299,10 +361,8 @@ export class Game {
       this.applyAccessibilitySettings(result.settings);
     } catch (err) {
       console.error('Failed to load settings:', err);
-      // Set defaults if load fails
-      this.state.set('userSettings', {
-        battle: { actionMenuStyle: 'radial' }
-      });
+      // Set full defaults if load fails to ensure accessibility settings work
+      this.state.set('userSettings', JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
     }
   }
 
