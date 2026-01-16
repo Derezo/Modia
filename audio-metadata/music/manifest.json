@@ -1,0 +1,65 @@
+{
+  "version": "1.0.0",
+  "description": "Master manifest for Modia music tracks",
+  "totalTracks": 55,
+  "categories": {
+    "regions": {
+      "description": "Regional exploration and activity music",
+      "trackCount": 25,
+      "files": [
+        "regions/heartlands.json",
+        "regions/sylvan_reaches.json",
+        "regions/iron_depths.json",
+        "regions/shadowmere.json",
+        "regions/bloodplains.json"
+      ]
+    },
+    "battle": {
+      "description": "Combat music for all battle types",
+      "trackCount": 20,
+      "files": [
+        "battle/battle-themes.json"
+      ]
+    },
+    "core": {
+      "description": "Core game music (menus, fanfares, ambient)",
+      "trackCount": 10,
+      "files": [
+        "core/core-tracks.json"
+      ]
+    }
+  },
+  "regions": [
+    "heartlands",
+    "sylvan_reaches",
+    "iron_depths",
+    "shadowmere",
+    "bloodplains"
+  ],
+  "nodeTypes": [
+    "exploration",
+    "tavern",
+    "shop",
+    "fishing",
+    "ruins"
+  ],
+  "battleTypes": [
+    "regular",
+    "boss",
+    "pvp",
+    "story"
+  ],
+  "generationSettings": {
+    "model": "V5",
+    "defaultVolume": 0.7,
+    "defaultFadeIn": 2000,
+    "defaultFadeOut": 1500,
+    "fanfareVolume": 0.8,
+    "ambientVolume": 0.5
+  },
+  "outputPaths": {
+    "regions": "/assets/audio/music/regions/",
+    "battle": "/assets/audio/music/battle/",
+    "core": "/assets/audio/music/core/"
+  }
+}

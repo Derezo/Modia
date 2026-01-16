@@ -1,0 +1,102 @@
+{
+  "region": "bloodplains",
+  "name": "Bloodplains",
+  "race": "Orc",
+  "description": "The savage orc territories, featuring volcanic mountains, war camps, and scorched battlefields",
+  "musicalTheme": {
+    "style": "Primal power, tribal rhythm",
+    "instruments": "War drums, bone flutes, low brass, chanting",
+    "mood": "Savage glory, warrior spirit",
+    "keys": {
+      "exploration": "G minor",
+      "battle": "G minor"
+    }
+  },
+  "tracks": [
+    {
+      "id": "bloodplains_exploration",
+      "name": "March of the Warlords",
+      "category": "region",
+      "region": "bloodplains",
+      "nodeType": "exploration",
+      "battleType": null,
+      "sunoPrompt": "Primal orc exploration theme, G minor, driving war drums and tribal percussion, bone flutes and low brass, savage and powerful, volcanic wastes and war camps, classic JRPG, warrior spirit, relentless march",
+      "style": "Tribal orc warfare",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/bloodplains_exploration.mp3",
+      "loop": true,
+      "volume": 0.7,
+      "fadeIn": 1500,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "bloodplains_tavern",
+      "name": "The Warhorn's Rest",
+      "category": "region",
+      "region": "bloodplains",
+      "nodeType": "tavern",
+      "battleType": null,
+      "sunoPrompt": "Rough orc tavern music, heavy drums and guttural chanting, warriors boasting, bone dice rolling, crude but proud atmosphere, fire pits and war trophies, primal celebration, stomping rhythms",
+      "style": "Orc war camp gathering",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/bloodplains_tavern.mp3",
+      "loop": true,
+      "volume": 0.65,
+      "fadeIn": 1500,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "bloodplains_shop",
+      "name": "The War Spoils Bazaar",
+      "category": "region",
+      "region": "bloodplains",
+      "nodeType": "shop",
+      "battleType": null,
+      "sunoPrompt": "Tribal orc trading music, rhythmic drums and bone instruments, war spoils and crude weapons, bartering and arguing, harsh but fair dealings, primal commerce, moderate aggressive tempo",
+      "style": "War camp bazaar",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/bloodplains_shop.mp3",
+      "loop": true,
+      "volume": 0.6,
+      "fadeIn": 1500,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "bloodplains_fishing",
+      "name": "The Bloodriver Shallows",
+      "category": "region",
+      "region": "bloodplains",
+      "nodeType": "fishing",
+      "battleType": null,
+      "sunoPrompt": "Primal fishing music, sparse tribal drums, muddy river waiting, patient hunter atmosphere, bone flute melody, slow and deliberate, volcanic steam rising, savage patience",
+      "style": "Primitive hunting",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/bloodplains_fishing.mp3",
+      "loop": true,
+      "volume": 0.55,
+      "fadeIn": 2000,
+      "fadeOut": 2000,
+      "generated": false
+    },
+    {
+      "id": "bloodplains_ruins",
+      "name": "Bones of the Old Wars",
+      "category": "region",
+      "region": "bloodplains",
+      "nodeType": "ruins",
+      "battleType": null,
+      "sunoPrompt": "Ancient battlefield ruins music, G minor, low brass dirge and scattered drums, forgotten war monuments, ancestral spirits, puzzle atmosphere, bones and broken weapons, haunted glory of fallen warriors",
+      "style": "Ancient battleground",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/bloodplains_ruins.mp3",
+      "loop": true,
+      "volume": 0.6,
+      "fadeIn": 2000,
+      "fadeOut": 1500,
+      "generated": false
+    }
+  ]
+}

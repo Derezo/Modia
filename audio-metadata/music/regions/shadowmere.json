@@ -1,0 +1,102 @@
+{
+  "region": "shadowmere",
+  "name": "Shadowmere",
+  "race": "Vampire",
+  "description": "The gothic vampire domain, featuring dark castles, foggy crypts, and eternal moonless nights",
+  "musicalTheme": {
+    "style": "Gothic elegance, nocturnal tension",
+    "instruments": "Pipe organ, harpsichord, strings in minor keys, choir",
+    "mood": "Aristocratic menace, predatory grace",
+    "keys": {
+      "exploration": "B minor",
+      "battle": "B minor"
+    }
+  },
+  "tracks": [
+    {
+      "id": "shadowmere_exploration",
+      "name": "Nocturne of the Damned",
+      "category": "region",
+      "region": "shadowmere",
+      "nodeType": "exploration",
+      "battleType": null,
+      "sunoPrompt": "Gothic vampire exploration theme, B minor, haunting harpsichord and pipe organ, elegant yet menacing, dark castles and foggy crypts, minor key strings, classic JRPG, aristocratic darkness, predatory grace",
+      "style": "Gothic vampire elegance",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/shadowmere_exploration.mp3",
+      "loop": true,
+      "volume": 0.7,
+      "fadeIn": 2000,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "shadowmere_tavern",
+      "name": "The Crimson Chalice",
+      "category": "region",
+      "region": "shadowmere",
+      "nodeType": "tavern",
+      "battleType": null,
+      "sunoPrompt": "Dark gothic tavern music, melancholic harpsichord waltz, candlelit shadows, aristocratic patrons, refined and dangerous, blood-red wine, velvet and cobwebs, elegant minor key melody",
+      "style": "Vampire salon",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/shadowmere_tavern.mp3",
+      "loop": true,
+      "volume": 0.6,
+      "fadeIn": 1500,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "shadowmere_shop",
+      "name": "The Night Market",
+      "category": "region",
+      "region": "shadowmere",
+      "nodeType": "shop",
+      "battleType": null,
+      "sunoPrompt": "Mysterious vampire shop music, soft harpsichord and strings, forbidden wares and dark artifacts, candlelit exchanges, gothic commerce, hushed whispers, minor key atmosphere, dangerous dealings",
+      "style": "Gothic marketplace",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/shadowmere_shop.mp3",
+      "loop": true,
+      "volume": 0.55,
+      "fadeIn": 1500,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "shadowmere_fishing",
+      "name": "The Black Lake",
+      "category": "region",
+      "region": "shadowmere",
+      "nodeType": "fishing",
+      "battleType": null,
+      "sunoPrompt": "Eerie dark fishing music, minimal harpsichord notes, still black waters, fog rolling in, unsettling calm, what lurks beneath, very slow tempo, gothic atmosphere, moonless reflection",
+      "style": "Dark waters",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/shadowmere_fishing.mp3",
+      "loop": true,
+      "volume": 0.5,
+      "fadeIn": 2500,
+      "fadeOut": 2000,
+      "generated": false
+    },
+    {
+      "id": "shadowmere_ruins",
+      "name": "Crypt of the First Blood",
+      "category": "region",
+      "region": "shadowmere",
+      "nodeType": "ruins",
+      "battleType": null,
+      "sunoPrompt": "Ancient vampire ruins music, B minor, pipe organ and ghostly choir, crumbling crypts and forgotten tombs, dark secrets and ancient bloodlines, puzzle atmosphere, dread and reverence, echoing chambers",
+      "style": "Ancient vampire crypt",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/shadowmere_ruins.mp3",
+      "loop": true,
+      "volume": 0.6,
+      "fadeIn": 2000,
+      "fadeOut": 1500,
+      "generated": false
+    }
+  ]
+}

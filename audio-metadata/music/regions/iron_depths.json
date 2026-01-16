@@ -1,0 +1,102 @@
+{
+  "region": "iron_depths",
+  "name": "Iron Depths",
+  "race": "Dwarf",
+  "description": "The mighty dwarven underground kingdoms, featuring vast forge halls, deep mines, and mountain strongholds",
+  "musicalTheme": {
+    "style": "Deep, resonant, industrial pride",
+    "instruments": "Deep brass, timpani, anvil percussion, pipe organ undertones",
+    "mood": "Proud craftsmanship, underground majesty",
+    "keys": {
+      "exploration": "E minor",
+      "battle": "E minor"
+    }
+  },
+  "tracks": [
+    {
+      "id": "iron_depths_exploration",
+      "name": "Halls of the Mountain King",
+      "category": "region",
+      "region": "iron_depths",
+      "nodeType": "exploration",
+      "battleType": null,
+      "sunoPrompt": "Epic dwarven underground exploration theme, E minor, deep brass and powerful timpani, anvil percussion accents, proud and industrious, vast cavern halls and glowing forges, resonant pipe organ undertones, classic JRPG, majestic",
+      "style": "Dwarven forge epic",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/iron_depths_exploration.mp3",
+      "loop": true,
+      "volume": 0.7,
+      "fadeIn": 2000,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "iron_depths_tavern",
+      "name": "The Anvil and Ale",
+      "category": "region",
+      "region": "iron_depths",
+      "nodeType": "tavern",
+      "battleType": null,
+      "sunoPrompt": "Hearty dwarven tavern music, accordion and stomping rhythms, drinking songs and boisterous laughter, warm underground pub, stone walls echoing, tankards slamming, merry and robust, deep bass line",
+      "style": "Dwarven drinking hall",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/iron_depths_tavern.mp3",
+      "loop": true,
+      "volume": 0.65,
+      "fadeIn": 1500,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "iron_depths_shop",
+      "name": "The Master Craftsman's Hall",
+      "category": "region",
+      "region": "iron_depths",
+      "nodeType": "shop",
+      "battleType": null,
+      "sunoPrompt": "Industrious dwarven shop music, rhythmic hammering accents, proud craftsmanship, fine metalwork and gemstones, deep brass undertones, busy forge atmosphere, quality wares, steady working tempo",
+      "style": "Forge marketplace",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/iron_depths_shop.mp3",
+      "loop": true,
+      "volume": 0.6,
+      "fadeIn": 1500,
+      "fadeOut": 1500,
+      "generated": false
+    },
+    {
+      "id": "iron_depths_fishing",
+      "name": "The Deep Pools",
+      "category": "region",
+      "region": "iron_depths",
+      "nodeType": "fishing",
+      "battleType": null,
+      "sunoPrompt": "Peaceful underground fishing music, echoing cavern drips, deep resonant tones, subterranean lake atmosphere, contemplative and still, distant forge sounds, relaxed tempo, cave fish waiting",
+      "style": "Underground serenity",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/iron_depths_fishing.mp3",
+      "loop": true,
+      "volume": 0.55,
+      "fadeIn": 2000,
+      "fadeOut": 2000,
+      "generated": false
+    },
+    {
+      "id": "iron_depths_ruins",
+      "name": "The Lost Forgehalls",
+      "category": "region",
+      "region": "iron_depths",
+      "nodeType": "ruins",
+      "battleType": null,
+      "sunoPrompt": "Ancient dwarven ruins music, E minor, haunting echoes in abandoned mines, cold forge silence, lost kingdom grandeur, deep brass lament, puzzle-solving tension, faded glory of master craftsmen",
+      "style": "Lost dwarven kingdom",
+      "model": "V5",
+      "path": "/assets/audio/music/regions/iron_depths_ruins.mp3",
+      "loop": true,
+      "volume": 0.6,
+      "fadeIn": 2000,
+      "fadeOut": 1500,
+      "generated": false
+    }
+  ]
+}
