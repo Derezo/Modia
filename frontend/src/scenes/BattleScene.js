@@ -90,6 +90,9 @@ export class BattleScene extends Scene {
     this.bossPhaseIndicator = null;
     this.isBossBattle = false;
     this.guildmasterData = null;
+
+    // Battle log turn counter
+    this.battleLogTurnCounter = 1;
   }
 
   /**
@@ -945,6 +948,9 @@ export class BattleScene extends Scene {
     const isEnemy = unitType === 'enemy';
     const isPlayerTurn = unitType === 'player' || unitType === 'player_local';
 
+    // Increment battle log turn counter
+    this.battleLogTurnCounter++;
+
     // Update turn predictions if provided
     if (turnPredictions) {
       this.battleState.turnPredictions = turnPredictions;
@@ -1051,6 +1057,9 @@ export class BattleScene extends Scene {
     const unit = this.units.get(unitId);
 
     if (unit) {
+      // Add movement to battle log
+      this.addBattleLogEntry(unit, 'move', null, { from, to });
+
       // Start the movement animation
       unit.moveTo(to.x, to.y);
 
@@ -1073,25 +1082,100 @@ export class BattleScene extends Scene {
       actor.setThinking(false);
     }
 
+    // Get target unit for logging
+    const target = result?.targetId ? this.units.get(result.targetId) : null;
+
+    // Add entry to battle log
+    this.addBattleLogEntry(actor, actionType, target, result);
+
     // Play attack/skill animation
     if (actionType === 'attack' || actionType === 'skill') {
       // Find target and play damage animation
-      if (result?.targetId) {
-        const target = this.units.get(result.targetId);
-        if (target) {
-          if (result.damage > 0) {
-            target.playHitAnimation();
-            this.animations.addDamageNumber(target.screenX, target.screenY - 40, result.damage, result.isCritical);
-            this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
-            target.hp = Math.max(0, target.hp - result.damage);
-          } else if (result.missed) {
-            this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
-          }
+      if (target) {
+        if (result.damage > 0) {
+          target.playHitAnimation();
+          this.animations.addDamageNumber(target.screenX, target.screenY - 40, result.damage, result.isCritical);
+          this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
+          target.hp = Math.max(0, target.hp - result.damage);
+        } else if (result.missed) {
+          this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
         }
       }
 
       // Wait for attack animation
       await this.waitForAnimation(600);
+    }
+  }
+
+  /**
+   * Add an entry to the battle log
+   * @param {Object} actor - The unit performing the action
+   * @param {string} actionType - Type of action (attack, skill, move, wait, item)
+   * @param {Object} target - The target unit (optional)
+   * @param {Object} result - The action result
+   */
+  addBattleLogEntry(actor, actionType, target, result) {
+    if (!this.ui) return;
+
+    // Build log entry
+    const entry = {
+      timestamp: Date.now(),
+      turn: this.battleLogTurnCounter || 1,
+      actor: actor ? {
+        name: actor.name,
+        isPlayer: actor.type === 'player'
+      } : { name: 'Unknown', isPlayer: false },
+      action: {
+        type: actionType,
+        name: this.getActionName(actionType, result)
+      },
+      element: result?.element || 'physical',
+      target: target ? {
+        name: target.name,
+        isPlayer: target.type === 'player'
+      } : null,
+      result: {
+        damage: result?.damage || 0,
+        baseDamage: result?.baseDamage || null,
+        critBonus: result?.critBonus || null,
+        isCritical: result?.isCritical || false,
+        missed: result?.missed || false,
+        healing: result?.healing || 0,
+        mpRestored: result?.mpRestored || 0,
+        statusApplied: result?.statusApplied || null,
+        damageType: result?.damageType || 'physical'
+      }
+    };
+
+    // For movement, add position data if available
+    if (actionType === 'move' && result?.from && result?.to) {
+      entry.result.from = result.from;
+      entry.result.to = result.to;
+    }
+
+    this.ui.addBattleLogEntry(entry);
+  }
+
+  /**
+   * Get a display name for an action
+   * @param {string} actionType - The action type
+   * @param {Object} result - The action result (may contain skill/item name)
+   * @returns {string} Display name
+   */
+  getActionName(actionType, result) {
+    switch (actionType) {
+      case 'attack':
+        return 'Attack';
+      case 'skill':
+        return result?.skillName || 'Skill';
+      case 'move':
+        return 'Move';
+      case 'wait':
+        return 'Wait';
+      case 'item':
+        return result?.itemName || 'Item';
+      default:
+        return actionType;
     }
   }
 
