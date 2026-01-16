@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 4.1 |
+| Version | 5.0 |
 | Last Updated | January 2026 |
 | Focus | Features, mechanics, UX, content |
 
@@ -14,10 +14,10 @@
 
 | Category | Completion | Status |
 |----------|------------|--------|
-| Core Mechanics | 95% | Near Complete |
-| Combat System | 95% | Near Complete |
-| Economy & Items | 90% | Near Complete |
-| User Experience | 85% | Near Complete |
+| Core Mechanics | 100% | Complete |
+| Combat System | 98% | Near Complete |
+| Economy & Items | 95% | Near Complete |
+| User Experience | 95% | Near Complete |
 | Social Features | 95% | Complete |
 | World & Progression | 95% | Near Complete |
 
@@ -81,13 +81,13 @@
 - [x] Green checkmark (cleared)
 - [x] Orange path preview through blocked
 
-### 1.3 Audio System (Not Started)
+### 1.3 Audio System (Complete - v9.0)
 
-- [ ] Web Audio API integration
-- [ ] Sound effect loading/playback
-- [ ] Battle music
-- [ ] UI sounds
-- [ ] Volume controls wired to settings
+- [x] Web Audio API integration
+- [x] Sound effect loading/playback
+- [x] Scene-based music system
+- [x] Battle music and UI sounds
+- [x] Volume controls wired to settings
 
 ### 1.4 Boss Battle Integration (Complete)
 
@@ -105,8 +105,8 @@
 
 ### 2.1 Battle Engine
 
-- [ ] Battle log panel (scrollable combat history with damage/healing/status events)
-- [ ] Elemental damage system (fire/ice/lightning weaknesses for tactical depth)
+- [x] Battle log panel (scrollable combat history with damage/healing/status events) - v9.0
+- [x] Elemental damage system (8 elements, resistances, enemy/racial templates) - v9.0
 - [ ] Skill cooldowns
 - [ ] Status effect duration display
 
@@ -203,14 +203,14 @@ Per ITEM_SYSTEM.md specifications:
 - [x] Supply level display with color-coded badges
 - [ ] Item decay system (10% daily)
 
-### 3.4 Gold Sinks (Not Started)
+### 3.4 Gold Sinks (Complete - v9.0)
 
 > **Purpose:** Prevent late-game gold inflation
 
-**High Priority:**
-- [ ] Marketplace fee (5% seller fee on sales)
-- [ ] Fast travel costs (50-500g by distance)
-- [ ] Stamina restore for gold (100g per point)
+**High Priority (Complete):**
+- [x] Marketplace fee (5% seller fee on sales)
+- [x] Fast travel costs (50-500g by distance)
+- [x] Stamina restore for gold (100g per point)
 
 **Medium Priority:**
 - [ ] Skill respec fee (1000-5000g scaling)
@@ -221,54 +221,41 @@ Per ITEM_SYSTEM.md specifications:
 - [ ] Equipment repair system (requires durability)
 - [ ] Guild upgrade costs (player guilds feature)
 
+### 3.5 Relic System (Complete - v9.0)
+
+> **Purpose:** Rare collectibles providing permanent bonuses
+
+- [x] Relic item category and templates
+- [x] Relic discovery from ruins and special events
+- [x] Permanent stat bonuses from owned relics
+- [x] Relic collection UI
+
 ---
 
 ## 4. User Experience
 
-### 4.1 Settings System Expansion
+### 4.1 Settings System Expansion (Complete - v9.0)
 
-#### Current (4 categories, ~12 settings)
-- [x] Battle: actionMenuStyle
-- [x] Audio: volumes, mute
-- [x] Display: animations, numbers, grid
-- [x] Accessibility: contrast, motion, text size
+#### Current (7 categories, ~44 settings)
+- [x] Battle: actionMenuStyle, camera settings, previews, battle log verbosity
+- [x] Audio: master, music, sfx volumes, mute toggles
+- [x] Display: animations, damage numbers, grid overlay, health bars
+- [x] Accessibility: colorblind modes (protanopia, deuteranopia, tritanopia), high contrast, reduced motion, text size
+- [x] Gameplay: tutorials, auto-save, confirmations
+- [x] Social: online status, party invites, chat settings
+- [x] Controls: keybinds, mouse sensitivity, touch settings
 
-#### New Categories (7 total, ~55 settings)
+#### Implemented Features
+- [x] SettingsManager.js with event-driven updates
+- [x] Settings wired to game systems (audio, battle, accessibility)
+- [x] 7-tab settings UI (Battle, Audio, Display, Accessibility, Gameplay, Social, Controls)
+- [x] Colorblind mode filters applied to canvas rendering
+- [x] Settings persistence to localStorage and database
 
-**Battle Settings (13):**
-- [ ] Camera: followMode, panSpeed, lerpSpeed
-- [ ] Previews: movement, attack, terrain costs
-- [ ] UX: confirmActions, autoEndTurn, skipEnemyAnimations
-- [ ] Display: turnOrder, healthBars, statusIcons, battleLogVerbosity
-
-**Gameplay Settings (12):**
-- [ ] Tutorials: showTutorials, showNewFeatureHighlights
-- [ ] Auto-save: enabled, interval
-- [ ] Confirmations: shop, marketplace
-- [ ] Convenience: itemComparison, autoTravel, questMarkers
-
-**Social Settings (14):**
-- [ ] Privacy: onlineStatus, partyInvites, DMs
-- [ ] Chat: profanityFilter, mentionNotify, timestamps
-- [ ] Guild: autoJoinChat, memberActivity
-
-**Controls Settings (17):**
-- [ ] Keybinds: camera, grid, inventory, map, save, cancel, confirm
-- [ ] Mouse: sensitivity, invertY
-- [ ] Touch: enabled, doubleTapConfirm, swipeGestures
-
-**Accessibility (12):**
-- [ ] Colorblind modes (protanopia, deuteranopia, tritanopia)
+#### Remaining (Post-MVP)
 - [ ] Screen reader optimization
-- [ ] Dyslexia font option
-- [ ] Cursor size options
-- [ ] Click-to-hold for motor accessibility
-- [ ] Haptic feedback toggle
-
-#### Implementation
-- [ ] SettingsManager.js with event-driven updates
-- [ ] Wire settings to actual game systems
-- [ ] Add Gameplay, Social, Controls tabs
+- [ ] Dyslexia font option (OpenDyslexic)
+- [ ] Haptic feedback toggle (mobile)
 
 ### 4.2 Mobile Optimization
 
@@ -625,6 +612,7 @@ Recent implementations:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 5.0 | Jan 2026 | Gameplay Features v9.0: Audio System complete (Web Audio API, scene-based music, SFX, volume controls). Battle Log Panel complete (scrollable combat history, color-coded entries). Elemental Damage System complete (8 elements, resistances, enemy/racial templates). Gold Sinks complete (marketplace 5% fee, fast travel 50-500g, stamina restore 100g/point). Relic System complete (rare collectibles, permanent bonuses). Settings Expansion complete (7 categories, ~44 settings, colorblind modes). Core Mechanics now 100%, Combat System 98%, Economy 95%, UX 95%. |
 | 4.1 | Jan 2026 | Project cleanup audit: Added battle log panel, elemental damage system to Battle Engine. Added Tier 5+ enemies to Enemy System. Enhanced Mobile Optimization with touch gestures, 44px tap targets. Added loading indicators, keyboard navigation, tooltips, object pooling to UI Polish. Elevated Daily/Weekly Quests priority. Archived all design documents (regional world gen, formation integration, icon quality, marketplace augments). |
 | 4.0 | Jan 2026 | Battle System Formula Overhaul (v8.8): Complete FFT-style tactical combat rebalance. Defense now uses diminishing returns formula (DEF/(DEF+100) for physical, MDEF/(MDEF+80) for magical). CT turn order system replaces initiative (ctGain=5+AGI/10, act at CT>=100, haste/slow modifiers). LCK stat now scales with level (0.3-1.5 per level by class) and affects crits (5%+LCK/300), evasion (2%+agiDiff/400+LCK/400), and status resistance (10%+LCK/200). VIT provides HP bonus (level/2+VIT*0.5). Polynomial skill costs (baseCost*level^1.5) make max level achievable. Archetype-based enemy scaling with tier multipliers. New: formulaValidation.test.js (31 tests). Combat System now 95% complete. |
 | 3.1 | Jan 2026 | Activity Node Features (v8.6): All 4 activity node systems implemented. Fishing: FishingScene.js with idle auto-fishing, Big One events, session management (fishingService.js), fish templates (15 types, 5 rarities). Ruins: RuinsPuzzleModal.js with 3x3/4x4/5x5 sliding tile puzzles, regional themes, tier-based rewards, one-time completion. Caravan: Extended ShopScene.js with exclusive items (23 items), 48-hour refresh cycle, seeded inventory, stock tracking. Watchtower: Presence-based fog reveal endpoint. Security: FOR UPDATE locks, MAX_GOLD caps, input validation. |
