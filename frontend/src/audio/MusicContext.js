@@ -185,6 +185,13 @@ export class MusicContext {
   }
 
   /**
+   * Alias for playColiseum() - for consistency with scene naming
+   */
+  playColiseumTheme() {
+    this.playColiseum();
+  }
+
+  /**
    * Play social hub theme
    * Used in guild halls, social areas
    */
@@ -193,6 +200,13 @@ export class MusicContext {
     this.isInBattle = false;
     this.currentBattleType = null;
     this.audio.playMusic('social_hub_theme');
+  }
+
+  /**
+   * Alias for playSocialHub() - for consistency with scene naming
+   */
+  playSocialHubTheme() {
+    this.playSocialHub();
   }
 
   /**
