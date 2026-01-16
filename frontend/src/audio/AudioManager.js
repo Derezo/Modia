@@ -22,6 +22,7 @@
 import { AudioAssets } from './AudioAssets.js';
 import { MusicPlayer } from './MusicPlayer.js';
 import { SFXPlayer } from './SFXPlayer.js';
+import { MusicContext } from './MusicContext.js';
 
 export class AudioManager {
   constructor(game) {
@@ -30,6 +31,7 @@ export class AudioManager {
     this.assets = null;
     this.music = null;
     this.sfx = null;
+    this.musicContext = null;
 
     // Global state
     this.isMuted = false;
@@ -66,6 +68,7 @@ export class AudioManager {
       this.assets = new AudioAssets(this.context);
       this.music = new MusicPlayer(this.context, this.assets);
       this.sfx = new SFXPlayer(this.context, this.assets);
+      this.musicContext = new MusicContext(this);
 
       // Subscribe to settings changes
       this._subscribeToSettings();

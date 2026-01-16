@@ -181,6 +181,14 @@ export class Game {
     console.log('Modia initialized');
   }
 
+  /**
+   * Get the music context for region-aware music playback
+   * @returns {MusicContext|null} The music context instance
+   */
+  get musicContext() {
+    return this.audio?.musicContext;
+  }
+
   getApiUrl() {
     // In development, API runs on port 3000. In production, same origin with /api prefix
     if (window.location.hostname === 'localhost') {
