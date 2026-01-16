@@ -92,7 +92,7 @@ export class BattleScene extends Scene {
     this.guildmasterData = null;
 
     // Battle log turn counter
-    this.battleLogTurnCounter = 1;
+    this.battleLogTurnCounter = 0;
   }
 
   /**
