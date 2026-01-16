@@ -2,6 +2,7 @@
 // Combat properties: power (% damage), range, mpCost, effect (status to apply), effectDuration, effectChance
 // Scaling: All skills now scale to level 100 with linear attribute progression
 // Visual categories: fire, ice, lightning, physical, healing, buff, debuff, selfAura, poison, holy, shadow, earth, wind
+// Elements: physical, fire, ice, lightning, earth, wind, water, holy, dark (affects damage with elemental system)
 
 const SKILL_TREES = {
   warrior: {
@@ -41,22 +42,22 @@ const SKILL_TREES = {
       {
         name: 'Fire',
         skills: [
-          { id: 'fireball', name: 'Fireball', description: 'Launch a ball of fire (130% MATK, burn)', maxLevel: 100, baseCost: 50, type: 'active', icon: '🔥', power: 130, range: 4, mpCost: 18, damageType: 'magical', effect: 'burn', effectDuration: 2, effectChance: 0.5, visualCategory: 'fire', scaling: { power: 0.7, effectChance: 0.004 } },
-          { id: 'inferno', name: 'Inferno', description: 'Burn all enemies in area (180% MATK)', maxLevel: 100, baseCost: 150, type: 'active', icon: '🌋', requires: { fireball: 25 }, power: 180, range: 4, mpCost: 35, damageType: 'magical', aoeRadius: 2, effect: 'burn', effectDuration: 3, effectChance: 0.8, visualCategory: 'fire', scaling: { power: 0.8, effectChance: 0.002 } }
+          { id: 'fireball', name: 'Fireball', description: 'Launch a ball of fire (130% MATK, burn)', maxLevel: 100, baseCost: 50, type: 'active', icon: '🔥', power: 130, range: 4, mpCost: 18, damageType: 'magical', element: 'fire', effect: 'burn', effectDuration: 2, effectChance: 0.5, visualCategory: 'fire', scaling: { power: 0.7, effectChance: 0.004 } },
+          { id: 'inferno', name: 'Inferno', description: 'Burn all enemies in area (180% MATK)', maxLevel: 100, baseCost: 150, type: 'active', icon: '🌋', requires: { fireball: 25 }, power: 180, range: 4, mpCost: 35, damageType: 'magical', element: 'fire', aoeRadius: 2, effect: 'burn', effectDuration: 3, effectChance: 0.8, visualCategory: 'fire', scaling: { power: 0.8, effectChance: 0.002 } }
         ]
       },
       {
         name: 'Ice',
         skills: [
-          { id: 'ice_shard', name: 'Ice Shard', description: 'Pierce with ice (100% MATK, slow)', maxLevel: 100, baseCost: 50, type: 'active', icon: '❄️', power: 100, range: 4, mpCost: 8, damageType: 'magical', effect: 'slow', effectDuration: 2, effectChance: 0.6, visualCategory: 'ice', scaling: { power: 0.6, effectChance: 0.004 } },
-          { id: 'blizzard', name: 'Blizzard', description: 'Freeze enemies in area (110% MATK)', maxLevel: 100, baseCost: 150, type: 'active', icon: '🌨️', requires: { ice_shard: 25 }, power: 110, range: 4, mpCost: 30, damageType: 'magical', aoeRadius: 2, effect: 'freeze', effectDuration: 1, effectChance: 0.5, visualCategory: 'ice', scaling: { power: 0.7, effectChance: 0.004, effectDuration: 0.01 } }
+          { id: 'ice_shard', name: 'Ice Shard', description: 'Pierce with ice (100% MATK, slow)', maxLevel: 100, baseCost: 50, type: 'active', icon: '❄️', power: 100, range: 4, mpCost: 8, damageType: 'magical', element: 'ice', effect: 'slow', effectDuration: 2, effectChance: 0.6, visualCategory: 'ice', scaling: { power: 0.6, effectChance: 0.004 } },
+          { id: 'blizzard', name: 'Blizzard', description: 'Freeze enemies in area (110% MATK)', maxLevel: 100, baseCost: 150, type: 'active', icon: '🌨️', requires: { ice_shard: 25 }, power: 110, range: 4, mpCost: 30, damageType: 'magical', element: 'ice', aoeRadius: 2, effect: 'freeze', effectDuration: 1, effectChance: 0.5, visualCategory: 'ice', scaling: { power: 0.7, effectChance: 0.004, effectDuration: 0.01 } }
         ]
       },
       {
         name: 'Lightning',
         skills: [
-          { id: 'lightning_bolt', name: 'Lightning Bolt', description: 'Strike with lightning (150% MATK, stun)', maxLevel: 100, baseCost: 50, type: 'active', icon: '⚡', power: 150, range: 5, mpCost: 15, damageType: 'magical', effect: 'stun', effectDuration: 1, effectChance: 0.15, visualCategory: 'lightning', scaling: { power: 0.6, effectChance: 0.006 } },
-          { id: 'chain_lightning', name: 'Chain Lightning', description: 'Lightning that chains (80% per target)', maxLevel: 100, baseCost: 150, type: 'active', icon: '⛈️', requires: { lightning_bolt: 25 }, power: 80, range: 4, mpCost: 22, damageType: 'magical', chainTargets: 3, visualCategory: 'lightning', scaling: { power: 0.5, chainTargets: 0.02 } }
+          { id: 'lightning_bolt', name: 'Lightning Bolt', description: 'Strike with lightning (150% MATK, stun)', maxLevel: 100, baseCost: 50, type: 'active', icon: '⚡', power: 150, range: 5, mpCost: 15, damageType: 'magical', element: 'lightning', effect: 'stun', effectDuration: 1, effectChance: 0.15, visualCategory: 'lightning', scaling: { power: 0.6, effectChance: 0.006 } },
+          { id: 'chain_lightning', name: 'Chain Lightning', description: 'Lightning that chains (80% per target)', maxLevel: 100, baseCost: 150, type: 'active', icon: '⛈️', requires: { lightning_bolt: 25 }, power: 80, range: 4, mpCost: 22, damageType: 'magical', element: 'lightning', chainTargets: 3, visualCategory: 'lightning', scaling: { power: 0.5, chainTargets: 0.02 } }
         ]
       },
       {
@@ -110,8 +111,8 @@ const SKILL_TREES = {
       {
         name: 'Offense',
         skills: [
-          { id: 'acid_flask', name: 'Acid Flask', description: 'Acid damage + armor reduction (80% MATK)', maxLevel: 100, baseCost: 50, type: 'active', icon: '⚗️', power: 80, range: 3, mpCost: 8, damageType: 'magical', effect: 'corrode', effectDuration: 3, effectChance: 0.7, visualCategory: 'poison', scaling: { power: 0.5, effectChance: 0.003 } },
-          { id: 'poison_cloud', name: 'Poison Cloud', description: 'AoE poison (5% HP/turn for 3 turns)', maxLevel: 100, baseCost: 100, type: 'active', icon: '☠️', requires: { acid_flask: 15 }, power: 60, range: 4, mpCost: 18, damageType: 'magical', aoeRadius: 2, effect: 'poison', effectDuration: 3, effectChance: 0.9, visualCategory: 'poison', scaling: { power: 0.4, effectChance: 0.001, aoeRadius: 0.01 } }
+          { id: 'acid_flask', name: 'Acid Flask', description: 'Acid damage + armor reduction (80% MATK)', maxLevel: 100, baseCost: 50, type: 'active', icon: '⚗️', power: 80, range: 3, mpCost: 8, damageType: 'magical', element: 'earth', effect: 'corrode', effectDuration: 3, effectChance: 0.7, visualCategory: 'poison', scaling: { power: 0.5, effectChance: 0.003 } },
+          { id: 'poison_cloud', name: 'Poison Cloud', description: 'AoE poison (5% HP/turn for 3 turns)', maxLevel: 100, baseCost: 100, type: 'active', icon: '☠️', requires: { acid_flask: 15 }, power: 60, range: 4, mpCost: 18, damageType: 'magical', element: 'earth', aoeRadius: 2, effect: 'poison', effectDuration: 3, effectChance: 0.9, visualCategory: 'poison', scaling: { power: 0.4, effectChance: 0.001, aoeRadius: 0.01 } }
         ]
       },
       {
@@ -163,7 +164,7 @@ const SKILL_TREES = {
           { id: 'martyrs_resolve', name: "Martyr's Resolve", description: '+100% damage when below 30% HP', maxLevel: 100, baseCost: 200, type: 'active', icon: '✝️', requires: { berserker_leap: 25 }, power: 0, range: 0, mpCost: 30, selfBuff: 'martyr', buffDuration: 3, targetSelf: true, visualCategory: 'buff', scaling: { buffDuration: 0.02 } },
           { id: 'death_wish', name: 'Death Wish', description: '+1% ATK per 1% missing HP', maxLevel: 100, baseCost: 250, type: 'passive', icon: '💀', requires: { martyrs_resolve: 15 }, statBonus: { stat: 'lowHpDamage', percentPerLevel: 0.01 } },
           { id: 'final_stand', name: 'Final Stand', description: 'Survive at 1 HP once per battle', maxLevel: 100, baseCost: 400, type: 'active', icon: '🛡️', requires: { death_wish: 25 }, power: 0, range: 0, mpCost: 40, selfBuff: 'final_stand', buffDuration: 999, targetSelf: true, visualCategory: 'buff' },
-          { id: 'self_destruction', name: 'Self-Destruction', description: 'Deal HP as damage to all enemies, KO self', maxLevel: 100, baseCost: 500, type: 'active', icon: '☢️', requires: { final_stand: 15 }, power: 0, range: 3, mpCost: 0, aoeRadius: 3, visualCategory: 'fire', scaling: { aoeRadius: 0.02 } }
+          { id: 'self_destruction', name: 'Self-Destruction', description: 'Deal HP as damage to all enemies, KO self', maxLevel: 100, baseCost: 500, type: 'active', icon: '☢️', requires: { final_stand: 15 }, power: 0, range: 3, mpCost: 0, element: 'fire', aoeRadius: 3, visualCategory: 'fire', scaling: { aoeRadius: 0.02 } }
         ]
       }
     ]
@@ -178,26 +179,26 @@ const SKILL_TREES = {
       {
         name: 'Arcane Power',
         skills: [
-          { id: 'arcane_bolt', name: 'Arcane Bolt', description: '120% MATK, ignores resistance', maxLevel: 100, baseCost: 100, type: 'active', icon: '✨', power: 120, range: 5, mpCost: 12, damageType: 'magical', visualCategory: 'holy', scaling: { power: 0.6 } },
+          { id: 'arcane_bolt', name: 'Arcane Bolt', description: '120% MATK, ignores resistance', maxLevel: 100, baseCost: 100, type: 'active', icon: '✨', power: 120, range: 5, mpCost: 12, damageType: 'magical', element: 'holy', visualCategory: 'holy', scaling: { power: 0.6 } },
           { id: 'mana_shield', name: 'Mana Shield', description: 'Damage reduces MP instead of HP', maxLevel: 100, baseCost: 150, type: 'active', icon: '🛡️', requires: { arcane_bolt: 15 }, power: 0, range: 0, mpCost: 20, selfBuff: 'mana_shield', buffDuration: 3, targetSelf: true, visualCategory: 'selfAura', scaling: { buffDuration: 0.02 } },
           { id: 'spell_amplify', name: 'Spell Amplify', description: 'Next spell +75% damage', maxLevel: 100, baseCost: 200, type: 'active', icon: '📈', requires: { mana_shield: 15 }, power: 0, range: 0, mpCost: 25, selfBuff: 'amplify', buffDuration: 1, targetSelf: true, visualCategory: 'buff' },
           { id: 'arcane_mastery', name: 'Arcane Mastery', description: '+20% spell damage', maxLevel: 100, baseCost: 200, type: 'passive', icon: '📚', requires: { spell_amplify: 15 }, statBonus: { stat: 'spellDamage', percentPerLevel: 0.2 } },
           { id: 'penetrating_magic', name: 'Penetrating Magic', description: 'Ignore 25% magic resistance', maxLevel: 100, baseCost: 250, type: 'passive', icon: '🔮', requires: { arcane_mastery: 25 }, statBonus: { stat: 'magicPen', percentPerLevel: 0.25 } },
-          { id: 'arcane_explosion', name: 'Arcane Explosion', description: '250% MATK, 3-tile AoE', maxLevel: 100, baseCost: 300, type: 'active', icon: '💥', requires: { penetrating_magic: 15 }, power: 250, range: 4, mpCost: 50, damageType: 'magical', aoeRadius: 3, visualCategory: 'holy', scaling: { power: 1.0, aoeRadius: 0.01 } },
+          { id: 'arcane_explosion', name: 'Arcane Explosion', description: '250% MATK, 3-tile AoE', maxLevel: 100, baseCost: 300, type: 'active', icon: '💥', requires: { penetrating_magic: 15 }, power: 250, range: 4, mpCost: 50, damageType: 'magical', element: 'holy', aoeRadius: 3, visualCategory: 'holy', scaling: { power: 1.0, aoeRadius: 0.01 } },
           { id: 'infinite_mana', name: 'Infinite Mana', description: '20% chance spell costs no MP', maxLevel: 100, baseCost: 350, type: 'passive', icon: '♾️', requires: { arcane_explosion: 25 }, statBonus: { stat: 'freeCastChance', percentPerLevel: 0.2 } },
-          { id: 'armageddon', name: 'Armageddon', description: '400% MATK to all enemies', maxLevel: 100, baseCost: 500, type: 'active', icon: '🌋', requires: { infinite_mana: 15 }, power: 400, range: 10, mpCost: 100, damageType: 'magical', aoeRadius: 10, visualCategory: 'fire', scaling: { power: 1.5 } }
+          { id: 'armageddon', name: 'Armageddon', description: '400% MATK to all enemies', maxLevel: 100, baseCost: 500, type: 'active', icon: '🌋', requires: { infinite_mana: 15 }, power: 400, range: 10, mpCost: 100, damageType: 'magical', element: 'fire', aoeRadius: 10, visualCategory: 'fire', scaling: { power: 1.5 } }
         ]
       },
       {
         name: 'Elemental Mastery',
         skills: [
           { id: 'element_shift', name: 'Element Shift', description: 'Change spell element mid-cast', maxLevel: 100, baseCost: 100, type: 'active', icon: '🔄', power: 0, range: 0, mpCost: 10, targetSelf: true, visualCategory: 'selfAura' },
-          { id: 'tri_element', name: 'Tri-Element', description: 'Fire+Ice+Lightning, 100% each', maxLevel: 100, baseCost: 200, type: 'active', icon: '🌈', requires: { element_shift: 15 }, power: 100, range: 4, mpCost: 30, damageType: 'magical', hits: 3, visualCategory: 'lightning', scaling: { power: 0.6, hits: 0.02 } },
-          { id: 'prismatic_blast', name: 'Prismatic Blast', description: 'Random element, 200% MATK', maxLevel: 100, baseCost: 200, type: 'active', icon: '💎', requires: { tri_element: 25 }, power: 200, range: 5, mpCost: 40, damageType: 'magical', visualCategory: 'holy', scaling: { power: 0.8 } },
+          { id: 'tri_element', name: 'Tri-Element', description: 'Fire+Ice+Lightning, 100% each', maxLevel: 100, baseCost: 200, type: 'active', icon: '🌈', requires: { element_shift: 15 }, power: 100, range: 4, mpCost: 30, damageType: 'magical', element: 'fire', hits: 3, visualCategory: 'lightning', scaling: { power: 0.6, hits: 0.02 } },
+          { id: 'prismatic_blast', name: 'Prismatic Blast', description: 'Random element, 200% MATK', maxLevel: 100, baseCost: 200, type: 'active', icon: '💎', requires: { tri_element: 25 }, power: 200, range: 5, mpCost: 40, damageType: 'magical', element: 'holy', visualCategory: 'holy', scaling: { power: 0.8 } },
           { id: 'elemental_shield', name: 'Elemental Shield', description: 'Resist current highest element +50%', maxLevel: 100, baseCost: 200, type: 'active', icon: '🔰', requires: { prismatic_blast: 15 }, power: 0, range: 0, mpCost: 25, selfBuff: 'elem_shield', buffDuration: 3, targetSelf: true, visualCategory: 'selfAura', scaling: { buffDuration: 0.02 } },
           { id: 'all_elements', name: 'All Elements', description: '+10% all elemental damage', maxLevel: 100, baseCost: 250, type: 'passive', icon: '🌐', requires: { elemental_shield: 15 }, statBonus: { stat: 'elementalDamage', percentPerLevel: 0.1 } },
-          { id: 'elemental_overload', name: 'Elemental Overload', description: 'Hit weakness for +100% damage', maxLevel: 100, baseCost: 350, type: 'active', icon: '⚡', requires: { all_elements: 25 }, power: 200, range: 5, mpCost: 60, damageType: 'magical', visualCategory: 'lightning', scaling: { power: 1.0 } },
-          { id: 'avatar_of_elements', name: 'Avatar of Elements', description: 'Cast 3 elemental spells instantly', maxLevel: 100, baseCost: 500, type: 'active', icon: '👑', requires: { elemental_overload: 15 }, power: 150, range: 5, mpCost: 80, damageType: 'magical', hits: 3, visualCategory: 'holy', scaling: { power: 0.8, hits: 0.02 } }
+          { id: 'elemental_overload', name: 'Elemental Overload', description: 'Hit weakness for +100% damage', maxLevel: 100, baseCost: 350, type: 'active', icon: '⚡', requires: { all_elements: 25 }, power: 200, range: 5, mpCost: 60, damageType: 'magical', element: 'lightning', visualCategory: 'lightning', scaling: { power: 1.0 } },
+          { id: 'avatar_of_elements', name: 'Avatar of Elements', description: 'Cast 3 elemental spells instantly', maxLevel: 100, baseCost: 500, type: 'active', icon: '👑', requires: { elemental_overload: 15 }, power: 150, range: 5, mpCost: 80, damageType: 'magical', element: 'holy', hits: 3, visualCategory: 'holy', scaling: { power: 0.8, hits: 0.02 } }
         ]
       }
     ]
@@ -212,14 +213,14 @@ const SKILL_TREES = {
       {
         name: 'Stealth',
         skills: [
-          { id: 'shadow_step', name: 'Shadow Step', description: 'Teleport behind target', maxLevel: 100, baseCost: 100, type: 'active', icon: '👤', power: 0, range: 4, mpCost: 15, visualCategory: 'shadow', scaling: { range: 0.03 } },
-          { id: 'vanish', name: 'Vanish', description: 'Become invisible for 2 turns', maxLevel: 100, baseCost: 150, type: 'active', icon: '🌫️', requires: { shadow_step: 15 }, power: 0, range: 0, mpCost: 20, selfBuff: 'invisible', buffDuration: 2, targetSelf: true, visualCategory: 'shadow', scaling: { buffDuration: 0.02 } },
-          { id: 'backstab', name: 'Backstab', description: '+100% damage from behind', maxLevel: 100, baseCost: 150, type: 'active', icon: '🗡️', requires: { vanish: 15 }, power: 200, range: 1, mpCost: 18, visualCategory: 'shadow', scaling: { power: 0.8 } },
-          { id: 'assassination', name: 'Assassination', description: '300% ATK if invisible', maxLevel: 100, baseCost: 250, type: 'active', icon: '☠️', requires: { backstab: 25 }, power: 300, range: 1, mpCost: 35, visualCategory: 'shadow', scaling: { power: 1.2 } },
+          { id: 'shadow_step', name: 'Shadow Step', description: 'Teleport behind target', maxLevel: 100, baseCost: 100, type: 'active', icon: '👤', power: 0, range: 4, mpCost: 15, element: 'dark', visualCategory: 'shadow', scaling: { range: 0.03 } },
+          { id: 'vanish', name: 'Vanish', description: 'Become invisible for 2 turns', maxLevel: 100, baseCost: 150, type: 'active', icon: '🌫️', requires: { shadow_step: 15 }, power: 0, range: 0, mpCost: 20, element: 'dark', selfBuff: 'invisible', buffDuration: 2, targetSelf: true, visualCategory: 'shadow', scaling: { buffDuration: 0.02 } },
+          { id: 'backstab', name: 'Backstab', description: '+100% damage from behind', maxLevel: 100, baseCost: 150, type: 'active', icon: '🗡️', requires: { vanish: 15 }, power: 200, range: 1, mpCost: 18, element: 'dark', visualCategory: 'shadow', scaling: { power: 0.8 } },
+          { id: 'assassination', name: 'Assassination', description: '300% ATK if invisible', maxLevel: 100, baseCost: 250, type: 'active', icon: '☠️', requires: { backstab: 25 }, power: 300, range: 1, mpCost: 35, element: 'dark', visualCategory: 'shadow', scaling: { power: 1.2 } },
           { id: 'silent_step', name: 'Silent Step', description: 'Movement does not reveal', maxLevel: 100, baseCost: 200, type: 'passive', icon: '🔇', requires: { assassination: 15 }, statBonus: { stat: 'stealthMove', percentPerLevel: 0.01 } },
-          { id: 'shadow_clone', name: 'Shadow Clone', description: 'Create clone with 25% stats', maxLevel: 100, baseCost: 300, type: 'active', icon: '👥', requires: { silent_step: 15 }, power: 0, range: 0, mpCost: 40, targetSelf: true, visualCategory: 'shadow', scaling: {} },
-          { id: 'death_mark', name: 'Death Mark', description: 'Target takes +50% damage for 3 turns', maxLevel: 100, baseCost: 300, type: 'active', icon: '💀', requires: { shadow_clone: 15 }, power: 0, range: 3, mpCost: 30, effect: 'marked', effectDuration: 3, effectChance: 1.0, visualCategory: 'debuff', scaling: { effectDuration: 0.02 } },
-          { id: 'one_thousand_cuts', name: 'One Thousand Cuts', description: '20 hits at 20% ATK from stealth', maxLevel: 100, baseCost: 500, type: 'active', icon: '⚔️', requires: { death_mark: 15 }, power: 20, range: 1, mpCost: 70, hits: 20, visualCategory: 'shadow', scaling: { power: 0.3, hits: 0.1 } }
+          { id: 'shadow_clone', name: 'Shadow Clone', description: 'Create clone with 25% stats', maxLevel: 100, baseCost: 300, type: 'active', icon: '👥', requires: { silent_step: 15 }, power: 0, range: 0, mpCost: 40, element: 'dark', targetSelf: true, visualCategory: 'shadow', scaling: {} },
+          { id: 'death_mark', name: 'Death Mark', description: 'Target takes +50% damage for 3 turns', maxLevel: 100, baseCost: 300, type: 'active', icon: '💀', requires: { shadow_clone: 15 }, power: 0, range: 3, mpCost: 30, element: 'dark', effect: 'marked', effectDuration: 3, effectChance: 1.0, visualCategory: 'debuff', scaling: { effectDuration: 0.02 } },
+          { id: 'one_thousand_cuts', name: 'One Thousand Cuts', description: '20 hits at 20% ATK from stealth', maxLevel: 100, baseCost: 500, type: 'active', icon: '⚔️', requires: { death_mark: 15 }, power: 20, range: 1, mpCost: 70, element: 'dark', hits: 20, visualCategory: 'shadow', scaling: { power: 0.3, hits: 0.1 } }
         ]
       },
       {
@@ -228,10 +229,10 @@ const SKILL_TREES = {
           { id: 'shuriken', name: 'Shuriken', description: '80% ATK ranged attack', maxLevel: 100, baseCost: 100, type: 'active', icon: '✴️', power: 80, range: 4, mpCost: 10, visualCategory: 'physical', scaling: { power: 0.5, range: 0.02 } },
           { id: 'kunai_barrage', name: 'Kunai Barrage', description: '3 shurikens at 50% ATK', maxLevel: 100, baseCost: 150, type: 'active', icon: '🔪', requires: { shuriken: 15 }, power: 50, range: 4, mpCost: 18, hits: 3, visualCategory: 'physical', scaling: { power: 0.4, hits: 0.02 } },
           { id: 'ninja_smoke_bomb', name: 'Smoke Bomb', description: 'AoE blind + evasion boost', maxLevel: 100, baseCost: 150, type: 'active', icon: '💨', requires: { kunai_barrage: 15 }, power: 0, range: 3, mpCost: 15, aoeRadius: 2, effect: 'blind', effectDuration: 2, effectChance: 0.8, visualCategory: 'debuff', scaling: { effectChance: 0.002, aoeRadius: 0.01 } },
-          { id: 'poison_blade', name: 'Poison Blade', description: '100% ATK + lethal poison', maxLevel: 100, baseCost: 200, type: 'active', icon: '🗡️☠️', requires: { ninja_smoke_bomb: 15 }, power: 100, range: 1, mpCost: 25, effect: 'poison', effectDuration: 3, effectChance: 0.9, visualCategory: 'poison', scaling: { power: 0.6, effectChance: 0.001 } },
+          { id: 'poison_blade', name: 'Poison Blade', description: '100% ATK + lethal poison', maxLevel: 100, baseCost: 200, type: 'active', icon: '🗡️☠️', requires: { ninja_smoke_bomb: 15 }, power: 100, range: 1, mpCost: 25, element: 'earth', effect: 'poison', effectDuration: 3, effectChance: 0.9, visualCategory: 'poison', scaling: { power: 0.6, effectChance: 0.001 } },
           { id: 'ninja_tools', name: 'Ninja Tools', description: '+20% thrown weapon damage', maxLevel: 100, baseCost: 200, type: 'passive', icon: '🎒', requires: { poison_blade: 15 }, statBonus: { stat: 'thrownDamage', percentPerLevel: 0.2 } },
-          { id: 'explosive_tag', name: 'Explosive Tag', description: 'Place trap, 200% ATK when triggered', maxLevel: 100, baseCost: 300, type: 'active', icon: '💣', requires: { ninja_tools: 25 }, power: 200, range: 4, mpCost: 35, visualCategory: 'fire', scaling: { power: 0.8 } },
-          { id: 'shadow_arts', name: 'Shadow Arts', description: 'All attacks +50% from any angle for 3 turns', maxLevel: 100, baseCost: 500, type: 'active', icon: '🥷', requires: { explosive_tag: 15 }, power: 0, range: 0, mpCost: 60, selfBuff: 'shadow_arts', buffDuration: 3, targetSelf: true, visualCategory: 'shadow', scaling: { buffDuration: 0.02 } }
+          { id: 'explosive_tag', name: 'Explosive Tag', description: 'Place trap, 200% ATK when triggered', maxLevel: 100, baseCost: 300, type: 'active', icon: '💣', requires: { ninja_tools: 25 }, power: 200, range: 4, mpCost: 35, element: 'fire', visualCategory: 'fire', scaling: { power: 0.8 } },
+          { id: 'shadow_arts', name: 'Shadow Arts', description: 'All attacks +50% from any angle for 3 turns', maxLevel: 100, baseCost: 500, type: 'active', icon: '🥷', requires: { explosive_tag: 15 }, power: 0, range: 0, mpCost: 60, element: 'dark', selfBuff: 'shadow_arts', buffDuration: 3, targetSelf: true, visualCategory: 'shadow', scaling: { buffDuration: 0.02 } }
         ]
       }
     ]
@@ -246,25 +247,25 @@ const SKILL_TREES = {
       {
         name: 'Transmutation',
         skills: [
-          { id: 'transmute', name: 'Transmute', description: 'Convert debuff to buff (or reverse)', maxLevel: 100, baseCost: 100, type: 'active', icon: '🔄', power: 0, range: 3, mpCost: 20, visualCategory: 'holy', scaling: { range: 0.02 } },
-          { id: 'gold_touch', name: 'Gold Touch', description: '+50% gold from target enemy', maxLevel: 100, baseCost: 100, type: 'active', icon: '💰', power: 0, range: 1, mpCost: 15, visualCategory: 'holy' },
-          { id: 'element_convert', name: 'Element Convert', description: "Change enemy's elemental weakness", maxLevel: 100, baseCost: 150, type: 'active', icon: '⚗️', requires: { transmute: 15, gold_touch: 15 }, power: 0, range: 4, mpCost: 25, visualCategory: 'holy', scaling: { range: 0.02 } },
+          { id: 'transmute', name: 'Transmute', description: 'Convert debuff to buff (or reverse)', maxLevel: 100, baseCost: 100, type: 'active', icon: '🔄', power: 0, range: 3, mpCost: 20, element: 'holy', visualCategory: 'holy', scaling: { range: 0.02 } },
+          { id: 'gold_touch', name: 'Gold Touch', description: '+50% gold from target enemy', maxLevel: 100, baseCost: 100, type: 'active', icon: '💰', power: 0, range: 1, mpCost: 15, element: 'earth', visualCategory: 'holy' },
+          { id: 'element_convert', name: 'Element Convert', description: "Change enemy's elemental weakness", maxLevel: 100, baseCost: 150, type: 'active', icon: '⚗️', requires: { transmute: 15, gold_touch: 15 }, power: 0, range: 4, mpCost: 25, element: 'holy', visualCategory: 'holy', scaling: { range: 0.02 } },
           { id: 'philosophers_stone', name: "Philosopher's Stone", description: '+25% potion effectiveness', maxLevel: 100, baseCost: 200, type: 'passive', icon: '💎', requires: { element_convert: 15 }, statBonus: { stat: 'potionEffectiveness', percentPerLevel: 0.25 } },
-          { id: 'matter_shift', name: 'Matter Shift', description: 'Swap positions with ally or enemy', maxLevel: 100, baseCost: 200, type: 'active', icon: '↔️', requires: { philosophers_stone: 25 }, power: 0, range: 3, mpCost: 30, visualCategory: 'holy', scaling: { range: 0.03 } },
-          { id: 'equivalent_exchange', name: 'Equivalent Exchange', description: 'Trade HP for MP or reverse', maxLevel: 100, baseCost: 250, type: 'active', icon: '⚖️', requires: { matter_shift: 15 }, power: 0, range: 0, mpCost: 40, targetSelf: true, visualCategory: 'selfAura' },
-          { id: 'perfect_transmutation', name: 'Perfect Transmutation', description: 'Transform enemy to weaker form for 3 turns', maxLevel: 100, baseCost: 500, type: 'active', icon: '✨', requires: { equivalent_exchange: 15 }, power: 0, range: 4, mpCost: 80, effect: 'transmuted', effectDuration: 3, effectChance: 0.7, visualCategory: 'holy', scaling: { effectChance: 0.003, effectDuration: 0.01 } }
+          { id: 'matter_shift', name: 'Matter Shift', description: 'Swap positions with ally or enemy', maxLevel: 100, baseCost: 200, type: 'active', icon: '↔️', requires: { philosophers_stone: 25 }, power: 0, range: 3, mpCost: 30, element: 'holy', visualCategory: 'holy', scaling: { range: 0.03 } },
+          { id: 'equivalent_exchange', name: 'Equivalent Exchange', description: 'Trade HP for MP or reverse', maxLevel: 100, baseCost: 250, type: 'active', icon: '⚖️', requires: { matter_shift: 15 }, power: 0, range: 0, mpCost: 40, element: 'holy', targetSelf: true, visualCategory: 'selfAura' },
+          { id: 'perfect_transmutation', name: 'Perfect Transmutation', description: 'Transform enemy to weaker form for 3 turns', maxLevel: 100, baseCost: 500, type: 'active', icon: '✨', requires: { equivalent_exchange: 15 }, power: 0, range: 4, mpCost: 80, element: 'holy', effect: 'transmuted', effectDuration: 3, effectChance: 0.7, visualCategory: 'holy', scaling: { effectChance: 0.003, effectDuration: 0.01 } }
         ]
       },
       {
         name: 'Explosives',
         skills: [
-          { id: 'volatile_mix', name: 'Volatile Mix', description: '150% ATK bomb + random status', maxLevel: 100, baseCost: 100, type: 'active', icon: '🧪', power: 150, range: 4, mpCost: 18, damageType: 'magical', visualCategory: 'fire', scaling: { power: 0.7 } },
-          { id: 'napalm', name: 'Napalm', description: '2-tile fire zone for 3 turns', maxLevel: 100, baseCost: 150, type: 'active', icon: '🔥', requires: { volatile_mix: 15 }, power: 80, range: 4, mpCost: 22, aoeRadius: 2, effect: 'burn', effectDuration: 3, effectChance: 1.0, visualCategory: 'fire', scaling: { power: 0.5, aoeRadius: 0.01 } },
-          { id: 'elemental_bomb', name: 'Elemental Bomb', description: 'Choose fire/ice/lightning, 180% ATK', maxLevel: 100, baseCost: 200, type: 'active', icon: '💣', requires: { napalm: 15 }, power: 180, range: 5, mpCost: 30, damageType: 'magical', visualCategory: 'fire', scaling: { power: 0.8 } },
-          { id: 'scatter_shot', name: 'Scatter Shot', description: '5 random targets, 60% ATK each', maxLevel: 100, baseCost: 200, type: 'active', icon: '💥', requires: { elemental_bomb: 15 }, power: 60, range: 5, mpCost: 35, hits: 5, visualCategory: 'fire', scaling: { power: 0.4, hits: 0.03 } },
+          { id: 'volatile_mix', name: 'Volatile Mix', description: '150% ATK bomb + random status', maxLevel: 100, baseCost: 100, type: 'active', icon: '🧪', power: 150, range: 4, mpCost: 18, damageType: 'magical', element: 'fire', visualCategory: 'fire', scaling: { power: 0.7 } },
+          { id: 'napalm', name: 'Napalm', description: '2-tile fire zone for 3 turns', maxLevel: 100, baseCost: 150, type: 'active', icon: '🔥', requires: { volatile_mix: 15 }, power: 80, range: 4, mpCost: 22, element: 'fire', aoeRadius: 2, effect: 'burn', effectDuration: 3, effectChance: 1.0, visualCategory: 'fire', scaling: { power: 0.5, aoeRadius: 0.01 } },
+          { id: 'elemental_bomb', name: 'Elemental Bomb', description: 'Choose fire/ice/lightning, 180% ATK', maxLevel: 100, baseCost: 200, type: 'active', icon: '💣', requires: { napalm: 15 }, power: 180, range: 5, mpCost: 30, damageType: 'magical', element: 'fire', visualCategory: 'fire', scaling: { power: 0.8 } },
+          { id: 'scatter_shot', name: 'Scatter Shot', description: '5 random targets, 60% ATK each', maxLevel: 100, baseCost: 200, type: 'active', icon: '💥', requires: { elemental_bomb: 15 }, power: 60, range: 5, mpCost: 35, element: 'fire', hits: 5, visualCategory: 'fire', scaling: { power: 0.4, hits: 0.03 } },
           { id: 'unstable_mixture', name: 'Unstable Mixture', description: '+15% bomb crit chance', maxLevel: 100, baseCost: 250, type: 'passive', icon: '⚠️', requires: { scatter_shot: 15 }, statBonus: { stat: 'bombCrit', percentPerLevel: 0.15 } },
-          { id: 'tactical_nuke', name: 'Tactical Nuke', description: '250% ATK, 4-tile AoE', maxLevel: 100, baseCost: 350, type: 'active', icon: '☢️', requires: { unstable_mixture: 25 }, power: 250, range: 6, mpCost: 55, damageType: 'magical', aoeRadius: 4, visualCategory: 'fire', scaling: { power: 1.0, aoeRadius: 0.02 } },
-          { id: 'alchemical_warfare', name: 'Alchemical Warfare', description: 'All enemies: 200% + burn + poison + slow', maxLevel: 100, baseCost: 500, type: 'active', icon: '🌍', requires: { tactical_nuke: 15 }, power: 200, range: 10, mpCost: 90, damageType: 'magical', aoeRadius: 10, effect: 'burn', effectDuration: 3, effectChance: 1.0, visualCategory: 'fire', scaling: { power: 1.2 } }
+          { id: 'tactical_nuke', name: 'Tactical Nuke', description: '250% ATK, 4-tile AoE', maxLevel: 100, baseCost: 350, type: 'active', icon: '☢️', requires: { unstable_mixture: 25 }, power: 250, range: 6, mpCost: 55, damageType: 'magical', element: 'fire', aoeRadius: 4, visualCategory: 'fire', scaling: { power: 1.0, aoeRadius: 0.02 } },
+          { id: 'alchemical_warfare', name: 'Alchemical Warfare', description: 'All enemies: 200% + burn + poison + slow', maxLevel: 100, baseCost: 500, type: 'active', icon: '🌍', requires: { tactical_nuke: 15 }, power: 200, range: 10, mpCost: 90, damageType: 'magical', element: 'fire', aoeRadius: 10, effect: 'burn', effectDuration: 3, effectChance: 1.0, visualCategory: 'fire', scaling: { power: 1.2 } }
         ]
       }
     ]

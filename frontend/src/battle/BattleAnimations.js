@@ -215,9 +215,52 @@ export class BattleAnimations {
   }
 
   /**
-   * Add a damage number animation
+   * Element-to-color mapping for damage numbers
    */
-  addDamageNumber(x, y, damage, isCritical = false) {
+  static ELEMENT_COLORS = {
+    physical: '#ff4444',    // Red (default damage)
+    fire: '#ff4400',        // Orange-red
+    ice: '#88ccff',         // Light blue
+    lightning: '#ffff44',   // Yellow
+    earth: '#886644',       // Brown
+    wind: '#aaccaa',        // Sage green
+    water: '#4488ff',       // Blue
+    holy: '#ffff88',        // Bright yellow
+    dark: '#aa66cc'         // Purple
+  };
+
+  /**
+   * Add a damage number animation
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} damage - Damage amount
+   * @param {boolean} isCritical - Whether hit was critical
+   * @param {string} element - Element type for color (optional)
+   * @param {number} elementalModifier - Elemental effectiveness (optional)
+   */
+  addDamageNumber(x, y, damage, isCritical = false, element = null, elementalModifier = null) {
+    // Determine color based on element
+    let color = BattleAnimations.ELEMENT_COLORS.physical;
+    if (isCritical) {
+      color = '#ffcc00'; // Gold for criticals always
+    } else if (element && BattleAnimations.ELEMENT_COLORS[element]) {
+      color = BattleAnimations.ELEMENT_COLORS[element];
+    }
+
+    // Determine effectiveness text
+    let effectivenessText = null;
+    if (elementalModifier !== null && elementalModifier !== 1.0) {
+      if (elementalModifier >= 1.5) {
+        effectivenessText = 'WEAK!';
+      } else if (elementalModifier > 1.0) {
+        effectivenessText = 'Weak';
+      } else if (elementalModifier <= 0.25) {
+        effectivenessText = 'RESIST';
+      } else if (elementalModifier < 1.0) {
+        effectivenessText = 'Resist';
+      }
+    }
+
     this.animations.push({
       type: 'damage',
       x,
@@ -228,7 +271,37 @@ export class BattleAnimations {
       timer: 0,
       duration: 1.2,
       velocityY: -80,
-      scale: isCritical ? 1.5 : 1.0
+      scale: isCritical ? 1.5 : 1.0,
+      color,
+      element,
+      elementalModifier,
+      effectivenessText
+    });
+  }
+
+  /**
+   * Add an absorb (healing from elemental damage) animation
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} amount - Healing amount
+   * @param {string} element - Element type that was absorbed
+   */
+  addAbsorbNumber(x, y, amount, element = null) {
+    const color = element && BattleAnimations.ELEMENT_COLORS[element]
+      ? BattleAnimations.ELEMENT_COLORS[element]
+      : '#44ff88';
+
+    this.animations.push({
+      type: 'absorb',
+      x,
+      y,
+      startY: y,
+      value: amount,
+      timer: 0,
+      duration: 1.2,
+      velocityY: -60,
+      color,
+      element
     });
   }
 
@@ -392,6 +465,9 @@ export class BattleAnimations {
         case 'damage':
           this.renderDamageNumber(ctx, anim);
           break;
+        case 'absorb':
+          this.renderAbsorbNumber(ctx, anim);
+          break;
         case 'heal':
           this.renderHealNumber(ctx, anim);
           break;
@@ -428,7 +504,7 @@ export class BattleAnimations {
   }
 
   /**
-   * Render damage number
+   * Render damage number with elemental coloring
    */
   renderDamageNumber(ctx, anim) {
     const fontSize = anim.isCritical ? 24 : 18;
@@ -440,8 +516,8 @@ export class BattleAnimations {
     ctx.fillStyle = '#000';
     ctx.fillText(`-${anim.value}`, anim.x + 2, anim.y + 2);
 
-    // Main text
-    ctx.fillStyle = anim.isCritical ? '#ffcc00' : '#ff4444';
+    // Main text - use element color or critical gold
+    ctx.fillStyle = anim.color || (anim.isCritical ? '#ffcc00' : '#ff4444');
     ctx.fillText(`-${anim.value}`, anim.x, anim.y);
 
     // Critical indicator
@@ -450,6 +526,34 @@ export class BattleAnimations {
       ctx.fillStyle = '#ffcc00';
       ctx.fillText('CRITICAL!', anim.x, anim.y - 20);
     }
+    // Elemental effectiveness indicator (below critical if both exist)
+    else if (anim.effectivenessText) {
+      ctx.font = '11px Arial';
+      ctx.fillStyle = anim.elementalModifier > 1.0 ? '#ff6644' : '#4488ff';
+      ctx.fillText(anim.effectivenessText, anim.x, anim.y - 18);
+    }
+  }
+
+  /**
+   * Render absorb (healing from element) number
+   */
+  renderAbsorbNumber(ctx, anim) {
+    ctx.font = 'bold 18px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Shadow
+    ctx.fillStyle = '#000';
+    ctx.fillText(`+${anim.value}`, anim.x + 2, anim.y + 2);
+
+    // Main text with element tint
+    ctx.fillStyle = anim.color || '#44ff88';
+    ctx.fillText(`+${anim.value}`, anim.x, anim.y);
+
+    // Absorb indicator
+    ctx.font = '11px Arial';
+    ctx.fillStyle = anim.color || '#44ff88';
+    ctx.fillText('ABSORB', anim.x, anim.y - 18);
   }
 
   /**

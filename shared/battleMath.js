@@ -12,7 +12,15 @@
  * - Crit: 5% base + LCK/300 (max 50%)
  * - Evasion: 2% base + (defAGI - atkAGI)/400 + defLCK/400 (max 35%)
  * - Status resistance: 10% base + LCK/200 (max 50%)
+ * - Elemental damage: 8 elements with resistance/weakness mechanics
  */
+
+// Import elemental constants from shared constants
+import {
+  ELEMENTS,
+  MAX_ELEMENTAL_RESISTANCE,
+  RACIAL_RESISTANCES
+} from './constants.js';
 
 // ============================================================================
 // CONSTANTS
@@ -468,4 +476,158 @@ export function applyVariance(base, randomValue = null) {
  */
 export function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+// ============================================================================
+// ELEMENTAL DAMAGE SYSTEM
+// ============================================================================
+
+/**
+ * Get total elemental resistance for a defender against a specific element
+ * Combines: racial innate + equipment + buff sources
+ *
+ * @param {Object} defender - Defender unit with { race, elementalResistances, statusEffects }
+ * @param {string} element - Element type (fire, ice, lightning, etc.)
+ * @returns {number} Total resistance value (-100 to 100+, will be capped during calculation)
+ */
+export function getElementalResistance(defender, element) {
+  if (!element || element === 'physical') return 0;
+
+  let totalResistance = 0;
+
+  // 1. Racial innate resistance
+  const race = defender.race?.toLowerCase();
+  if (race && RACIAL_RESISTANCES[race]) {
+    const racialResist = RACIAL_RESISTANCES[race][element] || 0;
+    totalResistance += racialResist;
+  }
+
+  // 2. Enemy innate resistances (from elemental_resistances field)
+  if (defender.elementalResistances && defender.elementalResistances[element]) {
+    totalResistance += defender.elementalResistances[element];
+  }
+
+  // 3. Equipment resistances (from equipped items with elemental_resistance property)
+  if (defender.equipment) {
+    for (const slot of Object.values(defender.equipment)) {
+      if (slot?.elementalResistances && slot.elementalResistances[element]) {
+        totalResistance += slot.elementalResistances[element];
+      }
+    }
+  }
+
+  // 4. Buff-based resistances (from status effects like 'fire_resist')
+  if (defender.statusEffects) {
+    for (const effect of defender.statusEffects) {
+      // Handle resistance buffs like 'fire_resist', 'ice_resist', etc.
+      if (effect.type === `${element}_resist`) {
+        totalResistance += effect.value || 25; // Default +25% resist from buff
+      }
+      // Handle elemental shield that provides resistance to all elements
+      if (effect.type === 'elemental_shield') {
+        totalResistance += effect.value || 15;
+      }
+    }
+  }
+
+  return totalResistance;
+}
+
+/**
+ * Calculate elemental damage modifier based on defender's resistance
+ * Formula:
+ * - Resistance is capped at MAX_ELEMENTAL_RESISTANCE (90%) to ensure some damage always gets through
+ * - Negative resistance (weakness) increases damage
+ * - Absorb (150+ resistance) converts damage to healing (returns negative modifier)
+ *
+ * @param {Object} defender - Defender unit
+ * @param {string} element - Element type (fire, ice, lightning, etc.)
+ * @returns {number} Damage multiplier (0.1 minimum, can be negative for absorb)
+ */
+export function calculateElementalModifier(defender, element) {
+  // Physical/non-elemental attacks have no modifier
+  if (!element || element === 'physical') return 1.0;
+
+  const resistance = getElementalResistance(defender, element);
+
+  // Handle absorb (heals instead of damages)
+  if (resistance >= 150) {
+    return -0.5; // Negative means healing (50% of damage becomes healing)
+  }
+
+  // Handle immunity
+  if (resistance >= 100) {
+    return 0;
+  }
+
+  // Cap resistance at 90% (always at least 10% damage gets through)
+  const cappedResistance = Math.min(resistance, MAX_ELEMENTAL_RESISTANCE);
+
+  // Calculate modifier:
+  // - resistance 0 = 100% damage (1.0)
+  // - resistance 50 = 50% damage (0.5)
+  // - resistance 90 = 10% damage (0.1)
+  // - resistance -50 = 150% damage (1.5)
+  // - resistance -100 = 200% damage (2.0)
+  const modifier = (100 - cappedResistance) / 100;
+
+  // Minimum 10% damage (0.1 modifier) even with high resistance
+  return Math.max(0.1, modifier);
+}
+
+/**
+ * Get display text for elemental effectiveness
+ *
+ * @param {number} modifier - Elemental damage modifier
+ * @returns {Object} { text, color } for UI display
+ */
+export function getElementalEffectivenessDisplay(modifier) {
+  if (modifier < 0) {
+    return { text: 'ABSORB', color: '#44ff88' }; // Green for healing
+  }
+  if (modifier === 0) {
+    return { text: 'IMMUNE', color: '#888888' }; // Gray for no effect
+  }
+  if (modifier <= 0.25) {
+    return { text: 'RESIST', color: '#4488ff' }; // Blue for high resist
+  }
+  if (modifier <= 0.75) {
+    return { text: 'Resist', color: '#88aaff' }; // Light blue for resist
+  }
+  if (modifier >= 1.5) {
+    return { text: 'WEAK!', color: '#ff4444' }; // Red for very weak
+  }
+  if (modifier > 1.0) {
+    return { text: 'Weak', color: '#ffaa44' }; // Orange for weak
+  }
+  return null; // Normal damage, no special display
+}
+
+/**
+ * Element color mapping for damage numbers
+ */
+export const ELEMENT_COLORS = {
+  physical: '#ff4444',    // Red (default damage)
+  fire: '#ff4400',        // Orange-red
+  ice: '#88ccff',         // Light blue
+  lightning: '#ffff44',   // Yellow
+  earth: '#886644',       // Brown
+  wind: '#aaccaa',        // Sage green
+  water: '#4488ff',       // Blue
+  holy: '#ffff88',        // Bright yellow
+  dark: '#aa66cc'         // Purple (lighter for visibility)
+};
+
+/**
+ * Get damage number color for an element
+ *
+ * @param {string} element - Element type
+ * @param {boolean} isCritical - Whether the hit was critical
+ * @returns {string} Hex color string
+ */
+export function getElementDamageColor(element, isCritical = false) {
+  if (isCritical) {
+    return '#ffcc00'; // Gold for criticals always
+  }
+  return ELEMENT_COLORS[element] || ELEMENT_COLORS.physical;
 }

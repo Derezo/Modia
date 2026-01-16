@@ -196,6 +196,34 @@ export const SKILL_EFFECT_CATEGORIES = {
     particleStyle: 'swirl',
     trailEnabled: true,
     glowColor: 'rgba(170, 204, 170, 0.3)'
+  },
+
+  water: {
+    name: 'Water',
+    colors: {
+      primary: '#4488ff',
+      secondary: '#88bbff',
+      tertiary: '#2266cc'
+    },
+    flashColor: '#88bbff',
+    particleCount: 10,
+    particleStyle: 'fall',
+    trailEnabled: true,
+    glowColor: 'rgba(68, 136, 255, 0.4)'
+  },
+
+  dark: {
+    name: 'Dark',
+    colors: {
+      primary: '#aa66cc',
+      secondary: '#cc88ee',
+      tertiary: '#663388'
+    },
+    flashColor: '#aa66cc',
+    particleCount: 10,
+    particleStyle: 'swirl',
+    trailEnabled: true,
+    glowColor: 'rgba(170, 102, 204, 0.5)'
   }
 };
 
