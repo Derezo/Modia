@@ -229,7 +229,52 @@
 
 ---
 
-## 6. Technical Debt
+## 6. Audio System
+
+### 6.1 Audio Generation Infrastructure (Completed Jan 2026)
+
+- [x] Suno API client for music generation
+- [x] ElevenLabs API client for SFX generation
+- [x] Metadata-driven prompt system (JSON files)
+- [x] Generation orchestrator scripts with CLI options
+- [x] Validation and status scripts
+
+### 6.2 Audio Assets (Completed Jan 2026)
+
+- [x] 55 music tracks (regional, battle, core)
+- [x] 239 SFX (skills, combat, UI, ambient, interactions)
+- [x] Region-themed music for 5 regions
+- [x] Battle music for 4 encounter types per region
+- [x] 140 skill sounds (72 player + 68 monster)
+
+### 6.3 Frontend Integration (Completed Jan 2026)
+
+- [x] MusicContext for region-aware music playback
+- [x] Audio triggers in all 14+ scenes
+- [x] Battle audio integration (skills, impacts, status effects)
+- [x] Victory/defeat fanfares via MusicContext
+- [x] Ambient sound management in TavernScene
+
+### 6.4 npm Scripts
+
+```bash
+npm run audio:generate      # Generate all audio
+npm run audio:generate:music # Music only
+npm run audio:generate:sfx   # SFX only
+npm run audio:download       # Download pending tracks
+npm run audio:validate       # Validate assets exist
+npm run audio:status         # Show asset status
+```
+
+### 6.5 Pending
+
+- [ ] Generate actual audio files (requires API keys)
+- [ ] Audio variation system for combat sounds
+- [ ] Dynamic music intensity layers
+
+---
+
+## 7. Technical Debt
 
 ### 6.1 Known Issues
 
