@@ -41,7 +41,10 @@ import {
   calculateEffectiveStatusChance,
   calculateCTGain,
   calculateInitialCT,
-  applyVariance
+  applyVariance,
+  calculateElementalModifier,
+  getElementalResistance,
+  getElementDamageColor
 } from '../../../shared/battleMath.js';
 
 // Default attack range for melee (1 tile adjacent)
@@ -49,11 +52,16 @@ const DEFAULT_ATTACK_RANGE = 1;
 
 /**
  * Calculate physical damage with diminishing returns defense
- * Formula: (STR + weaponAttack) * skillPower * (1 - defenseReduction) * variance * crit
+ * Formula: (STR + weaponAttack) * skillPower * (1 - defenseReduction) * elementalMod * variance * crit
  * Defense reduction = (VIT + armorDefense) / ((VIT + armorDefense) + 100)
  * This creates meaningful defense that never hits 100% (diminishing returns)
+ *
+ * @param {Object} attacker - Attacking unit
+ * @param {Object} defender - Defending unit
+ * @param {number} skillPower - Skill power percentage (default 100)
+ * @param {string} element - Element type for elemental damage (optional)
  */
-function calculatePhysicalDamage(attacker, defender, skillPower = 100) {
+function calculatePhysicalDamage(attacker, defender, skillPower = 100, element = null) {
   // Base attack = strength + equipment attack bonus
   const attackPower = (attacker.strength || 0) + (attacker.attack || 0);
   const rawDamage = attackPower * (skillPower / 100);
@@ -65,6 +73,10 @@ function calculatePhysicalDamage(attacker, defender, skillPower = 100) {
 
   // Apply defense reduction
   const reducedDamage = Math.max(1, rawDamage * (1 - defenseReduction));
+
+  // Apply elemental modifier
+  const elementalModifier = calculateElementalModifier(defender, element);
+  const elementalDamage = reducedDamage * Math.abs(elementalModifier);
 
   // Random variance (0.9 - 1.1)
   const variance = 0.9 + Math.random() * 0.2;
@@ -81,24 +93,32 @@ function calculatePhysicalDamage(attacker, defender, skillPower = 100) {
   const traitDamageMultiplier = traitService.getPhysicalDamageMultiplier(attacker, defender, isCritical);
   const traitDefenseMultiplier = traitService.getDamageReductionMultiplier(defender, 'physical');
 
-  const finalDamage = Math.floor(reducedDamage * variance * critMultiplier * traitDamageMultiplier * traitDefenseMultiplier);
+  const finalDamage = Math.floor(elementalDamage * variance * critMultiplier * traitDamageMultiplier * traitDefenseMultiplier);
 
   return {
     damage: Math.max(1, finalDamage),
     isCritical,
     variance,
     defenseReduction,
-    traitBonusApplied: traitDamageMultiplier > 1.0 || traitDefenseMultiplier < 1.0
+    traitBonusApplied: traitDamageMultiplier > 1.0 || traitDefenseMultiplier < 1.0,
+    element,
+    elementalModifier,
+    isAbsorb: elementalModifier < 0 // Negative modifier means absorb (heal instead of damage)
   };
 }
 
 /**
  * Calculate magical damage with diminishing returns defense
- * Formula: (INT + magicAttack) * skillPower * (1 - magicDefenseReduction) * variance * crit
+ * Formula: (INT + magicAttack) * skillPower * (1 - magicDefenseReduction) * elementalMod * variance * crit
  * Magic defense reduction = (INT/2 + magicDefense) / ((INT/2 + magicDefense) + 80)
  * INT provides innate magic resistance (half value)
+ *
+ * @param {Object} attacker - Attacking unit
+ * @param {Object} defender - Defending unit
+ * @param {number} skillPower - Skill power percentage (default 100)
+ * @param {string} element - Element type for elemental damage (optional)
  */
-function calculateMagicalDamage(attacker, defender, skillPower = 100) {
+function calculateMagicalDamage(attacker, defender, skillPower = 100, element = null) {
   // Base magic attack = intelligence + equipment magic attack bonus
   const magicAttackPower = (attacker.intelligence || 0) + (attacker.magicAttack || 0);
   const rawDamage = magicAttackPower * (skillPower / 100);
@@ -111,6 +131,10 @@ function calculateMagicalDamage(attacker, defender, skillPower = 100) {
 
   // Apply defense reduction
   const reducedDamage = Math.max(1, rawDamage * (1 - defenseReduction));
+
+  // Apply elemental modifier
+  const elementalModifier = calculateElementalModifier(defender, element);
+  const elementalDamage = reducedDamage * Math.abs(elementalModifier);
 
   // Random variance (0.9 - 1.1)
   const variance = 0.9 + Math.random() * 0.2;
@@ -127,14 +151,17 @@ function calculateMagicalDamage(attacker, defender, skillPower = 100) {
   const traitDamageMultiplier = traitService.getMagicalDamageMultiplier(attacker, defender, isCritical);
   const traitDefenseMultiplier = traitService.getDamageReductionMultiplier(defender, 'magical');
 
-  const finalDamage = Math.floor(reducedDamage * variance * critMultiplier * traitDamageMultiplier * traitDefenseMultiplier);
+  const finalDamage = Math.floor(elementalDamage * variance * critMultiplier * traitDamageMultiplier * traitDefenseMultiplier);
 
   return {
     damage: Math.max(1, finalDamage),
     isCritical,
     variance,
     defenseReduction,
-    traitBonusApplied: traitDamageMultiplier > 1.0 || traitDefenseMultiplier < 1.0
+    traitBonusApplied: traitDamageMultiplier > 1.0 || traitDefenseMultiplier < 1.0,
+    element,
+    elementalModifier,
+    isAbsorb: elementalModifier < 0 // Negative modifier means absorb (heal instead of damage)
   };
 }
 
@@ -1418,15 +1445,37 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
           // Apply damage/effects to each unit in the AoE
           const power = skill.power || 150;
           const damageType = skill.damageType || 'physical';
+          const skillElement = skill.element || null;
           const hits = skill.hits || 1;
 
           let totalAoEDamage = 0; // Track total AoE damage for lifesteal
+          result.element = skillElement; // Include element in result for frontend
 
           for (const { unit: affectedUnit, isCenter } of affectedUnits) {
-            // Calculate damage for this target
+            // Calculate damage for this target (with elemental modifier)
             const damageResult = damageType === 'magical'
-              ? calculateMagicalDamage(unit, affectedUnit, power)
-              : calculatePhysicalDamage(unit, affectedUnit, power);
+              ? calculateMagicalDamage(unit, affectedUnit, power, skillElement)
+              : calculatePhysicalDamage(unit, affectedUnit, power, skillElement);
+
+            // Handle absorb (element heals instead of damages)
+            if (damageResult.isAbsorb) {
+              const healAmount = damageResult.damage;
+              affectedUnit.hp = Math.min(affectedUnit.maxHp, affectedUnit.hp + healAmount);
+              const targetResult = {
+                targetId: affectedUnit.id,
+                targetName: affectedUnit.name,
+                targetType: affectedUnit.type,
+                healing: healAmount,
+                isAbsorb: true,
+                isCenter,
+                tileX: affectedUnit.tileX,
+                tileY: affectedUnit.tileY,
+                element: skillElement,
+                elementalModifier: damageResult.elementalModifier
+              };
+              result.aoeTargets.push(targetResult);
+              continue;
+            }
 
             // Apply damage (multiply by hits if multi-hit skill)
             let totalDamage = 0;
@@ -1459,7 +1508,9 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
               isCenter,
               tileX: affectedUnit.tileX,
               tileY: affectedUnit.tileY,
-              deathSaveTrigger: wouldKill && affectedUnit.hp === 1
+              deathSaveTrigger: wouldKill && affectedUnit.hp === 1,
+              element: skillElement,
+              elementalModifier: damageResult.elementalModifier
             };
 
             // Apply status effect if skill has one and chance succeeds
@@ -1506,9 +1557,30 @@ function processAction(state, unit, actionType, targetTile, skillId = null) {
           // Single-target skill: Apply skill damage (using power from skill or default 150%)
           const power = skill.power || 150;
           const damageType = skill.damageType || 'physical';
+          const skillElement = skill.element || null;
           const damageResult = damageType === 'magical'
-            ? calculateMagicalDamage(unit, target, power)
-            : calculatePhysicalDamage(unit, target, power);
+            ? calculateMagicalDamage(unit, target, power, skillElement)
+            : calculatePhysicalDamage(unit, target, power, skillElement);
+
+          // Include element info in result for frontend
+          result.element = skillElement;
+          result.elementalModifier = damageResult.elementalModifier;
+
+          // Handle absorb (element heals instead of damages)
+          if (damageResult.isAbsorb) {
+            const healAmount = damageResult.damage;
+            target.hp = Math.min(target.maxHp, target.hp + healAmount);
+            result.healing = healAmount;
+            result.isAbsorb = true;
+            result.targetId = target.id;
+            result.targetType = target.type;
+            // Set skill cooldown if defined
+            if (skill.cooldown && skill.cooldown > 0) {
+              unit.skillCooldowns[skillId] = skill.cooldown;
+            }
+            unit.actUsed = true;
+            break;
+          }
 
           // Apply damage (multiply by hits if multi-hit skill)
           const hits = skill.hits || 1;

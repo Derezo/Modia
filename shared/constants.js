@@ -271,6 +271,61 @@ export const CLASS_GROWTH = {
   [ADVANCED_CLASSES.ARTIFICER]: { hp: 11, mp: 9, strength: 2, intelligence: 3, agility: 2, vitality: 2, luck: 0.8 }
 };
 
+// Elemental System - 8 elements with resistance/weakness mechanics
+export const ELEMENTS = {
+  PHYSICAL: 'physical',  // Non-elemental, standard attacks
+  FIRE: 'fire',
+  ICE: 'ice',
+  LIGHTNING: 'lightning',
+  EARTH: 'earth',
+  WIND: 'wind',
+  WATER: 'water',
+  HOLY: 'holy',
+  DARK: 'dark'
+};
+
+// Elemental resistance levels (damage multiplier)
+// Negative = weakness (takes more damage), Positive = resistance (takes less damage)
+export const ELEMENTAL_RESISTANCE_LEVELS = {
+  VERY_WEAK: -100,    // 200% damage (2x)
+  WEAK: -50,          // 150% damage (1.5x)
+  NORMAL: 0,          // 100% damage (1x)
+  RESIST: 50,         // 50% damage (0.5x)
+  HIGHLY_RESIST: 75,  // 25% damage (0.25x)
+  IMMUNE: 100,        // 0% damage
+  ABSORB: 150         // Heals instead of damages (-50% damage)
+};
+
+// Maximum elemental resistance cap (90% = always takes at least 10% damage)
+export const MAX_ELEMENTAL_RESISTANCE = 90;
+
+// Racial elemental resistances
+// Positive values = resistance, Negative values = weakness
+export const RACIAL_RESISTANCES = {
+  human: {
+    // Humans are balanced, no innate resistances or weaknesses
+  },
+  elf: {
+    fire: -25,   // 25% weak to fire (125% damage)
+    ice: 25,     // 25% resist ice (75% damage)
+    wind: 15     // 15% resist wind (85% damage)
+  },
+  dwarf: {
+    fire: 25,    // 25% resist fire (75% damage)
+    ice: -25,    // 25% weak to ice (125% damage)
+    earth: 25    // 25% resist earth (75% damage)
+  },
+  vampire: {
+    holy: -50,   // 50% weak to holy (150% damage)
+    dark: 50,    // 50% resist dark (50% damage)
+    fire: -25    // 25% weak to fire (125% damage)
+  },
+  orc: {
+    // Orcs are physically tough but no elemental affinity
+    lightning: -15  // 15% weak to lightning (115% damage)
+  }
+};
+
 // Movement range by class
 export const CLASS_MOVEMENT = {
   // Base classes
