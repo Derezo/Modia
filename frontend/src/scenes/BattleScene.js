@@ -272,6 +272,11 @@ export class BattleScene extends Scene {
     this.isIntroPlaying = true;
     this.ui.hide(); // Hide action menu during intro
 
+    // Start battle music
+    if (this.game.audio) {
+      this.game.audio.playMusic('battle_combat');
+    }
+
     // Update UI with initial state (will show after intro)
     this.updateUI();
   }
@@ -1099,6 +1104,9 @@ export class BattleScene extends Scene {
   handleRemoteYourTurn(payload) {
     const { unitId, availableActions } = payload;
     console.log('[Battle WS] Your turn:', unitId, '(input enabled, queue handles camera)');
+
+    // Play turn start sound for player
+    this.playSound('turn_start');
 
     // Store server-provided available actions for use in action methods
     this.serverAvailableActions = availableActions || null;
@@ -1939,6 +1947,7 @@ export class BattleScene extends Scene {
       // Add skill or item ID depending on action type
       if (actionType === 'skill') {
         actionData.skillId = this.selectedSkillId;
+        this.playSound('skill_cast');
       } else if (actionType === 'item') {
         // For items, we use skillId field to pass the item's itemId
         // (backend expects skillId for item type lookups)
@@ -2014,8 +2023,9 @@ export class BattleScene extends Scene {
         const target = this.units.get(targetInfo.targetId);
         if (!target) continue;
 
-        // Play hit animation
+        // Play hit animation and sound
         target.playHitAnimation();
+        this.playSound(targetInfo.isCritical ? 'critical_hit' : 'attack_hit');
 
         // Show damage number
         this.animations.addDamageNumber(
@@ -2073,6 +2083,7 @@ export class BattleScene extends Scene {
 
         // Target plays hit animation
         target.playHitAnimation();
+        this.playSound(actionResult.isCritical ? 'critical_hit' : 'attack_hit');
         this.animations.addDamageNumber(target.screenX, target.screenY - 40, actionResult.damage, actionResult.isCritical);
         this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
         this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#ff4444');
@@ -2091,6 +2102,7 @@ export class BattleScene extends Scene {
     if (actionResult.missed && actionResult.targetId) {
       const target = this.units.get(actionResult.targetId);
       if (target) {
+        this.playSound('miss');
         this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
         await this.waitForAnimation(300);
       }
@@ -2103,19 +2115,23 @@ export class BattleScene extends Scene {
         if (!target) continue;
 
         if (effect.type === 'heal') {
+          this.playSound('heal');
           target.hp = Math.min(target.maxHp, target.hp + effect.amount);
           this.animations.addHealNumber(target.screenX, target.screenY - 40, effect.amount);
           this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#44ff44');
           await this.waitForAnimation(300);
         } else if (effect.type === 'mpRestore') {
+          this.playSound('heal');
           target.mp = Math.min(target.maxMp, target.mp + effect.amount);
           this.animations.addHealNumber(target.screenX, target.screenY - 40, effect.amount);
           this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#4488ff');
           await this.waitForAnimation(300);
         } else if (effect.type === 'cleanse') {
+          this.playSound('heal');
           this.animations.addHealNumber(target.screenX, target.screenY - 40, 'Cleansed');
           await this.waitForAnimation(300);
         } else if (effect.type === 'revive') {
+          this.playSound('heal');
           target.hp = effect.amount;
           this.animations.addHealNumber(target.screenX, target.screenY - 40, 'Revive!');
           this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#ffdd44');
@@ -2361,6 +2377,12 @@ export class BattleScene extends Scene {
 
     this.ui.hideActionMenu();
 
+    // Play victory or defeat music
+    if (this.game.audio) {
+      const track = status === 'victory' ? 'victory_fanfare' : 'defeat_jingle';
+      this.game.audio.playMusic(track, { crossfade: false });
+    }
+
     // Use BattleOutroSequence for animated victory/defeat display
     this.outroSequence = new BattleOutroSequence(this);
     this.outroSequence.start(status, rewards, {
@@ -2371,11 +2393,16 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Play sound effect (stub for future audio system)
+   * Play sound effect using game audio system
+   * @param {string} soundId - Sound effect identifier
+   * @param {Object} options - Playback options (volume, pitch, etc.)
    */
-  playSound(soundId) {
-    // TODO: Implement audio system
-    console.log(`[Sound] ${soundId}`);
+  playSound(soundId, options = {}) {
+    if (!this.game.audio) {
+      console.debug(`[Sound] ${soundId} (audio not initialized)`);
+      return;
+    }
+    this.game.audio.playCombat(soundId, options);
   }
 
   /**
