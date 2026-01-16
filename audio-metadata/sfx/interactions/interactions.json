@@ -1,0 +1,250 @@
+{
+  "category": "interactions",
+  "subcategory": "game",
+  "description": "Game interaction and event sound effects",
+  "totalEffects": 22,
+  "effects": [
+    {
+      "id": "interaction_equip_weapon",
+      "name": "Equip Weapon",
+      "category": "interaction",
+      "subcategory": "equipment",
+      "prompt": "Fantasy weapon equip, sword drawing from sheath, metal sliding, readying weapon sound, equipment activated",
+      "path": "/assets/audio/sfx/interactions/equip_weapon.mp3",
+      "duration": 1.2,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "interaction_equip_armor",
+      "name": "Equip Armor",
+      "category": "interaction",
+      "subcategory": "equipment",
+      "prompt": "Fantasy armor equip, metal plates fastening, leather straps securing, protective gear donning, armor clicking into place",
+      "path": "/assets/audio/sfx/interactions/equip_armor.mp3",
+      "duration": 1.5,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "interaction_unequip",
+      "name": "Unequip",
+      "category": "interaction",
+      "subcategory": "equipment",
+      "prompt": "Fantasy equipment removal, item putting away, gear unfastening, equipment removal sound, brief metallic shuffle",
+      "path": "/assets/audio/sfx/interactions/unequip.mp3",
+      "duration": 1.0,
+      "volume": 0.7,
+      "generated": false
+    },
+    {
+      "id": "interaction_item_pickup",
+      "name": "Item Pickup",
+      "category": "interaction",
+      "subcategory": "inventory",
+      "prompt": "Fantasy item pickup, acquiring loot, collecting treasure, brief rewarding chime, satisfying collection sound",
+      "path": "/assets/audio/sfx/interactions/item_pickup.mp3",
+      "duration": 0.8,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "interaction_item_drop",
+      "name": "Item Drop",
+      "category": "interaction",
+      "subcategory": "inventory",
+      "prompt": "Fantasy item drop, object placed down, inventory removal, item landing softly, discarding sound",
+      "path": "/assets/audio/sfx/interactions/item_drop.mp3",
+      "duration": 0.8,
+      "volume": 0.7,
+      "generated": false
+    },
+    {
+      "id": "interaction_item_use",
+      "name": "Item Use",
+      "category": "interaction",
+      "subcategory": "inventory",
+      "prompt": "Fantasy item use, potion drinking, consumable activated, brief magical effect, item consumed",
+      "path": "/assets/audio/sfx/interactions/item_use.mp3",
+      "duration": 1.0,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "interaction_gold_gain",
+      "name": "Gold Gain",
+      "category": "interaction",
+      "subcategory": "currency",
+      "prompt": "Fantasy gold coins gained, money jingling, treasure acquired, rewarding coin sound, wealth increasing",
+      "path": "/assets/audio/sfx/interactions/gold_gain.mp3",
+      "duration": 1.0,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "interaction_gold_spend",
+      "name": "Gold Spend",
+      "category": "interaction",
+      "subcategory": "currency",
+      "prompt": "Fantasy gold coins spent, money exchanging, coins counting, transaction complete, purchase sound",
+      "path": "/assets/audio/sfx/interactions/gold_spend.mp3",
+      "duration": 1.0,
+      "volume": 0.7,
+      "generated": false
+    },
+    {
+      "id": "interaction_quest_complete",
+      "name": "Quest Complete",
+      "category": "interaction",
+      "subcategory": "progress",
+      "prompt": "Fantasy quest complete fanfare, achievement unlocked, mission accomplished, triumphant brief jingle, rewarding success sound",
+      "path": "/assets/audio/sfx/interactions/quest_complete.mp3",
+      "duration": 2.0,
+      "volume": 0.8,
+      "generated": false
+    },
+    {
+      "id": "interaction_quest_accept",
+      "name": "Quest Accept",
+      "category": "interaction",
+      "subcategory": "progress",
+      "prompt": "Fantasy quest accepted, new mission sound, adventure beginning, brief hopeful chime, journey starting",
+      "path": "/assets/audio/sfx/interactions/quest_accept.mp3",
+      "duration": 1.2,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "interaction_chest_open",
+      "name": "Chest Open",
+      "category": "interaction",
+      "subcategory": "discovery",
+      "prompt": "Fantasy treasure chest opening, wooden lid creaking, lock clicking, mysterious container revealed, treasure found",
+      "path": "/assets/audio/sfx/interactions/chest_open.mp3",
+      "duration": 1.5,
+      "volume": 0.8,
+      "generated": false
+    },
+    {
+      "id": "interaction_shrine_activate",
+      "name": "Shrine Activate",
+      "category": "interaction",
+      "subcategory": "discovery",
+      "prompt": "Fantasy shrine activation, ancient power awakening, mystical energy surge, holy site blessing, divine light ascending",
+      "path": "/assets/audio/sfx/interactions/shrine_activate.mp3",
+      "duration": 2.0,
+      "volume": 0.8,
+      "generated": false
+    },
+    {
+      "id": "interaction_discovery_found",
+      "name": "Discovery Found",
+      "category": "interaction",
+      "subcategory": "discovery",
+      "prompt": "Fantasy discovery made, secret revealed, exploration reward, mysterious finding, intriguing discovery chime",
+      "path": "/assets/audio/sfx/interactions/discovery_found.mp3",
+      "duration": 1.5,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "interaction_travel_start",
+      "name": "Travel Start",
+      "category": "interaction",
+      "subcategory": "travel",
+      "prompt": "Fantasy travel beginning, journey starting, footsteps departing, adventure commencing, brief departure sound",
+      "path": "/assets/audio/sfx/interactions/travel_start.mp3",
+      "duration": 1.2,
+      "volume": 0.7,
+      "generated": false
+    },
+    {
+      "id": "interaction_travel_arrive",
+      "name": "Travel Arrive",
+      "category": "interaction",
+      "subcategory": "travel",
+      "prompt": "Fantasy destination reached, journey complete, arrival sound, location discovered, welcoming chime",
+      "path": "/assets/audio/sfx/interactions/travel_arrive.mp3",
+      "duration": 1.2,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "interaction_party_join",
+      "name": "Party Join",
+      "category": "interaction",
+      "subcategory": "social",
+      "prompt": "Fantasy party joined, allies united, group forming, brief cooperative chime, fellowship sound",
+      "path": "/assets/audio/sfx/interactions/party_join.mp3",
+      "duration": 1.2,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "interaction_party_leave",
+      "name": "Party Leave",
+      "category": "interaction",
+      "subcategory": "social",
+      "prompt": "Fantasy party left, departure from group, temporary farewell, brief dissolving sound, party separation",
+      "path": "/assets/audio/sfx/interactions/party_leave.mp3",
+      "duration": 1.0,
+      "volume": 0.7,
+      "generated": false
+    },
+    {
+      "id": "interaction_level_up",
+      "name": "Level Up",
+      "category": "interaction",
+      "subcategory": "progress",
+      "prompt": "Fantasy level up fanfare, power increasing, character growth, triumphant ascending chime, rewarding progression sound",
+      "path": "/assets/audio/sfx/interactions/level_up.mp3",
+      "duration": 2.5,
+      "volume": 0.85,
+      "generated": false
+    },
+    {
+      "id": "interaction_fishing_cast",
+      "name": "Fishing Cast",
+      "category": "interaction",
+      "subcategory": "activity",
+      "prompt": "Fantasy fishing rod cast, line flying through air, hook splashing in water, relaxing fishing sound",
+      "path": "/assets/audio/sfx/interactions/fishing_cast.mp3",
+      "duration": 1.5,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "interaction_fishing_reel",
+      "name": "Fishing Reel",
+      "category": "interaction",
+      "subcategory": "activity",
+      "prompt": "Fantasy fishing reel, line winding, fish struggling, exciting catch moment, reeling in prize",
+      "path": "/assets/audio/sfx/interactions/fishing_reel.mp3",
+      "duration": 2.0,
+      "volume": 0.8,
+      "generated": false
+    },
+    {
+      "id": "interaction_fishing_big_one",
+      "name": "Big One Event",
+      "category": "interaction",
+      "subcategory": "activity",
+      "prompt": "Fantasy big fish event, massive catch alert, exciting fishing moment, rare opportunity sound, urgent attention chime",
+      "path": "/assets/audio/sfx/interactions/fishing_big_one.mp3",
+      "duration": 1.5,
+      "volume": 0.85,
+      "generated": false
+    },
+    {
+      "id": "interaction_puzzle_solve",
+      "name": "Puzzle Solve",
+      "category": "interaction",
+      "subcategory": "activity",
+      "prompt": "Fantasy puzzle solved, pieces clicking into place, brain teaser complete, rewarding solution sound, mystery solved chime",
+      "path": "/assets/audio/sfx/interactions/puzzle_solve.mp3",
+      "duration": 1.5,
+      "volume": 0.8,
+      "generated": false
+    }
+  ]
+}

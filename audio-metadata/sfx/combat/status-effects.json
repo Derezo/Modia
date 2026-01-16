@@ -1,0 +1,173 @@
+{
+  "category": "combat",
+  "subcategory": "status-effects",
+  "description": "Status effect application and tick sounds",
+  "totalEffects": 15,
+  "effects": [
+    {
+      "id": "status_burn",
+      "name": "Burn Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy burn status effect, flames igniting on target, crackling fire, sizzling damage, brief fiery whoosh",
+      "path": "/assets/audio/sfx/combat/status_burn.mp3",
+      "duration": 1.5,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "status_freeze",
+      "name": "Freeze Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy freeze status effect, ice crystallizing rapidly, crackling frost, frozen solid, magical ice encasing",
+      "path": "/assets/audio/sfx/combat/status_freeze.mp3",
+      "duration": 1.5,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "status_poison",
+      "name": "Poison Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy poison status effect, toxic bubbling, venomous dripping, sickly green corruption, harmful contamination",
+      "path": "/assets/audio/sfx/combat/status_poison.mp3",
+      "duration": 1.5,
+      "volume": 0.7,
+      "generated": false
+    },
+    {
+      "id": "status_stun",
+      "name": "Stun Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy stun status effect, disorienting impact, ringing bells, dazed confusion, brief electrical crackle",
+      "path": "/assets/audio/sfx/combat/status_stun.mp3",
+      "duration": 1.2,
+      "volume": 0.8,
+      "generated": false
+    },
+    {
+      "id": "status_slow",
+      "name": "Slow Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy slow status effect, time distortion, heavy sluggish sound, movement impaired, weighted down feeling",
+      "path": "/assets/audio/sfx/combat/status_slow.mp3",
+      "duration": 1.5,
+      "volume": 0.7,
+      "generated": false
+    },
+    {
+      "id": "status_bleed",
+      "name": "Bleed Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy bleed status effect, wound opening, blood dripping, continuous damage, visceral injury sound",
+      "path": "/assets/audio/sfx/combat/status_bleed.mp3",
+      "duration": 1.2,
+      "volume": 0.7,
+      "generated": false
+    },
+    {
+      "id": "status_blind",
+      "name": "Blind Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy blind status effect, vision obscured, disorienting darkness, sight stolen, muffled confusion",
+      "path": "/assets/audio/sfx/combat/status_blind.mp3",
+      "duration": 1.2,
+      "volume": 0.7,
+      "generated": false
+    },
+    {
+      "id": "status_fear",
+      "name": "Fear Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy fear status effect, terrifying presence, chilling dread, heartbeat racing, horror inducing whispers",
+      "path": "/assets/audio/sfx/combat/status_fear.mp3",
+      "duration": 1.5,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "status_taunt",
+      "name": "Taunt Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy taunt status effect, provoking call, attention grabbed, rage inducing challenge, forced aggression",
+      "path": "/assets/audio/sfx/combat/status_taunt.mp3",
+      "duration": 1.2,
+      "volume": 0.8,
+      "generated": false
+    },
+    {
+      "id": "status_weaken",
+      "name": "Weaken Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy weaken status effect, strength draining, power fading, debilitating curse, diminishing energy",
+      "path": "/assets/audio/sfx/combat/status_weaken.mp3",
+      "duration": 1.3,
+      "volume": 0.7,
+      "generated": false
+    },
+    {
+      "id": "status_corrode",
+      "name": "Corrode Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy corrode status effect, acid eating metal, armor dissolving, hissing corrosion, protective layers melting",
+      "path": "/assets/audio/sfx/combat/status_corrode.mp3",
+      "duration": 1.5,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "status_curse",
+      "name": "Curse Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy curse status effect, dark magic binding, ominous whispers, unholy mark, shadowy affliction",
+      "path": "/assets/audio/sfx/combat/status_curse.mp3",
+      "duration": 1.5,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "status_haste",
+      "name": "Haste Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy haste buff effect, speed increasing, time acceleration, quick energizing whoosh, empowering velocity",
+      "path": "/assets/audio/sfx/combat/status_haste.mp3",
+      "duration": 1.2,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "status_rage",
+      "name": "Rage Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy rage buff effect, fury building, power surging, angry roar undertone, berserker energy rising",
+      "path": "/assets/audio/sfx/combat/status_rage.mp3",
+      "duration": 1.5,
+      "volume": 0.8,
+      "generated": false
+    },
+    {
+      "id": "status_fortify",
+      "name": "Fortify Effect",
+      "category": "combat",
+      "subcategory": "status",
+      "prompt": "Fantasy fortify buff effect, defense hardening, protective aura, stone-like reinforcement, guardian strength",
+      "path": "/assets/audio/sfx/combat/status_fortify.mp3",
+      "duration": 1.3,
+      "volume": 0.75,
+      "generated": false
+    }
+  ]
+}

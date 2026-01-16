@@ -1,0 +1,68 @@
+{
+  "version": "1.0.0",
+  "description": "Master manifest for Modia sound effects",
+  "totalEffects": 219,
+  "categories": {
+    "combat": {
+      "description": "Weapon attacks, impacts, and combat sounds",
+      "effectCount": 45,
+      "files": [
+        "combat/weapons.json",
+        "combat/status-effects.json",
+        "combat/deaths.json"
+      ]
+    },
+    "skills": {
+      "description": "Player and monster skill sound effects",
+      "effectCount": 120,
+      "files": [
+        "skills/skill-templates.json",
+        "skills/player-skills.json",
+        "skills/monster-skills.json"
+      ]
+    },
+    "ambient": {
+      "description": "Environmental and location ambient loops",
+      "effectCount": 8,
+      "files": [
+        "ambient/ambient.json"
+      ]
+    },
+    "interactions": {
+      "description": "Game interaction and event sounds",
+      "effectCount": 22,
+      "files": [
+        "interactions/interactions.json"
+      ]
+    },
+    "ui": {
+      "description": "User interface and notification sounds",
+      "effectCount": 24,
+      "files": [
+        "ui/ui-sounds.json"
+      ]
+    }
+  },
+  "generationSettings": {
+    "model": "ElevenLabs",
+    "defaultVolume": 0.8,
+    "sfxDuration": {
+      "short": 1.0,
+      "medium": 2.0,
+      "long": 3.0,
+      "ambient": 15.0
+    },
+    "promptGuidelines": {
+      "maxWords": 100,
+      "useTerms": ["impact", "whoosh", "crackle", "sizzle", "boom", "punch"],
+      "characteristics": ["punchy", "brief", "sustained", "layered", "crisp"]
+    }
+  },
+  "outputPaths": {
+    "combat": "/assets/audio/sfx/combat/",
+    "skills": "/assets/audio/sfx/skills/",
+    "ambient": "/assets/audio/sfx/ambient/",
+    "interactions": "/assets/audio/sfx/interactions/",
+    "ui": "/assets/audio/sfx/ui/"
+  }
+}

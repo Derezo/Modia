@@ -1,0 +1,118 @@
+{
+  "category": "combat",
+  "subcategory": "deaths",
+  "description": "Death and knockout sounds for players and enemy types",
+  "totalEffects": 10,
+  "effects": [
+    {
+      "id": "player_ko",
+      "name": "Player Knockout",
+      "category": "combat",
+      "subcategory": "death",
+      "prompt": "Fantasy player knockout, heroic fall, body collapsing, defeated groan, dramatic but dignified, brief fade",
+      "path": "/assets/audio/sfx/combat/player_ko.mp3",
+      "duration": 1.5,
+      "volume": 0.8,
+      "generated": false
+    },
+    {
+      "id": "enemy_death_beast",
+      "name": "Beast Death",
+      "category": "combat",
+      "subcategory": "death",
+      "prompt": "Fantasy beast death, animal creature dying howl, wounded animal collapse, primal death cry, body thud",
+      "path": "/assets/audio/sfx/combat/enemy_death_beast.mp3",
+      "duration": 1.8,
+      "volume": 0.8,
+      "generated": false
+    },
+    {
+      "id": "enemy_death_humanoid",
+      "name": "Humanoid Death",
+      "category": "combat",
+      "subcategory": "death",
+      "prompt": "Fantasy humanoid death, enemy warrior fall, armor clanking on ground, defeated grunt, body collapse",
+      "path": "/assets/audio/sfx/combat/enemy_death_humanoid.mp3",
+      "duration": 1.5,
+      "volume": 0.8,
+      "generated": false
+    },
+    {
+      "id": "enemy_death_undead",
+      "name": "Undead Death",
+      "category": "combat",
+      "subcategory": "death",
+      "prompt": "Fantasy undead death, skeleton crumbling, bones scattering, unholy energy dissipating, ghostly wail fading",
+      "path": "/assets/audio/sfx/combat/enemy_death_undead.mp3",
+      "duration": 2.0,
+      "volume": 0.8,
+      "generated": false
+    },
+    {
+      "id": "enemy_death_elemental",
+      "name": "Elemental Death",
+      "category": "combat",
+      "subcategory": "death",
+      "prompt": "Fantasy elemental death, magical energy dispersing, elemental form collapsing, crackling dissipation, essence fading",
+      "path": "/assets/audio/sfx/combat/enemy_death_elemental.mp3",
+      "duration": 2.0,
+      "volume": 0.8,
+      "generated": false
+    },
+    {
+      "id": "enemy_death_dragon",
+      "name": "Dragon Death",
+      "category": "combat",
+      "subcategory": "death",
+      "prompt": "Fantasy dragon death, massive creature roar fading, giant body crashing, earth-shaking thud, legendary beast falling",
+      "path": "/assets/audio/sfx/combat/enemy_death_dragon.mp3",
+      "duration": 2.5,
+      "volume": 0.9,
+      "generated": false
+    },
+    {
+      "id": "enemy_death_demon",
+      "name": "Demon Death",
+      "category": "combat",
+      "subcategory": "death",
+      "prompt": "Fantasy demon death, hellish screech, dark energy imploding, infernal form banishing, evil essence destroyed",
+      "path": "/assets/audio/sfx/combat/enemy_death_demon.mp3",
+      "duration": 2.0,
+      "volume": 0.85,
+      "generated": false
+    },
+    {
+      "id": "enemy_death_construct",
+      "name": "Construct Death",
+      "category": "combat",
+      "subcategory": "death",
+      "prompt": "Fantasy construct death, golem crumbling, mechanical parts falling, stone or metal breaking apart, magical gears stopping",
+      "path": "/assets/audio/sfx/combat/enemy_death_construct.mp3",
+      "duration": 2.0,
+      "volume": 0.85,
+      "generated": false
+    },
+    {
+      "id": "enemy_death_insect",
+      "name": "Insect Death",
+      "category": "combat",
+      "subcategory": "death",
+      "prompt": "Fantasy giant insect death, chittering stopping abruptly, exoskeleton cracking, legs curling, squelching demise",
+      "path": "/assets/audio/sfx/combat/enemy_death_insect.mp3",
+      "duration": 1.5,
+      "volume": 0.75,
+      "generated": false
+    },
+    {
+      "id": "enemy_death_plant",
+      "name": "Plant Death",
+      "category": "combat",
+      "subcategory": "death",
+      "prompt": "Fantasy plant creature death, vines wilting, leaves rustling down, organic matter collapsing, natural decay sound",
+      "path": "/assets/audio/sfx/combat/enemy_death_plant.mp3",
+      "duration": 1.8,
+      "volume": 0.75,
+      "generated": false
+    }
+  ]
+}
