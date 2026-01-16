@@ -1,3 +1,6 @@
+// REVIEW: This component appears unused after FormationScene v8.2 redesign.
+// Skills are now accessed via CharacterModal → SkillDetailModal.
+// Consider removing if confirmed unused, or re-integrating if needed elsewhere.
 import { PARCHMENT_COLORS } from '../ui/parchment/ParchmentTheme.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 

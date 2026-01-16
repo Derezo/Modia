@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "workspaces": {
+    "api": {
+      "entry": ["src/index.js"],
+      "project": ["src/**/*.js"],
+      "ignore": ["src/tests/**", "src/**/*.test.js"]
+    },
+    "frontend": {
+      "entry": ["src/main.js"],
+      "project": ["src/**/*.js"]
+    },
+    "shared": {
+      "entry": ["*.js"],
+      "project": ["*.js"]
+    }
+  },
+  "ignore": ["**/node_modules/**", "scripts/**", "**/*.test.js"],
+  "ignoreDependencies": ["sharp", "playwright"]
+}

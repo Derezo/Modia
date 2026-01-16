@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.4 |
+| Version | 1.5 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -14,11 +14,11 @@
 
 | Category | Completion | Status |
 |----------|------------|--------|
-| Infrastructure | 25% | In Progress |
-| CI/CD Pipeline | 20% | In Progress |
+| Infrastructure | 60% | In Progress |
+| CI/CD Pipeline | 40% | In Progress |
 | Testing | 70% | In Progress |
 | Performance | 30% | In Progress |
-| Monitoring | 10% | In Progress |
+| Monitoring | 20% | In Progress |
 
 ---
 
@@ -33,25 +33,25 @@
 
 ### 1.2 Database
 
-- [ ] PostgreSQL 14+ installation
-- [ ] Database user configuration
+- [x] PostgreSQL 14+ installation (via Docker Compose for dev, setup.sh for production)
+- [x] Database user configuration (via setup.sh)
 - [ ] Connection pooling (pgBouncer)
-- [ ] Automated backups
+- [x] Automated backups (backup.sh with 7-day retention)
 
 ### 1.3 Application Server
 
-- [ ] Node.js 20+ LTS installation
-- [ ] PM2 process manager setup
-- [ ] Environment variable management
+- [x] Node.js 20+ LTS installation (via setup.sh)
+- [x] PM2 process manager setup (via setup.sh, ecosystem.config.js)
+- [x] Environment variable management (.env template in deploy/)
 - [ ] Log rotation configuration
 
 ### 1.4 Web Server
 
-- [ ] Nginx installation
-- [ ] Reverse proxy configuration
-- [ ] Gzip compression
-- [ ] Static asset caching
-- [ ] WebSocket upgrade handling
+- [x] Nginx installation (via setup.sh)
+- [x] Reverse proxy configuration (nginx.conf.template)
+- [x] Gzip compression (nginx.conf.template)
+- [x] Static asset caching (nginx.conf.template)
+- [x] WebSocket upgrade handling (nginx.conf.template)
 
 ### 1.5 Security
 
@@ -235,16 +235,14 @@
 
 | Issue | Location | Priority |
 |-------|----------|----------|
-| ~~Missing `trust proxy` config (IP spoofing risk)~~ | ~~index.js, rateLimiterFactory.js~~ | ~~Critical~~ **RESOLVED v8.7** |
-| ~~Token refresh endpoint not rate limited~~ | ~~auth.js:137~~ | ~~Critical~~ **RESOLVED v8.7** |
 | In-memory rate limit state (no distributed storage) | rateLimiterFactory.js | High |
 | WebSocket rate limits reset on reconnection | websocket/index.js:92-94 | High |
-| ~~Missing rate limiter on /api/world/travel~~ | ~~world.js:316~~ | ~~High~~ **RESOLVED v8.7** |
-| ~~Production rate limits 2x multiplier too permissive~~ | ~~rateLimiterFactory.js:33-44~~ | ~~High~~ **RESOLVED v8.7: 300 base, per-user limits** |
-| ~~WorldMapScene pathPreviewCache unbounded growth~~ | ~~WorldMapScene.js:74~~ | ~~Medium~~ **RESOLVED** |
 | Event name mismatch (party:invite) | Game.js / partyWebsocket.js | Medium |
-| SettingsModal.js orphaned | frontend/src/components/ | Low |
 | Inline listeners without cleanup | LoginScene.js, WorldMapScene.js | Medium |
+| Missing rate limiters on inventory endpoints | inventory.js | Medium |
+| API response format inconsistency | Various routes | Low |
+| Debug endpoint in production | battle.js:verify-traits | Low |
+| SkillTreePanel.js potentially unused | frontend/src/components/ | Low |
 
 ### 6.2 Refactoring Opportunities
 
@@ -254,6 +252,19 @@
 - [ ] Unify WebSocket event naming
 - [ ] Add TypeScript types (future)
 - [ ] API response standardization
+- [ ] Database audit trail for gold/item changes (track before/after values)
+- [ ] Request validation layer (Zod schemas for consistent input validation)
+- [ ] Distributed rate limiting (Redis) for horizontal scaling
+- [ ] Structured logging with request correlation IDs
+
+### 6.3 Future Infrastructure
+
+| Item | Priority | Notes |
+|------|----------|-------|
+| API versioning (/api/v1/...) | Low | Only when breaking changes needed |
+| Database connection pooling (pgBouncer) | Medium | For horizontal scaling |
+| Health check expansion | High | DB connectivity, WebSocket status, memory metrics |
+| Log aggregation service | Medium | JSON structured logs for monitoring |
 
 ---
 
@@ -274,6 +285,7 @@
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.5 | Jan 2026 | Project cleanup audit: Updated infrastructure completion (60%), marked VPS deployment items as complete (setup.sh, deploy.sh, nginx.conf.template, backup.sh). Added new known issues (inventory rate limits, API inconsistency, debug endpoints). Added refactoring opportunities (audit trail, Zod validation, Redis rate limiting, structured logging). Added Future Infrastructure section. Installed knip for dead code analysis. |
 | 1.4 | Jan 2026 | Security & Infrastructure (v8.7): Trust proxy config for proper IP detection. Per-user rate limiting for authenticated requests. New rate limiters: auth/refresh (20/15min), world/travel (60/min), gameplay actions (skill 30/min, inventory 45/min). Increased global limits (300 base). JWT extended to 1h with automatic refresh. TokenRefreshManager for seamless token renewal. VPS deployment scripts: setup.sh, deploy.sh (zero-downtime), nginx.conf.template, backup.sh (7-day retention). |
 | 1.3 | Jan 2026 | Technical debt cleanup: seed.js modularization (4862→918 lines, 12 new modules), WorldMapScene pathPreviewCache LRU limits, composite database indexes (030_performance_indexes.sql). |
 | 1.2 | Jan 2026 | ItemDataTable & Marketplace plan complete: Added marketplace integration tests, order expiration unit tests, shop refresh unit tests. Testing updated to 70%. |
