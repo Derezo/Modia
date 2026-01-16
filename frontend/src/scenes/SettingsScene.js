@@ -1264,6 +1264,7 @@ export class SettingsScene extends Scene {
     // Tab switching
     this.uiElement.querySelectorAll('.settings-tab').forEach(tab => {
       tab.addEventListener('click', () => {
+        this.game.audio?.playUI('button_click');
         this.switchTab(tab.dataset.tab);
       }, opts);
     });
@@ -1308,14 +1309,17 @@ export class SettingsScene extends Scene {
 
     // Buttons
     this.uiElement.querySelector('#cancel-btn')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       this.handleCancel();
     }, opts);
 
     this.uiElement.querySelector('#save-btn')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       this.handleSave();
     }, opts);
 
     this.uiElement.querySelector('#reset-btn')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       this.handleReset();
     }, opts);
   }

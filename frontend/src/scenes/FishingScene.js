@@ -76,6 +76,11 @@ export class FishingScene extends Scene {
 
     this.responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
 
+    // Play regional fishing music
+    if (this.game.musicContext) {
+      this.game.musicContext.playNodeMusic('fishing');
+    }
+
     // Start fishing session
     await this.startFishing();
   }
@@ -576,10 +581,12 @@ export class FishingScene extends Scene {
     const opts = { signal: this.abortController.signal };
 
     this.uiElement.querySelector('#back-btn')?.addEventListener('click', async () => {
+      this.game.audio?.playUI('button_click');
       await this.endFishing();
     }, opts);
 
     this.uiElement.querySelector('#pack-up-btn')?.addEventListener('click', async () => {
+      this.game.audio?.playUI('button_click');
       await this.endFishing();
     }, opts);
   }
@@ -635,6 +642,9 @@ export class FishingScene extends Scene {
     try {
       const result = await this.game.api.registerCatch(this.nodeId);
 
+      // Play fish catch sound
+      this.game.audio?.playSFX('fish_catch');
+
       // Add catch to list
       this.catches.unshift(result.catch);
       this.totalValue = result.sessionStats.totalValue;
@@ -667,6 +677,9 @@ export class FishingScene extends Scene {
     this.bigOneActive = true;
     this.bigOneFish = bigOneData;
     this.bigOneExpires = Date.now() + bigOneData.expiresIn;
+
+    // Play big one alert sound
+    this.game.audio?.playSFX('fish_big_one');
 
     const mainPanel = this.uiElement.querySelector('#main-panel');
     if (!mainPanel) return;

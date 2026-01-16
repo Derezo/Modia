@@ -92,6 +92,11 @@ export class ColiseumScene extends Scene {
     this.setupEventListeners();
     this.setupWebSocketHandlers();
 
+    // Play coliseum theme music
+    if (this.game.musicContext) {
+      this.game.musicContext.playColiseumTheme();
+    }
+
     // Load queue statuses
     await this.loadQueueStatuses();
   }
@@ -1500,6 +1505,7 @@ export class ColiseumScene extends Scene {
   setupEventListeners() {
     // Back button
     this.uiElement.querySelector('#coliseum-back-btn')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       this.game.sceneManager.changeScene('worldMap');
     });
 
@@ -1656,6 +1662,8 @@ export class ColiseumScene extends Scene {
         this.updateTabs();
         this.updateContent();
         this.startReadyCountdown();
+        // Play match found notification sound
+        this.game.audio?.playSFX('match_found');
         parchmentToast.success('Match Found', 'Get ready!');
       },
 

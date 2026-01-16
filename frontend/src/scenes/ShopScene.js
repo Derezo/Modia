@@ -68,6 +68,11 @@ export class ShopScene extends Scene {
     // Subscribe to responsive breakpoint changes
     this.responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
 
+    // Play regional shop music
+    if (this.game.musicContext) {
+      this.game.musicContext.playNodeMusic('shop');
+    }
+
     await this.loadShopData();
   }
 
@@ -815,12 +820,14 @@ export class ShopScene extends Scene {
 
     // Back button
     this.uiElement.querySelector('#back-btn')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
       this.game.scenes.switchTo('worldMap');
     }, opts);
 
     // Tab switching
     this.uiElement.querySelectorAll('.shop-tab').forEach(tab => {
       tab.addEventListener('click', () => {
+        this.game.audio?.playUI('button_click');
         this.activeTab = tab.dataset.tab;
         this.selectedItem = null;
         this.purchaseQuantity = 1;
@@ -1119,6 +1126,9 @@ export class ShopScene extends Scene {
       this.updateGoldDisplay();
       this.game.state.set('user', { ...this.game.state.get('user'), gold: this.playerGold });
 
+      // Play purchase sound
+      this.game.audio?.playSFX('gold_spend');
+
       parchmentToast.success('Purchase Complete', result.message);
 
       // Refresh shop data
@@ -1146,6 +1156,9 @@ export class ShopScene extends Scene {
       this.playerGold = result.newGold;
       this.updateGoldDisplay();
       this.game.state.set('user', { ...this.game.state.get('user'), gold: this.playerGold });
+
+      // Play sell sound
+      this.game.audio?.playSFX('gold_receive');
 
       parchmentToast.success('Item Sold', result.message);
 

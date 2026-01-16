@@ -27,6 +27,11 @@ export class CharacterSelectScene extends Scene {
     this.characters = this.game.state.get('characters') || [];
     this.addStyles();
     this.createUI();
+
+    // Play character select music
+    if (this.game.musicContext) {
+      this.game.musicContext.playCharacterSelect();
+    }
   }
 
   exit() {
@@ -314,6 +319,7 @@ export class CharacterSelectScene extends Scene {
     // Event listeners
     container.querySelectorAll('.charselect-card, .charselect-card-empty').forEach(card => {
       card.addEventListener('click', () => {
+        this.game.audio?.playUI('button_click');
         const charId = card.dataset.id;
         const action = card.dataset.action;
 
@@ -325,7 +331,10 @@ export class CharacterSelectScene extends Scene {
       });
     });
 
-    container.querySelector('#logout-btn').addEventListener('click', () => this.handleLogout());
+    container.querySelector('#logout-btn').addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
+      this.handleLogout();
+    });
   }
 
   selectCharacter(charId) {

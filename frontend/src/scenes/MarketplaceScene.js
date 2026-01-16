@@ -85,6 +85,11 @@ export class MarketplaceScene extends Scene {
     // Initialize item panel for viewing unique item listings
     this.itemPanel = new MarketplaceItemPanel(this.game);
 
+    // Play marketplace music (uses castle/regional theme)
+    if (this.game.musicContext) {
+      this.game.musicContext.playExplorationMusic();
+    }
+
     await this.loadInitialData();
   }
 
@@ -1781,6 +1786,9 @@ export class MarketplaceScene extends Scene {
           this.updateGoldDisplay();
           this.game.state.set('user', { ...this.game.state.get('user'), gold: result.gold });
 
+          // Play purchase sound effect
+          this.game.audio?.playSFX('gold_spend');
+
           parchmentToast.success('Purchase Complete', `Bought ${result.purchase.itemName} for ${result.purchase.price}g`);
 
           // Close panel and refresh
@@ -2111,6 +2119,13 @@ export class MarketplaceScene extends Scene {
       this.playerGold = result.gold;
       this.updateGoldDisplay();
       this.game.state.set('user', { ...this.game.state.get('user'), gold: result.gold });
+
+      // Play appropriate sound effect
+      if (this.orderSide === 'buy') {
+        this.game.audio?.playSFX('gold_spend');
+      } else {
+        this.game.audio?.playSFX('gold_receive');
+      }
 
       // Show success toast
       const action = this.orderSide === 'buy' ? 'Buy' : 'Sell';

@@ -24,6 +24,11 @@ export class TitleIntroScene extends Scene {
     this.animationEngine.init();
 
     this.skipRequested = false;
+
+    // Play title theme music
+    if (this.game.musicContext) {
+      this.game.musicContext.playTitleTheme();
+    }
   }
 
   /**
