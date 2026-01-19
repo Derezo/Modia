@@ -17,6 +17,9 @@
 
 let gameInstance = null;
 
+// Track open console groups for safety when toggling settings mid-group
+const openGroups = new Set();
+
 /**
  * Set the game instance for settings lookup
  * @param {Game} game - The game instance
@@ -117,23 +120,38 @@ export function debugError(settingPath, ...args) {
 
 /**
  * Conditional debug group - creates a collapsible group only if setting is enabled
+ * Tracks open groups to safely close them if settings change mid-group
  * @param {string} settingPath - Dot-notation path to the setting
  * @param {string} label - Group label
  */
 export function debugGroup(settingPath, label) {
   if (getDevSetting(settingPath)) {
     console.group(formatPrefix(settingPath), label);
+    openGroups.add(settingPath);
   }
 }
 
 /**
- * Conditional debug groupEnd - ends a group only if setting is enabled
+ * Conditional debug groupEnd - ends a group if it was opened
+ * Uses tracking Set to safely close groups even if settings changed mid-group
  * @param {string} settingPath - Dot-notation path to the setting
  */
 export function debugGroupEnd(settingPath) {
-  if (getDevSetting(settingPath)) {
+  if (openGroups.has(settingPath)) {
+    console.groupEnd();
+    openGroups.delete(settingPath);
+  }
+}
+
+/**
+ * Close all open debug groups - call when settings change or on cleanup
+ * Prevents orphaned console groups when developer settings are toggled
+ */
+export function closeAllDebugGroups() {
+  for (const _ of openGroups) {
     console.groupEnd();
   }
+  openGroups.clear();
 }
 
 /**
@@ -174,6 +192,7 @@ export default {
   debugError,
   debugGroup,
   debugGroupEnd,
+  closeAllDebugGroups,
   debugTable,
   isDebugEnabled,
   isDevModeEnabled
