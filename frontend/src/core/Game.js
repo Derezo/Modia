@@ -14,8 +14,13 @@ import SettingsModal from '../components/SettingsModal.js';
 import { NotificationCenter } from '../components/NotificationCenter.js';
 import { PartyStatusBar } from '../components/PartyStatusBar.js';
 import { PartyInviteModal } from '../components/PartyInviteModal.js';
+import { setGameInstance as setDebugGameInstance, debugLog, isDebugEnabled } from '../utils/debugLogger.js';
 
-// Default settings structure (mirrors backend and SettingsScene)
+// Default settings structure
+// IMPORTANT: This structure is mirrored in:
+// - api/src/routes/settings.js (backend validation)
+// - frontend/src/scenes/SettingsScene.js (UI)
+// Keep all three in sync when making changes.
 const DEFAULT_SETTINGS = {
   battle: {
     actionMenuStyle: 'radial',
@@ -74,6 +79,32 @@ const DEFAULT_SETTINGS = {
     allowFriendRequests: true,
     chatTimestamps: true,
     profanityFilter: true
+  },
+  developer: {
+    enabled: false,
+    audio: {
+      logMusicChanges: false,
+      logRegionInfo: false,
+      logSFXPlayback: false,
+      logMissingAssets: true
+    },
+    network: {
+      logAPIRequests: false,
+      logWebSocketMessages: false
+    },
+    state: {
+      logStateChanges: false,
+      logSceneTransitions: false
+    },
+    battle: {
+      logTurnEvents: false,
+      logDamageCalculations: false,
+      logAIDecisions: false
+    },
+    performance: {
+      showFPS: false,
+      logSlowFrames: false
+    }
   }
 };
 
@@ -94,6 +125,11 @@ export class Game {
 
     this.lastTime = 0;
     this.running = false;
+
+    // FPS tracking for developer debug
+    this.fpsFrameTimes = [];
+    this.fpsLastUpdate = 0;
+    this.currentFPS = 0;
 
     // Target dimensions (will be scaled to fit screen)
     this.targetWidth = 800;
@@ -134,6 +170,9 @@ export class Game {
     this.socket = new GameWebSocket(this.getWebSocketUrl());
     this.input = new InputHandler(this.canvas);
     this.scenes = new SceneManager(this);
+
+    // Initialize debug logger with game instance
+    setDebugGameInstance(this);
 
     // Initialize asset loader
     this.assetLoader = new AssetLoader();
@@ -292,13 +331,60 @@ export class Game {
     const deltaTime = currentTime - this.lastTime;
     this.lastTime = currentTime;
 
+    // Performance tracking for developer debug
+    this.trackFramePerformance(deltaTime, currentTime);
+
     // Update current scene (passes deltaTime in ms)
     this.scenes.update(deltaTime);
 
     // Render
     this.render();
 
+    // Render FPS overlay if enabled
+    this.renderFPSOverlay();
+
     requestAnimationFrame((time) => this.gameLoop(time));
+  }
+
+  /**
+   * Track frame performance for debug logging
+   * @param {number} deltaTime - Frame time in milliseconds
+   * @param {number} currentTime - Current timestamp
+   */
+  trackFramePerformance(deltaTime, currentTime) {
+    // Log slow frames (> 32ms = below 30 FPS)
+    if (deltaTime > 32) {
+      debugLog('performance.logSlowFrames', `Slow frame: ${deltaTime.toFixed(1)}ms (${(1000 / deltaTime).toFixed(1)} FPS)`);
+    }
+
+    // Calculate FPS over a rolling window
+    this.fpsFrameTimes.push(deltaTime);
+    if (this.fpsFrameTimes.length > 60) {
+      this.fpsFrameTimes.shift();
+    }
+
+    // Update FPS calculation every 500ms
+    if (currentTime - this.fpsLastUpdate > 500) {
+      const avgFrameTime = this.fpsFrameTimes.reduce((a, b) => a + b, 0) / this.fpsFrameTimes.length;
+      this.currentFPS = Math.round(1000 / avgFrameTime);
+      this.fpsLastUpdate = currentTime;
+    }
+  }
+
+  /**
+   * Render FPS counter overlay if enabled
+   */
+  renderFPSOverlay() {
+    if (!isDebugEnabled('performance.showFPS')) return;
+
+    this.ctx.save();
+    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    this.ctx.fillRect(10, 10, 70, 24);
+    this.ctx.fillStyle = this.currentFPS >= 55 ? '#4caf50' : this.currentFPS >= 30 ? '#ff9800' : '#f44336';
+    this.ctx.font = 'bold 14px monospace';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText(`FPS: ${this.currentFPS}`, 18, 22);
+    this.ctx.restore();
   }
 
   render() {

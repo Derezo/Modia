@@ -6,6 +6,7 @@
  */
 
 import { AUDIO_MANIFEST } from './AudioAssets.js';
+import { debugLog } from '../utils/debugLogger.js';
 
 // Maximum concurrent sounds per effect type
 const MAX_CONCURRENT_SOUNDS = 8;
@@ -162,6 +163,13 @@ export class SFXPlayer {
 
       // Track active sounds
       this.activeSounds.set(effectId, activeCount + 1);
+
+      debugLog('audio.logSFXPlayback', 'Playing SFX:', effectId, {
+        category,
+        volume: effectiveVol.toFixed(2),
+        variation: variation !== null ? variation : 'none',
+        pan
+      });
 
       // Handle completion
       source.onended = () => {

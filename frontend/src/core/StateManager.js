@@ -1,3 +1,5 @@
+import { debugLog } from '../utils/debugLogger.js';
+
 export class StateManager {
   constructor() {
     this.state = {
@@ -59,6 +61,8 @@ export class StateManager {
 
     const oldValue = target[lastKey];
     target[lastKey] = value;
+
+    debugLog('state.logStateChanges', `State change: ${key}`, { oldValue, newValue: value });
 
     this.notify(key, value, oldValue);
   }

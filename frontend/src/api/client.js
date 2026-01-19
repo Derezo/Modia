@@ -1,3 +1,5 @@
+import { debugLog } from '../utils/debugLogger.js';
+
 export class ApiClient {
   constructor(baseUrl) {
     this.baseUrl = baseUrl;
@@ -38,6 +40,12 @@ export class ApiClient {
       fetchOptions.body = JSON.stringify(data);
     }
 
+    // Redact sensitive data in logs
+    const sensitiveEndpoints = ['/auth/login', '/auth/register', '/auth/refresh'];
+    const shouldRedact = sensitiveEndpoints.some(ep => endpoint.includes(ep));
+    const logData = shouldRedact && data ? { body: '[REDACTED]' } : (data ? { body: data } : {});
+    debugLog('network.logAPIRequests', `${method} ${endpoint}`, logData);
+
     try {
       let response = await fetch(`${this.baseUrl}${endpoint}`, fetchOptions);
 
@@ -71,6 +79,8 @@ export class ApiClient {
       }
 
       const result = await response.json();
+
+      debugLog('network.logAPIRequests', `${method} ${endpoint} -> ${response.status}`, { response: result });
 
       if (!response.ok) {
         throw new Error(result.error || result.message || 'Request failed');

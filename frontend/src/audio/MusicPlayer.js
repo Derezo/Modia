@@ -6,6 +6,7 @@
  */
 
 import { AUDIO_MANIFEST } from './AudioAssets.js';
+import { debugLog } from '../utils/debugLogger.js';
 
 export class MusicPlayer {
   constructor(audioContext, audioAssets) {
@@ -211,6 +212,8 @@ export class MusicPlayer {
     this.isPlaying = true;
     this.isPaused = false;
 
+    debugLog('audio.logMusicChanges', 'Now playing:', trackId, { loop: config.loop !== false, fadeIn: fadeInMs });
+
     // Fade in if needed
     if (fadeInMs > 0) {
       gain.gain.setTargetAtTime(
@@ -277,6 +280,8 @@ export class MusicPlayer {
       this.context.currentTime,
       timeConstant
     );
+
+    debugLog('audio.logMusicChanges', 'Crossfading to:', trackId, { from: this.currentTrack, fadeMs: fadeDuration * 1000 });
 
     // Complete crossfade after duration
     const crossfadeDuration = fadeDuration * 3 * 1000; // 3 time constants for ~95% complete

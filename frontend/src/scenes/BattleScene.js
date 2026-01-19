@@ -13,10 +13,11 @@ import { BattleContextMenu } from '../battle/BattleContextMenu.js';
 import { GridCursor } from '../battle/GridCursor.js';
 import { BossPhaseIndicator } from '../battle/BossPhaseIndicator.js';
 import { isSelfTargetingSkill, getVisualCategory } from '../battle/SkillEffectCategories.js';
-import { getSkillSoundKey } from '../audio/AudioAssets.js';
+import { getSkillSoundKey, RACE_TO_REGION } from '../audio/AudioAssets.js';
 import { calculateDamagePreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { debugLog } from '../utils/debugLogger.js';
 
 /**
  * BattleScene - Tactical turn-based combat on an isometric grid with camera
@@ -947,6 +948,14 @@ export class BattleScene extends Scene {
     const isEnemy = unitType === 'enemy';
     const isPlayerTurn = unitType === 'player' || unitType === 'player_local';
 
+    debugLog('battle.logTurnEvents', 'Turn start:', {
+      unitId,
+      unitName,
+      unitType,
+      turnNumber: this.battleLogTurnCounter + 1,
+      position
+    });
+
     // Note: Turn start sound is played in handleRemoteYourTurn for player turns
     // to provide immediate audio feedback when the server signals your turn
 
@@ -1100,6 +1109,16 @@ export class BattleScene extends Scene {
       // Find target and play damage animation
       if (target) {
         if (result.damage > 0) {
+          debugLog('battle.logDamageCalculations', 'Damage dealt:', {
+            attacker: actor?.name,
+            target: target.name,
+            damage: result.damage,
+            baseDamage: result.baseDamage,
+            isCritical: result.isCritical,
+            critBonus: result.critBonus,
+            damageType: result.damageType,
+            element: result.element
+          });
           target.playHitAnimation();
           // Play impact sound based on result
           this.playImpactSound(result);
@@ -2047,7 +2066,8 @@ export class BattleScene extends Scene {
       // Add skill or item ID depending on action type
       if (actionType === 'skill') {
         actionData.skillId = this.selectedSkillId;
-        this.playSound('skill_cast');
+        // Play specific skill sound (e.g., skill_fireball, skill_inferno)
+        this.playSkillSound({ id: this.selectedSkillId }, this.units.get(activeUnit?.id));
       } else if (actionType === 'item') {
         // For items, we use skillId field to pass the item's itemId
         // (backend expects skillId for item type lookups)
@@ -2098,11 +2118,7 @@ export class BattleScene extends Scene {
     // Handle AoE skill damage (hits multiple units)
     if (actionResult.isAoE && actionResult.aoeTargets) {
       const attacker = this.units.get(this.getActiveUnit()?.id);
-
-      // Play skill sound for AoE skill
-      if (actionResult.skillId) {
-        this.playSkillSound({ id: actionResult.skillId }, attacker);
-      }
+      // Note: Skill sound already played in submitAction when skill was cast
 
       // Play attacker animation toward target tile
       if (attacker && this.pendingAction?.targetTile) {
@@ -2180,11 +2196,7 @@ export class BattleScene extends Scene {
     if (!actionResult.isAoE && actionResult.damage > 0 && actionResult.targetId) {
       const attacker = this.units.get(this.getActiveUnit()?.id);
       const target = this.units.get(actionResult.targetId);
-
-      // Play skill sound if this was a skill action
-      if (actionResult.skillId) {
-        this.playSkillSound({ id: actionResult.skillId }, attacker);
-      }
+      // Note: Skill sound already played in submitAction when skill was cast
 
       if (target) {
         // Attacker faces target and plays attack animation
@@ -2552,9 +2564,13 @@ export class BattleScene extends Scene {
    */
   getCurrentRegion() {
     // Try to get region from current node in game state
+    // API returns region_race ('Human', 'Elf', etc.), map to region name ('heartlands', etc.)
     const currentNode = this.game.state.get('currentNode');
-    if (currentNode?.region) {
-      return currentNode.region;
+    if (currentNode?.region_race) {
+      const regionName = RACE_TO_REGION[currentNode.region_race];
+      if (regionName) {
+        return regionName;
+      }
     }
     // Fallback to musicContext's current region if available
     if (this.game.musicContext?.getRegion()) {

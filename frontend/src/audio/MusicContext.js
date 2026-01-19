@@ -21,6 +21,8 @@
  *   game.musicContext.resumeAfterBattle();
  */
 
+import { debugLog } from '../utils/debugLogger.js';
+
 export class MusicContext {
   constructor(audioManager) {
     this.audio = audioManager;
@@ -41,6 +43,7 @@ export class MusicContext {
    * @param {string} regionId - Region identifier (e.g., 'heartlands', 'sylvan_reaches')
    */
   setRegion(regionId) {
+    debugLog('audio.logRegionInfo', 'Region set:', regionId);
     this.currentRegion = regionId;
   }
 
@@ -67,6 +70,7 @@ export class MusicContext {
     this.currentBattleType = null;
 
     const trackId = `${this.currentRegion}_exploration`;
+    debugLog('audio.logRegionInfo', 'Building key:', trackId, { region: this.currentRegion, type: 'exploration' });
     this.audio.playMusic(trackId);
   }
 
@@ -86,6 +90,7 @@ export class MusicContext {
     this.currentBattleType = null;
 
     const trackId = `${this.currentRegion}_${nodeType}`;
+    debugLog('audio.logRegionInfo', 'Building key:', trackId, { region: this.currentRegion, type: nodeType });
     this.audio.playMusic(trackId);
   }
 
@@ -111,6 +116,7 @@ export class MusicContext {
     this.isInBattle = true;
 
     const trackId = `${this.currentRegion}_battle_${battleType}`;
+    debugLog('audio.logRegionInfo', 'Building key:', trackId, { region: this.currentRegion, type: `battle_${battleType}` });
     this.audio.playMusic(trackId);
   }
 

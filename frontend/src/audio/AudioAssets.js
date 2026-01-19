@@ -7,12 +7,27 @@
  * Total: 55 music tracks + 244 sound effects = 299 audio assets
  */
 
+import { debugLog } from '../utils/debugLogger.js';
+
 // =============================================================================
 // CONSTANTS AND HELPERS
 // =============================================================================
 
 /** Region IDs for music context */
 export const REGIONS = ['heartlands', 'sylvan_reaches', 'iron_depths', 'shadowmere', 'bloodplains'];
+
+/**
+ * Maps race names (from API) to region IDs (for music)
+ * The API returns region_race ('human', 'elf', etc.) - music tracks use region names
+ * Keys are lowercase to match API response format
+ */
+export const RACE_TO_REGION = {
+  'human': 'heartlands',
+  'elf': 'sylvan_reaches',
+  'dwarf': 'iron_depths',
+  'vampire': 'shadowmere',
+  'orc': 'bloodplains'
+};
 
 /** Node types that have regional music */
 export const NODE_TYPES = ['exploration', 'tavern', 'shop', 'fishing', 'ruins'];
@@ -950,6 +965,16 @@ export const AUDIO_MANIFEST = {
     },
 
     // -------------------------------------------------------------------------
+    // Generic Skill Sounds
+    // -------------------------------------------------------------------------
+    skill_cast: {
+      path: '/assets/audio/sfx/skills/skill_cast.mp3',
+      volume: 0.7,
+      category: 'skill',
+      subcategory: 'generic'
+    },
+
+    // -------------------------------------------------------------------------
     // Player Skills - Warrior (7)
     // -------------------------------------------------------------------------
     skill_power_strike: {
@@ -1855,6 +1880,16 @@ export const AUDIO_MANIFEST = {
       volume: 0.7,
       category: 'skill',
       archetype: 'plant'
+    },
+
+    // -------------------------------------------------------------------------
+    // Movement (1)
+    // -------------------------------------------------------------------------
+    footstep: {
+      path: '/assets/audio/sfx/interactions/footstep.mp3',
+      volume: 0.4,
+      category: 'movement',
+      subcategory: 'step'
     }
   },
 
@@ -2262,16 +2297,6 @@ export const AUDIO_MANIFEST = {
     },
 
     // -------------------------------------------------------------------------
-    // Movement (1)
-    // -------------------------------------------------------------------------
-    footstep: {
-      path: '/assets/audio/sfx/interactions/footstep.mp3',
-      volume: 0.4,
-      category: 'interaction',
-      subcategory: 'movement'
-    },
-
-    // -------------------------------------------------------------------------
     // Matchmaking (2)
     // -------------------------------------------------------------------------
     match_found: {
@@ -2347,6 +2372,9 @@ export const PLACEHOLDER_CONFIG = {
     status_poison: { frequency: 150, type: 'triangle', duration: 0.4, silent: false },
     status_stun: { frequency: 500, type: 'square', duration: 0.2, silent: false },
     // Skills
+    // Generic skill
+    skill_cast: { frequency: 400, type: 'sine', duration: 0.3, silent: false },
+    // Wizard skills
     skill_fireball: { frequency: 300, type: 'sawtooth', duration: 0.4, silent: false },
     skill_inferno: { frequency: 250, type: 'sawtooth', duration: 0.6, silent: false },
     skill_ice_shard: { frequency: 600, type: 'sine', duration: 0.3, silent: false },
@@ -2418,8 +2446,6 @@ export const PLACEHOLDER_CONFIG = {
     fishing_reel: { frequency: 400, type: 'triangle', duration: 0.25, silent: false },
     fishing_big_one: { frequency: 700, type: 'square', duration: 0.2, silent: false },
     puzzle_solve: { frequency: 660, type: 'sine', duration: 0.25, silent: false },
-    // Movement
-    footstep: { frequency: 100, type: 'triangle', duration: 0.05, silent: false },
     // Matchmaking
     match_found: { frequency: 880, type: 'sine', duration: 0.3, silent: false },
     gold_receive: { frequency: 700, type: 'sine', duration: 0.15, silent: false }
@@ -2427,7 +2453,9 @@ export const PLACEHOLDER_CONFIG = {
   sfx: {
     // Turn indicators
     turn_start: { frequency: 600, type: 'sine', duration: 0.15, silent: false },
-    enemy_turn: { frequency: 350, type: 'triangle', duration: 0.12, silent: false }
+    enemy_turn: { frequency: 350, type: 'triangle', duration: 0.12, silent: false },
+    // Movement
+    footstep: { frequency: 100, type: 'triangle', duration: 0.05, silent: false }
   }
 };
 
@@ -2510,7 +2538,7 @@ export class AudioAssets {
   async getBuffer(category, id, variation = null) {
     const config = this.getAssetConfig(category, id);
     if (!config) {
-      console.warn(`Unknown audio asset: ${category}/${id}`);
+      console.warn(`[Audio] Unknown key "${id}" in category "${category}" - check AUDIO_MANIFEST`);
       return this.generatePlaceholder(category, id);
     }
 
@@ -2529,7 +2557,8 @@ export class AudioAssets {
     } catch (error) {
       // Fall back to placeholder
       if (this.usePlaceholders) {
-        console.debug(`Using placeholder for ${category}/${id}: ${error.message}`);
+        const generateCmd = category === 'music' ? 'music' : 'sfx';
+        debugLog('audio.logMissingAssets', `Missing: ${category}/${id} - using placeholder. Generate with: npm run audio:generate:${generateCmd} -- --key ${id}`);
         return this.generatePlaceholder(category, id);
       }
       throw error;

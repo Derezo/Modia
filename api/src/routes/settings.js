@@ -5,7 +5,11 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Default settings structure (7 categories, ~55 settings)
+// Default settings structure (8 categories, ~55 settings)
+// IMPORTANT: This structure is mirrored in:
+// - frontend/src/core/Game.js (defaults)
+// - frontend/src/scenes/SettingsScene.js (UI)
+// Keep all three in sync when making changes.
 const DEFAULT_SETTINGS = {
   battle: {
     actionMenuStyle: 'radial',    // 'radial' | 'context' | 'actionbar'
@@ -64,6 +68,32 @@ const DEFAULT_SETTINGS = {
     allowFriendRequests: true,    // allow friend requests
     chatTimestamps: true,         // show timestamps in chat
     profanityFilter: true         // filter profanity in chat
+  },
+  developer: {
+    enabled: false,               // master toggle for all debug features
+    audio: {
+      logMusicChanges: false,     // log when playing a new track
+      logRegionInfo: false,       // log when building audio keys
+      logSFXPlayback: false,      // log when playing sound effects
+      logMissingAssets: true      // show "npm run audio:generate" messages (default ON)
+    },
+    network: {
+      logAPIRequests: false,      // log HTTP requests/responses
+      logWebSocketMessages: false // log WebSocket messages
+    },
+    state: {
+      logStateChanges: false,     // log StateManager changes
+      logSceneTransitions: false  // log scene enter/exit
+    },
+    battle: {
+      logTurnEvents: false,       // log turn transitions
+      logDamageCalculations: false, // show damage formula breakdowns
+      logAIDecisions: false       // show AI decision making
+    },
+    performance: {
+      showFPS: false,             // show FPS counter overlay
+      logSlowFrames: false        // log frames >32ms
+    }
   }
 };
 
@@ -293,6 +323,83 @@ function validateSettings(settings) {
     for (const field of socialBooleanFields) {
       if (settings.social[field] !== undefined && typeof settings.social[field] !== 'boolean') {
         return { valid: false, error: `social.${field} must be a boolean` };
+      }
+    }
+  }
+
+  // Validate developer settings if present
+  if (settings.developer) {
+    if (typeof settings.developer !== 'object') {
+      return { valid: false, error: 'developer settings must be an object' };
+    }
+
+    // Validate enabled (master toggle)
+    if (settings.developer.enabled !== undefined && typeof settings.developer.enabled !== 'boolean') {
+      return { valid: false, error: 'developer.enabled must be a boolean' };
+    }
+
+    // Validate audio debug settings
+    if (settings.developer.audio) {
+      if (typeof settings.developer.audio !== 'object') {
+        return { valid: false, error: 'developer.audio settings must be an object' };
+      }
+      const audioBooleanFields = ['logMusicChanges', 'logRegionInfo', 'logSFXPlayback', 'logMissingAssets'];
+      for (const field of audioBooleanFields) {
+        if (settings.developer.audio[field] !== undefined && typeof settings.developer.audio[field] !== 'boolean') {
+          return { valid: false, error: `developer.audio.${field} must be a boolean` };
+        }
+      }
+    }
+
+    // Validate network debug settings
+    if (settings.developer.network) {
+      if (typeof settings.developer.network !== 'object') {
+        return { valid: false, error: 'developer.network settings must be an object' };
+      }
+      const networkBooleanFields = ['logAPIRequests', 'logWebSocketMessages'];
+      for (const field of networkBooleanFields) {
+        if (settings.developer.network[field] !== undefined && typeof settings.developer.network[field] !== 'boolean') {
+          return { valid: false, error: `developer.network.${field} must be a boolean` };
+        }
+      }
+    }
+
+    // Validate state debug settings
+    if (settings.developer.state) {
+      if (typeof settings.developer.state !== 'object') {
+        return { valid: false, error: 'developer.state settings must be an object' };
+      }
+      const stateBooleanFields = ['logStateChanges', 'logSceneTransitions'];
+      for (const field of stateBooleanFields) {
+        if (settings.developer.state[field] !== undefined && typeof settings.developer.state[field] !== 'boolean') {
+          return { valid: false, error: `developer.state.${field} must be a boolean` };
+        }
+      }
+    }
+
+    // Validate battle debug settings
+    if (settings.developer.battle) {
+      if (typeof settings.developer.battle !== 'object') {
+        return { valid: false, error: 'developer.battle settings must be an object' };
+      }
+      const battleBooleanFields = ['logTurnEvents', 'logDamageCalculations', 'logAIDecisions'];
+      for (const field of battleBooleanFields) {
+        if (settings.developer.battle[field] !== undefined && typeof settings.developer.battle[field] !== 'boolean') {
+          return { valid: false, error: `developer.battle.${field} must be a boolean` };
+        }
+      }
+    }
+
+    // Validate performance debug settings
+    if (settings.developer.performance) {
+      if (typeof settings.developer.performance !== 'object') {
+        return { valid: false, error: 'developer.performance settings must be an object' };
+      }
+      const performanceBooleanFields = ['showFPS', 'logSlowFrames'];
+      for (const field of performanceBooleanFields) {
+        if (settings.developer.performance[field] !== undefined && typeof settings.developer.performance[field] !== 'boolean') {
+          return { valid: false, error: `developer.performance.${field} must be a boolean` };
+        }
       }
     }
   }

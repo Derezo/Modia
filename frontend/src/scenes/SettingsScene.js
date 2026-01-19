@@ -4,7 +4,11 @@ import { PARCHMENT_COLORS, injectParchmentTheme } from '../ui/parchment/index.js
 // Shorthand for colors in CSS template
 const P = PARCHMENT_COLORS;
 
-// Default settings structure (mirrors backend)
+// Default settings structure
+// IMPORTANT: This structure is mirrored in:
+// - api/src/routes/settings.js (backend validation)
+// - frontend/src/core/Game.js (defaults)
+// Keep all three in sync when making changes.
 const DEFAULT_SETTINGS = {
   battle: {
     actionMenuStyle: 'radial',
@@ -63,12 +67,38 @@ const DEFAULT_SETTINGS = {
     allowFriendRequests: true,
     chatTimestamps: true,
     profanityFilter: true
+  },
+  developer: {
+    enabled: false,
+    audio: {
+      logMusicChanges: false,
+      logRegionInfo: false,
+      logSFXPlayback: false,
+      logMissingAssets: true
+    },
+    network: {
+      logAPIRequests: false,
+      logWebSocketMessages: false
+    },
+    state: {
+      logStateChanges: false,
+      logSceneTransitions: false
+    },
+    battle: {
+      logTurnEvents: false,
+      logDamageCalculations: false,
+      logAIDecisions: false
+    },
+    performance: {
+      showFPS: false,
+      logSlowFrames: false
+    }
   }
 };
 
 /**
  * SettingsScene - Full-screen settings configuration
- * Features: 7 tabs - Battle, Audio, Display, Accessibility, Gameplay, Controls, Social
+ * Features: 8 tabs - Battle, Audio, Display, Accessibility, Gameplay, Controls, Social, Developer
  */
 export class SettingsScene extends Scene {
   constructor(game) {
@@ -495,6 +525,16 @@ export class SettingsScene extends Scene {
         display: flex;
       }
 
+      /* Disabled state for developer settings */
+      .settings-section.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+
+      .settings-section.disabled .settings-checkbox {
+        cursor: not-allowed;
+      }
+
       /* Responsive */
       @media (max-width: 768px) {
         .settings-content {
@@ -618,6 +658,10 @@ export class SettingsScene extends Scene {
             <span class="settings-tab-icon">&#128101;</span>
             <span class="settings-tab-label">Social</span>
           </button>
+          <button class="settings-tab" data-tab="developer">
+            <span class="settings-tab-icon">&#128295;</span>
+            <span class="settings-tab-label">Developer</span>
+          </button>
         </div>
 
         <div class="settings-main">
@@ -628,6 +672,7 @@ export class SettingsScene extends Scene {
           ${this.renderGameplayPanel()}
           ${this.renderControlsPanel()}
           ${this.renderSocialPanel()}
+          ${this.renderDeveloperPanel()}
         </div>
       </div>
 
@@ -1247,6 +1292,155 @@ export class SettingsScene extends Scene {
     `;
   }
 
+  renderDeveloperPanel() {
+    const d = this.settings.developer;
+    const disabled = !d.enabled;
+    const disabledClass = disabled ? 'disabled' : '';
+    const disabledAttr = disabled ? 'disabled' : '';
+
+    return `
+      <div class="settings-panel" id="panel-developer">
+        <div class="settings-panel-title">Developer Settings</div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Master Toggle</div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-enabled" ${d.enabled ? 'checked' : ''} data-setting="developer.enabled">
+              <label class="settings-checkbox-label" for="developer-enabled">Enable Developer Mode</label>
+            </div>
+            <div class="settings-group-description">Master toggle for all debug features. When disabled, no debug output will be logged.</div>
+          </div>
+        </div>
+
+        <div class="settings-section ${disabledClass}">
+          <div class="settings-section-title">Audio Debugging</div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-audio-music" ${d.audio.logMusicChanges ? 'checked' : ''} ${disabledAttr} data-setting="developer.audio.logMusicChanges">
+              <label class="settings-checkbox-label" for="developer-audio-music">Log Music Track Changes</label>
+            </div>
+            <div class="settings-group-description">Log when playing a new music track.</div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-audio-region" ${d.audio.logRegionInfo ? 'checked' : ''} ${disabledAttr} data-setting="developer.audio.logRegionInfo">
+              <label class="settings-checkbox-label" for="developer-audio-region">Log Region Audio Keys</label>
+            </div>
+            <div class="settings-group-description">Log when building audio keys for regions.</div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-audio-sfx" ${d.audio.logSFXPlayback ? 'checked' : ''} ${disabledAttr} data-setting="developer.audio.logSFXPlayback">
+              <label class="settings-checkbox-label" for="developer-audio-sfx">Log Sound Effect Playback</label>
+            </div>
+            <div class="settings-group-description">Log when playing sound effects.</div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-audio-missing" ${d.audio.logMissingAssets ? 'checked' : ''} ${disabledAttr} data-setting="developer.audio.logMissingAssets">
+              <label class="settings-checkbox-label" for="developer-audio-missing">Show Missing Asset Warnings</label>
+            </div>
+            <div class="settings-group-description">Show "npm run audio:generate" messages for missing audio files.</div>
+          </div>
+        </div>
+
+        <div class="settings-section ${disabledClass}">
+          <div class="settings-section-title">Network Debugging</div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-network-api" ${d.network.logAPIRequests ? 'checked' : ''} ${disabledAttr} data-setting="developer.network.logAPIRequests">
+              <label class="settings-checkbox-label" for="developer-network-api">Log API Requests</label>
+            </div>
+            <div class="settings-group-description">Log HTTP requests and responses.</div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-network-ws" ${d.network.logWebSocketMessages ? 'checked' : ''} ${disabledAttr} data-setting="developer.network.logWebSocketMessages">
+              <label class="settings-checkbox-label" for="developer-network-ws">Log WebSocket Messages</label>
+            </div>
+            <div class="settings-group-description">Log WebSocket messages.</div>
+          </div>
+        </div>
+
+        <div class="settings-section ${disabledClass}">
+          <div class="settings-section-title">State Debugging</div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-state-changes" ${d.state.logStateChanges ? 'checked' : ''} ${disabledAttr} data-setting="developer.state.logStateChanges">
+              <label class="settings-checkbox-label" for="developer-state-changes">Log State Changes</label>
+            </div>
+            <div class="settings-group-description">Log StateManager changes.</div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-state-scenes" ${d.state.logSceneTransitions ? 'checked' : ''} ${disabledAttr} data-setting="developer.state.logSceneTransitions">
+              <label class="settings-checkbox-label" for="developer-state-scenes">Log Scene Transitions</label>
+            </div>
+            <div class="settings-group-description">Log scene enter/exit events.</div>
+          </div>
+        </div>
+
+        <div class="settings-section ${disabledClass}">
+          <div class="settings-section-title">Battle Debugging</div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-battle-turns" ${d.battle.logTurnEvents ? 'checked' : ''} ${disabledAttr} data-setting="developer.battle.logTurnEvents">
+              <label class="settings-checkbox-label" for="developer-battle-turns">Log Turn Events</label>
+            </div>
+            <div class="settings-group-description">Log turn transitions and battle events.</div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-battle-damage" ${d.battle.logDamageCalculations ? 'checked' : ''} ${disabledAttr} data-setting="developer.battle.logDamageCalculations">
+              <label class="settings-checkbox-label" for="developer-battle-damage">Log Damage Calculations</label>
+            </div>
+            <div class="settings-group-description">Show damage formula breakdowns.</div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-battle-ai" ${d.battle.logAIDecisions ? 'checked' : ''} ${disabledAttr} data-setting="developer.battle.logAIDecisions">
+              <label class="settings-checkbox-label" for="developer-battle-ai">Log AI Decisions</label>
+            </div>
+            <div class="settings-group-description">Show AI decision-making process.</div>
+          </div>
+        </div>
+
+        <div class="settings-section ${disabledClass}">
+          <div class="settings-section-title">Performance</div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-performance-fps" ${d.performance.showFPS ? 'checked' : ''} ${disabledAttr} data-setting="developer.performance.showFPS">
+              <label class="settings-checkbox-label" for="developer-performance-fps">Show FPS Counter</label>
+            </div>
+            <div class="settings-group-description">Display FPS counter overlay on the game canvas.</div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-checkbox-group">
+              <input type="checkbox" class="settings-checkbox" id="developer-performance-slow" ${d.performance.logSlowFrames ? 'checked' : ''} ${disabledAttr} data-setting="developer.performance.logSlowFrames">
+              <label class="settings-checkbox-label" for="developer-performance-slow">Log Slow Frames</label>
+            </div>
+            <div class="settings-group-description">Log frames that take longer than 32ms (below 30 FPS).</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   getKeybindsForScheme(scheme) {
     const schemes = {
       wasd: { up: 'W', down: 'S', left: 'A', right: 'D', confirm: 'E', cancel: 'Q' },
@@ -1288,6 +1482,11 @@ export class SettingsScene extends Scene {
     this.uiElement.querySelectorAll('.settings-checkbox').forEach(checkbox => {
       checkbox.addEventListener('change', () => {
         this.setSettingValue(checkbox.dataset.setting, checkbox.checked);
+
+        // Handle developer.enabled toggle - update disabled state of other developer settings
+        if (checkbox.dataset.setting === 'developer.enabled') {
+          this.updateDeveloperSectionsDisabledState(checkbox.checked);
+        }
       }, opts);
     });
 
@@ -1335,6 +1534,30 @@ export class SettingsScene extends Scene {
     // Update panels
     this.uiElement.querySelectorAll('.settings-panel').forEach(panel => {
       panel.classList.toggle('active', panel.id === `panel-${tab}`);
+    });
+  }
+
+  /**
+   * Update the disabled state of developer settings sections
+   * @param {boolean} enabled - Whether developer mode is enabled
+   */
+  updateDeveloperSectionsDisabledState(enabled) {
+    const developerPanel = this.uiElement.querySelector('#panel-developer');
+    if (!developerPanel) return;
+
+    // Get all sections except the master toggle section
+    const sections = developerPanel.querySelectorAll('.settings-section');
+    sections.forEach((section, index) => {
+      // Skip the first section (master toggle)
+      if (index === 0) return;
+
+      // Toggle disabled class
+      section.classList.toggle('disabled', !enabled);
+
+      // Toggle disabled attribute on checkboxes
+      section.querySelectorAll('.settings-checkbox').forEach(checkbox => {
+        checkbox.disabled = !enabled;
+      });
     });
   }
 
@@ -1417,7 +1640,7 @@ export class SettingsScene extends Scene {
       this.hasChanges = false;
 
       // Apply settings locally
-      this.game.state.set('settings', this.settings);
+      this.game.state.set('userSettings', this.settings);
 
       // Apply accessibility settings immediately
       this.applyAccessibilitySettings();
