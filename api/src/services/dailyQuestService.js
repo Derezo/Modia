@@ -89,7 +89,15 @@ export async function refreshQuestsIfNeeded(characterId) {
 async function assignQuests(characterId, userId, level, period) {
   const count = period === 'daily' ? DAILY_QUEST_COUNT : WEEKLY_QUEST_COUNT;
 
+  // Check if character has elite quest access (via Perfect Week)
+  const eliteAccessResult = await query(
+    'SELECT has_elite_quest_access($1) as has_access',
+    [characterId]
+  );
+  const hasEliteAccess = eliteAccessResult.rows[0]?.has_access || false;
+
   // Get eligible quest templates (level appropriate, active, weighted random)
+  // Gate elite quests based on Perfect Week achievement
   const templatesResult = await query(
     `SELECT id, quest_key, quest_name, quest_description, objective_type,
             objective_requirements, target_count, rewards, difficulty, selection_weight
@@ -98,9 +106,10 @@ async function assignQuests(characterId, userId, level, period) {
        AND is_active = TRUE
        AND min_level <= $2
        AND max_level >= $2
+       AND (difficulty != 'elite' OR $3 = TRUE)
      ORDER BY RANDOM() * selection_weight DESC
-     LIMIT $3`,
-    [period, level, count * 2] // Get extra for variety
+     LIMIT $4`,
+    [period, level, hasEliteAccess, count * 2] // Get extra for variety
   );
 
   if (templatesResult.rows.length === 0) {
@@ -413,7 +422,7 @@ export async function claimReward(questId, characterId) {
     const questResult = await client.query(
       `SELECT cdq.id, cdq.is_completed, cdq.rewards_claimed, cdq.quest_template_id,
               cdq.period, cdq.period_start, cdq.character_id,
-              dqt.rewards,
+              dqt.rewards, dqt.difficulty,
               c.user_id
        FROM character_daily_quests cdq
        JOIN daily_quest_templates dqt ON dqt.id = cdq.quest_template_id
@@ -493,12 +502,53 @@ export async function claimReward(questId, characterId) {
       ]
     );
 
+    // Elite quest handling: item drops and stats tracking
+    let itemDrop = null;
+    if (quest.difficulty === 'elite') {
+      // Update elite quest stats
+      await client.query('SELECT update_elite_quest_stats($1)', [characterId]);
+
+      // Roll for rare item drop (15% chance)
+      const dropChance = 0.15;
+      if (Math.random() < dropChance) {
+        // Get random elite-tier item (rarity 4+)
+        const itemResult = await client.query(
+          `SELECT id, name, item_type, equipment_slot, rarity
+           FROM item_templates
+           WHERE rarity >= 4 AND item_type IN ('weapon', 'armor', 'accessory')
+           ORDER BY RANDOM() LIMIT 1`
+        );
+
+        if (itemResult.rows.length > 0) {
+          const item = itemResult.rows[0];
+
+          // Add item to user's shared inventory pool (not character-specific)
+          // This matches the pattern used by shop, marketplace, and item drops
+          await client.query(
+            `INSERT INTO character_items (user_id, item_template_id, quantity)
+             VALUES ($1, $2, 1)`,
+            [quest.user_id, item.id]
+          );
+
+          itemDrop = {
+            id: item.id,
+            name: item.name,
+            type: item.item_type,
+            slot: item.equipment_slot,
+            rarity: item.rarity
+          };
+        }
+      }
+    }
+
     return {
       gold: finalGold,
       xp: finalXp,
       streakBonus: streakMultiplier - 1,
       firstBloodBonus: hasFirstBlood,
-      totalMultiplier
+      totalMultiplier,
+      isElite: quest.difficulty === 'elite',
+      itemDrop
     };
   });
 }
@@ -521,7 +571,8 @@ export async function claimAllRewards(characterId) {
     questsClaimed: 0,
     totalGold: 0,
     totalXp: 0,
-    completionBonus: null
+    completionBonus: null,
+    itemDrops: []
   };
 
   for (const quest of questsResult.rows) {
@@ -530,6 +581,9 @@ export async function claimAllRewards(characterId) {
       results.questsClaimed++;
       results.totalGold += reward.gold;
       results.totalXp += reward.xp;
+      if (reward.itemDrop) {
+        results.itemDrops.push(reward.itemDrop);
+      }
     } catch (err) {
       console.warn(`[Quest] Failed to claim quest ${quest.id}:`, err.message);
     }
@@ -774,7 +828,7 @@ async function updateStreak(characterId) {
  */
 export async function getFirstBloodWinners() {
   const result = await query(
-    `SELECT * FROM todays_first_blood`
+    'SELECT * FROM todays_first_blood'
   );
 
   return result.rows;
@@ -786,7 +840,7 @@ export async function getFirstBloodWinners() {
  */
 export async function getPerfectWeekChampions(limit = 50) {
   const result = await query(
-    `SELECT * FROM quest_champions LIMIT $1`,
+    'SELECT * FROM quest_champions LIMIT $1',
     [limit]
   );
 

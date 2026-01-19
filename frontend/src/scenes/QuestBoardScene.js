@@ -517,6 +517,45 @@ export class QuestBoardScene extends Scene {
         background: #7B1FA2;
         color: white;
       }
+
+      /* Elite Quest Styling */
+      .quest-card.elite-quest {
+        border: 2px solid transparent;
+        background: linear-gradient(${P.light}, ${P.light}) padding-box,
+                    linear-gradient(135deg, #9C27B0, #FFD700, #9C27B0) border-box;
+        position: relative;
+      }
+
+      .quest-card.elite-quest::before {
+        content: 'ELITE';
+        position: absolute;
+        top: -8px;
+        right: 12px;
+        padding: 2px 8px;
+        background: linear-gradient(135deg, #9C27B0, #7B1FA2);
+        color: white;
+        font-size: 10px;
+        font-weight: bold;
+        border-radius: 3px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      }
+
+      .elite-item-drop-hint {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 8px;
+        padding: 4px 8px;
+        background: linear-gradient(to right, rgba(156,39,176,0.1), rgba(255,215,0,0.1));
+        border: 1px dashed #9C27B0;
+        border-radius: 4px;
+        font-size: 11px;
+        color: #7B1FA2;
+      }
+
+      .elite-item-drop-hint .gift-icon {
+        font-size: 14px;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -716,7 +755,7 @@ export class QuestBoardScene extends Scene {
           <h4 class="first-blood-title">🩸 Today's First Blood Champions</h4>
           <div class="first-blood-winners">
             ${this.firstBloodWinners.map(w =>
-              `<span class="first-blood-winner">${w.character_name} - ${w.quest_name}</span>`
+              `<span class="first-blood-winner">${this.escapeHtml(w.character_name)} - ${this.escapeHtml(w.quest_name)}</span>`
             ).join('')}
           </div>
         </div>
@@ -743,12 +782,21 @@ export class QuestBoardScene extends Scene {
     const progressPercent = Math.min(100, (quest.currentProgress / quest.targetProgress) * 100);
     const isComplete = quest.isCompleted;
     const isClaimable = isComplete && !quest.rewardsClaimed;
+    const isElite = quest.difficulty === 'elite';
 
     const diffColor = DIFFICULTY_COLORS[quest.difficulty] || DIFFICULTY_COLORS.normal;
     const iconConfig = OBJECTIVE_ICONS[quest.objectiveType] || { category: 'misc', name: 'scroll' };
 
+    // Card classes
+    const cardClasses = [
+      'quest-card',
+      isComplete ? 'completed' : '',
+      isClaimable ? 'claimable' : '',
+      isElite ? 'elite-quest' : ''
+    ].filter(Boolean).join(' ');
+
     return `
-      <div class="quest-card ${isComplete ? 'completed' : ''} ${isClaimable ? 'claimable' : ''}">
+      <div class="${cardClasses}">
         <div class="quest-card-header">
           <div class="quest-info">
             <h3 class="quest-name">
@@ -778,6 +826,13 @@ export class QuestBoardScene extends Scene {
             ${quest.rewardsClaimed ? '<span style="color: #4CAF50; font-size: 12px;">✓ Claimed</span>' : ''}
           </div>
         </div>
+
+        ${isElite && !quest.rewardsClaimed ? `
+          <div class="elite-item-drop-hint">
+            <span class="gift-icon">🎁</span>
+            <span>15% chance for rare equipment drop!</span>
+          </div>
+        ` : ''}
       </div>
     `;
   }
@@ -805,6 +860,17 @@ export class QuestBoardScene extends Scene {
       }
 
       parchmentToast.success('Reward Claimed!', message);
+
+      // Show item drop notification if one occurred
+      if (reward.itemDrop) {
+        setTimeout(() => {
+          parchmentToast.success(
+            '🎁 Rare Item Drop!',
+            `You received: ${reward.itemDrop.name}`,
+            { duration: 5000 }
+          );
+        }, 1500);
+      }
 
       // Reload quest data
       await this.loadQuestData();
@@ -835,6 +901,18 @@ export class QuestBoardScene extends Scene {
       }
 
       parchmentToast.success('All Rewards Claimed!', message);
+
+      // Show item drop notifications
+      if (result.itemDrops && result.itemDrops.length > 0) {
+        setTimeout(() => {
+          const itemNames = result.itemDrops.map(item => item.name).join(', ');
+          parchmentToast.success(
+            `🎁 ${result.itemDrops.length} Rare Item${result.itemDrops.length > 1 ? 's' : ''} Dropped!`,
+            `You received: ${itemNames}`,
+            { duration: 6000 }
+          );
+        }, 1500);
+      }
 
       // Reload quest data
       await this.loadQuestData();
@@ -892,6 +970,12 @@ export class QuestBoardScene extends Scene {
     this.createUI();
     this.setupEventListeners();
     this.renderContent();
+  }
+
+  escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
   }
 
   update(deltaTime) {

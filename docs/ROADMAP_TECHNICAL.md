@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.5 |
+| Version | 1.7 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -104,7 +104,7 @@
 - [x] WebSocket tests (44)
 - [x] Order expiration service tests (orderExpirationService.unit.test.js)
 - [x] Shop refresh service tests (shopRefreshService.unit.test.js)
-- [ ] Quest service tests (pending implementation)
+- [x] Quest service (v9.3: elite quest gating, item drops, title awards)
 - [ ] Settings service tests
 
 ### 3.2 Integration Tests
@@ -122,6 +122,7 @@
 ### 3.3 E2E Tests (Playwright)
 
 - [x] Auth flow
+- [x] Quest Board flow (v9.3: daily/weekly tabs, streak display, claim buttons)
 - [ ] Character creation flow
 - [ ] Battle flow
 - [ ] Shop/marketplace flow
@@ -154,6 +155,7 @@
 - [x] Add rate limiter to auth/refresh endpoint (v8.7: 20/15min IP-based)
 - [x] Add rate limiter to world/travel endpoint (v8.7: 60/min per-user)
 - [ ] Review WebSocket rate limit persistence
+- [ ] Remove or gate debug endpoints (battle.js:900 /verify-traits)
 
 ---
 
@@ -330,6 +332,8 @@ npm run audio:status         # Show asset status
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.7 | Jan 2026 | Quest System Enhancements v9.3: Elite quests with Perfect Week gating (migration 036), rare item drops (15% chance), cosmetic title system, Perfect Week badge on leaderboard. E2E tests for quest flow (quests.spec.js). |
+| 1.6 | Jan 2026 | Documentation Consolidation v9.1: Added debug endpoint removal to Security Audit checklist (battle.js:900 /verify-traits). Cross-referenced TODOs from code audit. |
 | 1.5 | Jan 2026 | Project cleanup audit: Updated infrastructure completion (60%), marked VPS deployment items as complete (setup.sh, deploy.sh, nginx.conf.template, backup.sh). Added new known issues (inventory rate limits, API inconsistency, debug endpoints). Added refactoring opportunities (audit trail, Zod validation, Redis rate limiting, structured logging). Added Future Infrastructure section. Installed knip for dead code analysis. |
 | 1.4 | Jan 2026 | Security & Infrastructure (v8.7): Trust proxy config for proper IP detection. Per-user rate limiting for authenticated requests. New rate limiters: auth/refresh (20/15min), world/travel (60/min), gameplay actions (skill 30/min, inventory 45/min). Increased global limits (300 base). JWT extended to 1h with automatic refresh. TokenRefreshManager for seamless token renewal. VPS deployment scripts: setup.sh, deploy.sh (zero-downtime), nginx.conf.template, backup.sh (7-day retention). |
 | 1.3 | Jan 2026 | Technical debt cleanup: seed.js modularization (4862→918 lines, 12 new modules), WorldMapScene pathPreviewCache LRU limits, composite database indexes (030_performance_indexes.sql). |

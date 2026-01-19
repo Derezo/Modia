@@ -302,6 +302,30 @@ export class LeaderboardScene extends Scene {
         box-shadow: 0 2px 4px rgba(205, 127, 50, 0.4);
       }
 
+      /* Player Name Badges */
+      .player-name-container {
+        display: flex;
+        align-items: center;
+        gap: var(--parchment-spacing-sm);
+      }
+
+      .perfect-week-badge {
+        color: #ffd700;
+        font-size: 14px;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        cursor: help;
+      }
+
+      .equipped-title {
+        font-size: 11px;
+        color: #9c27b0;
+        font-style: italic;
+        margin-left: var(--parchment-spacing-xs);
+        background: linear-gradient(90deg, rgba(156, 39, 176, 0.1), transparent);
+        padding: 2px 6px;
+        border-radius: var(--parchment-radius-sm);
+      }
+
       /* User Entry Footer */
       .user-entry-footer {
         padding: var(--parchment-spacing-md);
@@ -716,11 +740,12 @@ export class LeaderboardScene extends Scene {
       const isCurrentUser = entry.userId === userId;
       const rankBadge = this.getRankBadge(entry.rank);
       const displayValue = this.formatValue(entry.value);
+      const playerCell = this.renderPlayerCell(entry);
 
       html += `
         <tr class="${isCurrentUser ? 'current-user' : ''}">
           <td>${rankBadge}</td>
-          <td>${this.escapeHtml(entry.username)}</td>
+          <td>${playerCell}</td>
           <td>${displayValue}</td>
         </tr>
       `;
@@ -745,6 +770,27 @@ export class LeaderboardScene extends Scene {
       return `<span class="rank-badge rank-${rank}">${rank}</span>`;
     }
     return `<span>${rank}</span>`;
+  }
+
+  renderPlayerCell(entry) {
+    const username = this.escapeHtml(entry.username);
+    let badges = '';
+
+    // Perfect Week badge (star)
+    if (entry.hasPerfectWeekBadge) {
+      badges += '<span class="perfect-week-badge" title="Perfect Week Achiever">&#11088;</span>';
+    }
+
+    // Equipped title
+    if (entry.equippedTitle) {
+      badges += `<span class="equipped-title">${this.escapeHtml(entry.equippedTitle)}</span>`;
+    }
+
+    if (badges) {
+      return `<span class="player-name-container">${username}${badges}</span>`;
+    }
+
+    return username;
   }
 
   formatValue(value) {
