@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 5.0 |
+| Version | 6.0 |
 | Last Updated | January 2026 |
 | Focus | Features, mechanics, UX, content |
 
@@ -15,11 +15,11 @@
 | Category | Completion | Status |
 |----------|------------|--------|
 | Core Mechanics | 100% | Complete |
-| Combat System | 98% | Near Complete |
+| Combat System | 99% | Near Complete |
 | Economy & Items | 95% | Near Complete |
 | User Experience | 95% | Near Complete |
 | Social Features | 95% | Complete |
-| World & Progression | 95% | Near Complete |
+| World & Progression | 96% | Near Complete |
 
 ---
 
@@ -107,8 +107,8 @@
 
 - [x] Battle log panel (scrollable combat history with damage/healing/status events) - v9.0
 - [x] Elemental damage system (8 elements, resistances, enemy/racial templates) - v9.0
-- [ ] Skill cooldowns
-- [ ] Status effect duration display
+- [x] Skill cooldowns (battleService.js lines 1317-1322, 1777-1781) - v9.1
+- [x] Status effect duration display (BattleUnit.js duration numbers on icons) - v9.1
 
 ### 2.2 Enemy System
 
@@ -166,7 +166,7 @@
 
 #### Remaining (v8.9)
 - [ ] Variable CT costs (Move+Act: 100, Move OR Act: 80, Wait: 60)
-- [ ] Status duration display in battle UI
+- [x] Status duration display in battle UI (BattleUnit.js) - v9.1
 - [ ] Enemy ability execution system
 
 ---
@@ -248,7 +248,9 @@ Per ITEM_SYSTEM.md specifications:
 #### Implemented Features
 - [x] SettingsManager.js with event-driven updates
 - [x] Settings wired to game systems (audio, battle, accessibility)
-- [x] 7-tab settings UI (Battle, Audio, Display, Accessibility, Gameplay, Social, Controls)
+- [x] 8-tab settings UI (Battle, Audio, Display, Accessibility, Gameplay, Social, Controls, Developer)
+- [x] Developer Settings with debug logging toggles (audio, network, state, battle, performance)
+- [x] FPS counter overlay and slow frame warnings
 - [x] Colorblind mode filters applied to canvas rendering
 - [x] Settings persistence to localStorage and database
 
@@ -342,7 +344,7 @@ Per ITEM_SYSTEM.md specifications:
 ### 5.1 World Map
 
 - [ ] Node hover information (detailed tooltips)
-- [ ] Mini-map display
+- [x] Mini-map display (WorldMapMinimap.js with click-to-navigate, fog of war, region colors) - v9.1
 - [x] Blocked/cleared node visuals (WorldMapScene.js)
 - [ ] Quest markers
 - [x] Terrain obstacles rendering (lakes, mountains, forests)
@@ -562,6 +564,16 @@ Per ITEM_SYSTEM.md specifications:
 | Guild Quest System | Non-advancement quests | Medium |
 | New Enemies | Additional enemy types (Tier 5+) | Medium |
 
+#### Code TODOs (from audit)
+
+| TODO | File:Line | Description |
+|------|-----------|-------------|
+| Quest completion verification | relicService.js:206 | Relic "quest" acquisition type needs real quest check |
+| Item drops from chests | world.js:973 | Chest treasure nodes only award gold, items stubbed |
+| Lore content system | world.js:1147 | Discovery nodes return generic lore, need database |
+| Quick party formation | SocialHubScene.js:479 | UI placeholder in Party tab |
+| Clan chat/management | SocialHubScene.js:518 | UI placeholder in Clan tab |
+
 ### 6.2 Version 1.2
 
 | Feature | Description | Priority |
@@ -612,6 +624,7 @@ Recent implementations:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 6.0 | Jan 2026 | Documentation Consolidation v9.1: Marked Skill Cooldowns COMPLETE (battleService.js:1317-1322, 1777-1781). Marked Status Effect Duration Display COMPLETE (BattleUnit.js). Marked Mini-map Display COMPLETE (WorldMapMinimap.js 700+ lines with click-to-navigate). Added TODO items from code audit to Post-MVP section (quest completion verification, item drops from chests, lore content system, quick party formation, clan chat/management). Combat System 99%, World & Progression 96%. |
 | 5.0 | Jan 2026 | Gameplay Features v9.0: Audio System complete (Web Audio API, scene-based music, SFX, volume controls). Battle Log Panel complete (scrollable combat history, color-coded entries). Elemental Damage System complete (8 elements, resistances, enemy/racial templates). Gold Sinks complete (marketplace 5% fee, fast travel 50-500g, stamina restore 100g/point). Relic System complete (rare collectibles, permanent bonuses). Settings Expansion complete (7 categories, ~44 settings, colorblind modes). Core Mechanics now 100%, Combat System 98%, Economy 95%, UX 95%. |
 | 4.1 | Jan 2026 | Project cleanup audit: Added battle log panel, elemental damage system to Battle Engine. Added Tier 5+ enemies to Enemy System. Enhanced Mobile Optimization with touch gestures, 44px tap targets. Added loading indicators, keyboard navigation, tooltips, object pooling to UI Polish. Elevated Daily/Weekly Quests priority. Archived all design documents (regional world gen, formation integration, icon quality, marketplace augments). |
 | 4.0 | Jan 2026 | Battle System Formula Overhaul (v8.8): Complete FFT-style tactical combat rebalance. Defense now uses diminishing returns formula (DEF/(DEF+100) for physical, MDEF/(MDEF+80) for magical). CT turn order system replaces initiative (ctGain=5+AGI/10, act at CT>=100, haste/slow modifiers). LCK stat now scales with level (0.3-1.5 per level by class) and affects crits (5%+LCK/300), evasion (2%+agiDiff/400+LCK/400), and status resistance (10%+LCK/200). VIT provides HP bonus (level/2+VIT*0.5). Polynomial skill costs (baseCost*level^1.5) make max level achievable. Archetype-based enemy scaling with tier multipliers. New: formulaValidation.test.js (31 tests). Combat System now 95% complete. |

@@ -17,6 +17,7 @@ import { LeaderboardScene } from '../scenes/LeaderboardScene.js';
 import { SettingsScene } from '../scenes/SettingsScene.js';
 import { GuildAdvancementScene } from '../scenes/GuildAdvancementScene.js';
 import { FishingScene } from '../scenes/FishingScene.js';
+import { debugLog } from '../utils/debugLogger.js';
 
 export class SceneManager {
   constructor(game) {
@@ -67,7 +68,9 @@ export class SceneManager {
     }
 
     // Exit current scene
+    const previousSceneName = this.currentScene ? Object.keys(this.scenes).find(key => this.scenes[key] === this.currentScene) : null;
     if (this.currentScene) {
+      debugLog('state.logSceneTransitions', 'Scene exit:', previousSceneName);
       this.currentScene.exit();
     }
 
@@ -82,6 +85,7 @@ export class SceneManager {
       data = { ...data, mode: sceneName };
     }
 
+    debugLog('state.logSceneTransitions', 'Scene enter:', sceneName, data);
     this.currentScene.enter(data);
 
     // Update state
@@ -89,8 +93,6 @@ export class SceneManager {
 
     // Update notification visibility based on scene
     this.game.updateNotificationVisibility(sceneName);
-
-    console.log(`Switched to scene: ${sceneName}`);
   }
 
   update(deltaTime) {

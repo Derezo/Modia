@@ -1,3 +1,5 @@
+import { debugLog } from '../utils/debugLogger.js';
+
 export class GameWebSocket {
   constructor(url) {
     this.url = url;
@@ -68,6 +70,8 @@ export class GameWebSocket {
   }
 
   handleMessage(type, payload) {
+    debugLog('network.logWebSocketMessages', 'WS received:', type, payload);
+
     // Notify registered handlers
     const typeHandlers = this.handlers.get(type);
     if (typeHandlers) {
@@ -102,6 +106,7 @@ export class GameWebSocket {
 
   send(type, payload = {}) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      debugLog('network.logWebSocketMessages', 'WS sending:', type, payload);
       this.ws.send(JSON.stringify({ type, payload }));
     } else {
       console.warn('WebSocket not connected, message not sent:', type);
