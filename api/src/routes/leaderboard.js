@@ -97,7 +97,7 @@ async function getPvPLeaderboard(userId, queue, time, limit, offset) {
   );
   const total = parseInt(countResult.rows[0]?.total || 0, 10);
 
-  // Get leaderboard page
+  // Get leaderboard page with badge info
   const leaderboardResult = await query(
     `SELECT
       ROW_NUMBER() OVER (ORDER BY pr.rating DESC, pr.wins DESC) as rank,
@@ -106,7 +106,18 @@ async function getPvPLeaderboard(userId, queue, time, limit, offset) {
       pr.rating as value,
       pr.wins,
       pr.losses,
-      pr.win_streak as "winStreak"
+      pr.win_streak as "winStreak",
+      EXISTS(
+        SELECT 1 FROM character_perfect_weeks cpw
+        JOIN characters c ON c.id = cpw.character_id
+        WHERE c.user_id = pr.user_id AND cpw.is_perfect = TRUE
+      ) as "hasPerfectWeekBadge",
+      (
+        SELECT ct.title FROM character_titles ct
+        JOIN characters c ON c.id = ct.character_id
+        WHERE c.user_id = pr.user_id AND ct.is_active = TRUE
+        LIMIT 1
+      ) as "equippedTitle"
      FROM pvp_ratings pr
      JOIN users u ON u.id = pr.user_id
      WHERE pr.queue_type = $1
@@ -180,7 +191,7 @@ async function getLevelLeaderboard(userId, time, limit, offset) {
   );
   const total = parseInt(countResult.rows[0]?.total || 0, 10);
 
-  // Get leaderboard - max level per user
+  // Get leaderboard - max level per user with badge info
   const leaderboardResult = await query(
     `WITH user_max_level AS (
       SELECT
@@ -196,7 +207,18 @@ async function getLevelLeaderboard(userId, time, limit, offset) {
       uml.user_id as "userId",
       u.username,
       uml.max_level as value,
-      uml.max_exp as experience
+      uml.max_exp as experience,
+      EXISTS(
+        SELECT 1 FROM character_perfect_weeks cpw
+        JOIN characters ch ON ch.id = cpw.character_id
+        WHERE ch.user_id = uml.user_id AND cpw.is_perfect = TRUE
+      ) as "hasPerfectWeekBadge",
+      (
+        SELECT ct.title FROM character_titles ct
+        JOIN characters ch ON ch.id = ct.character_id
+        WHERE ch.user_id = uml.user_id AND ct.is_active = TRUE
+        LIMIT 1
+      ) as "equippedTitle"
     FROM user_max_level uml
     JOIN users u ON u.id = uml.user_id
     ORDER BY uml.max_level DESC, uml.max_exp DESC
@@ -271,13 +293,24 @@ async function getGoldLeaderboard(userId, time, limit, offset) {
   );
   const total = parseInt(countResult.rows[0]?.total || 0, 10);
 
-  // Get leaderboard
+  // Get leaderboard with badge info
   const leaderboardResult = await query(
     `SELECT
       ROW_NUMBER() OVER (ORDER BY u.gold DESC) as rank,
       u.id as "userId",
       u.username,
-      u.gold as value
+      u.gold as value,
+      EXISTS(
+        SELECT 1 FROM character_perfect_weeks cpw
+        JOIN characters c ON c.id = cpw.character_id
+        WHERE c.user_id = u.id AND cpw.is_perfect = TRUE
+      ) as "hasPerfectWeekBadge",
+      (
+        SELECT ct.title FROM character_titles ct
+        JOIN characters c ON c.id = ct.character_id
+        WHERE c.user_id = u.id AND ct.is_active = TRUE
+        LIMIT 1
+      ) as "equippedTitle"
     FROM users u
     ${timeCondition} AND u.gold > 0
     ORDER BY u.gold DESC
@@ -344,7 +377,7 @@ async function getBattleLeaderboard(userId, time, limit, offset) {
   );
   const total = parseInt(countResult.rows[0]?.total || 0, 10);
 
-  // Get leaderboard
+  // Get leaderboard with badge info
   const leaderboardResult = await query(
     `WITH battle_stats AS (
       SELECT
@@ -360,7 +393,18 @@ async function getBattleLeaderboard(userId, time, limit, offset) {
       ROW_NUMBER() OVER (ORDER BY bs.wins DESC) as rank,
       bs.user_id as "userId",
       u.username,
-      bs.wins as value
+      bs.wins as value,
+      EXISTS(
+        SELECT 1 FROM character_perfect_weeks cpw
+        JOIN characters c ON c.id = cpw.character_id
+        WHERE c.user_id = bs.user_id AND cpw.is_perfect = TRUE
+      ) as "hasPerfectWeekBadge",
+      (
+        SELECT ct.title FROM character_titles ct
+        JOIN characters c ON c.id = ct.character_id
+        WHERE c.user_id = bs.user_id AND ct.is_active = TRUE
+        LIMIT 1
+      ) as "equippedTitle"
     FROM battle_stats bs
     JOIN users u ON u.id = bs.user_id
     ORDER BY bs.wins DESC
