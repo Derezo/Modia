@@ -2,8 +2,9 @@
  * Coliseum Service - Handles PvP matchmaking, turn timers, and match completion
  */
 
-import { query } from '../config/database.js';
+import { query, pool } from '../config/database.js';
 import * as battleService from './battleService.js';
+import * as dailyQuestService from './dailyQuestService.js';
 import * as battleWebsocket from './battleWebsocket.js';
 import { MAX_BATTLE_PARTY_SIZE } from '../config/constants.js';
 import { calculatePlayerPower, calculateBattlePartyPower } from './characterValuationService.js';
@@ -1351,6 +1352,19 @@ async function completeMatch(battleId, winnerId, loserId, reason = 'victory', ap
       type: 'coliseum:match_result',
       payload: { ...resultPayload, isWinner: false }
     });
+
+    // Daily/Weekly quest progress hooks (fire-and-forget pattern)
+    // Track coliseum win for winner
+    pool.query('SELECT id FROM characters WHERE user_id = $1 AND party_slot = 1', [winnerId])
+      .then(charResult => {
+        const characterId = charResult.rows[0]?.id;
+        if (characterId) {
+          dailyQuestService.updateProgress(characterId, 'coliseum_wins', 1, {
+            queueType
+          }).catch(err => console.warn('[Quest] coliseum_wins progress failed:', err.message));
+        }
+      })
+      .catch(err => console.warn('[Quest] Failed to get characterId for coliseum:', err.message));
 
     console.log(`[Coliseum] Match completed: Battle ${battleId}, Winner: ${winnerId} (+${ratingChange.winnerGain}), Loser: ${loserId} (-${ratingChange.loserLoss}), Reason: ${reason}`);
 

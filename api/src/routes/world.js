@@ -5,6 +5,7 @@ import { travelLimiter } from '../middleware/gameplayRateLimiter.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import presenceService from '../services/presenceService.js';
 import * as staminaService from '../services/staminaService.js';
+import * as dailyQuestService from '../services/dailyQuestService.js';
 import { SHRINE_BUFFS, SHRINE_COOLDOWN_HOURS } from '../../../shared/constants.js';
 
 const router = express.Router();
@@ -704,10 +705,11 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
     }
   }
 
-  // Get new node details
+  // Get new node details (including region for quest tracking)
   const nodeResult = await query(
-    `SELECT id, node_type, name, features, guild_class, local_seed, difficulty_tier
-     FROM world_nodes WHERE id = $1`,
+    `SELECT wn.id, wn.node_type, wn.name, wn.features, wn.guild_class,
+            wn.local_seed, wn.difficulty_tier, wn.region_id
+     FROM world_nodes wn WHERE wn.id = $1`,
     [targetNodeId]
   );
 
@@ -768,6 +770,31 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
 
   // Get updated stamina info
   const staminaInfo = await staminaService.getStaminaInfo(characterId);
+
+  // Daily/Weekly quest progress hooks (fire-and-forget pattern)
+  const destNode = nodeResult.rows[0];
+
+  // Track node visits (count all unique nodes in path)
+  dailyQuestService.updateProgress(characterId, 'visit_nodes', pathResult.path.length, {
+    nodeType: destNode.node_type
+  }).catch(err => console.warn('[Quest] visit_nodes progress failed:', err.message));
+
+  // Track region visits (only count unique new region if destination differs from origin)
+  if (destNode.region_id) {
+    // Get origin region
+    const originRegion = await query(
+      'SELECT region_id FROM world_nodes WHERE id = $1',
+      [currentNodeId]
+    );
+    const originRegionId = originRegion.rows[0]?.region_id;
+
+    // If we entered a new region, track it
+    if (originRegionId !== destNode.region_id) {
+      dailyQuestService.updateProgress(characterId, 'visit_regions', 1, {
+        regionId: destNode.region_id
+      }).catch(err => console.warn('[Quest] visit_regions progress failed:', err.message));
+    }
+  }
 
   res.json({
     message: 'Traveled successfully',

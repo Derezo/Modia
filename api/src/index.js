@@ -40,10 +40,12 @@ import clanRoutes from './routes/clans.js';
 import ruinsRoutes from './routes/ruins.js';
 import fishingRoutes from './routes/fishing.js';
 import relicRoutes from './routes/relics.js';
+import questRoutes from './routes/quests.js';
 
 // Scheduled services
 import { startRefreshScheduler } from './services/shopRefreshService.js';
 import { startExpirationScheduler } from './services/orderExpirationService.js';
+import { startCleanupScheduler as startQuestCleanupScheduler } from './services/dailyQuestService.js';
 
 // Trait effects system
 import { initializeTraitEffects } from './services/traits/index.js';
@@ -120,6 +122,7 @@ app.use('/api/clans', clanRoutes);
 app.use('/api/ruins', ruinsRoutes);
 app.use('/api/fishing', fishingRoutes);
 app.use('/api/relics', relicRoutes);
+app.use('/api/quests', questRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -139,6 +142,7 @@ server.listen(PORT, () => {
   // Start scheduled services
   startRefreshScheduler();
   startExpirationScheduler();
+  startQuestCleanupScheduler();
 });
 
 export { app, server };

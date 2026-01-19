@@ -15,9 +15,23 @@ import {
   FISHING_CONFIG,
   FISH_TYPES
 } from '../db/templates/fish.js';
+import * as dailyQuestService from './dailyQuestService.js';
 
 // In-memory session storage (sessions are short-lived)
 const activeSessions = new Map();
+
+/**
+ * Helper to get party leader character ID for a user
+ * @param {number} userId - User ID
+ * @returns {Promise<number|null>} Character ID or null
+ */
+async function getPartyLeaderId(userId) {
+  const result = await pool.query(
+    'SELECT id FROM characters WHERE user_id = $1 AND party_slot = 1',
+    [userId]
+  );
+  return result.rows[0]?.id || null;
+}
 
 /**
  * Session data structure
@@ -149,6 +163,15 @@ export async function registerCatch(userId, nodeId) {
     ON CONFLICT DO NOTHING
   `, [userId, nodeId, fish.id, 1]);
 
+  // Daily/Weekly quest progress hooks (fire-and-forget pattern)
+  getPartyLeaderId(userId).then(characterId => {
+    if (characterId) {
+      dailyQuestService.updateProgress(characterId, 'fish_catches', 1, {
+        rarity: fish.rarity
+      }).catch(err => console.warn('[Quest] fish_catches progress failed:', err.message));
+    }
+  }).catch(err => console.warn('[Quest] Failed to get characterId for fishing:', err.message));
+
   return {
     success: true,
     catch: catchRecord,
@@ -239,6 +262,17 @@ export async function claimBigOne(userId, nodeId) {
     VALUES ($1, $2, $3, $4, NOW())
   `, [userId, nodeId, fish.id, 1]);
 
+  // Daily/Weekly quest progress hooks (fire-and-forget pattern)
+  getPartyLeaderId(userId).then(characterId => {
+    if (characterId) {
+      // Track fish catch with Big One flag
+      dailyQuestService.updateProgress(characterId, 'fish_catches', 1, {
+        rarity: fish.rarity,
+        isBigOne: true
+      }).catch(err => console.warn('[Quest] fish_catches progress failed:', err.message));
+    }
+  }).catch(err => console.warn('[Quest] Failed to get characterId for big one:', err.message));
+
   return {
     success: true,
     message: `You caught a ${fish.name}! (Big One bonus!)`,
@@ -274,6 +308,14 @@ export async function endSession(userId, nodeId) {
     await pool.query(`
       UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3
     `, [totalValue, MAX_GOLD, userId]);
+
+    // Daily/Weekly quest progress - track gold earned (fire-and-forget)
+    getPartyLeaderId(userId).then(characterId => {
+      if (characterId) {
+        dailyQuestService.updateProgress(characterId, 'gold_earned', totalValue, {})
+          .catch(err => console.warn('[Quest] gold_earned progress failed:', err.message));
+      }
+    }).catch(err => console.warn('[Quest] Failed to get characterId for gold:', err.message));
   }
 
   // Get updated gold

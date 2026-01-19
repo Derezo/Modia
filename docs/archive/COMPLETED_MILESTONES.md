@@ -10,6 +10,8 @@ This document archives all completed features, resolved issues, and historical d
 
 | Version | Date | Major Accomplishments |
 |---------|------|----------------------|
+| 9.2 | Jan 2026 | Daily/Weekly Quest System - Auto-assignment, progress hooks, streaks, bonuses, QuestBoardScene |
+| 9.1 | Jan 2026 | Documentation Consolidation - Roadmap updates, quest documentation restructure, TODO audit |
 | 9.0 | Jan 2026 | Gameplay Features - Audio system, settings expansion, elemental damage, battle log, gold sinks, relics |
 | 1.0 | Jan 2026 | Initial project setup |
 | 2.0 | Jan 2026 | XP-spending system, SKILL_TREES.md, ENEMY_SYSTEM.md |
@@ -39,6 +41,191 @@ This document archives all completed features, resolved issues, and historical d
 | 8.6 | Jan 2026 | Activity Nodes - Fishing, ruins puzzles, caravan merchants, watchtowers |
 | 8.7 | Jan 2026 | Security Hardening - Trust proxy, per-user rate limiting, VPS deployment scripts |
 | 8.8 | Jan 2026 | FFT-Style Formula Overhaul - CT turn system, defense diminishing returns, LCK scaling |
+
+---
+
+## 9.2 - Daily/Weekly Quest System (Jan 2026)
+
+Complete implementation of the Daily/Weekly Quest system with auto-assignment, progress tracking across 10 objective types, streak bonuses, and three bonus mechanics.
+
+### Quest Assignment System
+
+- **Auto-assignment:** 3 daily + 2 weekly quests assigned on first login of each period
+- **Level-appropriate quests:** Selection filtered by character level with weighted randomization
+- **Period management:** Daily reset at midnight UTC, weekly reset on Monday
+- **Template system:** 25 quest templates covering 10 objective types
+
+### Objective Types (10 Total)
+
+| Objective | Trigger Location | Description |
+|-----------|------------------|-------------|
+| `kill_enemies` | battle.js | Count enemies defeated |
+| `complete_battles` | battle.js | Complete N battles |
+| `party_battles` | battle.js | Battles with multiple players |
+| `visit_nodes` | world.js | Travel to unique nodes |
+| `visit_regions` | world.js | Visit different regions |
+| `fish_catches` | fishingService.js | Catch fish (any type) |
+| `puzzle_solves` | ruins.js | Complete ruin puzzles |
+| `gold_earned` | Multiple files | Cumulative gold from rewards |
+| `items_sold` | marketplaceService.js | Sell items on marketplace |
+| `coliseum_wins` | coliseumService.js | Win PvP matches |
+
+### Streak System
+
+- **Bonus scaling:** +10% per consecutive day (capped at +100%)
+- **Streak tracking:** Database tracks current and longest streaks
+- **Reset on miss:** Streak resets if daily quests aren't completed
+
+### Three Bonus Mechanics
+
+**Completion Bonus (25%):**
+- Extra reward when ALL daily quests completed same day
+- 25% bonus on total gold and XP earned
+- Tracked per period in `completion_bonuses` table
+
+**First Blood (+50%):**
+- Server-wide race to complete each quest first
+- First completer gets 50% bonus rewards
+- Atomic claiming with partial unique index
+- Leaderboard shows today's First Blood winners
+
+**Perfect Week (7 consecutive days):**
+- Complete all quests for 7 days straight
+- Grants badge on profile/leaderboard
+- Unlocks elite quest access
+- 10% reward boost for following week
+- Tracked in `character_perfect_weeks` table
+
+### Backend Implementation
+
+**New Service:** `api/src/services/dailyQuestService.js`
+- `refreshQuestsIfNeeded()` - Auto-assign quests on login
+- `getDailyQuests()` / `getWeeklyQuests()` - Fetch current quests
+- `updateProgress()` - Fire-and-forget progress hooks
+- `claimReward()` / `claimAllRewards()` - Atomic reward claiming
+- `getStreakInfo()` - Streak and bonus calculations
+- `tryClaimFirstBlood()` - Race-safe First Blood claiming
+- `startCleanupScheduler()` - Expired quest cleanup
+
+**New Routes:** `api/src/routes/quests.js`
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | `/api/quests/daily/:characterId` | Daily quests + streak |
+| GET | `/api/quests/weekly/:characterId` | Weekly quests |
+| POST | `/api/quests/:questId/claim` | Claim single quest |
+| POST | `/api/quests/claim-all` | Claim all completed |
+| GET | `/api/quests/streaks/:characterId` | Streak info |
+| GET | `/api/quests/first-blood` | Today's First Blood winners |
+| GET | `/api/quests/champions` | Perfect Week leaderboard |
+
+### Progress Integration Hooks
+
+Added fire-and-forget hooks to 7 files:
+- `api/src/routes/battle.js` - Battle completion, kills, gold
+- `api/src/routes/world.js` - Node visits, region visits
+- `api/src/services/fishingService.js` - Fish catches
+- `api/src/routes/ruins.js` - Puzzle completions
+- `api/src/services/marketplaceService.js` - Item sales
+- `api/src/services/coliseumService.js` - PvP wins
+
+### Frontend Implementation
+
+**New Scene:** `frontend/src/scenes/QuestBoardScene.js`
+- Tab-based UI (Daily / Weekly tabs)
+- Quest cards with progress bars
+- Streak display with fire animation at 5+ days
+- Live countdown to reset timer
+- Claim All + individual claim buttons
+- First Blood banner showing today's winners
+
+**UI Integration:**
+- Quest Board menu item in ProfileDropdown
+- Scene registered in SceneManager.js
+- 7 new API methods in client.js
+
+### Database Changes
+
+**Migration:** `api/src/migrations/035_quest_bonuses.sql`
+- `first_blood` column on `daily_quest_history`
+- Partial unique index for First Blood race safety
+- `completion_bonuses` table for daily completion tracking
+- `character_perfect_weeks` table with day tracking
+- `quest_champions` view for leaderboard
+- `todays_first_blood` view for winners
+- Helper functions: `get_current_day_of_week()`, `get_weekly_period_start()`
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `api/src/services/dailyQuestService.js` | Quest service logic |
+| `api/src/routes/quests.js` | API endpoints |
+| `api/src/migrations/035_quest_bonuses.sql` | Bonus tracking schema |
+| `frontend/src/scenes/QuestBoardScene.js` | Quest UI scene |
+| `api/src/tests/unit/dailyQuestService.test.js` | Unit tests |
+| `api/src/tests/integration/quests.integration.test.js` | Integration tests |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `api/src/index.js` | Register routes, start scheduler |
+| `api/src/routes/battle.js` | Progress hooks |
+| `api/src/routes/world.js` | Progress hooks |
+| `api/src/services/fishingService.js` | Progress hooks |
+| `api/src/routes/ruins.js` | Progress hooks |
+| `api/src/services/marketplaceService.js` | Progress hooks |
+| `api/src/services/coliseumService.js` | Progress hooks |
+| `frontend/src/api/client.js` | Quest API methods |
+| `frontend/src/core/SceneManager.js` | Scene registration |
+| `frontend/src/ui/parchment/ProfileDropdown.js` | Menu item |
+
+---
+
+## 9.1 - Documentation Consolidation (Jan 2026)
+
+Comprehensive documentation audit and roadmap maintenance ensuring alignment between code and specifications.
+
+### Items Marked Complete
+
+Previously marked as "Not Started" but found fully implemented:
+
+- **Skill Cooldowns** (battleService.js:1317-1322, 1777-1781): Backend fully implemented with skillCooldowns object tracking per-unit cooldowns, enforcement before skill use, and decrement at end of turn
+- **Status Effect Duration Display** (BattleUnit.js): Duration numbers now displayed on status effect icons
+- **Mini-map Display** (WorldMapMinimap.js): Full 700+ line implementation with click-to-navigate, fog of war, region colors, parchment frame styling
+
+### TODO Items Documented
+
+Code audit discovered stubbed/placeholder features now tracked in roadmaps:
+
+| Item | Location | Status |
+|------|----------|--------|
+| Quest completion verification for relics | relicService.js:206 | TODO |
+| Item drops from treasure chests | world.js:973 | Stubbed (gold only) |
+| Lore content system | world.js:1147 | Generic placeholder |
+| Quick party formation UI | SocialHubScene.js:479 | Placeholder |
+| Clan chat/management | SocialHubScene.js:518 | Placeholder |
+| Debug endpoint gating | battle.js:900 | Security TODO |
+
+### Quest Documentation Restructure
+
+Reorganized quest documentation from single file to modular structure:
+
+- **QUEST_SYSTEM.md** - Index document linking quest types
+- **GUILD_ADVANCEMENT.md** - Detailed guild progression quest spec (from original QUEST_SYSTEM.md)
+- **DAILY_WEEKLY_QUESTS.md** - New daily/weekly quest specification
+
+### Files Modified
+
+- `docs/DEVELOPMENT_ROADMAP.md` - v25.0, skill cooldowns marked complete
+- `docs/ROADMAP_GAMEPLAY.md` - v6.0, status duration/minimap complete, TODO items added
+- `docs/ROADMAP_TECHNICAL.md` - v1.6, debug endpoint added to security checklist
+- `docs/archive/COMPLETED_MILESTONES.md` - v9.1 entry added
+- `docs/QUEST_SYSTEM.md` - Restructured as index document
+- `docs/GUILD_ADVANCEMENT.md` - New file (from QUEST_SYSTEM.md content)
+- `docs/DAILY_WEEKLY_QUESTS.md` - New specification file
+- `docs/archive/QUEST_SYSTEM_v1.md` - Archived original
 
 ---
 
