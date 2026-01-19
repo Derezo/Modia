@@ -1081,4 +1081,71 @@ export class ApiClient {
     const queryString = params.toString();
     return this.get(`/leaderboard/${category}${queryString ? '?' + queryString : ''}`);
   }
+
+  // ============================================
+  // DAILY/WEEKLY QUEST METHODS
+  // ============================================
+
+  /**
+   * Get daily quests for a character
+   * @param {number} characterId - Character ID
+   * @returns {Promise<{quests: Array, streak: Object, periodEnd: string, refreshed: boolean, perfectWeek: Object}>}
+   */
+  getDailyQuests(characterId) {
+    return this.get(`/quests/daily/${characterId}`);
+  }
+
+  /**
+   * Get weekly quests for a character
+   * @param {number} characterId - Character ID
+   * @returns {Promise<{quests: Array, periodEnd: string, refreshed: boolean}>}
+   */
+  getWeeklyQuests(characterId) {
+    return this.get(`/quests/weekly/${characterId}`);
+  }
+
+  /**
+   * Claim reward for a single quest
+   * @param {number} questId - Quest assignment ID
+   * @param {number} characterId - Character ID
+   * @returns {Promise<{success: boolean, reward: Object, newGold: number}>}
+   */
+  claimQuestReward(questId, characterId) {
+    return this.post(`/quests/${questId}/claim`, { characterId });
+  }
+
+  /**
+   * Claim all completed quest rewards
+   * @param {number} characterId - Character ID
+   * @returns {Promise<{success: boolean, questsClaimed: number, totalGold: number, totalXp: number, newGold: number, completionBonus: Object|null}>}
+   */
+  claimAllQuestRewards(characterId) {
+    return this.post('/quests/claim-all', { characterId });
+  }
+
+  /**
+   * Get streak information for a character
+   * @param {number} characterId - Character ID
+   * @returns {Promise<{currentStreak: number, longestStreak: number, bonusPercentage: number, lastLoginDate: string, perfectWeek: Object}>}
+   */
+  getQuestStreakInfo(characterId) {
+    return this.get(`/quests/streaks/${characterId}`);
+  }
+
+  /**
+   * Get today's First Blood winners
+   * @returns {Promise<{winners: Array, date: string}>}
+   */
+  getFirstBloodWinners() {
+    return this.get('/quests/first-blood');
+  }
+
+  /**
+   * Get Perfect Week champions leaderboard
+   * @param {number} limit - Max results (default 50)
+   * @returns {Promise<{champions: Array}>}
+   */
+  getPerfectWeekChampions(limit = 50) {
+    return this.get(`/quests/champions?limit=${limit}`);
+  }
 }

@@ -212,6 +212,7 @@ export const MAX_BATTLE_PARTY_SIZE = 5;
 export const MAX_CHARACTER_LEVEL = 256;
 export const STARTING_GOLD = 100;
 export const MAX_GOLD = 2147483647; // PostgreSQL INT max - prevents overflow
+export const MAX_XP = 2147483647; // PostgreSQL INT max - prevents overflow
 export const MAX_OPEN_ORDERS_PER_USER = 10; // Maximum concurrent marketplace orders
 
 // Base stats by race

@@ -17,6 +17,7 @@ import { LeaderboardScene } from '../scenes/LeaderboardScene.js';
 import { SettingsScene } from '../scenes/SettingsScene.js';
 import { GuildAdvancementScene } from '../scenes/GuildAdvancementScene.js';
 import { FishingScene } from '../scenes/FishingScene.js';
+import { QuestBoardScene } from '../scenes/QuestBoardScene.js';
 import { debugLog } from '../utils/debugLogger.js';
 
 export class SceneManager {
@@ -52,7 +53,8 @@ export class SceneManager {
       leaderboard: new LeaderboardScene(this.game),
       settings: new SettingsScene(this.game),
       guildAdvancement: new GuildAdvancementScene(this.game),
-      fishing: new FishingScene(this.game)
+      fishing: new FishingScene(this.game),
+      questBoard: new QuestBoardScene(this.game)
     };
   }
 

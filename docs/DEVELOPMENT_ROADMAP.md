@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 24.0 |
+| Version | 25.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -60,8 +60,8 @@ The roadmap is split into two focused documents:
 | ~~Settings Expansion~~ | ~~SettingsScene.js~~ | **COMPLETE** (v9.0) |
 | ~~Elemental Damage~~ | ~~battleService.js, elements.js~~ | **COMPLETE** (v9.0) |
 | ~~Battle Log Panel~~ | ~~BattleLogPanel.js~~ | **COMPLETE** (v9.0) |
-| Skill Cooldowns | battleService.js | Not Started |
-| Daily/Weekly Quests | questService.js | Not Started |
+| ~~Skill Cooldowns~~ | ~~battleService.js~~ | **COMPLETE** (v9.1) |
+| ~~Daily/Weekly Quests~~ | ~~dailyQuestService.js, QuestBoardScene.js~~ | **COMPLETE** (v9.2) |
 
 ### High Priority - Technical
 
@@ -117,6 +117,7 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 25.0 | Jan 2026 | Documentation Consolidation v9.1: Skill Cooldowns marked COMPLETE (backend implemented in battleService.js). Status Effect Duration Display marked COMPLETE (BattleUnit.js). Mini-map Display marked COMPLETE (WorldMapMinimap.js with click-to-navigate). Quest documentation restructured into index + detailed specs (QUEST_SYSTEM.md, GUILD_ADVANCEMENT.md, DAILY_WEEKLY_QUESTS.md). Added TODO items from code audit to roadmaps. Archived stale documentation. |
 | 24.0 | Jan 2026 | Gameplay Features v9.0: Audio System (Web Audio API, scene-based music, SFX, volume controls). Settings Expansion (7 categories, ~44 settings, colorblind modes). Elemental Damage System (8 elements, resistances, enemy/racial templates). Battle Log Panel (scrollable combat history, color-coded entries). Gold Sinks (marketplace 5% fee, fast travel, stamina restore). Relic System (rare collectibles, permanent bonuses). Gameplay track now 98%. Sprint focus updated with remaining high-priority items. |
 | 23.0 | Jan 2026 | Project cleanup audit: Installed knip for dead code analysis. Removed unused 'serve' dependency. Fixed console.log statements in marketplace.js (now uses logger). Archived 4 design documents (regional world gen, formation, icons, marketplace). Added v8.3-v8.8 to COMPLETED_MILESTONES.md. Updated ROADMAP_TECHNICAL.md v1.5 (marked infrastructure complete, added known issues). Updated ROADMAP_GAMEPLAY.md v4.1 (added battle log, elemental damage, touch gestures, keyboard nav). Technical track now 45%, Gameplay 92%. |
 | 22.0 | Jan 2026 | Battle System Formula Overhaul (v8.8): FFT-style tactical combat rebalance. Defense with diminishing returns (DEF/(DEF+100)). CT turn order system (ctGain=5+AGI/10, act at CT>=100). LCK now scales with level and affects crits/evasion/status resist. VIT provides HP bonus (level/2 + VIT*0.5). Polynomial skill costs (baseCost*level^1.5) for achievable max level. Archetype-based enemy scaling matching player growth. New files: formulaValidation.test.js. Modified: battleMath.js, constants.js, battleService.js, battleUnitFactory.js, skills.js, skillScaling.js, enemies.js, test files. Combat System now 95% complete. |

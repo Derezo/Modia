@@ -8,8 +8,9 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { pool } from '../config/database.js';
-import { SeededRandom } from '@shared/constants.js';
+import { SeededRandom } from '../../../shared/constants.js';
 import { MAX_GOLD } from '../config/constants.js';
+import * as dailyQuestService from '../services/dailyQuestService.js';
 
 const router = Router();
 
@@ -285,6 +286,26 @@ router.post('/:nodeId/solve', authenticate, async (req, res) => {
     `, [userId]);
 
     await client.query('COMMIT');
+
+    // Daily/Weekly quest progress hooks (fire-and-forget pattern)
+    // Get party leader character ID for quest tracking
+    pool.query('SELECT id FROM characters WHERE user_id = $1 AND party_slot = 1', [userId])
+      .then(charResult => {
+        const characterId = charResult.rows[0]?.id;
+        if (characterId) {
+          // Track puzzle completion
+          dailyQuestService.updateProgress(characterId, 'puzzle_solves', 1, {
+            tier
+          }).catch(err => console.warn('[Quest] puzzle_solves progress failed:', err.message));
+
+          // Track gold earned
+          if (goldReward > 0) {
+            dailyQuestService.updateProgress(characterId, 'gold_earned', goldReward, {})
+              .catch(err => console.warn('[Quest] gold_earned progress failed:', err.message));
+          }
+        }
+      })
+      .catch(err => console.warn('[Quest] Failed to get characterId for ruins:', err.message));
 
     res.json({
       success: true,

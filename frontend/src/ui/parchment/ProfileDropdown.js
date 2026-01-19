@@ -49,6 +49,7 @@ const MENU_ICONS = {
   characters: { category: 'menu', name: 'characters' },
   party: { category: 'menu', name: 'party' },
   friends: { category: 'menu', name: 'friends' },
+  quests: { category: 'misc', name: 'scroll' },
   leaderboard: { category: 'menu', name: 'leaderboard' },
   settings: { category: 'menu', name: 'settings' },
   logout: { category: 'menu', name: 'logout' }
@@ -561,6 +562,10 @@ export class ProfileDropdown {
           <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'friends', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Friends</span>
         </div>
+        <div class="profile-dropdown__menu-item" data-action="quests">
+          <span class="profile-dropdown__menu-icon">${Icon.html('misc', 'scroll', { size: 'sm' })}</span>
+          <span class="profile-dropdown__menu-label">Quest Board</span>
+        </div>
         <div class="profile-dropdown__menu-item" data-action="leaderboard">
           <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'leaderboard', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Leaderboards</span>
@@ -987,6 +992,9 @@ export class ProfileDropdown {
       case 'friends':
         // Navigate to Social Hub - unified social features
         this.game.scenes.switchTo('socialHub');
+        break;
+      case 'quests':
+        this.game.scenes.switchTo('questBoard');
         break;
       case 'leaderboard':
         this.game.scenes.switchTo('leaderboard');

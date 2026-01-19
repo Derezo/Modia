@@ -12,8 +12,21 @@ import { AppError } from '../middleware/errorHandler.js';
 import { MAX_GOLD } from '../config/constants.js';
 import { MAX_OPEN_ORDERS_PER_USER } from '../../../shared/constants.js';
 import * as marketplaceWebsocket from './marketplaceWebsocket.js';
+import * as dailyQuestService from './dailyQuestService.js';
+import { pool } from '../config/database.js';
 // Note: marketplaceAudit is imported dynamically in route handlers (after transaction commits)
 // to avoid deadlocks caused by FK checks on locked rows
+
+/**
+ * Helper to get party leader character ID for a user (for quest tracking)
+ */
+async function getPartyLeaderId(userId) {
+  const result = await pool.query(
+    'SELECT id FROM characters WHERE user_id = $1 AND party_slot = 1',
+    [userId]
+  );
+  return result.rows[0]?.id || null;
+}
 
 /**
  * Get the order book for an item (aggregated by price level)
@@ -485,6 +498,21 @@ async function executeTrade(client, buyOrder, sellOrder, quantity, executionPric
 
   // NOTE: Audit logging moved to route handler (after transaction commits) to avoid deadlocks
   // The audit service uses a separate DB connection which causes FK check deadlocks
+
+  // Daily/Weekly quest progress hooks (fire-and-forget pattern)
+  // Track items sold for seller
+  getPartyLeaderId(sellOrder.user_id).then(characterId => {
+    if (characterId) {
+      dailyQuestService.updateProgress(characterId, 'items_sold', quantity, {})
+        .catch(err => console.warn('[Quest] items_sold progress failed:', err.message));
+
+      // Track gold earned for seller (net amount after tax)
+      if (netAmount > 0) {
+        dailyQuestService.updateProgress(characterId, 'gold_earned', netAmount, {})
+          .catch(err => console.warn('[Quest] gold_earned progress failed:', err.message));
+      }
+    }
+  }).catch(err => console.warn('[Quest] Failed to get characterId for marketplace:', err.message));
 
   return {
     quantity,

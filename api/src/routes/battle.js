@@ -12,6 +12,7 @@ import battleWebsocket from '../services/battleWebsocket.js';
 import { createPlayerBattleUnit } from '../services/battleUnitFactory.js';
 import * as traitService from '../services/traitService.js';
 import * as advancementQuestService from '../services/advancementQuestService.js';
+import * as dailyQuestService from '../services/dailyQuestService.js';
 import * as bossService from '../services/bossService.js';
 import * as battleTurnManager from '../services/battleTurnManager.js';
 import { generateTerrainOnly } from '../../../shared/mapGeneration.js';
@@ -163,6 +164,29 @@ async function handleBattleEnd(battleId, status, state, userId) {
             console.warn(`Quest progress update failed for item ${item.templateId}:`, err.message);
           }
         }
+      }
+
+      // Daily/Weekly quest progress hooks (fire-and-forget pattern)
+      // Track enemy kills
+      dailyQuestService.updateProgress(partyLeaderId, 'kill_enemies', enemies.length, {})
+        .catch(err => console.warn('[Quest] kill_enemies progress failed:', err.message));
+
+      // Track battle completion
+      dailyQuestService.updateProgress(partyLeaderId, 'complete_battles', 1, {
+        tier: difficultyTier
+      }).catch(err => console.warn('[Quest] complete_battles progress failed:', err.message));
+
+      // Track gold earned
+      if (gold > 0) {
+        dailyQuestService.updateProgress(partyLeaderId, 'gold_earned', gold, {})
+          .catch(err => console.warn('[Quest] gold_earned progress failed:', err.message));
+      }
+
+      // Check if this was a party battle (multiple users)
+      const uniqueOwners = new Set(players.map(p => p.ownerId || p.userId).filter(Boolean));
+      if (uniqueOwners.size > 1) {
+        dailyQuestService.updateProgress(partyLeaderId, 'party_battles', 1, {})
+          .catch(err => console.warn('[Quest] party_battles progress failed:', err.message));
       }
     }
 
