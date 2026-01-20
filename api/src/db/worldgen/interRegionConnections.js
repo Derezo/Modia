@@ -746,20 +746,32 @@ export function generateInterRegionConnections(voronoiData, nodesByRegion, allNo
 
       // Connect wilderness nodes to bridge and each other
       if (bridgeNode && wildernessNodes.length > 0) {
-        // Connect first wilderness to bridge
-        interRegionConnections.push({
-          from: bridgeNode,
-          to: wildernessNodes[0],
-          connectionType: 'wilderness'
-        });
+        const maxSpacing = INTER_REGION_CONFIG.MAX_NODE_SPACING;
 
-        // Chain wilderness nodes together
+        // Connect bridge to first wilderness with spacing enforcement
+        const bridgeToWildResult = enforceSpacingForConnection(
+          bridgeNode,
+          wildernessNodes[0],
+          maxSpacing,
+          rng,
+          'wilderness',
+          { borderRegions: [border.region1, border.region2], isWilderness: true }
+        );
+        interRegionNodes.push(...bridgeToWildResult.intermediateNodes);
+        interRegionConnections.push(...bridgeToWildResult.connections);
+
+        // Chain wilderness nodes together with spacing enforcement
         for (let i = 0; i < wildernessNodes.length - 1; i++) {
-          interRegionConnections.push({
-            from: wildernessNodes[i],
-            to: wildernessNodes[i + 1],
-            connectionType: 'wilderness'
-          });
+          const chainResult = enforceSpacingForConnection(
+            wildernessNodes[i],
+            wildernessNodes[i + 1],
+            maxSpacing,
+            rng,
+            'wilderness',
+            { borderRegions: [border.region1, border.region2], isWilderness: true }
+          );
+          interRegionNodes.push(...chainResult.intermediateNodes);
+          interRegionConnections.push(...chainResult.connections);
         }
 
         // Connect wilderness to frontier nodes in both regions for accessibility
@@ -808,19 +820,25 @@ export function generateInterRegionConnections(voronoiData, nodesByRegion, allNo
 
       // Connect trade route nodes
       if (tradeRouteNodes.length > 0) {
-        // Chain trade route nodes together
+        const maxSpacing = INTER_REGION_CONFIG.MAX_NODE_SPACING;
+
+        // Chain trade route nodes together with spacing enforcement
         for (let i = 0; i < tradeRouteNodes.length - 1; i++) {
-          interRegionConnections.push({
-            from: tradeRouteNodes[i],
-            to: tradeRouteNodes[i + 1],
-            connectionType: 'trade'
-          });
+          const chainResult = enforceSpacingForConnection(
+            tradeRouteNodes[i],
+            tradeRouteNodes[i + 1],
+            maxSpacing,
+            rng,
+            'trade',
+            { isTradeRoute: true, tradeRegions: [border.region1, border.region2] }
+          );
+          interRegionNodes.push(...chainResult.intermediateNodes);
+          interRegionConnections.push(...chainResult.connections);
         }
 
         // Connect trade route endpoints to their cities with spacing enforcement
         const firstNode = tradeRouteNodes[0];
         const lastNode = tradeRouteNodes[tradeRouteNodes.length - 1];
-        const maxSpacing = INTER_REGION_CONFIG.MAX_NODE_SPACING;
 
         if (firstNode.connectToCity1 && r1Nodes) {
           const cityNode = r1Nodes[firstNode.connectToCity1.cityIndex];
