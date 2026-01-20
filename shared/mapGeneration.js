@@ -2,21 +2,27 @@
  * Map Generation - Seeded terrain and obstacle generation for battle maps
  * SINGLE SOURCE OF TRUTH for map generation used by both server and client
  *
- * This module provides the main entry point for battle map generation.
- * It integrates with the AlgorithmPipeline system for procedural terrain
- * generation while maintaining backwards compatibility with existing code.
+ * This module provides the main entry point for battle map generation using
+ * an 8-phase archetype-based procedural generation system:
  *
- * DETERMINISM: Same seed always produces identical output. The random
- * consumption pattern changed in the pipeline refactor, so old seeds
- * will produce different maps, but new maps remain fully deterministic.
+ * - Phase 8: PRNG Streams - Isolated random streams for determinism
+ * - Phase 1: Archetypes - Curated algorithm pipelines per map type
+ * - Phase 2: LayerContext - Algorithm cooperation via shared state
+ * - Phase 3: Graph - Topology-driven POI and path generation
+ * - Phase 4: Constraints - Validation and automatic repair
+ * - Phase 5: Cover - Tactical cover placement with lane system
+ * - Phase 6: Elevation - Integrated terrain height
+ * - Phase 7: Styles - Parameter tuning via style profiles
+ *
+ * DETERMINISM: Same seed always produces identical output.
  */
 
-import { isImpassable, getTerrainWeights } from './terrain.js';
+import { isImpassable } from './terrain.js';
 import { AlgorithmPipeline } from './mapgen/AlgorithmPipeline.js';
-import { getNodeConfig, getObstacleRulesForTerrain } from './mapgen/nodeTypeAlgorithms.js';
+import { getNodeConfig } from './mapgen/nodeTypeAlgorithms.js';
 import { SpawnPlacer, AI_SPAWN_CONFIGS } from './mapgen/SpawnPlacer.js';
 
-// New archetype system imports (Phase 1)
+// Archetype system (Phase 1)
 import {
   ARCHETYPES,
   getArchetype,
@@ -40,34 +46,6 @@ import { LayerContext } from './mapgen/LayerContext.js';
 import { getStyleProfile, applyStyleProfile } from './mapgen/StyleProfiles.js';
 
 // ============================================================================
-// OBSTACLE CONFIGURATION
-// ============================================================================
-
-/**
- * Obstacle configuration by terrain type
- * Defines what obstacles can appear on impassable terrain
- */
-const OBSTACLE_MAP = {
-  rock: { category: 'rocks', options: ['rock_small', 'rock_medium', 'rock_large'] },
-  tree: { category: 'trees', options: ['oak_tree', 'pine_tree', 'dead_tree'] },
-  forest: { category: 'trees', options: ['oak_tree', 'pine_tree'] },
-  cliff: { category: 'rocks', options: ['rock_large', 'mountain_boulder'] },
-  lava: null,
-  water: null
-};
-
-/**
- * Decorative obstacles by biome type (fallback)
- */
-const DECORATIVE_OBSTACLES = {
-  forest: ['grass_tufts', 'wildflowers', 'fallen_log'],
-  cave: ['cave_crystals', 'stalagmite'],
-  mountain: ['grass_tufts', 'stone_ruins'],
-  bridge: ['grass_tufts'],
-  castle: ['stone_ruins']
-};
-
-// ============================================================================
 // SEEDED RANDOM UTILITY
 // ============================================================================
 
@@ -86,104 +64,6 @@ function createSeededRandom(seed) {
   };
 }
 
-// ============================================================================
-// OBSTACLE GENERATION
-// ============================================================================
-
-/**
- * Get random decorative obstacle for a biome
- * @param {string} nodeType - Biome/node type
- * @param {function} random - Seeded random function
- * @returns {string} Decorative obstacle variant name
- */
-function getRandomDecorativeObstacle(nodeType, random) {
-  const options = DECORATIVE_OBSTACLES[nodeType] || DECORATIVE_OBSTACLES.forest;
-  return options[Math.floor(random() * options.length)];
-}
-
-/**
- * Generate obstacle for a terrain tile using node config rules
- * @param {string} terrain - Terrain type at this tile
- * @param {string} nodeType - Biome/node type
- * @param {function} random - Seeded random function
- * @param {Object} nodeConfig - Node configuration with obstacle rules
- * @returns {Object|null} Obstacle data { type, variant } or null
- */
-function generateObstacleForTile(terrain, nodeType, random, nodeConfig) {
-  // If we have obstacle rules in the config, use them
-  if (nodeConfig && nodeConfig.obstacleRules) {
-    const rules = getObstacleRulesForTerrain(nodeConfig, terrain);
-
-    for (const rule of rules) {
-      if (random() < rule.chance) {
-        const variant = rule.variants[Math.floor(random() * rule.variants.length)];
-        return { type: rule.type, variant };
-      }
-    }
-    return null;
-  }
-
-  // Fallback to legacy obstacle generation
-  return generateObstacleForTerrainLegacy(terrain, nodeType, random);
-}
-
-/**
- * Legacy obstacle generation for backwards compatibility
- * @param {string} terrain - Terrain type at this tile
- * @param {string} nodeType - Biome/node type
- * @param {function} random - Seeded random function
- * @returns {Object|null} Obstacle data { type, variant } or null
- */
-function generateObstacleForTerrainLegacy(terrain, nodeType, random) {
-  if (!isImpassable(terrain)) {
-    // Walkable terrain: possible decorative obstacles
-    if (nodeType === 'forest' && terrain === 'grass') {
-      if (random() < 0.15) {
-        const treeOptions = ['oak_tree', 'pine_tree'];
-        return { type: 'trees', variant: treeOptions[Math.floor(random() * treeOptions.length)] };
-      }
-      if (random() < 0.05) {
-        return { type: 'decorative', variant: getRandomDecorativeObstacle(nodeType, random) };
-      }
-    } else {
-      if (random() < 0.05) {
-        return { type: 'decorative', variant: getRandomDecorativeObstacle(nodeType, random) };
-      }
-    }
-    return null;
-  }
-
-  // Impassable terrain: generate terrain-specific obstacle
-  const config = OBSTACLE_MAP[terrain];
-  if (!config) return null;
-
-  const variant = config.options[Math.floor(random() * config.options.length)];
-  return { type: config.category, variant };
-}
-
-/**
- * Generate obstacles for the entire terrain grid
- * @param {string[][]} terrain - Terrain grid
- * @param {string} nodeType - Biome/node type
- * @param {function} random - Seeded random function
- * @param {Object} nodeConfig - Optional node configuration
- * @returns {Object[][]} Obstacle grid
- */
-function generateObstacles(terrain, nodeType, random, nodeConfig = null) {
-  const height = terrain.length;
-  const width = terrain[0]?.length || 0;
-  const obstacles = [];
-
-  for (let y = 0; y < height; y++) {
-    const row = [];
-    for (let x = 0; x < width; x++) {
-      row.push(generateObstacleForTile(terrain[y][x], nodeType, random, nodeConfig));
-    }
-    obstacles.push(row);
-  }
-
-  return obstacles;
-}
 
 // ============================================================================
 // SPAWN AREA CLEARING
@@ -356,88 +236,6 @@ function getPipeline() {
   return pipelineInstance;
 }
 
-/**
- * Generate terrain using the new algorithm pipeline
- * @param {number} seed - Seed value
- * @param {string} nodeType - Biome/node type
- * @param {number} width - Map width
- * @param {number} height - Map height
- * @param {Object} options - Generation options
- * @returns {Object} Generated map data
- */
-function generateWithPipeline(seed, nodeType, width, height, options = {}) {
-  const random = createSeededRandom(seed);
-  const pipeline = getPipeline();
-  const nodeConfig = getNodeConfig(nodeType);
-
-  // Get algorithm pool from node config or use pipeline defaults
-  const algorithmPool = nodeConfig?.algorithmPool
-    ? nodeConfig.algorithmPool.map(entry => entry.name)
-    : AlgorithmPipeline.getPoolForNodeType(nodeType);
-
-  // Run the pipeline
-  const result = pipeline.run(width, height, random, {
-    algorithmPool,
-    selectionRate: 0.6,
-    baseTerrain: nodeConfig?.baseTerrain || 'grass',
-    nodeType,
-    seed
-  });
-
-  // Generate obstacles using node config rules
-  const obstacles = generateObstacles(result.terrain, nodeType, random, nodeConfig);
-
-  // Clear spawn areas
-  clearSpawnAreas(result.terrain, obstacles, width, height);
-
-  // Ensure connectivity
-  ensureMapConnectivity(result.terrain, obstacles, width, height, random);
-
-  // Build return object
-  const returnValue = {
-    terrain: result.terrain,
-    obstacles,
-    variants: result.variants
-  };
-
-  // Add elevation data if requested
-  if (options.elevation || options.includeSpawns) {
-    returnValue.elevation = generateElevationData(result.terrain, width, height, random);
-  }
-
-  // Generate spawn positions if requested (Phase 5)
-  if (options.includeSpawns) {
-    const spawner = new SpawnPlacer({ mapWidth: width, mapHeight: height });
-
-    // Generate player spawns
-    returnValue.playerSpawns = spawner.generatePlayerSpawns(result.terrain, {
-      count: options.playerCount ?? 15,
-      obstacles
-    });
-
-    // Generate enemy spawns if AI type and count provided
-    if (options.enemyAiType && options.enemyCount) {
-      returnValue.enemySpawns = spawner.generateEnemySpawns(
-        result.terrain,
-        obstacles,
-        options.enemyAiType,
-        options.enemyCount,
-        random,
-        {
-          elevation: returnValue.elevation,
-          unitRoles: options.enemyRoles || []
-        }
-      );
-    }
-  }
-
-  // Add metadata if requested
-  if (options.includeMetadata) {
-    returnValue.metadata = result.metadata;
-  }
-
-  return returnValue;
-}
 
 /**
  * Generate elevation data for terrain (Phase 2 prep)
@@ -515,14 +313,14 @@ function generateWithArchetypes(seed, nodeType, width, height, options = {}) {
   const streams = createPRNGStreams(seed);
 
   // Phase 1: Select archetype (weighted by node type or explicit)
-  const archetype = archetypeName
+  let archetype = archetypeName
     ? getArchetype(archetypeName)
     : selectArchetypeForNode(nodeType, () => streams.structure());
 
   if (!archetype) {
-    // Fallback to legacy pipeline if no archetype found
-    console.warn(`No archetype found for node type: ${nodeType}, falling back to legacy pipeline`);
-    return generateWithPipeline(seed, nodeType, width, height, options);
+    // Default to openField archetype for unknown node types
+    console.warn(`No archetype found for node type: ${nodeType}, using openField`);
+    archetype = getArchetype('openField');
   }
 
   // Get style profile (from archetype or explicit)
@@ -713,13 +511,17 @@ function mergeObstacles(base, overlay, width, height) {
 /**
  * Generate terrain and obstacles from a seed value
  *
+ * Uses the archetype-based procedural generation system with:
+ * - PRNG Streams for deterministic isolation
+ * - Curated algorithm pipelines per archetype
+ * - Constraint validation and automatic repair
+ * - Tactical cover placement
+ *
  * @param {number} seed - Seed value for deterministic generation
  * @param {string} nodeType - Biome/node type (forest, cave, mountain, bridge, castle)
  * @param {number} width - Map width in tiles (default 32)
  * @param {number} height - Map height in tiles (default 32)
  * @param {Object} options - Optional generation parameters
- * @param {boolean} options.useNewPipeline - Use new algorithm pipeline (default true)
- * @param {boolean} options.useArchetypes - Use new archetype system (default false for now)
  * @param {string} options.archetypeName - Explicit archetype to use (overrides node type selection)
  * @param {boolean} options.elevation - Include elevation data (default false)
  * @param {boolean} options.includeMetadata - Include generation metadata (default false)
@@ -734,106 +536,9 @@ function mergeObstacles(base, overlay, width, height) {
  * @returns {Object} { terrain, obstacles, variants, elevation?, playerSpawns?, enemySpawns?, metadata? }
  */
 export function generateTerrain(seed, nodeType, width = 32, height = 32, options = {}) {
-  const {
-    useNewPipeline = true,
-    useArchetypes = false,
-    archetypeName = null,
-    elevation = false,
-    includeMetadata = false,
-    includeSpawns = false,
-    playerCount = 15,
-    enemyAiType = null,
-    enemyCount = 0,
-    enemyRoles = [],
-    coverStrategy = null,
-    styleProfile = null,
-    includeCoverGrid = false
-  } = options;
-
-  // Use new archetype system if enabled
-  if (useArchetypes) {
-    return generateWithArchetypes(seed, nodeType, width, height, {
-      archetypeName,
-      elevation,
-      includeMetadata,
-      includeSpawns,
-      playerCount,
-      enemyAiType,
-      enemyCount,
-      enemyRoles,
-      coverStrategy,
-      styleProfile,
-      includeCoverGrid
-    });
-  }
-
-  // Use new pipeline by default
-  if (useNewPipeline) {
-    return generateWithPipeline(seed, nodeType, width, height, {
-      elevation,
-      includeMetadata,
-      includeSpawns,
-      playerCount,
-      enemyAiType,
-      enemyCount,
-      enemyRoles
-    });
-  }
-
-  // Legacy generation path (for testing/comparison)
-  return generateTerrainLegacy(seed, nodeType, width, height);
+  return generateWithArchetypes(seed, nodeType, width, height, options);
 }
 
-/**
- * Legacy terrain generation (pre-pipeline)
- * Kept for backwards compatibility testing
- * @private
- */
-function generateTerrainLegacy(seed, nodeType, width, height) {
-  const random = createSeededRandom(seed);
-  const terrain = [];
-  const obstacles = [];
-  const variants = [];
-
-  const terrainWeights = getTerrainWeights(nodeType);
-
-  for (let y = 0; y < height; y++) {
-    const terrainRow = [];
-    const obstacleRow = [];
-    const variantRow = [];
-
-    for (let x = 0; x < width; x++) {
-      // Terrain selection
-      const roll = random();
-      let cumulative = 0;
-      let selectedTerrain = 'grass';
-
-      for (const [terrainType, weight] of Object.entries(terrainWeights)) {
-        cumulative += weight;
-        if (roll < cumulative) {
-          selectedTerrain = terrainType;
-          break;
-        }
-      }
-      terrainRow.push(selectedTerrain);
-
-      // Tile variant
-      variantRow.push(Math.floor(random() * 4));
-
-      // Obstacle generation
-      obstacleRow.push(generateObstacleForTerrainLegacy(selectedTerrain, nodeType, random));
-    }
-
-    terrain.push(terrainRow);
-    obstacles.push(obstacleRow);
-    variants.push(variantRow);
-  }
-
-  clearSpawnAreas(terrain, obstacles, width, height);
-  ensureMapConnectivity(terrain, obstacles, width, height, random);
-
-  return { terrain, obstacles, variants };
-}
 
 /**
  * Generate terrain only (without obstacles/variants) for server-side validation
