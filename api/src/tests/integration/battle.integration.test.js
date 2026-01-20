@@ -61,6 +61,8 @@ describe('Battle API', () => {
       assert.ok(res.body.state.units);
       assert.ok(res.body.mapWidth);
       assert.ok(res.body.mapHeight);
+      // nodeType is critical for frontend terrain generation to match server
+      assert.ok(res.body.nodeType, 'nodeType must be included for terrain sync');
 
       battle = res.body;
     });

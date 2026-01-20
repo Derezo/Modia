@@ -241,6 +241,7 @@ router.post('/boss/start', authenticate, startLimiter, asyncHandler(async (req, 
     mapSeed: battleConfig.mapSeed,
     mapWidth: 32,
     mapHeight: 32,
+    nodeType: 'guild', // Critical: frontend needs this for terrain generation
     state: battleConfig.initialState,
     guildmaster: {
       name: battleConfig.guildmaster.name,

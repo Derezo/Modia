@@ -570,6 +570,7 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     mapSeed,
     mapWidth: 32,
     mapHeight: 32,
+    nodeType: node.node_type, // Critical: frontend needs this for terrain generation
     state: initialState,
     availableActions
   });
