@@ -55,7 +55,48 @@ npm run generate:enemies                # Enemy sprites only
 npm run generate:nodes                  # World map node icons
 npm run generate:items                  # Item/equipment icons
 npm run generate:icons                  # UI icons
+
+# Audio Generation (requires Suno/ElevenLabs API keys)
+npm run audio:generate                  # Generate all audio (music + SFX)
+npm run audio:generate:music            # Generate music tracks only
+npm run audio:generate:sfx              # Generate sound effects only
+npm run audio:download                  # Download generated audio from Suno
+npm run audio:validate                  # Validate audio file coverage
+npm run audio:status                    # Quick status check of audio files
+npm run audio:check                     # Full validation (status + manifest sync)
+
+# Single-track generation with automatic download:
+npm run audio:generate:music -- --key heartlands_tavern --wait
+
+# Batch generation (two-step process for music):
+npm run audio:generate:music -- --region heartlands
+npm run audio:download
+
+# SFX generation is synchronous (files download immediately):
+npm run audio:generate:sfx -- --key attack_sword_1
 ```
+
+### Audio Prompt Guidelines (ElevenLabs SFX)
+
+ElevenLabs interprets comma-separated prompts as multiple distinct sounds, generating each sequentially. This causes files to be much longer than the specified duration.
+
+**Write prompts that describe ONE sound with adjectives, not multiple sounds:**
+
+```
+# BAD - Multiple sounds listed (generates ~16 seconds instead of 1):
+"Fantasy RPG turn notification, your turn alert, brief heroic chime, tactical combat readiness sound"
+
+# GOOD - Single sound with descriptive adjectives (generates ~1 second):
+"Fantasy RPG brief heroic turn notification chime"
+
+# BAD - List of sound types:
+"sword slash, metal cutting, whoosh, impact"
+
+# GOOD - Single described action:
+"Fantasy sword slash with sharp metallic whoosh and light impact"
+```
+
+The generate-sfx.js script warns about prompts with 4+ comma-separated segments when duration is short. Run with `--dry-run` to check prompts before generating.
 
 ## Architecture
 
@@ -116,13 +157,18 @@ Room-based subscriptions at `/ws`:
 
 **Database queries:** Always use parameterized queries (`$1, $2`) via the pool in `src/config/database.js`
 
-**World generation:** Deterministic from `WORLD_SEED` env var using `SeededRandom` - same seed always produces same world layout. The system uses a 5-region structure with Voronoi partitioning. Worldgen modules in `api/src/db/worldgen/`:
+**World generation:** Deterministic from `WORLD_SEED` env var using `SeededRandom` - same seed always produces same world layout. The system uses a 5-region structure with Voronoi partitioning.
+
+**Unit conversion:** 1 worldgen unit = 30 pixels. Max node spacing is 13.3 units (400px) - connections exceeding this trigger gap infill with intermediate nodes.
+
+Worldgen modules in `api/src/db/worldgen/`:
 - `castlePlacement.js` - Force-directed + Lloyd's relaxation for castle positions
 - `voronoiPartitioning.js` - Region boundaries from castle positions
 - `nodeGeneration.js` - Poisson disk sampling within each region
 - `internalConnections.js` - MST + extra connections per region
-- `interRegionConnections.js` - Bridges, wilderness zones, trade routes, palace
-- `validation.js` - Terminators, difficulty tiers, connectivity checks
+- `interRegionConnections.js` - Bridges, wilderness zones, trade routes, palace, gap infill
+- `validation.js` - Terminators, difficulty tiers, connectivity checks, max spacing validation
+- `constants.js` - All worldgen configuration including thematic naming pools
 
 **Environment variables:** Key env vars in `.env`:
 - `DEBUG=true` - Enable detailed query logging and debug output
@@ -233,6 +279,124 @@ const viewportY = rect.top + (canvasY * scale);
 
 See `docs/FRONTEND_TECHNICAL_PATTERNS.md` Section 10 for full details and examples.
 
+### Shared Module Imports
+
+**CRITICAL:** The `@shared/` import alias ONLY works in the frontend (configured in Vite). The API must use relative paths:
+
+```javascript
+// WRONG - API code (will fail at runtime)
+import { SeededRandom } from '@shared/constants.js';
+
+// CORRECT - API code (use relative path)
+import { SeededRandom } from '../../../shared/constants.js';
+
+// CORRECT - Frontend code (Vite alias works)
+import { SeededRandom } from '@shared/constants.js';
+```
+
+**Why this happens:** The `@shared` alias is a Vite-specific path mapping. Node.js doesn't recognize it. ESLint is configured to catch this error (`no-restricted-imports` rule in `api/.eslintrc.json`).
+
+## File Size Guidelines
+
+File size enforcement prevents monolithic files that harm maintainability. Oversized files **block plan validation and commits**.
+
+### Thresholds
+
+| Lines | Level | Action |
+|-------|-------|--------|
+| 500 | Target | Ideal file size |
+| 1000 | Notice | Note in review, continue |
+| 1500 | Warning | Flag in report, consider splitting |
+| **2500** | **BLOCKING** | **Halt validation, require modularization** |
+
+### Exemptions
+
+- `dist/`, `node_modules/`, `.min.js` files
+- Test files (`*.test.js`, `*.spec.js`)
+- Migration files (`*.sql`)
+- Generated files (sprites, audio metadata)
+
+### Modularization Patterns
+
+**1. Re-export Wrapper Pattern** (used for battleService.js)
+
+Keep the main file as a thin coordinator that re-exports from modules:
+
+```javascript
+// battleService.js (wrapper - stays small)
+export * from './battle/damageCalculations.js';
+export * from './battle/statusEffects.js';
+export * from './battle/rewards.js';
+export { BattleService } from './battle/BattleService.js';
+```
+
+```
+services/
+  battleService.js          # Re-export wrapper (~50 lines)
+  battle/
+    damageCalculations.js   # Damage formulas
+    statusEffects.js        # Status effect logic
+    rewards.js              # XP/loot calculations
+    BattleService.js        # Main service class
+```
+
+**2. Domain Module Directory**
+
+Group related functionality into a directory with an index:
+
+```
+services/ai/
+  index.js              # Public exports
+  utilityAI.js          # Scoring logic
+  lookahead.js          # Simulation
+  actionGenerator.js    # Action enumeration
+  stateEvaluator.js     # State analysis
+```
+
+**3. Scene Component Extraction** (frontend)
+
+Extract rendering/logic into separate files:
+
+```
+scenes/
+  BattleScene.js        # Orchestration only
+battle/
+  BattleGrid.js         # Grid rendering
+  BattleUnit.js         # Unit rendering
+  BattleUI.js           # HUD elements
+  BattleAnimations.js   # Animation logic
+```
+
+**4. Data Manifest Pattern** (config/templates)
+
+Split large data files by category:
+
+```
+audio-metadata/
+  sfx/
+    combat/
+      weapons.json      # Weapon sounds
+      deaths.json       # Death sounds
+      status-effects.json
+    manifest.json       # Index of all categories
+```
+
+### Tech Debt: Existing Large Files
+
+These files exceed or approach limits and are tracked in `docs/ROADMAP_TECHNICAL.md` section 6.2:
+
+| File | Lines | Status |
+|------|-------|--------|
+| `frontend/src/scenes/BattleScene.js` | 3,259 | BLOCKING - refactor in progress |
+| `frontend/src/scenes/WorldMapScene.js` | 2,478 | WARNING - near limit |
+| `api/src/services/marketplaceService.js` | 1,956 | WARNING |
+| `api/src/services/coliseumService.js` | 1,552 | WARNING |
+| `frontend/src/battle/BattleUI.js` | 1,477 | NOTICE - approaching 1,500 |
+
+*Last updated: 2026-01-19*
+
+**Note:** Changes to tech debt files do NOT block validation unless they increase the line count. New files must comply with the 2500-line limit.
+
 ## Subagents
 
 This project has specialized subagents in `.claude/agents/`. **Using subagents is strongly encouraged** - they have domain-specific context and produce better results. Use the Task tool with the appropriate `subagent_type`:
@@ -265,6 +429,11 @@ Detailed specifications in `docs/`. Key files:
 - `TECHNICAL_ARCHITECTURE.md` - System design, database schemas
 - `API_SPECIFICATION.md` - REST and WebSocket endpoints
 - `FRONTEND_TECHNICAL_PATTERNS.md` - Critical gotchas and component patterns
+- `GAME_DESIGN.md` - Combat mechanics, class progression, world design
+- `BATTLE_TURN_SYSTEM.md` - CT-based turn order, two-action system
+- `BATTLE_MESSAGING_PROTOCOL.md` - Hybrid HTTP/WebSocket battle protocol
+- `AI_SYSTEM.md` - Enemy AI behavior trees and utility functions
+- `DESIGN_SYSTEM.md` - Parchment UI components, theming, responsive patterns
 - `archive/COMPLETED_MILESTONES.md` - Archived completed work
 
 **Roadmap maintenance:** Keep roadmaps fresh by moving completed items to `docs/archive/`.
