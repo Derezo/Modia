@@ -12,6 +12,7 @@ import { PartyInviteModal } from '../components/PartyInviteModal.js';
 import { Icon } from '../components/Icon.js';
 import { responsive } from '../core/Responsive.js';
 import { PARCHMENT_COLORS } from '../ui/parchment/ParchmentTheme.js';
+import { RACE_TO_REGION } from '../audio/AudioAssets.js';
 
 // Class-specific action labels for guild recruitment buttons
 const GUILD_ACTION_LABELS = {
@@ -184,9 +185,12 @@ export class WorldMapScene extends Scene {
 
     // Start world exploration music (region-aware)
     if (this.game.musicContext) {
-      // Set region based on current node's region
-      if (this.currentNode?.region) {
-        this.game.musicContext.setRegion(this.currentNode.region);
+      // Set region based on current node's race (map to region name for music)
+      // API returns region_race ('human', 'elf', etc.), music uses region names ('heartlands', etc.)
+      const regionRace = this.currentNode?.region_race;
+      const regionName = regionRace ? RACE_TO_REGION[regionRace] : null;
+      if (regionName) {
+        this.game.musicContext.setRegion(regionName);
       }
       this.game.musicContext.playExplorationMusic();
     }
@@ -587,9 +591,10 @@ export class WorldMapScene extends Scene {
       this.watchtowerView = {
         watchtowerNode: result.watchtowerNode,
         revealedNodes: result.revealedNodes,
-        revealedConnections: result.revealedConnections
+        revealedConnections: result.revealedConnections,
+        revealRadiusPixels: result.watchtowerNode.reveal_radius_pixels || 1500
       };
-      console.log(`Watchtower view loaded: ${result.revealedNodes.length} nodes revealed`);
+      console.log(`Watchtower view loaded: ${result.revealedNodes.length} nodes revealed within ${this.watchtowerView.revealRadiusPixels}px`);
     } catch (err) {
       console.warn('Failed to fetch watchtower view:', err);
       this.watchtowerView = null;
@@ -1326,8 +1331,11 @@ export class WorldMapScene extends Scene {
     this.game.state.set('currentNode', this.currentNode);
 
     // Update music region if changed
-    if (this.game.musicContext && this.currentNode?.region) {
-      this.game.musicContext.setRegion(this.currentNode.region);
+    if (this.game.musicContext && this.currentNode?.region_race) {
+      const regionName = RACE_TO_REGION[this.currentNode.region_race];
+      if (regionName) {
+        this.game.musicContext.setRegion(regionName);
+      }
     }
 
     // Update stamina from travel result
@@ -1802,7 +1810,7 @@ export class WorldMapScene extends Scene {
 
     // Render fog of war overlay (before character and labels so player/text is always visible)
     if (this.effects) {
-      this.effects.renderFogOfWar(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height, this.nodes, this.connections);
+      this.effects.renderFogOfWar(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height, this.nodes, this.connections, this.watchtowerView);
     }
 
     // Second pass: Render node tooltips AFTER fog of war so they're always visible
@@ -2451,8 +2459,8 @@ export class WorldMapScene extends Scene {
         ctx.fillText(this.getNodeIcon(node.node_type, true), x, y);
       }
 
-      // Draw "?" label for undiscovered nodes, actual name only if discovered
-      const displayName = node.discovered ? node.name : '?';
+      // Draw node name - show actual name (backend now always provides it for watchtower reveals)
+      const displayName = node.name || '?';
       ctx.font = 'bold 11px Arial';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
@@ -2461,8 +2469,8 @@ export class WorldMapScene extends Scene {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       ctx.fillText(displayName, x + 1, y + this.nodeSize + 5);
 
-      // Main text
-      ctx.fillStyle = node.discovered ? 'rgba(255, 255, 255, 0.8)' : 'rgba(200, 180, 100, 0.8)';
+      // Main text - golden/amber for watchtower-revealed (undiscovered), white for discovered
+      ctx.fillStyle = node.discovered ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 220, 130, 0.9)';
       ctx.fillText(displayName, x, y + this.nodeSize + 4);
 
       ctx.restore();
