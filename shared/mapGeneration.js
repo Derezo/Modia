@@ -2,16 +2,55 @@
  * Map Generation - Seeded terrain and obstacle generation for battle maps
  * SINGLE SOURCE OF TRUTH for map generation used by both server and client
  *
- * CRITICAL: Random consumption pattern must be EXACTLY preserved for deterministic maps.
- * Any change to random() call order will cause server/client terrain desync.
+ * This module provides the main entry point for battle map generation.
+ * It integrates with the AlgorithmPipeline system for procedural terrain
+ * generation while maintaining backwards compatibility with existing code.
+ *
+ * DETERMINISM: Same seed always produces identical output. The random
+ * consumption pattern changed in the pipeline refactor, so old seeds
+ * will produce different maps, but new maps remain fully deterministic.
  */
 
 import { SeededRandom } from './constants.js';
-import { getTerrainWeights, isImpassable } from './terrain.js';
+import { isImpassable, getTerrainWeights } from './terrain.js';
+import { AlgorithmPipeline } from './mapgen/AlgorithmPipeline.js';
+import { getNodeConfig, getObstacleRulesForTerrain } from './mapgen/nodeTypeAlgorithms.js';
+import { SpawnPlacer, AI_SPAWN_CONFIGS } from './mapgen/SpawnPlacer.js';
+
+// ============================================================================
+// OBSTACLE CONFIGURATION
+// ============================================================================
+
+/**
+ * Obstacle configuration by terrain type
+ * Defines what obstacles can appear on impassable terrain
+ */
+const OBSTACLE_MAP = {
+  rock: { category: 'rocks', options: ['rock_small', 'rock_medium', 'rock_large'] },
+  tree: { category: 'trees', options: ['oak_tree', 'pine_tree', 'dead_tree'] },
+  forest: { category: 'trees', options: ['oak_tree', 'pine_tree'] },
+  cliff: { category: 'rocks', options: ['rock_large', 'mountain_boulder'] },
+  lava: null,
+  water: null
+};
+
+/**
+ * Decorative obstacles by biome type (fallback)
+ */
+const DECORATIVE_OBSTACLES = {
+  forest: ['grass_tufts', 'wildflowers', 'fallen_log'],
+  cave: ['cave_crystals', 'stalagmite'],
+  mountain: ['grass_tufts', 'stone_ruins'],
+  bridge: ['grass_tufts'],
+  castle: ['stone_ruins']
+};
+
+// ============================================================================
+// SEEDED RANDOM UTILITY
+// ============================================================================
 
 /**
  * Create a seeded random function (Mulberry32 algorithm)
- * This matches the existing pattern in api/src/routes/battle.js and frontend BattleGrid.js
  * @param {number} seed - Seed value
  * @returns {function} Random function that returns 0-1
  */
@@ -25,29 +64,9 @@ function createSeededRandom(seed) {
   };
 }
 
-/**
- * Obstacle configuration by terrain type
- * Defines what obstacles can appear on impassable terrain
- */
-const OBSTACLE_MAP = {
-  rock: { category: 'rocks', options: ['rock_small', 'rock_medium', 'rock_large'] },
-  tree: { category: 'trees', options: ['oak_tree', 'pine_tree', 'dead_tree'] },
-  forest: { category: 'trees', options: ['oak_tree', 'pine_tree'] }, // Note: forest terrain is walkable
-  cliff: { category: 'rocks', options: ['rock_large', 'mountain_boulder'] },
-  lava: null, // No obstacle, just lava tile
-  water: null  // No obstacle, just water tile
-};
-
-/**
- * Decorative obstacles by biome type
- */
-const DECORATIVE_OBSTACLES = {
-  forest: ['grass_tufts', 'wildflowers', 'fallen_log'],
-  cave: ['cave_crystals', 'stalagmite'],
-  mountain: ['grass_tufts', 'stone_ruins'],
-  bridge: ['grass_tufts'],
-  castle: ['stone_ruins']
-};
+// ============================================================================
+// OBSTACLE GENERATION
+// ============================================================================
 
 /**
  * Get random decorative obstacle for a biome
@@ -61,29 +80,50 @@ function getRandomDecorativeObstacle(nodeType, random) {
 }
 
 /**
- * Generate obstacle for a terrain tile
- * CRITICAL: Random consumption pattern must match frontend BattleGrid.generateObstacleForTerrain exactly
- *
+ * Generate obstacle for a terrain tile using node config rules
+ * @param {string} terrain - Terrain type at this tile
+ * @param {string} nodeType - Biome/node type
+ * @param {function} random - Seeded random function
+ * @param {Object} nodeConfig - Node configuration with obstacle rules
+ * @returns {Object|null} Obstacle data { type, variant } or null
+ */
+function generateObstacleForTile(terrain, nodeType, random, nodeConfig) {
+  // If we have obstacle rules in the config, use them
+  if (nodeConfig && nodeConfig.obstacleRules) {
+    const rules = getObstacleRulesForTerrain(nodeConfig, terrain);
+
+    for (const rule of rules) {
+      if (random() < rule.chance) {
+        const variant = rule.variants[Math.floor(random() * rule.variants.length)];
+        return { type: rule.type, variant };
+      }
+    }
+    return null;
+  }
+
+  // Fallback to legacy obstacle generation
+  return generateObstacleForTerrainLegacy(terrain, nodeType, random);
+}
+
+/**
+ * Legacy obstacle generation for backwards compatibility
  * @param {string} terrain - Terrain type at this tile
  * @param {string} nodeType - Biome/node type
  * @param {function} random - Seeded random function
  * @returns {Object|null} Obstacle data { type, variant } or null
  */
-function generateObstacleForTerrain(terrain, nodeType, random) {
+function generateObstacleForTerrainLegacy(terrain, nodeType, random) {
   if (!isImpassable(terrain)) {
     // Walkable terrain: possible decorative obstacles
     if (nodeType === 'forest' && terrain === 'grass') {
-      // Forest grass: 15% chance for tree
       if (random() < 0.15) {
         const treeOptions = ['oak_tree', 'pine_tree'];
         return { type: 'trees', variant: treeOptions[Math.floor(random() * treeOptions.length)] };
       }
-      // 5% chance for other decoratives
       if (random() < 0.05) {
         return { type: 'decorative', variant: getRandomDecorativeObstacle(nodeType, random) };
       }
     } else {
-      // Other biomes: 5% chance for decorative obstacles on walkable terrain
       if (random() < 0.05) {
         return { type: 'decorative', variant: getRandomDecorativeObstacle(nodeType, random) };
       }
@@ -100,69 +140,32 @@ function generateObstacleForTerrain(terrain, nodeType, random) {
 }
 
 /**
- * Generate terrain and obstacles from a seed value
- * CRITICAL: This function must produce IDENTICAL results on server and client for the same seed
- *
- * Random consumption pattern per tile (in order):
- * 1. Terrain selection roll
- * 2. Tile variant roll (for visual variety)
- * 3. Obstacle generation (variable calls depending on terrain/biome)
- *
- * @param {number} seed - Seed value for deterministic generation
- * @param {string} nodeType - Biome/node type (forest, cave, mountain, bridge, castle)
- * @param {number} width - Map width in tiles (default 32)
- * @param {number} height - Map height in tiles (default 32)
- * @returns {Object} { terrain: string[][], obstacles: Object[][], variants: number[][] }
+ * Generate obstacles for the entire terrain grid
+ * @param {string[][]} terrain - Terrain grid
+ * @param {string} nodeType - Biome/node type
+ * @param {function} random - Seeded random function
+ * @param {Object} nodeConfig - Optional node configuration
+ * @returns {Object[][]} Obstacle grid
  */
-export function generateTerrain(seed, nodeType, width = 32, height = 32) {
-  const random = createSeededRandom(seed);
-  const terrain = [];
+function generateObstacles(terrain, nodeType, random, nodeConfig = null) {
+  const height = terrain.length;
+  const width = terrain[0]?.length || 0;
   const obstacles = [];
-  const variants = [];
-
-  const terrainWeights = getTerrainWeights(nodeType);
 
   for (let y = 0; y < height; y++) {
-    const terrainRow = [];
-    const obstacleRow = [];
-    const variantRow = [];
-
+    const row = [];
     for (let x = 0; x < width; x++) {
-      // 1. Terrain selection
-      const roll = random();
-      let cumulative = 0;
-      let selectedTerrain = 'grass';
-
-      for (const [terrainType, weight] of Object.entries(terrainWeights)) {
-        cumulative += weight;
-        if (roll < cumulative) {
-          selectedTerrain = terrainType;
-          break;
-        }
-      }
-      terrainRow.push(selectedTerrain);
-
-      // 2. Tile variant (0-3 for visual variety)
-      variantRow.push(Math.floor(random() * 4));
-
-      // 3. Obstacle generation (random consumption depends on terrain type)
-      obstacleRow.push(generateObstacleForTerrain(selectedTerrain, nodeType, random));
+      row.push(generateObstacleForTile(terrain[y][x], nodeType, random, nodeConfig));
     }
-
-    terrain.push(terrainRow);
-    obstacles.push(obstacleRow);
-    variants.push(variantRow);
+    obstacles.push(row);
   }
 
-  // Clear spawn areas (left 5 columns for players, right 5 columns for enemies)
-  clearSpawnAreas(terrain, obstacles, width, height);
-
-  // Ensure connectivity between spawn areas, carve paths if needed
-  // CRITICAL: Pass obstacles so carved paths clear obstacles too
-  ensureMapConnectivity(terrain, obstacles, width, height, random);
-
-  return { terrain, obstacles, variants };
+  return obstacles;
 }
+
+// ============================================================================
+// SPAWN AREA CLEARING
+// ============================================================================
 
 /**
  * Clear spawn areas to ensure walkable tiles for unit placement
@@ -171,14 +174,13 @@ export function generateTerrain(seed, nodeType, width = 32, height = 32) {
  * @param {number} width - Map width
  * @param {number} height - Map height
  */
-function clearSpawnAreas(terrain, obstacles, width, height) {
+export function clearSpawnAreas(terrain, obstacles, width, height) {
   // Player spawn area (left side, columns 0-4)
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < 5; x++) {
       if (terrain[y] && isImpassable(terrain[y][x])) {
         terrain[y][x] = 'grass';
       }
-      // Clear obstacles in spawn areas
       if (obstacles[y]) {
         obstacles[y][x] = null;
       }
@@ -191,7 +193,6 @@ function clearSpawnAreas(terrain, obstacles, width, height) {
       if (terrain[y] && isImpassable(terrain[y][x])) {
         terrain[y][x] = 'grass';
       }
-      // Clear obstacles in spawn areas
       if (obstacles[y]) {
         obstacles[y][x] = null;
       }
@@ -199,10 +200,12 @@ function clearSpawnAreas(terrain, obstacles, width, height) {
   }
 }
 
+// ============================================================================
+// MAP CONNECTIVITY
+// ============================================================================
+
 /**
- * Pre-compute corridor data to ensure consistent random consumption
- * CRITICAL: This must always be called to maintain seeded determinism
- *
+ * Pre-compute corridor data for deterministic carving
  * @param {number} width - Map width
  * @param {number} height - Map height
  * @param {function} random - Seeded random function
@@ -211,7 +214,7 @@ function clearSpawnAreas(terrain, obstacles, width, height) {
 function precomputeCorridorData(width, height, random) {
   const playerSpawnX = 4;
   const enemySpawnX = width - 5;
-  const corridorCount = 2 + Math.floor(random() * 2); // 2-3 corridors
+  const corridorCount = 2 + Math.floor(random() * 2);
   const corridors = [];
 
   for (let i = 0; i < corridorCount; i++) {
@@ -219,7 +222,6 @@ function precomputeCorridorData(width, height, random) {
     const offsetY = Math.floor(random() * 5) - 2;
     const startY = Math.max(2, Math.min(height - 3, baseY + offsetY));
 
-    // Pre-compute wander decisions for each column
     const wanderData = [];
     for (let x = playerSpawnX; x <= enemySpawnX; x++) {
       const shouldWander = random() < 0.15;
@@ -235,7 +237,6 @@ function precomputeCorridorData(width, height, random) {
 
 /**
  * Apply pre-computed corridor data to terrain and obstacles
- *
  * @param {string[][]} terrain - Terrain grid to modify
  * @param {Object[][]} obstacles - Obstacles grid to modify
  * @param {number} height - Map height
@@ -249,19 +250,16 @@ function applyCorridorCarving(terrain, obstacles, height, corridorData) {
       const x = corridor.playerSpawnX + i;
       const { shouldWander, wanderDir } = corridor.wanderData[i];
 
-      // Carve a 3-tile wide corridor
       for (let dy = -1; dy <= 1; dy++) {
         const y = currentY + dy;
         if (y >= 0 && y < height && isImpassable(terrain[y]?.[x])) {
           terrain[y][x] = 'stone';
-          // Also clear any obstacles on carved tiles
           if (obstacles?.[y]) {
             obstacles[y][x] = null;
           }
         }
       }
 
-      // Apply wander if needed
       if (shouldWander) {
         currentY = Math.max(2, Math.min(height - 3, currentY + wanderDir));
       }
@@ -270,29 +268,22 @@ function applyCorridorCarving(terrain, obstacles, height, corridorData) {
 }
 
 /**
- * Ensure map has valid paths between spawn areas, carve if needed
- * Uses BFS to check connectivity and carves paths if disconnected
- *
- * CRITICAL: Always pre-computes corridor data to maintain consistent random
- * consumption, regardless of whether carving is needed. This ensures
- * server/client terrain sync with identical seeds.
- *
+ * Ensure map has valid paths between spawn areas
  * @param {string[][]} terrain - Terrain grid to modify in place
  * @param {Object[][]} obstacles - Obstacles grid to modify in place
  * @param {number} width - Map width
  * @param {number} height - Map height
  * @param {function} random - Seeded random function
  */
-function ensureMapConnectivity(terrain, obstacles, width, height, random) {
-  // ALWAYS pre-compute corridor data to consume random values consistently
-  // This ensures determinism regardless of whether we need to carve
+export function ensureMapConnectivity(terrain, obstacles, width, height, random) {
+  // Always pre-compute corridor data for deterministic random consumption
   const corridorData = precomputeCorridorData(width, height, random);
 
   const playerSpawnX = 2;
   const enemySpawnX = width - 3;
   const midY = Math.floor(height / 2);
 
-  // Quick connectivity check using BFS
+  // BFS connectivity check
   const visited = new Set();
   const queue = [{ x: playerSpawnX, y: midY }];
   visited.add(`${playerSpawnX},${midY}`);
@@ -316,15 +307,254 @@ function ensureMapConnectivity(terrain, obstacles, width, height, random) {
     }
   }
 
-  // Only apply carving if path doesn't exist (corridorData already computed)
   if (!reachedEnemy) {
     applyCorridorCarving(terrain, obstacles, height, corridorData);
   }
 }
 
+// ============================================================================
+// PIPELINE-BASED GENERATION
+// ============================================================================
+
+// Singleton pipeline instance for reuse
+let pipelineInstance = null;
+
+/**
+ * Get or create the algorithm pipeline instance
+ * @returns {AlgorithmPipeline} Pipeline instance
+ */
+function getPipeline() {
+  if (!pipelineInstance) {
+    pipelineInstance = new AlgorithmPipeline({
+      defaultSelectionRate: 0.5,
+      minIntensity: 0.3,
+      maxIntensity: 0.8
+    });
+  }
+  return pipelineInstance;
+}
+
+/**
+ * Generate terrain using the new algorithm pipeline
+ * @param {number} seed - Seed value
+ * @param {string} nodeType - Biome/node type
+ * @param {number} width - Map width
+ * @param {number} height - Map height
+ * @param {Object} options - Generation options
+ * @returns {Object} Generated map data
+ */
+function generateWithPipeline(seed, nodeType, width, height, options = {}) {
+  const random = createSeededRandom(seed);
+  const pipeline = getPipeline();
+  const nodeConfig = getNodeConfig(nodeType);
+
+  // Get algorithm pool from node config or use pipeline defaults
+  const algorithmPool = nodeConfig?.algorithmPool
+    ? nodeConfig.algorithmPool.map(entry => entry.name)
+    : AlgorithmPipeline.getPoolForNodeType(nodeType);
+
+  // Run the pipeline
+  const result = pipeline.run(width, height, random, {
+    algorithmPool,
+    selectionRate: 0.6,
+    baseTerrain: nodeConfig?.baseTerrain || 'grass',
+    nodeType,
+    seed
+  });
+
+  // Generate obstacles using node config rules
+  const obstacles = generateObstacles(result.terrain, nodeType, random, nodeConfig);
+
+  // Clear spawn areas
+  clearSpawnAreas(result.terrain, obstacles, width, height);
+
+  // Ensure connectivity
+  ensureMapConnectivity(result.terrain, obstacles, width, height, random);
+
+  // Build return object
+  const returnValue = {
+    terrain: result.terrain,
+    obstacles,
+    variants: result.variants
+  };
+
+  // Add elevation data if requested
+  if (options.elevation || options.includeSpawns) {
+    returnValue.elevation = generateElevationData(result.terrain, width, height, random);
+  }
+
+  // Generate spawn positions if requested (Phase 5)
+  if (options.includeSpawns) {
+    const spawner = new SpawnPlacer({ mapWidth: width, mapHeight: height });
+
+    // Generate player spawns
+    returnValue.playerSpawns = spawner.generatePlayerSpawns(result.terrain, {
+      count: options.playerCount ?? 15,
+      obstacles
+    });
+
+    // Generate enemy spawns if AI type and count provided
+    if (options.enemyAiType && options.enemyCount) {
+      returnValue.enemySpawns = spawner.generateEnemySpawns(
+        result.terrain,
+        obstacles,
+        options.enemyAiType,
+        options.enemyCount,
+        random,
+        {
+          elevation: returnValue.elevation,
+          unitRoles: options.enemyRoles || []
+        }
+      );
+    }
+  }
+
+  // Add metadata if requested
+  if (options.includeMetadata) {
+    returnValue.metadata = result.metadata;
+  }
+
+  return returnValue;
+}
+
+/**
+ * Generate elevation data for terrain (Phase 2 prep)
+ * @param {string[][]} terrain - Terrain grid
+ * @param {number} width - Map width
+ * @param {number} height - Map height
+ * @param {function} random - Seeded random function
+ * @returns {number[][]} Elevation grid (0-1 values)
+ */
+function generateElevationData(terrain, width, height, random) {
+  const elevation = [];
+
+  for (let y = 0; y < height; y++) {
+    const row = [];
+    for (let x = 0; x < width; x++) {
+      // Base elevation from terrain type
+      let baseElevation = 0.5;
+      const t = terrain[y][x];
+
+      if (t === 'cliff' || t === 'rock') baseElevation = 0.8;
+      else if (t === 'mountain') baseElevation = 0.9;
+      else if (t === 'water' || t === 'lava') baseElevation = 0.2;
+      else if (t === 'stone') baseElevation = 0.5;
+      else if (t === 'grass' || t === 'forest') baseElevation = 0.4;
+
+      // Add small random variation
+      const variation = (random() - 0.5) * 0.1;
+      row.push(Math.max(0, Math.min(1, baseElevation + variation)));
+    }
+    elevation.push(row);
+  }
+
+  return elevation;
+}
+
+// ============================================================================
+// MAIN EXPORT FUNCTIONS
+// ============================================================================
+
+/**
+ * Generate terrain and obstacles from a seed value
+ *
+ * @param {number} seed - Seed value for deterministic generation
+ * @param {string} nodeType - Biome/node type (forest, cave, mountain, bridge, castle)
+ * @param {number} width - Map width in tiles (default 32)
+ * @param {number} height - Map height in tiles (default 32)
+ * @param {Object} options - Optional generation parameters
+ * @param {boolean} options.useNewPipeline - Use new algorithm pipeline (default true)
+ * @param {boolean} options.elevation - Include elevation data (default false)
+ * @param {boolean} options.includeMetadata - Include generation metadata (default false)
+ * @param {boolean} options.includeSpawns - Generate spawn positions (default false)
+ * @param {number} options.playerCount - Number of player spawn slots (default 15)
+ * @param {string} options.enemyAiType - AI type for enemy spawn positioning
+ * @param {number} options.enemyCount - Number of enemies to spawn
+ * @param {string[]} options.enemyRoles - Optional roles for tactical spawn positioning
+ * @returns {Object} { terrain, obstacles, variants, elevation?, playerSpawns?, enemySpawns?, metadata? }
+ */
+export function generateTerrain(seed, nodeType, width = 32, height = 32, options = {}) {
+  const {
+    useNewPipeline = true,
+    elevation = false,
+    includeMetadata = false,
+    includeSpawns = false,
+    playerCount = 15,
+    enemyAiType = null,
+    enemyCount = 0,
+    enemyRoles = []
+  } = options;
+
+  // Use new pipeline by default
+  if (useNewPipeline) {
+    return generateWithPipeline(seed, nodeType, width, height, {
+      elevation,
+      includeMetadata,
+      includeSpawns,
+      playerCount,
+      enemyAiType,
+      enemyCount,
+      enemyRoles
+    });
+  }
+
+  // Legacy generation path (for testing/comparison)
+  return generateTerrainLegacy(seed, nodeType, width, height);
+}
+
+/**
+ * Legacy terrain generation (pre-pipeline)
+ * Kept for backwards compatibility testing
+ * @private
+ */
+function generateTerrainLegacy(seed, nodeType, width, height) {
+  const random = createSeededRandom(seed);
+  const terrain = [];
+  const obstacles = [];
+  const variants = [];
+
+  const terrainWeights = getTerrainWeights(nodeType);
+
+  for (let y = 0; y < height; y++) {
+    const terrainRow = [];
+    const obstacleRow = [];
+    const variantRow = [];
+
+    for (let x = 0; x < width; x++) {
+      // Terrain selection
+      const roll = random();
+      let cumulative = 0;
+      let selectedTerrain = 'grass';
+
+      for (const [terrainType, weight] of Object.entries(terrainWeights)) {
+        cumulative += weight;
+        if (roll < cumulative) {
+          selectedTerrain = terrainType;
+          break;
+        }
+      }
+      terrainRow.push(selectedTerrain);
+
+      // Tile variant
+      variantRow.push(Math.floor(random() * 4));
+
+      // Obstacle generation
+      obstacleRow.push(generateObstacleForTerrainLegacy(selectedTerrain, nodeType, random));
+    }
+
+    terrain.push(terrainRow);
+    obstacles.push(obstacleRow);
+    variants.push(variantRow);
+  }
+
+  clearSpawnAreas(terrain, obstacles, width, height);
+  ensureMapConnectivity(terrain, obstacles, width, height, random);
+
+  return { terrain, obstacles, variants };
+}
+
 /**
  * Generate terrain only (without obstacles/variants) for server-side validation
- * Uses SAME random consumption pattern as generateTerrain to ensure terrain matches
  *
  * @param {number} seed - Seed value
  * @param {string} nodeType - Biome type
@@ -335,4 +565,75 @@ function ensureMapConnectivity(terrain, obstacles, width, height, random) {
 export function generateTerrainOnly(seed, nodeType, width = 32, height = 32) {
   const result = generateTerrain(seed, nodeType, width, height);
   return result.terrain;
+}
+
+// ============================================================================
+// SPAWN GENERATION EXPORTS
+// ============================================================================
+
+// Re-export SpawnPlacer and configs for direct use
+export { SpawnPlacer, AI_SPAWN_CONFIGS };
+
+/**
+ * Generate spawn positions for an existing terrain/obstacle grid
+ * Use this when you already have terrain and need to add spawns separately
+ *
+ * @param {string[][]} terrain - Existing terrain grid
+ * @param {Object[][]} obstacles - Existing obstacle grid
+ * @param {Object} options - Spawn generation options
+ * @param {number} options.seed - Seed for deterministic enemy spawn positioning
+ * @param {number} options.playerCount - Number of player spawn slots (default 15)
+ * @param {string} options.enemyAiType - AI type for enemy positioning
+ * @param {number} options.enemyCount - Number of enemies to spawn
+ * @param {string[]} options.enemyRoles - Optional unit roles for tactical positioning
+ * @param {number[][]} options.elevation - Optional elevation grid
+ * @returns {Object} { playerSpawns, enemySpawns }
+ */
+export function generateSpawnPositions(terrain, obstacles, options = {}) {
+  const {
+    seed = Date.now(),
+    playerCount = 15,
+    enemyAiType = 'aggressive',
+    enemyCount = 5,
+    enemyRoles = [],
+    elevation = null
+  } = options;
+
+  const random = createSeededRandom(seed);
+  const width = terrain[0]?.length || 32;
+  const height = terrain.length || 32;
+  const spawner = new SpawnPlacer({ mapWidth: width, mapHeight: height });
+
+  const result = {
+    playerSpawns: spawner.generatePlayerSpawns(terrain, {
+      count: playerCount,
+      obstacles
+    }),
+    enemySpawns: spawner.generateEnemySpawns(
+      terrain,
+      obstacles,
+      enemyAiType,
+      enemyCount,
+      random,
+      {
+        elevation,
+        unitRoles: enemyRoles
+      }
+    )
+  };
+
+  return result;
+}
+
+/**
+ * Validate spawn positions are all walkable
+ *
+ * @param {Array<{x: number, y: number}>} spawns - Array of spawn positions
+ * @param {string[][]} terrain - Terrain grid
+ * @param {Object[][]} obstacles - Obstacle grid
+ * @returns {Object} { valid: boolean, invalidPositions: Array }
+ */
+export function validateSpawnPositions(spawns, terrain, obstacles) {
+  const spawner = new SpawnPlacer();
+  return spawner.validateSpawns(spawns, terrain, obstacles);
 }
