@@ -63,6 +63,7 @@ export class SkillDetailModal {
    * @param {number} [options.currentLevel=0] - Current skill level
    * @param {number} [options.availableXp=0] - Available XP pool
    * @param {Object} [options.learnedSkills={}] - All learned skills { skillId: level }
+   * @param {Object} [options.skillTree=null] - Full skill tree for name lookups
    * @param {Function} [options.onSkillLevelUp] - Callback when skill is leveled
    * @param {Function} [options.onClose] - Callback when modal closes
    */
@@ -73,6 +74,7 @@ export class SkillDetailModal {
     this.currentLevel = options.currentLevel || 0;
     this.availableXp = options.availableXp || 0;
     this.learnedSkills = options.learnedSkills || {};
+    this.skillTree = options.skillTree || null;
     this.onSkillLevelUp = options.onSkillLevelUp || (() => {});
     this.onClose = options.onClose || (() => {});
 
@@ -573,6 +575,35 @@ export class SkillDetailModal {
   }
 
   /**
+   * Look up a skill by ID in the skill tree
+   * @param {string} skillId - Skill ID to look up
+   * @returns {Object|null} Skill definition or null if not found
+   */
+  findSkillById(skillId) {
+    if (!this.skillTree?.branches) return null;
+
+    for (const branch of this.skillTree.branches) {
+      const found = branch.skills?.find(s => s.id === skillId);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  /**
+   * Get display name for a skill ID
+   * @param {string} skillId - Skill ID
+   * @returns {string} Skill name or formatted ID
+   */
+  getSkillDisplayName(skillId) {
+    const skill = this.findSkillById(skillId);
+    if (skill) return skill.name;
+    // Fallback: format ID as readable name (e.g., power_strike → Power Strike)
+    return skillId.split('_').map(word =>
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  }
+
+  /**
    * Render prerequisites section
    * @returns {string} HTML
    */
@@ -587,11 +618,12 @@ export class SkillDetailModal {
       const isMet = currentLevel >= requiredLevel;
       const statusClass = isMet ? 'skill-detail-prereq--met' : 'skill-detail-prereq--unmet';
       const icon = isMet ? '✓' : '✗';
+      const skillName = this.getSkillDisplayName(skillId);
 
       return `
         <div class="skill-detail-prereq ${statusClass}">
           <span>${icon}</span>
-          <span>${skillId} Lv.${requiredLevel} (Current: ${currentLevel})</span>
+          <span>${this.escapeHtml(skillName)} Lv.${requiredLevel} (Current: ${currentLevel})</span>
         </div>
       `;
     }).join('');
@@ -755,7 +787,7 @@ export class SkillDetailModal {
 
   /**
    * Calculate XP cost for leveling up
-   * Uses exponential formula matching backend: baseCost * 1.2^level
+   * Uses polynomial formula matching backend: baseCost * (level + 1)^1.5
    * @param {number} levels - Number of levels to gain
    * @returns {number} Total XP cost
    */
@@ -764,7 +796,8 @@ export class SkillDetailModal {
     let total = 0;
     for (let i = 0; i < levels; i++) {
       const targetLevel = this.currentLevel + i;
-      total += Math.floor(baseCost * Math.pow(1.2, targetLevel));
+      // Match backend: baseCost * (level + 1)^1.5
+      total += Math.floor(baseCost * Math.pow(targetLevel + 1, 1.5));
     }
     return total;
   }
@@ -912,9 +945,21 @@ export class SkillDetailModal {
 
       parchmentToast.success(`${this.skill.name} is now Level ${newLevel}!`);
 
+      // Show character level-up toast if character leveled up
+      if (result?.levelUp) {
+        const { newLevel: charLevel, statGains } = result.levelUp;
+        const statText = Object.entries(statGains || {})
+          .filter(([, val]) => val > 0)
+          .map(([stat, val]) => `+${val} ${stat.toUpperCase()}`)
+          .join(', ');
+
+        parchmentToast.success(`Level Up! Reached Level ${charLevel}${statText ? ` (${statText})` : ''}`);
+      }
+
       // Update internal state instead of closing
       this.currentLevel = newLevel;
-      this.availableXp = result?.availableXp ?? (this.availableXp - xpCost);
+      // Backend returns xpRemaining, not availableXp
+      this.availableXp = result?.xpRemaining ?? this.availableXp;
       this.learnedSkills[this.skill.id] = newLevel;
       this.selectedLevelUp = 1; // Reset to default selection
 

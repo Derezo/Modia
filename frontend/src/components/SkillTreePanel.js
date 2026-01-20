@@ -495,7 +495,8 @@ export class SkillTreePanel {
   calculateCost(skill, fromLevel, toLevel) {
     let total = 0;
     for (let i = fromLevel; i < toLevel; i++) {
-      total += Math.floor(skill.baseCost * Math.pow(1.2, i));
+      // Match backend: baseCost * (level + 1)^1.5
+      total += Math.floor(skill.baseCost * Math.pow(i + 1, 1.5));
     }
     return total;
   }
