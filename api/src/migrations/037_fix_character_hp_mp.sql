@@ -82,17 +82,17 @@ SET
                 )
             )
         FROM race_base_stats rbs, class_growth cg
-        WHERE rbs.race = c.race AND cg.class = c.class
+        WHERE rbs.race = c.race::TEXT AND cg.class = c.class::TEXT
     ),
     mp_max = (
         SELECT
             rbs.base_mp + (cg.mp_growth * (c.level - 1))
         FROM race_base_stats rbs, class_growth cg
-        WHERE rbs.race = c.race AND cg.class = c.class
+        WHERE rbs.race = c.race::TEXT AND cg.class = c.class::TEXT
     )
 WHERE EXISTS (
     SELECT 1 FROM race_base_stats rbs, class_growth cg
-    WHERE rbs.race = c.race AND cg.class = c.class
+    WHERE rbs.race = c.race::TEXT AND cg.class = c.class::TEXT
 );
 
 -- Also update hp_current and mp_current if they were at/above old max

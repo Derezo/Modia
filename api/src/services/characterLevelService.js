@@ -16,6 +16,8 @@
  * Level 100: 39,810,717 XP
  */
 
+import { CLASS_GROWTH, CLASSES } from '../../../shared/constants.js';
+
 const LEVEL_EXPONENT = 2.8;
 const LEVEL_MULTIPLIER = 100;
 const MAX_CHARACTER_LEVEL = 256;
@@ -96,50 +98,20 @@ function getLevelProgress(spentXP, currentLevel = null) {
  * @param {number} oldLevel - Previous level
  * @param {number} newLevel - New level
  * @param {string} characterClass - Character's class
- * @returns {object} Stat gains: {str, int, agi, vit, luck}
+ * @returns {object} Stat gains: {hp, mp, str, int, agi, vit, luck}
  */
 function calculateLevelUpStatGains(oldLevel, newLevel, characterClass) {
-  // Class growth rates matching CLASS_GROWTH in shared/constants.js
-  // Format: { strength, intelligence, agility, vitality } per level
-  const CLASS_GROWTH_RATES = {
-    // Base classes (from shared/constants.js CLASS_GROWTH)
-    warrior: { strength: 3, intelligence: 1, agility: 1, vitality: 2 },
-    wizard: { strength: 1, intelligence: 4, agility: 1, vitality: 1 },
-    monk: { strength: 2, intelligence: 2, agility: 3, vitality: 1 },
-    chemist: { strength: 1, intelligence: 2, agility: 2, vitality: 2 },
-    // Advanced warrior classes
-    berserker: { strength: 4, intelligence: 1, agility: 1, vitality: 2 },
-    paladin: { strength: 3, intelligence: 2, agility: 1, vitality: 3 },
-    guardian: { strength: 2, intelligence: 1, agility: 1, vitality: 4 },
-    warlord: { strength: 3, intelligence: 2, agility: 2, vitality: 2 },
-    // Advanced wizard classes
-    sorcerer: { strength: 1, intelligence: 5, agility: 1, vitality: 1 },
-    summoner: { strength: 1, intelligence: 4, agility: 1, vitality: 2 },
-    sage: { strength: 1, intelligence: 5, agility: 2, vitality: 1 },
-    archmage: { strength: 1, intelligence: 6, agility: 1, vitality: 1 },
-    // Advanced monk classes
-    ninja: { strength: 2, intelligence: 2, agility: 4, vitality: 1 },
-    samurai: { strength: 3, intelligence: 2, agility: 3, vitality: 1 },
-    mystic: { strength: 2, intelligence: 3, agility: 3, vitality: 1 },
-    grandmaster: { strength: 3, intelligence: 2, agility: 4, vitality: 1 },
-    // Advanced chemist classes
-    alchemist: { strength: 1, intelligence: 3, agility: 2, vitality: 2 },
-    poisoner: { strength: 1, intelligence: 3, agility: 3, vitality: 1 },
-    doctor: { strength: 1, intelligence: 3, agility: 2, vitality: 3 },
-    artificer: { strength: 2, intelligence: 3, agility: 2, vitality: 2 }
-  };
-
-  const growthRate = CLASS_GROWTH_RATES[characterClass] || CLASS_GROWTH_RATES.warrior;
+  const growth = CLASS_GROWTH[characterClass] || CLASS_GROWTH[CLASSES.WARRIOR];
   const levelsGained = newLevel - oldLevel;
 
-  // Stats gained are directly from growth rate per level
-  // This matches how calculateStats works in shared/constants.js
   return {
-    str: growthRate.strength * levelsGained,
-    int: growthRate.intelligence * levelsGained,
-    agi: growthRate.agility * levelsGained,
-    vit: growthRate.vitality * levelsGained,
-    luck: 0 // Luck doesn't increase from class growth in current system
+    hp: Math.floor(growth.hp * levelsGained),
+    mp: Math.floor(growth.mp * levelsGained),
+    str: Math.floor(growth.strength * levelsGained),
+    int: Math.floor(growth.intelligence * levelsGained),
+    agi: Math.floor(growth.agility * levelsGained),
+    vit: Math.floor(growth.vitality * levelsGained),
+    luck: Math.floor((growth.luck || 0) * levelsGained)
   };
 }
 
