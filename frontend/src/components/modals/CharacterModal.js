@@ -447,10 +447,10 @@ export class CharacterModal {
         <div class="character-modal-header">
           <div class="character-modal-portrait" style="background: ${classColor};">
             ${portraitUrl
-      ? `<img src="${portraitUrl}" alt="${this.escapeHtml(char.name)}"
+    ? `<img src="${portraitUrl}" alt="${this.escapeHtml(char.name)}"
                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
              <span class="character-modal-portrait-fallback" style="display: none;">${classIcon}</span>`
-      : `<span class="character-modal-portrait-fallback">${classIcon}</span>`}
+    : `<span class="character-modal-portrait-fallback">${classIcon}</span>`}
           </div>
           <div class="character-modal-info">
             <h3 class="character-modal-name">${this.escapeHtml(char.name)}</h3>
@@ -763,6 +763,12 @@ export class CharacterModal {
       return false;
     }
 
+    // Check class restriction
+    const classRestriction = item.class_restriction || item.classRestriction || [];
+    if (classRestriction.length > 0 && this.character && !classRestriction.includes(this.character.class)) {
+      return false;
+    }
+
     const slotMap = {
       head: ['armor'],
       body: ['armor'],
@@ -789,6 +795,7 @@ export class CharacterModal {
 
     try {
       let equipped = 0;
+      let failed = 0;
 
       for (const slot of EQUIPMENT_SLOTS) {
         const current = this.equipment[slot.key];
@@ -800,12 +807,18 @@ export class CharacterModal {
           .sort((a, b) => this.calculateItemPower(b) - this.calculateItemPower(a))[0];
 
         if (bestItem && this.calculateItemPower(bestItem) > currentPower) {
-          await this.game.api.equipItem(this.characterId, bestItem.instanceId || bestItem.id, slot.key);
-          equipped++;
+          try {
+            await this.game.api.equipItem(this.characterId, bestItem.instanceId || bestItem.id, slot.key);
+            equipped++;
 
-          // Remove from available inventory
-          const idx = this.inventory.findIndex(i => i.instanceId === bestItem.instanceId);
-          if (idx > -1) this.inventory.splice(idx, 1);
+            // Remove from available inventory
+            const idx = this.inventory.findIndex(i => i.instanceId === bestItem.instanceId);
+            if (idx > -1) this.inventory.splice(idx, 1);
+          } catch (itemError) {
+            // Log individual item failure but continue with other slots
+            console.warn(`Failed to equip ${bestItem.name} in ${slot.key}:`, itemError.message);
+            failed++;
+          }
         }
       }
 
@@ -814,6 +827,8 @@ export class CharacterModal {
         await this.loadData();
         this.render();
         this.onEquipmentChanged();
+      } else if (failed > 0) {
+        parchmentToast.error('Could not equip any items');
       } else {
         parchmentToast.info('No better items available');
       }
@@ -889,6 +904,7 @@ export class CharacterModal {
       currentLevel: this.skills[skillId] || 0,
       availableXp: this.availableXp,
       learnedSkills: this.skills,
+      skillTree: this.skillTree,
       onSkillLevelUp: async () => {
         // Preserve scroll position before refresh
         const scrollContainer = this.modal?.contentElement?.querySelector('.character-modal-accordions');

@@ -10,6 +10,7 @@ import {
   calculateLevelUpStatGains
 } from '../services/characterLevelService.js';
 import { scaleSkillAttributes, getSkillScalingPreview } from '../config/skillScaling.js';
+import { calculateStats } from '../../../shared/constants.js';
 
 const router = express.Router();
 
@@ -83,7 +84,7 @@ router.post('/learn', authenticate, asyncHandler(async (req, res) => {
 
   // Verify character ownership and get full character data
   const charResult = await query(
-    'SELECT id, class, experience, level, spent_xp, strength, intelligence, agility, vitality, luck FROM characters WHERE id = $1 AND user_id = $2',
+    'SELECT id, class, race, experience, level, spent_xp, strength, intelligence, agility, vitality, luck FROM characters WHERE id = $1 AND user_id = $2',
     [characterId, req.user.userId]
   );
 
@@ -204,6 +205,24 @@ router.post('/learn', authenticate, asyncHandler(async (req, res) => {
 
     // Apply stat gains if character leveled up
     if (statGains) {
+      // Calculate new HP/MP based on race, class, and new level
+      const newStats = calculateStats(character.race, character.class, levelAfterSpending);
+
+      // Get current HP/MP values
+      const currentResult = await client.query(
+        'SELECT hp_current, mp_current, hp_max, mp_max FROM characters WHERE id = $1',
+        [characterId]
+      );
+      const { hp_current, mp_current, hp_max, mp_max } = currentResult.rows[0];
+
+      // Calculate new current HP/MP:
+      // - Gain the delta HP/MP from the level up (healing on level up)
+      // - Cap at new max values
+      const hpDelta = newStats.hpMax - hp_max;
+      const mpDelta = newStats.mpMax - mp_max;
+      const newHpCurrent = Math.min(hp_current + hpDelta, newStats.hpMax);
+      const newMpCurrent = Math.min(mp_current + mpDelta, newStats.mpMax);
+
       await client.query(`
         UPDATE characters
         SET level = $1,
@@ -211,8 +230,12 @@ router.post('/learn', authenticate, asyncHandler(async (req, res) => {
             intelligence = intelligence + $3,
             agility = agility + $4,
             vitality = vitality + $5,
-            luck = luck + $6
-        WHERE id = $7
+            luck = luck + $6,
+            hp_max = $7,
+            mp_max = $8,
+            hp_current = $9,
+            mp_current = $10
+        WHERE id = $11
       `, [
         levelAfterSpending,
         statGains.str,
@@ -220,6 +243,10 @@ router.post('/learn', authenticate, asyncHandler(async (req, res) => {
         statGains.agi,
         statGains.vit,
         statGains.luck,
+        newStats.hpMax,
+        newStats.mpMax,
+        newHpCurrent,
+        newMpCurrent,
         characterId
       ]);
     }
