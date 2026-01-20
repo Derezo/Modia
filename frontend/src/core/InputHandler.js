@@ -55,7 +55,7 @@ export class InputHandler {
       this.mouseY = coords.y;
     });
 
-    this.canvas.addEventListener('mouseup', (e) => {
+    this.canvas.addEventListener('mouseup', (_e) => {
       if (this.mouseDown) {
         this.mouseClicked = true;
       }

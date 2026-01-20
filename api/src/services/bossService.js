@@ -109,7 +109,7 @@ function checkPhaseTransition(boss, bossState) {
  * @param {Object} battleState - Full battle state (for summons, etc.)
  * @returns {Object} Effects that occurred during transition
  */
-function applyPhaseTransition(boss, transition, bossState, battleState) {
+function applyPhaseTransition(boss, transition, bossState, _battleState) {
   const effects = {
     phaseName: transition.phaseName,
     fromPhase: transition.fromPhase,

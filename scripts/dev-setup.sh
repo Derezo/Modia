@@ -270,7 +270,7 @@ check_seed() {
 
     # Extract expected SEED_VERSION from seed.js
     EXPECTED_SEED_VERSION=$(grep "const SEED_VERSION" "$PROJECT_ROOT/api/src/db/seed.js" | grep -oP '\d+' || echo "1")
-    EXPECTED_WORLD_SEED="${WORLD_SEED:-12345}"
+    EXPECTED_WORLD_SEED="${WORLD_SEED:-123456}"
 
     # Check if seed_metadata table exists and has data
     METADATA_EXISTS=$(run_query "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'seed_metadata')" || echo "f")

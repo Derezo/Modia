@@ -154,7 +154,7 @@ export class BridgeRenderer {
   renderRails(ctx) {
     // Side rails (top and bottom of bridge)
     const railY1 = this.y - this.railHeight;
-    const railY2 = this.y + this.height;
+    const _railY2 = this.y + this.height;
 
     // Top rail (closer to camera)
     ctx.fillStyle = TITLE_COLORS.wood.mid;

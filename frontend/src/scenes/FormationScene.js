@@ -1,5 +1,5 @@
 import { Scene } from './Scene.js';
-import { CharacterCard, getClassColor, getClassIcon } from '../components/CharacterCard.js';
+import { CharacterCard } from '../components/CharacterCard.js';
 import { PartyStatsSummary } from '../components/PartyStatsSummary.js';
 import { CharacterModal } from '../components/modals/CharacterModal.js';
 import { ItemsModal } from '../components/modals/ItemsModal.js';
@@ -607,7 +607,7 @@ export class FormationScene extends Scene {
     this.renderCharacterCards();
   }
 
-  update(deltaTime) {
+  update(_deltaTime) {
     // No per-frame updates needed
   }
 

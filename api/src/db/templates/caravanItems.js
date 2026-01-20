@@ -142,7 +142,7 @@ export const CARAVAN_ITEMS = [
   // Human Kingdom (Heartlands)
   {
     id: 'knights_crest',
-    name: "Knight's Crest",
+    name: 'Knight\'s Crest',
     type: 'accessory',
     region: 'human',
     description: 'A badge of honor from the Human Kingdom. Worn by those who serve the crown.',
@@ -218,7 +218,7 @@ export const CARAVAN_ITEMS = [
   },
   {
     id: 'warchief_axe',
-    name: "Warchief's Axe",
+    name: 'Warchief\'s Axe',
     type: 'weapon',
     region: 'orc',
     description: 'A brutal axe once wielded by a warchief. Demands respect and blood.',

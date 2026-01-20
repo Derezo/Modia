@@ -10,7 +10,6 @@ import {
   getParchmentButtonCSS,
   getParchmentPanelCSS
 } from '../ui/parchment/index.js';
-import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { FriendsTab } from '../social/tabs/FriendsTab.js';
 import { RequestsTab } from '../social/tabs/RequestsTab.js';
 import { PartyTab } from '../social/tabs/PartyTab.js';
@@ -588,7 +587,7 @@ export class SocialHubScene extends Scene {
     }
   }
 
-  handlePartyInvite(data) {
+  handlePartyInvite(_data) {
     // Update party invites badge
     this.badges.requests++;
     this.updateBadge('requests');
@@ -738,11 +737,11 @@ export class SocialHubScene extends Scene {
   }
 
   // Scene lifecycle methods
-  update(deltaTime) {
+  update(_deltaTime) {
     // No game loop updates needed for this UI scene
   }
 
-  render(ctx) {
+  render(_ctx) {
     // No canvas rendering needed - this is a DOM-based UI scene
   }
 }

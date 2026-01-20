@@ -4,7 +4,7 @@
  */
 
 import { query, withTransaction } from '../config/database.js';
-import { RACES, GENDERS, CLASSES, calculateStats, MAX_PARTY_SIZE } from '../config/constants.js';
+import { RACES, GENDERS, calculateStats, MAX_PARTY_SIZE } from '../config/constants.js';
 import { generateName } from '../utils/nameGenerator.js';
 import { SKILL_TREES } from '../config/skillTrees.js';
 import { findSkillDefinition, validateSkillPrerequisites } from '../utils/skillValidation.js';

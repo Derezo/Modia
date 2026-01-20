@@ -17,7 +17,6 @@ import {
   getParchmentScrollbarCSS
 } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
-import { Icon } from '../components/Icon.js';
 
 const P = PARCHMENT_COLORS;
 

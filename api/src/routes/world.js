@@ -6,7 +6,7 @@ import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import presenceService from '../services/presenceService.js';
 import * as staminaService from '../services/staminaService.js';
 import * as dailyQuestService from '../services/dailyQuestService.js';
-import { SHRINE_BUFFS, SHRINE_COOLDOWN_HOURS, COMBAT_NODE_TYPES } from '../../../shared/constants.js';
+import { SHRINE_BUFFS, SHRINE_COOLDOWN_HOURS } from '../../../shared/constants.js';
 import { buildAdjacencyMap, bfsPath } from '../services/world/pathfindingService.js';
 
 const router = express.Router();
@@ -35,7 +35,7 @@ async function getBlockedNodes(userId) {
  * @param {number} userId - User ID
  * @returns {Promise<Set<number>>} Set of cleared node IDs
  */
-async function getClearedNodes(userId) {
+async function _getClearedNodes(userId) {
   const result = await query(
     'SELECT node_id FROM user_node_clearance WHERE user_id = $1',
     [userId]

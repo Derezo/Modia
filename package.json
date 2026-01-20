@@ -26,8 +26,9 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
-    "generate:tiles": "node api/src/scripts/generate-tiles.js",
-    "generate:obstacles": "node api/src/scripts/generate-obstacles.js",
+    "generate:tiles": "node scripts/tiles/generate-tiles.js",
+    "generate:tiles:terrain": "node scripts/tiles/generate-tiles.js --terrain",
+    "generate:tiles:obstacles": "node scripts/tiles/generate-tiles.js --obstacles",
     "generate:characters": "node api/src/scripts/generate-characters.js",
     "generate:enemies": "node api/src/scripts/generate-enemies.js",
     "generate:nodes": "node api/src/scripts/generate-nodes.js",
@@ -48,6 +49,7 @@
     "audio:download": "node scripts/audio/download-audio.js",
     "audio:validate": "node scripts/audio/validate-audio.js",
     "audio:status": "node scripts/audio/validate-audio.js --status",
+    "audio:check": "node scripts/audio/validate-audio.js --status && node scripts/audio/validate-manifest-sync.js",
     "doctor": "bash scripts/doctor.sh",
     "dev:setup": "bash scripts/dev-setup.sh",
     "prepare": "husky"
@@ -64,6 +66,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.31.0",
     "sharp": "^0.34.5"
   }
 }

@@ -63,7 +63,7 @@ export class CastleGateRenderer {
   update(deltaTime) {
     if (this.doorAngle < this.targetAngle) {
       // Opening - use easing (slow start, accelerate)
-      const remaining = this.targetAngle - this.doorAngle;
+      const _remaining = this.targetAngle - this.doorAngle;
       const speedMultiplier = 0.5 + (this.doorAngle / (Math.PI / 2)) * 1.5;
       this.doorAngle = Math.min(
         this.targetAngle,

@@ -244,7 +244,7 @@ export class BattlePathfinding {
         }
         break;
 
-      case 'line':
+      case 'line': {
         // Line in specified direction
         const dirOffsets = [
           { dx: 0, dy: -1 },  // N
@@ -265,6 +265,7 @@ export class BattlePathfinding {
           }
         }
         break;
+      }
 
       case 'circle':
       default:

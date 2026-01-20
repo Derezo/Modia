@@ -1,4 +1,4 @@
-import { TITLE_COLORS, hexToRgba } from '../TitleColors.js';
+import { hexToRgba } from '../TitleColors.js';
 
 /**
  * Renders a stormy, ominous background for the title animation.

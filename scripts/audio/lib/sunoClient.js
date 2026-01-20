@@ -20,11 +20,18 @@ const DEFAULT_CONFIG = {
   rateLimitDelay: 500    // 500ms between requests to stay under rate limit
 };
 
-// Generation status values
+// Generation status values (from API docs)
 const STATUS = {
   PENDING: 'PENDING',
+  TEXT_SUCCESS: 'TEXT_SUCCESS',       // Lyrics generation completed
+  FIRST_SUCCESS: 'FIRST_SUCCESS',     // Initial track generation complete
+  SUCCESS: 'SUCCESS',                 // All tracks generated successfully
+  CREATE_TASK_FAILED: 'CREATE_TASK_FAILED',
+  GENERATE_AUDIO_FAILED: 'GENERATE_AUDIO_FAILED',
+  CALLBACK_EXCEPTION: 'CALLBACK_EXCEPTION',
+  SENSITIVE_WORD_ERROR: 'SENSITIVE_WORD_ERROR',
+  // Legacy/internal status
   PROCESSING: 'PROCESSING',
-  SUCCESS: 'SUCCESS',
   FAILED: 'FAILED',
   TIMEOUT: 'TIMEOUT'
 };
@@ -93,6 +100,10 @@ class SunoClient {
         });
 
         res.on('end', () => {
+          log(`HTTP ${res.statusCode} ${res.statusMessage}`, 'debug');
+          log(`Response headers: ${JSON.stringify(res.headers)}`, 'debug');
+          log(`Response body: ${body.substring(0, 1000)}${body.length > 1000 ? '...' : ''}`, 'debug');
+
           try {
             const response = JSON.parse(body);
 
@@ -127,58 +138,81 @@ class SunoClient {
 
   /**
    * Generate a music track
-   * @param {string} prompt - Text prompt describing the desired music
+   * @param {string} prompt - Text prompt describing the desired music (lyrics for non-custom, description for custom)
    * @param {Object} [options] - Generation options
-   * @param {string} [options.title] - Track title
-   * @param {string} [options.tags] - Style tags (e.g., "orchestral, epic, fantasy")
-   * @param {boolean} [options.makeInstrumental] - Generate instrumental only (no vocals)
-   * @param {number} [options.duration] - Desired duration in seconds
+   * @param {string} [options.title] - Track title (required for custom mode)
+   * @param {string} [options.style] - Style tags (e.g., "orchestral, epic, fantasy") - required for custom instrumental
+   * @param {boolean} [options.instrumental] - Generate instrumental only (no vocals)
+   * @param {string} [options.model] - Model version: V3_5, V4, V4_5, V4_5ALL, V4_5PLUS, or V5
+   * @param {boolean} [options.customMode] - Use custom mode (true) or simple prompt mode (false)
    * @param {boolean} [options.waitForCompletion] - Wait for generation to complete
    * @returns {Promise<Object>} Generation task info or completed track
    */
   async generateTrack(prompt, options = {}) {
     const {
       title = '',
-      tags = '',
-      makeInstrumental = true,
-      duration = null,
+      style = '',
+      instrumental = true,
+      model = 'V4_5ALL',
+      customMode = true,
       waitForCompletion = false
     } = options;
 
     log(`Starting track generation: "${prompt.substring(0, 50)}..."`, 'info');
 
+    // callBackUrl is required by the API, but we use polling instead of callbacks
+    // If no webhook URL provided, use a placeholder (we'll poll for status anyway)
+    const callbackUrl = this.webhookUrl || 'https://localhost/suno-callback-unused';
+
+    // Build request body based on mode
     const requestBody = {
-      prompt: prompt,
-      make_instrumental: makeInstrumental
+      model: model,
+      instrumental: instrumental,
+      callBackUrl: callbackUrl
     };
 
-    if (title) {
-      requestBody.title = title;
-    }
+    if (customMode) {
+      // Custom mode: style and title required for instrumental
+      requestBody.customMode = true;
+      requestBody.prompt = prompt;  // In custom mode, this is the lyrics/description
 
-    if (tags) {
-      requestBody.tags = tags;
-    }
+      if (style) {
+        requestBody.style = style;
+      }
 
-    if (this.webhookUrl) {
-      requestBody.webhook_url = this.webhookUrl;
+      if (title) {
+        requestBody.title = title;
+      }
+    } else {
+      // Simple mode: only prompt needed (max 500 chars)
+      requestBody.customMode = false;
+      requestBody.prompt = prompt.substring(0, 500);
     }
 
     try {
+      log(`Sending generation request to ${this.baseUrl}/api/v1/generate`, 'debug');
+      log(`Request body: ${JSON.stringify(requestBody, null, 2)}`, 'debug');
+
       const response = await this._request('POST', '/api/v1/generate', requestBody);
 
-      if (!response.taskId) {
-        throw new Error('No taskId returned from generation request');
+      log(`API Response: ${JSON.stringify(response, null, 2)}`, 'debug');
+
+      // Response format: { code: 200, msg: "success", data: { taskId: "..." } }
+      const taskId = response.data?.taskId;
+
+      if (!taskId) {
+        log(`Response missing taskId. Full response: ${JSON.stringify(response)}`, 'error');
+        throw new Error(`No taskId returned from generation request. Response: ${JSON.stringify(response)}`);
       }
 
-      log(`Generation started: taskId=${response.taskId}`, 'info');
+      log(`Generation started: taskId=${taskId}`, 'info');
 
       if (waitForCompletion) {
-        return await this.waitForCompletion(response.taskId);
+        return await this.waitForCompletion(taskId);
       }
 
       return {
-        taskId: response.taskId,
+        taskId: taskId,
         status: STATUS.PENDING,
         prompt: prompt,
         createdAt: new Date().toISOString()
@@ -205,14 +239,51 @@ class SunoClient {
         `/api/v1/generate/record-info?taskId=${encodeURIComponent(taskId)}`
       );
 
+      log(`Status check response: ${JSON.stringify(response, null, 2)}`, 'debug');
+
+      // Response format: { code, msg, data: { taskId, status, response: { sunoData: [...] }, errorCode, errorMessage } }
+      const data = response.data || {};
+      const status = data.status || STATUS.PENDING;
+      const sunoData = data.response?.sunoData || [];
+
+      // Check for failure statuses
+      const isError = [
+        STATUS.CREATE_TASK_FAILED,
+        STATUS.GENERATE_AUDIO_FAILED,
+        STATUS.CALLBACK_EXCEPTION,
+        STATUS.SENSITIVE_WORD_ERROR
+      ].includes(status);
+
+      // Extract audio info from first track (Suno generates 2 tracks per request)
+      const firstTrack = sunoData[0] || {};
+
       return {
         taskId: taskId,
-        status: response.status || STATUS.PENDING,
-        progress: response.progress || 0,
-        audioUrl: response.audio_url || null,
-        title: response.title || null,
-        duration: response.duration || null,
-        error: response.error || null,
+        status: status,
+        isComplete: status === STATUS.SUCCESS,
+        isError: isError,
+        errorCode: data.errorCode || null,
+        errorMessage: data.errorMessage || null,
+        // Audio data from first generated track
+        audioUrl: firstTrack.audioUrl || null,
+        streamAudioUrl: firstTrack.streamAudioUrl || null,
+        imageUrl: firstTrack.imageUrl || null,
+        title: firstTrack.title || null,
+        duration: firstTrack.duration || null,
+        tags: firstTrack.tags || null,
+        // All generated tracks (usually 2)
+        tracks: sunoData.map(track => ({
+          id: track.id,
+          audioUrl: track.audioUrl,
+          streamAudioUrl: track.streamAudioUrl,
+          imageUrl: track.imageUrl,
+          title: track.title,
+          duration: track.duration,
+          tags: track.tags,
+          prompt: track.prompt,
+          modelName: track.modelName,
+          createTime: track.createTime
+        })),
         raw: response
       };
     } catch (error) {
@@ -230,20 +301,20 @@ class SunoClient {
     log(`Waiting for completion: taskId=${taskId}`, 'info');
 
     for (let attempt = 0; attempt < this.maxPollAttempts; attempt++) {
-      const status = await this.checkStatus(taskId);
+      const result = await this.checkStatus(taskId);
 
-      if (status.status === STATUS.SUCCESS) {
+      if (result.isComplete) {
         log(`Generation completed: ${taskId}`, 'success');
-        return status;
+        return result;
       }
 
-      if (status.status === STATUS.FAILED) {
-        throw new Error(`Generation failed: ${status.error || 'Unknown error'}`);
+      if (result.isError) {
+        throw new Error(`Generation failed: ${result.errorMessage || result.status}`);
       }
 
-      // Log progress periodically
+      // Log progress periodically (every 30 seconds)
       if (attempt % 6 === 0) {
-        log(`Still processing... (${status.progress || 0}%)`, 'info');
+        log(`Still processing... status=${result.status}`, 'info');
       }
 
       await delay(this.pollInterval);
@@ -260,15 +331,17 @@ class SunoClient {
    */
   async downloadTrack(taskId, outputPath) {
     // First get the track status to get the audio URL
-    const status = await this.checkStatus(taskId);
+    const result = await this.checkStatus(taskId);
 
-    if (status.status !== STATUS.SUCCESS) {
-      throw new Error(`Track is not ready for download. Status: ${status.status}`);
+    if (!result.isComplete) {
+      throw new Error(`Track is not ready for download. Status: ${result.status}`);
     }
 
-    if (!status.audioUrl) {
+    if (!result.audioUrl) {
       throw new Error('No audio URL available for download');
     }
+
+    const status = result; // Alias for compatibility with rest of method
 
     log(`Downloading track to ${outputPath}`, 'info');
 

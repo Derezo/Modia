@@ -782,7 +782,7 @@ export class GuildAdvancementScene extends Scene {
   renderQuestBoard() {
     const listHeader = this.uiElement.querySelector('#list-header');
     const listEl = this.uiElement.querySelector('#quest-list');
-    const detailEl = this.uiElement.querySelector('#detail-content');
+    const _detailEl = this.uiElement.querySelector('#detail-content');
 
     listHeader.textContent = 'Available Advancement Quests';
 

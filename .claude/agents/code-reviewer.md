@@ -123,22 +123,39 @@ File size enforcement is mandatory. Oversized files block commits.
 
 Checklist:
 - [ ] Count lines in all modified `.js` files (`wc -l`)
-- [ ] Flag files > 2500 lines as **CRITICAL** (blocking)
-- [ ] Flag files 1500-2499 lines as **HIGH** (should split soon)
-- [ ] Flag files 1000-1499 lines as **MEDIUM** (monitor)
+- [ ] Flag files > 3500 lines as **CRITICAL** (blocking)
+- [ ] Flag files 2500-3499 lines as **HIGH** (strong warning, plan split)
+- [ ] Flag files 1500-2499 lines as **MEDIUM** (requires module summary)
+- [ ] Flag files 1000-1499 lines as **LOW** (monitor)
+- [ ] Verify files >1500 lines have module summary comment at top
 
 Thresholds:
 | Lines | Severity | Action |
 |-------|----------|--------|
-| 2500+ | CRITICAL | BLOCKING - must modularize before merge |
-| 1500-2499 | HIGH | Should split in near-term |
-| 1000-1499 | MEDIUM | Consider splitting |
+| 3500+ | CRITICAL | BLOCKING - must modularize before merge |
+| 2500-3499 | HIGH | Strong warning, plan modularization |
+| 1500-2499 | MEDIUM | Requires module summary comment |
+| 1000-1499 | LOW | Consider splitting |
 | < 1000 | OK | No action needed |
+
+Module summary check (for files >1500 lines):
+```javascript
+/**
+ * @module ModuleName
+ * @description Brief description of module purpose.
+ *
+ * Key responsibilities:
+ * - Responsibility 1
+ * - Responsibility 2
+ *
+ * @see RelatedModule.js - Description
+ */
+```
 
 Flag template:
 ```
 File: path/to/file.js
-Issue: File size exceeds limit (X lines, limit: 2500)
+Issue: File size exceeds limit (X lines, limit: 3500)
 Severity: CRITICAL (BLOCKING)
 Action: Must split using modularization patterns before commit
 Reference: See CLAUDE.md > File Size Guidelines for patterns

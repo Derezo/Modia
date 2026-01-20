@@ -241,7 +241,7 @@ class StateEvaluator {
   evaluateState(state, perspective) {
     let score = 0;
     const friendlyType = perspective;
-    const enemyType = perspective === 'player' ? 'enemy' : 'player';
+    const _enemyType = perspective === 'player' ? 'enemy' : 'player';
 
     let friendlyUnits = 0;
     let friendlyTotalHp = 0;

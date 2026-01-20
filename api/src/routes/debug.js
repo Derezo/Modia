@@ -130,7 +130,7 @@ router.post('/win-battle/:battleId', authenticate, asyncHandler(async (req, res)
 
   // Verify user is in this battle
   const partyIds = battle.party_ids || [];
-  const isParticipant = partyIds.some(id => {
+  const _isParticipant = partyIds.some(_id => {
     // partyIds might be character IDs or user IDs depending on battle type
     return true; // For debug mode, allow winning any battle
   });

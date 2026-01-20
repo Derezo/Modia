@@ -8,7 +8,7 @@
  * - Forfeit/surrender penalty: 1.25x rating loss
  */
 
-import { query, withTransaction } from '../config/database.js';
+import { query } from '../config/database.js';
 
 // Base K-factor for ELO calculations
 const K_FACTOR = 32;
@@ -76,7 +76,7 @@ function applyForfeitPenalty(baseLoss) {
 async function ensureRating(userId, queueType = '1v1') {
   // Try to get existing rating
   let result = await query(
-    `SELECT * FROM pvp_ratings WHERE user_id = $1 AND queue_type = $2`,
+    'SELECT * FROM pvp_ratings WHERE user_id = $1 AND queue_type = $2',
     [userId, queueType]
   );
 
@@ -93,7 +93,7 @@ async function ensureRating(userId, queueType = '1v1') {
     // If ON CONFLICT triggered, fetch the existing record
     if (result.rows.length === 0) {
       result = await query(
-        `SELECT * FROM pvp_ratings WHERE user_id = $1 AND queue_type = $2`,
+        'SELECT * FROM pvp_ratings WHERE user_id = $1 AND queue_type = $2',
         [userId, queueType]
       );
     }
@@ -110,7 +110,7 @@ async function ensureRating(userId, queueType = '1v1') {
  */
 async function getPlayerRating(userId, queueType = '1v1') {
   const result = await query(
-    `SELECT * FROM pvp_ratings WHERE user_id = $1 AND queue_type = $2`,
+    'SELECT * FROM pvp_ratings WHERE user_id = $1 AND queue_type = $2',
     [userId, queueType]
   );
 
@@ -124,7 +124,7 @@ async function getPlayerRating(userId, queueType = '1v1') {
  */
 async function getAllPlayerRatings(userId) {
   const result = await query(
-    `SELECT * FROM pvp_ratings WHERE user_id = $1 ORDER BY queue_type`,
+    'SELECT * FROM pvp_ratings WHERE user_id = $1 ORDER BY queue_type',
     [userId]
   );
 
@@ -194,7 +194,7 @@ async function checkAndUseWeeklyGrace(userId) {
 
   // Check if grace is available
   const result = await query(
-    `SELECT last_disconnect_grace FROM users WHERE id = $1`,
+    'SELECT last_disconnect_grace FROM users WHERE id = $1',
     [userId]
   );
 
@@ -208,7 +208,7 @@ async function checkAndUseWeeklyGrace(userId) {
   if (!lastGrace || new Date(lastGrace) < oneWeekAgo) {
     // Use the grace
     await query(
-      `UPDATE users SET last_disconnect_grace = NOW() WHERE id = $1`,
+      'UPDATE users SET last_disconnect_grace = NOW() WHERE id = $1',
       [userId]
     );
     return true;
@@ -354,7 +354,7 @@ async function processMatchResult({
   const loserRating = loserRatingData?.rating || DEFAULT_RATING;
 
   // Calculate base rating change
-  let ratingChange = calculateRatingChange(winnerRating, loserRating, winnerPPR, loserPPR);
+  const ratingChange = calculateRatingChange(winnerRating, loserRating, winnerPPR, loserPPR);
 
   // Apply forfeit penalty if applicable
   if (['surrender', 'timeout_forfeit', 'disconnect_forfeit'].includes(endReason)) {

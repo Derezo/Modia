@@ -37,7 +37,7 @@ const activeTimeouts = new Set();
  */
 async function sendInvite(fromUserId, fromUsername, toUserId, characterId, partyInfo = null) {
   // Check if target is already in a party
-  const partyCheck = await query(
+  const _partyCheck = await query(
     `SELECT p.id FROM parties p
      JOIN party_members pm ON p.id = pm.party_id
      WHERE pm.user_id = $1`,

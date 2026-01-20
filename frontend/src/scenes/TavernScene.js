@@ -43,7 +43,7 @@ export class TavernScene extends Scene {
     this.wsHandlers = {};
   }
 
-  async enter(data = {}) {
+  async enter(_data = {}) {
     this.addStyles();
     this.createUI();
     this.setupEventListeners();
@@ -735,8 +735,8 @@ export class TavernScene extends Scene {
     const container = document.createElement('div');
     container.className = 'tavern-container';
 
-    const userId = this.game.state.get('user')?.id;
-    const username = this.game.state.get('user')?.username;
+    const _userId = this.game.state.get('user')?.id;
+    const _username = this.game.state.get('user')?.username;
 
     container.innerHTML = `
       <div class="tavern-header">
@@ -923,7 +923,7 @@ export class TavernScene extends Scene {
         this.updateDMBadge();
       },
 
-      'private_message_sent': (payload) => {
+      'private_message_sent': (_payload) => {
         // Message already added locally
       },
 
@@ -1484,7 +1484,7 @@ export class TavernScene extends Scene {
     return div.innerHTML;
   }
 
-  update(deltaTime) {
+  update(_deltaTime) {
     // No per-frame updates needed
   }
 
@@ -1499,7 +1499,7 @@ export class TavernScene extends Scene {
    * @param {string} newBreakpoint - 'mobile', 'tablet', or 'desktop'
    * @param {string} oldBreakpoint - Previous breakpoint
    */
-  onBreakpointChange(newBreakpoint, oldBreakpoint) {
+  onBreakpointChange(newBreakpoint, _oldBreakpoint) {
     // Rebuild UI for new layout if needed
     if (!this.uiElement) return;
 

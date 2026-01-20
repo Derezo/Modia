@@ -39,7 +39,10 @@ function formatItem(item) {
     augments: modifications.augments || [],
     material: modifications.material || null,
     itemData: modifications,
-    description: item.description
+    description: item.description,
+    // Equipment requirements for filtering
+    level_requirement: item.level_requirement || 0,
+    class_restriction: item.class_restriction || []
   };
 }
 
@@ -51,7 +54,7 @@ router.get('/shared', authenticate, asyncHandler(async (req, res) => {
   const itemsResult = await query(
     `SELECT ci.id as instance_id, ci.quantity, ci.modifications,
             it.id as template_id, it.name, it.item_type, it.rarity,
-            it.stat_bonuses, it.description
+            it.stat_bonuses, it.description, it.level_requirement, it.class_restriction
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
      WHERE ci.user_id = $1 AND ci.equipped_slot IS NULL
@@ -83,7 +86,7 @@ router.get('/:characterId', authenticate, asyncHandler(async (req, res) => {
   const itemsResult = await query(
     `SELECT ci.id as instance_id, ci.quantity, ci.equipped_slot, ci.modifications,
             it.id as template_id, it.name, it.item_type, it.rarity,
-            it.stat_bonuses, it.description
+            it.stat_bonuses, it.description, it.level_requirement, it.class_restriction
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
      WHERE ci.character_id = $1 AND ci.equipped_slot IS NOT NULL

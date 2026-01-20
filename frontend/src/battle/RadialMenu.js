@@ -352,10 +352,12 @@ export class RadialMenu {
     const itemsContainer = submenu.querySelector('.submenu-items');
 
     if (items.length === 0) {
-      itemsContainer.innerHTML = `<div style="color: #666; font-style: italic; font-size: 11px; text-align: center; padding: 10px;">None available</div>`;
+      itemsContainer.innerHTML = '<div style="color: #666; font-style: italic; font-size: 11px; text-align: center; padding: 10px;">None available</div>';
     } else {
       items.forEach((item) => {
-        const disabled = type === 'skill' && item.mpCost > this.currentUnitMp;
+        const onCooldown = type === 'skill' && item.currentCooldown && item.currentCooldown > 0;
+        const notEnoughMp = type === 'skill' && item.mpCost > this.currentUnitMp;
+        const disabled = onCooldown || notEnoughMp;
         const btn = document.createElement('button');
         btn.className = 'submenu-btn';
         btn.disabled = disabled;
@@ -377,7 +379,9 @@ export class RadialMenu {
         const icon = item.icon || (type === 'skill' ? '✨' : '📦');
         const costOrQty =
           type === 'skill'
-            ? `<span style="color: ${disabled ? '#446' : '#6af'}; margin-left: 6px;">${item.mpCost}MP</span>`
+            ? onCooldown
+              ? `<span style="color: #f88; margin-left: 6px;">${item.currentCooldown}⏱</span>`
+              : `<span style="color: ${disabled ? '#446' : '#6af'}; margin-left: 6px;">${item.mpCost}MP</span>`
             : `<span style="color: #8f8; margin-left: 6px;">x${item.quantity}</span>`;
 
         btn.innerHTML = `

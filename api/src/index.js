@@ -41,6 +41,7 @@ import ruinsRoutes from './routes/ruins.js';
 import fishingRoutes from './routes/fishing.js';
 import relicRoutes from './routes/relics.js';
 import questRoutes from './routes/quests.js';
+import debugRoutes from './routes/debug.js';
 
 // Scheduled services
 import { startRefreshScheduler } from './services/shopRefreshService.js';
@@ -123,6 +124,7 @@ app.use('/api/ruins', ruinsRoutes);
 app.use('/api/fishing', fishingRoutes);
 app.use('/api/relics', relicRoutes);
 app.use('/api/quests', questRoutes);
+app.use('/api/debug', debugRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -137,7 +139,7 @@ initializeTraitEffects();
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Modia API server running on port ${PORT}`);
-  console.log(`WebSocket server ready`);
+  console.log('WebSocket server ready');
 
   // Start scheduled services
   startRefreshScheduler();

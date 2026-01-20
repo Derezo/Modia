@@ -81,9 +81,9 @@ async function getPvPLeaderboard(userId, queue, time, limit, offset) {
   // Build time filter
   let timeCondition = '';
   if (time === 'week') {
-    timeCondition = "AND pr.last_match_at >= NOW() - INTERVAL '7 days'";
+    timeCondition = 'AND pr.last_match_at >= NOW() - INTERVAL \'7 days\'';
   } else if (time === 'today') {
-    timeCondition = "AND pr.last_match_at >= NOW() - INTERVAL '1 day'";
+    timeCondition = 'AND pr.last_match_at >= NOW() - INTERVAL \'1 day\'';
   }
 
   // Get total count
@@ -178,9 +178,9 @@ async function getLevelLeaderboard(userId, time, limit, offset) {
   // Build time filter
   let timeCondition = '';
   if (time === 'week') {
-    timeCondition = "AND c.created_at >= NOW() - INTERVAL '7 days'";
+    timeCondition = 'AND c.created_at >= NOW() - INTERVAL \'7 days\'';
   } else if (time === 'today') {
-    timeCondition = "AND c.created_at >= NOW() - INTERVAL '1 day'";
+    timeCondition = 'AND c.created_at >= NOW() - INTERVAL \'1 day\'';
   }
 
   // Get total unique users with characters
@@ -280,9 +280,9 @@ async function getGoldLeaderboard(userId, time, limit, offset) {
   // Build time filter (based on account creation for new wealth)
   let timeCondition = '';
   if (time === 'week') {
-    timeCondition = "WHERE u.created_at >= NOW() - INTERVAL '7 days'";
+    timeCondition = 'WHERE u.created_at >= NOW() - INTERVAL \'7 days\'';
   } else if (time === 'today') {
-    timeCondition = "WHERE u.created_at >= NOW() - INTERVAL '1 day'";
+    timeCondition = 'WHERE u.created_at >= NOW() - INTERVAL \'1 day\'';
   } else {
     timeCondition = 'WHERE 1=1';
   }
@@ -362,9 +362,9 @@ async function getBattleLeaderboard(userId, time, limit, offset) {
   // Build time filter
   let timeCondition = '';
   if (time === 'week') {
-    timeCondition = "AND b.ended_at >= NOW() - INTERVAL '7 days'";
+    timeCondition = 'AND b.ended_at >= NOW() - INTERVAL \'7 days\'';
   } else if (time === 'today') {
-    timeCondition = "AND b.ended_at >= NOW() - INTERVAL '1 day'";
+    timeCondition = 'AND b.ended_at >= NOW() - INTERVAL \'1 day\'';
   }
 
   // Count users with victories

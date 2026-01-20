@@ -942,7 +942,7 @@ export class ShopScene extends Scene {
    * @param {Object} item - Selected item (transformed)
    * @param {boolean} isBuyMode - Whether in buy mode
    */
-  handleTableRowSelect(item, isBuyMode) {
+  handleTableRowSelect(item, _isBuyMode) {
     // Get the original item for the detail panel
     const originalItem = item._original;
     if (!originalItem) return;

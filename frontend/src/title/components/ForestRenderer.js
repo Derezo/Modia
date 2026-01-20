@@ -69,7 +69,7 @@ export class ForestRenderer {
     this.frontTrees.sort((a, b) => a.y - b.y);
   }
 
-  update(deltaTime) {
+  update(_deltaTime) {
     // Static trees - no animation needed
   }
 

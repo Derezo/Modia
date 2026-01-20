@@ -515,7 +515,7 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
 
   // Update boss encounter records with actual battle ID
   if (Object.keys(initialState.bossStates).length > 0) {
-    for (const [unitId, bossState] of Object.entries(initialState.bossStates)) {
+    for (const [_unitId, bossState] of Object.entries(initialState.bossStates)) {
       bossState.battleId = battleId;
       bossService.saveBossEncounter(bossState).catch(err => {
         console.error('[Battle] Failed to save boss encounter:', err);

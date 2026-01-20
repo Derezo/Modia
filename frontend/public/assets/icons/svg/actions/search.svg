@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Drop shadow -->
+  <ellipse cx="12" cy="21" rx="7" ry="1.5" fill="#3d2a00" opacity="0.2"/>
+
+  <!-- Handle - dark base -->
+  <path d="M14.5 14.5l5 5" stroke="#4a3018" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Handle - mid brown -->
+  <path d="M14.5 14.5l5 5" stroke="#6b4423" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Handle - light highlight -->
+  <path d="M14.5 14.5l4.5 4.5" stroke="#8b5c30" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Gold rim - outer dark -->
+  <circle cx="10" cy="10" r="7" fill="none" stroke="#8b6914" stroke-width="2.5"/>
+
+  <!-- Gold rim - mid -->
+  <circle cx="10" cy="10" r="6.5" fill="none" stroke="#daa520" stroke-width="1.5"/>
+
+  <!-- Gold rim - bright highlight -->
+  <path d="M5 6a6 6 0 0 1 8-2" fill="none" stroke="#ffd700" stroke-width="1" stroke-linecap="round"/>
+
+  <!-- Glass - base tint -->
+  <circle cx="10" cy="10" r="5" fill="#446688" opacity="0.3"/>
+
+  <!-- Glass - lighter center -->
+  <circle cx="10" cy="10" r="4" fill="#668aaa" opacity="0.3"/>
+
+  <!-- Glass reflection - large -->
+  <ellipse cx="8" cy="8" rx="2" ry="1.5" fill="#88aacc" opacity="0.4" transform="rotate(-30 8 8)"/>
+
+  <!-- Glass reflection - small highlight -->
+  <circle cx="7" cy="7" r="1" fill="#ffffff" opacity="0.5"/>
+
+  <!-- Glass reflection - secondary -->
+  <circle cx="12" cy="12" r="0.6" fill="#ffffff" opacity="0.3"/>
+</svg>

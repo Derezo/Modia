@@ -28,155 +28,155 @@ const MATERIAL_TIERS = [
 const PREFIX_AUGMENTS = {
   // Elemental Prefixes
   blazing: { name: 'Blazing', category: 'fire', stat: 'strength', bonus: [2, 8],
-             effect: { type: 'fire_damage', value: 0.10 } },
+    effect: { type: 'fire_damage', value: 0.10 } },
   frozen: { name: 'Frozen', category: 'ice', stat: 'intelligence', bonus: [2, 8],
-            effect: { type: 'ice_damage', value: 0.10 } },
+    effect: { type: 'ice_damage', value: 0.10 } },
   shocking: { name: 'Shocking', category: 'lightning', stat: 'agility', bonus: [2, 8],
-              effect: { type: 'lightning_damage', value: 0.10 } },
+    effect: { type: 'lightning_damage', value: 0.10 } },
   venomous: { name: 'Venomous', category: 'poison', stat: 'luck', bonus: [2, 6],
-              effect: { type: 'poison_chance', value: 0.05 } },
+    effect: { type: 'poison_chance', value: 0.05 } },
   blessed: { name: 'Blessed', category: 'holy', stat: 'vitality', bonus: [2, 8],
-             effect: { type: 'holy_damage', value: 0.10 } },
+    effect: { type: 'holy_damage', value: 0.10 } },
   shadowed: { name: 'Shadowed', category: 'dark', stat: 'agility', bonus: [2, 8],
-              effect: { type: 'dark_damage', value: 0.10 } },
+    effect: { type: 'dark_damage', value: 0.10 } },
 
   // Combat Prefixes
   keen: { name: 'Keen', category: 'critical', stat: 'luck', bonus: [3, 10],
-          effect: { type: 'crit_chance', value: 0.05 } },
+    effect: { type: 'crit_chance', value: 0.05 } },
   swift: { name: 'Swift', category: 'speed', stat: 'agility', bonus: [4, 12],
-           effect: { type: 'initiative', value: 0.10 } },
+    effect: { type: 'initiative', value: 0.10 } },
   deadly: { name: 'Deadly', category: 'damage', stat: 'strength', bonus: [4, 12],
-            effect: { type: 'damage_bonus', value: 0.08 } },
+    effect: { type: 'damage_bonus', value: 0.08 } },
   mighty: { name: 'Mighty', category: 'power', stat: 'strength', bonus: [4, 12],
-            effect: { type: 'physical_attack', value: 0.10 } },
+    effect: { type: 'physical_attack', value: 0.10 } },
 
   // Defensive Prefixes
   sturdy: { name: 'Sturdy', category: 'defense', stat: 'vitality', bonus: [3, 10],
-            effect: { type: 'physical_defense', value: 0.08 } },
+    effect: { type: 'physical_defense', value: 0.08 } },
   warded: { name: 'Warded', category: 'magic_defense', stat: 'intelligence', bonus: [2, 8],
-            effect: { type: 'magic_defense', value: 0.08 } },
+    effect: { type: 'magic_defense', value: 0.08 } },
   reinforced: { name: 'Reinforced', category: 'armor', stat: 'vitality', bonus: [3, 8],
-                effect: { type: 'defense', value: 5 } },
+    effect: { type: 'defense', value: 5 } },
 
   // Enemy-Type Prefixes
   dragonbane: { name: 'Dragonbane', category: 'dragon_slayer', stat: 'strength', bonus: [5, 15],
-                effect: { type: 'damage_vs', target: 'dragon', value: 0.20 } },
+    effect: { type: 'damage_vs', target: 'dragon', value: 0.20 } },
   undeadbane: { name: 'Undeadbane', category: 'undead_slayer', stat: 'vitality', bonus: [5, 15],
-                effect: { type: 'damage_vs', target: 'undead', value: 0.20 } },
+    effect: { type: 'damage_vs', target: 'undead', value: 0.20 } },
   demonslayer: { name: 'Demonslayer', category: 'demon_slayer', stat: 'strength', bonus: [5, 15],
-                 effect: { type: 'damage_vs', target: 'demon', value: 0.20 } }
+    effect: { type: 'damage_vs', target: 'demon', value: 0.20 } }
 };
 
 // === EQUIPMENT SUFFIX AUGMENTS ===
 const SUFFIX_AUGMENTS = {
   // Elemental Suffixes (different effects than prefixes)
   flames: { name: 'of Flames', category: 'fire', stat: 'strength', bonus: [2, 8],
-            effect: { type: 'burn_chance', value: 0.03, duration: 2 } },
+    effect: { type: 'burn_chance', value: 0.03, duration: 2 } },
   frost: { name: 'of Frost', category: 'ice', stat: 'intelligence', bonus: [2, 8],
-           effect: { type: 'slow_chance', value: 0.05, duration: 1 } },
+    effect: { type: 'slow_chance', value: 0.05, duration: 1 } },
   thunder: { name: 'of Thunder', category: 'lightning', stat: 'agility', bonus: [2, 8],
-             effect: { type: 'stun_chance', value: 0.03 } },
+    effect: { type: 'stun_chance', value: 0.03 } },
   venom: { name: 'of Venom', category: 'poison', stat: 'luck', bonus: [2, 6],
-           effect: { type: 'poison_dot', value: 0.02, duration: 3 } },
+    effect: { type: 'poison_dot', value: 0.02, duration: 3 } },
   light: { name: 'of Light', category: 'holy', stat: 'vitality', bonus: [2, 8],
-           effect: { type: 'heal_on_hit', value: 0.02 } },
+    effect: { type: 'heal_on_hit', value: 0.02 } },
   darkness: { name: 'of Darkness', category: 'dark', stat: 'agility', bonus: [2, 8],
-              effect: { type: 'lifesteal', value: 0.03 } },
+    effect: { type: 'lifesteal', value: 0.03 } },
 
   // Stat Suffixes
   might: { name: 'of Might', category: 'strength', stat: 'strength', bonus: [4, 12],
-           effect: { type: 'stat_bonus', stat: 'strength' } },
+    effect: { type: 'stat_bonus', stat: 'strength' } },
   wisdom: { name: 'of Wisdom', category: 'intelligence', stat: 'intelligence', bonus: [4, 12],
-            effect: { type: 'stat_bonus', stat: 'intelligence' } },
+    effect: { type: 'stat_bonus', stat: 'intelligence' } },
   swiftness: { name: 'of Swiftness', category: 'agility', stat: 'agility', bonus: [4, 12],
-               effect: { type: 'stat_bonus', stat: 'agility' } },
+    effect: { type: 'stat_bonus', stat: 'agility' } },
   fortitude: { name: 'of Fortitude', category: 'vitality', stat: 'vitality', bonus: [4, 12],
-               effect: { type: 'stat_bonus', stat: 'vitality' } },
+    effect: { type: 'stat_bonus', stat: 'vitality' } },
   fortune: { name: 'of Fortune', category: 'luck', stat: 'luck', bonus: [3, 10],
-             effect: { type: 'stat_bonus', stat: 'luck' } },
+    effect: { type: 'stat_bonus', stat: 'luck' } },
 
   // Support Suffixes
   vitality: { name: 'of Vitality', category: 'hp', stat: 'vitality', bonus: [3, 10],
-              effect: { type: 'hp_max_bonus', value: 0.10 } },
+    effect: { type: 'hp_max_bonus', value: 0.10 } },
   sorcery: { name: 'of Sorcery', category: 'mp', stat: 'intelligence', bonus: [3, 10],
-             effect: { type: 'mp_max_bonus', value: 0.10 } },
+    effect: { type: 'mp_max_bonus', value: 0.10 } },
   mending: { name: 'of Mending', category: 'regen', stat: 'vitality', bonus: [3, 8],
-             effect: { type: 'hp_regen', value: 0.02 } },
+    effect: { type: 'hp_regen', value: 0.02 } },
   the_sage: { name: 'of the Sage', category: 'mp_regen', stat: 'intelligence', bonus: [3, 8],
-              effect: { type: 'mp_regen', value: 0.03 } },
+    effect: { type: 'mp_regen', value: 0.03 } },
 
   // Combat Suffixes
   precision: { name: 'of Precision', category: 'accuracy', stat: 'luck', bonus: [3, 10],
-               effect: { type: 'crit_damage', value: 0.15 } },
+    effect: { type: 'crit_damage', value: 0.15 } },
   lethality: { name: 'of Lethality', category: 'crit', stat: 'strength', bonus: [4, 12],
-               effect: { type: 'crit_damage', value: 0.25 } },
+    effect: { type: 'crit_damage', value: 0.25 } },
 
   // Defensive Suffixes
   the_bulwark: { name: 'of the Bulwark', category: 'block', stat: 'vitality', bonus: [3, 10],
-                 effect: { type: 'block_chance', value: 0.05 } },
+    effect: { type: 'block_chance', value: 0.05 } },
   warding: { name: 'of Warding', category: 'spell_resist', stat: 'intelligence', bonus: [2, 8],
-             effect: { type: 'magic_resist', value: 0.08 } },
+    effect: { type: 'magic_resist', value: 0.08 } },
   the_guardian: { name: 'of the Guardian', category: 'protection', stat: 'vitality', bonus: [4, 10],
-                  effect: { type: 'damage_reduction', value: 0.05 } }
+    effect: { type: 'damage_reduction', value: 0.05 } }
 };
 
 // === CONSUMABLE AUGMENTS ===
 const CONSUMABLE_AUGMENTS = {
   // Potency Augments (Prefix-only)
   potent: { prefix: 'Potent', suffix: null, category: 'potency',
-            effect: { type: 'effect_multiplier', value: 1.25 } },
+    effect: { type: 'effect_multiplier', value: 1.25 } },
   concentrated: { prefix: 'Concentrated', suffix: null, category: 'concentration',
-                  effect: { type: 'effect_multiplier', value: 1.50 } },
+    effect: { type: 'effect_multiplier', value: 1.50 } },
   empowered: { prefix: 'Empowered', suffix: null, category: 'empowerment',
-               effect: { type: 'effect_multiplier', value: 2.0 } },
+    effect: { type: 'effect_multiplier', value: 2.0 } },
 
   // Duration Augments (Suffix-only)
   mending: { prefix: null, suffix: 'of Mending', category: 'hot_minor',
-             effect: { type: 'hot', value: 5, duration: 3 } },
+    effect: { type: 'hot', value: 5, duration: 3 } },
   restoration: { prefix: null, suffix: 'of Restoration', category: 'hot_major',
-                 effect: { type: 'hot', value: 10, duration: 5 } },
+    effect: { type: 'hot', value: 10, duration: 5 } },
   regeneration: { prefix: null, suffix: 'of Regeneration', category: 'hot_percent',
-                  effect: { type: 'hot_percent', value: 0.03, duration: 5 } },
+    effect: { type: 'hot_percent', value: 0.03, duration: 5 } },
 
   // Mana Augments
   arcane: { prefix: 'Arcane', suffix: null, category: 'mp_bonus',
-            effect: { type: 'mp_bonus', value: 15 } },
+    effect: { type: 'mp_bonus', value: 15 } },
   sorcery: { prefix: null, suffix: 'of Sorcery', category: 'mp_regen',
-             effect: { type: 'mp_regen', value: 5, duration: 3 } },
+    effect: { type: 'mp_regen', value: 5, duration: 3 } },
   channeling: { prefix: null, suffix: 'of Channeling', category: 'spell_cost',
-                effect: { type: 'spell_cost_reduction', value: 0.20, duration: 3 } },
+    effect: { type: 'spell_cost_reduction', value: 0.20, duration: 3 } },
 
   // Cleansing Augments (Prefix-only)
   purifying: { prefix: 'Purifying', suffix: null, category: 'cleanse_minor',
-               effect: { type: 'cleanse', targets: ['poison', 'burn'] } },
+    effect: { type: 'cleanse', targets: ['poison', 'burn'] } },
   sanctified: { prefix: 'Sanctified', suffix: null, category: 'cleanse_major',
-                effect: { type: 'cleanse', targets: ['curse', 'silence', 'blind'] } },
+    effect: { type: 'cleanse', targets: ['curse', 'silence', 'blind'] } },
   absolute: { prefix: 'Absolute', suffix: null, category: 'cleanse_all',
-              effect: { type: 'cleanse', targets: 'all' } },
+    effect: { type: 'cleanse', targets: 'all' } },
 
   // Buff Augments (Suffix-only)
   fortitude: { prefix: null, suffix: 'of Fortitude', category: 'buff_vit',
-               effect: { type: 'buff', stat: 'vitality', value: 5, duration: 5 } },
+    effect: { type: 'buff', stat: 'vitality', value: 5, duration: 5 } },
   might: { prefix: null, suffix: 'of Might', category: 'buff_str',
-           effect: { type: 'buff', stat: 'strength', value: 5, duration: 5 } },
+    effect: { type: 'buff', stat: 'strength', value: 5, duration: 5 } },
   insight: { prefix: null, suffix: 'of Insight', category: 'buff_int',
-             effect: { type: 'buff', stat: 'intelligence', value: 5, duration: 5 } },
+    effect: { type: 'buff', stat: 'intelligence', value: 5, duration: 5 } },
   alacrity: { prefix: null, suffix: 'of Alacrity', category: 'buff_agi',
-              effect: { type: 'buff', stat: 'agility', value: 5, duration: 5 } },
+    effect: { type: 'buff', stat: 'agility', value: 5, duration: 5 } },
 
   // Revival Augments
   blessed: { prefix: 'Blessed', suffix: null, category: 'revive_bonus',
-             effect: { type: 'revive_hp_bonus', value: 0.25 } },
+    effect: { type: 'revive_hp_bonus', value: 0.25 } },
   divine: { prefix: 'Divine', suffix: null, category: 'revive_full',
-            effect: { type: 'revive_full', value: true } },
+    effect: { type: 'revive_full', value: true } },
   grace: { prefix: null, suffix: 'of Grace', category: 'revive_immunity',
-           effect: { type: 'revive_immunity', duration: 2 } },
+    effect: { type: 'revive_immunity', duration: 2 } },
 
   // Specialty Augments (Suffix-only)
   swiftness: { prefix: null, suffix: 'of Swiftness', category: 'instant',
-               effect: { type: 'instant', value: true } },
+    effect: { type: 'instant', value: true } },
   sharing: { prefix: null, suffix: 'of Sharing', category: 'aoe',
-             effect: { type: 'aoe', radius: 1 } }
+    effect: { type: 'aoe', radius: 1 } }
 };
 
 // Quality prefixes by rarity (equipment)
@@ -218,7 +218,7 @@ const AUGMENTS = { ...PREFIX_AUGMENTS, ...SUFFIX_AUGMENTS };
  * @param {string} terrainType - Node terrain type
  * @returns {Array} Array of dropped items
  */
-async function rollDrops(enemy, difficultyTier, terrainType) {
+async function rollDrops(enemy, difficultyTier, _terrainType) {
   const dropTable = enemy.dropTable || {};
   const drops = [];
 

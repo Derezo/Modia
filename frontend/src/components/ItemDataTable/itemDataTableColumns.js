@@ -161,9 +161,9 @@ export const COLUMN_RENDERERS = {
     return `
       <div class="item-data-table-augments">
         ${item.augments.slice(0, 4).map(aug => {
-          const category = aug.category || aug.type || 'holy';
-          return Icon.html('augments', category, { size: 'sm' }) || '';
-        }).join('')}
+    const category = aug.category || aug.type || 'holy';
+    return Icon.html('augments', category, { size: 'sm' }) || '';
+  }).join('')}
       </div>
     `;
   },

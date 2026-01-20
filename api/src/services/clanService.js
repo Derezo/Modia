@@ -24,7 +24,7 @@ export async function listClans(searchQuery, limit = 20) {
   const params = [];
 
   if (searchQuery && searchQuery.length >= 2) {
-    sql += ` WHERE c.name ILIKE $1 OR c.tag ILIKE $1`;
+    sql += ' WHERE c.name ILIKE $1 OR c.tag ILIKE $1';
     params.push(`%${searchQuery}%`);
   }
 
@@ -430,7 +430,7 @@ export async function acceptInvite(userId, inviteId) {
   if (new Date(invite.expires_at) < new Date()) {
     // Mark as expired
     await query(
-      "UPDATE clan_invites SET status = 'expired' WHERE id = $1",
+      'UPDATE clan_invites SET status = \'expired\' WHERE id = $1',
       [inviteId]
     );
     throw new Error('Invite has expired');
@@ -463,7 +463,7 @@ export async function acceptInvite(userId, inviteId) {
   }
 
   // Accept invite and add member in transaction
-  await query("UPDATE clan_invites SET status = 'accepted' WHERE id = $1", [inviteId]);
+  await query('UPDATE clan_invites SET status = \'accepted\' WHERE id = $1', [inviteId]);
 
   await query(
     `INSERT INTO clan_members (clan_id, user_id, role, joined_at)
@@ -535,7 +535,7 @@ export async function getClanMessages(userId, clanId, limit = 50, beforeId = nul
   const params = [clanId];
 
   if (beforeId) {
-    sql += ` AND cm.id < $2`;
+    sql += ' AND cm.id < $2';
     params.push(beforeId);
   }
 

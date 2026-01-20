@@ -309,7 +309,7 @@ function hasSkillType(unit, type) {
  * @param {Object} state - Battle state
  * @returns {number} Healing value (0-500)
  */
-function calculateHealingValue(healer, target, skill, state) {
+function calculateHealingValue(healer, target, skill, _state) {
   if (!skill || !target || target.hp <= 0) return 0;
   if (!skill.healPercent && !skill.selfBuff && skill.damageType !== 'heal') return 0;
 
@@ -452,7 +452,7 @@ function calculateTargetPriority(target, state) {
  * @param {Object} state - Battle state
  * @returns {number} Target value (0-100)
  */
-function getTargetValue(target, state) {
+function getTargetValue(target, _state) {
   let value = 50;
 
   // Class-based value

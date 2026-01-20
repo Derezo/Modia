@@ -276,17 +276,19 @@ function useNpcItem(item, unit) {
 
   // Calculate effect
   switch (item.effectType) {
-    case 'hp_restore':
+    case 'hp_restore': {
       const hpRestored = Math.min(item.effectValue, unit.maxHp - unit.hp);
       unit.hp += hpRestored;
       return { hpRestored, newHp: unit.hp };
+    }
 
-    case 'mp_restore':
+    case 'mp_restore': {
       const mpRestored = Math.min(item.effectValue, unit.maxMp - unit.mp);
       unit.mp += mpRestored;
       return { mpRestored, newMp: unit.mp };
+    }
 
-    case 'elixir':
+    case 'elixir': {
       // Restore percentage of both HP and MP
       const hpAmount = Math.floor(unit.maxHp * item.effectValue);
       const mpAmount = Math.floor(unit.maxMp * item.effectValue);
@@ -295,6 +297,7 @@ function useNpcItem(item, unit) {
       unit.hp += actualHp;
       unit.mp += actualMp;
       return { hpRestored: actualHp, mpRestored: actualMp, newHp: unit.hp, newMp: unit.mp };
+    }
 
     default:
       return { error: 'Unknown item effect type' };

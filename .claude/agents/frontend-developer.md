@@ -32,7 +32,8 @@ Frontend development checklist:
 - Memory management (no leaks)
 - Responsive canvas sizing
 - Cross-browser compatible
-- **File size under 2500 lines (BLOCKING)** - see CLAUDE.md for modularization patterns
+- **File size under 3500 lines (BLOCKING)** - see CLAUDE.md for modularization patterns
+- **Module summary required for files >1500 lines** - see CLAUDE.md for format
 
 **Build System: Vite**
 

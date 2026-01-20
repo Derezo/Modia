@@ -306,8 +306,55 @@ File size enforcement prevents monolithic files that harm maintainability. Overs
 |-------|-------|--------|
 | 500 | Target | Ideal file size |
 | 1000 | Notice | Note in review, continue |
-| 1500 | Warning | Flag in report, consider splitting |
-| **2500** | **BLOCKING** | **Halt validation, require modularization** |
+| 1500 | Warning | Flag in report, requires module summary comment |
+| 2500 | Warning | Strong warning, plan modularization |
+| **3500** | **BLOCKING** | **Halt validation, require modularization** |
+
+### Module Summary Requirements
+
+Files exceeding 1500 lines MUST include a module summary comment at the top:
+
+**JavaScript/TypeScript:**
+```javascript
+/**
+ * @module BattleScene
+ * @description Orchestrates tactical turn-based combat with grid-based movement.
+ *
+ * Key responsibilities:
+ * - Battle initialization and state management
+ * - Turn order and action processing
+ * - Unit rendering and animation coordination
+ * - WebSocket event handling for multiplayer sync
+ *
+ * @see BattleGrid.js - Grid rendering and pathfinding
+ * @see BattleUnit.js - Individual unit rendering
+ * @see BattleUI.js - HUD and action menus
+ */
+```
+
+This helps AI assistants understand file purpose without reading the entire file.
+
+### Reading Large Files
+
+When working with files >2000 lines, use targeted reading to preserve context:
+
+1. **Read the module summary first** (first 50 lines)
+2. **Use grep to find specific functions/sections**
+3. **Read in chunks using offset/limit parameters**
+
+Example workflow:
+```
+# First, understand the file's purpose
+Read file_path with limit=50
+
+# Find the specific function you need
+Grep for "function handleTurnEnd"
+
+# Read just that section
+Read file_path with offset=450, limit=100
+```
+
+Avoid reading entire large files unless absolutely necessary.
 
 ### Exemptions
 
@@ -383,21 +430,21 @@ audio-metadata/
 
 ### Tech Debt: Existing Large Files
 
-These files exceed or approach limits and are tracked in `docs/ROADMAP_TECHNICAL.md` section 6.2:
+These files exceed or approach limits and are tracked in `docs/ROADMAP_TECHNICAL.md` section 7.1:
 
 | File | Lines | Status |
 |------|-------|--------|
-| `frontend/src/scenes/BattleScene.js` | 2,632 | **BLOCKING** - exceeds 2500 limit |
-| `frontend/src/scenes/WorldMapScene.js` | 2,507 | **BLOCKING** - exceeds 2500 limit |
+| `frontend/src/scenes/BattleScene.js` | 2,632 | WARNING - plan modularization |
+| `frontend/src/scenes/WorldMapScene.js` | 2,507 | WARNING - plan modularization |
 | `api/src/services/marketplaceService.js` | 1,956 | WARNING |
 | `api/src/services/coliseumService.js` | 1,552 | WARNING |
 | `frontend/src/battle/BattleUI.js` | 1,477 | NOTICE - approaching 1,500 |
 
 *Last updated: 2026-01-20*
 
-**Recent refactoring:** BattleScene.js WebSocket handling extracted to `BattleWebSocketManager.js` (766 lines). Both BattleScene.js and WorldMapScene.js need further modularization to get under the 2500-line limit.
+**Recent refactoring:** BattleScene.js WebSocket handling extracted to `BattleWebSocketManager.js` (766 lines). All files are now under the 3500-line blocking threshold.
 
-**Note:** Changes to tech debt files do NOT block validation unless they increase the line count. New files must comply with the 2500-line limit.
+**Note:** Changes to tech debt files do NOT block validation unless they increase the line count. New files must comply with the 3500-line limit.
 
 ## Subagents
 

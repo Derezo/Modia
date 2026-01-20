@@ -418,7 +418,7 @@ export class ParchmentCard {
   }
 
   getEmptyStateHTML() {
-    return `<div class="pc-empty-state">Select a character</div>`;
+    return '<div class="pc-empty-state">Select a character</div>';
   }
 
   setCharacter(character) {
@@ -619,15 +619,15 @@ export class ParchmentCard {
 
     if (isHeal) {
       html += `<span class="pc-dmg-range pc-dmg-range--heal">+${min}-${max}</span>`;
-      html += `<span class="pc-dmg-label">HP</span>`;
+      html += '<span class="pc-dmg-label">HP</span>';
       if (data.isOverheal) {
-        html += `<span class="pc-dmg-label" style="color: #8a7a60;">(overheal)</span>`;
+        html += '<span class="pc-dmg-label" style="color: #8a7a60;">(overheal)</span>';
       }
     } else {
       html += `<span class="pc-dmg-range ${data.willKill ? 'pc-dmg-range--kill' : ''}">${min}-${max}</span>`;
-      html += `<span class="pc-dmg-label">dmg</span>`;
+      html += '<span class="pc-dmg-label">dmg</span>';
       if (data.willKill) {
-        html += `<span class="pc-dmg-kill">Kill</span>`;
+        html += '<span class="pc-dmg-kill">Kill</span>';
       }
     }
 

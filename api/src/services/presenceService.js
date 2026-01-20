@@ -149,7 +149,7 @@ async function getOnlinePlayers(options = {}) {
  */
 async function updateActivity(userId) {
   await query(
-    `UPDATE player_presence SET last_activity = CURRENT_TIMESTAMP WHERE user_id = $1`,
+    'UPDATE player_presence SET last_activity = CURRENT_TIMESTAMP WHERE user_id = $1',
     [userId]
   );
 
@@ -166,7 +166,7 @@ async function updateActivity(userId) {
  */
 async function setOffline(userId) {
   await query(
-    `UPDATE player_presence SET status = 'offline' WHERE user_id = $1`,
+    'UPDATE player_presence SET status = \'offline\' WHERE user_id = $1',
     [userId]
   );
 
@@ -247,7 +247,7 @@ function getTypingUsers(roomKey) {
   const now = Date.now();
   const activeTypers = [];
 
-  roomTyping.forEach((data, odUserId) => {
+  roomTyping.forEach((data, _odUserId) => {
     // Only include if typing within last 5 seconds
     if (now - data.timestamp < 5000) {
       activeTypers.push({
@@ -274,7 +274,7 @@ async function cleanupStalePresence() {
   );
 
   // Clear from cache
-  presenceCache.forEach((data, odUserId) => {
+  presenceCache.forEach((data, _odUserId) => {
     if (data.status !== 'offline') {
       const lastActivity = new Date(data.lastActivity);
       if (Date.now() - lastActivity.getTime() > 5 * 60 * 1000) {

@@ -28,7 +28,15 @@
       "volume": 0.7,
       "fadeIn": 2000,
       "fadeOut": 1500,
-      "generated": false
+      "generated": true,
+      "taskId": "035472827f45594e50bdef0f4547d576",
+      "generationStarted": "2026-01-19T03:43:55.359Z",
+      "lastStatusCheck": "2026-01-19T03:46:18.024Z",
+      "status": "SUCCESS",
+      "generatedAt": "2026-01-19T03:46:27.413Z",
+      "downloadedFrom": "035472827f45594e50bdef0f4547d576",
+      "fileSize": 4717492,
+      "duration": 207.28
     },
     {
       "id": "heartlands_tavern",

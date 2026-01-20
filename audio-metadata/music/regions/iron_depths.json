@@ -28,7 +28,10 @@
       "volume": 0.7,
       "fadeIn": 2000,
       "fadeOut": 1500,
-      "generated": false
+      "generated": true,
+      "taskId": "013ea48c9d2148794221d21cf2bee026",
+      "generationStarted": "2026-01-19T17:22:02.765Z",
+      "generatedAt": "2026-01-19T17:22:08.237Z"
     },
     {
       "id": "iron_depths_tavern",

@@ -7,6 +7,52 @@ const fs = require('fs');
 const path = require('path');
 
 /**
+ * Load environment variables from .env file
+ * Looks for .env in project root (two levels up from lib/)
+ */
+function loadEnv() {
+  const envPath = path.resolve(__dirname, '../../..', '.env');
+
+  if (!fs.existsSync(envPath)) {
+    return; // No .env file, skip silently
+  }
+
+  try {
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const lines = envContent.split('\n');
+
+    for (const line of lines) {
+      // Skip empty lines and comments
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+
+      // Parse KEY=VALUE (handle quoted values)
+      const match = trimmed.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        const key = match[1].trim();
+        let value = match[2].trim();
+
+        // Remove surrounding quotes if present
+        if ((value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+
+        // Only set if not already defined (don't override existing env vars)
+        if (process.env[key] === undefined) {
+          process.env[key] = value;
+        }
+      }
+    }
+  } catch (error) {
+    console.error(`Warning: Failed to load .env file: ${error.message}`);
+  }
+}
+
+// Auto-load .env when this module is imported
+loadEnv();
+
+/**
  * Ensure a directory exists, creating it if necessary
  * @param {string} dirPath - Path to the directory
  * @returns {void}
@@ -74,17 +120,32 @@ function getTimestamp() {
 }
 
 /**
+ * Check if debug logging is enabled
+ * Set AUDIO_DEBUG=1 or DEBUG=1 to enable verbose debug output
+ * @returns {boolean}
+ */
+function isDebugEnabled() {
+  return process.env.AUDIO_DEBUG === '1' || process.env.DEBUG === '1';
+}
+
+/**
  * Log with timestamp prefix
  * @param {string} message - Message to log
- * @param {string} level - Log level (info, warn, error)
+ * @param {string} level - Log level (info, warn, error, debug)
  */
 function log(message, level = 'info') {
+  // Skip debug messages unless debug mode is enabled
+  if (level === 'debug' && !isDebugEnabled()) {
+    return;
+  }
+
   const timestamp = getTimestamp();
   const prefix = {
     info: '[INFO]',
     warn: '[WARN]',
     error: '[ERROR]',
-    success: '[SUCCESS]'
+    success: '[SUCCESS]',
+    debug: '[DEBUG]'
   }[level] || '[INFO]';
 
   console.log(`${timestamp} ${prefix} ${message}`);
@@ -128,6 +189,7 @@ function sanitizeFilename(name) {
 }
 
 module.exports = {
+  loadEnv,
   ensureDirectoryExists,
   fileExists,
   delay,
@@ -135,6 +197,7 @@ module.exports = {
   saveMetadata,
   getTimestamp,
   log,
+  isDebugEnabled,
   formatBytes,
   isValidAudioFormat,
   sanitizeFilename

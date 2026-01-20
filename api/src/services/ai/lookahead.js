@@ -8,7 +8,7 @@
 
 import { StateEvaluator } from './stateEvaluator.js';
 import { getWeights, OPTIMAL_PLAYER_WEIGHTS } from './patternWeights.js';
-import { generateAllActions, pruneActions, orderActionsForPruning } from './actionGenerator.js';
+import { generateAllActions, pruneActions } from './actionGenerator.js';
 import {
   TranspositionTable,
   KillerMoves,
@@ -295,7 +295,7 @@ class Lookahead {
    * @param {string} perspective - Whose perspective
    * @returns {Object} First actor
    */
-  getFirstActor(state, perspective) {
+  getFirstActor(state, _perspective) {
     const aliveUnits = state.units.filter(u => u.hp > 0);
     if (aliveUnits.length === 0) return null;
 

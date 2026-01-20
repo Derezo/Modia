@@ -225,6 +225,53 @@ function markEffectGenerated(effect) {
 }
 
 /**
+ * Check prompt complexity and warn if it may produce longer audio than expected.
+ * ElevenLabs tends to generate multiple sounds when prompts contain many comma-separated concepts.
+ * @param {Object} effect - Effect metadata with prompt and duration
+ * @returns {boolean} True if prompt may be too complex
+ */
+function checkPromptComplexity(effect) {
+  const prompt = effect.prompt || '';
+  // Count comma-separated segments (distinct concepts)
+  const segments = prompt.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+  // Warn if prompt has many segments and short duration requested
+  // Rule of thumb: ~2-3 seconds per distinct sound concept
+  const estimatedMinDuration = segments.length * 2;
+  const requestedDuration = effect.duration || 2;
+
+  if (segments.length > 3 && requestedDuration < estimatedMinDuration) {
+    log(`Warning: "${effect.id}" prompt has ${segments.length} comma-separated concepts`, 'warn');
+    log(`  Requested: ${requestedDuration}s, but may generate ~${estimatedMinDuration}s`, 'warn');
+    log(`  Tip: Rewrite prompt to describe ONE sound with adjectives, not multiple sounds`, 'warn');
+    log(`  Example: "brief heroic chime, tactical ready tone" → "brief heroic tactical ready chime"`, 'warn');
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Validate required environment variables
+ * @param {Object} options - CLI options
+ * @returns {boolean} True if validation passed, exits otherwise
+ */
+function validateEnvVars(options) {
+  // Skip validation for dry-run mode
+  if (options.dryRun) {
+    return true;
+  }
+
+  if (!process.env.ELEVENLABS_API_KEY) {
+    log('Missing ELEVENLABS_API_KEY in environment', 'error');
+    log(`Expected .env file location: ${path.resolve(__dirname, '../..', '.env')}`, 'info');
+    log('Set it with: export ELEVENLABS_API_KEY=your_api_key', 'info');
+    process.exit(1);
+  }
+
+  return true;
+}
+
+/**
  * Main execution
  */
 async function main() {
@@ -234,6 +281,9 @@ async function main() {
     showHelp();
     process.exit(0);
   }
+
+  // Early validation of environment variables
+  validateEnvVars(options);
 
   log('SFX Generation Script', 'info');
   log('=====================', 'info');
@@ -277,6 +327,8 @@ async function main() {
     console.log(`    Output: ${getOutputPath(effect)}`);
     if (options.dryRun) {
       console.log(`    Prompt: ${effect.prompt}`);
+      // Check and warn about prompt complexity
+      checkPromptComplexity(effect);
     }
     console.log('');
   }
@@ -287,13 +339,8 @@ async function main() {
     process.exit(0);
   }
 
-  // Check for API key
+  // API key is validated at start of main(), safe to use directly
   const apiKey = process.env.ELEVENLABS_API_KEY;
-  if (!apiKey) {
-    log('ELEVENLABS_API_KEY environment variable is required', 'error');
-    log('Set it with: export ELEVENLABS_API_KEY=your_api_key', 'info');
-    process.exit(1);
-  }
 
   // Initialize generator
   const generator = new ElevenLabsSFXGenerator(apiKey);
@@ -318,6 +365,9 @@ async function main() {
     const effect = effectsToGenerate[i];
     const outputPath = getOutputPath(effect);
     log(`[${i + 1}/${effectsToGenerate.length}] Generating: ${effect.id}`, 'info');
+
+    // Warn about potentially problematic prompts
+    checkPromptComplexity(effect);
 
     try {
       // Determine if this is an ambient sound (longer duration)

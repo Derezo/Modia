@@ -49,7 +49,11 @@ export {
 // Map Generation
 export {
   generateTerrain,
-  generateTerrainOnly
+  generateTerrainOnly,
+  generateSpawnPositions,
+  validateSpawnPositions,
+  SpawnPlacer,
+  AI_SPAWN_CONFIGS
 } from './mapGeneration.js';
 
 // Pathfinding

@@ -371,7 +371,7 @@ function applyActionToState(state, unit, action) {
       break;
 
     case 'attack':
-    case 'skill':
+    case 'skill': {
       const targetUnit = state.units.find(u => u.id === action.targetId);
       if (targetUnit) {
         // Simplified damage for lookahead (actual damage calculated elsewhere)
@@ -383,6 +383,7 @@ function applyActionToState(state, unit, action) {
         stateUnit.mp = Math.max(0, stateUnit.mp - action.skill.mpCost);
       }
       break;
+    }
 
     case 'wait':
       stateUnit.moveUsed = true;

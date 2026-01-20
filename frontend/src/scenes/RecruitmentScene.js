@@ -1055,7 +1055,7 @@ export class RecruitmentScene extends Scene {
     return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
   }
 
-  update(deltaTime) {
+  update(_deltaTime) {
     // No per-frame updates needed
   }
 

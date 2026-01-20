@@ -11,7 +11,8 @@
 import { query, withTransaction } from '../config/database.js';
 import { calculateStats, GUILD_ADVANCEMENT_TIERS, CLASS_MOVEMENT } from '../config/constants.js';
 import { SKILL_TREES } from '../config/skillTrees.js';
-import { createPlayerBattleUnit } from './battleUnitFactory.js';
+// createPlayerBattleUnit could be used for future multi-character guildmaster battles
+// import { createPlayerBattleUnit } from './battleUnitFactory.js';
 import * as bossService from './bossService.js';
 import { generateTerrainOnly } from '../../../shared/mapGeneration.js';
 
@@ -24,7 +25,7 @@ const BASE_CLASSES = ['warrior', 'wizard', 'monk', 'chemist'];
  * @param {number} nodeId - Guild node ID where battle takes place
  * @returns {Object} Battle state and configuration
  */
-export async function generateGuildmasterBattle(character, targetClass, nodeId) {
+export async function generateGuildmasterBattle(character, targetClass, _nodeId) {
   // Get guildmaster template from database
   const templateResult = await query(
     'SELECT * FROM guildmaster_templates WHERE guild_class = $1',
@@ -406,7 +407,7 @@ function getGuildForClass(className) {
  * Create the actual battle record in database
  */
 export async function createGuildmasterBattleRecord(battleConfig, userId) {
-  const { initialState, mapSeed, isAdvancementBattle, targetClass, challengerId } = battleConfig;
+  const { initialState, mapSeed, isAdvancementBattle, targetClass: _targetClass, challengerId } = battleConfig;
 
   return await withTransaction(async (client) => {
     // Create battle record with advancement flags
@@ -424,7 +425,7 @@ export async function createGuildmasterBattleRecord(battleConfig, userId) {
 
     // Update boss state with actual battle ID
     if (Object.keys(initialState.bossStates).length > 0) {
-      for (const [unitId, bossState] of Object.entries(initialState.bossStates)) {
+      for (const [_unitId, bossState] of Object.entries(initialState.bossStates)) {
         bossState.battleId = battleId;
         await bossService.saveBossEncounter(bossState);
       }

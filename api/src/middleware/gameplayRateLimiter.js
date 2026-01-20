@@ -60,3 +60,39 @@ export const gameReadLimiter = createLimiter({
   message: 'Too many requests. Please wait a moment.',
   useUserKey: true
 });
+
+/**
+ * Quest read rate limiter
+ * For fetching daily/weekly quests and streak info
+ */
+export const questReadLimiter = createLimiter({
+  name: 'gameplay:quest:read',
+  windowMs: 60 * 1000,       // 1 minute
+  maxRequests: 60,           // Base: 60, Prod: 120, Dev: 300
+  message: 'Too many quest requests. Please wait a moment.',
+  useUserKey: true
+});
+
+/**
+ * Quest claim rate limiter
+ * For claiming quest rewards - lower limit to prevent abuse
+ */
+export const questClaimLimiter = createLimiter({
+  name: 'gameplay:quest:claim',
+  windowMs: 60 * 1000,       // 1 minute
+  maxRequests: 20,           // Base: 20, Prod: 40, Dev: 100
+  message: 'Too many quest claim attempts. Please wait a moment.',
+  useUserKey: true
+});
+
+/**
+ * Quest refresh rate limiter
+ * For manual quest refresh - very limited
+ */
+export const questRefreshLimiter = createLimiter({
+  name: 'gameplay:quest:refresh',
+  windowMs: 60 * 1000,       // 1 minute
+  maxRequests: 10,           // Base: 10, Prod: 20, Dev: 50
+  message: 'Too many quest refresh attempts. Please wait a moment.',
+  useUserKey: true
+});

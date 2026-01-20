@@ -44,6 +44,7 @@ function parseArgs() {
     region: null,
     category: null,
     force: false,
+    wait: true,  // Default to waiting and downloading (single-step workflow)
     help: false
   };
 
@@ -64,6 +65,9 @@ function parseArgs() {
         break;
       case '--force':
         options.force = true;
+        break;
+      case '--no-wait':
+        options.wait = false;  // Opt-out of waiting (for batch generation)
         break;
       case '--help':
       case '-h':
@@ -96,17 +100,21 @@ Options:
   --region <name>   Generate only for specific region (heartlands, sylvan_reaches, iron_depths, shadowmere, bloodplains)
   --category <cat>  Generate only specific category (regions, battle, core)
   --force           Regenerate even if file exists
+  --no-wait         Don't wait for completion (for batch generation, use download-audio.js later)
   --help, -h        Show this help message
+
+By default, the script waits for generation to complete and downloads the file automatically.
 
 Environment variables:
   SUNO_API_KEY      Required API key for Suno
-  SUNO_WEBHOOK_URL  Optional webhook for completion notifications
+  SUNO_WEBHOOK_URL  Optional webhook for completion notifications (not required)
 
 Examples:
-  node scripts/audio/generate-music.js --dry-run
-  node scripts/audio/generate-music.js --region heartlands
-  node scripts/audio/generate-music.js --category battle --force
-  node scripts/audio/generate-music.js --key title_theme
+  node scripts/audio/generate-music.js --key title_theme          # Generate and download
+  node scripts/audio/generate-music.js --dry-run                  # Preview what would be generated
+  node scripts/audio/generate-music.js --region heartlands        # Generate all heartlands tracks
+  node scripts/audio/generate-music.js --category battle --force  # Regenerate battle tracks
+  node scripts/audio/generate-music.js --no-wait                  # Start generation, download later
 `);
 }
 
@@ -263,6 +271,27 @@ function markTrackGenerated(track) {
 }
 
 /**
+ * Validate required environment variables
+ * @param {Object} options - CLI options
+ * @returns {boolean} True if validation passed, exits otherwise
+ */
+function validateEnvVars(options) {
+  // Skip validation for dry-run mode
+  if (options.dryRun) {
+    return true;
+  }
+
+  if (!process.env.SUNO_API_KEY) {
+    log('Missing SUNO_API_KEY in environment', 'error');
+    log(`Expected .env file location: ${path.resolve(__dirname, '../..', '.env')}`, 'info');
+    log('Set it with: export SUNO_API_KEY=your_api_key', 'info');
+    process.exit(1);
+  }
+
+  return true;
+}
+
+/**
  * Main execution
  */
 async function main() {
@@ -272,6 +301,9 @@ async function main() {
     showHelp();
     process.exit(0);
   }
+
+  // Early validation of environment variables
+  validateEnvVars(options);
 
   log('Music Generation Script', 'info');
   log('=======================', 'info');
@@ -325,13 +357,8 @@ async function main() {
     process.exit(0);
   }
 
-  // Check for API key
+  // API key is validated at start of main(), safe to use directly
   const apiKey = process.env.SUNO_API_KEY;
-  if (!apiKey) {
-    log('SUNO_API_KEY environment variable is required', 'error');
-    log('Set it with: export SUNO_API_KEY=your_api_key', 'info');
-    process.exit(1);
-  }
 
   // Initialize client
   const client = new SunoClient({
@@ -358,24 +385,32 @@ async function main() {
     log(`[${i + 1}/${tracksToGenerate.length}] Generating: ${track.id}`, 'info');
 
     try {
-      // Generate track (non-blocking, returns taskId)
+      // Generate track - wait for completion if --wait flag is set
       const result = await client.generateTrack(track.sunoPrompt, {
         title: track.name,
-        tags: track.style,
-        makeInstrumental: true,
-        waitForCompletion: false
+        style: track.style,
+        instrumental: true,
+        model: track.model || 'V4_5ALL',
+        customMode: true,
+        waitForCompletion: options.wait
       });
 
       results.started.push({
         id: track.id,
         name: track.name,
-        taskId: result.taskId
+        taskId: result.taskId,
+        track: track,
+        result: result
       });
 
       // Update metadata with taskId
       updateTrackMetadata(track, result);
 
-      log(`Started generation for ${track.id}, taskId: ${result.taskId}`, 'success');
+      if (options.wait) {
+        log(`Generation completed for ${track.id}, taskId: ${result.taskId}`, 'success');
+      } else {
+        log(`Started generation for ${track.id}, taskId: ${result.taskId}`, 'success');
+      }
 
       // Rate limit delay between requests
       if (i < tracksToGenerate.length - 1) {
@@ -391,6 +426,33 @@ async function main() {
     }
   }
 
+  // If --wait was specified, also download the completed tracks
+  if (options.wait && results.started.length > 0) {
+    log('\nDownloading completed tracks...', 'info');
+    console.log('');
+
+    for (const item of results.started) {
+      const outputPath = getOutputPath(item.track);
+
+      try {
+        log(`Downloading: ${item.id}`, 'info');
+        const downloadResult = await client.downloadTrack(item.taskId, outputPath);
+
+        // Mark as generated in metadata
+        markTrackGenerated(item.track);
+
+        log(`Downloaded: ${item.id} (${downloadResult.size} bytes)`, 'success');
+      } catch (error) {
+        log(`Failed to download ${item.id}: ${error.message}`, 'error');
+        results.failed.push({
+          id: item.id,
+          name: item.name,
+          error: `Download failed: ${error.message}`
+        });
+      }
+    }
+  }
+
   // Summary
   console.log('\n========================================');
   log('Generation Summary', 'info');
@@ -400,12 +462,14 @@ async function main() {
   console.log('');
 
   if (results.started.length > 0) {
-    log('Started tracks:', 'info');
+    log('Completed tracks:', 'info');
     for (const track of results.started) {
       console.log(`  - ${track.id} (taskId: ${track.taskId})`);
     }
     console.log('');
-    log('Use download-audio.js to check status and download completed tracks', 'info');
+    if (!options.wait) {
+      log('Use download-audio.js to check status and download completed tracks', 'info');
+    }
   }
 
   if (results.failed.length > 0) {

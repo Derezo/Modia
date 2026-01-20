@@ -24,7 +24,15 @@
       "volume": 0.75,
       "fadeIn": 500,
       "fadeOut": 1000,
-      "generated": false
+      "generated": true,
+      "taskId": "5ed706ee07a0c49d1c1e4255262cace0",
+      "generationStarted": "2026-01-19T04:14:53.533Z",
+      "lastStatusCheck": "2026-01-19T04:17:22.835Z",
+      "status": "SUCCESS",
+      "generatedAt": "2026-01-19T04:17:26.056Z",
+      "downloadedFrom": "5ed706ee07a0c49d1c1e4255262cace0",
+      "fileSize": 4062940,
+      "duration": 166.16
     },
     {
       "id": "heartlands_battle_boss",

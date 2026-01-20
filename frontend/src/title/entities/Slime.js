@@ -112,7 +112,7 @@ export class Slime {
   drawSlime(ctx) {
     // Main body (blob shape using rectangles for pixel art style)
     const w = this.baseWidth;
-    const h = this.baseHeight;
+    const _h = this.baseHeight;
 
     // Bottom row (widest)
     ctx.fillStyle = TITLE_COLORS.slime.dark;

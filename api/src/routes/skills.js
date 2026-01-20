@@ -9,7 +9,7 @@ import {
   getLevelProgress,
   calculateLevelUpStatGains
 } from '../services/characterLevelService.js';
-import { scaleSkillAttributes, getSkillScalingPreview } from '../config/skillScaling.js';
+import { scaleSkillAttributes } from '../config/skillScaling.js';
 import { calculateStats } from '../../../shared/constants.js';
 
 const router = express.Router();
@@ -398,7 +398,7 @@ router.get('/advancement/:characterId', authenticate, asyncHandler(async (req, r
 
 // POST /api/skills/advance - DEPRECATED: Use quest-based advancement
 // Advancement now requires completing quests via /api/advancement/* endpoints
-router.post('/advance', authenticate, asyncHandler(async (req, res) => {
+router.post('/advance', authenticate, asyncHandler(async (_req, _res) => {
   throw new AppError(
     'Direct advancement has been replaced with quest-based advancement. ' +
     'Visit your guild hall and complete an advancement quest to advance your class.',

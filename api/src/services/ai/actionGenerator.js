@@ -5,7 +5,7 @@
  * including moves, attacks, skills, and composite actions.
  */
 
-import { getReachableTiles, getAvailableActions, getTargetsInRange } from '../battleService.js';
+import { getAvailableActions } from '../battleService.js';
 import { canUseSkill } from '../npcSkillService.js';
 
 /**
@@ -346,7 +346,7 @@ function getQuickScore(action) {
  * @param {Object} unit - Acting unit
  * @returns {Array} Ordered actions
  */
-function orderActionsForPruning(actions, unit) {
+function orderActionsForPruning(actions, _unit) {
   // Sort: attacks > skills > moves > wait
   // Within each category, prefer higher impact
   return actions.sort((a, b) => {

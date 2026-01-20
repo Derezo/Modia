@@ -712,7 +712,7 @@ export class BattleUnit {
   }
 
   /**
-   * Render status effect icons
+   * Render status effect icons with duration display
    */
   renderStatusEffects(ctx, x, y) {
     const iconSize = 12;
@@ -726,11 +726,19 @@ export class BattleUnit {
       stun: '#ffeb3b',
       slow: '#607d8b',
       blind: '#424242',
-      silence: '#e91e63'
+      silence: '#e91e63',
+      root: '#8b4513',
+      sleep: '#9370db',
+      regen: '#32cd32',
+      haste: '#00bfff',
+      rage: '#dc143c',
+      fortify: '#4682b4'
     };
 
     this.statusEffects.forEach((effect, i) => {
       const effectX = startX + i * spacing;
+
+      // Draw effect circle
       ctx.beginPath();
       ctx.arc(effectX, y, iconSize / 2, 0, Math.PI * 2);
       ctx.fillStyle = effectColors[effect.type] || '#888';
@@ -738,6 +746,19 @@ export class BattleUnit {
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 1;
       ctx.stroke();
+
+      // Draw duration number on the icon
+      if (effect.duration !== undefined && effect.duration > 0) {
+        ctx.font = 'bold 8px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // Draw text shadow for readability
+        ctx.fillStyle = '#000';
+        ctx.fillText(effect.duration.toString(), effectX + 1, y + 1);
+        // Draw white text
+        ctx.fillStyle = '#fff';
+        ctx.fillText(effect.duration.toString(), effectX, y);
+      }
     });
   }
 

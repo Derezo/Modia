@@ -12,12 +12,12 @@ import { BattleActionBar } from '../battle/BattleActionBar.js';
 import { BattleContextMenu } from '../battle/BattleContextMenu.js';
 import { GridCursor } from '../battle/GridCursor.js';
 import { BossPhaseIndicator } from '../battle/BossPhaseIndicator.js';
+import { BattleWebSocketManager } from '../battle/BattleWebSocketManager.js';
 import { isSelfTargetingSkill, getVisualCategory } from '../battle/SkillEffectCategories.js';
 import { getSkillSoundKey, RACE_TO_REGION } from '../audio/AudioAssets.js';
 import { calculateDamagePreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
-import { debugLog } from '../utils/debugLogger.js';
 
 /**
  * BattleScene - Tactical turn-based combat on an isometric grid with camera
@@ -73,9 +73,8 @@ export class BattleScene extends Scene {
     this.inEnemySequence = false; // Track if we're in a sequence of enemy turns
     this.lastTurnWasEnemy = false; // Track if previous turn was enemy
 
-    // Turn event queue - processes WebSocket events in sequence with proper animation timing
-    this.turnEventQueue = [];
-    this.isProcessingQueue = false;
+    // WebSocket manager handles turn events and synchronization
+    this.wsManager = null;
     this.playerTurnPending = false; // True when player's turn is queued but not yet shown
 
     // Battle end state
@@ -84,9 +83,6 @@ export class BattleScene extends Scene {
 
     // Event cleanup
     this.abortController = null;
-
-    // WebSocket event unsubscribers
-    this.wsUnsubscribers = [];
 
     // Boss phase indicator
     this.bossPhaseIndicator = null;
@@ -371,7 +367,7 @@ export class BattleScene extends Scene {
         title: this.guildmasterData?.title || bossUnit?.title || null,
         currentPhase: this.guildmasterData?.currentPhase || bossUnit?.currentPhase || 1,
         maxPhases: this.guildmasterData?.maxPhases || bossUnit?.maxPhases || 1,
-        phaseName: bossUnit?.phaseName || `Phase 1`,
+        phaseName: bossUnit?.phaseName || 'Phase 1',
         hp: bossUnit?.hp || 100,
         maxHp: bossUnit?.maxHp || 100
       };
@@ -450,7 +446,7 @@ export class BattleScene extends Scene {
     const canvas = this.game.canvas;
 
     // Mouse move - hover detection and pan tracking
-    canvas.addEventListener('mousemove', (e) => {
+    canvas.addEventListener('mousemove', (_e) => {
       const pos = this.game.input.getPointerPosition();
 
       // Update pan if dragging
@@ -479,7 +475,7 @@ export class BattleScene extends Scene {
     }, opts);
 
     // Mouse down - start panning
-    canvas.addEventListener('mousedown', (e) => {
+    canvas.addEventListener('mousedown', (_e) => {
       const pos = this.game.input.getPointerPosition();
       this.camera.startPan(pos.x, pos.y);
     }, opts);
@@ -548,597 +544,35 @@ export class BattleScene extends Scene {
    * Setup WebSocket handlers for real-time battle events
    */
   setupWebSocketHandlers() {
-    const socket = this.game.socket;
-    if (!socket) return;
-
-    // Join battle room
-    socket.joinBattleRoom(this.battleId);
-
-    // Handle battle state updates (for multiplayer sync)
-    const stateUpdateUnsub = socket.on('battle:state_update', (payload) => {
-      console.log('[Battle WS] State update received:', payload.battleId);
-      if (payload.battleId === this.battleId) {
-        this.handleRemoteStateUpdate(payload);
-      }
-    });
-    this.wsUnsubscribers.push(stateUpdateUnsub);
-
-    // Handle unit movement from other players
-    const unitMovedUnsub = socket.on('battle:unit_moved', (payload) => {
-      if (payload.battleId === this.battleId) {
-        this.handleRemoteUnitMoved(payload);
-      }
-    });
-    this.wsUnsubscribers.push(unitMovedUnsub);
-
-    // Handle action execution from other players
-    const actionExecutedUnsub = socket.on('battle:action_executed', (payload) => {
-      if (payload.battleId === this.battleId) {
-        this.handleRemoteActionExecuted(payload);
-      }
-    });
-    this.wsUnsubscribers.push(actionExecutedUnsub);
-
-    // NOTE: battle:turn_changed is DEPRECATED - use battle:turn_start instead
-    // The turn_start event includes position data for camera panning and is the authoritative turn notification
-
-    // Handle battle end
-    const battleEndUnsub = socket.on('battle:end', (payload) => {
-      if (payload.battleId === this.battleId) {
-        this.handleRemoteBattleEnd(payload);
-      }
-    });
-    this.wsUnsubscribers.push(battleEndUnsub);
-
-    // Handle enemy actions batch
-    const enemyActionsUnsub = socket.on('battle:enemy_actions', (payload) => {
-      if (payload.battleId === this.battleId) {
-        this.handleRemoteEnemyActions(payload);
-      }
-    });
-    this.wsUnsubscribers.push(enemyActionsUnsub);
-
-    // NEW: Handle turn start (camera pan trigger)
-    const turnStartUnsub = socket.on('battle:turn_start', (payload) => {
-      if (payload.battleId === this.battleId) {
-        this.handleRemoteTurnStart(payload);
-      }
-    });
-    this.wsUnsubscribers.push(turnStartUnsub);
-
-    // NEW: Handle intent highlights (enemy visualization)
-    const intentHighlightUnsub = socket.on('battle:intent_highlight', (payload) => {
-      if (payload.battleId === this.battleId) {
-        this.handleRemoteIntentHighlight(payload);
-      }
-    });
-    this.wsUnsubscribers.push(intentHighlightUnsub);
-
-    // NEW: Handle "your turn" notification
-    const yourTurnUnsub = socket.on('battle:your_turn', (payload) => {
-      if (payload.battleId === this.battleId) {
-        this.handleRemoteYourTurn(payload);
-      }
-    });
-    this.wsUnsubscribers.push(yourTurnUnsub);
-
-    // NEW: Handle player disconnection
-    const playerDisconnectedUnsub = socket.on('battle:player_disconnected', (payload) => {
-      if (payload.battleId === this.battleId) {
-        this.handleRemotePlayerDisconnected(payload);
-      }
-    });
-    this.wsUnsubscribers.push(playerDisconnectedUnsub);
-
-    // NEW: Handle player reconnection
-    const playerReconnectedUnsub = socket.on('battle:player_reconnected', (payload) => {
-      if (payload.battleId === this.battleId) {
-        this.handleRemotePlayerReconnected(payload);
-      }
-    });
-    this.wsUnsubscribers.push(playerReconnectedUnsub);
-
-    // NEW: Handle boss phase transition
-    const phaseTransitionUnsub = socket.on('battle:phase_transition', (payload) => {
-      if (payload.battleId === this.battleId) {
-        this.handleBossPhaseTransition(payload);
-      }
-    });
-    this.wsUnsubscribers.push(phaseTransitionUnsub);
-
-    // NEW: Handle full state sync (for reconnection)
-    const stateSyncUnsub = socket.on('battle:state_sync', (payload) => {
-      if (payload.battleId === this.battleId) {
-        this.handleRemoteStateSync(payload);
-      }
-    });
-    this.wsUnsubscribers.push(stateSyncUnsub);
-
-    // Handle socket disconnect - trigger auto-reconnect
-    const disconnectUnsub = socket.on('disconnect', () => {
-      this.handleSocketDisconnect();
-    });
-    this.wsUnsubscribers.push(disconnectUnsub);
-
-    // Handle socket reconnect - rejoin battle room
-    const reconnectUnsub = socket.on('connect', () => {
-      if (this.battleId) {
-        console.log('[Battle WS] Socket reconnected, rejoining battle room');
-        socket.joinBattleRoom(this.battleId);
-        this.attemptRejoin();
-      }
-    });
-    this.wsUnsubscribers.push(reconnectUnsub);
+    this.wsManager = new BattleWebSocketManager(this);
+    this.wsManager.setup();
   }
 
   /**
    * Clean up WebSocket handlers
    */
   cleanupWebSocketHandlers() {
-    // Unsubscribe from all WebSocket events
-    for (const unsub of this.wsUnsubscribers) {
-      if (typeof unsub === 'function') {
-        unsub();
-      }
-    }
-    this.wsUnsubscribers = [];
-
-    // Leave battle room
-    if (this.game.socket && this.battleId) {
-      this.game.socket.leaveBattleRoom(this.battleId);
+    if (this.wsManager) {
+      this.wsManager.cleanup();
+      this.wsManager = null;
     }
   }
 
-  /**
-   * Attempt to rejoin battle after disconnect
-   * @returns {Promise<boolean>} Whether rejoin was successful
-   */
-  async attemptRejoin() {
-    if (!this.battleId) {
-      console.error('[Battle] Cannot rejoin - no battle ID');
-      return false;
-    }
+  // Getters and delegates for WebSocket manager state access
+  get isProcessingQueue() {
+    return this.wsManager?.isProcessingQueue ?? false;
+  }
 
-    try {
-      console.log('[Battle] Attempting to rejoin battle', this.battleId);
-
-      // Show reconnecting notification
-      parchmentToast.info('Connection', 'Reconnecting...');
-
-      const response = await this.game.api.request(`/battle/${this.battleId}/rejoin`);
-
-      if (response.success) {
-        console.log('[Battle] Rejoin successful');
-
-        // Update local state with server state
-        this.battleState = response.state;
-        this.syncUnitsWithState(response.state.units);
-        this.updateUI();
-
-        // Rejoin WebSocket room
-        if (this.game.socket) {
-          this.game.socket.joinBattleRoom(this.battleId);
-        }
-
-        // Show reconnection notification
-        parchmentToast.success('Connection', 'Reconnected!');
-
-        // Handle grace period (brief delay before turn timer resumes)
-        if (response.gracePeriod > 0) {
-          console.log(`[Battle] Grace period: ${response.gracePeriod}ms`);
-        }
-
-        // Show any disconnected players
-        if (response.disconnectedPlayers?.length > 0) {
-          for (const player of response.disconnectedPlayers) {
-            parchmentToast.warning('Player Status', `${player.playerName} is disconnected`);
-          }
-        }
-
-        return true;
-      }
-    } catch (error) {
-      console.error('[Battle] Rejoin failed:', error);
-
-      parchmentToast.error('Connection', 'Reconnection failed');
-
-      // If battle is no longer active, return to world map
-      if (error.message?.includes('no longer active')) {
-        this.game.changeScene('WorldMap');
-        return false;
-      }
-    }
-
-    return false;
+  get turnEventQueue() {
+    return this.wsManager?.turnEventQueue ?? [];
   }
 
   /**
-   * Setup auto-reconnect on WebSocket disconnect
-   * Called from the main socket connection logic
-   */
-  handleSocketDisconnect() {
-    console.log('[Battle] WebSocket disconnected during battle');
-
-    parchmentToast.warning('Connection', 'Connection lost - attempting reconnect...');
-
-    // Attempt reconnect after a brief delay
-    setTimeout(() => {
-      if (this.battleId && this.game.currentScene === this) {
-        this.attemptRejoin();
-      }
-    }, 1000);
-  }
-
-  /**
-   * Handle remote state update (for rejoins or full sync)
-   * NOTE: Only updates unit positions/HP, doesn't control camera during active play.
-   * Camera is controlled by the turn event queue.
-   */
-  handleRemoteStateUpdate(payload) {
-    console.log('[Battle WS] Processing state update (sync only, no camera control)');
-    // Sync unit data but preserve activeUnitId if queue is processing
-    const preserveActiveUnit = this.isProcessingQueue || this.inEnemySequence;
-    const currentActiveId = this.battleState?.activeUnitId;
-
-    this.battleState = payload.state;
-    this.syncUnitsWithState(payload.state.units);
-
-    // Restore activeUnitId if we should preserve it (queue handles transitions)
-    if (preserveActiveUnit && currentActiveId) {
-      this.battleState.activeUnitId = currentActiveId;
-    }
-    // Don't call updateUI() - let queue system handle camera and UI updates
-  }
-
-  /**
-   * Handle remote unit movement - queue for sequential processing
-   */
-  handleRemoteUnitMoved(payload) {
-    const { unitId, from, to } = payload;
-    console.log(`[Battle WS] Unit moved: ${unitId} from (${from?.x},${from?.y}) to (${to?.x},${to?.y})`);
-
-    // Queue the movement for sequential processing
-    this.queueTurnEvent({
-      type: 'unit_moved',
-      unitId,
-      from,
-      to
-    });
-  }
-
-  /**
-   * Handle remote action execution - queue for sequential processing
-   */
-  handleRemoteActionExecuted(payload) {
-    const { actorId, actionType, result } = payload;
-    console.log(`[Battle WS] Action executed: ${actorId} - ${actionType}`);
-
-    // Queue the action for sequential processing
-    // This ensures thinking indicator is cleared and animations play in order
-    this.queueTurnEvent({
-      type: 'action_executed',
-      actorId,
-      actionType,
-      result
-    });
-  }
-
-  // NOTE: handleRemoteTurnChanged removed - DEPRECATED
-  // Use handleRemoteTurnStart instead (battle:turn_start event)
-  // The turn_start event is authoritative and includes position for camera panning
-
-  /**
-   * Handle remote battle end - queue as turn event so it plays after animations
-   */
-  handleRemoteBattleEnd(payload) {
-    console.log('[Battle WS] Battle ended:', payload.status);
-    // Queue battle end so it waits for death animations to complete
-    this.queueTurnEvent({
-      type: 'battle_end',
-      status: payload.status,
-      rewards: payload.rewards
-    });
-  }
-
-  /**
-   * Handle batch of enemy actions from server
-   */
-  async handleRemoteEnemyActions(payload) {
-    // These are typically already processed by the server response
-    // This handler is for multiplayer scenarios
-    console.log('[Battle WS] Enemy actions received:', payload.actions?.length || 0);
-  }
-
-  /**
-   * Handle turn start event - queue for sequential processing
-   */
-  handleRemoteTurnStart(payload) {
-    const { unitId, unitName, unitType, position, turnPredictions } = payload;
-    console.log(`[Battle WS] Turn start: ${unitName} (${unitType})`);
-
-    // Queue the turn start for sequential processing
-    // This ensures animations complete before transitioning to next turn
-    this.queueTurnEvent({
-      type: 'turn_start',
-      unitId,
-      unitName,
-      unitType,
-      position,
-      turnPredictions
-    });
-  }
-
-  /**
-   * Handle intent highlight event (enemy visualization)
-   */
-  handleRemoteIntentHighlight(payload) {
-    const { unitId, highlightType, tiles, duration } = payload;
-    console.log(`[Battle WS] Intent highlight: ${highlightType} (${tiles?.length || 0} tiles)`);
-
-    // Queue the intent highlight for sequential processing
-    this.queueTurnEvent({
-      type: 'intent_highlight',
-      unitId,
-      highlightType,
-      tiles,
-      duration
-    });
-  }
-
-  /**
-   * Queue a turn event for sequential processing
-   * This ensures animations play in order without interruption
+   * Queue a turn event for sequential processing (delegates to wsManager)
    */
   queueTurnEvent(event) {
-    this.turnEventQueue.push(event);
-    this.processTurnEventQueue();
-  }
-
-  /**
-   * Process turn events sequentially with proper animation timing
-   * Only one event processes at a time - each waits for its animation to complete
-   */
-  async processTurnEventQueue() {
-    // Don't start processing if already processing
-    if (this.isProcessingQueue) return;
-    this.isProcessingQueue = true;
-
-    while (this.turnEventQueue.length > 0) {
-      const event = this.turnEventQueue.shift();
-      await this.processSingleTurnEvent(event);
-    }
-
-    this.isProcessingQueue = false;
-  }
-
-  /**
-   * Process a single turn event with appropriate animation timing
-   */
-  async processSingleTurnEvent(event) {
-    switch (event.type) {
-      case 'turn_start':
-        await this.processTurnStartEvent(event);
-        break;
-
-      case 'intent_highlight':
-        await this.processIntentHighlightEvent(event);
-        break;
-
-      case 'unit_moved':
-        await this.processUnitMovedEvent(event);
-        break;
-
-      case 'action_executed':
-        await this.processActionExecutedEvent(event);
-        break;
-
-      case 'battle_end':
-        // Wait extra time after death animation before showing victory/defeat
-        await this.waitForAnimation(800);
-        this.handleBattleEnd(event.status, event.rewards);
-        break;
-    }
-  }
-
-  /**
-   * Process turn_start event from queue
-   */
-  async processTurnStartEvent(event) {
-    const { unitId, unitName, unitType, position, turnPredictions } = event;
-    const isEnemy = unitType === 'enemy';
-    const isPlayerTurn = unitType === 'player' || unitType === 'player_local';
-
-    debugLog('battle.logTurnEvents', 'Turn start:', {
-      unitId,
-      unitName,
-      unitType,
-      turnNumber: this.battleLogTurnCounter + 1,
-      position
-    });
-
-    // Note: Turn start sound is played in handleRemoteYourTurn for player turns
-    // to provide immediate audio feedback when the server signals your turn
-
-    // Increment battle log turn counter
-    this.battleLogTurnCounter++;
-
-    // Update turn predictions if provided
-    if (turnPredictions) {
-      this.battleState.turnPredictions = turnPredictions;
-    }
-
-    // Update active unit
-    this.battleState.activeUnitId = unitId;
-
-    // Update selection to active unit
-    const activeUnit = this.units.get(unitId);
-    if (activeUnit) {
-      if (this.selectedUnit) {
-        this.selectedUnit.isSelected = false;
-      }
-      this.selectedUnit = activeUnit;
-      activeUnit.isSelected = true;
-    }
-
-    // Update turn order UI
-    if (this.ui) {
-      this.ui.updateTurnOrder(this.battleState);
-      this.ui.showTurnIndicator(unitName, unitType);
-    }
-
-    // Camera handling - pan to EVERY active unit (queue handles timing)
-    if (position && this.camera && this.grid) {
-      const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
-
-      // Clear intent highlights at start of each turn
-      if (this.grid) this.grid.clearIntentHighlights();
-
-      // CRITICAL: Set follow target to current active unit BEFORE panning
-      // This prevents camera from drifting back to player after transition ends
-      if (activeUnit) {
-        this.camera.setFollowTarget(activeUnit);
-      }
-
-      // Pan to active unit and wait for animation to complete
-      console.log(`[Queue] Panning to ${unitName} at (${position.x}, ${position.y})`);
-      await new Promise(resolve => {
-        this.camera.startTurnTransition(worldPos.x, worldPos.y, resolve, 300);
-      });
-
-      if (isPlayerTurn) {
-        this.inEnemySequence = false;
-        this.lastTurnWasEnemy = false;
-
-        // Clear sticky target card from enemy turn
-        if (this.ui) {
-          this.ui.clearTargetSticky();
-          this.ui.hideTargetInfo();
-        }
-
-        // Enable player controls after camera pan
-        this.updateUI();
-      } else {
-        // Enemy turn
-        this.inEnemySequence = true;
-        this.lastTurnWasEnemy = true;
-
-        // Show thinking indicator for enemy
-        if (activeUnit) {
-          activeUnit.setThinking(true);
-        }
-
-        // Show enemy's parchment card during their turn
-        if (activeUnit && this.ui) {
-          this.ui.showTargetInfo(activeUnit);
-          this.ui.setTargetSticky(activeUnit);
-        }
-      }
-    }
-  }
-
-  /**
-   * Process intent_highlight event from queue
-   */
-  async processIntentHighlightEvent(event) {
-    const { unitId, highlightType, tiles, duration } = event;
-
-    // Hide thinking indicator when intent is shown
-    const unit = this.units.get(unitId);
-    if (unit) {
-      unit.setThinking(false);
-    }
-
-    // Show the highlight on the grid
-    if (this.grid && tiles && tiles.length > 0) {
-      this.grid.showIntentHighlight(highlightType, tiles, duration);
-    }
-
-    // Wait for the highlight duration before processing next event
-    // This ensures intent visualization is visible before the action happens
-    if (duration && duration > 0) {
-      await this.waitForAnimation(duration);
-    }
-  }
-
-  /**
-   * Process unit_moved event from queue
-   */
-  async processUnitMovedEvent(event) {
-    const { unitId, from, to } = event;
-    const unit = this.units.get(unitId);
-
-    if (unit) {
-      // Add movement to battle log
-      this.addBattleLogEntry(unit, 'move', null, { from, to });
-
-      // Start the movement animation
-      unit.moveTo(to.x, to.y);
-
-      // Wait for movement animation to complete (estimate based on distance)
-      const distance = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
-      const moveDuration = Math.max(300, distance * 150); // 150ms per tile, minimum 300ms
-      await this.waitForAnimation(moveDuration);
-    }
-  }
-
-  /**
-   * Process action_executed event from queue
-   */
-  async processActionExecutedEvent(event) {
-    const { actorId, actionType, result } = event;
-
-    // Clear thinking indicator when action is executed (especially important for 'wait')
-    const actor = this.units.get(actorId);
-    if (actor) {
-      actor.setThinking(false);
-    }
-
-    // Get target unit for logging
-    const target = result?.targetId ? this.units.get(result.targetId) : null;
-
-    // Add entry to battle log
-    this.addBattleLogEntry(actor, actionType, target, result);
-
-    // Play attack/skill animation
-    if (actionType === 'attack' || actionType === 'skill') {
-      // Play skill sound if this is a skill action
-      if (actionType === 'skill' && result.skillId) {
-        this.playSkillSound({ id: result.skillId }, actor);
-      }
-
-      // Find target and play damage animation
-      if (target) {
-        if (result.damage > 0) {
-          debugLog('battle.logDamageCalculations', 'Damage dealt:', {
-            attacker: actor?.name,
-            target: target.name,
-            damage: result.damage,
-            baseDamage: result.baseDamage,
-            isCritical: result.isCritical,
-            critBonus: result.critBonus,
-            damageType: result.damageType,
-            element: result.element
-          });
-          target.playHitAnimation();
-          // Play impact sound based on result
-          this.playImpactSound(result);
-          this.animations.addDamageNumber(target.screenX, target.screenY - 40, result.damage, result.isCritical);
-          this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
-          target.hp = Math.max(0, target.hp - result.damage);
-        } else if (result.missed) {
-          // Play miss sound
-          this.playImpactSound({ missed: true });
-          this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
-        }
-      }
-
-      // Play status effect sound if effect was applied
-      if (result.effectApplied || result.statusApplied) {
-        this.playStatusEffectSound(result.effectApplied || result.statusApplied);
-      }
-
-      // Wait for attack animation
-      await this.waitForAnimation(600);
+    if (this.wsManager) {
+      this.wsManager.queueTurnEvent(event);
     }
   }
 
@@ -1215,90 +649,6 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Handle "your turn" notification
-   * NOTE: This is redundant with turn_start for player turns.
-   * The queue system handles camera and UI via processTurnStartEvent.
-   * This handler only enables input - doesn't touch camera or call updateUI.
-   */
-  handleRemoteYourTurn(payload) {
-    const { unitId, availableActions } = payload;
-    console.log('[Battle WS] Your turn:', unitId, '(input enabled, queue handles camera)');
-
-    // Play turn start sound for player
-    this.playSound('turn_start');
-
-    // Store server-provided available actions for use in action methods
-    this.serverAvailableActions = availableActions || null;
-
-    // Enable player input (but don't set activeUnitId - queue handles that)
-    this.inputEnabled = true;
-    this.currentAction = null;
-    this.validTiles = [];
-
-    // NOTE: Don't call updateUI() - the queue's processTurnStartEvent handles that
-    // NOTE: Don't set activeUnitId - the queue's processTurnStartEvent handles that
-    // This prevents camera bounce when your_turn arrives before queue processes turn_start
-  }
-
-  /**
-   * Handle player disconnection notification
-   */
-  handleRemotePlayerDisconnected(payload) {
-    const { playerId, playerName } = payload;
-    console.log(`[Battle WS] Player disconnected: ${playerName}`);
-
-    // Show notification
-    parchmentToast.warning('Player Status', `${playerName} disconnected`);
-
-    // Mark player's units as disconnected (visual indicator)
-    for (const unit of this.units.values()) {
-      if (unit.ownerId === playerId) {
-        unit.setDisconnected(true);
-      }
-    }
-  }
-
-  /**
-   * Handle player reconnection notification
-   */
-  handleRemotePlayerReconnected(payload) {
-    const { playerId, playerName } = payload;
-    console.log(`[Battle WS] Player reconnected: ${playerName}`);
-
-    // Show notification
-    parchmentToast.success('Player Status', `${playerName} reconnected`);
-
-    // Clear disconnected state from player's units
-    for (const unit of this.units.values()) {
-      if (unit.ownerId === playerId) {
-        unit.setDisconnected(false);
-      }
-    }
-  }
-
-  /**
-   * Handle full state sync (for reconnection)
-   */
-  handleRemoteStateSync(payload) {
-    const { state, reason } = payload;
-    console.log(`[Battle WS] State sync: ${reason}`);
-
-    // Update battle state
-    this.battleState = state;
-
-    // Resync all units
-    this.syncUnitsWithState(state.units);
-
-    // Update UI
-    this.updateUI();
-
-    // Show reconnect notification if applicable
-    if (reason === 'reconnect') {
-      parchmentToast.success('Connection', 'Reconnected to battle');
-    }
-  }
-
-  /**
    * Handle click on a tile
    * @param {number} x - Tile X coordinate
    * @param {number} y - Tile Y coordinate
@@ -1364,7 +714,7 @@ export class BattleScene extends Scene {
       if (target) {
         this.ui.showConfirmation(`Attack ${target.name}?`);
       } else {
-        this.ui.showConfirmation(`Attack empty tile?`);
+        this.ui.showConfirmation('Attack empty tile?');
       }
     } else if (this.currentAction === 'skill' && isValidTile) {
       // Tile-based skill targeting
@@ -1506,7 +856,7 @@ export class BattleScene extends Scene {
    * @param {string} unitClass - The unit's class
    * @returns {string} Icon emoji
    */
-  getSkillIcon(skillId, unitClass) {
+  getSkillIcon(skillId, _unitClass) {
     const skillIcons = {
       // Warrior skills
       slash: '⚔️', power_strike: '💥', bash: '🛡️', cleave: '🔪', rend: '🩸',
@@ -1810,7 +1160,7 @@ export class BattleScene extends Scene {
    * Update damage preview based on current hover and action mode
    * Uses UI-based preview on the target parchment card
    */
-  updateDamagePreview(hoveredTile, screenPos) {
+  updateDamagePreview(hoveredTile, _screenPos) {
     const activeUnit = this.getActiveUnit();
     if (!activeUnit || activeUnit.type !== 'player') {
       this.ui.hideDamagePreview();
@@ -2330,6 +1680,13 @@ export class BattleScene extends Scene {
 
     // Check battle end - queue so it waits for death animations
     if (battleStatus !== 'active') {
+      console.log('[BattleScene] Queueing battle_end from HTTP response:', {
+        status: battleStatus,
+        hasRewards: !!actionResult.rewards,
+        queueLength: this.turnEventQueue.length,
+        isProcessing: this.isProcessingQueue,
+        battleEnded: this.battleEnded
+      });
       this.queueTurnEvent({
         type: 'battle_end',
         status: battleStatus,
@@ -2502,11 +1859,21 @@ export class BattleScene extends Scene {
    * Handle battle end (victory or defeat)
    */
   handleBattleEnd(status, rewards = null) {
+    console.log('[BattleScene] handleBattleEnd called:', { status, hasRewards: !!rewards, battleEnded: this.battleEnded });
+
     // Guard against double-trigger from both HTTP response and WebSocket
-    if (this.battleEnded) return;
+    if (this.battleEnded) {
+      console.log('[BattleScene] handleBattleEnd skipped - already ended');
+      return;
+    }
     this.battleEnded = true;
 
-    this.ui.hideActionMenu();
+    // Guard against UI being null (shouldn't happen, but prevent crash)
+    if (this.ui) {
+      this.ui.hideActionMenu();
+    } else {
+      console.warn('[BattleScene] UI was null when hiding action menu');
+    }
 
     // Play victory or defeat fanfare via MusicContext
     if (this.game.musicContext) {
@@ -2522,12 +1889,17 @@ export class BattleScene extends Scene {
     }
 
     // Use BattleOutroSequence for animated victory/defeat display
+    console.log('[BattleScene] Creating outro sequence for:', status);
     this.outroSequence = new BattleOutroSequence(this);
     this.outroSequence.start(status, rewards, {
       isPvP: this.isPvP,
       opponentName: this.opponentUsername,
-      onComplete: () => this.endBattle()
+      onComplete: () => {
+        console.log('[BattleScene] Outro sequence completed, calling endBattle');
+        this.endBattle();
+      }
     });
+    console.log('[BattleScene] Outro sequence started, phase:', this.outroSequence.phase);
   }
 
   /**

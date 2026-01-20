@@ -24,7 +24,7 @@ export class LeaderboardScene extends Scene {
     this.loading = false;
   }
 
-  async enter(data = {}) {
+  async enter(_data = {}) {
     try {
       this.addStyles();
       this.createUI();
@@ -865,7 +865,7 @@ export class LeaderboardScene extends Scene {
     return div.innerHTML;
   }
 
-  update(deltaTime) {
+  update(_deltaTime) {
     // No per-frame updates needed
   }
 
