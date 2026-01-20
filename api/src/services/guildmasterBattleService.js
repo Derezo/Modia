@@ -14,7 +14,7 @@ import { SKILL_TREES } from '../config/skillTrees.js';
 // createPlayerBattleUnit could be used for future multi-character guildmaster battles
 // import { createPlayerBattleUnit } from './battleUnitFactory.js';
 import * as bossService from './bossService.js';
-import { generateTerrainOnly } from '../../../shared/mapGeneration.js';
+import { generateTerrain } from '../../../shared/mapGeneration.js';
 
 const BASE_CLASSES = ['warrior', 'wizard', 'monk', 'chemist'];
 
@@ -54,9 +54,9 @@ export async function generateGuildmasterBattle(character, targetClass, _nodeId)
   // Combine enemies (guildmaster first, then disciples)
   const enemies = [guildmaster, ...disciples];
 
-  // Generate battle map
+  // Generate battle map - use 'guild' node type for advancement battles
   const mapSeed = Date.now() % 1000000;
-  const terrainData = generateTerrainOnly(mapSeed, 32, 32);
+  const terrainData = generateTerrain(mapSeed, 'guild', 32, 32);
 
   // Position units on map
   positionUnits([playerUnit], enemies, 32, 32);
