@@ -27,11 +27,272 @@
  * @module worldgen/internalConnections
  */
 
-import { CONNECTION_CONFIG, MIN_CONNECTIONS, MAX_CONNECTIONS } from './constants.js';
+import {
+  CONNECTION_CONFIG,
+  MIN_CONNECTIONS,
+  MAX_CONNECTIONS,
+  INTER_REGION_CONFIG,
+  REGION_INTERMEDIATE_CONFIG,
+  normalizeRegionName
+} from './constants.js';
 import { SeededRandom } from '../../config/constants.js';
 import { generateCastlePlacements } from './castlePlacement.js';
 import { createVoronoiRegions } from './voronoiPartitioning.js';
 import { generateAllRegionNodes } from './nodeGeneration.js';
+
+// ============================================================================
+// INTERMEDIATE NODE GENERATION HELPERS
+// ============================================================================
+
+/**
+ * Pick a terrain type based on weighted probabilities
+ *
+ * @param {Object} weights - Object mapping terrain types to weights (should sum to ~1.0)
+ * @param {SeededRandom} rng - Seeded random generator
+ * @returns {string} Selected terrain type
+ */
+function weightedPick(weights, rng) {
+  const roll = rng.next();
+  let cumulative = 0;
+
+  for (const [terrain, weight] of Object.entries(weights)) {
+    cumulative += weight;
+    if (roll < cumulative) {
+      return terrain;
+    }
+  }
+
+  // Fallback to first key if weights don't sum to 1.0
+  return Object.keys(weights)[0];
+}
+
+/**
+ * Pick a unique name from a pool, avoiding already-used names
+ *
+ * @param {Array<string>} namePool - Available names
+ * @param {Set<string>} usedNames - Names already used in this region
+ * @param {SeededRandom} rng - Seeded random generator
+ * @returns {string} Selected unique name
+ */
+function pickUniqueName(namePool, usedNames, rng) {
+  // Find available names
+  const available = namePool.filter(name => !usedNames.has(name));
+
+  if (available.length > 0) {
+    const name = rng.pick(available);
+    usedNames.add(name);
+    return name;
+  }
+
+  // If all names used, generate a numbered variant with safety bound
+  const baseName = rng.pick(namePool);
+  let suffix = 2;
+  let name = `${baseName} ${suffix}`;
+  const maxSuffix = 100; // Safety bound to prevent infinite loops
+  while (usedNames.has(name) && suffix < maxSuffix) {
+    suffix++;
+    name = `${baseName} ${suffix}`;
+  }
+  usedNames.add(name);
+  return name;
+}
+
+/**
+ * Create a region-appropriate intermediate node for gap infill
+ *
+ * @param {number} x - X coordinate
+ * @param {number} y - Y coordinate
+ * @param {Object} region - Region object with id and name
+ * @param {SeededRandom} rng - Seeded random generator
+ * @param {Set<string>} usedNames - Names already used (will be mutated)
+ * @returns {Object} New intermediate node
+ */
+export function createRegionIntermediateNode(x, y, region, rng, usedNames) {
+  const regionKey = normalizeRegionName(region.name);
+  const config = REGION_INTERMEDIATE_CONFIG[regionKey];
+
+  if (!config) {
+    // Fallback for unknown regions
+    console.warn(`  Warning: No intermediate config for region "${region.name}", using default`);
+    return {
+      x,
+      y,
+      nodeType: 'forest',
+      displayTerrain: 'forest',
+      regionId: region.id,
+      regionName: region.name,
+      ringDistance: null,
+      hopDistance: null,
+      isIntermediateNode: true,
+      excludeFromTotals: true,
+      name: `Waypoint at (${x.toFixed(1)}, ${y.toFixed(1)})`
+    };
+  }
+
+  // Pick terrain subtype based on weights
+  const displayTerrain = weightedPick(config.terrainWeights, rng);
+  const nodeType = config.terrainBaseTypes[displayTerrain];
+
+  // Pick unique name
+  const name = pickUniqueName(config.namePool, usedNames, rng);
+
+  return {
+    x,
+    y,
+    nodeType,
+    displayTerrain,
+    regionId: region.id,
+    regionName: region.name,
+    ringDistance: null,  // Will be calculated by BFS later
+    hopDistance: null,
+    isIntermediateNode: true,
+    excludeFromTotals: true,
+    name
+  };
+}
+
+/**
+ * Insert intermediate nodes along an edge that exceeds max spacing
+ *
+ * @param {Object} nodeA - Start node with x, y
+ * @param {Object} nodeB - End node with x, y
+ * @param {number} maxSpacing - Maximum allowed distance between nodes
+ * @param {SeededRandom} rng - Seeded random generator
+ * @param {Object} region - Region object with id and name
+ * @param {Set<string>} usedNames - Names already used (will be mutated)
+ * @param {Array<Object>} existingNodes - Current node array (for index calculation)
+ * @param {number} indexA - Index of nodeA in the combined array
+ * @param {number} indexB - Index of nodeB in the combined array
+ * @returns {Object} Result with nodes array and connections array
+ */
+export function insertIntermediatesForEdge(nodeA, nodeB, maxSpacing, rng, region, usedNames, existingNodes, indexA, indexB) {
+  const dx = nodeB.x - nodeA.x;
+  const dy = nodeB.y - nodeA.y;
+  const totalDistance = Math.hypot(dx, dy);
+
+  // Calculate how many segments we need (each segment <= maxSpacing)
+  // Use INTERMEDIATE_SPACING for target spacing (provides margin under max)
+  const targetSpacing = INTER_REGION_CONFIG.INTERMEDIATE_SPACING;
+  const segmentCount = Math.ceil(totalDistance / targetSpacing);
+
+  // We need segmentCount - 1 intermediate nodes
+  const intermediateCount = segmentCount - 1;
+
+  if (intermediateCount <= 0) {
+    // No intermediates needed - return direct connection
+    return {
+      nodes: [],
+      connections: [{ from: indexA, to: indexB, distance: totalDistance }]
+    };
+  }
+
+  const nodes = [];
+  const connections = [];
+
+  // Create intermediate nodes evenly spaced along the edge
+  let prevIndex = indexA;
+
+  for (let i = 1; i <= intermediateCount; i++) {
+    const t = i / segmentCount;  // Parameter along the line [0, 1]
+    const x = nodeA.x + dx * t;
+    const y = nodeA.y + dy * t;
+
+    const intermediateNode = createRegionIntermediateNode(x, y, region, rng, usedNames);
+    nodes.push(intermediateNode);
+
+    // Index of this new node will be existingNodes.length + nodes.length - 1
+    const newIndex = existingNodes.length + nodes.length - 1;
+
+    // Connect previous node to this intermediate
+    const prevNode = prevIndex === indexA ? nodeA : nodes[nodes.length - 2];
+    const distToPrev = Math.hypot(x - prevNode.x, y - prevNode.y);
+    connections.push({ from: prevIndex, to: newIndex, distance: distToPrev });
+
+    prevIndex = newIndex;
+  }
+
+  // Connect last intermediate to nodeB
+  const lastNode = nodes[nodes.length - 1];
+  const distToEnd = Math.hypot(nodeB.x - lastNode.x, nodeB.y - lastNode.y);
+  connections.push({ from: prevIndex, to: indexB, distance: distToEnd });
+
+  return { nodes, connections };
+}
+
+/**
+ * Process all connections and insert intermediate nodes where spacing exceeds max
+ * This is a post-processing step after all connections are established
+ *
+ * IMPORTANT: Caller MUST append returned intermediateNodes to the original nodes array
+ * immediately after this call for connection indices to be valid.
+ *
+ * @param {Array<Object>} nodes - Array of region nodes
+ * @param {Array<{from: number, to: number, distance?: number}>} connections - Connections to process
+ * @param {SeededRandom} rng - Seeded random generator
+ * @param {Object} region - Region object with id and name
+ * @returns {Object} Result with processedConnections and intermediateNodes arrays
+ */
+export function processConnectionsWithGapInfill(nodes, connections, rng, region) {
+  const MAX_SPACING = INTER_REGION_CONFIG.MAX_NODE_SPACING;
+  const intermediateNodes = [];
+  const usedNames = new Set();
+  const processedConnections = [];
+
+  for (const conn of connections) {
+    const nodeA = nodes[conn.from];
+    const nodeB = nodes[conn.to];
+    const dist = conn.distance !== undefined
+      ? conn.distance
+      : Math.hypot(nodeB.x - nodeA.x, nodeB.y - nodeA.y);
+
+    if (dist <= MAX_SPACING) {
+      // Connection is within limit, keep it as-is
+      processedConnections.push(conn);
+    } else {
+      // Need to insert intermediate nodes
+      const targetSpacing = INTER_REGION_CONFIG.INTERMEDIATE_SPACING;
+      const segmentCount = Math.ceil(dist / targetSpacing);
+      const intermediateCount = segmentCount - 1;
+
+      const dx = nodeB.x - nodeA.x;
+      const dy = nodeB.y - nodeA.y;
+
+      let prevIndex = conn.from;
+
+      for (let i = 1; i <= intermediateCount; i++) {
+        const t = i / segmentCount;  // Parameter along line [0, 1]
+        const x = nodeA.x + dx * t;
+        const y = nodeA.y + dy * t;
+
+        const intermediateNode = createRegionIntermediateNode(x, y, region, rng, usedNames);
+        intermediateNodes.push(intermediateNode);
+
+        // New node index = original nodes length + intermediates added so far - 1
+        const newIndex = nodes.length + intermediateNodes.length - 1;
+
+        // Get previous node for distance calculation
+        let prevNode;
+        if (prevIndex < nodes.length) {
+          prevNode = nodes[prevIndex];
+        } else {
+          prevNode = intermediateNodes[prevIndex - nodes.length];
+        }
+
+        const distToPrev = Math.hypot(x - prevNode.x, y - prevNode.y);
+        processedConnections.push({ from: prevIndex, to: newIndex, distance: distToPrev });
+
+        prevIndex = newIndex;
+      }
+
+      // Connect last intermediate to nodeB
+      const lastNode = intermediateNodes[intermediateNodes.length - 1];
+      const distToEnd = Math.hypot(nodeB.x - lastNode.x, nodeB.y - lastNode.y);
+      processedConnections.push({ from: prevIndex, to: conn.to, distance: distToEnd });
+    }
+  }
+
+  return { connections: processedConnections, intermediateNodes };
+}
 
 /**
  * Check if a node type is a settlement type
@@ -377,22 +638,30 @@ export function ensureMinimumConnections(nodes, connections, rng) {
 
 /**
  * Main function: generate all internal connections for a region
- * Orchestrates MST building, extra connections, and ring distance calculation
+ * Orchestrates MST building, extra connections, gap infill, and ring distance calculation
  *
- * @param {Array<Object>} regionNodes - Nodes in this region (from Phase 3)
+ * @param {Array<Object>} regionNodes - Nodes in this region (from Phase 3) - will be mutated with intermediate nodes
  * @param {SeededRandom} rng - Seeded random generator
- * @returns {Object} Result containing connections and updated nodes
+ * @returns {Object} Result containing connections and updated nodes (including intermediates)
  */
 export function generateRegionConnections(regionNodes, rng) {
   // Find the castle node index
   const castleIndex = regionNodes.findIndex(n => n.nodeType === 'castle');
   if (castleIndex === -1) {
     console.error('  ERROR: No castle found in region!');
-    return { connections: [], nodes: regionNodes };
+    return { connections: [], nodes: regionNodes, intermediateCount: 0 };
   }
 
-  const regionName = regionNodes[0]?.regionName || 'Unknown';
-  console.log(`  Processing connections for ${regionName} (${regionNodes.length} nodes)...`);
+  // Extract region info from castle node
+  const castle = regionNodes[castleIndex];
+  const region = {
+    id: castle.regionId,
+    name: castle.regionName
+  };
+
+  const regionName = region.name || 'Unknown';
+  const originalNodeCount = regionNodes.length;
+  console.log(`  Processing connections for ${regionName} (${originalNodeCount} nodes)...`);
 
   // Step 1: Build MST from castle
   const mstConnections = buildRegionMST(regionNodes, castleIndex);
@@ -409,7 +678,19 @@ export function generateRegionConnections(regionNodes, rng) {
   allConnections = ensureMinimumConnections(regionNodes, allConnections, rng);
   console.log(`    After minimums: ${allConnections.length} connections`);
 
-  // Step 5: Calculate ring distances using BFS from castle
+  // Step 5: Process connections with gap infill - insert intermediate nodes where needed
+  const gapInfillResult = processConnectionsWithGapInfill(regionNodes, allConnections, rng, region);
+  allConnections = gapInfillResult.connections;
+
+  // Step 6: Merge intermediate nodes into region nodes array
+  const intermediateCount = gapInfillResult.intermediateNodes.length;
+  if (intermediateCount > 0) {
+    // Push intermediate nodes onto the regionNodes array (mutating it)
+    regionNodes.push(...gapInfillResult.intermediateNodes);
+    console.log(`    Gap infill: Added ${intermediateCount} intermediate nodes (${originalNodeCount} -> ${regionNodes.length})`);
+  }
+
+  // Step 7: Calculate ring distances using BFS from castle (includes intermediates)
   calculateRingDistances(regionNodes, allConnections, castleIndex);
 
   // Count ring distribution
@@ -418,10 +699,12 @@ export function generateRegionConnections(regionNodes, rng) {
     ringCounts[node.ringDistance] = (ringCounts[node.ringDistance] || 0) + 1;
   }
   console.log(`    Ring distribution: R0=${ringCounts[0]}, R1=${ringCounts[1]}, R2=${ringCounts[2]}, R3=${ringCounts[3]}`);
+  console.log(`    Final connections: ${allConnections.length}`);
 
   return {
     connections: allConnections,
-    nodes: regionNodes
+    nodes: regionNodes,
+    intermediateCount
   };
 }
 
@@ -434,7 +717,7 @@ export function generateRegionConnections(regionNodes, rng) {
  * @returns {Object} Connection data organized by region
  *   - allConnections: Array of all connections with region info
  *   - connectionsByRegion: Map of regionId -> connections array
- *   - nodesByRegion: Updated nodesByRegion with ring distances
+ *   - nodesByRegion: Updated nodesByRegion with ring distances and intermediate nodes
  */
 export function generateAllRegionConnections(nodeData, rng) {
   console.log('\n========================================');
@@ -446,6 +729,7 @@ export function generateAllRegionConnections(nodeData, rng) {
   const { nodesByRegion } = nodeData;
 
   let totalConnections = 0;
+  let totalIntermediates = 0;
 
   for (const [regionId, regionNodes] of nodesByRegion) {
     // Generate connections for this region
@@ -460,26 +744,33 @@ export function generateAllRegionConnections(nodeData, rng) {
     connectionsByRegion.set(regionId, connectionsWithRegion);
     allConnections.push(...connectionsWithRegion);
     totalConnections += result.connections.length;
+    totalIntermediates += result.intermediateCount || 0;
   }
 
-  console.log(`\nPhase 4 Complete: Generated ${totalConnections} total connections across ${nodesByRegion.size} regions`);
+  console.log('\nPhase 4 Complete:');
+  console.log(`  Generated ${totalConnections} total connections across ${nodesByRegion.size} regions`);
+  console.log(`  Added ${totalIntermediates} intermediate nodes for gap infill`);
 
   // Summary statistics
   let totalRing0 = 0, totalRing1 = 0, totalRing2 = 0, totalRing3 = 0;
+  let totalNodes = 0;
   for (const [_regionId, nodes] of nodesByRegion) {
     for (const node of nodes) {
+      totalNodes++;
       if (node.ringDistance === 0) totalRing0++;
       else if (node.ringDistance === 1) totalRing1++;
       else if (node.ringDistance === 2) totalRing2++;
       else totalRing3++;
     }
   }
-  console.log(`Global ring distribution: R0=${totalRing0}, R1=${totalRing1}, R2=${totalRing2}, R3=${totalRing3}`);
+  console.log(`  Total nodes: ${totalNodes}`);
+  console.log(`  Ring distribution: R0=${totalRing0}, R1=${totalRing1}, R2=${totalRing2}, R3=${totalRing3}`);
 
   return {
     allConnections,
     connectionsByRegion,
-    nodesByRegion
+    nodesByRegion,
+    totalIntermediates
   };
 }
 
@@ -614,6 +905,34 @@ export function validateRegionConnections(seed = 12345) {
       }
     }
   }
+
+  // Check 8: Max spacing constraint (all connections <= 13.3 units)
+  const MAX_SPACING = INTER_REGION_CONFIG.MAX_NODE_SPACING;
+  let spacingViolations = 0;
+  for (const [regionId, connections] of connectionData.connectionsByRegion) {
+    const nodes = nodeData.nodesByRegion.get(regionId);
+    for (const conn of connections) {
+      const nodeA = nodes[conn.from];
+      const nodeB = nodes[conn.to];
+      const dist = conn.distance !== undefined
+        ? conn.distance
+        : Math.hypot(nodeB.x - nodeA.x, nodeB.y - nodeA.y);
+
+      if (dist > MAX_SPACING) {
+        spacingViolations++;
+        if (spacingViolations <= 5) {
+          issues.push(`Region ${regionId}: Connection exceeds max spacing: ${dist.toFixed(1)} > ${MAX_SPACING} units`);
+        }
+      }
+    }
+  }
+  if (spacingViolations > 5) {
+    issues.push(`... and ${spacingViolations - 5} more spacing violations`);
+  }
+
+  // Check 9: Intermediate nodes count
+  const intermediateCount = connectionData.totalIntermediates || 0;
+  console.log(`    Intermediate nodes added: ${intermediateCount}`);
 
   const passed = issues.length === 0;
 

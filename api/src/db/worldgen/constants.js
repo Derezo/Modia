@@ -83,18 +83,18 @@ export const NODE_NAME_SUFFIXES = {
 // Trade Route Node Names - mix of commerce, journey, and destination themes
 export const TRADE_ROUTE_NAMES = {
   commerce: [
-    "Merchant's Rest", "Trader's Crossing", 'Caravan Camp', "Peddler's Way",
-    'Bargain Bend', "Haggler's Haven", "Coin Counter's Rest", 'Market Waypoint',
-    'Spice Road Station', 'Silk Route Camp', 'Gold Dust Stop', "Barter's End"
+    'Merchant\'s Rest', 'Trader\'s Crossing', 'Caravan Camp', 'Peddler\'s Way',
+    'Bargain Bend', 'Haggler\'s Haven', 'Coin Counter\'s Rest', 'Market Waypoint',
+    'Spice Road Station', 'Silk Route Camp', 'Gold Dust Stop', 'Barter\'s End'
   ],
   journey: [
-    "Wayfarer's Glen", "Traveler's Rest", "Pilgrim's Path", "Wanderer's Watch",
-    "Road's End Camp", 'Mile Marker Hollow', "Journey's Pause", 'Passage Point',
-    "Sojourner's Shade", "Drifter's Dell", "Nomad's Nook", "Rambler's Refuge"
+    'Wayfarer\'s Glen', 'Traveler\'s Rest', 'Pilgrim\'s Path', 'Wanderer\'s Watch',
+    'Road\'s End Camp', 'Mile Marker Hollow', 'Journey\'s Pause', 'Passage Point',
+    'Sojourner\'s Shade', 'Drifter\'s Dell', 'Nomad\'s Nook', 'Rambler\'s Refuge'
   ],
   destination: [
     'Midway Station', 'Border Market', 'Crossroads Camp', 'Halfway House',
-    'Twin Realms Rest', "Realm's Edge Trading Post", 'Frontier Exchange',
+    'Twin Realms Rest', 'Realm\'s Edge Trading Post', 'Frontier Exchange',
     'Junction Dell', 'Borderland Bazaar', 'Treaty Grounds', 'Alliance Market'
   ]
 };
@@ -102,17 +102,17 @@ export const TRADE_ROUTE_NAMES = {
 // Wilderness Zone Node Names - dangerous/wild themes
 export const WILDERNESS_ZONE_NAMES = {
   dangerous: [
-    "Bandit's Hollow", 'Outlaw Pass', 'Lawless Woods', "Rogue's Den",
-    'Cutthroat Canyon', "Brigand's Bluff", "Marauder's Mark", "Smuggler's Run",
-    "Raider's Rest", "Highwayman's Haunt", "Thief's Thicket", "Pillager's Path"
+    'Bandit\'s Hollow', 'Outlaw Pass', 'Lawless Woods', 'Rogue\'s Den',
+    'Cutthroat Canyon', 'Brigand\'s Bluff', 'Marauder\'s Mark', 'Smuggler\'s Run',
+    'Raider\'s Rest', 'Highwayman\'s Haunt', 'Thief\'s Thicket', 'Pillager\'s Path'
   ],
   wild: [
     'Untamed Wilds', 'Savage Reach', 'Feral Depths', 'Primal Grove',
-    "Beast's Domain", "Hunter's Peril", "Predator's Trail", 'Wild Frontier',
-    'Fang & Claw Pass', 'Howling Wastes', "Stalker's Territory", 'Apex Hunting Grounds'
+    'Beast\'s Domain', 'Hunter\'s Peril', 'Predator\'s Trail', 'Wild Frontier',
+    'Fang & Claw Pass', 'Howling Wastes', 'Stalker\'s Territory', 'Apex Hunting Grounds'
   ],
   ominous: [
-    "No Man's Land", 'Forgotten Frontier', 'Border Badlands', 'Contested Ground',
+    'No Man\'s Land', 'Forgotten Frontier', 'Border Badlands', 'Contested Ground',
     'Disputed Territory', 'Unclaimed Wastes', 'The Disputed Reach', 'Forsaken Border',
     'Twilight Zone', 'Shadowlands Edge', 'The Blighted Pass', 'War-Torn Crossing'
   ]
@@ -363,3 +363,102 @@ export const GAP_INFILL_CONFIG = {
     settlement: 0.30                       // 30% village/farm
   }
 };
+
+// ============================================================================
+// PHASE 4 INTERMEDIATE NODE CONFIGURATION
+// ============================================================================
+
+/**
+ * Region-specific configuration for intermediate nodes created during Phase 4
+ * gap infill. Each region has themed terrain subtypes and unique naming pools.
+ *
+ * Terrain subtypes map to base types for battle terrain generation but
+ * provide visual/thematic variety in the world map.
+ */
+export const REGION_INTERMEDIATE_CONFIG = {
+  heartlands: {
+    // Civilized Frontier - Human territory
+    terrainWeights: { meadow: 0.4, woodland: 0.35, roadside: 0.25 },
+    terrainBaseTypes: { meadow: 'forest', woodland: 'forest', roadside: 'forest' },
+    namePool: [
+      'Wayfarer\'s Rest', 'Traveler\'s Hollow', 'Shepherd\'s Watch',
+      'Border Station', 'Ranger\'s Post', 'Crossroads Camp',
+      'Miller\'s Path', 'Harvest Road', 'Homestead Trail',
+      'King\'s Mile', 'Merchant\'s Waypoint', 'Farmstead Junction',
+      'Fieldstone Pass', 'Haymaker\'s Ridge', 'Cobblestone Crossing',
+      'Pilgrim\'s Way', 'Wheelwright\'s Rest', 'Innkeeper\'s Mile',
+      'Cooper\'s Trail', 'Baker\'s Path', 'Farrier\'s Rest'
+    ]
+  },
+
+  sylvan_reaches: {
+    // Ancient Woodland - Elf territory
+    terrainWeights: { grove: 0.35, glade: 0.35, thicket: 0.30 },
+    terrainBaseTypes: { grove: 'forest', glade: 'forest', thicket: 'forest' },
+    namePool: [
+      'Starlight Glade', 'Moonlit Path', 'Ancient Grove',
+      'Whisperwood Trail', 'Silverleaf Crossing', 'Fey\'s Passage',
+      'Elder\'s Rest', 'Duskwood Hollow', 'Dewdrop Dell',
+      'Sunbeam Clearing', 'Thornveil Path', 'Mistwood Junction',
+      'Willowshade Rest', 'Evergreen Crossing', 'Oakenshield Pass',
+      'Verdant Way', 'Treesong Path', 'Branchweave Trail',
+      'Rootholm Rest', 'Leafshadow Dell', 'Mossglen Hollow'
+    ]
+  },
+
+  iron_depths: {
+    // Underground Network - Dwarf territory
+    terrainWeights: { tunnel: 0.40, mineshaft: 0.35, cavern: 0.25 },
+    terrainBaseTypes: { tunnel: 'cave', mineshaft: 'cave', cavern: 'cave' },
+    namePool: [
+      'Deep Tunnel Junction', 'Mine Outpost', 'Stone Passage',
+      'Forge Road', 'Anvil Rest', 'Hammer\'s Echo',
+      'Gemstone Corridor', 'Iron Vein Crossing', 'Mithril Path',
+      'Echoing Hall', 'Lantern Post', 'Ore Cart Station',
+      'Pickaxe Pass', 'Smelter\'s Way', 'Bellows Rest',
+      'Ingot Trail', 'Crucible Crossing', 'Grindstone Junction',
+      'Coal Seam Path', 'Lodestone Rest', 'Veinstone Hollow'
+    ]
+  },
+
+  shadowmere: {
+    // Dark Passages - Vampire territory
+    terrainWeights: { crypt: 0.35, shadow_grove: 0.35, mist_hollow: 0.30 },
+    terrainBaseTypes: { crypt: 'cave', shadow_grove: 'forest', mist_hollow: 'cave' },
+    namePool: [
+      'Shadow Crossing', 'Twilight Refuge', 'Night\'s Passage',
+      'Bloodmist Hollow', 'Dread Path', 'Whispering Dark',
+      'Crypt Entrance', 'Pale Moon Rest', 'Nightshade Trail',
+      'Gloom Junction', 'Shroud\'s Edge', 'Phantom\'s Way',
+      'Veil\'s End Rest', 'Darksong Path', 'Wraithgate Crossing',
+      'Sorrow\'s Trail', 'Murkwater Pass', 'Tombstone Junction',
+      'Raven\'s Roost', 'Shade\'s Rest', 'Spectral Hollow'
+    ]
+  },
+
+  bloodplains: {
+    // Harsh Highlands - Orc territory
+    terrainWeights: { crag: 0.40, plateau: 0.35, badlands: 0.25 },
+    terrainBaseTypes: { crag: 'mountain', plateau: 'mountain', badlands: 'mountain' },
+    namePool: [
+      'War Camp Ruins', 'Stone Guard Post', 'Peak Watchers',
+      'Bloodrock Pass', 'Skull Ridge', 'Warlord\'s Trail',
+      'Iron Crag Rest', 'Battle Scar Hollow', 'Raider\'s Mark',
+      'Bonfire Site', 'Trophy Road', 'Challenger\'s Path',
+      'Axe-Cleave Pass', 'Warhorn Rest', 'Battlecry Junction',
+      'Scarred Path', 'Ironhide Trail', 'Bloodspear Crossing',
+      'Warbanner Rest', 'Shieldwall Pass', 'Conquest Road'
+    ]
+  }
+};
+
+/**
+ * Helper: Normalize region name to config key
+ * Converts "Sylvan Reaches" -> "sylvan_reaches", "Iron Depths" -> "iron_depths"
+ *
+ * @param {string} regionName - Display name of the region
+ * @returns {string} Config key for REGION_INTERMEDIATE_CONFIG
+ */
+export function normalizeRegionName(regionName) {
+  return regionName.toLowerCase().replace(/\s+/g, '_');
+}
