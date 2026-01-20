@@ -10,6 +10,7 @@ This document archives all completed features, resolved issues, and historical d
 
 | Version | Date | Major Accomplishments |
 |---------|------|----------------------|
+| 9.5 | Jan 2026 | Legacy Map Generation Removal - Removed all backward-compatibility code, archetype system is now the only code path |
 | 9.4 | Jan 2026 | Battle Map Generation Overhaul - 8-phase modular system with archetypes, PRNG streams, constraint validation, tactical cover |
 | 9.3 | Jan 2026 | Codebase Cleanup - Database fixes, constant deduplication, dead code removal, documentation updates |
 | 9.2 | Jan 2026 | Daily/Weekly Quest System - Auto-assignment, progress hooks, streaks, bonuses, QuestBoardScene |
@@ -43,6 +44,44 @@ This document archives all completed features, resolved issues, and historical d
 | 8.6 | Jan 2026 | Activity Nodes - Fishing, ruins puzzles, caravan merchants, watchtowers |
 | 8.7 | Jan 2026 | Security Hardening - Trust proxy, per-user rate limiting, VPS deployment scripts |
 | 8.8 | Jan 2026 | FFT-Style Formula Overhaul - CT turn system, defense diminishing returns, LCK scaling |
+
+---
+
+## 9.5 - Legacy Map Generation Removal (Jan 2026)
+
+Removed all backward-compatibility code from the map generation system since there has never been a release. The archetype-based system is now the only code path.
+
+### Removed Functions
+
+- `generateTerrainLegacy()` - Old terrain generation
+- `generateWithPipeline()` - Old pipeline wrapper
+- `generateObstacleForTerrainLegacy()` - Old obstacle placement
+- `generateObstacleForTile()` - Per-tile obstacle selection
+- `generateObstacles()` - Old obstacle batch placement
+- `getRandomDecorativeObstacle()` - Random decoration selection
+
+### Removed Constants
+
+- `OBSTACLE_MAP` - Terrain-to-obstacle mapping
+- `DECORATIVE_OBSTACLES` - Decorative obstacle list
+
+### Removed Flags
+
+- `useArchetypes` - Feature flag for new system
+- `useNewPipeline` - Feature flag for pipeline mode
+
+### Changes
+
+- `generateTerrain()` now directly calls `generateWithArchetypes()`
+- Unknown node types fall back to 'openField' archetype
+- Removed unused imports (`getTerrainWeights`, `getObstacleRulesForTerrain`)
+- Updated module documentation header
+
+### Impact
+
+- File reduced from 989 to 693 lines (~296 lines removed)
+- All 265 tests continue to pass
+- No changes to public API (same function signatures)
 
 ---
 
@@ -94,10 +133,9 @@ shared/mapgen/
 
 ### Integration
 
-- New `useArchetypes: true` option in `generateTerrain()` for opt-in
 - `generateWithArchetypes()` function integrating all 8 phases
-- Backward-compatible with existing `useNewPipeline` mode
 - 265 tests pass (all existing + 4 new test suites)
+- *Note: Legacy code and flags removed in v9.5*
 
 ### Key Features
 
