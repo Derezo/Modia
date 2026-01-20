@@ -651,8 +651,18 @@ stat_scaling:
 ```sql
 CREATE TYPE race_type AS ENUM ('elf', 'dwarf', 'vampire', 'human', 'orc');
 CREATE TYPE class_type AS ENUM ('warrior', 'wizard', 'monk', 'chemist');
-CREATE TYPE node_type AS ENUM ('castle', 'city', 'village', 'forest',
-                               'cave', 'mountain', 'bridge', 'guild', 'palace');
+CREATE TYPE node_type AS ENUM (
+  -- Core settlement types
+  'castle', 'city', 'village', 'keep', 'farm', 'guild',
+  -- Battle terrain types
+  'forest', 'cave', 'mountain',
+  -- Activity/neutral types
+  'fishing_spot', 'merchant_caravan', 'ruins', 'watchtower',
+  -- Inter-region types
+  'bridge', 'palace',
+  -- Terminator types (Ring 3+ dead-ends)
+  'chest', 'shrine', 'discovery'
+);
 CREATE TYPE item_type AS ENUM ('weapon', 'armor', 'accessory',
                                'consumable', 'material', 'key_item');
 CREATE TYPE equipment_slot AS ENUM ('main_hand', 'off_hand', 'head',
@@ -922,41 +932,71 @@ class Game {
 
 ### 5.1 World Generation Algorithm
 
+The world uses a 6-phase 5-region generation system. Each region has a unique race-themed castle and is partitioned using Voronoi tessellation.
+
+**Coordinate System:** 1 unit = 30 pixels. World bounds: [-50, 50] in both X and Y axes.
+
 ```
 Input: seed (integer)
 
-1. Initialize SeededRandom(seed)
+Phase 1: Castle Placement
+  - Initialize SeededRandom(seed)
+  - Place 5 castles using force-directed simulation + Lloyd's relaxation
+  - Minimum distance between castles: 25 units
+  - Each castle assigned a race (orc, elf, human, dwarf, vampire)
 
-2. Create Castle at (0, 0)
-   - Assign all 9 features
+Phase 2: Voronoi Partitioning
+  - Generate Voronoi diagram from castle positions
+  - Each region bounded by Voronoi edges
+  - Identify border segments between adjacent regions
+  - Find Grand Palace position (farthest Voronoi vertex from all castles)
 
-3. For ring = 1 to 5:
-   - Calculate node count (3 + ring * 2)
-   - For each node:
-     a. Calculate angle (evenly distributed + variance)
-     b. Calculate distance (ring * 3 + variance)
-     c. Convert polar to cartesian (x, y)
-     d. Select node type based on ring probabilities
-     e. Assign features based on type
-     f. Add to nodes list
+Phase 3: Internal Node Generation (per region)
+  - ~60-80 nodes per region using Poisson disk sampling
+  - Ring assignment via graph-based BFS from castle (not Euclidean distance)
+    - Ring 0: Castle only
+    - Ring 1: Cities, primary guild (1-2 hops)
+    - Ring 2: Villages, farms, secondary guilds, keep (3-5 hops)
+    - Ring 3+: Battle nodes, activity nodes, terminators (6+ hops)
+  - Node type distribution:
+    - Settlements: castle, 2-3 cities, 6-10 villages, 1 keep, 2-4 farms
+    - Guilds: 3 per region (1 primary matching castle race, 2 secondary)
+    - Battle: 40-50% (forest, cave, mountain)
+    - Activity: 20-30% (fishing_spot, ruins, merchant_caravan)
+    - Watchtower: max 1 per region (Ring 3+, 30% spawn chance)
 
-4. Place Guild nodes (4 total, one per class)
-   - Distance: 5-8 from center
-   - Evenly distributed angles
+Phase 4: Internal Connections
+  - Minimum Spanning Tree for base connectivity
+  - 20% extra connections beyond MST (max distance: 12 units)
+  - Ring distance recalculated via BFS from castle
 
-5. Place Palace node (exactly 1)
-   - Distance: minimum 13 from center
-   - Random angle
+Phase 5: Inter-Region Connections
+  - Border classification by edge length:
+    - Short (<10 units): Bridge only
+    - Medium (10-20 units): Bridge + wilderness zone (2-4 nodes)
+    - Long (20+ units): Bridge + wilderness + trade route (3-5 nodes)
+  - Bridge nodes: chokepoints between regions (exactly 2 connections)
+  - Wilderness zones: higher difficulty border conflicts (thematic names)
+  - Trade routes: safe paths connecting cities (commerce-themed names)
+  - Grand Palace: endgame destination (tier 5 difficulty)
+  - Gap infill: intermediate nodes inserted when connections exceed 13.3 units (400px)
 
-6. Connect nodes:
-   - For each node:
-     a. Find 2-4 nearest neighbors
-     b. Create bidirectional edges
-   - Ensure graph connectivity (BFS check)
-   - Add edges if isolated components found
+Phase 6: Validation & Cleanup
+  - Calculate difficulty tiers (1-5) based on ring distance
+  - Assign terminators to Ring 3+ dead-ends (~6% of nodes):
+    - 30% chest (one-time loot)
+    - 30% shrine (temporary buffs)
+    - 40% discovery (lore rewards)
+  - Verify full connectivity (BFS from any castle)
+  - Validate max spacing constraint (all connections ≤ 13.3 units / 400px)
 
-7. Return nodes[] and connections[]
+Output: nodes[], connections[], regions[], palace
 ```
+
+**Inter-Region Node Naming:**
+- Trade routes: "Merchant's Rest", "Trader's Crossing", "Wayfarer's Glen"
+- Wilderness zones: "Bandit's Hollow", "Outlaw Pass", "No Man's Land"
+- Bridges: Region-pair specific names ("Border Crossing", "War's End Bridge")
 
 ### 5.2 Seeded Random Number Generator
 

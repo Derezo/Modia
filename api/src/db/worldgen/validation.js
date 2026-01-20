@@ -12,7 +12,7 @@
  * - validatePhase6: Test function to run full validation with sample data
  */
 
-import { PHASE6_CONFIG } from './constants.js';
+import { PHASE6_CONFIG, INTER_REGION_CONFIG } from './constants.js';
 import { SeededRandom } from '../../config/constants.js';
 import { generateCastlePlacements } from './castlePlacement.js';
 import { createVoronoiRegions } from './voronoiPartitioning.js';
@@ -222,6 +222,73 @@ export function verifyConnectivity(allNodes, allConnections) {
 }
 
 /**
+ * Validate that all connections respect the maximum spacing constraint.
+ * Returns an array of violations with details about which connections are too long.
+ *
+ * @param {Array<Object>} allNodes - All nodes in the world
+ * @param {Array<Object>} allConnections - All connections
+ * @param {number} maxSpacing - Maximum allowed distance (defaults to INTER_REGION_CONFIG.MAX_NODE_SPACING)
+ * @returns {Object} Validation results with violations array and pass status
+ */
+export function validateMaxSpacing(allNodes, allConnections, maxSpacing = INTER_REGION_CONFIG.MAX_NODE_SPACING) {
+  console.log('\n  Validating max spacing constraint...');
+
+  const violations = [];
+
+  for (const conn of allConnections) {
+    // Resolve node references - handle both index-based and object-based connections
+    let fromNode, toNode;
+
+    if (typeof conn.from === 'number') {
+      fromNode = allNodes[conn.from];
+    } else {
+      fromNode = conn.from;
+    }
+
+    if (typeof conn.to === 'number') {
+      toNode = allNodes[conn.to];
+    } else if (conn.to.node) {
+      toNode = conn.to.node;
+    } else {
+      toNode = conn.to;
+    }
+
+    if (!fromNode || !toNode) {
+      continue; // Skip invalid connections
+    }
+
+    const distance = Math.hypot(toNode.x - fromNode.x, toNode.y - fromNode.y);
+
+    if (distance > maxSpacing) {
+      violations.push({
+        from: fromNode.name || `Node at (${fromNode.x?.toFixed(1)}, ${fromNode.y?.toFixed(1)})`,
+        to: toNode.name || `Node at (${toNode.x?.toFixed(1)}, ${toNode.y?.toFixed(1)})`,
+        distance: distance,
+        maxAllowed: maxSpacing,
+        connectionType: conn.connectionType || 'unknown'
+      });
+    }
+  }
+
+  const passed = violations.length === 0;
+
+  if (passed) {
+    console.log(`    All ${allConnections.length} connections respect max spacing of ${maxSpacing} units`);
+  } else {
+    console.log(`    WARNING: ${violations.length} connections exceed max spacing of ${maxSpacing} units`);
+    // Show first 5 violations
+    for (const v of violations.slice(0, 5)) {
+      console.log(`      - ${v.from} -> ${v.to}: ${v.distance.toFixed(1)} units (${v.connectionType})`);
+    }
+    if (violations.length > 5) {
+      console.log(`      ... and ${violations.length - 5} more violations`);
+    }
+  }
+
+  return { passed, violations, totalConnections: allConnections.length };
+}
+
+/**
  * Validate and finalize all world data
  * Phase 6 orchestration function
  *
@@ -270,17 +337,22 @@ export function validateAndCleanup(allNodes, regionConnections, interRegionConne
     }
   }
 
+  // Step 4: Validate max spacing constraint
+  const spacingResult = validateMaxSpacing(allNodes, allConnections);
+
   // Summary
   console.log('\n  Phase 6 Complete:');
   console.log(`    Total nodes: ${allNodes.length}`);
   console.log(`    Terminators: ${terminatorStats.chest + terminatorStats.shrine + terminatorStats.discovery}`);
   console.log(`    Connectivity: ${connectivityResult.allReachable ? 'PASS' : 'FAIL'}`);
+  console.log(`    Max spacing: ${spacingResult.passed ? 'PASS' : 'FAIL'} (${spacingResult.violations.length} violations)`);
 
   return {
     allNodes,
     allConnections,
     connectivityResult,
-    terminatorStats
+    terminatorStats,
+    spacingResult
   };
 }
 
@@ -348,6 +420,11 @@ export function validatePhase6(seed = 12345) {
   // Check 3: Connectivity
   if (!phase6Result.connectivityResult.allReachable) {
     issues.push(`${phase6Result.connectivityResult.orphanedNodes.length} nodes not reachable from castle`);
+  }
+
+  // Check 4: Max spacing constraint
+  if (phase6Result.spacingResult && !phase6Result.spacingResult.passed) {
+    issues.push(`${phase6Result.spacingResult.violations.length} connections exceed max spacing of ${INTER_REGION_CONFIG.MAX_NODE_SPACING} units`);
   }
 
   const passed = issues.length === 0;

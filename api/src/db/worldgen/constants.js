@@ -80,6 +80,44 @@ export const NODE_NAME_SUFFIXES = {
   discovery: ['Ruins', 'Monument', 'Archive', 'Relic', 'Artifact', 'Mystery']
 };
 
+// Trade Route Node Names - mix of commerce, journey, and destination themes
+export const TRADE_ROUTE_NAMES = {
+  commerce: [
+    "Merchant's Rest", "Trader's Crossing", 'Caravan Camp', "Peddler's Way",
+    'Bargain Bend', "Haggler's Haven", "Coin Counter's Rest", 'Market Waypoint',
+    'Spice Road Station', 'Silk Route Camp', 'Gold Dust Stop', "Barter's End"
+  ],
+  journey: [
+    "Wayfarer's Glen", "Traveler's Rest", "Pilgrim's Path", "Wanderer's Watch",
+    "Road's End Camp", 'Mile Marker Hollow', "Journey's Pause", 'Passage Point',
+    "Sojourner's Shade", "Drifter's Dell", "Nomad's Nook", "Rambler's Refuge"
+  ],
+  destination: [
+    'Midway Station', 'Border Market', 'Crossroads Camp', 'Halfway House',
+    'Twin Realms Rest', "Realm's Edge Trading Post", 'Frontier Exchange',
+    'Junction Dell', 'Borderland Bazaar', 'Treaty Grounds', 'Alliance Market'
+  ]
+};
+
+// Wilderness Zone Node Names - dangerous/wild themes
+export const WILDERNESS_ZONE_NAMES = {
+  dangerous: [
+    "Bandit's Hollow", 'Outlaw Pass', 'Lawless Woods', "Rogue's Den",
+    'Cutthroat Canyon', "Brigand's Bluff", "Marauder's Mark", "Smuggler's Run",
+    "Raider's Rest", "Highwayman's Haunt", "Thief's Thicket", "Pillager's Path"
+  ],
+  wild: [
+    'Untamed Wilds', 'Savage Reach', 'Feral Depths', 'Primal Grove',
+    "Beast's Domain", "Hunter's Peril", "Predator's Trail", 'Wild Frontier',
+    'Fang & Claw Pass', 'Howling Wastes', "Stalker's Territory", 'Apex Hunting Grounds'
+  ],
+  ominous: [
+    "No Man's Land", 'Forgotten Frontier', 'Border Badlands', 'Contested Ground',
+    'Disputed Territory', 'Unclaimed Wastes', 'The Disputed Reach', 'Forsaken Border',
+    'Twilight Zone', 'Shadowlands Edge', 'The Blighted Pass', 'War-Torn Crossing'
+  ]
+};
+
 export const PALACE_FEATURES = ['throne_room', 'treasury', 'royal_guard'];
 
 // ============================================================================
@@ -166,6 +204,14 @@ export const INTER_REGION_CONFIG = {
 
   // Node connection settings
   MAX_FRONTIER_SEARCH_DIST: 15,        // Max distance to search for frontier nodes
+
+  // Maximum distance between ANY connected nodes (400px = 13.3 units)
+  // 1 unit = 30 pixels in world coordinate system
+  MAX_NODE_SPACING: 13.3,
+
+  // When creating intermediate nodes, target this spacing
+  // ~300px provides safe margin under the 400px max
+  INTERMEDIATE_SPACING: 10,
 };
 
 // Thematic bridge names based on region pairs
