@@ -372,7 +372,7 @@ async function generateWorld(seed) {
   });
 
   // Summary
-  console.log(`\nWorld Generation Complete:`);
+  console.log('\nWorld Generation Complete:');
   console.log(`  Total nodes: ${nodes.length}`);
   console.log(`  Total connections: ${connections.length}`);
   console.log(`  Regions: ${regions.length}`);
@@ -419,8 +419,8 @@ async function seedItems() {
 async function seedEnemies() {
   for (const enemy of ENEMY_TEMPLATES) {
     await pool.query(
-      `INSERT INTO enemy_templates (name, sprite_id, base_hp, base_mp, base_strength, base_intelligence, base_agility, spawn_node_types, ai_type, abilities, drop_table, experience_reward, gold_reward_min, gold_reward_max, min_difficulty_tier)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      `INSERT INTO enemy_templates (name, sprite_id, base_hp, base_mp, base_strength, base_intelligence, base_agility, base_vitality, base_luck, spawn_node_types, ai_type, abilities, drop_table, experience_reward, gold_reward_min, gold_reward_max, min_difficulty_tier, archetype, elemental_resistances)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
        ON CONFLICT DO NOTHING`,
       [
         enemy.name,
@@ -430,6 +430,8 @@ async function seedEnemies() {
         enemy.base_strength,
         enemy.base_intelligence,
         enemy.base_agility,
+        enemy.base_vitality || 5,
+        enemy.base_luck || 5,
         enemy.spawn_node_types,
         enemy.ai_type || 'aggressive',
         JSON.stringify(enemy.abilities || []),
@@ -437,7 +439,9 @@ async function seedEnemies() {
         enemy.experience_reward,
         enemy.gold_reward_min || 1,
         enemy.gold_reward_max,
-        enemy.min_difficulty_tier || 1
+        enemy.min_difficulty_tier || 1,
+        enemy.archetype || 'humanoid',
+        JSON.stringify(enemy.elemental_resistances || {})
       ]
     );
   }
@@ -515,7 +519,7 @@ async function seedDeveloperTestData(castleId) {
 
   // Check if character already exists
   const existingChar = await pool.query(
-    `SELECT id FROM characters WHERE user_id = $1 AND name = 'Derezo'`,
+    'SELECT id FROM characters WHERE user_id = $1 AND name = \'Derezo\'',
     [userId]
   );
 

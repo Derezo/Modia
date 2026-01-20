@@ -136,7 +136,7 @@ The generate-sfx.js script warns about prompts with 4+ comma-separated segments 
 ### Battle System (`api/src/services/` + `frontend/src/battle/`)
 Multi-file system spanning backend and frontend:
 - **Backend:** `battleService.js` (damage formulas, status effects), `battleWebsocket.js` (real-time sync), `battleTurnManager.js` (async turn processing), `battleReconnection.js` (state persistence), `aiService.js` + `services/ai/*.js` (utility-based AI with lookahead)
-- **Frontend:** `BattleScene.js` orchestrates `BattleGrid.js` (tactical grid), `BattleUnit.js` (unit rendering), `BattleUI.js` (HUD), `BattleAnimations.js`, `BattlePathfinding.js`, `BattleCamera.js`, `BattleIntro.js`
+- **Frontend:** `BattleScene.js` orchestrates `BattleGrid.js` (tactical grid), `BattleUnit.js` (unit rendering), `BattleUI.js` (HUD), `BattleAnimations.js`, `BattlePathfinding.js`, `BattleCamera.js`, `BattleIntro.js`, `BattleWebSocketManager.js` (WebSocket events and turn queue)
 - Damage formulas: Physical = `(STR + equipment) * skillPower - (VIT + defense) * 0.15`; Magic = `(INT + magicAttack) * skillPower - (INT + magicDefense) * 0.075`
 - Turn order based on agility + random variance
 
@@ -387,13 +387,15 @@ These files exceed or approach limits and are tracked in `docs/ROADMAP_TECHNICAL
 
 | File | Lines | Status |
 |------|-------|--------|
-| `frontend/src/scenes/BattleScene.js` | 3,259 | BLOCKING - refactor in progress |
-| `frontend/src/scenes/WorldMapScene.js` | 2,478 | WARNING - near limit |
+| `frontend/src/scenes/BattleScene.js` | 2,632 | **BLOCKING** - exceeds 2500 limit |
+| `frontend/src/scenes/WorldMapScene.js` | 2,507 | **BLOCKING** - exceeds 2500 limit |
 | `api/src/services/marketplaceService.js` | 1,956 | WARNING |
 | `api/src/services/coliseumService.js` | 1,552 | WARNING |
 | `frontend/src/battle/BattleUI.js` | 1,477 | NOTICE - approaching 1,500 |
 
-*Last updated: 2026-01-19*
+*Last updated: 2026-01-20*
+
+**Recent refactoring:** BattleScene.js WebSocket handling extracted to `BattleWebSocketManager.js` (766 lines). Both BattleScene.js and WorldMapScene.js need further modularization to get under the 2500-line limit.
 
 **Note:** Changes to tech debt files do NOT block validation unless they increase the line count. New files must comply with the 2500-line limit.
 

@@ -121,8 +121,7 @@ async function handleBattleEnd(battleId, status, state, userId) {
       }
 
       // Clear combat node on victory (allows player to pass through in future)
-      const combatNodeTypes = ['forest', 'cave', 'mountain', 'bridge'];
-      if (nodeId && combatNodeTypes.includes(nodeType)) {
+      if (nodeId && BATTLE_NODE_TYPES.includes(nodeType)) {
         await client.query(
           `INSERT INTO user_node_clearance (user_id, node_id, battle_id)
            VALUES ($1, $2, $3)
@@ -801,7 +800,7 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   }
 
   // Check if battle ended from player action
-  let battleStatus = battleService.checkBattleEnd(state);
+  const battleStatus = battleService.checkBattleEnd(state);
 
   // Track if turn continues (two-action system: move + act)
   const turnContinues = !result.turnEnded && battleStatus === 'active';

@@ -6,71 +6,10 @@ import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import presenceService from '../services/presenceService.js';
 import * as staminaService from '../services/staminaService.js';
 import * as dailyQuestService from '../services/dailyQuestService.js';
-import { SHRINE_BUFFS, SHRINE_COOLDOWN_HOURS } from '../../../shared/constants.js';
+import { SHRINE_BUFFS, SHRINE_COOLDOWN_HOURS, COMBAT_NODE_TYPES } from '../../../shared/constants.js';
+import { buildAdjacencyMap, bfsPath } from '../services/world/pathfindingService.js';
 
 const router = express.Router();
-
-// Combat node types that require clearance (forest, cave, mountain, bridge)
-const COMBAT_NODE_TYPES = ['forest', 'cave', 'mountain', 'bridge'];
-
-/**
- * Build adjacency map from world node connections
- * @param {Object[]} connections - Array of {from_node_id, to_node_id} pairs
- * @returns {Map<number, Set<number>>} Adjacency map
- */
-function buildAdjacencyMap(connections) {
-  const adj = new Map();
-  for (const conn of connections) {
-    const from = conn.from_node_id;
-    const to = conn.to_node_id;
-    if (!adj.has(from)) adj.set(from, new Set());
-    if (!adj.has(to)) adj.set(to, new Set());
-    adj.get(from).add(to);
-    adj.get(to).add(from);
-  }
-  return adj;
-}
-
-/**
- * Find shortest path between two nodes using BFS
- * Respects node blocking: cannot pass THROUGH blocked nodes, but CAN travel TO them
- * @param {number} fromNodeId - Starting node ID
- * @param {number} toNodeId - Destination node ID
- * @param {Map<number, Set<number>>} adjacency - Adjacency map
- * @param {Set<number>} blockedNodes - Set of blocked node IDs (cannot pass through)
- * @returns {number[]|null} Array of node IDs forming the path, or null if no path
- */
-function bfsPath(fromNodeId, toNodeId, adjacency, blockedNodes = new Set()) {
-  if (fromNodeId === toNodeId) {
-    return [fromNodeId];
-  }
-
-  const visited = new Set([fromNodeId]);
-  const queue = [[fromNodeId]];
-
-  while (queue.length > 0) {
-    const path = queue.shift();
-    const current = path[path.length - 1];
-
-    const neighbors = adjacency.get(current) || new Set();
-    for (const neighbor of neighbors) {
-      // Destination is always reachable (can travel TO blocked node to fight)
-      if (neighbor === toNodeId) {
-        return [...path, neighbor];
-      }
-      // Skip blocked intermediate nodes (cannot pass THROUGH)
-      if (blockedNodes.has(neighbor)) {
-        continue;
-      }
-      if (!visited.has(neighbor)) {
-        visited.add(neighbor);
-        queue.push([...path, neighbor]);
-      }
-    }
-  }
-
-  return null; // No path found
-}
 
 /**
  * Get set of blocked node IDs for a user

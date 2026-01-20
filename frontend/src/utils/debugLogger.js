@@ -29,21 +29,6 @@ export function setGameInstance(game) {
 }
 
 /**
- * Clear the game instance reference (call on game destroy)
- */
-export function clearGameInstance() {
-  gameInstance = null;
-}
-
-/**
- * Get the game instance (for testing/debugging)
- * @returns {Game|null}
- */
-export function getGameInstance() {
-  return gameInstance;
-}
-
-/**
  * Check if developer mode is enabled
  * @returns {boolean}
  */
@@ -186,7 +171,6 @@ export function isDevModeEnabled() {
 
 export default {
   setGameInstance,
-  getGameInstance,
   debugLog,
   debugWarn,
   debugError,
