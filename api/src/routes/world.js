@@ -643,7 +643,7 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
   if (blockedIntermediates.length > 0) {
     // Get names of blocked nodes for better error message
     const blockedNamesResult = await query(
-      `SELECT name FROM world_nodes WHERE id = ANY($1)`,
+      'SELECT name FROM world_nodes WHERE id = ANY($1)',
       [blockedIntermediates]
     );
     const blockedNames = blockedNamesResult.rows.map(r => r.name).join(', ');
@@ -715,7 +715,7 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
 
   // Get path node details for animation
   const pathNodesResult = await query(
-    `SELECT id, name, node_type, x_coord, y_coord FROM world_nodes WHERE id = ANY($1) ORDER BY array_position($1, id)`,
+    'SELECT id, name, node_type, x_coord, y_coord FROM world_nodes WHERE id = ANY($1) ORDER BY array_position($1, id)',
     [pathResult.path]
   );
 
@@ -1215,40 +1215,34 @@ router.get('/watchtower-view/:nodeId', authenticate, asyncHandler(async (req, re
     throw new AppError('This node is not a watchtower', 400);
   }
 
-  // Use the watchtower's reveal radius (default 4 if not set)
-  const revealRadius = watchtowerNode.watchtower_reveal_radius ?? 4;
+  // Use pixel-based reveal radius (~3000px diameter = 1500px radius)
+  // watchtower_reveal_radius in DB is a multiplier (DB default is 2, meaning 3000px radius)
+  // The base is 1500px, multiplied by the radius value to get final pixel radius
+  const baseRevealRadiusPixels = 1500;
+  const radiusMultiplier = watchtowerNode.watchtower_reveal_radius ?? 2;
+  const revealRadiusPixels = baseRevealRadiusPixels * radiusMultiplier;
 
-  // Get all connections to build adjacency map
-  const connectionsResult = await query(
-    'SELECT from_node_id, to_node_id FROM world_node_connections'
+  // Spatial query: find all nodes within pixel radius using Euclidean distance
+  // Coordinates are in worldgen units (1 unit = 30 pixels), so convert radius
+  const revealRadiusUnits = revealRadiusPixels / 30;
+  const wtX = watchtowerNode.x_coord;
+  const wtY = watchtowerNode.y_coord;
+
+  // Query nodes within the circular radius using spatial distance
+  // Use bounding box pre-filter for index optimization, then apply circular filter
+  const spatialResult = await query(
+    `SELECT id,
+            SQRT(POWER(x_coord - $1, 2) + POWER(y_coord - $2, 2)) as distance_units
+     FROM world_nodes
+     WHERE x_coord BETWEEN $1 - $3 AND $1 + $3
+       AND y_coord BETWEEN $2 - $3 AND $2 + $3
+       AND SQRT(POWER(x_coord - $1, 2) + POWER(y_coord - $2, 2)) <= $3
+     ORDER BY distance_units`,
+    [wtX, wtY, revealRadiusUnits]
   );
 
-  const adjacency = buildAdjacencyMap(connectionsResult.rows);
-
-  // BFS to find all nodes within reveal radius
-  const visited = new Map(); // nodeId -> distance from watchtower
-  visited.set(nodeId, 0);
-  const queue = [{ nodeId, distance: 0 }];
-  const revealedNodeIds = [nodeId];
-
-  while (queue.length > 0) {
-    const { nodeId: currentId, distance } = queue.shift();
-
-    // Don't expand beyond reveal radius
-    if (distance >= revealRadius) {
-      continue;
-    }
-
-    const neighbors = adjacency.get(currentId) || new Set();
-    for (const neighborId of neighbors) {
-      if (!visited.has(neighborId)) {
-        const newDistance = distance + 1;
-        visited.set(neighborId, newDistance);
-        revealedNodeIds.push(neighborId);
-        queue.push({ nodeId: neighborId, distance: newDistance });
-      }
-    }
-  }
+  const revealedNodeIds = spatialResult.rows.map(r => r.id);
+  const distanceMap = new Map(spatialResult.rows.map(r => [r.id, r.distance_units * 30])); // Convert back to pixels
 
   // Fetch node details for all revealed nodes
   const nodesResult = await query(
@@ -1269,18 +1263,18 @@ router.get('/watchtower-view/:nodeId', authenticate, asyncHandler(async (req, re
     [revealedNodeIds]
   );
 
-  // Format revealed nodes - include name only if discovered
+  // Format revealed nodes - always include names for watchtower reveals
   const revealedNodes = nodesResult.rows.map(node => ({
     id: node.id,
     x_coord: node.x_coord,
     y_coord: node.y_coord,
     node_type: node.node_type,
-    name: node.discovered ? node.name : null,
+    name: node.name, // Always include actual name for watchtower reveals
     discovered: node.discovered,
     region_id: node.region_id,
     region_race: node.region_race,
     difficulty_tier: node.difficulty_tier,
-    distance_from_watchtower: visited.get(node.id)
+    distance_from_watchtower: distanceMap.get(node.id) ?? 0 // Distance in pixels
   }));
 
   res.json({
@@ -1292,7 +1286,7 @@ router.get('/watchtower-view/:nodeId', authenticate, asyncHandler(async (req, re
       node_type: watchtowerNode.node_type,
       region_id: watchtowerNode.region_id,
       region_race: watchtowerNode.region_race,
-      reveal_radius: revealRadius
+      reveal_radius_pixels: revealRadiusPixels
     },
     revealedNodes,
     revealedConnections: revealedConnectionsResult.rows
@@ -1313,7 +1307,7 @@ router.get('/my-discoveries', authenticate, asyncHandler(async (req, res) => {
   );
 
   const totalDiscoveries = await query(
-    `SELECT COUNT(*) as total FROM world_nodes WHERE node_type = 'discovery'`
+    'SELECT COUNT(*) as total FROM world_nodes WHERE node_type = \'discovery\''
   );
 
   res.json({

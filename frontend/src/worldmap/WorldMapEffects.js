@@ -623,7 +623,7 @@ export class WorldMapEffects {
    * - Paths to unvisited adjacent nodes: lightened fog (organic curves)
    * - Polygons formed by visited nodes: filled for enclosed areas
    */
-  renderFogOfWar(ctx, cameraX, cameraY, canvasWidth, canvasHeight, nodes, connections = []) {
+  renderFogOfWar(ctx, cameraX, cameraY, canvasWidth, canvasHeight, nodes, connections = [], watchtowerView = null) {
     // Create fog canvas at 1/4 resolution for performance
     const scale = 0.25;
     const fogW = Math.ceil(canvasWidth * scale);
@@ -754,6 +754,111 @@ export class WorldMapEffects {
       this.fogCtx.beginPath();
       this.fogCtx.arc(screenX, screenY, revealRadius, 0, Math.PI * 2);
       this.fogCtx.fill();
+    }
+
+    // Fourth pass: Watchtower reveal - large circular area centered on watchtower
+    if (watchtowerView && watchtowerView.watchtowerNode) {
+      const wtNode = watchtowerView.watchtowerNode;
+      const wtScreenX = (wtNode.x_coord * this.nodeSpacing + cameraX) * scale;
+      const wtScreenY = (wtNode.y_coord * this.nodeSpacing + cameraY) * scale;
+
+      // Use dynamic reveal radius from API (default 1500px if not set)
+      const watchtowerRevealRadius = (watchtowerView.revealRadiusPixels || 1500) * scale;
+
+      // Create soft-edged radial gradient for watchtower reveal
+      const wtGradient = this.fogCtx.createRadialGradient(
+        wtScreenX, wtScreenY, 0,
+        wtScreenX, wtScreenY, watchtowerRevealRadius
+      );
+      // Full clear in center, fading to transparent at edges
+      wtGradient.addColorStop(0, 'rgba(0, 0, 0, 0.85)');
+      wtGradient.addColorStop(0.6, 'rgba(0, 0, 0, 0.7)');
+      wtGradient.addColorStop(0.85, 'rgba(0, 0, 0, 0.3)');
+      wtGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+      this.fogCtx.fillStyle = wtGradient;
+      this.fogCtx.beginPath();
+      this.fogCtx.arc(wtScreenX, wtScreenY, watchtowerRevealRadius, 0, Math.PI * 2);
+      this.fogCtx.fill();
+
+      // Fifth pass: Individual fog clearing for revealed (but not discovered) nodes
+      // This creates additional "spot reveals" at each node location
+      const revealedNodes = watchtowerView.revealedNodes || [];
+      for (const revNode of revealedNodes) {
+        // Skip nodes already in discovered set (they have their own reveals in third pass)
+        if (this.discoveredNodes.has(revNode.id)) continue;
+
+        const nodeScreenX = (revNode.x_coord * this.nodeSpacing + cameraX) * scale;
+        const nodeScreenY = (revNode.y_coord * this.nodeSpacing + cameraY) * scale;
+
+        // Calculate opacity based on distance from watchtower (closer = clearer)
+        const distancePixels = revNode.distance_from_watchtower || 0;
+        const maxDistance = watchtowerView.revealRadiusPixels || 1500;
+        const distanceRatio = Math.min(distancePixels / maxDistance, 1.0);
+        // Opacity fades from 0.7 (near) to 0.3 (far)
+        const nodeOpacity = 0.7 - (distanceRatio * 0.4);
+
+        // Small reveal radius for individual nodes (40-60px scaled)
+        const nodeRevealRadius = 50 * scale;
+
+        const nodeGradient = this.fogCtx.createRadialGradient(
+          nodeScreenX, nodeScreenY, 0,
+          nodeScreenX, nodeScreenY, nodeRevealRadius
+        );
+        nodeGradient.addColorStop(0, `rgba(0, 0, 0, ${nodeOpacity})`);
+        nodeGradient.addColorStop(0.6, `rgba(0, 0, 0, ${nodeOpacity * 0.6})`);
+        nodeGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        this.fogCtx.fillStyle = nodeGradient;
+        this.fogCtx.beginPath();
+        this.fogCtx.arc(nodeScreenX, nodeScreenY, nodeRevealRadius, 0, Math.PI * 2);
+        this.fogCtx.fill();
+      }
+
+      // Sixth pass: Revealed connections between watchtower-revealed nodes
+      const revealedConnections = watchtowerView.revealedConnections || [];
+      const revealedNodeMap = new Map(revealedNodes.map(n => [n.id, n]));
+
+      for (const conn of revealedConnections) {
+        const fromNode = revealedNodeMap.get(conn.from_node_id);
+        const toNode = revealedNodeMap.get(conn.to_node_id);
+
+        if (!fromNode || !toNode) continue;
+
+        // Skip connections where both nodes are already discovered (handled in second pass)
+        const fromDiscovered = this.discoveredNodes.has(fromNode.id);
+        const toDiscovered = this.discoveredNodes.has(toNode.id);
+        if (fromDiscovered && toDiscovered) continue;
+
+        const x1 = (fromNode.x_coord * this.nodeSpacing + cameraX) * scale;
+        const y1 = (fromNode.y_coord * this.nodeSpacing + cameraY) * scale;
+        const x2 = (toNode.x_coord * this.nodeSpacing + cameraX) * scale;
+        const y2 = (toNode.y_coord * this.nodeSpacing + cameraY) * scale;
+
+        // Render at 50% opacity for watchtower-revealed connections
+        const baseOpacity = 0.5;
+        const baseWidth = 28 * scale;
+
+        if (this.useOrganicPaths) {
+          renderPathReveal(
+            this.fogCtx,
+            x1, y1, x2, y2,
+            conn.from_node_id, conn.to_node_id,
+            baseWidth,
+            baseOpacity,
+            scale
+          );
+        } else {
+          // Legacy: bezier curve reveal
+          const control = this.getPathControlPoint(x1, y1, x2, y2, conn.from_node_id, conn.to_node_id);
+          this.fogCtx.strokeStyle = `rgba(0, 0, 0, ${baseOpacity})`;
+          this.fogCtx.lineWidth = baseWidth;
+          this.fogCtx.beginPath();
+          this.fogCtx.moveTo(x1, y1);
+          this.fogCtx.quadraticCurveTo(control.x, control.y, x2, y2);
+          this.fogCtx.stroke();
+        }
+      }
     }
 
     this.fogCtx.globalCompositeOperation = 'source-over';

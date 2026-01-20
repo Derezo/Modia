@@ -425,6 +425,7 @@ Complete implementation of all 4 activity node systems providing non-combat cont
 - Fog reveal for nearby undiscovered nodes
 - One-time activation per watchtower
 - Reveal radius based on watchtower tier
+- **Enhanced (Jan 2026):** Pixel-based radius (3000px default), revealed nodes show actual names with golden styling, individual fog clearing per node with distance-based opacity
 
 ### Security
 - FOR UPDATE locks on concurrent access
