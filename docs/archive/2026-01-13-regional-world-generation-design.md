@@ -4,6 +4,11 @@
 **Status:** Implemented
 **Scope:** Major refactor of procedural world generation system
 
+> **Post-Implementation Updates (2026-01-19):**
+> - Added max spacing constraint (13.3 units / 400px) with automatic gap infill
+> - Added thematic naming for trade routes ("Merchant's Rest", "Wayfarer's Glen") and wilderness zones ("Bandit's Hollow", "No Man's Land")
+> - See `api/src/db/worldgen/constants.js` for `TRADE_ROUTE_NAMES` and `WILDERNESS_ZONE_NAMES`
+
 ## Overview
 
 Replace the current single-castle, distance-band world generation with a **5-region system** based on racial homelands. Each region has its own castle, cities, villages, and frontier, connected via bridges, border zones, and trade routes.

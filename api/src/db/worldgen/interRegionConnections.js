@@ -22,7 +22,12 @@
  * @module worldgen/interRegionConnections
  */
 
-import { INTER_REGION_CONFIG, BRIDGE_NAMES } from './constants.js';
+import {
+  INTER_REGION_CONFIG,
+  BRIDGE_NAMES,
+  TRADE_ROUTE_NAMES,
+  WILDERNESS_ZONE_NAMES
+} from './constants.js';
 import { SeededRandom } from '../../config/constants.js';
 import { getRegionBorders, findGrandPalacePosition, createVoronoiRegions } from './voronoiPartitioning.js';
 import { generateCastlePlacements } from './castlePlacement.js';
@@ -171,6 +176,100 @@ export function generateBridgeName(region1Name, region2Name, rng) {
   // Fallback: generic bridge name
   const fallbackNames = ['Border Bridge', 'Realm Crossing', 'The Great Span', 'Alliance Bridge'];
   return rng.pick(fallbackNames);
+}
+
+/**
+ * Generate a thematic name for a trade route node
+ * First/last nodes are destination-themed (near cities)
+ * Middle nodes are journey-themed
+ * Others mix commerce themes
+ *
+ * @param {number} nodeIndex - Position in route (0-based)
+ * @param {number} totalNodes - Total nodes in route
+ * @param {SeededRandom} rng - Seeded random generator
+ * @returns {string} Thematic trade route name
+ */
+export function generateTradeRouteName(nodeIndex, totalNodes, rng) {
+  let category;
+  if (nodeIndex === 0 || nodeIndex === totalNodes - 1) {
+    category = 'destination';
+  } else if (nodeIndex === Math.floor(totalNodes / 2)) {
+    category = 'journey';
+  } else {
+    category = rng.next() < 0.6 ? 'commerce' : 'journey';
+  }
+
+  return rng.pick(TRADE_ROUTE_NAMES[category]);
+}
+
+/**
+ * Generate a thematic name for a wilderness zone node
+ * Names have dangerous, wild, or ominous themes fitting border conflict areas
+ *
+ * @param {string} terrain - Terrain type (forest, cave, mountain) - unused but for future theming
+ * @param {SeededRandom} rng - Seeded random generator
+ * @returns {string} Thematic wilderness name
+ */
+export function generateWildernessName(terrain, rng) {
+  const categories = Object.keys(WILDERNESS_ZONE_NAMES);
+  const category = rng.pick(categories);
+  return rng.pick(WILDERNESS_ZONE_NAMES[category]);
+}
+
+/**
+ * Generate intermediate nodes to ensure max spacing is respected between two nodes.
+ * When connections are too long (> maxSpacing), generates intermediate nodes
+ * along the path to fill the gap.
+ *
+ * @param {Object} nodeA - First node {x, y, ...}
+ * @param {Object} nodeB - Second node {x, y, ...}
+ * @param {number} maxSpacing - Max allowed distance (units)
+ * @param {SeededRandom} rng - Seeded random generator
+ * @param {Object} nodeDefaults - Default properties for new nodes
+ * @returns {Array<Object>} Intermediate nodes (empty if none needed)
+ */
+export function generateIntermediateNodes(nodeA, nodeB, maxSpacing, rng, nodeDefaults = {}) {
+  const distance = Math.hypot(nodeB.x - nodeA.x, nodeB.y - nodeA.y);
+
+  if (distance <= maxSpacing) {
+    return []; // No intermediates needed
+  }
+
+  // Calculate how many intermediate nodes needed
+  const numIntermediates = Math.ceil(distance / maxSpacing) - 1;
+  const intermediateNodes = [];
+
+  // Direction vector
+  const dx = (nodeB.x - nodeA.x) / distance;
+  const dy = (nodeB.y - nodeA.y) / distance;
+
+  for (let i = 1; i <= numIntermediates; i++) {
+    const t = i / (numIntermediates + 1);
+    let x = nodeA.x + dx * distance * t;
+    let y = nodeA.y + dy * distance * t;
+
+    // Add small perpendicular offset for visual interest
+    const perpX = -dy;
+    const perpY = dx;
+    const offset = (rng.next() - 0.5) * 2;
+    x += perpX * offset;
+    y += perpY * offset;
+
+    intermediateNodes.push({
+      x,
+      y,
+      nodeType: rng.pick(['forest', 'cave', 'mountain']),
+      regionId: null,
+      regionName: 'Inter-Region Path',
+      ringDistance: 4,
+      hopDistance: -1,
+      isIntermediateNode: true,
+      difficultyTier: 3, // Mid-tier difficulty for gap fill nodes
+      ...nodeDefaults
+    });
+  }
+
+  return intermediateNodes;
 }
 
 /**
@@ -331,13 +430,15 @@ export function createWildernessZone(border, bridgeNode, nodesByRegion, rng) {
       isWilderness: true,
       borderRegions: [region1, region2],
       difficultyTier: Math.min(5, baseDifficulty + INTER_REGION_CONFIG.WILDERNESS_DIFFICULTY_BONUS),
-      name: `Border ${terrain.charAt(0).toUpperCase() + terrain.slice(1)}`
+      name: generateWildernessName(terrain, rng)
     };
 
     wildernessNodes.push(wildernessNode);
   }
 
+  const wildernessNameList = wildernessNodes.map(n => `"${n.name}"`).join(', ');
   console.log(`    Wilderness Zone: ${wildernessNodes.length} nodes between ${region1Name} and ${region2Name}`);
+  console.log(`      Names: ${wildernessNameList}`);
 
   return wildernessNodes;
 }
@@ -448,7 +549,7 @@ export function createTradeRoute(border, bridgeNode, nodesByRegion, rng) {
       isTradeRoute: true,
       tradeRegions: [region1, region2],
       difficultyTier: Math.max(1, 2 - INTER_REGION_CONFIG.TRADE_ROUTE_DIFFICULTY_REDUCTION),
-      name: `Trade ${terrain.charAt(0).toUpperCase() + terrain.slice(1)}`
+      name: generateTradeRouteName(i, nodeCount, rng)
     };
 
     tradeRouteNodes.push(tradeNode);
@@ -460,7 +561,9 @@ export function createTradeRoute(border, bridgeNode, nodesByRegion, rng) {
     tradeRouteNodes[tradeRouteNodes.length - 1].connectToCity2 = { region: region2, cityIndex: endpoint2.index };
   }
 
+  const tradeNameList = tradeRouteNodes.map(n => `"${n.name}"`).join(', ');
   console.log(`    Trade Route: ${tradeRouteNodes.length} nodes between ${region1Name} city and ${region2Name} city`);
+  console.log(`      Names: ${tradeNameList}`);
 
   return tradeRouteNodes;
 }
@@ -500,6 +603,72 @@ export function createGrandPalace(palacePosition) {
 }
 
 /**
+ * Enforce max spacing on a connection by inserting intermediate nodes if needed.
+ * Returns the intermediate nodes created and a chain of connections.
+ *
+ * @param {Object} nodeA - Source node
+ * @param {Object} nodeB - Target node (may be {node, distance} or plain node)
+ * @param {number} maxSpacing - Maximum allowed distance
+ * @param {SeededRandom} rng - Seeded random generator
+ * @param {string} connectionType - Type of connection for new connections
+ * @param {Object} nodeDefaults - Default properties for intermediate nodes
+ * @returns {Object} { intermediateNodes: [], connections: [] }
+ */
+function enforceSpacingForConnection(nodeA, nodeB, maxSpacing, rng, connectionType, nodeDefaults = {}) {
+  const targetNode = nodeB.node || nodeB;
+  const distance = Math.hypot(targetNode.x - nodeA.x, targetNode.y - nodeA.y);
+
+  if (distance <= maxSpacing) {
+    // No intermediates needed, return single connection
+    return {
+      intermediateNodes: [],
+      connections: [{ from: nodeA, to: nodeB, connectionType }]
+    };
+  }
+
+  // Generate intermediate nodes
+  const intermediates = generateIntermediateNodes(nodeA, targetNode, maxSpacing, rng, nodeDefaults);
+
+  if (intermediates.length === 0) {
+    // Fallback if generation failed
+    return {
+      intermediateNodes: [],
+      connections: [{ from: nodeA, to: nodeB, connectionType }]
+    };
+  }
+
+  // Build chain of connections: nodeA -> intermediate[0] -> ... -> intermediate[n] -> nodeB
+  const connections = [];
+
+  // Connect nodeA to first intermediate
+  connections.push({
+    from: nodeA,
+    to: intermediates[0],
+    connectionType: `${connectionType}_infill`
+  });
+
+  // Chain intermediates
+  for (let i = 0; i < intermediates.length - 1; i++) {
+    connections.push({
+      from: intermediates[i],
+      to: intermediates[i + 1],
+      connectionType: `${connectionType}_infill`
+    });
+  }
+
+  // Connect last intermediate to nodeB
+  connections.push({
+    from: intermediates[intermediates.length - 1],
+    to: nodeB,
+    connectionType
+  });
+
+  console.log(`      Gap infill: ${intermediates.length} nodes inserted (distance: ${distance.toFixed(1)} > ${maxSpacing})`);
+
+  return { intermediateNodes: intermediates, connections };
+}
+
+/**
  * Generate all inter-region connections
  * Orchestrates Phase 5 across all region borders
  *
@@ -535,22 +704,36 @@ export function generateInterRegionConnections(voronoiData, nodesByRegion, allNo
       interRegionNodes.push(bridgeNode);
 
       // For bridge_only type, connect bridge directly to frontier nodes in both regions
+      // Use spacing enforcement to insert intermediate nodes if needed
       if (border.connectionType === 'bridge_only' && bridgeNode.connectTo) {
-        // Connect to region 1 frontier
+        const maxSpacing = INTER_REGION_CONFIG.MAX_NODE_SPACING;
+
+        // Connect to region 1 frontier with spacing enforcement
         if (bridgeNode.connectTo.region1 && bridgeNode.connectTo.region1.node) {
-          interRegionConnections.push({
-            from: bridgeNode,
-            to: bridgeNode.connectTo.region1,
-            connectionType: 'bridge_frontier'
-          });
+          const result = enforceSpacingForConnection(
+            bridgeNode,
+            bridgeNode.connectTo.region1,
+            maxSpacing,
+            rng,
+            'bridge_frontier',
+            { borderRegions: [border.region1, border.region2] }
+          );
+          interRegionNodes.push(...result.intermediateNodes);
+          interRegionConnections.push(...result.connections);
         }
-        // Connect to region 2 frontier
+
+        // Connect to region 2 frontier with spacing enforcement
         if (bridgeNode.connectTo.region2 && bridgeNode.connectTo.region2.node) {
-          interRegionConnections.push({
-            from: bridgeNode,
-            to: bridgeNode.connectTo.region2,
-            connectionType: 'bridge_frontier'
-          });
+          const result = enforceSpacingForConnection(
+            bridgeNode,
+            bridgeNode.connectTo.region2,
+            maxSpacing,
+            rng,
+            'bridge_frontier',
+            { borderRegions: [border.region1, border.region2] }
+          );
+          interRegionNodes.push(...result.intermediateNodes);
+          interRegionConnections.push(...result.connections);
         }
       }
     }
@@ -580,27 +763,39 @@ export function generateInterRegionConnections(voronoiData, nodesByRegion, allNo
         }
 
         // Connect wilderness to frontier nodes in both regions for accessibility
+        // Use spacing enforcement to insert intermediate nodes if needed
         if (r1Nodes && r2Nodes) {
           const centerX = bridgeNode ? bridgeNode.x : border.midpoint.x;
           const centerY = bridgeNode ? bridgeNode.y : border.midpoint.y;
           const frontier1 = findFrontierNodes(r1Nodes, centerX, centerY);
           const frontier2 = findFrontierNodes(r2Nodes, centerX, centerY);
+          const maxSpacing = INTER_REGION_CONFIG.MAX_NODE_SPACING;
 
           // Connect last wilderness node to region frontiers
           const lastWilderness = wildernessNodes[wildernessNodes.length - 1];
           if (frontier1.length > 0) {
-            interRegionConnections.push({
-              from: lastWilderness,
-              to: frontier1[0],
-              connectionType: 'wilderness_frontier'
-            });
+            const result = enforceSpacingForConnection(
+              lastWilderness,
+              frontier1[0],
+              maxSpacing,
+              rng,
+              'wilderness_frontier',
+              { borderRegions: [border.region1, border.region2], isWilderness: true }
+            );
+            interRegionNodes.push(...result.intermediateNodes);
+            interRegionConnections.push(...result.connections);
           }
           if (frontier2.length > 0) {
-            interRegionConnections.push({
-              from: lastWilderness,
-              to: frontier2[0],
-              connectionType: 'wilderness_frontier'
-            });
+            const result = enforceSpacingForConnection(
+              lastWilderness,
+              frontier2[0],
+              maxSpacing,
+              rng,
+              'wilderness_frontier',
+              { borderRegions: [border.region1, border.region2], isWilderness: true }
+            );
+            interRegionNodes.push(...result.intermediateNodes);
+            interRegionConnections.push(...result.connections);
           }
         }
       }
@@ -622,18 +817,24 @@ export function generateInterRegionConnections(voronoiData, nodesByRegion, allNo
           });
         }
 
-        // Connect trade route endpoints to their cities
+        // Connect trade route endpoints to their cities with spacing enforcement
         const firstNode = tradeRouteNodes[0];
         const lastNode = tradeRouteNodes[tradeRouteNodes.length - 1];
+        const maxSpacing = INTER_REGION_CONFIG.MAX_NODE_SPACING;
 
         if (firstNode.connectToCity1 && r1Nodes) {
           const cityNode = r1Nodes[firstNode.connectToCity1.cityIndex];
           if (cityNode) {
-            interRegionConnections.push({
-              from: firstNode,
-              to: { node: cityNode, distance: 0 },
-              connectionType: 'trade_city'
-            });
+            const result = enforceSpacingForConnection(
+              firstNode,
+              { node: cityNode, distance: 0 },
+              maxSpacing,
+              rng,
+              'trade_city',
+              { isTradeRoute: true, tradeRegions: [border.region1, border.region2] }
+            );
+            interRegionNodes.push(...result.intermediateNodes);
+            interRegionConnections.push(...result.connections);
             console.log(`      Trade route connected to ${border.region1Name} city`);
           }
         }
@@ -641,11 +842,16 @@ export function generateInterRegionConnections(voronoiData, nodesByRegion, allNo
         if (lastNode.connectToCity2 && r2Nodes) {
           const cityNode = r2Nodes[lastNode.connectToCity2.cityIndex];
           if (cityNode) {
-            interRegionConnections.push({
-              from: lastNode,
-              to: { node: cityNode, distance: 0 },
-              connectionType: 'trade_city'
-            });
+            const result = enforceSpacingForConnection(
+              lastNode,
+              { node: cityNode, distance: 0 },
+              maxSpacing,
+              rng,
+              'trade_city',
+              { isTradeRoute: true, tradeRegions: [border.region1, border.region2] }
+            );
+            interRegionNodes.push(...result.intermediateNodes);
+            interRegionConnections.push(...result.connections);
             console.log(`      Trade route connected to ${border.region2Name} city`);
           }
         }
@@ -660,8 +866,9 @@ export function generateInterRegionConnections(voronoiData, nodesByRegion, allNo
   const palace = createGrandPalace(palacePosition);
   interRegionNodes.push(palace);
 
-  // Connect palace to nearest nodes in adjacent regions
+  // Connect palace to nearest nodes in adjacent regions with spacing enforcement
   // palace.adjacentRegions contains 0-indexed region indices
+  const maxSpacing = INTER_REGION_CONFIG.MAX_NODE_SPACING;
   if (palace.adjacentRegions && palace.adjacentRegions.length > 0) {
     for (const regionIdx of palace.adjacentRegions) {
       // Use 1-indexed regionId to access nodesByRegion
@@ -669,11 +876,16 @@ export function generateInterRegionConnections(voronoiData, nodesByRegion, allNo
       if (regionNodes) {
         const nearest = findFrontierNodes(regionNodes, palace.x, palace.y);
         if (nearest.length > 0) {
-          interRegionConnections.push({
-            from: palace,
-            to: nearest[0],
-            connectionType: 'palace'
-          });
+          const result = enforceSpacingForConnection(
+            palace,
+            nearest[0],
+            maxSpacing,
+            rng,
+            'palace',
+            { isPalaceApproach: true, difficultyTier: 4 }
+          );
+          interRegionNodes.push(...result.intermediateNodes);
+          interRegionConnections.push(...result.connections);
           console.log(`    Palace connected to ${castles[regionIdx].region.name} frontier node`);
         }
       }
@@ -681,12 +893,13 @@ export function generateInterRegionConnections(voronoiData, nodesByRegion, allNo
   }
 
   // Summary
-  console.log(`\nPhase 5 Complete:`);
+  console.log('\nPhase 5 Complete:');
   console.log(`  Inter-region nodes: ${interRegionNodes.length}`);
   console.log(`    - Bridges: ${interRegionNodes.filter(n => n.isBridge).length}`);
   console.log(`    - Wilderness: ${interRegionNodes.filter(n => n.isWilderness).length}`);
   console.log(`    - Trade Route: ${interRegionNodes.filter(n => n.isTradeRoute).length}`);
   console.log(`    - Palace: ${interRegionNodes.filter(n => n.isPalace).length}`);
+  console.log(`    - Gap Infill: ${interRegionNodes.filter(n => n.isIntermediateNode).length}`);
   console.log(`  Inter-region connections: ${interRegionConnections.length}`);
 
   return {
@@ -739,7 +952,7 @@ export function validateInterRegionConnections(seed = 12345) {
   const bordersWithBridges = new Set();
   for (const node of interRegionData.interRegionNodes) {
     if (node.isBridge && node.connectsRegions) {
-      const key = node.connectsRegions.sort().join('-');
+      const key = [...node.connectsRegions].sort().join('-');
       bordersWithBridges.add(key);
     }
   }
