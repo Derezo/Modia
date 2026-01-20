@@ -29,6 +29,7 @@ Fullstack development checklist:
 - Shared constants updated if needed
 - Tests cover the feature
 - Documentation updated
+- **File sizes under 2500 lines at both layers (BLOCKING)** - see CLAUDE.md for patterns
 
 Modia stack layers:
 

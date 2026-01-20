@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.8 |
+| Version | 1.9 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -276,9 +276,31 @@ npm run audio:status         # Show asset status
 
 ---
 
-## 7. Technical Debt
+## 7. Technical Debt & Code Quality
 
-### 6.1 Known Issues
+### 7.1 File Size Enforcement (Added Jan 2026)
+
+File size limits are now enforced during plan validation and code review:
+
+| Threshold | Level | Action |
+|-----------|-------|--------|
+| 500 | Target | Ideal file size |
+| 1000 | Notice | Note in review |
+| 1500 | Warning | Flag prominently |
+| **2500** | **BLOCKING** | Halt validation, require modularization |
+
+**Tracked Large Files:**
+| File | Lines | Status |
+|------|-------|--------|
+| `frontend/src/scenes/BattleScene.js` | 3,259 | BLOCKING - refactor in progress |
+| `frontend/src/scenes/WorldMapScene.js` | 2,478 | WARNING |
+| `api/src/services/marketplaceService.js` | 1,956 | WARNING |
+| `api/src/services/coliseumService.js` | 1,552 | WARNING |
+| `frontend/src/battle/BattleUI.js` | 1,477 | NOTICE |
+
+See **CLAUDE.md > File Size Guidelines** for modularization patterns.
+
+### 7.2 Known Issues
 
 | Issue | Location | Priority |
 |-------|----------|----------|
@@ -291,7 +313,7 @@ npm run audio:status         # Show asset status
 | Debug endpoint in production | battle.js:verify-traits | Low |
 | SkillTreePanel.js potentially unused | frontend/src/components/ | Low |
 
-### 6.2 Refactoring Opportunities
+### 7.3 Refactoring Opportunities
 
 - [x] **seed.js modularization** - Reduced from 4862 to 918 lines via worldgen/ modules
 - [x] **Database performance indexes** - Composite indexes for regional queries (030_performance_indexes.sql)
@@ -307,7 +329,7 @@ npm run audio:status         # Show asset status
 - [ ] Distributed rate limiting (Redis) for horizontal scaling
 - [ ] Structured logging with request correlation IDs
 
-### 6.3 Future Infrastructure
+### 7.4 Future Infrastructure
 
 | Item | Priority | Notes |
 |------|----------|-------|
@@ -335,6 +357,7 @@ npm run audio:status         # Show asset status
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.9 | Jan 2026 | File Size Enforcement: Added Section 7.1 with 2500-line blocking threshold, tracked large files table. Fixed section numbering (7.1-7.4). Cross-references CLAUDE.md > File Size Guidelines for patterns. |
 | 1.8 | Jan 2026 | Large File Modularization: Split battleService.js (1855→66 lines) into 9 focused modules. Created api/src/services/battle/ with damageCalculator, statusEffectManager, movementService, turnOrderService, chargeSystem, aoeService, skillDefinitionService, actionProcessor. Extracted world services (pathfinding, discovery, region, node). Frontend: AudioAssets split into 6 manifests, MarketplaceScene/ColiseumScene CSS and tabs extracted. |
 | 1.7 | Jan 2026 | Quest System Enhancements v9.3: Elite quests with Perfect Week gating (migration 036), rare item drops (15% chance), cosmetic title system, Perfect Week badge on leaderboard. E2E tests for quest flow (quests.spec.js). |
 | 1.6 | Jan 2026 | Documentation Consolidation v9.1: Added debug endpoint removal to Security Audit checklist (battle.js:900 /verify-traits). Cross-referenced TODOs from code audit. |

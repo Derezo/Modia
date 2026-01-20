@@ -117,6 +117,38 @@ Review categories:
 - Comment additions
 - Refactoring opportunities
 
+**File Size Review (CRITICAL):**
+
+File size enforcement is mandatory. Oversized files block commits.
+
+Checklist:
+- [ ] Count lines in all modified `.js` files (`wc -l`)
+- [ ] Flag files > 2500 lines as **CRITICAL** (blocking)
+- [ ] Flag files 1500-2499 lines as **HIGH** (should split soon)
+- [ ] Flag files 1000-1499 lines as **MEDIUM** (monitor)
+
+Thresholds:
+| Lines | Severity | Action |
+|-------|----------|--------|
+| 2500+ | CRITICAL | BLOCKING - must modularize before merge |
+| 1500-2499 | HIGH | Should split in near-term |
+| 1000-1499 | MEDIUM | Consider splitting |
+| < 1000 | OK | No action needed |
+
+Flag template:
+```
+File: path/to/file.js
+Issue: File size exceeds limit (X lines, limit: 2500)
+Severity: CRITICAL (BLOCKING)
+Action: Must split using modularization patterns before commit
+Reference: See CLAUDE.md > File Size Guidelines for patterns
+```
+
+Modularization guidance:
+- **Services**: Use re-export wrapper pattern (see `battleService.js`)
+- **Scenes**: Extract rendering/logic into `battle/`, `components/`
+- **Data files**: Split by category with manifest index
+
 Feedback format:
 ```
 File: path/to/file.js:line

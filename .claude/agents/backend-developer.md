@@ -32,6 +32,7 @@ Backend development checklist:
 - Consistent error responses
 - Rate limiting where needed
 - Proper HTTP status codes
+- **File size under 2500 lines (BLOCKING)** - see CLAUDE.md for modularization patterns
 
 **API Routes (`api/src/routes/`)**
 

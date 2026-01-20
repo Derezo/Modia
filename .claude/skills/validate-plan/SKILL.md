@@ -1,7 +1,7 @@
 ---
 name: validate-plan
 description: Use this skill when the user wants to validate completed work against a plan, perform code review, analyze gaps, update the roadmap, and commit changes. Trigger on phrases like "validate plan", "review changes", "check implementation", "gap analysis", or "finalize and commit".
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Plan Validation and Code Review Skill
@@ -38,17 +38,125 @@ When invoked, execute these steps in order:
    - `frontend/src/scenes/` → Scene lifecycle
    - `shared/` → Shared formulas/constants
 
-### Step 3: Run Existing Tests
+### Step 2.5: File Size Enforcement (BLOCKING)
 
-1. Execute `npm run test` to run the full test suite
-2. Capture test results:
+**CRITICAL**: Oversized files harm maintainability. Files exceeding 2500 lines **block validation and commits**.
+
+1. Count lines in all modified/added `.js` files:
+   ```bash
+   # Get line counts for changed JS files
+   git diff --name-only HEAD | grep '\.js$' | xargs wc -l 2>/dev/null | sort -n
+   ```
+
+2. Check against thresholds (matching CLAUDE.md > File Size Guidelines):
+
+   | Lines | Level | Action |
+   |-------|-------|--------|
+   | < 500 | Target | Ideal - proceed |
+   | 500-999 | OK | Proceed |
+   | 1000-1499 | NOTICE | Mention in report, continue |
+   | 1500-2499 | WARNING | Flag prominently, continue with caution |
+   | **2500+** | **BLOCKING** | **HALT - Do not proceed to Step 3** |
+
+3. **Exemptions** (skip these files):
+   - Files in `dist/`, `node_modules/`
+   - Test files: `*.test.js`, `*.spec.js`
+   - Migration files: `*.sql`
+   - Minified files: `*.min.js`
+   - Generated files (sprites, audio metadata)
+   - Data template files (`api/src/db/templates/*.js`)
+
+4. **If BLOCKING violations found**, output this format and STOP:
+
+   ```markdown
+   ## ⛔ FILE SIZE VIOLATION - BLOCKING
+
+   The following files exceed the 2500-line limit and must be modularized before proceeding:
+
+   | File | Lines | Excess |
+   |------|-------|--------|
+   | `path/to/file.js` | 3,259 | +759 |
+
+   ### Required Actions
+
+   1. Split oversized file(s) using modularization patterns from CLAUDE.md
+   2. Re-run validation after refactoring
+
+   ### Modularization Patterns
+
+   See **CLAUDE.md > File Size Guidelines** for:
+   - Re-export wrapper pattern (battleService.js example)
+   - Domain module directory structure
+   - Scene component extraction
+   - Data manifest pattern
+
+   **Validation halted. Fix file sizes before continuing.**
+   ```
+
+5. **Do NOT proceed to Step 3 if any BLOCKING violations exist.**
+
+   **Existing Tech Debt Files:** Files listed in CLAUDE.md > Tech Debt are tracked separately.
+   Changes to these files do NOT block validation unless they increase the line count.
+   New files or files not in the tech debt list must comply with the 2500-line limit.
+
+6. For WARNING-level files (1500-2499 lines), add to report but continue:
+   ```markdown
+   ### ⚠️ File Size Warnings
+
+   These files are approaching the limit and should be considered for future modularization:
+
+   | File | Lines | Status |
+   |------|-------|--------|
+   | `path/to/file.js` | 1,956 | Warning (limit: 2500) |
+   ```
+
+### Step 3: Module Loading Validation
+
+**CRITICAL**: ESLint and tests may pass while the server cannot start due to runtime import errors (missing exports, circular dependencies, module resolution). This step catches those errors early.
+
+1. Run `node --check` on all modified `.js` files to catch syntax errors:
+   ```bash
+   # For each modified file
+   node --check api/src/routes/myRoute.js
+   ```
+
+2. Attempt to start the API server briefly to validate all imports resolve:
+   ```bash
+   # Start server with timeout - if it starts successfully, imports are valid
+   timeout 10 npm run dev:api 2>&1 || true
+   ```
+   - Look for errors like: `SyntaxError: The requested module 'X' does not provide an export named 'Y'`
+   - Look for: `Error [ERR_MODULE_NOT_FOUND]`
+   - Look for: `Cannot find module`
+
+3. If module loading fails:
+   - Identify the problematic import statement
+   - Read the source module to see what it actually exports
+   - Fix the import to use the correct export name or pattern
+   - Re-run validation
+
+**Common patterns that cause runtime import errors:**
+- Assuming a function exists without reading the module: `import { createRateLimiter } from './file.js'` when only `createLimiter` is exported
+- Made-up constants like `COST_LEVELS` that don't exist
+- Circular dependencies between modules
+- Wrong relative path depth (`../` vs `../../`)
+
+### Step 4: Run Lint and Tests
+
+1. Execute `npm run lint` to check for code quality issues
+   - **CRITICAL**: The `@shared` import alias only works in frontend (Vite)
+   - API code must use relative paths: `../../../shared/constants.js`
+   - ESLint will catch `@shared` imports in API code with `no-restricted-imports` rule
+   - Fix all lint errors before proceeding (warnings can be deferred)
+2. Execute `npm run test` to run the full test suite
+3. Capture test results:
    - Number of tests passed/failed
    - Which test files have failures
    - Error messages for failures
-3. If tests fail, note these for the code review context
-4. Do NOT proceed to commit if critical tests are failing (fix first)
+4. If tests fail, note these for the code review context
+5. Do NOT proceed to commit if lint errors or critical tests are failing (fix first)
 
-### Step 4: Subagent Code Review
+### Step 5: Subagent Code Review
 
 Use the Task tool to invoke specialized subagents based on what was changed. Run applicable subagents in parallel:
 
@@ -74,7 +182,7 @@ Provide findings in this format:
 
 Collect all findings and consolidate into a single review report.
 
-### Step 5: Game System Validation
+### Step 6: Game System Validation
 
 Perform Modia-specific validation checks based on affected systems:
 
@@ -112,7 +220,13 @@ Perform Modia-specific validation checks based on affected systems:
 - Verify schema changes match API expectations
 - Validate foreign key relationships
 
-### Step 6: Gap Analysis
+**Shared Module Imports (always check):**
+- Verify NO `@shared/` imports exist in `api/` code (use relative paths)
+- Verify `@shared/` imports are used correctly in `frontend/` code (Vite alias)
+- Run `grep -r "@shared" api/src/` to catch violations
+- This is a recurring issue - ESLint catches it but manual verification is recommended
+
+### Step 7: Gap Analysis
 
 Compare implementation against plan:
 
@@ -144,9 +258,9 @@ Output format:
 - [!] [doc file]: [discrepancy description]
 ```
 
-### Step 7: Implement Critical Tests
+### Step 8: Implement Critical Tests
 
-Use the `qa-expert` subagent to implement tests for gaps identified in steps 4-6:
+Use the `qa-expert` subagent to implement tests for gaps identified in steps 5-7:
 
 1. Identify critical code paths lacking test coverage:
    - New API endpoints without tests
@@ -175,7 +289,7 @@ Create tests in the appropriate test file or create new test file if needed.
    - Existing tests still pass
    - No regressions introduced
 
-### Step 8: Update Roadmap & Archive
+### Step 9: Update Roadmap & Archive
 
 1. Read `docs/DEVELOPMENT_ROADMAP.md`
 2. Mark completed phases/items with checkboxes
@@ -189,7 +303,7 @@ Create tests in the appropriate test file or create new test file if needed.
    - Current project state
    - Recommended next steps (prioritized)
 
-### Step 9: Generate Commit
+### Step 10: Generate Commit
 
 1. Stage all relevant changes including new tests: `git add .`
 2. Generate a comprehensive commit message including:
@@ -221,6 +335,10 @@ Code review findings addressed:
 Gap analysis:
 - Completed: X items
 - Remaining: Y items
+
+File size status:
+- All files under 2500 lines ✓
+- [or] Warnings: [file.js (1,956 lines)]
 
 Next priority:
 - [Next task 1]
@@ -278,13 +396,17 @@ After completing all steps, provide a structured summary:
 
 ## Important Notes
 
+- **ALWAYS validate module loading before commit** - run `timeout 10 npm run dev:api` to catch missing export errors
+- Always read the source file before importing from it - never assume an export exists
 - Always read files before making judgments about them
-- Run tests before and after making changes
+- Run lint AND tests before and after making changes
 - Use subagents for thorough review - don't skip this step
 - Check that database schema matches route expectations
 - Verify frontend components have corresponding API endpoints
 - Implement tests for critical functionality - don't just suggest them
 - Keep the roadmap fresh by removing completed items
 - Flag any security concerns immediately
+- Do not commit if lint errors are found - fix them first
 - Do not commit if critical issues are found - report them first
 - Do not commit if tests are failing - fix them first
+- **ALWAYS verify no `@shared/` imports in API code** - this is a recurring issue

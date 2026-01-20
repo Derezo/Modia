@@ -110,6 +110,86 @@ Technical debt indicators:
 - Tight coupling
 - Outdated dependencies
 
+**File Size Architecture (Proactive Modularization):**
+
+File size is a key architectural concern. Large files indicate tight coupling and poor separation of concerns.
+
+Threshold action table:
+| Lines | Status | Architectural Action |
+|-------|--------|---------------------|
+| < 500 | Target | Ideal - well-modularized |
+| 500-999 | OK | Monitor for growth |
+| 1000-1499 | Watch | Plan modularization strategy |
+| 1500-2499 | Warning | Prioritize splitting in next refactor |
+| **2500+** | **BLOCKING** | **Must refactor before merge** |
+
+**Proven Modularization Strategies:**
+
+**1. Service Module Pattern (Backend)**
+
+For growing services, extract to a directory with re-export wrapper:
+
+```
+services/
+  battleService.js           # Thin wrapper with re-exports
+  battle/
+    index.js                 # Internal coordination
+    damageCalculations.js    # ~200 lines
+    statusEffects.js         # ~300 lines
+    rewards.js               # ~150 lines
+    turnManager.js           # ~250 lines
+```
+
+The wrapper maintains backward compatibility:
+```javascript
+// battleService.js
+export * from './battle/damageCalculations.js';
+export * from './battle/statusEffects.js';
+export { processTurn } from './battle/turnManager.js';
+```
+
+**2. Scene Component Pattern (Frontend)**
+
+For complex scenes, extract rendering and logic:
+
+```
+scenes/
+  BattleScene.js             # Orchestration only (~500 lines)
+battle/
+  BattleGrid.js              # Grid rendering
+  BattleUnit.js              # Unit rendering/animation
+  BattleUI.js                # HUD and panels
+  BattleAnimations.js        # Animation sequences
+  BattlePathfinding.js       # Movement logic
+```
+
+**3. Data Manifest Pattern (Config)**
+
+For large data files, split by category:
+
+```
+templates/
+  items/
+    weapons.js
+    armor.js
+    consumables.js
+    index.js                 # Aggregates all categories
+  enemies/
+    region_heartlands.js
+    region_iron_depths.js
+    index.js
+```
+
+**Architectural Review Guidance:**
+
+When reviewing changes that affect file sizes:
+1. Check if new code pushes a file toward limits
+2. Recommend proactive splitting before files become unwieldy
+3. Suggest appropriate modularization pattern for the domain
+4. Reference existing successful patterns (battleService.js, battle/, ai/)
+
+See **CLAUDE.md > File Size Guidelines** for the canonical threshold table and additional patterns.
+
 Architecture review areas:
 
 **Data flow:**
