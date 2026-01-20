@@ -5,9 +5,13 @@
 **Scope:** Major refactor of procedural world generation system
 
 > **Post-Implementation Updates (2026-01-19):**
-> - Added max spacing constraint (13.3 units / 400px) with automatic gap infill
+> - Added max spacing constraint (13.3 units / 400px) with automatic gap infill for **Phase 5 inter-region connections**
 > - Added thematic naming for trade routes ("Merchant's Rest", "Wayfarer's Glen") and wilderness zones ("Bandit's Hollow", "No Man's Land")
 > - See `api/src/db/worldgen/constants.js` for `TRADE_ROUTE_NAMES` and `WILDERNESS_ZONE_NAMES`
+>
+> **Known Future Work:**
+> - Phase 4 internal connections still lack max spacing enforcement (~320 violations)
+> - See `docs/plans/2026-01-19-phase4-spacing-enforcement-design.md` for implementation plan
 
 ## Overview
 
