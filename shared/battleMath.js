@@ -22,6 +22,9 @@ import {
   RACIAL_RESISTANCES
 } from './constants.js';
 
+// Import elevation constants for damage modifiers
+import { ELEVATION_LEVELS } from './terrain.js';
+
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -69,6 +72,13 @@ export const MAX_STATUS_RESIST = 0.50;         // 50% cap
 // Damage variance
 export const DAMAGE_VARIANCE_MIN = 0.9;
 export const DAMAGE_VARIANCE_MAX = 1.1;
+
+// Elevation combat modifiers
+export const ELEVATION_DAMAGE_BONUS_PER_LEVEL = 0.10;  // +10% damage per level above
+export const ELEVATION_DAMAGE_PENALTY_PER_LEVEL = 0.05; // -5% damage per level below
+export const ELEVATION_RANGED_BONUS_PER_LEVEL = 0.05;  // +5% extra for ranged attacks per level above
+export const MAX_ELEVATION_BONUS = 0.40;               // Cap at +40% bonus
+export const MAX_ELEVATION_PENALTY = 0.20;             // Cap at -20% penalty
 
 // ============================================================================
 // DAMAGE FORMULAS
@@ -173,6 +183,193 @@ export function calculateHealing(caster, target, skillPower = 100) {
   const isOverheal = maxHeal > targetMissingHp;
 
   return { minHeal, maxHeal, effectiveHeal, isOverheal };
+}
+
+// ============================================================================
+// ELEVATION COMBAT MODIFIERS
+// ============================================================================
+
+/**
+ * Calculate damage modifier based on elevation difference between attacker and defender
+ *
+ * High ground advantages:
+ * - +10% damage per level above defender
+ * - Additional +5% for ranged attacks per level above
+ *
+ * Low ground disadvantages:
+ * - -5% damage per level below defender
+ *
+ * @param {number} attackerZ - Attacker's elevation level (-1 to 3)
+ * @param {number} defenderZ - Defender's elevation level (-1 to 3)
+ * @param {string} attackType - Type of attack ('melee', 'ranged', 'magic')
+ * @returns {Object} { modifier: number, description: string }
+ */
+export function calculateElevationModifier(attackerZ, defenderZ, attackType = 'melee') {
+  const elevDiff = attackerZ - defenderZ;
+
+  // No modifier for same level
+  if (elevDiff === 0) {
+    return { modifier: 1.0, description: 'Same level' };
+  }
+
+  // Attacker is higher (advantage)
+  if (elevDiff > 0) {
+    // Base bonus per level above
+    let bonus = elevDiff * ELEVATION_DAMAGE_BONUS_PER_LEVEL;
+
+    // Additional bonus for ranged attacks (arrows/magic benefit more from high ground)
+    if (attackType === 'ranged' || attackType === 'magic') {
+      bonus += elevDiff * ELEVATION_RANGED_BONUS_PER_LEVEL;
+    }
+
+    // Cap the bonus
+    bonus = Math.min(bonus, MAX_ELEVATION_BONUS);
+
+    const modifier = 1.0 + bonus;
+    const percentage = Math.round(bonus * 100);
+    const description = `High ground: +${percentage}% damage`;
+
+    return { modifier, description, elevationDiff: elevDiff };
+  }
+
+  // Attacker is lower (disadvantage)
+  const penalty = Math.abs(elevDiff) * ELEVATION_DAMAGE_PENALTY_PER_LEVEL;
+  const cappedPenalty = Math.min(penalty, MAX_ELEVATION_PENALTY);
+  const modifier = 1.0 - cappedPenalty;
+  const percentage = Math.round(cappedPenalty * 100);
+  const description = `Low ground: -${percentage}% damage`;
+
+  return { modifier, description, elevationDiff: elevDiff };
+}
+
+/**
+ * Calculate hit chance modifier based on elevation
+ * Attacking from high ground improves accuracy
+ * Attacking from low ground reduces accuracy
+ *
+ * @param {number} attackerZ - Attacker's elevation level
+ * @param {number} defenderZ - Defender's elevation level
+ * @returns {number} Hit chance modifier (added to base accuracy)
+ */
+export function calculateElevationAccuracyModifier(attackerZ, defenderZ) {
+  const elevDiff = attackerZ - defenderZ;
+
+  if (elevDiff === 0) return 0;
+
+  // +2% accuracy per level above, -2% per level below
+  const modifier = elevDiff * 0.02;
+
+  // Cap at +/- 8%
+  return Math.max(-0.08, Math.min(0.08, modifier));
+}
+
+/**
+ * Calculate evasion modifier based on elevation
+ * Defending from low ground (like a pit) makes dodging harder
+ * Defending from high ground provides slight evasion bonus
+ *
+ * @param {number} attackerZ - Attacker's elevation level
+ * @param {number} defenderZ - Defender's elevation level
+ * @returns {number} Evasion modifier (added to base evasion)
+ */
+export function calculateElevationEvasionModifier(attackerZ, defenderZ) {
+  const elevDiff = defenderZ - attackerZ;
+
+  if (elevDiff === 0) return 0;
+
+  // Defender higher: +1% evasion per level
+  // Defender lower: -2% evasion per level (harder to dodge when in a pit)
+  if (elevDiff > 0) {
+    return Math.min(elevDiff * 0.01, 0.04); // Cap at +4%
+  } else {
+    return Math.max(elevDiff * 0.02, -0.08); // Cap at -8%
+  }
+}
+
+/**
+ * Check if an attack has line of sight considering elevation
+ * Higher attackers can shoot over obstacles on lower ground
+ *
+ * @param {number} attackerX - Attacker X position
+ * @param {number} attackerY - Attacker Y position
+ * @param {number} attackerZ - Attacker elevation
+ * @param {number} defenderX - Defender X position
+ * @param {number} defenderY - Defender Y position
+ * @param {number} defenderZ - Defender elevation
+ * @param {number[][]} elevation - 2D elevation grid
+ * @param {string[][]} terrain - 2D terrain grid for obstacles
+ * @returns {Object} { hasLOS: boolean, blocked: boolean, blockingTile: {x,y}|null }
+ */
+export function checkLineOfSight(
+  attackerX, attackerY, attackerZ,
+  defenderX, defenderY, defenderZ,
+  elevation, terrain
+) {
+  // If no elevation data, assume clear LOS
+  if (!elevation) {
+    return { hasLOS: true, blocked: false, blockingTile: null };
+  }
+
+  // Use Bresenham's line algorithm to check tiles between attacker and defender
+  const dx = Math.abs(defenderX - attackerX);
+  const dy = Math.abs(defenderY - attackerY);
+  const sx = attackerX < defenderX ? 1 : -1;
+  const sy = attackerY < defenderY ? 1 : -1;
+
+  let err = dx - dy;
+  let x = attackerX;
+  let y = attackerY;
+
+  // Calculate the line-of-sight height at start and end
+  // Assume projectile travels in straight line from attacker height to defender height
+  const distance = Math.max(dx, dy);
+  if (distance === 0) {
+    return { hasLOS: true, blocked: false, blockingTile: null };
+  }
+
+  let step = 0;
+
+  while (x !== defenderX || y !== defenderY) {
+    const e2 = 2 * err;
+    if (e2 > -dy) {
+      err -= dy;
+      x += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y += sy;
+    }
+
+    // Skip start and end positions
+    if ((x === attackerX && y === attackerY) || (x === defenderX && y === defenderY)) {
+      continue;
+    }
+
+    step++;
+
+    // Calculate expected projectile height at this point (linear interpolation)
+    const t = step / distance;
+    const expectedHeight = attackerZ + (defenderZ - attackerZ) * t;
+
+    // Get actual terrain height at this position
+    const tileElevation = elevation[y]?.[x] ?? 0;
+    const tileTerrain = terrain?.[y]?.[x] || 'grass';
+
+    // Check if terrain blocks the shot
+    // Impassable terrain (rocks, trees) at same or higher elevation blocks
+    const isBlocking = tileTerrain === 'rock' || tileTerrain === 'tree' || tileTerrain === 'cliff';
+
+    if (isBlocking && tileElevation >= expectedHeight) {
+      return { hasLOS: false, blocked: true, blockingTile: { x, y } };
+    }
+
+    // High terrain can block low shots
+    if (tileElevation > expectedHeight + 1) {
+      return { hasLOS: false, blocked: true, blockingTile: { x, y } };
+    }
+  }
+
+  return { hasLOS: true, blocked: false, blockingTile: null };
 }
 
 // ============================================================================
@@ -445,6 +642,103 @@ export function calculateDamagePreview(attacker, defender, skill) {
     isOverheal: false,
     type: isMagical ? 'magical' : 'physical',
     defenseReduction: damageData.defenseReduction
+  };
+}
+
+/**
+ * Calculate full damage preview for UI display with elevation support
+ * Extended version of calculateDamagePreview that includes elevation modifiers
+ *
+ * @param {Object} attacker - Attacker unit with optional elevation (z or elevation property)
+ * @param {Object} defender - Defender unit with optional elevation
+ * @param {Object} skill - Skill object with { power, damageType, effect, type, attackType }
+ * @param {Object} options - Optional parameters
+ * @param {number} options.attackerZ - Override attacker elevation
+ * @param {number} options.defenderZ - Override defender elevation
+ * @returns {Object} Complete preview data for UI display including elevation modifiers
+ */
+export function calculateDamagePreviewWithElevation(attacker, defender, skill, options = {}) {
+  const skillPower = skill?.power || 100;
+  const damageType = skill?.damageType || 'physical';
+  const attackType = skill?.attackType || (damageType === 'physical' ? 'melee' : 'magic');
+  const isHeal = skill?.effect === 'heal' || skill?.type === 'heal';
+
+  // Get elevation values
+  const attackerZ = options.attackerZ ?? attacker.z ?? attacker.elevation ?? 0;
+  const defenderZ = options.defenderZ ?? defender.z ?? defender.elevation ?? 0;
+
+  // Calculate elevation modifier
+  const elevationMod = calculateElevationModifier(attackerZ, defenderZ, attackType);
+
+  // Calculate based on skill type
+  if (isHeal) {
+    const healData = calculateHealing(attacker, defender, skillPower);
+    return {
+      minDamage: null,
+      maxDamage: null,
+      minHeal: healData.minHeal,
+      maxHeal: healData.maxHeal,
+      effectiveHeal: healData.effectiveHeal,
+      hitChance: 1.0,
+      critChance: 0,
+      critDamage: null,
+      willKill: false,
+      isOverheal: healData.isOverheal,
+      type: 'heal',
+      defenseReduction: 0,
+      elevationModifier: 1.0, // Healing not affected by elevation
+      elevationDescription: null,
+      attackerElevation: attackerZ,
+      defenderElevation: defenderZ
+    };
+  }
+
+  // Damage calculation
+  const isMagical = damageType === 'magical' || damageType === 'magic';
+  const damageData = isMagical
+    ? calculateMagicalDamage(attacker, defender, skillPower)
+    : calculatePhysicalDamage(attacker, defender, skillPower);
+
+  // Apply elevation modifier to damage
+  const elevModifiedMinDamage = Math.max(1, Math.floor(damageData.minDamage * elevationMod.modifier));
+  const elevModifiedMaxDamage = Math.max(1, Math.floor(damageData.maxDamage * elevationMod.modifier));
+  const elevModifiedAvgDamage = Math.floor((elevModifiedMinDamage + elevModifiedMaxDamage) / 2);
+
+  // Calculate hit chance with elevation modifier
+  const elevAccuracyMod = calculateElevationAccuracyModifier(attackerZ, defenderZ);
+  const hitChance = calculateHitChance(attacker, defender, elevAccuracyMod, 0);
+
+  const critChance = calculateCritChance(attacker);
+  const critMultiplier = calculateCritMultiplier(attacker);
+  const critDamage = Math.floor(elevModifiedMaxDamage * critMultiplier);
+
+  // Will this kill the target at max damage?
+  const targetHp = defender.hp || defender.currentHp || 0;
+  const willKill = elevModifiedMaxDamage >= targetHp;
+
+  return {
+    minDamage: elevModifiedMinDamage,
+    maxDamage: elevModifiedMaxDamage,
+    avgDamage: elevModifiedAvgDamage,
+    baseDamage: {
+      min: damageData.minDamage,
+      max: damageData.maxDamage,
+      avg: damageData.avgDamage
+    },
+    minHeal: null,
+    maxHeal: null,
+    hitChance,
+    critChance,
+    critDamage,
+    willKill,
+    isOverheal: false,
+    type: isMagical ? 'magical' : 'physical',
+    defenseReduction: damageData.defenseReduction,
+    elevationModifier: elevationMod.modifier,
+    elevationDescription: elevationMod.description,
+    elevationDiff: elevationMod.elevationDiff,
+    attackerElevation: attackerZ,
+    defenderElevation: defenderZ
   };
 }
 
