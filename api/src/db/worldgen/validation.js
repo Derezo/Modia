@@ -289,6 +289,80 @@ export function validateMaxSpacing(allNodes, allConnections, maxSpacing = INTER_
 }
 
 /**
+ * Validate Phase 4 internal connection spacing specifically.
+ * Checks that all connections within each region respect the max spacing constraint.
+ *
+ * @param {Map<number, Array<Object>>} connectionsByRegion - Map of regionId -> connections
+ * @param {Map<number, Array<Object>>} nodesByRegion - Map of regionId -> nodes
+ * @param {number} maxSpacing - Maximum allowed distance (defaults to INTER_REGION_CONFIG.MAX_NODE_SPACING)
+ * @returns {Object} Validation results with violations by region
+ */
+export function validatePhase4Spacing(connectionsByRegion, nodesByRegion, maxSpacing = INTER_REGION_CONFIG.MAX_NODE_SPACING) {
+  console.log('\n  Validating Phase 4 internal connection spacing...');
+
+  const violationsByRegion = new Map();
+  let totalViolations = 0;
+
+  for (const [regionId, connections] of connectionsByRegion) {
+    const nodes = nodesByRegion.get(regionId);
+    if (!nodes) {
+      console.warn(`  Warning: No nodes found for region ${regionId}`);
+      continue;
+    }
+    const regionViolations = [];
+
+    for (const conn of connections) {
+      const nodeA = nodes[conn.from];
+      const nodeB = nodes[conn.to];
+
+      if (!nodeA || !nodeB) continue;
+
+      const distance = conn.distance !== undefined
+        ? conn.distance
+        : Math.hypot(nodeB.x - nodeA.x, nodeB.y - nodeA.y);
+
+      if (distance > maxSpacing) {
+        regionViolations.push({
+          from: nodeA.name || `Node ${conn.from}`,
+          to: nodeB.name || `Node ${conn.to}`,
+          distance,
+          maxAllowed: maxSpacing,
+          fromType: nodeA.nodeType,
+          toType: nodeB.nodeType
+        });
+      }
+    }
+
+    if (regionViolations.length > 0) {
+      violationsByRegion.set(regionId, regionViolations);
+      totalViolations += regionViolations.length;
+
+      // Get region name from first node
+      const regionName = nodes[0]?.regionName || `Region ${regionId}`;
+      console.log(`    ${regionName}: ${regionViolations.length} violations`);
+
+      // Show first few violations
+      for (const v of regionViolations.slice(0, 3)) {
+        console.log(`      - ${v.from} -> ${v.to}: ${v.distance.toFixed(1)} units (max: ${maxSpacing})`);
+      }
+      if (regionViolations.length > 3) {
+        console.log(`      ... and ${regionViolations.length - 3} more`);
+      }
+    }
+  }
+
+  const passed = totalViolations === 0;
+
+  if (passed) {
+    console.log(`    All Phase 4 connections respect max spacing of ${maxSpacing} units`);
+  } else {
+    console.log(`    FAILED: ${totalViolations} total violations across ${violationsByRegion.size} regions`);
+  }
+
+  return { passed, violationsByRegion, totalViolations };
+}
+
+/**
  * Validate and finalize all world data
  * Phase 6 orchestration function
  *
