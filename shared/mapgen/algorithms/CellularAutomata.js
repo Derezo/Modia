@@ -318,6 +318,210 @@ export class CellularAutomataAlgorithm {
     }
     grid[to.y][to.x] = false;
   }
+
+  /**
+   * Apply cellular automata only within seed regions
+   *
+   * This method enables Perlin+CA cooperation: Perlin defines large-scale
+   * structure and marks transition zones, CA then smooths only those zones.
+   *
+   * @param {string[][]} terrain - Terrain grid to modify
+   * @param {function} random - Seeded random function
+   * @param {Object} options - Runtime options
+   * @param {number} options.intensity - Effect intensity (0-1)
+   * @param {Set<string>} options.seedRegions - Set of "x,y" coords to operate on
+   * @param {Object} options.context - LayerContext with seed regions
+   * @param {boolean} options.smoothBoundaries - Blend edges with surrounding terrain
+   */
+  applyToSeedRegions(terrain, random, options = {}) {
+    const intensity = options.intensity || 0.7;
+    const context = options.context || null;
+    const smoothBoundaries = options.smoothBoundaries !== false;
+
+    // Get seed regions from options or context
+    let seedRegions = options.seedRegions;
+    if (!seedRegions && context) {
+      seedRegions = context.seedRegions;
+    }
+
+    // If no seed regions, fall back to full apply
+    if (!seedRegions || seedRegions.size === 0) {
+      return this.apply(terrain, random, options);
+    }
+
+    const bounds = options.bounds || {
+      x: 0,
+      y: 0,
+      width: terrain[0].length,
+      height: terrain.length
+    };
+
+    // Create binary grid (true = wall, false = floor) for seed regions only
+    const grid = this._createGridFromSeedRegions(
+      terrain,
+      seedRegions,
+      bounds.width,
+      bounds.height
+    );
+
+    // Run CA iterations only on seed region tiles
+    for (let i = 0; i < this.iterations; i++) {
+      this._iterateSeedRegionsOnly(grid, seedRegions, bounds.width, bounds.height);
+    }
+
+    // Apply results back to terrain
+    this._applyToTerrainSeedRegions(terrain, grid, bounds, seedRegions, random, intensity);
+
+    // Smooth boundaries between CA-processed and original terrain
+    if (smoothBoundaries) {
+      this._smoothBoundaries(terrain, seedRegions, bounds, random);
+    }
+  }
+
+  /**
+   * Create binary grid from terrain, marking only seed regions
+   * @private
+   */
+  _createGridFromSeedRegions(terrain, seedRegions, width, height) {
+    const grid = [];
+
+    for (let y = 0; y < height; y++) {
+      const row = [];
+      for (let x = 0; x < width; x++) {
+        const key = `${x},${y}`;
+        if (!seedRegions.has(key)) {
+          // Not in seed region - preserve terrain state as fixed
+          // Mark as wall if impassable, floor otherwise
+          const isWall = this._isWallTerrain(terrain[y]?.[x]);
+          row.push(isWall);
+        } else {
+          // In seed region - start with random based on existing terrain
+          const isWall = this._isWallTerrain(terrain[y]?.[x]);
+          row.push(isWall);
+        }
+      }
+      grid.push(row);
+    }
+
+    return grid;
+  }
+
+  /**
+   * Check if terrain type should be treated as a wall
+   * @private
+   */
+  _isWallTerrain(terrain) {
+    return terrain === 'rock' || terrain === 'cliff' || terrain === this.wallTerrain;
+  }
+
+  /**
+   * Run CA iteration only on seed region tiles
+   * @private
+   */
+  _iterateSeedRegionsOnly(grid, seedRegions, width, height) {
+    const changes = [];
+
+    // Calculate new states for seed region tiles only
+    for (const key of seedRegions) {
+      const [x, y] = key.split(',').map(Number);
+      if (x < 0 || y < 0 || x >= width || y >= height) continue;
+
+      // Count living (wall) neighbors
+      const neighbors = this._countNeighbors(grid, x, y, width, height);
+      const isWall = grid[y][x];
+
+      // Apply rules
+      let newState;
+      if (isWall) {
+        newState = this.survive.has(neighbors);
+      } else {
+        newState = this.birth.has(neighbors);
+      }
+
+      // Record change if different
+      if (newState !== isWall) {
+        changes.push({ x, y, newState });
+      }
+    }
+
+    // Apply changes
+    for (const change of changes) {
+      grid[change.y][change.x] = change.newState;
+    }
+  }
+
+  /**
+   * Apply CA results to terrain for seed regions only
+   * @private
+   */
+  _applyToTerrainSeedRegions(terrain, grid, bounds, seedRegions, random, intensity) {
+    for (const key of seedRegions) {
+      const [x, y] = key.split(',').map(Number);
+      const tx = bounds.x + x;
+      const ty = bounds.y + y;
+
+      // Skip if outside terrain bounds
+      if (ty >= terrain.length || tx >= terrain[0].length) continue;
+      if (ty < 0 || tx < 0) continue;
+
+      // Apply with intensity probability
+      if (random() < intensity) {
+        terrain[ty][tx] = grid[y][x] ? this.wallTerrain : this.floorTerrain;
+      }
+    }
+  }
+
+  /**
+   * Smooth boundaries between CA-processed and original areas
+   * Provides visual blending at the edges of seed regions
+   * @private
+   */
+  _smoothBoundaries(terrain, seedRegions, bounds, random) {
+    const boundaryBlendChance = 0.5;
+
+    for (const key of seedRegions) {
+      const [x, y] = key.split(',').map(Number);
+      const tx = bounds.x + x;
+      const ty = bounds.y + y;
+
+      if (ty >= terrain.length || tx >= terrain[0].length) continue;
+      if (ty < 0 || tx < 0) continue;
+
+      // Check if this is a boundary tile (adjacent to non-seed tile)
+      const neighbors = [
+        `${x-1},${y}`, `${x+1},${y}`,
+        `${x},${y-1}`, `${x},${y+1}`
+      ];
+
+      const isBoundary = neighbors.some(nkey => !seedRegions.has(nkey));
+
+      if (isBoundary && random() < boundaryBlendChance) {
+        // Get neighboring terrain that isn't in seed region
+        const adjacentTerrains = [];
+        const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+        for (const [dx, dy] of dirs) {
+          const nx = x + dx;
+          const ny = y + dy;
+          const ntx = bounds.x + nx;
+          const nty = bounds.y + ny;
+          const nkey = `${nx},${ny}`;
+
+          if (!seedRegions.has(nkey) &&
+              nty >= 0 && nty < terrain.length &&
+              ntx >= 0 && ntx < terrain[0].length) {
+            adjacentTerrains.push(terrain[nty][ntx]);
+          }
+        }
+
+        // Blend with adjacent terrain occasionally
+        if (adjacentTerrains.length > 0 && random() < 0.3) {
+          const blendTerrain = adjacentTerrains[Math.floor(random() * adjacentTerrains.length)];
+          terrain[ty][tx] = blendTerrain;
+        }
+      }
+    }
+  }
 }
 
 export default CellularAutomataAlgorithm;
