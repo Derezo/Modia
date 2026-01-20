@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.7 |
+| Version | 1.8 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -295,6 +295,9 @@ npm run audio:status         # Show asset status
 
 - [x] **seed.js modularization** - Reduced from 4862 to 918 lines via worldgen/ modules
 - [x] **Database performance indexes** - Composite indexes for regional queries (030_performance_indexes.sql)
+- [x] **Large file modularization** (Jan 2026) - Split monolithic files into focused modules:
+  - Frontend: AudioAssets.js split into 6 manifest modules, MarketplaceScene CSS + tabs extracted, ColiseumScene styles + tabs extracted
+  - Backend: battleService.js (1855→66 lines) split into 9 modules in `api/src/services/battle/`, world routes refactored with 5 services in `api/src/services/world/`
 - [ ] Consolidate settings modal and scene
 - [ ] Unify WebSocket event naming
 - [ ] Add TypeScript types (future)
@@ -332,6 +335,7 @@ npm run audio:status         # Show asset status
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.8 | Jan 2026 | Large File Modularization: Split battleService.js (1855→66 lines) into 9 focused modules. Created api/src/services/battle/ with damageCalculator, statusEffectManager, movementService, turnOrderService, chargeSystem, aoeService, skillDefinitionService, actionProcessor. Extracted world services (pathfinding, discovery, region, node). Frontend: AudioAssets split into 6 manifests, MarketplaceScene/ColiseumScene CSS and tabs extracted. |
 | 1.7 | Jan 2026 | Quest System Enhancements v9.3: Elite quests with Perfect Week gating (migration 036), rare item drops (15% chance), cosmetic title system, Perfect Week badge on leaderboard. E2E tests for quest flow (quests.spec.js). |
 | 1.6 | Jan 2026 | Documentation Consolidation v9.1: Added debug endpoint removal to Security Audit checklist (battle.js:900 /verify-traits). Cross-referenced TODOs from code audit. |
 | 1.5 | Jan 2026 | Project cleanup audit: Updated infrastructure completion (60%), marked VPS deployment items as complete (setup.sh, deploy.sh, nginx.conf.template, backup.sh). Added new known issues (inventory rate limits, API inconsistency, debug endpoints). Added refactoring opportunities (audit trail, Zod validation, Redis rate limiting, structured logging). Added Future Infrastructure section. Installed knip for dead code analysis. |
