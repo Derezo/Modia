@@ -2513,7 +2513,167 @@ PUT /api/settings
 
 ---
 
-## 15. Error Codes
+## 15. Fishing Endpoints
+
+Activity node for auto-fishing with chance of rare catches.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/fishing/:nodeId` | Get fishing spot state and current session |
+| POST | `/api/fishing/:nodeId/start` | Start fishing session at node |
+| POST | `/api/fishing/:nodeId/stop` | Stop current fishing session |
+| POST | `/api/fishing/:nodeId/catch` | Attempt to catch during Big One event |
+| GET | `/api/fishing/inventory` | Get player's fish inventory |
+
+---
+
+## 16. Ruins Endpoints
+
+Activity node for sliding puzzle minigame with regional themes.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/ruins/:nodeId` | Get ruins puzzle state |
+| POST | `/api/ruins/:nodeId/start` | Start new puzzle attempt |
+| POST | `/api/ruins/:nodeId/move` | Submit puzzle move |
+
+---
+
+## 17. Relics Endpoints
+
+Collection system for permanent stat bonuses.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/relics` | Get all relics and completion status |
+| GET | `/api/relics/:relicId` | Get specific relic details |
+| POST | `/api/relics/:relicId/activate` | Activate a collected relic |
+
+---
+
+## 18. Friends Endpoints
+
+Social system for friend management and invites.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/friends` | Get friend list with online status |
+| GET | `/api/friends/requests` | Get pending friend requests |
+| POST | `/api/friends/request` | Send friend request |
+| POST | `/api/friends/accept/:userId` | Accept friend request |
+| POST | `/api/friends/decline/:userId` | Decline friend request |
+| DELETE | `/api/friends/:userId` | Remove friend |
+| POST | `/api/friends/:userId/block` | Block user |
+| DELETE | `/api/friends/:userId/block` | Unblock user |
+| GET | `/api/friends/blocked` | Get blocked users list |
+
+---
+
+## 19. LFG Endpoints
+
+Looking-for-group system for party formation.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/lfg` | Get active LFG posts |
+| POST | `/api/lfg` | Create LFG post |
+| DELETE | `/api/lfg/:postId` | Delete own LFG post |
+| POST | `/api/lfg/:postId/apply` | Apply to join LFG group |
+
+---
+
+## 20. Notifications Endpoints
+
+In-game notification system.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/notifications` | Get user's notifications |
+| GET | `/api/notifications/unread` | Get unread notification count |
+| POST | `/api/notifications/:id/read` | Mark notification as read |
+| POST | `/api/notifications/read-all` | Mark all notifications as read |
+| DELETE | `/api/notifications/:id` | Delete notification |
+
+---
+
+## 21. Advancement Quest Endpoints
+
+Guild advancement quest system for class progression.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/advancement-quest/available` | Get available advancement quests |
+| GET | `/api/advancement-quest/:characterId` | Get character's quest progress |
+| POST | `/api/advancement-quest/:characterId/start` | Start advancement quest |
+| POST | `/api/advancement-quest/:characterId/progress` | Update quest progress |
+| POST | `/api/advancement-quest/:characterId/complete` | Complete quest and advance class |
+| POST | `/api/advancement-quest/:characterId/abandon` | Abandon current quest |
+| GET | `/api/advancement-quest/guildmaster/:class` | Get guildmaster boss info |
+
+---
+
+## 22. Daily/Weekly Quests Endpoints
+
+Repeatable quest system with daily and weekly resets.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/quests/daily` | Get available daily quests |
+| GET | `/api/quests/weekly` | Get available weekly quests |
+| GET | `/api/quests/progress` | Get quest completion progress |
+| POST | `/api/quests/:questId/claim` | Claim quest reward |
+| GET | `/api/quests/bonus` | Get active quest bonuses |
+| GET | `/api/quests/elite` | Get elite quest challenges |
+| POST | `/api/quests/elite/:questId/start` | Start elite quest |
+
+---
+
+## 23. Coliseum Endpoints
+
+PvP arena with matchmaking and rankings.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/coliseum/status` | Get coliseum availability and player status |
+| POST | `/api/coliseum/queue` | Join matchmaking queue |
+| DELETE | `/api/coliseum/queue` | Leave matchmaking queue |
+| GET | `/api/coliseum/match/:matchId` | Get match details |
+| POST | `/api/coliseum/match/:matchId/ready` | Signal ready for match |
+| GET | `/api/coliseum/rankings` | Get PvP rankings |
+| GET | `/api/coliseum/history` | Get player's match history |
+| GET | `/api/coliseum/rewards` | Get season rewards |
+
+---
+
+## 24. Clans Endpoints
+
+Clan system for player organizations.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/clans` | Search/list clans |
+| POST | `/api/clans` | Create new clan |
+| GET | `/api/clans/:clanId` | Get clan details |
+| POST | `/api/clans/:clanId/join` | Request to join clan |
+| POST | `/api/clans/:clanId/leave` | Leave current clan |
+| POST | `/api/clans/:clanId/invite` | Invite player to clan (officer+) |
+
+---
+
+## 25. Chat Endpoints
+
+Chat message history retrieval (real-time via WebSocket).
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/chat/history/:room` | Get chat history for room |
+| GET | `/api/chat/rooms` | Get available chat rooms |
+| POST | `/api/chat/report` | Report chat message |
+| DELETE | `/api/chat/:messageId` | Delete own message |
+
+---
+
+## 26. Error Codes
 
 | Code | HTTP Status | Description |
 |------|-------------|-------------|
@@ -2529,10 +2689,11 @@ PUT /api/settings
 
 ---
 
-## 16. Document History
+## 27. Document History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | Jan 2026 | - | Initial document |
 | 2.0 | Jan 2026 | - | Removed flee endpoint; added skill, guild, inventory, shop, marketplace endpoints; added battle and PvP WebSocket events |
 | 2.1 | Jan 2026 | - | Added battle rejoin endpoint (6.5); updated submit action to show async WebSocket delivery (6.3); added battle turn events (7.8) and battle connection events (7.9) |
+| 2.2 | Jan 2026 | - | Added sections 15-25: Fishing, Ruins, Relics, Friends, LFG, Notifications, Advancement Quest, Daily/Weekly Quests, Coliseum, Clans, Chat endpoints |

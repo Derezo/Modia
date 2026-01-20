@@ -27,7 +27,7 @@ const BASE_CLASSES = ['warrior', 'wizard', 'monk', 'chemist'];
 export async function generateGuildmasterBattle(character, targetClass, nodeId) {
   // Get guildmaster template from database
   const templateResult = await query(
-    `SELECT * FROM guildmaster_templates WHERE guild_class = $1`,
+    'SELECT * FROM guildmaster_templates WHERE guild_class = $1',
     [targetClass]
   );
 
@@ -107,7 +107,7 @@ async function createSoloPlayerUnit(character) {
 
   // Get equipped items for stat bonuses
   const equipResult = await query(
-    `SELECT ci.*, it.base_stats, it.bonus_stats, it.equipment_slot
+    `SELECT ci.*, it.stat_bonuses, it.equipment_slot
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
      WHERE ci.character_id = $1 AND ci.is_equipped = true`,
@@ -119,7 +119,7 @@ async function createSoloPlayerUnit(character) {
 
   // Get character skills
   const skillsResult = await query(
-    `SELECT skill_id, skill_level FROM character_skills WHERE character_id = $1`,
+    'SELECT skill_id, skill_level FROM character_skills WHERE character_id = $1',
     [character.id]
   );
 
@@ -347,16 +347,9 @@ function calculateEquipmentBonuses(equipment) {
   };
 
   for (const item of equipment) {
-    const baseStats = item.base_stats || {};
-    const bonusStats = item.bonus_stats || {};
+    const statBonuses = item.stat_bonuses || {};
 
-    for (const [stat, value] of Object.entries(baseStats)) {
-      if (bonuses[stat] !== undefined) {
-        bonuses[stat] += value;
-      }
-    }
-
-    for (const [stat, value] of Object.entries(bonusStats)) {
+    for (const [stat, value] of Object.entries(statBonuses)) {
       if (bonuses[stat] !== undefined) {
         bonuses[stat] += value;
       }

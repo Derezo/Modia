@@ -10,6 +10,8 @@ This document archives all completed features, resolved issues, and historical d
 
 | Version | Date | Major Accomplishments |
 |---------|------|----------------------|
+| 9.4 | Jan 2026 | Battle Map Generation Overhaul - 8-phase modular system with archetypes, PRNG streams, constraint validation, tactical cover |
+| 9.3 | Jan 2026 | Codebase Cleanup - Database fixes, constant deduplication, dead code removal, documentation updates |
 | 9.2 | Jan 2026 | Daily/Weekly Quest System - Auto-assignment, progress hooks, streaks, bonuses, QuestBoardScene |
 | 9.1 | Jan 2026 | Documentation Consolidation - Roadmap updates, quest documentation restructure, TODO audit |
 | 9.0 | Jan 2026 | Gameplay Features - Audio system, settings expansion, elemental damage, battle log, gold sinks, relics |
@@ -41,6 +43,43 @@ This document archives all completed features, resolved issues, and historical d
 | 8.6 | Jan 2026 | Activity Nodes - Fishing, ruins puzzles, caravan merchants, watchtowers |
 | 8.7 | Jan 2026 | Security Hardening - Trust proxy, per-user rate limiting, VPS deployment scripts |
 | 8.8 | Jan 2026 | FFT-Style Formula Overhaul - CT turn system, defense diminishing returns, LCK scaling |
+
+---
+
+## 9.3 - Codebase Cleanup (Jan 2026)
+
+Conservative cleanup of deprecated code, database mismatches, dead code, and documentation.
+
+### Database Fixes
+
+- **guildmasterBattleService.js:** Fixed column name mismatch (`base_stats`/`bonus_stats` → `stat_bonuses`)
+- **Migration 038:** Added missing `base_vitality`, `base_luck`, `archetype`, `elemental_resistances` columns to `enemy_templates`
+- **seed.js:** Updated enemy template INSERT to include all new columns
+
+### Code Deduplication
+
+- **COMBAT_NODE_TYPES:** Added to `shared/constants.js`, removed 8 duplicate definitions across:
+  - `api/src/routes/world.js`
+  - `api/src/routes/debug.js`
+  - `api/src/routes/battle.js`
+  - `frontend/src/scenes/WorldMapScene.js`
+- **Pathfinding functions:** Removed duplicate `buildAdjacencyMap` and `bfsPath` from `world.js`, now imports from `pathfindingService.js`
+
+### Dead Code Removal
+
+Files removed:
+- `api/src/db/testCastlePlacement.js` - Debug/test file
+- `api/src/scripts/auditInvalidSkills.js` - One-time audit script
+- `frontend/src/components/SkillTreePanel.js` - Unused since v8.2
+
+Exports removed:
+- `PathRenderer.js`: `catmullRomPoint` (made private), `getLegacyControlPoint` (deleted)
+- `debugLogger.js`: `clearGameInstance`, `getGameInstance`
+
+### Documentation Updates
+
+- **TECHNICAL_ARCHITECTURE.md:** Added migrations 023-038 to index
+- **API_SPECIFICATION.md:** Added 11 missing endpoint sections (Fishing, Ruins, Relics, Friends, LFG, Notifications, Advancement Quest, Daily/Weekly Quests, Coliseum, Clans, Chat)
 
 ---
 

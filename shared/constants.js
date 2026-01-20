@@ -171,6 +171,9 @@ export const NODE_TYPES = {
 // Battle node types (where PvE battles occur)
 export const BATTLE_NODE_TYPES = [NODE_TYPES.FOREST, NODE_TYPES.CAVE, NODE_TYPES.MOUNTAIN, NODE_TYPES.BRIDGE];
 
+// Alias for backward compatibility (used by pathfinding and clearance checks)
+export const COMBAT_NODE_TYPES = BATTLE_NODE_TYPES;
+
 // Terminator node types (special reward nodes at map edges)
 export const TERMINATOR_NODE_TYPES = [NODE_TYPES.CHEST, NODE_TYPES.SHRINE, NODE_TYPES.DISCOVERY];
 

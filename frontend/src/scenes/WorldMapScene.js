@@ -13,6 +13,7 @@ import { Icon } from '../components/Icon.js';
 import { responsive } from '../core/Responsive.js';
 import { PARCHMENT_COLORS } from '../ui/parchment/ParchmentTheme.js';
 import { RACE_TO_REGION } from '../audio/AudioAssets.js';
+import { COMBAT_NODE_TYPES } from '@shared/constants.js';
 
 // Class-specific action labels for guild recruitment buttons
 const GUILD_ACTION_LABELS = {
@@ -140,6 +141,10 @@ export class WorldMapScene extends Scene {
       onAction: (feature) => {
         if (feature === 'battle') {
           this.startBattle();
+        } else if (feature === 'debug_clear') {
+          // Debug mode: node was auto-cleared, refresh the map
+          this.refreshNodes();
+          this.game.toast.success('Debug', 'Node cleared automatically');
         } else {
           this.handleFeature(feature);
         }
@@ -579,6 +584,29 @@ export class WorldMapScene extends Scene {
       console.error('Failed to load world:', err);
       parchmentToast.error('World Data Error', 'Failed to load world data. Please try again.');
     }
+  }
+
+  /**
+   * Refresh nodes data and update the UI
+   * Used after node state changes (e.g., clearing a node via debug)
+   */
+  async refreshNodes() {
+    await this.loadWorldData();
+
+    // Update node action menu with refreshed node data
+    if (this.currentNode && this.nodeActionMenu) {
+      const position = this.getNodeScreenPosition(this.currentNode);
+      this.nodeActionMenu.setNode(this.currentNode, position);
+      this.nodeActionMenu.expand();
+    }
+
+    // Update minimap
+    if (this.minimap) {
+      this.minimap.setRegionData(this.regions, this.castleNodes);
+    }
+
+    // Clear path cache since node states changed
+    this.clearPathCache();
   }
 
   /**
@@ -1700,7 +1728,7 @@ export class WorldMapScene extends Scene {
 
         // Draw blocked/cleared indicator for combat nodes (only for VISITED nodes)
         // Mystery/undiscovered nodes should not reveal blocked status
-        const isCombatNode = ['forest', 'cave', 'mountain', 'bridge'].includes(node.node_type);
+        const isCombatNode = COMBAT_NODE_TYPES.includes(node.node_type);
         if (isCombatNode && !isCurrent && !isMystery) {
           if (node.blocked) {
             // Red tint overlay for blocked nodes
@@ -1766,7 +1794,7 @@ export class WorldMapScene extends Scene {
         ctx.restore();
 
         // Draw blocked/cleared indicator for combat nodes (fallback style)
-        const isCombatNode = ['forest', 'cave', 'mountain', 'bridge'].includes(node.node_type);
+        const isCombatNode = COMBAT_NODE_TYPES.includes(node.node_type);
         if (isCombatNode && !isCurrent && !isMystery) {
           if (node.blocked) {
             // Red border for blocked
@@ -2004,7 +2032,7 @@ export class WorldMapScene extends Scene {
 
     // Add blocked indicator if destination is blocked (only for VISITED nodes)
     // Undiscovered blocked nodes should still show "Mystery location"
-    const isCombatNode = ['forest', 'cave', 'mountain', 'bridge'].includes(node.node_type);
+    const isCombatNode = COMBAT_NODE_TYPES.includes(node.node_type);
     if (isCombatNode && node.blocked && !isCurrent && isVisited) {
       costLine = { text: 'Blocked - defeat enemies first', color: '#ff4444' };
     }

@@ -127,7 +127,7 @@ export function generatePathControlPoints(x1, y1, x2, y2, fromNodeId, toNodeId) 
  * @param {number} tension - Spline tension (0.5 = Catmull-Rom, 0 = linear, 1 = tight)
  * @returns {{x: number, y: number}} Interpolated point
  */
-export function catmullRomPoint(p0, p1, p2, p3, t, tension = 0.5) {
+function catmullRomPoint(p0, p1, p2, p3, t, tension = 0.5) {
   const t2 = t * t;
   const t3 = t2 * t;
 
@@ -335,39 +335,3 @@ export function renderPathReveal(ctx, x1, y1, x2, y2, fromNodeId, toNodeId, base
   }
 }
 
-/**
- * Get the legacy bezier control point for backward compatibility
- * This matches the original WorldMapScene algorithm
- * @param {number} x1 - Start X
- * @param {number} y1 - Start Y
- * @param {number} x2 - End X
- * @param {number} y2 - End Y
- * @param {number} fromNodeId - Source node ID
- * @param {number} toNodeId - Destination node ID
- * @returns {{x: number, y: number}} Control point
- */
-export function getLegacyControlPoint(x1, y1, x2, y2, fromNodeId, toNodeId) {
-  const midX = (x1 + x2) / 2;
-  const midY = (y1 + y2) / 2;
-
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const length = Math.sqrt(dx * dx + dy * dy);
-
-  if (length < 1) return { x: midX, y: midY };
-
-  // Perpendicular vector
-  const perpX = -dy / length;
-  const perpY = dx / length;
-
-  // Curve amount proportional to path length (capped)
-  const curveAmount = Math.min(length * 0.2, 40);
-
-  // Consistent direction based on node ID ordering
-  const direction = fromNodeId < toNodeId ? 1 : -1;
-
-  return {
-    x: midX + perpX * curveAmount * direction,
-    y: midY + perpY * curveAmount * direction
-  };
-}

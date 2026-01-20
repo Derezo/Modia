@@ -789,6 +789,22 @@ All database migrations are located in `api/src/migrations/` and run sequentiall
 | 020 | 020_guild_quest_system.sql | advancement_quest_templates, character_quests, character_quest_items, character_titles | Guild advancement quest system |
 | 021 | 021_guildmaster_bosses.sql | guildmaster_templates, disciple_templates, advancement_battle_history | Guildmaster boss templates and battle history |
 | 022 | 022_seed_metadata.sql | seed_metadata | Seed versioning for dev-setup |
+| 023 | 023_order_expiration.sql | market_orders | Marketplace order expiration timestamps |
+| 024 | 024_shared_inventory.sql | user_inventory | Shared inventory system across characters |
+| 025 | 025_clans.sql | clans, clan_members, clan_invites | Clan system with ranks and invites |
+| 026 | 026_skill_system_overhaul.sql | skill_templates, character_skills | Skill system overhaul with cooldowns |
+| 027 | 027_terminator_nodes.sql | world_nodes (terminator cols) | Terminator nodes at map edges |
+| 028 | 028_world_obstacles.sql | world_obstacles | World obstacle system for terrain |
+| 029 | 029_regional_world.sql | world_regions, world_nodes (region cols) | Regional world system with 5 racial regions |
+| 030 | 030_performance_indexes.sql | (indexes only) | Performance optimization indexes |
+| 031 | 031_expanded_node_types.sql | (node_type enum) | Expanded node types (chest, shrine, discovery) |
+| 032 | 032_elemental_system.sql | enemy_templates (elemental cols), characters (elemental cols) | Elemental damage and resistance system |
+| 033 | 033_relic_system.sql | relics, character_relics | Relic collection system |
+| 034 | 034_daily_weekly_quests.sql | daily_quests, weekly_quests, character_quest_progress | Daily/weekly quest system |
+| 035 | 035_quest_bonuses.sql | quest_bonuses | Quest completion bonuses |
+| 036 | 036_elite_quests.sql | elite_quest_templates, character_elite_quests | Elite quest challenges |
+| 037 | 037_fix_character_hp_mp.sql | characters (hp/mp recalc) | HP/MP calculation fix for existing characters |
+| 038 | 038_enemy_template_stats.sql | enemy_templates (vitality, luck, archetype, elemental_resistances) | Missing enemy stat columns |
 
 **Migration Commands:**
 ```bash
