@@ -98,7 +98,7 @@ function hasTraitEffect(unit, effectType) {
  * Apply HP bonus trait at battle start
  * @param {Object} unit - Battle unit to modify
  */
-function applyHPBonusTrait(unit) {
+function _applyHPBonusTrait(unit) {
   const hpBonus = getTraitEffectValue(unit, 'hp_bonus');
   const hpMpBonus = getTraitEffectValue(unit, 'hp_mp_bonus');
   const totalBonus = hpBonus + hpMpBonus;
@@ -114,7 +114,7 @@ function applyHPBonusTrait(unit) {
  * Apply MP bonus trait at battle start
  * @param {Object} unit - Battle unit to modify
  */
-function applyMPBonusTrait(unit) {
+function _applyMPBonusTrait(unit) {
   const mpBonus = getTraitEffectValue(unit, 'mp_bonus');
   const hpMpBonus = getTraitEffectValue(unit, 'hp_mp_bonus');
   const totalBonus = mpBonus + hpMpBonus;

@@ -1003,7 +1003,7 @@ async function cancelOrder(client, orderId, userId) {
 
   // Return reserved gold or escrowed items
   if (order.side === 'buy') {
-    const returnGold = order.price * remainingQuantity;
+    const _returnGold = order.price * remainingQuantity;
     await releaseGold(client, orderId);
   } else {
     // Return remaining escrowed items to user's shared pool
@@ -1012,7 +1012,7 @@ async function cancelOrder(client, orderId, userId) {
 
   // Update order status
   await client.query(
-    "UPDATE market_orders SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = $1",
+    'UPDATE market_orders SET status = \'cancelled\', updated_at = CURRENT_TIMESTAMP WHERE id = $1',
     [orderId]
   );
 
@@ -1087,7 +1087,7 @@ async function getUserOrders(client, userId, status = null) {
     query += ' AND mo.status = $2';
     params.push(status);
   } else {
-    query += " AND mo.status IN ('open', 'partial')";
+    query += ' AND mo.status IN (\'open\', \'partial\')';
   }
 
   query += ' ORDER BY mo.created_at DESC';
@@ -1292,7 +1292,7 @@ const AUGMENT_VALUES = {
   hot: 0.8,
   hot_percent: 1.0,
   mp_bonus: 0.7,
-  mp_regen: 0.8,
+  mp_regen_consumable: 0.8,
   spell_cost_reduction: 0.9,
   cleanse: 1.2,
   buff: 0.8,
@@ -1472,7 +1472,7 @@ async function createItemListing(client, userId, characterId, characterItemId, p
 
   // Check if item is already listed
   const existingResult = await client.query(
-    `SELECT id FROM item_listings WHERE character_item_id = $1 AND status = 'active'`,
+    'SELECT id FROM item_listings WHERE character_item_id = $1 AND status = \'active\'',
     [characterItemId]
   );
 
@@ -1501,7 +1501,7 @@ async function createItemListing(client, userId, characterId, characterItemId, p
 
   // Mark the item as "listed" in modifications to prevent other operations
   await client.query(
-    `UPDATE character_items SET modifications = modifications || '{"listed": true}'::jsonb WHERE id = $1`,
+    'UPDATE character_items SET modifications = modifications || \'{"listed": true}\'::jsonb WHERE id = $1',
     [characterItemId]
   );
 
@@ -1598,7 +1598,7 @@ async function buyItemListing(client, buyerUserId, buyerCharacterId, listingId, 
 
   // Update listing status
   await client.query(
-    `UPDATE item_listings SET status = 'sold', updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+    'UPDATE item_listings SET status = \'sold\', updated_at = CURRENT_TIMESTAMP WHERE id = $1',
     [listingId]
   );
 
@@ -1656,13 +1656,13 @@ async function cancelItemListing(client, userId, listingId) {
   delete mods.listed;
 
   await client.query(
-    `UPDATE character_items SET modifications = $1 WHERE id = $2`,
+    'UPDATE character_items SET modifications = $1 WHERE id = $2',
     [mods, listing.character_item_id]
   );
 
   // Update listing status
   await client.query(
-    `UPDATE item_listings SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+    'UPDATE item_listings SET status = \'cancelled\', updated_at = CURRENT_TIMESTAMP WHERE id = $1',
     [listingId]
   );
 

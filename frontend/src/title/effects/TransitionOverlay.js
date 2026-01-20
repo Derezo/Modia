@@ -37,7 +37,7 @@ export class TransitionOverlay {
   update(deltaTime) {
     if (this.phase === 'inactive') return;
 
-    const dt = deltaTime / 1000;
+    const _dt = deltaTime / 1000;
     this.timer += deltaTime;
 
     if (this.phase === 'fade_in') {

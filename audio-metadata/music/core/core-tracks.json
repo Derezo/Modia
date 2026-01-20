@@ -58,7 +58,10 @@
       "volume": 0.8,
       "fadeIn": 0,
       "fadeOut": 500,
-      "generated": false
+      "generated": true,
+      "taskId": "607b65bed2347f24ad55fbdb44aa385d",
+      "generationStarted": "2026-01-19T04:21:30.131Z",
+      "generatedAt": "2026-01-19T04:21:32.884Z"
     },
     {
       "id": "defeat_jingle",

@@ -128,7 +128,7 @@ export class Bat {
   /**
    * Check if bat has flown off screen
    */
-  isOffScreen(canvasWidth) {
+  isOffScreen(_canvasWidth) {
     return this.x < -30;
   }
 }

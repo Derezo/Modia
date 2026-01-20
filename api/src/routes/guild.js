@@ -68,7 +68,7 @@ async function verifyGuildNode(nodeId) {
  * @param {Date} lastRefresh - Last refresh timestamp
  * @returns {Date} Next refresh time
  */
-function calculateNextRefresh(refreshHour, lastRefresh) {
+function calculateNextRefresh(refreshHour, _lastRefresh) {
   const now = new Date();
   const next = new Date(now);
 

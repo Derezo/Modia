@@ -1,15 +1,16 @@
 {
   "version": "1.0.0",
   "description": "Master manifest for Modia sound effects",
-  "totalEffects": 239,
+  "totalEffects": 244,
   "categories": {
     "combat": {
       "description": "Weapon attacks, impacts, and combat sounds",
-      "effectCount": 45,
+      "effectCount": 47,
       "files": [
         "combat/weapons.json",
         "combat/status-effects.json",
-        "combat/deaths.json"
+        "combat/deaths.json",
+        "combat/turns.json"
       ]
     },
     "skills": {
@@ -30,7 +31,7 @@
     },
     "interactions": {
       "description": "Game interaction and event sounds",
-      "effectCount": 22,
+      "effectCount": 25,
       "files": [
         "interactions/interactions.json"
       ]

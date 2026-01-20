@@ -1,5 +1,5 @@
 import express from 'express';
-import { query, withTransaction } from '../config/database.js';
+import { query } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { MAX_PARTY_SIZE, MAX_BATTLE_PARTY_SIZE } from '../config/constants.js';
@@ -30,7 +30,7 @@ router.put('/', authenticate, asyncHandler(async (req, res) => {
 
   // Validate slots
   const slots = new Set();
-  for (const { characterId, slot } of formation) {
+  for (const { characterId: _characterId, slot } of formation) {
     if (slot < 1 || slot > MAX_PARTY_SIZE) {
       throw new AppError(`Slot must be between 1 and ${MAX_PARTY_SIZE}`, 400);
     }
@@ -43,7 +43,7 @@ router.put('/', authenticate, asyncHandler(async (req, res) => {
   // Verify all characters belong to user
   const charIds = formation.map(f => f.characterId);
   const verifyResult = await query(
-    `SELECT id FROM characters WHERE id = ANY($1) AND user_id = $2`,
+    'SELECT id FROM characters WHERE id = ANY($1) AND user_id = $2',
     [charIds, req.user.userId]
   );
 
@@ -423,7 +423,7 @@ router.post('/multiplayer/join/:inviteId', authenticate, asyncHandler(async (req
 
   if (new Date(invite.expires_at) < new Date()) {
     await query(
-      "UPDATE party_invites SET status = 'expired' WHERE id = $1",
+      'UPDATE party_invites SET status = \'expired\' WHERE id = $1',
       [inviteId]
     );
     throw new AppError('Invite has expired', 400);
@@ -451,7 +451,7 @@ router.post('/multiplayer/join/:inviteId', authenticate, asyncHandler(async (req
 
   // Update invite status
   await query(
-    "UPDATE party_invites SET status = 'accepted' WHERE id = $1",
+    'UPDATE party_invites SET status = \'accepted\' WHERE id = $1',
     [inviteId]
   );
 
@@ -538,7 +538,7 @@ router.post('/multiplayer/:partyId/leave', authenticate, asyncHandler(async (req
     if (memberCount <= 1) {
       // Last member leaving - disband party
       await query(
-        "UPDATE parties SET status = 'disbanded' WHERE id = $1",
+        'UPDATE parties SET status = \'disbanded\' WHERE id = $1',
         [partyId]
       );
       partyWebsocket.broadcastPartyDisbanded(parseInt(partyId), 'Leader left');
@@ -623,7 +623,7 @@ router.put('/multiplayer/:partyId/ready', authenticate, asyncHandler(async (req,
   // Update party status if all ready
   if (allReady) {
     await query(
-      "UPDATE parties SET status = 'ready' WHERE id = $1",
+      'UPDATE parties SET status = \'ready\' WHERE id = $1',
       [partyId]
     );
     websocket.broadcastToRoom(roomName, {
@@ -672,7 +672,7 @@ router.post('/multiplayer/:partyId/start', authenticate, asyncHandler(async (req
 
   // Get all party members
   const membersResult = await query(
-    `SELECT pm.user_id FROM party_members pm WHERE pm.party_id = $1`,
+    'SELECT pm.user_id FROM party_members pm WHERE pm.party_id = $1',
     [partyId]
   );
 
@@ -680,7 +680,7 @@ router.post('/multiplayer/:partyId/start', authenticate, asyncHandler(async (req
 
   // Update party status
   await query(
-    "UPDATE parties SET status = 'in_battle' WHERE id = $1",
+    'UPDATE parties SET status = \'in_battle\' WHERE id = $1',
     [partyId]
   );
 

@@ -6,20 +6,20 @@ export class Scene {
   }
 
   // Called when scene becomes active
-  enter(data = {}) {}
+  enter(_data = {}) {}
 
   // Called when leaving scene
   exit() {}
 
   // Called every frame
-  update(deltaTime) {}
+  update(_deltaTime) {}
 
   // Called every frame to render to canvas
-  render(ctx) {}
+  render(_ctx) {}
 
   // Called when viewport breakpoint changes (mobile/tablet/desktop)
   // Override in subclasses to rebuild UI for new breakpoint
-  onBreakpointChange(newBreakpoint, oldBreakpoint) {}
+  onBreakpointChange(_newBreakpoint, _oldBreakpoint) {}
 
   // Helper to get responsive utility reference
   get responsive() {

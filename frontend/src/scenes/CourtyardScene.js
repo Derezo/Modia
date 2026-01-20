@@ -15,7 +15,7 @@ export class CourtyardScene extends Scene {
     this.name = 'courtyard';
   }
 
-  async enter(data = {}) {
+  async enter(_data = {}) {
     // Redirect to Social Hub LFG tab
     this.game.scenes.switchTo('socialHub', { tab: 'lfg' });
   }

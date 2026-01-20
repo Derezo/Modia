@@ -3,8 +3,7 @@ import {
   PARCHMENT_TYPOGRAPHY,
   PARCHMENT_SPACING,
   PARCHMENT_RADIUS,
-  getParchmentButtonCSS,
-  getParchmentInputCSS
+  getParchmentButtonCSS
 } from '../../ui/parchment/index.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
 

@@ -339,18 +339,18 @@ router.get('/search', authenticate, searchLimiter, asyncHandler(async (req, res)
     // Use enhanced search if augment filter is provided
     const items = augment
       ? await marketplaceService.searchItemsWithAugments(
-          client,
-          q,
-          type || null,
-          augment,
-          parseInt(limit, 10)
-        )
+        client,
+        q,
+        type || null,
+        augment,
+        parseInt(limit, 10)
+      )
       : await marketplaceService.searchItems(
-          client,
-          q,
-          type || null,
-          parseInt(limit, 10)
-        );
+        client,
+        q,
+        type || null,
+        parseInt(limit, 10)
+      );
     res.json({ items });
   } finally {
     client.release();

@@ -94,7 +94,7 @@ function getValidMoves(emptyIndex, gridSize) {
  * @param {number[]} tiles - Current tile positions
  * @returns {boolean}
  */
-function isPuzzleSolved(tiles) {
+function _isPuzzleSolved(tiles) {
   for (let i = 0; i < tiles.length - 1; i++) {
     if (tiles[i] !== i + 1) return false;
   }

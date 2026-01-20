@@ -13,7 +13,8 @@
       "path": "/assets/audio/sfx/combat/status_burn.mp3",
       "duration": 1.5,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:29:44.429Z"
     },
     {
       "id": "status_freeze",
@@ -24,7 +25,8 @@
       "path": "/assets/audio/sfx/combat/status_freeze.mp3",
       "duration": 1.5,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:29:46.858Z"
     },
     {
       "id": "status_poison",
@@ -35,7 +37,8 @@
       "path": "/assets/audio/sfx/combat/status_poison.mp3",
       "duration": 1.5,
       "volume": 0.7,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:29:49.351Z"
     },
     {
       "id": "status_stun",
@@ -46,7 +49,8 @@
       "path": "/assets/audio/sfx/combat/status_stun.mp3",
       "duration": 1.2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:29:51.838Z"
     },
     {
       "id": "status_slow",
@@ -57,7 +61,8 @@
       "path": "/assets/audio/sfx/combat/status_slow.mp3",
       "duration": 1.5,
       "volume": 0.7,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:29:55.019Z"
     },
     {
       "id": "status_bleed",
@@ -68,7 +73,8 @@
       "path": "/assets/audio/sfx/combat/status_bleed.mp3",
       "duration": 1.2,
       "volume": 0.7,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:29:57.481Z"
     },
     {
       "id": "status_blind",
@@ -79,7 +85,8 @@
       "path": "/assets/audio/sfx/combat/status_blind.mp3",
       "duration": 1.2,
       "volume": 0.7,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:00.067Z"
     },
     {
       "id": "status_fear",
@@ -90,7 +97,8 @@
       "path": "/assets/audio/sfx/combat/status_fear.mp3",
       "duration": 1.5,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:02.526Z"
     },
     {
       "id": "status_taunt",
@@ -101,7 +109,8 @@
       "path": "/assets/audio/sfx/combat/status_taunt.mp3",
       "duration": 1.2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:05.152Z"
     },
     {
       "id": "status_weaken",
@@ -112,7 +121,8 @@
       "path": "/assets/audio/sfx/combat/status_weaken.mp3",
       "duration": 1.3,
       "volume": 0.7,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:07.604Z"
     },
     {
       "id": "status_corrode",
@@ -123,7 +133,8 @@
       "path": "/assets/audio/sfx/combat/status_corrode.mp3",
       "duration": 1.5,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:10.161Z"
     },
     {
       "id": "status_curse",
@@ -134,7 +145,8 @@
       "path": "/assets/audio/sfx/combat/status_curse.mp3",
       "duration": 1.5,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:12.488Z"
     },
     {
       "id": "status_haste",
@@ -145,7 +157,8 @@
       "path": "/assets/audio/sfx/combat/status_haste.mp3",
       "duration": 1.2,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:14.987Z"
     },
     {
       "id": "status_rage",
@@ -156,7 +169,8 @@
       "path": "/assets/audio/sfx/combat/status_rage.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:17.633Z"
     },
     {
       "id": "status_fortify",
@@ -167,7 +181,8 @@
       "path": "/assets/audio/sfx/combat/status_fortify.mp3",
       "duration": 1.3,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:20.316Z"
     }
   ]
 }

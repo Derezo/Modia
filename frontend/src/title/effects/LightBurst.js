@@ -82,7 +82,7 @@ export class LightBurst {
       return;
     }
 
-    const progress = Math.min(1, this.timer / this.duration);
+    const _progress = Math.min(1, this.timer / this.duration);
 
     // Flash decay (quick)
     if (this.timer < 150) {

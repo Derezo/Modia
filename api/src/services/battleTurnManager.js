@@ -464,7 +464,7 @@ function getSkillRangeTiles(unit, state, skillId) {
 /**
  * Get path tiles from unit to target (simple line)
  */
-function getPathToTarget(unit, targetTile, state) {
+function getPathToTarget(unit, targetTile, _state) {
   const path = [];
   let currentX = unit.tileX;
   let currentY = unit.tileY;

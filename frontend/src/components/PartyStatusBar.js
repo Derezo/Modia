@@ -323,7 +323,7 @@ export class PartyStatusBar {
     if (leaveBtn) {
       leaveBtn.addEventListener('click', () => this.handleLeave());
       leaveBtn.addEventListener('mouseenter', () => {
-        leaveBtn.style.background = `rgba(139, 68, 68, 0.2)`;
+        leaveBtn.style.background = 'rgba(139, 68, 68, 0.2)';
       });
       leaveBtn.addEventListener('mouseleave', () => {
         leaveBtn.style.background = 'transparent';

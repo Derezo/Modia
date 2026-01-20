@@ -854,9 +854,9 @@ export class ClanTab {
   renderClanList() {
     const filteredClans = this.searchQuery
       ? this.clans.filter(c =>
-          c.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+        c.name.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
           c.tag.toLowerCase().includes(this.searchQuery.toLowerCase())
-        )
+      )
       : this.clans;
 
     if (filteredClans.length === 0) {

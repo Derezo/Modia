@@ -792,7 +792,7 @@ export class BattleContextMenu {
     if (items.length === 0) return;
 
     // Find current position among enabled items
-    let enabledIndices = [];
+    const enabledIndices = [];
     this.element.querySelectorAll('.context-menu-item').forEach((item, index) => {
       if (!item.classList.contains('disabled')) {
         enabledIndices.push(index);

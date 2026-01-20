@@ -1,7 +1,7 @@
 /**
  * BattleAnimations - Visual effects for tactical combat
  */
-import { SKILL_EFFECT_CATEGORIES, getSkillEffectConfig, getRandomCategoryColor } from './SkillEffectCategories.js';
+import { SKILL_EFFECT_CATEGORIES, getRandomCategoryColor } from './SkillEffectCategories.js';
 import { ELEMENT_COLORS } from '@shared/battleMath.js';
 
 export class BattleAnimations {
@@ -16,7 +16,7 @@ export class BattleAnimations {
    * @param {string} categoryName - Visual category (fire, ice, etc.)
    * @param {Object} skill - Optional skill object for more context
    */
-  addSkillEffect(x, y, categoryName, skill = null) {
+  addSkillEffect(x, y, categoryName, _skill = null) {
     const config = SKILL_EFFECT_CATEGORIES[categoryName] || SKILL_EFFECT_CATEGORIES.physical;
 
     // Flash effect with category color
@@ -638,8 +638,8 @@ export class BattleAnimations {
    * Render slash effect
    */
   renderSlash(ctx, anim, progress) {
-    const midX = (anim.startX + anim.endX) / 2;
-    const midY = (anim.startY + anim.endY) / 2;
+    const _midX = (anim.startX + anim.endX) / 2;
+    const _midY = (anim.startY + anim.endY) / 2;
 
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 3 * (1 - progress);

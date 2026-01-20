@@ -42,7 +42,7 @@ export function initSpecialEffects() {
   registerEffectHandler('death_save', {
     phase: EFFECT_PHASES.ON_DEATH,
     description: 'Survive a killing blow once per battle',
-    apply(unit, effectValue, context) {
+    apply(unit, effectValue, _context) {
       // Check if death save already used
       if (unit.deathSaveUsed) return null;
 

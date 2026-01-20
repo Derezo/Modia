@@ -13,9 +13,7 @@ import {
   PARCHMENT_TYPOGRAPHY,
   PARCHMENT_SPACING,
   PARCHMENT_RADIUS,
-  getParchmentGradient,
-  getParchmentBorder,
-  getParchmentShadow
+  getParchmentBorder
 } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 
@@ -1336,7 +1334,7 @@ export class BattleFormationScene extends Scene {
     document.head.appendChild(style);
   }
 
-  update(deltaTime) {
+  update(_deltaTime) {
     // Main update handled by animation loop
   }
 

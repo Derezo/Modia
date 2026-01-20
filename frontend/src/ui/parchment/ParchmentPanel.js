@@ -34,7 +34,6 @@ import {
   PARCHMENT_TYPOGRAPHY,
   PARCHMENT_SPACING,
   PARCHMENT_RADIUS,
-  getParchmentGradient,
   getParchmentGradientTextured,
   getParchmentBorder,
   getParchmentShadow,

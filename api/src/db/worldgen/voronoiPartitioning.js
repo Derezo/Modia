@@ -292,7 +292,7 @@ export function extractVoronoiVertices(voronoi, castles) {
 
   // Filter to only vertices where 3+ regions meet
   const vertices = [];
-  for (const [key, data] of vertexMap) {
+  for (const [_key, data] of vertexMap) {
     if (data.regions.size >= 3) {
       const adjacentRegions = [...data.regions].sort((a, b) => a - b);
       const distanceFromCenter = Math.hypot(data.x, data.y);

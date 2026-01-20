@@ -107,7 +107,7 @@ export class MarketConfirmDialog {
     document.addEventListener('keydown', this.escHandler);
   }
 
-  addStyles(isBuy, rarityColor) {
+  addStyles(_isBuy, _rarityColor) {
     if (document.getElementById('market-confirm-dialog-styles')) return;
 
     const style = document.createElement('style');

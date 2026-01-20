@@ -15,6 +15,7 @@
     "./terrain": "./terrain.js",
     "./mapGeneration": "./mapGeneration.js",
     "./pathfinding": "./pathfinding.js",
-    "./battleMath": "./battleMath.js"
+    "./battleMath": "./battleMath.js",
+    "./mapgen/SpawnPlacer": "./mapgen/SpawnPlacer.js"
   }
 }

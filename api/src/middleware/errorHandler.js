@@ -1,6 +1,6 @@
 import { logger } from '../utils/logger.js';
 
-const errorHandler = (err, req, res, next) => {
+const errorHandler = (err, req, res, _next) => {
   const statusCode = err.statusCode || 500;
 
   // Only log actual errors (5xx), not expected client errors (4xx)

@@ -331,7 +331,7 @@ export class MusicPlayer {
     // (a new track could start before the timeout fires)
     const sourceToStop = this.currentSource;
     const gainToDisconnect = this.currentGain;
-    const trackToStop = this.currentTrack;
+    const _trackToStop = this.currentTrack;
 
     if (fadeOutMs > 0 && gainToDisconnect) {
       // Fade out

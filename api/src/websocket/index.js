@@ -297,7 +297,7 @@ function setupWebSocket(server) {
             }
             break;
 
-          case 'join_room':
+          case 'join_room': {
             if (!userId) {
               ws.send(JSON.stringify({
                 type: 'error',
@@ -347,8 +347,9 @@ function setupWebSocket(server) {
               }
             }));
             break;
+          }
 
-          case 'leave_room':
+          case 'leave_room': {
             if (!userId) break;
 
             const leaveRoom = payload.room;
@@ -371,8 +372,9 @@ function setupWebSocket(server) {
               payload: { room: leaveRoom }
             }));
             break;
+          }
 
-          case 'chat_message':
+          case 'chat_message': {
             if (!userId) {
               ws.send(JSON.stringify({
                 type: 'error',
@@ -430,6 +432,7 @@ function setupWebSocket(server) {
               console.error('Chat message error:', err);
             }
             break;
+          }
 
           case 'coliseum_queue_join':
             if (!userId) break;

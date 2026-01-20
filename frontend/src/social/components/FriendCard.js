@@ -367,9 +367,9 @@ export class FriendCard {
     this.element.innerHTML = `
       <div class="friend-card-avatar">
         ${this.friend.avatarUrl
-          ? `<img src="${this.escapeHtml(this.friend.avatarUrl)}" alt="">`
-          : `<span>${this.getClassIcon()}</span>`
-        }
+    ? `<img src="${this.escapeHtml(this.friend.avatarUrl)}" alt="">`
+    : `<span>${this.getClassIcon()}</span>`
+}
         <div class="friend-card-status ${this.getStatusClass()}"></div>
       </div>
       <div class="friend-card-info">

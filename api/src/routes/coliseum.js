@@ -31,9 +31,9 @@ router.get('/leaderboard', async (req, res) => {
     // Build time filter condition
     let timeCondition = '';
     if (time === 'week') {
-      timeCondition = "AND pr.last_match_at >= NOW() - INTERVAL '7 days'";
+      timeCondition = 'AND pr.last_match_at >= NOW() - INTERVAL \'7 days\'';
     } else if (time === 'today') {
-      timeCondition = "AND pr.last_match_at >= NOW() - INTERVAL '1 day'";
+      timeCondition = 'AND pr.last_match_at >= NOW() - INTERVAL \'1 day\'';
     }
 
     // Get leaderboard
@@ -102,7 +102,7 @@ router.get('/matches', async (req, res) => {
     const parsedOffset = parseInt(offset, 10) || 0;
 
     let whereClause = '';
-    let params = [parsedLimit, parsedOffset];
+    const params = [parsedLimit, parsedOffset];
 
     if (filter === 'mine') {
       whereClause = 'WHERE cm.winner_user_id = $3 OR cm.loser_user_id = $3';
@@ -209,10 +209,10 @@ router.post('/surrender', async (req, res) => {
     }
 
     const battle = battleResult.rows[0];
-    const winnerId = battle.player1_id === userId ? battle.player2_id : battle.player1_id;
+    const _winnerId = battle.player1_id === userId ? battle.player2_id : battle.player1_id;
 
     // Import coliseum service to handle surrender
-    const coliseumService = await import('../services/coliseumService.js');
+    const _coliseumService = await import('../services/coliseumService.js');
 
     // The actual surrender handling would be done via WebSocket
     // This endpoint is for fallback/confirmation

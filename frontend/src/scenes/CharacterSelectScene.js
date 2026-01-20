@@ -375,7 +375,7 @@ export class CharacterSelectScene extends Scene {
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
-  update(deltaTime) {}
+  update(_deltaTime) {}
 
   render(ctx) {
     // Draw parchment-themed background gradient

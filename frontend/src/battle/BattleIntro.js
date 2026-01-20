@@ -485,7 +485,7 @@ export class BattleIntro {
   /**
    * Render - now a no-op since we use DOM elements
    */
-  render(ctx) {
+  render(_ctx) {
     // DOM-based rendering, no canvas drawing needed
   }
 

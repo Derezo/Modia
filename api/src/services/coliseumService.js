@@ -7,7 +7,7 @@ import * as battleService from './battleService.js';
 import * as dailyQuestService from './dailyQuestService.js';
 import * as battleWebsocket from './battleWebsocket.js';
 import { MAX_BATTLE_PARTY_SIZE } from '../config/constants.js';
-import { calculatePlayerPower, calculateBattlePartyPower } from './characterValuationService.js';
+import { calculateBattlePartyPower } from './characterValuationService.js';
 import {
   calculateRatingChange,
   updatePvpRating,
@@ -713,7 +713,7 @@ async function getPlayerBattleParty(userId) {
   const characters = result.rows;
   for (const char of characters) {
     const skillsResult = await query(
-      `SELECT skill_id, skill_level FROM character_skills WHERE character_id = $1`,
+      'SELECT skill_id, skill_level FROM character_skills WHERE character_id = $1',
       [char.id]
     );
     char.skills = skillsResult.rows.map(s => ({ id: s.skill_id, level: s.skill_level }));
@@ -938,7 +938,7 @@ async function handleTurnTimeout(battleId, playerId) {
 async function skipPlayerTurn(battleId, playerId) {
   // Get battle state and advance to next actor
   const result = await query(
-    `SELECT battle_state FROM battles WHERE id = $1`,
+    'SELECT battle_state FROM battles WHERE id = $1',
     [battleId]
   );
 
@@ -953,12 +953,12 @@ async function skipPlayerTurn(battleId, playerId) {
 
     // Save updated state
     await query(
-      `UPDATE battles SET battle_state = $1 WHERE id = $2`,
+      'UPDATE battles SET battle_state = $1 WHERE id = $2',
       [JSON.stringify(state), battleId]
     );
 
     // Broadcast turn advanced
-    const ws = await getWebsocket();
+    const _ws = await getWebsocket();
     const nextUnit = state.units.find(u => u.id === state.activeUnitId);
     if (nextUnit) {
       battleWebsocket.broadcastTurnStart(battleId, {
@@ -1031,7 +1031,7 @@ function handlePlayerDisconnect(battleId, playerId) {
  * @param {number} battleId - Battle ID
  * @param {number} playerId - Player who reconnected
  */
-function handlePlayerReconnect(battleId, playerId) {
+function _handlePlayerReconnect(battleId, playerId) {
   const tracking = disconnectTracking.get(battleId);
   if (tracking && tracking[playerId]) {
     // Clear forfeit timer
@@ -1048,7 +1048,7 @@ function handlePlayerReconnect(battleId, playerId) {
 
     // Restart turn timer if it's this player's turn
     query(
-      `SELECT battle_state FROM battles WHERE id = $1`,
+      'SELECT battle_state FROM battles WHERE id = $1',
       [battleId]
     ).then(result => {
       if (result.rows.length > 0) {
@@ -1072,13 +1072,13 @@ function handlePlayerReconnect(battleId, playerId) {
 async function endMatchByForfeit(battleId, forfeiterId, reason, applyPenalty = true) {
   // Get battle info
   const result = await query(
-    `SELECT player1_id, player2_id, battle_state FROM battles WHERE id = $1`,
+    'SELECT player1_id, player2_id, battle_state FROM battles WHERE id = $1',
     [battleId]
   );
 
   if (result.rows.length === 0) return;
 
-  const { player1_id, player2_id, battle_state } = result.rows[0];
+  const { player1_id, player2_id, battle_state: _battle_state } = result.rows[0];
   const winnerId = forfeiterId === player1_id ? player2_id : player1_id;
   const loserId = forfeiterId;
 
@@ -1151,7 +1151,7 @@ async function captureTeamSnapshots(winnerId, loserId) {
  */
 async function calculateMatchStats(battleId) {
   const result = await query(
-    `SELECT battle_state, created_at FROM battles WHERE id = $1`,
+    'SELECT battle_state, created_at FROM battles WHERE id = $1',
     [battleId]
   );
 
@@ -1239,7 +1239,7 @@ async function completeMatch(battleId, winnerId, loserId, reason = 'victory', ap
     // Find the match in activeMatches
     let queueType = '1v1';
     let match = null;
-    activeMatches.forEach((m, matchId) => {
+    activeMatches.forEach((m, _matchId) => {
       if (m.battleId === battleId) {
         match = m;
         queueType = m.queueType;
@@ -1276,7 +1276,7 @@ async function completeMatch(battleId, winnerId, loserId, reason = 'victory', ap
       : (match?.player2?.ppr || await calculateBattlePartyPower(loserId));
 
     // Calculate rating changes
-    let ratingChange = calculateRatingChange(
+    const ratingChange = calculateRatingChange(
       winnerCurrentRating,
       loserCurrentRating,
       winnerPPR,
@@ -1317,7 +1317,7 @@ async function completeMatch(battleId, winnerId, loserId, reason = 'victory', ap
 
     // Update battle status
     await query(
-      `UPDATE battles SET status = 'completed', winner_id = $2 WHERE id = $1`,
+      'UPDATE battles SET status = \'completed\', winner_id = $2 WHERE id = $1',
       [battleId, winnerId]
     );
 
@@ -1378,7 +1378,7 @@ async function completeMatch(battleId, winnerId, loserId, reason = 'victory', ap
  * @param {number} battleId - Battle ID
  * @param {number} surrenderingPlayerId - Player who is surrendering
  */
-async function handleSurrender(battleId, surrenderingPlayerId) {
+async function _handleSurrender(battleId, surrenderingPlayerId) {
   console.log(`[Coliseum] Player ${surrenderingPlayerId} surrendering battle ${battleId}`);
   await endMatchByForfeit(battleId, surrenderingPlayerId, 'surrender', true);
 }
@@ -1393,7 +1393,7 @@ async function handleSurrender(battleId, surrenderingPlayerId) {
  * @param {number} limit - Number of entries to return
  * @returns {Promise<Array>} Leaderboard entries
  */
-async function getLeaderboard(queueType = '1v1', limit = 100) {
+async function _getLeaderboard(queueType = '1v1', limit = 100) {
   const result = await query(
     `SELECT
        pr.user_id,
@@ -1426,7 +1426,7 @@ async function getLeaderboard(queueType = '1v1', limit = 100) {
  * @param {number} offset - Offset for pagination
  * @returns {Promise<Array>} Match history
  */
-async function getMatchHistory(filter = 'all', userId = null, limit = 50, offset = 0) {
+async function _getMatchHistory(filter = 'all', userId = null, limit = 50, offset = 0) {
   let queryStr;
   let params;
 
@@ -1482,7 +1482,7 @@ async function getMatchHistory(filter = 'all', userId = null, limit = 50, offset
  * @param {number} matchId - Coliseum match ID
  * @returns {Promise<Object>} Match details with snapshots and stats
  */
-async function getMatchDetails(matchId) {
+async function _getMatchDetails(matchId) {
   const result = await query(
     `SELECT
        cm.*,
@@ -1508,7 +1508,7 @@ async function getMatchDetails(matchId) {
  * @param {string} queueType - Queue type
  * @returns {Promise<Object>} Player's rank and rating info
  */
-async function getPlayerRank(userId, queueType = '1v1') {
+async function _getPlayerRank(userId, queueType = '1v1') {
   const result = await query(
     `SELECT
        user_id,

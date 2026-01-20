@@ -11,7 +11,7 @@ import * as battleService from './battleService.js';
 import { getManhattanDistance } from '../../../shared/pathfinding.js';
 
 // Import new utility AI system
-import { UtilityAI, createAIForUnit, quickDecision } from './ai/index.js';
+import { createAIForUnit, quickDecision } from './ai/index.js';
 
 // Configuration for utility AI usage
 const USE_UTILITY_AI = true;
@@ -135,7 +135,7 @@ function convertToLegacyFormat(action, enemy, battleState) {
  * @param {Object} battleState - Battle state
  * @returns {Object} Legacy format action
  */
-function convertSingleAction(action, enemy, battleState) {
+function convertSingleAction(action, enemy, _battleState) {
   switch (action.type) {
     case 'move':
       return {
@@ -160,9 +160,9 @@ function convertSingleAction(action, enemy, battleState) {
         skillId: action.skillId || action.skill?.id,
         targetTile: action.target
           ? {
-              x: action.target.x ?? action.target.tileX,
-              y: action.target.y ?? action.target.tileY
-            }
+            x: action.target.x ?? action.target.tileX,
+            y: action.target.y ?? action.target.tileY
+          }
           : { x: enemy.tileX, y: enemy.tileY }
       };
 
@@ -176,9 +176,9 @@ function convertSingleAction(action, enemy, battleState) {
         itemId: action.itemId || action.item?.itemId,
         targetTile: action.target
           ? {
-              x: action.target.x ?? action.target.tileX,
-              y: action.target.y ?? action.target.tileY
-            }
+            x: action.target.x ?? action.target.tileX,
+            y: action.target.y ?? action.target.tileY
+          }
           : { x: enemy.tileX, y: enemy.tileY }
       };
 

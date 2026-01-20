@@ -23,7 +23,6 @@
 
 import { ParchmentModal } from '../../ui/parchment/ParchmentModal.js';
 import { Accordion } from '../../ui/parchment/Accordion.js';
-import { ItemDataTable } from '../ItemDataTable/ItemDataTable.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
 import { getClassColor, getClassIcon } from '../CharacterCard.js';
 import {

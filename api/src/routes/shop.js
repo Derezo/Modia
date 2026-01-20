@@ -605,7 +605,7 @@ router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async
   await verifyShopAccess(nodeIdNum, shopType);
 
   // Verify character location and get party character
-  const activeChar = await verifyCharacterAtNode(req.user.userId, nodeIdNum);
+  const _activeChar = await verifyCharacterAtNode(req.user.userId, nodeIdNum);
 
   // Get all user's shared pool items that can be sold (unequipped, unlisted, tradeable)
   const itemsResult = await query(

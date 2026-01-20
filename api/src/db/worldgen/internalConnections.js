@@ -574,7 +574,7 @@ export function enforceAdjacencyRules(nodes, connections) {
  * @param {SeededRandom} rng - Seeded random generator
  * @returns {Array<{from: number, to: number}>} Updated connections
  */
-export function ensureMinimumConnections(nodes, connections, rng) {
+export function ensureMinimumConnections(nodes, connections, _rng) {
   const connectionSet = new Set(
     connections.map(c => `${Math.min(c.from, c.to)},${Math.max(c.from, c.to)}`)
   );
@@ -593,7 +593,7 @@ export function ensureMinimumConnections(nodes, connections, rng) {
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
     const minConn = MIN_CONNECTIONS[node.nodeType] || 2;
-    const maxConn = MAX_CONNECTIONS[node.nodeType];
+    const _maxConn = MAX_CONNECTIONS[node.nodeType];
 
     while (connectionCounts.get(i) < minConn) {
       // Find nearby valid targets

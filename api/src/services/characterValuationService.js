@@ -67,7 +67,7 @@ function getSkillBaseCost(skillId) {
  */
 async function calculateSkillXPSpent(characterId) {
   const result = await query(
-    `SELECT skill_id, level FROM character_skills WHERE character_id = $1`,
+    'SELECT skill_id, level FROM character_skills WHERE character_id = $1',
     [characterId]
   );
 

@@ -9,9 +9,9 @@ const router = express.Router();
 
 // Starter equipment by class (weapon, armor, accessory)
 const STARTER_EQUIPMENT = {
-  warrior: ['Trainee Sword', 'Trainee Tunic', "Warrior's Pendant"],
-  wizard: ['Novice Wand', 'Student Robe', "Mage's Crystal"],
-  monk: ['Initiate Wraps', 'Initiate Gi', "Monk's Beads"],
+  warrior: ['Trainee Sword', 'Trainee Tunic', 'Warrior\'s Pendant'],
+  wizard: ['Novice Wand', 'Student Robe', 'Mage\'s Crystal'],
+  monk: ['Initiate Wraps', 'Initiate Gi', 'Monk\'s Beads'],
   chemist: ['Mixing Rod', 'Alchemist Coat', 'Reagent Pouch']
 };
 

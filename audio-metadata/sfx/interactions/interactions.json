@@ -2,8 +2,20 @@
   "category": "interactions",
   "subcategory": "game",
   "description": "Game interaction and event sound effects",
-  "totalEffects": 22,
+  "totalEffects": 25,
   "effects": [
+    {
+      "id": "footstep",
+      "name": "Footstep",
+      "category": "interaction",
+      "subcategory": "movement",
+      "prompt": "Single soft footstep on stone, medieval boot stepping, subtle walking sound, brief gravel crunch, quiet exploration step",
+      "path": "/assets/audio/sfx/interactions/footstep.mp3",
+      "duration": 0.3,
+      "volume": 0.4,
+      "generated": true,
+      "generatedAt": "2026-01-19T04:06:48.582Z"
+    },
     {
       "id": "interaction_equip_weapon",
       "name": "Equip Weapon",
@@ -33,7 +45,7 @@
       "subcategory": "equipment",
       "prompt": "Fantasy equipment removal, item putting away, gear unfastening, equipment removal sound, brief metallic shuffle",
       "path": "/assets/audio/sfx/interactions/unequip.mp3",
-      "duration": 1.0,
+      "duration": 1,
       "volume": 0.7,
       "generated": false
     },
@@ -66,7 +78,7 @@
       "subcategory": "inventory",
       "prompt": "Fantasy item use, potion drinking, consumable activated, brief magical effect, item consumed",
       "path": "/assets/audio/sfx/interactions/item_use.mp3",
-      "duration": 1.0,
+      "duration": 1,
       "volume": 0.75,
       "generated": false
     },
@@ -77,7 +89,7 @@
       "subcategory": "currency",
       "prompt": "Fantasy gold coins gained, money jingling, treasure acquired, rewarding coin sound, wealth increasing",
       "path": "/assets/audio/sfx/interactions/gold_gain.mp3",
-      "duration": 1.0,
+      "duration": 1,
       "volume": 0.75,
       "generated": false
     },
@@ -88,7 +100,7 @@
       "subcategory": "currency",
       "prompt": "Fantasy gold coins spent, money exchanging, coins counting, transaction complete, purchase sound",
       "path": "/assets/audio/sfx/interactions/gold_spend.mp3",
-      "duration": 1.0,
+      "duration": 1,
       "volume": 0.7,
       "generated": false
     },
@@ -99,7 +111,7 @@
       "subcategory": "progress",
       "prompt": "Fantasy quest complete fanfare, achievement unlocked, mission accomplished, triumphant brief jingle, rewarding success sound",
       "path": "/assets/audio/sfx/interactions/quest_complete.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.8,
       "generated": false
     },
@@ -132,7 +144,7 @@
       "subcategory": "discovery",
       "prompt": "Fantasy shrine activation, ancient power awakening, mystical energy surge, holy site blessing, divine light ascending",
       "path": "/assets/audio/sfx/interactions/shrine_activate.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.8,
       "generated": false
     },
@@ -187,7 +199,7 @@
       "subcategory": "social",
       "prompt": "Fantasy party left, departure from group, temporary farewell, brief dissolving sound, party separation",
       "path": "/assets/audio/sfx/interactions/party_leave.mp3",
-      "duration": 1.0,
+      "duration": 1,
       "volume": 0.7,
       "generated": false
     },
@@ -220,7 +232,7 @@
       "subcategory": "activity",
       "prompt": "Fantasy fishing reel, line winding, fish struggling, exciting catch moment, reeling in prize",
       "path": "/assets/audio/sfx/interactions/fishing_reel.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.8,
       "generated": false
     },
@@ -244,6 +256,28 @@
       "path": "/assets/audio/sfx/interactions/puzzle_solve.mp3",
       "duration": 1.5,
       "volume": 0.8,
+      "generated": false
+    },
+    {
+      "id": "interaction_match_found",
+      "name": "Match Found",
+      "category": "interaction",
+      "subcategory": "matchmaking",
+      "prompt": "Fantasy matchmaking success, party found chime, group ready notification, exciting match alert, players connected",
+      "path": "/assets/audio/sfx/interactions/match_found.mp3",
+      "duration": 1.0,
+      "volume": 0.7,
+      "generated": false
+    },
+    {
+      "id": "interaction_gold_receive",
+      "name": "Gold Receive",
+      "category": "interaction",
+      "subcategory": "currency",
+      "prompt": "Fantasy gold received, coins landing, treasure acquired, rewarding payment sound, currency gained notification",
+      "path": "/assets/audio/sfx/interactions/gold_receive.mp3",
+      "duration": 0.8,
+      "volume": 0.6,
       "generated": false
     }
   ]

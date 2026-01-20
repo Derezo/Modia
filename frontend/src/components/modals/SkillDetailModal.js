@@ -941,7 +941,7 @@ export class SkillDetailModal {
       const result = await this.game.api.learnSkill(this.characterId, this.skill.id, this.selectedLevelUp);
 
       const newLevel = this.currentLevel + this.selectedLevelUp;
-      const xpCost = this.calculateXpCost(this.selectedLevelUp);
+      const _xpCost = this.calculateXpCost(this.selectedLevelUp);
 
       parchmentToast.success(`${this.skill.name} is now Level ${newLevel}!`);
 

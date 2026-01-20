@@ -460,10 +460,16 @@ export class Game {
 
       // Apply accessibility settings immediately
       this.applyAccessibilitySettings(result.settings);
+
+      // Setup developer debug tools if enabled
+      this.setupDebugTools();
     } catch (err) {
       console.error('Failed to load settings:', err);
       // Set full defaults if load fails to ensure accessibility settings work
       this.state.set('userSettings', JSON.parse(JSON.stringify(DEFAULT_SETTINGS)));
+
+      // Setup debug tools even with defaults (dev mode disabled by default)
+      this.setupDebugTools();
     }
   }
 
@@ -1008,6 +1014,84 @@ export class Game {
       this.partyStatusBar?.hide();
     } else if (this.partyStatusBar?.party) {
       this.partyStatusBar.show();
+    }
+  }
+
+  /**
+   * Setup developer debug tools (console functions)
+   * Only available when developer mode is enabled in settings
+   */
+  setupDebugTools() {
+    const settings = this.state.get('userSettings');
+    const devEnabled = settings?.developer?.enabled === true;
+
+    if (devEnabled) {
+      // Expose win_battle() function to console
+      window.win_battle = async () => {
+        const currentScene = this.scenes?.getCurrentScene();
+
+        if (!currentScene || !currentScene.battleId) {
+          console.error('[DEBUG] win_battle(): Not in a battle. Navigate to a battle scene first.');
+          return;
+        }
+
+        const battleId = currentScene.battleId;
+        console.log(`[DEBUG] Winning battle ${battleId}...`);
+
+        try {
+          const response = await this.api.post(`/debug/win-battle/${battleId}`);
+
+          if (response.success) {
+            console.log('[DEBUG] Battle won!', response);
+            // The backend will broadcast battle:end via WebSocket which will trigger the victory sequence
+          } else {
+            console.error('[DEBUG] Failed to win battle:', response);
+          }
+        } catch (error) {
+          console.error('[DEBUG] Error winning battle:', error.message);
+        }
+      };
+
+      // Expose clear_node() function to console
+      window.clear_node = async (nodeId) => {
+        if (!nodeId) {
+          // Try to get current node if not provided
+          const currentNode = this.state.get('currentNode');
+          if (currentNode?.id) {
+            nodeId = currentNode.id;
+          } else {
+            console.error('[DEBUG] clear_node(nodeId): Please provide a node ID');
+            return;
+          }
+        }
+
+        console.log(`[DEBUG] Clearing node ${nodeId}...`);
+
+        try {
+          const response = await this.api.post(`/debug/clear-node/${nodeId}`);
+
+          if (response.success) {
+            console.log('[DEBUG] Node cleared!', response);
+            // Refresh world map if currently on it
+            const currentScene = this.scenes?.getCurrentScene();
+            if (currentScene?.refreshNodes) {
+              currentScene.refreshNodes();
+            }
+          } else {
+            console.error('[DEBUG] Failed to clear node:', response);
+          }
+        } catch (error) {
+          console.error('[DEBUG] Error clearing node:', error.message);
+        }
+      };
+
+      console.log('[DEBUG] Developer tools enabled. Available commands:');
+      console.log('  win_battle() - Instantly win the current battle');
+      console.log('  clear_node(nodeId?) - Clear a combat node without fighting');
+    } else {
+      // Remove debug functions if dev mode is disabled
+      delete window.win_battle;
+      delete window.clear_node;
     }
   }
 }

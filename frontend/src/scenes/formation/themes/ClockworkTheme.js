@@ -153,7 +153,7 @@ export class ClockworkTheme extends FormationTheme {
 
   createParticle(type, width, height) {
     switch (type) {
-      case 'steam':
+      case 'steam': {
         const pipeX = Math.random() < 0.5 ? width * 0.08 : width * 0.92;
         return {
           x: pipeX,
@@ -166,6 +166,7 @@ export class ClockworkTheme extends FormationTheme {
           life: 2 + Math.random() * 2,
           maxLife: 4
         };
+      }
 
       case 'spark':
         return {

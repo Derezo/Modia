@@ -22,6 +22,7 @@ import {
 } from '../ui/parchment/ParchmentTheme.js';
 import { responsive } from '../core/Responsive.js';
 import { Icon } from '../components/Icon.js';
+import { isDevModeEnabled } from '../utils/debugLogger.js';
 
 const STYLE_ID = 'node-action-menu-styles';
 
@@ -171,6 +172,20 @@ export class NodeActionMenu {
 
       .node-action-menu__button--primary:hover {
         background: linear-gradient(to bottom, #d4a44a, ${PARCHMENT_COLORS.accent.copper});
+      }
+
+      /* Debug button (developer mode only) */
+      .node-action-menu__button--debug {
+        background: linear-gradient(to bottom, #6a5acd, #483d8b);
+        color: ${PARCHMENT_COLORS.text.inverse};
+        text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        font-size: 10px;
+        padding: 6px 10px;
+        border: 1px dashed rgba(255,255,255,0.3);
+      }
+
+      .node-action-menu__button--debug:hover {
+        background: linear-gradient(to bottom, #7b68ee, #6a5acd);
       }
 
       /* Button icon */
@@ -398,7 +413,54 @@ export class NodeActionMenu {
     if (['forest', 'cave', 'mountain', 'bridge'].includes(node.node_type)) {
       const battleBtn = this.createButton('battle', true, node);
       this.actionsInner.appendChild(battleBtn);
+
+      // Add "Defeat Automatically" debug button if developer mode is enabled
+      if (isDevModeEnabled() && !node.cleared) {
+        const debugBtn = this.createDebugClearButton(node);
+        this.actionsInner.appendChild(debugBtn);
+      }
     }
+  }
+
+  /**
+   * Create a debug button to clear a combat node without fighting
+   * Only shown when developer mode is enabled
+   * @param {Object} node
+   * @returns {HTMLButtonElement}
+   */
+  createDebugClearButton(node) {
+    const btn = document.createElement('button');
+    btn.className = 'node-action-menu__button node-action-menu__button--debug';
+
+    // Icon (use a skip/fast-forward style icon)
+    const iconContainer = document.createElement('span');
+    iconContainer.className = 'node-action-menu__button-icon';
+    iconContainer.innerHTML = Icon.html('actions', 'travel', { size: 'sm' }).replace(/<span[^>]*>([^<]*)<\/span>/g, '');
+    btn.appendChild(iconContainer);
+
+    // Label
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = 'Defeat Auto';
+    btn.appendChild(labelSpan);
+
+    // Click handler - call debug API to clear node
+    btn.addEventListener('click', async () => {
+      try {
+        const response = await this.game.api.post(`/debug/clear-node/${node.id}`);
+
+        if (response.success) {
+          console.log('[DEBUG] Node cleared:', response.message);
+          // Notify via callback (same as battle action)
+          if (this.onAction) {
+            this.onAction('debug_clear');
+          }
+        }
+      } catch (error) {
+        console.error('[DEBUG] Failed to clear node:', error.message);
+      }
+    }, { signal: this.abortController.signal });
+
+    return btn;
   }
 
   /**

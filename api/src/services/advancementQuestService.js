@@ -466,7 +466,7 @@ export async function canStartBossTrial(characterId) {
  * @param {number} battleId - The boss battle ID
  * @returns {Object} Completion result with new class info
  */
-export async function completeQuest(characterId, battleId) {
+export async function completeQuest(characterId, _battleId) {
   const progress = await getQuestProgress(characterId);
 
   if (!progress || progress.status !== 'boss_ready') {

@@ -14,9 +14,8 @@
  */
 
 import { SeededRandom } from '../config/constants.js';
-import { query, pool, withTransaction } from '../config/database.js';
+import { query, withTransaction } from '../config/database.js';
 import {
-  CARAVAN_ITEMS,
   CARAVAN_PRICE_MODIFIER,
   CARAVAN_REFRESH_INTERVAL,
   getStockLimits,
@@ -123,7 +122,7 @@ export async function getCaravanData(nodeId) {
   let regionRace = 'human'; // Default fallback
   if (node.region_id) {
     const regionResult = await query(
-      `SELECT race FROM world_regions WHERE id = $1`,
+      'SELECT race FROM world_regions WHERE id = $1',
       [node.region_id]
     );
     if (regionResult.rows.length > 0) {
@@ -186,7 +185,7 @@ export async function refreshCaravanInventory(nodeId) {
 
   // Get node to use its local_seed
   const nodeResult = await query(
-    `SELECT local_seed FROM world_nodes WHERE id = $1`,
+    'SELECT local_seed FROM world_nodes WHERE id = $1',
     [nodeId]
   );
 
@@ -322,7 +321,7 @@ export async function processPurchase(userId, nodeId, itemId, quantity = 1) {
 
     // Check user gold
     const userResult = await client.query(
-      `SELECT gold FROM users WHERE id = $1 FOR UPDATE`,
+      'SELECT gold FROM users WHERE id = $1 FOR UPDATE',
       [userId]
     );
 
@@ -337,7 +336,7 @@ export async function processPurchase(userId, nodeId, itemId, quantity = 1) {
 
     // Deduct gold
     await client.query(
-      `UPDATE users SET gold = gold - $1 WHERE id = $2`,
+      'UPDATE users SET gold = gold - $1 WHERE id = $2',
       [totalPrice, userId]
     );
 
@@ -398,7 +397,7 @@ export async function processPurchase(userId, nodeId, itemId, quantity = 1) {
 
     // Get updated gold balance
     const updatedUser = await client.query(
-      `SELECT gold FROM users WHERE id = $1`,
+      'SELECT gold FROM users WHERE id = $1',
       [userId]
     );
 

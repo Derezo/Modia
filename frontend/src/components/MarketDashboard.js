@@ -29,7 +29,7 @@ import {
  * @param {number} intensity - Wobble intensity (default 2)
  * @returns {number} Value with random offset
  */
-function wobble(value, intensity = 2) {
+function _wobble(value, intensity = 2) {
   return value + (Math.random() - 0.5) * intensity;
 }
 
@@ -262,7 +262,7 @@ export class MarketDashboard {
    * Render dashboard content when an item is selected
    */
   renderContent() {
-    const { item, priceHistory, orderBook, stats } = this;
+    const { item, priceHistory: _priceHistory, orderBook, stats } = this;
     const bestAsk = orderBook?.bestAsk || stats?.avgPrice || item.price || 0;
     const bestBid = orderBook?.bestBid || Math.round(bestAsk * 0.9);
     const spread = bestAsk > 0 ? (((bestAsk - bestBid) / bestAsk) * 100).toFixed(1) : 0;

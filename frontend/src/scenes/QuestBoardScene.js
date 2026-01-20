@@ -68,7 +68,7 @@ export class QuestBoardScene extends Scene {
     this.characterId = null;
   }
 
-  async enter(data = {}) {
+  async enter(_data = {}) {
     // Get character ID from state
     const characters = this.game.state.get('characters') || [];
     const partyLeader = characters.find(c => c.party_slot === 1) || characters[0];
@@ -741,8 +741,8 @@ export class QuestBoardScene extends Scene {
           <span>Perfect Week Progress:</span>
           <div class="perfect-week-days">
             ${this.perfectWeek.dayStatus.map((complete, i) =>
-              `<div class="perfect-week-day ${complete ? 'complete' : ''}">${days[i]}</div>`
-            ).join('')}
+    `<div class="perfect-week-day ${complete ? 'complete' : ''}">${days[i]}</div>`
+  ).join('')}
           </div>
         </div>
       `;
@@ -755,8 +755,8 @@ export class QuestBoardScene extends Scene {
           <h4 class="first-blood-title">🩸 Today's First Blood Champions</h4>
           <div class="first-blood-winners">
             ${this.firstBloodWinners.map(w =>
-              `<span class="first-blood-winner">${this.escapeHtml(w.character_name)} - ${this.escapeHtml(w.quest_name)}</span>`
-            ).join('')}
+    `<span class="first-blood-winner">${this.escapeHtml(w.character_name)} - ${this.escapeHtml(w.quest_name)}</span>`
+  ).join('')}
           </div>
         </div>
       `;
@@ -978,7 +978,7 @@ export class QuestBoardScene extends Scene {
     return div.innerHTML;
   }
 
-  update(deltaTime) {
+  update(_deltaTime) {
     // No per-frame updates needed
   }
 

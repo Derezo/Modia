@@ -64,17 +64,17 @@ export const ITEM_TEMPLATES = [
   // Warrior Guild
   { name: 'Trainee Sword', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { strength: 1 }, level_requirement: 1, base_price: 2, rarity: 1, description: 'A simple blade given to warrior initiates.' },                   // 33
   { name: 'Trainee Tunic', item_type: 'armor', equipment_slot: 'body', stat_bonuses: { vitality: 1 }, level_requirement: 1, base_price: 2, rarity: 1, description: 'Padded cloth worn during basic training.' },                            // 34
-  { name: "Warrior's Pendant", item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { hp_max: 5 }, level_requirement: 1, base_price: 2, rarity: 1, description: 'A token of the warrior guild.' },                            // 35
+  { name: 'Warrior\'s Pendant', item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { hp_max: 5 }, level_requirement: 1, base_price: 2, rarity: 1, description: 'A token of the warrior guild.' },                            // 35
 
   // Wizard Guild
   { name: 'Novice Wand', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { intelligence: 1 }, level_requirement: 1, base_price: 2, rarity: 1, description: 'A basic focus for channeling magic.' },                         // 36
   { name: 'Student Robe', item_type: 'armor', equipment_slot: 'body', stat_bonuses: { mp_max: 5 }, level_requirement: 1, base_price: 2, rarity: 1, description: 'Standard robes for magic students.' },                                     // 37
-  { name: "Mage's Crystal", item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { intelligence: 1 }, level_requirement: 1, base_price: 2, rarity: 1, description: 'A small crystal attuned to mana.' },                      // 38
+  { name: 'Mage\'s Crystal', item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { intelligence: 1 }, level_requirement: 1, base_price: 2, rarity: 1, description: 'A small crystal attuned to mana.' },                      // 38
 
   // Monk Guild
   { name: 'Initiate Wraps', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { agility: 1 }, level_requirement: 1, base_price: 2, rarity: 1, description: 'Cloth wraps for hand-to-hand combat.' },                          // 39
   { name: 'Initiate Gi', item_type: 'armor', equipment_slot: 'body', stat_bonuses: { agility: 1 }, level_requirement: 1, base_price: 2, rarity: 1, description: 'Light garments for martial training.' },                                   // 40
-  { name: "Monk's Beads", item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { luck: 1 }, level_requirement: 1, base_price: 2, rarity: 1, description: 'Prayer beads blessed by the monastery.' },                          // 41
+  { name: 'Monk\'s Beads', item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { luck: 1 }, level_requirement: 1, base_price: 2, rarity: 1, description: 'Prayer beads blessed by the monastery.' },                          // 41
 
   // Chemist Guild
   { name: 'Mixing Rod', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { intelligence: 1 }, level_requirement: 1, base_price: 2, rarity: 1, description: 'A tool for stirring potions and reagents.' },                    // 42

@@ -22,7 +22,6 @@
 import {
   PARCHMENT_COLORS,
   PARCHMENT_TYPOGRAPHY,
-  PARCHMENT_SPACING,
   PARCHMENT_RADIUS,
   getParchmentGradient,
   getParchmentBorder,
@@ -43,8 +42,8 @@ const NOTIFICATION_TYPES = {
   system: { category: 'notifications', name: 'system', color: '#6b7280', label: 'System' }
 };
 
-// Menu item icon mappings
-const MENU_ICONS = {
+// Menu item icon mappings (reserved for future dynamic menu rendering)
+const _MENU_ICONS = {
   formation: { category: 'menu', name: 'formation' },
   characters: { category: 'menu', name: 'characters' },
   party: { category: 'menu', name: 'party' },
@@ -618,7 +617,7 @@ export class ProfileDropdown {
     }).join('');
 
     // Add "View All" link
-    html += `<a class="profile-dropdown__view-all" data-action="view-all-notifications">View All Notifications</a>`;
+    html += '<a class="profile-dropdown__view-all" data-action="view-all-notifications">View All Notifications</a>';
 
     return html;
   }

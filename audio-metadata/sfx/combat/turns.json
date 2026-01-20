@@ -1,0 +1,32 @@
+{
+  "category": "combat",
+  "subcategory": "turn",
+  "description": "Turn-based combat notification sounds",
+  "totalEffects": 2,
+  "effects": [
+    {
+      "id": "turn_start",
+      "name": "Player Turn Start",
+      "category": "combat",
+      "subcategory": "turn",
+      "prompt": "Fantasy RPG brief heroic turn notification chime with tactical readiness tone",
+      "path": "/assets/audio/sfx/combat/turn_start.mp3",
+      "duration": 0.8,
+      "volume": 0.6,
+      "generated": true,
+      "generatedAt": "2026-01-19T04:16:54.217Z"
+    },
+    {
+      "id": "enemy_turn",
+      "name": "Enemy Turn Start",
+      "category": "combat",
+      "subcategory": "turn",
+      "prompt": "Fantasy RPG brief ominous enemy turn notification with dark threatening chime",
+      "path": "/assets/audio/sfx/combat/enemy_turn.mp3",
+      "duration": 0.7,
+      "volume": 0.5,
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:50.546Z"
+    }
+  ]
+}

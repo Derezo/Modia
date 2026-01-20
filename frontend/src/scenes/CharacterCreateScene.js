@@ -8,8 +8,7 @@ import {
   getParchmentBorder,
   getParchmentShadow,
   getParchmentInputCSS,
-  getParchmentButtonCSS,
-  getParchmentCardCSS
+  getParchmentButtonCSS
 } from '../ui/parchment/index.js';
 
 // Local alias for cleaner access
@@ -610,7 +609,7 @@ export class CharacterCreateScene extends Scene {
     }
   }
 
-  update(deltaTime) {}
+  update(_deltaTime) {}
 
   render(ctx) {
     // Draw parchment-themed background gradient

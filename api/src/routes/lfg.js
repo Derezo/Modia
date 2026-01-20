@@ -119,7 +119,7 @@ router.post('/', authenticate, asyncHandler(async (req, res) => {
 
   // Check if user already has an active post
   const existingPost = await query(
-    `SELECT id FROM lfg_posts WHERE user_id = $1 AND expires_at > NOW()`,
+    'SELECT id FROM lfg_posts WHERE user_id = $1 AND expires_at > NOW()',
     [req.user.userId]
   );
 
@@ -173,7 +173,7 @@ router.delete('/:postId', authenticate, asyncHandler(async (req, res) => {
 
   // Check if post exists and belongs to user
   const existingPost = await query(
-    `SELECT id, user_id FROM lfg_posts WHERE id = $1`,
+    'SELECT id, user_id FROM lfg_posts WHERE id = $1',
     [postIdInt]
   );
 
@@ -185,7 +185,7 @@ router.delete('/:postId', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('You can only delete your own LFG posts', 403);
   }
 
-  await query(`DELETE FROM lfg_posts WHERE id = $1`, [postIdInt]);
+  await query('DELETE FROM lfg_posts WHERE id = $1', [postIdInt]);
 
   res.json({ success: true, message: 'LFG post deleted' });
 }));

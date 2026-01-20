@@ -70,8 +70,8 @@ export const PARCHMENT_COLORS = {
  * Typography settings for parchment components
  */
 export const PARCHMENT_TYPOGRAPHY = {
-  fontFamily: "'Georgia', 'Times New Roman', serif",
-  fontFamilyMono: "'Consolas', 'Monaco', monospace",
+  fontFamily: '\'Georgia\', \'Times New Roman\', serif',
+  fontFamilyMono: '\'Consolas\', \'Monaco\', monospace',
 
   sizes: {
     xs: '10px',

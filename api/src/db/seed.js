@@ -19,15 +19,13 @@ import { dirname, resolve } from 'path';
 import pg from 'pg';
 
 // World generation modules
-import { SeededRandom, CITY_OPTIONS, CASTLE_FEATURES, REGIONS, TERRAIN_DISTRIBUTION } from '../config/constants.js';
+import { SeededRandom } from '../config/constants.js';
 import {
   NODE_NAME_PREFIXES,
-  NODE_NAME_SUFFIXES,
-  PALACE_FEATURES,
-  OBSTACLE_TYPES
+  NODE_NAME_SUFFIXES
 } from './worldgen/constants.js';
 import { generateCastlePlacements } from './worldgen/castlePlacement.js';
-import { createVoronoiRegions, getRegionBorders, findGrandPalacePosition } from './worldgen/voronoiPartitioning.js';
+import { createVoronoiRegions } from './worldgen/voronoiPartitioning.js';
 import { generateAllRegionNodes } from './worldgen/nodeGeneration.js';
 import { generateAllRegionConnections } from './worldgen/internalConnections.js';
 import { generateInterRegionConnections } from './worldgen/interRegionConnections.js';
@@ -203,7 +201,7 @@ async function generateWorld(seed) {
   const usedCoords = new Set();
 
   // Convert nodes to database format
-  const nodes = phase6Result.allNodes.map((node, idx) => {
+  const nodes = phase6Result.allNodes.map((node, _idx) => {
     // Generate appropriate name
     let name;
     if (node.nodeType === 'castle') {

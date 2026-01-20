@@ -217,7 +217,7 @@ router.post('/logout', authenticate, asyncHandler(async (req, res) => {
   if (refreshToken) {
     // Invalidate specific session
     const sessionsResult = await query(
-      `SELECT id, refresh_token_hash FROM user_sessions WHERE user_id = $1`,
+      'SELECT id, refresh_token_hash FROM user_sessions WHERE user_id = $1',
       [req.user.userId]
     );
 

@@ -20,6 +20,8 @@
 
 const path = require('path');
 const { spawn } = require('child_process');
+
+// Note: .env is auto-loaded by lib/audioUtils.js when imported
 const { log, loadMetadata, fileExists } = require('./lib');
 
 // Configuration

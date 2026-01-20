@@ -784,10 +784,11 @@ export class EquipmentSlotModal {
       }
     }
 
-    // Check class restrictions
-    if (item.classRestrictions && item.classRestrictions.length > 0) {
+    // Check class restrictions (handle both API naming conventions)
+    const classRestrictions = item.classRestrictions || item.class_restriction || item.classRestriction || [];
+    if (classRestrictions.length > 0) {
       const charClass = (this.characterClass || '').toLowerCase();
-      const allowed = item.classRestrictions.some(c => c.toLowerCase() === charClass);
+      const allowed = classRestrictions.some(c => c.toLowerCase() === charClass);
       if (!allowed) return false;
     }
 

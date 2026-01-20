@@ -40,7 +40,7 @@ When invoked, execute these steps in order:
 
 ### Step 2.5: File Size Enforcement (BLOCKING)
 
-**CRITICAL**: Oversized files harm maintainability. Files exceeding 2500 lines **block validation and commits**.
+**CRITICAL**: Oversized files harm maintainability. Files exceeding 3500 lines **block validation and commits**.
 
 1. Count lines in all modified/added `.js` files:
    ```bash
@@ -55,8 +55,9 @@ When invoked, execute these steps in order:
    | < 500 | Target | Ideal - proceed |
    | 500-999 | OK | Proceed |
    | 1000-1499 | NOTICE | Mention in report, continue |
-   | 1500-2499 | WARNING | Flag prominently, continue with caution |
-   | **2500+** | **BLOCKING** | **HALT - Do not proceed to Step 3** |
+   | 1500-2499 | WARNING | Flag prominently, verify module summary exists |
+   | 2500-3499 | WARNING | Strong warning, plan modularization |
+   | **3500+** | **BLOCKING** | **HALT - Do not proceed to Step 3** |
 
 3. **Exemptions** (skip these files):
    - Files in `dist/`, `node_modules/`
@@ -71,11 +72,11 @@ When invoked, execute these steps in order:
    ```markdown
    ## ⛔ FILE SIZE VIOLATION - BLOCKING
 
-   The following files exceed the 2500-line limit and must be modularized before proceeding:
+   The following files exceed the 3500-line limit and must be modularized before proceeding:
 
    | File | Lines | Excess |
    |------|-------|--------|
-   | `path/to/file.js` | 3,259 | +759 |
+   | `path/to/file.js` | 4,000 | +500 |
 
    ### Required Actions
 
@@ -97,9 +98,18 @@ When invoked, execute these steps in order:
 
    **Existing Tech Debt Files:** Files listed in CLAUDE.md > Tech Debt are tracked separately.
    Changes to these files do NOT block validation unless they increase the line count.
-   New files or files not in the tech debt list must comply with the 2500-line limit.
+   New files or files not in the tech debt list must comply with the 3500-line limit.
 
-6. For WARNING-level files (1500-2499 lines), add to report but continue:
+6. **For files 1500-2499 lines**, verify they have a module summary comment at the top:
+   ```javascript
+   /**
+    * @module ModuleName
+    * @description Brief description...
+    */
+   ```
+   If missing, add to warnings report but do not block.
+
+7. For WARNING-level files (1500-3499 lines), add to report but continue:
    ```markdown
    ### ⚠️ File Size Warnings
 
@@ -107,7 +117,8 @@ When invoked, execute these steps in order:
 
    | File | Lines | Status |
    |------|-------|--------|
-   | `path/to/file.js` | 1,956 | Warning (limit: 2500) |
+   | `path/to/file.js` | 2,632 | Warning (limit: 3500), needs module summary |
+   | `path/to/other.js` | 1,956 | Warning, verify module summary exists |
    ```
 
 ### Step 3: Module Loading Validation
@@ -337,8 +348,8 @@ Gap analysis:
 - Remaining: Y items
 
 File size status:
-- All files under 2500 lines ✓
-- [or] Warnings: [file.js (1,956 lines)]
+- All files under 3500 lines ✓
+- [or] Warnings: [file.js (2,632 lines)]
 
 Next priority:
 - [Next task 1]

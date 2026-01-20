@@ -120,8 +120,25 @@ Threshold action table:
 | < 500 | Target | Ideal - well-modularized |
 | 500-999 | OK | Monitor for growth |
 | 1000-1499 | Watch | Plan modularization strategy |
-| 1500-2499 | Warning | Prioritize splitting in next refactor |
-| **2500+** | **BLOCKING** | **Must refactor before merge** |
+| 1500-2499 | Warning | Requires module summary comment, consider splitting |
+| 2500-3499 | Strong Warning | Prioritize splitting in next refactor |
+| **3500+** | **BLOCKING** | **Must refactor before merge** |
+
+**Module Summary Requirement:**
+
+Files exceeding 1500 lines must include a module summary comment at the top to aid comprehension:
+```javascript
+/**
+ * @module ModuleName
+ * @description Brief description of module purpose.
+ *
+ * Key responsibilities:
+ * - Responsibility 1
+ * - Responsibility 2
+ *
+ * @see RelatedModule.js - Description
+ */
+```
 
 **Proven Modularization Strategies:**
 

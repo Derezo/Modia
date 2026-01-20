@@ -115,7 +115,7 @@ export class ArcaneChamberTheme extends FormationTheme {
     const centerY = height / 2;
 
     switch (type) {
-      case 'arcane':
+      case 'arcane': {
         // Particles that orbit the center
         const angle = Math.random() * Math.PI * 2;
         const radius = 80 + Math.random() * 40;
@@ -130,6 +130,7 @@ export class ArcaneChamberTheme extends FormationTheme {
           life: 2 + Math.random() * 2,
           maxLife: 4
         };
+      }
 
       case 'sparkle':
         return {

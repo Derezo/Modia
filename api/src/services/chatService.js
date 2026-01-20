@@ -176,7 +176,7 @@ async function addReaction(messageId, userId, emoji) {
 
   // Update the JSONB reactions column on the message for quick access
   await query(
-    `UPDATE chat_messages SET reactions = $1 WHERE id = $2`,
+    'UPDATE chat_messages SET reactions = $1 WHERE id = $2',
     [JSON.stringify(reactions), messageId]
   );
 
@@ -214,7 +214,7 @@ async function removeReaction(messageId, userId, emoji) {
 
   // Update the JSONB reactions column
   await query(
-    `UPDATE chat_messages SET reactions = $1 WHERE id = $2`,
+    'UPDATE chat_messages SET reactions = $1 WHERE id = $2',
     [JSON.stringify(reactions), messageId]
   );
 

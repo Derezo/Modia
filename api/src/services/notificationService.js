@@ -71,7 +71,6 @@ export async function createNotification(userId, type, title, message = null, pa
  */
 export async function getNotifications(userId, includeRead = false, includeDismissed = false, limit = 50) {
   let whereClause = 'WHERE user_id = $1';
-  const params = [userId];
 
   if (!includeRead) {
     whereClause += ' AND read_at IS NULL';

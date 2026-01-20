@@ -1139,7 +1139,7 @@ export class BattleUI {
 
   /**
    * Show skill selection panel
-   * @param {Array} skills - Array of skill objects with id, name, mpCost, icon, description
+   * @param {Array} skills - Array of skill objects with id, name, mpCost, icon, description, cooldown, currentCooldown
    * @param {number} currentMp - Current MP of the active unit
    */
   showSkillPanel(skills, currentMp) {
@@ -1147,15 +1147,28 @@ export class BattleUI {
     const list = this.element.querySelector('#skill-list');
     if (!panel || !list) return;
 
-    list.innerHTML = skills.map(skill => `
-      <button class="btn btn-secondary skill-btn"
-              data-skill-id="${skill.id}"
-              ${skill.mpCost > currentMp ? 'disabled' : ''}
-              title="${skill.description} (${skill.mpCost} MP)">
-        ${skill.icon || ''} ${skill.name}
-        <span style="font-size: 10px; color: #6af; margin-left: 4px;">${skill.mpCost}MP</span>
-      </button>
-    `).join('');
+    list.innerHTML = skills.map(skill => {
+      const onCooldown = skill.currentCooldown && skill.currentCooldown > 0;
+      const notEnoughMp = skill.mpCost > currentMp;
+      const isDisabled = onCooldown || notEnoughMp;
+      const _cooldownText = onCooldown ? ` (${skill.currentCooldown}⏱)` : '';
+      const titleText = onCooldown
+        ? `On cooldown: ${skill.currentCooldown} turn(s) remaining`
+        : `${skill.description || skill.name} (${skill.mpCost} MP)`;
+
+      return `
+        <button class="btn btn-secondary skill-btn ${onCooldown ? 'on-cooldown' : ''}"
+                data-skill-id="${skill.id}"
+                ${isDisabled ? 'disabled' : ''}
+                title="${titleText}"
+                style="${onCooldown ? 'opacity: 0.5; position: relative;' : ''}">
+          ${skill.icon || ''} ${skill.name}
+          <span style="font-size: 10px; color: ${onCooldown ? '#f88' : '#6af'}; margin-left: 4px;">
+            ${onCooldown ? `${skill.currentCooldown}⏱` : `${skill.mpCost}MP`}
+          </span>
+        </button>
+      `;
+    }).join('');
 
     panel.style.display = 'block';
 

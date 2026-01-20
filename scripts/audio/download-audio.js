@@ -217,8 +217,8 @@ function updateTrackStatus(track, status) {
     data.tracks[trackIndex].lastStatusCheck = new Date().toISOString();
     data.tracks[trackIndex].status = status.status;
 
-    if (status.status === SUNO_STATUS.FAILED) {
-      data.tracks[trackIndex].generationError = status.error;
+    if (status.isError) {
+      data.tracks[trackIndex].generationError = status.errorMessage || status.status;
     }
 
     saveMetadata(filePath, data);
@@ -358,26 +358,20 @@ async function main() {
         // Update metadata with status
         updateTrackStatus(track, status);
 
-        // Track the result
-        switch (status.status) {
-          case SUNO_STATUS.PENDING:
-            results.pending.push({ track, status });
-            console.log(`  [PENDING]    ${track.id} - Queued for generation`);
-            break;
-          case SUNO_STATUS.PROCESSING:
-            results.processing.push({ track, status });
-            console.log(`  [PROCESSING] ${track.id} - ${status.progress || 0}% complete`);
-            break;
-          case SUNO_STATUS.SUCCESS:
-            results.completed.push({ track, status });
-            console.log(`  [COMPLETED]  ${track.id} - Ready for download`);
-            break;
-          case SUNO_STATUS.FAILED:
-            results.failed.push({ track, status, error: status.error });
-            console.log(`  [FAILED]     ${track.id} - ${status.error || 'Unknown error'}`);
-            break;
-          default:
-            console.log(`  [UNKNOWN]    ${track.id} - Status: ${status.status}`);
+        // Track the result based on isComplete/isError flags
+        if (status.isComplete) {
+          results.completed.push({ track, status });
+          console.log(`  [COMPLETED]  ${track.id} - Ready for download`);
+        } else if (status.isError) {
+          results.failed.push({ track, status, error: status.errorMessage || status.status });
+          console.log(`  [FAILED]     ${track.id} - ${status.errorMessage || status.status}`);
+        } else if (status.status === SUNO_STATUS.PENDING) {
+          results.pending.push({ track, status });
+          console.log(`  [PENDING]    ${track.id} - Queued for generation`);
+        } else {
+          // TEXT_SUCCESS, FIRST_SUCCESS, or other intermediate states
+          results.processing.push({ track, status });
+          console.log(`  [PROCESSING] ${track.id} - Status: ${status.status}`);
         }
 
         // Small delay between status checks

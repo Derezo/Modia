@@ -11,15 +11,10 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
-import { createRateLimiter, COST_LEVELS } from '../middleware/rateLimiterFactory.js';
+import { questReadLimiter, questClaimLimiter, questRefreshLimiter } from '../middleware/gameplayRateLimiter.js';
 import * as dailyQuestService from '../services/dailyQuestService.js';
 
 const router = express.Router();
-
-// Rate limiters
-const questReadLimiter = createRateLimiter('quest/read', 60, COST_LEVELS.READ);
-const questClaimLimiter = createRateLimiter('quest/claim', 20, COST_LEVELS.WRITE);
-const questRefreshLimiter = createRateLimiter('quest/refresh', 10, COST_LEVELS.WRITE);
 
 // ============================================
 // QUEST RETRIEVAL

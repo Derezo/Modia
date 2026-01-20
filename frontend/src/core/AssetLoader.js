@@ -368,7 +368,7 @@ export class AssetLoader {
     const material = item.material || 'default';
 
     // Try material-specific
-    let path = `${this.basePath}/items/${category}/${templateId}_${material}.png`;
+    const path = `${this.basePath}/items/${category}/${templateId}_${material}.png`;
     try {
       return await this.loadImage(path);
     } catch {

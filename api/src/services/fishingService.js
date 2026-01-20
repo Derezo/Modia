@@ -11,7 +11,6 @@ import { MAX_GOLD } from '../config/constants.js';
 import {
   selectRandomFish,
   calculateFishValue,
-  getFishById,
   FISHING_CONFIG,
   FISH_TYPES
 } from '../db/templates/fish.js';

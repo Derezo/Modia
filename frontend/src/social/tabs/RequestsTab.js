@@ -2,8 +2,7 @@ import {
   PARCHMENT_COLORS,
   PARCHMENT_TYPOGRAPHY,
   PARCHMENT_SPACING,
-  PARCHMENT_RADIUS,
-  getParchmentButtonCSS
+  PARCHMENT_RADIUS
 } from '../../ui/parchment/index.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
 
@@ -708,7 +707,7 @@ export class RequestsTab {
   /**
    * Accept clan invite (placeholder)
    */
-  async acceptClanInvite(inviteId, buttonEl) {
+  async acceptClanInvite(_inviteId, _buttonEl) {
     // Will be implemented with clan system
     parchmentToast.info('Coming Soon', 'Clan system is not yet implemented');
   }
@@ -716,7 +715,7 @@ export class RequestsTab {
   /**
    * Decline clan invite (placeholder)
    */
-  async declineClanInvite(inviteId, buttonEl) {
+  async declineClanInvite(_inviteId, _buttonEl) {
     // Will be implemented with clan system
     parchmentToast.info('Coming Soon', 'Clan system is not yet implemented');
   }

@@ -13,7 +13,8 @@
       "path": "/assets/audio/sfx/combat/player_ko.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:22.826Z"
     },
     {
       "id": "enemy_death_beast",
@@ -24,7 +25,8 @@
       "path": "/assets/audio/sfx/combat/enemy_death_beast.mp3",
       "duration": 1.8,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:25.193Z"
     },
     {
       "id": "enemy_death_humanoid",
@@ -35,7 +37,8 @@
       "path": "/assets/audio/sfx/combat/enemy_death_humanoid.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:27.698Z"
     },
     {
       "id": "enemy_death_undead",
@@ -44,9 +47,10 @@
       "subcategory": "death",
       "prompt": "Fantasy undead death, skeleton crumbling, bones scattering, unholy energy dissipating, ghostly wail fading",
       "path": "/assets/audio/sfx/combat/enemy_death_undead.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:30.955Z"
     },
     {
       "id": "enemy_death_elemental",
@@ -55,9 +59,10 @@
       "subcategory": "death",
       "prompt": "Fantasy elemental death, magical energy dispersing, elemental form collapsing, crackling dissipation, essence fading",
       "path": "/assets/audio/sfx/combat/enemy_death_elemental.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:33.414Z"
     },
     {
       "id": "enemy_death_dragon",
@@ -68,7 +73,8 @@
       "path": "/assets/audio/sfx/combat/enemy_death_dragon.mp3",
       "duration": 2.5,
       "volume": 0.9,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:35.970Z"
     },
     {
       "id": "enemy_death_demon",
@@ -77,9 +83,10 @@
       "subcategory": "death",
       "prompt": "Fantasy demon death, hellish screech, dark energy imploding, infernal form banishing, evil essence destroyed",
       "path": "/assets/audio/sfx/combat/enemy_death_demon.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:39.042Z"
     },
     {
       "id": "enemy_death_construct",
@@ -88,9 +95,10 @@
       "subcategory": "death",
       "prompt": "Fantasy construct death, golem crumbling, mechanical parts falling, stone or metal breaking apart, magical gears stopping",
       "path": "/assets/audio/sfx/combat/enemy_death_construct.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:41.399Z"
     },
     {
       "id": "enemy_death_insect",
@@ -101,7 +109,8 @@
       "path": "/assets/audio/sfx/combat/enemy_death_insect.mp3",
       "duration": 1.5,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:44.062Z"
     },
     {
       "id": "enemy_death_plant",
@@ -112,7 +121,8 @@
       "path": "/assets/audio/sfx/combat/enemy_death_plant.mp3",
       "duration": 1.8,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-19T12:30:46.776Z"
     }
   ]
 }
