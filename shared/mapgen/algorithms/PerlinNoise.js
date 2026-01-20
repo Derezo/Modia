@@ -281,6 +281,117 @@ export class PerlinNoiseAlgorithm {
 
     return map;
   }
+
+  /**
+   * Generate terrain with seed regions for CA refinement
+   *
+   * This method outputs:
+   * - terrain: The generated terrain grid
+   * - noiseMap: Raw noise values for each tile
+   * - seedRegions: Set of coordinates where CA should operate
+   *
+   * Seed regions are tiles where noise is in the "boundary" range between
+   * clearly defined terrain types. CA can smooth these transition areas.
+   *
+   * @param {string[][]} terrain - Terrain grid to modify
+   * @param {function} random - Seeded random function
+   * @param {Object} options - Runtime options
+   * @param {number} options.intensity - Effect intensity (0-1)
+   * @param {number} options.seedMinThreshold - Min noise for seed region (default 0.3)
+   * @param {number} options.seedMaxThreshold - Max noise for seed region (default 0.5)
+   * @param {Object} options.context - LayerContext for sharing data
+   * @returns {Object} { noiseMap, seedRegions }
+   */
+  applyWithSeedRegions(terrain, random, options = {}) {
+    const intensity = options.intensity || 0.5;
+    const seedMinThreshold = options.seedMinThreshold ?? 0.3;
+    const seedMaxThreshold = options.seedMaxThreshold ?? 0.5;
+    const context = options.context || null;
+
+    const width = terrain[0].length;
+    const height = terrain.length;
+
+    // Create noise generator with seeded permutation
+    const noise = new SimplexNoise(random);
+
+    // Generate noise map and seed regions
+    const noiseMap = [];
+    const seedRegions = new Set();
+
+    for (let y = 0; y < height; y++) {
+      const noiseRow = [];
+      for (let x = 0; x < width; x++) {
+        const nx = x * this.scale;
+        const ny = y * this.scale;
+
+        // Get FBM noise value
+        const noiseValue = noise.fbm(nx, ny, this.octaves, this.persistence);
+        noiseRow.push(noiseValue);
+
+        // Apply terrain based on intensity
+        if (random() < intensity) {
+          terrain[y][x] = this._noiseToTerrain(noiseValue);
+        }
+
+        // Mark as seed region if in boundary range
+        if (noiseValue >= seedMinThreshold && noiseValue <= seedMaxThreshold) {
+          seedRegions.add(`${x},${y}`);
+        }
+      }
+      noiseMap.push(noiseRow);
+    }
+
+    // Store in context if provided
+    if (context) {
+      context.setNoiseMap(noiseMap);
+      context.setSeedRegions(seedRegions);
+    }
+
+    return { noiseMap, seedRegions };
+  }
+
+  /**
+   * Apply noise-based terrain with configurable threshold behavior
+   *
+   * Enhanced version that supports more terrain types and can output
+   * to context for pipeline cooperation.
+   *
+   * @param {string[][]} terrain - Terrain grid to modify
+   * @param {function} random - Seeded random function
+   * @param {Object} options - Runtime options
+   * @param {boolean} options.outputSeedRegions - Generate seed regions for CA
+   * @param {Object} options.context - LayerContext for sharing data
+   */
+  applyEnhanced(terrain, random, options = {}) {
+    if (options.outputSeedRegions) {
+      return this.applyWithSeedRegions(terrain, random, options);
+    }
+
+    // Standard apply
+    this.apply(terrain, random, options);
+
+    // If context provided, generate noise map for reference
+    if (options.context) {
+      const noise = new SimplexNoise(random);
+      const noiseMap = [];
+      const width = terrain[0].length;
+      const height = terrain.length;
+
+      for (let y = 0; y < height; y++) {
+        const noiseRow = [];
+        for (let x = 0; x < width; x++) {
+          const nx = x * this.scale;
+          const ny = y * this.scale;
+          noiseRow.push(noise.fbm(nx, ny, this.octaves, this.persistence));
+        }
+        noiseMap.push(noiseRow);
+      }
+
+      options.context.setNoiseMap(noiseMap);
+    }
+
+    return null;
+  }
 }
 
 export default PerlinNoiseAlgorithm;

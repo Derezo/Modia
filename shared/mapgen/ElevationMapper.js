@@ -683,6 +683,194 @@ export class ElevationMapper {
 
     return { canMove: false, cost: Infinity, type: 'error' };
   }
+
+  // ==========================================================================
+  // INTEGRATION HOOKS - For algorithm cooperation
+  // ==========================================================================
+
+  /**
+   * Flatten room interior to a single elevation level
+   * Called by RoomCarver to ensure room floors are flat
+   *
+   * @param {number[][]} elevation - Elevation grid to modify
+   * @param {Object} bounds - Room bounds { x, y, width, height }
+   * @param {number} targetLevel - Target elevation level (default: most common in room)
+   * @returns {number} The elevation level used
+   */
+  static flattenRoomElevation(elevation, bounds, targetLevel = null) {
+    const { x, y, width, height } = bounds;
+
+    // If no target level specified, find most common in room
+    if (targetLevel === null) {
+      const levelCounts = new Map();
+      for (let ry = y; ry < y + height; ry++) {
+        for (let rx = x; rx < x + width; rx++) {
+          const level = ElevationMapper.getElevationAt(elevation, rx, ry);
+          levelCounts.set(level, (levelCounts.get(level) || 0) + 1);
+        }
+      }
+
+      // Find most common level
+      let maxCount = 0;
+      targetLevel = ELEVATION_LEVELS.GROUND;
+      for (const [level, count] of levelCounts) {
+        if (count > maxCount) {
+          maxCount = count;
+          targetLevel = level;
+        }
+      }
+    }
+
+    // Set all tiles in room to target level
+    for (let ry = y; ry < y + height; ry++) {
+      for (let rx = x; rx < x + width; rx++) {
+        if (ry >= 0 && ry < elevation.length && rx >= 0 && rx < elevation[0].length) {
+          elevation[ry][rx] = targetLevel;
+        }
+      }
+    }
+
+    return targetLevel;
+  }
+
+  /**
+   * Enforce gradient along a path
+   * Ensures no tile has more than maxGradient elevation change from previous
+   * Called by PathCarver to smooth path elevation
+   *
+   * @param {number[][]} elevation - Elevation grid to modify
+   * @param {Array<{x: number, y: number}>} path - Path waypoints
+   * @param {number} maxGradient - Maximum elevation change per tile (default 1)
+   * @param {function} random - Seeded random for ramp placement
+   * @returns {Array<{x: number, y: number, type: string}>} Ramp/stair placements
+   */
+  static enforcePathGradient(elevation, path, maxGradient = 1, random = null) {
+    if (!path || path.length < 2) return [];
+
+    const rampPlacements = [];
+    const rampChance = 0.7; // Chance to adjust elevation vs place ramp
+
+    for (let i = 1; i < path.length; i++) {
+      const prev = path[i - 1];
+      const curr = path[i];
+
+      const prevElev = ElevationMapper.getElevationAt(elevation, prev.x, prev.y);
+      const currElev = ElevationMapper.getElevationAt(elevation, curr.x, curr.y);
+      const elevDiff = currElev - prevElev;
+
+      if (Math.abs(elevDiff) > maxGradient) {
+        // Need to fix gradient
+        if (random && random() < rampChance) {
+          // Adjust current tile elevation
+          const newElev = prevElev + Math.sign(elevDiff) * maxGradient;
+          if (curr.y >= 0 && curr.y < elevation.length &&
+              curr.x >= 0 && curr.x < elevation[0].length) {
+            elevation[curr.y][curr.x] = newElev;
+          }
+        } else {
+          // Mark for ramp/stair placement
+          const direction = {
+            dx: curr.x - prev.x,
+            dy: curr.y - prev.y
+          };
+          rampPlacements.push({
+            x: curr.x,
+            y: curr.y,
+            type: Math.abs(elevDiff) > 1 ? 'stairs' : 'ramp',
+            direction,
+            elevChange: elevDiff
+          });
+        }
+      }
+    }
+
+    return rampPlacements;
+  }
+
+  /**
+   * Score spawn position based on elevation
+   * Higher ground gives tactical advantage
+   * Called by SpawnPlacer for position scoring
+   *
+   * @param {number[][]} elevation - Elevation grid
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {Object} options - Scoring options
+   * @param {boolean} options.preferHighGround - Prefer elevated positions
+   * @param {number} options.elevationWeight - Points per elevation level
+   * @returns {number} Position score
+   */
+  static scoreSpawnElevation(elevation, x, y, options = {}) {
+    const preferHighGround = options.preferHighGround !== false;
+    const elevationWeight = options.elevationWeight ?? 15;
+
+    const level = ElevationMapper.getElevationAt(elevation, x, y);
+
+    if (preferHighGround) {
+      // Higher is better
+      return level * elevationWeight;
+    } else {
+      // Middle ground preferred
+      const idealLevel = ELEVATION_LEVELS.GROUND;
+      const deviation = Math.abs(level - idealLevel);
+      return Math.max(0, 30 - deviation * elevationWeight);
+    }
+  }
+
+  /**
+   * Get elevation context for a position
+   * Useful for algorithm decisions
+   *
+   * @param {number[][]} elevation - Elevation grid
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @returns {Object} Elevation context
+   */
+  static getElevationContext(elevation, x, y) {
+    const current = ElevationMapper.getElevationAt(elevation, x, y);
+
+    // Get neighbor elevations
+    const neighbors = {
+      n: ElevationMapper.getElevationAt(elevation, x, y - 1),
+      s: ElevationMapper.getElevationAt(elevation, x, y + 1),
+      e: ElevationMapper.getElevationAt(elevation, x + 1, y),
+      w: ElevationMapper.getElevationAt(elevation, x - 1, y)
+    };
+
+    // Calculate statistics
+    const neighborValues = Object.values(neighbors).filter(v => v !== null);
+    const avgNeighbor = neighborValues.length > 0
+      ? neighborValues.reduce((a, b) => a + b, 0) / neighborValues.length
+      : current;
+    const maxNeighbor = Math.max(...neighborValues, current);
+    const minNeighbor = Math.min(...neighborValues, current);
+
+    return {
+      current,
+      neighbors,
+      avgNeighbor,
+      maxNeighbor,
+      minNeighbor,
+      isHighPoint: current >= maxNeighbor,
+      isLowPoint: current <= minNeighbor,
+      maxSlope: maxNeighbor - minNeighbor
+    };
+  }
+
+  /**
+   * Generate elevation early in pipeline
+   * Can be called at start of generation to guide other algorithms
+   *
+   * @param {number} width - Map width
+   * @param {number} height - Map height
+   * @param {function} random - Seeded random function
+   * @param {Object} options - Generation options
+   * @returns {Object} { elevation, connections }
+   */
+  static generateEarly(width, height, random, options = {}) {
+    const mapper = new ElevationMapper(options);
+    return mapper.generateElevation(width, height, random, null);
+  }
 }
 
 export default ElevationMapper;

@@ -11,6 +11,7 @@
  * - Seeded random algorithm selection (~50% of available algorithms)
  * - Priority-ordered execution (terrain-shaping first, details last)
  * - Intensity-based algorithm strength (0.1-0.9)
+ * - Archetype-based generation for curated map styles
  * - Fully deterministic - same seed produces identical output
  *
  * CRITICAL: All random operations use the provided seeded random function
@@ -22,6 +23,7 @@ import { CellularAutomataAlgorithm } from './algorithms/CellularAutomata.js';
 import { RoomCarverAlgorithm } from './algorithms/RoomCarver.js';
 import { PathCarverAlgorithm } from './algorithms/PathCarver.js';
 import { ClusterPlacerAlgorithm } from './algorithms/ClusterPlacer.js';
+import { PRNGStreams, createPRNGStreams } from './PRNGStreams.js';
 
 /**
  * Algorithm categories for execution priority
@@ -535,6 +537,269 @@ export class AlgorithmPipeline {
 
     // Execute pipeline
     return this.execute(terrain, random, preparedAlgorithms, nodeConfig);
+  }
+
+  /**
+   * Run an archetype-based generation pipeline
+   *
+   * Archetypes define curated algorithm sequences with specific roles:
+   * - 'macro': Large-scale structure (runs first, others build on it)
+   * - 'refinement': Refines macro output (e.g., CA smoothing Perlin edges)
+   * - 'structure': Places rooms, corridors, POIs
+   * - 'detail': Adds clusters, decorations, minor features
+   *
+   * @param {Object} archetype - Archetype definition from archetypeDefinitions.js
+   * @param {number} width - Map width
+   * @param {number} height - Map height
+   * @param {Function|PRNGStreams} randomSource - Seeded random function or PRNGStreams
+   * @param {Object} options - Additional options
+   * @param {Object} options.nodeConfig - Node-specific configuration overrides
+   * @param {Object} options.layerContext - Shared context between algorithms
+   * @param {number} options.seed - Original seed for metadata
+   * @returns {Object} Generation result with terrain, metadata, and archetype info
+   */
+  runArchetype(archetype, width, height, randomSource, options = {}) {
+    if (!archetype) {
+      throw new Error('Archetype is required');
+    }
+
+    const { nodeConfig = {}, layerContext = null, seed } = options;
+
+    // Determine random source - support both legacy single random and PRNG streams
+    let streams = null;
+    let random;
+
+    if (randomSource instanceof PRNGStreams) {
+      streams = randomSource;
+      random = streams.getStream('terrain'); // Default to terrain stream
+    } else if (typeof randomSource === 'function') {
+      random = randomSource;
+    } else {
+      throw new Error('randomSource must be a function or PRNGStreams instance');
+    }
+
+    // Create initial terrain with archetype's base terrain
+    const baseTerrain = archetype.baseTerrain || nodeConfig.baseTerrain || 'grass';
+    const terrain = this.createInitialTerrain(width, height, baseTerrain);
+
+    // Create supporting grids
+    const obstacles = this.createInitialObstacles(width, height);
+    const variantsRandom = streams ? streams.getStream('variants') : random;
+    const variants = this.createInitialVariants(width, height, variantsRandom);
+
+    // Track context shared between algorithms
+    const context = layerContext || {
+      terrain,
+      noiseMap: null,
+      seedRegions: null,
+      rooms: [],
+      paths: [],
+      pois: []
+    };
+
+    // Execute archetype algorithms in defined order
+    const algorithmsUsed = [];
+
+    for (const algorithmSpec of archetype.algorithms) {
+      const { name, intensity, role, options: algOptions = {}, seedFromPrevious } = algorithmSpec;
+
+      // Get appropriate random stream based on role
+      let algorithmRandom = random;
+      if (streams) {
+        switch (role) {
+          case 'macro':
+          case 'refinement':
+            algorithmRandom = streams.getStream('terrain');
+            break;
+          case 'structure':
+            algorithmRandom = streams.getStream('structure');
+            break;
+          case 'detail':
+            algorithmRandom = streams.getStream('detail');
+            break;
+          default:
+            algorithmRandom = streams.getStream('terrain');
+        }
+      }
+
+      // Get algorithm from registry
+      const algorithmConfig = this.registry.get(name);
+
+      if (!algorithmConfig) {
+        // Try to match by algorithm class name
+        const registeredName = this._findAlgorithmByClassPattern(name, algOptions);
+        if (!registeredName) {
+          console.warn(`Algorithm "${name}" not found in registry, skipping`);
+          continue;
+        }
+        // Use found algorithm instead
+        const foundConfig = this.registry.get(registeredName);
+        if (!foundConfig) continue;
+
+        try {
+          const instance = new foundConfig.class({
+            ...foundConfig.options,
+            ...algOptions
+          });
+
+          // Prepare runtime options
+          const runtimeOptions = {
+            intensity: intensity ?? 0.5,
+            nodeType: nodeConfig.nodeType || archetype.name,
+            bounds: { x: 0, y: 0, width, height },
+            context,
+            seedFromPrevious,
+            ...algOptions
+          };
+
+          // Execute algorithm
+          instance.apply(terrain, algorithmRandom, runtimeOptions);
+
+          algorithmsUsed.push({
+            name,
+            role,
+            intensity,
+            success: true
+          });
+        } catch (error) {
+          console.error(`Algorithm "${name}" failed:`, error.message);
+          algorithmsUsed.push({
+            name,
+            role,
+            intensity,
+            success: false,
+            error: error.message
+          });
+        }
+        continue;
+      }
+
+      try {
+        // Create algorithm instance with merged options
+        const instance = new algorithmConfig.class({
+          ...algorithmConfig.options,
+          ...algOptions
+        });
+
+        // Prepare runtime options
+        const runtimeOptions = {
+          intensity: intensity ?? 0.5,
+          nodeType: nodeConfig.nodeType || archetype.name,
+          bounds: { x: 0, y: 0, width, height },
+          context,
+          seedFromPrevious,
+          ...algOptions
+        };
+
+        // Execute algorithm
+        instance.apply(terrain, algorithmRandom, runtimeOptions);
+
+        // Track usage
+        algorithmsUsed.push({
+          name,
+          role,
+          intensity,
+          success: true
+        });
+      } catch (error) {
+        console.error(`Algorithm "${name}" failed:`, error.message);
+        algorithmsUsed.push({
+          name,
+          role,
+          intensity,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    // Build result
+    const result = {
+      terrain,
+      obstacles,
+      variants,
+      metadata: {
+        archetype: archetype.name,
+        displayName: archetype.displayName,
+        algorithmsUsed,
+        constraints: archetype.constraints,
+        coverStrategy: archetype.coverStrategy,
+        styleProfile: archetype.styleProfile,
+        width,
+        height,
+        baseTerrain
+      }
+    };
+
+    // Add seed to metadata if provided
+    if (seed !== undefined) {
+      result.metadata.seed = seed;
+    }
+
+    // Include context data in result
+    result.context = {
+      rooms: context.rooms,
+      paths: context.paths,
+      pois: context.pois
+    };
+
+    return result;
+  }
+
+  /**
+   * Find an algorithm by matching class pattern or preset
+   * @private
+   */
+  _findAlgorithmByClassPattern(name, options) {
+    // Common name patterns to algorithm registry names
+    const patternMap = {
+      perlinTerrain: 'perlinTerrain',
+      perlinMacro: 'perlinTerrain',
+      cellularRefine: 'cellularCaves',
+      cellularCaves: 'cellularCaves',
+      cellularCrypt: 'cellularCrypt',
+      caveRooms: 'caveRooms',
+      dungeonRooms: 'dungeonRooms',
+      arenaRoom: 'arenaRoom',
+      drunkardPaths: 'drunkardPaths',
+      bezierPaths: 'bezierPaths',
+      directCorridors: 'directCorridors',
+      treeGroves: 'treeGroves',
+      rockFormations: 'rockFormations',
+      waterPools: 'waterPools',
+      lavaPools: 'lavaPools',
+      denseForest: 'denseForest'
+    };
+
+    // Try direct pattern match
+    if (patternMap[name]) {
+      return patternMap[name];
+    }
+
+    // Try to infer from options
+    if (options.preset === 'cave') {
+      return name.includes('cellular') ? 'cellularCaves' : 'caveRooms';
+    }
+    if (options.preset === 'crypt') {
+      return 'cellularCrypt';
+    }
+    if (options.preset === 'dungeon') {
+      return 'dungeonRooms';
+    }
+    if (options.preset === 'arena') {
+      return 'arenaRoom';
+    }
+    if (options.pathStyle === 'drunkard') {
+      return 'drunkardPaths';
+    }
+    if (options.pathStyle === 'bezier') {
+      return 'bezierPaths';
+    }
+    if (options.pathStyle === 'direct') {
+      return 'directCorridors';
+    }
+
+    return null;
   }
 
   /**

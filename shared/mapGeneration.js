@@ -11,11 +11,33 @@
  * will produce different maps, but new maps remain fully deterministic.
  */
 
-import { SeededRandom } from './constants.js';
 import { isImpassable, getTerrainWeights } from './terrain.js';
 import { AlgorithmPipeline } from './mapgen/AlgorithmPipeline.js';
 import { getNodeConfig, getObstacleRulesForTerrain } from './mapgen/nodeTypeAlgorithms.js';
 import { SpawnPlacer, AI_SPAWN_CONFIGS } from './mapgen/SpawnPlacer.js';
+
+// New archetype system imports (Phase 1)
+import {
+  ARCHETYPES,
+  getArchetype,
+  selectArchetypeForNode,
+  getArchetypeNames
+} from './mapgen/archetypes/index.js';
+
+// PRNG Streams for deterministic isolation (Phase 8)
+import { createPRNGStreams, PRNGStreams } from './mapgen/PRNGStreams.js';
+
+// Constraint validation and repair (Phase 4)
+import { ConstraintValidator } from './mapgen/ConstraintValidator.js';
+
+// Tactical cover system (Phase 5)
+import { CoverGridSystem, COVER_LEVELS } from './mapgen/CoverGridSystem.js';
+
+// Layer context for algorithm cooperation (Phase 2)
+import { LayerContext } from './mapgen/LayerContext.js';
+
+// Style profiles for parameter tuning (Phase 7)
+import { getStyleProfile, applyStyleProfile } from './mapgen/StyleProfiles.js';
 
 // ============================================================================
 // OBSTACLE CONFIGURATION
@@ -452,6 +474,239 @@ function generateElevationData(terrain, width, height, random) {
 }
 
 // ============================================================================
+// ARCHETYPE-BASED GENERATION (New System)
+// ============================================================================
+
+/**
+ * Generate terrain using the archetype system with all phases integrated
+ *
+ * This is the new generation path that uses:
+ * - Phase 8: PRNG Streams for deterministic isolation
+ * - Phase 1: Archetype selection and curated algorithm pipelines
+ * - Phase 2: LayerContext for algorithm cooperation
+ * - Phase 3: Graph-based topology (via archetype algorithms)
+ * - Phase 4: Constraint validation and repair
+ * - Phase 5: Tactical cover placement
+ * - Phase 6: Integrated elevation
+ * - Phase 7: Style profile parameter tuning
+ *
+ * @param {number} seed - Seed value for deterministic generation
+ * @param {string} nodeType - Biome/node type (forest, cave, mountain, etc.)
+ * @param {number} width - Map width in tiles
+ * @param {number} height - Map height in tiles
+ * @param {Object} options - Generation options
+ * @returns {Object} Generated map with terrain, obstacles, variants, and metadata
+ */
+function generateWithArchetypes(seed, nodeType, width, height, options = {}) {
+  const {
+    archetypeName = null,
+    elevation: includeElevation = true,
+    includeMetadata = false,
+    includeSpawns = false,
+    playerCount = 15,
+    enemyAiType = null,
+    enemyCount = 0,
+    enemyRoles = [],
+    coverStrategy = null,
+    styleProfile = null
+  } = options;
+
+  // Phase 8: Create isolated PRNG streams
+  const streams = createPRNGStreams(seed);
+
+  // Phase 1: Select archetype (weighted by node type or explicit)
+  const archetype = archetypeName
+    ? getArchetype(archetypeName)
+    : selectArchetypeForNode(nodeType, () => streams.structure());
+
+  if (!archetype) {
+    // Fallback to legacy pipeline if no archetype found
+    console.warn(`No archetype found for node type: ${nodeType}, falling back to legacy pipeline`);
+    return generateWithPipeline(seed, nodeType, width, height, options);
+  }
+
+  // Get style profile (from archetype or explicit)
+  const effectiveStyleProfile = styleProfile || archetype.styleProfile || 'natural';
+
+  // Phase 2: Create layer context for algorithm cooperation
+  const context = new LayerContext(width, height);
+  context.setMetadata('archetype', archetype.name);
+  context.setMetadata('nodeType', nodeType);
+  context.setMetadata('seed', seed);
+  context.setMetadata('styleProfile', effectiveStyleProfile);
+
+  // Phase 1+2: Run archetype through pipeline with context
+  const pipeline = getPipeline();
+  const nodeConfig = getNodeConfig(nodeType);
+
+  const pipelineResult = pipeline.runArchetype(archetype, width, height, streams, {
+    nodeConfig,
+    context,
+    styleProfile: effectiveStyleProfile
+  });
+
+  // Extract results
+  let terrain = pipelineResult.terrain;
+  let obstacles = pipelineResult.obstacles || [];
+  const variants = pipelineResult.variants || generateVariants(width, height, () => streams.variants());
+
+  // Phase 6: Generate or use elevation from context
+  let elevationGrid = context.elevation;
+  if (!elevationGrid && includeElevation) {
+    elevationGrid = generateElevationData(terrain, width, height, () => streams.terrain());
+  }
+
+  // Phase 5: Generate tactical cover
+  const effectiveCoverStrategy = coverStrategy || archetype.coverStrategy || 'staggered';
+  const coverSystem = new CoverGridSystem(width, height);
+  coverSystem.generate(effectiveCoverStrategy, () => streams.cover(), {
+    archetype: archetype.name
+  });
+
+  // Map cover to obstacles (merge with existing)
+  const coverObstacles = coverSystem.mapToObstacles({}, () => streams.obstacles());
+  obstacles = mergeObstacles(obstacles, coverObstacles, width, height);
+
+  // Clear spawn areas before validation
+  clearSpawnAreas(terrain, obstacles, width, height);
+
+  // Phase 4: Validate and repair constraints
+  const constraints = archetype.constraints || {};
+  const validator = new ConstraintValidator(constraints);
+  const validationResult = validator.validateAndRepair(
+    terrain,
+    obstacles,
+    width,
+    height,
+    () => streams.repair()
+  );
+
+  // Apply any repairs
+  if (validationResult.repaired) {
+    terrain = validationResult.terrain;
+    obstacles = validationResult.obstacles;
+  }
+
+  // Build return value
+  const returnValue = {
+    terrain,
+    obstacles,
+    variants
+  };
+
+  // Include elevation if requested
+  if (includeElevation) {
+    returnValue.elevation = elevationGrid;
+  }
+
+  // Include cover grid data for debugging/rendering
+  if (options.includeCoverGrid) {
+    returnValue.coverGrid = coverGrid;
+  }
+
+  // Generate spawn positions if requested
+  if (includeSpawns) {
+    const spawner = new SpawnPlacer({ mapWidth: width, mapHeight: height });
+
+    // Player spawns
+    returnValue.playerSpawns = spawner.generatePlayerSpawns(terrain, {
+      count: playerCount,
+      obstacles
+    });
+
+    // Enemy spawns with elevation scoring
+    if (enemyAiType && enemyCount) {
+      returnValue.enemySpawns = spawner.generateEnemySpawns(
+        terrain,
+        obstacles,
+        enemyAiType,
+        enemyCount,
+        () => streams.spawns(),
+        {
+          elevation: elevationGrid,
+          unitRoles: enemyRoles
+        }
+      );
+    }
+  }
+
+  // Include metadata if requested
+  if (includeMetadata) {
+    returnValue.metadata = {
+      ...pipelineResult.metadata,
+      archetype: archetype.name,
+      styleProfile: effectiveStyleProfile,
+      coverStrategy: effectiveCoverStrategy,
+      constraints: archetype.constraints,
+      validationResult: {
+        iterations: validationResult.iterations,
+        repaired: validationResult.repaired,
+        finalAnalysis: validationResult.finalAnalysis
+      },
+      context: {
+        roomCount: context.rooms.length,
+        pathCount: context.paths.length,
+        poiCount: context.pois.length
+      }
+    };
+  }
+
+  return returnValue;
+}
+
+/**
+ * Generate tile variants grid
+ * @param {number} width - Map width
+ * @param {number} height - Map height
+ * @param {function} random - Random function
+ * @returns {number[][]} Variant indices (0-3)
+ */
+function generateVariants(width, height, random) {
+  const variants = [];
+  for (let y = 0; y < height; y++) {
+    const row = [];
+    for (let x = 0; x < width; x++) {
+      row.push(Math.floor(random() * 4));
+    }
+    variants.push(row);
+  }
+  return variants;
+}
+
+/**
+ * Merge two obstacle grids, preferring non-null values from the second grid
+ * @param {Object[][]} base - Base obstacle grid
+ * @param {Object[][]} overlay - Overlay obstacle grid
+ * @param {number} width - Map width
+ * @param {number} height - Map height
+ * @returns {Object[][]} Merged obstacle grid
+ */
+function mergeObstacles(base, overlay, width, height) {
+  // If no base, return overlay or empty grid
+  if (!base || base.length === 0) {
+    return overlay || Array.from({ length: height }, () => Array(width).fill(null));
+  }
+
+  // If no overlay, return base
+  if (!overlay || overlay.length === 0) {
+    return base;
+  }
+
+  const merged = [];
+  for (let y = 0; y < height; y++) {
+    const row = [];
+    for (let x = 0; x < width; x++) {
+      // Prefer overlay if it has an obstacle, otherwise use base
+      const baseObs = base[y]?.[x];
+      const overlayObs = overlay[y]?.[x];
+      row.push(overlayObs || baseObs);
+    }
+    merged.push(row);
+  }
+  return merged;
+}
+
+// ============================================================================
 // MAIN EXPORT FUNCTIONS
 // ============================================================================
 
@@ -464,6 +719,8 @@ function generateElevationData(terrain, width, height, random) {
  * @param {number} height - Map height in tiles (default 32)
  * @param {Object} options - Optional generation parameters
  * @param {boolean} options.useNewPipeline - Use new algorithm pipeline (default true)
+ * @param {boolean} options.useArchetypes - Use new archetype system (default false for now)
+ * @param {string} options.archetypeName - Explicit archetype to use (overrides node type selection)
  * @param {boolean} options.elevation - Include elevation data (default false)
  * @param {boolean} options.includeMetadata - Include generation metadata (default false)
  * @param {boolean} options.includeSpawns - Generate spawn positions (default false)
@@ -471,19 +728,44 @@ function generateElevationData(terrain, width, height, random) {
  * @param {string} options.enemyAiType - AI type for enemy spawn positioning
  * @param {number} options.enemyCount - Number of enemies to spawn
  * @param {string[]} options.enemyRoles - Optional roles for tactical spawn positioning
+ * @param {string} options.coverStrategy - Cover placement strategy (symmetric, staggered, etc.)
+ * @param {string} options.styleProfile - Style profile for parameter tuning
+ * @param {boolean} options.includeCoverGrid - Include raw cover grid data
  * @returns {Object} { terrain, obstacles, variants, elevation?, playerSpawns?, enemySpawns?, metadata? }
  */
 export function generateTerrain(seed, nodeType, width = 32, height = 32, options = {}) {
   const {
     useNewPipeline = true,
+    useArchetypes = false,
+    archetypeName = null,
     elevation = false,
     includeMetadata = false,
     includeSpawns = false,
     playerCount = 15,
     enemyAiType = null,
     enemyCount = 0,
-    enemyRoles = []
+    enemyRoles = [],
+    coverStrategy = null,
+    styleProfile = null,
+    includeCoverGrid = false
   } = options;
+
+  // Use new archetype system if enabled
+  if (useArchetypes) {
+    return generateWithArchetypes(seed, nodeType, width, height, {
+      archetypeName,
+      elevation,
+      includeMetadata,
+      includeSpawns,
+      playerCount,
+      enemyAiType,
+      enemyCount,
+      enemyRoles,
+      coverStrategy,
+      styleProfile,
+      includeCoverGrid
+    });
+  }
 
   // Use new pipeline by default
   if (useNewPipeline) {
@@ -637,3 +919,70 @@ export function validateSpawnPositions(spawns, terrain, obstacles) {
   const spawner = new SpawnPlacer();
   return spawner.validateSpawns(spawns, terrain, obstacles);
 }
+
+// ============================================================================
+// ARCHETYPE SYSTEM EXPORTS
+// ============================================================================
+
+// Re-export archetype system components for direct use
+export {
+  ARCHETYPES,
+  getArchetype,
+  selectArchetypeForNode,
+  getArchetypeNames
+} from './mapgen/archetypes/index.js';
+
+// Re-export PRNG streams for deterministic generation
+export {
+  createPRNGStreams,
+  PRNGStreams,
+  STREAM_SALTS,
+  mulberry32
+} from './mapgen/PRNGStreams.js';
+
+// Re-export constraint validation
+export { ConstraintValidator, VIOLATION_TYPES } from './mapgen/ConstraintValidator.js';
+
+// Re-export default constraints from archetypes
+export { DEFAULT_CONSTRAINTS, CONSTRAINT_PRESETS } from './mapgen/archetypes/constraints.js';
+
+// Re-export cover grid system
+export {
+  CoverGridSystem,
+  COVER_LEVELS,
+  COVER_BONUSES,
+  DEFAULT_LANE_CONFIG as LANE_CONFIG,
+  COVER_STRATEGIES
+} from './mapgen/CoverGridSystem.js';
+
+// Re-export layer context for algorithm cooperation
+export { LayerContext } from './mapgen/LayerContext.js';
+
+// Re-export style profiles for parameter tuning
+export {
+  STYLE_PROFILES,
+  getStyleProfile,
+  getStyleProfileNames,
+  applyStyleProfile,
+  getAlgorithmWeight,
+  blendProfiles,
+  suggestStyleProfile
+} from './mapgen/StyleProfiles.js';
+
+// Re-export parameter schema for algorithm configuration
+export {
+  PARAM_TYPES,
+  ALGORITHM_PARAMS,
+  validateParam,
+  validateAlgorithmParams,
+  getDefaultParams,
+  getParamDocs,
+  getAlgorithmNames
+} from './mapgen/ParameterSchema.js';
+
+// Re-export graph system for topology-driven generation
+export {
+  TopologyGraph,
+  POIGenerator,
+  GraphBuilder
+} from './mapgen/graph/index.js';

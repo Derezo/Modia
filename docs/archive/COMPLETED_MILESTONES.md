@@ -46,6 +46,69 @@ This document archives all completed features, resolved issues, and historical d
 
 ---
 
+## 9.4 - Battle Map Generation Overhaul (Jan 2026)
+
+Complete overhaul of the procedural map generation system for battle maps, implementing an 8-phase architecture with deterministic PRNG streams, curated archetypes, and tactical features.
+
+### New Architecture
+
+| Phase | Module | Purpose |
+|-------|--------|---------|
+| 8 | `PRNGStreams.js` | Isolated random streams (Mulberry32) for deterministic subsystems |
+| 1 | `archetypes/` | 14 map archetypes with weighted node-type selection |
+| 2 | `LayerContext.js` | Algorithm cooperation via shared state (noiseMap, seedRegions) |
+| 3 | `graph/` | Topology-driven generation with POIs, MST + extra edges |
+| 4 | `ConstraintValidator.js` | Constraint validation and automatic repair |
+| 5 | `CoverGridSystem.js` | Tactical cover with 6 strategies and lane-based layout |
+| 6 | `ElevationMapper.js` | First-class elevation integration |
+| 7 | `StyleProfiles.js` | Style presets with parameter validation |
+
+### New Files Created
+
+```
+shared/mapgen/
+├── PRNGStreams.js           # Phase 8: Modular PRNG streams
+├── LayerContext.js          # Phase 2: Algorithm cooperation
+├── ConstraintValidator.js   # Phase 4: Validation & repair
+├── CoverGridSystem.js       # Phase 5: Tactical cover
+├── ParameterSchema.js       # Phase 7: Parameter definitions
+├── StyleProfiles.js         # Phase 7: Style presets
+├── archetypes/
+│   ├── index.js             # Re-exports
+│   ├── archetypeDefinitions.js  # 14 archetype definitions
+│   ├── ArchetypeSelector.js     # Weighted selection
+│   └── constraints.js           # Constraint presets
+└── graph/
+    ├── index.js             # Re-exports
+    ├── TopologyGraph.js     # Graph data structure
+    ├── POIGenerator.js      # POI placement
+    └── GraphBuilder.js      # MST + edge generation
+```
+
+### Unit Tests Added
+
+- `PRNGStreams.test.js` - Stream isolation, determinism, forking
+- `constraintValidator.test.js` - Validation, repair, violation detection
+- `coverGridSystem.test.js` - Cover strategies, lane generation, symmetry
+- `archetypes.test.js` - Archetype structure, selection, constraints
+
+### Integration
+
+- New `useArchetypes: true` option in `generateTerrain()` for opt-in
+- `generateWithArchetypes()` function integrating all 8 phases
+- Backward-compatible with existing `useNewPipeline` mode
+- 265 tests pass (all existing + 4 new test suites)
+
+### Key Features
+
+- **Determinism:** Same seed always produces identical maps across all subsystems
+- **Archetypes:** 14 curated map types (openField, forestClearing, caveRooms, tunnelNetwork, etc.)
+- **Constraints:** Automatic validation and repair for walkable ratio, connectivity, dead ends
+- **Tactical Cover:** Lane-based cover with strategies (symmetric, staggered, defensive, etc.)
+- **Style Profiles:** 6 profiles (clean, cluttered, natural, structured, organic, maze)
+
+---
+
 ## 9.3 - Codebase Cleanup (Jan 2026)
 
 Conservative cleanup of deprecated code, database mismatches, dead code, and documentation.
