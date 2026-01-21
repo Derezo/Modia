@@ -57,6 +57,10 @@ function generateAllActions(unit, state) {
 
       // Self-targeting skills
       if (skill.range === 0 || skill.selfBuff || skill.healPercent) {
+        // Skip healing skills if target is at full HP
+        if (skill.healPercent && unit.hp >= unit.maxHp) {
+          continue;
+        }
         actions.push({
           type: 'skill',
           skill: skill,
@@ -204,6 +208,10 @@ function generateActionsAtPosition(unit, state) {
 
     // Self-targeting skills
     if (skill.range === 0 || skill.selfBuff || skill.healPercent) {
+      // Skip healing skills if target is at full HP
+      if (skill.healPercent && unit.hp >= unit.maxHp) {
+        continue;
+      }
       actions.push({
         type: 'skill',
         skill: skill,
@@ -221,6 +229,10 @@ function generateActionsAtPosition(unit, state) {
     );
 
     for (const target of skillTargets) {
+      // Skip healing skills if target is at full HP
+      if (isHealingSkill(skill) && target.hp >= target.maxHp) {
+        continue;
+      }
       // Normalize target format to match getTargetsInRange: {x, y, unitId, unitName}
       actions.push({
         type: 'skill',
