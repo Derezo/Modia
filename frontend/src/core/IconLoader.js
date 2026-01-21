@@ -55,6 +55,15 @@ export class IconLoader {
   }
 
   /**
+   * Normalize icon name to kebab-case (file naming convention)
+   * @param {string} name - Icon name (snake_case or kebab-case)
+   * @returns {string} Normalized kebab-case name
+   */
+  normalizeName(name) {
+    return name.replace(/_/g, '-');
+  }
+
+  /**
    * Build cache key for an icon
    * @param {string} category - Icon category (e.g., 'menu', 'action')
    * @param {string} name - Icon name (e.g., 'formation', 'attack')
@@ -62,19 +71,23 @@ export class IconLoader {
    * @returns {string} Cache key
    */
   getCacheKey(category, name, size) {
-    return `${category}-${name}@${size}`;
+    const normalizedName = this.normalizeName(name);
+    return `${category}-${normalizedName}@${size}`;
   }
 
   /**
    * Build URL path for an icon
    * @param {string} category - Icon category
-   * @param {string} name - Icon name
+   * @param {string} name - Icon name. Accepts either snake_case (from code constants)
+   *                        or kebab-case (matching file names). Internally normalized
+   *                        to kebab-case to match file naming convention.
    * @param {number} size - Icon size
    * @returns {string} URL path
    */
   getIconPath(category, name, size) {
     const optimalSize = this.getOptimalSize(size);
-    return `${this.basePath}/${optimalSize}/${category}-${name}.png`;
+    const normalizedName = this.normalizeName(name);
+    return `${this.basePath}/${optimalSize}/${category}-${normalizedName}.png`;
   }
 
   /**

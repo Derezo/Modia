@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="5" ry="1.2" fill="#111133" opacity="0.3"/>
+
+  <!-- Potion bottle - dark base -->
+  <path d="M9 8v-3h6v3l3 5v5c0 2-2 3-6 3s-6-1-6-3v-5l3-5z" fill="#222244"/>
+
+  <!-- Potion bottle - mid blue -->
+  <path d="M10 8v-2h4v2l2.5 4.5v4.5c0 1.5-1.5 2.5-4.5 2.5s-4.5-1-4.5-2.5v-4.5l2.5-4.5z" fill="#334466"/>
+
+  <!-- Liquid - bright blue -->
+  <path d="M8 14v3c0 1.5 1.5 2 4 2s4-.5 4-2v-3c-2 1-6 1-8 0z" fill="#4488bb"/>
+
+  <!-- Liquid highlight -->
+  <ellipse cx="12" cy="16" rx="3" ry="1.5" fill="#66aadd" opacity="0.5"/>
+
+  <!-- Bottle neck -->
+  <rect x="10" y="4" width="4" height="2" rx="0.5" fill="#334466"/>
+
+  <!-- Cork -->
+  <rect x="10.5" y="2" width="3" height="2.5" rx="0.5" fill="#8b6914"/>
+  <rect x="10.8" y="2.2" width="2.4" height="2" rx="0.3" fill="#aa8833"/>
+
+  <!-- Double glow effect -->
+  <ellipse cx="10" cy="14" rx="2" ry="1.5" fill="#88bbff" opacity="0.4"/>
+  <ellipse cx="14" cy="14" rx="2" ry="1.5" fill="#88bbff" opacity="0.4"/>
+
+  <!-- Gold accent -->
+  <ellipse cx="12" cy="8" rx="3" ry="0.5" fill="#daa520" opacity="0.6"/>
+
+  <!-- Sparkles -->
+  <circle cx="10" cy="15" r="0.5" fill="#ffffff" opacity="0.7"/>
+  <circle cx="14" cy="15" r="0.4" fill="#ffffff" opacity="0.6"/>
+</svg>

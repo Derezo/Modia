@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="6" ry="1.5" fill="#001133" opacity="0.3"/>
+
+  <!-- Crystal - dark base -->
+  <path d="M12 3l-6 7 6 9 6-9-6-7z" fill="#224488"/>
+
+  <!-- Crystal - mid blue -->
+  <path d="M12 4l-5 6 5 8 5-8-5-6z" fill="#4477bb"/>
+
+  <!-- Crystal - left facet -->
+  <path d="M12 4l-5 6 5 8z" fill="#3366aa"/>
+
+  <!-- Crystal - right facet highlight -->
+  <path d="M12 4l5 6-5 8z" fill="#5588cc"/>
+
+  <!-- Inner glow -->
+  <path d="M12 6l-3 4 3 5 3-5-3-4z" fill="#88bbff" opacity="0.6"/>
+
+  <!-- Plus sign circle background -->
+  <circle cx="12" cy="10" r="3" fill="#224488"/>
+
+  <!-- Plus sign - cyan -->
+  <path d="M10 10h4" fill="none" stroke="#44ddff" stroke-width="1.8" stroke-linecap="round"/>
+  <path d="M12 8v4" fill="none" stroke="#44ddff" stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- Crystal sparkles -->
+  <circle cx="9" cy="7" r="0.6" fill="#aaddff" opacity="0.8"/>
+  <circle cx="15" cy="9" r="0.5" fill="#aaddff" opacity="0.6"/>
+
+  <!-- Top sparkle -->
+  <circle cx="12" cy="3" r="0.5" fill="#ffffff" opacity="0.8"/>
+</svg>

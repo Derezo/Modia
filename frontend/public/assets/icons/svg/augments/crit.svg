@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="6" ry="1.5" fill="#330000" opacity="0.3"/>
+
+  <!-- Skull - dark base -->
+  <ellipse cx="12" cy="10" rx="8" ry="7" fill="#2a2a2a"/>
+
+  <!-- Skull - mid tone -->
+  <ellipse cx="12" cy="10" rx="7" ry="6" fill="#4a4a4a"/>
+
+  <!-- Skull - highlight -->
+  <ellipse cx="12" cy="9" rx="6" ry="5" fill="#666666"/>
+
+  <!-- Brow ridge -->
+  <path d="M6 8c2-1 4-1.5 6-1.5s4 .5 6 1.5" fill="none" stroke="#4a4a4a" stroke-width="1.5"/>
+
+  <!-- Left eye socket -->
+  <ellipse cx="9" cy="10" rx="2" ry="2.5" fill="#1a1a1a"/>
+
+  <!-- Right eye socket -->
+  <ellipse cx="15" cy="10" rx="2" ry="2.5" fill="#1a1a1a"/>
+
+  <!-- X in left eye -->
+  <path d="M7.5 8.5l3 3M10.5 8.5l-3 3" fill="none" stroke="#cc2222" stroke-width="1.2" stroke-linecap="round"/>
+
+  <!-- X in right eye -->
+  <path d="M13.5 8.5l3 3M16.5 8.5l-3 3" fill="none" stroke="#cc2222" stroke-width="1.2" stroke-linecap="round"/>
+
+  <!-- Nose -->
+  <path d="M12 12v2" fill="none" stroke="#3a3a3a" stroke-width="1"/>
+  <circle cx="11" cy="13.5" r="0.6" fill="#2a2a2a"/>
+  <circle cx="13" cy="13.5" r="0.6" fill="#2a2a2a"/>
+
+  <!-- Jaw line -->
+  <path d="M6 14c2 3 4 4 6 4s4-1 6-4" fill="none" stroke="#3a3a3a" stroke-width="1"/>
+
+  <!-- Teeth -->
+  <rect x="8" y="15" width="1.5" height="2" rx="0.3" fill="#888888"/>
+  <rect x="10" y="15" width="1.5" height="2.5" rx="0.3" fill="#888888"/>
+  <rect x="12.5" y="15" width="1.5" height="2.5" rx="0.3" fill="#888888"/>
+  <rect x="14.5" y="15" width="1.5" height="2" rx="0.3" fill="#888888"/>
+
+  <!-- Critical spark -->
+  <circle cx="12" cy="3" r="1" fill="#ff4444"/>
+  <path d="M10 3h4" fill="none" stroke="#ff4444" stroke-width="0.8"/>
+  <path d="M12 1v4" fill="none" stroke="#ff4444" stroke-width="0.8"/>
+</svg>

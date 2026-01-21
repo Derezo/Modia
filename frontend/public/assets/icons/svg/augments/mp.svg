@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="6" ry="1.5" fill="#001133" opacity="0.3"/>
+
+  <!-- Crystal - dark base -->
+  <path d="M12 2l-6 8 6 10 6-10-6-8z" fill="#224488"/>
+
+  <!-- Crystal - mid blue -->
+  <path d="M12 3l-5 7 5 9 5-9-5-7z" fill="#4477bb"/>
+
+  <!-- Crystal - left facet -->
+  <path d="M12 3l-5 7 5 9z" fill="#3366aa"/>
+
+  <!-- Crystal - right facet highlight -->
+  <path d="M12 3l5 7-5 9z" fill="#5588cc"/>
+
+  <!-- Crystal - bright center -->
+  <path d="M12 5l-3 5 3 6 3-6-3-5z" fill="#6699dd"/>
+
+  <!-- Inner glow -->
+  <path d="M12 7l-2 3 2 4 2-4-2-3z" fill="#88bbff" opacity="0.7"/>
+
+  <!-- Sparkle on facet -->
+  <circle cx="10" cy="8" r="0.8" fill="#aaddff" opacity="0.8"/>
+  <circle cx="14" cy="11" r="0.6" fill="#aaddff" opacity="0.6"/>
+
+  <!-- Plus sign - light blue -->
+  <path d="M10.5 10h3" fill="none" stroke="#aaddff" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M12 8.5v3" fill="none" stroke="#aaddff" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Magic aura -->
+  <circle cx="12" cy="10" r="7" fill="none" stroke="#6699dd" stroke-width="0.5" opacity="0.4"/>
+
+  <!-- Top sparkle -->
+  <circle cx="12" cy="2" r="0.5" fill="#ffffff" opacity="0.8"/>
+</svg>
