@@ -19,7 +19,7 @@
 | Economy & Items | 95% | Near Complete |
 | User Experience | 95% | Near Complete |
 | Social Features | 95% | Complete |
-| World & Progression | 96% | Near Complete |
+| World & Progression | 98% | Near Complete |
 
 ---
 
@@ -109,6 +109,8 @@
 - [x] Elemental damage system (8 elements, resistances, enemy/racial templates) - v9.0
 - [x] Skill cooldowns (battleService.js lines 1317-1322, 1777-1781) - v9.1
 - [x] Status effect duration display (BattleUnit.js duration numbers on icons) - v9.1
+- [x] Elevation-aware tilemap rendering (coordinate transformation, depth sorting, click detection) - v9.7
+- [x] Frontend/backend 3D pathfinding synchronization (movement highlights match server validation) - v9.7
 
 ### 2.2 Enemy System
 
@@ -343,10 +345,10 @@ Per ITEM_SYSTEM.md specifications:
 
 ### 5.1 World Map
 
-- [ ] Node hover information (detailed tooltips)
+- [x] Node hover information (detailed tooltips) - v9.6 NodeHoverTooltip.js with progressive disclosure
 - [x] Mini-map display (WorldMapMinimap.js with click-to-navigate, fog of war, region colors) - v9.1
 - [x] Blocked/cleared node visuals (WorldMapScene.js)
-- [ ] Quest markers
+- [x] Quest markers - v9.6 QuestMarkerManager.js, QuestProgressHUD.js
 - [x] Terrain obstacles rendering (lakes, mountains, forests)
 - [x] Compact node options panel with type badge
 - [x] Settlement adjacency rules (no village-village, city-city, etc.)
@@ -444,12 +446,15 @@ Per ITEM_SYSTEM.md specifications:
 - [x] Watchtowers - Reveal nearby undiscovered nodes (very rare, outer rings)
 - [x] Farms - Additional settlement type for outer areas
 
-#### Zodiac Shrine System (Placement Complete, Effects Future)
+#### Zodiac Shrine System (Complete - v9.6)
 - [x] 12 zodiac shrines placed (one of each type): Aries, Taurus, Gemini, Cancer, Leo, Virgo, Libra, Scorpio, Sagittarius, Capricorn, Aquarius, Pisces
 - [x] Shrine placement: outer areas, evenly distributed with MIN_SPACING=15
 - [x] shrine_buff_type column for zodiac identification
-- [ ] Zodiac stone collection quest (collect all 12)
-- [ ] Unique blessings per zodiac type
+- [x] Zodiac crystal collection system (collect all 12 for bonus)
+- [x] Unique blessings per zodiac type (ZODIAC_SHRINE_BUFFS in constants.js)
+- [x] Relic collection modal (RelicCollectionModal.js)
+- [x] Zodiac indicator HUD element (ZodiacIndicator.js)
+- [x] Shrine tooltip with crystal status (NodeHoverTooltip.js)
 
 #### Guild Distribution Enhancement
 - [x] 3 guilds per region (up from 1)
@@ -624,6 +629,8 @@ Recent implementations:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 8.0 | Jan 2026 | Battle Tilemap Rendering v9.7: Elevation-aware coordinate system (Y offset 8px/level), depth sorting with painter's algorithm, elevation-aware click detection. Frontend/backend 3D pathfinding synchronization. Archetype elevation profiles (6 archetypes: openField, caveRooms, mountainPass, bridgeCrossing, arena, volcano). Elevation constraints (variation limits, ramp requirements, peak/pit ratios). Code quality: BattleGrid cleanup, deterministic noise fix, elevation validation. |
+| 7.0 | Jan 2026 | World & Progression Polish v9.6: Zodiac Shrine System complete with crystal collection, RelicCollectionModal.js for viewing relic/crystal collection, ZodiacIndicator.js HUD element showing collection progress, NodeHoverTooltip.js enhanced with zodiac crystal status. Quest markers system complete with QuestMarkerManager.js and QuestProgressHUD.js. World & Progression now 98% complete. |
 | 6.0 | Jan 2026 | Documentation Consolidation v9.1: Marked Skill Cooldowns COMPLETE (battleService.js:1317-1322, 1777-1781). Marked Status Effect Duration Display COMPLETE (BattleUnit.js). Marked Mini-map Display COMPLETE (WorldMapMinimap.js 700+ lines with click-to-navigate). Added TODO items from code audit to Post-MVP section (quest completion verification, item drops from chests, lore content system, quick party formation, clan chat/management). Combat System 99%, World & Progression 96%. |
 | 5.0 | Jan 2026 | Gameplay Features v9.0: Audio System complete (Web Audio API, scene-based music, SFX, volume controls). Battle Log Panel complete (scrollable combat history, color-coded entries). Elemental Damage System complete (8 elements, resistances, enemy/racial templates). Gold Sinks complete (marketplace 5% fee, fast travel 50-500g, stamina restore 100g/point). Relic System complete (rare collectibles, permanent bonuses). Settings Expansion complete (7 categories, ~44 settings, colorblind modes). Core Mechanics now 100%, Combat System 98%, Economy 95%, UX 95%. |
 | 4.1 | Jan 2026 | Project cleanup audit: Added battle log panel, elemental damage system to Battle Engine. Added Tier 5+ enemies to Enemy System. Enhanced Mobile Optimization with touch gestures, 44px tap targets. Added loading indicators, keyboard navigation, tooltips, object pooling to UI Polish. Elevated Daily/Weekly Quests priority. Archived all design documents (regional world gen, formation integration, icon quality, marketplace augments). |
