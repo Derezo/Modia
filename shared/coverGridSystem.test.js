@@ -223,7 +223,7 @@ describe('CoverGridSystem', () => {
   });
 
   describe('mapToObstacles()', () => {
-    it('should convert cover grid to obstacles', () => {
+    it('should convert cover grid to 2D obstacle grid', () => {
       const system = new CoverGridSystem(20, 20);
       const random = createSeededRandom(42);
 
@@ -234,21 +234,32 @@ describe('CoverGridSystem', () => {
         [COVER_LEVELS.HIGH]: { type: 'rocks', variants: ['rock_large'] }
       };
 
-      const obstacles = system.mapToObstacles(mapping);
+      const obstacleGrid = system.mapToObstacles(mapping);
 
-      // Returns array of obstacle objects, not 2D grid
-      assert.ok(Array.isArray(obstacles));
-      // Should have obstacles for each cover position
+      // Returns 2D grid with dimensions matching the cover system
+      assert.ok(Array.isArray(obstacleGrid));
+      assert.strictEqual(obstacleGrid.length, 20); // height
+      assert.strictEqual(obstacleGrid[0].length, 20); // width
+
+      // Count obstacles in grid - should match cover positions
       const coverPositions = system.getCoverPositions();
-      assert.strictEqual(obstacles.length, coverPositions.length);
+      let obstacleCount = 0;
+      for (let y = 0; y < obstacleGrid.length; y++) {
+        for (let x = 0; x < obstacleGrid[y].length; x++) {
+          if (obstacleGrid[y][x] !== null) {
+            obstacleCount++;
+          }
+        }
+      }
+      assert.strictEqual(obstacleCount, coverPositions.length);
 
-      // Each obstacle should have x, y, type, variant
-      if (obstacles.length > 0) {
-        const first = obstacles[0];
-        assert.ok(first.x !== undefined);
-        assert.ok(first.y !== undefined);
-        assert.ok(first.type !== undefined);
-        assert.ok(first.variant !== undefined);
+      // Verify obstacles have type and variant
+      if (coverPositions.length > 0) {
+        const pos = coverPositions[0];
+        const obstacle = obstacleGrid[pos.y][pos.x];
+        assert.ok(obstacle !== null);
+        assert.ok(obstacle.type !== undefined);
+        assert.ok(obstacle.variant !== undefined);
       }
     });
   });

@@ -429,12 +429,12 @@ export class CoverGridSystem {
   }
 
   /**
-   * Map cover grid to obstacle types
+   * Map cover grid to obstacle types as a 2D grid
    * Used by obstacle placement system
    *
    * @param {Object} mapping - Cover level to obstacle type mapping
    * @param {Function} random - Seeded random function for deterministic variant selection
-   * @returns {Array<{x: number, y: number, type: string, variant: string}>}
+   * @returns {Object[][]} 2D grid of obstacles (null for empty cells)
    */
   mapToObstacles(mapping = {}, random = null) {
     const defaultMapping = {
@@ -443,27 +443,31 @@ export class CoverGridSystem {
     };
 
     const finalMapping = { ...defaultMapping, ...mapping };
-    const obstacles = [];
 
     // Use seeded random if provided, fall back to Math.random for backward compatibility
     const rng = random || Math.random;
 
+    // Create 2D grid initialized with nulls
+    const obstacleGrid = [];
+    for (let y = 0; y < this.height; y++) {
+      obstacleGrid.push(new Array(this.width).fill(null));
+    }
+
+    // Place obstacles at cover positions
     for (const pos of this.coverPositions) {
       const obstacleConfig = finalMapping[pos.level];
-      if (obstacleConfig) {
-        obstacles.push({
-          x: pos.x,
-          y: pos.y,
+      if (obstacleConfig && pos.x >= 0 && pos.x < this.width && pos.y >= 0 && pos.y < this.height) {
+        obstacleGrid[pos.y][pos.x] = {
           type: obstacleConfig.type,
           variant: obstacleConfig.variants[
             Math.floor(rng() * obstacleConfig.variants.length)
           ],
           coverLevel: pos.level
-        });
+        };
       }
     }
 
-    return obstacles;
+    return obstacleGrid;
   }
 
   /**

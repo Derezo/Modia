@@ -250,11 +250,23 @@ export class PerlinNoiseAlgorithm {
 
   /**
    * Convert noise value to terrain type
+   * Dynamically checks all terrain types in thresholds from highest to lowest
    */
   _noiseToTerrain(value) {
-    // Check thresholds from highest to lowest
-    if (value >= this.thresholds.rock) return 'rock';
-    if (value >= this.thresholds.forest) return 'forest';
+    // Build sorted list of terrain types by threshold (highest first)
+    // Skip special 'grass' key which is the fallback
+    const sortedTerrains = Object.entries(this.thresholds)
+      .filter(([terrain]) => terrain !== 'grass')
+      .sort((a, b) => b[1] - a[1]); // Sort by threshold descending
+
+    // Check each threshold from highest to lowest
+    for (const [terrain, threshold] of sortedTerrains) {
+      if (value >= threshold) {
+        return terrain;
+      }
+    }
+
+    // Fallback to grass (or whatever is specified as the lowest terrain)
     return 'grass';
   }
 
