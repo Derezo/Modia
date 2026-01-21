@@ -47,7 +47,9 @@ export const ARCHETYPES = {
           scale: 0.06,
           octaves: 3,
           persistence: 0.4,
-          thresholds: { rock: 0.8, forest: 0.6, grass: -1.0 }
+          // Lower thresholds to match actual noise distribution (centered around 0)
+          // rock: high values only, forest: moderate, grass: negative values
+          thresholds: { rock: 0.35, forest: -0.1, grass: -1.0 }
         }
       },
       {
@@ -84,7 +86,8 @@ export const ARCHETYPES = {
           scale: 0.08,
           octaves: 4,
           persistence: 0.5,
-          thresholds: { rock: 0.75, forest: 0.4, grass: -1.0 }
+          // Lower thresholds for more forest coverage
+          thresholds: { rock: 0.4, forest: -0.15, grass: -1.0 }
         }
       },
       {
@@ -135,7 +138,8 @@ export const ARCHETYPES = {
           scale: 0.1,
           octaves: 3,
           persistence: 0.45,
-          thresholds: { rock: 0.7, stone: 0.4, grass: -1.0 }
+          // Adjusted thresholds for more terrain variety
+          thresholds: { rock: 0.35, stone: -0.1, grass: -1.0 }
         }
       },
       {
