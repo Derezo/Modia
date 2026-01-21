@@ -50,6 +50,46 @@ This document archives all completed features, resolved issues, and historical d
 
 ---
 
+## 9.8 - Battle Map Visual Overhaul (Jan 2026)
+
+Complete visual refresh of battle maps with procedurally generated isometric sprites, elevation rendering improvements, and critical movement synchronization fixes.
+
+### Terrain Sprite System
+
+| Component | File | Description |
+|-----------|------|-------------|
+| Sprite Generator | `scripts/generate-terrain-tiles.js` | Sharp-based SVG-to-PNG, 64 sprites total |
+| Base Sprites | `terrain/base/{type}_{0-3}.png` | 7 terrain types × 4 variants |
+| Elevation Sprites | `terrain/base/{type}_elev{1-3}.png` | Height variants for elevated tiles |
+| Pit Sprites | `terrain/base/{type}_pit.png` | Darker recessed tiles for negative elevation |
+| Asset Loading | `AssetLoader.js:getElevatedTile()` | Biome-specific sprite resolution with fallback |
+
+### Color Palette Changes
+
+| Terrain | Old Color | New Color | Purpose |
+|---------|-----------|-----------|---------|
+| rock | Gray (#808080) | Brown-red (#8b4513) | Clear distinction from stone |
+| stone | Gray (#708090) | Warm gray (#8b8682) | Walkable tile clarity |
+
+### Movement Sync Fix
+
+| Issue | Fix | File |
+|-------|-----|------|
+| Percentage vs flat modifiers | Changed slow/haste from 50% to +/-1 | `BattlePathfinding.js` |
+| Status effect structure | Added `e.type` check to match server | `BattlePathfinding.js` |
+| Missing effects | Added stun/freeze/sleep to movement blockers | `BattlePathfinding.js` |
+| Test coverage | 20 new tests validating sync | `movement-sync.integration.test.js` |
+
+### Removed Systems
+
+| System | Files Deleted | Reason |
+|--------|---------------|--------|
+| Decorative Obstacles | `obstacles/decorative/*.png` | Visual clutter, no gameplay value |
+| CoverGridSystem | `CoverGridSystem.js`, test file | Tactical cover unnecessary for game design |
+| Cover Strategy | Properties from 14 archetypes | Simplified map generation |
+
+---
+
 ## 9.7 - Elevation-Aware Tilemap Rendering (Jan 2026)
 
 Complete implementation of elevation-aware rendering for battle maps, enabling visual distinction of terrain height with proper coordinate transformation, click detection, and pathfinding synchronization.

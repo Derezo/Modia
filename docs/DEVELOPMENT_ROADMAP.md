@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 28.0 |
+| Version | 30.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -117,8 +117,10 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 30.0 | Jan 2026 | Battle Map Visual Overhaul (v9.5): Isometric terrain sprite system with 64 generated sprites (7 terrain types × 4 variants + elevation variants). New generate-terrain-tiles.js using Sharp SVG-to-PNG. Updated BattleGrid.js with elevation-aware rendering, click detection, fallback wall faces. AssetLoader.js enhanced with getElevatedTile(), biome resolution. Fixed movement desync: status effects now use flat modifiers (+/-1) matching server, added e.type check, added all movement-preventing effects (stun/freeze/sleep/root). New movement-sync.integration.test.js (20 tests). Rock terrain now brown-red (#8b4513) for clear distinction from stone. |
+| 29.0 | Jan 2026 | Battle Map Cleanup: Removed CoverGridSystem (tactical cover deemed unnecessary). Removed decorative obstacles entirely from codebase. Simplified map generation by removing cover strategies from archetypes. Files deleted: CoverGridSystem.js, coverGridSystem.test.js, decorative obstacle sprites. Cleaner battle maps with only functional terrain. |
 | 28.0 | Jan 2026 | Legacy Map Generation Removal: Removed all backward-compatibility code from mapGeneration.js. Deleted generateTerrainLegacy(), generateWithPipeline(), and all legacy obstacle functions. Removed useArchetypes and useNewPipeline flags. Archetype-based system is now the only code path. Unknown node types fall back to 'openField' archetype. File reduced from 989 to 693 lines (~296 lines removed). All 265 tests pass. |
-| 27.0 | Jan 2026 | Battle Map Generation Overhaul (v9.4): 8-phase modular procedural map generation. New modules: PRNGStreams (Mulberry32 with stream isolation), 14 map archetypes with weighted selection, LayerContext for algorithm cooperation, TopologyGraph/POI/GraphBuilder for topology-driven generation, ConstraintValidator with automatic repair, CoverGridSystem with 6 tactical strategies, StyleProfiles with 6 presets. 265 tests pass. |
+| 27.0 | Jan 2026 | Battle Map Generation Overhaul (v9.4): 8-phase modular procedural map generation. New modules: PRNGStreams (Mulberry32 with stream isolation), 14 map archetypes with weighted selection, LayerContext for algorithm cooperation, TopologyGraph/POI/GraphBuilder for topology-driven generation, ConstraintValidator with automatic repair, StyleProfiles with 6 presets. (Note: CoverGridSystem removed in v29.0) |
 | 26.0 | Jan 2026 | XP/Leveling Bug Fixes: Fixed HP/MP never updating on level up (critical bug: level 256 monk with only 118 HP). Fixed XP cost formula mismatch between frontend (exponential) and backend (polynomial). Fixed API response field name (`xpRemaining` instead of `availableXp`). Capped all skill requirements at level 5 (was 10-25). Added skill name display in prerequisites (was showing IDs). Added level-up toast when character levels via skill learning. New migration: 037_fix_character_hp_mp.sql. |
 | 25.0 | Jan 2026 | Documentation Consolidation v9.1: Skill Cooldowns marked COMPLETE (backend implemented in battleService.js). Status Effect Duration Display marked COMPLETE (BattleUnit.js). Mini-map Display marked COMPLETE (WorldMapMinimap.js with click-to-navigate). Quest documentation restructured into index + detailed specs (QUEST_SYSTEM.md, GUILD_ADVANCEMENT.md, DAILY_WEEKLY_QUESTS.md). Added TODO items from code audit to roadmaps. Archived stale documentation. |
 | 24.0 | Jan 2026 | Gameplay Features v9.0: Audio System (Web Audio API, scene-based music, SFX, volume controls). Settings Expansion (7 categories, ~44 settings, colorblind modes). Elemental Damage System (8 elements, resistances, enemy/racial templates). Battle Log Panel (scrollable combat history, color-coded entries). Gold Sinks (marketplace 5% fee, fast travel, stamina restore). Relic System (rare collectibles, permanent bonuses). Gameplay track now 98%. Sprint focus updated with remaining high-priority items. |

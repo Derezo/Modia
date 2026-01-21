@@ -60,9 +60,6 @@ export class LayerContext {
     // Elevation data if generated
     this.elevation = null;
 
-    // Cover grid if generated
-    this.coverGrid = null;
-
     // Generation metadata
     this.meta = {
       algorithmOrder: [],
@@ -476,32 +473,6 @@ export class LayerContext {
   }
 
   // ==========================================================================
-  // COVER GRID METHODS
-  // ==========================================================================
-
-  /**
-   * Set cover grid
-   *
-   * @param {number[][]} coverGrid - Cover grid (0=none, 1=low, 2=high)
-   */
-  setCoverGrid(coverGrid) {
-    this.coverGrid = coverGrid;
-  }
-
-  /**
-   * Get cover value at position
-   *
-   * @param {number} x - X coordinate
-   * @param {number} y - Y coordinate
-   * @returns {number} Cover level (0=none, 1=low, 2=high)
-   */
-  getCover(x, y) {
-    if (!this.coverGrid) return 0;
-    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return 0;
-    return this.coverGrid[y][x];
-  }
-
-  // ==========================================================================
   // METADATA METHODS
   // ==========================================================================
 
@@ -537,8 +508,7 @@ export class LayerContext {
       meta: this.meta,
       hasNoiseMap: this.noiseMap !== null,
       hasSeedRegions: this.seedRegions !== null,
-      hasElevation: this.elevation !== null,
-      hasCoverGrid: this.coverGrid !== null
+      hasElevation: this.elevation !== null
     };
   }
 
@@ -554,7 +524,6 @@ export class LayerContext {
     this.paths = [];
     this.pois = [];
     this.elevation = null;
-    this.coverGrid = null;
     this.meta = {
       algorithmOrder: [],
       passes: 0

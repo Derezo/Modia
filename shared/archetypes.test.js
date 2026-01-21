@@ -325,23 +325,4 @@ describe('Archetype System', () => {
       }
     });
   });
-
-  describe('Cover strategies', () => {
-    it('archetypes should reference valid cover strategies when defined', () => {
-      // Valid cover strategies - includes 'sparse' which is used by openField
-      const validStrategies = [
-        'symmetric', 'staggered', 'defensive', 'scattered',
-        'chokepoint', 'perimeter', 'sparse', 'none'
-      ];
-
-      for (const [name, archetype] of Object.entries(ARCHETYPES)) {
-        if (archetype.coverStrategy) {
-          assert.ok(
-            validStrategies.includes(archetype.coverStrategy),
-            `${name} references invalid cover strategy: ${archetype.coverStrategy}`
-          );
-        }
-      }
-    });
-  });
 });

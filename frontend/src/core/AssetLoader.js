@@ -51,13 +51,14 @@ export class AssetLoader {
         chemist: 'C'
       },
       terrain: {
-        grass: '#3d5c3d',
-        stone: '#5a5a5a',
-        forest: '#2d4a2d',
-        water: '#3d5c7a',
-        rock: '#4a4a4a',
-        lava: '#7a3d3d',
-        cliff: '#3a3a3a'
+        grass: '#6b8e23',   // Olive green
+        stone: '#8b8682',   // Warm gray (walkable)
+        forest: '#228b22',  // Forest green
+        water: '#4682b4',   // Steel blue
+        rock: '#8b4513',    // Brown-red (IMPASSABLE - distinct from stone)
+        lava: '#ff4500',    // Orange-red
+        cliff: '#2f2f2f',   // Dark charcoal
+        tree: '#228b22'     // Forest green
       }
     };
   }
@@ -124,19 +125,84 @@ export class AssetLoader {
   }
 
   /**
+   * Map node type to sprite biome directory
+   * @param {string} nodeType - Node type (forest, cave, mountain, etc.)
+   * @returns {string} Biome directory (base, cave, mountain)
+   */
+  getSpriteBiome(nodeType) {
+    const biomeMap = {
+      cave: 'cave',
+      mountain: 'mountain',
+      // All other node types use base biome
+      forest: 'base',
+      bridge: 'base',
+      castle: 'base',
+      village: 'base',
+      city: 'base',
+      default: 'base'
+    };
+    return biomeMap[nodeType] || biomeMap.default;
+  }
+
+  /**
    * Load terrain tile sprite
    * @param {string} terrain - Terrain type (grass, stone, forest, etc.)
    * @param {string} nodeType - Node type for biome-specific tiles (forest, cave, mountain, etc.)
-   * @param {number} [variant=0] - Tile variant index
+   * @param {number} [variant=0] - Tile variant index (0-3)
    */
   async loadTile(terrain, nodeType, variant = 0) {
-    const path = `${this.basePath}/terrain/${nodeType}/${terrain}_${variant}.png`;
+    const biome = this.getSpriteBiome(nodeType);
+    const path = `${this.basePath}/terrain/${biome}/${terrain}_${variant}.png`;
     try {
       return await this.loadImage(path);
     } catch {
-      // Try without variant
+      // Fallback to base biome
       try {
-        return await this.loadImage(`${this.basePath}/terrain/${nodeType}/${terrain}.png`);
+        return await this.loadImage(`${this.basePath}/terrain/base/${terrain}_${variant}.png`);
+      } catch {
+        // Try without variant
+        try {
+          return await this.loadImage(`${this.basePath}/terrain/base/${terrain}.png`);
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+
+  /**
+   * Get terrain tile (sync, returns null if not cached)
+   * @param {string} terrain - Terrain type
+   * @param {string} nodeType - Node type for biome lookup
+   * @param {number} [variant=0] - Tile variant index
+   */
+  getTile(terrain, nodeType, variant = 0) {
+    const biome = this.getSpriteBiome(nodeType);
+    const primaryPath = `${this.basePath}/terrain/${biome}/${terrain}_${variant}.png`;
+    const fallbackPath = `${this.basePath}/terrain/base/${terrain}_${variant}.png`;
+
+    return this.cache.get(primaryPath) ||
+           this.cache.get(fallbackPath) ||
+           this.cache.get(`${this.basePath}/terrain/base/${terrain}.png`) ||
+           null;
+  }
+
+  /**
+   * Load elevated terrain tile sprite
+   * @param {string} terrain - Terrain type (grass, stone, etc.)
+   * @param {number} elevation - Elevation level (1, 2, 3) or -1 for pit
+   * @param {string} nodeType - Node type for biome lookup
+   */
+  async loadElevatedTile(terrain, elevation, nodeType) {
+    const biome = this.getSpriteBiome(nodeType);
+    const suffix = elevation < 0 ? 'pit' : `elev${elevation}`;
+    const path = `${this.basePath}/terrain/${biome}/${terrain}_${suffix}.png`;
+    try {
+      return await this.loadImage(path);
+    } catch {
+      // Fallback to base biome
+      try {
+        return await this.loadImage(`${this.basePath}/terrain/base/${terrain}_${suffix}.png`);
       } catch {
         return null;
       }
@@ -144,11 +210,49 @@ export class AssetLoader {
   }
 
   /**
-   * Get terrain tile (sync, returns null if not cached)
+   * Get elevated terrain tile (sync, returns null if not cached)
+   * @param {string} terrain - Terrain type
+   * @param {number} elevation - Elevation level (1, 2, 3) or -1 for pit
+   * @param {string} nodeType - Node type for biome lookup
    */
-  getTile(terrain, nodeType, variant = 0) {
-    const path = `${this.basePath}/terrain/${nodeType}/${terrain}_${variant}.png`;
-    return this.cache.get(path) || this.cache.get(`${this.basePath}/terrain/${nodeType}/${terrain}.png`) || null;
+  getElevatedTile(terrain, elevation, nodeType) {
+    const biome = this.getSpriteBiome(nodeType);
+    const suffix = elevation < 0 ? 'pit' : `elev${elevation}`;
+    const primaryPath = `${this.basePath}/terrain/${biome}/${terrain}_${suffix}.png`;
+    const fallbackPath = `${this.basePath}/terrain/base/${terrain}_${suffix}.png`;
+
+    return this.cache.get(primaryPath) || this.cache.get(fallbackPath) || null;
+  }
+
+  /**
+   * Load elevation transition indicator sprite
+   * @param {string} indicatorType - Type: 'ramp', 'stairs', 'ledge', 'cliff'
+   * @param {string} nodeType - Node type for biome lookup
+   */
+  async loadElevationIndicator(indicatorType, nodeType) {
+    const biome = this.getSpriteBiome(nodeType);
+    const path = `${this.basePath}/terrain/${biome}/indicators/${indicatorType}_indicator.png`;
+    try {
+      return await this.loadImage(path);
+    } catch {
+      // Fallback to base biome
+      try {
+        return await this.loadImage(`${this.basePath}/terrain/base/indicators/${indicatorType}_indicator.png`);
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  /**
+   * Get elevation transition indicator (sync)
+   */
+  getElevationIndicator(indicatorType, nodeType) {
+    const biome = this.getSpriteBiome(nodeType);
+    const primaryPath = `${this.basePath}/terrain/${biome}/indicators/${indicatorType}_indicator.png`;
+    const fallbackPath = `${this.basePath}/terrain/base/indicators/${indicatorType}_indicator.png`;
+
+    return this.cache.get(primaryPath) || this.cache.get(fallbackPath) || null;
   }
 
   /**
@@ -397,7 +501,7 @@ export class AssetLoader {
   /**
    * Load obstacle sprite
    * @param {string} obstacleType - Type (rock_small, oak_tree, etc.)
-   * @param {string} category - Category (rocks, trees, decorative)
+   * @param {string} category - Category (rocks, trees)
    */
   async loadObstacle(obstacleType, category) {
     const path = `${this.basePath}/obstacles/${category}/${obstacleType}.png`;
@@ -474,25 +578,51 @@ export class AssetLoader {
   // =====================
 
   /**
-   * Preload terrain tiles for a biome
+   * Standard terrain types for preloading
    */
-  async preloadTerrainSet(nodeType) {
-    if (!this.manifest?.terrain?.[nodeType]) {
-      console.warn(`No terrain manifest for ${nodeType}`);
-      return [];
-    }
+  static TERRAIN_TYPES = ['grass', 'stone', 'rock', 'forest', 'water', 'lava', 'cliff', 'tree'];
+  static VARIANTS_PER_TERRAIN = 4;
+  static ELEVATION_LEVELS = [1, 2, 3];
+  static INDICATOR_TYPES = ['ramp', 'stairs', 'ledge', 'cliff'];
 
+  /**
+   * Preload terrain tiles for a biome (new system - no manifest required)
+   * @param {string} nodeType - Node type for biome-specific sprites
+   * @param {Object} options - Preload options
+   * @param {boolean} options.includeElevation - Also preload elevation variants
+   * @param {boolean} options.includeIndicators - Also preload transition indicators
+   */
+  async preloadTerrainSet(nodeType, options = {}) {
+    const { includeElevation = true, includeIndicators = true } = options;
     const promises = [];
-    const terrainConfig = this.manifest.terrain[nodeType];
 
-    for (const [terrain, config] of Object.entries(terrainConfig)) {
-      const variants = config.variants || 1;
-      for (let v = 0; v < variants; v++) {
+    // Load base variants for all terrain types
+    for (const terrain of AssetLoader.TERRAIN_TYPES) {
+      for (let v = 0; v < AssetLoader.VARIANTS_PER_TERRAIN; v++) {
         promises.push(this.loadTile(terrain, nodeType, v));
+      }
+
+      // Load elevation variants if requested
+      if (includeElevation) {
+        for (const elev of AssetLoader.ELEVATION_LEVELS) {
+          promises.push(this.loadElevatedTile(terrain, elev, nodeType));
+        }
+        // Load pit variant
+        promises.push(this.loadElevatedTile(terrain, -1, nodeType));
       }
     }
 
-    return Promise.allSettled(promises);
+    // Load transition indicators if requested
+    if (includeIndicators) {
+      for (const indicator of AssetLoader.INDICATOR_TYPES) {
+        promises.push(this.loadElevationIndicator(indicator, nodeType));
+      }
+    }
+
+    const results = await Promise.allSettled(promises);
+    const loaded = results.filter(r => r.status === 'fulfilled' && r.value).length;
+    console.log(`Preloaded ${loaded}/${results.length} terrain tiles for ${nodeType}`);
+    return results;
   }
 
   /**
@@ -601,8 +731,7 @@ export class AssetLoader {
     // Define all obstacles by category matching generate-obstacles.js
     const obstacles = {
       rocks: ['rock_small', 'rock_medium', 'rock_large', 'stalagmite', 'mountain_boulder'],
-      trees: ['oak_tree', 'pine_tree', 'dead_tree', 'mushroom_large', 'mountain_pine'],
-      decorative: ['grass_tufts', 'wildflowers', 'cave_crystals', 'fallen_log', 'stone_ruins']
+      trees: ['oak_tree', 'pine_tree', 'dead_tree', 'mushroom_large', 'mountain_pine']
     };
 
     const promises = [];

@@ -190,15 +190,6 @@ Terrain names match the game's biome system. Each terrain type has 4 variants.
 | mushroom_large | Giant glowing mushroom, bioluminescent cap, cave flora |
 | mountain_pine | Hardy mountain pine, snow on branches, alpine tree |
 
-### Decorative
-| Key | Prompt |
-|-----|--------|
-| grass_tufts | Tall grass tuft cluster, wild meadow grass |
-| wildflowers | Colorful wildflower patch, purple and yellow blooms |
-| cave_crystals | Small crystal cluster, purple and blue gems, magical |
-| fallen_log | Moss-covered fallen log, forest debris |
-| stone_ruins | Ancient broken pillar, ruined stone column |
-
 ---
 
 ## Characters

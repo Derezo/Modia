@@ -287,44 +287,6 @@ export const ALGORITHM_PARAMS = {
       default: 0.4,
       description: 'Preference for ramps over stairs.'
     }
-  ],
-
-  /**
-   * Cover grid parameters
-   */
-  coverGrid: [
-    {
-      name: 'density',
-      type: PARAM_TYPES.NUMBER,
-      min: 0.05,
-      max: 0.4,
-      default: 0.15,
-      description: 'Cover placement density.'
-    },
-    {
-      name: 'minCover',
-      type: PARAM_TYPES.INTEGER,
-      min: 2,
-      max: 10,
-      default: 4,
-      description: 'Minimum cover positions.'
-    },
-    {
-      name: 'maxCover',
-      type: PARAM_TYPES.INTEGER,
-      min: 5,
-      max: 30,
-      default: 20,
-      description: 'Maximum cover positions.'
-    },
-    {
-      name: 'highCoverRatio',
-      type: PARAM_TYPES.NUMBER,
-      min: 0.1,
-      max: 0.6,
-      default: 0.35,
-      description: 'Ratio of high vs low cover.'
-    }
   ]
 };
 

@@ -529,24 +529,17 @@ describe('Map Generation - Output Structure', () => {
     }
   });
 
-  test('should have obstacles only on impassable terrain or as decoratives', () => {
+  test('should have obstacles with proper type and variant', () => {
     const result = generateTerrain(12345, 'forest', MAP_WIDTH, MAP_HEIGHT);
 
     for (let y = 0; y < MAP_HEIGHT; y++) {
       for (let x = 0; x < MAP_WIDTH; x++) {
         const obstacle = result.obstacles[y][x];
-        const terrainType = result.terrain[y][x];
 
         if (obstacle !== null) {
           // Obstacle should have type and variant
           assert.ok(obstacle.type, `Obstacle at (${x}, ${y}) should have type`);
           assert.ok(obstacle.variant, `Obstacle at (${x}, ${y}) should have variant`);
-
-          // Decorative obstacles can be on passable terrain
-          // Non-decorative obstacles should be on impassable terrain
-          if (obstacle.type !== 'decorative' && obstacle.type !== 'trees') {
-            // Allow trees on passable terrain in forests
-          }
         }
       }
     }
