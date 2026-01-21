@@ -312,9 +312,8 @@ export class Icon {
       ? `<span class="modia-icon__label">${escapeHtml(label)}</span>`
       : '';
 
-    // Build image path
-    const optimalSize = iconLoader.getOptimalSize(pixelSize);
-    const imgPath = `/assets/icons/png/${optimalSize}/${category}-${name}.png`;
+    // Build image path using IconLoader for consistent normalization
+    const imgPath = iconLoader.getIconPath(category, name, pixelSize);
 
     // Use descriptive alt for screen readers, but avoid label duplication when image fails
     const altText = label ? '' : `${category}-${name}`;

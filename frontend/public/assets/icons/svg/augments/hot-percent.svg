@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="6" ry="1.5" fill="#112211" opacity="0.3"/>
+
+  <!-- Heart - dark base -->
+  <path d="M12 18c-5-3.5-8-6-8-9 0-2.5 1.5-4 4-4 1.5 0 3 1 4 2.5 1-1.5 2.5-2.5 4-2.5 2.5 0 4 1.5 4 4 0 3-3 5.5-8 9z" fill="#336633"/>
+
+  <!-- Heart - mid tone -->
+  <path d="M12 16c-4-3-6-4.5-6-7 0-2 1-3 3-3 1 0 2 .8 3 2 1-1.2 2-2 3-2 2 0 3 1 3 3 0 2.5-2 4-6 7z" fill="#44aa44"/>
+
+  <!-- Heart - highlight -->
+  <path d="M12 14c-3-2-4-3.5-4-5.5 0-1.5.8-2.2 2-2.2.8 0 1.5.5 2 1.2" fill="none" stroke="#66cc66" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Percentage symbol - white background circles -->
+  <circle cx="9" cy="9" r="1.8" fill="#ffffff" opacity="0.9"/>
+  <circle cx="15" cy="13" r="1.8" fill="#ffffff" opacity="0.9"/>
+
+  <!-- Percentage line -->
+  <path d="M8 15l8-8" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- Percentage circles green -->
+  <circle cx="9" cy="9" r="1.2" fill="#336633"/>
+  <circle cx="15" cy="13" r="1.2" fill="#336633"/>
+
+  <!-- Inner dots -->
+  <circle cx="9" cy="9" r="0.6" fill="#44aa44"/>
+  <circle cx="15" cy="13" r="0.6" fill="#44aa44"/>
+
+  <!-- Sparkle -->
+  <circle cx="17" cy="6" r="0.6" fill="#88ff88" opacity="0.8"/>
+</svg>

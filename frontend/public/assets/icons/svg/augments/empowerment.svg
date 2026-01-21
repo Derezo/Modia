@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="5" ry="1.2" fill="#220033" opacity="0.3"/>
+
+  <!-- Potion bottle - dark base -->
+  <path d="M9 8v-3h6v3l3 5v5c0 2-2 3-6 3s-6-1-6-3v-5l3-5z" fill="#332244"/>
+
+  <!-- Potion bottle - mid purple -->
+  <path d="M10 8v-2h4v2l2.5 4.5v4.5c0 1.5-1.5 2.5-4.5 2.5s-4.5-1-4.5-2.5v-4.5l2.5-4.5z" fill="#553366"/>
+
+  <!-- Liquid - bright purple -->
+  <path d="M8 14v3c0 1.5 1.5 2 4 2s4-.5 4-2v-3c-2 1-6 1-8 0z" fill="#8855aa"/>
+
+  <!-- Liquid highlight -->
+  <ellipse cx="12" cy="16" rx="3" ry="1.5" fill="#aa77cc" opacity="0.5"/>
+
+  <!-- Bottle neck -->
+  <rect x="10" y="4" width="4" height="2" rx="0.5" fill="#553366"/>
+
+  <!-- Cork -->
+  <rect x="10.5" y="2" width="3" height="2.5" rx="0.5" fill="#8b6914"/>
+  <rect x="10.8" y="2.2" width="2.4" height="2" rx="0.3" fill="#aa8833"/>
+
+  <!-- Burst/explosion effect -->
+  <path d="M12 10l-2-4" fill="none" stroke="#daa520" stroke-width="1" stroke-linecap="round"/>
+  <path d="M12 10l2-4" fill="none" stroke="#daa520" stroke-width="1" stroke-linecap="round"/>
+  <path d="M12 10l-4-1" fill="none" stroke="#daa520" stroke-width="1" stroke-linecap="round"/>
+  <path d="M12 10l4-1" fill="none" stroke="#daa520" stroke-width="1" stroke-linecap="round"/>
+  <path d="M12 10l0-5" fill="none" stroke="#ffd700" stroke-width="1.2" stroke-linecap="round"/>
+
+  <!-- Gold accent -->
+  <ellipse cx="12" cy="8" rx="3" ry="0.5" fill="#daa520" opacity="0.6"/>
+
+  <!-- Burst sparkles -->
+  <circle cx="10" cy="5" r="0.6" fill="#ffd700" opacity="0.8"/>
+  <circle cx="14" cy="5" r="0.5" fill="#ffd700" opacity="0.7"/>
+  <circle cx="8" cy="8" r="0.5" fill="#ffd700" opacity="0.6"/>
+  <circle cx="16" cy="8" r="0.6" fill="#ffd700" opacity="0.7"/>
+  <circle cx="12" cy="4" r="0.7" fill="#ffd700" opacity="0.9"/>
+</svg>

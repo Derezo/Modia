@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="5" ry="1.2" fill="#112233" opacity="0.3"/>
+
+  <!-- Water droplet - dark outer -->
+  <path d="M12 3c-5 6-7 10-7 13 0 3 3 5 7 5s7-2 7-5c0-3-2-7-7-13z" fill="#336688"/>
+
+  <!-- Water droplet - mid -->
+  <path d="M12 5c-4 5-5.5 8.5-5.5 11 0 2.5 2.5 4 5.5 4s5.5-1.5 5.5-4c0-2.5-1.5-6-5.5-11z" fill="#4488aa"/>
+
+  <!-- Water droplet - highlight -->
+  <path d="M12 7c-3 4-4 6.5-4 9 0 2 2 3 4 3" fill="none" stroke="#66aacc" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Inner shine -->
+  <ellipse cx="10" cy="14" rx="1.5" ry="2" fill="#88ccee" opacity="0.6"/>
+
+  <!-- Bubble details -->
+  <circle cx="9" cy="12" r="0.8" fill="#aaddff" opacity="0.5"/>
+  <circle cx="14" cy="16" r="0.6" fill="#aaddff" opacity="0.4"/>
+
+  <!-- Top sparkle -->
+  <circle cx="12" cy="4" r="0.5" fill="#ffffff" opacity="0.7"/>
+</svg>

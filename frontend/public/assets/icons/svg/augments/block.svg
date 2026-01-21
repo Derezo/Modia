@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="6" ry="1.5" fill="#221100" opacity="0.3"/>
+
+  <!-- Shield raised - dark wood base -->
+  <path d="M4 3v12c0 3 3 5 8 6 5-1 8-3 8-6V3l-8-1-8 1z" fill="#553311"/>
+
+  <!-- Shield - mid brown -->
+  <path d="M5 4v11c0 2.5 2.5 4 7 5 4.5-1 7-2.5 7-5V4l-7-.8-7 .8z" fill="#885522"/>
+
+  <!-- Shield - highlight edge -->
+  <path d="M6 5v10c0 2 2 3 6 4" fill="none" stroke="#aa7744" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Shield boss - dark -->
+  <circle cx="12" cy="11" r="4" fill="#664422"/>
+
+  <!-- Shield boss - mid -->
+  <circle cx="12" cy="11" r="3" fill="#886633"/>
+
+  <!-- Shield boss - bright -->
+  <circle cx="12" cy="11" r="2" fill="#aa8844"/>
+
+  <!-- Boss highlight -->
+  <circle cx="11" cy="10" r="0.8" fill="#ccaa66" opacity="0.6"/>
+
+  <!-- Gold rim -->
+  <path d="M4 3l8-1 8 1" fill="none" stroke="#daa520" stroke-width="1"/>
+  <path d="M4 3v2" fill="none" stroke="#daa520" stroke-width="1"/>
+  <path d="M20 3v2" fill="none" stroke="#daa520" stroke-width="1"/>
+
+  <!-- Block effect lines -->
+  <path d="M1 8l2-2" fill="none" stroke="#daa520" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M1 12l2-2" fill="none" stroke="#daa520" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+  <path d="M21 10l2-2" fill="none" stroke="#daa520" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <path d="M21 14l2-2" fill="none" stroke="#daa520" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+</svg>

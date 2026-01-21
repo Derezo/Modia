@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Shadow -->
+  <ellipse cx="12" cy="21" rx="5" ry="1.2" fill="#333300" opacity="0.3"/>
+
+  <!-- Lightning bolt - dark outer -->
+  <path d="M14 1l-6 10h5l-5 12 10-13h-6l6-9h-4z" fill="#8b6914"/>
+
+  <!-- Lightning bolt - mid yellow -->
+  <path d="M13.5 2l-5 9h4.5l-4.5 11 9-12h-5.5l5.5-8h-4z" fill="#daa520"/>
+
+  <!-- Lightning bolt - bright inner -->
+  <path d="M13 3l-4 8h4l-4 9 7.5-10h-4.5l4.5-7h-3.5z" fill="#ffd700"/>
+
+  <!-- Core glow -->
+  <path d="M12.5 4l-3 6h3l-3 7 6-8h-3.5l3.5-5h-3z" fill="#ffee88" opacity="0.7"/>
+
+  <!-- Electric sparkles -->
+  <circle cx="7" cy="8" r="0.8" fill="#ffff88" opacity="0.8"/>
+  <circle cx="16" cy="6" r="0.6" fill="#ffff88" opacity="0.7"/>
+  <circle cx="6" cy="14" r="0.7" fill="#ffff88" opacity="0.6"/>
+  <circle cx="17" cy="12" r="0.5" fill="#ffff88" opacity="0.7"/>
+
+  <!-- Energy arcs -->
+  <path d="M5 10c1-1 2-1 3 0" fill="none" stroke="#ffd700" stroke-width="0.6" stroke-linecap="round" opacity="0.6"/>
+  <path d="M16 14c1-1 2-1 3 0" fill="none" stroke="#ffd700" stroke-width="0.6" stroke-linecap="round" opacity="0.6"/>
+</svg>
