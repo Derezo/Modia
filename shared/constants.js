@@ -205,6 +205,117 @@ export const SHRINE_BUFFS = {
 // Shrine visit cooldown in hours
 export const SHRINE_COOLDOWN_HOURS = 6;
 
+// Zodiac shrine effects - 12 signs with signature abilities
+export const ZODIAC_SHRINE_BUFFS = {
+  aries: {
+    name: "Ram's Charge",
+    description: 'First attack +25% crit chance',
+    signatureAbility: 'rams_charge',
+    element: 'fire',
+    duration: 4 // hours
+  },
+  taurus: {
+    name: 'Unmovable',
+    description: 'Immune to push/pull effects',
+    signatureAbility: 'unmovable',
+    element: 'earth',
+    duration: 4
+  },
+  gemini: {
+    name: 'Twin Strike',
+    description: 'Next attack hits twice at 60% damage',
+    signatureAbility: 'twin_strike',
+    element: 'air',
+    duration: 4
+  },
+  cancer: {
+    name: 'Moonshield',
+    description: 'Block next instance of damage',
+    signatureAbility: 'moonshield',
+    element: 'water',
+    duration: 4
+  },
+  leo: {
+    name: 'Roar',
+    description: 'Adjacent enemies lose 30 CT',
+    signatureAbility: 'roar',
+    element: 'fire',
+    duration: 4
+  },
+  virgo: {
+    name: 'Purify',
+    description: 'Remove 1 debuff from self',
+    signatureAbility: 'purify',
+    element: 'earth',
+    duration: 4
+  },
+  libra: {
+    name: 'Balance',
+    description: 'Heal equal to damage dealt (once)',
+    signatureAbility: 'balance',
+    element: 'air',
+    duration: 4
+  },
+  scorpio: {
+    name: 'Venom Sting',
+    description: 'Apply 3% HP poison for 4 turns',
+    signatureAbility: 'venom_sting',
+    element: 'water',
+    duration: 4
+  },
+  sagittarius: {
+    name: 'Celestial Arrow',
+    description: '+2 range on next attack',
+    signatureAbility: 'celestial_arrow',
+    element: 'fire',
+    duration: 4
+  },
+  capricorn: {
+    name: "Mountain's Endurance",
+    description: '+25% defense for 2 turns',
+    signatureAbility: 'mountains_endurance',
+    element: 'earth',
+    duration: 4
+  },
+  aquarius: {
+    name: 'Cascade',
+    description: 'Heal self for 20% of max HP',
+    signatureAbility: 'cascade',
+    element: 'air',
+    duration: 4
+  },
+  pisces: {
+    name: 'Dreamwave',
+    description: '50% chance to sleep target 1 turn',
+    signatureAbility: 'dreamwave',
+    element: 'water',
+    duration: 4
+  }
+};
+
+// Zodiac crystal relics (permanent collectibles)
+export const ZODIAC_CRYSTALS = {
+  aries: { name: 'Crystal of the Ram', bonus: { type: 'physical_damage', value: 0.01 } },
+  taurus: { name: 'Crystal of the Bull', bonus: { type: 'defense', value: 0.01 } },
+  gemini: { name: 'Crystal of the Twins', bonus: { type: 'crit_chance', value: 0.01 } },
+  cancer: { name: 'Crystal of the Crab', bonus: { type: 'healing_received', value: 0.01 } },
+  leo: { name: 'Crystal of the Lion', bonus: { type: 'physical_damage', value: 0.01 } },
+  virgo: { name: 'Crystal of the Maiden', bonus: { type: 'defense', value: 0.01 } },
+  libra: { name: 'Crystal of the Scales', bonus: { type: 'crit_chance', value: 0.01 } },
+  scorpio: { name: 'Crystal of the Scorpion', bonus: { type: 'healing_received', value: 0.01 } },
+  sagittarius: { name: 'Crystal of the Archer', bonus: { type: 'physical_damage', value: 0.01 } },
+  capricorn: { name: 'Crystal of the Sea-Goat', bonus: { type: 'defense', value: 0.01 } },
+  aquarius: { name: 'Crystal of the Water-Bearer', bonus: { type: 'crit_chance', value: 0.01 } },
+  pisces: { name: 'Crystal of the Fish', bonus: { type: 'healing_received', value: 0.01 } }
+};
+
+// Complete zodiac collection bonuses
+export const ZODIAC_COLLECTION_BONUS = {
+  title: 'Celestial Wanderer',
+  allStatsBonus: 0.05, // +5% all stats
+  dualBlessingSlots: true // Can hold 2 active blessings
+};
+
 // Node features
 export const CASTLE_FEATURES = ['coliseum', 'tavern', 'courtyard', 'throne', 'blacksmith', 'apothecary', 'temple', 'stables', 'marketplace'];
 export const CITY_OPTIONS = ['blacksmith', 'apothecary', 'temple', 'stables'];

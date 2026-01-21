@@ -337,6 +337,7 @@ function processSkillAction(state, unit, targetTile, skillId) {
   // Deduct MP
   unit.mp -= mpCost;
   result.skillUsed = skillId;
+  result.skillName = skill.name;
   result.mpCost = mpCost;
 
   // Handle self-targeting skills (buffs, heals)

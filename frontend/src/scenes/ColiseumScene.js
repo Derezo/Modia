@@ -180,7 +180,7 @@ export class ColiseumScene extends Scene {
     // Back button
     this.uiElement.querySelector('#coliseum-back-btn')?.addEventListener('click', () => {
       this.game.audio?.playUI('button_click');
-      this.game.sceneManager.changeScene('worldMap');
+      this.game.scenes.changeScene('worldMap');
     });
 
     // Tab navigation
@@ -373,7 +373,7 @@ export class ColiseumScene extends Scene {
 
           if (response.success !== false) {
             // Transition to BattleScene with full battle data
-            this.game.sceneManager.changeScene('battle', {
+            this.game.scenes.changeScene('battle', {
               battleId: response.battleId || payload.battleId,
               battleType: 'pvp',
               mapSeed: response.mapSeed || payload.mapSeed,

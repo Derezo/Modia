@@ -15,6 +15,14 @@ pg.types.setTypeParser(1114, (val) => {
   return val === null ? null : new Date(val + 'Z');
 });
 
+// Fix BIGINT parsing: PostgreSQL BIGINT is returned as string by node-postgres
+// because JavaScript Number can't safely represent all 64-bit integers.
+// For game values (XP, gold, scores), we're well under MAX_SAFE_INTEGER (9 quadrillion).
+// Type OID 20 = BIGINT
+pg.types.setTypeParser(20, (val) => {
+  return val === null ? null : parseInt(val, 10);
+});
+
 // Load .env from project root
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

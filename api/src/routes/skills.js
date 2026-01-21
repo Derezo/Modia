@@ -267,7 +267,19 @@ router.post('/learn', authenticate, asyncHandler(async (req, res) => {
   );
 
   const updated = updatedChar.rows[0];
-  const newLevelProgress = getLevelProgress(updated.spent_xp, updated.level);
+
+  // Always calculate level from spent_xp (source of truth) instead of using database level
+  const calculatedLevel = calculateLevelFromSpentXP(updated.spent_xp);
+  const newLevelProgress = getLevelProgress(updated.spent_xp, calculatedLevel);
+
+  // Ensure database level column stays in sync with calculated level
+  // This fixes any existing desync and prevents future issues
+  if (updated.level !== calculatedLevel) {
+    await query(
+      'UPDATE characters SET level = $1 WHERE id = $2',
+      [calculatedLevel, characterId]
+    );
+  }
 
   // Get scaled skill attributes for the new level
   const scaledSkill = scaleSkillAttributes(skillDef, newLevel);
@@ -292,7 +304,7 @@ router.post('/learn', authenticate, asyncHandler(async (req, res) => {
     xpRemaining: updated.experience,
     spentXP: updated.spent_xp,
     levelProgress: {
-      currentLevel: updated.level,
+      currentLevel: calculatedLevel,
       xpIntoLevel: newLevelProgress.current,
       xpNeededForNext: newLevelProgress.needed,
       percentToNext: Math.round(newLevelProgress.percent * 100),

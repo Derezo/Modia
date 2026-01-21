@@ -26,7 +26,7 @@ const STARTER_SKILLS = {
 // GET /api/characters - List all user's characters
 router.get('/', authenticate, asyncHandler(async (req, res) => {
   const result = await query(
-    `SELECT id, name, race, class, gender, level, experience,
+    `SELECT id, name, race, class, gender, level, experience, spent_xp,
             hp_current, hp_max, mp_current, mp_max,
             strength, intelligence, agility, vitality, luck,
             party_slot, current_node_id, in_battle, created_at,

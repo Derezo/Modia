@@ -102,7 +102,7 @@ The generate-sfx.js script warns about prompts with 4+ comma-separated segments 
 
 ### Backend (`api/`)
 - **Entry point:** `src/index.js` - Express server with WebSocket upgrade
-- **Routes:** `src/routes/` - auth, characters, party, world, battle, inventory, skills, shop, marketplace, chat, guild, coliseum, friends, lfg, notifications, settings, fishing, ruins
+- **Routes:** `src/routes/` - auth, characters, party, world, battle, inventory, skills, shop, marketplace, chat, guild, coliseum, friends, lfg, notifications, settings, fishing, ruins, advancementQuest, clans, debug, leaderboard, relics
 - **WebSocket:** `src/websocket/index.js` - Room-based subscriptions for chat, tavern presence, marketplace
 - **Database:** PostgreSQL via `pg` pool in `src/config/database.js`
 - **Migrations:** `src/migrations/` - Sequential SQL files (001_initial_schema.sql, etc.)
@@ -251,6 +251,23 @@ pg.types.setTypeParser(1114, (val) => val === null ? null : new Date(val + 'Z'))
 ```
 
 See `docs/TECHNICAL_ARCHITECTURE.md` section 3.5 for details.
+
+### PostgreSQL BIGINT String Coercion
+
+PostgreSQL `BIGINT` columns are returned as **strings** by node-postgres because JavaScript Number can't safely represent all 64-bit integers. This causes arithmetic bugs when JavaScript performs string concatenation instead of addition:
+
+```javascript
+// BUG: String concatenation instead of numeric addition
+const spent_xp = character.spent_xp;  // "13235" (string from DB!)
+const newTotal = spent_xp + 1000;     // "132351000" (concatenation, not 14235!)
+```
+
+This caused the "Level 145" toast bug where skill purchases showed gaining 140+ levels.
+
+**Fix in `database.js`:**
+```javascript
+pg.types.setTypeParser(20, (val) => val === null ? null : parseInt(val, 10));
+```
 
 ### Canvas Context State
 
@@ -434,11 +451,11 @@ These files exceed or approach limits and are tracked in `docs/ROADMAP_TECHNICAL
 
 | File | Lines | Status |
 |------|-------|--------|
-| `frontend/src/scenes/BattleScene.js` | 2,632 | WARNING - plan modularization |
-| `frontend/src/scenes/WorldMapScene.js` | 2,507 | WARNING - plan modularization |
+| `frontend/src/scenes/WorldMapScene.js` | 2,861 | WARNING - plan modularization |
+| `frontend/src/scenes/BattleScene.js` | 2,636 | WARNING - plan modularization |
 | `api/src/services/marketplaceService.js` | 1,956 | WARNING |
+| `frontend/src/battle/BattleUI.js` | 1,556 | WARNING - exceeds 1,500 threshold |
 | `api/src/services/coliseumService.js` | 1,552 | WARNING |
-| `frontend/src/battle/BattleUI.js` | 1,477 | NOTICE - approaching 1,500 |
 
 *Last updated: 2026-01-20*
 

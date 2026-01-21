@@ -57,13 +57,14 @@ import traitService from './traitService.js';
  * @param {Object} character - Character from database
  * @param {Object} formation - Formation position data (optional)
  * @param {Array} skills - Loaded skills array
- * @param {Object} options - Additional options (defaultX, defaultY, traits)
+ * @param {Object} options - Additional options (defaultX, defaultY, traits, zodiacAbilities)
  * @returns {Object} BattleUnit object
  */
 function createPlayerBattleUnit(character, formation = null, skills = [], options = {}) {
   const defaultX = options.defaultX ?? 3;
   const defaultY = options.defaultY ?? 15;
   const traits = options.traits || [];
+  const zodiacAbilities = options.zodiacAbilities || [];
 
   const unit = {
     // Identity
@@ -112,6 +113,10 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
 
     // Traits (innate bonuses from guild recruits)
     traits: traits,
+
+    // Zodiac signature abilities (once per battle)
+    zodiacAbilities: zodiacAbilities,
+    usedZodiacAbilities: [],
 
     // Movement/Range (from class)
     movement: CLASS_MOVEMENT[character.class?.toLowerCase()] || 3,

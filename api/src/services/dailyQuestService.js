@@ -920,3 +920,136 @@ export function startCleanupScheduler() {
 
   console.log('[Quest] Cleanup scheduler started');
 }
+
+// ============================================
+// QUEST MARKERS
+// ============================================
+
+/**
+ * Node types that spawn enemies (combat nodes)
+ */
+const COMBAT_NODE_TYPES = ['forest', 'cave', 'mountain', 'bridge'];
+
+/**
+ * Map of objective types to their relevant node types
+ */
+const OBJECTIVE_NODE_TYPE_MAP = {
+  kill_enemies: COMBAT_NODE_TYPES,
+  complete_battles: COMBAT_NODE_TYPES,
+  fish_catches: ['fishing_spot'],
+  puzzle_solves: ['ruins']
+};
+
+/**
+ * Get world nodes that are relevant to a character's active quests
+ * Used for displaying quest markers on the world map
+ *
+ * @param {number} characterId - Character ID
+ * @returns {Promise<Map<number, Array<Object>>>} Map of nodeId -> quest info array
+ */
+export async function getQuestRelevantNodes(characterId) {
+  // Get all active (uncompleted) quests for the character
+  const activeQuests = await query(
+    `SELECT cdq.id, cdq.current_progress, cdq.target_progress, cdq.period,
+            dqt.quest_name, dqt.objective_type, dqt.objective_requirements
+     FROM character_daily_quests cdq
+     JOIN daily_quest_templates dqt ON dqt.id = cdq.quest_template_id
+     WHERE cdq.character_id = $1
+       AND cdq.is_completed = FALSE
+       AND cdq.period_end > NOW()`,
+    [characterId]
+  );
+
+  if (activeQuests.rows.length === 0) {
+    return new Map();
+  }
+
+  // Collect all required node types from active quests
+  const requiredNodeTypes = new Set();
+  const questNodeRequirements = [];
+
+  for (const quest of activeQuests.rows) {
+    const requirements = quest.objective_requirements || {};
+    const objectiveType = quest.objective_type;
+
+    let nodeTypes = [];
+
+    // Determine relevant node types based on objective type
+    if (objectiveType === 'visit_nodes') {
+      // Visit quests may specify specific node types
+      if (requirements.node_types && requirements.node_types.length > 0) {
+        nodeTypes = requirements.node_types;
+      }
+      // If no specific types, skip (too many nodes to mark)
+    } else if (OBJECTIVE_NODE_TYPE_MAP[objectiveType]) {
+      nodeTypes = OBJECTIVE_NODE_TYPE_MAP[objectiveType];
+    }
+    // gold_earned, items_sold, coliseum_wins, party_battles, visit_regions
+    // don't map to specific nodes
+
+    if (nodeTypes.length > 0) {
+      for (const nt of nodeTypes) {
+        requiredNodeTypes.add(nt);
+      }
+      questNodeRequirements.push({
+        questId: quest.id,
+        questType: quest.period,
+        name: quest.quest_name,
+        progress: quest.target_progress > 0
+          ? quest.current_progress / quest.target_progress
+          : 0,
+        nearComplete: quest.target_progress > 0
+          ? (quest.current_progress / quest.target_progress) >= 0.8
+          : false,
+        nodeTypes,
+        region: requirements.region || null
+      });
+    }
+  }
+
+  if (requiredNodeTypes.size === 0) {
+    return new Map();
+  }
+
+  // Fetch all nodes of the required types
+  const nodeTypesArray = Array.from(requiredNodeTypes);
+  const nodesResult = await query(
+    'SELECT id, node_type, region_id FROM world_nodes WHERE node_type = ANY($1)',
+    [nodeTypesArray]
+  );
+
+  // Build nodeId -> quests map
+  const nodeQuestMap = new Map();
+
+  for (const node of nodesResult.rows) {
+    const matchingQuests = [];
+
+    for (const qr of questNodeRequirements) {
+      // Check if this node matches the quest's node type requirements
+      if (!qr.nodeTypes.includes(node.node_type)) {
+        continue;
+      }
+
+      // Check region requirement if specified
+      if (qr.region !== null) {
+        // Get region name from region_id if needed
+        // For simplicity, we skip region filtering here - can be enhanced later
+        // when region names are needed
+      }
+
+      matchingQuests.push({
+        questId: qr.questId,
+        questType: qr.questType,
+        name: qr.name,
+        progress: qr.progress,
+        nearComplete: qr.nearComplete
+      });
+    }
+
+    if (matchingQuests.length > 0) {
+      nodeQuestMap.set(node.id, matchingQuests);
+    }
+  }
+
+  return nodeQuestMap;
+}

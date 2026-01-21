@@ -6,7 +6,13 @@ import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import presenceService from '../services/presenceService.js';
 import * as staminaService from '../services/staminaService.js';
 import * as dailyQuestService from '../services/dailyQuestService.js';
-import { SHRINE_BUFFS, SHRINE_COOLDOWN_HOURS } from '../../../shared/constants.js';
+import {
+  SHRINE_BUFFS,
+  SHRINE_COOLDOWN_HOURS,
+  ZODIAC_SHRINE_BUFFS,
+  ZODIAC_CRYSTALS,
+  ZODIAC_COLLECTION_BONUS
+} from '../../../shared/constants.js';
 import { buildAdjacencyMap, bfsPath } from '../services/world/pathfindingService.js';
 
 const router = express.Router();
@@ -983,7 +989,7 @@ router.post('/nodes/:id/visit-shrine', authenticate, asyncHandler(async (req, re
 
   // Verify the node exists and is a shrine type
   const nodeResult = await query(
-    'SELECT id, node_type, shrine_buff_type FROM world_nodes WHERE id = $1',
+    'SELECT id, node_type, shrine_buff_type, zodiac_sign FROM world_nodes WHERE id = $1',
     [nodeId]
   );
 
@@ -996,8 +1002,23 @@ router.post('/nodes/:id/visit-shrine', authenticate, asyncHandler(async (req, re
     throw new AppError('This node is not a shrine', 400);
   }
 
-  const buffType = node.shrine_buff_type;
-  const buffInfo = SHRINE_BUFFS[buffType];
+  const zodiacSign = node.zodiac_sign;
+  const isZodiacShrine = zodiacSign && ZODIAC_SHRINE_BUFFS[zodiacSign];
+
+  // Get buff info from either zodiac or regular shrine buffs
+  let buffInfo;
+  let buffType;
+  let signatureAbility = null;
+
+  if (isZodiacShrine) {
+    buffInfo = ZODIAC_SHRINE_BUFFS[zodiacSign];
+    buffType = `zodiac_${zodiacSign}`;
+    signatureAbility = buffInfo.signatureAbility;
+  } else {
+    buffType = node.shrine_buff_type;
+    buffInfo = SHRINE_BUFFS[buffType];
+  }
+
   if (!buffInfo) {
     throw new AppError('Invalid shrine buff type', 500);
   }
@@ -1023,25 +1044,85 @@ router.post('/nodes/:id/visit-shrine', authenticate, asyncHandler(async (req, re
   // Calculate expiration time
   const expiresAt = new Date(now.getTime() + buffInfo.duration * 60 * 60 * 1000);
 
-  // Upsert the shrine visit
+  // Handle zodiac crystal collection (first visit awards permanent crystal)
+  let crystalAwarded = false;
+  let crystalName = null;
+  let totalCrystals = 0;
+  let collectionComplete = false;
+
+  if (isZodiacShrine) {
+    // Check if user already has this crystal
+    const crystalCheck = await query(
+      'SELECT 1 FROM user_zodiac_crystals WHERE user_id = $1 AND zodiac_sign = $2',
+      [userId, zodiacSign]
+    );
+
+    if (crystalCheck.rows.length === 0) {
+      // Award the crystal
+      await query(
+        `INSERT INTO user_zodiac_crystals (user_id, zodiac_sign, shrine_node_id)
+         VALUES ($1, $2, $3)`,
+        [userId, zodiacSign, nodeId]
+      );
+      crystalAwarded = true;
+      crystalName = ZODIAC_CRYSTALS[zodiacSign].name;
+    }
+
+    // Get total crystals collected
+    const crystalCount = await query(
+      'SELECT COUNT(*) as count FROM user_zodiac_crystals WHERE user_id = $1',
+      [userId]
+    );
+    totalCrystals = parseInt(crystalCount.rows[0].count, 10);
+    collectionComplete = totalCrystals >= 12;
+  }
+
+  // Upsert the shrine visit with signature ability for zodiac shrines
   await query(
-    `INSERT INTO user_shrine_visits (user_id, node_id, buff_type, expires_at, last_visited_at)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO user_shrine_visits (user_id, node_id, buff_type, expires_at, last_visited_at, signature_ability, signature_used)
+     VALUES ($1, $2, $3, $4, $5, $6, FALSE)
      ON CONFLICT (user_id, node_id) DO UPDATE SET
        buff_type = $3,
        expires_at = $4,
-       last_visited_at = $5`,
-    [userId, nodeId, buffType, expiresAt, now]
+       last_visited_at = $5,
+       signature_ability = $6,
+       signature_used = FALSE`,
+    [userId, nodeId, buffType, expiresAt, now, signatureAbility]
   );
 
-  res.json({
+  // Build response
+  const response = {
     success: true,
     buff_name: buffInfo.name,
     buff_description: buffInfo.description,
     expires_at: expiresAt,
     duration_hours: buffInfo.duration,
     message: `You received the blessing: ${buffInfo.name}!`
-  });
+  };
+
+  // Add zodiac-specific response fields
+  if (isZodiacShrine) {
+    response.isZodiacShrine = true;
+    response.zodiacSign = zodiacSign;
+    response.signatureAbility = {
+      name: buffInfo.signatureAbility,
+      description: buffInfo.description,
+      element: buffInfo.element
+    };
+    response.crystalAwarded = crystalAwarded;
+    if (crystalAwarded) {
+      response.crystalName = crystalName;
+      response.message = `You received the blessing: ${buffInfo.name}! You also collected the ${crystalName}!`;
+    }
+    response.totalCrystals = totalCrystals;
+    response.collectionComplete = collectionComplete;
+    if (collectionComplete && crystalAwarded) {
+      response.collectionBonusUnlocked = ZODIAC_COLLECTION_BONUS;
+      response.message += ` You have completed the Zodiac Collection and earned the title "${ZODIAC_COLLECTION_BONUS.title}"!`;
+    }
+  }
+
+  res.json(response);
 }));
 
 // GET /api/world/active-buffs - Get user's active shrine buffs
@@ -1065,6 +1146,55 @@ router.get('/active-buffs', authenticate, asyncHandler(async (req, res) => {
   }));
 
   res.json({ buffs: activeBuffs });
+}));
+
+// GET /api/world/zodiac-collection - Get user's zodiac crystal collection progress
+router.get('/zodiac-collection', authenticate, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+
+  // Get all collected crystals for this user
+  const collectedResult = await query(
+    `SELECT zodiac_sign, collected_at, shrine_node_id
+     FROM user_zodiac_crystals
+     WHERE user_id = $1
+     ORDER BY collected_at ASC`,
+    [userId]
+  );
+
+  // Build a map of collected crystals
+  const collectedMap = new Map();
+  for (const row of collectedResult.rows) {
+    collectedMap.set(row.zodiac_sign, {
+      collectedAt: row.collected_at,
+      shrineNodeId: row.shrine_node_id
+    });
+  }
+
+  // Build the full collection status
+  const zodiacSigns = Object.keys(ZODIAC_CRYSTALS);
+  const crystals = zodiacSigns.map(sign => {
+    const crystal = ZODIAC_CRYSTALS[sign];
+    const collected = collectedMap.get(sign);
+    return {
+      sign,
+      name: crystal.name,
+      bonus: crystal.bonus,
+      collected: !!collected,
+      collectedAt: collected?.collectedAt || null,
+      shrineNodeId: collected?.shrineNodeId || null
+    };
+  });
+
+  const totalCollected = collectedResult.rows.length;
+  const collectionComplete = totalCollected >= 12;
+
+  res.json({
+    crystals,
+    totalCollected,
+    collectionComplete,
+    bonusActive: collectionComplete,
+    collectionBonus: collectionComplete ? ZODIAC_COLLECTION_BONUS : null
+  });
 }));
 
 // POST /api/world/nodes/:id/discover - Unlock discovery content

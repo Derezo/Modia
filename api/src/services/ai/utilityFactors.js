@@ -399,10 +399,16 @@ function countNearbyAllies(tileX, tileY, state, unitType, excludeId) {
  * Calculate MP efficiency value
  * @param {Object} unit - Unit using skill
  * @param {Object} skill - Skill being used
- * @returns {number} MP efficiency (0-100)
+ * @param {number|null} benefitValue - The benefit (damage/healing) produced by this skill
+ * @returns {number} MP efficiency (0-100, or -200 for zero-benefit)
  */
-function calculateMpEfficiency(unit, skill) {
+function calculateMpEfficiency(unit, skill, benefitValue = null) {
   if (!skill || !skill.mpCost || skill.mpCost === 0) return 50; // Neutral for free actions
+
+  // CRITICAL: Strongly penalize spending MP for zero benefit (e.g., healing full-HP targets)
+  if (benefitValue !== null && benefitValue === 0 && skill.mpCost > 0) {
+    return -200;
+  }
 
   const mpPercent = unit.mp / unit.maxMp;
   const skillCostPercent = skill.mpCost / unit.maxMp;
