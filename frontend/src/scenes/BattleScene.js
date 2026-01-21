@@ -17,6 +17,7 @@ import { isSelfTargetingSkill, getVisualCategory } from '../battle/SkillEffectCa
 import { getSkillSoundKey, RACE_TO_REGION } from '../audio/AudioAssets.js';
 import { calculateDamagePreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
+import { getElevationName } from '@shared/terrain.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 
 /**
@@ -91,12 +92,15 @@ export class BattleScene extends Scene {
 
     // Battle log turn counter
     this.battleLogTurnCounter = 0;
+
+    // Asset loading state - prevents rendering before terrain sprites are cached
+    this.isLoadingAssets = true;
   }
 
   /**
    * Enter the battle scene
    */
-  enter(data) {
+  async enter(data) {
     // data = { battleId, mapSeed, mapWidth, mapHeight, state, initialEnemyActions, battleType, opponentUsername, nodeType }
     this.battleId = data.battleId;
     this.mapSeed = data.mapSeed;
@@ -131,8 +135,9 @@ export class BattleScene extends Scene {
     // Create units from battle state
     this.initializeUnits(data.state.units);
 
-    // Preload terrain tiles, obstacles, and enemy sprites in background
-    // Units will get sprites when preloading completes
+    // Preload terrain tiles, obstacles, and enemy sprites
+    // Block rendering until assets are cached to avoid fallback diamond rendering
+    this.isLoadingAssets = true;
     const nodeType = this.getNodeType();
 
     // Debug: log unit data to see enemyId values
@@ -155,20 +160,26 @@ export class BattleScene extends Scene {
     )];
     console.log(`[BattleScene] Player classes to preload: [${playerClasses.join(', ')}]`);
 
-    Promise.all([
-      this.game.assetLoader.preloadTerrainSet(nodeType),
-      this.game.assetLoader.preloadObstacles(),
-      this.game.assetLoader.preloadEnemies(nodeType, enemyIds),
-      ...playerClasses.map(cls => this.game.assetLoader.preloadCharacter(cls))
-    ]).then(() => {
-      console.log(`Preloaded terrain, obstacles, ${enemyIds.length} enemy types, and ${playerClasses.length} player classes for ${nodeType}`);
+    // AWAIT preload to ensure terrain sprites are cached before rendering
+    try {
+      await Promise.all([
+        this.game.assetLoader.preloadTerrainSet(nodeType),
+        this.game.assetLoader.preloadObstacles(),
+        this.game.assetLoader.preloadEnemies(nodeType, enemyIds),
+        ...playerClasses.map(cls => this.game.assetLoader.preloadCharacter(cls))
+      ]);
+      console.log(`[BattleScene] Preloaded terrain, obstacles, ${enemyIds.length} enemy types, and ${playerClasses.length} player classes for ${nodeType}`);
+
       // Reinitialize unit sprites now that assets are loaded
       for (const unit of this.units.values()) {
         unit.initializeSprites();
       }
-    }).catch(err => {
-      console.warn('Failed to preload assets:', err.message);
-    });
+    } catch (err) {
+      console.warn('[BattleScene] Asset preload failed:', err.message);
+      // Continue anyway - fallback diamond rendering will work
+    }
+
+    this.isLoadingAssets = false;
 
     // Initialize camera after units so we can center on first player
     this.camera = new BattleCamera(this.game.canvas.width, this.game.canvas.height);
@@ -2387,6 +2398,16 @@ export class BattleScene extends Scene {
     // Safety check - don't render if not fully initialized
     if (!this.camera || !this.grid) return;
 
+    // Show loading indicator while terrain sprites are being cached
+    if (this.isLoadingAssets) {
+      ctx.fillStyle = '#e8dcc4';
+      ctx.font = '24px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Preparing battle...', ctx.canvas.width / 2, ctx.canvas.height / 2);
+      return; // Don't render battle content until assets are loaded
+    }
+
     // Build tile highlights
     const highlights = {};
 
@@ -2538,16 +2559,26 @@ export class BattleScene extends Scene {
     // Get terrain info
     const terrain = this.grid.getTerrain(tooltipTile.x, tooltipTile.y);
     const moveCost = this.grid.getMovementCost(tooltipTile.x, tooltipTile.y);
+    const elevation = this.grid.getElevation(tooltipTile.x, tooltipTile.y);
+    const elevationName = getElevationName(elevation);
 
     // Format terrain name nicely (capitalize first letter)
     const terrainName = terrain.charAt(0).toUpperCase() + terrain.slice(1);
-    const tooltipText = `${terrainName} (${moveCost} mov)`;
+
+    // Build tooltip text with elevation if not ground level
+    let tooltipText;
+    if (elevation === 0) {
+      tooltipText = `${terrainName} (${moveCost} mov)`;
+    } else {
+      const elevSymbol = elevation > 0 ? '\u2191' : '\u2193'; // ↑ or ↓
+      tooltipText = `${terrainName} (${moveCost} mov) ${elevSymbol}${elevationName}`;
+    }
 
     // Get position for tooltip
     let tooltipX, tooltipY;
     if (this.isTouchDevice && this.selectedMoveTile) {
       // On mobile, position tooltip above the selected tile
-      const worldPos = this.grid.gridToWorld(tooltipTile.x, tooltipTile.y);
+      const worldPos = this.grid.gridToScreenWorld(tooltipTile.x, tooltipTile.y);
       const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
       tooltipX = screenPos.x;
       tooltipY = screenPos.y - 50;
