@@ -110,6 +110,10 @@ class StateEvaluator {
         factors.MP_EFFICIENCY = calculateMpEfficiency(unit, skill, skillBenefit);
         factors.strategicPathProgress = 0; // N/A for skill
         factors.waitingPenalty = 0; // N/A for skill
+
+        // Track benefit for conditional action bonus (internal fields prefixed with _)
+        factors._skillBenefit = skillBenefit;
+        factors._mpCost = skill.mpCost || 0;
         break;
       }
 
@@ -148,12 +152,20 @@ class StateEvaluator {
 
     // Calculate weighted total
     for (const [factor, value] of Object.entries(factors)) {
+      // Skip internal tracking fields (prefixed with _)
+      if (factor.startsWith('_')) continue;
       const weight = this.weights[factor] || 0;
       totalScore += value * weight;
     }
 
-    // Apply action type bonuses/penalties
-    totalScore += this.getActionTypeBonus(action.type);
+    // Apply unweighted penalty for wasteful resource expenditure
+    // This penalty bypasses pattern weights to guarantee wasteful actions lose
+    if (factors._skillBenefit === 0 && factors._mpCost > 0) {
+      totalScore -= 300;
+    }
+
+    // Apply action type bonuses/penalties (conditional for skills)
+    totalScore += this.getActionTypeBonus(action.type, factors._skillBenefit);
 
     return { score: totalScore, factors };
   }
@@ -161,9 +173,15 @@ class StateEvaluator {
   /**
    * Get bonus/penalty for action types based on pattern
    * @param {string} actionType - Type of action
+   * @param {number|null} skillBenefit - Skill benefit value (null for non-skills)
    * @returns {number} Bonus value
    */
-  getActionTypeBonus(actionType) {
+  getActionTypeBonus(actionType, skillBenefit = null) {
+    // No bonus for zero-benefit skills - they shouldn't get rewarded
+    if (actionType === 'skill' && skillBenefit !== null && skillBenefit === 0) {
+      return 0;
+    }
+
     // Aggressive patterns strongly prefer attacking, heavily penalize waiting
     if (this.patternName === 'Aggressive' || this.patternName === 'Berserker') {
       if (actionType === 'attack' || actionType === 'skill') return 50;

@@ -57,10 +57,6 @@ function generateAllActions(unit, state) {
 
       // Self-targeting skills
       if (skill.range === 0 || skill.selfBuff || skill.healPercent) {
-        // Skip healing skills if target is at full HP
-        if (skill.healPercent && unit.hp >= unit.maxHp) {
-          continue;
-        }
         actions.push({
           type: 'skill',
           skill: skill,
@@ -89,6 +85,19 @@ function generateAllActions(unit, state) {
   // Generate item actions (NPCs can use items too)
   if (available.canAct && available.items && available.items.length > 0) {
     for (const item of available.items) {
+      // Skip HP items if at full HP
+      if (item.effectType === 'hp_restore' && unit.hp >= unit.maxHp) {
+        continue;
+      }
+      // Skip MP items if at full MP
+      if (item.effectType === 'mp_restore' && unit.mp >= unit.maxMp) {
+        continue;
+      }
+      // Skip elixir if both HP and MP are full
+      if (item.effectType === 'elixir' && unit.hp >= unit.maxHp && unit.mp >= unit.maxMp) {
+        continue;
+      }
+
       // Self-use healing/MP items when low
       if (item.effectType === 'hp_restore' || item.effectType === 'mp_restore' || item.effectType === 'elixir') {
         actions.push({
@@ -208,10 +217,6 @@ function generateActionsAtPosition(unit, state) {
 
     // Self-targeting skills
     if (skill.range === 0 || skill.selfBuff || skill.healPercent) {
-      // Skip healing skills if target is at full HP
-      if (skill.healPercent && unit.hp >= unit.maxHp) {
-        continue;
-      }
       actions.push({
         type: 'skill',
         skill: skill,
@@ -229,10 +234,6 @@ function generateActionsAtPosition(unit, state) {
     );
 
     for (const target of skillTargets) {
-      // Skip healing skills if target is at full HP
-      if (isHealingSkill(skill) && target.hp >= target.maxHp) {
-        continue;
-      }
       // Normalize target format to match getTargetsInRange: {x, y, unitId, unitName}
       actions.push({
         type: 'skill',

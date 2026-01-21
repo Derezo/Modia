@@ -76,6 +76,11 @@ export class BattleOutroSequence {
 
     // Phase timeline (computed on start)
     this.timeline = {};
+
+    // Continue button state (for victory confirmation)
+    this.showContinueButton = false;
+    this.continueButtonRect = null;
+    this.continueButtonHover = false;
   }
 
   /**
@@ -296,14 +301,23 @@ export class BattleOutroSequence {
         this.fireworkWaves.finale = true;
         this.fireworks.launchWave(6);
       }
-    } else if (t < tl.fadeEnd) {
-      // Fading out
-      this.fadeProgress = (t - tl.fadeStart) / TIMINGS.fadeOut;
+    } else if (this.phase === 'awaiting_confirmation' || !this.showContinueButton) {
+      // After finale, show continue button and wait for user confirmation
+      for (let i = 0; i < this.itemProgress.length; i++) {
+        this.itemProgress[i] = 1;
+      }
+      this.showContinueButton = true;
+      this.phase = 'awaiting_confirmation';
+      // Stay in this phase until user clicks continue
+    } else if (this.phase === 'fade_out') {
+      // Fading out (triggered by proceedToFadeOut)
+      const fadeElapsed = t - this.fadeStartTime;
+      this.fadeProgress = Math.min(1, fadeElapsed / TIMINGS.fadeOut);
       this.overlayAlpha = 0.5 + 0.5 * this.fadeProgress;
-      this.phase = 'fade_out';
-    } else {
-      // Complete
-      this.complete();
+
+      if (this.fadeProgress >= 1) {
+        this.complete();
+      }
     }
   }
 
@@ -328,8 +342,8 @@ export class BattleOutroSequence {
     // Draw banner
     this.renderBanner(ctx, w, h);
 
-    // Draw rewards (victory only)
-    if (this.status === 'victory' && this.phase === 'rewards_reveal') {
+    // Draw rewards (victory only - during reveal and confirmation phases)
+    if (this.status === 'victory' && (this.phase === 'rewards_reveal' || this.phase === 'awaiting_confirmation')) {
       this.renderRewards(ctx, w, h);
     }
 
@@ -341,6 +355,11 @@ export class BattleOutroSequence {
     // Draw PvP details
     if (this.isPvP && this.phase === 'pvp_details') {
       this.renderPvPDetails(ctx, w, h);
+    }
+
+    // Draw continue button (victory confirmation)
+    if (this.showContinueButton && this.status === 'victory') {
+      this.renderContinueButton(ctx, w, h);
     }
   }
 
@@ -619,6 +638,98 @@ export class BattleOutroSequence {
     }
 
     ctx.restore();
+  }
+
+  /**
+   * Render the continue button at the bottom of the screen
+   */
+  renderContinueButton(ctx, w, h) {
+    const buttonWidth = 180;
+    const buttonHeight = 48;
+    const buttonX = (w - buttonWidth) / 2;
+    const buttonY = h - 100;
+
+    // Store button rect for click detection
+    this.continueButtonRect = { x: buttonX, y: buttonY, width: buttonWidth, height: buttonHeight };
+
+    ctx.save();
+
+    // Button background (parchment-styled)
+    const isHovered = this.continueButtonHover;
+    ctx.fillStyle = isHovered ? 'rgba(211, 194, 158, 0.98)' : 'rgba(191, 174, 138, 0.95)';
+    ctx.strokeStyle = isHovered ? '#9a7b4f' : '#7a6a4f';
+    ctx.lineWidth = 2;
+
+    // Draw rounded rect button
+    this.roundRect(ctx, buttonX, buttonY, buttonWidth, buttonHeight, 8);
+    ctx.fill();
+
+    // Button border with subtle glow
+    if (isHovered) {
+      ctx.shadowColor = 'rgba(255, 215, 0, 0.4)';
+      ctx.shadowBlur = 10;
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // Button text
+    ctx.font = 'bold 20px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = isHovered ? '#4a3a2a' : '#5a4a3a';
+    ctx.fillText('Continue', w / 2, buttonY + buttonHeight / 2);
+
+    ctx.restore();
+  }
+
+  /**
+   * Handle click event - check if continue button was clicked
+   * @param {number} x - Canvas X coordinate
+   * @param {number} y - Canvas Y coordinate
+   * @returns {boolean} True if click was handled
+   */
+  handleClick(x, y) {
+    if (!this.showContinueButton || this.phase !== 'awaiting_confirmation') {
+      return false;
+    }
+
+    if (this.continueButtonRect && this.isPointInRect(x, y, this.continueButtonRect)) {
+      this.proceedToFadeOut();
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Handle mouse move for button hover state
+   * @param {number} x - Canvas X coordinate
+   * @param {number} y - Canvas Y coordinate
+   */
+  handleMouseMove(x, y) {
+    if (!this.showContinueButton || !this.continueButtonRect) {
+      this.continueButtonHover = false;
+      return;
+    }
+    this.continueButtonHover = this.isPointInRect(x, y, this.continueButtonRect);
+  }
+
+  /**
+   * Check if point is inside a rectangle
+   */
+  isPointInRect(x, y, rect) {
+    return x >= rect.x && x <= rect.x + rect.width &&
+           y >= rect.y && y <= rect.y + rect.height;
+  }
+
+  /**
+   * Proceed to fade out phase after user confirmation
+   */
+  proceedToFadeOut() {
+    this.showContinueButton = false;
+    this.continueButtonRect = null;
+    this.fadeStartTime = this.timer;
+    this.phase = 'fade_out';
   }
 
   /**

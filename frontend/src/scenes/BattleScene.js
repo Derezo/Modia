@@ -109,6 +109,10 @@ export class BattleScene extends Scene {
     this.isBossBattle = data.isBossBattle || false;
     this.guildmasterData = data.guildmaster || null;
 
+    // Reset battle end state for new battle (scene instances are reused)
+    this.battleEnded = false;
+    this.outroSequence = null;
+
     // PvP turn timer state
     this.pvpTurnTimer = null;
     this.pvpTurnDeadline = null;
@@ -449,6 +453,11 @@ export class BattleScene extends Scene {
     canvas.addEventListener('mousemove', (_e) => {
       const pos = this.game.input.getPointerPosition();
 
+      // Update outro sequence button hover state
+      if (this.outroSequence) {
+        this.outroSequence.handleMouseMove(pos.x, pos.y);
+      }
+
       // Update pan if dragging
       if (this.camera.isPanning) {
         this.camera.updatePan(pos.x, pos.y);
@@ -488,6 +497,12 @@ export class BattleScene extends Scene {
       // Only register as click if pan distance was small (not a drag)
       if (panDistance < 10) {
         const pos = this.game.input.getPointerPosition();
+
+        // Check if outro sequence is showing continue button
+        if (this.outroSequence && this.outroSequence.handleClick(pos.x, pos.y)) {
+          return; // Click was handled by outro sequence
+        }
+
         const tile = this.grid.getTileAtScreen(pos.x, pos.y, this.camera);
         if (tile) {
           this.handleTileClick(tile.x, tile.y, { mouseX: e.clientX, mouseY: e.clientY });
