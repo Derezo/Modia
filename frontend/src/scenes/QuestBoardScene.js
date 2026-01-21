@@ -76,7 +76,7 @@ export class QuestBoardScene extends Scene {
 
     if (!this.characterId) {
       parchmentToast.error('Error', 'No active character found');
-      this.game.sceneManager.switchTo('worldMap');
+      this.game.scenes.switchTo('worldMap');
       return;
     }
 
@@ -616,7 +616,7 @@ export class QuestBoardScene extends Scene {
 
     // Back button
     this.uiElement.querySelector('#quest-back-btn').addEventListener('click', () => {
-      this.game.sceneManager.switchTo('worldMap');
+      this.game.scenes.switchTo('worldMap');
     }, opts);
 
     // Tab switching

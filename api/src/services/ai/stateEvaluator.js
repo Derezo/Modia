@@ -104,7 +104,10 @@ class StateEvaluator {
         factors.ALLY_SUPPORT = calculateAllySupport(unit, unit.tileX, unit.tileY, state);
         factors.HEALING_VALUE = calculateHealingValue(unit, resolvedTarget, skill, state);
         factors.SURVIVAL_PRIORITY = calculateSurvivalPriority(unit, unit.tileX, unit.tileY, state);
-        factors.MP_EFFICIENCY = calculateMpEfficiency(unit, skill);
+        // Pass skill benefit to detect zero-benefit actions (buff skills always provide value)
+        const isBuff = skill.selfBuff || skill.effect;
+        const skillBenefit = isBuff ? 50 : (factors.DAMAGE_DEALT + factors.HEALING_VALUE);
+        factors.MP_EFFICIENCY = calculateMpEfficiency(unit, skill, skillBenefit);
         factors.strategicPathProgress = 0; // N/A for skill
         factors.waitingPenalty = 0; // N/A for skill
         break;

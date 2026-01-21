@@ -3,6 +3,7 @@
  *
  * Provides endpoints for:
  * - Getting assigned daily/weekly quests
+ * - Getting quest markers for world map nodes
  * - Claiming quest rewards (single or all)
  * - Streak information
  * - First Blood and Perfect Week leaderboards
@@ -90,6 +91,44 @@ router.get('/weekly/:characterId', authenticate, questReadLimiter, asyncHandler(
     ...result,
     refreshed: refreshResult.weeklyRefreshed
   });
+}));
+
+/**
+ * GET /api/quests/markers/:characterId
+ * Get world node markers for active quests
+ * Returns nodes that are relevant to the character's uncompleted quests
+ */
+router.get('/markers/:characterId', authenticate, questReadLimiter, asyncHandler(async (req, res) => {
+  const characterId = parseInt(req.params.characterId, 10);
+
+  if (isNaN(characterId)) {
+    throw new AppError('Invalid character ID', 400);
+  }
+
+  // Verify character ownership
+  const { pool } = await import('../config/database.js');
+  const charResult = await pool.query(
+    'SELECT id FROM characters WHERE id = $1 AND user_id = $2',
+    [characterId, req.user.userId]
+  );
+
+  if (charResult.rows.length === 0) {
+    throw new AppError('Character not found', 404);
+  }
+
+  // Get quest-relevant nodes
+  const nodeQuestMap = await dailyQuestService.getQuestRelevantNodes(characterId);
+
+  // Convert Map to array format for JSON response
+  const markers = [];
+  for (const [nodeId, quests] of nodeQuestMap) {
+    markers.push({
+      nodeId,
+      quests
+    });
+  }
+
+  res.json({ markers });
 }));
 
 /**

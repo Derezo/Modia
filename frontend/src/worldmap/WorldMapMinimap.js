@@ -42,6 +42,9 @@ export class WorldMapMinimap {
     this.regions = [];
     this.castleNodes = [];
 
+    // Quest marker manager reference
+    this.questMarkerManager = null;
+
     // Region colors by race (matching WorldMapScene)
     this.regionColors = {
       human: '#8B7355',    // Brown/earth
@@ -60,6 +63,14 @@ export class WorldMapMinimap {
   setRegionData(regions, castleNodes) {
     this.regions = regions || [];
     this.castleNodes = castleNodes || [];
+  }
+
+  /**
+   * Set quest marker manager for rendering quest markers on minimap
+   * @param {QuestMarkerManager} questMarkerManager - Quest marker manager instance
+   */
+  setQuestMarkers(questMarkerManager) {
+    this.questMarkerManager = questMarkerManager || null;
   }
 
   /**
@@ -309,6 +320,9 @@ export class WorldMapMinimap {
     // Render node symbols
     this.renderNodes(ctx, nodes, currentNode, discoveredNodes, visitedNodes);
 
+    // Render quest markers (small dots on nodes with quests)
+    this.renderQuestMarkers(ctx, nodes, discoveredNodes);
+
     // Render current player marker
     if (currentNode) {
       this.renderPlayerMarker(ctx, currentNode);
@@ -544,6 +558,59 @@ export class WorldMapMinimap {
 
     ctx.lineTo(cx, cy - outerRadius);
     ctx.closePath();
+  }
+
+  /**
+   * Render quest markers as small colored dots on nodes with active quests
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {Array} nodes - All world nodes
+   * @param {Set} discoveredNodes - Set of discovered node IDs
+   */
+  renderQuestMarkers(ctx, nodes, discoveredNodes) {
+    if (!this.questMarkerManager) return;
+
+    // Quest marker colors
+    const QUEST_COLORS = {
+      daily: '#b87333',   // Copper
+      weekly: '#ffd700'   // Gold
+    };
+
+    for (const node of nodes) {
+      // Only show markers on discovered nodes
+      if (!discoveredNodes.has(node.id)) continue;
+
+      // Skip nodes without quest markers
+      if (!this.questMarkerManager.hasMarker(node.id)) continue;
+
+      const marker = this.questMarkerManager.getMarkerForNode(node.id);
+      if (!marker) continue;
+
+      const pos = this.worldToMinimap(node.x_coord, node.y_coord);
+      const dotRadius = 3;
+
+      // Offset the dot slightly from the node center
+      const offsetX = 4;
+      const offsetY = -4;
+
+      ctx.save();
+      ctx.globalAlpha = 0.85;
+
+      // Draw quest type dot (weekly takes priority for color)
+      const dotColor = marker.hasWeekly ? QUEST_COLORS.weekly : QUEST_COLORS.daily;
+
+      // Draw dot
+      ctx.beginPath();
+      ctx.arc(pos.x + offsetX, pos.y + offsetY, dotRadius, 0, Math.PI * 2);
+      ctx.fillStyle = dotColor;
+      ctx.fill();
+
+      // Subtle border
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+
+      ctx.restore();
+    }
   }
 
   /**

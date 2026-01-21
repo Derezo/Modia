@@ -5,6 +5,10 @@ import { WorldMapCharacter } from '../worldmap/WorldMapCharacter.js';
 import { StaminaBar } from '../worldmap/StaminaBar.js';
 import { TravelProgressBar } from '../worldmap/TravelProgressBar.js';
 import { NodeActionMenu } from '../worldmap/NodeActionMenu.js';
+import { NodeHoverTooltip } from '../worldmap/NodeHoverTooltip.js';
+import { QuestMarkerManager } from '../worldmap/QuestMarkerManager.js';
+import { QuestProgressHUD } from '../worldmap/QuestProgressHUD.js';
+import { ZodiacIndicator } from '../worldmap/ZodiacIndicator.js';
 import { generatePathControlPoints, generateSplinePoints } from '../worldmap/PathRenderer.js';
 import { ProfileDropdown } from '../ui/parchment/ProfileDropdown.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
@@ -110,6 +114,9 @@ export class WorldMapScene extends Scene {
     // Node action menu (positioned near current node)
     this.nodeActionMenu = null;
 
+    // Node hover tooltip (for non-current nodes)
+    this.nodeHoverTooltip = null;
+
     // Region system
     this.regions = [];              // Region data from API
     this.showRegionTint = true;     // Toggle for region color tinting on nodes
@@ -118,6 +125,14 @@ export class WorldMapScene extends Scene {
 
     // Watchtower extended view
     this.watchtowerView = null;     // Extended view data from watchtower node
+
+    // Quest marker system
+    this.questMarkerManager = null; // Manages quest marker data
+    this.questProgressHUD = null;   // Collapsible quest progress panel
+
+    // Zodiac collection indicator
+    this.zodiacIndicator = null;
+    this.zodiacCollectionData = null; // Cache for tooltip display
   }
 
   async enter() {
@@ -159,6 +174,18 @@ export class WorldMapScene extends Scene {
       this.nodeActionMenu.expand();
     }
 
+    // Initialize node hover tooltip
+    this.nodeHoverTooltip = new NodeHoverTooltip({ game: this.game });
+    this.game.uiOverlay.appendChild(this.nodeHoverTooltip.element);
+
+    // Initialize quest marker system
+    this.questMarkerManager = new QuestMarkerManager(this.game);
+    this.questProgressHUD = new QuestProgressHUD({ game: this.game });
+    this.game.uiOverlay.appendChild(this.questProgressHUD.element);
+
+    // Fetch initial quest markers (non-blocking)
+    this.refreshQuestMarkers();
+
     // Initialize minimap with region data
     this.minimap = new WorldMapMinimap(this.assetLoader);
     await this.minimap.init();
@@ -175,6 +202,12 @@ export class WorldMapScene extends Scene {
 
     // Initialize travel progress bar
     this.travelProgressBar = new TravelProgressBar();
+
+    // Initialize zodiac indicator
+    this.zodiacIndicator = new ZodiacIndicator();
+    this.zodiacIndicator.setClickHandler(() => this.openRelicCollectionModal());
+    this.zodiacIndicator.checkNewCrystalFlag(); // Check for new crystal notification
+    this.refreshZodiacCollection(); // Fetch collection data (non-blocking)
 
     // Preload node sprites in background
     this.preloadNodeSprites();
@@ -222,6 +255,73 @@ export class WorldMapScene extends Scene {
       }
     } catch (err) {
       console.warn('Failed to fetch stamina:', err);
+    }
+  }
+
+  /**
+   * Refresh quest markers from the server and update the HUD
+   */
+  async refreshQuestMarkers() {
+    if (!this.questMarkerManager) return;
+
+    try {
+      const characters = this.game.state.get('characters') || [];
+      const partyLeader = characters.find(c => c.party_slot === 1) || characters[0];
+
+      if (partyLeader) {
+        await this.questMarkerManager.refresh(partyLeader.id);
+
+        // Update the HUD with active quests
+        if (this.questProgressHUD) {
+          const activeQuests = this.questMarkerManager.getActiveQuests();
+          this.questProgressHUD.update(activeQuests);
+        }
+
+        // Update minimap with quest marker data
+        if (this.minimap) {
+          this.minimap.setQuestMarkers(this.questMarkerManager);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to refresh quest markers:', err);
+    }
+  }
+
+  /**
+   * Refresh zodiac crystal collection from the server
+   */
+  async refreshZodiacCollection() {
+    if (!this.zodiacIndicator) return;
+
+    try {
+      const result = await this.game.api.get('/world/zodiac-collection');
+      this.zodiacIndicator.setCollection(result);
+      this.zodiacCollectionData = result; // Cache for tooltip use
+    } catch (err) {
+      console.warn('Failed to refresh zodiac collection:', err);
+    }
+  }
+
+  /**
+   * Open the relic collection modal
+   */
+  async openRelicCollectionModal() {
+    try {
+      const { RelicCollectionModal } = await import('../modals/RelicCollectionModal.js');
+      const modal = new RelicCollectionModal({
+        game: this.game,
+        onClose: () => {
+          modal.destroy();
+          // Clear glow after viewing the collection
+          if (this.zodiacIndicator) {
+            this.zodiacIndicator.showNewCrystalGlow = false;
+          }
+        }
+      });
+      await modal.show();
+    } catch (err) {
+      console.error('Failed to open relic collection modal:', err);
+      parchmentToast.error('Error', 'Failed to load relic collection.');
     }
   }
 
@@ -388,6 +488,44 @@ export class WorldMapScene extends Scene {
   }
 
   /**
+   * Update hover tooltip for a node (shows rich contextual info)
+   * @param {Object|null} node - The hovered node or null to hide
+   */
+  updateHoverTooltip(node) {
+    if (!this.nodeHoverTooltip) return;
+
+    // Hide tooltip if no node, traveling, or hovering current node
+    if (!node || this.isTraveling || (this.currentNode && node.id === this.currentNode.id)) {
+      this.nodeHoverTooltip.hide();
+      return;
+    }
+
+    // Get screen position for the node
+    const position = this.getNodeScreenPosition(node);
+    if (!position) {
+      this.nodeHoverTooltip.hide();
+      return;
+    }
+
+    // Prepare context with path preview info
+    const context = {
+      nodeSize: position.nodeSize,
+      canvasHeight: position.canvasHeight,
+      previewCost: this.previewCost || 0,
+      previewAffordable: this.previewAffordable !== false,
+      previewPathBlocked: this.previewPathBlocked || false,
+      previewCannotReach: this.previewCannotReach || false,
+      isDiscovered: this.isNodeDiscovered(node),
+      isVisited: node.visited === true,
+      currentStamina: this.staminaBar?.current || 0,
+      zodiacCollection: this.zodiacCollectionData // Pass for shrine tooltips
+    };
+
+    // Show the tooltip
+    this.nodeHoverTooltip.show(node, position.x, position.y, context);
+  }
+
+  /**
    * Calculate which nodes are reachable from the current position.
    * Uses BFS traversal through connections, considering node blocking.
    *
@@ -503,6 +641,22 @@ export class WorldMapScene extends Scene {
     if (this.nodeActionMenu) {
       this.nodeActionMenu.destroy();
       this.nodeActionMenu = null;
+    }
+
+    // Destroy node hover tooltip
+    if (this.nodeHoverTooltip) {
+      this.nodeHoverTooltip.destroy();
+      this.nodeHoverTooltip = null;
+    }
+
+    // Destroy quest marker system
+    if (this.questMarkerManager) {
+      this.questMarkerManager.destroy();
+      this.questMarkerManager = null;
+    }
+    if (this.questProgressHUD) {
+      this.questProgressHUD.destroy();
+      this.questProgressHUD = null;
     }
 
     // Unsubscribe from responsive changes
@@ -924,7 +1078,7 @@ export class WorldMapScene extends Scene {
     const modal = new RuinsPuzzleModal({
       game: this.game,
       onClose: () => {
-        modal.destroy();
+        // Modal already cleaned up in close() - this callback is for scene notification only
       },
       onSolve: (result) => {
         // Could trigger animations or updates here
@@ -1185,10 +1339,11 @@ export class WorldMapScene extends Scene {
       const pos = this.game.input.getPointerPosition();
       const newHoveredNode = this.getNodeAtPosition(pos.x, pos.y);
 
-      // If hovered node changed, update path preview
+      // If hovered node changed, update path preview and tooltip
       if (newHoveredNode?.id !== this.hoveredNode?.id) {
         this.hoveredNode = newHoveredNode;
         this.updatePathPreview(newHoveredNode);
+        this.updateHoverTooltip(newHoveredNode);
       }
     }, opts);
 
@@ -1198,6 +1353,12 @@ export class WorldMapScene extends Scene {
 
     canvas.addEventListener('click', () => {
       const pos = this.game.input.getPointerPosition();
+
+      // Check zodiac indicator click first
+      if (this.zodiacIndicator && this.zodiacIndicator.containsPoint(pos.x, pos.y)) {
+        this.zodiacIndicator.handleClick();
+        return;
+      }
 
       // Check minimap click first
       if (this.minimap) {
@@ -1227,6 +1388,64 @@ export class WorldMapScene extends Scene {
       e.preventDefault();
       const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
       this.zoom = Math.max(0.5, Math.min(2, this.zoom * zoomFactor));
+    }, opts);
+
+    // Mobile touch support for tooltips
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchMoved = false;
+
+    canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchMoved = false;
+
+        // Update hovered node on touch start for tooltip
+        const pos = this.game.input.getPointerPosition();
+        const touchedNode = this.getNodeAtPosition(pos.x, pos.y);
+
+        if (touchedNode?.id !== this.hoveredNode?.id) {
+          this.hoveredNode = touchedNode;
+          this.updatePathPreview(touchedNode);
+          this.updateHoverTooltip(touchedNode);
+        }
+      }
+    }, opts);
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 1) {
+        const dx = e.touches[0].clientX - touchStartX;
+        const dy = e.touches[0].clientY - touchStartY;
+
+        // If moved more than 10px, consider it a drag
+        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+          touchMoved = true;
+          // Hide tooltip during drag
+          if (this.nodeHoverTooltip) {
+            this.nodeHoverTooltip.hide();
+          }
+        }
+      }
+    }, opts);
+
+    canvas.addEventListener('touchend', () => {
+      // If touch moved, don't handle as tap
+      if (touchMoved) {
+        touchMoved = false;
+        return;
+      }
+
+      // Hide tooltip when tapping on empty space
+      const pos = this.game.input.getPointerPosition();
+      const touchedNode = this.getNodeAtPosition(pos.x, pos.y);
+
+      if (!touchedNode) {
+        this.hoveredNode = null;
+        if (this.nodeHoverTooltip) {
+          this.nodeHoverTooltip.hide();
+        }
+      }
     }, opts);
   }
 
@@ -1274,6 +1493,12 @@ export class WorldMapScene extends Scene {
     if (this.currentNode && node.id === this.currentNode.id) {
       return;
     }
+
+    // Hide hover tooltip when travel starts
+    if (this.nodeHoverTooltip) {
+      this.nodeHoverTooltip.hide();
+    }
+    this.hoveredNode = null;
 
     // Check if destination is discovered
     if (!this.isNodeDiscovered(node)) {
@@ -1411,6 +1636,9 @@ export class WorldMapScene extends Scene {
       }
       this.game.socket.joinNodeRoom(this.currentNode.id);
     }
+
+    // Refresh quest markers (travel may affect quest progress)
+    this.refreshQuestMarkers();
   }
 
   capitalize(str) {
@@ -1449,6 +1677,11 @@ export class WorldMapScene extends Scene {
     // Update travel progress bar
     if (this.travelProgressBar) {
       this.travelProgressBar.update(deltaTime);
+    }
+
+    // Update zodiac indicator
+    if (this.zodiacIndicator) {
+      this.zodiacIndicator.update(deltaTime);
     }
 
     // Update effects
@@ -1819,6 +2052,9 @@ export class WorldMapScene extends Scene {
       // Note: tooltips are rendered after fog of war for visibility
     }
 
+    // Render quest markers on nodes (after nodes, before watchtower/fog)
+    this.renderQuestMarkers(ctx);
+
     // Render watchtower-revealed nodes at reduced opacity
     if (this.watchtowerView) {
       this.renderWatchtowerRevealedNodes(ctx);
@@ -1856,14 +2092,8 @@ export class WorldMapScene extends Scene {
         continue;
       }
 
-      const isCurrent = this.currentNode && node.id === this.currentNode.id;
-      const isHovered = this.hoveredNode && node.id === this.hoveredNode.id;
-
-      // Node tooltip for hovered nodes only (current node uses NodeActionMenu)
-      // Skip if this is the current node - its info is shown in the DOM menu
-      if (isHovered && !isCurrent) {
-        this.renderNodeTooltip(ctx, node, x, y, false);
-      }
+      // Note: Node hover tooltip is now handled by DOM-based NodeHoverTooltip component
+      // The canvas-based renderNodeTooltip is kept for fallback but not called here
     }
 
     // Render character on map (after fog so always visible)
@@ -1881,6 +2111,11 @@ export class WorldMapScene extends Scene {
     // Render travel progress bar (below stamina bar)
     if (this.travelProgressBar) {
       this.travelProgressBar.render(ctx);
+    }
+
+    // Render zodiac indicator (below travel bar)
+    if (this.zodiacIndicator) {
+      this.zodiacIndicator.render(ctx);
     }
 
     // Render minimap (on top of everything)
@@ -1906,6 +2141,125 @@ export class WorldMapScene extends Scene {
         this.nodeActionMenu.updatePosition(position.x, position.y, position.nodeSize, position.canvasHeight);
       }
     }
+
+    // Update node hover tooltip position (DOM element follows hovered node)
+    if (this.nodeHoverTooltip && this.hoveredNode && this.hoveredNode.id !== this.currentNode?.id) {
+      const position = this.getNodeScreenPosition(this.hoveredNode);
+      if (position) {
+        this.nodeHoverTooltip.updatePosition(position.x, position.y, position.nodeSize, position.canvasHeight);
+      }
+    }
+  }
+
+  /**
+   * Render quest markers on nodes that have active quest objectives
+   * Markers are small colored badges positioned above/to-the-side of nodes
+   */
+  renderQuestMarkers(ctx) {
+    if (!this.questMarkerManager) return;
+
+    for (const node of this.nodes) {
+      // Skip nodes without markers
+      if (!this.questMarkerManager.hasMarker(node.id)) continue;
+
+      // Skip nodes that are not reachable
+      if (this.reachableNodes.size > 0 && !this.reachableNodes.has(node.id)) continue;
+
+      const x = node.x_coord * this.nodeSpacing + this.cameraX;
+      const y = node.y_coord * this.nodeSpacing + this.cameraY;
+
+      // Skip if off screen
+      if (x < -50 || x > ctx.canvas.width + 50 || y < -50 || y > ctx.canvas.height + 50) {
+        continue;
+      }
+
+      const marker = this.questMarkerManager.getMarkerForNode(node.id);
+      this.renderMarkerBadge(ctx, x, y, marker, node);
+    }
+  }
+
+  /**
+   * Render a quest marker badge at a node position
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {number} x - Node X position (screen coords)
+   * @param {number} y - Node Y position (screen coords)
+   * @param {Object} marker - Marker data from QuestMarkerManager
+   * @param {Object} node - Node object for sprite lookup
+   */
+  renderMarkerBadge(ctx, x, y, marker, node) {
+    if (!marker) return;
+
+    const badges = QuestMarkerManager.getBadgeColors(marker);
+    if (badges.length === 0) return;
+
+    // Position badges above and to the right of the node
+    const nodeSprite = node ? this.getNodeSprite(node.node_type) : null;
+    const spriteSize = nodeSprite ? this.getNodeSpriteSize(node.node_type) : this.nodeSize;
+    const badgeRadius = 5;
+    const badgeSpacing = 4;
+    const startX = x + spriteSize / 2 - 4;
+    const startY = y - spriteSize / 2 - 4;
+
+    ctx.save();
+
+    // Draw each badge (max 3, with overlap)
+    for (let i = 0; i < Math.min(badges.length, 3); i++) {
+      const badgeX = startX - i * badgeSpacing;
+      const badgeY = startY;
+      const color = badges[i];
+
+      // Badge background with glow
+      if (marker.nearComplete) {
+        // Pulse glow for near-complete quests
+        const pulse = 0.4 + Math.sin(Date.now() * 0.005) * 0.3;
+        ctx.beginPath();
+        ctx.arc(badgeX, badgeY, badgeRadius + 3, 0, Math.PI * 2);
+        ctx.fillStyle = color.replace(')', `, ${pulse})`).replace('rgb', 'rgba').replace('#', '');
+        // Convert hex to rgba for glow
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${pulse})`;
+        ctx.fill();
+      }
+
+      // Badge circle
+      ctx.beginPath();
+      ctx.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      // Badge border
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Inner highlight
+      ctx.beginPath();
+      ctx.arc(badgeX - 1, badgeY - 1, badgeRadius - 2, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Show "+N" indicator if more than 3 quests
+    if (marker.questCount > 3) {
+      const extraX = startX - 3 * badgeSpacing - 8;
+      const extraY = startY;
+
+      ctx.font = 'bold 9px Arial';
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.lineWidth = 2;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const text = `+${marker.questCount - 3}`;
+      ctx.strokeText(text, extraX, extraY);
+      ctx.fillText(text, extraX, extraY);
+    }
+
+    ctx.restore();
   }
 
   /**

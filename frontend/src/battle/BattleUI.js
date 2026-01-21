@@ -122,6 +122,22 @@ export class BattleUI {
         </div>
       </div>
 
+      <!-- Zodiac Ability Panel (hidden by default) -->
+      <div id="zodiac-panel" class="battle-panel" style="
+        position: absolute;
+        bottom: 70px;
+        left: 50%;
+        transform: translateX(-50%);
+        pointer-events: auto;
+        display: none;
+      ">
+        <div class="ui-panel" style="padding: 10px; max-width: 400px;">
+          <div style="font-size: 12px; color: #d4af37; margin-bottom: 8px;">Zodiac Signature Ability (Once per Battle)</div>
+          <div id="zodiac-list" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+          <div id="no-zodiac" style="color: #666; font-style: italic; display: none;">No zodiac abilities available</div>
+        </div>
+      </div>
+
       <!-- Target Info (bottom right) - ParchmentCard container -->
       <div id="target-panel" style="
         position: absolute;
@@ -1233,6 +1249,69 @@ export class BattleUI {
   hideItemPanel() {
     const panel = this.element.querySelector('#item-panel');
     if (panel) panel.style.display = 'none';
+  }
+
+  /**
+   * Show zodiac ability panel
+   * @param {Array} abilities - Array of zodiac ability objects with key, name, description, element
+   */
+  showZodiacPanel(abilities) {
+    const panel = this.element.querySelector('#zodiac-panel');
+    const list = this.element.querySelector('#zodiac-list');
+    const noZodiac = this.element.querySelector('#no-zodiac');
+    if (!panel || !list) return;
+
+    if (!abilities || abilities.length === 0) {
+      list.innerHTML = '';
+      if (noZodiac) noZodiac.style.display = 'block';
+    } else {
+      if (noZodiac) noZodiac.style.display = 'none';
+      list.innerHTML = abilities.map(ability => {
+        const elementIcon = this.getElementIcon(ability.element);
+        return `
+          <button class="btn btn-secondary zodiac-btn"
+                  data-ability-key="${ability.key}"
+                  data-needs-target="${ability.needsTarget || false}"
+                  title="${ability.description || ability.name}"
+                  style="background: linear-gradient(135deg, #2a1f4e 0%, #1a1a2e 100%); border-color: #d4af37;">
+            ${elementIcon} ${ability.name}
+          </button>
+        `;
+      }).join('');
+
+      // Add click handlers for zodiac buttons
+      list.querySelectorAll('.zodiac-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const abilityKey = btn.dataset.abilityKey;
+          const needsTarget = btn.dataset.needsTarget === 'true';
+          this.actionCallbacks.onSelectZodiacAbility?.(abilityKey, needsTarget);
+        });
+      });
+    }
+
+    panel.style.display = 'block';
+  }
+
+  /**
+   * Hide zodiac ability panel
+   */
+  hideZodiacPanel() {
+    const panel = this.element.querySelector('#zodiac-panel');
+    if (panel) panel.style.display = 'none';
+  }
+
+  /**
+   * Get element icon for zodiac abilities
+   */
+  getElementIcon(element) {
+    const icons = {
+      fire: String.fromCodePoint(0x1F525),    // Fire emoji
+      water: String.fromCodePoint(0x1F4A7),   // Droplet emoji
+      earth: String.fromCodePoint(0x26F0),    // Mountain emoji
+      air: String.fromCodePoint(0x1F4A8),     // Dashing away emoji
+      neutral: String.fromCodePoint(0x2728)   // Sparkles emoji
+    };
+    return icons[element] || icons.neutral;
   }
 
   /**

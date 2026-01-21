@@ -24,7 +24,16 @@ export {
   resetTurnState,
   shouldAutoEndTurn,
   applyStatusEffect,
-  initializeTurnState
+  initializeTurnState,
+  // Zodiac signature abilities
+  hasZodiacAbility,
+  getAvailableZodiacAbility,
+  getAvailableZodiacAbilities,
+  markZodiacAbilityUsed,
+  applyZodiacAbility,
+  processZodiacPoison,
+  checkMoonshield,
+  getDefenseMultiplier
 } from './statusEffectManager.js';
 
 // Movement and pathfinding

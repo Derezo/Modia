@@ -28,6 +28,15 @@ export {
   resetTurnState,
   shouldAutoEndTurn,
   applyStatusEffect,
+  // Zodiac signature abilities
+  hasZodiacAbility,
+  getAvailableZodiacAbility,
+  getAvailableZodiacAbilities,
+  markZodiacAbilityUsed,
+  applyZodiacAbility,
+  processZodiacPoison,
+  checkMoonshield,
+  getDefenseMultiplier,
   // Movement and range
   getMovementRange,
   getAttackRange,

@@ -113,15 +113,14 @@ router.get('/:nodeId/puzzle', authenticate, async (req, res) => {
     // Get ruins node data
     const nodeResult = await pool.query(`
       SELECT
-        wn.id,
-        wn.name,
-        wn.node_type,
-        wn.ruins_puzzle_type,
-        wn.ruins_reward_tier,
-        r.race as region_race
-      FROM world_nodes wn
-      LEFT JOIN regions r ON wn.region_id = r.id
-      WHERE wn.id = $1
+        id,
+        name,
+        node_type,
+        ruins_puzzle_type,
+        ruins_reward_tier,
+        region_race
+      FROM world_nodes
+      WHERE id = $1
     `, [nodeId]);
 
     if (nodeResult.rows.length === 0) {

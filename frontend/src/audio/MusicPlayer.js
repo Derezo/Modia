@@ -230,11 +230,15 @@ export class MusicPlayer {
    */
   async _crossfadeTo(buffer, trackId, config, fadeInMs) {
     if (this.isCrossfading) {
-      // If already crossfading, complete immediately
-      this._completeCrossfade();
+      // If already crossfading, complete immediately and promote nextSource to current
+      this._completeCrossfade(true);
     }
 
     this.isCrossfading = true;
+
+    // Update currentTrack immediately to prevent duplicate requests for same track
+    // (the check in play() uses currentTrack to skip redundant requests)
+    this.currentTrack = trackId;
 
     // Create new source
     const nextSource = this.context.createBufferSource();
@@ -297,9 +301,10 @@ export class MusicPlayer {
 
   /**
    * Complete an in-progress crossfade
+   * @param {boolean} promoteNext - If true, promote nextSource to currentSource before clearing
    * @private
    */
-  _completeCrossfade() {
+  _completeCrossfade(promoteNext = false) {
     if (this.fadeTimer) {
       clearTimeout(this.fadeTimer);
       this.fadeTimer = null;
@@ -317,6 +322,16 @@ export class MusicPlayer {
       }
     }
 
+    // If requested and we have a nextSource, promote it to current
+    // This prevents orphaned audio sources when interrupting a crossfade
+    if (promoteNext && this.nextSource) {
+      this.currentSource = this.nextSource;
+      this.currentGain = this.nextGain;
+      // Note: currentTrack is already set by the caller
+    }
+
+    this.nextSource = null;
+    this.nextGain = null;
     this.isCrossfading = false;
   }
 

@@ -313,11 +313,14 @@ export class AudioAssets {
       return this.bufferCache.get(cacheKey);
     }
 
+    // Default placeholder config - music and ambient should be silent to avoid
+    // annoying looping tones when actual audio files are missing
+    const isSilentCategory = category === 'music' || category === 'ambient';
     const config = PLACEHOLDER_CONFIG[category]?.[id] || {
       frequency: 440,
       type: 'sine',
-      duration: 0.1,
-      silent: false
+      duration: isSilentCategory ? 0.5 : 0.1,
+      silent: isSilentCategory
     };
 
     const sampleRate = this.context.sampleRate;
