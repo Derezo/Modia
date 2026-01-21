@@ -1832,6 +1832,11 @@ export class BattleScene extends Scene {
         unit.hasActed = unitData.hasActed;
         unit.statusEffects = unitData.statusEffects || [];
 
+        // Sync two-action system state
+        unit.moveUsed = unitData.moveUsed ?? false;
+        unit.actUsed = unitData.actUsed ?? false;
+        unit.turnPhase = unitData.turnPhase ?? 'ready';
+
         // Update position if changed - but DON'T interrupt ongoing movement animations
         // WebSocket unit_moved calls moveTo() for smooth animation; we only snap if unit is stationary
         if (unit.gridX !== unitData.tileX || unit.gridY !== unitData.tileY) {

@@ -4,6 +4,16 @@
 import { SKILL_EFFECT_CATEGORIES, getRandomCategoryColor } from './SkillEffectCategories.js';
 import { ELEMENT_COLORS } from '@shared/battleMath.js';
 
+/**
+ * Animation timing constants (milliseconds)
+ * Used by BattleWebSocketManager for queue timing synchronization
+ */
+export const ANIMATION_TIMING = {
+  DAMAGE_NUMBER_DURATION: 1200,
+  ACTION_WAIT_SHORT: 600,      // Minimum wait after attack animations
+  ACTION_WAIT_FULL: 1200,      // Wait for damage numbers to complete
+};
+
 export class BattleAnimations {
   constructor() {
     this.animations = [];

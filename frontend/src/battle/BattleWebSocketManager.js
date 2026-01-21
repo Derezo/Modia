@@ -12,6 +12,7 @@
 
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { debugLog } from '../utils/debugLogger.js';
+import { ANIMATION_TIMING } from './BattleAnimations.js';
 
 export class BattleWebSocketManager {
   /**
@@ -225,6 +226,23 @@ export class BattleWebSocketManager {
         // Update local state with server state
         this.battleState = response.state;
         this.scene.syncUnitsWithState(response.state.units);
+
+        // Apply turn state from availableActions (two-action system)
+        if (response.availableActions) {
+          this.scene.canMove = response.availableActions.canMove ?? true;
+          this.scene.canAct = response.availableActions.canAct ?? true;
+          const bothAvailable = this.scene.canMove && this.scene.canAct;
+          const neitherAvailable = !this.scene.canMove && !this.scene.canAct;
+          this.scene.turnPhase = bothAvailable ? 'ready' : (neitherAvailable ? 'done' : 'partial');
+          console.log(`[Battle] Turn state restored: canMove=${this.scene.canMove}, canAct=${this.scene.canAct}, turnPhase=${this.scene.turnPhase}`);
+        } else {
+          // Not player's turn - disable actions until turn_start arrives
+          this.scene.canMove = false;
+          this.scene.canAct = false;
+          this.scene.turnPhase = 'done';
+          console.log('[Battle] Not player turn on rejoin - actions disabled');
+        }
+
         this.scene.updateUI();
 
         // Rejoin WebSocket room
@@ -759,8 +777,14 @@ export class BattleWebSocketManager {
         this.scene.playStatusEffectSound(result.effectApplied || result.statusApplied);
       }
 
-      // Wait for attack animation
-      await this.scene.waitForAnimation(600);
+      // Wait longer if camera will pan to different unit (so damage numbers complete)
+      const nextEvent = this.turnEventQueue[0];
+      const willPanToDifferentUnit = nextEvent?.type === 'turn_start' &&
+                                      nextEvent.unitId !== actorId;
+      const waitDuration = willPanToDifferentUnit
+        ? ANIMATION_TIMING.ACTION_WAIT_FULL
+        : ANIMATION_TIMING.ACTION_WAIT_SHORT;
+      await this.scene.waitForAnimation(waitDuration);
     }
   }
 }
