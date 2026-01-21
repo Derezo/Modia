@@ -51,13 +51,6 @@
       "dead_tree": { "size": 72, "passable": false },
       "mushroom_large": { "size": 64, "passable": false },
       "mountain_pine": { "size": 72, "passable": false }
-    },
-    "decorative": {
-      "grass_tufts": { "size": 24, "passable": true },
-      "wildflowers": { "size": 24, "passable": true },
-      "cave_crystals": { "size": 32, "passable": true },
-      "fallen_log": { "size": 48, "passable": true },
-      "stone_ruins": { "size": 56, "passable": true }
     }
   },
   "characters": {

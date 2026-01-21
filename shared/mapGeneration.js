@@ -36,9 +36,6 @@ import { createPRNGStreams, PRNGStreams } from './mapgen/PRNGStreams.js';
 // Constraint validation and repair (Phase 4)
 import { ConstraintValidator } from './mapgen/ConstraintValidator.js';
 
-// Tactical cover system (Phase 5)
-import { CoverGridSystem, COVER_LEVELS } from './mapgen/CoverGridSystem.js';
-
 // Layer context for algorithm cooperation (Phase 2)
 import { LayerContext } from './mapgen/LayerContext.js';
 
@@ -305,7 +302,6 @@ function generateWithArchetypes(seed, nodeType, width, height, options = {}) {
     enemyAiType = null,
     enemyCount = 0,
     enemyRoles = [],
-    coverStrategy = null,
     styleProfile = null
   } = options;
 
@@ -354,17 +350,6 @@ function generateWithArchetypes(seed, nodeType, width, height, options = {}) {
     elevationGrid = generateElevationData(terrain, width, height, () => streams.terrain());
   }
 
-  // Phase 5: Generate tactical cover
-  const effectiveCoverStrategy = coverStrategy || archetype.coverStrategy || 'staggered';
-  const coverSystem = new CoverGridSystem(width, height);
-  coverSystem.generate(effectiveCoverStrategy, () => streams.cover(), {
-    archetype: archetype.name
-  });
-
-  // Map cover to obstacles (merge with existing)
-  const coverObstacles = coverSystem.mapToObstacles({}, () => streams.obstacles());
-  obstacles = mergeObstacles(obstacles, coverObstacles, width, height);
-
   // Clear spawn areas before validation
   clearSpawnAreas(terrain, obstacles, width, height);
 
@@ -395,11 +380,6 @@ function generateWithArchetypes(seed, nodeType, width, height, options = {}) {
   // Include elevation if requested
   if (includeElevation) {
     returnValue.elevation = elevationGrid;
-  }
-
-  // Include cover grid data for debugging/rendering
-  if (options.includeCoverGrid) {
-    returnValue.coverGrid = coverGrid;
   }
 
   // Generate spawn positions if requested
@@ -434,7 +414,6 @@ function generateWithArchetypes(seed, nodeType, width, height, options = {}) {
       ...pipelineResult.metadata,
       archetype: archetype.name,
       styleProfile: effectiveStyleProfile,
-      coverStrategy: effectiveCoverStrategy,
       constraints: archetype.constraints,
       validationResult: {
         iterations: validationResult.iterations,
@@ -530,9 +509,7 @@ function mergeObstacles(base, overlay, width, height) {
  * @param {string} options.enemyAiType - AI type for enemy spawn positioning
  * @param {number} options.enemyCount - Number of enemies to spawn
  * @param {string[]} options.enemyRoles - Optional roles for tactical spawn positioning
- * @param {string} options.coverStrategy - Cover placement strategy (symmetric, staggered, etc.)
  * @param {string} options.styleProfile - Style profile for parameter tuning
- * @param {boolean} options.includeCoverGrid - Include raw cover grid data
  * @returns {Object} { terrain, obstacles, variants, elevation?, playerSpawns?, enemySpawns?, metadata? }
  */
 export function generateTerrain(seed, nodeType, width = 32, height = 32, options = {}) {
@@ -650,15 +627,6 @@ export { ConstraintValidator, VIOLATION_TYPES } from './mapgen/ConstraintValidat
 
 // Re-export default constraints from archetypes
 export { DEFAULT_CONSTRAINTS, CONSTRAINT_PRESETS } from './mapgen/archetypes/constraints.js';
-
-// Re-export cover grid system
-export {
-  CoverGridSystem,
-  COVER_LEVELS,
-  COVER_BONUSES,
-  DEFAULT_LANE_CONFIG as LANE_CONFIG,
-  COVER_STRATEGIES
-} from './mapgen/CoverGridSystem.js';
 
 // Re-export layer context for algorithm cooperation
 export { LayerContext } from './mapgen/LayerContext.js';

@@ -99,8 +99,7 @@ export const NODE_TYPE_CONFIGS = {
     ],
     obstacleRules: {
       tree: { onTerrain: ['grass', 'forest'], chance: 0.15, variants: ['oak_tree', 'pine_tree'] },
-      rock: { onTerrain: ['rock'], chance: 0.8, variants: ['rock_small', 'rock_medium', 'rock_large'] },
-      decorative: { onTerrain: ['grass'], chance: 0.05, variants: ['grass_tufts', 'wildflowers', 'fallen_log'] }
+      rock: { onTerrain: ['rock'], chance: 0.8, variants: ['rock_small', 'rock_medium', 'rock_large'] }
     }
   },
 
@@ -169,8 +168,7 @@ export const NODE_TYPE_CONFIGS = {
     ],
     obstacleRules: {
       rock: { onTerrain: ['rock'], chance: 0.9, variants: ['rock_medium', 'rock_large', 'stalagmite'] },
-      crystal: { onTerrain: ['stone'], chance: 0.03, variants: ['cave_crystals', 'stalagmite'] },
-      decorative: { onTerrain: ['stone'], chance: 0.02, variants: ['cave_crystals', 'stalagmite'] }
+      crystal: { onTerrain: ['stone'], chance: 0.03, variants: ['cave_crystals', 'stalagmite'] }
     }
   },
 
@@ -229,8 +227,7 @@ export const NODE_TYPE_CONFIGS = {
     ],
     obstacleRules: {
       rock: { onTerrain: ['rock', 'cliff'], chance: 0.85, variants: ['rock_large', 'mountain_boulder'] },
-      smallRock: { onTerrain: ['stone'], chance: 0.1, variants: ['rock_small', 'rock_medium'] },
-      decorative: { onTerrain: ['grass'], chance: 0.04, variants: ['grass_tufts', 'stone_ruins'] }
+      smallRock: { onTerrain: ['stone'], chance: 0.1, variants: ['rock_small', 'rock_medium'] }
     }
   },
 
@@ -276,7 +273,6 @@ export const NODE_TYPE_CONFIGS = {
     ],
     obstacleRules: {
       // Bridge has minimal obstacles - mostly open for tactical combat
-      decorative: { onTerrain: ['stone', 'grass'], chance: 0.02, variants: ['grass_tufts'] }
     }
   },
 
@@ -318,8 +314,7 @@ export const NODE_TYPE_CONFIGS = {
       }
     ],
     obstacleRules: {
-      pillar: { onTerrain: ['stone'], chance: 0.02, variants: ['stone_ruins', 'pillar'] },
-      decorative: { onTerrain: ['stone'], chance: 0.01, variants: ['stone_ruins'] }
+      pillar: { onTerrain: ['stone'], chance: 0.02, variants: ['stone_ruins', 'pillar'] }
     }
   }
 };
@@ -401,8 +396,7 @@ export const RACE_SUBTYPE_CONFIGS = {
     ],
     thematicFeatures: ['moonwell', 'ancient_tree', 'flower_ring'],
     obstacleRules: {
-      tree: { onTerrain: ['grass', 'forest'], chance: 0.12, variants: ['ancient_tree', 'silver_birch'] },
-      decorative: { onTerrain: ['grass'], chance: 0.08, variants: ['flower_ring', 'glowing_mushroom', 'fairy_circle'] }
+      tree: { onTerrain: ['grass', 'forest'], chance: 0.12, variants: ['ancient_tree', 'silver_birch'] }
     }
   },
 
@@ -473,8 +467,7 @@ export const RACE_SUBTYPE_CONFIGS = {
     thematicFeatures: ['mine_cart_track', 'ore_vein', 'support_beam'],
     obstacleRules: {
       rock: { onTerrain: ['rock'], chance: 0.7, variants: ['ore_vein', 'rock_medium'] },
-      minecart: { onTerrain: ['stone'], chance: 0.02, variants: ['mine_cart', 'support_beam'] },
-      decorative: { onTerrain: ['stone'], chance: 0.03, variants: ['lantern', 'pickaxe', 'barrel'] }
+      minecart: { onTerrain: ['stone'], chance: 0.02, variants: ['mine_cart', 'support_beam'] }
     }
   },
 
@@ -544,8 +537,7 @@ export const RACE_SUBTYPE_CONFIGS = {
     thematicFeatures: ['coffin', 'blood_pool', 'gothic_pillar', 'candelabra'],
     obstacleRules: {
       rock: { onTerrain: ['rock'], chance: 0.8, variants: ['gothic_pillar', 'tomb_wall'] },
-      coffin: { onTerrain: ['stone'], chance: 0.04, variants: ['coffin', 'sarcophagus'] },
-      decorative: { onTerrain: ['stone'], chance: 0.03, variants: ['candelabra', 'bone_pile', 'chain'] }
+      coffin: { onTerrain: ['stone'], chance: 0.04, variants: ['coffin', 'sarcophagus'] }
     }
   },
 
@@ -619,8 +611,7 @@ export const RACE_SUBTYPE_CONFIGS = {
     thematicFeatures: ['war_tent', 'palisade', 'firepit', 'weapon_rack'],
     obstacleRules: {
       palisade: { onTerrain: ['grass'], chance: 0.06, variants: ['palisade_wall', 'spike_barrier'] },
-      campfire: { onTerrain: ['stone'], chance: 0.03, variants: ['firepit', 'cooking_pot'] },
-      decorative: { onTerrain: ['grass', 'stone'], chance: 0.04, variants: ['weapon_rack', 'banner', 'skull_pile'] }
+      campfire: { onTerrain: ['stone'], chance: 0.03, variants: ['firepit', 'cooking_pot'] }
     }
   },
 
@@ -694,8 +685,7 @@ export const RACE_SUBTYPE_CONFIGS = {
     thematicFeatures: ['ruined_wall', 'rubble', 'overgrown_pillar', 'broken_statue'],
     obstacleRules: {
       rock: { onTerrain: ['rock'], chance: 0.75, variants: ['rubble', 'fallen_pillar', 'broken_wall'] },
-      tree: { onTerrain: ['grass', 'forest'], chance: 0.1, variants: ['overgrown_tree', 'vine_tree'] },
-      decorative: { onTerrain: ['stone', 'grass'], chance: 0.04, variants: ['broken_statue', 'moss_patch', 'vine_wall'] }
+      tree: { onTerrain: ['grass', 'forest'], chance: 0.1, variants: ['overgrown_tree', 'vine_tree'] }
     }
   }
 };

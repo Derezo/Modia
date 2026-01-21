@@ -119,7 +119,7 @@ function ensureDirectories(biomes) {
     }
   }
 
-  const obstacleCategories = ['trees', 'rocks', 'crystals', 'decorative'];
+  const obstacleCategories = ['trees', 'rocks', 'crystals'];
   for (const category of obstacleCategories) {
     const dir = path.join(OBSTACLES_DIR, category);
     if (!fs.existsSync(dir)) {
@@ -207,13 +207,6 @@ const OBSTACLE_CONFIG = {
     rock_large: { generator: (s, v) => generateRockLarge(s, v, 'granite'), size: 64 },
     stalagmite: { generator: generateStalagmite, size: 48 },
     mountain_boulder: { generator: generateMountainBoulder, size: 56 }
-  },
-  decorative: {
-    grass_tufts: { generator: generateGrassTufts, size: 24 },
-    wildflowers: { generator: generateWildflowers, size: 24 },
-    cave_crystals: { generator: generateCaveCrystalsDecorative, size: 32 },
-    fallen_log: { generator: generateFallenLog, size: 48 },
-    stone_ruins: { generator: generateStoneRuins, size: 56 }
   }
 };
 

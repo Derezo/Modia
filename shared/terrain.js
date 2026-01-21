@@ -196,14 +196,17 @@ export function getTerrainWeights(nodeType) {
  * @returns {string} Hex color string
  */
 export function getTerrainColor(terrain) {
+  // Updated colors with better distinction between stone and rock
+  // Rock is now brown-red instead of gray to clearly indicate impassable terrain
   const colors = {
-    grass: '#3d5c3d',
-    stone: '#5a5a5a',
-    forest: '#2d4a2d',
-    water: '#3d5c7a',
-    rock: '#4a4a4a',
-    lava: '#7a3d3d',
-    cliff: '#3a3a3a'
+    grass: '#6b8e23',   // Olive green
+    stone: '#8b8682',   // Warm gray (walkable)
+    forest: '#228b22',  // Forest green
+    water: '#4682b4',   // Steel blue
+    rock: '#8b4513',    // Brown-red (IMPASSABLE - distinct from stone)
+    lava: '#ff4500',    // Orange-red
+    cliff: '#2f2f2f',   // Dark charcoal
+    tree: '#228b22'     // Forest green (same as forest)
   };
-  return colors[terrain] || '#3d5c3d';
+  return colors[terrain] || '#6b8e23';
 }
