@@ -4,7 +4,7 @@
  * Uses shared modules for terrain generation to ensure server/client consistency.
  */
 import { generateTerrain } from '@shared/mapGeneration.js';
-import { isImpassable, getTerrainMovementCost, getTerrainColor } from '@shared/terrain.js';
+import { isImpassable, getTerrainMovementCost, getTerrainColor, discretizeElevation, getElevationName } from '@shared/terrain.js';
 
 export class BattleGrid {
   constructor(canvas, width = 32, height = 32) {
@@ -92,28 +92,26 @@ export class BattleGrid {
   }
 
   /**
-   * Get elevation at position
+   * Get elevation at position (discrete level)
+   * Uses shared discretizeElevation for consistency with pathfinding
    * @param {number} x - Grid X coordinate
    * @param {number} y - Grid Y coordinate
    * @returns {number} Elevation level (0 = ground, 1-3 = elevated, -1 = pit)
    */
   getElevation(x, y) {
     if (!this.isInBounds(x, y)) return 0;
-
-    // Elevation from grid may be 0-1 normalized, convert to discrete levels
     const rawElev = this.elevation[y]?.[x] ?? 0;
+    return discretizeElevation(rawElev);
+  }
 
-    // If normalized (0-1), convert to discrete levels (-1 to 3)
-    if (rawElev >= 0 && rawElev <= 1) {
-      if (rawElev < 0.25) return -1;  // Pit
-      if (rawElev < 0.45) return 0;   // Ground
-      if (rawElev < 0.6) return 1;    // Raised
-      if (rawElev < 0.75) return 2;   // High
-      return 3;                        // Peak
-    }
-
-    // Already discrete, return as-is
-    return Math.round(rawElev);
+  /**
+   * Get elevation name for UI display
+   * @param {number} x - Grid X coordinate
+   * @param {number} y - Grid Y coordinate
+   * @returns {string} Human-readable elevation name
+   */
+  getElevationName(x, y) {
+    return getElevationName(this.getElevation(x, y));
   }
 
   /**
