@@ -10,8 +10,11 @@ This document archives all completed features, resolved issues, and historical d
 
 | Version | Date | Major Accomplishments |
 |---------|------|----------------------|
+| 9.8 | Jan 2026 | Battle Map Visual Overhaul - 64 isometric terrain sprites, elevation rendering, movement sync fix (flat modifiers), removed decorative obstacles and cover system |
+| 9.7 | Jan 2026 | Elevation-Aware Tilemap Rendering - Visual elevation in battle maps, coordinate transformation, 3D pathfinding sync, archetype elevation profiles |
+| 9.6 | Jan 2026 | World & Progression Polish - Zodiac shrine system complete, relic collection modal, zodiac indicator HUD, quest markers system |
 | 9.5 | Jan 2026 | Legacy Map Generation Removal - Removed all backward-compatibility code, archetype system is now the only code path |
-| 9.4 | Jan 2026 | Battle Map Generation Overhaul - 8-phase modular system with archetypes, PRNG streams, constraint validation, tactical cover |
+| 9.4 | Jan 2026 | Battle Map Generation Overhaul - 8-phase modular system with archetypes, PRNG streams, constraint validation (tactical cover later removed) |
 | 9.3 | Jan 2026 | Codebase Cleanup - Database fixes, constant deduplication, dead code removal, documentation updates |
 | 9.2 | Jan 2026 | Daily/Weekly Quest System - Auto-assignment, progress hooks, streaks, bonuses, QuestBoardScene |
 | 9.1 | Jan 2026 | Documentation Consolidation - Roadmap updates, quest documentation restructure, TODO audit |
@@ -47,6 +50,111 @@ This document archives all completed features, resolved issues, and historical d
 
 ---
 
+## 9.7 - Elevation-Aware Tilemap Rendering (Jan 2026)
+
+Complete implementation of elevation-aware rendering for battle maps, enabling visual distinction of terrain height with proper coordinate transformation, click detection, and pathfinding synchronization.
+
+### Core Rendering System
+
+| Feature | File | Description |
+|---------|------|-------------|
+| Coordinate Transformation | `BattleGrid.js:gridToScreenWorld()` | Y offset by elevation × 8px per level |
+| Depth Sorting | `BattleGrid.js:buildRenderOrder()` | Painter's algorithm with elevation consideration |
+| Click Detection | `BattleGrid.js:screenToGrid()` | Diamond intersection test for elevated tiles |
+| Tile Rendering | `BattleGrid.js:renderTileAt()` | Elevation sprite selection with wall face rendering |
+| Cleanup | `BattleGrid.js:destroy()` | Intent highlight timer cleanup (memory leak fix) |
+
+### Pathfinding Synchronization
+
+- **Frontend**: `BattlePathfinding.js` now uses `getReachableTiles3D()` when elevation data available
+- **Backend**: `movementService.js` validates movement using 3D pathfinding
+- **Battle State**: Elevation data transmitted in battle API responses
+- **Validation**: Server-side dimension validation for elevation arrays
+
+### Generation Pipeline
+
+| Feature | File | Description |
+|---------|------|-------------|
+| Elevation Profiles | `archetypeDefinitions.js` | 6 archetypes with elevation profiles (openField, caveRooms, mountainPass, bridgeCrossing, arena, volcano) |
+| Generation Types | `AlgorithmPipeline.js:generateElevation()` | 4 types: rolling, depression, canyon, multiLevel |
+| Deterministic Noise | `AlgorithmPipeline.js:_hashNoise()` | Fixed to use seed offset for determinism |
+| Early Generation | `AlgorithmPipeline.js:runArchetype()` | Elevation generated before terrain when profile exists |
+
+### Elevation Constraints
+
+Added to `constraints.js`:
+- `minElevationVariation` - Minimum elevation standard deviation
+- `maxElevationVariation` - Maximum elevation standard deviation
+- `minRampsPerLevelPair` - Accessibility requirement
+- `maxPeakRatio` - Peak tile limit (default 10%)
+- `maxPitRatio` - Pit tile limit (default 15%)
+- `requireElevationAccessibility` - No stranded elevated areas
+- `requireSpawnElevationAccess` - Spawns on traversable elevation
+
+### Archetype Elevation Profiles
+
+| Archetype | Type | Description |
+|-----------|------|-------------|
+| openField | rolling | Gentle hills (0-1 levels) |
+| caveRooms | depression | Center lower, stalactite pits |
+| mountainPass | canyon | High walls, canyon floor |
+| bridgeCrossing | multiLevel | Raised bridge, pit hazards |
+| arena | depression | Central depression, elevated edges |
+| volcano | multiLevel | Raised platforms, lava pits |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `frontend/src/battle/BattleGrid.js` | Coordinate system, rendering, click detection, cleanup |
+| `frontend/src/battle/BattlePathfinding.js` | 3D pathfinding integration |
+| `api/src/routes/battle.js` | Elevation data generation and validation |
+| `api/src/services/battle/movementService.js` | 3D pathfinding for movement validation |
+| `shared/mapgen/AlgorithmPipeline.js` | Elevation generation, deterministic noise |
+| `shared/mapgen/archetypes/archetypeDefinitions.js` | Elevation profiles for 6 archetypes |
+| `shared/mapgen/archetypes/constraints.js` | Elevation constraint definitions |
+| `shared/mapgen/archetypes/index.js` | Export cleanup |
+
+### Code Quality Fixes
+
+- **Memory Leak**: Added `destroy()` method to BattleGrid.js for intent highlight timer cleanup
+- **Determinism**: Fixed `_hashNoise()` to incorporate seed offset from random function
+- **Validation**: Added dimension checks for elevation data in battle route
+
+---
+
+## 9.6 - World & Progression Polish (Jan 2026)
+
+Completed the Zodiac Shrine Blessings system with full UI integration and enhanced the world map with quest markers and node tooltips.
+
+### Zodiac Crystal Collection System
+
+| Feature | File | Description |
+|---------|------|-------------|
+| RelicCollectionModal | `frontend/src/modals/RelicCollectionModal.js` | Modal displaying zodiac crystals and adventure relics with element-based coloring |
+| ZodiacIndicator | `frontend/src/worldmap/ZodiacIndicator.js` | HUD element showing collection progress (X/12), click to open modal |
+| NodeHoverTooltip | `frontend/src/worldmap/NodeHoverTooltip.js` | Enhanced with zodiac sign, element, blessing name, and crystal status |
+
+### Zodiac Features
+
+- 12 zodiac crystals with element-based coloring (fire/earth/air/water)
+- Collection progress indicator in world map HUD
+- Glow animation when new crystal collected
+- Shrine tooltips show crystal availability status
+- Relic modal shows all relics and zodiac collection
+
+### API Endpoints (existing)
+
+- `GET /api/world/zodiac-collection` - Returns collection progress and crystal status
+- `GET /api/relics/owned` - Returns owned adventure relics
+
+### Quest Markers System (existing, documented)
+
+- `QuestMarkerManager.js` - Manages quest marker data for world map nodes
+- `QuestProgressHUD.js` - Collapsible panel showing active quest progress
+
+---
+
 ## 9.5 - Legacy Map Generation Removal (Jan 2026)
 
 Removed all backward-compatibility code from the map generation system since there has never been a release. The archetype-based system is now the only code path.
@@ -58,12 +166,10 @@ Removed all backward-compatibility code from the map generation system since the
 - `generateObstacleForTerrainLegacy()` - Old obstacle placement
 - `generateObstacleForTile()` - Per-tile obstacle selection
 - `generateObstacles()` - Old obstacle batch placement
-- `getRandomDecorativeObstacle()` - Random decoration selection
 
 ### Removed Constants
 
 - `OBSTACLE_MAP` - Terrain-to-obstacle mapping
-- `DECORATIVE_OBSTACLES` - Decorative obstacle list
 
 ### Removed Flags
 
@@ -98,7 +204,7 @@ Complete overhaul of the procedural map generation system for battle maps, imple
 | 2 | `LayerContext.js` | Algorithm cooperation via shared state (noiseMap, seedRegions) |
 | 3 | `graph/` | Topology-driven generation with POIs, MST + extra edges |
 | 4 | `ConstraintValidator.js` | Constraint validation and automatic repair |
-| 5 | `CoverGridSystem.js` | Tactical cover with 6 strategies and lane-based layout |
+| 5 | ~~`CoverGridSystem.js`~~ | ~~Tactical cover (REMOVED - deemed unnecessary)~~ |
 | 6 | `ElevationMapper.js` | First-class elevation integration |
 | 7 | `StyleProfiles.js` | Style presets with parameter validation |
 
@@ -109,7 +215,6 @@ shared/mapgen/
 ├── PRNGStreams.js           # Phase 8: Modular PRNG streams
 ├── LayerContext.js          # Phase 2: Algorithm cooperation
 ├── ConstraintValidator.js   # Phase 4: Validation & repair
-├── CoverGridSystem.js       # Phase 5: Tactical cover
 ├── ParameterSchema.js       # Phase 7: Parameter definitions
 ├── StyleProfiles.js         # Phase 7: Style presets
 ├── archetypes/
@@ -128,7 +233,6 @@ shared/mapgen/
 
 - `PRNGStreams.test.js` - Stream isolation, determinism, forking
 - `constraintValidator.test.js` - Validation, repair, violation detection
-- `coverGridSystem.test.js` - Cover strategies, lane generation, symmetry
 - `archetypes.test.js` - Archetype structure, selection, constraints
 
 ### Integration
@@ -142,7 +246,6 @@ shared/mapgen/
 - **Determinism:** Same seed always produces identical maps across all subsystems
 - **Archetypes:** 14 curated map types (openField, forestClearing, caveRooms, tunnelNetwork, etc.)
 - **Constraints:** Automatic validation and repair for walkable ratio, connectivity, dead ends
-- **Tactical Cover:** Lane-based cover with strategies (symmetric, staggered, defensive, etc.)
 - **Style Profiles:** 6 profiles (clean, cluttered, natural, structured, organic, maze)
 
 ---
