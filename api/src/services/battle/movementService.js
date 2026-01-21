@@ -6,7 +6,9 @@ import { CLASS_MOVEMENT } from '../../config/constants.js';
 import * as traitService from '../traitService.js';
 import {
   getReachableTiles as sharedGetReachableTiles,
+  getReachableTiles3D as sharedGetReachableTiles3D,
   calculatePathCost as sharedCalculatePathCost,
+  calculatePathCost3D as sharedCalculatePathCost3D,
   getManhattanDistance
 } from '../../../../shared/pathfinding.js';
 import { canUnitMove } from './statusEffectManager.js';
@@ -59,10 +61,11 @@ export function getAttackRange(unit) {
 /**
  * Get all tiles reachable within a unit's movement range
  * Wrapper around shared pathfinding module for server-side use
+ * Uses 3D pathfinding when elevation data is available
  *
  * @param {Object} unit - The unit to calculate movement for
  * @param {Object} state - Battle state with terrain and units
- * @returns {Array<{x, y, cost}>} Array of reachable tile positions with movement costs
+ * @returns {Array<{x, y, cost, z?}>} Array of reachable tile positions with movement costs
  */
 export function getReachableTiles(unit, state) {
   // Check if unit can move (status effects)
@@ -74,7 +77,23 @@ export function getReachableTiles(unit, state) {
   const mapWidth = state.mapWidth || 32;
   const mapHeight = state.mapHeight || 32;
 
-  // Use shared pathfinding module
+  // Use 3D pathfinding when elevation data is available
+  if (state.elevation) {
+    return sharedGetReachableTiles3D(
+      unit.tileX,
+      unit.tileY,
+      null, // startZ will be looked up from elevation grid
+      maxCost,
+      state.terrain,
+      state.elevation,
+      state.elevationConnections || null,
+      state.units,
+      mapWidth,
+      mapHeight
+    );
+  }
+
+  // Fall back to 2D pathfinding
   return sharedGetReachableTiles(
     unit.tileX,
     unit.tileY,
@@ -203,6 +222,7 @@ export function getOppositeType(type) {
 /**
  * Calculate minimum movement cost to reach target tile
  * Wrapper around shared pathfinding module for server-side use
+ * Uses 3D pathfinding when elevation data is available
  *
  * @param {number} startX - Starting X position
  * @param {number} startY - Starting Y position
@@ -221,7 +241,24 @@ export function calculatePathCost(startX, startY, targetX, targetY, state, maxCo
   const mapWidth = state.mapWidth || 32;
   const mapHeight = state.mapHeight || 32;
 
-  // Use shared pathfinding module
+  // Use 3D pathfinding when elevation data is available
+  if (state.elevation) {
+    return sharedCalculatePathCost3D(
+      startX,
+      startY,
+      targetX,
+      targetY,
+      state.terrain,
+      state.elevation,
+      state.elevationConnections || null,
+      state.units,
+      maxCost,
+      mapWidth,
+      mapHeight
+    );
+  }
+
+  // Fall back to 2D pathfinding
   return sharedCalculatePathCost(
     startX,
     startY,

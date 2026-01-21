@@ -55,7 +55,32 @@ export const DEFAULT_CONSTRAINTS = {
   minCoverPositions: 4,
 
   /** Maximum cover positions (prevents cluttered maps) */
-  maxCoverPositions: 20
+  maxCoverPositions: 20,
+
+  // ==========================================================================
+  // ELEVATION CONSTRAINTS
+  // ==========================================================================
+
+  /** Minimum elevation variation (standard deviation) - 0 = flat allowed */
+  minElevationVariation: 0,
+
+  /** Maximum elevation variation (standard deviation) */
+  maxElevationVariation: 1.5,
+
+  /** Minimum number of ramps per elevation level pair (for accessibility) */
+  minRampsPerLevelPair: 2,
+
+  /** Maximum ratio of peak tiles (elevation 3) */
+  maxPeakRatio: 0.10,
+
+  /** Maximum ratio of pit tiles (elevation -1) */
+  maxPitRatio: 0.15,
+
+  /** Require elevation to be accessible from spawns (no stranded elevated areas) */
+  requireElevationAccessibility: true,
+
+  /** Require spawns to be on traversable elevation (not on unreachable ledges) */
+  requireSpawnElevationAccess: true
 };
 
 // ============================================================================
@@ -133,7 +158,11 @@ export const CONSTRAINT_PRESETS = {
     maxPathLengthRatio: 2.5,
     minPassableWidth: 2,
     minCoverPositions: 4,
-    maxCoverPositions: 16
+    maxCoverPositions: 16,
+    // Elevation: caves can have pits and moderate variation
+    minElevationVariation: 0.1,
+    maxPitRatio: 0.20,
+    minRampsPerLevelPair: 2
   },
 
   /**
@@ -147,7 +176,30 @@ export const CONSTRAINT_PRESETS = {
     maxPathLengthRatio: 2.0,
     minPassableWidth: 3,
     minCoverPositions: 2,
-    maxCoverPositions: 6
+    maxCoverPositions: 6,
+    // Elevation: bridges require elevation for the hazard/bridge distinction
+    minElevationVariation: 0.3,
+    requireSpawnElevationAccess: true,
+    minRampsPerLevelPair: 4
+  },
+
+  /**
+   * Mountain - Elevated terrain with high ground advantage
+   */
+  mountain: {
+    minWalkableRatio: 0.40,
+    maxWalkableRatio: 0.65,
+    maxDeadEnds: 4,
+    minApproachPaths: 2,
+    maxPathLengthRatio: 3.0,
+    minPassableWidth: 2,
+    minCoverPositions: 5,
+    maxCoverPositions: 15,
+    // Elevation: mountains should have significant elevation
+    minElevationVariation: 0.5,
+    maxElevationVariation: 2.0,
+    maxPeakRatio: 0.15,
+    minRampsPerLevelPair: 3
   },
 
   /**
@@ -239,6 +291,25 @@ export function validateConstraintConfig(constraints) {
   // Check passable width
   if (constraints.minPassableWidth < 1) {
     errors.push('minPassableWidth must be at least 1');
+  }
+
+  // Check elevation constraints
+  if (constraints.minElevationVariation !== undefined &&
+      constraints.maxElevationVariation !== undefined &&
+      constraints.minElevationVariation > constraints.maxElevationVariation) {
+    errors.push('minElevationVariation must be less than or equal to maxElevationVariation');
+  }
+
+  if (constraints.maxPeakRatio !== undefined && constraints.maxPeakRatio > 0.5) {
+    errors.push('maxPeakRatio too high - peaks should be rare');
+  }
+
+  if (constraints.maxPitRatio !== undefined && constraints.maxPitRatio > 0.5) {
+    errors.push('maxPitRatio too high - pits should be limited');
+  }
+
+  if (constraints.minRampsPerLevelPair !== undefined && constraints.minRampsPerLevelPair < 1) {
+    errors.push('minRampsPerLevelPair must be at least 1 for accessibility');
   }
 
   return {

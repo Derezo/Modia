@@ -375,6 +375,143 @@ export class AlgorithmPipeline {
   }
 
   /**
+   * Generate elevation grid based on elevation profile
+   * Called early in archetype pipeline so algorithms can use elevation data
+   *
+   * @param {number} width - Grid width
+   * @param {number} height - Grid height
+   * @param {Object} profile - Elevation profile from archetype
+   * @param {Function} random - Seeded random function
+   * @returns {number[][]} 2D elevation grid (-1 to 3 values)
+   */
+  generateElevation(width, height, profile, random) {
+    const elevation = [];
+    const {
+      type = 'flat',
+      maxElevation = 1,
+      minElevation = 0,
+      noiseScale = 0.1,
+      pitChance = 0,
+      rampPreference = 0.8
+    } = profile;
+
+    // Generate base noise for elevation
+    for (let y = 0; y < height; y++) {
+      const row = [];
+      for (let x = 0; x < width; x++) {
+        let elev = 0;
+
+        switch (type) {
+          case 'rolling':
+            // Gentle rolling hills using noise
+            elev = this._noiseAt(x, y, noiseScale, random);
+            elev = Math.round(elev * maxElevation);
+            elev = Math.max(minElevation, Math.min(maxElevation, elev));
+            break;
+
+          case 'depression':
+            // Center is lower (caves, pits)
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const distFromCenter = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
+            const maxDist = Math.sqrt(centerX ** 2 + centerY ** 2);
+            const normalizedDist = distFromCenter / maxDist;
+
+            // Closer to center = lower elevation
+            elev = Math.round(normalizedDist * maxElevation + (1 - normalizedDist) * minElevation);
+            // Add some noise variation
+            elev += Math.round((random() - 0.5) * 0.5);
+            elev = Math.max(minElevation, Math.min(maxElevation, elev));
+
+            // Random pit chance near center
+            if (pitChance > 0 && normalizedDist < 0.4 && random() < pitChance) {
+              elev = -1;
+            }
+            break;
+
+          case 'canyon':
+            // High walls, low center path
+            const canyonCenterY = height / 2;
+            const distFromCanyonCenter = Math.abs(y - canyonCenterY);
+            const pathWidth = height * 0.2;
+
+            if (distFromCanyonCenter < pathWidth) {
+              // In the path - ground level
+              elev = 0;
+            } else {
+              // On the walls - elevated
+              const wallProgress = (distFromCanyonCenter - pathWidth) / (height / 2 - pathWidth);
+              elev = Math.round(wallProgress * maxElevation);
+            }
+            // Add some noise variation
+            elev += Math.round((random() - 0.5) * 0.3);
+            elev = Math.max(minElevation, Math.min(maxElevation, elev));
+            break;
+
+          case 'multiLevel':
+            // Default to ground level - terrain algorithms will set specific elevations
+            elev = 0;
+            break;
+
+          default:
+            // Flat terrain
+            elev = 0;
+        }
+
+        row.push(elev);
+      }
+      elevation.push(row);
+    }
+
+    return elevation;
+  }
+
+  /**
+   * Simple noise function for elevation generation
+   * Uses seeded random for deterministic results
+   * @private
+   */
+  _noiseAt(x, y, scale, random) {
+    // Simple value noise with interpolation
+    const scaledX = x * scale;
+    const scaledY = y * scale;
+
+    // Generate deterministic noise based on position
+    const ix = Math.floor(scaledX);
+    const iy = Math.floor(scaledY);
+    const fx = scaledX - ix;
+    const fy = scaledY - iy;
+
+    // Generate seed offset from random for determinism
+    // Consume one random value to establish the offset for this generation pass
+    const seedOffset = Math.floor(random() * 2147483647);
+
+    // Use hash-based noise with seed offset for deterministic grid values
+    const n00 = this._hashNoise(ix, iy, seedOffset);
+    const n10 = this._hashNoise(ix + 1, iy, seedOffset);
+    const n01 = this._hashNoise(ix, iy + 1, seedOffset);
+    const n11 = this._hashNoise(ix + 1, iy + 1, seedOffset);
+
+    // Bilinear interpolation
+    const nx0 = n00 * (1 - fx) + n10 * fx;
+    const nx1 = n01 * (1 - fx) + n11 * fx;
+    return nx0 * (1 - fy) + nx1 * fy;
+  }
+
+  /**
+   * Hash-based noise for deterministic values at grid points
+   * @param {number} x - Grid X coordinate
+   * @param {number} y - Grid Y coordinate
+   * @param {number} seedOffset - Seed offset for determinism
+   * @private
+   */
+  _hashNoise(x, y, seedOffset) {
+    // Simple hash combining x, y, and seed offset
+    const hash = ((x * 374761393 + y * 668265263 + seedOffset) ^ 0x85ebca6b) >>> 0;
+    return (hash % 1000) / 1000;
+  }
+
+  /**
    * Execute selected algorithms in sequence on terrain
    *
    * @param {string[][]} terrain - Terrain grid to modify (modified in place)
@@ -587,6 +724,14 @@ export class AlgorithmPipeline {
     const variantsRandom = streams ? streams.getStream('variants') : random;
     const variants = this.createInitialVariants(width, height, variantsRandom);
 
+    // Generate elevation early if archetype has elevation profile
+    // This allows algorithms to reference elevation data during generation
+    let elevation = null;
+    if (archetype.elevationProfile) {
+      const elevationRandom = streams ? streams.getStream('terrain') : random;
+      elevation = this.generateElevation(width, height, archetype.elevationProfile, elevationRandom);
+    }
+
     // Track context shared between algorithms
     const context = layerContext || {
       terrain,
@@ -596,6 +741,13 @@ export class AlgorithmPipeline {
       paths: [],
       pois: []
     };
+
+    // Set elevation in context if generated (allows algorithms to use it)
+    if (elevation && context.setElevation) {
+      context.setElevation(elevation);
+    } else if (elevation) {
+      context.elevation = elevation;
+    }
 
     // Execute archetype algorithms in defined order
     const algorithmsUsed = [];
@@ -723,13 +875,20 @@ export class AlgorithmPipeline {
         displayName: archetype.displayName,
         algorithmsUsed,
         constraints: archetype.constraints,
-        coverStrategy: archetype.coverStrategy,
         styleProfile: archetype.styleProfile,
+        elevationProfile: archetype.elevationProfile || null,
         width,
         height,
         baseTerrain
       }
     };
+
+    // Include elevation data if generated
+    if (elevation) {
+      result.elevation = elevation;
+    } else if (context.elevation) {
+      result.elevation = context.elevation;
+    }
 
     // Add seed to metadata if provided
     if (seed !== undefined) {

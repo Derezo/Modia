@@ -4,7 +4,6 @@
  * Each archetype defines a specific map style with:
  * - algorithms: Ordered list of algorithms to apply with their roles
  * - constraints: Validation rules the generated map must satisfy
- * - coverStrategy: How tactical cover should be placed
  * - styleProfile: High-level style parameters
  *
  * Algorithm roles:
@@ -63,8 +62,14 @@ export const ARCHETYPES = {
         }
       }
     ],
+    elevationProfile: {
+      type: 'rolling',        // Gentle rolling hills
+      maxElevation: 1,        // Only minor elevation changes
+      minElevation: 0,
+      noiseScale: 0.05,       // Low frequency for smooth hills
+      rampPreference: 0.9     // Mostly ramps (easy to traverse)
+    },
     constraints: getConstraints('open'),
-    coverStrategy: 'sparse',
     styleProfile: 'clean',
     baseTerrain: 'grass',
     description: 'Wide open battlefield with scattered obstacles'
@@ -116,7 +121,6 @@ export const ARCHETYPES = {
       }
     ],
     constraints: getConstraints('arena'),
-    coverStrategy: 'perimeter',
     styleProfile: 'natural',
     baseTerrain: 'grass',
     description: 'Central clearing surrounded by dense forest'
@@ -155,7 +159,6 @@ export const ARCHETYPES = {
       }
     ],
     constraints: getConstraints('open', { maxDeadEnds: 2 }),
-    coverStrategy: 'scattered',
     styleProfile: 'clean',
     baseTerrain: 'grass',
     description: 'Open rolling terrain with natural paths'
@@ -211,8 +214,15 @@ export const ARCHETYPES = {
         }
       }
     ],
+    elevationProfile: {
+      type: 'depression',     // Center is lower (cave floor)
+      maxElevation: 1,
+      minElevation: -1,       // Pits possible in center
+      noiseScale: 0.08,
+      pitChance: 0.15,        // Some pits in caves
+      ledgePreference: 0.4    // Some one-way drops
+    },
     constraints: getConstraints('cave', { maxDeadEnds: 4 }),
-    coverStrategy: 'staggered',
     styleProfile: 'organic',
     baseTerrain: 'stone',
     description: 'Organic cave chambers with natural tunnels'
@@ -264,7 +274,6 @@ export const ARCHETYPES = {
       }
     ],
     constraints: getConstraints('corridor'),
-    coverStrategy: 'chokepoint',
     styleProfile: 'organic',
     baseTerrain: 'rock',
     description: 'Narrow tunnels with occasional chambers'
@@ -313,7 +322,6 @@ export const ARCHETYPES = {
       }
     ],
     constraints: getConstraints('cave'),
-    coverStrategy: 'defensive',
     styleProfile: 'natural',
     baseTerrain: 'stone',
     description: 'Crystal-filled cavern with water features'
@@ -366,7 +374,6 @@ export const ARCHETYPES = {
       }
     ],
     constraints: getConstraints('rooms'),
-    coverStrategy: 'symmetric',
     styleProfile: 'structured',
     baseTerrain: 'rock',
     description: 'Classic dungeon with rectangular rooms'
@@ -418,7 +425,6 @@ export const ARCHETYPES = {
       }
     ],
     constraints: getConstraints('corridor', { maxDeadEnds: 4 }),
-    coverStrategy: 'staggered',
     styleProfile: 'structured',
     baseTerrain: 'rock',
     description: 'Gothic crypt with burial chambers'
@@ -460,8 +466,14 @@ export const ARCHETYPES = {
         }
       }
     ],
+    elevationProfile: {
+      type: 'depression',     // Sunken arena floor
+      maxElevation: 1,        // Spectator area slightly raised
+      minElevation: 0,
+      noiseScale: 0.03,
+      rampPreference: 1.0     // All ramps for easy movement
+    },
     constraints: getConstraints('arena', { minApproachPaths: 4 }),
-    coverStrategy: 'symmetric',
     styleProfile: 'clean',
     baseTerrain: 'stone',
     description: 'Open arena for gladiatorial combat'
@@ -518,8 +530,16 @@ export const ARCHETYPES = {
         }
       }
     ],
+    elevationProfile: {
+      type: 'multiLevel',       // Bridge elevated above water
+      maxElevation: 1,          // Bridge at RAISED level
+      minElevation: -1,         // Water at PIT level
+      bridgeElevation: 1,       // Bridge path forced to elevation 1
+      waterElevation: -1,       // Water forced to pit
+      landingElevation: 0,      // Landing pads at ground level
+      rampPreference: 1.0       // All ramps for bridge access
+    },
     constraints: getConstraints('bridge'),
-    coverStrategy: 'defensive',
     styleProfile: 'structured',
     baseTerrain: 'water',
     description: 'Stone bridge over water hazard'
@@ -569,8 +589,16 @@ export const ARCHETYPES = {
         }
       }
     ],
+    elevationProfile: {
+      type: 'canyon',         // High walls, low center path
+      maxElevation: 2,        // Cliff walls at HIGH level
+      minElevation: 0,
+      noiseScale: 0.1,
+      wallElevation: 2,       // Cliff terrain forced to elevation 2
+      stairsPreference: 0.6,  // Mix of stairs and ledges for cliff access
+      cliffPreference: 0.3    // Some impassable cliff faces
+    },
     constraints: getConstraints('corridor', { minPassableWidth: 3 }),
-    coverStrategy: 'staggered',
     styleProfile: 'natural',
     baseTerrain: 'stone',
     description: 'Narrow mountain pass between cliff walls'
@@ -635,7 +663,6 @@ export const ARCHETYPES = {
       }
     ],
     constraints: getConstraints('rooms', { maxDeadEnds: 5 }),
-    coverStrategy: 'scattered',
     styleProfile: 'organic',
     baseTerrain: 'stone',
     description: 'Crumbling castle walls with nature reclaiming'
@@ -684,7 +711,6 @@ export const ARCHETYPES = {
       }
     ],
     constraints: getConstraints('balanced', { minWalkableRatio: 0.4 }),
-    coverStrategy: 'scattered',
     styleProfile: 'natural',
     baseTerrain: 'grass',
     description: 'Treacherous swamp with water hazards'
@@ -734,8 +760,15 @@ export const ARCHETYPES = {
         }
       }
     ],
+    elevationProfile: {
+      type: 'depression',       // Volcanic crater - center is lower
+      maxElevation: 2,          // Rim at HIGH level
+      minElevation: -1,         // Lava pit at PIT level
+      noiseScale: 0.06,
+      pitChance: 0.3,           // Lava often in pits
+      ledgePreference: 0.5      // Mix of ledges and ramps near lava
+    },
     constraints: getConstraints('balanced', { minWalkableRatio: 0.35 }),
-    coverStrategy: 'defensive',
     styleProfile: 'natural',
     baseTerrain: 'lava',
     description: 'Volcanic crater with lava hazards'
@@ -763,16 +796,6 @@ export function getArchetype(name) {
  */
 export function getArchetypeNames() {
   return Object.keys(ARCHETYPES);
-}
-
-/**
- * Get archetypes by cover strategy
- *
- * @param {string} strategy - Cover strategy name
- * @returns {Object[]} Array of matching archetypes
- */
-export function getArchetypesByCoverStrategy(strategy) {
-  return Object.values(ARCHETYPES).filter(arch => arch.coverStrategy === strategy);
 }
 
 /**

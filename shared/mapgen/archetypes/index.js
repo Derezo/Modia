@@ -10,7 +10,6 @@ export {
   ARCHETYPES,
   getArchetype,
   getArchetypeNames,
-  getArchetypesByCoverStrategy,
   getArchetypesByBaseTerrain,
   validateArchetypeDefinition
 } from './archetypeDefinitions.js';

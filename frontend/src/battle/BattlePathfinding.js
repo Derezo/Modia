@@ -3,10 +3,19 @@
  *
  * Uses shared pathfinding module for core algorithms to ensure server/client consistency.
  * This class provides a game-specific interface for the BattleScene.
+ *
+ * IMPORTANT: Movement calculations must match server-side logic exactly to prevent
+ * desync where client highlights tiles that server rejects. Key factors:
+ * - Status effect modifiers (slow, haste, root)
+ * - Terrain movement costs
+ * - Elevation traversal rules
+ * - Unit collision
  */
 import {
   getReachableTiles,
+  getReachableTiles3D,
   findPath,
+  findPath3D,
   getAttackableTiles,
   getManhattanDistance
 } from '@shared/pathfinding.js';
@@ -25,17 +34,91 @@ export class BattlePathfinding {
   }
 
   /**
-   * Get all tiles reachable within movement range
-   * Uses shared Dijkstra's algorithm with terrain costs
+   * Apply status effect modifiers to movement range
+   * MUST match server-side status effect handling to prevent desync
+   *
+   * @param {number} baseRange - Base movement range from unit stats
+   * @param {Object} unit - Unit object with statusEffects array
+   * @returns {number} Modified movement range
    */
-  getReachableTiles(startX, startY, movementRange) {
+  applyMovementModifiers(baseRange, unit) {
+    if (!unit || !unit.statusEffects) return baseRange;
+
+    let range = baseRange;
+    const effects = unit.statusEffects;
+
+    // Check for effects by type, name, or id (server uses e.type)
+    const hasEffect = (name) => effects.some(e =>
+      (typeof e === 'string' && e.toLowerCase() === name) ||
+      (e?.type?.toLowerCase() === name) ||
+      (e?.name?.toLowerCase() === name) ||
+      (e?.id?.toLowerCase() === name)
+    );
+
+    // Root prevents all movement (server uses canUnitMove which checks root/stun/freeze/sleep)
+    if (hasEffect('root') || hasEffect('rooted') || hasEffect('stun') || hasEffect('freeze') || hasEffect('sleep')) {
+      return 0;
+    }
+
+    // Slow reduces movement by 1 (minimum 1) - matches server flat modifier
+    if (hasEffect('slow') || hasEffect('slowed')) {
+      range = Math.max(1, range - 1);
+    }
+
+    // Haste increases movement by 1 - matches server flat modifier
+    if (hasEffect('haste') || hasEffect('hastened')) {
+      range += 1;
+    }
+
+    return Math.max(0, range);
+  }
+
+  /**
+   * Get all tiles reachable within movement range
+   * Applies status effect modifiers for consistent client/server behavior
+   * Uses 3D pathfinding when elevation data is available
+   *
+   * @param {number} startX - Starting grid X position
+   * @param {number} startY - Starting grid Y position
+   * @param {number} movementRange - Base movement range
+   * @param {Object} unit - Optional unit object for status effect modifiers
+   * @returns {Array} Array of { x, y, cost, z? } reachable tiles
+   */
+  getReachableTiles(startX, startY, movementRange, unit = null) {
+    // Apply status effect modifiers if unit provided
+    const effectiveRange = unit
+      ? this.applyMovementModifiers(movementRange, unit)
+      : movementRange;
+
+    // If rooted or range is 0, no tiles are reachable
+    if (effectiveRange <= 0) {
+      return [];
+    }
+
     // Convert Map to array format expected by shared module
     const unitsArray = this._getUnitsArray();
 
+    // Use 3D pathfinding when elevation data is available
+    if (this.grid.elevation && this.grid.elevation.length > 0) {
+      return getReachableTiles3D(
+        startX,
+        startY,
+        null, // startZ will be looked up from elevation grid
+        effectiveRange,
+        this.grid.terrain,
+        this.grid.elevation,
+        this.grid.elevationConnections || null,
+        unitsArray,
+        this.grid.width,
+        this.grid.height
+      );
+    }
+
+    // Fall back to 2D pathfinding
     return getReachableTiles(
       startX,
       startY,
-      movementRange,
+      effectiveRange,
       this.grid.terrain,
       unitsArray,
       this.grid.width,
@@ -144,12 +227,35 @@ export class BattlePathfinding {
 
   /**
    * Find path between two points using A*
-   * Uses shared pathfinding module
+   * Uses 3D pathfinding when elevation data is available
+   *
+   * @param {number} startX - Starting X position
+   * @param {number} startY - Starting Y position
+   * @param {number} endX - Destination X position
+   * @param {number} endY - Destination Y position
+   * @returns {Array|null} Array of { x, y, z? } waypoints, or null if no path
    */
   findPath(startX, startY, endX, endY) {
     // Convert Map to array format expected by shared module
     const unitsArray = this._getUnitsArray();
 
+    // Use 3D pathfinding when elevation data is available
+    if (this.grid.elevation && this.grid.elevation.length > 0) {
+      return findPath3D(
+        startX,
+        startY,
+        endX,
+        endY,
+        this.grid.terrain,
+        this.grid.elevation,
+        this.grid.elevationConnections || null,
+        unitsArray,
+        this.grid.width,
+        this.grid.height
+      );
+    }
+
+    // Fall back to 2D pathfinding
     return findPath(
       startX,
       startY,

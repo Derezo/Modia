@@ -15,7 +15,8 @@ import * as advancementQuestService from '../services/advancementQuestService.js
 import * as dailyQuestService from '../services/dailyQuestService.js';
 import * as bossService from '../services/bossService.js';
 import * as battleTurnManager from '../services/battleTurnManager.js';
-import { generateTerrainOnly } from '../../../shared/mapGeneration.js';
+import { generateTerrain } from '../../../shared/mapGeneration.js';
+import * as zodiacAbilityService from '../services/zodiacAbilityService.js';
 
 const router = express.Router();
 
@@ -393,11 +394,23 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   // Generate battle map seed
   const mapSeed = Math.floor(Math.random() * 1000000);
 
-  // Generate terrain using shared module (server-side mirror of frontend for validation)
-  const terrain = generateTerrainOnly(mapSeed, node.node_type, 32, 32);
+  // Generate terrain with elevation using shared module (server-side mirror of frontend)
+  const mapData = generateTerrain(mapSeed, node.node_type, 32, 32, { elevation: true });
+  const terrain = mapData.terrain;
+
+  // Validate elevation data before storing in battle state
+  let elevation = mapData.elevation;
+  if (elevation && (!Array.isArray(elevation) || elevation.length !== 32 ||
+      !elevation[0] || elevation[0].length !== 32)) {
+    console.warn('[Battle] Invalid elevation data dimensions, using flat map');
+    elevation = null;  // Fall back to 2D pathfinding
+  }
 
   // Load character traits for all party members
   const characterTraits = await traitService.loadCharacterTraits(characterIds);
+
+  // Load zodiac signature abilities for the user
+  const zodiacAbilities = await zodiacAbilityService.loadActiveZodiacAbilities(req.user.userId);
 
   // Create initial battle state
   const initialState = {
@@ -408,6 +421,7 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     mapWidth: 32,
     mapHeight: 32,
     terrain, // Store terrain for server-side movement validation
+    elevation, // Store elevation for 3D pathfinding and rendering
     units: party.map((char, idx) => {
       // Use formation position if provided, otherwise default layout
       const formationPos = formation?.[char.id];
@@ -440,7 +454,8 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
         {
           defaultX,
           defaultY,
-          traits: characterTraits[char.id] || []
+          traits: characterTraits[char.id] || [],
+          zodiacAbilities: zodiacAbilities // Pass zodiac abilities to all player units
         }
       );
     })
@@ -917,6 +932,132 @@ router.get('/rewards/:battleId', authenticate, rewardsLimiter, asyncHandler(asyn
   }
 
   res.json({ rewards: result.rows[0].rewards });
+}));
+
+// ============================================================================
+// ZODIAC SIGNATURE ABILITIES
+// ============================================================================
+
+/**
+ * POST /api/battle/:battleId/zodiac-ability
+ * Use a zodiac signature ability during battle
+ * Body: { characterId, abilityKey, targetUnitId? }
+ */
+router.post('/:battleId/zodiac-ability', authenticate, actionLimiter, asyncHandler(async (req, res) => {
+  const battleId = parseInt(req.params.battleId, 10);
+  const { characterId, abilityKey, targetUnitId } = req.body;
+
+  if (!characterId || !abilityKey) {
+    throw new AppError('characterId and abilityKey are required', 400);
+  }
+
+  // Get battle and verify player is a participant
+  const battleResult = await query(
+    `SELECT id, battle_state, player1_id, player2_id FROM battles
+     WHERE id = $1 AND (player1_id = $2 OR player2_id = $2) AND status = 'active'`,
+    [battleId, req.user.userId]
+  );
+
+  if (battleResult.rows.length === 0) {
+    throw new AppError('Battle not found or not active', 404);
+  }
+
+  const battle = battleResult.rows[0];
+  const state = battle.battle_state;
+
+  // Find the source unit
+  const sourceUnit = state.units.find(u =>
+    u.type === 'player' && u.id === characterId && u.ownerId === req.user.userId
+  );
+
+  if (!sourceUnit) {
+    throw new AppError('Character not found in battle or not controlled by you', 400);
+  }
+
+  if (sourceUnit.hp <= 0) {
+    throw new AppError('Character is defeated', 400);
+  }
+
+  // Find target unit if specified
+  let targetUnit = null;
+  if (targetUnitId) {
+    targetUnit = state.units.find(u => u.id === targetUnitId && u.hp > 0);
+    if (!targetUnit) {
+      throw new AppError('Target unit not found or defeated', 400);
+    }
+  }
+
+  // Apply the zodiac ability
+  const result = battleService.applyZodiacAbility(state, sourceUnit, abilityKey, targetUnit);
+
+  if (!result.success) {
+    throw new AppError(result.error || 'Failed to use zodiac ability', 400);
+  }
+
+  // Update battle state
+  await query(
+    'UPDATE battles SET battle_state = $1 WHERE id = $2',
+    [JSON.stringify(state), battleId]
+  );
+
+  // Broadcast the ability use via WebSocket
+  battleWebsocket.broadcastActionExecuted(battleId, sourceUnit.id, 'zodiac_ability', {
+    ...result,
+    unitId: sourceUnit.id,
+    unitName: sourceUnit.name,
+    targetId: targetUnit?.id,
+    targetName: targetUnit?.name
+  }, req.user.userId);
+
+  res.json({
+    success: true,
+    message: result.message,
+    effects: result.effects,
+    abilityUsed: true,
+    abilityKey,
+    abilityName: result.abilityName,
+    state
+  });
+}));
+
+/**
+ * GET /api/battle/:battleId/zodiac-abilities
+ * Get available zodiac abilities for a character in battle
+ */
+router.get('/:battleId/zodiac-abilities/:characterId', authenticate, readLimiter, asyncHandler(async (req, res) => {
+  const battleId = parseInt(req.params.battleId, 10);
+  const characterId = parseInt(req.params.characterId, 10);
+
+  // Get battle and verify player is a participant
+  const battleResult = await query(
+    `SELECT id, battle_state FROM battles
+     WHERE id = $1 AND (player1_id = $2 OR player2_id = $2) AND status = 'active'`,
+    [battleId, req.user.userId]
+  );
+
+  if (battleResult.rows.length === 0) {
+    throw new AppError('Battle not found or not active', 404);
+  }
+
+  const state = battleResult.rows[0].battle_state;
+
+  // Find the unit
+  const unit = state.units.find(u =>
+    u.type === 'player' && u.id === characterId && u.ownerId === req.user.userId
+  );
+
+  if (!unit) {
+    throw new AppError('Character not found in battle or not controlled by you', 400);
+  }
+
+  // Get available (unused) zodiac abilities
+  const availableAbilities = battleService.getAvailableZodiacAbilities(unit);
+
+  res.json({
+    characterId,
+    availableAbilities,
+    usedAbilities: unit.usedZodiacAbilities || []
+  });
 }));
 
 // ============================================================================
