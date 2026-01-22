@@ -464,7 +464,7 @@ Tracks unspent and spent XP for the XP-spending leveling system.
 | updated_at | TIMESTAMP | DEFAULT NOW() | Last update time |
 
 **Notes:**
-- Character level is derived from `total_xp_spent` using formula: `XP Required for Level N = 100 × N^2.2`
+- Character level is derived from `total_xp_spent` using formula: `XP Required for Level N = 100 × N^2.8`
 - `xp_pool = total_xp_earned - total_xp_spent`
 
 #### 3.2.7 character_guilds
@@ -952,6 +952,8 @@ The world uses a 6-phase 5-region generation system. Each region has a unique ra
 
 **Coordinate System:** 1 unit = 30 pixels. World bounds: [-50, 50] in both X and Y axes.
 
+> **Full Documentation:** See `docs/WORLDGEN_TECHNICAL_DEEP_DIVE.md` for complete algorithm details, configuration reference, and debugging guide.
+
 ```
 Input: seed (integer)
 
@@ -960,20 +962,22 @@ Phase 1: Castle Placement
   - Place 5 castles using force-directed simulation + Lloyd's relaxation
   - Minimum distance between castles: 25 units
   - Each castle assigned a race (orc, elf, human, dwarf, vampire)
+  - Note: Lloyd's implementation pushes AWAY from centroid (unconventional)
 
 Phase 2: Voronoi Partitioning
-  - Generate Voronoi diagram from castle positions
+  - Generate Voronoi diagram from castle positions (d3-delaunay library)
   - Each region bounded by Voronoi edges
   - Identify border segments between adjacent regions
   - Find Grand Palace position (farthest Voronoi vertex from all castles)
+  - Note: Voronoi uses 0-indexed regions; other phases use 1-indexed
 
 Phase 3: Internal Node Generation (per region)
   - ~60-80 nodes per region using Poisson disk sampling
-  - Ring assignment via graph-based BFS from castle (not Euclidean distance)
-    - Ring 0: Castle only
-    - Ring 1: Cities, primary guild (1-2 hops)
-    - Ring 2: Villages, farms, secondary guilds, keep (3-5 hops)
-    - Ring 3+: Battle nodes, activity nodes, terminators (6+ hops)
+  - Initial ring assignment via EUCLIDEAN distance from castle (approximation):
+    - Ring 0 (0-5 units): Castle guards only
+    - Ring 1 (5-12 units): Cities, villages, primary guild
+    - Ring 2 (12-20 units): Keep, secondary guilds, farms
+    - Ring 3 (20+ units): Battle nodes, activity nodes
   - Node type distribution:
     - Settlements: castle, 2-3 cities, 6-10 villages, 1 keep, 2-4 farms
     - Guilds: 3 per region (1 primary matching castle race, 2 secondary)
@@ -984,7 +988,11 @@ Phase 3: Internal Node Generation (per region)
 Phase 4: Internal Connections
   - Minimum Spanning Tree for base connectivity
   - 20% extra connections beyond MST (max distance: 12 units)
-  - Ring distance recalculated via BFS from castle
+  - Ring distance RECALCULATED via BFS from castle (authoritative):
+    - Ring 0: 0 hops (castle itself)
+    - Ring 1: 1-2 hops
+    - Ring 2: 3-5 hops
+    - Ring 3: 6+ hops
 
 Phase 5: Inter-Region Connections
   - Border classification by edge length:
@@ -1008,6 +1016,11 @@ Phase 6: Validation & Cleanup
 
 Output: nodes[], connections[], regions[], palace
 ```
+
+**Ring Distance Clarification:**
+- Phase 3 uses Euclidean distance for initial type assignment (approximation)
+- Phase 4 recalculates via BFS for authoritative ring values
+- A node may change rings between Phase 3 and Phase 4
 
 **Inter-Region Node Naming:**
 - Trade routes: "Merchant's Rest", "Trader's Crossing", "Wayfarer's Glen"
@@ -1397,3 +1410,4 @@ If database becomes bottleneck:
 | 1.0 | Jan 2026 | - | Initial document |
 | 2.0 | Jan 2026 | - | Added character_xp, character_guilds, character_skills, enemy_templates tables; removed experience column; updated max level to 100; removed 'fled' status |
 | 2.1 | Jan 2026 | - | Added battle WebSocket events (turn_start, intent_highlight, action_result, turn_end, your_turn, player_disconnected, player_reconnected, state_sync, end); added Section 2.5 Battle Turn Architecture; added battleTurnManager.js and battleReconnection.js to services directory |
+| 2.2 | Jan 2026 | - | Section 5.1 World Generation: Clarified two-phase ring distance calculation (Euclidean in Phase 3, BFS in Phase 4); documented Lloyd's relaxation inversion; noted Voronoi 0-indexed vs nodesByRegion 1-indexed; added reference to WORLDGEN_TECHNICAL_DEEP_DIVE.md |

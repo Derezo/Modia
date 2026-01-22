@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 30.0 |
+| Version | 31.0 |
 | Last Updated | January 2026 |
 
 ---
@@ -14,10 +14,12 @@
 
 The roadmap is split into two focused documents:
 
-| Document | Focus | Link |
-|----------|-------|------|
-| **ROADMAP_TECHNICAL.md** | Infrastructure, deployment, testing, performance, CI/CD | [View](./ROADMAP_TECHNICAL.md) |
-| **ROADMAP_GAMEPLAY.md** | Features, mechanics, UX, content, settings | [View](./ROADMAP_GAMEPLAY.md) |
+| Document | Focus | Version | Link |
+|----------|-------|---------|------|
+| **ROADMAP_TECHNICAL.md** | Infrastructure, deployment, testing, performance, CI/CD | v2.1 | [View](./ROADMAP_TECHNICAL.md) |
+| **ROADMAP_GAMEPLAY.md** | Features, mechanics, UX, content, settings | v7.0 | [View](./ROADMAP_GAMEPLAY.md) |
+
+> **Note:** Sub-roadmaps maintain independent version numbers reflecting their update frequency.
 
 > **Completed milestones** are archived in `docs/archive/COMPLETED_MILESTONES.md`
 
@@ -38,11 +40,13 @@ The roadmap is split into two focused documents:
 | Phase | Name | Completion | Status |
 |-------|------|------------|--------|
 | 1 | Foundation | 100% | Complete |
-| 2 | Characters & World | 95% | Near Complete |
-| 3 | Combat System | 95% | Near Complete |
-| 4 | Economy & Inventory | 90% | Near Complete |
-| 5 | Multiplayer | 80% | In Progress |
+| 2 | Characters & World | 98% | Near Complete |
+| 3 | Combat System | 98% | Near Complete |
+| 4 | Economy & Inventory | 95% | Near Complete |
+| 5 | Multiplayer | 80% | In Progress (PvP modes partial) |
 | 6 | Polish & Launch | 50% | In Progress |
+
+*Updated: 2026-01-22 - Adjusted completion % after documentation audit*
 
 ---
 
@@ -77,6 +81,7 @@ The roadmap is split into two focused documents:
 
 ### Documentation
 - [Technical Architecture](./TECHNICAL_ARCHITECTURE.md)
+- [Worldgen Technical Deep Dive](./WORLDGEN_TECHNICAL_DEEP_DIVE.md)
 - [API Specification](./API_SPECIFICATION.md)
 - [Game Design](./GAME_DESIGN.md)
 
@@ -117,6 +122,7 @@ The roadmap is split into two focused documents:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 31.0 | Jan 2026 | Documentation Audit v9.8: Comprehensive documentation review with ~78% alignment. Updated CHARACTER_PROGRESSION.md (v3.0): Level formula to 2.8 exponent, polynomial skill costs. Updated SKILL_TREES.md (v2.0): Removed tier XP multipliers, simplified prerequisites. Updated BATTLE_MODES.md (v1.1): Added implementation status section. Updated ROADMAP_TECHNICAL.md (v2.1): Verified file sizes, audited known issues. Updated ROADMAP_GAMEPLAY.md (v7.0): Marked deferred items, added TavernScene status. Phase completion percentages adjusted. |
 | 30.0 | Jan 2026 | Battle Map Visual Overhaul (v9.5): Isometric terrain sprite system with 64 generated sprites (7 terrain types × 4 variants + elevation variants). New generate-terrain-tiles.js using Sharp SVG-to-PNG. Updated BattleGrid.js with elevation-aware rendering, click detection, fallback wall faces. AssetLoader.js enhanced with getElevatedTile(), biome resolution. Fixed movement desync: status effects now use flat modifiers (+/-1) matching server, added e.type check, added all movement-preventing effects (stun/freeze/sleep/root). New movement-sync.integration.test.js (20 tests). Rock terrain now brown-red (#8b4513) for clear distinction from stone. |
 | 29.0 | Jan 2026 | Battle Map Cleanup: Removed CoverGridSystem (tactical cover deemed unnecessary). Removed decorative obstacles entirely from codebase. Simplified map generation by removing cover strategies from archetypes. Files deleted: CoverGridSystem.js, coverGridSystem.test.js, decorative obstacle sprites. Cleaner battle maps with only functional terrain. |
 | 28.0 | Jan 2026 | Legacy Map Generation Removal: Removed all backward-compatibility code from mapGeneration.js. Deleted generateTerrainLegacy(), generateWithPipeline(), and all legacy obstacle functions. Removed useArchetypes and useNewPipeline flags. Archetype-based system is now the only code path. Unknown node types fall back to 'openField' archetype. File reduced from 989 to 693 lines (~296 lines removed). All 265 tests pass. |

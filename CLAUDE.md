@@ -508,6 +508,7 @@ This project has specialized subagents in `.claude/agents/`. **Using subagents i
 | `postgres-pro` | Database optimization, queries |
 | `debugger` | Bug investigation, state sync issues |
 | `game-developer` | Game loop, procedural generation |
+| `worldgen-specialist` | World map generation, Voronoi, MST, graph connectivity |
 | `ui-ux-specialist` | Canvas UI design, responsive layouts |
 | `qa-expert` | Testing strategies, validation |
 | `code-reviewer` | Code quality review |
@@ -526,6 +527,7 @@ Detailed specifications in `docs/`. Key files:
 **Planning & Architecture:**
 - `DEVELOPMENT_ROADMAP.md` - Links to `ROADMAP_TECHNICAL.md` and `ROADMAP_GAMEPLAY.md`
 - `TECHNICAL_ARCHITECTURE.md` - System design, database schemas
+- `WORLDGEN_TECHNICAL_DEEP_DIVE.md` - 6-phase world generation algorithms, constants, gotchas
 - `API_SPECIFICATION.md` - REST and WebSocket endpoints
 - `FRONTEND_TECHNICAL_PATTERNS.md` - Critical gotchas and component patterns
 
