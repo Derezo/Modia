@@ -47,6 +47,9 @@ function parseArgs() {
     backup: false,
     local: true,     // Local ComfyUI is now the default
     huggingface: false,
+    verbose: false,
+    quiet: false,
+    delay: 2000,  // Default 2 second delay between requests
     help: false
   };
 
@@ -77,6 +80,17 @@ function parseArgs() {
         // Explicit local flag (already default, but kept for clarity)
         options.local = true;
         options.huggingface = false;
+        break;
+      case '--verbose':
+      case '-v':
+        options.verbose = true;
+        break;
+      case '--quiet':
+      case '-q':
+        options.quiet = true;
+        break;
+      case '--delay':
+        options.delay = parseInt(args[++i], 10);
         break;
       case '--help':
       case '-h':
@@ -111,6 +125,9 @@ Options:
   --backup            Create backup of existing files before regenerating
   --huggingface, --hf Use HuggingFace API instead of local ComfyUI
   --local             Use local ComfyUI (default, explicit flag optional)
+  --verbose, -v       Show detailed output including full prompt construction
+  --quiet, -q         Suppress all output except errors
+  --delay <ms>        Delay between requests in milliseconds (default: 2000)
   --help, -h          Show this help message
 
 Environment variables:
@@ -225,7 +242,8 @@ async function main() {
   // Display what will be generated
   for (const icon of iconsToGenerate) {
     const prompt = buildThemedPrompt('icons', icon.prompt, {
-      iconCategory: icon._iconCategory
+      iconCategory: icon._iconCategory,
+      skipTrigger: true  // Python script adds trigger word
     });
 
     console.log(`  - ${icon.id}`);
@@ -280,7 +298,12 @@ async function main() {
         key: icon.id,
         category: icon._iconCategory,
         seed: icon.seed
-      }, { verbose: true });
+      }, {
+        verbose: options.verbose,
+        quiet: options.quiet,
+        local: options.local,
+        huggingface: options.huggingface
+      });
 
       if (result.success) {
         results.success.push({ id: icon.id, icon });
@@ -298,8 +321,8 @@ async function main() {
       }
 
       // Rate limit delay
-      if (i < iconsToGenerate.length - 1) {
-        await delay(2000);
+      if (i < iconsToGenerate.length - 1 && options.delay > 0) {
+        await delay(options.delay);
       }
     } catch (error) {
       log(`Failed to generate ${icon.id}: ${error.message}`, 'error');
