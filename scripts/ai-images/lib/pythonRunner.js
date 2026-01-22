@@ -23,13 +23,15 @@ const { log, getProjectRoot, getImageGeneratorRoot } = require('./imageUtils');
  * @param {string[]} args - Command line arguments
  * @param {Object} options - Additional options
  * @param {boolean} options.dryRun - If true, skip actual execution
- * @param {boolean} options.verbose - If true, stream output to console
+ * @param {boolean} options.verbose - If true, stream output to console and pass --verbose to Python
+ * @param {boolean} options.quiet - If true, suppress all output except errors
  * @param {boolean} options.local - If true, use local ComfyUI (default: true)
  * @param {boolean} options.huggingface - If true, use HuggingFace API (overrides local)
+ * @param {number} options.delay - Delay in ms between requests (for rate limiting)
  * @returns {Promise<PythonResult>} Execution result
  */
 async function runPythonScript(scriptName, args = [], options = {}) {
-  const { dryRun = false, verbose = false, local = true, huggingface = false } = options;
+  const { dryRun = false, verbose = false, quiet = false, local = true, huggingface = false } = options;
 
   // HuggingFace flag overrides local
   const useLocal = huggingface ? false : local;
@@ -47,6 +49,11 @@ async function runPythonScript(scriptName, args = [], options = {}) {
 
   // Build full command for logging
   const fullArgs = ['--modia-root', modiaRoot, ...args];
+
+  // Pass --verbose flag to Python script for detailed prompt construction output
+  if (verbose) {
+    fullArgs.push('--verbose');
+  }
 
   // Determine if we should use conda environment for local ComfyUI generation
   const useCondaEnv = useLocal && !process.env.AI_IMAGE_PYTHON;
@@ -94,7 +101,8 @@ async function runPythonScript(scriptName, args = [], options = {}) {
     proc.stdout.on('data', (data) => {
       const text = data.toString();
       stdout += text;
-      if (verbose) {
+      // Stream output unless in quiet mode
+      if (!quiet) {
         text.split('\n').forEach(line => {
           if (line.trim()) console.log(`  ${line}`);
         });
@@ -104,7 +112,8 @@ async function runPythonScript(scriptName, args = [], options = {}) {
     proc.stderr.on('data', (data) => {
       const text = data.toString();
       stderr += text;
-      if (verbose) {
+      // Always show stderr (errors) unless it's verbose logging that should be suppressed
+      if (!quiet || text.includes('Error') || text.includes('error')) {
         text.split('\n').forEach(line => {
           if (line.trim()) console.error(`  [stderr] ${line}`);
         });
@@ -138,11 +147,13 @@ async function runPythonScript(scriptName, args = [], options = {}) {
  * @param {Object} options - Additional options
  * @param {boolean} options.local - Use local ComfyUI (default: true)
  * @param {boolean} options.huggingface - Use HuggingFace API instead
+ * @param {boolean} options.verbose - Enable verbose output
+ * @param {boolean} options.quiet - Suppress output
  * @returns {Promise<PythonResult>}
  */
 async function generateTile(tileConfig, options = {}) {
   const { prompt, key, biome = 'default', seed = 42, variants = 1 } = tileConfig;
-  const { local = true, huggingface = false } = options;
+  const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
   const args = [
     '--prompt', prompt,
@@ -163,31 +174,65 @@ async function generateTile(tileConfig, options = {}) {
     args.push('--local');
   }
 
-  return runPythonScript('generate_tile.py', args, options);
+  return runPythonScript('generate_tile.py', args, { ...options, verbose, quiet });
 }
 
 /**
  * Generate a portrait using the Python generator
  * @param {Object} portraitConfig - Portrait configuration
- * @param {string} portraitConfig.race - Character race
- * @param {string} portraitConfig.gender - Character gender
- * @param {string} portraitConfig.characterClass - Character class
+ * @param {string} portraitConfig.race - Character race (player only)
+ * @param {string} portraitConfig.gender - Character gender (player only)
+ * @param {string} portraitConfig.characterClass - Character class (player only)
+ * @param {boolean} portraitConfig.isAdvanced - Whether this is an advanced class (player only)
+ * @param {string} portraitConfig.prompt - Direct prompt for enemy/custom portraits
+ * @param {string} portraitConfig.key - Asset key for enemy/custom portraits
+ * @param {string} portraitConfig.outputDir - Override output directory (for enemy portraits)
+ * @param {boolean} portraitConfig.isEnemy - Whether this is an enemy portrait
  * @param {number} portraitConfig.seed - Random seed
  * @param {Object} options - Additional options
  * @param {boolean} options.local - Use local ComfyUI (default: true)
  * @param {boolean} options.huggingface - Use HuggingFace API instead
+ * @param {boolean} options.verbose - Enable verbose output
+ * @param {boolean} options.quiet - Suppress output
  * @returns {Promise<PythonResult>}
  */
 async function generatePortrait(portraitConfig, options = {}) {
-  const { race, gender, characterClass, seed = 42 } = portraitConfig;
-  const { local = true, huggingface = false } = options;
+  const { seed = 42, isEnemy = false, isAdvanced = false, outputDir } = portraitConfig;
+  const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
-  const args = [
-    '--race', race,
-    '--gender', gender,
-    '--class', characterClass,
-    '--seed', String(seed)
-  ];
+  let args;
+
+  if (isEnemy) {
+    // Enemy portrait - use prompt/key mode with custom output dir
+    const { prompt, key } = portraitConfig;
+    args = [
+      '--prompt', prompt,
+      '--key', key,
+      '--seed', String(seed)
+    ];
+    // Enemy portraits go to a different directory
+    if (outputDir) {
+      args.push('--output-dir', outputDir);
+    }
+  } else if (isAdvanced) {
+    // Advanced class portrait - use prompt/key mode
+    // (Python script only validates base classes: warrior, wizard, monk, chemist)
+    const { prompt, key } = portraitConfig;
+    args = [
+      '--prompt', prompt,
+      '--key', key,
+      '--seed', String(seed)
+    ];
+  } else {
+    // Base class player portrait - use race/gender/class mode
+    const { race, gender, characterClass } = portraitConfig;
+    args = [
+      '--race', race,
+      '--gender', gender,
+      '--class', characterClass,
+      '--seed', String(seed)
+    ];
+  }
 
   if (options.dryRun) {
     args.push('--dry-run');
@@ -200,7 +245,7 @@ async function generatePortrait(portraitConfig, options = {}) {
     args.push('--local');
   }
 
-  return runPythonScript('generate_portrait.py', args, options);
+  return runPythonScript('generate_portrait.py', args, { ...options, verbose, quiet });
 }
 
 /**
@@ -213,11 +258,13 @@ async function generatePortrait(portraitConfig, options = {}) {
  * @param {Object} options - Additional options
  * @param {boolean} options.local - Use local ComfyUI (default: true)
  * @param {boolean} options.huggingface - Use HuggingFace API instead
+ * @param {boolean} options.verbose - Enable verbose output
+ * @param {boolean} options.quiet - Suppress output
  * @returns {Promise<PythonResult>}
  */
 async function generateIcon(iconConfig, options = {}) {
   const { prompt, key, category = 'items', seed = 42 } = iconConfig;
-  const { local = true, huggingface = false } = options;
+  const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
   const args = [
     '--prompt', prompt,
@@ -237,7 +284,7 @@ async function generateIcon(iconConfig, options = {}) {
     args.push('--local');
   }
 
-  return runPythonScript('generate_icon.py', args, options);
+  return runPythonScript('generate_icon.py', args, { ...options, verbose, quiet });
 }
 
 /**
@@ -250,11 +297,13 @@ async function generateIcon(iconConfig, options = {}) {
  * @param {Object} options - Additional options
  * @param {boolean} options.local - Use local ComfyUI (default: true)
  * @param {boolean} options.huggingface - Use HuggingFace API instead
+ * @param {boolean} options.verbose - Enable verbose output
+ * @param {boolean} options.quiet - Suppress output
  * @returns {Promise<PythonResult>}
  */
 async function generateItem(itemConfig, options = {}) {
   const { prompt, key, category = 'weapons', seed = 42 } = itemConfig;
-  const { local = true, huggingface = false } = options;
+  const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
   const args = [
     '--prompt', prompt,
@@ -274,7 +323,7 @@ async function generateItem(itemConfig, options = {}) {
     args.push('--local');
   }
 
-  return runPythonScript('generate_item.py', args, options);
+  return runPythonScript('generate_item.py', args, { ...options, verbose, quiet });
 }
 
 /**
@@ -286,11 +335,13 @@ async function generateItem(itemConfig, options = {}) {
  * @param {Object} options - Additional options
  * @param {boolean} options.local - Use local ComfyUI (default: true)
  * @param {boolean} options.huggingface - Use HuggingFace API instead
+ * @param {boolean} options.verbose - Enable verbose output
+ * @param {boolean} options.quiet - Suppress output
  * @returns {Promise<PythonResult>}
  */
 async function generateNode(nodeConfig, options = {}) {
   const { prompt, key, seed = 42 } = nodeConfig;
-  const { local = true, huggingface = false } = options;
+  const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
   const args = [
     '--prompt', prompt,
@@ -309,7 +360,7 @@ async function generateNode(nodeConfig, options = {}) {
     args.push('--local');
   }
 
-  return runPythonScript('generate_node.py', args, options);
+  return runPythonScript('generate_node.py', args, { ...options, verbose, quiet });
 }
 
 /**
@@ -319,10 +370,12 @@ async function generateNode(nodeConfig, options = {}) {
  * @param {Object} options - Additional options
  * @param {boolean} options.local - Use local ComfyUI (default: true)
  * @param {boolean} options.huggingface - Use HuggingFace API instead
+ * @param {boolean} options.verbose - Enable verbose output
+ * @param {boolean} options.quiet - Suppress output
  * @returns {Promise<PythonResult>}
  */
 async function runBatchGeneration(scriptName, configPath, options = {}) {
-  const { local = true, huggingface = false } = options;
+  const { local = true, huggingface = false, verbose = false, quiet = false } = options;
   const args = ['--batch', configPath];
 
   if (options.dryRun) {
@@ -336,7 +389,7 @@ async function runBatchGeneration(scriptName, configPath, options = {}) {
     args.push('--local');
   }
 
-  return runPythonScript(scriptName, args, { ...options, verbose: true });
+  return runPythonScript(scriptName, args, { ...options, verbose, quiet });
 }
 
 module.exports = {

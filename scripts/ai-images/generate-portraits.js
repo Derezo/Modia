@@ -33,7 +33,10 @@ const {
 
 // Configuration
 const PROJECT_ROOT = getProjectRoot();
-const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/sprites/characters/portraits');
+const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/sprites/portraits');
+const ENEMY_OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/sprites/enemies/portraits');
+// For Python script's fallback_dir (it adds 'portraits/' automatically)
+const ENEMY_OUTPUT_BASE = path.join(PROJECT_ROOT, 'frontend/public/assets/sprites/enemies');
 
 /**
  * Parse command line arguments
@@ -43,13 +46,20 @@ function parseArgs() {
   const options = {
     dryRun: false,
     key: null,
+    type: 'all',       // player, enemy, or all
     race: null,
     gender: null,
     class: null,
+    advancedClass: null,
+    archetype: null,   // enemy archetype filter
+    region: null,      // enemy region filter
     force: false,
     backup: false,
-    local: true,     // Local ComfyUI is now the default
+    local: true,       // Local ComfyUI is now the default
     huggingface: false,
+    verbose: false,
+    quiet: false,
+    delay: 2000,  // Default 2 second delay between requests
     help: false
   };
 
@@ -62,6 +72,9 @@ function parseArgs() {
       case '--key':
         options.key = args[++i];
         break;
+      case '--type':
+        options.type = args[++i];
+        break;
       case '--race':
         options.race = args[++i];
         break;
@@ -70,6 +83,15 @@ function parseArgs() {
         break;
       case '--class':
         options.class = args[++i];
+        break;
+      case '--advanced-class':
+        options.advancedClass = args[++i];
+        break;
+      case '--archetype':
+        options.archetype = args[++i];
+        break;
+      case '--region':
+        options.region = args[++i];
         break;
       case '--force':
         options.force = true;
@@ -86,6 +108,17 @@ function parseArgs() {
         // Explicit local flag (already default, but kept for clarity)
         options.local = true;
         options.huggingface = false;
+        break;
+      case '--verbose':
+      case '-v':
+        options.verbose = true;
+        break;
+      case '--quiet':
+      case '-q':
+        options.quiet = true;
+        break;
+      case '--delay':
+        options.delay = parseInt(args[++i], 10);
         break;
       case '--help':
       case '-h':
@@ -113,16 +146,23 @@ Usage:
   node scripts/ai-images/generate-portraits.js [options]
 
 Options:
-  --dry-run           Show what would be generated without calling APIs
-  --key <id>          Generate specific portrait (e.g., human_male_warrior)
-  --race <race>       Filter by race (human, elf, dwarf, vampire, orc)
-  --gender <gender>   Filter by gender (male, female, other)
-  --class <class>     Filter by class (warrior, wizard, monk, chemist)
-  --force             Regenerate even if file exists
-  --backup            Backup existing portraits before regeneration
-  --huggingface, --hf Use HuggingFace API instead of local ComfyUI
-  --local             Use local ComfyUI (default, explicit flag optional)
-  --help, -h          Show this help message
+  --dry-run              Show what would be generated without calling APIs
+  --key <id>             Generate specific portrait (e.g., human_male_warrior, goblin_warrior)
+  --type <type>          Filter by portrait type: player, enemy, or all (default: all)
+  --race <race>          Filter player portraits by race (human, elf, dwarf, vampire, orc)
+  --gender <gender>      Filter player portraits by gender (male, female, other)
+  --class <class>        Filter player portraits by class (warrior, wizard, monk, chemist)
+  --advanced-class <cls> Filter to specific advanced class (berserker, paladin, etc.)
+  --archetype <type>     Filter enemy portraits by archetype (beast, humanoid, undead, elemental)
+  --region <name>        Filter enemy portraits by region (forest, cave, mountain, bridge, palace)
+  --force                Regenerate even if file exists
+  --backup               Backup existing portraits before regeneration
+  --huggingface, --hf    Use HuggingFace API instead of local ComfyUI
+  --local                Use local ComfyUI (default, explicit flag optional)
+  --verbose, -v          Show detailed output including full prompt construction
+  --quiet, -q            Suppress all output except errors
+  --delay <ms>           Delay between requests in milliseconds (default: 2000)
+  --help, -h             Show this help message
 
 Environment variables:
   IMAGE_GENERATOR_ROOT   Path to image-generator project (required)
@@ -130,8 +170,12 @@ Environment variables:
 
 Examples:
   node scripts/ai-images/generate-portraits.js --dry-run
-  node scripts/ai-images/generate-portraits.js --race elf --class mage
+  node scripts/ai-images/generate-portraits.js --dry-run --type enemy
+  node scripts/ai-images/generate-portraits.js --race elf --class wizard
+  node scripts/ai-images/generate-portraits.js --advanced-class berserker
+  node scripts/ai-images/generate-portraits.js --type enemy --archetype beast
   node scripts/ai-images/generate-portraits.js --key human_male_warrior --force
+  node scripts/ai-images/generate-portraits.js --key goblin_warrior --type enemy
   node scripts/ai-images/generate-portraits.js --huggingface --race human  # Use HF API
 `);
 }
@@ -140,7 +184,8 @@ Examples:
  * Get the output path for a portrait
  */
 function getOutputPath(portrait) {
-  return path.join(OUTPUT_DIR, `${portrait.id}.png`);
+  const dir = portrait._type === 'enemy' ? ENEMY_OUTPUT_DIR : OUTPUT_DIR;
+  return path.join(dir, `${portrait.id}.png`);
 }
 
 /**
@@ -206,9 +251,13 @@ async function main() {
   let metadata;
   try {
     metadata = loadPortraitMetadata({
+      type: options.type,
       race: options.race,
       gender: options.gender,
-      class: options.class
+      class: options.class,
+      advancedClass: options.advancedClass,
+      archetype: options.archetype,
+      region: options.region
     });
     log(`Loaded ${metadata.portraits.length} portraits (filtered)`, 'info');
   } catch (error) {
@@ -240,16 +289,36 @@ async function main() {
 
   // Display what will be generated
   for (const portrait of portraitsToGenerate) {
-    // Build a base prompt from portrait traits
-    const raceTraits = metadata.raceTraits[portrait.race] || portrait.race;
-    const genderTraits = metadata.genderTraits[portrait.gender] || portrait.gender;
-    const classTraits = metadata.classTraits[portrait.class] || portrait.class;
-    const basePrompt = `${raceTraits} ${genderTraits} ${classTraits}`;
+    let basePrompt;
 
-    const prompt = buildThemedPrompt('portraits', basePrompt, {});
+    if (portrait._type === 'enemy') {
+      // Build prompt for enemy portrait
+      const archetypeTraits = metadata.archetypeTraits[portrait.archetype] || portrait.archetype;
+      const regionTraits = metadata.regionTraits[portrait.region] || portrait.region;
+      const visualTraits = portrait.visualTraits || '';
+      basePrompt = `${archetypeTraits} ${regionTraits} ${visualTraits} monster creature enemy`;
+    } else {
+      // Build prompt for player portrait
+      const raceTraits = metadata.raceTraits[portrait.race] || portrait.race;
+      const genderTraits = metadata.genderTraits[portrait.gender] || portrait.gender;
+      // Use advancedClassTraits if available and is advanced class
+      let classTraits;
+      if (portrait.isAdvanced && metadata.advancedClassTraits[portrait.class]) {
+        classTraits = metadata.advancedClassTraits[portrait.class];
+      } else {
+        classTraits = metadata.classTraits[portrait.class] || portrait.class;
+      }
+      basePrompt = `${raceTraits} ${genderTraits} ${classTraits}`;
+    }
 
-    console.log(`  - ${portrait.id}`);
-    console.log(`    Race: ${portrait.race}, Gender: ${portrait.gender}, Class: ${portrait.class}`);
+    const prompt = buildThemedPrompt('portraits', basePrompt, { skipTrigger: true });
+
+    console.log(`  - ${portrait.id} [${portrait._type}]`);
+    if (portrait._type === 'enemy') {
+      console.log(`    Name: ${portrait.name}, Archetype: ${portrait.archetype}, Region: ${portrait.region}`);
+    } else {
+      console.log(`    Race: ${portrait.race}, Gender: ${portrait.gender}, Class: ${portrait.class}${portrait.isAdvanced ? ' (advanced)' : ''}`);
+    }
     console.log(`    Output: ${getOutputPath(portrait)}`);
     if (options.dryRun) {
       console.log(`    Prompt: ${prompt}`);
@@ -275,8 +344,11 @@ async function main() {
     }
   }
 
-  // Ensure output directory exists
-  ensureDirectoryExists(OUTPUT_DIR);
+  // Ensure output directories exist
+  const hasPlayerPortraits = portraitsToGenerate.some(p => p._type !== 'enemy');
+  const hasEnemyPortraits = portraitsToGenerate.some(p => p._type === 'enemy');
+  if (hasPlayerPortraits) ensureDirectoryExists(OUTPUT_DIR);
+  if (hasEnemyPortraits) ensureDirectoryExists(ENEMY_OUTPUT_DIR);
 
   // Generate portraits
   const results = {
@@ -293,18 +365,68 @@ async function main() {
     log(`[${i + 1}/${portraitsToGenerate.length}] Generating: ${portrait.id}`, 'info');
 
     try {
-      const result = await generatePortrait({
-        race: portrait.race,
-        gender: portrait.gender,
-        characterClass: portrait.class,
-        seed: portrait.seed
-      }, { verbose: true });
+      let result;
+
+      if (portrait._type === 'enemy') {
+        // Build prompt for enemy portrait
+        const archetypeTraits = metadata.archetypeTraits[portrait.archetype] || portrait.archetype;
+        const regionTraits = metadata.regionTraits[portrait.region] || portrait.region;
+        const visualTraits = portrait.visualTraits || '';
+        const enemyPrompt = `${visualTraits} ${archetypeTraits} ${regionTraits} monster creature`;
+
+        // Generate enemy portrait using prompt/key mode with custom output dir
+        // Note: Python script adds 'portraits/' to the fallback_dir, so we use ENEMY_OUTPUT_BASE
+        result = await generatePortrait({
+          prompt: enemyPrompt,
+          key: portrait.id,
+          seed: portrait.seed,
+          outputDir: ENEMY_OUTPUT_BASE,
+          isEnemy: true
+        }, {
+          verbose: options.verbose,
+          quiet: options.quiet,
+          local: options.local,
+          huggingface: options.huggingface
+        });
+      } else if (portrait.isAdvanced) {
+        // Generate advanced class portrait using prompt/key mode
+        // (Python script only validates base classes: warrior, wizard, monk, chemist)
+        const raceTraits = metadata.raceTraits[portrait.race] || portrait.race;
+        const genderTraits = metadata.genderTraits[portrait.gender] || portrait.gender;
+        const classTraits = metadata.advancedClassTraits[portrait.class] || portrait.class;
+        const advancedPrompt = `${raceTraits} ${genderTraits} ${classTraits}`;
+
+        result = await generatePortrait({
+          prompt: advancedPrompt,
+          key: portrait.id,
+          seed: portrait.seed,
+          isAdvanced: true
+        }, {
+          verbose: options.verbose,
+          quiet: options.quiet,
+          local: options.local,
+          huggingface: options.huggingface
+        });
+      } else {
+        // Generate base class player portrait using race/gender/class mode
+        result = await generatePortrait({
+          race: portrait.race,
+          gender: portrait.gender,
+          characterClass: portrait.class,
+          seed: portrait.seed
+        }, {
+          verbose: options.verbose,
+          quiet: options.quiet,
+          local: options.local,
+          huggingface: options.huggingface
+        });
+      }
 
       if (result.success) {
         results.success.push({ id: portrait.id, portrait });
 
         portrait._category = 'portraits';
-        portrait._sourceFile = 'combinations.json';
+        // _sourceFile is already set by loadPortraitMetadata
         markAssetGenerated(portrait);
 
         log(`Generated: ${portrait.id}`, 'success');
@@ -317,8 +439,8 @@ async function main() {
       }
 
       // Rate limit delay
-      if (i < portraitsToGenerate.length - 1) {
-        await delay(2000);
+      if (i < portraitsToGenerate.length - 1 && options.delay > 0) {
+        await delay(options.delay);
       }
     } catch (error) {
       log(`Failed to generate ${portrait.id}: ${error.message}`, 'error');

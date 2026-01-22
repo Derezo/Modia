@@ -21,13 +21,16 @@ const {
   loadTileMetadata,
   markAssetGenerated,
   generateTile,
+  runBatchGeneration,
   log,
   fileExists,
   delay,
   ensureDirectoryExists,
   getProjectRoot,
   buildTilePrompt,
-  createBackup
+  createBackup,
+  loadBatchConfig,
+  getBatchConfigSummary
 } = require('./lib');
 
 // Configuration
@@ -49,6 +52,10 @@ function parseArgs() {
     local: true,     // Local ComfyUI is now the default
     huggingface: false,
     backup: false,
+    verbose: false,
+    quiet: false,
+    delay: 2000,  // Default 2 second delay between requests
+    batch: null,  // YAML batch config path
     help: false
   };
 
@@ -82,6 +89,20 @@ function parseArgs() {
         break;
       case '--backup':
         options.backup = true;
+        break;
+      case '--verbose':
+      case '-v':
+        options.verbose = true;
+        break;
+      case '--quiet':
+      case '-q':
+        options.quiet = true;
+        break;
+      case '--delay':
+        options.delay = parseInt(args[++i], 10);
+        break;
+      case '--batch':
+        options.batch = args[++i];
         break;
       case '--help':
       case '-h':
@@ -117,6 +138,10 @@ Options:
   --backup            Backup existing files before regeneration
   --huggingface, --hf Use HuggingFace API instead of local ComfyUI
   --local             Use local ComfyUI (default, explicit flag optional)
+  --verbose, -v       Show detailed output including full prompt construction
+  --quiet, -q         Suppress all output except errors
+  --delay <ms>        Delay between requests in milliseconds (default: 2000)
+  --batch <config>    Use YAML batch config file (bypasses metadata filtering)
   --help, -h          Show this help message
 
 Environment variables:
@@ -239,6 +264,52 @@ function validateEnvVars(options) {
 }
 
 /**
+ * Run batch generation mode
+ * @param {Object} options - CLI options
+ */
+async function runBatchMode(options) {
+  log('Tile Generation Script (Batch Mode)', 'info');
+  log('===================================', 'info');
+
+  try {
+    const batchInfo = loadBatchConfig(options.batch);
+    log(`${getBatchConfigSummary(batchInfo)}`, 'info');
+    log(`Config file: ${batchInfo.path}`, 'info');
+    console.log('');
+
+    if (options.dryRun) {
+      log('Dry run mode - would pass config to Python generator', 'info');
+      log(`Config preview: ${JSON.stringify(batchInfo.config, null, 2)}`, 'debug');
+      process.exit(0);
+    }
+
+    log('Running batch generation via Python...', 'info');
+    console.log('');
+
+    const result = await runBatchGeneration('generate_tile.py', batchInfo.path, {
+      dryRun: options.dryRun,
+      verbose: options.verbose,
+      quiet: options.quiet,
+      local: options.local,
+      huggingface: options.huggingface
+    });
+
+    if (result.success) {
+      log('Batch generation completed successfully', 'success');
+    } else {
+      log('Batch generation failed', 'error');
+      if (result.stderr) {
+        console.error(result.stderr);
+      }
+      process.exit(1);
+    }
+  } catch (error) {
+    log(`Batch generation error: ${error.message}`, 'error');
+    process.exit(1);
+  }
+}
+
+/**
  * Main execution
  */
 async function main() {
@@ -250,6 +321,12 @@ async function main() {
   }
 
   validateEnvVars(options);
+
+  // Handle batch mode separately
+  if (options.batch) {
+    await runBatchMode(options);
+    return;
+  }
 
   log('Tile Generation Script', 'info');
   log('======================', 'info');
@@ -348,7 +425,12 @@ async function main() {
         biome: tile._biome,
         seed: tile.seed,
         variants: tile.variants || 1
-      }, { verbose: true, local: options.local });
+      }, {
+        verbose: options.verbose,
+        quiet: options.quiet,
+        local: options.local,
+        huggingface: options.huggingface
+      });
 
       if (result.success) {
         results.success.push({
@@ -372,8 +454,8 @@ async function main() {
       }
 
       // Rate limit delay between requests
-      if (i < tilesToGenerate.length - 1) {
-        await delay(2000);
+      if (i < tilesToGenerate.length - 1 && options.delay > 0) {
+        await delay(options.delay);
       }
     } catch (error) {
       log(`Failed to generate ${tile.id}: ${error.message}`, 'error');
