@@ -141,20 +141,27 @@ Examples:
  * @returns {string} Full file system path
  */
 function getOutputPath(tile, biome, variantIndex = 0) {
+  // Build filename - only append variantIndex if tile has multiple variants
+  // If tile.variants <= 1, the key already contains the variant (e.g., grass_0)
+  const numVariants = tile.variants || 1;
+  const filename = numVariants > 1
+    ? `${tile.id}_${variantIndex}.png`
+    : `${tile.id}.png`;
+
   // Handle outputPath from tile metadata
   if (tile.outputPath) {
-    return path.join(OUTPUT_DIR, tile.outputPath, `${tile.id}_${variantIndex}.png`);
+    return path.join(OUTPUT_DIR, tile.outputPath, filename);
   }
 
   // Default based on category
   const category = tile._tileCategory || 'floors';
   if (category === 'walls') {
-    return path.join(OUTPUT_DIR, biome, 'walls', `${tile.id}_${variantIndex}.png`);
+    return path.join(OUTPUT_DIR, biome, 'walls', filename);
   }
   if (category === 'slopes') {
-    return path.join(OUTPUT_DIR, biome, 'slopes', `${tile.id}_${variantIndex}.png`);
+    return path.join(OUTPUT_DIR, biome, 'slopes', filename);
   }
-  return path.join(OUTPUT_DIR, biome, `${tile.id}_${variantIndex}.png`);
+  return path.join(OUTPUT_DIR, biome, filename);
 }
 
 /**
@@ -289,7 +296,7 @@ async function main() {
     console.log(`    Variants: ${tile.variants || 1}`);
     console.log(`    Output: ${getOutputPath(tile, tile._biome)}`);
     if (options.dryRun) {
-      console.log(`    Prompt: ${prompt.substring(0, 80)}...`);
+      console.log(`    Prompt: ${prompt}`);
     }
     console.log('');
   }
@@ -300,11 +307,15 @@ async function main() {
     process.exit(0);
   }
 
-  // Backup existing files before regeneration
+  // Create backup if requested
   if (options.backup) {
-    const backupResult = await createBackup(tilesToGenerate, { reason: 'tiles regeneration' });
-    if (backupResult && backupResult.backupDir) {
-      log(`Backup created at: ${backupResult.backupDir}`, 'info');
+    log('Creating backup of existing files...', 'info');
+    const backupResult = createBackup(tilesToGenerate, { reason: 'category regeneration' });
+    if (backupResult.success) {
+      log(`Backup created: ${backupResult.backupDir}`, 'success');
+      log(`Backed up ${backupResult.assetCount} assets`, 'info');
+    } else {
+      log(`Backup failed: ${backupResult.error}`, 'warn');
     }
   }
 

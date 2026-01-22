@@ -234,7 +234,7 @@ async function main() {
     console.log(`    Rarity: ${item.rarity || 'common'}`);
     console.log(`    Output: ${getOutputPath(item)}`);
     if (options.dryRun) {
-      console.log(`    Prompt: ${prompt.substring(0, 80)}...`);
+      console.log(`    Prompt: ${prompt}`);
     }
     console.log('');
   }
@@ -247,9 +247,11 @@ async function main() {
 
   // Create backup if requested
   if (options.backup) {
-    const backupResult = await createBackup(itemsToGenerate, { reason: 'items regeneration' });
+    log('Creating backup of existing files...', 'info');
+    const backupResult = createBackup(itemsToGenerate, { reason: 'category regeneration' });
     if (backupResult.success) {
       log(`Backup created: ${backupResult.backupDir}`, 'success');
+      log(`Backed up ${backupResult.assetCount} assets`, 'info');
     } else {
       log(`Backup failed: ${backupResult.error}`, 'warn');
     }

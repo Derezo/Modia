@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "description": "Stacking tile system with floors, walls, and slopes for tactical battle maps",
   "categories": ["floors", "walls", "slopes"],
-  "biomes": ["forest", "cave", "mountain", "bridge", "castle"],
+  "biomes": ["base", "forest", "cave", "mountain", "bridge", "castle"],
   "stylePrefix": "wbgmsst, isometric floor tile, 30 degree orthographic projection, flat horizontal surface, ink and wash watercolor style, bold black outlines, aged parchment aesthetic, diamond shaped footprint, clean crisp edges, 64x64 game sprite, white background",
   "wallStylePrefix": "wbgmsst, seamless vertical cliff face texture, ink and wash watercolor style, bold black outlines, tileable pattern, aged parchment aesthetic, 64x16 strip, white background",
   "slopeStylePrefix": "wbgmsst, isometric ramp tile, 30 degree orthographic projection, smooth elevation transition, ink and wash watercolor style, bold black outlines, diamond footprint, white background",
@@ -14,6 +14,7 @@
     "slope": { "width": 64, "height": 80 }
   },
   "biomeColors": {
+    "base": { "primary": "#6B8E4A", "secondary": "#808080", "accent": "#696969" },
     "forest": { "primary": "#6B8E4A", "secondary": "#8B7355", "accent": "#4A6B2A" },
     "cave": { "primary": "#696969", "secondary": "#4682B4", "accent": "#2F4F4F" },
     "mountain": { "primary": "#8B8682", "secondary": "#A0A0A0", "accent": "#708090" },
@@ -22,6 +23,7 @@
   },
   "categoryFiles": {
     "floors": {
+      "base": ["floors/base.json", "floors/base-elevations.json"],
       "forest": "floors/forest.json",
       "cave": "floors/cave.json",
       "mountain": "floors/mountain.json",
@@ -29,6 +31,7 @@
       "castle": "floors/castle.json"
     },
     "walls": {
+      "base": "walls/base.json",
       "forest": "walls/forest.json",
       "cave": "walls/cave.json",
       "mountain": "walls/mountain.json",
@@ -36,6 +39,7 @@
       "castle": "walls/castle.json"
     },
     "slopes": {
+      "base": "slopes/base.json",
       "forest": "slopes/forest.json",
       "cave": "slopes/cave.json",
       "mountain": "slopes/mountain.json",

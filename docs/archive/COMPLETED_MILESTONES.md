@@ -10,6 +10,7 @@ This document archives all completed features, resolved issues, and historical d
 
 | Version | Date | Major Accomplishments |
 |---------|------|----------------------|
+| 9.9 | Jan 2026 | Documentation Audit & Consolidation - Formula updates (level 2.8, skill polynomial costs), implementation status marking, roadmap verification, ~78% documentation alignment |
 | 9.8 | Jan 2026 | Battle Map Visual Overhaul - 64 isometric terrain sprites, elevation rendering, movement sync fix (flat modifiers), removed decorative obstacles and cover system |
 | 9.7 | Jan 2026 | Elevation-Aware Tilemap Rendering - Visual elevation in battle maps, coordinate transformation, 3D pathfinding sync, archetype elevation profiles |
 | 9.6 | Jan 2026 | World & Progression Polish - Zodiac shrine system complete, relic collection modal, zodiac indicator HUD, quest markers system |
@@ -47,6 +48,95 @@ This document archives all completed features, resolved issues, and historical d
 | 8.6 | Jan 2026 | Activity Nodes - Fishing, ruins puzzles, caravan merchants, watchtowers |
 | 8.7 | Jan 2026 | Security Hardening - Trust proxy, per-user rate limiting, VPS deployment scripts |
 | 8.8 | Jan 2026 | FFT-Style Formula Overhaul - CT turn system, defense diminishing returns, LCK scaling |
+| 10.0 | Jan 2026 | Stacking Tile System & Extended Elevation - Extended elevation -3 to +8, stacking tile renderer, occlusion transparency, AI tile metadata reorganization |
+
+---
+
+## 10.0 - Stacking Tile System & Extended Elevation (Jan 2026)
+
+Major refactoring of the battle map tile system to support taller structures and improved visual rendering.
+
+### Elevation System Changes
+
+| Component | Before | After |
+|-----------|--------|-------|
+| Elevation range | -1 to +3 | -3 to +8 (12 levels) |
+| Pixels per level | 8 | 16 |
+| Elevation names | PIT, GROUND, RAISED, HIGH, PEAK | DEEP_PIT, PIT, TRENCH, GROUND, RAISED, HIGH, VERY_HIGH, PEAK, SPIRE, TOWER, TOWER_TOP, CLOUD |
+| MAX_DROP | 2 | 3 |
+| CLIFF_THRESHOLD | 3 | 4 |
+
+### Frontend Rendering
+
+- **Stacking tile system**: Dynamic wall rendering based on elevation height
+- **Occlusion transparency**: Tiles blocking unit visibility become 35% transparent
+- **AssetLoader updates**: `getWallTexture()`, `getSlopeSprite()`, `getTopTileSprite()` methods
+- **Fixed biome mapping**: Forest/bridge/castle now load from their directories (not base fallback)
+
+### AI Tile Metadata Structure
+
+- Reorganized `ai-image-metadata/tiles/` into floors/walls/slopes subdirectories
+- Added base biome with fallback tiles for all terrain types
+- Standardized terrain naming (grass_0, grass_1 instead of forest_grass_1)
+- Updated manifest.json with categories, biome colors, and categoryFiles mappings
+
+### Generation Scripts
+
+- Local ComfyUI generation is now the default (`--local`)
+- HuggingFace API available as fallback (`--huggingface`)
+- Fixed output path to not add duplicate variant suffix
+- `metadataUtils.js` now handles array values in categoryFiles
+
+### Files Changed
+
+| Category | Files |
+|----------|-------|
+| Backend | `shared/terrain.js`, `shared/mapgen/ElevationMapper.js`, `shared/pathfinding.js` |
+| Frontend | `frontend/src/battle/BattleGrid.js`, `frontend/src/core/AssetLoader.js` |
+| Scripts | `scripts/ai-images/generate-tiles.js`, `scripts/ai-images/lib/metadataUtils.js` |
+| Metadata | `ai-image-metadata/tiles/**/*.json` (manifest + 16 biome/category files) |
+
+---
+
+## 9.9 - Documentation Audit & Consolidation (Jan 2026)
+
+Comprehensive audit of all documentation with ~78% alignment between docs and implementation. Updated documentation to match actual implementation per user decision.
+
+### Core Documentation Updates
+
+| Document | Version | Key Changes |
+|----------|---------|-------------|
+| CHARACTER_PROGRESSION.md | 3.0 | Level formula to 2.8 exponent, polynomial skill costs `baseCost × (level+1)^1.5`, removed unimplemented tier multipliers |
+| SKILL_TREES.md | 2.0 | Removed guild-level tier requirements, updated cost formula, simplified prerequisites |
+| BATTLE_MODES.md | 1.1 | Added prominent implementation status section, marked PVE_COOP/PVP_TEAM/PVP_FFA as Post-MVP |
+| GAME_DESIGN.md | 3.0 | Updated damage formulas with diminishing returns defense `DEF/(DEF+100)`, added reduction curve table |
+| ITEM_SYSTEM.md | 3.0 | Added Section 12: Relic System (templates, acquisition, bonuses, UI) |
+| API_SPECIFICATION.md | 2.3 | Verified all 24 route files documented |
+
+### Roadmap Updates
+
+| Document | Version | Key Changes |
+|----------|---------|-------------|
+| DEVELOPMENT_ROADMAP.md | 31.0 | Phase completion % adjusted, version alignment notes |
+| ROADMAP_TECHNICAL.md | 2.1 | File sizes verified, known issues audited (2 resolved: party:invite_received naming, SkillTreePanel removed) |
+| ROADMAP_GAMEPLAY.md | 7.0 | Deferred items marked, TavernScene status updated, BATTLE_MODES.md linked |
+
+### Known Issues Resolved
+
+| Issue | Resolution |
+|-------|------------|
+| Event name mismatch (party:invite) | Uses `party:invite_received` consistently |
+| SkillTreePanel.js potentially unused | File removed from codebase |
+
+### Formula Alignment Summary
+
+| Formula | Old Documentation | Actual Implementation |
+|---------|------------------|----------------------|
+| Character Level | `100 × N^2.2` | `100 × N^2.8` |
+| Skill Cost | `baseCost × (1 + (level-1) × 0.1)` | `baseCost × (level+1)^1.5` |
+| Physical Defense | `DEF × 0.3` reduction | `DEF / (DEF + 100)` reduction |
+| Magical Defense | `MDEF × 0.3` reduction | `MDEF / (MDEF + 80)` reduction |
+| Guild Advancement | Guild Level 50 | Character Level 10 |
 
 ---
 
