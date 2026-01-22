@@ -1,0 +1,430 @@
+# AI Image Generation Pipeline
+
+This document describes Modia's AI image generation system for creating game assets using HuggingFace Flux LoRA models.
+
+## Overview
+
+The AI image generation pipeline integrates with the external `image-generator` project to create:
+- **Terrain tiles** - Isometric 64x64 tiles for battle maps
+- **Character portraits** - 64x64 bust shots for all race/gender/class combinations
+- **Item sprites** - 32x32 equipment and consumable icons
+- **UI icons** - 16-48px action, status, menu, and augment icons
+- **World map nodes** - 48x48 landmark icons for the overworld
+
+## Quick Start
+
+```bash
+# Check current generation status
+npm run ai:status
+
+# Preview what would be generated (dry run)
+npm run ai:generate:tiles -- --dry-run
+
+# Generate a single asset
+npm run ai:generate:tiles -- --key forest_grass_1 --force
+
+# Generate all assets for a biome/category
+npm run ai:generate:tiles -- --biome forest
+npm run ai:generate:portraits -- --race elf
+
+# Generate everything
+npm run ai:generate
+```
+
+## Art Direction
+
+The visual style is **Cozy & Nostalgic** with **Ink & Wash Technique**:
+
+| Aspect | Choice |
+|--------|--------|
+| **Mood** | Cozy, warm, inviting storybook/classic JRPG |
+| **Technique** | Ink & wash (bold black outlines + watercolor fills) |
+| **Line Weight** | Medium outlines (balanced visibility at all sizes) |
+| **Texture** | Visible aged parchment with slight yellowing |
+
+### Regional Color Palettes
+
+| Region | Primary | Secondary | Accent |
+|--------|---------|-----------|--------|
+| Heartlands | Warm brown (#8B7355) | Golden tan (#D4A574) | Meadow green (#6B8E4A) |
+| Sylvan Reaches | Sea green (#2E8B57) | Yellow-green (#9ACD32) | Sage (#8FBC8F) |
+| Iron Depths | Dim gray (#696969) | Copper (#B87333) | Forge fire (#FF6347) |
+| Shadowmere | Indigo (#4B0082) | Dark red (#8B0000) | Silver (#C0C0C0) |
+| Bloodplains | Dark red (#8B0000) | Sienna (#A0522D) | Dark olive (#556B2F) |
+
+## Directory Structure
+
+```
+Modia/
+├── ai-image-metadata/           # Asset metadata and prompts
+│   ├── manifest.json            # Master manifest
+│   ├── tiles/                   # Terrain tile metadata
+│   │   ├── manifest.json
+│   │   ├── forest.json
+│   │   ├── cave.json
+│   │   ├── mountain.json
+│   │   ├── bridge.json
+│   │   └── castle.json
+│   ├── portraits/               # Character portrait metadata
+│   │   ├── manifest.json
+│   │   └── combinations.json
+│   ├── items/                   # Item sprite metadata
+│   │   ├── manifest.json
+│   │   ├── weapons.json
+│   │   ├── armor.json
+│   │   └── consumables.json
+│   ├── icons/                   # UI icon metadata
+│   │   ├── manifest.json
+│   │   ├── actions.json
+│   │   ├── status.json
+│   │   ├── menu.json
+│   │   └── augments.json
+│   └── nodes/                   # World map node metadata
+│       ├── manifest.json
+│       └── locations.json
+├── scripts/ai-images/           # Generation scripts
+│   ├── lib/
+│   │   ├── index.js
+│   │   ├── imageUtils.js
+│   │   ├── pythonRunner.js
+│   │   ├── metadataUtils.js
+│   │   └── promptBuilder.js
+│   ├── generate-all.js
+│   ├── generate-tiles.js
+│   ├── generate-portraits.js
+│   ├── generate-items.js
+│   ├── generate-icons.js
+│   ├── generate-nodes.js
+│   └── validate-images.js
+└── frontend/public/assets/sprites/  # Output directory
+    ├── terrain/{biome}/         # Generated tiles
+    ├── characters/portraits/    # Generated portraits
+    ├── items/{category}/        # Generated item sprites
+    ├── icons/{category}/        # Generated icons
+    └── nodes/                   # Generated node icons
+```
+
+## Environment Setup
+
+1. **Clone the image-generator project:**
+   ```bash
+   cd ~/Projects
+   git clone <image-generator-repo>
+   ```
+
+2. **Set environment variables in `.env`:**
+   ```bash
+   HUGGINGFACE_API_TOKEN=hf_your_token_here
+   IMAGE_GENERATOR_ROOT=/path/to/image-generator/modia-generators
+   ```
+
+3. **Install Python dependencies:**
+   ```bash
+   cd ~/Projects/image-generator/modia-generators
+   pip install -r requirements.txt
+   ```
+
+## Prompt Templates
+
+### Master Style Prefixes
+
+**Flat 2D (V1 LoRA - GRPZA trigger):**
+```
+GRPZA, medieval fantasy illustration, ink and wash technique with watercolor fills,
+bold black outlines of medium weight, visible aged parchment texture with slight yellowing,
+cozy nostalgic JRPG aesthetic, warm and inviting storybook quality, hand-drawn illustration style,
+```
+
+**Isometric (V2 LoRA - wbgmsst trigger):**
+```
+wbgmsst, isometric fantasy game asset, ink and wash technique with watercolor fills,
+bold black outlines of medium weight, visible aged parchment texture, cozy JRPG aesthetic,
+top-down 3/4 view, clear silhouette, isolated subject,
+```
+
+### Asset-Specific Templates
+
+**Portraits (64×64):**
+```
+{trigger}, {race_traits} {gender_traits} {class_traits} portrait, bust shot from chest up,
+character centered, hands not visible, expressive eyes, isolated on plain background, 64x64 game portrait
+```
+
+**Terrain Tiles (64×64):**
+```
+{trigger}, {terrain} floor tile, {biome_modifier}, 64x64 diamond shape game tile
+```
+
+**Icons (16-48px):**
+```
+{trigger}, {description}, {category_modifier}, simplified bold design, ink and wash style,
+thick black outlines, flat watercolor fills, high contrast silhouette, clean edges, isolated on plain background
+```
+
+**Item Sprites (32×32):**
+```
+{trigger}, {description}, fantasy RPG {category} sprite, ink and wash illustration,
+bold black outlines, watercolor fills, slight 3D depth, {rarity_glow}, isolated subject, plain neutral background, 32x32 game sprite
+```
+
+**World Map Nodes (48×48):**
+```
+{trigger}, {description}, fantasy map landmark icon, top-down stylized view,
+ink and wash illustration, bold black outlines, watercolor fills, {regional_palette},
+aged parchment texture, miniature landmark style, clear silhouette, isolated on plain background, 48x48 game icon
+```
+
+### Negative Prompt
+
+Used for all generations:
+```
+photorealistic, 3D render, CGI, anime style, chibi, pixel art, blurry, low quality,
+watermark, signature, text, logo, modern elements, neon colors, oversaturated,
+complex backgrounds, multiple subjects, deformed, bad anatomy, extra limbs, messy lines, muddy colors,
+holding objects, hands in frame, full body, weapon in hand, action pose, white framing, white border
+```
+
+**Note:** The negative prompt includes composition constraints (`holding objects, hands in frame, white framing`) added in Jan 2026 to prevent white background framing and inappropriate composition in portraits.
+
+## NPM Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run ai:generate` | Generate all pending images |
+| `npm run ai:generate:tiles` | Generate terrain tiles |
+| `npm run ai:generate:portraits` | Generate character portraits |
+| `npm run ai:generate:items` | Generate item sprites |
+| `npm run ai:generate:icons` | Generate UI icons |
+| `npm run ai:generate:nodes` | Generate world map nodes |
+| `npm run ai:status` | Quick status check |
+| `npm run ai:validate` | Full validation |
+
+### Common Flags
+
+| Flag | Description |
+|------|-------------|
+| `--dry-run` | Preview without generating |
+| `--key <id>` | Generate specific asset by ID |
+| `--force` | Regenerate even if file exists |
+| `--biome <name>` | Filter tiles by biome (forest, cave, mountain, bridge, castle) |
+| `--category <name>` | Filter by category (varies by asset type) |
+| `--race <name>` | Filter portraits by race (human, elf, dwarf, vampire, orc) |
+| `--gender <name>` | Filter portraits by gender (male, female, other) |
+| `--class <name>` | Filter portraits by class (warrior, wizard, monk, chemist) |
+
+## Adding New Assets
+
+### 1. Add Metadata
+
+Add an entry to the appropriate JSON file in `ai-image-metadata/`:
+
+```json
+{
+  "id": "forest_mushroom_2",
+  "name": "Glowing Mushroom Patch",
+  "prompt": "forest floor with bioluminescent glowing mushrooms",
+  "variants": 2,
+  "seed": 1071,
+  "generated": false
+}
+```
+
+### 2. Generate
+
+```bash
+npm run ai:generate:tiles -- --key forest_mushroom_2
+```
+
+### 3. Verify
+
+```bash
+npm run ai:validate -- --category tiles --verbose
+```
+
+## Metadata Schema
+
+### Master Manifest (manifest.json)
+
+```json
+{
+  "version": "1.0.0",
+  "description": "Master manifest for Modia AI-generated image assets",
+  "totalAssets": 366,
+  "artDirection": {
+    "mood": "cozy_nostalgic",
+    "technique": "ink_wash",
+    "lineWeight": "medium",
+    "texture": "aged_parchment"
+  },
+  "categories": {
+    "tiles": { ... },
+    "portraits": { ... },
+    "items": { ... },
+    "icons": { ... },
+    "nodes": { ... }
+  },
+  "regions": { ... },
+  "generationSettings": {
+    "defaultSeed": 42,
+    "triggerV1": "GRPZA",
+    "triggerV2": "wbgmsst"
+  }
+}
+```
+
+### Asset Entry
+
+```json
+{
+  "id": "unique_asset_id",
+  "name": "Human-readable name",
+  "prompt": "Description for AI generation",
+  "seed": 12345,
+  "variants": 1,
+  "generated": false,
+  "generatedAt": null
+}
+```
+
+## Asset Counts
+
+| Category | Count | Notes |
+|----------|-------|-------|
+| Portraits | 60 | 5 races × 3 genders × 4 base classes |
+| Terrain Tiles | ~96 | 8 types × 4 variants × 3 biomes |
+| World Map Nodes | 20 | Location landmarks |
+| Icons | 80 | Actions, status, menu, augments |
+| Item Sprites | 49 | Weapons, armor, consumables |
+| **Total** | **~305** | |
+
+## Troubleshooting
+
+### Missing HUGGINGFACE_API_TOKEN
+
+```
+[ERROR] Missing HUGGINGFACE_API_TOKEN in environment
+```
+
+Add your token to `.env`:
+```bash
+HUGGINGFACE_API_TOKEN=hf_your_token_here
+```
+
+### Python Script Not Found
+
+```
+Failed to spawn Python process
+```
+
+Verify `IMAGE_GENERATOR_ROOT` points to the correct directory:
+```bash
+IMAGE_GENERATOR_ROOT=/path/to/image-generator/modia-generators
+```
+
+### Rate Limiting
+
+The scripts include a 2-second delay between generations. For large batches, consider:
+1. Running overnight
+2. Using `--biome` or `--category` to process in smaller batches
+3. Checking `npm run ai:status` periodically
+
+### Regenerating Assets
+
+To regenerate an existing asset:
+```bash
+npm run ai:generate:tiles -- --key forest_grass_1 --force
+```
+
+This will regenerate even if the file exists and is marked as generated.
+
+## Quality Evaluation System
+
+### Overview
+
+Assets include an `evaluation` field for tracking quality scores and issues:
+
+```json
+{
+  "id": "node_cave",
+  "prompt": "cave entrance with visible rocky archway, warm torch glow inside, stone frame",
+  "seed": 40005,
+  "generated": false,
+  "evaluation": {
+    "score": 5,
+    "issues": ["too_dark"],
+    "regenerate": true
+  }
+}
+```
+
+### Evaluation Criteria
+
+| Criterion | Weight | Description |
+|-----------|--------|-------------|
+| Resemblance | 25% | Does the image resemble the intended subject? |
+| Style Consistency | 20% | Is the style consistent with other images? |
+| Alpha Handling | 20% | Is the background properly isolated without white framing? |
+| Composition | 20% | Is the composition appropriate for the asset type? |
+| Clarity | 15% | Is the image clear at the target display size? |
+
+### Score Thresholds
+
+| Score | Status |
+|-------|--------|
+| 8-10 | Excellent - no action needed |
+| 6-7 | Passing - acceptable quality |
+| < 6 | Needs Regeneration - marked with `regenerate: true` |
+
+### Common Issues
+
+| Issue Code | Description | Fix |
+|------------|-------------|-----|
+| `too_dark` | Image is too dark to read | Add brightness guidance ("warm glow", "bright") to prompt |
+| `too_cluttered` | Too many visual elements | Simplify prompt to single focal point |
+| `unclear_meaning` | Abstract, unclear subject | Use concrete objects instead of concepts |
+| `white_framing` | White background visible as border | Fixed in promptBuilder.js (Jan 2026) |
+| `hands_in_frame` | Inappropriate hands/objects visible | Added to negative prompt (Jan 2026) |
+| `full_body_rather_than_bust` | Shows more than head/shoulders | Emphasize "bust shot, chest up" in prompt |
+
+### Evaluation Report
+
+Generated at `ai-image-metadata/evaluation-report.json`:
+
+```json
+{
+  "summary": {
+    "totalEvaluated": 36,
+    "passing": 30,
+    "needsRegeneration": 6,
+    "averageScore": 6.9
+  },
+  "regenerationQueue": [
+    { "id": "node_discovery", "score": 3, "issues": [...], "priority": "high" }
+  ],
+  "regenerationCommands": [
+    "npm run ai:generate:nodes -- --key node_discovery --force"
+  ]
+}
+```
+
+### Prompt Writing Best Practices
+
+**DO:**
+- Use single focal point ("three tall pine trees" not "dense forest")
+- Include brightness guidance for dark subjects ("warm torch glow inside")
+- Describe concrete objects, not abstract concepts
+- Keep prompts concise (5-10 key descriptors)
+
+**DON'T:**
+- Use multiple comma-separated scene descriptions
+- Say "dark" without brightness guidance
+- Rely on abstract concepts ("mysterious", "secret")
+- Include action verbs for static assets
+
+### Regeneration Workflow
+
+1. Check evaluation report: `cat ai-image-metadata/evaluation-report.json`
+2. Review regeneration queue for low-scoring assets
+3. Verify updated prompts address identified issues
+4. Regenerate: `npm run ai:generate:nodes -- --key <id> --force`
+5. Re-evaluate and update score in metadata file

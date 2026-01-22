@@ -1,0 +1,260 @@
+{
+  "version": "1.0.0",
+  "description": "NPC enemy portrait definitions",
+  "totalCombinations": 16,
+  "archetypeTraits": {
+    "beast": "animal creature feral wild natural predator instinctual",
+    "humanoid": "intelligent bipedal capable of speech armor or clothing",
+    "undead": "reanimated corpse deathly pale glowing eyes decayed otherworldly",
+    "elemental": "magical being composed of element animated by magic supernatural"
+  },
+  "regionTraits": {
+    "forest": "leafy green natural woodland undergrowth dappled light",
+    "cave": "dark rocky underground subterranean crystalline damp",
+    "mountain": "rocky alpine windswept rugged high altitude harsh",
+    "bridge": "weathered crossing structure near water worn traveled",
+    "palace": "ornate regal dark gothic corrupted once-grand sinister"
+  },
+  "enemies": [
+    {
+      "id": "goblin_warrior",
+      "name": "Goblin Warrior",
+      "archetype": "humanoid",
+      "region": "forest",
+      "visualTraits": "green skin pointed ears yellow eyes tusks war paint crude iron helmet",
+      "seed": 31001,
+      "generated": true,
+      "generatedAt": "2026-01-22T06:56:58.576Z",
+      "evaluation": {
+        "score": 8,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "gray_wolf",
+      "name": "Gray Wolf",
+      "archetype": "beast",
+      "region": "forest",
+      "visualTraits": "gray fur amber predator eyes snarling maw fangs alert ears",
+      "seed": 31002,
+      "generated": true,
+      "generatedAt": "2026-01-22T06:57:27.965Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "forest_slime",
+      "name": "Forest Slime",
+      "archetype": "elemental",
+      "region": "forest",
+      "visualTraits": "translucent green body glowing core dripping tendrils bubbles",
+      "seed": 31003,
+      "generated": true,
+      "generatedAt": "2026-01-22T06:57:59.442Z",
+      "evaluation": {
+        "score": 6,
+        "issues": ["full_body_rather_than_bust"],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "cave_bat",
+      "name": "Cave Bat",
+      "archetype": "beast",
+      "region": "cave",
+      "visualTraits": "large pointed ears red glowing eyes wing membrane fangs",
+      "seed": 32001,
+      "generated": true,
+      "generatedAt": "2026-01-22T06:58:31.971Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "giant_spider",
+      "name": "Giant Spider",
+      "archetype": "beast",
+      "region": "cave",
+      "visualTraits": "8 red eyes cluster mandibles hairy body segmented legs",
+      "seed": 32002,
+      "generated": true,
+      "generatedAt": "2026-01-22T06:59:04.594Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "skeleton_warrior",
+      "name": "Skeleton Warrior",
+      "archetype": "undead",
+      "region": "cave",
+      "visualTraits": "bone white cracked skull purple glowing eyes rusted armor",
+      "seed": 32003,
+      "generated": true,
+      "generatedAt": "2026-01-22T06:59:41.234Z",
+      "evaluation": {
+        "score": 8,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "stone_golem",
+      "name": "Stone Golem",
+      "archetype": "elemental",
+      "region": "cave",
+      "visualTraits": "gray stone texture moss patches orange glowing eyes runes",
+      "seed": 32004,
+      "generated": true,
+      "generatedAt": "2026-01-22T07:00:15.877Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "mountain_troll",
+      "name": "Mountain Troll",
+      "archetype": "humanoid",
+      "region": "mountain",
+      "visualTraits": "gray-green skin heavy brow warts large tusks massive build",
+      "seed": 33001,
+      "generated": true,
+      "generatedAt": "2026-01-22T07:00:51.576Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "troll_shaman",
+      "name": "Troll Shaman",
+      "archetype": "humanoid",
+      "region": "mountain",
+      "visualTraits": "bone necklace staff with orb purple magic glow feathers",
+      "seed": 33002,
+      "generated": true,
+      "generatedAt": "2026-01-22T07:01:28.272Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "harpy",
+      "name": "Harpy",
+      "archetype": "beast",
+      "region": "mountain",
+      "visualTraits": "feathered head plume sharp beak fierce yellow eyes talons",
+      "seed": 33003,
+      "generated": true,
+      "generatedAt": "2026-01-22T07:02:04.926Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "bridge_bandit",
+      "name": "Bridge Bandit",
+      "archetype": "humanoid",
+      "region": "bridge",
+      "visualTraits": "hood shadow facial scar mask over mouth gold earring",
+      "seed": 34001,
+      "generated": true,
+      "generatedAt": "2026-01-22T07:02:40.546Z",
+      "evaluation": {
+        "score": 8,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "bandit_captain",
+      "name": "Bandit Captain",
+      "archetype": "humanoid",
+      "region": "bridge",
+      "visualTraits": "fancy hat with feathers goatee confident smirk fine clothes",
+      "seed": 34002,
+      "generated": true,
+      "generatedAt": "2026-01-22T07:59:04.942Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "bridge_troll",
+      "name": "Bridge Troll",
+      "archetype": "humanoid",
+      "region": "bridge",
+      "visualTraits": "blue-gray skin barnacles algae patches massive tusks",
+      "seed": 34003,
+      "generated": true,
+      "generatedAt": "2026-01-22T07:59:35.342Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "dark_knight",
+      "name": "Dark Knight",
+      "archetype": "humanoid",
+      "region": "palace",
+      "visualTraits": "dark ornate plate armor red piercing eyes purple dark aura",
+      "seed": 35001,
+      "generated": true,
+      "generatedAt": "2026-01-22T08:00:05.771Z",
+      "evaluation": {
+        "score": 8,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "shadow_assassin",
+      "name": "Shadow Assassin",
+      "archetype": "humanoid",
+      "region": "palace",
+      "visualTraits": "deep hood void only red glowing eyes visible shadow tendrils",
+      "seed": 35002,
+      "generated": true,
+      "generatedAt": "2026-01-22T08:00:36.256Z",
+      "evaluation": {
+        "score": 8,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "palace_guard",
+      "name": "Palace Guard",
+      "archetype": "humanoid",
+      "region": "palace",
+      "visualTraits": "polished plate armor golden trim royal emblem stern visor",
+      "seed": 35003,
+      "generated": true,
+      "generatedAt": "2026-01-22T08:01:07.750Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    }
+  ]
+}

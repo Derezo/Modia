@@ -1,0 +1,116 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-01-22T12:00:00.000Z",
+  "evaluationCriteria": {
+    "resemblance": "25% - Does the image resemble the intended subject?",
+    "styleConsistency": "20% - Is the style consistent with other images?",
+    "alphaHandling": "20% - Is the background properly isolated without white framing?",
+    "composition": "20% - Is the composition appropriate for the asset type?",
+    "clarity": "15% - Is the image clear at the target display size?"
+  },
+  "scoreThresholds": {
+    "passing": 6,
+    "excellent": 8
+  },
+  "summary": {
+    "totalEvaluated": 42,
+    "passing": 36,
+    "needsRegeneration": 6,
+    "averageScore": 6.95
+  },
+  "categoryBreakdown": {
+    "nodes": {
+      "totalEvaluated": 26,
+      "passing": 20,
+      "needsRegeneration": 6,
+      "averageScore": 6.73,
+      "excellentCount": 6
+    },
+    "enemyPortraits": {
+      "totalEvaluated": 16,
+      "passing": 16,
+      "needsRegeneration": 0,
+      "averageScore": 7.3,
+      "excellentCount": 4
+    }
+  },
+  "regenerationQueue": [
+    {
+      "id": "node_discovery",
+      "category": "nodes",
+      "score": 3,
+      "issues": ["unclear_meaning", "abstract"],
+      "priority": "high",
+      "newPrompt": "glowing treasure map scroll with golden X mark, discovery sparkle aura"
+    },
+    {
+      "id": "node_city",
+      "category": "nodes",
+      "score": 4,
+      "issues": ["too_cluttered", "hard_to_read"],
+      "priority": "high",
+      "newPrompt": "city gatehouse with central clock tower, two flanking towers, compact landmark"
+    },
+    {
+      "id": "node_fishing",
+      "category": "nodes",
+      "score": 4,
+      "issues": ["odd_composition", "large_fishing_pole"],
+      "priority": "high",
+      "newPrompt": "wooden fishing pier with simple dock, leaping fish splashing, waterside"
+    },
+    {
+      "id": "node_forest",
+      "category": "nodes",
+      "score": 5,
+      "issues": ["too_busy", "cluttered"],
+      "priority": "medium",
+      "newPrompt": "three tall pine trees clustered, bright green foliage, forest clearing visible"
+    },
+    {
+      "id": "node_cave",
+      "category": "nodes",
+      "score": 5,
+      "issues": ["too_dark"],
+      "priority": "medium",
+      "newPrompt": "cave entrance with visible rocky archway, warm torch glow inside, stone frame"
+    },
+    {
+      "id": "node_mountain",
+      "category": "nodes",
+      "score": 5,
+      "issues": ["inconsistent_style", "sketchy"],
+      "priority": "medium",
+      "newPrompt": "single mountain peak with snow cap, rocky face visible, clear silhouette"
+    }
+  ],
+  "promptBuilderFixes": {
+    "appliedAt": "2026-01-22T12:00:00.000Z",
+    "changes": [
+      "Removed 'white background for cutout' from buildThemedPrompt (line 107)",
+      "Updated isometric style prefix to use 'clear silhouette, isolated subject' instead of 'clean white background for cutout'",
+      "Updated portrait prompts to include 'hands not visible, character centered, isolated on plain background'",
+      "Updated item prompts to use 'isolated subject, plain neutral background'",
+      "Updated node prompts to use 'isolated on plain background'",
+      "Added negative prompt terms: 'holding objects, hands in frame, full body, weapon in hand, action pose, white framing, white border'"
+    ]
+  },
+  "themeJsonFixes": {
+    "appliedAt": "2026-01-22T12:00:00.000Z",
+    "changes": [
+      "Updated portraits suffix: 'head and shoulders portrait bust, character centered, hands not visible, expressive eyes, warm inviting storybook quality, isolated on plain background'",
+      "Updated items suffix: 'fantasy RPG sprite, slight 3D depth, isolated subject, plain neutral background'",
+      "Updated nodes suffix: added 'isolated on plain background'",
+      "Updated icons suffix: added 'isolated on plain background'",
+      "Added negative prompt terms for composition constraints"
+    ]
+  },
+  "regenerationCommands": [
+    "npm run ai:generate:nodes -- --key node_discovery --force",
+    "npm run ai:generate:nodes -- --key node_city --force",
+    "npm run ai:generate:nodes -- --key node_fishing --force",
+    "npm run ai:generate:nodes -- --key node_forest --force",
+    "npm run ai:generate:nodes -- --key node_cave --force",
+    "npm run ai:generate:nodes -- --key node_mountain --force"
+  ]
+}

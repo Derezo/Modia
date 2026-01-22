@@ -74,20 +74,49 @@ npm run audio:download
 
 # SFX generation is synchronous (files download immediately):
 npm run audio:generate:sfx -- --key attack_sword_1
+
+# AI Image Generation (requires HuggingFace API token + image-generator project)
+npm run ai:generate                     # Generate all pending images
+npm run ai:generate:tiles               # Generate terrain tiles only
+npm run ai:generate:portraits           # Generate character portraits only
+npm run ai:generate:items               # Generate item sprites only
+npm run ai:generate:icons               # Generate UI icons only
+npm run ai:generate:nodes               # Generate world map nodes only
+npm run ai:status                       # Quick status check of generated images
+npm run ai:validate                     # Full validation of image files
+
+# Single asset generation:
+npm run ai:generate:tiles -- --key forest_grass_1 --force
+npm run ai:generate:portraits -- --race elf --class wizard
+
+# Batch generation by filter:
+npm run ai:generate:tiles -- --biome forest
+npm run ai:generate:icons -- --category actions
+
+# Preview without generating:
+npm run ai:generate:tiles -- --dry-run
 ```
 
 ### Audio Prompt Guidelines (ElevenLabs SFX)
 
-ElevenLabs interprets comma-separated prompts as multiple distinct sounds, generating each sequentially. This causes files to be much longer than the specified duration.
+**CRITICAL: Maximum 1 comma per prompt.** ElevenLabs interprets comma-separated prompts as multiple distinct sounds, generating each sequentially. This causes files to be much longer than the specified duration.
 
-**Write prompts that describe ONE sound with adjectives, not multiple sounds:**
+| Commas | Status |
+|--------|--------|
+| 0 | Best - single unified sound |
+| 1 | Acceptable - primary + secondary quality |
+| 2+ | **BLOCKED** - validation will fail |
+
+**Pattern:** `"[Fantasy context] [adjective] [adjective] [core sound noun] with [secondary quality]"`
+
+Use "with" and "and" to join descriptors instead of commas:
 
 ```
-# BAD - Multiple sounds listed (generates ~16 seconds instead of 1):
-"Fantasy RPG turn notification, your turn alert, brief heroic chime, tactical combat readiness sound"
+# BAD - Multiple comma-separated sounds (generates ~16 seconds instead of 1):
+"Fantasy fire spell, magical flames whooshing, crackling sparks, heat sizzle"
 
-# GOOD - Single sound with descriptive adjectives (generates ~1 second):
-"Fantasy RPG brief heroic turn notification chime"
+# GOOD - Single sound with descriptive adjectives:
+"Fantasy arcane fireball with roaring mystical flames and explosive impact"
 
 # BAD - List of sound types:
 "sword slash, metal cutting, whoosh, impact"
@@ -96,7 +125,9 @@ ElevenLabs interprets comma-separated prompts as multiple distinct sounds, gener
 "Fantasy sword slash with sharp metallic whoosh and light impact"
 ```
 
-The generate-sfx.js script warns about prompts with 4+ comma-separated segments when duration is short. Run with `--dry-run` to check prompts before generating.
+The generate-sfx.js script **blocks** prompts with 2+ commas. Run with `--dry-run` to check prompts before generating.
+
+**Full documentation:** See `docs/AUDIO_STYLE_GUIDE.md` for comprehensive prompt writing guidelines including regional music profiles.
 
 ## Architecture
 
@@ -447,17 +478,17 @@ audio-metadata/
 
 ### Tech Debt: Existing Large Files
 
-These files exceed or approach limits and are tracked in `docs/ROADMAP_TECHNICAL.md` section 7.1:
+These files exceed or approach limits and are tracked in `docs/ROADMAP_TECHNICAL.md` section 8.1:
 
 | File | Lines | Status |
 |------|-------|--------|
 | `frontend/src/scenes/WorldMapScene.js` | 2,861 | WARNING - plan modularization |
-| `frontend/src/scenes/BattleScene.js` | 2,636 | WARNING - plan modularization |
+| `frontend/src/scenes/BattleScene.js` | 2,680 | WARNING - plan modularization |
 | `api/src/services/marketplaceService.js` | 1,956 | WARNING |
 | `frontend/src/battle/BattleUI.js` | 1,556 | WARNING - exceeds 1,500 threshold |
 | `api/src/services/coliseumService.js` | 1,552 | WARNING |
 
-*Last updated: 2026-01-20*
+*Last updated: 2026-01-22*
 
 **Recent refactoring:** BattleScene.js WebSocket handling extracted to `BattleWebSocketManager.js` (766 lines). All files are now under the 3500-line blocking threshold.
 
@@ -491,15 +522,34 @@ Pull requests run: lint → API tests → E2E tests (Playwright) → build. The 
 ## Documentation
 
 Detailed specifications in `docs/`. Key files:
+
+**Planning & Architecture:**
 - `DEVELOPMENT_ROADMAP.md` - Links to `ROADMAP_TECHNICAL.md` and `ROADMAP_GAMEPLAY.md`
 - `TECHNICAL_ARCHITECTURE.md` - System design, database schemas
 - `API_SPECIFICATION.md` - REST and WebSocket endpoints
 - `FRONTEND_TECHNICAL_PATTERNS.md` - Critical gotchas and component patterns
+
+**Game Systems:**
 - `GAME_DESIGN.md` - Combat mechanics, class progression, world design
+- `SKILL_TREES.md` - Skill definitions for 8 guilds (4 base + 4 advanced)
+- `CHARACTER_PROGRESSION.md` - Formation, skill trees, guild advancement
+- `ITEM_SYSTEM.md` - Equipment, rarity, drop tables
+- `ENEMY_SYSTEM.md` - Enemy templates, AI archetypes, scaling
+- `ECONOMY_SYSTEM.md` - Shops, marketplace, gold flow
+
+**Battle System:**
 - `BATTLE_TURN_SYSTEM.md` - CT-based turn order, two-action system
 - `BATTLE_MESSAGING_PROTOCOL.md` - Hybrid HTTP/WebSocket battle protocol
+- `BATTLE_ANIMATIONS.md` - Visual feedback, intent visualization
+- `BATTLE_MODES.md` - PvE, PvP, Coliseum modes
+- `BATTLE_RECONNECTION.md` - State persistence and reconnection
 - `AI_SYSTEM.md` - Enemy AI behavior trees and utility functions
+
+**UI & Assets:**
 - `DESIGN_SYSTEM.md` - Parchment UI components, theming, responsive patterns
-- `archive/COMPLETED_MILESTONES.md` - Archived completed work
+- `AI_IMAGE_GENERATION.md` - AI image generation pipeline, style guide, prompts
+- `AUDIO_STYLE_GUIDE.md` - Audio prompt guidelines, regional music profiles, SFX patterns
+
+**Archive:** `docs/archive/COMPLETED_MILESTONES.md` - Archived completed work
 
 **Roadmap maintenance:** Keep roadmaps fresh by moving completed items to `docs/archive/`.

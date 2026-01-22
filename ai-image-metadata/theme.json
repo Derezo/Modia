@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "name": "watercolor",
+  "description": "Ink and wash watercolor style with parchment texture",
+
+  "style": {
+    "trigger": "GRPZA",
+    "basePhrase": "ink and wash watercolor illustration",
+    "technique": "bold black outlines with watercolor fills",
+    "texture": "aged parchment texture",
+    "mood": "cozy nostalgic JRPG aesthetic"
+  },
+
+  "negativePrompt": "photorealistic, 3D render, CGI, anime style, chibi, pixel art, blurry, low quality, watermark, signature, text, logo, modern elements, neon colors, oversaturated, complex backgrounds, multiple subjects, deformed, bad anatomy, extra limbs, messy lines, muddy colors, holding objects, hands in frame, full body, weapon in hand, action pose, white framing, white border",
+
+  "categoryModifiers": {
+    "portraits": {
+      "suffix": "head and shoulders portrait bust, character centered, hands not visible, expressive eyes, warm inviting storybook quality, isolated on plain background",
+      "size": "64x64"
+    },
+    "icons": {
+      "suffix": "simplified bold design, high contrast silhouette, clean edges, isolated on plain background",
+      "size": "32x32"
+    },
+    "items": {
+      "suffix": "fantasy RPG sprite, slight 3D depth, isolated subject, plain neutral background",
+      "size": "32x32"
+    },
+    "nodes": {
+      "suffix": "fantasy map landmark icon, top-down stylized view, miniature landmark style, clear silhouette, isolated on plain background",
+      "size": "48x48"
+    }
+  },
+
+  "rarityModifiers": {
+    "common": "",
+    "uncommon": "subtle glow",
+    "rare": "soft blue glow",
+    "epic": "golden glow legendary aura"
+  },
+
+  "iconCategoryModifiers": {
+    "actions": "action skill icon",
+    "status": "status effect icon",
+    "menu": "menu UI icon",
+    "augments": "augment upgrade icon"
+  }
+}

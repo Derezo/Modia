@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.0 |
+| Version | 2.2 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -276,9 +276,49 @@ npm run audio:status         # Show asset status
 
 ---
 
-## 7. Technical Debt & Code Quality
+## 7. AI Image Generation System
 
-### 7.1 File Size Enforcement (Updated Jan 2026)
+### 7.1 Image Generation Infrastructure (Completed Jan 2026)
+
+- [x] HuggingFace API client for Flux LoRA models
+- [x] Metadata-driven prompt system (JSON files in ai-image-metadata/)
+- [x] Generation orchestrator scripts with CLI options
+- [x] Validation and status scripts
+
+### 7.2 Prompt Builder Improvements (Completed Jan 2026)
+
+- [x] Removed "white background for cutout" prompts (caused white framing artifacts)
+- [x] Updated portrait prompts: "bust shot from chest up, character centered, hands not visible"
+- [x] Updated node prompts: "isolated on plain background"
+- [x] Updated item prompts: "isolated subject, plain neutral background"
+- [x] Added negative prompt constraints: "holding objects, hands in frame, white framing, white border"
+
+### 7.3 Quality Evaluation System (Completed Jan 2026)
+
+- [x] Evaluation schema added to metadata files (score, issues, regenerate)
+- [x] Evaluation criteria: resemblance (25%), style consistency (20%), alpha handling (20%), composition (20%), clarity (15%)
+- [x] Score thresholds: >= 6 passing, < 6 needs regeneration
+- [x] Generated evaluation-report.json with regeneration queue
+
+**Current Status:**
+| Category | Evaluated | Passing | Regeneration Queue |
+|----------|-----------|---------|-------------------|
+| Nodes | 20 | 14 | 6 (city, forest, cave, mountain, discovery, fishing) |
+| Enemy Portraits | 16 | 16 | 0 |
+| **Total** | **36** | **30** | **6** |
+
+### 7.4 Pending
+
+- [ ] Regenerate 6 node images marked for regeneration
+- [ ] Evaluate player portraits (60 combinations)
+- [ ] Evaluate item sprites (49 items)
+- [ ] Evaluate UI icons (80 icons)
+
+---
+
+## 8. Technical Debt & Code Quality
+
+### 8.1 File Size Enforcement (Updated Jan 2026)
 
 File size limits are enforced during plan validation and code review:
 
@@ -293,30 +333,34 @@ File size limits are enforced during plan validation and code review:
 **Tracked Large Files:**
 | File | Lines | Status |
 |------|-------|--------|
-| `frontend/src/scenes/BattleScene.js` | 2,632 | WARNING - plan modularization |
-| `frontend/src/scenes/WorldMapScene.js` | 2,507 | WARNING - plan modularization |
+| `frontend/src/scenes/WorldMapScene.js` | 2,861 | WARNING - plan modularization |
+| `frontend/src/scenes/BattleScene.js` | 2,680 | WARNING - plan modularization |
 | `api/src/services/marketplaceService.js` | 1,956 | WARNING |
+| `frontend/src/battle/BattleUI.js` | 1,556 | WARNING - exceeds 1,500 |
 | `api/src/services/coliseumService.js` | 1,552 | WARNING |
-| `frontend/src/battle/BattleUI.js` | 1,477 | NOTICE |
+
+*Last updated: 2026-01-22*
 
 All files are now under the 3500-line blocking threshold.
 
 See **CLAUDE.md > File Size Guidelines** for modularization patterns, module summary requirements, and chunk reading guidance.
 
-### 7.2 Known Issues
+### 8.2 Known Issues
 
-| Issue | Location | Priority |
-|-------|----------|----------|
-| In-memory rate limit state (no distributed storage) | rateLimiterFactory.js | High |
-| WebSocket rate limits reset on reconnection | websocket/index.js:92-94 | High |
-| Event name mismatch (party:invite) | Game.js / partyWebsocket.js | Medium |
-| Inline listeners without cleanup | LoginScene.js, WorldMapScene.js | Medium |
-| Missing rate limiters on inventory endpoints | inventory.js | Medium |
-| API response format inconsistency | Various routes | Low |
-| Debug endpoint in production | battle.js:verify-traits | Low |
-| SkillTreePanel.js potentially unused | frontend/src/components/ | Low |
+| Issue | Location | Priority | Status |
+|-------|----------|----------|--------|
+| In-memory rate limit state (no distributed storage) | rateLimiterFactory.js | High | Open |
+| WebSocket rate limits reset on reconnection | websocket/index.js:92-94 | High | Open |
+| Inline listeners without cleanup | LoginScene.js, WorldMapScene.js | Medium | Open |
+| Missing rate limiters on inventory endpoints | inventory.js | Medium | Open |
+| API response format inconsistency | Various routes | Low | Open |
+| Debug endpoint in production | battle.js:1076 verify-traits | Low | Open |
+| ~~Event name mismatch (party:invite)~~ | Game.js / partyWebsocket.js | ~~Medium~~ | **Resolved** - uses party:invite_received |
+| ~~SkillTreePanel.js potentially unused~~ | frontend/src/components/ | ~~Low~~ | **Resolved** - file removed |
 
-### 7.3 Refactoring Opportunities
+*Issues audited: 2026-01-22*
+
+### 8.3 Refactoring Opportunities
 
 - [x] **seed.js modularization** - Reduced from 4862 to 918 lines via worldgen/ modules
 - [x] **Database performance indexes** - Composite indexes for regional queries (030_performance_indexes.sql)
@@ -332,7 +376,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 - [ ] Distributed rate limiting (Redis) for horizontal scaling
 - [ ] Structured logging with request correlation IDs
 
-### 7.4 Future Infrastructure
+### 8.4 Future Infrastructure
 
 | Item | Priority | Notes |
 |------|----------|-------|
@@ -360,6 +404,8 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.2 | Jan 2026 | AI Image Quality Evaluation: Added Section 7 for AI Image Generation System. Documented prompt builder improvements (removed white background, added composition constraints). Added quality evaluation system with scoring criteria. Section numbering updated (7→8 for Technical Debt). |
+| 2.1 | Jan 2026 | Documentation Audit: Updated file size table with verified line counts. Audited known issues - resolved party:invite mismatch (uses party:invite_received) and SkillTreePanel.js (file removed). Added status column to known issues. |
 | 2.0 | Jan 2026 | ESLint Warning Cleanup: Resolved all 138 `no-unused-vars` warnings (69 API + 69 frontend) across 58 files. Used `_` prefix convention for intentionally unused parameters required by signatures (Express middleware, base class methods, callbacks). |
 | 1.9 | Jan 2026 | File Size Enforcement: Added Section 7.1 with 2500-line blocking threshold, tracked large files table. Fixed section numbering (7.1-7.4). Cross-references CLAUDE.md > File Size Guidelines for patterns. |
 | 1.8 | Jan 2026 | Large File Modularization: Split battleService.js (1855→66 lines) into 9 focused modules. Created api/src/services/battle/ with damageCalculator, statusEffectManager, movementService, turnOrderService, chargeSystem, aoeService, skillDefinitionService, actionProcessor. Extracted world services (pathfinding, discovery, region, node). Frontend: AudioAssets split into 6 manifests, MarketplaceScene/ColiseumScene CSS and tabs extracted. |
