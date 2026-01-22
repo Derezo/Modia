@@ -1,0 +1,52 @@
+{
+  "biome": "cave",
+  "category": "floors",
+  "description": "Cave biome floor tiles - rough stone, crystals, underground pools, bioluminescent moss",
+  "palette": {
+    "primary": "#696969",
+    "secondary": "#4682B4",
+    "accent": "#2F4F4F"
+  },
+  "tiles": [
+    {
+      "key": "cave_stone_1",
+      "terrain": "stone",
+      "prompt": "rough hewn cave stone floor with natural cracks and worn surface in dark grey tones #696969 #2F4F4F",
+      "variants": 2,
+      "seed": 20001,
+      "outputPath": "cave/stone"
+    },
+    {
+      "key": "cave_crystal_1",
+      "terrain": "crystal",
+      "prompt": "cave floor with embedded glowing crystal formations casting blue light #4682B4 #696969",
+      "variants": 2,
+      "seed": 20011,
+      "outputPath": "cave/crystal"
+    },
+    {
+      "key": "cave_moss_1",
+      "terrain": "moss",
+      "prompt": "cave floor covered in bioluminescent moss with soft green glow in teal tones #2F4F4F #228B22",
+      "variants": 2,
+      "seed": 20021,
+      "outputPath": "cave/moss"
+    },
+    {
+      "key": "cave_pool_1",
+      "terrain": "pool",
+      "prompt": "still underground pool with dark reflective water and stone rim in deep blue tones #4682B4 #2F4F4F",
+      "variants": 2,
+      "seed": 20031,
+      "outputPath": "cave/pool"
+    },
+    {
+      "key": "cave_gravel_1",
+      "terrain": "gravel",
+      "prompt": "loose cave gravel floor with scattered small rocks and rubble in grey brown tones #696969 #8B7355",
+      "variants": 2,
+      "seed": 20041,
+      "outputPath": "cave/gravel"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "biome": "forest",
+  "category": "walls",
+  "description": "Forest biome wall textures - earth cliff faces, root-covered soil, natural stone",
+  "palette": {
+    "primary": "#6B8E4A",
+    "secondary": "#8B7355",
+    "accent": "#4A6B2A"
+  },
+  "tiles": [
+    {
+      "key": "wall_forest_default",
+      "prompt": "exposed earth cliff face with grass roots and mossy patches in forest colors #6B8E4A #8B7355",
+      "seed": 11001,
+      "outputPath": "forest/walls/default"
+    },
+    {
+      "key": "wall_forest_stone",
+      "prompt": "natural stone cliff face with vegetation growing from cracks in grey and green tones #8B8682 #6B8E4A",
+      "seed": 11011,
+      "outputPath": "forest/walls/stone"
+    },
+    {
+      "key": "wall_forest_dirt",
+      "prompt": "layered soil cliff face showing dark earth strata with root tendrils in brown tones #8B7355 #5C4033",
+      "seed": 11021,
+      "outputPath": "forest/walls/dirt"
+    }
+  ]
+}

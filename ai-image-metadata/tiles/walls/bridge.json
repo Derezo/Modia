@@ -1,0 +1,30 @@
+{
+  "biome": "bridge",
+  "category": "walls",
+  "description": "Bridge biome wall textures - wooden supports, rope railings, stone abutments",
+  "palette": {
+    "primary": "#8B7355",
+    "secondary": "#A0522D",
+    "accent": "#D2B48C"
+  },
+  "tiles": [
+    {
+      "key": "wall_bridge_default",
+      "prompt": "wooden bridge support beam with weathered timber grain and iron brackets in brown tones #8B7355 #A0522D",
+      "seed": 41001,
+      "outputPath": "bridge/walls/default"
+    },
+    {
+      "key": "wall_bridge_rope",
+      "prompt": "thick hemp rope railing with braided knots and frayed edges in tan tones #D2B48C #8B7355",
+      "seed": 41011,
+      "outputPath": "bridge/walls/rope"
+    },
+    {
+      "key": "wall_bridge_stone",
+      "prompt": "stone bridge abutment with ancient carved blocks and weathered mortar in grey brown #708090 #8B7355",
+      "seed": 41021,
+      "outputPath": "bridge/walls/stone"
+    }
+  ]
+}

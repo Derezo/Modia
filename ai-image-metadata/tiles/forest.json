@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "biome": "forest",
+  "description": "Forest biome terrain tiles - lush, organic, mossy",
+  "palette": {
+    "primary": "#6B8E4A",
+    "secondary": "#8B7355",
+    "accent": "#D4A574"
+  },
+  "biomeModifier": "lush green colors, mossy organic texture, earthy natural tones",
+  "tiles": [
+    {
+      "id": "grass",
+      "name": "Forest Grass",
+      "prompt": "grass floor texture with subtle leaf litter",
+      "variants": 1,
+      "seed": 1001,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:13:46.446Z"
+    },
+    {
+      "id": "stone",
+      "name": "Forest Stone",
+      "prompt": "stone floor texture with moss patches",
+      "variants": 1,
+      "seed": 1002,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:14:22.325Z"
+    },
+    {
+      "id": "forest",
+      "name": "Dense Forest Floor",
+      "prompt": "dense forest floor texture with fallen leaves",
+      "variants": 1,
+      "seed": 1003,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:14:53.921Z"
+    },
+    {
+      "id": "rock",
+      "name": "Rocky Ground",
+      "prompt": "rocky ground texture with grass between stones",
+      "variants": 1,
+      "seed": 1004,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:15:26.553Z"
+    }
+  ]
+}

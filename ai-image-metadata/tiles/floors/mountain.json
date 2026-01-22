@@ -1,0 +1,52 @@
+{
+  "biome": "mountain",
+  "category": "floors",
+  "description": "Mountain biome floor tiles - rocky terrain, snow patches, alpine textures",
+  "palette": {
+    "primary": "#8B8682",
+    "secondary": "#A0A0A0",
+    "accent": "#708090"
+  },
+  "tiles": [
+    {
+      "key": "mountain_rock_1",
+      "terrain": "rock",
+      "prompt": "solid mountain rock floor with natural striations and weathered surface in grey stone tones #8B8682 #708090",
+      "variants": 2,
+      "seed": 30001,
+      "outputPath": "mountain/rock"
+    },
+    {
+      "key": "mountain_snow_1",
+      "terrain": "snow",
+      "prompt": "pristine mountain snow cover with subtle blue shadows and sparkling ice crystals #F5F5F5 #87CEEB",
+      "variants": 2,
+      "seed": 30011,
+      "outputPath": "mountain/snow"
+    },
+    {
+      "key": "mountain_ice_1",
+      "terrain": "ice",
+      "prompt": "frozen mountain ice sheet with translucent blue surface and frost patterns #87CEEB #B0C4DE",
+      "variants": 2,
+      "seed": 30021,
+      "outputPath": "mountain/ice"
+    },
+    {
+      "key": "mountain_gravel_1",
+      "terrain": "gravel",
+      "prompt": "loose mountain scree with angular rocks and windswept debris in grey brown tones #8B8682 #A0A0A0",
+      "variants": 2,
+      "seed": 30031,
+      "outputPath": "mountain/gravel"
+    },
+    {
+      "key": "mountain_lichen_1",
+      "terrain": "lichen",
+      "prompt": "alpine rock surface with orange and green lichen growth in earth tones #8B8682 #DAA520",
+      "variants": 2,
+      "seed": 30041,
+      "outputPath": "mountain/lichen"
+    }
+  ]
+}

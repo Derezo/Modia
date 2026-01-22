@@ -2,9 +2,15 @@
  * BattleGrid - Isometric grid rendering for tactical combat (supports 32x32 with camera)
  *
  * Uses shared modules for terrain generation to ensure server/client consistency.
+ * Supports stacking tile rendering with dynamic wall faces and occlusion transparency.
  */
 import { generateTerrain } from '@shared/mapGeneration.js';
 import { isImpassable, getTerrainMovementCost, getTerrainColor, discretizeElevation, getElevationName } from '@shared/terrain.js';
+
+// Stacking tile rendering constants
+const WALL_HEIGHT_PER_LEVEL = 16; // Pixels per elevation level for wall faces
+const OCCLUSION_ALPHA = 0.35; // Transparency for tiles blocking units
+// Note: Elevation limits (-3 to +8) are defined in shared/terrain.js as ELEVATION_LEVELS
 
 export class BattleGrid {
   constructor(canvas, width = 32, height = 32) {
@@ -14,7 +20,12 @@ export class BattleGrid {
     this.tileWidth = 64;   // Visual diamond width (for grid spacing)
     this.tileHeight = 32;  // Visual diamond height (for grid spacing)
     this.spriteSize = 64;  // Sprite canvas size (64x64 with diamond inscribed)
-    this.elevationPixelsPerLevel = 8; // Pixels per elevation level for rendering
+    this.elevationPixelsPerLevel = WALL_HEIGHT_PER_LEVEL; // Pixels per elevation level for rendering
+
+    // Stacking tile system state
+    this.useStackingTiles = true; // Enable new stacking tile rendering
+    this.occlusionCache = new Map(); // Cache for occlusion calculations
+    this.occlusionCacheDirty = true; // Flag to invalidate cache
 
     // World-space origin offset (for centering the isometric diamond)
     this.offsetX = 0;
@@ -375,8 +386,11 @@ export class BattleGrid {
 
     // Try elevation-specific sprite first for non-zero elevation
     let sprite = null;
+    let usingElevatedSprite = false;
+
     if (elevation !== 0) {
       sprite = this.assetLoader?.getElevatedTile(terrain, elevation, this.nodeType);
+      if (sprite) usingElevatedSprite = true;
     }
 
     // Fall back to base variant if no elevation sprite
@@ -385,21 +399,24 @@ export class BattleGrid {
     }
 
     if (sprite) {
-      // Elevated sprites are taller - wall faces extend below the diamond top
-      // The diamond top face (64x64 inscribed area) should be centered at screenX, screenY
-      // For elevated tiles: sprite is 64 wide, taller than 64
-      // Draw so the TOP of the diamond aligns with flat tile position
-      // The extra height extends downward
       const spriteWidth = sprite.width || this.spriteSize;
       const spriteHeight = sprite.height || this.spriteSize;
 
-      // Position sprite so the diamond top face center is at (screenX, screenY)
-      // For elevated sprites, the diamond top is at the top of the image
-      // Wall faces extend below, so we draw at normal position
+      // Calculate where the diamond surface center is within the sprite.
+      // Elevated sprites have the diamond shifted UP by (elevation * 8) pixels
+      // from the standard center position of spriteSize/2.
+      let diamondCenterY;
+      if (usingElevatedSprite && elevation > 0) {
+        diamondCenterY = this.spriteSize / 2 - (elevation * this.elevationPixelsPerLevel);
+      } else {
+        diamondCenterY = this.spriteSize / 2;
+      }
+
+      // Draw sprite so the diamond center aligns with screenY
       ctx.drawImage(
         sprite,
         screenX - spriteWidth / 2,
-        screenY - this.spriteSize / 2,  // Position based on standard tile height
+        screenY - diamondCenterY,
         spriteWidth,
         spriteHeight
       );
@@ -528,6 +545,500 @@ export class BattleGrid {
    */
   getTileVariant(gridX, gridY) {
     return this.tileVariants[gridY]?.[gridX] || 0;
+  }
+
+  // =========================================================================
+  // STACKING TILE RENDERING SYSTEM
+  // =========================================================================
+
+  /**
+   * Convert grid coordinates to isometric position (without camera transform)
+   * @param {number} gridX - Grid X coordinate
+   * @param {number} gridY - Grid Y coordinate
+   * @returns {Object} { x, y } isometric position
+   */
+  gridToIso(gridX, gridY) {
+    const isoX = (gridX - gridY) * (this.tileWidth / 2);
+    const isoY = (gridX + gridY) * (this.tileHeight / 2);
+    return { x: isoX, y: isoY };
+  }
+
+  /**
+   * Render a tile using the stacking system (top tile + dynamic walls)
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {number} screenX - Screen X position (tile center)
+   * @param {number} screenY - Screen Y position (tile center, NOT elevation-adjusted)
+   * @param {number} gridX - Grid X position
+   * @param {number} gridY - Grid Y position
+   * @param {number} elevation - Elevation level
+   * @param {string} terrain - Terrain type
+   * @param {string} biome - Biome type
+   * @param {Object} connection - Connection data for slopes/ramps
+   * @param {number} alpha - Opacity (for occlusion transparency)
+   */
+  renderStackedTile(ctx, screenX, screenY, gridX, gridY, elevation, terrain, biome, connection, alpha = 1.0) {
+    // Calculate wall height from elevation (relative to ground level 0)
+    const wallHeight = Math.max(0, elevation) * WALL_HEIGHT_PER_LEVEL;
+    const adjustedY = screenY - wallHeight;
+
+    ctx.save();
+    if (alpha < 1.0) {
+      ctx.globalAlpha = alpha;
+    }
+
+    // Render wall faces if elevation > 0
+    if (elevation > 0) {
+      this.renderWallFace(ctx, screenX, screenY, elevation, biome, terrain);
+    }
+
+    // Check if this is a slope/ramp connection
+    const isSlope = connection?.type === 'slope' ||
+                    connection?.type === 'long_ramp' ||
+                    connection?.type === 'ramp';
+
+    if (isSlope && connection?.direction) {
+      // Render slope tile
+      this.renderSlopeTile(ctx, screenX, adjustedY, biome, connection.direction, connection.levels || 1);
+    } else {
+      // Render flat top tile
+      this.renderTopTile(ctx, screenX, adjustedY, terrain, biome, gridX, gridY);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Render the vertical wall face for elevated tiles
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {number} screenX - Tile center X (screen position)
+   * @param {number} screenY - Tile center Y at ground level (NOT elevation-adjusted)
+   * @param {number} elevation - Elevation level
+   * @param {string} biome - Biome type
+   * @param {string} terrain - Terrain type
+   */
+  renderWallFace(ctx, screenX, screenY, elevation, biome, terrain) {
+    const wallTexture = this.assetLoader?.getWallTexture(biome, terrain);
+    const wallHeight = elevation * WALL_HEIGHT_PER_LEVEL;
+    const halfWidth = this.tileWidth / 2;
+    const halfHeight = this.tileHeight / 2;
+
+    // The top surface sits at screenY - wallHeight
+    // Wall faces extend DOWN from the top surface edges to ground level
+
+    if (wallTexture) {
+      // Tile the wall texture vertically
+      ctx.save();
+
+      // Clip to left wall face shape
+      ctx.beginPath();
+      ctx.moveTo(screenX - halfWidth, screenY - wallHeight);         // Top left of top surface
+      ctx.lineTo(screenX, screenY + halfHeight - wallHeight);        // Bottom of top surface
+      ctx.lineTo(screenX, screenY + halfHeight);                     // Ground bottom
+      ctx.lineTo(screenX - halfWidth, screenY);                      // Ground left
+      ctx.closePath();
+      ctx.clip();
+
+      // Draw textured wall (tiled vertically)
+      const tileHeight = 16;
+      for (let h = 0; h < wallHeight; h += tileHeight) {
+        const drawHeight = Math.min(tileHeight, wallHeight - h);
+        ctx.drawImage(
+          wallTexture,
+          0, 0, wallTexture.width, tileHeight,
+          screenX - halfWidth, screenY - wallHeight + h, halfWidth, drawHeight
+        );
+      }
+
+      ctx.restore();
+
+      // Right wall face (slightly darker)
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(screenX + halfWidth, screenY - wallHeight);
+      ctx.lineTo(screenX, screenY + halfHeight - wallHeight);
+      ctx.lineTo(screenX, screenY + halfHeight);
+      ctx.lineTo(screenX + halfWidth, screenY);
+      ctx.closePath();
+      ctx.clip();
+
+      ctx.globalAlpha = (ctx.globalAlpha || 1.0) * 0.8; // Darken right side
+      for (let h = 0; h < wallHeight; h += tileHeight) {
+        const drawHeight = Math.min(tileHeight, wallHeight - h);
+        ctx.drawImage(
+          wallTexture,
+          0, 0, wallTexture.width, tileHeight,
+          screenX, screenY - wallHeight + h, halfWidth, drawHeight
+        );
+      }
+
+      ctx.restore();
+    } else {
+      // Fallback: Draw colored wall faces
+      const baseColor = this.getWallColor(terrain, elevation);
+      const darkColor = this.darkenColor(baseColor, 0.7);
+      const sideColor = this.darkenColor(baseColor, 0.85);
+
+      // Left wall face (south-west, slightly lighter)
+      ctx.beginPath();
+      ctx.moveTo(screenX - halfWidth, screenY - wallHeight);  // Top left
+      ctx.lineTo(screenX, screenY + halfHeight - wallHeight); // Top bottom
+      ctx.lineTo(screenX, screenY + halfHeight);              // Ground bottom
+      ctx.lineTo(screenX - halfWidth, screenY);               // Ground left
+      ctx.closePath();
+      ctx.fillStyle = sideColor;
+      ctx.fill();
+
+      // Right wall face (south-east, darker)
+      ctx.beginPath();
+      ctx.moveTo(screenX + halfWidth, screenY - wallHeight);  // Top right
+      ctx.lineTo(screenX, screenY + halfHeight - wallHeight); // Top bottom
+      ctx.lineTo(screenX, screenY + halfHeight);              // Ground bottom
+      ctx.lineTo(screenX + halfWidth, screenY);               // Ground right
+      ctx.closePath();
+      ctx.fillStyle = darkColor;
+      ctx.fill();
+    }
+  }
+
+  /**
+   * Render the flat top surface of a tile
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {number} screenX - Tile center X
+   * @param {number} screenY - Tile center Y (already elevation-adjusted)
+   * @param {string} terrain - Terrain type
+   * @param {string} biome - Biome type
+   * @param {number} _gridX - Grid X for variant lookup (reserved for future use)
+   * @param {number} _gridY - Grid Y for variant lookup (reserved for future use)
+   */
+  renderTopTile(ctx, screenX, screenY, terrain, biome, _gridX, _gridY) {
+    const topSprite = this.assetLoader?.getTopTileSprite(biome, terrain);
+
+    if (topSprite) {
+      // Draw just the top surface from the sprite
+      // Assuming the sprite is a 64x64 isometric tile
+      ctx.drawImage(
+        topSprite,
+        screenX - this.tileWidth / 2,
+        screenY - this.tileHeight / 2,
+        this.tileWidth,
+        this.tileHeight
+      );
+    } else {
+      // Fallback to terrain color diamond
+      this.renderTerrainDiamond(ctx, screenX, screenY, terrain);
+    }
+  }
+
+  /**
+   * Render a slope tile for elevation transitions
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {number} screenX - Tile center X
+   * @param {number} screenY - Tile center Y at top of slope
+   * @param {string} biome - Biome type
+   * @param {string} direction - Slope direction (north, south, east, west)
+   * @param {number} levels - Number of elevation levels
+   */
+  renderSlopeTile(ctx, screenX, screenY, biome, direction, levels) {
+    const slopeSprite = this.assetLoader?.getSlopeSprite(biome, direction, levels);
+    const slopeHeight = levels * WALL_HEIGHT_PER_LEVEL / 2; // Slopes span half the wall height visually
+
+    if (slopeSprite) {
+      ctx.drawImage(
+        slopeSprite,
+        screenX - this.tileWidth / 2,
+        screenY - this.tileHeight / 2,
+        this.tileWidth,
+        this.tileHeight + slopeHeight
+      );
+    } else {
+      // Fallback: draw a simple gradient to indicate slope
+      const gradient = ctx.createLinearGradient(
+        screenX, screenY - this.tileHeight / 2,
+        screenX + this.tileWidth / 2, screenY + this.tileHeight / 2
+      );
+      gradient.addColorStop(0, '#8b7355');
+      gradient.addColorStop(1, '#6b5344');
+
+      // Draw diamond shape
+      ctx.beginPath();
+      ctx.moveTo(screenX, screenY - this.tileHeight / 2);
+      ctx.lineTo(screenX + this.tileWidth / 2, screenY);
+      ctx.lineTo(screenX, screenY + this.tileHeight / 2);
+      ctx.lineTo(screenX - this.tileWidth / 2, screenY);
+      ctx.closePath();
+      ctx.fillStyle = gradient;
+      ctx.fill();
+
+      // Add slope indicator lines
+      ctx.strokeStyle = '#5a4a3a';
+      ctx.lineWidth = 1;
+      const lineCount = levels + 1;
+      for (let i = 1; i < lineCount; i++) {
+        const t = i / lineCount;
+        ctx.beginPath();
+        ctx.moveTo(screenX - this.tileWidth / 2 + t * this.tileWidth / 2, screenY - t * this.tileHeight / 2);
+        ctx.lineTo(screenX + t * this.tileWidth / 2, screenY + this.tileHeight / 2 - t * this.tileHeight / 2);
+        ctx.stroke();
+      }
+    }
+  }
+
+  /**
+   * Render a simple terrain diamond (for top surface fallback)
+   */
+  renderTerrainDiamond(ctx, screenX, screenY, terrain) {
+    const baseColor = this.getTerrainColor(terrain);
+
+    ctx.beginPath();
+    ctx.moveTo(screenX, screenY - this.tileHeight / 2);
+    ctx.lineTo(screenX + this.tileWidth / 2, screenY);
+    ctx.lineTo(screenX, screenY + this.tileHeight / 2);
+    ctx.lineTo(screenX - this.tileWidth / 2, screenY);
+    ctx.closePath();
+
+    ctx.fillStyle = baseColor;
+    ctx.fill();
+
+    ctx.strokeStyle = '#2a2a4a';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  /**
+   * Get wall color based on terrain type
+   * @param {string} terrain - Terrain type
+   * @param {number} _elevation - Elevation level (reserved for depth-based color variation)
+   * @returns {string} Hex color for wall
+   */
+  getWallColor(terrain, _elevation) {
+    const baseColors = {
+      grass: '#5a4a2a',
+      stone: '#6b6b6b',
+      forest: '#4a3a2a',
+      water: '#3a5a6a',
+      rock: '#5a5a5a',
+      cliff: '#4a4a4a',
+      lava: '#8b2a0a',
+      tree: '#3a2a1a',
+      default: '#5a4a3a'
+    };
+    return baseColors[terrain] || baseColors.default;
+  }
+
+  // =========================================================================
+  // OCCLUSION DETECTION SYSTEM
+  // =========================================================================
+
+  /**
+   * Check if a unit is visually occluded by a tile
+   * A unit is occluded if a tile is "in front" of it in isometric space and tall enough to block
+   *
+   * @param {Object} unit - Unit with gridX, gridY, z properties
+   * @param {Object} tile - Tile with x, y, elevation properties
+   * @returns {boolean} True if the tile occludes the unit
+   */
+  isUnitOccludedBy(unit, tile) {
+    const unitX = unit.gridX ?? unit.x ?? unit.tileX;
+    const unitY = unit.gridY ?? unit.y ?? unit.tileY;
+    const unitZ = unit.z ?? unit.elevation ?? 0;
+
+    const tileX = tile.x;
+    const tileY = tile.y;
+    const tileZ = tile.elevation ?? 0;
+
+    // Tile is "in front" in isometric space if (tileX + tileY) > (unitX + unitY)
+    const tileDepth = tileX + tileY;
+    const unitDepth = unitX + unitY;
+
+    if (tileDepth <= unitDepth) return false;
+
+    // Tile must be tall enough to block the unit
+    // Consider both vertical distance and tile height
+    const tileHeight = Math.max(0, tileZ) * WALL_HEIGHT_PER_LEVEL;
+    const unitVisualY = unitZ * WALL_HEIGHT_PER_LEVEL;
+
+    // Check if tile's wall would visually overlap with unit's position
+    const depthDiff = tileDepth - unitDepth;
+    if (depthDiff > 2) return false; // Too far away to matter
+
+    return tileHeight > unitVisualY + 8; // 8px buffer
+  }
+
+  /**
+   * Get all units that would be occluded by a tile
+   * @param {Object} tile - Tile to check
+   * @param {Array} units - All units on the battlefield
+   * @returns {Array} Units that are occluded by this tile
+   */
+  getOccludedUnits(tile, units) {
+    if (!units || units.length === 0) return [];
+    return units.filter(unit => this.isUnitOccludedBy(unit, tile));
+  }
+
+  /**
+   * Build occlusion map for all tiles given current unit positions
+   * @param {Array} units - All units on the battlefield
+   * @returns {Map} Map of "x,y" -> occluded (boolean)
+   */
+  buildOcclusionMap(units) {
+    const occlusionMap = new Map();
+
+    if (!units || units.length === 0) return occlusionMap;
+
+    // For each tile with elevation > 0, check if it occludes any unit
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        const elevation = this.getElevation(x, y);
+        if (elevation <= 0) continue; // Only elevated tiles can occlude
+
+        const tile = { x, y, elevation };
+        const occludedUnits = this.getOccludedUnits(tile, units);
+
+        if (occludedUnits.length > 0) {
+          occlusionMap.set(`${x},${y}`, true);
+        }
+      }
+    }
+
+    return occlusionMap;
+  }
+
+  /**
+   * Invalidate occlusion cache (call when units move)
+   */
+  invalidateOcclusionCache() {
+    this.occlusionCacheDirty = true;
+    this.occlusionCache.clear();
+  }
+
+  /**
+   * Update occlusion cache if dirty
+   * @param {Array} units - Current unit positions
+   */
+  updateOcclusionCache(units) {
+    if (!this.occlusionCacheDirty) return;
+
+    this.occlusionCache = this.buildOcclusionMap(units);
+    this.occlusionCacheDirty = false;
+  }
+
+  /**
+   * Check if a tile should be rendered with occlusion transparency
+   * @param {number} x - Grid X
+   * @param {number} y - Grid Y
+   * @returns {boolean} True if tile should be transparent
+   */
+  isTileOccluding(x, y) {
+    return this.occlusionCache.get(`${x},${y}`) || false;
+  }
+
+  // =========================================================================
+  // ENHANCED RENDER METHODS WITH STACKING TILES
+  // =========================================================================
+
+  /**
+   * Render a tile using the appropriate system (stacking or legacy)
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {Object} tile - Tile render data { x, y, screenX, screenY, elevation }
+   * @param {string|null} highlight - Highlight color
+   * @param {Object} connection - Elevation connection data
+   */
+  renderTileWithStacking(ctx, tile, highlight = null, connection = null) {
+    const terrain = this.getTerrain(tile.x, tile.y);
+    const biome = this.getSpriteBiome();
+    const alpha = this.isTileOccluding(tile.x, tile.y) ? OCCLUSION_ALPHA : 1.0;
+
+    if (this.useStackingTiles && tile.elevation > 0) {
+      // Use stacking tile system for elevated tiles
+      // Note: screenY from gridToScreen is already elevation-adjusted
+      // We need the base screenY (without elevation) for proper wall rendering
+      const baseScreenY = tile.screenY + (tile.elevation * this.elevationPixelsPerLevel);
+      this.renderStackedTile(
+        ctx,
+        tile.screenX,
+        baseScreenY,
+        tile.x,
+        tile.y,
+        tile.elevation,
+        terrain,
+        biome,
+        connection,
+        alpha
+      );
+    } else {
+      // Use existing tile rendering for ground level and pits
+      if (alpha < 1.0) {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        this.renderTileAt(ctx, tile.screenX, tile.screenY, terrain, null, tile.x, tile.y);
+        ctx.restore();
+      } else {
+        this.renderTileAt(ctx, tile.screenX, tile.screenY, terrain, null, tile.x, tile.y);
+      }
+    }
+
+    // Apply highlight on top
+    if (highlight) {
+      // For stacking tiles, highlight goes on the top surface
+      const highlightY = this.useStackingTiles && tile.elevation > 0
+        ? tile.screenY // Already elevation-adjusted
+        : tile.screenY;
+      this.renderTileHighlight(ctx, tile.screenX, highlightY, highlight);
+    }
+  }
+
+  /**
+   * Get the sprite biome string for current node type
+   * @returns {string} Biome directory name
+   */
+  getSpriteBiome() {
+    const biomeMap = {
+      cave: 'cave',
+      mountain: 'mountain',
+      forest: 'forest',
+      bridge: 'bridge',
+      castle: 'castle',
+      village: 'base',
+      city: 'base',
+      default: 'base'
+    };
+    return biomeMap[this.nodeType] || biomeMap.default;
+  }
+
+  /**
+   * Render the grid with stacking tiles and occlusion
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {Object} highlights - Highlight map { "x,y": color }
+   * @param {Object} camera - Camera for transforms
+   * @param {Array} units - Units for occlusion calculation (optional)
+   */
+  renderWithOcclusion(ctx, highlights = {}, camera = null, units = []) {
+    // Update occlusion cache if needed
+    if (units && units.length > 0) {
+      this.updateOcclusionCache(units);
+    }
+
+    // Build sorted render order
+    const renderOrder = this.buildRenderOrder(camera);
+
+    // Merge intent highlights
+    const combinedHighlights = this.getCombinedHighlights(highlights);
+
+    // Render all tiles in sorted order
+    for (const tile of renderOrder) {
+      const key = `${tile.x},${tile.y}`;
+      const highlight = combinedHighlights[key] || null;
+      const connection = this.elevationConnections?.[tile.y]?.[tile.x] || null;
+
+      // Render tile with stacking system
+      this.renderTileWithStacking(ctx, tile, highlight, connection);
+
+      // Render obstacle if present
+      const obstacle = this.getObstacle(tile.x, tile.y);
+      if (obstacle) {
+        this.renderObstacleAt(ctx, tile.screenX, tile.screenY, obstacle);
+      }
+    }
   }
 
   /**
@@ -807,5 +1318,8 @@ export class BattleGrid {
     this.elevation = null;
     this.tileVariants = null;
     this.obstacles = null;
+    this.elevationConnections = null;
+    this.occlusionCache.clear();
+    this.occlusionCache = null;
   }
 }

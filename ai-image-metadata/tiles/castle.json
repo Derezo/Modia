@@ -1,0 +1,85 @@
+{
+  "version": "1.0.0",
+  "biome": "castle",
+  "description": "Castle biome terrain tiles - stone brick, ornate, medieval interior",
+  "palette": {
+    "primary": "#708090",
+    "secondary": "#8B0000",
+    "accent": "#DAA520"
+  },
+  "biomeModifier": "castle interior stone brick floor, ornate medieval craftsmanship, torchlit warmth",
+  "tiles": [
+    {
+      "id": "castle_stone_1",
+      "name": "Castle Stone",
+      "prompt": "castle stone brick floor medieval masonry",
+      "variants": 1,
+      "seed": 5001,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:28:40.645Z"
+    },
+    {
+      "id": "castle_tile_1",
+      "name": "Checkered Tile",
+      "prompt": "castle checkered floor tile marble pattern",
+      "variants": 1,
+      "seed": 5011,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:29:14.244Z"
+    },
+    {
+      "id": "castle_carpet_1",
+      "name": "Royal Carpet",
+      "prompt": "ornate royal carpet runner red gold",
+      "variants": 1,
+      "seed": 5021,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:29:46.825Z"
+    },
+    {
+      "id": "castle_throne_1",
+      "name": "Throne Room Floor",
+      "prompt": "throne room floor ornate stone gilded inlay",
+      "variants": 1,
+      "seed": 5031,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:30:20.415Z"
+    },
+    {
+      "id": "castle_dungeon_1",
+      "name": "Dungeon Floor",
+      "prompt": "dark dungeon floor damp stone chains",
+      "variants": 1,
+      "seed": 5041,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:30:53.996Z"
+    },
+    {
+      "id": "castle_courtyard_1",
+      "name": "Courtyard Cobbles",
+      "prompt": "castle courtyard cobblestone floor weathered",
+      "variants": 1,
+      "seed": 5051,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:31:27.716Z"
+    },
+    {
+      "id": "castle_garden_1",
+      "name": "Castle Garden",
+      "prompt": "castle garden path hedgerow floor tiles",
+      "variants": 1,
+      "seed": 5061,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:32:00.340Z"
+    },
+    {
+      "id": "castle_armory_1",
+      "name": "Armory Floor",
+      "prompt": "castle armory floor weapon racks metal grating",
+      "variants": 1,
+      "seed": 5071,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:32:33.914Z"
+    }
+  ]
+}

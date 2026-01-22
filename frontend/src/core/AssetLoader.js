@@ -549,6 +549,171 @@ export class AssetLoader {
   }
 
   // =====================
+  // Stacking Tile System Methods
+  // =====================
+
+  /**
+   * Get wall texture for a terrain/biome type
+   * Wall textures are vertical strips that tile based on elevation height
+   * @param {string} biome - Biome type (forest, cave, mountain, bridge, castle)
+   * @param {string} terrain - Terrain type (grass, stone, etc.)
+   * @returns {HTMLImageElement|null} Wall texture image or null if not found
+   */
+  getWallTexture(biome, terrain = 'default') {
+    // Try specific terrain wall first, then biome default
+    const key = `${this.basePath}/terrain/${biome}/walls/${terrain}_wall.png`;
+    const fallbackKey = `${this.basePath}/terrain/${biome}/walls/default_wall.png`;
+    const baseFallbackKey = `${this.basePath}/terrain/base/walls/${terrain}_wall.png`;
+
+    return this.cache.get(key) ||
+           this.cache.get(fallbackKey) ||
+           this.cache.get(baseFallbackKey) ||
+           null;
+  }
+
+  /**
+   * Load wall texture for a terrain/biome type
+   * @param {string} biome - Biome type
+   * @param {string} terrain - Terrain type
+   * @returns {Promise<HTMLImageElement|null>}
+   */
+  async loadWallTexture(biome, terrain = 'default') {
+    const paths = [
+      `${this.basePath}/terrain/${biome}/walls/${terrain}_wall.png`,
+      `${this.basePath}/terrain/${biome}/walls/default_wall.png`,
+      `${this.basePath}/terrain/base/walls/${terrain}_wall.png`
+    ];
+
+    for (const path of paths) {
+      try {
+        return await this.loadImage(path);
+      } catch {
+        // Try next path
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get slope sprite for elevation transitions
+   * @param {string} biome - Biome type
+   * @param {string} direction - Slope direction (north, south, east, west)
+   * @param {number} levels - Number of elevation levels (1-3)
+   * @returns {HTMLImageElement|null} Slope sprite or null if not found
+   */
+  getSlopeSprite(biome, direction, levels = 1) {
+    const key = `${this.basePath}/terrain/${biome}/slopes/${direction}_${levels}.png`;
+    const fallbackKey = `${this.basePath}/terrain/${biome}/slopes/${direction}_1.png`;
+    const baseFallbackKey = `${this.basePath}/terrain/base/slopes/${direction}_${levels}.png`;
+
+    return this.cache.get(key) ||
+           this.cache.get(fallbackKey) ||
+           this.cache.get(baseFallbackKey) ||
+           null;
+  }
+
+  /**
+   * Load slope sprite for elevation transitions
+   * @param {string} biome - Biome type
+   * @param {string} direction - Slope direction
+   * @param {number} levels - Number of elevation levels (1-3)
+   * @returns {Promise<HTMLImageElement|null>}
+   */
+  async loadSlopeSprite(biome, direction, levels = 1) {
+    const paths = [
+      `${this.basePath}/terrain/${biome}/slopes/${direction}_${levels}.png`,
+      `${this.basePath}/terrain/${biome}/slopes/${direction}_1.png`,
+      `${this.basePath}/terrain/base/slopes/${direction}_${levels}.png`
+    ];
+
+    for (const path of paths) {
+      try {
+        return await this.loadImage(path);
+      } catch {
+        // Try next path
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get top tile sprite for stacking (flat surface only)
+   * @param {string} biome - Biome type
+   * @param {string} terrain - Terrain type
+   * @returns {HTMLImageElement|null} Top tile sprite or null
+   */
+  getTopTileSprite(biome, terrain) {
+    // First try new naming convention with _top suffix
+    const newKey = `${this.basePath}/terrain/${biome}/${terrain}_top.png`;
+    // Then try biome-specific terrain without suffix (current system)
+    const biomeKey = `${this.basePath}/terrain/${biome}/${terrain}.png`;
+    // Fall back to base biome with variant
+    const baseKey = `${this.basePath}/terrain/base/${terrain}_0.png`;
+
+    return this.cache.get(newKey) ||
+           this.cache.get(biomeKey) ||
+           this.cache.get(baseKey) ||
+           null;
+  }
+
+  /**
+   * Load top tile sprite for stacking
+   * @param {string} biome - Biome type
+   * @param {string} terrain - Terrain type
+   * @returns {Promise<HTMLImageElement|null>}
+   */
+  async loadTopTileSprite(biome, terrain) {
+    const paths = [
+      `${this.basePath}/terrain/${biome}/${terrain}_top.png`,
+      `${this.basePath}/terrain/${biome}/${terrain}.png`,
+      `${this.basePath}/terrain/base/${terrain}_0.png`
+    ];
+
+    for (const path of paths) {
+      try {
+        return await this.loadImage(path);
+      } catch {
+        // Try next path
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Preload stacking tile assets for a biome
+   * Loads wall textures, slopes, and top tiles
+   * @param {string} biome - Biome type
+   * @param {Object} options - Preload options
+   */
+  async preloadStackingTileAssets(biome, options = {}) {
+    const { terrainTypes = AssetLoader.TERRAIN_TYPES } = options;
+    const directions = ['north', 'south', 'east', 'west'];
+    const levels = [1, 2, 3];
+    const promises = [];
+
+    // Load wall textures for each terrain type
+    for (const terrain of terrainTypes) {
+      promises.push(this.loadWallTexture(biome, terrain));
+      promises.push(this.loadTopTileSprite(biome, terrain));
+    }
+
+    // Load default wall texture
+    promises.push(this.loadWallTexture(biome, 'default'));
+
+    // Load slope sprites for all directions and levels
+    for (const direction of directions) {
+      for (const level of levels) {
+        promises.push(this.loadSlopeSprite(biome, direction, level));
+      }
+    }
+
+    const results = await Promise.allSettled(promises);
+    const loaded = results.filter(r => r.status === 'fulfilled' && r.value).length;
+    console.log(`[AssetLoader] Stacking tile preload for ${biome}: ${loaded}/${results.length} loaded`);
+    return results;
+  }
+
+  // =====================
   // Fallback Methods
   // =====================
 
@@ -621,7 +786,11 @@ export class AssetLoader {
 
     const results = await Promise.allSettled(promises);
     const loaded = results.filter(r => r.status === 'fulfilled' && r.value).length;
-    console.log(`Preloaded ${loaded}/${results.length} terrain tiles for ${nodeType}`);
+    const failed = results.filter(r => r.status === 'rejected');
+    console.log(`[AssetLoader] Terrain preload for ${nodeType}: ${loaded}/${results.length} loaded`);
+    if (failed.length > 0) {
+      console.warn(`[AssetLoader] ${failed.length} terrain tiles failed:`, failed[0]?.reason?.message);
+    }
     return results;
   }
 
