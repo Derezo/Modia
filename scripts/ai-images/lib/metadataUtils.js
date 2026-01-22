@@ -56,7 +56,13 @@ function loadCategoryAssets(category) {
     // New structure: categoryFiles with nested biome files
     if (manifest.categoryFiles) {
       for (const catFiles of Object.values(manifest.categoryFiles)) {
-        files.push(...Object.values(catFiles));
+        for (const fileOrFiles of Object.values(catFiles)) {
+          if (Array.isArray(fileOrFiles)) {
+            files.push(...fileOrFiles);
+          } else {
+            files.push(fileOrFiles);
+          }
+        }
       }
     } else if (manifest.biomeFiles) {
       // Legacy fallback
@@ -138,18 +144,18 @@ function loadTileMetadata(options = {}) {
                       : cat === 'slopes' ? manifest.slopeStylePrefix
                       : manifest.stylePrefix;
 
-    for (const biomeName of biomes) {
-      const fileName = `${cat}/${biomeName}.json`;
+    // Helper function to load tiles from a file
+    const loadTilesFromFile = (fileName, biomeName) => {
       const filePath = getMetadataPath(`tiles/${fileName}`);
 
       if (!fileExists(filePath)) {
-        continue; // Skip if file doesn't exist
+        return; // Skip if file doesn't exist
       }
 
       const data = loadMetadata(filePath);
       if (!data) {
         console.warn(`Warning: Failed to load tiles/${fileName}`);
-        continue;
+        return;
       }
 
       // Initialize biome data if not exists
@@ -169,6 +175,28 @@ function loadTileMetadata(options = {}) {
         tile.id = tile.key || tile.id;  // Normalize to 'id' field
         result.tiles.push(tile);
         result.byBiome[biomeName].tiles.push(tile);
+      }
+    };
+
+    // Check if manifest has categoryFiles with explicit file mappings
+    const catFiles = manifest.categoryFiles?.[cat];
+
+    for (const biomeName of biomes) {
+      // Check if categoryFiles has an explicit mapping for this biome
+      if (catFiles && catFiles[biomeName]) {
+        const fileOrFiles = catFiles[biomeName];
+        if (Array.isArray(fileOrFiles)) {
+          // Handle array of files
+          for (const fileName of fileOrFiles) {
+            loadTilesFromFile(fileName, biomeName);
+          }
+        } else {
+          // Handle single file string
+          loadTilesFromFile(fileOrFiles, biomeName);
+        }
+      } else {
+        // Default convention: {cat}/{biomeName}.json
+        loadTilesFromFile(`${cat}/${biomeName}.json`, biomeName);
       }
     }
   }

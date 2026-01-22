@@ -232,7 +232,7 @@ async function main() {
     console.log(`    Category: ${icon._iconCategory}`);
     console.log(`    Output: ${getOutputPath(icon)}`);
     if (options.dryRun) {
-      console.log(`    Prompt: ${prompt.substring(0, 80)}...`);
+      console.log(`    Prompt: ${prompt}`);
     }
     console.log('');
   }
@@ -245,12 +245,13 @@ async function main() {
 
   // Create backup if requested
   if (options.backup) {
-    const backupResult = createBackup(iconsToGenerate, { reason: 'icons regeneration' });
-    if (backupResult.backedUp > 0) {
+    log('Creating backup of existing files...', 'info');
+    const backupResult = createBackup(iconsToGenerate, { reason: 'category regeneration' });
+    if (backupResult.success) {
       log(`Backup created: ${backupResult.backupDir}`, 'success');
-      log(`Backed up ${backupResult.backedUp} files`, 'info');
+      log(`Backed up ${backupResult.assetCount} assets`, 'info');
     } else {
-      log('No existing files to backup', 'info');
+      log(`Backup failed: ${backupResult.error}`, 'warn');
     }
   }
 

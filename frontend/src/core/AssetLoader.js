@@ -126,17 +126,18 @@ export class AssetLoader {
 
   /**
    * Map node type to sprite biome directory
+   * Each biome has its own tile set; base is used as fallback when biome tiles don't exist.
    * @param {string} nodeType - Node type (forest, cave, mountain, etc.)
-   * @returns {string} Biome directory (base, cave, mountain)
+   * @returns {string} Biome directory
    */
   getSpriteBiome(nodeType) {
     const biomeMap = {
+      forest: 'forest',
       cave: 'cave',
       mountain: 'mountain',
-      // All other node types use base biome
-      forest: 'base',
-      bridge: 'base',
-      castle: 'base',
+      bridge: 'bridge',
+      castle: 'castle',
+      // Village/city use base since they don't have unique terrain
       village: 'base',
       city: 'base',
       default: 'base'

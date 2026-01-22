@@ -1,0 +1,233 @@
+{
+  "biome": "base",
+  "category": "floors",
+  "subcategory": "elevations",
+  "description": "Elevated terrain tiles with embedded wall faces (legacy system)",
+  "note": "These tiles include wall faces embedded in the sprite for the old elevation rendering system",
+  "tiles": [
+    {
+      "key": "grass_elev1",
+      "terrain": "grass",
+      "elevation": 1,
+      "prompt": "raised grass platform with one-level stone wall edge in green and grey #6B8E4A #696969",
+      "outputPath": "base"
+    },
+    {
+      "key": "grass_elev2",
+      "terrain": "grass",
+      "elevation": 2,
+      "prompt": "elevated grass platform with two-level stone wall in green and grey #6B8E4A #696969",
+      "outputPath": "base"
+    },
+    {
+      "key": "grass_elev3",
+      "terrain": "grass",
+      "elevation": 3,
+      "prompt": "tall grass platform with three-level stone wall in green and grey #6B8E4A #696969",
+      "outputPath": "base"
+    },
+    {
+      "key": "grass_pit",
+      "terrain": "grass",
+      "elevation": -1,
+      "prompt": "sunken grass pit with dark shadowed walls in green and dark grey #6B8E4A #404040",
+      "outputPath": "base"
+    },
+    {
+      "key": "stone_elev1",
+      "terrain": "stone",
+      "elevation": 1,
+      "prompt": "raised stone platform with one-level carved wall edge in grey tones #808080 #696969",
+      "outputPath": "base"
+    },
+    {
+      "key": "stone_elev2",
+      "terrain": "stone",
+      "elevation": 2,
+      "prompt": "elevated stone platform with two-level brick wall in grey #808080 #505050",
+      "outputPath": "base"
+    },
+    {
+      "key": "stone_elev3",
+      "terrain": "stone",
+      "elevation": 3,
+      "prompt": "tall stone platform with three-level masonry wall in grey #808080 #404040",
+      "outputPath": "base"
+    },
+    {
+      "key": "stone_pit",
+      "terrain": "stone",
+      "elevation": -1,
+      "prompt": "sunken stone pit with dark carved walls in grey #808080 #303030",
+      "outputPath": "base"
+    },
+    {
+      "key": "rock_elev1",
+      "terrain": "rock",
+      "elevation": 1,
+      "prompt": "raised rock outcrop with natural cliff edge in grey brown #8B8682 #696969",
+      "outputPath": "base"
+    },
+    {
+      "key": "rock_elev2",
+      "terrain": "rock",
+      "elevation": 2,
+      "prompt": "elevated rock formation with two-level cliff face in grey #8B8682 #505050",
+      "outputPath": "base"
+    },
+    {
+      "key": "rock_elev3",
+      "terrain": "rock",
+      "elevation": 3,
+      "prompt": "tall rock pillar with three-level natural wall in grey #8B8682 #404040",
+      "outputPath": "base"
+    },
+    {
+      "key": "rock_pit",
+      "terrain": "rock",
+      "elevation": -1,
+      "prompt": "rocky pit with dark shadowed cliff walls in grey #8B8682 #303030",
+      "outputPath": "base"
+    },
+    {
+      "key": "forest_elev1",
+      "terrain": "forest",
+      "elevation": 1,
+      "prompt": "raised forest floor with mossy earth wall edge in brown green #5C4033 #4A6B2A",
+      "outputPath": "base"
+    },
+    {
+      "key": "forest_elev2",
+      "terrain": "forest",
+      "elevation": 2,
+      "prompt": "elevated forest mound with two-level root-covered wall in brown #5C4033 #3D2B1F",
+      "outputPath": "base"
+    },
+    {
+      "key": "forest_elev3",
+      "terrain": "forest",
+      "elevation": 3,
+      "prompt": "tall forest rise with three-level earthen wall in dark brown #5C4033 #2F2F2F",
+      "outputPath": "base"
+    },
+    {
+      "key": "forest_pit",
+      "terrain": "forest",
+      "elevation": -1,
+      "prompt": "forest hollow with dark shadowed earth walls in brown #5C4033 #1F1F1F",
+      "outputPath": "base"
+    },
+    {
+      "key": "water_elev1",
+      "terrain": "water",
+      "elevation": 1,
+      "prompt": "raised water pool with stone basin edge in blue grey #4682B4 #696969",
+      "outputPath": "base"
+    },
+    {
+      "key": "water_elev2",
+      "terrain": "water",
+      "elevation": 2,
+      "prompt": "elevated fountain pool with two-level stone wall in blue #4682B4 #505050",
+      "outputPath": "base"
+    },
+    {
+      "key": "water_elev3",
+      "terrain": "water",
+      "elevation": 3,
+      "prompt": "tall water tower pool with three-level stone walls in blue #4682B4 #404040",
+      "outputPath": "base"
+    },
+    {
+      "key": "water_pit",
+      "terrain": "water",
+      "elevation": -1,
+      "prompt": "deep water pit with dark submerged walls in dark blue #191970 #0F0F2F",
+      "outputPath": "base"
+    },
+    {
+      "key": "lava_elev1",
+      "terrain": "lava",
+      "elevation": 1,
+      "prompt": "raised lava pool with scorched rock edge in orange black #FF4500 #2F2F2F",
+      "outputPath": "base"
+    },
+    {
+      "key": "lava_elev2",
+      "terrain": "lava",
+      "elevation": 2,
+      "prompt": "elevated lava basin with two-level charred wall in red black #FF4500 #1F1F1F",
+      "outputPath": "base"
+    },
+    {
+      "key": "lava_elev3",
+      "terrain": "lava",
+      "elevation": 3,
+      "prompt": "tall lava crater with three-level volcanic walls in orange black #FF4500 #0F0F0F",
+      "outputPath": "base"
+    },
+    {
+      "key": "lava_pit",
+      "terrain": "lava",
+      "elevation": -1,
+      "prompt": "deep lava pit with glowing depths and dark walls in red black #8B0000 #0F0F0F",
+      "outputPath": "base"
+    },
+    {
+      "key": "cliff_elev1",
+      "terrain": "cliff",
+      "elevation": 1,
+      "prompt": "raised cliff edge with one-level drop wall in grey #696969 #505050",
+      "outputPath": "base"
+    },
+    {
+      "key": "cliff_elev2",
+      "terrain": "cliff",
+      "elevation": 2,
+      "prompt": "elevated cliff platform with two-level sheer face in grey #696969 #404040",
+      "outputPath": "base"
+    },
+    {
+      "key": "cliff_elev3",
+      "terrain": "cliff",
+      "elevation": 3,
+      "prompt": "tall cliff peak with three-level vertical wall in grey #696969 #303030",
+      "outputPath": "base"
+    },
+    {
+      "key": "cliff_pit",
+      "terrain": "cliff",
+      "elevation": -1,
+      "prompt": "cliff chasm with dark shadowed walls dropping into darkness #696969 #1F1F1F",
+      "outputPath": "base"
+    },
+    {
+      "key": "tree_elev1",
+      "terrain": "tree",
+      "elevation": 1,
+      "prompt": "raised tree root platform with one-level earthen wall in brown #5C4033 #3D2B1F",
+      "outputPath": "base"
+    },
+    {
+      "key": "tree_elev2",
+      "terrain": "tree",
+      "elevation": 2,
+      "prompt": "elevated tree base with two-level root wall in dark brown #5C4033 #2F2F2F",
+      "outputPath": "base"
+    },
+    {
+      "key": "tree_elev3",
+      "terrain": "tree",
+      "elevation": 3,
+      "prompt": "tall tree stump with three-level bark wall in brown #5C4033 #1F1F1F",
+      "outputPath": "base"
+    },
+    {
+      "key": "tree_pit",
+      "terrain": "tree",
+      "elevation": -1,
+      "prompt": "tree root hollow with dark underground walls in brown black #5C4033 #0F0F0F",
+      "outputPath": "base"
+    }
+  ]
+}

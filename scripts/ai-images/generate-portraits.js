@@ -252,7 +252,7 @@ async function main() {
     console.log(`    Race: ${portrait.race}, Gender: ${portrait.gender}, Class: ${portrait.class}`);
     console.log(`    Output: ${getOutputPath(portrait)}`);
     if (options.dryRun) {
-      console.log(`    Prompt: ${prompt.substring(0, 80)}...`);
+      console.log(`    Prompt: ${prompt}`);
     }
     console.log('');
   }
@@ -265,12 +265,13 @@ async function main() {
 
   // Create backup if requested
   if (options.backup) {
-    log('\nCreating backup of existing portraits...', 'info');
-    const backupResult = createBackup(portraitsToGenerate, { reason: 'portraits regeneration' });
+    log('Creating backup of existing files...', 'info');
+    const backupResult = createBackup(portraitsToGenerate, { reason: 'category regeneration' });
     if (backupResult.success) {
       log(`Backup created: ${backupResult.backupDir}`, 'success');
+      log(`Backed up ${backupResult.assetCount} assets`, 'info');
     } else {
-      log(`Backup warning: ${backupResult.message}`, 'warn');
+      log(`Backup failed: ${backupResult.error}`, 'warn');
     }
   }
 
