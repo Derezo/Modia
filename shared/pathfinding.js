@@ -11,6 +11,7 @@ import {
   isImpassable,
   getElevationMovementCost,
   canTraverseElevation,
+  discretizeElevation,
   ELEVATION_RULES
 } from './terrain.js';
 
@@ -453,6 +454,30 @@ export function analyzeMapConnectivity(terrain, mapWidth, mapHeight) {
 // ============================================================================
 
 /**
+ * Calculate movement cost for elevation connection types
+ * Slopes and long ramps cost 0.5 movement per level traversed.
+ * Multi-stairs cost 1 movement per level traversed.
+ * Other connections use the base traversal cost.
+ *
+ * @param {Object} connectionData - Connection data with type and levels
+ * @param {number} baseCost - Base traversal cost from canTraverseElevation
+ * @returns {number} Adjusted movement cost
+ */
+function getConnectionMovementCost(connectionData, baseCost) {
+  if (!connectionData) return baseCost;
+
+  switch (connectionData.type) {
+    case 'slope':
+    case 'long_ramp':
+      return Math.ceil((connectionData.levels || 1) * 0.5);
+    case 'multi_stairs':
+      return connectionData.levels || 1;
+    default:
+      return baseCost;
+  }
+}
+
+/**
  * Get all tiles reachable within a movement range, accounting for elevation
  * Uses Dijkstra's algorithm with elevation costs and traversal rules
  *
@@ -489,7 +514,9 @@ export function getReachableTiles3D(
   const maxDrop = options.maxDrop ?? ELEVATION_RULES.MAX_DROP;
 
   // Get actual starting elevation from grid if not provided
-  const actualStartZ = startZ ?? (elevation[startY]?.[startX] ?? 0);
+  // Apply discretization to ensure consistent level comparison
+  const rawStartZ = startZ ?? (elevation[startY]?.[startX] ?? 0);
+  const actualStartZ = discretizeElevation(rawStartZ);
 
   const costs = new Map();
   const visited = new Set();
@@ -527,8 +554,9 @@ export function getReachableTiles3D(
       // Skip impassable terrain
       if (terrainCost === Infinity) continue;
 
-      // Check elevation traversal
-      const neighborZ = elevation[neighbor.y]?.[neighbor.x] ?? 0;
+      // Check elevation traversal (discretize raw elevation values)
+      const rawNeighborZ = elevation[neighbor.y]?.[neighbor.x] ?? 0;
+      const neighborZ = discretizeElevation(rawNeighborZ);
       const connectionType = connections?.[current.y]?.[current.x]?.[neighbor.dir]?.type || null;
 
       const traversal = canTraverseElevation(
@@ -545,7 +573,9 @@ export function getReachableTiles3D(
       if (occupied) continue;
 
       // Calculate total movement cost
-      const elevationCost = traversal.moveCost;
+      // Use connection-specific cost for slopes, multi-stairs, and long ramps
+      const connectionData = connections?.[current.y]?.[current.x]?.[neighbor.dir];
+      const elevationCost = getConnectionMovementCost(connectionData, traversal.moveCost);
       const newCost = current.cost + terrainCost + elevationCost;
       const key = `${neighbor.x},${neighbor.y}`;
 
@@ -562,7 +592,9 @@ export function getReachableTiles3D(
   for (const [key, cost] of costs) {
     if (key === `${startX},${startY}`) continue;
     const [x, y] = key.split(',').map(Number);
-    const z = elevation[y]?.[x] ?? 0;
+    // Return discrete elevation levels for consistency
+    const rawZ = elevation[y]?.[x] ?? 0;
+    const z = discretizeElevation(rawZ);
     reachable.push({ x, y, z, cost });
   }
 
@@ -603,8 +635,9 @@ export function findPath3D(
   const maxClimb = options.maxClimb ?? ELEVATION_RULES.MAX_CLIMB;
   const maxDrop = options.maxDrop ?? ELEVATION_RULES.MAX_DROP;
 
-  const startZ = elevation[startY]?.[startX] ?? 0;
-  const endZ = elevation[endY]?.[endX] ?? 0;
+  // Discretize elevations for consistent comparison
+  const startZ = discretizeElevation(elevation[startY]?.[startX] ?? 0);
+  const endZ = discretizeElevation(elevation[endY]?.[endX] ?? 0);
 
   const openSet = [{ x: startX, y: startY, z: startZ, g: 0, f: 0, parent: null }];
   const closedSet = new Set();
@@ -657,8 +690,8 @@ export function findPath3D(
       // Skip impassable terrain
       if (terrainCost === Infinity) continue;
 
-      // Check elevation traversal
-      const neighborZ = elevation[neighbor.y]?.[neighbor.x] ?? 0;
+      // Check elevation traversal (discretize raw elevation)
+      const neighborZ = discretizeElevation(elevation[neighbor.y]?.[neighbor.x] ?? 0);
       const connectionType = connections?.[current.y]?.[current.x]?.[neighbor.dir]?.type || null;
 
       const traversal = canTraverseElevation(
@@ -677,7 +710,9 @@ export function findPath3D(
         if (occupied) continue;
       }
 
-      const elevationCost = traversal.moveCost;
+      // Calculate elevation cost based on connection type
+      const connectionData = connections?.[current.y]?.[current.x]?.[neighbor.dir];
+      const elevationCost = getConnectionMovementCost(connectionData, traversal.moveCost);
       const tentativeG = current.g + terrainCost + elevationCost;
 
       if (!gScores.has(neighborKey) || tentativeG < gScores.get(neighborKey)) {
@@ -759,10 +794,12 @@ export function calculatePathCost3D(
 
   const costs = new Map();
   const visited = new Set();
+  // Discretize starting elevation
+  const startZ = discretizeElevation(elevation[startY]?.[startX] ?? 0);
   const queue = [{
     x: startX,
     y: startY,
-    z: elevation[startY]?.[startX] ?? 0,
+    z: startZ,
     cost: 0
   }];
 
@@ -796,7 +833,8 @@ export function calculatePathCost3D(
       const terrainCost = getTerrainMovementCost(tileTerrain);
       if (terrainCost === Infinity) continue;
 
-      const neighborZ = elevation[neighbor.y]?.[neighbor.x] ?? 0;
+      // Discretize neighbor elevation
+      const neighborZ = discretizeElevation(elevation[neighbor.y]?.[neighbor.x] ?? 0);
       const connectionType = connections?.[current.y]?.[current.x]?.[neighbor.dir]?.type || null;
 
       const traversal = canTraverseElevation(current.z, neighborZ, connectionType, { maxClimb, maxDrop });
@@ -808,7 +846,10 @@ export function calculatePathCost3D(
         if (occupied) continue;
       }
 
-      const newCost = current.cost + terrainCost + traversal.moveCost;
+      // Handle special connection types for movement cost
+      const connectionData = connections?.[current.y]?.[current.x]?.[neighbor.dir];
+      const moveCost = getConnectionMovementCost(connectionData, traversal.moveCost);
+      const newCost = current.cost + terrainCost + moveCost;
       const key = `${neighbor.x},${neighbor.y}`;
 
       if (newCost <= maxCost && (!costs.has(key) || costs.get(key) > newCost)) {
@@ -848,7 +889,8 @@ export function getAttackableTiles3D(
   }
 
   const attackable = [];
-  const startZ = elevation[startY]?.[startX] ?? 0;
+  // Discretize elevation for consistent level comparison
+  const startZ = discretizeElevation(elevation[startY]?.[startX] ?? 0);
   const rangedBonus = options.rangedBonus ?? true;
 
   // Calculate effective range with elevation bonus for ranged
@@ -864,7 +906,8 @@ export function getAttackableTiles3D(
 
         // Check bounds
         if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
-          const targetZ = elevation[y]?.[x] ?? 0;
+          // Discretize target elevation
+          const targetZ = discretizeElevation(elevation[y]?.[x] ?? 0);
           const elevDiff = startZ - targetZ;
 
           // Calculate elevation-based bonuses
@@ -911,10 +954,12 @@ export function hasValidPath3D(
   }
 
   const visited = new Set();
+  // Discretize starting elevation
+  const startZ = discretizeElevation(elevation[startY]?.[startX] ?? 0);
   const queue = [{
     x: startX,
     y: startY,
-    z: elevation[startY]?.[startX] ?? 0
+    z: startZ
   }];
   visited.add(`${startX},${startY}`);
 
@@ -937,10 +982,27 @@ export function hasValidPath3D(
       const tileTerrain = terrain?.[neighbor.y]?.[neighbor.x] || 'grass';
       if (isImpassable(tileTerrain)) continue;
 
-      const neighborZ = elevation[neighbor.y]?.[neighbor.x] ?? 0;
-      const connectionType = connections?.[current.y]?.[current.x]?.[neighbor.dir]?.type || null;
+      // Discretize neighbor elevation
+      const neighborZ = discretizeElevation(elevation[neighbor.y]?.[neighbor.x] ?? 0);
+      const connectionData = connections?.[current.y]?.[current.x]?.[neighbor.dir];
+      const connectionType = connectionData?.type || null;
 
-      const traversal = canTraverseElevation(current.z, neighborZ, connectionType);
+      // For large elevation diffs without explicit connection, check cliff threshold
+      const elevDiff = Math.abs(current.z - neighborZ);
+      if (!connectionType && elevDiff >= ELEVATION_RULES.CLIFF_THRESHOLD) {
+        continue; // Impassable cliff
+      }
+
+      // Allow slope, long_ramp, and multi_stairs for connectivity checks
+      // These connection types enable traversal across multiple elevation levels
+      let effectiveType = connectionType;
+      if (connectionType === 'slope' || connectionType === 'long_ramp' || connectionType === 'multi_stairs') {
+        // These special connections allow multi-level traversal
+        // Use 'ramp' as base type since canTraverseElevation supports it
+        effectiveType = 'ramp';
+      }
+
+      const traversal = canTraverseElevation(current.z, neighborZ, effectiveType);
       if (!traversal.canTraverse) continue;
 
       visited.add(key);

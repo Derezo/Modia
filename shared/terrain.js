@@ -9,19 +9,98 @@
 
 /**
  * Elevation levels for multi-level battle maps
- * -1 (PIT): Pits, trenches - can drop into, hard to climb out
+ * Extended range from -3 to +8 for dramatic vertical gameplay
+ *
+ * Negative levels (below ground):
+ * -3 (DEEP_PIT): Deep dungeon pits, dangerous chasms
+ * -2 (PIT): Standard pits, trap areas
+ * -1 (TRENCH): Shallow trenches, moats
+ *
+ * Ground and raised levels:
  *  0 (GROUND): Ground level - default
  *  1 (RAISED): Raised platforms, small hills
  *  2 (HIGH): High ground, cliffs
- *  3 (PEAK): Mountain peaks - rare
+ *  3 (VERY_HIGH): Very high structures
+ *
+ * Elevated structures:
+ *  4 (PEAK): Mountain peaks
+ *  5 (SPIRE): Tower spires
+ *  6 (TOWER): Tower structures
+ *  7 (TOWER_TOP): Tower tops
+ *  8 (CLOUD): Maximum height - sky platforms
  */
 export const ELEVATION_LEVELS = {
-  PIT: -1,
+  DEEP_PIT: -3,
+  PIT: -2,
+  TRENCH: -1,
   GROUND: 0,
   RAISED: 1,
   HIGH: 2,
-  PEAK: 3
+  VERY_HIGH: 3,
+  PEAK: 4,
+  SPIRE: 5,
+  TOWER: 6,
+  TOWER_TOP: 7,
+  CLOUD: 8
 };
+
+/**
+ * Discretize raw elevation value (0-1 float) to elevation level (-3 to +8)
+ * SINGLE SOURCE OF TRUTH for elevation discretization used by pathfinding and rendering
+ *
+ * Distribution is weighted toward ground level for natural terrain:
+ * - Extreme depths (-3 to -2) and heights (+5 to +8) are rare
+ * - Ground level (0) is most common (30% of range)
+ *
+ * @param {number} rawElevation - Raw elevation value (0-1 float or already discrete)
+ * @returns {number} Discrete elevation level (-3 to +8)
+ */
+export function discretizeElevation(rawElevation) {
+  if (rawElevation === null || rawElevation === undefined) return ELEVATION_LEVELS.GROUND;
+
+  // If already discrete (not in 0-1 range), return as-is
+  if (rawElevation < 0 || rawElevation > 1) {
+    return Math.round(rawElevation);
+  }
+
+  // Discretize 0-1 floats to elevation levels
+  // Weighted toward ground level for natural terrain distribution
+  if (rawElevation < 0.05) return ELEVATION_LEVELS.DEEP_PIT;   // -3 (rare)
+  if (rawElevation < 0.10) return ELEVATION_LEVELS.PIT;        // -2
+  if (rawElevation < 0.18) return ELEVATION_LEVELS.TRENCH;     // -1
+  if (rawElevation < 0.48) return ELEVATION_LEVELS.GROUND;     // 0 (most common)
+  if (rawElevation < 0.60) return ELEVATION_LEVELS.RAISED;     // 1
+  if (rawElevation < 0.72) return ELEVATION_LEVELS.HIGH;       // 2
+  if (rawElevation < 0.82) return ELEVATION_LEVELS.VERY_HIGH;  // 3
+  if (rawElevation < 0.90) return ELEVATION_LEVELS.PEAK;       // 4
+  if (rawElevation < 0.94) return ELEVATION_LEVELS.SPIRE;      // 5
+  if (rawElevation < 0.97) return ELEVATION_LEVELS.TOWER;      // 6
+  if (rawElevation < 0.99) return ELEVATION_LEVELS.TOWER_TOP;  // 7
+  return ELEVATION_LEVELS.CLOUD;                                // 8 (very rare)
+}
+
+/**
+ * Get elevation level name for UI display
+ * @param {number} level - Discrete elevation level (-3 to +8)
+ * @returns {string} Human-readable elevation name
+ */
+export function getElevationName(level) {
+  const names = {
+    [-3]: 'Deep Pit',
+    [-2]: 'Pit',
+    [-1]: 'Trench',
+    [0]: 'Ground',
+    [1]: 'Raised',
+    [2]: 'High',
+    [3]: 'Very High',
+    [4]: 'Peak',
+    [5]: 'Spire',
+    [6]: 'Tower',
+    [7]: 'Tower Top',
+    [8]: 'Cloud'
+  };
+  return names[level] ?? 'Ground';
+}
 
 /**
  * Connection types for elevation transitions
@@ -50,11 +129,13 @@ export const ELEVATION_MOVEMENT_COSTS = {
 
 /**
  * Elevation traversal rules
+ * Updated for extended elevation range (-3 to +8)
  */
 export const ELEVATION_RULES = {
-  MAX_CLIMB: 1,     // Maximum elevation levels a unit can climb in one move
-  MAX_DROP: 2,      // Maximum elevation levels a unit can drop in one move
-  DROP_DAMAGE_THRESHOLD: 3 // Drops greater than this cause fall damage
+  MAX_CLIMB: 1,              // Maximum elevation levels a unit can climb in one move
+  MAX_DROP: 3,               // Maximum elevation levels a unit can drop in one move
+  DROP_DAMAGE_THRESHOLD: 4,  // Drops greater than this cause fall damage
+  CLIFF_THRESHOLD: 4         // 4+ level difference = impassable cliff
 };
 
 /**

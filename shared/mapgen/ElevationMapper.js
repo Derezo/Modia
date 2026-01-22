@@ -5,48 +5,40 @@
  * to enable vertical tactical gameplay. Ensures all areas remain reachable
  * through proper connection placement.
  *
- * Elevation levels:
- * - -1 (PIT): Pits, trenches - can drop into, hard to climb out
+ * Elevation levels (extended range -3 to +8):
+ * - -3 (DEEP_PIT): Deep chasms, bottomless pits
+ * - -2 (PIT): Standard pits, trenches
+ * - -1 (TRENCH): Shallow depressions
  * - 0 (GROUND): Ground level - default
  * - 1 (RAISED): Raised platforms, small hills
  * - 2 (HIGH): High ground, cliffs
- * - 3 (PEAK): Mountain peaks - rare
+ * - 3 (VERY_HIGH): Tall platforms, cliff tops
+ * - 4 (PEAK): Mountain peaks
+ * - 5 (SPIRE): Tower bases, tall formations
+ * - 6 (TOWER): Tower mid-sections
+ * - 7 (TOWER_TOP): Tower tops
+ * - 8 (CLOUD): Floating platforms, extreme heights
  *
  * Connection types:
- * - ramp: Gentle slope, no movement penalty
- * - stairs: Steps, +1 movement cost
- * - ledge: One-way drop (can go down, not up)
- * - cliff: Impassable wall
+ * - ramp: Gentle slope, no movement penalty (1 level)
+ * - stairs: Steps, +1 movement cost (1-2 levels)
+ * - ledge: One-way drop (can go down, not up) (1-2 levels)
+ * - cliff: Impassable wall (2+ levels)
+ * - slope: Multi-level gradual transition (2-3 levels)
+ * - long_ramp: Extended ramp for larger drops (3 levels)
+ * - multi_stairs: Multiple stair flights (3-4 levels)
  *
  * CRITICAL: All random operations use seeded random for server/client sync.
  */
 
 import { SimplexNoise } from './algorithms/PerlinNoise.js';
+import {
+  ELEVATION_LEVELS,
+  ELEVATION_CONNECTION_TYPES as CONNECTION_TYPES
+} from '../terrain.js';
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/**
- * Elevation level definitions
- */
-export const ELEVATION_LEVELS = {
-  PIT: -1,
-  GROUND: 0,
-  RAISED: 1,
-  HIGH: 2,
-  PEAK: 3
-};
-
-/**
- * Connection type definitions for elevation transitions
- */
-export const CONNECTION_TYPES = {
-  RAMP: 'ramp',
-  STAIRS: 'stairs',
-  LEDGE: 'ledge',
-  CLIFF: 'cliff'
-};
+// Re-export for backward compatibility with existing imports from this module
+export { ELEVATION_LEVELS, CONNECTION_TYPES };
 
 /**
  * Direction vectors for 4-directional connections
@@ -62,19 +54,21 @@ export const DIRECTIONS = {
  * Default elevation generation options
  */
 export const DEFAULT_OPTIONS = {
-  maxElevation: 3,
-  minElevation: -1,
-  noiseScale: 0.08,
-  noiseOctaves: 3,
-  noisePersistence: 0.5,
-  pitChance: 0.05,       // Chance of generating pits
-  peakChance: 0.03,      // Chance of peak terrain
-  flattenEdges: true,    // Keep map edges at ground level
-  edgeMargin: 2,         // Tiles from edge to flatten
-  rampPreference: 0.4,   // Preference for ramps over stairs
-  stairsPreference: 0.35, // Preference for stairs over ledges
-  minRampsPerLevel: 2,   // Minimum ramps between adjacent levels
-  ensureConnectivity: true // Ensure all areas are reachable
+  maxElevation: 8,           // Extended maximum for towers/cloud platforms
+  minElevation: -3,          // Extended minimum for deep pits
+  noiseScale: 0.06,          // Lower = larger terrain features
+  noiseOctaves: 5,           // More octaves = more detail levels
+  noisePersistence: 0.6,     // Higher = more height variation
+  pitChance: 0.05,           // Chance of generating pits
+  peakChance: 0.03,          // Chance of peak terrain
+  towerChance: 0.02,         // Chance of tower placement on elevated terrain
+  deepPitChance: 0.01,       // Chance of deep pit placement in low areas
+  flattenEdges: true,        // Keep map edges at ground level
+  edgeMargin: 2,             // Tiles from edge to flatten
+  rampPreference: 0.35,      // Preference for ramps over stairs
+  stairsPreference: 0.4,     // Preference for stairs over ledges
+  minRampsPerLevel: 3,       // Minimum ramps between adjacent levels
+  ensureConnectivity: true   // Ensure all areas are reachable
 };
 
 // ============================================================================
@@ -88,13 +82,18 @@ export class ElevationMapper {
   /**
    * Create a new ElevationMapper
    * @param {Object} options - Configuration options
-   * @param {number} options.maxElevation - Maximum elevation level (default 3)
-   * @param {number} options.minElevation - Minimum elevation level (default -1)
-   * @param {number} options.noiseScale - Perlin noise scale (default 0.08)
+   * @param {number} options.maxElevation - Maximum elevation level (default 8)
+   * @param {number} options.minElevation - Minimum elevation level (default -3)
+   * @param {number} options.noiseScale - Perlin noise scale (default 0.06)
+   * @param {number} options.noiseOctaves - Number of noise octaves (default 5)
+   * @param {number} options.noisePersistence - Noise persistence (default 0.6)
    * @param {number} options.pitChance - Chance of pit generation (default 0.05)
    * @param {number} options.peakChance - Chance of peak terrain (default 0.03)
+   * @param {number} options.towerChance - Chance of tower placement (default 0.02)
+   * @param {number} options.deepPitChance - Chance of deep pit placement (default 0.01)
    * @param {boolean} options.flattenEdges - Keep edges at ground level (default true)
-   * @param {number} options.rampPreference - Preference for ramps (default 0.4)
+   * @param {number} options.rampPreference - Preference for ramps (default 0.35)
+   * @param {number} options.stairsPreference - Preference for stairs (default 0.4)
    */
   constructor(options = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
@@ -107,7 +106,7 @@ export class ElevationMapper {
    * @param {number} height - Map height in tiles
    * @param {Function} random - Seeded random function returning 0-1
    * @param {string[][]} terrain - Optional terrain grid for context
-   * @returns {Object} { elevation: number[][], connections: Object[][] }
+   * @returns {Object} { elevation: number[][], connections: Object[][], towers: Array }
    */
   generateElevation(width, height, random, terrain = null) {
     // Generate base elevation from noise
@@ -117,6 +116,9 @@ export class ElevationMapper {
     if (terrain) {
       this._applyTerrainModifiers(elevation, terrain);
     }
+
+    // Generate tall structures (towers, deep pits) in appropriate areas
+    const towers = this._generateTallStructures(elevation, random);
 
     // Flatten edges if configured
     if (this.options.flattenEdges) {
@@ -129,23 +131,27 @@ export class ElevationMapper {
     // Generate connections (ramps, stairs, ledges, cliffs)
     const connections = this._generateConnections(elevation, random);
 
+    // Place slopes for multi-level transitions
+    this._placeSlopes(elevation, connections);
+
     // Ensure connectivity if configured
     if (this.options.ensureConnectivity) {
       this._ensureConnectivity(elevation, connections, random);
     }
 
-    return { elevation, connections };
+    return { elevation, connections, towers };
   }
 
   /**
    * Generate base elevation using Perlin noise
+   * Uses extended elevation range (-3 to +8) for more dramatic terrain
    * @private
    */
   _generateBaseElevation(width, height, random) {
     const noise = new SimplexNoise(random);
     const elevation = [];
 
-    const { noiseScale, noiseOctaves, noisePersistence, pitChance, peakChance, minElevation, maxElevation } = this.options;
+    const { noiseScale, noiseOctaves, noisePersistence, pitChance, peakChance } = this.options;
 
     for (let y = 0; y < height; y++) {
       const row = [];
@@ -158,21 +164,32 @@ export class ElevationMapper {
           noisePersistence
         );
 
-        // Map noise to elevation levels
+        // Map noise to elevation levels with extended range
         let level;
-        if (noiseValue < -0.4 && random() < pitChance * 2) {
-          level = minElevation; // PIT
+        if (noiseValue < -0.6 && random() < pitChance * 3) {
+          // Deep pit in very low noise areas
+          level = ELEVATION_LEVELS.PIT; // -2 (deep pits handled separately)
+        } else if (noiseValue < -0.4 && random() < pitChance * 2) {
+          // Standard pit
+          level = ELEVATION_LEVELS.TRENCH; // -1
+        } else if (noiseValue > 0.8 && random() < peakChance * 3) {
+          // Very high peak
+          level = ELEVATION_LEVELS.PEAK; // 4
         } else if (noiseValue > 0.6 && random() < peakChance * 2) {
-          level = maxElevation; // PEAK
+          // High peak
+          level = ELEVATION_LEVELS.VERY_HIGH; // 3
         } else if (noiseValue > 0.4) {
-          level = ELEVATION_LEVELS.HIGH;
-        } else if (noiseValue > 0.1) {
-          level = ELEVATION_LEVELS.RAISED;
-        } else if (noiseValue < -0.3) {
-          // Small chance of pit even in medium-low areas
-          level = random() < pitChance ? ELEVATION_LEVELS.PIT : ELEVATION_LEVELS.GROUND;
+          // High ground
+          level = ELEVATION_LEVELS.HIGH; // 2
+        } else if (noiseValue > 0.15) {
+          // Raised terrain
+          level = ELEVATION_LEVELS.RAISED; // 1
+        } else if (noiseValue < -0.25) {
+          // Small chance of trench in medium-low areas
+          level = random() < pitChance ? ELEVATION_LEVELS.TRENCH : ELEVATION_LEVELS.GROUND;
         } else {
-          level = ELEVATION_LEVELS.GROUND;
+          // Ground level
+          level = ELEVATION_LEVELS.GROUND; // 0
         }
 
         row.push(level);
@@ -184,7 +201,67 @@ export class ElevationMapper {
   }
 
   /**
+   * Generate tall structures (towers, pillars) in elevated areas
+   * Called after base elevation to create dramatic vertical features
+   * @private
+   * @param {number[][]} elevation - Elevation grid to modify
+   * @param {Function} random - Seeded random function
+   * @returns {Array<{x: number, y: number, height: number}>} Array of tower positions
+   */
+  _generateTallStructures(elevation, random) {
+    const height = elevation.length;
+    const width = elevation[0].length;
+    const towers = [];
+    const { towerChance, deepPitChance, maxElevation, minElevation } = this.options;
+
+    for (let y = 2; y < height - 2; y++) {
+      for (let x = 2; x < width - 2; x++) {
+        const currentElev = elevation[y][x];
+
+        // Tower placement on already-elevated terrain
+        if (currentElev >= ELEVATION_LEVELS.HIGH && random() < towerChance) {
+          const towerHeight = ELEVATION_LEVELS.SPIRE + Math.floor(random() * 3); // 5-7
+          elevation[y][x] = Math.min(towerHeight, maxElevation);
+
+          // Create gradual descent around tower base
+          for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+              elevation[ny][nx] = Math.max(
+                elevation[ny][nx],
+                Math.min(towerHeight - 2, ELEVATION_LEVELS.VERY_HIGH)
+              );
+            }
+          }
+          towers.push({ x, y, height: elevation[y][x] });
+        }
+
+        // Deep pit placement in low areas
+        if (currentElev <= ELEVATION_LEVELS.GROUND && random() < deepPitChance) {
+          elevation[y][x] = Math.max(ELEVATION_LEVELS.DEEP_PIT, minElevation);
+
+          // Gradual descent into pit
+          for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+            const nx = x + dx;
+            const ny = y + dy;
+            if (ny >= 0 && ny < height && nx >= 0 && nx < width) {
+              elevation[ny][nx] = Math.min(
+                elevation[ny][nx],
+                ELEVATION_LEVELS.PIT
+              );
+            }
+          }
+        }
+      }
+    }
+
+    return towers;
+  }
+
+  /**
    * Apply terrain-based modifiers to elevation
+   * Uses extended elevation levels for more dramatic terrain features
    * @private
    */
   _applyTerrainModifiers(elevation, terrain) {
@@ -201,13 +278,25 @@ export class ElevationMapper {
             // Rock/cliff terrain tends to be elevated
             elevation[y][x] = Math.max(elevation[y][x], ELEVATION_LEVELS.RAISED);
             break;
+          case 'mountain':
+            // Mountain terrain is high
+            elevation[y][x] = Math.max(elevation[y][x], ELEVATION_LEVELS.HIGH);
+            break;
           case 'water':
-            // Water is at ground level or lower
+            // Water is at ground level or lower (shallow water)
             elevation[y][x] = Math.min(elevation[y][x], ELEVATION_LEVELS.GROUND);
+            break;
+          case 'deep_water':
+            // Deep water in trenches
+            elevation[y][x] = Math.min(elevation[y][x], ELEVATION_LEVELS.TRENCH);
             break;
           case 'lava':
             // Lava is in pits
             elevation[y][x] = ELEVATION_LEVELS.PIT;
+            break;
+          case 'chasm':
+            // Chasms are deep pits
+            elevation[y][x] = ELEVATION_LEVELS.DEEP_PIT;
             break;
           // grass, stone, forest keep their generated elevation
         }
@@ -240,13 +329,16 @@ export class ElevationMapper {
 
   /**
    * Smooth elevation to avoid jagged transitions
-   * Limits elevation changes to 1 level between adjacent tiles
+   * With extended range, allows up to 2 level changes between adjacent tiles
+   * (preserving tall structures while smoothing general terrain)
    * @private
    */
   _smoothElevation(elevation, random) {
     const height = elevation.length;
     const width = elevation[0].length;
     const passes = 2;
+    // Allow steeper gradients for tall structures (towers go from 5+ levels)
+    const maxGradient = 2;
 
     for (let pass = 0; pass < passes; pass++) {
       for (let y = 1; y < height - 1; y++) {
@@ -265,11 +357,28 @@ export class ElevationMapper {
           const maxNeighbor = Math.max(...neighbors);
           const minNeighbor = Math.min(...neighbors);
 
-          // If current is more than 2 levels different from neighbors, adjust
-          if (current > maxNeighbor + 1) {
-            elevation[y][x] = maxNeighbor + 1;
-          } else if (current < minNeighbor - 1) {
-            elevation[y][x] = minNeighbor - 1;
+          // Preserve tall structures (SPIRE and above) from aggressive smoothing
+          if (current >= ELEVATION_LEVELS.SPIRE) {
+            // Only smooth if ALL neighbors are much lower
+            if (maxNeighbor < ELEVATION_LEVELS.HIGH) {
+              elevation[y][x] = Math.max(current, maxNeighbor + maxGradient);
+            }
+            continue;
+          }
+
+          // Preserve deep pits from aggressive smoothing
+          if (current <= ELEVATION_LEVELS.DEEP_PIT) {
+            if (minNeighbor > ELEVATION_LEVELS.TRENCH) {
+              elevation[y][x] = Math.min(current, minNeighbor - maxGradient);
+            }
+            continue;
+          }
+
+          // If current is more than maxGradient levels different from neighbors, adjust
+          if (current > maxNeighbor + maxGradient) {
+            elevation[y][x] = maxNeighbor + maxGradient;
+          } else if (current < minNeighbor - maxGradient) {
+            elevation[y][x] = minNeighbor - maxGradient;
           }
         }
       }
@@ -338,20 +447,44 @@ export class ElevationMapper {
 
   /**
    * Determine connection type based on elevation difference
+   * Handles extended elevation range with multi-level transitions
    * @private
    */
   _determineConnectionType(elevDiff, random, rampPreference, stairsPreference) {
-    // More than 1 level difference is always a cliff (impassable)
-    // unless we specifically place a multi-level ramp
-    if (elevDiff > 2) {
+    // 5+ level difference is always an impassable cliff
+    if (elevDiff > 4) {
       return { type: CONNECTION_TYPES.CLIFF, levels: elevDiff };
     }
 
-    if (elevDiff === 2) {
-      // 2-level drop: can be ledge (one-way) or cliff
+    if (elevDiff === 4) {
+      // 4 level jump: mostly cliff, some multi-stairs
       const roll = random();
-      if (roll < 0.6) {
+      if (roll < 0.3) {
+        return { type: 'multi_stairs', levels: 4, steps: 2 };
+      }
+      return { type: CONNECTION_TYPES.CLIFF, levels: 4 };
+    }
+
+    if (elevDiff === 3) {
+      // 3 level difference: stairs, long ramp, or cliff
+      const roll = random();
+      if (roll < 0.4) {
+        return { type: 'multi_stairs', levels: 3, steps: 2 };
+      }
+      if (roll < 0.7) {
+        return { type: 'long_ramp', levels: 3 };
+      }
+      return { type: CONNECTION_TYPES.CLIFF, levels: 3 };
+    }
+
+    if (elevDiff === 2) {
+      // 2-level drop: can be ledge, stairs, or cliff
+      const roll = random();
+      if (roll < 0.4) {
         return { type: CONNECTION_TYPES.LEDGE, levels: 2 };
+      }
+      if (roll < 0.7) {
+        return { type: CONNECTION_TYPES.STAIRS, levels: 2 };
       }
       return { type: CONNECTION_TYPES.CLIFF, levels: 2 };
     }
@@ -364,6 +497,50 @@ export class ElevationMapper {
       return { type: CONNECTION_TYPES.STAIRS, levels: 1 };
     } else {
       return { type: CONNECTION_TYPES.LEDGE, levels: 1 };
+    }
+  }
+
+  /**
+   * Mark tiles as slopes for multi-level transitions (2-3 levels)
+   * Called after connections are generated to add slope transitions
+   * @private
+   * @param {number[][]} elevation - Elevation grid
+   * @param {Object[][]} connections - Connections grid to modify
+   */
+  _placeSlopes(elevation, connections) {
+    const height = elevation.length;
+    const width = elevation[0].length;
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const currentElev = elevation[y][x];
+
+        for (const dir of Object.values(DIRECTIONS)) {
+          const nx = x + dir.dx;
+          const ny = y + dir.dy;
+
+          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+
+          const neighborElev = elevation[ny][nx];
+          const elevDiff = Math.abs(currentElev - neighborElev);
+
+          // For 2-3 level transitions, check if we should convert to slope
+          if (elevDiff >= 2 && elevDiff <= 3) {
+            const existingConn = connections[y][x][dir.name];
+
+            // Only add slope if no existing connection or it's a cliff
+            if (!existingConn || existingConn.type === CONNECTION_TYPES.CLIFF) {
+              const slopeConnection = {
+                type: 'slope',
+                direction: currentElev > neighborElev ? 'down' : 'up',
+                levels: elevDiff
+              };
+              connections[y][x][dir.name] = slopeConnection;
+              connections[ny][nx][dir.opposite] = slopeConnection;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -499,12 +676,14 @@ export class ElevationMapper {
 
   /**
    * Add ramps between two elevation levels
+   * Handles extended elevation range with appropriate connection types
    * @private
    */
   _addRampsBetweenLevels(elevation, connections, lowerLevel, higherLevel, count, random) {
     const height = elevation.length;
     const width = elevation[0].length;
     const borderTiles = [];
+    const levelDiff = higherLevel - lowerLevel;
 
     // Find all border tiles between these levels
     for (let y = 0; y < height; y++) {
@@ -532,10 +711,33 @@ export class ElevationMapper {
     const rampsToAdd = Math.min(count, borderTiles.length);
     for (let i = 0; i < rampsToAdd; i++) {
       const tile = borderTiles[i];
-      const newConnection = {
-        type: random() < 0.6 ? CONNECTION_TYPES.RAMP : CONNECTION_TYPES.STAIRS,
-        levels: higherLevel - lowerLevel
-      };
+
+      // Choose appropriate connection type based on level difference
+      let newConnection;
+      if (levelDiff === 1) {
+        newConnection = {
+          type: random() < 0.6 ? CONNECTION_TYPES.RAMP : CONNECTION_TYPES.STAIRS,
+          levels: 1
+        };
+      } else if (levelDiff === 2) {
+        newConnection = {
+          type: random() < 0.5 ? CONNECTION_TYPES.STAIRS : 'slope',
+          levels: 2
+        };
+      } else if (levelDiff === 3) {
+        newConnection = {
+          type: random() < 0.5 ? 'long_ramp' : 'multi_stairs',
+          levels: 3,
+          steps: 2
+        };
+      } else {
+        // 4+ levels - use multi_stairs
+        newConnection = {
+          type: 'multi_stairs',
+          levels: levelDiff,
+          steps: Math.ceil(levelDiff / 2)
+        };
+      }
 
       connections[tile.y][tile.x][tile.dir.name] = newConnection;
       connections[tile.ny][tile.nx][tile.dir.opposite] = newConnection;
@@ -573,6 +775,7 @@ export class ElevationMapper {
 
   /**
    * Check if movement between two tiles is allowed
+   * Handles extended elevation range with new connection types
    * @param {number[][]} elevation - Elevation grid
    * @param {Object[][]} connections - Connections grid
    * @param {number} fromX - Starting X
@@ -581,12 +784,12 @@ export class ElevationMapper {
    * @param {number} toY - Destination Y
    * @param {Object} options - Movement options
    * @param {number} options.maxClimb - Maximum climb height (default 1)
-   * @param {number} options.maxDrop - Maximum drop height (default 2)
+   * @param {number} options.maxDrop - Maximum drop height (default 3)
    * @returns {Object} { canMove: boolean, cost: number, type: string }
    */
   static canMove(elevation, connections, fromX, fromY, toX, toY, options = {}) {
     const maxClimb = options.maxClimb ?? 1;
-    const maxDrop = options.maxDrop ?? 2;
+    const maxDrop = options.maxDrop ?? 3; // Increased default for extended range
 
     const fromElev = ElevationMapper.getElevationAt(elevation, fromX, fromY);
     const toElev = ElevationMapper.getElevationAt(elevation, toX, toY);
@@ -614,19 +817,11 @@ export class ElevationMapper {
 
     // Going up
     if (elevDiff > 0) {
-      if (elevDiff > maxClimb) {
-        // Check for multi-level connection
-        if (!connection || connection.type === CONNECTION_TYPES.CLIFF) {
-          return { canMove: false, cost: Infinity, type: 'cliff' };
-        }
-        if (connection.type === CONNECTION_TYPES.LEDGE) {
-          // Ledges are one-way (down only)
-          return { canMove: false, cost: Infinity, type: 'ledge_wrong_way' };
-        }
-      }
-
-      // Check connection type
+      // Check connection type for climbing
       if (!connection) {
+        if (elevDiff <= maxClimb) {
+          return { canMove: true, cost: elevDiff, type: 'climb' };
+        }
         return { canMove: false, cost: Infinity, type: 'no_connection' };
       }
 
@@ -635,12 +830,25 @@ export class ElevationMapper {
           return { canMove: true, cost: 0, type: 'ramp' };
         case CONNECTION_TYPES.STAIRS:
           return { canMove: true, cost: 1, type: 'stairs' };
+        case 'slope':
+          // Slopes allow multi-level traversal with cost
+          return { canMove: true, cost: connection.levels, type: 'slope' };
+        case 'long_ramp':
+          // Long ramps for 3-level transitions
+          return { canMove: true, cost: 1, type: 'long_ramp' };
+        case 'multi_stairs':
+          // Multiple stair flights for 3-4 level transitions
+          return { canMove: true, cost: connection.steps || 2, type: 'multi_stairs' };
         case CONNECTION_TYPES.LEDGE:
           // Cannot climb up ledges
           return { canMove: false, cost: Infinity, type: 'ledge_wrong_way' };
         case CONNECTION_TYPES.CLIFF:
           return { canMove: false, cost: Infinity, type: 'cliff' };
         default:
+          // Unknown connection type - check if within climb limit
+          if (elevDiff <= maxClimb) {
+            return { canMove: true, cost: elevDiff, type: 'climb' };
+          }
           return { canMove: false, cost: Infinity, type: 'unknown' };
       }
     }
@@ -649,17 +857,13 @@ export class ElevationMapper {
     if (elevDiff < 0) {
       const dropHeight = Math.abs(elevDiff);
 
-      if (dropHeight > maxDrop) {
-        return { canMove: false, cost: Infinity, type: 'too_high' };
-      }
-
       // Check connection from the perspective of going down
       if (!connection) {
         // No explicit connection - check if drop is within limits
         if (dropHeight <= maxDrop) {
           return { canMove: true, cost: 0, type: 'drop' };
         }
-        return { canMove: false, cost: Infinity, type: 'no_connection' };
+        return { canMove: false, cost: Infinity, type: 'too_high' };
       }
 
       switch (connection.type) {
@@ -667,6 +871,15 @@ export class ElevationMapper {
           return { canMove: true, cost: 0, type: 'ramp' };
         case CONNECTION_TYPES.STAIRS:
           return { canMove: true, cost: 1, type: 'stairs' };
+        case 'slope':
+          // Slopes allow multi-level traversal with reduced cost going down
+          return { canMove: true, cost: Math.max(0, connection.levels - 1), type: 'slope' };
+        case 'long_ramp':
+          // Long ramps - easier going down
+          return { canMove: true, cost: 0, type: 'long_ramp' };
+        case 'multi_stairs':
+          // Multiple stair flights - same cost up or down
+          return { canMove: true, cost: connection.steps || 2, type: 'multi_stairs' };
         case CONNECTION_TYPES.LEDGE:
           // Can always go down ledges
           return { canMove: true, cost: 0, type: 'ledge' };
@@ -677,7 +890,11 @@ export class ElevationMapper {
           }
           return { canMove: false, cost: Infinity, type: 'cliff' };
         default:
-          return { canMove: true, cost: 0, type: 'drop' };
+          // Unknown connection - allow if within drop limit
+          if (dropHeight <= maxDrop) {
+            return { canMove: true, cost: 0, type: 'drop' };
+          }
+          return { canMove: false, cost: Infinity, type: 'too_high' };
       }
     }
 

@@ -1,0 +1,85 @@
+{
+  "version": "1.0.0",
+  "biome": "mountain",
+  "description": "Mountain biome terrain tiles - rocky, alpine, snow patches",
+  "palette": {
+    "primary": "#808080",
+    "secondary": "#F5F5F5",
+    "accent": "#87CEEB"
+  },
+  "biomeModifier": "rocky alpine mountain terrain, sparse snow patches, windswept texture",
+  "tiles": [
+    {
+      "id": "mountain_rock_1",
+      "name": "Mountain Rock",
+      "prompt": "rocky mountain terrain grey stone floor",
+      "variants": 1,
+      "seed": 3001,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:20:26.202Z"
+    },
+    {
+      "id": "mountain_snow_1",
+      "name": "Snowy Ground",
+      "prompt": "snow-covered mountain ground icy patches",
+      "variants": 1,
+      "seed": 3011,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:21:00.844Z"
+    },
+    {
+      "id": "mountain_gravel_1",
+      "name": "Mountain Gravel",
+      "prompt": "loose mountain gravel scree slope",
+      "variants": 1,
+      "seed": 3021,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:21:35.484Z"
+    },
+    {
+      "id": "mountain_cliff_1",
+      "name": "Cliff Edge",
+      "prompt": "mountain cliff edge rocky precipice",
+      "variants": 1,
+      "seed": 3031,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:22:10.203Z"
+    },
+    {
+      "id": "mountain_ice_1",
+      "name": "Frozen Ice",
+      "prompt": "frozen ice sheet mountain pass slippery",
+      "variants": 1,
+      "seed": 3041,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:22:43.838Z"
+    },
+    {
+      "id": "mountain_boulder_1",
+      "name": "Boulder Field",
+      "prompt": "scattered boulder field mountain floor",
+      "variants": 1,
+      "seed": 3051,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:23:18.487Z"
+    },
+    {
+      "id": "mountain_path_1",
+      "name": "Mountain Path",
+      "prompt": "worn mountain path switchback trail",
+      "variants": 1,
+      "seed": 3061,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:23:54.142Z"
+    },
+    {
+      "id": "mountain_lichen_1",
+      "name": "Lichen Rock",
+      "prompt": "mountain rock with orange lichen growth",
+      "variants": 1,
+      "seed": 3071,
+      "generated": true,
+      "generatedAt": "2026-01-22T04:24:28.788Z"
+    }
+  ]
+}

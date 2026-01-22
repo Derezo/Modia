@@ -1,0 +1,44 @@
+{
+  "biome": "castle",
+  "category": "floors",
+  "description": "Castle biome floor tiles - stone bricks, ornate tiles, royal carpets, interior surfaces",
+  "palette": {
+    "primary": "#708090",
+    "secondary": "#696969",
+    "accent": "#2F4F4F"
+  },
+  "tiles": [
+    {
+      "key": "castle_tile_1",
+      "terrain": "tile",
+      "prompt": "polished castle floor tiles with checkered marble pattern in grey and cream tones #708090 #F5F5DC",
+      "variants": 2,
+      "seed": 50001,
+      "outputPath": "castle/tile"
+    },
+    {
+      "key": "castle_carpet_1",
+      "terrain": "carpet",
+      "prompt": "ornate royal carpet with woven gold filigree pattern in deep crimson and gold #8B0000 #DAA520",
+      "variants": 2,
+      "seed": 50011,
+      "outputPath": "castle/carpet"
+    },
+    {
+      "key": "castle_stone_1",
+      "terrain": "stone",
+      "prompt": "hewn castle stone floor with fitted blocks and ancient mortar in slate grey tones #708090 #696969",
+      "variants": 2,
+      "seed": 50021,
+      "outputPath": "castle/stone"
+    },
+    {
+      "key": "castle_garden_1",
+      "terrain": "garden",
+      "prompt": "castle garden path with decorative flagstones and grass borders in grey and green #708090 #6B8E4A",
+      "variants": 2,
+      "seed": 50031,
+      "outputPath": "castle/garden"
+    }
+  ]
+}

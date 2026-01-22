@@ -1,0 +1,36 @@
+{
+  "biome": "bridge",
+  "category": "floors",
+  "description": "Bridge biome floor tiles - wooden planks, rope mesh, stone masonry",
+  "palette": {
+    "primary": "#8B7355",
+    "secondary": "#A0522D",
+    "accent": "#D2B48C"
+  },
+  "tiles": [
+    {
+      "key": "bridge_plank_1",
+      "terrain": "plank",
+      "prompt": "sturdy wooden bridge planks with visible grain and iron nail heads in warm brown tones #8B7355 #A0522D",
+      "variants": 2,
+      "seed": 40001,
+      "outputPath": "bridge/plank"
+    },
+    {
+      "key": "bridge_stone_1",
+      "terrain": "stone",
+      "prompt": "ancient stone bridge floor with carved masonry and weathered mortar in grey brown tones #708090 #8B7355",
+      "variants": 2,
+      "seed": 40011,
+      "outputPath": "bridge/stone"
+    },
+    {
+      "key": "bridge_rope_1",
+      "terrain": "rope",
+      "prompt": "woven rope bridge floor with thick hemp fiber mesh and wooden slats in tan brown tones #D2B48C #8B7355",
+      "variants": 2,
+      "seed": 40021,
+      "outputPath": "bridge/rope"
+    }
+  ]
+}

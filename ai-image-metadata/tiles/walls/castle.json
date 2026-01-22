@@ -1,0 +1,30 @@
+{
+  "biome": "castle",
+  "category": "walls",
+  "description": "Castle biome wall textures - hewn stone, brick patterns, fortification walls",
+  "palette": {
+    "primary": "#708090",
+    "secondary": "#696969",
+    "accent": "#2F4F4F"
+  },
+  "tiles": [
+    {
+      "key": "wall_castle_default",
+      "prompt": "hewn castle stone wall with fitted blocks and mortar lines in slate grey #708090 #696969",
+      "seed": 51001,
+      "outputPath": "castle/walls/default"
+    },
+    {
+      "key": "wall_castle_brick",
+      "prompt": "castle brick wall with weathered red and grey masonry pattern #8B0000 #696969",
+      "seed": 51011,
+      "outputPath": "castle/walls/brick"
+    },
+    {
+      "key": "wall_castle_dungeon",
+      "prompt": "damp dungeon wall with moss growth and rusted iron rings in dark tones #2F4F4F #696969",
+      "seed": 51021,
+      "outputPath": "castle/walls/dungeon"
+    }
+  ]
+}

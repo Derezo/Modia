@@ -1,0 +1,80 @@
+{
+  "biome": "forest",
+  "category": "slopes",
+  "description": "Forest biome slope tiles - grass ramps, earthen inclines, natural stairs",
+  "palette": {
+    "primary": "#6B8E4A",
+    "secondary": "#8B7355",
+    "accent": "#4A6B2A"
+  },
+  "tiles": [
+    {
+      "key": "slope_forest_north_1",
+      "direction": "north",
+      "levels": 1,
+      "prompt": "gentle grass slope ascending northward with scattered pebbles in forest green #6B8E4A",
+      "seed": 12001,
+      "outputPath": "forest/slopes/north_1"
+    },
+    {
+      "key": "slope_forest_south_1",
+      "direction": "south",
+      "levels": 1,
+      "prompt": "gentle grass slope descending southward with embedded stones in forest green #6B8E4A",
+      "seed": 12011,
+      "outputPath": "forest/slopes/south_1"
+    },
+    {
+      "key": "slope_forest_east_1",
+      "direction": "east",
+      "levels": 1,
+      "prompt": "gentle grass slope ascending eastward with natural wear marks in forest green #6B8E4A",
+      "seed": 12021,
+      "outputPath": "forest/slopes/east_1"
+    },
+    {
+      "key": "slope_forest_west_1",
+      "direction": "west",
+      "levels": 1,
+      "prompt": "gentle grass slope descending westward with mossy patches in forest green #6B8E4A",
+      "seed": 12031,
+      "outputPath": "forest/slopes/west_1"
+    },
+    {
+      "key": "stairs_forest_north_2",
+      "direction": "north",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "carved stone steps ascending north with moss growth showing 2-3 visible steps in earthy tones #8B7355",
+      "seed": 12041,
+      "outputPath": "forest/slopes/stairs_north_2"
+    },
+    {
+      "key": "stairs_forest_south_2",
+      "direction": "south",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "carved stone steps descending south with leaf debris showing 2-3 visible steps in earthy tones #8B7355",
+      "seed": 12051,
+      "outputPath": "forest/slopes/stairs_south_2"
+    },
+    {
+      "key": "stairs_forest_east_2",
+      "direction": "east",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "carved stone steps ascending east with worn treads showing 2-3 visible steps in earthy tones #8B7355",
+      "seed": 12061,
+      "outputPath": "forest/slopes/stairs_east_2"
+    },
+    {
+      "key": "stairs_forest_west_2",
+      "direction": "west",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "carved stone steps descending west with root overgrowth showing 2-3 visible steps in earthy tones #8B7355",
+      "seed": 12071,
+      "outputPath": "forest/slopes/stairs_west_2"
+    }
+  ]
+}

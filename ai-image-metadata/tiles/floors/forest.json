@@ -1,0 +1,52 @@
+{
+  "biome": "forest",
+  "category": "floors",
+  "description": "Forest biome floor tiles - lush grass, mossy stones, organic woodland textures",
+  "palette": {
+    "primary": "#6B8E4A",
+    "secondary": "#8B7355",
+    "accent": "#4A6B2A"
+  },
+  "tiles": [
+    {
+      "key": "forest_grass_1",
+      "terrain": "grass",
+      "prompt": "lush forest floor with scattered grass blades and small wildflowers in forest green tones #6B8E4A #4A6B2A",
+      "variants": 2,
+      "seed": 10001,
+      "outputPath": "forest/grass"
+    },
+    {
+      "key": "forest_stone_1",
+      "terrain": "stone",
+      "prompt": "worn forest path stone with moss patches and leaf debris in earthy brown tones #8B7355 #6B8E4A",
+      "variants": 2,
+      "seed": 10011,
+      "outputPath": "forest/stone"
+    },
+    {
+      "key": "forest_dirt_1",
+      "terrain": "dirt",
+      "prompt": "packed forest dirt floor with exposed roots and fallen leaves in warm brown tones #8B7355 #A0522D",
+      "variants": 2,
+      "seed": 10021,
+      "outputPath": "forest/dirt"
+    },
+    {
+      "key": "forest_mushroom_1",
+      "terrain": "mushroom",
+      "prompt": "fairy ring mushroom patch on forest floor with glowing caps in mystical purple and forest green #6B8E4A #8B008B",
+      "variants": 2,
+      "seed": 10031,
+      "outputPath": "forest/mushroom"
+    },
+    {
+      "key": "forest_fern_1",
+      "terrain": "fern",
+      "prompt": "dense fern ground cover in dappled forest light in deep green tones #228B22 #4A6B2A",
+      "variants": 2,
+      "seed": 10041,
+      "outputPath": "forest/fern"
+    }
+  ]
+}
