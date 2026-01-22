@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 /**
  * Tile Generation Script
- * Generates isometric terrain tiles using HuggingFace Flux LoRA
+ * Generates isometric terrain tiles using local ComfyUI (default) or HuggingFace API
  *
  * Usage:
- *   node scripts/ai-images/generate-tiles.js                    # Generate all pending tiles
+ *   node scripts/ai-images/generate-tiles.js                    # Generate using local ComfyUI
+ *   node scripts/ai-images/generate-tiles.js --huggingface      # Use HuggingFace API instead
  *   node scripts/ai-images/generate-tiles.js --dry-run          # Preview without generating
  *   node scripts/ai-images/generate-tiles.js --key forest_grass_1  # Generate specific tile
  *   node scripts/ai-images/generate-tiles.js --biome forest     # Generate tiles for biome
  *   node scripts/ai-images/generate-tiles.js --force            # Regenerate even if exists
  *
  * Environment variables:
- *   HUGGINGFACE_API_TOKEN - Required API token for HuggingFace
- *   IMAGE_GENERATOR_ROOT - Path to image-generator project (optional)
+ *   HUGGINGFACE_API_TOKEN - Required for --huggingface mode
+ *   IMAGE_GENERATOR_ROOT - Path to image-generator project (required)
  */
 
 const path = require('path');
@@ -25,7 +26,8 @@ const {
   delay,
   ensureDirectoryExists,
   getProjectRoot,
-  buildTilePrompt
+  buildTilePrompt,
+  createBackup
 } = require('./lib');
 
 // Configuration
@@ -44,7 +46,9 @@ function parseArgs() {
     biome: null,
     category: null,  // floors, walls, slopes
     force: false,
-    local: false,
+    local: true,     // Local ComfyUI is now the default
+    huggingface: false,
+    backup: false,
     help: false
   };
 
@@ -66,8 +70,18 @@ function parseArgs() {
       case '--force':
         options.force = true;
         break;
+      case '--huggingface':
+      case '--hf':
+        options.huggingface = true;
+        options.local = false;  // Disable local when using HuggingFace
+        break;
       case '--local':
+        // Explicit local flag (already default, but kept for clarity)
         options.local = true;
+        options.huggingface = false;
+        break;
+      case '--backup':
+        options.backup = true;
         break;
       case '--help':
       case '-h':
@@ -89,7 +103,7 @@ function parseArgs() {
 function showHelp() {
   console.log(`
 Tile Generation Script
-Generates isometric terrain tiles using HuggingFace Flux LoRA
+Generates isometric terrain tiles using local ComfyUI (default) or HuggingFace API
 
 Usage:
   node scripts/ai-images/generate-tiles.js [options]
@@ -100,11 +114,14 @@ Options:
   --biome <name>      Generate only for specific biome (forest, cave, mountain, bridge, castle)
   --category <type>   Generate only specific category (floors, walls, slopes)
   --force             Regenerate even if file exists
+  --backup            Backup existing files before regeneration
+  --huggingface, --hf Use HuggingFace API instead of local ComfyUI
+  --local             Use local ComfyUI (default, explicit flag optional)
   --help, -h          Show this help message
 
 Environment variables:
-  HUGGINGFACE_API_TOKEN  Required API token for HuggingFace
-  IMAGE_GENERATOR_ROOT   Path to image-generator project (optional)
+  IMAGE_GENERATOR_ROOT   Path to image-generator project (required)
+  HUGGINGFACE_API_TOKEN  Required only for --huggingface mode
 
 Examples:
   node scripts/ai-images/generate-tiles.js --dry-run
@@ -112,6 +129,7 @@ Examples:
   node scripts/ai-images/generate-tiles.js --category walls
   node scripts/ai-images/generate-tiles.js --category slopes --biome mountain
   node scripts/ai-images/generate-tiles.js --key forest_grass_1 --force
+  node scripts/ai-images/generate-tiles.js --huggingface --biome cave  # Use HF API
 `);
 }
 
@@ -199,10 +217,17 @@ function validateEnvVars(options) {
     return;
   }
 
-  if (!process.env.HUGGINGFACE_API_TOKEN) {
+  // Only require HuggingFace token when using HuggingFace mode
+  if (options.huggingface && !process.env.HUGGINGFACE_API_TOKEN) {
     log('Missing HUGGINGFACE_API_TOKEN in environment', 'error');
     log('Set it with: export HUGGINGFACE_API_TOKEN=hf_xxx', 'info');
+    log('Or use local generation (default): remove --huggingface flag', 'info');
     process.exit(1);
+  }
+
+  // Warn about IMAGE_GENERATOR_ROOT for local mode
+  if (options.local && !process.env.IMAGE_GENERATOR_ROOT) {
+    log('IMAGE_GENERATOR_ROOT not set, will try default paths', 'warn');
   }
 }
 
@@ -273,6 +298,14 @@ async function main() {
   if (options.dryRun) {
     log(`\nDry run complete. Would generate ${tilesToGenerate.length} tiles.`, 'success');
     process.exit(0);
+  }
+
+  // Backup existing files before regeneration
+  if (options.backup) {
+    const backupResult = await createBackup(tilesToGenerate, { reason: 'tiles regeneration' });
+    if (backupResult && backupResult.backupDir) {
+      log(`Backup created at: ${backupResult.backupDir}`, 'info');
+    }
   }
 
   // Ensure output directories exist
