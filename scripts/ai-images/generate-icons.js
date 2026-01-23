@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Icon Generation Script
- * Generates UI icons using local ComfyUI (default) or HuggingFace API
+ * Generates UI icons using local ComfyUI (default) or HuggingFace API.
+ * Icons are generated at 128x128 source size for better quality, then downscaled to 64x64.
  *
  * Usage:
  *   node scripts/ai-images/generate-icons.js                    # Generate using local ComfyUI
@@ -112,7 +113,8 @@ function parseArgs() {
 function showHelp() {
   console.log(`
 Icon Generation Script
-Generates UI icons using local ComfyUI (default) or HuggingFace API
+Generates UI icons using local ComfyUI (default) or HuggingFace API.
+Icons are generated at 128x128 source size for better quality, then downscaled to 64x64.
 
 Usage:
   node scripts/ai-images/generate-icons.js [options]

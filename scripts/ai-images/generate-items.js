@@ -117,10 +117,13 @@ Generates item sprites using local ComfyUI (default) or HuggingFace API
 Usage:
   node scripts/ai-images/generate-items.js [options]
 
+Generates clean base sprites WITHOUT rarity glow effects.
+Rarity and augment effects are composited at runtime via overlays.
+
 Options:
   --dry-run           Show what would be generated without calling APIs
   --key <id>          Generate specific item (e.g., sword_iron)
-  --category <cat>    Filter by category (weapons, armor, consumables)
+  --category <cat>    Filter by category (weapons, armor, accessories, consumables)
   --force             Regenerate even if file exists
   --backup            Backup existing images before regenerating
   --huggingface, --hf Use HuggingFace API instead of local ComfyUI
@@ -276,7 +279,7 @@ async function main() {
   }
 
   // Ensure output directories exist
-  for (const cat of ['weapons', 'armor', 'consumables']) {
+  for (const cat of ['weapons', 'armor', 'accessories', 'consumables']) {
     ensureDirectoryExists(path.join(OUTPUT_DIR, cat));
   }
 
