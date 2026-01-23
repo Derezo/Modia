@@ -12,7 +12,7 @@
  * - validatePhase6: Test function to run full validation with sample data
  */
 
-import { PHASE6_CONFIG, INTER_REGION_CONFIG } from './constants.js';
+import { PHASE6_CONFIG, INTER_REGION_CONFIG, ZODIAC_CONFIG, TERRAIN_ANTI_CLUSTERING, NODE_DISTRIBUTION, GUILD_CONFIG } from './constants.js';
 import { SeededRandom } from '../../config/constants.js';
 import { generateCastlePlacements } from './castlePlacement.js';
 import { createVoronoiRegions } from './voronoiPartitioning.js';
@@ -363,6 +363,262 @@ export function validatePhase4Spacing(connectionsByRegion, nodesByRegion, maxSpa
 }
 
 /**
+ * Validate battle terrain clustering.
+ * Detects clusters where 3+ same-type battle nodes are within N graph hops.
+ *
+ * @param {Array<Object>} allNodes - All nodes in the world
+ * @param {Array<Object>} allConnections - All connections
+ * @returns {Object} Validation results with cluster details
+ */
+export function validateTerrainClustering(allNodes, allConnections) {
+  const config = TERRAIN_ANTI_CLUSTERING;
+
+  if (!config.VALIDATION_ENABLED) {
+    return { passed: true, clusters: [], skipped: true };
+  }
+
+  console.log('\n  Validating terrain clustering...');
+
+  // Build adjacency list for graph traversal
+  const adjacency = new Map();
+  for (let i = 0; i < allNodes.length; i++) {
+    adjacency.set(i, new Set());
+  }
+
+  for (const conn of allConnections) {
+    const fromIdx = typeof conn.from === 'number' ? conn.from : allNodes.indexOf(conn.from);
+    const toIdx = typeof conn.to === 'number' ? conn.to : (conn.to.node ? allNodes.indexOf(conn.to.node) : allNodes.indexOf(conn.to));
+
+    if (fromIdx >= 0 && toIdx >= 0) {
+      adjacency.get(fromIdx).add(toIdx);
+      adjacency.get(toIdx).add(fromIdx);
+    }
+  }
+
+  // Find battle nodes
+  const battleTypes = NODE_DISTRIBUTION.BATTLE_TYPES;
+  const battleNodeIndices = [];
+  for (let i = 0; i < allNodes.length; i++) {
+    if (battleTypes.includes(allNodes[i].nodeType)) {
+      battleNodeIndices.push(i);
+    }
+  }
+
+  // For each battle node, count same-type nodes within N hops
+  const clusters = [];
+  const visitedClusters = new Set(); // Track clusters to avoid duplicates
+
+  for (const startIdx of battleNodeIndices) {
+    const startNode = allNodes[startIdx];
+    const terrainType = startNode.nodeType;
+
+    // BFS up to CLUSTER_HOP_DISTANCE hops
+    const visited = new Set([startIdx]);
+    const queue = [{ idx: startIdx, depth: 0 }];
+    const sameTypeNeighbors = [startIdx];
+
+    while (queue.length > 0) {
+      const { idx, depth } = queue.shift();
+
+      if (depth >= config.CLUSTER_HOP_DISTANCE) continue;
+
+      for (const neighborIdx of adjacency.get(idx)) {
+        if (visited.has(neighborIdx)) continue;
+        visited.add(neighborIdx);
+
+        const neighborNode = allNodes[neighborIdx];
+        if (neighborNode.nodeType === terrainType) {
+          sameTypeNeighbors.push(neighborIdx);
+        }
+
+        queue.push({ idx: neighborIdx, depth: depth + 1 });
+      }
+    }
+
+    // Check if cluster exceeds max size
+    if (sameTypeNeighbors.length > config.MAX_CLUSTER_SIZE) {
+      // Create unique cluster ID (sorted indices)
+      const clusterKey = sameTypeNeighbors.sort((a, b) => a - b).join('-');
+      if (!visitedClusters.has(clusterKey)) {
+        visitedClusters.add(clusterKey);
+        clusters.push({
+          terrainType,
+          size: sameTypeNeighbors.length,
+          nodeIndices: sameTypeNeighbors,
+          nodes: sameTypeNeighbors.map(i => ({
+            name: allNodes[i].name || `Node at (${allNodes[i].x?.toFixed(1)}, ${allNodes[i].y?.toFixed(1)})`,
+            region: allNodes[i].regionName
+          }))
+        });
+      }
+    }
+  }
+
+  const passed = clusters.length === 0;
+
+  if (passed) {
+    console.log(`    No terrain clusters exceed ${config.MAX_CLUSTER_SIZE} same-type nodes within ${config.CLUSTER_HOP_DISTANCE} hops`);
+  } else {
+    console.log(`    WARNING: Found ${clusters.length} terrain clusters exceeding max size`);
+    for (const cluster of clusters.slice(0, 5)) {
+      console.log(`      - ${cluster.terrainType} cluster: ${cluster.size} nodes (${cluster.nodes.map(n => n.region).join(', ')})`);
+    }
+    if (clusters.length > 5) {
+      console.log(`      ... and ${clusters.length - 5} more clusters`);
+    }
+  }
+
+  return { passed, clusters, totalBattleNodes: battleNodeIndices.length };
+}
+
+/**
+ * Validate guild distribution and same-type spacing.
+ * Ensures guilds are well-distributed globally and same types aren't clustered.
+ *
+ * @param {Array<Object>} allNodes - All nodes in the world
+ * @returns {Object} Validation results with guild distribution details
+ */
+export function validateGuildSpacing(allNodes) {
+  if (!GUILD_CONFIG.VALIDATION_ENABLED) {
+    return { passed: true, skipped: true };
+  }
+
+  console.log('\n  Validating guild spacing...');
+
+  // Collect all guilds by type
+  const guildsByType = {
+    warrior: [],
+    wizard: [],
+    monk: [],
+    chemist: []
+  };
+
+  for (const node of allNodes) {
+    if (node.nodeType === 'guild' && node.guildType) {
+      guildsByType[node.guildType].push(node);
+    }
+  }
+
+  const violations = [];
+  const warnings = [];
+
+  // Check 1: Global count per type
+  for (const [type, guilds] of Object.entries(guildsByType)) {
+    if (guilds.length < GUILD_CONFIG.GLOBAL_MIN_PER_TYPE) {
+      violations.push(`${type}: only ${guilds.length} guilds (min: ${GUILD_CONFIG.GLOBAL_MIN_PER_TYPE})`);
+    }
+    if (guilds.length > GUILD_CONFIG.GLOBAL_MAX_PER_TYPE) {
+      warnings.push(`${type}: ${guilds.length} guilds exceeds recommended max of ${GUILD_CONFIG.GLOBAL_MAX_PER_TYPE}`);
+    }
+  }
+
+  // Check 2: Same-type spacing
+  const spacingViolations = [];
+  for (const [type, guilds] of Object.entries(guildsByType)) {
+    for (let i = 0; i < guilds.length; i++) {
+      for (let j = i + 1; j < guilds.length; j++) {
+        const dist = Math.hypot(guilds[i].x - guilds[j].x, guilds[i].y - guilds[j].y);
+        if (dist < GUILD_CONFIG.MIN_SAME_TYPE_SPACING) {
+          spacingViolations.push({
+            type,
+            distance: dist,
+            minRequired: GUILD_CONFIG.MIN_SAME_TYPE_SPACING,
+            guild1: guilds[i].regionName || 'unknown',
+            guild2: guilds[j].regionName || 'unknown'
+          });
+        }
+      }
+    }
+  }
+
+  if (spacingViolations.length > 0) {
+    warnings.push(`${spacingViolations.length} same-type guild pairs are closer than ${GUILD_CONFIG.MIN_SAME_TYPE_SPACING} units`);
+  }
+
+  const passed = violations.length === 0;
+
+  if (passed && warnings.length === 0) {
+    console.log('    Guild distribution: PASS');
+    console.log(`    Distribution: ${Object.entries(guildsByType).map(([t, g]) => `${t}:${g.length}`).join(', ')}`);
+  } else {
+    if (violations.length > 0) {
+      console.log('    Guild distribution: FAIL');
+      for (const v of violations) {
+        console.log(`      - ${v}`);
+      }
+    }
+    if (warnings.length > 0) {
+      console.log('    Guild spacing warnings:');
+      for (const w of warnings) {
+        console.log(`      - ${w}`);
+      }
+      for (const sv of spacingViolations.slice(0, 3)) {
+        console.log(`        ${sv.type}: ${sv.guild1} <-> ${sv.guild2} = ${sv.distance.toFixed(1)} units`);
+      }
+    }
+  }
+
+  return {
+    passed,
+    guildsByType: Object.fromEntries(Object.entries(guildsByType).map(([t, g]) => [t, g.length])),
+    violations,
+    warnings,
+    spacingViolations
+  };
+}
+
+/**
+ * Validate zodiac shrine placement.
+ * Ensures exactly 12 zodiac shrines (one of each type) exist in the world.
+ *
+ * @param {Array<Object>} allNodes - All nodes in the world
+ * @returns {Object} Validation results with pass status and details
+ */
+export function validateZodiacShrines(allNodes) {
+  console.log('\n  Validating zodiac shrines...');
+
+  const zodiacShrines = allNodes.filter(n =>
+    n.nodeType === 'shrine' && n.shrineBuffType?.startsWith('zodiac_')
+  );
+
+  // Extract zodiac types from shrines
+  const foundTypes = new Set();
+  for (const shrine of zodiacShrines) {
+    const zodiacType = shrine.shrineBuffType.replace('zodiac_', '');
+    foundTypes.add(zodiacType);
+  }
+
+  // Check for missing types
+  const missingTypes = ZODIAC_CONFIG.ZODIAC_TYPES.filter(t => !foundTypes.has(t));
+  const duplicateTypes = zodiacShrines.length - foundTypes.size;
+
+  const passed = zodiacShrines.length === ZODIAC_CONFIG.PER_WORLD &&
+                 missingTypes.length === 0 &&
+                 duplicateTypes === 0;
+
+  if (passed) {
+    console.log(`    All ${ZODIAC_CONFIG.PER_WORLD} zodiac shrines present`);
+  } else {
+    console.log(`    FAILED: Found ${zodiacShrines.length}/${ZODIAC_CONFIG.PER_WORLD} zodiac shrines`);
+    if (missingTypes.length > 0) {
+      console.log(`    Missing types: ${missingTypes.join(', ')}`);
+    }
+    if (duplicateTypes > 0) {
+      console.log(`    Duplicate shrines detected: ${duplicateTypes}`);
+    }
+  }
+
+  return {
+    passed,
+    total: zodiacShrines.length,
+    expected: ZODIAC_CONFIG.PER_WORLD,
+    foundTypes: Array.from(foundTypes),
+    missingTypes,
+    duplicateTypes
+  };
+}
+
+/**
  * Validate and finalize all world data
  * Phase 6 orchestration function
  *
@@ -414,19 +670,34 @@ export function validateAndCleanup(allNodes, regionConnections, interRegionConne
   // Step 4: Validate max spacing constraint
   const spacingResult = validateMaxSpacing(allNodes, allConnections);
 
+  // Step 5: Validate zodiac shrine placement
+  const zodiacResult = validateZodiacShrines(allNodes);
+
+  // Step 6: Validate terrain clustering
+  const clusteringResult = validateTerrainClustering(allNodes, allConnections);
+
+  // Step 7: Validate guild distribution and spacing
+  const guildResult = validateGuildSpacing(allNodes);
+
   // Summary
   console.log('\n  Phase 6 Complete:');
   console.log(`    Total nodes: ${allNodes.length}`);
   console.log(`    Terminators: ${terminatorStats.chest + terminatorStats.shrine + terminatorStats.discovery}`);
   console.log(`    Connectivity: ${connectivityResult.allReachable ? 'PASS' : 'FAIL'}`);
   console.log(`    Max spacing: ${spacingResult.passed ? 'PASS' : 'FAIL'} (${spacingResult.violations.length} violations)`);
+  console.log(`    Zodiac shrines: ${zodiacResult.passed ? 'PASS' : 'FAIL'} (${zodiacResult.total}/${zodiacResult.expected})`);
+  console.log(`    Terrain clustering: ${clusteringResult.passed ? 'PASS' : 'WARN'} (${clusteringResult.clusters.length} clusters)`);
+  console.log(`    Guild distribution: ${guildResult.passed ? 'PASS' : 'FAIL'} (${guildResult.warnings?.length || 0} warnings)`);
 
   return {
     allNodes,
     allConnections,
     connectivityResult,
     terminatorStats,
-    spacingResult
+    spacingResult,
+    zodiacResult,
+    clusteringResult,
+    guildResult
   };
 }
 
@@ -499,6 +770,29 @@ export function validatePhase6(seed = 12345) {
   // Check 4: Max spacing constraint
   if (phase6Result.spacingResult && !phase6Result.spacingResult.passed) {
     issues.push(`${phase6Result.spacingResult.violations.length} connections exceed max spacing of ${INTER_REGION_CONFIG.MAX_NODE_SPACING} units`);
+  }
+
+  // Check 5: Zodiac shrine placement
+  if (phase6Result.zodiacResult && !phase6Result.zodiacResult.passed) {
+    issues.push(`Zodiac shrines incomplete: ${phase6Result.zodiacResult.total}/${phase6Result.zodiacResult.expected}`);
+    if (phase6Result.zodiacResult.missingTypes.length > 0) {
+      issues.push(`Missing zodiac types: ${phase6Result.zodiacResult.missingTypes.join(', ')}`);
+    }
+  }
+
+  // Check 6: Terrain clustering (warning only, doesn't fail validation)
+  if (phase6Result.clusteringResult && !phase6Result.clusteringResult.passed) {
+    // Log as warning but don't add to issues (doesn't fail world gen)
+    console.log(`  Note: ${phase6Result.clusteringResult.clusters.length} terrain clusters detected (advisory)`);
+  }
+
+  // Check 7: Guild distribution
+  if (phase6Result.guildResult && !phase6Result.guildResult.passed) {
+    issues.push(`Guild distribution incomplete: ${phase6Result.guildResult.violations?.join(', ')}`);
+  }
+  // Guild spacing warnings don't fail validation but are logged
+  if (phase6Result.guildResult?.warnings?.length > 0) {
+    console.log(`  Note: ${phase6Result.guildResult.warnings.length} guild spacing warnings (advisory)`);
   }
 
   const passed = issues.length === 0;
