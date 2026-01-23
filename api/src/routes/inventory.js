@@ -1,6 +1,7 @@
 import express from 'express';
 import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
+import { inventoryLimiter, gameReadLimiter } from '../middleware/gameplayRateLimiter.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 
 const router = express.Router();
@@ -47,7 +48,7 @@ function formatItem(item) {
 }
 
 // GET /api/inventory/shared - Get user's shared inventory (unequipped items)
-router.get('/shared', authenticate, asyncHandler(async (req, res) => {
+router.get('/shared', authenticate, gameReadLimiter, asyncHandler(async (req, res) => {
   const userId = req.user.userId;
 
   // Get all unequipped items owned by user (shared pool)
@@ -69,7 +70,7 @@ router.get('/shared', authenticate, asyncHandler(async (req, res) => {
 
 // GET /api/inventory/:characterId - Get character's equipped items only
 // Note: Use GET /api/inventory/shared for the shared inventory pool
-router.get('/:characterId', authenticate, asyncHandler(async (req, res) => {
+router.get('/:characterId', authenticate, gameReadLimiter, asyncHandler(async (req, res) => {
   const { characterId } = req.params;
 
   // Verify character ownership
@@ -104,7 +105,7 @@ router.get('/:characterId', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/inventory/equip - Equip an item
-router.post('/equip', authenticate, asyncHandler(async (req, res) => {
+router.post('/equip', authenticate, inventoryLimiter, asyncHandler(async (req, res) => {
   const { characterId, itemInstanceId, slot } = req.body;
 
   // Validate slot
@@ -207,7 +208,7 @@ router.post('/equip', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/inventory/unequip - Unequip an item
-router.post('/unequip', authenticate, asyncHandler(async (req, res) => {
+router.post('/unequip', authenticate, inventoryLimiter, asyncHandler(async (req, res) => {
   const { characterId, slot } = req.body;
 
   // Validate slot
@@ -248,7 +249,7 @@ router.post('/unequip', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/inventory/use - Use a consumable item from shared pool
-router.post('/use', authenticate, asyncHandler(async (req, res) => {
+router.post('/use', authenticate, inventoryLimiter, asyncHandler(async (req, res) => {
   const { itemInstanceId, targetCharacterId } = req.body;
   const userId = req.user.userId;
 
@@ -328,7 +329,7 @@ router.post('/use', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/inventory/discard - Discard an item from shared pool
-router.post('/discard', authenticate, asyncHandler(async (req, res) => {
+router.post('/discard', authenticate, inventoryLimiter, asyncHandler(async (req, res) => {
   const { itemInstanceId } = req.body;
   const userId = req.user.userId;
 
