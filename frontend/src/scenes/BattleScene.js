@@ -9,6 +9,7 @@ import { BattleIntro } from '../battle/BattleIntro.js';
 import { BattleOutroSequence } from '../battle/BattleOutroSequence.js';
 import { RadialMenu } from '../battle/RadialMenu.js';
 import { BattleActionBar } from '../battle/BattleActionBar.js';
+import { TerrainTooltip } from '../battle/TerrainTooltip.js';
 import { BattleContextMenu } from '../battle/BattleContextMenu.js';
 import { GridCursor } from '../battle/GridCursor.js';
 import { BossPhaseIndicator } from '../battle/BossPhaseIndicator.js';
@@ -17,7 +18,6 @@ import { isSelfTargetingSkill, getVisualCategory } from '../battle/SkillEffectCa
 import { getSkillSoundKey, RACE_TO_REGION } from '../audio/AudioAssets.js';
 import { calculateDamagePreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
-import { getElevationName } from '@shared/terrain.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 
 /**
@@ -276,6 +276,10 @@ export class BattleScene extends Scene {
     // Initialize boss phase indicator if this is a boss battle
     this.initializeBossIndicator();
 
+    // Initialize terrain tooltip (DOM-based)
+    this.terrainTooltip = new TerrainTooltip();
+    this.terrainTooltip.attachTo(this.game.container);
+
     // Setup input handlers
     this.setupInputHandlers();
 
@@ -338,9 +342,19 @@ export class BattleScene extends Scene {
       this.gridCursor = null;
     }
 
+    if (this.grid) {
+      this.grid.destroy();
+      this.grid = null;
+    }
+
     if (this.bossPhaseIndicator) {
       this.bossPhaseIndicator.destroy();
       this.bossPhaseIndicator = null;
+    }
+
+    if (this.terrainTooltip) {
+      this.terrainTooltip.destroy();
+      this.terrainTooltip = null;
     }
 
     if (this.rewardsModal) {
@@ -2383,6 +2397,9 @@ export class BattleScene extends Scene {
       this.outroSequence.update(deltaTime);
     }
 
+    // Update terrain tooltip (DOM-based)
+    this.updateTerrainTooltip();
+
     // Clear input state
     this.game.input.clearFrameState();
   }
@@ -2504,9 +2521,6 @@ export class BattleScene extends Scene {
       this.gridCursor.render(ctx, this.camera);
     }
 
-    // Render terrain tooltip when hovering during move action
-    this.renderTerrainTooltip(ctx);
-
     // Sort and render units (by Y position for depth)
     const allUnits = Array.from(this.units.values());
     const sortedUnits = allUnits
@@ -2546,67 +2560,56 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Render terrain tooltip when hovering over tiles during move action
+   * Update terrain tooltip when hovering over tiles during move action.
+   * Uses DOM-based tooltip for better alignment and styling.
    */
-  renderTerrainTooltip(ctx) {
+  updateTerrainTooltip() {
+    if (!this.terrainTooltip) return;
+
     // Only show during move action
-    if (this.currentAction !== 'move') return;
+    if (this.currentAction !== 'move') {
+      this.terrainTooltip.hide();
+      return;
+    }
 
     // Determine which tile to show tooltip for (hovered or selected on mobile)
     const tooltipTile = this.isTouchDevice ? this.selectedMoveTile : this.hoveredTile;
-    if (!tooltipTile) return;
+    if (!tooltipTile) {
+      this.terrainTooltip.hide();
+      return;
+    }
 
     // Get terrain info
     const terrain = this.grid.getTerrain(tooltipTile.x, tooltipTile.y);
     const moveCost = this.grid.getMovementCost(tooltipTile.x, tooltipTile.y);
     const elevation = this.grid.getElevation(tooltipTile.x, tooltipTile.y);
-    const elevationName = getElevationName(elevation);
 
-    // Format terrain name nicely (capitalize first letter)
-    const terrainName = terrain.charAt(0).toUpperCase() + terrain.slice(1);
-
-    // Build tooltip text with elevation if not ground level
-    let tooltipText;
-    if (elevation === 0) {
-      tooltipText = `${terrainName} (${moveCost} mov)`;
-    } else {
-      const elevSymbol = elevation > 0 ? '\u2191' : '\u2193'; // ↑ or ↓
-      tooltipText = `${terrainName} (${moveCost} mov) ${elevSymbol}${elevationName}`;
-    }
-
-    // Get position for tooltip
+    // Calculate position - convert canvas coords to viewport coords
+    // DOM tooltip is positioned relative to game container
     let tooltipX, tooltipY;
+
     if (this.isTouchDevice && this.selectedMoveTile) {
       // On mobile, position tooltip above the selected tile
       const worldPos = this.grid.gridToScreenWorld(tooltipTile.x, tooltipTile.y);
       const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
-      tooltipX = screenPos.x;
-      tooltipY = screenPos.y - 50;
+      // Scale canvas coords to viewport coords (tooltip is in game container)
+      const scale = this.game.scale || 1;
+      tooltipX = screenPos.x * scale;
+      tooltipY = screenPos.y * scale;
     } else {
-      // On desktop, position near cursor
+      // On desktop, position near cursor (already in viewport coords)
       const pos = this.game.input.getPointerPosition();
-      tooltipX = pos.x + 15;
-      tooltipY = pos.y - 25;
+      tooltipX = pos.x;
+      tooltipY = pos.y;
     }
 
-    // Measure text for background
-    ctx.font = '12px monospace';
-    const textMetrics = ctx.measureText(tooltipText);
-    const padding = 6;
-    const bgWidth = textMetrics.width + padding * 2;
-    const bgHeight = 18;
-
-    // Keep tooltip on screen
-    tooltipX = Math.min(tooltipX, ctx.canvas.width - bgWidth - 5);
-    tooltipY = Math.max(tooltipY, bgHeight + 5);
-
-    // Draw background
-    ctx.fillStyle = 'rgba(20, 20, 30, 0.85)';
-    ctx.fillRect(tooltipX, tooltipY - bgHeight + 4, bgWidth, bgHeight);
-
-    // Draw text
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(tooltipText, tooltipX + padding, tooltipY);
+    this.terrainTooltip.show({
+      terrain,
+      movementCost: moveCost,
+      elevation,
+      x: tooltipX,
+      y: tooltipY
+    });
   }
 
   /**

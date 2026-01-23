@@ -129,12 +129,15 @@ async function resizeImage(sourcePath, outputPath, size, options = {}) {
   return new Promise((resolve) => {
     const proc = spawn('convert', args);
     let stderr = '';
+    let resolved = false;
 
     proc.stderr.on('data', (data) => {
       stderr += data.toString();
     });
 
     proc.on('close', (code) => {
+      if (resolved) return;
+      resolved = true;
       if (code === 0) {
         resolve({ success: true, outputPath });
       } else {
@@ -143,6 +146,8 @@ async function resizeImage(sourcePath, outputPath, size, options = {}) {
     });
 
     proc.on('error', (err) => {
+      if (resolved) return;
+      resolved = true;
       resolve({ success: false, outputPath, error: err.message });
     });
   });
@@ -331,12 +336,15 @@ async function applyDiamondMask(sourcePath, outputPath, size) {
   return new Promise((resolve) => {
     const proc = spawn('convert', args);
     let stderr = '';
+    let resolved = false;
 
     proc.stderr.on('data', (data) => {
       stderr += data.toString();
     });
 
     proc.on('close', (code) => {
+      if (resolved) return;
+      resolved = true;
       if (code === 0) {
         resolve({ success: true, outputPath });
       } else {
@@ -345,9 +353,155 @@ async function applyDiamondMask(sourcePath, outputPath, size) {
     });
 
     proc.on('error', (err) => {
+      if (resolved) return;
+      resolved = true;
       resolve({ success: false, outputPath, error: err.message });
     });
   });
+}
+
+/**
+ * Apply isometric transform to a flat texture
+ * Converts a square flat texture to an isometric diamond shape
+ *
+ * The transform applies:
+ * 1. Rotation by 45 degrees
+ * 2. Vertical scale to 50% (creates 2:1 aspect ratio)
+ * 3. Optional diamond mask
+ * 4. Resize to target dimensions
+ *
+ * @param {string} sourcePath - Source flat texture (square, e.g., 128x128)
+ * @param {string} outputPath - Output path for isometric tile
+ * @param {number} size - Target size (width of the diamond bounding box)
+ * @param {Object} options - Transform options
+ * @param {boolean} options.applyMask - Apply diamond mask (default: true)
+ * @param {boolean} options.addLighting - Add top-left lighting gradient (default: true)
+ * @returns {Promise<{success: boolean, outputPath: string, error?: string}>}
+ */
+async function applyIsometricTransform(sourcePath, outputPath, size, options = {}) {
+  const { applyMask = true, addLighting = true } = options;
+
+  if (!fileExists(sourcePath)) {
+    return { success: false, outputPath, error: `Source not found: ${sourcePath}` };
+  }
+
+  ensureDirectoryExists(path.dirname(outputPath));
+
+  // Calculate intermediate size (before rotation, need larger canvas)
+  const intermediateSize = Math.ceil(size * Math.sqrt(2));
+  const halfSize = size / 2;
+
+  // Build ImageMagick command for isometric transform
+  // Steps:
+  // 1. Resize source to intermediate size
+  // 2. Rotate 45 degrees
+  // 3. Scale vertically to 50% (isometric projection)
+  // 4. Crop to final size
+  // 5. Apply diamond mask if requested
+  // 6. Add lighting gradient if requested
+
+  let args = [
+    sourcePath,
+    '-resize', `${intermediateSize}x${intermediateSize}`,
+    '-background', 'transparent',
+    '-rotate', '45',
+    '-resize', `${size}x${size / 2}!`, // Scale to 2:1 aspect ratio
+    '-gravity', 'center',
+    '-extent', `${size}x${size / 2}` // Ensure exact dimensions
+  ];
+
+  // Apply diamond mask
+  if (applyMask) {
+    const diamondPoints = `${halfSize},0 ${size},${size / 4} ${halfSize},${size / 2} 0,${size / 4}`;
+    args = args.concat([
+      '(',
+        '-size', `${size}x${size / 2}`,
+        'xc:none',
+        '-fill', 'white',
+        '-draw', `polygon ${diamondPoints}`,
+      ')',
+      '-compose', 'DstIn',
+      '-composite'
+    ]);
+  }
+
+  // Add subtle lighting gradient (top-left light source)
+  if (addLighting) {
+    args = args.concat([
+      '(',
+        '-size', `${size}x${size / 2}`,
+        '-define', 'gradient:direction=NorthWest',
+        'gradient:rgba(255,255,255,0.1)-rgba(0,0,0,0.15)',
+      ')',
+      '-compose', 'Overlay',
+      '-composite'
+    ]);
+  }
+
+  args.push(outputPath);
+
+  return new Promise((resolve) => {
+    const proc = spawn('convert', args);
+    let stderr = '';
+    let resolved = false;
+
+    proc.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    proc.on('close', (code) => {
+      if (resolved) return;
+      resolved = true;
+      if (code === 0) {
+        resolve({ success: true, outputPath });
+      } else {
+        resolve({ success: false, outputPath, error: stderr || `Exit code ${code}` });
+      }
+    });
+
+    proc.on('error', (err) => {
+      if (resolved) return;
+      resolved = true;
+      resolve({ success: false, outputPath, error: err.message });
+    });
+  });
+}
+
+/**
+ * Post-process a flat texture tile: apply isometric transform and resize to 64x32
+ * This is the new standard tile post-processing for the unified stacking system
+ *
+ * @param {string} imagePath - Path to generated flat texture (128x128)
+ * @param {Object} options - Options (force, verbose)
+ * @returns {Promise<{success: boolean, outputPath: string, error?: string}>}
+ */
+async function postProcessFlatTile(imagePath, options = {}) {
+  const { force = false, verbose = false } = options;
+
+  // Output goes to same location but with _iso suffix before extension
+  const dir = path.dirname(imagePath);
+  const ext = path.extname(imagePath);
+  const base = path.basename(imagePath, ext);
+  const outputPath = path.join(dir, `${base}${ext}`); // Replace original with isometric version
+
+  if (!force && fileExists(outputPath) && imagePath !== outputPath) {
+    if (verbose) log(`Skipped (exists): ${outputPath}`, 'info');
+    return { success: true, outputPath, skipped: true };
+  }
+
+  // Apply isometric transform: 128x128 flat -> 64x32 isometric diamond
+  const result = await applyIsometricTransform(imagePath, outputPath, 64, {
+    applyMask: true,
+    addLighting: true
+  });
+
+  if (result.success && verbose) {
+    log(`Generated isometric tile: ${outputPath}`, 'success');
+  } else if (!result.success && verbose) {
+    log(`Failed isometric tile: ${outputPath} - ${result.error}`, 'error');
+  }
+
+  return result;
 }
 
 /**
@@ -385,12 +539,15 @@ async function resizeImageNonSquare(sourcePath, outputPath, width, height, optio
   return new Promise((resolve) => {
     const proc = spawn('convert', args);
     let stderr = '';
+    let resolved = false;
 
     proc.stderr.on('data', (data) => {
       stderr += data.toString();
     });
 
     proc.on('close', (code) => {
+      if (resolved) return;
+      resolved = true;
       if (code === 0) {
         resolve({ success: true, outputPath });
       } else {
@@ -399,6 +556,8 @@ async function resizeImageNonSquare(sourcePath, outputPath, width, height, optio
     });
 
     proc.on('error', (err) => {
+      if (resolved) return;
+      resolved = true;
       resolve({ success: false, outputPath, error: err.message });
     });
   });
@@ -660,7 +819,7 @@ async function postProcessSlope(imagePath, options = {}) {
  * Post-process an image based on its asset type
  * Dispatcher function that calls the appropriate post-processor
  * @param {string} imagePath - Path to generated image
- * @param {string} assetType - Asset type (tiles, portraits, items, icons, nodes, walls, slopes)
+ * @param {string} assetType - Asset type (tiles, flatTiles, portraits, items, icons, nodes, walls, slopes)
  * @param {Object} options - Options (force, verbose)
  * @returns {Promise<{success: boolean, variants?: string[], outputPath?: string, error?: string}>}
  */
@@ -668,6 +827,9 @@ async function postProcessByType(imagePath, assetType, options = {}) {
   switch (assetType) {
     case 'tiles':
       return postProcessTile(imagePath, options);
+    case 'flatTiles':
+      // NEW: Flat texture -> isometric diamond transform
+      return postProcessFlatTile(imagePath, options);
     case 'portraits':
       return postProcessPortrait(imagePath, options);
     case 'items':
@@ -696,10 +858,12 @@ module.exports = {
   resizeImage,
   resizeImageNonSquare,
   applyDiamondMask,
+  applyIsometricTransform,
   generateSizeVariants,
   generateSizeVariantsForDirectory,
   postProcessGenerated,
   postProcessTile,
+  postProcessFlatTile,  // NEW: for flat texture -> isometric diamond
   postProcessPortrait,
   postProcessItem,
   postProcessIcon,

@@ -176,16 +176,29 @@ const STYLE_PREFIXES = {
   // Isometric style (V2 LoRA - wbgmsst trigger) - for obstacles, nodes
   isometric: 'wbgmsst, isometric fantasy game asset, ink and wash technique with watercolor fills, bold black outlines of medium weight, visible aged parchment texture, cozy JRPG aesthetic, top-down 3/4 view, clear silhouette, isolated subject,',
 
-  // Tile style (V2 LoRA - wbgmsst trigger) - flat terrain textures only
+  // Tile style (DEPRECATED) - legacy isometric prompts with embedded perspective
+  // New tiles should use tileFlatTexture and apply isometric transform in post-processing
   tile: 'wbgmsst, isometric floor tile, diamond rhombus shape with sharp pointed corners, ' +
     '2:1 width-to-height aspect ratio, 30 degree orthographic projection, ' +
     'flat horizontal surface texture only, seamless tileable pattern, ' +
     'ink and wash watercolor style, bold black outline border defining diamond edges, ' +
-    'clean white background outside diamond shape, 128x128 game sprite'
+    'clean white background outside diamond shape, 128x128 game sprite',
+
+  // NEW: Flat texture style for tiles - generates top-down textures that get isometric transform in post-processing
+  // This produces more consistent results as the AI doesn't have to handle perspective
+  tileFlatTexture: 'GRPZA, seamless tileable texture, top-down flat view, ' +
+    'ink and wash watercolor illustration, bold black outlines, ' +
+    'game texture asset, square seamless pattern',
+
+  // Wall texture style - horizontal strips for stacking wall system
+  wallTexture: 'GRPZA, vertical cliff face texture strip, side-lit from top-left, ' +
+    'horizontal seamless tileable, ink and wash watercolor style, ' +
+    'bold black outlines, fantasy game texture, 128x32 wall strip'
 };
 
 /**
- * Build a tile prompt
+ * Build a tile prompt (legacy - uses isometric prompting)
+ * @deprecated Use buildFlatTilePrompt() for new tiles - isometric transform applied in post-processing
  * @param {Object} tile - Tile metadata
  * @param {Object} biomeData - Biome metadata
  * @returns {string} Full prompt
@@ -194,6 +207,44 @@ function buildTilePrompt(tile, biomeData) {
   const biomeModifier = biomeData.biomeModifier || '';
   const basePrompt = tile.prompt;
   return `${STYLE_PREFIXES.tile} ${basePrompt}, ${biomeModifier}`;
+}
+
+/**
+ * Build a flat texture tile prompt (NEW - for post-processing isometric transform)
+ *
+ * Strategy: Generate flat top-down textures that will have isometric skew applied
+ * in post-processing. This produces more consistent results because:
+ * 1. AI doesn't have to handle perspective projection
+ * 2. Hex color codes are not in the prompt (AI ignores them anyway)
+ * 3. Results are code-controlled for perfect consistency
+ *
+ * @param {Object} tile - Tile metadata with prompt property
+ * @param {Object} biomeData - Biome metadata with biomeModifier
+ * @returns {string} Full prompt for flat texture generation
+ */
+function buildFlatTilePrompt(tile, biomeData) {
+  const biomeModifier = biomeData?.biomeModifier || '';
+  const basePrompt = tile.prompt;
+
+  // New flat texture format - no isometric instructions, let post-processing handle it
+  return `${STYLE_PREFIXES.tileFlatTexture}, ${basePrompt}, ${biomeModifier}`;
+}
+
+/**
+ * Build a wall texture prompt for the stacking tile system
+ *
+ * Walls are 64x16 pixel strips that tile vertically to create elevation faces.
+ * Generated at 128x32 and resized to 64x16 in post-processing.
+ *
+ * @param {Object} wall - Wall metadata with prompt property
+ * @param {Object} biomeData - Biome metadata with biomeModifier
+ * @returns {string} Full prompt for wall texture generation
+ */
+function buildWallPrompt(wall, biomeData) {
+  const biomeModifier = biomeData?.biomeModifier || '';
+  const basePrompt = wall.prompt;
+
+  return `${STYLE_PREFIXES.wallTexture}, ${basePrompt}, ${biomeModifier}`;
 }
 
 /**
@@ -419,11 +470,15 @@ module.exports = {
   buildOverlayPrompt,
   getOverlayConfig,
 
+  // NEW: Flat texture tile system (isometric transform in post-processing)
+  buildFlatTilePrompt,
+  buildWallPrompt,
+
   // Legacy functions (for backward compatibility and tiles)
   NEGATIVE_PROMPT,
   STYLE_PREFIXES,
   REGIONAL_PALETTES,
-  buildTilePrompt,
+  buildTilePrompt,  // DEPRECATED: use buildFlatTilePrompt instead
   buildPortraitPrompt,
   buildIconPrompt,
   buildItemPrompt,
