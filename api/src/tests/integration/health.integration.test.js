@@ -1,9 +1,11 @@
 /**
- * Health Endpoint Unit Tests
+ * Health Endpoint Integration Tests
  * Tests for /api/health endpoints (basic check, readiness, metrics)
  *
  * These are smoke tests that verify the health endpoints return
- * expected response structures. Server must be running.
+ * expected response structures. Requires server running and database connected.
+ *
+ * @category integration
  */
 
 import { describe, it } from 'node:test';
