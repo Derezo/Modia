@@ -310,6 +310,15 @@ if [ "$ENABLE_SSL" = true ] && [ -n "$DOMAIN" ]; then
   run apt-get install -y certbot python3-certbot-nginx
   run mkdir -p /var/www/certbot
   run certbot --nginx -d "$DOMAIN" -d "www.$DOMAIN" --non-interactive --agree-tos --email "admin@$DOMAIN"
+
+  # Setup SSL auto-renewal cron
+  log "Setting up SSL auto-renewal..."
+  if [ "$DRY_RUN" = false ]; then
+    echo "0 0,12 * * * root certbot renew --quiet --deploy-hook 'systemctl reload nginx'" > /etc/cron.d/certbot-renewal
+    chmod 644 /etc/cron.d/certbot-renewal
+  else
+    echo -e "${YELLOW}[DRY-RUN]${NC} Would create /etc/cron.d/certbot-renewal with renewal cron"
+  fi
 else
   if [ "$ENABLE_SSL" = true ]; then
     warn "SSL requested but no domain specified. Run with --domain to enable SSL."
