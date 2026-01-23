@@ -1,6 +1,17 @@
 /**
  * Prompt Builder
  * Build prompts for AI image generation based on metadata templates
+ *
+ * NOTE: For Python-based generation (tiles, portraits, items, icons, nodes, overlays),
+ * prompts are built by the Python scripts in image-generator/modia-generators/.
+ * This module's themed prompt building is used for non-Python operations only.
+ *
+ * The Python scripts handle:
+ * - Trigger word injection (GRPZA for V1, wbgmsst for V2)
+ * - Style prefixes and biome modifiers
+ * - LoRA model selection based on asset type
+ *
+ * See pythonRunner.js for how prompts are passed to Python.
  */
 
 const path = require('path');

@@ -50,6 +50,7 @@ function parseArgs() {
     verbose: false,
     quiet: false,
     delay: 2000,  // Default 2 second delay between requests
+    lora: null,   // LoRA model override (v1, v2, modern-pixel, retro-pixel)
     help: false
   };
 
@@ -92,6 +93,9 @@ function parseArgs() {
       case '--delay':
         options.delay = parseInt(args[++i], 10);
         break;
+      case '--lora':
+        options.lora = args[++i];  // v1, v2, modern-pixel, retro-pixel
+        break;
       case '--help':
       case '-h':
         options.help = true;
@@ -131,6 +135,7 @@ Options:
   --verbose, -v       Show detailed output including full prompt construction
   --quiet, -q         Suppress all output except errors
   --delay <ms>        Delay between requests in milliseconds (default: 2000)
+  --lora <model>      LoRA model override (v1, v2, modern-pixel, retro-pixel)
   --help, -h          Show this help message
 
 Environment variables:
@@ -203,6 +208,11 @@ async function main() {
   if (options.help) {
     showHelp();
     process.exit(0);
+  }
+
+  // Auto-enable verbose for dry-run to show all generation details
+  if (options.dryRun && !options.verbose) {
+    options.verbose = true;
   }
 
   validateEnvVars(options);
@@ -302,7 +312,8 @@ async function main() {
         prompt: item.prompt,
         key: item.id,
         category: item._itemCategory,
-        seed: item.seed
+        seed: item.seed,
+        loraModel: options.lora
       }, {
         verbose: options.verbose,
         quiet: options.quiet,

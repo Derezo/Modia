@@ -31,7 +31,7 @@ const { log, getProjectRoot, getImageGeneratorRoot } = require('./imageUtils');
  * @returns {Promise<PythonResult>} Execution result
  */
 async function runPythonScript(scriptName, args = [], options = {}) {
-  const { dryRun = false, verbose = false, quiet = false, local = true, huggingface = false } = options;
+  const { dryRun = false, verbose = false, quiet = false, local = true, huggingface = false, loraModel = null } = options;
 
   // HuggingFace flag overrides local
   const useLocal = huggingface ? false : local;
@@ -53,6 +53,11 @@ async function runPythonScript(scriptName, args = [], options = {}) {
   // Pass --verbose flag to Python script for detailed prompt construction output
   if (verbose) {
     fullArgs.push('--verbose');
+  }
+
+  // Pass --lora flag to Python script for LoRA model override
+  if (loraModel) {
+    fullArgs.push('--lora', loraModel);
   }
 
   // Determine if we should use conda environment for local ComfyUI generation
@@ -153,7 +158,7 @@ async function runPythonScript(scriptName, args = [], options = {}) {
  * @returns {Promise<PythonResult>}
  */
 async function generateTile(tileConfig, options = {}) {
-  const { prompt, key, biome = 'default', outputDir, seed = 42, variants = 1 } = tileConfig;
+  const { prompt, key, biome = 'default', outputDir, seed = 42, variants = 1, loraModel } = tileConfig;
   const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
   const args = [
@@ -179,7 +184,10 @@ async function generateTile(tileConfig, options = {}) {
   }
   // Note: --local flag is no longer needed as local ComfyUI is now the default
 
-  return runPythonScript('generate_tile.py', args, { ...options, verbose, quiet });
+  // Pass LoRA model override if specified (config takes precedence over options)
+  const effectiveLoraModel = loraModel || options.loraModel;
+
+  return runPythonScript('generate_tile.py', args, { ...options, verbose, quiet, loraModel: effectiveLoraModel });
 }
 
 /**
@@ -202,7 +210,7 @@ async function generateTile(tileConfig, options = {}) {
  * @returns {Promise<PythonResult>}
  */
 async function generatePortrait(portraitConfig, options = {}) {
-  const { seed = 42, isEnemy = false, isAdvanced = false, outputDir } = portraitConfig;
+  const { seed = 42, isEnemy = false, isAdvanced = false, outputDir, loraModel } = portraitConfig;
   const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
   let args;
@@ -249,7 +257,10 @@ async function generatePortrait(portraitConfig, options = {}) {
   }
   // Note: --local flag is no longer needed as local ComfyUI is now the default
 
-  return runPythonScript('generate_portrait.py', args, { ...options, verbose, quiet });
+  // Pass LoRA model override if specified (config takes precedence over options)
+  const effectiveLoraModel = loraModel || options.loraModel;
+
+  return runPythonScript('generate_portrait.py', args, { ...options, verbose, quiet, loraModel: effectiveLoraModel });
 }
 
 /**
@@ -267,7 +278,7 @@ async function generatePortrait(portraitConfig, options = {}) {
  * @returns {Promise<PythonResult>}
  */
 async function generateIcon(iconConfig, options = {}) {
-  const { prompt, key, category = 'items', seed = 42 } = iconConfig;
+  const { prompt, key, category = 'items', seed = 42, loraModel } = iconConfig;
   const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
   const args = [
@@ -287,7 +298,10 @@ async function generateIcon(iconConfig, options = {}) {
   }
   // Note: --local flag is no longer needed as local ComfyUI is now the default
 
-  return runPythonScript('generate_icon.py', args, { ...options, verbose, quiet });
+  // Pass LoRA model override if specified (config takes precedence over options)
+  const effectiveLoraModel = loraModel || options.loraModel;
+
+  return runPythonScript('generate_icon.py', args, { ...options, verbose, quiet, loraModel: effectiveLoraModel });
 }
 
 /**
@@ -305,7 +319,7 @@ async function generateIcon(iconConfig, options = {}) {
  * @returns {Promise<PythonResult>}
  */
 async function generateItem(itemConfig, options = {}) {
-  const { prompt, key, category = 'weapons', seed = 42 } = itemConfig;
+  const { prompt, key, category = 'weapons', seed = 42, loraModel } = itemConfig;
   const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
   const args = [
@@ -325,7 +339,10 @@ async function generateItem(itemConfig, options = {}) {
   }
   // Note: --local flag is no longer needed as local ComfyUI is now the default
 
-  return runPythonScript('generate_item.py', args, { ...options, verbose, quiet });
+  // Pass LoRA model override if specified (config takes precedence over options)
+  const effectiveLoraModel = loraModel || options.loraModel;
+
+  return runPythonScript('generate_item.py', args, { ...options, verbose, quiet, loraModel: effectiveLoraModel });
 }
 
 /**
@@ -342,7 +359,7 @@ async function generateItem(itemConfig, options = {}) {
  * @returns {Promise<PythonResult>}
  */
 async function generateNode(nodeConfig, options = {}) {
-  const { prompt, key, seed = 42 } = nodeConfig;
+  const { prompt, key, seed = 42, loraModel } = nodeConfig;
   const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
   const args = [
@@ -361,7 +378,10 @@ async function generateNode(nodeConfig, options = {}) {
   }
   // Note: --local flag is no longer needed as local ComfyUI is now the default
 
-  return runPythonScript('generate_node.py', args, { ...options, verbose, quiet });
+  // Pass LoRA model override if specified (config takes precedence over options)
+  const effectiveLoraModel = loraModel || options.loraModel;
+
+  return runPythonScript('generate_node.py', args, { ...options, verbose, quiet, loraModel: effectiveLoraModel });
 }
 
 /**
@@ -379,7 +399,7 @@ async function generateNode(nodeConfig, options = {}) {
  * @returns {Promise<PythonResult>}
  */
 async function generateOverlay(overlayConfig, options = {}) {
-  const { prompt, key, subcategory = 'rarity', seed = 42 } = overlayConfig;
+  const { prompt, key, subcategory = 'rarity', seed = 42, loraModel } = overlayConfig;
   const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
   const args = [
@@ -399,7 +419,10 @@ async function generateOverlay(overlayConfig, options = {}) {
   }
   // Note: --local flag is no longer needed as local ComfyUI is now the default
 
-  return runPythonScript('generate_overlay.py', args, { ...options, verbose, quiet });
+  // Pass LoRA model override if specified (config takes precedence over options)
+  const effectiveLoraModel = loraModel || options.loraModel;
+
+  return runPythonScript('generate_overlay.py', args, { ...options, verbose, quiet, loraModel: effectiveLoraModel });
 }
 
 /**
@@ -414,7 +437,7 @@ async function generateOverlay(overlayConfig, options = {}) {
  * @returns {Promise<PythonResult>}
  */
 async function runBatchGeneration(scriptName, configPath, options = {}) {
-  const { local = true, huggingface = false, verbose = false, quiet = false } = options;
+  const { local = true, huggingface = false, verbose = false, quiet = false, loraModel = null } = options;
   const args = ['--batch', configPath];
 
   if (options.dryRun) {
@@ -427,7 +450,7 @@ async function runBatchGeneration(scriptName, configPath, options = {}) {
   }
   // Note: --local flag is no longer needed as local ComfyUI is now the default
 
-  return runPythonScript(scriptName, args, { ...options, verbose, quiet });
+  return runPythonScript(scriptName, args, { ...options, verbose, quiet, loraModel });
 }
 
 module.exports = {
