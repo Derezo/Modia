@@ -142,6 +142,7 @@ async function runPythonScript(scriptName, args = [], options = {}) {
  * @param {string} tileConfig.prompt - Terrain description
  * @param {string} tileConfig.key - Asset key/filename
  * @param {string} tileConfig.biome - Biome modifier
+ * @param {string} tileConfig.outputDir - Override output directory
  * @param {number} tileConfig.seed - Random seed
  * @param {number} tileConfig.variants - Number of variants to generate
  * @param {Object} options - Additional options
@@ -152,17 +153,21 @@ async function runPythonScript(scriptName, args = [], options = {}) {
  * @returns {Promise<PythonResult>}
  */
 async function generateTile(tileConfig, options = {}) {
-  const { prompt, key, biome = 'default', seed = 42, variants = 1 } = tileConfig;
+  const { prompt, key, biome = 'default', outputDir, seed = 42, variants = 1 } = tileConfig;
   const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
   const args = [
     '--prompt', prompt,
     '--key', key,
-    '--resolution', '128',
     '--biome', biome,
     '--seed', String(seed),
     '--variants', String(variants)
   ];
+
+  // Pass explicit output directory if specified (e.g., for "base" biome tiles)
+  if (outputDir) {
+    args.push('--output-dir', outputDir);
+  }
 
   if (options.dryRun) {
     args.push('--dry-run');
@@ -208,7 +213,6 @@ async function generatePortrait(portraitConfig, options = {}) {
     args = [
       '--prompt', prompt,
       '--key', key,
-      '--resolution', '256',
       '--seed', String(seed)
     ];
     // Enemy portraits go to a different directory
@@ -222,7 +226,6 @@ async function generatePortrait(portraitConfig, options = {}) {
     args = [
       '--prompt', prompt,
       '--key', key,
-      '--resolution', '256',
       '--seed', String(seed)
     ];
   } else {
@@ -232,7 +235,6 @@ async function generatePortrait(portraitConfig, options = {}) {
       '--race', race,
       '--gender', gender,
       '--class', characterClass,
-      '--resolution', '256',
       '--seed', String(seed)
     ];
   }
@@ -271,7 +273,6 @@ async function generateIcon(iconConfig, options = {}) {
   const args = [
     '--prompt', prompt,
     '--key', key,
-    '--resolution', '128',
     '--category', category,
     '--seed', String(seed)
   ];
@@ -310,7 +311,6 @@ async function generateItem(itemConfig, options = {}) {
   const args = [
     '--prompt', prompt,
     '--key', key,
-    '--resolution', '128',
     '--category', category,
     '--seed', String(seed)
   ];
@@ -348,7 +348,6 @@ async function generateNode(nodeConfig, options = {}) {
   const args = [
     '--prompt', prompt,
     '--key', key,
-    '--resolution', '256',
     '--seed', String(seed)
   ];
 
@@ -386,7 +385,6 @@ async function generateOverlay(overlayConfig, options = {}) {
   const args = [
     '--prompt', prompt,
     '--key', key,
-    '--resolution', '128',
     '--subcategory', subcategory,
     '--seed', String(seed)
   ];
