@@ -158,14 +158,16 @@ The pipeline supports two inference modes:
 
 ### Master Style Prefixes
 
-**Flat 2D (V1 LoRA - GRPZA trigger):**
+All asset generation now uses **LoRA V2 (wbgmsst trigger)** as the default. The V1 trigger (GRPZA) is deprecated as it was rendering as literal text in generated images.
+
+**Default Style (V2 LoRA - wbgmsst trigger):**
 ```
-GRPZA, medieval fantasy illustration, ink and wash technique with watercolor fills,
+wbgmsst, medieval fantasy illustration, ink and wash technique with watercolor fills,
 bold black outlines of medium weight, visible aged parchment texture with slight yellowing,
 cozy nostalgic JRPG aesthetic, warm and inviting storybook quality, hand-drawn illustration style,
 ```
 
-**Isometric (V2 LoRA - wbgmsst trigger):**
+**Isometric Variant (V2 LoRA - wbgmsst trigger):**
 ```
 wbgmsst, isometric fantasy game asset, ink and wash technique with watercolor fills,
 bold black outlines of medium weight, visible aged parchment texture, cozy JRPG aesthetic,
@@ -357,8 +359,9 @@ npm run ai:validate -- --category tiles --verbose
   "regions": { ... },
   "generationSettings": {
     "defaultSeed": 42,
-    "triggerV1": "GRPZA",
-    "triggerV2": "wbgmsst"
+    "defaultTrigger": "wbgmsst",
+    "triggerV2": "wbgmsst",
+    "triggerV1Legacy": "GRPZA"
   }
 }
 ```

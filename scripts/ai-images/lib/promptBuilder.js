@@ -168,30 +168,30 @@ const NEGATIVE_PROMPT = 'photorealistic, 3D render, CGI, anime style, chibi, pix
 
 /**
  * Style prefixes for different asset types
+ * All use LoRA v2 (wbgmsst trigger) as the default
  */
 const STYLE_PREFIXES = {
-  // Flat 2D style (V1 LoRA - GRPZA trigger) - for portraits, icons, items
-  flat: 'GRPZA, medieval fantasy illustration, ink and wash technique with watercolor fills, bold black outlines of medium weight, visible aged parchment texture with slight yellowing, cozy nostalgic JRPG aesthetic, warm and inviting storybook quality, hand-drawn illustration style,',
+  // Flat 2D style (V2 LoRA - wbgmsst trigger) - for portraits, icons, items
+  flat: 'wbgmsst, medieval fantasy illustration, ink and wash technique with watercolor fills, bold black outlines of medium weight, visible aged parchment texture with slight yellowing, cozy nostalgic JRPG aesthetic, warm and inviting storybook quality, hand-drawn illustration style,',
 
   // Isometric style (V2 LoRA - wbgmsst trigger) - for obstacles, nodes
   isometric: 'wbgmsst, isometric fantasy game asset, ink and wash technique with watercolor fills, bold black outlines of medium weight, visible aged parchment texture, cozy JRPG aesthetic, top-down 3/4 view, clear silhouette, isolated subject,',
 
-  // Tile style (DEPRECATED) - legacy isometric prompts with embedded perspective
-  // New tiles should use tileFlatTexture and apply isometric transform in post-processing
+  // Tile style - isometric floor tiles with diamond shape
   tile: 'wbgmsst, isometric floor tile, diamond rhombus shape with sharp pointed corners, ' +
     '2:1 width-to-height aspect ratio, 30 degree orthographic projection, ' +
     'flat horizontal surface texture only, seamless tileable pattern, ' +
     'ink and wash watercolor style, bold black outline border defining diamond edges, ' +
     'clean white background outside diamond shape, 128x128 game sprite',
 
-  // NEW: Flat texture style for tiles - generates top-down textures that get isometric transform in post-processing
+  // Flat texture style for tiles - generates top-down textures that get isometric transform in post-processing
   // This produces more consistent results as the AI doesn't have to handle perspective
-  tileFlatTexture: 'GRPZA, seamless tileable texture, top-down flat view, ' +
+  tileFlatTexture: 'wbgmsst, seamless tileable texture, top-down flat view, ' +
     'ink and wash watercolor illustration, bold black outlines, ' +
     'game texture asset, square seamless pattern',
 
   // Wall texture style - horizontal strips for stacking wall system
-  wallTexture: 'GRPZA, vertical cliff face texture strip, side-lit from top-left, ' +
+  wallTexture: 'wbgmsst, vertical cliff face texture strip, side-lit from top-left, ' +
     'horizontal seamless tileable, ink and wash watercolor style, ' +
     'bold black outlines, fantasy game texture, 128x32 wall strip'
 };
@@ -277,7 +277,7 @@ function buildIconPrompt(icon, category) {
 
   const catMod = categoryModifiers[category] || 'game icon';
 
-  return `GRPZA, ${icon.prompt}, ${catMod}, simplified bold design, ink and wash style, thick black outlines, flat watercolor fills, high contrast silhouette, clean edges, isolated on plain background`;
+  return `wbgmsst, ${icon.prompt}, ${catMod}, simplified bold design, ink and wash style, thick black outlines, flat watercolor fills, high contrast silhouette, clean edges, isolated on plain background`;
 }
 
 /**
@@ -291,7 +291,7 @@ function buildItemPrompt(item, category) {
   // Rarity glow removed - use layered composition with overlays instead
   const categoryMod = category === 'consumables' ? 'consumable item' : category;
 
-  return `GRPZA, ${item.prompt}, fantasy RPG ${categoryMod} sprite, ink and wash illustration, bold black outlines, watercolor fills, slight 3D depth, isolated subject, plain neutral background, 128x128 game sprite`;
+  return `wbgmsst, ${item.prompt}, fantasy RPG ${categoryMod} sprite, ink and wash illustration, bold black outlines, watercolor fills, slight 3D depth, isolated subject, plain neutral background, 128x128 game sprite`;
 }
 
 /**
@@ -425,7 +425,7 @@ function buildNodePrompt(node, region = null) {
 
   const colorPart = colorHint ? `, ${colorHint} color palette` : '';
 
-  return `GRPZA, ${node.prompt}, fantasy map landmark icon, top-down stylized view, ink and wash illustration, bold black outlines, watercolor fills${colorPart}, aged parchment texture, miniature landmark style, clear silhouette, isolated on plain background, 48x48 game icon`;
+  return `wbgmsst, ${node.prompt}, fantasy map landmark icon, top-down stylized view, ink and wash illustration, bold black outlines, watercolor fills${colorPart}, aged parchment texture, miniature landmark style, clear silhouette, isolated on plain background, 48x48 game icon`;
 }
 
 /**
@@ -441,12 +441,13 @@ function getStylePrefix(category) {
 
 /**
  * Get the LoRA trigger word for an asset category
+ * All categories now use LoRA v2 (wbgmsst trigger)
  * @param {string} category - Asset category
  * @returns {string} Trigger word
  */
 function getTriggerWord(category) {
-  const isometricCategories = ['tiles', 'obstacles'];
-  return isometricCategories.includes(category) ? 'wbgmsst' : 'GRPZA';
+  // LoRA v2 uses wbgmsst for all asset types
+  return 'wbgmsst';
 }
 
 /**
