@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 6.0 |
+| Version | 7.0 |
 | Last Updated | January 2026 |
 | Focus | Features, mechanics, UX, content |
 
@@ -114,9 +114,11 @@
 
 ### 2.2 Enemy System
 
-- [ ] Ability execution system (use defined abilities array in enemy templates)
-- [ ] Ability cooldowns per enemy
-- [ ] Ability trigger conditions
+> **Note:** Ability execution is deferred to post-MVP. Enemies currently use basic attacks with scaling damage.
+
+- [ ] Ability execution system (use defined abilities array in enemy templates) - **Deferred**
+- [ ] Ability cooldowns per enemy - **Deferred**
+- [ ] Ability trigger conditions - **Deferred**
 - [ ] New enemy types (Tier 5+ for endgame content)
 
 ### 2.3 Advancement Trial Bosses (Complete)
@@ -179,13 +181,18 @@
 
 Per ITEM_SYSTEM.md specifications:
 
-- [ ] 5 intensity tiers (Minor → Supreme)
-- [ ] Enemy-type prefixes (Dragonbane, etc.)
-- [ ] Defensive augments
-- [ ] Support augments
-- [ ] Combat augments
-- [ ] Set item bonuses
-- [ ] Full metal tier progression (12 tiers)
+> **Note:** Core item system is complete. Advanced augments deferred to post-MVP.
+
+- [x] Basic item augments (stat bonuses, damage bonuses)
+- [x] Item rarity system (common to legendary)
+- [x] Equipment slots and requirements
+- [ ] 5 intensity tiers (Minor → Supreme) - **Post-MVP**
+- [ ] Enemy-type prefixes (Dragonbane, etc.) - **Post-MVP**
+- [ ] Defensive augments - **Post-MVP**
+- [ ] Support augments - **Post-MVP**
+- [ ] Combat augments - **Post-MVP**
+- [ ] Set item bonuses - **Post-MVP**
+- [ ] Full metal tier progression (12 tiers) - **Post-MVP**
 
 ### 3.2 Marketplace Enhancements
 
@@ -434,7 +441,7 @@ Per ITEM_SYSTEM.md specifications:
 - [x] region_id, region_race, ring_distance on world_nodes
 - [x] Foreign keys and indexes
 
-### 5.1.3 World Generation Improvements (In Progress - v8.5)
+### 5.1.3 World Generation Improvements (Complete - v9.7)
 
 > **Purpose:** Enhance world variety with new node types, better distribution, and improved connectivity
 > **Migration:** 031_expanded_node_types.sql
@@ -471,7 +478,13 @@ Per ITEM_SYSTEM.md specifications:
 #### Connection Improvements
 - [x] Max connection distance: 10-12 world units
 - [x] Inter-region bridges with subtle river/canyon visual
-- [ ] Gap infill algorithm for connections >20 units (generates intermediate nodes)
+- [x] Gap infill via intermediate nodes (implemented in inter-region connections)
+
+#### Node Distribution Quality (Complete - v9.7)
+- [x] Global guild same-type spacing (~100 units / 3000px between same types)
+- [x] Battle terrain anti-clustering (prevent 3+ same-type nodes clustering)
+- [x] Zodiac shrine validation (exactly 12 shrines or generation fails)
+- [x] Guild distribution validation (3 different guild types per region)
 
 #### Activity Node Features (Complete - v8.6)
 - [x] Fishing mini-game implementation (FishingScene.js, fishingService.js)
@@ -549,6 +562,11 @@ Per ITEM_SYSTEM.md specifications:
 - [x] Clan API routes (create, join, leave, disband, invite, chat)
 
 #### Tavern 2.0 (Future - Post-MVP)
+
+> **Note:** Basic TavernScene exists with presence and chat. Advanced features below are deferred.
+
+- [x] TavernScene with presence indicator
+- [x] Node-scoped chat (tavern:nodeId rooms)
 - [ ] Real-time movement in tavern space
 - [ ] Position sync via WebSocket
 - [ ] Proximity-based chat bubbles
@@ -584,7 +602,8 @@ Per ITEM_SYSTEM.md specifications:
 | Feature | Description | Priority |
 |---------|-------------|----------|
 | Player Guilds | Player-created organizations | Medium |
-| Cooperative Battles | Team vs bosses | High |
+| Cooperative Battles | Team vs bosses (see [BATTLE_MODES.md](BATTLE_MODES.md)) | High |
+| PvP Team Battles | 2v2, 3v3, 4v4 modes (see [BATTLE_MODES.md](BATTLE_MODES.md)) | Medium |
 | Equipment Crafting | Item creation system | Medium |
 | Achievement System | Milestones and rewards | Medium |
 
@@ -629,6 +648,8 @@ Recent implementations:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 9.1 | Jan 2026 | World Generation Quality (v9.7): Global guild same-type spacing (~100 units between same guild types). Battle terrain anti-clustering (prevent 3+ same-type nodes clustering). Zodiac shrine validation (exactly 12 or fail). Removed unused GAP_INFILL_CONFIG. Section 5.1.3 now complete. |
+| 9.0 | Jan 2026 | Documentation Audit: Marked enemy ability execution as deferred. Updated Advanced Item System with implementation status. Updated Tavern 2.0 section noting TavernScene exists. Added BATTLE_MODES.md reference for PvP modes. |
 | 8.0 | Jan 2026 | Battle Tilemap Rendering v9.7: Elevation-aware coordinate system (Y offset 8px/level), depth sorting with painter's algorithm, elevation-aware click detection. Frontend/backend 3D pathfinding synchronization. Archetype elevation profiles (6 archetypes: openField, caveRooms, mountainPass, bridgeCrossing, arena, volcano). Elevation constraints (variation limits, ramp requirements, peak/pit ratios). Code quality: BattleGrid cleanup, deterministic noise fix, elevation validation. |
 | 7.0 | Jan 2026 | World & Progression Polish v9.6: Zodiac Shrine System complete with crystal collection, RelicCollectionModal.js for viewing relic/crystal collection, ZodiacIndicator.js HUD element showing collection progress, NodeHoverTooltip.js enhanced with zodiac crystal status. Quest markers system complete with QuestMarkerManager.js and QuestProgressHUD.js. World & Progression now 98% complete. |
 | 6.0 | Jan 2026 | Documentation Consolidation v9.1: Marked Skill Cooldowns COMPLETE (battleService.js:1317-1322, 1777-1781). Marked Status Effect Duration Display COMPLETE (BattleUnit.js). Marked Mini-map Display COMPLETE (WorldMapMinimap.js 700+ lines with click-to-navigate). Added TODO items from code audit to Post-MVP section (quest completion verification, item drops from chests, lore content system, quick party formation, clan chat/management). Combat System 99%, World & Progression 96%. |

@@ -4,9 +4,9 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 1.0 |
+| Version | 1.1 |
 | Last Updated | January 2026 |
-| Total Code | ~5,076 lines across 9 modules |
+| Total Code | ~5,500 lines across 9 modules |
 
 ---
 
@@ -256,6 +256,51 @@ RACE_PRIMARY_GUILD = {
   'human': 'monk',
   'dwarf': 'chemist',
   'vampire': 'wizard'  // Magic affinity
+}
+```
+
+### Global Guild Same-Type Spacing
+
+Secondary guilds (2 per region) are assigned **globally** after all regions have primary guilds. This prevents clustering of same guild types (e.g., two wizard guilds adjacent).
+
+**Algorithm:**
+1. Collect all primary guild positions and types
+2. For each region needing secondary guilds:
+   - Find candidate nodes in outer rings (12-25 units from castle)
+   - Score by minimum distance to nearest same-type guild globally
+   - Prefer underrepresented guild types
+3. Assign guilds prioritizing maximum same-type spacing
+
+**Constants:**
+```javascript
+GUILD_CONFIG = {
+  MIN_SAME_TYPE_SPACING: 100,  // ~3000px between same guild types
+  GLOBAL_MAX_PER_TYPE: 4,      // Max 4 of each type worldwide
+  GLOBAL_MIN_PER_TYPE: 3,      // Min 3 of each type worldwide
+}
+```
+
+**Note:** Elf and Vampire regions both have wizard primaries - this is acceptable as race-alignment is a hard requirement.
+
+### Battle Terrain Anti-Clustering
+
+Prevents clusters of same-type battle nodes (caves, forests, mountains) from appearing together.
+
+**Algorithm:**
+1. During assignment, track all assigned battle nodes
+2. For each new battle node:
+   - Count same-type neighbors within 5.0 unit radius
+   - Reduce dominant terrain probability per neighbor found (40% penalty each)
+   - Hard cap: if 2+ same-type nodes nearby, force different type
+3. Post-validation detects remaining clusters (advisory warnings)
+
+**Constants:**
+```javascript
+TERRAIN_ANTI_CLUSTERING = {
+  ANTI_CLUSTER_RADIUS: 5.0,     // Check distance
+  SAME_TYPE_PENALTY: 0.4,       // Weight reduction per neighbor
+  MAX_SAME_TYPE_NEARBY: 2,      // Hard cap triggers alternate type
+  MIN_DOMINANT_RATIO: 0.55,     // Preserve regional identity
 }
 ```
 
@@ -716,11 +761,11 @@ See `api/src/db/worldgen/constants.js` for complete definitions:
 - `CONNECTION_CONFIG` - Phase 4 MST and connections
 - `INTER_REGION_CONFIG` - Phase 5 bridges and routes
 - `PHASE6_CONFIG` - Phase 6 validation
-- `GUILD_CONFIG` - Guild assignment rules
+- `GUILD_CONFIG` - Guild assignment rules (includes global same-type spacing)
 - `NODE_DISTRIBUTION` - Type percentages
+- `TERRAIN_ANTI_CLUSTERING` - Battle node anti-clustering settings
 - `ZODIAC_CONFIG` - Shrine placement
-- `WATCHTOWER_CONFIG` - Watchtower rules
-- `GAP_INFILL_CONFIG` - Long edge handling
+- `WATCHTOWER_CONFIG` - Watchtower rules (pixel radius multiplier)
 - `REGION_INTERMEDIATE_CONFIG` - Region-themed nodes
 
 ### Environment Variables
@@ -736,4 +781,5 @@ See `api/src/db/worldgen/constants.js` for complete definitions:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | Jan 2026 | Added global guild spacing, terrain anti-clustering, removed GAP_INFILL_CONFIG |
 | 1.0 | Jan 2026 | Initial document from codebase analysis |

@@ -28,7 +28,8 @@ import {
   GUILD_CONFIG,
   NODE_DISTRIBUTION,
   WATCHTOWER_CONFIG,
-  ZODIAC_CONFIG
+  ZODIAC_CONFIG,
+  TERRAIN_ANTI_CLUSTERING
 } from './constants.js';
 import { SeededRandom, TERRAIN_DISTRIBUTION } from '../../config/constants.js';
 import { generateCastlePlacements } from './castlePlacement.js';
@@ -223,27 +224,6 @@ function getPrimaryGuildType(region) {
 }
 
 /**
- * Get secondary guild types (different from primary)
- *
- * @param {string} primaryType - Primary guild type to exclude
- * @param {SeededRandom} rng - Random generator
- * @param {number} count - Number of secondary types needed
- * @returns {Array<string>} Array of secondary guild types
- */
-function getSecondaryGuildTypes(primaryType, rng, count) {
-  const available = GUILD_CONFIG.TYPES.filter(t => t !== primaryType);
-  const result = [];
-
-  // Shuffle and pick
-  for (let i = 0; i < count && available.length > 0; i++) {
-    const idx = rng.nextInt(0, available.length - 1);
-    result.push(available.splice(idx, 1)[0]);
-  }
-
-  return result;
-}
-
-/**
  * Assign node types to generated positions within a region
  * Uses distance from castle as proxy for ring assignment (graph distance computed in Phase 4)
  *
@@ -291,16 +271,15 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
   const farmCount = rng.nextInt(NODE_DISTRIBUTION.FARM_COUNT_MIN, NODE_DISTRIBUTION.FARM_COUNT_MAX);
   const keepCount = REGION_NODE_CONFIG.KEEP_COUNT;
 
-  // Guild setup: 1 primary (Ring 1) + 2 secondary (Rings 2-3)
+  // Guild setup: Only primary guild assigned here (race-appropriate)
+  // Secondary guilds are assigned globally in assignGlobalSecondaryGuilds()
   const primaryGuildType = getPrimaryGuildType(region);
-  const secondaryGuildTypes = getSecondaryGuildTypes(primaryGuildType, rng, GUILD_CONFIG.RING_2_3_COUNT);
 
   let citiesAssigned = 0;
   let villagesAssigned = 0;
   let farmsAssigned = 0;
   let keepAssigned = 0;
   let primaryGuildAssigned = false;
-  let secondaryGuildsAssigned = 0;
   let watchtowerAssigned = false;
 
   // Activity node counters
@@ -312,13 +291,96 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
   const activityTarget = Math.floor(positions.length * (NODE_DISTRIBUTION.ACTIVITY_PERCENT.min +
     rng.next() * (NODE_DISTRIBUTION.ACTIVITY_PERCENT.max - NODE_DISTRIBUTION.ACTIVITY_PERCENT.min)));
 
-  // Helper to pick battle terrain based on region configuration
-  function pickBattleTerrain() {
-    if (rng.next() < TERRAIN_DISTRIBUTION.DOMINANT_WEIGHT) {
-      return region.dominantTerrain; // 70% dominant
-    } else {
-      return rng.pick(region.secondaryTerrains); // 30% secondary
+  // Track assigned battle nodes for anti-clustering
+  const assignedBattleNodes = [];
+  const battleTypes = NODE_DISTRIBUTION.BATTLE_TYPES;
+
+  /**
+   * Helper to pick battle terrain with neighbor-aware anti-clustering.
+   * Reduces probability of same-type terrain when neighbors of that type exist nearby.
+   *
+   * @param {Object} currentNode - The node being assigned (with x, y)
+   * @returns {string} Selected terrain type (forest, cave, mountain)
+   */
+  function pickBattleTerrain(currentNode) {
+    const config = TERRAIN_ANTI_CLUSTERING;
+
+    // If anti-clustering is disabled, use simple probabilistic selection
+    if (!config.ENABLED) {
+      if (rng.next() < TERRAIN_DISTRIBUTION.DOMINANT_WEIGHT) {
+        return region.dominantTerrain;
+      }
+      return rng.pick(region.secondaryTerrains);
     }
+
+    // Count same-type neighbors within anti-cluster radius
+    const neighborCounts = { forest: 0, cave: 0, mountain: 0 };
+    for (const neighbor of assignedBattleNodes) {
+      const dist = Math.hypot(currentNode.x - neighbor.x, currentNode.y - neighbor.y);
+      if (dist <= config.ANTI_CLUSTER_RADIUS && battleTypes.includes(neighbor.nodeType)) {
+        neighborCounts[neighbor.nodeType]++;
+      }
+    }
+
+    // Calculate adjusted weights
+    const dominantType = region.dominantTerrain;
+    const secondaryTypes = region.secondaryTerrains;
+    const allTerrainTypes = [dominantType, ...secondaryTypes.filter(t => t !== dominantType)];
+
+    // Start with base weights
+    const weights = {};
+    for (const type of allTerrainTypes) {
+      if (type === dominantType) {
+        weights[type] = TERRAIN_DISTRIBUTION.DOMINANT_WEIGHT; // 0.70
+      } else {
+        // Split remaining weight among secondary types
+        weights[type] = (1 - TERRAIN_DISTRIBUTION.DOMINANT_WEIGHT) / secondaryTypes.length;
+      }
+    }
+
+    // Apply penalties for clustering
+    for (const type of allTerrainTypes) {
+      const count = neighborCounts[type] || 0;
+
+      // Hard cap: if too many same-type nearby, zero out this type
+      if (count >= config.MAX_SAME_TYPE_NEARBY) {
+        weights[type] = 0;
+        continue;
+      }
+
+      // Soft penalty: reduce weight by penalty factor per neighbor
+      for (let i = 0; i < count; i++) {
+        weights[type] *= (1 - config.SAME_TYPE_PENALTY);
+      }
+    }
+
+    // Ensure minimum dominant ratio is preserved (regional identity)
+    const totalWeight = Object.values(weights).reduce((sum, w) => sum + w, 0);
+    if (totalWeight > 0 && weights[dominantType] / totalWeight < config.MIN_DOMINANT_RATIO) {
+      // Boost dominant type to minimum ratio
+      const targetDominant = config.MIN_DOMINANT_RATIO * totalWeight / (1 - config.MIN_DOMINANT_RATIO);
+      weights[dominantType] = Math.max(weights[dominantType], targetDominant);
+    }
+
+    // Normalize and select
+    const normalizedTotal = Object.values(weights).reduce((sum, w) => sum + w, 0);
+    if (normalizedTotal === 0) {
+      // Fallback: all types blocked, pick any secondary
+      return rng.pick(secondaryTypes);
+    }
+
+    // Weighted random selection
+    const roll = rng.next() * normalizedTotal;
+    let cumulative = 0;
+    for (const type of allTerrainTypes) {
+      cumulative += weights[type];
+      if (roll <= cumulative) {
+        return type;
+      }
+    }
+
+    // Fallback (shouldn't reach)
+    return dominantType;
   }
 
   // Helper to pick activity node type
@@ -335,7 +397,8 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
 
     // Ring 0 (0-5): Battle nodes only (guards around castle)
     if (dist <= REGION_NODE_CONFIG.RING_0_MAX_DIST) {
-      node.nodeType = pickBattleTerrain();
+      node.nodeType = pickBattleTerrain(node);
+      assignedBattleNodes.push(node);
       continue;
     }
 
@@ -370,23 +433,18 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
         continue;
       }
       // Default: battle terrain
-      node.nodeType = pickBattleTerrain();
+      node.nodeType = pickBattleTerrain(node);
+      assignedBattleNodes.push(node);
       continue;
     }
 
-    // Ring 2 (12-20): Keep, Secondary Guilds, Villages, Farms, Activity nodes, Battle nodes
+    // Ring 2 (12-20): Keep, Villages, Farms, Activity nodes, Battle nodes
+    // Note: Secondary guilds are assigned globally after all regions are processed
     if (dist <= REGION_NODE_CONFIG.RING_2_MAX_DIST) {
       // Keep (place in 14-18 range)
       if (keepAssigned < keepCount && dist >= 14 && dist <= 18 && rng.next() < 0.25) {
         node.nodeType = 'keep';
         keepAssigned++;
-        continue;
-      }
-      // Secondary guilds (place in 13-19 range)
-      if (secondaryGuildsAssigned < secondaryGuildTypes.length && dist >= 13 && dist <= 19 && rng.next() < 0.25) {
-        node.nodeType = 'guild';
-        node.guildType = secondaryGuildTypes[secondaryGuildsAssigned];
-        secondaryGuildsAssigned++;
         continue;
       }
       // Farms (outer ring settlements)
@@ -411,7 +469,8 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
         continue;
       }
       // Default: battle terrain
-      node.nodeType = pickBattleTerrain();
+      node.nodeType = pickBattleTerrain(node);
+      assignedBattleNodes.push(node);
       continue;
     }
 
@@ -432,7 +491,8 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
       continue;
     }
     // Default: battle terrain
-    node.nodeType = pickBattleTerrain();
+    node.nodeType = pickBattleTerrain(node);
+    assignedBattleNodes.push(node);
   }
 
   // ============================================================================
@@ -478,19 +538,7 @@ export function assignRegionNodeTypes(positions, castle, region, rng) {
     keepAssigned++;
   }
 
-  // Secondary guilds
-  const availableForSecondaryGuild = nodesWithDist.filter(n =>
-    n.nodeType !== 'castle' && n.nodeType !== 'city' && n.nodeType !== 'keep' &&
-    n.nodeType !== 'guild' && n.nodeType !== 'village' &&
-    n.distFromCastle >= 12 && n.distFromCastle <= 22
-  );
-  while (secondaryGuildsAssigned < secondaryGuildTypes.length && availableForSecondaryGuild.length > 0) {
-    const idx = rng.nextInt(0, availableForSecondaryGuild.length - 1);
-    const node = availableForSecondaryGuild.splice(idx, 1)[0];
-    node.nodeType = 'guild';
-    node.guildType = secondaryGuildTypes[secondaryGuildsAssigned];
-    secondaryGuildsAssigned++;
-  }
+  // Note: Secondary guilds are assigned globally in assignGlobalSecondaryGuilds()
 
   // Villages (fill to target)
   const availableForVillage = nodesWithDist.filter(n =>
@@ -602,6 +650,9 @@ export function generateAllRegionNodes(castles, voronoiData, rng) {
 
   console.log(`\nPhase 3 Complete: Generated ${allNodes.length} total nodes across ${nodesByRegion.size} regions`);
 
+  // Assign secondary guilds globally with same-type spacing
+  assignGlobalSecondaryGuilds(allNodes, nodesByRegion, castles, rng);
+
   // Assign zodiac shrines globally (one of each type)
   assignZodiacShrines(allNodes, castles, rng);
 
@@ -616,6 +667,139 @@ export function generateAllRegionNodes(castles, voronoiData, rng) {
     allNodes,
     nodesByRegion
   };
+}
+
+/**
+ * Assign secondary guilds globally with same-type spacing constraint.
+ * Called after all regions have primary guilds assigned.
+ *
+ * Algorithm:
+ * 1. Collect all existing guild positions and types (primaries)
+ * 2. For each region needing secondary guilds:
+ *    - Find candidate nodes (outer rings, not already assigned)
+ *    - Score by distance to nearest same-type guild globally
+ *    - Prefer types that are underrepresented
+ * 3. Place guilds prioritizing maximum same-type spacing
+ *
+ * @param {Array} allNodes - All generated nodes
+ * @param {Map} nodesByRegion - Nodes organized by region ID
+ * @param {Array} castles - Castle data with region info
+ * @param {SeededRandom} rng - Seeded random generator
+ */
+function assignGlobalSecondaryGuilds(allNodes, nodesByRegion, castles, _rng) {
+  console.log('\n  Assigning secondary guilds with global spacing...');
+
+  // Track all guild positions globally
+  const guildsByType = {
+    warrior: [],
+    wizard: [],
+    monk: [],
+    chemist: []
+  };
+
+  // Collect existing primary guilds
+  for (const node of allNodes) {
+    if (node.nodeType === 'guild' && node.guildType) {
+      guildsByType[node.guildType].push(node);
+    }
+  }
+
+  console.log(`    Primary guilds found: ${Object.entries(guildsByType).map(([t, g]) => `${t}:${g.length}`).join(', ')}`);
+
+  // For each region, assign 2 secondary guilds
+  const targetSecondaryPerRegion = GUILD_CONFIG.RING_2_3_COUNT;
+
+  for (const castle of castles) {
+    const regionNodes = nodesByRegion.get(castle.region.id);
+    if (!regionNodes) continue;
+
+    // Get primary guild type for this region (to exclude)
+    const primaryType = GUILD_CONFIG.RACE_PRIMARY_GUILD[castle.region.race] || 'warrior';
+
+    // Find candidates: nodes in Ring 2-3 (distance 12-25 from castle)
+    const candidates = regionNodes.filter(node => {
+      if (node.nodeType === 'guild' || node.nodeType === 'castle') return false;
+
+      // Skip settlements (except battle nodes which can be converted)
+      const protectedTypes = ['city', 'village', 'keep', 'farm', 'watchtower', 'shrine'];
+      if (protectedTypes.includes(node.nodeType)) return false;
+
+      const dist = Math.hypot(node.x - castle.x, node.y - castle.y);
+      return dist >= 12 && dist <= 25;
+    });
+
+    if (candidates.length < targetSecondaryPerRegion) {
+      console.log(`    Warning: ${castle.region.name} has only ${candidates.length} candidates for secondary guilds`);
+    }
+
+    // Determine which guild types to assign (exclude primary)
+    const availableTypes = GUILD_CONFIG.TYPES.filter(t => t !== primaryType);
+
+    // Sort available types by global count (prefer underrepresented)
+    availableTypes.sort((a, b) => guildsByType[a].length - guildsByType[b].length);
+
+    // Assign secondary guilds
+    let assigned = 0;
+    for (const guildType of availableTypes) {
+      if (assigned >= targetSecondaryPerRegion) break;
+
+      // Check global cap
+      if (guildsByType[guildType].length >= GUILD_CONFIG.GLOBAL_MAX_PER_TYPE) {
+        continue;
+      }
+
+      // Score candidates by distance to same-type guilds
+      let bestCandidate = null;
+      let bestScore = -Infinity;
+
+      for (const candidate of candidates) {
+        // Skip if already used
+        if (candidate.nodeType === 'guild') continue;
+
+        // Calculate minimum distance to same-type guilds globally
+        let minSameTypeDist = Infinity;
+        for (const existingGuild of guildsByType[guildType]) {
+          const dist = Math.hypot(candidate.x - existingGuild.x, candidate.y - existingGuild.y);
+          minSameTypeDist = Math.min(minSameTypeDist, dist);
+        }
+
+        // Score = distance (higher = better spacing)
+        const score = minSameTypeDist === Infinity ? 1000 : minSameTypeDist;
+        if (score > bestScore) {
+          bestScore = score;
+          bestCandidate = candidate;
+        }
+      }
+
+      if (bestCandidate) {
+        // Check minimum spacing constraint (soft warning)
+        if (bestScore < GUILD_CONFIG.MIN_SAME_TYPE_SPACING && guildsByType[guildType].length > 0) {
+          if (GUILD_CONFIG.WARN_ON_SAME_TYPE_SPACING) {
+            console.log(`    Warning: ${guildType} guild in ${castle.region.name} only ${bestScore.toFixed(1)} units from nearest same-type (min: ${GUILD_CONFIG.MIN_SAME_TYPE_SPACING})`);
+          }
+        }
+
+        bestCandidate.nodeType = 'guild';
+        bestCandidate.guildType = guildType;
+        guildsByType[guildType].push(bestCandidate);
+        assigned++;
+      }
+    }
+
+    if (assigned < targetSecondaryPerRegion) {
+      console.log(`    Warning: ${castle.region.name} only got ${assigned}/${targetSecondaryPerRegion} secondary guilds`);
+    }
+  }
+
+  // Final summary
+  console.log(`    Final guild distribution: ${Object.entries(guildsByType).map(([t, g]) => `${t}:${g.length}`).join(', ')}`);
+
+  // Validate global minimums
+  for (const [type, guilds] of Object.entries(guildsByType)) {
+    if (guilds.length < GUILD_CONFIG.GLOBAL_MIN_PER_TYPE) {
+      console.log(`    Warning: Only ${guilds.length} ${type} guilds (min: ${GUILD_CONFIG.GLOBAL_MIN_PER_TYPE})`);
+    }
+  }
 }
 
 /**
@@ -700,9 +884,16 @@ function assignZodiacShrines(allNodes, castles, rng) {
   }
 
   console.log(`    Assigned ${assignedShrines.length} zodiac shrines`);
-  if (assignedShrines.length < 12) {
-    console.log(`    Warning: Only ${assignedShrines.length}/12 zodiac shrines placed (not enough eligible nodes)`);
+  if (assignedShrines.length < ZODIAC_CONFIG.PER_WORLD) {
+    const missingCount = ZODIAC_CONFIG.PER_WORLD - assignedShrines.length;
+    const missingTypes = zodiacTypes.slice(assignedShrines.length);
+    console.error(`    ERROR: Only ${assignedShrines.length}/${ZODIAC_CONFIG.PER_WORLD} zodiac shrines placed! (${missingCount} missing)`);
+    console.error(`    Missing zodiac types: ${missingTypes.join(', ')}`);
+    console.error(`    Eligible nodes: ${eligibleNodes.length}, Candidates checked: ${eligibleNodes.filter(n => !n.shrineBuffType).length}`);
+    throw new Error(`World generation failed: Could not place all ${ZODIAC_CONFIG.PER_WORLD} zodiac shrines. Only ${assignedShrines.length} placed (${missingCount} missing). Missing: ${missingTypes.join(', ')}`);
   }
+
+  return assignedShrines;
 }
 
 /**

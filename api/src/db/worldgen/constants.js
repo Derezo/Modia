@@ -269,7 +269,17 @@ export const GUILD_CONFIG = {
   // Distance constraints
   RING_1_REQUIRED: true,                  // Primary guild must be in Ring 1 (near castle)
   RING_2_3_COUNT: 2,                      // 2 secondary guilds in outer rings
-  MIN_GUILD_SPACING: 8                    // Minimum distance between guilds in same region
+  MIN_GUILD_SPACING: 8,                   // Minimum distance between guilds in same region
+
+  // Global same-type spacing (prevent wizard guilds from clustering)
+  // ~100 units = ~3000px - ensures same guild types spread across world
+  MIN_SAME_TYPE_SPACING: 100,
+  GLOBAL_MAX_PER_TYPE: 4,                 // Max 4 of each guild type worldwide
+  GLOBAL_MIN_PER_TYPE: 3,                 // Min 3 of each guild type worldwide
+
+  // Validation settings
+  VALIDATION_ENABLED: true,
+  WARN_ON_SAME_TYPE_SPACING: true         // Log warning if spacing violated
 };
 
 // ============================================================================
@@ -295,6 +305,39 @@ export const NODE_DISTRIBUTION = {
   FARM_COUNT_MIN: 2,
   FARM_COUNT_MAX: 4,
   FARM_MIN_RING: 2                        // Farms not too close to castle
+};
+
+// ============================================================================
+// TERRAIN ANTI-CLUSTERING CONFIGURATION
+// ============================================================================
+
+/**
+ * Prevents battle node type clustering (too many caves/forests/mountains together).
+ * Uses neighbor-aware selection during assignment and post-validation.
+ */
+export const TERRAIN_ANTI_CLUSTERING = {
+  ENABLED: true,
+
+  // Selection phase: check nodes within this distance for same-type neighbors
+  ANTI_CLUSTER_RADIUS: 5.0,
+
+  // Reduce dominant terrain weight by this factor per same-type neighbor found
+  // With 2 neighbors at 0.4 penalty each: 0.70 * 0.6 * 0.6 = 0.252 (vs base 0.70)
+  SAME_TYPE_PENALTY: 0.4,
+
+  // Hard cap: if this many same-type nodes are within radius, force different type
+  MAX_SAME_TYPE_NEARBY: 2,
+
+  // Validation phase settings
+  VALIDATION_ENABLED: true,
+  MAX_CLUSTER_SIZE: 2,                    // Max same-type nodes within N hops before flagging
+  CLUSTER_HOP_DISTANCE: 2,                // Check within this many graph hops
+
+  // Preserve regional identity: don't drop below this dominant ratio
+  MIN_DOMINANT_RATIO: 0.55,
+
+  // Optional: post-process fix to auto-reassign peripheral cluster nodes
+  POST_PROCESS_FIX: false                 // Disabled by default - just log warnings
 };
 
 // ============================================================================
@@ -339,29 +382,7 @@ export const WATCHTOWER_CONFIG = {
   MAX_PER_REGION: 1,                      // Very rare - at most 1 per region
   SPAWN_CHANCE: 0.3,                      // Only 30% chance to spawn
   MIN_RING: 3,                            // Outer rings only
-  REVEAL_RADIUS: 2                        // Reveals nodes within 2 hops
-};
-
-// ============================================================================
-// GAP INFILL CONFIGURATION (for long connections)
-// ============================================================================
-
-export const GAP_INFILL_CONFIG = {
-  // Connection distance limits
-  MAX_CONNECTION_DISTANCE: 12,            // Standard max connection distance
-  GAP_INFILL_THRESHOLD: 20,               // Generate intermediates when gap > 20 units
-
-  // Intermediate node generation
-  INTERMEDIATE_NODE_SPACING: 6,           // Space between intermediate nodes
-  INTERMEDIATE_BRANCH_CHANCE: 0.3,        // 30% chance intermediate connects to nearby nodes
-  INTERMEDIATE_BRANCH_DISTANCE: 8,        // Max distance to search for branch connections
-
-  // Type distribution for intermediate nodes (should sum to 1.0)
-  INTERMEDIATE_TYPE_WEIGHTS: {
-    battle: 0.40,                          // 40% battle nodes
-    activity: 0.30,                        // 30% activity nodes
-    settlement: 0.30                       // 30% village/farm
-  }
+  REVEAL_RADIUS: 2                        // Pixel radius multiplier (base 1500px, so 2 = 3000px reveal)
 };
 
 // ============================================================================
