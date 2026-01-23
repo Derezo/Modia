@@ -57,6 +57,7 @@ function parseArgs() {
     quiet: false,
     delay: 2000,  // Default 2 second delay between requests
     batch: null,  // YAML batch config path
+    lora: null,   // LoRA model override (v1, v2, modern-pixel, retro-pixel)
     help: false
   };
 
@@ -105,6 +106,9 @@ function parseArgs() {
       case '--batch':
         options.batch = args[++i];
         break;
+      case '--lora':
+        options.lora = args[++i];  // v1, v2, modern-pixel, retro-pixel
+        break;
       case '--help':
       case '-h':
         options.help = true;
@@ -143,6 +147,7 @@ Options:
   --quiet, -q         Suppress all output except errors
   --delay <ms>        Delay between requests in milliseconds (default: 2000)
   --batch <config>    Use YAML batch config file (bypasses metadata filtering)
+  --lora <model>      LoRA model override (v1, v2, modern-pixel, retro-pixel)
   --help, -h          Show this help message
 
 Environment variables:
@@ -292,7 +297,8 @@ async function runBatchMode(options) {
       verbose: options.verbose,
       quiet: options.quiet,
       local: options.local,
-      huggingface: options.huggingface
+      huggingface: options.huggingface,
+      loraModel: options.lora
     });
 
     if (result.success) {
@@ -319,6 +325,11 @@ async function main() {
   if (options.help) {
     showHelp();
     process.exit(0);
+  }
+
+  // Auto-enable verbose for dry-run to show all generation details
+  if (options.dryRun && !options.verbose) {
+    options.verbose = true;
   }
 
   validateEnvVars(options);
@@ -431,7 +442,8 @@ async function main() {
         biome: pythonBiome,
         outputDir: outputDir,
         seed: tile.seed,
-        variants: tile.variants || 1
+        variants: tile.variants || 1,
+        loraModel: options.lora
       }, {
         verbose: options.verbose,
         quiet: options.quiet,

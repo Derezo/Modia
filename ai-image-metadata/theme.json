@@ -99,5 +99,16 @@
     "status": "status effect icon",
     "menu": "menu UI icon",
     "augments": "augment upgrade icon"
+  },
+
+  "loraDefaults": {
+    "description": "Default LoRA model for each asset type. v1=GRPZA (legacy), v2=wbgmsst (current)",
+    "tiles": "v2",
+    "portraits": "v1",
+    "items": "v1",
+    "icons": "v1",
+    "nodes": "v2",
+    "obstacles": "v2",
+    "overlays": "v2"
   }
 }
