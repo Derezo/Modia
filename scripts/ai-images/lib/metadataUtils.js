@@ -215,9 +215,13 @@ function loadTileMetadata(options = {}) {
 /**
  * Load all portrait metadata
  * @param {Object} filters - Optional filters
- * @param {string} filters.race - Filter by race
- * @param {string} filters.gender - Filter by gender
- * @param {string} filters.class - Filter by class
+ * @param {string} filters.type - Filter by type: 'player', 'enemy', or 'all' (default: 'all')
+ * @param {string} filters.race - Filter player portraits by race
+ * @param {string} filters.gender - Filter player portraits by gender
+ * @param {string} filters.class - Filter player portraits by class (base or advanced)
+ * @param {string} filters.advancedClass - Filter to specific advanced class
+ * @param {string} filters.archetype - Filter enemy portraits by archetype
+ * @param {string} filters.region - Filter enemy portraits by region
  * @returns {Object} Portrait data
  */
 function loadPortraitMetadata(filters = {}) {
@@ -226,30 +230,85 @@ function loadPortraitMetadata(filters = {}) {
     throw new Error('Failed to load portraits manifest');
   }
 
-  const data = loadMetadata(getMetadataPath('portraits/combinations.json'));
-  if (!data) {
-    throw new Error('Failed to load portrait combinations');
-  }
+  const type = filters.type || 'all';
+  // If player-specific filters are set, exclude enemies automatically
+  const hasPlayerFilters = filters.race || filters.gender || filters.class || filters.advancedClass;
+  const hasEnemyFilters = filters.archetype || filters.region;
+  const includePlayer = (type === 'all' && !hasEnemyFilters) || type === 'player' || hasPlayerFilters;
+  const includeEnemy = (type === 'all' && !hasPlayerFilters) || type === 'enemy' || hasEnemyFilters;
 
   const result = {
     manifest,
-    raceTraits: data.raceTraits,
-    genderTraits: data.genderTraits,
-    classTraits: data.classTraits,
+    raceTraits: {},
+    genderTraits: {},
+    classTraits: {},
+    advancedClassTraits: {},
+    archetypeTraits: {},
+    regionTraits: {},
     portraits: []
   };
 
-  for (const portrait of data.portraits || []) {
-    // Apply filters
-    if (filters.race && portrait.race !== filters.race) continue;
-    if (filters.gender && portrait.gender !== filters.gender) continue;
-    if (filters.class && portrait.class !== filters.class) continue;
+  // Load player portraits from combinations.json
+  if (includePlayer) {
+    const data = loadMetadata(getMetadataPath('portraits/combinations.json'));
+    if (!data) {
+      throw new Error('Failed to load portrait combinations');
+    }
 
-    portrait._sourceFile = 'combinations.json';
-    result.portraits.push(portrait);
+    result.raceTraits = data.raceTraits || {};
+    result.genderTraits = data.genderTraits || {};
+    result.classTraits = data.classTraits || {};
+    result.advancedClassTraits = data.advancedClassTraits || {};
+
+    for (const portrait of data.portraits || []) {
+      // Apply filters
+      if (filters.race && portrait.race !== filters.race) continue;
+      if (filters.gender && portrait.gender !== filters.gender) continue;
+      if (filters.class && portrait.class !== filters.class) continue;
+      if (filters.advancedClass) {
+        if (!portrait.isAdvanced || portrait.class !== filters.advancedClass) continue;
+      }
+
+      portrait._sourceFile = 'combinations.json';
+      portrait._type = 'player';
+      result.portraits.push(portrait);
+    }
+  }
+
+  // Load enemy portraits from enemies.json
+  if (includeEnemy) {
+    const enemyData = loadMetadata(getMetadataPath('portraits/enemies.json'));
+    if (enemyData) {
+      result.archetypeTraits = enemyData.archetypeTraits || {};
+      result.regionTraits = enemyData.regionTraits || {};
+
+      for (const enemy of enemyData.enemies || []) {
+        // Apply filters
+        if (filters.archetype && enemy.archetype !== filters.archetype) continue;
+        if (filters.region && enemy.region !== filters.region) continue;
+
+        enemy._sourceFile = 'enemies.json';
+        enemy._type = 'enemy';
+        result.portraits.push(enemy);
+      }
+    }
   }
 
   return result;
+}
+
+/**
+ * Load enemy portrait metadata only
+ * @param {Object} filters - Optional filters
+ * @param {string} filters.archetype - Filter by archetype (beast, humanoid, undead, elemental)
+ * @param {string} filters.region - Filter by region (forest, cave, mountain, bridge, palace)
+ * @returns {Object} Enemy portrait data
+ */
+function loadEnemyPortraitMetadata(filters = {}) {
+  return loadPortraitMetadata({
+    ...filters,
+    type: 'enemy'
+  });
 }
 
 /**
@@ -360,6 +419,47 @@ function loadNodeMetadata() {
 }
 
 /**
+ * Load overlay metadata by subcategory
+ * @param {string} subcategory - Optional subcategory filter ('rarity', 'augments', or null for all)
+ * @returns {Object} Overlay data
+ */
+function loadOverlayMetadata(subcategory = null) {
+  const result = {
+    overlays: [],
+    bySubcategory: {}
+  };
+
+  const subcategories = subcategory
+    ? [subcategory]
+    : ['rarity', 'augments'];
+
+  for (const subcat of subcategories) {
+    const filePath = getMetadataPath(`overlays/${subcat}.json`);
+    if (!fileExists(filePath)) {
+      console.warn(`Warning: Overlay file not found: overlays/${subcat}.json`);
+      continue;
+    }
+
+    const data = loadMetadata(filePath);
+    if (!data) {
+      console.warn(`Warning: Failed to load overlays/${subcat}.json`);
+      continue;
+    }
+
+    result.bySubcategory[subcat] = data;
+
+    for (const overlay of data.overlays || []) {
+      overlay._subcategory = subcat;
+      overlay._sourceFile = `${subcat}.json`;
+      overlay._category = 'overlays';
+      result.overlays.push(overlay);
+    }
+  }
+
+  return result;
+}
+
+/**
  * Update asset generation status in metadata
  * @param {string} category - Asset category
  * @param {string} sourceFile - Source JSON file name
@@ -376,14 +476,15 @@ function updateAssetStatus(category, sourceFile, assetId, updates) {
   }
 
   // Find the asset array (different names in different files)
-  const assetArray = data.tiles || data.portraits || data.items || data.icons || data.nodes;
+  const assetArray = data.tiles || data.portraits || data.enemies || data.items || data.icons || data.nodes;
 
   if (!assetArray) {
     console.error(`No asset array found in ${category}/${sourceFile}`);
     return;
   }
 
-  const assetIndex = assetArray.findIndex(a => a.id === assetId);
+  // Search by 'id' or 'key' (tiles use 'key' in JSON, normalized to 'id' at runtime)
+  const assetIndex = assetArray.findIndex(a => a.id === assetId || a.key === assetId);
   if (assetIndex === -1) {
     console.error(`Asset ${assetId} not found in ${category}/${sourceFile}`);
     return;
@@ -473,9 +574,11 @@ module.exports = {
   loadCategoryAssets,
   loadTileMetadata,
   loadPortraitMetadata,
+  loadEnemyPortraitMetadata,
   loadItemMetadata,
   loadIconMetadata,
   loadNodeMetadata,
+  loadOverlayMetadata,
   updateAssetStatus,
   markAssetGenerated,
   getCategoryStats,
