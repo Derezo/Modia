@@ -17,6 +17,7 @@
  */
 
 const path = require('path');
+const fs = require('fs');
 const {
   loadTileMetadata,
   markAssetGenerated,
@@ -419,10 +420,16 @@ async function main() {
     log(`[${i + 1}/${tilesToGenerate.length}] Generating: ${tile.id}`, 'info');
 
     try {
+      // Map "base" biome to "default" for Python script compatibility
+      // but pass explicit output directory to preserve "base" folder structure
+      const pythonBiome = tile._biome === 'base' ? 'default' : tile._biome;
+      const outputDir = tile._biome === 'base' ? path.join(OUTPUT_DIR, 'base') : null;
+
       const result = await generateTile({
         prompt: tile.prompt,
         key: tile.id,
-        biome: tile._biome,
+        biome: pythonBiome,
+        outputDir: outputDir,
         seed: tile.seed,
         variants: tile.variants || 1
       }, {
@@ -433,6 +440,24 @@ async function main() {
       });
 
       if (result.success) {
+        // For "base" biome tiles, move from default/ to base/ directory
+        // (Python script doesn't respect --output-dir, uses --biome for path)
+        if (tile._biome === 'base') {
+          const numVariants = tile.variants || 1;
+          for (let v = 0; v < numVariants; v++) {
+            const filename = numVariants > 1 ? `${tile.id}_${v}.png` : `${tile.id}.png`;
+            const srcPath = path.join(OUTPUT_DIR, 'default', filename);
+            const destPath = path.join(OUTPUT_DIR, 'base', filename);
+            if (fs.existsSync(srcPath)) {
+              ensureDirectoryExists(path.join(OUTPUT_DIR, 'base'));
+              fs.renameSync(srcPath, destPath);
+              if (options.verbose) {
+                log(`Moved ${filename} from default/ to base/`, 'debug');
+              }
+            }
+          }
+        }
+
         results.success.push({
           id: tile.id,
           biome: tile._biome,

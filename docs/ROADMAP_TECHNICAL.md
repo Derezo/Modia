@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.2 |
+| Version | 2.3 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -307,8 +307,28 @@ npm run audio:status         # Show asset status
 | Enemy Portraits | 16 | 16 | 0 |
 | **Total** | **36** | **30** | **6** |
 
-### 7.4 Pending
+### 7.4 Post-Processing Pipeline Overhaul (Completed Jan 2026)
 
+- [x] Removed `--sizes` CLI flag from all generators (hard-coded post-processing per asset type)
+- [x] Added asset-specific post-processing functions in `resizeUtils.js`:
+  - `postProcessTile()` - 128x128 → 64x64 with diamond mask
+  - `postProcessPortrait()` - 256x256 → 64/128/256 variants
+  - `postProcessItem()` - 128x128 → 32/64/128 variants
+  - `postProcessIcon()` - 128x128 → 16/24/32/48/64/128 variants
+  - `postProcessNode()` - 256x256 → 48/96 variants
+  - `postProcessWall()` - 128x32 → 64x16
+  - `postProcessSlope()` - 128x160 → 64x80
+- [x] Updated `pythonRunner.js` with standardized resolution parameters
+- [x] Improved tile prompts for diamond geometry in `promptBuilder.js`
+- [x] Added tile-specific negative prompt to `tiles/manifest.json`
+- [x] Updated `AI_IMAGE_GENERATION.md` documentation
+- [x] Verified wall/slope metadata exists for all 6 biomes
+
+**Commit:** `91ac94b feat(ai-images): Overhaul AI image generation post-processing pipeline`
+
+### 7.5 Pending
+
+- [ ] Regenerate all ~300 floor tiles with new diamond prompts
 - [ ] Regenerate 6 node images marked for regeneration
 - [ ] Evaluate player portraits (60 combinations)
 - [ ] Evaluate item sprites (49 items)
@@ -404,6 +424,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.3 | Jan 2026 | Post-Processing Pipeline Overhaul: Added Section 7.4 documenting new asset-specific post-processing functions. Removed --sizes flag, standardized resolutions (256 portraits/nodes, 128 tiles/items/icons). Added diamond mask for tiles, improved prompts for geometry. Renumbered pending items to 7.5. Commit 91ac94b. |
 | 2.2 | Jan 2026 | AI Image Quality Evaluation: Added Section 7 for AI Image Generation System. Documented prompt builder improvements (removed white background, added composition constraints). Added quality evaluation system with scoring criteria. Section numbering updated (7→8 for Technical Debt). |
 | 2.1 | Jan 2026 | Documentation Audit: Updated file size table with verified line counts. Audited known issues - resolved party:invite mismatch (uses party:invite_received) and SkillTreePanel.js (file removed). Added status column to known issues. |
 | 2.0 | Jan 2026 | ESLint Warning Cleanup: Resolved all 138 `no-unused-vars` warnings (69 API + 69 frontend) across 58 files. Used `_` prefix convention for intentionally unused parameters required by signatures (Express middleware, base class methods, callbacks). |
