@@ -42,6 +42,7 @@ import fishingRoutes from './routes/fishing.js';
 import relicRoutes from './routes/relics.js';
 import questRoutes from './routes/quests.js';
 import debugRoutes from './routes/debug.js';
+import healthRoutes from './routes/health.js';
 
 // Scheduled services
 import { startRefreshScheduler } from './services/shopRefreshService.js';
@@ -82,10 +83,8 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' })); // SECURITY: Limit request body size
 app.use(rateLimiter);
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+// Health check (three-tier: /, /ready, /metrics)
+app.use('/api/health', healthRoutes);
 
 // Test utility endpoint to reset rate limiters (non-production only)
 if (!isProduction) {
