@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "category": "overlays",
+  "description": "Effect overlays for layered item composition - rarity auras and augment effects",
+  "totalAssets": 18,
+  "outputDir": "/assets/sprites/overlays/",
+  "size": "128x128",
+  "format": "png",
+  "loraModel": "V2",
+  "trigger": "wbgmsst",
+  "subcategories": ["rarity", "augments"],
+  "subcategoryFiles": {
+    "rarity": "rarity.json",
+    "augments": "augments.json"
+  },
+  "compositionConfig": {
+    "blendMode": "lighter",
+    "description": "Overlays are composited using Canvas 2D lighter blend mode (additive)",
+    "rarityAlpha": {
+      "uncommon": 0.5,
+      "rare": 0.65,
+      "epic": 0.75,
+      "legendary": 0.85
+    },
+    "augmentAlpha": {
+      "minor": 0.4,
+      "standard": 0.6,
+      "supreme": 0.8
+    }
+  },
+  "promptSuffix": "particle effect overlay, full frame aura surrounding empty center, transparent background with additive glow, no central object, pure effect layer"
+}

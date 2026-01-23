@@ -1,0 +1,144 @@
+{
+  "version": "1.0.0",
+  "description": "Master manifest for Modia AI-generated image assets",
+  "totalAssets": 465,
+  "artDirection": {
+    "mood": "cozy_nostalgic",
+    "technique": "ink_wash",
+    "lineWeight": "medium",
+    "texture": "aged_parchment"
+  },
+  "categories": {
+    "tiles": {
+      "description": "Isometric terrain tiles for battle maps",
+      "assetCount": 96,
+      "files": [
+        "tiles/forest.json",
+        "tiles/cave.json",
+        "tiles/mountain.json",
+        "tiles/bridge.json",
+        "tiles/castle.json"
+      ]
+    },
+    "portraits": {
+      "description": "Character portraits (race × gender × class combinations)",
+      "assetCount": 120,
+      "files": [
+        "portraits/combinations.json"
+      ]
+    },
+    "items": {
+      "description": "Equipment and consumable item sprites",
+      "assetCount": 131,
+      "files": [
+        "items/weapons.json",
+        "items/armor.json",
+        "items/consumables.json",
+        "items/accessories.json"
+      ]
+    },
+    "icons": {
+      "description": "UI icons for actions, status effects, and menus",
+      "assetCount": 80,
+      "files": [
+        "icons/actions.json",
+        "icons/status.json",
+        "icons/menu.json",
+        "icons/augments.json"
+      ]
+    },
+    "nodes": {
+      "description": "World map node icons",
+      "assetCount": 20,
+      "files": [
+        "nodes/locations.json"
+      ]
+    },
+    "overlays": {
+      "description": "Effect overlays for layered item composition - rarity auras and augment effects",
+      "assetCount": 18,
+      "files": [
+        "overlays/rarity.json",
+        "overlays/augments.json"
+      ]
+    }
+  },
+  "biomes": [
+    "forest",
+    "cave",
+    "mountain",
+    "bridge",
+    "castle"
+  ],
+  "regions": {
+    "heartlands": {
+      "name": "Heartlands",
+      "biomes": ["forest", "bridge"],
+      "palette": {
+        "primary": "#8B7355",
+        "secondary": "#D4A574",
+        "accent": "#6B8E4A"
+      }
+    },
+    "sylvan_reaches": {
+      "name": "Sylvan Reaches",
+      "biomes": ["forest"],
+      "palette": {
+        "primary": "#2E8B57",
+        "secondary": "#9ACD32",
+        "accent": "#8FBC8F"
+      }
+    },
+    "iron_depths": {
+      "name": "Iron Depths",
+      "biomes": ["cave", "mountain"],
+      "palette": {
+        "primary": "#696969",
+        "secondary": "#B87333",
+        "accent": "#FF6347"
+      }
+    },
+    "shadowmere": {
+      "name": "Shadowmere",
+      "biomes": ["cave"],
+      "palette": {
+        "primary": "#4B0082",
+        "secondary": "#8B0000",
+        "accent": "#C0C0C0"
+      }
+    },
+    "bloodplains": {
+      "name": "Bloodplains",
+      "biomes": ["mountain"],
+      "palette": {
+        "primary": "#8B0000",
+        "secondary": "#A0522D",
+        "accent": "#556B2F"
+      }
+    }
+  },
+  "generationSettings": {
+    "defaultSeed": 42,
+    "defaultVariants": 1,
+    "huggingFaceModel": "Flux LoRA",
+    "defaultTrigger": "wbgmsst",
+    "triggerV2": "wbgmsst",
+    "triggerV1Legacy": "GRPZA"
+  },
+  "outputPaths": {
+    "tiles": "/assets/sprites/terrain/",
+    "portraits": "/assets/sprites/characters/portraits/",
+    "items": "/assets/sprites/items/",
+    "icons": "/assets/sprites/icons/",
+    "nodes": "/assets/sprites/nodes/",
+    "overlays": "/assets/sprites/overlays/"
+  },
+  "layeredComposition": {
+    "enabled": true,
+    "description": "Items are generated as clean base sprites. Rarity and augment effects are applied at runtime via overlay compositing.",
+    "itemSize": "128x128",
+    "overlaySize": "128x128",
+    "blendMode": "lighter",
+    "combinations": "10,000+ visual variations from ~200 base assets"
+  }
+}
