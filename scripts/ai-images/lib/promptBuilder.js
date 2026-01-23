@@ -177,7 +177,11 @@ const STYLE_PREFIXES = {
   isometric: 'wbgmsst, isometric fantasy game asset, ink and wash technique with watercolor fills, bold black outlines of medium weight, visible aged parchment texture, cozy JRPG aesthetic, top-down 3/4 view, clear silhouette, isolated subject,',
 
   // Tile style (V2 LoRA - wbgmsst trigger) - flat terrain textures only
-  tile: 'wbgmsst, isometric diamond floor tile texture, flat surface only, no walls no borders no raised edges, no objects no trees no decorations, seamless tileable game terrain, top-down 3/4 view, clean white background,'
+  tile: 'wbgmsst, isometric floor tile, diamond rhombus shape with sharp pointed corners, ' +
+    '2:1 width-to-height aspect ratio, 30 degree orthographic projection, ' +
+    'flat horizontal surface texture only, seamless tileable pattern, ' +
+    'ink and wash watercolor style, bold black outline border defining diamond edges, ' +
+    'clean white background outside diamond shape, 128x128 game sprite'
 };
 
 /**
@@ -189,8 +193,7 @@ const STYLE_PREFIXES = {
 function buildTilePrompt(tile, biomeData) {
   const biomeModifier = biomeData.biomeModifier || '';
   const basePrompt = tile.prompt;
-
-  return `${STYLE_PREFIXES.tile} ${basePrompt}, ${biomeModifier}, 64x64 isometric diamond rhombus shape`;
+  return `${STYLE_PREFIXES.tile} ${basePrompt}, ${biomeModifier}`;
 }
 
 /**
@@ -227,23 +230,134 @@ function buildIconPrompt(icon, category) {
 }
 
 /**
- * Build an item prompt
+ * Build an item prompt (legacy - includes rarity glow for backward compatibility)
  * @param {Object} item - Item metadata
  * @param {string} category - Item category
  * @returns {string} Full prompt
+ * @deprecated Use buildCleanItemPrompt for layered composition system
  */
 function buildItemPrompt(item, category) {
-  const rarityGlow = {
-    common: '',
-    uncommon: 'subtle glow',
-    rare: 'soft blue glow',
-    epic: 'golden glow legendary aura'
-  };
-
-  const glow = rarityGlow[item.rarity] || '';
+  // Rarity glow removed - use layered composition with overlays instead
   const categoryMod = category === 'consumables' ? 'consumable item' : category;
 
-  return `GRPZA, ${item.prompt}, fantasy RPG ${categoryMod} sprite, ink and wash illustration, bold black outlines, watercolor fills, slight 3D depth, ${glow}, isolated subject, plain neutral background, 32x32 game sprite`;
+  return `GRPZA, ${item.prompt}, fantasy RPG ${categoryMod} sprite, ink and wash illustration, bold black outlines, watercolor fills, slight 3D depth, isolated subject, plain neutral background, 128x128 game sprite`;
+}
+
+/**
+ * Build a clean item prompt WITHOUT rarity glow effects
+ * Used for the layered composition system where overlays are applied separately
+ * @param {Object} item - Item metadata with prompt property
+ * @param {string} category - Item category (weapons, armor, consumables, accessories)
+ * @returns {string} Full prompt for clean base item sprite
+ */
+function buildCleanItemPrompt(item, category) {
+  const theme = loadTheme();
+  const categoryMod = category === 'consumables' ? 'consumable item' : category;
+
+  const parts = [
+    theme.style.trigger,
+    theme.style.basePhrase,
+    theme.style.technique,
+    item.prompt,
+    `fantasy RPG ${categoryMod} sprite`,
+    'clean centered composition',
+    'slight 3D depth',
+    'no glow effects',
+    theme.style.texture,
+    theme.style.mood,
+    'isolated subject',
+    'plain neutral background',
+    'clear sprite edges',
+    '128x128 game sprite'
+  ];
+
+  return parts.filter(Boolean).join(', ');
+}
+
+/**
+ * Build an overlay prompt for rarity or augment effects
+ * Creates particle/glow effect overlays for the layered composition system
+ * @param {string} overlayType - Type of overlay: 'rarity' or 'augment'
+ * @param {string} overlayId - Specific overlay ID (e.g., 'rare', 'epic', 'fire', 'ice')
+ * @param {Object} options - Additional options
+ * @param {boolean} options.skipTrigger - Skip the LoRA trigger word
+ * @returns {string} Full prompt for overlay sprite
+ */
+function buildOverlayPrompt(overlayType, overlayId, options = {}) {
+  const theme = loadTheme();
+  const overlayConfig = theme.overlayConfig;
+
+  if (!overlayConfig) {
+    throw new Error('overlayConfig not found in theme.json');
+  }
+
+  let effectDescription = '';
+  let colorKeywords = '';
+
+  if (overlayType === 'rarity') {
+    const rarityOverlay = overlayConfig.rarityOverlays[overlayId];
+    if (!rarityOverlay) {
+      throw new Error(`Unknown rarity overlay: ${overlayId}. Valid options: ${Object.keys(overlayConfig.rarityOverlays).join(', ')}`);
+    }
+    colorKeywords = rarityOverlay.color;
+    effectDescription = rarityOverlay.promptKeywords;
+  } else if (overlayType === 'augment') {
+    const augmentOverlay = overlayConfig.augmentOverlays[overlayId];
+    if (!augmentOverlay) {
+      throw new Error(`Unknown augment overlay: ${overlayId}. Valid options: ${Object.keys(overlayConfig.augmentOverlays).join(', ')}`);
+    }
+    effectDescription = augmentOverlay;
+    // Extract color from augment description or use a default
+    const colorMap = {
+      fire: 'orange and red',
+      ice: 'blue and white',
+      lightning: 'yellow and electric blue',
+      poison: 'green and sickly yellow',
+      holy: 'golden and white',
+      dark: 'purple and black',
+      critical: 'red',
+      lifesteal: 'crimson red',
+      speed: 'blue and cyan',
+      pierce: 'white and silver',
+      stun: 'yellow',
+      chain: 'electric blue',
+      earth: 'brown and tan',
+      wind: 'white and cyan'
+    };
+    colorKeywords = colorMap[overlayId] || 'magical';
+  } else {
+    throw new Error(`Unknown overlay type: ${overlayType}. Valid options: rarity, augment`);
+  }
+
+  const parts = [];
+
+  if (!options.skipTrigger) {
+    parts.push(theme.style.trigger);
+  }
+
+  parts.push(
+    theme.style.basePhrase,
+    `${effectDescription} particle effect overlay`,
+    'full frame aura surrounding empty center',
+    'transparent background with additive glow',
+    `${colorKeywords} particles and energy wisps`,
+    'magical fantasy JRPG effect',
+    'no central object',
+    'pure effect layer',
+    '128x128 overlay sprite'
+  );
+
+  return parts.filter(Boolean).join(', ');
+}
+
+/**
+ * Get the overlay configuration from theme
+ * Provides access to overlayConfig for layered composition scripts
+ * @returns {Object} Overlay configuration with rarityOverlays and augmentOverlays
+ */
+function getOverlayConfig() {
+  const theme = loadTheme();
+  return theme.overlayConfig || null;
 }
 
 /**
@@ -299,6 +413,11 @@ module.exports = {
   clearThemeCache,
   buildThemedPrompt,
   getThemedNegativePrompt,
+
+  // Layered composition system
+  buildCleanItemPrompt,
+  buildOverlayPrompt,
+  getOverlayConfig,
 
   // Legacy functions (for backward compatibility and tiles)
   NEGATIVE_PROMPT,

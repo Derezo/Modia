@@ -5,11 +5,11 @@ This document describes Modia's AI image generation system for creating game ass
 ## Overview
 
 The AI image generation pipeline integrates with the external `image-generator` project to create:
-- **Terrain tiles** - Isometric 64x64 tiles for battle maps
-- **Character portraits** - 64x64 bust shots for all race/gender/class combinations
-- **Item sprites** - 32x32 equipment and consumable icons
-- **UI icons** - 16-48px action, status, menu, and augment icons
-- **World map nodes** - 48x48 landmark icons for the overworld
+- **Terrain tiles** - Isometric tiles for battle maps (floors, walls, slopes)
+- **Character portraits** - Bust shots for all race/gender/class combinations
+- **Item sprites** - Equipment and consumable icons
+- **UI icons** - Action, status, menu, and augment icons
+- **World map nodes** - Landmark icons for the overworld
 
 ## Quick Start
 
@@ -104,25 +104,55 @@ Modia/
     └── nodes/                   # Generated node icons
 ```
 
+## Inference Modes
+
+The pipeline supports two inference modes:
+
+| Mode | Description | Latency | Requirements |
+|------|-------------|---------|--------------|
+| **Local ComfyUI** (default) | GGUF-quantized Flux via ComfyUI | ~5-8s/image | NVIDIA GPU 8GB+ VRAM |
+| **HuggingFace Space** (`--huggingface`) | Cloud API via gradio_client | ~30s/image | API token |
+
+> **Note:** Local ComfyUI is now the default. Use `--huggingface` flag for cloud API mode.
+
 ## Environment Setup
 
-1. **Clone the image-generator project:**
+### Local ComfyUI Mode (Recommended)
+
+1. **Clone and set up the image-generator project:**
    ```bash
    cd ~/Projects
    git clone <image-generator-repo>
+   cd image-generator
+   conda env create -f environment.yml && conda activate image-gen-comfyui
+   python scripts/setup_comfyui.py  # Downloads ~21GB of models
    ```
 
-2. **Set environment variables in `.env`:**
+2. **Start the ComfyUI server:**
+   ```bash
+   python scripts/start_comfyui.py --background
+   ```
+
+3. **Set environment variable in `.env`:**
+   ```bash
+   IMAGE_GENERATOR_ROOT=/path/to/image-generator/modia-generators
+   ```
+
+### HuggingFace Space Mode (No Local GPU)
+
+1. **Set environment variables in `.env`:**
    ```bash
    HUGGINGFACE_API_TOKEN=hf_your_token_here
    IMAGE_GENERATOR_ROOT=/path/to/image-generator/modia-generators
    ```
 
-3. **Install Python dependencies:**
+2. **Install Python dependencies:**
    ```bash
    cd ~/Projects/image-generator/modia-generators
    pip install -r requirements.txt
    ```
+
+3. **Use the `--huggingface` flag** with generation commands (see below).
 
 ## Prompt Templates
 
@@ -211,6 +241,67 @@ holding objects, hands in frame, full body, weapon in hand, action pose, white f
 | `--race <name>` | Filter portraits by race (human, elf, dwarf, vampire, orc) |
 | `--gender <name>` | Filter portraits by gender (male, female, other) |
 | `--class <name>` | Filter portraits by class (warrior, wizard, monk, chemist) |
+| `--huggingface` | Use HuggingFace Space API instead of local ComfyUI |
+| `--lora <model>` | Override LoRA model selection (v1, v2, pixel-dever, 64bit) |
+| `--list-models` | List available LoRA models and exit |
+
+> **Note:** The `--local` flag is deprecated. Local ComfyUI is now the default.
+
+### Tile Category Flags
+
+Terrain tiles support three categories via `--category`:
+
+```bash
+# Generate floor tiles (default)
+npm run ai:generate:tiles -- --biome forest
+
+# Generate wall tiles
+npm run ai:generate:tiles -- --category walls
+
+# Generate slope tiles
+npm run ai:generate:tiles -- --category slopes
+```
+
+| Category | Description | AI Resolution | Output |
+|----------|-------------|---------------|--------|
+| `floors` | Standard isometric floor tiles | 128x128 | 64x64 (diamond masked) |
+| `walls` | Vertical wall segments | 128x32 | 64x16 |
+| `slopes` | Elevation transition tiles | 128x160 | 64x80 |
+
+## Post-Processing Pipeline
+
+All generated images go through automatic post-processing to create multiple output sizes optimized for different use cases.
+
+### Resolution Standards
+
+| Asset Type | AI Resolution | Output Sizes |
+|------------|---------------|--------------|
+| **Tiles (floors)** | 128x128 | 64x64 (diamond masked) |
+| **Tiles (walls)** | 128x32 | 64x16 |
+| **Tiles (slopes)** | 128x160 | 64x80 |
+| **Portraits** | 256x256 | 64x64, 128x128, 256x256 |
+| **Items** | 128x128 | 32x32, 64x64, 128x128 |
+| **Icons** | 128x128 | 16x16, 24x24, 32x32, 48x48, 64x64, 128x128 |
+| **Nodes** | 256x256 | 48x48, 96x96 |
+
+### Diamond Mask (Isometric Tiles)
+
+Floor tiles are automatically processed with a diamond-shaped mask to create proper isometric tiles. The mask clips the square image into a diamond shape for seamless tile rendering on the battle grid.
+
+The diamond mask is applied during post-processing after the AI generates the base image. No manual masking is required.
+
+### Size Generation
+
+Multiple output sizes are generated automatically during the post-processing step:
+
+1. AI generates the image at the source resolution
+2. Post-processor applies any required masks (diamond for tiles)
+3. Post-processor creates all output sizes using high-quality downscaling
+4. All sizes are saved to the appropriate output directory
+
+Output files follow the naming convention:
+- Single size: `{asset_id}.png`
+- Multiple sizes: `{asset_id}_{size}.png` (e.g., `sword_iron_32.png`, `sword_iron_64.png`)
 
 ## Adding New Assets
 
@@ -299,13 +390,30 @@ npm run ai:validate -- --category tiles --verbose
 
 ## Troubleshooting
 
-### Missing HUGGINGFACE_API_TOKEN
+### ComfyUI Server Not Running
+
+```
+ComfyUI server is not running after 3 connection attempts
+```
+
+Start the ComfyUI server:
+```bash
+cd ~/Projects/image-generator
+python scripts/start_comfyui.py --background
+```
+
+Check server status:
+```bash
+python scripts/start_comfyui.py --check
+```
+
+### Missing HUGGINGFACE_API_TOKEN (HF Space Mode Only)
 
 ```
 [ERROR] Missing HUGGINGFACE_API_TOKEN in environment
 ```
 
-Add your token to `.env`:
+This only applies when using `--huggingface` flag. Add your token to `.env`:
 ```bash
 HUGGINGFACE_API_TOKEN=hf_your_token_here
 ```
@@ -336,6 +444,19 @@ npm run ai:generate:tiles -- --key forest_grass_1 --force
 ```
 
 This will regenerate even if the file exists and is marked as generated.
+
+### Using Different LoRA Models
+
+To override the default model for a specific generation:
+```bash
+npm run ai:generate:tiles -- --key forest_grass_1 --lora v2 --force
+```
+
+List available models:
+```bash
+cd ~/Projects/image-generator
+python modia-generators/generate_tile.py --list-models
+```
 
 ## Quality Evaluation System
 

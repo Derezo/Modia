@@ -25,7 +25,7 @@ const { log, getProjectRoot, getImageGeneratorRoot } = require('./imageUtils');
  * @param {boolean} options.dryRun - If true, skip actual execution
  * @param {boolean} options.verbose - If true, stream output to console and pass --verbose to Python
  * @param {boolean} options.quiet - If true, suppress all output except errors
- * @param {boolean} options.local - If true, use local ComfyUI (default: true)
+ * @param {boolean} options.local - [DEPRECATED] Local is now default, this option is ignored
  * @param {boolean} options.huggingface - If true, use HuggingFace API (overrides local)
  * @param {number} options.delay - Delay in ms between requests (for rate limiting)
  * @returns {Promise<PythonResult>} Execution result
@@ -145,7 +145,7 @@ async function runPythonScript(scriptName, args = [], options = {}) {
  * @param {number} tileConfig.seed - Random seed
  * @param {number} tileConfig.variants - Number of variants to generate
  * @param {Object} options - Additional options
- * @param {boolean} options.local - Use local ComfyUI (default: true)
+ * @param {boolean} options.local - [DEPRECATED] Local is now default, this option is ignored
  * @param {boolean} options.huggingface - Use HuggingFace API instead
  * @param {boolean} options.verbose - Enable verbose output
  * @param {boolean} options.quiet - Suppress output
@@ -158,6 +158,7 @@ async function generateTile(tileConfig, options = {}) {
   const args = [
     '--prompt', prompt,
     '--key', key,
+    '--resolution', '128',
     '--biome', biome,
     '--seed', String(seed),
     '--variants', String(variants)
@@ -167,12 +168,11 @@ async function generateTile(tileConfig, options = {}) {
     args.push('--dry-run');
   }
 
-  // Pass generation mode to Python script
+  // Pass generation mode to Python script (local is now default)
   if (huggingface) {
     args.push('--huggingface');
-  } else if (local) {
-    args.push('--local');
   }
+  // Note: --local flag is no longer needed as local ComfyUI is now the default
 
   return runPythonScript('generate_tile.py', args, { ...options, verbose, quiet });
 }
@@ -190,7 +190,7 @@ async function generateTile(tileConfig, options = {}) {
  * @param {boolean} portraitConfig.isEnemy - Whether this is an enemy portrait
  * @param {number} portraitConfig.seed - Random seed
  * @param {Object} options - Additional options
- * @param {boolean} options.local - Use local ComfyUI (default: true)
+ * @param {boolean} options.local - [DEPRECATED] Local is now default, this option is ignored
  * @param {boolean} options.huggingface - Use HuggingFace API instead
  * @param {boolean} options.verbose - Enable verbose output
  * @param {boolean} options.quiet - Suppress output
@@ -208,6 +208,7 @@ async function generatePortrait(portraitConfig, options = {}) {
     args = [
       '--prompt', prompt,
       '--key', key,
+      '--resolution', '256',
       '--seed', String(seed)
     ];
     // Enemy portraits go to a different directory
@@ -221,6 +222,7 @@ async function generatePortrait(portraitConfig, options = {}) {
     args = [
       '--prompt', prompt,
       '--key', key,
+      '--resolution', '256',
       '--seed', String(seed)
     ];
   } else {
@@ -230,6 +232,7 @@ async function generatePortrait(portraitConfig, options = {}) {
       '--race', race,
       '--gender', gender,
       '--class', characterClass,
+      '--resolution', '256',
       '--seed', String(seed)
     ];
   }
@@ -238,12 +241,11 @@ async function generatePortrait(portraitConfig, options = {}) {
     args.push('--dry-run');
   }
 
-  // Pass generation mode to Python script
+  // Pass generation mode to Python script (local is now default)
   if (huggingface) {
     args.push('--huggingface');
-  } else if (local) {
-    args.push('--local');
   }
+  // Note: --local flag is no longer needed as local ComfyUI is now the default
 
   return runPythonScript('generate_portrait.py', args, { ...options, verbose, quiet });
 }
@@ -256,7 +258,7 @@ async function generatePortrait(portraitConfig, options = {}) {
  * @param {string} iconConfig.category - Icon category
  * @param {number} iconConfig.seed - Random seed
  * @param {Object} options - Additional options
- * @param {boolean} options.local - Use local ComfyUI (default: true)
+ * @param {boolean} options.local - [DEPRECATED] Local is now default, this option is ignored
  * @param {boolean} options.huggingface - Use HuggingFace API instead
  * @param {boolean} options.verbose - Enable verbose output
  * @param {boolean} options.quiet - Suppress output
@@ -269,6 +271,7 @@ async function generateIcon(iconConfig, options = {}) {
   const args = [
     '--prompt', prompt,
     '--key', key,
+    '--resolution', '128',
     '--category', category,
     '--seed', String(seed)
   ];
@@ -277,12 +280,11 @@ async function generateIcon(iconConfig, options = {}) {
     args.push('--dry-run');
   }
 
-  // Pass generation mode to Python script
+  // Pass generation mode to Python script (local is now default)
   if (huggingface) {
     args.push('--huggingface');
-  } else if (local) {
-    args.push('--local');
   }
+  // Note: --local flag is no longer needed as local ComfyUI is now the default
 
   return runPythonScript('generate_icon.py', args, { ...options, verbose, quiet });
 }
@@ -295,7 +297,7 @@ async function generateIcon(iconConfig, options = {}) {
  * @param {string} itemConfig.category - Item category
  * @param {number} itemConfig.seed - Random seed
  * @param {Object} options - Additional options
- * @param {boolean} options.local - Use local ComfyUI (default: true)
+ * @param {boolean} options.local - [DEPRECATED] Local is now default, this option is ignored
  * @param {boolean} options.huggingface - Use HuggingFace API instead
  * @param {boolean} options.verbose - Enable verbose output
  * @param {boolean} options.quiet - Suppress output
@@ -308,6 +310,7 @@ async function generateItem(itemConfig, options = {}) {
   const args = [
     '--prompt', prompt,
     '--key', key,
+    '--resolution', '128',
     '--category', category,
     '--seed', String(seed)
   ];
@@ -316,12 +319,11 @@ async function generateItem(itemConfig, options = {}) {
     args.push('--dry-run');
   }
 
-  // Pass generation mode to Python script
+  // Pass generation mode to Python script (local is now default)
   if (huggingface) {
     args.push('--huggingface');
-  } else if (local) {
-    args.push('--local');
   }
+  // Note: --local flag is no longer needed as local ComfyUI is now the default
 
   return runPythonScript('generate_item.py', args, { ...options, verbose, quiet });
 }
@@ -333,7 +335,7 @@ async function generateItem(itemConfig, options = {}) {
  * @param {string} nodeConfig.key - Asset key/filename
  * @param {number} nodeConfig.seed - Random seed
  * @param {Object} options - Additional options
- * @param {boolean} options.local - Use local ComfyUI (default: true)
+ * @param {boolean} options.local - [DEPRECATED] Local is now default, this option is ignored
  * @param {boolean} options.huggingface - Use HuggingFace API instead
  * @param {boolean} options.verbose - Enable verbose output
  * @param {boolean} options.quiet - Suppress output
@@ -346,6 +348,7 @@ async function generateNode(nodeConfig, options = {}) {
   const args = [
     '--prompt', prompt,
     '--key', key,
+    '--resolution', '256',
     '--seed', String(seed)
   ];
 
@@ -353,14 +356,52 @@ async function generateNode(nodeConfig, options = {}) {
     args.push('--dry-run');
   }
 
-  // Pass generation mode to Python script
+  // Pass generation mode to Python script (local is now default)
   if (huggingface) {
     args.push('--huggingface');
-  } else if (local) {
-    args.push('--local');
   }
+  // Note: --local flag is no longer needed as local ComfyUI is now the default
 
   return runPythonScript('generate_node.py', args, { ...options, verbose, quiet });
+}
+
+/**
+ * Generate an overlay sprite using the Python generator
+ * @param {Object} overlayConfig - Overlay configuration
+ * @param {string} overlayConfig.prompt - Overlay description
+ * @param {string} overlayConfig.key - Asset key/filename
+ * @param {string} overlayConfig.subcategory - Overlay subcategory ('rarity' or 'augments')
+ * @param {number} overlayConfig.seed - Random seed
+ * @param {Object} options - Additional options
+ * @param {boolean} options.local - [DEPRECATED] Local is now default, this option is ignored
+ * @param {boolean} options.huggingface - Use HuggingFace API instead
+ * @param {boolean} options.verbose - Enable verbose output
+ * @param {boolean} options.quiet - Suppress output
+ * @returns {Promise<PythonResult>}
+ */
+async function generateOverlay(overlayConfig, options = {}) {
+  const { prompt, key, subcategory = 'rarity', seed = 42 } = overlayConfig;
+  const { local = true, huggingface = false, verbose = false, quiet = false } = options;
+
+  const args = [
+    '--prompt', prompt,
+    '--key', key,
+    '--resolution', '128',
+    '--subcategory', subcategory,
+    '--seed', String(seed)
+  ];
+
+  if (options.dryRun) {
+    args.push('--dry-run');
+  }
+
+  // Pass generation mode to Python script (local is now default)
+  if (huggingface) {
+    args.push('--huggingface');
+  }
+  // Note: --local flag is no longer needed as local ComfyUI is now the default
+
+  return runPythonScript('generate_overlay.py', args, { ...options, verbose, quiet });
 }
 
 /**
@@ -368,7 +409,7 @@ async function generateNode(nodeConfig, options = {}) {
  * @param {string} scriptName - Script name (e.g., 'generate_tile.py')
  * @param {string} configPath - Path to YAML config file
  * @param {Object} options - Additional options
- * @param {boolean} options.local - Use local ComfyUI (default: true)
+ * @param {boolean} options.local - [DEPRECATED] Local is now default, this option is ignored
  * @param {boolean} options.huggingface - Use HuggingFace API instead
  * @param {boolean} options.verbose - Enable verbose output
  * @param {boolean} options.quiet - Suppress output
@@ -382,12 +423,11 @@ async function runBatchGeneration(scriptName, configPath, options = {}) {
     args.push('--dry-run');
   }
 
-  // Pass generation mode to Python script
+  // Pass generation mode to Python script (local is now default)
   if (huggingface) {
     args.push('--huggingface');
-  } else if (local) {
-    args.push('--local');
   }
+  // Note: --local flag is no longer needed as local ComfyUI is now the default
 
   return runPythonScript(scriptName, args, { ...options, verbose, quiet });
 }
@@ -399,5 +439,6 @@ module.exports = {
   generateIcon,
   generateItem,
   generateNode,
+  generateOverlay,
   runBatchGeneration
 };

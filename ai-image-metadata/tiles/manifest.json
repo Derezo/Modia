@@ -1,5 +1,6 @@
 {
   "name": "Battle Map Tiles",
+  "negativePrompt": "square tile, rectangular, circular, rounded corners, irregular shape, perspective view, 3D depth, raised edges, objects on tile, decorations, scattered items, grass clumps, plants, rocks, debris",
   "version": "2.0.0",
   "description": "Stacking tile system with floors, walls, and slopes for tactical battle maps",
   "categories": ["floors", "walls", "slopes"],

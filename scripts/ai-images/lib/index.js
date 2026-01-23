@@ -28,6 +28,7 @@ const {
   generateIcon,
   generateItem,
   generateNode,
+  generateOverlay,
   runBatchGeneration
 } = require('./pythonRunner');
 
@@ -41,6 +42,7 @@ const {
   loadItemMetadata,
   loadIconMetadata,
   loadNodeMetadata,
+  loadOverlayMetadata,
   updateAssetStatus,
   markAssetGenerated,
   getCategoryStats,
@@ -53,6 +55,10 @@ const {
   clearThemeCache,
   buildThemedPrompt,
   getThemedNegativePrompt,
+  // Layered composition system
+  buildCleanItemPrompt,
+  buildOverlayPrompt,
+  getOverlayConfig,
   // Legacy functions
   NEGATIVE_PROMPT,
   STYLE_PREFIXES,
@@ -89,6 +95,29 @@ const {
   getBatchConfigSummary
 } = require('./batchConfig');
 
+const {
+  STANDARD_SIZES,
+  SIZE_PRESETS,
+  AI_RESOLUTIONS,
+  checkImageMagick,
+  getSizedPath,
+  getSizedPathNonSquare,
+  resizeImage,
+  resizeImageNonSquare,
+  applyDiamondMask,
+  generateSizeVariants,
+  generateSizeVariantsForDirectory,
+  postProcessGenerated,
+  postProcessTile,
+  postProcessPortrait,
+  postProcessItem,
+  postProcessIcon,
+  postProcessNode,
+  postProcessWall,
+  postProcessSlope,
+  postProcessByType
+} = require('./resizeUtils');
+
 module.exports = {
   // Image utilities
   loadEnv,
@@ -114,6 +143,7 @@ module.exports = {
   generateIcon,
   generateItem,
   generateNode,
+  generateOverlay,
   runBatchGeneration,
 
   // Metadata utilities
@@ -126,6 +156,7 @@ module.exports = {
   loadItemMetadata,
   loadIconMetadata,
   loadNodeMetadata,
+  loadOverlayMetadata,
   updateAssetStatus,
   markAssetGenerated,
   getCategoryStats,
@@ -136,6 +167,11 @@ module.exports = {
   clearThemeCache,
   buildThemedPrompt,
   getThemedNegativePrompt,
+
+  // Layered composition system
+  buildCleanItemPrompt,
+  buildOverlayPrompt,
+  getOverlayConfig,
 
   // Prompt builders (legacy)
   NEGATIVE_PROMPT,
@@ -168,5 +204,27 @@ module.exports = {
   parseSimpleYaml,
   resolveBatchConfigPath,
   loadBatchConfig,
-  getBatchConfigSummary
+  getBatchConfigSummary,
+
+  // Resize utilities
+  STANDARD_SIZES,
+  SIZE_PRESETS,
+  AI_RESOLUTIONS,
+  checkImageMagick,
+  getSizedPath,
+  getSizedPathNonSquare,
+  resizeImage,
+  resizeImageNonSquare,
+  applyDiamondMask,
+  generateSizeVariants,
+  generateSizeVariantsForDirectory,
+  postProcessGenerated,
+  postProcessTile,
+  postProcessPortrait,
+  postProcessItem,
+  postProcessIcon,
+  postProcessNode,
+  postProcessWall,
+  postProcessSlope,
+  postProcessByType
 };
