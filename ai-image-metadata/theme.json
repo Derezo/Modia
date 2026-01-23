@@ -102,7 +102,8 @@
   },
 
   "loraDefaults": {
-    "description": "Default LoRA model for each asset type. v1=GRPZA (legacy), v2=wbgmsst (current)",
+    "_comment": "DOCUMENTATION ONLY - actual defaults set in image-generator/modia-generators/lib/prompt_templates.py",
+    "description": "Default LoRA model for each asset type. v1=GRPZA (flat 2D), v2=wbgmsst (textured/isometric)",
     "tiles": "v2",
     "portraits": "v1",
     "items": "v1",

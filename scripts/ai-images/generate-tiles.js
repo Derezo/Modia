@@ -177,7 +177,11 @@ Options:
   --quiet, -q         Suppress all output except errors
   --delay <ms>        Delay between requests in milliseconds (default: 2000)
   --batch <config>    Use YAML batch config file (bypasses metadata filtering)
-  --lora <model>      LoRA model override (v1, v2, modern-pixel, retro-pixel)
+  --lora <model>      LoRA model override:
+                        v1 - Flat 2D style (GRPZA trigger)
+                        v2 - Textured/isometric style (wbgmsst trigger) [default for tiles]
+                        modern-pixel - Modern pixel art
+                        retro-pixel - Classic 8-bit pixel art
   --help, -h          Show this help message
 
 Environment variables:
@@ -360,6 +364,7 @@ async function main() {
   // Auto-enable verbose for dry-run to show all generation details
   if (options.dryRun && !options.verbose) {
     options.verbose = true;
+    log('Verbose mode auto-enabled for dry-run', 'debug');
   }
 
   validateEnvVars(options);
