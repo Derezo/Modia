@@ -71,27 +71,59 @@ function parseArgs() {
         options.dryRun = true;
         break;
       case '--key':
+        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
+          log('--key requires a value', 'error');
+          process.exit(1);
+        }
         options.key = args[++i];
         break;
       case '--type':
+        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
+          log('--type requires a value', 'error');
+          process.exit(1);
+        }
         options.type = args[++i];
         break;
       case '--race':
+        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
+          log('--race requires a value', 'error');
+          process.exit(1);
+        }
         options.race = args[++i];
         break;
       case '--gender':
+        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
+          log('--gender requires a value', 'error');
+          process.exit(1);
+        }
         options.gender = args[++i];
         break;
       case '--class':
+        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
+          log('--class requires a value', 'error');
+          process.exit(1);
+        }
         options.class = args[++i];
         break;
       case '--advanced-class':
+        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
+          log('--advanced-class requires a value', 'error');
+          process.exit(1);
+        }
         options.advancedClass = args[++i];
         break;
       case '--archetype':
+        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
+          log('--archetype requires a value', 'error');
+          process.exit(1);
+        }
         options.archetype = args[++i];
         break;
       case '--region':
+        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
+          log('--region requires a value', 'error');
+          process.exit(1);
+        }
         options.region = args[++i];
         break;
       case '--force':
@@ -119,11 +151,25 @@ function parseArgs() {
         options.quiet = true;
         break;
       case '--delay':
+        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
+          log('--delay requires a value', 'error');
+          process.exit(1);
+        }
         options.delay = parseInt(args[++i], 10);
         break;
-      case '--lora':
-        options.lora = args[++i];  // v1, v2, modern-pixel, retro-pixel
+      case '--lora': {
+        const validLoraModels = ['v1', 'v2', 'modern-pixel', 'retro-pixel'];
+        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
+          log('--lora requires a value (v1, v2, modern-pixel, retro-pixel)', 'error');
+          process.exit(1);
+        }
+        options.lora = args[++i];
+        if (!validLoraModels.includes(options.lora)) {
+          log(`Invalid --lora value: ${options.lora}. Valid options: ${validLoraModels.join(', ')}`, 'error');
+          process.exit(1);
+        }
         break;
+      }
       case '--help':
       case '-h':
         options.help = true;
