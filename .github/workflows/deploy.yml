@@ -1,0 +1,72 @@
+name: Deploy
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag/version to deploy (leave empty for latest release)'
+        required: false
+
+# Required secrets (configure in repository settings):
+# - DEPLOY_HOST: VPS hostname or IP address
+# - DEPLOY_USER: SSH username (default: modia)
+# - DEPLOY_SSH_KEY: Private SSH key for authentication (ed25519 or RSA)
+#
+# Server prerequisites:
+# - Deploy script at ~/scripts/deploy/deploy.sh (or /var/www/modia/scripts/deploy/deploy.sh)
+# - PM2 installed and configured
+# - PostgreSQL running
+# - .env configured at /var/www/modia/shared/.env
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+
+    steps:
+      - name: Determine deploy tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            # Release event: use the release tag
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            echo "Deploying release: ${{ github.event.release.tag_name }}"
+          elif [ -n "${{ github.event.inputs.tag }}" ]; then
+            # Manual dispatch with tag specified
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+            echo "Deploying manual tag: ${{ github.event.inputs.tag }}"
+          else
+            # Manual dispatch without tag: deploy main branch
+            echo "tag=" >> $GITHUB_OUTPUT
+            echo "Deploying main branch (no tag specified)"
+          fi
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script_stop: true
+          script: |
+            echo "=== Starting Modia Deployment ==="
+            echo "Tag: ${{ steps.tag.outputs.tag || 'main branch' }}"
+            echo "Triggered by: ${{ github.event_name }}"
+            echo ""
+
+            # Navigate to deployment scripts
+            cd /var/www/modia || cd ~/Modia
+
+            # Run deployment with or without tag
+            if [ -n "${{ steps.tag.outputs.tag }}" ]; then
+              ./scripts/deploy/deploy.sh --tag "${{ steps.tag.outputs.tag }}"
+            else
+              ./scripts/deploy/deploy.sh --branch main
+            fi
+
+            echo ""
+            echo "=== Deployment Complete ==="
