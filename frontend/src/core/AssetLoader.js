@@ -10,6 +10,12 @@ export class AssetLoader {
     this.basePath = '/assets/sprites';
     this.initialized = false;
 
+    // Node type aliases (worldgen name → sprite name)
+    this.nodeTypeAliases = {
+      fishing_spot: 'fishing',
+      merchant_caravan: 'caravan'
+    };
+
     // Fallback emoji for when sprites aren't loaded
     this.fallbackEmoji = {
       node: {
@@ -21,7 +27,26 @@ export class AssetLoader {
         mountain: '⛰️',
         bridge: '🌉',
         guild: '⚔️',
-        palace: '👑'
+        palace: '👑',
+        keep: '🏯',
+        chest: '📦',
+        shrine: '⛩️',
+        discovery: '✨',
+        tavern: '🍺',
+        shop: '🏪',
+        blacksmith: '⚒️',
+        apothecary: '⚗️',
+        fishing: '🎣',
+        fishing_spot: '🎣',
+        ruins: '🏚️',
+        watchtower: '🗼',
+        farm: '🌾',
+        caravan: '🐫',
+        merchant_caravan: '🐫',
+        guild_warrior: '⚔️',
+        guild_wizard: '🔮',
+        guild_monk: '☯️',
+        guild_chemist: '⚗️'
       },
       item: {
         weapon: '⚔️',
@@ -43,6 +68,23 @@ export class AssetLoader {
         scroll: '📜',
         material: '📦',
         key: '🔑'
+      },
+      // Rarity colors for fallback border/glow rendering
+      rarity: {
+        common: '#9d9d9d',     // Gray
+        uncommon: '#1eff00',   // Green
+        rare: '#0070dd',       // Blue
+        epic: '#a335ee',       // Purple
+        legendary: '#ff8000'   // Orange
+      },
+      // Augment colors for fallback effect rendering
+      augment: {
+        fire: '#ff4500',       // Orange-red
+        ice: '#00bfff',        // Deep sky blue
+        lightning: '#ffd700',  // Gold/yellow
+        poison: '#32cd32',     // Lime green
+        holy: '#fffacd',       // Lemon chiffon (light gold)
+        dark: '#4b0082'        // Indigo
       },
       character: {
         warrior: 'W',
@@ -190,39 +232,35 @@ export class AssetLoader {
 
   /**
    * Load elevated terrain tile sprite
-   * @param {string} terrain - Terrain type (grass, stone, etc.)
-   * @param {number} elevation - Elevation level (1, 2, 3) or -1 for pit
-   * @param {string} nodeType - Node type for biome lookup
+   * @deprecated Elevation is now rendered using stacking (separate floor + wall tiles).
+   * Use getTile() for floor surfaces and getWallTexture() for wall faces.
+   * This method is kept for backward compatibility but always returns null.
+   * @param {string} _terrain - Terrain type (unused)
+   * @param {number} _elevation - Elevation level (unused)
+   * @param {string} _nodeType - Node type (unused)
+   * @returns {Promise<null>} Always returns null
    */
-  async loadElevatedTile(terrain, elevation, nodeType) {
-    const biome = this.getSpriteBiome(nodeType);
-    const suffix = elevation < 0 ? 'pit' : `elev${elevation}`;
-    const path = `${this.basePath}/terrain/${biome}/${terrain}_${suffix}.png`;
-    try {
-      return await this.loadImage(path);
-    } catch {
-      // Fallback to base biome
-      try {
-        return await this.loadImage(`${this.basePath}/terrain/base/${terrain}_${suffix}.png`);
-      } catch {
-        return null;
-      }
-    }
+  async loadElevatedTile(_terrain, _elevation, _nodeType) {
+    // DEPRECATED: Embedded elevation sprites (*_elev*.png, *_pit.png) are no longer used.
+    // The unified stacking system renders walls separately from floor tiles.
+    // See BattleGrid.renderTileUnified() for the new approach.
+    return null;
   }
 
   /**
-   * Get elevated terrain tile (sync, returns null if not cached)
-   * @param {string} terrain - Terrain type
-   * @param {number} elevation - Elevation level (1, 2, 3) or -1 for pit
-   * @param {string} nodeType - Node type for biome lookup
+   * Get elevated terrain tile (sync)
+   * @deprecated Elevation is now rendered using stacking (separate floor + wall tiles).
+   * Use getTile() for floor surfaces and getWallTexture() for wall faces.
+   * This method is kept for backward compatibility but always returns null.
+   * @param {string} _terrain - Terrain type (unused)
+   * @param {number} _elevation - Elevation level (unused)
+   * @param {string} _nodeType - Node type (unused)
+   * @returns {null} Always returns null
    */
-  getElevatedTile(terrain, elevation, nodeType) {
-    const biome = this.getSpriteBiome(nodeType);
-    const suffix = elevation < 0 ? 'pit' : `elev${elevation}`;
-    const primaryPath = `${this.basePath}/terrain/${biome}/${terrain}_${suffix}.png`;
-    const fallbackPath = `${this.basePath}/terrain/base/${terrain}_${suffix}.png`;
-
-    return this.cache.get(primaryPath) || this.cache.get(fallbackPath) || null;
+  getElevatedTile(_terrain, _elevation, _nodeType) {
+    // DEPRECATED: Embedded elevation sprites are no longer used.
+    // The unified stacking system renders walls separately from floor tiles.
+    return null;
   }
 
   /**
@@ -445,7 +483,20 @@ export class AssetLoader {
    * @param {string} [guildClass] - For guild nodes, the class (warrior, wizard, monk, chemist)
    */
   async loadNodeSprite(nodeType, guildClass = null) {
-    const filename = guildClass ? `guild_${guildClass}` : nodeType;
+    // Resolve aliases first (e.g., fishing_spot → fishing)
+    const resolvedType = this.nodeTypeAliases[nodeType] || nodeType;
+
+    // Handle guild class variants - try class-specific sprite first
+    if (resolvedType === 'guild' && guildClass) {
+      const classPath = `${this.basePath}/nodes/node_guild_${guildClass}.png`;
+      try {
+        return await this.loadImage(classPath);
+      } catch {
+        // Fall back to generic guild sprite
+      }
+    }
+
+    const filename = `node_${resolvedType}`;
     const path = `${this.basePath}/nodes/${filename}.png`;
     try {
       return await this.loadImage(path);
@@ -458,7 +509,17 @@ export class AssetLoader {
    * Get node sprite (sync)
    */
   getNodeSprite(nodeType, guildClass = null) {
-    const filename = guildClass ? `guild_${guildClass}` : nodeType;
+    // Resolve aliases first (e.g., fishing_spot → fishing)
+    const resolvedType = this.nodeTypeAliases[nodeType] || nodeType;
+
+    // Handle guild class variants - try class-specific sprite first
+    if (resolvedType === 'guild' && guildClass) {
+      const classSprite = this.cache.get(`${this.basePath}/nodes/node_guild_${guildClass}.png`);
+      if (classSprite) return classSprite;
+      // Fall back to generic guild sprite
+    }
+
+    const filename = `node_${resolvedType}`;
     return this.cache.get(`${this.basePath}/nodes/${filename}.png`) || null;
   }
 
@@ -547,6 +608,208 @@ export class AssetLoader {
       key_item: 'misc'
     };
     return categories[type] || 'misc';
+  }
+
+  // =====================
+  // Layered Item Compositing System
+  // =====================
+
+  /**
+   * Rarity overlay alpha values for compositing
+   * Higher rarity = more visible glow effect
+   */
+  static RARITY_ALPHA = {
+    common: 0,        // No overlay for common items
+    uncommon: 0.5,
+    rare: 0.65,
+    epic: 0.75,
+    legendary: 0.85
+  };
+
+  /**
+   * Standard overlay size for item compositing
+   */
+  static COMPOSITE_SIZE = 128;
+
+  /**
+   * Load and composite an item sprite with rarity and augment overlays
+   * @param {string} itemId - Item template identifier
+   * @param {string} category - Item category (weapons, armor, accessories, etc.)
+   * @param {string} [rarity='common'] - Item rarity (common, uncommon, rare, epic, legendary)
+   * @param {string|null} [augment=null] - Augment type (fire, ice, lightning, poison, holy, dark)
+   * @returns {Promise<HTMLImageElement|null>} Composited item image or null if base not found
+   */
+  async loadItemComposite(itemId, category, rarity = 'common', augment = null) {
+    // Generate cache key for this specific combination
+    const cacheKey = `item_${itemId}_${rarity}_${augment || 'none'}`;
+
+    // Return cached composite if available
+    if (this.cache.has(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    // Load base item sprite
+    const basePath = `${this.basePath}/items/${category}/${itemId}.png`;
+    let baseImage;
+    try {
+      baseImage = await this.loadImage(basePath);
+    } catch {
+      console.warn(`[AssetLoader] Failed to load base item: ${basePath}`);
+      return null;
+    }
+
+    // Load rarity overlay if not common
+    let rarityOverlay = null;
+    if (rarity && rarity !== 'common') {
+      const rarityPath = `${this.basePath}/overlays/rarity/rarity_${rarity}.png`;
+      try {
+        rarityOverlay = await this.loadImage(rarityPath);
+      } catch {
+        console.warn(`[AssetLoader] Rarity overlay not found: ${rarityPath}`);
+      }
+    }
+
+    // Load augment overlay if specified
+    let augmentOverlay = null;
+    if (augment) {
+      const augmentPath = `${this.basePath}/overlays/augments/augment_${augment}.png`;
+      try {
+        augmentOverlay = await this.loadImage(augmentPath);
+      } catch {
+        console.warn(`[AssetLoader] Augment overlay not found: ${augmentPath}`);
+      }
+    }
+
+    // Compose the final sprite
+    const composite = this.composeItemSprite(baseImage, rarityOverlay, augmentOverlay, rarity);
+
+    // Cache the composited image
+    this.cache.set(cacheKey, composite);
+
+    return composite;
+  }
+
+  /**
+   * Compose an item sprite with rarity and augment overlays using canvas
+   * @param {HTMLImageElement} base - Base item sprite
+   * @param {HTMLImageElement|null} rarityOverlay - Rarity glow overlay
+   * @param {HTMLImageElement|null} augmentOverlay - Augment effect overlay
+   * @param {string} rarity - Rarity level for alpha calculation
+   * @returns {HTMLImageElement} Composited image
+   */
+  composeItemSprite(base, rarityOverlay, augmentOverlay, rarity) {
+    const size = AssetLoader.COMPOSITE_SIZE;
+
+    // Create offscreen canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    // Clear canvas
+    ctx.clearRect(0, 0, size, size);
+
+    // Draw base sprite with normal blend mode
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1.0;
+    ctx.drawImage(base, 0, 0, size, size);
+
+    // Apply rarity overlay with additive blend
+    if (rarityOverlay) {
+      const rarityAlpha = AssetLoader.RARITY_ALPHA[rarity] || 0;
+      if (rarityAlpha > 0) {
+        ctx.globalAlpha = rarityAlpha;
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.drawImage(rarityOverlay, 0, 0, size, size);
+      }
+    }
+
+    // Apply augment overlay with additive blend
+    if (augmentOverlay) {
+      ctx.globalAlpha = 0.6;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(augmentOverlay, 0, 0, size, size);
+    }
+
+    // Reset context state
+    ctx.globalAlpha = 1.0;
+    ctx.globalCompositeOperation = 'source-over';
+
+    // Convert canvas to Image
+    const compositeImage = new Image();
+    compositeImage.src = canvas.toDataURL('image/png');
+
+    return compositeImage;
+  }
+
+  /**
+   * Get cached item composite (sync version)
+   * Returns null if the composite is not in cache
+   * Use loadItemComposite() to load asynchronously
+   * @param {string} itemId - Item template identifier
+   * @param {string} category - Item category (unused but kept for API consistency)
+   * @param {string} [rarity='common'] - Item rarity
+   * @param {string|null} [augment=null] - Augment type
+   * @returns {HTMLImageElement|null} Cached composite or null
+   */
+  getItemComposite(itemId, category, rarity = 'common', augment = null) {
+    const cacheKey = `item_${itemId}_${rarity}_${augment || 'none'}`;
+    return this.cache.get(cacheKey) || null;
+  }
+
+  /**
+   * Preload all overlay assets (rarity and augment overlays)
+   * Call this during initial asset loading to ensure overlays are ready
+   * @returns {Promise<PromiseSettledResult<HTMLImageElement>[]>}
+   */
+  async preloadOverlays() {
+    const rarities = ['uncommon', 'rare', 'epic', 'legendary'];
+    const augments = [
+      // Elemental augments
+      'fire', 'ice', 'lightning', 'poison', 'holy', 'dark', 'earth', 'wind',
+      // Combat augments
+      'critical', 'lifesteal', 'speed', 'pierce', 'stun', 'chain'
+    ];
+
+    const promises = [
+      // Preload rarity overlays
+      ...rarities.map(rarity =>
+        this.loadImage(`${this.basePath}/overlays/rarity/rarity_${rarity}.png`)
+          .catch(() => null) // Don't fail if overlay doesn't exist
+      ),
+      // Preload augment overlays
+      ...augments.map(augment =>
+        this.loadImage(`${this.basePath}/overlays/augments/augment_${augment}.png`)
+          .catch(() => null) // Don't fail if overlay doesn't exist
+      )
+    ];
+
+    const results = await Promise.allSettled(promises);
+    const loaded = results.filter(r => r.status === 'fulfilled' && r.value).length;
+    console.log(`[AssetLoader] Overlay preload: ${loaded}/${results.length} loaded`);
+    return results;
+  }
+
+  /**
+   * Preload item composites for a list of items
+   * Useful for preloading inventory or shop items
+   * @param {Array<{itemId: string, category: string, rarity?: string, augment?: string}>} items
+   * @returns {Promise<PromiseSettledResult<HTMLImageElement>[]>}
+   */
+  async preloadItemComposites(items) {
+    const promises = items.map(item =>
+      this.loadItemComposite(
+        item.itemId,
+        item.category,
+        item.rarity || 'common',
+        item.augment || null
+      )
+    );
+
+    const results = await Promise.allSettled(promises);
+    const loaded = results.filter(r => r.status === 'fulfilled' && r.value).length;
+    console.log(`[AssetLoader] Item composite preload: ${loaded}/${results.length} loaded`);
+    return results;
   }
 
   // =====================
@@ -739,6 +1002,24 @@ export class AssetLoader {
     return this.fallbackEmoji.character[charClass] || 'X';
   }
 
+  /**
+   * Get fallback color for item rarity (for border/glow effects)
+   * @param {string} rarity - Rarity level
+   * @returns {string} CSS color string
+   */
+  getFallbackRarityColor(rarity) {
+    return this.fallbackEmoji.rarity?.[rarity] || this.fallbackEmoji.rarity?.common || '#9d9d9d';
+  }
+
+  /**
+   * Get fallback color for item augment (for effect rendering)
+   * @param {string} augment - Augment type
+   * @returns {string} CSS color string
+   */
+  getFallbackAugmentColor(augment) {
+    return this.fallbackEmoji.augment?.[augment] || '#ffffff';
+  }
+
   // =====================
   // Preloading
   // =====================
@@ -752,30 +1033,34 @@ export class AssetLoader {
   static INDICATOR_TYPES = ['ramp', 'stairs', 'ledge', 'cliff'];
 
   /**
-   * Preload terrain tiles for a biome (new system - no manifest required)
+   * Preload terrain tiles for a biome (unified stacking system)
+   * Loads floor tiles and wall textures - elevation variants are deprecated.
    * @param {string} nodeType - Node type for biome-specific sprites
    * @param {Object} options - Preload options
-   * @param {boolean} options.includeElevation - Also preload elevation variants
+   * @param {boolean} options.includeElevation - DEPRECATED: ignored, elevation sprites no longer used
    * @param {boolean} options.includeIndicators - Also preload transition indicators
+   * @param {boolean} options.includeWalls - Also preload wall textures (default: true)
    */
   async preloadTerrainSet(nodeType, options = {}) {
-    const { includeElevation = true, includeIndicators = true } = options;
+    const { includeIndicators = true, includeWalls = true } = options;
     const promises = [];
+    const biome = this.getSpriteBiome(nodeType);
 
-    // Load base variants for all terrain types
+    // Load base floor tile variants for all terrain types
     for (const terrain of AssetLoader.TERRAIN_TYPES) {
       for (let v = 0; v < AssetLoader.VARIANTS_PER_TERRAIN; v++) {
         promises.push(this.loadTile(terrain, nodeType, v));
       }
 
-      // Load elevation variants if requested
-      if (includeElevation) {
-        for (const elev of AssetLoader.ELEVATION_LEVELS) {
-          promises.push(this.loadElevatedTile(terrain, elev, nodeType));
-        }
-        // Load pit variant
-        promises.push(this.loadElevatedTile(terrain, -1, nodeType));
+      // Load wall textures for the stacking system
+      if (includeWalls) {
+        promises.push(this.loadWallTexture(biome, terrain));
       }
+    }
+
+    // Load default wall texture for fallback
+    if (includeWalls) {
+      promises.push(this.loadWallTexture(biome, 'default'));
     }
 
     // Load transition indicators if requested
@@ -823,11 +1108,25 @@ export class AssetLoader {
    * Preload all node sprites
    */
   async preloadNodes() {
-    const nodeTypes = ['castle', 'city', 'village', 'forest', 'cave', 'mountain', 'bridge', 'palace'];
+    const nodeTypes = [
+      // Settlements
+      'castle', 'city', 'village', 'keep', 'palace',
+      // Battle terrain
+      'forest', 'cave', 'mountain', 'bridge',
+      // Activity nodes
+      'fishing', 'ruins', 'watchtower', 'farm', 'caravan',
+      // Terminators
+      'chest', 'shrine', 'discovery',
+      // Commerce
+      'tavern', 'shop', 'blacksmith', 'apothecary'
+    ];
     const guildClasses = ['warrior', 'wizard', 'monk', 'chemist'];
 
     const promises = [
       ...nodeTypes.map(type => this.loadNodeSprite(type)),
+      // Generic guild sprite
+      this.loadNodeSprite('guild'),
+      // Class-specific guild sprites
       ...guildClasses.map(cls => this.loadNodeSprite('guild', cls))
     ];
 

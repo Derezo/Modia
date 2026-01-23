@@ -1,8 +1,23 @@
 /**
- * BattleGrid - Isometric grid rendering for tactical combat (supports 32x32 with camera)
+ * @module BattleGrid
+ * @description Isometric grid rendering for tactical combat with unified stacking tile system.
  *
- * Uses shared modules for terrain generation to ensure server/client consistency.
- * Supports stacking tile rendering with dynamic wall faces and occlusion transparency.
+ * Key responsibilities:
+ * - Grid coordinate to screen position conversion (isometric projection)
+ * - Terrain rendering with elevation via stacking tiles (floor + wall strips)
+ * - Occlusion detection for units behind elevated tiles
+ * - Movement range and attack preview highlighting
+ * - Intent highlight system for enemy turn visualization
+ *
+ * Rendering System (Unified Stacking):
+ * - Floor tiles: 64x64 sprites with diamond mask (flat texture + isometric transform)
+ * - Wall strips: 64x16 sprites stacked vertically for elevation
+ * - Procedural fallback: Colored polygons when sprites unavailable
+ *
+ * @see BattleCamera.js - Camera transforms and viewport
+ * @see BattleScene.js - Orchestrates grid rendering
+ * @see AssetLoader.js - Provides tile sprites and wall textures
+ * @see shared/terrain.js - Terrain types, movement costs, elevation limits
  */
 import { generateTerrain } from '@shared/mapGeneration.js';
 import { isImpassable, getTerrainMovementCost, getTerrainColor, discretizeElevation, getElevationName } from '@shared/terrain.js';
@@ -365,12 +380,8 @@ export class BattleGrid {
 
   /**
    * Render a single isometric tile at screen position
-   *
-   * Elevation rendering:
-   * - Screen position (screenX, screenY) is already elevation-adjusted
-   * - Elevated sprites have wall faces extending BELOW the diamond top
-   * - Sprite is positioned so the diamond top aligns with screenX/screenY center
-   * - Wall faces extend downward from there
+   * DEPRECATED: Use renderTileUnified() instead for proper stacking tile rendering.
+   * This method is kept for backward compatibility but no longer loads elevation sprites.
    *
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    * @param {number} screenX - Screen X position (tile center, elevation-adjusted)
@@ -379,44 +390,25 @@ export class BattleGrid {
    * @param {string|null} highlight - Highlight color or null
    * @param {number} gridX - Grid X coordinate
    * @param {number} gridY - Grid Y coordinate
+   * @deprecated Use renderTileUnified() for consistent stacking tile rendering
    */
   renderTileAt(ctx, screenX, screenY, terrain, highlight = null, gridX = 0, gridY = 0) {
     const variant = this.getTileVariant(gridX, gridY);
     const elevation = this.getElevation(gridX, gridY);
 
-    // Try elevation-specific sprite first for non-zero elevation
-    let sprite = null;
-    let usingElevatedSprite = false;
-
-    if (elevation !== 0) {
-      sprite = this.assetLoader?.getElevatedTile(terrain, elevation, this.nodeType);
-      if (sprite) usingElevatedSprite = true;
-    }
-
-    // Fall back to base variant if no elevation sprite
-    if (!sprite) {
-      sprite = this.assetLoader?.getTile(terrain, this.nodeType, variant);
-    }
+    // Use base variant sprite only - elevation is handled by stacking walls separately
+    // Deprecated: getElevatedTile() no longer used - wall faces rendered separately
+    const sprite = this.assetLoader?.getTile(terrain, this.nodeType, variant);
 
     if (sprite) {
       const spriteWidth = sprite.width || this.spriteSize;
       const spriteHeight = sprite.height || this.spriteSize;
 
-      // Calculate where the diamond surface center is within the sprite.
-      // Elevated sprites have the diamond shifted UP by (elevation * 8) pixels
-      // from the standard center position of spriteSize/2.
-      let diamondCenterY;
-      if (usingElevatedSprite && elevation > 0) {
-        diamondCenterY = this.spriteSize / 2 - (elevation * this.elevationPixelsPerLevel);
-      } else {
-        diamondCenterY = this.spriteSize / 2;
-      }
-
-      // Draw sprite so the diamond center aligns with screenY
+      // Draw sprite centered - diamond center is at spriteSize/2
       ctx.drawImage(
         sprite,
         screenX - spriteWidth / 2,
-        screenY - diamondCenterY,
+        screenY - this.spriteSize / 2,
         spriteWidth,
         spriteHeight
       );
@@ -426,7 +418,6 @@ export class BattleGrid {
     }
 
     // Apply highlight overlay on top of the tile's visible surface
-    // Highlight is drawn at the same screenX/screenY (already elevation-adjusted)
     if (highlight) {
       this.renderTileHighlight(ctx, screenX, screenY, highlight);
     }
@@ -1007,6 +998,7 @@ export class BattleGrid {
 
   /**
    * Render the grid with stacking tiles and occlusion
+   * Uses the unified stacking tile system for consistent elevation rendering
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    * @param {Object} highlights - Highlight map { "x,y": color }
    * @param {Object} camera - Camera for transforms
@@ -1018,27 +1010,8 @@ export class BattleGrid {
       this.updateOcclusionCache(units);
     }
 
-    // Build sorted render order
-    const renderOrder = this.buildRenderOrder(camera);
-
-    // Merge intent highlights
-    const combinedHighlights = this.getCombinedHighlights(highlights);
-
-    // Render all tiles in sorted order
-    for (const tile of renderOrder) {
-      const key = `${tile.x},${tile.y}`;
-      const highlight = combinedHighlights[key] || null;
-      const connection = this.elevationConnections?.[tile.y]?.[tile.x] || null;
-
-      // Render tile with stacking system
-      this.renderTileWithStacking(ctx, tile, highlight, connection);
-
-      // Render obstacle if present
-      const obstacle = this.getObstacle(tile.x, tile.y);
-      if (obstacle) {
-        this.renderObstacleAt(ctx, tile.screenX, tile.screenY, obstacle);
-      }
-    }
+    // Use the standard render method which now uses unified stacking
+    this.render(ctx, highlights, camera);
   }
 
   /**
@@ -1143,19 +1116,22 @@ export class BattleGrid {
 
   /**
    * Render the entire grid with optional camera
+   * Uses the unified stacking tile system for consistent elevation rendering
    */
   render(ctx, highlights = {}, camera = null) {
+    // Merge intent highlights with passed highlights
+    const combinedHighlights = this.getCombinedHighlights(highlights);
+
     // Build sorted render order
     const renderOrder = this.buildRenderOrder(camera);
 
-    // Render all tiles in sorted order (terrain + obstacles together)
+    // Render all tiles in sorted order using unified stacking system
     for (const tile of renderOrder) {
-      const terrain = this.getTerrain(tile.x, tile.y);
       const key = `${tile.x},${tile.y}`;
-      const highlight = highlights[key] || null;
+      const highlight = combinedHighlights[key] || null;
 
-      // Render terrain tile
-      this.renderTileAt(ctx, tile.screenX, tile.screenY, terrain, highlight, tile.x, tile.y);
+      // Use unified rendering (stacking system - separate floor + wall tiles)
+      this.renderTileUnified(ctx, tile.screenX, tile.screenY, tile.x, tile.y, highlight);
 
       // Render obstacle if present (drawn right after its terrain for proper layering)
       const obstacle = this.getObstacle(tile.x, tile.y);
@@ -1174,6 +1150,235 @@ export class BattleGrid {
       return { x, y };
     }
     return null;
+  }
+
+  // =========================================================================
+  // UNIFIED TILE RENDERING (Pure Stacking System)
+  // =========================================================================
+
+  /**
+   * Render a single tile using the unified stacking system
+   * This is the new standard rendering method - separate floor + wall tiles
+   *
+   * Rendering order:
+   * 1. For elevation > 0: render wall strips stacked bottom-to-top, then floor on top
+   * 2. For elevation = 0: render floor tile only
+   * 3. For elevation < 0: render pit with inset shadow
+   *
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {number} screenX - Screen X position (tile center)
+   * @param {number} screenY - Screen Y position (tile center, already elevation-adjusted)
+   * @param {number} gridX - Grid X position
+   * @param {number} gridY - Grid Y position
+   * @param {string} highlight - Optional highlight color
+   */
+  renderTileUnified(ctx, screenX, screenY, gridX, gridY, highlight = null) {
+    const terrain = this.getTerrain(gridX, gridY);
+    const elevation = this.getElevation(gridX, gridY);
+    const variant = this.getTileVariant(gridX, gridY);
+    const biome = this.getSpriteBiome();
+
+    // Check if this tile should be rendered with occlusion transparency
+    const alpha = this.isTileOccluding(gridX, gridY) ? OCCLUSION_ALPHA : 1.0;
+
+    ctx.save();
+    if (alpha < 1.0) {
+      ctx.globalAlpha = alpha;
+    }
+
+    if (elevation > 0) {
+      // Elevated tiles: render wall strips + floor on top
+      // screenY is already elevation-adjusted, so calculate base position
+      const wallHeight = elevation * WALL_HEIGHT_PER_LEVEL;
+      const baseScreenY = screenY + wallHeight; // Ground level position
+
+      // Render wall faces (procedural or textured)
+      this.renderUnifiedWalls(ctx, screenX, baseScreenY, elevation, terrain, biome);
+
+      // Render floor tile on top (at elevated position)
+      this.renderUnifiedFloor(ctx, screenX, screenY, terrain, biome, variant);
+    } else if (elevation < 0) {
+      // Pit tiles: render floor with inset shadow
+      this.renderUnifiedPit(ctx, screenX, screenY, terrain, biome, variant, elevation);
+    } else {
+      // Ground level: render floor tile only
+      this.renderUnifiedFloor(ctx, screenX, screenY, terrain, biome, variant);
+    }
+
+    ctx.restore();
+
+    // Apply highlight on top
+    if (highlight) {
+      this.renderTileHighlight(ctx, screenX, screenY, highlight);
+    }
+  }
+
+  /**
+   * Render wall faces for elevated tiles using the stacking system
+   * Walls are rendered as stacked strips from bottom to top
+   *
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {number} screenX - Tile center X
+   * @param {number} screenY - Ground level Y (base of the wall)
+   * @param {number} elevation - Number of elevation levels
+   * @param {string} terrain - Terrain type
+   * @param {string} biome - Biome type
+   */
+  renderUnifiedWalls(ctx, screenX, screenY, elevation, terrain, biome) {
+    const wallTexture = this.assetLoader?.getWallTexture(biome, terrain);
+    const halfWidth = this.tileWidth / 2;
+    const halfHeight = this.tileHeight / 2;
+    const wallHeight = elevation * WALL_HEIGHT_PER_LEVEL;
+    const topY = screenY - wallHeight; // Where the floor sits
+
+    if (wallTexture) {
+      // Textured wall rendering - tile the texture vertically
+      this.renderTexturedWall(ctx, screenX, topY, screenY, wallTexture, halfWidth, halfHeight);
+    } else {
+      // Procedural wall rendering - colored polygons
+      this.renderProceduralWall(ctx, screenX, topY, screenY, terrain, halfWidth, halfHeight);
+    }
+  }
+
+  /**
+   * Render textured wall faces
+   */
+  renderTexturedWall(ctx, screenX, topY, bottomY, wallTexture, halfWidth, halfHeight) {
+    const wallHeight = bottomY - topY;
+    const tileH = 16; // Wall strip height
+
+    // Left wall face (south-west)
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(screenX - halfWidth, topY);
+    ctx.lineTo(screenX, topY + halfHeight);
+    ctx.lineTo(screenX, bottomY + halfHeight);
+    ctx.lineTo(screenX - halfWidth, bottomY);
+    ctx.closePath();
+    ctx.clip();
+
+    for (let h = 0; h < wallHeight; h += tileH) {
+      const drawH = Math.min(tileH, wallHeight - h);
+      ctx.drawImage(
+        wallTexture,
+        0, 0, wallTexture.width, tileH,
+        screenX - halfWidth, topY + h, halfWidth, drawH
+      );
+    }
+    ctx.restore();
+
+    // Right wall face (south-east) - slightly darker
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(screenX + halfWidth, topY);
+    ctx.lineTo(screenX, topY + halfHeight);
+    ctx.lineTo(screenX, bottomY + halfHeight);
+    ctx.lineTo(screenX + halfWidth, bottomY);
+    ctx.closePath();
+    ctx.clip();
+
+    ctx.globalAlpha = (ctx.globalAlpha || 1.0) * 0.8;
+    for (let h = 0; h < wallHeight; h += tileH) {
+      const drawH = Math.min(tileH, wallHeight - h);
+      ctx.drawImage(
+        wallTexture,
+        0, 0, wallTexture.width, tileH,
+        screenX, topY + h, halfWidth, drawH
+      );
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Render procedural (colored) wall faces
+   */
+  renderProceduralWall(ctx, screenX, topY, bottomY, terrain, halfWidth, halfHeight) {
+    const baseColor = this.getWallColor(terrain, 1);
+    const darkColor = this.darkenColor(baseColor, 0.7);
+    const sideColor = this.darkenColor(baseColor, 0.85);
+
+    // Left wall face (south-west, slightly lighter)
+    ctx.beginPath();
+    ctx.moveTo(screenX - halfWidth, topY);
+    ctx.lineTo(screenX, topY + halfHeight);
+    ctx.lineTo(screenX, bottomY + halfHeight);
+    ctx.lineTo(screenX - halfWidth, bottomY);
+    ctx.closePath();
+    ctx.fillStyle = sideColor;
+    ctx.fill();
+
+    // Right wall face (south-east, darker)
+    ctx.beginPath();
+    ctx.moveTo(screenX + halfWidth, topY);
+    ctx.lineTo(screenX, topY + halfHeight);
+    ctx.lineTo(screenX, bottomY + halfHeight);
+    ctx.lineTo(screenX + halfWidth, bottomY);
+    ctx.closePath();
+    ctx.fillStyle = darkColor;
+    ctx.fill();
+  }
+
+  /**
+   * Render a floor tile (the top surface)
+   *
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {number} screenX - Tile center X
+   * @param {number} screenY - Tile center Y (at elevation height)
+   * @param {string} terrain - Terrain type
+   * @param {string} biome - Biome type
+   * @param {number} variant - Tile variant index
+   */
+  renderUnifiedFloor(ctx, screenX, screenY, terrain, biome, variant) {
+    // Try to get floor tile sprite (base variant, no elevation embedded)
+    const sprite = this.assetLoader?.getTile(terrain, biome, variant);
+
+    if (sprite) {
+      const spriteWidth = sprite.width || this.spriteSize;
+      const spriteHeight = sprite.height || this.spriteSize;
+
+      // Draw sprite centered on the screen position
+      // The diamond center is at spriteSize/2 for standard tiles
+      ctx.drawImage(
+        sprite,
+        screenX - spriteWidth / 2,
+        screenY - this.spriteSize / 2,
+        spriteWidth,
+        spriteHeight
+      );
+    } else {
+      // Fallback: procedural diamond
+      this.renderTerrainDiamond(ctx, screenX, screenY, terrain);
+    }
+  }
+
+  /**
+   * Render a pit tile (elevation < 0)
+   *
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   * @param {number} screenX - Tile center X
+   * @param {number} screenY - Tile center Y
+   * @param {string} terrain - Terrain type
+   * @param {string} biome - Biome type
+   * @param {number} variant - Tile variant index
+   * @param {number} elevation - Negative elevation level
+   */
+  renderUnifiedPit(ctx, screenX, screenY, terrain, biome, variant, elevation) {
+    // First render the base floor
+    this.renderUnifiedFloor(ctx, screenX, screenY, terrain, biome, variant);
+
+    // Then overlay a darker inset to show depth
+    const baseColor = this.getTerrainColor(terrain);
+    const darkColor = this.darkenColor(baseColor, 0.5);
+    const inset = 4 + Math.abs(elevation);
+
+    ctx.beginPath();
+    ctx.moveTo(screenX, screenY - this.tileHeight / 2 + inset);
+    ctx.lineTo(screenX + this.tileWidth / 2 - inset * 2, screenY);
+    ctx.lineTo(screenX, screenY + this.tileHeight / 2 - inset);
+    ctx.lineTo(screenX - this.tileWidth / 2 + inset * 2, screenY);
+    ctx.closePath();
+    ctx.fillStyle = darkColor;
+    ctx.fill();
   }
 
   // =========================================================================

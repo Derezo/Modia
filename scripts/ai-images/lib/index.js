@@ -59,6 +59,9 @@ const {
   buildCleanItemPrompt,
   buildOverlayPrompt,
   getOverlayConfig,
+  // NEW: Flat texture tile system
+  buildFlatTilePrompt,
+  buildWallPrompt,
   // Legacy functions
   NEGATIVE_PROMPT,
   STYLE_PREFIXES,
@@ -105,10 +108,12 @@ const {
   resizeImage,
   resizeImageNonSquare,
   applyDiamondMask,
+  applyIsometricTransform,
   generateSizeVariants,
   generateSizeVariantsForDirectory,
   postProcessGenerated,
   postProcessTile,
+  postProcessFlatTile,
   postProcessPortrait,
   postProcessItem,
   postProcessIcon,
@@ -173,6 +178,10 @@ module.exports = {
   buildOverlayPrompt,
   getOverlayConfig,
 
+  // NEW: Flat texture tile system
+  buildFlatTilePrompt,
+  buildWallPrompt,
+
   // Prompt builders (legacy)
   NEGATIVE_PROMPT,
   STYLE_PREFIXES,
@@ -216,10 +225,12 @@ module.exports = {
   resizeImage,
   resizeImageNonSquare,
   applyDiamondMask,
+  applyIsometricTransform,
   generateSizeVariants,
   generateSizeVariantsForDirectory,
   postProcessGenerated,
   postProcessTile,
+  postProcessFlatTile,
   postProcessPortrait,
   postProcessItem,
   postProcessIcon,
