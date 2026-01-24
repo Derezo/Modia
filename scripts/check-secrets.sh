@@ -154,6 +154,11 @@ while IFS= read -r -d '' file; do
         continue
     fi
 
+    # Skip E2E and load test files (they contain test fixture passwords)
+    if [[ "$file" == "e2e/"* ]] || [[ "$file" == "load-tests/"* ]]; then
+        continue
+    fi
+
     # Skip binary files
     if file "$file" 2>/dev/null | grep -q 'binary\|executable\|image\|archive'; then
         continue

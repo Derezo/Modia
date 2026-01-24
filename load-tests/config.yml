@@ -1,0 +1,192 @@
+# Artillery Load Testing Configuration
+# https://www.artillery.io/docs
+
+config:
+  target: "http://localhost:3000"
+  phases:
+    # Warm-up phase: gradually increase load
+    - duration: 30
+      arrivalRate: 2
+      name: "Warm-up"
+    # Ramp-up phase: increase to target concurrency
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 25
+      name: "Ramp-up to 25 users"
+    # Sustained load: maintain 25 concurrent users
+    - duration: 120
+      arrivalRate: 25
+      name: "Sustained load"
+    # Cool-down phase
+    - duration: 30
+      arrivalRate: 5
+      name: "Cool-down"
+
+  # HTTP engine settings
+  http:
+    timeout: 10
+    pool: 50
+
+  # Plugin for metric collection
+  plugins:
+    expect: {}
+
+  # Default headers
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+  # Variables
+  variables:
+    testUsername: "loadtest_{{ $randomNumber(1000, 9999) }}"
+    testPassword: "LoadTest123!"
+
+  # Ensure proper cleanup
+  ensure:
+    p95: 200
+    maxErrorRate: 1
+
+# Import scenarios
+scenarios:
+  - name: "Basic gameplay flow"
+    weight: 5
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "derezo"
+            password: "password"
+          capture:
+            - json: "$.accessToken"
+              as: "accessToken"
+            - json: "$.user.id"
+              as: "userId"
+          expect:
+            - statusCode: 200
+
+      # Get characters
+      - get:
+          url: "/api/characters"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          capture:
+            - json: "$.characters[0].id"
+              as: "characterId"
+            - json: "$.characters[0].current_node_id"
+              as: "currentNodeId"
+          expect:
+            - statusCode: 200
+
+      # Get world state
+      - get:
+          url: "/api/world/current"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+
+      # Get node details
+      - get:
+          url: "/api/world/nodes/{{ currentNodeId }}"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+
+      # Small pause to simulate user thinking
+      - think: 2
+
+      # Get inventory
+      - get:
+          url: "/api/inventory"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+
+      # Get skills
+      - get:
+          url: "/api/skills/available"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+
+  - name: "Auth stress test"
+    weight: 2
+    flow:
+      # Rapid login/refresh cycle
+      - loop:
+          - post:
+              url: "/api/auth/login"
+              json:
+                username: "derezo"
+                password: "password"
+              capture:
+                - json: "$.accessToken"
+                  as: "accessToken"
+                - json: "$.refreshToken"
+                  as: "refreshToken"
+              expect:
+                - statusCode: 200
+
+          - think: 1
+
+          - post:
+              url: "/api/auth/refresh"
+              json:
+                refreshToken: "{{ refreshToken }}"
+              expect:
+                - statusCode: 200
+
+          - think: 1
+        count: 3
+
+  - name: "World navigation"
+    weight: 3
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "derezo"
+            password: "password"
+          capture:
+            - json: "$.accessToken"
+              as: "accessToken"
+          expect:
+            - statusCode: 200
+
+      # Get characters and current position
+      - get:
+          url: "/api/characters"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          capture:
+            - json: "$.characters[0].current_node_id"
+              as: "currentNodeId"
+          expect:
+            - statusCode: 200
+
+      # Get world state
+      - get:
+          url: "/api/world/current"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          capture:
+            - json: "$.connectedNodes"
+              as: "connectedNodes"
+          expect:
+            - statusCode: 200
+
+      # Simulate exploring the map
+      - think: 2
+
+      # Get fog of war
+      - get:
+          url: "/api/world/fog"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200

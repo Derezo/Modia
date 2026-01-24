@@ -1,0 +1,216 @@
+# Gameplay Scenarios for Load Testing
+# These scenarios test typical player actions
+
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: "Gameplay load"
+  http:
+    timeout: 10
+  defaults:
+    headers:
+      Content-Type: "application/json"
+  ensure:
+    p95: 200
+    maxErrorRate: 1
+
+scenarios:
+  - name: "Shop interaction"
+    weight: 2
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "derezo"
+            password: "password"
+          capture:
+            - json: "$.accessToken"
+              as: "accessToken"
+          expect:
+            - statusCode: 200
+
+      # Get shop inventory at castle (node 1 is typically a castle)
+      - get:
+          url: "/api/shops/1/blacksmith"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode:
+                - 200
+                - 400  # May not be at castle
+
+      # Get sell inventory
+      - get:
+          url: "/api/shops/1/blacksmith/sell-inventory"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode:
+                - 200
+                - 400
+
+      - think: 1
+
+  - name: "Inventory management"
+    weight: 3
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "derezo"
+            password: "password"
+          capture:
+            - json: "$.accessToken"
+              as: "accessToken"
+          expect:
+            - statusCode: 200
+
+      # Get full inventory
+      - get:
+          url: "/api/inventory"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+
+      # Get character equipment
+      - get:
+          url: "/api/characters"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          capture:
+            - json: "$.characters[0].id"
+              as: "characterId"
+          expect:
+            - statusCode: 200
+
+      - get:
+          url: "/api/inventory/equipped/{{ characterId }}"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+
+      - think: 1
+
+  - name: "Social features"
+    weight: 2
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "derezo"
+            password: "password"
+          capture:
+            - json: "$.accessToken"
+              as: "accessToken"
+          expect:
+            - statusCode: 200
+
+      # Get friends list
+      - get:
+          url: "/api/friends"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+
+      # Get pending requests
+      - get:
+          url: "/api/friends/requests"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+
+      # Search for players
+      - get:
+          url: "/api/friends/search?q=test"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+
+      - think: 1
+
+  - name: "Quest and daily tasks"
+    weight: 2
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "derezo"
+            password: "password"
+          capture:
+            - json: "$.accessToken"
+              as: "accessToken"
+          expect:
+            - statusCode: 200
+
+      # Get characters
+      - get:
+          url: "/api/characters"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          capture:
+            - json: "$.characters[0].id"
+              as: "characterId"
+          expect:
+            - statusCode: 200
+
+      # Get quests
+      - get:
+          url: "/api/quests/active"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+
+      # Get daily quests
+      - get:
+          url: "/api/quests/daily/{{ characterId }}"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+
+      - think: 1
+
+  - name: "Leaderboard and rankings"
+    weight: 1
+    flow:
+      # Login
+      - post:
+          url: "/api/auth/login"
+          json:
+            username: "derezo"
+            password: "password"
+          capture:
+            - json: "$.accessToken"
+              as: "accessToken"
+          expect:
+            - statusCode: 200
+
+      # Get leaderboard categories
+      - get:
+          url: "/api/leaderboard"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+
+      # Get specific leaderboard
+      - get:
+          url: "/api/leaderboard/level?limit=20"
+          headers:
+            Authorization: "Bearer {{ accessToken }}"
+          expect:
+            - statusCode: 200
+
+      - think: 1
