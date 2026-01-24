@@ -5,6 +5,7 @@ import presenceService from '../services/presenceService.js';
 import coliseumService from '../services/coliseumService.js';
 import * as partyWebsocket from '../services/partyWebsocket.js';
 import * as marketplaceWebsocket from '../services/marketplaceWebsocket.js';
+import adminGenerationService from '../services/adminGenerationService.js';
 import { query } from '../config/database.js';
 import { getRedisClient, isRedisConnected } from '../config/redis.js';
 
@@ -283,6 +284,15 @@ async function validateRoomAccess(userId, roomName) {
     return { authorized: true };
   }
 
+  // Admin generation room - allowed for all authenticated users in dev/test mode
+  // SECURITY: Production check is handled by admin routes, but we add extra protection here
+  if (roomName === 'admin:generation') {
+    if (process.env.NODE_ENV === 'production') {
+      return { authorized: false, error: 'Admin rooms disabled in production' };
+    }
+    return { authorized: true };
+  }
+
   // Unknown room type - deny by default (security)
   return { authorized: false, error: 'Unknown room type' };
 }
@@ -341,6 +351,23 @@ function setupWebSocket(server) {
         switch (type) {
           case 'auth':
             try {
+              // DEV ONLY: Special admin token for admin dashboard WebSocket connections
+              // This is ONLY available in development/test mode and provides limited access
+              if (payload.token === 'dev_admin_token' && process.env.NODE_ENV !== 'production') {
+                // Use a special admin user ID (negative to avoid collision with real users)
+                userId = -999;
+                username = 'admin_dashboard';
+
+                // Don't set presence for admin dashboard
+                clearTimeout(authTimeout);
+
+                ws.send(JSON.stringify({
+                  type: 'auth_success',
+                  payload: { userId, username, isAdmin: true }
+                }));
+                break;
+              }
+
               const decoded = verifyAccessToken(payload.token);
               userId = decoded.userId;
               username = decoded.username;
@@ -1030,6 +1057,88 @@ function setupWebSocket(server) {
               type: 'marketplace:unsubscribed',
               payload: { itemTemplateId: unsubId }
             }));
+            break;
+          }
+
+          // Admin generation control handlers (dev/test only)
+          case 'generation:cancel': {
+            if (!userId) break;
+            if (process.env.NODE_ENV === 'production') break;
+
+            try {
+              const { jobId } = payload;
+              const result = adminGenerationService.cancelJobs({ jobId });
+              ws.send(JSON.stringify({
+                type: 'generation:cancel_result',
+                payload: result
+              }));
+            } catch (err) {
+              console.error('Generation cancel error:', err);
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { message: err.message }
+              }));
+            }
+            break;
+          }
+
+          case 'generation:cancel_all': {
+            if (!userId) break;
+            if (process.env.NODE_ENV === 'production') break;
+
+            try {
+              const result = adminGenerationService.cancelJobs({ all: true });
+              ws.send(JSON.stringify({
+                type: 'generation:cancel_all_result',
+                payload: result
+              }));
+            } catch (err) {
+              console.error('Generation cancel all error:', err);
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { message: err.message }
+              }));
+            }
+            break;
+          }
+
+          case 'generation:pause': {
+            if (!userId) break;
+            if (process.env.NODE_ENV === 'production') break;
+
+            try {
+              const result = adminGenerationService.pauseQueue();
+              ws.send(JSON.stringify({
+                type: 'generation:pause_result',
+                payload: result
+              }));
+            } catch (err) {
+              console.error('Generation pause error:', err);
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { message: err.message }
+              }));
+            }
+            break;
+          }
+
+          case 'generation:resume': {
+            if (!userId) break;
+            if (process.env.NODE_ENV === 'production') break;
+
+            try {
+              const result = adminGenerationService.resumeQueue();
+              ws.send(JSON.stringify({
+                type: 'generation:resume_result',
+                payload: result
+              }));
+            } catch (err) {
+              console.error('Generation resume error:', err);
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { message: err.message }
+              }));
+            }
             break;
           }
 
