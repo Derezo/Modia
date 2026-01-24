@@ -22,6 +22,7 @@
 import { AudioAssets } from './AudioAssets.js';
 import { MusicPlayer } from './MusicPlayer.js';
 import { SFXPlayer } from './SFXPlayer.js';
+import { AmbientPlayer } from './AmbientPlayer.js';
 import { MusicContext } from './MusicContext.js';
 
 export class AudioManager {
@@ -31,6 +32,7 @@ export class AudioManager {
     this.assets = null;
     this.music = null;
     this.sfx = null;
+    this.ambient = null;
     this.musicContext = null;
 
     // Global state
@@ -68,6 +70,7 @@ export class AudioManager {
       this.assets = new AudioAssets(this.context);
       this.music = new MusicPlayer(this.context, this.assets);
       this.sfx = new SFXPlayer(this.context, this.assets);
+      this.ambient = new AmbientPlayer(this.context, this.assets);
       this.musicContext = new MusicContext(this);
 
       // Subscribe to settings changes
@@ -148,9 +151,11 @@ export class AudioManager {
       musicVolume = 70,
       sfxVolume = 80,
       uiVolume = 70,
+      ambientVolume = 50,
       muted = false,
       musicEnabled = true,
-      sfxEnabled = true
+      sfxEnabled = true,
+      ambientEnabled = true
     } = audioSettings;
 
     // Store mute state
@@ -170,6 +175,13 @@ export class AudioManager {
       this.sfx.setUIVolume(uiVolume);
       this.sfx.setSFXEnabled(sfxEnabled && !muted);
       this.sfx.setUIEnabled(!muted); // UI sounds follow mute but always enabled
+    }
+
+    // Apply to ambient player
+    if (this.ambient) {
+      this.ambient.setMasterVolume(muted ? 0 : masterVolume);
+      this.ambient.setAmbientVolume(ambientVolume);
+      this.ambient.setEnabled(ambientEnabled && !muted);
     }
   }
 
@@ -263,6 +275,34 @@ export class AudioManager {
   }
 
   // =====================
+  // Public API - Ambient
+  // =====================
+
+  /**
+   * Play an ambient sound
+   * @param {string} ambientId - Ambient sound identifier (e.g., 'tavern_chatter', 'shop_bustle')
+   * @param {Object} options - Playback options
+   * @param {number} options.volume - Volume multiplier (0-1)
+   * @param {number} options.fadeInMs - Override fade-in duration
+   */
+  playAmbient(ambientId, options = {}) {
+    if (!this.isInitialized || !this.ambient) {
+      console.debug(`AudioManager: Cannot play ambient '${ambientId}' - not initialized`);
+      return;
+    }
+    this.ambient.play(ambientId, options);
+  }
+
+  /**
+   * Stop ambient playback
+   * @param {boolean} fadeOut - Whether to fade out (default: true)
+   */
+  stopAmbient(fadeOut = true) {
+    if (!this.isInitialized || !this.ambient) return;
+    this.ambient.stop(fadeOut);
+  }
+
+  // =====================
   // Public API - Volume Control
   // =====================
 
@@ -299,6 +339,14 @@ export class AudioManager {
     if (this.sfx) this.sfx.setUIVolume(volume);
   }
 
+  /**
+   * Set ambient sounds volume
+   * @param {number} volume - Volume level (0-100)
+   */
+  setAmbientVolume(volume) {
+    if (this.ambient) this.ambient.setAmbientVolume(volume);
+  }
+
   // =====================
   // Public API - State Control
   // =====================
@@ -313,6 +361,9 @@ export class AudioManager {
     }
     if (this.sfx) {
       this.sfx.setMasterVolume(0);
+    }
+    if (this.ambient) {
+      this.ambient.setMasterVolume(0);
     }
   }
 
@@ -357,6 +408,7 @@ export class AudioManager {
       contextState: this.context?.state || 'unavailable',
       music: this.music?.getState() || null,
       sfx: this.sfx?.getState() || null,
+      ambient: this.ambient?.getState() || null,
       assetStats: this.assets?.getStats() || null
     };
   }
@@ -435,6 +487,11 @@ export class AudioManager {
     if (this.sfx) {
       this.sfx.destroy();
       this.sfx = null;
+    }
+
+    if (this.ambient) {
+      this.ambient.destroy();
+      this.ambient = null;
     }
 
     if (this.assets) {

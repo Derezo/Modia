@@ -75,10 +75,11 @@ export class FishingScene extends Scene {
 
     this.responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
 
-    // Play regional fishing music
+    // Play regional fishing music and ambient sounds
     if (this.game.musicContext) {
       this.game.musicContext.playNodeMusic('fishing');
     }
+    this.game.audio?.playAmbient('fishing_water');
 
     // Start fishing session
     await this.startFishing();
@@ -86,6 +87,9 @@ export class FishingScene extends Scene {
 
   exit() {
     this.stopTimers();
+
+    // Stop ambient sounds
+    this.game.audio?.stopAmbient();
 
     if (this.responsiveUnsubscribe) {
       this.responsiveUnsubscribe();

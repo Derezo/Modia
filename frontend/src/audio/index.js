@@ -7,5 +7,6 @@
 export { AudioManager } from './AudioManager.js';
 export { MusicPlayer } from './MusicPlayer.js';
 export { SFXPlayer } from './SFXPlayer.js';
+export { AmbientPlayer } from './AmbientPlayer.js';
 export { AudioAssets, AUDIO_MANIFEST } from './AudioAssets.js';
 export { MusicContext } from './MusicContext.js';

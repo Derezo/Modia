@@ -365,6 +365,8 @@ function buildCombatSFXPrompt(type, options = {}) {
 
 /**
  * Build an ambient sound prompt
+ * Uses proper 0-1 comma pattern per AUDIO_STYLE_GUIDE.md
+ * Pattern: "[Fantasy context] [adjective] [adjective] [core sound noun] with [secondary quality]"
  * @param {string} environment - Environment type
  * @param {Object} [options] - Options
  * @returns {Object} Prompt configuration
@@ -372,32 +374,40 @@ function buildCombatSFXPrompt(type, options = {}) {
 function buildAmbientPrompt(environment, options = {}) {
   const ambientTemplates = {
     forest: {
-      prompt: 'peaceful forest ambience, birds chirping, leaves rustling, gentle breeze, nature sounds',
-      duration: 15
-    },
-    cave: {
-      prompt: 'dark cave ambience, water dripping, echoing footsteps, distant rumbles, underground atmosphere',
-      duration: 15
-    },
-    mountain: {
-      prompt: 'mountain peak ambience, howling wind, distant eagles, cold atmosphere, rocky terrain',
-      duration: 15
-    },
-    castle: {
-      prompt: 'medieval castle interior, crackling fireplace, distant voices, stone hall echo',
-      duration: 15
-    },
-    tavern: {
-      prompt: 'busy tavern ambience, crowd chatter, clinking mugs, laughter, warm atmosphere',
-      duration: 15
-    },
-    battle: {
-      prompt: 'distant battle sounds, clashing swords, war cries, dramatic tension',
+      prompt: 'Fantasy enchanted forest with rustling leaves and soft birdsong chorus',
       duration: 10
     },
+    cave: {
+      prompt: 'Fantasy deep underground cavern with echoing water drips and distant rumbles',
+      duration: 10
+    },
+    mountain: {
+      prompt: 'Fantasy exposed mountain peak with howling wind gusts and cold desolation',
+      duration: 10
+    },
+    castle: {
+      prompt: 'Fantasy grand palace hall with distant footsteps echoing on marble',
+      duration: 10
+    },
+    tavern: {
+      prompt: 'Fantasy cozy tavern atmosphere with murmuring crowd and crackling fireplace warmth',
+      duration: 10
+    },
+    battle: {
+      prompt: 'Fantasy distant battle sounds with clashing swords and war cries',
+      duration: 8
+    },
     shop: {
-      prompt: 'merchant shop ambience, coins clinking, items rustling, calm marketplace',
-      duration: 15
+      prompt: 'Fantasy busy merchant shop with clinking coins and quiet marketplace activity',
+      duration: 10
+    },
+    fishing: {
+      prompt: 'Fantasy peaceful riverside with gentle lapping water and distant birdsong',
+      duration: 10
+    },
+    ruins: {
+      prompt: 'Fantasy ancient stone ruins with eerie echoing drips and mysterious atmosphere',
+      duration: 10
     }
   };
 

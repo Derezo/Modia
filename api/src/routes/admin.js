@@ -443,6 +443,40 @@ router.get('/generate/job/:jobId', asyncHandler(async (req, res) => {
   res.json(job);
 }));
 
+/**
+ * GET /api/admin/generate/config
+ * Get current generation configuration
+ * Returns: backend, seedMode, fixedSeed, loraDefaults, delay, verbose
+ */
+router.get('/generate/config', asyncHandler(async (req, res) => {
+  const config = await adminGenerationService.getConfig();
+  const validLora = adminGenerationService.getValidLoraModels();
+  const defaultLora = adminGenerationService.getDefaultLora();
+
+  res.json({
+    config,
+    validLoraModels: validLora,
+    defaultLoraByCategory: defaultLora,
+    validBackends: ['local', 'huggingface'],
+    validSeedModes: ['random', 'fixed', 'incremental'],
+    validCategories: adminGenerationService.getValidCategories()
+  });
+}));
+
+/**
+ * POST /api/admin/generate/seed/reset
+ * Reset the incremental seed counter
+ * Body: { seed?: number }
+ */
+router.post('/generate/seed/reset', asyncHandler(async (req, res) => {
+  const { seed = 42 } = req.body;
+  adminGenerationService.resetIncrementalSeed(seed);
+  res.json({
+    message: 'Incremental seed reset',
+    seed
+  });
+}));
+
 // ============================================================================
 // BACKUP ROUTES
 // ============================================================================

@@ -68,15 +68,19 @@ export class ShopScene extends Scene {
     // Subscribe to responsive breakpoint changes
     this.responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
 
-    // Play regional shop music
+    // Play regional shop music and ambient sounds
     if (this.game.musicContext) {
       this.game.musicContext.playNodeMusic('shop');
     }
+    this.game.audio?.playAmbient('shop_bustle');
 
     await this.loadShopData();
   }
 
   exit() {
+    // Stop ambient sounds
+    this.game.audio?.stopAmbient();
+
     if (this.responsiveUnsubscribe) {
       this.responsiveUnsubscribe();
       this.responsiveUnsubscribe = null;

@@ -813,12 +813,21 @@ export class WorldMapScene extends Scene {
   }
 
   centerOnCurrentNode() {
-    if (this.currentNode) {
-      const node = this.nodes.find(n => n.id === this.currentNode.id);
-      if (node) {
-        this.cameraX = -node.x_coord * this.nodeSpacing + this.game.canvas.width / 2;
-        this.cameraY = -node.y_coord * this.nodeSpacing + this.game.canvas.height / 2;
-      }
+    if (!this.currentNode) return;
+
+    // Try to find in discovered nodes first
+    let node = this.nodes.find(n => n.id === this.currentNode.id);
+
+    // Fallback: use currentNode's coordinates directly (from /api/world/current)
+    if (!node && this.currentNode.x_coord !== undefined) {
+      node = this.currentNode;
+    }
+
+    if (node && node.x_coord !== undefined && node.y_coord !== undefined) {
+      this.cameraX = -node.x_coord * this.nodeSpacing + this.game.canvas.width / 2;
+      this.cameraY = -node.y_coord * this.nodeSpacing + this.game.canvas.height / 2;
+    } else {
+      console.error('Cannot center camera - no coordinates for current node:', this.currentNode?.id);
     }
   }
 

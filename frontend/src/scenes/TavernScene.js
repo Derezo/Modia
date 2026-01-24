@@ -57,9 +57,7 @@ export class TavernScene extends Scene {
     if (this.game.musicContext) {
       this.game.musicContext.playNodeMusic('tavern');
     }
-    if (this.game.audio) {
-      this.game.audio.playAmbient('tavern_chatter');
-    }
+    this.game.audio?.playAmbient('tavern_chatter');
 
     // Load initial data
     await Promise.all([
@@ -75,9 +73,7 @@ export class TavernScene extends Scene {
     this.game.socket.leaveRoom('global');
 
     // Stop ambient sounds
-    if (this.game.audio) {
-      this.game.audio.stopAmbient();
-    }
+    this.game.audio?.stopAmbient();
 
     // Remove WebSocket handlers
     Object.entries(this.wsHandlers).forEach(([type, handler]) => {

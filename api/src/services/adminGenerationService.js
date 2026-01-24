@@ -8,24 +8,82 @@
  * - Progress parsing from stdout
  * - WebSocket event broadcasting to admin:generation room
  * - Cancel/pause/resume functionality
+ * - Full configuration support (backend, LoRA, seed, variants, etc.)
  */
 
 import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
+import { readFile } from 'fs/promises';
 import { broadcastToRoom } from '../websocket/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, '../../..');
 const SCRIPTS_DIR = path.join(PROJECT_ROOT, 'scripts/ai-images');
+const THEME_PATH = path.join(PROJECT_ROOT, 'ai-image-metadata/theme.json');
 
 // Room name for generation events
 const GENERATION_ROOM = 'admin:generation';
 
 // Valid categories
 const VALID_CATEGORIES = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays'];
+
+// Valid LoRA models
+const VALID_LORA_MODELS = ['v1', 'v2', 'modern-pixel', 'retro-pixel'];
+
+// Default LoRA per category (matches Python prompt_templates.py)
+const DEFAULT_LORA = {
+  tiles: 'v2',
+  portraits: 'v1',
+  items: 'v1',
+  icons: 'v1',
+  nodes: 'v2',
+  overlays: 'v2'
+};
+
+/**
+ * Read generation configuration from theme.json
+ * Returns defaults if theme.json is unavailable
+ */
+async function getGenerationConfig() {
+  try {
+    const themeData = await readFile(THEME_PATH, 'utf-8');
+    const theme = JSON.parse(themeData);
+
+    return {
+      // Backend: 'local' (default) or 'huggingface'
+      backend: theme.generationBackend || 'local',
+
+      // Seed settings
+      seedMode: theme.seedMode || 'random', // 'random', 'fixed', 'incremental'
+      fixedSeed: theme.fixedSeed || 42,
+
+      // LoRA defaults per category
+      loraDefaults: theme.loraDefaults || DEFAULT_LORA,
+
+      // Advanced settings
+      variants: theme.variants || 1,
+      delay: theme.generationDelay || 2000,
+      verbose: theme.generationVerbose || false
+    };
+  } catch (error) {
+    console.warn('[AdminGeneration] Could not read theme.json, using defaults:', error.message);
+    return {
+      backend: 'local',
+      seedMode: 'random',
+      fixedSeed: 42,
+      loraDefaults: DEFAULT_LORA,
+      variants: 1,
+      delay: 2000,
+      verbose: false
+    };
+  }
+}
+
+// Track incremental seed across jobs
+let incrementalSeed = 42;
 
 // Category to script mapping
 const SCRIPT_MAP = {
@@ -130,11 +188,61 @@ function parseProgress(line) {
 
 /**
  * Build command line arguments for generation script
+ * @param {Object} job - The job object
+ * @param {Object} config - Generation configuration from theme.json
  */
-function buildScriptArgs(job) {
+function buildScriptArgs(job, config) {
   const args = [];
 
-  // Add filters
+  // === BACKEND SELECTION ===
+  // If backend is 'huggingface', add the --huggingface flag
+  const backend = job.options?.backend || config.backend;
+  if (backend === 'huggingface') {
+    args.push('--huggingface');
+  }
+  // Local is default, no flag needed
+
+  // === LORA MODEL ===
+  // Job-level override > config default for category > hardcoded default
+  const loraModel = job.options?.lora ||
+    config.loraDefaults?.[job.category] ||
+    DEFAULT_LORA[job.category];
+
+  if (loraModel && VALID_LORA_MODELS.includes(loraModel)) {
+    args.push('--lora', loraModel);
+  }
+
+  // === SEED ===
+  // Job-level seed > seed mode from config
+  if (job.options?.seed !== undefined) {
+    args.push('--seed', String(job.options.seed));
+  } else {
+    const seedMode = job.options?.seedMode || config.seedMode;
+    if (seedMode === 'fixed') {
+      const seed = job.options?.fixedSeed || config.fixedSeed || 42;
+      args.push('--seed', String(seed));
+    } else if (seedMode === 'incremental') {
+      args.push('--seed', String(incrementalSeed));
+      incrementalSeed++;
+    }
+    // 'random' mode: don't pass --seed, let script randomize
+  }
+
+  // === VARIANTS ===
+  // Only applicable to tiles and nodes
+  const variants = job.options?.variants || config.variants;
+  if (variants && variants > 1 && ['tiles', 'nodes'].includes(job.category)) {
+    args.push('--variants', String(variants));
+  }
+
+  // === DELAY ===
+  // Delay between API requests (useful for rate limiting)
+  const delay = job.options?.delay || config.delay;
+  if (delay && delay !== 2000) { // Only add if non-default
+    args.push('--delay', String(delay));
+  }
+
+  // === FILTERS (category-specific) ===
   if (job.filters) {
     if (job.filters.biome) args.push('--biome', job.filters.biome);
     if (job.filters.race) args.push('--race', job.filters.race);
@@ -147,12 +255,13 @@ function buildScriptArgs(job) {
     }
   }
 
-  // Add options
+  // === OPTIONS ===
   if (job.options) {
     if (job.options.force) args.push('--force');
     if (job.options.dryRun) args.push('--dry-run');
     if (job.options.limit) args.push('--limit', String(job.options.limit));
-    if (job.options.verbose) args.push('--verbose');
+    if (job.options.verbose || config.verbose) args.push('--verbose');
+    if (job.options.backup) args.push('--backup');
   }
 
   return args;
@@ -161,7 +270,7 @@ function buildScriptArgs(job) {
 /**
  * Start processing the next job in queue
  */
-function processNextJob() {
+async function processNextJob() {
   // Don't start if paused or already processing
   if (state.paused || state.current || state.queue.length === 0) {
     return;
@@ -189,10 +298,14 @@ function processNextJob() {
     return;
   }
 
-  // Build arguments
-  const args = buildScriptArgs(job);
+  // Read generation config from theme.json
+  const config = await getGenerationConfig();
+
+  // Build arguments with config
+  const args = buildScriptArgs(job, config);
 
   console.log(`[AdminGeneration] Starting: node ${script} ${args.join(' ')}`);
+  console.log(`[AdminGeneration] Config: backend=${config.backend}, seedMode=${config.seedMode}, lora=${job.options?.lora || config.loraDefaults?.[job.category] || 'default'}`);
 
   // Broadcast start event
   broadcast('generation:started', {
@@ -358,10 +471,47 @@ function finishJob(job, status, error = null) {
 
 /**
  * Queue a new generation job
+ *
+ * @param {string} category - Asset category (tiles, portraits, items, icons, nodes, overlays)
+ * @param {Object} filters - Filter criteria for which assets to generate
+ * @param {string} filters.biome - For tiles: forest, cave, mountain, bridge, castle
+ * @param {string} filters.race - For portraits: human, elf, dwarf, vampire, orc
+ * @param {string} filters.class - For portraits: warrior, wizard, monk, chemist
+ * @param {string} filters.subcategory - For items/icons: category name
+ * @param {string} filters.key - Generate specific asset by key
+ * @param {string[]} filters.ids - Generate specific assets by ID array
+ * @param {Object} options - Generation options
+ * @param {string} options.backend - 'local' (default) or 'huggingface'
+ * @param {string} options.lora - LoRA model: 'v1', 'v2', 'modern-pixel', 'retro-pixel'
+ * @param {string} options.seedMode - 'random', 'fixed', or 'incremental'
+ * @param {number} options.seed - Specific seed value (overrides seedMode)
+ * @param {number} options.fixedSeed - Fixed seed when seedMode='fixed'
+ * @param {number} options.variants - Number of variants (tiles/nodes only)
+ * @param {number} options.delay - Delay between requests in ms
+ * @param {boolean} options.force - Regenerate even if exists
+ * @param {boolean} options.dryRun - Preview without generating
+ * @param {number} options.limit - Maximum assets to generate
+ * @param {boolean} options.verbose - Verbose output
+ * @param {boolean} options.backup - Create backup before generating
  */
 export function queueJob(category, filters = {}, options = {}) {
   if (!VALID_CATEGORIES.includes(category)) {
     throw new Error(`Invalid category: ${category}`);
+  }
+
+  // Validate LoRA model if specified
+  if (options.lora && !VALID_LORA_MODELS.includes(options.lora)) {
+    throw new Error(`Invalid LoRA model: ${options.lora}. Valid: ${VALID_LORA_MODELS.join(', ')}`);
+  }
+
+  // Validate backend if specified
+  if (options.backend && !['local', 'huggingface'].includes(options.backend)) {
+    throw new Error(`Invalid backend: ${options.backend}. Valid: local, huggingface`);
+  }
+
+  // Validate seedMode if specified
+  if (options.seedMode && !['random', 'fixed', 'incremental'].includes(options.seedMode)) {
+    throw new Error(`Invalid seedMode: ${options.seedMode}. Valid: random, fixed, incremental`);
   }
 
   const job = {
@@ -509,6 +659,34 @@ export function getValidCategories() {
   return VALID_CATEGORIES;
 }
 
+/**
+ * Get valid LoRA models
+ */
+export function getValidLoraModels() {
+  return VALID_LORA_MODELS;
+}
+
+/**
+ * Get default LoRA for each category
+ */
+export function getDefaultLora() {
+  return { ...DEFAULT_LORA };
+}
+
+/**
+ * Get current generation configuration
+ */
+export async function getConfig() {
+  return getGenerationConfig();
+}
+
+/**
+ * Reset incremental seed counter
+ */
+export function resetIncrementalSeed(seed = 42) {
+  incrementalSeed = seed;
+}
+
 export default {
   queueJob,
   cancelJobs,
@@ -516,5 +694,9 @@ export default {
   resumeQueue,
   getQueueStatus,
   getJob,
-  getValidCategories
+  getValidCategories,
+  getValidLoraModels,
+  getDefaultLora,
+  getConfig,
+  resetIncrementalSeed
 };

@@ -312,15 +312,25 @@ function ThemeTab({ theme, saving, onUpdateField, onUpdateCategoryModifier }) {
 /**
  * Generation Tab Content
  */
-function GenerationTab({ theme, status, onThemeUpdate }) {
+function GenerationTab({ theme, status, onThemeUpdate, onLoraUpdate }) {
   const toast = useToast();
   const loraDefaults = theme?.loraDefaults || {};
   const categories = Object.keys(loraDefaults).filter((k) => !k.startsWith('_'));
+
+  // Valid LoRA models (must match backend VALID_LORA_MODELS)
+  const VALID_LORA_MODELS = [
+    { value: 'v1', label: 'v1 (GRPZA)', description: 'Flat 2D pixel art style' },
+    { value: 'v2', label: 'v2 (wbgmsst)', description: 'Isometric/watercolor style' },
+    { value: 'modern-pixel', label: 'Modern Pixel', description: 'Clean modern pixel art' },
+    { value: 'retro-pixel', label: 'Retro Pixel', description: 'Classic retro 8-bit style' },
+  ];
 
   // Local state for editable settings
   const [backend, setBackend] = useState(theme?.generationBackend || 'local');
   const [seedMode, setSeedMode] = useState(theme?.seedMode || 'random');
   const [fixedSeed, setFixedSeed] = useState(theme?.fixedSeed || '');
+  const [variants, setVariants] = useState(theme?.variants || 1);
+  const [generationDelay, setGenerationDelay] = useState(theme?.generationDelay || 0);
   const [saving, setSaving] = useState(false);
 
   // Handle backend change
@@ -348,6 +358,35 @@ function GenerationTab({ theme, status, onThemeUpdate }) {
       toast.success('Seed settings saved');
     } catch (err) {
       toast.error(err.message || 'Failed to save seed settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Handle LoRA change for a category
+  const handleLoraChange = async (category, newLora) => {
+    setSaving(true);
+    try {
+      await onLoraUpdate(category, newLora);
+      toast.success(`LoRA updated for ${category}`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to update LoRA');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Handle advanced options change
+  const handleAdvancedChange = async () => {
+    setSaving(true);
+    try {
+      await onThemeUpdate({
+        variants: parseInt(variants, 10) || 1,
+        generationDelay: parseInt(generationDelay, 10) || 0
+      });
+      toast.success('Advanced options saved');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save advanced options');
     } finally {
       setSaving(false);
     }
@@ -461,6 +500,59 @@ function GenerationTab({ theme, status, onThemeUpdate }) {
         </div>
       </div>
 
+      {/* Advanced Options */}
+      <div className="card p-6">
+        <h3 className="text-lg font-display font-semibold text-parchment-100 mb-4">
+          Advanced Generation Options
+        </h3>
+        <p className="text-sm text-parchment-400 mb-4">
+          Additional options for controlling generation behavior.
+        </p>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-parchment-400 mb-2">Variants per Asset</label>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={variants}
+                onChange={(e) => setVariants(e.target.value)}
+                className="w-full px-3 py-2 bg-midnight-800 border border-midnight-600 rounded-lg
+                           text-parchment-200 focus:outline-none focus:border-accent-gold"
+              />
+              <p className="text-xs text-parchment-500 mt-1">
+                Number of variants to generate for tiles/nodes (1-10)
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm text-parchment-400 mb-2">Delay Between Jobs (ms)</label>
+              <input
+                type="number"
+                min="0"
+                max="10000"
+                step="100"
+                value={generationDelay}
+                onChange={(e) => setGenerationDelay(e.target.value)}
+                className="w-full px-3 py-2 bg-midnight-800 border border-midnight-600 rounded-lg
+                           text-parchment-200 focus:outline-none focus:border-accent-gold"
+              />
+              <p className="text-xs text-parchment-500 mt-1">
+                Delay between generation jobs to prevent overload (0-10000ms)
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleAdvancedChange}
+            disabled={saving}
+            className="px-4 py-2 bg-accent-gold text-midnight-950 rounded-lg hover:bg-accent-copper transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Save Advanced Options'}
+          </button>
+        </div>
+      </div>
+
       {/* LoRA Defaults */}
       <div className="card p-6">
         <h3 className="text-lg font-display font-semibold text-parchment-100 mb-4">
@@ -469,23 +561,31 @@ function GenerationTab({ theme, status, onThemeUpdate }) {
         <div className="flex items-start gap-2 mb-4 p-3 bg-midnight-800 rounded-lg">
           <InfoCircledIcon className="w-4 h-4 text-accent-gold flex-shrink-0 mt-0.5" />
           <p className="text-sm text-parchment-400">
-            LoRA defaults are defined in the image generator Python scripts.
-            This view is read-only. Edit <code className="text-parchment-300">prompt_templates.py</code> to change defaults.
+            Select the default LoRA model for each asset category. These can be overridden per-job
+            when queuing generation from the asset browser.
           </p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {categories.map((category) => (
             <div key={category} className="p-3 bg-midnight-800 rounded-lg">
-              <span className="text-sm text-parchment-400 capitalize">{category}</span>
-              <div className="mt-1 font-mono text-parchment-200">
-                {loraDefaults[category] === 'v1' ? (
-                  <span className="text-accent-gold">v1 (GRPZA)</span>
-                ) : loraDefaults[category] === 'v2' ? (
-                  <span className="text-accent-emerald">v2 (wbgmsst)</span>
-                ) : (
-                  <span className="text-parchment-500">{loraDefaults[category]}</span>
-                )}
-              </div>
+              <label className="text-sm text-parchment-400 capitalize block mb-2">{category}</label>
+              <select
+                value={loraDefaults[category] || 'v1'}
+                onChange={(e) => handleLoraChange(category, e.target.value)}
+                disabled={saving}
+                className="w-full px-3 py-2 bg-midnight-900 border border-midnight-600 rounded-lg
+                           text-parchment-200 focus:outline-none focus:border-accent-gold
+                           disabled:opacity-50"
+              >
+                {VALID_LORA_MODELS.map((lora) => (
+                  <option key={lora.value} value={lora.value}>
+                    {lora.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-parchment-500 mt-1">
+                {VALID_LORA_MODELS.find(l => l.value === (loraDefaults[category] || 'v1'))?.description}
+              </p>
             </div>
           ))}
         </div>
@@ -862,7 +962,7 @@ function BackupsTab({ backups, loading, operating, onRefresh, onCreateBackup, on
  */
 export default function SettingsPage() {
   const { status, loading: statusLoading, error: statusError } = useApiStatus();
-  const { theme, loading: themeLoading, saving, error: themeError, updateField, updateCategoryModifier, updateTheme, refetch: refetchTheme } = useTheme();
+  const { theme, loading: themeLoading, saving, error: themeError, updateField, updateCategoryModifier, updateTheme, updateLoraDefault, refetch: refetchTheme } = useTheme();
   const {
     backups,
     loading: backupsLoading,
@@ -1015,7 +1115,7 @@ export default function SettingsPage() {
               <ReloadIcon className="w-6 h-6 animate-spin text-parchment-400" />
             </div>
           ) : (
-            <GenerationTab theme={theme} status={status} onThemeUpdate={updateTheme} />
+            <GenerationTab theme={theme} status={status} onThemeUpdate={updateTheme} onLoraUpdate={updateLoraDefault} />
           )}
         </Tabs.Content>
 

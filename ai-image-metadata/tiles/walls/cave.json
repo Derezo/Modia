@@ -14,7 +14,7 @@
       "seed": 21001,
       "outputPath": "cave/walls/default",
       "generated": true,
-      "generatedAt": "2026-01-23T15:12:56.005Z"
+      "generatedAt": "2026-01-24T16:28:10.912Z"
     },
     {
       "key": "wall_cave_crystal",
@@ -22,7 +22,7 @@
       "seed": 21011,
       "outputPath": "cave/walls/crystal",
       "generated": true,
-      "generatedAt": "2026-01-23T15:13:42.398Z"
+      "generatedAt": "2026-01-24T16:28:53.689Z"
     },
     {
       "key": "wall_cave_wet",
@@ -30,7 +30,7 @@
       "seed": 21021,
       "outputPath": "cave/walls/wet",
       "generated": true,
-      "generatedAt": "2026-01-23T15:14:28.973Z"
+      "generatedAt": "2026-01-24T16:29:35.507Z"
     }
   ]
 }
