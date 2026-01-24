@@ -241,24 +241,21 @@ export default function AssetGrid({
     setActionLoading(true);
 
     try {
-      // Find the pending assets that are selected
-      const pendingSelected = filteredAssets.filter(
-        (a) => selectedIds.has(a.key || a.id) && !a.generated
-      );
+      // Get selected asset IDs
+      const selectedAssetIds = Array.from(selectedIds);
 
-      if (pendingSelected.length === 0) {
-        toast.info('All selected assets are already generated');
-        setActionLoading(false);
-        return;
-      }
+      // Check how many are already generated (for messaging)
+      const alreadyGenerated = filteredAssets.filter(
+        (a) => selectedIds.has(a.key || a.id) && a.generated
+      ).length;
 
-      // Queue generation for selected assets
-      // For now, generate with category filter - individual asset generation requires API changes
-      await api.generateAssets(category, filters, {
-        limit: pendingSelected.length,
-      });
+      // Use generateAssetsByIds with force:true to allow regeneration
+      await api.generateAssetsByIds(category, selectedAssetIds, { force: true });
 
-      toast.success(`Generation queued for ${pendingSelected.length} asset(s)`);
+      const message = alreadyGenerated > 0
+        ? `Queued ${selectedAssetIds.length} asset(s) for (re)generation`
+        : `Generation queued for ${selectedAssetIds.length} asset(s)`;
+      toast.success(message);
 
       // Clear selection after queueing
       clearSelection();
@@ -273,7 +270,7 @@ export default function AssetGrid({
     } finally {
       setActionLoading(false);
     }
-  }, [selectedIds, filteredAssets, category, filters, clearSelection, refetch, toast]);
+  }, [selectedIds, filteredAssets, category, clearSelection, refetch, toast]);
 
   /**
    * Select/deselect all visible assets
