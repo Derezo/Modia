@@ -37,6 +37,33 @@
 }
 
 @layer components {
+  /* Slide-over animations */
+  @keyframes slideInRight {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideOutRight {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-slideInRight {
+    animation: slideInRight 0.3s ease-out;
+  }
+
+  .animate-slideOutRight {
+    animation: slideOutRight 0.2s ease-in;
+  }
+
   /* Parchment card component */
   .card {
     @apply bg-midnight-900 border border-midnight-700 rounded-lg;

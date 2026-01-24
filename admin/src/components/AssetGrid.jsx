@@ -3,7 +3,7 @@
  * Uses CSS grid with lazy loading for performance on large lists
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   RocketIcon,
   Cross2Icon,
@@ -13,6 +13,7 @@ import {
 } from '@radix-ui/react-icons';
 
 import AssetCard from './AssetCard';
+import AssetDetail from './AssetDetail';
 import FilterBar from './FilterBar';
 import { useAssets } from '../hooks/useAssets';
 import { api } from '../lib/api';
@@ -117,6 +118,22 @@ export default function AssetGrid({
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState(null);
 
+  // Detail panel state
+  const [detailAsset, setDetailAsset] = useState(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
+  // Timeout refs for cleanup
+  const closeTimeoutRef = useRef(null);
+  const refetchTimeoutRef = useRef(null);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+      if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
+    };
+  }, []);
+
   // Fetch assets
   const { data, loading, error, refetch } = useAssets(category, filters);
 
@@ -183,13 +200,30 @@ export default function AssetGrid({
   }, []);
 
   /**
-   * Handle asset click (for future detail panel)
+   * Handle asset click - opens the detail panel
    */
   const handleAssetClick = useCallback((asset) => {
-    // TODO: Open detail panel in Task 5
-    // For now, just track selected asset for future use
-    void asset;
+    setDetailAsset(asset);
+    setDetailOpen(true);
   }, []);
+
+  /**
+   * Close detail panel
+   */
+  const handleDetailClose = useCallback(() => {
+    setDetailOpen(false);
+    // Delay clearing asset to allow close animation
+    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    closeTimeoutRef.current = setTimeout(() => setDetailAsset(null), 300);
+  }, []);
+
+  /**
+   * Handle asset update from detail panel
+   */
+  const handleDetailUpdate = useCallback(() => {
+    // Refetch to get updated data
+    refetch();
+  }, [refetch]);
 
   /**
    * Generate selected assets
@@ -230,7 +264,8 @@ export default function AssetGrid({
       clearSelection();
 
       // Refresh after a delay to show updated status
-      setTimeout(() => {
+      if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
+      refetchTimeoutRef.current = setTimeout(() => {
         refetch();
       }, 2000);
     } catch (err) {
@@ -386,6 +421,15 @@ export default function AssetGrid({
         onGenerate={handleGenerateSelected}
         onClearSelection={clearSelection}
         loading={actionLoading}
+      />
+
+      {/* Asset detail slide-over panel */}
+      <AssetDetail
+        asset={detailAsset}
+        category={category}
+        open={detailOpen}
+        onClose={handleDetailClose}
+        onUpdate={handleDetailUpdate}
       />
     </div>
   );
