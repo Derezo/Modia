@@ -38,10 +38,9 @@ function getAssetImageUrl(asset, category) {
   // Build path based on category and asset metadata
   switch (category) {
     case 'tiles': {
-      // Tiles are organized by biome and subcategory (floors/walls/slopes)
+      // Tiles are directly in the biome folder (no floors/walls/slopes subdirectory)
       const biome = asset._biome || asset.outputPath || 'base';
-      const tileCategory = asset._tileCategory || 'floors';
-      return `/assets/sprites/terrain/${biome}/${tileCategory}/${asset.key}.png`;
+      return `/assets/sprites/terrain/${biome}/${asset.key}.png`;
     }
     case 'portraits': {
       // Portraits for players vs enemies
@@ -51,9 +50,10 @@ function getAssetImageUrl(asset, category) {
       return `/assets/sprites/portraits/${id}.png`;
     }
     case 'items': {
-      // Items organized by subcategory (weapons, armor, etc.)
+      // Items organized by subcategory with size suffix (weapons, armor, etc.)
       const subcategory = asset._itemCategory || asset._subcategory || asset.subcategory || 'weapons';
-      return `/assets/sprites/items/${subcategory}/${id}.png`;
+      // Items have multiple sizes (32, 48, 64) - use 64 for preview
+      return `/assets/sprites/items/${subcategory}/${id}_64.png`;
     }
     case 'icons': {
       // Icons organized by subcategory (actions, status, etc.)

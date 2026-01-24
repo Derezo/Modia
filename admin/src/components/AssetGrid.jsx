@@ -393,9 +393,13 @@ export default function AssetGrid({
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {filteredAssets.map((asset) => {
             const id = asset.key || asset.id;
+            // For tiles, include tileCategory to ensure unique keys across floors/walls/slopes
+            const uniqueKey = category === 'tiles' && asset._tileCategory
+              ? `${asset._tileCategory}_${id}`
+              : id;
             return (
               <AssetCard
-                key={id}
+                key={uniqueKey}
                 asset={asset}
                 category={category}
                 selected={selectedIds.has(id)}

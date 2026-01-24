@@ -245,9 +245,28 @@ if [ "$DRY_RUN" = true ]; then
   dry_run "Would upload: $TARBALL_PATH -> ${SERVER_USER}@${SERVER_HOST}:/tmp/"
   dry_run "Would upload: install-remote.sh -> ${SERVER_USER}@${SERVER_HOST}:${SERVER_DEPLOY_DIR}/"
 else
-  # Upload tarball (no -z compression since .tar.gz is already compressed)
-  # Use faster SSH cipher for better throughput
-  rsync -av --progress -e "ssh -c aes128-gcm@openssh.com" "$TARBALL_PATH" "${SERVER_USER}@${SERVER_HOST}:/tmp/"
+  # Upload tarball with optimized settings for large file transfers
+  # Key optimizations:
+  # - scp instead of rsync: no delta/checksum overhead for new files
+  # - aes128-gcm cipher: fastest authenticated cipher
+  # - Compression=no: file is already gzipped
+  # - IPQoS=throughput: optimize for bandwidth over latency
+  # - TCPKeepAlive/ServerAliveInterval: prevent connection drops
+  SSH_OPTS="-c aes128-gcm@openssh.com -o Compression=no -o IPQoS=throughput -o TCPKeepAlive=yes -o ServerAliveInterval=60"
+
+  TARBALL_SIZE_BYTES=$(stat -c%s "$TARBALL_PATH" 2>/dev/null || stat -f%z "$TARBALL_PATH")
+  TARBALL_SIZE_MB=$((TARBALL_SIZE_BYTES / 1024 / 1024))
+
+  # For files over 50MB, show transfer rate with pv if available
+  if [ "$TARBALL_SIZE_MB" -gt 50 ] && command -v pv >/dev/null 2>&1; then
+    log "Uploading ${TARBALL_SIZE_MB}MB via pipe with progress..."
+    pv -pterab "$TARBALL_PATH" | ssh $SSH_OPTS "${SERVER_USER}@${SERVER_HOST}" "cat > /tmp/${TARBALL_NAME}"
+  else
+    # Use scp for single-file transfer (less overhead than rsync)
+    # The -O flag uses legacy SCP protocol which can be faster for large files
+    log "Uploading ${TARBALL_SIZE_MB}MB..."
+    scp $SSH_OPTS -O "$TARBALL_PATH" "${SERVER_USER}@${SERVER_HOST}:/tmp/"
+  fi
 
   # Upload install script (small file, compression doesn't matter)
   rsync -avz "$PROJECT_ROOT/scripts/deploy/install-remote.sh" "${SERVER_USER}@${SERVER_HOST}:${SERVER_DEPLOY_DIR}/"
