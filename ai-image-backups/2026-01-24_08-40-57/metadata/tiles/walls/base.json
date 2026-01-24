@@ -1,0 +1,84 @@
+{
+  "biome": "base",
+  "category": "walls",
+  "description": "Core wall textures used as fallbacks for all biomes - neutral vertical cliff faces",
+  "palette": {
+    "primary": "#6B8E4A",
+    "secondary": "#808080",
+    "accent": "#696969"
+  },
+  "tiles": [
+    {
+      "key": "wall_base_grass",
+      "terrain": "grass",
+      "prompt": "earthen cliff face with grass roots and soil layers in natural brown green #6B8E4A #8B7355",
+      "seed": 10001,
+      "outputPath": "base/walls",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:02:48.487Z"
+    },
+    {
+      "key": "wall_base_stone",
+      "terrain": "stone",
+      "prompt": "weathered stone cliff face with natural fractures in neutral grey #808080 #696969",
+      "seed": 10011,
+      "outputPath": "base/walls",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:03:44.225Z"
+    },
+    {
+      "key": "wall_base_rock",
+      "terrain": "rock",
+      "prompt": "rough natural rock face with lichen and mineral deposits in warm grey #8B8682 #A0A0A0",
+      "seed": 10021,
+      "outputPath": "base/walls",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:04:39.743Z"
+    },
+    {
+      "key": "wall_base_forest",
+      "terrain": "forest",
+      "prompt": "soil cliff face with exposed tree roots and fallen leaves in earthy brown #5C4033 #4A6B2A",
+      "seed": 10031,
+      "outputPath": "base/walls",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:05:34.412Z"
+    },
+    {
+      "key": "wall_base_water",
+      "terrain": "water",
+      "prompt": "wet stone cliff face with water trickling down and algae stains in grey blue #4682B4 #696969",
+      "seed": 10041,
+      "outputPath": "base/walls",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:06:29.204Z"
+    },
+    {
+      "key": "wall_base_lava",
+      "terrain": "lava",
+      "prompt": "scorched volcanic rock face with glowing cracks and heat shimmer in dark red #8B0000 #FF4500",
+      "seed": 10051,
+      "outputPath": "base/walls",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:07:24.787Z"
+    },
+    {
+      "key": "wall_base_cliff",
+      "terrain": "cliff",
+      "prompt": "sheer rock cliff face with exposed geological strata in layered grey #696969 #808080",
+      "seed": 10061,
+      "outputPath": "base/walls",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:08:20.550Z"
+    },
+    {
+      "key": "wall_base_tree",
+      "terrain": "tree",
+      "prompt": "earth wall with massive tree roots breaking through in brown tones #5C4033 #8B7355",
+      "seed": 10071,
+      "outputPath": "base/walls",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:09:16.161Z"
+    }
+  ]
+}

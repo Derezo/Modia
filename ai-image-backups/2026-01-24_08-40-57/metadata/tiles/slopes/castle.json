@@ -1,0 +1,96 @@
+{
+  "biome": "castle",
+  "category": "slopes",
+  "description": "Castle biome slope tiles - stone ramps, grand staircases, dungeon inclines",
+  "palette": {
+    "primary": "#708090",
+    "secondary": "#696969",
+    "accent": "#2F4F4F"
+  },
+  "tiles": [
+    {
+      "key": "slope_castle_north_1",
+      "direction": "north",
+      "levels": 1,
+      "prompt": "polished stone ramp ascending northward with carved edges in slate grey #708090",
+      "seed": 52001,
+      "outputPath": "castle/slopes/north_1",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:53:58.912Z"
+    },
+    {
+      "key": "slope_castle_south_1",
+      "direction": "south",
+      "levels": 1,
+      "prompt": "polished stone ramp descending southward with worn surface in slate grey #708090",
+      "seed": 52011,
+      "outputPath": "castle/slopes/south_1",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:54:46.291Z"
+    },
+    {
+      "key": "slope_castle_east_1",
+      "direction": "east",
+      "levels": 1,
+      "prompt": "polished stone ramp ascending eastward with decorative borders in slate grey #708090 #DAA520",
+      "seed": 52021,
+      "outputPath": "castle/slopes/east_1",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:55:33.077Z"
+    },
+    {
+      "key": "slope_castle_west_1",
+      "direction": "west",
+      "levels": 1,
+      "prompt": "polished stone ramp descending westward with carpet runner in slate grey #708090 #8B0000",
+      "seed": 52031,
+      "outputPath": "castle/slopes/west_1",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:56:20.374Z"
+    },
+    {
+      "key": "stairs_castle_north_2",
+      "direction": "north",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "grand castle stairs ascending north with ornate carved balustrade showing 2-3 visible steps #708090 #DAA520",
+      "seed": 52041,
+      "outputPath": "castle/slopes/stairs_north_2",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:57:06.870Z"
+    },
+    {
+      "key": "stairs_castle_south_2",
+      "direction": "south",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "grand castle stairs descending south with red carpet runner showing 2-3 visible steps #708090 #8B0000",
+      "seed": 52051,
+      "outputPath": "castle/slopes/stairs_south_2",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:57:54.224Z"
+    },
+    {
+      "key": "stairs_castle_east_2",
+      "direction": "east",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "dungeon stone stairs ascending east with torch sconces showing 2-3 visible steps #696969 #2F4F4F",
+      "seed": 52061,
+      "outputPath": "castle/slopes/stairs_east_2",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:58:40.794Z"
+    },
+    {
+      "key": "stairs_castle_west_2",
+      "direction": "west",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "dungeon stone stairs descending west with damp moss showing 2-3 visible steps #696969 #2F4F4F",
+      "seed": 52071,
+      "outputPath": "castle/slopes/stairs_west_2",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:59:29.341Z"
+    }
+  ]
+}

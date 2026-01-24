@@ -1,0 +1,1490 @@
+{
+  "timestamp": "2026-01-24_08-40-57",
+  "createdAt": "2026-01-24T13:40:57.712Z",
+  "reason": "category regeneration",
+  "assetCount": 291,
+  "metadataFiles": [
+    "tiles/floors/base.json",
+    "tiles/floors/forest.json",
+    "tiles/floors/cave.json",
+    "tiles/floors/mountain.json",
+    "tiles/floors/bridge.json",
+    "tiles/floors/castle.json",
+    "tiles/walls/base.json",
+    "tiles/walls/forest.json",
+    "tiles/walls/cave.json",
+    "tiles/walls/mountain.json",
+    "tiles/walls/bridge.json",
+    "tiles/walls/castle.json",
+    "tiles/slopes/base.json",
+    "tiles/slopes/forest.json",
+    "tiles/slopes/cave.json",
+    "tiles/slopes/mountain.json",
+    "tiles/slopes/bridge.json",
+    "tiles/slopes/castle.json",
+    "tiles/manifest.json"
+  ],
+  "imageFiles": [
+    {
+      "category": "tiles",
+      "assetId": "grass_0",
+      "relativePath": "base/grass_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_1",
+      "relativePath": "base/grass_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_2",
+      "relativePath": "base/grass_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_3",
+      "relativePath": "base/grass_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_0",
+      "relativePath": "base/stone_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_1",
+      "relativePath": "base/stone_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_2",
+      "relativePath": "base/stone_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_3",
+      "relativePath": "base/stone_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_0",
+      "relativePath": "base/rock_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_1",
+      "relativePath": "base/rock_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_2",
+      "relativePath": "base/rock_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_3",
+      "relativePath": "base/rock_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_0",
+      "relativePath": "base/forest_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_1",
+      "relativePath": "base/forest_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_2",
+      "relativePath": "base/forest_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_3",
+      "relativePath": "base/forest_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_0",
+      "relativePath": "base/water_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_1",
+      "relativePath": "base/water_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_2",
+      "relativePath": "base/water_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_3",
+      "relativePath": "base/water_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_0",
+      "relativePath": "base/lava_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_1",
+      "relativePath": "base/lava_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_2",
+      "relativePath": "base/lava_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_3",
+      "relativePath": "base/lava_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_0",
+      "relativePath": "base/cliff_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_1",
+      "relativePath": "base/cliff_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_2",
+      "relativePath": "base/cliff_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_3",
+      "relativePath": "base/cliff_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_0",
+      "relativePath": "base/tree_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_1",
+      "relativePath": "base/tree_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_2",
+      "relativePath": "base/tree_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_3",
+      "relativePath": "base/tree_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_0",
+      "relativePath": "forest/grass_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_1",
+      "relativePath": "forest/grass_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_2",
+      "relativePath": "forest/grass_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_3",
+      "relativePath": "forest/grass_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_0",
+      "relativePath": "forest/stone_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_1",
+      "relativePath": "forest/stone_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_2",
+      "relativePath": "forest/stone_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_3",
+      "relativePath": "forest/stone_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_0",
+      "relativePath": "forest/rock_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_1",
+      "relativePath": "forest/rock_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_2",
+      "relativePath": "forest/rock_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_3",
+      "relativePath": "forest/rock_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_0",
+      "relativePath": "forest/forest_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_1",
+      "relativePath": "forest/forest_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_2",
+      "relativePath": "forest/forest_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_3",
+      "relativePath": "forest/forest_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_0",
+      "relativePath": "forest/water_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_1",
+      "relativePath": "forest/water_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_2",
+      "relativePath": "forest/water_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_3",
+      "relativePath": "forest/water_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_0",
+      "relativePath": "forest/lava_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_1",
+      "relativePath": "forest/lava_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_2",
+      "relativePath": "forest/lava_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_3",
+      "relativePath": "forest/lava_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_0",
+      "relativePath": "forest/cliff_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_1",
+      "relativePath": "forest/cliff_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_2",
+      "relativePath": "forest/cliff_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_3",
+      "relativePath": "forest/cliff_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_0",
+      "relativePath": "forest/tree_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_1",
+      "relativePath": "forest/tree_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_2",
+      "relativePath": "forest/tree_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_3",
+      "relativePath": "forest/tree_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_fern_0",
+      "relativePath": "forest/forest_fern_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_fern_1",
+      "relativePath": "forest/forest_fern_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_mushroom_0",
+      "relativePath": "forest/forest_mushroom_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_mushroom_1",
+      "relativePath": "forest/forest_mushroom_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_0",
+      "relativePath": "cave/grass_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_1",
+      "relativePath": "cave/grass_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_2",
+      "relativePath": "cave/grass_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_3",
+      "relativePath": "cave/grass_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_0",
+      "relativePath": "cave/stone_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_1",
+      "relativePath": "cave/stone_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_2",
+      "relativePath": "cave/stone_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_3",
+      "relativePath": "cave/stone_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_0",
+      "relativePath": "cave/rock_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_1",
+      "relativePath": "cave/rock_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_2",
+      "relativePath": "cave/rock_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_3",
+      "relativePath": "cave/rock_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_0",
+      "relativePath": "cave/forest_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_1",
+      "relativePath": "cave/forest_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_2",
+      "relativePath": "cave/forest_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_3",
+      "relativePath": "cave/forest_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_0",
+      "relativePath": "cave/water_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_1",
+      "relativePath": "cave/water_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_2",
+      "relativePath": "cave/water_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_3",
+      "relativePath": "cave/water_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_0",
+      "relativePath": "cave/lava_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_1",
+      "relativePath": "cave/lava_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_2",
+      "relativePath": "cave/lava_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_3",
+      "relativePath": "cave/lava_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_0",
+      "relativePath": "cave/cliff_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_1",
+      "relativePath": "cave/cliff_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_2",
+      "relativePath": "cave/cliff_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_3",
+      "relativePath": "cave/cliff_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_0",
+      "relativePath": "cave/tree_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_1",
+      "relativePath": "cave/tree_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_2",
+      "relativePath": "cave/tree_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_3",
+      "relativePath": "cave/tree_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cave_crystal_0",
+      "relativePath": "cave/cave_crystal_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cave_crystal_1",
+      "relativePath": "cave/cave_crystal_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cave_stalactite_0",
+      "relativePath": "cave/cave_stalactite_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cave_stalactite_1",
+      "relativePath": "cave/cave_stalactite_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_0",
+      "relativePath": "mountain/grass_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_1",
+      "relativePath": "mountain/grass_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_2",
+      "relativePath": "mountain/grass_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_3",
+      "relativePath": "mountain/grass_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_0",
+      "relativePath": "mountain/stone_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_1",
+      "relativePath": "mountain/stone_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_2",
+      "relativePath": "mountain/stone_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_3",
+      "relativePath": "mountain/stone_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_0",
+      "relativePath": "mountain/rock_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_1",
+      "relativePath": "mountain/rock_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_2",
+      "relativePath": "mountain/rock_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_3",
+      "relativePath": "mountain/rock_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_0",
+      "relativePath": "mountain/forest_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_1",
+      "relativePath": "mountain/forest_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_2",
+      "relativePath": "mountain/forest_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_3",
+      "relativePath": "mountain/forest_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_0",
+      "relativePath": "mountain/water_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_1",
+      "relativePath": "mountain/water_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_2",
+      "relativePath": "mountain/water_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_3",
+      "relativePath": "mountain/water_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_0",
+      "relativePath": "mountain/lava_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_1",
+      "relativePath": "mountain/lava_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_2",
+      "relativePath": "mountain/lava_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_3",
+      "relativePath": "mountain/lava_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_0",
+      "relativePath": "mountain/cliff_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_1",
+      "relativePath": "mountain/cliff_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_2",
+      "relativePath": "mountain/cliff_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_3",
+      "relativePath": "mountain/cliff_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_0",
+      "relativePath": "mountain/tree_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_1",
+      "relativePath": "mountain/tree_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_2",
+      "relativePath": "mountain/tree_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_3",
+      "relativePath": "mountain/tree_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "mountain_snow_0",
+      "relativePath": "mountain/mountain_snow_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "mountain_snow_1",
+      "relativePath": "mountain/mountain_snow_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "mountain_ice_0",
+      "relativePath": "mountain/mountain_ice_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "mountain_ice_1",
+      "relativePath": "mountain/mountain_ice_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "mountain_lichen_0",
+      "relativePath": "mountain/mountain_lichen_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "mountain_lichen_1",
+      "relativePath": "mountain/mountain_lichen_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_0",
+      "relativePath": "bridge/grass_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_1",
+      "relativePath": "bridge/grass_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_2",
+      "relativePath": "bridge/grass_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_3",
+      "relativePath": "bridge/grass_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_0",
+      "relativePath": "bridge/stone_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_1",
+      "relativePath": "bridge/stone_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_2",
+      "relativePath": "bridge/stone_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_3",
+      "relativePath": "bridge/stone_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_0",
+      "relativePath": "bridge/rock_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_1",
+      "relativePath": "bridge/rock_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_2",
+      "relativePath": "bridge/rock_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_3",
+      "relativePath": "bridge/rock_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_0",
+      "relativePath": "bridge/forest_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_1",
+      "relativePath": "bridge/forest_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_2",
+      "relativePath": "bridge/forest_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_3",
+      "relativePath": "bridge/forest_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_0",
+      "relativePath": "bridge/water_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_1",
+      "relativePath": "bridge/water_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_2",
+      "relativePath": "bridge/water_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_3",
+      "relativePath": "bridge/water_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_0",
+      "relativePath": "bridge/lava_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_1",
+      "relativePath": "bridge/lava_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_2",
+      "relativePath": "bridge/lava_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_3",
+      "relativePath": "bridge/lava_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_0",
+      "relativePath": "bridge/cliff_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_1",
+      "relativePath": "bridge/cliff_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_2",
+      "relativePath": "bridge/cliff_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_3",
+      "relativePath": "bridge/cliff_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_0",
+      "relativePath": "bridge/tree_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_1",
+      "relativePath": "bridge/tree_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_2",
+      "relativePath": "bridge/tree_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_3",
+      "relativePath": "bridge/tree_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "bridge_plank_0",
+      "relativePath": "bridge/bridge_plank_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "bridge_plank_1",
+      "relativePath": "bridge/bridge_plank_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "bridge_rope_0",
+      "relativePath": "bridge/bridge_rope_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "bridge_rope_1",
+      "relativePath": "bridge/bridge_rope_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "bridge_broken_0",
+      "relativePath": "bridge/bridge_broken_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "bridge_broken_1",
+      "relativePath": "bridge/bridge_broken_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_0",
+      "relativePath": "castle/grass_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_1",
+      "relativePath": "castle/grass_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_2",
+      "relativePath": "castle/grass_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "grass_3",
+      "relativePath": "castle/grass_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_0",
+      "relativePath": "castle/stone_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_1",
+      "relativePath": "castle/stone_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_2",
+      "relativePath": "castle/stone_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stone_3",
+      "relativePath": "castle/stone_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_0",
+      "relativePath": "castle/rock_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_1",
+      "relativePath": "castle/rock_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_2",
+      "relativePath": "castle/rock_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "rock_3",
+      "relativePath": "castle/rock_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_0",
+      "relativePath": "castle/forest_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_1",
+      "relativePath": "castle/forest_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_2",
+      "relativePath": "castle/forest_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "forest_3",
+      "relativePath": "castle/forest_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_0",
+      "relativePath": "castle/water_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_1",
+      "relativePath": "castle/water_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_2",
+      "relativePath": "castle/water_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "water_3",
+      "relativePath": "castle/water_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_0",
+      "relativePath": "castle/lava_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_1",
+      "relativePath": "castle/lava_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_2",
+      "relativePath": "castle/lava_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "lava_3",
+      "relativePath": "castle/lava_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_0",
+      "relativePath": "castle/cliff_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_1",
+      "relativePath": "castle/cliff_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_2",
+      "relativePath": "castle/cliff_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "cliff_3",
+      "relativePath": "castle/cliff_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_0",
+      "relativePath": "castle/tree_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_1",
+      "relativePath": "castle/tree_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_2",
+      "relativePath": "castle/tree_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "tree_3",
+      "relativePath": "castle/tree_3.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "castle_tile_0",
+      "relativePath": "castle/castle_tile_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "castle_tile_1",
+      "relativePath": "castle/castle_tile_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "castle_carpet_0",
+      "relativePath": "castle/castle_carpet_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "castle_carpet_1",
+      "relativePath": "castle/castle_carpet_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "castle_dungeon_0",
+      "relativePath": "castle/castle_dungeon_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "castle_dungeon_1",
+      "relativePath": "castle/castle_dungeon_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "castle_armory_0",
+      "relativePath": "castle/castle_armory_0.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "castle_armory_1",
+      "relativePath": "castle/castle_armory_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_base_grass",
+      "relativePath": "base/wall_base_grass.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_base_stone",
+      "relativePath": "base/wall_base_stone.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_base_rock",
+      "relativePath": "base/wall_base_rock.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_base_forest",
+      "relativePath": "base/wall_base_forest.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_base_water",
+      "relativePath": "base/wall_base_water.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_base_lava",
+      "relativePath": "base/wall_base_lava.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_base_cliff",
+      "relativePath": "base/wall_base_cliff.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_base_tree",
+      "relativePath": "base/wall_base_tree.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_forest_default",
+      "relativePath": "forest/wall_forest_default.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_forest_stone",
+      "relativePath": "forest/wall_forest_stone.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_forest_dirt",
+      "relativePath": "forest/wall_forest_dirt.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_cave_default",
+      "relativePath": "cave/wall_cave_default.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_cave_crystal",
+      "relativePath": "cave/wall_cave_crystal.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_cave_wet",
+      "relativePath": "cave/wall_cave_wet.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_mountain_default",
+      "relativePath": "mountain/wall_mountain_default.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_mountain_ice",
+      "relativePath": "mountain/wall_mountain_ice.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_mountain_snow",
+      "relativePath": "mountain/wall_mountain_snow.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_bridge_default",
+      "relativePath": "bridge/wall_bridge_default.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_bridge_rope",
+      "relativePath": "bridge/wall_bridge_rope.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_bridge_stone",
+      "relativePath": "bridge/wall_bridge_stone.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_castle_default",
+      "relativePath": "castle/wall_castle_default.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_castle_brick",
+      "relativePath": "castle/wall_castle_brick.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "wall_castle_dungeon",
+      "relativePath": "castle/wall_castle_dungeon.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_base_north_1",
+      "relativePath": "base/slope_base_north_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_base_south_1",
+      "relativePath": "base/slope_base_south_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_base_east_1",
+      "relativePath": "base/slope_base_east_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_base_west_1",
+      "relativePath": "base/slope_base_west_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_base_north_1",
+      "relativePath": "base/stairs_base_north_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_base_south_1",
+      "relativePath": "base/stairs_base_south_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_base_east_1",
+      "relativePath": "base/stairs_base_east_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_base_west_1",
+      "relativePath": "base/stairs_base_west_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_forest_north_1",
+      "relativePath": "forest/slope_forest_north_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_forest_south_1",
+      "relativePath": "forest/slope_forest_south_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_forest_east_1",
+      "relativePath": "forest/slope_forest_east_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_forest_west_1",
+      "relativePath": "forest/slope_forest_west_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_forest_north_2",
+      "relativePath": "forest/stairs_forest_north_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_forest_south_2",
+      "relativePath": "forest/stairs_forest_south_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_forest_east_2",
+      "relativePath": "forest/stairs_forest_east_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_forest_west_2",
+      "relativePath": "forest/stairs_forest_west_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_cave_north_1",
+      "relativePath": "cave/slope_cave_north_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_cave_south_1",
+      "relativePath": "cave/slope_cave_south_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_cave_east_1",
+      "relativePath": "cave/slope_cave_east_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_cave_west_1",
+      "relativePath": "cave/slope_cave_west_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_cave_north_2",
+      "relativePath": "cave/stairs_cave_north_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_cave_south_2",
+      "relativePath": "cave/stairs_cave_south_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_cave_east_2",
+      "relativePath": "cave/stairs_cave_east_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_cave_west_2",
+      "relativePath": "cave/stairs_cave_west_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_mountain_north_1",
+      "relativePath": "mountain/slope_mountain_north_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_mountain_south_1",
+      "relativePath": "mountain/slope_mountain_south_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_mountain_east_1",
+      "relativePath": "mountain/slope_mountain_east_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_mountain_west_1",
+      "relativePath": "mountain/slope_mountain_west_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_mountain_north_2",
+      "relativePath": "mountain/stairs_mountain_north_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_mountain_south_2",
+      "relativePath": "mountain/stairs_mountain_south_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_mountain_east_2",
+      "relativePath": "mountain/stairs_mountain_east_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_mountain_west_2",
+      "relativePath": "mountain/stairs_mountain_west_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_bridge_north_1",
+      "relativePath": "bridge/slope_bridge_north_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_bridge_south_1",
+      "relativePath": "bridge/slope_bridge_south_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_bridge_east_1",
+      "relativePath": "bridge/slope_bridge_east_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_bridge_west_1",
+      "relativePath": "bridge/slope_bridge_west_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_bridge_north_2",
+      "relativePath": "bridge/stairs_bridge_north_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_bridge_south_2",
+      "relativePath": "bridge/stairs_bridge_south_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_bridge_east_2",
+      "relativePath": "bridge/stairs_bridge_east_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_bridge_west_2",
+      "relativePath": "bridge/stairs_bridge_west_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_castle_north_1",
+      "relativePath": "castle/slope_castle_north_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_castle_south_1",
+      "relativePath": "castle/slope_castle_south_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_castle_east_1",
+      "relativePath": "castle/slope_castle_east_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "slope_castle_west_1",
+      "relativePath": "castle/slope_castle_west_1.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_castle_north_2",
+      "relativePath": "castle/stairs_castle_north_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_castle_south_2",
+      "relativePath": "castle/stairs_castle_south_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_castle_east_2",
+      "relativePath": "castle/stairs_castle_east_2.png"
+    },
+    {
+      "category": "tiles",
+      "assetId": "stairs_castle_west_2",
+      "relativePath": "castle/stairs_castle_west_2.png"
+    }
+  ],
+  "categories": {
+    "tiles": {
+      "assetCount": 291,
+      "imagesCopied": 291
+    }
+  }
+}
