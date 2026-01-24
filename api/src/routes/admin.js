@@ -45,6 +45,121 @@ const isProduction = process.env.NODE_ENV === 'production';
 // Valid asset categories
 const VALID_CATEGORIES = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays'];
 
+// Cached trait data for prompt construction
+let cachedTraitData = null;
+
+/**
+ * Load trait data from portrait metadata files (cached)
+ */
+async function loadTraitData() {
+  if (cachedTraitData) return cachedTraitData;
+
+  const playerPath = path.join(METADATA_DIR, 'portraits/combinations.json');
+  const enemyPath = path.join(METADATA_DIR, 'portraits/enemies.json');
+
+  const [playerData, enemyData] = await Promise.all([
+    loadJsonFile(playerPath),
+    loadJsonFile(enemyPath),
+  ]);
+
+  cachedTraitData = {
+    // Player traits
+    raceTraits: playerData?.raceTraits || {},
+    genderTraits: playerData?.genderTraits || {},
+    classTraits: playerData?.classTraits || {},
+    advancedClassTraits: playerData?.advancedClassTraits || {},
+    // Enemy traits
+    archetypeTraits: enemyData?.archetypeTraits || {},
+    regionTraits: enemyData?.regionTraits || {},
+  };
+
+  return cachedTraitData;
+}
+
+/**
+ * Construct a prompt for a portrait asset
+ * @param {object} portrait - Portrait asset metadata
+ * @param {object} traitData - Trait lookup data
+ * @returns {object} { basePrompt, components }
+ */
+function constructPortraitPrompt(portrait, traitData) {
+  // For enemy portraits
+  if (portrait._type === 'enemy' || portrait.type === 'enemy') {
+    const archetypeVal = traitData.archetypeTraits?.[portrait.archetype] || '';
+    const regionVal = traitData.regionTraits?.[portrait.region] || '';
+    const visualVal = portrait.visualTraits || '';
+
+    return {
+      basePrompt: [visualVal, archetypeVal, regionVal].filter(Boolean).join(' ').trim(),
+      components: {
+        archetype: { key: portrait.archetype, value: archetypeVal },
+        region: { key: portrait.region, value: regionVal },
+        visualTraits: { value: visualVal },
+      },
+    };
+  }
+
+  // For player portraits
+  const raceVal = traitData.raceTraits?.[portrait.race] || '';
+  const genderVal = traitData.genderTraits?.[portrait.gender] || '';
+
+  // Determine if using advanced class
+  const isAdvanced = !!traitData.advancedClassTraits?.[portrait.class];
+  const classVal = isAdvanced
+    ? traitData.advancedClassTraits[portrait.class]
+    : traitData.classTraits?.[portrait.class] || '';
+
+  return {
+    basePrompt: [raceVal, genderVal, classVal].filter(Boolean).join(' ').trim(),
+    components: {
+      race: { key: portrait.race, value: raceVal },
+      gender: { key: portrait.gender, value: genderVal },
+      class: { key: portrait.class, value: classVal, isAdvanced },
+    },
+  };
+}
+
+/**
+ * Construct full prompt with theme data for any asset
+ * @param {object} asset - Asset metadata
+ * @param {string} category - Asset category
+ * @param {object} theme - Theme configuration
+ * @param {object} traitData - Trait lookup data (for portraits)
+ * @returns {object} Full prompt construction breakdown
+ */
+function constructFullPrompt(asset, category, theme, traitData = null) {
+  const styleTrigger = theme?.style?.trigger || 'wbgmsst';
+  const styleBase = theme?.style?.basePhrase || 'ink and wash watercolor illustration';
+  const categorySuffix = theme?.categoryModifiers?.[category]?.suffix || '';
+  const negativePrompt = theme?.negativePrompt || '';
+
+  let basePrompt = asset.prompt || '';
+  let traitComponents = null;
+
+  // For portraits, construct from traits if no custom prompt
+  if (category === 'portraits' && traitData && !asset.prompt) {
+    const constructed = constructPortraitPrompt(asset, traitData);
+    basePrompt = constructed.basePrompt;
+    traitComponents = constructed.components;
+  }
+
+  // Full prompt assembly
+  const fullPrompt = [styleTrigger, styleBase, basePrompt, categorySuffix]
+    .filter(Boolean)
+    .join(', ')
+    .trim();
+
+  return {
+    styleTrigger,
+    styleBase,
+    basePrompt,
+    traitComponents,
+    categorySuffix,
+    fullPrompt,
+    negativePrompt,
+  };
+}
+
 // Rate limiter for admin endpoints (30 requests per minute)
 const adminRateLimiter = createLimiter({
   name: 'admin',
@@ -147,6 +262,18 @@ router.get('/assets/:category', asyncHandler(async (req, res) => {
         }
         const data = metadataUtils.loadPortraitMetadata(filters);
         assets = data.portraits || [];
+
+        // Enrich portraits with constructed prompts
+        const traitData = await loadTraitData();
+        assets = assets.map((portrait) => {
+          const { basePrompt, components } = constructPortraitPrompt(portrait, traitData);
+          return {
+            ...portrait,
+            // Only add constructed prompt if no custom prompt exists
+            prompt: portrait.prompt || basePrompt,
+            promptComponents: components,
+          };
+        });
         break;
       }
       case 'items': {
@@ -226,7 +353,62 @@ router.get('/assets/:category/:id', asyncHandler(async (req, res) => {
     throw new AppError(`Asset not found: ${category}/${id}`, 404);
   }
 
+  // Enrich portraits with constructed prompts
+  if (category === 'portraits') {
+    const traitData = await loadTraitData();
+    const { basePrompt, components } = constructPortraitPrompt(asset, traitData);
+    asset = {
+      ...asset,
+      prompt: asset.prompt || basePrompt,
+      promptComponents: components,
+    };
+  }
+
   res.json(asset);
+}));
+
+/**
+ * GET /api/admin/assets/:category/:id/prompt
+ * Get full prompt construction breakdown with theme data
+ * Returns structured prompt parts for display in editor
+ */
+router.get('/assets/:category/:id/prompt', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { category, id } = req.params;
+
+  if (!VALID_CATEGORIES.includes(category)) {
+    throw new AppError(`Invalid category: ${category}`, 400);
+  }
+
+  // Load asset
+  let asset = null;
+  try {
+    const data = metadataUtils.loadCategoryAssets(category);
+    asset = data.byId[id];
+  } catch (error) {
+    throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
+  }
+
+  if (!asset) {
+    throw new AppError(`Asset not found: ${category}/${id}`, 404);
+  }
+
+  // Load theme
+  const themePath = path.join(METADATA_DIR, 'theme.json');
+  const theme = await loadJsonFile(themePath);
+
+  // Load trait data for portraits
+  const traitData = category === 'portraits' ? await loadTraitData() : null;
+
+  // Construct full prompt breakdown
+  const promptData = constructFullPrompt(asset, category, theme, traitData);
+
+  res.json({
+    assetId: id,
+    category,
+    ...promptData,
+  });
 }));
 
 /**

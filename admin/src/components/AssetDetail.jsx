@@ -19,9 +19,29 @@ import { api } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 
 /**
- * Size options for preview
+ * Category-specific size options for preview
+ * Based on actual generated image sizes per category
  */
-const SIZE_OPTIONS = [128, 256, 384, 512];
+const CATEGORY_SIZE_OPTIONS = {
+  portraits: [64],  // Portraits are 64px only, no size variants
+  tiles: [64],      // Tiles are 64px only
+  items: [32, 64, 128],
+  icons: [16, 24, 32, 48, 64, 128],
+  nodes: [48, 96],
+  overlays: [32, 48, 64, 128],
+};
+
+/**
+ * Default size per category
+ */
+const CATEGORY_DEFAULT_SIZE = {
+  portraits: 64,
+  tiles: 64,
+  items: 64,
+  icons: 32,
+  nodes: 48,
+  overlays: 64,
+};
 
 /**
  * Get the base image URL for an asset (without size suffix)
@@ -121,45 +141,222 @@ function StarRating({ value, onChange, disabled = false }) {
 }
 
 /**
- * Full prompt preview modal
+ * Read-only prompt section component
  */
-function FullPromptModal({ open, onClose, basePrompt, fullPrompt, loading }) {
+function PromptSection({ label, value, readOnly = true, hint = null }) {
+  if (!value) return null;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-sm font-medium text-parchment-400">{label}</h4>
+        {readOnly && (
+          <span className="text-xs px-2 py-0.5 bg-midnight-700 text-parchment-500 rounded">
+            Read-only
+          </span>
+        )}
+      </div>
+      <div
+        className={`p-3 border rounded-lg text-sm whitespace-pre-wrap ${
+          readOnly
+            ? 'bg-midnight-950 border-midnight-800 text-parchment-400'
+            : 'bg-midnight-800 border-midnight-700 text-parchment-200'
+        }`}
+      >
+        {value}
+      </div>
+      {hint && <p className="text-xs text-parchment-600 mt-1">{hint}</p>}
+    </div>
+  );
+}
+
+/**
+ * Trait component breakdown for portraits
+ */
+function TraitComponents({ components, isEnemy = false }) {
+  if (!components) return null;
+
+  if (isEnemy) {
+    return (
+      <div className="space-y-3">
+        <h4 className="text-sm font-medium text-parchment-400">Enemy Trait Components</h4>
+        <div className="grid gap-2">
+          {components.visualTraits?.value && (
+            <div className="flex items-start gap-2">
+              <span className="text-xs px-2 py-0.5 bg-accent-ruby/20 text-accent-ruby rounded shrink-0">
+                Visual
+              </span>
+              <span className="text-sm text-parchment-300">{components.visualTraits.value}</span>
+            </div>
+          )}
+          {components.archetype?.value && (
+            <div className="flex items-start gap-2">
+              <span className="text-xs px-2 py-0.5 bg-accent-sapphire/20 text-accent-sapphire rounded shrink-0">
+                {components.archetype.key}
+              </span>
+              <span className="text-sm text-parchment-300">{components.archetype.value}</span>
+            </div>
+          )}
+          {components.region?.value && (
+            <div className="flex items-start gap-2">
+              <span className="text-xs px-2 py-0.5 bg-accent-emerald/20 text-accent-emerald rounded shrink-0">
+                {components.region.key}
+              </span>
+              <span className="text-sm text-parchment-300">{components.region.value}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <h4 className="text-sm font-medium text-parchment-400">Portrait Trait Components</h4>
+      <div className="grid gap-2">
+        {components.race?.value && (
+          <div className="flex items-start gap-2">
+            <span className="text-xs px-2 py-0.5 bg-accent-gold/20 text-accent-gold rounded shrink-0">
+              {components.race.key}
+            </span>
+            <span className="text-sm text-parchment-300">{components.race.value}</span>
+          </div>
+        )}
+        {components.gender?.value && (
+          <div className="flex items-start gap-2">
+            <span className="text-xs px-2 py-0.5 bg-accent-sapphire/20 text-accent-sapphire rounded shrink-0">
+              {components.gender.key}
+            </span>
+            <span className="text-sm text-parchment-300">{components.gender.value}</span>
+          </div>
+        )}
+        {components.class?.value && (
+          <div className="flex items-start gap-2">
+            <span className="text-xs px-2 py-0.5 bg-accent-emerald/20 text-accent-emerald rounded shrink-0">
+              {components.class.key}
+              {components.class.isAdvanced && ' ★'}
+            </span>
+            <span className="text-sm text-parchment-300">{components.class.value}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Full prompt preview modal with structured sections
+ */
+function FullPromptModal({ open, onClose, promptData, loading, category, error }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    if (promptData?.fullPrompt) {
+      navigator.clipboard.writeText(promptData.fullPrompt);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const isEnemy = promptData?.traitComponents?.archetype !== undefined;
+  const isPortrait = category === 'portraits';
+
   return (
     <Dialog.Root open={open} onOpenChange={onClose}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/60 z-[60]" />
         <Dialog.Content
+          aria-describedby="prompt-modal-description"
           className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                     w-[90vw] max-w-2xl max-h-[80vh] overflow-y-auto
+                     w-[90vw] max-w-2xl max-h-[85vh] overflow-y-auto
                      bg-midnight-900 border border-midnight-700 rounded-lg shadow-xl z-[70]
                      focus:outline-none"
         >
           <div className="p-6">
-            <Dialog.Title className="text-lg font-display font-semibold text-parchment-100 mb-4">
-              Full Constructed Prompt
+            <Dialog.Title className="text-lg font-display font-semibold text-parchment-100 mb-2">
+              Prompt Construction
             </Dialog.Title>
+            <p id="prompt-modal-description" className="text-sm text-parchment-500 mb-4">
+              Shows how the final prompt is constructed from theme and asset metadata.
+            </p>
 
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <ReloadIcon className="w-6 h-6 text-parchment-400 animate-spin" />
               </div>
-            ) : (
+            ) : promptData ? (
               <div className="space-y-4">
+                {/* Style Trigger */}
+                <PromptSection
+                  label="Style Trigger (LoRA)"
+                  value={promptData.styleTrigger}
+                  hint="Triggers the trained style model"
+                />
+
+                {/* Style Base */}
+                <PromptSection
+                  label="Style Base"
+                  value={promptData.styleBase}
+                  hint="Base style description from theme"
+                />
+
+                {/* Trait Components (portraits only) */}
+                {isPortrait && promptData.traitComponents && (
+                  <div className="p-3 bg-midnight-800/50 border border-midnight-700 rounded-lg">
+                    <TraitComponents components={promptData.traitComponents} isEnemy={isEnemy} />
+                  </div>
+                )}
+
+                {/* Base Prompt */}
+                <PromptSection
+                  label="Base Prompt"
+                  value={promptData.basePrompt}
+                  readOnly={false}
+                  hint={isPortrait ? 'Constructed from traits above' : 'Custom prompt for this asset'}
+                />
+
+                {/* Category Suffix */}
+                <PromptSection
+                  label="Category Suffix"
+                  value={promptData.categorySuffix}
+                  hint={`Standard suffix for ${category}`}
+                />
+
+                {/* Full Prompt */}
                 <div>
-                  <h4 className="text-sm font-medium text-parchment-400 mb-2">Base Prompt</h4>
-                  <div className="p-3 bg-midnight-800 border border-midnight-700 rounded-lg text-parchment-200 text-sm">
-                    {basePrompt || 'No prompt defined'}
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-medium text-accent-gold">Full Constructed Prompt</h4>
+                    <button
+                      type="button"
+                      onClick={handleCopy}
+                      className="text-xs px-2 py-1 bg-midnight-700 text-parchment-300 rounded hover:bg-midnight-600 transition-colors"
+                    >
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
+                  <div className="p-3 bg-midnight-800 border border-accent-gold/30 rounded-lg text-parchment-100 text-sm whitespace-pre-wrap">
+                    {promptData.fullPrompt || 'Unable to construct prompt'}
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="text-sm font-medium text-parchment-400 mb-2">
-                    With Theme Modifiers
-                  </h4>
-                  <div className="p-3 bg-midnight-800 border border-midnight-700 rounded-lg text-parchment-200 text-sm whitespace-pre-wrap">
-                    {fullPrompt || 'Theme not available'}
-                  </div>
-                </div>
+                {/* Negative Prompt */}
+                {promptData.negativePrompt && (
+                  <PromptSection
+                    label="Negative Prompt"
+                    value={promptData.negativePrompt}
+                    hint="Things to avoid in generation"
+                  />
+                )}
+              </div>
+            ) : error ? (
+              <div className="text-center py-8">
+                <ExclamationTriangleIcon className="w-8 h-8 mx-auto mb-2 text-accent-ruby" />
+                <p className="text-accent-ruby">Failed to load prompt data</p>
+                <p className="text-parchment-500 text-sm mt-1">{error}</p>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-parchment-500">
+                No prompt data available
               </div>
             )}
 
@@ -201,8 +398,8 @@ export default function AssetDetail({
     needsRegeneration: false,
   });
 
-  // UI state
-  const [previewSize, setPreviewSize] = useState(256);
+  // UI state - preview size will be initialized per category
+  const [previewSize, setPreviewSize] = useState(null);
   const [imageError, setImageError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
@@ -225,19 +422,47 @@ export default function AssetDetail({
     }
   }, [asset]);
 
+  // Set default preview size when category changes
+  useEffect(() => {
+    if (category) {
+      setPreviewSize(CATEGORY_DEFAULT_SIZE[category] || 64);
+    }
+  }, [category]);
+
+  // Get available size options for this category
+  const sizeOptions = useMemo(() =>
+    CATEGORY_SIZE_OPTIONS[category] || [64],
+    [category]
+  );
+
   // Get image paths (memoized to prevent useCallback recreation)
   const basePath = useMemo(() =>
     asset ? getAssetBasePath(asset, category) : null,
     [asset, category]
   );
 
+  /**
+   * Get the image URL for a given size.
+   * Path format varies by category:
+   * - portraits, tiles: {dir}/{filename}.png (no size variants)
+   * - items, icons: {dir}/{filename}_{size}.png (size suffix)
+   * - nodes, overlays: {dir}/{filename}.png (no size variants currently)
+   */
   const getImageUrl = useCallback((size) => {
     if (!basePath) return null;
-    if (size === 'original') {
+
+    // Categories with size variants use suffix format
+    const categoriesWithSizeVariants = ['items', 'icons'];
+    const hasSizeVariants = categoriesWithSizeVariants.includes(category);
+
+    if (size === 'original' || !hasSizeVariants) {
+      // No size suffix - just base filename
       return `${basePath.dir}/${basePath.filename}.png`;
     }
+
+    // Size suffix format for items/icons
     return `${basePath.dir}/${basePath.filename}_${size}.png`;
-  }, [basePath]);
+  }, [basePath, category]);
 
   // Handle form field changes
   const handleChange = (field, value) => {
@@ -293,31 +518,24 @@ export default function AssetDetail({
     handleChange('needsRegeneration', true);
   };
 
-  // Preview full prompt with theme
+  // Preview full prompt with theme - uses API endpoint for structured breakdown
   const handlePreviewFullPrompt = async () => {
     setShowFullPrompt(true);
-    setFullPromptData({ loading: true, prompt: '' });
+    setFullPromptData({ loading: true, data: null });
 
     try {
-      const theme = await api.getTheme();
-      // Construct full prompt with theme modifiers
-      const basePrompt = formData.prompt || asset?.prompt || '';
-      const themePrefix = theme?.globalPrefix || '';
-      const themeSuffix = theme?.globalSuffix || '';
-      const fullPrompt = [themePrefix, basePrompt, themeSuffix]
-        .filter(Boolean)
-        .join(' ');
-
+      const assetKey = asset?.key || asset?.id;
+      const promptData = await api.getAssetPrompt(category, assetKey);
       setFullPromptData({
         loading: false,
-        basePrompt,
-        prompt: fullPrompt || basePrompt,
+        data: promptData,
       });
     } catch (err) {
+      console.error('Failed to load prompt data:', err);
       setFullPromptData({
         loading: false,
-        basePrompt: formData.prompt,
-        prompt: 'Failed to load theme: ' + err.message,
+        data: null,
+        error: err.message,
       });
     }
   };
@@ -334,6 +552,7 @@ export default function AssetDetail({
 
           {/* Slide-over panel */}
           <Dialog.Content
+            aria-describedby="asset-detail-description"
             className="fixed top-0 right-0 h-full w-full max-w-lg
                        bg-midnight-900 border-l border-midnight-700 shadow-xl z-50
                        flex flex-col focus:outline-none
@@ -358,6 +577,9 @@ export default function AssetDetail({
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
+              <p id="asset-detail-description" className="sr-only">
+                View and edit asset metadata including prompt, seed, evaluation, and regeneration options.
+              </p>
               {!asset ? (
                 <div className="text-center py-12 text-parchment-400">
                   No asset selected
@@ -367,7 +589,7 @@ export default function AssetDetail({
                   {/* Image Preview */}
                   <div className="space-y-3">
                     <div className="aspect-square bg-midnight-950 rounded-lg overflow-hidden flex items-center justify-center border border-midnight-700">
-                      {isGenerated && !imageError ? (
+                      {isGenerated && !imageError && previewSize ? (
                         <img
                           src={getImageUrl(previewSize)}
                           alt={assetId}
@@ -375,50 +597,51 @@ export default function AssetDetail({
                           className="max-w-full max-h-full object-contain"
                         />
                       ) : (
-                        <div className="text-center text-parchment-500">
+                        <div className="text-center text-parchment-500 px-4">
                           <ExclamationTriangleIcon className="w-12 h-12 mx-auto mb-2" />
-                          <p>{isGenerated ? 'Image not found' : 'Not yet generated'}</p>
+                          <p className="font-medium">
+                            {!isGenerated ? 'Not yet generated' : 'Image not found'}
+                          </p>
+                          {isGenerated && imageError && previewSize && (
+                            <p className="text-xs mt-2 text-parchment-600 break-all">
+                              Tried: {getImageUrl(previewSize)}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
 
-                    {/* Size switcher */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm text-parchment-400">Size:</span>
-                      {SIZE_OPTIONS.map((size) => (
-                        <button
-                          key={size}
-                          type="button"
-                          onClick={() => {
-                            setPreviewSize(size);
-                            setImageError(false);
-                          }}
-                          className={`
-                            px-3 py-1 text-sm rounded-lg transition-colors
-                            ${previewSize === size
-                              ? 'bg-accent-gold text-midnight-950'
-                              : 'bg-midnight-800 text-parchment-300 hover:bg-midnight-700'}
-                          `}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPreviewSize('original');
-                          setImageError(false);
-                        }}
-                        className={`
-                          px-3 py-1 text-sm rounded-lg transition-colors
-                          ${previewSize === 'original'
-                            ? 'bg-accent-gold text-midnight-950'
-                            : 'bg-midnight-800 text-parchment-300 hover:bg-midnight-700'}
-                        `}
-                      >
-                        Original
-                      </button>
-                    </div>
+                    {/* Size switcher - only show if multiple sizes available */}
+                    {sizeOptions.length > 1 && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm text-parchment-400">Size:</span>
+                        {sizeOptions.map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => {
+                              setPreviewSize(size);
+                              setImageError(false);
+                            }}
+                            className={`
+                              px-3 py-1 text-sm rounded-lg transition-colors
+                              ${previewSize === size
+                                ? 'bg-accent-gold text-midnight-950'
+                                : 'bg-midnight-800 text-parchment-300 hover:bg-midnight-700'}
+                            `}
+                          >
+                            {size}px
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Show asset info for single-size categories */}
+                    {sizeOptions.length === 1 && (
+                      <div className="text-sm text-parchment-500">
+                        Size: {sizeOptions[0]}px (original)
+                      </div>
+                    )}
                   </div>
 
                   {/* Status badges */}
@@ -438,10 +661,51 @@ export default function AssetDetail({
                     )}
                   </div>
 
+                  {/* Portrait Trait Summary (for portraits only) */}
+                  {category === 'portraits' && asset?.promptComponents && (
+                    <div className="p-3 bg-midnight-800/50 border border-midnight-700 rounded-lg">
+                      <h4 className="text-xs font-medium text-parchment-500 mb-2 uppercase tracking-wide">
+                        Trait Components
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {asset.promptComponents.race?.key && (
+                          <span className="text-xs px-2 py-0.5 bg-accent-gold/20 text-accent-gold rounded">
+                            {asset.promptComponents.race.key}
+                          </span>
+                        )}
+                        {asset.promptComponents.gender?.key && (
+                          <span className="text-xs px-2 py-0.5 bg-accent-sapphire/20 text-accent-sapphire rounded">
+                            {asset.promptComponents.gender.key}
+                          </span>
+                        )}
+                        {asset.promptComponents.class?.key && (
+                          <span className="text-xs px-2 py-0.5 bg-accent-emerald/20 text-accent-emerald rounded">
+                            {asset.promptComponents.class.key}
+                            {asset.promptComponents.class.isAdvanced && ' ★'}
+                          </span>
+                        )}
+                        {/* Enemy traits */}
+                        {asset.promptComponents.archetype?.key && (
+                          <span className="text-xs px-2 py-0.5 bg-accent-ruby/20 text-accent-ruby rounded">
+                            {asset.promptComponents.archetype.key}
+                          </span>
+                        )}
+                        {asset.promptComponents.region?.key && (
+                          <span className="text-xs px-2 py-0.5 bg-accent-emerald/20 text-accent-emerald rounded">
+                            {asset.promptComponents.region.key}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-parchment-600 mt-2">
+                        These traits are combined to construct the base prompt.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Prompt */}
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-parchment-300">
-                      Prompt
+                      {category === 'portraits' ? 'Custom Prompt Override' : 'Prompt'}
                     </label>
                     <textarea
                       value={formData.prompt}
@@ -450,7 +714,11 @@ export default function AssetDetail({
                       className="w-full px-3 py-2 bg-midnight-800 border border-midnight-700 rounded-lg
                                  text-parchment-100 placeholder-parchment-500 resize-none
                                  focus:outline-none focus:border-accent-gold focus:ring-1 focus:ring-accent-gold/30"
-                      placeholder="Enter generation prompt..."
+                      placeholder={
+                        category === 'portraits'
+                          ? 'Optional: Override auto-generated prompt from traits...'
+                          : 'Enter generation prompt...'
+                      }
                     />
                     <button
                       type="button"
@@ -592,9 +860,10 @@ export default function AssetDetail({
       <FullPromptModal
         open={showFullPrompt}
         onClose={() => setShowFullPrompt(false)}
-        basePrompt={fullPromptData.basePrompt}
-        fullPrompt={fullPromptData.prompt}
+        promptData={fullPromptData.data}
         loading={fullPromptData.loading}
+        error={fullPromptData.error}
+        category={category}
       />
     </>
   );
