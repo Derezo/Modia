@@ -301,7 +301,7 @@ export class BattleOutroSequence {
         this.fireworkWaves.finale = true;
         this.fireworks.launchWave(6);
       }
-    } else if (this.phase === 'awaiting_confirmation' || !this.showContinueButton) {
+    } else if (this.phase !== 'fade_out' && this.phase !== 'complete') {
       // After finale, show continue button and wait for user confirmation
       for (let i = 0; i < this.itemProgress.length; i++) {
         this.itemProgress[i] = 1;

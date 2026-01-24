@@ -174,7 +174,7 @@ check_port
 step "Verifying environment..."
 
 if [ ! -f "$SHARED_DIR/.env" ]; then
-  error "No .env file found at $SHARED_DIR/.env. Run setup-mittonvillage.sh first."
+  error "No .env file found at $SHARED_DIR/.env. This should have been created automatically by deploy-production.sh. Try re-running deploy-production.sh or manually run setup-mittonvillage.sh on the server."
 fi
 
 if [ ! -d "$RELEASES_DIR" ]; then
@@ -294,8 +294,8 @@ pm2 save
 step "Verifying deployment health..."
 
 HEALTH_URL="http://localhost:$API_PORT/api/health"
-MAX_RETRIES=5
-RETRY_DELAY=3
+MAX_RETRIES=10
+RETRY_DELAY=5
 
 for i in $(seq 1 $MAX_RETRIES); do
   sleep $RETRY_DELAY

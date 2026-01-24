@@ -7,6 +7,12 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import * as clanService from '../services/clanService.js';
+import {
+  clanCreateLimiter,
+  clanInviteLimiter,
+  clanMessageLimiter,
+  clanManageLimiter
+} from '../middleware/socialRateLimiter.js';
 
 const router = express.Router();
 
@@ -33,7 +39,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
  * POST /api/clans
  * Create a new clan
  */
-router.post('/', authenticate, asyncHandler(async (req, res) => {
+router.post('/', authenticate, clanCreateLimiter, asyncHandler(async (req, res) => {
   const { name, tag, description } = req.body;
 
   if (!name || name.trim().length < 3 || name.trim().length > 32) {
@@ -127,7 +133,7 @@ router.get('/:id', authenticate, asyncHandler(async (req, res) => {
  * POST /api/clans/:id/leave
  * Leave the current clan
  */
-router.post('/:id/leave', authenticate, asyncHandler(async (req, res) => {
+router.post('/:id/leave', authenticate, clanManageLimiter, asyncHandler(async (req, res) => {
   const clanId = parseInt(req.params.id, 10);
 
   if (isNaN(clanId)) {
@@ -156,7 +162,7 @@ router.post('/:id/leave', authenticate, asyncHandler(async (req, res) => {
  * DELETE /api/clans/:id
  * Disband a clan (leader only)
  */
-router.delete('/:id', authenticate, asyncHandler(async (req, res) => {
+router.delete('/:id', authenticate, clanManageLimiter, asyncHandler(async (req, res) => {
   const clanId = parseInt(req.params.id, 10);
 
   if (isNaN(clanId)) {
@@ -185,7 +191,7 @@ router.delete('/:id', authenticate, asyncHandler(async (req, res) => {
  * POST /api/clans/:id/invite/:username
  * Invite a player to the clan
  */
-router.post('/:id/invite/:username', authenticate, asyncHandler(async (req, res) => {
+router.post('/:id/invite/:username', authenticate, clanInviteLimiter, asyncHandler(async (req, res) => {
   const clanId = parseInt(req.params.id, 10);
   const { username } = req.params;
 
@@ -220,7 +226,7 @@ router.post('/:id/invite/:username', authenticate, asyncHandler(async (req, res)
  * POST /api/clans/invite/:inviteId/accept
  * Accept a clan invite
  */
-router.post('/invite/:inviteId/accept', authenticate, asyncHandler(async (req, res) => {
+router.post('/invite/:inviteId/accept', authenticate, clanManageLimiter, asyncHandler(async (req, res) => {
   const inviteId = parseInt(req.params.inviteId, 10);
 
   if (isNaN(inviteId)) {
@@ -250,7 +256,7 @@ router.post('/invite/:inviteId/accept', authenticate, asyncHandler(async (req, r
  * POST /api/clans/invite/:inviteId/decline
  * Decline a clan invite
  */
-router.post('/invite/:inviteId/decline', authenticate, asyncHandler(async (req, res) => {
+router.post('/invite/:inviteId/decline', authenticate, clanManageLimiter, asyncHandler(async (req, res) => {
   const inviteId = parseInt(req.params.inviteId, 10);
 
   if (isNaN(inviteId)) {
@@ -314,7 +320,7 @@ router.get('/:id/messages', authenticate, asyncHandler(async (req, res) => {
  * POST /api/clans/:id/messages
  * Send a clan chat message
  */
-router.post('/:id/messages', authenticate, asyncHandler(async (req, res) => {
+router.post('/:id/messages', authenticate, clanMessageLimiter, asyncHandler(async (req, res) => {
   const clanId = parseInt(req.params.id, 10);
   const { message } = req.body;
 

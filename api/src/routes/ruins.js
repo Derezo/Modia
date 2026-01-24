@@ -11,6 +11,7 @@ import { pool } from '../config/database.js';
 import { SeededRandom } from '../../../shared/constants.js';
 import { MAX_GOLD } from '../config/constants.js';
 import * as dailyQuestService from '../services/dailyQuestService.js';
+import { ruinsSolveLimiter } from '../middleware/economyRateLimiter.js';
 
 const router = Router();
 
@@ -188,7 +189,7 @@ router.get('/:nodeId/puzzle', authenticate, async (req, res) => {
  * POST /ruins/:nodeId/solve
  * Submit puzzle solution and claim rewards
  */
-router.post('/:nodeId/solve', authenticate, async (req, res) => {
+router.post('/:nodeId/solve', authenticate, ruinsSolveLimiter, async (req, res) => {
   const { nodeId } = req.params;
   const { moveCount } = req.body;
   const userId = req.user.userId;

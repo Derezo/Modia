@@ -7,6 +7,11 @@ import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import * as friendService from '../services/friendService.js';
+import {
+  friendRequestLimiter,
+  friendActionLimiter,
+  blockUserLimiter
+} from '../middleware/socialRateLimiter.js';
 
 const router = express.Router();
 
@@ -53,7 +58,7 @@ router.get('/blocked', authenticate, asyncHandler(async (req, res) => {
  * POST /api/friends/request/:username
  * Send a friend request to a user by username
  */
-router.post('/request/:username', authenticate, asyncHandler(async (req, res) => {
+router.post('/request/:username', authenticate, friendRequestLimiter, asyncHandler(async (req, res) => {
   const { username } = req.params;
 
   if (!username || username.trim().length === 0) {
@@ -84,7 +89,7 @@ router.post('/request/:username', authenticate, asyncHandler(async (req, res) =>
  * POST /api/friends/accept/:requestId
  * Accept a pending friend request
  */
-router.post('/accept/:requestId', authenticate, asyncHandler(async (req, res) => {
+router.post('/accept/:requestId', authenticate, friendActionLimiter, asyncHandler(async (req, res) => {
   const requestId = parseInt(req.params.requestId, 10);
 
   if (isNaN(requestId)) {
@@ -117,7 +122,7 @@ router.post('/accept/:requestId', authenticate, asyncHandler(async (req, res) =>
  * POST /api/friends/decline/:requestId
  * Decline a pending friend request
  */
-router.post('/decline/:requestId', authenticate, asyncHandler(async (req, res) => {
+router.post('/decline/:requestId', authenticate, friendActionLimiter, asyncHandler(async (req, res) => {
   const requestId = parseInt(req.params.requestId, 10);
 
   if (isNaN(requestId)) {
@@ -143,7 +148,7 @@ router.post('/decline/:requestId', authenticate, asyncHandler(async (req, res) =
  * DELETE /api/friends/:friendId
  * Remove a friend (unfriend)
  */
-router.delete('/:friendId', authenticate, asyncHandler(async (req, res) => {
+router.delete('/:friendId', authenticate, friendActionLimiter, asyncHandler(async (req, res) => {
   const friendId = parseInt(req.params.friendId, 10);
 
   if (isNaN(friendId)) {
@@ -169,7 +174,7 @@ router.delete('/:friendId', authenticate, asyncHandler(async (req, res) => {
  * POST /api/friends/:friendId/block
  * Block a user
  */
-router.post('/:friendId/block', authenticate, asyncHandler(async (req, res) => {
+router.post('/:friendId/block', authenticate, blockUserLimiter, asyncHandler(async (req, res) => {
   const blockedId = parseInt(req.params.friendId, 10);
 
   if (isNaN(blockedId)) {
@@ -196,7 +201,7 @@ router.post('/:friendId/block', authenticate, asyncHandler(async (req, res) => {
  * DELETE /api/friends/:friendId/block
  * Unblock a user
  */
-router.delete('/:friendId/block', authenticate, asyncHandler(async (req, res) => {
+router.delete('/:friendId/block', authenticate, blockUserLimiter, asyncHandler(async (req, res) => {
   const blockedId = parseInt(req.params.friendId, 10);
 
   if (isNaN(blockedId)) {

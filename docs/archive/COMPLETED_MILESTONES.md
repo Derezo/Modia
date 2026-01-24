@@ -10,6 +10,7 @@ This document archives all completed features, resolved issues, and historical d
 
 | Version | Date | Major Accomplishments |
 |---------|------|----------------------|
+| 9.10 | Jan 2026 | Security & Testing Infrastructure - Redis-backed rate limiting, 70+ endpoint protection, Artillery load testing, E2E expansion (character creation, battle flow, error handling), enhanced health checks |
 | 9.9 | Jan 2026 | Documentation Audit & Consolidation - Formula updates (level 2.8, skill polynomial costs), implementation status marking, roadmap verification, ~78% documentation alignment |
 | 9.8 | Jan 2026 | Battle Map Visual Overhaul - 64 isometric terrain sprites, elevation rendering, movement sync fix (flat modifiers), removed decorative obstacles and cover system |
 | 9.7 | Jan 2026 | Elevation-Aware Tilemap Rendering - Visual elevation in battle maps, coordinate transformation, 3D pathfinding sync, archetype elevation profiles |
@@ -49,6 +50,155 @@ This document archives all completed features, resolved issues, and historical d
 | 8.7 | Jan 2026 | Security Hardening - Trust proxy, per-user rate limiting, VPS deployment scripts |
 | 8.8 | Jan 2026 | FFT-Style Formula Overhaul - CT turn system, defense diminishing returns, LCK scaling |
 | 10.0 | Jan 2026 | Stacking Tile System & Extended Elevation - Extended elevation -3 to +8, stacking tile renderer, occlusion transparency, AI tile metadata reorganization |
+
+---
+
+## 9.10 - Security & Testing Infrastructure (Jan 2026)
+
+Major infrastructure improvements addressing critical security gaps and expanding test coverage.
+
+### Phase 1: Security Hardening
+
+**Debug Endpoint Gating:**
+- `api/src/routes/debug.js` - Debug endpoints now blocked in production regardless of DEBUG env var
+- Added rate limiter as backup protection (5/min)
+
+**Comprehensive Rate Limiting (70+ endpoints protected):**
+
+| Limiter File | Endpoints Protected |
+|--------------|---------------------|
+| `economyRateLimiter.js` | Chest claims (10/min), stamina restore (5/min), shrines (5/min), relics (5/min), ruins solve (10/min), shop buy/sell (30/min), fast travel (10/min), discovery (10/min), fishing (30/min) |
+| `characterRateLimiter.js` | Character create (3/15min), delete (2/15min), update (10/min), party manage (30/min) |
+| `socialRateLimiter.js` | Friend requests (20/min), friend actions (30/min), block user (10/min), clan create (2/15min), clan invites (20/min), clan messages (30/min), clan manage (20/min) |
+
+### Phase 2: Redis Integration
+
+**Redis Configuration (`api/src/config/redis.js`):**
+- Singleton client with reconnection logic
+- `getRedisClient()`, `isRedisConnected()`, `isRedisConfigured()`
+- `pingRedis()` for health checks
+- Graceful fallback to in-memory when Redis unavailable
+
+**Rate Limiter Factory Updates:**
+- Added `rate-limit-redis` dependency
+- `initializeRateLimiterStore()` - Initializes Redis store
+- `isUsingRedisStore()` - Reports current store type
+- Graceful fallback to memory store if Redis unavailable
+
+**WebSocket Rate Limiting:**
+- Redis sorted sets for sliding window algorithm
+- `checkRedisRateLimit()` using ZADD/ZCOUNT operations
+- Async `checkRateLimit()` with Redis fallback
+
+### Phase 3: E2E Test Expansion
+
+**Shared Test Helpers (`e2e/helpers/index.js`):**
+- `TEST_USER` constant for consistent test credentials
+- `login()`, `register()` - Authentication helpers
+- `selectCharacter()`, `navigateToWorldMap()` - Navigation helpers
+- `startBattle()`, `waitForBattleLoaded()`, `clickBattleAction()` - Battle helpers
+- `debugWinBattle()` - Debug endpoint for quick battle completion
+
+**New E2E Test Files:**
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `character-creation.spec.js` | 8 | Race selection, class selection, name validation, creation success |
+| `battle-complete.spec.js` | 13 | Enter battle, turn order, actions, rewards, state persistence |
+| `error-handling.spec.js` | 11 | Auth errors, session handling, network errors, rate limiting, input validation |
+
+### Phase 4: Load Testing Infrastructure
+
+**Artillery.io Configuration (`load-tests/config.yml`):**
+- 4 phases: warm-up (30s), ramp-up to 25 users (60s), sustained (120s), cool-down (30s)
+- HTTP pool: 50 connections, 10s timeout
+- Success metrics: p95 < 200ms, error rate < 1%
+
+**Gameplay Scenarios (`load-tests/scenarios/gameplay.yml`):**
+
+| Scenario | Weight | Flow |
+|----------|--------|------|
+| Shop interaction | 2 | Login → shop inventory → sell inventory |
+| Inventory management | 3 | Login → full inventory → equipment |
+| Social features | 2 | Login → friends list → requests → search |
+| Quest and daily tasks | 2 | Login → active quests → daily quests |
+| Leaderboard and rankings | 1 | Login → leaderboard categories → specific board |
+
+**npm Scripts Added:**
+```bash
+npm run test:load           # Full load test
+npm run test:load:quick     # Quick 10 users × 20 requests
+npm run test:load:report    # Generate HTML report
+npm run test:load:gameplay  # Gameplay scenarios only
+```
+
+### Phase 5: Enhanced Health Checks
+
+**Health Endpoints (`api/src/routes/health.js`):**
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/health` | Basic health for load balancers |
+| `GET /api/health/ready` | Readiness with DB + Redis latency |
+| `GET /api/health/live` | Liveness for Kubernetes probes |
+| `GET /api/health/metrics` | Full metrics dashboard |
+
+**Metrics Response Structure:**
+```json
+{
+  "status": "healthy|degraded|unhealthy",
+  "requests": { "total": 1000, "errors": 5, "errorRate": "0.5%" },
+  "memory": { "heapUsedMB": 150, "heapTotalMB": 512, "rssMB": 200 },
+  "database": { "status": "connected", "latency": 5, "pool": {...} },
+  "redis": { "configured": true, "connected": true, "latency": 2 },
+  "rateLimiter": { "store": "redis|memory", "stats": {...} },
+  "websocket": { "connections": 12, "rooms": 5 }
+}
+```
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `api/src/config/redis.js` | Redis client singleton |
+| `api/src/middleware/economyRateLimiter.js` | Economy endpoint protection |
+| `api/src/middleware/characterRateLimiter.js` | Character endpoint protection |
+| `api/src/middleware/socialRateLimiter.js` | Social endpoint protection |
+| `e2e/helpers/index.js` | Shared E2E test utilities |
+| `e2e/character-creation.spec.js` | Character creation E2E tests |
+| `e2e/battle-complete.spec.js` | Battle flow E2E tests |
+| `e2e/error-handling.spec.js` | Error handling E2E tests |
+| `load-tests/config.yml` | Artillery configuration |
+| `load-tests/scenarios/gameplay.yml` | Gameplay load test scenarios |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `api/src/routes/debug.js` | Production gating, rate limiter |
+| `api/src/routes/world.js` | Economy rate limiters applied |
+| `api/src/routes/relics.js` | Relic claim rate limiter |
+| `api/src/routes/ruins.js` | Ruins solve rate limiter |
+| `api/src/routes/shop.js` | Buy/sell rate limiters |
+| `api/src/routes/characters.js` | Character rate limiters |
+| `api/src/routes/friends.js` | Friend action rate limiters |
+| `api/src/routes/clans.js` | Clan operation rate limiters |
+| `api/src/routes/health.js` | Enhanced metrics and Redis checks |
+| `api/src/middleware/rateLimiterFactory.js` | Redis store support |
+| `api/src/websocket/index.js` | Redis-backed rate limiting |
+| `api/package.json` | redis, rate-limit-redis dependencies |
+| `package.json` | Artillery dependency, load test scripts |
+| `.env.example` | REDIS_URL configuration |
+
+### Dependencies Added
+
+```json
+{
+  "redis": "^4.x",
+  "rate-limit-redis": "^4.x",
+  "artillery": "^2.0.0"
+}
+```
 
 ---
 

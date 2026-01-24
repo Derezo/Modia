@@ -417,8 +417,11 @@ async function main() {
 
     console.log(`  - ${tile.id}`);
     console.log(`    Biome: ${tile._biome}`);
+    if (tile._biome === 'base') {
+      console.log(`    Note: Base biome generates via 'default' then moves to 'base'`);
+    }
     console.log(`    Variants: ${tile.variants || 1}`);
-    console.log(`    Output: ${getOutputPath(tile, tile._biome)}`);
+    console.log(`    Final path: ${getOutputPath(tile, tile._biome)}`);
     if (options.dryRun) {
       console.log(`    Prompt: ${prompt}`);
     }
@@ -490,6 +493,9 @@ async function main() {
         // For "base" biome tiles, move from default/ to base/ directory
         // (Python script doesn't respect --output-dir, uses --biome for path)
         if (tile._biome === 'base') {
+          if (options.verbose) {
+            console.log(`    (Note: Python OUTPUT above is intermediate; file will be moved to base/)`);
+          }
           const numVariants = tile.variants || 1;
           for (let v = 0; v < numVariants; v++) {
             const filename = numVariants > 1 ? `${tile.id}_${v}.png` : `${tile.id}.png`;
@@ -499,7 +505,8 @@ async function main() {
               ensureDirectoryExists(path.join(OUTPUT_DIR, 'base'));
               fs.renameSync(srcPath, destPath);
               if (options.verbose) {
-                log(`Moved ${filename} from default/ to base/`, 'debug');
+                console.log(`    MOVED: ${srcPath}`);
+                console.log(`    FINAL PATH: ${destPath}`);
               }
             }
           }

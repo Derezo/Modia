@@ -15,7 +15,9 @@
       "levels": 1,
       "prompt": "isometric ramp tile with gradual incline toward north edge, grassy earth surface with natural stone edges, 30 degree projection, white background",
       "seed": 10101,
-      "outputPath": "base/slopes"
+      "outputPath": "base/slopes",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:22:22.903Z"
     },
     {
       "key": "slope_base_south_1",
@@ -24,7 +26,9 @@
       "levels": 1,
       "prompt": "isometric ramp tile with gradual incline toward south edge, grassy earth surface with natural stone edges, 30 degree projection, white background",
       "seed": 10111,
-      "outputPath": "base/slopes"
+      "outputPath": "base/slopes",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:23:10.626Z"
     },
     {
       "key": "slope_base_east_1",
@@ -33,7 +37,9 @@
       "levels": 1,
       "prompt": "isometric ramp tile with gradual incline toward east edge, grassy earth surface with natural stone edges, 30 degree projection, white background",
       "seed": 10121,
-      "outputPath": "base/slopes"
+      "outputPath": "base/slopes",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:23:57.262Z"
     },
     {
       "key": "slope_base_west_1",
@@ -42,7 +48,9 @@
       "levels": 1,
       "prompt": "isometric ramp tile with gradual incline toward west edge, grassy earth surface with natural stone edges, 30 degree projection, white background",
       "seed": 10131,
-      "outputPath": "base/slopes"
+      "outputPath": "base/slopes",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:24:44.845Z"
     },
     {
       "key": "stairs_base_north_1",
@@ -51,7 +59,9 @@
       "levels": 1,
       "prompt": "isometric stairs tile with carved stone steps ascending northward, 2-3 visible steps, weathered grey stone texture, 30 degree projection, white background",
       "seed": 10141,
-      "outputPath": "base/slopes"
+      "outputPath": "base/slopes",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:25:32.444Z"
     },
     {
       "key": "stairs_base_south_1",
@@ -60,7 +70,9 @@
       "levels": 1,
       "prompt": "isometric stairs tile with carved stone steps ascending southward, 2-3 visible steps, weathered grey stone texture, 30 degree projection, white background",
       "seed": 10151,
-      "outputPath": "base/slopes"
+      "outputPath": "base/slopes",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:26:19.999Z"
     },
     {
       "key": "stairs_base_east_1",
@@ -69,7 +81,9 @@
       "levels": 1,
       "prompt": "isometric stairs tile with carved stone steps ascending eastward, 2-3 visible steps, weathered grey stone texture, 30 degree projection, white background",
       "seed": 10161,
-      "outputPath": "base/slopes"
+      "outputPath": "base/slopes",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:27:06.561Z"
     },
     {
       "key": "stairs_base_west_1",
@@ -78,7 +92,9 @@
       "levels": 1,
       "prompt": "isometric stairs tile with carved stone steps ascending westward, 2-3 visible steps, weathered grey stone texture, 30 degree projection, white background",
       "seed": 10171,
-      "outputPath": "base/slopes"
+      "outputPath": "base/slopes",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:27:54.103Z"
     }
   ]
 }

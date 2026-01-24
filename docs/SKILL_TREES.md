@@ -2,7 +2,7 @@
 
 | Document | Version | Last Updated |
 |----------|---------|--------------|
-| Skill Trees Specification | 1.0 | 2026-01-06 |
+| Skill Trees Specification | 2.0 | 2026-01-22 |
 
 ## Table of Contents
 
@@ -35,13 +35,17 @@ Skills are learned by spending XP earned from battles. Each guild has a skill tr
 
 ### 1.2 Skill Tiers
 
-| Tier | Guild Level Req | XP Cost Multiplier | Power Level |
-|------|-----------------|-------------------|-------------|
-| 1 | 1 | 1x | Basic |
-| 2 | 10 | 2x | Improved |
-| 3 | 25 | 4x | Advanced |
-| 4 | 50 | 8x | Mastery |
-| 5 | 75 | 16x | Ultimate |
+Tiers indicate skill power level and are used for UI organization. Skill costs are determined by the `baseXpCost` field, not tier multipliers.
+
+| Tier | Power Level | Description |
+|------|-------------|-------------|
+| 1 | Basic | Starter skills, no prerequisites |
+| 2 | Improved | Early progression, basic prereqs |
+| 3 | Advanced | Mid-game power spikes |
+| 4 | Mastery | Late-game specialization |
+| 5 | Ultimate | Powerful capstone abilities |
+
+*Note: Guild-level requirements are not enforced. Skill prerequisites (requiring other skills at specific levels) are the primary gating mechanism.*
 
 ---
 
@@ -49,10 +53,10 @@ Skills are learned by spending XP earned from battles. Each guild has a skill tr
 
 ### 2.1 Learning Skills
 
-- Skills cost XP to learn (base cost varies by tier)
+- Skills cost XP to learn (base cost defined per skill)
 - Each skill can be leveled 1-100
 - Higher skill levels increase effectiveness
-- Skill cost formula: `base_cost × tier_multiplier × skill_level`
+- Skill cost formula: `baseCost × (level + 1)^1.5`
 
 ### 2.2 Skill Slots
 
@@ -69,6 +73,17 @@ Most skills scale with:
 
 ```
 damage = base_damage × (1 + skill_level × 0.02) × stat_modifier
+```
+
+**XP Cost Scaling:**
+```
+costForLevel = baseCost × (level + 1)^1.5
+
+Example (100 base cost):
+- Level 1:  283 XP
+- Level 10: 3,648 XP
+- Level 50: 36,418 XP
+- Level 100: 101,453 XP
 ```
 
 ---
@@ -503,7 +518,16 @@ Enhanced bomb abilities.
 
 ## 12. Post-MVP Guilds
 
-### 12.1 Planned Advanced Guilds
+### 12.1 Guild Advancement
+
+To advance from a base guild to an advanced guild, characters must:
+- Reach **Character Level 10** or higher
+- Complete the advancement quest at the guild node
+- Visit the appropriate guild node on the world map
+
+See [CHARACTER_PROGRESSION.md](CHARACTER_PROGRESSION.md) for full advancement details.
+
+### 12.2 Planned Advanced Guilds
 
 | Base Guild | Advanced Options (Post-MVP) |
 |------------|----------------------------|
@@ -512,7 +536,7 @@ Enhanced bomb abilities.
 | Monk | Martial Artist, Brawler, Ascetic |
 | Chemist | Medic, Plague Doctor, Artificer |
 
-### 12.2 Total Guild Count
+### 12.3 Total Guild Count
 
 - **MVP**: 8 guilds (4 base + 4 advanced)
 - **Post-MVP**: +12 guilds
@@ -536,3 +560,4 @@ Enhanced bomb abilities.
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | 2026-01-06 | Initial document with 8 MVP guilds |
+| 2.0 | 2026-01-22 | Updated skill cost formula to polynomial scaling; simplified tier system; added advancement requirements |

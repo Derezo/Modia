@@ -5,9 +5,25 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 1.0 |
+| Version | 1.1 |
 | Last Updated | January 2026 |
 | System Type | Battle Mode Definitions and Configuration |
+
+---
+
+## Implementation Status
+
+> **Important:** This document contains specifications for all planned battle modes. Many modes are not yet implemented.
+
+| Mode | Status | Notes |
+|------|--------|-------|
+| **PVE_SOLO** | **Implemented** | Full functionality in MVP |
+| **PVE_COOP** | Post-MVP | Requires party system enhancements |
+| **PVP_DUEL** | Partial | Coliseum queue exists, needs refinement |
+| **PVP_TEAM** | Post-MVP | Requires team matchmaking system |
+| **PVP_FFA** | Post-MVP | Complex spawn and elimination logic |
+
+*Specifications for unimplemented modes are retained for future development reference.*
 
 ---
 
@@ -97,7 +113,9 @@ Single player battles against AI-controlled enemies at world nodes.
 
 ---
 
-### 2.2 PVE_COOP (Future)
+### 2.2 PVE_COOP (Post-MVP - Not Implemented)
+
+> **Status:** This mode is planned for post-MVP development.
 
 Cooperative multiplayer battles where multiple players fight AI enemies together.
 
@@ -168,7 +186,9 @@ Cooperative multiplayer battles where multiple players fight AI enemies together
 
 ## 3. PvP Modes
 
-### 3.1 PVP_DUEL
+### 3.1 PVP_DUEL (Partial Implementation)
+
+> **Status:** Coliseum queue UI exists. Full battle flow needs refinement.
 
 One-on-one competitive battle between two players.
 
@@ -241,7 +261,9 @@ One-on-one competitive battle between two players.
 
 ---
 
-### 3.2 PVP_TEAM
+### 3.2 PVP_TEAM (Post-MVP - Not Implemented)
+
+> **Status:** This mode is planned for post-MVP development.
 
 Team-based competitive battles (2v2, 3v3, or 4v4).
 
@@ -318,7 +340,9 @@ Team-based competitive battles (2v2, 3v3, or 4v4).
 
 ---
 
-### 3.3 PVP_FFA (Free-for-All)
+### 3.3 PVP_FFA (Post-MVP - Not Implemented)
+
+> **Status:** This mode is planned for post-MVP development (Phase 3+).
 
 Every player for themselves in a multi-player battle royale style encounter.
 
@@ -964,3 +988,4 @@ Distributed around edges and corners based on player count.
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | Jan 2026 | - | Initial document: All battle mode configurations |
+| 1.1 | Jan 2026 | - | Added prominent implementation status section; marked unimplemented modes |

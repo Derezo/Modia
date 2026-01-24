@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| API Version | 2.0 |
+| API Version | 2.3 |
 | Base URL | `/api` |
 | Last Updated | January 2026 |
 
@@ -2697,3 +2697,4 @@ Chat message history retrieval (real-time via WebSocket).
 | 2.0 | Jan 2026 | - | Removed flee endpoint; added skill, guild, inventory, shop, marketplace endpoints; added battle and PvP WebSocket events |
 | 2.1 | Jan 2026 | - | Added battle rejoin endpoint (6.5); updated submit action to show async WebSocket delivery (6.3); added battle turn events (7.8) and battle connection events (7.9) |
 | 2.2 | Jan 2026 | - | Added sections 15-25: Fishing, Ruins, Relics, Friends, LFG, Notifications, Advancement Quest, Daily/Weekly Quests, Coliseum, Clans, Chat endpoints |
+| 2.3 | Jan 2026 | - | Documentation audit: Verified all 24 route files have corresponding API documentation sections |

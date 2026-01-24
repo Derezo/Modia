@@ -1,9 +1,15 @@
 import rateLimit from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
+import { getRedisClientForRateLimit, isRedisConfigured } from '../config/redis.js';
 
 // Environment detection
 const isTest = process.env.NODE_ENV === 'test';
 const isDev = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production' || (!isTest && !isDev);
+
+// Redis store singleton (initialized lazily)
+let redisStore = null;
+let redisStoreInitialized = false;
 
 // TEST_RATE_LIMITS=true enables rate limiting even in test mode
 // This allows dedicated rate limit tests to verify behavior
@@ -27,6 +33,55 @@ const limiterStats = new Map();
 
 // Store references to limiter instances for reset capability
 const limiterInstances = new Map();
+
+/**
+ * Initialize Redis store for rate limiting
+ * Falls back to in-memory store if Redis is unavailable
+ * @returns {Promise<import('rate-limit-redis').RedisStore|null>}
+ */
+async function getRedisStore() {
+  if (redisStoreInitialized) {
+    return redisStore;
+  }
+
+  redisStoreInitialized = true;
+
+  // Skip Redis in test mode unless explicitly enabled
+  if (isTest && !process.env.TEST_REDIS) {
+    return null;
+  }
+
+  // Check if Redis is configured
+  if (!isRedisConfigured()) {
+    return null;
+  }
+
+  try {
+    const redisClient = await getRedisClientForRateLimit();
+    if (!redisClient) {
+      return null;
+    }
+
+    redisStore = new RedisStore({
+      sendCommand: (...args) => redisClient.sendCommand(args),
+      prefix: 'rl:'  // Rate limit key prefix
+    });
+
+    console.log('[RateLimiter] Using Redis store');
+    return redisStore;
+  } catch (err) {
+    console.warn('[RateLimiter] Failed to initialize Redis store:', err.message);
+    console.warn('[RateLimiter] Falling back to in-memory store');
+    return null;
+  }
+}
+
+// Initialize Redis store asynchronously on module load
+// This allows the store to be ready when limiters are created
+let redisStorePromise = null;
+if (isRedisConfigured() && !isTest) {
+  redisStorePromise = getRedisStore();
+}
 
 /**
  * Get the max requests based on environment
@@ -73,7 +128,8 @@ export function createLimiter({ name, windowMs, maxRequests, message, useUserKey
     ? (req) => (req.user?.userId ? `user:${req.user.userId}` : req.ip)
     : (req) => req.ip;
 
-  const limiter = rateLimit({
+  // Build limiter config
+  const limiterConfig = {
     windowMs,
     max,
     keyGenerator,
@@ -89,7 +145,14 @@ export function createLimiter({ name, windowMs, maxRequests, message, useUserKey
       }
       res.status(options.statusCode).json(options.message);
     }
-  });
+  };
+
+  // Use Redis store if available (initialized synchronously from previous calls)
+  if (redisStore) {
+    limiterConfig.store = redisStore;
+  }
+
+  const limiter = rateLimit(limiterConfig);
 
   // Store the limiter instance for reset capability
   limiterInstances.set(name, limiter);
@@ -215,6 +278,28 @@ export async function resetAllRateLimiters() {
   }
 
   return true;
+}
+
+/**
+ * Initialize Redis store for rate limiting
+ * Call this during server startup to ensure Redis is ready
+ * @returns {Promise<boolean>} - True if Redis store was initialized
+ */
+export async function initializeRateLimiterStore() {
+  if (redisStorePromise) {
+    await redisStorePromise;
+  } else {
+    await getRedisStore();
+  }
+  return !!redisStore;
+}
+
+/**
+ * Check if rate limiting is using Redis
+ * @returns {boolean}
+ */
+export function isUsingRedisStore() {
+  return !!redisStore;
 }
 
 // Export environment detection for use in other modules

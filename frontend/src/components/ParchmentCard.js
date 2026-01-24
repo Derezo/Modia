@@ -488,7 +488,7 @@ export class ParchmentCard {
 
     // Portrait URL - enemies use their sprite_id, players use race_gender_class
     const portraitUrl = this.type === 'enemy'
-      ? `/assets/sprites/enemies/${enemySpriteId || charClass}.png`
+      ? `/assets/sprites/enemies/portraits/${enemySpriteId || charClass}.png`
       : `/assets/sprites/portraits/${race}_${gender}_${charClass}.png`;
 
     // Class colors for fallback

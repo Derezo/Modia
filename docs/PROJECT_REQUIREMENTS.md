@@ -188,7 +188,7 @@ Modia/
 - **Trigger**: Player manually invests XP from battle rewards
 - **Acceptance Criteria**:
   - [ ] XP accumulates in character's XP pool from battles
-  - [ ] Level formula: `XP Required for Level N = 100 × N^2.2`
+  - [ ] Level formula: `XP Required for Level N = 100 × N^2.8`
   - [ ] Maximum level: 100
   - [ ] Spending XP on skills/level unlocks increases total_xp_spent
   - [ ] Character level derived from total_xp_spent
@@ -634,18 +634,19 @@ Modia/
 
 Characters level up by spending accumulated XP on skills. Character level is derived from `total_xp_spent`.
 
-**Formula**: `XP Required for Level N = 100 × N^2.2`
+**Formula**: `XP Required for Level N = 100 × N^2.8`
 
 | Level | Total XP Spent | XP to Next Level |
 |-------|----------------|------------------|
-| 1 | 0 | 100 |
-| 2 | 100 | 359 |
-| 5 | 3,400 | 1,074 |
-| 10 | 15,849 | 2,470 |
-| 25 | 158,489 | 8,913 |
-| 50 | 794,328 | 22,387 |
-| 75 | 2,371,374 | 40,738 |
-| 100 | 3,981,072 | N/A (Max) |
+| 1 | 0 | 693 |
+| 5 | 9,052 | 3,048 |
+| 10 | 63,096 | 10,185 |
+| 25 | 820,008 | 47,715 |
+| 50 | 5,714,965 | 160,181 |
+| 75 | 17,777,247 | 326,108 |
+| 100 | 39,810,717 | N/A (Max) |
+
+*Note: The 2.8 exponent creates a steep late-game curve. See [CHARACTER_PROGRESSION.md](CHARACTER_PROGRESSION.md) for detailed thresholds.*
 
 *Note: XP is earned from battles and spent to unlock/level skills. The total spent determines character level.*
 

@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "category": "overlays",
+  "subcategory": "rarity",
+  "description": "Rarity aura overlays for layered item composition - additive glow effects",
+  "size": "128x128",
+  "blendMode": "lighter",
+  "overlays": [
+    {
+      "id": "rarity_uncommon",
+      "name": "Uncommon Aura",
+      "rarity": "uncommon",
+      "alpha": 0.5,
+      "prompt": "subtle green shimmer particle effect faint sparkles and light wisps around edges ethereal glow",
+      "seed": 24001,
+      "generated": false
+    },
+    {
+      "id": "rarity_rare",
+      "name": "Rare Aura",
+      "rarity": "rare",
+      "alpha": 0.65,
+      "prompt": "soft blue radial glow particle effect gentle energy wisps and floating particles magical shine",
+      "seed": 24002,
+      "generated": false
+    },
+    {
+      "id": "rarity_epic",
+      "name": "Epic Aura",
+      "rarity": "epic",
+      "alpha": 0.75,
+      "prompt": "bright purple radiance particle effect swirling energy and glowing particles intense magical",
+      "seed": 24003,
+      "generated": false
+    },
+    {
+      "id": "rarity_legendary",
+      "name": "Legendary Aura",
+      "rarity": "legendary",
+      "alpha": 0.85,
+      "prompt": "intense golden burst particle effect radiant rays and animated sparkles divine legendary power",
+      "seed": 24004,
+      "generated": false
+    }
+  ]
+}

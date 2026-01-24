@@ -912,6 +912,7 @@ export class AlgorithmPipeline {
   _findAlgorithmByClassPattern(name, options) {
     // Common name patterns to algorithm registry names
     const patternMap = {
+      // Core algorithms (direct mappings)
       perlinTerrain: 'perlinTerrain',
       perlinMacro: 'perlinTerrain',
       cellularRefine: 'cellularCaves',
@@ -927,7 +928,45 @@ export class AlgorithmPipeline {
       rockFormations: 'rockFormations',
       waterPools: 'waterPools',
       lavaPools: 'lavaPools',
-      denseForest: 'denseForest'
+      denseForest: 'denseForest',
+
+      // Terrain generation aliases
+      cliffWalls: 'perlinTerrain',       // Mountain pass cliff walls
+      swampTerrain: 'perlinTerrain',     // Swamp base terrain
+      lavaTerrain: 'perlinTerrain',      // Volcano base terrain
+      ruinBase: 'perlinTerrain',         // Ruined castle base
+
+      // Room aliases
+      centralClearing: 'arenaRoom',      // Forest clearing center
+      mainChamber: 'arenaRoom',          // Large central room
+      smallChambers: 'caveRooms',        // Smaller rooms
+      restAreas: 'caveRooms',            // Mountain pass rest areas
+      burialChambers: 'dungeonRooms',    // Crypt burial rooms
+      ruinedRooms: 'dungeonRooms',       // Ruined castle rooms
+      landingPads: 'caveRooms',          // Bridge landing platforms
+      stonePlatforms: 'caveRooms',       // Volcano stone platforms
+
+      // Path aliases
+      passPath: 'bezierPaths',           // Mountain pass main path
+      tunnelPaths: 'drunkardPaths',      // Cave tunnel paths
+      corridors: 'directCorridors',      // Dungeon corridors
+      cryptPaths: 'directCorridors',     // Crypt paths
+      dryPaths: 'drunkardPaths',         // Swamp dry paths
+      stonePaths: 'bezierPaths',         // Volcano stone paths
+      bridgePath: 'directCorridors',     // Bridge crossing path
+
+      // Cluster aliases
+      crystalPools: 'waterPools',        // Cave crystal pools
+      arenaCover: 'rockFormations',      // Arena cover objects
+      overgrowth: 'treeGroves',          // Ruined castle overgrowth
+      rubble: 'rockFormations',          // Ruin rubble debris
+
+      // Cellular aliases
+      cellularWalls: 'cellularCaves',    // Dungeon walls
+      cryptWalls: 'cellularCrypt',       // Crypt walls
+
+      // Water aliases
+      waterBase: 'waterPools'            // Bridge crossing water base
     };
 
     // Try direct pattern match

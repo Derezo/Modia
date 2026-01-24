@@ -8,11 +8,11 @@ export const MUSIC_MANIFEST = {
   // Core tracks (10)
   // -------------------------------------------------------------------------
   title_theme: {
-    path: '/assets/audio/music/core/title_theme.mp3',
+    path: '/assets/audio/music/core/title_theme_short.mp3',
     volume: 0.8,
-    loop: true,
-    fadeIn: 2000,
-    fadeOut: 2000,
+    loop: false,
+    fadeIn: 500,
+    fadeOut: 1000,
     category: 'core'
   },
   character_select: {

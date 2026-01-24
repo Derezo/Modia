@@ -9,7 +9,7 @@
       "name": "Footstep",
       "category": "interaction",
       "subcategory": "movement",
-      "prompt": "Single soft footstep on stone, medieval boot stepping, subtle walking sound, brief gravel crunch, quiet exploration step",
+      "prompt": "Fantasy single soft footstep with medieval boot on stone and subtle gravel crunch",
       "path": "/assets/audio/sfx/interactions/footstep.mp3",
       "duration": 0.3,
       "volume": 0.4,
@@ -21,264 +21,288 @@
       "name": "Equip Weapon",
       "category": "interaction",
       "subcategory": "equipment",
-      "prompt": "Fantasy weapon equip, sword drawing from sheath, metal sliding, readying weapon sound, equipment activated",
+      "prompt": "Fantasy weapon equip with sword drawing from sheath and satisfying metal readiness",
       "path": "/assets/audio/sfx/interactions/equip_weapon.mp3",
       "duration": 1.2,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:20.342Z"
     },
     {
       "id": "interaction_equip_armor",
       "name": "Equip Armor",
       "category": "interaction",
       "subcategory": "equipment",
-      "prompt": "Fantasy armor equip, metal plates fastening, leather straps securing, protective gear donning, armor clicking into place",
+      "prompt": "Fantasy armor equip with metal plates fastening and leather straps securing click",
       "path": "/assets/audio/sfx/interactions/equip_armor.mp3",
       "duration": 1.5,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:23.236Z"
     },
     {
       "id": "interaction_unequip",
       "name": "Unequip",
       "category": "interaction",
       "subcategory": "equipment",
-      "prompt": "Fantasy equipment removal, item putting away, gear unfastening, equipment removal sound, brief metallic shuffle",
+      "prompt": "Fantasy equipment removal with gear unfastening and brief metallic shuffle put-away",
       "path": "/assets/audio/sfx/interactions/unequip.mp3",
       "duration": 1,
       "volume": 0.7,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:26.029Z"
     },
     {
       "id": "interaction_item_pickup",
       "name": "Item Pickup",
       "category": "interaction",
       "subcategory": "inventory",
-      "prompt": "Fantasy item pickup, acquiring loot, collecting treasure, brief rewarding chime, satisfying collection sound",
+      "prompt": "Fantasy item pickup with acquiring treasure and brief rewarding collection chime",
       "path": "/assets/audio/sfx/interactions/item_pickup.mp3",
       "duration": 0.8,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:29.208Z"
     },
     {
       "id": "interaction_item_drop",
       "name": "Item Drop",
       "category": "interaction",
       "subcategory": "inventory",
-      "prompt": "Fantasy item drop, object placed down, inventory removal, item landing softly, discarding sound",
+      "prompt": "Fantasy item drop with object placed down and soft landing inventory removal",
       "path": "/assets/audio/sfx/interactions/item_drop.mp3",
       "duration": 0.8,
       "volume": 0.7,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:31.791Z"
     },
     {
       "id": "interaction_item_use",
       "name": "Item Use",
       "category": "interaction",
       "subcategory": "inventory",
-      "prompt": "Fantasy item use, potion drinking, consumable activated, brief magical effect, item consumed",
+      "prompt": "Fantasy item use with potion drinking gulps and brief magical consumable effect",
       "path": "/assets/audio/sfx/interactions/item_use.mp3",
       "duration": 1,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:34.338Z"
     },
     {
       "id": "interaction_gold_gain",
       "name": "Gold Gain",
       "category": "interaction",
       "subcategory": "currency",
-      "prompt": "Fantasy gold coins gained, money jingling, treasure acquired, rewarding coin sound, wealth increasing",
+      "prompt": "Fantasy gold coins gained with treasure jingling and rewarding wealth acquisition chime",
       "path": "/assets/audio/sfx/interactions/gold_gain.mp3",
       "duration": 1,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:37.018Z"
     },
     {
       "id": "interaction_gold_spend",
       "name": "Gold Spend",
       "category": "interaction",
       "subcategory": "currency",
-      "prompt": "Fantasy gold coins spent, money exchanging, coins counting, transaction complete, purchase sound",
+      "prompt": "Fantasy gold coins spent with money exchanging and transaction complete purchase sound",
       "path": "/assets/audio/sfx/interactions/gold_spend.mp3",
       "duration": 1,
       "volume": 0.7,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:39.603Z"
     },
     {
       "id": "interaction_quest_complete",
       "name": "Quest Complete",
       "category": "interaction",
       "subcategory": "progress",
-      "prompt": "Fantasy quest complete fanfare, achievement unlocked, mission accomplished, triumphant brief jingle, rewarding success sound",
+      "prompt": "Fantasy quest complete fanfare with triumphant achievement jingle and rewarding success",
       "path": "/assets/audio/sfx/interactions/quest_complete.mp3",
       "duration": 2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:42.257Z"
     },
     {
       "id": "interaction_quest_accept",
       "name": "Quest Accept",
       "category": "interaction",
       "subcategory": "progress",
-      "prompt": "Fantasy quest accepted, new mission sound, adventure beginning, brief hopeful chime, journey starting",
+      "prompt": "Fantasy quest accepted with new mission chime and hopeful adventure beginning",
       "path": "/assets/audio/sfx/interactions/quest_accept.mp3",
       "duration": 1.2,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:45.014Z"
     },
     {
       "id": "interaction_chest_open",
       "name": "Chest Open",
       "category": "interaction",
       "subcategory": "discovery",
-      "prompt": "Fantasy treasure chest opening, wooden lid creaking, lock clicking, mysterious container revealed, treasure found",
+      "prompt": "Fantasy treasure chest opening with wooden lid creak and lock clicking reveal",
       "path": "/assets/audio/sfx/interactions/chest_open.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:47.310Z"
     },
     {
       "id": "interaction_shrine_activate",
       "name": "Shrine Activate",
       "category": "interaction",
       "subcategory": "discovery",
-      "prompt": "Fantasy shrine activation, ancient power awakening, mystical energy surge, holy site blessing, divine light ascending",
+      "prompt": "Fantasy shrine activation with ancient power awakening and mystical blessing energy surge",
       "path": "/assets/audio/sfx/interactions/shrine_activate.mp3",
       "duration": 2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:50.143Z"
     },
     {
       "id": "interaction_discovery_found",
       "name": "Discovery Found",
       "category": "interaction",
       "subcategory": "discovery",
-      "prompt": "Fantasy discovery made, secret revealed, exploration reward, mysterious finding, intriguing discovery chime",
+      "prompt": "Fantasy discovery made with secret revealed and intriguing mysterious finding chime",
       "path": "/assets/audio/sfx/interactions/discovery_found.mp3",
       "duration": 1.5,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:53.482Z"
     },
     {
       "id": "interaction_travel_start",
       "name": "Travel Start",
       "category": "interaction",
       "subcategory": "travel",
-      "prompt": "Fantasy travel beginning, journey starting, footsteps departing, adventure commencing, brief departure sound",
+      "prompt": "Fantasy travel beginning with journey starting footsteps and brief adventure departure",
       "path": "/assets/audio/sfx/interactions/travel_start.mp3",
       "duration": 1.2,
       "volume": 0.7,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:56.206Z"
     },
     {
       "id": "interaction_travel_arrive",
       "name": "Travel Arrive",
       "category": "interaction",
       "subcategory": "travel",
-      "prompt": "Fantasy destination reached, journey complete, arrival sound, location discovered, welcoming chime",
+      "prompt": "Fantasy destination reached with journey complete arrival and welcoming location chime",
       "path": "/assets/audio/sfx/interactions/travel_arrive.mp3",
       "duration": 1.2,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:58.843Z"
     },
     {
       "id": "interaction_party_join",
       "name": "Party Join",
       "category": "interaction",
       "subcategory": "social",
-      "prompt": "Fantasy party joined, allies united, group forming, brief cooperative chime, fellowship sound",
+      "prompt": "Fantasy party joined with allies united and brief cooperative fellowship chime",
       "path": "/assets/audio/sfx/interactions/party_join.mp3",
       "duration": 1.2,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:15:01.365Z"
     },
     {
       "id": "interaction_party_leave",
       "name": "Party Leave",
       "category": "interaction",
       "subcategory": "social",
-      "prompt": "Fantasy party left, departure from group, temporary farewell, brief dissolving sound, party separation",
+      "prompt": "Fantasy party left with temporary farewell departure and brief dissolving separation",
       "path": "/assets/audio/sfx/interactions/party_leave.mp3",
       "duration": 1,
       "volume": 0.7,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:15:03.873Z"
     },
     {
       "id": "interaction_level_up",
       "name": "Level Up",
       "category": "interaction",
       "subcategory": "progress",
-      "prompt": "Fantasy level up fanfare, power increasing, character growth, triumphant ascending chime, rewarding progression sound",
+      "prompt": "Fantasy level up fanfare with triumphant ascending chime and rewarding power growth",
       "path": "/assets/audio/sfx/interactions/level_up.mp3",
       "duration": 2.5,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:15:07.000Z"
     },
     {
       "id": "interaction_fishing_cast",
       "name": "Fishing Cast",
       "category": "interaction",
       "subcategory": "activity",
-      "prompt": "Fantasy fishing rod cast, line flying through air, hook splashing in water, relaxing fishing sound",
+      "prompt": "Fantasy fishing rod cast with line flying through air and splashing water hook",
       "path": "/assets/audio/sfx/interactions/fishing_cast.mp3",
       "duration": 1.5,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:15:09.870Z"
     },
     {
       "id": "interaction_fishing_reel",
       "name": "Fishing Reel",
       "category": "interaction",
       "subcategory": "activity",
-      "prompt": "Fantasy fishing reel, line winding, fish struggling, exciting catch moment, reeling in prize",
+      "prompt": "Fantasy fishing reel with line winding tension and exciting struggling catch moment",
       "path": "/assets/audio/sfx/interactions/fishing_reel.mp3",
       "duration": 2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:15:15.829Z"
     },
     {
       "id": "interaction_fishing_big_one",
       "name": "Big One Event",
       "category": "interaction",
       "subcategory": "activity",
-      "prompt": "Fantasy big fish event, massive catch alert, exciting fishing moment, rare opportunity sound, urgent attention chime",
+      "prompt": "Fantasy big fish event with massive catch alert and urgent rare opportunity chime",
       "path": "/assets/audio/sfx/interactions/fishing_big_one.mp3",
       "duration": 1.5,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:15:18.501Z"
     },
     {
       "id": "interaction_puzzle_solve",
       "name": "Puzzle Solve",
       "category": "interaction",
       "subcategory": "activity",
-      "prompt": "Fantasy puzzle solved, pieces clicking into place, brain teaser complete, rewarding solution sound, mystery solved chime",
+      "prompt": "Fantasy puzzle solved with pieces clicking into place and rewarding solution chime",
       "path": "/assets/audio/sfx/interactions/puzzle_solve.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:15:21.153Z"
     },
     {
       "id": "interaction_match_found",
       "name": "Match Found",
       "category": "interaction",
       "subcategory": "matchmaking",
-      "prompt": "Fantasy matchmaking success, party found chime, group ready notification, exciting match alert, players connected",
+      "prompt": "Fantasy matchmaking success with party found notification and exciting players connected chime",
       "path": "/assets/audio/sfx/interactions/match_found.mp3",
-      "duration": 1.0,
+      "duration": 1,
       "volume": 0.7,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:15:23.916Z"
     },
     {
       "id": "interaction_gold_receive",
       "name": "Gold Receive",
       "category": "interaction",
       "subcategory": "currency",
-      "prompt": "Fantasy gold received, coins landing, treasure acquired, rewarding payment sound, currency gained notification",
+      "prompt": "Fantasy gold received with coins landing and rewarding payment currency notification",
       "path": "/assets/audio/sfx/interactions/gold_receive.mp3",
       "duration": 0.8,
       "volume": 0.6,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:15:28.725Z"
     }
   ]
 }

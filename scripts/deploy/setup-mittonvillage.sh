@@ -12,10 +12,11 @@
 # Usage: ./setup-mittonvillage.sh [options]
 #
 # Options:
-#   --skip-ssl        Skip SSL certificate setup
-#   --skip-db         Skip database setup
-#   --dry-run         Show what would happen without executing
-#   --help            Show this help message
+#   --skip-ssl          Skip SSL certificate setup
+#   --skip-db           Skip database setup
+#   --non-interactive   Run without prompts (auto-generates passwords, skips SSL)
+#   --dry-run           Show what would happen without executing
+#   --help              Show this help message
 #
 # Prerequisites:
 # - Ubuntu 24.04+ with nginx, PostgreSQL, PM2, and Node.js installed
@@ -46,6 +47,7 @@ DB_USER="modia"
 SKIP_SSL=false
 SKIP_DB=false
 DRY_RUN=false
+NON_INTERACTIVE=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -58,12 +60,16 @@ while [[ $# -gt 0 ]]; do
       SKIP_DB=true
       shift
       ;;
+    --non-interactive)
+      NON_INTERACTIVE=true
+      shift
+      ;;
     --dry-run)
       DRY_RUN=true
       shift
       ;;
     --help|-h)
-      head -30 "$0" | tail -26
+      head -31 "$0" | tail -27
       exit 0
       ;;
     *)
@@ -104,11 +110,12 @@ echo "=========================================="
 echo "  Modia Server Setup - mittonvillage.com"
 echo "=========================================="
 echo ""
-echo "Frontend: $DOMAIN_FRONTEND"
-echo "API:      $DOMAIN_API"
-echo "App Dir:  $APP_DIR"
-echo "Database: $DB_NAME"
-echo "Dry Run:  $DRY_RUN"
+echo "Frontend:        $DOMAIN_FRONTEND"
+echo "API:             $DOMAIN_API"
+echo "App Dir:         $APP_DIR"
+echo "Database:        $DB_NAME"
+echo "Dry Run:         $DRY_RUN"
+echo "Non-Interactive: $NON_INTERACTIVE"
 echo ""
 
 # ============================================
@@ -158,15 +165,21 @@ if [ "$SKIP_DB" = false ]; then
     # Check if user exists
     if sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1; then
       log "PostgreSQL user '$DB_USER' already exists"
-      # Prompt for existing password or generate new one
-      warn "User exists - you'll need to provide the existing password for .env"
-      read -p "Enter existing DB password (or press Enter to reset): " -s EXISTING_PASS
-      echo
-      if [ -n "$EXISTING_PASS" ]; then
-        DB_PASSWORD="$EXISTING_PASS"
-      else
+      if [ "$NON_INTERACTIVE" = true ]; then
+        # In non-interactive mode, generate new password and update
         sudo -u postgres psql -c "ALTER USER $DB_USER WITH PASSWORD '$DB_PASSWORD'"
         log "Password reset for user: $DB_USER"
+      else
+        # Interactive: ask for existing password
+        warn "User exists - you'll need to provide the existing password for .env"
+        read -p "Enter existing DB password (or press Enter to reset): " -s EXISTING_PASS
+        echo
+        if [ -n "$EXISTING_PASS" ]; then
+          DB_PASSWORD="$EXISTING_PASS"
+        else
+          sudo -u postgres psql -c "ALTER USER $DB_USER WITH PASSWORD '$DB_PASSWORD'"
+          log "Password reset for user: $DB_USER"
+        fi
       fi
     else
       sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD'"
@@ -206,19 +219,32 @@ if [ "$DRY_RUN" = true ]; then
   dry_run "Would create: $ENV_FILE"
   dry_run "JWT secrets would be generated"
 else
+  SHOULD_CREATE_ENV=false
+
   if [ -f "$ENV_FILE" ]; then
-    warn ".env file already exists at $ENV_FILE"
-    read -p "Overwrite? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      log "Keeping existing .env"
+    if [ "$NON_INTERACTIVE" = true ]; then
+      log "Keeping existing .env file (non-interactive mode)"
       JWT_SECRET="[EXISTING]"
       JWT_REFRESH_SECRET="[EXISTING]"
       DB_PASSWORD="[EXISTING]"
+    else
+      warn ".env file already exists at $ENV_FILE"
+      read -p "Overwrite? (y/N) " -n 1 -r
+      echo
+      if [[ $REPLY =~ ^[Yy]$ ]]; then
+        SHOULD_CREATE_ENV=true
+      else
+        log "Keeping existing .env"
+        JWT_SECRET="[EXISTING]"
+        JWT_REFRESH_SECRET="[EXISTING]"
+        DB_PASSWORD="[EXISTING]"
+      fi
     fi
+  else
+    SHOULD_CREATE_ENV=true
   fi
 
-  if [[ $REPLY =~ ^[Yy]$ ]] || [ ! -f "$ENV_FILE" ]; then
+  if [ "$SHOULD_CREATE_ENV" = true ]; then
     cat > "$ENV_FILE" << EOF
 # Modia Production Environment
 # Generated: $(date)
@@ -310,7 +336,11 @@ server {
     root <APP_DIR>/current/frontend/dist;
     index index.html;
 
+    # Hide nginx version
+    server_tokens off;
+
     # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
@@ -358,10 +388,10 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
 
-        # Long timeout for WebSocket connections
-        proxy_connect_timeout 7d;
-        proxy_send_timeout 7d;
-        proxy_read_timeout 7d;
+        # 1-hour timeout for WebSocket connections (consistent with API config)
+        proxy_connect_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_read_timeout 3600s;
     }
 
     # SPA fallback - serve index.html for all non-file routes
@@ -416,7 +446,11 @@ server {
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
+    # Hide nginx version
+    server_tokens off;
+
     # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
@@ -472,10 +506,10 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
 
-        # 24-hour timeout for persistent connections
-        proxy_connect_timeout 86400s;
-        proxy_send_timeout 86400s;
-        proxy_read_timeout 86400s;
+        # 1-hour timeout for WebSocket connections (reconnects if idle)
+        proxy_connect_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_read_timeout 3600s;
     }
 
     # General API endpoints
@@ -549,20 +583,33 @@ if [ "$SKIP_SSL" = false ]; then
       log "SSL certificates already exist"
     else
       warn "SSL certificates not found"
-      echo ""
-      echo "To obtain certificates, run:"
-      echo "  certbot --nginx -d $DOMAIN_FRONTEND -d $DOMAIN_API"
-      echo ""
-      echo "Make sure DNS records are configured first:"
-      echo "  $DOMAIN_FRONTEND -> [server IP]"
-      echo "  $DOMAIN_API -> [server IP]"
-      echo ""
-      read -p "Attempt to obtain certificates now? (y/N) " -n 1 -r
-      echo
-      if [[ $REPLY =~ ^[Yy]$ ]]; then
-        certbot --nginx -d "$DOMAIN_FRONTEND" -d "$DOMAIN_API" --non-interactive --agree-tos --email "admin@mittonvillage.com" || {
-          warn "Certbot failed - you may need to configure DNS first"
-        }
+
+      if [ "$NON_INTERACTIVE" = true ]; then
+        # In non-interactive mode, attempt certbot automatically
+        log "Attempting to obtain SSL certificates..."
+        if certbot --nginx -d "$DOMAIN_FRONTEND" -d "$DOMAIN_API" --non-interactive --agree-tos --email "admin@mittonvillage.com" 2>/dev/null; then
+          log "SSL certificates obtained successfully!"
+        else
+          warn "Certbot failed - DNS may not be configured yet"
+          warn "HTTPS will not work until you run:"
+          warn "  certbot --nginx -d $DOMAIN_FRONTEND -d $DOMAIN_API"
+        fi
+      else
+        echo ""
+        echo "To obtain certificates, run:"
+        echo "  certbot --nginx -d $DOMAIN_FRONTEND -d $DOMAIN_API"
+        echo ""
+        echo "Make sure DNS records are configured first:"
+        echo "  $DOMAIN_FRONTEND -> [server IP]"
+        echo "  $DOMAIN_API -> [server IP]"
+        echo ""
+        read -p "Attempt to obtain certificates now? (y/N) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+          certbot --nginx -d "$DOMAIN_FRONTEND" -d "$DOMAIN_API" --non-interactive --agree-tos --email "admin@mittonvillage.com" || {
+            warn "Certbot failed - you may need to configure DNS first"
+          }
+        fi
       fi
     fi
   fi

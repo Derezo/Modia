@@ -139,12 +139,39 @@ if [ ! -d "node_modules" ]; then
   error "node_modules not found. Run 'npm install' first"
 fi
 
-# Check API and frontend workspaces
-if [ ! -d "api/node_modules" ] || [ ! -d "frontend/node_modules" ]; then
-  error "Workspace node_modules not found. Run 'npm install' first"
+# Verify npm workspace installation (hoisted deps in root node_modules)
+# Note: npm workspaces hoist dependencies to root, so api/node_modules may not exist
+if [ ! -f "package-lock.json" ]; then
+  error "package-lock.json not found. Run 'npm install' first"
 fi
 
 log "Pre-flight checks passed"
+
+# ============================================
+# Step 1.5: Check/Run Server Setup
+# ============================================
+step "Checking server setup..."
+
+# Check if .env exists (indicates server is set up)
+SERVER_SETUP_NEEDED=$(ssh "${SERVER_USER}@${SERVER_HOST}" "[ -f '${SERVER_DEPLOY_DIR}/shared/.env' ] && echo 'no' || echo 'yes'" 2>/dev/null)
+
+if [ "$SERVER_SETUP_NEEDED" = "yes" ]; then
+  log "First-time deployment detected - running server setup..."
+
+  if [ "$DRY_RUN" = true ]; then
+    dry_run "Would upload and run setup-mittonvillage.sh --non-interactive"
+  else
+    # Upload setup script
+    rsync -avz "$PROJECT_ROOT/scripts/deploy/setup-mittonvillage.sh" "${SERVER_USER}@${SERVER_HOST}:/tmp/"
+
+    # Run setup in non-interactive mode (attempts SSL, continues if DNS not ready)
+    ssh "${SERVER_USER}@${SERVER_HOST}" "chmod +x /tmp/setup-mittonvillage.sh && /tmp/setup-mittonvillage.sh --non-interactive"
+
+    log "Server setup complete"
+  fi
+else
+  log "Server already configured"
+fi
 
 # ============================================
 # Step 2: Build frontend
@@ -186,6 +213,7 @@ INCLUDE_PATHS=(
   "package-lock.json"
   "ecosystem.config.js"
   "scripts/deploy/install-remote.sh"
+  "scripts/deploy/setup-mittonvillage.sh"
 )
 
 if [ "$DRY_RUN" = true ]; then
@@ -257,8 +285,8 @@ if [ "$DRY_RUN" = true ]; then
 else
   sleep 3
 
-  MAX_RETRIES=5
-  RETRY_DELAY=3
+  MAX_RETRIES=10
+  RETRY_DELAY=5
 
   for i in $(seq 1 $MAX_RETRIES); do
     HEALTH_RESPONSE=$(curl -sf "$HEALTH_URL" 2>/dev/null || echo "failed")

@@ -2607,15 +2607,40 @@ export class WorldMapScene extends Scene {
 
   getNodeColor(type) {
     const colors = {
+      // Settlements
       castle: '#8b4513',
       city: '#4a4a6a',
       village: '#2e7d32',
+      keep: '#6d4c41',
+      palace: '#c9a227',
+      // Battle terrain
       forest: '#1b5e20',
       cave: '#37474f',
       mountain: '#5d4037',
       bridge: '#795548',
+      // Activity nodes
+      fishing_spot: '#4682b4',
+      fishing: '#4682b4',
+      ruins: '#696969',
+      watchtower: '#a0522d',
+      farm: '#9acd32',
+      caravan: '#cd853f',
+      merchant_caravan: '#cd853f',
+      // Terminators
+      chest: '#daa520',
+      shrine: '#9370db',
+      discovery: '#20b2aa',
+      // Commerce
+      tavern: '#8b4513',
+      shop: '#daa520',
+      blacksmith: '#4a4a4a',
+      apothecary: '#228b22',
+      // Guilds
       guild: '#7b1fa2',
-      palace: '#c9a227'
+      guild_warrior: '#b22222',
+      guild_wizard: '#4169e1',
+      guild_monk: '#ffd700',
+      guild_chemist: '#32cd32'
     };
     return colors[type] || '#4a4a6a';
   }
@@ -2633,15 +2658,40 @@ export class WorldMapScene extends Scene {
     }
 
     const icons = {
+      // Settlements
       castle: '🏰',
       city: '🏛️',
       village: '🏘️',
+      keep: '🏯',
+      palace: '👑',
+      // Battle terrain
       forest: '🌲',
       cave: '🕳️',
       mountain: '⛰️',
       bridge: '🌉',
+      // Activity nodes
+      fishing_spot: '🎣',
+      fishing: '🎣',
+      ruins: '🏚️',
+      watchtower: '🗼',
+      farm: '🌾',
+      caravan: '🐫',
+      merchant_caravan: '🐫',
+      // Terminators
+      chest: '📦',
+      shrine: '⛩️',
+      discovery: '✨',
+      // Commerce
+      tavern: '🍺',
+      shop: '🏪',
+      blacksmith: '⚒️',
+      apothecary: '⚗️',
+      // Guilds
       guild: '⚔️',
-      palace: '👑'
+      guild_warrior: '⚔️',
+      guild_wizard: '🔮',
+      guild_monk: '☯️',
+      guild_chemist: '⚗️'
     };
     return icons[type] || '📍';
   }
