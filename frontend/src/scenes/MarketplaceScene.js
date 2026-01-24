@@ -89,10 +89,11 @@ export class MarketplaceScene extends Scene {
     // Initialize item panel for viewing unique item listings
     this.itemPanel = new MarketplaceItemPanel(this.game);
 
-    // Play marketplace music (uses castle/regional theme)
+    // Play marketplace music and ambient sounds
     if (this.game.musicContext) {
       this.game.musicContext.playExplorationMusic();
     }
+    this.game.audio?.playAmbient('shop_bustle');
 
     await this.loadInitialData();
   }
@@ -173,6 +174,9 @@ export class MarketplaceScene extends Scene {
   }
 
   exit() {
+    // Stop ambient sounds
+    this.game.audio?.stopAmbient();
+
     // Leave marketplace WebSocket room
     this.game.socket?.leaveMarketplace();
 

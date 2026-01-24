@@ -763,7 +763,7 @@ router.post('/travel', authenticate, travelLimiter, asyncHandler(async (req, res
 // GET /api/world/current - Get current node + available actions
 router.get('/current', authenticate, asyncHandler(async (req, res) => {
   const result = await query(
-    `SELECT wn.id, wn.node_type, wn.name, wn.features, wn.guild_class,
+    `SELECT wn.id, wn.node_type, wn.name, wn.x_coord, wn.y_coord, wn.features, wn.guild_class,
             wn.local_seed, wn.difficulty_tier,
             wn.region_id, wn.region_race, wn.ring_distance,
             wr.race as region_name, wr.dominant_terrain as region_terrain,

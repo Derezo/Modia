@@ -198,6 +198,11 @@ step "Extracting tarball..."
 
 tar -xzf "$TARBALL_PATH" -C "$RELEASE_DIR"
 
+# Fix permissions so nginx (www-data) can read static assets
+# Files: world-readable, Directories: world-executable
+find "$RELEASE_DIR/frontend" -type f -exec chmod o+r {} \;
+find "$RELEASE_DIR/frontend" -type d -exec chmod o+rx {} \;
+
 log "Extracted to: $RELEASE_DIR"
 
 # ============================================
