@@ -245,10 +245,11 @@ if [ "$DRY_RUN" = true ]; then
   dry_run "Would upload: $TARBALL_PATH -> ${SERVER_USER}@${SERVER_HOST}:/tmp/"
   dry_run "Would upload: install-remote.sh -> ${SERVER_USER}@${SERVER_HOST}:${SERVER_DEPLOY_DIR}/"
 else
-  # Upload tarball
-  rsync -avz --progress "$TARBALL_PATH" "${SERVER_USER}@${SERVER_HOST}:/tmp/"
+  # Upload tarball (no -z compression since .tar.gz is already compressed)
+  # Use faster SSH cipher for better throughput
+  rsync -av --progress -e "ssh -c aes128-gcm@openssh.com" "$TARBALL_PATH" "${SERVER_USER}@${SERVER_HOST}:/tmp/"
 
-  # Upload install script
+  # Upload install script (small file, compression doesn't matter)
   rsync -avz "$PROJECT_ROOT/scripts/deploy/install-remote.sh" "${SERVER_USER}@${SERVER_HOST}:${SERVER_DEPLOY_DIR}/"
 
   log "Upload complete"
