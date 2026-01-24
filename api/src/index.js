@@ -60,9 +60,11 @@ const server = http.createServer(app);
 // Without this, req.ip returns proxy IP (127.0.0.1) instead of real client IP
 // Set to 1 to trust first hop, or 'loopback' for local reverse proxy
 // Handle string "true" from .env files (convert to boolean true)
-const trustProxy = process.env.TRUST_PROXY === 'true' ? true :
-                   process.env.TRUST_PROXY === 'false' ? false :
-                   process.env.TRUST_PROXY || 1;
+const trustProxy = process.env.TRUST_PROXY === 'true'
+  ? true
+  : process.env.TRUST_PROXY === 'false'
+    ? false
+    : process.env.TRUST_PROXY || 1;
 app.set('trust proxy', trustProxy);
 
 // SECURITY: Parse CORS origins from environment variable or use defaults

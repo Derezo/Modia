@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.4 |
+| Version | 2.5 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -341,6 +341,27 @@ npm run audio:status         # Show asset status
 - [ ] Evaluate player portraits (60 combinations)
 - [ ] Evaluate item sprites (49 items)
 - [ ] Evaluate UI icons (80 icons)
+
+### 7.6 Admin Asset Manager (Completed Jan 2026)
+
+Development-only dashboard for AI asset generation and management. Available at `npm run dev:admin` (port 8081).
+
+- [x] React + Vite workspace with Tailwind CSS + Radix UI
+- [x] Dev-only API routes (`/api/admin/*`) with production blocking
+- [x] Dashboard with stats cards, quick actions, generation console
+- [x] Asset browser with filtering, multi-select, bulk operations
+- [x] Asset detail panel for editing metadata, prompts, seeds
+- [x] Real-time generation streaming via WebSocket
+- [x] Settings page: theme editor, generation config, backup management
+- [x] Keyboard shortcuts, toast notifications, responsive design
+
+**Security:** Routes gated by `NODE_ENV !== 'production'`, rate limiting (30/min), timestamp validation for path traversal prevention.
+
+**Files:**
+- `admin/` - Complete React workspace (35+ files)
+- `api/src/routes/admin.js` - Admin API endpoints
+- `api/src/services/adminGenerationService.js` - Generation queue
+- `api/src/websocket/index.js` - admin:generation room
 
 ---
 
