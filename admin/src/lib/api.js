@@ -57,6 +57,9 @@ export const api = {
 
   getAsset: (category, id) => fetchAPI(`/assets/${category}/${id}`),
 
+  // Get full prompt construction breakdown for an asset
+  getAssetPrompt: (category, id) => fetchAPI(`/assets/${category}/${id}/prompt`),
+
   updateAsset: (category, id, updates) =>
     fetchAPI(`/assets/${category}/${id}`, {
       method: 'PUT',

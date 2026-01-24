@@ -12,30 +12,24 @@ import {
   ExclamationTriangleIcon,
   ActivityLogIcon,
   InfoCircledIcon,
+  ClockIcon,
 } from '@radix-ui/react-icons';
 
 import StatsCard from '../components/StatsCard';
 import GenerationConsole from '../components/GenerationConsole';
 import { useStats, useQueue, useApiStatus } from '../hooks/useAssets';
+import { useActivityLog } from '../hooks/useActivityLog';
 import { api } from '../lib/api';
 
 // Category order for display
 const categoryOrder = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays'];
-
-// Recent activity placeholder data
-const placeholderActivity = [
-  { id: 1, type: 'generate', message: 'Generated 12 forest floor tiles', time: '2 hours ago', status: 'success' },
-  { id: 2, type: 'backup', message: 'Backup created before batch generation', time: '2 hours ago', status: 'info' },
-  { id: 3, type: 'generate', message: 'Generated 8 warrior portraits', time: '4 hours ago', status: 'success' },
-  { id: 4, type: 'error', message: 'Failed to generate cave_wall_3: API timeout', time: '5 hours ago', status: 'error' },
-  { id: 5, type: 'validate', message: 'Validation complete: 42 pending assets', time: '6 hours ago', status: 'warning' },
-];
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { stats, loading: statsLoading, error: statsError, refetch: refetchStats } = useStats();
   const { queue } = useQueue();
   const { error: statusError } = useApiStatus();
+  const { activities, loading: activitiesLoading, refetch: refetchActivities } = useActivityLog({ limit: 10 });
 
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
@@ -316,35 +310,62 @@ export default function Dashboard() {
 
       {/* Recent activity */}
       <div className="mb-8">
-        <h2 className="text-lg font-display font-semibold text-parchment-100 mb-4 flex items-center gap-2">
-          <ActivityLogIcon className="w-5 h-5" />
-          Recent Activity
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-display font-semibold text-parchment-100 flex items-center gap-2">
+            <ActivityLogIcon className="w-5 h-5" />
+            Recent Activity
+          </h2>
+          <button
+            onClick={refetchActivities}
+            disabled={activitiesLoading}
+            className="btn-ghost text-sm flex items-center gap-1"
+          >
+            <ReloadIcon className={`w-3 h-3 ${activitiesLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
         <div className="card divide-y divide-midnight-700">
-          {placeholderActivity.map((activity) => (
-            <div key={activity.id} className="p-4 flex items-center gap-4">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  activity.status === 'success'
-                    ? 'bg-accent-emerald'
-                    : activity.status === 'error'
-                    ? 'bg-accent-ruby'
-                    : activity.status === 'warning'
-                    ? 'bg-accent-gold'
-                    : 'bg-parchment-400'
-                }`}
-              />
-              <div className="flex-1">
-                <p className="text-parchment-200">{activity.message}</p>
-                <p className="text-parchment-500 text-sm">{activity.time}</p>
-              </div>
+          {activitiesLoading ? (
+            <div className="p-6 text-center">
+              <ReloadIcon className="w-6 h-6 text-parchment-400 animate-spin mx-auto mb-2" />
+              <p className="text-parchment-500 text-sm">Loading activity...</p>
             </div>
-          ))}
-          <div className="p-4 text-center">
-            <span className="text-parchment-500 text-sm">
-              Activity log is a placeholder - will be populated with real job history
-            </span>
-          </div>
+          ) : activities.length === 0 ? (
+            <div className="p-6 text-center">
+              <ClockIcon className="w-8 h-8 text-parchment-600 mx-auto mb-2" />
+              <p className="text-parchment-500">No generation history yet</p>
+              <p className="text-parchment-600 text-sm mt-1">
+                Generate some assets to see activity here
+              </p>
+            </div>
+          ) : (
+            activities.map((activity) => (
+              <div key={activity.id} className="p-4 flex items-center gap-4">
+                <div
+                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    activity.status === 'success'
+                      ? 'bg-accent-emerald'
+                      : activity.status === 'error'
+                      ? 'bg-accent-ruby'
+                      : activity.status === 'warning'
+                      ? 'bg-accent-gold'
+                      : 'bg-parchment-400'
+                  }`}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-parchment-200 truncate">{activity.message}</p>
+                  <div className="flex items-center gap-3 text-parchment-500 text-sm">
+                    <span>{activity.time}</span>
+                    {activity.details?.duration && (
+                      <span className="text-parchment-600">
+                        ({activity.details.duration})
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
