@@ -169,7 +169,7 @@ function loadTileMetadata(options = {}) {
       // Process tiles from this file
       for (const tile of data.tiles || []) {
         tile._biome = biomeName;
-        tile._category = cat;
+        tile._category = 'tiles';
         tile._tileCategory = cat; // floors, walls, or slopes
         tile._sourceFile = fileName;
         tile.id = tile.key || tile.id;  // Normalize to 'id' field
@@ -271,6 +271,7 @@ function loadPortraitMetadata(filters = {}) {
 
       portrait._sourceFile = 'combinations.json';
       portrait._type = 'player';
+      portrait._category = 'portraits';
       result.portraits.push(portrait);
     }
   }
@@ -289,6 +290,7 @@ function loadPortraitMetadata(filters = {}) {
 
         enemy._sourceFile = 'enemies.json';
         enemy._type = 'enemy';
+        enemy._category = 'portraits';
         result.portraits.push(enemy);
       }
     }
@@ -347,6 +349,7 @@ function loadItemMetadata(itemCategory = null) {
     for (const item of data.items || []) {
       item._itemCategory = catName;
       item._sourceFile = fileName;
+      item._category = 'items';
       result.items.push(item);
     }
   }
@@ -390,6 +393,7 @@ function loadIconMetadata(iconCategory = null) {
     for (const icon of data.icons || []) {
       icon._iconCategory = catName;
       icon._sourceFile = fileName;
+      icon._category = 'icons';
       result.icons.push(icon);
     }
   }
@@ -412,9 +416,15 @@ function loadNodeMetadata() {
     throw new Error('Failed to load node locations');
   }
 
+  const nodes = data.nodes || [];
+  for (const node of nodes) {
+    node._category = 'nodes';
+    node._sourceFile = 'locations.json';
+  }
+
   return {
     manifest,
-    nodes: data.nodes || []
+    nodes
   };
 }
 
