@@ -517,10 +517,10 @@ router.post('/backups', asyncHandler(async (req, res) => {
 
 /**
  * Validate backup timestamp format to prevent path traversal
- * Expected format: 2024-01-20T15-30-00-000Z
+ * Expected format: 2024-01-20_15-30-00 (matches backupUtils.js formatBackupTimestamp)
  */
 function validateTimestamp(timestamp) {
-  const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z$/;
+  const timestampPattern = /^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$/;
   return timestampPattern.test(timestamp);
 }
 
