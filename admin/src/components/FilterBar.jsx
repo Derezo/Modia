@@ -3,6 +3,7 @@
  * Provides category-specific filtering options (biome, subcategory, status)
  */
 
+import { forwardRef } from 'react';
 import { MagnifyingGlassIcon, Cross2Icon, ReloadIcon } from '@radix-ui/react-icons';
 
 /**
@@ -39,7 +40,7 @@ const STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending' },
 ];
 
-export default function FilterBar({
+const FilterBar = forwardRef(function FilterBar({
   category,
   filters,
   onFilterChange,
@@ -48,7 +49,7 @@ export default function FilterBar({
   onRefresh,
   loading = false,
   summary = null,
-}) {
+}, ref) {
   const config = FILTER_CONFIG[category] || {};
 
   /**
@@ -88,8 +89,9 @@ export default function FilterBar({
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-parchment-400" />
           <input
+            ref={ref}
             type="text"
-            placeholder="Search by ID..."
+            placeholder="Search by ID... (press / to focus)"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-midnight-800 border border-midnight-700 rounded-lg
@@ -200,4 +202,6 @@ export default function FilterBar({
       </div>
     </div>
   );
-}
+});
+
+export default FilterBar;

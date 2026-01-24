@@ -16,6 +16,7 @@ import {
 } from '@radix-ui/react-icons';
 
 import { api } from '../lib/api';
+import { useToast } from '../contexts/ToastContext';
 
 /**
  * Size options for preview
@@ -186,6 +187,9 @@ export default function AssetDetail({
   onClose,
   onUpdate,
 }) {
+  // Toast notifications
+  const toast = useToast();
+
   // Form state
   const [formData, setFormData] = useState({
     prompt: '',
@@ -202,8 +206,6 @@ export default function AssetDetail({
   const [imageError, setImageError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
   const [showFullPrompt, setShowFullPrompt] = useState(false);
   const [fullPromptData, setFullPromptData] = useState({ loading: false, prompt: '' });
 
@@ -220,8 +222,6 @@ export default function AssetDetail({
         needsRegeneration: asset.needsRegeneration || false,
       });
       setImageError(false);
-      setError(null);
-      setSuccess(null);
     }
   }, [asset]);
 
@@ -242,8 +242,6 @@ export default function AssetDetail({
   // Handle form field changes
   const handleChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    setError(null);
-    setSuccess(null);
   };
 
   // Save changes
@@ -251,8 +249,6 @@ export default function AssetDetail({
     if (!asset) return;
 
     setSaving(true);
-    setError(null);
-    setSuccess(null);
 
     try {
       const updates = {
@@ -266,10 +262,10 @@ export default function AssetDetail({
       };
 
       await api.updateAsset(category, asset.key || asset.id, updates);
-      setSuccess('Changes saved successfully');
+      toast.success('Asset saved');
       onUpdate?.();
     } catch (err) {
-      setError(err.message || 'Failed to save changes');
+      toast.error(err.message || 'Failed to save changes');
     } finally {
       setSaving(false);
     }
@@ -280,15 +276,13 @@ export default function AssetDetail({
     if (!asset) return;
 
     setRegenerating(true);
-    setError(null);
-    setSuccess(null);
 
     try {
       await api.generateAssetsByIds(category, [asset.key || asset.id], { force: true });
-      setSuccess('Queued for regeneration');
+      toast.success('Queued for regeneration');
       onUpdate?.();
     } catch (err) {
-      setError(err.message || 'Failed to queue regeneration');
+      toast.error(err.message || 'Failed to queue regeneration');
     } finally {
       setRegenerating(false);
     }
@@ -544,17 +538,6 @@ export default function AssetDetail({
                     />
                   </div>
 
-                  {/* Error/Success messages */}
-                  {error && (
-                    <div className="p-3 bg-accent-ruby/10 border border-accent-ruby/30 rounded-lg text-accent-ruby text-sm">
-                      {error}
-                    </div>
-                  )}
-                  {success && (
-                    <div className="p-3 bg-accent-emerald/10 border border-accent-emerald/30 rounded-lg text-accent-emerald text-sm">
-                      {success}
-                    </div>
-                  )}
                 </div>
               )}
             </div>

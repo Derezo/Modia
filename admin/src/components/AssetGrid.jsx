@@ -9,13 +9,14 @@ import {
   Cross2Icon,
   ReloadIcon,
   ExclamationTriangleIcon,
-  CheckCircledIcon,
 } from '@radix-ui/react-icons';
 
 import AssetCard from './AssetCard';
 import AssetDetail from './AssetDetail';
 import FilterBar from './FilterBar';
 import { useAssets } from '../hooks/useAssets';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useToast } from '../contexts/ToastContext';
 import { api } from '../lib/api';
 
 /**
@@ -111,20 +112,23 @@ export default function AssetGrid({
   pageDescription,
   pageIcon: PageIcon,
 }) {
+  // Toast notifications
+  const toast = useToast();
+
   // Filter state
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [actionLoading, setActionLoading] = useState(false);
-  const [actionMessage, setActionMessage] = useState(null);
 
   // Detail panel state
   const [detailAsset, setDetailAsset] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  // Timeout refs for cleanup
+  // Refs
   const closeTimeoutRef = useRef(null);
   const refetchTimeoutRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -229,10 +233,12 @@ export default function AssetGrid({
    * Generate selected assets
    */
   const handleGenerateSelected = useCallback(async () => {
-    if (selectedIds.size === 0) return;
+    if (selectedIds.size === 0) {
+      toast.info('No assets selected');
+      return;
+    }
 
     setActionLoading(true);
-    setActionMessage(null);
 
     try {
       // Find the pending assets that are selected
@@ -241,10 +247,7 @@ export default function AssetGrid({
       );
 
       if (pendingSelected.length === 0) {
-        setActionMessage({
-          type: 'info',
-          text: 'All selected assets are already generated',
-        });
+        toast.info('All selected assets are already generated');
         setActionLoading(false);
         return;
       }
@@ -255,10 +258,7 @@ export default function AssetGrid({
         limit: pendingSelected.length,
       });
 
-      setActionMessage({
-        type: 'success',
-        text: `Queued generation for ${pendingSelected.length} asset(s)`,
-      });
+      toast.success(`Generation queued for ${pendingSelected.length} asset(s)`);
 
       // Clear selection after queueing
       clearSelection();
@@ -269,14 +269,11 @@ export default function AssetGrid({
         refetch();
       }, 2000);
     } catch (err) {
-      setActionMessage({
-        type: 'error',
-        text: err.message || 'Failed to queue generation',
-      });
+      toast.error(err.message || 'Failed to queue generation');
     } finally {
       setActionLoading(false);
     }
-  }, [selectedIds, filteredAssets, category, filters, clearSelection, refetch]);
+  }, [selectedIds, filteredAssets, category, filters, clearSelection, refetch, toast]);
 
   /**
    * Select/deselect all visible assets
@@ -291,6 +288,47 @@ export default function AssetGrid({
       setSelectedIds(allIds);
     }
   }, [selectedIds.size, filteredAssets]);
+
+  /**
+   * Focus search input
+   */
+  const handleFocusSearch = useCallback(() => {
+    searchInputRef.current?.focus();
+  }, []);
+
+  /**
+   * Handle escape key - close detail or clear selection
+   */
+  const handleEscape = useCallback(() => {
+    if (detailOpen) {
+      handleDetailClose();
+    } else if (selectedIds.size > 0) {
+      clearSelection();
+    }
+  }, [detailOpen, selectedIds.size, handleDetailClose, clearSelection]);
+
+  /**
+   * Edit first selected asset
+   */
+  const handleEdit = useCallback(() => {
+    if (selectedIds.size === 0) return;
+
+    // Find first selected asset
+    const firstSelectedId = Array.from(selectedIds)[0];
+    const asset = filteredAssets.find((a) => (a.key || a.id) === firstSelectedId);
+    if (asset) {
+      handleAssetClick(asset);
+    }
+  }, [selectedIds, filteredAssets, handleAssetClick]);
+
+  // Register keyboard shortcuts
+  useKeyboardShortcuts({
+    onGenerate: handleGenerateSelected,
+    onSelectAll: handleSelectAll,
+    onEdit: handleEdit,
+    onEscape: handleEscape,
+    onFocusSearch: handleFocusSearch,
+  });
 
   return (
     <div className="p-6 max-w-7xl mx-auto pb-24">
@@ -318,48 +356,9 @@ export default function AssetGrid({
         )}
       </div>
 
-      {/* Action message */}
-      {actionMessage && (
-        <div
-          className={`mb-6 p-4 rounded-lg flex items-center gap-3 ${
-            actionMessage.type === 'success'
-              ? 'bg-accent-emerald/10 border border-accent-emerald/30'
-              : actionMessage.type === 'error'
-              ? 'bg-accent-ruby/10 border border-accent-ruby/30'
-              : 'bg-accent-gold/10 border border-accent-gold/30'
-          }`}
-        >
-          {actionMessage.type === 'success' ? (
-            <CheckCircledIcon className="w-5 h-5 text-accent-emerald flex-shrink-0" />
-          ) : actionMessage.type === 'error' ? (
-            <ExclamationTriangleIcon className="w-5 h-5 text-accent-ruby flex-shrink-0" />
-          ) : (
-            <CheckCircledIcon className="w-5 h-5 text-accent-gold flex-shrink-0" />
-          )}
-          <p
-            className={
-              actionMessage.type === 'success'
-                ? 'text-accent-emerald'
-                : actionMessage.type === 'error'
-                ? 'text-accent-ruby'
-                : 'text-accent-gold'
-            }
-          >
-            {actionMessage.text}
-          </p>
-          <button
-            type="button"
-            onClick={() => setActionMessage(null)}
-            className="ml-auto text-parchment-400 hover:text-parchment-200"
-            aria-label="Dismiss message"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
-
       {/* Filter bar */}
       <FilterBar
+        ref={searchInputRef}
         category={category}
         filters={filters}
         onFilterChange={handleFilterChange}
