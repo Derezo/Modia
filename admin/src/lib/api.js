@@ -70,6 +70,17 @@ export const api = {
       body: JSON.stringify({ category, filters, options }),
     }),
 
+  // Generate specific assets by ID
+  generateAssetsByIds: (category, assetIds, options = {}) =>
+    fetchAPI('/generate', {
+      method: 'POST',
+      body: JSON.stringify({
+        category,
+        filters: { ids: assetIds },
+        options,
+      }),
+    }),
+
   getQueue: () => fetchAPI('/generate/queue'),
 
   getJob: (jobId) => fetchAPI(`/generate/job/${jobId}`),
