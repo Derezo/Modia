@@ -222,8 +222,10 @@ log "Shared resources linked"
 step "Installing production dependencies..."
 
 cd "$RELEASE_DIR"
-# HUSKY=0 skips the husky prepare script (husky is a dev dependency)
-HUSKY=0 npm ci --omit=dev
+# Remove prepare script (husky is a dev dependency that would fail)
+# This preserves postinstall scripts needed by bcrypt and other native modules
+npm pkg delete scripts.prepare 2>/dev/null || true
+npm ci --omit=dev
 
 log "Dependencies installed"
 
