@@ -222,7 +222,8 @@ log "Shared resources linked"
 step "Installing production dependencies..."
 
 cd "$RELEASE_DIR"
-npm ci --omit=dev
+# HUSKY=0 skips the husky prepare script (husky is a dev dependency)
+HUSKY=0 npm ci --omit=dev
 
 log "Dependencies installed"
 
