@@ -1,0 +1,24 @@
+{
+  "version": "1.0.0",
+  "description": "UI icon metadata",
+  "category": "icons",
+  "totalAssets": 80,
+  "outputDir": "/assets/sprites/icons/",
+  "sizes": {
+    "small": "16x16",
+    "medium": "32x32",
+    "large": "48x48"
+  },
+  "format": "png",
+  "loraModel": "V2",
+  "trigger": "wbgmsst",
+  "stylePrefix": "wbgmsst, simplified bold design, ink and wash style, thick black outlines, flat watercolor fills, high contrast silhouette, clean edges, white background,",
+  "negativePrompt": "photorealistic, 3D render, CGI, anime style, chibi, pixel art, blurry, low quality, watermark, signature, text, logo, modern elements, neon colors, oversaturated, complex backgrounds, multiple subjects, deformed, messy lines, muddy colors, detailed",
+  "categories": ["actions", "status", "menu", "augments"],
+  "categoryFiles": {
+    "actions": "actions.json",
+    "status": "status.json",
+    "menu": "menu.json",
+    "augments": "augments.json"
+  }
+}

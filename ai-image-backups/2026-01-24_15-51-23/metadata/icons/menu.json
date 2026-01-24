@@ -1,0 +1,168 @@
+{
+  "version": "1.0.0",
+  "category": "menu",
+  "description": "Menu and UI navigation icons",
+  "size": "32x32",
+  "icons": [
+    {
+      "id": "menu_inventory",
+      "name": "Inventory",
+      "prompt": "backpack bag inventory storage pouch",
+      "seed": 32001,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:45:59.503Z"
+    },
+    {
+      "id": "menu_equipment",
+      "name": "Equipment",
+      "prompt": "helmet armor equipment gear loadout",
+      "seed": 32002,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:46:41.519Z"
+    },
+    {
+      "id": "menu_skills",
+      "name": "Skills",
+      "prompt": "book spellbook skills abilities magic tome",
+      "seed": 32003,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:47:23.439Z"
+    },
+    {
+      "id": "menu_party",
+      "name": "Party",
+      "prompt": "group people party team characters",
+      "seed": 32004,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:48:05.380Z"
+    },
+    {
+      "id": "menu_map",
+      "name": "Map",
+      "prompt": "scroll map parchment world navigation",
+      "seed": 32005,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:48:47.282Z"
+    },
+    {
+      "id": "menu_quest",
+      "name": "Quests",
+      "prompt": "exclamation scroll quest mission objective",
+      "seed": 32006,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:49:29.170Z"
+    },
+    {
+      "id": "menu_settings",
+      "name": "Settings",
+      "prompt": "gear cog settings options configure",
+      "seed": 32007,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:50:11.134Z"
+    },
+    {
+      "id": "menu_shop",
+      "name": "Shop",
+      "prompt": "coins gold shop store purchase merchant",
+      "seed": 32008,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:50:52.072Z"
+    },
+    {
+      "id": "menu_chat",
+      "name": "Chat",
+      "prompt": "speech bubble chat message communication",
+      "seed": 32009,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:51:34.105Z"
+    },
+    {
+      "id": "menu_guild",
+      "name": "Guild",
+      "prompt": "banner flag guild clan organization",
+      "seed": 32010,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:52:16.042Z"
+    },
+    {
+      "id": "menu_tavern",
+      "name": "Tavern",
+      "prompt": "mug beer tavern inn social drink",
+      "seed": 32011,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:52:57.926Z"
+    },
+    {
+      "id": "menu_coliseum",
+      "name": "Coliseum",
+      "prompt": "arena coliseum pvp battle swords crossed",
+      "seed": 32012,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:53:39.814Z"
+    },
+    {
+      "id": "menu_fishing",
+      "name": "Fishing",
+      "prompt": "fishing rod hook fish catch water",
+      "seed": 32013,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:54:21.711Z"
+    },
+    {
+      "id": "menu_ruins",
+      "name": "Ruins",
+      "prompt": "ancient ruins puzzle temple mystery stones",
+      "seed": 32014,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:55:03.641Z"
+    },
+    {
+      "id": "menu_caravan",
+      "name": "Caravan",
+      "prompt": "wagon caravan trade merchant cart",
+      "seed": 32015,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:55:45.641Z"
+    },
+    {
+      "id": "menu_close",
+      "name": "Close",
+      "prompt": "x close exit cancel cross",
+      "seed": 32016,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:56:27.537Z"
+    },
+    {
+      "id": "menu_confirm",
+      "name": "Confirm",
+      "prompt": "checkmark confirm accept yes approve",
+      "seed": 32017,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:57:10.477Z"
+    },
+    {
+      "id": "menu_back",
+      "name": "Back",
+      "prompt": "arrow left back return previous",
+      "seed": 32018,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:57:51.330Z"
+    },
+    {
+      "id": "menu_help",
+      "name": "Help",
+      "prompt": "question mark help info tutorial",
+      "seed": 32019,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:58:32.207Z"
+    },
+    {
+      "id": "menu_notifications",
+      "name": "Notifications",
+      "prompt": "bell notification alert message new",
+      "seed": 32020,
+      "generated": true,
+      "generatedAt": "2026-01-23T05:59:13.063Z"
+    }
+  ]
+}

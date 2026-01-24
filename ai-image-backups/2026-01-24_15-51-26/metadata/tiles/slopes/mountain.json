@@ -1,0 +1,96 @@
+{
+  "biome": "mountain",
+  "category": "slopes",
+  "description": "Mountain biome slope tiles - rocky inclines, snowy ramps, alpine stairs",
+  "palette": {
+    "primary": "#8B8682",
+    "secondary": "#A0A0A0",
+    "accent": "#708090"
+  },
+  "tiles": [
+    {
+      "key": "slope_mountain_north_1",
+      "direction": "north",
+      "levels": 1,
+      "prompt": "rocky mountain slope ascending northward with loose gravel surface in grey stone #8B8682",
+      "seed": 32001,
+      "outputPath": "mountain/slopes/north_1",
+      "generated": true,
+      "generatedAt": "2026-01-24T16:53:28.541Z"
+    },
+    {
+      "key": "slope_mountain_south_1",
+      "direction": "south",
+      "levels": 1,
+      "prompt": "rocky mountain slope descending southward with weathered surface in grey stone #8B8682",
+      "seed": 32011,
+      "outputPath": "mountain/slopes/south_1",
+      "generated": true,
+      "generatedAt": "2026-01-24T16:54:10.364Z"
+    },
+    {
+      "key": "slope_mountain_east_1",
+      "direction": "east",
+      "levels": 1,
+      "prompt": "rocky mountain slope ascending eastward with snow dusting in grey and white #8B8682 #F5F5F5",
+      "seed": 32021,
+      "outputPath": "mountain/slopes/east_1",
+      "generated": true,
+      "generatedAt": "2026-01-24T16:54:53.111Z"
+    },
+    {
+      "key": "slope_mountain_west_1",
+      "direction": "west",
+      "levels": 1,
+      "prompt": "rocky mountain slope descending westward with ice patches in grey and blue #8B8682 #87CEEB",
+      "seed": 32031,
+      "outputPath": "mountain/slopes/west_1",
+      "generated": true,
+      "generatedAt": "2026-01-24T16:55:35.076Z"
+    },
+    {
+      "key": "stairs_mountain_north_2",
+      "direction": "north",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "carved mountain stone steps ascending north with snow-filled cracks showing 2-3 visible steps #8B8682 #F5F5F5",
+      "seed": 32041,
+      "outputPath": "mountain/slopes/stairs_north_2",
+      "generated": true,
+      "generatedAt": "2026-01-24T16:56:17.882Z"
+    },
+    {
+      "key": "stairs_mountain_south_2",
+      "direction": "south",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "carved mountain stone steps descending south with worn treads showing 2-3 visible steps #8B8682 #708090",
+      "seed": 32051,
+      "outputPath": "mountain/slopes/stairs_south_2",
+      "generated": true,
+      "generatedAt": "2026-01-24T16:56:59.951Z"
+    },
+    {
+      "key": "stairs_mountain_east_2",
+      "direction": "east",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "carved mountain stone steps ascending east with icy surface showing 2-3 visible steps #8B8682 #87CEEB",
+      "seed": 32061,
+      "outputPath": "mountain/slopes/stairs_east_2",
+      "generated": true,
+      "generatedAt": "2026-01-24T16:57:41.785Z"
+    },
+    {
+      "key": "stairs_mountain_west_2",
+      "direction": "west",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "carved mountain stone steps descending west with alpine lichen showing 2-3 visible steps #8B8682 #DAA520",
+      "seed": 32071,
+      "outputPath": "mountain/slopes/stairs_west_2",
+      "generated": true,
+      "generatedAt": "2026-01-24T16:58:23.549Z"
+    }
+  ]
+}
