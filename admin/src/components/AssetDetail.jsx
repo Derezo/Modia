@@ -31,10 +31,10 @@ function getAssetBasePath(asset, category) {
 
   switch (category) {
     case 'tiles': {
+      // Tiles are directly in the biome folder (no floors/walls/slopes subdirectory)
       const biome = asset._biome || asset.outputPath || 'base';
-      const tileCategory = asset._tileCategory || 'floors';
       return {
-        dir: `/assets/sprites/terrain/${biome}/${tileCategory}`,
+        dir: `/assets/sprites/terrain/${biome}`,
         filename: asset.key,
       };
     }

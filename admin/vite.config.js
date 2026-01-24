@@ -13,7 +13,9 @@ export default defineConfig({
       '/ws': {
         target: 'ws://localhost:3000',
         ws: true
-      }
+      },
+      // Proxy asset requests to the frontend dev server
+      '/assets': 'http://localhost:8080'
     }
   },
   resolve: {
