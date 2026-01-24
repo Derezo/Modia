@@ -123,6 +123,7 @@ export function useBackups() {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [operating, setOperating] = useState(false);
 
   const refetch = useCallback(async () => {
     setLoading(true);
@@ -143,13 +144,89 @@ export function useBackups() {
     refetch();
   }, [refetch]);
 
-  const createBackup = useCallback(async (reason) => {
-    const result = await api.createBackup(reason);
-    await refetch();
-    return result;
+  /**
+   * Create a new backup
+   * @param {string} reason - Reason for backup (e.g., 'manual', 'pre-generation')
+   */
+  const createBackup = useCallback(async (reason = 'manual') => {
+    setOperating(true);
+    setError(null);
+
+    try {
+      const result = await api.createBackup(reason);
+      await refetch();
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setOperating(false);
+    }
   }, [refetch]);
 
-  return { backups, loading, error, refetch, createBackup };
+  /**
+   * Restore from a backup
+   * @param {string} timestamp - Backup timestamp identifier
+   */
+  const restoreBackup = useCallback(async (timestamp) => {
+    setOperating(true);
+    setError(null);
+
+    try {
+      const result = await api.restoreBackup(timestamp);
+      await refetch();
+      return result;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setOperating(false);
+    }
+  }, [refetch]);
+
+  /**
+   * Delete a backup
+   * @param {string} timestamp - Backup timestamp identifier
+   */
+  const deleteBackup = useCallback(async (timestamp) => {
+    setOperating(true);
+    setError(null);
+
+    try {
+      await api.deleteBackup(timestamp);
+      await refetch();
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    } finally {
+      setOperating(false);
+    }
+  }, [refetch]);
+
+  /**
+   * Get backup details
+   * @param {string} timestamp - Backup timestamp identifier
+   */
+  const getBackupDetails = useCallback(async (timestamp) => {
+    try {
+      return await api.getBackup(timestamp);
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  }, []);
+
+  return {
+    backups,
+    loading,
+    error,
+    operating,
+    refetch,
+    createBackup,
+    restoreBackup,
+    deleteBackup,
+    getBackupDetails,
+  };
 }
 
 /**

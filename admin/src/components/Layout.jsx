@@ -4,8 +4,13 @@
 
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
+import { useNavigationShortcuts } from '../hooks/useKeyboardShortcuts';
+import KeyboardShortcutsHelp from './KeyboardShortcutsHelp';
 
 export default function Layout() {
+  // Enable global navigation shortcuts (1-6 for category tabs)
+  useNavigationShortcuts();
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
@@ -18,6 +23,7 @@ export default function Layout() {
             <span className="text-parchment-400 text-sm">Asset Manager</span>
           </div>
           <div className="flex items-center gap-4">
+            <KeyboardShortcutsHelp />
             <span className="badge badge-warning">Development Only</span>
           </div>
         </div>
