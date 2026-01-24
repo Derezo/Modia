@@ -32,6 +32,8 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.11.3",
+    "rate-limit-redis": "^4.2.0",
+    "redis": "^4.7.0",
     "ws": "^8.14.2"
   },
   "devDependencies": {

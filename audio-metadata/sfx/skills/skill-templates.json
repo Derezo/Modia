@@ -7,157 +7,157 @@
   "templates": {
     "fire": {
       "name": "Fire Magic",
-      "basePrompt": "Fantasy fire spell, magical flames whooshing, crackling sparks, heat sizzle",
+      "basePrompt": "Fantasy arcane flames with crackling magical heat and mystical fire energy",
       "modifiers": {
-        "low_power": "small flame, brief flicker, contained heat",
-        "mid_power": "blazing flames, fiery burst, intense burning",
-        "high_power": "roaring inferno, explosive fire eruption, overwhelming heat",
-        "aoe": "spreading fire wave, multiple ignitions, wall of flame",
-        "projectile": "fire bolt flying, trailing sparks, scorching arc",
-        "sustained": "continuous burning, persistent flames, ongoing combustion"
+        "low_power": "small flickering flame with brief contained warmth",
+        "mid_power": "blazing fire burst with intense magical burning",
+        "high_power": "roaring inferno eruption with overwhelming mystical heat",
+        "aoe": "spreading fire wave with multiple ignition points",
+        "projectile": "soaring fire bolt with trailing arcane sparks",
+        "sustained": "persistent magical flames with continuous burning energy"
       }
     },
     "ice": {
       "name": "Ice Magic",
-      "basePrompt": "Fantasy ice spell, crystallizing frost, cold magical energy, freezing crackle",
+      "basePrompt": "Fantasy crystalline frost with piercing cold magical energy",
       "modifiers": {
-        "low_power": "frost forming, light freeze, delicate ice crystals",
-        "mid_power": "ice shards forming, cold snap, freezing burst",
-        "high_power": "massive ice formation, blizzard force, glacial power",
-        "aoe": "ice spreading outward, frozen ground, frost wave",
-        "projectile": "ice shard flying, frozen projectile whistle, cold streak",
-        "sustained": "persistent cold, ongoing freeze, ice creeping"
+        "low_power": "delicate ice crystals forming with light frost shimmer",
+        "mid_power": "shattering ice shards with sudden freezing burst",
+        "high_power": "massive glacial formation with overwhelming blizzard force",
+        "aoe": "spreading frost wave with creeping frozen ground",
+        "projectile": "whistling frozen projectile with piercing cold streak",
+        "sustained": "persistent creeping ice with ongoing freezing energy"
       }
     },
     "lightning": {
       "name": "Lightning Magic",
-      "basePrompt": "Fantasy lightning spell, electrical crackling, thunder rumble, static discharge",
+      "basePrompt": "Fantasy crackling thunder magic with electrical discharge and arcane static",
       "modifiers": {
-        "low_power": "small spark, brief zap, electrical pop",
-        "mid_power": "lightning bolt strike, powerful shock, electric surge",
-        "high_power": "massive thunderbolt, devastating electrical storm, overwhelming power",
-        "aoe": "chain lightning jumping, multiple targets, electricity spreading",
-        "projectile": "lightning bolt arcing, electrical streak, shocking projectile",
-        "instant": "instant discharge, sudden strike, immediate shock"
+        "low_power": "brief electrical spark with small static pop",
+        "mid_power": "powerful lightning bolt strike with shocking surge",
+        "high_power": "devastating thunderbolt with overwhelming electrical storm",
+        "aoe": "jumping chain lightning with cascading electrical arcs",
+        "projectile": "streaking lightning arc with shocking projectile trail",
+        "instant": "sudden electrical discharge with immediate shocking impact"
       }
     },
     "physical": {
       "name": "Physical Combat",
-      "basePrompt": "Fantasy martial attack, weapon or body impact, combat strike, physical force",
+      "basePrompt": "Fantasy martial strike with forceful combat impact and physical power",
       "modifiers": {
-        "low_power": "quick strike, light hit, swift attack",
-        "mid_power": "solid blow, powerful strike, forceful impact",
-        "high_power": "devastating hit, crushing blow, overwhelming force",
-        "multi_hit": "rapid strikes, flurry of attacks, consecutive impacts",
-        "charge": "charging forward, rushing momentum, powerful advance",
-        "leap": "jumping attack, aerial strike, descending blow"
+        "low_power": "swift quick strike with light precise impact",
+        "mid_power": "solid powerful blow with forceful crushing impact",
+        "high_power": "devastating crushing strike with overwhelming bone-shattering force",
+        "multi_hit": "rapid strike flurry with consecutive powerful impacts",
+        "charge": "rushing momentum charge with powerful advancing force",
+        "leap": "soaring aerial strike with descending crushing impact"
       }
     },
     "healing": {
       "name": "Healing Magic",
-      "basePrompt": "Fantasy healing spell, restorative magical energy, soothing light, life restoration",
+      "basePrompt": "Fantasy restorative holy light with warm soothing magical energy",
       "modifiers": {
-        "low_power": "gentle healing, minor restoration, light recovery",
-        "mid_power": "warm healing glow, substantial restoration, wounds mending",
-        "high_power": "powerful healing surge, major restoration, miraculous recovery",
-        "aoe": "healing spreading, group restoration, area cure",
-        "single": "focused healing beam, targeted restoration, individual cure"
+        "low_power": "gentle healing glow with minor restorative shimmer",
+        "mid_power": "warm healing radiance with substantial wound restoration",
+        "high_power": "powerful healing surge with miraculous divine restoration",
+        "aoe": "spreading restorative light with group healing energy",
+        "single": "focused healing beam with concentrated restoration power"
       }
     },
     "buff": {
       "name": "Buff Magic",
-      "basePrompt": "Fantasy buff spell, empowering magical energy, stat enhancement, strengthening aura",
+      "basePrompt": "Fantasy empowering aura activation with rising mystical enhancement energy",
       "modifiers": {
-        "attack": "attack power rising, offensive enhancement, damage boost",
-        "defense": "protective barrier forming, defensive boost, armor enhancement",
-        "speed": "quickening effect, agility boost, hastening energy",
-        "all_stats": "full empowerment, complete enhancement, total boost"
+        "attack": "surging offensive power with rising attack enhancement",
+        "defense": "forming protective barrier with hardening defensive energy",
+        "speed": "quickening acceleration with rushing agility enhancement",
+        "all_stats": "complete empowerment surge with total attribute amplification"
       }
     },
     "debuff": {
       "name": "Debuff Magic",
-      "basePrompt": "Fantasy debuff spell, weakening curse, stat reduction, hindering hex",
+      "basePrompt": "Fantasy weakening curse with draining hindering hex energy",
       "modifiers": {
-        "attack": "strength draining, attack reduction, power sapping",
-        "defense": "armor breaking, defense reduction, protection stripping",
-        "movement": "movement impairing, slowing hex, mobility curse",
-        "all_stats": "full debilitation, complete weakening, total reduction"
+        "attack": "sapping strength drain with fading offensive power",
+        "defense": "crumbling armor break with stripping protection energy",
+        "movement": "heavy slowing hex with impairing mobility curse",
+        "all_stats": "complete debilitation wave with total weakening affliction"
       }
     },
     "selfAura": {
       "name": "Self Enhancement",
-      "basePrompt": "Fantasy self-aura, internal energy focus, personal empowerment, meditative power",
+      "basePrompt": "Fantasy inner power focus with personal empowerment aura rising",
       "modifiers": {
-        "defensive": "protective shell forming, personal barrier, self shielding",
-        "offensive": "inner power rising, self amplification, strength within",
-        "recovery": "self healing, internal restoration, regenerating energy",
-        "transform": "form shifting, self modification, power transformation"
+        "defensive": "protective shell forming with personal barrier manifestation",
+        "offensive": "inner strength surging with self-amplifying power rise",
+        "recovery": "internal restoration flow with regenerating healing energy",
+        "transform": "power transformation surge with form-shifting energy release"
       }
     },
     "poison": {
       "name": "Poison/Acid Magic",
-      "basePrompt": "Fantasy poison spell, toxic bubbling, acidic sizzle, venomous corruption",
+      "basePrompt": "Fantasy toxic corruption with bubbling venomous acidic energy",
       "modifiers": {
-        "low_power": "mild toxin, light acid, minor poison",
-        "mid_power": "dangerous venom, corrosive acid, potent poison",
-        "high_power": "deadly toxin, dissolving acid, lethal poison",
-        "aoe": "poison cloud spreading, toxic area, acid splash zone",
-        "dot": "ongoing corruption, persistent toxin, continuous damage"
+        "low_power": "mild toxin drip with light acidic hiss",
+        "mid_power": "potent venom surge with corrosive acid splash",
+        "high_power": "deadly lethal poison with dissolving acid devastation",
+        "aoe": "spreading poison cloud with toxic area contamination",
+        "dot": "persistent corruption with ongoing venomous damage"
       }
     },
     "holy": {
       "name": "Holy Magic",
-      "basePrompt": "Fantasy holy spell, divine radiance, sacred light, celestial power",
+      "basePrompt": "Fantasy divine radiance with sacred celestial light power",
       "modifiers": {
-        "low_power": "soft divine glow, gentle blessing, light radiance",
-        "mid_power": "holy light burst, divine judgment, sacred energy",
-        "high_power": "overwhelming divine power, celestial wrath, godly force",
-        "smite": "holy smite impact, divine punishment, righteous strike",
-        "purify": "cleansing light, purification energy, corruption removal"
+        "low_power": "soft divine glow with gentle blessing shimmer",
+        "mid_power": "holy light burst with sacred judgment energy",
+        "high_power": "overwhelming divine power with celestial wrath force",
+        "smite": "holy smite impact with righteous divine punishment",
+        "purify": "cleansing purification light with corruption-banishing energy"
       }
     },
     "shadow": {
       "name": "Shadow Magic",
-      "basePrompt": "Fantasy shadow spell, dark energy swirling, void whispers, darkness manipulation",
+      "basePrompt": "Fantasy dark void energy with swirling shadow manipulation power",
       "modifiers": {
-        "low_power": "shadows shifting, minor darkness, light void",
-        "mid_power": "shadow tendrils, dark energy burst, void power",
-        "high_power": "overwhelming darkness, shadow explosion, void consuming",
-        "stealth": "invisibility cloak, shadow concealment, vanishing into dark",
-        "teleport": "shadow step, dark blink, void travel"
+        "low_power": "shifting shadows with minor darkness manifestation",
+        "mid_power": "dark energy burst with shadow tendril eruption",
+        "high_power": "overwhelming void explosion with consuming darkness force",
+        "stealth": "vanishing shadow cloak with invisibility concealment",
+        "teleport": "shadow step blink with dark void teleportation"
       }
     },
     "earth": {
       "name": "Earth Magic",
-      "basePrompt": "Fantasy earth spell, stone rumbling, ground shaking, rock manipulation",
+      "basePrompt": "Fantasy rumbling stone magic with ground-shaking rock manipulation",
       "modifiers": {
-        "low_power": "pebbles shifting, minor tremor, small rocks",
-        "mid_power": "boulders moving, earth shaking, stone barrier",
-        "high_power": "massive earthquake, mountain force, devastating quake",
-        "projectile": "rock hurling, stone launching, boulder flying",
-        "wall": "earth wall rising, stone barrier forming, rock wall"
+        "low_power": "shifting pebbles with minor ground tremor",
+        "mid_power": "moving boulders with earth-shaking stone barrier",
+        "high_power": "massive earthquake with devastating mountain force",
+        "projectile": "hurling rock with launching stone projectile impact",
+        "wall": "rising earth wall with forming stone barrier"
       }
     },
     "wind": {
       "name": "Wind Magic",
-      "basePrompt": "Fantasy wind spell, air rushing, gust whooshing, wind manipulation",
+      "basePrompt": "Fantasy rushing air magic with whooshing wind manipulation power",
       "modifiers": {
-        "low_power": "gentle breeze, light gust, minor wind",
-        "mid_power": "powerful gust, strong wind, air blast",
-        "high_power": "hurricane force, tornado power, devastating wind",
-        "blade": "cutting wind, air slash, razor gust",
-        "push": "wind pushing, air pressure, knockback gust"
+        "low_power": "gentle breeze with light gusting flow",
+        "mid_power": "powerful gust with strong air blast force",
+        "high_power": "devastating hurricane with overwhelming tornado power",
+        "blade": "cutting razor wind with slashing air blade",
+        "push": "knockback wind pressure with forceful air push"
       }
     },
     "water": {
       "name": "Water Magic",
-      "basePrompt": "Fantasy water spell, liquid flowing, wave crashing, aquatic magic",
+      "basePrompt": "Fantasy flowing aquatic magic with crashing wave manipulation power",
       "modifiers": {
-        "low_power": "water trickling, small splash, minor flow",
-        "mid_power": "wave crashing, water surge, powerful current",
-        "high_power": "tidal wave, tsunami force, overwhelming flood",
-        "projectile": "water bolt, liquid projectile, aqua missile",
-        "heal": "healing waters, restorative current, life-giving flow"
+        "low_power": "trickling water with small splashing flow",
+        "mid_power": "crashing wave surge with powerful current force",
+        "high_power": "overwhelming tidal wave with devastating flood force",
+        "projectile": "launching water bolt with aqua missile impact",
+        "heal": "restorative healing waters with life-giving current flow"
       }
     }
   }

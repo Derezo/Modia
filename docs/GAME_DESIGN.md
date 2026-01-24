@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 2.0 |
+| Version | 3.0 |
 | Last Updated | January 2026 |
 | Genre | Tactical RPG / MMORPG |
 
@@ -235,8 +235,10 @@ Characters earn XP from battles which is added to their **XP Pool**. This XP is 
 
 Character level is determined by total XP spent:
 ```
-XP Required for Level N = 100 × N^1.8
+XP Required for Level N = 100 × N^2.8
 ```
+
+*Note: See [CHARACTER_PROGRESSION.md](CHARACTER_PROGRESSION.md) for detailed level thresholds and skill cost formulas.*
 
 #### Level Thresholds
 
@@ -561,41 +563,59 @@ Some status effects restrict which actions are available:
 #### Physical Damage
 ```
 base_damage = ATK × (skill_power / 100)
-defense_reduction = DEF × 0.3
-raw_damage = max(1, base_damage - defense_reduction)
+
+# Diminishing returns defense formula
+reduction_percent = DEF / (DEF + 100)
+reduced_damage = base_damage × (1 - reduction_percent)
 
 crit_roll = random(0, 1)
-is_crit = crit_roll < (LUK / 200)
-crit_multiplier = is_crit ? 1.5 : 1.0
+is_crit = crit_roll < (5% + LUK / 300)  # Base 5%, cap 50%
+crit_multiplier = is_crit ? (1.5 + LUK / 500) : 1.0  # Orcs get +0.25
 
-final_damage = floor(raw_damage × crit_multiplier)
+final_damage = floor(max(1, reduced_damage × crit_multiplier))
 ```
 
 #### Magical Damage
 ```
 base_damage = MATK × (skill_power / 100)
-defense_reduction = MDEF × 0.3
-raw_damage = max(1, base_damage - defense_reduction)
+
+# Diminishing returns defense formula (magic uses 80 divisor)
+reduction_percent = MDEF / (MDEF + 80)
+reduced_damage = base_damage × (1 - reduction_percent)
 
 # Crits work the same for magic
-final_damage = floor(raw_damage × crit_multiplier)
+final_damage = floor(max(1, reduced_damage × crit_multiplier))
 ```
+
+#### Defense Reduction Curve
+
+The diminishing returns formula creates an effective cap:
+
+| Defense | Physical Reduction | Magic Reduction |
+|---------|-------------------|-----------------|
+| 50 | 33% | 38% |
+| 100 | 50% | 56% |
+| 200 | 67% | 71% |
+| 300 | 75% | 79% |
+| 500 | 83% | 86% |
+
+*Effective cap at ~80% reduction (300+ defense). VIT contributes to physical defense, INT/2 to magic defense.*
 
 #### Example Calculation
 
-Level 10 Warrior (STR 40) uses Slash (110 power) vs Enemy (VIT 20)
+Level 10 Warrior (STR 40) uses Slash (110 power) vs Enemy (DEF 50)
 
 ```
 ATK = 40
 skill_power = 110
-DEF = 20 × 0.5 = 10
+DEF = 50
 
 base_damage = 40 × 1.10 = 44
-defense_reduction = 10 × 0.3 = 3
-raw_damage = 44 - 3 = 41
+reduction_percent = 50 / (50 + 100) = 33.3%
+reduced_damage = 44 × 0.667 = 29.3
 
-No crit: final_damage = 41
-With crit: final_damage = 61
+No crit: final_damage = 29
+With crit (1.5x): final_damage = 44
 ```
 
 ### 4.5 Status Effects

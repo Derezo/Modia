@@ -3,6 +3,7 @@ import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { MAX_GOLD } from '../config/constants.js';
+import { shopBuyLimiter, shopSellLimiter } from '../middleware/economyRateLimiter.js';
 import {
   getCaravanInventoryWithStock,
   processPurchase as processCaravanPurchase
@@ -259,7 +260,7 @@ router.get('/:nodeId/:shopType', authenticate, asyncHandler(async (req, res) => 
 // ============================================
 // POST /api/shops/:nodeId/:shopType/buy - Purchase item
 // ============================================
-router.post('/:nodeId/:shopType/buy', authenticate, asyncHandler(async (req, res) => {
+router.post('/:nodeId/:shopType/buy', authenticate, shopBuyLimiter, asyncHandler(async (req, res) => {
   const { nodeId, shopType } = req.params;
   const { itemTemplateId, characterId, itemId } = req.body;
   const nodeIdNum = parseInt(nodeId, 10);
@@ -452,7 +453,7 @@ router.post('/:nodeId/:shopType/buy', authenticate, asyncHandler(async (req, res
 // ============================================
 // POST /api/shops/:nodeId/:shopType/sell - Sell item
 // ============================================
-router.post('/:nodeId/:shopType/sell', authenticate, asyncHandler(async (req, res) => {
+router.post('/:nodeId/:shopType/sell', authenticate, shopSellLimiter, asyncHandler(async (req, res) => {
   const { nodeId, shopType } = req.params;
   const { itemInstanceId } = req.body;
   const nodeIdNum = parseInt(nodeId, 10);

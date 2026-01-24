@@ -9,6 +9,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import { relicClaimLimiter } from '../middleware/economyRateLimiter.js';
 import * as relicService from '../services/relicService.js';
 
 const router = express.Router();
@@ -58,7 +59,7 @@ router.get('/check/:key', authenticate, asyncHandler(async (req, res) => {
 // ============================================
 // POST /api/relics/:id/claim - Claim a relic
 // ============================================
-router.post('/:id/claim', authenticate, asyncHandler(async (req, res) => {
+router.post('/:id/claim', authenticate, relicClaimLimiter, asyncHandler(async (req, res) => {
   const relicId = parseInt(req.params.id, 10);
 
   if (isNaN(relicId)) {

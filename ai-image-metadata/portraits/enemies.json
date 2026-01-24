@@ -24,7 +24,7 @@
       "visualTraits": "green skin pointed ears yellow eyes tusks war paint crude iron helmet",
       "seed": 31001,
       "generated": true,
-      "generatedAt": "2026-01-22T06:56:58.576Z",
+      "generatedAt": "2026-01-24T04:13:18.476Z",
       "evaluation": {
         "score": 8,
         "issues": [],
@@ -39,7 +39,7 @@
       "visualTraits": "gray fur amber predator eyes snarling maw fangs alert ears",
       "seed": 31002,
       "generated": true,
-      "generatedAt": "2026-01-22T06:57:27.965Z",
+      "generatedAt": "2026-01-24T04:14:03.532Z",
       "evaluation": {
         "score": 7,
         "issues": [],
@@ -54,10 +54,12 @@
       "visualTraits": "translucent green body glowing core dripping tendrils bubbles",
       "seed": 31003,
       "generated": true,
-      "generatedAt": "2026-01-22T06:57:59.442Z",
+      "generatedAt": "2026-01-24T04:14:49.682Z",
       "evaluation": {
         "score": 6,
-        "issues": ["full_body_rather_than_bust"],
+        "issues": [
+          "full_body_rather_than_bust"
+        ],
         "regenerate": false
       }
     },
@@ -69,7 +71,7 @@
       "visualTraits": "large pointed ears red glowing eyes wing membrane fangs",
       "seed": 32001,
       "generated": true,
-      "generatedAt": "2026-01-22T06:58:31.971Z",
+      "generatedAt": "2026-01-23T11:26:54.665Z",
       "evaluation": {
         "score": 7,
         "issues": [],
@@ -84,7 +86,7 @@
       "visualTraits": "8 red eyes cluster mandibles hairy body segmented legs",
       "seed": 32002,
       "generated": true,
-      "generatedAt": "2026-01-22T06:59:04.594Z",
+      "generatedAt": "2026-01-23T11:27:35.543Z",
       "evaluation": {
         "score": 7,
         "issues": [],
@@ -99,7 +101,7 @@
       "visualTraits": "bone white cracked skull purple glowing eyes rusted armor",
       "seed": 32003,
       "generated": true,
-      "generatedAt": "2026-01-22T06:59:41.234Z",
+      "generatedAt": "2026-01-23T11:28:16.876Z",
       "evaluation": {
         "score": 8,
         "issues": [],
@@ -114,7 +116,7 @@
       "visualTraits": "gray stone texture moss patches orange glowing eyes runes",
       "seed": 32004,
       "generated": true,
-      "generatedAt": "2026-01-22T07:00:15.877Z",
+      "generatedAt": "2026-01-23T11:28:57.853Z",
       "evaluation": {
         "score": 7,
         "issues": [],
@@ -129,7 +131,7 @@
       "visualTraits": "gray-green skin heavy brow warts large tusks massive build",
       "seed": 33001,
       "generated": true,
-      "generatedAt": "2026-01-22T07:00:51.576Z",
+      "generatedAt": "2026-01-23T11:29:38.806Z",
       "evaluation": {
         "score": 7,
         "issues": [],
@@ -144,7 +146,7 @@
       "visualTraits": "bone necklace staff with orb purple magic glow feathers",
       "seed": 33002,
       "generated": true,
-      "generatedAt": "2026-01-22T07:01:28.272Z",
+      "generatedAt": "2026-01-23T11:30:19.677Z",
       "evaluation": {
         "score": 7,
         "issues": [],
@@ -159,7 +161,7 @@
       "visualTraits": "feathered head plume sharp beak fierce yellow eyes talons",
       "seed": 33003,
       "generated": true,
-      "generatedAt": "2026-01-22T07:02:04.926Z",
+      "generatedAt": "2026-01-23T11:31:00.581Z",
       "evaluation": {
         "score": 7,
         "issues": [],
@@ -174,7 +176,7 @@
       "visualTraits": "hood shadow facial scar mask over mouth gold earring",
       "seed": 34001,
       "generated": true,
-      "generatedAt": "2026-01-22T07:02:40.546Z",
+      "generatedAt": "2026-01-23T11:31:41.509Z",
       "evaluation": {
         "score": 8,
         "issues": [],
@@ -189,7 +191,7 @@
       "visualTraits": "fancy hat with feathers goatee confident smirk fine clothes",
       "seed": 34002,
       "generated": true,
-      "generatedAt": "2026-01-22T07:59:04.942Z",
+      "generatedAt": "2026-01-23T11:32:22.529Z",
       "evaluation": {
         "score": 7,
         "issues": [],
@@ -204,7 +206,7 @@
       "visualTraits": "blue-gray skin barnacles algae patches massive tusks",
       "seed": 34003,
       "generated": true,
-      "generatedAt": "2026-01-22T07:59:35.342Z",
+      "generatedAt": "2026-01-23T11:33:03.433Z",
       "evaluation": {
         "score": 7,
         "issues": [],
@@ -219,7 +221,7 @@
       "visualTraits": "dark ornate plate armor red piercing eyes purple dark aura",
       "seed": 35001,
       "generated": true,
-      "generatedAt": "2026-01-22T08:00:05.771Z",
+      "generatedAt": "2026-01-23T11:33:44.264Z",
       "evaluation": {
         "score": 8,
         "issues": [],
@@ -234,7 +236,7 @@
       "visualTraits": "deep hood void only red glowing eyes visible shadow tendrils",
       "seed": 35002,
       "generated": true,
-      "generatedAt": "2026-01-22T08:00:36.256Z",
+      "generatedAt": "2026-01-23T11:34:25.093Z",
       "evaluation": {
         "score": 8,
         "issues": [],
@@ -249,7 +251,7 @@
       "visualTraits": "polished plate armor golden trim royal emblem stern visor",
       "seed": 35003,
       "generated": true,
-      "generatedAt": "2026-01-22T08:01:07.750Z",
+      "generatedAt": "2026-01-23T11:35:06.173Z",
       "evaluation": {
         "score": 7,
         "issues": [],

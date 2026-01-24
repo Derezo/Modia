@@ -324,38 +324,24 @@ class SunoClient {
   }
 
   /**
-   * Download a completed track to a file
-   * @param {string} taskId - The task ID of the completed track
+   * Download a single audio file from URL
+   * @private
+   * @param {string} audioUrl - URL to download from
    * @param {string} outputPath - Path where the file should be saved
    * @returns {Promise<Object>} Download result with file path and size
    */
-  async downloadTrack(taskId, outputPath) {
-    // First get the track status to get the audio URL
-    const result = await this.checkStatus(taskId);
-
-    if (!result.isComplete) {
-      throw new Error(`Track is not ready for download. Status: ${result.status}`);
-    }
-
-    if (!result.audioUrl) {
-      throw new Error('No audio URL available for download');
-    }
-
-    const status = result; // Alias for compatibility with rest of method
-
-    log(`Downloading track to ${outputPath}`, 'info');
-
+  async _downloadFile(audioUrl, outputPath) {
     // Ensure output directory exists
     const outputDir = path.dirname(outputPath);
     ensureDirectoryExists(outputDir);
 
     return new Promise((resolve, reject) => {
-      const url = new URL(status.audioUrl);
+      const url = new URL(audioUrl);
       const protocol = url.protocol === 'https:' ? https : require('http');
 
       const file = fs.createWriteStream(outputPath);
 
-      protocol.get(status.audioUrl, (response) => {
+      protocol.get(audioUrl, (response) => {
         if (response.statusCode === 302 || response.statusCode === 301) {
           // Handle redirect
           protocol.get(response.headers.location, (redirectRes) => {
@@ -374,13 +360,9 @@ class SunoClient {
         file.on('finish', () => {
           file.close();
           const stats = fs.statSync(outputPath);
-          log(`Download complete: ${outputPath} (${stats.size} bytes)`, 'success');
           resolve({
             path: outputPath,
-            size: stats.size,
-            taskId: taskId,
-            title: status.title,
-            duration: status.duration
+            size: stats.size
           });
         });
       }).on('error', (error) => {
@@ -388,6 +370,93 @@ class SunoClient {
         reject(new Error(`Download failed: ${error.message}`));
       });
     });
+  }
+
+  /**
+   * Download a completed track to a file (downloads primary track only)
+   * @param {string} taskId - The task ID of the completed track
+   * @param {string} outputPath - Path where the file should be saved
+   * @returns {Promise<Object>} Download result with file path and size
+   */
+  async downloadTrack(taskId, outputPath) {
+    // First get the track status to get the audio URL
+    const result = await this.checkStatus(taskId);
+
+    if (!result.isComplete) {
+      throw new Error(`Track is not ready for download. Status: ${result.status}`);
+    }
+
+    if (!result.audioUrl) {
+      throw new Error('No audio URL available for download');
+    }
+
+    log(`Downloading track to ${outputPath}`, 'info');
+
+    const downloadResult = await this._downloadFile(result.audioUrl, outputPath);
+    log(`Download complete: ${outputPath} (${downloadResult.size} bytes)`, 'success');
+
+    return {
+      ...downloadResult,
+      taskId: taskId,
+      title: result.title,
+      duration: result.duration
+    };
+  }
+
+  /**
+   * Download ALL completed tracks from a task (Suno generates 2 tracks per request)
+   * Saves both tracks to preserve credits - primary track uses outputPath,
+   * additional tracks get _v2, _v3 suffix
+   * @param {string} taskId - The task ID of the completed tracks
+   * @param {string} outputPath - Base path where files should be saved
+   * @returns {Promise<Object>} Download results with all file paths and sizes
+   */
+  async downloadAllTracks(taskId, outputPath) {
+    // First get the track status to get all audio URLs
+    const result = await this.checkStatus(taskId);
+
+    if (!result.isComplete) {
+      throw new Error(`Tracks not ready for download. Status: ${result.status}`);
+    }
+
+    if (!result.tracks || result.tracks.length === 0) {
+      throw new Error('No tracks available for download');
+    }
+
+    log(`Downloading ${result.tracks.length} tracks from task ${taskId}`, 'info');
+
+    const downloads = [];
+    const ext = path.extname(outputPath);
+    const base = outputPath.slice(0, -ext.length);
+
+    for (let i = 0; i < result.tracks.length; i++) {
+      const track = result.tracks[i];
+      if (!track.audioUrl) {
+        log(`Track ${i + 1} has no audio URL, skipping`, 'warn');
+        continue;
+      }
+
+      // First track uses original path, others get _v2, _v3 suffix
+      const trackPath = i === 0 ? outputPath : `${base}_v${i + 1}${ext}`;
+
+      log(`Downloading track ${i + 1}/${result.tracks.length} to ${trackPath}`, 'info');
+      const downloadResult = await this._downloadFile(track.audioUrl, trackPath);
+      log(`Download complete: ${trackPath} (${downloadResult.size} bytes)`, 'success');
+
+      downloads.push({
+        ...downloadResult,
+        trackIndex: i,
+        title: track.title,
+        duration: track.duration
+      });
+    }
+
+    return {
+      taskId: taskId,
+      totalTracks: result.tracks.length,
+      downloads: downloads,
+      primaryPath: outputPath
+    };
   }
 
   /**

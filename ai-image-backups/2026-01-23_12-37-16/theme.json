@@ -1,0 +1,103 @@
+{
+  "version": "2.0.0",
+  "name": "watercolor",
+  "description": "Ink and wash watercolor style with parchment texture - updated for layered composition",
+
+  "style": {
+    "trigger": "wbgmsst",
+    "legacyTrigger": "GRPZA",
+    "basePhrase": "ink and wash watercolor illustration",
+    "technique": "bold black outlines with watercolor fills",
+    "texture": "aged parchment texture",
+    "mood": "cozy nostalgic JRPG aesthetic"
+  },
+
+  "negativePrompt": "photorealistic, 3D render, CGI, anime style, chibi, pixel art, blurry, low quality, watermark, signature, text, logo, modern elements, neon colors, oversaturated, complex backgrounds, multiple subjects, deformed, bad anatomy, extra limbs, messy lines, muddy colors, holding objects, hands in frame, full body, weapon in hand, action pose, white framing, white border",
+
+  "categoryModifiers": {
+    "portraits": {
+      "suffix": "head and shoulders portrait bust, character centered, hands not visible, expressive eyes, warm inviting storybook quality, isolated on plain background",
+      "size": "64x64"
+    },
+    "icons": {
+      "suffix": "simplified bold design, high contrast silhouette, clean edges, isolated on plain background",
+      "size": "128x128"
+    },
+    "items": {
+      "suffix": "fantasy RPG sprite, clean centered composition, slight 3D depth, no glow effects, isolated subject, plain neutral background",
+      "size": "128x128"
+    },
+    "nodes": {
+      "suffix": "fantasy map landmark icon, top-down stylized view, miniature landmark style, clear silhouette, isolated on plain background",
+      "size": "48x48"
+    },
+    "overlays": {
+      "suffix": "particle effect overlay, full frame aura surrounding empty center, transparent background with additive glow, no central object, pure effect layer",
+      "size": "128x128"
+    }
+  },
+
+  "rarityModifiers": {
+    "common": "",
+    "uncommon": "",
+    "rare": "",
+    "epic": ""
+  },
+
+  "overlayConfig": {
+    "description": "Configuration for layered item composition system",
+    "blendMode": "lighter",
+    "rarityAlpha": {
+      "uncommon": 0.5,
+      "rare": 0.65,
+      "epic": 0.75,
+      "legendary": 0.85
+    },
+    "augmentAlpha": {
+      "minor": 0.4,
+      "standard": 0.6,
+      "supreme": 0.8
+    },
+    "rarityOverlays": {
+      "uncommon": {
+        "color": "green",
+        "promptKeywords": "subtle green shimmer, faint sparkles, light wisps around edges"
+      },
+      "rare": {
+        "color": "blue",
+        "promptKeywords": "soft blue radial glow, gentle energy wisps, floating particles"
+      },
+      "epic": {
+        "color": "purple",
+        "promptKeywords": "bright purple radiance, swirling energy, glowing particles"
+      },
+      "legendary": {
+        "color": "golden",
+        "promptKeywords": "intense golden burst, radiant rays, animated sparkles"
+      }
+    },
+    "augmentOverlays": {
+      "fire": "orange red flames dancing around edges, flickering fire particles, ember sparks",
+      "ice": "blue ice crystals forming, frost formations, cold mist wisps, snowflake sparkles",
+      "lightning": "yellow electric arcs, crackling energy bolts, spark trails",
+      "poison": "green poison droplets, toxic vapor wisps, venomous mist, sickly glow",
+      "holy": "golden holy light rays, divine radiance, white sparkles, blessed glow",
+      "dark": "purple dark tendrils, shadowy wisps, void particles, ominous mist",
+      "critical": "red slash lines, critical hit marks, sharp impact trails",
+      "lifesteal": "crimson blood wisps, vampiric drain trails, red absorbing particles",
+      "speed": "blue speed lines, motion blur trails, velocity streaks",
+      "pierce": "white piercing rays, armor crack lines, penetrating force",
+      "stun": "yellow impact burst, stunning flash, star marks",
+      "chain": "electric chain links, branching arcs, multi-target connectors",
+      "earth": "brown earth particles, stone chips, rocky debris",
+      "wind": "white-cyan wind trails, swirling air currents, leaf particles"
+    }
+  },
+
+  "iconCategoryModifiers": {
+    "actions": "action skill icon",
+    "status": "status effect icon",
+    "menu": "menu UI icon",
+    "augments": "augment upgrade icon"
+  }
+}

@@ -12,19 +12,25 @@
       "key": "wall_castle_default",
       "prompt": "hewn castle stone wall with fitted blocks and mortar lines in slate grey #708090 #696969",
       "seed": 51001,
-      "outputPath": "castle/walls/default"
+      "outputPath": "castle/walls/default",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:20:00.797Z"
     },
     {
       "key": "wall_castle_brick",
       "prompt": "castle brick wall with weathered red and grey masonry pattern #8B0000 #696969",
       "seed": 51011,
-      "outputPath": "castle/walls/brick"
+      "outputPath": "castle/walls/brick",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:20:47.624Z"
     },
     {
       "key": "wall_castle_dungeon",
       "prompt": "damp dungeon wall with moss growth and rusted iron rings in dark tones #2F4F4F #696969",
       "seed": 51021,
-      "outputPath": "castle/walls/dungeon"
+      "outputPath": "castle/walls/dungeon",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:21:35.173Z"
     }
   ]
 }

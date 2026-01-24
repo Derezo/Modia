@@ -1,0 +1,136 @@
+{
+  "version": "1.0.0",
+  "category": "overlays",
+  "subcategory": "augments",
+  "description": "Augment effect overlays for layered item composition - elemental and combat effects",
+  "size": "128x128",
+  "blendMode": "lighter",
+  "overlays": [
+    {
+      "id": "augment_fire",
+      "name": "Fire Augment",
+      "element": "fire",
+      "alpha": 0.6,
+      "prompt": "orange red flames dancing around edges flickering fire particles ember sparks heat distortion",
+      "seed": 25001,
+      "generated": false
+    },
+    {
+      "id": "augment_ice",
+      "name": "Ice Augment",
+      "element": "ice",
+      "alpha": 0.6,
+      "prompt": "blue ice crystals forming frost formations cold mist wisps snowflake sparkles freezing effect",
+      "seed": 25002,
+      "generated": false
+    },
+    {
+      "id": "augment_lightning",
+      "name": "Lightning Augment",
+      "element": "lightning",
+      "alpha": 0.6,
+      "prompt": "yellow electric arcs crackling energy bolts spark trails static discharge shocking effect",
+      "seed": 25003,
+      "generated": false
+    },
+    {
+      "id": "augment_poison",
+      "name": "Poison Augment",
+      "element": "poison",
+      "alpha": 0.6,
+      "prompt": "green poison droplets toxic vapor wisps venomous mist sickly glow dripping corrosive",
+      "seed": 25004,
+      "generated": false
+    },
+    {
+      "id": "augment_holy",
+      "name": "Holy Augment",
+      "element": "holy",
+      "alpha": 0.6,
+      "prompt": "golden holy light rays divine radiance white sparkles blessed glow sacred aura",
+      "seed": 25005,
+      "generated": false
+    },
+    {
+      "id": "augment_dark",
+      "name": "Dark Augment",
+      "element": "dark",
+      "alpha": 0.6,
+      "prompt": "purple dark tendrils shadowy wisps void particles ominous mist consuming darkness",
+      "seed": 25006,
+      "generated": false
+    },
+    {
+      "id": "augment_critical",
+      "name": "Critical Augment",
+      "effect": "critical",
+      "alpha": 0.6,
+      "prompt": "red slash lines critical hit marks sharp impact trails devastating precision",
+      "seed": 25011,
+      "generated": false
+    },
+    {
+      "id": "augment_lifesteal",
+      "name": "Lifesteal Augment",
+      "effect": "lifesteal",
+      "alpha": 0.6,
+      "prompt": "crimson blood wisps vampiric drain trails red absorbing particles life siphoning",
+      "seed": 25012,
+      "generated": false
+    },
+    {
+      "id": "augment_speed",
+      "name": "Speed Augment",
+      "effect": "speed",
+      "alpha": 0.6,
+      "prompt": "blue speed lines motion blur trails velocity streaks swift wind effect",
+      "seed": 25013,
+      "generated": false
+    },
+    {
+      "id": "augment_pierce",
+      "name": "Pierce Augment",
+      "effect": "pierce",
+      "alpha": 0.6,
+      "prompt": "white piercing rays armor crack lines penetrating force breakthrough effect",
+      "seed": 25014,
+      "generated": false
+    },
+    {
+      "id": "augment_stun",
+      "name": "Stun Augment",
+      "effect": "stun",
+      "alpha": 0.6,
+      "prompt": "yellow impact burst stunning flash star marks daze effect concussive",
+      "seed": 25015,
+      "generated": false
+    },
+    {
+      "id": "augment_chain",
+      "name": "Chain Augment",
+      "effect": "chain",
+      "alpha": 0.6,
+      "prompt": "electric chain links branching arcs multi-target connectors spreading effect",
+      "seed": 25016,
+      "generated": false
+    },
+    {
+      "id": "augment_earth",
+      "name": "Earth Augment",
+      "element": "earth",
+      "alpha": 0.6,
+      "prompt": "brown earth particles stone chips rocky debris tremor effect grounded",
+      "seed": 25017,
+      "generated": false
+    },
+    {
+      "id": "augment_wind",
+      "name": "Wind Augment",
+      "element": "wind",
+      "alpha": 0.6,
+      "prompt": "white-cyan wind trails swirling air currents leaf particles gust effect breeze",
+      "seed": 25018,
+      "generated": false
+    }
+  ]
+}

@@ -427,21 +427,26 @@ async function main() {
   }
 
   // If --wait was specified, also download the completed tracks
+  // Suno generates 2 tracks per request - download both to preserve credits
   if (options.wait && results.started.length > 0) {
-    log('\nDownloading completed tracks...', 'info');
+    log('\nDownloading completed tracks (Suno generates 2 per request)...', 'info');
     console.log('');
 
     for (const item of results.started) {
       const outputPath = getOutputPath(item.track);
 
       try {
-        log(`Downloading: ${item.id}`, 'info');
-        const downloadResult = await client.downloadTrack(item.taskId, outputPath);
+        log(`Downloading all variants: ${item.id}`, 'info');
+        const downloadResult = await client.downloadAllTracks(item.taskId, outputPath);
 
         // Mark as generated in metadata
         markTrackGenerated(item.track);
 
-        log(`Downloaded: ${item.id} (${downloadResult.size} bytes)`, 'success');
+        const totalSize = downloadResult.downloads.reduce((sum, d) => sum + d.size, 0);
+        log(`Downloaded: ${item.id} (${downloadResult.totalTracks} tracks, ${totalSize} bytes total)`, 'success');
+        for (const dl of downloadResult.downloads) {
+          log(`  - ${dl.path} (${dl.size} bytes)`, 'info');
+        }
       } catch (error) {
         log(`Failed to download ${item.id}: ${error.message}`, 'error');
         results.failed.push({

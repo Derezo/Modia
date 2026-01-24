@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.3 |
+| Version | 2.4 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -14,11 +14,11 @@
 
 | Category | Completion | Status |
 |----------|------------|--------|
-| Infrastructure | 60% | In Progress |
+| Infrastructure | 75% | In Progress |
 | CI/CD Pipeline | 40% | In Progress |
-| Testing | 70% | In Progress |
-| Performance | 30% | In Progress |
-| Monitoring | 20% | In Progress |
+| Testing | 85% | In Progress |
+| Performance | 50% | In Progress |
+| Monitoring | 60% | In Progress |
 
 ---
 
@@ -123,8 +123,9 @@
 
 - [x] Auth flow
 - [x] Quest Board flow (v9.3: daily/weekly tabs, streak display, claim buttons)
-- [ ] Character creation flow
-- [ ] Battle flow
+- [x] Character creation flow (v9.4: race/class selection, name validation, creation success)
+- [x] Battle flow (v9.4: enter battle, turn order, actions, rewards, state persistence)
+- [x] Error handling scenarios (v9.4: network errors, session expiration, rate limiting)
 - [ ] Shop/marketplace flow
 - [ ] Full gameplay walkthrough
 
@@ -139,10 +140,12 @@
 
 ### 3.5 Load Testing
 
-- [ ] 25 concurrent users
-- [ ] WebSocket connection handling
-- [ ] Database query performance
-- [ ] Memory stability over time
+- [x] Artillery.io infrastructure setup (v9.4: config.yml with phased load testing)
+- [x] 25 concurrent users configuration (v9.4: warm-up, ramp-up, sustained, cool-down phases)
+- [x] Gameplay scenario tests (v9.4: shop, inventory, social, quests, leaderboards)
+- [ ] WebSocket connection stress testing
+- [ ] Database query performance profiling
+- [ ] Memory stability over time validation
 
 ### 3.6 Security Audit
 
@@ -154,8 +157,10 @@
 - [x] Configure `trust proxy` for production deployment (v8.7)
 - [x] Add rate limiter to auth/refresh endpoint (v8.7: 20/15min IP-based)
 - [x] Add rate limiter to world/travel endpoint (v8.7: 60/min per-user)
-- [ ] Review WebSocket rate limit persistence
-- [ ] Remove or gate debug endpoints (battle.js:900 /verify-traits)
+- [x] Comprehensive endpoint rate limiting (v9.4: 70+ endpoints protected via economyRateLimiter, characterRateLimiter, socialRateLimiter)
+- [x] Redis-backed rate limiting (v9.4: distributed rate limiting with in-memory fallback)
+- [x] WebSocket rate limit persistence (v9.4: Redis sorted sets for sliding window)
+- [x] Gate debug endpoints in production (v9.4: debug.js blocks in production regardless of DEBUG env var)
 
 ---
 
@@ -203,9 +208,12 @@
 
 ### 5.1 Health Checks
 
-- [ ] API health endpoint
-- [ ] Database connectivity check
-- [ ] WebSocket health check
+- [x] API health endpoint (v9.4: GET /api/health basic, /health/ready for readiness, /health/live for liveness)
+- [x] Database connectivity check (v9.4: health/ready verifies DB with latency measurement)
+- [x] Redis health check (v9.4: health/ready and health/metrics include Redis status)
+- [x] WebSocket health check (v9.4: health/metrics reports connections, rooms)
+- [x] Memory metrics (v9.4: health/metrics includes heap, RSS)
+- [x] Rate limiter metrics (v9.4: health/metrics reports store type and stats)
 - [ ] Disk space monitoring
 
 ### 5.2 Error Tracking
@@ -369,16 +377,16 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Issue | Location | Priority | Status |
 |-------|----------|----------|--------|
-| In-memory rate limit state (no distributed storage) | rateLimiterFactory.js | High | Open |
-| WebSocket rate limits reset on reconnection | websocket/index.js:92-94 | High | Open |
+| ~~In-memory rate limit state (no distributed storage)~~ | rateLimiterFactory.js | ~~High~~ | **Resolved** v9.4 - Redis store with fallback |
+| ~~WebSocket rate limits reset on reconnection~~ | websocket/index.js | ~~High~~ | **Resolved** v9.4 - Redis sorted sets |
 | Inline listeners without cleanup | LoginScene.js, WorldMapScene.js | Medium | Open |
-| Missing rate limiters on inventory endpoints | inventory.js | Medium | Open |
+| ~~Missing rate limiters on inventory endpoints~~ | inventory.js | ~~Medium~~ | **Resolved** v9.4 - economyRateLimiter |
 | API response format inconsistency | Various routes | Low | Open |
-| Debug endpoint in production | battle.js:1076 verify-traits | Low | Open |
+| ~~Debug endpoint in production~~ | debug.js | ~~Low~~ | **Resolved** v9.4 - gated by NODE_ENV |
 | ~~Event name mismatch (party:invite)~~ | Game.js / partyWebsocket.js | ~~Medium~~ | **Resolved** - uses party:invite_received |
 | ~~SkillTreePanel.js potentially unused~~ | frontend/src/components/ | ~~Low~~ | **Resolved** - file removed |
 
-*Issues audited: 2026-01-22*
+*Issues audited: 2026-01-23*
 
 ### 8.3 Refactoring Opportunities
 
@@ -393,7 +401,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 - [ ] API response standardization
 - [ ] Database audit trail for gold/item changes (track before/after values)
 - [ ] Request validation layer (Zod schemas for consistent input validation)
-- [ ] Distributed rate limiting (Redis) for horizontal scaling
+- [x] Distributed rate limiting (Redis) for horizontal scaling (v9.4: rate-limit-redis with graceful fallback)
 - [ ] Structured logging with request correlation IDs
 
 ### 8.4 Future Infrastructure
@@ -402,7 +410,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 |------|----------|-------|
 | API versioning (/api/v1/...) | Low | Only when breaking changes needed |
 | Database connection pooling (pgBouncer) | Medium | For horizontal scaling |
-| Health check expansion | High | DB connectivity, WebSocket status, memory metrics |
+| ~~Health check expansion~~ | ~~High~~ | **Completed** v9.4 - DB, Redis, WebSocket, memory, rate limiter metrics |
 | Log aggregation service | Medium | JSON structured logs for monitoring |
 
 ---
@@ -424,6 +432,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.4 | Jan 2026 | Security & Testing Infrastructure (v9.4): Added Redis-backed rate limiting with graceful fallback. Comprehensive endpoint protection (70+ endpoints via economyRateLimiter, characterRateLimiter, socialRateLimiter). Gated debug endpoints in production. Enhanced health checks with Redis, rate limiter stats, liveness/readiness endpoints. Artillery.io load testing infrastructure for 25 concurrent users. E2E tests: character creation, battle flow, error handling. Shared test helpers. Updated status: Testing 85%, Monitoring 60%, Infrastructure 75%. |
 | 2.3 | Jan 2026 | Post-Processing Pipeline Overhaul: Added Section 7.4 documenting new asset-specific post-processing functions. Removed --sizes flag, standardized resolutions (256 portraits/nodes, 128 tiles/items/icons). Added diamond mask for tiles, improved prompts for geometry. Renumbered pending items to 7.5. Commit 91ac94b. |
 | 2.2 | Jan 2026 | AI Image Quality Evaluation: Added Section 7 for AI Image Generation System. Documented prompt builder improvements (removed white background, added composition constraints). Added quality evaluation system with scoring criteria. Section numbering updated (7→8 for Technical Debt). |
 | 2.1 | Jan 2026 | Documentation Audit: Updated file size table with verified line counts. Audited known issues - resolved party:invite mismatch (uses party:invite_received) and SkillTreePanel.js (file removed). Added status column to known issues. |

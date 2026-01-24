@@ -152,7 +152,13 @@ The generate-sfx.js script **blocks** prompts with 2+ commas. Run with `--dry-ru
 ### Shared (`shared/`)
 - `constants.js` - Races, classes, stat formulas, `SeededRandom` class (Mulberry32)
 - `terrain.js` - Terrain types, movement costs, passability checks
-- `mapGeneration.js` - Seeded terrain and obstacle generation for battle maps
+- `mapGeneration.js` - Legacy seeded terrain generation (simple)
+- `mapgen/` - **Advanced battle map generation system:**
+  - `AlgorithmPipeline.js` - Orchestrates algorithm selection and execution
+  - `algorithms/` - Perlin noise, cellular automata, room carving, path carving, cluster placement
+  - `archetypes/` - Curated map style definitions (cave, forest, mountain, etc.)
+  - `graph/` - Graph-based topology and POI generation
+  - `PRNGStreams.js` - Deterministic random number generation with multiple streams
 - `pathfinding.js` - Dijkstra and A* algorithms for movement/pathing
 - `battleMath.js` - Damage formulas, hit/crit calculations for combat previews
 - `nameData.js` - Procedural name generation data for NPCs/recruits
@@ -474,6 +480,15 @@ audio-metadata/
       deaths.json       # Death sounds
       status-effects.json
     manifest.json       # Index of all categories
+
+ai-image-metadata/
+  tiles/                # Battle terrain tiles by biome
+    floors/, walls/, slopes/
+  portraits/            # Character and enemy portraits
+  items/                # Weapons, armor, consumables
+  icons/                # UI action icons, status effects
+  nodes/                # World map node icons
+  manifest.json         # Master index
 ```
 
 ### Tech Debt: Existing Large Files
@@ -482,7 +497,7 @@ These files exceed or approach limits and are tracked in `docs/ROADMAP_TECHNICAL
 
 | File | Lines | Status |
 |------|-------|--------|
-| `frontend/src/scenes/WorldMapScene.js` | 2,861 | WARNING - plan modularization |
+| `frontend/src/scenes/WorldMapScene.js` | 2,911 | WARNING - plan modularization |
 | `frontend/src/scenes/BattleScene.js` | 2,680 | WARNING - plan modularization |
 | `api/src/services/marketplaceService.js` | 1,956 | WARNING |
 | `frontend/src/battle/BattleUI.js` | 1,556 | WARNING - exceeds 1,500 threshold |

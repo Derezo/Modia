@@ -3,7 +3,17 @@
   "subcategory": "monster",
   "description": "Sound effects for monster archetype skills",
   "totalEffects": 68,
-  "archetypes": ["beast", "dragon", "undead", "elemental", "humanoid", "construct", "demon", "insect", "plant"],
+  "archetypes": [
+    "beast",
+    "dragon",
+    "undead",
+    "elemental",
+    "humanoid",
+    "construct",
+    "demon",
+    "insect",
+    "plant"
+  ],
   "effects": [
     {
       "id": "monster_bite",
@@ -12,11 +22,12 @@
       "archetype": "beast",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy beast bite attack, animal jaws snapping, predatory chomping, feral teeth impact, vicious creature bite",
+      "prompt": "Fantasy vicious beast bite with snapping predatory jaws and feral teeth impact",
       "path": "/assets/audio/sfx/skills/monster/bite.mp3",
-      "duration": 1.0,
+      "duration": 1,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:16.516Z"
     },
     {
       "id": "monster_claw_swipe",
@@ -25,11 +36,12 @@
       "archetype": "beast",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy beast claw swipe, razor claws slashing, predatory attack, multiple scratch impacts, wild animal strike",
+      "prompt": "Fantasy razor claw swipe with slashing predatory attack and multiple scratch impacts",
       "path": "/assets/audio/sfx/skills/monster/claw_swipe.mp3",
       "duration": 1.2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:18.915Z"
     },
     {
       "id": "monster_pounce",
@@ -38,11 +50,12 @@
       "archetype": "beast",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy beast pounce, predator leaping, powerful jump attack, creature landing on prey, aggressive tackle impact",
+      "prompt": "Fantasy predator pounce with powerful leaping attack and aggressive tackle impact",
       "path": "/assets/audio/sfx/skills/monster/pounce.mp3",
       "duration": 1.5,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:21.381Z"
     },
     {
       "id": "monster_ferocious_roar",
@@ -51,11 +64,12 @@
       "archetype": "beast",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy beast roar, terrifying animal bellow, fear-inducing howl, primal intimidation, savage creature cry",
+      "prompt": "Fantasy terrifying beast roar with primal intimidating bellow and savage creature cry",
       "path": "/assets/audio/sfx/skills/monster/ferocious_roar.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:23.789Z"
     },
     {
       "id": "monster_rending_bite",
@@ -64,11 +78,12 @@
       "archetype": "beast",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy rending bite, tearing flesh attack, bleeding wound inflicted, vicious mauling, savage predator damage",
+      "prompt": "Fantasy vicious rending bite with tearing flesh mauling and savage predator damage",
       "path": "/assets/audio/sfx/skills/monster/rending_bite.mp3",
       "duration": 1.2,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:26.307Z"
     },
     {
       "id": "monster_savage_assault",
@@ -77,11 +92,12 @@
       "archetype": "beast",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy savage assault, rapid beast attacks, multiple hit frenzy, wild creature barrage, primal combat fury",
+      "prompt": "Fantasy savage assault frenzy with rapid beast attacks and primal combat fury",
       "path": "/assets/audio/sfx/skills/monster/savage_assault.mp3",
       "duration": 1.8,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:28.478Z"
     },
     {
       "id": "monster_howl",
@@ -90,11 +106,12 @@
       "archetype": "beast",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy pack howl, wolf-like rallying cry, pack buff activation, coordinated beast call, empowering animal howl",
+      "prompt": "Fantasy empowering pack howl with wolf-like rallying cry and coordinated beast call",
       "path": "/assets/audio/sfx/skills/monster/howl.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:31.471Z"
     },
     {
       "id": "monster_fire_breath",
@@ -103,11 +120,12 @@
       "archetype": "dragon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy dragon fire breath, massive flame exhale, cone of fire, devastating heat wave, legendary fire attack",
+      "prompt": "Fantasy devastating dragon fire breath with massive flame exhale and legendary heat wave",
       "path": "/assets/audio/sfx/skills/monster/fire_breath.mp3",
       "duration": 2.5,
       "volume": 0.9,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:34.248Z"
     },
     {
       "id": "monster_frost_breath",
@@ -116,11 +134,12 @@
       "archetype": "dragon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy dragon frost breath, freezing exhale, ice cone attack, bitter cold wave, flash-freezing breath weapon",
+      "prompt": "Fantasy dragon frost breath with flash-freezing exhale and bitter cold wave",
       "path": "/assets/audio/sfx/skills/monster/frost_breath.mp3",
       "duration": 2.5,
       "volume": 0.9,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:36.757Z"
     },
     {
       "id": "monster_lightning_breath",
@@ -129,11 +148,12 @@
       "archetype": "dragon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy dragon lightning breath, electrical beam exhale, shocking line attack, devastating thunder stream, legendary storm breath",
+      "prompt": "Fantasy dragon lightning breath with devastating electrical beam and legendary storm exhale",
       "path": "/assets/audio/sfx/skills/monster/lightning_breath.mp3",
       "duration": 2.5,
       "volume": 0.9,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:39.173Z"
     },
     {
       "id": "monster_poison_breath",
@@ -142,11 +162,12 @@
       "archetype": "dragon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy dragon poison breath, toxic cloud exhale, venomous mist spreading, poisonous area attack, noxious fumes",
+      "prompt": "Fantasy dragon poison breath with toxic cloud exhale and spreading venomous fumes",
       "path": "/assets/audio/sfx/skills/monster/poison_breath.mp3",
       "duration": 2.5,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:44.190Z"
     },
     {
       "id": "monster_tail_swipe",
@@ -155,11 +176,12 @@
       "archetype": "dragon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy dragon tail swipe, massive tail sweep, powerful knockback attack, area physical strike, legendary beast swing",
+      "prompt": "Fantasy massive dragon tail swipe with powerful knockback sweep and legendary beast strike",
       "path": "/assets/audio/sfx/skills/monster/tail_swipe.mp3",
       "duration": 1.5,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:46.702Z"
     },
     {
       "id": "monster_claw_rend",
@@ -168,11 +190,12 @@
       "archetype": "dragon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy dragon claw rend, massive talon strike, devastating slash, bleeding wound from claws, legendary physical attack",
+      "prompt": "Fantasy dragon claw rend with massive talon strike and devastating bleeding slash",
       "path": "/assets/audio/sfx/skills/monster/claw_rend.mp3",
       "duration": 1.2,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:49.934Z"
     },
     {
       "id": "monster_wing_buffet",
@@ -181,11 +204,12 @@
       "archetype": "dragon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy dragon wing buffet, powerful wing gust, knockback wind attack, massive creature wing flap, air pressure wave",
+      "prompt": "Fantasy dragon wing buffet with powerful knockback gust and massive air pressure wave",
       "path": "/assets/audio/sfx/skills/monster/wing_buffet.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:52.344Z"
     },
     {
       "id": "monster_crushing_stomp",
@@ -194,11 +218,12 @@
       "archetype": "dragon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy dragon stomp, massive foot crushing ground, earth-shaking impact, stunning area attack, legendary creature weight",
+      "prompt": "Fantasy dragon crushing stomp with earth-shaking massive impact and legendary creature weight",
       "path": "/assets/audio/sfx/skills/monster/crushing_stomp.mp3",
       "duration": 1.5,
       "volume": 0.9,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:54.859Z"
     },
     {
       "id": "monster_intimidating_roar",
@@ -207,11 +232,12 @@
       "archetype": "dragon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy dragon roar, terrifying legendary bellow, fear-inducing presence, overwhelming intimidation, earth-shaking cry",
+      "prompt": "Fantasy terrifying dragon roar with overwhelming legendary bellow and earth-shaking intimidation",
       "path": "/assets/audio/sfx/skills/monster/intimidating_roar.mp3",
       "duration": 2.5,
       "volume": 0.9,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:57.277Z"
     },
     {
       "id": "monster_life_drain",
@@ -220,11 +246,12 @@
       "archetype": "undead",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy life drain, soul-siphoning attack, health-stealing magic, vampiric energy absorption, dark life force extraction",
+      "prompt": "Fantasy vampiric life drain with soul-siphoning dark magic and health-stealing absorption",
       "path": "/assets/audio/sfx/skills/monster/life_drain.mp3",
       "duration": 1.8,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:10:59.711Z"
     },
     {
       "id": "monster_death_touch",
@@ -233,11 +260,12 @@
       "archetype": "undead",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy death touch, necrotic energy transfer, cursed contact, life-withering grasp, dark magic touch attack",
+      "prompt": "Fantasy necrotic death touch with life-withering cursed contact and dark magic transfer",
       "path": "/assets/audio/sfx/skills/monster/death_touch.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:11:04.108Z"
     },
     {
       "id": "monster_soul_siphon",
@@ -246,11 +274,12 @@
       "archetype": "undead",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy soul siphon, spirit extraction, HP and MP draining, essence stealing, dark soul absorption magic",
+      "prompt": "Fantasy dark soul siphon with spirit extraction and dual resource draining absorption",
       "path": "/assets/audio/sfx/skills/monster/soul_siphon.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:11:06.919Z"
     },
     {
       "id": "monster_wail_of_doom",
@@ -259,11 +288,12 @@
       "archetype": "undead",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy undead wail, terrifying ghostly scream, area fear and damage, haunting death cry, supernatural horror sound",
+      "prompt": "Fantasy haunting wail of doom with terrifying ghostly scream and supernatural horror cry",
       "path": "/assets/audio/sfx/skills/monster/wail_of_doom.mp3",
       "duration": 2.5,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:11:09.316Z"
     },
     {
       "id": "monster_bone_shatter",
@@ -272,11 +302,12 @@
       "archetype": "undead",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy bone shatter attack, skeletal strike, armor-corroding hit, bones cracking impact, undead physical damage",
+      "prompt": "Fantasy undead bone shatter with skeletal strike impact and armor-corroding cracking blow",
       "path": "/assets/audio/sfx/skills/monster/bone_shatter.mp3",
       "duration": 1.2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:11:11.882Z"
     },
     {
       "id": "monster_ghoul_bite",
@@ -285,11 +316,12 @@
       "archetype": "undead",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy ghoul bite, undead creature chomping, poisonous teeth attack, rotting jaw strike, infectious undead damage",
+      "prompt": "Fantasy infectious ghoul bite with rotting jaw chomp and poisonous undead teeth strike",
       "path": "/assets/audio/sfx/skills/monster/ghoul_bite.mp3",
-      "duration": 1.0,
+      "duration": 1,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:11:14.300Z"
     },
     {
       "id": "monster_unholy_strike",
@@ -298,11 +330,12 @@
       "archetype": "undead",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy unholy strike, dark-infused attack, necrotic damage blow, corrupted physical hit, evil energy impact",
+      "prompt": "Fantasy corrupted unholy strike with dark necrotic energy and evil-infused physical impact",
       "path": "/assets/audio/sfx/skills/monster/unholy_strike.mp3",
       "duration": 1.2,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:11:16.589Z"
     },
     {
       "id": "monster_flame_burst",
@@ -311,11 +344,12 @@
       "archetype": "elemental",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy flame burst, fire elemental attack, explosive fire release, burning projectile, elemental fire magic",
+      "prompt": "Fantasy fire elemental flame burst with explosive release and burning magical projectile",
       "path": "/assets/audio/sfx/skills/monster/flame_burst.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:11:18.989Z"
     },
     {
       "id": "monster_fire_nova",
@@ -324,11 +358,12 @@
       "archetype": "elemental",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy fire nova, flame elemental explosion, area fire burst, outward flame wave, burning circular attack",
+      "prompt": "Fantasy fire nova explosion with outward flame wave and burning circular elemental attack",
       "path": "/assets/audio/sfx/skills/monster/fire_nova.mp3",
       "duration": 1.8,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:11:21.284Z"
     },
     {
       "id": "monster_immolate",
@@ -337,11 +372,12 @@
       "archetype": "elemental",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy immolation, target set ablaze, long-lasting burn, fire consuming victim, persistent flame curse",
+      "prompt": "Fantasy immolation curse with consuming persistent flames and long-lasting fire engulfment",
       "path": "/assets/audio/sfx/skills/monster/immolate.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:11:23.951Z"
     },
     {
       "id": "monster_frost_bolt",
@@ -350,11 +386,12 @@
       "archetype": "elemental",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy frost bolt, ice elemental projectile, freezing magic missile, cold energy strike, slowing ice attack",
+      "prompt": "Fantasy ice elemental frost bolt with freezing magical missile and slowing cold strike",
       "path": "/assets/audio/sfx/skills/monster/frost_bolt.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:11:26.534Z"
     },
     {
       "id": "monster_ice_storm",
@@ -363,11 +400,12 @@
       "archetype": "elemental",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy ice storm, freezing area attack, ice shards raining, blizzard zone, elemental ice devastation",
+      "prompt": "Fantasy devastating ice storm with raining frozen shards and elemental blizzard devastation",
       "path": "/assets/audio/sfx/skills/monster/ice_storm.mp3",
       "duration": 2.5,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:11:58.291Z"
     },
     {
       "id": "monster_frozen_tomb",
@@ -376,11 +414,12 @@
       "archetype": "elemental",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy frozen tomb, target encased in ice, complete freeze, ice prison forming, crystalline imprisonment",
+      "prompt": "Fantasy frozen tomb imprisonment with complete ice encasing and crystalline prison formation",
       "path": "/assets/audio/sfx/skills/monster/frozen_tomb.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:00.816Z"
     },
     {
       "id": "monster_shock",
@@ -389,11 +428,12 @@
       "archetype": "elemental",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy shock attack, electrical zap, lightning elemental strike, stunning electricity, shocking damage",
+      "prompt": "Fantasy electrical shock attack with stunning lightning zap and elemental shocking damage",
       "path": "/assets/audio/sfx/skills/monster/shock.mp3",
       "duration": 1.2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:03.559Z"
     },
     {
       "id": "monster_chain_lightning",
@@ -402,11 +442,12 @@
       "archetype": "elemental",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy chain lightning, jumping electricity, multiple target shock, cascading thunder, electrical chain reaction",
+      "prompt": "Fantasy cascading chain lightning with jumping electricity and multiple target shock reaction",
       "path": "/assets/audio/sfx/skills/monster/chain_lightning.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:06.001Z"
     },
     {
       "id": "monster_thunderbolt",
@@ -415,11 +456,12 @@
       "archetype": "elemental",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy thunderbolt, massive lightning strike, devastating thunder attack, powerful electrical impact, sky-splitting bolt",
+      "prompt": "Fantasy devastating thunderbolt with massive lightning strike and sky-splitting electrical impact",
       "path": "/assets/audio/sfx/skills/monster/thunderbolt.mp3",
       "duration": 1.5,
       "volume": 0.9,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:08.519Z"
     },
     {
       "id": "monster_rock_throw",
@@ -428,11 +470,12 @@
       "archetype": "elemental",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy rock throw, boulder hurling, earth elemental projectile, heavy stone impact, physical earth attack",
+      "prompt": "Fantasy earth elemental rock throw with hurling boulder projectile and heavy stone impact",
       "path": "/assets/audio/sfx/skills/monster/rock_throw.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:10.871Z"
     },
     {
       "id": "monster_earthquake",
@@ -441,11 +484,12 @@
       "archetype": "elemental",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy earthquake, ground shaking violently, area tremor damage, earth cracking, stunning seismic attack",
+      "prompt": "Fantasy devastating earthquake with violently shaking ground and stunning seismic tremor",
       "path": "/assets/audio/sfx/skills/monster/earthquake.mp3",
       "duration": 2.5,
       "volume": 0.9,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:13.420Z"
     },
     {
       "id": "monster_stone_skin",
@@ -454,11 +498,12 @@
       "archetype": "elemental",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy stone skin buff, rock armor forming, defensive earth coating, protective mineral layer, hardening defense",
+      "prompt": "Fantasy stone skin buff with forming rock armor and protective mineral layer hardening",
       "path": "/assets/audio/sfx/skills/monster/stone_skin.mp3",
       "duration": 1.5,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:15.995Z"
     },
     {
       "id": "monster_slash",
@@ -467,11 +512,12 @@
       "archetype": "humanoid",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy sword slash, basic weapon strike, metal blade cutting, combat swing, enemy warrior attack",
+      "prompt": "Fantasy enemy warrior slash with basic sword strike and metal blade cutting swing",
       "path": "/assets/audio/sfx/skills/monster/slash.mp3",
-      "duration": 1.0,
+      "duration": 1,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:18.449Z"
     },
     {
       "id": "monster_heavy_blow",
@@ -480,11 +526,12 @@
       "archetype": "humanoid",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy heavy blow, powerful melee strike, stunning impact, forceful weapon hit, enemy warrior power attack",
+      "prompt": "Fantasy powerful heavy blow with stunning forceful impact and enemy warrior power attack",
       "path": "/assets/audio/sfx/skills/monster/heavy_blow.mp3",
       "duration": 1.2,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:20.789Z"
     },
     {
       "id": "monster_shield_slam",
@@ -493,11 +540,12 @@
       "archetype": "humanoid",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy shield slam, defensive weapon bash, stunning shield impact, metal crashing, warrior defensive attack",
+      "prompt": "Fantasy stunning shield slam with defensive weapon bash and crashing metal impact",
       "path": "/assets/audio/sfx/skills/monster/shield_slam.mp3",
-      "duration": 1.0,
+      "duration": 1,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:23.443Z"
     },
     {
       "id": "monster_whirlwind",
@@ -506,11 +554,12 @@
       "archetype": "humanoid",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy whirlwind attack, spinning weapon assault, area melee damage, rotating blade strikes, warrior tornado",
+      "prompt": "Fantasy spinning whirlwind attack with rotating blade strikes and warrior tornado assault",
       "path": "/assets/audio/sfx/skills/monster/whirlwind.mp3",
       "duration": 1.8,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:26.091Z"
     },
     {
       "id": "monster_arrow_shot",
@@ -519,11 +568,12 @@
       "archetype": "humanoid",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy arrow shot, bow string release, arrow flying, ranged projectile, enemy archer attack",
+      "prompt": "Fantasy enemy archer arrow shot with bow string release and flying ranged projectile",
       "path": "/assets/audio/sfx/skills/monster/arrow_shot.mp3",
       "duration": 1.5,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:28.549Z"
     },
     {
       "id": "monster_poison_arrow",
@@ -532,11 +582,12 @@
       "archetype": "humanoid",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy poison arrow, toxic-tipped projectile, venomous impact, poisoned ranged attack, corrupting arrow strike",
+      "prompt": "Fantasy venomous poison arrow with toxic-tipped projectile and corrupting ranged strike",
       "path": "/assets/audio/sfx/skills/monster/poison_arrow.mp3",
       "duration": 1.5,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:40.148Z"
     },
     {
       "id": "monster_volley",
@@ -545,11 +596,12 @@
       "archetype": "humanoid",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy arrow volley, multiple arrows raining, area ranged attack, barrage of projectiles, archer area assault",
+      "prompt": "Fantasy raining arrow volley with multiple projectile barrage and archer area assault",
       "path": "/assets/audio/sfx/skills/monster/volley.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:42.648Z"
     },
     {
       "id": "monster_magic_bolt",
@@ -558,11 +610,12 @@
       "archetype": "humanoid",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy magic bolt, basic magical projectile, arcane energy strike, enemy mage attack, mystical damage",
+      "prompt": "Fantasy enemy mage magic bolt with basic arcane projectile and mystical energy strike",
       "path": "/assets/audio/sfx/skills/monster/magic_bolt.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:45.067Z"
     },
     {
       "id": "monster_heal_ally",
@@ -571,11 +624,12 @@
       "archetype": "humanoid",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy ally healing, restorative magic cast, healing energy transfer, supportive spell, enemy healer magic",
+      "prompt": "Fantasy enemy healer ally restoration with supportive magic cast and healing energy transfer",
       "path": "/assets/audio/sfx/skills/monster/heal_ally.mp3",
       "duration": 1.8,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:47.500Z"
     },
     {
       "id": "monster_arcane_blast",
@@ -584,11 +638,12 @@
       "archetype": "humanoid",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy arcane blast, explosive magic attack, area magical damage, powerful spell detonation, enemy mage assault",
+      "prompt": "Fantasy enemy mage arcane blast with explosive magical detonation and powerful spell assault",
       "path": "/assets/audio/sfx/skills/monster/arcane_blast.mp3",
       "duration": 1.8,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:50.053Z"
     },
     {
       "id": "monster_slam",
@@ -597,11 +652,12 @@
       "archetype": "construct",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy golem slam, heavy construct strike, massive physical impact, stone or metal fist crashing, powerful automaton attack",
+      "prompt": "Fantasy golem slam with heavy construct fist crash and massive physical automaton impact",
       "path": "/assets/audio/sfx/skills/monster/slam.mp3",
       "duration": 1.2,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:52.731Z"
     },
     {
       "id": "monster_ground_pound",
@@ -610,11 +666,12 @@
       "archetype": "construct",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy ground pound, golem smashing earth, area stunning impact, floor-cracking strike, construct area attack",
+      "prompt": "Fantasy golem ground pound with earth-smashing impact and floor-cracking construct attack",
       "path": "/assets/audio/sfx/skills/monster/ground_pound.mp3",
       "duration": 1.8,
       "volume": 0.9,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:55.280Z"
     },
     {
       "id": "monster_boulder_hurl",
@@ -623,11 +680,12 @@
       "archetype": "construct",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy boulder hurl, golem throwing massive rock, heavy projectile flying, devastating ranged impact, construct siege attack",
+      "prompt": "Fantasy golem boulder hurl with massive rock throw and devastating siege projectile impact",
       "path": "/assets/audio/sfx/skills/monster/boulder_hurl.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.9,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:12:57.915Z"
     },
     {
       "id": "monster_overload",
@@ -636,11 +694,12 @@
       "archetype": "construct",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy construct overload, golem self-destructing, magical explosion, devastating area damage, automaton sacrifice",
+      "prompt": "Fantasy construct overload with self-destructing magical explosion and devastating automaton sacrifice",
       "path": "/assets/audio/sfx/skills/monster/overload.mp3",
       "duration": 2.5,
       "volume": 0.9,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:00.887Z"
     },
     {
       "id": "monster_charge_rush",
@@ -649,11 +708,12 @@
       "archetype": "construct",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy charge rush, golem charging forward, heavy trampling attack, knockback impact, construct momentum strike",
+      "prompt": "Fantasy golem charge rush with heavy trampling momentum and knockback construct impact",
       "path": "/assets/audio/sfx/skills/monster/charge_rush.mp3",
       "duration": 1.8,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:03.412Z"
     },
     {
       "id": "monster_hellfire_bolt",
@@ -662,11 +722,12 @@
       "archetype": "demon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy hellfire bolt, demonic fire projectile, infernal flame attack, dark fire magic, corrupted flame strike",
+      "prompt": "Fantasy demonic hellfire bolt with infernal flame projectile and corrupted dark fire strike",
       "path": "/assets/audio/sfx/skills/monster/hellfire_bolt.mp3",
       "duration": 1.5,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:06.721Z"
     },
     {
       "id": "monster_infernal_wave",
@@ -675,11 +736,12 @@
       "archetype": "demon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy infernal wave, cone of hellfire, demonic area attack, corrupted flame spread, dark fire devastation",
+      "prompt": "Fantasy demonic infernal wave with hellfire cone spread and corrupted dark flame devastation",
       "path": "/assets/audio/sfx/skills/monster/infernal_wave.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:09.020Z"
     },
     {
       "id": "monster_soul_burn",
@@ -688,11 +750,12 @@
       "archetype": "demon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy soul burn, spirit and MP damaging attack, demonic essence corruption, dual resource drain, hellish magic",
+      "prompt": "Fantasy demonic soul burn with dual resource drain and hellish essence corruption magic",
       "path": "/assets/audio/sfx/skills/monster/soul_burn.mp3",
       "duration": 1.8,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:12.005Z"
     },
     {
       "id": "monster_rain_of_fire",
@@ -701,11 +764,12 @@
       "archetype": "demon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy hellfire rain, demonic fire meteors, burning area attack, infernal bombardment, apocalyptic flame rain",
+      "prompt": "Fantasy apocalyptic hellfire rain with demonic meteor bombardment and infernal area devastation",
       "path": "/assets/audio/sfx/skills/monster/rain_of_fire.mp3",
       "duration": 2.5,
       "volume": 0.9,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:15.291Z"
     },
     {
       "id": "monster_corrupt",
@@ -714,11 +778,12 @@
       "archetype": "demon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy corruption curse, demonic affliction, dark energy poisoning, evil damage over time, hellish corruption",
+      "prompt": "Fantasy demonic corruption curse with dark energy poisoning and evil damage-over-time affliction",
       "path": "/assets/audio/sfx/skills/monster/corrupt.mp3",
       "duration": 1.8,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:17.748Z"
     },
     {
       "id": "monster_shadow_grasp",
@@ -727,11 +792,12 @@
       "archetype": "demon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy shadow grasp, dark tendrils grabbing, demonic root effect, shadow immobilization, evil binding magic",
+      "prompt": "Fantasy demonic shadow grasp with dark tendrils grabbing and evil binding immobilization",
       "path": "/assets/audio/sfx/skills/monster/shadow_grasp.mp3",
       "duration": 1.8,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:20.362Z"
     },
     {
       "id": "monster_doom",
@@ -740,11 +806,12 @@
       "archetype": "demon",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy doom curse, demonic death sentence, delayed massive damage, ominous doom marking, inevitable destruction",
+      "prompt": "Fantasy ominous doom curse with demonic death sentence and inevitable destruction marking",
       "path": "/assets/audio/sfx/skills/monster/doom.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.85,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:22.834Z"
     },
     {
       "id": "monster_sting",
@@ -753,11 +820,12 @@
       "archetype": "insect",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy insect sting, venomous puncture, poisonous stab, bug attack, toxic injection",
+      "prompt": "Fantasy venomous insect sting with poisonous puncture and toxic injection attack",
       "path": "/assets/audio/sfx/skills/monster/sting.mp3",
-      "duration": 1.0,
+      "duration": 1,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:25.236Z"
     },
     {
       "id": "monster_web_shot",
@@ -766,11 +834,12 @@
       "archetype": "insect",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy web shot, sticky silk projectile, slowing web attack, spider-like snare, movement-restricting shot",
+      "prompt": "Fantasy spider-like web shot with sticky silk projectile and movement-restricting snare",
       "path": "/assets/audio/sfx/skills/monster/web_shot.mp3",
       "duration": 1.5,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:27.867Z"
     },
     {
       "id": "monster_swarm_attack",
@@ -779,11 +848,12 @@
       "archetype": "insect",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy swarm attack, multiple rapid insect hits, buzzing assault, overwhelming small creature strikes, hive mind damage",
+      "prompt": "Fantasy buzzing swarm attack with overwhelming rapid insect hits and hive mind assault",
       "path": "/assets/audio/sfx/skills/monster/swarm_attack.mp3",
       "duration": 1.8,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:30.323Z"
     },
     {
       "id": "monster_paralytic_venom",
@@ -792,11 +862,12 @@
       "archetype": "insect",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy paralytic venom, stunning poison injection, paralyzing sting, immobilizing toxin, nerve-affecting poison",
+      "prompt": "Fantasy paralyzing venom injection with stunning poison sting and nerve-affecting immobilization",
       "path": "/assets/audio/sfx/skills/monster/paralytic_venom.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:33.104Z"
     },
     {
       "id": "monster_acid_spray",
@@ -805,11 +876,12 @@
       "archetype": "insect",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy acid spray, corrosive liquid attack, armor-dissolving spit, hissing acid, insect chemical attack",
+      "prompt": "Fantasy corrosive acid spray with hissing armor-dissolving spit and insect chemical attack",
       "path": "/assets/audio/sfx/skills/monster/acid_spray.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:36.458Z"
     },
     {
       "id": "monster_vine_lash",
@@ -818,11 +890,12 @@
       "archetype": "plant",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy vine lash, plant whip attack, natural tendril strike, vegetation slashing, organic weapon swing",
+      "prompt": "Fantasy plant vine lash with natural tendril whip and organic vegetation strike",
       "path": "/assets/audio/sfx/skills/monster/vine_lash.mp3",
       "duration": 1.2,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:39.803Z"
     },
     {
       "id": "monster_entangle",
@@ -831,11 +904,12 @@
       "archetype": "plant",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy entangle, roots and vines grabbing, plant immobilization, natural root binding, vegetation snare",
+      "prompt": "Fantasy plant entangle with grabbing roots and natural vine immobilization binding",
       "path": "/assets/audio/sfx/skills/monster/entangle.mp3",
       "duration": 1.8,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:42.483Z"
     },
     {
       "id": "monster_spore_cloud",
@@ -844,11 +918,12 @@
       "archetype": "plant",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy spore cloud, poisonous fungal release, toxic area effect, plant poison spreading, natural toxin burst",
+      "prompt": "Fantasy poisonous spore cloud with toxic fungal release and spreading natural toxin burst",
       "path": "/assets/audio/sfx/skills/monster/spore_cloud.mp3",
-      "duration": 2.0,
+      "duration": 2,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:45.061Z"
     },
     {
       "id": "monster_thorn_burst",
@@ -857,11 +932,12 @@
       "archetype": "plant",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy thorn burst, sharp spines launching, area plant attack, natural projectiles, vegetation defense",
+      "prompt": "Fantasy sharp thorn burst with launching natural spine projectiles and vegetation defense",
       "path": "/assets/audio/sfx/skills/monster/thorn_burst.mp3",
       "duration": 1.5,
       "volume": 0.8,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:47.582Z"
     },
     {
       "id": "monster_life_leech",
@@ -870,11 +946,12 @@
       "archetype": "plant",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy life leech, plant draining life force, vampiric vegetation, health stealing roots, natural life absorption",
+      "prompt": "Fantasy plant life leech with vampiric root drain and natural health-stealing absorption",
       "path": "/assets/audio/sfx/skills/monster/life_leech.mp3",
       "duration": 1.8,
       "volume": 0.75,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:50.263Z"
     },
     {
       "id": "monster_regenerate",
@@ -883,11 +960,12 @@
       "archetype": "plant",
       "category": "skill",
       "subcategory": "monster",
-      "prompt": "Fantasy plant regeneration, natural healing, vegetation regrowth, self-restoration, organic recovery",
+      "prompt": "Fantasy plant regeneration with natural healing regrowth and organic self-restoration",
       "path": "/assets/audio/sfx/skills/monster/regenerate.mp3",
       "duration": 1.8,
       "volume": 0.7,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:52.782Z"
     }
   ]
 }

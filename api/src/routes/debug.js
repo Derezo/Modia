@@ -1,7 +1,8 @@
 /**
- * Debug Routes - Developer tools for testing (DEBUG=true only)
+ * Debug Routes - Developer tools for testing (non-production only)
  *
- * These endpoints are only available when DEBUG=true in the environment.
+ * SECURITY: These endpoints are NEVER available in production, regardless of env vars.
+ * They are only available when NODE_ENV is 'development' or 'test'.
  * They allow developers to bypass gameplay mechanics for faster testing.
  */
 
@@ -12,29 +13,53 @@ import { AppError, asyncHandler } from '../middleware/errorHandler.js';
 import battleWebsocket from '../services/battleWebsocket.js';
 import { COMBAT_NODE_TYPES } from '../config/constants.js';
 import * as traitService from '../services/traitService.js';
+import { createLimiter } from '../middleware/rateLimiterFactory.js';
 
 const router = express.Router();
 
-// Check if debug mode is enabled
-// Debug endpoints are available when:
-// - DEBUG=true in environment, OR
-// - NODE_ENV=development (local development)
-const isDebugMode = process.env.DEBUG === 'true' || process.env.NODE_ENV === 'development';
+// SECURITY: Debug mode is STRICTLY disabled in production
+// NODE_ENV=production always disables debug endpoints, even if DEBUG=true
+const isProduction = process.env.NODE_ENV === 'production';
+const isDebugMode = !isProduction && (
+  process.env.DEBUG === 'true' ||
+  process.env.NODE_ENV === 'development' ||
+  process.env.NODE_ENV === 'test'
+);
+
+// Strict rate limiter for debug endpoints (1 request per minute per user)
+// This is a backup protection in case debug mode is accidentally enabled
+const debugRateLimiter = createLimiter({
+  name: 'debug',
+  windowMs: 60 * 1000,
+  maxRequests: 1,
+  message: 'Debug endpoint rate limit exceeded. Please wait.',
+  useUserKey: true
+});
 
 /**
  * Middleware to check debug mode is enabled
+ * SECURITY: Explicitly blocks production even if DEBUG=true is set
  */
 function requireDebugMode(req, res, next) {
+  // Double-check production environment
+  if (isProduction) {
+    console.warn(`[SECURITY] Debug endpoint access attempted in production by IP: ${req.ip}`);
+    return res.status(403).json({
+      error: 'Debug endpoints are disabled in production'
+    });
+  }
+
   if (!isDebugMode) {
     return res.status(403).json({
-      error: 'Debug endpoints are only available in development mode (NODE_ENV=development or DEBUG=true)'
+      error: 'Debug endpoints are only available in development mode (NODE_ENV=development)'
     });
   }
   next();
 }
 
-// Apply debug mode check to all routes
+// Apply debug mode check and rate limiter to all routes
 router.use(requireDebugMode);
+router.use(debugRateLimiter);
 
 /**
  * POST /api/debug/clear-node/:nodeId

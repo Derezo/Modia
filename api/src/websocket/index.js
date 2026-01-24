@@ -6,6 +6,7 @@ import coliseumService from '../services/coliseumService.js';
 import * as partyWebsocket from '../services/partyWebsocket.js';
 import * as marketplaceWebsocket from '../services/marketplaceWebsocket.js';
 import { query } from '../config/database.js';
+import { getRedisClient, isRedisConnected } from '../config/redis.js';
 
 // ============================================================
 // WebSocket Rate Limiting
@@ -30,21 +31,101 @@ const MESSAGE_CATEGORIES = {
   join_node: 'roomJoins'
 };
 
-// Per-user rate tracking: userId -> { global: [timestamps], chat: [timestamps], ... }
+// Per-user rate tracking (in-memory fallback): userId -> { global: [timestamps], ... }
 const userRateLimits = new Map();
 
 /**
+ * Check rate limit using Redis sorted sets (sliding window)
+ * @param {import('redis').RedisClientType} redisClient - Redis client
+ * @param {number} userId - User ID
+ * @param {string} category - Rate limit category
+ * @param {Object} config - { limit, windowMs }
+ * @returns {Promise<{ limited: boolean, retryAfter?: number }>}
+ */
+async function checkRedisRateLimit(redisClient, userId, category, config) {
+  const key = `ws:rl:${userId}:${category}`;
+  const now = Date.now();
+  const windowStart = now - config.windowMs;
+
+  try {
+    // Use a Redis transaction to atomically check and update
+    const multi = redisClient.multi();
+
+    // Remove expired entries
+    multi.zRemRangeByScore(key, 0, windowStart);
+
+    // Count current entries
+    multi.zCard(key);
+
+    // Add new entry
+    multi.zAdd(key, { score: now, value: `${now}` });
+
+    // Set key expiration (slightly longer than window to handle edge cases)
+    multi.expire(key, Math.ceil(config.windowMs / 1000) + 60);
+
+    const results = await multi.exec();
+    const count = results[1]; // zCard result
+
+    if (count >= config.limit) {
+      // Get the oldest timestamp to calculate retry-after
+      const oldest = await redisClient.zRange(key, 0, 0);
+      const oldestTime = oldest.length > 0 ? parseInt(oldest[0], 10) : now;
+      const retryAfter = config.windowMs - (now - oldestTime);
+      return { limited: true, retryAfter: Math.max(0, retryAfter) };
+    }
+
+    return { limited: false };
+  } catch (err) {
+    console.warn('[WS RateLimit] Redis error, falling back to in-memory:', err.message);
+    return { limited: false }; // Fail open on Redis errors
+  }
+}
+
+/**
  * Check if a user's message should be rate limited
+ * Uses Redis if available, falls back to in-memory
  * @param {number} userId - User ID
  * @param {string} messageType - WebSocket message type
- * @returns {{ limited: boolean, category?: string, retryAfter?: number }}
+ * @returns {Promise<{ limited: boolean, category?: string, retryAfter?: number }>}
  */
-function checkRateLimit(userId, messageType) {
+async function checkRateLimit(userId, messageType) {
   // Skip in test environment
   if (process.env.NODE_ENV === 'test') {
     return { limited: false };
   }
 
+  const category = MESSAGE_CATEGORIES[messageType];
+
+  // Try Redis first if connected
+  if (isRedisConnected()) {
+    try {
+      const redisClient = await getRedisClient();
+      if (redisClient) {
+        // Check global limit
+        const globalConfig = WS_RATE_LIMITS.global;
+        const globalResult = await checkRedisRateLimit(redisClient, userId, 'global', globalConfig);
+        if (globalResult.limited) {
+          return { limited: true, category: 'global', retryAfter: globalResult.retryAfter };
+        }
+
+        // Check category-specific limit
+        if (category && WS_RATE_LIMITS[category]) {
+          const catConfig = WS_RATE_LIMITS[category];
+          const catResult = await checkRedisRateLimit(redisClient, userId, category, catConfig);
+          if (catResult.limited) {
+            return { limited: true, category, retryAfter: catResult.retryAfter };
+          }
+        }
+
+        return { limited: false };
+      }
+    } catch (err) {
+      console.warn('[WS RateLimit] Redis check failed:', err.message);
+      // Fall through to in-memory
+    }
+  }
+
+  // In-memory fallback
   const now = Date.now();
 
   if (!userRateLimits.has(userId)) {
@@ -58,7 +139,6 @@ function checkRateLimit(userId, messageType) {
   }
 
   const userLimits = userRateLimits.get(userId);
-  const category = MESSAGE_CATEGORIES[messageType];
 
   // Check global limit first
   const globalConfig = WS_RATE_LIMITS.global;
@@ -89,8 +169,11 @@ function checkRateLimit(userId, messageType) {
  * Clean up rate limit tracking for a disconnected user
  * @param {number} userId - User ID
  */
-function cleanupUserRateLimits(userId) {
+async function cleanupUserRateLimits(userId) {
+  // Clear in-memory tracking
   userRateLimits.delete(userId);
+
+  // Note: Redis keys auto-expire via TTL, no cleanup needed
 }
 
 // ============================================================
@@ -241,7 +324,7 @@ function setupWebSocket(server) {
 
         // Rate limit check (skip for auth which happens before userId is set)
         if (userId && type !== 'auth') {
-          const rateCheck = checkRateLimit(userId, type);
+          const rateCheck = await checkRateLimit(userId, type);
           if (rateCheck.limited) {
             ws.send(JSON.stringify({
               type: 'rate_limited',

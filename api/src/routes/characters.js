@@ -4,6 +4,11 @@ import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats } from '../config/constants.js';
 import * as staminaService from '../services/staminaService.js';
+import {
+  characterCreateLimiter,
+  characterDeleteLimiter,
+  characterUpdateLimiter
+} from '../middleware/characterRateLimiter.js';
 
 const router = express.Router();
 
@@ -58,7 +63,7 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // POST /api/characters - Create new character
-router.post('/', authenticate, asyncHandler(async (req, res) => {
+router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, res) => {
   const { name, race, characterClass, gender = 'other' } = req.body;
 
   // Validation
@@ -211,7 +216,7 @@ router.get('/:id/stamina', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // PUT /api/characters/:id - Update character (name only for now)
-router.put('/:id', authenticate, asyncHandler(async (req, res) => {
+router.put('/:id', authenticate, characterUpdateLimiter, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { name } = req.body;
 
@@ -238,7 +243,7 @@ router.put('/:id', authenticate, asyncHandler(async (req, res) => {
 }));
 
 // DELETE /api/characters/:id - Delete character
-router.delete('/:id', authenticate, asyncHandler(async (req, res) => {
+router.delete('/:id', authenticate, characterDeleteLimiter, asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   // Check if character is in battle

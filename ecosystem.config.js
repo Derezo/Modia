@@ -5,9 +5,10 @@ module.exports = {
       script: './api/src/index.js',
 
       // Cluster mode for multi-core utilization
-      // NOTE: Set to 1 if WebSocket state sharing issues occur (until Redis is implemented)
-      // With cluster mode, ensure nginx is configured for sticky sessions if needed
-      instances: 2,
+      // NOTE: Set to 1 until sticky sessions or Redis pub/sub is implemented
+      // WebSocket connections may route to different instances without state sharing
+      // Increase to 2+ after implementing: nginx ip_hash, Redis adapter, or sticky sessions
+      instances: 1,
       exec_mode: 'cluster',
 
       // Memory management

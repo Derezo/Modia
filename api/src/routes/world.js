@@ -2,6 +2,13 @@ import express from 'express';
 import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { travelLimiter } from '../middleware/gameplayRateLimiter.js';
+import {
+  chestClaimLimiter,
+  staminaRestoreLimiter,
+  shrineLimiter,
+  fastTravelLimiter,
+  discoveryLimiter
+} from '../middleware/economyRateLimiter.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import presenceService from '../services/presenceService.js';
 import * as staminaService from '../services/staminaService.js';
@@ -911,7 +918,7 @@ async function verifyUserAtNode(userId, nodeId) {
 const MAX_GOLD = 2147483647;
 
 // POST /api/world/nodes/:id/claim-chest - Claim one-time chest loot
-router.post('/nodes/:id/claim-chest', authenticate, asyncHandler(async (req, res) => {
+router.post('/nodes/:id/claim-chest', authenticate, chestClaimLimiter, asyncHandler(async (req, res) => {
   const userId = req.user.userId;
   const nodeId = parseInt(req.params.id, 10);
 
@@ -977,7 +984,7 @@ router.post('/nodes/:id/claim-chest', authenticate, asyncHandler(async (req, res
 }));
 
 // POST /api/world/nodes/:id/visit-shrine - Apply shrine buff
-router.post('/nodes/:id/visit-shrine', authenticate, asyncHandler(async (req, res) => {
+router.post('/nodes/:id/visit-shrine', authenticate, shrineLimiter, asyncHandler(async (req, res) => {
   const userId = req.user.userId;
   const nodeId = parseInt(req.params.id, 10);
 
@@ -1198,7 +1205,7 @@ router.get('/zodiac-collection', authenticate, asyncHandler(async (req, res) => 
 }));
 
 // POST /api/world/nodes/:id/discover - Unlock discovery content
-router.post('/nodes/:id/discover', authenticate, asyncHandler(async (req, res) => {
+router.post('/nodes/:id/discover', authenticate, discoveryLimiter, asyncHandler(async (req, res) => {
   const userId = req.user.userId;
   const nodeId = parseInt(req.params.id, 10);
 
@@ -1461,7 +1468,7 @@ router.get('/fast-travel/destinations', authenticate, asyncHandler(async (req, r
 }));
 
 // POST /api/world/fast-travel - Fast travel to a region castle
-router.post('/fast-travel', authenticate, travelLimiter, asyncHandler(async (req, res) => {
+router.post('/fast-travel', authenticate, fastTravelLimiter, asyncHandler(async (req, res) => {
   const { targetNodeId } = req.body;
   const userId = req.user.userId;
 
@@ -1590,7 +1597,7 @@ router.post('/fast-travel', authenticate, travelLimiter, asyncHandler(async (req
 }));
 
 // POST /api/world/stamina/restore - Restore stamina at a town for gold
-router.post('/stamina/restore', authenticate, asyncHandler(async (req, res) => {
+router.post('/stamina/restore', authenticate, staminaRestoreLimiter, asyncHandler(async (req, res) => {
   const { amount } = req.body;
   const userId = req.user.userId;
 

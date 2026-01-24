@@ -2,7 +2,7 @@
 
 | Document | Version | Last Updated |
 |----------|---------|--------------|
-| Item System Specification | 2.0 | 2026-01-06 |
+| Item System Specification | 3.0 | 2026-01-22 |
 
 ## Table of Contents
 
@@ -54,6 +54,13 @@
     - 10.4 High-Level Equipment
     - 10.5 Off-Hand Equipment
     - 10.6 Generated Item Examples
+11. [Drop Tables](#11-drop-tables)
+12. [Relic System](#12-relic-system)
+    - 12.1 Overview
+    - 12.2 Relic Templates
+    - 12.3 Acquisition Methods
+    - 12.4 Permanent Bonuses
+    - 12.5 Collection UI
 
 ---
 
@@ -1858,6 +1865,76 @@ calculateDrops(enemy, killer):
 
 ---
 
+## 12. Relic System
+
+### 12.1 Overview
+
+Relics are rare collectible items that provide **permanent stat bonuses** to the owning player. Unlike equipment, relics are not worn or traded—they are collected and their bonuses apply automatically.
+
+Key characteristics:
+- **Permanent**: Bonuses persist across all characters
+- **Non-tradeable**: Cannot be sold or traded
+- **Unique**: Each relic can only be collected once
+- **Cumulative**: Multiple relics stack their bonuses
+
+### 12.2 Relic Templates
+
+| Relic | Stat Bonus | Acquisition |
+|-------|------------|-------------|
+| Ancient Coin | +2% Gold Drop | Ruins puzzle completion |
+| Dragon Scale | +5 Physical Defense | Boss drop (dragon enemies) |
+| Fairy Dust | +3% MP Regeneration | Rare shrine blessing |
+| Warrior's Medal | +2 STR | Guild advancement (Warrior) |
+| Scholar's Tome | +2 INT | Guild advancement (Wizard) |
+| Monk's Beads | +2 AGI | Guild advancement (Monk) |
+| Alchemist's Stone | +2 VIT | Guild advancement (Chemist) |
+
+*Note: This is a subset of available relics. Additional relics may be added in future updates.*
+
+### 12.3 Acquisition Methods
+
+| Method | Description |
+|--------|-------------|
+| **Ruins** | Complete sliding tile puzzles in ruin nodes |
+| **Shrines** | Visit zodiac shrines throughout the world |
+| **Guild Advancement** | Complete guild advancement quests |
+| **Boss Drops** | Defeat specific boss enemies |
+| **Discovery Nodes** | Find rare discovery nodes at world edges |
+
+### 12.4 Permanent Bonuses
+
+Relic bonuses are applied at the account level:
+
+```javascript
+// Relic bonus calculation
+function getRelicBonuses(userId) {
+  const relics = getUserRelics(userId);
+  return relics.reduce((bonuses, relic) => {
+    // Add each relic's stats to cumulative bonuses
+    return mergeStats(bonuses, relic.statBonus);
+  }, {});
+}
+```
+
+Bonuses affect:
+- **Base stats**: STR, INT, AGI, VIT, LUK
+- **Derived stats**: Defense, critical chance, regeneration
+- **Economy**: Gold drop rate, XP gain
+
+### 12.5 Collection UI
+
+The `RelicCollectionModal.js` component displays:
+- All collected relics with icons and descriptions
+- Total cumulative bonuses from collection
+- Zodiac crystal collection progress (12 crystals)
+- Completion percentage toward full collection
+
+Access via:
+- World map menu → "Relics" button
+- Profile dropdown → "Collection"
+
+---
+
 ## Related Documents
 
 | Document | Description |
@@ -1877,3 +1954,4 @@ calculateDrops(enemy, killer):
 |---------|------|---------|
 | 1.0 | 2026-01-06 | Initial document |
 | 2.0 | 2026-01-06 | Added drop table specifications |
+| 3.0 | 2026-01-22 | Added Section 12: Relic System (templates, acquisition, bonuses, UI) |

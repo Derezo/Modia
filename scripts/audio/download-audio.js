@@ -400,20 +400,29 @@ async function main() {
       }
 
       try {
-        log(`Downloading: ${track.id}`, 'info');
-        const downloadResult = await client.downloadTrack(track.taskId, outputPath);
+        log(`Downloading all variants: ${track.id}`, 'info');
+        const downloadResult = await client.downloadAllTracks(track.taskId, outputPath);
 
+        const totalSize = downloadResult.downloads.reduce((sum, d) => sum + d.size, 0);
         results.downloaded.push({
           id: track.id,
-          path: downloadResult.path,
-          size: downloadResult.size,
-          duration: downloadResult.duration
+          path: downloadResult.primaryPath,
+          size: totalSize,
+          totalTracks: downloadResult.totalTracks,
+          duration: downloadResult.downloads[0]?.duration
         });
 
-        // Update metadata
-        markTrackDownloaded(track, downloadResult);
+        // Update metadata (using primary track info)
+        markTrackDownloaded(track, {
+          path: downloadResult.primaryPath,
+          size: totalSize,
+          duration: downloadResult.downloads[0]?.duration
+        });
 
-        log(`Downloaded: ${track.id} (${downloadResult.size} bytes)`, 'success');
+        log(`Downloaded: ${track.id} (${downloadResult.totalTracks} tracks, ${totalSize} bytes total)`, 'success');
+        for (const dl of downloadResult.downloads) {
+          log(`  - ${dl.path} (${dl.size} bytes)`, 'info');
+        }
 
         // Rate limit delay
         await delay(500);

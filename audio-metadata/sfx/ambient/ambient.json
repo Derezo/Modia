@@ -10,12 +10,13 @@
       "category": "ambient",
       "subcategory": "location",
       "nodeType": "tavern",
-      "prompt": "Fantasy tavern ambience, background conversations murmuring, glasses clinking, fireplace crackling, cheerful indoor atmosphere, medieval inn background, seamless loop",
+      "prompt": "Fantasy tavern ambience with murmuring conversations and cheerful fireplace crackling atmosphere loop",
       "path": "/assets/audio/sfx/ambient/tavern_chatter.mp3",
-      "duration": 15.0,
+      "duration": 15,
       "volume": 0.5,
       "loop": true,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:55.610Z"
     },
     {
       "id": "ambient_shop_bustle",
@@ -23,12 +24,13 @@
       "category": "ambient",
       "subcategory": "location",
       "nodeType": "shop",
-      "prompt": "Fantasy shop ambience, merchant counting coins, items shuffling, customers browsing, busy marketplace feeling, medieval commerce, seamless loop",
+      "prompt": "Fantasy shop ambience with clinking coins and bustling medieval marketplace commerce loop",
       "path": "/assets/audio/sfx/ambient/shop_bustle.mp3",
-      "duration": 15.0,
+      "duration": 15,
       "volume": 0.5,
       "loop": true,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:13:59.037Z"
     },
     {
       "id": "ambient_fishing_water",
@@ -36,12 +38,13 @@
       "category": "ambient",
       "subcategory": "location",
       "nodeType": "fishing",
-      "prompt": "Peaceful water ambience, gentle waves lapping, river flowing, fish splashing occasionally, nature sounds, birds distant, relaxing fishing spot, seamless loop",
+      "prompt": "Fantasy peaceful water ambience with gentle lapping waves and distant bird fishing spot loop",
       "path": "/assets/audio/sfx/ambient/fishing_water.mp3",
-      "duration": 20.0,
+      "duration": 20,
       "volume": 0.5,
       "loop": true,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:01.634Z"
     },
     {
       "id": "ambient_ruins_echoes",
@@ -49,12 +52,13 @@
       "category": "ambient",
       "subcategory": "location",
       "nodeType": "ruins",
-      "prompt": "Ancient ruins ambience, mysterious echoes, dripping water, distant stone settling, eerie atmosphere, archaeological site, haunting emptiness, seamless loop",
+      "prompt": "Fantasy ancient ruins ambience with mysterious echoes and eerie dripping stone atmosphere loop",
       "path": "/assets/audio/sfx/ambient/ruins_echoes.mp3",
-      "duration": 15.0,
+      "duration": 15,
       "volume": 0.5,
       "loop": true,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:03.960Z"
     },
     {
       "id": "ambient_forest",
@@ -63,12 +67,13 @@
       "subcategory": "location",
       "nodeType": "exploration",
       "region": "sylvan_reaches",
-      "prompt": "Fantasy forest ambience, birds singing, leaves rustling, gentle wind through trees, woodland creatures, peaceful elven forest, natural serenity, seamless loop",
+      "prompt": "Fantasy forest ambience with singing birds and gentle wind rustling through leaves loop",
       "path": "/assets/audio/sfx/ambient/forest.mp3",
-      "duration": 20.0,
+      "duration": 20,
       "volume": 0.5,
       "loop": true,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:06.873Z"
     },
     {
       "id": "ambient_cave_drips",
@@ -77,12 +82,13 @@
       "subcategory": "location",
       "nodeType": "exploration",
       "region": "iron_depths",
-      "prompt": "Underground cave ambience, water dripping echoing, distant rumbling, cool cavern atmosphere, dwarven mines, subterranean depths, seamless loop",
+      "prompt": "Fantasy underground cave ambience with echoing water drips and rumbling subterranean depths loop",
       "path": "/assets/audio/sfx/ambient/cave_drips.mp3",
-      "duration": 15.0,
+      "duration": 15,
       "volume": 0.5,
       "loop": true,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:09.617Z"
     },
     {
       "id": "ambient_mountain_wind",
@@ -91,12 +97,13 @@
       "subcategory": "location",
       "nodeType": "exploration",
       "region": "bloodplains",
-      "prompt": "Mountain wind ambience, strong gusts howling, rocky terrain, harsh exposed peaks, distant thunder, rugged wilderness, seamless loop",
+      "prompt": "Fantasy mountain wind ambience with howling gusts and harsh exposed rocky peaks loop",
       "path": "/assets/audio/sfx/ambient/mountain_wind.mp3",
-      "duration": 15.0,
+      "duration": 15,
       "volume": 0.5,
       "loop": true,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:13.703Z"
     },
     {
       "id": "ambient_palace_echoes",
@@ -104,12 +111,13 @@
       "category": "ambient",
       "subcategory": "location",
       "nodeType": "palace",
-      "prompt": "Grand palace ambience, marble hall echoes, distant footsteps, regal atmosphere, throne room grandeur, royal court whispers, seamless loop",
+      "prompt": "Fantasy grand palace ambience with marble hall echoes and regal distant footsteps loop",
       "path": "/assets/audio/sfx/ambient/palace_echoes.mp3",
-      "duration": 15.0,
+      "duration": 15,
       "volume": 0.5,
       "loop": true,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-21T10:14:16.174Z"
     }
   ]
 }

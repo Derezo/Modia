@@ -2,7 +2,7 @@
 
 | Document | Version | Last Updated |
 |----------|---------|--------------|
-| Character Progression Specification | 2.0 | 2026-01-06 |
+| Character Progression Specification | 3.0 | 2026-01-22 |
 
 ## Table of Contents
 
@@ -48,17 +48,17 @@ Battle → Earn XP → XP added to Pool → Spend XP on Skills → Character/Gui
 
 Character and guild levels are calculated from cumulative XP spent:
 
-**Formula**: `XP Required for Level N = 100 × N^2.2`
+**Formula**: `XP Required for Level N = 100 × N^2.8`
 
 | Level | Total XP Spent | Level | Total XP Spent |
 |-------|----------------|-------|----------------|
-| 1 | 0 | 25 | 158,489 |
-| 5 | 3,400 | 50 | 794,328 |
-| 10 | 15,849 | 75 | 2,371,374 |
-| 15 | 47,863 | 100 | 3,981,072 (Max) |
-| 20 | 95,499 | | |
+| 1 | 0 | 25 | 820,008 |
+| 5 | 9,052 | 50 | 5,714,965 |
+| 10 | 63,096 | 75 | 17,777,247 |
+| 15 | 196,802 | 100 | 39,810,717 (Max) |
+| 20 | 440,701 | | |
 
-*Note: Maximum character level is 100.*
+*Note: Maximum character level is 100. The 2.8 exponent creates a steep late-game curve, requiring significantly more XP for high-level progression.*
 
 ---
 
@@ -238,26 +238,28 @@ XP Pool: 5,000
 
 ### 4.3 Skill Levels (1-100)
 
-Each skill can be leveled from 1 to 100, with small incremental improvements per level.
+Each skill can be leveled from 1 to 100, with polynomial cost scaling that increases significantly at higher levels.
 
 #### XP Cost Progression
 
-| Skill Level | Base Cost Multiplier | Example (100 base) |
-|-------------|---------------------|-------------------|
-| 1 | 1.0x | 100 XP |
-| 2 | 1.1x | 110 XP |
-| 3 | 1.2x | 120 XP |
-| 10 | 1.9x | 190 XP |
-| 25 | 3.4x | 340 XP |
-| 50 | 5.9x | 590 XP |
-| 75 | 8.4x | 840 XP |
-| 100 | 10.9x | 1,090 XP |
+| Skill Level | Cost Multiplier | Example (100 base) |
+|-------------|-----------------|-------------------|
+| 1 | 2.8x | 283 XP |
+| 2 | 5.2x | 520 XP |
+| 5 | 14.7x | 1,470 XP |
+| 10 | 36.5x | 3,648 XP |
+| 25 | 132.6x | 13,256 XP |
+| 50 | 364.2x | 36,418 XP |
+| 75 | 662.5x | 66,250 XP |
+| 100 | 1,014.5x | 101,453 XP |
 
-**Formula**: `costForLevel = baseCost × (1 + (level - 1) × 0.1)`
+**Formula**: `costForLevel = baseCost × (level + 1)^1.5`
 
 **Total XP to Max a Skill (100 levels)**:
-- 100 base cost skill: ~59,500 XP total
-- 200 base cost skill: ~119,000 XP total
+- 100 base cost skill: ~2,020,000 XP total
+- 200 base cost skill: ~4,040,000 XP total
+
+*Note: The polynomial scaling creates meaningful progression choices - early levels are affordable, but maxing skills requires significant investment.*
 
 ### 4.4 Skill Scaling Types
 
@@ -423,15 +425,15 @@ Passive skills use the same XP cost and leveling system as active skills.
 
 ### 4.8 Prerequisites
 
-Skills may require:
-- **Guild Level**: Minimum guild level to unlock
-- **Prerequisite Skills**: Other skills at minimum level
+Skills may require **prerequisite skills** at minimum levels to unlock.
 
 **Example Unlock Requirements:**
 - Bash: None (starter skill)
-- Power Strike: Warrior Guild Lv.5, Bash Lv.25
-- Cleave: Warrior Guild Lv.15, Power Strike Lv.50
-- Executioner: Warrior Guild Lv.30, Cleave Lv.75
+- Power Strike: Bash Lv.25
+- Cleave: Power Strike Lv.50
+- Executioner: Cleave Lv.75
+
+*Note: Guild-level requirements are not enforced in the current implementation. Skill prerequisites are the primary gating mechanism.*
 
 ### 4.9 Bulk Leveling
 
@@ -491,12 +493,12 @@ To advance from a base guild to an advanced guild:
 
 | Requirement | Description |
 |-------------|-------------|
-| **Guild Level** | Current guild level must be 50+ |
+| **Character Level** | Must be Character Level 10 or higher |
 | **Guild Quest** | Complete the advancement quest at the class guild node |
 | **Guild Visit** | Must physically travel to the guild node on world map |
 
 **Notes:**
-- Character Level is NOT a requirement - only Guild Level matters
+- Guild Level is not a requirement - only Character Level matters
 - You can advance to any advanced guild from your current guild's options
 - Once advanced, you cannot go back (but you keep all previous skills)
 
@@ -532,29 +534,19 @@ To advance from a base guild to an advanced guild:
 +----------------------------------------------------------+
 ```
 
-### 5.5 Skill Freezing
+### 5.5 Multi-Guild Skills
 
-When a character advances to a new guild:
+When a character advances to a new guild, they gain access to both old and new skills:
 
-| Aspect | Frozen Guild | Active Guild |
-|--------|--------------|--------------|
+| Aspect | Previous Guild | Active Guild |
+|--------|----------------|--------------|
 | Use skills in combat | Yes | Yes |
-| Spend XP on skills | No | Yes |
+| Spend XP on skills | Yes (if XP available) | Yes |
 | View skill tree | Yes | Yes |
 | Skill levels | Preserved | Can increase |
 | Equipment | Still usable | Still usable |
 
-**Frozen Skill Display:**
-```
-+------------------+
-|  [Bash]          |
-|  Lv.100/100 ❄    |
-|  (FROZEN)        |
-|                  |
-|  Cannot upgrade  |
-|  in this guild   |
-+------------------+
-```
+*Note: Skills from all guilds remain fully functional and upgradeable. Characters can continue investing in previous guild skills while also learning new ones.*
 
 ### 5.6 Multi-Guild Combat
 
@@ -620,8 +612,7 @@ Guild quests unlock advanced guild options. Characters are sent from base guild 
 | Requirement | Description |
 |-------------|-------------|
 | **Base Guild Match** | Character must belong to the guild matching the node (e.g., Warrior at Warriors' Guild) |
-| **Guild Level** | Some quests require minimum guild level |
-| **Advanced Guild** | Some quests require already having a specific advanced guild |
+| **Character Level** | Character must be Level 10 or higher |
 | **Special Items** | Some quests require rare items or equipment from battles/other quests |
 
 #### Quest Mechanics
@@ -944,8 +935,8 @@ function calculateSkillValue(baseValue, maxValue, currentLevel, maxLevel) {
 
 ```javascript
 function calculateXpCost(baseXpCost, targetLevel) {
-  // Cost increases by 10% per level
-  return Math.floor(baseXpCost * (1 + (targetLevel - 1) * 0.1));
+  // Polynomial scaling: cost = base × (level + 1)^1.5
+  return Math.floor(baseXpCost * Math.pow(targetLevel + 1, 1.5));
 }
 
 function calculateTotalXpToLevel(baseXpCost, targetLevel) {

@@ -8,224 +8,288 @@
       "terrain": "grass",
       "variant": 0,
       "prompt": "lush green grass field with subtle blade texture in natural green tones #6B8E4A #4A6B2A",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:24:59.185Z"
     },
     {
       "key": "grass_1",
       "terrain": "grass",
       "variant": 1,
       "prompt": "green meadow grass with scattered clover patches in verdant tones #6B8E4A #228B22",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:25:39.919Z"
     },
     {
       "key": "grass_2",
       "terrain": "grass",
       "variant": 2,
       "prompt": "wild grass with tall blades bending in wind in natural green #6B8E4A #4A6B2A",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:26:21.981Z"
     },
     {
       "key": "grass_3",
       "terrain": "grass",
       "variant": 3,
       "prompt": "patchy grass with exposed dirt and wildflowers in earthy green #6B8E4A #8B7355",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:27:05.969Z"
     },
     {
       "key": "stone_0",
       "terrain": "stone",
       "variant": 0,
       "prompt": "weathered cobblestone path with moss in cracks in grey tones #808080 #696969",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:27:50.128Z"
     },
     {
       "key": "stone_1",
       "terrain": "stone",
       "variant": 1,
       "prompt": "ancient flagstone pavement worn smooth by time in slate grey #708090 #696969",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:28:34.113Z"
     },
     {
       "key": "stone_2",
       "terrain": "stone",
       "variant": 2,
       "prompt": "cracked stone floor with mineral deposits in grey brown #808080 #8B7355",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:29:18.791Z"
     },
     {
       "key": "stone_3",
       "terrain": "stone",
       "variant": 3,
       "prompt": "rough hewn stone blocks with chisel marks in dark grey #696969 #505050",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:30:05.199Z"
     },
     {
       "key": "rock_0",
       "terrain": "rock",
       "variant": 0,
       "prompt": "natural rock surface with lichen patches in warm grey #8B8682 #696969",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:30:50.404Z"
     },
     {
       "key": "rock_1",
       "terrain": "rock",
       "variant": 1,
       "prompt": "granite boulder surface with quartz veins in speckled grey #A0A0A0 #696969",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:31:35.548Z"
     },
     {
       "key": "rock_2",
       "terrain": "rock",
       "variant": 2,
       "prompt": "rough basalt rock face with volcanic texture in dark grey #505050 #696969",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:32:19.755Z"
     },
     {
       "key": "rock_3",
       "terrain": "rock",
       "variant": 3,
       "prompt": "sandstone rock surface with erosion patterns in warm tan #C4A77D #8B7355",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:33:03.871Z"
     },
     {
       "key": "forest_0",
       "terrain": "forest",
       "variant": 0,
       "prompt": "dense forest floor with fallen leaves and twigs in brown green #5C4033 #4A6B2A",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:33:47.977Z"
     },
     {
       "key": "forest_1",
       "terrain": "forest",
       "variant": 1,
       "prompt": "shaded forest ground with fern fronds in deep green #2F4F2F #4A6B2A",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:34:32.097Z"
     },
     {
       "key": "forest_2",
       "terrain": "forest",
       "variant": 2,
       "prompt": "mossy forest floor with decomposing matter in earthy tones #5C4033 #6B8E4A",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:35:16.494Z"
     },
     {
       "key": "forest_3",
       "terrain": "forest",
       "variant": 3,
       "prompt": "forest undergrowth with small mushrooms and roots in woodland colors #5C4033 #8B7355",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:36:00.533Z"
     },
     {
       "key": "water_0",
       "terrain": "water",
       "variant": 0,
       "prompt": "clear shallow water surface with ripples and pebbles visible in blue #4682B4 #5F9EA0",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:36:45.670Z"
     },
     {
       "key": "water_1",
       "terrain": "water",
       "variant": 1,
       "prompt": "calm pond water with lily pad shadows in teal blue #20B2AA #4682B4",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:37:29.674Z"
     },
     {
       "key": "water_2",
       "terrain": "water",
       "variant": 2,
       "prompt": "flowing stream water with white foam edges in cool blue #4169E1 #5F9EA0",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:38:13.671Z"
     },
     {
       "key": "water_3",
       "terrain": "water",
       "variant": 3,
       "prompt": "deep water surface with dark depths visible in dark blue #191970 #4682B4",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:38:58.723Z"
     },
     {
       "key": "lava_0",
       "terrain": "lava",
       "variant": 0,
       "prompt": "molten lava pool with glowing orange cracks in fiery red #FF4500 #FF6347",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:39:42.768Z"
     },
     {
       "key": "lava_1",
       "terrain": "lava",
       "variant": 1,
       "prompt": "cooling lava crust with bright veins underneath in orange black #FF4500 #2F2F2F",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:40:27.676Z"
     },
     {
       "key": "lava_2",
       "terrain": "lava",
       "variant": 2,
       "prompt": "bubbling magma surface with heat shimmer in intense orange #FF6347 #FFD700",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:41:11.717Z"
     },
     {
       "key": "lava_3",
       "terrain": "lava",
       "variant": 3,
       "prompt": "hardened lava rock with glowing fissures in dark red orange #8B0000 #FF4500",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:41:55.869Z"
     },
     {
       "key": "cliff_0",
       "terrain": "cliff",
       "variant": 0,
       "prompt": "sheer cliff face with exposed rock strata in layered grey #696969 #808080",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:42:39.879Z"
     },
     {
       "key": "cliff_1",
       "terrain": "cliff",
       "variant": 1,
       "prompt": "weathered cliff edge with crumbling stone in warm grey #8B8682 #A0A0A0",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:43:24.029Z"
     },
     {
       "key": "cliff_2",
       "terrain": "cliff",
       "variant": 2,
       "prompt": "jagged cliff surface with sharp edges in dark grey #505050 #696969",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:44:09.111Z"
     },
     {
       "key": "cliff_3",
       "terrain": "cliff",
       "variant": 3,
       "prompt": "mossy cliff face with vegetation in cracks in grey green #696969 #6B8E4A",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:44:53.104Z"
     },
     {
       "key": "tree_0",
       "terrain": "tree",
       "variant": 0,
       "prompt": "tree trunk base with exposed roots and bark in brown #5C4033 #8B7355",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:45:37.158Z"
     },
     {
       "key": "tree_1",
       "terrain": "tree",
       "variant": 1,
       "prompt": "gnarled tree roots spreading across ground in dark brown #3D2B1F #5C4033",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:46:21.111Z"
     },
     {
       "key": "tree_2",
       "terrain": "tree",
       "variant": 2,
       "prompt": "fallen log with moss and fungus growth in woodland brown #5C4033 #6B8E4A",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:47:05.179Z"
     },
     {
       "key": "tree_3",
       "terrain": "tree",
       "variant": 3,
       "prompt": "tree stump with growth rings visible in aged brown #8B7355 #A0522D",
-      "outputPath": "base"
+      "outputPath": "base",
+      "generated": true,
+      "generatedAt": "2026-01-23T19:47:49.581Z"
     }
   ]
 }

@@ -403,7 +403,7 @@ export class BattleFormationScene extends Scene {
     return this.enemies.map((enemy, index) => {
       const isBoss = enemy.isBoss || enemy.level > 10;
       const threatClass = isBoss ? 'bf-threat-boss' : '';
-      const portraitUrl = `/assets/sprites/enemies/${enemy.spriteId || enemy.sprite_id || 'unknown'}.png`;
+      const portraitUrl = `/assets/sprites/enemies/portraits/${enemy.spriteId || enemy.sprite_id || 'unknown'}.png`;
 
       return `
         <div class="bf-enemy-card ${threatClass}" data-enemy-index="${index}">

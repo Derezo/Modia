@@ -99,6 +99,14 @@ Examples:
   node scripts/audio/generate-sfx.js --category combat
   node scripts/audio/generate-sfx.js --category ui --force
   node scripts/audio/generate-sfx.js --key impact_critical
+
+Note:
+  Prompts must have at most 1 comma. ElevenLabs generates multiple sounds
+  for comma-separated concepts, causing files longer than specified duration.
+  Write prompts that describe ONE sound with adjectives, not multiple sounds.
+
+  BAD:  "sword slash, metal cutting, whoosh, impact"
+  GOOD: "Fantasy sword slash with sharp metallic whoosh and light impact"
 `);
 }
 
@@ -225,29 +233,32 @@ function markEffectGenerated(effect) {
 }
 
 /**
- * Check prompt complexity and warn if it may produce longer audio than expected.
- * ElevenLabs tends to generate multiple sounds when prompts contain many comma-separated concepts.
+ * Check prompt complexity and fail if it contains too many commas.
+ * ElevenLabs generates multiple sounds sequentially when prompts contain commas,
+ * causing files to be much longer than requested duration.
+ *
+ * STRICT MODE: Maximum 1 comma allowed (2 segments max)
+ * Pattern: "adjective adjective noun" OR "description with secondary quality"
+ *
  * @param {Object} effect - Effect metadata with prompt and duration
- * @returns {boolean} True if prompt may be too complex
+ * @returns {Object|null} Error object if prompt is invalid, null if OK
  */
 function checkPromptComplexity(effect) {
   const prompt = effect.prompt || '';
   // Count comma-separated segments (distinct concepts)
   const segments = prompt.split(',').map(s => s.trim()).filter(s => s.length > 0);
 
-  // Warn if prompt has many segments and short duration requested
-  // Rule of thumb: ~2-3 seconds per distinct sound concept
-  const estimatedMinDuration = segments.length * 2;
-  const requestedDuration = effect.duration || 2;
-
-  if (segments.length > 3 && requestedDuration < estimatedMinDuration) {
-    log(`Warning: "${effect.id}" prompt has ${segments.length} comma-separated concepts`, 'warn');
-    log(`  Requested: ${requestedDuration}s, but may generate ~${estimatedMinDuration}s`, 'warn');
-    log(`  Tip: Rewrite prompt to describe ONE sound with adjectives, not multiple sounds`, 'warn');
-    log(`  Example: "brief heroic chime, tactical ready tone" → "brief heroic tactical ready chime"`, 'warn');
-    return true;
+  // BLOCK generation if prompt has more than 1 comma (2+ segments)
+  // Rule: prompts should describe ONE sound with adjectives, not list multiple sounds
+  if (segments.length > 1) {
+    return {
+      id: effect.id,
+      commaCount: segments.length - 1,
+      prompt: prompt,
+      tip: 'Rewrite to describe ONE sound with adjectives - use "with" and "and" instead of commas'
+    };
   }
-  return false;
+  return null;
 }
 
 /**
@@ -318,6 +329,30 @@ async function main() {
   log(`\nEffects to generate: ${effectsToGenerate.length}`, 'info');
   console.log('');
 
+  // Check all prompts upfront for comma issues
+  const promptErrors = [];
+  for (const effect of effectsToGenerate) {
+    const error = checkPromptComplexity(effect);
+    if (error) {
+      promptErrors.push(error);
+    }
+  }
+
+  // Block generation if any prompts have too many commas
+  if (promptErrors.length > 0) {
+    log(`\nERROR: ${promptErrors.length} effect(s) have prompts with too many commas`, 'error');
+    log('ElevenLabs generates multiple sounds for comma-separated concepts, causing longer files.\n', 'error');
+
+    for (const err of promptErrors) {
+      log(`  ${err.id}: ${err.commaCount} commas`, 'error');
+      log(`    Prompt: "${err.prompt}"`, 'error');
+      log(`    Fix: ${err.tip}\n`, 'info');
+    }
+
+    log('Fix the prompts in audio-metadata/sfx/ before generating.', 'error');
+    process.exit(1);
+  }
+
   // Display what will be generated
   for (const effect of effectsToGenerate) {
     console.log(`  - ${effect.id}`);
@@ -327,8 +362,8 @@ async function main() {
     console.log(`    Output: ${getOutputPath(effect)}`);
     if (options.dryRun) {
       console.log(`    Prompt: ${effect.prompt}`);
-      // Check and warn about prompt complexity
-      checkPromptComplexity(effect);
+      console.log(`    Chars: ${effect.prompt.length}`);
+      console.log(`    Commas: ${(effect.prompt.match(/,/g) || []).length}`);
     }
     console.log('');
   }
@@ -365,9 +400,6 @@ async function main() {
     const effect = effectsToGenerate[i];
     const outputPath = getOutputPath(effect);
     log(`[${i + 1}/${effectsToGenerate.length}] Generating: ${effect.id}`, 'info');
-
-    // Warn about potentially problematic prompts
-    checkPromptComplexity(effect);
 
     try {
       // Determine if this is an ambient sound (longer duration)
