@@ -1,0 +1,58 @@
+{
+  "name": "Battle Map Tiles",
+  "negativePrompt": "square tile, rectangular, circular, rounded corners, irregular shape, perspective view, 3D depth, raised edges, objects on tile, decorations, scattered items, grass clumps, plants, rocks, debris",
+  "version": "2.0.0",
+  "description": "Stacking tile system with floors, walls, and slopes for tactical battle maps",
+  "categories": ["floors", "walls", "slopes"],
+  "biomes": ["base", "forest", "cave", "mountain", "bridge", "castle"],
+  "stylePrefix": "wbgmsst, isometric floor tile, 30 degree orthographic projection, flat horizontal surface, ink and wash watercolor style, bold black outlines, aged parchment aesthetic, diamond shaped footprint, clean crisp edges, 64x64 game sprite, white background",
+  "wallStylePrefix": "wbgmsst, seamless vertical cliff face texture, ink and wash watercolor style, bold black outlines, tileable pattern, aged parchment aesthetic, 64x16 strip, white background",
+  "slopeStylePrefix": "wbgmsst, isometric ramp tile, 30 degree orthographic projection, smooth elevation transition, ink and wash watercolor style, bold black outlines, diamond footprint, white background",
+  "outputPath": "frontend/public/assets/sprites/terrain",
+  "dimensions": {
+    "floor": { "width": 64, "height": 64 },
+    "wall": { "width": 64, "height": 16 },
+    "slope": { "width": 64, "height": 80 }
+  },
+  "biomeColors": {
+    "base": { "primary": "#6B8E4A", "secondary": "#808080", "accent": "#696969" },
+    "forest": { "primary": "#6B8E4A", "secondary": "#8B7355", "accent": "#4A6B2A" },
+    "cave": { "primary": "#696969", "secondary": "#4682B4", "accent": "#2F4F4F" },
+    "mountain": { "primary": "#8B8682", "secondary": "#A0A0A0", "accent": "#708090" },
+    "bridge": { "primary": "#8B7355", "secondary": "#A0522D", "accent": "#D2B48C" },
+    "castle": { "primary": "#708090", "secondary": "#696969", "accent": "#2F4F4F" }
+  },
+  "categoryFiles": {
+    "floors": {
+      "base": ["floors/base.json", "floors/base-elevations.json"],
+      "forest": "floors/forest.json",
+      "cave": "floors/cave.json",
+      "mountain": "floors/mountain.json",
+      "bridge": "floors/bridge.json",
+      "castle": "floors/castle.json"
+    },
+    "walls": {
+      "base": "walls/base.json",
+      "forest": "walls/forest.json",
+      "cave": "walls/cave.json",
+      "mountain": "walls/mountain.json",
+      "bridge": "walls/bridge.json",
+      "castle": "walls/castle.json"
+    },
+    "slopes": {
+      "base": "slopes/base.json",
+      "forest": "slopes/forest.json",
+      "cave": "slopes/cave.json",
+      "mountain": "slopes/mountain.json",
+      "bridge": "slopes/bridge.json",
+      "castle": "slopes/castle.json"
+    }
+  },
+  "legacyFiles": {
+    "forest": "forest.json",
+    "cave": "cave.json",
+    "mountain": "mountain.json",
+    "bridge": "bridge.json",
+    "castle": "castle.json"
+  }
+}

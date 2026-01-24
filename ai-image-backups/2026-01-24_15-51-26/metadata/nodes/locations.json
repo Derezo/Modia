@@ -1,0 +1,362 @@
+{
+  "version": "1.0.0",
+  "category": "locations",
+  "description": "World map location node icons",
+  "nodes": [
+    {
+      "id": "node_castle",
+      "name": "Castle",
+      "prompt": "castle fortress towers battlements medieval stronghold",
+      "seed": 40001,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:13:29.341Z",
+      "evaluation": {
+        "score": 8,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_city",
+      "name": "City",
+      "prompt": "city gatehouse with central clock tower, two flanking towers, compact landmark",
+      "seed": 40002,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:14:10.223Z",
+      "evaluation": {
+        "score": 4,
+        "issues": [
+          "too_cluttered",
+          "hard_to_read"
+        ],
+        "regenerate": true
+      }
+    },
+    {
+      "id": "node_village",
+      "name": "Village",
+      "prompt": "small village cottages thatched roofs rustic hamlet",
+      "seed": 40003,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:14:51.090Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_forest",
+      "name": "Forest",
+      "prompt": "three tall pine trees clustered, bright green foliage, forest clearing visible",
+      "seed": 40004,
+      "generated": true,
+      "generatedAt": "2026-01-24T19:59:06.448Z",
+      "evaluation": {
+        "score": 5,
+        "issues": [
+          "too_busy",
+          "cluttered"
+        ],
+        "regenerate": true
+      }
+    },
+    {
+      "id": "node_cave",
+      "name": "Cave",
+      "prompt": "cave entrance with visible rocky archway, warm torch glow inside, stone frame",
+      "seed": 40005,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:16:12.877Z",
+      "evaluation": {
+        "score": 5,
+        "issues": [
+          "too_dark"
+        ],
+        "regenerate": true
+      }
+    },
+    {
+      "id": "node_mountain",
+      "name": "Mountain",
+      "prompt": "single mountain peak with snow cap, rocky face visible, clear silhouette",
+      "seed": 40006,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:16:53.698Z",
+      "evaluation": {
+        "score": 5,
+        "issues": [
+          "inconsistent_style",
+          "sketchy"
+        ],
+        "regenerate": true
+      }
+    },
+    {
+      "id": "node_bridge",
+      "name": "Bridge",
+      "prompt": "stone bridge crossing river arch medieval",
+      "seed": 40007,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:17:34.601Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_guild",
+      "name": "Guild Hall",
+      "prompt": "guild hall banner building adventurer headquarters",
+      "seed": 40008,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:18:14.705Z",
+      "evaluation": {
+        "score": 8,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_palace",
+      "name": "Palace",
+      "prompt": "grand palace ornate spires royal residence",
+      "seed": 40009,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:18:55.579Z",
+      "evaluation": {
+        "score": 8,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_keep",
+      "name": "Keep",
+      "prompt": "fortified keep tower defensive outpost garrison",
+      "seed": 40010,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:19:35.558Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_chest",
+      "name": "Treasure Chest",
+      "prompt": "treasure chest gold coins wooden chest loot",
+      "seed": 40011,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:20:16.480Z",
+      "evaluation": {
+        "score": 8,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_shrine",
+      "name": "Shrine",
+      "prompt": "holy shrine altar statue blessing sacred",
+      "seed": 40012,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:20:57.354Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_discovery",
+      "name": "Discovery",
+      "prompt": "glowing treasure map scroll with golden X mark, discovery sparkle aura",
+      "seed": 40013,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:21:38.212Z",
+      "evaluation": {
+        "score": 3,
+        "issues": [
+          "unclear_meaning",
+          "abstract"
+        ],
+        "regenerate": true
+      }
+    },
+    {
+      "id": "node_tavern",
+      "name": "Tavern",
+      "prompt": "tavern inn wooden sign mug hanging ale house",
+      "seed": 40014,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:22:19.033Z",
+      "evaluation": {
+        "score": 8,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_shop",
+      "name": "Shop",
+      "prompt": "merchant shop market stall goods store",
+      "seed": 40015,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:22:59.869Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_blacksmith",
+      "name": "Blacksmith",
+      "prompt": "blacksmith forge anvil hammer smoke smithy",
+      "seed": 40016,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:23:41.726Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_apothecary",
+      "name": "Apothecary",
+      "prompt": "apothecary potions herbs mortar alchemist shop",
+      "seed": 40017,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:24:21.576Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_fishing",
+      "name": "Fishing Spot",
+      "prompt": "wooden fishing pier with simple dock, leaping fish splashing, waterside",
+      "seed": 40018,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:25:02.412Z",
+      "evaluation": {
+        "score": 4,
+        "issues": [
+          "odd_composition",
+          "large_fishing_pole"
+        ],
+        "regenerate": true
+      }
+    },
+    {
+      "id": "node_ruins",
+      "name": "Ancient Ruins",
+      "prompt": "ancient ruins columns broken temple overgrown",
+      "seed": 40019,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:25:43.245Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_watchtower",
+      "name": "Watchtower",
+      "prompt": "watchtower lookout beacon signal tower scout",
+      "seed": 40020,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:26:24.102Z",
+      "evaluation": {
+        "score": 8,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_farm",
+      "name": "Farm",
+      "prompt": "farmstead barn windmill golden wheat fields rustic",
+      "seed": 40021,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:27:04.196Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_caravan",
+      "name": "Merchant Caravan",
+      "prompt": "merchant caravan covered wagon horses trade goods crates",
+      "seed": 40022,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:27:45.034Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_guild_warrior",
+      "name": "Warriors Guild",
+      "prompt": "warriors guild fortress hall crossed swords emblem training dummies",
+      "seed": 40023,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:28:25.869Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_guild_wizard",
+      "name": "Mages Guild",
+      "prompt": "mages tower guild arcane glowing symbols floating crystal orbs",
+      "seed": 40024,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:29:06.795Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_guild_monk",
+      "name": "Monastery Guild",
+      "prompt": "monastery temple guild zen meditation garden bronze prayer bells",
+      "seed": 40025,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:29:47.677Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    },
+    {
+      "id": "node_guild_chemist",
+      "name": "Alchemist Guild",
+      "prompt": "alchemist laboratory guild smoking chimneys bubbling vat cauldrons",
+      "seed": 40026,
+      "generated": true,
+      "generatedAt": "2026-01-23T06:30:28.558Z",
+      "evaluation": {
+        "score": 7,
+        "issues": [],
+        "regenerate": false
+      }
+    }
+  ]
+}
