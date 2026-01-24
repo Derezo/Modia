@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base dark theme styles */
+@layer base {
+  html {
+    @apply bg-midnight-950;
+  }
+
+  body {
+    @apply min-h-screen;
+  }
+
+  /* Custom scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-midnight-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-midnight-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-midnight-500;
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #4a4a5e #2d2d3d;
+  }
+}
+
+@layer components {
+  /* Parchment card component */
+  .card {
+    @apply bg-midnight-900 border border-midnight-700 rounded-lg;
+  }
+
+  .card-hover {
+    @apply card transition-all hover:border-midnight-600 hover:shadow-lg;
+  }
+
+  /* Gold accent button */
+  .btn-gold {
+    @apply px-4 py-2 bg-accent-gold text-midnight-950 font-medium rounded-lg
+           transition-all hover:bg-accent-gold/90 active:scale-95;
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply px-4 py-2 text-parchment-300 font-medium rounded-lg
+           transition-all hover:bg-midnight-800 hover:text-parchment-100;
+  }
+
+  /* Status badge */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 text-xs font-medium rounded;
+  }
+
+  .badge-success {
+    @apply badge bg-accent-emerald/20 text-accent-emerald;
+  }
+
+  .badge-warning {
+    @apply badge bg-accent-gold/20 text-accent-gold;
+  }
+
+  .badge-error {
+    @apply badge bg-accent-ruby/20 text-accent-ruby;
+  }
+}
