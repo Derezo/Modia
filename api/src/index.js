@@ -43,6 +43,7 @@ import relicRoutes from './routes/relics.js';
 import questRoutes from './routes/quests.js';
 import debugRoutes from './routes/debug.js';
 import healthRoutes from './routes/health.js';
+import adminRoutes from './routes/admin.js';
 
 // Scheduled services
 import { startRefreshScheduler } from './services/shopRefreshService.js';
@@ -128,6 +129,7 @@ app.use('/api/fishing', fishingRoutes);
 app.use('/api/relics', relicRoutes);
 app.use('/api/quests', questRoutes);
 app.use('/api/debug', debugRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling
 app.use(errorHandler);
