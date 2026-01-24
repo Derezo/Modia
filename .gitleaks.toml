@@ -1,0 +1,26 @@
+# Gitleaks configuration
+# https://github.com/gitleaks/gitleaks
+
+title = "Modia Gitleaks Config"
+
+# Allow test fixture passwords in E2E and load test files
+[[allowlist]]
+description = "E2E test helpers with test fixture passwords"
+paths = [
+  '''e2e/.*''',
+  '''load-tests/.*'''
+]
+
+# Alternative: allow specific test password patterns
+[[allowlist]]
+description = "Test fixture passwords"
+regexes = [
+  '''password:\s*['"]?(password|TestPassword123!)['"]?'''
+]
+paths = [
+  '''.*\.spec\.js$''',
+  '''.*\.test\.js$''',
+  '''.*test.*\.yml$''',
+  '''e2e/.*''',
+  '''load-tests/.*'''
+]
