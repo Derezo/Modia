@@ -376,7 +376,7 @@ export class AuthScene extends Scene {
             <label for="email" class="auth-label">Email</label>
             <input type="email" id="email" class="auth-input"
               placeholder="your@email.com"
-              autocomplete="email" ${isRegister ? 'required' : ''}>
+              autocomplete="email" ${isRegister ? 'required' : ''} tabindex="${isRegister ? '0' : '-1'}">
             <div class="auth-field-error" id="email-error"></div>
           </div>
 
@@ -392,7 +392,7 @@ export class AuthScene extends Scene {
             <label for="confirm-password" class="auth-label">Confirm Password</label>
             <input type="password" id="confirm-password" class="auth-input"
               placeholder="Repeat password"
-              autocomplete="new-password" ${isRegister ? 'required' : ''}>
+              autocomplete="new-password" ${isRegister ? 'required' : ''} tabindex="${isRegister ? '0' : '-1'}">
             <div class="auth-field-error" id="confirm-password-error"></div>
           </div>
 
@@ -490,6 +490,9 @@ export class AuthScene extends Scene {
       confirmGroup.classList.add('visible');
       emailInput.required = true;
       confirmInput.required = true;
+      // Restore tab order for visible fields
+      emailInput.tabIndex = 0;
+      confirmInput.tabIndex = 0;
 
       header.textContent = 'Create Account';
       btn.textContent = 'Create Account';
@@ -505,6 +508,9 @@ export class AuthScene extends Scene {
       confirmGroup.classList.add('hidden');
       emailInput.required = false;
       confirmInput.required = false;
+      // Remove hidden fields from tab order
+      emailInput.tabIndex = -1;
+      confirmInput.tabIndex = -1;
 
       header.textContent = 'Welcome Back';
       btn.textContent = 'Login';
@@ -653,6 +659,9 @@ export class AuthScene extends Scene {
         result = await this.game.api.login(username, password);
       }
 
+      // Clear any stale state from previous session before storing new auth data
+      this.game.state.clear();
+
       // Store auth data
       this.game.state.set('user', result.user);
       this.game.state.set('token', result.accessToken);
@@ -687,6 +696,9 @@ export class AuthScene extends Scene {
           if (charResult.characters.length === 0) {
             this.game.scenes.switchTo('characterCreate');
           } else {
+            // Auto-select first character (party leader or first in list)
+            const leader = charResult.characters.find(c => c.party_slot === 1) || charResult.characters[0];
+            this.game.state.set('activeCharacter', leader);
             this.game.scenes.switchTo('worldMap');
           }
         }

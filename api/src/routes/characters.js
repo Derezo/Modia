@@ -2,8 +2,9 @@ import express from 'express';
 import { query } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
-import { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats } from '../config/constants.js';
+import { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats, STARTING_EXPERIENCE } from '../config/constants.js';
 import * as staminaService from '../services/staminaService.js';
+import { discoverNodeAndAdjacent } from '../services/world/discoveryService.js';
 import {
   characterCreateLimiter,
   characterDeleteLimiter,
@@ -59,6 +60,8 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
     stamina_current: staminaService.calculateCurrentStamina(char)
   }));
 
+  // Prevent browser caching to avoid showing stale character lists across sessions
+  res.setHeader('Cache-Control', 'no-store, must-revalidate');
   res.json({ characters });
 }));
 
@@ -122,7 +125,8 @@ router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, 
   const spawnNodeId = region.castle_node_id;
   const homeRegionId = region.id;
 
-  // Insert character at racial homeland castle
+  // Insert character at racial homeland castle with starting experience
+  // Note: Gold is stored at user level (users.gold), not per-character
   const result = await query(
     `INSERT INTO characters (
        user_id, name, race, class, gender, level, experience,
@@ -130,10 +134,11 @@ router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, 
        strength, intelligence, agility, vitality, luck,
        party_slot, current_node_id, home_region_id
      )
-     VALUES ($1, $2, $3, $4, $5, 1, 0, $6, $6, $7, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+     VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $7, $8, $8, $9, $10, $11, $12, $13, $14, $15, $16)
      RETURNING *`,
     [
       req.user.userId, name, race, characterClass, gender,
+      STARTING_EXPERIENCE,
       stats.hpMax, stats.mpMax,
       stats.strength, stats.intelligence, stats.agility, stats.vitality, stats.luck,
       nextSlot <= MAX_PARTY_SIZE ? nextSlot : null,
@@ -169,6 +174,10 @@ router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, 
       );
     }
   }
+
+  // Initialize node discovery for character's spawn location
+  // This ensures the racial homeland castle and adjacent nodes are visible on the world map
+  await discoverNodeAndAdjacent(req.user.userId, spawnNodeId);
 
   res.status(201).json({ character });
 }));
