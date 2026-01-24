@@ -101,4 +101,19 @@
   .badge-error {
     @apply badge bg-accent-ruby/20 text-accent-ruby;
   }
+
+  /* Indeterminate progress bar animation */
+  .animate-indeterminate {
+    width: 30%;
+    animation: indeterminate 1.5s infinite ease-in-out;
+  }
+}
+
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
 }

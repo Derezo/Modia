@@ -5,19 +5,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  PlayIcon,
   CheckCircledIcon,
   ArchiveIcon,
   ReloadIcon,
   RocketIcon,
   ExclamationTriangleIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
   ActivityLogIcon,
   InfoCircledIcon,
 } from '@radix-ui/react-icons';
 
 import StatsCard from '../components/StatsCard';
+import GenerationConsole from '../components/GenerationConsole';
 import { useStats, useQueue, useApiStatus } from '../hooks/useAssets';
 import { api } from '../lib/api';
 
@@ -350,79 +348,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Collapsible console */}
-      <div className="card">
-        <button
-          onClick={() => setConsoleOpen(!consoleOpen)}
-          className="w-full p-4 flex items-center justify-between text-left hover:bg-midnight-800/50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <PlayIcon className="w-5 h-5 text-accent-gold" />
-            <span className="font-display font-semibold text-parchment-100">
-              Generation Console
-            </span>
-            {queue?.stats?.isProcessing && (
-              <span className="badge badge-success">Running</span>
-            )}
-          </div>
-          {consoleOpen ? (
-            <ChevronUpIcon className="w-5 h-5 text-parchment-400" />
-          ) : (
-            <ChevronDownIcon className="w-5 h-5 text-parchment-400" />
-          )}
-        </button>
-
-        {consoleOpen && (
-          <div className="border-t border-midnight-700">
-            <div className="p-4 bg-midnight-950 font-mono text-sm">
-              {queue?.stats?.isProcessing && queue.current ? (
-                <div className="space-y-2">
-                  <div className="text-parchment-300">
-                    <span className="text-accent-gold">[RUNNING]</span>{' '}
-                    {queue.current.category} generation
-                  </div>
-                  <div className="text-parchment-400">
-                    Progress: {queue.current.progress?.completed || 0} /{' '}
-                    {queue.current.progress?.total || '?'}
-                  </div>
-                  <div className="text-parchment-500">
-                    Started: {new Date(queue.current.startedAt).toLocaleTimeString()}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-parchment-500">
-                  <span className="text-parchment-400">[IDLE]</span> No generation jobs
-                  running.
-                  <br />
-                  <span className="text-parchment-600">
-                    Use &quot;Generate All Pending&quot; or navigate to a category to start
-                    generation.
-                  </span>
-                </div>
-              )}
-
-              {queue?.pending?.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-midnight-800">
-                  <div className="text-parchment-400 mb-2">
-                    Queued ({queue.pending.length}):
-                  </div>
-                  {queue.pending.slice(0, 5).map((job) => (
-                    <div key={job.id} className="text-parchment-500 pl-4">
-                      - {job.category}
-                      {job.filters?.biome && ` (${job.filters.biome})`}
-                    </div>
-                  ))}
-                  {queue.pending.length > 5 && (
-                    <div className="text-parchment-600 pl-4">
-                      ... and {queue.pending.length - 5} more
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+      {/* Generation Console - Real-time WebSocket-powered console */}
+      <GenerationConsole
+        minimized={!consoleOpen}
+        onMinimizeChange={(minimized) => setConsoleOpen(!minimized)}
+      />
     </div>
   );
 }
