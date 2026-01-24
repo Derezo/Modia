@@ -1,0 +1,96 @@
+{
+  "biome": "cave",
+  "category": "slopes",
+  "description": "Cave biome slope tiles - rocky ramps, carved passages, underground inclines",
+  "palette": {
+    "primary": "#696969",
+    "secondary": "#4682B4",
+    "accent": "#2F4F4F"
+  },
+  "tiles": [
+    {
+      "key": "slope_cave_north_1",
+      "direction": "north",
+      "levels": 1,
+      "prompt": "natural cave rock slope ascending northward with rough hewn surface in dark grey #696969",
+      "seed": 22001,
+      "outputPath": "cave/slopes/north_1",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:35:03.683Z"
+    },
+    {
+      "key": "slope_cave_south_1",
+      "direction": "south",
+      "levels": 1,
+      "prompt": "natural cave rock slope descending southward with worn smooth surface in dark grey #696969",
+      "seed": 22011,
+      "outputPath": "cave/slopes/south_1",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:35:51.184Z"
+    },
+    {
+      "key": "slope_cave_east_1",
+      "direction": "east",
+      "levels": 1,
+      "prompt": "natural cave rock slope ascending eastward with crystal deposits in dark grey #696969 #4682B4",
+      "seed": 22021,
+      "outputPath": "cave/slopes/east_1",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:36:38.947Z"
+    },
+    {
+      "key": "slope_cave_west_1",
+      "direction": "west",
+      "levels": 1,
+      "prompt": "natural cave rock slope descending westward with moss patches in dark grey #696969 #2F4F4F",
+      "seed": 22031,
+      "outputPath": "cave/slopes/west_1",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:37:26.167Z"
+    },
+    {
+      "key": "stairs_cave_north_2",
+      "direction": "north",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "carved stone cave steps ascending north with glowing crystal light showing 2-3 visible steps #696969 #4682B4",
+      "seed": 22041,
+      "outputPath": "cave/slopes/stairs_north_2",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:38:13.645Z"
+    },
+    {
+      "key": "stairs_cave_south_2",
+      "direction": "south",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "carved stone cave steps descending south with wet surface showing 2-3 visible steps in dark grey #696969",
+      "seed": 22051,
+      "outputPath": "cave/slopes/stairs_south_2",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:39:01.034Z"
+    },
+    {
+      "key": "stairs_cave_east_2",
+      "direction": "east",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "carved stone cave steps ascending east with ancient markings showing 2-3 visible steps #696969 #2F4F4F",
+      "seed": 22061,
+      "outputPath": "cave/slopes/stairs_east_2",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:39:48.581Z"
+    },
+    {
+      "key": "stairs_cave_west_2",
+      "direction": "west",
+      "levels": 2,
+      "type": "stairs",
+      "prompt": "carved stone cave steps descending west with dripping water showing 2-3 visible steps #696969 #4682B4",
+      "seed": 22071,
+      "outputPath": "cave/slopes/stairs_west_2",
+      "generated": true,
+      "generatedAt": "2026-01-23T15:40:36.239Z"
+    }
+  ]
+}
