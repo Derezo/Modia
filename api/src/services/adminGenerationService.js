@@ -85,6 +85,13 @@ async function getGenerationConfig() {
 // Track incremental seed across jobs
 let incrementalSeed = 42;
 
+// In-memory backend selection (can be changed at runtime without modifying theme.json)
+// Valid values: 'comfyui' (local), 'huggingface'
+let generationBackend = 'comfyui';
+
+// Valid backends for generation
+const VALID_BACKENDS = ['comfyui', 'huggingface'];
+
 // Category to script mapping
 const SCRIPT_MAP = {
   tiles: 'generate-tiles.js',
@@ -195,12 +202,13 @@ function buildScriptArgs(job, config) {
   const args = [];
 
   // === BACKEND SELECTION ===
+  // Priority: job-level override > in-memory state > theme.json config
   // If backend is 'huggingface', add the --huggingface flag
-  const backend = job.options?.backend || config.backend;
+  const backend = job.options?.backend || generationBackend || config.backend;
   if (backend === 'huggingface') {
     args.push('--huggingface');
   }
-  // Local is default, no flag needed
+  // comfyui (local) is default, no flag needed
 
   // === LORA MODEL ===
   // Job-level override > config default for category > hardcoded default
@@ -505,8 +513,8 @@ export function queueJob(category, filters = {}, options = {}) {
   }
 
   // Validate backend if specified
-  if (options.backend && !['local', 'huggingface'].includes(options.backend)) {
-    throw new Error(`Invalid backend: ${options.backend}. Valid: local, huggingface`);
+  if (options.backend && !VALID_BACKENDS.includes(options.backend)) {
+    throw new Error(`Invalid backend: ${options.backend}. Valid: ${VALID_BACKENDS.join(', ')}`);
   }
 
   // Validate seedMode if specified
@@ -687,6 +695,35 @@ export function resetIncrementalSeed(seed = 42) {
   incrementalSeed = seed;
 }
 
+/**
+ * Set the generation backend
+ * @param {string} backend - 'comfyui' or 'huggingface'
+ * @throws {Error} If backend is invalid
+ */
+export function setGenerationBackend(backend) {
+  if (!VALID_BACKENDS.includes(backend)) {
+    throw new Error(`Invalid backend: ${backend}. Valid: ${VALID_BACKENDS.join(', ')}`);
+  }
+  generationBackend = backend;
+  console.log(`[AdminGeneration] Backend set to: ${backend}`);
+}
+
+/**
+ * Get the current generation backend
+ * @returns {string} Current backend ('comfyui' or 'huggingface')
+ */
+export function getGenerationBackend() {
+  return generationBackend;
+}
+
+/**
+ * Get valid backends
+ * @returns {string[]} Array of valid backend names
+ */
+export function getValidBackends() {
+  return [...VALID_BACKENDS];
+}
+
 export default {
   queueJob,
   cancelJobs,
@@ -698,5 +735,8 @@ export default {
   getValidLoraModels,
   getDefaultLora,
   getConfig,
-  resetIncrementalSeed
+  resetIncrementalSeed,
+  setGenerationBackend,
+  getGenerationBackend,
+  getValidBackends
 };

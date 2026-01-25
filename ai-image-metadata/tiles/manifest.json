@@ -24,7 +24,7 @@
   },
   "categoryFiles": {
     "floors": {
-      "base": ["floors/base.json", "floors/base-elevations.json"],
+      "base": "floors/base.json",
       "forest": "floors/forest.json",
       "cave": "floors/cave.json",
       "mountain": "floors/mountain.json",
@@ -47,12 +47,5 @@
       "bridge": "slopes/bridge.json",
       "castle": "slopes/castle.json"
     }
-  },
-  "legacyFiles": {
-    "forest": "forest.json",
-    "cave": "cave.json",
-    "mountain": "mountain.json",
-    "bridge": "bridge.json",
-    "castle": "castle.json"
   }
 }

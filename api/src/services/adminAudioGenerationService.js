@@ -19,13 +19,17 @@
 import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { broadcastToRoom } from '../websocket/index.js';
+import { loadJsonFile, saveJsonFile } from '../utils/jsonFileUtils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, '../../..');
 const SCRIPTS_DIR = path.join(PROJECT_ROOT, 'scripts/audio');
+const AI_IMAGE_METADATA_DIR = path.join(PROJECT_ROOT, 'ai-image-metadata');
+const SEED_STATE_FILE = path.join(AI_IMAGE_METADATA_DIR, 'seed-state.json');
+const AUDIO_METADATA_DIR = path.join(PROJECT_ROOT, 'audio-metadata');
 
 // Room name for audio generation events
 const GENERATION_ROOM = 'admin:audio-generation';
@@ -49,6 +53,21 @@ const state = {
   stdout: [],          // Current job stdout lines (last 500)
   generatedAssets: []  // Assets generated in current job
 };
+
+// Pending Suno tasks for auto-polling
+const pendingSunoTasks = new Map();
+
+// Suno polling interval (30 seconds)
+const SUNO_POLL_INTERVAL_MS = 30 * 1000;
+
+// Post-completion polling duration (15 seconds)
+const POST_COMPLETION_POLL_DURATION_MS = 15 * 1000;
+
+// Track post-completion polling state
+let postCompletionPollingEndTime = null;
+
+// Suno poller interval reference
+let sunoPollerInterval = null;
 
 /**
  * Generate unique job ID
@@ -294,11 +313,41 @@ function completeJob(job, status, error = null) {
   state.stdout = [];
   state.generatedAssets = [];
 
+  // Enable post-completion polling for 15 seconds to catch final Suno task updates
+  enablePostCompletionPolling();
+
   broadcast('audio:job_completed', { job });
   broadcastQueueUpdate();
 
   // Process next job
   setImmediate(processNextJob);
+}
+
+/**
+ * Validate SFX prompt for comma count
+ * Per CLAUDE.md: Maximum 1 comma per prompt for ElevenLabs
+ * @param {string} prompt - The prompt to validate
+ * @returns {object} { valid, commaCount, message }
+ */
+function validateSFXPrompt(prompt) {
+  if (!prompt || typeof prompt !== 'string') {
+    return {
+      valid: true, // No prompt to validate is ok at queue time (may use metadata prompt)
+      commaCount: 0,
+      message: 'No prompt provided'
+    };
+  }
+
+  const commaCount = (prompt.match(/,/g) || []).length;
+  const valid = commaCount <= 1;
+
+  return {
+    valid,
+    commaCount,
+    message: valid
+      ? 'Prompt is valid'
+      : `Prompt has ${commaCount} commas. Maximum allowed is 1. ElevenLabs interprets comma-separated prompts as multiple distinct sounds.`
+  };
 }
 
 /**
@@ -311,6 +360,14 @@ function completeJob(job, status, error = null) {
 function queueJob(type, filters = {}, options = {}) {
   if (!VALID_AUDIO_TYPES.includes(type)) {
     throw new Error(`Invalid audio type: ${type}. Valid: ${VALID_AUDIO_TYPES.join(', ')}`);
+  }
+
+  // Validate SFX prompts before queuing
+  if (type === 'sfx' && options.prompt) {
+    const validation = validateSFXPrompt(options.prompt);
+    if (!validation.valid) {
+      throw new Error(`Invalid SFX prompt: ${validation.message}`);
+    }
   }
 
   const job = {
@@ -449,6 +506,315 @@ async function checkSunoStatus(taskId) {
   };
 }
 
+// ============================================================================
+// SUNO TASK AUTO-POLLING
+// ============================================================================
+
+/**
+ * Register a Suno task for auto-polling
+ * @param {string} taskId - Suno task ID
+ * @param {object} trackInfo - Track information { type, id, name, ... }
+ */
+function registerSunoTask(taskId, trackInfo) {
+  pendingSunoTasks.set(taskId, {
+    taskId,
+    trackInfo,
+    registeredAt: new Date().toISOString(),
+    lastPolledAt: null,
+    pollCount: 0
+  });
+
+  broadcast('audio:suno_task_registered', {
+    taskId,
+    trackInfo,
+    pendingCount: pendingSunoTasks.size
+  });
+
+  console.log(`[Suno Poller] Registered task ${taskId} for polling (${pendingSunoTasks.size} pending)`);
+}
+
+/**
+ * Poll all pending Suno tasks and update status
+ */
+async function pollSunoTasks() {
+  if (pendingSunoTasks.size === 0) {
+    // Check if we should continue polling after job completion
+    if (postCompletionPollingEndTime && Date.now() < postCompletionPollingEndTime) {
+      // Continue polling for 15 seconds after job completion
+      return;
+    }
+    return;
+  }
+
+  console.log(`[Suno Poller] Polling ${pendingSunoTasks.size} pending tasks...`);
+
+  for (const [taskId, taskData] of pendingSunoTasks) {
+    try {
+      const status = await checkSunoStatus(taskId);
+      taskData.lastPolledAt = new Date().toISOString();
+      taskData.pollCount++;
+
+      if (status.status === 'SUCCESS') {
+        console.log(`[Suno Poller] Task ${taskId} completed successfully`);
+
+        // Update audio metadata if we have track info
+        if (taskData.trackInfo) {
+          try {
+            await updateAudioMetadataFromTask(taskData.trackInfo, status);
+          } catch (err) {
+            console.error(`[Suno Poller] Failed to update metadata for ${taskId}:`, err.message);
+          }
+        }
+
+        // Remove from pending and broadcast success
+        pendingSunoTasks.delete(taskId);
+        broadcast('audio:suno_task_complete', {
+          taskId,
+          trackInfo: taskData.trackInfo,
+          status,
+          pendingCount: pendingSunoTasks.size
+        });
+
+      } else if (status.status === 'FAILED') {
+        console.log(`[Suno Poller] Task ${taskId} failed`);
+
+        // Remove from pending and broadcast failure
+        pendingSunoTasks.delete(taskId);
+        broadcast('audio:suno_task_failed', {
+          taskId,
+          trackInfo: taskData.trackInfo,
+          status,
+          error: status.error || status.message,
+          pendingCount: pendingSunoTasks.size
+        });
+
+      } else {
+        // Still pending - update the stored data
+        pendingSunoTasks.set(taskId, taskData);
+      }
+    } catch (err) {
+      console.error(`[Suno Poller] Error polling task ${taskId}:`, err.message);
+    }
+  }
+}
+
+/**
+ * Update audio metadata from completed Suno task
+ * @param {object} trackInfo - Track info from registration
+ * @param {object} _status - Status response from Suno (unused until API integration)
+ */
+async function updateAudioMetadataFromTask(trackInfo, _status) {
+  // This updates the metadata based on Suno task completion
+  // The actual file path and metadata updates depend on trackInfo structure
+  if (!trackInfo.type || !trackInfo.id) {
+    console.warn('[Suno Poller] Cannot update metadata - missing type or id in trackInfo');
+    return;
+  }
+
+  // For now, just log - actual implementation would update the metadata file
+  // when Suno API integration is complete (_status will contain the audio URL, etc.)
+  console.log(`[Suno Poller] Would update metadata for ${trackInfo.type}/${trackInfo.id}`);
+}
+
+/**
+ * Start the Suno task poller
+ */
+function startSunoPoller() {
+  if (sunoPollerInterval) {
+    console.log('[Suno Poller] Poller already running');
+    return;
+  }
+
+  sunoPollerInterval = setInterval(pollSunoTasks, SUNO_POLL_INTERVAL_MS);
+  console.log(`[Suno Poller] Started polling every ${SUNO_POLL_INTERVAL_MS / 1000}s`);
+}
+
+/**
+ * Stop the Suno task poller
+ */
+function stopSunoPoller() {
+  if (sunoPollerInterval) {
+    clearInterval(sunoPollerInterval);
+    sunoPollerInterval = null;
+    console.log('[Suno Poller] Stopped polling');
+  }
+}
+
+/**
+ * Get pending Suno tasks
+ * @returns {Array} Array of pending task data
+ */
+function getPendingSunoTasks() {
+  return Array.from(pendingSunoTasks.values());
+}
+
+// ============================================================================
+// POST-COMPLETION QUEUE POLLING (2.2)
+// ============================================================================
+
+/**
+ * Enable post-completion polling for 15 seconds after a job completes
+ * This allows any final Suno tasks from the job to be detected
+ */
+function enablePostCompletionPolling() {
+  postCompletionPollingEndTime = Date.now() + POST_COMPLETION_POLL_DURATION_MS;
+  console.log(`[Queue Poller] Post-completion polling enabled for ${POST_COMPLETION_POLL_DURATION_MS / 1000}s`);
+}
+
+// ============================================================================
+// WAVEFORM PERSISTENCE (2.3)
+// ============================================================================
+
+/**
+ * Update audio metadata with waveform data
+ * @param {string} type - 'music' or 'sfx'
+ * @param {string} id - Asset ID
+ * @param {Array<number>} waveform - Waveform peaks array
+ * @returns {Promise<boolean>} Success status
+ */
+async function persistWaveformData(type, id, waveform) {
+  try {
+    // Find the asset's source file
+    let sourceFilePath = null;
+    let arrayKey = null;
+
+    if (type === 'music') {
+      // Load music manifest to find source file
+      const manifest = await loadJsonFile(path.join(AUDIO_METADATA_DIR, 'music/manifest.json'));
+      if (manifest?.categories) {
+        for (const categoryKey of Object.keys(manifest.categories)) {
+          const categoryFile = manifest.categories[categoryKey];
+          const categoryData = await loadJsonFile(path.join(AUDIO_METADATA_DIR, 'music', categoryFile));
+          if (categoryData?.tracks) {
+            const track = categoryData.tracks.find(t => t.id === id);
+            if (track) {
+              sourceFilePath = path.join(AUDIO_METADATA_DIR, 'music', categoryFile);
+              arrayKey = 'tracks';
+              break;
+            }
+          }
+        }
+      }
+    } else {
+      // Load SFX manifest to find source file
+      const manifest = await loadJsonFile(path.join(AUDIO_METADATA_DIR, 'sfx/manifest.json'));
+      if (manifest?.categories) {
+        for (const categoryKey of Object.keys(manifest.categories)) {
+          const categoryData = manifest.categories[categoryKey];
+          if (categoryData?.file) {
+            const sfxData = await loadJsonFile(path.join(AUDIO_METADATA_DIR, 'sfx', categoryData.file));
+            if (sfxData?.effects) {
+              const effect = sfxData.effects.find(e => e.id === id);
+              if (effect) {
+                sourceFilePath = path.join(AUDIO_METADATA_DIR, 'sfx', categoryData.file);
+                arrayKey = 'effects';
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (!sourceFilePath || !arrayKey) {
+      console.warn(`[Waveform] Could not find source file for ${type}/${id}`);
+      return false;
+    }
+
+    // Load, update, and save the file
+    const fileData = await loadJsonFile(sourceFilePath);
+    if (!fileData || !fileData[arrayKey]) {
+      return false;
+    }
+
+    const assetIndex = fileData[arrayKey].findIndex(a => a.id === id);
+    if (assetIndex === -1) {
+      return false;
+    }
+
+    fileData[arrayKey][assetIndex].waveform = waveform;
+    await saveJsonFile(sourceFilePath, fileData);
+
+    console.log(`[Waveform] Persisted waveform for ${type}/${id}`);
+    return true;
+  } catch (err) {
+    console.error(`[Waveform] Failed to persist waveform for ${type}/${id}:`, err.message);
+    return false;
+  }
+}
+
+// ============================================================================
+// INCREMENTAL SEED PERSISTENCE (2.5)
+// ============================================================================
+
+/**
+ * Read the current seed value from seed-state.json
+ * @returns {number} Current seed value (defaults to 1 if file doesn't exist)
+ */
+function readSeedState() {
+  try {
+    if (existsSync(SEED_STATE_FILE)) {
+      const data = readFileSync(SEED_STATE_FILE, 'utf8');
+      const state = JSON.parse(data);
+      return state.seed || 1;
+    }
+  } catch (err) {
+    console.warn(`[Seed State] Failed to read seed-state.json: ${err.message}`);
+  }
+  return 1;
+}
+
+/**
+ * Save the seed value to seed-state.json
+ * @param {number} seed - Seed value to save
+ * @returns {boolean} Success status
+ */
+function saveSeedState(seed) {
+  try {
+    // Ensure directory exists
+    if (!existsSync(AI_IMAGE_METADATA_DIR)) {
+      mkdirSync(AI_IMAGE_METADATA_DIR, { recursive: true });
+    }
+
+    const state = {
+      seed,
+      lastUpdated: new Date().toISOString()
+    };
+
+    writeFileSync(SEED_STATE_FILE, JSON.stringify(state, null, 2));
+    console.log(`[Seed State] Saved seed value: ${seed}`);
+    return true;
+  } catch (err) {
+    console.error(`[Seed State] Failed to save seed-state.json: ${err.message}`);
+    return false;
+  }
+}
+
+/**
+ * Get the next seed value and increment
+ * @returns {number} The seed value to use (increments after reading)
+ */
+function getNextSeed() {
+  const currentSeed = readSeedState();
+  saveSeedState(currentSeed + 1);
+  return currentSeed;
+}
+
+/**
+ * Get current seed value without incrementing
+ * @returns {number} Current seed value
+ */
+function getCurrentSeed() {
+  return readSeedState();
+}
+
+// ============================================================================
+// START POLLER ON SERVICE LOAD
+// ============================================================================
+
+// Start the Suno poller when the service is loaded
+startSunoPoller();
+
 export default {
   queueJob,
   cancelJobs,
@@ -457,5 +823,20 @@ export default {
   getQueueStatus,
   getJob,
   checkSunoStatus,
-  VALID_AUDIO_TYPES
+  VALID_AUDIO_TYPES,
+  // Suno auto-polling
+  registerSunoTask,
+  getPendingSunoTasks,
+  startSunoPoller,
+  stopSunoPoller,
+  // Waveform persistence
+  persistWaveformData,
+  // Seed state management
+  readSeedState,
+  saveSeedState,
+  getNextSeed,
+  getCurrentSeed
 };
+
+// Named export for registerSunoTask (frequently used)
+export { registerSunoTask };

@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "description": "Master manifest for Modia AI-generated image assets",
-  "totalAssets": 465,
+  "totalAssets": 660,
   "artDirection": {
     "mood": "cozy_nostalgic",
     "technique": "ink_wash",
@@ -11,13 +11,26 @@
   "categories": {
     "tiles": {
       "description": "Isometric terrain tiles for battle maps",
-      "assetCount": 96,
+      "assetCount": 291,
       "files": [
-        "tiles/forest.json",
-        "tiles/cave.json",
-        "tiles/mountain.json",
-        "tiles/bridge.json",
-        "tiles/castle.json"
+        "tiles/floors/base.json",
+        "tiles/floors/forest.json",
+        "tiles/floors/cave.json",
+        "tiles/floors/mountain.json",
+        "tiles/floors/bridge.json",
+        "tiles/floors/castle.json",
+        "tiles/walls/base.json",
+        "tiles/walls/forest.json",
+        "tiles/walls/cave.json",
+        "tiles/walls/mountain.json",
+        "tiles/walls/bridge.json",
+        "tiles/walls/castle.json",
+        "tiles/slopes/base.json",
+        "tiles/slopes/forest.json",
+        "tiles/slopes/cave.json",
+        "tiles/slopes/mountain.json",
+        "tiles/slopes/bridge.json",
+        "tiles/slopes/castle.json"
       ]
     },
     "portraits": {
@@ -124,6 +137,36 @@
     "defaultTrigger": "wbgmsst",
     "triggerV2": "wbgmsst",
     "triggerV1Legacy": "GRPZA"
+  },
+  "loraModels": {
+    "v1": {
+      "name": "Flat 2D Pixel Art",
+      "triggerWord": "GRPZA",
+      "description": "Clean flat pixel art style, good for icons and portraits"
+    },
+    "v2": {
+      "name": "Isometric/Textured",
+      "triggerWord": "wbgmsst",
+      "description": "Textured isometric style, good for terrain tiles"
+    },
+    "modern-pixel": {
+      "name": "Modern Pixel Art",
+      "triggerWord": "umempart",
+      "description": "Contemporary pixel art with smooth gradients"
+    },
+    "retro-pixel": {
+      "name": "Retro 8-bit",
+      "triggerWord": "Retro Pixel",
+      "description": "Classic 8-bit aesthetic"
+    }
+  },
+  "categoryDefaults": {
+    "tiles": "v2",
+    "portraits": "v1",
+    "items": "v1",
+    "icons": "v1",
+    "nodes": "v1",
+    "overlays": "v1"
   },
   "outputPaths": {
     "tiles": "/assets/terrain/",

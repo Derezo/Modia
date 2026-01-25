@@ -82,11 +82,60 @@ npm run ai:generate:tiles -- --key forest_grass_1 --force
 npm run ai:generate:tiles -- --biome forest
 npm run ai:generate:portraits -- --race elf --class wizard
 npm run ai:generate:tiles -- --dry-run          # Preview only
+npm run ai:generate:tiles -- --lora v1          # Use specific LoRA model
 
 # Audio (with options)
 npm run audio:generate:music -- --key heartlands_tavern --wait
 npm run audio:generate:music -- --region heartlands
 npm run audio:generate:sfx -- --key attack_sword_1
+```
+
+### LoRA Model Selection
+
+The image generation pipeline supports multiple LoRA models for different art styles.
+
+| Model | Trigger Word | Style | Recommended For |
+|-------|--------------|-------|-----------------|
+| `v1` | GRPZA | Flat 2D pixel art | Icons, portraits, items |
+| `v2` | wbgmsst | Isometric/textured | Tiles, terrain, obstacles |
+| `modern-pixel` | umempart | Modern pixel art | Stylized assets |
+| `retro-pixel` | Retro Pixel | Classic 8-bit | Retro-themed assets |
+
+**Selection Priority:**
+1. CLI `--lora` flag (override for batch operations)
+2. Asset-level `loraModel` in metadata (per-asset override)
+3. Category default from `manifest.json` (tiles=v2, others=v1)
+
+**Category Defaults:**
+- **Tiles:** `v2` (isometric perspective needs textured style)
+- **Portraits:** `v1` (flat pixel art for character faces)
+- **Items:** `v1` (clean flat sprites for inventory)
+- **Icons:** `v1` (simple shapes for UI clarity)
+- **Nodes:** `v1` (consistent with flat map style)
+
+**Per-Asset Override:**
+Add `loraModel` to any asset in metadata to override the category default:
+```json
+{
+  "key": "boss_portrait",
+  "prompt": "menacing demon lord...",
+  "loraModel": "v2",  // Override v1 default for special style
+  "generated": false
+}
+```
+
+### Generation Backend
+
+Images can be generated via:
+- **ComfyUI (Local)** - Default, ~5-8s/image, requires local GPU
+- **HuggingFace Space** - Fallback, ~30s/image, no local GPU needed
+
+```bash
+# Local ComfyUI (default)
+npm run ai:generate:tiles -- --key grass_0
+
+# HuggingFace API
+npm run ai:generate:tiles -- --key grass_0 --huggingface
 ```
 
 ### Asset Directories
@@ -336,4 +385,4 @@ See [AI_IMAGE_GENERATION.md](AI_IMAGE_GENERATION.md) for complete art direction 
 
 ---
 
-*Last updated: 2026-01-25*
+*Last updated: 2026-01-25 (added LoRA model and backend selection docs)*
