@@ -33,7 +33,8 @@ const {
 
 // Configuration
 const PROJECT_ROOT = getProjectRoot();
-const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/sprites/icons');
+// New icons path with originals directory
+const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/icons/originals');
 
 /**
  * Parse command line arguments

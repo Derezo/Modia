@@ -7,19 +7,19 @@
  *
  * Key responsibilities:
  * - Define size presets and defaults for each asset category
- * - Generate legacy paths matching current file structure
- * - Generate standardized paths for future migration
+ * - Generate standardized paths for all asset types
  * - Provide output paths for asset generation scripts
+ * - Provide originals paths for source image preservation
  *
  * @example
  * // Frontend usage
- * import { getAssetUrl, DEFAULT_SIZES } from '@shared/assetPaths.js';
- * const iconUrl = getAssetUrl('icons', 'action_attack', { subcategory: 'actions', size: 32 });
+ * import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
+ * const iconPath = getAssetPath('icons', 'attack', { subcategory: 'actions', size: 32 });
  *
  * @example
  * // API/Script usage
  * import { getOutputPath } from '../../../shared/assetPaths.js';
- * const savePath = getOutputPath('tiles', 'forest_grass_1', { subcategory: 'forest' });
+ * const savePath = getOutputPath('portraits', 'human_male_warrior', { size: 64 });
  */
 
 /**
@@ -85,280 +85,291 @@ function getEffectiveSize(category, size) {
 }
 
 /**
- * Generates a legacy path for tiles
- * Handles floors, walls, and slopes with different path patterns:
- * - Floors: /assets/sprites/terrain/{biome}/{key}.png
- * - Walls:  /assets/sprites/terrain/{biome}/walls/{terrain}_wall.png
- * - Slopes: /assets/sprites/terrain/{biome}/slopes/{direction}_{levels}.png
+ * Generates path for portraits (unified player + enemy)
+ * Pattern: /assets/portraits/{size}/{id}.png
+ * - Player IDs: {race}_{gender}_{class} (e.g., 'human_male_warrior')
+ * - Enemy IDs: enemy_{name} (e.g., 'enemy_goblin_warrior')
  *
- * @param {string} id - The tile identifier (e.g., 'grass_0', 'wall_base_grass', 'slope_base_north_1')
+ * @param {string} id - The portrait identifier
  * @param {Object} options - Options
- * @param {string} [options.subcategory] - The biome/terrain type (e.g., 'forest', 'cave', 'base')
- * @param {string} [options.tileCategory] - The tile category ('floors', 'walls', 'slopes')
- * @returns {string} The legacy path
+ * @param {number} [options.size] - Size variant (64, 128, 256)
+ * @returns {string} The portrait path
  */
-function getLegacyTilePath(id, options = {}) {
-  const { subcategory = 'base', tileCategory = 'floors' } = options;
+function getPortraitPath(id, options = {}) {
+  const size = getEffectiveSize('portraits', options.size);
+  return `${ASSETS_BASE}/portraits/${size}/${id}.png`;
+}
+
+/**
+ * Generates path for world map nodes
+ * Pattern: /assets/nodes/{size}/{id}.png
+ * IDs no longer have 'node_' prefix (e.g., 'castle', not 'node_castle')
+ *
+ * @param {string} id - The node identifier (e.g., 'castle', 'tavern', 'guild_warrior')
+ * @param {Object} options - Options
+ * @param {number} [options.size] - Size variant (48, 96)
+ * @returns {string} The node path
+ */
+function getNodePath(id, options = {}) {
+  const size = getEffectiveSize('nodes', options.size);
+  return `${ASSETS_BASE}/nodes/${size}/${id}.png`;
+}
+
+/**
+ * Generates path for items
+ * Pattern: /assets/items/{size}/{subcategory}/{id}.png
+ *
+ * @param {string} id - The item identifier (e.g., 'sword_iron')
+ * @param {Object} options - Options
+ * @param {string} [options.subcategory='weapons'] - Item type
+ * @param {number} [options.size] - Size variant (32, 64, 128)
+ * @returns {string} The item path
+ */
+function getItemPath(id, options = {}) {
+  const { subcategory = 'weapons' } = options;
+  const size = getEffectiveSize('items', options.size);
+  return `${ASSETS_BASE}/items/${size}/${subcategory}/${id}.png`;
+}
+
+/**
+ * Generates path for icons
+ * Pattern: /assets/icons/png/{size}/{subcategory}/{id}.png
+ *
+ * @param {string} id - The icon identifier (e.g., 'attack')
+ * @param {Object} options - Options
+ * @param {string} [options.subcategory='actions'] - Icon category
+ * @param {number} [options.size] - Size variant (16, 24, 32, 48, 64, 128)
+ * @returns {string} The icon path
+ */
+function getIconPath(id, options = {}) {
+  const { subcategory = 'actions' } = options;
+  const size = getEffectiveSize('icons', options.size);
+  return `${ASSETS_BASE}/icons/png/${size}/${subcategory}/${id}.png`;
+}
+
+/**
+ * Generates path for terrain tiles
+ * Pattern: /assets/terrain/{biome}/{id}.png
+ * For walls: /assets/terrain/{biome}/walls/{terrain}_wall.png
+ * For slopes: /assets/terrain/{biome}/slopes/{direction}_{levels}.png
+ *
+ * @param {string} id - The tile identifier (e.g., 'grass_0', 'wall_forest_grass', 'slope_north_1')
+ * @param {Object} options - Options
+ * @param {string} [options.subcategory='forest'] - Biome type (forest, cave, mountain, bridge, castle)
+ * @param {string} [options.tileCategory='floors'] - Tile category (floors, walls, slopes)
+ * @returns {string} The tile path
+ */
+function getTilePath(id, options = {}) {
+  const { subcategory = 'forest', tileCategory = 'floors' } = options;
 
   // Handle walls: wall_{biome}_{terrain} -> {biome}/walls/{terrain}_wall.png
   if (tileCategory === 'walls' || id.startsWith('wall_')) {
-    // Extract terrain from key like "wall_base_grass" or "wall_castle_default"
     const match = id.match(/^wall_[^_]+_(.+)$/);
     if (match) {
       const terrain = match[1];
-      return `${ASSETS_BASE}/sprites/terrain/${subcategory}/walls/${terrain}_wall.png`;
+      return `${ASSETS_BASE}/terrain/${subcategory}/walls/${terrain}_wall.png`;
     }
-    // Fallback for unexpected wall format
-    return `${ASSETS_BASE}/sprites/terrain/${subcategory}/walls/${id}.png`;
+    return `${ASSETS_BASE}/terrain/${subcategory}/walls/${id}.png`;
   }
 
   // Handle slopes: slope_{biome}_{direction}_{levels} -> {biome}/slopes/{direction}_{levels}.png
   // Also handles stairs: stairs_{biome}_{direction}_{levels} -> {biome}/slopes/stairs_{direction}_{levels}.png
   if (tileCategory === 'slopes' || id.startsWith('slope_') || id.startsWith('stairs_')) {
-    // Handle stairs_base_north_1 -> slopes/stairs_north_1.png
     if (id.startsWith('stairs_')) {
       const match = id.match(/^stairs_[^_]+_(.+)$/);
       if (match) {
-        return `${ASSETS_BASE}/sprites/terrain/${subcategory}/slopes/stairs_${match[1]}.png`;
+        return `${ASSETS_BASE}/terrain/${subcategory}/slopes/stairs_${match[1]}.png`;
       }
     }
-    // Handle slope_base_north_1 -> slopes/north_1.png
     const match = id.match(/^slope_[^_]+_(.+)$/);
     if (match) {
-      return `${ASSETS_BASE}/sprites/terrain/${subcategory}/slopes/${match[1]}.png`;
+      return `${ASSETS_BASE}/terrain/${subcategory}/slopes/${match[1]}.png`;
     }
-    // Fallback for unexpected slope format
-    return `${ASSETS_BASE}/sprites/terrain/${subcategory}/slopes/${id}.png`;
+    return `${ASSETS_BASE}/terrain/${subcategory}/slopes/${id}.png`;
   }
 
-  // Default: floors - use key directly
-  return `${ASSETS_BASE}/sprites/terrain/${subcategory}/${id}.png`;
+  // Default: floors - use id directly
+  return `${ASSETS_BASE}/terrain/${subcategory}/${id}.png`;
 }
 
 /**
- * Generates a legacy path for portraits
- * Pattern: /assets/sprites/portraits/{id}.png OR /assets/sprites/enemies/portraits/{id}.png
- * Size variants use subdirectories: /assets/sprites/portraits/128x128/{id}.png
- * @param {string} id - The portrait identifier (e.g., 'human_male_warrior', 'goblin_warrior')
- * @param {Object} options - Options
- * @param {string} [options.subcategory] - 'characters' or 'enemies'
- * @param {number} [options.size] - Size variant (64, 128, 256). Default (64) uses root directory.
- * @returns {string} The legacy path
- */
-function getLegacyPortraitPath(id, options = {}) {
-  const { subcategory = 'characters', size } = options;
-  const effectiveSize = size !== undefined ? size : DEFAULT_SIZES.portraits;
-
-  // Use subdirectory pattern for non-default sizes: portraits/128x128/human_male_warrior.png
-  // Default size (64) uses root directory for backward compatibility
-  const sizeDir = effectiveSize !== DEFAULT_SIZES.portraits ? `${effectiveSize}x${effectiveSize}/` : '';
-
-  if (subcategory === 'enemies') {
-    return `${ASSETS_BASE}/sprites/enemies/portraits/${sizeDir}${id}.png`;
-  }
-  return `${ASSETS_BASE}/sprites/portraits/${sizeDir}${id}.png`;
-}
-
-/**
- * Generates a legacy path for items
- * Pattern: /assets/sprites/items/{subcategory}/{id}_{size}.png
- * @param {string} id - The item identifier (e.g., 'sword_iron')
- * @param {Object} options - Options
- * @param {string} [options.subcategory] - Item type ('weapons', 'armor', 'accessories', 'consumables')
- * @param {number} [options.size] - Size variant
- * @returns {string} The legacy path
- */
-function getLegacyItemPath(id, options = {}) {
-  const { subcategory = 'weapons' } = options;
-  const size = getEffectiveSize('items', options.size);
-  return `${ASSETS_BASE}/sprites/items/${subcategory}/${id}_${size}.png`;
-}
-
-/**
- * Generates a legacy path for icons
- * Pattern: /assets/icons/png/{size}/{subcategory}-{id}.png
- * @param {string} id - The icon identifier (e.g., 'action_attack')
- * @param {Object} options - Options
- * @param {string} [options.subcategory] - Icon category ('actions', 'status', 'ui', etc.)
- * @param {number} [options.size] - Size variant
- * @returns {string} The legacy path
- */
-function getLegacyIconPath(id, options = {}) {
-  const { subcategory = 'actions' } = options;
-  const size = getEffectiveSize('icons', options.size);
-  return `${ASSETS_BASE}/icons/png/${size}/${subcategory}-${id}.png`;
-}
-
-/**
- * Generates a legacy path for world map nodes
- * Pattern: /assets/sprites/nodes/{id}.png
- * Size variants use subdirectories: /assets/sprites/nodes/48x48/{id}.png
- * @param {string} id - The node id (e.g., 'node_castle', 'node_tavern', 'node_forest')
- *                      Note: Metadata stores full id with 'node_' prefix
- * @param {Object} options - Options
- * @param {number} [options.size] - Size variant (48, 96). Default (96) uses root directory.
- * @returns {string} The legacy path
- */
-function getLegacyNodePath(id, options = {}) {
-  const { size } = options;
-  const effectiveSize = size !== undefined ? size : DEFAULT_SIZES.nodes;
-
-  // Use subdirectory pattern for non-default sizes: nodes/48x48/node_castle.png
-  // Default size (96) uses root directory for backward compatibility
-  const sizeDir = effectiveSize !== DEFAULT_SIZES.nodes ? `${effectiveSize}x${effectiveSize}/` : '';
-
-  // ID already includes 'node_' prefix from metadata (e.g., 'node_castle')
-  return `${ASSETS_BASE}/sprites/nodes/${sizeDir}${id}.png`;
-}
-
-/**
- * Generates a legacy path for overlays
- * Pattern: /assets/sprites/overlays/{subcategory}/{id}.png
- * @param {string} id - The overlay identifier (e.g., 'rare', 'epic')
- * @param {Object} options - Options
- * @param {string} [options.subcategory] - Overlay type ('rarity', 'augments')
- * @returns {string} The legacy path
- */
-function getLegacyOverlayPath(id, options = {}) {
-  const { subcategory = 'rarity' } = options;
-  return `${ASSETS_BASE}/sprites/overlays/${subcategory}/${id}.png`;
-}
-
-/**
- * Generates a legacy path for any asset category
- * @param {string} category - Asset category ('tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays')
- * @param {string} id - Asset identifier
- * @param {Object} [options] - Category-specific options
- * @param {string} [options.subcategory] - Subcategory for organization
- * @param {number} [options.size] - Size variant (where applicable)
- * @returns {string} The legacy path
- */
-export function getLegacyPath(category, id, options = {}) {
-  validateCategory(category);
-
-  switch (category) {
-    case 'tiles':
-      return getLegacyTilePath(id, options);
-    case 'portraits':
-      return getLegacyPortraitPath(id, options);
-    case 'items':
-      return getLegacyItemPath(id, options);
-    case 'icons':
-      return getLegacyIconPath(id, options);
-    case 'nodes':
-      return getLegacyNodePath(id, options);
-    case 'overlays':
-      return getLegacyOverlayPath(id, options);
-    default:
-      throw new Error(`Unhandled category: ${category}`);
-  }
-}
-
-/**
- * Generates a standardized path for any asset (future migration target)
- * Pattern: /assets/{type}/png/{size}/{subcategory}-{id}.png
- * @param {string} category - Asset category ('tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays')
- * @param {string} id - Asset identifier
- * @param {Object} [options] - Options
- * @param {string} [options.subcategory] - Subcategory for organization
- * @param {number} [options.size] - Size variant
- * @returns {string} The standardized path
- */
-export function getStandardizedPath(category, id, options = {}) {
-  validateCategory(category);
-
-  const { subcategory = 'default' } = options;
-  const size = getEffectiveSize(category, options.size);
-
-  return `${ASSETS_BASE}/${category}/png/${size}/${subcategory}-${id}.png`;
-}
-
-/**
- * Gets the asset URL based on category and options
+ * Generates path for overlays
+ * Pattern: /assets/overlays/{size}/{subcategory}/{id}.png
  *
- * This is the main function for retrieving asset URLs. By default, it returns
- * legacy paths matching the current file structure. Set useLegacyPath to false
- * to get the standardized format for future migration.
+ * @param {string} id - The overlay identifier (e.g., 'rare', 'fire')
+ * @param {Object} options - Options
+ * @param {string} [options.subcategory='rarity'] - Overlay type (rarity, augments)
+ * @param {number} [options.size] - Size variant (32, 48, 64, 128)
+ * @returns {string} The overlay path
+ */
+function getOverlayPath(id, options = {}) {
+  const { subcategory = 'rarity' } = options;
+  const size = getEffectiveSize('overlays', options.size);
+  return `${ASSETS_BASE}/overlays/${size}/${subcategory}/${id}.png`;
+}
+
+/**
+ * Gets the asset path for any category
+ *
+ * This is the main function for retrieving asset paths. It generates
+ * standardized paths based on category and options.
  *
  * @param {string} category - Asset category ('tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays')
  * @param {string} id - Asset identifier (varies by category)
  * @param {Object} [options] - Options for path generation
  * @param {number} [options.size] - Size variant (uses category default if not specified)
  * @param {string} [options.subcategory] - Subcategory for organization (meaning varies by category)
- * @param {boolean} [options.useLegacyPath=true] - Whether to use legacy path format
- * @returns {string} The asset URL
+ * @param {string} [options.tileCategory] - For tiles only: 'floors', 'walls', or 'slopes'
+ * @returns {string} The asset path
  *
  * @example
- * // Tile (terrain) - no size variants
- * getAssetUrl('tiles', 'forest_grass_1_v0', { subcategory: 'forest' });
- * // => '/assets/sprites/terrain/forest/forest_grass_1_v0.png'
+ * // Portrait (player)
+ * getAssetPath('portraits', 'human_male_warrior', { size: 64 });
+ * // => '/assets/portraits/64/human_male_warrior.png'
  *
  * @example
- * // Portrait - character
- * getAssetUrl('portraits', 'human_male_warrior');
- * // => '/assets/sprites/portraits/human_male_warrior.png'
+ * // Portrait (enemy)
+ * getAssetPath('portraits', 'enemy_goblin_warrior', { size: 64 });
+ * // => '/assets/portraits/64/enemy_goblin_warrior.png'
  *
  * @example
- * // Portrait - enemy
- * getAssetUrl('portraits', 'goblin_warrior', { subcategory: 'enemies' });
- * // => '/assets/sprites/enemies/portraits/goblin_warrior.png'
+ * // Node (no node_ prefix)
+ * getAssetPath('nodes', 'castle', { size: 96 });
+ * // => '/assets/nodes/96/castle.png'
  *
  * @example
- * // Item with size
- * getAssetUrl('items', 'sword_iron', { subcategory: 'weapons', size: 32 });
- * // => '/assets/sprites/items/weapons/sword_iron_32.png'
+ * // Item (size in path, not filename)
+ * getAssetPath('items', 'sword_iron', { subcategory: 'weapons', size: 64 });
+ * // => '/assets/items/64/weapons/sword_iron.png'
  *
  * @example
- * // Icon with size
- * getAssetUrl('icons', 'action_attack', { subcategory: 'actions', size: 48 });
- * // => '/assets/icons/png/48/actions-action_attack.png'
+ * // Icon
+ * getAssetPath('icons', 'attack', { subcategory: 'actions', size: 32 });
+ * // => '/assets/icons/png/32/actions/attack.png'
  *
  * @example
- * // Node (world map)
- * getAssetUrl('nodes', 'castle');
- * // => '/assets/sprites/nodes/node_castle.png'
+ * // Terrain tile
+ * getAssetPath('tiles', 'grass_0', { subcategory: 'forest' });
+ * // => '/assets/terrain/forest/grass_0.png'
  *
  * @example
  * // Overlay
- * getAssetUrl('overlays', 'rare', { subcategory: 'rarity' });
- * // => '/assets/sprites/overlays/rarity/rare.png'
+ * getAssetPath('overlays', 'rare', { subcategory: 'rarity', size: 64 });
+ * // => '/assets/overlays/64/rarity/rare.png'
  */
-export function getAssetUrl(category, id, options = {}) {
-  const { useLegacyPath = true, ...pathOptions } = options;
+export function getAssetPath(category, id, options = {}) {
+  validateCategory(category);
 
-  if (useLegacyPath) {
-    return getLegacyPath(category, id, pathOptions);
+  switch (category) {
+    case 'portraits':
+      return getPortraitPath(id, options);
+    case 'nodes':
+      return getNodePath(id, options);
+    case 'items':
+      return getItemPath(id, options);
+    case 'icons':
+      return getIconPath(id, options);
+    case 'tiles':
+      return getTilePath(id, options);
+    case 'overlays':
+      return getOverlayPath(id, options);
+    default:
+      throw new Error(`Unhandled category: ${category}`);
   }
+}
 
-  return getStandardizedPath(category, id, pathOptions);
+/**
+ * Alias for getAssetPath for backward compatibility
+ * @deprecated Use getAssetPath instead
+ */
+export const getAssetUrl = getAssetPath;
+
+/**
+ * Gets the path to the original source image
+ *
+ * Every asset category maintains an originals/ subdirectory with
+ * full-resolution AI-generated source images.
+ *
+ * @param {string} category - Asset category
+ * @param {string} id - Asset identifier
+ * @param {Object} [options] - Options
+ * @param {string} [options.subcategory] - Subcategory for organization
+ * @returns {string} The originals path
+ *
+ * @example
+ * getOriginalsPath('portraits', 'human_male_warrior');
+ * // => '/assets/portraits/originals/human_male_warrior.png'
+ *
+ * @example
+ * getOriginalsPath('items', 'sword_iron', { subcategory: 'weapons' });
+ * // => '/assets/items/originals/weapons/sword_iron.png'
+ *
+ * @example
+ * getOriginalsPath('tiles', 'grass_0', { subcategory: 'forest' });
+ * // => '/assets/terrain/originals/forest/grass_0.png'
+ */
+export function getOriginalsPath(category, id, options = {}) {
+  validateCategory(category);
+
+  const { subcategory } = options;
+
+  switch (category) {
+    case 'portraits':
+    case 'nodes':
+      return `${ASSETS_BASE}/${category}/originals/${id}.png`;
+
+    case 'items':
+    case 'icons':
+    case 'overlays': {
+      const sub = subcategory || (category === 'items' ? 'weapons' : category === 'icons' ? 'actions' : 'rarity');
+      return `${ASSETS_BASE}/${category}/originals/${sub}/${id}.png`;
+    }
+
+    case 'tiles': {
+      const biome = subcategory || 'forest';
+      return `${ASSETS_BASE}/terrain/originals/${biome}/${id}.png`;
+    }
+
+    default:
+      throw new Error(`Unhandled category: ${category}`);
+  }
 }
 
 /**
  * Gets the output path for asset generation scripts
  *
- * This returns a relative path from the project root suitable for scripts
- * that generate and save asset files. Always uses legacy format to match
- * the current directory structure.
+ * Returns a relative path from the project root suitable for scripts
+ * that generate and save asset files.
  *
  * @param {string} category - Asset category
  * @param {string} id - Asset identifier
  * @param {Object} [options] - Options
  * @param {string} [options.subcategory] - Subcategory
  * @param {number} [options.size] - Size variant
+ * @param {boolean} [options.original] - If true, returns path to originals directory
  * @returns {string} The output path relative to project root
  *
  * @example
- * getOutputPath('tiles', 'forest_grass_1_v0', { subcategory: 'forest' });
- * // => 'frontend/public/assets/sprites/terrain/forest/forest_grass_1_v0.png'
+ * getOutputPath('portraits', 'human_male_warrior', { size: 64 });
+ * // => 'frontend/public/assets/portraits/64/human_male_warrior.png'
  *
  * @example
- * getOutputPath('icons', 'action_attack', { subcategory: 'actions', size: 32 });
- * // => 'frontend/public/assets/icons/png/32/actions-action_attack.png'
+ * getOutputPath('nodes', 'castle', { size: 96 });
+ * // => 'frontend/public/assets/nodes/96/castle.png'
+ *
+ * @example
+ * getOutputPath('portraits', 'human_male_warrior', { original: true });
+ * // => 'frontend/public/assets/portraits/originals/human_male_warrior.png'
  */
 export function getOutputPath(category, id, options = {}) {
-  const legacyPath = getLegacyPath(category, id, options);
+  const { original, ...pathOptions } = options;
+
+  const assetPath = original
+    ? getOriginalsPath(category, id, pathOptions)
+    : getAssetPath(category, id, pathOptions);
+
   // Remove leading slash and prepend frontend/public
-  return `frontend/public${legacyPath}`;
+  return `frontend/public${assetPath}`;
 }
 
 /**
@@ -369,14 +380,14 @@ export function getOutputPath(category, id, options = {}) {
  * @param {string} category - Asset category
  * @param {string} id - Asset identifier
  * @param {Object} [options] - Base options (subcategory, etc.)
- * @returns {Array<{size: number, url: string}>} Array of size/URL pairs
+ * @returns {Array<{size: number, path: string}>} Array of size/path pairs
  *
  * @example
- * getAllSizeVariants('items', 'sword_iron', { subcategory: 'weapons' });
+ * getAllSizeVariants('portraits', 'human_male_warrior');
  * // => [
- * //   { size: 32, url: '/assets/sprites/items/weapons/sword_iron_32.png' },
- * //   { size: 64, url: '/assets/sprites/items/weapons/sword_iron_64.png' },
- * //   { size: 128, url: '/assets/sprites/items/weapons/sword_iron_128.png' }
+ * //   { size: 64, path: '/assets/portraits/64/human_male_warrior.png' },
+ * //   { size: 128, path: '/assets/portraits/128/human_male_warrior.png' },
+ * //   { size: 256, path: '/assets/portraits/256/human_male_warrior.png' }
  * // ]
  */
 export function getAllSizeVariants(category, id, options = {}) {
@@ -385,7 +396,7 @@ export function getAllSizeVariants(category, id, options = {}) {
   const sizes = SIZE_PRESETS[category];
   return sizes.map(size => ({
     size,
-    url: getAssetUrl(category, id, { ...options, size })
+    path: getAssetPath(category, id, { ...options, size })
   }));
 }
 
@@ -452,19 +463,23 @@ export function getOptimalSize(category, displaySize) {
 }
 
 /**
- * Parses an asset filename to extract category, id, and options
+ * Parses an asset filename to extract id and metadata
  *
  * @param {string} filename - The filename to parse
  * @param {string} category - The asset category (needed for context)
  * @returns {Object|null} Parsed info or null if unable to parse
  *
  * @example
- * parseAssetFilename('sword_iron_32.png', 'items');
- * // => { id: 'sword_iron', size: 32 }
+ * parseAssetFilename('human_male_warrior.png', 'portraits');
+ * // => { id: 'human_male_warrior' }
  *
  * @example
- * parseAssetFilename('actions-action_attack.png', 'icons');
- * // => { id: 'action_attack', subcategory: 'actions' }
+ * parseAssetFilename('attack.png', 'icons');
+ * // => { id: 'attack' }
+ *
+ * @example
+ * parseAssetFilename('sword_iron.png', 'items');
+ * // => { id: 'sword_iron' }
  */
 export function parseAssetFilename(filename, category) {
   validateCategory(category);
@@ -472,35 +487,6 @@ export function parseAssetFilename(filename, category) {
   // Remove .png extension
   const baseName = filename.replace(/\.png$/, '');
 
-  switch (category) {
-    case 'items': {
-      // Pattern: {id}_{size}
-      const match = baseName.match(/^(.+)_(\d+)$/);
-      if (match) {
-        return { id: match[1], size: parseInt(match[2], 10) };
-      }
-      return { id: baseName };
-    }
-
-    case 'icons': {
-      // Pattern: {subcategory}-{id}
-      const match = baseName.match(/^([^-]+)-(.+)$/);
-      if (match) {
-        return { subcategory: match[1], id: match[2] };
-      }
-      return { id: baseName };
-    }
-
-    case 'nodes': {
-      // Pattern: node_{type} - return full id including prefix
-      // Metadata stores full id (e.g., 'node_castle', not 'castle')
-      return { id: baseName };
-    }
-
-    case 'tiles':
-    case 'portraits':
-    case 'overlays':
-    default:
-      return { id: baseName };
-  }
+  // All categories now use simple id without embedded size/subcategory
+  return { id: baseName };
 }

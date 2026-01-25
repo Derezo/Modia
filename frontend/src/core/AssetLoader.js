@@ -1,38 +1,37 @@
+/**
+ * @module AssetLoader
+ * @description Handles loading and caching of sprite assets with fallback to emoji/colors.
+ *
+ * Key responsibilities:
+ * - Image loading with caching and request deduplication
+ * - Size-aware asset selection (getOptimalSize) for optimal display
+ * - Terrain tile loading with biome fallback (forest as default)
+ * - Character and enemy sprite/portrait management
+ * - Node sprite loading (world map icons)
+ * - Item icon compositing with rarity/augment overlays
+ *
+ * Size selection strategy:
+ * - Portraits: 64px (default), 128px, 256px - smallest >= display size
+ * - Nodes: 48px, 96px (default) - smallest >= display size
+ * - Items: 32px, 64px (default), 128px - directory-based
+ * - Icons: 16-128px - directory-based
+ *
+ * @see assetPaths.js - Path generation utilities
+ * @see IconLoader.js - Icon-specific loading
+ */
+
 import {
   getAssetUrl,
   SIZE_PRESETS,
   DEFAULT_SIZES,
   getOptimalSize
 } from '@shared/assetPaths.js';
-
-/**
- * AssetLoader - Handles loading and caching of sprite assets
- * Provides fallback to emoji/colors when sprites aren't available
- *
- * @description
- * This class provides unified asset loading with support for multiple size variants.
- * Size-aware methods automatically select the optimal asset size for the display context.
- *
- * Size selection strategy:
- * - Portraits: 64px (default), 128px, 256px - use smallest >= display size
- * - Nodes: 48px, 96px (default) - use smallest >= display size
- * - Items: 32px, 64px (default), 128px - size suffix in filename
- * - Icons: 16px, 24px, 32px (default), 48px, 64px, 128px - directory-based
- *
- * @example
- * // Get portrait URL for 48px display (will use 64px asset)
- * const url = assetLoader.getPortraitUrl(character, 48);
- *
- * @example
- * // Load node sprite for 60px display (will use 96px asset)
- * const sprite = await assetLoader.loadNodeSpriteAtSize('castle', { size: 60 });
- */
 export class AssetLoader {
   constructor() {
     this.cache = new Map();
     this.loading = new Map();
     this.manifest = null;
-    this.basePath = '/assets/sprites';
+    this.basePath = '/assets';
     this.initialized = false;
 
     // Node type aliases (worldgen name → sprite name)
@@ -193,7 +192,7 @@ export class AssetLoader {
 
   /**
    * Map node type to sprite biome directory
-   * Each biome has its own tile set; base is used as fallback when biome tiles don't exist.
+   * Each biome has its own tile set; forest is used as fallback for nodes without unique terrain.
    * @param {string} nodeType - Node type (forest, cave, mountain, etc.)
    * @returns {string} Biome directory
    */
@@ -204,10 +203,10 @@ export class AssetLoader {
       mountain: 'mountain',
       bridge: 'bridge',
       castle: 'castle',
-      // Village/city use base since they don't have unique terrain
-      village: 'base',
-      city: 'base',
-      default: 'base'
+      // Village/city use forest since they don't have unique terrain
+      village: 'forest',
+      city: 'forest',
+      default: 'forest'
     };
     return biomeMap[nodeType] || biomeMap.default;
   }
@@ -216,7 +215,7 @@ export class AssetLoader {
    * Load terrain tile sprite
    *
    * Uses shared assetPaths module for consistent path construction.
-   * Falls back through: biome-specific -> base biome with variant -> base biome without variant.
+   * Falls back through: biome-specific -> forest biome with variant -> forest biome without variant.
    *
    * @param {string} terrain - Terrain type (grass, stone, forest, etc.)
    * @param {string} nodeType - Node type for biome-specific tiles (forest, cave, mountain, etc.)
@@ -232,19 +231,22 @@ export class AssetLoader {
     try {
       return await this.loadImage(biomePath);
     } catch {
-      // Fallback to base biome
-      const basePath = getAssetUrl('tiles', tileId, { subcategory: 'base' });
-      try {
-        return await this.loadImage(basePath);
-      } catch {
-        // Try without variant
-        const noVariantPath = getAssetUrl('tiles', terrain, { subcategory: 'base' });
+      // Fallback to forest biome (default)
+      if (biome !== 'forest') {
+        const forestPath = getAssetUrl('tiles', tileId, { subcategory: 'forest' });
         try {
-          return await this.loadImage(noVariantPath);
+          return await this.loadImage(forestPath);
         } catch {
-          return null;
+          // Try without variant
+          const noVariantPath = getAssetUrl('tiles', terrain, { subcategory: 'forest' });
+          try {
+            return await this.loadImage(noVariantPath);
+          } catch {
+            return null;
+          }
         }
       }
+      return null;
     }
   }
 
@@ -257,11 +259,11 @@ export class AssetLoader {
   getTile(terrain, nodeType, variant = 0) {
     const biome = this.getSpriteBiome(nodeType);
     const primaryPath = `${this.basePath}/terrain/${biome}/${terrain}_${variant}.png`;
-    const fallbackPath = `${this.basePath}/terrain/base/${terrain}_${variant}.png`;
+    const fallbackPath = `${this.basePath}/terrain/forest/${terrain}_${variant}.png`;
 
     return this.cache.get(primaryPath) ||
            this.cache.get(fallbackPath) ||
-           this.cache.get(`${this.basePath}/terrain/base/${terrain}.png`) ||
+           this.cache.get(`${this.basePath}/terrain/forest/${terrain}.png`) ||
            null;
   }
 
@@ -309,9 +311,9 @@ export class AssetLoader {
     try {
       return await this.loadImage(path);
     } catch {
-      // Fallback to base biome
+      // Fallback to forest biome
       try {
-        return await this.loadImage(`${this.basePath}/terrain/base/indicators/${indicatorType}_indicator.png`);
+        return await this.loadImage(`${this.basePath}/terrain/forest/indicators/${indicatorType}_indicator.png`);
       } catch {
         return null;
       }
@@ -324,7 +326,7 @@ export class AssetLoader {
   getElevationIndicator(indicatorType, nodeType) {
     const biome = this.getSpriteBiome(nodeType);
     const primaryPath = `${this.basePath}/terrain/${biome}/indicators/${indicatorType}_indicator.png`;
-    const fallbackPath = `${this.basePath}/terrain/base/indicators/${indicatorType}_indicator.png`;
+    const fallbackPath = `${this.basePath}/terrain/forest/indicators/${indicatorType}_indicator.png`;
 
     return this.cache.get(primaryPath) || this.cache.get(fallbackPath) || null;
   }
@@ -514,6 +516,7 @@ export class AssetLoader {
 
   /**
    * Load world map node sprite
+   * Node filenames no longer have 'node_' prefix (e.g., castle.png not node_castle.png)
    * @param {string} nodeType - Node type (castle, city, village, etc.)
    * @param {string} [guildClass] - For guild nodes, the class (warrior, wizard, monk, chemist)
    */
@@ -523,7 +526,7 @@ export class AssetLoader {
 
     // Handle guild class variants - try class-specific sprite first
     if (resolvedType === 'guild' && guildClass) {
-      const classPath = `${this.basePath}/nodes/node_guild_${guildClass}.png`;
+      const classPath = getAssetUrl('nodes', `guild_${guildClass}`);
       try {
         return await this.loadImage(classPath);
       } catch {
@@ -531,8 +534,7 @@ export class AssetLoader {
       }
     }
 
-    const filename = `node_${resolvedType}`;
-    const path = `${this.basePath}/nodes/${filename}.png`;
+    const path = getAssetUrl('nodes', resolvedType);
     try {
       return await this.loadImage(path);
     } catch {
@@ -542,6 +544,7 @@ export class AssetLoader {
 
   /**
    * Get node sprite (sync)
+   * Node filenames no longer have 'node_' prefix
    */
   getNodeSprite(nodeType, guildClass = null) {
     // Resolve aliases first (e.g., fishing_spot → fishing)
@@ -549,13 +552,14 @@ export class AssetLoader {
 
     // Handle guild class variants - try class-specific sprite first
     if (resolvedType === 'guild' && guildClass) {
-      const classSprite = this.cache.get(`${this.basePath}/nodes/node_guild_${guildClass}.png`);
+      const classPath = getAssetUrl('nodes', `guild_${guildClass}`);
+      const classSprite = this.cache.get(classPath);
       if (classSprite) return classSprite;
       // Fall back to generic guild sprite
     }
 
-    const filename = `node_${resolvedType}`;
-    return this.cache.get(`${this.basePath}/nodes/${filename}.png`) || null;
+    const path = getAssetUrl('nodes', resolvedType);
+    return this.cache.get(path) || null;
   }
 
   // =====================
@@ -578,12 +582,12 @@ export class AssetLoader {
    * @example
    * // Get URL for 48px display (will use 64px asset)
    * const url = assetLoader.getPortraitUrl(character, 48);
-   * // => '/assets/sprites/portraits/human_male_warrior.png'
+   * // => '/assets/portraits/64/human_male_warrior.png'
    *
    * @example
    * // Get URL for 100px display (will use 128px asset)
    * const url = assetLoader.getPortraitUrl(character, 100);
-   * // => '/assets/sprites/portraits/128x128/human_male_warrior.png'
+   * // => '/assets/portraits/128/human_male_warrior.png'
    */
   getPortraitUrl(character, displaySize = 64) {
     const race = (character.race || 'human').toLowerCase();
@@ -596,6 +600,7 @@ export class AssetLoader {
 
   /**
    * Get enemy portrait URL with appropriate size
+   * Enemy portraits are in unified portraits directory with 'enemy_' prefix
    *
    * @param {string} enemyId - Enemy identifier (e.g., 'goblin_warrior', 'wolf')
    * @param {number} [displaySize=64] - Target display size in pixels
@@ -603,14 +608,12 @@ export class AssetLoader {
    *
    * @example
    * const url = assetLoader.getEnemyPortraitUrl('giant_spider', 40);
-   * // => '/assets/sprites/enemies/portraits/giant_spider.png'
+   * // => '/assets/portraits/64/enemy_giant_spider.png'
    */
   getEnemyPortraitUrl(enemyId, displaySize = 64) {
     const optimalSize = getOptimalSize('portraits', displaySize);
-    return getAssetUrl('portraits', enemyId, {
-      subcategory: 'enemies',
-      size: optimalSize
-    });
+    // Enemy portraits use 'enemy_' prefix in unified portraits directory
+    return getAssetUrl('portraits', `enemy_${enemyId}`, { size: optimalSize });
   }
 
   /**
@@ -663,10 +666,10 @@ export class AssetLoader {
     const resolvedType = this.nodeTypeAliases[nodeType] || nodeType;
     const optimalSize = getOptimalSize('nodes', size);
 
-    // Build node ID with optional guild class
-    let id = `node_${resolvedType}`;
+    // Build node ID with optional guild class (no node_ prefix)
+    let id = resolvedType;
     if (resolvedType === 'guild' && guildClass) {
-      id = `node_guild_${guildClass}`;
+      id = `guild_${guildClass}`;
     }
 
     const path = getAssetUrl('nodes', id, { size: optimalSize });
@@ -689,6 +692,7 @@ export class AssetLoader {
 
   /**
    * Get node sprite URL at appropriate size (sync, for URL generation only)
+   * Node IDs no longer have 'node_' prefix
    *
    * @param {string} nodeType - Node type
    * @param {Object} [options={}] - Options
@@ -701,9 +705,10 @@ export class AssetLoader {
     const resolvedType = this.nodeTypeAliases[nodeType] || nodeType;
     const optimalSize = getOptimalSize('nodes', size);
 
-    let id = `node_${resolvedType}`;
+    // Build node ID without node_ prefix
+    let id = resolvedType;
     if (resolvedType === 'guild' && guildClass) {
-      id = `node_guild_${guildClass}`;
+      id = `guild_${guildClass}`;
     }
 
     return getAssetUrl('nodes', id, { size: optimalSize });
@@ -1048,11 +1053,11 @@ export class AssetLoader {
     // New convention (primary)
     const key = `${this.basePath}/terrain/${biome}/walls/${terrain}_wall.png`;
     const fallbackKey = `${this.basePath}/terrain/${biome}/walls/default_wall.png`;
-    const baseFallbackKey = `${this.basePath}/terrain/base/walls/${terrain}_wall.png`;
+    const baseFallbackKey = `${this.basePath}/terrain/forest/walls/${terrain}_wall.png`;
     // Legacy convention (fallback)
     const legacyKey = `${this.basePath}/terrain/${biome}/wall_${biome}_${terrain}.png`;
     const legacyDefaultKey = `${this.basePath}/terrain/${biome}/wall_${biome}_default.png`;
-    const legacyBaseKey = `${this.basePath}/terrain/base/wall_base_${terrain}.png`;
+    const legacyBaseKey = `${this.basePath}/terrain/forest/wall_forest_${terrain}.png`;
 
     return this.cache.get(key) ||
            this.cache.get(fallbackKey) ||
@@ -1074,11 +1079,11 @@ export class AssetLoader {
       // New convention (primary)
       `${this.basePath}/terrain/${biome}/walls/${terrain}_wall.png`,
       `${this.basePath}/terrain/${biome}/walls/default_wall.png`,
-      `${this.basePath}/terrain/base/walls/${terrain}_wall.png`,
+      `${this.basePath}/terrain/forest/walls/${terrain}_wall.png`,
       // Legacy convention (fallback - existing files)
       `${this.basePath}/terrain/${biome}/wall_${biome}_${terrain}.png`,
       `${this.basePath}/terrain/${biome}/wall_${biome}_default.png`,
-      `${this.basePath}/terrain/base/wall_base_${terrain}.png`
+      `${this.basePath}/terrain/forest/wall_forest_${terrain}.png`
     ];
 
     for (const path of paths) {
@@ -1102,10 +1107,10 @@ export class AssetLoader {
     // New convention (primary)
     const key = `${this.basePath}/terrain/${biome}/slopes/${direction}_${levels}.png`;
     const fallbackKey = `${this.basePath}/terrain/${biome}/slopes/${direction}_1.png`;
-    const baseFallbackKey = `${this.basePath}/terrain/base/slopes/${direction}_${levels}.png`;
+    const baseFallbackKey = `${this.basePath}/terrain/forest/slopes/${direction}_${levels}.png`;
     // Legacy convention (fallback)
     const legacyKey = `${this.basePath}/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`;
-    const legacyBaseKey = `${this.basePath}/terrain/base/slope_base_${direction}_${levels}.png`;
+    const legacyBaseKey = `${this.basePath}/terrain/forest/slope_forest_${direction}_${levels}.png`;
 
     return this.cache.get(key) ||
            this.cache.get(fallbackKey) ||
@@ -1127,10 +1132,10 @@ export class AssetLoader {
       // New convention (primary)
       `${this.basePath}/terrain/${biome}/slopes/${direction}_${levels}.png`,
       `${this.basePath}/terrain/${biome}/slopes/${direction}_1.png`,
-      `${this.basePath}/terrain/base/slopes/${direction}_${levels}.png`,
+      `${this.basePath}/terrain/forest/slopes/${direction}_${levels}.png`,
       // Legacy convention (fallback - existing files)
       `${this.basePath}/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`,
-      `${this.basePath}/terrain/base/slope_base_${direction}_${levels}.png`
+      `${this.basePath}/terrain/forest/slope_forest_${direction}_${levels}.png`
     ];
 
     for (const path of paths) {
@@ -1155,7 +1160,7 @@ export class AssetLoader {
     // Then try biome-specific terrain without suffix (current system)
     const biomeKey = `${this.basePath}/terrain/${biome}/${terrain}.png`;
     // Fall back to base biome with variant
-    const baseKey = `${this.basePath}/terrain/base/${terrain}_0.png`;
+    const baseKey = `${this.basePath}/terrain/forest/${terrain}_0.png`;
 
     return this.cache.get(newKey) ||
            this.cache.get(biomeKey) ||
@@ -1173,7 +1178,7 @@ export class AssetLoader {
     const paths = [
       `${this.basePath}/terrain/${biome}/${terrain}_top.png`,
       `${this.basePath}/terrain/${biome}/${terrain}.png`,
-      `${this.basePath}/terrain/base/${terrain}_0.png`
+      `${this.basePath}/terrain/forest/${terrain}_0.png`
     ];
 
     for (const path of paths) {

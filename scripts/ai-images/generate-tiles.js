@@ -36,7 +36,8 @@ const {
 
 // Configuration
 const PROJECT_ROOT = getProjectRoot();
-const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/sprites/terrain');
+// New terrain path - no base/ biome, forest is the default fallback
+const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/terrain');
 
 /**
  * Parse command line arguments

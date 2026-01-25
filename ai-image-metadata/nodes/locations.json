@@ -4,7 +4,7 @@
   "description": "World map location node icons",
   "nodes": [
     {
-      "id": "node_castle",
+      "id": "castle",
       "name": "Castle",
       "prompt": "castle fortress towers battlements medieval stronghold",
       "seed": 40001,
@@ -17,7 +17,7 @@
       }
     },
     {
-      "id": "node_city",
+      "id": "city",
       "name": "City",
       "prompt": "city gatehouse with central clock tower, two flanking towers, compact landmark",
       "seed": 40002,
@@ -33,7 +33,7 @@
       }
     },
     {
-      "id": "node_village",
+      "id": "village",
       "name": "Village",
       "prompt": "small village cottages thatched roofs rustic hamlet",
       "seed": 40003,
@@ -46,7 +46,7 @@
       }
     },
     {
-      "id": "node_forest",
+      "id": "forest",
       "name": "Forest",
       "prompt": "three tall pine trees clustered, bright green foliage, forest clearing visible",
       "seed": 40004,
@@ -62,7 +62,7 @@
       }
     },
     {
-      "id": "node_cave",
+      "id": "cave",
       "name": "Cave",
       "prompt": "cave entrance with visible rocky archway, warm torch glow inside, stone frame",
       "seed": 40005,
@@ -74,10 +74,14 @@
           "too_dark"
         ],
         "regenerate": true
-      }
+      },
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
-      "id": "node_mountain",
+      "id": "mountain",
       "name": "Mountain",
       "prompt": "single mountain peak with snow cap, rocky face visible, clear silhouette",
       "seed": 40006,
@@ -93,7 +97,7 @@
       }
     },
     {
-      "id": "node_bridge",
+      "id": "bridge",
       "name": "Bridge",
       "prompt": "stone bridge crossing river arch medieval",
       "seed": 40007,
@@ -106,7 +110,7 @@
       }
     },
     {
-      "id": "node_guild",
+      "id": "guild",
       "name": "Guild Hall",
       "prompt": "guild hall banner building adventurer headquarters",
       "seed": 40008,
@@ -119,7 +123,7 @@
       }
     },
     {
-      "id": "node_palace",
+      "id": "palace",
       "name": "Palace",
       "prompt": "grand palace ornate spires royal residence",
       "seed": 40009,
@@ -132,7 +136,7 @@
       }
     },
     {
-      "id": "node_keep",
+      "id": "keep",
       "name": "Keep",
       "prompt": "fortified keep tower defensive outpost garrison",
       "seed": 40010,
@@ -145,7 +149,7 @@
       }
     },
     {
-      "id": "node_chest",
+      "id": "chest",
       "name": "Treasure Chest",
       "prompt": "treasure chest gold coins wooden chest loot",
       "seed": 40011,
@@ -158,7 +162,7 @@
       }
     },
     {
-      "id": "node_shrine",
+      "id": "shrine",
       "name": "Shrine",
       "prompt": "holy shrine altar statue blessing sacred",
       "seed": 40012,
@@ -171,7 +175,7 @@
       }
     },
     {
-      "id": "node_discovery",
+      "id": "discovery",
       "name": "Discovery",
       "prompt": "glowing treasure map scroll with golden X mark, discovery sparkle aura",
       "seed": 40013,
@@ -187,7 +191,7 @@
       }
     },
     {
-      "id": "node_tavern",
+      "id": "tavern",
       "name": "Tavern",
       "prompt": "tavern inn wooden sign mug hanging ale house",
       "seed": 40014,
@@ -200,7 +204,7 @@
       }
     },
     {
-      "id": "node_shop",
+      "id": "shop",
       "name": "Shop",
       "prompt": "merchant shop market stall goods store",
       "seed": 40015,
@@ -213,7 +217,7 @@
       }
     },
     {
-      "id": "node_blacksmith",
+      "id": "blacksmith",
       "name": "Blacksmith",
       "prompt": "blacksmith forge anvil hammer smoke smithy",
       "seed": 40016,
@@ -226,7 +230,7 @@
       }
     },
     {
-      "id": "node_apothecary",
+      "id": "apothecary",
       "name": "Apothecary",
       "prompt": "apothecary potions herbs mortar alchemist shop",
       "seed": 40017,
@@ -239,7 +243,7 @@
       }
     },
     {
-      "id": "node_fishing",
+      "id": "fishing",
       "name": "Fishing Spot",
       "prompt": "wooden fishing pier with simple dock, leaping fish splashing, waterside",
       "seed": 40018,
@@ -255,7 +259,7 @@
       }
     },
     {
-      "id": "node_ruins",
+      "id": "ruins",
       "name": "Ancient Ruins",
       "prompt": "ancient ruins columns broken temple overgrown",
       "seed": 40019,
@@ -268,7 +272,7 @@
       }
     },
     {
-      "id": "node_watchtower",
+      "id": "watchtower",
       "name": "Watchtower",
       "prompt": "watchtower lookout beacon signal tower scout",
       "seed": 40020,
@@ -281,7 +285,7 @@
       }
     },
     {
-      "id": "node_farm",
+      "id": "farm",
       "name": "Farm",
       "prompt": "farmstead barn windmill golden wheat fields rustic",
       "seed": 40021,
@@ -294,7 +298,7 @@
       }
     },
     {
-      "id": "node_caravan",
+      "id": "caravan",
       "name": "Merchant Caravan",
       "prompt": "merchant caravan covered wagon horses trade goods crates",
       "seed": 40022,
@@ -307,7 +311,7 @@
       }
     },
     {
-      "id": "node_guild_warrior",
+      "id": "guild_warrior",
       "name": "Warriors Guild",
       "prompt": "warriors guild fortress hall crossed swords emblem training dummies",
       "seed": 40023,
@@ -320,7 +324,7 @@
       }
     },
     {
-      "id": "node_guild_wizard",
+      "id": "guild_wizard",
       "name": "Mages Guild",
       "prompt": "mages tower guild arcane glowing symbols floating crystal orbs",
       "seed": 40024,
@@ -333,7 +337,7 @@
       }
     },
     {
-      "id": "node_guild_monk",
+      "id": "guild_monk",
       "name": "Monastery Guild",
       "prompt": "monastery temple guild zen meditation garden bronze prayer bells",
       "seed": 40025,
@@ -346,7 +350,7 @@
       }
     },
     {
-      "id": "node_guild_chemist",
+      "id": "guild_chemist",
       "name": "Alchemist Guild",
       "prompt": "alchemist laboratory guild smoking chimneys bubbling vat cauldrons",
       "seed": 40026,

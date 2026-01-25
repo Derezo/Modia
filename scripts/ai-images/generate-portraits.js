@@ -35,10 +35,12 @@ const {
 
 // Configuration
 const PROJECT_ROOT = getProjectRoot();
-const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/sprites/portraits');
-const ENEMY_OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/sprites/enemies/portraits');
-// For Python script's fallback_dir (it adds 'portraits/' automatically)
-const ENEMY_OUTPUT_BASE = path.join(PROJECT_ROOT, 'frontend/public/assets/sprites/enemies');
+// New unified portraits directory - player and enemy portraits in same location
+// Enemy portraits use 'enemy_' prefix in filename (e.g., enemy_goblin_warrior.png)
+const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/portraits/originals');
+const ENEMY_OUTPUT_DIR = OUTPUT_DIR; // Same directory, enemy_ prefix distinguishes them
+// For Python script's fallback_dir
+const ENEMY_OUTPUT_BASE = path.join(PROJECT_ROOT, 'frontend/public/assets/portraits');
 
 /**
  * Parse command line arguments
@@ -239,10 +241,14 @@ Examples:
 
 /**
  * Get the output path for a portrait
+ * Enemy portraits use 'enemy_' prefix in filename
  */
 function getOutputPath(portrait) {
-  const dir = portrait._type === 'enemy' ? ENEMY_OUTPUT_DIR : OUTPUT_DIR;
-  return path.join(dir, `${portrait.id}.png`);
+  // All portraits go to same directory, enemy has prefix
+  const filename = portrait._type === 'enemy'
+    ? `enemy_${portrait.id}.png`
+    : `${portrait.id}.png`;
+  return path.join(OUTPUT_DIR, filename);
 }
 
 /**
