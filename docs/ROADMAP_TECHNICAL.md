@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.7 |
+| Version | 2.8 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -487,6 +487,39 @@ Consolidated view for all three generation queues (images, music, SFX) in the ad
 
 **Commit:** `521e3fa feat: Unified Asset Generation System for Admin Dashboard`
 
+### 7.11 Regeneration Queue Workflow (Completed Jan 2026)
+
+Implemented queue-based workflow for asset regeneration to replace immediate execution pattern:
+
+**Workflow Changes:**
+- [x] Deprecated `GenerationConsole` in favor of `UnifiedAssetPanel`
+- [x] Added Queue tab to `UnifiedAssetPanel` showing items marked for regeneration
+- [x] Replaced dropdown filters with clickable tabs (All/Images/Music/SFX)
+- [x] Refactored bulk actions: "Add to Queue" (marks) vs "Generate Now" (immediate)
+- [x] Added queue visibility in `UnifiedGenerationBar` with count badge
+
+**New Frontend Files:**
+- `admin/src/hooks/useRegenerationQueue.js` - Queue state management with fetchQueue, markItem, markMultiple, clearCategory, clearAll, startBatchGeneration
+
+**Modified Frontend Files:**
+- `admin/src/pages/Dashboard.jsx` - Removed GenerationConsole usage
+- `admin/src/components/GenerationConsole.jsx` - Added @deprecated JSDoc
+- `admin/src/hooks/useGeneration.js` - Added @deprecated JSDoc
+- `admin/src/components/UnifiedAssetPanel.jsx` - Queue/Console/Assets tabs, source filtering
+- `admin/src/components/UnifiedGenerationBar.jsx` - Queue button with count
+- `admin/src/components/AssetGrid.jsx` - "Add to Queue" and "Generate Now" bulk actions
+- `admin/src/components/Layout.jsx` - Queue state wiring
+- `admin/src/lib/api.js` - Regeneration queue API methods
+
+**New API Endpoints:**
+- `PUT /api/admin/assets/mark-multiple` - Bulk mark assets for regeneration
+- `POST /api/admin/regeneration-queue/clear` - Clear queue (all or by category)
+- `GET /api/admin/audio/regeneration-queue` - List audio items marked for regeneration
+- `PUT /api/admin/audio/:type/:id/mark-regeneration` - Mark/unmark single audio item
+- `PUT /api/admin/audio/mark-multiple` - Bulk mark audio items
+
+**Commit:** `6a17841 feat: Regeneration queue workflow for admin dashboard`
+
 ---
 
 ## 8. Technical Debt & Code Quality
@@ -588,6 +621,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.8 | Jan 2026 | Regeneration Queue Workflow: Added Section 7.11 documenting queue-based asset regeneration workflow. Deprecated GenerationConsole in favor of UnifiedAssetPanel. Added Queue tab showing marked items grouped by category. Replaced dropdown filters with clickable tabs (All/Images/Music/SFX). Refactored bulk actions: "Add to Queue" (marks) vs "Generate Now" (immediate). New useRegenerationQueue hook. New API endpoints: mark-multiple, regeneration-queue/clear, audio regeneration queue endpoints. Commit 6a17841. |
 | 2.7 | Jan 2026 | Unified Asset Generation Dashboard: Added Section 7.10 documenting unified view for all generation queues. Created useUnifiedGeneration hook aggregating images/music/SFX queues. Added UnifiedGenerationBar (bottom status bar), UnifiedAssetPanel (split console/assets view), AssetPreviewCard (image thumbnails, audio waveforms). New API endpoints for metadata sync (sync-status, verify-status). Unified WebSocket events (asset:generation_update) with source tagging. Commit 521e3fa. |
 | 2.6 | Jan 2026 | Asset Path Standardization: Added Section 7.6 documenting unified asset path system. Rewrote shared/assetPaths.js with single getAssetPath() and getOriginalsPath() functions. Removed getLegacyPath/getStandardizedPath. Updated AssetLoader.js: basePath /assets, forest fallback, enemy_ prefix, no node_ prefix. Updated all generation scripts with new output paths. Updated metadata JSONs. Created migrate-asset-paths.js migration script. Migrated 682 assets. Renumbered sections (7.6→7.7 Pending, 7.7→7.8 Admin). |
 | 2.5 | Jan 2026 | Asset Loading System Refactoring: Added Section 7.5 documenting size-aware asset loading. Updated shared/assetPaths.js with getOptimalSize(), size-aware portrait/node paths. Refactored AssetLoader.js with getPortraitUrl, getEnemyPortraitUrl, loadNodeSpriteAtSize. Updated 4 scenes and 4 components. Integrated post-processing into generate-portraits.js/generate-nodes.js. Added getImageDimensions() with timeout. Renumbered sections (7.5→7.6 Pending, 7.6→7.7 Admin). |
