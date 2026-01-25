@@ -125,17 +125,17 @@ Icons use directory-based size organization.
 
 Terrain tiles organized by biome. No `base/` directory - code falls back to `forest` when biome-specific tiles don't exist.
 
-- **Floors Pattern:** `/assets/terrain/{biome}/{key}.png`
-- **Walls Pattern:** `/assets/terrain/{biome}/walls/{terrain}_wall.png`
-- **Slopes Pattern:** `/assets/terrain/{biome}/slopes/{direction}_{levels}.png`
+- **Floors Pattern:** `/assets/sprites/terrain/{biome}/{key}.png`
+- **Walls Pattern:** `/assets/sprites/terrain/{biome}/walls/{terrain}_wall.png`
+- **Slopes Pattern:** `/assets/sprites/terrain/{biome}/slopes/{direction}_{levels}.png`
 - **Biomes:** `forest`, `cave`, `mountain`, `bridge`, `castle`
 
 **Examples:**
 ```
-/assets/terrain/forest/grass_0.png              # Floor tile
-/assets/terrain/cave/walls/stone_wall.png       # Wall tile
-/assets/terrain/mountain/slopes/north_1.png     # Slope tile
-/assets/terrain/bridge/slopes/stairs_east_2.png # Stairs tile
+/assets/sprites/terrain/forest/grass_0.png              # Floor tile
+/assets/sprites/terrain/cave/walls/stone_wall.png       # Wall tile
+/assets/sprites/terrain/mountain/slopes/north_1.png     # Slope tile
+/assets/sprites/terrain/bridge/slopes/stairs_east_2.png # Stairs tile
 ```
 
 ### Overlays
@@ -177,7 +177,7 @@ Every asset category maintains an `originals/` subdirectory containing the full-
 /assets/portraits/originals/enemy_goblin_warrior.png
 /assets/nodes/originals/castle.png
 /assets/items/originals/weapons/sword_iron.png
-/assets/terrain/originals/forest/grass_0.png
+/assets/sprites/terrain/originals/forest/grass_0.png
 ```
 
 ## AssetPaths Module API
@@ -241,7 +241,7 @@ getAssetPath('icons', 'attack', { subcategory: 'actions', size: 32 });
 
 // Terrain tile
 getAssetPath('tiles', 'grass_0', { subcategory: 'forest' });
-// => '/assets/terrain/forest/grass_0.png'
+// => '/assets/sprites/terrain/forest/grass_0.png'
 
 // Overlay
 getAssetPath('overlays', 'rare', { subcategory: 'rarity', size: 64 });

@@ -258,12 +258,12 @@ export class AssetLoader {
    */
   getTile(terrain, nodeType, variant = 0) {
     const biome = this.getSpriteBiome(nodeType);
-    const primaryPath = `${this.basePath}/terrain/${biome}/${terrain}_${variant}.png`;
-    const fallbackPath = `${this.basePath}/terrain/forest/${terrain}_${variant}.png`;
+    const primaryPath = `${this.basePath}/sprites/terrain/${biome}/${terrain}_${variant}.png`;
+    const fallbackPath = `${this.basePath}/sprites/terrain/forest/${terrain}_${variant}.png`;
 
     return this.cache.get(primaryPath) ||
            this.cache.get(fallbackPath) ||
-           this.cache.get(`${this.basePath}/terrain/forest/${terrain}.png`) ||
+           this.cache.get(`${this.basePath}/sprites/terrain/forest/${terrain}.png`) ||
            null;
   }
 
@@ -307,13 +307,13 @@ export class AssetLoader {
    */
   async loadElevationIndicator(indicatorType, nodeType) {
     const biome = this.getSpriteBiome(nodeType);
-    const path = `${this.basePath}/terrain/${biome}/indicators/${indicatorType}_indicator.png`;
+    const path = `${this.basePath}/sprites/terrain/${biome}/indicators/${indicatorType}_indicator.png`;
     try {
       return await this.loadImage(path);
     } catch {
       // Fallback to forest biome
       try {
-        return await this.loadImage(`${this.basePath}/terrain/forest/indicators/${indicatorType}_indicator.png`);
+        return await this.loadImage(`${this.basePath}/sprites/terrain/forest/indicators/${indicatorType}_indicator.png`);
       } catch {
         return null;
       }
@@ -325,8 +325,8 @@ export class AssetLoader {
    */
   getElevationIndicator(indicatorType, nodeType) {
     const biome = this.getSpriteBiome(nodeType);
-    const primaryPath = `${this.basePath}/terrain/${biome}/indicators/${indicatorType}_indicator.png`;
-    const fallbackPath = `${this.basePath}/terrain/forest/indicators/${indicatorType}_indicator.png`;
+    const primaryPath = `${this.basePath}/sprites/terrain/${biome}/indicators/${indicatorType}_indicator.png`;
+    const fallbackPath = `${this.basePath}/sprites/terrain/forest/indicators/${indicatorType}_indicator.png`;
 
     return this.cache.get(primaryPath) || this.cache.get(fallbackPath) || null;
   }
@@ -1051,13 +1051,13 @@ export class AssetLoader {
    */
   getWallTexture(biome, terrain = 'default') {
     // New convention (primary)
-    const key = `${this.basePath}/terrain/${biome}/walls/${terrain}_wall.png`;
-    const fallbackKey = `${this.basePath}/terrain/${biome}/walls/default_wall.png`;
-    const baseFallbackKey = `${this.basePath}/terrain/forest/walls/${terrain}_wall.png`;
+    const key = `${this.basePath}/sprites/terrain/${biome}/walls/${terrain}_wall.png`;
+    const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/walls/default_wall.png`;
+    const baseFallbackKey = `${this.basePath}/sprites/terrain/forest/walls/${terrain}_wall.png`;
     // Legacy convention (fallback)
-    const legacyKey = `${this.basePath}/terrain/${biome}/wall_${biome}_${terrain}.png`;
-    const legacyDefaultKey = `${this.basePath}/terrain/${biome}/wall_${biome}_default.png`;
-    const legacyBaseKey = `${this.basePath}/terrain/forest/wall_forest_${terrain}.png`;
+    const legacyKey = `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_${terrain}.png`;
+    const legacyDefaultKey = `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_default.png`;
+    const legacyBaseKey = `${this.basePath}/sprites/terrain/forest/wall_forest_${terrain}.png`;
 
     return this.cache.get(key) ||
            this.cache.get(fallbackKey) ||
@@ -1077,13 +1077,13 @@ export class AssetLoader {
   async loadWallTexture(biome, terrain = 'default') {
     const paths = [
       // New convention (primary)
-      `${this.basePath}/terrain/${biome}/walls/${terrain}_wall.png`,
-      `${this.basePath}/terrain/${biome}/walls/default_wall.png`,
-      `${this.basePath}/terrain/forest/walls/${terrain}_wall.png`,
+      `${this.basePath}/sprites/terrain/${biome}/walls/${terrain}_wall.png`,
+      `${this.basePath}/sprites/terrain/${biome}/walls/default_wall.png`,
+      `${this.basePath}/sprites/terrain/forest/walls/${terrain}_wall.png`,
       // Legacy convention (fallback - existing files)
-      `${this.basePath}/terrain/${biome}/wall_${biome}_${terrain}.png`,
-      `${this.basePath}/terrain/${biome}/wall_${biome}_default.png`,
-      `${this.basePath}/terrain/forest/wall_forest_${terrain}.png`
+      `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_${terrain}.png`,
+      `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_default.png`,
+      `${this.basePath}/sprites/terrain/forest/wall_forest_${terrain}.png`
     ];
 
     for (const path of paths) {
@@ -1105,12 +1105,12 @@ export class AssetLoader {
    */
   getSlopeSprite(biome, direction, levels = 1) {
     // New convention (primary)
-    const key = `${this.basePath}/terrain/${biome}/slopes/${direction}_${levels}.png`;
-    const fallbackKey = `${this.basePath}/terrain/${biome}/slopes/${direction}_1.png`;
-    const baseFallbackKey = `${this.basePath}/terrain/forest/slopes/${direction}_${levels}.png`;
+    const key = `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_${levels}.png`;
+    const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_1.png`;
+    const baseFallbackKey = `${this.basePath}/sprites/terrain/forest/slopes/${direction}_${levels}.png`;
     // Legacy convention (fallback)
-    const legacyKey = `${this.basePath}/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`;
-    const legacyBaseKey = `${this.basePath}/terrain/forest/slope_forest_${direction}_${levels}.png`;
+    const legacyKey = `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`;
+    const legacyBaseKey = `${this.basePath}/sprites/terrain/forest/slope_forest_${direction}_${levels}.png`;
 
     return this.cache.get(key) ||
            this.cache.get(fallbackKey) ||
@@ -1130,12 +1130,12 @@ export class AssetLoader {
   async loadSlopeSprite(biome, direction, levels = 1) {
     const paths = [
       // New convention (primary)
-      `${this.basePath}/terrain/${biome}/slopes/${direction}_${levels}.png`,
-      `${this.basePath}/terrain/${biome}/slopes/${direction}_1.png`,
-      `${this.basePath}/terrain/forest/slopes/${direction}_${levels}.png`,
+      `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_${levels}.png`,
+      `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_1.png`,
+      `${this.basePath}/sprites/terrain/forest/slopes/${direction}_${levels}.png`,
       // Legacy convention (fallback - existing files)
-      `${this.basePath}/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`,
-      `${this.basePath}/terrain/forest/slope_forest_${direction}_${levels}.png`
+      `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`,
+      `${this.basePath}/sprites/terrain/forest/slope_forest_${direction}_${levels}.png`
     ];
 
     for (const path of paths) {
@@ -1156,11 +1156,11 @@ export class AssetLoader {
    */
   getTopTileSprite(biome, terrain) {
     // First try new naming convention with _top suffix
-    const newKey = `${this.basePath}/terrain/${biome}/${terrain}_top.png`;
+    const newKey = `${this.basePath}/sprites/terrain/${biome}/${terrain}_top.png`;
     // Then try biome-specific terrain without suffix (current system)
-    const biomeKey = `${this.basePath}/terrain/${biome}/${terrain}.png`;
+    const biomeKey = `${this.basePath}/sprites/terrain/${biome}/${terrain}.png`;
     // Fall back to base biome with variant
-    const baseKey = `${this.basePath}/terrain/forest/${terrain}_0.png`;
+    const baseKey = `${this.basePath}/sprites/terrain/forest/${terrain}_0.png`;
 
     return this.cache.get(newKey) ||
            this.cache.get(biomeKey) ||
@@ -1176,9 +1176,9 @@ export class AssetLoader {
    */
   async loadTopTileSprite(biome, terrain) {
     const paths = [
-      `${this.basePath}/terrain/${biome}/${terrain}_top.png`,
-      `${this.basePath}/terrain/${biome}/${terrain}.png`,
-      `${this.basePath}/terrain/forest/${terrain}_0.png`
+      `${this.basePath}/sprites/terrain/${biome}/${terrain}_top.png`,
+      `${this.basePath}/sprites/terrain/${biome}/${terrain}.png`,
+      `${this.basePath}/sprites/terrain/forest/${terrain}_0.png`
     ];
 
     for (const path of paths) {

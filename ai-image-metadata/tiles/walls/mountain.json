@@ -12,24 +12,21 @@
       "key": "wall_mountain_default",
       "prompt": "rugged mountain cliff face with exposed rock layers and weathered surface in grey stone #8B8682 #708090",
       "seed": 31001,
-      "generated": true,
-      "generatedAt": "2026-01-24T16:30:17.350Z",
+      "generated": false,
       "terrain": "default"
     },
     {
       "key": "wall_mountain_ice",
       "prompt": "frozen ice cliff face with blue glacial ice and frost patterns #87CEEB #B0C4DE",
       "seed": 31011,
-      "generated": true,
-      "generatedAt": "2026-01-24T16:31:00.141Z",
+      "generated": false,
       "terrain": "ice"
     },
     {
       "key": "wall_mountain_snow",
       "prompt": "snow-covered cliff face with icy rock showing through in white and grey #F5F5F5 #8B8682",
       "seed": 31021,
-      "generated": true,
-      "generatedAt": "2026-01-24T16:31:42.274Z",
+      "generated": false,
       "terrain": "snow"
     }
   ]

@@ -169,7 +169,7 @@
     "overlays": "v1"
   },
   "outputPaths": {
-    "tiles": "/assets/terrain/",
+    "tiles": "/assets/sprites/terrain/",
     "portraits": "/assets/portraits/",
     "items": "/assets/items/",
     "icons": "/assets/icons/",

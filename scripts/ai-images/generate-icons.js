@@ -28,7 +28,8 @@ const {
   ensureDirectoryExists,
   getProjectRoot,
   buildThemedPrompt,
-  createBackup
+  createBackup,
+  getEffectiveLoraModel
 } = require('./lib');
 
 // Configuration
@@ -333,12 +334,14 @@ async function main() {
     log(`[${i + 1}/${iconsToGenerate.length}] Generating: ${icon.id}`, 'info');
 
     try {
+      // Determine LoRA model: CLI override > asset-level > category default
+      const effectiveLoraModel = options.lora || getEffectiveLoraModel(icon, 'icons');
       const result = await generateIcon({
         prompt: icon.prompt,
         key: icon.id,
         category: icon._iconCategory,
         seed: icon.seed,
-        loraModel: options.lora
+        loraModel: effectiveLoraModel
       }, {
         verbose: options.verbose,
         quiet: options.quiet,

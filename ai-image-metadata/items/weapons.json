@@ -9,488 +9,427 @@
       "name": "Short Sword",
       "prompt": "short sword simple blade leather grip compact",
       "seed": 20001,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:31:07.729Z"
+      "generated": false
     },
     {
       "id": "sword_long",
       "name": "Longsword",
       "prompt": "longsword straight double-edged blade ornate crossguard leather-wrapped grip",
       "seed": 20002,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:31:48.583Z"
+      "generated": false
     },
     {
       "id": "sword_great",
       "name": "Greatsword",
       "prompt": "greatsword massive two-handed blade wide crossguard heavy pommel",
       "seed": 20003,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:32:29.494Z"
+      "generated": false
     },
     {
       "id": "sword_rapier",
       "name": "Rapier",
       "prompt": "rapier thin elegant blade ornate swept hilt fencing weapon",
       "seed": 20004,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:33:10.349Z"
+      "generated": false
     },
     {
       "id": "sword_katana",
       "name": "Katana",
       "prompt": "katana curved single-edge blade wrapped handle tsuba guard",
       "seed": 20005,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:33:50.182Z"
+      "generated": false
     },
     {
       "id": "sword_scimitar",
       "name": "Scimitar",
       "prompt": "scimitar curved blade desert style ornate pommel",
       "seed": 20006,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:34:30.077Z"
+      "generated": false
     },
     {
       "id": "sword_claymore",
       "name": "Claymore",
       "prompt": "claymore scottish greatsword cross hilt quillons two-handed",
       "seed": 20007,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:35:11.962Z"
+      "generated": false
     },
     {
       "id": "sword_falchion",
       "name": "Falchion",
       "prompt": "falchion single-edge cleaver-like blade broad tip",
       "seed": 20008,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:35:52.829Z"
+      "generated": false
     },
     {
       "id": "axe_hatchet",
       "name": "Hatchet",
       "prompt": "hatchet small hand axe compact wooden handle",
       "seed": 20011,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:36:33.716Z"
+      "generated": false
     },
     {
       "id": "axe_hand",
       "name": "Hand Axe",
       "prompt": "hand axe single-head throwing axe leather grip",
       "seed": 20012,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:37:14.596Z"
+      "generated": false
     },
     {
       "id": "axe_battle",
       "name": "Battle Axe",
       "prompt": "battle axe crescent blade long handle reinforced",
       "seed": 20013,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:37:55.665Z"
+      "generated": false
     },
     {
       "id": "axe_great",
       "name": "Great Axe",
       "prompt": "great axe massive double-crescent blade two-handed brutal",
       "seed": 20014,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:38:36.548Z"
+      "generated": false
     },
     {
       "id": "axe_double",
       "name": "Double Axe",
       "prompt": "double axe twin heads mirrored blades ornate handle",
       "seed": 20015,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:39:16.439Z"
+      "generated": false
     },
     {
       "id": "axe_war",
       "name": "War Axe",
       "prompt": "war axe heavy single-blade spike back reinforced",
       "seed": 20016,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:39:57.365Z"
+      "generated": false
     },
     {
       "id": "mace_club",
       "name": "Club",
       "prompt": "wooden club simple cudgel thick head bound leather",
       "seed": 20021,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:40:38.219Z"
+      "generated": false
     },
     {
       "id": "mace_basic",
       "name": "Mace",
       "prompt": "mace flanged head short handle crushing weapon",
       "seed": 20022,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:41:19.110Z"
+      "generated": false
     },
     {
       "id": "mace_morningstar",
       "name": "Morningstar",
       "prompt": "morningstar spiked ball head chain attached menacing",
       "seed": 20023,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:42:00.012Z"
+      "generated": false
     },
     {
       "id": "mace_flail",
       "name": "Flail",
       "prompt": "flail spiked ball chain swing handle reinforced",
       "seed": 20024,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:42:40.918Z"
+      "generated": false
     },
     {
       "id": "mace_warhammer",
       "name": "Warhammer",
       "prompt": "warhammer heavy hammer head spike back crushing",
       "seed": 20025,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:43:20.882Z"
+      "generated": false
     },
     {
       "id": "mace_maul",
       "name": "Maul",
       "prompt": "maul massive two-handed hammer devastating impact",
       "seed": 20026,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:44:01.764Z"
+      "generated": false
     },
     {
       "id": "polearm_spear",
       "name": "Spear",
       "prompt": "spear long shaft iron tip simple throwing thrusting",
       "seed": 20031,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:44:42.709Z"
+      "generated": false
     },
     {
       "id": "polearm_pike",
       "name": "Pike",
       "prompt": "pike very long shaft narrow blade formation weapon",
       "seed": 20032,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:45:23.707Z"
+      "generated": false
     },
     {
       "id": "polearm_halberd",
       "name": "Halberd",
       "prompt": "halberd axe blade spike hook combination polearm",
       "seed": 20033,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:46:04.581Z"
+      "generated": false
     },
     {
       "id": "polearm_glaive",
       "name": "Glaive",
       "prompt": "glaive single-edge curved blade long pole elegant",
       "seed": 20034,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:46:44.495Z"
+      "generated": false
     },
     {
       "id": "polearm_lance",
       "name": "Lance",
       "prompt": "lance jousting weapon long conical tip mounted combat",
       "seed": 20035,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:47:25.366Z"
+      "generated": false
     },
     {
       "id": "polearm_trident",
       "name": "Trident",
       "prompt": "trident three-pronged spear fishing weapon ornate",
       "seed": 20036,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:48:06.279Z"
+      "generated": false
     },
     {
       "id": "staff_quarter",
       "name": "Quarterstaff",
       "prompt": "quarterstaff wooden pole simple monk weapon balanced",
       "seed": 20041,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:48:47.123Z"
+      "generated": false
     },
     {
       "id": "staff_magic",
       "name": "Magic Staff",
       "prompt": "magic staff gnarled wood crystal tip glowing runes",
       "seed": 20042,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:49:28.017Z"
+      "generated": false
     },
     {
       "id": "staff_battle",
       "name": "Battle Staff",
       "prompt": "battle staff reinforced metal caps combat focused",
       "seed": 20043,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:50:08.911Z"
+      "generated": false
     },
     {
       "id": "staff_arcane",
       "name": "Arcane Staff",
       "prompt": "arcane staff floating orb intricate carvings mystical",
       "seed": 20044,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:50:49.757Z"
+      "generated": false
     },
     {
       "id": "staff_grand",
       "name": "Grand Staff",
       "prompt": "grand staff tall ornate crystal head elaborate design",
       "seed": 20045,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:51:30.615Z"
+      "generated": false
     },
     {
       "id": "staff_elder",
       "name": "Elder Staff",
       "prompt": "elder staff ancient gnarled multiple crystals powerful",
       "seed": 20046,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:52:11.480Z"
+      "generated": false
     },
     {
       "id": "wand_basic",
       "name": "Wand",
       "prompt": "wand thin wooden magical focus simple crystal tip",
       "seed": 20051,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:52:52.330Z"
+      "generated": false
     },
     {
       "id": "wand_scepter",
       "name": "Scepter",
       "prompt": "scepter ornate royal magical wand jeweled head",
       "seed": 20052,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:53:33.206Z"
+      "generated": false
     },
     {
       "id": "wand_focus",
       "name": "Arcane Focus",
       "prompt": "arcane focus crystal cylinder channeling device runes",
       "seed": 20053,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:54:13.099Z"
+      "generated": false
     },
     {
       "id": "orb_crystal",
       "name": "Crystal Orb",
       "prompt": "crystal orb floating sphere magical swirling energy",
       "seed": 20054,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:54:53.941Z"
+      "generated": false
     },
     {
       "id": "tome_magic",
       "name": "Magic Tome",
       "prompt": "magic tome floating book glowing pages ancient",
       "seed": 20055,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:55:34.805Z"
+      "generated": false
     },
     {
       "id": "relic_ancient",
       "name": "Ancient Relic",
       "prompt": "ancient relic mysterious artifact floating symbols power",
       "seed": 20056,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:56:15.649Z"
+      "generated": false
     },
     {
       "id": "fist_wraps",
       "name": "Hand Wraps",
       "prompt": "hand wraps cloth binding martial arts simple",
       "seed": 20061,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:56:56.488Z"
+      "generated": false
     },
     {
       "id": "fist_knuckles",
       "name": "Brass Knuckles",
       "prompt": "brass knuckles metal fist weapon spiked compact",
       "seed": 20062,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:57:37.346Z"
+      "generated": false
     },
     {
       "id": "fist_claws",
       "name": "Combat Claws",
       "prompt": "combat claws triple blade gauntlet slashing weapon",
       "seed": 20063,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:58:18.183Z"
+      "generated": false
     },
     {
       "id": "fist_cestus",
       "name": "Cestus",
       "prompt": "cestus armored fighting glove studded leather",
       "seed": 20064,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:58:59.253Z"
+      "generated": false
     },
     {
       "id": "fist_katar",
       "name": "Katar",
       "prompt": "katar push dagger h-shaped handle thrusting blade",
       "seed": 20065,
-      "generated": true,
-      "generatedAt": "2026-01-23T06:59:40.103Z"
+      "generated": false
     },
     {
       "id": "fist_tekko",
       "name": "Tekko",
       "prompt": "tekko knuckle duster traditional curved metal",
       "seed": 20066,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:00:21.186Z"
+      "generated": false
     },
     {
       "id": "fist_tiger",
       "name": "Tiger Claws",
       "prompt": "tiger claws curved blades finger rings slashing",
       "seed": 20067,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:01:02.063Z"
+      "generated": false
     },
     {
       "id": "dagger_knife",
       "name": "Knife",
       "prompt": "knife simple blade utility weapon compact",
       "seed": 20071,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:01:42.946Z"
+      "generated": false
     },
     {
       "id": "dagger_basic",
       "name": "Dagger",
       "prompt": "dagger double-edge short blade assassin weapon",
       "seed": 20072,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:02:23.837Z"
+      "generated": false
     },
     {
       "id": "dagger_stiletto",
       "name": "Stiletto",
       "prompt": "stiletto thin needle-like blade piercing elegant",
       "seed": 20073,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:03:04.704Z"
+      "generated": false
     },
     {
       "id": "dagger_kris",
       "name": "Kris",
       "prompt": "kris wavy blade asymmetric ornate cultural",
       "seed": 20074,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:03:45.624Z"
+      "generated": false
     },
     {
       "id": "dagger_dirk",
       "name": "Dirk",
       "prompt": "dirk long dagger thrusting blade simple guard",
       "seed": 20075,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:04:26.461Z"
+      "generated": false
     },
     {
       "id": "dagger_parrying",
       "name": "Parrying Dagger",
       "prompt": "parrying dagger defensive blade wide guard trapping",
       "seed": 20076,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:05:06.369Z"
+      "generated": false
     },
     {
       "id": "dagger_throwing",
       "name": "Throwing Knives",
       "prompt": "throwing knives set balanced blades sharp tips",
       "seed": 20077,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:05:47.273Z"
+      "generated": false
     },
     {
       "id": "ranged_crossbow_hand",
       "name": "Hand Crossbow",
       "prompt": "hand crossbow compact one-handed mechanical",
       "seed": 20081,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:06:28.164Z"
+      "generated": false
     },
     {
       "id": "ranged_crossbow_light",
       "name": "Light Crossbow",
       "prompt": "light crossbow two-handed simple stock stirrup",
       "seed": 20082,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:07:09.044Z"
+      "generated": false
     },
     {
       "id": "ranged_crossbow_heavy",
       "name": "Heavy Crossbow",
       "prompt": "heavy crossbow powerful reinforced stock winch",
       "seed": 20083,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:07:49.984Z"
+      "generated": false
     },
     {
       "id": "ranged_crossbow_repeater",
       "name": "Repeating Crossbow",
       "prompt": "repeating crossbow magazine fed rapid fire mechanical",
       "seed": 20084,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:08:30.940Z"
+      "generated": false
     },
     {
       "id": "ranged_arbalest",
       "name": "Arbalest",
       "prompt": "arbalest siege crossbow massive steel prod devastating",
       "seed": 20085,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:09:11.832Z"
+      "generated": false
     },
     {
       "id": "bow_short",
       "name": "Short Bow",
       "prompt": "short bow compact recurve wooden simple hunting",
       "seed": 20091,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:09:52.730Z"
+      "generated": false
     },
     {
       "id": "bow_long",
       "name": "Longbow",
       "prompt": "longbow tall elegant carved wood precision arrows",
       "seed": 20092,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:10:33.575Z"
+      "generated": false
     },
     {
       "id": "bow_composite",
       "name": "Composite Bow",
       "prompt": "composite bow layered horn wood sinew powerful compact",
       "seed": 20093,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:11:14.415Z"
+      "generated": false
     },
     {
       "id": "bow_great",
       "name": "Great Bow",
       "prompt": "great bow massive war bow steel-tipped deadly range",
       "seed": 20094,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:11:55.428Z"
+      "generated": false
     }
   ]
 }

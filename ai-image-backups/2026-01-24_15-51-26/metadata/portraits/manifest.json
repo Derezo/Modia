@@ -10,7 +10,7 @@
   "loraModel": "V2",
   "trigger": "wbgmsst",
   "stylePrefix": "wbgmsst, medieval fantasy illustration, ink and wash technique with watercolor fills, bold black outlines of medium weight, visible aged parchment texture with slight yellowing, cozy nostalgic JRPG aesthetic, warm and inviting storybook quality, hand-drawn illustration style,",
-  "negativePrompt": "photorealistic, 3D render, CGI, anime style, chibi, pixel art, blurry, low quality, watermark, signature, text, logo, modern elements, neon colors, oversaturated, complex backgrounds, multiple subjects, deformed, bad anatomy, extra limbs, messy lines, muddy colors",
+  "negativePrompt": "photorealistic, 3D render, CGI, anime style, chibi, blurry, low quality, watermark, signature, text, logo, modern elements, neon colors, oversaturated, complex backgrounds, multiple subjects, deformed, bad anatomy, extra limbs, messy lines, muddy colors",
   "races": ["human", "elf", "dwarf", "vampire", "orc"],
   "genders": ["male", "female", "other"],
   "classes": ["warrior", "wizard", "monk", "chemist"],

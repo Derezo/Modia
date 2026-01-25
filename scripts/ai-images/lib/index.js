@@ -45,8 +45,13 @@ const {
   loadOverlayMetadata,
   updateAssetStatus,
   markAssetGenerated,
+  loadRegenerationQueue,
+  markForRegeneration,
+  clearRegenerationMarker,
+  recordGenerationFailure,
   getCategoryStats,
-  getAllStats
+  getAllStats,
+  getEffectiveLoraModel
 } = require('./metadataUtils');
 
 const {
@@ -166,8 +171,13 @@ module.exports = {
   loadOverlayMetadata,
   updateAssetStatus,
   markAssetGenerated,
+  loadRegenerationQueue,
+  markForRegeneration,
+  clearRegenerationMarker,
+  recordGenerationFailure,
   getCategoryStats,
   getAllStats,
+  getEffectiveLoraModel,
 
   // Theme functions (new unified approach)
   loadTheme,

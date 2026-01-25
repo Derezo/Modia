@@ -175,7 +175,7 @@ const REGIONAL_PALETTES = {
 /**
  * Common negative prompt for all asset types
  */
-const NEGATIVE_PROMPT = 'photorealistic, 3D render, CGI, anime style, chibi, pixel art, blurry, low quality, watermark, signature, text, logo, modern elements, neon colors, oversaturated, complex backgrounds, multiple subjects, deformed, bad anatomy, extra limbs, messy lines, muddy colors, holding objects, hands in frame, full body, weapon in hand, action pose, white framing, white border';
+const NEGATIVE_PROMPT = 'photorealistic, 3D render, CGI, anime style, chibi, blurry, low quality, watermark, signature, text, logo, modern elements, neon colors, oversaturated, complex backgrounds, multiple subjects, deformed, bad anatomy, extra limbs, messy lines, muddy colors, holding objects, hands in frame, full body, weapon in hand, action pose, white framing, white border';
 
 /**
  * Style prefixes for different asset types

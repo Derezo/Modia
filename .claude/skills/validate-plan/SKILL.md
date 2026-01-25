@@ -1,16 +1,25 @@
 ---
 name: validate-plan
-description: Use this skill when the user wants to validate completed work against a plan, perform code review, analyze gaps, update the roadmap, and commit changes. Trigger on phrases like "validate plan", "review changes", "check implementation", "gap analysis", or "finalize and commit".
-version: 3.0.0
+description: Use this skill when the user wants to validate completed work against a plan, perform code review, analyze gaps, remediate issues, and commit changes. Trigger on phrases like "validate plan", "review changes", "check implementation", "gap analysis", or "finalize and commit".
+version: 4.0.0
 ---
 
-# Plan Validation and Code Review Skill v3.0
+# Plan Validation and Code Review Skill v4.0
 
-This skill performs comprehensive validation of completed implementation work using a parallel subagent architecture for thorough review.
+This skill performs comprehensive validation of completed implementation work using a parallel subagent architecture for thorough review, **then remediates all issues before committing**.
+
+## Core Principle: Remediation-First
+
+**This skill does NOT just report issues—it FIXES them.**
+
+- Blockers and critical issues → Dispatch subagents to fix
+- Ambiguous intent → Ask user for clarification via AskUserQuestion
+- Held-back plan items → Implement or explicitly defer with user approval
+- All remediations verified → Commit automatically
 
 ## Architecture Overview
 
-**Three-Phase Parallel Execution:**
+**Four-Phase Execution:**
 
 ```
 Phase 1: Pre-Analysis (Parallel)
@@ -27,12 +36,20 @@ Phase 2: Deep Analysis (Parallel)
 ├── architect-reviewer → arch_review (conditional)
 └── documentation-checker → doc_sync (conditional)
 
-Phase 3: Synthesis (Sequential)
-├── Collect all findings
-├── Deduplicate issues
-├── Classify severity
-├── Generate report
-└── Commit or block
+Phase 3: Remediation Execution (Sequential)
+├── Create TodoWrite tasks for all issues
+├── For BLOCKERS: Dispatch subagent → Verify fix
+├── For CRITICAL: Dispatch subagent → Verify fix
+├── For held-back items: AskUserQuestion → Implement or defer
+├── For ambiguous issues: AskUserQuestion → Resolve
+└── Gate: All issues remediated OR user-approved deferral
+
+Phase 4: Synthesis & Commit (Sequential)
+├── Collect remediation results
+├── Generate final report
+├── Update roadmap
+├── Archive completed items
+└── Commit (unconditional after Phase 3 passes)
 ```
 
 ---
@@ -273,29 +290,177 @@ Report undocumented changes as CRITICAL.
 
 ---
 
-## Phase 3: Synthesis
+## Phase 3: Remediation Execution
 
-Collect all findings and generate unified report.
+**This is the core differentiator of v4.0.** Instead of generating a report with "Next Actions" for the user, this phase actively fixes issues.
 
-### Step 3.1: Collect Findings
+### Step 3.1: Create Remediation Task List
 
-Gather results from all Phase 2 agents:
-- code_review findings
-- debt_analysis findings
-- coverage_analysis findings
-- security_review findings (if run)
-- arch_review findings (if run)
-- doc_sync findings (if run)
+After Phase 2 completes, create TodoWrite tasks for all findings:
 
-### Step 3.2: Deduplicate
+```javascript
+// For each BLOCKER issue
+TaskCreate({
+  subject: "[BLOCKER] Fix SQL injection in battle.js:45",
+  description: "Unparameterized query detected. Replace string interpolation with $1 syntax.",
+  activeForm: "Fixing SQL injection vulnerability"
+});
 
-Remove overlapping issues found by multiple agents:
-- Same file:line reported twice → keep highest severity
-- Similar issues → consolidate with all sources noted
+// For each CRITICAL issue
+TaskCreate({
+  subject: "[CRITICAL] Add integration test for /api/coliseum/challenge",
+  description: "New endpoint lacks test coverage. Add to coliseum.integration.test.js.",
+  activeForm: "Adding integration test for coliseum challenge"
+});
 
-### Step 3.3: Classify Severity
+// For each held-back plan item
+TaskCreate({
+  subject: "[HELD-BACK] Phase 3 animations not implemented",
+  description: "Plan specified animations but none were implemented. Clarify with user.",
+  activeForm: "Clarifying held-back plan item"
+});
+```
 
-Apply unified severity classification:
+### Step 3.2: Remediation Subagent Dispatch Matrix
+
+Use the appropriate subagent for each issue type:
+
+| Issue Type | Subagent | Context to Provide |
+|------------|----------|-------------------|
+| Missing tests | `qa-expert` | File paths, endpoint signatures, expected behaviors |
+| Security issues | `security-auditor` + `backend-developer` | Vulnerability details, attack vectors, fix patterns |
+| Documentation gaps | `documentation-maintainer` | Code changes, expected doc locations, format |
+| Code quality issues | `code-reviewer` + `refactoring-specialist` | Files, specific issues, patterns to follow |
+| Architecture drift | `architect-reviewer` + `fullstack-developer` | Expected patterns, current violations |
+| Lint errors | `code-reviewer` | Error messages, file locations |
+| File size violations | `refactoring-specialist` | File path, modularization strategy |
+| Held-back features | Ask user → `frontend-developer` / `backend-developer` / `fullstack-developer` | Original requirements, plan context |
+
+### Step 3.3: Remediation Flow
+
+```dot
+digraph remediation {
+    "Issue from Phase 2" -> "Clear fix approach?";
+    "Clear fix approach?" -> "Dispatch subagent" [label="yes"];
+    "Clear fix approach?" -> "AskUserQuestion" [label="no/ambiguous"];
+    "AskUserQuestion" -> "User response";
+    "User response" -> "Dispatch subagent" [label="implement"];
+    "User response" -> "Mark deferred (user approved)" [label="defer"];
+    "Dispatch subagent" -> "Verify fix";
+    "Verify fix" -> "Fixed?" [label="check"];
+    "Fixed?" -> "TaskUpdate: completed" [label="yes"];
+    "Fixed?" -> "Retry with more context" [label="no"];
+    "TaskUpdate: completed" -> "Next issue";
+    "Retry with more context" -> "Dispatch subagent" [label="max 2 retries"];
+    "Retry with more context" -> "Escalate to user" [label="still failing"];
+}
+```
+
+### Step 3.4: Clarification Triggers
+
+Use AskUserQuestion when encountering:
+
+| Trigger | Question Format |
+|---------|-----------------|
+| Ambiguous implementation intent | "The plan mentions [X] but implementation differs. Should I: (a) implement as planned, (b) update plan to match implementation, (c) defer for now?" |
+| Held-back items without clear reason | "Phase [N] task [X] was not implemented. Should I: (a) implement it now, (b) defer to next iteration, (c) remove from plan?" |
+| Multiple valid remediation approaches | "Found [issue]. I can fix this by: (a) [approach 1], (b) [approach 2]. Which approach?" |
+| Breaking changes requiring approval | "Fixing [issue] requires changing [public API/schema/interface]. This may break [X]. Proceed?" |
+| Unclear success criteria | "How should I verify [feature] is working correctly? Options: (a) [test approach 1], (b) [test approach 2]" |
+
+### Step 3.5: BLOCKER Remediation
+
+For each BLOCKER, dispatch the appropriate subagent:
+
+```
+Task tool prompt template for BLOCKER fixes:
+
+You are fixing a BLOCKER issue that prevents commit.
+
+Issue: [issue description]
+File: [file path]
+Line: [line number]
+Source: [which Phase 2 agent found it]
+
+Context:
+- Plan: [relevant plan context]
+- Pattern to follow: [reference to ESTABLISHED_PATTERNS.md section]
+
+REQUIREMENTS:
+1. Fix the issue completely
+2. Verify the fix (run relevant test/lint/check)
+3. Return confirmation with before/after
+
+Do NOT just report - IMPLEMENT the fix.
+```
+
+### Step 3.6: CRITICAL Remediation
+
+For each CRITICAL issue:
+
+```
+Task tool prompt template for CRITICAL fixes:
+
+You are addressing a CRITICAL issue that should be fixed before commit.
+
+Issue: [issue description]
+Category: [COVERAGE/DOCUMENTATION/DEBT/SECURITY]
+Files affected: [list]
+
+REQUIREMENTS:
+1. Implement the fix
+2. If adding tests, follow patterns in existing test files
+3. If updating docs, follow existing doc format
+4. Verify your changes work
+
+Return confirmation of what was fixed.
+```
+
+### Step 3.7: Held-Back Item Handling
+
+```dot
+digraph heldback {
+    "Held-back item detected" -> "Reason documented in changes?";
+    "Reason documented in changes?" -> "Valid intentional deferral?" [label="yes"];
+    "Reason documented in changes?" -> "AskUserQuestion: Implement or defer?" [label="no"];
+    "Valid intentional deferral?" -> "Log as intentional, continue" [label="yes"];
+    "Valid intentional deferral?" -> "AskUserQuestion: Clarify intent" [label="unclear"];
+    "AskUserQuestion: Implement or defer?" -> "Dispatch appropriate subagent" [label="implement now"];
+    "AskUserQuestion: Implement or defer?" -> "Log as user-approved deferral" [label="defer"];
+    "AskUserQuestion: Clarify intent" -> "Dispatch or defer based on response";
+}
+```
+
+### Step 3.8: Verification Gate
+
+**DO NOT proceed to Phase 4 until:**
+
+- [ ] All BLOCKER issues are fixed and verified
+- [ ] All CRITICAL issues are fixed OR user-approved deferral
+- [ ] All held-back items are implemented OR user-approved deferral
+- [ ] Lint passes (re-run after fixes)
+- [ ] Tests pass (re-run after fixes)
+
+If verification fails after max retries, escalate to user with AskUserQuestion.
+
+---
+
+## Phase 4: Synthesis & Commit
+
+**This phase runs ONLY after Phase 3 completes successfully.** All blockers should be resolved.
+
+### Step 4.1: Collect Final State
+
+Gather remediation results:
+- Original Phase 2 findings
+- Remediations applied (with before/after)
+- Verifications passed
+- User-approved deferrals (if any)
+- Final lint/test results
+
+### Step 4.2: Classify Remaining Items
+
+After remediation, classify any remaining items:
 
 #### BLOCKER (Cannot Proceed)
 
@@ -333,16 +498,16 @@ Apply unified severity classification:
 - Suggestions for improvement
 - Optional optimizations
 
-### Step 3.4: Generate Report
+### Step 4.3: Generate Final Report
 
 ```markdown
-# Plan Validation Report v3.0
+# Plan Validation Report v4.0
 
 ## Executive Summary
-**Verdict:** BLOCKED / PASSED WITH CONCERNS / PASSED
+**Verdict:** COMMITTED (all issues remediated)
 **Files Changed:** N (A added, M modified, D deleted)
 **Lines Changed:** +X, -Y
-**Subagents Run:** N
+**Subagents Run:** N (analysis) + M (remediation)
 
 ## Phase 1: Pre-Analysis
 
@@ -353,121 +518,84 @@ Apply unified severity classification:
 | path/big.js | 2,800 | WARNING |
 
 ### Lint Results
-- Errors: 0
-- Warnings: 3
-- @shared violations: 0
+- Initial: 2 errors, 3 warnings
+- After remediation: 0 errors, 3 warnings
 
 ### Test Results
-- Passed: 145
-- Failed: 0
-- Skipped: 2
+- Initial: 143 passed, 2 failed
+- After remediation: 147 passed, 0 failed
 
-## Phase 2: Deep Analysis
+## Phase 2: Issues Identified
 
-### BLOCKERS (Must Fix)
+### BLOCKERS Found
+1. **[SECURITY]** `api/src/routes/battle.js:45` - Unparameterized query
+2. **[COVERAGE]** Missing test for /api/coliseum/challenge
 
-1. **[SECURITY]** `api/src/routes/battle.js:45`
-   - Source: code-reviewer, security-auditor
-   - Issue: Unparameterized query with user input
-   - Fix: Use parameterized syntax `$1`
+### CRITICAL Found
+1. **[DOCUMENTATION]** New endpoint undocumented
 
-### CRITICAL (Should Fix)
+### WARNINGS Found
+1. **[DEBT]** Duplicated validation logic (deferred)
 
-1. **[COVERAGE]** `POST /api/coliseum/challenge`
-   - Source: qa-expert
-   - Issue: New endpoint without integration test
-   - Fix: Add test to coliseum.integration.test.js
+## Phase 3: Remediations Applied
 
-2. **[DOCUMENTATION]** New endpoint undocumented
-   - Source: documentation-checker
-   - Issue: /api/coliseum/challenge not in API_SPECIFICATION.md
-   - Fix: Add endpoint documentation
+### BLOCKER Fixes
+| Issue | Subagent | Action | Verified |
+|-------|----------|--------|----------|
+| SQL injection battle.js:45 | security-auditor + backend-developer | Parameterized query | YES - lint passes |
+| Missing test coliseum/challenge | qa-expert | Added integration test | YES - test passes |
 
-### WARNINGS
+### CRITICAL Fixes
+| Issue | Subagent | Action | Verified |
+|-------|----------|--------|----------|
+| Undocumented endpoint | documentation-maintainer | Updated API_SPECIFICATION.md | YES - doc sync check |
 
-1. **[DEBT]** Duplicated validation logic
-   - Source: debt-detector
-   - Files: auth.js:23, characters.js:45
-   - Recommendation: Extract to shared validation module
+### User-Approved Deferrals
+| Issue | Reason | Approved |
+|-------|--------|----------|
+| Duplicated validation logic | Low priority, extract in future refactor | YES - user confirmed |
 
-2. **[EDGE CASE]** Battle: target dies mid-action not tested
-   - Source: qa-expert
-   - Recommendation: Add overkill damage test
+## Phase 4: Final State
 
-## Checklists Summary
+### Checklists Summary (Post-Remediation)
+| Check | Status |
+|-------|--------|
+| All queries parameterized | YES |
+| All new endpoints tested | YES |
+| Documentation synced | YES |
+| Lint passes | YES |
+| Tests pass | YES |
 
-### Security (code-reviewer)
-| Item | Status |
-|------|--------|
-| Queries parameterized | YES |
-| Input validation | YES |
-| Auth middleware | YES |
-| No secrets in code | YES |
-
-### Test Coverage (qa-expert)
-| Requirement | Status |
-|-------------|--------|
-| New endpoints tested | NO (BLOCKER) |
-| Service functions tested | YES |
-| Battle formulas tested | N/A |
-
-### Pattern Conformance (debt-detector)
-| Pattern | Status |
-|---------|--------|
-| Routes to services | YES |
-| @shared usage | YES |
-| Import patterns | YES |
-
-## Gap Analysis
-
-### Fully Completed
-- [x] Phase 1: Initial setup
-- [x] Phase 2: Core implementation
-
-### Partially Completed
-- [~] Phase 3: Polish
-  - Done: Basic UI
-  - Remaining: Animations
-
-### Not Started
-- [ ] Phase 4: Testing
+### Gap Analysis
+- [x] Phase 1: Initial setup - COMPLETE
+- [x] Phase 2: Core implementation - COMPLETE
+- [~] Phase 3: Polish - PARTIAL (animations deferred with user approval)
 
 ## Metrics
 
-| Metric | Value |
-|--------|-------|
-| Files analyzed | 12 |
-| Total issues | 8 |
-| Blockers | 1 |
-| Critical | 2 |
-| Warnings | 3 |
-| Info | 2 |
-| New tests required | 2 |
-
-## Verdict
-
-**BLOCKED** - 1 blocker must be resolved before commit:
-1. Missing integration test for new endpoint
-
-### Next Actions
-1. Add integration test for /api/coliseum/challenge
-2. Update API_SPECIFICATION.md with new endpoint
-3. Review duplicated validation logic for extraction
+| Metric | Before | After |
+|--------|--------|-------|
+| Blockers | 2 | 0 |
+| Critical | 1 | 0 |
+| Warnings | 1 | 1 (deferred) |
+| Test count | 145 | 149 |
 ```
 
-### Step 3.5: Commit or Block
+### Step 4.4: Unconditional Commit
 
-**If BLOCKERS exist:**
-- Output full report
-- List specific blockers
-- Provide fix instructions
-- DO NOT COMMIT
+**After Phase 3 verification gate passes, ALWAYS commit:**
 
-**If no BLOCKERS:**
-- Proceed to commit
-- Include metrics in commit message
-- Update roadmap
-- Archive completed items
+1. All blockers have been remediated and verified
+2. All critical issues have been fixed or user-approved deferral
+3. Lint passes, tests pass
+4. Proceed directly to commit - no user confirmation needed
+
+**Commit includes:**
+- Summary of implemented features
+- List of remediations applied
+- User-approved deferrals noted
+- Updated roadmap
+- Archived completed items
 
 ---
 
@@ -481,6 +609,13 @@ Implemented:
 - [Feature 2]
 - [Feature 3]
 
+Remediations applied:
+- [BLOCKER] [Issue]: [How fixed]
+- [CRITICAL] [Issue]: [How fixed]
+
+User-approved deferrals:
+- [Issue]: [Reason for deferral]
+
 Tests added:
 - [test file]: [what it tests]
 
@@ -488,15 +623,17 @@ Files changed:
 - [file1.js] - [brief description]
 - [file2.js] - [brief description]
 
-Validation Report (v3.0):
-- Subagents run: 5 (code-reviewer, debt-detector, qa-expert, security-auditor, documentation-checker)
-- Issues found: 3 warnings (resolved), 0 critical, 0 blockers
-- Test coverage: All new endpoints tested
-- File sizes: All under threshold
+Validation Report (v4.0):
+- Analysis subagents: 5 (code-reviewer, debt-detector, qa-expert, security-auditor, documentation-checker)
+- Remediation subagents: 3 (backend-developer, qa-expert, documentation-maintainer)
+- Issues found: 2 blockers, 1 critical, 1 warning
+- Issues remediated: 2 blockers, 1 critical
+- Issues deferred: 1 warning (user-approved)
+- Final state: All tests pass, lint clean
 
 Gap analysis:
 - Completed: X items
-- Remaining: Y items
+- Deferred (approved): Y items
 
 Next priority:
 - [Next task 1]
@@ -558,12 +695,33 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 
 ## Important Notes
 
-- **Always run Phase 1 first** - blockers here prevent Phase 2
-- **Run Phase 2 agents in parallel** - use Task tool with multiple calls
-- **Wait for all Phase 2 results** before synthesis
-- **Never commit with BLOCKERS** - fix them first
+### Execution Flow
+- **Phase 1 first** - blockers here prevent Phase 2
+- **Phase 2 agents in parallel** - use Task tool with multiple calls
+- **Phase 3 is sequential** - remediate one issue at a time, verify each
+- **Phase 4 commits unconditionally** - after Phase 3 gate passes
+
+### Remediation-First Principles
+- **FIX issues, don't just report them** - this is the core v4.0 change
+- **Use subagents for fixes** - dispatch appropriate agent for each issue type
+- **Verify every fix** - re-run lint/test after each remediation
+- **Ask when unclear** - use AskUserQuestion for ambiguous situations
+- **Track with TodoWrite** - create tasks for each remediation
+
+### Clarification Requirements
+- **Ambiguous intent** - ask before implementing
+- **Held-back items** - ask user: implement now or defer?
+- **Multiple approaches** - ask user which approach to use
+- **Breaking changes** - get explicit approval before proceeding
+
+### Post-Remediation
+- **Always commit after Phase 3 passes** - no user confirmation needed
 - **Keep roadmap fresh** - remove completed items
-- **Document completion** - update relevant docs
-- **Implement tests** - don't just suggest them
-- **Verify module loading** - `timeout 10 npm run dev:api`
-- **Check @shared imports** - recurring issue, always verify
+- **Archive completed work** - update docs/archive/
+- **Include remediation summary** - in commit message
+
+### Verification Checks
+- **Lint must pass** - after all fixes
+- **Tests must pass** - after all fixes
+- **Module loading** - verify with `timeout 10 npm run dev:api`
+- **@shared imports** - recurring issue, always verify

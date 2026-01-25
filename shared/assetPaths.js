@@ -149,9 +149,9 @@ function getIconPath(id, options = {}) {
 
 /**
  * Generates path for terrain tiles
- * Pattern: /assets/terrain/{biome}/{id}.png
- * For walls: /assets/terrain/{biome}/walls/{terrain}_wall.png
- * For slopes: /assets/terrain/{biome}/slopes/{direction}_{levels}.png
+ * Pattern: /assets/sprites/terrain/{biome}/{id}.png
+ * For walls: /assets/sprites/terrain/{biome}/walls/{terrain}_wall.png
+ * For slopes: /assets/sprites/terrain/{biome}/slopes/{direction}_{levels}.png
  *
  * @param {string} id - The tile identifier (e.g., 'grass_0', 'wall_forest_grass', 'slope_north_1')
  * @param {Object} options - Options
@@ -167,9 +167,9 @@ function getTilePath(id, options = {}) {
     const match = id.match(/^wall_[^_]+_(.+)$/);
     if (match) {
       const terrain = match[1];
-      return `${ASSETS_BASE}/terrain/${subcategory}/walls/${terrain}_wall.png`;
+      return `${ASSETS_BASE}/sprites/terrain/${subcategory}/walls/${terrain}_wall.png`;
     }
-    return `${ASSETS_BASE}/terrain/${subcategory}/walls/${id}.png`;
+    return `${ASSETS_BASE}/sprites/terrain/${subcategory}/walls/${id}.png`;
   }
 
   // Handle slopes: slope_{biome}_{direction}_{levels} -> {biome}/slopes/{direction}_{levels}.png
@@ -178,18 +178,18 @@ function getTilePath(id, options = {}) {
     if (id.startsWith('stairs_')) {
       const match = id.match(/^stairs_[^_]+_(.+)$/);
       if (match) {
-        return `${ASSETS_BASE}/terrain/${subcategory}/slopes/stairs_${match[1]}.png`;
+        return `${ASSETS_BASE}/sprites/terrain/${subcategory}/slopes/stairs_${match[1]}.png`;
       }
     }
     const match = id.match(/^slope_[^_]+_(.+)$/);
     if (match) {
-      return `${ASSETS_BASE}/terrain/${subcategory}/slopes/${match[1]}.png`;
+      return `${ASSETS_BASE}/sprites/terrain/${subcategory}/slopes/${match[1]}.png`;
     }
-    return `${ASSETS_BASE}/terrain/${subcategory}/slopes/${id}.png`;
+    return `${ASSETS_BASE}/sprites/terrain/${subcategory}/slopes/${id}.png`;
   }
 
   // Default: floors - use id directly
-  return `${ASSETS_BASE}/terrain/${subcategory}/${id}.png`;
+  return `${ASSETS_BASE}/sprites/terrain/${subcategory}/${id}.png`;
 }
 
 /**
@@ -250,7 +250,7 @@ function getOverlayPath(id, options = {}) {
  * @example
  * // Terrain tile
  * getAssetPath('tiles', 'grass_0', { subcategory: 'forest' });
- * // => '/assets/terrain/forest/grass_0.png'
+ * // => '/assets/sprites/terrain/forest/grass_0.png'
  *
  * @example
  * // Overlay
@@ -306,7 +306,7 @@ export const getAssetUrl = getAssetPath;
  *
  * @example
  * getOriginalsPath('tiles', 'grass_0', { subcategory: 'forest' });
- * // => '/assets/terrain/originals/forest/grass_0.png'
+ * // => '/assets/sprites/terrain/originals/forest/grass_0.png'
  */
 export function getOriginalsPath(category, id, options = {}) {
   validateCategory(category);
@@ -327,7 +327,7 @@ export function getOriginalsPath(category, id, options = {}) {
 
     case 'tiles': {
       const biome = subcategory || 'forest';
-      return `${ASSETS_BASE}/terrain/originals/${biome}/${id}.png`;
+      return `${ASSETS_BASE}/sprites/terrain/originals/${biome}/${id}.png`;
     }
 
     default:

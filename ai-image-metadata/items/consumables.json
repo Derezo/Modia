@@ -10,8 +10,7 @@
       "prompt": "red health potion round flask glowing liquid",
       "rarity": "common",
       "seed": 22001,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:48:34.006Z"
+      "generated": false
     },
     {
       "id": "potion_health_large",
@@ -19,8 +18,7 @@
       "prompt": "large red health potion tall bottle bubbling",
       "rarity": "uncommon",
       "seed": 22002,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:49:14.848Z"
+      "generated": false
     },
     {
       "id": "potion_mana",
@@ -28,8 +26,7 @@
       "prompt": "blue mana potion swirling magical essence",
       "rarity": "common",
       "seed": 22011,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:49:54.800Z"
+      "generated": false
     },
     {
       "id": "potion_mana_large",
@@ -37,8 +34,7 @@
       "prompt": "large blue mana potion crystalline container",
       "rarity": "uncommon",
       "seed": 22012,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:50:35.648Z"
+      "generated": false
     },
     {
       "id": "potion_stamina",
@@ -46,8 +42,7 @@
       "prompt": "green stamina potion energizing sparkling",
       "rarity": "common",
       "seed": 22021,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:51:16.533Z"
+      "generated": false
     },
     {
       "id": "potion_strength",
@@ -55,8 +50,7 @@
       "prompt": "orange strength potion muscular aura fierce",
       "rarity": "rare",
       "seed": 22031,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:51:56.514Z"
+      "generated": false
     },
     {
       "id": "potion_speed",
@@ -64,8 +58,7 @@
       "prompt": "yellow speed potion lightning streaks swift",
       "rarity": "rare",
       "seed": 22032,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:52:37.527Z"
+      "generated": false
     },
     {
       "id": "potion_defense",
@@ -73,8 +66,7 @@
       "prompt": "brown defense potion stone-like swirling shield",
       "rarity": "rare",
       "seed": 22033,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:53:17.517Z"
+      "generated": false
     },
     {
       "id": "antidote",
@@ -82,8 +74,7 @@
       "prompt": "green antidote vial clear cleansing cure",
       "rarity": "common",
       "seed": 22041,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:53:58.428Z"
+      "generated": false
     },
     {
       "id": "elixir_life",
@@ -91,8 +82,7 @@
       "prompt": "golden elixir ornate bottle radiant glow legendary",
       "rarity": "epic",
       "seed": 22051,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:54:39.333Z"
+      "generated": false
     },
     {
       "id": "scroll_fire",
@@ -100,8 +90,7 @@
       "prompt": "ancient scroll fire runes burning edges",
       "rarity": "uncommon",
       "seed": 22061,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:55:20.243Z"
+      "generated": false
     },
     {
       "id": "scroll_teleport",
@@ -109,8 +98,7 @@
       "prompt": "magical teleport scroll portal symbols glowing",
       "rarity": "rare",
       "seed": 22062,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:56:02.130Z"
+      "generated": false
     },
     {
       "id": "food_bread",
@@ -118,8 +106,7 @@
       "prompt": "fresh bread loaf crusty brown wholesome",
       "rarity": "common",
       "seed": 22071,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:56:42.004Z"
+      "generated": false
     },
     {
       "id": "food_meat",
@@ -127,8 +114,7 @@
       "prompt": "cooked meat drumstick roasted savory",
       "rarity": "common",
       "seed": 22072,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:57:22.870Z"
+      "generated": false
     },
     {
       "id": "food_cheese",
@@ -136,8 +122,7 @@
       "prompt": "cheese wheel aged yellow wedge",
       "rarity": "common",
       "seed": 22073,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:58:03.717Z"
+      "generated": false
     },
     {
       "id": "food_apple",
@@ -145,8 +130,7 @@
       "prompt": "red apple fresh fruit shiny healthy",
       "rarity": "common",
       "seed": 22074,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:58:44.757Z"
+      "generated": false
     },
     {
       "id": "food_feast",
@@ -154,8 +138,7 @@
       "prompt": "elaborate feast platter turkey wine grapes",
       "rarity": "rare",
       "seed": 22075,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:59:25.643Z"
+      "generated": false
     }
   ]
 }

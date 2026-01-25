@@ -43,7 +43,6 @@
     "generate:items": "node api/src/scripts/generate-items.js",
     "generate:portraits": "node api/src/scripts/generate-portraits.js",
     "generate:icons": "node scripts/generate-icons.js",
-    "generate:terrain": "node scripts/generate-terrain-tiles.js",
     "generate:svg-icons": "node scripts/generate-svg-icons.js",
     "generate:svg-portraits": "node scripts/generate-svg-portraits.js",
     "generate:portrait-pngs": "node scripts/generate-icons.js --portraits",

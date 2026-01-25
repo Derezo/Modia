@@ -26,11 +26,11 @@ const authTimeout = 10000; // 10 seconds to authenticate
 // Event handlers map
 const handlers = new Map();
 
-// Connection state callbacks
-let onConnectCallback = null;
-let onDisconnectCallback = null;
-let onErrorCallback = null;
-let onStateChangeCallback = null;
+// Connection state callbacks (Sets for cleanup support)
+const onConnectCallbacks = new Set();
+const onDisconnectCallbacks = new Set();
+const onErrorCallbacks = new Set();
+const onStateChangeCallbacks = new Set();
 
 /**
  * Get WebSocket URL based on current environment
@@ -50,8 +50,14 @@ function setConnectionState(newState) {
   const oldState = connectionState;
   connectionState = newState;
 
-  if (onStateChangeCallback && oldState !== newState) {
-    onStateChangeCallback(newState, oldState);
+  if (oldState !== newState) {
+    onStateChangeCallbacks.forEach(callback => {
+      try {
+        callback(newState, oldState);
+      } catch (err) {
+        console.error('[WS] Error in state change callback:', err);
+      }
+    });
   }
 }
 
@@ -129,9 +135,14 @@ export function connect() {
 
       console.error('[WS] Authentication timeout');
       setConnectionState(ConnectionState.DISCONNECTED);
-      if (onErrorCallback) {
-        onErrorCallback(new Error('Authentication timeout'));
-      }
+      const error = new Error('Authentication timeout');
+      onErrorCallbacks.forEach(callback => {
+        try {
+          callback(error);
+        } catch (err) {
+          console.error('[WS] Error in error callback:', err);
+        }
+      });
       // Close and trigger reconnect
       try { socket.close(); } catch (e) { /* ignore */ }
     }, authTimeout);
@@ -146,9 +157,13 @@ export function connect() {
       console.error('[WS] Failed to send auth:', err);
     }
 
-    if (onConnectCallback) {
-      onConnectCallback();
-    }
+    onConnectCallbacks.forEach(callback => {
+      try {
+        callback();
+      } catch (err) {
+        console.error('[WS] Error in connect callback:', err);
+      }
+    });
   };
 
   socket.onmessage = (event) => {
@@ -210,9 +225,14 @@ export function connect() {
         console.error('[WS] Auth failed:', payload.message);
         setConnectionState(ConnectionState.DISCONNECTED);
 
-        if (onErrorCallback) {
-          onErrorCallback(new Error(payload.message));
-        }
+        const error = new Error(payload.message);
+        onErrorCallbacks.forEach(callback => {
+          try {
+            callback(error);
+          } catch (err) {
+            console.error('[WS] Error in error callback:', err);
+          }
+        });
         return;
       }
 
@@ -254,9 +274,13 @@ export function connect() {
 
     setConnectionState(ConnectionState.DISCONNECTED);
 
-    if (onDisconnectCallback) {
-      onDisconnectCallback(event);
-    }
+    onDisconnectCallbacks.forEach(callback => {
+      try {
+        callback(event);
+      } catch (err) {
+        console.error('[WS] Error in disconnect callback:', err);
+      }
+    });
 
     // Attempt reconnection with exponential backoff
     if (reconnectAttempts < maxReconnectAttempts) {
@@ -272,9 +296,14 @@ export function connect() {
       }, delay);
     } else {
       console.error('[WS] Max reconnection attempts reached');
-      if (onErrorCallback) {
-        onErrorCallback(new Error('Max reconnection attempts reached'));
-      }
+      const error = new Error('Max reconnection attempts reached');
+      onErrorCallbacks.forEach(callback => {
+        try {
+          callback(error);
+        } catch (err) {
+          console.error('[WS] Error in error callback:', err);
+        }
+      });
     }
   };
 
@@ -285,9 +314,13 @@ export function connect() {
     }
 
     console.error('[WS] Error:', event);
-    if (onErrorCallback) {
-      onErrorCallback(event);
-    }
+    onErrorCallbacks.forEach(callback => {
+      try {
+        callback(event);
+      } catch (err) {
+        console.error('[WS] Error in error callback:', err);
+      }
+    });
   };
 }
 
@@ -373,22 +406,27 @@ export function off(type) {
 }
 
 /**
- * Set connection state callbacks
+ * Register connection state callbacks
+ * Returns unsubscribe function for cleanup
  */
 export function onConnect(callback) {
-  onConnectCallback = callback;
+  onConnectCallbacks.add(callback);
+  return () => onConnectCallbacks.delete(callback);
 }
 
 export function onDisconnect(callback) {
-  onDisconnectCallback = callback;
+  onDisconnectCallbacks.add(callback);
+  return () => onDisconnectCallbacks.delete(callback);
 }
 
 export function onError(callback) {
-  onErrorCallback = callback;
+  onErrorCallbacks.add(callback);
+  return () => onErrorCallbacks.delete(callback);
 }
 
 export function onStateChange(callback) {
-  onStateChangeCallback = callback;
+  onStateChangeCallbacks.add(callback);
+  return () => onStateChangeCallbacks.delete(callback);
 }
 
 /**
