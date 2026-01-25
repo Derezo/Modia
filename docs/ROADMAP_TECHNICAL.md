@@ -502,8 +502,16 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 | ~~Debug endpoint in production~~ | debug.js | ~~Low~~ | **Resolved** v9.4 - gated by NODE_ENV |
 | ~~Event name mismatch (party:invite)~~ | Game.js / partyWebsocket.js | ~~Medium~~ | **Resolved** - uses party:invite_received |
 | ~~SkillTreePanel.js potentially unused~~ | frontend/src/components/ | ~~Low~~ | **Resolved** - file removed |
+| Missing null check in waveform fallback | adminAudio.js:633 | High | Open |
+| Duplicate `validateSFXPrompt()` function | adminAudio.js, adminAudioGenerationService.js | Medium | Open |
+| Duplicate `VALID_CATEGORIES` constant | admin.js, adminGenerationService.js | Low | Open |
+| Missing JSDoc on admin service exports | adminGenerationService.js | Low | Open |
+| No tests for admin generation endpoints | api/src/tests/ | Medium | Open |
+| Backend selection not persisted (in-memory) | adminGenerationService.js:90 | Low | Open |
 
-*Issues audited: 2026-01-23*
+*Issues audited: 2026-01-25*
+
+**Validation Report:** See `docs/archive/reports/2026-01-25-asset-refactoring-validation.md` for full findings.
 
 ### 8.3 Refactoring Opportunities
 
