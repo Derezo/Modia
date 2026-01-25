@@ -126,12 +126,12 @@
     "triggerV1Legacy": "GRPZA"
   },
   "outputPaths": {
-    "tiles": "/assets/sprites/terrain/",
-    "portraits": "/assets/sprites/characters/portraits/",
-    "items": "/assets/sprites/items/",
-    "icons": "/assets/sprites/icons/",
-    "nodes": "/assets/sprites/nodes/",
-    "overlays": "/assets/sprites/overlays/"
+    "tiles": "/assets/terrain/",
+    "portraits": "/assets/portraits/",
+    "items": "/assets/items/",
+    "icons": "/assets/icons/",
+    "nodes": "/assets/nodes/",
+    "overlays": "/assets/overlays/"
   },
   "layeredComposition": {
     "enabled": true,

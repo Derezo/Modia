@@ -1,6 +1,8 @@
 {
   "biome": "base",
   "category": "walls",
+  "deprecated": true,
+  "deprecationNote": "Base biome is no longer used. Forest biome serves as the fallback. Do not regenerate these tiles.",
   "description": "Core wall textures used as fallbacks for all biomes - neutral vertical cliff faces",
   "palette": {
     "primary": "#6B8E4A",

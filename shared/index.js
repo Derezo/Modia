@@ -83,12 +83,13 @@ export {
   SIZE_PRESETS,
   DEFAULT_SIZES,
   ASSET_CATEGORIES,
-  getAssetUrl,
-  getLegacyPath,
-  getStandardizedPath,
+  getAssetPath,
+  getAssetUrl, // Deprecated alias for getAssetPath
+  getOriginalsPath,
   getOutputPath,
   getAllSizeVariants,
   isValidSize,
   getDefaultSize,
+  getOptimalSize,
   parseAssetFilename
 } from './assetPaths.js';

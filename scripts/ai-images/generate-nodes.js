@@ -33,7 +33,8 @@ const {
 
 // Configuration
 const PROJECT_ROOT = getProjectRoot();
-const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/sprites/nodes');
+// New nodes directory without node_ prefix in filenames
+const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/nodes/originals');
 
 /**
  * Parse command line arguments
@@ -177,9 +178,12 @@ Examples:
 
 /**
  * Get the output path for a node
+ * Node IDs in metadata have 'node_' prefix, but output files don't
  */
 function getOutputPath(node) {
-  return path.join(OUTPUT_DIR, `${node.id}.png`);
+  // Strip 'node_' prefix from id for output filename
+  const filename = node.id.replace(/^node_/, '');
+  return path.join(OUTPUT_DIR, `${filename}.png`);
 }
 
 /**

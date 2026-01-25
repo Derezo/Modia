@@ -115,12 +115,13 @@ async function getImageDimensions(imagePath, timeout = 5000) {
  * @param {string} sourcePath - Original 128x128 image path
  * @param {number} size - Target size
  * @param {Object} options - Options
- * @param {string} options.sizeDir - Use subdirectory per size (e.g., /32x32/item.png)
- * @param {string} options.sizeSuffix - Use suffix (e.g., item_32.png)
+ * @param {string} options.sizeDir - Use subdirectory per size (e.g., /32/item.png)
+ * @param {string} options.sizeSuffix - Use suffix (e.g., item_32.png) - DEPRECATED
+ * @param {boolean} options.legacyFormat - Use legacy {size}x{size} format (default: false)
  * @returns {string} Output path for the sized variant
  */
 function getSizedPath(sourcePath, size, options = {}) {
-  const { sizeDir = true, sizeSuffix = false } = options;
+  const { sizeDir = true, sizeSuffix = false, legacyFormat = false } = options;
   const dir = path.dirname(sourcePath);
   const ext = path.extname(sourcePath);
   const base = path.basename(sourcePath, ext);
@@ -131,15 +132,16 @@ function getSizedPath(sourcePath, size, options = {}) {
   }
 
   if (sizeDir) {
-    // Put sized variants in subdirectories: /items/weapons/32x32/sword.png
-    const sizeSubdir = `${size}x${size}`;
+    // Put sized variants in subdirectories: /items/weapons/32/sword.png
+    // Or legacy format: /items/weapons/32x32/sword.png
+    const sizeSubdir = legacyFormat ? `${size}x${size}` : `${size}`;
     return path.join(dir, sizeSubdir, `${base}${ext}`);
   } else if (sizeSuffix) {
-    // Use suffix: /items/weapons/sword_32.png
+    // DEPRECATED: Use suffix: /items/weapons/sword_32.png
     return path.join(dir, `${base}_${size}${ext}`);
   } else {
-    // Default: subdirectory
-    const sizeSubdir = `${size}x${size}`;
+    // Default: subdirectory with new format
+    const sizeSubdir = legacyFormat ? `${size}x${size}` : `${size}`;
     return path.join(dir, sizeSubdir, `${base}${ext}`);
   }
 }

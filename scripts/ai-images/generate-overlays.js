@@ -34,7 +34,8 @@ const {
 
 // Configuration
 const PROJECT_ROOT = getProjectRoot();
-const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/sprites/overlays');
+// New overlays path with originals directory and size in path
+const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/overlays/originals');
 
 /**
  * Parse command line arguments

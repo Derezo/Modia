@@ -17,7 +17,7 @@
   },
   "enemies": [
     {
-      "id": "goblin_warrior",
+      "id": "enemy_goblin_warrior",
       "name": "Goblin Warrior",
       "archetype": "humanoid",
       "region": "forest",
@@ -32,7 +32,7 @@
       }
     },
     {
-      "id": "gray_wolf",
+      "id": "enemy_gray_wolf",
       "name": "Gray Wolf",
       "archetype": "beast",
       "region": "forest",
@@ -47,7 +47,7 @@
       }
     },
     {
-      "id": "forest_slime",
+      "id": "enemy_forest_slime",
       "name": "Forest Slime",
       "archetype": "elemental",
       "region": "forest",
@@ -64,7 +64,7 @@
       }
     },
     {
-      "id": "cave_bat",
+      "id": "enemy_cave_bat",
       "name": "Cave Bat",
       "archetype": "beast",
       "region": "cave",
@@ -79,22 +79,27 @@
       }
     },
     {
-      "id": "giant_spider",
+      "id": "enemy_giant_spider",
       "name": "Giant Spider",
       "archetype": "beast",
       "region": "cave",
       "visualTraits": "8 red eyes cluster mandibles hairy body segmented legs",
       "seed": 32002,
       "generated": true,
-      "generatedAt": "2026-01-24T04:16:22.741Z",
+      "generatedAt": "2026-01-25T15:10:26.163Z",
       "evaluation": {
         "score": 7,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "prompt": "8 red eyes cluster mandibles hairy body segmented legs tarantula feral wild natural predator instinctual dark rocky underground subterranean crystalline damp",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
-      "id": "skeleton_warrior",
+      "id": "enemy_skeleton_warrior",
       "name": "Skeleton Warrior",
       "archetype": "undead",
       "region": "cave",
@@ -109,7 +114,7 @@
       }
     },
     {
-      "id": "stone_golem",
+      "id": "enemy_stone_golem",
       "name": "Stone Golem",
       "archetype": "elemental",
       "region": "cave",
@@ -124,7 +129,7 @@
       }
     },
     {
-      "id": "mountain_troll",
+      "id": "enemy_mountain_troll",
       "name": "Mountain Troll",
       "archetype": "humanoid",
       "region": "mountain",
@@ -139,7 +144,7 @@
       }
     },
     {
-      "id": "troll_shaman",
+      "id": "enemy_troll_shaman",
       "name": "Troll Shaman",
       "archetype": "humanoid",
       "region": "mountain",
@@ -154,7 +159,7 @@
       }
     },
     {
-      "id": "harpy",
+      "id": "enemy_harpy",
       "name": "Harpy",
       "archetype": "beast",
       "region": "mountain",
@@ -169,7 +174,7 @@
       }
     },
     {
-      "id": "bridge_bandit",
+      "id": "enemy_bridge_bandit",
       "name": "Bridge Bandit",
       "archetype": "humanoid",
       "region": "bridge",
@@ -184,7 +189,7 @@
       }
     },
     {
-      "id": "bandit_captain",
+      "id": "enemy_bandit_captain",
       "name": "Bandit Captain",
       "archetype": "humanoid",
       "region": "bridge",
@@ -199,7 +204,7 @@
       }
     },
     {
-      "id": "bridge_troll",
+      "id": "enemy_bridge_troll",
       "name": "Bridge Troll",
       "archetype": "humanoid",
       "region": "bridge",
@@ -214,7 +219,7 @@
       }
     },
     {
-      "id": "dark_knight",
+      "id": "enemy_dark_knight",
       "name": "Dark Knight",
       "archetype": "humanoid",
       "region": "palace",
@@ -229,7 +234,7 @@
       }
     },
     {
-      "id": "shadow_assassin",
+      "id": "enemy_shadow_assassin",
       "name": "Shadow Assassin",
       "archetype": "humanoid",
       "region": "palace",
@@ -244,7 +249,7 @@
       }
     },
     {
-      "id": "palace_guard",
+      "id": "enemy_palace_guard",
       "name": "Palace Guard",
       "archetype": "humanoid",
       "region": "palace",

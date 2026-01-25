@@ -1,6 +1,8 @@
 {
   "biome": "base",
   "category": "slopes",
+  "deprecated": true,
+  "deprecationNote": "Base biome is no longer used. Forest biome serves as the fallback. Do not regenerate these tiles.",
   "description": "Base biome slope tiles - generic terrain transitions used as fallbacks",
   "palette": {
     "primary": "#6B8E4A",

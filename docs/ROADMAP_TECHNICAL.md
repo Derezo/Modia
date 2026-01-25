@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.5 |
+| Version | 2.6 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -339,39 +339,68 @@ npm run audio:status         # Show asset status
 Refactored asset loading to support multi-size assets with optimal size selection.
 
 - [x] Updated `shared/assetPaths.js` with size-aware path functions
-  - `getLegacyPortraitPath()` supports size subdirectories (64/128/256)
-  - `getLegacyNodePath()` supports size subdirectories (48/96)
   - Added `getOptimalSize()` utility for selecting smallest size >= display size
+  - Unified `getAssetPath()` function for all asset categories
 - [x] Refactored `frontend/src/core/AssetLoader.js` with size-aware methods
   - `getPortraitUrl(character, displaySize)` - character portraits
   - `getEnemyPortraitUrl(enemyId, displaySize)` - enemy portraits
   - `loadNodeSpriteAtSize(nodeType, options)` - world map nodes
   - Static exports: `SIZE_PRESETS`, `DEFAULT_SIZES`, `getOptimalSize`
-- [x] Updated 4 scenes to use AssetLoader portrait methods:
-  - `CharacterCreateScene.js` (64px), `CharacterSelectScene.js` (48px)
-  - `BattleFormationScene.js` (40px), `RecruitmentScene.js` (56px)
-- [x] Updated 4 components to import from shared module:
-  - `CharacterCard.js`, `CharacterPicker.js`, `ParchmentCard.js`, `CharacterModal.js`
-- [x] Integrated post-processing into generation scripts:
-  - `generate-portraits.js` calls `postProcessPortrait()` after generation
-  - `generate-nodes.js` calls `postProcessNode()` after generation
-- [x] Added `getImageDimensions()` to detect source size before post-processing
-  - Only generates size variants <= source dimensions
-  - Includes 5-second timeout for subprocess safety
+- [x] Updated 4 scenes to use AssetLoader portrait methods
+- [x] Updated 4 components to import from shared module
+- [x] Integrated post-processing into generation scripts
+- [x] Added `getImageDimensions()` with 5-second timeout for subprocess safety
 
-**Directory structure:**
+### 7.6 Asset Path Standardization (Completed Jan 2026)
+
+Major refactoring to consolidate and standardize the asset system with unified directory structure, consistent naming conventions, and removal of legacy code.
+
+**Key Changes:**
+
+| Before | After |
+|--------|-------|
+| `/assets/sprites/portraits/` + `/assets/sprites/enemies/portraits/` | `/assets/portraits/{size}/` (unified) |
+| `node_castle.png` | `castle.png` (no prefix) |
+| `sword_iron_64.png` | `64/weapons/sword_iron.png` (size in path) |
+| `/terrain/base/` fallback | Code fallback to `forest` |
+| `getLegacyPath()` / `getStandardizedPath()` | Single `getAssetPath()` |
+
+**Directory Structure:**
 ```
-sprites/portraits/
-├── human_male_warrior.png      # 64px (base/default)
-├── 128x128/human_male_warrior.png
-└── 256x256/human_male_warrior.png
-
-sprites/nodes/
-├── node_castle.png             # 96px (base/default)
-└── 48x48/node_castle.png
+/assets/
+├── portraits/{64,128,256}/       # Player: {race}_{gender}_{class}, Enemy: enemy_{id}
+├── nodes/{48,96}/                # No node_ prefix
+├── items/{32,64,128}/{category}/ # Size in path, not filename
+├── icons/png/{size}/{category}/  # PNG icons with size directories
+├── terrain/{biome}/              # No base/ - forest is fallback
+└── overlays/{size}/{category}/   # Rarity and augment effects
 ```
 
-### 7.6 Pending
+**Files Modified:**
+- `shared/assetPaths.js` - Complete rewrite with unified `getAssetPath()`, `getOriginalsPath()`
+- `frontend/src/core/AssetLoader.js` - Updated basePath, biome fallbacks, node/portrait methods
+- `scripts/ai-images/*.js` - All generation scripts updated with new output paths
+- `ai-image-metadata/manifest.json` - Updated outputPaths
+- `ai-image-metadata/nodes/locations.json` - Stripped `node_` prefix from 26 IDs
+- `ai-image-metadata/portraits/enemies.json` - Added `enemy_` prefix to 16 IDs
+- `ai-image-metadata/tiles/{floors,walls,slopes}/base.json` - Marked deprecated
+
+**Migration:**
+- Created `scripts/migrate-asset-paths.js` for file migration
+- Migrated 682 assets (316 portraits, 45 nodes, 321 terrain tiles)
+- Old files preserved in `/assets/sprites/` for rollback
+
+**API Changes:**
+```javascript
+// New unified API
+getAssetPath('portraits', 'human_male_warrior', { size: 64 })
+getAssetPath('portraits', 'enemy_goblin_warrior', { size: 64 })
+getAssetPath('nodes', 'castle', { size: 96 })  // No node_ prefix
+getAssetPath('items', 'sword_iron', { subcategory: 'weapons', size: 64 })
+getOriginalsPath('portraits', 'human_male_warrior')
+```
+
+### 7.7 Pending
 
 - [ ] Regenerate all ~300 floor tiles with new diamond prompts
 - [ ] Regenerate 6 node images marked for regeneration
@@ -380,7 +409,7 @@ sprites/nodes/
 - [ ] Evaluate UI icons (80 icons)
 - [ ] Create `validate-size-variants.js` script for checking missing variants
 
-### 7.7 Admin Asset Manager (Completed Jan 2026)
+### 7.8 Admin Asset Manager (Completed Jan 2026)
 
 Development-only dashboard for AI asset generation and management. Available at `npm run dev:admin` (port 8081).
 
@@ -491,6 +520,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.6 | Jan 2026 | Asset Path Standardization: Added Section 7.6 documenting unified asset path system. Rewrote shared/assetPaths.js with single getAssetPath() and getOriginalsPath() functions. Removed getLegacyPath/getStandardizedPath. Updated AssetLoader.js: basePath /assets, forest fallback, enemy_ prefix, no node_ prefix. Updated all generation scripts with new output paths. Updated metadata JSONs. Created migrate-asset-paths.js migration script. Migrated 682 assets. Renumbered sections (7.6→7.7 Pending, 7.7→7.8 Admin). |
 | 2.5 | Jan 2026 | Asset Loading System Refactoring: Added Section 7.5 documenting size-aware asset loading. Updated shared/assetPaths.js with getOptimalSize(), size-aware portrait/node paths. Refactored AssetLoader.js with getPortraitUrl, getEnemyPortraitUrl, loadNodeSpriteAtSize. Updated 4 scenes and 4 components. Integrated post-processing into generate-portraits.js/generate-nodes.js. Added getImageDimensions() with timeout. Renumbered sections (7.5→7.6 Pending, 7.6→7.7 Admin). |
 | 2.4 | Jan 2026 | Security & Testing Infrastructure (v9.4): Added Redis-backed rate limiting with graceful fallback. Comprehensive endpoint protection (70+ endpoints via economyRateLimiter, characterRateLimiter, socialRateLimiter). Gated debug endpoints in production. Enhanced health checks with Redis, rate limiter stats, liveness/readiness endpoints. Artillery.io load testing infrastructure for 25 concurrent users. E2E tests: character creation, battle flow, error handling. Shared test helpers. Updated status: Testing 85%, Monitoring 60%, Infrastructure 75%. |
 | 2.3 | Jan 2026 | Post-Processing Pipeline Overhaul: Added Section 7.4 documenting new asset-specific post-processing functions. Removed --sizes flag, standardized resolutions (256 portraits/nodes, 128 tiles/items/icons). Added diamond mask for tiles, improved prompts for geometry. Renumbered pending items to 7.5. Commit 91ac94b. |

@@ -32,7 +32,8 @@ const {
 
 // Configuration
 const PROJECT_ROOT = getProjectRoot();
-const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/sprites/items');
+// New items path with originals directory and size in path, not filename
+const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/items/originals');
 
 /**
  * Parse command line arguments
