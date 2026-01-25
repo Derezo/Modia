@@ -69,7 +69,11 @@ function loadCategoryAssets(category) {
       files = Object.values(manifest.biomeFiles);
     }
   } else if (category === 'portraits') {
-    files = [manifest.combinationsFile || 'combinations.json'];
+    // Load both player portraits (combinations.json) and enemy portraits (enemies.json)
+    files = [
+      manifest.combinationsFile || 'combinations.json',
+      manifest.enemiesFile || 'enemies.json'
+    ];
   } else if (manifest.categoryFiles) {
     files = Object.values(manifest.categoryFiles);
   } else if (manifest.locationFile) {
@@ -84,7 +88,7 @@ function loadCategoryAssets(category) {
     }
 
     // Get assets from the appropriate field
-    const assetArray = data.tiles || data.portraits || data.items || data.icons || data.nodes || [];
+    const assetArray = data.tiles || data.portraits || data.enemies || data.items || data.icons || data.nodes || data.overlays || [];
 
     for (const asset of assetArray) {
       asset._sourceFile = file;

@@ -120,7 +120,8 @@ const {
   postProcessNode,
   postProcessWall,
   postProcessSlope,
-  postProcessByType
+  postProcessByType,
+  postProcessWithDualWrite
 } = require('./resizeUtils');
 
 module.exports = {
@@ -237,5 +238,6 @@ module.exports = {
   postProcessNode,
   postProcessWall,
   postProcessSlope,
-  postProcessByType
+  postProcessByType,
+  postProcessWithDualWrite
 };

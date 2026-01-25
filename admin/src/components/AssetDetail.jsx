@@ -51,11 +51,40 @@ function getAssetBasePath(asset, category) {
 
   switch (category) {
     case 'tiles': {
-      // Tiles are directly in the biome folder (no floors/walls/slopes subdirectory)
       const biome = asset._biome || asset.outputPath || 'base';
+      const tileCategory = asset._tileCategory || 'floors';
+      const key = asset.key || id;
+
+      // Walls and slopes are in subdirectories with different naming
+      if (tileCategory === 'walls' || key.startsWith('wall_')) {
+        // wall_base_grass -> walls/grass_wall.png
+        const match = key.match(/^wall_[^_]+_(.+)$/);
+        const terrain = match ? match[1] : key;
+        return {
+          dir: `/assets/sprites/terrain/${biome}/walls`,
+          filename: `${terrain}_wall`,
+        };
+      }
+      if (tileCategory === 'slopes' || key.startsWith('slope_') || key.startsWith('stairs_')) {
+        // slope_base_north_1 -> slopes/north_1.png
+        // stairs_base_north_1 -> slopes/stairs_north_1.png
+        let filename;
+        if (key.startsWith('stairs_')) {
+          const match = key.match(/^stairs_[^_]+_(.+)$/);
+          filename = match ? `stairs_${match[1]}` : key;
+        } else {
+          const match = key.match(/^slope_[^_]+_(.+)$/);
+          filename = match ? match[1] : key;
+        }
+        return {
+          dir: `/assets/sprites/terrain/${biome}/slopes`,
+          filename,
+        };
+      }
+      // Default: floors - use key directly
       return {
         dir: `/assets/sprites/terrain/${biome}`,
-        filename: asset.key,
+        filename: key,
       };
     }
     case 'portraits': {
@@ -79,9 +108,11 @@ function getAssetBasePath(asset, category) {
     }
     case 'icons': {
       const subcategory = asset._iconCategory || asset._subcategory || asset.subcategory || 'actions';
+      // Icons use directory-based sizing: /assets/icons/png/{size}/{subcategory}-{id}.png
       return {
-        dir: `/assets/sprites/icons/${subcategory}`,
-        filename: id,
+        dir: '/assets/icons/png',
+        filename: `${subcategory}-${id}`,
+        usesDirectorySize: true,
       };
     }
     case 'nodes': {
@@ -445,14 +476,20 @@ export default function AssetDetail({
    * Get the image URL for a given size.
    * Path format varies by category:
    * - portraits, tiles: {dir}/{filename}.png (no size variants)
-   * - items, icons: {dir}/{filename}_{size}.png (size suffix)
+   * - items: {dir}/{filename}_{size}.png (size suffix)
+   * - icons: {dir}/{size}/{filename}.png (directory-based sizing)
    * - nodes, overlays: {dir}/{filename}.png (no size variants currently)
    */
   const getImageUrl = useCallback((size) => {
     if (!basePath) return null;
 
+    // Icons use directory-based sizing: /assets/icons/png/{size}/{filename}.png
+    if (basePath.usesDirectorySize) {
+      return `${basePath.dir}/${size}/${basePath.filename}.png`;
+    }
+
     // Categories with size variants use suffix format
-    const categoriesWithSizeVariants = ['items', 'icons'];
+    const categoriesWithSizeVariants = ['items'];
     const hasSizeVariants = categoriesWithSizeVariants.includes(category);
 
     if (size === 'original' || !hasSizeVariants) {
@@ -460,7 +497,7 @@ export default function AssetDetail({
       return `${basePath.dir}/${basePath.filename}.png`;
     }
 
-    // Size suffix format for items/icons
+    // Size suffix format for items
     return `${basePath.dir}/${basePath.filename}_${size}.png`;
   }, [basePath, category]);
 
