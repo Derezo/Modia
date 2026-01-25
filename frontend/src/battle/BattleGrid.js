@@ -968,13 +968,9 @@ export class BattleGrid {
       }
     }
 
-    // Apply highlight on top
+    // Apply highlight on top (screenY is already elevation-adjusted)
     if (highlight) {
-      // For stacking tiles, highlight goes on the top surface
-      const highlightY = this.useStackingTiles && tile.elevation > 0
-        ? tile.screenY // Already elevation-adjusted
-        : tile.screenY;
-      this.renderTileHighlight(ctx, tile.screenX, highlightY, highlight);
+      this.renderTileHighlight(ctx, tile.screenX, tile.screenY, highlight);
     }
   }
 
@@ -1143,13 +1139,83 @@ export class BattleGrid {
 
   /**
    * Get tile at screen position (for click detection)
+   * @param {number} screenX - Screen X position
+   * @param {number} screenY - Screen Y position
+   * @param {Object} camera - Camera for transforms
+   * @param {boolean} returnAllCandidates - If true, returns array of all candidates
+   * @returns {Object|Array|null} Single tile, array of candidates, or null
    */
-  getTileAtScreen(screenX, screenY, camera = null) {
+  getTileAtScreen(screenX, screenY, camera = null, returnAllCandidates = false) {
+    if (returnAllCandidates) {
+      return this.screenToGridCandidates(screenX, screenY, camera);
+    }
     const { x, y } = this.screenToGrid(screenX, screenY, camera);
     if (this.isInBounds(x, y)) {
       return { x, y };
     }
     return null;
+  }
+
+  /**
+   * Get all tile candidates at a screen position (for tile cycling on overlapping elevations)
+   * Returns all tiles whose visual diamond contains the click point, sorted by depth (front-to-back)
+   *
+   * @param {number} screenX - Screen X position
+   * @param {number} screenY - Screen Y position
+   * @param {Object} camera - Camera for transforms
+   * @returns {Array} Array of { x, y, depth, elevation } sorted front-to-back (highest depth first)
+   */
+  screenToGridCandidates(screenX, screenY, camera = null) {
+    let worldX, worldY;
+    if (camera) {
+      const world = camera.screenToWorld(screenX, screenY);
+      worldX = world.x;
+      worldY = world.y;
+    } else {
+      worldX = screenX - this.canvas.width / 2;
+      worldY = screenY - 120;
+    }
+
+    // Get base grid position (ignoring elevation)
+    const halfTileWidth = this.tileWidth / 2;
+    const halfTileHeight = this.tileHeight / 2;
+
+    const isoX = worldX / halfTileWidth;
+    const isoY = worldY / halfTileHeight;
+
+    const baseGridX = Math.round((isoX + isoY) / 2);
+    const baseGridY = Math.round((isoY - isoX) / 2);
+
+    const candidates = [];
+
+    // Search nearby tiles for elevated ones that might contain the click
+    // Max elevation is 8, so check up to 8 rows ahead
+    const searchRadius = 8;
+    for (let dy = -2; dy <= searchRadius; dy++) {
+      for (let dx = -2; dx <= searchRadius; dx++) {
+        const checkX = baseGridX + dx;
+        const checkY = baseGridY + dy;
+
+        if (!this.isInBounds(checkX, checkY)) continue;
+
+        const elevation = this.getElevation(checkX, checkY);
+
+        // Get the world position of this tile (with elevation)
+        const tileWorld = this.gridToScreenWorld(checkX, checkY, true);
+
+        // Check if click point is within this tile's diamond
+        if (this.isPointInTileDiamond(worldX, worldY, tileWorld.x, tileWorld.y)) {
+          // Calculate depth for sorting (higher depth = closer to camera)
+          const depth = checkX + checkY;
+          candidates.push({ x: checkX, y: checkY, depth, elevation });
+        }
+      }
+    }
+
+    // Sort front-to-back (highest depth first - closest to camera)
+    candidates.sort((a, b) => b.depth - a.depth);
+
+    return candidates;
   }
 
   // =========================================================================

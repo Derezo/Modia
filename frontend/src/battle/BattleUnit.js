@@ -40,11 +40,21 @@ export class BattleUnit {
     this.prevGridX = this.gridX;
     this.prevGridY = this.gridY;
 
+    // Elevation tracking (for occlusion and height movement)
+    this.elevation = 0; // Current elevation level (updated from grid)
+    this.sourceElevation = 0; // Elevation at movement start
+    this.targetElevation = 0; // Elevation at movement end
+
     // Screen position (for smooth movement)
     this.screenX = 0;
     this.screenY = 0;
     this.targetScreenX = 0;
     this.targetScreenY = 0;
+
+    // Flat screen positions (without elevation offset, for height animation)
+    this.sourceScreenX = 0;
+    this.sourceScreenY = 0;
+    this.movementProgress = 0; // 0 to 1 during movement
 
     // Animation state
     this.isMoving = false;
@@ -296,6 +306,11 @@ export class BattleUnit {
     this.screenY = pos.y;
     this.targetScreenX = pos.x;
     this.targetScreenY = pos.y;
+
+    // Update elevation tracking
+    this.elevation = this.grid.getElevation(this.gridX, this.gridY);
+    this.sourceElevation = this.elevation;
+    this.targetElevation = this.elevation;
   }
 
   /**
@@ -306,12 +321,29 @@ export class BattleUnit {
     this.prevGridX = this.gridX;
     this.prevGridY = this.gridY;
 
+    // Store elevation data for height animation
+    this.sourceElevation = this.grid.getElevation(this.prevGridX, this.prevGridY);
+    this.targetElevation = this.grid.getElevation(gridX, gridY);
+
+    // Store flat positions (without elevation) for proper height interpolation
+    const sourceFlat = this.grid.gridToScreenWorld(this.prevGridX, this.prevGridY, false);
+    const targetFlat = this.grid.gridToScreenWorld(gridX, gridY, false);
+    this.sourceScreenX = sourceFlat.x;
+    this.sourceScreenY = sourceFlat.y;
+
     this.gridX = gridX;
     this.gridY = gridY;
-    const target = this.grid.gridToScreenWorld(gridX, gridY);
-    this.targetScreenX = target.x;
-    this.targetScreenY = target.y;
+
+    // Target uses flat Y - we'll add elevation offset during interpolation
+    this.targetScreenX = targetFlat.x;
+    this.targetScreenY = targetFlat.y;
     this.isMoving = true;
+    this.movementProgress = 0;
+
+    // Set current screen position from source (with elevation)
+    const sourceWithElev = this.grid.gridToScreenWorld(this.prevGridX, this.prevGridY, true);
+    this.screenX = sourceWithElev.x;
+    this.screenY = sourceWithElev.y;
 
     // Update direction based on movement
     this.updateDirectionFromMovement();
@@ -390,6 +422,12 @@ export class BattleUnit {
     this.gridY = gridY;
     this.updateScreenPosition();
     this.isMoving = false;
+    this.movementProgress = 0;
+
+    // Update elevation
+    this.elevation = this.grid.getElevation(gridX, gridY);
+    this.sourceElevation = this.elevation;
+    this.targetElevation = this.elevation;
   }
 
   /**
@@ -412,23 +450,86 @@ export class BattleUnit {
       this.animatedSprite.update(dt); // AnimatedSprite expects seconds
     }
 
-    // Movement interpolation
+    // Movement interpolation with elevation-aware height animation
     if (this.isMoving) {
-      const dx = this.targetScreenX - this.screenX;
-      const dy = this.targetScreenY - this.screenY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      // Calculate total distance in flat space (without elevation)
+      const totalDx = this.targetScreenX - this.sourceScreenX;
+      const totalDy = this.targetScreenY - this.sourceScreenY;
+      const totalDist = Math.sqrt(totalDx * totalDx + totalDy * totalDy);
 
-      if (dist < this.moveSpeed * dt) {
-        this.screenX = this.targetScreenX;
-        this.screenY = this.targetScreenY;
+      // Update movement progress
+      if (totalDist > 0) {
+        const progressIncrement = (this.moveSpeed * dt) / totalDist;
+        this.movementProgress = Math.min(1, this.movementProgress + progressIncrement);
+      } else {
+        this.movementProgress = 1;
+      }
+
+      // Interpolate flat X/Y position
+      const flatX = this.sourceScreenX + totalDx * this.movementProgress;
+      const flatY = this.sourceScreenY + totalDy * this.movementProgress;
+
+      // Calculate elevation offset with arc for height transitions
+      const elevOffset = this.calculateElevationOffset(
+        this.movementProgress,
+        this.sourceElevation,
+        this.targetElevation
+      );
+
+      // Apply final screen position
+      this.screenX = flatX;
+      this.screenY = flatY + elevOffset;
+
+      // Check if movement complete
+      if (this.movementProgress >= 1) {
+        // Snap to final position (with elevation)
+        const finalPos = this.grid.gridToScreenWorld(this.gridX, this.gridY, true);
+        this.screenX = finalPos.x;
+        this.screenY = finalPos.y;
+        this.targetScreenX = finalPos.x;
+        this.targetScreenY = finalPos.y;
         this.isMoving = false;
+        this.movementProgress = 0;
+
+        // Update elevation to target
+        this.elevation = this.targetElevation;
+        this.sourceElevation = this.targetElevation;
+
         // Return to idle animation when movement completes
         this.setAnimationState('idle');
-      } else {
-        this.screenX += (dx / dist) * this.moveSpeed * dt;
-        this.screenY += (dy / dist) * this.moveSpeed * dt;
       }
     }
+  }
+
+  /**
+   * Calculate elevation offset during movement with parabolic arc for smooth transitions
+   * @param {number} progress - Movement progress from 0 to 1
+   * @param {number} sourceElev - Elevation at start position
+   * @param {number} targetElev - Elevation at end position
+   * @returns {number} Y offset in pixels (negative = higher on screen)
+   */
+  calculateElevationOffset(progress, sourceElev, targetElev) {
+    // Get pixels per elevation level from grid
+    const pixelsPerLevel = this.grid?.elevationPixelsPerLevel || 16;
+
+    // Calculate base elevation Y offsets (negative because higher = lower Y)
+    const sourceY = -sourceElev * pixelsPerLevel;
+    const targetY = -targetElev * pixelsPerLevel;
+
+    // Linear interpolation of elevation
+    const baseOffset = sourceY + (targetY - sourceY) * progress;
+
+    // Add parabolic arc for elevation changes (jumping up/landing down effect)
+    const elevDiff = targetElev - sourceElev;
+    if (elevDiff !== 0) {
+      // Arc height scales with elevation difference, capped at 24px
+      const arcHeight = Math.min(Math.abs(elevDiff) * 8, 24);
+      // Sin curve creates smooth arc peaking at midpoint
+      const arcOffset = -arcHeight * Math.sin(progress * Math.PI);
+      return baseOffset + arcOffset;
+    }
+
+    return baseOffset;
   }
 
   /**
@@ -563,9 +664,27 @@ export class BattleUnit {
 
     const unitRadius = 16;
 
-    // Draw shadow
+    // Draw shadow - follows terrain during movement (not the unit's arc)
+    let shadowY = drawY + 4;
+    if (this.isMoving && this.grid) {
+      // Calculate where the shadow should be (on the interpolated terrain surface)
+      const pixelsPerLevel = this.grid.elevationPixelsPerLevel || 16;
+      const sourceTerrainY = -this.sourceElevation * pixelsPerLevel;
+      const targetTerrainY = -this.targetElevation * pixelsPerLevel;
+      const terrainY = sourceTerrainY + (targetTerrainY - sourceTerrainY) * this.movementProgress;
+
+      // Shadow Y is based on flat interpolated Y + terrain elevation offset
+      const flatY = this.sourceScreenY + (this.targetScreenY - this.sourceScreenY) * this.movementProgress;
+      if (camera) {
+        const flatScreen = camera.worldToScreen(this.screenX, flatY + terrainY);
+        shadowY = flatScreen.y + 4;
+      } else {
+        shadowY = flatY + terrainY + 4;
+      }
+    }
+
     ctx.beginPath();
-    ctx.ellipse(drawX, drawY + 4, unitRadius * 0.8, unitRadius * 0.3, 0, 0, Math.PI * 2);
+    ctx.ellipse(drawX, shadowY, unitRadius * 0.8, unitRadius * 0.3, 0, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     ctx.fill();
 

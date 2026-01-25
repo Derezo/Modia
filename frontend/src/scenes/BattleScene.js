@@ -1,3 +1,31 @@
+/**
+ * @module BattleScene
+ * @description Orchestrates tactical turn-based combat on an isometric grid with camera system.
+ *
+ * Key responsibilities:
+ * - Battle initialization and state management (units, turns, actions)
+ * - Isometric grid rendering with tile cycling for overlapping elevations
+ * - Unit movement with height animation and occlusion transparency
+ * - Input handling (mouse, touch, keyboard) with radial/context menus
+ * - WebSocket event handling for multiplayer sync
+ * - Camera control and battle intro/outro sequences
+ *
+ * Tile Cycling System:
+ * - Auto-cycles through overlapping elevated tiles every 1.5 seconds
+ * - Manual cycling via Tab key or mobile long-press (400ms)
+ * - Visual indicator shows current/total candidates and cycle progress
+ *
+ * Height Movement:
+ * - Units animate with parabolic arc when moving between elevations
+ * - Shadow follows terrain surface during movement
+ * - Occlusion cache updates per-frame for transparent blocking tiles
+ *
+ * @see BattleGrid.js - Grid rendering and coordinate conversion
+ * @see BattleUnit.js - Unit state, animation, and elevation tracking
+ * @see BattleUI.js - HUD elements and action menus
+ * @see BattleWebSocketManager.js - Real-time event handling
+ * @see BattleCamera.js - Viewport and follow behavior
+ */
 import { Scene } from './Scene.js';
 import { BattleGrid } from '../battle/BattleGrid.js';
 import { BattleUnit } from '../battle/BattleUnit.js';
@@ -58,6 +86,16 @@ export class BattleScene extends Scene {
     // Mobile/touch support for terrain preview
     this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.selectedMoveTile = null; // For two-tap movement on mobile
+
+    // Tile cycling for overlapping elevations
+    this.tileCandidates = [];           // All candidate tiles at hover position
+    this.tileCycleIndex = 0;            // Currently selected candidate index
+    this.tileCycleTimer = 0;            // Timer for auto-cycling (ms)
+    this.tileCyclePaused = false;       // Pause when user manually selects
+    this.tileCycleDuration = 1500;      // 1.5 second auto-cycle interval
+    this.lastTileCyclePosition = null;  // Track position changes to reset cycling
+    this.longPressTimer = null;         // Mobile long-press timer for manual cycling
+    this.longPressStartPos = null;      // Position at long-press start
 
     // Movement range (base value, could be modified by stats)
     this.movementRange = 3;
@@ -308,6 +346,14 @@ export class BattleScene extends Scene {
       this.abortController = null;
     }
 
+    // Clean up tile cycling long-press timer
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    this.longPressStartPos = null;
+    this.tileCandidates = [];
+
     // Clean up PvP turn timer
     if (this.pvpTurnTimer) {
       clearInterval(this.pvpTurnTimer);
@@ -488,8 +534,27 @@ export class BattleScene extends Scene {
         this.camera.updatePan(pos.x, pos.y);
       }
 
-      // Update hovered tile (with camera transform)
-      this.hoveredTile = this.grid.getTileAtScreen(pos.x, pos.y, this.camera);
+      // Get all tile candidates for cycling (overlapping elevations)
+      const candidates = this.grid.getTileAtScreen(pos.x, pos.y, this.camera, true);
+
+      // Check if position changed significantly (reset cycling)
+      const posKey = `${Math.round(pos.x / 10)},${Math.round(pos.y / 10)}`;
+      if (this.lastTileCyclePosition !== posKey) {
+        this.lastTileCyclePosition = posKey;
+        this.tileCandidates = candidates;
+        this.tileCycleIndex = 0;
+        this.tileCycleTimer = 0;
+        this.tileCyclePaused = false;
+      }
+
+      // Update hovered tile based on current cycle index (with bounds check)
+      if (candidates.length > 0) {
+        const safeIndex = Math.min(this.tileCycleIndex, candidates.length - 1);
+        const selectedCandidate = candidates[safeIndex];
+        this.hoveredTile = { x: selectedCandidate.x, y: selectedCandidate.y };
+      } else {
+        this.hoveredTile = null;
+      }
 
       // Update target info if hovering over unit
       if (this.hoveredTile) {
@@ -577,6 +642,61 @@ export class BattleScene extends Scene {
         e.preventDefault();
         this.cancelAction();
       }
+
+      // Tab - manual tile cycling (for overlapping tiles)
+      if (e.code === 'Tab' && this.tileCandidates.length > 1) {
+        e.preventDefault();
+        this.cycleTileManual();
+      }
+    }, opts);
+
+    // Mobile long-press for tile cycling
+    canvas.addEventListener('touchstart', (e) => {
+      if (this.tileCandidates.length <= 1) return;
+
+      const touch = e.touches[0];
+      this.longPressStartPos = { x: touch.clientX, y: touch.clientY };
+
+      // Start long-press timer (400ms)
+      this.longPressTimer = setTimeout(() => {
+        this.cycleTileManual();
+        // Provide haptic feedback if available
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+      }, 400);
+    }, opts);
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (!this.longPressTimer || !this.longPressStartPos) return;
+
+      const touch = e.touches[0];
+      const dx = touch.clientX - this.longPressStartPos.x;
+      const dy = touch.clientY - this.longPressStartPos.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      // Cancel long-press if finger moved more than 10px
+      if (dist > 10) {
+        clearTimeout(this.longPressTimer);
+        this.longPressTimer = null;
+        this.longPressStartPos = null;
+      }
+    }, opts);
+
+    canvas.addEventListener('touchend', () => {
+      if (this.longPressTimer) {
+        clearTimeout(this.longPressTimer);
+        this.longPressTimer = null;
+      }
+      this.longPressStartPos = null;
+    }, opts);
+
+    canvas.addEventListener('touchcancel', () => {
+      if (this.longPressTimer) {
+        clearTimeout(this.longPressTimer);
+        this.longPressTimer = null;
+      }
+      this.longPressStartPos = null;
     }, opts);
   }
 
@@ -2400,8 +2520,142 @@ export class BattleScene extends Scene {
     // Update terrain tooltip (DOM-based)
     this.updateTerrainTooltip();
 
+    // Update tile cycling for overlapping elevations
+    this.updateTileCycling(deltaTime);
+
     // Clear input state
     this.game.input.clearFrameState();
+  }
+
+  /**
+   * Update tile cycling for overlapping elevated tiles
+   * Auto-cycles through candidates every 1.5 seconds when multiple tiles overlap
+   * @param {number} deltaTime - Time since last frame in milliseconds
+   */
+  updateTileCycling(deltaTime) {
+    // Skip if only 0 or 1 candidate, or if cycling is paused (manual selection)
+    if (this.tileCandidates.length <= 1 || this.tileCyclePaused) {
+      return;
+    }
+
+    // Accumulate time
+    this.tileCycleTimer += deltaTime;
+
+    // Cycle to next candidate when timer reaches threshold
+    if (this.tileCycleTimer >= this.tileCycleDuration) {
+      this.tileCycleTimer = 0;
+      this.tileCycleIndex = (this.tileCycleIndex + 1) % this.tileCandidates.length;
+
+      // Update hovered tile
+      const selectedCandidate = this.tileCandidates[this.tileCycleIndex];
+      this.hoveredTile = { x: selectedCandidate.x, y: selectedCandidate.y };
+
+      // Update damage preview for new hovered tile
+      const pos = this.game.input.getPointerPosition();
+      this.updateDamagePreview(this.hoveredTile, pos);
+    }
+  }
+
+  /**
+   * Manually cycle to next tile candidate (for mobile long-press or keyboard)
+   */
+  cycleTileManual() {
+    if (this.tileCandidates.length <= 1) return;
+
+    // Pause auto-cycling when user manually cycles
+    this.tileCyclePaused = true;
+    this.tileCycleTimer = 0;
+
+    // Cycle to next candidate
+    this.tileCycleIndex = (this.tileCycleIndex + 1) % this.tileCandidates.length;
+
+    // Update hovered tile
+    const selectedCandidate = this.tileCandidates[this.tileCycleIndex];
+    this.hoveredTile = { x: selectedCandidate.x, y: selectedCandidate.y };
+
+    // Update damage preview
+    const pos = this.game.input.getPointerPosition();
+    this.updateDamagePreview(this.hoveredTile, pos);
+  }
+
+  /**
+   * Render tile cycle indicator when multiple tiles overlap at hover position
+   * Shows "1/3" style counter with progress arc for auto-cycle timer
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   */
+  renderTileCycleIndicator(ctx) {
+    // Only show when multiple candidates exist
+    if (this.tileCandidates.length <= 1 || !this.hoveredTile) return;
+
+    // Get screen position of hovered tile
+    const worldPos = this.grid.gridToScreenWorld(this.hoveredTile.x, this.hoveredTile.y);
+    const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
+
+    // Position indicator at top-right of tile
+    const indicatorX = screenPos.x + 24;
+    const indicatorY = screenPos.y - 20;
+    const radius = 14;
+
+    // Draw background circle
+    ctx.beginPath();
+    ctx.arc(indicatorX, indicatorY, radius, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fill();
+
+    // Draw progress arc (if not paused)
+    if (!this.tileCyclePaused) {
+      const progress = this.tileCycleTimer / this.tileCycleDuration;
+      const startAngle = -Math.PI / 2; // Start from top
+      const endAngle = startAngle + (progress * Math.PI * 2);
+
+      ctx.beginPath();
+      ctx.arc(indicatorX, indicatorY, radius - 2, startAngle, endAngle);
+      ctx.strokeStyle = 'rgba(100, 180, 255, 0.8)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    } else {
+      // Show paused indicator (full ring in different color)
+      ctx.beginPath();
+      ctx.arc(indicatorX, indicatorY, radius - 2, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 200, 100, 0.6)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Draw border
+    ctx.beginPath();
+    ctx.arc(indicatorX, indicatorY, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Draw counter text "1/3"
+    const currentIndex = this.tileCycleIndex + 1;
+    const totalCount = this.tileCandidates.length;
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${currentIndex}/${totalCount}`, indicatorX, indicatorY);
+
+    // Draw elevation info below counter
+    const currentCandidate = this.tileCandidates[this.tileCycleIndex];
+    if (currentCandidate && currentCandidate.elevation !== 0) {
+      const elevText = currentCandidate.elevation > 0
+        ? `+${currentCandidate.elevation}`
+        : `${currentCandidate.elevation}`;
+      ctx.fillStyle = 'rgba(200, 200, 255, 0.9)';
+      ctx.font = '9px Arial';
+      ctx.fillText(elevText, indicatorX, indicatorY + radius + 8);
+    }
+
+    // Draw hint text (Tab to cycle)
+    if (!this.isTouchDevice && this.tileCandidates.length > 1) {
+      ctx.fillStyle = 'rgba(180, 180, 180, 0.7)';
+      ctx.font = '8px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Tab', indicatorX, indicatorY - radius - 6);
+    }
   }
 
   /**
@@ -2513,6 +2767,11 @@ export class BattleScene extends Scene {
       }
     }
 
+    // Update occlusion cache with current unit positions before rendering
+    const aliveUnits = Array.from(this.units.values()).filter(u => u.isAlive());
+    this.grid.invalidateOcclusionCache();
+    this.grid.updateOcclusionCache(aliveUnits);
+
     // Render grid with highlights and camera (includes intent highlights from WebSocket)
     this.grid.renderWithIntentHighlights(ctx, highlights, this.camera);
 
@@ -2520,6 +2779,9 @@ export class BattleScene extends Scene {
     if (this.gridCursor) {
       this.gridCursor.render(ctx, this.camera);
     }
+
+    // Render tile cycle indicator when multiple tiles overlap
+    this.renderTileCycleIndicator(ctx);
 
     // Sort and render units (by Y position for depth)
     const allUnits = Array.from(this.units.values());
