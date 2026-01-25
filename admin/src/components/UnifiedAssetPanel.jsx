@@ -1,12 +1,13 @@
 /**
- * UnifiedAssetPanel - Split panel showing console output and generated assets
+ * UnifiedAssetPanel - Tabbed panel showing queue, console output, and generated assets
  *
- * Layout:
- * - Left side (40%): Console output with source filters
- * - Right side (60%): Generated assets grid with preview cards
+ * Tabs:
+ * - Queue: Items marked for regeneration, grouped by category
+ * - Console: Real-time stdout from generation processes
+ * - Assets: Recently generated assets grid
  */
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import {
   TrashIcon,
   ImageIcon,
@@ -17,11 +18,21 @@ import {
   StopIcon,
   PauseIcon,
   PlayIcon,
+  ListBulletIcon,
+  RocketIcon,
 } from '@radix-ui/react-icons';
 
 import { useUnifiedGeneration } from '../hooks/useUnifiedGeneration';
+import { useRegenerationQueue } from '../hooks/useRegenerationQueue';
 import AssetPreviewCard from './AssetPreviewCard';
 import ProgressBar from './ProgressBar';
+
+// Panel tabs
+const PANEL_TABS = {
+  QUEUE: 'queue',
+  CONSOLE: 'console',
+  ASSETS: 'assets',
+};
 
 // Source filter options
 const SOURCE_FILTERS = [
@@ -43,6 +54,235 @@ const SOURCE_TAGS = {
   music: '[MUS]',
   sfx: '[SFX]',
 };
+
+// Category display labels
+const CATEGORY_LABELS = {
+  tiles: 'Tiles',
+  portraits: 'Portraits',
+  items: 'Items',
+  icons: 'Icons',
+  nodes: 'Nodes',
+  overlays: 'Overlays',
+  music: 'Music',
+  sfx: 'SFX',
+};
+
+/**
+ * Clickable source filter tabs
+ */
+function SourceFilterTabs({ value, onChange }) {
+  return (
+    <div className="flex items-center gap-1 bg-midnight-800 rounded-lg p-0.5">
+      {SOURCE_FILTERS.map(({ value: filterValue, label, icon: Icon }) => (
+        <button
+          key={filterValue}
+          onClick={() => onChange(filterValue)}
+          className={`px-3 py-1 text-xs rounded transition-colors flex items-center gap-1.5 ${
+            value === filterValue
+              ? 'bg-midnight-600 text-parchment-100'
+              : 'text-parchment-400 hover:text-parchment-200 hover:bg-midnight-700'
+          }`}
+        >
+          {Icon && <Icon className="w-3 h-3" />}
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Queue panel showing items marked for regeneration
+ */
+function QueuePanel({
+  queue,
+  totalCount,
+  loading,
+  onRemoveItem,
+  onClearCategory,
+  onClearAll,
+  onStartGeneration,
+}) {
+  // Group queue items by source type (images vs audio)
+  const groupedQueue = useMemo(() => {
+    const imageCategories = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays'];
+    const audioCategories = ['music', 'sfx'];
+
+    const images = {};
+    const audio = {};
+
+    for (const [category, items] of Object.entries(queue)) {
+      if (imageCategories.includes(category)) {
+        images[category] = items;
+      } else if (audioCategories.includes(category)) {
+        audio[category] = items;
+      }
+    }
+
+    return { images, audio };
+  }, [queue]);
+
+  const imageCount = useMemo(() => {
+    return Object.values(groupedQueue.images).reduce((sum, items) => sum + items.length, 0);
+  }, [groupedQueue.images]);
+
+  const audioCount = useMemo(() => {
+    return Object.values(groupedQueue.audio).reduce((sum, items) => sum + items.length, 0);
+  }, [groupedQueue.audio]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full text-parchment-500">
+        <div className="animate-spin mr-2">
+          <RocketIcon className="w-5 h-5" />
+        </div>
+        Loading queue...
+      </div>
+    );
+  }
+
+  if (totalCount === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-parchment-500">
+        <ListBulletIcon className="w-10 h-10 mb-3 opacity-50" />
+        <p className="text-lg font-medium">Queue is empty</p>
+        <p className="text-sm mt-1">Mark assets for regeneration to add them here</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Queue header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-midnight-700 bg-midnight-900/50">
+        <div className="flex items-center gap-3">
+          <ListBulletIcon className="w-5 h-5 text-accent-gold" />
+          <span className="font-medium text-parchment-100">Regeneration Queue</span>
+          <span className="text-sm text-parchment-400">({totalCount} items)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onClearAll}
+            className="px-3 py-1.5 text-xs text-parchment-400 hover:text-parchment-200 hover:bg-midnight-700 rounded transition-colors"
+          >
+            Clear All
+          </button>
+          <button
+            onClick={() => onStartGeneration()}
+            className="px-3 py-1.5 text-xs bg-accent-gold text-midnight-950 font-medium rounded hover:bg-accent-gold/90 transition-colors flex items-center gap-1.5"
+          >
+            <RocketIcon className="w-3 h-3" />
+            Generate All
+          </button>
+        </div>
+      </div>
+
+      {/* Queue content */}
+      <div className="flex-1 overflow-y-auto p-4 bg-midnight-950">
+        {/* Image categories */}
+        {imageCount > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <ImageIcon className="w-4 h-4 text-blue-400" />
+              <span className="text-sm font-medium text-parchment-200">Images ({imageCount})</span>
+            </div>
+            <div className="space-y-3">
+              {Object.entries(groupedQueue.images).map(([category, items]) => (
+                <QueueCategorySection
+                  key={category}
+                  category={category}
+                  items={items}
+                  onRemoveItem={onRemoveItem}
+                  onClearCategory={onClearCategory}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Audio categories */}
+        {audioCount > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <SpeakerLoudIcon className="w-4 h-4 text-purple-400" />
+              <span className="text-sm font-medium text-parchment-200">Audio ({audioCount})</span>
+            </div>
+            <div className="space-y-3">
+              {Object.entries(groupedQueue.audio).map(([category, items]) => (
+                <QueueCategorySection
+                  key={category}
+                  category={category}
+                  items={items}
+                  onRemoveItem={onRemoveItem}
+                  onClearCategory={onClearCategory}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Category section within the queue panel
+ */
+function QueueCategorySection({ category, items, onRemoveItem, onClearCategory }) {
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <div className="bg-midnight-800/50 rounded-lg border border-midnight-700">
+      {/* Category header */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-3 py-2 hover:bg-midnight-700/50 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-parchment-200">
+            {CATEGORY_LABELS[category] || category}
+          </span>
+          <span className="text-xs text-parchment-500">({items.length})</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClearCategory(category);
+            }}
+            className="px-2 py-0.5 text-xs text-parchment-500 hover:text-accent-ruby hover:bg-midnight-700 rounded transition-colors"
+          >
+            Clear
+          </button>
+          <span className="text-parchment-500">{expanded ? '-' : '+'}</span>
+        </div>
+      </button>
+
+      {/* Category items */}
+      {expanded && (
+        <div className="px-3 pb-3 flex flex-wrap gap-2">
+          {items.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center gap-1.5 px-2 py-1 bg-midnight-700 rounded text-xs text-parchment-300 group"
+            >
+              <span className="truncate max-w-[150px]" title={item.id}>
+                {item.id}
+              </span>
+              <button
+                onClick={() => onRemoveItem(category, item.id)}
+                className="text-parchment-500 hover:text-accent-ruby opacity-0 group-hover:opacity-100 transition-opacity"
+                title="Remove from queue"
+              >
+                <Cross2Icon className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Console output panel with source filtering
@@ -83,16 +323,7 @@ function ConsolePanel({ stdout, clearStdout, sourceFilter, onSourceFilterChange 
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Source filter dropdown */}
-          <select
-            value={sourceFilter}
-            onChange={(e) => onSourceFilterChange(e.target.value)}
-            className="text-xs bg-midnight-800 border border-midnight-600 rounded px-2 py-1 text-parchment-300"
-          >
-            {SOURCE_FILTERS.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
+          <SourceFilterTabs value={sourceFilter} onChange={onSourceFilterChange} />
 
           {/* Clear button */}
           {stdout.length > 0 && (
@@ -177,16 +408,7 @@ function AssetsPanel({ generatedAssets, clearGeneratedAssets, sourceFilter, onSo
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Source filter dropdown */}
-          <select
-            value={sourceFilter}
-            onChange={(e) => onSourceFilterChange(e.target.value)}
-            className="text-xs bg-midnight-800 border border-midnight-600 rounded px-2 py-1 text-parchment-300"
-          >
-            {SOURCE_FILTERS.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
+          <SourceFilterTabs value={sourceFilter} onChange={onSourceFilterChange} />
 
           {/* Clear button */}
           {generatedAssets.length > 0 && (
@@ -224,7 +446,14 @@ function AssetsPanel({ generatedAssets, clearGeneratedAssets, sourceFilter, onSo
 /**
  * Main UnifiedAssetPanel component
  */
-export default function UnifiedAssetPanel({ onClose }) {
+export default function UnifiedAssetPanel({
+  onClose,
+  activePanel: controlledActivePanel,
+  onPanelChange,
+  queueData: externalQueueData,
+  queueTotalCount: externalQueueTotalCount,
+  onRefreshQueue,
+}) {
   const {
     queues,
     stdout,
@@ -236,8 +465,66 @@ export default function UnifiedAssetPanel({ onClose }) {
     resumeQueue,
   } = useUnifiedGeneration();
 
-  const [consoleFilter, setConsoleFilter] = useState('all');
-  const [assetsFilter, setAssetsFilter] = useState('all');
+  // Use internal queue hook if not provided externally
+  const internalQueue = useRegenerationQueue();
+  const queueData = externalQueueData ?? internalQueue.queue;
+  const queueTotalCount = externalQueueTotalCount ?? internalQueue.totalCount;
+  const queueLoading = internalQueue.loading;
+
+  const [activePanel, setActivePanel] = useState(controlledActivePanel || PANEL_TABS.CONSOLE);
+  const [sourceFilter, setSourceFilter] = useState('all');
+
+  // Sync with controlled activePanel prop
+  useEffect(() => {
+    if (controlledActivePanel && controlledActivePanel !== activePanel) {
+      setActivePanel(controlledActivePanel);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [controlledActivePanel]);
+
+  // Handle panel change
+  const handlePanelChange = useCallback((panel) => {
+    setActivePanel(panel);
+    onPanelChange?.(panel);
+  }, [onPanelChange]);
+
+  // Queue actions with error handling
+  const handleRemoveItem = useCallback(async (category, id) => {
+    try {
+      await internalQueue.markItem(category, id, false);
+      onRefreshQueue?.();
+    } catch (err) {
+      console.error('[UnifiedAssetPanel] Failed to remove item:', err);
+    }
+  }, [internalQueue, onRefreshQueue]);
+
+  const handleClearCategory = useCallback(async (category) => {
+    try {
+      await internalQueue.clearCategory(category);
+      onRefreshQueue?.();
+    } catch (err) {
+      console.error('[UnifiedAssetPanel] Failed to clear category:', err);
+    }
+  }, [internalQueue, onRefreshQueue]);
+
+  const handleClearAll = useCallback(async () => {
+    try {
+      await internalQueue.clearAll();
+      onRefreshQueue?.();
+    } catch (err) {
+      console.error('[UnifiedAssetPanel] Failed to clear queue:', err);
+    }
+  }, [internalQueue, onRefreshQueue]);
+
+  const handleStartGeneration = useCallback(async () => {
+    try {
+      await internalQueue.startBatchGeneration();
+      // Switch to console to watch progress
+      handlePanelChange(PANEL_TABS.CONSOLE);
+    } catch (err) {
+      console.error('[UnifiedAssetPanel] Failed to start generation:', err);
+    }
+  }, [internalQueue, handlePanelChange]);
 
   // Get current active job for progress display
   const activeJob = useMemo(() => {
@@ -255,6 +542,67 @@ export default function UnifiedAssetPanel({ onClose }) {
 
   return (
     <div className="fixed bottom-12 left-0 right-0 h-80 bg-midnight-900 border-t border-midnight-700 shadow-2xl z-40">
+      {/* Panel tabs */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-midnight-700 bg-midnight-850">
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => handlePanelChange(PANEL_TABS.QUEUE)}
+            className={`px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition-colors ${
+              activePanel === PANEL_TABS.QUEUE
+                ? 'bg-midnight-700 text-parchment-100'
+                : 'text-parchment-400 hover:text-parchment-200 hover:bg-midnight-800'
+            }`}
+          >
+            <ListBulletIcon className="w-4 h-4" />
+            Queue
+            {queueTotalCount > 0 && (
+              <span className="px-1.5 py-0.5 text-xs bg-accent-gold/20 text-accent-gold rounded">
+                {queueTotalCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => handlePanelChange(PANEL_TABS.CONSOLE)}
+            className={`px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition-colors ${
+              activePanel === PANEL_TABS.CONSOLE
+                ? 'bg-midnight-700 text-parchment-100'
+                : 'text-parchment-400 hover:text-parchment-200 hover:bg-midnight-800'
+            }`}
+          >
+            <CodeIcon className="w-4 h-4" />
+            Console
+            {stdout.length > 0 && (
+              <span className="text-xs text-parchment-500">({stdout.length})</span>
+            )}
+          </button>
+          <button
+            onClick={() => handlePanelChange(PANEL_TABS.ASSETS)}
+            className={`px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition-colors ${
+              activePanel === PANEL_TABS.ASSETS
+                ? 'bg-midnight-700 text-parchment-100'
+                : 'text-parchment-400 hover:text-parchment-200 hover:bg-midnight-800'
+            }`}
+          >
+            <ImageIcon className="w-4 h-4" />
+            Assets
+            {generatedAssets.length > 0 && (
+              <span className="text-xs text-accent-emerald">({generatedAssets.length})</span>
+            )}
+          </button>
+        </div>
+
+        {/* Close button */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-1 text-parchment-500 hover:text-parchment-300 hover:bg-midnight-700 rounded transition-colors"
+            title="Close panel"
+          >
+            <Cross2Icon className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
       {/* Progress bar (when job is running) */}
       {activeJob && activeProgress && (
         <div className="px-4 py-2 bg-midnight-850 border-b border-midnight-700">
@@ -301,39 +649,40 @@ export default function UnifiedAssetPanel({ onClose }) {
         </div>
       )}
 
-      {/* Split panel */}
-      <div className="flex h-full" style={{ height: activeJob && activeProgress ? 'calc(100% - 48px)' : '100%' }}>
-        {/* Left side: Console (40%) */}
-        <div className="w-2/5 border-r border-midnight-700 relative">
-          <ConsolePanel
-            stdout={stdout}
-            clearStdout={clearStdout}
-            sourceFilter={consoleFilter}
-            onSourceFilterChange={setConsoleFilter}
+      {/* Panel content */}
+      <div className="h-full" style={{ height: activeJob && activeProgress ? 'calc(100% - 92px)' : 'calc(100% - 44px)' }}>
+        {activePanel === PANEL_TABS.QUEUE && (
+          <QueuePanel
+            queue={queueData}
+            totalCount={queueTotalCount}
+            loading={queueLoading}
+            onRemoveItem={handleRemoveItem}
+            onClearCategory={handleClearCategory}
+            onClearAll={handleClearAll}
+            onStartGeneration={handleStartGeneration}
           />
-        </div>
+        )}
 
-        {/* Right side: Assets (60%) */}
-        <div className="w-3/5">
+        {activePanel === PANEL_TABS.CONSOLE && (
+          <div className="h-full relative">
+            <ConsolePanel
+              stdout={stdout}
+              clearStdout={clearStdout}
+              sourceFilter={sourceFilter}
+              onSourceFilterChange={setSourceFilter}
+            />
+          </div>
+        )}
+
+        {activePanel === PANEL_TABS.ASSETS && (
           <AssetsPanel
             generatedAssets={generatedAssets}
             clearGeneratedAssets={clearGeneratedAssets}
-            sourceFilter={assetsFilter}
-            onSourceFilterChange={setAssetsFilter}
+            sourceFilter={sourceFilter}
+            onSourceFilterChange={setSourceFilter}
           />
-        </div>
+        )}
       </div>
-
-      {/* Close button (optional) */}
-      {onClose && (
-        <button
-          onClick={onClose}
-          className="absolute top-2 right-2 p-1 text-parchment-500 hover:text-parchment-300 hover:bg-midnight-700 rounded transition-colors"
-          title="Close panel"
-        >
-          <Cross2Icon className="w-4 h-4" />
-        </button>
-      )}
     </div>
   );
 }

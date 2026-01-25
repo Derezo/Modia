@@ -1,4 +1,13 @@
 /**
+ * @deprecated This component has been replaced by UnifiedAssetPanel in Layout.jsx.
+ * The unified panel provides consolidated console output and asset preview for all
+ * generation sources (images, music, SFX) via the UnifiedGenerationBar at the bottom
+ * of every page. This file is kept for reference only.
+ *
+ * @see UnifiedAssetPanel.jsx - Replacement component
+ * @see UnifiedGenerationBar.jsx - Bottom status bar
+ * @see useUnifiedGeneration.js - Replacement hook
+ *
  * GenerationConsole - Docked console with tabs for stdout and live gallery
  */
 

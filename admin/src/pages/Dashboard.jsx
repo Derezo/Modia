@@ -17,7 +17,6 @@ import {
 } from '@radix-ui/react-icons';
 
 import StatsCard from '../components/StatsCard';
-import GenerationConsole from '../components/GenerationConsole';
 import { useStats, useQueue, useApiStatus } from '../hooks/useAssets';
 import { useAudioStats } from '../hooks/useAudioAssets';
 import { useActivityLog } from '../hooks/useActivityLog';
@@ -34,7 +33,6 @@ export default function Dashboard() {
   const { error: statusError } = useApiStatus();
   const { activities, loading: activitiesLoading, refetch: refetchActivities } = useActivityLog({ limit: 10 });
 
-  const [consoleOpen, setConsoleOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
   const [backupCategory, setBackupCategory] = useState('all');
@@ -488,11 +486,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Generation Console - Real-time WebSocket-powered console */}
-      <GenerationConsole
-        minimized={!consoleOpen}
-        onMinimizeChange={(minimized) => setConsoleOpen(!minimized)}
-      />
     </div>
   );
 }

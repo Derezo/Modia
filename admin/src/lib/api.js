@@ -294,6 +294,102 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ all: true }),
     }),
+
+  // ============================================
+  // Regeneration Queue
+  // ============================================
+
+  /**
+   * Get the unified regeneration queue across all asset types
+   * @returns {Promise<object>} Queue with items grouped by category
+   */
+  getRegenerationQueue: () => fetchAPI('/regeneration-queue'),
+
+  /**
+   * Mark a single asset for regeneration
+   * @param {string} category - Asset category (tiles, portraits, items, icons, nodes, music, sfx)
+   * @param {string} id - Asset ID
+   * @param {boolean} mark - True to mark, false to unmark
+   * @returns {Promise<object>} Updated asset status
+   */
+  markForRegeneration: (category, id, mark = true) =>
+    fetchAPI(`/assets/${category}/${id}/mark-regeneration`, {
+      method: 'PUT',
+      body: JSON.stringify({ mark }),
+    }),
+
+  /**
+   * Mark multiple assets for regeneration
+   * @param {string} category - Asset category
+   * @param {string[]} ids - Array of asset IDs
+   * @param {boolean} mark - True to mark, false to unmark
+   * @returns {Promise<object>} Result with updated count
+   */
+  markMultipleForRegeneration: (category, ids, mark = true) =>
+    fetchAPI('/assets/mark-multiple', {
+      method: 'PUT',
+      body: JSON.stringify({ category, ids, mark }),
+    }),
+
+  /**
+   * Clear all items from the regeneration queue
+   * @param {string} category - Optional category to clear (all if omitted)
+   * @returns {Promise<object>} Result with cleared count
+   */
+  clearRegenerationQueue: (category = null) =>
+    fetchAPI('/regeneration-queue/clear', {
+      method: 'POST',
+      body: JSON.stringify({ category }),
+    }),
+
+  /**
+   * Process the regeneration queue (start batch generation)
+   * Uses --queue mode for items marked with needsRegeneration
+   * @param {object} options - Generation options
+   * @param {string} options.category - Optional category to process (all if omitted)
+   * @returns {Promise<object>} Generation job info
+   */
+  processRegenerationQueue: (options = {}) =>
+    fetchAPI('/generate/regeneration-queue', {
+      method: 'POST',
+      body: JSON.stringify(options),
+    }),
+
+  // ============================================
+  // Audio Regeneration Queue
+  // ============================================
+
+  /**
+   * Get audio items marked for regeneration
+   * @returns {Promise<object>} Audio queue items grouped by type (music, sfx)
+   */
+  getAudioRegenerationQueue: () => fetchAPI('/audio/regeneration-queue'),
+
+  /**
+   * Mark a single audio asset for regeneration
+   * @param {string} audioType - 'music' or 'sfx'
+   * @param {string} id - Asset ID
+   * @param {boolean} mark - True to mark, false to unmark
+   * @returns {Promise<object>} Updated asset status
+   */
+  markAudioForRegeneration: (audioType, id, mark = true) =>
+    fetchAPI(`/audio/${audioType}/${id}/mark-regeneration`, {
+      method: 'PUT',
+      body: JSON.stringify({ mark }),
+    }),
+
+  /**
+   * Mark multiple audio assets for regeneration
+   * @param {string} audioType - 'music' or 'sfx'
+   * @param {string[]} ids - Array of asset IDs
+   * @param {boolean} mark - True to mark, false to unmark
+   * @returns {Promise<object>} Result with updated count
+   */
+  markMultipleAudioForRegeneration: (audioType, ids, mark = true) =>
+    fetchAPI('/audio/mark-multiple', {
+      method: 'PUT',
+      body: JSON.stringify({ type: audioType, ids, mark }),
+    }),
 };
 
 export default api;

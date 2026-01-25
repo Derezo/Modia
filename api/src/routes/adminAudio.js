@@ -512,6 +512,201 @@ router.get('/stats', asyncHandler(async (req, res) => {
   });
 }));
 
+// ============================================================================
+// REGENERATION QUEUE ROUTES
+// ============================================================================
+
+/**
+ * GET /api/admin/audio/regeneration-queue
+ * Get all audio assets marked for regeneration
+ */
+router.get('/regeneration-queue', asyncHandler(async (req, res) => {
+  const [musicData, sfxData] = await Promise.all([
+    loadMusicMetadata(),
+    loadSFXMetadata()
+  ]);
+
+  const queue = {};
+  let totalCount = 0;
+
+  // Filter music tracks marked for regeneration
+  const musicNeedsRegen = musicData.tracks.filter(t => t.needsRegeneration === true);
+  if (musicNeedsRegen.length > 0) {
+    queue.music = musicNeedsRegen;
+    totalCount += musicNeedsRegen.length;
+  }
+
+  // Filter SFX effects marked for regeneration
+  const sfxNeedsRegen = sfxData.effects.filter(e => e.needsRegeneration === true);
+  if (sfxNeedsRegen.length > 0) {
+    queue.sfx = sfxNeedsRegen;
+    totalCount += sfxNeedsRegen.length;
+  }
+
+  res.json({ totalCount, queue });
+}));
+
+/**
+ * PUT /api/admin/audio/:type/:id/mark-regeneration
+ * Mark a single audio asset for regeneration
+ * Body: { mark: boolean }
+ */
+router.put('/:type/:id/mark-regeneration', asyncHandler(async (req, res) => {
+  const { type, id } = req.params;
+  const { mark = true } = req.body;
+
+  if (!VALID_AUDIO_TYPES.includes(type)) {
+    throw new AppError(`Invalid audio type: ${type}. Valid: ${VALID_AUDIO_TYPES.join(', ')}`, 400);
+  }
+
+  // Load the appropriate metadata
+  let asset = null;
+  let assetPath = null;
+
+  if (type === 'music') {
+    const { tracks } = await loadMusicMetadata();
+    asset = tracks.find(t => t.id === id);
+    // Find the source file for this track
+    if (asset && asset._sourceFile) {
+      assetPath = path.join(METADATA_DIR, 'music', asset._sourceFile);
+    }
+  } else {
+    const { effects } = await loadSFXMetadata();
+    asset = effects.find(e => e.id === id);
+    if (asset && asset._sourceFile) {
+      assetPath = path.join(METADATA_DIR, 'sfx', asset._sourceFile);
+    }
+  }
+
+  if (!asset) {
+    throw new AppError(`Audio asset not found: ${type}/${id}`, 404);
+  }
+
+  // Update the asset in its source file
+  if (assetPath && existsSync(assetPath)) {
+    const fileData = await loadJsonFile(assetPath);
+    if (fileData && fileData[id]) {
+      fileData[id].needsRegeneration = mark;
+      fileData[id].regenerationQueuedAt = mark ? new Date().toISOString() : null;
+      await saveJsonFile(assetPath, fileData);
+    }
+  }
+
+  res.json({
+    message: mark ? 'Audio asset marked for regeneration' : 'Regeneration marker cleared',
+    asset: { id, type, needsRegeneration: mark }
+  });
+}));
+
+/**
+ * PUT /api/admin/audio/mark-multiple
+ * Mark multiple audio assets for regeneration
+ * Body: { type: 'music' | 'sfx', ids: string[], mark: boolean }
+ */
+router.put('/mark-multiple', asyncHandler(async (req, res) => {
+  const { type, ids, mark = true } = req.body;
+
+  if (!type || !VALID_AUDIO_TYPES.includes(type)) {
+    throw new AppError(`type must be one of: ${VALID_AUDIO_TYPES.join(', ')}`, 400);
+  }
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    throw new AppError('ids array is required', 400);
+  }
+
+  // Load the appropriate metadata
+  let assets = [];
+  let baseDir = '';
+
+  if (type === 'music') {
+    const { tracks } = await loadMusicMetadata();
+    assets = tracks;
+    baseDir = path.join(METADATA_DIR, 'music');
+  } else {
+    const { effects } = await loadSFXMetadata();
+    assets = effects;
+    baseDir = path.join(METADATA_DIR, 'sfx');
+  }
+
+  // Group assets by source file for efficient updates
+  const fileUpdates = new Map();
+  const results = { success: 0, notFound: 0 };
+
+  for (const id of ids) {
+    const asset = assets.find(a => a.id === id);
+    if (!asset) {
+      results.notFound++;
+      continue;
+    }
+
+    const sourceFile = asset._sourceFile;
+    if (!sourceFile) continue;
+
+    if (!fileUpdates.has(sourceFile)) {
+      fileUpdates.set(sourceFile, []);
+    }
+    fileUpdates.get(sourceFile).push(id);
+  }
+
+  // Apply updates to each file
+  // Audio metadata files use arrays: { tracks: [...] } for music, root array or { effects: [...] } for SFX
+  const arrayKey = type === 'music' ? 'tracks' : null; // SFX files may be root arrays or have different structure
+
+  for (const [sourceFile, assetIds] of fileUpdates) {
+    const filePath = path.join(baseDir, sourceFile);
+    if (!existsSync(filePath)) continue;
+
+    try {
+      const fileData = await loadJsonFile(filePath);
+      if (!fileData) continue;
+
+      // Get the asset array from the file
+      let assetArray;
+      if (arrayKey && fileData[arrayKey]) {
+        assetArray = fileData[arrayKey];
+      } else if (Array.isArray(fileData)) {
+        assetArray = fileData;
+      } else {
+        // Try to find any array in the file
+        const possibleKeys = ['tracks', 'effects', 'sounds'];
+        for (const key of possibleKeys) {
+          if (Array.isArray(fileData[key])) {
+            assetArray = fileData[key];
+            break;
+          }
+        }
+      }
+
+      if (!assetArray) {
+        console.warn(`[AdminAudio] Could not find asset array in ${sourceFile}`);
+        continue;
+      }
+
+      for (const id of assetIds) {
+        const assetIndex = assetArray.findIndex(a => a.id === id);
+        if (assetIndex !== -1) {
+          assetArray[assetIndex].needsRegeneration = mark;
+          assetArray[assetIndex].regenerationQueuedAt = mark ? new Date().toISOString() : null;
+          results.success++;
+        }
+      }
+
+      await saveJsonFile(filePath, fileData);
+    } catch (error) {
+      console.warn(`[AdminAudio] Failed to update ${sourceFile}:`, error.message);
+    }
+  }
+
+  res.json({
+    message: mark
+      ? `Marked ${results.success} audio assets for regeneration`
+      : `Cleared regeneration marker for ${results.success} audio assets`,
+    updated: results.success,
+    total: ids.length,
+    notFound: results.notFound
+  });
+}));
+
 /**
  * GET /api/admin/audio/:type/:id/waveform
  * Get waveform data - generates on-demand if not in metadata

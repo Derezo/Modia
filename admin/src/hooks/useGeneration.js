@@ -1,5 +1,12 @@
 /**
- * useGeneration Hook
+ * @deprecated This hook has been replaced by useUnifiedGeneration.js which provides
+ * consolidated state management for all three generation queues (images, music, SFX).
+ * The old hook only tracked image generation; the new hook tracks all sources via
+ * unified WebSocket events.
+ *
+ * @see useUnifiedGeneration.js - Replacement hook with multi-queue support
+ *
+ * useGeneration Hook (Legacy)
  * React hook for managing real-time generation state via WebSocket
  */
 
