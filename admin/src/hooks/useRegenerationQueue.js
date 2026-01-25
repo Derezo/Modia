@@ -135,13 +135,35 @@ export function useRegenerationQueue() {
    */
   const startBatchGeneration = useCallback(async (options = {}) => {
     try {
-      await api.processRegenerationQueue(options);
+      const { category } = options;
+      const isAudioCategory = category === 'music' || category === 'sfx';
+
+      if (isAudioCategory) {
+        // Use audio-specific endpoint for music/sfx
+        await api.processAudioRegenerationQueue({ type: category });
+      } else if (!category) {
+        // No category specified - process both image and audio queues
+        // Check if we have any audio items in the queue
+        const hasMusic = (queue.queue.music || []).length > 0;
+        const hasSfx = (queue.queue.sfx || []).length > 0;
+
+        // Process image queue (for image categories like tiles, portraits, etc.)
+        await api.processRegenerationQueue(options);
+
+        // Also process audio queue if there are audio items
+        if (hasMusic || hasSfx) {
+          await api.processAudioRegenerationQueue({});
+        }
+      } else {
+        // Image category - use image endpoint
+        await api.processRegenerationQueue(options);
+      }
       // Don't refresh immediately - the queue will be cleared as items are processed
     } catch (err) {
       console.error('[useRegenerationQueue] Failed to start batch generation:', err);
       setError(err.message);
     }
-  }, []);
+  }, [queue.queue]);
 
   // Fetch queue on mount
   useEffect(() => {

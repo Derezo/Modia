@@ -127,7 +127,9 @@ const {
   postProcessWall,
   postProcessSlope,
   postProcessByType,
-  postProcessWithDualWrite
+  postProcessWithDualWrite,
+  getCanonicalSizedPath,
+  generateCanonicalSizeVariants
 } = require('./resizeUtils');
 
 module.exports = {
@@ -251,5 +253,7 @@ module.exports = {
   postProcessWall,
   postProcessSlope,
   postProcessByType,
-  postProcessWithDualWrite
+  postProcessWithDualWrite,
+  getCanonicalSizedPath,
+  generateCanonicalSizeVariants
 };

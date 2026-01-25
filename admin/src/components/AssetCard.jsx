@@ -5,70 +5,7 @@
 
 import { useState, memo } from 'react';
 import { CheckIcon, ImageIcon } from '@radix-ui/react-icons';
-import { getAssetUrl, DEFAULT_SIZES } from '@shared/assetPaths.js';
-
-/**
- * Get the subcategory for an asset (handles different field names)
- */
-function getAssetSubcategory(asset, category) {
-  // Different categories use different field names
-  if (category === 'tiles') {
-    return asset._tileCategory;
-  }
-  if (category === 'items') {
-    return asset._itemCategory || asset._subcategory || asset.subcategory;
-  }
-  if (category === 'icons') {
-    return asset._iconCategory || asset._subcategory || asset.subcategory;
-  }
-  if (category === 'portraits') {
-    return asset._type || asset.type;
-  }
-  if (category === 'overlays') {
-    return asset._overlayCategory || asset._subcategory || asset.subcategory;
-  }
-  return asset._subcategory || asset.subcategory;
-}
-
-/**
- * Get the image URL for an asset based on category and metadata
- */
-function getAssetImageUrl(asset, category) {
-  const id = asset.key || asset.id;
-
-  // Determine subcategory and additional options based on category and asset metadata
-  let subcategory;
-  let extraOptions = {};
-
-  switch (category) {
-    case 'tiles':
-      subcategory = asset._biome || asset.outputPath || 'base';
-      // Pass tileCategory for walls/slopes path resolution
-      if (asset._tileCategory) {
-        extraOptions.tileCategory = asset._tileCategory;
-      }
-      break;
-    case 'portraits':
-      subcategory = (asset._type === 'enemy' || asset.type === 'enemy') ? 'enemies' : 'characters';
-      break;
-    case 'items':
-      subcategory = asset._itemCategory || asset._subcategory || asset.subcategory || 'weapons';
-      break;
-    case 'icons':
-      subcategory = asset._iconCategory || asset._subcategory || asset.subcategory || 'actions';
-      break;
-    case 'overlays':
-      subcategory = asset._overlayCategory || asset._subcategory || asset.subcategory || 'rarity';
-      break;
-    default:
-      subcategory = asset._subcategory || 'default';
-  }
-
-  // Use default size for preview (48 for icons, 64 for items, etc.)
-  const size = DEFAULT_SIZES[category];
-
-  return getAssetUrl(category, id, { subcategory, size, useLegacyPath: true, ...extraOptions });
-}
+import { getAssetImageUrl, getAssetSubcategory } from '../lib/assetPathHelper.js';
 
 /**
  * Memoized to prevent re-renders when other cards' selection changes

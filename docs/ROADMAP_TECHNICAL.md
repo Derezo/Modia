@@ -520,6 +520,65 @@ Implemented queue-based workflow for asset regeneration to replace immediate exe
 
 **Commit:** `6a17841 feat: Regeneration queue workflow for admin dashboard`
 
+### 7.12 Asset Loading System Remediation (Completed Jan 2026)
+
+Fixed admin dashboard portrait loading issues where grid thumbnails showed 404 errors while detail panes worked. Root cause was two incompatible path conventions and missing size variant generation.
+
+**Issues Fixed:**
+- Admin grid using `assetPaths.js` → `/assets/portraits/{size}/{id}.png` (404 - files didn't exist)
+- Detail pane using hardcoded `/assets/sprites/portraits/{id}.png` (worked - legacy location)
+- Python image-generator saving 1024x1024 originals to external project, JS only finding 64x64 processed files
+- Double directory bug: `ENEMY_OUTPUT_BASE` included `portraits/` but Python added it again
+
+**Solution:**
+- Created `admin/src/lib/assetPathHelper.js` - Fallback URL support for transition period
+- Updated admin components to use fallback helper with canonical path preference
+- Updated `api/src/routes/admin.js` to compute and include `path` property in responses
+- Fixed `generate-portraits.js` to copy 1024x1024 originals from external image-generator project
+- Enhanced migration script to scan external originals directory
+
+**Files Modified:**
+- `admin/src/lib/assetPathHelper.js` (new) - `getAssetUrlsWithFallback()`, `createFallbackLoader()`
+- `admin/src/components/AssetCard.jsx` - Removed legacy path params, use assetPathHelper
+- `admin/src/components/AssetDetail.jsx` - Fallback handling with `imageUrls` state
+- `admin/src/components/AssetPreviewCard.jsx` - Compute path from metadata
+- `api/src/routes/admin.js` - Added `enrichAssetWithPath()` helper
+- `scripts/ai-images/lib/resizeUtils.js` - Added `getCanonicalSizedPath()`, `generateCanonicalSizeVariants()`
+- `scripts/ai-images/generate-portraits.js` - External originals integration, fixed `ENEMY_OUTPUT_BASE`
+- `scripts/ai-images/migrate-asset-paths.js` - Scan external originals, generate all size variants
+
+**Migration Results:**
+- 318 portrait files processed
+- 315 new variants generated from 1024x1024 originals
+- All enemy portraits (enemy_cave_bat, enemy_giant_spider, etc.) now have 64/128/256 variants
+
+**New npm script:** `npm run ai:migrate-paths` - Migrate legacy assets and generate size variants
+
+### 7.13 LoRA Model Selection UI (Completed Jan 2026)
+
+Added per-asset LoRA model selection to admin dashboard detail panel, enabling style customization for individual assets.
+
+**Features:**
+- Style Model dropdown in asset detail panel with 4 LoRA options:
+  - Flat 2D Pixel Art (v1) - `GRPZA` trigger
+  - Isometric/Textured (v2) - `wbgmsst` trigger
+  - Modern Pixel Art - `umempart` trigger
+  - Retro 8-bit - `Retro Pixel` trigger
+- Category defaults shown when no per-asset selection
+- Selection saved to asset metadata JSON files
+- Regeneration uses selected model's trigger word
+
+**Files Modified:**
+- `api/src/routes/admin.js` - Added `loraModel` to allowedFields, validation, `/api/admin/config` endpoint
+- `admin/src/components/AssetDetail.jsx` - Style Model dropdown, config loading
+- `admin/src/lib/api.js` - `getConfig()` method
+- `scripts/ai-images/migrate-asset-paths.js` - One-time migration header comment
+
+**Path Verification:**
+All generation scripts (`generate-portraits.js`, `generate-items.js`, `generate-nodes.js`) confirmed to use canonical paths via `generateCanonicalSizeVariants()`. No migration needed for new assets.
+
+**Design doc:** `docs/plans/2026-01-25-lora-model-selection-design.md`
+
 ---
 
 ## 8. Technical Debt & Code Quality
@@ -621,6 +680,8 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.0 | Jan 2026 | LoRA Model Selection UI: Added Section 7.13 documenting per-asset LoRA model selection in admin dashboard. Style Model dropdown with 4 options (v1, v2, modern-pixel, retro-pixel). Added /api/admin/config endpoint for model definitions. Updated AssetDetail.jsx with dropdown and category default hints. Verified all generation scripts use canonical paths via generateCanonicalSizeVariants(). Marked migrate-asset-paths.js as one-time migration. Design doc: docs/plans/2026-01-25-lora-model-selection-design.md. |
+| 2.9 | Jan 2026 | Asset Loading System Remediation: Added Section 7.12 documenting admin dashboard asset loading fixes. Fixed two incompatible path conventions causing 404s on portrait grid. Created admin/src/lib/assetPathHelper.js with fallback URL support. Fixed generate-portraits.js to copy 1024x1024 originals from external image-generator project. Enhanced migrate-asset-paths.js to scan external originals. Fixed double directory bug (ENEMY_OUTPUT_BASE). Added npm run ai:migrate-paths script. Migrated 318 portraits with 315 new size variants generated. |
 | 2.8 | Jan 2026 | Regeneration Queue Workflow: Added Section 7.11 documenting queue-based asset regeneration workflow. Deprecated GenerationConsole in favor of UnifiedAssetPanel. Added Queue tab showing marked items grouped by category. Replaced dropdown filters with clickable tabs (All/Images/Music/SFX). Refactored bulk actions: "Add to Queue" (marks) vs "Generate Now" (immediate). New useRegenerationQueue hook. New API endpoints: mark-multiple, regeneration-queue/clear, audio regeneration queue endpoints. Commit 6a17841. |
 | 2.7 | Jan 2026 | Unified Asset Generation Dashboard: Added Section 7.10 documenting unified view for all generation queues. Created useUnifiedGeneration hook aggregating images/music/SFX queues. Added UnifiedGenerationBar (bottom status bar), UnifiedAssetPanel (split console/assets view), AssetPreviewCard (image thumbnails, audio waveforms). New API endpoints for metadata sync (sync-status, verify-status). Unified WebSocket events (asset:generation_update) with source tagging. Commit 521e3fa. |
 | 2.6 | Jan 2026 | Asset Path Standardization: Added Section 7.6 documenting unified asset path system. Rewrote shared/assetPaths.js with single getAssetPath() and getOriginalsPath() functions. Removed getLegacyPath/getStandardizedPath. Updated AssetLoader.js: basePath /assets, forest fallback, enemy_ prefix, no node_ prefix. Updated all generation scripts with new output paths. Updated metadata JSONs. Created migrate-asset-paths.js migration script. Migrated 682 assets. Renumbered sections (7.6→7.7 Pending, 7.7→7.8 Admin). |

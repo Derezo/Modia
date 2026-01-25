@@ -166,6 +166,11 @@ export function useUnifiedGeneration() {
           addStdoutLine(source, line, lineType || 'stdout');
         }
 
+        // Handle asset_generated events (real-time asset updates)
+        if (eventType === 'asset_generated' && payload.asset) {
+          addGeneratedAsset(payload.asset.type, payload.asset.path, payload.asset);
+        }
+
         // Handle progress events
         if (eventType === 'progress') {
           setQueues(prev => ({
@@ -191,8 +196,8 @@ export function useUnifiedGeneration() {
 
         // Handle job completed
         if (eventType === 'completed' && job) {
-          // Add generated assets
-          if (job.generatedAssets) {
+          // Add generated assets (may have already been added via asset_generated events)
+          if (job.generatedAssets && job.generatedAssets.length > 0) {
             job.generatedAssets.forEach(asset => {
               addGeneratedAsset(asset.type, asset.path, asset);
             });
@@ -255,22 +260,8 @@ export function useUnifiedGeneration() {
       })
     );
 
-    unsubscribers.push(
-      socket.on('generation:stdout', (payload) => {
-        const { line } = payload;
-        if (line?.text) {
-          addStdoutLine('images', line.text, line.type || 'stdout');
-
-          // Check for saved image
-          if (line.text.includes('Saved:')) {
-            const match = line.text.match(/Saved:\s*(.+\.png)/i);
-            if (match) {
-              addGeneratedAsset('image', match[1]);
-            }
-          }
-        }
-      })
-    );
+    // NOTE: generation:stdout handler removed - now handled by unified asset:generation_update events
+    // to prevent duplicate console lines
 
     unsubscribers.push(
       socket.on('generation:progress', (payload) => {
@@ -310,25 +301,13 @@ export function useUnifiedGeneration() {
 
     unsubscribers.push(
       socket.on('audio:progress', (payload) => {
-        const { line, progress } = payload;
-        // Determine source from current job and update state
+        const { progress } = payload;
+        // NOTE: stdout logging removed - now handled by unified asset:generation_update events
+        // NOTE: saved asset detection removed - now handled by unified asset_generated events
+
+        // Update progress only
         setQueues(prev => {
           const source = prev.music.current ? 'music' : prev.sfx.current ? 'sfx' : null;
-
-          // Handle stdout logging
-          if (line && source) {
-            addStdoutLine(source, line, 'stdout');
-
-            // Check for saved audio
-            if (typeof line === 'string' && line.includes('Saved:')) {
-              const match = line.match(/Saved:\s*(.+\.mp3)/i);
-              if (match) {
-                addGeneratedAsset(source, match[1]);
-              }
-            }
-          }
-
-          // Update progress
           if (source && progress) {
             return {
               ...prev,
@@ -343,18 +322,7 @@ export function useUnifiedGeneration() {
       })
     );
 
-    unsubscribers.push(
-      socket.on('audio:log', (payload) => {
-        const { line, level } = payload;
-        // Determine source from current job using ref (avoids state updater anti-pattern)
-        const currentQueues = queuesRef.current;
-        const source = currentQueues.music.current ? 'music'
-                     : currentQueues.sfx.current ? 'sfx' : null;
-        if (line && source) {
-          addStdoutLine(source, line, level === 'error' ? 'stderr' : 'stdout');
-        }
-      })
-    );
+    // NOTE: audio:log handler removed - now handled by unified asset:generation_update events
 
     unsubscribers.push(
       socket.on('audio:job_completed', (payload) => {

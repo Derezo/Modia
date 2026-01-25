@@ -17,120 +17,34 @@ import {
 
 import { api } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
+import { DEFAULT_SIZES, SIZE_PRESETS } from '@shared/assetPaths.js';
+import { getAssetSubcategory, getAssetExtraOptions, getAssetUrlsWithFallback } from '../lib/assetPathHelper.js';
 
 /**
  * Category-specific size options for preview
- * Based on actual generated image sizes per category
+ * Uses SIZE_PRESETS from shared assetPaths module
  */
-const CATEGORY_SIZE_OPTIONS = {
-  portraits: [64],  // Portraits are 64px only, no size variants
-  tiles: [64],      // Tiles are 64px only
-  items: [32, 64, 128],
-  icons: [16, 24, 32, 48, 64, 128],
-  nodes: [48, 96],
-  overlays: [32, 48, 64, 128],
-};
+const CATEGORY_SIZE_OPTIONS = SIZE_PRESETS;
 
 /**
- * Default size per category
+ * Get image URLs for asset preview using canonical paths with fallback
+ * Returns an array of URLs to try in order (canonical first, then legacy)
+ *
+ * @param {Object} asset - The asset object
+ * @param {string} category - Asset category
+ * @param {number} size - Size variant to use
+ * @returns {string[]} Array of URLs to try
  */
-const CATEGORY_DEFAULT_SIZE = {
-  portraits: 64,
-  tiles: 64,
-  items: 64,
-  icons: 32,
-  nodes: 48,
-  overlays: 64,
-};
-
-/**
- * Get the base image URL for an asset (without size suffix)
- */
-function getAssetBasePath(asset, category) {
+function getAssetImageUrls(asset, category, size) {
   const id = asset.key || asset.id;
+  const subcategory = getAssetSubcategory(asset, category);
+  const extraOptions = getAssetExtraOptions(asset, category);
 
-  switch (category) {
-    case 'tiles': {
-      const biome = asset._biome || asset.outputPath || 'base';
-      const tileCategory = asset._tileCategory || 'floors';
-      const key = asset.key || id;
-
-      // Walls and slopes are in subdirectories with different naming
-      if (tileCategory === 'walls' || key.startsWith('wall_')) {
-        // wall_base_grass -> walls/grass_wall.png
-        const match = key.match(/^wall_[^_]+_(.+)$/);
-        const terrain = match ? match[1] : key;
-        return {
-          dir: `/assets/sprites/terrain/${biome}/walls`,
-          filename: `${terrain}_wall`,
-        };
-      }
-      if (tileCategory === 'slopes' || key.startsWith('slope_') || key.startsWith('stairs_')) {
-        // slope_base_north_1 -> slopes/north_1.png
-        // stairs_base_north_1 -> slopes/stairs_north_1.png
-        let filename;
-        if (key.startsWith('stairs_')) {
-          const match = key.match(/^stairs_[^_]+_(.+)$/);
-          filename = match ? `stairs_${match[1]}` : key;
-        } else {
-          const match = key.match(/^slope_[^_]+_(.+)$/);
-          filename = match ? match[1] : key;
-        }
-        return {
-          dir: `/assets/sprites/terrain/${biome}/slopes`,
-          filename,
-        };
-      }
-      // Default: floors - use key directly
-      return {
-        dir: `/assets/sprites/terrain/${biome}`,
-        filename: key,
-      };
-    }
-    case 'portraits': {
-      if (asset._type === 'enemy' || asset.type === 'enemy') {
-        return {
-          dir: '/assets/sprites/enemies/portraits',
-          filename: id,
-        };
-      }
-      return {
-        dir: '/assets/sprites/portraits',
-        filename: id,
-      };
-    }
-    case 'items': {
-      const subcategory = asset._itemCategory || asset._subcategory || asset.subcategory || 'weapons';
-      return {
-        dir: `/assets/sprites/items/${subcategory}`,
-        filename: id,
-      };
-    }
-    case 'icons': {
-      const subcategory = asset._iconCategory || asset._subcategory || asset.subcategory || 'actions';
-      // Icons use directory-based sizing: /assets/icons/png/{size}/{subcategory}-{id}.png
-      return {
-        dir: '/assets/icons/png',
-        filename: `${subcategory}-${id}`,
-        usesDirectorySize: true,
-      };
-    }
-    case 'nodes': {
-      return {
-        dir: '/assets/sprites/nodes',
-        filename: id,
-      };
-    }
-    case 'overlays': {
-      const subcategory = asset._overlayCategory || asset._subcategory || asset.subcategory || 'rarity';
-      return {
-        dir: `/assets/sprites/overlays/${subcategory}`,
-        filename: id,
-      };
-    }
-    default:
-      return { dir: '', filename: id };
-  }
+  return getAssetUrlsWithFallback(category, id, {
+    subcategory,
+    size,
+    ...extraOptions
+  });
 }
 
 /**
@@ -427,6 +341,14 @@ export default function AssetDetail({
     notes: '',
     priority: 0,
     needsRegeneration: false,
+    loraModel: '', // Empty string means use category default
+  });
+
+  // Config state for LoRA models
+  const [loraConfig, setLoraConfig] = useState({
+    loraModels: {},       // { v1: { name, triggerWord, description }, ... }
+    categoryDefaults: {}, // { tiles: 'v2', portraits: 'v1', ... }
+    loading: true,
   });
 
   // UI state - preview size will be initialized per category
@@ -436,6 +358,26 @@ export default function AssetDetail({
   const [regenerating, setRegenerating] = useState(false);
   const [showFullPrompt, setShowFullPrompt] = useState(false);
   const [fullPromptData, setFullPromptData] = useState({ loading: false, prompt: '' });
+
+  // Load LoRA config on mount
+  useEffect(() => {
+    async function loadConfig() {
+      try {
+        const config = await api.getConfig();
+        // API returns validLoraModels (array), loraModels (full metadata), and defaultLoraByCategory (object)
+        setLoraConfig({
+          // Use full model metadata from API (includes name, triggerWord, description)
+          loraModels: config.loraModels || {},
+          categoryDefaults: config.defaultLoraByCategory || {},
+          loading: false,
+        });
+      } catch (err) {
+        console.error('Failed to load LoRA config:', err);
+        setLoraConfig(prev => ({ ...prev, loading: false }));
+      }
+    }
+    loadConfig();
+  }, []);
 
   // Initialize form data when asset changes
   useEffect(() => {
@@ -448,6 +390,7 @@ export default function AssetDetail({
         notes: asset.notes || '',
         priority: asset.priority || 0,
         needsRegeneration: asset.needsRegeneration || false,
+        loraModel: asset.loraModel || '', // Empty string means use category default
       });
       setImageError(false);
     }
@@ -456,7 +399,7 @@ export default function AssetDetail({
   // Set default preview size when category changes
   useEffect(() => {
     if (category) {
-      setPreviewSize(CATEGORY_DEFAULT_SIZE[category] || 64);
+      setPreviewSize(DEFAULT_SIZES[category] || 64);
     }
   }, [category]);
 
@@ -466,40 +409,40 @@ export default function AssetDetail({
     [category]
   );
 
-  // Get image paths (memoized to prevent useCallback recreation)
-  const basePath = useMemo(() =>
-    asset ? getAssetBasePath(asset, category) : null,
-    [asset, category]
+  // Get image URLs with fallback support (memoized for performance)
+  const imageUrls = useMemo(() =>
+    asset && previewSize ? getAssetImageUrls(asset, category, previewSize) : [],
+    [asset, category, previewSize]
   );
 
+  // Track current fallback URL index
+  const [fallbackIndex, setFallbackIndex] = useState(0);
+
+  // Reset fallback index when asset or size changes
+  useEffect(() => {
+    setFallbackIndex(0);
+  }, [asset, previewSize]);
+
   /**
-   * Get the image URL for a given size.
-   * Path format varies by category:
-   * - portraits, tiles: {dir}/{filename}.png (no size variants)
-   * - items: {dir}/{filename}_{size}.png (size suffix)
-   * - icons: {dir}/{size}/{filename}.png (directory-based sizing)
-   * - nodes, overlays: {dir}/{filename}.png (no size variants currently)
+   * Get the current image URL to display
+   * Returns the URL at the current fallback index
    */
   const getImageUrl = useCallback((size) => {
-    if (!basePath) return null;
+    if (!asset) return null;
+    const urls = getAssetImageUrls(asset, category, size);
+    return urls[fallbackIndex] || urls[0] || null;
+  }, [asset, category, fallbackIndex]);
 
-    // Icons use directory-based sizing: /assets/icons/png/{size}/{filename}.png
-    if (basePath.usesDirectorySize) {
-      return `${basePath.dir}/${size}/${basePath.filename}.png`;
+  /**
+   * Handle image load error - try next URL in fallback list
+   */
+  const handleImageError = useCallback(() => {
+    if (fallbackIndex < imageUrls.length - 1) {
+      setFallbackIndex(prev => prev + 1);
+    } else {
+      setImageError(true);
     }
-
-    // Categories with size variants use suffix format
-    const categoriesWithSizeVariants = ['items'];
-    const hasSizeVariants = categoriesWithSizeVariants.includes(category);
-
-    if (size === 'original' || !hasSizeVariants) {
-      // No size suffix - just base filename
-      return `${basePath.dir}/${basePath.filename}.png`;
-    }
-
-    // Size suffix format for items
-    return `${basePath.dir}/${basePath.filename}_${size}.png`;
-  }, [basePath, category]);
+  }, [fallbackIndex, imageUrls.length]);
 
   // Handle form field changes
   const handleChange = (field, value) => {
@@ -521,6 +464,8 @@ export default function AssetDetail({
         notes: formData.notes,
         priority: formData.priority,
         needsRegeneration: formData.needsRegeneration,
+        // Only include loraModel if explicitly set (non-empty), otherwise use category default
+        loraModel: formData.loraModel || null,
       };
 
       await api.updateAsset(category, asset.key || asset.id, updates);
@@ -630,7 +575,7 @@ export default function AssetDetail({
                         <img
                           src={getImageUrl(previewSize)}
                           alt={assetId}
-                          onError={() => setImageError(true)}
+                          onError={handleImageError}
                           className="max-w-full max-h-full object-contain"
                         />
                       ) : (
@@ -641,7 +586,7 @@ export default function AssetDetail({
                           </p>
                           {isGenerated && imageError && previewSize && (
                             <p className="text-xs mt-2 text-parchment-600 break-all">
-                              Tried: {getImageUrl(previewSize)}
+                              Tried: {imageUrls.join(', ')}
                             </p>
                           )}
                         </div>
@@ -659,6 +604,7 @@ export default function AssetDetail({
                             onClick={() => {
                               setPreviewSize(size);
                               setImageError(false);
+                              setFallbackIndex(0);
                             }}
                             className={`
                               px-3 py-1 text-sm rounded-lg transition-colors
@@ -765,6 +711,37 @@ export default function AssetDetail({
                       <EyeOpenIcon className="w-4 h-4" />
                       Preview Full Prompt
                     </button>
+                  </div>
+
+                  {/* Style Model (LoRA) */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-parchment-300">
+                      Style Model
+                    </label>
+                    <select
+                      value={formData.loraModel}
+                      onChange={(e) => handleChange('loraModel', e.target.value)}
+                      disabled={loraConfig.loading}
+                      className="w-full px-3 py-2 bg-midnight-800 border border-midnight-700 rounded-lg
+                                 text-parchment-200 focus:outline-none focus:border-accent-gold
+                                 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="">
+                        Category Default ({loraConfig.categoryDefaults[category]
+                          ? `${loraConfig.loraModels[loraConfig.categoryDefaults[category]]?.name || loraConfig.categoryDefaults[category]}`
+                          : 'loading...'})
+                      </option>
+                      {Object.entries(loraConfig.loraModels).map(([modelId, model]) => (
+                        <option key={modelId} value={modelId}>
+                          {model.name} ({modelId})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-parchment-500">
+                      Default for {category}: {loraConfig.categoryDefaults[category]
+                        ? `${loraConfig.loraModels[loraConfig.categoryDefaults[category]]?.name || loraConfig.categoryDefaults[category]}`
+                        : 'loading...'}
+                    </p>
                   </div>
 
                   {/* Seed */}

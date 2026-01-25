@@ -359,6 +359,9 @@ function setupWebSocket(server) {
                 userId = -999;
                 username = 'admin_dashboard';
 
+                // Store connection so broadcasts can find this WebSocket
+                connections.set(userId, ws);
+
                 // Don't set presence for admin dashboard
                 clearTimeout(authTimeout);
 

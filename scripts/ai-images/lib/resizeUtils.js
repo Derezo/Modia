@@ -9,6 +9,11 @@ const fs = require('fs');
 const { log, fileExists, ensureDirectoryExists } = require('./imageUtils');
 
 /**
+ * Project root directory (Modia/)
+ */
+const PROJECT_ROOT = path.resolve(__dirname, '../../..');
+
+/**
  * Standard sizes for game assets
  * Generated from 128x128 source for maximum quality
  */
@@ -1064,6 +1069,156 @@ async function postProcessWithDualWrite(imagePath, category, options = {}) {
   return { legacy: legacyResults, standardized: standardizedResults };
 }
 
+/**
+ * Dynamically import assetPaths.js (ESM module from CommonJS)
+ * Cached after first import for performance
+ * @returns {Promise<Object>} The assetPaths module
+ */
+let assetPathsCache = null;
+async function getAssetPathsModule() {
+  if (!assetPathsCache) {
+    assetPathsCache = await import('../../../shared/assetPaths.js');
+  }
+  return assetPathsCache;
+}
+
+/**
+ * Get canonical sized path for an asset using assetPaths.js conventions
+ * Size variants are siblings to originals/, not nested under it
+ *
+ * @param {string} category - Asset category (portraits, items, nodes, icons, tiles, overlays)
+ * @param {string} id - Asset identifier
+ * @param {number} size - Target size
+ * @param {Object} options - Additional options
+ * @param {string} [options.subcategory] - Subcategory for organization (items, icons, tiles)
+ * @returns {Promise<string>} Absolute path to sized variant
+ *
+ * @example
+ * await getCanonicalSizedPath('portraits', 'human_male_warrior', 64);
+ * // => '/home/wizard/Projects/Modia/frontend/public/assets/portraits/64/human_male_warrior.png'
+ *
+ * @example
+ * await getCanonicalSizedPath('items', 'sword_iron', 32, { subcategory: 'weapons' });
+ * // => '/home/wizard/Projects/Modia/frontend/public/assets/items/32/weapons/sword_iron.png'
+ */
+async function getCanonicalSizedPath(category, id, size, options = {}) {
+  const assetPaths = await getAssetPathsModule();
+
+  // getOutputPath returns path relative to project root
+  // e.g., 'frontend/public/assets/portraits/64/human_male_warrior.png'
+  const relativePath = assetPaths.getOutputPath(category, id, {
+    ...options,
+    size
+  });
+
+  return path.join(PROJECT_ROOT, relativePath);
+}
+
+/**
+ * Generate all canonical size variants for an asset
+ * Uses assetPaths.js for path conventions - size variants are siblings to originals/
+ *
+ * @param {string} sourcePath - Path to source/original image
+ * @param {string} category - Asset category (portraits, items, nodes, icons, tiles, overlays)
+ * @param {string} id - Asset identifier
+ * @param {Object} options - Additional options
+ * @param {string} [options.subcategory] - Subcategory for organization
+ * @param {number[]} [options.sizes] - Override size presets (uses category defaults if not specified)
+ * @param {boolean} [options.force=false] - Overwrite existing files
+ * @param {boolean} [options.verbose=false] - Log progress
+ * @returns {Promise<Object>} Results with generated paths and any errors
+ *
+ * @example
+ * const results = await generateCanonicalSizeVariants(
+ *   '/path/to/originals/human_male_warrior.png',
+ *   'portraits',
+ *   'human_male_warrior'
+ * );
+ * // Generates: /assets/portraits/64/human_male_warrior.png
+ * //            /assets/portraits/128/human_male_warrior.png
+ * //            /assets/portraits/256/human_male_warrior.png (if source is large enough)
+ */
+async function generateCanonicalSizeVariants(sourcePath, category, id, options = {}) {
+  const { subcategory, sizes, force = false, verbose = false } = options;
+
+  const assetPaths = await getAssetPathsModule();
+
+  // Get size presets for category (from assetPaths.js)
+  const targetSizes = sizes || assetPaths.SIZE_PRESETS[category] || [64];
+
+  const results = { success: true, generated: [], skipped: [], errors: [] };
+
+  // Check source exists
+  if (!fileExists(sourcePath)) {
+    results.success = false;
+    results.errors.push({ size: 'all', error: `Source not found: ${sourcePath}` });
+    return results;
+  }
+
+  // Get source dimensions using ImageMagick
+  const dimensions = await getImageDimensions(sourcePath);
+  if (!dimensions) {
+    results.success = false;
+    results.errors.push({ size: 'all', error: `Cannot determine dimensions for: ${sourcePath}` });
+    return results;
+  }
+
+  const sourceSize = Math.min(dimensions.width, dimensions.height);
+
+  for (const size of targetSizes) {
+    // Skip sizes larger than source (would require upscaling)
+    if (size > sourceSize) {
+      if (verbose) {
+        log(`Skipping ${size}px (source is only ${sourceSize}px)`, 'info');
+      }
+      continue;
+    }
+
+    const destPath = await getCanonicalSizedPath(category, id, size, { subcategory });
+
+    // Check if file already exists
+    if (!force && fileExists(destPath)) {
+      results.skipped.push({ size, path: destPath });
+      if (verbose) {
+        log(`Skipped (exists): ${destPath}`, 'info');
+      }
+      continue;
+    }
+
+    try {
+      // Create directory if needed
+      const destDir = path.dirname(destPath);
+      if (!fs.existsSync(destDir)) {
+        fs.mkdirSync(destDir, { recursive: true });
+      }
+
+      // Resize and save using existing resizeImage function
+      const result = await resizeImage(sourcePath, destPath, size);
+
+      if (result.success) {
+        results.generated.push({ size, path: destPath });
+        if (verbose) {
+          log(`Generated: ${destPath}`, 'success');
+        }
+      } else {
+        results.errors.push({ size, path: destPath, error: result.error });
+        results.success = false;
+        if (verbose) {
+          log(`Failed: ${destPath} - ${result.error}`, 'error');
+        }
+      }
+    } catch (error) {
+      results.errors.push({ size, path: destPath, error: error.message });
+      results.success = false;
+      if (verbose) {
+        log(`Failed: ${destPath} - ${error.message}`, 'error');
+      }
+    }
+  }
+
+  return results;
+}
+
 module.exports = {
   STANDARD_SIZES,
   SIZE_PRESETS,
@@ -1088,5 +1243,7 @@ module.exports = {
   postProcessWall,
   postProcessSlope,
   postProcessByType,
-  postProcessWithDualWrite
+  postProcessWithDualWrite,
+  getCanonicalSizedPath,
+  generateCanonicalSizeVariants
 };

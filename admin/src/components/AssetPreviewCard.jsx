@@ -51,6 +51,7 @@ function getImageUrl(imagePath) {
 
 /**
  * Format audio path for display as URL
+ * Handles paths like /assets/audio/music/regions/track.mp3
  */
 function getAudioUrl(audioPath) {
   if (!audioPath) return null;
@@ -59,13 +60,17 @@ function getAudioUrl(audioPath) {
   if (audioPath.includes('frontend/public')) {
     return audioPath.replace('frontend/public', '');
   }
-  // Already a relative path
-  if (audioPath.startsWith('/audio')) {
+  // Already a web path with /assets prefix
+  if (audioPath.startsWith('/assets/')) {
     return audioPath;
+  }
+  // Legacy path starting with /audio (add /assets prefix)
+  if (audioPath.startsWith('/audio')) {
+    return '/assets' + audioPath;
   }
   // Try to construct path from audio directory
   if (audioPath.includes('/audio/')) {
-    return '/audio/' + audioPath.split('/audio/').pop();
+    return '/assets/audio/' + audioPath.split('/audio/').pop();
   }
   return audioPath;
 }

@@ -67,12 +67,13 @@
       "region": "cave",
       "visualTraits": "large pointed ears red glowing eyes wing membrane fangs",
       "seed": 32001,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 7,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-25T22:19:00.283Z"
     },
     {
       "id": "enemy_giant_spider",
@@ -81,7 +82,7 @@
       "region": "cave",
       "visualTraits": "8 red eyes cluster mandibles hairy body segmented legs",
       "seed": 32002,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 7,
         "issues": [],
@@ -91,7 +92,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-25T22:20:36.102Z"
     },
     {
       "id": "enemy_skeleton_warrior",

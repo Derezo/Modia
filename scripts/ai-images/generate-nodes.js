@@ -27,9 +27,9 @@ const {
   getProjectRoot,
   buildThemedPrompt,
   createBackup,
-  postProcessNode,
   checkImageMagick,
-  getEffectiveLoraModel
+  getEffectiveLoraModel,
+  generateCanonicalSizeVariants
 } = require('./lib');
 
 // Configuration
@@ -363,19 +363,35 @@ async function main() {
 
         log(`Generated: ${node.id}`, 'success');
 
-        // Post-process to generate size variants
+        // Post-process to generate size variants using canonical paths
+        // Size variants are siblings to originals/ (e.g., /assets/nodes/48/, /assets/nodes/96/)
         if (checkImageMagick()) {
           const outputPath = getOutputPath(node);
-          const postResult = await postProcessNode(outputPath, {
-            force: options.force,
-            verbose: options.verbose
-          });
+          // Strip node_ prefix from ID for canonical paths
+          const nodeId = node.id.replace(/^node_/, '');
+
+          const postResult = await generateCanonicalSizeVariants(
+            outputPath,
+            'nodes',
+            nodeId,
+            {
+              sizes: [48, 96],
+              force: options.force,
+              verbose: options.verbose
+            }
+          );
+
           if (postResult.success) {
-            if (options.verbose && postResult.variants.length > 1) {
-              log(`  Size variants: ${postResult.variants.length} (source: ${postResult.sourceSize}px)`, 'info');
+            if (options.verbose && postResult.generated.length > 0) {
+              log(`  Size variants: ${postResult.generated.length} generated`, 'info');
             }
           } else if (options.verbose) {
             log(`  Warning: Post-processing failed for ${node.id}`, 'warn');
+            if (postResult.errors.length > 0) {
+              postResult.errors.forEach(err => {
+                log(`    - ${err.error}`, 'warn');
+              });
+            }
           }
         }
       } else {

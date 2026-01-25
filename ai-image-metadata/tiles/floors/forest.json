@@ -42,7 +42,8 @@
       "variant": 3,
       "prompt": "patchy forest grass with exposed roots and mushroom caps in earthy green brown #6B8E4A #5C4033",
       "outputPath": "forest",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-25T20:23:14.781Z"
     },
     {
       "key": "stone_0",

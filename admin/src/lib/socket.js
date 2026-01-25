@@ -169,6 +169,7 @@ export function connect() {
   socket.onmessage = (event) => {
     // Guard against stale callback
     if (currentConnectionId !== connectionId) {
+      console.log('[WS] Ignoring message from stale connection');
       return;
     }
 

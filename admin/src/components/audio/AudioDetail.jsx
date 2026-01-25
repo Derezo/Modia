@@ -27,12 +27,16 @@ import { formatDuration } from '../../utils/timeFormat';
 
 /**
  * Get audio file URL from asset
+ * Supports multiple path formats from metadata
  */
 function getAudioUrl(asset, audioType) {
   if (asset?.audioUrl) return asset.audioUrl;
-  if (asset?.filePath) return `/audio/${asset.filePath}`;
+  // Use path from metadata (e.g., "/assets/audio/music/regions/key.mp3")
+  if (asset?.path) return asset.path;
+  if (asset?.filePath) return `/assets/audio/${asset.filePath}`;
   if (asset?.key) {
-    return `/audio/${audioType}/${asset.key}.mp3`;
+    // Fallback with correct /assets prefix
+    return `/assets/audio/${audioType}/${asset.key}.mp3`;
   }
   return null;
 }
@@ -128,9 +132,11 @@ export default function AudioDetail({
     }
     return asset.variants.map((v) => ({
       id: v.id || v.variantId,
-      url: v.url || v.audioUrl,
+      // Use path from metadata first, then fall back to url/audioUrl
+      url: v.path || v.url || v.audioUrl,
       duration: v.duration,
       filename: v.filename,
+      isPrimary: v.isPrimary || false,
     }));
   }, [showVariants, audioType, asset?.variants]);
 

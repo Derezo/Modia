@@ -40,7 +40,7 @@ function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
     dryRun: false,
-    key: null,
+    keys: [],  // Support multiple --key arguments
     region: null,
     category: null,
     force: false,
@@ -55,7 +55,8 @@ function parseArgs() {
         options.dryRun = true;
         break;
       case '--key':
-        options.key = args[++i];
+        // Support multiple --key arguments
+        options.keys.push(args[++i]);
         break;
       case '--region':
         options.region = args[++i];
@@ -168,9 +169,9 @@ function loadAllMusicMetadata() {
 function filterTracks(tracks, options) {
   let filtered = tracks;
 
-  // Filter by specific key
-  if (options.key) {
-    filtered = filtered.filter(t => t.id === options.key);
+  // Filter by specific keys (supports multiple --key arguments)
+  if (options.keys && options.keys.length > 0) {
+    filtered = filtered.filter(t => options.keys.includes(t.id));
   }
 
   // Filter by region

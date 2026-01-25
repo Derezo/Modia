@@ -30,10 +30,10 @@ import path from 'path';
 import { promises as fs, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { AppError, asyncHandler } from '../middleware/errorHandler.js';
-import { createLimiter } from '../middleware/rateLimiterFactory.js';
 import { loadJsonFile, saveJsonFile } from '../utils/jsonFileUtils.js';
-import { VALID_CATEGORIES } from '../utils/assetConstants.js';
+import { VALID_CATEGORIES, VALID_LORA_MODELS } from '../utils/assetConstants.js';
 import adminGenerationService from '../services/adminGenerationService.js';
+import { getAssetPath, DEFAULT_SIZES } from '../../../shared/assetPaths.js';
 
 const router = express.Router();
 
@@ -177,14 +177,49 @@ function constructFullPrompt(asset, category, theme, traitData = null) {
   };
 }
 
-// Rate limiter for admin endpoints (100 requests per minute base = 500/min in dev, 200/min in prod)
-const adminRateLimiter = createLimiter({
-  name: 'admin',
-  windowMs: 60 * 1000,
-  maxRequests: 100,
-  message: 'Admin endpoint rate limit exceeded. Please wait.',
-  useUserKey: false // IP-based since no auth
-});
+/**
+ * Get the subcategory for an asset based on category
+ */
+function getAssetSubcategory(asset, category) {
+  switch (category) {
+    case 'tiles':
+      return asset._biome || asset.outputPath || 'base';
+    case 'items':
+      return asset._itemCategory || asset._subcategory || 'weapons';
+    case 'icons':
+      return asset._iconCategory || asset._subcategory || 'actions';
+    case 'overlays':
+      return asset._overlayCategory || asset._subcategory || 'rarity';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Add computed path to asset
+ */
+function enrichAssetWithPath(asset, category) {
+  const id = asset.key || asset.id;
+  const subcategory = getAssetSubcategory(asset, category);
+  const size = DEFAULT_SIZES[category];
+
+  try {
+    const extraOptions = {};
+    if (category === 'tiles' && asset._tileCategory) {
+      extraOptions.tileCategory = asset._tileCategory;
+    }
+
+    asset.path = getAssetPath(category, id, {
+      subcategory,
+      size,
+      ...extraOptions
+    });
+  } catch (e) {
+    // Category not supported by getAssetPath, skip
+  }
+
+  return asset;
+}
 
 /**
  * Middleware to check admin mode is enabled
@@ -200,9 +235,8 @@ function requireDevMode(req, res, next) {
   next();
 }
 
-// Apply dev mode check and rate limiting to all routes
+// Apply dev mode check to all routes (rate limiting removed - requireDevMode already blocks production)
 router.use(requireDevMode);
-router.use(adminRateLimiter);
 
 /**
  * Helper to ensure utilities are loaded
@@ -304,6 +338,9 @@ router.get('/assets/:category', asyncHandler(async (req, res) => {
   const total = assets.length;
   const generated = assets.filter(a => a.generated === true).length;
   const pending = total - generated;
+
+  // Add computed paths to assets
+  assets = assets.map(asset => enrichAssetWithPath(asset, category));
 
   res.json({
     category,
@@ -419,10 +456,15 @@ router.put('/assets/:category/:id', asyncHandler(async (req, res) => {
   }
 
   // Validate allowed update fields
-  const allowedFields = ['prompt', 'seed', 'evaluation', 'issues', 'notes', 'priority', 'generated', 'generatedAt', 'needsRegeneration'];
+  const allowedFields = ['prompt', 'seed', 'evaluation', 'issues', 'notes', 'priority', 'generated', 'generatedAt', 'needsRegeneration', 'loraModel'];
   const invalidFields = Object.keys(updates).filter(key => !allowedFields.includes(key));
   if (invalidFields.length > 0) {
     throw new AppError(`Invalid update fields: ${invalidFields.join(', ')}. Allowed: ${allowedFields.join(', ')}`, 400);
+  }
+
+  // Validate loraModel if provided (using centralized constant from assetConstants.js)
+  if (updates.loraModel && !VALID_LORA_MODELS.includes(updates.loraModel)) {
+    throw new AppError(`Invalid loraModel: ${updates.loraModel}. Valid: ${VALID_LORA_MODELS.join(', ')}`, 400);
   }
 
   // Find the asset to get its source file
@@ -583,16 +625,22 @@ router.post('/regeneration-queue/clear', asyncHandler(async (req, res) => {
   ensureUtilities();
 
   const { category } = req.body;
+  const AUDIO_METADATA_DIR = path.join(PROJECT_ROOT, 'audio-metadata');
+  const ALL_CATEGORIES = [...VALID_CATEGORIES, 'music', 'sfx'];
 
   // If category specified, validate it
-  if (category && !VALID_CATEGORIES.includes(category)) {
+  if (category && !ALL_CATEGORIES.includes(category)) {
     throw new AppError(`Invalid category: ${category}`, 400);
   }
 
-  const categoriesToClear = category ? [category] : VALID_CATEGORIES;
   let totalCleared = 0;
 
-  for (const cat of categoriesToClear) {
+  // Handle image categories
+  const imageCategoriesToClear = category
+    ? (VALID_CATEGORIES.includes(category) ? [category] : [])
+    : VALID_CATEGORIES;
+
+  for (const cat of imageCategoriesToClear) {
     try {
       const data = metadataUtils.loadCategoryAssets(cat);
       const needsRegen = data.assets.filter(a => a.needsRegeneration === true);
@@ -613,6 +661,68 @@ router.post('/regeneration-queue/clear', asyncHandler(async (req, res) => {
     }
   }
 
+  // Handle music if no category or category is 'music'
+  if (!category || category === 'music') {
+    try {
+      const musicManifest = await loadJsonFile(path.join(AUDIO_METADATA_DIR, 'music/manifest.json'));
+      if (musicManifest) {
+        for (const [_cat, info] of Object.entries(musicManifest.categories || {})) {
+          for (const file of (info.files || [])) {
+            const filePath = path.join(AUDIO_METADATA_DIR, 'music', file);
+            const data = await loadJsonFile(filePath);
+            if (data?.tracks) {
+              let modified = false;
+              for (const track of data.tracks) {
+                if (track.needsRegeneration === true) {
+                  track.needsRegeneration = false;
+                  delete track.regenerationQueuedAt;
+                  totalCleared++;
+                  modified = true;
+                }
+              }
+              if (modified) {
+                await saveJsonFile(filePath, data);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('[Admin] Failed to clear music queue:', error.message);
+    }
+  }
+
+  // Handle SFX if no category or category is 'sfx'
+  if (!category || category === 'sfx') {
+    try {
+      const sfxManifest = await loadJsonFile(path.join(AUDIO_METADATA_DIR, 'sfx/manifest.json'));
+      if (sfxManifest) {
+        for (const [_cat, info] of Object.entries(sfxManifest.categories || {})) {
+          for (const file of (info.files || [])) {
+            const filePath = path.join(AUDIO_METADATA_DIR, 'sfx', file);
+            const data = await loadJsonFile(filePath);
+            if (data?.effects) {
+              let modified = false;
+              for (const effect of data.effects) {
+                if (effect.needsRegeneration === true) {
+                  effect.needsRegeneration = false;
+                  delete effect.regenerationQueuedAt;
+                  totalCleared++;
+                  modified = true;
+                }
+              }
+              if (modified) {
+                await saveJsonFile(filePath, data);
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('[Admin] Failed to clear SFX queue:', error.message);
+    }
+  }
+
   res.json({
     message: `Cleared ${totalCleared} items from regeneration queue`,
     cleared: totalCleared,
@@ -622,7 +732,7 @@ router.post('/regeneration-queue/clear', asyncHandler(async (req, res) => {
 
 /**
  * GET /api/admin/regeneration-queue
- * Get all assets marked for regeneration across all categories
+ * Get all assets marked for regeneration across all categories (image + audio)
  */
 router.get('/regeneration-queue', asyncHandler(async (req, res) => {
   ensureUtilities();
@@ -630,6 +740,7 @@ router.get('/regeneration-queue', asyncHandler(async (req, res) => {
   const queue = {};
   let totalCount = 0;
 
+  // Load image assets
   for (const category of VALID_CATEGORIES) {
     try {
       const data = metadataUtils.loadCategoryAssets(category);
@@ -641,6 +752,61 @@ router.get('/regeneration-queue', asyncHandler(async (req, res) => {
     } catch (error) {
       console.warn(`[Admin] Failed to load ${category} for queue:`, error.message);
     }
+  }
+
+  // Load audio assets (music and SFX)
+  const AUDIO_METADATA_DIR = path.join(PROJECT_ROOT, 'audio-metadata');
+
+  // Load music tracks
+  try {
+    const musicManifest = await loadJsonFile(path.join(AUDIO_METADATA_DIR, 'music/manifest.json'));
+    if (musicManifest) {
+      const musicTracks = [];
+      for (const [cat, info] of Object.entries(musicManifest.categories || {})) {
+        for (const file of (info.files || [])) {
+          const data = await loadJsonFile(path.join(AUDIO_METADATA_DIR, 'music', file));
+          if (data?.tracks) {
+            for (const track of data.tracks) {
+              if (track.needsRegeneration === true) {
+                musicTracks.push({ ...track, _sourceFile: file, _category: cat });
+              }
+            }
+          }
+        }
+      }
+      if (musicTracks.length > 0) {
+        queue.music = musicTracks;
+        totalCount += musicTracks.length;
+      }
+    }
+  } catch (error) {
+    console.warn('[Admin] Failed to load music for queue:', error.message);
+  }
+
+  // Load SFX effects
+  try {
+    const sfxManifest = await loadJsonFile(path.join(AUDIO_METADATA_DIR, 'sfx/manifest.json'));
+    if (sfxManifest) {
+      const sfxEffects = [];
+      for (const [cat, info] of Object.entries(sfxManifest.categories || {})) {
+        for (const file of (info.files || [])) {
+          const data = await loadJsonFile(path.join(AUDIO_METADATA_DIR, 'sfx', file));
+          if (data?.effects) {
+            for (const effect of data.effects) {
+              if (effect.needsRegeneration === true) {
+                sfxEffects.push({ ...effect, _sourceFile: file, _category: cat });
+              }
+            }
+          }
+        }
+      }
+      if (sfxEffects.length > 0) {
+        queue.sfx = sfxEffects;
+        totalCount += sfxEffects.length;
+      }
+    }
+  } catch (error) {
+    console.warn('[Admin] Failed to load SFX for queue:', error.message);
   }
 
   res.json({
@@ -1281,6 +1447,33 @@ router.delete('/backups/:timestamp', asyncHandler(async (req, res) => {
     if (error instanceof AppError) throw error;
     throw new AppError(`Failed to delete backup: ${error.message}`, 500);
   }
+}));
+
+// ============================================================================
+// CONFIG ROUTE
+// ============================================================================
+
+/**
+ * GET /api/admin/config
+ * Get admin configuration including LoRA models and category defaults
+ * Returns validLoraModels (array of IDs), loraModels (full metadata), and defaultLoraByCategory
+ */
+router.get('/config', asyncHandler(async (req, res) => {
+  const manifestPath = path.join(METADATA_DIR, 'manifest.json');
+  const manifest = await loadJsonFile(manifestPath);
+
+  if (!manifest) {
+    throw new AppError('Manifest file not found', 404);
+  }
+
+  res.json({
+    // Array of valid model IDs (for validation)
+    validLoraModels: Object.keys(manifest.loraModels || {}),
+    // Full model metadata object (for display names, descriptions)
+    loraModels: manifest.loraModels || {},
+    // Category to default model mapping
+    defaultLoraByCategory: manifest.categoryDefaults || {}
+  });
 }));
 
 // ============================================================================
