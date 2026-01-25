@@ -10,6 +10,7 @@ This document archives all completed features, resolved issues, and historical d
 
 | Version | Date | Major Accomplishments |
 |---------|------|----------------------|
+| 9.11 | Jan 2026 | Battle Tile Rendering & Height System - Tile cycling for overlapping elevations, occlusion transparency, height movement animation with parabolic arc |
 | 9.10 | Jan 2026 | Security & Testing Infrastructure - Redis-backed rate limiting, 70+ endpoint protection, Artillery load testing, E2E expansion (character creation, battle flow, error handling), enhanced health checks |
 | 9.9 | Jan 2026 | Documentation Audit & Consolidation - Formula updates (level 2.8, skill polynomial costs), implementation status marking, roadmap verification, ~78% documentation alignment |
 | 9.8 | Jan 2026 | Battle Map Visual Overhaul - 64 isometric terrain sprites, elevation rendering, movement sync fix (flat modifiers), removed decorative obstacles and cover system |
