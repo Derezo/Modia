@@ -531,7 +531,11 @@ export class CharacterCreateScene extends Scene {
     if (!previewEl) return;
 
     if (this.selectedRace && this.selectedClass && this.selectedGender) {
-      const portraitUrl = `/assets/sprites/portraits/${this.selectedRace}_${this.selectedGender}_${this.selectedClass}.png`;
+      const portraitUrl = this.game.assetLoader.getPortraitUrl({
+        race: this.selectedRace,
+        gender: this.selectedGender,
+        class: this.selectedClass
+      }, 64);
       previewEl.classList.add('has-portrait');
       previewEl.innerHTML = `
         <img

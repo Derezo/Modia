@@ -32,6 +32,7 @@ import {
   PARCHMENT_RADIUS,
   getParchmentBorder
 } from '../../ui/parchment/ParchmentTheme.js';
+import { getAssetUrl, getOptimalSize } from '@shared/assetPaths.js';
 
 const STYLE_ID = 'character-modal-styles';
 
@@ -966,7 +967,11 @@ export class CharacterModal {
 
     if (!race || !charClass) return null;
 
-    return `/assets/sprites/portraits/${race}_${gender}_${charClass}.png`;
+    // Use shared module for consistent path construction
+    // Display size is 64px, so use optimal size (64px)
+    const id = `${race}_${gender}_${charClass}`;
+    const optimalSize = getOptimalSize('portraits', 64);
+    return getAssetUrl('portraits', id, { size: optimalSize });
   }
 
   /**

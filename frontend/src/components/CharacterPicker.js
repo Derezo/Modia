@@ -34,6 +34,7 @@ import {
   getParchmentBorder
 } from '../ui/parchment/ParchmentTheme.js';
 import { getClassColor, getClassIcon } from './CharacterCard.js';
+import { getAssetUrl, getOptimalSize } from '@shared/assetPaths.js';
 
 const STYLE_ID = 'character-picker-styles';
 
@@ -478,7 +479,11 @@ export class CharacterPicker {
 
     if (!race || !charClass) return null;
 
-    return `/assets/sprites/portraits/${race}_${gender}_${charClass}.png`;
+    // Use shared module for consistent path construction
+    // Display size is 36px, so use optimal size (64px)
+    const id = `${race}_${gender}_${charClass}`;
+    const optimalSize = getOptimalSize('portraits', 36);
+    return getAssetUrl('portraits', id, { size: optimalSize });
   }
 
   /**

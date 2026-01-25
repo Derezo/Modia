@@ -1022,10 +1022,7 @@ export class RecruitmentScene extends Scene {
 
   // Utility methods
   getPortraitUrl(recruit) {
-    const race = recruit.race || 'human';
-    const gender = recruit.gender || 'other';
-    const charClass = recruit.class || 'warrior';
-    return `/assets/sprites/portraits/${race}_${gender}_${charClass}.png`;
+    return this.game.assetLoader.getPortraitUrl(recruit, 56);
   }
 
   getClassColor(className) {

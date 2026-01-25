@@ -26,7 +26,9 @@ const {
   ensureDirectoryExists,
   getProjectRoot,
   buildThemedPrompt,
-  createBackup
+  createBackup,
+  postProcessNode,
+  checkImageMagick
 } = require('./lib');
 
 // Configuration
@@ -353,6 +355,22 @@ async function main() {
         markAssetGenerated(node);
 
         log(`Generated: ${node.id}`, 'success');
+
+        // Post-process to generate size variants
+        if (checkImageMagick()) {
+          const outputPath = getOutputPath(node);
+          const postResult = await postProcessNode(outputPath, {
+            force: options.force,
+            verbose: options.verbose
+          });
+          if (postResult.success) {
+            if (options.verbose && postResult.variants.length > 1) {
+              log(`  Size variants: ${postResult.variants.length} (source: ${postResult.sourceSize}px)`, 'info');
+            }
+          } else if (options.verbose) {
+            log(`  Warning: Post-processing failed for ${node.id}`, 'warn');
+          }
+        }
       } else {
         results.failed.push({
           id: node.id,

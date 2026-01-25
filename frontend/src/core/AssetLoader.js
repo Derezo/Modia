@@ -1,6 +1,31 @@
+import {
+  getAssetUrl,
+  SIZE_PRESETS,
+  DEFAULT_SIZES,
+  getOptimalSize
+} from '@shared/assetPaths.js';
+
 /**
  * AssetLoader - Handles loading and caching of sprite assets
  * Provides fallback to emoji/colors when sprites aren't available
+ *
+ * @description
+ * This class provides unified asset loading with support for multiple size variants.
+ * Size-aware methods automatically select the optimal asset size for the display context.
+ *
+ * Size selection strategy:
+ * - Portraits: 64px (default), 128px, 256px - use smallest >= display size
+ * - Nodes: 48px, 96px (default) - use smallest >= display size
+ * - Items: 32px, 64px (default), 128px - size suffix in filename
+ * - Icons: 16px, 24px, 32px (default), 48px, 64px, 128px - directory-based
+ *
+ * @example
+ * // Get portrait URL for 48px display (will use 64px asset)
+ * const url = assetLoader.getPortraitUrl(character, 48);
+ *
+ * @example
+ * // Load node sprite for 60px display (will use 96px asset)
+ * const sprite = await assetLoader.loadNodeSpriteAtSize('castle', { size: 60 });
  */
 export class AssetLoader {
   constructor() {
@@ -189,23 +214,33 @@ export class AssetLoader {
 
   /**
    * Load terrain tile sprite
+   *
+   * Uses shared assetPaths module for consistent path construction.
+   * Falls back through: biome-specific -> base biome with variant -> base biome without variant.
+   *
    * @param {string} terrain - Terrain type (grass, stone, forest, etc.)
    * @param {string} nodeType - Node type for biome-specific tiles (forest, cave, mountain, etc.)
    * @param {number} [variant=0] - Tile variant index (0-3)
+   * @returns {Promise<HTMLImageElement|null>} Loaded tile image or null if not found
    */
   async loadTile(terrain, nodeType, variant = 0) {
     const biome = this.getSpriteBiome(nodeType);
-    const path = `${this.basePath}/terrain/${biome}/${terrain}_${variant}.png`;
+    const tileId = `${terrain}_${variant}`;
+
+    // Try biome-specific tile first
+    const biomePath = getAssetUrl('tiles', tileId, { subcategory: biome });
     try {
-      return await this.loadImage(path);
+      return await this.loadImage(biomePath);
     } catch {
       // Fallback to base biome
+      const basePath = getAssetUrl('tiles', tileId, { subcategory: 'base' });
       try {
-        return await this.loadImage(`${this.basePath}/terrain/base/${terrain}_${variant}.png`);
+        return await this.loadImage(basePath);
       } catch {
         // Try without variant
+        const noVariantPath = getAssetUrl('tiles', terrain, { subcategory: 'base' });
         try {
-          return await this.loadImage(`${this.basePath}/terrain/base/${terrain}.png`);
+          return await this.loadImage(noVariantPath);
         } catch {
           return null;
         }
@@ -521,6 +556,192 @@ export class AssetLoader {
 
     const filename = `node_${resolvedType}`;
     return this.cache.get(`${this.basePath}/nodes/${filename}.png`) || null;
+  }
+
+  // =====================
+  // Size-Aware Asset Methods
+  // =====================
+
+  /**
+   * Get portrait URL with appropriate size for display context
+   *
+   * Uses getOptimalSize() to select the smallest asset size >= display size.
+   * This ensures crisp rendering without loading unnecessarily large assets.
+   *
+   * @param {Object} character - Character object with race, gender, class properties
+   * @param {string} [character.race='human'] - Character race
+   * @param {string} [character.gender='other'] - Character gender
+   * @param {string} [character.class='warrior'] - Character class
+   * @param {number} [displaySize=64] - Target display size in pixels
+   * @returns {string} Portrait URL with optimal size
+   *
+   * @example
+   * // Get URL for 48px display (will use 64px asset)
+   * const url = assetLoader.getPortraitUrl(character, 48);
+   * // => '/assets/sprites/portraits/human_male_warrior.png'
+   *
+   * @example
+   * // Get URL for 100px display (will use 128px asset)
+   * const url = assetLoader.getPortraitUrl(character, 100);
+   * // => '/assets/sprites/portraits/128x128/human_male_warrior.png'
+   */
+  getPortraitUrl(character, displaySize = 64) {
+    const race = (character.race || 'human').toLowerCase();
+    const gender = (character.gender || 'other').toLowerCase();
+    const charClass = (character.class || 'warrior').toLowerCase();
+    const id = `${race}_${gender}_${charClass}`;
+    const optimalSize = getOptimalSize('portraits', displaySize);
+    return getAssetUrl('portraits', id, { size: optimalSize });
+  }
+
+  /**
+   * Get enemy portrait URL with appropriate size
+   *
+   * @param {string} enemyId - Enemy identifier (e.g., 'goblin_warrior', 'wolf')
+   * @param {number} [displaySize=64] - Target display size in pixels
+   * @returns {string} Enemy portrait URL with optimal size
+   *
+   * @example
+   * const url = assetLoader.getEnemyPortraitUrl('giant_spider', 40);
+   * // => '/assets/sprites/enemies/portraits/giant_spider.png'
+   */
+  getEnemyPortraitUrl(enemyId, displaySize = 64) {
+    const optimalSize = getOptimalSize('portraits', displaySize);
+    return getAssetUrl('portraits', enemyId, {
+      subcategory: 'enemies',
+      size: optimalSize
+    });
+  }
+
+  /**
+   * Load portrait with appropriate size
+   *
+   * @param {Object} character - Character object with race, gender, class
+   * @param {number} [displaySize=64] - Target display size in pixels
+   * @returns {Promise<HTMLImageElement|null>} Loaded portrait image or null if failed
+   */
+  async loadPortrait(character, displaySize = 64) {
+    const url = this.getPortraitUrl(character, displaySize);
+    try {
+      return await this.loadImage(url);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Load enemy portrait with appropriate size
+   *
+   * @param {string} enemyId - Enemy identifier
+   * @param {number} [displaySize=64] - Target display size in pixels
+   * @returns {Promise<HTMLImageElement|null>} Loaded portrait image or null if failed
+   */
+  async loadEnemyPortrait(enemyId, displaySize = 64) {
+    const url = this.getEnemyPortraitUrl(enemyId, displaySize);
+    try {
+      return await this.loadImage(url);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Load world map node sprite at appropriate size
+   *
+   * @param {string} nodeType - Node type (castle, city, village, etc.)
+   * @param {Object} [options={}] - Options
+   * @param {number} [options.size] - Target display size (uses optimal size selection)
+   * @param {string} [options.guildClass] - For guild nodes, the class variant
+   * @returns {Promise<HTMLImageElement|null>} Loaded node sprite or null if failed
+   *
+   * @example
+   * // Load castle node for 50px display (will try 48px variant, then 96px)
+   * const sprite = await assetLoader.loadNodeSpriteAtSize('castle', { size: 50 });
+   */
+  async loadNodeSpriteAtSize(nodeType, options = {}) {
+    const { size = DEFAULT_SIZES.nodes, guildClass = null } = options;
+    const resolvedType = this.nodeTypeAliases[nodeType] || nodeType;
+    const optimalSize = getOptimalSize('nodes', size);
+
+    // Build node ID with optional guild class
+    let id = `node_${resolvedType}`;
+    if (resolvedType === 'guild' && guildClass) {
+      id = `node_guild_${guildClass}`;
+    }
+
+    const path = getAssetUrl('nodes', id, { size: optimalSize });
+
+    try {
+      return await this.loadImage(path);
+    } catch {
+      // Fallback: if requested size variant doesn't exist, try default size
+      if (optimalSize !== DEFAULT_SIZES.nodes) {
+        const fallbackPath = getAssetUrl('nodes', id, { size: DEFAULT_SIZES.nodes });
+        try {
+          return await this.loadImage(fallbackPath);
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Get node sprite URL at appropriate size (sync, for URL generation only)
+   *
+   * @param {string} nodeType - Node type
+   * @param {Object} [options={}] - Options
+   * @param {number} [options.size] - Target display size
+   * @param {string} [options.guildClass] - For guild nodes, the class variant
+   * @returns {string} Node sprite URL
+   */
+  getNodeSpriteUrl(nodeType, options = {}) {
+    const { size = DEFAULT_SIZES.nodes, guildClass = null } = options;
+    const resolvedType = this.nodeTypeAliases[nodeType] || nodeType;
+    const optimalSize = getOptimalSize('nodes', size);
+
+    let id = `node_${resolvedType}`;
+    if (resolvedType === 'guild' && guildClass) {
+      id = `node_guild_${guildClass}`;
+    }
+
+    return getAssetUrl('nodes', id, { size: optimalSize });
+  }
+
+  /**
+   * Preload node sprites at multiple sizes
+   *
+   * @param {number[]} sizes - Array of sizes to preload
+   * @returns {Promise<PromiseSettledResult<HTMLImageElement>[]>}
+   */
+  async preloadNodesAtSizes(sizes = [48, 96]) {
+    const nodeTypes = [
+      'castle', 'city', 'village', 'keep', 'palace',
+      'forest', 'cave', 'mountain', 'bridge',
+      'fishing', 'ruins', 'watchtower', 'farm', 'caravan',
+      'chest', 'shrine', 'discovery',
+      'tavern', 'shop', 'blacksmith', 'apothecary', 'guild'
+    ];
+    const guildClasses = ['warrior', 'wizard', 'monk', 'chemist'];
+
+    const promises = [];
+
+    for (const size of sizes) {
+      // Regular nodes
+      for (const type of nodeTypes) {
+        promises.push(this.loadNodeSpriteAtSize(type, { size }));
+      }
+      // Guild class variants
+      for (const cls of guildClasses) {
+        promises.push(this.loadNodeSpriteAtSize('guild', { size, guildClass: cls }));
+      }
+    }
+
+    const results = await Promise.allSettled(promises);
+    const loaded = results.filter(r => r.status === 'fulfilled' && r.value).length;
+    console.log(`[AssetLoader] Node preload at sizes ${sizes.join(',')}: ${loaded}/${results.length} loaded`);
+    return results;
   }
 
   /**
@@ -1053,6 +1274,22 @@ export class AssetLoader {
   static VARIANTS_PER_TERRAIN = 4;
   static ELEVATION_LEVELS = [1, 2, 3];
   static INDICATOR_TYPES = ['ramp', 'stairs', 'ledge', 'cliff'];
+
+  /**
+   * Size presets from shared module (exposed for convenience)
+   */
+  static SIZE_PRESETS = SIZE_PRESETS;
+  static DEFAULT_SIZES = DEFAULT_SIZES;
+
+  /**
+   * Static utility to get optimal size without instance
+   * @param {string} category - Asset category
+   * @param {number} displaySize - Target display size
+   * @returns {number} Optimal preset size
+   */
+  static getOptimalSize(category, displaySize) {
+    return getOptimalSize(category, displaySize);
+  }
 
   /**
    * Preload terrain tiles for a biome (unified stacking system)
