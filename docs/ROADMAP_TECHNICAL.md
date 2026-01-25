@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.6 |
+| Version | 2.7 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -459,6 +459,34 @@ Per-asset LoRA model selection and generation backend switching.
 
 **Commit:** `466b526 feat: Asset Generation System Refactoring - Per-asset LoRA and backend selection`
 
+### 7.10 Unified Asset Generation Dashboard (Completed Jan 2026)
+
+Consolidated view for all three generation queues (images, music, SFX) in the admin dashboard.
+
+- [x] Unified WebSocket events (`asset:generation_update`) across all generators
+- [x] `useUnifiedGeneration` hook aggregating all three queue states
+- [x] `UnifiedGenerationBar` - persistent bottom status bar with color-coded indicators
+- [x] `UnifiedAssetPanel` - split view (40% console / 60% assets grid)
+- [x] `AssetPreviewCard` - image thumbnails and audio waveforms with playback
+- [x] Metadata sync endpoints for audio file verification
+- [x] Renamed "Images" terminology to "Assets" throughout
+
+**New Components:**
+- `admin/src/hooks/useUnifiedGeneration.js` - Unified state management
+- `admin/src/components/UnifiedGenerationBar.jsx` - Bottom status bar
+- `admin/src/components/UnifiedAssetPanel.jsx` - Split console/assets view
+- `admin/src/components/AssetPreviewCard.jsx` - Unified preview cards
+
+**New API Endpoints:**
+- `POST /api/admin/audio/sync-status` - Verify and sync audio file status
+- `GET /api/admin/audio/verify-status` - Check file existence for tracks
+
+**WebSocket Events:**
+- `asset:generation_update` - Unified event with source identifier (images/music/sfx)
+- Socket joins both `admin:generation` and `admin:audio-generation` rooms
+
+**Commit:** `521e3fa feat: Unified Asset Generation System for Admin Dashboard`
+
 ---
 
 ## 8. Technical Debt & Code Quality
@@ -508,6 +536,9 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 | Missing JSDoc on admin service exports | adminGenerationService.js | Low | Open |
 | No tests for admin generation endpoints | api/src/tests/ | Medium | Open |
 | Backend selection not persisted (in-memory) | adminGenerationService.js:90 | Low | Open |
+| Socket callbacks not cleared on unmount | useUnifiedGeneration.js:133-147 | Low | Open (admin tooling) |
+| Duplicate `parseProgress()` function | adminGenerationService.js:156, adminAudioGenerationService.js:132 | Low | Open |
+| Duplicate `generateJobId()` function | adminGenerationService.js:103, adminAudioGenerationService.js:72 | Low | Open |
 
 *Issues audited: 2026-01-25*
 
@@ -557,6 +588,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.7 | Jan 2026 | Unified Asset Generation Dashboard: Added Section 7.10 documenting unified view for all generation queues. Created useUnifiedGeneration hook aggregating images/music/SFX queues. Added UnifiedGenerationBar (bottom status bar), UnifiedAssetPanel (split console/assets view), AssetPreviewCard (image thumbnails, audio waveforms). New API endpoints for metadata sync (sync-status, verify-status). Unified WebSocket events (asset:generation_update) with source tagging. Commit 521e3fa. |
 | 2.6 | Jan 2026 | Asset Path Standardization: Added Section 7.6 documenting unified asset path system. Rewrote shared/assetPaths.js with single getAssetPath() and getOriginalsPath() functions. Removed getLegacyPath/getStandardizedPath. Updated AssetLoader.js: basePath /assets, forest fallback, enemy_ prefix, no node_ prefix. Updated all generation scripts with new output paths. Updated metadata JSONs. Created migrate-asset-paths.js migration script. Migrated 682 assets. Renumbered sections (7.6→7.7 Pending, 7.7→7.8 Admin). |
 | 2.5 | Jan 2026 | Asset Loading System Refactoring: Added Section 7.5 documenting size-aware asset loading. Updated shared/assetPaths.js with getOptimalSize(), size-aware portrait/node paths. Refactored AssetLoader.js with getPortraitUrl, getEnemyPortraitUrl, loadNodeSpriteAtSize. Updated 4 scenes and 4 components. Integrated post-processing into generate-portraits.js/generate-nodes.js. Added getImageDimensions() with timeout. Renumbered sections (7.5→7.6 Pending, 7.6→7.7 Admin). |
 | 2.4 | Jan 2026 | Security & Testing Infrastructure (v9.4): Added Redis-backed rate limiting with graceful fallback. Comprehensive endpoint protection (70+ endpoints via economyRateLimiter, characterRateLimiter, socialRateLimiter). Gated debug endpoints in production. Enhanced health checks with Redis, rate limiter stats, liveness/readiness endpoints. Artillery.io load testing infrastructure for 25 concurrent users. E2E tests: character creation, battle flow, error handling. Shared test helpers. Updated status: Testing 85%, Monitoring 60%, Infrastructure 75%. |
