@@ -317,12 +317,14 @@ router.get('/verify-traits/:characterId', authenticate, asyncHandler(async (req,
 /**
  * GET /api/debug/discovery-health/:userId
  * Check discovery health for a user without repairing
+ * Note: Debug mode already restricts to dev/test environments
  */
 router.get('/discovery-health/:userId', authenticate, asyncHandler(async (req, res) => {
   const userId = parseInt(req.params.userId, 10);
   if (isNaN(userId)) {
     throw new AppError('Invalid user ID', 400);
   }
+  console.log(`[DEBUG] User ${req.user.userId} checking discovery health for user ${userId}`);
   const health = await checkDiscoveryHealth(userId);
   res.json(health);
 }));
@@ -330,12 +332,14 @@ router.get('/discovery-health/:userId', authenticate, asyncHandler(async (req, r
 /**
  * POST /api/debug/repair-discovery/:userId
  * Validate and repair discovery state for a specific user
+ * Note: Debug mode already restricts to dev/test environments
  */
 router.post('/repair-discovery/:userId', authenticate, asyncHandler(async (req, res) => {
   const userId = parseInt(req.params.userId, 10);
   if (isNaN(userId)) {
     throw new AppError('Invalid user ID', 400);
   }
+  console.log(`[DEBUG] User ${req.user.userId} repairing discovery for user ${userId}`);
   const healthBefore = await checkDiscoveryHealth(userId);
   const repairResult = await validateAndRepairDiscovery(userId);
   const healthAfter = await checkDiscoveryHealth(userId);

@@ -109,8 +109,11 @@ router.post('/login', authLimiter, asyncHandler(async (req, res) => {
   // Update last login
   await query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
 
-  // Self-healing: Validate and repair discovery state (fire-and-forget)
-  validateAndRepairDiscovery(user.id).catch(err => {
+  // Self-healing: Validate and repair discovery state (fire-and-forget with timeout)
+  Promise.race([
+    validateAndRepairDiscovery(user.id),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
+  ]).catch(err => {
     console.warn(`[Login] Discovery validation failed for user ${user.id}:`, err.message);
   });
 
