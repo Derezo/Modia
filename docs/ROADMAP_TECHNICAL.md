@@ -430,6 +430,35 @@ Development-only dashboard for AI asset generation and management. Available at 
 - `api/src/services/adminGenerationService.js` - Generation queue
 - `api/src/websocket/index.js` - admin:generation room
 
+### 7.9 Asset Generation System Refactoring (Completed Jan 2026)
+
+Per-asset LoRA model selection and generation backend switching.
+
+- [x] Per-asset LoRA model selection with priority: asset-level > category defaults > fallback
+  - Available models: v1 (flat 2D), v2 (isometric), modern-pixel, retro-pixel
+  - Category defaults: tiles=v2, portraits/items/icons/nodes/overlays=v1
+- [x] Generation backend selection API (ComfyUI local vs HuggingFace cloud)
+- [x] Audio status field transformation (generated boolean → status 'exists'|'missing')
+- [x] SFX prompt validation at queue time (max 1 comma for ElevenLabs)
+- [x] Suno task auto-polling (30s interval) with WebSocket broadcasts
+- [x] Incremental seed persistence (`ai-image-metadata/seed-state.json`)
+- [x] Waveform data persistence to audio metadata
+- [x] Shared script utilities library (`scripts/lib/` - 6 modules)
+- [x] Legacy tile metadata cleanup (deleted 5 unused biome files)
+
+**New API Endpoints:**
+- `GET /api/admin/generate/settings` - Get current backend preference
+- `POST /api/admin/generate/settings` - Set generation backend
+
+**New Files:**
+- `ai-image-metadata/seed-state.json` - Persisted seed value
+- `scripts/lib/` - Shared utilities (pathUtils, logger, fileUtils, envLoader, generationConfig, index)
+
+**Deleted Files:**
+- `ai-image-metadata/tiles/{forest,cave,mountain,bridge,castle}.json` - Legacy biome files
+
+**Commit:** `466b526 feat: Asset Generation System Refactoring - Per-asset LoRA and backend selection`
+
 ---
 
 ## 8. Technical Debt & Code Quality
