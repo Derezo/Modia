@@ -4,7 +4,7 @@
  */
 
 const path = require('path');
-const { loadMetadata, saveMetadata, getMetadataDir, fileExists } = require('./imageUtils');
+const { loadMetadata, saveMetadata, getMetadataDir, fileExists, log } = require('./imageUtils');
 
 /**
  * Get the full path to a metadata file
@@ -83,7 +83,7 @@ function loadCategoryAssets(category) {
   for (const file of files) {
     const data = loadMetadata(getMetadataPath(`${category}/${file}`));
     if (!data) {
-      console.warn(`Warning: Failed to load ${category}/${file}`);
+      log(`Failed to load metadata: ${category}/${file}`, 'warn');
       continue;
     }
 
@@ -153,12 +153,13 @@ function loadTileMetadata(options = {}) {
       const filePath = getMetadataPath(`tiles/${fileName}`);
 
       if (!fileExists(filePath)) {
-        return; // Skip if file doesn't exist
+        log(`Manifest references non-existent file: tiles/${fileName}`, 'warn');
+        return;
       }
 
       const data = loadMetadata(filePath);
       if (!data) {
-        console.warn(`Warning: Failed to load tiles/${fileName}`);
+        log(`Failed to parse metadata: tiles/${fileName}`, 'warn');
         return;
       }
 
@@ -344,7 +345,7 @@ function loadItemMetadata(itemCategory = null) {
 
     const data = loadMetadata(getMetadataPath(`items/${fileName}`));
     if (!data) {
-      console.warn(`Warning: Failed to load items/${fileName}`);
+      log(`Failed to load metadata: items/${fileName}`, 'warn');
       continue;
     }
 
@@ -388,7 +389,7 @@ function loadIconMetadata(iconCategory = null) {
 
     const data = loadMetadata(getMetadataPath(`icons/${fileName}`));
     if (!data) {
-      console.warn(`Warning: Failed to load icons/${fileName}`);
+      log(`Failed to load metadata: icons/${fileName}`, 'warn');
       continue;
     }
 
@@ -450,13 +451,13 @@ function loadOverlayMetadata(subcategory = null) {
   for (const subcat of subcategories) {
     const filePath = getMetadataPath(`overlays/${subcat}.json`);
     if (!fileExists(filePath)) {
-      console.warn(`Warning: Overlay file not found: overlays/${subcat}.json`);
+      log(`Manifest references non-existent file: overlays/${subcat}.json`, 'warn');
       continue;
     }
 
     const data = loadMetadata(filePath);
     if (!data) {
-      console.warn(`Warning: Failed to load overlays/${subcat}.json`);
+      log(`Failed to parse metadata: overlays/${subcat}.json`, 'warn');
       continue;
     }
 
@@ -485,7 +486,7 @@ function updateAssetStatus(category, sourceFile, assetId, updates) {
   const data = loadMetadata(filePath);
 
   if (!data) {
-    console.error(`Failed to load ${category}/${sourceFile} for update`);
+    log(`Failed to load ${category}/${sourceFile} for update`, 'error');
     return;
   }
 
@@ -493,14 +494,14 @@ function updateAssetStatus(category, sourceFile, assetId, updates) {
   const assetArray = data.tiles || data.portraits || data.enemies || data.items || data.icons || data.nodes;
 
   if (!assetArray) {
-    console.error(`No asset array found in ${category}/${sourceFile}`);
+    log(`No asset array found in ${category}/${sourceFile}`, 'error');
     return;
   }
 
   // Search by 'id' or 'key' (tiles use 'key' in JSON, normalized to 'id' at runtime)
   const assetIndex = assetArray.findIndex(a => a.id === assetId || a.key === assetId);
   if (assetIndex === -1) {
-    console.error(`Asset ${assetId} not found in ${category}/${sourceFile}`);
+    log(`Asset ${assetId} not found in ${category}/${sourceFile}`, 'error');
     return;
   }
 
@@ -570,7 +571,7 @@ function getAllStats() {
       stats.total.generated += catStats.generated;
       stats.total.pending += catStats.pending;
     } catch (error) {
-      console.warn(`Warning: Failed to get stats for ${category}: ${error.message}`);
+      log(`Failed to get stats for ${category}: ${error.message}`, 'warn');
     }
   }
 
@@ -579,6 +580,32 @@ function getAllStats() {
     : 0;
 
   return stats;
+}
+
+/**
+ * Get the effective LoRA model for an asset
+ * Priority: asset.loraModel > categoryDefaults[category] > 'v2'
+ * @param {Object} asset - Asset object with optional loraModel and _category
+ * @param {string} categoryOverride - Optional category override (use when _category not set)
+ * @returns {string} LoRA model identifier (v1, v2, modern-pixel, retro-pixel)
+ */
+function getEffectiveLoraModel(asset, categoryOverride = null) {
+  // Asset-level loraModel takes highest priority
+  if (asset.loraModel) {
+    return asset.loraModel;
+  }
+
+  // Try to get from master manifest categoryDefaults
+  const category = categoryOverride || asset._category;
+  if (category) {
+    const manifest = loadMasterManifest();
+    if (manifest?.categoryDefaults?.[category]) {
+      return manifest.categoryDefaults[category];
+    }
+  }
+
+  // Final fallback - v2 for tiles, v1 for everything else
+  return category === 'tiles' ? 'v2' : 'v1';
 }
 
 module.exports = {
@@ -596,5 +623,6 @@ module.exports = {
   updateAssetStatus,
   markAssetGenerated,
   getCategoryStats,
-  getAllStats
+  getAllStats,
+  getEffectiveLoraModel
 };

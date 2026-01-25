@@ -823,6 +823,43 @@ router.post('/generate/seed/reset', asyncHandler(async (req, res) => {
   });
 }));
 
+/**
+ * GET /api/admin/generate/settings
+ * Get current generation settings (backend preference)
+ */
+router.get('/generate/settings', asyncHandler(async (req, res) => {
+  const backend = adminGenerationService.getGenerationBackend();
+  const validBackends = adminGenerationService.getValidBackends();
+
+  res.json({
+    backend,
+    validBackends
+  });
+}));
+
+/**
+ * POST /api/admin/generate/settings
+ * Set generation settings (backend preference)
+ * Body: { backend: 'comfyui' | 'huggingface' }
+ */
+router.post('/generate/settings', asyncHandler(async (req, res) => {
+  const { backend } = req.body;
+
+  if (!backend) {
+    throw new AppError('backend is required', 400);
+  }
+
+  try {
+    adminGenerationService.setGenerationBackend(backend);
+    res.json({
+      message: `Generation backend set to ${backend}`,
+      backend: adminGenerationService.getGenerationBackend()
+    });
+  } catch (err) {
+    throw new AppError(err.message, 400);
+  }
+}));
+
 // ============================================================================
 // BACKUP ROUTES
 // ============================================================================

@@ -279,6 +279,19 @@ async function updateAudioMetadata(type, id, updates) {
 }
 
 /**
+ * Transform audio asset to include dashboard-expected status field
+ * Maps `generated: true/false` to `status: 'exists'|'missing'`
+ * @param {object} asset - The audio asset (track or effect)
+ * @returns {object} Asset with status field added
+ */
+function transformAssetForResponse(asset) {
+  return {
+    ...asset,
+    status: asset.generated ? 'exists' : 'missing'
+  };
+}
+
+/**
  * Validate SFX prompt for comma count
  * Per CLAUDE.md: Maximum 1 comma per prompt for ElevenLabs
  * @param {string} prompt - The prompt to validate
@@ -328,7 +341,7 @@ router.get('/music', asyncHandler(async (req, res) => {
     type: 'music',
     filters: { category, region, status },
     summary,
-    assets: tracks
+    assets: tracks.map(transformAssetForResponse)
   });
 }));
 
@@ -346,7 +359,7 @@ router.get('/music/:id', asyncHandler(async (req, res) => {
     throw new AppError(`Track not found: ${id}`, 404);
   }
 
-  res.json(track);
+  res.json(transformAssetForResponse(track));
 }));
 
 /**
@@ -424,7 +437,7 @@ router.get('/sfx', asyncHandler(async (req, res) => {
     type: 'sfx',
     filters: { category, subcategory, status },
     summary,
-    assets: effects
+    assets: effects.map(transformAssetForResponse)
   });
 }));
 
@@ -442,7 +455,7 @@ router.get('/sfx/:id', asyncHandler(async (req, res) => {
     throw new AppError(`Effect not found: ${id}`, 404);
   }
 
-  res.json(effect);
+  res.json(transformAssetForResponse(effect));
 }));
 
 /**
@@ -576,11 +589,19 @@ router.get('/:type/:id/waveform', asyncHandler(async (req, res) => {
 
   try {
     const waveformData = await generateWaveformData(audioPath, 100);
+    const peaks = waveformData.peaks;
+
+    // Persist waveform to metadata (2.3)
+    try {
+      await audioGenerationService.persistWaveformData(type, id, peaks);
+    } catch (persistErr) {
+      console.warn(`Failed to persist waveform for ${type}/${id}:`, persistErr.message);
+    }
 
     res.json({
       id,
       type,
-      waveform: waveformData.peaks
+      waveform: peaks
     });
   } catch (err) {
     // Fallback: generate deterministic pseudo-waveform from asset ID
@@ -588,6 +609,14 @@ router.get('/:type/:id/waveform', asyncHandler(async (req, res) => {
     console.warn(`Waveform generation failed for ${type}/${id}, using fallback:`, err.message);
 
     const peaks = generatePseudoWaveform(id, 100);
+
+    // Persist fallback waveform to metadata (2.3)
+    try {
+      await audioGenerationService.persistWaveformData(type, id, peaks);
+    } catch (persistErr) {
+      console.warn(`Failed to persist fallback waveform for ${type}/${id}:`, persistErr.message);
+    }
+
     res.json({
       id,
       type,

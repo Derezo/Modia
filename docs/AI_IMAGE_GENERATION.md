@@ -154,11 +154,76 @@ The pipeline supports two inference modes:
 
 3. **Use the `--huggingface` flag** with generation commands (see below).
 
+## LoRA Models
+
+The image-generator project supports multiple LoRA models trained on different pixel art styles:
+
+| Model ID | Trigger Word | Style | Recommended For |
+|----------|--------------|-------|-----------------|
+| `v1` | GRPZA | Flat 2D pixel art | Icons, items (less detail) |
+| `v2` | wbgmsst | Isometric/textured | Tiles, terrain, obstacles |
+| `modern-pixel` | umempart | Modern pixel art | Stylized contemporary assets |
+| `retro-pixel` | Retro Pixel | Classic 8-bit | Retro-themed special assets |
+
+### Selection Priority
+
+The LoRA model is selected with this priority:
+
+1. **CLI Flag:** `--lora v1` overrides all other settings
+2. **Asset Metadata:** `loraModel` field in individual asset JSON
+3. **Category Default:** From `ai-image-metadata/manifest.json` categoryDefaults
+
+### Category Defaults
+
+The manifest defines sensible defaults per category:
+
+```json
+{
+  "categoryDefaults": {
+    "tiles": "v2",       // Isometric style for terrain
+    "portraits": "v1",   // Flat pixel art for faces
+    "items": "v1",       // Clean sprites for inventory
+    "icons": "v1",       // Simple shapes for UI
+    "nodes": "v1",       // Flat style for map icons
+    "overlays": "v1"     // Flat overlays
+  }
+}
+```
+
+### Per-Asset Override
+
+Override the category default by adding `loraModel` to any asset:
+
+```json
+{
+  "key": "boss_portrait",
+  "prompt": "menacing demon lord with glowing eyes",
+  "loraModel": "v2",
+  "generated": false
+}
+```
+
+### Usage Examples
+
+```bash
+# Use category default (tiles use v2)
+npm run ai:generate:tiles -- --key grass_0
+
+# Override with CLI flag
+npm run ai:generate:tiles -- --key grass_0 --lora v1
+
+# Dry run shows which model will be used
+npm run ai:generate:tiles -- --dry-run --key grass_0
+# Output: LoRA: v2 (default)
+```
+
 ## Prompt Templates
 
 ### Master Style Prefixes
 
-All asset generation now uses **LoRA V2 (wbgmsst trigger)** as the default. The V1 trigger (GRPZA) is deprecated as it was rendering as literal text in generated images.
+Each category uses a default LoRA model (see [LoRA Models](#lora-models) section). The most common triggers are:
+- **V2 (wbgmsst)**: Used for tiles and terrain (isometric/textured style)
+- **V1 (GRPZA)**: Used for icons, items, portraits (flat pixel art style)
 
 **Default Style (V2 LoRA - wbgmsst trigger):**
 ```
