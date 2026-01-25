@@ -12,25 +12,25 @@
       "key": "wall_cave_default",
       "prompt": "rough cave wall rock face with natural crevices and mineral deposits in dark grey #696969 #2F4F4F",
       "seed": 21001,
-      "outputPath": "cave/walls/default",
       "generated": true,
-      "generatedAt": "2026-01-24T16:28:10.912Z"
+      "generatedAt": "2026-01-24T16:28:10.912Z",
+      "terrain": "default"
     },
     {
       "key": "wall_cave_crystal",
       "prompt": "cave wall with embedded crystal formations glowing with inner blue light #4682B4 #696969",
       "seed": 21011,
-      "outputPath": "cave/walls/crystal",
       "generated": true,
-      "generatedAt": "2026-01-24T16:28:53.689Z"
+      "generatedAt": "2026-01-24T16:28:53.689Z",
+      "terrain": "crystal"
     },
     {
       "key": "wall_cave_wet",
       "prompt": "wet cave wall with moisture seeping through and algae growth in dark teal tones #2F4F4F #4682B4",
       "seed": 21021,
-      "outputPath": "cave/walls/wet",
       "generated": true,
-      "generatedAt": "2026-01-24T16:29:35.507Z"
+      "generatedAt": "2026-01-24T16:29:35.507Z",
+      "terrain": "wet"
     }
   ]
 }

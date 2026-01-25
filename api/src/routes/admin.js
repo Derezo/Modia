@@ -427,7 +427,7 @@ router.put('/assets/:category/:id', asyncHandler(async (req, res) => {
   }
 
   // Validate allowed update fields
-  const allowedFields = ['prompt', 'seed', 'evaluation', 'issues', 'notes', 'priority', 'generated', 'generatedAt'];
+  const allowedFields = ['prompt', 'seed', 'evaluation', 'issues', 'notes', 'priority', 'generated', 'generatedAt', 'needsRegeneration'];
   const invalidFields = Object.keys(updates).filter(key => !allowedFields.includes(key));
   if (invalidFields.length > 0) {
     throw new AppError(`Invalid update fields: ${invalidFields.join(', ')}. Allowed: ${allowedFields.join(', ')}`, 400);

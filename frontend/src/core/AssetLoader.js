@@ -824,14 +824,21 @@ export class AssetLoader {
    * @returns {HTMLImageElement|null} Wall texture image or null if not found
    */
   getWallTexture(biome, terrain = 'default') {
-    // Try specific terrain wall first, then biome default
+    // New convention (primary)
     const key = `${this.basePath}/terrain/${biome}/walls/${terrain}_wall.png`;
     const fallbackKey = `${this.basePath}/terrain/${biome}/walls/default_wall.png`;
     const baseFallbackKey = `${this.basePath}/terrain/base/walls/${terrain}_wall.png`;
+    // Legacy convention (fallback)
+    const legacyKey = `${this.basePath}/terrain/${biome}/wall_${biome}_${terrain}.png`;
+    const legacyDefaultKey = `${this.basePath}/terrain/${biome}/wall_${biome}_default.png`;
+    const legacyBaseKey = `${this.basePath}/terrain/base/wall_base_${terrain}.png`;
 
     return this.cache.get(key) ||
            this.cache.get(fallbackKey) ||
            this.cache.get(baseFallbackKey) ||
+           this.cache.get(legacyKey) ||
+           this.cache.get(legacyDefaultKey) ||
+           this.cache.get(legacyBaseKey) ||
            null;
   }
 
@@ -843,9 +850,14 @@ export class AssetLoader {
    */
   async loadWallTexture(biome, terrain = 'default') {
     const paths = [
+      // New convention (primary)
       `${this.basePath}/terrain/${biome}/walls/${terrain}_wall.png`,
       `${this.basePath}/terrain/${biome}/walls/default_wall.png`,
-      `${this.basePath}/terrain/base/walls/${terrain}_wall.png`
+      `${this.basePath}/terrain/base/walls/${terrain}_wall.png`,
+      // Legacy convention (fallback - existing files)
+      `${this.basePath}/terrain/${biome}/wall_${biome}_${terrain}.png`,
+      `${this.basePath}/terrain/${biome}/wall_${biome}_default.png`,
+      `${this.basePath}/terrain/base/wall_base_${terrain}.png`
     ];
 
     for (const path of paths) {
@@ -866,13 +878,19 @@ export class AssetLoader {
    * @returns {HTMLImageElement|null} Slope sprite or null if not found
    */
   getSlopeSprite(biome, direction, levels = 1) {
+    // New convention (primary)
     const key = `${this.basePath}/terrain/${biome}/slopes/${direction}_${levels}.png`;
     const fallbackKey = `${this.basePath}/terrain/${biome}/slopes/${direction}_1.png`;
     const baseFallbackKey = `${this.basePath}/terrain/base/slopes/${direction}_${levels}.png`;
+    // Legacy convention (fallback)
+    const legacyKey = `${this.basePath}/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`;
+    const legacyBaseKey = `${this.basePath}/terrain/base/slope_base_${direction}_${levels}.png`;
 
     return this.cache.get(key) ||
            this.cache.get(fallbackKey) ||
            this.cache.get(baseFallbackKey) ||
+           this.cache.get(legacyKey) ||
+           this.cache.get(legacyBaseKey) ||
            null;
   }
 
@@ -885,9 +903,13 @@ export class AssetLoader {
    */
   async loadSlopeSprite(biome, direction, levels = 1) {
     const paths = [
+      // New convention (primary)
       `${this.basePath}/terrain/${biome}/slopes/${direction}_${levels}.png`,
       `${this.basePath}/terrain/${biome}/slopes/${direction}_1.png`,
-      `${this.basePath}/terrain/base/slopes/${direction}_${levels}.png`
+      `${this.basePath}/terrain/base/slopes/${direction}_${levels}.png`,
+      // Legacy convention (fallback - existing files)
+      `${this.basePath}/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`,
+      `${this.basePath}/terrain/base/slope_base_${direction}_${levels}.png`
     ];
 
     for (const path of paths) {

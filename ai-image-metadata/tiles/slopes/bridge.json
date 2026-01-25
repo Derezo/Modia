@@ -14,7 +14,6 @@
       "levels": 1,
       "prompt": "wooden plank ramp ascending northward with rope railings in warm brown tones #8B7355 #D2B48C",
       "seed": 42001,
-      "outputPath": "bridge/slopes/north_1",
       "generated": true,
       "generatedAt": "2026-01-24T16:59:06.346Z"
     },
@@ -24,7 +23,6 @@
       "levels": 1,
       "prompt": "wooden plank ramp descending southward with weathered boards in warm brown tones #8B7355",
       "seed": 42011,
-      "outputPath": "bridge/slopes/south_1",
       "generated": true,
       "generatedAt": "2026-01-24T16:59:48.409Z"
     },
@@ -34,7 +32,6 @@
       "levels": 1,
       "prompt": "wooden plank ramp ascending eastward with iron brackets in warm brown tones #8B7355 #A0522D",
       "seed": 42021,
-      "outputPath": "bridge/slopes/east_1",
       "generated": true,
       "generatedAt": "2026-01-24T17:00:31.211Z"
     },
@@ -44,7 +41,6 @@
       "levels": 1,
       "prompt": "wooden plank ramp descending westward with rope bindings in warm brown tones #8B7355 #D2B48C",
       "seed": 42031,
-      "outputPath": "bridge/slopes/west_1",
       "generated": true,
       "generatedAt": "2026-01-24T17:01:14.011Z"
     },
@@ -55,7 +51,6 @@
       "type": "stairs",
       "prompt": "wooden bridge steps ascending north with worn treads showing 2-3 visible steps #8B7355 #A0522D",
       "seed": 42041,
-      "outputPath": "bridge/slopes/stairs_north_2",
       "generated": true,
       "generatedAt": "2026-01-24T17:01:55.976Z"
     },
@@ -66,7 +61,6 @@
       "type": "stairs",
       "prompt": "wooden bridge steps descending south with rope handrails showing 2-3 visible steps #8B7355 #D2B48C",
       "seed": 42051,
-      "outputPath": "bridge/slopes/stairs_south_2",
       "generated": true,
       "generatedAt": "2026-01-24T17:02:38.745Z"
     },
@@ -77,7 +71,6 @@
       "type": "stairs",
       "prompt": "stone bridge approach steps ascending east with weathered masonry showing 2-3 visible steps #708090 #8B7355",
       "seed": 42061,
-      "outputPath": "bridge/slopes/stairs_east_2",
       "generated": true,
       "generatedAt": "2026-01-24T17:03:21.545Z"
     },
@@ -88,7 +81,6 @@
       "type": "stairs",
       "prompt": "stone bridge approach steps descending west with ancient blocks showing 2-3 visible steps #708090 #8B7355",
       "seed": 42071,
-      "outputPath": "bridge/slopes/stairs_west_2",
       "generated": true,
       "generatedAt": "2026-01-24T17:04:03.391Z"
     }
