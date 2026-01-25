@@ -14,6 +14,7 @@ import battleWebsocket from '../services/battleWebsocket.js';
 import { COMBAT_NODE_TYPES } from '../config/constants.js';
 import * as traitService from '../services/traitService.js';
 import { createLimiter } from '../middleware/rateLimiterFactory.js';
+import { validateAndRepairDiscovery, checkDiscoveryHealth, batchRepairAllUsers } from '../services/world/discoveryValidationService.js';
 
 const router = express.Router();
 
@@ -311,6 +312,44 @@ router.get('/verify-traits/:characterId', authenticate, asyncHandler(async (req,
       dbEntryCount: dbTraits.rows.length
     }
   });
+}));
+
+/**
+ * GET /api/debug/discovery-health/:userId
+ * Check discovery health for a user without repairing
+ */
+router.get('/discovery-health/:userId', authenticate, asyncHandler(async (req, res) => {
+  const userId = parseInt(req.params.userId, 10);
+  if (isNaN(userId)) {
+    throw new AppError('Invalid user ID', 400);
+  }
+  const health = await checkDiscoveryHealth(userId);
+  res.json(health);
+}));
+
+/**
+ * POST /api/debug/repair-discovery/:userId
+ * Validate and repair discovery state for a specific user
+ */
+router.post('/repair-discovery/:userId', authenticate, asyncHandler(async (req, res) => {
+  const userId = parseInt(req.params.userId, 10);
+  if (isNaN(userId)) {
+    throw new AppError('Invalid user ID', 400);
+  }
+  const healthBefore = await checkDiscoveryHealth(userId);
+  const repairResult = await validateAndRepairDiscovery(userId);
+  const healthAfter = await checkDiscoveryHealth(userId);
+  res.json({ healthBefore, repairResult, healthAfter });
+}));
+
+/**
+ * POST /api/debug/repair-all-discovery
+ * Batch repair all users with discovery issues (admin only - use with caution)
+ */
+router.post('/repair-all-discovery', authenticate, asyncHandler(async (req, res) => {
+  console.log(`[DEBUG] Batch discovery repair initiated by user ${req.user.userId}`);
+  const result = await batchRepairAllUsers();
+  res.json(result);
 }));
 
 export default router;

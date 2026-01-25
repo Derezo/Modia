@@ -125,6 +125,11 @@ router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, 
   const spawnNodeId = region.castle_node_id;
   const homeRegionId = region.id;
 
+  if (!spawnNodeId) {
+    console.error(`[CharacterCreate] ERROR: No castle_node_id for race ${race} in world_regions`);
+    throw new AppError('Unable to determine spawn location', 500);
+  }
+
   // Insert character at racial homeland castle with starting experience
   // Note: Gold is stored at user level (users.gold), not per-character
   const result = await query(
@@ -177,7 +182,25 @@ router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, 
 
   // Initialize node discovery for character's spawn location
   // This ensures the racial homeland castle and adjacent nodes are visible on the world map
-  await discoverNodeAndAdjacent(req.user.userId, spawnNodeId);
+  console.log(`[CharacterCreate] Discovering spawn node for user ${req.user.userId}: nodeId=${spawnNodeId}`);
+
+  try {
+    await discoverNodeAndAdjacent(req.user.userId, spawnNodeId);
+
+    // Verify discovery succeeded
+    const verifyResult = await query(
+      'SELECT COUNT(*) as count FROM user_node_discovery WHERE user_id = $1',
+      [req.user.userId]
+    );
+    console.log(`[CharacterCreate] Discovery complete: user ${req.user.userId} now has ${verifyResult.rows[0].count} discovered nodes`);
+
+    if (parseInt(verifyResult.rows[0].count, 10) === 0) {
+      console.error(`[CharacterCreate] WARNING: Discovery produced 0 nodes for user ${req.user.userId}, spawnNodeId=${spawnNodeId}`);
+    }
+  } catch (err) {
+    console.error(`[CharacterCreate] Discovery FAILED for user ${req.user.userId}, spawnNodeId=${spawnNodeId}:`, err.message);
+    // Don't throw - character was created, discovery failure shouldn't block
+  }
 
   res.status(201).json({ character });
 }));

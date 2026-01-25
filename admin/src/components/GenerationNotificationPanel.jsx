@@ -16,9 +16,12 @@ import {
   ImageIcon,
   CheckCircledIcon,
   MinusIcon,
+  ExclamationTriangleIcon,
+  Link2Icon,
 } from '@radix-ui/react-icons';
 
 import { useGenerationContext } from '../contexts/GenerationContext';
+import { ConnectionState } from '../lib/socket';
 
 /**
  * Progress bar component
@@ -43,12 +46,60 @@ function ProgressBar({ current, total, label }) {
 }
 
 /**
+ * Validate and normalize image path for display
+ * @param {string} imagePath - Raw path from generation output
+ * @returns {string|null} - Valid URL path or null if invalid
+ */
+function normalizeImagePath(imagePath) {
+  if (!imagePath || typeof imagePath !== 'string') return null;
+
+  // If it's already a URL path starting with /assets, use it
+  if (imagePath.startsWith('/assets/')) {
+    return imagePath;
+  }
+
+  // If it's a full file system path, try to convert it
+  // Look for common asset directories and extract relative path
+  const assetMarkers = ['/public/assets/', '/frontend/public/assets/'];
+  for (const marker of assetMarkers) {
+    const idx = imagePath.indexOf(marker);
+    if (idx !== -1) {
+      return '/assets/' + imagePath.slice(idx + marker.length);
+    }
+  }
+
+  // If path contains 'assets' somewhere, try to use from there
+  const assetsIdx = imagePath.indexOf('/assets/');
+  if (assetsIdx !== -1) {
+    return imagePath.slice(assetsIdx);
+  }
+
+  // Can't normalize - return null
+  return null;
+}
+
+/**
  * Generated image thumbnail
  */
 function ImageThumbnail({ image }) {
   const [hasError, setHasError] = useState(false);
-  // Extract filename from path
+
+  // Normalize the image path
+  const normalizedPath = normalizeImagePath(image.path);
   const filename = image.path?.split('/').pop() || 'unknown';
+
+  // If we can't get a valid path, show placeholder
+  if (!normalizedPath) {
+    return (
+      <div
+        className="w-12 h-12 bg-midnight-800 border border-midnight-700 rounded-lg
+                   flex items-center justify-center text-parchment-500 overflow-hidden"
+        title={`Invalid path: ${filename}`}
+      >
+        <ImageIcon className="w-6 h-6" />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -60,7 +111,7 @@ function ImageThumbnail({ image }) {
         <ImageIcon className="w-6 h-6" />
       ) : (
         <img
-          src={image.path}
+          src={normalizedPath}
           alt={filename}
           className="w-full h-full object-cover"
           onError={() => setHasError(true)}
@@ -74,9 +125,11 @@ function ImageThumbnail({ image }) {
  * Minimized badge shown when panel is collapsed
  */
 export function GenerationBadge() {
-  const { isProcessing, currentProgress, pendingCount, toggleMinimize } = useGenerationContext();
+  const { isProcessing, currentProgress, pendingCount, toggleMinimize, connected, connectionState } = useGenerationContext();
 
-  if (!isProcessing && pendingCount === 0) return null;
+  // Always show if disconnected (so user can reconnect) or if there's activity
+  const showBadge = !connected || isProcessing || pendingCount > 0;
+  if (!showBadge) return null;
 
   const current = currentProgress?.current || 0;
   const total = currentProgress?.total || 0;
@@ -88,7 +141,14 @@ export function GenerationBadge() {
                  bg-midnight-800 border border-midnight-700 rounded-lg shadow-lg
                  hover:bg-midnight-700 transition-colors"
     >
-      {isProcessing ? (
+      {!connected ? (
+        <>
+          <span className="w-2 h-2 bg-accent-ruby rounded-full" />
+          <span className="text-sm text-parchment-400">
+            {connectionState === ConnectionState.CONNECTING ? 'Connecting...' : 'Disconnected'}
+          </span>
+        </>
+      ) : isProcessing ? (
         <>
           <ReloadIcon className="w-4 h-4 text-accent-gold animate-spin" />
           <span className="text-sm text-parchment-200">
@@ -108,6 +168,54 @@ export function GenerationBadge() {
 }
 
 /**
+ * Connection status indicator with detailed state
+ */
+function ConnectionStatusIndicator({ connectionState, connectionError, onReconnect }) {
+  const getStatusConfig = () => {
+    switch (connectionState) {
+      case ConnectionState.AUTHENTICATED:
+        return { color: 'bg-accent-emerald', text: 'Connected', icon: null };
+      case ConnectionState.AUTHENTICATING:
+        return { color: 'bg-accent-gold', text: 'Authenticating...', icon: <ReloadIcon className="w-3 h-3 animate-spin" /> };
+      case ConnectionState.CONNECTING:
+        return { color: 'bg-accent-gold', text: 'Connecting...', icon: <ReloadIcon className="w-3 h-3 animate-spin" /> };
+      case ConnectionState.DISCONNECTED:
+      default:
+        return { color: 'bg-accent-ruby', text: 'Disconnected', icon: null };
+    }
+  };
+
+  const { color, text, icon } = getStatusConfig();
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
+        <span className={`w-2 h-2 rounded-full ${color}`} title={text} />
+        <span className="text-xs text-parchment-400">{text}</span>
+        {icon}
+      </div>
+      {connectionState === ConnectionState.DISCONNECTED && (
+        <button
+          type="button"
+          onClick={onReconnect}
+          className="flex items-center gap-1 px-2 py-0.5 text-xs bg-midnight-700 text-parchment-300
+                     rounded hover:bg-midnight-600 transition-colors"
+          title="Reconnect to server"
+        >
+          <Link2Icon className="w-3 h-3" />
+          Reconnect
+        </button>
+      )}
+      {connectionError && (
+        <span className="text-xs text-accent-ruby flex items-center gap-1" title={connectionError}>
+          <ExclamationTriangleIcon className="w-3 h-3" />
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
  * Main notification panel component
  */
 export default function GenerationNotificationPanel() {
@@ -121,6 +229,8 @@ export default function GenerationNotificationPanel() {
     eta,
     generatedImages,
     connected,
+    connectionState,
+    connectionError,
 
     // Panel controls
     panelOpen,
@@ -131,6 +241,7 @@ export default function GenerationNotificationPanel() {
     resume,
     cancelJob,
     cancelAll,
+    reconnect,
   } = useGenerationContext();
 
   // Recent images (last 8)
@@ -162,11 +273,11 @@ export default function GenerationNotificationPanel() {
               <Dialog.Title className="text-lg font-display font-semibold text-parchment-100">
                 Generation Status
               </Dialog.Title>
-              {connected ? (
-                <span className="w-2 h-2 bg-accent-emerald rounded-full" title="Connected" />
-              ) : (
-                <span className="w-2 h-2 bg-accent-ruby rounded-full" title="Disconnected" />
-              )}
+              <ConnectionStatusIndicator
+                connectionState={connectionState}
+                connectionError={connectionError}
+                onReconnect={reconnect}
+              />
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -343,7 +454,16 @@ export default function GenerationNotificationPanel() {
 
           {/* Footer */}
           <div className="px-6 py-4 border-t border-midnight-700 text-xs text-parchment-600 text-center">
-            {connected ? 'Real-time updates via WebSocket' : 'Reconnecting...'}
+            {connected ? (
+              'Real-time updates via WebSocket'
+            ) : connectionState === ConnectionState.CONNECTING || connectionState === ConnectionState.AUTHENTICATING ? (
+              <span className="flex items-center justify-center gap-2">
+                <ReloadIcon className="w-3 h-3 animate-spin" />
+                {connectionState === ConnectionState.CONNECTING ? 'Connecting...' : 'Authenticating...'}
+              </span>
+            ) : (
+              <span className="text-accent-ruby">Disconnected - click Reconnect above</span>
+            )}
           </div>
         </Dialog.Content>
       </Dialog.Portal>

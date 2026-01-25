@@ -7,6 +7,7 @@ import { authLimiter } from '../middleware/rateLimiter.js';
 import { refreshLimiter } from '../middleware/refreshRateLimiter.js';
 import { authenticate } from '../middleware/auth.js';
 import { STARTING_GOLD } from '../config/constants.js';
+import { validateAndRepairDiscovery } from '../services/world/discoveryValidationService.js';
 
 const router = express.Router();
 
@@ -107,6 +108,11 @@ router.post('/login', authLimiter, asyncHandler(async (req, res) => {
 
   // Update last login
   await query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
+
+  // Self-healing: Validate and repair discovery state (fire-and-forget)
+  validateAndRepairDiscovery(user.id).catch(err => {
+    console.warn(`[Login] Discovery validation failed for user ${user.id}:`, err.message);
+  });
 
   // Generate tokens
   const accessToken = generateAccessToken(user.id, user.username);

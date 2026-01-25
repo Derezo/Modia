@@ -2,7 +2,7 @@
  * Dashboard - Main overview page with stats and quick actions
  */
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   CheckCircledIcon,
@@ -13,6 +13,7 @@ import {
   ActivityLogIcon,
   InfoCircledIcon,
   ClockIcon,
+  ChevronDownIcon,
 } from '@radix-ui/react-icons';
 
 import StatsCard from '../components/StatsCard';
@@ -34,6 +35,20 @@ export default function Dashboard() {
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
   const [actionMessage, setActionMessage] = useState(null);
+  const [backupCategory, setBackupCategory] = useState('all');
+  const [showBackupDropdown, setShowBackupDropdown] = useState(false);
+  const backupDropdownRef = useRef(null);
+
+  // Close backup dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (backupDropdownRef.current && !backupDropdownRef.current.contains(event.target)) {
+        setShowBackupDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Quick action handlers
   const handleGenerateAll = async () => {
@@ -80,15 +95,18 @@ export default function Dashboard() {
     }
   };
 
-  const handleBackup = async () => {
+  const handleBackup = async (category = backupCategory) => {
     setActionLoading('backup');
     setActionMessage(null);
+    setShowBackupDropdown(false);
 
     try {
-      const result = await api.createBackup('manual');
+      const options = category !== 'all' ? { category } : {};
+      const result = await api.createBackup('manual', options);
+      const categoryLabel = category === 'all' ? 'all categories' : category;
       setActionMessage({
         type: 'success',
-        text: `Backup created with ${result.assetCount} assets`,
+        text: `Backup created with ${result.assetCount} assets (${categoryLabel})`,
       });
     } catch (err) {
       setActionMessage({ type: 'error', text: err.message });
@@ -241,18 +259,49 @@ export default function Dashboard() {
             Validate Assets
           </button>
 
-          <button
-            onClick={handleBackup}
-            disabled={actionLoading === 'backup'}
-            className="btn-ghost flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {actionLoading === 'backup' ? (
-              <ReloadIcon className="w-4 h-4 animate-spin" />
-            ) : (
-              <ArchiveIcon className="w-4 h-4" />
+          <div className="relative" ref={backupDropdownRef}>
+            <div className="flex">
+              <button
+                onClick={() => handleBackup(backupCategory)}
+                disabled={actionLoading === 'backup'}
+                className="btn-ghost flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed rounded-r-none border-r border-midnight-600"
+              >
+                {actionLoading === 'backup' ? (
+                  <ReloadIcon className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ArchiveIcon className="w-4 h-4" />
+                )}
+                Backup {backupCategory === 'all' ? 'All' : backupCategory.charAt(0).toUpperCase() + backupCategory.slice(1)}
+              </button>
+              <button
+                onClick={() => setShowBackupDropdown(!showBackupDropdown)}
+                disabled={actionLoading === 'backup'}
+                className="btn-ghost px-2 rounded-l-none disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Select backup category"
+              >
+                <ChevronDownIcon className="w-4 h-4" />
+              </button>
+            </div>
+            {showBackupDropdown && (
+              <div className="absolute top-full left-0 mt-1 w-48 bg-midnight-800 border border-midnight-600 rounded-lg shadow-xl z-50 py-1">
+                {['all', ...categoryOrder].map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => {
+                      setBackupCategory(cat);
+                      setShowBackupDropdown(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-midnight-700 transition-colors ${
+                      backupCategory === cat ? 'text-accent-gold' : 'text-parchment-200'
+                    }`}
+                  >
+                    {cat === 'all' ? 'All Categories' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    {backupCategory === cat && ' ✓'}
+                  </button>
+                ))}
+              </div>
             )}
-            Create Backup
-          </button>
+          </div>
 
           <button
             onClick={refetchStats}

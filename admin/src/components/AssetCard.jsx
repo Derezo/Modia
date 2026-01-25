@@ -56,9 +56,10 @@ function getAssetImageUrl(asset, category) {
       return `/assets/sprites/items/${subcategory}/${id}_64.png`;
     }
     case 'icons': {
-      // Icons organized by subcategory (actions, status, etc.)
+      // Icons are stored as: /assets/icons/png/{size}/{subcategory}-{id}.png
+      // Example: /assets/icons/png/48/actions-action_attack.png
       const subcategory = asset._iconCategory || asset._subcategory || asset.subcategory || 'actions';
-      return `/assets/sprites/icons/${subcategory}/${id}.png`;
+      return `/assets/icons/png/48/${subcategory}-${id}.png`;
     }
     case 'nodes': {
       return `/assets/sprites/nodes/${id}.png`;
