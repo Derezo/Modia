@@ -53,7 +53,8 @@
       "gender": "male",
       "class": "wizard",
       "seed": 10002,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-25T21:56:54.647Z"
     },
     {
       "id": "human_male_monk",
@@ -61,7 +62,8 @@
       "gender": "male",
       "class": "monk",
       "seed": 10003,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-25T22:25:01.204Z"
     },
     {
       "id": "human_male_chemist",
@@ -117,7 +119,8 @@
       "gender": "other",
       "class": "wizard",
       "seed": 10010,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-25T22:19:47.243Z"
     },
     {
       "id": "human_other_monk",

@@ -268,8 +268,8 @@ export default function AudioGrid({
       audioRef.current.pause();
     }
 
-    // Get audio URL
-    const audioUrl = asset.audioUrl || `/audio/${audioType}/${asset.key || asset.id}.mp3`;
+    // Get audio URL - use path from metadata first, fallback with correct /assets prefix
+    const audioUrl = asset.audioUrl || asset.path || `/assets/audio/${audioType}/${asset.key || asset.id}.mp3`;
 
     // Create new audio element
     const audio = new Audio(audioUrl);

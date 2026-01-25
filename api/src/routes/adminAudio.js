@@ -25,7 +25,6 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { AppError, asyncHandler } from '../middleware/errorHandler.js';
-import { createLimiter } from '../middleware/rateLimiterFactory.js';
 import { loadJsonFile, saveJsonFile } from '../utils/jsonFileUtils.js';
 import {
   VALID_AUDIO_TYPES,
@@ -51,15 +50,6 @@ const METADATA_DIR = path.join(PROJECT_ROOT, 'audio-metadata');
 // SECURITY: Admin mode is STRICTLY disabled in production
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Rate limiter for admin endpoints (100 requests per minute base = 500/min in dev, 200/min in prod)
-const adminRateLimiter = createLimiter({
-  name: 'admin-audio',
-  windowMs: 60 * 1000,
-  maxRequests: 100,
-  message: 'Admin audio endpoint rate limit exceeded. Please wait.',
-  useUserKey: false // IP-based since no auth
-});
-
 /**
  * Middleware to check admin mode is enabled
  * SECURITY: Explicitly blocks production even if DEBUG=true is set
@@ -74,9 +64,8 @@ function requireDevMode(req, res, next) {
   next();
 }
 
-// Apply dev mode check and rate limiting to all routes
+// Apply dev mode check to all routes (rate limiting removed - requireDevMode already blocks production)
 router.use(requireDevMode);
-router.use(adminRateLimiter);
 
 /**
  * Load all music tracks from metadata files
@@ -585,10 +574,18 @@ router.put('/:type/:id/mark-regeneration', asyncHandler(async (req, res) => {
   // Update the asset in its source file
   if (assetPath && existsSync(assetPath)) {
     const fileData = await loadJsonFile(assetPath);
-    if (fileData && fileData[id]) {
-      fileData[id].needsRegeneration = mark;
-      fileData[id].regenerationQueuedAt = mark ? new Date().toISOString() : null;
-      await saveJsonFile(assetPath, fileData);
+    if (fileData) {
+      // Handle array-based structure (tracks[] for music, effects[] for SFX)
+      const arrayKey = type === 'music' ? 'tracks' : 'effects';
+      const items = fileData[arrayKey];
+      if (Array.isArray(items)) {
+        const item = items.find(i => i.id === id);
+        if (item) {
+          item.needsRegeneration = mark;
+          item.regenerationQueuedAt = mark ? new Date().toISOString() : null;
+          await saveJsonFile(assetPath, fileData);
+        }
+      }
     }
   }
 
@@ -975,6 +972,67 @@ router.post('/generate/cancel', asyncHandler(async (req, res) => {
   res.json({
     message: result.cancelledCount > 0 ? `Cancelled ${result.cancelledCount} job(s)` : 'No jobs to cancel',
     ...result
+  });
+}));
+
+/**
+ * POST /api/admin/audio/generate/regeneration-queue
+ * Process all audio assets marked for regeneration
+ * Body: { type?: 'music'|'sfx', options?: object }
+ */
+router.post('/generate/regeneration-queue', asyncHandler(async (req, res) => {
+  const { type, options = {} } = req.body;
+
+  // Validate type if provided
+  if (type && !VALID_AUDIO_TYPES.includes(type)) {
+    throw new AppError(`Invalid audio type: ${type}. Valid: ${VALID_AUDIO_TYPES.join(', ')}`, 400);
+  }
+
+  // Load metadata and find items needing regeneration
+  const [musicData, sfxData] = await Promise.all([
+    loadMusicMetadata(),
+    loadSFXMetadata()
+  ]);
+
+  const jobsQueued = [];
+  const errors = [];
+
+  // Process music if type is 'music' or not specified
+  if (!type || type === 'music') {
+    const musicNeedsRegen = musicData.tracks.filter(t => t.needsRegeneration === true);
+    if (musicNeedsRegen.length > 0) {
+      const musicKeys = musicNeedsRegen.map(t => t.id);
+      try {
+        const result = audioGenerationService.queueJob('music', { keys: musicKeys }, { ...options, force: true });
+        jobsQueued.push({ type: 'music', count: musicKeys.length, ...result });
+      } catch (err) {
+        errors.push({ type: 'music', error: err.message });
+      }
+    }
+  }
+
+  // Process SFX if type is 'sfx' or not specified
+  if (!type || type === 'sfx') {
+    const sfxNeedsRegen = sfxData.effects.filter(e => e.needsRegeneration === true);
+    if (sfxNeedsRegen.length > 0) {
+      const sfxKeys = sfxNeedsRegen.map(e => e.id);
+      try {
+        const result = audioGenerationService.queueJob('sfx', { keys: sfxKeys }, { ...options, force: true });
+        jobsQueued.push({ type: 'sfx', count: sfxKeys.length, ...result });
+      } catch (err) {
+        errors.push({ type: 'sfx', error: err.message });
+      }
+    }
+  }
+
+  if (jobsQueued.length === 0 && errors.length === 0) {
+    return res.json({ message: 'No audio assets marked for regeneration', jobsQueued: [] });
+  }
+
+  res.status(202).json({
+    message: `Queued ${jobsQueued.reduce((sum, j) => sum + j.count, 0)} audio asset(s) for regeneration`,
+    jobsQueued,
+    errors: errors.length > 0 ? errors : undefined
   });
 }));
 

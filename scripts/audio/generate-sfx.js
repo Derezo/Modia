@@ -38,7 +38,7 @@ function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
     dryRun: false,
-    key: null,
+    keys: [],  // Support multiple --key arguments
     category: null,
     force: false,
     help: false
@@ -51,7 +51,8 @@ function parseArgs() {
         options.dryRun = true;
         break;
       case '--key':
-        options.key = args[++i];
+        // Support multiple --key arguments
+        options.keys.push(args[++i]);
         break;
       case '--category':
         options.category = args[++i];
@@ -160,9 +161,9 @@ function loadAllSFXMetadata() {
 function filterEffects(effects, options) {
   let filtered = effects;
 
-  // Filter by specific key
-  if (options.key) {
-    filtered = filtered.filter(e => e.id === options.key);
+  // Filter by specific keys (supports multiple --key arguments)
+  if (options.keys && options.keys.length > 0) {
+    filtered = filtered.filter(e => options.keys.includes(e.id));
   }
 
   // Filter by category

@@ -11,8 +11,9 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:3000',
       '/ws': {
-        target: 'ws://localhost:3000',
-        ws: true
+        target: 'http://localhost:3000',
+        ws: true,
+        changeOrigin: true
       },
       // Proxy asset requests to the frontend dev server
       '/assets': 'http://localhost:8080'

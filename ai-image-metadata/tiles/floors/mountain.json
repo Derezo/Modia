@@ -42,7 +42,8 @@
       "variant": 3,
       "prompt": "patchy mountain grass with gravel and small stones in earthy green grey #4A6B2A #8B8682",
       "outputPath": "mountain",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-25T20:24:46.432Z"
     },
     {
       "key": "stone_0",

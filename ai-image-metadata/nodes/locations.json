@@ -73,7 +73,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "mountain",

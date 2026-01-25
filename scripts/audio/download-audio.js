@@ -228,7 +228,7 @@ function updateTrackStatus(track, status) {
 /**
  * Mark track as successfully downloaded
  * @param {Object} track - Track to update
- * @param {Object} downloadResult - Download result
+ * @param {Object} downloadResult - Download result with downloads array
  */
 function markTrackDownloaded(track, downloadResult) {
   const filePath = path.join(METADATA_DIR, track._sourceFile);
@@ -247,6 +247,19 @@ function markTrackDownloaded(track, downloadResult) {
     data.tracks[trackIndex].fileSize = downloadResult.size;
     data.tracks[trackIndex].duration = downloadResult.duration;
     delete data.tracks[trackIndex].downloadFailed;
+
+    // Store variant information if multiple tracks were downloaded
+    if (downloadResult.downloads && downloadResult.downloads.length > 0) {
+      data.tracks[trackIndex].variants = downloadResult.downloads.map((dl, index) => ({
+        id: `${track.id}_v${index + 1}`,
+        path: dl.path.replace(/.*\/public/, ''), // Convert to web path (e.g., /assets/audio/...)
+        duration: dl.duration,
+        filename: path.basename(dl.path),
+        fileSize: dl.size,
+        isPrimary: index === 0
+      }));
+      data.tracks[trackIndex].primaryVariantId = `${track.id}_v1`;
+    }
 
     saveMetadata(filePath, data);
   }
@@ -412,11 +425,13 @@ async function main() {
           duration: downloadResult.downloads[0]?.duration
         });
 
-        // Update metadata (using primary track info)
+        // Update metadata with all variant info
         markTrackDownloaded(track, {
+          taskId: track.taskId,
           path: downloadResult.primaryPath,
           size: totalSize,
-          duration: downloadResult.downloads[0]?.duration
+          duration: downloadResult.downloads[0]?.duration,
+          downloads: downloadResult.downloads
         });
 
         log(`Downloaded: ${track.id} (${downloadResult.totalTracks} tracks, ${totalSize} bytes total)`, 'success');

@@ -9,7 +9,8 @@
       "name": "Short Sword",
       "prompt": "short sword simple blade leather grip compact",
       "seed": 20001,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-25T20:14:17.281Z"
     },
     {
       "id": "sword_long",

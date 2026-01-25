@@ -24,11 +24,25 @@ async function fetchAPI(endpoint, options = {}) {
     delete config.headers['Content-Type'];
   }
 
-  const response = await fetch(url, config);
+  let response;
+  try {
+    response = await fetch(url, config);
+  } catch (networkError) {
+    // Network error - server unreachable, CORS issue, etc.
+    throw new Error(`Network error: ${networkError.message}. Is the API server running?`);
+  }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `API Error: ${response.status}`);
+    // Try to parse error as JSON, fallback to status text
+    let errorMessage;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.error || errorData.message || `API Error: ${response.status}`;
+    } catch {
+      // Response is not JSON (e.g., HTML error page)
+      errorMessage = `API Error ${response.status}: ${response.statusText || 'Server error'}`;
+    }
+    throw new Error(errorMessage);
   }
 
   return response.json();
@@ -38,6 +52,9 @@ async function fetchAPI(endpoint, options = {}) {
  * API Methods
  */
 export const api = {
+  // Config
+  getConfig: () => fetchAPI('/config'),
+
   // Stats
   getStats: () => fetchAPI('/stats'),
 
@@ -389,6 +406,19 @@ export const api = {
     fetchAPI('/audio/mark-multiple', {
       method: 'PUT',
       body: JSON.stringify({ type: audioType, ids, mark }),
+    }),
+
+  /**
+   * Process audio regeneration queue (start batch generation)
+   * Processes music and/or SFX items marked with needsRegeneration
+   * @param {object} options - Options
+   * @param {string} options.type - Optional 'music' or 'sfx' (all if omitted)
+   * @returns {Promise<object>} Generation job info
+   */
+  processAudioRegenerationQueue: (options = {}) =>
+    fetchAPI('/audio/generate/regeneration-queue', {
+      method: 'POST',
+      body: JSON.stringify(options),
     }),
 };
 

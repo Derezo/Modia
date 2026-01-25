@@ -14,13 +14,17 @@ import { useWaveform } from '../../hooks/useWaveform';
 
 /**
  * Get audio file URL from asset metadata
+ * Supports multiple path formats from metadata
  */
 function getAudioUrl(asset) {
   if (asset.audioUrl) return asset.audioUrl;
-  if (asset.filePath) return `/audio/${asset.filePath}`;
+  // Use path from metadata (e.g., "/assets/audio/music/regions/key.mp3")
+  if (asset.path) return asset.path;
+  if (asset.filePath) return `/assets/audio/${asset.filePath}`;
   if (asset.key) {
     const category = asset._category || 'music';
-    return `/audio/${category}/${asset.key}.mp3`;
+    // Fallback with correct /assets prefix
+    return `/assets/audio/${category}/${asset.key}.mp3`;
   }
   return null;
 }
@@ -59,8 +63,9 @@ const AudioCard = memo(function AudioCard({
   const duration = asset.duration;
 
   // Fetch waveform data for generated assets
+  // API returns { id, type, waveform: [...] } so extract the array
   const { waveform: fetchedWaveform } = useWaveform(audioType, id, isGenerated);
-  const peaks = fetchedWaveform || asset.peaks || asset.waveform || [];
+  const peaks = fetchedWaveform?.waveform || asset.peaks || asset.waveform || [];
 
   /**
    * Handle checkbox click without triggering card click

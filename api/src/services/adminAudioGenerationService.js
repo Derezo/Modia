@@ -129,6 +129,11 @@ const AUDIO_EXTRA_PATTERNS = [
   {
     regex: /Downloading:\s*(\S+)/i,
     processor: (match) => ({ type: 'downloading', asset: match[1] })
+  },
+  {
+    // Match "Download complete: /path/to/file.mp3 (size bytes)"
+    regex: /Download complete:\s*(.+\.mp3)/i,
+    processor: (match) => ({ type: 'saved', path: match[1].trim() })
   }
 ];
 
@@ -245,12 +250,36 @@ async function processNextJob() {
         }
         state.stdout.push(line);
 
+        // ALWAYS broadcast stdout (not just progress lines)
+        // This ensures Console/Assets tabs update with all output
+        broadcastUnified('stdout', job.type, {
+          jobId: job.id,
+          line,
+          lineType: 'stdout'
+        });
+
+        // Parse progress for special handling
         const progress = parseProgress(line);
         if (progress) {
           job.progress = progress;
 
           if (progress.type === 'saved') {
             state.generatedAssets.push(progress.path);
+
+            // Convert to web path and broadcast immediately
+            const publicIndex = progress.path.indexOf('/public/');
+            const webPath = publicIndex !== -1 ? progress.path.slice(publicIndex + 7) : progress.path;
+
+            // Broadcast asset_generated event for real-time UI updates
+            broadcastUnified('asset_generated', job.type, {
+              jobId: job.id,
+              asset: {
+                type: job.type === 'music' ? 'music' : 'sfx',
+                path: webPath,
+                timestamp: new Date().toISOString(),
+                status: 'completed'
+              }
+            });
           }
 
           broadcast('audio:progress', {
@@ -265,13 +294,6 @@ async function processNextJob() {
             jobId: job.id,
             progress,
             generatedCount: state.generatedAssets.length
-          });
-
-          // Broadcast unified stdout for each line
-          broadcastUnified('stdout', job.type, {
-            jobId: job.id,
-            line,
-            lineType: 'stdout'
           });
         }
       }
@@ -343,6 +365,17 @@ function completeJob(job, status, error = null) {
   broadcast('audio:job_completed', { job });
 
   // Broadcast unified completed/failed event
+  // Convert file system paths to web paths (e.g., /home/.../public/assets/... -> /assets/...)
+  const webAssets = job.generatedAssets.map(fsPath => {
+    const publicIndex = fsPath.indexOf('/public/');
+    const webPath = publicIndex !== -1 ? fsPath.slice(publicIndex + 7) : fsPath;
+    return {
+      type: job.type === 'music' ? 'music' : 'sfx',
+      path: webPath,
+      timestamp: new Date().toISOString()
+    };
+  });
+
   broadcastUnified(status, job.type, {
     jobId: job.id,
     job: {
@@ -351,11 +384,7 @@ function completeJob(job, status, error = null) {
       filters: job.filters,
       status,
       error: job.error || null,
-      generatedAssets: job.generatedAssets.map(path => ({
-        type: job.type === 'music' ? 'music' : 'sfx',
-        path,
-        timestamp: new Date().toISOString()
-      }))
+      generatedAssets: webAssets
     }
   });
 

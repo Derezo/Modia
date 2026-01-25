@@ -89,7 +89,16 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '1mb' })); // SECURITY: Limit request body size
-app.use(rateLimiter);
+
+// Apply global rate limiter to all routes EXCEPT admin routes
+// Admin routes are dev-only (blocked in production by requireDevMode middleware)
+// and need higher throughput for dashboard operations like waveform generation
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/admin')) {
+    return next();
+  }
+  return rateLimiter(req, res, next);
+});
 
 // Health check (three-tier: /, /ready, /metrics)
 app.use('/api/health', healthRoutes);
@@ -134,6 +143,14 @@ app.use('/api/quests', questRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/audio', adminAudioRoutes);
+
+// 404 handler for API routes - must come before error handler
+// Returns JSON instead of Express's default HTML response
+app.use('/api', (req, res) => {
+  res.status(404).json({
+    error: `API endpoint not found: ${req.method} ${req.path}`
+  });
+});
 
 // Error handling
 app.use(errorHandler);

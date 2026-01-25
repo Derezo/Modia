@@ -42,7 +42,8 @@
       "variant": 3,
       "prompt": "sparse cave moss patches on rocky underground floor in dark green grey #2F4F4F #696969",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-25T20:24:01.093Z"
     },
     {
       "key": "stone_0",

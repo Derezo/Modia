@@ -411,6 +411,38 @@ This eliminates the need for a `base/` directory with generic tiles.
 | Item rarity borders | overlays | rarity |
 | Enchantment effects | overlays | augments |
 
+## Migration Script
+
+The `npm run ai:migrate-paths` command migrates assets from legacy locations to the canonical path structure and generates all required size variants.
+
+### Usage
+
+```bash
+# Migrate all asset categories
+npm run ai:migrate-paths
+
+# Migrate specific category
+npm run ai:migrate-paths -- --category portraits
+
+# Preview without making changes
+npm run ai:migrate-paths -- --dry-run
+
+# Verbose output
+npm run ai:migrate-paths -- --category portraits --verbose
+```
+
+### What It Does
+
+1. **Scans legacy locations** for existing assets (e.g., `/assets/sprites/portraits/`)
+2. **Scans external originals** from the image-generator project (`../image-generator/outputs/originals/`)
+3. **Copies originals** to the canonical `originals/` directory
+4. **Generates size variants** using ImageMagick (64, 128, 256 for portraits)
+5. **Skips existing files** to avoid redundant processing
+
+### External Originals Integration
+
+The migration script automatically finds 1024x1024 originals from the external `image-generator` project and uses them as source for size variant generation. This ensures high-quality resizing even when the AI generation pipeline saves processed images to a separate location.
+
 ## Related Documentation
 
 - **AI Image Generation:** `docs/AI_IMAGE_GENERATION.md` - Image generation pipeline

@@ -340,9 +340,26 @@ async function processNextJob() {
           job.progress.steps.current = progress.current;
           job.progress.steps.total = progress.total;
         } else if (progress.type === 'saved') {
+          const timestamp = new Date().toISOString();
           state.generatedImages.push({
             path: progress.path,
-            timestamp: new Date().toISOString()
+            timestamp
+          });
+
+          // Convert to web path and broadcast immediately
+          const publicIndex = progress.path.indexOf('/public/');
+          const webPath = publicIndex !== -1 ? progress.path.slice(publicIndex + 7) : progress.path;
+
+          // Broadcast asset_generated event for real-time UI updates
+          broadcastUnified('asset_generated', {
+            jobId: job.id,
+            asset: {
+              type: 'image',
+              category: job.category,
+              path: webPath,
+              timestamp,
+              status: 'completed'
+            }
           });
         }
 

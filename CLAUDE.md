@@ -84,6 +84,7 @@ npm run ai:generate:icons               # Generate UI icons only
 npm run ai:generate:nodes               # Generate world map nodes only
 npm run ai:status                       # Quick status check of generated images
 npm run ai:validate                     # Full validation of image files
+npm run ai:migrate-paths                # Migrate assets to canonical paths with size variants
 
 # Single asset generation:
 npm run ai:generate:tiles -- --key forest_grass_1 --force

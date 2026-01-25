@@ -28,7 +28,8 @@ const {
   getProjectRoot,
   buildThemedPrompt,
   createBackup,
-  getEffectiveLoraModel
+  getEffectiveLoraModel,
+  generateCanonicalSizeVariants
 } = require('./lib');
 
 // Configuration
@@ -359,6 +360,37 @@ async function main() {
         markAssetGenerated(item);
 
         log(`Generated: ${item.id}`, 'success');
+
+        // Post-process: generate canonical size variants (32, 64, 128)
+        const outputPath = getOutputPath(item);
+        try {
+          const postResult = await generateCanonicalSizeVariants(
+            outputPath,
+            'items',
+            item.id,
+            {
+              subcategory: item._itemCategory,
+              sizes: [32, 64, 128],
+              force: options.force,
+              verbose: options.verbose
+            }
+          );
+
+          if (postResult.success) {
+            const genCount = postResult.generated.length;
+            const skipCount = postResult.skipped.length;
+            if (genCount > 0 || options.verbose) {
+              log(`  Size variants: ${genCount} generated, ${skipCount} skipped`, 'info');
+            }
+          } else {
+            log(`  Warning: Some size variants failed`, 'warn');
+            for (const err of postResult.errors) {
+              log(`    ${err.size}px: ${err.error}`, 'error');
+            }
+          }
+        } catch (postError) {
+          log(`  Warning: Post-processing failed: ${postError.message}`, 'warn');
+        }
       } else {
         results.failed.push({
           id: item.id,
