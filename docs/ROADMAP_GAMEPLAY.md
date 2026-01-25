@@ -111,6 +111,9 @@
 - [x] Status effect duration display (BattleUnit.js duration numbers on icons) - v9.1
 - [x] Elevation-aware tilemap rendering (coordinate transformation, depth sorting, click detection) - v9.7
 - [x] Frontend/backend 3D pathfinding synchronization (movement highlights match server validation) - v9.7
+- [x] Tile cycling for overlapping elevations (auto-cycle 1.5s, Tab key, mobile long-press) - v9.8
+- [x] Occlusion transparency (35% alpha for tiles blocking units) - v9.8
+- [x] Height movement animation (parabolic arc for elevation transitions) - v9.8
 
 ### 2.2 Enemy System
 
