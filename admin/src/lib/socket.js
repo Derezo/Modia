@@ -1,13 +1,27 @@
 /**
  * WebSocket Client for Admin Dashboard
- * Handles real-time generation events
+ * Handles real-time generation events with proper connection state management
  */
+
+// Connection state enum
+export const ConnectionState = {
+  DISCONNECTED: 'disconnected',
+  CONNECTING: 'connecting',
+  CONNECTED: 'connected',
+  AUTHENTICATING: 'authenticating',
+  AUTHENTICATED: 'authenticated',
+};
 
 // Connection state
 let ws = null;
+let connectionState = ConnectionState.DISCONNECTED;
+let connectionId = 0; // Incremented on each connect to track stale callbacks
 let reconnectAttempts = 0;
+let reconnectTimeoutId = null;
+let authTimeoutId = null;
 const maxReconnectAttempts = 10;
 const baseReconnectDelay = 1000;
+const authTimeout = 10000; // 10 seconds to authenticate
 
 // Event handlers map
 const handlers = new Map();
@@ -16,6 +30,7 @@ const handlers = new Map();
 let onConnectCallback = null;
 let onDisconnectCallback = null;
 let onErrorCallback = null;
+let onStateChangeCallback = null;
 
 /**
  * Get WebSocket URL based on current environment
@@ -29,49 +44,142 @@ function getWsUrl() {
 }
 
 /**
+ * Update connection state and notify listeners
+ */
+function setConnectionState(newState) {
+  const oldState = connectionState;
+  connectionState = newState;
+
+  if (onStateChangeCallback && oldState !== newState) {
+    onStateChangeCallback(newState, oldState);
+  }
+}
+
+/**
+ * Clear all pending timeouts
+ */
+function clearPendingTimeouts() {
+  if (reconnectTimeoutId) {
+    clearTimeout(reconnectTimeoutId);
+    reconnectTimeoutId = null;
+  }
+  if (authTimeoutId) {
+    clearTimeout(authTimeoutId);
+    authTimeoutId = null;
+  }
+}
+
+/**
  * Connect to WebSocket server
  */
 export function connect() {
-  if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
-    console.log('[WS] Already connected or connecting');
+  // Prevent concurrent connection attempts
+  if (connectionState === ConnectionState.CONNECTING ||
+      connectionState === ConnectionState.AUTHENTICATING) {
+    console.log('[WS] Already connecting or authenticating');
     return;
   }
 
+  // Already fully connected
+  if (connectionState === ConnectionState.AUTHENTICATED && ws?.readyState === WebSocket.OPEN) {
+    console.log('[WS] Already connected and authenticated');
+    return;
+  }
+
+  // Clean up any existing connection
+  if (ws) {
+    try {
+      ws.close();
+    } catch (e) {
+      // Ignore close errors
+    }
+    ws = null;
+  }
+
+  // Clear any pending timeouts
+  clearPendingTimeouts();
+
+  // Increment connection ID to invalidate stale callbacks
+  connectionId++;
+  const currentConnectionId = connectionId;
+
   const url = getWsUrl();
-  console.log('[WS] Connecting to', url);
+  console.log('[WS] Connecting to', url, `(connection #${currentConnectionId})`);
 
-  ws = new WebSocket(url);
+  setConnectionState(ConnectionState.CONNECTING);
 
-  ws.onopen = () => {
+  const socket = new WebSocket(url);
+
+  socket.onopen = () => {
+    // Guard against stale callback
+    if (currentConnectionId !== connectionId) {
+      console.log('[WS] Ignoring stale onopen callback');
+      try { socket.close(); } catch (e) { /* ignore */ }
+      return;
+    }
+
     console.log('[WS] Connected');
+    ws = socket;
     reconnectAttempts = 0;
+    setConnectionState(ConnectionState.AUTHENTICATING);
 
-    // Authenticate (we use a simple dev token since admin is dev-only)
-    // In a real app, you'd use a proper auth token
-    // For now, we'll skip auth since admin:generation room allows all authenticated users
-    // and we're in dev mode
-    ws.send(JSON.stringify({
-      type: 'auth',
-      payload: { token: getDevToken() }
-    }));
+    // Set auth timeout
+    authTimeoutId = setTimeout(() => {
+      if (currentConnectionId !== connectionId) return;
+
+      console.error('[WS] Authentication timeout');
+      setConnectionState(ConnectionState.DISCONNECTED);
+      if (onErrorCallback) {
+        onErrorCallback(new Error('Authentication timeout'));
+      }
+      // Close and trigger reconnect
+      try { socket.close(); } catch (e) { /* ignore */ }
+    }, authTimeout);
+
+    // Authenticate
+    try {
+      socket.send(JSON.stringify({
+        type: 'auth',
+        payload: { token: getDevToken() }
+      }));
+    } catch (err) {
+      console.error('[WS] Failed to send auth:', err);
+    }
 
     if (onConnectCallback) {
       onConnectCallback();
     }
   };
 
-  ws.onmessage = (event) => {
+  socket.onmessage = (event) => {
+    // Guard against stale callback
+    if (currentConnectionId !== connectionId) {
+      return;
+    }
+
     try {
       const message = JSON.parse(event.data);
       const { type, payload } = message;
 
       // Handle auth success - join generation room
       if (type === 'auth_success') {
+        // Clear auth timeout
+        if (authTimeoutId) {
+          clearTimeout(authTimeoutId);
+          authTimeoutId = null;
+        }
+
         console.log('[WS] Authenticated, joining admin:generation room');
-        ws.send(JSON.stringify({
-          type: 'join_room',
-          payload: { room: 'admin:generation' }
-        }));
+        setConnectionState(ConnectionState.AUTHENTICATED);
+
+        try {
+          socket.send(JSON.stringify({
+            type: 'join_room',
+            payload: { room: 'admin:generation' }
+          }));
+        } catch (err) {
+          console.error('[WS] Failed to join room:', err);
+        }
         return;
       }
 
@@ -83,7 +191,15 @@ export function connect() {
 
       // Handle auth errors
       if (type === 'auth_error' || type === 'auth_timeout') {
+        // Clear auth timeout
+        if (authTimeoutId) {
+          clearTimeout(authTimeoutId);
+          authTimeoutId = null;
+        }
+
         console.error('[WS] Auth failed:', payload.message);
+        setConnectionState(ConnectionState.DISCONNECTED);
+
         if (onErrorCallback) {
           onErrorCallback(new Error(payload.message));
         }
@@ -106,9 +222,27 @@ export function connect() {
     }
   };
 
-  ws.onclose = (event) => {
+  socket.onclose = (event) => {
+    // Guard against stale callback
+    if (currentConnectionId !== connectionId) {
+      console.log('[WS] Ignoring stale onclose callback');
+      return;
+    }
+
     console.log('[WS] Disconnected:', event.code, event.reason);
-    ws = null;
+
+    // Clear auth timeout if pending
+    if (authTimeoutId) {
+      clearTimeout(authTimeoutId);
+      authTimeoutId = null;
+    }
+
+    // Only null out ws if it's still our socket
+    if (ws === socket) {
+      ws = null;
+    }
+
+    setConnectionState(ConnectionState.DISCONNECTED);
 
     if (onDisconnectCallback) {
       onDisconnectCallback(event);
@@ -119,7 +253,13 @@ export function connect() {
       const delay = Math.min(baseReconnectDelay * Math.pow(2, reconnectAttempts), 30000);
       console.log(`[WS] Reconnecting in ${delay}ms (attempt ${reconnectAttempts + 1})`);
       reconnectAttempts++;
-      setTimeout(connect, delay);
+
+      reconnectTimeoutId = setTimeout(() => {
+        // Only reconnect if we haven't connected elsewhere
+        if (connectionState === ConnectionState.DISCONNECTED) {
+          connect();
+        }
+      }, delay);
     } else {
       console.error('[WS] Max reconnection attempts reached');
       if (onErrorCallback) {
@@ -128,7 +268,12 @@ export function connect() {
     }
   };
 
-  ws.onerror = (event) => {
+  socket.onerror = (event) => {
+    // Guard against stale callback
+    if (currentConnectionId !== connectionId) {
+      return;
+    }
+
     console.error('[WS] Error:', event);
     if (onErrorCallback) {
       onErrorCallback(event);
@@ -140,24 +285,66 @@ export function connect() {
  * Disconnect from WebSocket server
  */
 export function disconnect() {
+  // Increment connection ID to invalidate any pending callbacks
+  connectionId++;
+
+  // Clear pending timeouts
+  clearPendingTimeouts();
+
+  // Prevent reconnection
+  reconnectAttempts = maxReconnectAttempts;
+
   if (ws) {
-    reconnectAttempts = maxReconnectAttempts; // Prevent reconnection
-    ws.close(1000, 'Client disconnect');
+    try {
+      ws.close(1000, 'Client disconnect');
+    } catch (e) {
+      // Ignore close errors
+    }
     ws = null;
   }
+
+  setConnectionState(ConnectionState.DISCONNECTED);
+}
+
+/**
+ * Force reconnect - useful for manual reconnect button
+ */
+export function reconnect() {
+  // Reset reconnect attempts
+  reconnectAttempts = 0;
+
+  // Disconnect and reconnect
+  disconnect();
+
+  // Small delay before reconnecting
+  setTimeout(() => {
+    connect();
+  }, 100);
 }
 
 /**
  * Send a message through WebSocket
  */
 export function send(type, payload = {}) {
+  // Check both WebSocket state and our connection state
   if (!ws || ws.readyState !== WebSocket.OPEN) {
-    console.warn('[WS] Cannot send - not connected');
+    console.warn('[WS] Cannot send - WebSocket not open');
     return false;
   }
 
-  ws.send(JSON.stringify({ type, payload }));
-  return true;
+  // For non-auth messages, require authenticated state
+  if (type !== 'auth' && connectionState !== ConnectionState.AUTHENTICATED) {
+    console.warn('[WS] Cannot send - not authenticated');
+    return false;
+  }
+
+  try {
+    ws.send(JSON.stringify({ type, payload }));
+    return true;
+  } catch (err) {
+    console.error('[WS] Send error:', err);
+    return false;
+  }
 }
 
 /**
@@ -190,11 +377,29 @@ export function onError(callback) {
   onErrorCallback = callback;
 }
 
+export function onStateChange(callback) {
+  onStateChangeCallback = callback;
+}
+
 /**
- * Check if connected
+ * Check if connected (WebSocket open)
  */
 export function isConnected() {
   return ws && ws.readyState === WebSocket.OPEN;
+}
+
+/**
+ * Check if fully authenticated
+ */
+export function isAuthenticated() {
+  return connectionState === ConnectionState.AUTHENTICATED && isConnected();
+}
+
+/**
+ * Get current connection state
+ */
+export function getConnectionState() {
+  return connectionState;
 }
 
 /**
@@ -239,13 +444,18 @@ export const generation = {
 export default {
   connect,
   disconnect,
+  reconnect,
   send,
   on,
   off,
   onConnect,
   onDisconnect,
   onError,
+  onStateChange,
   isConnected,
+  isAuthenticated,
+  getConnectionState,
   setAuthToken,
-  generation
+  generation,
+  ConnectionState
 };

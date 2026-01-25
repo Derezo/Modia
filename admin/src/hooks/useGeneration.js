@@ -5,7 +5,12 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as socket from '../lib/socket';
+import { ConnectionState } from '../lib/socket';
 import { api } from '../lib/api';
+
+// Storage key for persisting stdout across reconnections
+const STDOUT_STORAGE_KEY = 'admin_generation_stdout';
+const MAX_STDOUT_LINES = 500;
 
 /**
  * Hook for generation state and WebSocket events
@@ -13,6 +18,7 @@ import { api } from '../lib/api';
 export function useGeneration() {
   // Connection state
   const [connected, setConnected] = useState(false);
+  const [connectionState, setConnectionState] = useState(ConnectionState.DISCONNECTED);
   const [connectionError, setConnectionError] = useState(null);
 
   // Queue state
@@ -31,6 +37,31 @@ export function useGeneration() {
   // Progress tracking
   const [progress, setProgress] = useState({ current: 0, total: 0, steps: { current: 0, total: 0 } });
 
+  // Load persisted stdout on mount
+  useEffect(() => {
+    try {
+      const persisted = localStorage.getItem(STDOUT_STORAGE_KEY);
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          stdoutRef.current = parsed;
+          setStdout(parsed);
+        }
+      }
+    } catch (err) {
+      // Ignore storage errors
+    }
+  }, []);
+
+  // Persist stdout when it changes
+  const persistStdout = useCallback((lines) => {
+    try {
+      localStorage.setItem(STDOUT_STORAGE_KEY, JSON.stringify(lines.slice(-MAX_STDOUT_LINES)));
+    } catch (err) {
+      // Ignore storage errors (quota exceeded, etc.)
+    }
+  }, []);
+
   // Fetch initial state from API
   const fetchQueueState = useCallback(async () => {
     try {
@@ -40,9 +71,10 @@ export function useGeneration() {
       setPaused(data.paused || false);
       setStats(data.stats || { pendingCount: 0, historyCount: 0, isProcessing: false });
 
-      if (data.stdout) {
+      if (data.stdout && data.stdout.length > 0) {
         stdoutRef.current = data.stdout;
         setStdout(data.stdout);
+        persistStdout(data.stdout);
       }
       if (data.generatedImages) {
         setGeneratedImages(data.generatedImages);
@@ -53,7 +85,7 @@ export function useGeneration() {
     } catch (err) {
       console.error('Failed to fetch queue state:', err);
     }
-  }, []);
+  }, [persistStdout]);
 
   // Connect to WebSocket and set up event handlers
   useEffect(() => {
@@ -71,6 +103,12 @@ export function useGeneration() {
 
     socket.onError((err) => {
       setConnectionError(err.message || 'Connection error');
+    });
+
+    // Track detailed connection state
+    socket.onStateChange((newState) => {
+      setConnectionState(newState);
+      setConnected(newState === ConnectionState.AUTHENTICATED);
     });
 
     // Register event handlers
@@ -95,6 +133,8 @@ export function useGeneration() {
         setStdout([]);
         setGeneratedImages([]);
         setProgress({ current: 0, total: 0, steps: { current: 0, total: 0 } });
+        // Clear persisted stdout for new job
+        persistStdout([]);
       })
     );
 
@@ -112,8 +152,10 @@ export function useGeneration() {
     unsubscribers.push(
       socket.on('generation:stdout', (payload) => {
         const line = payload.line;
-        stdoutRef.current = [...stdoutRef.current, line].slice(-500);
-        setStdout(stdoutRef.current);
+        const newStdout = [...stdoutRef.current, line].slice(-MAX_STDOUT_LINES);
+        stdoutRef.current = newStdout;
+        setStdout(newStdout);
+        persistStdout(newStdout);
 
         // Check for saved image in stdout
         if (line.text && line.text.includes('Saved:')) {
@@ -153,11 +195,11 @@ export function useGeneration() {
       unsubscribers.forEach((unsub) => unsub && unsub());
       socket.disconnect();
     };
-  }, [fetchQueueState]);
+  }, [fetchQueueState, persistStdout]);
 
   // Control actions
   const cancelJob = useCallback((jobId) => {
-    if (socket.isConnected()) {
+    if (socket.isAuthenticated()) {
       socket.generation.cancel(jobId);
     } else {
       // Fallback to API
@@ -166,7 +208,7 @@ export function useGeneration() {
   }, [fetchQueueState]);
 
   const cancelAll = useCallback(() => {
-    if (socket.isConnected()) {
+    if (socket.isAuthenticated()) {
       socket.generation.cancelAll();
     } else {
       // Fallback to API
@@ -175,7 +217,7 @@ export function useGeneration() {
   }, [fetchQueueState]);
 
   const pause = useCallback(async () => {
-    if (socket.isConnected()) {
+    if (socket.isAuthenticated()) {
       socket.generation.pause();
     } else {
       // Fallback to API
@@ -189,7 +231,7 @@ export function useGeneration() {
   }, [fetchQueueState]);
 
   const resume = useCallback(async () => {
-    if (socket.isConnected()) {
+    if (socket.isAuthenticated()) {
       socket.generation.resume();
     } else {
       // Fallback to API
@@ -206,11 +248,19 @@ export function useGeneration() {
   const clearStdout = useCallback(() => {
     stdoutRef.current = [];
     setStdout([]);
+    persistStdout([]);
+  }, [persistStdout]);
+
+  // Manual reconnect
+  const reconnect = useCallback(() => {
+    setConnectionError(null);
+    socket.reconnect();
   }, []);
 
   return {
     // Connection state
     connected,
+    connectionState,
     connectionError,
 
     // Queue state
@@ -234,7 +284,8 @@ export function useGeneration() {
     cancelAll,
     pause,
     resume,
-    refresh: fetchQueueState
+    refresh: fetchQueueState,
+    reconnect
   };
 }
 

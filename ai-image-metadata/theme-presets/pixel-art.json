@@ -1,0 +1,35 @@
+{
+  "name": "pixel-art",
+  "description": "Classic 16-bit pixel art style with limited color palette",
+  "builtin": true,
+  "style": {
+    "trigger": "GRPZA",
+    "basePhrase": "16-bit pixel art sprite",
+    "technique": "crisp pixels with limited color palette",
+    "texture": "clean digital",
+    "mood": "retro SNES/Genesis game aesthetic"
+  },
+  "negativePrompt": "photorealistic, 3D render, CGI, smooth gradients, anti-aliasing, blurry, watercolor, painterly, modern, high resolution details, complex shading, watermark, signature, text, logo",
+  "categoryModifiers": {
+    "portraits": {
+      "suffix": "pixel art character portrait, front-facing, simple features, limited palette, game sprite style",
+      "size": "64x64"
+    },
+    "icons": {
+      "suffix": "pixel art icon, bold readable design, limited colors, clear silhouette",
+      "size": "32x32"
+    },
+    "items": {
+      "suffix": "pixel art item sprite, centered, clear outline, RPG inventory style",
+      "size": "32x32"
+    },
+    "nodes": {
+      "suffix": "pixel art map icon, simplified landmark, top-down view, game map style",
+      "size": "48x48"
+    },
+    "overlays": {
+      "suffix": "pixel art effect, limited animation frames, retro particle style",
+      "size": "64x64"
+    }
+  }
+}

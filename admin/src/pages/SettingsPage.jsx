@@ -26,6 +26,7 @@ import {
 import { useApiStatus, useBackups } from '../hooks/useAssets';
 import { useTheme } from '../hooks/useTheme';
 import { useToast } from '../contexts/ToastContext';
+import ThemePresetManager from '../components/ThemePresetManager';
 
 /**
  * Editable text field component
@@ -123,7 +124,7 @@ function EditableField({ label, value, onChange, multiline = false, placeholder 
 /**
  * Theme Tab Content
  */
-function ThemeTab({ theme, saving, onUpdateField, onUpdateCategoryModifier }) {
+function ThemeTab({ theme, saving, onUpdateField, onUpdateCategoryModifier, onPresetApplied }) {
   const [previewCategory, setPreviewCategory] = useState('tiles');
   const [previewSubject, setPreviewSubject] = useState('forest grass floor tile');
 
@@ -155,6 +156,12 @@ function ThemeTab({ theme, saving, onUpdateField, onUpdateCategoryModifier }) {
 
   return (
     <div className="space-y-6">
+      {/* Theme Presets */}
+      <ThemePresetManager
+        currentThemeName={theme?.name}
+        onPresetApplied={onPresetApplied}
+      />
+
       {/* Style Settings */}
       <div className="card p-6">
         <h3 className="text-lg font-display font-semibold text-parchment-100 mb-4">
@@ -1098,6 +1105,7 @@ export default function SettingsPage() {
               saving={saving}
               onUpdateField={handleUpdateField}
               onUpdateCategoryModifier={handleUpdateCategoryModifier}
+              onPresetApplied={refetchTheme}
             />
           ) : (
             <div className="card p-8 text-center text-parchment-400">

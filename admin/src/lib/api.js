@@ -103,10 +103,10 @@ export const api = {
   // Backups
   getBackups: () => fetchAPI('/backups'),
 
-  createBackup: (reason = 'manual') =>
+  createBackup: (reason = 'manual', options = {}) =>
     fetchAPI('/backups', {
       method: 'POST',
-      body: JSON.stringify({ reason }),
+      body: JSON.stringify({ reason, ...options }),
     }),
 
   getBackup: (timestamp) => fetchAPI(`/backups/${timestamp}`),
@@ -128,6 +128,27 @@ export const api = {
     fetchAPI('/theme', {
       method: 'PUT',
       body: JSON.stringify(updates),
+    }),
+
+  // Theme Presets
+  getThemePresets: () => fetchAPI('/theme/presets'),
+
+  getThemePreset: (name) => fetchAPI(`/theme/presets/${name}`),
+
+  saveThemePreset: (name, description = '') =>
+    fetchAPI('/theme/presets', {
+      method: 'POST',
+      body: JSON.stringify({ name, description }),
+    }),
+
+  applyThemePreset: (name) =>
+    fetchAPI(`/theme/presets/${name}/apply`, {
+      method: 'POST',
+    }),
+
+  deleteThemePreset: (name) =>
+    fetchAPI(`/theme/presets/${name}`, {
+      method: 'DELETE',
     }),
 };
 

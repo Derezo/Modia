@@ -497,6 +497,196 @@ router.get('/theme', asyncHandler(async (req, res) => {
   res.json(theme);
 }));
 
+// Theme presets directory
+const PRESETS_DIR = path.join(METADATA_DIR, 'theme-presets');
+
+/**
+ * GET /api/admin/theme/presets
+ * List all available theme presets
+ */
+router.get('/theme/presets', asyncHandler(async (req, res) => {
+  const presets = [];
+
+  if (!existsSync(PRESETS_DIR)) {
+    return res.json({ presets: [] });
+  }
+
+  const files = await fs.readdir(PRESETS_DIR);
+
+  for (const file of files) {
+    if (!file.endsWith('.json')) continue;
+
+    try {
+      const presetPath = path.join(PRESETS_DIR, file);
+      const preset = await loadJsonFile(presetPath);
+      if (preset) {
+        presets.push({
+          filename: file.replace('.json', ''),
+          name: preset.name || file.replace('.json', ''),
+          description: preset.description || '',
+          builtin: preset.builtin === true
+        });
+      }
+    } catch (error) {
+      console.warn(`[Admin] Failed to load preset ${file}:`, error.message);
+    }
+  }
+
+  res.json({ presets });
+}));
+
+/**
+ * GET /api/admin/theme/presets/:name
+ * Get a specific theme preset
+ */
+router.get('/theme/presets/:name', asyncHandler(async (req, res) => {
+  const { name } = req.params;
+
+  // Validate name to prevent path traversal
+  if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+    throw new AppError('Invalid preset name', 400);
+  }
+
+  const presetPath = path.join(PRESETS_DIR, `${name}.json`);
+  const preset = await loadJsonFile(presetPath);
+
+  if (!preset) {
+    throw new AppError(`Preset not found: ${name}`, 404);
+  }
+
+  res.json(preset);
+}));
+
+/**
+ * POST /api/admin/theme/presets
+ * Save current theme as a new preset
+ * Body: { name: string, description?: string }
+ */
+router.post('/theme/presets', asyncHandler(async (req, res) => {
+  const { name, description = '' } = req.body;
+
+  if (!name || !/^[a-zA-Z0-9_-]+$/.test(name)) {
+    throw new AppError('Invalid preset name. Use only letters, numbers, underscores, and dashes.', 400);
+  }
+
+  // Check if preset exists and is builtin
+  const presetPath = path.join(PRESETS_DIR, `${name}.json`);
+  const existingPreset = await loadJsonFile(presetPath);
+  if (existingPreset?.builtin) {
+    throw new AppError('Cannot overwrite built-in preset', 400);
+  }
+
+  // Load current theme
+  const themePath = path.join(METADATA_DIR, 'theme.json');
+  const currentTheme = await loadJsonFile(themePath);
+
+  if (!currentTheme) {
+    throw new AppError('Current theme not found', 404);
+  }
+
+  // Create preset from current theme (exclude version and some fields)
+  const preset = {
+    name,
+    description,
+    builtin: false,
+    savedAt: new Date().toISOString(),
+    style: currentTheme.style,
+    negativePrompt: currentTheme.negativePrompt,
+    categoryModifiers: currentTheme.categoryModifiers
+  };
+
+  // Ensure presets directory exists
+  if (!existsSync(PRESETS_DIR)) {
+    await fs.mkdir(PRESETS_DIR, { recursive: true });
+  }
+
+  await saveJsonFile(presetPath, preset);
+
+  res.status(201).json({
+    message: 'Preset saved successfully',
+    preset: {
+      filename: name,
+      name: preset.name,
+      description: preset.description,
+      builtin: false
+    }
+  });
+}));
+
+/**
+ * POST /api/admin/theme/presets/:name/apply
+ * Apply a preset to the current theme
+ */
+router.post('/theme/presets/:name/apply', asyncHandler(async (req, res) => {
+  const { name } = req.params;
+
+  if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+    throw new AppError('Invalid preset name', 400);
+  }
+
+  // Load preset
+  const presetPath = path.join(PRESETS_DIR, `${name}.json`);
+  const preset = await loadJsonFile(presetPath);
+
+  if (!preset) {
+    throw new AppError(`Preset not found: ${name}`, 404);
+  }
+
+  // Load current theme
+  const themePath = path.join(METADATA_DIR, 'theme.json');
+  const currentTheme = await loadJsonFile(themePath);
+
+  if (!currentTheme) {
+    throw new AppError('Current theme not found', 404);
+  }
+
+  // Apply preset to theme (preserve version, loraDefaults, overlayConfig, etc.)
+  const updatedTheme = {
+    ...currentTheme,
+    name: preset.name,
+    description: preset.description || currentTheme.description,
+    style: { ...currentTheme.style, ...preset.style },
+    negativePrompt: preset.negativePrompt || currentTheme.negativePrompt,
+    categoryModifiers: { ...currentTheme.categoryModifiers, ...preset.categoryModifiers }
+  };
+
+  await saveJsonFile(themePath, updatedTheme);
+
+  res.json({
+    message: `Preset "${name}" applied successfully`,
+    theme: updatedTheme
+  });
+}));
+
+/**
+ * DELETE /api/admin/theme/presets/:name
+ * Delete a custom preset (cannot delete built-in presets)
+ */
+router.delete('/theme/presets/:name', asyncHandler(async (req, res) => {
+  const { name } = req.params;
+
+  if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
+    throw new AppError('Invalid preset name', 400);
+  }
+
+  const presetPath = path.join(PRESETS_DIR, `${name}.json`);
+  const preset = await loadJsonFile(presetPath);
+
+  if (!preset) {
+    throw new AppError(`Preset not found: ${name}`, 404);
+  }
+
+  if (preset.builtin) {
+    throw new AppError('Cannot delete built-in preset', 400);
+  }
+
+  await fs.unlink(presetPath);
+
+  res.json({
+    message: `Preset "${name}" deleted successfully`
+  });
+}));
+
 /**
  * PUT /api/admin/theme
  * Update theme.json
@@ -686,7 +876,10 @@ router.get('/backups', asyncHandler(async (req, res) => {
 /**
  * POST /api/admin/backups
  * Create backup
- * Body: { reason?: string, assets?: array } - if assets not provided, backs up everything
+ * Body: { reason?: string, category?: string, assets?: array }
+ * - assets: explicit list of assets to backup
+ * - category: specific category to backup (tiles, portraits, etc.)
+ * - If neither specified, backs up everything
  */
 router.post('/backups', asyncHandler(async (req, res) => {
   ensureUtilities();
@@ -694,27 +887,35 @@ router.post('/backups', asyncHandler(async (req, res) => {
     throw new AppError('Backup utilities not available', 500);
   }
 
-  const { reason = 'manual', assets } = req.body;
+  const { reason = 'manual', category, assets } = req.body;
+
+  // Validate category if provided
+  if (category && !VALID_CATEGORIES.includes(category)) {
+    throw new AppError(`Invalid category: ${category}. Valid: ${VALID_CATEGORIES.join(', ')}`, 400);
+  }
 
   let assetsToBackup = assets;
 
-  // If no assets specified, backup all categories
+  // If no assets specified, load from category or all categories
   if (!assetsToBackup) {
     assetsToBackup = [];
-    const categories = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays'];
+    const categoriesToBackup = category ? [category] : VALID_CATEGORIES;
 
-    for (const category of categories) {
+    for (const cat of categoriesToBackup) {
       try {
-        const data = metadataUtils.loadCategoryAssets(category);
+        const data = metadataUtils.loadCategoryAssets(cat);
         assetsToBackup.push(...data.assets);
       } catch (error) {
-        console.warn(`[Admin] Failed to load ${category} for backup:`, error.message);
+        console.warn(`[Admin] Failed to load ${cat} for backup:`, error.message);
       }
     }
   }
 
+  // Build backup reason with category info
+  const backupReason = category ? `${reason} (${category})` : reason;
+
   try {
-    const result = backupUtils.createBackup(assetsToBackup, { reason });
+    const result = backupUtils.createBackup(assetsToBackup, { reason: backupReason });
 
     if (!result.success) {
       throw new AppError(result.error || 'Backup failed', 500);
@@ -724,7 +925,8 @@ router.post('/backups', asyncHandler(async (req, res) => {
       message: 'Backup created successfully',
       timestamp: result.timestamp,
       assetCount: result.assetCount,
-      backupDir: result.backupDir
+      backupDir: result.backupDir,
+      category: category || 'all'
     });
   } catch (error) {
     throw new AppError(`Failed to create backup: ${error.message}`, 500);

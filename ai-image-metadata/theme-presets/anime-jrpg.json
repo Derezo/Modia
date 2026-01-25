@@ -1,0 +1,35 @@
+{
+  "name": "anime-jrpg",
+  "description": "Modern anime-inspired JRPG art style with vibrant colors",
+  "builtin": true,
+  "style": {
+    "trigger": "",
+    "basePhrase": "anime style digital illustration",
+    "technique": "cel shading with clean linework",
+    "texture": "smooth digital painting",
+    "mood": "vibrant modern JRPG aesthetic"
+  },
+  "negativePrompt": "photorealistic, 3D render, pixel art, watercolor, sketch, rough lines, blurry, low quality, western cartoon, chibi, super deformed, watermark, signature, text, logo, nsfw, suggestive",
+  "categoryModifiers": {
+    "portraits": {
+      "suffix": "anime character portrait, expressive large eyes, detailed hair, head and shoulders, game CG quality, isolated on simple background",
+      "size": "128x128"
+    },
+    "icons": {
+      "suffix": "anime game icon, stylized design, vibrant colors, clean edges",
+      "size": "64x64"
+    },
+    "items": {
+      "suffix": "anime game item sprite, fantasy weapon/armor design, centered composition, slight glow effect",
+      "size": "128x128"
+    },
+    "nodes": {
+      "suffix": "anime style map icon, fantasy location marker, stylized landmark, isometric view",
+      "size": "64x64"
+    },
+    "overlays": {
+      "suffix": "anime effect overlay, magical aura, glowing particles, transparent background",
+      "size": "128x128"
+    }
+  }
+}
