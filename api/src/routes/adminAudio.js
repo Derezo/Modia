@@ -24,15 +24,21 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
 import { AppError, asyncHandler } from '../middleware/errorHandler.js';
 import { createLimiter } from '../middleware/rateLimiterFactory.js';
 import { loadJsonFile, saveJsonFile } from '../utils/jsonFileUtils.js';
+import {
+  VALID_AUDIO_TYPES,
+  VALID_MUSIC_CATEGORIES,
+  VALID_SFX_CATEGORIES
+} from '../utils/assetConstants.js';
+import { validateSFXPrompt } from '../utils/audioValidation.js';
+import {
+  generateWaveformWithFFmpeg,
+  generatePseudoWaveform
+} from '../utils/waveformGenerator.js';
 import audioGenerationService from '../services/adminAudioGenerationService.js';
-
-// Import CommonJS waveform generator
-const require = createRequire(import.meta.url);
-const { generateWaveformData } = require('../../../scripts/audio/lib/waveformGenerator');
+import { existsSync } from 'fs';
 
 const router = express.Router();
 
@@ -44,11 +50,6 @@ const METADATA_DIR = path.join(PROJECT_ROOT, 'audio-metadata');
 
 // SECURITY: Admin mode is STRICTLY disabled in production
 const isProduction = process.env.NODE_ENV === 'production';
-
-// Valid audio categories
-const VALID_AUDIO_TYPES = ['music', 'sfx'];
-const VALID_MUSIC_CATEGORIES = ['regions', 'battle', 'core'];
-const VALID_SFX_CATEGORIES = ['combat', 'skills', 'ambient', 'interactions', 'ui'];
 
 // Rate limiter for admin endpoints (30 requests per minute)
 const adminRateLimiter = createLimiter({
@@ -288,33 +289,6 @@ function transformAssetForResponse(asset) {
   return {
     ...asset,
     status: asset.generated ? 'exists' : 'missing'
-  };
-}
-
-/**
- * Validate SFX prompt for comma count
- * Per CLAUDE.md: Maximum 1 comma per prompt for ElevenLabs
- * @param {string} prompt - The prompt to validate
- * @returns {object} { valid, commaCount, message }
- */
-function validateSFXPrompt(prompt) {
-  if (!prompt || typeof prompt !== 'string') {
-    return {
-      valid: false,
-      commaCount: 0,
-      message: 'Prompt is required and must be a string'
-    };
-  }
-
-  const commaCount = (prompt.match(/,/g) || []).length;
-  const valid = commaCount <= 1;
-
-  return {
-    valid,
-    commaCount,
-    message: valid
-      ? 'Prompt is valid'
-      : `Prompt has ${commaCount} commas. Maximum allowed is 1. ElevenLabs interprets comma-separated prompts as multiple distinct sounds.`
   };
 }
 
@@ -588,10 +562,10 @@ router.get('/:type/:id/waveform', asyncHandler(async (req, res) => {
   }
 
   try {
-    const waveformData = await generateWaveformData(audioPath, 100);
-    const peaks = waveformData.peaks;
+    // Use ffmpeg for real waveform generation
+    const peaks = await generateWaveformWithFFmpeg(audioPath, 100);
 
-    // Persist waveform to metadata (2.3)
+    // Persist waveform to metadata
     try {
       await audioGenerationService.persistWaveformData(type, id, peaks);
     } catch (persistErr) {
@@ -608,9 +582,10 @@ router.get('/:type/:id/waveform', asyncHandler(async (req, res) => {
     // This ensures each asset looks unique even without ffmpeg
     console.warn(`Waveform generation failed for ${type}/${id}, using fallback:`, err.message);
 
+    // generatePseudoWaveform has null check (H1 fix)
     const peaks = generatePseudoWaveform(id, 100);
 
-    // Persist fallback waveform to metadata (2.3)
+    // Persist fallback waveform to metadata
     try {
       await audioGenerationService.persistWaveformData(type, id, peaks);
     } catch (persistErr) {
@@ -627,33 +602,135 @@ router.get('/:type/:id/waveform', asyncHandler(async (req, res) => {
 }));
 
 /**
- * Generate deterministic pseudo-waveform from asset ID
- * Used as fallback when ffmpeg isn't available
+ * GET /api/admin/audio/waveforms/status
+ * Get statistics on waveform coverage for all audio assets
  */
-function generatePseudoWaveform(seed, barCount) {
-  // Simple seeded random using string hash
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-    hash = hash & hash;
+router.get('/waveforms/status', asyncHandler(async (req, res) => {
+  const [musicData, sfxData] = await Promise.all([
+    loadMusicMetadata(),
+    loadSFXMetadata()
+  ]);
+
+  // Count waveform coverage for music
+  const musicWithWaveform = musicData.tracks.filter(t => t.waveform && t.generated).length;
+  const musicGenerated = musicData.tracks.filter(t => t.generated).length;
+  const musicMissing = musicGenerated - musicWithWaveform;
+
+  // Count waveform coverage for SFX
+  const sfxWithWaveform = sfxData.effects.filter(e => e.waveform && e.generated).length;
+  const sfxGenerated = sfxData.effects.filter(e => e.generated).length;
+  const sfxMissing = sfxGenerated - sfxWithWaveform;
+
+  res.json({
+    music: {
+      total: musicData.summary.total,
+      generated: musicGenerated,
+      withWaveform: musicWithWaveform,
+      missing: musicMissing,
+      percentCoverage: musicGenerated > 0 ? Math.round((musicWithWaveform / musicGenerated) * 100) : 0
+    },
+    sfx: {
+      total: sfxData.summary.total,
+      generated: sfxGenerated,
+      withWaveform: sfxWithWaveform,
+      missing: sfxMissing,
+      percentCoverage: sfxGenerated > 0 ? Math.round((sfxWithWaveform / sfxGenerated) * 100) : 0
+    },
+    overall: {
+      totalGenerated: musicGenerated + sfxGenerated,
+      withWaveform: musicWithWaveform + sfxWithWaveform,
+      missing: musicMissing + sfxMissing,
+      percentCoverage: (musicGenerated + sfxGenerated) > 0
+        ? Math.round(((musicWithWaveform + sfxWithWaveform) / (musicGenerated + sfxGenerated)) * 100)
+        : 0
+    }
+  });
+}));
+
+/**
+ * POST /api/admin/audio/waveforms/regenerate
+ * Regenerate waveforms for all generated assets using real ffmpeg
+ * Query params: ?type=music|sfx&force=true
+ */
+router.post('/waveforms/regenerate', asyncHandler(async (req, res) => {
+  const { type, force = false } = req.query;
+
+  // Validate type if provided
+  if (type && !VALID_AUDIO_TYPES.includes(type)) {
+    throw new AppError(`Invalid audio type: ${type}. Valid: ${VALID_AUDIO_TYPES.join(', ')}`, 400);
   }
 
-  const peaks = [];
-  for (let i = 0; i < barCount; i++) {
-    // LCG random with seed variation per bar
-    hash = (hash * 1103515245 + 12345) & 0x7fffffff;
-    const random = (hash % 1000) / 1000;
+  const results = {
+    processed: 0,
+    succeeded: 0,
+    failed: 0,
+    skipped: 0,
+    errors: []
+  };
 
-    // Create more natural looking waveform with envelope
-    const position = i / barCount;
-    const envelope = Math.sin(position * Math.PI) * 0.4 + 0.3;
-    const value = 0.2 + random * envelope;
+  // Helper to process assets
+  const processAssets = async (assets, assetType) => {
+    for (const asset of assets) {
+      if (!asset.generated || !asset.path) {
+        results.skipped++;
+        continue;
+      }
 
-    peaks.push(Math.round(value * 1000) / 1000);
+      // Skip if already has waveform and not forcing
+      if (asset.waveform && force !== 'true') {
+        results.skipped++;
+        continue;
+      }
+
+      results.processed++;
+
+      try {
+        const relativePath = asset.path.startsWith('/') ? asset.path.slice(1) : asset.path;
+        const audioPath = path.join(PROJECT_ROOT, 'frontend', 'public', relativePath);
+
+        // Use ffmpeg for real waveform generation
+        const peaks = await generateWaveformWithFFmpeg(audioPath, 100);
+
+        // Persist waveform to metadata
+        await audioGenerationService.persistWaveformData(assetType, asset.id, peaks);
+        results.succeeded++;
+      } catch (err) {
+        results.failed++;
+        results.errors.push({
+          id: asset.id,
+          type: assetType,
+          error: err.message
+        });
+
+        // Generate fallback waveform
+        try {
+          const peaks = generatePseudoWaveform(asset.id, 100);
+          await audioGenerationService.persistWaveformData(assetType, asset.id, peaks);
+        } catch {
+          // Ignore fallback failure
+        }
+      }
+    }
+  };
+
+  // Process requested types
+  if (!type || type === 'music') {
+    const { tracks } = await loadMusicMetadata();
+    await processAssets(tracks, 'music');
   }
 
-  return peaks;
-}
+  if (!type || type === 'sfx') {
+    const { effects } = await loadSFXMetadata();
+    await processAssets(effects, 'sfx');
+  }
+
+  res.json({
+    message: 'Waveform regeneration complete',
+    filter: type || 'all',
+    force: force === 'true',
+    results
+  });
+}));
 
 // ============================================================================
 // GENERATION QUEUE ROUTES
@@ -751,6 +828,173 @@ router.get('/manifest/sfx', asyncHandler(async (req, res) => {
     throw new AppError('SFX manifest not found', 404);
   }
   res.json(manifest);
+}));
+
+// ============================================================================
+// SYNC STATUS ROUTE
+// ============================================================================
+
+/**
+ * Verify if an audio file exists on disk
+ * @param {string} audioPath - Path from metadata (e.g., '/audio/music/...')
+ * @returns {boolean} Whether the file exists
+ */
+function verifyFileExists(audioPath) {
+  if (!audioPath) return false;
+
+  // Remove leading slash and resolve from frontend public dir
+  const relativePath = audioPath.startsWith('/') ? audioPath.slice(1) : audioPath;
+  const fullPath = path.join(PROJECT_ROOT, 'frontend', 'public', relativePath);
+
+  return existsSync(fullPath);
+}
+
+/**
+ * POST /api/admin/audio/sync-status
+ * Synchronize metadata 'generated' flag with actual file existence
+ * Fixes mismatches where metadata says generated but file is missing or vice versa
+ * Query params: ?type=music|sfx&dryRun=true
+ */
+router.post('/sync-status', asyncHandler(async (req, res) => {
+  const { type, dryRun = false } = req.query;
+
+  // Validate type if provided
+  if (type && !VALID_AUDIO_TYPES.includes(type)) {
+    throw new AppError(`Invalid audio type: ${type}. Valid: ${VALID_AUDIO_TYPES.join(', ')}`, 400);
+  }
+
+  const results = {
+    scanned: 0,
+    mismatches: 0,
+    fixed: 0,
+    details: []
+  };
+
+  // Helper to process assets
+  const processAssets = async (assets, assetType) => {
+    for (const asset of assets) {
+      results.scanned++;
+
+      const fileExists = verifyFileExists(asset.path);
+      const metadataSaysGenerated = asset.generated === true;
+
+      // Check for mismatch
+      if (fileExists !== metadataSaysGenerated) {
+        results.mismatches++;
+
+        const mismatchInfo = {
+          id: asset.id,
+          type: assetType,
+          name: asset.name || asset.id,
+          path: asset.path,
+          metadataGenerated: metadataSaysGenerated,
+          fileExists,
+          action: fileExists ? 'mark_generated' : 'mark_missing'
+        };
+
+        results.details.push(mismatchInfo);
+
+        // Fix the mismatch if not a dry run
+        if (dryRun !== 'true') {
+          try {
+            await updateAudioMetadata(assetType, asset.id, {
+              generated: fileExists,
+              generatedAt: fileExists && !metadataSaysGenerated ? new Date().toISOString() : asset.generatedAt
+            });
+            results.fixed++;
+            mismatchInfo.fixed = true;
+          } catch (err) {
+            mismatchInfo.error = err.message;
+            mismatchInfo.fixed = false;
+          }
+        }
+      }
+    }
+  };
+
+  // Process requested types
+  if (!type || type === 'music') {
+    const { tracks } = await loadMusicMetadata();
+    await processAssets(tracks, 'music');
+  }
+
+  if (!type || type === 'sfx') {
+    const { effects } = await loadSFXMetadata();
+    await processAssets(effects, 'sfx');
+  }
+
+  res.json({
+    message: dryRun === 'true' ? 'Dry run complete - no changes made' : 'Sync complete',
+    filter: type || 'all',
+    dryRun: dryRun === 'true',
+    results
+  });
+}));
+
+/**
+ * GET /api/admin/audio/verify-status
+ * Check for metadata/file mismatches without making changes
+ * Query params: ?type=music|sfx
+ */
+router.get('/verify-status', asyncHandler(async (req, res) => {
+  const { type } = req.query;
+
+  // Validate type if provided
+  if (type && !VALID_AUDIO_TYPES.includes(type)) {
+    throw new AppError(`Invalid audio type: ${type}. Valid: ${VALID_AUDIO_TYPES.join(', ')}`, 400);
+  }
+
+  const results = {
+    scanned: 0,
+    mismatches: 0,
+    markedGeneratedButMissing: [],
+    fileExistsButNotMarked: []
+  };
+
+  // Helper to verify assets
+  const verifyAssets = (assets, assetType) => {
+    for (const asset of assets) {
+      results.scanned++;
+
+      const fileExists = verifyFileExists(asset.path);
+      const metadataSaysGenerated = asset.generated === true;
+
+      if (metadataSaysGenerated && !fileExists) {
+        results.mismatches++;
+        results.markedGeneratedButMissing.push({
+          id: asset.id,
+          type: assetType,
+          name: asset.name || asset.id,
+          path: asset.path
+        });
+      } else if (fileExists && !metadataSaysGenerated) {
+        results.mismatches++;
+        results.fileExistsButNotMarked.push({
+          id: asset.id,
+          type: assetType,
+          name: asset.name || asset.id,
+          path: asset.path
+        });
+      }
+    }
+  };
+
+  // Process requested types
+  if (!type || type === 'music') {
+    const { tracks } = await loadMusicMetadata();
+    verifyAssets(tracks, 'music');
+  }
+
+  if (!type || type === 'sfx') {
+    const { effects } = await loadSFXMetadata();
+    verifyAssets(effects, 'sfx');
+  }
+
+  res.json({
+    filter: type || 'all',
+    results,
+    healthy: results.mismatches === 0
+  });
 }));
 
 // ============================================================================

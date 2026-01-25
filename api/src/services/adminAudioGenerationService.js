@@ -22,6 +22,8 @@ import { fileURLToPath } from 'url';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { broadcastToRoom } from '../websocket/index.js';
 import { loadJsonFile, saveJsonFile } from '../utils/jsonFileUtils.js';
+import { VALID_AUDIO_TYPES, AUDIO_SCRIPT_MAP } from '../utils/assetConstants.js';
+import { validateSFXPrompt } from '../utils/audioValidation.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,14 +36,8 @@ const AUDIO_METADATA_DIR = path.join(PROJECT_ROOT, 'audio-metadata');
 // Room name for audio generation events
 const GENERATION_ROOM = 'admin:audio-generation';
 
-// Valid audio types
-const VALID_AUDIO_TYPES = ['music', 'sfx'];
-
-// Type to script mapping
-const SCRIPT_MAP = {
-  music: 'generate-music.js',
-  sfx: 'generate-sfx.js'
-};
+// Use imported AUDIO_SCRIPT_MAP as SCRIPT_MAP
+const SCRIPT_MAP = AUDIO_SCRIPT_MAP;
 
 // Generation state
 const state = {
@@ -84,6 +80,26 @@ function generateJobId() {
  */
 function broadcast(type, payload) {
   broadcastToRoom(GENERATION_ROOM, { type, payload });
+}
+
+/**
+ * Broadcast unified asset generation event
+ * This normalizes all generation events across images, music, and SFX
+ * @param {string} eventType - Event type (started, progress, completed, failed, queued)
+ * @param {string} source - Source type ('music' or 'sfx')
+ * @param {object} data - Event-specific data
+ */
+function broadcastUnified(eventType, source, data) {
+  // Broadcast to the main admin:generation room for unified view
+  broadcastToRoom('admin:generation', {
+    type: 'asset:generation_update',
+    payload: {
+      source,
+      eventType,
+      timestamp: new Date().toISOString(),
+      ...data
+    }
+  });
 }
 
 /**
@@ -210,6 +226,17 @@ async function processNextJob() {
   broadcastQueueUpdate();
   broadcast('audio:job_started', { job });
 
+  // Broadcast unified event
+  broadcastUnified('started', job.type, {
+    jobId: job.id,
+    job: {
+      id: job.id,
+      type: job.type,
+      filters: job.filters,
+      status: 'running'
+    }
+  });
+
   // Get script path
   const scriptName = SCRIPT_MAP[job.type];
   if (!scriptName) {
@@ -256,6 +283,20 @@ async function processNextJob() {
             line,
             generatedCount: state.generatedAssets.length
           });
+
+          // Broadcast unified progress
+          broadcastUnified('progress', job.type, {
+            jobId: job.id,
+            progress,
+            generatedCount: state.generatedAssets.length
+          });
+
+          // Broadcast unified stdout for each line
+          broadcastUnified('stdout', job.type, {
+            jobId: job.id,
+            line,
+            lineType: 'stdout'
+          });
         }
       }
     });
@@ -271,6 +312,13 @@ async function processNextJob() {
         jobId: job.id,
         line,
         level: 'error'
+      });
+
+      // Broadcast unified stderr
+      broadcastUnified('stdout', job.type, {
+        jobId: job.id,
+        line,
+        lineType: 'stderr'
       });
     });
 
@@ -317,38 +365,31 @@ function completeJob(job, status, error = null) {
   enablePostCompletionPolling();
 
   broadcast('audio:job_completed', { job });
+
+  // Broadcast unified completed/failed event
+  broadcastUnified(status, job.type, {
+    jobId: job.id,
+    job: {
+      id: job.id,
+      type: job.type,
+      filters: job.filters,
+      status,
+      error: job.error || null,
+      generatedAssets: job.generatedAssets.map(path => ({
+        type: job.type === 'music' ? 'music' : 'sfx',
+        path,
+        timestamp: new Date().toISOString()
+      }))
+    }
+  });
+
   broadcastQueueUpdate();
 
   // Process next job
   setImmediate(processNextJob);
 }
 
-/**
- * Validate SFX prompt for comma count
- * Per CLAUDE.md: Maximum 1 comma per prompt for ElevenLabs
- * @param {string} prompt - The prompt to validate
- * @returns {object} { valid, commaCount, message }
- */
-function validateSFXPrompt(prompt) {
-  if (!prompt || typeof prompt !== 'string') {
-    return {
-      valid: true, // No prompt to validate is ok at queue time (may use metadata prompt)
-      commaCount: 0,
-      message: 'No prompt provided'
-    };
-  }
-
-  const commaCount = (prompt.match(/,/g) || []).length;
-  const valid = commaCount <= 1;
-
-  return {
-    valid,
-    commaCount,
-    message: valid
-      ? 'Prompt is valid'
-      : `Prompt has ${commaCount} commas. Maximum allowed is 1. ElevenLabs interprets comma-separated prompts as multiple distinct sounds.`
-  };
-}
+// Note: validateSFXPrompt is imported from ../utils/audioValidation.js
 
 /**
  * Queue a new generation job
@@ -362,9 +403,9 @@ function queueJob(type, filters = {}, options = {}) {
     throw new Error(`Invalid audio type: ${type}. Valid: ${VALID_AUDIO_TYPES.join(', ')}`);
   }
 
-  // Validate SFX prompts before queuing
+  // Validate SFX prompts before queuing (non-strict: missing prompt ok, may use metadata default)
   if (type === 'sfx' && options.prompt) {
-    const validation = validateSFXPrompt(options.prompt);
+    const validation = validateSFXPrompt(options.prompt, { strictMode: false });
     if (!validation.valid) {
       throw new Error(`Invalid SFX prompt: ${validation.message}`);
     }
@@ -386,6 +427,18 @@ function queueJob(type, filters = {}, options = {}) {
 
   broadcastQueueUpdate();
   broadcast('audio:job_queued', { job, position });
+
+  // Broadcast unified queue event
+  broadcastUnified('queued', type, {
+    jobId: job.id,
+    position,
+    job: {
+      id: job.id,
+      type,
+      filters,
+      status: 'pending'
+    }
+  });
 
   // Start processing if not already
   setImmediate(processNextJob);
@@ -790,14 +843,34 @@ function saveSeedState(seed) {
   }
 }
 
+// I2 FIX: Simple mutex to prevent seed race conditions
+let seedLock = false;
+
 /**
  * Get the next seed value and increment
- * @returns {number} The seed value to use (increments after reading)
+ * Uses a simple mutex to prevent race conditions when multiple calls happen simultaneously
+ * @returns {Promise<number>} The seed value to use (increments after reading)
  */
-function getNextSeed() {
-  const currentSeed = readSeedState();
-  saveSeedState(currentSeed + 1);
-  return currentSeed;
+async function getNextSeed() {
+  // Wait for lock with exponential backoff
+  let attempts = 0;
+  while (seedLock) {
+    await new Promise(r => setTimeout(r, 10 * Math.pow(2, attempts)));
+    attempts++;
+    if (attempts > 5) {
+      console.warn('[Seed State] Lock timeout, proceeding anyway');
+      break;
+    }
+  }
+
+  seedLock = true;
+  try {
+    const currentSeed = readSeedState();
+    saveSeedState(currentSeed + 1);
+    return currentSeed;
+  } finally {
+    seedLock = false;
+  }
 }
 
 /**

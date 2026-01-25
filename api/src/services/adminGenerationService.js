@@ -14,9 +14,16 @@
 import { spawn } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync } from 'fs';
+import { existsSync, writeFileSync, readFileSync } from 'fs';
 import { readFile } from 'fs/promises';
 import { broadcastToRoom } from '../websocket/index.js';
+import {
+  VALID_CATEGORIES,
+  VALID_LORA_MODELS,
+  VALID_BACKENDS,
+  DEFAULT_LORA_BY_CATEGORY,
+  CATEGORY_SCRIPT_MAP
+} from '../utils/assetConstants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,21 +34,8 @@ const THEME_PATH = path.join(PROJECT_ROOT, 'ai-image-metadata/theme.json');
 // Room name for generation events
 const GENERATION_ROOM = 'admin:generation';
 
-// Valid categories
-const VALID_CATEGORIES = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays'];
-
-// Valid LoRA models
-const VALID_LORA_MODELS = ['v1', 'v2', 'modern-pixel', 'retro-pixel'];
-
-// Default LoRA per category (matches Python prompt_templates.py)
-const DEFAULT_LORA = {
-  tiles: 'v2',
-  portraits: 'v1',
-  items: 'v1',
-  icons: 'v1',
-  nodes: 'v2',
-  overlays: 'v2'
-};
+// Re-export for backwards compatibility (use imported DEFAULT_LORA_BY_CATEGORY)
+const DEFAULT_LORA = DEFAULT_LORA_BY_CATEGORY;
 
 /**
  * Read generation configuration from theme.json
@@ -89,18 +83,8 @@ let incrementalSeed = 42;
 // Valid values: 'comfyui' (local), 'huggingface'
 let generationBackend = 'comfyui';
 
-// Valid backends for generation
-const VALID_BACKENDS = ['comfyui', 'huggingface'];
-
-// Category to script mapping
-const SCRIPT_MAP = {
-  tiles: 'generate-tiles.js',
-  portraits: 'generate-portraits.js',
-  items: 'generate-items.js',
-  icons: 'generate-icons.js',
-  nodes: 'generate-nodes.js',
-  overlays: 'generate-overlays.js'
-};
+// Use imported CATEGORY_SCRIPT_MAP as SCRIPT_MAP
+const SCRIPT_MAP = CATEGORY_SCRIPT_MAP;
 
 // Generation state
 const state = {
@@ -125,6 +109,24 @@ function generateJobId() {
  */
 function broadcast(type, payload) {
   broadcastToRoom(GENERATION_ROOM, { type, payload });
+}
+
+/**
+ * Broadcast unified asset generation event
+ * This normalizes all generation events across images, music, and SFX
+ * @param {string} eventType - Event type (started, progress, completed, failed, queued)
+ * @param {object} data - Event-specific data
+ */
+function broadcastUnified(eventType, data) {
+  broadcastToRoom('admin:generation', {
+    type: 'asset:generation_update',
+    payload: {
+      source: 'images',
+      eventType,
+      timestamp: new Date().toISOString(),
+      ...data
+    }
+  });
 }
 
 /**
@@ -324,6 +326,18 @@ async function processNextJob() {
     startedAt: job.startedAt
   });
 
+  // Broadcast unified event
+  broadcastUnified('started', {
+    jobId: job.id,
+    job: {
+      id: job.id,
+      type: 'images',
+      category: job.category,
+      filters: job.filters,
+      status: 'running'
+    }
+  });
+
   broadcastQueueUpdate();
 
   // Spawn child process
@@ -372,6 +386,13 @@ async function processNextJob() {
           progress: job.progress,
           images: state.generatedImages.length
         });
+
+        // Broadcast unified progress
+        broadcastUnified('progress', {
+          jobId: job.id,
+          progress: job.progress,
+          generatedCount: state.generatedImages.length
+        });
       }
 
       // Broadcast stdout line
@@ -382,6 +403,13 @@ async function processNextJob() {
           type: 'stdout',
           text: line
         }
+      });
+
+      // Broadcast unified stdout
+      broadcastUnified('stdout', {
+        jobId: job.id,
+        line,
+        lineType: 'stdout'
       });
     }
   });
@@ -407,6 +435,13 @@ async function processNextJob() {
           type: 'stderr',
           text: line
         }
+      });
+
+      // Broadcast unified stderr
+      broadcastUnified('stdout', {
+        jobId: job.id,
+        line,
+        lineType: 'stderr'
       });
     }
   });
@@ -462,12 +497,40 @@ function finishJob(job, status, error = null) {
       generatedImages: job.generatedImages,
       completedAt: job.completedAt
     });
+
+    // Broadcast unified completed
+    broadcastUnified('completed', {
+      jobId: job.id,
+      job: {
+        id: job.id,
+        type: 'images',
+        category: job.category,
+        status: 'completed',
+        generatedAssets: job.generatedImages.map(img => ({
+          type: 'image',
+          path: img.path,
+          timestamp: img.timestamp
+        }))
+      }
+    });
   } else if (status === 'failed') {
     broadcast('generation:failed', {
       jobId: job.id,
       category: job.category,
       error: job.error,
       completedAt: job.completedAt
+    });
+
+    // Broadcast unified failed
+    broadcastUnified('failed', {
+      jobId: job.id,
+      job: {
+        id: job.id,
+        type: 'images',
+        category: job.category,
+        status: 'failed',
+        error: job.error
+      }
     });
   }
 
@@ -538,6 +601,19 @@ export function queueJob(category, filters = {}, options = {}) {
   state.queue.push(job);
 
   broadcastQueueUpdate();
+
+  // Broadcast unified queue event
+  broadcastUnified('queued', {
+    jobId: job.id,
+    position: state.queue.length,
+    job: {
+      id: job.id,
+      type: 'images',
+      category: job.category,
+      filters: job.filters,
+      status: 'pending'
+    }
+  });
 
   // Start processing if idle
   processNextJob();
@@ -661,42 +737,50 @@ export function getJob(jobId) {
 }
 
 /**
- * Get valid categories
+ * Get valid asset categories for generation
+ * @returns {string[]} Array of valid category names: tiles, portraits, items, icons, nodes, overlays
  */
 export function getValidCategories() {
   return VALID_CATEGORIES;
 }
 
 /**
- * Get valid LoRA models
+ * Get valid LoRA model identifiers
+ * @returns {string[]} Array of valid LoRA model names: v1, v2, modern-pixel, retro-pixel
  */
 export function getValidLoraModels() {
   return VALID_LORA_MODELS;
 }
 
 /**
- * Get default LoRA for each category
+ * Get default LoRA model mapping for each category
+ * @returns {Object<string, string>} Map of category name to default LoRA model
+ * @example
+ * // Returns: { tiles: 'v2', portraits: 'v1', items: 'v1', ... }
  */
 export function getDefaultLora() {
   return { ...DEFAULT_LORA };
 }
 
 /**
- * Get current generation configuration
+ * Get current generation configuration from theme.json
+ * @returns {Promise<Object>} Configuration object with backend, seedMode, fixedSeed, loraDefaults, variants, delay, verbose
  */
 export async function getConfig() {
   return getGenerationConfig();
 }
 
 /**
- * Reset incremental seed counter
+ * Reset the incremental seed counter to a specified value
+ * Used when seedMode='incremental' to restart or set a specific seed sequence
+ * @param {number} [seed=42] - The seed value to reset to
  */
 export function resetIncrementalSeed(seed = 42) {
   incrementalSeed = seed;
 }
 
 /**
- * Set the generation backend
+ * Set the generation backend and persist to theme.json
  * @param {string} backend - 'comfyui' or 'huggingface'
  * @throws {Error} If backend is invalid
  */
@@ -705,7 +789,18 @@ export function setGenerationBackend(backend) {
     throw new Error(`Invalid backend: ${backend}. Valid: ${VALID_BACKENDS.join(', ')}`);
   }
   generationBackend = backend;
-  console.log(`[AdminGeneration] Backend set to: ${backend}`);
+
+  // I1 FIX: Persist backend selection to theme.json
+  try {
+    const themeData = readFileSync(THEME_PATH, 'utf-8');
+    const theme = JSON.parse(themeData);
+    theme.generationBackend = backend;
+    writeFileSync(THEME_PATH, JSON.stringify(theme, null, 2));
+    console.log(`[AdminGeneration] Backend set and persisted to: ${backend}`);
+  } catch (err) {
+    // Log but don't fail - in-memory value still works
+    console.warn(`[AdminGeneration] Backend set to ${backend} (persistence failed: ${err.message})`);
+  }
 }
 
 /**
