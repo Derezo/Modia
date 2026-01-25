@@ -206,26 +206,33 @@ Examples:
  * @returns {string} Full file system path
  */
 function getOutputPath(tile, biome, variantIndex = 0) {
+  const category = tile._tileCategory || 'floors';
+
+  // For walls: {biome}/walls/{terrain}_wall.png
+  if (category === 'walls') {
+    const terrain = tile.terrain || 'default';
+    return path.join(OUTPUT_DIR, biome, 'walls', `${terrain}_wall.png`);
+  }
+
+  // For slopes: {biome}/slopes/{direction}_{levels}.png
+  // Also handles stairs which use the same path pattern
+  if (category === 'slopes') {
+    const direction = tile.direction || 'north';
+    const levels = tile.levels || 1;
+    // Check if it's stairs (use full key for stairs)
+    if (tile.type === 'stairs' || tile.key?.startsWith('stairs_')) {
+      return path.join(OUTPUT_DIR, biome, 'slopes', `stairs_${direction}_${levels}.png`);
+    }
+    return path.join(OUTPUT_DIR, biome, 'slopes', `${direction}_${levels}.png`);
+  }
+
+  // For floors: {biome}/{key}.png (unchanged)
   // Build filename - only append variantIndex if tile has multiple variants
-  // If tile.variants <= 1, the key already contains the variant (e.g., grass_0)
   const numVariants = tile.variants || 1;
   const filename = numVariants > 1
     ? `${tile.id}_${variantIndex}.png`
     : `${tile.id}.png`;
 
-  // Handle outputPath from tile metadata
-  if (tile.outputPath) {
-    return path.join(OUTPUT_DIR, tile.outputPath, filename);
-  }
-
-  // Default based on category
-  const category = tile._tileCategory || 'floors';
-  if (category === 'walls') {
-    return path.join(OUTPUT_DIR, biome, 'walls', filename);
-  }
-  if (category === 'slopes') {
-    return path.join(OUTPUT_DIR, biome, 'slopes', filename);
-  }
   return path.join(OUTPUT_DIR, biome, filename);
 }
 

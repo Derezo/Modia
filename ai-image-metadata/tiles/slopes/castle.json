@@ -14,7 +14,6 @@
       "levels": 1,
       "prompt": "polished stone ramp ascending northward with carved edges in slate grey #708090",
       "seed": 52001,
-      "outputPath": "castle/slopes/north_1",
       "generated": true,
       "generatedAt": "2026-01-24T17:04:46.210Z"
     },
@@ -24,7 +23,6 @@
       "levels": 1,
       "prompt": "polished stone ramp descending southward with worn surface in slate grey #708090",
       "seed": 52011,
-      "outputPath": "castle/slopes/south_1",
       "generated": true,
       "generatedAt": "2026-01-24T17:05:29.001Z"
     },
@@ -34,7 +32,6 @@
       "levels": 1,
       "prompt": "polished stone ramp ascending eastward with decorative borders in slate grey #708090 #DAA520",
       "seed": 52021,
-      "outputPath": "castle/slopes/east_1",
       "generated": true,
       "generatedAt": "2026-01-24T17:06:10.835Z"
     },
@@ -44,7 +41,6 @@
       "levels": 1,
       "prompt": "polished stone ramp descending westward with carpet runner in slate grey #708090 #8B0000",
       "seed": 52031,
-      "outputPath": "castle/slopes/west_1",
       "generated": true,
       "generatedAt": "2026-01-24T17:06:53.587Z"
     },
@@ -55,7 +51,6 @@
       "type": "stairs",
       "prompt": "grand castle stairs ascending north with ornate carved balustrade showing 2-3 visible steps #708090 #DAA520",
       "seed": 52041,
-      "outputPath": "castle/slopes/stairs_north_2",
       "generated": true,
       "generatedAt": "2026-01-24T17:07:36.348Z"
     },
@@ -66,7 +61,6 @@
       "type": "stairs",
       "prompt": "grand castle stairs descending south with red carpet runner showing 2-3 visible steps #708090 #8B0000",
       "seed": 52051,
-      "outputPath": "castle/slopes/stairs_south_2",
       "generated": true,
       "generatedAt": "2026-01-24T17:08:19.200Z"
     },
@@ -77,7 +71,6 @@
       "type": "stairs",
       "prompt": "dungeon stone stairs ascending east with torch sconces showing 2-3 visible steps #696969 #2F4F4F",
       "seed": 52061,
-      "outputPath": "castle/slopes/stairs_east_2",
       "generated": true,
       "generatedAt": "2026-01-24T17:09:01.980Z"
     },
@@ -88,7 +81,6 @@
       "type": "stairs",
       "prompt": "dungeon stone stairs descending west with damp moss showing 2-3 visible steps #696969 #2F4F4F",
       "seed": 52071,
-      "outputPath": "castle/slopes/stairs_west_2",
       "generated": true,
       "generatedAt": "2026-01-24T17:09:44.775Z"
     }
