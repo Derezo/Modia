@@ -5,6 +5,7 @@
 
 import { useState, memo } from 'react';
 import { CheckIcon, ImageIcon } from '@radix-ui/react-icons';
+import { getAssetUrl, DEFAULT_SIZES } from '@shared/assetPaths.js';
 
 /**
  * Get the subcategory for an asset (handles different field names)
@@ -35,42 +36,38 @@ function getAssetSubcategory(asset, category) {
 function getAssetImageUrl(asset, category) {
   const id = asset.key || asset.id;
 
-  // Build path based on category and asset metadata
+  // Determine subcategory and additional options based on category and asset metadata
+  let subcategory;
+  let extraOptions = {};
+
   switch (category) {
-    case 'tiles': {
-      // Tiles are directly in the biome folder (no floors/walls/slopes subdirectory)
-      const biome = asset._biome || asset.outputPath || 'base';
-      return `/assets/sprites/terrain/${biome}/${asset.key}.png`;
-    }
-    case 'portraits': {
-      // Portraits for players vs enemies
-      if (asset._type === 'enemy' || asset.type === 'enemy') {
-        return `/assets/sprites/enemies/portraits/${id}.png`;
+    case 'tiles':
+      subcategory = asset._biome || asset.outputPath || 'base';
+      // Pass tileCategory for walls/slopes path resolution
+      if (asset._tileCategory) {
+        extraOptions.tileCategory = asset._tileCategory;
       }
-      return `/assets/sprites/portraits/${id}.png`;
-    }
-    case 'items': {
-      // Items organized by subcategory with size suffix (weapons, armor, etc.)
-      const subcategory = asset._itemCategory || asset._subcategory || asset.subcategory || 'weapons';
-      // Items have multiple sizes (32, 48, 64) - use 64 for preview
-      return `/assets/sprites/items/${subcategory}/${id}_64.png`;
-    }
-    case 'icons': {
-      // Icons are stored as: /assets/icons/png/{size}/{subcategory}-{id}.png
-      // Example: /assets/icons/png/48/actions-action_attack.png
-      const subcategory = asset._iconCategory || asset._subcategory || asset.subcategory || 'actions';
-      return `/assets/icons/png/48/${subcategory}-${id}.png`;
-    }
-    case 'nodes': {
-      return `/assets/sprites/nodes/${id}.png`;
-    }
-    case 'overlays': {
-      const subcategory = asset._overlayCategory || asset._subcategory || asset.subcategory || 'rarity';
-      return `/assets/sprites/overlays/${subcategory}/${id}.png`;
-    }
+      break;
+    case 'portraits':
+      subcategory = (asset._type === 'enemy' || asset.type === 'enemy') ? 'enemies' : 'characters';
+      break;
+    case 'items':
+      subcategory = asset._itemCategory || asset._subcategory || asset.subcategory || 'weapons';
+      break;
+    case 'icons':
+      subcategory = asset._iconCategory || asset._subcategory || asset.subcategory || 'actions';
+      break;
+    case 'overlays':
+      subcategory = asset._overlayCategory || asset._subcategory || asset.subcategory || 'rarity';
+      break;
     default:
-      return null;
+      subcategory = asset._subcategory || 'default';
   }
+
+  // Use default size for preview (48 for icons, 64 for items, etc.)
+  const size = DEFAULT_SIZES[category];
+
+  return getAssetUrl(category, id, { subcategory, size, useLegacyPath: true, ...extraOptions });
 }
 
 /**

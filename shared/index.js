@@ -77,3 +77,18 @@ export {
   calculateDamagePreview,
   calculateInitiative
 } from './battleMath.js';
+
+// Asset Paths
+export {
+  SIZE_PRESETS,
+  DEFAULT_SIZES,
+  ASSET_CATEGORIES,
+  getAssetUrl,
+  getLegacyPath,
+  getStandardizedPath,
+  getOutputPath,
+  getAllSizeVariants,
+  isValidSize,
+  getDefaultSize,
+  parseAssetFilename
+} from './assetPaths.js';

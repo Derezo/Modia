@@ -848,6 +848,64 @@ async function postProcessByType(imagePath, assetType, options = {}) {
   }
 }
 
+/**
+ * Post-process a generated image with dual-write support
+ * Generates assets at both legacy locations and new standardized locations
+ * @param {string} imagePath - Path to generated source image
+ * @param {string} category - Asset category (icons, items, nodes, portraits, etc.)
+ * @param {Object} options - Options
+ * @param {string} options.id - Asset identifier
+ * @param {string} [options.subcategory] - Subcategory for organization
+ * @param {boolean} [options.dualWrite=true] - Whether to also write to standardized paths
+ * @param {boolean} [options.force=false] - Overwrite existing files
+ * @param {boolean} [options.verbose=false] - Log progress
+ * @returns {Promise<{legacy: Object, standardized: Object}>}
+ */
+async function postProcessWithDualWrite(imagePath, category, options = {}) {
+  const { id, subcategory, dualWrite = true, force = false, verbose = false } = options;
+
+  // 1. Generate legacy paths (existing behavior)
+  const legacyResults = await postProcessByType(imagePath, category, { force, verbose });
+
+  if (!dualWrite) {
+    return { legacy: legacyResults, standardized: null };
+  }
+
+  // 2. Generate standardized paths
+  const sizes = SIZE_PRESETS[category] || [64];
+  const standardizedResults = { success: true, variants: [], failed: [] };
+
+  for (const size of sizes) {
+    // Standardized pattern: /assets/{category}/png/{size}/{subcategory}-{id}.png
+    const subPart = subcategory ? `${subcategory}-` : '';
+    const standardizedPath = path.join(
+      'frontend/public/assets',
+      category,
+      'png',
+      String(size),
+      `${subPart}${id}.png`
+    );
+
+    if (!force && fileExists(standardizedPath)) {
+      standardizedResults.variants.push(standardizedPath);
+      if (verbose) log(`Skipped (exists): ${standardizedPath}`, 'info');
+      continue;
+    }
+
+    const result = await resizeImage(imagePath, standardizedPath, size);
+    if (result.success) {
+      standardizedResults.variants.push(standardizedPath);
+      if (verbose) log(`Generated standardized: ${standardizedPath}`, 'success');
+    } else {
+      standardizedResults.failed.push({ path: standardizedPath, error: result.error });
+      standardizedResults.success = false;
+      if (verbose) log(`Failed standardized: ${standardizedPath} - ${result.error}`, 'error');
+    }
+  }
+
+  return { legacy: legacyResults, standardized: standardizedResults };
+}
+
 module.exports = {
   STANDARD_SIZES,
   SIZE_PRESETS,
@@ -870,5 +928,6 @@ module.exports = {
   postProcessNode,
   postProcessWall,
   postProcessSlope,
-  postProcessByType
+  postProcessByType,
+  postProcessWithDualWrite
 };

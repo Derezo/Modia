@@ -17,8 +17,10 @@
  *   await iconLoader.preloadCategory('menu', ['formation', 'inventory', 'settings']);
  */
 
+import { getAssetUrl, SIZE_PRESETS } from '@shared/assetPaths.js';
+
 /** Available PNG sizes from the generation script */
-const AVAILABLE_SIZES = [16, 24, 32, 48];
+const AVAILABLE_SIZES = SIZE_PRESETS.icons;
 
 export class IconLoader {
   constructor() {
@@ -27,9 +29,6 @@ export class IconLoader {
 
     /** @type {Map<string, Promise<HTMLImageElement>>} Pending load promises */
     this.pending = new Map();
-
-    /** @type {string} Base path for icon assets */
-    this.basePath = '/assets/icons/png';
 
     /** @type {Set<string>} Set of icons that failed to load */
     this.failedIcons = new Set();
@@ -44,14 +43,15 @@ export class IconLoader {
    * @returns {number} Optimal available size
    */
   getOptimalSize(requestedSize) {
+    const availableSizes = SIZE_PRESETS.icons;
     // Find smallest size >= requested
-    for (const size of AVAILABLE_SIZES) {
+    for (const size of availableSizes) {
       if (size >= requestedSize) {
         return size;
       }
     }
     // Return largest if requested is bigger than all options
-    return AVAILABLE_SIZES[AVAILABLE_SIZES.length - 1];
+    return availableSizes[availableSizes.length - 1];
   }
 
   /**
@@ -85,9 +85,14 @@ export class IconLoader {
    * @returns {string} URL path
    */
   getIconPath(category, name, size) {
-    const optimalSize = this.getOptimalSize(size);
     const normalizedName = this.normalizeName(name);
-    return `${this.basePath}/${optimalSize}/${category}-${normalizedName}.png`;
+    const optimalSize = this.getOptimalSize(size);
+
+    return getAssetUrl('icons', normalizedName, {
+      subcategory: category,
+      size: optimalSize,
+      useLegacyPath: true
+    });
   }
 
   /**
