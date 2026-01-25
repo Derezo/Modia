@@ -161,7 +161,7 @@ export function connect() {
       const message = JSON.parse(event.data);
       const { type, payload } = message;
 
-      // Handle auth success - join generation room
+      // Handle auth success - join generation rooms
       if (type === 'auth_success') {
         // Clear auth timeout
         if (authTimeoutId) {
@@ -169,23 +169,33 @@ export function connect() {
           authTimeoutId = null;
         }
 
-        console.log('[WS] Authenticated, joining admin:generation room');
+        console.log('[WS] Authenticated, joining admin rooms');
         setConnectionState(ConnectionState.AUTHENTICATED);
 
         try {
+          // Join image generation room
           socket.send(JSON.stringify({
             type: 'join_room',
             payload: { room: 'admin:generation' }
           }));
+          // Join audio generation room
+          socket.send(JSON.stringify({
+            type: 'join_room',
+            payload: { room: 'admin:audio-generation' }
+          }));
         } catch (err) {
-          console.error('[WS] Failed to join room:', err);
+          console.error('[WS] Failed to join rooms:', err);
         }
         return;
       }
 
       // Handle room joined confirmation
-      if (type === 'room_joined' && payload.room === 'admin:generation') {
-        console.log('[WS] Joined admin:generation room');
+      if (type === 'room_joined') {
+        if (payload.room === 'admin:generation') {
+          console.log('[WS] Joined admin:generation room');
+        } else if (payload.room === 'admin:audio-generation') {
+          console.log('[WS] Joined admin:audio-generation room');
+        }
         return;
       }
 

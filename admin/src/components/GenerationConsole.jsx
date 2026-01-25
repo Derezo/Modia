@@ -23,7 +23,7 @@ import ProgressBar from './ProgressBar';
 // Tab types
 const TABS = {
   CONSOLE: 'console',
-  IMAGES: 'images'
+  ASSETS: 'assets'
 };
 
 export default function GenerationConsole({ minimized = false, onMinimizeChange }) {
@@ -175,15 +175,15 @@ export default function GenerationConsole({ minimized = false, onMinimizeChange 
                 )}
               </button>
               <button
-                onClick={() => setActiveTab(TABS.IMAGES)}
+                onClick={() => setActiveTab(TABS.ASSETS)}
                 className={`px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition-colors ${
-                  activeTab === TABS.IMAGES
+                  activeTab === TABS.ASSETS
                     ? 'bg-midnight-700 text-parchment-100'
                     : 'text-parchment-400 hover:text-parchment-200 hover:bg-midnight-800'
                 }`}
               >
                 <ImageIcon className="w-4 h-4" />
-                Images
+                Assets
                 {generatedImages.length > 0 && (
                   <span className="text-xs text-accent-emerald">({generatedImages.length})</span>
                 )}
@@ -295,14 +295,14 @@ export default function GenerationConsole({ minimized = false, onMinimizeChange 
               </div>
             )}
 
-            {activeTab === TABS.IMAGES && (
+            {activeTab === TABS.ASSETS && (
               <div className="h-full overflow-y-auto p-4 bg-midnight-950">
                 {generatedImages.length === 0 ? (
                   <div className="text-parchment-500 text-center py-8">
                     <ImageIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>No images generated yet</p>
+                    <p>No assets generated yet</p>
                     <p className="text-sm text-parchment-600">
-                      Images will appear here as they are generated
+                      Assets will appear here as they are generated
                     </p>
                   </div>
                 ) : (

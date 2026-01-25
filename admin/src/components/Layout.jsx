@@ -1,15 +1,21 @@
 /**
- * Layout - Main layout component with header and navigation
+ * Layout - Main layout component with header, navigation, and unified generation panel
  */
 
+import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 import { useNavigationShortcuts } from '../hooks/useKeyboardShortcuts';
 import KeyboardShortcutsHelp from './KeyboardShortcutsHelp';
+import UnifiedGenerationBar from './UnifiedGenerationBar';
+import UnifiedAssetPanel from './UnifiedAssetPanel';
 
 export default function Layout() {
   // Enable global navigation shortcuts (1-6 for category tabs)
   useNavigationShortcuts();
+
+  // Track whether the unified panel is expanded
+  const [panelExpanded, setPanelExpanded] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -32,10 +38,21 @@ export default function Layout() {
         <Navbar />
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 bg-midnight-950">
+      {/* Main content - add padding at bottom for the generation bar */}
+      <main className="flex-1 bg-midnight-950 pb-12">
         <Outlet />
       </main>
+
+      {/* Unified Generation Panel (expanded view) */}
+      {panelExpanded && (
+        <UnifiedAssetPanel onClose={() => setPanelExpanded(false)} />
+      )}
+
+      {/* Unified Generation Bar (always visible at bottom) */}
+      <UnifiedGenerationBar
+        expanded={panelExpanded}
+        onExpandChange={setPanelExpanded}
+      />
     </div>
   );
 }
