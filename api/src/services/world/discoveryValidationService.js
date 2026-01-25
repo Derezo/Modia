@@ -47,25 +47,35 @@ export async function validateAndRepairDiscovery(userId) {
 
   const discoveredSet = new Set(discoveryCheck.rows.map(r => r.node_id));
 
-  // Find and repair missing nodes
+  // Find and repair missing nodes (with per-repair error handling for partial success)
   for (const char of charResult.rows) {
     // Check current position
     if (char.current_node_id && !discoveredSet.has(char.current_node_id)) {
-      console.log(`[DiscoveryValidation] Repairing user ${userId}: discovering current_node ${char.current_node_id} for char ${char.name}`);
-      await discoverNodeAndAdjacent(userId, char.current_node_id);
-      result.repairs.push({ type: 'current_node', nodeId: char.current_node_id, charName: char.name });
-      result.repaired = true;
-      // Add to discovered set to avoid duplicate repairs
-      discoveredSet.add(char.current_node_id);
+      try {
+        console.log(`[DiscoveryValidation] Repairing user ${userId}: discovering current_node ${char.current_node_id} for char ${char.name}`);
+        await discoverNodeAndAdjacent(userId, char.current_node_id);
+        result.repairs.push({ type: 'current_node', nodeId: char.current_node_id, charName: char.name });
+        result.repaired = true;
+        // Add to discovered set to avoid duplicate repairs
+        discoveredSet.add(char.current_node_id);
+      } catch (err) {
+        console.error(`[DiscoveryValidation] Failed to repair current_node ${char.current_node_id} for char ${char.name}:`, err.message);
+        result.repairs.push({ type: 'current_node', nodeId: char.current_node_id, charName: char.name, error: err.message });
+      }
     }
 
     // Check home castle
     if (char.castle_node_id && !discoveredSet.has(char.castle_node_id)) {
-      console.log(`[DiscoveryValidation] Repairing user ${userId}: discovering home_castle ${char.castle_node_id} for char ${char.name}`);
-      await discoverNodeAndAdjacent(userId, char.castle_node_id);
-      result.repairs.push({ type: 'home_castle', nodeId: char.castle_node_id, charName: char.name });
-      result.repaired = true;
-      discoveredSet.add(char.castle_node_id);
+      try {
+        console.log(`[DiscoveryValidation] Repairing user ${userId}: discovering home_castle ${char.castle_node_id} for char ${char.name}`);
+        await discoverNodeAndAdjacent(userId, char.castle_node_id);
+        result.repairs.push({ type: 'home_castle', nodeId: char.castle_node_id, charName: char.name });
+        result.repaired = true;
+        discoveredSet.add(char.castle_node_id);
+      } catch (err) {
+        console.error(`[DiscoveryValidation] Failed to repair home_castle ${char.castle_node_id} for char ${char.name}:`, err.message);
+        result.repairs.push({ type: 'home_castle', nodeId: char.castle_node_id, charName: char.name, error: err.message });
+      }
     }
   }
 
