@@ -7,7 +7,7 @@ import { authLimiter } from '../middleware/rateLimiter.js';
 import { refreshLimiter } from '../middleware/refreshRateLimiter.js';
 import { authenticate } from '../middleware/auth.js';
 import { STARTING_GOLD } from '../config/constants.js';
-import { validateAndRepairDiscovery } from '../services/world/discoveryValidationService.js';
+import { validateAndRepairDiscovery, fixOrphanedCharacters } from '../services/world/discoveryValidationService.js';
 
 const router = express.Router();
 
@@ -109,15 +109,24 @@ router.post('/login', authLimiter, asyncHandler(async (req, res) => {
   // Update last login
   await query('UPDATE users SET last_login = NOW() WHERE id = $1', [user.id]);
 
-  // Self-healing: Validate and repair discovery state (blocking with timeout)
+  // Self-healing: Fix orphaned characters and repair discovery state (blocking with timeout)
   // Must complete before login response so frontend fetches correct world data
   try {
     await Promise.race([
-      validateAndRepairDiscovery(user.id),
+      (async () => {
+        // First, fix any characters at non-existent nodes
+        const orphanResult = await fixOrphanedCharacters(user.id);
+        if (orphanResult.fixed.length > 0) {
+          console.log(`[Login] Fixed ${orphanResult.fixed.length} orphaned characters for user ${user.id}`);
+        }
+
+        // Then, repair discovery state
+        await validateAndRepairDiscovery(user.id);
+      })(),
       new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000))
     ]);
   } catch (err) {
-    console.warn(`[Login] Discovery validation failed for user ${user.id}:`, err.message);
+    console.warn(`[Login] Self-healing failed for user ${user.id}:`, err.message);
     // Don't block login on repair failure
   }
 

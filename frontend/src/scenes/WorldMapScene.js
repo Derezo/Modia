@@ -711,6 +711,26 @@ export class WorldMapScene extends Scene {
       this.game.state.set('worldNodes', this.nodes);
       this.game.state.set('currentNode', this.currentNode);
 
+      // Check if current node exists in loaded nodes (orphan detection)
+      if (this.currentNode) {
+        const currentNodeData = this.nodes.find(n => n.id === this.currentNode.id);
+        if (!currentNodeData) {
+          console.error(`Current node ${this.currentNode.id} not found in discovered nodes - character may be orphaned`);
+
+          // Show toast with error message - self-healing on login should fix this on next login
+          parchmentToast.error(
+            'Position Error',
+            'Your character is at an unknown location. Please log out and back in to fix this.',
+            { duration: 10000 }
+          );
+
+          // Flag for UI
+          this.characterOrphaned = true;
+        } else {
+          this.characterOrphaned = false;
+        }
+      }
+
       // Calculate reachable nodes first (needed for filtering)
       this.calculateReachableNodes();
 
@@ -828,6 +848,17 @@ export class WorldMapScene extends Scene {
       this.cameraY = -node.y_coord * this.nodeSpacing + this.game.canvas.height / 2;
     } else {
       console.error('Cannot center camera - no coordinates for current node:', this.currentNode?.id);
+
+      // GRACEFUL FALLBACK: Center on ANY discovered castle instead of showing nothing
+      const anyCastle = this.nodes.find(n => n.node_type === 'castle');
+      if (anyCastle && anyCastle.x_coord !== undefined) {
+        console.log(`Centering on fallback castle: ${anyCastle.id} (${anyCastle.name})`);
+        this.cameraX = -anyCastle.x_coord * this.nodeSpacing + this.game.canvas.width / 2;
+        this.cameraY = -anyCastle.y_coord * this.nodeSpacing + this.game.canvas.height / 2;
+
+        // Flag for UI - character may be orphaned
+        this.characterOrphaned = true;
+      }
     }
   }
 
