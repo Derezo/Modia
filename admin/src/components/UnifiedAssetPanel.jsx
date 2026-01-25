@@ -120,7 +120,7 @@ function ConsolePanel({ stdout, clearStdout, sourceFilter, onSourceFilterChange 
         ) : (
           filteredStdout.map((entry, index) => (
             <div
-              key={index}
+              key={`${entry.source}-${entry.timestamp}-${index}`}
               className={`py-0.5 ${entry.lineType === 'stderr' ? 'text-accent-ruby' : 'text-parchment-300'}`}
             >
               <span className="text-parchment-600 mr-2">
@@ -212,7 +212,7 @@ function AssetsPanel({ generatedAssets, clearGeneratedAssets, sourceFilter, onSo
         ) : (
           <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
             {filteredAssets.map((asset, index) => (
-              <AssetPreviewCard key={`${asset.path}-${index}`} asset={asset} />
+              <AssetPreviewCard key={`${asset.type}-${asset.category}-${asset.path}-${index}`} asset={asset} />
             ))}
           </div>
         )}

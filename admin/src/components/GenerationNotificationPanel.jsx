@@ -18,6 +18,7 @@ import {
   MinusIcon,
   ExclamationTriangleIcon,
   Link2Icon,
+  CopyIcon,
 } from '@radix-ui/react-icons';
 
 import { useGenerationContext } from '../contexts/GenerationContext';
@@ -318,8 +319,15 @@ export default function GenerationNotificationPanel() {
                       <p className="text-parchment-100 font-medium capitalize">
                         {currentJob.category}
                       </p>
-                      <p className="text-sm text-parchment-500">
-                        ID: {currentJob.id?.slice(0, 8)}...
+                      <p className="text-sm text-parchment-500 flex items-center gap-1">
+                        <span title={currentJob.id}>ID: {currentJob.id?.slice(0, 12)}...</span>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(currentJob.id)}
+                          className="text-parchment-400 hover:text-parchment-200 transition-colors"
+                          title="Copy full ID"
+                        >
+                          <CopyIcon className="w-3 h-3" />
+                        </button>
                       </p>
                     </div>
                     {isProcessing ? (
@@ -439,8 +447,8 @@ export default function GenerationNotificationPanel() {
 
               {recentImages.length > 0 ? (
                 <div className="grid grid-cols-4 gap-2">
-                  {recentImages.map((img) => (
-                    <ImageThumbnail key={img.path || img.timestamp} image={img} />
+                  {recentImages.map((img, index) => (
+                    <ImageThumbnail key={`${img.path}-${img.timestamp}-${index}`} image={img} />
                   ))}
                 </div>
               ) : (

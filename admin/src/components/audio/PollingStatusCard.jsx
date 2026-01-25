@@ -118,7 +118,10 @@ export default function PollingStatusCard({
         {/* Task ID */}
         <div className="flex items-center justify-between">
           <span className="text-parchment-500">Task ID</span>
-          <code className="text-parchment-400 font-mono bg-midnight-800 px-2 py-0.5 rounded truncate max-w-[180px]">
+          <code
+            className="text-parchment-400 font-mono bg-midnight-800 px-2 py-0.5 rounded truncate max-w-[280px]"
+            title={taskId}
+          >
             {taskId || '--'}
           </code>
         </div>

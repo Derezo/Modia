@@ -51,11 +51,11 @@ const METADATA_DIR = path.join(PROJECT_ROOT, 'audio-metadata');
 // SECURITY: Admin mode is STRICTLY disabled in production
 const isProduction = process.env.NODE_ENV === 'production';
 
-// Rate limiter for admin endpoints (30 requests per minute)
+// Rate limiter for admin endpoints (100 requests per minute base = 500/min in dev, 200/min in prod)
 const adminRateLimiter = createLimiter({
   name: 'admin-audio',
   windowMs: 60 * 1000,
-  maxRequests: 30,
+  maxRequests: 100,
   message: 'Admin audio endpoint rate limit exceeded. Please wait.',
   useUserKey: false // IP-based since no auth
 });

@@ -451,6 +451,18 @@ export function getConnectionState() {
 }
 
 /**
+ * Get reconnection info for UI display
+ * @returns {{attempts: number, maxAttempts: number, isReconnecting: boolean}}
+ */
+export function getReconnectInfo() {
+  return {
+    attempts: reconnectAttempts,
+    maxAttempts: maxReconnectAttempts,
+    isReconnecting: connectionState === ConnectionState.DISCONNECTED && reconnectAttempts < maxReconnectAttempts && reconnectAttempts > 0
+  };
+}
+
+/**
  * Get a dev token for WebSocket authentication
  *
  * SECURITY NOTE: This is for development-only admin tooling.
@@ -503,6 +515,7 @@ export default {
   isConnected,
   isAuthenticated,
   getConnectionState,
+  getReconnectInfo,
   setAuthToken,
   generation,
   ConnectionState

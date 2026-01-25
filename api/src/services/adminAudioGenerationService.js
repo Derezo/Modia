@@ -157,11 +157,21 @@ function buildScriptArgs(job) {
   if (job.type === 'music') {
     if (job.filters?.category) args.push('--category', job.filters.category);
     if (job.filters?.region) args.push('--region', job.filters.region);
-    if (job.filters?.key) args.push('--key', job.filters.key);
+    // Support both 'key' (singular) and 'keys' (array) for regeneration
+    if (job.filters?.key) {
+      args.push('--key', job.filters.key);
+    } else if (Array.isArray(job.filters?.keys) && job.filters.keys.length > 0) {
+      job.filters.keys.forEach(k => args.push('--key', k));
+    }
   } else if (job.type === 'sfx') {
     if (job.filters?.category) args.push('--category', job.filters.category);
     if (job.filters?.subcategory) args.push('--subcategory', job.filters.subcategory);
-    if (job.filters?.key) args.push('--key', job.filters.key);
+    // Support both 'key' (singular) and 'keys' (array) for regeneration
+    if (job.filters?.key) {
+      args.push('--key', job.filters.key);
+    } else if (Array.isArray(job.filters?.keys) && job.filters.keys.length > 0) {
+      job.filters.keys.forEach(k => args.push('--key', k));
+    }
   }
 
   // Common options
