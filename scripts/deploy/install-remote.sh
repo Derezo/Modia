@@ -227,12 +227,42 @@ log "Shared resources linked"
 step "Installing production dependencies..."
 
 cd "$RELEASE_DIR"
+
 # Remove prepare script (husky is a dev dependency that would fail)
 # This preserves postinstall scripts needed by bcrypt and other native modules
 npm pkg delete scripts.prepare 2>/dev/null || true
-npm ci --omit=dev
 
-log "Dependencies installed"
+# Ensure clean state - remove any partial node_modules from failed extractions
+rm -rf node_modules 2>/dev/null || true
+
+# Clear npm cache to prevent corrupted package issues
+# This is cheap (~2s) and prevents hard-to-debug failures
+npm cache clean --force 2>/dev/null || true
+
+# Install dependencies - fail immediately on any error
+log "Running npm ci --omit=dev..."
+if ! npm ci --omit=dev 2>&1; then
+  error "npm ci failed. Check network connectivity and package-lock.json integrity."
+fi
+
+# Verify critical dependencies are fully installed
+# These packages are known to sometimes install incompletely
+verify_dependency() {
+  local name="$1"
+  local check_path="$2"
+  if [ ! -e "node_modules/$check_path" ]; then
+    error "Dependency verification failed: $name is missing or incomplete (expected: node_modules/$check_path). This indicates a corrupted npm cache or network issue during install. The deployment has been aborted - previous release remains active."
+  fi
+}
+
+log "Verifying critical dependencies..."
+verify_dependency "iconv-lite" "iconv-lite/encodings/index.js"
+verify_dependency "body-parser" "body-parser/lib/types/json.js"
+verify_dependency "express" "express/lib/express.js"
+verify_dependency "pg" "pg/lib/index.js"
+verify_dependency "jsonwebtoken" "jsonwebtoken/index.js"
+
+log "Dependencies installed and verified"
 
 # ============================================
 # Step 7: Run database migrations
