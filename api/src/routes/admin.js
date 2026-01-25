@@ -510,6 +510,117 @@ router.put('/assets/:category/:id/mark-regeneration', asyncHandler(async (req, r
 }));
 
 /**
+ * PUT /api/admin/assets/mark-multiple
+ * Mark multiple assets for regeneration at once
+ * Body: { category: string, ids: string[], mark: boolean }
+ */
+router.put('/assets/mark-multiple', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { category, ids, mark = true } = req.body;
+
+  if (!category || !Array.isArray(ids)) {
+    throw new AppError('category and ids array required', 400);
+  }
+
+  if (!VALID_CATEGORIES.includes(category)) {
+    throw new AppError(`Invalid category: ${category}`, 400);
+  }
+
+  // Load category data once
+  let data;
+  try {
+    data = metadataUtils.loadCategoryAssets(category);
+  } catch (error) {
+    throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
+  }
+
+  // Track results
+  const results = { success: 0, notFound: 0, errors: [] };
+
+  for (const id of ids) {
+    const asset = data.byId[id];
+    if (!asset) {
+      results.notFound++;
+      continue;
+    }
+
+    try {
+      if (mark) {
+        metadataUtils.updateAssetStatus(category, asset._sourceFile, id, {
+          needsRegeneration: true,
+          regenerationQueuedAt: new Date().toISOString()
+        });
+      } else {
+        metadataUtils.updateAssetStatus(category, asset._sourceFile, id, {
+          needsRegeneration: false,
+          regenerationQueuedAt: null
+        });
+      }
+      results.success++;
+    } catch (error) {
+      results.errors.push({ id, error: error.message });
+    }
+  }
+
+  res.json({
+    message: mark
+      ? `Marked ${results.success} assets for regeneration`
+      : `Cleared regeneration marker for ${results.success} assets`,
+    updated: results.success,
+    total: ids.length,
+    notFound: results.notFound,
+    errors: results.errors.length > 0 ? results.errors : undefined
+  });
+}));
+
+/**
+ * POST /api/admin/regeneration-queue/clear
+ * Clear all items from the regeneration queue
+ * Body: { category?: string }
+ */
+router.post('/regeneration-queue/clear', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { category } = req.body;
+
+  // If category specified, validate it
+  if (category && !VALID_CATEGORIES.includes(category)) {
+    throw new AppError(`Invalid category: ${category}`, 400);
+  }
+
+  const categoriesToClear = category ? [category] : VALID_CATEGORIES;
+  let totalCleared = 0;
+
+  for (const cat of categoriesToClear) {
+    try {
+      const data = metadataUtils.loadCategoryAssets(cat);
+      const needsRegen = data.assets.filter(a => a.needsRegeneration === true);
+
+      for (const asset of needsRegen) {
+        try {
+          metadataUtils.updateAssetStatus(cat, asset._sourceFile, asset.id, {
+            needsRegeneration: false,
+            regenerationQueuedAt: null
+          });
+          totalCleared++;
+        } catch (error) {
+          console.warn(`[Admin] Failed to clear ${cat}/${asset.id}:`, error.message);
+        }
+      }
+    } catch (error) {
+      console.warn(`[Admin] Failed to load ${cat} for clearing:`, error.message);
+    }
+  }
+
+  res.json({
+    message: `Cleared ${totalCleared} items from regeneration queue`,
+    cleared: totalCleared,
+    category: category || 'all'
+  });
+}));
+
+/**
  * GET /api/admin/regeneration-queue
  * Get all assets marked for regeneration across all categories
  */

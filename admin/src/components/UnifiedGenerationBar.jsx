@@ -17,6 +17,7 @@ import {
   ChevronDownIcon,
   PlayIcon,
   PauseIcon,
+  ListBulletIcon,
 } from '@radix-ui/react-icons';
 
 import { useUnifiedGeneration } from '../hooks/useUnifiedGeneration';
@@ -68,7 +69,7 @@ function QueueStatus({ icon: Icon, label, isActive, pendingCount, isPaused, prog
 /**
  * Main UnifiedGenerationBar component
  */
-export default function UnifiedGenerationBar({ expanded, onExpandChange }) {
+export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCount = 0, onOpenQueue }) {
   const {
     connected,
     queueSummary,
@@ -133,6 +134,17 @@ export default function UnifiedGenerationBar({ expanded, onExpandChange }) {
 
         {/* Right side: Stats and expand button */}
         <div className="flex items-center gap-4">
+          {/* Queue button - show when items are queued */}
+          {queueCount > 0 && (
+            <button
+              onClick={onOpenQueue}
+              className="flex items-center gap-2 px-3 py-1.5 bg-accent-gold/20 text-accent-gold rounded-lg hover:bg-accent-gold/30 transition-colors"
+            >
+              <ListBulletIcon className="w-4 h-4" />
+              <span className="text-sm font-medium">{queueCount} Queued</span>
+            </button>
+          )}
+
           {/* Console/Assets counts */}
           <div className="flex items-center gap-3 text-sm text-parchment-500">
             {stdout.length > 0 && (

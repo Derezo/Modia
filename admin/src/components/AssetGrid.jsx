@@ -5,6 +5,7 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
+  ListBulletIcon,
   RocketIcon,
   Cross2Icon,
   ReloadIcon,
@@ -22,7 +23,7 @@ import { api } from '../lib/api';
 /**
  * Bulk action bar component
  */
-function BulkActionBar({ selectedCount, onGenerate, onClearSelection, loading }) {
+function BulkActionBar({ selectedCount, onAddToQueue, onGenerateNow, onClearSelection, loading }) {
   if (selectedCount === 0) return null;
 
   return (
@@ -36,16 +37,27 @@ function BulkActionBar({ selectedCount, onGenerate, onClearSelection, loading })
 
         <button
           type="button"
-          onClick={onGenerate}
+          onClick={onAddToQueue}
           disabled={loading}
           className="btn-gold flex items-center gap-2 disabled:opacity-50"
         >
           {loading ? (
             <ReloadIcon className="w-4 h-4 animate-spin" />
           ) : (
-            <RocketIcon className="w-4 h-4" />
+            <ListBulletIcon className="w-4 h-4" />
           )}
-          Generate Selected
+          Add to Queue
+        </button>
+
+        <button
+          type="button"
+          onClick={onGenerateNow}
+          disabled={loading}
+          className="btn-ghost flex items-center gap-2 disabled:opacity-50"
+          title="Skip queue and generate immediately"
+        >
+          <RocketIcon className="w-4 h-4" />
+          Generate Now
         </button>
 
         <button
@@ -230,9 +242,43 @@ export default function AssetGrid({
   }, [refetch]);
 
   /**
-   * Generate selected assets
+   * Add selected assets to the regeneration queue (marks them, doesn't execute)
    */
-  const handleGenerateSelected = useCallback(async () => {
+  const handleAddToQueue = useCallback(async () => {
+    if (selectedIds.size === 0) {
+      toast.info('No assets selected');
+      return;
+    }
+
+    setActionLoading(true);
+
+    try {
+      const selectedAssetIds = Array.from(selectedIds);
+
+      // Mark items for regeneration instead of immediate execution
+      await api.markMultipleForRegeneration(category, selectedAssetIds, true);
+
+      toast.success(`Added ${selectedAssetIds.length} item(s) to regeneration queue`);
+
+      // Clear selection after marking
+      clearSelection();
+
+      // Refresh to show updated markers
+      if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
+      refetchTimeoutRef.current = setTimeout(() => {
+        refetch();
+      }, 500);
+    } catch (err) {
+      toast.error(err.message || 'Failed to add to queue');
+    } finally {
+      setActionLoading(false);
+    }
+  }, [selectedIds, category, clearSelection, refetch, toast]);
+
+  /**
+   * Generate selected assets immediately (bypasses queue)
+   */
+  const handleGenerateNow = useCallback(async () => {
     if (selectedIds.size === 0) {
       toast.info('No assets selected');
       return;
@@ -320,7 +366,7 @@ export default function AssetGrid({
 
   // Register keyboard shortcuts
   useKeyboardShortcuts({
-    onGenerate: handleGenerateSelected,
+    onGenerate: handleAddToQueue,  // Shift+G now adds to queue
     onSelectAll: handleSelectAll,
     onEdit: handleEdit,
     onEscape: handleEscape,
@@ -421,7 +467,8 @@ export default function AssetGrid({
       {/* Bulk action bar */}
       <BulkActionBar
         selectedCount={selectedIds.size}
-        onGenerate={handleGenerateSelected}
+        onAddToQueue={handleAddToQueue}
+        onGenerateNow={handleGenerateNow}
         onClearSelection={clearSelection}
         loading={actionLoading}
       />
