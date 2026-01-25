@@ -214,7 +214,7 @@ Major refactoring of the battle map tile system to support taller structures and
 | Pixels per level | 8 | 16 |
 | Elevation names | PIT, GROUND, RAISED, HIGH, PEAK | DEEP_PIT, PIT, TRENCH, GROUND, RAISED, HIGH, VERY_HIGH, PEAK, SPIRE, TOWER, TOWER_TOP, CLOUD |
 | MAX_DROP | 2 | 3 |
-| CLIFF_THRESHOLD | 3 | 4 |
+| CLIFF_THRESHOLD | 4 | 4 |
 
 ### Frontend Rendering
 
@@ -744,11 +744,11 @@ Reorganized quest documentation from single file to modular structure:
 - `docs/DEVELOPMENT_ROADMAP.md` - v25.0, skill cooldowns marked complete
 - `docs/ROADMAP_GAMEPLAY.md` - v6.0, status duration/minimap complete, TODO items added
 - `docs/ROADMAP_TECHNICAL.md` - v1.6, debug endpoint added to security checklist
-- `docs/archive/COMPLETED_MILESTONES.md` - v9.1 entry added
+- `docs/archive/completed/COMPLETED_MILESTONES.md` - v9.1 entry added
 - `docs/QUEST_SYSTEM.md` - Restructured as index document
 - `docs/GUILD_ADVANCEMENT.md` - New file (from QUEST_SYSTEM.md content)
 - `docs/DAILY_WEEKLY_QUESTS.md` - New specification file
-- `docs/archive/QUEST_SYSTEM_v1.md` - Archived original
+- `docs/archive/deprecated/QUEST_SYSTEM_v1.md` - Archived original
 
 ---
 
@@ -984,6 +984,7 @@ Enhanced world variety with new node types and better distribution.
 - Target: 40-50% battle nodes (down from 60-70%)
 - Target: 20-30% activity/neutral nodes
 - Target: 20-30% settlements
+
 - Farms in outer areas, not near castles
 
 ### Migration
@@ -1149,8 +1150,8 @@ Comprehensive audit of TODO markers, roadmaps, and documentation to ensure align
 - **DEVELOPMENT_ROADMAP.md (v10.0):** Updated phase percentages, sprint focus
 
 ### Documentation Archived
-- `GAME_MECHANICS_IMPROVEMENTS.md` → `docs/archive/` with consolidation notice
-- `TECHNICAL_IMPROVEMENTS.md` → `docs/archive/` with consolidation notice
+- `GAME_MECHANICS_IMPROVEMENTS.md` → `docs/archive/deprecated/` with consolidation notice
+- `TECHNICAL_IMPROVEMENTS.md` → `docs/archive/deprecated/` with consolidation notice
 - `pending-features-consolidated.md` updated with completion status (v4.0)
 
 ### Code Fixes
@@ -1315,7 +1316,7 @@ All critical blocking issues have been resolved:
 
 ### PixelLab Integration Removal & Rate Limiter Refactoring (v7.8)
 - Removed AI sprite generation integration (17 files deleted, 6000+ lines)
-- Archived prompt templates to `docs/archive/IMAGE_GENERATION_PROMPTS.md` for future use
+- Archived prompt templates to `docs/archive/deprecated/IMAGE_GENERATION_PROMPTS.md` for future use
 - Existing generated sprite assets preserved in `frontend/public/assets/sprites/`
 - Rate limiter factory pattern introduced (`rateLimiterFactory.js`)
 - Test reorganization: moved to `integration/`, `unit/`, `ratelimit/` directories

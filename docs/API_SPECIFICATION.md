@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| API Version | 2.3 |
+| API Version | 2.4 |
 | Base URL | `/api` |
 | Last Updated | January 2026 |
 
@@ -2109,66 +2109,97 @@ POST /api/inventory/discard
 
 ## 11. Shop Endpoints
 
-### 11.1 Get Node Shops
+Shop types: `blacksmith` (weapons, armor), `apothecary` (consumables), `farm` (materials, consumables), `caravan` (exclusive items at merchant_caravan nodes).
 
-Get available shops at a node.
+### 11.1 Get Shop Inventory
 
-```
-GET /api/shops/:nodeId
-```
-
-**Headers:** `Authorization: Bearer <token>`
-
-**Response (200 OK):**
-```json
-{
-  "shops": [
-    {
-      "type": "blacksmith",
-      "name": "Castle Blacksmith",
-      "itemCount": 15
-    },
-    {
-      "type": "apothecary",
-      "name": "Castle Apothecary",
-      "itemCount": 12
-    }
-  ]
-}
-```
-
----
-
-### 11.2 Get Shop Inventory
-
-Get items available in a shop.
+Get items available in a shop at a node.
 
 ```
-GET /api/shops/:nodeId/:shopType/inventory
+GET /api/shops/:nodeId/:shopType
 ```
 
 **Headers:** `Authorization: Bearer <token>`
 
-**Response (200 OK):**
+**Path Parameters:**
+- `nodeId` - World node ID
+- `shopType` - One of: `blacksmith`, `apothecary`, `farm`, `caravan`
+
+**Response (200 OK) - Standard Shop:**
 ```json
 {
+  "nodeId": 5,
   "shopType": "blacksmith",
   "items": [
     {
+      "inventoryId": 12,
       "templateId": 101,
       "name": "Iron Sword",
-      "itemType": "weapon",
-      "price": 150,
-      "quantity": 10,
-      "supplyLevel": "normal"
+      "description": "A sturdy iron blade",
+      "type": "weapon",
+      "equipmentSlot": "main_hand",
+      "statBonuses": { "strength": 5, "attack": 10 },
+      "levelRequirement": 1,
+      "rarity": "common",
+      "basePrice": 150,
+      "buyPrice": 128,
+      "quantity": 8,
+      "supplyLevel": "medium",
+      "supplyLabel": "Medium",
+      "priceModifier": 0.85
     }
   ]
 }
 ```
 
+**Response (200 OK) - Caravan Shop:**
+```json
+{
+  "isCaravan": true,
+  "shopType": "caravan",
+  "nodeId": 42,
+  "nodeName": "Wandering Merchant",
+  "inventory": [
+    {
+      "itemId": "rare_elixir",
+      "name": "Rare Elixir",
+      "type": "consumable",
+      "description": "Restores 50% HP and MP",
+      "basePrice": 500,
+      "price": 575,
+      "stock": 3,
+      "maxStock": 5,
+      "regional": false,
+      "caravanExclusive": true,
+      "effect": { "hpRestore": 0.5, "mpRestore": 0.5 },
+      "inStock": true
+    }
+  ],
+  "refreshesIn": 172800000,
+  "lastRefresh": "2026-01-24T00:00:00.000Z"
+}
+```
+
+**Supply Level Pricing:**
+| Level | Stock Range | Price Modifier |
+|-------|-------------|----------------|
+| Scarce | 0-2 | 120% |
+| Low | 3-5 | 100% |
+| Medium | 6-10 | 85% |
+| High | 11-20 | 70% |
+| Surplus | 21+ | 60% |
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Invalid node ID |
+| 400 | Invalid shop type |
+| 400 | This location does not have a {shopType} |
+| 404 | Node not found |
+
 ---
 
-### 11.3 Buy Item
+### 11.2 Buy Item
 
 Purchase an item from a shop.
 
@@ -2178,10 +2209,19 @@ POST /api/shops/:nodeId/:shopType/buy
 
 **Headers:** `Authorization: Bearer <token>`
 
-**Request Body:**
+**Request Body (Standard Shop):**
 ```json
 {
   "itemTemplateId": 101,
+  "quantity": 1,
+  "characterId": 5
+}
+```
+
+**Request Body (Caravan Shop):**
+```json
+{
+  "itemId": "rare_elixir",
   "quantity": 1
 }
 ```
@@ -2190,26 +2230,45 @@ POST /api/shops/:nodeId/:shopType/buy
 ```json
 {
   "success": true,
-  "items": [
-    { "instanceId": 50, "name": "Iron Sword" }
-  ],
-  "totalCost": 150,
-  "goldBalance": 850
+  "message": "Purchased 1x Iron Sword for 128 gold",
+  "itemName": "Iron Sword",
+  "quantity": 1,
+  "unitPrice": 128,
+  "totalPrice": 128,
+  "remainingGold": 872
+}
+```
+
+**Response (200 OK) - Caravan:**
+```json
+{
+  "success": true,
+  "message": "Purchased 1x Rare Elixir for 575 gold",
+  "itemId": "rare_elixir",
+  "itemName": "Rare Elixir",
+  "quantity": 1,
+  "totalPrice": 575,
+  "remainingGold": 425,
+  "remainingStock": 2
 }
 ```
 
 **Errors:**
 | Code | Message |
 |------|---------|
+| 400 | Invalid quantity (1-99) |
 | 400 | Insufficient gold |
-| 400 | Item out of stock |
-| 400 | Inventory full |
+| 400 | Only {n} available |
+| 400 | Cannot use shop during battle |
+| 400 | You must be at this location to use the shop |
+| 404 | Item not available at this shop |
+| 404 | Target character not found |
 
 ---
 
-### 11.4 Sell Item
+### 11.3 Sell Item
 
-Sell an item to a shop.
+Sell an item to a shop. Sell price is always 50% of base price.
 
 ```
 POST /api/shops/:nodeId/:shopType/sell
@@ -2229,24 +2288,83 @@ POST /api/shops/:nodeId/:shopType/sell
 ```json
 {
   "success": true,
-  "goldReceived": 50,
-  "goldBalance": 900
+  "message": "Sold 1x Iron Sword for 75 gold",
+  "itemName": "Iron Sword",
+  "quantity": 1,
+  "unitPrice": 75,
+  "totalPrice": 75,
+  "newGold": 975
 }
 ```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Invalid quantity (1-9999) |
+| 400 | Cannot sell equipped items. Unequip first. |
+| 400 | Cannot sell items listed on the marketplace. Cancel the listing first. |
+| 400 | This item cannot be sold |
+| 400 | Insufficient items |
+| 404 | Item not found |
+
+---
+
+### 11.4 Get Sellable Inventory
+
+Get items from shared inventory that can be sold at a shop.
+
+```
+GET /api/shops/:nodeId/:shopType/sell-inventory
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "nodeId": 5,
+  "shopType": "blacksmith",
+  "items": [
+    {
+      "instanceId": 45,
+      "templateId": 101,
+      "name": "Iron Sword",
+      "description": "A sturdy iron blade",
+      "type": "weapon",
+      "rarity": "common",
+      "quantity": 1,
+      "basePrice": 150,
+      "sellPrice": 75
+    }
+  ]
+}
+```
+
+**Notes:**
+- Only shows unequipped items from shared inventory
+- Excludes items currently listed on marketplace
+- Excludes untradeable items
 
 ---
 
 ## 12. Marketplace Endpoints
 
+The marketplace supports two trading systems:
+1. **Order Book** - For stackable/fungible items (commodities). Uses limit/market orders.
+2. **Item Listings** - For unique items with augments. Individual item listings with specific prices.
+
 ### 12.1 Get Order Book
 
-Get current buy/sell orders for an item.
+Get current buy/sell orders for a stackable item.
 
 ```
 GET /api/marketplace/orderbook/:itemTemplateId
 ```
 
 **Headers:** `Authorization: Bearer <token>`
+
+**Query Parameters:**
+- `depth` (optional) - Number of price levels to return (default: 20)
 
 **Response (200 OK):**
 ```json
@@ -2266,6 +2384,13 @@ GET /api/marketplace/orderbook/:itemTemplateId
 }
 ```
 
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Invalid item template ID |
+| 400 | This item cannot be traded |
+| 404 | Item not found |
+
 ---
 
 ### 12.2 Get My Orders
@@ -2278,24 +2403,25 @@ GET /api/marketplace/orders/mine
 
 **Headers:** `Authorization: Bearer <token>`
 
+**Query Parameters:**
+- `status` (optional) - Filter by order status
+
 **Response (200 OK):**
 ```json
 {
   "orders": [
     {
-      "orderId": "order_123",
+      "id": 123,
       "itemTemplateId": 101,
       "itemName": "Iron Sword",
-      "orderType": "sell",
+      "side": "sell",
+      "price": 160,
       "quantity": 1,
-      "pricePerUnit": 160,
-      "createdAt": "2026-01-06T12:00:00Z"
+      "quantityFilled": 0,
+      "status": "open",
+      "createdAt": "2026-01-06T12:00:00.000Z"
     }
-  ],
-  "reservedGold": 0,
-  "escrowedItems": 1,
-  "maxOrders": 10,
-  "remainingOrders": 9
+  ]
 }
 ```
 
@@ -2303,7 +2429,7 @@ GET /api/marketplace/orders/mine
 
 ### 12.3 Create Limit Order
 
-Create a buy or sell limit order.
+Create a buy or sell limit order for stackable items.
 
 ```
 POST /api/marketplace/orders/limit
@@ -2315,30 +2441,47 @@ POST /api/marketplace/orders/limit
 ```json
 {
   "itemTemplateId": 101,
-  "orderType": "buy",
+  "side": "buy",
+  "price": 145,
   "quantity": 2,
-  "pricePerUnit": 145
+  "characterId": 5
 }
 ```
 
-**Response (201 Created):**
+**Response (200 OK):**
 ```json
 {
-  "orderId": "order_456",
-  "immediatelyFilled": 0,
-  "remaining": 2,
-  "reserved": {
-    "gold": 290
-  }
+  "success": true,
+  "message": "Buy order placed for Iron Sword",
+  "order": {
+    "id": 456,
+    "side": "buy",
+    "price": 145,
+    "quantity": 2,
+    "quantityFilled": 0,
+    "status": "open",
+    "itemName": "Iron Sword"
+  },
+  "trades": [],
+  "immediatelyFilled": false,
+  "partiallyFilled": false,
+  "gold": 9710
 }
 ```
 
 **Errors:**
 | Code | Message |
 |------|---------|
-| 400 | Maximum 10 orders allowed |
-| 400 | Insufficient gold for buy order |
-| 400 | Item not found in inventory for sell order |
+| 400 | Price must be a valid integer |
+| 400 | Quantity must be a valid integer |
+| 400 | Item template ID required |
+| 400 | Side must be "buy" or "sell" |
+| 400 | Price must be at least 1 |
+| 400 | Price cannot exceed 999999999 |
+| 400 | Quantity must be between 1 and 9999 |
+| 400 | Insufficient gold |
+| 400 | Maximum 10 active orders allowed |
+| 404 | Character not found |
 
 ---
 
@@ -2356,28 +2499,43 @@ POST /api/marketplace/orders/market
 ```json
 {
   "itemTemplateId": 101,
-  "orderType": "buy",
-  "quantity": 1
+  "side": "buy",
+  "quantity": 1,
+  "characterId": 5
 }
 ```
 
 **Response (200 OK):**
 ```json
 {
-  "filled": 1,
-  "unfilled": 0,
-  "totalCost": 155,
+  "success": true,
+  "message": "Market buy executed: 1x Iron Sword @ avg 155g",
   "trades": [
-    { "price": 155, "quantity": 1 }
-  ]
+    { "price": 155, "quantity": 1, "sellerId": 12 }
+  ],
+  "totalQuantity": 1,
+  "totalGold": 155,
+  "averagePrice": 155,
+  "gold": 9845
 }
 ```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Quantity must be a valid integer |
+| 400 | Item template ID required |
+| 400 | Side must be "buy" or "sell" |
+| 400 | Quantity must be between 1 and 9999 |
+| 400 | No matching orders available |
+| 400 | Insufficient gold |
+| 404 | Character not found |
 
 ---
 
 ### 12.5 Cancel Order
 
-Cancel an active order.
+Cancel an active limit order.
 
 ```
 DELETE /api/marketplace/orders/:orderId
@@ -2389,15 +2547,325 @@ DELETE /api/marketplace/orders/:orderId
 ```json
 {
   "success": true,
-  "released": {
-    "gold": 290
-  }
+  "message": "Order cancelled. 290g returned",
+  "side": "buy",
+  "returnedGold": 290,
+  "returnedQuantity": 0,
+  "itemName": "Iron Sword",
+  "gold": 10000
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Invalid order ID |
+| 400 | Order already filled or cancelled |
+| 403 | Not your order |
+| 404 | Order not found |
+
+---
+
+### 12.6 Search Items
+
+Search for tradeable items on the marketplace.
+
+```
+GET /api/marketplace/search
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Query Parameters:**
+- `q` (optional) - Search query for item name
+- `type` (optional) - Filter by item type (weapon, armor, consumable, etc.)
+- `augment` (optional) - Filter by augment type
+- `limit` (optional) - Max results (default: 50)
+
+**Response (200 OK):**
+```json
+{
+  "items": [
+    {
+      "templateId": 101,
+      "name": "Iron Sword",
+      "itemType": "weapon",
+      "basePrice": 150,
+      "lowestAsk": 155,
+      "highestBid": 140,
+      "volume24h": 23
+    }
+  ]
 }
 ```
 
 ---
 
-### 12.6 Get Trade History
+### 12.7 Get Item Listings
+
+Get all individual listings for items with a specific template (for unique/augmented items).
+
+```
+GET /api/marketplace/items/:templateId
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "templateId": 101,
+  "templateName": "Iron Sword",
+  "itemType": "weapon",
+  "basePrice": 150,
+  "isStackable": false,
+  "listings": [
+    {
+      "listingId": 789,
+      "price": 500,
+      "itemName": "Blazing Iron Sword",
+      "rarity": "rare",
+      "augments": [
+        { "type": "fire_damage", "value": 15 }
+      ],
+      "sellerName": "player123",
+      "listedAt": "2026-01-06T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### 12.8 Get My Listings
+
+Get the player's active item listings.
+
+```
+GET /api/marketplace/listings/mine
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "listings": [
+    {
+      "listingId": 789,
+      "itemName": "Blazing Iron Sword",
+      "templateId": 101,
+      "price": 500,
+      "rarity": "rare",
+      "augments": [...],
+      "listedAt": "2026-01-06T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### 12.9 Get Sellable Inventory
+
+Get items from inventory that can be listed on the marketplace.
+
+```
+GET /api/marketplace/inventory/sellable
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "items": [
+    {
+      "characterItemId": 456,
+      "templateId": 101,
+      "name": "Blazing Iron Sword",
+      "itemType": "weapon",
+      "rarity": "rare",
+      "quantity": 1,
+      "augments": [...]
+    }
+  ]
+}
+```
+
+**Notes:**
+- Only shows unequipped items
+- Excludes items already listed
+- Excludes untradeable items
+
+---
+
+### 12.10 Create Item Listing
+
+List an individual item for sale (for unique/augmented items).
+
+```
+POST /api/marketplace/listings
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "characterId": 5,
+  "characterItemId": 456,
+  "price": 500
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Listed Blazing Iron Sword for 500g",
+  "listing": {
+    "listingId": 789,
+    "itemName": "Blazing Iron Sword",
+    "price": 500,
+    "rarity": "rare",
+    "augments": [...]
+  }
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Character ID required |
+| 400 | Character item ID required |
+| 400 | Price must be a valid integer |
+| 400 | Price must be at least 1 |
+| 400 | Price cannot exceed 999999999 |
+| 400 | Item is already listed |
+| 400 | Cannot list equipped items |
+| 400 | Item is not tradeable |
+| 404 | Character not found |
+| 404 | Item not found |
+
+---
+
+### 12.11 Buy Item Listing
+
+Purchase a listed item.
+
+```
+POST /api/marketplace/listings/:listingId/buy
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "characterId": 5
+}
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Purchased Blazing Iron Sword for 500g",
+  "purchase": {
+    "itemName": "Blazing Iron Sword",
+    "price": 500,
+    "sellerId": 12
+  },
+  "gold": 9500
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Invalid listing ID |
+| 400 | Character ID required |
+| 400 | Insufficient gold |
+| 400 | Cannot buy your own listing |
+| 404 | Character not found |
+| 404 | Listing not found or already sold |
+
+---
+
+### 12.12 Cancel Item Listing
+
+Cancel an active item listing.
+
+```
+DELETE /api/marketplace/listings/:listingId
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Listing for Blazing Iron Sword cancelled",
+  "cancelled": {
+    "itemName": "Blazing Iron Sword",
+    "price": 500
+  }
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Invalid listing ID |
+| 403 | Not your listing |
+| 404 | Listing not found |
+
+---
+
+### 12.13 Get Price Suggestion
+
+Get suggested price for an item based on rarity and augments.
+
+```
+GET /api/marketplace/price-suggestion
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Query Parameters:**
+- `characterItemId` - Item instance ID
+- `characterId` - Owning character ID
+
+**Response (200 OK):**
+```json
+{
+  "itemName": "Blazing Iron Sword",
+  "basePrice": 150,
+  "suggestedPrice": 450,
+  "priceRange": {
+    "low": 350,
+    "high": 550
+  },
+  "factors": {
+    "rarity": "rare",
+    "rarityMultiplier": 2.0,
+    "augmentBonus": 100
+  }
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Character item ID and character ID required |
+| 404 | Item not found or not owned |
+
+---
+
+### 12.14 Get Trade History
 
 Get recent trades for an item.
 
@@ -2407,22 +2875,85 @@ GET /api/marketplace/history/:itemTemplateId
 
 **Headers:** `Authorization: Bearer <token>`
 
+**Query Parameters:**
+- `limit` (optional) - Max trades to return (default: 50)
+
+**Response (200 OK):**
+```json
+{
+  "itemTemplateId": 101,
+  "itemName": "Iron Sword",
+  "trades": [
+    {
+      "id": 567,
+      "price": 150,
+      "quantity": 1,
+      "executedAt": "2026-01-06T11:30:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+### 12.15 Get My Trades
+
+Get the player's trade history.
+
+```
+GET /api/marketplace/my-trades
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Query Parameters:**
+- `limit` (optional) - Max trades to return (default: 50)
+
 **Response (200 OK):**
 ```json
 {
   "trades": [
     {
+      "id": 567,
+      "itemTemplateId": 101,
+      "itemName": "Iron Sword",
+      "side": "buy",
       "price": 150,
       "quantity": 1,
-      "timestamp": "2026-01-06T11:30:00Z"
+      "totalGold": 150,
+      "executedAt": "2026-01-06T11:30:00.000Z"
     }
-  ],
-  "stats": {
-    "high": 165,
-    "low": 140,
+  ]
+}
+```
+
+---
+
+### 12.16 Get Item Stats
+
+Get 24-hour market statistics for an item.
+
+```
+GET /api/marketplace/stats/:itemTemplateId
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "itemTemplateId": 101,
+  "itemName": "Iron Sword",
+  "basePrice": 150,
+  "stats24h": {
+    "tradeCount": 15,
     "volume": 23,
-    "avg": 152
-  }
+    "goldVolume": 3450,
+    "lowPrice": 140,
+    "highPrice": 165,
+    "avgPrice": 152
+  },
+  "lastTradePrice": 155
 }
 ```
 
@@ -2698,3 +3229,4 @@ Chat message history retrieval (real-time via WebSocket).
 | 2.1 | Jan 2026 | - | Added battle rejoin endpoint (6.5); updated submit action to show async WebSocket delivery (6.3); added battle turn events (7.8) and battle connection events (7.9) |
 | 2.2 | Jan 2026 | - | Added sections 15-25: Fishing, Ruins, Relics, Friends, LFG, Notifications, Advancement Quest, Daily/Weekly Quests, Coliseum, Clans, Chat endpoints |
 | 2.3 | Jan 2026 | - | Documentation audit: Verified all 24 route files have corresponding API documentation sections |
+| 2.4 | Jan 2026 | - | Shop/Marketplace sync: Fixed shop endpoints (11.1-11.4) to match implementation with supply-based pricing, caravan support, sell-inventory. Rewrote marketplace section (12.1-12.16) adding item listings system, search, price suggestions, my-trades, stats. Updated request/response schemas to match actual code. |

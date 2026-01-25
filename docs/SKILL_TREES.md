@@ -1,8 +1,8 @@
 # Skill Trees
 
-| Document | Version | Last Updated |
-|----------|---------|--------------|
-| Skill Trees Specification | 2.0 | 2026-01-22 |
+| Document | Version | Last Updated | Last Validated |
+|----------|---------|--------------|----------------|
+| Skill Trees Specification | 2.0 | 2026-01-22 | 2026-01-25 |
 
 ## Table of Contents
 

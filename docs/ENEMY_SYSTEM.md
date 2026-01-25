@@ -1,8 +1,8 @@
 # Enemy System
 
-| Document | Version | Last Updated |
-|----------|---------|--------------|
-| Enemy System Specification | 1.0 | 2026-01-06 |
+| Document | Version | Last Updated | Last Validated |
+|----------|---------|--------------|----------------|
+| Enemy System Specification | 1.0 | 2026-01-06 | 2026-01-25 |
 
 ## Table of Contents
 

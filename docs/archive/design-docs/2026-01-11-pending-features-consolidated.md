@@ -197,7 +197,7 @@ Issues discovered during comprehensive multi-agent code review in January 2026.
 
 | Issue | Location | Impact | Priority |
 |-------|----------|--------|----------|
-| ~~Rate limiting missing on marketplace batch~~ | ~~marketplace.js~~ | ~~DoS vulnerability~~ | ✅ FIXED (marketplaceRateLimiter.js) |
+| ~~Rate limiting missing on marketplace batch~~ | ~~marketplace.js~~ | ~~DoS vulnerability~~ | FIXED (marketplaceRateLimiter.js) |
 | Rate limiting missing on battle actions | battle.js | Action spam | **Critical** |
 | Rate limiting missing on WebSocket messages | websocket/index.js | Message flood | **Critical** |
 | Event listener leak in Game.js | Game.js:resize | Memory leak | **Critical** |

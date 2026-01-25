@@ -397,6 +397,17 @@ Based on game design review:
 
 ---
 
+## Related Documents
+
+- [GAME_DESIGN.md](./GAME_DESIGN.md) - Class definitions, race bonuses, stat formulas
+- [CHARACTER_PROGRESSION.md](./CHARACTER_PROGRESSION.md) - Party management, formation screen
+- [ECONOMY_SYSTEM.md](./ECONOMY_SYSTEM.md) - Gold economy, pricing considerations
+- [BATTLE_TURN_SYSTEM.md](./BATTLE_TURN_SYSTEM.md) - How traits apply in combat
+- [TECHNICAL_ARCHITECTURE.md](./TECHNICAL_ARCHITECTURE.md) - Database schemas, world nodes
+- [WORLDGEN_TECHNICAL_DEEP_DIVE.md](./WORLDGEN_TECHNICAL_DEEP_DIVE.md) - Guild node placement in world generation
+
+---
+
 ## Document History
 
 | Version | Date | Changes |

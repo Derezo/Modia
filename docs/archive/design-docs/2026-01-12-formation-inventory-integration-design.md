@@ -545,14 +545,14 @@ function getAccordionDefaultState(characterId, accordionType) {
 - [ ] Load with 1-12 characters
 - [ ] Verify responsive grid (4/3/2 columns)
 - [ ] Verify badges show correctly
-- [ ] Click card → modal opens
+- [ ] Click card -> modal opens
 - [ ] Party stats summary updates
 
 #### Items Modal
 - [ ] Open via Items button
 - [ ] All inventory items display
 - [ ] Filters work (search, type, rarity)
-- [ ] Click item → detail modal
+- [ ] Click item -> detail modal
 - [ ] Use consumable with character picker
 - [ ] Verify item consumed and inventory refreshed
 
@@ -564,7 +564,7 @@ function getAccordionDefaultState(characterId, accordionType) {
 - [ ] Skills display correctly
 
 #### Equipment Management
-- [ ] Click slot → modal shows current + available
+- [ ] Click slot -> modal shows current + available
 - [ ] Only compatible items shown
 - [ ] Stat comparison indicators correct
 - [ ] Equip works and refreshes
@@ -619,8 +619,8 @@ function getAccordionDefaultState(characterId, accordionType) {
 1. New layout structure
 2. Character grid with CharacterCard
 3. Party stats summary bar
-4. Items button → ItemsModal
-5. Character click → CharacterModal
+4. Items button -> ItemsModal
+5. Character click -> CharacterModal
 6. Remove old elements
 
 ### Phase 5: Extra Features

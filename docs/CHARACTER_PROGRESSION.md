@@ -55,10 +55,17 @@ Character and guild levels are calculated from cumulative XP spent:
 | 1 | 0 | 25 | 820,008 |
 | 5 | 9,052 | 50 | 5,714,965 |
 | 10 | 63,096 | 75 | 17,777,247 |
-| 15 | 196,802 | 100 | 39,810,717 (Max) |
+| 15 | 196,802 | 100 | 39,810,717 |
 | 20 | 440,701 | | |
 
-*Note: Maximum character level is 100. The 2.8 exponent creates a steep late-game curve, requiring significantly more XP for high-level progression.*
+### Level Caps
+
+| Cap Type | Level | Description |
+|----------|-------|-------------|
+| **Design Cap** | 100 | Intended maximum for normal gameplay. All content, balance, and progression curves are designed around reaching level 100. |
+| **Technical Limit** | 256 | Hard cap enforced in code (`MAX_CHARACTER_LEVEL` in `shared/constants.js`). Exists as a safety ceiling and to allow flexibility for future expansion. |
+
+*Note: The 2.8 exponent creates a steep late-game curve, requiring significantly more XP for high-level progression. Players should expect to reach level 100 as the practical endgame goal.*
 
 ---
 

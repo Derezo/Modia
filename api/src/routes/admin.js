@@ -13,6 +13,7 @@ import { promises as fs, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { AppError, asyncHandler } from '../middleware/errorHandler.js';
 import { createLimiter } from '../middleware/rateLimiterFactory.js';
+import { loadJsonFile, saveJsonFile } from '../utils/jsonFileUtils.js';
 import adminGenerationService from '../services/adminGenerationService.js';
 
 const router = express.Router();
@@ -194,33 +195,6 @@ function ensureUtilities() {
   if (!metadataUtils) {
     throw new AppError('Metadata utilities not available', 500);
   }
-}
-
-/**
- * Helper to load JSON file (async)
- */
-async function loadJsonFile(filePath) {
-  if (!existsSync(filePath)) {
-    return null;
-  }
-  try {
-    const content = await fs.readFile(filePath, 'utf8');
-    return JSON.parse(content);
-  } catch (error) {
-    console.error(`Failed to load JSON from ${filePath}:`, error.message);
-    return null;
-  }
-}
-
-/**
- * Helper to save JSON file (async)
- */
-async function saveJsonFile(filePath, data) {
-  const dir = path.dirname(filePath);
-  if (!existsSync(dir)) {
-    await fs.mkdir(dir, { recursive: true });
-  }
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2) + '\n');
 }
 
 // ============================================================================

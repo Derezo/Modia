@@ -1,0 +1,339 @@
+# Asset System Index
+
+This document provides unified navigation for Modia's asset pipeline documentation, covering AI image generation, audio generation, and asset organization.
+
+## Table of Contents
+
+1. [Overview Diagram](#overview-diagram)
+2. [Quick Reference](#quick-reference)
+3. [Document Navigation](#document-navigation)
+4. [Asset Type Reference](#asset-type-reference)
+5. [Related Documents](#related-documents)
+
+---
+
+## Overview Diagram
+
+```
+                         MODIA ASSET PIPELINE
+                         ====================
+
+  +-----------------+     +-------------------+     +------------------+
+  |   METADATA      |     |   GENERATION      |     |   DEPLOYMENT     |
+  |   DEFINITIONS   |     |   PIPELINE        |     |   STRUCTURE      |
+  +-----------------+     +-------------------+     +------------------+
+         |                        |                        |
+         v                        v                        v
+  +-------------+          +-------------+          +---------------+
+  | ai-image-   |   --->   | HuggingFace |   --->   | frontend/     |
+  | metadata/   |          | Flux LoRA   |          | public/       |
+  |             |          | (External)  |          | assets/       |
+  | - tiles/    |          +-------------+          |               |
+  | - portraits/|                                   | - terrain/    |
+  | - items/    |          +-------------+          | - portraits/  |
+  | - icons/    |   --->   | Sharp.js    |   --->   | - items/      |
+  | - nodes/    |          | Post-Proc   |          | - icons/      |
+  +-------------+          +-------------+          | - nodes/      |
+                                                    +---------------+
+  +-------------+          +-------------+          +---------------+
+  | audio-      |   --->   | Suno AI     |   --->   | frontend/     |
+  | metadata/   |          | (Music)     |          | public/       |
+  |             |          +-------------+          | assets/       |
+  | - music/    |                                   | audio/        |
+  | - sfx/      |          +-------------+          |               |
+  |             |   --->   | ElevenLabs  |   --->   | - music/      |
+  +-------------+          | (SFX)       |          | - sfx/        |
+                           +-------------+          +---------------+
+
+  +-------------+          +-------------+          +---------------+
+  | Design      |   --->   | CSS Vars    |   --->   | Parchment UI  |
+  | System      |          | Tokens      |          | Components    |
+  +-------------+          +-------------+          +---------------+
+```
+
+---
+
+## Quick Reference
+
+### Generation Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run ai:status` | Check AI image generation status |
+| `npm run ai:validate` | Full validation of image files |
+| `npm run ai:generate` | Generate all pending images |
+| `npm run ai:generate:tiles` | Generate terrain tiles only |
+| `npm run ai:generate:portraits` | Generate character portraits only |
+| `npm run ai:generate:items` | Generate item sprites only |
+| `npm run ai:generate:icons` | Generate UI icons only |
+| `npm run ai:generate:nodes` | Generate world map nodes only |
+| `npm run audio:status` | Check audio file status |
+| `npm run audio:generate` | Generate all audio (music + SFX) |
+| `npm run audio:generate:music` | Generate music tracks only |
+| `npm run audio:generate:sfx` | Generate sound effects only |
+| `npm run audio:download` | Download generated audio from Suno |
+| `npm run audio:validate` | Validate audio file coverage |
+
+### Single Asset Generation
+
+```bash
+# AI Images (with options)
+npm run ai:generate:tiles -- --key forest_grass_1 --force
+npm run ai:generate:tiles -- --biome forest
+npm run ai:generate:portraits -- --race elf --class wizard
+npm run ai:generate:tiles -- --dry-run          # Preview only
+
+# Audio (with options)
+npm run audio:generate:music -- --key heartlands_tavern --wait
+npm run audio:generate:music -- --region heartlands
+npm run audio:generate:sfx -- --key attack_sword_1
+```
+
+### Asset Directories
+
+| Directory | Purpose | Sizes |
+|-----------|---------|-------|
+| `assets/terrain/{biome}/` | Battle map tiles | 64x64 |
+| `assets/portraits/` | Character/enemy portraits | 64, 128, 256 |
+| `assets/items/{subcategory}/` | Equipment/consumable icons | 32, 64, 128 |
+| `assets/icons/png/` | UI action/status icons | 16, 24, 32, 48, 64 |
+| `assets/icons/svg/` | Hand-crafted SVG icons | Scalable |
+| `assets/nodes/` | World map node icons | 48, 96 |
+| `assets/audio/music/` | Background music tracks | - |
+| `assets/audio/sfx/` | Sound effects | - |
+| `assets/sprites/characters/` | Animated sprite sheets | 64x512 (8 frames) |
+
+### File Naming Conventions
+
+| Asset Type | Pattern | Example |
+|------------|---------|---------|
+| Player Portrait | `{race}_{gender}_{class}` | `human_male_warrior.png` |
+| Enemy Portrait | `enemy_{name}` | `enemy_goblin_warrior.png` |
+| Terrain Tile | `{biome}_{variant}` | `forest_grass_1.png` |
+| Item | `{type}_{material}` | `sword_iron.png` |
+| Action Icon | `{action}` | `attack.png` |
+| Node | `{type}` | `castle.png`, `tavern.png` |
+| Music | `{region}_{context}` | `heartlands_tavern.mp3` |
+| SFX | `{category}_{action}` | `attack_sword_1.mp3` |
+
+---
+
+## Document Navigation
+
+### Core Asset Documents
+
+| Document | Description | Key Topics |
+|----------|-------------|------------|
+| [AI_IMAGE_GENERATION.md](AI_IMAGE_GENERATION.md) | AI image generation pipeline | HuggingFace Flux, prompts, art direction |
+| [AUDIO_STYLE_GUIDE.md](AUDIO_STYLE_GUIDE.md) | Audio generation guidelines | SFX prompts, music, regional profiles |
+| [ASSET_PATH_STANDARD.md](ASSET_PATH_STANDARD.md) | Directory structure and naming | Path patterns, size conventions |
+| [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | Parchment UI components | Colors, tokens, components |
+
+### Document Purpose Map
+
+```
+AI_IMAGE_GENERATION.md         AUDIO_STYLE_GUIDE.md
+          |                              |
+          v                              v
+   "How do I write          "How do I write
+    image prompts?"          audio prompts?"
+          |                              |
+          +------+               +-------+
+                 |               |
+                 v               v
+         ASSET_PATH_STANDARD.md
+                 |
+                 v
+         "Where do the
+          files go?"
+                 |
+                 v
+          DESIGN_SYSTEM.md
+                 |
+                 v
+         "How do I use
+          them in UI?"
+```
+
+---
+
+## Asset Type Reference
+
+### Image Assets
+
+#### Terrain Tiles
+
+Battle map floor, wall, and slope tiles organized by biome.
+
+- **Metadata:** `ai-image-metadata/tiles/floors/`, `walls/`, `slopes/`
+- **Output:** `frontend/public/assets/terrain/{biome}/{type}/`
+- **Biomes:** forest, cave, mountain, bridge, castle
+- **Size:** 64x64 pixels (isometric perspective)
+- **Style:** Ink & wash, watercolor fills
+
+#### Character Portraits
+
+Bust shots for player characters and enemies.
+
+- **Metadata:** `ai-image-metadata/portraits/`
+- **Output:** `frontend/public/assets/portraits/{size}/`
+- **Sizes:** 64 (UI), 128 (dialogs), 256 (details)
+- **Player:** All race/gender/class combinations
+- **Enemy:** Named enemies with `enemy_` prefix
+
+#### Item Sprites
+
+Equipment and consumable icons.
+
+- **Metadata:** `ai-image-metadata/items/`
+- **Output:** `frontend/public/assets/items/{size}/{subcategory}/`
+- **Subcategories:** weapons, armor, accessories, consumables
+- **Sizes:** 32 (inventory grid), 64 (tooltips), 128 (details)
+
+#### UI Icons
+
+Action, status, menu, and augment icons.
+
+- **Metadata:** `ai-image-metadata/icons/`
+- **Output PNG:** `frontend/public/assets/icons/png/{size}/{category}/`
+- **Output SVG:** `frontend/public/assets/icons/svg/{category}/`
+- **Categories:** actions, status, menu, augments
+- **Sizes:** 16, 24, 32, 48, 64
+
+#### World Map Nodes
+
+Landmark icons for the overworld map.
+
+- **Metadata:** `ai-image-metadata/nodes/`
+- **Output:** `frontend/public/assets/nodes/{size}/`
+- **Types:** castle, city, village, tavern, shop, guild_*, etc.
+- **Sizes:** 48 (zoomed out), 96 (zoomed in)
+
+### Audio Assets
+
+#### Music Tracks
+
+Background music organized by region and context.
+
+- **Metadata:** `audio-metadata/music/`
+- **Output:** `frontend/public/assets/audio/music/`
+- **Regions:** heartlands, sylvan_reaches, shadowmere, bloodplains, iron_depths
+- **Contexts:** overworld, tavern, battle, boss
+- **Generator:** Suno AI
+
+#### Sound Effects
+
+Game sound effects for combat, UI, and interactions.
+
+- **Metadata:** `audio-metadata/sfx/`
+- **Output:** `frontend/public/assets/audio/sfx/`
+- **Categories:** combat (weapons, deaths, turns), skills, ui, ambient, interactions
+- **Generator:** ElevenLabs
+- **Critical:** Maximum 1 comma per prompt (see AUDIO_STYLE_GUIDE.md)
+
+### Metadata Locations
+
+```
+ai-image-metadata/
+  manifest.json           # Master index for all image types
+  theme.json              # Global art direction settings
+  tiles/
+    manifest.json         # Tile category index
+    floors/{biome}.json   # Floor tile definitions
+    walls/{biome}.json    # Wall tile definitions
+    slopes/{biome}.json   # Slope tile definitions
+  portraits/
+    manifest.json         # Portrait category index
+    combinations.json     # Race/gender/class combinations
+    enemies.json          # Enemy portrait definitions
+  items/
+    manifest.json         # Item category index
+    weapons.json          # Weapon definitions
+    armor.json            # Armor definitions
+    accessories.json      # Accessory definitions
+    consumables.json      # Consumable definitions
+  icons/
+    manifest.json         # Icon category index
+    actions.json          # Action icon definitions
+    status.json           # Status effect icons
+    menu.json             # Menu icons
+    augments.json         # Augment icons
+  nodes/
+    manifest.json         # Node category index
+    locations.json        # Location node definitions
+  overlays/
+    manifest.json         # Overlay index
+    rarity.json           # Rarity frame overlays
+    augments.json         # Augment overlays
+
+audio-metadata/
+  music/
+    manifest.json         # Music track index
+    regions/{region}.json # Region-specific tracks
+    battle/battle-themes.json
+    core/core-tracks.json
+  sfx/
+    manifest.json         # SFX index
+    combat/
+      weapons.json        # Weapon sounds
+      deaths.json         # Death sounds
+      turns.json          # Turn indicators
+      status-effects.json # Status effect sounds
+    skills/
+      player-skills.json  # Player ability sounds
+      monster-skills.json # Monster ability sounds
+      skill-templates.json
+    ui/ui-sounds.json     # Interface sounds
+    ambient/ambient.json  # Background ambience
+    interactions/interactions.json
+```
+
+---
+
+## Related Documents
+
+### Architecture
+
+- [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) - System design overview
+- [FRONTEND_TECHNICAL_PATTERNS.md](FRONTEND_TECHNICAL_PATTERNS.md) - Canvas rendering patterns
+
+### Game Systems
+
+- [GAME_DESIGN.md](GAME_DESIGN.md) - Visual style context
+- [BATTLE_ANIMATIONS.md](BATTLE_ANIMATIONS.md) - Animation timing and feedback
+- [ENEMY_SYSTEM.md](ENEMY_SYSTEM.md) - Enemy visual requirements
+- [ITEM_SYSTEM.md](ITEM_SYSTEM.md) - Item visual requirements
+
+### Development
+
+- [ROADMAP_TECHNICAL.md](ROADMAP_TECHNICAL.md) - Asset pipeline milestones
+- [CLAUDE.md](../CLAUDE.md) - Asset generation commands reference
+
+---
+
+## Art Direction Summary
+
+The visual style is **Cozy & Nostalgic** with **Ink & Wash Technique**:
+
+| Aspect | Standard |
+|--------|----------|
+| Mood | Cozy, warm, inviting storybook/classic JRPG |
+| Technique | Ink & wash (bold black outlines + watercolor fills) |
+| Line Weight | Medium outlines (balanced visibility at all sizes) |
+| Texture | Visible aged parchment with slight yellowing |
+
+### Regional Color Palettes
+
+| Region | Primary | Secondary | Accent |
+|--------|---------|-----------|--------|
+| Heartlands | Warm brown (#8B7355) | Golden tan (#D4A574) | Meadow green (#6B8E4A) |
+| Sylvan Reaches | Sea green (#2E8B57) | Yellow-green (#9ACD32) | Sage (#8FBC8F) |
+| Shadowmere | Deep purple (#483D8B) | Slate gray (#708090) | Ghostly blue (#87CEEB) |
+| Bloodplains | Crimson (#8B0000) | Rust (#B7410E) | Bone white (#FFFAFA) |
+| Iron Depths | Steel blue (#4682B4) | Charcoal (#36454F) | Copper (#B87333) |
+
+See [AI_IMAGE_GENERATION.md](AI_IMAGE_GENERATION.md) for complete art direction guidelines.
+
+---
+
+*Last updated: 2026-01-25*

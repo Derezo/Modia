@@ -58,7 +58,7 @@ Each icon follows a layered structure:
 
 **Metallic Objects (weapons, armor, shields):**
 - 3 gradient layers for metal surface
-- Dark edge → mid body → bright highlight
+- Dark edge -> mid body -> bright highlight
 - Engraved detail lines at 1px stroke
 - Rivets as small filled circles
 - Materials: Steel (#a0a0a0), Bronze (#cd7f32), Gold (#daa520)

@@ -44,6 +44,7 @@ import questRoutes from './routes/quests.js';
 import debugRoutes from './routes/debug.js';
 import healthRoutes from './routes/health.js';
 import adminRoutes from './routes/admin.js';
+import adminAudioRoutes from './routes/adminAudio.js';
 
 // Scheduled services
 import { startRefreshScheduler } from './services/shopRefreshService.js';
@@ -132,6 +133,7 @@ app.use('/api/relics', relicRoutes);
 app.use('/api/quests', questRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/audio', adminAudioRoutes);
 
 // Error handling
 app.use(errorHandler);

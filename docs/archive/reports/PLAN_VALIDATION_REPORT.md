@@ -16,7 +16,7 @@
 
 | Phase | Status | Details |
 |-------|--------|---------|
-| Phase 1: Archive Content | ✅ Done | `docs/archive/IMAGE_GENERATION_PROMPTS.md` created |
+| Phase 1: Archive Content | ✅ Done | `docs/archive/deprecated/IMAGE_GENERATION_PROMPTS.md` created |
 | Phase 2: Remove Code | ✅ Done | 17 files deleted (services, scripts, routes) |
 | Phase 3: Remove References | ✅ Done | index.js cleaned |
 | Phase 4: Environment Variables | ✅ Done | .env.example updated |
@@ -81,7 +81,7 @@
 
 The Battle Sprite Enhancement Plan was implemented through Phase 2 (Direction Fix). The direction rendering and animation callback systems are complete.
 
-**Note (2026-01-11):** The AI sprite generation integration was deprecated and removed from the codebase due to poor results, slow performance, and high costs. Existing generated sprite assets have been retained. Prompt templates have been archived to `docs/archive/IMAGE_GENERATION_PROMPTS.md` for potential future use with a different service.
+**Note (2026-01-11):** The AI sprite generation integration was deprecated and removed from the codebase due to poor results, slow performance, and high costs. Existing generated sprite assets have been retained. Prompt templates have been archived to `docs/archive/deprecated/IMAGE_GENERATION_PROMPTS.md` for potential future use with a different service.
 
 ---
 
@@ -111,7 +111,7 @@ The following AI sprite generation infrastructure was removed:
 - `api/src/scripts/generate-*.js` (11 scripts)
 - `docs/PIXELLAB_REFERENCE.md`
 
-**Archived:** Prompt templates preserved in `docs/archive/IMAGE_GENERATION_PROMPTS.md`
+**Archived:** Prompt templates preserved in `docs/archive/deprecated/IMAGE_GENERATION_PROMPTS.md`
 
 ---
 

@@ -6,43 +6,19 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { api } from '../lib/api';
+import { formatRelativeTime, formatDurationHuman } from '../utils/timeFormat';
 
 /**
- * Format relative time from ISO timestamp
+ * Calculate and format job duration between two timestamps
  */
-function formatRelativeTime(isoDate) {
-  if (!isoDate) return 'Unknown';
-
-  const date = new Date(isoDate);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffSeconds = Math.floor(diffMs / 1000);
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffSeconds < 60) return 'Just now';
-  if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
-  if (diffDays < 7) return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`;
-
-  return date.toLocaleDateString();
-}
-
-/**
- * Calculate job duration
- */
-function formatDuration(startedAt, completedAt) {
+function formatJobDuration(startedAt, completedAt) {
   if (!startedAt || !completedAt) return null;
 
   const start = new Date(startedAt);
   const end = new Date(completedAt);
   const diffMs = end - start;
-  const diffSeconds = Math.floor(diffMs / 1000);
-  const diffMinutes = Math.floor(diffSeconds / 60);
 
-  if (diffSeconds < 60) return `${diffSeconds}s`;
-  return `${diffMinutes}m ${diffSeconds % 60}s`;
+  return formatDurationHuman(diffMs);
 }
 
 /**
@@ -85,7 +61,7 @@ function jobToActivity(job) {
     details: {
       category,
       imageCount,
-      duration: formatDuration(job.startedAt, job.completedAt),
+      duration: formatJobDuration(job.startedAt, job.completedAt),
       startedAt: job.startedAt,
       completedAt: job.completedAt,
     },

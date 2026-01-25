@@ -150,6 +150,150 @@ export const api = {
     fetchAPI(`/theme/presets/${name}`, {
       method: 'DELETE',
     }),
+
+  // ============================================
+  // Audio Assets
+  // ============================================
+
+  /**
+   * Get audio assets by type with optional filters
+   * @param {string} audioType - 'music' or 'sfx'
+   * @param {object} params - Filter parameters
+   * @param {string} [params.category] - Category filter (for sfx)
+   * @param {string} [params.region] - Region filter (for music)
+   * @param {string} [params.subcategory] - Subcategory filter
+   * @param {string} [params.status] - Status filter ('exists', 'missing', 'error')
+   * @returns {Promise<object>} Audio assets response
+   */
+  getAudioAssets: (audioType, params = {}) => {
+    const searchParams = new URLSearchParams();
+    if (params.category) searchParams.set('category', params.category);
+    if (params.region) searchParams.set('region', params.region);
+    if (params.subcategory) searchParams.set('subcategory', params.subcategory);
+    if (params.status) searchParams.set('status', params.status);
+    const query = searchParams.toString();
+    return fetchAPI(`/audio/${audioType}${query ? `?${query}` : ''}`);
+  },
+
+  /**
+   * Get a single audio asset by ID
+   * @param {string} audioType - 'music' or 'sfx'
+   * @param {string} id - Asset ID
+   * @returns {Promise<object>} Audio asset details
+   */
+  getAudioAsset: (audioType, id) => fetchAPI(`/audio/${audioType}/${id}`),
+
+  /**
+   * Update an audio asset's metadata
+   * @param {string} audioType - 'music' or 'sfx'
+   * @param {string} id - Asset ID
+   * @param {object} updates - Fields to update
+   * @returns {Promise<object>} Updated asset
+   */
+  updateAudioAsset: (audioType, id, updates) =>
+    fetchAPI(`/audio/${audioType}/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    }),
+
+  /**
+   * Get waveform visualization data for an audio asset
+   * @param {string} audioType - 'music' or 'sfx'
+   * @param {string} id - Asset ID
+   * @returns {Promise<object>} Waveform data
+   */
+  getAudioWaveform: (audioType, id) => fetchAPI(`/audio/${audioType}/${id}/waveform`),
+
+  /**
+   * Get overall audio statistics
+   * @returns {Promise<object>} Audio stats for music and sfx
+   */
+  getAudioStats: () => fetchAPI('/audio/stats'),
+
+  // ============================================
+  // Music-specific
+  // ============================================
+
+  /**
+   * Set the primary variant for a music track
+   * @param {string} trackId - Music track ID
+   * @param {string} variantPath - Path to the variant file
+   * @returns {Promise<object>} Updated track info
+   */
+  setMusicPrimaryVariant: (trackId, variantPath) =>
+    fetchAPI(`/audio/music/${trackId}/primary`, {
+      method: 'POST',
+      body: JSON.stringify({ variantPath }),
+    }),
+
+  /**
+   * Get Suno generation task status
+   * @param {string} taskId - Suno task ID
+   * @returns {Promise<object>} Task status
+   */
+  getSunoTaskStatus: (taskId) => fetchAPI(`/audio/suno/status/${taskId}`),
+
+  // ============================================
+  // SFX-specific
+  // ============================================
+
+  /**
+   * Validate an SFX prompt before generation
+   * Checks for comma count and other requirements
+   * @param {string} prompt - The prompt to validate
+   * @returns {Promise<object>} Validation result
+   */
+  validateSfxPrompt: (prompt) =>
+    fetchAPI('/audio/sfx/validate', {
+      method: 'POST',
+      body: JSON.stringify({ prompt }),
+    }),
+
+  // ============================================
+  // Audio Generation Queue
+  // ============================================
+
+  /**
+   * Queue audio generation for assets
+   * @param {string} audioType - 'music' or 'sfx'
+   * @param {object} filters - Filter parameters to select which assets to generate
+   * @param {object} options - Generation options
+   * @param {boolean} [options.force] - Force regeneration of existing assets
+   * @param {boolean} [options.wait] - Wait for Suno tasks to complete (music only)
+   * @returns {Promise<object>} Generation job info
+   */
+  generateAudio: (audioType, filters = {}, options = {}) =>
+    fetchAPI('/audio/generate', {
+      method: 'POST',
+      body: JSON.stringify({ type: audioType, filters, options }),
+    }),
+
+  /**
+   * Get the current audio generation queue status
+   * @returns {Promise<object>} Queue status with current, pending, and history
+   */
+  getAudioQueue: () => fetchAPI('/audio/generate/queue'),
+
+  /**
+   * Cancel a specific audio generation job
+   * @param {string} jobId - Job ID to cancel
+   * @returns {Promise<object>} Cancellation result
+   */
+  cancelAudioJob: (jobId) =>
+    fetchAPI('/audio/generate/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ jobId }),
+    }),
+
+  /**
+   * Cancel all pending audio generation jobs
+   * @returns {Promise<object>} Cancellation result
+   */
+  cancelAllAudioJobs: () =>
+    fetchAPI('/audio/generate/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ all: true }),
+    }),
 };
 
 export default api;

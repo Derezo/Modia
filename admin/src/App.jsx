@@ -15,6 +15,8 @@ import ItemsPage from './pages/ItemsPage';
 import IconsPage from './pages/IconsPage';
 import NodesPage from './pages/NodesPage';
 import OverlaysPage from './pages/OverlaysPage';
+import MusicPage from './pages/MusicPage';
+import SoundEffectsPage from './pages/SoundEffectsPage';
 import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
@@ -30,6 +32,8 @@ export default function App() {
             <Route path="icons" element={<IconsPage />} />
             <Route path="nodes" element={<NodesPage />} />
             <Route path="overlays" element={<OverlaysPage />} />
+            <Route path="music" element={<MusicPage />} />
+            <Route path="sfx" element={<SoundEffectsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
         </Routes>

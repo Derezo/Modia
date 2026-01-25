@@ -54,24 +54,41 @@ The CT system determines when each unit takes their turn. All units accumulate C
 | Parameter | Value | Description |
 |-----------|-------|-------------|
 | CT Threshold | 100 | Unit acts when CT >= 100 |
-| Starting CT | 0 | All units begin battle at 0 CT |
-| CT Reset | 0 | CT resets to 0 after acting |
+| Starting CT | `(AGI/2) + random(0,20)` | Faster units start with head start + variance |
+| CT After Acting | `CT - 100` | CT carries over (not reset to 0) |
 
 ### 2.2 CT Accumulation Formula
 
-```
-CT_gain_per_tick = unit.agility
+The CT system uses **diminishing returns** to prevent high-agility units from completely dominating turn order. Doubling AGI does not double turn frequency.
 
-turns_to_first_action = ceil(100 / unit.agility)
 ```
+CT_gain_per_tick = CT_BASE_GAIN + (AGI / CT_AGI_DIVISOR)
+                 = 5 + (AGI / 10)
+
+ticks_to_first_action = ceil(100 / CT_gain_per_tick)
+```
+
+**Constants (from `shared/battleMath.js`):**
+
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `CT_THRESHOLD` | 100 | Unit acts when CT >= 100 |
+| `CT_BASE_GAIN` | 5 | Minimum CT gain per tick |
+| `CT_AGI_DIVISOR` | 10 | Agility scaling factor |
 
 **Example Calculations:**
 
-| Unit | AGI | Ticks to Act | Actions per 100 Ticks |
-|------|-----|--------------|----------------------|
-| Fast Monk | 25 | 4 | ~25 |
-| Normal Warrior | 15 | 7 | ~15 |
-| Slow Wizard | 10 | 10 | ~10 |
+| Unit | AGI | CT/Tick | Ticks to Act | Relative Speed |
+|------|-----|---------|--------------|----------------|
+| Fast Monk | 50 | 10 | 10 | 1.67x |
+| Normal Warrior | 20 | 7 | 15 | 1.17x |
+| Slow Wizard | 10 | 6 | 17 | 1.0x (baseline) |
+| Tank Knight | 5 | 5.5 | 19 | 0.92x |
+
+**Design Rationale:**
+- A unit with 50 AGI (10 CT/tick) is only 1.67x faster than a unit with 10 AGI (6 CT/tick)
+- Without diminishing returns, 50 AGI would be 5x faster, making speed builds mandatory
+- The base gain of 5 ensures even slow units get turns reasonably often
 
 ### 2.3 CT Tick Loop
 
@@ -93,7 +110,7 @@ The server runs a CT tick loop during battle:
 │      │           ▼                                              │
 │      │           PAUSE tick loop until turn complete            │
 │      │                                                          │
-│      └── NO ───▶ Add AGI to each unit's CT                     │
+│      └── NO ───▶ Add (5 + AGI/10) to each unit's CT            │
 │                  │                                              │
 │                  ▼                                              │
 │                  Repeat from step 1                             │
@@ -103,15 +120,20 @@ The server runs a CT tick loop during battle:
 
 ### 2.4 CT Modification Effects
 
-Some abilities and status effects modify CT:
+Some abilities and status effects modify CT gain (implemented in `calculateCTGain()` in `shared/battleMath.js`):
 
-| Effect | CT Modification | Notes |
-|--------|-----------------|-------|
-| Haste | +50% CT gain | Stacks additively with AGI |
-| Slow | -20% CT gain | Minimum CT gain is 1 |
+| Effect | CT Modification | Implementation |
+|--------|-----------------|----------------|
+| Haste | +50% CT gain | `ctGain *= 1.5` |
+| Slow | -50% CT gain | `ctGain *= 0.5` |
 | Delay (skill) | -50 CT | Cannot reduce below 0 |
 | Quick (skill) | +25 CT | Cannot exceed threshold |
 | Stun | Skip turn, CT = 0 | Lose accumulated CT |
+
+**Example with Haste/Slow:**
+- Unit with 20 AGI: base CT gain = 5 + (20/10) = 7/tick
+- With Haste: 7 * 1.5 = 10.5/tick
+- With Slow: 7 * 0.5 = 3.5/tick
 
 ---
 
@@ -184,7 +206,8 @@ The server provides turn predictions for UI display:
 **Prediction Formula:**
 
 ```
-ticks_until_action = ceil((100 - unit.ct) / unit.agility)
+ct_gain = 5 + (unit.agility / 10)  // With haste/slow modifiers
+ticks_until_action = ceil((100 - unit.ct) / ct_gain)
 ```
 
 ---
@@ -938,9 +961,420 @@ function validateAction(unit, action) {
 
 ---
 
-## 11. Integration Points
+## 11. Two-Action Turn State Machine
 
-### 11.1 Related Systems
+### 11.1 Turn State Tracking
+
+Each unit tracks turn state with the following properties:
+
+```javascript
+{
+  moveUsed: false,    // Has movement action been used
+  actUsed: false,     // Has act (attack/skill/item) been used
+  turnPhase: 'ready', // Current turn phase: 'ready' | 'partial' | 'done'
+  hasActed: false     // Legacy compatibility flag
+}
+```
+
+**Reference:** `api/src/services/battle/statusEffectManager.js:96-101` (`resetTurnState`)
+
+### 11.2 Turn Phase States
+
+| Phase | Description | Transitions From | Transitions To |
+|-------|-------------|------------------|----------------|
+| `ready` | Turn just started, no actions taken | `done` (previous unit) | `partial`, `done` |
+| `partial` | One action used, one remaining | `ready` | `done` |
+| `done` | Both actions used or wait chosen | `ready`, `partial` | `ready` (next unit) |
+
+### 11.3 State Transition Logic
+
+```
+                          ┌──────────────────────────────────────────────────┐
+                          │                   READY                           │
+                          │  moveUsed=false, actUsed=false                   │
+                          └─────────────────────┬────────────────────────────┘
+                                                │
+                    ┌───────────────────────────┼───────────────────────────┐
+                    │                           │                           │
+                    ▼                           ▼                           ▼
+          ┌─────────────────┐        ┌─────────────────┐        ┌─────────────────┐
+          │ MOVE action     │        │ ACT action      │        │ WAIT action     │
+          │ (moveUsed=true) │        │ (actUsed=true)  │        │                 │
+          └────────┬────────┘        └────────┬────────┘        └────────┬────────┘
+                   │                          │                          │
+                   ▼                          ▼                          │
+          ┌─────────────────────────────────────────────┐                │
+          │                   PARTIAL                    │                │
+          │  One action used, can still:                │                │
+          │  - ACT (if moveUsed) or MOVE (if actUsed)  │                │
+          │  - WAIT to end turn early                   │                │
+          └─────────────────────┬───────────────────────┘                │
+                                │                                         │
+                    ┌───────────┼───────────┐                            │
+                    ▼           ▼           ▼                            │
+              ┌──────────┐ ┌──────────┐ ┌──────────┐                     │
+              │ ACT      │ │ MOVE     │ │ WAIT     │                     │
+              │ (if avl) │ │ (if avl) │ │          │                     │
+              └────┬─────┘ └────┬─────┘ └────┬─────┘                     │
+                   │            │            │                           │
+                   └────────────┴────────────┴───────────────────────────┘
+                                             │
+                                             ▼
+                          ┌──────────────────────────────────────────────────┐
+                          │                    DONE                           │
+                          │  moveUsed=true, actUsed=true                     │
+                          │  (or WAIT chosen to end early)                   │
+                          └──────────────────────────────────────────────────┘
+```
+
+**Reference:** `api/src/services/battle/actionProcessor.js:794-800`
+
+### 11.4 Auto-End Turn Conditions
+
+Turn automatically ends when the unit cannot perform any remaining actions:
+
+```javascript
+function shouldAutoEndTurn(unit) {
+  const canMove = canUnitMove(unit) && !unit.moveUsed;
+  const canAct = canUnitAct(unit) && !unit.actUsed;
+  return !canMove && !canAct;
+}
+```
+
+**Reference:** `api/src/services/battle/statusEffectManager.js:106-110`
+
+---
+
+## 12. Pre-Battle Formation System
+
+### 12.1 Overview
+
+Before combat begins, players position their characters on a 5x4 isometric grid. This formation determines initial battle positions.
+
+**Reference:** `frontend/src/scenes/BattleFormationScene.js`
+
+### 12.2 Formation Grid
+
+| Property | Value | Description |
+|----------|-------|-------------|
+| Grid Width | 5 tiles | Horizontal placement slots |
+| Grid Height | 4 tiles | Vertical placement slots |
+| Max Characters | 5 | Maximum units in battle party |
+| Placement Order | FIFO | Oldest placement removed if exceeding 5 |
+
+### 12.3 Formation Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       Pre-Battle Formation Flow                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  1. Player enters node that triggers battle                                 │
+│     │                                                                        │
+│     ▼                                                                        │
+│  2. BattleFormationScene loads                                              │
+│     ├── Load party characters (slots 1-12, sorted by level)                 │
+│     ├── Load enemy preview data                                             │
+│     └── Initialize themed grid (based on node type or battle type)          │
+│     │                                                                        │
+│     ▼                                                                        │
+│  3. Player places characters on grid                                        │
+│     ├── Click empty tile: Place next unplaced character                     │
+│     ├── Click occupied tile: Cycle to next character                        │
+│     └── Long press: Remove character from tile                              │
+│     │                                                                        │
+│     ▼                                                                        │
+│  4. Player clicks "Start Battle"                                            │
+│     │                                                                        │
+│     ▼                                                                        │
+│  5. Formation sent to server                                                │
+│     {                                                                        │
+│       "formation": {                                                         │
+│         "charId1": { "tileX": 0, "tileY": 0 },                              │
+│         "charId2": { "tileX": 1, "tileY": 2 },                              │
+│         ...                                                                  │
+│       }                                                                      │
+│     }                                                                        │
+│     │                                                                        │
+│     ▼                                                                        │
+│  6. Server initializes battle with player positions                         │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 12.4 Battle Context Themes
+
+| Battle Type | Theme Class | Visual Style |
+|-------------|-------------|--------------|
+| Standard PvE | `BattlefieldTheme` | Node-type based (forest, cave, etc.) |
+| Coliseum PvP | `PitFighterTheme` | Arena combat style |
+| Guild Wizard | `ArcaneChamberTheme` | Magical arcane chamber |
+| Guild Warrior | `ArmoryTheme` | Military armory |
+| Guild Monk | `DojoTheme` | Martial arts dojo |
+| Guild Chemist | `ClockworkTheme` | Mechanical clockwork |
+
+**Reference:** `frontend/src/scenes/BattleFormationScene.js:184-207`
+
+---
+
+## 13. Zodiac Signature Abilities
+
+### 13.1 Overview
+
+Units can gain temporary zodiac buffs by visiting Zodiac Shrine nodes on the world map. These buffs grant signature abilities usable once per battle.
+
+**Reference:** `api/src/services/battle/statusEffectManager.js:144-563`
+
+### 13.2 All Zodiac Abilities
+
+| Zodiac | Ability Name | Effect | Targeting |
+|--------|--------------|--------|-----------|
+| Aries | Ram's Charge | +25% crit chance on next attack | Self |
+| Taurus | Unmovable | Immune to push/pull effects (battle-long) | Self |
+| Gemini | Twin Strike | Next attack hits twice at 60% damage | Self |
+| Cancer | Moonshield | Block next instance of damage | Self |
+| Leo | Roar | Adjacent enemies lose 30 CT | AoE (range 1) |
+| Virgo | Purify | Remove 1 debuff from self | Self |
+| Libra | Balance | Next attack heals for damage dealt | Self |
+| Scorpio | Venom Sting | Apply 3% HP poison for 4 turns | Target (attack range) |
+| Sagittarius | Celestial Arrow | +2 range on next attack | Self |
+| Capricorn | Mountain's Endurance | +25% defense for 2 turns | Self |
+| Aquarius | Cascade | Heal self for 20% of max HP | Self |
+| Pisces | Dreamwave | 50% chance to sleep target 1 turn | Target (attack range) |
+
+**Reference:** `shared/constants.js:209-294` (`ZODIAC_SHRINE_BUFFS`)
+
+### 13.3 Ability Usage Rules
+
+- Each ability can only be used **once per battle**
+- Abilities are tracked via `unit.usedZodiacAbilities` array
+- Abilities require the unit to have the zodiac buff active (`unit.zodiacAbilities`)
+- Buff duration on world map: 4 hours (does not decrement in battle)
+
+### 13.4 Ability Application Flow
+
+```javascript
+// Example: Applying Moonshield
+applyZodiacAbility(battleState, sourceUnit, 'moonshield');
+
+// Result:
+{
+  success: true,
+  message: 'Moonshield activated! Next damage instance will be blocked.',
+  effects: [{
+    type: 'buff',
+    target: 'self',
+    effect: 'damage_shield',
+    value: 1
+  }],
+  abilityKey: 'moonshield'
+}
+```
+
+### 13.5 Special Mechanics
+
+**Moonshield Damage Check:**
+```javascript
+// Called when unit takes damage
+const shieldResult = checkMoonshield(unit, incomingDamage);
+if (shieldResult.blocked) {
+  // Damage was blocked, shield consumed
+  return 0;
+}
+```
+
+**Zodiac Poison (Venom Sting):**
+```javascript
+// Processed at turn start, separate from regular poison
+const poisonResult = processZodiacPoison(unit);
+// Deals 3% max HP per turn for 4 turns
+```
+
+---
+
+## 14. Boss Phase Mechanics
+
+### 14.1 Overview
+
+Boss enemies can have multiple phases that trigger at HP thresholds. Transitioning phases can unlock new abilities, modify stats, and trigger special effects.
+
+**Reference:** `api/src/services/bossService.js`
+
+### 14.2 Boss Detection
+
+```javascript
+function isBoss(template) {
+  return template.is_boss === true && template.phases && template.phases.length > 0;
+}
+```
+
+### 14.3 Phase Configuration
+
+Bosses define phases in their enemy template:
+
+```javascript
+{
+  name: "Ancient Dragon",
+  is_boss: true,
+  phases: [
+    {
+      name: "Phase 1",
+      threshold: 1.0,  // Active at 100% HP
+      abilities: ['dragon_breath'],
+      statMods: {}
+    },
+    {
+      name: "Enraged",
+      threshold: 0.5,  // Triggers at 50% HP
+      abilities: ['dragon_breath', 'tail_swipe', 'inferno'],
+      statMods: { attack: 1.3, agility: 1.2 },
+      onEnter: {
+        effect: 'rage',
+        duration: 3,
+        summon: 'dragon_whelp',
+        count: 2
+      }
+    },
+    {
+      name: "Desperate",
+      threshold: 0.2,  // Triggers at 20% HP
+      abilities: ['dragon_breath', 'tail_swipe', 'inferno', 'apocalypse'],
+      statMods: { attack: 1.5, defense: 0.8, agility: 1.5 },
+      onEnter: {
+        aura: 'fire_aura',
+        damagePerTurn: 15
+      }
+    }
+  ]
+}
+```
+
+### 14.4 Phase Transition Effects
+
+| Effect Type | Description | Example |
+|-------------|-------------|---------|
+| `statMods` | Multiply base stats | `{ attack: 1.3 }` = +30% attack |
+| `abilities` | Unlock new skills | New skill added to boss.skills array |
+| `onEnter.effect` | Apply status buff | Rage, fortify, haste |
+| `onEnter.summon` | Spawn additional enemies | `{ summon: 'minion', count: 2 }` |
+| `onEnter.aura` | Persistent damage aura | Deals damage to all enemies each boss turn |
+
+**Reference:** `api/src/services/bossService.js:104-201`
+
+### 14.5 Boss State Persistence
+
+Boss phase state is persisted in the database for reconnection support:
+
+```sql
+CREATE TABLE boss_encounters (
+  battle_id INT REFERENCES battles(id),
+  enemy_template_id INT,
+  unit_id VARCHAR(50),
+  current_phase INT DEFAULT 1,
+  max_phases INT,
+  phase_triggered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (battle_id, unit_id)
+);
+```
+
+---
+
+## 15. Trait System Combat Modifiers
+
+### 15.1 Overview
+
+Traits are innate bonuses that guild recruits can have. In battle, traits modify damage, stats, and provide special effects at specific phases.
+
+**Reference:** `api/src/services/traitService.js`, `api/src/services/traits/`
+
+### 15.2 Effect Phases
+
+| Phase | When Applied | Example Effects |
+|-------|--------------|-----------------|
+| `BATTLE_START` | Unit enters battle | HP bonus, movement bonus, range bonus |
+| `ON_DAMAGE_DEALT` | Calculating outgoing damage | Physical/magic damage bonus |
+| `ON_DAMAGE_RECEIVED` | Calculating incoming damage | Resistance, damage reduction |
+| `ON_TURN_START` | Start of unit's turn | HP regeneration |
+| `ON_ATTACK` | During attack rolls | Accuracy bonus, crit chance |
+| `ON_DEATH` | Unit would die | Death save (survive with 1 HP) |
+| `ON_REWARD` | Battle victory | XP/gold bonuses |
+
+**Reference:** `api/src/services/traits/traitEffectRegistry.js:16-40`
+
+### 15.3 Damage Modifier Traits
+
+| Effect Type | Phase | Description |
+|-------------|-------|-------------|
+| `physical_damage_bonus` | ON_DAMAGE_DEALT | +X% to physical attacks |
+| `magic_damage_bonus` | ON_DAMAGE_DEALT | +X% to magical attacks |
+| `all_damage_bonus` | ON_DAMAGE_DEALT | +X% to all damage |
+| `critical_damage_bonus` | ON_DAMAGE_DEALT | +X% on critical hits |
+| `low_hp_damage_bonus` | ON_DAMAGE_DEALT | +X% when below 30% HP |
+| `dragon_damage_bonus` | ON_DAMAGE_DEALT | +X% vs dragon enemies |
+| `undead_damage_bonus` | ON_DAMAGE_DEALT | +X% vs undead enemies |
+| `demon_damage_bonus` | ON_DAMAGE_DEALT | +X% vs demon enemies |
+| `boss_damage_bonus` | ON_DAMAGE_DEALT | +X% vs boss enemies |
+
+**Reference:** `api/src/services/traits/effects/damageEffects.js`
+
+### 15.4 Defense Modifier Traits
+
+| Effect Type | Phase | Description |
+|-------------|-------|-------------|
+| `physical_resistance` | ON_DAMAGE_RECEIVED | -X% physical damage taken |
+| `magic_resistance` | ON_DAMAGE_RECEIVED | -X% magical damage taken |
+| `all_resistance` | ON_DAMAGE_RECEIVED | -X% all damage taken (min 10%) |
+
+**Reference:** `api/src/services/traits/effects/defenseEffects.js`
+
+### 15.5 Combat Roll Modifier Traits
+
+| Effect Type | Phase | Description |
+|-------------|-------|-------------|
+| `accuracy_bonus` | ON_ATTACK | +X% hit chance |
+| `evasion_bonus` | ON_DAMAGE_RECEIVED | +X% dodge chance |
+| `crit_chance_bonus` | ON_ATTACK | +X% critical hit chance |
+| `luck_effectiveness` | ON_ATTACK | Multiplier on luck-based rolls |
+| `mp_cost_reduction` | ON_ATTACK | -X% MP cost for skills |
+
+**Reference:** `api/src/services/traits/effects/combatModifierEffects.js`
+
+### 15.6 Special Traits
+
+| Effect Type | Phase | Description |
+|-------------|-------|-------------|
+| `hp_bonus` | BATTLE_START | +X% max HP |
+| `mp_bonus` | BATTLE_START | +X% max MP |
+| `movement_bonus` | BATTLE_START | +X movement tiles |
+| `range_bonus` | BATTLE_START | +X attack range tiles |
+| `initiative_bonus` | BATTLE_START | +X% starting CT |
+| `hp_regen_percent` | ON_TURN_START | Heal X% max HP per turn |
+| `lifesteal` | ON_DAMAGE_DEALT | Heal X% of damage dealt |
+| `death_save` | ON_DEATH | Survive fatal blow with 1 HP (once) |
+| `xp_bonus` | ON_REWARD | +X% experience gained |
+| `gold_bonus` | ON_REWARD | +X% gold gained |
+
+### 15.7 Trait Application at Battle Start
+
+```javascript
+function applyBattleStartTraits(unit) {
+  // Uses modular trait registry
+  const results = applyEffectsForPhase(unit, EFFECT_PHASES.BATTLE_START);
+
+  // Example applied effects:
+  // - HP bonus: unit.maxHp += Math.floor(unit.maxHp * 0.10)
+  // - Movement: unit.movement += 1
+  // - Range: unit.attackRange += 1
+}
+```
+
+**Reference:** `api/src/services/traitService.js:415-467`
+
+---
+
+## 16. Integration Points
+
+### 16.1 Related Systems
 
 | System | Integration |
 |--------|-------------|
@@ -950,7 +1384,7 @@ function validateAction(unit, action) {
 | BattleAnimations | Client-side visual feedback |
 | BattleGrid | Tile validation, unit positioning |
 
-### 11.2 API Endpoints
+### 16.2 API Endpoints
 
 | Endpoint | Purpose |
 |----------|---------|
@@ -958,7 +1392,7 @@ function validateAction(unit, action) {
 | `GET /api/battle/current` | Get current battle state |
 | `WebSocket battle:*` | Real-time turn updates |
 
-### 11.3 Database Updates
+### 16.3 Database Updates
 
 Turn actions update the `battle_state` JSONB column:
 
@@ -974,7 +1408,7 @@ WHERE id = $2;
 
 ---
 
-## 12. Related Documents
+## 17. Related Documents
 
 | Document | Description |
 |----------|-------------|
@@ -986,8 +1420,10 @@ WHERE id = $2;
 
 ---
 
-## 13. Document History
+## 18. Document History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.2 | Jan 2026 | - | Added sections 11-15: Two-action state machine, formation system, zodiac abilities, boss phases, trait modifiers |
+| 1.1 | Jan 2026 | - | Fixed CT formula: documented diminishing returns formula `5 + (AGI/10)`, updated initial CT formula, corrected haste/slow modifiers |
 | 1.0 | Jan 2026 | - | Initial document: CT system, turn state machine, WebSocket protocol |

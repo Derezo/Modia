@@ -21,7 +21,7 @@ The roadmap is split into two focused documents:
 
 > **Note:** Sub-roadmaps maintain independent version numbers reflecting their update frequency.
 
-> **Completed milestones** are archived in `docs/archive/COMPLETED_MILESTONES.md`
+> **Completed milestones** are archived in `docs/archive/completed/COMPLETED_MILESTONES.md`
 
 ---
 
@@ -81,6 +81,7 @@ The roadmap is split into two focused documents:
 
 ### Documentation
 - [Technical Architecture](./TECHNICAL_ARCHITECTURE.md)
+- [Battle System Index](./BATTLE_SYSTEM_INDEX.md)
 - [Worldgen Technical Deep Dive](./WORLDGEN_TECHNICAL_DEEP_DIVE.md)
 - [API Specification](./API_SPECIFICATION.md)
 - [Game Design](./GAME_DESIGN.md)

@@ -18,7 +18,7 @@ Tile opacity scales based on movement cost:
 ```javascript
 const remainingMovement = movementRange - tile.cost;
 const opacity = 0.2 + (remainingMovement / movementRange) * 0.5;
-// Result: 20% (hard to reach) → 70% (easy to reach)
+// Result: 20% (hard to reach) -> 70% (easy to reach)
 ```
 
 Example for Wizard (3 movement):

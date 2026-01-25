@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import * as socket from '../lib/socket';
 import { ConnectionState } from '../lib/socket';
 import { api } from '../lib/api';
+import { formatDurationHuman } from '../utils/timeFormat';
 
 // Storage key for persisting stdout across reconnections
 const STDOUT_STORAGE_KEY = 'admin_generation_stdout';
@@ -304,29 +305,8 @@ export function calculateETA(progress, startedAt) {
 
   return {
     ms: etaMs,
-    formatted: formatDuration(etaMs)
+    formatted: formatDurationHuman(etaMs)
   };
-}
-
-/**
- * Format duration in human-readable form
- */
-function formatDuration(ms) {
-  if (ms < 1000) return 'less than a second';
-
-  const seconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-
-  if (hours > 0) {
-    const remainingMinutes = minutes % 60;
-    return `${hours}h ${remainingMinutes}m`;
-  }
-  if (minutes > 0) {
-    const remainingSeconds = seconds % 60;
-    return `${minutes}m ${remainingSeconds}s`;
-  }
-  return `${seconds}s`;
 }
 
 export default useGeneration;
