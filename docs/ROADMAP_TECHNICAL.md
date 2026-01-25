@@ -334,15 +334,53 @@ npm run audio:status         # Show asset status
 
 **Commit:** `91ac94b feat(ai-images): Overhaul AI image generation post-processing pipeline`
 
-### 7.5 Pending
+### 7.5 Asset Loading System Refactoring (Completed Jan 2026)
+
+Refactored asset loading to support multi-size assets with optimal size selection.
+
+- [x] Updated `shared/assetPaths.js` with size-aware path functions
+  - `getLegacyPortraitPath()` supports size subdirectories (64/128/256)
+  - `getLegacyNodePath()` supports size subdirectories (48/96)
+  - Added `getOptimalSize()` utility for selecting smallest size >= display size
+- [x] Refactored `frontend/src/core/AssetLoader.js` with size-aware methods
+  - `getPortraitUrl(character, displaySize)` - character portraits
+  - `getEnemyPortraitUrl(enemyId, displaySize)` - enemy portraits
+  - `loadNodeSpriteAtSize(nodeType, options)` - world map nodes
+  - Static exports: `SIZE_PRESETS`, `DEFAULT_SIZES`, `getOptimalSize`
+- [x] Updated 4 scenes to use AssetLoader portrait methods:
+  - `CharacterCreateScene.js` (64px), `CharacterSelectScene.js` (48px)
+  - `BattleFormationScene.js` (40px), `RecruitmentScene.js` (56px)
+- [x] Updated 4 components to import from shared module:
+  - `CharacterCard.js`, `CharacterPicker.js`, `ParchmentCard.js`, `CharacterModal.js`
+- [x] Integrated post-processing into generation scripts:
+  - `generate-portraits.js` calls `postProcessPortrait()` after generation
+  - `generate-nodes.js` calls `postProcessNode()` after generation
+- [x] Added `getImageDimensions()` to detect source size before post-processing
+  - Only generates size variants <= source dimensions
+  - Includes 5-second timeout for subprocess safety
+
+**Directory structure:**
+```
+sprites/portraits/
+├── human_male_warrior.png      # 64px (base/default)
+├── 128x128/human_male_warrior.png
+└── 256x256/human_male_warrior.png
+
+sprites/nodes/
+├── node_castle.png             # 96px (base/default)
+└── 48x48/node_castle.png
+```
+
+### 7.6 Pending
 
 - [ ] Regenerate all ~300 floor tiles with new diamond prompts
 - [ ] Regenerate 6 node images marked for regeneration
 - [ ] Evaluate player portraits (60 combinations)
 - [ ] Evaluate item sprites (49 items)
 - [ ] Evaluate UI icons (80 icons)
+- [ ] Create `validate-size-variants.js` script for checking missing variants
 
-### 7.6 Admin Asset Manager (Completed Jan 2026)
+### 7.7 Admin Asset Manager (Completed Jan 2026)
 
 Development-only dashboard for AI asset generation and management. Available at `npm run dev:admin` (port 8081).
 
@@ -453,6 +491,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.5 | Jan 2026 | Asset Loading System Refactoring: Added Section 7.5 documenting size-aware asset loading. Updated shared/assetPaths.js with getOptimalSize(), size-aware portrait/node paths. Refactored AssetLoader.js with getPortraitUrl, getEnemyPortraitUrl, loadNodeSpriteAtSize. Updated 4 scenes and 4 components. Integrated post-processing into generate-portraits.js/generate-nodes.js. Added getImageDimensions() with timeout. Renumbered sections (7.5→7.6 Pending, 7.6→7.7 Admin). |
 | 2.4 | Jan 2026 | Security & Testing Infrastructure (v9.4): Added Redis-backed rate limiting with graceful fallback. Comprehensive endpoint protection (70+ endpoints via economyRateLimiter, characterRateLimiter, socialRateLimiter). Gated debug endpoints in production. Enhanced health checks with Redis, rate limiter stats, liveness/readiness endpoints. Artillery.io load testing infrastructure for 25 concurrent users. E2E tests: character creation, battle flow, error handling. Shared test helpers. Updated status: Testing 85%, Monitoring 60%, Infrastructure 75%. |
 | 2.3 | Jan 2026 | Post-Processing Pipeline Overhaul: Added Section 7.4 documenting new asset-specific post-processing functions. Removed --sizes flag, standardized resolutions (256 portraits/nodes, 128 tiles/items/icons). Added diamond mask for tiles, improved prompts for geometry. Renumbered pending items to 7.5. Commit 91ac94b. |
 | 2.2 | Jan 2026 | AI Image Quality Evaluation: Added Section 7 for AI Image Generation System. Documented prompt builder improvements (removed white background, added composition constraints). Added quality evaluation system with scoring criteria. Section numbering updated (7→8 for Technical Debt). |

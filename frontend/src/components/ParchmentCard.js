@@ -1,3 +1,5 @@
+import { getAssetUrl, getOptimalSize } from '@shared/assetPaths.js';
+
 /**
  * ParchmentCard - Unified character/enemy card with classic RPG parchment styling
  *
@@ -487,9 +489,11 @@ export class ParchmentCard {
     }
 
     // Portrait URL - enemies use their sprite_id, players use race_gender_class
+    // Display size is 56px, optimal size is 64px
+    const optimalSize = getOptimalSize('portraits', 56);
     const portraitUrl = this.type === 'enemy'
-      ? `/assets/sprites/enemies/portraits/${enemySpriteId || charClass}.png`
-      : `/assets/sprites/portraits/${race}_${gender}_${charClass}.png`;
+      ? getAssetUrl('portraits', enemySpriteId || charClass, { subcategory: 'enemies', size: optimalSize })
+      : getAssetUrl('portraits', `${race}_${gender}_${charClass}`, { size: optimalSize });
 
     // Class colors for fallback
     const classColors = {

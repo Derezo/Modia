@@ -268,7 +268,11 @@ export class CharacterSelectScene extends Scene {
     this.characters.forEach((char) => {
       const hpPercent = (char.hp_current / char.hp_max) * 100;
       const gender = char.gender || 'other';
-      const portraitUrl = `/assets/sprites/portraits/${char.race}_${gender}_${char.class}.png`;
+      const portraitUrl = this.game.assetLoader.getPortraitUrl({
+        race: char.race,
+        gender: gender,
+        class: char.class
+      }, 48);
       const fallbackEmoji = this.getRaceEmoji(char.race);
 
       charactersHtml += `

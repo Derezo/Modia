@@ -56,6 +56,61 @@ function checkImageMagick() {
 }
 
 /**
+ * Get image dimensions using ImageMagick identify
+ * @param {string} imagePath - Path to the image
+ * @param {number} timeout - Timeout in milliseconds (default 5000)
+ * @returns {Promise<{width: number, height: number}|null>} Dimensions or null if failed
+ */
+async function getImageDimensions(imagePath, timeout = 5000) {
+  if (!fileExists(imagePath)) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    const proc = spawn('identify', ['-format', '%wx%h', imagePath]);
+    let stdout = '';
+    let resolved = false;
+
+    const timeoutId = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        proc.kill();
+        resolve(null);
+      }
+    }, timeout);
+
+    proc.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    proc.on('close', (code) => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timeoutId);
+
+      if (code === 0 && stdout) {
+        const match = stdout.trim().match(/^(\d+)x(\d+)$/);
+        if (match) {
+          resolve({
+            width: parseInt(match[1], 10),
+            height: parseInt(match[2], 10)
+          });
+          return;
+        }
+      }
+      resolve(null);
+    });
+
+    proc.on('error', () => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(timeoutId);
+      resolve(null);
+    });
+  });
+}
+
+/**
  * Get the output path for a sized variant
  * @param {string} sourcePath - Original 128x128 image path
  * @param {number} size - Target size
@@ -606,19 +661,46 @@ async function postProcessTile(imagePath, options = {}) {
 }
 
 /**
- * Post-process a portrait image: generate 64, 128, 256 variants from 256x256
- * @param {string} imagePath - Path to generated 256x256 portrait image
+ * Post-process a portrait image: generate size variants from source
+ * Detects source size and only generates variants <= source size.
+ *
+ * Expected sizes: [64, 128, 256]
+ * - If source is 256x256: generates 64, 128, keeps 256
+ * - If source is 128x128: generates 64, keeps 128 (skips 256)
+ * - If source is 64x64: keeps 64 only (skips 128, 256)
+ *
+ * @param {string} imagePath - Path to generated portrait image
  * @param {Object} options - Options (force, verbose)
- * @returns {Promise<{success: boolean, variants: string[], failed: string[]}>}
+ * @returns {Promise<{success: boolean, variants: string[], failed: string[], sourceSize: number}>}
  */
 async function postProcessPortrait(imagePath, options = {}) {
   const { force = false, verbose = false } = options;
-  const sizes = SIZE_PRESETS.portraits; // [64, 128, 256]
-  const results = { success: true, variants: [], failed: [] };
+  const allSizes = SIZE_PRESETS.portraits; // [64, 128, 256]
+  const results = { success: true, variants: [], failed: [], sourceSize: 0 };
+
+  // Detect source image size
+  const dimensions = await getImageDimensions(imagePath);
+  if (!dimensions) {
+    if (verbose) log(`Cannot determine dimensions for: ${imagePath}`, 'error');
+    results.success = false;
+    results.failed.push({ path: imagePath, error: 'Cannot determine image dimensions' });
+    return results;
+  }
+
+  const sourceSize = Math.min(dimensions.width, dimensions.height);
+  results.sourceSize = sourceSize;
+
+  // Only generate sizes <= source size
+  const sizes = allSizes.filter(s => s <= sourceSize);
+
+  if (verbose && sizes.length < allSizes.length) {
+    const skipped = allSizes.filter(s => s > sourceSize);
+    log(`Source is ${sourceSize}px, skipping sizes: ${skipped.join(', ')}`, 'info');
+  }
 
   for (const size of sizes) {
-    // For 256, keep the original in place
-    if (size === 256) {
+    // If size matches source, keep the original in place (don't resize)
+    if (size === sourceSize) {
       results.variants.push(imagePath);
       continue;
     }
@@ -729,17 +811,91 @@ async function postProcessIcon(imagePath, options = {}) {
 }
 
 /**
- * Post-process a node image: generate 48, 96 variants from 256x256
- * @param {string} imagePath - Path to generated 256x256 node image
+ * Post-process a node image: generate size variants from source
+ * Detects source size and only generates variants <= source size.
+ *
+ * Expected sizes: [48, 96]
+ * - If source is 256x256: generates 48, 96
+ * - If source is 96x96: keeps 96, generates 48
+ * - If source is 48x48: keeps 48 only
+ *
+ * @param {string} imagePath - Path to generated node image
  * @param {Object} options - Options (force, verbose)
- * @returns {Promise<{success: boolean, variants: string[], failed: string[]}>}
+ * @returns {Promise<{success: boolean, variants: string[], failed: string[], sourceSize: number}>}
  */
 async function postProcessNode(imagePath, options = {}) {
   const { force = false, verbose = false } = options;
-  const sizes = SIZE_PRESETS.nodes; // [48, 96]
-  const results = { success: true, variants: [], failed: [] };
+  const allSizes = SIZE_PRESETS.nodes; // [48, 96]
+  const results = { success: true, variants: [], failed: [], sourceSize: 0 };
 
+  // Detect source image size
+  const dimensions = await getImageDimensions(imagePath);
+  if (!dimensions) {
+    if (verbose) log(`Cannot determine dimensions for: ${imagePath}`, 'error');
+    results.success = false;
+    results.failed.push({ path: imagePath, error: 'Cannot determine image dimensions' });
+    return results;
+  }
+
+  const sourceSize = Math.min(dimensions.width, dimensions.height);
+  results.sourceSize = sourceSize;
+
+  // Only generate sizes <= source size
+  const sizes = allSizes.filter(s => s <= sourceSize);
+
+  if (verbose && sizes.length < allSizes.length) {
+    const skipped = allSizes.filter(s => s > sourceSize);
+    log(`Source is ${sourceSize}px, skipping sizes: ${skipped.join(', ')}`, 'info');
+  }
+
+  // If source is larger than all preset sizes, resize to default (96)
+  // and then generate the 48 variant from that
+  if (sourceSize > Math.max(...allSizes)) {
+    // Resize source to 96 (default) first
+    const defaultSize = 96;
+    const defaultPath = getSizedPath(imagePath, defaultSize, { sizeDir: true });
+
+    if (force || !fileExists(defaultPath)) {
+      const resizeResult = await resizeImage(imagePath, defaultPath, defaultSize);
+      if (resizeResult.success) {
+        results.variants.push(defaultPath);
+        if (verbose) log(`Generated node (resized to default): ${defaultPath}`, 'success');
+      } else {
+        results.failed.push({ path: defaultPath, error: resizeResult.error });
+        results.success = false;
+        if (verbose) log(`Failed node: ${defaultPath} - ${resizeResult.error}`, 'error');
+      }
+    } else {
+      results.variants.push(defaultPath);
+    }
+
+    // Generate 48 variant from the 96
+    const smallPath = getSizedPath(imagePath, 48, { sizeDir: true });
+    if (force || !fileExists(smallPath)) {
+      const smallResult = await resizeImage(defaultPath, smallPath, 48);
+      if (smallResult.success) {
+        results.variants.push(smallPath);
+        if (verbose) log(`Generated node: ${smallPath}`, 'success');
+      } else {
+        results.failed.push({ path: smallPath, error: smallResult.error });
+        results.success = false;
+        if (verbose) log(`Failed node: ${smallPath} - ${smallResult.error}`, 'error');
+      }
+    } else {
+      results.variants.push(smallPath);
+    }
+
+    return results;
+  }
+
+  // Handle normal case: source is within preset range
   for (const size of sizes) {
+    // If size matches source, keep the original in place
+    if (size === sourceSize) {
+      results.variants.push(imagePath);
+      continue;
+    }
+
     const outputPath = getSizedPath(imagePath, size, { sizeDir: true });
 
     if (!force && fileExists(outputPath)) {
@@ -911,6 +1067,7 @@ module.exports = {
   SIZE_PRESETS,
   AI_RESOLUTIONS,
   checkImageMagick,
+  getImageDimensions,
   getSizedPath,
   getSizedPathNonSquare,
   resizeImage,

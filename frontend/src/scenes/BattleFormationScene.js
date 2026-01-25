@@ -403,7 +403,10 @@ export class BattleFormationScene extends Scene {
     return this.enemies.map((enemy, index) => {
       const isBoss = enemy.isBoss || enemy.level > 10;
       const threatClass = isBoss ? 'bf-threat-boss' : '';
-      const portraitUrl = `/assets/sprites/enemies/portraits/${enemy.spriteId || enemy.sprite_id || 'unknown'}.png`;
+      const portraitUrl = this.game.assetLoader.getEnemyPortraitUrl(
+        enemy.spriteId || enemy.sprite_id || 'unknown',
+        40
+      );
 
       return `
         <div class="bf-enemy-card ${threatClass}" data-enemy-index="${index}">
@@ -743,8 +746,7 @@ export class BattleFormationScene extends Scene {
     roster.innerHTML = this.selectableCharacters.map(char => {
       const isPlaced = placedIds.has(char.id);
       const isSelected = this.selectedCharacter?.id === char.id;
-      const gender = char.gender || 'other';
-      const portraitUrl = `/assets/sprites/portraits/${char.race}_${gender}_${char.class}.png`;
+      const portraitUrl = this.game.assetLoader.getPortraitUrl(char, 40);
 
       return `
         <div class="bf-roster-char ${isPlaced ? 'placed' : ''} ${isSelected ? 'selected' : ''}"
