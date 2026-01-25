@@ -177,11 +177,11 @@ function constructFullPrompt(asset, category, theme, traitData = null) {
   };
 }
 
-// Rate limiter for admin endpoints (30 requests per minute)
+// Rate limiter for admin endpoints (100 requests per minute base = 500/min in dev, 200/min in prod)
 const adminRateLimiter = createLimiter({
   name: 'admin',
   windowMs: 60 * 1000,
-  maxRequests: 30,
+  maxRequests: 100,
   message: 'Admin endpoint rate limit exceeded. Please wait.',
   useUserKey: false // IP-based since no auth
 });
