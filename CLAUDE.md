@@ -530,6 +530,12 @@ This project has specialized subagents in `.claude/agents/`. **Using subagents i
 | `architect-reviewer` | System design review |
 | `performance-engineer` | Optimization, profiling |
 | `security-auditor` | Security review, OWASP checks |
+| `javascript-pro` | ES2023+ features, async patterns, memory management |
+| `test-automator` | Test framework, CI pipeline, E2E automation |
+| `refactoring-specialist` | File size enforcement, modularization patterns |
+| `documentation-maintainer` | Roadmaps, archives, spec synchronization |
+| `economy-balance-designer` | Gold flow, XP curves, item pricing, drop rates |
+| `asset-pipeline-specialist` | AI image/audio generation, sprite conventions |
 
 ## CI Pipeline
 
@@ -555,6 +561,7 @@ Detailed specifications in `docs/`. Key files:
 - `ECONOMY_SYSTEM.md` - Shops, marketplace, gold flow
 
 **Battle System:**
+- `BATTLE_SYSTEM_INDEX.md` - Unified navigation, component cross-reference, quick reference tables
 - `BATTLE_TURN_SYSTEM.md` - CT-based turn order, two-action system
 - `BATTLE_MESSAGING_PROTOCOL.md` - Hybrid HTTP/WebSocket battle protocol
 - `BATTLE_ANIMATIONS.md` - Visual feedback, intent visualization
@@ -563,10 +570,17 @@ Detailed specifications in `docs/`. Key files:
 - `AI_SYSTEM.md` - Enemy AI behavior trees and utility functions
 
 **UI & Assets:**
+- `ASSET_SYSTEM_INDEX.md` - Unified asset pipeline navigation and quick reference
 - `DESIGN_SYSTEM.md` - Parchment UI components, theming, responsive patterns
 - `AI_IMAGE_GENERATION.md` - AI image generation pipeline, style guide, prompts
 - `AUDIO_STYLE_GUIDE.md` - Audio prompt guidelines, regional music profiles, SFX patterns
 
-**Archive:** `docs/archive/COMPLETED_MILESTONES.md` - Archived completed work
+**Archive:** `docs/archive/completed/COMPLETED_MILESTONES.md` - Archived completed work
 
-**Roadmap maintenance:** Keep roadmaps fresh by moving completed items to `docs/archive/`.
+**Archive structure:**
+- `docs/archive/completed/` - Milestone tracking
+- `docs/archive/design-docs/` - Dated design documents
+- `docs/archive/deprecated/` - Superseded document versions
+- `docs/archive/reports/` - Validation and analysis reports
+
+**Roadmap maintenance:** Keep roadmaps fresh by moving completed items to `docs/archive/completed/`.

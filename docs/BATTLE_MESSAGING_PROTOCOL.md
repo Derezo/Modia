@@ -5,8 +5,9 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 1.0 |
+| Version | 1.1 |
 | Last Updated | January 2026 |
+| Last Validated | 2026-01-25 |
 | Protocol Type | Hybrid HTTP/WebSocket |
 
 ---
@@ -25,11 +26,11 @@ The battle messaging protocol uses a hybrid HTTP/WebSocket architecture to balan
 |   PLAYER ACTIONS (HTTP)                    BROADCASTS (WebSocket)            |
 |   +------------------------+               +------------------------+         |
 |   | POST /api/battle/action|               | battle:turn_start      |         |
-|   |                        |               | battle:action_result   |         |
-|   | - Request/Response     |               | battle:turn_end        |         |
-|   | - Guaranteed delivery  |               | battle:state_sync      |         |
+|   | POST /api/battle/start |               | battle:action_executed |         |
+|   |                        |               | battle:unit_moved      |         |
+|   | - Request/Response     |               | battle:state_sync      |         |
+|   | - Guaranteed delivery  |               | battle:your_turn       |         |
 |   | - Validation feedback  |               | battle:end             |         |
-|   | - Idempotency support  |               |                        |         |
 |   +------------------------+               +------------------------+         |
 |              |                                        |                       |
 |              v                                        v                       |
@@ -81,31 +82,39 @@ All server-to-client WebSocket messages follow this structure:
 ```json
 {
   "type": "battle:{message_type}",
-  "payload": { ... },
-  "sequence": 123,
-  "timestamp": 1704556800000
+  "payload": {
+    "battleId": 42,
+    ... ,
+    "timestamp": 1704556800000
+  }
 }
 ```
+
+Note: The `timestamp` is included in the payload. Sequence numbers are not currently implemented but are planned for future message ordering guarantees.
 
 ### 2.1 Message Reference Table
 
 | Message | Payload | Purpose |
 |---------|---------|---------|
-| `battle:turn_start` | `{ battleId, unitId, unitType, unitName, turnPredictions }` | Broadcast when any unit's turn begins |
+| `battle:turn_start` | `{ battleId, unitId, unitType, unitName, position, turnPredictions }` | Broadcast when any unit's turn begins |
 | `battle:intent_highlight` | `{ battleId, unitId, highlightType, tiles[], duration }` | Show enemy movement/attack range preview |
-| `battle:action_result` | `{ battleId, unitId, actionType, result, targetTile, damage?, effects? }` | Result of action for animation |
-| `battle:turn_end` | `{ battleId, unitId, nextUnitId, nextUnitType }` | Turn complete, announce next unit |
+| `battle:action_executed` | `{ battleId, actorId, actionType, result }` | Result of action for animation |
+| `battle:turn_changed` | `{ battleId, activeUnitIndex, activeUnitId, turn, turnPredictions }` | Turn complete, announce next unit (legacy) |
+| `battle:unit_moved` | `{ battleId, unitId, from, to }` | Unit movement event |
 | `battle:your_turn` | `{ battleId, unitId, state, availableActions }` | Sent only to controlling player |
 | `battle:player_disconnected` | `{ battleId, playerId, playerName }` | Player dropped from battle |
 | `battle:player_reconnected` | `{ battleId, playerId, playerName }` | Player returned to battle |
 | `battle:state_sync` | `{ battleId, state, reason }` | Full state synchronization |
-| `battle:end` | `{ battleId, status, winners, rewards }` | Battle complete |
+| `battle:state_update` | `{ battleId, state, rejoined? }` | State update (for rejoins) |
+| `battle:enemy_actions` | `{ battleId, actions[] }` | Batch of enemy actions |
+| `battle:phase_transition` | `{ battleId, bossId, bossName, phaseName, ... }` | Boss phase change |
+| `battle:end` | `{ battleId, status, rewards }` | Battle complete |
 
 ### 2.2 Detailed Message Specifications
 
 #### battle:turn_start
 
-Broadcast to all participants when a unit's turn begins.
+Broadcast to all participants when a unit's turn begins. Triggers camera pan to the active unit.
 
 ```json
 {
@@ -115,15 +124,14 @@ Broadcast to all participants when a unit's turn begins.
     "unitId": "char_1",
     "unitType": "player_local",
     "unitName": "Hero",
-    "turnNumber": 15,
+    "position": { "x": 3, "y": 5 },
     "turnPredictions": [
       { "unitId": "enemy_2", "estimatedTicks": 3 },
       { "unitId": "char_3", "estimatedTicks": 5 },
       { "unitId": "char_1", "estimatedTicks": 8 }
-    ]
-  },
-  "sequence": 145,
-  "timestamp": 1704556800000
+    ],
+    "timestamp": 1704556800000
+  }
 }
 ```
 
@@ -133,8 +141,9 @@ Broadcast to all participants when a unit's turn begins.
 | `unitId` | string | Active unit identifier |
 | `unitType` | string | `"player_local"`, `"player_remote"`, or `"enemy"` |
 | `unitName` | string | Display name for UI |
-| `turnNumber` | number | Current turn count |
+| `position` | object | Unit position `{ x, y }` for camera panning |
 | `turnPredictions` | array | Predicted upcoming turns based on CT |
+| `timestamp` | number | Server timestamp |
 
 ---
 
@@ -163,96 +172,110 @@ Shows enemy intent before action execution, allowing players to anticipate moves
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `highlightType` | string | `"movement"`, `"attack_range"`, `"skill_area"` |
+| `highlightType` | string | `"movement_range"`, `"attack_range"`, `"target_path"`, `"target_tile"`, `"aoe"` |
 | `tiles` | array | Tiles to highlight |
 | `duration` | number | Highlight duration in milliseconds |
 
 ---
 
-#### battle:action_result
+#### battle:action_executed
 
 Broadcast after an action is processed, containing results for animation.
 
 ```json
 {
-  "type": "battle:action_result",
+  "type": "battle:action_executed",
   "payload": {
     "battleId": 42,
-    "unitId": "char_1",
+    "actorId": "char_1",
     "actionType": "skill",
-    "skillId": "warrior_bash",
-    "targetTile": { "x": 5, "y": 3 },
     "result": {
-      "success": true,
       "damage": 125,
-      "critical": false,
-      "targetId": "enemy_1"
+      "isCritical": false,
+      "targetId": "enemy_1",
+      "skillId": "warrior_bash",
+      "missed": false,
+      "effectApplied": "stun"
     },
-    "effects": [
-      { "type": "stun", "targetId": "enemy_1", "duration": 1 }
-    ],
-    "unitStates": {
-      "enemy_1": {
-        "hp": 25,
-        "maxHp": 150,
-        "mp": 30,
-        "maxMp": 30,
-        "statusEffects": [
-          { "type": "stun", "duration": 1 }
-        ]
-      }
-    },
-    "turnState": {
-      "moveUsed": true,
-      "actUsed": true,
-      "turnComplete": true
-    }
-  },
-  "sequence": 147,
-  "timestamp": 1704556801000
+    "timestamp": 1704556801000
+  }
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `actionType` | string | `"move"`, `"attack"`, `"skill"`, `"item"`, `"wait"` |
-| `skillId` | string? | Skill identifier if action was skill |
-| `targetTile` | object | Target position `{ x, y }` |
+| `battleId` | number | Battle identifier |
+| `actorId` | string | Unit that performed the action |
+| `actionType` | string | `"move"`, `"attack"`, `"skill"`, `"item"`, `"wait"`, `"zodiac_ability"` |
 | `result` | object | Action outcome details |
-| `effects` | array? | Status effects applied |
-| `unitStates` | object | Updated states for affected units |
-| `turnState` | object | Current turn action state |
+| `result.damage` | number? | Damage dealt (if applicable) |
+| `result.isCritical` | boolean? | Whether the hit was critical |
+| `result.targetId` | string? | Target unit identifier |
+| `result.skillId` | string? | Skill used (if skill action) |
+| `result.missed` | boolean? | Whether the attack missed |
+| `result.effectApplied` | string? | Status effect that was applied |
+| `timestamp` | number | Server timestamp |
 
 ---
 
-#### battle:turn_end
+#### battle:turn_changed (Legacy)
 
-Broadcast when a unit's turn is complete.
+Broadcast when a unit's turn is complete. Note: This is being phased out in favor of `battle:turn_start` for the new protocol.
 
 ```json
 {
-  "type": "battle:turn_end",
+  "type": "battle:turn_changed",
   "payload": {
     "battleId": 42,
-    "unitId": "char_1",
-    "turnNumber": 15,
-    "nextUnitId": "enemy_2",
-    "nextUnitType": "enemy"
-  },
-  "sequence": 148,
-  "timestamp": 1704556801500
+    "activeUnitIndex": 2,
+    "activeUnitId": "enemy_2",
+    "turn": 15,
+    "turnPredictions": [
+      { "unitId": "char_3", "estimatedTicks": 5 },
+      { "unitId": "char_1", "estimatedTicks": 8 }
+    ],
+    "timestamp": 1704556801500
+  }
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `nextUnitType` | string | `"player_local"`, `"player_remote"`, or `"enemy"` |
+| `activeUnitIndex` | number | Index of new active unit in units array |
+| `activeUnitId` | string | ID of the new active unit |
+| `turn` | number | Current turn count |
+| `turnPredictions` | array | Predicted upcoming turns based on CT |
+
+---
+
+#### battle:unit_moved
+
+Broadcast when a unit moves to a new position.
+
+```json
+{
+  "type": "battle:unit_moved",
+  "payload": {
+    "battleId": 42,
+    "unitId": "char_1",
+    "from": { "x": 3, "y": 5 },
+    "to": { "x": 4, "y": 5 },
+    "timestamp": 1704556801000
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `unitId` | string | Unit that moved |
+| `from` | object | Previous position `{ x, y }` |
+| `to` | object | New position `{ x, y }` |
 
 ---
 
 #### battle:your_turn
 
-Sent only to the controlling player when their unit's turn begins.
+Sent only to the controlling player when their unit's turn begins. Enables player input.
 
 ```json
 {
@@ -261,39 +284,24 @@ Sent only to the controlling player when their unit's turn begins.
     "battleId": 42,
     "unitId": "char_1",
     "state": {
-      "hp": 180,
-      "maxHp": 200,
-      "mp": 45,
-      "maxMp": 60,
-      "tileX": 3,
-      "tileY": 5,
-      "statusEffects": []
+      "turn": 15,
+      "phase": "active",
+      "activeUnitId": "char_1",
+      "units": [ ... ]
     },
-    "availableActions": {
-      "canMove": true,
-      "canAct": true,
-      "canWait": true,
-      "movementRange": [
-        { "x": 2, "y": 5 },
-        { "x": 4, "y": 5 },
-        { "x": 3, "y": 4 },
-        { "x": 3, "y": 6 }
-      ],
-      "attackRange": [
-        { "x": 2, "y": 5 },
-        { "x": 4, "y": 5 }
-      ],
-      "skills": [
-        { "id": "warrior_bash", "mpCost": 15, "available": true },
-        { "id": "warrior_shield", "mpCost": 10, "available": true }
-      ]
-    },
-    "timeRemaining": 60000
-  },
-  "sequence": 145,
-  "timestamp": 1704556800000
+    "availableActions": ["move", "attack", "skill", "item", "wait"],
+    "timestamp": 1704556800000
+  }
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `battleId` | number | Battle identifier |
+| `unitId` | string | Active unit identifier |
+| `state` | object | Full battle state |
+| `availableActions` | array | List of available action types |
+| `timestamp` | number | Server timestamp |
 
 ---
 
@@ -308,11 +316,8 @@ Broadcast when a player loses connection during battle.
     "battleId": 42,
     "playerId": 5,
     "playerName": "Hero",
-    "gracePeriod": 30000,
-    "forfeitAt": 1704556830000
-  },
-  "sequence": 150,
-  "timestamp": 1704556800000
+    "timestamp": 1704556800000
+  }
 }
 ```
 
@@ -328,10 +333,9 @@ Broadcast when a disconnected player returns.
   "payload": {
     "battleId": 42,
     "playerId": 5,
-    "playerName": "Hero"
-  },
-  "sequence": 155,
-  "timestamp": 1704556815000
+    "playerName": "Hero",
+    "timestamp": 1704556815000
+  }
 }
 ```
 
@@ -346,10 +350,10 @@ Full state synchronization, sent on reconnection or desync detection.
   "type": "battle:state_sync",
   "payload": {
     "battleId": 42,
-    "reason": "reconnection",
+    "reason": "reconnect",
     "state": {
       "turn": 15,
-      "phase": "player_turn",
+      "phase": "active",
       "activeUnitId": "char_1",
       "units": [
         {
@@ -366,24 +370,82 @@ Full state synchronization, sent on reconnection or desync detection.
           "statusEffects": []
         }
       ],
-      "terrain": { ... },
-      "turnState": {
-        "moveUsed": false,
-        "actUsed": false
-      }
+      "terrain": [ ... ],
+      "elevation": [ ... ]
     },
-    "lastSequence": 144
-  },
-  "sequence": 156,
-  "timestamp": 1704556815500
+    "timestamp": 1704556815500
+  }
 }
 ```
 
 | Reason | Description |
 |--------|-------------|
-| `"reconnection"` | Player reconnected after disconnect |
-| `"desync_detected"` | Client reported sequence gap |
-| `"admin_request"` | Manual sync request |
+| `"reconnect"` | Player reconnected after disconnect |
+| `"resync"` | Client requested resync |
+| `"initial"` | Initial state on battle join |
+
+---
+
+#### battle:state_update
+
+State update broadcast, typically for rejoins or full sync scenarios.
+
+```json
+{
+  "type": "battle:state_update",
+  "payload": {
+    "battleId": 42,
+    "state": { ... },
+    "rejoined": true,
+    "timestamp": 1704556815500
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `state` | object | Full battle state |
+| `rejoined` | boolean? | True if this is a rejoin sync |
+
+---
+
+#### battle:enemy_actions
+
+Batch of enemy actions for animation sequencing (multiplayer scenarios).
+
+```json
+{
+  "type": "battle:enemy_actions",
+  "payload": {
+    "battleId": 42,
+    "actions": [
+      { "actorId": "enemy_1", "actionType": "attack", "result": { ... } },
+      { "actorId": "enemy_2", "actionType": "move", "to": { "x": 5, "y": 3 } }
+    ],
+    "timestamp": 1704556815500
+  }
+}
+```
+
+---
+
+#### battle:phase_transition
+
+Broadcast when a boss enters a new phase.
+
+```json
+{
+  "type": "battle:phase_transition",
+  "payload": {
+    "battleId": 42,
+    "bossId": "boss_1",
+    "bossName": "Dragon Lord",
+    "phaseName": "Enraged",
+    "phaseNumber": 2,
+    "maxPhases": 3,
+    "timestamp": 1704556815500
+  }
+}
 
 ---
 
@@ -397,27 +459,16 @@ Broadcast when the battle concludes.
   "payload": {
     "battleId": 42,
     "status": "victory",
-    "winners": [1],
-    "turnCount": 23,
-    "duration": 245000,
     "rewards": {
-      "xp": 450,
       "gold": 175,
+      "experience": 450,
       "items": [
         { "templateId": 101, "name": "Health Potion", "quantity": 1 }
-      ]
+      ],
+      "advancementComplete": null
     },
-    "characterUpdates": [
-      {
-        "characterId": 1,
-        "xpGained": 450,
-        "newLevel": 16,
-        "leveledUp": true
-      }
-    ]
-  },
-  "sequence": 200,
-  "timestamp": 1704557045000
+    "timestamp": 1704557045000
+  }
 }
 ```
 
@@ -425,102 +476,94 @@ Broadcast when the battle concludes.
 |--------|-------------|
 | `"victory"` | Player team won |
 | `"defeat"` | Player team lost |
-| `"draw"` | Battle ended in draw |
-| `"forfeit"` | Opponent forfeited (PvP) |
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Battle outcome |
+| `rewards` | object? | Rewards for victory (null for defeat) |
+| `rewards.gold` | number | Gold earned |
+| `rewards.experience` | number | XP earned |
+| `rewards.items` | array | Dropped items |
+| `rewards.advancementComplete` | object? | Guild advancement result if applicable |
 
 ---
 
 ## 3. WebSocket Message Types (Client to Server)
 
-### 3.1 Message Reference Table
+### 3.1 Room Management
+
+The client uses WebSocket for room subscription only. All battle actions are submitted via HTTP.
 
 | Message | Payload | Purpose |
 |---------|---------|---------|
-| `battle:player_action` | `{ battleId, actionType, unitId, targetTile, skillId? }` | Alternative to HTTP POST for real-time |
-| `battle:ping` | `{ battleId, timestamp }` | Keep-alive and latency measurement |
-| `battle:request_sync` | `{ battleId, lastSequence }` | Request state synchronization |
+| `join_room` | `{ room: "battle:{battleId}" }` | Join battle room for real-time updates |
+| `leave_room` | `{ room: "battle:{battleId}" }` | Leave battle room |
 
-### 3.2 Detailed Message Specifications
+### 3.2 Action Submission
 
-#### battle:player_action
+**All player actions are submitted via HTTP `POST /api/battle/action`**, not WebSocket. This provides:
+- Request/response guarantees
+- Validation feedback
+- Idempotency support
 
-Alternative to HTTP endpoint for submitting actions. Use HTTP for better reliability guarantees.
-
-```json
-{
-  "type": "battle:player_action",
-  "payload": {
-    "battleId": 42,
-    "actionType": "move",
-    "unitId": "char_1",
-    "targetTile": { "x": 4, "y": 5 }
-  }
-}
-```
+The WebSocket channel is used exclusively for server-to-client broadcasts.
 
 ---
 
-#### battle:ping
+## 4. HTTP Endpoints for Battle
 
-Keep-alive message to maintain connection and measure latency.
+### 4.1 Endpoint Reference
 
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `GET` | `/api/battle/preview/:nodeId` | Get encounter preview for formation |
+| `POST` | `/api/battle/start` | Start PvE battle at current node |
+| `GET` | `/api/battle/current` | Get current active battle state |
+| `GET` | `/api/battle/:battleId/rejoin` | Rejoin battle after disconnect |
+| `POST` | `/api/battle/action` | Submit battle action |
+| `GET` | `/api/battle/rewards/:battleId` | Get rewards after victory |
+| `POST` | `/api/battle/:battleId/zodiac-ability` | Use zodiac signature ability |
+| `GET` | `/api/battle/:battleId/zodiac-abilities/:characterId` | Get available zodiac abilities |
+
+### 4.2 POST /api/battle/start
+
+Start a new PvE battle at the player's current node.
+
+**Request Body:**
 ```json
 {
-  "type": "battle:ping",
-  "payload": {
-    "battleId": 42,
-    "timestamp": 1704556800000
+  "formation": {
+    "1": { "tileX": 2, "tileY": 1 },
+    "2": { "tileX": 3, "tileY": 1 }
   }
 }
 ```
 
-Server responds with:
-
+**Response (201 Created):**
 ```json
 {
-  "type": "battle:pong",
-  "payload": {
-    "battleId": 42,
-    "clientTimestamp": 1704556800000,
-    "serverTimestamp": 1704556800015
-  }
+  "battleId": 42,
+  "mapSeed": 123456,
+  "mapWidth": 32,
+  "mapHeight": 32,
+  "nodeType": "forest",
+  "state": {
+    "turn": 1,
+    "phase": "active",
+    "activeUnitId": "char_1",
+    "units": [ ... ],
+    "terrain": [ ... ],
+    "elevation": [ ... ],
+    "consumables": [ ... ],
+    "turnPredictions": [ ... ]
+  },
+  "availableActions": { ... }
 }
 ```
 
----
+### 4.3 POST /api/battle/action
 
-#### battle:request_sync
-
-Request full state sync when client detects message gap.
-
-```json
-{
-  "type": "battle:request_sync",
-  "payload": {
-    "battleId": 42,
-    "lastSequence": 140,
-    "reason": "sequence_gap"
-  }
-}
-```
-
----
-
-## 4. HTTP Endpoints for Player Actions
-
-### 4.1 Submit Player Action
-
-The primary method for submitting player actions during battle.
-
-```
-POST /api/battle/action
-```
-
-**Headers:**
-```
-Authorization: Bearer <token>
-Content-Type: application/json
-```
+Submit a player action during battle.
 
 **Request Body:**
 ```json
@@ -540,41 +583,72 @@ Content-Type: application/json
 | `unitId` | string | Yes | Acting unit identifier |
 | `targetTile` | object | For move/attack/skill | Target position `{ x, y }` |
 | `skillId` | string | For skill action | Skill to use |
-| `itemId` | string | For item action | Item to use |
+
+**Response (200 OK):**
+```json
+{
+  "state": { ... },
+  "actionResult": {
+    "damage": 45,
+    "isCritical": false,
+    "targetId": "enemy_1",
+    "turnEnded": false
+  },
+  "battleStatus": "active",
+  "turnContinues": true,
+  "availableActions": {
+    "canMove": false,
+    "canAct": true,
+    "movementRange": [],
+    "attackRange": [ ... ],
+    "skills": [ ... ]
+  }
+}
+```
+
+The response includes the updated battle state. Results are also broadcast via WebSocket `battle:action_executed` to all participants.
+
+**Error Response (400 Bad Request):**
+```json
+{
+  "error": "Not this unit's turn",
+  "state": { ... },
+  "availableActions": { ... }
+}
+```
+
+### 4.4 GET /api/battle/:battleId/rejoin
+
+Rejoin an active battle after disconnect.
 
 **Response (200 OK):**
 ```json
 {
   "success": true,
-  "actionId": "action_42_147",
-  "sequence": 147
+  "battleId": 42,
+  "battleType": "pve",
+  "mapSeed": 123456,
+  "mapWidth": 32,
+  "mapHeight": 32,
+  "nodeType": "forest",
+  "nodeName": "Dark Forest",
+  "state": { ... },
+  "gracePeriod": 0,
+  "disconnectedPlayers": [],
+  "availableActions": { ... }
 }
 ```
 
-The immediate response confirms action receipt. Full results are delivered via WebSocket `battle:action_result` to all participants.
+### 4.5 Action Error Codes
 
-**Error Response (400 Bad Request):**
-```json
-{
-  "success": false,
-  "error": "Not this unit's turn",
-  "code": "INVALID_TURN"
-}
-```
-
-### 4.2 Action Error Codes
-
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `INVALID_TURN` | 400 | Not the specified unit's turn |
-| `INVALID_ACTION` | 400 | Action type not recognized |
-| `INVALID_TARGET` | 400 | Target tile is invalid |
-| `OUT_OF_RANGE` | 400 | Target outside action range |
-| `INSUFFICIENT_MP` | 400 | Not enough MP for skill |
-| `ALREADY_ACTED` | 400 | Unit already performed this action type |
-| `BATTLE_NOT_FOUND` | 404 | Battle does not exist |
-| `BATTLE_ENDED` | 400 | Battle has already concluded |
-| `STATUS_BLOCKED` | 400 | Status effect prevents action |
+| Error | HTTP Status | Description |
+|-------|-------------|-------------|
+| Not this unit's turn | 400 | Not the specified unit's turn |
+| Battle not found or not active | 404 | Battle does not exist or ended |
+| You do not control this unit | 403 | Unit belongs to another player |
+| Cannot battle at this location | 400 | Node type doesn't support battles |
+| No battle party set | 400 | No characters in battle party |
+| Cannot battle with incapacitated characters | 400 | Party member has 0 HP |
 
 ---
 
@@ -894,24 +968,22 @@ function handleBattleMessage(message) {
 |      |-- POST /battle/action ->|                            |                 |
 |      |   { move to (4,5) }     |                            |                 |
 |      |                         |                            |                 |
-|      |<-- { success, seq:147 } |                            |                 |
+|      |<-- { state, result }    |                            |                 |
 |      |                         |                            |                 |
-|      |                         |-- battle:action_result --->|                 |
-|      |<-- battle:action_result-|    (broadcast to all)      |                 |
+|      |                         |-- battle:unit_moved ------>|                 |
+|      |<-- battle:unit_moved --|     (broadcast to all)      |                 |
 |      |                         |                            |                 |
 |      |    [animate movement]   |                            |                 |
 |      |                         |                            |                 |
 |      |-- POST /battle/action ->|                            |                 |
 |      |   { attack enemy_1 }    |                            |                 |
 |      |                         |                            |                 |
-|      |<-- { success, seq:148 } |                            |                 |
+|      |<-- { state, result }    |                            |                 |
 |      |                         |                            |                 |
-|      |                         |-- battle:action_result --->|                 |
-|      |<-- battle:action_result-|    (broadcast to all)      |                 |
-|      |   { turnComplete: true }|                            |                 |
+|      |                         |-- battle:action_executed ->|                 |
+|      |<-- battle:action_exec --|     (broadcast to all)     |                 |
 |      |                         |                            |                 |
-|      |                         |-- battle:turn_end -------->|                 |
-|      |<-- battle:turn_end -----|                            |                 |
+|      |    [next turn starts]   |                            |                 |
 |      |                         |                            |                 |
 +-----------------------------------------------------------------------------+
 ```
@@ -934,12 +1006,12 @@ function handleBattleMessage(message) {
 |      |                         |                                              |
 |      |    [500ms delay]        |                                              |
 |      |                         |                                              |
-|      |<-- battle:action_result-|  Action executed                            |
+|      |<-- battle:action_executed  Action executed                            |
 |      |    { damage, effects }  |                                              |
 |      |                         |                                              |
 |      |    [animate attack]     |                                              |
 |      |                         |                                              |
-|      |<-- battle:turn_end -----|                                              |
+|      |<-- battle:turn_start --|  Next unit's turn                            |
 |      |                         |                                              |
 +-----------------------------------------------------------------------------+
 ```
@@ -950,24 +1022,22 @@ function handleBattleMessage(message) {
 
 ### 10.1 Server Implementation Checklist
 
-- [ ] Assign unique sequence numbers per battle
-- [ ] Persist sequence with battle state
-- [ ] Broadcast to all room members
-- [ ] Send `battle:your_turn` only to controlling player
-- [ ] Implement turn timeout with warnings
-- [ ] Handle reconnection with state sync
-- [ ] Track player connection state
+- [x] Broadcast to all room members via `battleWebsocket.js`
+- [x] Send `battle:your_turn` only to controlling player
+- [x] Handle reconnection with state sync via `/api/battle/:battleId/rejoin`
+- [x] Track player connection state via `battleReconnection.js`
+- [ ] Assign unique sequence numbers per battle (planned)
+- [ ] Implement turn timeout with warnings (planned)
 
 ### 10.2 Client Implementation Checklist
 
-- [ ] Join battle room on battle start
-- [ ] Track last received sequence
-- [ ] Detect and handle sequence gaps
-- [ ] Buffer out-of-order messages
-- [ ] Request sync when needed
-- [ ] Discard duplicate messages
-- [ ] Implement ping/pong for keep-alive
-- [ ] Handle all message types with appropriate UI updates
+- [x] Join battle room on battle start via `socket.joinBattleRoom()`
+- [x] Handle all message types with appropriate UI updates via `BattleWebSocketManager.js`
+- [x] Queue turn events for sequential processing (turn event queue)
+- [x] Auto-reconnect on disconnect with `/api/battle/:battleId/rejoin`
+- [ ] Track last received sequence (planned - currently not implemented)
+- [ ] Detect and handle sequence gaps (planned)
+- [ ] Buffer out-of-order messages (planned)
 
 ### 10.3 Testing Considerations
 
@@ -999,3 +1069,4 @@ function handleBattleMessage(message) {
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | Jan 2026 | - | Initial document: Hybrid HTTP/WebSocket protocol, message specifications, state sync, timing constants |
+| 1.1 | 2026-01-25 | - | Validated against implementation: Fixed event names (`battle:action_executed`, `battle:turn_changed`), added missing events (`battle:unit_moved`, `battle:state_update`, `battle:enemy_actions`, `battle:phase_transition`), updated payload schemas to match code, added all HTTP endpoints, removed unsupported client-to-server WebSocket messages |

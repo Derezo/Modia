@@ -27,6 +27,11 @@ const {
   isValidAudioFormat,
   sanitizeFilename
 } = require('./audioUtils');
+const {
+  generateWaveformPeaks,
+  generateWaveformData,
+  checkFfmpegAvailable
+} = require('./waveformGenerator');
 
 module.exports = {
   // Clients
@@ -62,5 +67,10 @@ module.exports = {
   log,
   formatBytes,
   isValidAudioFormat,
-  sanitizeFilename
+  sanitizeFilename,
+
+  // Waveform generation
+  generateWaveformPeaks,
+  generateWaveformData,
+  checkFfmpegAvailable
 };

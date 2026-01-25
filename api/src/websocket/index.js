@@ -6,6 +6,7 @@ import coliseumService from '../services/coliseumService.js';
 import * as partyWebsocket from '../services/partyWebsocket.js';
 import * as marketplaceWebsocket from '../services/marketplaceWebsocket.js';
 import adminGenerationService from '../services/adminGenerationService.js';
+import audioGenerationService from '../services/adminAudioGenerationService.js';
 import { query } from '../config/database.js';
 import { getRedisClient, isRedisConnected } from '../config/redis.js';
 
@@ -284,9 +285,9 @@ async function validateRoomAccess(userId, roomName) {
     return { authorized: true };
   }
 
-  // Admin generation room - allowed for all authenticated users in dev/test mode
+  // Admin generation rooms - allowed for all authenticated users in dev/test mode
   // SECURITY: Production check is handled by admin routes, but we add extra protection here
-  if (roomName === 'admin:generation') {
+  if (roomName === 'admin:generation' || roomName === 'admin:audio-generation') {
     if (process.env.NODE_ENV === 'production') {
       return { authorized: false, error: 'Admin rooms disabled in production' };
     }
@@ -1134,6 +1135,88 @@ function setupWebSocket(server) {
               }));
             } catch (err) {
               console.error('Generation resume error:', err);
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { message: err.message }
+              }));
+            }
+            break;
+          }
+
+          // Audio generation control handlers (dev/test only)
+          case 'audio:cancel': {
+            if (!userId) break;
+            if (process.env.NODE_ENV === 'production') break;
+
+            try {
+              const { jobId } = payload;
+              const result = audioGenerationService.cancelJobs({ jobId });
+              ws.send(JSON.stringify({
+                type: 'audio:cancel_result',
+                payload: result
+              }));
+            } catch (err) {
+              console.error('Audio generation cancel error:', err);
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { message: err.message }
+              }));
+            }
+            break;
+          }
+
+          case 'audio:cancel_all': {
+            if (!userId) break;
+            if (process.env.NODE_ENV === 'production') break;
+
+            try {
+              const result = audioGenerationService.cancelJobs({ all: true });
+              ws.send(JSON.stringify({
+                type: 'audio:cancel_all_result',
+                payload: result
+              }));
+            } catch (err) {
+              console.error('Audio generation cancel all error:', err);
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { message: err.message }
+              }));
+            }
+            break;
+          }
+
+          case 'audio:pause': {
+            if (!userId) break;
+            if (process.env.NODE_ENV === 'production') break;
+
+            try {
+              const result = audioGenerationService.pauseQueue();
+              ws.send(JSON.stringify({
+                type: 'audio:pause_result',
+                payload: result
+              }));
+            } catch (err) {
+              console.error('Audio generation pause error:', err);
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { message: err.message }
+              }));
+            }
+            break;
+          }
+
+          case 'audio:resume': {
+            if (!userId) break;
+            if (process.env.NODE_ENV === 'production') break;
+
+            try {
+              const result = audioGenerationService.resumeQueue();
+              ws.send(JSON.stringify({
+                type: 'audio:resume_result',
+                payload: result
+              }));
+            } catch (err) {
+              console.error('Audio generation resume error:', err);
               ws.send(JSON.stringify({
                 type: 'error',
                 payload: { message: err.message }

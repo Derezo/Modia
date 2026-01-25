@@ -87,14 +87,14 @@ New: List of next 10 predicted turns, same unit can appear multiple times
 
 ```
 Turn Order
-┌─────────────┐
-│ 1. ★ Wizard │  <- current turn
-│ 2.   Warrior│
-│ 3.   Wizard │  <- appears again (fast)
-│ 4.   Goblin │
-│ 5.   Wizard │
-│ ...         │
-└─────────────┘
++-------------+
+| 1. * Wizard |  <- current turn
+| 2.   Warrior|
+| 3.   Wizard |  <- appears again (fast)
+| 4.   Goblin |
+| 5.   Wizard |
+| ...         |
++-------------+
 ```
 
 ## Files to Modify

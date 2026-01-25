@@ -114,10 +114,10 @@ services:
 ```
 Checking development environment...
 
-✓ Node.js v20.10.0 (>=18 required)
-✓ Docker is running
-✗ PostgreSQL container is not running
-  → Run: docker compose up -d
+* Node.js v20.10.0 (>=18 required)
+* Docker is running
+x PostgreSQL container is not running
+  -> Run: docker compose up -d
 ```
 
 ### 5. Database Utilities
@@ -130,11 +130,11 @@ Checking development environment...
 Shows migration state:
 ```
 Applied migrations:
-  ✓ 001_initial_schema.sql
-  ✓ 002_add_inventory.sql
+  * 001_initial_schema.sql
+  * 002_add_inventory.sql
 
 Pending migrations:
-  ○ 003_add_guilds.sql
+  o 003_add_guilds.sql
 ```
 
 #### DB Fresh

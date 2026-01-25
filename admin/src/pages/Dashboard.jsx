@@ -19,6 +19,7 @@ import {
 import StatsCard from '../components/StatsCard';
 import GenerationConsole from '../components/GenerationConsole';
 import { useStats, useQueue, useApiStatus } from '../hooks/useAssets';
+import { useAudioStats } from '../hooks/useAudioAssets';
 import { useActivityLog } from '../hooks/useActivityLog';
 import { api } from '../lib/api';
 
@@ -28,6 +29,7 @@ const categoryOrder = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlay
 export default function Dashboard() {
   const navigate = useNavigate();
   const { stats, loading: statsLoading, error: statsError, refetch: refetchStats } = useStats();
+  const { stats: audioStats } = useAudioStats();
   const { queue } = useQueue();
   const { error: statusError } = useApiStatus();
   const { activities, loading: activitiesLoading, refetch: refetchActivities } = useActivityLog({ limit: 10 });
@@ -314,10 +316,78 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Audio stats */}
+      {audioStats && (
+        <div className="mb-8">
+          <h2 className="text-lg font-display font-semibold text-parchment-100 mb-4">
+            Audio Assets
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Music stats card */}
+            <div
+              className="card p-5 cursor-pointer hover:ring-2 hover:ring-accent-gold/50 transition-all"
+              onClick={() => navigate('/music')}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-display font-semibold text-parchment-100 capitalize">
+                  Music
+                </h3>
+                <span className="text-xl font-bold text-accent-gold">
+                  {audioStats.music?.percentComplete || 0}%
+                </span>
+              </div>
+              <div className="h-2 bg-midnight-800 rounded-full overflow-hidden mb-3">
+                <div
+                  className="h-full bg-accent-gold transition-all duration-300"
+                  style={{ width: `${audioStats.music?.percentComplete || 0}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-parchment-400">
+                  {audioStats.music?.generated || 0} generated
+                </span>
+                <span className="text-parchment-500">
+                  {audioStats.music?.pending || 0} pending
+                </span>
+              </div>
+            </div>
+
+            {/* SFX stats card */}
+            <div
+              className="card p-5 cursor-pointer hover:ring-2 hover:ring-accent-gold/50 transition-all"
+              onClick={() => navigate('/sfx')}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-display font-semibold text-parchment-100 capitalize">
+                  Sound Effects
+                </h3>
+                <span className="text-xl font-bold text-accent-gold">
+                  {audioStats.sfx?.percentComplete || 0}%
+                </span>
+              </div>
+              <div className="h-2 bg-midnight-800 rounded-full overflow-hidden mb-3">
+                <div
+                  className="h-full bg-accent-gold transition-all duration-300"
+                  style={{ width: `${audioStats.sfx?.percentComplete || 0}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-parchment-400">
+                  {audioStats.sfx?.generated || 0} generated
+                </span>
+                <span className="text-parchment-500">
+                  {audioStats.sfx?.pending || 0} pending
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Category stats grid */}
       <div className="mb-8">
         <h2 className="text-lg font-display font-semibold text-parchment-100 mb-4">
-          Categories
+          Image Categories
         </h2>
 
         {statsLoading ? (

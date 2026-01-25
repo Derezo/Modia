@@ -29,8 +29,8 @@
       "fadeIn": 2000,
       "fadeOut": 1500,
       "generated": true,
-      "taskId": "035472827f45594e50bdef0f4547d576",
-      "generationStarted": "2026-01-19T03:43:55.359Z",
+      "taskId": "713aa121f2ce39e79fdae0fdb520908e",
+      "generationStarted": "2026-01-25T17:38:28.312Z",
       "lastStatusCheck": "2026-01-19T03:46:18.024Z",
       "status": "SUCCESS",
       "generatedAt": "2026-01-19T03:46:27.413Z",
@@ -54,8 +54,8 @@
       "fadeIn": 1500,
       "fadeOut": 1500,
       "generated": false,
-      "taskId": "ac32fa235aebd1cf97c569a30a607e48",
-      "generationStarted": "2026-01-21T10:38:52.532Z"
+      "taskId": "fca896b7465ddb377c4a9fb53a3db0e0",
+      "generationStarted": "2026-01-25T17:40:23.658Z"
     },
     {
       "id": "heartlands_shop",

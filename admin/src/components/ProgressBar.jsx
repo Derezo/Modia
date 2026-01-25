@@ -4,6 +4,7 @@
 
 import { useMemo } from 'react';
 import { ReloadIcon, ClockIcon } from '@radix-ui/react-icons';
+import { formatDurationHuman } from '../utils/timeFormat';
 
 /**
  * Calculate ETA based on progress
@@ -22,24 +23,11 @@ function calculateETA(progress, startedAt) {
 }
 
 /**
- * Format duration in human-readable form
+ * Format ETA duration with fallback for calculating state
  */
-function formatDuration(ms) {
+function formatETA(ms) {
   if (!ms || ms < 1000) return 'calculating...';
-
-  const seconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-
-  if (hours > 0) {
-    const remainingMinutes = minutes % 60;
-    return `${hours}h ${remainingMinutes}m`;
-  }
-  if (minutes > 0) {
-    const remainingSeconds = seconds % 60;
-    return `${minutes}m ${remainingSeconds}s`;
-  }
-  return `${seconds}s`;
+  return formatDurationHuman(ms);
 }
 
 export default function ProgressBar({
@@ -87,7 +75,7 @@ export default function ProgressBar({
           {showETA && eta && !isIndeterminate && (
             <span className="flex items-center gap-1 text-parchment-400">
               <ClockIcon className="w-3 h-3" />
-              {formatDuration(eta)}
+              {formatETA(eta)}
             </span>
           )}
         </div>

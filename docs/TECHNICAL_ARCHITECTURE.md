@@ -5,8 +5,9 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 2.0 |
+| Version | 2.1 |
 | Last Updated | January 2026 |
+| Last Validated | 2026-01-25 |
 
 ---
 
@@ -805,6 +806,7 @@ All database migrations are located in `api/src/migrations/` and run sequentiall
 | 036 | 036_elite_quests.sql | elite_quest_templates, character_elite_quests | Elite quest challenges |
 | 037 | 037_fix_character_hp_mp.sql | characters (hp/mp recalc) | HP/MP calculation fix for existing characters |
 | 038 | 038_enemy_template_stats.sql | enemy_templates (vitality, luck, archetype, elemental_resistances) | Missing enemy stat columns |
+| 039 | 039_zodiac_blessings.sql | user_zodiac_crystals, world_nodes (zodiac_sign), user_shrine_visits (signature cols) | Zodiac crystal collection system |
 
 **Migration Commands:**
 ```bash

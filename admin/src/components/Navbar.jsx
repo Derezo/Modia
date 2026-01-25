@@ -12,6 +12,8 @@ import {
   MixerHorizontalIcon,
   GlobeIcon,
   LayersIcon,
+  SpeakerLoudIcon,
+  MixerVerticalIcon,
   GearIcon,
 } from '@radix-ui/react-icons';
 
@@ -23,6 +25,8 @@ const navItems = [
   { to: '/icons', icon: MixerHorizontalIcon, label: 'Icons' },
   { to: '/nodes', icon: GlobeIcon, label: 'Nodes' },
   { to: '/overlays', icon: LayersIcon, label: 'Overlays' },
+  { to: '/music', icon: SpeakerLoudIcon, label: 'Music' },
+  { to: '/sfx', icon: MixerVerticalIcon, label: 'SFX' },
   { to: '/settings', icon: GearIcon, label: 'Settings' },
 ];
 

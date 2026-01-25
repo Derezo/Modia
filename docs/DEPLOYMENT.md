@@ -487,6 +487,15 @@ current -> releases/20260123_150000/  (mv -Tf is atomic)
 
 ---
 
+## Related Documents
+
+- [TECHNICAL_ARCHITECTURE.md](./TECHNICAL_ARCHITECTURE.md) - System architecture, backend structure, database schemas
+- [API_SPECIFICATION.md](./API_SPECIFICATION.md) - REST and WebSocket endpoint definitions
+- [PROJECT_REQUIREMENTS.md](./PROJECT_REQUIREMENTS.md) - Infrastructure targets, MVP specifications
+- [DEVELOPMENT_ROADMAP.md](./DEVELOPMENT_ROADMAP.md) - Project phases, milestone planning
+
+---
+
 ## Version History
 
 | Version | Date | Changes |

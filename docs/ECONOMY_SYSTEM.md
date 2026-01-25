@@ -2,7 +2,7 @@
 
 | Document | Version | Last Updated |
 |----------|---------|--------------|
-| Economy System Specification | 2.0 | 2026-01-06 |
+| Economy System Specification | 2.2 | 2026-01-25 |
 
 ## Table of Contents
 
@@ -14,6 +14,7 @@
    - 2.4 NPC Inventory Management
    - 2.5 Shop Item Restrictions
    - 2.6 Base Stock Generation
+   - 2.7 Shop Restock Mechanics
 3. [Player Marketplace](#3-player-marketplace)
    - 3.1 Overview
    - 3.2 Order Book Structure
@@ -23,10 +24,17 @@
    - 3.6 Partial Fill Examples
    - 3.7 Marketplace Restrictions
    - 3.8 Gold Reservation System
-4. [Price Discovery](#4-price-discovery)
-5. [Database Schema](#5-database-schema)
-6. [API Endpoints](#6-api-endpoints)
-7. [Economic Balance](#7-economic-balance)
+   - 3.9 Item Listing System
+4. [Caravan Shop System](#4-caravan-shop-system)
+   - 4.1 Overview
+   - 4.2 Inventory Generation
+   - 4.3 Regional Specialty Items
+   - 4.4 Caravan Item Categories
+   - 4.5 Stock and Pricing
+5. [Price Discovery](#5-price-discovery)
+6. [Database Schema](#6-database-schema)
+7. [API Endpoints](#7-api-endpoints)
+8. [Economic Balance](#8-economic-balance)
 
 ---
 
@@ -67,10 +75,10 @@ Modia's economy consists of two primary trading systems:
         ▼                  ▼                  ▼
 ┌───────────────┐  ┌───────────────┐  ┌────────────────┐
 │  NPC SHOPS    │  │  MARKETPLACE  │  │ GUILD RECRUITS │
-│ (Gold Sink)   │  │ (Gold Neutral)│  │  (Gold Sink)   │
+│ (Gold Sink)   │  │  (Gold Sink)  │  │  (Gold Sink)   │
 │               │  │               │  │                │
 │ Buy at 50%    │  │ Player ↔ Player│  │ 2,000-12,000g │
-│ Sell at 60-120%│ │ No fees       │  │  per recruit   │
+│ Sell at 60-120%│ │ 5% seller tax │  │  per recruit   │
 └───────────────┘  └───────────────┘  └────────────────┘
 ```
 
@@ -268,6 +276,82 @@ rollBaseQuantity(rarity, rng):
     return range.min + floor(rng.next() × (range.max - range.min + 1))
 ```
 
+### 2.7 Shop Restock Mechanics
+
+NPC shop inventories automatically restock over time via the `shopRefreshService.js` scheduler.
+
+#### Restock Intervals
+
+| Shop Type | Interval | Rationale |
+|-----------|----------|-----------|
+| Blacksmith | 24 hours | Weapons/armor - slow production |
+| Apothecary | 12 hours | Consumables - moderate production |
+| Farm | 6 hours | Materials - fast production |
+
+#### Restock Formula
+
+Restocking is **additive** - new stock is added to existing quantity, capped at the maximum capacity (`restock_quantity` column):
+
+```
+restock_amount = max(floor(restock_quantity × 0.25), 1)
+new_quantity = min(current_quantity + restock_amount, restock_quantity)
+```
+
+| Parameter | Value | Purpose |
+|-----------|-------|---------|
+| `RESTOCK_PERCENTAGE` | 0.25 (25%) | Amount added per cycle as fraction of max |
+| `MIN_RESTOCK_AMOUNT` | 1 | Ensures at least 1 item added even for small stocks |
+| `CHECK_INTERVAL` | 1 hour | How often scheduler checks for due restocks |
+
+#### Example: Blacksmith Sword Restock
+
+```
+Iron Sword: restock_quantity = 20, current_quantity = 5
+
+Restock triggered (24h since last_restock):
+  restock_amount = max(floor(20 × 0.25), 1) = 5
+  new_quantity = min(5 + 5, 20) = 10
+
+Next restock (24h later):
+  restock_amount = 5
+  new_quantity = min(10 + 5, 20) = 15
+
+Next restock:
+  new_quantity = min(15 + 5, 20) = 20 (at max)
+
+No further restocks until quantity drops below 20.
+```
+
+#### Small Stock Edge Case
+
+For items with small `restock_quantity` (e.g., 3), the 25% calculation would yield 0:
+
+```
+rare_gem: restock_quantity = 3
+  floor(3 × 0.25) = 0
+  restock_amount = max(0, 1) = 1  // MIN_RESTOCK_AMOUNT ensures progress
+```
+
+#### Restock Status Query
+
+The `getRestockStatus()` function provides insight into shop inventory state:
+
+```javascript
+// api/src/services/shopRefreshService.js:168
+const status = await getRestockStatus(nodeId, 'blacksmith');
+// Returns:
+// {
+//   shopType: 'blacksmith',
+//   totalItems: 15,
+//   lowStockItems: 3,      // Items below max
+//   restockIntervalHours: 24,
+//   nextRestock: Date,
+//   isOverdue: boolean
+// }
+```
+
+> **Code Reference:** `api/src/services/shopRefreshService.js`
+
 ---
 
 ## 3. Player Marketplace
@@ -280,9 +364,44 @@ The Player Marketplace is an open exchange system located exclusively at Castle 
 |---------|-------------|
 | Location | Castle nodes only |
 | Order Types | Limit Orders, Market Orders |
-| Fees | None (no listing or transaction fees) |
+| Fees | 5% seller tax on completed trades (see below) |
 | Max Orders | 10 open orders per player (buy + sell combined) |
 | Item Restrictions | No Key Items |
+
+#### Marketplace Fees
+
+The marketplace applies a **5% seller tax** on all completed trades:
+
+| Fee Type | Rate | When Applied | Paid By |
+|----------|------|--------------|---------|
+| Listing Fee | None | - | - |
+| Seller Tax | 5% | On trade completion | Seller |
+| Buyer Tax | None | - | - |
+
+**How it works:**
+- When a trade executes, the buyer pays the full trade price
+- The seller receives 95% of the trade price (gross amount minus 5% tax)
+- Tax is calculated as `floor(grossAmount * 0.05)` (rounded down)
+
+**Example:**
+```
+Trade: 10 Iron Swords at 100g each
+Gross Amount: 1,000g
+Tax (5%): 50g
+Net to Seller: 950g
+
+Buyer pays: 1,000g
+Seller receives: 950g
+Tax collected: 50g (removed from economy)
+```
+
+**Tax Ledger:**
+All marketplace taxes are logged to `marketplace_tax_ledger` for auditing:
+- Trade reference (order_id, trade_id)
+- Parties involved (seller_id, buyer_id)
+- Amounts (gross_amount, tax_amount, net_amount, tax_rate)
+
+This tax serves as a **gold sink**, removing gold from the economy with each player-to-player trade.
 
 ### 3.2 Order Book Structure
 
@@ -696,11 +815,298 @@ The reservation system ensures buy orders can always be fulfilled.
    Filled
 ```
 
+### 3.9 Item Listing System
+
+The marketplace supports two trading mechanisms:
+
+1. **Order Book** (Section 3.2-3.8): For stackable/fungible items (potions, materials)
+2. **Item Listings**: For unique items with modifications (augmented equipment)
+
+#### Order Book vs Item Listings
+
+| Feature | Order Book | Item Listings |
+|---------|------------|---------------|
+| Item Type | Stackable (consumables, materials) | Non-stackable (equipment) |
+| Matching | Automatic price-time priority | Direct purchase at listed price |
+| Quantity | Bulk orders supported | Single item per listing |
+| Modifications | N/A | Augments, materials, rarity preserved |
+| Suggested Price | N/A | Calculated from item properties |
+
+#### Item Listing Workflow
+
+```
+┌─────────────┐    ┌──────────────┐    ┌──────────────┐
+│  Seller     │    │   Listing    │    │   Buyer      │
+│  Creates    │───▶│   Active     │───▶│   Purchases  │
+│  Listing    │    │  (escrowed)  │    │   Item       │
+└─────────────┘    └──────────────┘    └──────────────┘
+      │                   │                   │
+      │ Item marked      │ Visible in        │ Item transferred
+      │ "listed: true"   │ marketplace       │ to buyer pool
+      │ in mods          │ search            │ 5% tax applied
+```
+
+#### Suggested Price Calculation
+
+Unique items receive a calculated suggested price based on rarity and augments:
+
+```javascript
+// api/src/services/marketplaceService.js:1320
+function calculateSuggestedPrice(item) {
+  const basePrice = item.basePrice;
+  const rarityMult = RARITY_MULTIPLIERS[rarity]; // 1.0 to 10.0
+  const augmentValue = sum(augments.map(a => AUGMENT_VALUES[a.category]));
+  const augmentMult = 1.0 + (augmentValue * 0.15);
+
+  return floor(basePrice * rarityMult * augmentMult);
+}
+```
+
+**Rarity Multipliers:**
+
+| Rarity | Multiplier |
+|--------|------------|
+| Common | 1.0x |
+| Uncommon | 1.5x |
+| Rare | 2.5x |
+| Epic | 5.0x |
+| Legendary | 10.0x |
+
+**Augment Value Categories (partial list):**
+
+| Category | Value | Category | Value |
+|----------|-------|----------|-------|
+| fire, ice, lightning | 0.8 | strength, intelligence | 1.0 |
+| dragon_slayer, demon_slayer | 1.2 | critical, damage | 1.0-1.1 |
+| defense, armor | 0.8-0.9 | instant (consumables) | 1.5 |
+
+#### Creating a Listing
+
+```javascript
+// api/src/services/marketplaceService.js:1442
+const listing = await createItemListing(client, userId, characterId, itemId, price);
+// Returns: { listingId, itemTemplateId, itemName, price, suggestedPrice, createdAt }
+```
+
+**Requirements:**
+- Item must be unequipped (in shared pool)
+- Item must be tradeable (`is_tradeable !== false`)
+- Item must NOT be stackable (use order book instead)
+- Item must not already be listed
+
+#### Purchasing a Listing
+
+The buyer pays the full listing price; seller receives 95% (5% tax):
+
+```javascript
+// api/src/services/marketplaceService.js:1522
+const result = await buyItemListing(client, buyerUserId, buyerCharId, listingId);
+// Returns: { listingId, itemName, price, netPrice, taxAmount, ... }
+```
+
+**Tax Calculation:**
+```
+Listing Price: 1,000g
+Tax (5%): 50g
+Seller Receives: 950g
+```
+
+#### Cancelling a Listing
+
+```javascript
+// api/src/services/marketplaceService.js:1632
+const result = await cancelItemListing(client, userId, listingId);
+// Item returned to user's shared pool, "listed" flag removed
+```
+
+#### Listing Data Tables
+
+```sql
+-- Item listings for unique equipment
+item_listings (
+  id, seller_id, character_id, character_item_id,
+  item_template_id, price, suggested_price,
+  modifications_snapshot, status, created_at
+)
+
+-- Sales history
+item_listing_sales (
+  listing_id, buyer_id, buyer_character_id, seller_id,
+  item_template_id, price, modifications, created_at
+)
+```
+
+> **Code Reference:** `api/src/services/marketplaceService.js` lines 1246-1956
+
 ---
 
-## 4. Price Discovery
+## 4. Caravan Shop System
 
-### 4.1 Market Price Calculation
+The merchant caravan is a traveling shop that offers exclusive items not found in regular NPC shops.
+
+### 4.1 Overview
+
+| Feature | Details |
+|---------|---------|
+| Location | `merchant_caravan` node type |
+| Refresh Cycle | 48 hours (deterministic per caravan) |
+| Price Modifier | 115% of base price (15% premium) |
+| Item Pool | 23 exclusive caravan-only items |
+| Regional Items | 2 unique items per region race |
+
+### 4.2 Inventory Generation
+
+Caravan inventory is generated using seeded randomness for consistency:
+
+```javascript
+// api/src/services/caravanService.js:33
+function generateCaravanInventory(seed, regionRace) {
+  const rng = new SeededRandom(seed);
+
+  // Get items available in this region
+  const availableItems = getItemsForRegion(regionRace);
+
+  // Shuffle and select 70-90% of available items
+  const shuffledItems = rng.shuffle(availableItems);
+  const itemCount = floor(shuffledItems.length * (0.7 + rng.next() * 0.2));
+  const selectedItems = shuffledItems.slice(0, itemCount);
+
+  // Guarantee at least one regional item
+  if (regionalItems.length > 0) {
+    const guaranteedRegional = rng.pick(regionalItems);
+    if (!selectedItems.includes(guaranteedRegional)) {
+      selectedItems.push(guaranteedRegional);
+    }
+  }
+
+  return selectedItems.map(item => ({
+    ...item,
+    price: floor(item.basePrice * CARAVAN_PRICE_MODIFIER),
+    quantity: rng.nextInt(stockLimits.min, stockLimits.max)
+  }));
+}
+```
+
+#### Seed Calculation
+
+The inventory seed combines node data with a 48-hour time window:
+
+```javascript
+// Time window: current time divided by 48-hour interval
+const timeWindow = floor(Date.now() / CARAVAN_REFRESH_INTERVAL);
+const inventorySeed = (node.local_seed * 31337) ^ timeWindow;
+```
+
+This ensures:
+- Same caravan has consistent inventory within a 48-hour window
+- All players see the same items at the same caravan
+- Inventory changes predictably every 48 hours
+
+### 4.3 Regional Specialty Items
+
+Each region race has 2 exclusive items only available when the caravan visits that region:
+
+| Region | Race | Item 1 | Item 2 |
+|--------|------|--------|--------|
+| Heartlands | Human | Knight's Crest (accessory) | Royal Signet Ring (accessory) |
+| Sylvan Reaches | Elf | Fey Bow (weapon) | Moonweave Cloak (armor) |
+| Iron Depths | Dwarf | Ironforge Hammer (weapon) | Stonekin Shield (off-hand) |
+| Bloodplains | Orc | Berserker Tusk (accessory) | Warchief's Axe (weapon) |
+| Shadowmere | Vampire | Blood Vial (consumable) | Nightwalker Fang (accessory) |
+
+Regional items provide unique stat combinations not found elsewhere.
+
+### 4.4 Caravan Item Categories
+
+#### Rare Consumables
+
+More potent versions of standard potions:
+
+| Item | Effect | Base Price |
+|------|--------|------------|
+| Mega-Potion | Restores 150 HP | 150g |
+| Full Restore | Full HP + cure all status | 300g |
+| Mega-Ether | Restores 100 MP | 200g |
+| Supreme Elixir | Restores 200 HP + 100 MP | 400g |
+| Revival Herb | Revive with 50% HP | 350g |
+
+#### Mystery Boxes
+
+Random loot containers:
+
+| Item | Contents | Base Price |
+|------|----------|------------|
+| Mystery Box | Random rare item | 500g |
+| Premium Mystery Box | Guaranteed rare+ item | 1,000g |
+
+#### Crafting Materials
+
+Components for future crafting system:
+
+| Item | Description | Base Price |
+|------|-------------|------------|
+| Dragon Scale | Advanced armor crafting | 250g |
+| Moon Ore | Enchantment component | 200g |
+| Phoenix Ash | Fire enchantments | 400g |
+| Void Crystal | Dangerous power source | 450g |
+| Ancient Wood | First Age petrified wood | 180g |
+| Starlight Essence | Magical enhancement | 320g |
+
+### 4.5 Stock and Pricing
+
+#### Stock Limits by Item Type
+
+| Type | Min Stock | Max Stock |
+|------|-----------|-----------|
+| Consumable | 3 | 5 |
+| Material | 5 | 10 |
+| Weapon | 1 | 2 |
+| Armor | 1 | 2 |
+| Accessory | 1 | 2 |
+
+**Special Stock Overrides:**
+
+| Item | Stock |
+|------|-------|
+| Mystery Box | Exactly 1 |
+| Premium Mystery Box | Exactly 1 |
+| Full Restore | 2-3 |
+| Revival Herb | 1-2 |
+
+#### Pricing Formula
+
+```
+final_price = floor(base_price × CARAVAN_PRICE_MODIFIER)
+            = floor(base_price × 1.15)
+```
+
+**Example:** Dragon Scale (250g base) sells for floor(250 × 1.15) = **287g**
+
+#### Stock Tracking
+
+Purchases are tracked in `user_caravan_transactions` table:
+
+```sql
+-- Each purchase creates a record (one per quantity unit)
+INSERT INTO user_caravan_transactions
+  (user_id, node_id, item_bought, gold_spent, transaction_at)
+VALUES ($1, $2, $3, $4, NOW());
+```
+
+Current stock is calculated as:
+```
+available_stock = generated_quantity - purchases_since_last_refresh
+```
+
+> **Code Reference:**
+> - `api/src/services/caravanService.js` (full service)
+> - `api/src/db/templates/caravanItems.js` (item definitions)
+
+---
+
+## 5. Price Discovery
+
+### 5.1 Market Price Calculation
 
 The "Market Price" displayed for each item is determined by:
 
@@ -711,7 +1117,7 @@ The "Market Price" displayed for each item is determined by:
 | Ask | Lowest sell order price | Current supply |
 | Spread | Ask - Bid | Market liquidity indicator |
 
-### 4.2 Price Statistics
+### 5.2 Price Statistics
 
 Track per item:
 - Last 100 trades
@@ -734,7 +1140,7 @@ Track per item:
 └─────────────────────────────────────────────┘
 ```
 
-### 4.3 NPC Base Price Reference
+### 5.3 NPC Base Price Reference
 
 Items in the marketplace can reference NPC base values:
 - `npc_base_value`: What NPCs would pay (50%)
@@ -744,9 +1150,9 @@ This helps players understand if marketplace prices are good deals.
 
 ---
 
-## 5. Database Schema
+## 6. Database Schema
 
-### 5.1 NPC Shop Tables
+### 6.1 NPC Shop Tables
 
 ```sql
 -- NPC Shop Inventory
@@ -778,7 +1184,7 @@ CREATE TABLE npc_shop_refresh (
 );
 ```
 
-### 5.2 Marketplace Tables
+### 6.2 Marketplace Tables
 
 ```sql
 -- Active and historical orders
@@ -851,6 +1257,25 @@ CREATE TABLE item_escrow (
     UNIQUE(order_id)
 );
 
+-- Marketplace tax ledger (audit trail for 5% seller tax)
+CREATE TABLE marketplace_tax_ledger (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id UUID NOT NULL REFERENCES market_orders(order_id),
+    trade_id UUID NOT NULL REFERENCES market_trades(trade_id),
+    seller_id UUID NOT NULL REFERENCES players(id),
+    buyer_id UUID NOT NULL REFERENCES players(id),
+    item_template_id VARCHAR(100) NOT NULL,
+    gross_amount INTEGER NOT NULL,        -- Full trade value
+    tax_amount INTEGER NOT NULL,          -- Gold removed (5% of gross)
+    net_amount INTEGER NOT NULL,          -- Amount seller received
+    tax_rate DECIMAL(5,4) NOT NULL,       -- Rate applied (0.0500)
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Index for tax reporting
+CREATE INDEX idx_tax_ledger_seller ON marketplace_tax_ledger(seller_id, created_at DESC);
+CREATE INDEX idx_tax_ledger_date ON marketplace_tax_ledger(created_at DESC);
+
 -- Price statistics cache
 CREATE TABLE market_price_stats (
     item_template_id VARCHAR(100) PRIMARY KEY,
@@ -866,7 +1291,7 @@ CREATE TABLE market_price_stats (
 );
 ```
 
-### 5.3 Player Gold Table Extension
+### 6.3 Player Gold Table Extension
 
 ```sql
 -- Extend player table or create separate gold table
@@ -879,9 +1304,9 @@ ALTER TABLE players ADD COLUMN gold_reserved INTEGER DEFAULT 0;
 
 ---
 
-## 6. API Endpoints
+## 7. API Endpoints
 
-### 6.1 NPC Shop Endpoints
+### 7.1 NPC Shop Endpoints
 
 #### Get Shop Inventory
 
@@ -946,7 +1371,7 @@ Response:
 }
 ```
 
-### 6.2 Marketplace Endpoints
+### 7.2 Marketplace Endpoints
 
 #### Get Order Book
 
@@ -1083,9 +1508,9 @@ Response:
 
 ---
 
-## 7. Economic Balance
+## 8. Economic Balance
 
-### 7.1 Gold Sources
+### 8.1 Gold Sources
 
 | Source | Gold/Event | Frequency | Notes |
 |--------|------------|-----------|-------|
@@ -1096,13 +1521,15 @@ Response:
 | PvE Tier 4 | 150-250g | Per battle | Palace, boss areas |
 | PvP Victory | 50-100g | Per win | Coliseum |
 
-### 7.2 Gold Sinks
+### 8.2 Gold Sinks
 
 | Sink | Cost | Notes |
 |------|------|-------|
 | NPC Buy Rate | 50% loss | Player sells at 50%, buys at 60-120% |
 | NPC Stock Purchases | 60-120% | Base stock is gold creation |
+| Marketplace Tax | 5% per trade | Seller tax on completed trades |
 | Guild Recruitment | 2,000-12,000g | Major gold sink for party expansion |
+| Caravan Purchases | 115% premium | Exclusive items at higher prices |
 | Stables (future) | Variable | Fast travel costs |
 | Repair (future) | 10-20% value | Equipment durability |
 
@@ -1119,7 +1546,7 @@ Guild recruitment is a significant gold sink. Price ranges:
 
 See [GUILD_RECRUITMENT_SYSTEM.md](GUILD_RECRUITMENT_SYSTEM.md) for detailed pricing formula.
 
-### 7.3 Gold Flow Analysis
+### 8.3 Gold Flow Analysis
 
 **Inflation Pressures:**
 - PvE battles create gold from nothing
@@ -1130,10 +1557,11 @@ See [GUILD_RECRUITMENT_SYSTEM.md](GUILD_RECRUITMENT_SYSTEM.md) for detailed pric
 - Dynamic NPC pricing discourages selling to players when surplus
 
 **Marketplace Effect:**
-- Zero-sum (gold transfers, not created/destroyed)
-- But enables efficient pricing, reducing NPC usage
+- 5% seller tax removes gold from economy on each trade
+- High-volume items create significant gold drain
+- Tax logged to `marketplace_tax_ledger` for monitoring
 
-### 7.4 Balance Recommendations
+### 8.4 Balance Recommendations
 
 1. **Monitor Total Gold Supply**: Track `SUM(gold_available + gold_reserved)` over time
 2. **Adjust Battle Rewards**: If inflation detected, reduce drop rates
@@ -1160,3 +1588,5 @@ See [GUILD_RECRUITMENT_SYSTEM.md](GUILD_RECRUITMENT_SYSTEM.md) for detailed pric
 |---------|------|---------|
 | 1.0 | 2026-01-06 | Initial document |
 | 2.0 | 2026-01-06 | Removed temple revival; updated max orders to 10 |
+| 2.1 | 2026-01-25 | Fixed P1-1: Documented 5% seller tax and tax ledger system |
+| 2.2 | 2026-01-25 | P2-3: Added shop restock mechanics, item listing system, caravan shop system |

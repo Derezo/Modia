@@ -621,6 +621,17 @@ export async function updateQuestProgress(characterId, objectiveType, amount) {
 
 ---
 
+## Related Documents
+
+- [QUEST_SYSTEM.md](./QUEST_SYSTEM.md) - Parent document for all quest systems
+- [GUILD_ADVANCEMENT.md](./GUILD_ADVANCEMENT.md) - One-time guild advancement quests
+- [ECONOMY_SYSTEM.md](./ECONOMY_SYSTEM.md) - Gold rewards, economy balance
+- [GAME_DESIGN.md](./GAME_DESIGN.md) - Combat mechanics, progression systems
+- [TECHNICAL_ARCHITECTURE.md](./TECHNICAL_ARCHITECTURE.md) - Database schemas, service architecture
+- [API_SPECIFICATION.md](./API_SPECIFICATION.md) - Quest API endpoint definitions
+
+---
+
 ## Document History
 
 | Version | Date | Changes |
