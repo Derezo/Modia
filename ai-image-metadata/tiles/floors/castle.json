@@ -16,8 +16,8 @@
       "prompt": "manicured castle courtyard grass with trimmed edges in rich green #6B8E4A #708090",
       "outputPath": "castle",
       "generated": true,
-      "generatedAt": "2026-01-25T14:08:40.828Z",
-      "notes": null
+      "notes": null,
+      "generatedAt": "2026-01-25T19:57:35.400Z"
     },
     {
       "key": "grass_1",
@@ -26,7 +26,7 @@
       "prompt": "castle garden lawn with decorative stone borders in vibrant green grey #228B22 #696969",
       "outputPath": "castle",
       "generated": true,
-      "generatedAt": "2026-01-24T15:53:14.884Z"
+      "generatedAt": "2026-01-25T20:04:13.375Z"
     },
     {
       "key": "grass_2",
@@ -35,7 +35,7 @@
       "prompt": "inner bailey grass with worn paths from guards in green brown #6B8E4A #8B7355",
       "outputPath": "castle",
       "generated": true,
-      "generatedAt": "2026-01-24T15:53:55.939Z"
+      "generatedAt": "2026-01-25T20:09:04.235Z"
     },
     {
       "key": "grass_3",
@@ -43,8 +43,7 @@
       "variant": 3,
       "prompt": "overgrown castle ruins with wild grass through stones in earthy green #4A6B2A #708090",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:54:37.673Z"
+      "generated": false
     },
     {
       "key": "stone_0",
@@ -52,8 +51,7 @@
       "variant": 0,
       "prompt": "hewn castle stone floor with fitted blocks in slate grey tones #708090 #696969",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T20:51:08.665Z"
+      "generated": false
     },
     {
       "key": "stone_1",
@@ -61,8 +59,7 @@
       "variant": 1,
       "prompt": "polished castle hall floor with geometric patterns in warm grey #696969 #708090",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-25T14:13:14.693Z"
+      "generated": false
     },
     {
       "key": "stone_2",
@@ -70,8 +67,7 @@
       "variant": 2,
       "prompt": "worn castle dungeon floor with iron rings set in dark grey #505050 #696969",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-25T15:28:32.027Z"
+      "generated": false
     },
     {
       "key": "stone_3",
@@ -79,8 +75,7 @@
       "variant": 3,
       "prompt": "ancient castle foundation stone with carved heraldic marks in grey #696969 #2F4F4F",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:57:24.764Z"
+      "generated": false
     },
     {
       "key": "rock_0",
@@ -88,8 +83,7 @@
       "variant": 0,
       "prompt": "castle rampart natural stone surface in fortress grey #8B8682 #708090",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:58:06.527Z"
+      "generated": false
     },
     {
       "key": "rock_1",
@@ -97,8 +91,7 @@
       "variant": 1,
       "prompt": "rough castle cellar rock floor with drainage channels in dark grey #A0A0A0 #696969",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:58:48.291Z"
+      "generated": false
     },
     {
       "key": "rock_2",
@@ -106,8 +99,7 @@
       "variant": 2,
       "prompt": "castle cliff foundation rock with fortress walls above in grey brown #696969 #8B7355",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:59:31.227Z"
+      "generated": false
     },
     {
       "key": "rock_3",
@@ -115,8 +107,7 @@
       "variant": 3,
       "prompt": "quarried stone for castle construction in weathered grey #8B8682 #696969",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:00:12.170Z"
+      "generated": false
     },
     {
       "key": "forest_0",
@@ -124,8 +115,7 @@
       "variant": 0,
       "prompt": "castle forest grounds with fallen leaves on packed earth in brown green #5C4033 #4A6B2A",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:00:54.912Z"
+      "generated": false
     },
     {
       "key": "forest_1",
@@ -133,8 +123,7 @@
       "variant": 1,
       "prompt": "royal hunting grounds floor with fern undergrowth in deep green #2F4F2F #5C4033",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:01:37.730Z"
+      "generated": false
     },
     {
       "key": "forest_2",
@@ -142,8 +131,7 @@
       "variant": 2,
       "prompt": "castle orchard floor with fallen fruit and leaves in warm brown #5C4033 #8B7355",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:02:18.672Z"
+      "generated": false
     },
     {
       "key": "forest_3",
@@ -151,8 +139,7 @@
       "variant": 3,
       "prompt": "abandoned castle gardens reclaimed by forest growth in wild green brown #8B7355 #4A6B2A",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:03:00.396Z"
+      "generated": false
     },
     {
       "key": "water_0",
@@ -160,8 +147,7 @@
       "variant": 0,
       "prompt": "castle moat water with still surface and stone walls in dark blue grey #4682B4 #708090",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:03:42.156Z"
+      "generated": false
     },
     {
       "key": "water_1",
@@ -169,8 +155,7 @@
       "variant": 1,
       "prompt": "ornate castle fountain pool with clear water in blue grey #20B2AA #696969",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:04:23.922Z"
+      "generated": false
     },
     {
       "key": "water_2",
@@ -178,8 +163,7 @@
       "variant": 2,
       "prompt": "castle cistern water storage with stone rim in deep blue #4169E1 #708090",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:05:05.671Z"
+      "generated": false
     },
     {
       "key": "water_3",
@@ -187,8 +171,7 @@
       "variant": 3,
       "prompt": "flooded castle dungeon with murky water in dark grey blue #191970 #696969",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:05:47.427Z"
+      "generated": false
     },
     {
       "key": "lava_0",
@@ -196,8 +179,7 @@
       "variant": 0,
       "prompt": "volcanic castle forge with molten metal channels in orange grey #FF4500 #708090",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:06:29.266Z"
+      "generated": false
     },
     {
       "key": "lava_1",
@@ -205,8 +187,7 @@
       "variant": 1,
       "prompt": "castle blacksmith floor with ember glow from forge in orange black #FF4500 #2F2F2F",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:07:10.992Z"
+      "generated": false
     },
     {
       "key": "lava_2",
@@ -214,8 +195,7 @@
       "variant": 2,
       "prompt": "infernal castle throne room with lava moat in fiery orange grey #FF6347 #696969",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:07:52.741Z"
+      "generated": false
     },
     {
       "key": "lava_3",
@@ -223,8 +203,7 @@
       "variant": 3,
       "prompt": "demon castle floor with glowing hellfire cracks in dark red black #8B0000 #2F2F2F",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:08:34.524Z"
+      "generated": false
     },
     {
       "key": "cliff_0",
@@ -232,8 +211,7 @@
       "variant": 0,
       "prompt": "castle perched on cliff edge with sheer drop in grey stone #696969 #708090",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:09:16.272Z"
+      "generated": false
     },
     {
       "key": "cliff_1",
@@ -241,8 +219,7 @@
       "variant": 1,
       "prompt": "fortress wall built into cliff face in weathered grey #8B8682 #696969",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:09:58.048Z"
+      "generated": false
     },
     {
       "key": "cliff_2",
@@ -250,8 +227,7 @@
       "variant": 2,
       "prompt": "castle cliff stairway carved into rock in dark grey #505050 #708090",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:10:39.767Z"
+      "generated": false
     },
     {
       "key": "cliff_3",
@@ -259,8 +235,7 @@
       "variant": 3,
       "prompt": "ruined castle wall on crumbling cliff in grey brown #696969 #8B7355",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:11:21.478Z"
+      "generated": false
     },
     {
       "key": "tree_0",
@@ -268,8 +243,7 @@
       "variant": 0,
       "prompt": "ancient oak in castle courtyard with massive trunk in dark brown grey #5C4033 #708090",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:12:03.263Z"
+      "generated": false
     },
     {
       "key": "tree_1",
@@ -277,8 +251,7 @@
       "variant": 1,
       "prompt": "royal garden tree roots spreading over flagstones in brown grey #3D2B1F #696969",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:12:45.047Z"
+      "generated": false
     },
     {
       "key": "tree_2",
@@ -286,8 +259,7 @@
       "variant": 2,
       "prompt": "fallen siege timber on castle floor in weathered brown #5C4033 #708090",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:13:26.766Z"
+      "generated": false
     },
     {
       "key": "tree_3",
@@ -295,8 +267,7 @@
       "variant": 3,
       "prompt": "decorative castle planter with trimmed topiary base in brown green #8B7355 #6B8E4A",
       "outputPath": "castle",
-      "generated": true,
-      "generatedAt": "2026-01-24T16:14:08.502Z"
+      "generated": false
     },
     {
       "key": "castle_tile_0",
@@ -305,8 +276,7 @@
       "prompt": "polished castle floor tiles with checkered marble pattern in grey cream #708090 #F5F5DC",
       "outputPath": "castle",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T16:14:50.266Z"
+      "generated": false
     },
     {
       "key": "castle_tile_1",
@@ -315,8 +285,7 @@
       "prompt": "ornate castle mosaic floor with royal crest design in blue gold #4682B4 #DAA520",
       "outputPath": "castle",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T16:15:32.069Z"
+      "generated": false
     },
     {
       "key": "castle_carpet_0",
@@ -325,8 +294,7 @@
       "prompt": "ornate royal carpet with woven gold filigree in deep crimson gold #8B0000 #DAA520",
       "outputPath": "castle",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T16:16:14.817Z"
+      "generated": false
     },
     {
       "key": "castle_carpet_1",
@@ -335,8 +303,7 @@
       "prompt": "luxurious throne room rug with royal purple and silver in violet grey #4B0082 #C0C0C0",
       "outputPath": "castle",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T16:16:56.521Z"
+      "generated": false
     },
     {
       "key": "castle_dungeon_0",
@@ -345,8 +312,7 @@
       "prompt": "dark castle dungeon floor with straw and grime in grey brown #505050 #8B7355",
       "outputPath": "castle",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T16:17:38.365Z"
+      "generated": false
     },
     {
       "key": "castle_dungeon_1",
@@ -355,8 +321,7 @@
       "prompt": "damp prison cell floor with drainage grate in dark grey #2F4F4F #696969",
       "outputPath": "castle",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T16:18:20.368Z"
+      "generated": false
     },
     {
       "key": "castle_armory_0",
@@ -365,8 +330,7 @@
       "prompt": "castle armory floor with weapon racks and iron fittings in grey steel #708090 #A0A0A0",
       "outputPath": "castle",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T16:19:02.383Z"
+      "generated": false
     },
     {
       "key": "castle_armory_1",
@@ -375,8 +339,7 @@
       "prompt": "forge room floor with soot and metal shavings in dark grey orange #696969 #A0522D",
       "outputPath": "castle",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T16:19:45.163Z"
+      "generated": false
     }
   ]
 }

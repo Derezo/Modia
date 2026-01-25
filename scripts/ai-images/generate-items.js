@@ -27,7 +27,8 @@ const {
   ensureDirectoryExists,
   getProjectRoot,
   buildThemedPrompt,
-  createBackup
+  createBackup,
+  getEffectiveLoraModel
 } = require('./lib');
 
 // Configuration
@@ -336,12 +337,14 @@ async function main() {
     log(`[${i + 1}/${itemsToGenerate.length}] Generating: ${item.id}`, 'info');
 
     try {
+      // Determine LoRA model: CLI override > asset-level > category default
+      const effectiveLoraModel = options.lora || getEffectiveLoraModel(item, 'items');
       const result = await generateItem({
         prompt: item.prompt,
         key: item.id,
         category: item._itemCategory,
         seed: item.seed,
-        loraModel: options.lora
+        loraModel: effectiveLoraModel
       }, {
         verbose: options.verbose,
         quiet: options.quiet,

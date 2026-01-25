@@ -16,7 +16,7 @@
       "prompt": "grass growing through cracks in old bridge stonework in green tan tones #6B8E4A #D2B48C",
       "outputPath": "bridge",
       "generated": true,
-      "generatedAt": "2026-01-25T14:07:54.331Z"
+      "generatedAt": "2026-01-25T19:56:43.248Z"
     },
     {
       "key": "grass_1",
@@ -25,7 +25,7 @@
       "prompt": "weedy grass sprouting between bridge planks in muted green brown #4A6B2A #8B7355",
       "outputPath": "bridge",
       "generated": true,
-      "generatedAt": "2026-01-24T15:26:33.728Z"
+      "generatedAt": "2026-01-25T20:03:25.791Z"
     },
     {
       "key": "grass_2",
@@ -34,7 +34,7 @@
       "prompt": "moss and grass on abandoned bridge section in grey green #6B8E4A #708090",
       "outputPath": "bridge",
       "generated": true,
-      "generatedAt": "2026-01-24T15:27:16.664Z"
+      "generatedAt": "2026-01-25T20:08:15.504Z"
     },
     {
       "key": "grass_3",
@@ -42,8 +42,7 @@
       "variant": 3,
       "prompt": "patchy grass on bridge approach earthwork in earthy green tan #4A6B2A #D2B48C",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:27:59.605Z"
+      "generated": false
     },
     {
       "key": "stone_0",
@@ -51,8 +50,7 @@
       "variant": 0,
       "prompt": "ancient stone bridge floor with carved masonry in grey brown tones #708090 #8B7355",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T20:50:13.612Z"
+      "generated": false
     },
     {
       "key": "stone_1",
@@ -60,8 +58,7 @@
       "variant": 1,
       "prompt": "weathered bridge flagstones worn smooth by passage in slate grey #696969 #708090",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-25T14:12:29.608Z"
+      "generated": false
     },
     {
       "key": "stone_2",
@@ -69,8 +66,7 @@
       "variant": 2,
       "prompt": "cracked bridge stonework with mortar erosion in warm grey brown #808080 #8B7355",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-25T15:27:44.183Z"
+      "generated": false
     },
     {
       "key": "stone_3",
@@ -78,8 +74,7 @@
       "variant": 3,
       "prompt": "decorative bridge paving with carved patterns in grey tan #708090 #D2B48C",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:30:49.991Z"
+      "generated": false
     },
     {
       "key": "rock_0",
@@ -87,8 +82,7 @@
       "variant": 0,
       "prompt": "natural rock bridge surface with water erosion in grey brown #8B8682 #8B7355",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:31:32.891Z"
+      "generated": false
     },
     {
       "key": "rock_1",
@@ -96,8 +90,7 @@
       "variant": 1,
       "prompt": "rough stone bridge foundation exposed by age in warm grey #A0A0A0 #A0522D",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:32:15.827Z"
+      "generated": false
     },
     {
       "key": "rock_2",
@@ -105,8 +98,7 @@
       "variant": 2,
       "prompt": "bridge support pillar top surface in weathered grey #696969 #708090",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:32:57.811Z"
+      "generated": false
     },
     {
       "key": "rock_3",
@@ -114,8 +106,7 @@
       "variant": 3,
       "prompt": "river-worn rock at bridge base with smooth surface in tan grey #C4A77D #8B8682",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:33:40.747Z"
+      "generated": false
     },
     {
       "key": "forest_0",
@@ -123,8 +114,7 @@
       "variant": 0,
       "prompt": "forest canopy debris on woodland bridge in brown green #5C4033 #4A6B2A",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:34:23.671Z"
+      "generated": false
     },
     {
       "key": "forest_1",
@@ -132,8 +122,7 @@
       "variant": 1,
       "prompt": "leaf-covered bridge planks in autumn forest in orange brown #8B7355 #A0522D",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:35:06.625Z"
+      "generated": false
     },
     {
       "key": "forest_2",
@@ -141,8 +130,7 @@
       "variant": 2,
       "prompt": "mossy overgrown bridge section in deep woodland in brown green #5C4033 #6B8E4A",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:35:49.565Z"
+      "generated": false
     },
     {
       "key": "forest_3",
@@ -150,8 +138,7 @@
       "variant": 3,
       "prompt": "vine-covered abandoned bridge floor in tangled brown green #8B7355 #4A6B2A",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:36:32.475Z"
+      "generated": false
     },
     {
       "key": "water_0",
@@ -159,8 +146,7 @@
       "variant": 0,
       "prompt": "water visible through bridge gaps with river flow below in blue brown #4682B4 #8B7355",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:37:16.605Z"
+      "generated": false
     },
     {
       "key": "water_1",
@@ -168,8 +154,7 @@
       "variant": 1,
       "prompt": "wet bridge surface after rain with puddles in grey blue #708090 #4682B4",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:37:58.320Z"
+      "generated": false
     },
     {
       "key": "water_2",
@@ -177,8 +162,7 @@
       "variant": 2,
       "prompt": "waterfall mist on bridge stone in cool blue grey #4169E1 #708090",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:38:40.098Z"
+      "generated": false
     },
     {
       "key": "water_3",
@@ -186,8 +170,7 @@
       "variant": 3,
       "prompt": "flooded low bridge section with shallow water in dark blue brown #191970 #8B7355",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:39:21.835Z"
+      "generated": false
     },
     {
       "key": "lava_0",
@@ -195,8 +178,7 @@
       "variant": 0,
       "prompt": "bridge over lava chasm with heat-cracked stone in orange grey #FF4500 #708090",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:40:03.553Z"
+      "generated": false
     },
     {
       "key": "lava_1",
@@ -204,8 +186,7 @@
       "variant": 1,
       "prompt": "scorched bridge planks above flowing magma in charred black orange #2F2F2F #FF4500",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:40:44.372Z"
+      "generated": false
     },
     {
       "key": "lava_2",
@@ -213,8 +194,7 @@
       "variant": 2,
       "prompt": "volcanic rock bridge with glowing cracks in red orange grey #FF6347 #696969",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:41:26.187Z"
+      "generated": false
     },
     {
       "key": "lava_3",
@@ -222,8 +202,7 @@
       "variant": 3,
       "prompt": "obsidian bridge surface over lava flow in glass black red #2F2F2F #8B0000",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:42:07.950Z"
+      "generated": false
     },
     {
       "key": "cliff_0",
@@ -231,8 +210,7 @@
       "variant": 0,
       "prompt": "bridge anchor point on cliff edge with exposed stone in grey brown #696969 #8B7355",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:42:49.870Z"
+      "generated": false
     },
     {
       "key": "cliff_1",
@@ -240,8 +218,7 @@
       "variant": 1,
       "prompt": "rope bridge attachment point on cliff face in tan grey #8B8682 #D2B48C",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:43:31.876Z"
+      "generated": false
     },
     {
       "key": "cliff_2",
@@ -249,8 +226,7 @@
       "variant": 2,
       "prompt": "carved cliff steps leading to bridge in weathered grey #505050 #708090",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:44:13.643Z"
+      "generated": false
     },
     {
       "key": "cliff_3",
@@ -258,8 +234,7 @@
       "variant": 3,
       "prompt": "natural rock arch bridge over chasm in grey tan #696969 #C4A77D",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:44:55.348Z"
+      "generated": false
     },
     {
       "key": "tree_0",
@@ -267,8 +242,7 @@
       "variant": 0,
       "prompt": "fallen tree trunk forming natural bridge in weathered brown #5C4033 #8B7355",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:45:37.068Z"
+      "generated": false
     },
     {
       "key": "tree_1",
@@ -276,8 +250,7 @@
       "variant": 1,
       "prompt": "living tree roots forming rope bridge support in dark brown #3D2B1F #A0522D",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:46:18.880Z"
+      "generated": false
     },
     {
       "key": "tree_2",
@@ -285,8 +258,7 @@
       "variant": 2,
       "prompt": "wooden bridge with tree growth through planks in brown green #5C4033 #6B8E4A",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:47:00.606Z"
+      "generated": false
     },
     {
       "key": "tree_3",
@@ -294,8 +266,7 @@
       "variant": 3,
       "prompt": "ancient log bridge worn smooth by use in aged brown #8B7355 #A0522D",
       "outputPath": "bridge",
-      "generated": true,
-      "generatedAt": "2026-01-24T15:47:42.345Z"
+      "generated": false
     },
     {
       "key": "bridge_plank_0",
@@ -304,8 +275,7 @@
       "prompt": "sturdy wooden bridge planks with visible grain and iron nails in warm brown #8B7355 #A0522D",
       "outputPath": "bridge",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T15:48:24.163Z"
+      "generated": false
     },
     {
       "key": "bridge_plank_1",
@@ -314,8 +284,7 @@
       "prompt": "weathered bridge boards with gaps and wear marks in aged brown #A0522D #8B7355",
       "outputPath": "bridge",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T15:49:05.132Z"
+      "generated": false
     },
     {
       "key": "bridge_rope_0",
@@ -324,8 +293,7 @@
       "prompt": "woven rope bridge floor with thick hemp mesh in tan brown #D2B48C #8B7355",
       "outputPath": "bridge",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T15:49:46.940Z"
+      "generated": false
     },
     {
       "key": "bridge_rope_1",
@@ -334,8 +302,7 @@
       "prompt": "knotted rope ladder bridge with wooden rungs in hemp tan #D2B48C #A0522D",
       "outputPath": "bridge",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T15:50:28.695Z"
+      "generated": false
     },
     {
       "key": "bridge_broken_0",
@@ -344,8 +311,7 @@
       "prompt": "damaged bridge section with missing planks and frayed ropes in weathered brown #8B7355 #696969",
       "outputPath": "bridge",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T15:51:10.625Z"
+      "generated": false
     },
     {
       "key": "bridge_broken_1",
@@ -354,8 +320,7 @@
       "prompt": "collapsed stone bridge with rubble and gaps in grey brown #708090 #8B7355",
       "outputPath": "bridge",
       "bonus": true,
-      "generated": true,
-      "generatedAt": "2026-01-24T15:51:52.382Z"
+      "generated": false
     }
   ]
 }

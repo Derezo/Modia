@@ -24,6 +24,7 @@ import {
   DEFAULT_LORA_BY_CATEGORY,
   CATEGORY_SCRIPT_MAP
 } from '../utils/assetConstants.js';
+import { generateJobId, parseProgress as parseProgressBase, parseStepProgress } from './generationUtils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -97,12 +98,7 @@ const state = {
   generatedImages: []  // Images generated in current job
 };
 
-/**
- * Generate unique job ID
- */
-function generateJobId() {
-  return `job_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-}
+// Note: generateJobId imported from generationUtils.js
 
 /**
  * Broadcast event to admin:generation room
@@ -146,53 +142,18 @@ function broadcastQueueUpdate() {
 }
 
 /**
- * Parse progress from stdout line
- * Expected formats:
- * - [1/10] Generating: asset_name
- * - Progress: 15/50 steps (30%)
- * - Generated: asset_name
- * - Saved: /path/to/file.png
+ * Parse progress from stdout line (image-specific)
+ * Uses shared parseProgress with step progress support
+ * @param {string} line - Stdout line to parse
+ * @returns {Object|null} Parsed progress or null
  */
 function parseProgress(line) {
-  // Match [X/Y] pattern for asset progress
-  const assetMatch = line.match(/\[(\d+)\/(\d+)\]/);
-  if (assetMatch) {
-    return {
-      type: 'asset',
-      current: parseInt(assetMatch[1], 10),
-      total: parseInt(assetMatch[2], 10)
-    };
-  }
+  // Try base progress patterns (asset, saved, generated)
+  const baseProgress = parseProgressBase(line, { fileExtension: 'png' });
+  if (baseProgress) return baseProgress;
 
-  // Match Progress: X/Y steps pattern for step progress
-  const stepMatch = line.match(/Progress:\s*(\d+)\/(\d+)\s*steps/i);
-  if (stepMatch) {
-    return {
-      type: 'step',
-      current: parseInt(stepMatch[1], 10),
-      total: parseInt(stepMatch[2], 10)
-    };
-  }
-
-  // Match Saved: path pattern for completed image
-  const savedMatch = line.match(/Saved:\s*(.+\.png)/i);
-  if (savedMatch) {
-    return {
-      type: 'saved',
-      path: savedMatch[1]
-    };
-  }
-
-  // Match Generated: asset pattern
-  const generatedMatch = line.match(/Generated:\s*(\S+)/i);
-  if (generatedMatch) {
-    return {
-      type: 'generated',
-      asset: generatedMatch[1]
-    };
-  }
-
-  return null;
+  // Try step progress pattern (image-generation specific)
+  return parseStepProgress(line);
 }
 
 /**
@@ -254,14 +215,19 @@ function buildScriptArgs(job, config) {
 
   // === FILTERS (category-specific) ===
   if (job.filters) {
-    if (job.filters.biome) args.push('--biome', job.filters.biome);
-    if (job.filters.race) args.push('--race', job.filters.race);
-    if (job.filters.class) args.push('--class', job.filters.class);
-    if (job.filters.subcategory) args.push('--category', job.filters.subcategory);
-    if (job.filters.key) args.push('--key', job.filters.key);
-    if (job.filters.ids && Array.isArray(job.filters.ids)) {
-      // For multiple IDs, run them sequentially
-      job.filters.ids.forEach(id => args.push('--key', id));
+    // Queue mode: process assets marked for regeneration
+    if (job.filters.queueMode) {
+      args.push('--queue');
+    } else {
+      if (job.filters.biome) args.push('--biome', job.filters.biome);
+      if (job.filters.race) args.push('--race', job.filters.race);
+      if (job.filters.class) args.push('--class', job.filters.class);
+      if (job.filters.subcategory) args.push('--category', job.filters.subcategory);
+      if (job.filters.key) args.push('--key', job.filters.key);
+      if (job.filters.ids && Array.isArray(job.filters.ids)) {
+        // For multiple IDs, run them sequentially
+        job.filters.ids.forEach(id => args.push('--key', id));
+      }
     }
   }
 

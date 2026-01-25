@@ -28,7 +28,8 @@ const {
   buildThemedPrompt,
   createBackup,
   postProcessNode,
-  checkImageMagick
+  checkImageMagick,
+  getEffectiveLoraModel
 } = require('./lib');
 
 // Configuration
@@ -339,11 +340,13 @@ async function main() {
         skipTrigger: true  // Python script adds trigger
       });
 
+      // Determine LoRA model: CLI override > asset-level > category default
+      const effectiveLoraModel = options.lora || getEffectiveLoraModel(node, 'nodes');
       const result = await generateNode({
         prompt: prompt,
         key: node.id,
         seed: node.seed,
-        loraModel: options.lora
+        loraModel: effectiveLoraModel
       }, {
         verbose: options.verbose,
         quiet: options.quiet,

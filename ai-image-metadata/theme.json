@@ -1,8 +1,7 @@
 {
   "version": "2.0.0",
   "name": "watercolor",
-  "description": "Ink and wash watercolor style with parchment texture - updated for layered composition",
-
+  "description": "Ink and wash watercolor style with parchment texture - the classic Modia aesthetic",
   "style": {
     "trigger": "wbgmsst",
     "legacyTrigger": "GRPZA",
@@ -11,9 +10,7 @@
     "texture": "aged parchment texture",
     "mood": "cozy nostalgic JRPG aesthetic"
   },
-
-  "negativePrompt": "photorealistic, 3D render, CGI, anime style, chibi, pixel art, blurry, low quality, watermark, signature, text, logo, modern elements, neon colors, oversaturated, complex backgrounds, multiple subjects, deformed, bad anatomy, extra limbs, messy lines, muddy colors, holding objects, hands in frame, full body, weapon in hand, action pose, white framing, white border",
-
+  "negativePrompt": "photorealistic, 3D render, CGI, anime style, chibi, blurry, low quality, watermark, signature, text, logo, modern elements, neon colors, oversaturated, complex backgrounds, multiple subjects, deformed, bad anatomy, extra limbs, messy lines, muddy colors, holding objects, hands in frame, full body, weapon in hand, action pose, white framing, white border",
   "categoryModifiers": {
     "portraits": {
       "suffix": "head and shoulders portrait bust, character centered, hands not visible, expressive eyes, warm inviting storybook quality, isolated on plain background",
@@ -36,14 +33,12 @@
       "size": "128x128"
     }
   },
-
   "rarityModifiers": {
     "common": "",
     "uncommon": "",
     "rare": "",
     "epic": ""
   },
-
   "overlayConfig": {
     "description": "Configuration for layered item composition system",
     "blendMode": "lighter",
@@ -93,14 +88,12 @@
       "wind": "white-cyan wind trails, swirling air currents, leaf particles"
     }
   },
-
   "iconCategoryModifiers": {
     "actions": "action skill icon",
     "status": "status effect icon",
     "menu": "menu UI icon",
     "augments": "augment upgrade icon"
   },
-
   "loraDefaults": {
     "_comment": "DOCUMENTATION ONLY - actual defaults set in image-generator/modia-generators/lib/prompt_templates.py",
     "description": "Default LoRA model for each asset type. v1=GRPZA (flat 2D), v2=wbgmsst (textured/isometric)",

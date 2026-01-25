@@ -21,6 +21,8 @@ const fs = require('fs');
 const {
   loadTileMetadata,
   markAssetGenerated,
+  loadRegenerationQueue,
+  clearRegenerationMarker,
   generateTile,
   runBatchGeneration,
   log,
@@ -31,13 +33,14 @@ const {
   buildTilePrompt,
   createBackup,
   loadBatchConfig,
-  getBatchConfigSummary
+  getBatchConfigSummary,
+  getEffectiveLoraModel
 } = require('./lib');
 
 // Configuration
 const PROJECT_ROOT = getProjectRoot();
-// New terrain path - no base/ biome, forest is the default fallback
-const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/terrain');
+// Canonical terrain path - sprites/terrain matches Python generator output
+const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/sprites/terrain');
 
 /**
  * Parse command line arguments
@@ -59,6 +62,7 @@ function parseArgs() {
     delay: 2000,  // Default 2 second delay between requests
     batch: null,  // YAML batch config path
     lora: null,   // LoRA model override (v1, v2, modern-pixel, retro-pixel)
+    queue: false, // Process tiles marked for regeneration
     help: false
   };
 
@@ -140,6 +144,10 @@ function parseArgs() {
         }
         break;
       }
+      case '--queue':
+        options.queue = true;
+        options.force = true;  // Queue mode implies --force since tiles are marked for regen
+        break;
       case '--help':
       case '-h':
         options.help = true;
@@ -171,6 +179,8 @@ Options:
   --biome <name>      Generate only for specific biome (forest, cave, mountain, bridge, castle)
   --category <type>   Generate only specific category (floors, walls, slopes)
   --force             Regenerate even if file exists
+  --queue             Process tiles marked for regeneration (needsRegeneration: true)
+                      Implies --force since tiles are explicitly marked for regen
   --backup            Backup existing files before regeneration
   --huggingface, --hf Use HuggingFace API instead of local ComfyUI
   --local             Use local ComfyUI (default, explicit flag optional)
@@ -386,25 +396,58 @@ async function main() {
   log('Tile Generation Script', 'info');
   log('======================', 'info');
 
-  // Load metadata
+  // Load metadata - either from queue or full metadata
   let metadata;
-  try {
-    metadata = loadTileMetadata({ biome: options.biome, category: options.category });
-    log(`Loaded ${metadata.tiles.length} total tiles`, 'info');
-  } catch (error) {
-    log(`Failed to load metadata: ${error.message}`, 'error');
-    process.exit(1);
+  let tilesToGenerate;
+
+  if (options.queue) {
+    // Queue mode: load only tiles marked for regeneration
+    log('Queue mode: loading tiles marked for regeneration', 'info');
+    try {
+      const queuedTiles = loadRegenerationQueue('tiles');
+      log(`Found ${queuedTiles.length} tiles in regeneration queue`, 'info');
+
+      // Create minimal metadata structure for compatibility
+      metadata = {
+        tiles: queuedTiles,
+        byBiome: {},
+        byCategory: {}
+      };
+
+      // Group by biome for prompt building
+      for (const tile of queuedTiles) {
+        if (!metadata.byBiome[tile._biome]) {
+          metadata.byBiome[tile._biome] = { tiles: [], stylePrefix: '' };
+        }
+        metadata.byBiome[tile._biome].tiles.push(tile);
+      }
+
+      tilesToGenerate = queuedTiles;
+    } catch (error) {
+      log(`Failed to load regeneration queue: ${error.message}`, 'error');
+      process.exit(1);
+    }
+  } else {
+    // Standard mode: load all tiles and filter
+    try {
+      metadata = loadTileMetadata({ biome: options.biome, category: options.category });
+      log(`Loaded ${metadata.tiles.length} total tiles`, 'info');
+    } catch (error) {
+      log(`Failed to load metadata: ${error.message}`, 'error');
+      process.exit(1);
+    }
+
+    // Filter tiles
+    const filteredTiles = filterTiles(metadata.tiles, options);
+    log(`Filtered to ${filteredTiles.length} tiles`, 'info');
+
+    // Determine which tiles need generation
+    tilesToGenerate = filteredTiles.filter(t =>
+      needsGeneration(t, t._biome, options)
+    );
   }
 
-  // Filter tiles
-  const filteredTiles = filterTiles(metadata.tiles, options);
-  log(`Filtered to ${filteredTiles.length} tiles`, 'info');
-
-  // Determine which tiles need generation
-  const tilesToGenerate = filteredTiles.filter(t =>
-    needsGeneration(t, t._biome, options)
-  );
-  const skippedTiles = filteredTiles.length - tilesToGenerate.length;
+  const skippedTiles = (metadata.tiles.length || 0) - tilesToGenerate.length;
 
   if (skippedTiles > 0) {
     log(`Skipping ${skippedTiles} tiles (already exist or generated)`, 'info');
@@ -422,6 +465,7 @@ async function main() {
   for (const tile of tilesToGenerate) {
     const biomeData = metadata.byBiome[tile._biome];
     const prompt = buildTilePrompt(tile, biomeData);
+    const loraModel = options.lora || getEffectiveLoraModel(tile, 'tiles');
 
     console.log(`  - ${tile.id}`);
     console.log(`    Biome: ${tile._biome}`);
@@ -429,6 +473,7 @@ async function main() {
       console.log(`    Note: Base biome generates via 'default' then moves to 'base'`);
     }
     console.log(`    Variants: ${tile.variants || 1}`);
+    console.log(`    LoRA: ${loraModel}${tile.loraModel ? ' (asset-level)' : options.lora ? ' (CLI override)' : ' (default)'}`);
     console.log(`    Final path: ${getOutputPath(tile, tile._biome)}`);
     if (options.dryRun) {
       console.log(`    Prompt: ${prompt}`);
@@ -482,6 +527,9 @@ async function main() {
       const pythonBiome = tile._biome === 'base' ? 'default' : tile._biome;
       const outputDir = tile._biome === 'base' ? path.join(OUTPUT_DIR, 'base') : null;
 
+      // Determine LoRA model: CLI override > asset-level > category default
+      const effectiveLoraModel = options.lora || getEffectiveLoraModel(tile, 'tiles');
+
       const result = await generateTile({
         prompt: tile.prompt,
         key: tile.id,
@@ -489,7 +537,7 @@ async function main() {
         outputDir: outputDir,
         seed: tile.seed,
         variants: tile.variants || 1,
-        loraModel: options.lora
+        loraModel: effectiveLoraModel
       }, {
         verbose: options.verbose,
         quiet: options.quiet,
@@ -529,6 +577,11 @@ async function main() {
         // Update metadata
         tile._category = 'tiles';
         markAssetGenerated(tile);
+
+        // Clear regeneration marker if in queue mode
+        if (options.queue && tile.needsRegeneration) {
+          clearRegenerationMarker(tile);
+        }
 
         log(`Generated: ${tile.id}`, 'success');
       } else {

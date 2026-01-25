@@ -24,6 +24,7 @@ import { broadcastToRoom } from '../websocket/index.js';
 import { loadJsonFile, saveJsonFile } from '../utils/jsonFileUtils.js';
 import { VALID_AUDIO_TYPES, AUDIO_SCRIPT_MAP } from '../utils/assetConstants.js';
 import { validateSFXPrompt } from '../utils/audioValidation.js';
+import { generateJobId as generateJobIdBase, parseProgress as parseProgressBase } from './generationUtils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,11 +67,12 @@ let postCompletionPollingEndTime = null;
 let sunoPollerInterval = null;
 
 /**
- * Generate unique job ID
+ * Generate unique audio job ID
+ * Uses shared generateJobId with 'audio_job' prefix
  * @returns {string} Unique job ID
  */
 function generateJobId() {
-  return `audio_job_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+  return generateJobIdBase('audio_job');
 }
 
 /**
@@ -118,65 +120,29 @@ function broadcastQueueUpdate() {
   });
 }
 
+// Audio-specific progress patterns (Suno/ElevenLabs)
+const AUDIO_EXTRA_PATTERNS = [
+  {
+    regex: /Queued:\s*(\S+)/i,
+    processor: (match) => ({ type: 'queued', taskId: match[1] })
+  },
+  {
+    regex: /Downloading:\s*(\S+)/i,
+    processor: (match) => ({ type: 'downloading', asset: match[1] })
+  }
+];
+
 /**
- * Parse progress from stdout line
- * Expected formats:
- * - [1/10] Generating: track_name
- * - Queued: task_id
- * - Downloading: track_name
- * - Generated: track_name
- * - Saved: /path/to/file.mp3
+ * Parse progress from stdout line (audio-specific)
+ * Uses shared parseProgress with audio-specific patterns
  * @param {string} line - Stdout line to parse
  * @returns {object|null} Parsed progress or null
  */
 function parseProgress(line) {
-  // Match [X/Y] pattern for asset progress
-  const assetMatch = line.match(/\[(\d+)\/(\d+)\]/);
-  if (assetMatch) {
-    return {
-      type: 'asset',
-      current: parseInt(assetMatch[1], 10),
-      total: parseInt(assetMatch[2], 10)
-    };
-  }
-
-  // Match Queued: task_id pattern
-  const queuedMatch = line.match(/Queued:\s*(\S+)/i);
-  if (queuedMatch) {
-    return {
-      type: 'queued',
-      taskId: queuedMatch[1]
-    };
-  }
-
-  // Match Downloading: pattern
-  const downloadingMatch = line.match(/Downloading:\s*(\S+)/i);
-  if (downloadingMatch) {
-    return {
-      type: 'downloading',
-      asset: downloadingMatch[1]
-    };
-  }
-
-  // Match Saved: path pattern for completed audio
-  const savedMatch = line.match(/Saved:\s*(.+\.mp3)/i);
-  if (savedMatch) {
-    return {
-      type: 'saved',
-      path: savedMatch[1]
-    };
-  }
-
-  // Match Generated: asset pattern
-  const generatedMatch = line.match(/Generated:\s*(\S+)/i);
-  if (generatedMatch) {
-    return {
-      type: 'generated',
-      asset: generatedMatch[1]
-    };
-  }
-
-  return null;
+  return parseProgressBase(line, {
+    fileExtension: 'mp3',
+    extraPatterns: AUDIO_EXTRA_PATTERNS
+  });
 }
 
 /**

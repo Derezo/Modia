@@ -29,7 +29,8 @@ const {
   getProjectRoot,
   buildThemedPrompt,
   createBackup,
-  postProcessGenerated
+  postProcessGenerated,
+  getEffectiveLoraModel
 } = require('./lib');
 
 // Configuration
@@ -365,12 +366,14 @@ async function main() {
     log(`[${i + 1}/${overlaysToGenerate.length}] Generating: ${overlay.id}`, 'info');
 
     try {
+      // Determine LoRA model: CLI override > asset-level > category default
+      const effectiveLoraModel = options.lora || getEffectiveLoraModel(overlay, 'overlays');
       const result = await generateOverlay({
         prompt: overlay.prompt,
         key: overlay.id,
         subcategory: overlay._subcategory,
         seed: overlay.seed,
-        loraModel: options.lora
+        loraModel: effectiveLoraModel
       }, {
         verbose: options.verbose,
         quiet: options.quiet,

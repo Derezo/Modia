@@ -30,7 +30,8 @@ const {
   buildThemedPrompt,
   createBackup,
   postProcessPortrait,
-  checkImageMagick
+  checkImageMagick,
+  getEffectiveLoraModel
 } = require('./lib');
 
 // Configuration
@@ -445,13 +446,15 @@ async function main() {
 
         // Generate enemy portrait using prompt/key mode with custom output dir
         // Note: Python script adds 'portraits/' to the fallback_dir, so we use ENEMY_OUTPUT_BASE
+        // Determine LoRA model: CLI override > asset-level > category default
+        const effectiveLoraModel = options.lora || getEffectiveLoraModel(portrait, 'portraits');
         result = await generatePortrait({
           prompt: enemyPrompt,
           key: portrait.id,
           seed: portrait.seed,
           outputDir: ENEMY_OUTPUT_BASE,
           isEnemy: true,
-          loraModel: options.lora
+          loraModel: effectiveLoraModel
         }, {
           verbose: options.verbose,
           quiet: options.quiet,
@@ -466,12 +469,14 @@ async function main() {
         const classTraits = metadata.advancedClassTraits[portrait.class] || portrait.class;
         const advancedPrompt = `${raceTraits} ${genderTraits} ${classTraits}`;
 
+        // Determine LoRA model: CLI override > asset-level > category default
+        const effectiveLoraModelAdvanced = options.lora || getEffectiveLoraModel(portrait, 'portraits');
         result = await generatePortrait({
           prompt: advancedPrompt,
           key: portrait.id,
           seed: portrait.seed,
           isAdvanced: true,
-          loraModel: options.lora
+          loraModel: effectiveLoraModelAdvanced
         }, {
           verbose: options.verbose,
           quiet: options.quiet,
@@ -480,12 +485,14 @@ async function main() {
         });
       } else {
         // Generate base class player portrait using race/gender/class mode
+        // Determine LoRA model: CLI override > asset-level > category default
+        const effectiveLoraModelBase = options.lora || getEffectiveLoraModel(portrait, 'portraits');
         result = await generatePortrait({
           race: portrait.race,
           gender: portrait.gender,
           characterClass: portrait.class,
           seed: portrait.seed,
-          loraModel: options.lora
+          loraModel: effectiveLoraModelBase
         }, {
           verbose: options.verbose,
           quiet: options.quiet,

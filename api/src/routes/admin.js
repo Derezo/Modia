@@ -1,9 +1,27 @@
 /**
- * Admin Routes - Asset Manager for AI-generated images (development only)
+ * @module admin
+ * @description Admin Routes for AI-generated image asset management (development only)
  *
  * SECURITY: These endpoints are NEVER available in production, regardless of env vars.
  * They are only available when NODE_ENV is 'development' or 'test'.
- * They provide access to AI image generation metadata and queue management.
+ *
+ * Key responsibilities:
+ * - Asset listing and filtering by category (tiles, portraits, items, icons, nodes, overlays)
+ * - Asset metadata updates (prompts, seeds, evaluation status)
+ * - Theme management and preset system for style configuration
+ * - Generation queue management (queue, cancel, pause, resume jobs)
+ * - Backup creation, restoration, and management
+ *
+ * Route groups:
+ * - GET/PUT /assets/:category - Asset CRUD operations
+ * - GET/PUT /theme - Theme configuration
+ * - GET/POST /theme/presets - Theme preset management
+ * - POST /generate - Queue generation jobs
+ * - GET/POST /generate/* - Queue management endpoints
+ * - GET/POST /backups - Backup operations
+ *
+ * @see adminGenerationService.js - Queue management service
+ * @see adminAudio.js - Audio asset admin routes
  */
 
 import express from 'express';
@@ -14,6 +32,7 @@ import { fileURLToPath } from 'url';
 import { AppError, asyncHandler } from '../middleware/errorHandler.js';
 import { createLimiter } from '../middleware/rateLimiterFactory.js';
 import { loadJsonFile, saveJsonFile } from '../utils/jsonFileUtils.js';
+import { VALID_CATEGORIES } from '../utils/assetConstants.js';
 import adminGenerationService from '../services/adminGenerationService.js';
 
 const router = express.Router();
@@ -42,9 +61,6 @@ try {
 
 // SECURITY: Admin mode is STRICTLY disabled in production
 const isProduction = process.env.NODE_ENV === 'production';
-
-// Valid asset categories
-const VALID_CATEGORIES = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays'];
 
 // Cached trait data for prompt construction
 let cachedTraitData = null;
@@ -280,6 +296,8 @@ router.get('/assets/:category', asyncHandler(async (req, res) => {
     assets = assets.filter(a => a.generated === true);
   } else if (status === 'pending') {
     assets = assets.filter(a => !a.generated);
+  } else if (status === 'needsRegen') {
+    assets = assets.filter(a => a.needsRegeneration === true);
   }
 
   // Calculate summary stats
@@ -435,6 +453,119 @@ router.put('/assets/:category/:id', asyncHandler(async (req, res) => {
     message: 'Asset updated successfully',
     asset: updatedAsset
   });
+}));
+
+/**
+ * PUT /api/admin/assets/:category/:id/mark-regeneration
+ * Mark an asset for regeneration (adds to regeneration queue)
+ */
+router.put('/assets/:category/:id/mark-regeneration', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { category, id } = req.params;
+  const { mark = true } = req.body;  // Allow unmarking too
+
+  if (!VALID_CATEGORIES.includes(category)) {
+    throw new AppError(`Invalid category: ${category}`, 400);
+  }
+
+  // Find the asset to get its source file
+  let asset = null;
+  try {
+    const data = metadataUtils.loadCategoryAssets(category);
+    asset = data.byId[id];
+  } catch (error) {
+    throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
+  }
+
+  if (!asset) {
+    throw new AppError(`Asset not found: ${category}/${id}`, 404);
+  }
+
+  // Apply the regeneration marker
+  try {
+    if (mark) {
+      metadataUtils.updateAssetStatus(category, asset._sourceFile, id, {
+        needsRegeneration: true,
+        regenerationQueuedAt: new Date().toISOString()
+      });
+    } else {
+      metadataUtils.updateAssetStatus(category, asset._sourceFile, id, {
+        needsRegeneration: false,
+        regenerationQueuedAt: null
+      });
+    }
+  } catch (error) {
+    throw new AppError(`Failed to update asset: ${error.message}`, 500);
+  }
+
+  // Reload to return updated asset
+  const updatedData = metadataUtils.loadCategoryAssets(category);
+  const updatedAsset = updatedData.byId[id];
+
+  res.json({
+    message: mark ? 'Asset marked for regeneration' : 'Regeneration marker cleared',
+    asset: updatedAsset
+  });
+}));
+
+/**
+ * GET /api/admin/regeneration-queue
+ * Get all assets marked for regeneration across all categories
+ */
+router.get('/regeneration-queue', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const queue = {};
+  let totalCount = 0;
+
+  for (const category of VALID_CATEGORIES) {
+    try {
+      const data = metadataUtils.loadCategoryAssets(category);
+      const needsRegen = data.assets.filter(a => a.needsRegeneration === true);
+      if (needsRegen.length > 0) {
+        queue[category] = needsRegen;
+        totalCount += needsRegen.length;
+      }
+    } catch (error) {
+      console.warn(`[Admin] Failed to load ${category} for queue:`, error.message);
+    }
+  }
+
+  res.json({
+    totalCount,
+    queue
+  });
+}));
+
+/**
+ * POST /api/admin/generate/regeneration-queue
+ * Process all assets marked for regeneration
+ * Body: { category?: string, options?: object }
+ */
+router.post('/generate/regeneration-queue', asyncHandler(async (req, res) => {
+  const { category, options = {} } = req.body;
+
+  // Validate category if provided
+  if (category && !VALID_CATEGORIES.includes(category)) {
+    throw new AppError(`Invalid category: ${category}. Valid: ${VALID_CATEGORIES.join(', ')}`, 400);
+  }
+
+  try {
+    // Queue mode processes assets marked with needsRegeneration: true
+    const result = adminGenerationService.queueJob(
+      category || 'tiles',  // Default to tiles for now
+      { queueMode: true },  // Special filter for regeneration queue
+      { ...options, force: true }  // Force regeneration
+    );
+
+    res.status(202).json({
+      message: 'Regeneration queue job started',
+      ...result
+    });
+  } catch (err) {
+    throw new AppError(err.message, 400);
+  }
 }));
 
 /**

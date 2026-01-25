@@ -85,6 +85,7 @@ const AssetCard = memo(function AssetCard({
 
   const id = asset.key || asset.id;
   const isGenerated = asset.generated === true;
+  const needsRegeneration = asset.needsRegeneration === true;
   const imageUrl = getAssetImageUrl(asset, category);
 
   /**
@@ -157,6 +158,16 @@ const AssetCard = memo(function AssetCard({
           title={isGenerated ? 'Generated' : 'Pending'}
         />
       </div>
+
+      {/* Regeneration pending badge */}
+      {needsRegeneration && (
+        <div className="absolute top-2 left-9 z-10">
+          <div
+            className="w-3 h-3 rounded-full border-2 border-midnight-900 bg-orange-500"
+            title="Marked for Regeneration"
+          />
+        </div>
+      )}
 
       {/* Thumbnail container */}
       <div className="aspect-square bg-midnight-950 flex items-center justify-center overflow-hidden">

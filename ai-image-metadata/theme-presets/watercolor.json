@@ -9,7 +9,7 @@
     "texture": "aged parchment texture",
     "mood": "cozy nostalgic JRPG aesthetic"
   },
-  "negativePrompt": "photorealistic, 3D render, CGI, anime style, chibi, pixel art, blurry, low quality, watermark, signature, text, logo, modern elements, neon colors, oversaturated, complex backgrounds, multiple subjects, deformed, bad anatomy, extra limbs, messy lines, muddy colors, holding objects, hands in frame, full body, weapon in hand, action pose, white framing, white border",
+  "negativePrompt": "photorealistic, 3D render, CGI, anime style, chibi, blurry, low quality, watermark, signature, text, logo, modern elements, neon colors, oversaturated, complex backgrounds, multiple subjects, deformed, bad anatomy, extra limbs, messy lines, muddy colors, holding objects, hands in frame, full body, weapon in hand, action pose, white framing, white border",
   "categoryModifiers": {
     "portraits": {
       "suffix": "head and shoulders portrait bust, character centered, hands not visible, expressive eyes, warm inviting storybook quality, isolated on plain background",

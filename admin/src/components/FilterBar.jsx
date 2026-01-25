@@ -38,6 +38,7 @@ const STATUS_OPTIONS = [
   { value: 'all', label: 'All Status' },
   { value: 'generated', label: 'Generated' },
   { value: 'pending', label: 'Pending' },
+  { value: 'needsRegen', label: 'Needs Regen' },
 ];
 
 const FilterBar = forwardRef(function FilterBar({

@@ -29,8 +29,8 @@
       "fadeIn": 2000,
       "fadeOut": 1500,
       "generated": true,
-      "taskId": "713aa121f2ce39e79fdae0fdb520908e",
-      "generationStarted": "2026-01-25T17:38:28.312Z",
+      "taskId": "9efa0f258d20e91416f84e67173d7ca6",
+      "generationStarted": "2026-01-25T20:09:07.989Z",
       "lastStatusCheck": "2026-01-19T03:46:18.024Z",
       "status": "SUCCESS",
       "generatedAt": "2026-01-19T03:46:27.413Z",
@@ -54,8 +54,8 @@
       "fadeIn": 1500,
       "fadeOut": 1500,
       "generated": false,
-      "taskId": "fca896b7465ddb377c4a9fb53a3db0e0",
-      "generationStarted": "2026-01-25T17:40:23.658Z"
+      "taskId": "ba999bd613ad56ba822d9fdde37d73a3",
+      "generationStarted": "2026-01-25T19:01:33.005Z"
     },
     {
       "id": "heartlands_shop",
@@ -72,7 +72,10 @@
       "volume": 0.6,
       "fadeIn": 1500,
       "fadeOut": 1500,
-      "generated": false
+      "generated": false,
+      "notes": "",
+      "taskId": "ceae4c9cd391a51757ac7313874d47da",
+      "generationStarted": "2026-01-25T19:03:12.583Z"
     },
     {
       "id": "heartlands_fishing",
@@ -89,7 +92,9 @@
       "volume": 0.55,
       "fadeIn": 2000,
       "fadeOut": 2000,
-      "generated": false
+      "generated": false,
+      "taskId": "8b685a1fb58969f9eb892455e849dc69",
+      "generationStarted": "2026-01-25T19:05:07.921Z"
     },
     {
       "id": "heartlands_ruins",
@@ -106,7 +111,9 @@
       "volume": 0.6,
       "fadeIn": 2000,
       "fadeOut": 1500,
-      "generated": false
+      "generated": false,
+      "taskId": "b87128ae959f2dbf121a6c3893f7595a",
+      "generationStarted": "2026-01-25T19:07:52.686Z"
     }
   ]
 }

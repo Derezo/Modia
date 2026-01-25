@@ -33,6 +33,9 @@ export function useUnifiedGeneration() {
     sfx: { current: null, pending: [], paused: false, progress: null }
   });
 
+  // Ref to track current queues state for non-React callbacks
+  const queuesRef = useRef(queues);
+
   // Merged console output with source tags
   const [stdout, setStdout] = useState([]);
   const stdoutRef = useRef([]);
@@ -40,6 +43,11 @@ export function useUnifiedGeneration() {
   // Generated assets (unified list)
   const [generatedAssets, setGeneratedAssets] = useState([]);
   const generatedAssetsRef = useRef([]);
+
+  // Keep queuesRef in sync with queues state
+  useEffect(() => {
+    queuesRef.current = queues;
+  }, [queues]);
 
   // Load persisted stdout on mount
   useEffect(() => {
@@ -131,22 +139,22 @@ export function useUnifiedGeneration() {
 
   // Connect to WebSocket and set up event handlers
   useEffect(() => {
-    // Set up connection callbacks
-    socket.onConnect(() => {
+    const unsubscribers = [];
+
+    // Set up connection callbacks (with cleanup support)
+    unsubscribers.push(socket.onConnect(() => {
       setConnected(true);
       fetchAllQueueStates();
-    });
+    }));
 
-    socket.onDisconnect(() => {
+    unsubscribers.push(socket.onDisconnect(() => {
       setConnected(false);
-    });
+    }));
 
-    socket.onStateChange((newState) => {
+    unsubscribers.push(socket.onStateChange((newState) => {
       setConnectionState(newState);
       setConnected(newState === ConnectionState.AUTHENTICATED);
-    });
-
-    const unsubscribers = [];
+    }));
 
     // ========== UNIFIED EVENT HANDLER ==========
     unsubscribers.push(
@@ -338,14 +346,13 @@ export function useUnifiedGeneration() {
     unsubscribers.push(
       socket.on('audio:log', (payload) => {
         const { line, level } = payload;
-        // Determine source from current job using state updater
-        setQueues(prev => {
-          const source = prev.music.current ? 'music' : prev.sfx.current ? 'sfx' : null;
-          if (line && source) {
-            addStdoutLine(source, line, level === 'error' ? 'stderr' : 'stdout');
-          }
-          return prev; // No state change needed
-        });
+        // Determine source from current job using ref (avoids state updater anti-pattern)
+        const currentQueues = queuesRef.current;
+        const source = currentQueues.music.current ? 'music'
+                     : currentQueues.sfx.current ? 'sfx' : null;
+        if (line && source) {
+          addStdoutLine(source, line, level === 'error' ? 'stderr' : 'stdout');
+        }
       })
     );
 

@@ -583,6 +583,97 @@ function getAllStats() {
 }
 
 /**
+ * Load assets marked for regeneration from a category
+ * @param {string} category - Asset category (tiles, portraits, items, icons, nodes)
+ * @returns {Array} Assets with needsRegeneration: true
+ */
+function loadRegenerationQueue(category) {
+  if (category === 'tiles') {
+    const metadata = loadTileMetadata({});
+    return metadata.tiles.filter(t => t.needsRegeneration === true);
+  }
+
+  // Other categories use loadCategoryAssets
+  const data = loadCategoryAssets(category);
+  return data.assets.filter(a => a.needsRegeneration === true);
+}
+
+/**
+ * Mark a specific asset for regeneration using its global ID
+ * Global ID format: "category:subcategory:biome:key" (e.g., "tiles:floors:forest:grass_0")
+ * @param {string} globalId - The global asset identifier
+ * @returns {boolean} True if asset was found and marked
+ */
+function markForRegeneration(globalId) {
+  const parts = globalId.split(':');
+  if (parts.length < 3) {
+    log(`Invalid globalId format: ${globalId}`, 'error');
+    return false;
+  }
+
+  const [category, tileCategory, biome, ...keyParts] = parts;
+  const key = keyParts.join(':'); // Handle keys with colons
+
+  if (category !== 'tiles') {
+    // For non-tile assets, simpler format: "category:subcategory:key"
+    const [, subcategory, assetKey] = parts;
+    const data = loadCategoryAssets(category);
+    const asset = data.assets.find(a => a.id === assetKey);
+    if (!asset) {
+      log(`Asset not found: ${globalId}`, 'error');
+      return false;
+    }
+    updateAssetStatus(category, asset._sourceFile, assetKey, {
+      needsRegeneration: true,
+      regenerationQueuedAt: new Date().toISOString()
+    });
+    return true;
+  }
+
+  // For tiles: "tiles:floors:forest:grass_0"
+  const metadata = loadTileMetadata({ biome, category: tileCategory });
+  const tile = metadata.tiles.find(t => (t.id === key || t.key === key) && t._biome === biome);
+
+  if (!tile) {
+    log(`Tile not found: ${globalId}`, 'error');
+    return false;
+  }
+
+  updateAssetStatus('tiles', tile._sourceFile, tile.id || tile.key, {
+    needsRegeneration: true,
+    regenerationQueuedAt: new Date().toISOString()
+  });
+
+  return true;
+}
+
+/**
+ * Clear regeneration markers after successful generation
+ * @param {Object} asset - Asset object with _category, _sourceFile, and id
+ */
+function clearRegenerationMarker(asset) {
+  updateAssetStatus(asset._category, asset._sourceFile, asset.id, {
+    needsRegeneration: false,
+    regenerationQueuedAt: null,
+    generationFailureCount: null,
+    lastError: null
+  });
+}
+
+/**
+ * Record a generation failure for queue retry logic
+ * @param {Object} asset - Asset object
+ * @param {string} error - Error message
+ */
+function recordGenerationFailure(asset, error) {
+  const currentCount = asset.generationFailureCount || 0;
+  updateAssetStatus(asset._category, asset._sourceFile, asset.id, {
+    generationFailureCount: currentCount + 1,
+    lastError: error
+  });
+}
+
+/**
  * Get the effective LoRA model for an asset
  * Priority: asset.loraModel > categoryDefaults[category] > 'v2'
  * @param {Object} asset - Asset object with optional loraModel and _category
@@ -622,6 +713,10 @@ module.exports = {
   loadOverlayMetadata,
   updateAssetStatus,
   markAssetGenerated,
+  loadRegenerationQueue,
+  markForRegeneration,
+  clearRegenerationMarker,
+  recordGenerationFailure,
   getCategoryStats,
   getAllStats,
   getEffectiveLoraModel

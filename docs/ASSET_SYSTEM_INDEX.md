@@ -142,7 +142,7 @@ npm run ai:generate:tiles -- --key grass_0 --huggingface
 
 | Directory | Purpose | Sizes |
 |-----------|---------|-------|
-| `assets/terrain/{biome}/` | Battle map tiles | 64x64 |
+| `assets/sprites/terrain/{biome}/` | Battle map tiles | 64x64 |
 | `assets/portraits/` | Character/enemy portraits | 64, 128, 256 |
 | `assets/items/{subcategory}/` | Equipment/consumable icons | 32, 64, 128 |
 | `assets/icons/png/` | UI action/status icons | 16, 24, 32, 48, 64 |
@@ -215,7 +215,7 @@ AI_IMAGE_GENERATION.md         AUDIO_STYLE_GUIDE.md
 Battle map floor, wall, and slope tiles organized by biome.
 
 - **Metadata:** `ai-image-metadata/tiles/floors/`, `walls/`, `slopes/`
-- **Output:** `frontend/public/assets/terrain/{biome}/{type}/`
+- **Output:** `frontend/public/assets/sprites/terrain/{biome}/{type}/`
 - **Biomes:** forest, cave, mountain, bridge, castle
 - **Size:** 64x64 pixels (isometric perspective)
 - **Style:** Ink & wash, watercolor fills

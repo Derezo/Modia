@@ -9,160 +9,140 @@
       "name": "Iron Ring",
       "prompt": "iron ring simple band plain dull metal",
       "seed": 23001,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:34:59.808Z"
+      "generated": false
     },
     {
       "id": "ring_silver",
       "name": "Silver Ring",
       "prompt": "silver ring polished band elegant shine",
       "seed": 23002,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:35:40.641Z"
+      "generated": false
     },
     {
       "id": "ring_gold",
       "name": "Gold Ring",
       "prompt": "gold ring precious band ornate royal",
       "seed": 23003,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:36:21.465Z"
+      "generated": false
     },
     {
       "id": "ring_gem",
       "name": "Gemstone Ring",
       "prompt": "gemstone ring jeweled setting sparkling faceted",
       "seed": 23004,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:37:02.260Z"
+      "generated": false
     },
     {
       "id": "ring_signet",
       "name": "Signet Ring",
       "prompt": "signet ring engraved seal noble heraldic",
       "seed": 23005,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:37:43.063Z"
+      "generated": false
     },
     {
       "id": "amulet_bone",
       "name": "Bone Amulet",
       "prompt": "bone amulet carved pendant tribal primitive",
       "seed": 23011,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:38:23.989Z"
+      "generated": false
     },
     {
       "id": "amulet_silver",
       "name": "Silver Amulet",
       "prompt": "silver amulet chain pendant ornate mystical",
       "seed": 23012,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:39:04.888Z"
+      "generated": false
     },
     {
       "id": "amulet_crystal",
       "name": "Crystal Amulet",
       "prompt": "crystal amulet glowing gem pendant magical",
       "seed": 23013,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:39:45.747Z"
+      "generated": false
     },
     {
       "id": "amulet_holy",
       "name": "Holy Symbol",
       "prompt": "holy symbol sacred pendant divine blessed",
       "seed": 23014,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:40:26.647Z"
+      "generated": false
     },
     {
       "id": "amulet_dark",
       "name": "Dark Talisman",
       "prompt": "dark talisman ominous pendant shadowy cursed",
       "seed": 23015,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:41:07.534Z"
+      "generated": false
     },
     {
       "id": "cloak_traveler",
       "name": "Traveler Cloak",
       "prompt": "traveler cloak simple brown hooded weathered",
       "seed": 23021,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:41:47.604Z"
+      "generated": false
     },
     {
       "id": "cloak_shadow",
       "name": "Shadow Cloak",
       "prompt": "shadow cloak dark fabric flowing wispy edges",
       "seed": 23022,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:42:27.528Z"
+      "generated": false
     },
     {
       "id": "cloak_royal",
       "name": "Royal Cape",
       "prompt": "royal cape rich fabric fur trim elegant regal",
       "seed": 23023,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:43:07.553Z"
+      "generated": false
     },
     {
       "id": "cloak_mage",
       "name": "Enchanted Mantle",
       "prompt": "enchanted mantle magical fabric runic patterns",
       "seed": 23024,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:43:48.432Z"
+      "generated": false
     },
     {
       "id": "cloak_feather",
       "name": "Feathered Cloak",
       "prompt": "feathered cloak bird plumes colorful tribal",
       "seed": 23025,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:44:29.316Z"
+      "generated": false
     },
     {
       "id": "belt_leather",
       "name": "Leather Belt",
       "prompt": "leather belt simple buckle utility practical",
       "seed": 23031,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:45:09.243Z"
+      "generated": false
     },
     {
       "id": "belt_warrior",
       "name": "Warrior Belt",
       "prompt": "warrior belt wide reinforced metal studs",
       "seed": 23032,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:45:50.150Z"
+      "generated": false
     },
     {
       "id": "belt_pouch",
       "name": "Utility Belt",
       "prompt": "utility belt multiple pouches adventurer gear",
       "seed": 23033,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:46:31.088Z"
+      "generated": false
     },
     {
       "id": "gloves_leather",
       "name": "Leather Gloves",
       "prompt": "leather gloves fingerless grip practical",
       "seed": 23041,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:47:12.017Z"
+      "generated": false
     },
     {
       "id": "gauntlets_steel",
       "name": "Steel Gauntlets",
       "prompt": "steel gauntlets armored hands articulated",
       "seed": 23042,
-      "generated": true,
-      "generatedAt": "2026-01-23T07:47:53.101Z"
+      "generated": false
     }
   ]
 }
