@@ -1,5 +1,6 @@
 import { Scene } from './Scene.js';
 import { PARCHMENT_COLORS, injectParchmentTheme } from '../ui/parchment/index.js';
+import { FeedbackModal } from '../modals/FeedbackModal.js';
 
 // Shorthand for colors in CSS template
 const P = PARCHMENT_COLORS;
@@ -662,6 +663,10 @@ export class SettingsScene extends Scene {
             <span class="settings-tab-icon">&#128295;</span>
             <span class="settings-tab-label">Developer</span>
           </button>
+          <button class="settings-tab" data-tab="help">
+            <span class="settings-tab-icon">&#10068;</span>
+            <span class="settings-tab-label">Help</span>
+          </button>
         </div>
 
         <div class="settings-main">
@@ -673,6 +678,7 @@ export class SettingsScene extends Scene {
           ${this.renderControlsPanel()}
           ${this.renderSocialPanel()}
           ${this.renderDeveloperPanel()}
+          ${this.renderHelpPanel()}
         </div>
       </div>
 
@@ -1441,6 +1447,40 @@ export class SettingsScene extends Scene {
     `;
   }
 
+  renderHelpPanel() {
+    return `
+      <div class="settings-panel" id="panel-help">
+        <div class="settings-panel-title">Help & Feedback</div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">Send Feedback</div>
+
+          <div class="settings-group">
+            <div class="settings-group-description">
+              Have a suggestion, found a bug, or need to report another player?
+              We'd love to hear from you.
+            </div>
+            <button class="settings-btn settings-btn-primary" id="feedback-btn">
+              Open Feedback Form
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">About</div>
+
+          <div class="settings-group">
+            <div class="settings-group-description">
+              <strong>Modia</strong> - A browser-based MMORPG with tactical turn-based combat.
+              <br><br>
+              Version: 1.0.0-alpha
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   getKeybindsForScheme(scheme) {
     const schemes = {
       wasd: { up: 'W', down: 'S', left: 'A', right: 'D', confirm: 'E', cancel: 'Q' },
@@ -1520,6 +1560,12 @@ export class SettingsScene extends Scene {
     this.uiElement.querySelector('#reset-btn')?.addEventListener('click', () => {
       this.game.audio?.playUI('button_click');
       this.handleReset();
+    }, opts);
+
+    // Feedback button
+    this.uiElement.querySelector('#feedback-btn')?.addEventListener('click', () => {
+      this.game.audio?.playUI('button_click');
+      this.openFeedbackModal();
     }, opts);
   }
 
@@ -1623,6 +1669,20 @@ export class SettingsScene extends Scene {
         <span class="keybind-key">${keybinds.cancel}</span>
       </div>
     `;
+  }
+
+  openFeedbackModal() {
+    if (this.feedbackModal) return; // Prevent double-opening
+
+    this.feedbackModal = new FeedbackModal({
+      game: this.game,
+      onClose: () => {
+        this.feedbackModal?.destroy();
+        this.feedbackModal = null;
+      }
+    });
+
+    this.feedbackModal.show();
   }
 
   handleCancel() {

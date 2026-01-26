@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| API Version | 2.4 |
+| API Version | 2.5 |
 | Base URL | `/api` |
 | Last Updated | January 2026 |
 
@@ -44,9 +44,12 @@ All responses are JSON with the following structure:
 {
   "error": "Error message",
   "code": "ERROR_CODE",
+  "requestId": "uuid-string",
   "details": { ... }
 }
 ```
+
+> **Note:** All error responses include a `requestId` field (UUID) for correlation with server-side exception tracking. Include this ID when reporting issues to help with debugging.
 
 ### 1.4 HTTP Status Codes
 
@@ -3204,7 +3207,94 @@ Chat message history retrieval (real-time via WebSocket).
 
 ---
 
-## 26. Error Codes
+## 26. Feedback Endpoints
+
+User feedback submission for enhancements, bug reports, and abuse reports.
+
+### 26.1 Submit Feedback
+
+Submit user feedback.
+
+```
+POST /api/feedback
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "feedbackType": "enhancement|bug|abuse",
+  "title": "string (max 200 chars)",
+  "description": "string (max 2000 chars)",
+  "reportedCharacterName": "string (optional, for abuse reports)"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": 1,
+  "feedbackType": "bug",
+  "title": "Battle freezes when using skill",
+  "status": "pending",
+  "createdAt": "2026-01-26T12:00:00.000Z"
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | feedbackType is required |
+| 400 | title is required |
+| 400 | description is required |
+| 400 | Invalid feedback type |
+| 400 | Title must be 200 characters or less |
+| 400 | Description must be 2000 characters or less |
+| 400 | reportedCharacterName is required for abuse reports |
+| 404 | Reported character not found |
+
+---
+
+### 26.2 Get My Feedback
+
+Get the authenticated user's feedback submissions.
+
+```
+GET /api/feedback/my
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Query Parameters:**
+- `limit` (optional) - Max results (default: 50)
+- `status` (optional) - Filter by status (pending, reviewing, resolved, declined)
+
+**Response (200 OK):**
+```json
+{
+  "feedback": [
+    {
+      "id": 1,
+      "feedbackType": "bug",
+      "title": "Battle freezes when using skill",
+      "status": "pending",
+      "createdAt": "2026-01-26T12:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "feedbackType": "enhancement",
+      "title": "Add more character customization",
+      "status": "reviewing",
+      "createdAt": "2026-01-25T10:30:00.000Z"
+    }
+  ]
+}
+```
+
+---
+
+## 27. Error Codes
 
 | Code | HTTP Status | Description |
 |------|-------------|-------------|
@@ -3220,7 +3310,7 @@ Chat message history retrieval (real-time via WebSocket).
 
 ---
 
-## 27. Document History
+## 28. Document History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
@@ -3230,3 +3320,4 @@ Chat message history retrieval (real-time via WebSocket).
 | 2.2 | Jan 2026 | - | Added sections 15-25: Fishing, Ruins, Relics, Friends, LFG, Notifications, Advancement Quest, Daily/Weekly Quests, Coliseum, Clans, Chat endpoints |
 | 2.3 | Jan 2026 | - | Documentation audit: Verified all 24 route files have corresponding API documentation sections |
 | 2.4 | Jan 2026 | - | Shop/Marketplace sync: Fixed shop endpoints (11.1-11.4) to match implementation with supply-based pricing, caravan support, sell-inventory. Rewrote marketplace section (12.1-12.16) adding item listings system, search, price suggestions, my-trades, stats. Updated request/response schemas to match actual code. |
+| 2.5 | Jan 2026 | - | Added feedback endpoints (Section 26) for user submissions (enhancement, bug, abuse reports). Updated error response format to include requestId field for exception correlation. |

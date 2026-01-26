@@ -5,9 +5,9 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 2.1 |
+| Version | 2.3 |
 | Last Updated | January 2026 |
-| Last Validated | 2026-01-25 |
+| Last Validated | 2026-01-26 |
 
 ---
 
@@ -631,6 +631,87 @@ Permanent traits attached to characters.
 **Constraints:**
 - `UNIQUE (character_id, trait_id)` - No duplicate traits per character
 
+#### 3.2.15 exception_groups
+
+Groups exceptions by fingerprint for tracking recurring errors.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY | Unique identifier |
+| fingerprint | VARCHAR(64) | UNIQUE NOT NULL | Hash identifying unique error signature |
+| exception_type | VARCHAR(100) | | Error class name |
+| exception_message | TEXT | NOT NULL | Error message |
+| stack_trace_normalized | TEXT | | Normalized stack trace |
+| source_file | VARCHAR(255) | | File where error originated |
+| source_line | INTEGER | | Line number |
+| source_function | VARCHAR(255) | | Function name |
+| first_seen_at | TIMESTAMP | DEFAULT NOW() | First occurrence |
+| last_seen_at | TIMESTAMP | DEFAULT NOW() | Most recent occurrence |
+| occurrence_count | INTEGER | DEFAULT 1 | Total occurrences |
+| status | VARCHAR(20) | DEFAULT 'new' | new, investigating, resolved, ignored |
+| resolved_at | TIMESTAMP | | When resolved |
+| resolved_by | INTEGER | FK -> users.id | Admin who resolved |
+| resolution_notes | TEXT | | Resolution details |
+
+**Indexes:**
+- `idx_exception_groups_fingerprint` on `fingerprint`
+- `idx_exception_groups_status` on `(status, last_seen_at DESC)`
+
+#### 3.2.16 exception_events
+
+Individual exception occurrences with request context.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY | Unique identifier |
+| exception_group_id | INTEGER | FK -> exception_groups.id CASCADE | Parent group |
+| request_id | VARCHAR(36) | | UUID for request correlation |
+| request_method | VARCHAR(10) | | HTTP method |
+| request_url | TEXT | | Request URL |
+| request_headers | JSONB | DEFAULT '{}' | Request headers |
+| user_id | INTEGER | FK -> users.id | User if authenticated |
+| character_id | INTEGER | FK -> characters.id | Active character |
+| full_stack_trace | TEXT | | Complete stack trace |
+| error_context | JSONB | DEFAULT '{}' | Additional context |
+| ip_address | INET | | Client IP |
+| user_agent | TEXT | | Browser/client info |
+| environment | VARCHAR(20) | | development, production |
+| created_at | TIMESTAMP | DEFAULT NOW() | When occurred |
+
+**Indexes:**
+- `idx_exception_events_group` on `(exception_group_id, created_at DESC)`
+- `idx_exception_events_user` on `user_id` WHERE user_id IS NOT NULL
+- `idx_exception_events_request` on `request_id` WHERE request_id IS NOT NULL
+
+#### 3.2.17 user_feedback
+
+User-submitted feedback including enhancement requests, bug reports, and abuse reports.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY | Unique identifier |
+| feedback_type | feedback_type | NOT NULL | enhancement, bug, abuse |
+| title | VARCHAR(200) | NOT NULL | Feedback title |
+| description | TEXT | NOT NULL | Detailed description |
+| user_id | INTEGER | FK -> users.id CASCADE | Submitter |
+| character_id | INTEGER | FK -> characters.id | Active character |
+| game_context | JSONB | DEFAULT '{}' | Game state context |
+| ip_address | INET | | Client IP |
+| user_agent | TEXT | | Browser/client info |
+| reported_user_id | INTEGER | FK -> users.id | Reported user (abuse) |
+| reported_character_id | INTEGER | FK -> characters.id | Reported character (abuse) |
+| status | feedback_status | DEFAULT 'pending' | pending, reviewing, resolved, declined |
+| admin_notes | TEXT | | Admin notes |
+| resolved_at | TIMESTAMP | | When resolved |
+| resolved_by | INTEGER | FK -> users.id | Admin who resolved |
+| created_at | TIMESTAMP | DEFAULT NOW() | Submission time |
+
+**Indexes:**
+- `idx_user_feedback_user` on `(user_id, created_at DESC)`
+- `idx_user_feedback_type` on `(feedback_type, status)`
+- `idx_user_feedback_reported` on `reported_user_id` WHERE reported_user_id IS NOT NULL
+- `idx_user_feedback_status` on `(status, created_at DESC)`
+
 **Enemy Level Scaling Formula:**
 ```
 enemy_level = floor(avg_party_level × tier_multiplier)
@@ -671,6 +752,8 @@ CREATE TYPE equipment_slot AS ENUM ('main_hand', 'off_hand', 'head',
 CREATE TYPE battle_type AS ENUM ('pve', 'pvp_coliseum');
 CREATE TYPE battle_status AS ENUM ('active', 'victory', 'defeat', 'draw');
 CREATE TYPE listing_status AS ENUM ('active', 'sold', 'cancelled', 'expired');
+CREATE TYPE feedback_type AS ENUM ('enhancement', 'bug', 'abuse');
+CREATE TYPE feedback_status AS ENUM ('pending', 'reviewing', 'resolved', 'declined');
 ```
 
 ### 3.4 JSON Structures
@@ -807,6 +890,7 @@ All database migrations are located in `api/src/migrations/` and run sequentiall
 | 037 | 037_fix_character_hp_mp.sql | characters (hp/mp recalc) | HP/MP calculation fix for existing characters |
 | 038 | 038_enemy_template_stats.sql | enemy_templates (vitality, luck, archetype, elemental_resistances) | Missing enemy stat columns |
 | 039 | 039_zodiac_blessings.sql | user_zodiac_crystals, world_nodes (zodiac_sign), user_shrine_visits (signature cols) | Zodiac crystal collection system |
+| 040 | 040_error_tracking.sql | exception_groups, exception_events, user_feedback | Error tracking and user feedback system |
 
 **Migration Commands:**
 ```bash
@@ -1413,3 +1497,4 @@ If database becomes bottleneck:
 | 2.0 | Jan 2026 | - | Added character_xp, character_guilds, character_skills, enemy_templates tables; removed experience column; updated max level to 100; removed 'fled' status |
 | 2.1 | Jan 2026 | - | Added battle WebSocket events (turn_start, intent_highlight, action_result, turn_end, your_turn, player_disconnected, player_reconnected, state_sync, end); added Section 2.5 Battle Turn Architecture; added battleTurnManager.js and battleReconnection.js to services directory |
 | 2.2 | Jan 2026 | - | Section 5.1 World Generation: Clarified two-phase ring distance calculation (Euclidean in Phase 3, BFS in Phase 4); documented Lloyd's relaxation inversion; noted Voronoi 0-indexed vs nodesByRegion 1-indexed; added reference to WORLDGEN_TECHNICAL_DEEP_DIVE.md |
+| 2.3 | Jan 2026 | - | Added migration 040 (error tracking); added tables exception_groups (3.2.15), exception_events (3.2.16), user_feedback (3.2.17); added feedback_type and feedback_status ENUMs (3.3) |

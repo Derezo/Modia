@@ -1148,4 +1148,36 @@ export class ApiClient {
   getPerfectWeekChampions(limit = 50) {
     return this.get(`/quests/champions?limit=${limit}`);
   }
+
+  // ============================================
+  // FEEDBACK METHODS
+  // ============================================
+
+  /**
+   * Submit user feedback (enhancement, bug, or abuse report)
+   * @param {Object} data - Feedback data
+   * @param {string} data.feedbackType - 'enhancement', 'bug', or 'abuse'
+   * @param {string} data.title - Feedback title (max 200 chars)
+   * @param {string} data.description - Detailed description (max 2000 chars)
+   * @param {number} [data.characterId] - Optional character ID for context
+   * @param {Object} [data.gameContext] - Optional game state context
+   * @param {string} [data.reportedCharacterName] - For abuse reports: name of reported player
+   * @returns {Promise<{message: string, feedback: Object}>}
+   */
+  submitFeedback(data) {
+    return this.post('/feedback', data);
+  }
+
+  /**
+   * Get current user's feedback submissions
+   * @param {number} [limit=20] - Max results
+   * @param {number} [offset=0] - Pagination offset
+   * @returns {Promise<{feedback: Array}>}
+   */
+  getMyFeedback(limit = 20, offset = 0) {
+    const params = new URLSearchParams();
+    params.append('limit', limit);
+    params.append('offset', offset);
+    return this.get(`/feedback/my?${params.toString()}`);
+  }
 }

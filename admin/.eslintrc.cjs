@@ -10,6 +10,7 @@ module.exports = {
   parserOptions: { ecmaVersion: 'latest', sourceType: 'module' },
   settings: { react: { version: '18.3' } },
   rules: {
-    'react/prop-types': 'off'
+    'react/prop-types': 'off',
+    'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
   }
 };
