@@ -51,6 +51,50 @@ This document archives all completed features, resolved issues, and historical d
 | 8.7 | Jan 2026 | Security Hardening - Trust proxy, per-user rate limiting, VPS deployment scripts |
 | 8.8 | Jan 2026 | FFT-Style Formula Overhaul - CT turn system, defense diminishing returns, LCK scaling |
 | 10.0 | Jan 2026 | Stacking Tile System & Extended Elevation - Extended elevation -3 to +8, stacking tile renderer, occlusion transparency, AI tile metadata reorganization |
+| 10.1 | Jan 2026 | LoRA Model Selection & Admin Asset Pipeline - Per-asset style model selection, /api/admin/config endpoint, canonical asset paths, integration tests |
+
+---
+
+## 10.1 - LoRA Model Selection & Admin Asset Pipeline (Jan 2026)
+
+Added per-asset LoRA model selection to the admin dashboard, enabling different visual styles for generated assets.
+
+### LoRA Model Selection
+
+**Available Models:**
+| Model ID | Name | Trigger Word | Best For |
+|----------|------|--------------|----------|
+| `v1` | Flat 2D Pixel Art | `GRPZA` | Icons, portraits |
+| `v2` | Isometric/Textured | `wbgmsst` | Terrain tiles |
+| `modern-pixel` | Modern Pixel Art | `umempart` | Smooth gradients |
+| `retro-pixel` | Retro 8-bit | `Retro Pixel` | Classic aesthetic |
+
+**API Changes (`api/src/routes/admin.js`):**
+- Added `loraModel` to `allowedFields` array for asset updates
+- Added validation using centralized `VALID_LORA_MODELS` from `assetConstants.js`
+- Added `GET /api/admin/config` endpoint returning `validLoraModels`, `loraModels`, `defaultLoraByCategory`
+
+**UI Changes (`admin/src/components/AssetDetail.jsx`):**
+- Added Style Model dropdown below Prompt field
+- Shows category default hint when no model explicitly set
+- Loads LoRA config from API (eliminates hardcoded model names)
+
+### Asset Pipeline Improvements
+
+**Canonical Path System:**
+- `admin/src/lib/assetPathHelper.js` - Helper for canonical path generation with legacy fallback
+- Updated `AssetCard`, `AssetPreviewCard`, audio components for consistent asset handling
+- `generateCanonicalSizeVariants()` in `resizeUtils.js` for size variant generation
+
+**Integration Tests:**
+- `api/src/tests/integration/admin.integration.test.js` - 15 test cases for config endpoint and loraModel validation
+
+### Files Modified
+- `api/src/routes/admin.js` - loraModel validation, config endpoint
+- `admin/src/components/AssetDetail.jsx` - Style Model dropdown
+- `admin/src/lib/assetPathHelper.js` - NEW: canonical path helper
+- `api/src/tests/integration/admin.integration.test.js` - NEW: integration tests
+- `scripts/ai-images/lib/resizeUtils.js` - canonical size variant generation
 
 ---
 
