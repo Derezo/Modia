@@ -82,5 +82,52 @@ export const logger = {
    */
   isDebug() {
     return DEBUG;
+  },
+
+  /**
+   * Create a request-scoped logger with request ID prefix
+   * Returns a logger instance where all methods include the request ID
+   * Format: [TYPE] [req-id] context message
+   *
+   * @param {Object} req - Express request object with requestId attached
+   * @returns {Object} Logger with same methods, prefixed with request ID
+   */
+  withRequest(req) {
+    const reqId = req?.requestId ? `[${req.requestId.substring(0, 8)}]` : '';
+
+    return {
+      query(sql, params, duration, rowCount) {
+        if (!DEBUG) return;
+        const paramStr = params?.length ? ` params=${formatParams(params)}` : '';
+        console.log(`[DB] ${reqId} ${formatSQL(sql)}${paramStr} duration=${duration}ms rows=${rowCount}`);
+      },
+
+      error(context, error) {
+        const ctx = typeof context === 'string' ? context : JSON.stringify(context);
+        console.error(`[ERROR] ${reqId} ${ctx} message="${error?.message || error}"`);
+        if (DEBUG && error?.stack) {
+          const stackLines = error.stack.split('\n').slice(0, 5).join(' | ');
+          console.error(`[STACK] ${reqId} ${stackLines}`);
+        }
+      },
+
+      info(context, message) {
+        console.log(`[INFO] ${reqId} ${context} ${message}`);
+      },
+
+      debug(context, message, data) {
+        if (!DEBUG) return;
+        const dataStr = data ? ` ${JSON.stringify(data)}` : '';
+        console.log(`[DEBUG] ${reqId} ${context} ${message}${dataStr}`);
+      },
+
+      warn(context, message) {
+        console.warn(`[WARN] ${reqId} ${context} ${message}`);
+      },
+
+      isDebug() {
+        return DEBUG;
+      }
+    };
   }
 };

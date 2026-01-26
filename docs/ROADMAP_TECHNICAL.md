@@ -70,12 +70,14 @@
 
 ## 2. CI/CD Pipeline
 
-### 2.1 GitHub Actions
+### 2.1 GitHub Actions (Completed Jan 2026)
 
-- [ ] Lint on push
-- [ ] Test on pull request
-- [ ] Build validation
-- [ ] Dependency security scanning
+- [x] Lint on push (v9.12: ESLint in CI workflow)
+- [x] Test on pull request (v9.12: unit tests for API and shared modules)
+- [x] Build validation (v9.12: frontend build check)
+- [x] Dependency security scanning (v9.12: npm audit + Dependabot automation)
+- [x] Simplified CI pipeline (v9.12: removed integration tests from PR, main-only E2E)
+- [x] Code coverage reporting (v9.12: Codecov integration)
 
 ### 2.2 Deployment Scripts
 
@@ -216,12 +218,14 @@
 - [x] Rate limiter metrics (v9.4: health/metrics reports store type and stats)
 - [ ] Disk space monitoring
 
-### 5.2 Error Tracking
+### 5.2 Error Tracking (Completed Jan 2026)
 
-- [ ] Error logging service
-- [ ] Alerting configuration
-- [ ] Error categorization
-- [ ] Stack trace preservation
+- [x] Error logging service (v9.12: PostgreSQL-based exception tracking)
+- [x] Request correlation IDs (v9.12: X-Request-ID middleware)
+- [x] Error categorization (v9.12: fingerprint-based grouping with status workflow)
+- [x] Stack trace preservation (v9.12: full stack in exception_events table)
+- [x] File-based logging for VPS (v9.12: daily rotation JSON logs)
+- [x] User feedback system (v9.12: enhancement/bug/abuse reports via UI)
 
 ### 5.3 Performance Monitoring
 
@@ -680,6 +684,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.1 | Jan 2026 | Production Readiness Implementation: Added home-grown exception tracking system (PostgreSQL-based with fingerprint grouping). Request correlation IDs via X-Request-ID middleware. File-based error logging with daily rotation for VPS. User feedback system (enhancement/bug/abuse reports) with FeedbackModal UI in Settings. Simplified CI pipeline (removed integration tests from PR, main-only E2E). Added npm audit security scanning. Dependabot automation for weekly dependency updates. Codecov integration for coverage reporting. Migration 040_error_tracking.sql with exception_groups, exception_events, user_feedback tables. Updated Section 2.1 GitHub Actions and Section 5.2 Error Tracking to completed status. |
 | 3.0 | Jan 2026 | LoRA Model Selection UI: Added Section 7.13 documenting per-asset LoRA model selection in admin dashboard. Style Model dropdown with 4 options (v1, v2, modern-pixel, retro-pixel). Added /api/admin/config endpoint for model definitions. Updated AssetDetail.jsx with dropdown and category default hints. Verified all generation scripts use canonical paths via generateCanonicalSizeVariants(). Marked migrate-asset-paths.js as one-time migration. Design doc: docs/plans/2026-01-25-lora-model-selection-design.md. |
 | 2.9 | Jan 2026 | Asset Loading System Remediation: Added Section 7.12 documenting admin dashboard asset loading fixes. Fixed two incompatible path conventions causing 404s on portrait grid. Created admin/src/lib/assetPathHelper.js with fallback URL support. Fixed generate-portraits.js to copy 1024x1024 originals from external image-generator project. Enhanced migrate-asset-paths.js to scan external originals. Fixed double directory bug (ENEMY_OUTPUT_BASE). Added npm run ai:migrate-paths script. Migrated 318 portraits with 315 new size variants generated. |
 | 2.8 | Jan 2026 | Regeneration Queue Workflow: Added Section 7.11 documenting queue-based asset regeneration workflow. Deprecated GenerationConsole in favor of UnifiedAssetPanel. Added Queue tab showing marked items grouped by category. Replaced dropdown filters with clickable tabs (All/Images/Music/SFX). Refactored bulk actions: "Add to Queue" (marks) vs "Generate Now" (immediate). New useRegenerationQueue hook. New API endpoints: mark-multiple, regeneration-queue/clear, audio regeneration queue endpoints. Commit 6a17841. |

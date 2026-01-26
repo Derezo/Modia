@@ -1,0 +1,58 @@
+# Codecov Configuration for Modia
+# https://docs.codecov.com/docs/codecovyml-reference
+
+coverage:
+  # Project-level coverage thresholds
+  status:
+    project:
+      default:
+        # Target 60% overall coverage
+        target: 60%
+        # Allow 5% drop from base
+        threshold: 5%
+        # Informational only - don't fail PRs
+        informational: true
+
+    # Patch coverage for new code
+    patch:
+      default:
+        # New code should have 70% coverage
+        target: 70%
+        # Informational only - don't fail PRs
+        informational: true
+
+# Ignore certain paths from coverage
+ignore:
+  - "**/*.test.js"
+  - "**/*.spec.js"
+  - "**/tests/**"
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "scripts/**"
+  - "docs/**"
+
+# Comment configuration
+comment:
+  # Post coverage comment on PRs
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: true
+  require_base: false
+  require_head: true
+
+# Flag definitions for different workspaces
+flags:
+  api:
+    paths:
+      - api/src/
+    carryforward: true
+
+  frontend:
+    paths:
+      - frontend/src/
+    carryforward: true
+
+  shared:
+    paths:
+      - shared/
+    carryforward: true

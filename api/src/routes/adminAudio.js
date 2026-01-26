@@ -637,7 +637,10 @@ router.put('/mark-multiple', asyncHandler(async (req, res) => {
     }
 
     const sourceFile = asset._sourceFile;
-    if (!sourceFile) continue;
+    if (!sourceFile) {
+      console.debug(`[adminAudio] Skipping asset ${id}: no _sourceFile metadata`);
+      continue;
+    }
 
     if (!fileUpdates.has(sourceFile)) {
       fileUpdates.set(sourceFile, []);

@@ -16,6 +16,7 @@ import { setupWebSocket } from './websocket/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { rateLimiter } from './middleware/rateLimiter.js';
 import { resetAllRateLimiters, isProduction } from './middleware/rateLimiterFactory.js';
+import { requestIdMiddleware } from './middleware/requestId.js';
 
 // Routes
 import authRoutes from './routes/auth.js';
@@ -45,6 +46,7 @@ import debugRoutes from './routes/debug.js';
 import healthRoutes from './routes/health.js';
 import adminRoutes from './routes/admin.js';
 import adminAudioRoutes from './routes/adminAudio.js';
+import feedbackRoutes from './routes/feedback.js';
 
 // Scheduled services
 import { startRefreshScheduler } from './services/shopRefreshService.js';
@@ -80,6 +82,9 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false, // Allows CORS to work properly
   crossOriginResourcePolicy: { policy: 'cross-origin' } // Allows assets to be loaded cross-origin
 }));
+
+// Request ID middleware for correlation tracking
+app.use(requestIdMiddleware);
 
 // Middleware
 app.use(cors({
@@ -143,6 +148,7 @@ app.use('/api/quests', questRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/audio', adminAudioRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // 404 handler for API routes - must come before error handler
 // Returns JSON instead of Express's default HTML response
