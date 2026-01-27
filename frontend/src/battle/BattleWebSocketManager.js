@@ -786,5 +786,51 @@ export class BattleWebSocketManager {
         : ANIMATION_TIMING.ACTION_WAIT_SHORT;
       await this.scene.waitForAnimation(waitDuration);
     }
+
+    // Play item animation
+    if (actionType === 'item') {
+      const effectType = result.effectType || 'heal_hp';
+
+      if (actor && target) {
+        // Item arc from actor to target with effect particles
+        this.animations.addItemUseEffect(
+          actor.screenX, actor.screenY,
+          target.screenX, target.screenY,
+          effectType
+        );
+      }
+
+      // Wait for arc animation, then show result numbers
+      await this.scene.waitForAnimation(800);
+
+      if (target && result.itemEffects) {
+        let yOffset = 0;
+        for (const effect of result.itemEffects) {
+          const effectTarget = effect.targetId ? this.units.get(effect.targetId) : target;
+          if (!effectTarget) continue;
+
+          if (effect.type === 'heal' && effect.amount > 0) {
+            this.animations.addHealNumber(effectTarget.screenX, effectTarget.screenY - 40 + yOffset, effect.amount);
+            effectTarget.hp = Math.min(effectTarget.maxHp, effectTarget.hp + effect.amount);
+            yOffset -= 20;
+          }
+          if (effect.type === 'mpRestore' && effect.amount > 0) {
+            this.animations.addMpRestoreNumber(effectTarget.screenX, effectTarget.screenY - 40 + yOffset, effect.amount);
+            effectTarget.mp = Math.min(effectTarget.maxMp, effectTarget.mp + effect.amount);
+            yOffset -= 20;
+          }
+          if (effect.type === 'revive' && effect.amount > 0) {
+            this.animations.addHealNumber(effectTarget.screenX, effectTarget.screenY - 40, effect.amount);
+            effectTarget.hp = effect.amount;
+          }
+          if (effect.type === 'cleanse') {
+            this.animations.addStatusEffect(effectTarget.screenX, effectTarget.screenY - 40, 'Cleansed!');
+          }
+        }
+      }
+
+      // Wait for result numbers to display
+      await this.scene.waitForAnimation(ANIMATION_TIMING.ACTION_WAIT_FULL);
+    }
   }
 }

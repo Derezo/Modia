@@ -687,35 +687,58 @@ function processItemAction(state, unit, targetTile, itemId) {
     }
   }
 
-  // Apply item effects based on effectType from database
-  const effectType = consumable.effectType || consumable.name?.toLowerCase();
-  const effectValue = consumable.effectValue || 25;
+  // Apply item effects based on canonical effectType from database
+  // Canonical types: heal_hp, heal_mp, heal_both, cure_poison, cure_all, revive
+  const effectType = consumable.effectType;
+  const effectValue = consumable.effectValue || 0;
 
-  // Handle different effect types
-  if (effectType === 'hp_restore' || consumable.name?.toLowerCase().includes('potion')) {
-    const healAmount = Math.floor(itemTarget.maxHp * effectValue / 100);
-    itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + healAmount);
+  // Guard: non-revive items cannot target dead units
+  if (effectType !== 'revive' && itemTarget.hp <= 0) {
+    result.error = 'Cannot use this item on a defeated unit';
+    return result;
+  }
+
+  // Guard: revive items require a dead target
+  if (effectType === 'revive' && itemTarget.hp > 0) {
+    result.error = 'Target is not defeated';
+    return result;
+  }
+
+  // Handle different effect types (effectValue is absolute HP/MP, not percentage)
+  if (effectType === 'heal_hp') {
+    const healAmount = Math.min(effectValue, itemTarget.maxHp - itemTarget.hp);
+    itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + effectValue);
     result.healing = healAmount;
     result.itemEffects.push({ type: 'heal', amount: healAmount, targetId: itemTarget.id });
   }
 
-  if (effectType === 'mp_restore' || consumable.name?.toLowerCase().includes('ether')) {
-    const mpAmount = Math.floor(itemTarget.maxMp * effectValue / 100);
-    itemTarget.mp = Math.min(itemTarget.maxMp, itemTarget.mp + mpAmount);
+  if (effectType === 'heal_mp') {
+    const mpAmount = Math.min(effectValue, itemTarget.maxMp - itemTarget.mp);
+    itemTarget.mp = Math.min(itemTarget.maxMp, itemTarget.mp + effectValue);
     result.mpRestored = mpAmount;
     result.itemEffects.push({ type: 'mpRestore', amount: mpAmount, targetId: itemTarget.id });
   }
 
-  if (effectType === 'elixir' || consumable.name?.toLowerCase().includes('elixir')) {
-    const healAmount = Math.floor(itemTarget.maxHp * effectValue / 100);
-    const mpAmount = Math.floor(itemTarget.maxMp * effectValue / 100);
-    itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + healAmount);
-    itemTarget.mp = Math.min(itemTarget.maxMp, itemTarget.mp + mpAmount);
+  if (effectType === 'heal_both') {
+    const healAmount = Math.min(effectValue, itemTarget.maxHp - itemTarget.hp);
+    const mpAmount = Math.min(Math.floor(effectValue / 2), itemTarget.maxMp - itemTarget.mp);
+    itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + effectValue);
+    itemTarget.mp = Math.min(itemTarget.maxMp, itemTarget.mp + Math.floor(effectValue / 2));
+    result.healing = healAmount;
+    result.mpRestored = mpAmount;
     result.itemEffects.push({ type: 'heal', amount: healAmount, targetId: itemTarget.id });
     result.itemEffects.push({ type: 'mpRestore', amount: mpAmount, targetId: itemTarget.id });
   }
 
-  if (effectType === 'cleanse' || consumable.name?.toLowerCase().includes('antidote')) {
+  if (effectType === 'cure_poison') {
+    const cleansableEffects = ['poison'];
+    itemTarget.statusEffects = (itemTarget.statusEffects || []).filter(e =>
+      !cleansableEffects.includes(e.type)
+    );
+    result.itemEffects.push({ type: 'cleanse', effects: cleansableEffects, targetId: itemTarget.id });
+  }
+
+  if (effectType === 'cure_all') {
     const cleansableEffects = ['poison', 'blind', 'silence', 'slow', 'burn'];
     itemTarget.statusEffects = (itemTarget.statusEffects || []).filter(e =>
       !cleansableEffects.includes(e.type)
@@ -723,18 +746,25 @@ function processItemAction(state, unit, targetTile, itemId) {
     result.itemEffects.push({ type: 'cleanse', effects: cleansableEffects, targetId: itemTarget.id });
   }
 
-  if (effectType === 'revive' || consumable.name?.toLowerCase().includes('phoenix')) {
-    if (itemTarget.hp <= 0) {
-      const reviveHp = Math.floor(itemTarget.maxHp * effectValue / 100);
-      itemTarget.hp = reviveHp;
-      result.itemEffects.push({ type: 'revive', amount: reviveHp, targetId: itemTarget.id });
-    }
+  if (effectType === 'revive') {
+    // Guard above ensures itemTarget.hp <= 0
+    const reviveHp = Math.floor(itemTarget.maxHp * effectValue / 100);
+    itemTarget.hp = reviveHp;
+    result.itemEffects.push({ type: 'revive', amount: reviveHp, targetId: itemTarget.id });
   }
+
+  // Include effectType in result so frontend can select correct animation
+  result.effectType = effectType;
 
   // Consume the item in battle state
   consumable.quantity--;
   if (consumable.quantity <= 0) {
-    state.consumables = consumables.filter(c => c.itemId !== consumable.itemId);
+    const filtered = consumables.filter(c => c.itemId !== consumable.itemId);
+    if (unit.type === 'player') {
+      state.consumables = filtered;
+    } else {
+      unit.consumables = filtered;
+    }
   }
 
   // Mark inventory item for consumption (will be processed after battle or immediately)

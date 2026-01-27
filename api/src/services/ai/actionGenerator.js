@@ -84,34 +84,67 @@ function generateAllActions(unit, state) {
 
   // Generate item actions (NPCs can use items too)
   if (available.canAct && available.items && available.items.length > 0) {
+    const allies = state.units.filter(u => u.type === unit.type && u.hp > 0);
+    const deadAllies = state.units.filter(u => u.type === unit.type && u.hp <= 0);
+
     for (const item of available.items) {
-      // Skip HP items if at full HP
-      if (item.effectType === 'hp_restore' && unit.hp >= unit.maxHp) {
-        continue;
-      }
-      // Skip MP items if at full MP
-      if (item.effectType === 'mp_restore' && unit.mp >= unit.maxMp) {
-        continue;
-      }
-      // Skip elixir if both HP and MP are full
-      if (item.effectType === 'elixir' && unit.hp >= unit.maxHp && unit.mp >= unit.maxMp) {
-        continue;
+      if (item.quantity <= 0) continue;
+
+      if (item.effectType === 'heal_hp' || item.effectType === 'heal_both') {
+        // Target self and injured allies
+        for (const ally of allies) {
+          if (ally.hp >= ally.maxHp) continue;
+          actions.push({
+            type: 'item',
+            item: item,
+            itemId: item.itemId,
+            target: { x: ally.tileX, y: ally.tileY, unitId: ally.id, unitName: ally.name },
+            targetId: ally.id
+          });
+        }
       }
 
-      // Self-use healing/MP items when low
-      if (item.effectType === 'hp_restore' || item.effectType === 'mp_restore' || item.effectType === 'elixir') {
-        actions.push({
-          type: 'item',
-          item: item,
-          itemId: item.itemId,
-          target: {
-            x: unit.tileX,
-            y: unit.tileY,
-            unitId: unit.id,
-            unitName: unit.name
-          },
-          targetId: unit.id
-        });
+      if (item.effectType === 'heal_mp') {
+        // Target self and allies with MP deficit
+        for (const ally of allies) {
+          if (ally.mp >= ally.maxMp) continue;
+          actions.push({
+            type: 'item',
+            item: item,
+            itemId: item.itemId,
+            target: { x: ally.tileX, y: ally.tileY, unitId: ally.id, unitName: ally.name },
+            targetId: ally.id
+          });
+        }
+      }
+
+      if (item.effectType === 'cure_poison' || item.effectType === 'cure_all') {
+        // Only generate if an ally has cleansable status effects
+        const cleansable = item.effectType === 'cure_poison' ? ['poison'] : ['poison', 'blind', 'silence', 'slow', 'burn'];
+        for (const ally of allies) {
+          const hasCleansable = (ally.statusEffects || []).some(e => cleansable.includes(e.type));
+          if (!hasCleansable) continue;
+          actions.push({
+            type: 'item',
+            item: item,
+            itemId: item.itemId,
+            target: { x: ally.tileX, y: ally.tileY, unitId: ally.id, unitName: ally.name },
+            targetId: ally.id
+          });
+        }
+      }
+
+      if (item.effectType === 'revive') {
+        // Target dead allies
+        for (const ally of deadAllies) {
+          actions.push({
+            type: 'item',
+            item: item,
+            itemId: item.itemId,
+            target: { x: ally.tileX, y: ally.tileY, unitId: ally.id, unitName: ally.name },
+            targetId: ally.id
+          });
+        }
       }
     }
   }
@@ -341,6 +374,17 @@ function getQuickScore(action) {
       if (action.skill?.aoeRadius) score += action.skill.aoeRadius * 20;
       break;
 
+    case 'item':
+      score = 70;
+      // Bonus for using item on low HP target
+      if (action.target) {
+        const targetUnit = typeof action.target.hp === 'number' ? action.target : null;
+        if (targetUnit && targetUnit.hp / targetUnit.maxHp < 0.3) score += 60;
+      }
+      // High priority for revive
+      if (action.item?.effectType === 'revive') score += 80;
+      break;
+
     case 'move':
       score = 50;
       break;
@@ -363,7 +407,7 @@ function orderActionsForPruning(actions, _unit) {
   // Sort: attacks > skills > moves > wait
   // Within each category, prefer higher impact
   return actions.sort((a, b) => {
-    const typeOrder = { attack: 3, skill: 2, move: 1, wait: 0 };
+    const typeOrder = { attack: 4, skill: 3, item: 2, move: 1, wait: 0 };
     const typeA = typeOrder[a.type] || 0;
     const typeB = typeOrder[b.type] || 0;
 

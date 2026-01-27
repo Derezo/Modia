@@ -393,8 +393,8 @@ async function generateWorld(seed) {
 async function seedItems() {
   for (const item of ITEM_TEMPLATES) {
     await pool.query(
-      `INSERT INTO item_templates (name, description, item_type, equipment_slot, stat_bonuses, level_requirement, effect_type, effect_value, base_price, rarity)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO item_templates (name, description, item_type, equipment_slot, stat_bonuses, level_requirement, effect_type, effect_value, base_price, rarity, sprite_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        ON CONFLICT DO NOTHING`,
       [
         item.name,
@@ -406,7 +406,8 @@ async function seedItems() {
         item.effect_type || null,
         item.effect_value || null,
         item.base_price || 0,
-        item.rarity || 1
+        item.rarity || 1,
+        item.sprite_id || null
       ]
     );
   }
