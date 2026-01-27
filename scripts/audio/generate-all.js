@@ -37,7 +37,7 @@ function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
     dryRun: false,
-    key: null,
+    keys: [],
     musicOnly: false,
     sfxOnly: false,
     region: null,
@@ -54,7 +54,7 @@ function parseArgs() {
         options.dryRun = true;
         break;
       case '--key':
-        options.key = args[++i];
+        options.keys.push(args[++i]);
         break;
       case '--music-only':
         options.musicOnly = true;
@@ -191,7 +191,7 @@ function getSummary(options) {
           if (data && data.tracks) {
             for (const track of data.tracks) {
               if (options.region && track.region !== options.region) continue;
-              if (options.key && track.id !== options.key) continue;
+              if (options.keys.length > 0 && !options.keys.includes(track.id)) continue;
 
               summary.music.total++;
               if (!track.generated) {
@@ -215,7 +215,7 @@ function getSummary(options) {
           const data = loadMetadata(path.join(SFX_METADATA_DIR, filePath));
           if (data && data.effects) {
             for (const effect of data.effects) {
-              if (options.key && effect.id !== options.key) continue;
+              if (options.keys.length > 0 && !options.keys.includes(effect.id)) continue;
 
               summary.sfx.total++;
               if (!effect.generated) {
@@ -323,7 +323,7 @@ async function main() {
 
     const musicArgs = [];
     if (options.dryRun) musicArgs.push('--dry-run');
-    if (options.key) musicArgs.push('--key', options.key);
+    options.keys.forEach(k => musicArgs.push('--key', k));
     if (options.region) musicArgs.push('--region', options.region);
     if (options.category) musicArgs.push('--category', options.category);
     if (options.force) musicArgs.push('--force');
@@ -350,7 +350,7 @@ async function main() {
 
     const sfxArgs = [];
     if (options.dryRun) sfxArgs.push('--dry-run');
-    if (options.key) sfxArgs.push('--key', options.key);
+    options.keys.forEach(k => sfxArgs.push('--key', k));
     if (options.category) sfxArgs.push('--category', options.category);
     if (options.force) sfxArgs.push('--force');
 

@@ -101,6 +101,9 @@ const {
   getBatchConfigSummary
 } = require('./batchConfig');
 
+const { parseBaseArgs, VALID_LORA_MODELS, BASE_DEFAULTS } = require('./parseArgs');
+const { applyKeyFilter } = require('./filterAssets');
+
 const {
   STANDARD_SIZES,
   SIZE_PRESETS,
@@ -251,5 +254,13 @@ module.exports = {
   postProcessByType,
   postProcessWithDualWrite,
   getCanonicalSizedPath,
-  generateCanonicalSizeVariants
+  generateCanonicalSizeVariants,
+
+  // Shared argument parsing
+  parseBaseArgs,
+  VALID_LORA_MODELS,
+  BASE_DEFAULTS,
+
+  // Shared asset filtering
+  applyKeyFilter
 };

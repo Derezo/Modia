@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 3.4 |
+| Version | 3.5 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -583,6 +583,21 @@ All generation scripts (`generate-portraits.js`, `generate-items.js`, `generate-
 
 **Design doc:** `docs/plans/2026-01-25-lora-model-selection-design.md`
 
+### 7.14 Asset Pipeline Bug Fix & Deduplication (Completed Jan 2026)
+
+Fixed critical multi-key generation bug and extracted shared modules from generator scripts.
+
+- [x] Fixed multi-key `--key` flag bug in all 6 image generation scripts (overwrite instead of accumulate)
+- [x] Created `scripts/ai-images/lib/parseArgs.js` - shared argument parsing module
+- [x] Created `scripts/ai-images/lib/filterAssets.js` - shared key-based filtering utility
+- [x] Updated `scripts/ai-images/lib/index.js` with new exports
+- [x] Refactored all 6 scripts to use shared modules (~500 lines eliminated)
+- [x] Normalized `adminAudioGenerationService.js` to use `keys` array consistently
+- [x] Fixed `scripts/audio/generate-all.js` to use `keys: []` array pattern
+- [x] Added count badges to admin dashboard bulk action buttons
+
+**Bug Impact:** Admin dashboard "Generate Now" with multiple selected assets only generated the last one. Now correctly generates all selected assets.
+
 ---
 
 ## 8. Technical Debt & Code Quality
@@ -635,9 +650,9 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 | Socket callbacks not cleared on unmount | useUnifiedGeneration.js:133-147 | Low | Open (admin tooling) |
 | Duplicate `parseProgress()` function | adminGenerationService.js:156, adminAudioGenerationService.js:132 | Low | Open |
 | Duplicate `generateJobId()` function | adminGenerationService.js:103, adminAudioGenerationService.js:72 | Low | Open |
-| ~200 lines duplicated across 5 generator scripts | scripts/ai-images/generate-{tiles,portraits,items,icons,nodes}.js | Medium | Open |
+| ~~~200 lines duplicated across 6 generator scripts~~ | ~~scripts/ai-images/generate-{tiles,portraits,items,icons,nodes,overlays}.js~~ | ~~Medium~~ | **Resolved** v10.5 - shared parseArgs.js + filterAssets.js |
 
-*Issues audited: 2026-01-27*
+*Issues audited: 2026-01-27 (updated: generator script duplication resolved v10.5)*
 
 **Validation Report:** See `docs/archive/reports/2026-01-25-asset-refactoring-validation.md` for full findings.
 
@@ -657,7 +672,8 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 - [ ] Request validation layer (Zod schemas for consistent input validation)
 - [x] Distributed rate limiting (Redis) for horizontal scaling (v9.4: rate-limit-redis with graceful fallback)
 - [ ] Structured logging with request correlation IDs
-- [ ] **Generator script deduplication** — Extract shared boilerplate from 5 `scripts/ai-images/generate-*.js` scripts into `scripts/ai-images/lib/generationRunner.js`. Duplicated logic includes: `parseArgs()` (~80 lines of shared CLI flags), `validateEnvVars()`, `needsGeneration()`, `--queue` mode loading via `loadRegenerationQueue()`/`clearRegenerationMarker()`, generation loop with rate limiting, backup handling, summary output, and post-processing via `generateCanonicalSizeVariants()`. Each script should reduce to ~50-80 lines defining only its category-specific config (output paths, prompt building, metadata loading). Estimated ~200+ duplicated lines across tiles, portraits, items, icons, and nodes generators.
+- [x] **Generator script deduplication (Phase 1)** — Extracted shared `parseArgs.js` (~80 lines of CLI flag parsing) and `filterAssets.js` (key-based filtering) into `scripts/ai-images/lib/`. All 6 generator scripts refactored to use shared modules, eliminating ~500 lines of duplicated code. Fixed critical multi-key bug where `--key` flags overwrote instead of accumulating. (v10.5)
+- [ ] **Generator script deduplication (Phase 2)** — Further extraction of remaining shared boilerplate into `scripts/ai-images/lib/generationRunner.js`: `validateEnvVars()`, `needsGeneration()`, `--queue` mode loading via `loadRegenerationQueue()`/`clearRegenerationMarker()`, generation loop with rate limiting, backup handling, summary output, and post-processing via `generateCanonicalSizeVariants()`. Each script should reduce to ~50-80 lines defining only its category-specific config (output paths, prompt building, metadata loading).
 
 ### 8.4 Future Infrastructure
 
@@ -687,6 +703,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.5 | Jan 2026 | Asset Pipeline Bug Fix & Deduplication (v10.5): Fixed critical multi-key generation bug in all 6 AI image scripts (--key flag overwrote instead of accumulating). Created shared parseArgs.js and filterAssets.js modules eliminating ~500 lines of duplicated code. Normalized audio service to use keys array. Added count badges to admin bulk action buttons. Marked generator script duplication as resolved in Section 8.2. Updated Section 8.3 refactoring opportunities with Phase 1 complete, Phase 2 remaining. Added Section 7.14. |
 | 3.4 | Jan 2026 | Legacy Code Cleanup (v10.4): 4-phase cleanup removing dead code (GenerationConsole.jsx, useGeneration.js, useAudioGeneration.js, loadElevatedTile, CLASS_ADVANCEMENT, legacyTrigger), migrating deprecated APIs (getAssetUrl→getAssetPath, buildTilePrompt→buildFlatTilePrompt, renderTileAt→renderTileUnified), removing legacy fallbacks (wall/slope naming, getLegacyPaths/getAssetUrlsWithFallback→getAssetUrls, legacy biomeFiles), and standardizing property names (HP/MP fallback chains→snake_case). Updated Section 8.3, known issues, and historical sections. |
 | 3.3 | Jan 2026 | UnifiedAssetPanel Fixes (v10.3): Fixed 5 issues - asset path 404s, duplicate Assets/Console entries, UI consolidation (moved tabs from panel top bar to bottom generation bar), queue-to-generation pipeline for all categories. Added `--queue` flag to portraits/items/icons/nodes generators. Documented generator script duplication debt in Section 8.3. |
 | 3.2 | Jan 2026 | Admin Dashboard Code Review & Remediation (v10.2): 7-phase remediation addressing 26 issues. SettingsPage.jsx modularized (1,144→215 lines) into 4 tab components. API client split from 425-line god object into 9 focused modules. Hook consolidation: GenerationContext now uses useUnifiedGeneration with backward compatibility. Unified components with configs.js for image/audio asset handling. Testing infrastructure: 72 tests (24 API, 13 format, 17 timeFormat, 18 smoke) with ~88% API coverage, ~98% utility coverage. Marked "No tests for admin generation endpoints" as resolved. |

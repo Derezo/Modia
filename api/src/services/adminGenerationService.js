@@ -233,10 +233,13 @@ function buildScriptArgs(job, config) {
       if (job.filters.race) args.push('--race', job.filters.race);
       if (job.filters.class) args.push('--class', job.filters.class);
       if (job.filters.subcategory) args.push('--category', job.filters.subcategory);
-      if (job.filters.key) args.push('--key', job.filters.key);
-      if (job.filters.ids && Array.isArray(job.filters.ids)) {
-        // For multiple IDs, run them sequentially
-        job.filters.ids.forEach(id => args.push('--key', id));
+      // Normalize key/keys/ids into a single array
+      const keys = Array.isArray(job.filters.ids) ? job.filters.ids
+        : Array.isArray(job.filters.keys) ? job.filters.keys
+          : job.filters.key ? [job.filters.key]
+            : [];
+      if (keys.length > 0) {
+        keys.forEach(k => args.push('--key', k));
       }
     }
   }
@@ -607,7 +610,8 @@ function finishJob(job, status, error = null) {
  * @param {string} filters.race - For portraits: human, elf, dwarf, vampire, orc
  * @param {string} filters.class - For portraits: warrior, wizard, monk, chemist
  * @param {string} filters.subcategory - For items/icons: category name
- * @param {string} filters.key - Generate specific asset by key
+ * @param {string} filters.key - Generate specific asset by key (legacy, prefer keys/ids)
+ * @param {string[]} filters.keys - Generate specific assets by key array
  * @param {string[]} filters.ids - Generate specific assets by ID array
  * @param {Object} options - Generation options
  * @param {string} options.backend - 'local' (default) or 'huggingface'

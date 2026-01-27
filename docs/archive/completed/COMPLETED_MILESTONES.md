@@ -54,7 +54,50 @@ This document archives all completed features, resolved issues, and historical d
 | 10.1 | Jan 2026 | LoRA Model Selection & Admin Asset Pipeline - Per-asset style model selection, /api/admin/config endpoint, canonical asset paths, integration tests |
 | 10.2 | Jan 2026 | Admin Dashboard Code Review & Remediation - 7-phase remediation addressing 26 issues, SettingsPage modularized (1,144→215 lines), API client split into 9 modules, hook consolidation, unified components, 72 tests (88% API coverage) |
 | 10.3 | Jan 2026 | Admin Dashboard Remediation Plan - 14 issues across 8 phases: critical UI fixes, job queue reliability, clickable status badges, LoRA UX, asset state badges, icon path standardization, bulk operations, vim-style keyboard navigation |
+| 10.5 | Jan 2026 | Asset Pipeline Bug Fix & Deduplication - Multi-key generation bug fix, shared argument parser, audio service normalization, admin UX count badges |
 | 10.4 | Jan 2026 | Legacy Code Cleanup - 4-phase dead code removal, API migration, legacy fallback removal, property name standardization |
+
+---
+
+## 10.5 - Asset Pipeline Bug Fix & Deduplication (Jan 2026)
+
+Critical bug fix for multi-key asset generation and shared module extraction eliminating ~500 lines of duplicated code across 6 AI image generation scripts.
+
+### Bug Fix: Multi-Key Generation (Critical)
+
+All 6 AI image generation scripts (`generate-icons.js`, `generate-tiles.js`, `generate-portraits.js`, `generate-items.js`, `generate-nodes.js`, `generate-overlays.js`) had a bug where passing multiple `--key` flags only processed the last value. The admin dashboard "Generate Now" button with multiple selected assets would only generate 1 asset.
+
+**Root cause:** `options.key = args[++i]` overwrote on each `--key` flag instead of accumulating into an array.
+
+**Fix:** Changed to `options.keys = []` with `.push()` to accumulate all keys across all 6 scripts.
+
+### Shared Argument Parser
+
+Extracted duplicated CLI argument parsing and key filtering into shared modules, eliminating ~500 lines of boilerplate.
+
+| New File | Purpose |
+|----------|---------|
+| `scripts/ai-images/lib/parseArgs.js` | Shared argument parsing for all 6 image generation scripts |
+| `scripts/ai-images/lib/filterAssets.js` | Shared key-based asset filtering utility |
+
+- Updated `scripts/ai-images/lib/index.js` to export new modules
+- All 6 image scripts refactored to use the shared modules
+
+### Audio Service Consistency
+
+- Normalized `adminAudioGenerationService.js` to always use `keys` array instead of redundant `key`/`keys` distinction
+- Fixed `scripts/audio/generate-all.js` to use `keys: []` array pattern matching image scripts
+
+### Admin Dashboard UX
+
+- Added count badges to bulk action buttons: "Add to Queue (N)" and "Generate Now (N)" showing number of selected assets
+
+### Impact
+
+- Fixed critical bug preventing batch asset generation from admin dashboard
+- Eliminated ~500 lines of duplicated argument parsing across 6 scripts
+- Standardized `keys` array pattern across image and audio generation pipelines
+- Improved admin dashboard discoverability with selection count badges
 
 ---
 

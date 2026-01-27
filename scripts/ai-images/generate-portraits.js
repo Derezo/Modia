@@ -34,7 +34,9 @@ const {
   checkImageMagick,
   getEffectiveLoraModel,
   loadRegenerationQueue,
-  clearRegenerationMarker
+  clearRegenerationMarker,
+  parseBaseArgs,
+  applyKeyFilter
 } = require('./lib');
 
 // Configuration
@@ -54,151 +56,17 @@ const IMAGE_GENERATOR_ORIGINALS = path.join(PROJECT_ROOT, '..', 'image-generator
  * Parse command line arguments
  */
 function parseArgs() {
-  const args = process.argv.slice(2);
-  const options = {
-    dryRun: false,
-    key: null,
-    type: 'all',       // player, enemy, or all
-    race: null,
-    gender: null,
-    class: null,
-    advancedClass: null,
-    archetype: null,   // enemy archetype filter
-    region: null,      // enemy region filter
-    force: false,
-    backup: false,
-    local: true,       // Local ComfyUI is now the default
-    huggingface: false,
-    verbose: false,
-    quiet: false,
-    delay: 2000,  // Default 2 second delay between requests
-    lora: null,   // LoRA model override (v1, v2, modern-pixel, retro-pixel)
-    queue: false, // Process portraits marked for regeneration
-    help: false
-  };
-
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    switch (arg) {
-      case '--dry-run':
-        options.dryRun = true;
-        break;
-      case '--key':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--key requires a value', 'error');
-          process.exit(1);
-        }
-        options.key = args[++i];
-        break;
-      case '--type':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--type requires a value', 'error');
-          process.exit(1);
-        }
-        options.type = args[++i];
-        break;
-      case '--race':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--race requires a value', 'error');
-          process.exit(1);
-        }
-        options.race = args[++i];
-        break;
-      case '--gender':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--gender requires a value', 'error');
-          process.exit(1);
-        }
-        options.gender = args[++i];
-        break;
-      case '--class':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--class requires a value', 'error');
-          process.exit(1);
-        }
-        options.class = args[++i];
-        break;
-      case '--advanced-class':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--advanced-class requires a value', 'error');
-          process.exit(1);
-        }
-        options.advancedClass = args[++i];
-        break;
-      case '--archetype':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--archetype requires a value', 'error');
-          process.exit(1);
-        }
-        options.archetype = args[++i];
-        break;
-      case '--region':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--region requires a value', 'error');
-          process.exit(1);
-        }
-        options.region = args[++i];
-        break;
-      case '--force':
-        options.force = true;
-        break;
-      case '--backup':
-        options.backup = true;
-        break;
-      case '--huggingface':
-      case '--hf':
-        options.huggingface = true;
-        options.local = false;  // Disable local when using HuggingFace
-        break;
-      case '--local':
-        // Explicit local flag (already default, but kept for clarity)
-        options.local = true;
-        options.huggingface = false;
-        break;
-      case '--verbose':
-      case '-v':
-        options.verbose = true;
-        break;
-      case '--quiet':
-      case '-q':
-        options.quiet = true;
-        break;
-      case '--delay':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--delay requires a value', 'error');
-          process.exit(1);
-        }
-        options.delay = parseInt(args[++i], 10);
-        break;
-      case '--lora': {
-        const validLoraModels = ['v1', 'v2', 'modern-pixel', 'retro-pixel'];
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--lora requires a value (v1, v2, modern-pixel, retro-pixel)', 'error');
-          process.exit(1);
-        }
-        options.lora = args[++i];
-        if (!validLoraModels.includes(options.lora)) {
-          log(`Invalid --lora value: ${options.lora}. Valid options: ${validLoraModels.join(', ')}`, 'error');
-          process.exit(1);
-        }
-        break;
-      }
-      case '--queue':
-        options.queue = true;
-        options.force = true;  // Queue mode implies --force since portraits are marked for regen
-        break;
-      case '--help':
-      case '-h':
-        options.help = true;
-        break;
-      default:
-        if (arg.startsWith('--')) {
-          log(`Unknown option: ${arg}`, 'warn');
-        }
+  return parseBaseArgs(process.argv.slice(2), {
+    extraFlags: {
+      type:          { flag: '--type',           type: 'string', default: 'all' },
+      race:          { flag: '--race',           type: 'string', default: null },
+      gender:        { flag: '--gender',         type: 'string', default: null },
+      class:         { flag: '--class',          type: 'string', default: null },
+      advancedClass: { flag: '--advanced-class', type: 'string', default: null },
+      archetype:     { flag: '--archetype',      type: 'string', default: null },
+      region:        { flag: '--region',         type: 'string', default: null }
     }
-  }
-
-  return options;
+  });
 }
 
 /**
@@ -214,7 +82,7 @@ Usage:
 
 Options:
   --dry-run              Show what would be generated without calling APIs
-  --key <id>             Generate specific portrait (e.g., human_male_warrior, goblin_warrior)
+  --key <id>             Generate specific portrait (repeatable, e.g., --key human_male_warrior --key goblin_warrior)
   --type <type>          Filter by portrait type: player, enemy, or all (default: all)
   --race <race>          Filter player portraits by race (human, elf, dwarf, vampire, orc)
   --gender <gender>      Filter player portraits by gender (male, female, other)
@@ -277,12 +145,7 @@ function needsGeneration(portrait, options) {
  * Filter portraits based on CLI options
  */
 function filterPortraits(portraits, options) {
-  let filtered = portraits;
-
-  if (options.key) {
-    filtered = filtered.filter(p => p.id === options.key);
-  }
-
+  let filtered = applyKeyFilter(portraits, options.keys);
   // Note: race/gender/class filtering is handled by loadPortraitMetadata
   return filtered;
 }
