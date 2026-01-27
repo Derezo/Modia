@@ -29,7 +29,9 @@ const {
   getProjectRoot,
   buildThemedPrompt,
   createBackup,
-  getEffectiveLoraModel
+  getEffectiveLoraModel,
+  loadRegenerationQueue,
+  clearRegenerationMarker
 } = require('./lib');
 
 // Configuration
@@ -54,6 +56,7 @@ function parseArgs() {
     quiet: false,
     delay: 2000,  // Default 2 second delay between requests
     lora: null,   // LoRA model override (v1, v2, modern-pixel, retro-pixel)
+    queue: false, // Process icons marked for regeneration
     help: false
   };
 
@@ -121,6 +124,10 @@ function parseArgs() {
         }
         break;
       }
+      case '--queue':
+        options.queue = true;
+        options.force = true;  // Queue mode implies --force since icons are marked for regen
+        break;
       case '--help':
       case '-h':
         options.help = true;
@@ -248,28 +255,49 @@ async function main() {
   log('Icon Generation Script', 'info');
   log('======================', 'info');
 
-  // Load metadata
+  // Load metadata - either from queue or full metadata
   let metadata;
-  try {
-    metadata = loadIconMetadata(options.category);
-    log(`Loaded ${metadata.icons.length} icons`, 'info');
-  } catch (error) {
-    log(`Failed to load metadata: ${error.message}`, 'error');
-    process.exit(1);
-  }
+  let iconsToGenerate;
 
-  // Filter icons
-  const filteredIcons = filterIcons(metadata.icons, options);
-  log(`Filtered to ${filteredIcons.length} icons`, 'info');
+  if (options.queue) {
+    // Queue mode: load only icons marked for regeneration
+    log('Queue mode: loading icons marked for regeneration', 'info');
+    try {
+      const queuedIcons = loadRegenerationQueue('icons');
+      log(`Found ${queuedIcons.length} icons in regeneration queue`, 'info');
 
-  // Determine which need generation
-  const iconsToGenerate = filteredIcons.filter(i =>
-    needsGeneration(i, options)
-  );
-  const skipped = filteredIcons.length - iconsToGenerate.length;
+      metadata = {
+        icons: queuedIcons
+      };
 
-  if (skipped > 0) {
-    log(`Skipping ${skipped} icons (already exist or generated)`, 'info');
+      iconsToGenerate = queuedIcons;
+    } catch (error) {
+      log(`Failed to load regeneration queue: ${error.message}`, 'error');
+      process.exit(1);
+    }
+  } else {
+    // Standard mode: load all icons and filter
+    try {
+      metadata = loadIconMetadata(options.category);
+      log(`Loaded ${metadata.icons.length} icons`, 'info');
+    } catch (error) {
+      log(`Failed to load metadata: ${error.message}`, 'error');
+      process.exit(1);
+    }
+
+    // Filter icons
+    const filteredIcons = filterIcons(metadata.icons, options);
+    log(`Filtered to ${filteredIcons.length} icons`, 'info');
+
+    // Determine which need generation
+    iconsToGenerate = filteredIcons.filter(i =>
+      needsGeneration(i, options)
+    );
+    const skipped = filteredIcons.length - iconsToGenerate.length;
+
+    if (skipped > 0) {
+      log(`Skipping ${skipped} icons (already exist or generated)`, 'info');
+    }
   }
 
   if (iconsToGenerate.length === 0) {
@@ -354,6 +382,11 @@ async function main() {
 
         icon._category = 'icons';
         markAssetGenerated(icon);
+
+        // Clear regeneration marker if in queue mode
+        if (options.queue && icon.needsRegeneration) {
+          clearRegenerationMarker(icon);
+        }
 
         log(`Generated: ${icon.id}`, 'success');
       } else {

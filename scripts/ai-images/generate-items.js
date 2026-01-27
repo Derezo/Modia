@@ -29,7 +29,9 @@ const {
   buildThemedPrompt,
   createBackup,
   getEffectiveLoraModel,
-  generateCanonicalSizeVariants
+  generateCanonicalSizeVariants,
+  loadRegenerationQueue,
+  clearRegenerationMarker
 } = require('./lib');
 
 // Configuration
@@ -54,6 +56,7 @@ function parseArgs() {
     quiet: false,
     delay: 2000,  // Default 2 second delay between requests
     lora: null,   // LoRA model override (v1, v2, modern-pixel, retro-pixel)
+    queue: false, // Process items marked for regeneration
     help: false
   };
 
@@ -121,6 +124,10 @@ function parseArgs() {
         }
         break;
       }
+      case '--queue':
+        options.queue = true;
+        options.force = true;  // Queue mode implies --force since items are marked for regen
+        break;
       case '--help':
       case '-h':
         options.help = true;
@@ -250,28 +257,49 @@ async function main() {
   log('Item Sprite Generation Script', 'info');
   log('=============================', 'info');
 
-  // Load metadata
+  // Load metadata - either from queue or full metadata
   let metadata;
-  try {
-    metadata = loadItemMetadata(options.category);
-    log(`Loaded ${metadata.items.length} items`, 'info');
-  } catch (error) {
-    log(`Failed to load metadata: ${error.message}`, 'error');
-    process.exit(1);
-  }
+  let itemsToGenerate;
 
-  // Filter items
-  const filteredItems = filterItems(metadata.items, options);
-  log(`Filtered to ${filteredItems.length} items`, 'info');
+  if (options.queue) {
+    // Queue mode: load only items marked for regeneration
+    log('Queue mode: loading items marked for regeneration', 'info');
+    try {
+      const queuedItems = loadRegenerationQueue('items');
+      log(`Found ${queuedItems.length} items in regeneration queue`, 'info');
 
-  // Determine which need generation
-  const itemsToGenerate = filteredItems.filter(i =>
-    needsGeneration(i, options)
-  );
-  const skipped = filteredItems.length - itemsToGenerate.length;
+      metadata = {
+        items: queuedItems
+      };
 
-  if (skipped > 0) {
-    log(`Skipping ${skipped} items (already exist or generated)`, 'info');
+      itemsToGenerate = queuedItems;
+    } catch (error) {
+      log(`Failed to load regeneration queue: ${error.message}`, 'error');
+      process.exit(1);
+    }
+  } else {
+    // Standard mode: load all items and filter
+    try {
+      metadata = loadItemMetadata(options.category);
+      log(`Loaded ${metadata.items.length} items`, 'info');
+    } catch (error) {
+      log(`Failed to load metadata: ${error.message}`, 'error');
+      process.exit(1);
+    }
+
+    // Filter items
+    const filteredItems = filterItems(metadata.items, options);
+    log(`Filtered to ${filteredItems.length} items`, 'info');
+
+    // Determine which need generation
+    itemsToGenerate = filteredItems.filter(i =>
+      needsGeneration(i, options)
+    );
+    const skipped = filteredItems.length - itemsToGenerate.length;
+
+    if (skipped > 0) {
+      log(`Skipping ${skipped} items (already exist or generated)`, 'info');
+    }
   }
 
   if (itemsToGenerate.length === 0) {
@@ -340,12 +368,15 @@ async function main() {
     try {
       // Determine LoRA model: CLI override > asset-level > category default
       const effectiveLoraModel = options.lora || getEffectiveLoraModel(item, 'items');
+      // Compute canonical output path for the original image
+      const outputPath = getOutputPath(item);
       const result = await generateItem({
         prompt: item.prompt,
         key: item.id,
         category: item._itemCategory,
         seed: item.seed,
-        loraModel: effectiveLoraModel
+        loraModel: effectiveLoraModel,
+        outputPath  // Pass canonical path - Python will save directly here
       }, {
         verbose: options.verbose,
         quiet: options.quiet,
@@ -359,10 +390,14 @@ async function main() {
         item._category = 'items';
         markAssetGenerated(item);
 
+        // Clear regeneration marker if in queue mode
+        if (options.queue && item.needsRegeneration) {
+          clearRegenerationMarker(item);
+        }
+
         log(`Generated: ${item.id}`, 'success');
 
         // Post-process: generate canonical size variants (32, 64, 128)
-        const outputPath = getOutputPath(item);
         try {
           const postResult = await generateCanonicalSizeVariants(
             outputPath,

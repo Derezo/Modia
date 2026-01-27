@@ -32,7 +32,9 @@ const {
   createBackup,
   generateCanonicalSizeVariants,
   checkImageMagick,
-  getEffectiveLoraModel
+  getEffectiveLoraModel,
+  loadRegenerationQueue,
+  clearRegenerationMarker
 } = require('./lib');
 
 // Configuration
@@ -71,6 +73,7 @@ function parseArgs() {
     quiet: false,
     delay: 2000,  // Default 2 second delay between requests
     lora: null,   // LoRA model override (v1, v2, modern-pixel, retro-pixel)
+    queue: false, // Process portraits marked for regeneration
     help: false
   };
 
@@ -180,6 +183,10 @@ function parseArgs() {
         }
         break;
       }
+      case '--queue':
+        options.queue = true;
+        options.force = true;  // Queue mode implies --force since portraits are marked for regen
+        break;
       case '--help':
       case '-h':
         options.help = true;
@@ -322,36 +329,63 @@ async function main() {
   log('Portrait Generation Script', 'info');
   log('==========================', 'info');
 
-  // Load metadata with filters
+  // Load metadata - either from queue or full metadata
   let metadata;
-  try {
-    metadata = loadPortraitMetadata({
-      type: options.type,
-      race: options.race,
-      gender: options.gender,
-      class: options.class,
-      advancedClass: options.advancedClass,
-      archetype: options.archetype,
-      region: options.region
-    });
-    log(`Loaded ${metadata.portraits.length} portraits (filtered)`, 'info');
-  } catch (error) {
-    log(`Failed to load metadata: ${error.message}`, 'error');
-    process.exit(1);
-  }
+  let portraitsToGenerate;
 
-  // Filter portraits
-  const filteredPortraits = filterPortraits(metadata.portraits, options);
-  log(`Filtered to ${filteredPortraits.length} portraits`, 'info');
+  if (options.queue) {
+    // Queue mode: load only portraits marked for regeneration
+    log('Queue mode: loading portraits marked for regeneration', 'info');
+    try {
+      const queuedPortraits = loadRegenerationQueue('portraits');
+      log(`Found ${queuedPortraits.length} portraits in regeneration queue`, 'info');
 
-  // Determine which need generation
-  const portraitsToGenerate = filteredPortraits.filter(p =>
-    needsGeneration(p, options)
-  );
-  const skipped = filteredPortraits.length - portraitsToGenerate.length;
+      metadata = {
+        portraits: queuedPortraits,
+        raceTraits: {},
+        genderTraits: {},
+        classTraits: {},
+        advancedClassTraits: {},
+        archetypeTraits: {},
+        regionTraits: {}
+      };
 
-  if (skipped > 0) {
-    log(`Skipping ${skipped} portraits (already exist or generated)`, 'info');
+      portraitsToGenerate = queuedPortraits;
+    } catch (error) {
+      log(`Failed to load regeneration queue: ${error.message}`, 'error');
+      process.exit(1);
+    }
+  } else {
+    // Standard mode: load all portraits and filter
+    try {
+      metadata = loadPortraitMetadata({
+        type: options.type,
+        race: options.race,
+        gender: options.gender,
+        class: options.class,
+        advancedClass: options.advancedClass,
+        archetype: options.archetype,
+        region: options.region
+      });
+      log(`Loaded ${metadata.portraits.length} portraits (filtered)`, 'info');
+    } catch (error) {
+      log(`Failed to load metadata: ${error.message}`, 'error');
+      process.exit(1);
+    }
+
+    // Filter portraits
+    const filteredPortraits = filterPortraits(metadata.portraits, options);
+    log(`Filtered to ${filteredPortraits.length} portraits`, 'info');
+
+    // Determine which need generation
+    portraitsToGenerate = filteredPortraits.filter(p =>
+      needsGeneration(p, options)
+    );
+    const skipped = filteredPortraits.length - portraitsToGenerate.length;
+
+    if (skipped > 0) {
+      log(`Skipping ${skipped} portraits (already exist or generated)`, 'info');
+    }
   }
 
   if (portraitsToGenerate.length === 0) {
@@ -512,6 +546,11 @@ async function main() {
         portrait._category = 'portraits';
         // _sourceFile is already set by loadPortraitMetadata
         markAssetGenerated(portrait);
+
+        // Clear regeneration marker if in queue mode
+        if (options.queue && portrait.needsRegeneration) {
+          clearRegenerationMarker(portrait);
+        }
 
         log(`Generated: ${portrait.id}`, 'success');
 

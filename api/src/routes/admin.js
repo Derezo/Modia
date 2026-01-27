@@ -1016,19 +1016,44 @@ router.post('/generate/regeneration-queue', asyncHandler(async (req, res) => {
   }
 
   try {
-    // Queue mode processes assets marked with needsRegeneration: true
-    const result = adminGenerationService.queueJob(
-      category || 'tiles',  // Default to tiles for now
-      { queueMode: true },  // Special filter for regeneration queue
-      { ...options, force: true }  // Force regeneration
-    );
-
-    res.status(202).json({
-      message: 'Regeneration queue job started',
-      ...result
-    });
+    if (category) {
+      // Single category specified
+      const result = adminGenerationService.queueJob(
+        category,
+        { queueMode: true },
+        { ...options, force: true }
+      );
+      res.status(202).json({
+        message: 'Regeneration queue job started',
+        ...result
+      });
+    } else {
+      // No category specified - queue jobs for all categories that have pending items
+      ensureUtilities();
+      const results = [];
+      for (const cat of VALID_CATEGORIES) {
+        const queued = metadataUtils.loadRegenerationQueue(cat);
+        if (queued.length > 0) {
+          const result = adminGenerationService.queueJob(
+            cat,
+            { queueMode: true },
+            { ...options, force: true }
+          );
+          results.push({ category: cat, count: queued.length, ...result });
+        }
+      }
+      if (results.length === 0) {
+        res.json({ message: 'No items in regeneration queue' });
+      } else {
+        res.status(202).json({
+          message: `Queued ${results.length} generation jobs`,
+          jobs: results
+        });
+      }
+    }
   } catch (err) {
-    throw new AppError(err.message, 400);
+    if (err instanceof AppError) throw err;
+    throw new AppError(err.message, 500);
   }
 }));
 
