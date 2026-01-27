@@ -3,7 +3,7 @@
   "description": "UI icon metadata",
   "category": "icons",
   "totalAssets": 80,
-  "outputDir": "/assets/sprites/icons/",
+  "outputDir": "/assets/icons/",
   "sizes": {
     "small": "16x16",
     "medium": "32x32",

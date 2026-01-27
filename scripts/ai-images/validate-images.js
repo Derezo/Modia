@@ -26,10 +26,11 @@ const {
 const PROJECT_ROOT = getProjectRoot();
 const OUTPUT_DIRS = {
   tiles: 'frontend/public/assets/sprites/terrain',
-  portraits: 'frontend/public/assets/sprites/characters/portraits',
-  items: 'frontend/public/assets/sprites/items',
-  icons: 'frontend/public/assets/sprites/icons',
-  nodes: 'frontend/public/assets/sprites/nodes'
+  portraits: 'frontend/public/assets/portraits',
+  items: 'frontend/public/assets/items',
+  icons: 'frontend/public/assets/icons',
+  nodes: 'frontend/public/assets/nodes',
+  overlays: 'frontend/public/assets/overlays'
 };
 
 /**
@@ -109,17 +110,25 @@ function getAssetOutputPath(asset, category) {
 
   switch (category) {
     case 'tiles':
+      // Tiles: sprites/terrain/{biome}/{id}.png (no originals subdirectory)
       return path.join(baseDir, asset._biome || 'default', `${asset.id}.png`);
     case 'portraits':
-      return path.join(baseDir, `${asset.id}.png`);
+      // Canonical: portraits/originals/{id}.png
+      return path.join(baseDir, 'originals', `${asset.id}.png`);
     case 'items':
-      return path.join(baseDir, asset._itemCategory || 'misc', `${asset.id}.png`);
+      // Canonical: items/originals/{category}/{id}.png
+      return path.join(baseDir, 'originals', asset._itemCategory || 'misc', `${asset.id}.png`);
     case 'icons':
-      return path.join(baseDir, asset._iconCategory || 'misc', `${asset.id}.png`);
+      // Canonical: icons/originals/{category}/{id}.png
+      return path.join(baseDir, 'originals', asset._iconCategory || 'misc', `${asset.id}.png`);
     case 'nodes':
-      return path.join(baseDir, `${asset.id}.png`);
+      // Canonical: nodes/originals/{id}.png
+      return path.join(baseDir, 'originals', `${asset.id}.png`);
+    case 'overlays':
+      // Canonical: overlays/originals/{subcategory}/{id}.png
+      return path.join(baseDir, 'originals', asset._subcategory || 'rarity', `${asset.id}.png`);
     default:
-      return path.join(baseDir, `${asset.id}.png`);
+      return path.join(baseDir, 'originals', `${asset.id}.png`);
   }
 }
 

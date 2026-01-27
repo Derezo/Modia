@@ -35,31 +35,29 @@ const colors = {
 };
 
 /**
- * Expected file locations per category
+ * Expected file locations per category (canonical paths from shared/assetPaths.js)
  * sizePattern determines how size variants are organized:
- * - 'directory': {baseDir}/{size}/{subcategory}-{id}.png (icons in icons/png/)
- * - 'suffix': {baseDir}/{subcategory}/{id}_{size}.png (items)
- * - 'sizeDir': {baseDir}/{subcategory}/{size}x{size}/{id}.png (standard)
+ * - 'sizeDir': {baseDir}/{size}/{subcategory}/{id}.png (icons, items, nodes, portraits, overlays)
  * - 'none': No size variants, single file at {baseDir}/{id}.png
  */
 const CATEGORY_CONFIGS = {
   icons: {
     baseDir: 'icons/png',
-    sizePattern: 'directory', // {baseDir}/{size}/{subcategory}-{id}.png
+    sizePattern: 'sizeDir', // {baseDir}/{size}/{subcategory}/{id}.png
     subcategories: ['actions', 'status', 'ui', 'skills', 'items', 'augments', 'menu']
   },
   items: {
-    baseDir: 'sprites/items',
-    sizePattern: 'suffix', // {baseDir}/{subcategory}/{id}_{size}.png
+    baseDir: 'items',
+    sizePattern: 'sizeDir', // {baseDir}/{size}/{subcategory}/{id}.png
     subcategories: ['weapons', 'armor', 'accessories', 'consumables']
   },
   nodes: {
-    baseDir: 'sprites/nodes',
-    sizePattern: 'none' // Currently no size variants
+    baseDir: 'nodes',
+    sizePattern: 'sizeDir' // {baseDir}/{size}/{id}.png
   },
   portraits: {
-    baseDir: 'sprites/portraits',
-    sizePattern: 'none' // Currently no size variants
+    baseDir: 'portraits',
+    sizePattern: 'sizeDir' // {baseDir}/{size}/{id}.png
   },
   tiles: {
     baseDir: 'sprites/terrain',
@@ -67,8 +65,9 @@ const CATEGORY_CONFIGS = {
     subcategories: ['base', 'bridge', 'castle', 'cave', 'forest', 'mountain', 'default']
   },
   overlays: {
-    baseDir: 'sprites/overlays',
-    sizePattern: 'none'
+    baseDir: 'overlays',
+    sizePattern: 'sizeDir', // {baseDir}/{size}/{subcategory}/{id}.png
+    subcategories: ['rarity', 'augments']
   }
 };
 
@@ -88,90 +87,36 @@ function findAssetsForCategory(category, config) {
 
   const sizes = SIZE_PRESETS[category] || [];
 
-  if (config.sizePattern === 'directory') {
-    // Icons: assets are in size directories like icons/png/32/actions-action_attack.png
-    // Find the largest EXISTING size directory to get the list of assets
+  if (config.sizePattern === 'sizeDir') {
+    // Canonical: {baseDir}/{size}/{subcategory}/{id}.png or {baseDir}/{size}/{id}.png
     const sortedSizes = [...sizes].sort((a, b) => b - a); // Descending order
-    let sizePath = null;
-    let usedSize = null;
-
-    for (const size of sortedSizes) {
-      const testPath = path.join(baseDir, String(size));
-      if (fs.existsSync(testPath)) {
-        sizePath = testPath;
-        usedSize = size;
-        break;
-      }
-    }
-
-    if (sizePath) {
-      const files = fs.readdirSync(sizePath).filter(f => f.endsWith('.png'));
-      for (const file of files) {
-        // Parse subcategory-id.png format
-        const match = file.match(/^([^-]+)-(.+)\.png$/);
-        if (match) {
-          assets.push({
-            id: match[2],
-            subcategory: match[1],
-            basePath: path.join(sizePath, file),
-            _referenceSize: usedSize
-          });
-        } else {
-          // No subcategory
-          assets.push({
-            id: path.basename(file, '.png'),
-            basePath: path.join(sizePath, file),
-            _referenceSize: usedSize
-          });
-        }
-      }
-    }
-  } else if (config.sizePattern === 'suffix') {
-    // Items: files like weapons/axe_battle_32.png, axe_battle_48.png
-    // Find base assets by looking for the largest size
-    const largestSize = Math.max(...sizes);
     const subcategories = config.subcategories || [''];
 
+    // Find the largest EXISTING size directory to discover assets
     for (const subcat of subcategories) {
-      const subcatDir = subcat ? path.join(baseDir, subcat) : baseDir;
-      if (!fs.existsSync(subcatDir)) continue;
+      let foundSize = null;
+      let sizeSubdir = null;
 
-      const files = fs.readdirSync(subcatDir).filter(f => f.endsWith('.png'));
-
-      // Group by base name (remove size suffix)
-      const baseNames = new Set();
-      for (const file of files) {
-        const match = file.match(/^(.+)_(\d+)\.png$/);
-        if (match && sizes.includes(parseInt(match[2], 10))) {
-          baseNames.add(match[1]);
+      for (const size of sortedSizes) {
+        const testDir = subcat
+          ? path.join(baseDir, String(size), subcat)
+          : path.join(baseDir, String(size));
+        if (fs.existsSync(testDir)) {
+          foundSize = size;
+          sizeSubdir = testDir;
+          break;
         }
       }
 
-      for (const baseName of baseNames) {
-        assets.push({
-          id: baseName,
-          subcategory: subcat || undefined,
-          basePath: path.join(subcatDir, `${baseName}_${largestSize}.png`)
-        });
-      }
-    }
-  } else if (config.sizePattern === 'sizeDir') {
-    // Standard: files in size subdirectories like items/weapons/32x32/sword.png
-    const largestSize = Math.max(...sizes);
-    const subcategories = config.subcategories || [''];
-
-    for (const subcat of subcategories) {
-      const subcatDir = subcat ? path.join(baseDir, subcat) : baseDir;
-      const sizeSubdir = path.join(subcatDir, `${largestSize}x${largestSize}`);
-
-      if (!fs.existsSync(sizeSubdir)) continue;
+      if (!sizeSubdir) continue;
 
       const files = fs.readdirSync(sizeSubdir).filter(f => f.endsWith('.png'));
       for (const file of files) {
         assets.push({
           id: path.basename(file, '.png'),
           subcategory: subcat || undefined,
-          basePath: path.join(sizeSubdir, file)
+          basePath: path.join(sizeSubdir, file),
+          _referenceSize: foundSize
         });
       }
     }
@@ -215,26 +160,12 @@ function getExpectedPath(category, asset, size, config) {
   const baseDir = path.join(ASSETS_ROOT, config.baseDir);
 
   switch (config.sizePattern) {
-    case 'directory':
-      // icons/png/{size}/{subcategory}-{id}.png
+    case 'sizeDir':
+      // Canonical: {baseDir}/{size}/{subcategory}/{id}.png or {baseDir}/{size}/{id}.png
       if (asset.subcategory) {
-        return path.join(baseDir, String(size), `${asset.subcategory}-${asset.id}.png`);
+        return path.join(baseDir, String(size), asset.subcategory, `${asset.id}.png`);
       }
       return path.join(baseDir, String(size), `${asset.id}.png`);
-
-    case 'suffix':
-      // sprites/items/{subcategory}/{id}_{size}.png
-      if (asset.subcategory) {
-        return path.join(baseDir, asset.subcategory, `${asset.id}_${size}.png`);
-      }
-      return path.join(baseDir, `${asset.id}_${size}.png`);
-
-    case 'sizeDir':
-      // {baseDir}/{subcategory}/{size}x{size}/{id}.png
-      if (asset.subcategory) {
-        return path.join(baseDir, asset.subcategory, `${size}x${size}`, `${asset.id}.png`);
-      }
-      return path.join(baseDir, `${size}x${size}`, `${asset.id}.png`);
 
     case 'none':
     default:
