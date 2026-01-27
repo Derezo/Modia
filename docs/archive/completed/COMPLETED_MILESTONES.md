@@ -54,6 +54,64 @@ This document archives all completed features, resolved issues, and historical d
 | 10.1 | Jan 2026 | LoRA Model Selection & Admin Asset Pipeline - Per-asset style model selection, /api/admin/config endpoint, canonical asset paths, integration tests |
 | 10.2 | Jan 2026 | Admin Dashboard Code Review & Remediation - 7-phase remediation addressing 26 issues, SettingsPage modularized (1,144→215 lines), API client split into 9 modules, hook consolidation, unified components, 72 tests (88% API coverage) |
 | 10.3 | Jan 2026 | Admin Dashboard Remediation Plan - 14 issues across 8 phases: critical UI fixes, job queue reliability, clickable status badges, LoRA UX, asset state badges, icon path standardization, bulk operations, vim-style keyboard navigation |
+| 10.4 | Jan 2026 | Legacy Code Cleanup - 4-phase dead code removal, API migration, legacy fallback removal, property name standardization |
+
+---
+
+## 10.4 - Legacy Code Cleanup (Jan 2026)
+
+Comprehensive 4-phase legacy code cleanup removing dead code, migrating deprecated APIs, eliminating legacy fallbacks, and standardizing property naming conventions across the codebase.
+
+### Phase 1: Dead Code Removal
+
+Deleted files and exports that were fully superseded by newer implementations:
+
+| Deleted | Replacement |
+|---------|-------------|
+| `admin/src/components/GenerationConsole.jsx` | `UnifiedAssetPanel` |
+| `admin/src/hooks/useGeneration.js` | `useUnifiedGeneration` |
+| `admin/src/hooks/useAudioGeneration.js` | `useUnifiedGeneration` |
+| `AssetLoader.loadElevatedTile()` / `getElevatedTile()` | Stacking tile system (v10.0) |
+| `shared/constants.js` `CLASS_ADVANCEMENT` / `ADVANCEMENT_LEVEL_REQUIREMENT` | Guild advancement quest system |
+| `ai-image-metadata/theme.json` `legacyTrigger` field | Per-asset LoRA model selection (v10.1) |
+
+### Phase 2: Active Code Migration
+
+Migrated all callers from deprecated APIs to their replacements, then removed the deprecated functions:
+
+| Deprecated API | Replacement | Files Migrated |
+|----------------|-------------|----------------|
+| `getAssetUrl()` | `getAssetPath()` | 6 frontend files |
+| `buildTilePrompt()` | `buildFlatTilePrompt()` | generate-tiles.js |
+| `buildItemPrompt()` | (removed, unused) | promptBuilder.js |
+| `renderTileAt()` | `renderTileUnified()` | BattleGrid.js |
+
+Removed deprecated aliases from `shared/assetPaths.js` and `shared/index.js`.
+
+### Phase 3: Legacy Fallback Removal
+
+Eliminated backward-compatibility code paths that were no longer needed:
+
+- **AssetLoader.js**: Removed legacy wall/slope naming convention fallbacks (`wall_{biome}_{terrain}` and `slope_{biome}_{direction}_{levels}` formats)
+- **assetPathHelper.js**: Removed `getLegacyPaths()` and `getAssetUrlsWithFallback()`, renamed to `getAssetUrls()` (canonical paths only)
+- **metadataUtils.js**: Removed legacy `biomeFiles` support, added error guard for invalid metadata format
+
+### Phase 4: Property Name Standardization
+
+Removed HP/MP fallback chains from frontend components, standardizing on snake_case API format:
+
+| Component | Removed Fallbacks | Standard Format |
+|-----------|-------------------|-----------------|
+| `CharacterCard.js` | `hp`/`maxHp`/`hpMax` chains | `hp_current` / `hp_max` |
+| `ParchmentCard.js` | `hp`/`maxHp`/`hpMax` chains | `hp_current` / `hp_max` |
+| `CharacterModal.js` | `mp`/`maxMp`/`mpMax` chains | `mp_current` / `mp_max` |
+
+### Impact
+
+- Removed ~15 files and deprecated exports
+- Eliminated 6+ legacy fallback code paths
+- Standardized property naming across 3 components
+- All remaining code uses canonical API formats with no backward-compatibility overhead
 
 ---
 

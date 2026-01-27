@@ -279,12 +279,6 @@ export function getAssetPath(category, id, options = {}) {
 }
 
 /**
- * Alias for getAssetPath for backward compatibility
- * @deprecated Use getAssetPath instead
- */
-export const getAssetUrl = getAssetPath;
-
-/**
  * Gets the path to the original source image
  *
  * Every asset category maintains an originals/ subdirectory with

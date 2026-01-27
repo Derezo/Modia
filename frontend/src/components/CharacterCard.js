@@ -38,7 +38,7 @@ import {
   getParchmentShadow,
   getParchmentTextShadow
 } from '../ui/parchment/ParchmentTheme.js';
-import { getAssetUrl, getOptimalSize } from '@shared/assetPaths.js';
+import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
 
 const STYLE_ID = 'character-card-styles';
 
@@ -74,10 +74,10 @@ export class CharacterCard {
    * @param {string} options.character.name - Character name
    * @param {number} options.character.level - Character level
    * @param {string} options.character.class - Character class
-   * @param {number} options.character.currentHp - Current HP
-   * @param {number} options.character.maxHp - Max HP
-   * @param {number} [options.character.currentMp] - Current MP
-   * @param {number} [options.character.maxMp] - Max MP
+   * @param {number} options.character.hp_current - Current HP
+   * @param {number} options.character.hp_max - Max HP
+   * @param {number} [options.character.mp_current] - Current MP
+   * @param {number} [options.character.mp_max] - Max MP
    * @param {Object} [options.badges] - Badge visibility flags
    * @param {boolean} [options.badges.hasEquipmentUpgrade] - Show red equipment badge
    * @param {boolean} [options.badges.hasSkillPoints] - Show yellow skill badge
@@ -338,10 +338,9 @@ export class CharacterCard {
 
     const classColor = this.getClassColor(character.class);
     const classIcon = this.getClassIcon(character.class);
-    // Use snake_case properties from API, fallback to camelCase for compatibility
-    const maxHp = character.hp_max || character.maxHp || 0;
-    const currentHp = character.hp_current || character.currentHp || maxHp;
-    const hpPercent = maxHp > 0 ? (currentHp / maxHp) * 100 : 100;
+    const maxHp = character.hp_max || 1;
+    const currentHp = character.hp_current ?? maxHp;
+    const hpPercent = (currentHp / maxHp) * 100;
     const hpClass = hpPercent <= 25 ? 'character-card__hp-fill--critical'
       : hpPercent <= 50 ? 'character-card__hp-fill--low' : '';
 
@@ -442,11 +441,11 @@ export class CharacterCard {
   updateCharacter(character) {
     this.options.character = { ...this.options.character, ...character };
 
-    // Update HP bar - use snake_case with camelCase fallback
+    // Update HP bar
     const hpFill = this.element.querySelector('.character-card__hp-fill');
-    const maxHp = character.hp_max || character.maxHp || 0;
-    const currentHp = character.hp_current || character.currentHp || maxHp;
-    if (hpFill && maxHp > 0) {
+    const maxHp = character.hp_max || 1;
+    const currentHp = character.hp_current ?? maxHp;
+    if (hpFill) {
       const hpPercent = (currentHp / maxHp) * 100;
       hpFill.style.width = `${hpPercent}%`;
       hpFill.className = 'character-card__hp-fill';
@@ -511,7 +510,7 @@ export class CharacterCard {
     // Display size is 48px, so use optimal size (64px)
     const id = `${race}_${gender}_${charClass}`;
     const optimalSize = getOptimalSize('portraits', 48);
-    return getAssetUrl('portraits', id, { size: optimalSize });
+    return getAssetPath('portraits', id, { size: optimalSize });
   }
 
   /**

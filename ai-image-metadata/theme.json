@@ -4,8 +4,7 @@
   "description": "Ink and wash watercolor style with parchment texture - the classic Modia aesthetic",
   "style": {
     "trigger": "wbgmsst",
-    "legacyTrigger": "GRPZA",
-    "basePhrase": "ink and wash watercolor illustration",
+    "basePhrase": "watercolor illustration",
     "technique": "bold black outlines with watercolor fills",
     "texture": "aged parchment texture",
     "mood": "cozy nostalgic JRPG aesthetic"
@@ -96,11 +95,11 @@
   },
   "loraDefaults": {
     "_comment": "DOCUMENTATION ONLY - actual defaults set in image-generator/modia-generators/lib/prompt_templates.py",
-    "description": "Default LoRA model for each asset type. v1=GRPZA (flat 2D), v2=wbgmsst (textured/isometric)",
+    "description": "v2",
     "tiles": "v2",
-    "portraits": "v1",
-    "items": "v1",
-    "icons": "v1",
+    "portraits": "v2",
+    "items": "v2",
+    "icons": "v2",
     "nodes": "v2",
     "obstacles": "v2",
     "overlays": "v2"

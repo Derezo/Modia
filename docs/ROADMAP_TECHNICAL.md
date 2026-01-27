@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 2.8 |
+| Version | 3.4 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -496,7 +496,7 @@ Consolidated view for all three generation queues (images, music, SFX) in the ad
 Implemented queue-based workflow for asset regeneration to replace immediate execution pattern:
 
 **Workflow Changes:**
-- [x] Deprecated `GenerationConsole` in favor of `UnifiedAssetPanel`
+- [x] Replaced `GenerationConsole` with `UnifiedAssetPanel` (file deleted in legacy cleanup)
 - [x] Added Queue tab to `UnifiedAssetPanel` showing items marked for regeneration
 - [x] Replaced dropdown filters with clickable tabs (All/Images/Music/SFX)
 - [x] Refactored bulk actions: "Add to Queue" (marks) vs "Generate Now" (immediate)
@@ -507,8 +507,8 @@ Implemented queue-based workflow for asset regeneration to replace immediate exe
 
 **Modified Frontend Files:**
 - `admin/src/pages/Dashboard.jsx` - Removed GenerationConsole usage
-- `admin/src/components/GenerationConsole.jsx` - Added @deprecated JSDoc
-- `admin/src/hooks/useGeneration.js` - Added @deprecated JSDoc
+- ~~`admin/src/components/GenerationConsole.jsx`~~ - Deleted (legacy cleanup)
+- ~~`admin/src/hooks/useGeneration.js`~~ - Deleted (legacy cleanup)
 - `admin/src/components/UnifiedAssetPanel.jsx` - Queue/Console/Assets tabs, source filtering
 - `admin/src/components/UnifiedGenerationBar.jsx` - Queue button with count
 - `admin/src/components/AssetGrid.jsx` - "Add to Queue" and "Generate Now" bulk actions
@@ -535,14 +535,14 @@ Fixed admin dashboard portrait loading issues where grid thumbnails showed 404 e
 - Double directory bug: `ENEMY_OUTPUT_BASE` included `portraits/` but Python added it again
 
 **Solution:**
-- Created `admin/src/lib/assetPathHelper.js` - Fallback URL support for transition period
-- Updated admin components to use fallback helper with canonical path preference
+- Created `admin/src/lib/assetPathHelper.js` - Asset URL helper (legacy fallbacks removed in cleanup)
+- Updated admin components to use canonical path helper
 - Updated `api/src/routes/admin.js` to compute and include `path` property in responses
 - Fixed `generate-portraits.js` to copy 1024x1024 originals from external image-generator project
 - Enhanced migration script to scan external originals directory
 
 **Files Modified:**
-- `admin/src/lib/assetPathHelper.js` (new) - `getAssetUrlsWithFallback()`, `createFallbackLoader()`
+- `admin/src/lib/assetPathHelper.js` (new) - `getAssetUrls()` (legacy `getAssetUrlsWithFallback()` and `getLegacyPaths()` removed in cleanup)
 - `admin/src/components/AssetCard.jsx` - Removed legacy path params, use assetPathHelper
 - `admin/src/components/AssetDetail.jsx` - Fallback handling with `imageUrls` state
 - `admin/src/components/AssetPreviewCard.jsx` - Compute path from metadata
@@ -630,13 +630,14 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 | Duplicate `validateSFXPrompt()` function | adminAudio.js, adminAudioGenerationService.js | Medium | Open |
 | Duplicate `VALID_CATEGORIES` constant | admin.js, adminGenerationService.js | Low | Open |
 | Missing JSDoc on admin service exports | adminGenerationService.js | Low | Open |
-| No tests for admin generation endpoints | api/src/tests/ | Medium | Open |
+| ~~No tests for admin generation endpoints~~ | ~~api/src/tests/~~ | ~~Medium~~ | **Resolved** v10.2 - 72 admin tests |
 | Backend selection not persisted (in-memory) | adminGenerationService.js:90 | Low | Open |
 | Socket callbacks not cleared on unmount | useUnifiedGeneration.js:133-147 | Low | Open (admin tooling) |
 | Duplicate `parseProgress()` function | adminGenerationService.js:156, adminAudioGenerationService.js:132 | Low | Open |
 | Duplicate `generateJobId()` function | adminGenerationService.js:103, adminAudioGenerationService.js:72 | Low | Open |
+| ~200 lines duplicated across 5 generator scripts | scripts/ai-images/generate-{tiles,portraits,items,icons,nodes}.js | Medium | Open |
 
-*Issues audited: 2026-01-25*
+*Issues audited: 2026-01-27*
 
 **Validation Report:** See `docs/archive/reports/2026-01-25-asset-refactoring-validation.md` for full findings.
 
@@ -647,6 +648,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 - [x] **Large file modularization** (Jan 2026) - Split monolithic files into focused modules:
   - Frontend: AudioAssets.js split into 6 manifest modules, MarketplaceScene CSS + tabs extracted, ColiseumScene styles + tabs extracted
   - Backend: battleService.js (1855→66 lines) split into 9 modules in `api/src/services/battle/`, world routes refactored with 5 services in `api/src/services/world/`
+- [x] **Legacy code cleanup** (Jan 2026) - 4-phase cleanup removing dead code, migrating deprecated APIs, removing legacy fallbacks, and standardizing property names across admin dashboard, frontend, and shared modules
 - [ ] Consolidate settings modal and scene
 - [ ] Unify WebSocket event naming
 - [ ] Add TypeScript types (future)
@@ -655,6 +657,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 - [ ] Request validation layer (Zod schemas for consistent input validation)
 - [x] Distributed rate limiting (Redis) for horizontal scaling (v9.4: rate-limit-redis with graceful fallback)
 - [ ] Structured logging with request correlation IDs
+- [ ] **Generator script deduplication** — Extract shared boilerplate from 5 `scripts/ai-images/generate-*.js` scripts into `scripts/ai-images/lib/generationRunner.js`. Duplicated logic includes: `parseArgs()` (~80 lines of shared CLI flags), `validateEnvVars()`, `needsGeneration()`, `--queue` mode loading via `loadRegenerationQueue()`/`clearRegenerationMarker()`, generation loop with rate limiting, backup handling, summary output, and post-processing via `generateCanonicalSizeVariants()`. Each script should reduce to ~50-80 lines defining only its category-specific config (output paths, prompt building, metadata loading). Estimated ~200+ duplicated lines across tiles, portraits, items, icons, and nodes generators.
 
 ### 8.4 Future Infrastructure
 
@@ -684,6 +687,9 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.4 | Jan 2026 | Legacy Code Cleanup (v10.4): 4-phase cleanup removing dead code (GenerationConsole.jsx, useGeneration.js, useAudioGeneration.js, loadElevatedTile, CLASS_ADVANCEMENT, legacyTrigger), migrating deprecated APIs (getAssetUrl→getAssetPath, buildTilePrompt→buildFlatTilePrompt, renderTileAt→renderTileUnified), removing legacy fallbacks (wall/slope naming, getLegacyPaths/getAssetUrlsWithFallback→getAssetUrls, legacy biomeFiles), and standardizing property names (HP/MP fallback chains→snake_case). Updated Section 8.3, known issues, and historical sections. |
+| 3.3 | Jan 2026 | UnifiedAssetPanel Fixes (v10.3): Fixed 5 issues - asset path 404s, duplicate Assets/Console entries, UI consolidation (moved tabs from panel top bar to bottom generation bar), queue-to-generation pipeline for all categories. Added `--queue` flag to portraits/items/icons/nodes generators. Documented generator script duplication debt in Section 8.3. |
+| 3.2 | Jan 2026 | Admin Dashboard Code Review & Remediation (v10.2): 7-phase remediation addressing 26 issues. SettingsPage.jsx modularized (1,144→215 lines) into 4 tab components. API client split from 425-line god object into 9 focused modules. Hook consolidation: GenerationContext now uses useUnifiedGeneration with backward compatibility. Unified components with configs.js for image/audio asset handling. Testing infrastructure: 72 tests (24 API, 13 format, 17 timeFormat, 18 smoke) with ~88% API coverage, ~98% utility coverage. Marked "No tests for admin generation endpoints" as resolved. |
 | 3.1 | Jan 2026 | Production Readiness Implementation: Added home-grown exception tracking system (PostgreSQL-based with fingerprint grouping). Request correlation IDs via X-Request-ID middleware. File-based error logging with daily rotation for VPS. User feedback system (enhancement/bug/abuse reports) with FeedbackModal UI in Settings. Simplified CI pipeline (removed integration tests from PR, main-only E2E). Added npm audit security scanning. Dependabot automation for weekly dependency updates. Codecov integration for coverage reporting. Migration 040_error_tracking.sql with exception_groups, exception_events, user_feedback tables. Updated Section 2.1 GitHub Actions and Section 5.2 Error Tracking to completed status. |
 | 3.0 | Jan 2026 | LoRA Model Selection UI: Added Section 7.13 documenting per-asset LoRA model selection in admin dashboard. Style Model dropdown with 4 options (v1, v2, modern-pixel, retro-pixel). Added /api/admin/config endpoint for model definitions. Updated AssetDetail.jsx with dropdown and category default hints. Verified all generation scripts use canonical paths via generateCanonicalSizeVariants(). Marked migrate-asset-paths.js as one-time migration. Design doc: docs/plans/2026-01-25-lora-model-selection-design.md. |
 | 2.9 | Jan 2026 | Asset Loading System Remediation: Added Section 7.12 documenting admin dashboard asset loading fixes. Fixed two incompatible path conventions causing 404s on portrait grid. Created admin/src/lib/assetPathHelper.js with fallback URL support. Fixed generate-portraits.js to copy 1024x1024 originals from external image-generator project. Enhanced migrate-asset-paths.js to scan external originals. Fixed double directory bug (ENEMY_OUTPUT_BASE). Added npm run ai:migrate-paths script. Migrated 318 portraits with 315 new size variants generated. |
