@@ -10,6 +10,7 @@ This document archives all completed features, resolved issues, and historical d
 
 | Version | Date | Major Accomplishments |
 |---------|------|----------------------|
+| 10.8 | Jan 2026 | Battle Consumable Item System - Fixed 5 critical bugs, item animations with sprite arcs, AI urgency-based healing, standardized effect types, 165 new unit tests |
 | 9.11 | Jan 2026 | Battle Tile Rendering & Height System - Tile cycling for overlapping elevations, occlusion transparency, height movement animation with parabolic arc |
 | 9.10 | Jan 2026 | Security & Testing Infrastructure - Redis-backed rate limiting, 70+ endpoint protection, Artillery load testing, E2E expansion (character creation, battle flow, error handling), enhanced health checks |
 | 9.9 | Jan 2026 | Documentation Audit & Consolidation - Formula updates (level 2.8, skill polynomial costs), implementation status marking, roadmap verification, ~78% documentation alignment |
@@ -58,6 +59,111 @@ This document archives all completed features, resolved issues, and historical d
 | 10.6 | Jan 2026 | Asset Path Remediation - Unified all asset pipeline tools to canonical shared/assetPaths.js, deleted migrate-sizes.js, fixed test factories |
 | 10.5 | Jan 2026 | Asset Pipeline Bug Fix & Deduplication - Multi-key generation bug fix, shared argument parser, audio service normalization, admin UX count badges |
 | 10.4 | Jan 2026 | Legacy Code Cleanup - 4-phase dead code removal, API migration, legacy fallback removal, property name standardization |
+
+---
+
+## 10.8 - Battle Consumable Item System (Jan 2026)
+
+Complete implementation of battle consumable items fixing 5 critical interconnected bugs, adding visual animations, and integrating AI evaluation for strategic healing.
+
+### Bug Fixes (5 Critical Issues)
+
+| Bug | Root Cause | Fix |
+|-----|------------|-----|
+| Empty items list | Shared inventory query used `character_id` instead of `user_id` | Fixed query in `battle.js` |
+| Inconsistent effect types | Mixed naming (`heal`/`heal_hp`, `heal_both`/`dual-heal`) | Standardized to canonical DB names (heal_hp, heal_mp, heal_both, cure_poison, cure_all, revive) |
+| WebSocket action ignored | No item branch in action processing switch | Added item processing in `BattleWebSocketManager.js` |
+| AI never used items | No item evaluation logic | Added urgency-based item scoring in `stateEvaluator.js` |
+| NPC items written to wrong state | `npcItemService.js` wrote to non-existent `state.battle.npcItems` | Fixed to write to `state.npcConsumables` |
+
+### Visual Enhancements
+
+**Item Animations (`BattleAnimations.js`):**
+- Arc trajectory for item sprites (parabolic flight from user to target)
+- 400ms duration with 64px peak height
+- Particle bursts on impact with effect-specific colors
+- Visual effect mapping via `SkillEffectCategories.js`
+
+**Item Effect Mapping:**
+| Effect Type | Category | Visual |
+|-------------|----------|--------|
+| heal_hp / heal_both | healing | Green particles |
+| heal_mp | restoration | Blue particles |
+| cure_poison / cure_all | restoration | Purple cleansing particles |
+| revive | resurrection | Golden radiant burst |
+
+### AI Item Evaluation
+
+**Urgency-Based Healing (`stateEvaluator.js`):**
+- Health urgency scoring: inverse of HP percentage (0-1 scale)
+- Critical health (HP < 30%): 3x multiplier on healing utility
+- MP urgency: same formula applied to mana restoration
+- Revive priority: dead allies scored with 10x multiplier
+
+**Item Action Generation (`actionGenerator.js`):**
+- Consumable items enumerated for each unit
+- Effect types matched to unit needs (heal HP for low health, etc.)
+- Target selection based on urgency scoring
+- Items prioritized over attacks when allies critically wounded
+
+### Shared Inventory Integration
+
+**NPC Item Service (`npcItemService.js`):**
+- Unified consumable loading for NPCs and players
+- Shared inventory lookup by `user_id` for all party members
+- Item sprite IDs from consumable templates
+- Effect type standardization for consistent behavior
+
+### Database Changes
+
+**Consumable Templates (`items.js`):**
+- Added `sprite_id` to all 15 consumable templates
+- Sprite IDs match AI image metadata entries (potion_health_minor, potion_mana, elixir_dual, etc.)
+
+**Seed Script (`seed.js`):**
+- Updated INSERT statement to include sprite_id column
+
+### Asset Pipeline
+
+**AI Image Metadata (`ai-image-metadata/items/consumables.json`):**
+- Added metadata entries for all consumable sprites
+- Organized by effect type (healing, mana, dual, cure, revive, food)
+- Sprite IDs aligned with template naming
+
+### Files Modified (15 Files)
+
+| File | Changes |
+|------|---------|
+| `api/src/routes/battle.js` | Fixed shared inventory query (user_id not character_id) |
+| `api/src/services/battle/actionProcessor.js` | Canonical effectTypes, dead unit guards, revive validation |
+| `api/src/services/npcItemService.js` | Unified NPC/player items, fixed state property |
+| `api/src/services/ai/actionGenerator.js` | Item action generation and target selection |
+| `api/src/services/ai/stateEvaluator.js` | Urgency-based item scoring (HP/MP thresholds, critical multipliers) |
+| `frontend/src/battle/BattleAnimations.js` | Item arc animations with sprite rendering |
+| `frontend/src/battle/BattleWebSocketManager.js` | Item WebSocket action branch |
+| `frontend/src/battle/SkillEffectCategories.js` | Item effect type to visual category mapping |
+| `api/src/db/templates/items.js` | Added sprite_id to 15 consumables |
+| `api/src/db/seed.js` | Updated INSERT for sprite_id column |
+| `ai-image-metadata/items/consumables.json` | New sprite entries for all consumables |
+
+### Tests Added (165 Total)
+
+| Test File | Tests | Coverage |
+|-----------|-------|----------|
+| `processItemAction.test.js` | 57 | Effect processing, dead unit guards, revive validation, HP/MP caps |
+| `npcItemService.test.js` | 41 | NPC item loading, shared inventory, effect type standardization |
+| `stateEvaluator.items.test.js` | 35 | Urgency scoring, critical multipliers, revive priority |
+| `actionGenerator.items.test.js` | 32 | Item enumeration, target selection, effect matching |
+
+### Impact
+
+- **Battle items now fully functional** in both player and AI hands
+- **AI strategically uses consumables** to heal wounded allies and revive fallen units
+- **Visual feedback** with item sprites flying in arcs to targets
+- **Comprehensive test coverage** (165 tests) preventing future regressions
+- **Standardized effect naming** eliminates confusion between frontend/backend
+
+**Commit:** `feat: Battle consumable item system - fix 5 bugs, add animations, AI scoring`
 
 ---
 

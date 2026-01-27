@@ -15,7 +15,7 @@
 | Category | Completion | Status |
 |----------|------------|--------|
 | Core Mechanics | 100% | Complete |
-| Combat System | 99% | Near Complete |
+| Combat System | 100% | Complete |
 | Economy & Items | 95% | Near Complete |
 | User Experience | 95% | Near Complete |
 | Social Features | 95% | Complete |
@@ -114,6 +114,7 @@
 - [x] Tile cycling for overlapping elevations (auto-cycle 1.5s, Tab key, mobile long-press) - v9.8
 - [x] Occlusion transparency (35% alpha for tiles blocking units) - v9.8
 - [x] Height movement animation (parabolic arc for elevation transitions) - v9.8
+- [x] Battle consumable items (heal HP/MP, cure status, revive, AI scoring) - v10.8
 
 ### 2.2 Enemy System
 
@@ -651,6 +652,7 @@ Recent implementations:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 10.0 | Jan 2026 | Battle Consumable Item System (v10.8): Marked consumable items complete in Combat System (Section 2.1). Fixed 5 interconnected bugs preventing battle items from working. Added item branch to WebSocket action processing with sprite arc animations. Added AI item scoring with urgency-based healing evaluation. Updated Combat System completion to 100%. |
 | 9.1 | Jan 2026 | World Generation Quality (v9.7): Global guild same-type spacing (~100 units between same guild types). Battle terrain anti-clustering (prevent 3+ same-type nodes clustering). Zodiac shrine validation (exactly 12 or fail). Removed unused GAP_INFILL_CONFIG. Section 5.1.3 now complete. |
 | 9.0 | Jan 2026 | Documentation Audit: Marked enemy ability execution as deferred. Updated Advanced Item System with implementation status. Updated Tavern 2.0 section noting TavernScene exists. Added BATTLE_MODES.md reference for PvP modes. |
 | 8.0 | Jan 2026 | Battle Tilemap Rendering v9.7: Elevation-aware coordinate system (Y offset 8px/level), depth sorting with painter's algorithm, elevation-aware click detection. Frontend/backend 3D pathfinding synchronization. Archetype elevation profiles (6 archetypes: openField, caveRooms, mountainPass, bridgeCrossing, arena, volcano). Elevation constraints (variation limits, ramp requirements, peak/pit ratios). Code quality: BattleGrid cleanup, deterministic noise fix, elevation validation. |
