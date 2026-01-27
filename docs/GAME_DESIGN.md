@@ -419,7 +419,7 @@ Combat is **turn-based tactical** on an **8x8 isometric grid**. Each unit accumu
 - **Two-Action System**: Each turn allows 1 MOVE + 1 ACT (in any order)
 - **CT Turn Order**: Higher AGI = faster CT accumulation = more frequent turns
 - **Terrain Effects**: Different terrain types affect movement cost and provide combat bonuses
-- **Status Effects**: 11 status types with stacking and duration rules
+- **Status Effects**: 11 status types with stacking and duration rules (see [STATUS_EFFECTS.md](STATUS_EFFECTS.md))
 
 ### Battle Modes
 

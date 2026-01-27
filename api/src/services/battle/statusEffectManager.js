@@ -3,7 +3,7 @@
  */
 
 import * as traitService from '../traitService.js';
-import { PURIFY_EFFECTS } from '../../../../shared/battleMath.js';
+import { PURIFY_EFFECTS, PREVENT_ACTING, PREVENT_MOVEMENT, PREVENT_SKILLS } from '../../../../shared/battleMath.js';
 
 /**
  * Process status effects at turn start
@@ -67,8 +67,7 @@ export function processStatusEffects(unit) {
 export function canUnitAct(unit) {
   if (!unit.statusEffects) return true;
 
-  const preventActing = ['stun', 'freeze', 'sleep'];
-  return !unit.statusEffects.some(e => preventActing.includes(e.type));
+  return !unit.statusEffects.some(e => PREVENT_ACTING.includes(e.type));
 }
 
 /**
@@ -77,8 +76,7 @@ export function canUnitAct(unit) {
 export function canUnitMove(unit) {
   if (!unit.statusEffects) return true;
 
-  const preventMovement = ['stun', 'freeze', 'sleep', 'root'];
-  return !unit.statusEffects.some(e => preventMovement.includes(e.type));
+  return !unit.statusEffects.some(e => PREVENT_MOVEMENT.includes(e.type));
 }
 
 /**
@@ -87,8 +85,7 @@ export function canUnitMove(unit) {
 export function canUnitUseSkills(unit) {
   if (!unit.statusEffects) return true;
 
-  const preventSkills = ['stun', 'freeze', 'sleep', 'silence'];
-  return !unit.statusEffects.some(e => preventSkills.includes(e.type));
+  return !unit.statusEffects.some(e => PREVENT_SKILLS.includes(e.type));
 }
 
 /**

@@ -82,6 +82,7 @@ The roadmap is split into two focused documents:
 ### Documentation
 - [Technical Architecture](./TECHNICAL_ARCHITECTURE.md)
 - [Battle System Index](./BATTLE_SYSTEM_INDEX.md)
+- [Status Effects](./STATUS_EFFECTS.md)
 - [Worldgen Technical Deep Dive](./WORLDGEN_TECHNICAL_DEEP_DIVE.md)
 - [API Specification](./API_SPECIFICATION.md)
 - [Game Design](./GAME_DESIGN.md)

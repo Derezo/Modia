@@ -579,6 +579,7 @@ Detailed specifications in `docs/`. Key files:
 - `BATTLE_MODES.md` - PvE, PvP, Coliseum modes
 - `BATTLE_RECONNECTION.md` - State persistence and reconnection
 - `AI_SYSTEM.md` - Enemy AI behavior trees and utility functions
+- `STATUS_EFFECTS.md` - Status effect taxonomy, cleansing tiers, resistance formulas
 
 **UI & Assets:**
 - `ASSET_SYSTEM_INDEX.md` - Unified asset pipeline navigation and quick reference

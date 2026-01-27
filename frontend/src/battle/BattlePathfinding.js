@@ -19,6 +19,7 @@ import {
   getAttackableTiles,
   getManhattanDistance
 } from '@shared/pathfinding.js';
+import { PREVENT_MOVEMENT } from '@shared/battleMath.js';
 
 export class BattlePathfinding {
   constructor(grid, units) {
@@ -55,18 +56,21 @@ export class BattlePathfinding {
       (e?.id?.toLowerCase() === name)
     );
 
-    // Root prevents all movement (server uses canUnitMove which checks root/stun/freeze/sleep)
-    if (hasEffect('root') || hasEffect('rooted') || hasEffect('stun') || hasEffect('freeze') || hasEffect('sleep')) {
+    // Movement-preventing effects (shared with server via PREVENT_MOVEMENT constant)
+    if (effects.some(e => {
+      const type = typeof e === 'string' ? e.toLowerCase() : (e?.type?.toLowerCase() ?? '');
+      return PREVENT_MOVEMENT.includes(type);
+    })) {
       return 0;
     }
 
     // Slow reduces movement by 1 (minimum 1) - matches server flat modifier
-    if (hasEffect('slow') || hasEffect('slowed')) {
+    if (hasEffect('slow')) {
       range = Math.max(1, range - 1);
     }
 
     // Haste increases movement by 1 - matches server flat modifier
-    if (hasEffect('haste') || hasEffect('hastened')) {
+    if (hasEffect('haste')) {
       range += 1;
     }
 

@@ -1034,3 +1034,72 @@ describe('applyVariance', () => {
     assert.strictEqual(applyVariance(0, 0.5), 0);
   });
 });
+
+// ============================================================================
+// STATUS EFFECT PREVENTION CONSTANTS
+// ============================================================================
+
+import {
+  PREVENT_ACTING,
+  PREVENT_MOVEMENT,
+  PREVENT_SKILLS,
+  CURE_POISON_EFFECTS,
+  CURE_ALL_EFFECTS,
+  PURIFY_EFFECTS
+} from './battleMath.js';
+
+describe('Status effect prevention constants', () => {
+  it('PREVENT_ACTING should contain stun, freeze, sleep', () => {
+    assert.deepStrictEqual([...PREVENT_ACTING], ['stun', 'freeze', 'sleep']);
+  });
+
+  it('PREVENT_MOVEMENT should be PREVENT_ACTING + root', () => {
+    assert.deepStrictEqual([...PREVENT_MOVEMENT], ['stun', 'freeze', 'sleep', 'root']);
+  });
+
+  it('PREVENT_SKILLS should be PREVENT_ACTING + silence', () => {
+    assert.deepStrictEqual([...PREVENT_SKILLS], ['stun', 'freeze', 'sleep', 'silence']);
+  });
+
+  it('all PREVENT constants should be frozen', () => {
+    assert.ok(Object.isFrozen(PREVENT_ACTING));
+    assert.ok(Object.isFrozen(PREVENT_MOVEMENT));
+    assert.ok(Object.isFrozen(PREVENT_SKILLS));
+  });
+
+  it('PREVENT_MOVEMENT should be a superset of PREVENT_ACTING', () => {
+    for (const effect of PREVENT_ACTING) {
+      assert.ok(PREVENT_MOVEMENT.includes(effect), `${effect} missing from PREVENT_MOVEMENT`);
+    }
+  });
+
+  it('PREVENT_SKILLS should be a superset of PREVENT_ACTING', () => {
+    for (const effect of PREVENT_ACTING) {
+      assert.ok(PREVENT_SKILLS.includes(effect), `${effect} missing from PREVENT_SKILLS`);
+    }
+  });
+});
+
+describe('Cleansable status effect constants', () => {
+  it('CURE_POISON_EFFECTS should contain only poison', () => {
+    assert.deepStrictEqual([...CURE_POISON_EFFECTS], ['poison']);
+  });
+
+  it('CURE_ALL_EFFECTS should be a superset of CURE_POISON_EFFECTS', () => {
+    for (const effect of CURE_POISON_EFFECTS) {
+      assert.ok(CURE_ALL_EFFECTS.includes(effect), `${effect} missing from CURE_ALL_EFFECTS`);
+    }
+  });
+
+  it('PURIFY_EFFECTS should be a superset of CURE_ALL_EFFECTS', () => {
+    for (const effect of CURE_ALL_EFFECTS) {
+      assert.ok(PURIFY_EFFECTS.includes(effect), `${effect} missing from PURIFY_EFFECTS`);
+    }
+  });
+
+  it('all CURE/PURIFY constants should be frozen', () => {
+    assert.ok(Object.isFrozen(CURE_POISON_EFFECTS));
+    assert.ok(Object.isFrozen(CURE_ALL_EFFECTS));
+    assert.ok(Object.isFrozen(PURIFY_EFFECTS));
+  });
+});

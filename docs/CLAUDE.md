@@ -21,6 +21,7 @@ This directory (`docs/`) contains **pure markdown documentation only** — no co
 - **BATTLE_TURN_SYSTEM.md** — CT-based turn order, two-action system, turn state machine
 - **BATTLE_MESSAGING_PROTOCOL.md** — Hybrid HTTP/WebSocket protocol, message specs, state sync
 - **BATTLE_ANIMATIONS.md** — Visual feedback system, intent visualization, animation timing
+- **STATUS_EFFECTS.md** — Status effect taxonomy, cleansing tiers, resistance formulas, zodiac effects
 
 ## Parent Project Context
 
