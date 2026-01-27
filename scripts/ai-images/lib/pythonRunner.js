@@ -199,7 +199,6 @@ async function generateTile(tileConfig, options = {}) {
  * @param {boolean} portraitConfig.isAdvanced - Whether this is an advanced class (player only)
  * @param {string} portraitConfig.prompt - Direct prompt for enemy/custom portraits
  * @param {string} portraitConfig.key - Asset key for enemy/custom portraits
- * @param {string} portraitConfig.outputDir - Override output directory (for enemy portraits)
  * @param {boolean} portraitConfig.isEnemy - Whether this is an enemy portrait
  * @param {number} portraitConfig.seed - Random seed
  * @param {Object} options - Additional options
@@ -210,23 +209,20 @@ async function generateTile(tileConfig, options = {}) {
  * @returns {Promise<PythonResult>}
  */
 async function generatePortrait(portraitConfig, options = {}) {
-  const { seed = 42, isEnemy = false, isAdvanced = false, outputDir, loraModel } = portraitConfig;
+  const { seed = 42, isEnemy = false, isAdvanced = false, loraModel } = portraitConfig;
   const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
   let args;
 
   if (isEnemy) {
-    // Enemy portrait - use prompt/key mode with custom output dir
+    // Enemy portrait - use prompt/key mode
+    // No --output-dir; Python resolves via --modia-root
     const { prompt, key } = portraitConfig;
     args = [
       '--prompt', prompt,
       '--key', key,
       '--seed', String(seed ?? 42)
     ];
-    // Enemy portraits go to a different directory
-    if (outputDir) {
-      args.push('--output-dir', outputDir);
-    }
   } else if (isAdvanced) {
     // Advanced class portrait - use prompt/key mode
     // (Python script only validates base classes: warrior, wizard, monk, chemist)
@@ -459,6 +455,100 @@ async function runBatchGeneration(scriptName, configPath, options = {}) {
   return runPythonScript(scriptName, args, { ...options, verbose, quiet, loraModel });
 }
 
+/**
+ * Remove background from an image using the Python rembg helper
+ * @param {string} inputPath - Path to input image
+ * @param {string} outputPath - Path to save output image (can be same as input to overwrite)
+ * @param {Object} options - Additional options
+ * @param {boolean} options.verbose - Enable verbose output
+ * @param {boolean} options.quiet - Suppress output
+ * @param {string} options.model - rembg model name (default: isnet-general-use)
+ * @returns {Promise<PythonResult>}
+ */
+async function removeBackground(inputPath, outputPath, options = {}) {
+  const { verbose = false, quiet = false, model = null } = options;
+
+  const generatorRoot = getImageGeneratorRoot();
+  const scriptPath = path.join(generatorRoot, 'remove_bg.py');
+
+  const fullArgs = ['--input', inputPath, '--output', outputPath];
+  if (model) {
+    fullArgs.push('--model', model);
+  }
+  if (verbose) {
+    fullArgs.push('--verbose');
+  }
+
+  const useCondaEnv = !process.env.AI_IMAGE_PYTHON;
+  const command = useCondaEnv
+    ? `conda run -n image-gen-comfyui python ${scriptPath} ${fullArgs.join(' ')}`
+    : `python3 ${scriptPath} ${fullArgs.join(' ')}`;
+
+  if (verbose) {
+    log(`Executing rembg: ${command}`, 'debug');
+  }
+
+  let pythonCommand;
+  let pythonArgs;
+
+  if (useCondaEnv) {
+    pythonCommand = 'conda';
+    pythonArgs = ['run', '-n', 'image-gen-comfyui', '--no-capture-output', 'python', scriptPath, ...fullArgs];
+  } else {
+    pythonCommand = process.env.AI_IMAGE_PYTHON || 'python3';
+    pythonArgs = [scriptPath, ...fullArgs];
+  }
+
+  const env = {
+    ...process.env,
+    PYTHONUNBUFFERED: '1'
+  };
+
+  return new Promise((resolve, reject) => {
+    const proc = spawn(pythonCommand, pythonArgs, {
+      env,
+      cwd: generatorRoot
+    });
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (data) => {
+      const text = data.toString();
+      stdout += text;
+      if (!quiet) {
+        text.split('\n').forEach(line => {
+          if (line.trim()) console.log(`  ${line}`);
+        });
+      }
+    });
+
+    proc.stderr.on('data', (data) => {
+      const text = data.toString();
+      stderr += text;
+      if (!quiet || text.includes('Error') || text.includes('error')) {
+        text.split('\n').forEach(line => {
+          if (line.trim()) console.error(`  [stderr] ${line}`);
+        });
+      }
+    });
+
+    proc.on('close', (exitCode) => {
+      resolve({
+        success: exitCode === 0,
+        exitCode,
+        stdout,
+        stderr,
+        command
+      });
+    });
+
+    proc.on('error', (error) => {
+      reject(new Error(`Failed to spawn rembg process: ${error.message}`));
+    });
+  });
+}
+
 module.exports = {
   runPythonScript,
   generateTile,
@@ -467,5 +557,6 @@ module.exports = {
   generateItem,
   generateNode,
   generateOverlay,
-  runBatchGeneration
+  runBatchGeneration,
+  removeBackground
 };

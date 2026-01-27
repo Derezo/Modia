@@ -74,6 +74,7 @@
     "ai:regenerate-prompts": "node scripts/ai-images/regenerate-prompts.js",
     "ai:restore": "node scripts/ai-images/restore-backup.js",
     "ai:migrate-paths": "node scripts/ai-images/migrate-asset-paths.js",
+    "ai:reprocess:portraits": "node scripts/ai-images/reprocess-portraits.js",
     "doctor": "bash scripts/doctor.sh",
     "dev:setup": "bash scripts/dev-setup.sh",
     "prepare": "husky"
