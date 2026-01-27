@@ -181,6 +181,7 @@ async function resizeImage(sourcePath, outputPath, size, options = {}) {
   // -unsharp: Sharpen to counteract blur from downscaling
   const args = [
     sourcePath,
+    '-background', 'transparent',
     '-filter', filter,
     '-resize', `${size}x${size}`,
   ];
@@ -590,6 +591,7 @@ async function resizeImageNonSquare(sourcePath, outputPath, width, height, optio
 
   const args = [
     sourcePath,
+    '-background', 'transparent',
     '-filter', filter,
     '-resize', `${width}x${height}!`,
   ];
