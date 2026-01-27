@@ -91,7 +91,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@elevenlabs/elevenlabs-js": "^2.31.0",
+    "@elevenlabs/elevenlabs-js": "^2.33.0",
     "sharp": "^0.34.5"
   }
 }
