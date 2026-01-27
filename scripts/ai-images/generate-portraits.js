@@ -260,23 +260,30 @@ async function main() {
     let basePrompt;
 
     if (portrait._type === 'enemy') {
-      // Build prompt for enemy portrait
-      const archetypeTraits = metadata.archetypeTraits[portrait.archetype] || portrait.archetype;
-      const regionTraits = metadata.regionTraits[portrait.region] || portrait.region;
-      const visualTraits = portrait.visualTraits || '';
-      basePrompt = `${archetypeTraits} ${regionTraits} ${visualTraits} monster creature enemy`;
-    } else {
-      // Build prompt for player portrait
-      const raceTraits = metadata.raceTraits[portrait.race] || portrait.race;
-      const genderTraits = metadata.genderTraits[portrait.gender] || portrait.gender;
-      // Use advancedClassTraits if available and is advanced class
-      let classTraits;
-      if (portrait.isAdvanced && metadata.advancedClassTraits[portrait.class]) {
-        classTraits = metadata.advancedClassTraits[portrait.class];
+      // Use custom prompt override if available, otherwise build from traits
+      if (portrait.prompt) {
+        basePrompt = portrait.prompt;
       } else {
-        classTraits = metadata.classTraits[portrait.class] || portrait.class;
+        const archetypeTraits = metadata.archetypeTraits[portrait.archetype] || portrait.archetype;
+        const regionTraits = metadata.regionTraits[portrait.region] || portrait.region;
+        const visualTraits = portrait.visualTraits || '';
+        basePrompt = `${archetypeTraits} ${regionTraits} ${visualTraits} monster creature enemy`;
       }
-      basePrompt = `${raceTraits} ${genderTraits} ${classTraits}`;
+    } else {
+      // Use custom prompt override if available, otherwise build from traits
+      if (portrait.prompt) {
+        basePrompt = portrait.prompt;
+      } else {
+        const raceTraits = metadata.raceTraits[portrait.race] || portrait.race;
+        const genderTraits = metadata.genderTraits[portrait.gender] || portrait.gender;
+        let classTraits;
+        if (portrait.isAdvanced && metadata.advancedClassTraits[portrait.class]) {
+          classTraits = metadata.advancedClassTraits[portrait.class];
+        } else {
+          classTraits = metadata.classTraits[portrait.class] || portrait.class;
+        }
+        basePrompt = `${raceTraits} ${genderTraits} ${classTraits}`;
+      }
     }
 
     const prompt = buildThemedPrompt('portraits', basePrompt, { skipTrigger: true });
@@ -336,11 +343,16 @@ async function main() {
       let result;
 
       if (portrait._type === 'enemy') {
-        // Build prompt for enemy portrait
-        const archetypeTraits = metadata.archetypeTraits[portrait.archetype] || portrait.archetype;
-        const regionTraits = metadata.regionTraits[portrait.region] || portrait.region;
-        const visualTraits = portrait.visualTraits || '';
-        const enemyPrompt = `${visualTraits} ${archetypeTraits} ${regionTraits} monster creature`;
+        // Use custom prompt override if available, otherwise build from traits
+        let enemyPrompt;
+        if (portrait.prompt) {
+          enemyPrompt = portrait.prompt;
+        } else {
+          const archetypeTraits = metadata.archetypeTraits[portrait.archetype] || portrait.archetype;
+          const regionTraits = metadata.regionTraits[portrait.region] || portrait.region;
+          const visualTraits = portrait.visualTraits || '';
+          enemyPrompt = `${visualTraits} ${archetypeTraits} ${regionTraits} monster creature`;
+        }
 
         // Generate enemy portrait using prompt/key mode with custom output dir
         // Note: Python script adds 'portraits/' to the fallback_dir, so we use ENEMY_OUTPUT_BASE
@@ -360,12 +372,16 @@ async function main() {
           huggingface: options.huggingface
         });
       } else if (portrait.isAdvanced) {
-        // Generate advanced class portrait using prompt/key mode
-        // (Python script only validates base classes: warrior, wizard, monk, chemist)
-        const raceTraits = metadata.raceTraits[portrait.race] || portrait.race;
-        const genderTraits = metadata.genderTraits[portrait.gender] || portrait.gender;
-        const classTraits = metadata.advancedClassTraits[portrait.class] || portrait.class;
-        const advancedPrompt = `${raceTraits} ${genderTraits} ${classTraits}`;
+        // Use custom prompt override if available, otherwise build from traits
+        let advancedPrompt;
+        if (portrait.prompt) {
+          advancedPrompt = portrait.prompt;
+        } else {
+          const raceTraits = metadata.raceTraits[portrait.race] || portrait.race;
+          const genderTraits = metadata.genderTraits[portrait.gender] || portrait.gender;
+          const classTraits = metadata.advancedClassTraits[portrait.class] || portrait.class;
+          advancedPrompt = `${raceTraits} ${genderTraits} ${classTraits}`;
+        }
 
         // Determine LoRA model: CLI override > asset-level > category default
         const effectiveLoraModelAdvanced = options.lora || getEffectiveLoraModel(portrait, 'portraits');
