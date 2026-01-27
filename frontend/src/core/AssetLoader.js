@@ -12,7 +12,7 @@
  *
  * Size selection strategy:
  * - Portraits: 64px (default), 128px, 256px - smallest >= display size
- * - Nodes: 48px, 96px (default) - smallest >= display size
+ * - Nodes: 48px, 64px, 96px (default), 128px, 256px - smallest >= display size
  * - Items: 32px, 64px (default), 128px - directory-based
  * - Icons: 16-128px - directory-based
  *
@@ -625,7 +625,7 @@ export class AssetLoader {
    * @returns {Promise<HTMLImageElement|null>} Loaded node sprite or null if failed
    *
    * @example
-   * // Load castle node for 50px display (will try 48px variant, then 96px)
+   * // Load castle node for 50px display (will try 64px variant via getOptimalSize)
    * const sprite = await assetLoader.loadNodeSpriteAtSize('castle', { size: 50 });
    */
   async loadNodeSpriteAtSize(nodeType, options = {}) {
@@ -687,7 +687,7 @@ export class AssetLoader {
    * @param {number[]} sizes - Array of sizes to preload
    * @returns {Promise<PromiseSettledResult<HTMLImageElement>[]>}
    */
-  async preloadNodesAtSizes(sizes = [48, 96]) {
+  async preloadNodesAtSizes(sizes = [48, 64, 96, 128, 256]) {
     const nodeTypes = [
       'castle', 'city', 'village', 'keep', 'palace',
       'forest', 'cave', 'mountain', 'bridge',

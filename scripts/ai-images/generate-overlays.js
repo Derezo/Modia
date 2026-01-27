@@ -29,7 +29,8 @@ const {
   getProjectRoot,
   buildThemedPrompt,
   createBackup,
-  postProcessGenerated,
+  generateCanonicalSizeVariants,
+  checkImageMagick,
   getEffectiveLoraModel,
   parseBaseArgs,
   applyKeyFilter
@@ -296,18 +297,34 @@ async function main() {
         markAssetGenerated(overlay);
 
         log(`Generated: ${overlay.id}`, 'success');
+        log(`Saved: ${getOutputPath(overlay)}`, 'info');
 
-        // Generate size variants if requested
-        if (options.sizes) {
+        // Always generate canonical size variants
+        if (checkImageMagick()) {
           const outputPath = getOutputPath(overlay);
-          const sizeResult = await postProcessGenerated(outputPath, 'overlays', {
-            force: options.force,
-            verbose: options.verbose
-          });
-          if (sizeResult.success && sizeResult.variants.length > 0) {
-            log(`  Created ${sizeResult.variants.length} size variants`, 'success');
-          } else if (!sizeResult.success) {
-            log(`  Failed to create size variants`, 'warn');
+          const postResult = await generateCanonicalSizeVariants(
+            outputPath,
+            'overlays',
+            overlay.id,
+            {
+              subcategory: overlay._subcategory,
+              sizes: [32, 48, 64, 128],
+              force: options.force,
+              verbose: options.verbose
+            }
+          );
+
+          if (postResult.success) {
+            if (options.verbose && postResult.generated.length > 0) {
+              log(`  Size variants: ${postResult.generated.length} generated`, 'info');
+            }
+          } else if (options.verbose) {
+            log(`  Warning: Post-processing failed for ${overlay.id}`, 'warn');
+            if (postResult.errors.length > 0) {
+              for (const err of postResult.errors) {
+                log(`    - ${err.size || 'unknown'}: ${err.error}`, 'warn');
+              }
+            }
           }
         }
       } else {

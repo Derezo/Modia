@@ -17,9 +17,12 @@ frontend/public/assets/
 │   ├── 128/
 │   └── 256/
 ├── nodes/
-│   ├── originals/                      # AI source images
+│   ├── originals/                      # 1024x1024 AI source images
 │   ├── 48/castle.png                   # No node_ prefix
-│   └── 96/castle.png
+│   ├── 64/castle.png
+│   ├── 96/castle.png
+│   ├── 128/castle.png
+│   └── 256/castle.png
 ├── items/
 │   ├── originals/
 │   ├── 32/weapons/sword_iron.png       # Size in path, not filename
@@ -81,7 +84,7 @@ Player and enemy portraits are stored in a single unified directory structure, d
 World map node icons without the `node_` prefix.
 
 - **Pattern:** `/assets/nodes/{size}/{id}.png`
-- **Sizes:** 48, 96 (default)
+- **Sizes:** 48, 64, 96 (default), 128, 256
 - **IDs:** `castle`, `city`, `village`, `tavern`, `shop`, `guild_warrior`, etc.
 
 **Examples:**
@@ -194,7 +197,7 @@ SIZE_PRESETS = {
   portraits: [64, 128, 256],
   items: [32, 64, 128],
   icons: [16, 24, 32, 48, 64, 128],
-  nodes: [48, 96],
+  nodes: [48, 64, 96, 128, 256],
   overlays: [32, 48, 64, 128]
 };
 
@@ -383,7 +386,7 @@ This eliminates the need for a `base/` directory with generic tiles.
 - **Inventory/Shop:** 48-64px for item grids
 - **Detail Views:** 128px+ for inspect/preview
 - **Battle Grid:** 64px for terrain tiles
-- **World Map:** 48px (zoomed out) or 96px (normal) for nodes
+- **World Map:** 48px (zoomed out), 96px (normal), 128-256px (detail views) for nodes
 
 ### Adding New Assets
 

@@ -30,6 +30,8 @@ const {
   buildThemedPrompt,
   createBackup,
   getEffectiveLoraModel,
+  generateCanonicalSizeVariants,
+  checkImageMagick,
   loadRegenerationQueue,
   clearRegenerationMarker,
   parseBaseArgs,
@@ -294,6 +296,36 @@ async function main() {
         }
 
         log(`Generated: ${icon.id}`, 'success');
+        log(`Saved: ${getOutputPath(icon)}`, 'info');
+
+        // Post-process to generate canonical size variants
+        if (checkImageMagick()) {
+          const outputPath = getOutputPath(icon);
+          const postResult = await generateCanonicalSizeVariants(
+            outputPath,
+            'icons',
+            icon.id,
+            {
+              subcategory: icon._iconCategory,
+              sizes: [16, 24, 32, 48, 64, 128],
+              force: options.force,
+              verbose: options.verbose
+            }
+          );
+
+          if (postResult.success) {
+            if (options.verbose && postResult.generated.length > 0) {
+              log(`  Size variants: ${postResult.generated.length} generated`, 'info');
+            }
+          } else if (options.verbose) {
+            log(`  Warning: Post-processing failed for ${icon.id}`, 'warn');
+            if (postResult.errors.length > 0) {
+              for (const err of postResult.errors) {
+                log(`    - ${err.size || 'unknown'}: ${err.error}`, 'warn');
+              }
+            }
+          }
+        }
       } else {
         results.failed.push({
           id: icon.id,
