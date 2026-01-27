@@ -30,7 +30,7 @@ const {
   delay,
   ensureDirectoryExists,
   getProjectRoot,
-  buildTilePrompt,
+  buildFlatTilePrompt,
   createBackup,
   loadBatchConfig,
   getBatchConfigSummary,
@@ -464,7 +464,7 @@ async function main() {
   // Display what will be generated
   for (const tile of tilesToGenerate) {
     const biomeData = metadata.byBiome[tile._biome];
-    const prompt = buildTilePrompt(tile, biomeData);
+    const prompt = buildFlatTilePrompt(tile, biomeData);
     const loraModel = options.lora || getEffectiveLoraModel(tile, 'tiles');
 
     console.log(`  - ${tile.id}`);

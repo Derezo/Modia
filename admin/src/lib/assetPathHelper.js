@@ -1,6 +1,6 @@
 /**
- * Asset path helper with fallback support for transition period
- * Tries canonical paths first, falls back to legacy sprite paths
+ * Asset path helper for canonical asset paths
+ * All assets use the canonical path structure from shared/assetPaths.js
  */
 
 import { getAssetPath, DEFAULT_SIZES } from '@shared/assetPaths.js';
@@ -40,68 +40,23 @@ export function getAssetExtraOptions(asset, category) {
 }
 
 /**
- * Get legacy fallback paths for assets that may not have been migrated yet
- *
- * NOTE: Icons no longer have legacy fallbacks - they must use the canonical
- * subdirectory structure: /assets/icons/png/{size}/{subcategory}/{id}.png
- * Run scripts/ai-images/migrate-icon-paths.js to migrate legacy icon files.
- */
-function getLegacyPaths(category, id, options = {}) {
-  const { subcategory } = options;
-
-  switch (category) {
-    case 'portraits': {
-      const isEnemy = subcategory === 'enemy' || subcategory === 'enemies';
-      if (isEnemy) {
-        return [`/assets/sprites/enemies/portraits/${id}.png`];
-      }
-      return [`/assets/sprites/portraits/${id}.png`];
-    }
-    case 'items': {
-      const sub = subcategory || 'weapons';
-      // Try size-in-filename patterns (current actual files have size suffix)
-      return [
-        `/assets/sprites/items/${sub}/${id}_64.png`,
-        `/assets/sprites/items/${sub}/${id}_48.png`,
-        `/assets/sprites/items/${sub}/${id}_32.png`,
-        `/assets/sprites/items/${sub}/${id}.png`  // No size suffix as last resort
-      ];
-    }
-    case 'nodes':
-      return [`/assets/sprites/nodes/${id}.png`];
-    case 'overlays':
-      return [`/assets/sprites/overlays/${subcategory || 'rarity'}/${id}.png`];
-    case 'icons':
-      // Icons use canonical paths only - no legacy fallbacks
-      return [];
-    default:
-      return [];
-  }
-}
-
-/**
- * Get asset URLs with fallback support
- * Returns array of URLs to try in order (canonical first, then legacy)
+ * Get canonical asset URLs
+ * Returns array with the canonical path for the asset
  *
  * @param {string} category - Asset category
  * @param {string} id - Asset identifier
  * @param {Object} options - Options (subcategory, size, etc.)
- * @returns {string[]} Array of URLs to try
+ * @returns {string[]} Array of URLs (canonical path)
  */
-export function getAssetUrlsWithFallback(category, id, options = {}) {
+export function getAssetUrls(category, id, options = {}) {
   const urls = [];
   const size = options.size || DEFAULT_SIZES[category];
 
-  // Primary: canonical path from assetPaths.js
   try {
     urls.push(getAssetPath(category, id, { ...options, size }));
   } catch (e) {
-    // Category not supported, skip canonical path
+    // Category not supported
   }
-
-  // Fallback: legacy sprite paths
-  const legacyPaths = getLegacyPaths(category, id, options);
-  urls.push(...legacyPaths);
 
   return urls;
 }
@@ -116,8 +71,8 @@ export function getAssetUrl(category, id, options = {}) {
 }
 
 /**
- * Get asset URL for grid display with fallback
- * Computes path from asset metadata
+ * Get asset URL for grid display
+ * Computes canonical path from asset metadata
  */
 export function getAssetImageUrl(asset, category) {
   const id = asset.key || asset.id;
@@ -130,25 +85,7 @@ export function getAssetImageUrl(asset, category) {
     return getAssetPath(category, id, { subcategory, size, ...extraOptions });
   }
 
-  // For other categories, get fallback URLs and return the first one
-  // Components should use onError to try next URL
-  const urls = getAssetUrlsWithFallback(category, id, { subcategory, size, ...extraOptions });
+  // For other categories, get canonical URLs and return the first one
+  const urls = getAssetUrls(category, id, { subcategory, size, ...extraOptions });
   return urls[0] || null;
-}
-
-/**
- * Create an image loader that tries multiple URLs
- * Returns a function that can be used as onError handler
- */
-export function createFallbackLoader(urls, onAllFailed) {
-  let currentIndex = 0;
-
-  return function handleError(event) {
-    currentIndex++;
-    if (currentIndex < urls.length) {
-      event.target.src = urls[currentIndex];
-    } else if (onAllFailed) {
-      onAllFailed();
-    }
-  };
 }

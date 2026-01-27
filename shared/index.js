@@ -13,8 +13,6 @@ export {
   CLASSES,
   ADVANCED_CLASSES,
   GENDERS,
-  CLASS_ADVANCEMENT,
-  ADVANCEMENT_LEVEL_REQUIREMENT,
   NODE_TYPES,
   BATTLE_NODE_TYPES,
   CASTLE_FEATURES,
@@ -84,7 +82,6 @@ export {
   DEFAULT_SIZES,
   ASSET_CATEGORIES,
   getAssetPath,
-  getAssetUrl, // Deprecated alias for getAssetPath
   getOriginalsPath,
   getOutputPath,
   getAllSizeVariants,

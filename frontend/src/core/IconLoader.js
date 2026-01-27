@@ -17,7 +17,7 @@
  *   await iconLoader.preloadCategory('menu', ['formation', 'inventory', 'settings']);
  */
 
-import { getAssetUrl, SIZE_PRESETS } from '@shared/assetPaths.js';
+import { getAssetPath, SIZE_PRESETS } from '@shared/assetPaths.js';
 
 /** Available PNG sizes from the generation script */
 const AVAILABLE_SIZES = SIZE_PRESETS.icons;
@@ -88,7 +88,7 @@ export class IconLoader {
     const normalizedName = this.normalizeName(name);
     const optimalSize = this.getOptimalSize(size);
 
-    return getAssetUrl('icons', normalizedName, {
+    return getAssetPath('icons', normalizedName, {
       subcategory: category,
       size: optimalSize,
       useLegacyPath: true

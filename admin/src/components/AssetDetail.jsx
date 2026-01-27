@@ -18,7 +18,7 @@ import {
 import { api } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { DEFAULT_SIZES, SIZE_PRESETS } from '@shared/assetPaths.js';
-import { getAssetSubcategory, getAssetExtraOptions, getAssetUrlsWithFallback } from '../lib/assetPathHelper.js';
+import { getAssetSubcategory, getAssetExtraOptions, getAssetUrls } from '../lib/assetPathHelper.js';
 
 /**
  * Category-specific size options for preview
@@ -27,20 +27,19 @@ import { getAssetSubcategory, getAssetExtraOptions, getAssetUrlsWithFallback } f
 const CATEGORY_SIZE_OPTIONS = SIZE_PRESETS;
 
 /**
- * Get image URLs for asset preview using canonical paths with fallback
- * Returns an array of URLs to try in order (canonical first, then legacy)
+ * Get image URLs for asset preview using canonical paths
  *
  * @param {Object} asset - The asset object
  * @param {string} category - Asset category
  * @param {number} size - Size variant to use
- * @returns {string[]} Array of URLs to try
+ * @returns {string[]} Array of canonical URLs
  */
 function getAssetImageUrls(asset, category, size) {
   const id = asset.key || asset.id;
   const subcategory = getAssetSubcategory(asset, category);
   const extraOptions = getAssetExtraOptions(asset, category);
 
-  return getAssetUrlsWithFallback(category, id, {
+  return getAssetUrls(category, id, {
     subcategory,
     size,
     ...extraOptions

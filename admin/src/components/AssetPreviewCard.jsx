@@ -17,7 +17,7 @@ import {
 } from '@radix-ui/react-icons';
 
 import WaveformDisplay from './audio/WaveformDisplay';
-import { getAssetUrlsWithFallback } from '../lib/assetPathHelper.js';
+import { getAssetUrls } from '../lib/assetPathHelper.js';
 
 // Type colors
 const TYPE_COLORS = {
@@ -55,7 +55,7 @@ function getImageUrl(asset) {
     const filename = imagePath.split('/').pop() || imagePath;
     const id = filename.replace(/\.\w+$/, ''); // strip extension
     try {
-      const urls = getAssetUrlsWithFallback(asset.category, id, {
+      const urls = getAssetUrls(asset.category, id, {
         subcategory: asset.subcategory
       });
       if (urls.length > 0) return urls[0];

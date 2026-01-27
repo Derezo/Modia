@@ -138,18 +138,6 @@ export const TIER_REQUIREMENTS = {
 // Minimum level to start advancement quests
 export const ADVANCEMENT_QUEST_MIN_LEVEL = 10;
 
-// Legacy: Direct advancement paths (deprecated - use GUILD_ADVANCEMENT_TIERS)
-// Kept for backwards compatibility during transition
-export const CLASS_ADVANCEMENT = {
-  warrior: 'berserker',
-  wizard: 'sorcerer',
-  monk: 'ninja',
-  chemist: 'alchemist'
-};
-
-// Legacy: Old level requirement (deprecated - use ADVANCEMENT_QUEST_MIN_LEVEL)
-export const ADVANCEMENT_LEVEL_REQUIREMENT = 20;
-
 // Node types
 export const NODE_TYPES = {
   CASTLE: 'castle',

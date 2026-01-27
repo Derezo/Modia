@@ -19,6 +19,8 @@ npm run dev                             # Start both API (port 3000) and fronten
 # Individual services
 npm run dev:api                         # API only
 npm run dev:frontend                    # Frontend only
+npm run dev:admin                       # Admin dashboard only (port 5173)
+npm run dev:all                         # API + frontend + admin concurrently
 
 # Testing (server must be running - integration tests hit live endpoints)
 npm run test                            # All workspaces (unit + integration + ratelimit)
@@ -42,6 +44,7 @@ npm run db:migrate                      # Run pending migrations
 npm run db:seed                         # Seed the world (procedural generation)
 npm run db:reset                        # Re-run migrations + seed
 npm run db:fresh                        # Drop all tables, re-migrate, re-seed
+npm run db:status                       # Show migration status
 npm -w api run migrate:rollback         # Roll back last migration
 
 # Other
@@ -98,37 +101,31 @@ npm run ai:generate:icons -- --category actions
 npm run ai:generate:tiles -- --dry-run
 ```
 
+### Workspace Structure
+
+The monorepo uses npm workspaces (defined in root `package.json`):
+
+| Workspace | Port | Purpose |
+|-----------|------|---------|
+| `api/` | 3000 | Node.js/Express backend |
+| `frontend/` | 8080 | Vanilla JS game client (Vite) |
+| `admin/` | 5173 | React asset manager dashboard (Vite) |
+| `shared/` | - | Constants and utilities used by api/frontend |
+
+Workspace-specific commands use `-w` flag: `npm run test -w api`, `npm run lint -w frontend`
+
 ### Audio Prompt Guidelines (ElevenLabs SFX)
 
-**CRITICAL: Maximum 1 comma per prompt.** ElevenLabs interprets comma-separated prompts as multiple distinct sounds, generating each sequentially. This causes files to be much longer than the specified duration.
+**CRITICAL: Maximum 1 comma per prompt.** ElevenLabs interprets commas as separate sounds, generating each sequentially (causing 16s files instead of 1s).
 
 | Commas | Status |
 |--------|--------|
-| 0 | Best - single unified sound |
-| 1 | Acceptable - primary + secondary quality |
-| 2+ | **BLOCKED** - validation will fail |
+| 0-1 | OK |
+| 2+ | **BLOCKED** |
 
-**Pattern:** `"[Fantasy context] [adjective] [adjective] [core sound noun] with [secondary quality]"`
+**Pattern:** Use "with" and "and" instead of commas: `"Fantasy sword slash with sharp metallic whoosh and light impact"`
 
-Use "with" and "and" to join descriptors instead of commas:
-
-```
-# BAD - Multiple comma-separated sounds (generates ~16 seconds instead of 1):
-"Fantasy fire spell, magical flames whooshing, crackling sparks, heat sizzle"
-
-# GOOD - Single sound with descriptive adjectives:
-"Fantasy arcane fireball with roaring mystical flames and explosive impact"
-
-# BAD - List of sound types:
-"sword slash, metal cutting, whoosh, impact"
-
-# GOOD - Single described action:
-"Fantasy sword slash with sharp metallic whoosh and light impact"
-```
-
-The generate-sfx.js script **blocks** prompts with 2+ commas. Run with `--dry-run` to check prompts before generating.
-
-**Full documentation:** See `docs/AUDIO_STYLE_GUIDE.md` for comprehensive prompt writing guidelines including regional music profiles.
+The `generate-sfx.js` script blocks 2+ commas. Run with `--dry-run` to validate. See `docs/AUDIO_STYLE_GUIDE.md` for full guidelines.
 
 ## Architecture
 
@@ -153,8 +150,8 @@ The generate-sfx.js script **blocks** prompts with 2+ commas. Run with `--dry-ru
 ### Shared (`shared/`)
 - `constants.js` - Races, classes, stat formulas, `SeededRandom` class (Mulberry32)
 - `terrain.js` - Terrain types, movement costs, passability checks
-- `mapGeneration.js` - Legacy seeded terrain generation (simple)
-- `mapgen/` - **Advanced battle map generation system:**
+- `mapGeneration.js` - Main entry point for battle map generation (8-phase archetype-based system)
+- `mapgen/` - **Battle map generation modules:**
   - `AlgorithmPipeline.js` - Orchestrates algorithm selection and execution
   - `algorithms/` - Perlin noise, cellular automata, room carving, path carving, cluster placement
   - `archetypes/` - Curated map style definitions (cave, forest, mountain, etc.)
@@ -164,6 +161,19 @@ The generate-sfx.js script **blocks** prompts with 2+ commas. Run with `--dry-ru
 - `battleMath.js` - Damage formulas, hit/crit calculations for combat previews
 - `nameData.js` - Procedural name generation data for NPCs/recruits
 - All modules use ESM; imported by API (direct imports) and frontend (via Vite `@shared` alias)
+
+### Admin Dashboard (`admin/`)
+- **Stack:** React 18 + Vite + Tailwind CSS + Radix UI
+- **Purpose:** Asset generation management for AI-generated images and audio
+- **Entry:** `src/main.jsx` → `src/App.jsx` (React Router)
+- **Pages:** Dashboard, Tiles, Portraits, Items, Icons, Nodes, Overlays, Music, SoundEffects, Settings
+- **Key features:**
+  - Real-time generation status via WebSocket
+  - Asset preview with variant selection (32px/48px/64px sizes)
+  - Regeneration queue management
+  - Theme customization and backup management
+- **API routes:** `api/src/routes/admin.js`, `api/src/routes/adminAudio.js`
+- **Testing:** Vitest + React Testing Library + MSW for mocking
 
 ### Data Flow
 1. Frontend scenes call `api/client.js` for HTTP requests
@@ -498,13 +508,13 @@ These files exceed or approach limits and are tracked in `docs/ROADMAP_TECHNICAL
 
 | File | Lines | Status |
 |------|-------|--------|
-| `frontend/src/scenes/WorldMapScene.js` | 2,911 | WARNING - plan modularization |
-| `frontend/src/scenes/BattleScene.js` | 2,680 | WARNING - plan modularization |
+| `frontend/src/scenes/WorldMapScene.js` | 2,951 | WARNING - plan modularization |
+| `frontend/src/scenes/BattleScene.js` | 2,947 | WARNING - plan modularization |
 | `api/src/services/marketplaceService.js` | 1,956 | WARNING |
 | `frontend/src/battle/BattleUI.js` | 1,556 | WARNING - exceeds 1,500 threshold |
 | `api/src/services/coliseumService.js` | 1,552 | WARNING |
 
-*Last updated: 2026-01-22*
+*Last updated: 2026-01-26*
 
 **Recent refactoring:** BattleScene.js WebSocket handling extracted to `BattleWebSocketManager.js` (766 lines). All files are now under the 3500-line blocking threshold.
 
@@ -585,3 +595,9 @@ Detailed specifications in `docs/`. Key files:
 - `docs/archive/reports/` - Validation and analysis reports
 
 **Roadmap maintenance:** Keep roadmaps fresh by moving completed items to `docs/archive/completed/`.
+
+**Planning and Plan Execution**
+- Avoid creating legacy fallbacks when implementing new backend functionality or frontend components.
+- Always use the newly implemented components over legacy code and delete the legacy code
+- Always use context specific subagents for all tasks, implementation routines
+- When planning, seek advice from multiple agents for complex implementations and ask clarifying questions when they provide different opinions

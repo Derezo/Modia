@@ -21,7 +21,7 @@
  */
 
 import {
-  getAssetUrl,
+  getAssetPath,
   SIZE_PRESETS,
   DEFAULT_SIZES,
   getOptimalSize
@@ -227,18 +227,18 @@ export class AssetLoader {
     const tileId = `${terrain}_${variant}`;
 
     // Try biome-specific tile first
-    const biomePath = getAssetUrl('tiles', tileId, { subcategory: biome });
+    const biomePath = getAssetPath('tiles', tileId, { subcategory: biome });
     try {
       return await this.loadImage(biomePath);
     } catch {
       // Fallback to forest biome (default)
       if (biome !== 'forest') {
-        const forestPath = getAssetUrl('tiles', tileId, { subcategory: 'forest' });
+        const forestPath = getAssetPath('tiles', tileId, { subcategory: 'forest' });
         try {
           return await this.loadImage(forestPath);
         } catch {
           // Try without variant
-          const noVariantPath = getAssetUrl('tiles', terrain, { subcategory: 'forest' });
+          const noVariantPath = getAssetPath('tiles', terrain, { subcategory: 'forest' });
           try {
             return await this.loadImage(noVariantPath);
           } catch {
@@ -265,39 +265,6 @@ export class AssetLoader {
            this.cache.get(fallbackPath) ||
            this.cache.get(`${this.basePath}/sprites/terrain/forest/${terrain}.png`) ||
            null;
-  }
-
-  /**
-   * Load elevated terrain tile sprite
-   * @deprecated Elevation is now rendered using stacking (separate floor + wall tiles).
-   * Use getTile() for floor surfaces and getWallTexture() for wall faces.
-   * This method is kept for backward compatibility but always returns null.
-   * @param {string} _terrain - Terrain type (unused)
-   * @param {number} _elevation - Elevation level (unused)
-   * @param {string} _nodeType - Node type (unused)
-   * @returns {Promise<null>} Always returns null
-   */
-  async loadElevatedTile(_terrain, _elevation, _nodeType) {
-    // DEPRECATED: Embedded elevation sprites (*_elev*.png, *_pit.png) are no longer used.
-    // The unified stacking system renders walls separately from floor tiles.
-    // See BattleGrid.renderTileUnified() for the new approach.
-    return null;
-  }
-
-  /**
-   * Get elevated terrain tile (sync)
-   * @deprecated Elevation is now rendered using stacking (separate floor + wall tiles).
-   * Use getTile() for floor surfaces and getWallTexture() for wall faces.
-   * This method is kept for backward compatibility but always returns null.
-   * @param {string} _terrain - Terrain type (unused)
-   * @param {number} _elevation - Elevation level (unused)
-   * @param {string} _nodeType - Node type (unused)
-   * @returns {null} Always returns null
-   */
-  getElevatedTile(_terrain, _elevation, _nodeType) {
-    // DEPRECATED: Embedded elevation sprites are no longer used.
-    // The unified stacking system renders walls separately from floor tiles.
-    return null;
   }
 
   /**
@@ -526,7 +493,7 @@ export class AssetLoader {
 
     // Handle guild class variants - try class-specific sprite first
     if (resolvedType === 'guild' && guildClass) {
-      const classPath = getAssetUrl('nodes', `guild_${guildClass}`);
+      const classPath = getAssetPath('nodes', `guild_${guildClass}`);
       try {
         return await this.loadImage(classPath);
       } catch {
@@ -534,7 +501,7 @@ export class AssetLoader {
       }
     }
 
-    const path = getAssetUrl('nodes', resolvedType);
+    const path = getAssetPath('nodes', resolvedType);
     try {
       return await this.loadImage(path);
     } catch {
@@ -552,13 +519,13 @@ export class AssetLoader {
 
     // Handle guild class variants - try class-specific sprite first
     if (resolvedType === 'guild' && guildClass) {
-      const classPath = getAssetUrl('nodes', `guild_${guildClass}`);
+      const classPath = getAssetPath('nodes', `guild_${guildClass}`);
       const classSprite = this.cache.get(classPath);
       if (classSprite) return classSprite;
       // Fall back to generic guild sprite
     }
 
-    const path = getAssetUrl('nodes', resolvedType);
+    const path = getAssetPath('nodes', resolvedType);
     return this.cache.get(path) || null;
   }
 
@@ -595,7 +562,7 @@ export class AssetLoader {
     const charClass = (character.class || 'warrior').toLowerCase();
     const id = `${race}_${gender}_${charClass}`;
     const optimalSize = getOptimalSize('portraits', displaySize);
-    return getAssetUrl('portraits', id, { size: optimalSize });
+    return getAssetPath('portraits', id, { size: optimalSize });
   }
 
   /**
@@ -613,7 +580,7 @@ export class AssetLoader {
   getEnemyPortraitUrl(enemyId, displaySize = 64) {
     const optimalSize = getOptimalSize('portraits', displaySize);
     // Enemy portraits use 'enemy_' prefix in unified portraits directory
-    return getAssetUrl('portraits', `enemy_${enemyId}`, { size: optimalSize });
+    return getAssetPath('portraits', `enemy_${enemyId}`, { size: optimalSize });
   }
 
   /**
@@ -672,14 +639,14 @@ export class AssetLoader {
       id = `guild_${guildClass}`;
     }
 
-    const path = getAssetUrl('nodes', id, { size: optimalSize });
+    const path = getAssetPath('nodes', id, { size: optimalSize });
 
     try {
       return await this.loadImage(path);
     } catch {
       // Fallback: if requested size variant doesn't exist, try default size
       if (optimalSize !== DEFAULT_SIZES.nodes) {
-        const fallbackPath = getAssetUrl('nodes', id, { size: DEFAULT_SIZES.nodes });
+        const fallbackPath = getAssetPath('nodes', id, { size: DEFAULT_SIZES.nodes });
         try {
           return await this.loadImage(fallbackPath);
         } catch {
@@ -711,7 +678,7 @@ export class AssetLoader {
       id = `guild_${guildClass}`;
     }
 
-    return getAssetUrl('nodes', id, { size: optimalSize });
+    return getAssetPath('nodes', id, { size: optimalSize });
   }
 
   /**
@@ -1050,22 +1017,17 @@ export class AssetLoader {
    * @returns {HTMLImageElement|null} Wall texture image or null if not found
    */
   getWallTexture(biome, terrain = 'default') {
-    // New convention (primary)
     const key = `${this.basePath}/sprites/terrain/${biome}/walls/${terrain}_wall.png`;
     const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/walls/default_wall.png`;
     const baseFallbackKey = `${this.basePath}/sprites/terrain/forest/walls/${terrain}_wall.png`;
-    // Legacy convention (fallback)
-    const legacyKey = `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_${terrain}.png`;
-    const legacyDefaultKey = `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_default.png`;
-    const legacyBaseKey = `${this.basePath}/sprites/terrain/forest/wall_forest_${terrain}.png`;
 
-    return this.cache.get(key) ||
-           this.cache.get(fallbackKey) ||
-           this.cache.get(baseFallbackKey) ||
-           this.cache.get(legacyKey) ||
-           this.cache.get(legacyDefaultKey) ||
-           this.cache.get(legacyBaseKey) ||
-           null;
+    const result = this.cache.get(key) ||
+                   this.cache.get(fallbackKey) ||
+                   this.cache.get(baseFallbackKey);
+    if (!result) {
+      console.error(`[AssetLoader] Wall texture not found: biome=${biome}, terrain=${terrain}`);
+    }
+    return result || null;
   }
 
   /**
@@ -1076,14 +1038,9 @@ export class AssetLoader {
    */
   async loadWallTexture(biome, terrain = 'default') {
     const paths = [
-      // New convention (primary)
       `${this.basePath}/sprites/terrain/${biome}/walls/${terrain}_wall.png`,
       `${this.basePath}/sprites/terrain/${biome}/walls/default_wall.png`,
-      `${this.basePath}/sprites/terrain/forest/walls/${terrain}_wall.png`,
-      // Legacy convention (fallback - existing files)
-      `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_${terrain}.png`,
-      `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_default.png`,
-      `${this.basePath}/sprites/terrain/forest/wall_forest_${terrain}.png`
+      `${this.basePath}/sprites/terrain/forest/walls/${terrain}_wall.png`
     ];
 
     for (const path of paths) {
@@ -1093,6 +1050,7 @@ export class AssetLoader {
         // Try next path
       }
     }
+    console.error(`[AssetLoader] Failed to load wall texture: biome=${biome}, terrain=${terrain}`);
     return null;
   }
 
@@ -1104,20 +1062,17 @@ export class AssetLoader {
    * @returns {HTMLImageElement|null} Slope sprite or null if not found
    */
   getSlopeSprite(biome, direction, levels = 1) {
-    // New convention (primary)
     const key = `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_${levels}.png`;
     const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_1.png`;
     const baseFallbackKey = `${this.basePath}/sprites/terrain/forest/slopes/${direction}_${levels}.png`;
-    // Legacy convention (fallback)
-    const legacyKey = `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`;
-    const legacyBaseKey = `${this.basePath}/sprites/terrain/forest/slope_forest_${direction}_${levels}.png`;
 
-    return this.cache.get(key) ||
-           this.cache.get(fallbackKey) ||
-           this.cache.get(baseFallbackKey) ||
-           this.cache.get(legacyKey) ||
-           this.cache.get(legacyBaseKey) ||
-           null;
+    const result = this.cache.get(key) ||
+                   this.cache.get(fallbackKey) ||
+                   this.cache.get(baseFallbackKey);
+    if (!result) {
+      console.error(`[AssetLoader] Slope sprite not found: biome=${biome}, direction=${direction}, levels=${levels}`);
+    }
+    return result || null;
   }
 
   /**
@@ -1129,13 +1084,9 @@ export class AssetLoader {
    */
   async loadSlopeSprite(biome, direction, levels = 1) {
     const paths = [
-      // New convention (primary)
       `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_${levels}.png`,
       `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_1.png`,
-      `${this.basePath}/sprites/terrain/forest/slopes/${direction}_${levels}.png`,
-      // Legacy convention (fallback - existing files)
-      `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`,
-      `${this.basePath}/sprites/terrain/forest/slope_forest_${direction}_${levels}.png`
+      `${this.basePath}/sprites/terrain/forest/slopes/${direction}_${levels}.png`
     ];
 
     for (const path of paths) {
@@ -1145,6 +1096,7 @@ export class AssetLoader {
         // Try next path
       }
     }
+    console.error(`[AssetLoader] Failed to load slope sprite: biome=${biome}, direction=${direction}, levels=${levels}`);
     return null;
   }
 

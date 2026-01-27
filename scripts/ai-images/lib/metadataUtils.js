@@ -65,8 +65,7 @@ function loadCategoryAssets(category) {
         }
       }
     } else if (manifest.biomeFiles) {
-      // Legacy fallback
-      files = Object.values(manifest.biomeFiles);
+      throw new Error('Legacy biomeFiles format detected in tiles manifest. Run metadata migration.');
     }
   } else if (category === 'portraits') {
     // Load both player portraits (combinations.json) and enemy portraits (enemies.json)
@@ -206,12 +205,9 @@ function loadTileMetadata(options = {}) {
     }
   }
 
-  // Legacy support: biomeFiles mapping for old callers
-  result.manifest.biomeFiles = {};
-  for (const biomeName of biomes) {
-    if (result.byBiome[biomeName]?.tiles?.length > 0) {
-      result.manifest.biomeFiles[biomeName] = `floors/${biomeName}.json`;
-    }
+  // Guard against legacy biomeFiles format in manifest
+  if (result.manifest.biomeFiles) {
+    throw new Error('Legacy biomeFiles format detected in tiles manifest. Run metadata migration.');
   }
 
   return result;

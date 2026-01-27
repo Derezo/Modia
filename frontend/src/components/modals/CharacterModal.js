@@ -32,7 +32,7 @@ import {
   PARCHMENT_RADIUS,
   getParchmentBorder
 } from '../../ui/parchment/ParchmentTheme.js';
-import { getAssetUrl, getOptimalSize } from '@shared/assetPaths.js';
+import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
 
 const STYLE_ID = 'character-modal-styles';
 
@@ -486,9 +486,8 @@ export class CharacterModal {
    * @returns {string} HTML
    */
   renderStatsSummary(char) {
-    // Use snake_case properties from API - outside battle, show max HP/MP only
-    const maxHp = char.hp_max || char.maxHp || 0;
-    const maxMp = char.mp_max || char.maxMp || 0;
+    const maxHp = char.hp_max || 0;
+    const maxMp = char.mp_max || 0;
 
     const stats = [
       { label: 'HP', value: maxHp },
@@ -971,7 +970,7 @@ export class CharacterModal {
     // Display size is 64px, so use optimal size (64px)
     const id = `${race}_${gender}_${charClass}`;
     const optimalSize = getOptimalSize('portraits', 64);
-    return getAssetUrl('portraits', id, { size: optimalSize });
+    return getAssetPath('portraits', id, { size: optimalSize });
   }
 
   /**

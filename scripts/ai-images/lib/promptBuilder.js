@@ -208,19 +208,6 @@ const STYLE_PREFIXES = {
 };
 
 /**
- * Build a tile prompt (legacy - uses isometric prompting)
- * @deprecated Use buildFlatTilePrompt() for new tiles - isometric transform applied in post-processing
- * @param {Object} tile - Tile metadata
- * @param {Object} biomeData - Biome metadata
- * @returns {string} Full prompt
- */
-function buildTilePrompt(tile, biomeData) {
-  const biomeModifier = biomeData.biomeModifier || '';
-  const basePrompt = tile.prompt;
-  return `${STYLE_PREFIXES.tile} ${basePrompt}, ${biomeModifier}`;
-}
-
-/**
  * Build a flat texture tile prompt (NEW - for post-processing isometric transform)
  *
  * Strategy: Generate flat top-down textures that will have isometric skew applied
@@ -289,20 +276,6 @@ function buildIconPrompt(icon, category) {
   const catMod = categoryModifiers[category] || 'game icon';
 
   return `wbgmsst, ${icon.prompt}, ${catMod}, simplified bold design, ink and wash style, thick black outlines, flat watercolor fills, high contrast silhouette, clean edges, isolated on plain background`;
-}
-
-/**
- * Build an item prompt (legacy - includes rarity glow for backward compatibility)
- * @param {Object} item - Item metadata
- * @param {string} category - Item category
- * @returns {string} Full prompt
- * @deprecated Use buildCleanItemPrompt for layered composition system
- */
-function buildItemPrompt(item, category) {
-  // Rarity glow removed - use layered composition with overlays instead
-  const categoryMod = category === 'consumables' ? 'consumable item' : category;
-
-  return `wbgmsst, ${item.prompt}, fantasy RPG ${categoryMod} sprite, ink and wash illustration, bold black outlines, watercolor fills, slight 3D depth, isolated subject, plain neutral background, 128x128 game sprite`;
 }
 
 /**
@@ -490,10 +463,8 @@ module.exports = {
   NEGATIVE_PROMPT,
   STYLE_PREFIXES,
   REGIONAL_PALETTES,
-  buildTilePrompt,  // DEPRECATED: use buildFlatTilePrompt instead
   buildPortraitPrompt,
   buildIconPrompt,
-  buildItemPrompt,
   buildNodePrompt,
   getStylePrefix,
   getTriggerWord,
