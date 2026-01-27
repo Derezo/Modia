@@ -327,3 +327,82 @@ describe('Combination Viability', () => {
     }
   });
 });
+
+// ============================================================================
+// INDIVIDUAL ADVANCED CLASS STAT VALIDATION
+// ============================================================================
+
+describe('Advanced Class Stat Validation', () => {
+  const advancedClassList = Object.values(ADVANCED_CLASSES);
+  const testLevel = 25;
+
+  // Physical-focused advanced classes (expect strength > intelligence)
+  const physicalClasses = [
+    'berserker', 'paladin', 'guardian', 'warlord',
+    'martial_artist', 'brawler'
+  ];
+
+  // Magic-focused advanced classes (expect intelligence > strength)
+  const magicClasses = [
+    'sorcerer', 'summoner', 'conjurer', 'oracle',
+    'alchemist', 'medic', 'plague_doctor'
+  ];
+
+  // Hybrid classes (either stat can be dominant or equal)
+  const hybridClasses = ['ninja', 'ascetic', 'artificer'];
+
+  for (const charClass of advancedClassList) {
+    it(`${charClass} should have valid positive stats at level ${testLevel}`, () => {
+      const char = createMockCharacter({ charClass, level: testLevel });
+
+      assert.ok(char.hp > 0, `${charClass} HP should be positive: ${char.hp}`);
+      assert.ok(char.mp > 0, `${charClass} MP should be positive: ${char.mp}`);
+      assert.ok(char.strength > 0, `${charClass} STR should be positive: ${char.strength}`);
+      assert.ok(char.intelligence > 0, `${charClass} INT should be positive: ${char.intelligence}`);
+      assert.ok(char.agility > 0, `${charClass} AGI should be positive: ${char.agility}`);
+      assert.ok(char.vitality > 0, `${charClass} VIT should be positive: ${char.vitality}`);
+      assert.ok(char.luck >= 0, `${charClass} LCK should be non-negative: ${char.luck}`);
+    });
+  }
+
+  it('should have physical classes favor strength over intelligence', () => {
+    for (const charClass of physicalClasses) {
+      const char = createMockCharacter({ charClass, level: testLevel });
+      assert.ok(char.strength > char.intelligence,
+        `${charClass} STR (${char.strength}) should exceed INT (${char.intelligence})`);
+    }
+  });
+
+  it('should have magic classes favor intelligence over strength', () => {
+    for (const charClass of magicClasses) {
+      const char = createMockCharacter({ charClass, level: testLevel });
+      assert.ok(char.intelligence > char.strength,
+        `${charClass} INT (${char.intelligence}) should exceed STR (${char.strength})`);
+    }
+  });
+
+  it('should have guardian be the tankiest advanced class', () => {
+    const guardian = createMockCharacter({ charClass: 'guardian', level: testLevel });
+    const otherAdvanced = advancedClassList
+      .filter(c => c !== 'guardian')
+      .map(c => ({ charClass: c, char: createMockCharacter({ charClass: c, level: testLevel }) }));
+
+    const guardianHP = guardian.hp;
+    for (const { charClass, char } of otherAdvanced) {
+      assert.ok(guardianHP >= char.hp,
+        `Guardian HP (${guardianHP}) should be >= ${charClass} HP (${char.hp})`);
+    }
+  });
+
+  it('should have ninja be the fastest advanced class', () => {
+    const ninja = createMockCharacter({ charClass: 'ninja', level: testLevel });
+    const otherAdvanced = advancedClassList
+      .filter(c => c !== 'ninja')
+      .map(c => ({ charClass: c, char: createMockCharacter({ charClass: c, level: testLevel }) }));
+
+    for (const { charClass, char } of otherAdvanced) {
+      assert.ok(ninja.agility >= char.agility,
+        `Ninja AGI (${ninja.agility}) should be >= ${charClass} AGI (${char.agility})`);
+    }
+  });
+});

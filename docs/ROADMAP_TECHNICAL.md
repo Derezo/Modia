@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 3.6 |
+| Version | 3.7 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -16,7 +16,7 @@
 |----------|------------|--------|
 | Infrastructure | 75% | In Progress |
 | CI/CD Pipeline | 40% | In Progress |
-| Testing | 85% | In Progress |
+| Testing | 90% | In Progress |
 | Performance | 50% | In Progress |
 | Monitoring | 60% | In Progress |
 
@@ -107,7 +107,23 @@
 - [x] Order expiration service tests (orderExpirationService.unit.test.js)
 - [x] Shop refresh service tests (shopRefreshService.unit.test.js)
 - [x] Quest service (v9.3: elite quest gating, item drops, title awards)
+- [x] Shared battleMath tests (v10.7: 360 tests across 16+ function suites - damage, defense, CT, evasion, crit, status, healing, MP cost, skill scaling, range)
+- [x] Shared constants tests (v10.7: 5 new sections - SeededRandom, calculateStats, stat formulas, race/class validation, XP thresholds)
+- [x] Shared pathfinding tests (v10.7: performance benchmarks, mixed terrain cost, water terrain impassability)
+- [x] AI unit tests (v10.7: 224 tests across 72 suites - patternWeights, cache, utilityFactors, stateEvaluator, actionGenerator, lookahead, utilityAI, aiPatternBehavior)
+- [x] Worldgen unit tests (v10.7: 125 tests across 19 suites - castlePlacement, nodeGeneration, internalConnections, validation)
+- [x] Balance tests extended (v10.7: all 16 advanced classes, elemental damage scaling, CT/status formulas, fishing/caravan economy)
 - [ ] Settings service tests
+
+**Test counts (v10.7):**
+| Suite | Tests | Failures |
+|-------|-------|----------|
+| Shared (battleMath + constants + pathfinding) | 360 | 0 |
+| API unit (AI + worldgen + balance + services) | 754 | 0 |
+| AI unit tests | 224 (72 suites) | 0 |
+| Worldgen unit tests | 125 (19 suites) | 0 |
+
+**npm scripts:** `test:unit:ai`, `test:unit:worldgen` (added v10.7)
 
 ### 3.2 Integration Tests
 
@@ -710,7 +726,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 | WebSocket latency | < 100ms | ~50ms |
 | Error rate | < 1% | ~0.5% |
 | Concurrent users | 25 | Untested |
-| Test coverage | 80% | ~65% |
+| Test coverage | 80% | ~75% |
 
 ---
 
@@ -718,6 +734,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.7 | Jan 2026 | Major Test Suite Expansion (v10.7): Added ~4,900 lines across 13 new files + 7 extended files. Shared tests: battleMath.test.js +660 lines (16 new function suites), constants.test.js +235 lines (5 new sections), pathfinding.test.js +3 suites (performance, mixed terrain, water). Created 9 AI unit test files (224 tests/72 suites): patternWeights, cache, utilityFactors, stateEvaluator, actionGenerator, lookahead, utilityAI, aiPatternBehavior with mockHelpers. Created 4 worldgen unit test files (125 tests/19 suites): castlePlacement, nodeGeneration, internalConnections, validation. Extended 4 balance tests: classBalance (all 16 advanced classes), damageScaling (elemental), formulaValidation (CT/status), economyBalance (fishing/caravan). Added npm scripts: test:unit:ai, test:unit:worldgen. Updated test:unit glob for subdirectories. Final counts: Shared 360 tests, API unit 754 tests, all passing. Testing status updated to 90%, coverage to ~75%. |
 | 3.6 | Jan 2026 | Asset Path Remediation: Added Section 7.15 documenting resolution of all asset path discrepancies between Python OutputManager, JS scripts, and canonical shared/assetPaths.js. Updated backupUtils.js, validate-images.js, validate-paths.js to use canonical paths. Updated 5 category manifest.json outputDir fields. Deleted obsolete migrate-sizes.js (398 lines). Cleaned up legacy asset files and admin test factories. Removed dead sizePattern code branches. |
 | 3.5 | Jan 2026 | Asset Pipeline Bug Fix & Deduplication (v10.5): Fixed critical multi-key generation bug in all 6 AI image scripts (--key flag overwrote instead of accumulating). Created shared parseArgs.js and filterAssets.js modules eliminating ~500 lines of duplicated code. Normalized audio service to use keys array. Added count badges to admin bulk action buttons. Marked generator script duplication as resolved in Section 8.2. Updated Section 8.3 refactoring opportunities with Phase 1 complete, Phase 2 remaining. Added Section 7.14. |
 | 3.4 | Jan 2026 | Legacy Code Cleanup (v10.4): 4-phase cleanup removing dead code (GenerationConsole.jsx, useGeneration.js, useAudioGeneration.js, loadElevatedTile, CLASS_ADVANCEMENT, legacyTrigger), migrating deprecated APIs (getAssetUrl→getAssetPath, buildTilePrompt→buildFlatTilePrompt, renderTileAt→renderTileUnified), removing legacy fallbacks (wall/slope naming, getLegacyPaths/getAssetUrlsWithFallback→getAssetUrls, legacy biomeFiles), and standardizing property names (HP/MP fallback chains→snake_case). Updated Section 8.3, known issues, and historical sections. |

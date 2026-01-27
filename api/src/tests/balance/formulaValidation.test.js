@@ -15,6 +15,8 @@ import {
   calculateCTGain,
   calculateDefenseReduction,
   calculateStatusResistance,
+  predictTicksToAct,
+  calculateEffectiveStatusChance,
   PHYSICAL_DEFENSE_CONSTANT,
   MAGIC_DEFENSE_CONSTANT,
   CT_THRESHOLD
@@ -326,5 +328,114 @@ describe('Enemy Archetype Scaling', () => {
     assert.ok(tier3.hp > tier1.hp, 'Tier 3 should have more HP than tier 1');
     assert.ok(tier5.hp > tier3.hp, 'Tier 5 should have more HP than tier 3');
     assert.ok(tier5.strength > tier1.strength, 'Higher tiers should have more strength');
+  });
+});
+
+// ============================================================================
+// PREDICT TICKS TO ACT
+// ============================================================================
+
+describe('predictTicksToAct', () => {
+  it('should return 0 when current CT >= threshold', () => {
+    const unit = { agility: 50, statusEffects: [] };
+    assert.strictEqual(predictTicksToAct(unit, 100), 0);
+    assert.strictEqual(predictTicksToAct(unit, 150), 0);
+  });
+
+  it('should predict correct ticks for AGI 10 from zero CT', () => {
+    const unit = { agility: 10, statusEffects: [] };
+    // CT gain = 5 + 10/10 = 6 per tick, need 100 CT -> ceil(100/6) = 17 ticks
+    const ticks = predictTicksToAct(unit, 0);
+    assert.strictEqual(ticks, 17, `AGI 10 from 0 CT should take 17 ticks, got ${ticks}`);
+  });
+
+  it('should predict correct ticks for AGI 50 from zero CT', () => {
+    const unit = { agility: 50, statusEffects: [] };
+    // CT gain = 5 + 50/10 = 10 per tick, need 100 CT -> ceil(100/10) = 10 ticks
+    const ticks = predictTicksToAct(unit, 0);
+    assert.strictEqual(ticks, 10, `AGI 50 from 0 CT should take 10 ticks, got ${ticks}`);
+  });
+
+  it('should account for existing CT', () => {
+    const unit = { agility: 50, statusEffects: [] };
+    // CT gain = 10, need 100 - 50 = 50 more CT -> ceil(50/10) = 5 ticks
+    const ticks = predictTicksToAct(unit, 50);
+    assert.strictEqual(ticks, 5, `AGI 50 from 50 CT should take 5 ticks, got ${ticks}`);
+  });
+
+  it('should show fast units act sooner than slow units', () => {
+    const fast = { agility: 100, statusEffects: [] };
+    const slow = { agility: 10, statusEffects: [] };
+
+    const fastTicks = predictTicksToAct(fast, 0);
+    const slowTicks = predictTicksToAct(slow, 0);
+
+    assert.ok(fastTicks < slowTicks,
+      `Fast unit (${fastTicks} ticks) should act before slow unit (${slowTicks} ticks)`);
+  });
+
+  it('should handle haste reducing ticks needed', () => {
+    const normal = { agility: 10, statusEffects: [] };
+    const hasted = { agility: 10, statusEffects: [{ type: 'haste' }] };
+
+    const normalTicks = predictTicksToAct(normal, 0);
+    const hasteTicks = predictTicksToAct(hasted, 0);
+
+    assert.ok(hasteTicks < normalTicks,
+      `Hasted unit (${hasteTicks} ticks) should act before normal (${normalTicks} ticks)`);
+  });
+});
+
+// ============================================================================
+// EFFECTIVE STATUS CHANCE
+// ============================================================================
+
+describe('calculateEffectiveStatusChance', () => {
+  it('should reduce base chance by resistance', () => {
+    const baseChance = 0.5; // 50% base
+    const defender = { luck: 0 }; // 10% base resistance
+
+    const effective = calculateEffectiveStatusChance(baseChance, defender);
+    // 0.5 * (1 - 0.1) = 0.45
+    assert.ok(Math.abs(effective - 0.45) < 0.001,
+      `Effective chance should be ~45%, got ${(effective * 100).toFixed(1)}%`);
+  });
+
+  it('should reduce more with higher luck', () => {
+    const baseChance = 0.5;
+    const lowLuck = { luck: 0 };
+    const highLuck = { luck: 80 };
+
+    const lowLuckChance = calculateEffectiveStatusChance(baseChance, lowLuck);
+    const highLuckChance = calculateEffectiveStatusChance(baseChance, highLuck);
+
+    assert.ok(highLuckChance < lowLuckChance,
+      `High luck (${(highLuckChance * 100).toFixed(1)}%) should reduce chance more than low luck (${(lowLuckChance * 100).toFixed(1)}%)`);
+  });
+
+  it('should return 0 for 0% base chance', () => {
+    const effective = calculateEffectiveStatusChance(0, { luck: 50 });
+    assert.strictEqual(effective, 0, 'Zero base chance should always result in zero');
+  });
+
+  it('should never exceed original base chance', () => {
+    const baseChance = 0.8;
+    const defender = { luck: 0 };
+
+    const effective = calculateEffectiveStatusChance(baseChance, defender);
+    assert.ok(effective <= baseChance,
+      `Effective (${effective}) should not exceed base (${baseChance})`);
+  });
+
+  it('should account for trait bonus resistance', () => {
+    const baseChance = 0.5;
+    const defender = { luck: 0 };
+    const traitBonus = 0.2; // +20% resistance from trait
+
+    const withoutTrait = calculateEffectiveStatusChance(baseChance, defender);
+    const withTrait = calculateEffectiveStatusChance(baseChance, defender, traitBonus);
+
+    assert.ok(withTrait < withoutTrait,
+      `Trait bonus should reduce effective chance: ${(withTrait * 100).toFixed(1)}% < ${(withoutTrait * 100).toFixed(1)}%`);
   });
 });

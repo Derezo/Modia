@@ -16,7 +16,7 @@ The roadmap is split into two focused documents:
 
 | Document | Focus | Version | Link |
 |----------|-------|---------|------|
-| **ROADMAP_TECHNICAL.md** | Infrastructure, deployment, testing, performance, CI/CD | v2.1 | [View](./ROADMAP_TECHNICAL.md) |
+| **ROADMAP_TECHNICAL.md** | Infrastructure, deployment, testing, performance, CI/CD | v3.7 | [View](./ROADMAP_TECHNICAL.md) |
 | **ROADMAP_GAMEPLAY.md** | Features, mechanics, UX, content, settings | v7.0 | [View](./ROADMAP_GAMEPLAY.md) |
 
 > **Note:** Sub-roadmaps maintain independent version numbers reflecting their update frequency.
