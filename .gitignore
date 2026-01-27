@@ -34,5 +34,5 @@ coverage/
 # Database
 *.sql.backup
 
-# Generated icon PNGs (SVG sources tracked, PNGs generated at build time)
-frontend/public/assets/icons/png/
+# Generated assets (AI-generated images, audio, sprites)
+frontend/public/assets/

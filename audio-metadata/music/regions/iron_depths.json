@@ -177,7 +177,10 @@
       "volume": 0.6,
       "fadeIn": 1500,
       "fadeOut": 1500,
-      "generated": false
+      "generated": true,
+      "taskId": "669228add3ccb6c7caba66f49710389d",
+      "generationStarted": "2026-01-26T13:55:31.588Z",
+      "generatedAt": "2026-01-26T13:57:15.696Z"
     },
     {
       "id": "iron_depths_fishing",
@@ -194,7 +197,10 @@
       "volume": 0.55,
       "fadeIn": 2000,
       "fadeOut": 2000,
-      "generated": false
+      "generated": true,
+      "taskId": "d8e5c868e9d9b7893c0f52aa29704bd9",
+      "generationStarted": "2026-01-26T13:57:10.739Z",
+      "generatedAt": "2026-01-26T13:57:18.438Z"
     },
     {
       "id": "iron_depths_ruins",

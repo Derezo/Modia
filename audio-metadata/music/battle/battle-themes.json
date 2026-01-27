@@ -334,7 +334,9 @@
         0.782,
         0.876,
         0.686
-      ]
+      ],
+      "notes": "",
+      "primaryVariant": "sylvan_reaches_battle_regular_v2"
     },
     {
       "id": "sylvan_reaches_battle_boss",
@@ -351,7 +353,10 @@
       "volume": 0.8,
       "fadeIn": 300,
       "fadeOut": 1500,
-      "generated": false
+      "generated": true,
+      "taskId": "261b25aca36587514d451b6376d1cad2",
+      "generationStarted": "2026-01-26T05:24:16.849Z",
+      "generatedAt": "2026-01-26T05:30:24.204Z"
     },
     {
       "id": "sylvan_reaches_battle_pvp",
@@ -368,7 +373,10 @@
       "volume": 0.75,
       "fadeIn": 500,
       "fadeOut": 1000,
-      "generated": false
+      "generated": true,
+      "taskId": "87f21edd92c01a3a45e6568bea4b1380",
+      "generationStarted": "2026-01-26T05:26:17.850Z",
+      "generatedAt": "2026-01-26T05:30:34.716Z"
     },
     {
       "id": "sylvan_reaches_battle_story",
@@ -419,7 +427,10 @@
       "volume": 0.8,
       "fadeIn": 300,
       "fadeOut": 1500,
-      "generated": false
+      "generated": true,
+      "taskId": "975d68a03215e06ee9e24e28712d6a38",
+      "generationStarted": "2026-01-26T05:28:35.757Z",
+      "generatedAt": "2026-01-26T05:30:37.989Z"
     },
     {
       "id": "iron_depths_battle_pvp",
@@ -436,7 +447,10 @@
       "volume": 0.75,
       "fadeIn": 500,
       "fadeOut": 1000,
-      "generated": false
+      "generated": true,
+      "taskId": "be5bd53df976097608079d053a62d1a1",
+      "generationStarted": "2026-01-26T05:30:20.076Z",
+      "generatedAt": "2026-01-26T05:30:41.025Z"
     },
     {
       "id": "iron_depths_battle_story",

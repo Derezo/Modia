@@ -9,84 +9,96 @@
       "name": "Iron Ring",
       "prompt": "iron ring simple band plain dull metal",
       "seed": 23001,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T15:31:00.979Z"
     },
     {
       "id": "ring_silver",
       "name": "Silver Ring",
       "prompt": "silver ring polished band elegant shine",
       "seed": 23002,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T15:31:51.294Z"
     },
     {
       "id": "ring_gold",
       "name": "Gold Ring",
       "prompt": "gold ring precious band ornate royal",
       "seed": 23003,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T15:32:42.199Z"
     },
     {
       "id": "ring_gem",
       "name": "Gemstone Ring",
       "prompt": "gemstone ring jeweled setting sparkling faceted",
       "seed": 23004,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T15:33:33.151Z"
     },
     {
       "id": "ring_signet",
       "name": "Signet Ring",
       "prompt": "signet ring engraved seal noble heraldic",
       "seed": 23005,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T15:34:24.070Z"
     },
     {
       "id": "amulet_bone",
       "name": "Bone Amulet",
       "prompt": "bone amulet carved pendant tribal primitive",
       "seed": 23011,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T15:35:14.314Z"
     },
     {
       "id": "amulet_silver",
       "name": "Silver Amulet",
       "prompt": "silver amulet chain pendant ornate mystical",
       "seed": 23012,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T15:36:05.472Z"
     },
     {
       "id": "amulet_crystal",
       "name": "Crystal Amulet",
       "prompt": "crystal amulet glowing gem pendant magical",
       "seed": 23013,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T15:36:55.509Z"
     },
     {
       "id": "amulet_holy",
       "name": "Holy Symbol",
       "prompt": "holy symbol sacred pendant divine blessed",
       "seed": 23014,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T15:37:46.472Z"
     },
     {
       "id": "amulet_dark",
       "name": "Dark Talisman",
       "prompt": "dark talisman ominous pendant shadowy cursed",
       "seed": 23015,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T15:38:37.397Z"
     },
     {
       "id": "cloak_traveler",
       "name": "Traveler Cloak",
       "prompt": "traveler cloak simple brown hooded weathered",
       "seed": 23021,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T15:39:26.463Z"
     },
     {
       "id": "cloak_shadow",
       "name": "Shadow Cloak",
       "prompt": "shadow cloak dark fabric flowing wispy edges",
       "seed": 23022,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-27T04:03:13.737Z"
     },
     {
       "id": "cloak_royal",

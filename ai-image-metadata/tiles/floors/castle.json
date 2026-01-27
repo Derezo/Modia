@@ -81,9 +81,20 @@
       "key": "rock_0",
       "terrain": "rock",
       "variant": 0,
-      "prompt": "castle rampart natural stone surface in fortress grey #8B8682 #708090",
+      "prompt": "moss-covered forest boulder surface with natural crevices in grey green #8B8682 #6B8E4A",
       "outputPath": "castle",
-      "generated": false
+      "generated": true,
+      "seed": null,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": null,
+      "generatedAt": "2026-01-27T12:33:11.563Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "rock_1",
@@ -91,7 +102,8 @@
       "variant": 1,
       "prompt": "rough castle cellar rock floor with drainage channels in dark grey #A0A0A0 #696969",
       "outputPath": "castle",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T05:04:01.870Z"
     },
     {
       "key": "rock_2",
@@ -123,7 +135,8 @@
       "variant": 1,
       "prompt": "royal hunting grounds floor with fern undergrowth in deep green #2F4F2F #5C4033",
       "outputPath": "castle",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-27T12:43:24.975Z"
     },
     {
       "key": "forest_2",
@@ -163,7 +176,12 @@
       "variant": 2,
       "prompt": "castle cistern water storage with stone rim in deep blue #4169E1 #708090",
       "outputPath": "castle",
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-26T05:26:10.185Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "water_3",
@@ -171,7 +189,12 @@
       "variant": 3,
       "prompt": "flooded castle dungeon with murky water in dark grey blue #191970 #696969",
       "outputPath": "castle",
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-26T05:26:56.579Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "lava_0",
@@ -219,7 +242,12 @@
       "variant": 1,
       "prompt": "fortress wall built into cliff face in weathered grey #8B8682 #696969",
       "outputPath": "castle",
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T12:13:06.429Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "cliff_2",
@@ -227,7 +255,12 @@
       "variant": 2,
       "prompt": "castle cliff stairway carved into rock in dark grey #505050 #708090",
       "outputPath": "castle",
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T12:13:47.724Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "cliff_3",
@@ -235,7 +268,12 @@
       "variant": 3,
       "prompt": "ruined castle wall on crumbling cliff in grey brown #696969 #8B7355",
       "outputPath": "castle",
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T12:14:30.313Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "tree_0",
@@ -243,7 +281,12 @@
       "variant": 0,
       "prompt": "ancient oak in castle courtyard with massive trunk in dark brown grey #5C4033 #708090",
       "outputPath": "castle",
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T12:15:16.220Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "tree_1",
@@ -251,7 +294,8 @@
       "variant": 1,
       "prompt": "royal garden tree roots spreading over flagstones in brown grey #3D2B1F #696969",
       "outputPath": "castle",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T05:25:25.737Z"
     },
     {
       "key": "tree_2",
@@ -259,7 +303,12 @@
       "variant": 2,
       "prompt": "fallen siege timber on castle floor in weathered brown #5C4033 #708090",
       "outputPath": "castle",
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-26T05:29:13.594Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "tree_3",
@@ -267,7 +316,12 @@
       "variant": 3,
       "prompt": "decorative castle planter with trimmed topiary base in brown green #8B7355 #6B8E4A",
       "outputPath": "castle",
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-26T05:30:00.922Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "castle_tile_0",

@@ -51,21 +51,27 @@
       "name": "Silence",
       "prompt": "mouth crossed silence mute no sound",
       "seed": 31007,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "status_slow",
       "name": "Slow",
       "prompt": "snail slow sluggish turtle speed down",
       "seed": 31008,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "status_haste",
       "name": "Haste",
       "prompt": "wind speed haste fast quick motion lines",
       "seed": 31009,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "status_regen",

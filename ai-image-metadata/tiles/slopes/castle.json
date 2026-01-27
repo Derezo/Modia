@@ -74,7 +74,8 @@
       "type": "stairs",
       "prompt": "dungeon stone stairs descending west with damp moss showing 2-3 visible steps #696969 #2F4F4F",
       "seed": 52071,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-27T12:31:20.737Z"
     }
   ]
 }

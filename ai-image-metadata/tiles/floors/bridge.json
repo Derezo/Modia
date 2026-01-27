@@ -90,7 +90,8 @@
       "variant": 1,
       "prompt": "rough stone bridge foundation exposed by age in warm grey #A0A0A0 #A0522D",
       "outputPath": "bridge",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T05:03:16.474Z"
     },
     {
       "key": "rock_2",
@@ -122,7 +123,8 @@
       "variant": 1,
       "prompt": "leaf-covered bridge planks in autumn forest in orange brown #8B7355 #A0522D",
       "outputPath": "bridge",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-27T12:42:39.554Z"
     },
     {
       "key": "forest_2",
@@ -250,7 +252,8 @@
       "variant": 1,
       "prompt": "living tree roots forming rope bridge support in dark brown #3D2B1F #A0522D",
       "outputPath": "bridge",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T05:24:38.325Z"
     },
     {
       "key": "tree_2",

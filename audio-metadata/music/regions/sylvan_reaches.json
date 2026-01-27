@@ -187,7 +187,10 @@
       "volume": 0.55,
       "fadeIn": 1500,
       "fadeOut": 1500,
-      "generated": false
+      "generated": true,
+      "taskId": "4a168815889de816983c11c32e3ffa77",
+      "generationStarted": "2026-01-26T05:01:35.872Z",
+      "generatedAt": "2026-01-26T05:01:44.181Z"
     },
     {
       "id": "sylvan_reaches_fishing",
@@ -221,7 +224,10 @@
       "volume": 0.6,
       "fadeIn": 2000,
       "fadeOut": 2000,
-      "generated": false
+      "generated": true,
+      "taskId": "bc3b103b0ee965c82211e7eb033b8986",
+      "generationStarted": "2026-01-26T05:13:43.450Z",
+      "generatedAt": "2026-01-26T05:13:48.589Z"
     }
   ]
 }

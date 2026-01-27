@@ -63,7 +63,14 @@
       "class": "monk",
       "seed": 10003,
       "generated": true,
-      "generatedAt": "2026-01-25T22:25:01.204Z"
+      "generatedAt": "2026-01-27T11:03:22.137Z",
+      "prompt": "human features balanced proportions warm skin tone male masculine features monk martial artist wrappings disciplined serene focused",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "v2"
     },
     {
       "id": "human_male_chemist",
@@ -71,7 +78,18 @@
       "gender": "male",
       "class": "chemist",
       "seed": 10004,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "prompt": "human features balanced proportions warm skin tone male masculine features chemist apothecary vials pouches herbs practical clever",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "loraModel": null,
+      "generatedAt": "2026-01-27T12:33:52.848Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "human_female_warrior",
@@ -79,7 +97,18 @@
       "gender": "female",
       "class": "warrior",
       "seed": 10005,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "prompt": "human features balanced proportions warm skin tone female feminine features warrior heavy armor sword shield battle-worn determined",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "loraModel": null,
+      "generatedAt": "2026-01-27T12:36:56.805Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "human_female_wizard",
@@ -111,7 +140,9 @@
       "gender": "other",
       "class": "warrior",
       "seed": 10009,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "human_other_wizard",
@@ -160,7 +191,9 @@
       "gender": "male",
       "class": "monk",
       "seed": 10103,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "elf_male_chemist",

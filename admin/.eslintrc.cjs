@@ -12,5 +12,23 @@ module.exports = {
   rules: {
     'react/prop-types': 'off',
     'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
-  }
+  },
+  overrides: [
+    {
+      // Test files use vitest globals
+      files: ['**/*.test.{js,jsx}', '**/*.spec.{js,jsx}', '**/tests/**/*.{js,jsx}'],
+      globals: {
+        vi: 'readonly',
+        describe: 'readonly',
+        it: 'readonly',
+        expect: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        test: 'readonly',
+        global: 'readonly'
+      }
+    }
+  ]
 };

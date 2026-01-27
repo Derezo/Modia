@@ -93,7 +93,7 @@
       "prompt": "granite boulder surface with quartz veins in speckled grey #A0A0A0 #696969",
       "outputPath": "base",
       "generated": true,
-      "generatedAt": "2026-01-25T20:53:07.835Z"
+      "generatedAt": "2026-01-26T05:00:12.510Z"
     },
     {
       "key": "rock_2",
@@ -129,7 +129,7 @@
       "prompt": "shaded forest ground with fern fronds in deep green #2F4F2F #4A6B2A",
       "outputPath": "base",
       "generated": true,
-      "generatedAt": "2026-01-25T20:56:37.253Z"
+      "generatedAt": "2026-01-27T12:39:38.881Z"
     },
     {
       "key": "forest_2",
@@ -268,7 +268,8 @@
       "variant": 1,
       "prompt": "gnarled tree roots spreading across ground in dark brown #3D2B1F #5C4033",
       "outputPath": "base",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T05:21:33.901Z"
     },
     {
       "key": "tree_2",
