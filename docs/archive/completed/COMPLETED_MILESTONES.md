@@ -54,9 +54,91 @@ This document archives all completed features, resolved issues, and historical d
 | 10.1 | Jan 2026 | LoRA Model Selection & Admin Asset Pipeline - Per-asset style model selection, /api/admin/config endpoint, canonical asset paths, integration tests |
 | 10.2 | Jan 2026 | Admin Dashboard Code Review & Remediation - 7-phase remediation addressing 26 issues, SettingsPage modularized (1,144→215 lines), API client split into 9 modules, hook consolidation, unified components, 72 tests (88% API coverage) |
 | 10.3 | Jan 2026 | Admin Dashboard Remediation Plan - 14 issues across 8 phases: critical UI fixes, job queue reliability, clickable status badges, LoRA UX, asset state badges, icon path standardization, bulk operations, vim-style keyboard navigation |
+| 10.7 | Jan 2026 | Major Test Suite Expansion - ~4,900 new lines, 13 new files + 7 extended files, shared 360 tests, API unit 754 tests, 224 AI tests, 125 worldgen tests |
 | 10.6 | Jan 2026 | Asset Path Remediation - Unified all asset pipeline tools to canonical shared/assetPaths.js, deleted migrate-sizes.js, fixed test factories |
 | 10.5 | Jan 2026 | Asset Pipeline Bug Fix & Deduplication - Multi-key generation bug fix, shared argument parser, audio service normalization, admin UX count badges |
 | 10.4 | Jan 2026 | Legacy Code Cleanup - 4-phase dead code removal, API migration, legacy fallback removal, property name standardization |
+
+---
+
+## 10.7 - Major Test Suite Expansion (Jan 2026)
+
+Comprehensive test coverage expansion adding ~4,900 lines across 13 new files and 7 extended files, bringing shared tests to 360 and API unit tests to 754 with zero failures.
+
+### Shared Module Test Expansion
+
+Extended three core shared test files with significant new coverage:
+
+| File | New Content | Tests Added |
+|------|-------------|-------------|
+| `shared/battleMath.test.js` | +660 lines, 16 new function test suites | Damage formulas, defense reduction, CT calculations, evasion, crit chance/damage, status resistance, healing, MP cost, skill scaling, range calculations |
+| `shared/constants.test.js` | +235 lines, 5 new sections | SeededRandom determinism, calculateStats formula, stat formula validation, race/class data integrity, XP threshold curves |
+| `shared/pathfinding.test.js` | +3 new test suites | Performance benchmarks, mixed terrain cost calculations, water terrain impassability |
+
+**Shared total: 360 tests, 0 failures**
+
+### AI Unit Tests (New)
+
+Created 9 new test files in `api/src/tests/unit/ai/` covering the entire AI subsystem:
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `mockHelpers.js` | - | Shared test utilities for AI mocking |
+| `patternWeights.test.js` | Varies | AI pattern weight calculations |
+| `cache.test.js` | Varies | AI decision cache behavior |
+| `utilityFactors.test.js` | Varies | Utility scoring factor calculations |
+| `stateEvaluator.test.js` | Varies | Battle state evaluation logic |
+| `actionGenerator.test.js` | Varies | Action enumeration and filtering |
+| `lookahead.test.js` | Varies | Multi-turn lookahead simulation |
+| `utilityAI.test.js` | Varies | Top-level utility AI integration |
+| `aiPatternBehavior.test.js` | Varies | Pattern-specific behavior validation |
+| **Total** | **224** | **72 suites** |
+
+### Worldgen Unit Tests (New)
+
+Created 4 new test files in `api/src/tests/unit/worldgen/` covering world generation algorithms:
+
+| File | Tests | Coverage |
+|------|-------|----------|
+| `castlePlacement.test.js` | Varies | Force-directed placement, Lloyd's relaxation, minimum distance |
+| `nodeGeneration.test.js` | Varies | Poisson disk sampling, ring-based placement, terrain distribution |
+| `internalConnections.test.js` | Varies | MST generation, extra connections, connectivity validation |
+| `validation.test.js` | Varies | Terminator checks, difficulty tiers, spacing validation |
+| **Total** | **125** | **19 suites** |
+
+### Balance Test Extensions
+
+Extended 4 existing balance test files with new coverage areas:
+
+| File | Extensions |
+|------|-----------|
+| `classBalance.test.js` | All 16 advanced classes (was only base 4) |
+| `damageScaling.test.js` | Elemental damage type scaling |
+| `formulaValidation.test.js` | CT turn formulas, status effect duration/resistance |
+| `economyBalance.test.js` | Fishing economy curves, caravan item pricing |
+
+### Infrastructure Changes
+
+- Added npm script `test:unit:ai` for running AI tests independently
+- Added npm script `test:unit:worldgen` for running worldgen tests independently
+- Updated `test:unit` glob pattern to include subdirectories (`unit/**/*.test.js`)
+
+### Final Test Counts
+
+| Suite | Tests | Failures |
+|-------|-------|----------|
+| Shared (battleMath + constants + pathfinding) | 360 | 0 |
+| API unit (AI + worldgen + balance + services) | 754 | 0 |
+| AI unit tests | 224 (72 suites) | 0 |
+| Worldgen unit tests | 125 (19 suites) | 0 |
+
+### Impact
+
+- Testing status in ROADMAP_TECHNICAL.md updated from 85% to 90%
+- Test coverage estimate updated from ~65% to ~75%
+- AI subsystem now has dedicated unit test coverage (previously untested)
+- Worldgen algorithms now have dedicated unit test coverage (previously untested)
+- All shared math/utility functions have comprehensive edge case coverage
 
 ---
 

@@ -344,3 +344,239 @@ describe('calculateStats', () => {
     assert.strictEqual(stats50.luck, expectedLuck50, 'Luck should follow growth formula');
   });
 });
+
+// =============================================================================
+// NEW TEST SECTIONS
+// =============================================================================
+
+describe('Advanced class growth rates validation', () => {
+  const ALL_STATS = ['hp', 'mp', 'strength', 'intelligence', 'agility', 'vitality', 'luck'];
+  const advancedClassValues = Object.values(ADVANCED_CLASSES);
+
+  it('should have exactly 16 advanced classes', () => {
+    assert.strictEqual(advancedClassValues.length, 16);
+  });
+
+  it('should define growth rates for ALL stats in every advanced class', () => {
+    for (const className of advancedClassValues) {
+      const growth = CLASS_GROWTH[className];
+      assert.ok(growth, `Missing CLASS_GROWTH entry for ${className}`);
+
+      for (const stat of ALL_STATS) {
+        assert.ok(
+          typeof growth[stat] === 'number',
+          `${className} missing growth rate for '${stat}'`
+        );
+      }
+    }
+  });
+
+  it('should have positive HP and MP growth for all advanced classes', () => {
+    for (const className of advancedClassValues) {
+      const growth = CLASS_GROWTH[className];
+      assert.ok(growth.hp > 0, `${className} should have positive HP growth, got ${growth.hp}`);
+      assert.ok(growth.mp > 0, `${className} should have positive MP growth, got ${growth.mp}`);
+    }
+  });
+
+  it('should have non-negative growth for all stats', () => {
+    for (const className of advancedClassValues) {
+      const growth = CLASS_GROWTH[className];
+      for (const stat of ALL_STATS) {
+        assert.ok(
+          growth[stat] >= 0,
+          `${className}.${stat} growth should be non-negative, got ${growth[stat]}`
+        );
+      }
+    }
+  });
+});
+
+describe('XP formula validation', () => {
+  const testLevels = [1, 2, 5, 10, 25, 50, 100];
+
+  it('should match the formula Math.floor(100 * Math.pow(N, 1.8))', () => {
+    for (const level of testLevels) {
+      const expected = Math.floor(100 * Math.pow(level, 1.8));
+      const actual = expForLevel(level);
+      assert.strictEqual(
+        actual,
+        expected,
+        `expForLevel(${level}): expected ${expected}, got ${actual}`
+      );
+    }
+  });
+
+  it('should return positive integers for all test levels', () => {
+    for (const level of testLevels) {
+      const exp = expForLevel(level);
+      assert.ok(Number.isInteger(exp), `expForLevel(${level}) should be integer, got ${exp}`);
+      assert.ok(exp > 0, `expForLevel(${level}) should be positive, got ${exp}`);
+    }
+  });
+
+  it('should be strictly monotonically increasing', () => {
+    for (let i = 1; i < testLevels.length; i++) {
+      const prev = expForLevel(testLevels[i - 1]);
+      const curr = expForLevel(testLevels[i]);
+      assert.ok(
+        curr > prev,
+        `expForLevel(${testLevels[i]})=${curr} should exceed expForLevel(${testLevels[i - 1]})=${prev}`
+      );
+    }
+  });
+});
+
+describe('calculateStats at boundary levels', () => {
+  const STAT_KEYS = ['hpMax', 'mpMax', 'strength', 'intelligence', 'agility', 'vitality', 'luck'];
+  const boundaryLevels = [1, 50, 100, 256];
+
+  for (const level of boundaryLevels) {
+    it(`should produce valid stats for HUMAN/WARRIOR at level ${level}`, () => {
+      const stats = calculateStats(RACES.HUMAN, CLASSES.WARRIOR, level);
+
+      for (const key of STAT_KEYS) {
+        assert.ok(
+          key in stats,
+          `Missing stat property '${key}' at level ${level}`
+        );
+        assert.ok(
+          typeof stats[key] === 'number',
+          `${key} should be a number at level ${level}, got ${typeof stats[key]}`
+        );
+        assert.ok(
+          stats[key] > 0,
+          `${key} should be positive at level ${level}, got ${stats[key]}`
+        );
+        assert.ok(
+          Number.isInteger(stats[key]),
+          `${key} should be an integer at level ${level}, got ${stats[key]}`
+        );
+      }
+    });
+  }
+
+  it('should scale monotonically across boundary levels for HUMAN/WARRIOR', () => {
+    let prevStats = null;
+    for (const level of boundaryLevels) {
+      const stats = calculateStats(RACES.HUMAN, CLASSES.WARRIOR, level);
+      if (prevStats) {
+        for (const key of STAT_KEYS) {
+          assert.ok(
+            stats[key] >= prevStats[key],
+            `${key} should not decrease from level ${boundaryLevels[boundaryLevels.indexOf(level) - 1]} to ${level}`
+          );
+        }
+      }
+      prevStats = stats;
+    }
+  });
+});
+
+describe('Exhaustive race/class combos', () => {
+  const STAT_KEYS = ['hpMax', 'mpMax', 'strength', 'intelligence', 'agility', 'vitality', 'luck'];
+  const allRaces = Object.values(RACES);
+  const baseClasses = Object.values(CLASSES);
+  const advancedClasses = Object.values(ADVANCED_CLASSES);
+
+  it('should have 5 races, 4 base classes, 16 advanced classes for 100 total combos', () => {
+    assert.strictEqual(allRaces.length, 5);
+    assert.strictEqual(baseClasses.length, 4);
+    assert.strictEqual(advancedClasses.length, 16);
+    assert.strictEqual(allRaces.length * (baseClasses.length + advancedClasses.length), 100);
+  });
+
+  it('should produce valid positive integer stats for all 20 base race/class combos at level 10', () => {
+    for (const race of allRaces) {
+      for (const cls of baseClasses) {
+        const stats = calculateStats(race, cls, 10);
+        for (const key of STAT_KEYS) {
+          assert.ok(
+            typeof stats[key] === 'number' && Number.isInteger(stats[key]) && stats[key] > 0,
+            `${race}/${cls} at level 10: ${key} should be a positive integer, got ${stats[key]}`
+          );
+        }
+      }
+    }
+  });
+
+  it('should produce valid positive integer stats for all 80 advanced race/class combos at level 10', () => {
+    for (const race of allRaces) {
+      for (const cls of advancedClasses) {
+        const stats = calculateStats(race, cls, 10);
+        for (const key of STAT_KEYS) {
+          assert.ok(
+            typeof stats[key] === 'number' && Number.isInteger(stats[key]) && stats[key] > 0,
+            `${race}/${cls} at level 10: ${key} should be a positive integer, got ${stats[key]}`
+          );
+        }
+      }
+    }
+  });
+
+  it('should produce higher stats at level 10 than level 1 for all combos', () => {
+    const allClasses = [...baseClasses, ...advancedClasses];
+    for (const race of allRaces) {
+      for (const cls of allClasses) {
+        const stats1 = calculateStats(race, cls, 1);
+        const stats10 = calculateStats(race, cls, 10);
+        assert.ok(
+          stats10.hpMax > stats1.hpMax,
+          `${race}/${cls}: hpMax should grow from level 1 to 10`
+        );
+      }
+    }
+  });
+});
+
+describe('Race traits validation', () => {
+  const expectedTraits = {
+    [RACES.HUMAN]: 'exp_bonus',
+    [RACES.ELF]: 'mp_regen',
+    [RACES.DWARF]: 'gold_bonus',
+    [RACES.VAMPIRE]: 'lifesteal',
+    [RACES.ORC]: 'crit_damage'
+  };
+
+  for (const [race, expectedTrait] of Object.entries(expectedTraits)) {
+    it(`should assign trait '${expectedTrait}' to ${race}`, () => {
+      const raceStats = RACE_BASE_STATS[race];
+      assert.ok(raceStats, `RACE_BASE_STATS missing entry for ${race}`);
+      assert.strictEqual(
+        raceStats.trait,
+        expectedTrait,
+        `${race} trait should be '${expectedTrait}', got '${raceStats.trait}'`
+      );
+    });
+  }
+
+  it('should have a positive traitValue for every race', () => {
+    for (const race of Object.values(RACES)) {
+      const raceStats = RACE_BASE_STATS[race];
+      assert.ok(
+        typeof raceStats.traitValue === 'number' && raceStats.traitValue > 0,
+        `${race} traitValue should be a positive number, got ${raceStats.traitValue}`
+      );
+    }
+  });
+
+  it('should have unique traits across all races', () => {
+    const traits = Object.values(RACES).map(r => RACE_BASE_STATS[r].trait);
+    const uniqueTraits = new Set(traits);
+    assert.strictEqual(
+      uniqueTraits.size,
+      traits.length,
+      `All ${traits.length} race traits should be unique, found ${uniqueTraits.size} unique`
+    );
+  });
+
+  it('should match all 5 expected race-trait pairings exactly', () => {
+    for (const race of Object.values(RACES)) {
+      assert.ok(
+        race in expectedTraits,
+        `Race '${race}' should have an expected trait mapping`
+      );
+      assert.strictEqual(RACE_BASE_STATS[race].trait, expectedTraits[race]);
+    }
+  });
+});

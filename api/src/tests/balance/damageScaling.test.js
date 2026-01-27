@@ -19,6 +19,7 @@ import {
   calculateHitChance,
   calculateCritChance
 } from './balanceTestUtils.js';
+import { calculateElementalModifier } from '../../../../shared/battleMath.js';
 
 describe('Damage Scaling Balance', () => {
   describe('Physical Damage Scaling', () => {
@@ -307,5 +308,88 @@ describe('Class-Specific Damage Profiles', () => {
 
     assert.ok(berserkerDamage > warriorDamage,
       `Berserker damage (${berserkerDamage}) should exceed warrior (${warriorDamage})`);
+  });
+});
+
+// ============================================================================
+// ELEMENTAL DAMAGE SCALING
+// ============================================================================
+
+describe('Elemental Damage Scaling', () => {
+  it('should reduce fire damage against fire-resistant defender', () => {
+    const fireResistantDefender = {
+      race: 'dwarf', // Dwarves have 25% fire resistance
+      elementalResistances: {},
+      statusEffects: [],
+      equipment: {}
+    };
+
+    const modifier = calculateElementalModifier(fireResistantDefender, 'fire');
+    // Dwarf has 25 fire resist -> modifier = (100 - 25) / 100 = 0.75
+    assert.ok(modifier < 1.0, `Fire modifier vs dwarf should be < 1.0, got ${modifier}`);
+    assert.ok(modifier > 0, 'Fire modifier should still deal some damage');
+  });
+
+  it('should increase ice damage against ice-weak defender', () => {
+    const iceWeakDefender = {
+      race: 'dwarf', // Dwarves have -25% ice resistance (weakness)
+      elementalResistances: {},
+      statusEffects: [],
+      equipment: {}
+    };
+
+    const modifier = calculateElementalModifier(iceWeakDefender, 'ice');
+    // Dwarf has -25 ice resist -> modifier = (100 - (-25)) / 100 = 1.25
+    assert.ok(modifier > 1.0, `Ice modifier vs dwarf should be > 1.0, got ${modifier}`);
+  });
+
+  it('should return 1.0 for physical (non-elemental) attacks', () => {
+    const defender = { race: 'elf', elementalResistances: {}, statusEffects: [], equipment: {} };
+    const modifier = calculateElementalModifier(defender, 'physical');
+    assert.strictEqual(modifier, 1.0, 'Physical attacks should have no elemental modifier');
+  });
+
+  it('should return 1.0 for null/undefined element', () => {
+    const defender = { race: 'human', elementalResistances: {}, statusEffects: [], equipment: {} };
+    assert.strictEqual(calculateElementalModifier(defender, null), 1.0);
+    assert.strictEqual(calculateElementalModifier(defender, undefined), 1.0);
+  });
+
+  it('should handle vampires being very weak to holy', () => {
+    const vampireDefender = {
+      race: 'vampire', // -50 holy resistance
+      elementalResistances: {},
+      statusEffects: [],
+      equipment: {}
+    };
+
+    const holyMod = calculateElementalModifier(vampireDefender, 'holy');
+    // -50 resist -> modifier = (100 - (-50)) / 100 = 1.5
+    assert.ok(holyMod >= 1.5, `Holy vs vampire should deal 150%+ damage, got ${(holyMod * 100).toFixed(0)}%`);
+  });
+
+  it('should cap resistance at 90% (10% minimum damage)', () => {
+    const highResistDefender = {
+      race: 'human',
+      elementalResistances: { fire: 100 }, // 100 resist = immune normally but capped at 90 by modifier
+      statusEffects: [],
+      equipment: {}
+    };
+
+    const modifier = calculateElementalModifier(highResistDefender, 'fire');
+    // 100 resist >= 100 -> immune (returns 0)
+    assert.strictEqual(modifier, 0, 'Resistance of 100 should grant immunity');
+  });
+
+  it('should handle absorb at 150+ resistance', () => {
+    const absorbDefender = {
+      race: 'human',
+      elementalResistances: { fire: 150 },
+      statusEffects: [],
+      equipment: {}
+    };
+
+    const modifier = calculateElementalModifier(absorbDefender, 'fire');
+    assert.ok(modifier < 0, `Absorb resistance should produce negative modifier, got ${modifier}`);
   });
 });

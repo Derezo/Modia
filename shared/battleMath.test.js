@@ -13,7 +13,28 @@ import {
   calculateCritChance,
   calculateCritMultiplier,
   calculateDamagePreview,
-  calculateInitiative
+  calculateInitiative,
+  calculateDefenseReduction,
+  calculateEvasion,
+  calculateStatusResistance,
+  calculateEffectiveStatusChance,
+  calculateCTGain,
+  calculateInitialCT,
+  predictTicksToAct,
+  calculateElevationModifier,
+  calculateElevationAccuracyModifier,
+  calculateElevationEvasionModifier,
+  checkLineOfSight,
+  calculateDamagePreviewWithElevation,
+  getElementalResistance,
+  calculateElementalModifier,
+  getElementalEffectivenessDisplay,
+  applyVariance,
+  PHYSICAL_DEFENSE_CONSTANT,
+  MAGIC_DEFENSE_CONSTANT,
+  CT_THRESHOLD,
+  CT_BASE_GAIN,
+  CT_AGI_DIVISOR
 } from './battleMath.js';
 
 describe('calculatePhysicalDamage', () => {
@@ -370,5 +391,646 @@ describe('calculateInitiative', () => {
     const init = calculateInitiative(unit, 0.5);  // 0/2 + floor(0.5 * 21) = 0 + 10 = 10
 
     assert.strictEqual(init, 10, 'Default agility 0 with middle variance');
+  });
+});
+
+// ============================================================================
+// NEW TESTS - Comprehensive coverage for all untested exports
+// ============================================================================
+
+// --- Additional tests for existing suites ---
+
+describe('calculateCritMultiplier (luck scaling)', () => {
+  it('should scale crit multiplier with luck for orcs', () => {
+    // Orc with luck 50: 1.5 + 0.15 (orc bonus) + 50/500 = 1.75
+    const orc = { race: 'orc', luck: 50 };
+    const multiplier = calculateCritMultiplier(orc);
+    assert.ok(Math.abs(multiplier - 1.75) < 0.0001, `Orc LCK 50 should be ~1.75 (got ${multiplier})`);
+  });
+
+  it('should scale crit multiplier with luck for humans', () => {
+    // Human with luck 100: 1.5 + 100/500 = 1.7
+    const human = { race: 'human', luck: 100 };
+    const multiplier = calculateCritMultiplier(human);
+    assert.ok(Math.abs(multiplier - 1.7) < 0.0001, `Human LCK 100 should be ~1.7 (got ${multiplier})`);
+  });
+});
+
+describe('calculatePhysicalDamage (floor verification)', () => {
+  it('should apply floor operation to min and max damage', () => {
+    // STR 100, DEF 0 => rawDamage=100, defReduction=0
+    // min = floor(100 * 0.9) = 90, max = floor(100 * 1.1) = 110
+    const attacker = { strength: 100, attack: 0 };
+    const defender = { vitality: 0, defense: 0 };
+    const result = calculatePhysicalDamage(attacker, defender, 100);
+
+    assert.strictEqual(result.minDamage, 90, 'Min should be floor(100*0.9)=90');
+    assert.strictEqual(result.maxDamage, 110, 'Max should be floor(100*1.1)=110');
+  });
+});
+
+// --- calculateDefenseReduction ---
+
+describe('calculateDefenseReduction', () => {
+  it('should return 0 for zero defense', () => {
+    assert.strictEqual(calculateDefenseReduction(0, PHYSICAL_DEFENSE_CONSTANT), 0);
+  });
+
+  it('should return 0 for negative defense', () => {
+    assert.strictEqual(calculateDefenseReduction(-10, PHYSICAL_DEFENSE_CONSTANT), 0);
+  });
+
+  it('should return 50% reduction at 100 DEF with PHYSICAL_DEFENSE_CONSTANT', () => {
+    // 100 / (100 + 100) = 0.5
+    const reduction = calculateDefenseReduction(100, PHYSICAL_DEFENSE_CONSTANT);
+    assert.ok(Math.abs(reduction - 0.5) < 0.0001, `Expected 0.5, got ${reduction}`);
+  });
+
+  it('should show diminishing returns at high defense', () => {
+    // 200 / (200 + 100) = 0.6667
+    const at200 = calculateDefenseReduction(200, PHYSICAL_DEFENSE_CONSTANT);
+    // 400 / (400 + 100) = 0.8
+    const at400 = calculateDefenseReduction(400, PHYSICAL_DEFENSE_CONSTANT);
+
+    // Doubling from 200 to 400 should not double the reduction
+    const gain200to400 = at400 - at200;
+    const gain0to200 = at200;
+    assert.ok(gain200to400 < gain0to200, 'Diminishing returns: 200->400 gain should be less than 0->200 gain');
+    assert.ok(Math.abs(at200 - 2 / 3) < 0.001, `200 DEF should be ~66.7% (got ${at200})`);
+  });
+
+  it('should work with magic defense constant', () => {
+    // 80 / (80 + 80) = 0.5
+    const reduction = calculateDefenseReduction(80, MAGIC_DEFENSE_CONSTANT);
+    assert.ok(Math.abs(reduction - 0.5) < 0.0001, `Expected 0.5, got ${reduction}`);
+  });
+});
+
+// --- calculateEvasion ---
+
+describe('calculateEvasion', () => {
+  it('should return 2% base evasion with equal AGI and 0 luck', () => {
+    const attacker = { agility: 20 };
+    const defender = { agility: 20, luck: 0 };
+    const evasion = calculateEvasion(attacker, defender);
+    assert.ok(Math.abs(evasion - 0.02) < 0.001, `Equal AGI should give 2% (got ${evasion})`);
+  });
+
+  it('should increase evasion when defender is faster', () => {
+    const attacker = { agility: 10 };
+    const defender = { agility: 50, luck: 0 };
+    // 2% + (50-10)/400 = 2% + 10% = 12%
+    const evasion = calculateEvasion(attacker, defender);
+    assert.ok(Math.abs(evasion - 0.12) < 0.001, `Faster defender should give ~12% (got ${evasion})`);
+  });
+
+  it('should decrease evasion when attacker is faster but not below floor', () => {
+    const attacker = { agility: 100 };
+    const defender = { agility: 10, luck: 0 };
+    // 2% + (10-100)/400 = 2% - 22.5% = -20.5% => clamped to 2%
+    const evasion = calculateEvasion(attacker, defender);
+    assert.strictEqual(evasion, 0.02, 'Should not go below 2% floor');
+  });
+
+  it('should add luck bonus for defender', () => {
+    const attacker = { agility: 20 };
+    const defender = { agility: 20, luck: 40 };
+    // 2% + 0 + 40/400 = 2% + 10% = 12%
+    const evasion = calculateEvasion(attacker, defender);
+    assert.ok(Math.abs(evasion - 0.12) < 0.001, `Luck 40 should give ~12% (got ${evasion})`);
+  });
+
+  it('should cap at 35%', () => {
+    const attacker = { agility: 1 };
+    const defender = { agility: 200, luck: 200 };
+    const evasion = calculateEvasion(attacker, defender);
+    assert.strictEqual(evasion, 0.35, 'Should cap at 35%');
+  });
+
+  it('should maintain 2% floor', () => {
+    const attacker = { agility: 200 };
+    const defender = { agility: 1, luck: 0 };
+    const evasion = calculateEvasion(attacker, defender);
+    assert.strictEqual(evasion, 0.02, 'Should have 2% floor');
+  });
+});
+
+// --- calculateStatusResistance ---
+
+describe('calculateStatusResistance', () => {
+  it('should return 10% base resistance at 0 luck', () => {
+    const defender = { luck: 0 };
+    const resist = calculateStatusResistance(defender);
+    assert.ok(Math.abs(resist - 0.10) < 0.001, `Base should be 10% (got ${resist})`);
+  });
+
+  it('should scale with luck', () => {
+    // LCK 100: 10% + 100/200 = 10% + 50% = 60% => capped at 50%
+    const defender = { luck: 100 };
+    const resist = calculateStatusResistance(defender);
+    assert.strictEqual(resist, 0.50, 'LCK 100 should cap at 50%');
+  });
+
+  it('should cap at 50%', () => {
+    const defender = { luck: 200 };
+    const resist = calculateStatusResistance(defender);
+    assert.strictEqual(resist, 0.50, 'Should not exceed 50%');
+  });
+
+  it('should add trait bonus', () => {
+    const defender = { luck: 0 };
+    const resist = calculateStatusResistance(defender, 0.05);
+    assert.ok(Math.abs(resist - 0.15) < 0.001, `10% + 5% trait = 15% (got ${resist})`);
+  });
+});
+
+// --- calculateEffectiveStatusChance ---
+
+describe('calculateEffectiveStatusChance', () => {
+  it('should reduce base chance by resistance', () => {
+    // Base 80%, defender LCK 0 => resist 10% => effective = 0.8 * (1-0.1) = 0.72
+    const defender = { luck: 0 };
+    const chance = calculateEffectiveStatusChance(0.8, defender);
+    assert.ok(Math.abs(chance - 0.72) < 0.001, `Expected 0.72, got ${chance}`);
+  });
+
+  it('should return 0 when base chance is 0', () => {
+    const defender = { luck: 50 };
+    const chance = calculateEffectiveStatusChance(0, defender);
+    assert.strictEqual(chance, 0, 'Zero base chance should stay zero');
+  });
+
+  it('should apply trait bonus resistance', () => {
+    // Base 50%, LCK 0 + 0.1 trait => resist 20% => effective = 0.5 * 0.8 = 0.4
+    const defender = { luck: 0 };
+    const chance = calculateEffectiveStatusChance(0.5, defender, 0.1);
+    assert.ok(Math.abs(chance - 0.4) < 0.001, `Expected 0.4, got ${chance}`);
+  });
+});
+
+// --- calculateCTGain ---
+
+describe('calculateCTGain', () => {
+  it('should return 5 CT/tick at AGI 0', () => {
+    const unit = { agility: 0 };
+    const gain = calculateCTGain(unit);
+    assert.strictEqual(gain, 5, 'AGI 0 should give base 5 CT/tick');
+  });
+
+  it('should return 10 CT/tick at AGI 50', () => {
+    // 5 + 50/10 = 10
+    const unit = { agility: 50 };
+    const gain = calculateCTGain(unit);
+    assert.strictEqual(gain, 10, 'AGI 50 should give 10 CT/tick');
+  });
+
+  it('should apply 1.5x multiplier with haste', () => {
+    // AGI 50: base 10, haste: 15
+    const unit = { agility: 50, statusEffects: [{ type: 'haste' }] };
+    const gain = calculateCTGain(unit);
+    assert.strictEqual(gain, 15, 'Haste should multiply by 1.5');
+  });
+
+  it('should apply 0.5x multiplier with slow', () => {
+    // AGI 50: base 10, slow: 5
+    const unit = { agility: 50, statusEffects: [{ type: 'slow' }] };
+    const gain = calculateCTGain(unit);
+    assert.strictEqual(gain, 5, 'Slow should multiply by 0.5');
+  });
+
+  it('should apply both haste and slow (1.5 * 0.5 = 0.75)', () => {
+    // AGI 50: base 10, haste then slow: 10 * 1.5 * 0.5 = 7.5
+    const unit = { agility: 50, statusEffects: [{ type: 'haste' }, { type: 'slow' }] };
+    const gain = calculateCTGain(unit);
+    assert.strictEqual(gain, 7.5, 'Haste + slow should give 0.75x');
+  });
+});
+
+// --- calculateInitialCT ---
+
+describe('calculateInitialCT', () => {
+  it('should be deterministic with fixed random value', () => {
+    const unit = { agility: 40 };
+    const ct1 = calculateInitialCT(unit, 0.5);
+    const ct2 = calculateInitialCT(unit, 0.5);
+    assert.strictEqual(ct1, ct2, 'Same input should give same output');
+  });
+
+  it('should compute correctly with AGI 40 and random 0.5', () => {
+    // base = 40/2 = 20, variance = floor(0.5 * 21) = 10, total = floor(30) = 30
+    const unit = { agility: 40 };
+    const ct = calculateInitialCT(unit, 0.5);
+    assert.strictEqual(ct, 30, 'AGI 40, rand 0.5 => 30');
+  });
+
+  it('should have variance range of 0 to 20', () => {
+    const unit = { agility: 20 };
+    const ctMin = calculateInitialCT(unit, 0);       // 10 + 0 = 10
+    const ctMax = calculateInitialCT(unit, 0.99);    // 10 + 20 = 30
+    assert.strictEqual(ctMin, 10, 'Random 0 should add 0 variance');
+    assert.strictEqual(ctMax, 30, 'Random ~1 should add 20 variance');
+  });
+});
+
+// --- predictTicksToAct ---
+
+describe('predictTicksToAct', () => {
+  it('should predict ticks from CT 0 with AGI 10', () => {
+    // ctGain = 5 + 10/10 = 6, ticks = ceil(100/6) = 17
+    const unit = { agility: 10 };
+    const ticks = predictTicksToAct(unit, 0);
+    assert.strictEqual(ticks, 17, 'AGI 10 from CT 0 should take 17 ticks');
+  });
+
+  it('should return 0 when already at or above threshold', () => {
+    const unit = { agility: 50 };
+    assert.strictEqual(predictTicksToAct(unit, 100), 0, 'CT 100 should need 0 ticks');
+    assert.strictEqual(predictTicksToAct(unit, 120), 0, 'CT above threshold should need 0 ticks');
+  });
+
+  it('should account for haste', () => {
+    // AGI 50: base ctGain = 10, haste = 15, ticks = ceil(100/15) = 7
+    const unit = { agility: 50, statusEffects: [{ type: 'haste' }] };
+    const ticks = predictTicksToAct(unit, 0);
+    assert.strictEqual(ticks, 7, 'Haste AGI 50 should take 7 ticks');
+  });
+
+  it('should handle partial CT', () => {
+    // AGI 50: ctGain=10, remaining=50, ticks = ceil(50/10) = 5
+    const unit = { agility: 50 };
+    const ticks = predictTicksToAct(unit, 50);
+    assert.strictEqual(ticks, 5, 'CT 50 with AGI 50 should take 5 ticks');
+  });
+});
+
+// --- calculateElevationModifier ---
+
+describe('calculateElevationModifier', () => {
+  it('should return 1.0 for same level', () => {
+    const result = calculateElevationModifier(0, 0);
+    assert.strictEqual(result.modifier, 1.0);
+    assert.strictEqual(result.description, 'Same level');
+  });
+
+  it('should give +10% per level above for melee', () => {
+    const result = calculateElevationModifier(2, 0, 'melee');
+    // 2 levels * 10% = 20%
+    assert.ok(Math.abs(result.modifier - 1.2) < 0.001, `Expected 1.2, got ${result.modifier}`);
+  });
+
+  it('should give +15% per level above for ranged (10% base + 5% ranged bonus)', () => {
+    const result = calculateElevationModifier(2, 0, 'ranged');
+    // 2 * (10% + 5%) = 30%
+    assert.ok(Math.abs(result.modifier - 1.3) < 0.001, `Expected 1.3, got ${result.modifier}`);
+  });
+
+  it('should cap bonus at +40%', () => {
+    const resultMelee = calculateElevationModifier(5, 0, 'melee');
+    // 5 * 10% = 50% => capped at 40%
+    assert.ok(Math.abs(resultMelee.modifier - 1.4) < 0.001, `Melee cap should be 1.4 (got ${resultMelee.modifier})`);
+  });
+
+  it('should apply -5% penalty per level below', () => {
+    const result = calculateElevationModifier(0, 2, 'melee');
+    // 2 * 5% = 10% penalty
+    assert.ok(Math.abs(result.modifier - 0.9) < 0.001, `Expected 0.9, got ${result.modifier}`);
+  });
+
+  it('should cap penalty at -20%', () => {
+    const result = calculateElevationModifier(0, 6, 'melee');
+    // 6 * 5% = 30% => capped at 20%
+    assert.ok(Math.abs(result.modifier - 0.8) < 0.001, `Penalty cap should be 0.8 (got ${result.modifier})`);
+  });
+});
+
+// --- calculateElevationAccuracyModifier ---
+
+describe('calculateElevationAccuracyModifier', () => {
+  it('should return 0 for same level', () => {
+    assert.strictEqual(calculateElevationAccuracyModifier(0, 0), 0);
+  });
+
+  it('should give +2% per level above', () => {
+    const mod = calculateElevationAccuracyModifier(3, 1);
+    assert.ok(Math.abs(mod - 0.04) < 0.001, `2 levels above => +4% (got ${mod})`);
+  });
+
+  it('should give -2% per level below', () => {
+    const mod = calculateElevationAccuracyModifier(0, 2);
+    assert.ok(Math.abs(mod - (-0.04)) < 0.001, `2 levels below => -4% (got ${mod})`);
+  });
+
+  it('should cap at +8%', () => {
+    const mod = calculateElevationAccuracyModifier(6, 0);
+    assert.ok(Math.abs(mod - 0.08) < 0.001, `Should cap at +8% (got ${mod})`);
+  });
+
+  it('should cap at -8%', () => {
+    const mod = calculateElevationAccuracyModifier(0, 6);
+    assert.ok(Math.abs(mod - (-0.08)) < 0.001, `Should cap at -8% (got ${mod})`);
+  });
+});
+
+// --- calculateElevationEvasionModifier ---
+
+describe('calculateElevationEvasionModifier', () => {
+  it('should return 0 for same level', () => {
+    assert.strictEqual(calculateElevationEvasionModifier(0, 0), 0);
+  });
+
+  it('should give +1% evasion per level defender is above', () => {
+    // defenderZ=2, attackerZ=0 => elevDiff=2, bonus=2*0.01=0.02
+    const mod = calculateElevationEvasionModifier(0, 2);
+    assert.ok(Math.abs(mod - 0.02) < 0.001, `Defender 2 above => +2% (got ${mod})`);
+  });
+
+  it('should give -2% evasion per level defender is below', () => {
+    // defenderZ=0, attackerZ=2 => elevDiff=-2, penalty=-2*0.02=-0.04
+    const mod = calculateElevationEvasionModifier(2, 0);
+    assert.ok(Math.abs(mod - (-0.04)) < 0.001, `Defender 2 below => -4% (got ${mod})`);
+  });
+
+  it('should cap positive modifier at +4%', () => {
+    const mod = calculateElevationEvasionModifier(0, 6);
+    assert.ok(Math.abs(mod - 0.04) < 0.001, `Should cap at +4% (got ${mod})`);
+  });
+
+  it('should cap negative modifier at -8%', () => {
+    const mod = calculateElevationEvasionModifier(6, 0);
+    assert.ok(Math.abs(mod - (-0.08)) < 0.001, `Should cap at -8% (got ${mod})`);
+  });
+});
+
+// --- checkLineOfSight ---
+
+describe('checkLineOfSight', () => {
+  it('should have LOS when no elevation data provided', () => {
+    const result = checkLineOfSight(0, 0, 0, 5, 5, 0, null, null);
+    assert.strictEqual(result.hasLOS, true);
+    assert.strictEqual(result.blocked, false);
+    assert.strictEqual(result.blockingTile, null);
+  });
+
+  it('should have LOS on flat terrain with no obstacles', () => {
+    const elevation = Array.from({ length: 10 }, () => Array(10).fill(0));
+    const terrain = Array.from({ length: 10 }, () => Array(10).fill('grass'));
+    const result = checkLineOfSight(0, 0, 0, 5, 5, 0, elevation, terrain);
+    assert.strictEqual(result.hasLOS, true);
+  });
+
+  it('should be blocked by rock obstacle at same elevation', () => {
+    const elevation = Array.from({ length: 10 }, () => Array(10).fill(0));
+    const terrain = Array.from({ length: 10 }, () => Array(10).fill('grass'));
+    // Place a rock in the middle of the path from (0,0) to (4,4)
+    terrain[2][2] = 'rock';
+    const result = checkLineOfSight(0, 0, 0, 4, 4, 0, elevation, terrain);
+    assert.strictEqual(result.hasLOS, false);
+    assert.strictEqual(result.blocked, true);
+    assert.ok(result.blockingTile !== null, 'Should report blocking tile');
+  });
+
+  it('should see over low obstacle when attacker is high', () => {
+    const elevation = Array.from({ length: 10 }, () => Array(10).fill(0));
+    const terrain = Array.from({ length: 10 }, () => Array(10).fill('grass'));
+    // Place a rock at elevation 0 in the path
+    terrain[2][2] = 'rock';
+    elevation[2][2] = 0;
+    // Attacker at elevation 3, defender at elevation 0
+    // The projectile height at step 2 of ~4 steps: 3 + (0-3)*(2/4) = 3 - 1.5 = 1.5
+    // Rock at height 0, 0 < 1.5 so it should not block
+    const result = checkLineOfSight(0, 0, 3, 4, 4, 0, elevation, terrain);
+    assert.strictEqual(result.hasLOS, true, 'High attacker should see over low obstacle');
+  });
+
+  it('should have LOS for same-position (distance 0)', () => {
+    const elevation = Array.from({ length: 10 }, () => Array(10).fill(0));
+    const terrain = Array.from({ length: 10 }, () => Array(10).fill('grass'));
+    const result = checkLineOfSight(3, 3, 0, 3, 3, 0, elevation, terrain);
+    assert.strictEqual(result.hasLOS, true);
+  });
+});
+
+// --- calculateDamagePreviewWithElevation ---
+
+describe('calculateDamagePreviewWithElevation', () => {
+  it('should not modify healing with elevation', () => {
+    const caster = { intelligence: 30 };
+    const target = { hp: 50, maxHp: 100 };
+    const skill = { power: 100, effect: 'heal' };
+    const preview = calculateDamagePreviewWithElevation(caster, target, skill, {
+      attackerZ: 3, defenderZ: 0
+    });
+    assert.strictEqual(preview.type, 'heal');
+    assert.strictEqual(preview.elevationModifier, 1.0, 'Healing should not be affected by elevation');
+  });
+
+  it('should increase physical damage with height advantage', () => {
+    const attacker = { strength: 50, attack: 10 };
+    const defender = { vitality: 10, defense: 5, hp: 200 };
+    const skill = { power: 100 };
+
+    const flat = calculateDamagePreviewWithElevation(attacker, defender, skill, {
+      attackerZ: 0, defenderZ: 0
+    });
+    const elevated = calculateDamagePreviewWithElevation(attacker, defender, skill, {
+      attackerZ: 2, defenderZ: 0
+    });
+
+    assert.ok(elevated.maxDamage > flat.maxDamage, 'Elevated attacker should deal more damage');
+    assert.ok(elevated.elevationModifier > 1.0, 'Modifier should be > 1.0');
+  });
+
+  it('should include baseDamage for comparison', () => {
+    const attacker = { strength: 50, attack: 10 };
+    const defender = { vitality: 10, defense: 5, hp: 200 };
+    const skill = { power: 100 };
+
+    const preview = calculateDamagePreviewWithElevation(attacker, defender, skill, {
+      attackerZ: 2, defenderZ: 0
+    });
+
+    assert.ok(preview.baseDamage, 'Should include baseDamage object');
+    assert.ok(preview.baseDamage.min > 0, 'Base min damage should be positive');
+    assert.ok(preview.maxDamage >= preview.baseDamage.max, 'Elevated max should >= base max');
+  });
+});
+
+// --- getElementalResistance ---
+
+describe('getElementalResistance', () => {
+  it('should return 0 for physical element', () => {
+    const defender = { race: 'elf' };
+    assert.strictEqual(getElementalResistance(defender, 'physical'), 0);
+  });
+
+  it('should return 0 for null element', () => {
+    const defender = { race: 'elf' };
+    assert.strictEqual(getElementalResistance(defender, null), 0);
+  });
+
+  it('should return racial resistance for elves vs fire', () => {
+    // Elf: fire = -25 (weakness)
+    const defender = { race: 'elf' };
+    const resist = getElementalResistance(defender, 'fire');
+    assert.strictEqual(resist, -25, 'Elf should have -25 fire resistance');
+  });
+
+  it('should return racial resistance for vampires vs holy', () => {
+    // Vampire: holy = -50 (weakness)
+    const defender = { race: 'vampire' };
+    const resist = getElementalResistance(defender, 'holy');
+    assert.strictEqual(resist, -50, 'Vampire should have -50 holy resistance');
+  });
+
+  it('should add innate elemental resistances', () => {
+    const defender = { race: 'human', elementalResistances: { fire: 30 } };
+    assert.strictEqual(getElementalResistance(defender, 'fire'), 30);
+  });
+
+  it('should stack equipment resistances', () => {
+    const defender = {
+      race: 'human',
+      equipment: {
+        armor: { elementalResistances: { fire: 20 } },
+        shield: { elementalResistances: { fire: 15 } }
+      }
+    };
+    assert.strictEqual(getElementalResistance(defender, 'fire'), 35);
+  });
+
+  it('should stack buff resistances', () => {
+    const defender = {
+      race: 'human',
+      statusEffects: [
+        { type: 'fire_resist', value: 25 },
+        { type: 'elemental_shield', value: 15 }
+      ]
+    };
+    assert.strictEqual(getElementalResistance(defender, 'fire'), 40);
+  });
+
+  it('should stack all sources together', () => {
+    // Dwarf fire racial: +25
+    // Innate: +10
+    // Equipment: +20
+    // Buff: +25
+    const defender = {
+      race: 'dwarf',
+      elementalResistances: { fire: 10 },
+      equipment: { armor: { elementalResistances: { fire: 20 } } },
+      statusEffects: [{ type: 'fire_resist', value: 25 }]
+    };
+    assert.strictEqual(getElementalResistance(defender, 'fire'), 80);
+  });
+});
+
+// --- calculateElementalModifier ---
+
+describe('calculateElementalModifier', () => {
+  it('should return 1.0 for physical/null element', () => {
+    assert.strictEqual(calculateElementalModifier({}, 'physical'), 1.0);
+    assert.strictEqual(calculateElementalModifier({}, null), 1.0);
+  });
+
+  it('should cap resistance modifier at 0.1 minimum', () => {
+    // 90 resistance => (100-90)/100 = 0.1
+    const defender = { race: 'human', elementalResistances: { fire: 90 } };
+    const mod = calculateElementalModifier(defender, 'fire');
+    assert.ok(Math.abs(mod - 0.1) < 0.001, `90 resist should give 0.1 (got ${mod})`);
+  });
+
+  it('should return 0 for immunity (resistance >= 100)', () => {
+    const defender = { race: 'human', elementalResistances: { fire: 100 } };
+    assert.strictEqual(calculateElementalModifier(defender, 'fire'), 0);
+  });
+
+  it('should return -0.5 for absorb (resistance >= 150)', () => {
+    const defender = { race: 'human', elementalResistances: { fire: 150 } };
+    assert.strictEqual(calculateElementalModifier(defender, 'fire'), -0.5);
+  });
+
+  it('should increase damage for weakness (negative resistance)', () => {
+    // Elf fire: -25 => (100 - (-25))/100 = 1.25
+    const defender = { race: 'elf' };
+    const mod = calculateElementalModifier(defender, 'fire');
+    assert.ok(Math.abs(mod - 1.25) < 0.001, `Elf fire weakness should give 1.25 (got ${mod})`);
+  });
+
+  it('should give 1.5+ for strong weakness', () => {
+    // Vampire holy: -50 => (100-(-50))/100 = 1.5
+    const defender = { race: 'vampire' };
+    const mod = calculateElementalModifier(defender, 'holy');
+    assert.ok(mod >= 1.5, `Vampire holy should be >= 1.5 (got ${mod})`);
+  });
+});
+
+// --- getElementalEffectivenessDisplay ---
+
+describe('getElementalEffectivenessDisplay', () => {
+  it('should return ABSORB for negative modifier', () => {
+    const result = getElementalEffectivenessDisplay(-0.5);
+    assert.strictEqual(result.text, 'ABSORB');
+    assert.strictEqual(result.color, '#44ff88');
+  });
+
+  it('should return IMMUNE for modifier 0', () => {
+    const result = getElementalEffectivenessDisplay(0);
+    assert.strictEqual(result.text, 'IMMUNE');
+    assert.strictEqual(result.color, '#888888');
+  });
+
+  it('should return RESIST for modifier <= 0.25', () => {
+    const result = getElementalEffectivenessDisplay(0.1);
+    assert.strictEqual(result.text, 'RESIST');
+  });
+
+  it('should return Resist for modifier 0.25 < x <= 0.75', () => {
+    const result = getElementalEffectivenessDisplay(0.5);
+    assert.strictEqual(result.text, 'Resist');
+  });
+
+  it('should return Weak for modifier > 1.0 and < 1.5', () => {
+    const result = getElementalEffectivenessDisplay(1.25);
+    assert.strictEqual(result.text, 'Weak');
+    assert.strictEqual(result.color, '#ffaa44');
+  });
+
+  it('should return WEAK! for modifier >= 1.5', () => {
+    const result = getElementalEffectivenessDisplay(1.5);
+    assert.strictEqual(result.text, 'WEAK!');
+    assert.strictEqual(result.color, '#ff4444');
+  });
+
+  it('should return null for normal damage (modifier ~1.0)', () => {
+    const result = getElementalEffectivenessDisplay(1.0);
+    assert.strictEqual(result, null, 'Normal damage should have no special display');
+  });
+});
+
+// --- applyVariance ---
+
+describe('applyVariance', () => {
+  it('should return floor(base * 0.9) when random is 0', () => {
+    // base=100, random=0 => variance=0.9 => floor(100*0.9) = 90
+    assert.strictEqual(applyVariance(100, 0), 90);
+  });
+
+  it('should return floor(base * 1.1) when random is 1', () => {
+    // base=100, random=1 => variance=0.9 + 1*0.2 = 1.1 => floor(100*1.1) = 110
+    assert.strictEqual(applyVariance(100, 1), 110);
+  });
+
+  it('should return floor(base * 1.0) at midpoint random', () => {
+    // base=100, random=0.5 => variance=0.9 + 0.5*0.2 = 1.0 => floor(100*1.0) = 100
+    assert.strictEqual(applyVariance(100, 0.5), 100);
+  });
+
+  it('should floor non-integer results', () => {
+    // base=77, random=0 => floor(77 * 0.9) = floor(69.3) = 69
+    assert.strictEqual(applyVariance(77, 0), 69);
+  });
+
+  it('should handle base of 0', () => {
+    assert.strictEqual(applyVariance(0, 0.5), 0);
   });
 });

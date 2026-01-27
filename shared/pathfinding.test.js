@@ -446,3 +446,87 @@ describe('analyzeMapConnectivity', () => {
     assert.ok(Array.isArray(result.bottlenecks), 'bottlenecks should be array');
   });
 });
+
+// ============================================================================
+// EXTENDED PATHFINDING TESTS
+// ============================================================================
+
+describe('Pathfinding Performance', () => {
+  it('should complete 32x32 grid pathfinding in under 1000ms', () => {
+    const size = 32;
+    const terrain = createGrid(size, size);
+
+    const start = performance.now();
+    const path = findPath(0, 0, size - 1, size - 1, terrain, [], size, size);
+    const elapsed = performance.now() - start;
+
+    assert.ok(path, 'Path should exist on open 32x32 grid');
+    assert.ok(path.length > 0, 'Path should have waypoints');
+    assert.ok(elapsed < 1000, `Pathfinding took ${elapsed.toFixed(2)}ms, should be < 1000ms`);
+  });
+});
+
+describe('Mixed Terrain Cost Pathfinding', () => {
+  it('should prefer lower-cost path over shorter-distance path', () => {
+    // Create a 10x5 grid. Direct route (row 2) goes through forest (cost 2 each).
+    // Alternate route goes around through grass (cost 1 each) via rows 0 or 4.
+    const terrain = createGrid(10, 5);
+
+    // Fill row 2 columns 2-7 with forest (cost 2 per tile)
+    for (let x = 2; x <= 7; x++) {
+      terrain[2][x] = 'forest';
+    }
+
+    // Path from (0,2) to (9,2)
+    const path = findPath(0, 2, 9, 2, terrain, [], 10, 5);
+
+    assert.ok(path, 'Path should exist');
+    assert.deepStrictEqual(path[0], { x: 0, y: 2 }, 'Should start at (0,2)');
+    assert.deepStrictEqual(path[path.length - 1], { x: 9, y: 2 }, 'Should end at (9,2)');
+
+    // The optimal path should avoid the forest strip.
+    // Count how many path tiles are in the forest row (y=2) between x=2..7
+    const forestTiles = path.filter(p => p.y === 2 && p.x >= 2 && p.x <= 7);
+
+    // A* should route around forest because 6 forest tiles cost 12 movement
+    // while going around costs ~9-11 via grass depending on exact route.
+    // The path should use fewer forest tiles than the direct 6.
+    assert.ok(forestTiles.length < 6,
+      `Path should avoid most forest tiles, used ${forestTiles.length}/6 forest tiles`);
+  });
+
+  it('should handle water terrain with cost 3', () => {
+    const terrain = createGrid(10, 5);
+
+    // Place water tiles along the direct path at row 2
+    for (let x = 3; x <= 5; x++) {
+      terrain[2][x] = 'water';
+    }
+
+    // findPath should still find a path (water is passable, cost 3)
+    const path = findPath(0, 2, 9, 2, terrain, [], 10, 5);
+    assert.ok(path, 'Path should exist even with water tiles');
+    assert.ok(path.length > 0, 'Path should have waypoints');
+
+    // calculatePathCost through water should be higher than through grass
+    const costViaWater = calculatePathCost(0, 2, 9, 2, terrain, [], 20, 10, 5);
+
+    const grassTerrain = createGrid(10, 5);
+    const costViaGrass = calculatePathCost(0, 2, 9, 2, grassTerrain, [], 20, 10, 5);
+
+    assert.ok(costViaWater >= costViaGrass,
+      `Water path cost (${costViaWater}) should be >= grass path cost (${costViaGrass})`);
+  });
+
+  it('should correctly calculate path cost through multi-cost terrain', () => {
+    const terrain = createGrid(5, 1);
+    // All grass: cost should be 4 (4 steps)
+    const grassCost = calculatePathCost(0, 0, 4, 0, terrain, [], 10, 5, 1);
+    assert.strictEqual(grassCost, 4, 'All grass path should cost 4');
+
+    // Put forest in the middle: cost should increase
+    terrain[0][2] = 'forest'; // cost 2 instead of 1
+    const forestCost = calculatePathCost(0, 0, 4, 0, terrain, [], 10, 5, 1);
+    assert.strictEqual(forestCost, 5, 'Path through 1 forest tile should cost 5 (3 grass + 1 forest)');
+  });
+});

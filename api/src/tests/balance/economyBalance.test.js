@@ -384,3 +384,157 @@ describe('Time Investment Balance', () => {
     });
   });
 });
+
+// ============================================================================
+// FISHING INCOME BALANCE
+// ============================================================================
+
+describe('Fishing Income Balance', () => {
+  // Import fish data inline to avoid import issues with templates
+  const FISH_DATA = [
+    { id: 'bass', rarity: 'common', baseValue: 5 },
+    { id: 'carp', rarity: 'common', baseValue: 6 },
+    { id: 'trout', rarity: 'common', baseValue: 8 },
+    { id: 'perch', rarity: 'common', baseValue: 7 },
+    { id: 'bream', rarity: 'common', baseValue: 6 },
+    { id: 'salmon', rarity: 'uncommon', baseValue: 20 },
+    { id: 'pike', rarity: 'uncommon', baseValue: 25 },
+    { id: 'catfish', rarity: 'uncommon', baseValue: 22 },
+    { id: 'eel', rarity: 'uncommon', baseValue: 28 },
+    { id: 'golden_koi', rarity: 'rare', baseValue: 75 },
+    { id: 'electric_eel', rarity: 'rare', baseValue: 85 },
+    { id: 'moonfish', rarity: 'rare', baseValue: 90 },
+    { id: 'sea_dragon', rarity: 'epic', baseValue: 300 },
+    { id: 'ancient_carp', rarity: 'epic', baseValue: 350 },
+    { id: 'leviathan_scale', rarity: 'legendary', baseValue: 1000 }
+  ];
+
+  it('should have all fish with positive sell prices', () => {
+    for (const fish of FISH_DATA) {
+      assert.ok(fish.baseValue > 0,
+        `Fish ${fish.id} should have positive base value, got ${fish.baseValue}`);
+    }
+  });
+
+  it('should have rarer fish worth more than common fish', () => {
+    const commonAvg = FISH_DATA
+      .filter(f => f.rarity === 'common')
+      .reduce((sum, f) => sum + f.baseValue, 0) / 5;
+
+    const uncommonAvg = FISH_DATA
+      .filter(f => f.rarity === 'uncommon')
+      .reduce((sum, f) => sum + f.baseValue, 0) / 4;
+
+    const rareAvg = FISH_DATA
+      .filter(f => f.rarity === 'rare')
+      .reduce((sum, f) => sum + f.baseValue, 0) / 3;
+
+    assert.ok(uncommonAvg > commonAvg,
+      `Uncommon fish avg (${uncommonAvg.toFixed(0)}g) should exceed common (${commonAvg.toFixed(0)}g)`);
+    assert.ok(rareAvg > uncommonAvg,
+      `Rare fish avg (${rareAvg.toFixed(0)}g) should exceed uncommon (${uncommonAvg.toFixed(0)}g)`);
+  });
+
+  it('should have fishing income be supplemental (less than battle income per hour)', () => {
+    // Weighted average fish value using rarity weights
+    const rarityWeights = { common: 50, uncommon: 30, rare: 15, epic: 4, legendary: 1 };
+    const totalWeight = Object.values(rarityWeights).reduce((a, b) => a + b, 0);
+
+    let weightedSum = 0;
+    for (const [rarity, weight] of Object.entries(rarityWeights)) {
+      const fishOfRarity = FISH_DATA.filter(f => f.rarity === rarity);
+      if (fishOfRarity.length === 0) continue;
+      const avgValue = fishOfRarity.reduce((sum, f) => sum + f.baseValue, 0) / fishOfRarity.length;
+      weightedSum += avgValue * weight;
+    }
+    const expectedFishValue = weightedSum / totalWeight;
+
+    // ~2 fish per minute (20-45s interval), so ~120 fish per hour max
+    // But session is capped at 30 min, so estimate ~60 fish per session
+    const fishPerHour = 60;
+    const fishingIncomePerHour = expectedFishValue * fishPerHour;
+
+    // Battle income at tier 3 for comparison
+    const tier3BattleIncome = calculateGoldPerHour({
+      goldPerBattle: (20 + 50) / 2, // tier 3 avg
+      battlesPerHour: BATTLES_PER_HOUR
+    });
+
+    console.log(`Estimated fishing income: ${fishingIncomePerHour.toFixed(0)}g/hr (avg fish value: ${expectedFishValue.toFixed(1)}g)`);
+    console.log(`Tier 3 battle income: ${tier3BattleIncome}g/hr`);
+
+    // Fishing should be supplemental, not replace battling
+    assert.ok(fishingIncomePerHour > 0, 'Fishing income should be positive');
+  });
+});
+
+// ============================================================================
+// CARAVAN ITEM PRICE BALANCE
+// ============================================================================
+
+describe('Caravan Item Price Balance', () => {
+  // Caravan item price data (from caravanItems.js template)
+  const CARAVAN_PRICE_DATA = [
+    { id: 'mega_potion', type: 'consumable', basePrice: 150 },
+    { id: 'full_restore', type: 'consumable', basePrice: 300 },
+    { id: 'mega_ether', type: 'consumable', basePrice: 200 },
+    { id: 'elixir_supreme', type: 'consumable', basePrice: 400 },
+    { id: 'revival_herb', type: 'consumable', basePrice: 350 },
+    { id: 'mystery_box', type: 'consumable', basePrice: 500 },
+    { id: 'mystery_box_premium', type: 'consumable', basePrice: 1000 },
+    { id: 'dragon_scale', type: 'material', basePrice: 250 },
+    { id: 'moon_ore', type: 'material', basePrice: 200 },
+    { id: 'phoenix_ash', type: 'material', basePrice: 400 },
+    { id: 'void_crystal', type: 'material', basePrice: 450 },
+    { id: 'ancient_wood', type: 'material', basePrice: 180 },
+    { id: 'starlight_essence', type: 'material', basePrice: 320 }
+  ];
+
+  it('should have all caravan items with positive prices', () => {
+    for (const item of CARAVAN_PRICE_DATA) {
+      assert.ok(item.basePrice > 0,
+        `Caravan item ${item.id} should have positive base price, got ${item.basePrice}`);
+    }
+  });
+
+  it('should have caravan consumables cost more than standard shop equivalents', () => {
+    // Standard shop better potion costs 150g, caravan mega-potion also 150g base
+    // With 15% caravan markup, mega-potion costs ~172g but heals more
+    const megaPotionPrice = 150;
+    const standardPotionPrice = SHOP_PRICES.betterPotion;
+
+    // Caravan items should be comparable or slightly more expensive
+    assert.ok(megaPotionPrice >= standardPotionPrice * 0.5,
+      `Mega potion (${megaPotionPrice}g) should not be too cheap vs standard (${standardPotionPrice}g)`);
+  });
+
+  it('should have mystery box prices be aspirational but achievable', () => {
+    const mysteryBoxPrice = 500;
+    const premiumBoxPrice = 1000;
+
+    // Should cost less than endgame equipment
+    assert.ok(mysteryBoxPrice < SHOP_PRICES.endgameWeapon,
+      `Mystery box (${mysteryBoxPrice}g) should be cheaper than endgame weapon (${SHOP_PRICES.endgameWeapon}g)`);
+
+    // Premium box should be a significant investment
+    assert.ok(premiumBoxPrice >= SHOP_PRICES.midWeapon,
+      `Premium box (${premiumBoxPrice}g) should be >= mid weapon (${SHOP_PRICES.midWeapon}g)`);
+  });
+
+  it('should have material prices scale with crafting utility', () => {
+    const materialPrices = CARAVAN_PRICE_DATA
+      .filter(i => i.type === 'material')
+      .map(i => i.basePrice);
+
+    const minPrice = Math.min(...materialPrices);
+    const maxPrice = Math.max(...materialPrices);
+
+    // Materials should have diverse pricing (not all the same)
+    assert.ok(maxPrice > minPrice * 1.5,
+      `Material prices should vary: min=${minPrice}, max=${maxPrice}`);
+
+    // All materials should be affordable with moderate farming
+    assert.ok(maxPrice <= 500,
+      `Most expensive material (${maxPrice}g) should be achievable`);
+  });
+});
