@@ -69,6 +69,14 @@ export const BASE_STATUS_RESIST = 0.10;        // 10% base
 export const STATUS_LUCK_DIVISOR = 200;        // +0.5% per LCK
 export const MAX_STATUS_RESIST = 0.50;         // 50% cap
 
+// Cleansable status effect lists
+/** Status effects removed by cure_poison items */
+export const CURE_POISON_EFFECTS = Object.freeze(['poison']);
+/** Status effects removed by cure_all items */
+export const CURE_ALL_EFFECTS = Object.freeze(['poison', 'blind', 'silence', 'slow', 'burn']);
+/** Status effects removed by purify skills (superset of cure_all) */
+export const PURIFY_EFFECTS = Object.freeze(['poison', 'burn', 'blind', 'silence', 'slow', 'stun', 'freeze', 'root']);
+
 // Damage variance
 export const DAMAGE_VARIANCE_MIN = 0.9;
 export const DAMAGE_VARIANCE_MAX = 1.1;

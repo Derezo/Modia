@@ -18,6 +18,7 @@ import {
   strategicPathProgress,
   waitingPenalty
 } from './utilityFactors.js';
+import { CURE_POISON_EFFECTS, CURE_ALL_EFFECTS } from '../../../../shared/battleMath.js';
 
 /**
  * Resolve a target from an action to get the full unit object
@@ -168,7 +169,7 @@ class StateEvaluator {
         }
 
         if (effectType === 'cure_poison' || effectType === 'cure_all') {
-          const cleansable = effectType === 'cure_poison' ? ['poison'] : ['poison', 'blind', 'silence', 'slow', 'burn'];
+          const cleansable = effectType === 'cure_poison' ? CURE_POISON_EFFECTS : CURE_ALL_EFFECTS;
           const numEffects = itemTarget ? (itemTarget.statusEffects || []).filter(e => cleansable.includes(e.type)).length : 0;
           healingValue = 80 * numEffects;
         }

@@ -3,6 +3,7 @@
  */
 
 import * as traitService from '../traitService.js';
+import { PURIFY_EFFECTS } from '../../../../shared/battleMath.js';
 
 /**
  * Process status effects at turn start
@@ -332,7 +333,7 @@ export function applyZodiacAbility(battleState, sourceUnit, abilityKey, targetUn
       if (!sourceUnit.statusEffects) {
         sourceUnit.statusEffects = [];
       }
-      const debuffTypes = ['poison', 'burn', 'blind', 'silence', 'slow', 'stun', 'freeze', 'root'];
+      const debuffTypes = PURIFY_EFFECTS;
       const debuffIndex = sourceUnit.statusEffects.findIndex(e => debuffTypes.includes(e.type));
       if (debuffIndex >= 0) {
         const removed = sourceUnit.statusEffects.splice(debuffIndex, 1)[0];

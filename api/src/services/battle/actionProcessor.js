@@ -25,6 +25,7 @@ import {
 } from './movementService.js';
 import { getSkillDefinition } from './skillDefinitionService.js';
 import { getAoETiles, getUnitsInAoE } from './aoeService.js';
+import { CURE_POISON_EFFECTS, CURE_ALL_EFFECTS } from '../../../../shared/battleMath.js';
 
 /**
  * Get all available actions for a unit in the current battle state
@@ -730,16 +731,8 @@ function processItemAction(state, unit, targetTile, itemId) {
     result.itemEffects.push({ type: 'mpRestore', amount: mpAmount, targetId: itemTarget.id });
   }
 
-  if (effectType === 'cure_poison') {
-    const cleansableEffects = ['poison'];
-    itemTarget.statusEffects = (itemTarget.statusEffects || []).filter(e =>
-      !cleansableEffects.includes(e.type)
-    );
-    result.itemEffects.push({ type: 'cleanse', effects: cleansableEffects, targetId: itemTarget.id });
-  }
-
-  if (effectType === 'cure_all') {
-    const cleansableEffects = ['poison', 'blind', 'silence', 'slow', 'burn'];
+  if (effectType === 'cure_poison' || effectType === 'cure_all') {
+    const cleansableEffects = effectType === 'cure_poison' ? CURE_POISON_EFFECTS : CURE_ALL_EFFECTS;
     itemTarget.statusEffects = (itemTarget.statusEffects || []).filter(e =>
       !cleansableEffects.includes(e.type)
     );
