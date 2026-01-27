@@ -131,6 +131,68 @@ class StateEvaluator {
         factors.waitingPenalty = 0; // No waiting penalty for move actions
         break;
 
+      case 'item': {
+        const itemTarget = resolveTarget(action, state);
+        const item = action.item;
+        const effectType = item?.effectType;
+        let healingValue = 0;
+
+        if (effectType === 'heal_hp' || effectType === 'heal_both') {
+          if (itemTarget && itemTarget.hp > 0) {
+            const missingHp = itemTarget.maxHp - itemTarget.hp;
+            const restored = Math.min(item.effectValue || 0, missingHp);
+            const hpPercent = itemTarget.hp / itemTarget.maxHp;
+            // Urgency multiplier: much more valuable at low HP
+            let urgency = 0.2;
+            if (hpPercent < 0.25) urgency = 3.0;
+            else if (hpPercent < 0.40) urgency = 2.0;
+            else if (hpPercent < 0.60) urgency = 1.2;
+            else if (hpPercent < 0.80) urgency = 0.5;
+            healingValue = restored * urgency;
+          }
+        }
+
+        if (effectType === 'heal_mp' || effectType === 'heal_both') {
+          if (itemTarget && itemTarget.hp > 0) {
+            const missingMp = itemTarget.maxMp - itemTarget.mp;
+            const mpValue = effectType === 'heal_both' ? Math.floor((item.effectValue || 0) / 2) : (item.effectValue || 0);
+            const restored = Math.min(mpValue, missingMp);
+            const mpPercent = itemTarget.mp / itemTarget.maxMp;
+            const hasSkills = (itemTarget.skills && itemTarget.skills.length > 0) ? 1.5 : 0.5;
+            let mpUrgency = 0.2;
+            if (mpPercent < 0.2) mpUrgency = 2.0;
+            else if (mpPercent < 0.4) mpUrgency = 1.5;
+            else if (mpPercent < 0.6) mpUrgency = 0.8;
+            healingValue += restored * mpUrgency * hasSkills;
+          }
+        }
+
+        if (effectType === 'cure_poison' || effectType === 'cure_all') {
+          const cleansable = effectType === 'cure_poison' ? ['poison'] : ['poison', 'blind', 'silence', 'slow', 'burn'];
+          const numEffects = itemTarget ? (itemTarget.statusEffects || []).filter(e => cleansable.includes(e.type)).length : 0;
+          healingValue = 80 * numEffects;
+        }
+
+        if (effectType === 'revive') {
+          if (itemTarget && itemTarget.hp <= 0) {
+            healingValue = 500;
+          }
+        }
+
+        factors.DAMAGE_DEALT = 0;
+        factors.KILL_POTENTIAL = 0;
+        factors.TARGET_PRIORITY = 0;
+        factors.DAMAGE_RECEIVED = calculateDamageReceived(unit, unit.tileX, unit.tileY, state);
+        factors.POSITION_QUALITY = 0;
+        factors.ALLY_SUPPORT = calculateAllySupport(unit, unit.tileX, unit.tileY, state);
+        factors.HEALING_VALUE = healingValue;
+        factors.SURVIVAL_PRIORITY = calculateSurvivalPriority(unit, unit.tileX, unit.tileY, state);
+        factors.MP_EFFICIENCY = 100; // Items don't cost MP
+        factors.strategicPathProgress = 0;
+        factors.waitingPenalty = 0;
+        break;
+      }
+
       case 'wait':
         factors.DAMAGE_DEALT = 0;
         factors.KILL_POTENTIAL = 0;
@@ -185,12 +247,14 @@ class StateEvaluator {
     // Aggressive patterns strongly prefer attacking, heavily penalize waiting
     if (this.patternName === 'Aggressive' || this.patternName === 'Berserker') {
       if (actionType === 'attack' || actionType === 'skill') return 50;
+      if (actionType === 'item') return 10; // Aggressive units rarely use items
       if (actionType === 'move') return 10; // Moving toward enemies is good
       if (actionType === 'wait') return -150; // Strong penalty for doing nothing
     }
 
     // Defensive patterns prefer repositioning, neutral on waiting
     if (this.patternName === 'Defensive') {
+      if (actionType === 'item') return 20; // Defensive units value items
       if (actionType === 'move') return 20;
       if (actionType === 'attack' || actionType === 'skill') return 10;
       if (actionType === 'wait') return 0;
@@ -200,12 +264,14 @@ class StateEvaluator {
     if (this.patternName === 'HitAndRun') {
       if (actionType === 'attack' || actionType === 'skill') return 40;
       if (actionType === 'move') return 30; // Moving away after attack is good
+      if (actionType === 'item') return 15;
       if (actionType === 'wait') return -100; // Shouldn't wait when can hit-and-run
     }
 
     // Tactical patterns favor calculated attacks
     if (this.patternName === 'Tactical') {
       if (actionType === 'attack' || actionType === 'skill') return 30;
+      if (actionType === 'item') return 20;
       if (actionType === 'move') return 15;
       if (actionType === 'wait') return -50;
     }
@@ -214,7 +280,11 @@ class StateEvaluator {
     if (this.patternName === 'Ambush') {
       if (actionType === 'wait') return 20;
       if (actionType === 'attack') return 10; // Springing the ambush is fine
+      if (actionType === 'item') return 10;
     }
+
+    // Default item bonus for unmatched patterns
+    if (actionType === 'item') return 10;
 
     return 0;
   }

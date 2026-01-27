@@ -1,7 +1,7 @@
 /**
  * BattleAnimations - Visual effects for tactical combat
  */
-import { SKILL_EFFECT_CATEGORIES, getRandomCategoryColor } from './SkillEffectCategories.js';
+import { SKILL_EFFECT_CATEGORIES, getRandomCategoryColor, ITEM_EFFECT_VISUAL_MAP } from './SkillEffectCategories.js';
 import { ELEMENT_COLORS } from '@shared/battleMath.js';
 
 /**
@@ -410,6 +410,56 @@ export class BattleAnimations {
   }
 
   /**
+   * Add MP restore floating number (blue text)
+   * @param {number} x - X position
+   * @param {number} y - Y position
+   * @param {number} amount - MP restored
+   */
+  addMpRestoreNumber(x, y, amount) {
+    this.animations.push({
+      type: 'mp_restore',
+      x,
+      y,
+      startY: y,
+      value: amount,
+      timer: 0,
+      duration: 1.2,
+      velocityY: -60
+    });
+  }
+
+  /**
+   * Add item use effect - parabolic arc from user to target with particle effects
+   * Three phases: item arc (0-400ms), effect particles (400-800ms), result numbers (800ms+)
+   * @param {number} userX - User screen X
+   * @param {number} userY - User screen Y
+   * @param {number} targetX - Target screen X
+   * @param {number} targetY - Target screen Y
+   * @param {string} effectType - Canonical effectType (heal_hp, heal_mp, etc.)
+   */
+  addItemUseEffect(userX, userY, targetX, targetY, effectType) {
+    const visual = ITEM_EFFECT_VISUAL_MAP[effectType] || ITEM_EFFECT_VISUAL_MAP.heal_hp;
+
+    // Phase 1: Item arc animation (colored orb flies in parabolic arc)
+    this.animations.push({
+      type: 'item_arc',
+      startX: userX,
+      startY: userY - 20,
+      endX: targetX,
+      endY: targetY - 20,
+      color: visual.orbColor,
+      timer: 0,
+      duration: 0.4,
+      size: 6
+    });
+
+    // Phase 2: Effect particles at target after arc completes
+    setTimeout(() => {
+      this.addSkillEffect(targetX, targetY - 20, visual.category);
+    }, 400);
+  }
+
+  /**
    * Update all animations
    */
   update(deltaTime) {
@@ -422,10 +472,20 @@ export class BattleAnimations {
       switch (anim.type) {
         case 'damage':
         case 'heal':
+        case 'mp_restore':
         case 'miss':
         case 'status':
           anim.y = anim.startY + (anim.velocityY * anim.timer);
           break;
+        case 'item_arc': {
+          // Quadratic bezier: start -> apex -> end
+          const t = Math.min(anim.timer / anim.duration, 1);
+          const midX = (anim.startX + anim.endX) / 2;
+          const midY = Math.min(anim.startY, anim.endY) - 60; // Arc apex above both points
+          anim.x = (1 - t) * (1 - t) * anim.startX + 2 * (1 - t) * t * midX + t * t * anim.endX;
+          anim.y = (1 - t) * (1 - t) * anim.startY + 2 * (1 - t) * t * midY + t * t * anim.endY;
+          break;
+        }
         case 'particle':
           anim.x += anim.velocityX * dt;
           anim.y += anim.velocityY * dt;
@@ -475,6 +535,12 @@ export class BattleAnimations {
           break;
         case 'heal':
           this.renderHealNumber(ctx, anim);
+          break;
+        case 'mp_restore':
+          this.renderMpRestoreNumber(ctx, anim);
+          break;
+        case 'item_arc':
+          this.renderItemArc(ctx, anim, progress);
           break;
         case 'miss':
           this.renderMiss(ctx, anim);
@@ -583,6 +649,51 @@ export class BattleAnimations {
     // Main text
     ctx.fillStyle = '#44ff44';
     ctx.fillText(`+${anim.value}`, anim.x, anim.y);
+  }
+
+  /**
+   * Render MP restore number (blue floating text)
+   */
+  renderMpRestoreNumber(ctx, anim) {
+    ctx.font = 'bold 18px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Shadow
+    ctx.fillStyle = '#000';
+    ctx.fillText(`+${anim.value} MP`, anim.x + 2, anim.y + 2);
+
+    // Main text (blue)
+    ctx.fillStyle = '#44aaff';
+    ctx.fillText(`+${anim.value} MP`, anim.x, anim.y);
+  }
+
+  /**
+   * Render item arc (colored orb with trailing glow)
+   */
+  renderItemArc(ctx, anim, progress) {
+    const size = anim.size * (1 + Math.sin(progress * Math.PI) * 0.5);
+
+    // Trailing glow
+    const gradient = ctx.createRadialGradient(anim.x, anim.y, 0, anim.x, anim.y, size * 3);
+    gradient.addColorStop(0, anim.color);
+    gradient.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.arc(anim.x, anim.y, size * 3, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // Core orb
+    ctx.beginPath();
+    ctx.arc(anim.x, anim.y, size, 0, Math.PI * 2);
+    ctx.fillStyle = anim.color;
+    ctx.fill();
+
+    // Bright center
+    ctx.beginPath();
+    ctx.arc(anim.x, anim.y, size * 0.4, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
   }
 
   /**

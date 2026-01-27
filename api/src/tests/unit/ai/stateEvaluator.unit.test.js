@@ -219,6 +219,440 @@ describe('StateEvaluator', () => {
     });
   });
 
+  describe('evaluateAction() item scoring', { skip: !canImport }, () => {
+    // Helper to create an item action targeting a specific unit
+    function createItemAction(item, targetUnit) {
+      return {
+        type: 'item',
+        item,
+        itemId: item.itemId || 'item_1',
+        target: { x: targetUnit.tileX, y: targetUnit.tileY, unitId: targetUnit.id, unitName: targetUnit.name },
+        targetId: targetUnit.id
+      };
+    }
+
+    describe('heal_hp urgency scoring', () => {
+      it('scores highest urgency (3.0x) when target below 25% HP', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 40, maxHp: 200 }  // 20% HP
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_hp', effectValue: 100 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // 100 restored * 3.0 urgency = 300 healing value
+        assert.strictEqual(result.factors.HEALING_VALUE, 300);
+        assert.strictEqual(result.factors.DAMAGE_DEALT, 0);
+        assert.strictEqual(result.factors.KILL_POTENTIAL, 0);
+        assert.strictEqual(result.factors.TARGET_PRIORITY, 0);
+        assert.strictEqual(result.factors.MP_EFFICIENCY, 100);
+      });
+
+      it('scores 2.0x urgency when target between 25-40% HP', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 60, maxHp: 200 }  // 30% HP
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_hp', effectValue: 100 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // 100 restored * 2.0 urgency = 200
+        assert.strictEqual(result.factors.HEALING_VALUE, 200);
+      });
+
+      it('scores 1.2x urgency when target between 40-60% HP', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 100, maxHp: 200 }  // 50% HP
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_hp', effectValue: 50 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // 50 restored * 1.2 urgency = 60
+        assert.strictEqual(result.factors.HEALING_VALUE, 60);
+      });
+
+      it('scores 0.5x urgency when target between 60-80% HP', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 140, maxHp: 200 }  // 70% HP
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_hp', effectValue: 50 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // 50 restored * 0.5 urgency = 25
+        assert.strictEqual(result.factors.HEALING_VALUE, 25);
+      });
+
+      it('scores 0.2x urgency when target at 80%+ HP', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 180, maxHp: 200 }  // 90% HP
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_hp', effectValue: 50 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // Only 20 missing HP, so restored = min(50, 20) = 20; 20 * 0.2 = 4
+        assert.strictEqual(result.factors.HEALING_VALUE, 4);
+      });
+
+      it('caps heal at missing HP (does not overheal)', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 170, maxHp: 200 }  // 85% HP, missing 30
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_hp', effectValue: 500 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // missing = 30, restored = min(500, 30) = 30; 85% HP => 0.2x urgency; 30 * 0.2 = 6
+        assert.strictEqual(result.factors.HEALING_VALUE, 6);
+      });
+
+      it('scores 0 healing for target at full HP (no missing HP)', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 200, maxHp: 200 }  // full HP
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_hp', effectValue: 100 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // restored = min(100, 0) = 0; 0 * any_urgency = 0
+        assert.strictEqual(result.factors.HEALING_VALUE, 0);
+      });
+
+      it('scores 0 for dead target (hp <= 0)', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 0, maxHp: 200 }
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_hp', effectValue: 100 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // Dead target: hp > 0 check fails, so healingValue stays 0
+        assert.strictEqual(result.factors.HEALING_VALUE, 0);
+      });
+    });
+
+    describe('heal_both scoring', () => {
+      it('scores heal_both for HP urgency same as heal_hp', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 40, maxHp: 200, mp: 10, maxMp: 100, skills: [{ id: 's1' }] }
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_both', effectValue: 100 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // HP: restored = min(100, 160) = 100; 20% HP => 3.0x urgency => 300
+        // MP: mpValue = floor(100/2) = 50; restored = min(50, 90) = 50; 10% MP => 2.0x; hasSkills = 1.5; => 50 * 2.0 * 1.5 = 150
+        // Total = 300 + 150 = 450
+        assert.strictEqual(result.factors.HEALING_VALUE, 450);
+      });
+    });
+
+    describe('heal_mp scoring', () => {
+      it('scales MP urgency with hasSkills multiplier (1.5 if has skills)', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 200, maxHp: 200, mp: 10, maxMp: 100, skills: [{ id: 's1' }] }
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_mp', effectValue: 50 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // restored = min(50, 90) = 50; 10% MP => 2.0x urgency; hasSkills = 1.5
+        // 50 * 2.0 * 1.5 = 150
+        assert.strictEqual(result.factors.HEALING_VALUE, 150);
+      });
+
+      it('uses 0.5 multiplier when target has no skills', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 200, maxHp: 200, mp: 10, maxMp: 100, skills: [] }
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_mp', effectValue: 50 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // restored = min(50, 90) = 50; 10% MP => 2.0x; hasSkills = 0.5
+        // 50 * 2.0 * 0.5 = 50
+        assert.strictEqual(result.factors.HEALING_VALUE, 50);
+      });
+
+      it('scores 0 when target MP is full', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 200, maxHp: 200, mp: 100, maxMp: 100, skills: [{ id: 's1' }] }
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_mp', effectValue: 50 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // restored = min(50, 0) = 0; 0 * anything = 0
+        assert.strictEqual(result.factors.HEALING_VALUE, 0);
+      });
+    });
+
+    describe('cure_poison and cure_all scoring', () => {
+      it('scores 80 per cleansable poison effect', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 100, maxHp: 200, statusEffects: [
+              { type: 'poison' }, { type: 'poison' }
+            ]}
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'cure_poison', effectValue: 0 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // 80 * 2 poison effects = 160
+        assert.strictEqual(result.factors.HEALING_VALUE, 160);
+      });
+
+      it('cure_poison ignores non-poison effects', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 100, maxHp: 200, statusEffects: [
+              { type: 'poison' }, { type: 'blind' }, { type: 'silence' }
+            ]}
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'cure_poison', effectValue: 0 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // Only 1 poison is cleansable by cure_poison
+        assert.strictEqual(result.factors.HEALING_VALUE, 80);
+      });
+
+      it('cure_all cleanses poison, blind, silence, slow, burn', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 100, maxHp: 200, statusEffects: [
+              { type: 'poison' }, { type: 'blind' }, { type: 'silence' },
+              { type: 'slow' }, { type: 'burn' }
+            ]}
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'cure_all', effectValue: 0 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        // 80 * 5 effects = 400
+        assert.strictEqual(result.factors.HEALING_VALUE, 400);
+      });
+
+      it('scores 0 when target has no cleansable effects', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 100, maxHp: 200, statusEffects: [] }
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'cure_all', effectValue: 0 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        assert.strictEqual(result.factors.HEALING_VALUE, 0);
+      });
+    });
+
+    describe('revive scoring', () => {
+      it('scores 500 for reviving a dead target', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 0, maxHp: 200 }
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'revive', effectValue: 50 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        assert.strictEqual(result.factors.HEALING_VALUE, 500);
+      });
+
+      it('scores 0 for revive on alive target', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 50, maxHp: 200 }
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'revive', effectValue: 50 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        assert.strictEqual(result.factors.HEALING_VALUE, 0);
+      });
+    });
+
+    describe('item action common factors', () => {
+      it('always sets DAMAGE_DEALT, KILL_POTENTIAL, TARGET_PRIORITY to 0', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 40, maxHp: 200 }
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('aggressive'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_hp', effectValue: 100 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        assert.strictEqual(result.factors.DAMAGE_DEALT, 0);
+        assert.strictEqual(result.factors.KILL_POTENTIAL, 0);
+        assert.strictEqual(result.factors.TARGET_PRIORITY, 0);
+      });
+
+      it('always sets MP_EFFICIENCY to 100 (items are free)', () => {
+        const state = createMockBattleState(
+          [],
+          [
+            { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+            { tileX: 6, tileY: 5, hp: 40, maxHp: 200 }
+          ]
+        );
+        const evaluator = new StateEvaluator(getWeights('tactical'));
+        const actor = state.units[0];
+        const target = state.units[1];
+        const item = { effectType: 'heal_hp', effectValue: 50 };
+        const action = createItemAction(item, target);
+        const result = evaluator.evaluateAction(actor, action, state);
+
+        assert.strictEqual(result.factors.MP_EFFICIENCY, 100);
+      });
+    });
+
+    describe('item pattern bonuses via getActionTypeBonus()', () => {
+      it('defensive pattern gives +20 for item', () => {
+        const evaluator = new StateEvaluator(getWeights('defensive'));
+        assert.strictEqual(evaluator.getActionTypeBonus('item'), 20);
+      });
+
+      it('aggressive pattern gives +10 for item', () => {
+        const evaluator = new StateEvaluator(getWeights('aggressive'));
+        assert.strictEqual(evaluator.getActionTypeBonus('item'), 10);
+      });
+
+      it('tactical pattern gives +20 for item', () => {
+        const evaluator = new StateEvaluator(getWeights('tactical'));
+        assert.strictEqual(evaluator.getActionTypeBonus('item'), 20);
+      });
+    });
+  });
+
   describe('evaluateState()', { skip: !canImport }, () => {
     it('returns 10000 for victory (all enemies dead)', () => {
       const state = createMockBattleState(

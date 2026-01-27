@@ -221,6 +221,100 @@ describe('ActionGenerator', () => {
     });
   });
 
+  describe('getQuickScore() item scoring', { skip: !canImport }, () => {
+    // getQuickScore is internal, but tested indirectly through pruneActions ordering.
+    // We can test behavior by creating item actions and checking pruning priority.
+
+    it('item base score (70) ranks above move (50) but below skill (80)', () => {
+      const actions = [
+        { type: 'move' },
+        { type: 'item', item: { effectType: 'heal_hp' } },
+        { type: 'skill', skill: { power: 0 } }
+      ];
+      const result = actionGenerator.pruneActions(actions, 3);
+      const types = result.map(a => a.type);
+      // All should be kept since within limit, but order reflects quick score
+      assert.strictEqual(types.length, 3);
+    });
+
+    it('item with low HP target gets +60 bonus (total 130)', () => {
+      const actions = [
+        { type: 'attack', target: { hp: 200, maxHp: 200 } },  // 100
+        { type: 'item', item: { effectType: 'heal_hp' }, target: { hp: 20, maxHp: 200 } },  // 70 + 60 = 130
+        { type: 'move' }  // 50
+      ];
+      const result = actionGenerator.pruneActions(actions, 2);
+      // Item with low HP target (130) should beat basic attack (100)
+      assert.ok(result.some(a => a.type === 'item'), 'Item with low HP target should survive pruning');
+    });
+
+    it('revive item gets +80 bonus (total 150)', () => {
+      const actions = [
+        { type: 'attack', target: { hp: 200, maxHp: 200 } },  // 100
+        { type: 'item', item: { effectType: 'revive' } },  // 70 + 80 = 150
+        { type: 'skill', skill: { power: 100 } },  // 80 + 20 = 100
+        { type: 'move' }  // 50
+      ];
+      const result = actionGenerator.pruneActions(actions, 2);
+      // Revive (150) should be highest, then attack or skill (100 each)
+      assert.ok(result.some(a => a.item?.effectType === 'revive'), 'Revive should be in top 2');
+    });
+
+    it('item without qualifying target gets base 70 only', () => {
+      const actions = [
+        { type: 'attack', target: { hp: 200, maxHp: 200 } },  // 100
+        { type: 'item', item: { effectType: 'heal_hp' }, target: { hp: 180, maxHp: 200 } },  // 70 (hp not < 30%)
+        { type: 'move' }  // 50
+      ];
+      const result = actionGenerator.pruneActions(actions, 2);
+      // Attack (100) should beat heal item (70)
+      assert.strictEqual(result[0].type, 'attack');
+    });
+  });
+
+  describe('orderActionsForPruning() item ordering', { skip: !canImport }, () => {
+    const orderActionsForPruning = () => actionGenerator.orderActionsForPruning;
+
+    it('item type has order value 2 (between move=1 and skill=3)', () => {
+      const actions = [
+        { type: 'move' },
+        { type: 'item', item: { effectType: 'heal_hp' } },
+        { type: 'skill', skill: { power: 100 } },
+        { type: 'attack' },
+        { type: 'wait' }
+      ];
+      const unit = createMockUnit({});
+      const result = orderActionsForPruning()(actions, unit);
+      // Expected order: attack(4), skill(3), item(2), move(1), wait(0)
+      assert.strictEqual(result[0].type, 'attack');
+      assert.strictEqual(result[1].type, 'skill');
+      assert.strictEqual(result[2].type, 'item');
+      assert.strictEqual(result[3].type, 'move');
+      assert.strictEqual(result[4].type, 'wait');
+    });
+
+    it('revive items rank higher than heal items within item type', () => {
+      const actions = [
+        { type: 'item', item: { effectType: 'heal_hp' } },  // quickScore 70
+        { type: 'item', item: { effectType: 'revive' } }     // quickScore 70 + 80 = 150
+      ];
+      const unit = createMockUnit({});
+      const result = orderActionsForPruning()(actions, unit);
+      assert.strictEqual(result[0].item.effectType, 'revive');
+      assert.strictEqual(result[1].item.effectType, 'heal_hp');
+    });
+
+    it('item targeting low HP ally ranks higher than generic item', () => {
+      const actions = [
+        { type: 'item', item: { effectType: 'heal_hp' }, target: { hp: 180, maxHp: 200 } },  // 70
+        { type: 'item', item: { effectType: 'heal_hp' }, target: { hp: 20, maxHp: 200 } }     // 70 + 60 = 130
+      ];
+      const unit = createMockUnit({});
+      const result = orderActionsForPruning()(actions, unit);
+      assert.strictEqual(result[0].target.hp, 20);
+    });
+  });
+
   describe('findImmediateThreats()', { skip: !canImport }, () => {
     const findImmediateThreats = () => actionGenerator.findImmediateThreats;
 

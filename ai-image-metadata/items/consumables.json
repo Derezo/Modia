@@ -85,6 +85,22 @@
       "generated": false
     },
     {
+      "id": "phoenix_feather",
+      "name": "Phoenix Feather",
+      "prompt": "glowing phoenix feather golden orange revival resurrection light",
+      "rarity": "epic",
+      "seed": 22052,
+      "generated": false
+    },
+    {
+      "id": "status_cure",
+      "name": "Status Cure",
+      "prompt": "cleansing tonic crystal vial swirling white purifying light remedy",
+      "rarity": "uncommon",
+      "seed": 22053,
+      "generated": false
+    },
+    {
       "id": "scroll_fire",
       "name": "Fire Scroll",
       "prompt": "ancient scroll fire runes burning edges",

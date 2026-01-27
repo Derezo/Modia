@@ -30,10 +30,10 @@ export const ITEM_TEMPLATES = [
   { name: 'Ring of Vitality', item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { hp_max: 25, vitality: 3 }, level_requirement: 5, base_price: 200, rarity: 2, description: 'Pulses with life energy.' },            // 11
 
   // Consumables (templateId 12-15)
-  { name: 'Health Potion', item_type: 'consumable', effect_type: 'heal_hp', effect_value: 50, base_price: 25, rarity: 1, description: 'Restores 50 HP when consumed.' },                                                              // 12
-  { name: 'Mana Potion', item_type: 'consumable', effect_type: 'heal_mp', effect_value: 30, base_price: 30, rarity: 1, description: 'Restores 30 MP when consumed.' },                                                                // 13
-  { name: 'Antidote', item_type: 'consumable', effect_type: 'cure_poison', effect_value: 0, base_price: 15, rarity: 1, description: 'Cures poison status.' },                                                                         // 14
-  { name: 'Phoenix Feather', item_type: 'consumable', effect_type: 'revive', effect_value: 50, base_price: 500, rarity: 4, description: 'Revives a fallen ally with 50% HP.' },                                                       // 15
+  { name: 'Health Potion', item_type: 'consumable', effect_type: 'heal_hp', effect_value: 50, base_price: 25, rarity: 1, sprite_id: 'potion_health', description: 'Restores 50 HP when consumed.' },                                   // 12
+  { name: 'Mana Potion', item_type: 'consumable', effect_type: 'heal_mp', effect_value: 30, base_price: 30, rarity: 1, sprite_id: 'potion_mana', description: 'Restores 30 MP when consumed.' },                                      // 13
+  { name: 'Antidote', item_type: 'consumable', effect_type: 'cure_poison', effect_value: 0, base_price: 15, rarity: 1, sprite_id: 'antidote', description: 'Cures poison status.' },                                                   // 14
+  { name: 'Phoenix Feather', item_type: 'consumable', effect_type: 'revive', effect_value: 50, base_price: 500, rarity: 4, sprite_id: 'phoenix_feather', description: 'Revives a fallen ally with 50% HP.' },                          // 15
 
   // Additional Weapons (templateId 16-20)
   { name: 'Bronze Axe', item_type: 'weapon', equipment_slot: 'main_hand', stat_bonuses: { strength: 5 }, level_requirement: 3, base_price: 90, rarity: 1, description: 'A heavy axe with a bronze head.' },                          // 16
@@ -55,10 +55,10 @@ export const ITEM_TEMPLATES = [
   { name: 'Speed Amulet', item_type: 'accessory', equipment_slot: 'accessory', stat_bonuses: { agility: 5 }, level_requirement: 3, base_price: 130, rarity: 2, description: 'Increases reflexes and speed.' },                        // 28
 
   // Additional Consumables (templateId 29-32)
-  { name: 'Hi-Potion', item_type: 'consumable', effect_type: 'heal_hp', effect_value: 150, base_price: 100, rarity: 2, description: 'Restores 150 HP when consumed.' },                                                               // 29
-  { name: 'Hi-Ether', item_type: 'consumable', effect_type: 'heal_mp', effect_value: 80, base_price: 120, rarity: 2, description: 'Restores 80 MP when consumed.' },                                                                  // 30
-  { name: 'Elixir', item_type: 'consumable', effect_type: 'heal_both', effect_value: 100, base_price: 300, rarity: 3, description: 'Restores 100 HP and 50 MP.' },                                                                    // 31
-  { name: 'Status Cure', item_type: 'consumable', effect_type: 'cure_all', effect_value: 0, base_price: 75, rarity: 2, description: 'Cures all negative status effects.' },                                                           // 32
+  { name: 'Hi-Potion', item_type: 'consumable', effect_type: 'heal_hp', effect_value: 150, base_price: 100, rarity: 2, sprite_id: 'potion_health_large', description: 'Restores 150 HP when consumed.' },                              // 29
+  { name: 'Hi-Ether', item_type: 'consumable', effect_type: 'heal_mp', effect_value: 80, base_price: 120, rarity: 2, sprite_id: 'potion_mana_large', description: 'Restores 80 MP when consumed.' },                                  // 30
+  { name: 'Elixir', item_type: 'consumable', effect_type: 'heal_both', effect_value: 100, base_price: 300, rarity: 3, sprite_id: 'elixir_life', description: 'Restores 100 HP and 50 MP.' },                                          // 31
+  { name: 'Status Cure', item_type: 'consumable', effect_type: 'cure_all', effect_value: 0, base_price: 75, rarity: 2, sprite_id: 'status_cure', description: 'Cures all negative status effects.' },                                  // 32
 
   // Guild Starter Equipment (base_price = 2 for 1 gold sell value)
   // Warrior Guild

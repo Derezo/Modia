@@ -461,17 +461,17 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     })
   };
 
-  // Get consumable items from party leader's inventory
-  const partyLeaderId = party[0].id;
+  // Get consumable items from shared inventory (user_id based, not character_id)
   const consumablesResult = await query(
     `SELECT ci.id as inventory_id, it.id as item_id, it.name, it.item_type,
-            it.effect_type, it.effect_value, it.description, ci.quantity
+            it.effect_type, it.effect_value, it.description, ci.quantity,
+            it.sprite_id
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
-     WHERE ci.character_id = $1 AND it.item_type = 'consumable' AND ci.quantity > 0
+     WHERE ci.user_id = $1 AND it.item_type = 'consumable' AND ci.quantity > 0
        AND ci.equipped_slot IS NULL
      ORDER BY it.name`,
-    [partyLeaderId]
+    [req.user.userId]
   );
 
   // Map consumables to battle format
@@ -482,7 +482,8 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     quantity: item.quantity,
     description: item.description,
     effectType: item.effect_type,
-    effectValue: item.effect_value
+    effectValue: item.effect_value,
+    spriteId: item.sprite_id
   }));
 
   // Extract character IDs from formation (only placed characters count for enemy scaling)

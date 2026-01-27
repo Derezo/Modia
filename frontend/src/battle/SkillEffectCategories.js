@@ -228,6 +228,43 @@ export const SKILL_EFFECT_CATEGORIES = {
 };
 
 /**
+ * Maps consumable item effectTypes to visual effect categories and colors.
+ * Used by BattleAnimations to determine which particle effects to play for item use.
+ */
+export const ITEM_EFFECT_VISUAL_MAP = {
+  heal_hp: {
+    category: 'healing',
+    primaryColor: '#44ff88',
+    orbColor: '#44ff88'
+  },
+  heal_mp: {
+    category: 'selfAura',
+    primaryColor: '#44aaff',
+    orbColor: '#44aaff'
+  },
+  heal_both: {
+    category: 'holy',
+    primaryColor: '#ffff88',
+    orbColor: '#ffdd44'
+  },
+  cure_poison: {
+    category: 'wind',
+    primaryColor: '#aaccaa',
+    orbColor: '#88cc88'
+  },
+  cure_all: {
+    category: 'buff',
+    primaryColor: '#ffdd44',
+    orbColor: '#ffdd44'
+  },
+  revive: {
+    category: 'holy',
+    primaryColor: '#ffff88',
+    orbColor: '#ffffaa'
+  }
+};
+
+/**
  * Get visual category for a skill based on its properties
  * Priority: explicit visualCategory > inferred from effect > inferred from damageType > default
  * @param {Object} skill - Skill definition object
