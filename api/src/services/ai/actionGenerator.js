@@ -7,6 +7,7 @@
 
 import { getAvailableActions } from '../battleService.js';
 import { canUseSkill } from '../npcSkillService.js';
+import { CURE_POISON_EFFECTS, CURE_ALL_EFFECTS } from '../../../../shared/battleMath.js';
 
 /**
  * Generate all possible actions for a unit
@@ -120,7 +121,7 @@ function generateAllActions(unit, state) {
 
       if (item.effectType === 'cure_poison' || item.effectType === 'cure_all') {
         // Only generate if an ally has cleansable status effects
-        const cleansable = item.effectType === 'cure_poison' ? ['poison'] : ['poison', 'blind', 'silence', 'slow', 'burn'];
+        const cleansable = item.effectType === 'cure_poison' ? CURE_POISON_EFFECTS : CURE_ALL_EFFECTS;
         for (const ally of allies) {
           const hasCleansable = (ally.statusEffects || []).some(e => cleansable.includes(e.type));
           if (!hasCleansable) continue;
