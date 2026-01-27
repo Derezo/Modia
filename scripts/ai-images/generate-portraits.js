@@ -18,7 +18,6 @@
  */
 
 const path = require('path');
-const fs = require('fs');
 const {
   loadPortraitMetadata,
   markAssetGenerated,
@@ -48,9 +47,6 @@ const ENEMY_OUTPUT_DIR = OUTPUT_DIR; // Same directory, enemy_ prefix distinguis
 // For Python script's fallback_dir - note: Python output_manager adds 'portraits/' subdirectory
 // So we pass the parent directory to avoid double 'portraits/portraits/'
 const ENEMY_OUTPUT_BASE = path.join(PROJECT_ROOT, 'frontend/public/assets');
-
-// Path to external image-generator project where 1024x1024 originals are saved
-const IMAGE_GENERATOR_ORIGINALS = path.join(PROJECT_ROOT, '..', 'image-generator', 'outputs', 'originals', 'portraits');
 
 /**
  * Parse command line arguments
@@ -416,41 +412,16 @@ async function main() {
         }
 
         log(`Generated: ${portrait.id}`, 'success');
+        log(`Saved: ${getOutputPath(portrait)}`, 'info');
 
         // Post-process to generate canonical size variants
-        // Outputs to /assets/portraits/{size}/{id}.png (siblings to originals/)
+        // Python now saves processed 1024x1024 original directly to originals/
         if (checkImageMagick()) {
-          // Determine portrait ID for canonical paths (enemy portraits use enemy_ prefix)
           const portraitId = portrait._type === 'enemy'
             ? `enemy_${portrait.id}`
             : portrait.id;
 
-          // The Python script saves 1024x1024 original to image-generator/outputs/originals/portraits/
-          // We need to copy it to Modia's portraits/originals/ for size variant generation
-          const externalOriginalPath = path.join(IMAGE_GENERATOR_ORIGINALS, `${portraitId}.png`);
-          const modiaOriginalPath = path.join(OUTPUT_DIR, `${portraitId}.png`);
-
-          // Check if external original exists and copy it to Modia's originals
-          let sourcePath = modiaOriginalPath; // Default to Modia's path
-          if (fs.existsSync(externalOriginalPath)) {
-            try {
-              // Ensure the originals directory exists
-              ensureDirectoryExists(OUTPUT_DIR);
-              // Copy the 1024x1024 original to Modia's originals directory
-              fs.copyFileSync(externalOriginalPath, modiaOriginalPath);
-              if (options.verbose) {
-                log(`  Copied 1024x1024 original to ${modiaOriginalPath}`, 'info');
-              }
-              sourcePath = modiaOriginalPath;
-            } catch (copyErr) {
-              if (options.verbose) {
-                log(`  Warning: Could not copy original: ${copyErr.message}`, 'warn');
-              }
-            }
-          } else if (options.verbose) {
-            log(`  Note: External original not found at ${externalOriginalPath}`, 'info');
-            log(`  Using processed file for size variants (limited to 64px)`, 'info');
-          }
+          const sourcePath = path.join(OUTPUT_DIR, `${portraitId}.png`);
 
           const postResult = await generateCanonicalSizeVariants(
             sourcePath,

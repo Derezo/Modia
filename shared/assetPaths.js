@@ -31,7 +31,7 @@ export const SIZE_PRESETS = {
   portraits: [64, 128, 256],
   items: [32, 64, 128],
   icons: [16, 24, 32, 48, 64, 128],
-  nodes: [48, 96],
+  nodes: [48, 64, 96, 128, 256],
   overlays: [32, 48, 64, 128]
 };
 
@@ -107,7 +107,7 @@ function getPortraitPath(id, options = {}) {
  *
  * @param {string} id - The node identifier (e.g., 'castle', 'tavern', 'guild_warrior')
  * @param {Object} options - Options
- * @param {number} [options.size] - Size variant (48, 96)
+ * @param {number} [options.size] - Size variant (48, 64, 96, 128, 256)
  * @returns {string} The node path
  */
 function getNodePath(id, options = {}) {
@@ -440,8 +440,9 @@ export function getDefaultSize(category) {
  *
  * @example
  * getOptimalSize('nodes', 40);  // => 48 (smallest >= 40)
- * getOptimalSize('nodes', 60);  // => 96 (smallest >= 60)
- * getOptimalSize('nodes', 120); // => 96 (largest available)
+ * getOptimalSize('nodes', 60);  // => 64 (smallest >= 60)
+ * getOptimalSize('nodes', 120); // => 128 (smallest >= 120)
+ * getOptimalSize('nodes', 300); // => 256 (largest available)
  */
 export function getOptimalSize(category, displaySize) {
   validateCategory(category);

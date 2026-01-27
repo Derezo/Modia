@@ -4,7 +4,7 @@
   "category": "nodes",
   "totalAssets": 26,
   "outputDir": "/assets/nodes/",
-  "size": "48x48",
+  "size": "multi-size (48, 64, 96, 128, 256)",
   "format": "png",
   "loraModel": "V2",
   "trigger": "wbgmsst",

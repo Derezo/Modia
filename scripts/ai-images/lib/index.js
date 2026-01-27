@@ -29,7 +29,8 @@ const {
   generateItem,
   generateNode,
   generateOverlay,
-  runBatchGeneration
+  runBatchGeneration,
+  removeBackground
 } = require('./pythonRunner');
 
 const {
@@ -105,6 +106,13 @@ const { parseBaseArgs, VALID_LORA_MODELS, BASE_DEFAULTS } = require('./parseArgs
 const { applyKeyFilter } = require('./filterAssets');
 
 const {
+  getAssetPathsModule,
+  CATEGORY_BASE_DIRS,
+  getOutputDir,
+  getOriginalsFilePath
+} = require('./assetPathsBridge');
+
+const {
   STANDARD_SIZES,
   SIZE_PRESETS,
   AI_RESOLUTIONS,
@@ -160,6 +168,7 @@ module.exports = {
   generateNode,
   generateOverlay,
   runBatchGeneration,
+  removeBackground,
 
   // Metadata utilities
   getMetadataPath,
@@ -262,5 +271,11 @@ module.exports = {
   BASE_DEFAULTS,
 
   // Shared asset filtering
-  applyKeyFilter
+  applyKeyFilter,
+
+  // Asset path bridge (shared/assetPaths.js CJS bridge)
+  getAssetPathsModule,
+  CATEGORY_BASE_DIRS,
+  getOutputDir,
+  getOriginalsFilePath
 };

@@ -15,23 +15,27 @@ const PROJECT_ROOT = path.resolve(__dirname, '../../..');
 
 /**
  * Standard sizes for game assets
- * Generated from 128x128 source for maximum quality
+ * Generated from source images (typically 1024x1024, see AI_RESOLUTIONS)
  */
 const STANDARD_SIZES = [16, 24, 32, 48, 64, 128];
 
 /**
- * Size presets for different asset categories
- * These define the output sizes for each asset type after AI generation
+ * Size presets for different asset categories.
+ * Standard categories (tiles, portraits, items, icons, nodes, overlays) are
+ * canonically defined in shared/assetPaths.js SIZE_PRESETS.
+ * The walls/slopes entries are resize-specific and only used here.
+ *
+ * @see shared/assetPaths.js for the canonical source of truth
  */
 const SIZE_PRESETS = {
   tiles: [64],                        // 128x128 AI -> 64x64 with diamond mask
   portraits: [64, 128, 256],          // 256x256 AI -> 64, 128, 256 variants
   items: [32, 64, 128],               // 128x128 AI -> 32, 64, 128 variants
   icons: [16, 24, 32, 48, 64, 128],   // 128x128 AI -> 16, 24, 32, 48, 64, 128 variants
-  nodes: [48, 96],                    // 256x256 AI -> 48, 96 variants
-  walls: [64],                        // 128x32 AI -> 64x16
-  slopes: [64],                       // 128x160 AI -> 64x80
-  overlays: [32, 48, 64, 128]         // Match item sizes for compositing (legacy)
+  nodes: [48, 64, 96, 128, 256],       // 1024x1024 AI -> 48, 64, 96, 128, 256 variants
+  walls: [64],                        // 128x32 AI -> 64x16 (resize-specific)
+  slopes: [64],                       // 128x160 AI -> 64x80 (resize-specific)
+  overlays: [32, 48, 64, 128]         // Match item sizes for compositing
 };
 
 /**
@@ -39,10 +43,10 @@ const SIZE_PRESETS = {
  */
 const AI_RESOLUTIONS = {
   tiles: { width: 128, height: 128 },
-  portraits: { width: 256, height: 256 },
-  items: { width: 128, height: 128 },
-  icons: { width: 128, height: 128 },
-  nodes: { width: 256, height: 256 },
+  portraits: { width: 1024, height: 1024 },
+  items: { width: 1024, height: 1024 },
+  icons: { width: 1024, height: 1024 },
+  nodes: { width: 1024, height: 1024 },
   walls: { width: 128, height: 32 },
   slopes: { width: 128, height: 160 }
 };
@@ -821,10 +825,12 @@ async function postProcessIcon(imagePath, options = {}) {
  * Post-process a node image: generate size variants from source
  * Detects source size and only generates variants <= source size.
  *
- * Expected sizes: [48, 96]
- * - If source is 256x256: generates 48, 96
- * - If source is 96x96: keeps 96, generates 48
+ * Expected sizes: [48, 64, 96, 128, 256]
+ * - If source is 1024x1024: generates all size variants
+ * - If source is 96x96: keeps 96, generates 48, 64
  * - If source is 48x48: keeps 48 only
+ *
+ * @deprecated Prefer generateCanonicalSizeVariants() for new code paths
  *
  * @param {string} imagePath - Path to generated node image
  * @param {Object} options - Options (force, verbose)
@@ -832,7 +838,7 @@ async function postProcessIcon(imagePath, options = {}) {
  */
 async function postProcessNode(imagePath, options = {}) {
   const { force = false, verbose = false } = options;
-  const allSizes = SIZE_PRESETS.nodes; // [48, 96]
+  const allSizes = SIZE_PRESETS.nodes; // [48, 64, 96, 128, 256]
   const results = { success: true, variants: [], failed: [], sourceSize: 0 };
 
   // Detect source image size
@@ -1069,18 +1075,8 @@ async function postProcessWithDualWrite(imagePath, category, options = {}) {
   return { legacy: legacyResults, standardized: standardizedResults };
 }
 
-/**
- * Dynamically import assetPaths.js (ESM module from CommonJS)
- * Cached after first import for performance
- * @returns {Promise<Object>} The assetPaths module
- */
-let assetPathsCache = null;
-async function getAssetPathsModule() {
-  if (!assetPathsCache) {
-    assetPathsCache = await import('../../../shared/assetPaths.js');
-  }
-  return assetPathsCache;
-}
+// Use centralized bridge for ESM import (eliminates duplicate cached import)
+const { getAssetPathsModule } = require('./assetPathsBridge');
 
 /**
  * Get canonical sized path for an asset using assetPaths.js conventions
@@ -1166,12 +1162,16 @@ async function generateCanonicalSizeVariants(sourcePath, category, id, options =
   const sourceSize = Math.min(dimensions.width, dimensions.height);
 
   for (const size of targetSizes) {
-    // Skip sizes larger than source (would require upscaling)
-    if (size > sourceSize) {
-      if (verbose) {
-        log(`Skipping ${size}px (source is only ${sourceSize}px)`, 'info');
-      }
-      continue;
+    // Determine if this is an upscale operation
+    const isUpscale = size > sourceSize;
+
+    // For upscaling, use nearest-neighbor (point) filter to preserve pixel art
+    const resizeOptions = isUpscale
+      ? { filter: 'point', unsharp: false }
+      : {};
+
+    if (isUpscale && verbose) {
+      log(`Upscaling ${sourceSize}px -> ${size}px (nearest-neighbor)`, 'info');
     }
 
     const destPath = await getCanonicalSizedPath(category, id, size, { subcategory });
@@ -1193,7 +1193,7 @@ async function generateCanonicalSizeVariants(sourcePath, category, id, options =
       }
 
       // Resize and save using existing resizeImage function
-      const result = await resizeImage(sourcePath, destPath, size);
+      const result = await resizeImage(sourcePath, destPath, size, resizeOptions);
 
       if (result.success) {
         results.generated.push({ size, path: destPath });

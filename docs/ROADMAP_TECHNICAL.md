@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 3.7 |
+| Version | 3.8 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -337,6 +337,8 @@ npm run audio:status         # Show asset status
 
 ### 7.4 Post-Processing Pipeline Overhaul (Completed Jan 2026)
 
+> **Note:** Resolutions and size variants superseded by Section 7.16 (Pipeline Refactor). Python now saves 1024x1024 processed originals; Node.js generates all size variants via `generateCanonicalSizeVariants()`.
+
 - [x] Removed `--sizes` CLI flag from all generators (hard-coded post-processing per asset type)
 - [x] Added asset-specific post-processing functions in `resizeUtils.js`:
   - `postProcessTile()` - 128x128 → 64x64 with diamond mask
@@ -420,6 +422,47 @@ getAssetPath('items', 'sword_iron', { subcategory: 'weapons', size: 64 })
 getOriginalsPath('portraits', 'human_male_warrior')
 ```
 
+### 7.16 Image Pipeline Refactor: Standardized Generation & Post-Processing (Completed Jan 2026)
+
+Unified the generation pipeline to eliminate dual post-processing and quality loss. Python now handles semantic processing (rembg, crop, square) at full 1024x1024 resolution; Node.js handles all sizing via ImageMagick Lanczos downscaling.
+
+- [x] Added `process_to_original()` utility to Python image_processing.py
+- [x] Refactored 5 Python generators (portrait, node, icon, item, obstacle) to save 1024x1024 processed originals
+- [x] Created Python overlay generator (`generate_overlay.py`) with `build_overlay_prompt()` template
+- [x] Updated AI_RESOLUTIONS to 1024x1024 for portraits, items, icons, nodes
+- [x] Extended node SIZE_PRESETS from [48, 96] to [48, 64, 96, 128, 256]
+- [x] Removed fragile portrait rembg workaround (copy external 1024x1024 + re-run rembg)
+- [x] Added generateCanonicalSizeVariants to generate-icons.js (was missing entirely)
+- [x] Converted generate-overlays.js from old postProcessGenerated to generateCanonicalSizeVariants
+- [x] Updated AssetLoader.js preloadNodesAtSizes default to match new presets
+- [x] Added get_icon_originals_path() to Python OutputManager
+- [x] Added build_overlay_prompt() to Python prompt_templates.py
+
+**Architecture:**
+- Python: generate 1024x1024 → `process_to_original()` (rembg → crop → square) → save to `originals/`
+- Node.js: read from `originals/` → `generateCanonicalSizeVariants()` (ImageMagick Lanczos) → save to `{size}/`
+- Tiles exempt: diamond masking is type-specific, single output size, no quality loss
+
+**Files Changed (Python - image-generator):**
+- `modia-generators/lib/image_processing.py` - Added `process_to_original()`
+- `modia-generators/lib/output_manager.py` - Added `get_icon_originals_path()`
+- `modia-generators/lib/prompt_templates.py` - Added `build_overlay_prompt()`
+- `modia-generators/generate_portrait.py` - Uses `process_to_original()`, removed resize_with_alpha
+- `modia-generators/generate_node.py` - Uses `process_to_original()`, removed manual chain
+- `modia-generators/generate_icon.py` - Uses `process_to_original()`, single original output
+- `modia-generators/generate_item.py` - Uses `process_to_original()`, removed multi-size loop
+- `modia-generators/generate_obstacle.py` - Uses `process_to_original()`
+- `modia-generators/generate_overlay.py` - New file
+
+**Files Changed (Node.js - Modia):**
+- `shared/assetPaths.js` - nodes presets [48, 64, 96, 128, 256]
+- `scripts/ai-images/lib/resizeUtils.js` - nodes presets + AI_RESOLUTIONS to 1024x1024
+- `scripts/ai-images/generate-portraits.js` - Removed external copy/rembg workaround, simplified
+- `scripts/ai-images/generate-nodes.js` - Sizes [48, 64, 96, 128, 256]
+- `scripts/ai-images/generate-icons.js` - Added generateCanonicalSizeVariants [16-128]
+- `scripts/ai-images/generate-overlays.js` - Unconditional canonical variants [32-128]
+- `frontend/src/core/AssetLoader.js` - Updated preloadNodesAtSizes, comments
+
 ### 7.7 Pending
 
 - [ ] Regenerate all ~300 floor tiles with new diamond prompts
@@ -428,6 +471,7 @@ getOriginalsPath('portraits', 'human_male_warrior')
 - [ ] Evaluate item sprites (49 items)
 - [ ] Evaluate UI icons (80 icons)
 - [ ] Create `validate-size-variants.js` script for checking missing variants
+- [ ] Regenerate all assets using new 1024x1024 pipeline (portraits, nodes, icons, items)
 
 ### 7.8 Admin Asset Manager (Completed Jan 2026)
 
@@ -734,6 +778,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.8 | Jan 2026 | Image Pipeline Refactor (v10.8): Added Section 7.16 documenting standardized generation & post-processing. Python saves 1024x1024 processed originals via process_to_original(), Node.js generates all size variants via ImageMagick. Extended node sizes from [48,96] to [48,64,96,128,256]. Added icon 128px variant. Removed portrait rembg workaround. Created Python overlay generator. Updated AI_IMAGE_GENERATION.md resolution tables. |
 | 3.7 | Jan 2026 | Major Test Suite Expansion (v10.7): Added ~4,900 lines across 13 new files + 7 extended files. Shared tests: battleMath.test.js +660 lines (16 new function suites), constants.test.js +235 lines (5 new sections), pathfinding.test.js +3 suites (performance, mixed terrain, water). Created 9 AI unit test files (224 tests/72 suites): patternWeights, cache, utilityFactors, stateEvaluator, actionGenerator, lookahead, utilityAI, aiPatternBehavior with mockHelpers. Created 4 worldgen unit test files (125 tests/19 suites): castlePlacement, nodeGeneration, internalConnections, validation. Extended 4 balance tests: classBalance (all 16 advanced classes), damageScaling (elemental), formulaValidation (CT/status), economyBalance (fishing/caravan). Added npm scripts: test:unit:ai, test:unit:worldgen. Updated test:unit glob for subdirectories. Final counts: Shared 360 tests, API unit 754 tests, all passing. Testing status updated to 90%, coverage to ~75%. |
 | 3.6 | Jan 2026 | Asset Path Remediation: Added Section 7.15 documenting resolution of all asset path discrepancies between Python OutputManager, JS scripts, and canonical shared/assetPaths.js. Updated backupUtils.js, validate-images.js, validate-paths.js to use canonical paths. Updated 5 category manifest.json outputDir fields. Deleted obsolete migrate-sizes.js (398 lines). Cleaned up legacy asset files and admin test factories. Removed dead sizePattern code branches. |
 | 3.5 | Jan 2026 | Asset Pipeline Bug Fix & Deduplication (v10.5): Fixed critical multi-key generation bug in all 6 AI image scripts (--key flag overwrote instead of accumulating). Created shared parseArgs.js and filterAssets.js modules eliminating ~500 lines of duplicated code. Normalized audio service to use keys array. Added count badges to admin bulk action buttons. Marked generator script duplication as resolved in Section 8.2. Updated Section 8.3 refactoring opportunities with Phase 1 complete, Phase 2 remaining. Added Section 7.14. |

@@ -300,6 +300,7 @@ async function main() {
         }
 
         log(`Generated: ${node.id}`, 'success');
+        log(`Saved: ${getOutputPath(node)}`, 'info');
 
         // Post-process to generate size variants using canonical paths
         // Size variants are siblings to originals/ (e.g., /assets/nodes/48/, /assets/nodes/96/)
@@ -313,7 +314,7 @@ async function main() {
             'nodes',
             nodeId,
             {
-              sizes: [48, 96],
+              sizes: [48, 64, 96, 128, 256],
               force: options.force,
               verbose: options.verbose
             }
