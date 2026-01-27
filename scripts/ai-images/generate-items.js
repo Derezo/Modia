@@ -31,7 +31,9 @@ const {
   getEffectiveLoraModel,
   generateCanonicalSizeVariants,
   loadRegenerationQueue,
-  clearRegenerationMarker
+  clearRegenerationMarker,
+  parseBaseArgs,
+  applyKeyFilter
 } = require('./lib');
 
 // Configuration
@@ -43,103 +45,11 @@ const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/items/origina
  * Parse command line arguments
  */
 function parseArgs() {
-  const args = process.argv.slice(2);
-  const options = {
-    dryRun: false,
-    key: null,
-    category: null,
-    force: false,
-    backup: false,
-    local: true,     // Local ComfyUI is now the default
-    huggingface: false,
-    verbose: false,
-    quiet: false,
-    delay: 2000,  // Default 2 second delay between requests
-    lora: null,   // LoRA model override (v1, v2, modern-pixel, retro-pixel)
-    queue: false, // Process items marked for regeneration
-    help: false
-  };
-
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    switch (arg) {
-      case '--dry-run':
-        options.dryRun = true;
-        break;
-      case '--key':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--key requires a value', 'error');
-          process.exit(1);
-        }
-        options.key = args[++i];
-        break;
-      case '--category':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--category requires a value', 'error');
-          process.exit(1);
-        }
-        options.category = args[++i];
-        break;
-      case '--force':
-        options.force = true;
-        break;
-      case '--backup':
-        options.backup = true;
-        break;
-      case '--huggingface':
-      case '--hf':
-        options.huggingface = true;
-        options.local = false;  // Disable local when using HuggingFace
-        break;
-      case '--local':
-        // Explicit local flag (already default, but kept for clarity)
-        options.local = true;
-        options.huggingface = false;
-        break;
-      case '--verbose':
-      case '-v':
-        options.verbose = true;
-        break;
-      case '--quiet':
-      case '-q':
-        options.quiet = true;
-        break;
-      case '--delay':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--delay requires a value', 'error');
-          process.exit(1);
-        }
-        options.delay = parseInt(args[++i], 10);
-        break;
-      case '--lora': {
-        const validLoraModels = ['v1', 'v2', 'modern-pixel', 'retro-pixel'];
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--lora requires a value (v1, v2, modern-pixel, retro-pixel)', 'error');
-          process.exit(1);
-        }
-        options.lora = args[++i];
-        if (!validLoraModels.includes(options.lora)) {
-          log(`Invalid --lora value: ${options.lora}. Valid options: ${validLoraModels.join(', ')}`, 'error');
-          process.exit(1);
-        }
-        break;
-      }
-      case '--queue':
-        options.queue = true;
-        options.force = true;  // Queue mode implies --force since items are marked for regen
-        break;
-      case '--help':
-      case '-h':
-        options.help = true;
-        break;
-      default:
-        if (arg.startsWith('--')) {
-          log(`Unknown option: ${arg}`, 'warn');
-        }
+  return parseBaseArgs(process.argv.slice(2), {
+    extraFlags: {
+      category: { flag: '--category', type: 'string', default: null }
     }
-  }
-
-  return options;
+  });
 }
 
 /**
@@ -158,7 +68,7 @@ Rarity and augment effects are composited at runtime via overlays.
 
 Options:
   --dry-run           Show what would be generated without calling APIs
-  --key <id>          Generate specific item (e.g., sword_iron)
+  --key <id>          Generate specific item (repeatable, e.g., --key sword_iron --key axe_steel)
   --category <cat>    Filter by category (weapons, armor, accessories, consumables)
   --force             Regenerate even if file exists
   --backup            Backup existing images before regenerating
@@ -206,12 +116,7 @@ function needsGeneration(item, options) {
  * Filter items based on CLI options
  */
 function filterItems(items, options) {
-  let filtered = items;
-
-  if (options.key) {
-    filtered = filtered.filter(i => i.id === options.key);
-  }
-
+  let filtered = applyKeyFilter(items, options.keys);
   return filtered;
 }
 

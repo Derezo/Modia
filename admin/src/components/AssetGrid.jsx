@@ -56,7 +56,7 @@ function BulkActionBar({
           ) : (
             <ListBulletIcon className="w-4 h-4" />
           )}
-          Add to Queue
+          Add to Queue ({selectedCount})
         </button>
 
         <button
@@ -67,7 +67,7 @@ function BulkActionBar({
           title="Skip queue and generate immediately"
         >
           <RocketIcon className="w-4 h-4" />
-          Generate Now
+          Generate Now ({selectedCount})
         </button>
 
         <button
@@ -201,6 +201,16 @@ export default function AssetGrid({
 
   // Fetch assets
   const { data, loading, error, refetch } = useAssets(category, filters);
+
+  // Refetch assets when generation finishes (active → idle)
+  const wasGeneratingRef = useRef(false);
+  useEffect(() => {
+    const isActive = !!unified?.anyActive;
+    if (wasGeneratingRef.current && !isActive) {
+      refetch();
+    }
+    wasGeneratingRef.current = isActive;
+  }, [unified?.anyActive, refetch]);
 
   // Filter assets by search query (client-side)
   const filteredAssets = useMemo(() => {

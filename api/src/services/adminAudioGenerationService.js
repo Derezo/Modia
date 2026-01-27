@@ -24,6 +24,7 @@ import { broadcastToRoom } from '../websocket/index.js';
 import { loadJsonFile, saveJsonFile } from '../utils/jsonFileUtils.js';
 import { VALID_AUDIO_TYPES, AUDIO_SCRIPT_MAP } from '../utils/assetConstants.js';
 import { validateSFXPrompt } from '../utils/audioValidation.js';
+import { AsyncMutex } from '../utils/assetLocking.js';
 import { generateJobId as generateJobIdBase, parseProgress as parseProgressBase } from './generationUtils.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -162,20 +163,22 @@ function buildScriptArgs(job) {
   if (job.type === 'music') {
     if (job.filters?.category) args.push('--category', job.filters.category);
     if (job.filters?.region) args.push('--region', job.filters.region);
-    // Support both 'key' (singular) and 'keys' (array) for regeneration
-    if (job.filters?.key) {
-      args.push('--key', job.filters.key);
-    } else if (Array.isArray(job.filters?.keys) && job.filters.keys.length > 0) {
-      job.filters.keys.forEach(k => args.push('--key', k));
+    // Normalize key/keys into a single array
+    const musicKeys = Array.isArray(job.filters?.keys) ? job.filters.keys
+      : job.filters?.key ? [job.filters.key]
+        : [];
+    if (musicKeys.length > 0) {
+      musicKeys.forEach(k => args.push('--key', k));
     }
   } else if (job.type === 'sfx') {
     if (job.filters?.category) args.push('--category', job.filters.category);
     if (job.filters?.subcategory) args.push('--subcategory', job.filters.subcategory);
-    // Support both 'key' (singular) and 'keys' (array) for regeneration
-    if (job.filters?.key) {
-      args.push('--key', job.filters.key);
-    } else if (Array.isArray(job.filters?.keys) && job.filters.keys.length > 0) {
-      job.filters.keys.forEach(k => args.push('--key', k));
+    // Normalize key/keys into a single array
+    const sfxKeys = Array.isArray(job.filters?.keys) ? job.filters.keys
+      : job.filters?.key ? [job.filters.key]
+        : [];
+    if (sfxKeys.length > 0) {
+      sfxKeys.forEach(k => args.push('--key', k));
     }
   }
 
@@ -848,34 +851,20 @@ function saveSeedState(seed) {
   }
 }
 
-// I2 FIX: Simple mutex to prevent seed race conditions
-let seedLock = false;
+// I2 FIX: AsyncMutex to prevent seed race conditions (replaces boolean lock)
+const seedMutex = new AsyncMutex();
 
 /**
  * Get the next seed value and increment
- * Uses a simple mutex to prevent race conditions when multiple calls happen simultaneously
+ * Uses AsyncMutex to prevent race conditions when multiple calls happen simultaneously
  * @returns {Promise<number>} The seed value to use (increments after reading)
  */
 async function getNextSeed() {
-  // Wait for lock with exponential backoff
-  let attempts = 0;
-  while (seedLock) {
-    await new Promise(r => setTimeout(r, 10 * Math.pow(2, attempts)));
-    attempts++;
-    if (attempts > 5) {
-      console.warn('[Seed State] Lock timeout, proceeding anyway');
-      break;
-    }
-  }
-
-  seedLock = true;
-  try {
+  return seedMutex.withLock(async () => {
     const currentSeed = readSeedState();
     saveSeedState(currentSeed + 1);
     return currentSeed;
-  } finally {
-    seedLock = false;
-  }
+  });
 }
 
 /**

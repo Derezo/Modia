@@ -30,7 +30,9 @@ const {
   buildThemedPrompt,
   createBackup,
   postProcessGenerated,
-  getEffectiveLoraModel
+  getEffectiveLoraModel,
+  parseBaseArgs,
+  applyKeyFilter
 } = require('./lib');
 
 // Configuration
@@ -42,102 +44,14 @@ const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/overlays/orig
  * Parse command line arguments
  */
 function parseArgs() {
-  const args = process.argv.slice(2);
-  const options = {
-    dryRun: false,
-    key: null,
-    rarity: false,
-    augments: false,
-    force: false,
-    backup: false,
-    local: true,     // Local ComfyUI is now the default
-    huggingface: false,
-    verbose: false,
-    quiet: false,
-    delay: 2000,  // Default 2 second delay between requests
-    sizes: false, // Generate size variants after generation
-    lora: null,   // LoRA model override (v1, v2, modern-pixel, retro-pixel)
-    help: false
-  };
-
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    switch (arg) {
-      case '--dry-run':
-        options.dryRun = true;
-        break;
-      case '--key':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--key requires a value', 'error');
-          process.exit(1);
-        }
-        options.key = args[++i];
-        break;
-      case '--rarity':
-        options.rarity = true;
-        break;
-      case '--augments':
-        options.augments = true;
-        break;
-      case '--force':
-        options.force = true;
-        break;
-      case '--backup':
-        options.backup = true;
-        break;
-      case '--huggingface':
-      case '--hf':
-        options.huggingface = true;
-        options.local = false;  // Disable local when using HuggingFace
-        break;
-      case '--local':
-        // Explicit local flag (already default, but kept for clarity)
-        options.local = true;
-        options.huggingface = false;
-        break;
-      case '--verbose':
-      case '-v':
-        options.verbose = true;
-        break;
-      case '--quiet':
-      case '-q':
-        options.quiet = true;
-        break;
-      case '--delay':
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--delay requires a value', 'error');
-          process.exit(1);
-        }
-        options.delay = parseInt(args[++i], 10);
-        break;
-      case '--sizes':
-        options.sizes = true;
-        break;
-      case '--lora': {
-        const validLoraModels = ['v1', 'v2', 'modern-pixel', 'retro-pixel'];
-        if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log('--lora requires a value (v1, v2, modern-pixel, retro-pixel)', 'error');
-          process.exit(1);
-        }
-        options.lora = args[++i];
-        if (!validLoraModels.includes(options.lora)) {
-          log(`Invalid --lora value: ${options.lora}. Valid options: ${validLoraModels.join(', ')}`, 'error');
-          process.exit(1);
-        }
-        break;
-      }
-      case '--help':
-      case '-h':
-        options.help = true;
-        break;
-      default:
-        if (arg.startsWith('--')) {
-          log(`Unknown option: ${arg}`, 'warn');
-        }
-    }
-  }
-
-  return options;
+  return parseBaseArgs(process.argv.slice(2), {
+    extraFlags: {
+      rarity:   { flag: '--rarity',   type: 'boolean', default: false },
+      augments: { flag: '--augments', type: 'boolean', default: false },
+      sizes:    { flag: '--sizes',    type: 'boolean', default: false }
+    },
+    noQueue: true
+  });
 }
 
 /**
@@ -153,7 +67,7 @@ Usage:
 
 Options:
   --dry-run           Show what would be generated without calling APIs
-  --key <id>          Generate specific overlay (e.g., rarity_uncommon, augment_fire)
+  --key <id>          Generate specific overlay (repeatable, e.g., --key rarity_uncommon --key augment_fire)
   --rarity            Generate only rarity overlays
   --augments          Generate only augment overlays
   --force             Regenerate even if file exists
@@ -204,12 +118,7 @@ function needsGeneration(overlay, options) {
  * Filter overlays based on CLI options
  */
 function filterOverlays(overlays, options) {
-  let filtered = overlays;
-
-  // Filter by key if specified
-  if (options.key) {
-    filtered = filtered.filter(o => o.id === options.key);
-  }
+  let filtered = applyKeyFilter(overlays, options.keys);
 
   // Filter by subcategory if --rarity or --augments is specified
   if (options.rarity && !options.augments) {
