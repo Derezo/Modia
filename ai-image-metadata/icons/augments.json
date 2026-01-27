@@ -142,7 +142,8 @@
       "name": "Cleanse",
       "prompt": "sparkle cleanse purify remove debuff holy",
       "seed": 33020,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-27T12:47:18.183Z"
     }
   ]
 }

@@ -31,6 +31,7 @@ import {
   VALID_MUSIC_CATEGORIES,
   VALID_SFX_CATEGORIES
 } from '../utils/assetConstants.js';
+import { assertValidAssetId, validateAssetIds, fileLocks } from '../utils/assetLocking.js';
 import { validateSFXPrompt } from '../utils/audioValidation.js';
 import {
   generateWaveformWithFFmpeg,
@@ -315,6 +316,9 @@ router.get('/music', asyncHandler(async (req, res) => {
 router.get('/music/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Track');
+
   const { tracks } = await loadMusicMetadata();
   const track = tracks.find(t => t.id === id);
 
@@ -332,6 +336,9 @@ router.get('/music/:id', asyncHandler(async (req, res) => {
 router.put('/music/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Track');
 
   // Validate allowed update fields
   const allowedFields = [
@@ -361,6 +368,9 @@ router.put('/music/:id', asyncHandler(async (req, res) => {
 router.post('/music/:id/primary', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { variantPath } = req.body;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Track');
 
   if (!variantPath) {
     throw new AppError('variantPath is required', 400);
@@ -411,6 +421,9 @@ router.get('/sfx', asyncHandler(async (req, res) => {
 router.get('/sfx/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
 
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Effect');
+
   const { effects } = await loadSFXMetadata();
   const effect = effects.find(e => e.id === id);
 
@@ -428,6 +441,9 @@ router.get('/sfx/:id', asyncHandler(async (req, res) => {
 router.put('/sfx/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Effect');
 
   // Validate allowed update fields
   const allowedFields = [
@@ -543,6 +559,9 @@ router.get('/regeneration-queue', asyncHandler(async (req, res) => {
 router.put('/:type/:id/mark-regeneration', asyncHandler(async (req, res) => {
   const { type, id } = req.params;
   const { mark = true } = req.body;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Audio asset');
 
   if (!VALID_AUDIO_TYPES.includes(type)) {
     throw new AppError(`Invalid audio type: ${type}. Valid: ${VALID_AUDIO_TYPES.join(', ')}`, 400);
@@ -713,6 +732,9 @@ router.put('/mark-multiple', asyncHandler(async (req, res) => {
  */
 router.get('/:type/:id/waveform', asyncHandler(async (req, res) => {
   const { type, id } = req.params;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Audio asset');
 
   if (!VALID_AUDIO_TYPES.includes(type)) {
     throw new AppError(`Invalid audio type: ${type}. Valid: ${VALID_AUDIO_TYPES.join(', ')}`, 400);

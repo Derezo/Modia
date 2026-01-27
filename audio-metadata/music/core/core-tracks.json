@@ -156,7 +156,10 @@
       "volume": 0.7,
       "fadeIn": 1500,
       "fadeOut": 1500,
-      "generated": false
+      "generated": true,
+      "taskId": "e3023165678b38d3b5ce35a72e6a75b3",
+      "generationStarted": "2026-01-26T05:03:06.018Z",
+      "generatedAt": "2026-01-26T05:03:09.732Z"
     },
     {
       "id": "victory_fanfare",

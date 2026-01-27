@@ -234,9 +234,12 @@ function QueueCategorySection({ category, items, onRemoveItem, onClearCategory }
   return (
     <div className="bg-midnight-800/50 rounded-lg border border-midnight-700">
       {/* Category header */}
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-3 py-2 hover:bg-midnight-700/50 transition-colors"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(!expanded); } }}
+        className="w-full flex items-center justify-between px-3 py-2 hover:bg-midnight-700/50 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-parchment-200">
@@ -256,7 +259,7 @@ function QueueCategorySection({ category, items, onRemoveItem, onClearCategory }
           </button>
           <span className="text-parchment-500">{expanded ? '-' : '+'}</span>
         </div>
-      </button>
+      </div>
 
       {/* Category items */}
       {expanded && (
@@ -458,6 +461,7 @@ export default function UnifiedAssetPanel({
   const { unified } = useGenerationContext();
   const {
     queues,
+    anyActive,
     stdout,
     clearStdout,
     generatedAssets,
@@ -472,6 +476,16 @@ export default function UnifiedAssetPanel({
   const queueData = internalQueue.queue;
   const queueTotalCount = internalQueue.totalCount;
   const queueLoading = internalQueue.loading;
+
+  // Refresh regeneration queue when generation finishes (active → idle)
+  const wasActiveRef = useRef(false);
+  useEffect(() => {
+    if (wasActiveRef.current && !anyActive) {
+      internalQueue.fetchQueue();
+      onRefreshQueue?.();
+    }
+    wasActiveRef.current = !!anyActive;
+  }, [anyActive, internalQueue, onRefreshQueue]);
 
   const [activePanel, setActivePanel] = useState(controlledActivePanel || PANEL_TABS.CONSOLE);
   const [sourceFilter, setSourceFilter] = useState(initialSourceFilter);

@@ -9,28 +9,37 @@
       "name": "Attack",
       "prompt": "crossed swords attack action combat strike",
       "seed": 30001,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "action_defend",
       "name": "Defend",
       "prompt": "raised shield defend block protection stance",
       "seed": 30002,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "action_move",
       "name": "Move",
       "prompt": "boot footprint movement walk arrow direction",
       "seed": 30003,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T13:08:30.172Z"
     },
     {
       "id": "action_wait",
       "name": "Wait",
       "prompt": "hourglass wait time pause clock",
       "seed": 30004,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "action_item",
@@ -58,7 +67,14 @@
       "name": "Heal",
       "prompt": "heart cross heal restore health plus",
       "seed": 30011,
-      "generated": false
+      "generated": true,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "v2",
+      "generatedAt": "2026-01-27T04:04:08.822Z"
     },
     {
       "id": "action_magic_fire",

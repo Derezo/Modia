@@ -8,12 +8,13 @@
       "name": "Castle",
       "prompt": "castle fortress towers battlements medieval stronghold",
       "seed": 40001,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 8,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T04:40:45.796Z"
     },
     {
       "id": "city",
@@ -28,7 +29,9 @@
           "hard_to_read"
         ],
         "regenerate": true
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "village",
@@ -40,7 +43,9 @@
         "score": 7,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "forest",
@@ -55,7 +60,9 @@
           "cluttered"
         ],
         "regenerate": true
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "cave",
@@ -89,7 +96,9 @@
           "sketchy"
         ],
         "regenerate": true
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "bridge",
@@ -161,7 +170,9 @@
         "score": 7,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "discovery",

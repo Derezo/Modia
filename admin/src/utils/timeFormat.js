@@ -90,3 +90,25 @@ export function formatRelativeTime(date) {
   if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
   return 'just now';
 }
+
+/**
+ * Calculate estimated time of arrival based on progress
+ * @param {object} progress - Progress object with current and total
+ * @param {string|Date} startedAt - When the job started
+ * @returns {object|null} ETA object with ms and formatted, or null if can't calculate
+ */
+export function calculateETA(progress, startedAt) {
+  if (!progress || !progress.total || progress.current === 0 || !startedAt) {
+    return null;
+  }
+
+  const elapsed = Date.now() - new Date(startedAt).getTime();
+  const avgTimePerItem = elapsed / progress.current;
+  const remaining = progress.total - progress.current;
+  const etaMs = remaining * avgTimePerItem;
+
+  return {
+    ms: etaMs,
+    formatted: formatDurationHuman(etaMs)
+  };
+}

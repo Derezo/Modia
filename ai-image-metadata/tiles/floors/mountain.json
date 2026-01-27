@@ -91,7 +91,8 @@
       "variant": 1,
       "prompt": "granite boulder surface with quartz inclusions in light grey #A0A0A0 #F5F5F5",
       "outputPath": "mountain",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T05:02:30.935Z"
     },
     {
       "key": "rock_2",
@@ -123,7 +124,8 @@
       "variant": 1,
       "prompt": "sparse mountain woodland floor with rocky patches in grey brown #2F4F2F #8B8682",
       "outputPath": "mountain",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-27T12:41:53.077Z"
     },
     {
       "key": "forest_2",
@@ -251,7 +253,8 @@
       "variant": 1,
       "prompt": "windswept alpine tree roots gripping rocky ground in dark brown grey #3D2B1F #A0A0A0",
       "outputPath": "mountain",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-26T05:23:52.001Z"
     },
     {
       "key": "tree_2",
