@@ -22,7 +22,7 @@ import {
   RocketIcon,
 } from '@radix-ui/react-icons';
 
-import { useUnifiedGeneration } from '../hooks/useUnifiedGeneration';
+import { useGenerationContext } from '../contexts/GenerationContext';
 import { useRegenerationQueue } from '../hooks/useRegenerationQueue';
 import AssetPreviewCard from './AssetPreviewCard';
 import ProgressBar from './ProgressBar';
@@ -450,12 +450,12 @@ function AssetsPanel({ generatedAssets, clearGeneratedAssets, sourceFilter, onSo
  * The onRefreshQueue callback is used to sync the Layout's badge count after actions.
  */
 export default function UnifiedAssetPanel({
-  onClose,
   activePanel: controlledActivePanel,
   onPanelChange,
   onRefreshQueue,
   initialSourceFilter = 'all',
 }) {
+  const { unified } = useGenerationContext();
   const {
     queues,
     stdout,
@@ -465,7 +465,7 @@ export default function UnifiedAssetPanel({
     cancelJob,
     pauseQueue,
     resumeQueue,
-  } = useUnifiedGeneration();
+  } = unified;
 
   // Always use internal queue hook - it fetches fresh data when panel opens
   const internalQueue = useRegenerationQueue();
@@ -552,67 +552,6 @@ export default function UnifiedAssetPanel({
 
   return (
     <div className="fixed bottom-12 left-0 right-0 h-80 bg-midnight-900 border-t border-midnight-700 shadow-2xl z-40">
-      {/* Panel tabs */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-midnight-700 bg-midnight-850">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => handlePanelChange(PANEL_TABS.QUEUE)}
-            className={`px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition-colors ${
-              activePanel === PANEL_TABS.QUEUE
-                ? 'bg-midnight-700 text-parchment-100'
-                : 'text-parchment-400 hover:text-parchment-200 hover:bg-midnight-800'
-            }`}
-          >
-            <ListBulletIcon className="w-4 h-4" />
-            Queue
-            {queueTotalCount > 0 && (
-              <span className="px-1.5 py-0.5 text-xs bg-accent-gold/20 text-accent-gold rounded">
-                {queueTotalCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => handlePanelChange(PANEL_TABS.CONSOLE)}
-            className={`px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition-colors ${
-              activePanel === PANEL_TABS.CONSOLE
-                ? 'bg-midnight-700 text-parchment-100'
-                : 'text-parchment-400 hover:text-parchment-200 hover:bg-midnight-800'
-            }`}
-          >
-            <CodeIcon className="w-4 h-4" />
-            Console
-            {stdout.length > 0 && (
-              <span className="text-xs text-parchment-500">({stdout.length})</span>
-            )}
-          </button>
-          <button
-            onClick={() => handlePanelChange(PANEL_TABS.ASSETS)}
-            className={`px-3 py-1.5 text-sm rounded-lg flex items-center gap-2 transition-colors ${
-              activePanel === PANEL_TABS.ASSETS
-                ? 'bg-midnight-700 text-parchment-100'
-                : 'text-parchment-400 hover:text-parchment-200 hover:bg-midnight-800'
-            }`}
-          >
-            <ImageIcon className="w-4 h-4" />
-            Assets
-            {generatedAssets.length > 0 && (
-              <span className="text-xs text-accent-emerald">({generatedAssets.length})</span>
-            )}
-          </button>
-        </div>
-
-        {/* Close button */}
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="p-1 text-parchment-500 hover:text-parchment-300 hover:bg-midnight-700 rounded transition-colors"
-            title="Close panel"
-          >
-            <Cross2Icon className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
       {/* Progress bar (when job is running) */}
       {activeJob && activeProgress && (
         <div className="px-4 py-2 bg-midnight-850 border-b border-midnight-700">
@@ -660,7 +599,7 @@ export default function UnifiedAssetPanel({
       )}
 
       {/* Panel content */}
-      <div className="h-full" style={{ height: activeJob && activeProgress ? 'calc(100% - 92px)' : 'calc(100% - 44px)' }}>
+      <div className="h-full" style={{ height: activeJob && activeProgress ? 'calc(100% - 48px)' : '100%' }}>
         {activePanel === PANEL_TABS.QUEUE && (
           <QueuePanel
             queue={queueData}

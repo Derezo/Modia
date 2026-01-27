@@ -13,14 +13,14 @@ import {
   ImageIcon,
   SpeakerLoudIcon,
   MixerVerticalIcon,
-  ChevronUpIcon,
   ChevronDownIcon,
   PlayIcon,
   PauseIcon,
   ListBulletIcon,
+  CodeIcon,
 } from '@radix-ui/react-icons';
 
-import { useUnifiedGeneration } from '../hooks/useUnifiedGeneration';
+import { useGenerationContext } from '../contexts/GenerationContext';
 
 /**
  * Status indicator for a single queue - clickable to filter console
@@ -72,7 +72,8 @@ function QueueStatus({ icon: Icon, label, isActive, pendingCount, isPaused, prog
 /**
  * Main UnifiedGenerationBar component
  */
-export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCount = 0, onOpenQueue, onBadgeClick }) {
+export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCount = 0, activePanel, onPanelChange, onBadgeClick }) {
+  const { unified } = useGenerationContext();
   const {
     connected,
     queueSummary,
@@ -80,7 +81,7 @@ export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCo
     totalPending,
     stdout,
     generatedAssets
-  } = useUnifiedGeneration();
+  } = unified;
 
   // Overall status for the bar
   const overallStatus = useMemo(() => {
@@ -138,46 +139,75 @@ export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCo
           </div>
         </div>
 
-        {/* Right side: Stats and expand button */}
-        <div className="flex items-center gap-4">
-          {/* Queue button - show when items are queued */}
-          {queueCount > 0 && (
+        {/* Right side: Panel tabs and collapse */}
+        <div className="flex items-center gap-2">
+          {/* Panel tab buttons */}
+          <div className="flex items-center bg-midnight-800 rounded-lg p-0.5">
             <button
-              onClick={onOpenQueue}
-              className="flex items-center gap-2 px-3 py-1.5 bg-accent-gold/20 text-accent-gold rounded-lg hover:bg-accent-gold/30 transition-colors"
+              onClick={() => {
+                onPanelChange?.('queue');
+                if (!expanded) onExpandChange?.(true);
+              }}
+              className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 transition-colors ${
+                expanded && activePanel === 'queue'
+                  ? 'bg-midnight-600 text-parchment-100'
+                  : 'text-parchment-400 hover:text-parchment-200 hover:bg-midnight-700'
+              }`}
             >
-              <ListBulletIcon className="w-4 h-4" />
-              <span className="text-sm font-medium">{queueCount} Queued</span>
+              <ListBulletIcon className="w-3.5 h-3.5" />
+              Queue
+              {queueCount > 0 && (
+                <span className="px-1.5 py-0.5 text-xs bg-accent-gold/20 text-accent-gold rounded">
+                  {queueCount}
+                </span>
+              )}
             </button>
-          )}
-
-          {/* Console/Assets counts */}
-          <div className="flex items-center gap-3 text-sm text-parchment-500">
-            {stdout.length > 0 && (
-              <span>{stdout.length} lines</span>
-            )}
-            {generatedAssets.length > 0 && (
-              <span className="text-accent-emerald">{generatedAssets.length} assets</span>
-            )}
+            <button
+              onClick={() => {
+                onPanelChange?.('console');
+                if (!expanded) onExpandChange?.(true);
+              }}
+              className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 transition-colors ${
+                expanded && activePanel === 'console'
+                  ? 'bg-midnight-600 text-parchment-100'
+                  : 'text-parchment-400 hover:text-parchment-200 hover:bg-midnight-700'
+              }`}
+            >
+              <CodeIcon className="w-3.5 h-3.5" />
+              Console
+              {stdout.length > 0 && (
+                <span className="text-xs text-parchment-500">({stdout.length})</span>
+              )}
+            </button>
+            <button
+              onClick={() => {
+                onPanelChange?.('assets');
+                if (!expanded) onExpandChange?.(true);
+              }}
+              className={`px-3 py-1.5 text-sm rounded-md flex items-center gap-1.5 transition-colors ${
+                expanded && activePanel === 'assets'
+                  ? 'bg-midnight-600 text-parchment-100'
+                  : 'text-parchment-400 hover:text-parchment-200 hover:bg-midnight-700'
+              }`}
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              Assets
+              {generatedAssets.length > 0 && (
+                <span className="text-xs text-accent-emerald">({generatedAssets.length})</span>
+              )}
+            </button>
           </div>
 
-          {/* Expand/Collapse button */}
-          <button
-            onClick={() => onExpandChange && onExpandChange(!expanded)}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-parchment-300 hover:text-parchment-100 hover:bg-midnight-700 rounded-lg transition-colors"
-          >
-            {expanded ? (
-              <>
-                <ChevronDownIcon className="w-4 h-4" />
-                Collapse
-              </>
-            ) : (
-              <>
-                <ChevronUpIcon className="w-4 h-4" />
-                Expand
-              </>
-            )}
-          </button>
+          {/* Collapse button - only visible when expanded */}
+          {expanded && (
+            <button
+              onClick={() => onExpandChange?.(false)}
+              className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-parchment-300 hover:text-parchment-100 hover:bg-midnight-700 rounded-lg transition-colors"
+            >
+              <ChevronDownIcon className="w-4 h-4" />
+              Collapse
+            </button>
+          )}
         </div>
       </div>
     </div>

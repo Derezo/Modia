@@ -309,6 +309,7 @@ holding objects, hands in frame, full body, weapon in hand, action pose, white f
 | `--gender <name>` | Filter portraits by gender (male, female, other) |
 | `--class <name>` | Filter portraits by class (warrior, wizard, monk, chemist) |
 | `--huggingface` | Use HuggingFace Space API instead of local ComfyUI |
+| `--queue` | Process only assets marked for regeneration (used by admin dashboard) |
 | `--lora <model>` | Override LoRA model selection (v1, v2, pixel-dever, 64bit) |
 | `--list-models` | List available LoRA models and exit |
 
@@ -612,8 +613,12 @@ Generated at `ai-image-metadata/evaluation-report.json`:
 
 ### Regeneration Workflow
 
-1. Check evaluation report: `cat ai-image-metadata/evaluation-report.json`
-2. Review regeneration queue for low-scoring assets
-3. Verify updated prompts address identified issues
-4. Regenerate: `npm run ai:generate:nodes -- --key <id> --force`
-5. Re-evaluate and update score in metadata file
+**Single asset:**
+1. Regenerate: `npm run ai:generate:nodes -- --key <id> --force`
+2. Re-evaluate and update score in metadata file
+
+**Batch via admin dashboard:**
+1. Mark assets for regeneration in the admin dashboard (sets `needsRegeneration: true`)
+2. Click "Generate All" in the Queue panel, or run: `npm run ai:generate:tiles -- --queue`
+3. The `--queue` flag processes only marked assets and clears their regeneration markers on success
+4. All generator scripts support `--queue`: tiles, portraits, items, icons, nodes

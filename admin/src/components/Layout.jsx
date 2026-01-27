@@ -31,16 +31,11 @@ export default function Layout() {
     fetchQueue,
   } = useRegenerationQueue();
 
-  // Open the queue panel
-  const handleOpenQueue = useCallback(() => {
-    setActivePanel('queue');
-    setPanelExpanded(true);
-  }, []);
-
-  // Handle panel change
+  // Handle panel change - also expand if collapsed
   const handlePanelChange = useCallback((panel) => {
     setActivePanel(panel);
-  }, []);
+    if (!panelExpanded) setPanelExpanded(true);
+  }, [panelExpanded]);
 
   // Handle badge click - open console panel with source filter
   const handleBadgeClick = useCallback((sourceType) => {
@@ -78,7 +73,6 @@ export default function Layout() {
       {/* Unified Generation Panel (expanded view) */}
       {panelExpanded && (
         <UnifiedAssetPanel
-          onClose={() => setPanelExpanded(false)}
           activePanel={activePanel}
           onPanelChange={handlePanelChange}
           onRefreshQueue={fetchQueue}
@@ -91,7 +85,8 @@ export default function Layout() {
         expanded={panelExpanded}
         onExpandChange={setPanelExpanded}
         queueCount={queueCount}
-        onOpenQueue={handleOpenQueue}
+        activePanel={activePanel}
+        onPanelChange={handlePanelChange}
         onBadgeClick={handleBadgeClick}
       />
     </div>

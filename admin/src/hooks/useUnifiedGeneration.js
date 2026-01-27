@@ -76,6 +76,13 @@ export function useUnifiedGeneration() {
 
   // Add a line to stdout with source tag
   const addStdoutLine = useCallback((source, line, lineType = 'stdout') => {
+    // Dedup: skip if same source+line appeared in last 5 entries within 2 seconds
+    const recentDupe = stdoutRef.current.slice(-5).some(entry =>
+      entry.source === source && entry.line === line &&
+      (Date.now() - new Date(entry.timestamp).getTime()) < 2000
+    );
+    if (recentDupe) return;
+
     const entry = {
       source,
       line,
@@ -91,6 +98,9 @@ export function useUnifiedGeneration() {
 
   // Add a generated asset
   const addGeneratedAsset = useCallback((type, path, additionalData = {}) => {
+    // Dedup: skip if asset with same path already exists (guard against undefined matching undefined)
+    if (path && generatedAssetsRef.current.some(a => a.path === path)) return;
+
     const asset = {
       type, // 'image', 'music', or 'sfx'
       path,

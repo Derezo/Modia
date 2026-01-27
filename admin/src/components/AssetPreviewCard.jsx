@@ -17,6 +17,7 @@ import {
 } from '@radix-ui/react-icons';
 
 import WaveformDisplay from './audio/WaveformDisplay';
+import { getAssetUrlsWithFallback } from '../lib/assetPathHelper.js';
 
 // Type colors
 const TYPE_COLORS = {
@@ -32,20 +33,41 @@ const TYPE_BG_COLORS = {
 };
 
 /**
- * Format image path for display as URL
+ * Format image path for display as URL, using category metadata
+ * to construct proper paths (e.g., /assets/portraits/64/human_male_monk.png)
  */
-function getImageUrl(imagePath) {
+function getImageUrl(asset) {
+  const imagePath = asset?.path;
   if (!imagePath) return null;
 
-  // Convert file path to URL
+  // If path already starts with /assets/ and has multiple segments, use as-is
+  if (imagePath.startsWith('/assets/') && imagePath.split('/').length > 3) {
+    return imagePath;
+  }
+
+  // Strip frontend/public prefix if present
   if (imagePath.includes('frontend/public')) {
     return imagePath.replace('frontend/public', '');
   }
-  // Already a relative path
+
+  // Use category metadata to construct proper path
+  if (asset.category) {
+    const filename = imagePath.split('/').pop() || imagePath;
+    const id = filename.replace(/\.\w+$/, ''); // strip extension
+    try {
+      const urls = getAssetUrlsWithFallback(asset.category, id, {
+        subcategory: asset.subcategory
+      });
+      if (urls.length > 0) return urls[0];
+    } catch (e) {
+      // Fall through to default logic
+    }
+  }
+
+  // Fallback: try to construct path
   if (imagePath.startsWith('/assets')) {
     return imagePath;
   }
-  // Try to construct path
   return `/assets/${imagePath.split('assets/').pop() || imagePath}`;
 }
 
@@ -88,7 +110,7 @@ function getFilename(path) {
  */
 const ImagePreviewCard = memo(function ImagePreviewCard({ asset }) {
   const [imageError, setImageError] = useState(false);
-  const imageUrl = getImageUrl(asset.path);
+  const imageUrl = getImageUrl(asset);
 
   return (
     <div className="group relative aspect-square bg-midnight-800 rounded-lg overflow-hidden border border-midnight-700 hover:border-blue-500/50 transition-colors">

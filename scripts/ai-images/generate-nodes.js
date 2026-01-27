@@ -29,7 +29,9 @@ const {
   createBackup,
   checkImageMagick,
   getEffectiveLoraModel,
-  generateCanonicalSizeVariants
+  generateCanonicalSizeVariants,
+  loadRegenerationQueue,
+  clearRegenerationMarker
 } = require('./lib');
 
 // Configuration
@@ -54,6 +56,7 @@ function parseArgs() {
     quiet: false,
     delay: 2000,  // Default 2 second delay between requests
     lora: null,   // LoRA model override (v1, v2, modern-pixel, retro-pixel)
+    queue: false, // Process nodes marked for regeneration
     help: false
   };
 
@@ -121,6 +124,10 @@ function parseArgs() {
         }
         break;
       }
+      case '--queue':
+        options.queue = true;
+        options.force = true;  // Queue mode implies --force since nodes are marked for regen
+        break;
       case '--help':
       case '-h':
         options.help = true;
@@ -251,28 +258,49 @@ async function main() {
   log('World Map Node Generation Script', 'info');
   log('================================', 'info');
 
-  // Load metadata
+  // Load metadata - either from queue or full metadata
   let metadata;
-  try {
-    metadata = loadNodeMetadata();
-    log(`Loaded ${metadata.nodes.length} nodes`, 'info');
-  } catch (error) {
-    log(`Failed to load metadata: ${error.message}`, 'error');
-    process.exit(1);
-  }
+  let nodesToGenerate;
 
-  // Filter nodes
-  const filteredNodes = filterNodes(metadata.nodes, options);
-  log(`Filtered to ${filteredNodes.length} nodes`, 'info');
+  if (options.queue) {
+    // Queue mode: load only nodes marked for regeneration
+    log('Queue mode: loading nodes marked for regeneration', 'info');
+    try {
+      const queuedNodes = loadRegenerationQueue('nodes');
+      log(`Found ${queuedNodes.length} nodes in regeneration queue`, 'info');
 
-  // Determine which need generation
-  const nodesToGenerate = filteredNodes.filter(n =>
-    needsGeneration(n, options)
-  );
-  const skipped = filteredNodes.length - nodesToGenerate.length;
+      metadata = {
+        nodes: queuedNodes
+      };
 
-  if (skipped > 0) {
-    log(`Skipping ${skipped} nodes (already exist or generated)`, 'info');
+      nodesToGenerate = queuedNodes;
+    } catch (error) {
+      log(`Failed to load regeneration queue: ${error.message}`, 'error');
+      process.exit(1);
+    }
+  } else {
+    // Standard mode: load all nodes and filter
+    try {
+      metadata = loadNodeMetadata();
+      log(`Loaded ${metadata.nodes.length} nodes`, 'info');
+    } catch (error) {
+      log(`Failed to load metadata: ${error.message}`, 'error');
+      process.exit(1);
+    }
+
+    // Filter nodes
+    const filteredNodes = filterNodes(metadata.nodes, options);
+    log(`Filtered to ${filteredNodes.length} nodes`, 'info');
+
+    // Determine which need generation
+    nodesToGenerate = filteredNodes.filter(n =>
+      needsGeneration(n, options)
+    );
+    const skipped = filteredNodes.length - nodesToGenerate.length;
+
+    if (skipped > 0) {
+      log(`Skipping ${skipped} nodes (already exist or generated)`, 'info');
+    }
   }
 
   if (nodesToGenerate.length === 0) {
@@ -360,6 +388,11 @@ async function main() {
         node._category = 'nodes';
         node._sourceFile = 'locations.json';
         markAssetGenerated(node);
+
+        // Clear regeneration marker if in queue mode
+        if (options.queue && node.needsRegeneration) {
+          clearRegenerationMarker(node);
+        }
 
         log(`Generated: ${node.id}`, 'success');
 
