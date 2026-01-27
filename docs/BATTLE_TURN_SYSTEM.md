@@ -120,7 +120,7 @@ The server runs a CT tick loop during battle:
 
 ### 2.4 CT Modification Effects
 
-Some abilities and status effects modify CT gain (implemented in `calculateCTGain()` in `shared/battleMath.js`):
+Some abilities and status effects modify CT gain (implemented in `calculateCTGain()` in `shared/battleMath.js`). See [STATUS_EFFECTS.md](STATUS_EFFECTS.md) for full movement and CT modifier details.
 
 | Effect | CT Modification | Implementation |
 |--------|-----------------|----------------|
@@ -285,7 +285,8 @@ Some status effects restrict available actions:
 | Sleep | Yes | Yes | Auto-ends turn (broken by damage) |
 | Root | Yes | No | Can still Attack/Skill/Item |
 | Silence | No | Skills only | Can Move and basic Attack |
-| Disarm | No | Attack only | Can Move and use Skills/Items |
+
+> For the full status effect taxonomy including cleansing, stacking, and resistance mechanics, see [STATUS_EFFECTS.md](STATUS_EFFECTS.md).
 
 ---
 

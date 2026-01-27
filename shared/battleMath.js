@@ -77,6 +77,14 @@ export const CURE_ALL_EFFECTS = Object.freeze(['poison', 'blind', 'silence', 'sl
 /** Status effects removed by purify skills (superset of cure_all) */
 export const PURIFY_EFFECTS = Object.freeze(['poison', 'burn', 'blind', 'silence', 'slow', 'stun', 'freeze', 'root']);
 
+// Action-prevention status effect lists
+/** Status effects that prevent all actions (move, act, skills) */
+export const PREVENT_ACTING = Object.freeze(['stun', 'freeze', 'sleep']);
+/** Status effects that prevent movement (superset of PREVENT_ACTING + root) */
+export const PREVENT_MOVEMENT = Object.freeze(['stun', 'freeze', 'sleep', 'root']);
+/** Status effects that prevent skill use (superset of PREVENT_ACTING + silence) */
+export const PREVENT_SKILLS = Object.freeze(['stun', 'freeze', 'sleep', 'silence']);
+
 // Damage variance
 export const DAMAGE_VARIANCE_MIN = 0.9;
 export const DAMAGE_VARIANCE_MAX = 1.1;

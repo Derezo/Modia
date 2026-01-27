@@ -152,6 +152,7 @@ Turn Transition Flow:
 | [BATTLE_MODES.md](BATTLE_MODES.md) | Combat mode configurations | PVE_SOLO, PVE_COOP, PVP_DUEL, PVP_TEAM |
 | [BATTLE_RECONNECTION.md](BATTLE_RECONNECTION.md) | State persistence and recovery | Disconnect handling, grace periods, state sync |
 | [AI_SYSTEM.md](AI_SYSTEM.md) | Enemy AI behavior | Utility scoring, lookahead, pattern weights |
+| [STATUS_EFFECTS.md](STATUS_EFFECTS.md) | Status effect taxonomy | DoT/HoT, CC, cleansing tiers, resistance, zodiac effects |
 
 ### 3.2 Document Relationships
 
