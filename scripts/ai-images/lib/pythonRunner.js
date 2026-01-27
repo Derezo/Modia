@@ -165,7 +165,7 @@ async function generateTile(tileConfig, options = {}) {
     '--prompt', prompt,
     '--key', key,
     '--biome', biome,
-    '--seed', String(seed),
+    '--seed', String(seed ?? 42),
     '--variants', String(variants)
   ];
 
@@ -221,7 +221,7 @@ async function generatePortrait(portraitConfig, options = {}) {
     args = [
       '--prompt', prompt,
       '--key', key,
-      '--seed', String(seed)
+      '--seed', String(seed ?? 42)
     ];
     // Enemy portraits go to a different directory
     if (outputDir) {
@@ -234,7 +234,7 @@ async function generatePortrait(portraitConfig, options = {}) {
     args = [
       '--prompt', prompt,
       '--key', key,
-      '--seed', String(seed)
+      '--seed', String(seed ?? 42)
     ];
   } else {
     // Base class player portrait - use race/gender/class mode
@@ -243,7 +243,7 @@ async function generatePortrait(portraitConfig, options = {}) {
       '--race', race,
       '--gender', gender,
       '--class', characterClass,
-      '--seed', String(seed)
+      '--seed', String(seed ?? 42)
     ];
   }
 
@@ -285,7 +285,7 @@ async function generateIcon(iconConfig, options = {}) {
     '--prompt', prompt,
     '--key', key,
     '--category', category,
-    '--seed', String(seed)
+    '--seed', String(seed ?? 42)
   ];
 
   if (options.dryRun) {
@@ -311,6 +311,7 @@ async function generateIcon(iconConfig, options = {}) {
  * @param {string} itemConfig.key - Asset key/filename
  * @param {string} itemConfig.category - Item category
  * @param {number} itemConfig.seed - Random seed
+ * @param {string} itemConfig.outputPath - Explicit output path (bypasses internal path logic)
  * @param {Object} options - Additional options
  * @param {boolean} options.local - [DEPRECATED] Local is now default, this option is ignored
  * @param {boolean} options.huggingface - Use HuggingFace API instead
@@ -319,15 +320,20 @@ async function generateIcon(iconConfig, options = {}) {
  * @returns {Promise<PythonResult>}
  */
 async function generateItem(itemConfig, options = {}) {
-  const { prompt, key, category = 'weapons', seed = 42, loraModel } = itemConfig;
+  const { prompt, key, category = 'weapons', seed = 42, loraModel, outputPath } = itemConfig;
   const { local = true, huggingface = false, verbose = false, quiet = false } = options;
 
   const args = [
     '--prompt', prompt,
     '--key', key,
     '--category', category,
-    '--seed', String(seed)
+    '--seed', String(seed ?? 42)
   ];
+
+  // Pass explicit output path if provided (canonical path control)
+  if (outputPath) {
+    args.push('--output-path', outputPath);
+  }
 
   if (options.dryRun) {
     args.push('--dry-run');
@@ -365,7 +371,7 @@ async function generateNode(nodeConfig, options = {}) {
   const args = [
     '--prompt', prompt,
     '--key', key,
-    '--seed', String(seed)
+    '--seed', String(seed ?? 42)
   ];
 
   if (options.dryRun) {
@@ -406,7 +412,7 @@ async function generateOverlay(overlayConfig, options = {}) {
     '--prompt', prompt,
     '--key', key,
     '--subcategory', subcategory,
-    '--seed', String(seed)
+    '--seed', String(seed ?? 42)
   ];
 
   if (options.dryRun) {
