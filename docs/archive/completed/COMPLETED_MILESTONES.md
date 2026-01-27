@@ -54,8 +54,46 @@ This document archives all completed features, resolved issues, and historical d
 | 10.1 | Jan 2026 | LoRA Model Selection & Admin Asset Pipeline - Per-asset style model selection, /api/admin/config endpoint, canonical asset paths, integration tests |
 | 10.2 | Jan 2026 | Admin Dashboard Code Review & Remediation - 7-phase remediation addressing 26 issues, SettingsPage modularized (1,144→215 lines), API client split into 9 modules, hook consolidation, unified components, 72 tests (88% API coverage) |
 | 10.3 | Jan 2026 | Admin Dashboard Remediation Plan - 14 issues across 8 phases: critical UI fixes, job queue reliability, clickable status badges, LoRA UX, asset state badges, icon path standardization, bulk operations, vim-style keyboard navigation |
+| 10.6 | Jan 2026 | Asset Path Remediation - Unified all asset pipeline tools to canonical shared/assetPaths.js, deleted migrate-sizes.js, fixed test factories |
 | 10.5 | Jan 2026 | Asset Pipeline Bug Fix & Deduplication - Multi-key generation bug fix, shared argument parser, audio service normalization, admin UX count badges |
 | 10.4 | Jan 2026 | Legacy Code Cleanup - 4-phase dead code removal, API migration, legacy fallback removal, property name standardization |
+
+---
+
+## 10.6 - Asset Path Remediation (Jan 2026)
+
+Resolved all remaining asset path discrepancies between the Python OutputManager, JavaScript generation/validation scripts, and the canonical `shared/assetPaths.js` module. This ensures a single source of truth for all asset output directories across the entire pipeline.
+
+### Path Unification
+
+Updated three validation/utility scripts to derive paths from `shared/assetPaths.js` instead of hardcoded strings:
+
+| File | Change |
+|------|--------|
+| `scripts/ai-images/lib/backupUtils.js` | Uses canonical paths from `shared/assetPaths.js` |
+| `scripts/ai-images/validate-images.js` | Uses canonical paths from `shared/assetPaths.js` |
+| `scripts/ai-images/validate-paths.js` | Uses canonical paths from `shared/assetPaths.js` |
+
+### Manifest Updates
+
+Updated `outputDir` fields in 5 category manifest.json files to match canonical path definitions.
+
+### Dead Code Removal
+
+| Deleted | Lines | Reason |
+|---------|-------|--------|
+| `scripts/ai-images/migrate-sizes.js` | 398 | Obsolete one-time migration script, functionality superseded by canonical path system |
+| Directory/suffix `sizePattern` branches | ~50 | Dead code paths no longer reachable after path standardization |
+
+### Test Fixes
+
+- Fixed admin test factories (`admin/src/tests/utils/factories.js`) referencing legacy asset paths that no longer exist
+
+### Impact
+
+- All asset pipeline tools now derive paths from `shared/assetPaths.js`
+- Eliminated path drift between Python generators, JS scripts, validation tools, and the admin dashboard
+- Removed 398 lines of obsolete migration code
 
 ---
 

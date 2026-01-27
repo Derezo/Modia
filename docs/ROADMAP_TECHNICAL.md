@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 3.5 |
+| Version | 3.6 |
 | Last Updated | January 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
@@ -598,6 +598,21 @@ Fixed critical multi-key generation bug and extracted shared modules from genera
 
 **Bug Impact:** Admin dashboard "Generate Now" with multiple selected assets only generated the last one. Now correctly generates all selected assets.
 
+### 7.15 Asset Path Remediation (Completed Jan 2026)
+
+Resolved all remaining asset path discrepancies between Python OutputManager, JS generation scripts, and the canonical `shared/assetPaths.js` module. Ensures a single source of truth for all asset output directories.
+
+- [x] Updated `backupUtils.js` to use canonical paths from `shared/assetPaths.js`
+- [x] Updated `validate-images.js` to use canonical paths from `shared/assetPaths.js`
+- [x] Updated `validate-paths.js` to use canonical paths from `shared/assetPaths.js`
+- [x] Updated 5 category `manifest.json` `outputDir` fields to match canonical paths
+- [x] Deleted obsolete `migrate-sizes.js` (398 lines of dead code)
+- [x] Cleaned up legacy asset files on disk
+- [x] Fixed admin test factories referencing legacy paths
+- [x] Removed dead code (directory/suffix `sizePattern` branches)
+
+**Impact:** All asset pipeline tools now derive paths from `shared/assetPaths.js`, eliminating path drift between Python generators, JS scripts, validation tools, and the admin dashboard.
+
 ---
 
 ## 8. Technical Debt & Code Quality
@@ -703,6 +718,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.6 | Jan 2026 | Asset Path Remediation: Added Section 7.15 documenting resolution of all asset path discrepancies between Python OutputManager, JS scripts, and canonical shared/assetPaths.js. Updated backupUtils.js, validate-images.js, validate-paths.js to use canonical paths. Updated 5 category manifest.json outputDir fields. Deleted obsolete migrate-sizes.js (398 lines). Cleaned up legacy asset files and admin test factories. Removed dead sizePattern code branches. |
 | 3.5 | Jan 2026 | Asset Pipeline Bug Fix & Deduplication (v10.5): Fixed critical multi-key generation bug in all 6 AI image scripts (--key flag overwrote instead of accumulating). Created shared parseArgs.js and filterAssets.js modules eliminating ~500 lines of duplicated code. Normalized audio service to use keys array. Added count badges to admin bulk action buttons. Marked generator script duplication as resolved in Section 8.2. Updated Section 8.3 refactoring opportunities with Phase 1 complete, Phase 2 remaining. Added Section 7.14. |
 | 3.4 | Jan 2026 | Legacy Code Cleanup (v10.4): 4-phase cleanup removing dead code (GenerationConsole.jsx, useGeneration.js, useAudioGeneration.js, loadElevatedTile, CLASS_ADVANCEMENT, legacyTrigger), migrating deprecated APIs (getAssetUrl→getAssetPath, buildTilePrompt→buildFlatTilePrompt, renderTileAt→renderTileUnified), removing legacy fallbacks (wall/slope naming, getLegacyPaths/getAssetUrlsWithFallback→getAssetUrls, legacy biomeFiles), and standardizing property names (HP/MP fallback chains→snake_case). Updated Section 8.3, known issues, and historical sections. |
 | 3.3 | Jan 2026 | UnifiedAssetPanel Fixes (v10.3): Fixed 5 issues - asset path 404s, duplicate Assets/Console entries, UI consolidation (moved tabs from panel top bar to bottom generation bar), queue-to-generation pipeline for all categories. Added `--queue` flag to portraits/items/icons/nodes generators. Documented generator script duplication debt in Section 8.3. |
