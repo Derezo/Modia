@@ -1032,14 +1032,19 @@ router.post('/generate/regeneration-queue', asyncHandler(async (req, res) => {
       ensureUtilities();
       const results = [];
       for (const cat of VALID_CATEGORIES) {
-        const queued = metadataUtils.loadRegenerationQueue(cat);
-        if (queued.length > 0) {
-          const result = adminGenerationService.queueJob(
-            cat,
-            { queueMode: true },
-            { ...options, force: true }
-          );
-          results.push({ category: cat, count: queued.length, ...result });
+        try {
+          const queued = metadataUtils.loadRegenerationQueue(cat);
+          console.log(`[Admin] Regeneration queue for ${cat}: ${queued.length} items`);
+          if (queued.length > 0) {
+            const result = adminGenerationService.queueJob(
+              cat,
+              { queueMode: true },
+              { ...options, force: true }
+            );
+            results.push({ category: cat, count: queued.length, ...result });
+          }
+        } catch (catErr) {
+          console.warn(`[Admin] Failed to load regeneration queue for ${cat}:`, catErr.message);
         }
       }
       if (results.length === 0) {
