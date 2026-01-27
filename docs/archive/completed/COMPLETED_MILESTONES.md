@@ -52,6 +52,190 @@ This document archives all completed features, resolved issues, and historical d
 | 8.8 | Jan 2026 | FFT-Style Formula Overhaul - CT turn system, defense diminishing returns, LCK scaling |
 | 10.0 | Jan 2026 | Stacking Tile System & Extended Elevation - Extended elevation -3 to +8, stacking tile renderer, occlusion transparency, AI tile metadata reorganization |
 | 10.1 | Jan 2026 | LoRA Model Selection & Admin Asset Pipeline - Per-asset style model selection, /api/admin/config endpoint, canonical asset paths, integration tests |
+| 10.2 | Jan 2026 | Admin Dashboard Code Review & Remediation - 7-phase remediation addressing 26 issues, SettingsPage modularized (1,144→215 lines), API client split into 9 modules, hook consolidation, unified components, 72 tests (88% API coverage) |
+| 10.3 | Jan 2026 | Admin Dashboard Remediation Plan - 14 issues across 8 phases: critical UI fixes, job queue reliability, clickable status badges, LoRA UX, asset state badges, icon path standardization, bulk operations, vim-style keyboard navigation |
+
+---
+
+## 10.3 - Admin Dashboard Remediation Plan (Jan 2026)
+
+Comprehensive implementation of 14 identified issues across 8 phases, improving admin dashboard usability, reliability, and developer experience.
+
+### Phase 1: Critical UI Fixes
+
+- Moved toasts from bottom-right to top-right to prevent overlap with action buttons
+- Fixed selection toolbar overlap with status bar (moved from bottom-6 to bottom-16)
+
+### Phase 2: Job Queue & Status Fixes
+
+- Fixed status badge source validation - handles undefined source with fallback detection
+- Added legacy stdout event handlers as fallback for console updates
+- Fixed job queue stalling with setImmediate in try/finally block for processNextJob()
+
+### Phase 3: Clickable Status Badges
+
+- Made QueueStatus component clickable with onClick handler
+- Added onBadgeClick prop to UnifiedGenerationBar
+- Implemented source filter syncing in Layout to filter console by source type
+
+### Phase 4: LoRA Dropdown UX Fix
+
+- Implemented optimistic updates with per-category loading state
+- Added rollback on error with toast notifications
+- Per-dropdown spinner while saving (savingCategory state)
+
+### Phase 5: Asset State Clarity
+
+- Added getAssetState() helper function for 5 states: pending, marked, queued, generating, generated
+- Added STATE_BADGE_CONFIG with colors and labels
+- Added AssetStateBadge component to AssetCard
+- Added inline quick actions (regenerate, mark, copy ID) on hover
+
+### Phase 6: Icon Path Standardization
+
+- Created migration script: scripts/ai-images/migrate-icon-paths.js
+- Migrated legacy hyphen-format icons to directory structure (e.g., 32/actions-action_heal.png → 32/actions/action_heal.png)
+- Updated assetPathHelper.js to use canonical paths only (no legacy fallbacks for icons)
+
+### Phase 7: Bulk Operations & Model Update
+
+- Created BulkEditModal.jsx component with fields: quality score, priority, LoRA model, notes
+- Added POST /api/admin/assets/bulk-update endpoint with validation and file locking
+- Added bulkUpdateAssets() to API client with test coverage
+- Updated BulkActionBar with "Bulk Edit" button
+
+### Phase 8: UI/UX Enhancements
+
+- Added vim-style keyboard navigation (j/k for next/prev, Enter to open, r to regenerate, m to mark, q to add to queue)
+- Enhanced useKeyboardShortcuts hook with new action handlers
+- Added active filter chips to FilterBar with removable badges
+- Added FilterChip component and "Clear all" button
+
+### Validation & Testing
+
+- Added MSW mock handler for bulk-update endpoint (handlers.js)
+- Added 3 new API client tests for bulkUpdateAssets
+- Fixed potential memory leak in BulkEditModal (added mounted flag cleanup)
+- All 27 admin tests pass
+
+---
+
+## 10.2 - Admin Dashboard Code Review & Remediation (Jan 2026)
+
+Comprehensive 7-phase code review and remediation of the admin dashboard addressing 26 distinct issues across frontend, backend, and testing infrastructure.
+
+### Phase 1: Testing Infrastructure
+
+Established Vitest + MSW testing foundation:
+- `admin/vitest.config.js` - Test configuration with happy-dom
+- `admin/src/tests/setup.js` - Global test setup with MSW server
+- `admin/src/tests/mocks/server.js` - MSW server instance
+- `admin/src/tests/mocks/handlers.js` - 50+ mock handlers for admin API
+- `admin/src/tests/utils/renderWithProviders.jsx` - Test render helper
+- `admin/src/tests/utils/factories.js` - Test data factories
+
+### Phase 2: Backend Security Fixes
+
+Fixed race conditions and validation gaps in admin API routes.
+
+### Phase 3: SettingsPage Modularization
+
+Reduced SettingsPage.jsx from 1,144 to 215 lines:
+| Component | Lines | Purpose |
+|-----------|-------|---------|
+| `EditableField.jsx` | ~90 | Reusable inline edit field |
+| `ThemeTab.jsx` | ~200 | Theme configuration UI |
+| `GenerationTab.jsx` | ~370 | Generation settings and controls |
+| `BackupsTab.jsx` | ~260 | Backup management interface |
+| `settings/index.js` | ~10 | Re-exports all components |
+
+### Phase 4: Hook Consolidation
+
+Removed deprecated hook usage:
+- Added deprecation warnings to `useGeneration.js` and `useAudioGeneration.js`
+- Rewrote `GenerationContext.jsx` to use `useUnifiedGeneration`
+- Added `calculateETA()` function to `utils/timeFormat.js`
+- Maintained backward compatibility layer for legacy consumers
+
+### Phase 5: Unified Asset Components
+
+Created configuration-driven unified components:
+- `unified/configs.js` - Centralized filter/grid configurations for all asset types
+- `unified/UnifiedFilterBar.jsx` - Generic filter bar working for image and audio
+- `unified/index.js` - Module exports
+
+### Phase 6: API Client Refactoring
+
+Split 425-line api.js "god object" into 9 focused modules:
+| Module | Purpose |
+|--------|---------|
+| `api/client.js` | Base fetch wrapper with error handling |
+| `api/config.js` | Config, stats, status endpoints |
+| `api/assets.js` | Image asset CRUD operations |
+| `api/audio.js` | Audio asset CRUD operations |
+| `api/generation.js` | Image generation queue |
+| `api/audioGeneration.js` | Audio generation queue |
+| `api/backups.js` | Backup management |
+| `api/theme.js` | Theme and preset management |
+| `api/regeneration.js` | Regeneration queue operations |
+| `api/index.js` | Unified exports with backward compatibility |
+
+### Phase 7: Test Coverage
+
+Implemented comprehensive test suite:
+| File | Tests | Coverage |
+|------|-------|----------|
+| `api.test.js` | 24 | API modules ~88% |
+| `format.test.js` | 13 | formatSize, formatTimestamp, formatDuration |
+| `timeFormat.test.js` | 17 | formatDuration, formatRelativeTime, calculateETA |
+| `smoke.test.js` | 18 | Component smoke tests |
+| **Total** | **72** | **~88% API, ~98% utilities** |
+
+### Files Created
+- `admin/vitest.config.js`
+- `admin/src/tests/setup.js`
+- `admin/src/tests/mocks/server.js`
+- `admin/src/tests/mocks/handlers.js`
+- `admin/src/tests/utils/renderWithProviders.jsx`
+- `admin/src/tests/utils/factories.js`
+- `admin/src/tests/lib/api.test.js`
+- `admin/src/tests/utils/format.test.js`
+- `admin/src/tests/utils/timeFormat.test.js`
+- `admin/src/components/settings/EditableField.jsx`
+- `admin/src/components/settings/ThemeTab.jsx`
+- `admin/src/components/settings/GenerationTab.jsx`
+- `admin/src/components/settings/BackupsTab.jsx`
+- `admin/src/components/settings/index.js`
+- `admin/src/components/unified/configs.js`
+- `admin/src/components/unified/UnifiedFilterBar.jsx`
+- `admin/src/components/unified/index.js`
+- `admin/src/lib/api/client.js`
+- `admin/src/lib/api/config.js`
+- `admin/src/lib/api/assets.js`
+- `admin/src/lib/api/audio.js`
+- `admin/src/lib/api/generation.js`
+- `admin/src/lib/api/audioGeneration.js`
+- `admin/src/lib/api/backups.js`
+- `admin/src/lib/api/theme.js`
+- `admin/src/lib/api/regeneration.js`
+- `admin/src/lib/api/index.js`
+
+### Files Modified
+- `admin/src/pages/SettingsPage.jsx` - Reduced to orchestration only
+- `admin/src/contexts/GenerationContext.jsx` - Now uses useUnifiedGeneration
+- `admin/src/hooks/useGeneration.js` - Added deprecation warning
+- `admin/src/hooks/useAudioGeneration.js` - Added deprecation warning
+- `admin/src/utils/timeFormat.js` - Added calculateETA
+- `admin/src/lib/api.js` - Thin re-export wrapper
+
+### Metrics Achieved
+| Metric | Before | After |
+|--------|--------|-------|
+| SettingsPage.jsx lines | 1,144 | 215 |
+| api.js lines | 425 | 16 (re-export) |
+| Test coverage | 0% | ~88% API, ~98% utils |
+| Test count | 18 (smoke only) | 72 |
+| Deprecated hook usage | 1 | 0 (with warnings) |
 
 ---
 

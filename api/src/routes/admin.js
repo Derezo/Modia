@@ -32,6 +32,7 @@ import { fileURLToPath } from 'url';
 import { AppError, asyncHandler } from '../middleware/errorHandler.js';
 import { loadJsonFile, saveJsonFile } from '../utils/jsonFileUtils.js';
 import { VALID_CATEGORIES, VALID_LORA_MODELS } from '../utils/assetConstants.js';
+import { assertValidAssetId, validateAssetIds, fileLocks } from '../utils/assetLocking.js';
 import adminGenerationService from '../services/adminGenerationService.js';
 import { getAssetPath, DEFAULT_SIZES } from '../../../shared/assetPaths.js';
 
@@ -450,6 +451,9 @@ router.put('/assets/:category/:id', asyncHandler(async (req, res) => {
   const { category, id } = req.params;
   const updates = req.body;
 
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Asset');
+
   // Use module-level constant
   if (!VALID_CATEGORIES.includes(category)) {
     throw new AppError(`Invalid category: ${category}`, 400);
@@ -507,6 +511,9 @@ router.put('/assets/:category/:id/mark-regeneration', asyncHandler(async (req, r
   const { category, id } = req.params;
   const { mark = true } = req.body;  // Allow unmarking too
 
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Asset');
+
   if (!VALID_CATEGORIES.includes(category)) {
     throw new AppError(`Invalid category: ${category}`, 400);
   }
@@ -555,6 +562,9 @@ router.put('/assets/:category/:id/mark-regeneration', asyncHandler(async (req, r
  * PUT /api/admin/assets/mark-multiple
  * Mark multiple assets for regeneration at once
  * Body: { category: string, ids: string[], mark: boolean }
+ *
+ * SECURITY: Validates all IDs before processing
+ * ATOMICITY: Groups updates by source file with file locking
  */
 router.put('/assets/mark-multiple', asyncHandler(async (req, res) => {
   ensureUtilities();
@@ -569,6 +579,12 @@ router.put('/assets/mark-multiple', asyncHandler(async (req, res) => {
     throw new AppError(`Invalid category: ${category}`, 400);
   }
 
+  // Validate all IDs upfront to prevent path traversal
+  const validation = validateAssetIds(ids);
+  if (!validation.valid) {
+    throw new AppError(`Invalid asset IDs: ${validation.errors.join('; ')}`, 400);
+  }
+
   // Load category data once
   let data;
   try {
@@ -580,29 +596,54 @@ router.put('/assets/mark-multiple', asyncHandler(async (req, res) => {
   // Track results
   const results = { success: 0, notFound: 0, errors: [] };
 
+  // Group assets by source file to enable atomic updates per file
+  const byFile = new Map();
   for (const id of ids) {
     const asset = data.byId[id];
     if (!asset) {
       results.notFound++;
       continue;
     }
-
-    try {
-      if (mark) {
-        metadataUtils.updateAssetStatus(category, asset._sourceFile, id, {
-          needsRegeneration: true,
-          regenerationQueuedAt: new Date().toISOString()
-        });
-      } else {
-        metadataUtils.updateAssetStatus(category, asset._sourceFile, id, {
-          needsRegeneration: false,
-          regenerationQueuedAt: null
-        });
-      }
-      results.success++;
-    } catch (error) {
-      results.errors.push({ id, error: error.message });
+    const file = asset._sourceFile;
+    if (!byFile.has(file)) {
+      byFile.set(file, []);
     }
+    byFile.get(file).push({ id, asset });
+  }
+
+  // Process each file with file locking to prevent race conditions
+  for (const [sourceFile, assets] of byFile.entries()) {
+    const filePath = path.join(METADATA_DIR, category, sourceFile);
+    await fileLocks.withFileLock(filePath, async () => {
+      // Re-load data inside lock to get current state (TOCTOU fix)
+      const freshData = metadataUtils.loadCategoryAssets(category);
+
+      for (const { id, asset } of assets) {
+        // Re-verify asset exists with fresh data
+        const freshAsset = freshData.byId[id];
+        if (!freshAsset) {
+          results.errors.push({ id, error: 'Asset disappeared during update' });
+          continue;
+        }
+
+        try {
+          if (mark) {
+            metadataUtils.updateAssetStatus(category, sourceFile, id, {
+              needsRegeneration: true,
+              regenerationQueuedAt: new Date().toISOString()
+            });
+          } else {
+            metadataUtils.updateAssetStatus(category, sourceFile, id, {
+              needsRegeneration: false,
+              regenerationQueuedAt: null
+            });
+          }
+          results.success++;
+        } catch (error) {
+          results.errors.push({ id, error: error.message });
+        }
+      }
+    });
   }
 
   res.json({
@@ -611,6 +652,152 @@ router.put('/assets/mark-multiple', asyncHandler(async (req, res) => {
       : `Cleared regeneration marker for ${results.success} assets`,
     updated: results.success,
     total: ids.length,
+    notFound: results.notFound,
+    errors: results.errors.length > 0 ? results.errors : undefined
+  });
+}));
+
+/**
+ * POST /api/admin/assets/bulk-update
+ * Bulk update metadata for multiple assets
+ * Body: { assetIds: string[], category: string, updates: { loraModel?, priority?, qualityScore?, note? } }
+ *
+ * SECURITY: Validates all IDs before processing
+ * ATOMICITY: Groups updates by source file with file locking
+ */
+router.post('/assets/bulk-update', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { assetIds, category, updates } = req.body;
+
+  if (!category || !Array.isArray(assetIds) || !updates) {
+    throw new AppError('category, assetIds array, and updates object required', 400);
+  }
+
+  if (assetIds.length === 0) {
+    throw new AppError('assetIds array cannot be empty', 400);
+  }
+
+  if (!VALID_CATEGORIES.includes(category)) {
+    throw new AppError(`Invalid category: ${category}`, 400);
+  }
+
+  // Validate all IDs upfront to prevent path traversal
+  const validation = validateAssetIds(assetIds);
+  if (!validation.valid) {
+    throw new AppError(`Invalid asset IDs: ${validation.errors.join('; ')}`, 400);
+  }
+
+  // Validate allowed update fields
+  const allowedFields = ['loraModel', 'priority', 'qualityScore', 'note'];
+  const invalidFields = Object.keys(updates).filter(key => !allowedFields.includes(key));
+  if (invalidFields.length > 0) {
+    throw new AppError(`Invalid update fields: ${invalidFields.join(', ')}. Allowed: ${allowedFields.join(', ')}`, 400);
+  }
+
+  // Validate loraModel if provided
+  if (updates.loraModel && !VALID_LORA_MODELS.includes(updates.loraModel)) {
+    throw new AppError(`Invalid loraModel: ${updates.loraModel}. Valid: ${VALID_LORA_MODELS.join(', ')}`, 400);
+  }
+
+  // Validate priority if provided
+  if (updates.priority !== undefined) {
+    const priority = parseInt(updates.priority, 10);
+    if (isNaN(priority) || priority < 0 || priority > 100) {
+      throw new AppError('Priority must be a number between 0 and 100', 400);
+    }
+    updates.priority = priority;
+  }
+
+  // Validate qualityScore if provided (maps to 'evaluation' field in metadata)
+  if (updates.qualityScore !== undefined) {
+    const score = parseInt(updates.qualityScore, 10);
+    if (isNaN(score) || score < 0 || score > 5) {
+      throw new AppError('Quality score must be a number between 0 and 5', 400);
+    }
+  }
+
+  // Load category data once
+  let data;
+  try {
+    data = metadataUtils.loadCategoryAssets(category);
+  } catch (error) {
+    throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
+  }
+
+  // Track results
+  const results = { success: 0, notFound: 0, errors: [] };
+
+  // Group assets by source file to enable atomic updates per file
+  const byFile = new Map();
+  for (const id of assetIds) {
+    const asset = data.byId[id];
+    if (!asset) {
+      results.notFound++;
+      continue;
+    }
+    const file = asset._sourceFile;
+    if (!byFile.has(file)) {
+      byFile.set(file, []);
+    }
+    byFile.get(file).push({ id, asset });
+  }
+
+  // Process each file with file locking to prevent race conditions
+  for (const [sourceFile, assets] of byFile.entries()) {
+    const filePath = path.join(METADATA_DIR, category, sourceFile);
+    await fileLocks.withFileLock(filePath, async () => {
+      // Re-load data inside lock to get current state (TOCTOU fix)
+      const freshData = metadataUtils.loadCategoryAssets(category);
+
+      for (const { id } of assets) {
+        // Re-verify asset exists with fresh data
+        const freshAsset = freshData.byId[id];
+        if (!freshAsset) {
+          results.errors.push({ id, error: 'Asset disappeared during update' });
+          continue;
+        }
+
+        try {
+          // Build the update object, mapping frontend fields to metadata fields
+          const metadataUpdates = {};
+
+          if (updates.loraModel !== undefined) {
+            metadataUpdates.loraModel = updates.loraModel || null;
+          }
+
+          if (updates.priority !== undefined) {
+            metadataUpdates.priority = updates.priority;
+          }
+
+          if (updates.qualityScore !== undefined) {
+            // Frontend uses 'qualityScore', metadata uses 'evaluation'
+            metadataUpdates.evaluation = updates.qualityScore;
+          }
+
+          if (updates.note && updates.note.trim()) {
+            // Append note to existing notes
+            const existingNotes = freshAsset.notes || '';
+            const timestamp = new Date().toISOString().split('T')[0];
+            const newNote = `[${timestamp}] ${updates.note.trim()}`;
+            metadataUpdates.notes = existingNotes
+              ? `${existingNotes}\n${newNote}`
+              : newNote;
+          }
+
+          metadataUtils.updateAssetStatus(category, sourceFile, id, metadataUpdates);
+          results.success++;
+        } catch (error) {
+          results.errors.push({ id, error: error.message });
+        }
+      }
+    });
+  }
+
+  res.json({
+    message: `Updated ${results.success} of ${assetIds.length} asset(s)`,
+    updated: results.success,
+    total: assetIds.length,
     notFound: results.notFound,
     errors: results.errors.length > 0 ? results.errors : undefined
   });

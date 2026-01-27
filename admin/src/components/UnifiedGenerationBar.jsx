@@ -23,9 +23,9 @@ import {
 import { useUnifiedGeneration } from '../hooks/useUnifiedGeneration';
 
 /**
- * Status indicator for a single queue
+ * Status indicator for a single queue - clickable to filter console
  */
-function QueueStatus({ icon: Icon, label, isActive, pendingCount, isPaused, progress }) {
+function QueueStatus({ icon: Icon, label, isActive, pendingCount, isPaused, progress, onClick }) {
   // Determine status color
   const statusColor = useMemo(() => {
     if (!isActive && pendingCount === 0) return 'text-parchment-500'; // Idle
@@ -57,19 +57,22 @@ function QueueStatus({ icon: Icon, label, isActive, pendingCount, isPaused, prog
   }, [isActive, pendingCount, isPaused, progress]);
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-midnight-800/50">
+    <button
+      onClick={onClick}
+      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-midnight-800/50 hover:bg-midnight-700/50 transition-colors"
+    >
       <div className={`w-2 h-2 rounded-full ${dotColor}`} />
       <Icon className={`w-4 h-4 ${statusColor}`} />
       <span className={`text-sm font-medium ${statusColor}`}>{label}</span>
       <span className="text-xs text-parchment-500">{statusText}</span>
-    </div>
+    </button>
   );
 }
 
 /**
  * Main UnifiedGenerationBar component
  */
-export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCount = 0, onOpenQueue }) {
+export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCount = 0, onOpenQueue, onBadgeClick }) {
   const {
     connected,
     queueSummary,
@@ -112,6 +115,7 @@ export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCo
               pendingCount={queueSummary.images.pendingCount}
               isPaused={queueSummary.images.isPaused}
               progress={queueSummary.images.progress}
+              onClick={() => onBadgeClick?.('images')}
             />
             <QueueStatus
               icon={SpeakerLoudIcon}
@@ -120,6 +124,7 @@ export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCo
               pendingCount={queueSummary.music.pendingCount}
               isPaused={queueSummary.music.isPaused}
               progress={queueSummary.music.progress}
+              onClick={() => onBadgeClick?.('music')}
             />
             <QueueStatus
               icon={MixerVerticalIcon}
@@ -128,6 +133,7 @@ export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCo
               pendingCount={queueSummary.sfx.pendingCount}
               isPaused={queueSummary.sfx.isPaused}
               progress={queueSummary.sfx.progress}
+              onClick={() => onBadgeClick?.('sfx')}
             />
           </div>
         </div>

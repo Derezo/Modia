@@ -1,13 +1,26 @@
 /**
  * useKeyboardShortcuts - Global keyboard shortcut handling
  *
- * Shortcuts:
+ * Navigation shortcuts:
  * - 1-6: Switch category tabs (1=tiles, 2=portraits, 3=items, 4=icons, 5=nodes, 6=overlays)
  * - /: Focus search input
- * - g: Generate selected assets (when on category page with selections)
+ * - Escape: Close detail panel / clear selection
+ *
+ * Vim-style grid navigation:
+ * - j: Select next asset in grid
+ * - k: Select previous asset in grid
+ * - Enter: Open selected asset detail
+ *
+ * Action shortcuts:
+ * - g: Generate selected assets (add to queue)
  * - a: Select all visible assets
  * - e: Edit selected prompt (opens detail panel)
- * - Escape: Close detail panel / clear selection
+ * - r: Regenerate selected asset immediately
+ * - m: Mark/unmark selected for regeneration
+ * - q: Add selected to queue
+ *
+ * Rating shortcuts:
+ * - 1-5: Rate selected asset (when in detail view)
  * - ?: Show keyboard shortcuts help
  */
 
@@ -54,6 +67,14 @@ function isInputFocused() {
  * @param {Function} handlers.onEdit - Called when 'e' is pressed
  * @param {Function} handlers.onEscape - Called when 'Escape' is pressed
  * @param {Function} handlers.onFocusSearch - Called when '/' is pressed
+ * @param {Function} handlers.onSelectNext - Called when 'j' is pressed (vim down)
+ * @param {Function} handlers.onSelectPrev - Called when 'k' is pressed (vim up)
+ * @param {Function} handlers.onOpenSelected - Called when 'Enter' is pressed on selected item
+ * @param {Function} handlers.onRegenerate - Called when 'r' is pressed
+ * @param {Function} handlers.onMark - Called when 'm' is pressed
+ * @param {Function} handlers.onAddToQueue - Called when 'q' is pressed
+ * @param {Function} handlers.onRate - Called when 1-5 is pressed in detail view (receives rating number)
+ * @param {boolean} handlers.isDetailOpen - Whether detail panel is open (enables rating shortcuts)
  */
 export function useKeyboardShortcuts(handlers = {}) {
   const navigate = useNavigate();
@@ -81,15 +102,38 @@ export function useKeyboardShortcuts(handlers = {}) {
     }
 
     const key = event.key;
-    const { onGenerate, onSelectAll, onEdit, onEscape, onFocusSearch } = handlersRef.current;
+    const {
+      onGenerate,
+      onSelectAll,
+      onEdit,
+      onEscape,
+      onFocusSearch,
+      onSelectNext,
+      onSelectPrev,
+      onOpenSelected,
+      onRegenerate,
+      onMark,
+      onAddToQueue,
+      onRate,
+      isDetailOpen,
+    } = handlersRef.current;
 
     switch (key) {
-      // Number keys 1-6 for category navigation
+      // Number keys 1-5 for rating (when detail is open) or 1-6 for navigation
       case '1':
       case '2':
       case '3':
       case '4':
-      case '5':
+      case '5': {
+        // If detail panel is open and rating handler exists, use for rating
+        if (isDetailOpen && onRate) {
+          event.preventDefault();
+          onRate(parseInt(key, 10));
+          break;
+        }
+        // Fall through to navigation
+      }
+      // eslint-disable-next-line no-fallthrough
       case '6': {
         const route = CATEGORY_ROUTES[key];
         if (route && location.pathname !== route) {
@@ -112,7 +156,34 @@ export function useKeyboardShortcuts(handlers = {}) {
         break;
       }
 
-      // 'g' for generate
+      // Vim-style navigation: j for next (down)
+      case 'j': {
+        if (onSelectNext) {
+          event.preventDefault();
+          onSelectNext();
+        }
+        break;
+      }
+
+      // Vim-style navigation: k for previous (up)
+      case 'k': {
+        if (onSelectPrev) {
+          event.preventDefault();
+          onSelectPrev();
+        }
+        break;
+      }
+
+      // Enter to open selected item
+      case 'Enter': {
+        if (onOpenSelected) {
+          event.preventDefault();
+          onOpenSelected();
+        }
+        break;
+      }
+
+      // 'g' for generate (add to queue)
       case 'g': {
         if (onGenerate) {
           event.preventDefault();
@@ -135,6 +206,33 @@ export function useKeyboardShortcuts(handlers = {}) {
         if (onEdit) {
           event.preventDefault();
           onEdit();
+        }
+        break;
+      }
+
+      // 'r' for regenerate immediately
+      case 'r': {
+        if (onRegenerate) {
+          event.preventDefault();
+          onRegenerate();
+        }
+        break;
+      }
+
+      // 'm' for mark/unmark for regeneration
+      case 'm': {
+        if (onMark) {
+          event.preventDefault();
+          onMark();
+        }
+        break;
+      }
+
+      // 'q' for add to queue
+      case 'q': {
+        if (onAddToQueue) {
+          event.preventDefault();
+          onAddToQueue();
         }
         break;
       }

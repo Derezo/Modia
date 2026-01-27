@@ -21,9 +21,12 @@ export default function Layout() {
   // Track active panel (queue, console, assets)
   const [activePanel, setActivePanel] = useState('console');
 
-  // Regeneration queue state (hook fetches on mount automatically)
+  // Track source filter for console/assets panels
+  const [sourceFilter, setSourceFilter] = useState('all');
+
+  // Regeneration queue state for badge count (hook fetches on mount)
+  // Note: UnifiedAssetPanel uses its own hook for fresh panel data
   const {
-    queue,
     totalCount: queueCount,
     fetchQueue,
   } = useRegenerationQueue();
@@ -37,6 +40,13 @@ export default function Layout() {
   // Handle panel change
   const handlePanelChange = useCallback((panel) => {
     setActivePanel(panel);
+  }, []);
+
+  // Handle badge click - open console panel with source filter
+  const handleBadgeClick = useCallback((sourceType) => {
+    setSourceFilter(sourceType);
+    setActivePanel('console');
+    setPanelExpanded(true);
   }, []);
 
   return (
@@ -60,8 +70,8 @@ export default function Layout() {
         <Navbar />
       </header>
 
-      {/* Main content - add padding at bottom for the generation bar */}
-      <main className="flex-1 bg-midnight-950 pb-12">
+      {/* Main content - add padding at bottom for the generation bar (and panel when expanded) */}
+      <main className={`flex-1 bg-midnight-950 ${panelExpanded ? 'pb-96' : 'pb-16'}`}>
         <Outlet />
       </main>
 
@@ -71,9 +81,8 @@ export default function Layout() {
           onClose={() => setPanelExpanded(false)}
           activePanel={activePanel}
           onPanelChange={handlePanelChange}
-          queueData={queue}
-          queueTotalCount={queueCount}
           onRefreshQueue={fetchQueue}
+          initialSourceFilter={sourceFilter}
         />
       )}
 
@@ -83,6 +92,7 @@ export default function Layout() {
         onExpandChange={setPanelExpanded}
         queueCount={queueCount}
         onOpenQueue={handleOpenQueue}
+        onBadgeClick={handleBadgeClick}
       />
     </div>
   );

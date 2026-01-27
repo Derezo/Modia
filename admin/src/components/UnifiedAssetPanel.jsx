@@ -445,14 +445,16 @@ function AssetsPanel({ generatedAssets, clearGeneratedAssets, sourceFilter, onSo
 
 /**
  * Main UnifiedAssetPanel component
+ *
+ * Uses its own useRegenerationQueue hook to ensure fresh data when panel opens.
+ * The onRefreshQueue callback is used to sync the Layout's badge count after actions.
  */
 export default function UnifiedAssetPanel({
   onClose,
   activePanel: controlledActivePanel,
   onPanelChange,
-  queueData: externalQueueData,
-  queueTotalCount: externalQueueTotalCount,
   onRefreshQueue,
+  initialSourceFilter = 'all',
 }) {
   const {
     queues,
@@ -465,14 +467,14 @@ export default function UnifiedAssetPanel({
     resumeQueue,
   } = useUnifiedGeneration();
 
-  // Use internal queue hook if not provided externally
+  // Always use internal queue hook - it fetches fresh data when panel opens
   const internalQueue = useRegenerationQueue();
-  const queueData = externalQueueData ?? internalQueue.queue;
-  const queueTotalCount = externalQueueTotalCount ?? internalQueue.totalCount;
+  const queueData = internalQueue.queue;
+  const queueTotalCount = internalQueue.totalCount;
   const queueLoading = internalQueue.loading;
 
   const [activePanel, setActivePanel] = useState(controlledActivePanel || PANEL_TABS.CONSOLE);
-  const [sourceFilter, setSourceFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState(initialSourceFilter);
 
   // Sync with controlled activePanel prop
   useEffect(() => {
@@ -481,6 +483,14 @@ export default function UnifiedAssetPanel({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [controlledActivePanel]);
+
+  // Sync with external source filter when it changes
+  useEffect(() => {
+    if (initialSourceFilter && initialSourceFilter !== sourceFilter) {
+      setSourceFilter(initialSourceFilter);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialSourceFilter]);
 
   // Handle panel change
   const handlePanelChange = useCallback((panel) => {

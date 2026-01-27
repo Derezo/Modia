@@ -10,24 +10,34 @@ import {
   Cross2Icon,
   ReloadIcon,
   ExclamationTriangleIcon,
+  Pencil2Icon,
 } from '@radix-ui/react-icons';
 
 import AssetCard from './AssetCard';
 import AssetDetail from './AssetDetail';
 import FilterBar from './FilterBar';
+import BulkEditModal from './BulkEditModal';
 import { useAssets } from '../hooks/useAssets';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useToast } from '../contexts/ToastContext';
+import { useGenerationContext } from '../contexts/GenerationContext';
 import { api } from '../lib/api';
 
 /**
  * Bulk action bar component
  */
-function BulkActionBar({ selectedCount, onAddToQueue, onGenerateNow, onClearSelection, loading }) {
+function BulkActionBar({
+  selectedCount,
+  onAddToQueue,
+  onGenerateNow,
+  onBulkEdit,
+  onClearSelection,
+  loading,
+}) {
   if (selectedCount === 0) return null;
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+    <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-50">
       <div className="card px-6 py-4 flex items-center gap-4 shadow-lg border border-accent-gold/30">
         <span className="text-parchment-200 font-medium">
           {selectedCount} selected
@@ -58,6 +68,17 @@ function BulkActionBar({ selectedCount, onAddToQueue, onGenerateNow, onClearSele
         >
           <RocketIcon className="w-4 h-4" />
           Generate Now
+        </button>
+
+        <button
+          type="button"
+          onClick={onBulkEdit}
+          disabled={loading}
+          className="btn-ghost flex items-center gap-2 disabled:opacity-50"
+          title="Edit metadata for selected assets"
+        >
+          <Pencil2Icon className="w-4 h-4" />
+          Bulk Edit
         </button>
 
         <button
@@ -127,6 +148,31 @@ export default function AssetGrid({
   // Toast notifications
   const toast = useToast();
 
+  // Generation context for queue status
+  const { unified } = useGenerationContext();
+
+  // Extract queued IDs and currently generating ID from generation context
+  const { queuedIds, generatingId } = useMemo(() => {
+    const queue = unified?.queues?.images;
+    if (!queue) {
+      return { queuedIds: new Set(), generatingId: null };
+    }
+
+    // Get currently generating asset ID
+    const currentId = queue.current?.assetId || queue.current?.key || null;
+
+    // Build set of pending asset IDs
+    const pendingIds = new Set();
+    if (queue.pending) {
+      for (const job of queue.pending) {
+        const id = job.assetId || job.key;
+        if (id) pendingIds.add(id);
+      }
+    }
+
+    return { queuedIds: pendingIds, generatingId: currentId };
+  }, [unified?.queues?.images]);
+
   // Filter state
   const [filters, setFilters] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,6 +182,9 @@ export default function AssetGrid({
   // Detail panel state
   const [detailAsset, setDetailAsset] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // Bulk edit modal state
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
 
   // Refs
   const closeTimeoutRef = useRef(null);
@@ -364,13 +413,178 @@ export default function AssetGrid({
     }
   }, [selectedIds, filteredAssets, handleAssetClick]);
 
-  // Register keyboard shortcuts
+  /**
+   * Quick action: Regenerate single asset immediately
+   */
+  const handleQuickRegenerate = useCallback(async (id) => {
+    try {
+      await api.generateAssetsByIds(category, [id], { force: true });
+      toast.success(`Regenerating ${id}...`);
+      // Refresh after a delay
+      if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
+      refetchTimeoutRef.current = setTimeout(() => {
+        refetch();
+      }, 2000);
+    } catch (err) {
+      toast.error(err.message || 'Failed to regenerate');
+    }
+  }, [category, refetch, toast]);
+
+  /**
+   * Quick action: Toggle mark for regeneration
+   */
+  const handleQuickToggleMark = useCallback(async (id, mark) => {
+    try {
+      await api.markForRegeneration(category, id, mark);
+      toast.success(mark ? `Marked ${id} for regeneration` : `Removed ${id} from queue`);
+      // Refresh to show updated status
+      if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
+      refetchTimeoutRef.current = setTimeout(() => {
+        refetch();
+      }, 300);
+    } catch (err) {
+      toast.error(err.message || 'Failed to update');
+    }
+  }, [category, refetch, toast]);
+
+  /**
+   * Open bulk edit modal
+   */
+  const handleOpenBulkEdit = useCallback(() => {
+    if (selectedIds.size === 0) {
+      toast.info('No assets selected');
+      return;
+    }
+    setBulkEditOpen(true);
+  }, [selectedIds.size, toast]);
+
+  /**
+   * Handle bulk edit update complete
+   */
+  const handleBulkEditUpdate = useCallback(() => {
+    clearSelection();
+    refetch();
+  }, [clearSelection, refetch]);
+
+  /**
+   * Get the currently focused asset index for keyboard navigation
+   */
+  const getFocusedIndex = useCallback(() => {
+    if (selectedIds.size === 0) return -1;
+    const lastSelected = Array.from(selectedIds).pop();
+    return filteredAssets.findIndex((a) => (a.key || a.id) === lastSelected);
+  }, [selectedIds, filteredAssets]);
+
+  /**
+   * Vim-style navigation: Select next asset (j key)
+   */
+  const handleSelectNext = useCallback(() => {
+    if (filteredAssets.length === 0) return;
+
+    const currentIndex = getFocusedIndex();
+    const nextIndex = currentIndex < filteredAssets.length - 1 ? currentIndex + 1 : 0;
+    const nextAsset = filteredAssets[nextIndex];
+    const nextId = nextAsset.key || nextAsset.id;
+
+    setSelectedIds(new Set([nextId]));
+  }, [filteredAssets, getFocusedIndex]);
+
+  /**
+   * Vim-style navigation: Select previous asset (k key)
+   */
+  const handleSelectPrev = useCallback(() => {
+    if (filteredAssets.length === 0) return;
+
+    const currentIndex = getFocusedIndex();
+    const prevIndex = currentIndex > 0 ? currentIndex - 1 : filteredAssets.length - 1;
+    const prevAsset = filteredAssets[prevIndex];
+    const prevId = prevAsset.key || prevAsset.id;
+
+    setSelectedIds(new Set([prevId]));
+  }, [filteredAssets, getFocusedIndex]);
+
+  /**
+   * Open selected asset detail (Enter key)
+   */
+  const handleOpenSelected = useCallback(() => {
+    if (selectedIds.size === 0) return;
+
+    const firstSelectedId = Array.from(selectedIds)[0];
+    const asset = filteredAssets.find((a) => (a.key || a.id) === firstSelectedId);
+    if (asset) {
+      handleAssetClick(asset);
+    }
+  }, [selectedIds, filteredAssets, handleAssetClick]);
+
+  /**
+   * Regenerate selected assets (r key)
+   */
+  const handleRegenerateSelected = useCallback(async () => {
+    if (selectedIds.size === 0) {
+      toast.info('No assets selected');
+      return;
+    }
+
+    const selectedAssetIds = Array.from(selectedIds);
+    try {
+      await api.generateAssetsByIds(category, selectedAssetIds, { force: true });
+      toast.success(`Regenerating ${selectedAssetIds.length} asset(s)...`);
+      // Refresh after a delay
+      if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
+      refetchTimeoutRef.current = setTimeout(() => {
+        refetch();
+      }, 2000);
+    } catch (err) {
+      toast.error(err.message || 'Failed to regenerate');
+    }
+  }, [selectedIds, category, refetch, toast]);
+
+  /**
+   * Toggle mark for regeneration on selected assets (m key)
+   */
+  const handleMarkSelected = useCallback(async () => {
+    if (selectedIds.size === 0) {
+      toast.info('No assets selected');
+      return;
+    }
+
+    const selectedAssetIds = Array.from(selectedIds);
+    // Check if any are already marked - if so, unmark all; otherwise mark all
+    const anyMarked = filteredAssets.some(
+      (a) => selectedIds.has(a.key || a.id) && a.needsRegeneration
+    );
+
+    try {
+      await api.markMultipleForRegeneration(category, selectedAssetIds, !anyMarked);
+      toast.success(
+        anyMarked
+          ? `Removed ${selectedAssetIds.length} item(s) from queue`
+          : `Marked ${selectedAssetIds.length} item(s) for regeneration`
+      );
+      // Refresh to show updated status
+      if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
+      refetchTimeoutRef.current = setTimeout(() => {
+        refetch();
+      }, 300);
+    } catch (err) {
+      toast.error(err.message || 'Failed to update');
+    }
+  }, [selectedIds, filteredAssets, category, refetch, toast]);
+
+  // Register keyboard shortcuts with vim-style navigation
   useKeyboardShortcuts({
-    onGenerate: handleAddToQueue,  // Shift+G now adds to queue
+    onGenerate: handleAddToQueue,
     onSelectAll: handleSelectAll,
     onEdit: handleEdit,
     onEscape: handleEscape,
     onFocusSearch: handleFocusSearch,
+    onSelectNext: handleSelectNext,
+    onSelectPrev: handleSelectPrev,
+    onOpenSelected: handleOpenSelected,
+    onRegenerate: handleRegenerateSelected,
+    onMark: handleMarkSelected,
+    onAddToQueue: handleAddToQueue,
+    isDetailOpen: detailOpen,
   });
 
   return (
@@ -451,6 +665,10 @@ export default function AssetGrid({
                 selected={selectedIds.has(id)}
                 onSelect={handleSelect}
                 onClick={handleAssetClick}
+                onRegenerate={handleQuickRegenerate}
+                onToggleMark={handleQuickToggleMark}
+                queuedIds={queuedIds}
+                generatingId={generatingId}
               />
             );
           })}
@@ -469,6 +687,7 @@ export default function AssetGrid({
         selectedCount={selectedIds.size}
         onAddToQueue={handleAddToQueue}
         onGenerateNow={handleGenerateNow}
+        onBulkEdit={handleOpenBulkEdit}
         onClearSelection={clearSelection}
         loading={actionLoading}
       />
@@ -480,6 +699,15 @@ export default function AssetGrid({
         open={detailOpen}
         onClose={handleDetailClose}
         onUpdate={handleDetailUpdate}
+      />
+
+      {/* Bulk edit modal */}
+      <BulkEditModal
+        open={bulkEditOpen}
+        onClose={() => setBulkEditOpen(false)}
+        selectedIds={Array.from(selectedIds)}
+        category={category}
+        onUpdate={handleBulkEditUpdate}
       />
     </div>
   );

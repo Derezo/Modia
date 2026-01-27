@@ -1,88 +1,46 @@
 /**
- * FilterBar - Reusable filter controls for asset browsing
- * Provides category-specific filtering options (biome, subcategory, status)
- * Shows active filter chips for quick visibility and removal
+ * UnifiedFilterBar - Generic filter controls for any asset type
+ *
+ * Works for both image assets (tiles, portraits, items, icons, nodes, overlays)
+ * and audio assets (music, sfx) with configuration-driven filters.
  */
 
-import { forwardRef, useMemo } from 'react';
+import { forwardRef } from 'react';
 import { MagnifyingGlassIcon, Cross2Icon, ReloadIcon } from '@radix-ui/react-icons';
+import { getFilterConfig, getStatusOptions, isAudioType } from './configs';
 
 /**
- * Filter configuration by category
+ * Unified filter bar component
+ * @param {object} props
+ * @param {string} props.assetType - Asset type (tiles, portraits, music, sfx, etc.)
+ * @param {object} props.filters - Current filter values
+ * @param {function} props.onFilterChange - Callback when filters change
+ * @param {string} props.searchQuery - Current search query
+ * @param {function} props.onSearchChange - Callback when search changes
+ * @param {function} props.onRefresh - Callback to refresh data
+ * @param {boolean} props.loading - Loading state
+ * @param {object} props.summary - Summary stats { total, generated, pending }
+ * @param {string} props.searchPlaceholder - Custom search placeholder
  */
-const FILTER_CONFIG = {
-  tiles: {
-    biome: ['forest', 'cave', 'mountain', 'bridge', 'castle'],
-    subcategory: ['floors', 'walls', 'slopes'],
-  },
-  portraits: {
-    subcategory: ['player', 'enemy'],
-  },
-  items: {
-    subcategory: ['weapons', 'armor', 'accessories', 'consumables'],
-  },
-  icons: {
-    subcategory: ['actions', 'status', 'menu', 'augments'],
-  },
-  nodes: {
-    // No category-specific filters, just status
-  },
-  overlays: {
-    subcategory: ['rarity', 'augments'],
-  },
-};
-
-/**
- * Status options available for all categories
- */
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'All Status' },
-  { value: 'generated', label: 'Generated' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'needsRegen', label: 'Needs Regen' },
-];
-
-/**
- * Filter label mappings for display
- */
-const FILTER_LABELS = {
-  biome: 'Biome',
-  subcategory: 'Type',
-  status: 'Status',
-  search: 'Search',
-};
-
-/**
- * Active filter chip component
- */
-function FilterChip({ label, value, onRemove }) {
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-1 bg-midnight-700 rounded-full text-xs text-parchment-300">
-      <span className="text-parchment-500">{label}:</span>
-      <span className="font-medium">{value}</span>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="ml-0.5 text-parchment-500 hover:text-parchment-200 transition-colors"
-        aria-label={`Remove ${label} filter`}
-      >
-        <Cross2Icon className="w-3 h-3" />
-      </button>
-    </span>
-  );
-}
-
-const FilterBar = forwardRef(function FilterBar({
-  category,
-  filters,
+const UnifiedFilterBar = forwardRef(function UnifiedFilterBar({
+  assetType,
+  filters = {},
   onFilterChange,
-  onSearchChange,
   searchQuery = '',
+  onSearchChange,
   onRefresh,
   loading = false,
   summary = null,
+  searchPlaceholder,
 }, ref) {
-  const config = FILTER_CONFIG[category] || {};
+  const config = getFilterConfig(assetType);
+  const statusOptions = getStatusOptions(assetType);
+  const isAudio = isAudioType(assetType);
+
+  // Default placeholder based on asset type
+  const placeholder = searchPlaceholder || (isAudio
+    ? 'Search by key... (press / to focus)'
+    : 'Search by ID... (press / to focus)');
 
   /**
    * Handle individual filter change
@@ -95,19 +53,6 @@ const FilterBar = forwardRef(function FilterBar({
   };
 
   /**
-   * Remove a single filter
-   */
-  const removeFilter = (key) => {
-    if (key === 'search') {
-      onSearchChange('');
-    } else {
-      const newFilters = { ...filters };
-      delete newFilters[key];
-      onFilterChange(newFilters);
-    }
-  };
-
-  /**
    * Clear all filters
    */
   const clearFilters = () => {
@@ -116,51 +61,32 @@ const FilterBar = forwardRef(function FilterBar({
   };
 
   /**
-   * Build list of active filters for chip display
-   */
-  const activeFilters = useMemo(() => {
-    const active = [];
-
-    if (searchQuery) {
-      active.push({
-        key: 'search',
-        label: FILTER_LABELS.search,
-        value: searchQuery.length > 20 ? `${searchQuery.slice(0, 20)}...` : searchQuery,
-      });
-    }
-
-    if (filters.biome) {
-      active.push({
-        key: 'biome',
-        label: FILTER_LABELS.biome,
-        value: filters.biome.charAt(0).toUpperCase() + filters.biome.slice(1),
-      });
-    }
-
-    if (filters.subcategory) {
-      active.push({
-        key: 'subcategory',
-        label: FILTER_LABELS.subcategory,
-        value: filters.subcategory.charAt(0).toUpperCase() + filters.subcategory.slice(1),
-      });
-    }
-
-    if (filters.status) {
-      const statusOption = STATUS_OPTIONS.find((opt) => opt.value === filters.status);
-      active.push({
-        key: 'status',
-        label: FILTER_LABELS.status,
-        value: statusOption?.label || filters.status,
-      });
-    }
-
-    return active;
-  }, [searchQuery, filters]);
-
-  /**
    * Check if any filters are active
    */
-  const hasActiveFilters = activeFilters.length > 0;
+  const hasActiveFilters = () => {
+    return (
+      searchQuery ||
+      filters.status ||
+      filters.biome ||
+      filters.subcategory
+    );
+  };
+
+  /**
+   * Normalize subcategory options to consistent format
+   */
+  const normalizeSubcategoryOptions = () => {
+    if (!config.subcategory) return null;
+
+    return config.subcategory.map(item => {
+      if (typeof item === 'string') {
+        return { value: item, label: item.charAt(0).toUpperCase() + item.slice(1) };
+      }
+      return item;
+    });
+  };
+
+  const subcategoryOptions = normalizeSubcategoryOptions();
 
   return (
     <div className="card p-4 mb-6">
@@ -171,7 +97,7 @@ const FilterBar = forwardRef(function FilterBar({
           <input
             ref={ref}
             type="text"
-            placeholder="Search by ID... (press / to focus)"
+            placeholder={placeholder}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-midnight-800 border border-midnight-700 rounded-lg
@@ -209,7 +135,7 @@ const FilterBar = forwardRef(function FilterBar({
         )}
 
         {/* Subcategory filter */}
-        {config.subcategory && (
+        {subcategoryOptions && (
           <select
             value={filters.subcategory || 'all'}
             onChange={(e) => handleChange('subcategory', e.target.value)}
@@ -218,9 +144,9 @@ const FilterBar = forwardRef(function FilterBar({
                        cursor-pointer"
           >
             <option value="all">All Types</option>
-            {config.subcategory.map((sub) => (
-              <option key={sub} value={sub}>
-                {sub.charAt(0).toUpperCase() + sub.slice(1)}
+            {subcategoryOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>
@@ -234,7 +160,7 @@ const FilterBar = forwardRef(function FilterBar({
                      text-parchment-200 focus:outline-none focus:border-accent-gold
                      cursor-pointer"
         >
-          {STATUS_OPTIONS.map((opt) => (
+          {statusOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
@@ -242,7 +168,7 @@ const FilterBar = forwardRef(function FilterBar({
         </select>
 
         {/* Clear filters button */}
-        {hasActiveFilters && (
+        {hasActiveFilters() && (
           <button
             type="button"
             onClick={clearFilters}
@@ -280,32 +206,8 @@ const FilterBar = forwardRef(function FilterBar({
           </div>
         )}
       </div>
-
-      {/* Active filter chips */}
-      {activeFilters.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-midnight-700">
-          <span className="text-xs text-parchment-500">Active filters:</span>
-          {activeFilters.map((filter) => (
-            <FilterChip
-              key={filter.key}
-              label={filter.label}
-              value={filter.value}
-              onRemove={() => removeFilter(filter.key)}
-            />
-          ))}
-          {activeFilters.length > 1 && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="text-xs text-parchment-400 hover:text-parchment-200 transition-colors ml-2"
-            >
-              Clear all
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 });
 
-export default FilterBar;
+export default UnifiedFilterBar;

@@ -1,11 +1,79 @@
 /**
  * AssetCard - Individual asset card for grid display
- * Shows thumbnail, status badge, ID, and selection checkbox
+ * Shows thumbnail, state badge, ID, and selection checkbox
+ *
+ * State badges indicate asset lifecycle:
+ * - Pending: Not yet generated (yellow)
+ * - Marked: Flagged for regeneration (orange)
+ * - Queued: In generation queue (blue)
+ * - Generating: Currently being generated (green, animated)
+ * - Generated: Complete and up-to-date (emerald)
  */
 
-import { useState, memo } from 'react';
-import { CheckIcon, ImageIcon } from '@radix-ui/react-icons';
+import { useState, memo, useCallback } from 'react';
+import { CheckIcon, ImageIcon, ReloadIcon, BookmarkIcon, CopyIcon } from '@radix-ui/react-icons';
 import { getAssetImageUrl, getAssetSubcategory } from '../lib/assetPathHelper.js';
+
+/**
+ * Determine the current state of an asset based on its properties and queue status
+ * @param {Object} asset - The asset object
+ * @param {Set} queuedIds - Set of asset IDs currently in the generation queue
+ * @param {string|null} generatingId - ID of the asset currently being generated
+ * @returns {'generating'|'queued'|'marked'|'pending'|'generated'}
+ */
+export function getAssetState(asset, queuedIds = new Set(), generatingId = null) {
+  const id = asset.key || asset.id;
+  if (generatingId === id) return 'generating';
+  if (queuedIds.has(id)) return 'queued';
+  if (asset.needsRegeneration) return 'marked';
+  if (!asset.generated) return 'pending';
+  return 'generated';
+}
+
+/**
+ * Badge configuration for each asset state
+ */
+const STATE_BADGE_CONFIG = {
+  pending: {
+    label: 'Pending',
+    className: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  },
+  marked: {
+    label: 'Marked',
+    className: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  },
+  queued: {
+    label: 'Queued',
+    className: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  },
+  generating: {
+    label: 'Generating',
+    className: 'bg-green-500/20 text-green-400 border-green-500/30 animate-pulse',
+  },
+  generated: {
+    label: 'Generated',
+    className: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  },
+};
+
+/**
+ * AssetStateBadge - Displays a pill badge indicating asset state
+ */
+export function AssetStateBadge({ state }) {
+  const config = STATE_BADGE_CONFIG[state];
+  if (!config) return null;
+
+  return (
+    <span
+      className={`
+        inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+        border ${config.className}
+      `}
+    >
+      {config.label}
+    </span>
+  );
+}
 
 /**
  * Memoized to prevent re-renders when other cards' selection changes
@@ -16,13 +84,19 @@ const AssetCard = memo(function AssetCard({
   selected = false,
   onSelect,
   onClick,
+  onRegenerate,
+  onToggleMark,
+  queuedIds = new Set(),
+  generatingId = null,
 }) {
   const [imageError, setImageError] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState(false);
 
   const id = asset.key || asset.id;
-  const isGenerated = asset.generated === true;
-  const needsRegeneration = asset.needsRegeneration === true;
+  const assetState = getAssetState(asset, queuedIds, generatingId);
+  const isGenerated = assetState === 'generated';
+  const isMarked = assetState === 'marked';
   const imageUrl = getAssetImageUrl(asset, category);
 
   /**
@@ -49,6 +123,36 @@ const AssetCard = memo(function AssetCard({
       handleCardClick();
     }
   };
+
+  /**
+   * Copy asset ID to clipboard
+   */
+  const copyToClipboard = useCallback(async (e) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 1500);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
+  }, [id]);
+
+  /**
+   * Handle regenerate click
+   */
+  const handleRegenerate = useCallback((e) => {
+    e.stopPropagation();
+    onRegenerate?.(id);
+  }, [id, onRegenerate]);
+
+  /**
+   * Handle toggle mark for regeneration
+   */
+  const handleToggleMark = useCallback((e) => {
+    e.stopPropagation();
+    onToggleMark?.(id, !isMarked);
+  }, [id, isMarked, onToggleMark]);
 
   return (
     <div
@@ -85,30 +189,51 @@ const AssetCard = memo(function AssetCard({
         </div>
       </div>
 
-      {/* Status badge */}
+      {/* State badge - positioned top right */}
       <div className="absolute top-2 right-2 z-10">
-        <div
-          className={`
-            w-3 h-3 rounded-full border-2 border-midnight-900
-            ${isGenerated ? 'bg-accent-emerald' : 'bg-accent-gold'}
-          `}
-          title={isGenerated ? 'Generated' : 'Pending'}
-        />
+        <AssetStateBadge state={assetState} />
       </div>
 
-      {/* Regeneration pending badge */}
-      {needsRegeneration && (
-        <div className="absolute top-2 left-9 z-10">
-          <div
-            className="w-3 h-3 rounded-full border-2 border-midnight-900 bg-orange-500"
-            title="Marked for Regeneration"
-          />
-        </div>
-      )}
+      {/* Quick action buttons overlay - shown on hover */}
+      <div className="absolute top-10 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col gap-1">
+        {onRegenerate && (
+          <button
+            onClick={handleRegenerate}
+            className="p-1.5 bg-midnight-800/90 hover:bg-midnight-700 rounded text-parchment-400 hover:text-accent-gold transition-colors"
+            title="Regenerate now"
+          >
+            <ReloadIcon className="w-4 h-4" />
+          </button>
+        )}
+        {onToggleMark && (
+          <button
+            onClick={handleToggleMark}
+            className={`p-1.5 bg-midnight-800/90 hover:bg-midnight-700 rounded transition-colors ${
+              isMarked
+                ? 'text-orange-400 hover:text-orange-300'
+                : 'text-parchment-400 hover:text-orange-400'
+            }`}
+            title={isMarked ? 'Remove from queue' : 'Mark for regeneration'}
+          >
+            <BookmarkIcon className="w-4 h-4" />
+          </button>
+        )}
+        <button
+          onClick={copyToClipboard}
+          className={`p-1.5 bg-midnight-800/90 hover:bg-midnight-700 rounded transition-colors ${
+            copyFeedback
+              ? 'text-accent-emerald'
+              : 'text-parchment-400 hover:text-parchment-200'
+          }`}
+          title={copyFeedback ? 'Copied!' : 'Copy ID'}
+        >
+          <CopyIcon className="w-4 h-4" />
+        </button>
+      </div>
 
       {/* Thumbnail container */}
       <div className="aspect-square bg-midnight-950 flex items-center justify-center overflow-hidden">
-        {!imageError && imageUrl && isGenerated ? (
+        {!imageError && imageUrl && (isGenerated || asset.generated) ? (
           <>
             {/* Loading placeholder */}
             {!imageLoaded && (
@@ -134,7 +259,7 @@ const AssetCard = memo(function AssetCard({
           <div className="flex flex-col items-center justify-center text-parchment-600 p-4">
             <ImageIcon className="w-8 h-8 mb-2" />
             <span className="text-xs text-center">
-              {isGenerated ? 'Image unavailable' : 'Not generated'}
+              {asset.generated ? 'Image unavailable' : 'Not generated'}
             </span>
           </div>
         )}
