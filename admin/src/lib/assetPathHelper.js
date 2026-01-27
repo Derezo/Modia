@@ -41,6 +41,10 @@ export function getAssetExtraOptions(asset, category) {
 
 /**
  * Get legacy fallback paths for assets that may not have been migrated yet
+ *
+ * NOTE: Icons no longer have legacy fallbacks - they must use the canonical
+ * subdirectory structure: /assets/icons/png/{size}/{subcategory}/{id}.png
+ * Run scripts/ai-images/migrate-icon-paths.js to migrate legacy icon files.
  */
 function getLegacyPaths(category, id, options = {}) {
   const { subcategory } = options;
@@ -53,12 +57,23 @@ function getLegacyPaths(category, id, options = {}) {
       }
       return [`/assets/sprites/portraits/${id}.png`];
     }
-    case 'items':
-      return [`/assets/sprites/items/${subcategory || 'weapons'}/${id}.png`];
+    case 'items': {
+      const sub = subcategory || 'weapons';
+      // Try size-in-filename patterns (current actual files have size suffix)
+      return [
+        `/assets/sprites/items/${sub}/${id}_64.png`,
+        `/assets/sprites/items/${sub}/${id}_48.png`,
+        `/assets/sprites/items/${sub}/${id}_32.png`,
+        `/assets/sprites/items/${sub}/${id}.png`  // No size suffix as last resort
+      ];
+    }
     case 'nodes':
       return [`/assets/sprites/nodes/${id}.png`];
     case 'overlays':
       return [`/assets/sprites/overlays/${subcategory || 'rarity'}/${id}.png`];
+    case 'icons':
+      // Icons use canonical paths only - no legacy fallbacks
+      return [];
     default:
       return [];
   }

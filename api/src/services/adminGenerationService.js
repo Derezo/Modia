@@ -11,8 +11,9 @@
  * - Full configuration support (backend, LoRA, seed, variants, etc.)
  */
 
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import path from 'path';
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
 import { existsSync, writeFileSync, readFileSync } from 'fs';
 import { readFile } from 'fs/promises';
@@ -86,6 +87,15 @@ let generationBackend = 'comfyui';
 
 // Use imported CATEGORY_SCRIPT_MAP as SCRIPT_MAP
 const SCRIPT_MAP = CATEGORY_SCRIPT_MAP;
+
+// Load CommonJS metadata utilities for clearing needsRegeneration
+const require = createRequire(import.meta.url);
+let metadataUtils = null;
+try {
+  metadataUtils = require(path.join(SCRIPTS_DIR, 'lib/metadataUtils.js'));
+} catch (error) {
+  console.warn('[AdminGeneration] Could not load metadataUtils:', error.message);
+}
 
 // Generation state
 const state = {
@@ -451,76 +461,141 @@ async function processNextJob() {
 }
 
 /**
+ * Extract asset ID from a generated image path
+ * @param {string} imagePath - Path like '/assets/sprites/terrain/forest/grass_1.png'
+ * @returns {string} Asset ID like 'grass_1'
+ */
+function extractAssetId(imagePath) {
+  const filename = path.basename(imagePath);
+  // Remove extension and any size suffix (e.g., _32, _48, _64)
+  return filename.replace(/\.png$/i, '').replace(/_\d+$/, '');
+}
+
+/**
+ * Clear needsRegeneration flag for successfully generated assets
+ * Called after job completion to remove items from regeneration queue
+ */
+async function clearGeneratedAssetFlags(category, generatedImages) {
+  if (!metadataUtils || !generatedImages?.length) return;
+
+  try {
+    const data = metadataUtils.loadCategoryAssets(category);
+    if (!data?.byId) return;
+
+    // Extract unique asset IDs and group by source file
+    const assetIds = new Set();
+    for (const img of generatedImages) {
+      const id = extractAssetId(img.path);
+      if (data.byId[id] && data.byId[id].needsRegeneration) {
+        assetIds.add(id);
+      }
+    }
+
+    if (assetIds.size === 0) return;
+
+    // Clear flags for each asset
+    for (const id of assetIds) {
+      const asset = data.byId[id];
+      if (asset?._sourceFile) {
+        try {
+          metadataUtils.updateAssetStatus(category, asset._sourceFile, id, {
+            needsRegeneration: false,
+            regenerationQueuedAt: null,
+            generatedAt: new Date().toISOString()
+          });
+        } catch (err) {
+          console.warn(`[AdminGeneration] Failed to clear needsRegeneration for ${id}:`, err.message);
+        }
+      }
+    }
+
+    console.log(`[AdminGeneration] Cleared needsRegeneration for ${assetIds.size} assets in ${category}`);
+  } catch (error) {
+    console.warn('[AdminGeneration] Failed to clear needsRegeneration flags:', error.message);
+  }
+}
+
+/**
  * Finish a job and move to history
  */
 function finishJob(job, status, error = null) {
-  job.status = status;
-  job.completedAt = new Date().toISOString();
-  job.error = error;
-  job.output = state.stdout.slice(-100); // Keep last 100 lines
-  job.generatedImages = [...state.generatedImages];
+  try {
+    job.status = status;
+    job.completedAt = new Date().toISOString();
+    job.error = error;
+    job.output = state.stdout.slice(-100); // Keep last 100 lines
+    job.generatedImages = [...state.generatedImages];
 
-  // Add to history
-  state.history.unshift(job);
-  if (state.history.length > 50) {
-    state.history = state.history.slice(0, 50);
-  }
+    // Add to history
+    state.history.unshift(job);
+    if (state.history.length > 50) {
+      state.history = state.history.slice(0, 50);
+    }
 
-  // Clear current
-  state.current = null;
-  state.stdout = [];
-  state.generatedImages = [];
+    // Clear current
+    state.current = null;
+    state.stdout = [];
+    state.generatedImages = [];
 
-  // Broadcast completion event
-  if (status === 'completed') {
-    broadcast('generation:completed', {
-      jobId: job.id,
-      category: job.category,
-      progress: job.progress,
-      generatedImages: job.generatedImages,
-      completedAt: job.completedAt
-    });
+    // Broadcast completion event
+    if (status === 'completed') {
+      // Clear needsRegeneration flags for generated assets (async, don't block)
+      clearGeneratedAssetFlags(job.category, job.generatedImages).catch(err => {
+        console.warn('[AdminGeneration] Background flag clearing failed:', err.message);
+      });
 
-    // Broadcast unified completed
-    broadcastUnified('completed', {
-      jobId: job.id,
-      job: {
-        id: job.id,
-        type: 'images',
+      broadcast('generation:completed', {
+        jobId: job.id,
         category: job.category,
-        status: 'completed',
-        generatedAssets: job.generatedImages.map(img => ({
-          type: 'image',
-          path: img.path,
-          timestamp: img.timestamp
-        }))
-      }
-    });
-  } else if (status === 'failed') {
-    broadcast('generation:failed', {
-      jobId: job.id,
-      category: job.category,
-      error: job.error,
-      completedAt: job.completedAt
-    });
+        progress: job.progress,
+        generatedImages: job.generatedImages,
+        completedAt: job.completedAt
+      });
 
-    // Broadcast unified failed
-    broadcastUnified('failed', {
-      jobId: job.id,
-      job: {
-        id: job.id,
-        type: 'images',
+      // Broadcast unified completed
+      broadcastUnified('completed', {
+        jobId: job.id,
+        job: {
+          id: job.id,
+          type: 'images',
+          category: job.category,
+          status: 'completed',
+          generatedAssets: job.generatedImages.map(img => ({
+            type: 'image',
+            path: img.path,
+            timestamp: img.timestamp
+          }))
+        }
+      });
+    } else if (status === 'failed') {
+      broadcast('generation:failed', {
+        jobId: job.id,
         category: job.category,
-        status: 'failed',
-        error: job.error
-      }
+        error: job.error,
+        completedAt: job.completedAt
+      });
+
+      // Broadcast unified failed
+      broadcastUnified('failed', {
+        jobId: job.id,
+        job: {
+          id: job.id,
+          type: 'images',
+          category: job.category,
+          status: 'failed',
+          error: job.error
+        }
+      });
+    }
+
+    broadcastQueueUpdate();
+  } finally {
+    // Always attempt to process next job, even if finish had issues
+    // Use setImmediate to ensure the call stack clears first
+    setImmediate(() => {
+      processNextJob();
     });
   }
-
-  broadcastQueueUpdate();
-
-  // Process next job
-  processNextJob();
 }
 
 /**

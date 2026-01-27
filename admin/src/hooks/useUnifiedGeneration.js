@@ -184,10 +184,16 @@ export function useUnifiedGeneration() {
 
         // Handle job started
         if (eventType === 'started' && job) {
+          // Add validation and fallback for source
+          const effectiveSource = source || (job?.type === 'audio' ? (job?.category === 'sfx' ? 'sfx' : 'music') : 'images');
+          if (!effectiveSource || !['images', 'music', 'sfx'].includes(effectiveSource)) {
+            console.warn('[useUnifiedGeneration] Cannot determine source for started event:', payload);
+            return;
+          }
           setQueues(prev => ({
             ...prev,
-            [source]: {
-              ...prev[source],
+            [effectiveSource]: {
+              ...prev[effectiveSource],
               current: job,
               progress: null
             }
@@ -234,6 +240,27 @@ export function useUnifiedGeneration() {
               pending: [...prev[source].pending, job]
             }
           }));
+        }
+      })
+    );
+
+    // ========== LEGACY STDOUT FALLBACK HANDLERS ==========
+    // Re-added for backwards compatibility when unified events don't contain stdout
+    unsubscribers.push(
+      socket.on('generation:stdout', ({ line, type }) => {
+        if (line?.text) {
+          addStdoutLine('images', line.text, type || line.type || 'stdout');
+        } else if (typeof line === 'string') {
+          addStdoutLine('images', line, type || 'stdout');
+        }
+      })
+    );
+
+    unsubscribers.push(
+      socket.on('audio:log', ({ message, level, category }) => {
+        if (message) {
+          const source = category === 'sfx' ? 'sfx' : 'music';
+          addStdoutLine(source, message, level === 'error' ? 'stderr' : 'stdout');
         }
       })
     );
