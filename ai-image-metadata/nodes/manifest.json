@@ -3,7 +3,7 @@
   "description": "World map node icon metadata",
   "category": "nodes",
   "totalAssets": 26,
-  "outputDir": "/assets/sprites/nodes/",
+  "outputDir": "/assets/nodes/",
   "size": "48x48",
   "format": "png",
   "loraModel": "V2",

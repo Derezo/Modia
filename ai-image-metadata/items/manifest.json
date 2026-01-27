@@ -3,7 +3,7 @@
   "category": "items",
   "description": "Item sprites for layered composition system - base sprites combined with overlays at runtime",
   "totalAssets": 131,
-  "outputDir": "/assets/sprites/items/",
+  "outputDir": "/assets/items/",
   "size": "128x128",
   "format": "png",
   "loraModel": "V2",

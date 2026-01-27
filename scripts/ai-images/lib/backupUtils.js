@@ -66,13 +66,14 @@ function parseBackupTimestamp(timestamp) {
 function getImageOutputDir(category) {
   const projectRoot = getProjectRoot();
 
-  // Map category to image output paths
+  // Map category to canonical image output paths (matches shared/assetPaths.js)
   const categoryPaths = {
     tiles: path.join(projectRoot, 'frontend/public/assets/sprites/terrain'),
-    portraits: path.join(projectRoot, 'frontend/public/assets/sprites/characters/portraits'),
-    items: path.join(projectRoot, 'frontend/public/assets/sprites/items'),
-    icons: path.join(projectRoot, 'frontend/public/assets/sprites/icons'),
-    nodes: path.join(projectRoot, 'frontend/public/assets/sprites/nodes')
+    portraits: path.join(projectRoot, 'frontend/public/assets/portraits'),
+    items: path.join(projectRoot, 'frontend/public/assets/items'),
+    icons: path.join(projectRoot, 'frontend/public/assets/icons'),
+    nodes: path.join(projectRoot, 'frontend/public/assets/nodes'),
+    overlays: path.join(projectRoot, 'frontend/public/assets/overlays')
   };
 
   return categoryPaths[category] || null;
@@ -144,10 +145,10 @@ function getAssetImagePath(asset) {
 
   if (!baseDir) return null;
 
-  // Build path based on category and asset structure
+  // Build path based on category using canonical structure (matches shared/assetPaths.js)
   switch (category) {
     case 'tiles': {
-      // Tiles are organized by biome: terrain/{biome}/{key}.png
+      // Tiles: sprites/terrain/{biome}/{key}.png
       const biome = asset._biome || asset.biome;
       if (biome && asset.id) {
         return path.join(baseDir, biome, `${asset.id}.png`);
@@ -155,32 +156,40 @@ function getAssetImagePath(asset) {
       break;
     }
     case 'portraits': {
-      // Portraits: portraits/{race}_{gender}_{class}.png
+      // Portraits: portraits/originals/{id}.png
       if (asset.id) {
-        return path.join(baseDir, `${asset.id}.png`);
+        return path.join(baseDir, 'originals', `${asset.id}.png`);
       }
       break;
     }
     case 'items': {
-      // Items are organized by category: items/{itemCategory}/{id}.png
+      // Items: items/originals/{itemCategory}/{id}.png
       const itemCategory = asset._itemCategory || 'misc';
       if (asset.id) {
-        return path.join(baseDir, itemCategory, `${asset.id}.png`);
+        return path.join(baseDir, 'originals', itemCategory, `${asset.id}.png`);
       }
       break;
     }
     case 'icons': {
-      // Icons are organized by category: icons/{iconCategory}/{id}.png
+      // Icons: icons/originals/{iconCategory}/{id}.png
       const iconCategory = asset._iconCategory || 'misc';
       if (asset.id) {
-        return path.join(baseDir, iconCategory, `${asset.id}.png`);
+        return path.join(baseDir, 'originals', iconCategory, `${asset.id}.png`);
       }
       break;
     }
     case 'nodes': {
-      // Nodes: nodes/{id}.png
+      // Nodes: nodes/originals/{id}.png
       if (asset.id) {
-        return path.join(baseDir, `${asset.id}.png`);
+        return path.join(baseDir, 'originals', `${asset.id}.png`);
+      }
+      break;
+    }
+    case 'overlays': {
+      // Overlays: overlays/originals/{subcategory}/{id}.png
+      const subcategory = asset._subcategory || 'rarity';
+      if (asset.id) {
+        return path.join(baseDir, 'originals', subcategory, `${asset.id}.png`);
       }
       break;
     }

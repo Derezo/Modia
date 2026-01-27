@@ -76,7 +76,7 @@ export function createItemAsset(overrides = {}) {
     itemType: 'sword',
     status: 'exists',
     file: `${id}.png`,
-    path: `/assets/sprites/items/weapons/${id}.png`,
+    path: `/assets/items/originals/weapons/${id}.png`,
     prompt: 'A medieval sword icon',
     needsRegeneration: false,
     ...overrides
@@ -94,7 +94,7 @@ export function createIconAsset(overrides = {}) {
     subcategory: 'actions',
     status: 'exists',
     file: `${id}.png`,
-    path: `/assets/sprites/icons/actions/${id}.png`,
+    path: `/assets/icons/originals/actions/${id}.png`,
     prompt: 'An action icon',
     needsRegeneration: false,
     ...overrides
