@@ -25,6 +25,7 @@ import { ParchmentModal } from '../../ui/parchment/ParchmentModal.js';
 import { CharacterPicker } from '../CharacterPicker.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
 import { Icon } from '../Icon.js';
+import { ItemIcon } from '../ItemIcon.js';
 import {
   PARCHMENT_COLORS,
   PARCHMENT_SPACING,
@@ -320,7 +321,6 @@ export class ItemDetailModal {
   renderContent() {
     const item = this.item;
     const rarity = item.rarity || 'common';
-    const iconType = item.type || 'weapon';
 
     // Combine base and bonus stats
     const allStats = { ...(item.baseStats || {}), ...(item.bonusStats || {}) };
@@ -334,7 +334,7 @@ export class ItemDetailModal {
         <!-- Header -->
         <div class="item-detail-header">
           <div class="item-detail-icon-wrapper rarity-${rarity}">
-            ${Icon.html('items', iconType, { size: 'lg' }) || ''}
+            ${ItemIcon.html({ item, size: 'lg' })}
           </div>
           <div class="item-detail-title-section">
             <h3 class="item-detail-name rarity-${rarity}">${this.escapeHtml(item.name)}</h3>

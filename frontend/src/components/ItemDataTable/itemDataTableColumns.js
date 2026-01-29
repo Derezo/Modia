@@ -25,6 +25,7 @@
  */
 
 import { Icon } from '../Icon.js';
+import { ItemIcon } from '../ItemIcon.js';
 
 /**
  * Escape HTML to prevent XSS
@@ -100,8 +101,7 @@ export const COLUMN_RENDERERS = {
    * Icon + Name column
    */
   iconName: (item) => {
-    const iconType = item.type || 'weapon';
-    const iconHtml = Icon.html('items', iconType, { size: 'sm' }) || '';
+    const iconHtml = ItemIcon.html({ item, size: 'sm' });
     const rarityClass = `rarity-${item.rarity || 'common'}`;
     const name = escapeHtml(item.name || item.templateName || 'Unknown Item');
 
@@ -229,8 +229,7 @@ export const COLUMN_RENDERERS = {
       return '<span class="item-data-table-empty-slot">Empty</span>';
     }
 
-    const iconType = row.item.type || 'weapon';
-    const iconHtml = Icon.html('items', iconType, { size: 'sm' }) || '';
+    const iconHtml = ItemIcon.html({ item: row.item, size: 'sm' });
     const rarityClass = `rarity-${row.item.rarity || 'common'}`;
     const name = escapeHtml(row.item.name || 'Unknown');
 
