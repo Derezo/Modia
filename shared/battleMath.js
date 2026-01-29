@@ -941,3 +941,124 @@ export function getElementDamageColor(element, isCritical = false) {
   }
   return ELEMENT_COLORS[element] || ELEMENT_COLORS.physical;
 }
+
+// ============================================================================
+// ITEM PREVIEW CALCULATIONS
+// ============================================================================
+
+/**
+ * Calculate item effect preview for UI display
+ * Used by battle damage preview system to show item effects on target cards
+ *
+ * Item data uses snake_case from database: effect_type, effect_value
+ *
+ * @param {Object} item - Item object with { effect_type, effect_value, name }
+ * @param {Object} target - Target unit with { hp, maxHp, mp, maxMp, statusEffects }
+ * @returns {Object} Preview data for UI display
+ */
+export function calculateItemPreview(item, target) {
+  if (!item || !item.effect_type) {
+    return null;
+  }
+
+  const effectType = item.effect_type;
+  const effectValue = item.effect_value || 0;
+
+  // Get target's current and max stats (handle both camelCase and snake_case)
+  const targetHp = target.hp ?? target.hp_current ?? 0;
+  const targetMaxHp = target.maxHp ?? target.hp_max ?? 100;
+  const targetMp = target.mp ?? target.mp_current ?? 0;
+  const targetMaxMp = target.maxMp ?? target.mp_max ?? 50;
+  const missingHp = targetMaxHp - targetHp;
+  const missingMp = targetMaxMp - targetMp;
+
+  switch (effectType) {
+    case 'heal_hp': {
+      const effectiveHeal = Math.min(effectValue, missingHp);
+      const isOverheal = effectValue > missingHp;
+      return {
+        type: 'heal',
+        minHeal: effectValue,
+        maxHeal: effectValue,
+        effectiveHeal,
+        isOverheal,
+        hitChance: 1.0
+      };
+    }
+
+    case 'heal_mp': {
+      const effectiveRestore = Math.min(effectValue, missingMp);
+      const isOverheal = effectValue > missingMp;
+      return {
+        type: 'mp_restore',
+        minRestore: effectValue,
+        maxRestore: effectValue,
+        effectiveRestore,
+        isOverheal,
+        hitChance: 1.0
+      };
+    }
+
+    case 'heal_both': {
+      // Elixir-type items: effect_value for HP, half for MP
+      const hpValue = effectValue;
+      const mpValue = Math.floor(effectValue / 2);
+      const effectiveHpHeal = Math.min(hpValue, missingHp);
+      const effectiveMpRestore = Math.min(mpValue, missingMp);
+      return {
+        type: 'heal_both',
+        hpValue,
+        mpValue,
+        effectiveHpHeal,
+        effectiveMpRestore,
+        isHpOverheal: hpValue > missingHp,
+        isMpOverheal: mpValue > missingMp,
+        hitChance: 1.0
+      };
+    }
+
+    case 'cure_poison': {
+      // Check if target has poison status
+      const hasPoison = target.statusEffects?.some(e => e.type === 'poison') ?? false;
+      return {
+        type: 'cure',
+        curedEffects: ['poison'],
+        willCure: hasPoison,
+        hitChance: 1.0
+      };
+    }
+
+    case 'cure_all': {
+      // Check which status effects target has that can be cured
+      const curableEffects = CURE_ALL_EFFECTS;
+      const activeEffects = target.statusEffects?.filter(
+        e => curableEffects.includes(e.type)
+      ).map(e => e.type) || [];
+      return {
+        type: 'cure',
+        curedEffects: curableEffects,
+        activeEffects,
+        willCure: activeEffects.length > 0,
+        hitChance: 1.0
+      };
+    }
+
+    case 'revive': {
+      // effect_value is the revival HP percentage
+      const revivePercent = effectValue;
+      const reviveHp = Math.floor(targetMaxHp * (revivePercent / 100));
+      const isDead = targetHp <= 0;
+      return {
+        type: 'revive',
+        revivePercent,
+        reviveHp,
+        targetMaxHp,
+        willRevive: isDead,
+        hitChance: 1.0
+      };
+    }
+
+    default:
+      return null;
+  }
+}

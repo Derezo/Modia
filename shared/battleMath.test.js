@@ -30,6 +30,7 @@ import {
   calculateElementalModifier,
   getElementalEffectivenessDisplay,
   applyVariance,
+  calculateItemPreview,
   PHYSICAL_DEFENSE_CONSTANT,
   MAGIC_DEFENSE_CONSTANT,
   CT_THRESHOLD,
@@ -1101,5 +1102,255 @@ describe('Cleansable status effect constants', () => {
     assert.ok(Object.isFrozen(CURE_POISON_EFFECTS));
     assert.ok(Object.isFrozen(CURE_ALL_EFFECTS));
     assert.ok(Object.isFrozen(PURIFY_EFFECTS));
+  });
+});
+
+// ============================================================================
+// ITEM PREVIEW CALCULATIONS
+// ============================================================================
+
+describe('calculateItemPreview', () => {
+  describe('heal_hp items', () => {
+    it('should calculate effective HP heal amount', () => {
+      const item = { effect_type: 'heal_hp', effect_value: 50 };
+      const target = { hp: 60, maxHp: 100 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.type, 'heal');
+      assert.strictEqual(result.minHeal, 50);
+      assert.strictEqual(result.maxHeal, 50);
+      assert.strictEqual(result.effectiveHeal, 40); // Only 40 HP missing
+      assert.strictEqual(result.isOverheal, true);
+      assert.strictEqual(result.hitChance, 1.0);
+    });
+
+    it('should not overheal when target needs more HP', () => {
+      const item = { effect_type: 'heal_hp', effect_value: 30 };
+      const target = { hp: 20, maxHp: 100 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.effectiveHeal, 30);
+      assert.strictEqual(result.isOverheal, false);
+    });
+
+    it('should handle snake_case target properties', () => {
+      const item = { effect_type: 'heal_hp', effect_value: 50 };
+      const target = { hp_current: 60, hp_max: 100 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.effectiveHeal, 40);
+      assert.strictEqual(result.isOverheal, true);
+    });
+
+    it('should handle target at full HP', () => {
+      const item = { effect_type: 'heal_hp', effect_value: 50 };
+      const target = { hp: 100, maxHp: 100 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.effectiveHeal, 0);
+      assert.strictEqual(result.isOverheal, true);
+    });
+  });
+
+  describe('heal_mp items', () => {
+    it('should calculate effective MP restore amount', () => {
+      const item = { effect_type: 'heal_mp', effect_value: 30 };
+      const target = { mp: 10, maxMp: 50 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.type, 'mp_restore');
+      assert.strictEqual(result.minRestore, 30);
+      assert.strictEqual(result.maxRestore, 30);
+      assert.strictEqual(result.effectiveRestore, 30);
+      assert.strictEqual(result.isOverheal, false);
+      assert.strictEqual(result.hitChance, 1.0);
+    });
+
+    it('should detect MP overheal', () => {
+      const item = { effect_type: 'heal_mp', effect_value: 50 };
+      const target = { mp: 40, maxMp: 50 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.effectiveRestore, 10);
+      assert.strictEqual(result.isOverheal, true);
+    });
+
+    it('should handle snake_case MP properties', () => {
+      const item = { effect_type: 'heal_mp', effect_value: 20 };
+      const target = { mp_current: 30, mp_max: 50 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.effectiveRestore, 20);
+    });
+  });
+
+  describe('heal_both items (elixirs)', () => {
+    it('should restore HP at full value and MP at half value', () => {
+      const item = { effect_type: 'heal_both', effect_value: 100 };
+      const target = { hp: 50, maxHp: 200, mp: 20, maxMp: 100 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.type, 'heal_both');
+      assert.strictEqual(result.hpValue, 100);
+      assert.strictEqual(result.mpValue, 50); // Half of effect_value
+      assert.strictEqual(result.effectiveHpHeal, 100);
+      assert.strictEqual(result.effectiveMpRestore, 50);
+      assert.strictEqual(result.hitChance, 1.0);
+    });
+
+    it('should detect HP and MP overheal separately', () => {
+      const item = { effect_type: 'heal_both', effect_value: 100 };
+      const target = { hp: 180, maxHp: 200, mp: 90, maxMp: 100 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.isHpOverheal, true); // 100 heal but only 20 missing
+      assert.strictEqual(result.isMpOverheal, true); // 50 restore but only 10 missing
+      assert.strictEqual(result.effectiveHpHeal, 20);
+      assert.strictEqual(result.effectiveMpRestore, 10);
+    });
+  });
+
+  describe('cure_poison items', () => {
+    it('should detect poison status to cure', () => {
+      const item = { effect_type: 'cure_poison' };
+      const target = { statusEffects: [{ type: 'poison' }] };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.type, 'cure');
+      assert.strictEqual(result.willCure, true);
+      assert.deepStrictEqual(result.curedEffects, ['poison']);
+      assert.strictEqual(result.hitChance, 1.0);
+    });
+
+    it('should indicate no status to cure when target not poisoned', () => {
+      const item = { effect_type: 'cure_poison' };
+      const target = { statusEffects: [] };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.willCure, false);
+    });
+
+    it('should handle missing statusEffects array', () => {
+      const item = { effect_type: 'cure_poison' };
+      const target = { hp: 50, maxHp: 100 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.willCure, false);
+    });
+  });
+
+  describe('cure_all items', () => {
+    it('should identify multiple curable status effects', () => {
+      const item = { effect_type: 'cure_all' };
+      const target = { statusEffects: [{ type: 'poison' }, { type: 'blind' }, { type: 'stun' }] };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.type, 'cure');
+      assert.strictEqual(result.willCure, true);
+      // stun is not in CURE_ALL_EFFECTS, so only poison and blind
+      assert.deepStrictEqual(result.activeEffects, ['poison', 'blind']);
+    });
+
+    it('should report curedEffects from CURE_ALL_EFFECTS constant', () => {
+      const item = { effect_type: 'cure_all' };
+      const target = { statusEffects: [{ type: 'poison' }] };
+      const result = calculateItemPreview(item, target);
+
+      assert.deepStrictEqual(result.curedEffects, CURE_ALL_EFFECTS);
+    });
+
+    it('should indicate no cure when no matching effects', () => {
+      const item = { effect_type: 'cure_all' };
+      const target = { statusEffects: [{ type: 'stun' }, { type: 'haste' }] };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.willCure, false);
+      assert.deepStrictEqual(result.activeEffects, []);
+    });
+  });
+
+  describe('revive items', () => {
+    it('should calculate revival HP based on percentage', () => {
+      const item = { effect_type: 'revive', effect_value: 50 };
+      const target = { hp: 0, maxHp: 200 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.type, 'revive');
+      assert.strictEqual(result.willRevive, true);
+      assert.strictEqual(result.revivePercent, 50);
+      assert.strictEqual(result.reviveHp, 100); // 50% of 200
+      assert.strictEqual(result.targetMaxHp, 200);
+      assert.strictEqual(result.hitChance, 1.0);
+    });
+
+    it('should indicate target not KO when target is alive', () => {
+      const item = { effect_type: 'revive', effect_value: 50 };
+      const target = { hp: 50, maxHp: 200 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.willRevive, false);
+    });
+
+    it('should handle negative HP as dead', () => {
+      const item = { effect_type: 'revive', effect_value: 25 };
+      const target = { hp: -10, maxHp: 100 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.willRevive, true);
+      assert.strictEqual(result.reviveHp, 25);
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should return null for null item', () => {
+      const result = calculateItemPreview(null, { hp: 50, maxHp: 100 });
+      assert.strictEqual(result, null);
+    });
+
+    it('should return null for undefined item', () => {
+      const result = calculateItemPreview(undefined, { hp: 50, maxHp: 100 });
+      assert.strictEqual(result, null);
+    });
+
+    it('should return null for item without effect_type', () => {
+      const item = { name: 'Broken Item', effect_value: 50 };
+      const result = calculateItemPreview(item, { hp: 50, maxHp: 100 });
+      assert.strictEqual(result, null);
+    });
+
+    it('should return null for unknown effect_type', () => {
+      const item = { effect_type: 'unknown_effect', effect_value: 50 };
+      const result = calculateItemPreview(item, { hp: 50, maxHp: 100 });
+      assert.strictEqual(result, null);
+    });
+
+    it('should handle zero effect_value', () => {
+      const item = { effect_type: 'heal_hp', effect_value: 0 };
+      const target = { hp: 50, maxHp: 100 };
+      const result = calculateItemPreview(item, target);
+
+      assert.strictEqual(result.minHeal, 0);
+      assert.strictEqual(result.effectiveHeal, 0);
+    });
+
+    it('should use default maxHp when missing', () => {
+      const item = { effect_type: 'heal_hp', effect_value: 50 };
+      const target = { hp: 50 }; // No maxHp
+      const result = calculateItemPreview(item, target);
+
+      // Default maxHp is 100, so 50 missing HP
+      assert.strictEqual(result.effectiveHeal, 50);
+      assert.strictEqual(result.isOverheal, false);
+    });
+
+    it('should use default maxMp when missing', () => {
+      const item = { effect_type: 'heal_mp', effect_value: 30 };
+      const target = { mp: 20 }; // No maxMp
+      const result = calculateItemPreview(item, target);
+
+      // Default maxMp is 50, so 30 missing MP
+      assert.strictEqual(result.effectiveRestore, 30);
+      assert.strictEqual(result.isOverheal, false);
+    });
   });
 });

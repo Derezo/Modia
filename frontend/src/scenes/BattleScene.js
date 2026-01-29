@@ -44,7 +44,7 @@ import { BossPhaseIndicator } from '../battle/BossPhaseIndicator.js';
 import { BattleWebSocketManager } from '../battle/BattleWebSocketManager.js';
 import { isSelfTargetingSkill, getVisualCategory } from '../battle/SkillEffectCategories.js';
 import { getSkillSoundKey, RACE_TO_REGION } from '../audio/AudioAssets.js';
-import { calculateDamagePreview } from '@shared/battleMath.js';
+import { calculateDamagePreview, calculateItemPreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 
@@ -565,13 +565,20 @@ export class BattleScene extends Scene {
         this.updateDamagePreview(this.lockedTarget.tile, pos);
       } else if (this.hoveredTile) {
         const unit = this.getUnitAt(this.hoveredTile.x, this.hoveredTile.y);
-        if (unit && unit.type === 'enemy') {
-          this.ui.showTargetInfo(unit);
+        if (unit) {
+          // Show target info for enemies always, or allies when targeting with skill/item
+          const isTargetingAlly = ['skill', 'item'].includes(this.currentAction) &&
+                                  unit.type === 'player';
+          if (unit.type === 'enemy' || isTargetingAlly) {
+            this.ui.showTargetInfo(unit);
+          } else {
+            this.ui.hideTargetInfo();
+          }
         } else {
           this.ui.hideTargetInfo();
         }
 
-        // Show damage preview when hovering over valid targets during attack/skill mode
+        // Show damage preview when hovering over valid targets during attack/skill/item mode
         this.updateDamagePreview(this.hoveredTile, pos);
       } else {
         // Hide damage preview when not hovering a tile
@@ -1339,8 +1346,14 @@ export class BattleScene extends Scene {
       return;
     }
 
-    // Only show preview during attack or skill targeting
-    if (this.currentAction !== 'attack' && this.currentAction !== 'skill') {
+    // Check user setting for damage preview
+    if (!this.game.getUserSetting('battle.showDamagePreview', true)) {
+      this.ui.hideDamagePreview();
+      return;
+    }
+
+    // Only show preview during attack, skill, or item targeting
+    if (!['attack', 'skill', 'item'].includes(this.currentAction)) {
       this.ui.hideDamagePreview();
       return;
     }
@@ -1364,17 +1377,31 @@ export class BattleScene extends Scene {
     // Make the target card sticky so it stays visible during targeting
     this.ui.setTargetSticky(targetUnit);
 
-    // Get skill info for damage calculation
-    let skill = null;
-    if (this.currentAction === 'skill' && this.selectedSkillId) {
-      skill = this.getUnitActiveSkills(activeUnit).find(s => s.id === this.selectedSkillId);
+    let previewData = null;
+
+    if (this.currentAction === 'item' && this.selectedItemId) {
+      // Item preview - find item from consumables
+      const item = this.battleState.consumables?.find(
+        i => String(i.itemId) === String(this.selectedItemId)
+      );
+      if (item) {
+        previewData = calculateItemPreview(item, targetUnit);
+      }
+    } else {
+      // Attack or skill preview
+      let skill = null;
+      if (this.currentAction === 'skill' && this.selectedSkillId) {
+        skill = this.getUnitActiveSkills(activeUnit).find(s => s.id === this.selectedSkillId);
+      }
+      previewData = this.calculateDamagePreviewData(activeUnit, targetUnit, skill);
     }
 
-    // Calculate damage preview data using DamagePreview utility
-    const previewData = this.calculateDamagePreviewData(activeUnit, targetUnit, skill);
-
     // Show on UI target card
-    this.ui.showDamagePreview(previewData);
+    if (previewData) {
+      this.ui.showDamagePreview(previewData);
+    } else {
+      this.ui.hideDamagePreview();
+    }
   }
 
   /**
@@ -1474,6 +1501,14 @@ export class BattleScene extends Scene {
     };
     // Lock target to prevent tile cycling from changing it during confirmation
     this.lockedTarget = { tile: { x: activeUnit.gridX, y: activeUnit.gridY }, unit: activeUnit };
+
+    // Show self-target preview on active unit card
+    if (this.game.getUserSetting('battle.showDamagePreview', true)) {
+      const previewData = this.calculateDamagePreviewData(activeUnit, activeUnit, skill);
+      if (previewData) {
+        this.ui.showActiveUnitPreview(previewData);
+      }
+    }
 
     // Show confirmation UI
     this.ui.hideSkillPanel();
@@ -1601,6 +1636,9 @@ export class BattleScene extends Scene {
 
     // Clear sticky target and damage preview when action cancelled
     this.ui.clearTargetSticky();
+
+    // Clear active unit preview (for self-targeting skills)
+    this.ui.hideActiveUnitPreview();
   }
 
   /**
