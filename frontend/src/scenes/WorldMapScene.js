@@ -926,18 +926,18 @@ export class WorldMapScene extends Scene {
     const btn = document.createElement('button');
 
     // Get icon mapping for features
-    // Uses existing icons where available, new icons for farm/guild/courtyard
+    // Uses menu category for location/building icons, actions for combat
     const iconMap = {
-      blacksmith: { category: 'actions', name: 'blacksmith' },
-      marketplace: { category: 'actions', name: 'marketplace' },
-      tavern: { category: 'actions', name: 'tavern' },
-      apothecary: { category: 'actions', name: 'apothecary' },
-      coliseum: { category: 'actions', name: 'battle' },
-      farm: { category: 'actions', name: 'harvest' },
-      guild_hall: { category: 'actions', name: 'recruit' },
-      guild_advancement: { category: 'actions', name: 'advance' },
-      courtyard: { category: 'actions', name: 'social' },
-      battle: { category: 'actions', name: 'battle' }
+      blacksmith: { category: 'menu', name: 'shop' },
+      marketplace: { category: 'menu', name: 'shop' },
+      tavern: { category: 'menu', name: 'tavern' },
+      apothecary: { category: 'menu', name: 'shop' },
+      coliseum: { category: 'menu', name: 'coliseum' },
+      farm: { category: 'menu', name: 'caravan' },
+      guild_hall: { category: 'menu', name: 'guild' },
+      guild_advancement: { category: 'menu', name: 'guild' },
+      courtyard: { category: 'menu', name: 'party' },
+      battle: { category: 'actions', name: 'attack' }
     };
 
     // Get label text

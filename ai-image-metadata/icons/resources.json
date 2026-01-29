@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "category": "resources",
+  "description": "Resource and currency icons",
+  "size": "32x32",
+  "icons": [
+    {
+      "id": "resources_gold",
+      "name": "Gold",
+      "prompt": "gold coins pile treasure currency money",
+      "seed": 35001,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "resources_xp",
+      "name": "Experience",
+      "prompt": "blue star experience points level up sparkle",
+      "seed": 35002,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "resources_stamina",
+      "name": "Stamina",
+      "prompt": "green lightning bolt energy stamina power",
+      "seed": 35003,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    }
+  ]
+}

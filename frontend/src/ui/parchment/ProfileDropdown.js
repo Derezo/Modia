@@ -28,6 +28,7 @@ import {
   getParchmentShadow
 } from './ParchmentTheme.js';
 import { Icon } from '../../components/Icon.js';
+import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
 
 const STYLE_ID = 'profile-dropdown-styles';
 
@@ -40,18 +41,6 @@ const NOTIFICATION_TYPES = {
   match_result: { category: 'notifications', name: 'match-result', color: '#a855f7', label: 'Match Result' },
   lfg_application: { category: 'notifications', name: 'lfg-application', color: '#06b6d4', label: 'LFG Application' },
   system: { category: 'notifications', name: 'system', color: '#6b7280', label: 'System' }
-};
-
-// Menu item icon mappings (reserved for future dynamic menu rendering)
-const _MENU_ICONS = {
-  formation: { category: 'menu', name: 'formation' },
-  characters: { category: 'menu', name: 'characters' },
-  party: { category: 'menu', name: 'party' },
-  friends: { category: 'menu', name: 'friends' },
-  quests: { category: 'misc', name: 'scroll' },
-  leaderboard: { category: 'menu', name: 'leaderboard' },
-  settings: { category: 'menu', name: 'settings' },
-  logout: { category: 'menu', name: 'logout' }
 };
 
 // Class icon mappings for avatar fallback
@@ -562,7 +551,7 @@ export class ProfileDropdown {
           <span class="profile-dropdown__menu-label">Friends</span>
         </div>
         <div class="profile-dropdown__menu-item" data-action="quests">
-          <span class="profile-dropdown__menu-icon">${Icon.html('misc', 'scroll', { size: 'sm' })}</span>
+          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'quest', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Quest Board</span>
         </div>
         <div class="profile-dropdown__menu-item" data-action="leaderboard">
@@ -847,13 +836,24 @@ export class ProfileDropdown {
 
   /**
    * Update avatar display
+   * Constructs portrait URL from character properties (race, gender, class)
    */
   updateAvatar() {
     const characters = this.game.state?.get('characters') || [];
     const leader = characters.find(c => c.isLeader) || characters[0];
 
-    if (leader?.portrait) {
-      this.avatarElement.innerHTML = `<img src="${leader.portrait}" alt="Avatar">`;
+    if (leader?.race && leader?.class) {
+      // Construct portrait URL from character properties
+      const race = leader.race.toLowerCase();
+      const charClass = leader.class.toLowerCase();
+      const gender = (leader.gender || 'male').toLowerCase();
+      const portraitId = `${race}_${gender}_${charClass}`;
+      const optimalSize = getOptimalSize('portraits', 48);
+      const portraitUrl = getAssetPath('portraits', portraitId, { size: optimalSize });
+
+      // Create img with fallback on error
+      const fallbackIcon = Icon.html('menu', 'characters', { size: 'md' }).replace(/'/g, "\\'");
+      this.avatarElement.innerHTML = `<img src="${portraitUrl}" alt="Avatar" onerror="this.parentElement.innerHTML='<span class=\\'profile-dropdown__avatar-fallback\\'>${fallbackIcon}</span>'">`;
     } else if (leader?.class) {
       // Use class icon fallback from Icon component
       const classKey = leader.class.toLowerCase();
