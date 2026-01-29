@@ -589,7 +589,22 @@ function loadRegenerationQueue(category) {
     return metadata.tiles.filter(t => t.needsRegeneration === true);
   }
 
-  // Other categories use loadCategoryAssets
+  if (category === 'icons') {
+    const metadata = loadIconMetadata();
+    return metadata.icons.filter(i => i.needsRegeneration === true);
+  }
+
+  if (category === 'items') {
+    const metadata = loadItemMetadata();
+    return metadata.items.filter(i => i.needsRegeneration === true);
+  }
+
+  if (category === 'overlays') {
+    const metadata = loadOverlayMetadata();
+    return metadata.overlays.filter(o => o.needsRegeneration === true);
+  }
+
+  // Other categories (portraits, nodes) use loadCategoryAssets
   const data = loadCategoryAssets(category);
   return data.assets.filter(a => a.needsRegeneration === true);
 }

@@ -344,12 +344,33 @@ router.put('/music/:id', asyncHandler(async (req, res) => {
   const allowedFields = [
     'name', 'sunoPrompt', 'style', 'model', 'volume', 'fadeIn', 'fadeOut',
     'loop', 'generated', 'generatedAt', 'taskId', 'status', 'notes',
-    'needsRegeneration', 'priority', 'primaryVariant'
+    'needsRegeneration', 'priority', 'primaryVariantId'
   ];
   const invalidFields = Object.keys(updates).filter(key => !allowedFields.includes(key));
 
   if (invalidFields.length > 0) {
     throw new AppError(`Invalid update fields: ${invalidFields.join(', ')}. Allowed: ${allowedFields.join(', ')}`, 400);
+  }
+
+  // If primaryVariantId is being set, also update related fields
+  if (updates.primaryVariantId) {
+    const { tracks } = await loadMusicMetadata();
+    const track = tracks.find(t => t.id === id);
+    if (track) {
+      const variant = track.variants?.find(v => v.id === updates.primaryVariantId);
+      if (variant) {
+        // Update the main path to match primary variant
+        updates.path = variant.path;
+
+        // Update isPrimary flags on all variants
+        if (track.variants) {
+          updates.variants = track.variants.map(v => ({
+            ...v,
+            isPrimary: v.id === updates.primaryVariantId
+          }));
+        }
+      }
+    }
   }
 
   const updatedTrack = await updateAudioMetadata('music', id, updates);
@@ -376,10 +397,30 @@ router.post('/music/:id/primary', asyncHandler(async (req, res) => {
     throw new AppError('variantPath is required', 400);
   }
 
-  const updatedTrack = await updateAudioMetadata('music', id, {
-    primaryVariant: variantPath,
+  // Find variant by path to get its ID and update all related fields
+  const { tracks } = await loadMusicMetadata();
+  const track = tracks.find(t => t.id === id);
+
+  if (!track) {
+    throw new AppError(`Track not found: ${id}`, 404);
+  }
+
+  const variant = track.variants?.find(v => v.path === variantPath);
+
+  const updates = {
+    primaryVariantId: variant?.id || null,
     path: variantPath
-  });
+  };
+
+  // Update isPrimary flags on all variants
+  if (track.variants) {
+    updates.variants = track.variants.map(v => ({
+      ...v,
+      isPrimary: v.path === variantPath
+    }));
+  }
+
+  const updatedTrack = await updateAudioMetadata('music', id, updates);
 
   res.json({
     message: 'Primary variant set successfully',

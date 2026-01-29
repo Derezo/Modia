@@ -25,7 +25,7 @@ import { useGenerationContext } from '../contexts/GenerationContext';
 /**
  * Status indicator for a single queue - clickable to filter console
  */
-function QueueStatus({ icon: Icon, label, isActive, pendingCount, isPaused, progress, onClick }) {
+function QueueStatus({ icon: Icon, label, isActive, pendingCount, isPaused, progress, onClick, active }) {
   // Determine status color
   const statusColor = useMemo(() => {
     if (!isActive && pendingCount === 0) return 'text-parchment-500'; // Idle
@@ -59,7 +59,11 @@ function QueueStatus({ icon: Icon, label, isActive, pendingCount, isPaused, prog
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-midnight-800/50 hover:bg-midnight-700/50 transition-colors"
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
+        active
+          ? 'bg-midnight-700/50 ring-1 ring-accent-gold/60'
+          : 'bg-midnight-800/50 hover:bg-midnight-700/50'
+      }`}
     >
       <div className={`w-2 h-2 rounded-full ${dotColor}`} />
       <Icon className={`w-4 h-4 ${statusColor}`} />
@@ -72,7 +76,7 @@ function QueueStatus({ icon: Icon, label, isActive, pendingCount, isPaused, prog
 /**
  * Main UnifiedGenerationBar component
  */
-export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCount = 0, activePanel, onPanelChange, onBadgeClick }) {
+export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCount = 0, activePanel, onPanelChange, onBadgeClick, sourceFilter = 'all' }) {
   const { unified } = useGenerationContext();
   const {
     connected,
@@ -109,6 +113,16 @@ export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCo
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => onBadgeClick?.('all')}
+              className={`flex items-center px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                sourceFilter === 'all'
+                  ? 'bg-midnight-700/50 ring-1 ring-accent-gold/60 text-parchment-100'
+                  : 'bg-midnight-800/50 hover:bg-midnight-700/50 text-parchment-400'
+              }`}
+            >
+              All
+            </button>
             <QueueStatus
               icon={ImageIcon}
               label="Images"
@@ -117,6 +131,7 @@ export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCo
               isPaused={queueSummary.images.isPaused}
               progress={queueSummary.images.progress}
               onClick={() => onBadgeClick?.('images')}
+              active={sourceFilter === 'images'}
             />
             <QueueStatus
               icon={SpeakerLoudIcon}
@@ -126,6 +141,7 @@ export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCo
               isPaused={queueSummary.music.isPaused}
               progress={queueSummary.music.progress}
               onClick={() => onBadgeClick?.('music')}
+              active={sourceFilter === 'music'}
             />
             <QueueStatus
               icon={MixerVerticalIcon}
@@ -135,6 +151,7 @@ export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCo
               isPaused={queueSummary.sfx.isPaused}
               progress={queueSummary.sfx.progress}
               onClick={() => onBadgeClick?.('sfx')}
+              active={sourceFilter === 'sfx'}
             />
           </div>
         </div>

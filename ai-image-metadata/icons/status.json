@@ -9,146 +9,228 @@
       "name": "Poison",
       "prompt": "poison drop skull toxic green drip",
       "seed": 31001,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T14:50:01.591Z"
     },
     {
       "id": "status_burn",
       "name": "Burn",
       "prompt": "flame burn fire damage ember",
       "seed": 31002,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T14:50:49.469Z"
     },
     {
       "id": "status_freeze",
       "name": "Freeze",
       "prompt": "ice crystal freeze frozen cold snowflake",
       "seed": 31003,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T14:51:39.404Z"
     },
     {
       "id": "status_stun",
       "name": "Stun",
       "prompt": "stars spinning stun dazed dizzy spiral",
       "seed": 31004,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T14:52:28.919Z"
     },
     {
       "id": "status_sleep",
       "name": "Sleep",
       "prompt": "zzz sleep rest unconscious moon",
       "seed": 31005,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T14:53:18.181Z"
     },
     {
       "id": "status_blind",
       "name": "Blind",
       "prompt": "closed eye blind darkness unable to see",
       "seed": 31006,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T14:54:10.322Z"
     },
     {
       "id": "status_silence",
       "name": "Silence",
       "prompt": "mouth crossed silence mute no sound",
       "seed": 31007,
-      "generated": false,
+      "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T20:57:06.282Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "status_slow",
       "name": "Slow",
       "prompt": "snail slow sluggish turtle speed down",
       "seed": 31008,
-      "generated": false,
+      "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T14:55:49.264Z"
     },
     {
       "id": "status_haste",
       "name": "Haste",
-      "prompt": "wind speed haste fast quick motion lines",
+      "prompt": "vibrating stopwatch speed haste fast quick motion lines",
       "seed": 31009,
-      "generated": false,
+      "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T17:26:47.331Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "status_regen",
       "name": "Regeneration",
       "prompt": "heart pulse regeneration heal over time green",
       "seed": 31010,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T14:57:30.288Z"
     },
     {
       "id": "status_protect",
       "name": "Protect",
       "prompt": "shield protect defense barrier buff blue",
       "seed": 31011,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T14:58:17.113Z"
     },
     {
       "id": "status_shell",
       "name": "Shell",
       "prompt": "magic shell bubble protect magic defense",
       "seed": 31012,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T14:59:04.833Z"
     },
     {
       "id": "status_strength_up",
       "name": "Strength Up",
       "prompt": "muscle bicep strength up power red",
       "seed": 31013,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T14:59:52.259Z"
     },
     {
       "id": "status_strength_down",
       "name": "Strength Down",
       "prompt": "broken arm strength down weakness blue",
       "seed": 31014,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:00:39.930Z"
     },
     {
       "id": "status_defense_up",
       "name": "Defense Up",
       "prompt": "shield plus defense up armor gold",
       "seed": 31015,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:01:27.420Z"
     },
     {
       "id": "status_defense_down",
       "name": "Defense Down",
       "prompt": "cracked shield defense down vulnerable",
       "seed": 31016,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:02:14.916Z"
     },
     {
       "id": "status_berserk",
       "name": "Berserk",
       "prompt": "angry face berserk rage fury red",
       "seed": 31017,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:03:02.756Z"
     },
     {
       "id": "status_confusion",
       "name": "Confusion",
       "prompt": "question mark confusion confused spiral",
       "seed": 31018,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:03:48.426Z"
     },
     {
       "id": "status_charm",
       "name": "Charm",
       "prompt": "heart charm love infatuation pink",
       "seed": 31019,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:04:34.773Z"
     },
     {
       "id": "status_doom",
       "name": "Doom",
       "prompt": "skull countdown doom death timer dark",
       "seed": 31020,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:05:22.420Z"
     }
   ]
 }

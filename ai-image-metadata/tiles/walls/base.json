@@ -15,56 +15,64 @@
       "terrain": "grass",
       "prompt": "earthen cliff face with grass roots and soil layers in natural brown green #6B8E4A #8B7355",
       "seed": 10001,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:02:35.035Z"
     },
     {
       "key": "wall_base_stone",
       "terrain": "stone",
       "prompt": "weathered stone cliff face with natural fractures in neutral grey #808080 #696969",
       "seed": 10011,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:03:16.238Z"
     },
     {
       "key": "wall_base_rock",
       "terrain": "rock",
       "prompt": "rough natural rock face with lichen and mineral deposits in warm grey #8B8682 #A0A0A0",
       "seed": 10021,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:03:58.451Z"
     },
     {
       "key": "wall_base_forest",
       "terrain": "forest",
       "prompt": "soil cliff face with exposed tree roots and fallen leaves in earthy brown #5C4033 #4A6B2A",
       "seed": 10031,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:04:39.669Z"
     },
     {
       "key": "wall_base_water",
       "terrain": "water",
       "prompt": "wet stone cliff face with water trickling down and algae stains in grey blue #4682B4 #696969",
       "seed": 10041,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:05:20.893Z"
     },
     {
       "key": "wall_base_lava",
       "terrain": "lava",
       "prompt": "scorched volcanic rock face with glowing cracks and heat shimmer in dark red #8B0000 #FF4500",
       "seed": 10051,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:06:02.068Z"
     },
     {
       "key": "wall_base_cliff",
       "terrain": "cliff",
       "prompt": "sheer rock cliff face with exposed geological strata in layered grey #696969 #808080",
       "seed": 10061,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:06:42.255Z"
     },
     {
       "key": "wall_base_tree",
       "terrain": "tree",
       "prompt": "earth wall with massive tree roots breaking through in brown tones #5C4033 #8B7355",
       "seed": 10071,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:07:23.430Z"
     }
   ]
 }

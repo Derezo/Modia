@@ -213,12 +213,13 @@
       "name": "Party Leave",
       "category": "interaction",
       "subcategory": "social",
-      "prompt": "Fantasy party left with temporary farewell departure and brief dissolving separation",
+      "prompt": "Fantasy party left with brief dissolving separation",
       "path": "/assets/audio/sfx/interactions/party_leave.mp3",
       "duration": 1,
       "volume": 0.7,
       "generated": true,
-      "generatedAt": "2026-01-21T10:15:03.873Z"
+      "generatedAt": "2026-01-28T20:08:54.006Z",
+      "notes": ""
     },
     {
       "id": "interaction_level_up",

@@ -14,7 +14,8 @@
       "levels": 1,
       "prompt": "polished stone ramp ascending northward with carved edges in slate grey #708090",
       "seed": 52001,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:45:53.891Z"
     },
     {
       "key": "slope_castle_south_1",
@@ -22,7 +23,8 @@
       "levels": 1,
       "prompt": "polished stone ramp descending southward with worn surface in slate grey #708090",
       "seed": 52011,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:46:35.085Z"
     },
     {
       "key": "slope_castle_east_1",
@@ -30,7 +32,8 @@
       "levels": 1,
       "prompt": "polished stone ramp ascending eastward with decorative borders in slate grey #708090 #DAA520",
       "seed": 52021,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:47:16.255Z"
     },
     {
       "key": "slope_castle_west_1",
@@ -38,7 +41,8 @@
       "levels": 1,
       "prompt": "polished stone ramp descending westward with carpet runner in slate grey #708090 #8B0000",
       "seed": 52031,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:47:57.381Z"
     },
     {
       "key": "stairs_castle_north_2",
@@ -47,7 +51,8 @@
       "type": "stairs",
       "prompt": "grand castle stairs ascending north with ornate carved balustrade showing 2-3 visible steps #708090 #DAA520",
       "seed": 52041,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:48:38.773Z"
     },
     {
       "key": "stairs_castle_south_2",
@@ -56,7 +61,8 @@
       "type": "stairs",
       "prompt": "grand castle stairs descending south with red carpet runner showing 2-3 visible steps #708090 #8B0000",
       "seed": 52051,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:49:20.940Z"
     },
     {
       "key": "stairs_castle_east_2",
@@ -65,7 +71,8 @@
       "type": "stairs",
       "prompt": "dungeon stone stairs ascending east with torch sconces showing 2-3 visible steps #696969 #2F4F4F",
       "seed": 52061,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:50:02.093Z"
     },
     {
       "key": "stairs_castle_west_2",

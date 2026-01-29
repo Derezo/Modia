@@ -301,6 +301,7 @@ async function main() {
         }
 
         log(`Generated: ${item.id}`, 'success');
+        log(`Saved: ${getOutputPath(item)}`, 'info');
 
         // Post-process: generate canonical size variants (32, 64, 128)
         try {

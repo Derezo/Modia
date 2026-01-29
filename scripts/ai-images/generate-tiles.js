@@ -476,6 +476,7 @@ async function main() {
         }
 
         log(`Generated: ${tile.id}`, 'success');
+        log(`Saved: ${getOutputPath(tile, tile._biome)}`, 'info');
       } else {
         results.failed.push({
           id: tile.id,

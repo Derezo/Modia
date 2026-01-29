@@ -12,7 +12,6 @@ import {
   TrashIcon,
   ImageIcon,
   SpeakerLoudIcon,
-  MixerVerticalIcon,
   CodeIcon,
   Cross2Icon,
   StopIcon,
@@ -33,14 +32,6 @@ const PANEL_TABS = {
   CONSOLE: 'console',
   ASSETS: 'assets',
 };
-
-// Source filter options
-const SOURCE_FILTERS = [
-  { value: 'all', label: 'All', icon: null },
-  { value: 'images', label: 'Images', icon: ImageIcon },
-  { value: 'music', label: 'Music', icon: SpeakerLoudIcon },
-  { value: 'sfx', label: 'SFX', icon: MixerVerticalIcon },
-];
 
 // Source color mapping
 const SOURCE_COLORS = {
@@ -66,30 +57,6 @@ const CATEGORY_LABELS = {
   music: 'Music',
   sfx: 'SFX',
 };
-
-/**
- * Clickable source filter tabs
- */
-function SourceFilterTabs({ value, onChange }) {
-  return (
-    <div className="flex items-center gap-1 bg-midnight-800 rounded-lg p-0.5">
-      {SOURCE_FILTERS.map(({ value: filterValue, label, icon: Icon }) => (
-        <button
-          key={filterValue}
-          onClick={() => onChange(filterValue)}
-          className={`px-3 py-1 text-xs rounded transition-colors flex items-center gap-1.5 ${
-            value === filterValue
-              ? 'bg-midnight-600 text-parchment-100'
-              : 'text-parchment-400 hover:text-parchment-200 hover:bg-midnight-700'
-          }`}
-        >
-          {Icon && <Icon className="w-3 h-3" />}
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 /**
  * Queue panel showing items marked for regeneration
@@ -290,7 +257,7 @@ function QueueCategorySection({ category, items, onRemoveItem, onClearCategory }
 /**
  * Console output panel with source filtering
  */
-function ConsolePanel({ stdout, clearStdout, sourceFilter, onSourceFilterChange }) {
+function ConsolePanel({ stdout, clearStdout, sourceFilter }) {
   const consoleRef = useRef(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
@@ -325,20 +292,16 @@ function ConsolePanel({ stdout, clearStdout, sourceFilter, onSourceFilterChange 
           <span className="text-xs text-parchment-500">({filteredStdout.length})</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <SourceFilterTabs value={sourceFilter} onChange={onSourceFilterChange} />
-
-          {/* Clear button */}
-          {stdout.length > 0 && (
-            <button
-              onClick={clearStdout}
-              className="p-1 text-parchment-500 hover:text-parchment-300 hover:bg-midnight-700 rounded transition-colors"
-              title="Clear console"
-            >
-              <TrashIcon className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        {/* Clear button */}
+        {stdout.length > 0 && (
+          <button
+            onClick={clearStdout}
+            className="p-1 text-parchment-500 hover:text-parchment-300 hover:bg-midnight-700 rounded transition-colors"
+            title="Clear console"
+          >
+            <TrashIcon className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Console output */}
@@ -390,7 +353,7 @@ function ConsolePanel({ stdout, clearStdout, sourceFilter, onSourceFilterChange 
 /**
  * Assets grid panel with previews
  */
-function AssetsPanel({ generatedAssets, clearGeneratedAssets, sourceFilter, onSourceFilterChange }) {
+function AssetsPanel({ generatedAssets, clearGeneratedAssets, sourceFilter }) {
   // Filter assets by source/type
   const filteredAssets = useMemo(() => {
     if (sourceFilter === 'all') return generatedAssets;
@@ -410,20 +373,16 @@ function AssetsPanel({ generatedAssets, clearGeneratedAssets, sourceFilter, onSo
           <span className="text-xs text-accent-emerald">({filteredAssets.length})</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <SourceFilterTabs value={sourceFilter} onChange={onSourceFilterChange} />
-
-          {/* Clear button */}
-          {generatedAssets.length > 0 && (
-            <button
-              onClick={clearGeneratedAssets}
-              className="p-1 text-parchment-500 hover:text-parchment-300 hover:bg-midnight-700 rounded transition-colors"
-              title="Clear assets"
-            >
-              <TrashIcon className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        {/* Clear button */}
+        {generatedAssets.length > 0 && (
+          <button
+            onClick={clearGeneratedAssets}
+            className="p-1 text-parchment-500 hover:text-parchment-300 hover:bg-midnight-700 rounded transition-colors"
+            title="Clear assets"
+          >
+            <TrashIcon className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Assets grid */}
@@ -632,7 +591,6 @@ export default function UnifiedAssetPanel({
               stdout={stdout}
               clearStdout={clearStdout}
               sourceFilter={sourceFilter}
-              onSourceFilterChange={setSourceFilter}
             />
           </div>
         )}
@@ -642,7 +600,6 @@ export default function UnifiedAssetPanel({
             generatedAssets={generatedAssets}
             clearGeneratedAssets={clearGeneratedAssets}
             sourceFilter={sourceFilter}
-            onSourceFilterChange={setSourceFilter}
           />
         )}
       </div>

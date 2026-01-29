@@ -545,8 +545,10 @@ This project has specialized subagents in `.claude/agents/`. **Using subagents i
 | `test-automator` | Test framework, CI pipeline, E2E automation |
 | `refactoring-specialist` | File size enforcement, modularization patterns |
 | `documentation-maintainer` | Roadmaps, archives, spec synchronization |
+| `documentation-checker` | Code-to-doc mapping, stale detection, API doc verification |
 | `economy-balance-designer` | Gold flow, XP curves, item pricing, drop rates |
 | `asset-pipeline-specialist` | AI image/audio generation, sprite conventions |
+| `debt-detector` | Pattern conformance, coupling analysis, architecture drift |
 
 ## CI Pipeline
 

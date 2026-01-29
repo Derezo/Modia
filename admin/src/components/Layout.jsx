@@ -37,12 +37,11 @@ export default function Layout() {
     if (!panelExpanded) setPanelExpanded(true);
   }, [panelExpanded]);
 
-  // Handle badge click - open console panel with source filter
+  // Handle badge click - toggle source filter (click same = reset to 'all')
   const handleBadgeClick = useCallback((sourceType) => {
-    setSourceFilter(sourceType);
-    setActivePanel('console');
-    setPanelExpanded(true);
-  }, []);
+    setSourceFilter(prev => prev === sourceType ? 'all' : sourceType);
+    if (!panelExpanded) setPanelExpanded(true);
+  }, [panelExpanded]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -88,6 +87,7 @@ export default function Layout() {
         activePanel={activePanel}
         onPanelChange={handlePanelChange}
         onBadgeClick={handleBadgeClick}
+        sourceFilter={sourceFilter}
       />
     </div>
   );

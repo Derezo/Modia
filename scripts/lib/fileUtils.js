@@ -1,6 +1,8 @@
 /**
  * File Utilities for Generation Scripts
- * Common file operations for JSON and general file handling
+ * Common file operations for JSON and general file handling.
+ * Uses cross-process file locking to prevent race conditions during
+ * concurrent updates from the API server and CLI scripts.
  *
  * @module fileUtils
  * @description Provides file utilities including JSON load/save with error handling.
@@ -10,6 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const { ensureDirectory } = require('./pathUtils');
+const { withFileLockSync } = require('./fileLock');
 
 /**
  * Check if a file exists
@@ -59,27 +62,37 @@ function loadJson(filePath, options = {}) {
 }
 
 /**
- * Save data to a JSON file with pretty formatting
+ * Save data to a JSON file with pretty formatting and cross-process locking
  * Creates parent directories if they don't exist.
+ * Uses file locking to prevent race conditions with the API server.
  *
  * @param {string} filePath - Path to the JSON file
  * @param {*} data - Data to save (must be JSON-serializable)
  * @param {Object} [options={}] - Options
  * @param {number} [options.indent=2] - Number of spaces for indentation
  * @param {boolean} [options.trailingNewline=true] - Add trailing newline
+ * @param {boolean} [options.useLock=true] - Whether to use file locking
  */
 function saveJson(filePath, data, options = {}) {
-  const { indent = 2, trailingNewline = true } = options;
+  const { indent = 2, trailingNewline = true, useLock = true } = options;
 
-  const dir = path.dirname(filePath);
-  ensureDirectory(dir);
+  const doSave = () => {
+    const dir = path.dirname(filePath);
+    ensureDirectory(dir);
 
-  let content = JSON.stringify(data, null, indent);
-  if (trailingNewline) {
-    content += '\n';
+    let content = JSON.stringify(data, null, indent);
+    if (trailingNewline) {
+      content += '\n';
+    }
+
+    fs.writeFileSync(filePath, content);
+  };
+
+  if (useLock) {
+    withFileLockSync(filePath, doSave);
+  } else {
+    doSave();
   }
-
-  fs.writeFileSync(filePath, content);
 }
 
 /**

@@ -43,10 +43,6 @@ const PROJECT_ROOT = getProjectRoot();
 // New unified portraits directory - player and enemy portraits in same location
 // Enemy portraits use 'enemy_' prefix in filename (e.g., enemy_goblin_warrior.png)
 const OUTPUT_DIR = path.join(PROJECT_ROOT, 'frontend/public/assets/portraits/originals');
-const ENEMY_OUTPUT_DIR = OUTPUT_DIR; // Same directory, enemy_ prefix distinguishes them
-// For Python script's fallback_dir - note: Python output_manager adds 'portraits/' subdirectory
-// So we pass the parent directory to avoid double 'portraits/portraits/'
-const ENEMY_OUTPUT_BASE = path.join(PROJECT_ROOT, 'frontend/public/assets');
 
 /**
  * Parse command line arguments
@@ -121,11 +117,9 @@ Examples:
  * Enemy portraits use 'enemy_' prefix in filename
  */
 function getOutputPath(portrait) {
-  // All portraits go to same directory, enemy has prefix
-  const filename = portrait._type === 'enemy'
-    ? `enemy_${portrait.id}.png`
-    : `${portrait.id}.png`;
-  return path.join(OUTPUT_DIR, filename);
+  // All portraits go to same directory
+  // Enemy portrait IDs already include 'enemy_' prefix (e.g., 'enemy_goblin_warrior')
+  return path.join(OUTPUT_DIR, `${portrait.id}.png`);
 }
 
 /**
@@ -319,11 +313,8 @@ async function main() {
     }
   }
 
-  // Ensure output directories exist
-  const hasPlayerPortraits = portraitsToGenerate.some(p => p._type !== 'enemy');
-  const hasEnemyPortraits = portraitsToGenerate.some(p => p._type === 'enemy');
-  if (hasPlayerPortraits) ensureDirectoryExists(OUTPUT_DIR);
-  if (hasEnemyPortraits) ensureDirectoryExists(ENEMY_OUTPUT_DIR);
+  // Ensure output directory exists
+  ensureDirectoryExists(OUTPUT_DIR);
 
   // Generate portraits
   const results = {
@@ -354,15 +345,14 @@ async function main() {
           enemyPrompt = `${visualTraits} ${archetypeTraits} ${regionTraits} monster creature`;
         }
 
-        // Generate enemy portrait using prompt/key mode with custom output dir
-        // Note: Python script adds 'portraits/' to the fallback_dir, so we use ENEMY_OUTPUT_BASE
+        // Generate enemy portrait using prompt/key mode
+        // Python resolves output path via --modia-root (no --output-dir needed)
         // Determine LoRA model: CLI override > asset-level > category default
         const effectiveLoraModel = options.lora || getEffectiveLoraModel(portrait, 'portraits');
         result = await generatePortrait({
           prompt: enemyPrompt,
           key: portrait.id,
           seed: portrait.seed,
-          outputDir: ENEMY_OUTPUT_BASE,
           isEnemy: true,
           loraModel: effectiveLoraModel
         }, {
@@ -433,9 +423,8 @@ async function main() {
         // Post-process to generate canonical size variants
         // Python now saves processed 1024x1024 original directly to originals/
         if (checkImageMagick()) {
-          const portraitId = portrait._type === 'enemy'
-            ? `enemy_${portrait.id}`
-            : portrait.id;
+          // portrait.id already includes 'enemy_' prefix for enemy portraits
+          const portraitId = portrait.id;
 
           const sourcePath = path.join(OUTPUT_DIR, `${portraitId}.png`);
 

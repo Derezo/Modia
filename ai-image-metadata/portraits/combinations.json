@@ -45,7 +45,9 @@
       "gender": "male",
       "class": "warrior",
       "seed": 10001,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T19:52:03.258Z"
     },
     {
       "id": "human_male_wizard",
@@ -54,7 +56,8 @@
       "class": "wizard",
       "seed": 10002,
       "generated": true,
-      "generatedAt": "2026-01-25T21:56:54.647Z"
+      "generatedAt": "2026-01-27T19:52:44.700Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "human_male_monk",
@@ -63,14 +66,14 @@
       "class": "monk",
       "seed": 10003,
       "generated": true,
-      "generatedAt": "2026-01-27T11:03:22.137Z",
+      "generatedAt": "2026-01-27T19:53:28.374Z",
       "prompt": "human features balanced proportions warm skin tone male masculine features monk martial artist wrappings disciplined serene focused",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
       "needsRegeneration": false,
-      "loraModel": "v2"
+      "loraModel": "retro-pixel"
     },
     {
       "id": "human_male_chemist",
@@ -86,8 +89,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "loraModel": null,
-      "generatedAt": "2026-01-27T12:33:52.848Z",
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T19:54:13.253Z",
       "generationFailureCount": null,
       "lastError": null
     },
@@ -105,8 +108,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "loraModel": null,
-      "generatedAt": "2026-01-27T12:36:56.805Z",
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T19:54:58.157Z",
       "generationFailureCount": null,
       "lastError": null
     },
@@ -116,7 +119,9 @@
       "gender": "female",
       "class": "wizard",
       "seed": 10006,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T19:55:43.097Z"
     },
     {
       "id": "human_female_monk",
@@ -124,7 +129,9 @@
       "gender": "female",
       "class": "monk",
       "seed": 10007,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T19:56:29.268Z"
     },
     {
       "id": "human_female_chemist",
@@ -132,7 +139,9 @@
       "gender": "female",
       "class": "chemist",
       "seed": 10008,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T19:57:15.304Z"
     },
     {
       "id": "human_other_warrior",
@@ -140,9 +149,11 @@
       "gender": "other",
       "class": "warrior",
       "seed": 10009,
-      "generated": false,
+      "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T19:58:01.885Z"
     },
     {
       "id": "human_other_wizard",
@@ -151,7 +162,8 @@
       "class": "wizard",
       "seed": 10010,
       "generated": true,
-      "generatedAt": "2026-01-25T22:19:47.243Z"
+      "generatedAt": "2026-01-27T19:58:49.594Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "human_other_monk",
@@ -159,7 +171,9 @@
       "gender": "other",
       "class": "monk",
       "seed": 10011,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T19:59:38.041Z"
     },
     {
       "id": "human_other_chemist",
@@ -167,7 +181,9 @@
       "gender": "other",
       "class": "chemist",
       "seed": 10012,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:00:24.293Z"
     },
     {
       "id": "elf_male_warrior",
@@ -175,7 +191,9 @@
       "gender": "male",
       "class": "warrior",
       "seed": 10101,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:01:11.409Z"
     },
     {
       "id": "elf_male_wizard",
@@ -183,7 +201,9 @@
       "gender": "male",
       "class": "wizard",
       "seed": 10102,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:01:57.428Z"
     },
     {
       "id": "elf_male_monk",
@@ -191,9 +211,11 @@
       "gender": "male",
       "class": "monk",
       "seed": 10103,
-      "generated": false,
+      "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:02:44.736Z"
     },
     {
       "id": "elf_male_chemist",
@@ -201,7 +223,9 @@
       "gender": "male",
       "class": "chemist",
       "seed": 10104,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:03:32.217Z"
     },
     {
       "id": "elf_female_warrior",
@@ -209,7 +233,9 @@
       "gender": "female",
       "class": "warrior",
       "seed": 10105,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:04:20.126Z"
     },
     {
       "id": "elf_female_wizard",
@@ -217,7 +243,9 @@
       "gender": "female",
       "class": "wizard",
       "seed": 10106,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:05:06.275Z"
     },
     {
       "id": "elf_female_monk",
@@ -225,7 +253,9 @@
       "gender": "female",
       "class": "monk",
       "seed": 10107,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:05:50.945Z"
     },
     {
       "id": "elf_female_chemist",
@@ -233,7 +263,9 @@
       "gender": "female",
       "class": "chemist",
       "seed": 10108,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:06:35.919Z"
     },
     {
       "id": "elf_other_warrior",
@@ -241,7 +273,9 @@
       "gender": "other",
       "class": "warrior",
       "seed": 10109,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:07:21.943Z"
     },
     {
       "id": "elf_other_wizard",
@@ -249,7 +283,9 @@
       "gender": "other",
       "class": "wizard",
       "seed": 10110,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:08:09.638Z"
     },
     {
       "id": "elf_other_monk",
@@ -257,7 +293,9 @@
       "gender": "other",
       "class": "monk",
       "seed": 10111,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:08:56.890Z"
     },
     {
       "id": "elf_other_chemist",
@@ -265,7 +303,9 @@
       "gender": "other",
       "class": "chemist",
       "seed": 10112,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:09:42.833Z"
     },
     {
       "id": "dwarf_male_warrior",
@@ -273,7 +313,9 @@
       "gender": "male",
       "class": "warrior",
       "seed": 10201,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:10:30.201Z"
     },
     {
       "id": "dwarf_male_wizard",
@@ -281,7 +323,9 @@
       "gender": "male",
       "class": "wizard",
       "seed": 10202,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:11:16.336Z"
     },
     {
       "id": "dwarf_male_monk",
@@ -289,7 +333,9 @@
       "gender": "male",
       "class": "monk",
       "seed": 10203,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:12:02.793Z"
     },
     {
       "id": "dwarf_male_chemist",
@@ -297,7 +343,9 @@
       "gender": "male",
       "class": "chemist",
       "seed": 10204,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:12:49.443Z"
     },
     {
       "id": "dwarf_female_warrior",
@@ -305,7 +353,9 @@
       "gender": "female",
       "class": "warrior",
       "seed": 10205,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:13:34.053Z"
     },
     {
       "id": "dwarf_female_wizard",
@@ -313,7 +363,9 @@
       "gender": "female",
       "class": "wizard",
       "seed": 10206,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:14:18.631Z"
     },
     {
       "id": "dwarf_female_monk",
@@ -321,7 +373,9 @@
       "gender": "female",
       "class": "monk",
       "seed": 10207,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:15:04.453Z"
     },
     {
       "id": "dwarf_female_chemist",
@@ -329,7 +383,9 @@
       "gender": "female",
       "class": "chemist",
       "seed": 10208,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:15:49.569Z"
     },
     {
       "id": "dwarf_other_warrior",
@@ -337,7 +393,9 @@
       "gender": "other",
       "class": "warrior",
       "seed": 10209,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:16:34.287Z"
     },
     {
       "id": "dwarf_other_wizard",
@@ -345,7 +403,9 @@
       "gender": "other",
       "class": "wizard",
       "seed": 10210,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:17:18.864Z"
     },
     {
       "id": "dwarf_other_monk",
@@ -353,7 +413,9 @@
       "gender": "other",
       "class": "monk",
       "seed": 10211,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:18:03.472Z"
     },
     {
       "id": "dwarf_other_chemist",
@@ -361,7 +423,9 @@
       "gender": "other",
       "class": "chemist",
       "seed": 10212,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:18:48.062Z"
     },
     {
       "id": "vampire_male_warrior",
@@ -369,7 +433,9 @@
       "gender": "male",
       "class": "warrior",
       "seed": 10301,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:19:33.071Z"
     },
     {
       "id": "vampire_male_wizard",
@@ -377,7 +443,9 @@
       "gender": "male",
       "class": "wizard",
       "seed": 10302,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:20:18.709Z"
     },
     {
       "id": "vampire_male_monk",
@@ -385,7 +453,9 @@
       "gender": "male",
       "class": "monk",
       "seed": 10303,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:21:03.473Z"
     },
     {
       "id": "vampire_male_chemist",
@@ -393,7 +463,9 @@
       "gender": "male",
       "class": "chemist",
       "seed": 10304,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:21:48.338Z"
     },
     {
       "id": "vampire_female_warrior",
@@ -401,7 +473,9 @@
       "gender": "female",
       "class": "warrior",
       "seed": 10305,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:22:33.050Z"
     },
     {
       "id": "vampire_female_wizard",
@@ -409,7 +483,9 @@
       "gender": "female",
       "class": "wizard",
       "seed": 10306,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:23:18.724Z"
     },
     {
       "id": "vampire_female_monk",
@@ -417,7 +493,9 @@
       "gender": "female",
       "class": "monk",
       "seed": 10307,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:24:05.859Z"
     },
     {
       "id": "vampire_female_chemist",
@@ -425,7 +503,9 @@
       "gender": "female",
       "class": "chemist",
       "seed": 10308,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:24:53.569Z"
     },
     {
       "id": "vampire_other_warrior",
@@ -433,7 +513,9 @@
       "gender": "other",
       "class": "warrior",
       "seed": 10309,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:25:40.732Z"
     },
     {
       "id": "vampire_other_wizard",
@@ -441,7 +523,9 @@
       "gender": "other",
       "class": "wizard",
       "seed": 10310,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:26:27.787Z"
     },
     {
       "id": "vampire_other_monk",
@@ -449,7 +533,9 @@
       "gender": "other",
       "class": "monk",
       "seed": 10311,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:27:13.705Z"
     },
     {
       "id": "vampire_other_chemist",
@@ -457,7 +543,9 @@
       "gender": "other",
       "class": "chemist",
       "seed": 10312,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:27:59.432Z"
     },
     {
       "id": "orc_male_warrior",
@@ -465,7 +553,9 @@
       "gender": "male",
       "class": "warrior",
       "seed": 10401,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:28:44.103Z"
     },
     {
       "id": "orc_male_wizard",
@@ -473,7 +563,9 @@
       "gender": "male",
       "class": "wizard",
       "seed": 10402,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:29:29.981Z"
     },
     {
       "id": "orc_male_monk",
@@ -481,7 +573,9 @@
       "gender": "male",
       "class": "monk",
       "seed": 10403,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:30:15.726Z"
     },
     {
       "id": "orc_male_chemist",
@@ -489,7 +583,9 @@
       "gender": "male",
       "class": "chemist",
       "seed": 10404,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:31:00.336Z"
     },
     {
       "id": "orc_female_warrior",
@@ -497,7 +593,9 @@
       "gender": "female",
       "class": "warrior",
       "seed": 10405,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:31:45.733Z"
     },
     {
       "id": "orc_female_wizard",
@@ -505,7 +603,9 @@
       "gender": "female",
       "class": "wizard",
       "seed": 10406,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:32:33.199Z"
     },
     {
       "id": "orc_female_monk",
@@ -513,7 +613,9 @@
       "gender": "female",
       "class": "monk",
       "seed": 10407,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:33:19.616Z"
     },
     {
       "id": "orc_female_chemist",
@@ -521,7 +623,9 @@
       "gender": "female",
       "class": "chemist",
       "seed": 10408,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:34:53.126Z"
     },
     {
       "id": "orc_other_warrior",
@@ -529,7 +633,9 @@
       "gender": "other",
       "class": "warrior",
       "seed": 10409,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:35:34.767Z"
     },
     {
       "id": "orc_other_wizard",
@@ -537,7 +643,9 @@
       "gender": "other",
       "class": "wizard",
       "seed": 10410,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:36:19.248Z"
     },
     {
       "id": "orc_other_monk",
@@ -545,7 +653,9 @@
       "gender": "other",
       "class": "monk",
       "seed": 10411,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:37:04.161Z"
     },
     {
       "id": "orc_other_chemist",
@@ -553,7 +663,9 @@
       "gender": "other",
       "class": "chemist",
       "seed": 10412,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:37:48.367Z"
     },
     {
       "id": "human_male_berserker",
@@ -562,7 +674,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 20001,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:38:33.346Z"
     },
     {
       "id": "human_male_paladin",
@@ -571,7 +685,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 20002,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:39:18.477Z"
     },
     {
       "id": "human_male_guardian",
@@ -580,7 +696,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 20003,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:40:03.337Z"
     },
     {
       "id": "human_male_warlord",
@@ -589,7 +707,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 20004,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:40:47.248Z"
     },
     {
       "id": "human_male_sorcerer",
@@ -598,7 +718,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 20005,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:41:34.098Z"
     },
     {
       "id": "human_male_summoner",
@@ -607,7 +729,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 20006,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:42:24.644Z"
     },
     {
       "id": "human_male_conjurer",
@@ -616,7 +740,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 20007,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:43:13.352Z"
     },
     {
       "id": "human_male_oracle",
@@ -625,7 +751,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 20008,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T20:44:01.604Z"
     },
     {
       "id": "human_male_ninja",
@@ -634,7 +762,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 20009,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:35:23.277Z"
     },
     {
       "id": "human_male_martial_artist",
@@ -643,7 +773,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 20010,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:36:05.134Z"
     },
     {
       "id": "human_male_brawler",
@@ -652,7 +784,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 20011,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:36:49.358Z"
     },
     {
       "id": "human_male_ascetic",
@@ -661,7 +795,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 20012,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:37:33.732Z"
     },
     {
       "id": "human_male_alchemist",
@@ -670,7 +806,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 20013,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:38:18.986Z"
     },
     {
       "id": "human_male_medic",
@@ -679,7 +817,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 20014,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:39:04.748Z"
     },
     {
       "id": "human_male_plague_doctor",
@@ -688,7 +828,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 20015,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:39:50.686Z"
     },
     {
       "id": "human_male_artificer",
@@ -697,7 +839,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 20016,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:40:37.381Z"
     },
     {
       "id": "human_female_berserker",
@@ -706,7 +850,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 20017,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:41:24.131Z"
     },
     {
       "id": "human_female_paladin",
@@ -715,7 +861,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 20018,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:42:10.401Z"
     },
     {
       "id": "human_female_guardian",
@@ -724,7 +872,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 20019,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:42:57.350Z"
     },
     {
       "id": "human_female_warlord",
@@ -733,7 +883,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 20020,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:43:43.949Z"
     },
     {
       "id": "human_female_sorcerer",
@@ -742,7 +894,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 20021,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:44:30.469Z"
     },
     {
       "id": "human_female_summoner",
@@ -751,7 +905,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 20022,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:45:16.890Z"
     },
     {
       "id": "human_female_conjurer",
@@ -760,7 +916,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 20023,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:46:02.937Z"
     },
     {
       "id": "human_female_oracle",
@@ -769,7 +927,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 20024,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:46:49.624Z"
     },
     {
       "id": "human_female_ninja",
@@ -778,7 +938,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 20025,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:47:36.280Z"
     },
     {
       "id": "human_female_martial_artist",
@@ -787,7 +949,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 20026,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:48:21.986Z"
     },
     {
       "id": "human_female_brawler",
@@ -796,7 +960,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 20027,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:49:08.655Z"
     },
     {
       "id": "human_female_ascetic",
@@ -805,7 +971,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 20028,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:49:54.195Z"
     },
     {
       "id": "human_female_alchemist",
@@ -814,7 +982,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 20029,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:50:40.663Z"
     },
     {
       "id": "human_female_medic",
@@ -823,7 +993,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 20030,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:51:27.000Z"
     },
     {
       "id": "human_female_plague_doctor",
@@ -832,7 +1004,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 20031,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:52:12.562Z"
     },
     {
       "id": "human_female_artificer",
@@ -841,7 +1015,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 20032,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:52:58.329Z"
     },
     {
       "id": "human_other_berserker",
@@ -850,7 +1026,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 20033,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:53:43.749Z"
     },
     {
       "id": "human_other_paladin",
@@ -859,7 +1037,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 20034,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:54:29.475Z"
     },
     {
       "id": "human_other_guardian",
@@ -868,7 +1048,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 20035,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:55:15.272Z"
     },
     {
       "id": "human_other_warlord",
@@ -877,7 +1059,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 20036,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:56:01.098Z"
     },
     {
       "id": "human_other_sorcerer",
@@ -886,7 +1070,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 20037,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:56:47.527Z"
     },
     {
       "id": "human_other_summoner",
@@ -895,7 +1081,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 20038,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:57:32.998Z"
     },
     {
       "id": "human_other_conjurer",
@@ -904,7 +1092,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 20039,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:58:17.541Z"
     },
     {
       "id": "human_other_oracle",
@@ -913,7 +1103,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 20040,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:59:03.061Z"
     },
     {
       "id": "human_other_ninja",
@@ -922,7 +1114,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 20041,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T22:59:48.601Z"
     },
     {
       "id": "human_other_martial_artist",
@@ -931,7 +1125,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 20042,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:00:34.380Z"
     },
     {
       "id": "human_other_brawler",
@@ -940,7 +1136,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 20043,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:01:20.030Z"
     },
     {
       "id": "human_other_ascetic",
@@ -949,7 +1147,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 20044,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:02:05.468Z"
     },
     {
       "id": "human_other_alchemist",
@@ -958,7 +1158,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 20045,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:02:51.819Z"
     },
     {
       "id": "human_other_medic",
@@ -967,7 +1169,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 20046,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:03:37.467Z"
     },
     {
       "id": "human_other_plague_doctor",
@@ -976,7 +1180,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 20047,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:04:22.757Z"
     },
     {
       "id": "human_other_artificer",
@@ -985,7 +1191,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 20048,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:05:08.355Z"
     },
     {
       "id": "elf_male_berserker",
@@ -994,7 +1202,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 21001,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:05:53.211Z"
     },
     {
       "id": "elf_male_paladin",
@@ -1003,7 +1213,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 21002,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:06:34.738Z"
     },
     {
       "id": "elf_male_guardian",
@@ -1012,7 +1224,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 21003,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:07:17.459Z"
     },
     {
       "id": "elf_male_warlord",
@@ -1021,7 +1235,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 21004,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:08:00.255Z"
     },
     {
       "id": "elf_male_sorcerer",
@@ -1030,7 +1246,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 21005,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:08:43.950Z"
     },
     {
       "id": "elf_male_summoner",
@@ -1039,7 +1257,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 21006,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:09:26.602Z"
     },
     {
       "id": "elf_male_conjurer",
@@ -1048,7 +1268,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 21007,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:10:09.173Z"
     },
     {
       "id": "elf_male_oracle",
@@ -1057,7 +1279,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 21008,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:10:51.678Z"
     },
     {
       "id": "elf_male_ninja",
@@ -1066,7 +1290,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 21009,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:11:34.362Z"
     },
     {
       "id": "elf_male_martial_artist",
@@ -1075,7 +1301,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 21010,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:12:17.158Z"
     },
     {
       "id": "elf_male_brawler",
@@ -1084,7 +1312,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 21011,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:13:00.852Z"
     },
     {
       "id": "elf_male_ascetic",
@@ -1093,7 +1323,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 21012,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:13:43.498Z"
     },
     {
       "id": "elf_male_alchemist",
@@ -1102,7 +1334,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 21013,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:14:26.105Z"
     },
     {
       "id": "elf_male_medic",
@@ -1111,7 +1345,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 21014,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:15:08.113Z"
     },
     {
       "id": "elf_male_plague_doctor",
@@ -1120,7 +1356,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 21015,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:15:50.861Z"
     },
     {
       "id": "elf_male_artificer",
@@ -1129,7 +1367,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 21016,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:16:33.578Z"
     },
     {
       "id": "elf_female_berserker",
@@ -1138,7 +1378,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 21017,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:17:17.309Z"
     },
     {
       "id": "elf_female_paladin",
@@ -1147,7 +1389,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 21018,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:17:59.923Z"
     },
     {
       "id": "elf_female_guardian",
@@ -1156,7 +1400,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 21019,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:18:42.654Z"
     },
     {
       "id": "elf_female_warlord",
@@ -1165,7 +1411,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 21020,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:19:25.543Z"
     },
     {
       "id": "elf_female_sorcerer",
@@ -1174,7 +1422,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 21021,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:20:08.394Z"
     },
     {
       "id": "elf_female_summoner",
@@ -1183,7 +1433,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 21022,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:20:51.429Z"
     },
     {
       "id": "elf_female_conjurer",
@@ -1192,7 +1444,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 21023,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:21:34.028Z"
     },
     {
       "id": "elf_female_oracle",
@@ -1201,7 +1455,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 21024,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:22:17.728Z"
     },
     {
       "id": "elf_female_ninja",
@@ -1210,7 +1466,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 21025,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:23:01.378Z"
     },
     {
       "id": "elf_female_martial_artist",
@@ -1219,7 +1477,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 21026,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:23:44.023Z"
     },
     {
       "id": "elf_female_brawler",
@@ -1228,7 +1488,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 21027,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:24:26.648Z"
     },
     {
       "id": "elf_female_ascetic",
@@ -1237,7 +1499,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 21028,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:25:09.330Z"
     },
     {
       "id": "elf_female_alchemist",
@@ -1246,7 +1510,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 21029,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:25:52.038Z"
     },
     {
       "id": "elf_female_medic",
@@ -1255,7 +1521,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 21030,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:26:34.630Z"
     },
     {
       "id": "elf_female_plague_doctor",
@@ -1264,7 +1532,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 21031,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:27:17.292Z"
     },
     {
       "id": "elf_female_artificer",
@@ -1273,7 +1543,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 21032,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:27:59.979Z"
     },
     {
       "id": "elf_other_berserker",
@@ -1282,7 +1554,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 21033,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:28:42.794Z"
     },
     {
       "id": "elf_other_paladin",
@@ -1291,7 +1565,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 21034,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:29:25.791Z"
     },
     {
       "id": "elf_other_guardian",
@@ -1300,7 +1576,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 21035,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:30:08.416Z"
     },
     {
       "id": "elf_other_warlord",
@@ -1309,7 +1587,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 21036,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:30:51.079Z"
     },
     {
       "id": "elf_other_sorcerer",
@@ -1318,7 +1598,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 21037,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:31:33.597Z"
     },
     {
       "id": "elf_other_summoner",
@@ -1327,7 +1609,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 21038,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:32:16.235Z"
     },
     {
       "id": "elf_other_conjurer",
@@ -1336,7 +1620,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 21039,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:32:58.872Z"
     },
     {
       "id": "elf_other_oracle",
@@ -1345,7 +1631,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 21040,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:33:41.499Z"
     },
     {
       "id": "elf_other_ninja",
@@ -1354,7 +1642,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 21041,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:34:24.137Z"
     },
     {
       "id": "elf_other_martial_artist",
@@ -1363,7 +1653,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 21042,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:35:06.721Z"
     },
     {
       "id": "elf_other_brawler",
@@ -1372,7 +1664,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 21043,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:35:49.284Z"
     },
     {
       "id": "elf_other_ascetic",
@@ -1381,7 +1675,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 21044,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:36:31.905Z"
     },
     {
       "id": "elf_other_alchemist",
@@ -1390,7 +1686,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 21045,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:37:13.742Z"
     },
     {
       "id": "elf_other_medic",
@@ -1399,7 +1697,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 21046,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:37:55.460Z"
     },
     {
       "id": "elf_other_plague_doctor",
@@ -1408,7 +1708,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 21047,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:38:38.049Z"
     },
     {
       "id": "elf_other_artificer",
@@ -1417,7 +1719,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 21048,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:39:19.550Z"
     },
     {
       "id": "dwarf_male_berserker",
@@ -1426,7 +1730,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 22001,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:40:01.114Z"
     },
     {
       "id": "dwarf_male_paladin",
@@ -1435,7 +1741,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 22002,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:40:42.740Z"
     },
     {
       "id": "dwarf_male_guardian",
@@ -1444,7 +1752,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 22003,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:41:24.570Z"
     },
     {
       "id": "dwarf_male_warlord",
@@ -1453,7 +1763,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 22004,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:42:08.138Z"
     },
     {
       "id": "dwarf_male_sorcerer",
@@ -1462,7 +1774,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 22005,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:42:50.748Z"
     },
     {
       "id": "dwarf_male_summoner",
@@ -1471,7 +1785,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 22006,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:43:33.386Z"
     },
     {
       "id": "dwarf_male_conjurer",
@@ -1480,7 +1796,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 22007,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:44:15.996Z"
     },
     {
       "id": "dwarf_male_oracle",
@@ -1489,7 +1807,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 22008,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:44:58.731Z"
     },
     {
       "id": "dwarf_male_ninja",
@@ -1498,7 +1818,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 22009,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:45:41.192Z"
     },
     {
       "id": "dwarf_male_martial_artist",
@@ -1507,7 +1829,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 22010,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:46:23.095Z"
     },
     {
       "id": "dwarf_male_brawler",
@@ -1516,7 +1840,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 22011,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:47:05.708Z"
     },
     {
       "id": "dwarf_male_ascetic",
@@ -1525,7 +1851,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 22012,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:47:47.323Z"
     },
     {
       "id": "dwarf_male_alchemist",
@@ -1534,7 +1862,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 22013,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:48:28.844Z"
     },
     {
       "id": "dwarf_male_medic",
@@ -1543,7 +1873,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 22014,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:49:11.384Z"
     },
     {
       "id": "dwarf_male_plague_doctor",
@@ -1552,7 +1884,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 22015,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:49:53.816Z"
     },
     {
       "id": "dwarf_male_artificer",
@@ -1561,7 +1895,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 22016,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:50:35.365Z"
     },
     {
       "id": "dwarf_female_berserker",
@@ -1570,7 +1906,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 22017,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:51:17.996Z"
     },
     {
       "id": "dwarf_female_paladin",
@@ -1579,7 +1917,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 22018,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:51:59.580Z"
     },
     {
       "id": "dwarf_female_guardian",
@@ -1588,7 +1928,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 22019,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:52:41.486Z"
     },
     {
       "id": "dwarf_female_warlord",
@@ -1597,7 +1939,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 22020,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:53:22.897Z"
     },
     {
       "id": "dwarf_female_sorcerer",
@@ -1606,7 +1950,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 22021,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:54:04.352Z"
     },
     {
       "id": "dwarf_female_summoner",
@@ -1615,7 +1961,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 22022,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:54:45.838Z"
     },
     {
       "id": "dwarf_female_conjurer",
@@ -1624,7 +1972,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 22023,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:55:27.472Z"
     },
     {
       "id": "dwarf_female_oracle",
@@ -1633,7 +1983,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 22024,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:56:10.042Z"
     },
     {
       "id": "dwarf_female_ninja",
@@ -1642,7 +1994,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 22025,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:56:52.645Z"
     },
     {
       "id": "dwarf_female_martial_artist",
@@ -1651,7 +2005,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 22026,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:57:35.091Z"
     },
     {
       "id": "dwarf_female_brawler",
@@ -1660,7 +2016,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 22027,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:58:17.629Z"
     },
     {
       "id": "dwarf_female_ascetic",
@@ -1669,7 +2027,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 22028,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:59:00.124Z"
     },
     {
       "id": "dwarf_female_alchemist",
@@ -1678,7 +2038,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 22029,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-27T23:59:42.709Z"
     },
     {
       "id": "dwarf_female_medic",
@@ -1687,7 +2049,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 22030,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:00:25.264Z"
     },
     {
       "id": "dwarf_female_plague_doctor",
@@ -1696,7 +2060,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 22031,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:01:07.745Z"
     },
     {
       "id": "dwarf_female_artificer",
@@ -1705,7 +2071,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 22032,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:01:50.492Z"
     },
     {
       "id": "dwarf_other_berserker",
@@ -1714,7 +2082,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 22033,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:02:32.100Z"
     },
     {
       "id": "dwarf_other_paladin",
@@ -1723,7 +2093,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 22034,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:03:14.492Z"
     },
     {
       "id": "dwarf_other_guardian",
@@ -1732,7 +2104,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 22035,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:03:56.970Z"
     },
     {
       "id": "dwarf_other_warlord",
@@ -1741,7 +2115,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 22036,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:04:39.512Z"
     },
     {
       "id": "dwarf_other_sorcerer",
@@ -1750,7 +2126,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 22037,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:05:21.186Z"
     },
     {
       "id": "dwarf_other_summoner",
@@ -1759,7 +2137,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 22038,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:06:03.787Z"
     },
     {
       "id": "dwarf_other_conjurer",
@@ -1768,7 +2148,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 22039,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:06:45.479Z"
     },
     {
       "id": "dwarf_other_oracle",
@@ -1777,7 +2159,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 22040,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:07:28.157Z"
     },
     {
       "id": "dwarf_other_ninja",
@@ -1786,7 +2170,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 22041,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:08:09.725Z"
     },
     {
       "id": "dwarf_other_martial_artist",
@@ -1795,7 +2181,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 22042,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:08:52.240Z"
     },
     {
       "id": "dwarf_other_brawler",
@@ -1804,7 +2192,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 22043,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:09:34.879Z"
     },
     {
       "id": "dwarf_other_ascetic",
@@ -1813,7 +2203,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 22044,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:10:17.290Z"
     },
     {
       "id": "dwarf_other_alchemist",
@@ -1822,7 +2214,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 22045,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:10:58.809Z"
     },
     {
       "id": "dwarf_other_medic",
@@ -1831,7 +2225,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 22046,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:11:40.376Z"
     },
     {
       "id": "dwarf_other_plague_doctor",
@@ -1840,7 +2236,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 22047,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:12:22.966Z"
     },
     {
       "id": "dwarf_other_artificer",
@@ -1849,7 +2247,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 22048,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:13:04.506Z"
     },
     {
       "id": "vampire_male_berserker",
@@ -1858,7 +2258,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 23001,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:13:46.085Z"
     },
     {
       "id": "vampire_male_paladin",
@@ -1867,7 +2269,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 23002,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:14:28.629Z"
     },
     {
       "id": "vampire_male_guardian",
@@ -1876,7 +2280,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 23003,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:15:10.222Z"
     },
     {
       "id": "vampire_male_warlord",
@@ -1885,7 +2291,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 23004,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:15:52.782Z"
     },
     {
       "id": "vampire_male_sorcerer",
@@ -1894,7 +2302,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 23005,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:16:34.380Z"
     },
     {
       "id": "vampire_male_summoner",
@@ -1903,7 +2313,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 23006,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:17:17.190Z"
     },
     {
       "id": "vampire_male_conjurer",
@@ -1912,7 +2324,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 23007,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:17:59.659Z"
     },
     {
       "id": "vampire_male_oracle",
@@ -1921,7 +2335,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 23008,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:18:41.385Z"
     },
     {
       "id": "vampire_male_ninja",
@@ -1930,7 +2346,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 23009,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:19:23.964Z"
     },
     {
       "id": "vampire_male_martial_artist",
@@ -1939,7 +2357,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 23010,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:20:05.526Z"
     },
     {
       "id": "vampire_male_brawler",
@@ -1948,7 +2368,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 23011,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:20:48.051Z"
     },
     {
       "id": "vampire_male_ascetic",
@@ -1957,7 +2379,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 23012,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:21:29.667Z"
     },
     {
       "id": "vampire_male_alchemist",
@@ -1966,7 +2390,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 23013,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:22:12.089Z"
     },
     {
       "id": "vampire_male_medic",
@@ -1975,7 +2401,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 23014,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:22:53.720Z"
     },
     {
       "id": "vampire_male_plague_doctor",
@@ -1984,7 +2412,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 23015,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:23:35.366Z"
     },
     {
       "id": "vampire_male_artificer",
@@ -1993,7 +2423,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 23016,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:24:16.956Z"
     },
     {
       "id": "vampire_female_berserker",
@@ -2002,7 +2434,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 23017,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:24:58.520Z"
     },
     {
       "id": "vampire_female_paladin",
@@ -2011,7 +2445,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 23018,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:25:40.132Z"
     },
     {
       "id": "vampire_female_guardian",
@@ -2020,7 +2456,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 23019,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:26:21.750Z"
     },
     {
       "id": "vampire_female_warlord",
@@ -2029,7 +2467,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 23020,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:27:04.323Z"
     },
     {
       "id": "vampire_female_sorcerer",
@@ -2038,7 +2478,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 23021,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:27:45.886Z"
     },
     {
       "id": "vampire_female_summoner",
@@ -2047,7 +2489,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 23022,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:28:28.385Z"
     },
     {
       "id": "vampire_female_conjurer",
@@ -2056,7 +2500,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 23023,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:29:10.026Z"
     },
     {
       "id": "vampire_female_oracle",
@@ -2065,7 +2511,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 23024,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:29:52.521Z"
     },
     {
       "id": "vampire_female_ninja",
@@ -2074,7 +2522,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 23025,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:30:35.049Z"
     },
     {
       "id": "vampire_female_martial_artist",
@@ -2083,7 +2533,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 23026,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:31:16.865Z"
     },
     {
       "id": "vampire_female_brawler",
@@ -2092,7 +2544,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 23027,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:31:58.689Z"
     },
     {
       "id": "vampire_female_ascetic",
@@ -2101,7 +2555,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 23028,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:32:41.298Z"
     },
     {
       "id": "vampire_female_alchemist",
@@ -2110,7 +2566,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 23029,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:33:22.885Z"
     },
     {
       "id": "vampire_female_medic",
@@ -2119,7 +2577,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 23030,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:34:05.493Z"
     },
     {
       "id": "vampire_female_plague_doctor",
@@ -2128,7 +2588,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 23031,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:34:46.964Z"
     },
     {
       "id": "vampire_female_artificer",
@@ -2137,7 +2599,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 23032,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:35:29.569Z"
     },
     {
       "id": "vampire_other_berserker",
@@ -2146,7 +2610,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 23033,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:36:11.113Z"
     },
     {
       "id": "vampire_other_paladin",
@@ -2155,7 +2621,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 23034,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:36:52.755Z"
     },
     {
       "id": "vampire_other_guardian",
@@ -2164,7 +2632,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 23035,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:37:35.398Z"
     },
     {
       "id": "vampire_other_warlord",
@@ -2173,7 +2643,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 23036,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:38:16.909Z"
     },
     {
       "id": "vampire_other_sorcerer",
@@ -2182,7 +2654,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 23037,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:38:59.409Z"
     },
     {
       "id": "vampire_other_summoner",
@@ -2191,7 +2665,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 23038,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:39:41.839Z"
     },
     {
       "id": "vampire_other_conjurer",
@@ -2200,7 +2676,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 23039,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:40:23.530Z"
     },
     {
       "id": "vampire_other_oracle",
@@ -2209,7 +2687,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 23040,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:41:05.132Z"
     },
     {
       "id": "vampire_other_ninja",
@@ -2218,7 +2698,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 23041,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:41:46.639Z"
     },
     {
       "id": "vampire_other_martial_artist",
@@ -2227,7 +2709,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 23042,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:42:29.197Z"
     },
     {
       "id": "vampire_other_brawler",
@@ -2236,7 +2720,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 23043,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:43:10.883Z"
     },
     {
       "id": "vampire_other_ascetic",
@@ -2245,7 +2731,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 23044,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:43:53.256Z"
     },
     {
       "id": "vampire_other_alchemist",
@@ -2254,7 +2742,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 23045,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:44:35.719Z"
     },
     {
       "id": "vampire_other_medic",
@@ -2263,7 +2753,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 23046,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:45:17.215Z"
     },
     {
       "id": "vampire_other_plague_doctor",
@@ -2272,7 +2764,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 23047,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:45:58.797Z"
     },
     {
       "id": "vampire_other_artificer",
@@ -2281,7 +2775,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 23048,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:46:41.412Z"
     },
     {
       "id": "orc_male_berserker",
@@ -2290,7 +2786,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 24001,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:47:23.815Z"
     },
     {
       "id": "orc_male_paladin",
@@ -2299,7 +2797,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 24002,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:48:05.342Z"
     },
     {
       "id": "orc_male_guardian",
@@ -2308,7 +2808,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 24003,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:48:47.931Z"
     },
     {
       "id": "orc_male_warlord",
@@ -2317,7 +2819,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 24004,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:49:29.439Z"
     },
     {
       "id": "orc_male_sorcerer",
@@ -2326,7 +2830,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 24005,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:50:11.930Z"
     },
     {
       "id": "orc_male_summoner",
@@ -2335,7 +2841,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 24006,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:50:53.498Z"
     },
     {
       "id": "orc_male_conjurer",
@@ -2344,7 +2852,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 24007,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:51:35.979Z"
     },
     {
       "id": "orc_male_oracle",
@@ -2353,7 +2863,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 24008,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:52:18.577Z"
     },
     {
       "id": "orc_male_ninja",
@@ -2362,7 +2874,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 24009,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:53:00.235Z"
     },
     {
       "id": "orc_male_martial_artist",
@@ -2371,7 +2885,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 24010,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:53:42.145Z"
     },
     {
       "id": "orc_male_brawler",
@@ -2380,7 +2896,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 24011,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:54:23.640Z"
     },
     {
       "id": "orc_male_ascetic",
@@ -2389,7 +2907,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 24012,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:55:05.198Z"
     },
     {
       "id": "orc_male_alchemist",
@@ -2398,7 +2918,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 24013,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:55:46.862Z"
     },
     {
       "id": "orc_male_medic",
@@ -2407,7 +2929,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 24014,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:56:29.558Z"
     },
     {
       "id": "orc_male_plague_doctor",
@@ -2416,7 +2940,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 24015,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:57:11.118Z"
     },
     {
       "id": "orc_male_artificer",
@@ -2425,7 +2951,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 24016,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:57:53.639Z"
     },
     {
       "id": "orc_female_berserker",
@@ -2434,7 +2962,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 24017,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:58:36.180Z"
     },
     {
       "id": "orc_female_paladin",
@@ -2443,7 +2973,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 24018,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:59:17.700Z"
     },
     {
       "id": "orc_female_guardian",
@@ -2452,7 +2984,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 24019,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T00:59:59.386Z"
     },
     {
       "id": "orc_female_warlord",
@@ -2461,7 +2995,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 24020,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:00:41.965Z"
     },
     {
       "id": "orc_female_sorcerer",
@@ -2470,7 +3006,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 24021,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:01:23.532Z"
     },
     {
       "id": "orc_female_summoner",
@@ -2479,7 +3017,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 24022,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:02:06.199Z"
     },
     {
       "id": "orc_female_conjurer",
@@ -2488,7 +3028,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 24023,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:02:47.913Z"
     },
     {
       "id": "orc_female_oracle",
@@ -2497,7 +3039,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 24024,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:03:30.334Z"
     },
     {
       "id": "orc_female_ninja",
@@ -2506,7 +3050,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 24025,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:04:12.835Z"
     },
     {
       "id": "orc_female_martial_artist",
@@ -2515,7 +3061,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 24026,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:04:54.290Z"
     },
     {
       "id": "orc_female_brawler",
@@ -2524,7 +3072,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 24027,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:05:36.745Z"
     },
     {
       "id": "orc_female_ascetic",
@@ -2533,7 +3083,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 24028,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:06:18.323Z"
     },
     {
       "id": "orc_female_alchemist",
@@ -2542,7 +3094,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 24029,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:07:00.164Z"
     },
     {
       "id": "orc_female_medic",
@@ -2551,7 +3105,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 24030,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:07:42.618Z"
     },
     {
       "id": "orc_female_plague_doctor",
@@ -2560,7 +3116,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 24031,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:08:25.123Z"
     },
     {
       "id": "orc_female_artificer",
@@ -2569,7 +3127,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 24032,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:09:06.641Z"
     },
     {
       "id": "orc_other_berserker",
@@ -2578,7 +3138,9 @@
       "class": "berserker",
       "isAdvanced": true,
       "seed": 24033,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:09:49.117Z"
     },
     {
       "id": "orc_other_paladin",
@@ -2587,7 +3149,9 @@
       "class": "paladin",
       "isAdvanced": true,
       "seed": 24034,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:10:30.603Z"
     },
     {
       "id": "orc_other_guardian",
@@ -2596,7 +3160,9 @@
       "class": "guardian",
       "isAdvanced": true,
       "seed": 24035,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:11:13.099Z"
     },
     {
       "id": "orc_other_warlord",
@@ -2605,7 +3171,9 @@
       "class": "warlord",
       "isAdvanced": true,
       "seed": 24036,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:11:54.829Z"
     },
     {
       "id": "orc_other_sorcerer",
@@ -2614,7 +3182,9 @@
       "class": "sorcerer",
       "isAdvanced": true,
       "seed": 24037,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:12:37.375Z"
     },
     {
       "id": "orc_other_summoner",
@@ -2623,7 +3193,9 @@
       "class": "summoner",
       "isAdvanced": true,
       "seed": 24038,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:13:19.863Z"
     },
     {
       "id": "orc_other_conjurer",
@@ -2632,7 +3204,9 @@
       "class": "conjurer",
       "isAdvanced": true,
       "seed": 24039,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:14:02.318Z"
     },
     {
       "id": "orc_other_oracle",
@@ -2641,7 +3215,9 @@
       "class": "oracle",
       "isAdvanced": true,
       "seed": 24040,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:14:43.936Z"
     },
     {
       "id": "orc_other_ninja",
@@ -2650,7 +3226,9 @@
       "class": "ninja",
       "isAdvanced": true,
       "seed": 24041,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:15:26.373Z"
     },
     {
       "id": "orc_other_martial_artist",
@@ -2659,7 +3237,9 @@
       "class": "martial_artist",
       "isAdvanced": true,
       "seed": 24042,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:16:07.780Z"
     },
     {
       "id": "orc_other_brawler",
@@ -2668,7 +3248,9 @@
       "class": "brawler",
       "isAdvanced": true,
       "seed": 24043,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:16:49.267Z"
     },
     {
       "id": "orc_other_ascetic",
@@ -2677,7 +3259,9 @@
       "class": "ascetic",
       "isAdvanced": true,
       "seed": 24044,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:17:31.769Z"
     },
     {
       "id": "orc_other_alchemist",
@@ -2686,7 +3270,9 @@
       "class": "alchemist",
       "isAdvanced": true,
       "seed": 24045,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:18:13.438Z"
     },
     {
       "id": "orc_other_medic",
@@ -2695,7 +3281,9 @@
       "class": "medic",
       "isAdvanced": true,
       "seed": 24046,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:18:55.036Z"
     },
     {
       "id": "orc_other_plague_doctor",
@@ -2704,7 +3292,9 @@
       "class": "plague_doctor",
       "isAdvanced": true,
       "seed": 24047,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:19:36.553Z"
     },
     {
       "id": "orc_other_artificer",
@@ -2713,7 +3303,9 @@
       "class": "artificer",
       "isAdvanced": true,
       "seed": 24048,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-28T01:20:18.161Z"
     }
   ]
 }

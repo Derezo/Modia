@@ -89,6 +89,17 @@ const {
   RATE_LIMITS
 } = require('./generationConfig');
 
+// File locking utilities - cross-process synchronization
+const {
+  acquireLockSync,
+  releaseLockSync,
+  withFileLockSync,
+  acquireLockAsync,
+  releaseLockAsync,
+  withFileLockAsync,
+  getLockPath
+} = require('./fileLock');
+
 // Auto-load .env when this module is imported
 // This matches the behavior of the original imageUtils.js and audioUtils.js
 loadEnv();
@@ -154,5 +165,14 @@ module.exports = {
   DEFAULT_GENERATION_OPTIONS,
   STANDARD_IMAGE_SIZES,
   AI_GENERATION_RESOLUTIONS,
-  RATE_LIMITS
+  RATE_LIMITS,
+
+  // File locking utilities
+  acquireLockSync,
+  releaseLockSync,
+  withFileLockSync,
+  acquireLockAsync,
+  releaseLockAsync,
+  withFileLockAsync,
+  getLockPath
 };

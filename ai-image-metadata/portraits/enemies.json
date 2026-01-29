@@ -23,12 +23,14 @@
       "region": "forest",
       "visualTraits": "green skin pointed ears yellow eyes tusks war paint crude iron helmet",
       "seed": 31001,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 8,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T19:34:47.757Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_gray_wolf",
@@ -37,12 +39,14 @@
       "region": "forest",
       "visualTraits": "gray fur amber predator eyes snarling maw fangs alert ears",
       "seed": 31002,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 7,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T20:48:44.243Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_forest_slime",
@@ -51,14 +55,16 @@
       "region": "forest",
       "visualTraits": "translucent green body glowing core dripping tendrils bubbles",
       "seed": 31003,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 6,
         "issues": [
           "full_body_rather_than_bust"
         ],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T19:36:06.815Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_cave_bat",
@@ -73,7 +79,8 @@
         "issues": [],
         "regenerate": false
       },
-      "generatedAt": "2026-01-25T22:19:00.283Z"
+      "generatedAt": "2026-01-27T19:36:47.958Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_giant_spider",
@@ -88,12 +95,14 @@
         "issues": [],
         "regenerate": false
       },
-      "prompt": "8 red eyes cluster mandibles hairy body segmented legs tarantula feral wild natural predator instinctual dark rocky underground subterranean crystalline damp",
+      "prompt": "8 red eyes cluster mandibles hairy body segmented legs tarantula feral wild natural predator instinctual",
       "issues": "",
       "notes": "",
       "priority": 0,
       "needsRegeneration": false,
-      "generatedAt": "2026-01-27T12:38:20.492Z"
+      "generatedAt": "2026-01-27T19:37:34.201Z",
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null
     },
     {
       "id": "enemy_skeleton_warrior",
@@ -102,12 +111,14 @@
       "region": "cave",
       "visualTraits": "bone white cracked skull purple glowing eyes rusted armor",
       "seed": 32003,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 8,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T19:38:17.530Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_stone_golem",
@@ -116,12 +127,14 @@
       "region": "cave",
       "visualTraits": "gray stone texture moss patches orange glowing eyes runes",
       "seed": 32004,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 7,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T19:38:59.925Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_mountain_troll",
@@ -130,12 +143,14 @@
       "region": "mountain",
       "visualTraits": "gray-green skin heavy brow warts large tusks massive build",
       "seed": 33001,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 7,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T19:39:43.432Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_troll_shaman",
@@ -144,12 +159,14 @@
       "region": "mountain",
       "visualTraits": "bone necklace staff with orb purple magic glow feathers",
       "seed": 33002,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 7,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T19:40:25.998Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_harpy",
@@ -158,12 +175,14 @@
       "region": "mountain",
       "visualTraits": "feathered head plume sharp beak fierce yellow eyes talons",
       "seed": 33003,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 7,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T19:41:10.413Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_bridge_bandit",
@@ -172,12 +191,14 @@
       "region": "bridge",
       "visualTraits": "hood shadow facial scar mask over mouth gold earring",
       "seed": 34001,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 8,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T19:41:53.896Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_bandit_captain",
@@ -186,12 +207,14 @@
       "region": "bridge",
       "visualTraits": "fancy hat with feathers goatee confident smirk fine clothes",
       "seed": 34002,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 7,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T19:42:38.413Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_bridge_troll",
@@ -200,12 +223,19 @@
       "region": "bridge",
       "visualTraits": "blue-gray skin barnacles algae patches massive tusks",
       "seed": 34003,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 7,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T19:49:46.366Z",
+      "prompt": "blue-gray skin barnacles algae patches massive tusks intelligent bipedal capable of speech armor or clothing weathered crossing structure near water worn traveled",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_dark_knight",
@@ -214,12 +244,14 @@
       "region": "palace",
       "visualTraits": "dark ornate plate armor red piercing eyes purple dark aura",
       "seed": 35001,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 8,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T19:44:06.957Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_shadow_assassin",
@@ -228,12 +260,14 @@
       "region": "palace",
       "visualTraits": "deep hood void only red glowing eyes visible shadow tendrils",
       "seed": 35002,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 8,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T19:44:51.486Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "enemy_palace_guard",
@@ -242,12 +276,14 @@
       "region": "palace",
       "visualTraits": "polished plate armor golden trim royal emblem stern visor",
       "seed": 35003,
-      "generated": false,
+      "generated": true,
       "evaluation": {
         "score": 7,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "generatedAt": "2026-01-27T19:45:36.141Z",
+      "loraModel": "retro-pixel"
     }
   ]
 }

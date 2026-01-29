@@ -21,17 +21,10 @@ const {
   getProjectRoot,
   formatBytes
 } = require('./lib');
+const { getOutputDir, CATEGORY_BASE_DIRS } = require('./lib/assetPathsBridge');
 
 // Configuration
 const PROJECT_ROOT = getProjectRoot();
-const OUTPUT_DIRS = {
-  tiles: 'frontend/public/assets/sprites/terrain',
-  portraits: 'frontend/public/assets/portraits',
-  items: 'frontend/public/assets/items',
-  icons: 'frontend/public/assets/icons',
-  nodes: 'frontend/public/assets/nodes',
-  overlays: 'frontend/public/assets/overlays'
-};
 
 /**
  * Parse command line arguments
@@ -103,33 +96,26 @@ Examples:
 }
 
 /**
- * Get expected output path for an asset
+ * Get expected output path for an asset.
+ * Uses getOutputDir from bridge for canonical base directory.
  */
 function getAssetOutputPath(asset, category) {
-  const baseDir = path.join(PROJECT_ROOT, OUTPUT_DIRS[category]);
+  const baseDir = getOutputDir(category);
+  if (!baseDir) return path.join(PROJECT_ROOT, 'frontend/public/assets', `${asset.id}.png`);
 
-  switch (category) {
-    case 'tiles':
-      // Tiles: sprites/terrain/{biome}/{id}.png (no originals subdirectory)
-      return path.join(baseDir, asset._biome || 'default', `${asset.id}.png`);
-    case 'portraits':
-      // Canonical: portraits/originals/{id}.png
-      return path.join(baseDir, 'originals', `${asset.id}.png`);
-    case 'items':
-      // Canonical: items/originals/{category}/{id}.png
-      return path.join(baseDir, 'originals', asset._itemCategory || 'misc', `${asset.id}.png`);
-    case 'icons':
-      // Canonical: icons/originals/{category}/{id}.png
-      return path.join(baseDir, 'originals', asset._iconCategory || 'misc', `${asset.id}.png`);
-    case 'nodes':
-      // Canonical: nodes/originals/{id}.png
-      return path.join(baseDir, 'originals', `${asset.id}.png`);
-    case 'overlays':
-      // Canonical: overlays/originals/{subcategory}/{id}.png
-      return path.join(baseDir, 'originals', asset._subcategory || 'rarity', `${asset.id}.png`);
-    default:
-      return path.join(baseDir, 'originals', `${asset.id}.png`);
+  // Tiles don't use originals/ subdirectory
+  if (category === 'tiles') {
+    return path.join(baseDir, asset._biome || 'default', `${asset.id}.png`);
   }
+
+  // Categories with subcategories: {baseDir}/originals/{subcategory}/{id}.png
+  const subcategoryDefaults = { items: 'misc', icons: 'misc', overlays: 'rarity' };
+  const subcategory = asset._itemCategory || asset._iconCategory || asset._subcategory
+    || subcategoryDefaults[category];
+  if (subcategory) {
+    return path.join(baseDir, 'originals', subcategory, `${asset.id}.png`);
+  }
+  return path.join(baseDir, 'originals', `${asset.id}.png`);
 }
 
 /**
@@ -202,7 +188,7 @@ function validateCategory(category, options) {
     }
 
     // Check for orphaned files (files that exist but aren't in metadata)
-    const baseDir = path.join(PROJECT_ROOT, OUTPUT_DIRS[category]);
+    const baseDir = getOutputDir(category);
     if (fs.existsSync(baseDir)) {
       const findFiles = (dir) => {
         const files = [];
@@ -292,11 +278,11 @@ async function main() {
   // Determine categories to validate
   const categories = options.category
     ? [options.category]
-    : Object.keys(OUTPUT_DIRS);
+    : Object.keys(CATEGORY_BASE_DIRS);
 
-  if (options.category && !OUTPUT_DIRS[options.category]) {
+  if (options.category && !CATEGORY_BASE_DIRS[options.category]) {
     log(`Unknown category: ${options.category}`, 'error');
-    log(`Valid categories: ${Object.keys(OUTPUT_DIRS).join(', ')}`, 'info');
+    log(`Valid categories: ${Object.keys(CATEGORY_BASE_DIRS).join(', ')}`, 'info');
     process.exit(1);
   }
 
