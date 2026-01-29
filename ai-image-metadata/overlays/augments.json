@@ -131,6 +131,42 @@
       "prompt": "white-cyan wind trails swirling air currents leaf particles gust effect breeze",
       "seed": 25018,
       "generated": false
+    },
+    {
+      "id": "augment_arcane",
+      "name": "Arcane Augment",
+      "effect": "arcane",
+      "alpha": 0.6,
+      "prompt": "blue-purple magical energy swirling arcane runes mystic particles enchanted glow",
+      "seed": 25019,
+      "generated": false
+    },
+    {
+      "id": "augment_fortune",
+      "name": "Fortune Augment",
+      "effect": "fortune",
+      "alpha": 0.6,
+      "prompt": "golden shimmer lucky sparkles coin glint prosperity glow fortunate aura",
+      "seed": 25020,
+      "generated": false
+    },
+    {
+      "id": "augment_vitality",
+      "name": "Vitality Augment",
+      "effect": "vitality",
+      "alpha": 0.6,
+      "prompt": "green healing energy life force wisps regenerative glow health restoration aura",
+      "seed": 25021,
+      "generated": false
+    },
+    {
+      "id": "augment_slayer",
+      "name": "Slayer Augment",
+      "effect": "slayer",
+      "alpha": 0.6,
+      "prompt": "dark red tribal marks hunter insignia predatory streaks beast slayer glyphs",
+      "seed": 25022,
+      "generated": false
     }
   ]
 }

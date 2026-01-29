@@ -8,8 +8,9 @@ This document provides unified navigation for Modia's asset pipeline documentati
 2. [Quick Reference](#quick-reference)
 3. [Document Navigation](#document-navigation)
 4. [Metadata Consistency](#metadata-consistency)
-5. [Asset Type Reference](#asset-type-reference)
-6. [Related Documents](#related-documents)
+5. [Overlay System](#overlay-system)
+6. [Asset Type Reference](#asset-type-reference)
+7. [Related Documents](#related-documents)
 
 ---
 
@@ -248,13 +249,113 @@ The validation script checks:
 | `{terrain}_{variant}` | `grass_0`, `stone_3` | Tiles (via `key`) |
 | `{category}_{material}` | `sword_short`, `armor_plate` | Items |
 
-### Overlay System Status
+---
 
-Overlays (18 total) are defined in metadata for future AI generation:
-- **Rarity overlays** (4): uncommon, rare, epic, legendary auras
-- **Augment overlays** (14): fire, ice, lightning, poison, holy, dark, earth, wind, critical, lifesteal, speed, pierce, stun, chain
+## Overlay System
 
-**Current status:** All 18 overlays have `generated: false`. The game currently renders rarity and augment effects using CSS styling (borders, shadows, gradients) rather than AI-generated image overlays. The metadata definitions preserve the art direction for future AI generation when needed.
+Overlays are transparent image layers composited on top of item sprites to convey rarity and augment effects. They provide visual feedback for item power and special properties.
+
+### Overlay Types
+
+**Rarity Overlays** (4 types): Visual glow frames indicating item rarity tier.
+
+| Rarity | Asset | Alpha | Effect |
+|--------|-------|-------|--------|
+| Common | - | 0.0 | No overlay |
+| Uncommon | `uncommon.png` | 0.5 | Subtle green glow |
+| Rare | `rare.png` | 0.65 | Blue radiance |
+| Epic | `epic.png` | 0.75 | Purple aura |
+| Legendary | `legendary.png` | 0.85 | Golden shimmer |
+
+**Augment Overlays** (18 types): Elemental and effect overlays for augmented items.
+
+| Category | Augments | Effect Style |
+|----------|----------|--------------|
+| Elemental | fire, ice, lightning, poison, holy, dark, earth, wind | Elemental particles/auras |
+| Combat | critical, speed, pierce, stun, chain, lifesteal | Combat effect indicators |
+| Special | arcane, fortune, vitality, slayer | Unique visual effects |
+
+### Category Mapping
+
+Backend augment categories map to overlay asset IDs via `shared/overlayMapping.js`:
+
+```javascript
+import { CATEGORY_TO_OVERLAY, getPrimaryOverlay } from '@shared/overlayMapping.js';
+
+// Direct mapping
+CATEGORY_TO_OVERLAY['fire'];      // 'augment_fire'
+CATEGORY_TO_OVERLAY['critical'];  // 'augment_critical'
+
+// Get primary overlay for multi-augment items (priority-based)
+getPrimaryOverlay(['fire', 'critical']);  // 'augment_fire' (elemental > combat)
+getPrimaryOverlay(['speed', 'fortune']);  // 'augment_speed'
+```
+
+**Priority Order:** Elemental effects (1-8) > Combat effects (10-15) > Special augments (20-23)
+
+### Usage
+
+**ItemIcon.compositeHtml()** - Generates HTML with composited item icons:
+
+```javascript
+import { ItemIcon } from '../components/ItemIcon.js';
+
+// From item object
+const html = await ItemIcon.compositeHtml({
+  item: inventoryItem,
+  size: 'md'
+});
+
+// From individual properties
+const html = await ItemIcon.compositeHtml({
+  spriteId: 'sword_short',
+  itemType: 'weapon',
+  rarity: 'epic',
+  augments: ['fire'],
+  size: 'lg'
+});
+```
+
+**OverlayCompositor** - Direct canvas compositing:
+
+```javascript
+import { overlayCompositor } from '../utils/OverlayCompositor.js';
+
+const dataUrl = await overlayCompositor.composite({
+  spriteId: 'sword_short',
+  subcategory: 'weapons',
+  size: 64,
+  rarity: 'epic',
+  augments: ['fire']
+});
+// Returns base64 data URL for use in <img src>
+```
+
+### File Locations
+
+| Purpose | Path |
+|---------|------|
+| Metadata definitions | `ai-image-metadata/overlays/` |
+| Rarity overlays | `frontend/public/assets/overlays/{size}/rarity/` |
+| Augment overlays | `frontend/public/assets/overlays/{size}/augments/` |
+| Category mapping | `shared/overlayMapping.js` |
+| Compositor utility | `frontend/src/utils/OverlayCompositor.js` |
+| ItemIcon component | `frontend/src/components/ItemIcon.js` |
+
+**Available sizes:** 32, 48, 64, 128 pixels
+
+### Generation
+
+```bash
+# Generate all overlays
+node scripts/ai-images/generate-overlays.js --force
+
+# Or via npm scripts
+npm run ai:generate:overlays              # Regenerate missing overlays
+npm run ai:generate:overlays -- --force   # Regenerate all overlays
+npm run ai:generate:overlays -- --rarity  # Rarity overlays only
+npm run ai:generate:overlays -- --augments  # Augment overlays only
+```
 
 ---
 
@@ -316,46 +417,10 @@ Transparent overlay effects for item compositing (rarity auras, augment effects)
 
 - **Metadata:** `ai-image-metadata/overlays/`
 - **Output:** `frontend/public/assets/overlays/{size}/{category}/`
-- **Categories:** rarity (glow frames), augments (elemental effects)
+- **Categories:** rarity (4 types), augments (18 types)
 - **Sizes:** 32, 48, 64, 128
 
-**Rarity Overlays:**
-
-| Rarity | Asset | Alpha | Description |
-|--------|-------|-------|-------------|
-| Common | `common.png` | 0.0 | No overlay (transparent) |
-| Uncommon | `uncommon.png` | 0.5 | Subtle green glow |
-| Rare | `rare.png` | 0.65 | Blue radiance |
-| Epic | `epic.png` | 0.75 | Purple aura |
-| Legendary | `legendary.png` | 0.85 | Golden shimmer |
-
-**Augment Overlays:**
-
-Elemental effect overlays for augmented items. Each adds visual flair to indicate augment type.
-
-| Augment | Asset | Effect |
-|---------|-------|--------|
-| Fire | `fire.png` | Orange flame wisps |
-| Ice | `ice.png` | Blue frost crystals |
-| Lightning | `lightning.png` | Electric sparks |
-| Poison | `poison.png` | Green toxic bubbles |
-| Holy | `holy.png` | White divine rays |
-| Dark | `dark.png` | Purple shadow tendrils |
-
-**Compositing:**
-
-Overlays are composited using CSS `mix-blend-mode: lighter` (additive blending) or canvas `globalCompositeOperation: 'lighter'` for runtime compositing. The base item sprite is drawn first, then the overlay is drawn on top with the appropriate alpha value.
-
-```javascript
-// Canvas compositing example
-ctx.globalAlpha = 0.25; // Rare rarity alpha
-ctx.globalCompositeOperation = 'lighter';
-ctx.drawImage(overlayImage, x, y, width, height);
-ctx.globalAlpha = 1.0;
-ctx.globalCompositeOperation = 'source-over';
-```
-
-**Note:** Overlay compositing is currently documented for future implementation. The ItemIcon component handles rarity styling through CSS borders/shadows rather than runtime image compositing.
+See [Overlay System](#overlay-system) for detailed documentation on overlay types, category mapping, and usage patterns.
 
 ### Audio Assets
 
@@ -484,4 +549,4 @@ See [AI_IMAGE_GENERATION.md](AI_IMAGE_GENERATION.md) for complete art direction 
 
 ---
 
-*Last updated: 2026-01-29 (added Metadata Consistency section, overlay status note)*
+*Last updated: 2026-01-29 (added Overlay System section with category mapping and usage documentation)*
