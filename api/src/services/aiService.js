@@ -17,6 +17,9 @@ import { createAIForUnit, quickDecision } from './ai/index.js';
 const USE_UTILITY_AI = true;
 const UTILITY_AI_TIME_BUDGET = 450; // ms
 
+// Enable AI debug logging via environment variable
+const AI_DEBUG = process.env.AI_DEBUG === 'true' || process.env.AI_DEBUG === '1';
+
 /**
  * Main AI decision function for two-action turns
  * Returns array of 1-2 actions: [{actionType, targetTile, skillId?}, ...]
@@ -25,30 +28,57 @@ const UTILITY_AI_TIME_BUDGET = 450; // ms
  * @returns {Array} Array of actions to execute in order
  */
 function decideTurnActions(enemy, battleState) {
-  console.log('[AI] decideTurnActions for', enemy.name, 'aiType:', enemy.aiType, 'pos:', enemy.tileX, enemy.tileY);
+  if (AI_DEBUG) {
+    console.log('[AI] === Decision Start ===');
+    console.log('[AI] Unit:', enemy.name, '| Pattern:', enemy.aiType || 'aggressive', '| Pos:', `(${enemy.tileX},${enemy.tileY})`, '| HP:', `${enemy.hp}/${enemy.maxHp}`);
+  }
 
   // Try utility AI first if enabled
   if (USE_UTILITY_AI) {
     try {
       const actions = utilityAIDecision(enemy, battleState);
-      console.log('[AI] Utility AI returned:', JSON.stringify(actions));
       if (actions && actions.length > 0) {
+        if (AI_DEBUG) {
+          const actionSummary = actions.map(a => {
+            if (a.actionType === 'move') return `move(${a.targetTile?.x},${a.targetTile?.y})`;
+            if (a.actionType === 'attack') return `attack(${a.targetTile?.x},${a.targetTile?.y})`;
+            if (a.actionType === 'skill') return `skill:${a.skillId}(${a.targetTile?.x},${a.targetTile?.y})`;
+            return a.actionType;
+          }).join(' -> ');
+          console.log('[AI] Decision: Utility AI |', actionSummary);
+          console.log('[AI] === Decision End ===');
+        }
         return actions;
       }
     } catch (error) {
-      console.error('[AI] Utility AI failed, falling back to legacy:', error.message, error.stack);
+      if (AI_DEBUG) {
+        console.error('[AI] Fallback: Utility AI failed -', error.message);
+      }
     }
   }
 
   // Fall back to legacy AI patterns
+  if (AI_DEBUG) {
+    console.log('[AI] Fallback: Using legacy pattern -', enemy.aiType || 'aggressive');
+  }
   const legacyActions = legacyDecideTurnActions(enemy, battleState);
-  console.log('[AI] Legacy AI returned:', JSON.stringify(legacyActions));
+  if (AI_DEBUG) {
+    const actionSummary = legacyActions.map(a => {
+      if (a.actionType === 'move') return `move(${a.targetTile?.x},${a.targetTile?.y})`;
+      if (a.actionType === 'attack') return `attack(${a.targetTile?.x},${a.targetTile?.y})`;
+      if (a.actionType === 'skill') return `skill:${a.skillId}(${a.targetTile?.x},${a.targetTile?.y})`;
+      return a.actionType;
+    }).join(' -> ');
+    console.log('[AI] Decision: Legacy AI |', actionSummary);
+    console.log('[AI] === Decision End ===');
+  }
   return legacyActions;
 }
 
 /**
  * Utility AI decision making
  * Uses sophisticated utility-based scoring with multi-actor lookahead.
+ * Now handles action sequences (move + action) for two-action turns.
  * Falls back to quick (no-lookahead) decision if lookahead gives suboptimal results.
  * @param {Object} enemy - The enemy unit
  * @param {Object} battleState - Current battle state
@@ -56,6 +86,7 @@ function decideTurnActions(enemy, battleState) {
  */
 function utilityAIDecision(enemy, battleState) {
   // First get a quick decision without lookahead as baseline
+  // quickDecision now returns sequences (arrays of actions)
   const quickResult = quickDecision(enemy, battleState, enemy.aiType || 'aggressive');
 
   // Then try lookahead for potentially better multi-turn planning
@@ -69,30 +100,58 @@ function utilityAIDecision(enemy, battleState) {
 
   // Choose between quick and lookahead results
   let bestDecision;
+  let decisionSource = 'unknown';
+
+  // Quick result is now always an array (sequence)
+  const quickSequence = quickResult.bestAction;
+  const quickScore = quickResult.score;
 
   if (!lookaheadDecision || !lookaheadDecision.action) {
     // Lookahead failed, use quick decision
-    bestDecision = { action: quickResult.bestAction, score: quickResult.score };
-  } else if (!quickResult.bestAction || quickResult.score === undefined) {
+    bestDecision = { action: quickSequence, score: quickScore };
+    decisionSource = 'quick (lookahead failed)';
+  } else if (!quickSequence || quickScore === undefined) {
     // Quick decision failed, use lookahead
     bestDecision = lookaheadDecision;
+    decisionSource = 'lookahead (quick failed)';
   } else {
     // Both succeeded - compare action types
-    // Prefer attacking/using skills over moving/waiting when targets are in range
-    const quickType = quickResult.bestAction?.type;
-    const lookaheadType = lookaheadDecision.action?.type;
+    // Quick is now a sequence, lookahead may be single action or sequence
+    const quickTypes = Array.isArray(quickSequence)
+      ? quickSequence.map(a => a.type)
+      : [quickSequence?.type];
+    const lookaheadTypes = Array.isArray(lookaheadDecision.action)
+      ? lookaheadDecision.action.map(a => a.type)
+      : [lookaheadDecision.action?.type];
 
-    // If quick chose attack/skill but lookahead chose move/wait, prefer quick
-    // This prevents the issue where lookahead overthinks and misses obvious attacks
-    const isQuickOffensive = quickType === 'attack' || quickType === 'skill';
-    const isLookaheadPassive = lookaheadType === 'move' || lookaheadType === 'wait';
+    // Check if quick has offensive actions
+    const isQuickOffensive = quickTypes.some(t => t === 'attack' || t === 'skill');
+    // Check if lookahead is passive (only move/wait)
+    const isLookaheadPassive = lookaheadTypes.every(t => t === 'move' || t === 'wait');
 
-    if (isQuickOffensive && isLookaheadPassive && quickResult.score > 100) {
-      // Quick found a good offensive action, prefer it over passive lookahead
-      bestDecision = { action: quickResult.bestAction, score: quickResult.score };
+    // Quick sequence bonus: prefer sequences with 2 actions over single actions
+    const quickHasTwoActions = Array.isArray(quickSequence) && quickSequence.length === 2;
+    const lookaheadHasTwoActions = Array.isArray(lookaheadDecision.action) && lookaheadDecision.action.length === 2;
+
+    if (isQuickOffensive && isLookaheadPassive && quickScore > 100) {
+      // Quick found a good offensive action/sequence, prefer it over passive lookahead
+      bestDecision = { action: quickSequence, score: quickScore };
+      decisionSource = 'quick (offensive over passive lookahead)';
+    } else if (quickHasTwoActions && !lookaheadHasTwoActions && isQuickOffensive && quickScore > 50) {
+      // Quick has an efficient two-action sequence with offense, prefer it
+      bestDecision = { action: quickSequence, score: quickScore };
+      decisionSource = 'quick (efficient 2-action sequence)';
     } else {
       // Trust lookahead's multi-turn planning
       bestDecision = lookaheadDecision;
+      decisionSource = 'lookahead';
+    }
+  }
+
+  if (AI_DEBUG) {
+    console.log('[AI] Source:', decisionSource, '| Score:', bestDecision?.score?.toFixed?.(1) ?? bestDecision?.score);
+    if (quickScore !== undefined && lookaheadDecision?.score !== undefined) {
+      console.log('[AI] Comparison: quick=' + quickScore.toFixed(1) + ' vs lookahead=' + lookaheadDecision.score.toFixed(1));
     }
   }
 
@@ -275,7 +334,9 @@ function defensiveTurnAI(enemy, battleState) {
   const nearestPlayer = findClosestUnit(enemy, players);
   const attackRange = enemy.attackRange || 1;
 
-  console.log('[AI:defensive]', enemy.name, 'players:', players.length, 'nearest:', nearestPlayer?.name, 'attackRange:', attackRange, 'movement:', enemy.movement);
+  if (AI_DEBUG) {
+    console.log('[AI] Defensive:', enemy.name, '| players:', players.length, '| nearest:', nearestPlayer?.name, '| range:', attackRange, '| move:', enemy.movement);
+  }
 
   // Low HP: retreat first, then attack if in range after retreat
   if (enemy.hp < enemy.maxHp * 0.4) {

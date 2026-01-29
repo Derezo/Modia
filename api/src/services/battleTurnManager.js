@@ -10,6 +10,9 @@
 import battleWebsocket from './battleWebsocket.js';
 import { query } from '../config/database.js';
 
+// Enable AI debug logging via environment variable
+const AI_DEBUG = process.env.AI_DEBUG === 'true' || process.env.AI_DEBUG === '1';
+
 // Animation timing constants (ms) - sync with BATTLE_ANIMATIONS.md
 const TIMING = {
   TURN_START_DELAY: 500,      // Time for camera pan to active unit
@@ -131,13 +134,24 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
   // Get AI decisions for the full turn (returns array of 1-2 actions)
   const decisions = aiService.decideTurnActions(enemy, state);
 
-  console.log('[AsyncTurnManager]', enemy.name, 'decisions:', JSON.stringify(decisions));
+  if (AI_DEBUG) {
+    const actionSummary = decisions.map(d => {
+      if (d.actionType === 'move') return `move(${d.targetTile?.x},${d.targetTile?.y})`;
+      if (d.actionType === 'attack') return `attack(${d.targetTile?.x},${d.targetTile?.y})`;
+      if (d.actionType === 'skill') return `skill:${d.skillId}(${d.targetTile?.x},${d.targetTile?.y})`;
+      if (d.actionType === 'item') return `item:${d.itemId}`;
+      return d.actionType;
+    }).join(' -> ');
+    console.log(`[AI] Execute: ${enemy.name} | ${actionSummary}`);
+  }
 
   // Process each action in the enemy's turn
   for (const decision of decisions) {
     // Skip if wait (ends turn)
     if (decision.actionType === 'wait') {
-      console.log('[AsyncTurnManager]', enemy.name, 'chose to wait');
+      if (AI_DEBUG) {
+        console.log(`[AI] Action: ${enemy.name} | wait`);
+      }
       battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'wait', {});
       await delay(TIMING.TURN_END_BUFFER);
       break;
@@ -145,7 +159,9 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
 
     if (decision.actionType === 'move' && decision.targetTile) {
       // === MOVEMENT PHASE ===
-      console.log('[AsyncTurnManager]', enemy.name, 'moving to', decision.targetTile);
+      if (AI_DEBUG) {
+        console.log(`[AI] Action: ${enemy.name} | move (${enemy.tileX},${enemy.tileY}) -> (${decision.targetTile.x},${decision.targetTile.y})`);
+      }
 
       // Show movement range highlight
       const movementRange = getMovementRangeTiles(enemy, state, battleService);
@@ -186,11 +202,13 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       );
 
       if (moveResult.error) {
-        console.log('[AsyncTurnManager] Move FAILED:', moveResult.error,
-          'from:', oldPosition, 'to:', decision.targetTile,
-          'moveUsed:', enemy.moveUsed, 'range:', battleService.getMovementRange(enemy));
+        if (AI_DEBUG) {
+          console.log(`[AI] Result: ${enemy.name} | move FAILED - ${moveResult.error}`);
+        }
       } else {
-        console.log('[AsyncTurnManager] Move SUCCESS:', oldPosition, '->', decision.targetTile);
+        if (AI_DEBUG) {
+          console.log(`[AI] Result: ${enemy.name} | move SUCCESS (${oldPosition.x},${oldPosition.y}) -> (${decision.targetTile.x},${decision.targetTile.y})`);
+        }
         // Broadcast unit moved (using saved old position)
         battleWebsocket.broadcastUnitMoved(
           battleId,
@@ -214,14 +232,16 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
 
     } else if (decision.actionType === 'attack' && decision.targetTile) {
       // === ATTACK PHASE ===
-      console.log('[AsyncTurnManager]', enemy.name, 'attacking', decision.targetTile);
+      if (AI_DEBUG) {
+        const targetUnit = state.units.find(u => u.tileX === decision.targetTile.x && u.tileY === decision.targetTile.y);
+        console.log(`[AI] Action: ${enemy.name} | attack -> ${targetUnit?.name || 'unknown'} at (${decision.targetTile.x},${decision.targetTile.y})`);
+      }
 
       // Debug: Validate targetTile has valid coordinates
       if (decision.targetTile.x === undefined || decision.targetTile.y === undefined) {
-        console.error('[AsyncTurnManager] INVALID targetTile - x or y is undefined!', {
-          decision,
-          enemyPos: { x: enemy.tileX, y: enemy.tileY }
-        });
+        if (AI_DEBUG) {
+          console.error(`[AI] Error: ${enemy.name} | invalid targetTile - x or y undefined`);
+        }
       }
 
       // Show attack range highlight
@@ -257,17 +277,14 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       );
 
       if (attackResult.error) {
-        console.error('[AsyncTurnManager] Attack FAILED:', attackResult.error, {
-          enemyName: enemy.name,
-          enemyPos: { x: enemy.tileX, y: enemy.tileY },
-          targetTile: decision.targetTile,
-          attackRange: enemy.attackRange || 1
-        });
+        if (AI_DEBUG) {
+          console.log(`[AI] Result: ${enemy.name} | attack FAILED - ${attackResult.error}`);
+        }
       } else {
-        console.log('[AsyncTurnManager] Attack SUCCESS:', {
-          damage: attackResult.damage,
-          target: attackResult.targetName || decision.targetTile
-        });
+        if (AI_DEBUG) {
+          const isCrit = attackResult.isCritical ? ' (CRIT)' : '';
+          console.log(`[AI] Result: ${enemy.name} | attack -> ${attackResult.targetName || 'target'} | damage: ${attackResult.damage}${isCrit}`);
+        }
         // Broadcast action executed
         battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'attack', {
           targetTile: decision.targetTile,
@@ -294,7 +311,10 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
 
     } else if (decision.actionType === 'skill' && decision.targetTile) {
       // === SKILL PHASE ===
-      console.log('[AsyncTurnManager]', enemy.name, 'using skill', decision.skillId);
+      if (AI_DEBUG) {
+        const targetUnit = state.units.find(u => u.tileX === decision.targetTile.x && u.tileY === decision.targetTile.y);
+        console.log(`[AI] Action: ${enemy.name} | skill:${decision.skillId} -> ${targetUnit?.name || 'area'} at (${decision.targetTile.x},${decision.targetTile.y})`);
+      }
 
       // Show skill range (use actual skill range, not attack range)
       const skillRangeTiles = getSkillRangeTiles(enemy, state, decision.skillId);
@@ -329,6 +349,13 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       );
 
       if (!skillResult.error) {
+        if (AI_DEBUG) {
+          const effectInfo = [];
+          if (skillResult.damage) effectInfo.push(`damage: ${skillResult.damage}`);
+          if (skillResult.healing) effectInfo.push(`healing: ${skillResult.healing}`);
+          if (skillResult.statusApplied) effectInfo.push(`status: ${skillResult.statusApplied}`);
+          console.log(`[AI] Result: ${enemy.name} | skill:${decision.skillId} | ${effectInfo.join(', ') || 'effect applied'}`);
+        }
         battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'skill', {
           skillId: decision.skillId,
           targetTile: decision.targetTile,
@@ -345,6 +372,8 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
         });
 
         await delay(TIMING.ATTACK_ANIMATION + TIMING.DAMAGE_POPUP);
+      } else if (AI_DEBUG) {
+        console.log(`[AI] Result: ${enemy.name} | skill FAILED - ${skillResult.error}`);
       }
 
       // Check if battle ended
@@ -355,7 +384,12 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
 
     } else if (decision.actionType === 'item' && decision.itemId) {
       // === ITEM PHASE ===
-      console.log('[AsyncTurnManager]', enemy.name, 'using item', decision.itemId);
+      if (AI_DEBUG) {
+        const targetUnit = decision.targetTile
+          ? state.units.find(u => u.tileX === decision.targetTile.x && u.tileY === decision.targetTile.y)
+          : enemy;
+        console.log(`[AI] Action: ${enemy.name} | item:${decision.itemId} -> ${targetUnit?.name || 'self'}`);
+      }
 
       // Execute item via processAction
       const itemResult = battleService.processAction(
@@ -367,6 +401,13 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       );
 
       if (!itemResult.error) {
+        if (AI_DEBUG) {
+          const effectInfo = [];
+          if (itemResult.hpRestored) effectInfo.push(`HP: +${itemResult.hpRestored}`);
+          if (itemResult.mpRestored) effectInfo.push(`MP: +${itemResult.mpRestored}`);
+          if (itemResult.statusCured) effectInfo.push(`cured: ${itemResult.statusCured}`);
+          console.log(`[AI] Result: ${enemy.name} | item:${decision.itemId} | ${effectInfo.join(', ') || 'used'}`);
+        }
         battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'item', {
           itemId: decision.itemId,
           targetTile: decision.targetTile,
@@ -383,8 +424,8 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
         });
 
         await delay(TIMING.ATTACK_ANIMATION);
-      } else {
-        console.error('[AsyncTurnManager] Item use FAILED:', itemResult.error);
+      } else if (AI_DEBUG) {
+        console.log(`[AI] Result: ${enemy.name} | item FAILED - ${itemResult.error}`);
       }
     }
   }

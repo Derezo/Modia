@@ -800,4 +800,304 @@ describe('StateEvaluator', () => {
       assert.strictEqual(better.type, 'attack');
     });
   });
+
+  describe('getBestSequence()', { skip: !canImport }, () => {
+    it('returns wait sequence for empty sequences array', () => {
+      const evaluator = new StateEvaluator(getWeights('aggressive'));
+      const unit = createMockUnit({ type: 'enemy' });
+      const state = createMockBattleState([{}], []);
+      state.units.push(unit);
+      const result = evaluator.getBestSequence(unit, [], state);
+      assert.strictEqual(result.bestAction.length, 1);
+      assert.strictEqual(result.bestAction[0].type, 'wait');
+      assert.strictEqual(result.score, 0);
+      assert.deepStrictEqual(result.allScores, []);
+      assert.deepStrictEqual(result.alternatives, []);
+    });
+
+    it('returns wait sequence for null sequences', () => {
+      const evaluator = new StateEvaluator(getWeights('aggressive'));
+      const unit = createMockUnit({ type: 'enemy' });
+      const state = createMockBattleState([{}], []);
+      state.units.push(unit);
+      const result = evaluator.getBestSequence(unit, null, state);
+      assert.strictEqual(result.bestAction[0].type, 'wait');
+    });
+
+    it('returns allScores sorted descending', () => {
+      const state = createMockBattleState(
+        [{ tileX: 6, tileY: 5, hp: 100, maxHp: 200, vitality: 10, defense: 5 }],
+        [{ tileX: 5, tileY: 5, strength: 40, attack: 20 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('aggressive'));
+      const enemy = state.units[1];
+      const sequences = [
+        [{ type: 'wait' }],
+        [{ type: 'move', position: { x: 7, y: 5 } }],
+        [{ type: 'attack', targetId: state.units[0].id }]
+      ];
+      const result = evaluator.getBestSequence(enemy, sequences, state);
+      assert.strictEqual(result.allScores.length, 3);
+      for (let i = 1; i < result.allScores.length; i++) {
+        assert.ok(result.allScores[i - 1].score >= result.allScores[i].score,
+          `allScores should be sorted descending`);
+      }
+    });
+
+    it('returns alternatives array with top 3 non-best sequences', () => {
+      const state = createMockBattleState(
+        [{ tileX: 6, tileY: 5, hp: 100, maxHp: 200, vitality: 10, defense: 5 }],
+        [{ tileX: 5, tileY: 5, strength: 40, attack: 20 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('tactical'));
+      const enemy = state.units[1];
+      const sequences = [
+        [{ type: 'wait' }],
+        [{ type: 'move', position: { x: 7, y: 5 } }],
+        [{ type: 'move', position: { x: 4, y: 5 } }],
+        [{ type: 'attack', targetId: state.units[0].id }],
+        [{ type: 'move', position: { x: 5, y: 6 } }]
+      ];
+      const result = evaluator.getBestSequence(enemy, sequences, state);
+      // alternatives should be top 3 after the best
+      assert.ok(result.alternatives.length <= 3, 'alternatives should have at most 3 entries');
+      assert.ok(result.alternatives.length > 0, 'should have at least one alternative');
+      for (const alt of result.alternatives) {
+        assert.ok(alt.action, 'alternative should have action');
+        assert.ok(typeof alt.score === 'number', 'alternative should have score');
+      }
+    });
+
+    it('selects highest scoring sequence as bestAction', () => {
+      const state = createMockBattleState(
+        [{ tileX: 6, tileY: 5, hp: 50, maxHp: 200, vitality: 10, defense: 5 }],
+        [{ tileX: 5, tileY: 5, strength: 50, attack: 25 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('aggressive'));
+      const enemy = state.units[1];
+      const attackSeq = [{ type: 'attack', targetId: state.units[0].id }];
+      const waitSeq = [{ type: 'wait' }];
+      const sequences = [waitSeq, attackSeq];
+      const result = evaluator.getBestSequence(enemy, sequences, state);
+      // Aggressive pattern should prefer attack over wait
+      assert.strictEqual(result.bestAction[0].type, 'attack');
+    });
+  });
+
+  describe('evaluateSequence()', { skip: !canImport }, () => {
+    it('returns -1000 for empty sequence', () => {
+      const evaluator = new StateEvaluator(getWeights('aggressive'));
+      const unit = createMockUnit({ type: 'enemy' });
+      const state = createMockBattleState([{}], []);
+      state.units.push(unit);
+      const result = evaluator.evaluateSequence(unit, [], state);
+      assert.strictEqual(result.score, -1000);
+      assert.deepStrictEqual(result.factors, {});
+    });
+
+    it('returns -1000 for null sequence', () => {
+      const evaluator = new StateEvaluator(getWeights('aggressive'));
+      const unit = createMockUnit({ type: 'enemy' });
+      const state = createMockBattleState([{}], []);
+      state.units.push(unit);
+      const result = evaluator.evaluateSequence(unit, null, state);
+      assert.strictEqual(result.score, -1000);
+    });
+
+    it('sums scores for multi-action sequence', () => {
+      const state = createMockBattleState(
+        [{ tileX: 8, tileY: 5, hp: 100, maxHp: 200, vitality: 10, defense: 5 }],
+        [{ tileX: 5, tileY: 5, strength: 40, attack: 20 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('tactical'));
+      const enemy = state.units[1];
+      // Single move action
+      const moveOnly = [{ type: 'move', position: { x: 7, y: 5 } }];
+      // Single attack action
+      const attackOnly = [{ type: 'attack', targetId: state.units[0].id }];
+      // Combined sequence (move then attack) - note: may get bonus
+      const combined = [
+        { type: 'move', position: { x: 7, y: 5 } },
+        { type: 'attack', targetId: state.units[0].id }
+      ];
+
+      const moveResult = evaluator.evaluateSequence(enemy, moveOnly, state);
+      const attackResult = evaluator.evaluateSequence(enemy, attackOnly, state);
+      const combinedResult = evaluator.evaluateSequence(enemy, combined, state);
+
+      // Combined should be at least the sum of individual scores
+      // (plus potential two-action bonus of 30)
+      const expectedMin = moveResult.score + attackResult.score;
+      assert.ok(combinedResult.score >= expectedMin,
+        `Combined score ${combinedResult.score} should be >= sum of parts ${expectedMin}`);
+    });
+
+    it('gives +30 bonus for move+attack combination', () => {
+      const state = createMockBattleState(
+        [{ tileX: 8, tileY: 5, hp: 100, maxHp: 200, vitality: 10, defense: 5 }],
+        [{ tileX: 5, tileY: 5, strength: 40, attack: 20 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('aggressive'));
+      const enemy = state.units[1];
+      const sequence = [
+        { type: 'move', position: { x: 7, y: 5 } },
+        { type: 'attack', targetId: state.units[0].id }
+      ];
+      const result = evaluator.evaluateSequence(enemy, sequence, state);
+      assert.strictEqual(result.factors.twoActionBonus, 30);
+    });
+
+    it('gives +30 bonus for move+skill combination', () => {
+      const state = createMockBattleState(
+        [{ tileX: 8, tileY: 5, hp: 100, maxHp: 200, vitality: 10, defense: 5 }],
+        [{ tileX: 5, tileY: 5, strength: 40, attack: 20, mp: 50, maxMp: 100 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('tactical'));
+      const enemy = state.units[1];
+      const skill = createMockSkill({ power: 120, mpCost: 15 });
+      const sequence = [
+        { type: 'move', position: { x: 7, y: 5 } },
+        { type: 'skill', targetId: state.units[0].id, skill }
+      ];
+      const result = evaluator.evaluateSequence(enemy, sequence, state);
+      assert.strictEqual(result.factors.twoActionBonus, 30);
+    });
+
+    it('gives +30 bonus for move+healing skill combination', () => {
+      const state = createMockBattleState(
+        [],
+        [
+          { tileX: 5, tileY: 5, hp: 200, maxHp: 200, mp: 50, maxMp: 100 },
+          { tileX: 8, tileY: 5, hp: 40, maxHp: 200 }  // wounded ally
+        ]
+      );
+      const evaluator = new StateEvaluator(getWeights('support'));
+      const healer = state.units[0];
+      const healSkill = createMockSkill({
+        power: 0,
+        healPercent: 30,
+        damageType: 'heal',
+        mpCost: 20,
+        targetType: 'ally'
+      });
+      const sequence = [
+        { type: 'move', position: { x: 7, y: 5 } },
+        { type: 'skill', targetId: state.units[1].id, skill: healSkill }
+      ];
+      const result = evaluator.evaluateSequence(healer, sequence, state);
+      assert.strictEqual(result.factors.twoActionBonus, 30);
+    });
+
+    it('gives +30 bonus for move+healing item combination', () => {
+      const state = createMockBattleState(
+        [],
+        [
+          { tileX: 5, tileY: 5, hp: 200, maxHp: 200 },
+          { tileX: 8, tileY: 5, hp: 40, maxHp: 200 }  // wounded ally
+        ]
+      );
+      const evaluator = new StateEvaluator(getWeights('defensive'));
+      const actor = state.units[0];
+      const target = state.units[1];
+      const sequence = [
+        { type: 'move', position: { x: 7, y: 5 } },
+        {
+          type: 'item',
+          item: { effectType: 'heal_hp', effectValue: 100 },
+          itemId: 'potion_1',
+          target: { x: target.tileX, y: target.tileY, unitId: target.id },
+          targetId: target.id
+        }
+      ];
+      const result = evaluator.evaluateSequence(actor, sequence, state);
+      assert.strictEqual(result.factors.twoActionBonus, 30);
+    });
+
+    it('no bonus for single action sequence', () => {
+      const state = createMockBattleState(
+        [{ tileX: 6, tileY: 5, hp: 100, maxHp: 200, vitality: 10, defense: 5 }],
+        [{ tileX: 5, tileY: 5, strength: 40, attack: 20 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('aggressive'));
+      const enemy = state.units[1];
+      const sequence = [{ type: 'attack', targetId: state.units[0].id }];
+      const result = evaluator.evaluateSequence(enemy, sequence, state);
+      assert.strictEqual(result.factors.twoActionBonus, undefined);
+    });
+
+    it('no bonus for two-action sequence without move', () => {
+      const state = createMockBattleState(
+        [{ tileX: 6, tileY: 5, hp: 100, maxHp: 200, vitality: 10, defense: 5 }],
+        [{ tileX: 5, tileY: 5, strength: 40, attack: 20, mp: 50, maxMp: 100 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('aggressive'));
+      const enemy = state.units[1];
+      const skill = createMockSkill({ power: 120, mpCost: 10 });
+      // Two attacks without move
+      const sequence = [
+        { type: 'attack', targetId: state.units[0].id },
+        { type: 'skill', targetId: state.units[0].id, skill }
+      ];
+      const result = evaluator.evaluateSequence(enemy, sequence, state);
+      assert.strictEqual(result.factors.twoActionBonus, undefined);
+    });
+
+    it('no bonus for move+wait sequence', () => {
+      const state = createMockBattleState(
+        [{ tileX: 10, tileY: 5 }],
+        [{ tileX: 5, tileY: 5 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('defensive'));
+      const enemy = state.units[1];
+      const sequence = [
+        { type: 'move', position: { x: 6, y: 5 } },
+        { type: 'wait' }
+      ];
+      const result = evaluator.evaluateSequence(enemy, sequence, state);
+      assert.strictEqual(result.factors.twoActionBonus, undefined);
+    });
+
+    it('updates hypothetical position after move in sequence', () => {
+      const state = createMockBattleState(
+        [{ tileX: 10, tileY: 5, hp: 100, maxHp: 200, vitality: 10, defense: 5 }],
+        [{ tileX: 5, tileY: 5, strength: 40, attack: 20, attackRange: 1 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('tactical'));
+      const enemy = state.units[1];
+
+      // Move first to get in range, then attack
+      // Enemy starts at (5,5), target at (10,5) - distance = 5
+      // After move to (9,5), distance to target = 1 (in attack range)
+      const sequence = [
+        { type: 'move', position: { x: 9, y: 5 } },
+        { type: 'attack', targetId: state.units[0].id }
+      ];
+
+      const result = evaluator.evaluateSequence(enemy, sequence, state);
+
+      // The attack should be evaluated as if the unit is at (9,5)
+      // Verify the sequence was evaluated (has action0 and action1 factors)
+      assert.ok(result.factors.action0, 'should have factors for move action');
+      assert.ok(result.factors.action1, 'should have factors for attack action');
+      // The attack should have meaningful damage dealt (not -1000 for invalid)
+      assert.ok(result.factors.action1.DAMAGE_DEALT >= 0,
+        'attack after move should calculate damage based on new position');
+    });
+
+    it('stores factors with indexed keys for each action', () => {
+      const state = createMockBattleState(
+        [{ tileX: 8, tileY: 5, hp: 100, maxHp: 200, vitality: 10, defense: 5 }],
+        [{ tileX: 5, tileY: 5, strength: 40, attack: 20 }]
+      );
+      const evaluator = new StateEvaluator(getWeights('tactical'));
+      const enemy = state.units[1];
+      const sequence = [
+        { type: 'move', position: { x: 7, y: 5 } },
+        { type: 'attack', targetId: state.units[0].id }
+      ];
+      const result = evaluator.evaluateSequence(enemy, sequence, state);
+      assert.ok(result.factors.action0, 'should have action0 factors');
+      assert.ok(result.factors.action1, 'should have action1 factors');
+    });
+  });
 });

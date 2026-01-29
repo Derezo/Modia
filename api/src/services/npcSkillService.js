@@ -89,6 +89,10 @@ function getMonsterSkillsForArchetype(archetype) {
 
 /**
  * Get skills from player guild skill trees for humanoid NPCs
+ * NPCs should follow the same rules as player characters - they get access
+ * to both active and passive skills from their guild skill trees.
+ * This enables chemist NPCs to use throw_item, etc.
+ *
  * @param {string} guild - Guild name (warrior, wizard, monk, chemist)
  * @returns {Array} Array of skill definitions
  */
@@ -102,8 +106,10 @@ function getGuildSkillsForHumanoid(guild) {
   const skills = [];
   for (const branch of guildTree.branches) {
     for (const skill of branch.skills) {
-      // Only include active skills (not passives)
-      if (skill.type === 'active') {
+      // Include both active and passive skills
+      // NPCs should have access to the same skills as players
+      // This enables abilities like throw_item for chemist NPCs
+      if (skill.type === 'active' || skill.type === 'passive') {
         skills.push({
           ...skill,
           branch: branch.name.toLowerCase(),
@@ -195,19 +201,27 @@ function selectSkills(availableSkills, maxSlots) {
 
 /**
  * Create a skill object ready for use in battle
+ * Handles both active and passive skills, including special properties
+ * like throw_item for chemist class.
+ *
  * @param {Object} skillDef - Skill definition
  * @param {number} skillLevel - Level of the skill
  * @returns {Object} Battle-ready skill object
  */
 function createBattleSkill(skillDef, skillLevel) {
-  return {
+  // For passive skills, we don't scale power/mpCost the same way
+  const isPassive = skillDef.type === 'passive';
+
+  const battleSkill = {
     id: skillDef.id,
     name: skillDef.name,
     description: skillDef.description,
+    type: skillDef.type || 'active',
     level: skillLevel,
-    power: scaleSkillPower(skillDef.power || 100, skillLevel),
+    // Passive skills typically don't have power/mpCost
+    power: isPassive ? (skillDef.power || 0) : scaleSkillPower(skillDef.power || 100, skillLevel),
     range: skillDef.range || 1,
-    mpCost: scaleSkillMpCost(skillDef.mpCost || skillDef.mp_cost || 0, skillLevel),
+    mpCost: isPassive ? 0 : scaleSkillMpCost(skillDef.mpCost || skillDef.mp_cost || 0, skillLevel),
     damageType: skillDef.damageType || skillDef.damage_type || 'physical',
     effect: skillDef.effect || null,
     effectChance: skillDef.effectChance || skillDef.effect_chance || 1.0,
@@ -224,8 +238,28 @@ function createBattleSkill(skillDef, skillLevel) {
     ...(skillDef.mpRestore && { mpRestore: skillDef.mpRestore }),
     ...(skillDef.cleanse && { cleanse: skillDef.cleanse }),
     ...(skillDef.hits && { hits: skillDef.hits }),
-    ...(skillDef.chainTargets && { chainTargets: skillDef.chainTargets })
+    ...(skillDef.chainTargets && { chainTargets: skillDef.chainTargets }),
+
+    // Passive stat bonuses
+    ...(skillDef.statBonus && { statBonus: skillDef.statBonus }),
+
+    // throw_item passive properties (for chemist class)
+    // Range: 2 + floor(level / 5) tiles
+    // Effectiveness: 60% + (level * 2)%
+    ...(skillDef.throwItem && {
+      throwItem: {
+        baseRange: skillDef.throwItem.baseRange || 2,
+        rangeLevelDivisor: skillDef.throwItem.rangeLevelDivisor || 5,
+        baseEffectiveness: skillDef.throwItem.baseEffectiveness || 0.6,
+        effectivenessPerLevel: skillDef.throwItem.effectivenessPerLevel || 0.02,
+        // Calculated values at this skill level
+        range: (skillDef.throwItem.baseRange || 2) + Math.floor(skillLevel / (skillDef.throwItem.rangeLevelDivisor || 5)),
+        effectiveness: Math.min(1.0, (skillDef.throwItem.baseEffectiveness || 0.6) + (skillLevel * (skillDef.throwItem.effectivenessPerLevel || 0.02)))
+      }
+    })
   };
+
+  return battleSkill;
 }
 
 /**
