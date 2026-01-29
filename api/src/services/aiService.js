@@ -17,8 +17,14 @@ import { createAIForUnit, quickDecision } from './ai/index.js';
 const USE_UTILITY_AI = true;
 const UTILITY_AI_TIME_BUDGET = 450; // ms
 
-// Enable AI debug logging via environment variable
-const AI_DEBUG = process.env.AI_DEBUG === 'true' || process.env.AI_DEBUG === '1';
+/**
+ * Check if AI debug logging is enabled via user settings
+ * @param {Object} battleState - Battle state containing debugOptions
+ * @returns {boolean} True if AI decision logging is enabled
+ */
+function isAIDebugEnabled(battleState) {
+  return battleState?.debugOptions?.logAIDecisions === true;
+}
 
 /**
  * Main AI decision function for two-action turns
@@ -28,7 +34,8 @@ const AI_DEBUG = process.env.AI_DEBUG === 'true' || process.env.AI_DEBUG === '1'
  * @returns {Array} Array of actions to execute in order
  */
 function decideTurnActions(enemy, battleState) {
-  if (AI_DEBUG) {
+  const aiDebug = isAIDebugEnabled(battleState);
+  if (aiDebug) {
     console.log('[AI] === Decision Start ===');
     console.log('[AI] Unit:', enemy.name, '| Pattern:', enemy.aiType || 'aggressive', '| Pos:', `(${enemy.tileX},${enemy.tileY})`, '| HP:', `${enemy.hp}/${enemy.maxHp}`);
   }
@@ -36,9 +43,9 @@ function decideTurnActions(enemy, battleState) {
   // Try utility AI first if enabled
   if (USE_UTILITY_AI) {
     try {
-      const actions = utilityAIDecision(enemy, battleState);
+      const actions = utilityAIDecision(enemy, battleState, aiDebug);
       if (actions && actions.length > 0) {
-        if (AI_DEBUG) {
+        if (aiDebug) {
           const actionSummary = actions.map(a => {
             if (a.actionType === 'move') return `move(${a.targetTile?.x},${a.targetTile?.y})`;
             if (a.actionType === 'attack') return `attack(${a.targetTile?.x},${a.targetTile?.y})`;
@@ -51,18 +58,18 @@ function decideTurnActions(enemy, battleState) {
         return actions;
       }
     } catch (error) {
-      if (AI_DEBUG) {
+      if (aiDebug) {
         console.error('[AI] Fallback: Utility AI failed -', error.message);
       }
     }
   }
 
   // Fall back to legacy AI patterns
-  if (AI_DEBUG) {
+  if (aiDebug) {
     console.log('[AI] Fallback: Using legacy pattern -', enemy.aiType || 'aggressive');
   }
   const legacyActions = legacyDecideTurnActions(enemy, battleState);
-  if (AI_DEBUG) {
+  if (aiDebug) {
     const actionSummary = legacyActions.map(a => {
       if (a.actionType === 'move') return `move(${a.targetTile?.x},${a.targetTile?.y})`;
       if (a.actionType === 'attack') return `attack(${a.targetTile?.x},${a.targetTile?.y})`;
@@ -82,9 +89,10 @@ function decideTurnActions(enemy, battleState) {
  * Falls back to quick (no-lookahead) decision if lookahead gives suboptimal results.
  * @param {Object} enemy - The enemy unit
  * @param {Object} battleState - Current battle state
+ * @param {boolean} aiDebug - Whether to enable debug logging
  * @returns {Array} Actions array in legacy format
  */
-function utilityAIDecision(enemy, battleState) {
+function utilityAIDecision(enemy, battleState, aiDebug = false) {
   // First get a quick decision without lookahead as baseline
   // quickDecision now returns sequences (arrays of actions)
   const quickResult = quickDecision(enemy, battleState, enemy.aiType || 'aggressive');
@@ -93,7 +101,8 @@ function utilityAIDecision(enemy, battleState) {
   const ai = createAIForUnit(enemy, {
     timeBudgetMs: UTILITY_AI_TIME_BUDGET,
     maxRounds: 2, // 2 rounds lookahead for performance
-    useLookahead: true
+    useLookahead: true,
+    debug: aiDebug // Pass debug flag to utility AI
   });
 
   const lookaheadDecision = ai.decideTurnActions(enemy, battleState);
@@ -148,7 +157,7 @@ function utilityAIDecision(enemy, battleState) {
     }
   }
 
-  if (AI_DEBUG) {
+  if (aiDebug) {
     console.log('[AI] Source:', decisionSource, '| Score:', bestDecision?.score?.toFixed?.(1) ?? bestDecision?.score);
     if (quickScore !== undefined && lookaheadDecision?.score !== undefined) {
       console.log('[AI] Comparison: quick=' + quickScore.toFixed(1) + ' vs lookahead=' + lookaheadDecision.score.toFixed(1));
@@ -334,7 +343,7 @@ function defensiveTurnAI(enemy, battleState) {
   const nearestPlayer = findClosestUnit(enemy, players);
   const attackRange = enemy.attackRange || 1;
 
-  if (AI_DEBUG) {
+  if (isAIDebugEnabled(battleState)) {
     console.log('[AI] Defensive:', enemy.name, '| players:', players.length, '| nearest:', nearestPlayer?.name, '| range:', attackRange, '| move:', enemy.movement);
   }
 

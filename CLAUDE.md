@@ -131,7 +131,7 @@ The `generate-sfx.js` script blocks 2+ commas. Run with `--dry-run` to validate.
 
 ### Backend (`api/`)
 - **Entry point:** `src/index.js` - Express server with WebSocket upgrade
-- **Routes:** `src/routes/` - auth, characters, party, world, battle, inventory, skills, shop, marketplace, chat, guild, coliseum, friends, lfg, notifications, settings, fishing, ruins, advancementQuest, clans, debug, leaderboard, relics
+- **Routes:** `src/routes/` - auth, characters, party, world, battle, inventory, skills, shop, marketplace, chat, guild, coliseum, friends, lfg, notifications, settings, fishing, ruins, advancementQuest, clans, debug, leaderboard, relics, quests, feedback, health
 - **WebSocket:** `src/websocket/index.js` - Room-based subscriptions for chat, tavern presence, marketplace
 - **Database:** PostgreSQL via `pg` pool in `src/config/database.js`
 - **Migrations:** `src/migrations/` - Sequential SQL files (001_initial_schema.sql, etc.)
@@ -546,21 +546,21 @@ These files exceed or approach limits and are tracked in `docs/ROADMAP_TECHNICAL
 
 | File | Lines | Status |
 |------|-------|--------|
+| `frontend/src/scenes/BattleScene.js` | 3,083 | WARNING - approaching 3,500 blocking threshold |
 | `frontend/src/scenes/WorldMapScene.js` | 2,951 | WARNING - plan modularization |
-| `frontend/src/scenes/BattleScene.js` | 2,947 | WARNING - plan modularization |
 | `api/src/services/marketplaceService.js` | 1,956 | WARNING |
-| `frontend/src/battle/BattleUI.js` | 1,556 | WARNING - exceeds 1,500 threshold |
+| `frontend/src/battle/BattleUI.js` | 1,594 | WARNING - exceeds 1,500 threshold |
 | `api/src/services/coliseumService.js` | 1,552 | WARNING |
 
-*Last updated: 2026-01-26*
+*Last updated: 2026-01-29*
 
-**Recent refactoring:** BattleScene.js WebSocket handling extracted to `BattleWebSocketManager.js` (766 lines). All files are now under the 3500-line blocking threshold.
+**Recent refactoring:** BattleScene.js WebSocket handling extracted to `BattleWebSocketManager.js` (766 lines). All files are now under the 3500-line blocking threshold but BattleScene.js is approaching it.
 
 **Note:** Changes to tech debt files do NOT block validation unless they increase the line count. New files must comply with the 3500-line limit.
 
 ## Subagents
 
-This project has specialized subagents in `.claude/agents/`. **Using subagents is strongly encouraged** - they have domain-specific context and produce better results. Use the Task tool with the appropriate `subagent_type`:
+This project has specialized subagents in `.claude/agents/`. **Using subagents is MANDATORY for all non-trivial tasks.** Subagent-driven development produces better results through domain-specific expertise. Use the Task tool with the appropriate `subagent_type`:
 
 | Agent | Use Case |
 |-------|----------|
@@ -587,6 +587,71 @@ This project has specialized subagents in `.claude/agents/`. **Using subagents i
 | `economy-balance-designer` | Gold flow, XP curves, item pricing, drop rates |
 | `asset-pipeline-specialist` | AI image/audio generation, sprite conventions |
 | `debt-detector` | Pattern conformance, coupling analysis, architecture drift |
+
+### Subagent Enforcement Rules
+
+**MANDATORY**: All plan execution and implementation tasks MUST dispatch subagents unless explicitly exempt.
+
+**Exemptions (subagent optional):**
+- Single-file changes under 10 lines
+- Typo fixes and documentation corrections
+- Simple renames or moves
+- Direct user instruction to skip
+
+**Selection Rules (Specificity First):**
+1. Use the MOST SPECIALIZED agent that covers the task domain
+2. When scope spans multiple domains, use `fullstack-developer` as coordinator
+3. Never use a general agent when a specialist exists
+
+| Task Domain | Primary Agent | Fallback |
+|------------|---------------|----------|
+| World map generation | `worldgen-specialist` | `game-developer` |
+| Battle mechanics | `battle-systems-developer` | `game-developer` |
+| Database queries | `postgres-pro` | `backend-developer` |
+| Canvas rendering | `frontend-developer` | `ui-ux-specialist` |
+| Real-time features | `websocket-engineer` | `backend-developer` |
+| Economy/balance | `economy-balance-designer` | `game-developer` |
+| File size issues | `refactoring-specialist` | `architect-reviewer` |
+| Security concerns | `security-auditor` | `code-reviewer` |
+
+**Parallel Dispatch:**
+- Launch independent tasks as parallel subagents (single message, multiple Task tool calls)
+- Use `blockedBy` for sequential dependencies
+- Maximum 3-4 concurrent agents for context management
+
+**Handoff Protocol:**
+- If a subagent identifies an issue requiring different expertise, auto-dispatch the appropriate specialist
+- Example: backend-developer finds security issue → dispatch security-auditor
+- Always pass context from the originating agent to the specialist
+
+### Subagent Quick Reference
+
+**By Layer:**
+| Layer | Implementation | Review |
+|-------|---------------|--------|
+| Database | `postgres-pro` | `architect-reviewer` |
+| API | `backend-developer` | `code-reviewer` |
+| Frontend | `frontend-developer` | `ui-ux-specialist` |
+| Full Stack | `fullstack-developer` | `architect-reviewer` |
+
+**By Domain:**
+| Domain | Implementation | Review |
+|--------|---------------|--------|
+| Battle | `battle-systems-developer` | `qa-expert` |
+| World Gen | `worldgen-specialist` | `architect-reviewer` |
+| Economy | `economy-balance-designer` | `qa-expert` |
+| WebSocket | `websocket-engineer` | `security-auditor` |
+| Assets | `asset-pipeline-specialist` | - |
+
+**By Task Type:**
+| Task | Subagent |
+|------|----------|
+| Debug/investigate | `debugger` |
+| Performance issue | `performance-engineer` |
+| Security concern | `security-auditor` |
+| Refactoring | `refactoring-specialist` |
+| Test coverage | `qa-expert`, `test-automator` |
+| Documentation | `documentation-maintainer` |
 
 ## CI Pipeline
 
@@ -637,8 +702,60 @@ Detailed specifications in `docs/`. Key files:
 
 **Roadmap maintenance:** Keep roadmaps fresh by moving completed items to `docs/archive/completed/`.
 
-**Planning and Plan Execution**
-- Avoid creating legacy fallbacks when implementing new backend functionality or frontend components.
+## Plan Execution Workflow
+
+**CRITICAL: All plan execution MUST use subagent-driven development.**
+
+### Before Starting Implementation
+1. Review the plan file for task breakdown
+2. Identify which subagent handles each task (use Specificity First rule)
+3. Group independent tasks for parallel dispatch
+4. Identify sequential dependencies
+
+### During Implementation
+1. **Dispatch subagents** using the Task tool with appropriate `subagent_type`
+2. **Parallel tasks**: Launch in a single message with multiple Task tool calls
+3. **Sequential tasks**: Wait for blocking tasks to complete before dispatching dependent tasks
+4. **Monitor progress**: Check subagent outputs and verify completion
+5. **Handle issues**: Auto-dispatch specialists when subagents report domain-specific problems
+
+### Subagent Dispatch Template
+```
+Task(
+  description: "Brief task summary",
+  prompt: "Full context from plan, affected files, requirements, verification criteria",
+  subagent_type: "appropriate-agent-name"
+)
+```
+
+### Multi-Agent Coordination Example
+```
+// Frontend + Backend work in parallel
+Task(subagent_type: "frontend-developer", prompt: "Implement CharacterCard component...")
+Task(subagent_type: "backend-developer", prompt: "Add /api/characters/:id endpoint...")
+
+// Then integration (sequential)
+Task(subagent_type: "fullstack-developer", prompt: "Wire frontend to API, verify end-to-end...")
+```
+
+### Quality Gates (After Each Task)
+- Run tests: `npm run test -w api` or `npm run test -w frontend`
+- Run lint: `npm run lint`
+- Verify file sizes under limits
+
+### Validation
+After completing a plan, use the `validate-plan` skill to:
+- Run code-reviewer, debt-detector, qa-expert in parallel
+- Remediate any issues via appropriate subagents
+- Auto-commit after all issues resolved
+
+### Prohibited Patterns
+- Implementing plan tasks directly without dispatching subagents
+- Using general agents when specialists exist
+- Running sequential tasks that could be parallelized
+- Skipping verification after subagent completion
+
+### Legacy Code Policy
+- Avoid creating legacy fallbacks when implementing new backend functionality or frontend components
 - Always use the newly implemented components over legacy code and delete the legacy code
-- Always use context specific subagents for all tasks, implementation routines
 - When planning, seek advice from multiple agents for complex implementations and ask clarifying questions when they provide different opinions

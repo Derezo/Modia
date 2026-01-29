@@ -11,9 +11,6 @@ import { generateAllActions, generateMoveActionSequences, generateThreatResponse
 import { Lookahead, quickEvaluate } from './lookahead.js';
 import { PerformanceTracker } from './cache.js';
 
-// Enable AI debug logging via environment variable
-const AI_DEBUG = process.env.AI_DEBUG === 'true' || process.env.AI_DEBUG === '1';
-
 /**
  * UtilityAI - Main AI decision-making class
  */
@@ -78,8 +75,8 @@ class UtilityAI {
 
       this.performanceTracker.endDecision(decision);
 
-      // Debug logging (enabled via AI_DEBUG env var or options.debug)
-      if (AI_DEBUG || this.options.debug) {
+      // Debug logging (enabled via user settings passed as options.debug)
+      if (this.options.debug) {
         // Format action for logging
         const formatAction = (action) => {
           if (!action) return 'none';
@@ -257,7 +254,7 @@ function quickDecision(unit, state, pattern = 'aggressive') {
   const sequences = generateMoveActionSequences(unit, state);
   const result = evaluator.getBestSequence(unit, sequences, state);
 
-  if (AI_DEBUG) {
+  if (state?.debugOptions?.logAIDecisions) {
     // Format action for logging
     const formatAction = (action) => {
       if (!action) return 'none';

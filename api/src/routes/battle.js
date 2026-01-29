@@ -412,6 +412,16 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   // Load zodiac signature abilities for the user
   const zodiacAbilities = await zodiacAbilityService.loadActiveZodiacAbilities(req.user.userId);
 
+  // Load user settings for debug options
+  const settingsResult = await query(
+    'SELECT settings FROM user_settings WHERE user_id = $1',
+    [req.user.userId]
+  );
+  const userSettings = settingsResult.rows[0]?.settings || {};
+  const debugOptions = {
+    logAIDecisions: userSettings?.developer?.enabled && userSettings?.developer?.battle?.logAIDecisions
+  };
+
   // Create initial battle state
   const initialState = {
     turn: 1,
@@ -422,6 +432,7 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     mapHeight: 32,
     terrain, // Store terrain for server-side movement validation
     elevation, // Store elevation for 3D pathfinding and rendering
+    debugOptions, // User's debug settings for AI logging etc.
     units: party.map((char, idx) => {
       // Use formation position if provided, otherwise default layout
       const formationPos = formation?.[char.id];
