@@ -12,7 +12,7 @@ import { MagnifyingGlassIcon, Cross2Icon, ReloadIcon } from '@radix-ui/react-ico
  */
 const FILTER_CONFIG = {
   tiles: {
-    biome: ['forest', 'cave', 'mountain', 'bridge', 'castle'],
+    biome: ['base', 'forest', 'cave', 'mountain', 'bridge', 'castle'],
     subcategory: ['floors', 'walls', 'slopes'],
   },
   portraits: {

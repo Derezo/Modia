@@ -150,45 +150,20 @@ function getIconPath(id, options = {}) {
 /**
  * Generates path for terrain tiles
  * Pattern: /assets/sprites/terrain/{biome}/{id}.png
- * For walls: /assets/sprites/terrain/{biome}/walls/{terrain}_wall.png
- * For slopes: /assets/sprites/terrain/{biome}/slopes/{direction}_{levels}.png
+ * All tiles (floors, walls, slopes) use flat paths matching generated file structure:
+ * - Walls: wall_{biome}_{terrain}.png (e.g., wall_forest_default.png)
+ * - Slopes: slope_{biome}_{direction}_{levels}.png (e.g., slope_forest_north_1.png)
+ * - Floors: {terrain}_{variant}.png (e.g., grass_0.png)
  *
- * @param {string} id - The tile identifier (e.g., 'grass_0', 'wall_forest_grass', 'slope_north_1')
+ * @param {string} id - The tile identifier (e.g., 'grass_0', 'wall_forest_default', 'slope_forest_north_1')
  * @param {Object} options - Options
- * @param {string} [options.subcategory='forest'] - Biome type (forest, cave, mountain, bridge, castle)
- * @param {string} [options.tileCategory='floors'] - Tile category (floors, walls, slopes)
+ * @param {string} [options.subcategory='forest'] - Biome type (base, forest, cave, mountain, bridge, castle)
  * @returns {string} The tile path
  */
 function getTilePath(id, options = {}) {
-  const { subcategory = 'forest', tileCategory = 'floors' } = options;
-
-  // Handle walls: wall_{biome}_{terrain} -> {biome}/walls/{terrain}_wall.png
-  if (tileCategory === 'walls' || id.startsWith('wall_')) {
-    const match = id.match(/^wall_[^_]+_(.+)$/);
-    if (match) {
-      const terrain = match[1];
-      return `${ASSETS_BASE}/sprites/terrain/${subcategory}/walls/${terrain}_wall.png`;
-    }
-    return `${ASSETS_BASE}/sprites/terrain/${subcategory}/walls/${id}.png`;
-  }
-
-  // Handle slopes: slope_{biome}_{direction}_{levels} -> {biome}/slopes/{direction}_{levels}.png
-  // Also handles stairs: stairs_{biome}_{direction}_{levels} -> {biome}/slopes/stairs_{direction}_{levels}.png
-  if (tileCategory === 'slopes' || id.startsWith('slope_') || id.startsWith('stairs_')) {
-    if (id.startsWith('stairs_')) {
-      const match = id.match(/^stairs_[^_]+_(.+)$/);
-      if (match) {
-        return `${ASSETS_BASE}/sprites/terrain/${subcategory}/slopes/stairs_${match[1]}.png`;
-      }
-    }
-    const match = id.match(/^slope_[^_]+_(.+)$/);
-    if (match) {
-      return `${ASSETS_BASE}/sprites/terrain/${subcategory}/slopes/${match[1]}.png`;
-    }
-    return `${ASSETS_BASE}/sprites/terrain/${subcategory}/slopes/${id}.png`;
-  }
-
-  // Default: floors - use id directly
+  const { subcategory = 'forest' } = options;
+  // All tiles use flat path: {biome}/{id}.png
+  // Wall IDs: wall_{biome}_{terrain}, Slope IDs: slope_{biome}_{dir}_{levels}
   return `${ASSETS_BASE}/sprites/terrain/${subcategory}/${id}.png`;
 }
 
