@@ -917,7 +917,7 @@ export class RecruitmentScene extends Scene {
     // Update parchment card
     if (cardContainer) {
       cardContainer.innerHTML = '';
-      // Transform recruit data to match ParchmentCard expected format
+      // Transform recruit data to match ParchmentCard expected format (camelCase)
       const cardData = {
         id: recruit.id,
         name: recruit.name,
@@ -925,10 +925,10 @@ export class RecruitmentScene extends Scene {
         class: recruit.class,
         gender: recruit.gender,
         level: recruit.level || 1,
-        hp_current: recruit.stats?.hpMax,
-        hp_max: recruit.stats?.hpMax,
-        mp_current: recruit.stats?.mpMax,
-        mp_max: recruit.stats?.mpMax,
+        hp: recruit.stats?.hpMax,
+        maxHp: recruit.stats?.hpMax,
+        mp: recruit.stats?.mpMax,
+        maxMp: recruit.stats?.mpMax,
         strength: recruit.stats?.strength,
         intelligence: recruit.stats?.intelligence,
         agility: recruit.stats?.agility,

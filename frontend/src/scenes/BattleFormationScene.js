@@ -712,8 +712,18 @@ export class BattleFormationScene extends Scene {
   }
 
   updateDetailCard() {
-    if (this.characterCard) {
-      this.characterCard.setCharacter(this.selectedCharacter);
+    if (this.characterCard && this.selectedCharacter) {
+      // Transform API snake_case to camelCase for ParchmentCard
+      const char = this.selectedCharacter;
+      this.characterCard.setCharacter({
+        ...char,
+        hp: char.hp_current,
+        maxHp: char.hp_max,
+        mp: char.mp_current,
+        maxMp: char.mp_max
+      });
+    } else if (this.characterCard) {
+      this.characterCard.setCharacter(null);
     }
   }
 
