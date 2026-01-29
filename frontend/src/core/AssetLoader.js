@@ -1035,17 +1035,16 @@ export class AssetLoader {
    * @returns {HTMLImageElement|null} Wall texture image or null if not found
    */
   getWallTexture(biome, terrain = 'default') {
-    const key = `${this.basePath}/sprites/terrain/${biome}/walls/${terrain}_wall.png`;
-    const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/walls/default_wall.png`;
-    const baseFallbackKey = `${this.basePath}/sprites/terrain/forest/walls/${terrain}_wall.png`;
+    // Wall files use flat path: {biome}/wall_{biome}_{terrain}.png
+    const key = `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_${terrain}.png`;
+    const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_default.png`;
     // Additional fallback: base biome which has generic terrain walls
-    const baseDefaultKey = `${this.basePath}/sprites/terrain/base/walls/${terrain}_wall.png`;
-    const ultimateFallbackKey = `${this.basePath}/sprites/terrain/base/walls/default_wall.png`;
+    const baseFallbackKey = `${this.basePath}/sprites/terrain/base/wall_base_${terrain}.png`;
+    const ultimateFallbackKey = `${this.basePath}/sprites/terrain/base/wall_base_default.png`;
 
     const result = this.cache.get(key) ||
                    this.cache.get(fallbackKey) ||
                    this.cache.get(baseFallbackKey) ||
-                   this.cache.get(baseDefaultKey) ||
                    this.cache.get(ultimateFallbackKey);
 
     if (!result) {
@@ -1061,13 +1060,13 @@ export class AssetLoader {
    * @returns {Promise<HTMLImageElement|null>}
    */
   async loadWallTexture(biome, terrain = 'default') {
+    // Wall files use flat path: {biome}/wall_{biome}_{terrain}.png
     const paths = [
-      `${this.basePath}/sprites/terrain/${biome}/walls/${terrain}_wall.png`,
-      `${this.basePath}/sprites/terrain/${biome}/walls/default_wall.png`,
-      `${this.basePath}/sprites/terrain/forest/walls/${terrain}_wall.png`,
+      `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_${terrain}.png`,
+      `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_default.png`,
       // Additional fallback: base biome which has generic terrain walls
-      `${this.basePath}/sprites/terrain/base/walls/${terrain}_wall.png`,
-      `${this.basePath}/sprites/terrain/base/walls/default_wall.png`
+      `${this.basePath}/sprites/terrain/base/wall_base_${terrain}.png`,
+      `${this.basePath}/sprites/terrain/base/wall_base_default.png`
     ];
 
     for (const path of paths) {
@@ -1090,17 +1089,16 @@ export class AssetLoader {
    * @returns {HTMLImageElement|null} Slope sprite or null if not found
    */
   getSlopeSprite(biome, direction, levels = 1) {
-    const key = `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_${levels}.png`;
-    const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_1.png`;
-    const baseFallbackKey = `${this.basePath}/sprites/terrain/forest/slopes/${direction}_${levels}.png`;
+    // Slope files use flat path: {biome}/slope_{biome}_{direction}_{levels}.png
+    const key = `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`;
+    const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_1.png`;
     // Additional fallback: base biome
-    const baseKey = `${this.basePath}/sprites/terrain/base/slopes/${direction}_${levels}.png`;
-    const baseDefaultKey = `${this.basePath}/sprites/terrain/base/slopes/${direction}_1.png`;
+    const baseFallbackKey = `${this.basePath}/sprites/terrain/base/slope_base_${direction}_${levels}.png`;
+    const baseDefaultKey = `${this.basePath}/sprites/terrain/base/slope_base_${direction}_1.png`;
 
     const result = this.cache.get(key) ||
                    this.cache.get(fallbackKey) ||
                    this.cache.get(baseFallbackKey) ||
-                   this.cache.get(baseKey) ||
                    this.cache.get(baseDefaultKey);
 
     if (!result) {
@@ -1117,13 +1115,13 @@ export class AssetLoader {
    * @returns {Promise<HTMLImageElement|null>}
    */
   async loadSlopeSprite(biome, direction, levels = 1) {
+    // Slope files use flat path: {biome}/slope_{biome}_{direction}_{levels}.png
     const paths = [
-      `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_${levels}.png`,
-      `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_1.png`,
-      `${this.basePath}/sprites/terrain/forest/slopes/${direction}_${levels}.png`,
+      `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`,
+      `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_1.png`,
       // Additional fallback: base biome
-      `${this.basePath}/sprites/terrain/base/slopes/${direction}_${levels}.png`,
-      `${this.basePath}/sprites/terrain/base/slopes/${direction}_1.png`
+      `${this.basePath}/sprites/terrain/base/slope_base_${direction}_${levels}.png`,
+      `${this.basePath}/sprites/terrain/base/slope_base_${direction}_1.png`
     ];
 
     for (const path of paths) {
