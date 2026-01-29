@@ -9,140 +9,248 @@
       "name": "Inventory",
       "prompt": "backpack bag inventory storage pouch",
       "seed": 32001,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:06:10.179Z"
     },
     {
       "id": "menu_equipment",
       "name": "Equipment",
       "prompt": "helmet armor equipment gear loadout",
       "seed": 32002,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:06:57.954Z"
     },
     {
       "id": "menu_skills",
       "name": "Skills",
       "prompt": "book spellbook skills abilities magic tome",
       "seed": 32003,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:07:45.094Z"
     },
     {
       "id": "menu_party",
       "name": "Party",
       "prompt": "group people party team characters",
       "seed": 32004,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:08:32.589Z"
     },
     {
       "id": "menu_map",
       "name": "Map",
-      "prompt": "scroll map parchment world navigation",
+      "prompt": "scroll map parchment fictional world navigation",
       "seed": 32005,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T17:25:57.596Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "menu_quest",
       "name": "Quests",
       "prompt": "exclamation scroll quest mission objective",
       "seed": 32006,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:10:06.861Z"
     },
     {
       "id": "menu_settings",
       "name": "Settings",
       "prompt": "gear cog settings options configure",
       "seed": 32007,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:10:54.566Z"
     },
     {
       "id": "menu_shop",
       "name": "Shop",
-      "prompt": "coins gold shop store purchase merchant",
+      "prompt": "medieval shop store purchase merchant",
       "seed": 32008,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-28T20:57:06.282Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "menu_chat",
       "name": "Chat",
       "prompt": "speech bubble chat message communication",
       "seed": 32009,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:12:29.966Z"
     },
     {
       "id": "menu_guild",
       "name": "Guild",
       "prompt": "banner flag guild clan organization",
       "seed": 32010,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:13:17.479Z"
     },
     {
       "id": "menu_tavern",
       "name": "Tavern",
-      "prompt": "mug beer tavern inn social drink",
+      "prompt": "mug full of beer tavern inn social drink",
       "seed": 32011,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-28T20:45:00.994Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "menu_coliseum",
       "name": "Coliseum",
       "prompt": "arena coliseum pvp battle swords crossed",
       "seed": 32012,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:14:52.690Z"
     },
     {
       "id": "menu_fishing",
       "name": "Fishing",
       "prompt": "fishing rod hook fish catch water",
       "seed": 32013,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-28T20:51:39.258Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "menu_ruins",
       "name": "Ruins",
       "prompt": "ancient ruins puzzle temple mystery stones",
       "seed": 32014,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:16:28.105Z"
     },
     {
       "id": "menu_caravan",
       "name": "Caravan",
-      "prompt": "wagon caravan trade merchant cart",
+      "prompt": "wooden covered wagon caravan trade merchant cart with two horses pulling the cart",
       "seed": 32015,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-28T20:48:10.434Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "menu_close",
       "name": "Close",
       "prompt": "x close exit cancel cross",
       "seed": 32016,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-28T20:41:08.215Z"
     },
     {
       "id": "menu_confirm",
       "name": "Confirm",
-      "prompt": "checkmark confirm accept yes approve",
+      "prompt": "green checkmark confirm accept yes approve",
       "seed": 32017,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-28T20:59:43.857Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "menu_back",
       "name": "Back",
       "prompt": "arrow left back return previous",
       "seed": 32018,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:19:39.039Z"
     },
     {
       "id": "menu_help",
       "name": "Help",
-      "prompt": "question mark help info tutorial",
+      "prompt": "blue question mark help info tutorial",
       "seed": 32019,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-28T20:51:39.258Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "menu_notifications",
       "name": "Notifications",
       "prompt": "bell notification alert message new",
       "seed": 32020,
-      "generated": false
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T15:21:14.983Z"
     }
   ]
 }

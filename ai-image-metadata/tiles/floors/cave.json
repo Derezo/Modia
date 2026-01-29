@@ -43,7 +43,7 @@
       "prompt": "sparse cave moss patches on rocky underground floor in dark green grey #2F4F4F #696969",
       "outputPath": "cave",
       "generated": true,
-      "generatedAt": "2026-01-25T20:24:01.093Z"
+      "generatedAt": "2026-01-28T04:30:28.775Z"
     },
     {
       "key": "stone_0",
@@ -51,7 +51,8 @@
       "variant": 0,
       "prompt": "rough hewn cave stone floor with natural cracks and worn surface in dark grey tones #696969 #2F4F4F",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:31:09.979Z"
     },
     {
       "key": "stone_1",
@@ -59,7 +60,8 @@
       "variant": 1,
       "prompt": "smooth cave floor polished by ancient water flow in slate grey #708090 #696969",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:31:51.170Z"
     },
     {
       "key": "stone_2",
@@ -67,7 +69,8 @@
       "variant": 2,
       "prompt": "cave stone with mineral deposits and crystalline veins in grey blue #696969 #4682B4",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:32:32.384Z"
     },
     {
       "key": "stone_3",
@@ -75,7 +78,8 @@
       "variant": 3,
       "prompt": "ancient cave flagstone with drip marks and calcite buildup in dark grey #505050 #696969",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:33:13.772Z"
     },
     {
       "key": "rock_0",
@@ -83,7 +87,8 @@
       "variant": 0,
       "prompt": "natural cave rock surface with stalactite drips in cool grey tones #8B8682 #2F4F4F",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:33:55.163Z"
     },
     {
       "key": "rock_1",
@@ -100,7 +105,8 @@
       "variant": 2,
       "prompt": "dark basalt cave floor with volcanic texture in deep grey #505050 #2F4F4F",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:34:36.360Z"
     },
     {
       "key": "rock_3",
@@ -108,7 +114,8 @@
       "variant": 3,
       "prompt": "wet cave rock surface glistening with moisture in dark grey blue #696969 #4682B4",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:35:17.498Z"
     },
     {
       "key": "forest_0",
@@ -116,7 +123,8 @@
       "variant": 0,
       "prompt": "underground mushroom grove floor with organic debris in dark brown teal #5C4033 #2F4F4F",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:35:58.707Z"
     },
     {
       "key": "forest_1",
@@ -133,7 +141,8 @@
       "variant": 2,
       "prompt": "giant mushroom root network on cave floor in earthy brown grey #5C4033 #696969",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:36:39.876Z"
     },
     {
       "key": "forest_3",
@@ -141,7 +150,8 @@
       "variant": 3,
       "prompt": "decaying underground vegetation on damp cave floor in dark brown #8B7355 #2F4F4F",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:37:21.055Z"
     },
     {
       "key": "water_0",
@@ -149,7 +159,8 @@
       "variant": 0,
       "prompt": "still underground pool with crystal clear water and visible bottom in deep blue #4682B4 #2F4F4F",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:38:02.315Z"
     },
     {
       "key": "water_1",
@@ -157,7 +168,8 @@
       "variant": 1,
       "prompt": "glowing underground lake reflecting bioluminescent light in teal blue #20B2AA #4682B4",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:38:43.512Z"
     },
     {
       "key": "water_2",
@@ -165,7 +177,8 @@
       "variant": 2,
       "prompt": "underground stream flowing over smooth stone in cool blue grey #4169E1 #696969",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:39:24.699Z"
     },
     {
       "key": "water_3",
@@ -173,7 +186,8 @@
       "variant": 3,
       "prompt": "deep underground chasm pool with dark mysterious depths in midnight blue #191970 #2F4F4F",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:40:06.953Z"
     },
     {
       "key": "lava_0",
@@ -181,7 +195,8 @@
       "variant": 0,
       "prompt": "underground lava tube with molten rock flowing in fiery orange glow #FF4500 #696969",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:40:48.280Z"
     },
     {
       "key": "lava_1",
@@ -189,7 +204,8 @@
       "variant": 1,
       "prompt": "cooling magma chamber floor with bright veins in orange black #FF4500 #2F2F2F",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:41:29.479Z"
     },
     {
       "key": "lava_2",
@@ -197,7 +213,8 @@
       "variant": 2,
       "prompt": "bubbling volcanic cave pool with heat shimmer in intense orange #FF6347 #FF4500",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:42:10.645Z"
     },
     {
       "key": "lava_3",
@@ -205,7 +222,8 @@
       "variant": 3,
       "prompt": "hardened obsidian cave floor with glowing lava cracks in dark red orange #8B0000 #FF4500",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:42:51.827Z"
     },
     {
       "key": "cliff_0",
@@ -213,7 +231,8 @@
       "variant": 0,
       "prompt": "underground cliff edge dropping into darkness with exposed strata in dark grey #696969 #2F4F4F",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:43:32.994Z"
     },
     {
       "key": "cliff_1",
@@ -221,7 +240,8 @@
       "variant": 1,
       "prompt": "crumbling cave ledge with loose stones in grey brown #8B8682 #696969",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:44:13.154Z"
     },
     {
       "key": "cliff_2",
@@ -229,7 +249,8 @@
       "variant": 2,
       "prompt": "sharp underground precipice with jagged edges in dark grey #505050 #2F4F4F",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:44:54.315Z"
     },
     {
       "key": "cliff_3",
@@ -237,7 +258,8 @@
       "variant": 3,
       "prompt": "wet cave cliff face with dripping water and moss in grey green #696969 #2F4F4F",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:45:35.519Z"
     },
     {
       "key": "tree_0",
@@ -245,7 +267,8 @@
       "variant": 0,
       "prompt": "giant mushroom stem base with spreading mycelium in brown grey #5C4033 #696969",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:46:16.747Z"
     },
     {
       "key": "tree_1",
@@ -262,7 +285,8 @@
       "variant": 2,
       "prompt": "fallen giant mushroom with bioluminescent decay in brown blue #5C4033 #4682B4",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:46:57.881Z"
     },
     {
       "key": "tree_3",
@@ -270,7 +294,8 @@
       "variant": 3,
       "prompt": "petrified ancient root system emerging from cave floor in stone grey #8B7355 #696969",
       "outputPath": "cave",
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:47:39.061Z"
     },
     {
       "key": "cave_crystal_0",
@@ -279,7 +304,8 @@
       "prompt": "cave floor with embedded glowing crystal formations casting blue light #4682B4 #696969",
       "outputPath": "cave",
       "bonus": true,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:48:20.250Z"
     },
     {
       "key": "cave_crystal_1",
@@ -288,7 +314,8 @@
       "prompt": "cluster of amethyst crystals growing from cave floor with purple glow #8B008B #4682B4",
       "outputPath": "cave",
       "bonus": true,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:49:02.444Z"
     },
     {
       "key": "cave_stalactite_0",
@@ -297,7 +324,8 @@
       "prompt": "cave floor beneath dripping stalactites with mineral deposits in grey tan #696969 #D2B48C",
       "outputPath": "cave",
       "bonus": true,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:49:42.668Z"
     },
     {
       "key": "cave_stalactite_1",
@@ -306,7 +334,8 @@
       "prompt": "stalagmite forest floor with ancient calcite formations in cream grey #8B8682 #F5F5DC",
       "outputPath": "cave",
       "bonus": true,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T04:50:23.880Z"
     }
   ]
 }

@@ -15,8 +15,9 @@
 const path = require('path');
 const fs = require('fs');
 const { program } = require('commander');
-const { SIZE_PRESETS } = require('./lib/resizeUtils');
 const { fileExists, getProjectRoot } = require('./lib/imageUtils');
+const { CATEGORY_BASE_DIRS } = require('./lib/assetPathsBridge');
+const { SIZE_PRESETS } = require('./lib/resizeUtils');
 
 const PROJECT_ROOT = getProjectRoot();
 const ASSETS_ROOT = path.join(PROJECT_ROOT, 'frontend/public/assets');
@@ -36,37 +37,40 @@ const colors = {
 
 /**
  * Expected file locations per category (canonical paths from shared/assetPaths.js)
+ * baseDir values sourced from CATEGORY_BASE_DIRS (assetPathsBridge).
  * sizePattern determines how size variants are organized:
  * - 'sizeDir': {baseDir}/{size}/{subcategory}/{id}.png (icons, items, nodes, portraits, overlays)
  * - 'none': No size variants, single file at {baseDir}/{id}.png
+ *
+ * Note: icons use 'icons/png' for sized variants (not the base 'icons' directory).
  */
 const CATEGORY_CONFIGS = {
   icons: {
-    baseDir: 'icons/png',
-    sizePattern: 'sizeDir', // {baseDir}/{size}/{subcategory}/{id}.png
+    baseDir: CATEGORY_BASE_DIRS.icons + '/png',
+    sizePattern: 'sizeDir',
     subcategories: ['actions', 'status', 'ui', 'skills', 'items', 'augments', 'menu']
   },
   items: {
-    baseDir: 'items',
-    sizePattern: 'sizeDir', // {baseDir}/{size}/{subcategory}/{id}.png
+    baseDir: CATEGORY_BASE_DIRS.items,
+    sizePattern: 'sizeDir',
     subcategories: ['weapons', 'armor', 'accessories', 'consumables']
   },
   nodes: {
-    baseDir: 'nodes',
-    sizePattern: 'sizeDir' // {baseDir}/{size}/{id}.png
+    baseDir: CATEGORY_BASE_DIRS.nodes,
+    sizePattern: 'sizeDir'
   },
   portraits: {
-    baseDir: 'portraits',
-    sizePattern: 'sizeDir' // {baseDir}/{size}/{id}.png
+    baseDir: CATEGORY_BASE_DIRS.portraits,
+    sizePattern: 'sizeDir'
   },
   tiles: {
-    baseDir: 'sprites/terrain',
-    sizePattern: 'none', // Isometric tiles are a single size
+    baseDir: CATEGORY_BASE_DIRS.tiles,
+    sizePattern: 'none',
     subcategories: ['base', 'bridge', 'castle', 'cave', 'forest', 'mountain', 'default']
   },
   overlays: {
-    baseDir: 'overlays',
-    sizePattern: 'sizeDir', // {baseDir}/{size}/{subcategory}/{id}.png
+    baseDir: CATEGORY_BASE_DIRS.overlays,
+    sizePattern: 'sizeDir',
     subcategories: ['rarity', 'augments']
   }
 };

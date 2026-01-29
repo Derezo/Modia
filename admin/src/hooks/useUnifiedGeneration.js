@@ -96,14 +96,22 @@ export function useUnifiedGeneration() {
     persistStdout(newStdout);
   }, [persistStdout]);
 
+  // Normalize path to web path for consistent dedup (strip filesystem prefix)
+  const normalizePath = useCallback((p) => {
+    if (!p) return p;
+    const publicIndex = p.indexOf('/public/');
+    return publicIndex !== -1 ? p.slice(publicIndex + 7) : p;
+  }, []);
+
   // Add a generated asset
   const addGeneratedAsset = useCallback((type, path, additionalData = {}) => {
-    // Dedup: skip if asset with same path already exists (guard against undefined matching undefined)
-    if (path && generatedAssetsRef.current.some(a => a.path === path)) return;
+    const normalizedPath = normalizePath(path);
+    // Dedup: skip if asset with same normalized path already exists (guard against undefined matching undefined)
+    if (normalizedPath && generatedAssetsRef.current.some(a => normalizePath(a.path) === normalizedPath)) return;
 
     const asset = {
       type, // 'image', 'music', or 'sfx'
-      path,
+      path: normalizedPath || path,
       timestamp: new Date().toISOString(),
       ...additionalData
     };
@@ -111,7 +119,7 @@ export function useUnifiedGeneration() {
     const newAssets = [asset, ...generatedAssetsRef.current].slice(0, MAX_GENERATED_ASSETS);
     generatedAssetsRef.current = newAssets;
     setGeneratedAssets(newAssets);
-  }, []);
+  }, [normalizePath]);
 
   // Fetch initial state from API for all queues
   const fetchAllQueueStates = useCallback(async () => {
@@ -365,8 +373,8 @@ export function useUnifiedGeneration() {
       socket.on('audio:job_completed', (payload) => {
         const job = payload.job;
         if (job?.generatedAssets) {
-          job.generatedAssets.forEach(path => {
-            addGeneratedAsset(job.type === 'music' ? 'music' : 'sfx', path);
+          job.generatedAssets.forEach(assetPath => {
+            addGeneratedAsset(job.type === 'music' ? 'music' : 'sfx', assetPath);
           });
         }
       })

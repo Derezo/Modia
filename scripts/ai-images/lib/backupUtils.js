@@ -14,6 +14,7 @@ const {
   getMetadataDir,
   log
 } = require('./imageUtils');
+const { getOutputDir, CATEGORY_BASE_DIRS } = require('./assetPathsBridge');
 
 /**
  * Get the backup directory root
@@ -60,23 +61,12 @@ function parseBackupTimestamp(timestamp) {
 
 /**
  * Get the image output directory for a category
+ * Delegates to assetPathsBridge for canonical path mapping.
  * @param {string} category - Asset category
  * @returns {string} Path to the image output directory
  */
 function getImageOutputDir(category) {
-  const projectRoot = getProjectRoot();
-
-  // Map category to canonical image output paths (matches shared/assetPaths.js)
-  const categoryPaths = {
-    tiles: path.join(projectRoot, 'frontend/public/assets/sprites/terrain'),
-    portraits: path.join(projectRoot, 'frontend/public/assets/portraits'),
-    items: path.join(projectRoot, 'frontend/public/assets/items'),
-    icons: path.join(projectRoot, 'frontend/public/assets/icons'),
-    nodes: path.join(projectRoot, 'frontend/public/assets/nodes'),
-    overlays: path.join(projectRoot, 'frontend/public/assets/overlays')
-  };
-
-  return categoryPaths[category] || null;
+  return getOutputDir(category);
 }
 
 /**
@@ -135,7 +125,8 @@ function copyDirectoryRecursive(src, dest) {
 }
 
 /**
- * Get the image path for an asset
+ * Get the image path for an asset (originals location).
+ * Uses CATEGORY_BASE_DIRS from the bridge for canonical path structure.
  * @param {Object} asset - Asset object with category and id
  * @returns {string|null} Path to the image file or null
  */
@@ -143,59 +134,26 @@ function getAssetImagePath(asset) {
   const category = asset._category;
   const baseDir = getImageOutputDir(category);
 
-  if (!baseDir) return null;
+  if (!baseDir || !asset.id) return null;
 
-  // Build path based on category using canonical structure (matches shared/assetPaths.js)
-  switch (category) {
-    case 'tiles': {
-      // Tiles: sprites/terrain/{biome}/{key}.png
-      const biome = asset._biome || asset.biome;
-      if (biome && asset.id) {
-        return path.join(baseDir, biome, `${asset.id}.png`);
-      }
-      break;
+  // Tiles don't use originals/ subdirectory
+  if (category === 'tiles') {
+    const biome = asset._biome || asset.biome;
+    if (biome) {
+      return path.join(baseDir, biome, `${asset.id}.png`);
     }
-    case 'portraits': {
-      // Portraits: portraits/originals/{id}.png
-      if (asset.id) {
-        return path.join(baseDir, 'originals', `${asset.id}.png`);
-      }
-      break;
-    }
-    case 'items': {
-      // Items: items/originals/{itemCategory}/{id}.png
-      const itemCategory = asset._itemCategory || 'misc';
-      if (asset.id) {
-        return path.join(baseDir, 'originals', itemCategory, `${asset.id}.png`);
-      }
-      break;
-    }
-    case 'icons': {
-      // Icons: icons/originals/{iconCategory}/{id}.png
-      const iconCategory = asset._iconCategory || 'misc';
-      if (asset.id) {
-        return path.join(baseDir, 'originals', iconCategory, `${asset.id}.png`);
-      }
-      break;
-    }
-    case 'nodes': {
-      // Nodes: nodes/originals/{id}.png
-      if (asset.id) {
-        return path.join(baseDir, 'originals', `${asset.id}.png`);
-      }
-      break;
-    }
-    case 'overlays': {
-      // Overlays: overlays/originals/{subcategory}/{id}.png
-      const subcategory = asset._subcategory || 'rarity';
-      if (asset.id) {
-        return path.join(baseDir, 'originals', subcategory, `${asset.id}.png`);
-      }
-      break;
-    }
+    return null;
   }
 
-  return null;
+  // Categories with subcategories: {baseDir}/originals/{subcategory}/{id}.png
+  // Categories without (portraits, nodes): {baseDir}/originals/{id}.png
+  const subcategoryDefaults = { items: 'misc', icons: 'misc', overlays: 'rarity' };
+  const subcategory = asset._itemCategory || asset._iconCategory || asset._subcategory
+    || subcategoryDefaults[category];
+  if (subcategory) {
+    return path.join(baseDir, 'originals', subcategory, `${asset.id}.png`);
+  }
+  return path.join(baseDir, 'originals', `${asset.id}.png`);
 }
 
 /**

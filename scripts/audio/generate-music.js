@@ -253,8 +253,9 @@ function updateTrackMetadata(track, result) {
 /**
  * Mark track as generated in metadata
  * @param {Object} track - Track that was generated
+ * @param {Object} [downloadResult] - Download result with variants info
  */
-function markTrackGenerated(track) {
+function markTrackGenerated(track, downloadResult = null) {
   const filePath = path.join(METADATA_DIR, track._sourceFile);
   const data = loadMetadata(filePath);
 
@@ -267,6 +268,20 @@ function markTrackGenerated(track) {
   if (trackIndex !== -1) {
     data.tracks[trackIndex].generated = true;
     data.tracks[trackIndex].generatedAt = new Date().toISOString();
+
+    // Store variant information if multiple tracks were downloaded
+    if (downloadResult?.downloads && downloadResult.downloads.length > 0) {
+      data.tracks[trackIndex].variants = downloadResult.downloads.map((dl, index) => ({
+        id: `${track.id}_v${index + 1}`,
+        path: dl.path.replace(/.*\/public/, ''), // Convert to web path (e.g., /assets/audio/...)
+        duration: dl.duration,
+        filename: path.basename(dl.path),
+        fileSize: dl.size,
+        isPrimary: index === 0
+      }));
+      data.tracks[trackIndex].primaryVariantId = `${track.id}_v1`;
+    }
+
     saveMetadata(filePath, data);
   }
 }
@@ -440,8 +455,8 @@ async function main() {
         log(`Downloading all variants: ${item.id}`, 'info');
         const downloadResult = await client.downloadAllTracks(item.taskId, outputPath);
 
-        // Mark as generated in metadata
-        markTrackGenerated(item.track);
+        // Mark as generated in metadata (with variant info)
+        markTrackGenerated(item.track, downloadResult);
 
         const totalSize = downloadResult.downloads.reduce((sum, d) => sum + d.size, 0);
         log(`Downloaded: ${item.id} (${downloadResult.totalTracks} tracks, ${totalSize} bytes total)`, 'success');

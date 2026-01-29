@@ -87,10 +87,17 @@
     {
       "id": "robe_cloth",
       "name": "Cloth Robe",
-      "prompt": "cloth robe simple brown mage apprentice humble",
+      "prompt": "cloth robe simple humble brown",
       "seed": 21021,
       "generated": true,
-      "generatedAt": "2026-01-26T15:11:39.622Z"
+      "generatedAt": "2026-01-28T20:36:44.006Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null
     },
     {
       "id": "robe_padded",
@@ -130,7 +137,14 @@
       "prompt": "buckler small round shield fist grip compact",
       "seed": 21031,
       "generated": true,
-      "generatedAt": "2026-01-26T15:15:49.573Z"
+      "generatedAt": "2026-01-28T20:34:10.313Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null
     },
     {
       "id": "shield_round",
@@ -202,7 +216,14 @@
       "prompt": "battle crown royal circlet protective ornate regal",
       "seed": 21045,
       "generated": true,
-      "generatedAt": "2026-01-26T15:23:23.324Z"
+      "generatedAt": "2026-01-28T20:34:10.313Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null
     },
     {
       "id": "helm_wizard_hat",

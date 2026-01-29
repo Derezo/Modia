@@ -171,7 +171,7 @@ export default function AudioDetail({
 
       // Include selected variant for music
       if (showVariants && formData.selectedVariantId) {
-        updates.primaryVariant = formData.selectedVariantId;
+        updates.primaryVariantId = formData.selectedVariantId;
       }
 
       await api.updateAudioAsset(audioType, assetId, updates);

@@ -14,7 +14,8 @@
       "levels": 1,
       "prompt": "natural cave rock slope ascending northward with rough hewn surface in dark grey #696969",
       "seed": 22001,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:29:22.920Z"
     },
     {
       "key": "slope_cave_south_1",
@@ -22,7 +23,8 @@
       "levels": 1,
       "prompt": "natural cave rock slope descending southward with worn smooth surface in dark grey #696969",
       "seed": 22011,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:30:04.064Z"
     },
     {
       "key": "slope_cave_east_1",
@@ -30,7 +32,8 @@
       "levels": 1,
       "prompt": "natural cave rock slope ascending eastward with crystal deposits in dark grey #696969 #4682B4",
       "seed": 22021,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:30:45.211Z"
     },
     {
       "key": "slope_cave_west_1",
@@ -38,7 +41,8 @@
       "levels": 1,
       "prompt": "natural cave rock slope descending westward with moss patches in dark grey #696969 #2F4F4F",
       "seed": 22031,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:31:26.412Z"
     },
     {
       "key": "stairs_cave_north_2",
@@ -47,7 +51,8 @@
       "type": "stairs",
       "prompt": "carved stone cave steps ascending north with glowing crystal light showing 2-3 visible steps #696969 #4682B4",
       "seed": 22041,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:32:08.675Z"
     },
     {
       "key": "stairs_cave_south_2",
@@ -56,7 +61,8 @@
       "type": "stairs",
       "prompt": "carved stone cave steps descending south with wet surface showing 2-3 visible steps in dark grey #696969",
       "seed": 22051,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:32:49.881Z"
     },
     {
       "key": "stairs_cave_east_2",
@@ -65,7 +71,8 @@
       "type": "stairs",
       "prompt": "carved stone cave steps ascending east with ancient markings showing 2-3 visible steps #696969 #2F4F4F",
       "seed": 22061,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:33:30.291Z"
     },
     {
       "key": "stairs_cave_west_2",
@@ -74,7 +81,8 @@
       "type": "stairs",
       "prompt": "carved stone cave steps descending west with dripping water showing 2-3 visible steps #696969 #4682B4",
       "seed": 22071,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:34:12.525Z"
     }
   ]
 }

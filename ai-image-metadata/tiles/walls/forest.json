@@ -13,21 +13,24 @@
       "terrain": "default",
       "prompt": "exposed earth cliff face with grass roots and mossy patches in forest colors #6B8E4A #8B7355",
       "seed": 11001,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:08:04.623Z"
     },
     {
       "key": "wall_forest_stone",
       "terrain": "stone",
       "prompt": "natural stone cliff face with vegetation growing from cracks in grey and green tones #8B8682 #6B8E4A",
       "seed": 11011,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:08:45.795Z"
     },
     {
       "key": "wall_forest_dirt",
       "terrain": "dirt",
       "prompt": "layered soil cliff face showing dark earth strata with root tendrils in brown tones #8B7355 #5C4033",
       "seed": 11021,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-28T06:09:26.986Z"
     }
   ]
 }

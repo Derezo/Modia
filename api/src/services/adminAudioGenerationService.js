@@ -743,17 +743,23 @@ async function persistWaveformData(type, id, waveform) {
       // Load music manifest to find source file
       const manifest = await loadJsonFile(path.join(AUDIO_METADATA_DIR, 'music/manifest.json'));
       if (manifest?.categories) {
+        let found = false;
         for (const categoryKey of Object.keys(manifest.categories)) {
-          const categoryFile = manifest.categories[categoryKey];
-          const categoryData = await loadJsonFile(path.join(AUDIO_METADATA_DIR, 'music', categoryFile));
-          if (categoryData?.tracks) {
-            const track = categoryData.tracks.find(t => t.id === id);
-            if (track) {
-              sourceFilePath = path.join(AUDIO_METADATA_DIR, 'music', categoryFile);
-              arrayKey = 'tracks';
-              break;
+          const category = manifest.categories[categoryKey];
+          const categoryFiles = category?.files || [];
+          for (const categoryFile of categoryFiles) {
+            const categoryData = await loadJsonFile(path.join(AUDIO_METADATA_DIR, 'music', categoryFile));
+            if (categoryData?.tracks) {
+              const track = categoryData.tracks.find(t => t.id === id);
+              if (track) {
+                sourceFilePath = path.join(AUDIO_METADATA_DIR, 'music', categoryFile);
+                arrayKey = 'tracks';
+                found = true;
+                break;
+              }
             }
           }
+          if (found) break;
         }
       }
     } else {

@@ -563,11 +563,15 @@ function finishJob(job, status, error = null) {
           type: 'images',
           category: job.category,
           status: 'completed',
-          generatedAssets: job.generatedImages.map(img => ({
-            type: 'image',
-            path: img.path,
-            timestamp: img.timestamp
-          }))
+          generatedAssets: job.generatedImages.map(img => {
+            const publicIndex = img.path.indexOf('/public/');
+            const webPath = publicIndex !== -1 ? img.path.slice(publicIndex + 7) : img.path;
+            return {
+              type: 'image',
+              path: webPath,
+              timestamp: img.timestamp
+            };
+          })
         }
       });
     } else if (status === 'failed') {

@@ -7,10 +7,17 @@
     {
       "id": "ring_iron",
       "name": "Iron Ring",
-      "prompt": "iron ring simple band plain dull metal",
+      "prompt": "ornate iron ring plain dull metal",
       "seed": 23001,
       "generated": true,
-      "generatedAt": "2026-01-26T15:31:00.979Z"
+      "generatedAt": "2026-01-28T20:24:29.955Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null
     },
     {
       "id": "ring_silver",
@@ -18,7 +25,14 @@
       "prompt": "silver ring polished band elegant shine",
       "seed": 23002,
       "generated": true,
-      "generatedAt": "2026-01-26T15:31:51.294Z"
+      "generatedAt": "2026-01-28T20:20:55.685Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null
     },
     {
       "id": "ring_gold",
@@ -26,7 +40,13 @@
       "prompt": "gold ring precious band ornate royal",
       "seed": 23003,
       "generated": true,
-      "generatedAt": "2026-01-26T15:32:42.199Z"
+      "generatedAt": "2026-01-28T20:14:29.594Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "ring_gem",
@@ -105,56 +125,101 @@
       "name": "Royal Cape",
       "prompt": "royal cape rich fabric fur trim elegant regal",
       "seed": 23023,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T17:28:43.948Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "cloak_mage",
       "name": "Enchanted Mantle",
       "prompt": "enchanted mantle magical fabric runic patterns",
       "seed": 23024,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T17:29:27.628Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "cloak_feather",
       "name": "Feathered Cloak",
       "prompt": "feathered cloak bird plumes colorful tribal",
       "seed": 23025,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T17:30:11.982Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "belt_leather",
       "name": "Leather Belt",
-      "prompt": "leather belt simple buckle utility practical",
+      "prompt": "practical leather belt simple buckle",
       "seed": 23031,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-28T20:24:29.956Z",
+      "generationFailureCount": null,
+      "lastError": null,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "belt_warrior",
       "name": "Warrior Belt",
       "prompt": "warrior belt wide reinforced metal studs",
       "seed": 23032,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T17:31:44.356Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "belt_pouch",
       "name": "Utility Belt",
       "prompt": "utility belt multiple pouches adventurer gear",
       "seed": 23033,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T17:32:29.137Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "gloves_leather",
       "name": "Leather Gloves",
       "prompt": "leather gloves fingerless grip practical",
       "seed": 23041,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T17:33:13.828Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "gauntlets_steel",
       "name": "Steel Gauntlets",
       "prompt": "steel gauntlets armored hands articulated",
       "seed": 23042,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-27T17:33:59.553Z",
+      "generationFailureCount": null,
+      "lastError": null
     }
   ]
 }

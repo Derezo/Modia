@@ -153,12 +153,13 @@
       "name": "Party Notification",
       "category": "ui",
       "subcategory": "notifications",
-      "prompt": "Brief cooperative team party notification ping",
+      "prompt": "Brief cooperative team notification bleep",
       "path": "/assets/audio/sfx/ui/notification_party.mp3",
       "duration": 0.6,
       "volume": 0.6,
       "generated": true,
-      "generatedAt": "2026-01-21T10:06:41.206Z"
+      "generatedAt": "2026-01-28T20:10:36.076Z",
+      "notes": ""
     },
     {
       "id": "ui_notification_trade",
