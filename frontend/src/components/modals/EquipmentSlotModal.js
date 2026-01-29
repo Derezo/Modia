@@ -27,6 +27,7 @@
 import { ParchmentModal } from '../../ui/parchment/ParchmentModal.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
 import { Icon } from '../Icon.js';
+import { ItemIcon } from '../ItemIcon.js';
 import {
   PARCHMENT_COLORS,
   PARCHMENT_SPACING,
@@ -583,7 +584,6 @@ export class EquipmentSlotModal {
     }
 
     const rarity = item.rarity || 'common';
-    const iconType = item.type || 'armor';
     const allStats = this.getAllItemStats(item);
     const hasStats = Object.keys(allStats).length > 0;
     const augments = item.augments || [];
@@ -595,7 +595,7 @@ export class EquipmentSlotModal {
         <!-- Item Info -->
         <div class="equipment-slot-card-item">
           <div class="equipment-slot-card-icon rarity-${rarity}">
-            ${Icon.html('items', iconType, { size: 'md' }) || ''}
+            ${ItemIcon.html({ item, size: 'md' })}
           </div>
           <div class="equipment-slot-card-title">
             <div class="equipment-slot-card-name rarity-${rarity}">

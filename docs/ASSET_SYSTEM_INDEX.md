@@ -258,6 +258,53 @@ Landmark icons for the overworld map.
 - **Types:** castle, city, village, tavern, shop, guild_*, etc.
 - **Sizes:** 48 (zoomed out), 96 (zoomed in)
 
+#### Overlays
+
+Transparent overlay effects for item compositing (rarity auras, augment effects).
+
+- **Metadata:** `ai-image-metadata/overlays/`
+- **Output:** `frontend/public/assets/overlays/{size}/{category}/`
+- **Categories:** rarity (glow frames), augments (elemental effects)
+- **Sizes:** 32, 48, 64, 128
+
+**Rarity Overlays:**
+
+| Rarity | Asset | Alpha | Description |
+|--------|-------|-------|-------------|
+| Common | `common.png` | 0.0 | No overlay (transparent) |
+| Uncommon | `uncommon.png` | 0.15 | Subtle green glow |
+| Rare | `rare.png` | 0.25 | Blue radiance |
+| Epic | `epic.png` | 0.35 | Purple aura |
+| Legendary | `legendary.png` | 0.45 | Golden shimmer |
+
+**Augment Overlays:**
+
+Elemental effect overlays for augmented items. Each adds visual flair to indicate augment type.
+
+| Augment | Asset | Effect |
+|---------|-------|--------|
+| Fire | `fire.png` | Orange flame wisps |
+| Ice | `ice.png` | Blue frost crystals |
+| Lightning | `lightning.png` | Electric sparks |
+| Poison | `poison.png` | Green toxic bubbles |
+| Holy | `holy.png` | White divine rays |
+| Dark | `dark.png` | Purple shadow tendrils |
+
+**Compositing:**
+
+Overlays are composited using CSS `mix-blend-mode: lighter` (additive blending) or canvas `globalCompositeOperation: 'lighter'` for runtime compositing. The base item sprite is drawn first, then the overlay is drawn on top with the appropriate alpha value.
+
+```javascript
+// Canvas compositing example
+ctx.globalAlpha = 0.25; // Rare rarity alpha
+ctx.globalCompositeOperation = 'lighter';
+ctx.drawImage(overlayImage, x, y, width, height);
+ctx.globalAlpha = 1.0;
+ctx.globalCompositeOperation = 'source-over';
+```
+
+**Note:** Overlay compositing is currently documented for future implementation. The ItemIcon component handles rarity styling through CSS borders/shadows rather than runtime image compositing.
+
 ### Audio Assets
 
 #### Music Tracks
@@ -385,4 +432,4 @@ See [AI_IMAGE_GENERATION.md](AI_IMAGE_GENERATION.md) for complete art direction 
 
 ---
 
-*Last updated: 2026-01-25 (added LoRA model and backend selection docs)*
+*Last updated: 2026-01-29 (added overlay documentation, ItemIcon component)*
