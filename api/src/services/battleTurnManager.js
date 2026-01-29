@@ -10,8 +10,14 @@
 import battleWebsocket from './battleWebsocket.js';
 import { query } from '../config/database.js';
 
-// Enable AI debug logging via environment variable
-const AI_DEBUG = process.env.AI_DEBUG === 'true' || process.env.AI_DEBUG === '1';
+/**
+ * Check if AI debug logging is enabled via user settings in battle state
+ * @param {Object} state - Battle state containing debugOptions
+ * @returns {boolean} True if AI decision logging is enabled
+ */
+function isAIDebugEnabled(state) {
+  return state?.debugOptions?.logAIDecisions === true;
+}
 
 // Animation timing constants (ms) - sync with BATTLE_ANIMATIONS.md
 const TIMING = {
@@ -134,7 +140,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
   // Get AI decisions for the full turn (returns array of 1-2 actions)
   const decisions = aiService.decideTurnActions(enemy, state);
 
-  if (AI_DEBUG) {
+  if (isAIDebugEnabled(state)) {
     const actionSummary = decisions.map(d => {
       if (d.actionType === 'move') return `move(${d.targetTile?.x},${d.targetTile?.y})`;
       if (d.actionType === 'attack') return `attack(${d.targetTile?.x},${d.targetTile?.y})`;
@@ -149,7 +155,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
   for (const decision of decisions) {
     // Skip if wait (ends turn)
     if (decision.actionType === 'wait') {
-      if (AI_DEBUG) {
+      if (isAIDebugEnabled(state)) {
         console.log(`[AI] Action: ${enemy.name} | wait`);
       }
       battleWebsocket.broadcastActionExecuted(battleId, enemy.id, 'wait', {});
@@ -159,7 +165,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
 
     if (decision.actionType === 'move' && decision.targetTile) {
       // === MOVEMENT PHASE ===
-      if (AI_DEBUG) {
+      if (isAIDebugEnabled(state)) {
         console.log(`[AI] Action: ${enemy.name} | move (${enemy.tileX},${enemy.tileY}) -> (${decision.targetTile.x},${decision.targetTile.y})`);
       }
 
@@ -202,11 +208,11 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       );
 
       if (moveResult.error) {
-        if (AI_DEBUG) {
+        if (isAIDebugEnabled(state)) {
           console.log(`[AI] Result: ${enemy.name} | move FAILED - ${moveResult.error}`);
         }
       } else {
-        if (AI_DEBUG) {
+        if (isAIDebugEnabled(state)) {
           console.log(`[AI] Result: ${enemy.name} | move SUCCESS (${oldPosition.x},${oldPosition.y}) -> (${decision.targetTile.x},${decision.targetTile.y})`);
         }
         // Broadcast unit moved (using saved old position)
@@ -232,14 +238,14 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
 
     } else if (decision.actionType === 'attack' && decision.targetTile) {
       // === ATTACK PHASE ===
-      if (AI_DEBUG) {
+      if (isAIDebugEnabled(state)) {
         const targetUnit = state.units.find(u => u.tileX === decision.targetTile.x && u.tileY === decision.targetTile.y);
         console.log(`[AI] Action: ${enemy.name} | attack -> ${targetUnit?.name || 'unknown'} at (${decision.targetTile.x},${decision.targetTile.y})`);
       }
 
       // Debug: Validate targetTile has valid coordinates
       if (decision.targetTile.x === undefined || decision.targetTile.y === undefined) {
-        if (AI_DEBUG) {
+        if (isAIDebugEnabled(state)) {
           console.error(`[AI] Error: ${enemy.name} | invalid targetTile - x or y undefined`);
         }
       }
@@ -277,11 +283,11 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       );
 
       if (attackResult.error) {
-        if (AI_DEBUG) {
+        if (isAIDebugEnabled(state)) {
           console.log(`[AI] Result: ${enemy.name} | attack FAILED - ${attackResult.error}`);
         }
       } else {
-        if (AI_DEBUG) {
+        if (isAIDebugEnabled(state)) {
           const isCrit = attackResult.isCritical ? ' (CRIT)' : '';
           console.log(`[AI] Result: ${enemy.name} | attack -> ${attackResult.targetName || 'target'} | damage: ${attackResult.damage}${isCrit}`);
         }
@@ -311,7 +317,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
 
     } else if (decision.actionType === 'skill' && decision.targetTile) {
       // === SKILL PHASE ===
-      if (AI_DEBUG) {
+      if (isAIDebugEnabled(state)) {
         const targetUnit = state.units.find(u => u.tileX === decision.targetTile.x && u.tileY === decision.targetTile.y);
         console.log(`[AI] Action: ${enemy.name} | skill:${decision.skillId} -> ${targetUnit?.name || 'area'} at (${decision.targetTile.x},${decision.targetTile.y})`);
       }
@@ -349,7 +355,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       );
 
       if (!skillResult.error) {
-        if (AI_DEBUG) {
+        if (isAIDebugEnabled(state)) {
           const effectInfo = [];
           if (skillResult.damage) effectInfo.push(`damage: ${skillResult.damage}`);
           if (skillResult.healing) effectInfo.push(`healing: ${skillResult.healing}`);
@@ -372,7 +378,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
         });
 
         await delay(TIMING.ATTACK_ANIMATION + TIMING.DAMAGE_POPUP);
-      } else if (AI_DEBUG) {
+      } else if (isAIDebugEnabled(state)) {
         console.log(`[AI] Result: ${enemy.name} | skill FAILED - ${skillResult.error}`);
       }
 
@@ -384,7 +390,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
 
     } else if (decision.actionType === 'item' && decision.itemId) {
       // === ITEM PHASE ===
-      if (AI_DEBUG) {
+      if (isAIDebugEnabled(state)) {
         const targetUnit = decision.targetTile
           ? state.units.find(u => u.tileX === decision.targetTile.x && u.tileY === decision.targetTile.y)
           : enemy;
@@ -401,7 +407,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       );
 
       if (!itemResult.error) {
-        if (AI_DEBUG) {
+        if (isAIDebugEnabled(state)) {
           const effectInfo = [];
           if (itemResult.hpRestored) effectInfo.push(`HP: +${itemResult.hpRestored}`);
           if (itemResult.mpRestored) effectInfo.push(`MP: +${itemResult.mpRestored}`);
@@ -424,7 +430,7 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
         });
 
         await delay(TIMING.ATTACK_ANIMATION);
-      } else if (AI_DEBUG) {
+      } else if (isAIDebugEnabled(state)) {
         console.log(`[AI] Result: ${enemy.name} | item FAILED - ${itemResult.error}`);
       }
     }

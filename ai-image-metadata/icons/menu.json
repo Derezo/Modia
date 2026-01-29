@@ -266,32 +266,36 @@
       "name": "Characters",
       "prompt": "warrior knight character portrait adventurer",
       "seed": 32022,
-      "generated": false,
-      "loraModel": "retro-pixel"
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-29T07:00:37.744Z"
     },
     {
       "id": "menu_friends",
       "name": "Friends",
       "prompt": "two people friends social handshake partner",
       "seed": 32023,
-      "generated": false,
-      "loraModel": "retro-pixel"
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-29T07:21:44.779Z"
     },
     {
       "id": "menu_leaderboard",
       "name": "Leaderboard",
       "prompt": "trophy podium rankings leaderboard first place",
       "seed": 32024,
-      "generated": false,
-      "loraModel": "retro-pixel"
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-29T07:22:39.589Z"
     },
     {
       "id": "menu_logout",
       "name": "Logout",
       "prompt": "door exit logout leave arrow right",
       "seed": 32025,
-      "generated": false,
-      "loraModel": "retro-pixel"
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-29T07:23:30.596Z"
     }
   ]
 }

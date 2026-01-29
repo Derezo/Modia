@@ -451,11 +451,13 @@ newPattern: {
 
 ### Debug Logging
 
-Enable verbose AI logging via environment variable:
+Enable verbose AI logging via the **Developer Options** in the Settings menu:
 
-```bash
-AI_DEBUG=true npm run dev:api
-```
+1. Open **Settings** → **Developer Options**
+2. Enable **Developer Mode** (master toggle)
+3. Under **Battle**, enable **Log AI Decisions**
+
+When enabled, AI debug logs will appear in the server console for battles started by that user.
 
 **Output includes:**
 - `[AI] Lookahead: <unit> (<pattern>) | <action> | score: <score>` - Lookahead decisions
