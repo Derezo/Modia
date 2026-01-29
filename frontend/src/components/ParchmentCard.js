@@ -415,6 +415,56 @@ export class ParchmentCard {
       .pc-dmg-crit {
         color: #6a4a68;
       }
+
+      /* MP Restore Preview Styling */
+      .pc-damage-preview--mp {
+        border-color: #35527a;
+        background:
+          linear-gradient(135deg, rgba(80, 128, 176, 0.15) 0%, transparent 50%),
+          linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 50%, #cfc0a8 100%);
+      }
+
+      .pc-dmg-range--mp {
+        color: #35527a;
+      }
+
+      /* Cure Preview Styling */
+      .pc-damage-preview--cure {
+        border-color: #4a7548;
+        background:
+          linear-gradient(135deg, rgba(100, 160, 100, 0.15) 0%, transparent 50%),
+          linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 50%, #cfc0a8 100%);
+      }
+
+      .pc-dmg-cure-list {
+        font-size: 11px;
+        color: #3a6830;
+        font-weight: bold;
+      }
+
+      /* Buff Preview Styling */
+      .pc-damage-preview--buff {
+        border-color: #8a7a40;
+        background:
+          linear-gradient(135deg, rgba(180, 160, 80, 0.15) 0%, transparent 50%),
+          linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 50%, #cfc0a8 100%);
+      }
+
+      .pc-dmg-range--buff {
+        color: #6a5a28;
+      }
+
+      /* Revive Preview Styling */
+      .pc-damage-preview--revive {
+        border-color: #aa6633;
+        background:
+          linear-gradient(135deg, rgba(200, 140, 80, 0.15) 0%, transparent 50%),
+          linear-gradient(to bottom, #e8dcc8 0%, #d9ccb8 50%, #cfc0a8 100%);
+      }
+
+      .pc-dmg-range--revive {
+        color: #8a5520;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -594,7 +644,7 @@ export class ParchmentCard {
    * @param {number} data.critChance - Critical hit chance (0-1)
    * @param {number} data.critDamage - Damage on critical hit
    * @param {boolean} data.willKill - Whether this would kill the target
-   * @param {string} data.type - 'physical', 'magical', or 'heal'
+   * @param {string} data.type - 'physical', 'magical', 'heal', 'mp_restore', 'heal_both', 'cure', 'revive', 'buff'
    */
   showDamagePreview(data) {
     if (!data) return;
@@ -607,54 +657,136 @@ export class ParchmentCard {
       this.element.appendChild(this.damagePreviewElement);
     }
 
-    const isHeal = data.type === 'heal';
-    const min = isHeal ? data.minHeal : data.minDamage;
-    const max = isHeal ? data.maxHeal : data.maxDamage;
-    const hitPercent = Math.round(data.hitChance * 100);
-    const critPercent = Math.round((data.critChance || 0) * 100);
+    let html = '';
+    let modifierClass = '';
 
-    // Determine hit chance styling
-    let hitClass = '';
-    if (hitPercent < 70) hitClass = 'low';
-    else if (hitPercent < 90) hitClass = 'warning';
-
-    // Build HTML
-    let html = '<div class="pc-dmg-row">';
-
-    if (isHeal) {
-      html += `<span class="pc-dmg-range pc-dmg-range--heal">+${min}-${max}</span>`;
-      html += '<span class="pc-dmg-label">HP</span>';
-      if (data.isOverheal) {
-        html += '<span class="pc-dmg-label" style="color: #8a7a60;">(overheal)</span>';
+    switch (data.type) {
+      case 'heal': {
+        const min = data.minHeal;
+        const max = data.maxHeal;
+        html = '<div class="pc-dmg-row">';
+        html += `<span class="pc-dmg-range pc-dmg-range--heal">+${min}${min !== max ? `-${max}` : ''}</span>`;
+        html += '<span class="pc-dmg-label">HP</span>';
+        if (data.isOverheal) {
+          html += '<span class="pc-dmg-label" style="color: #8a7a60;">(overheal)</span>';
+        }
+        html += '</div>';
+        modifierClass = 'pc-damage-preview--heal';
+        break;
       }
-    } else {
-      html += `<span class="pc-dmg-range ${data.willKill ? 'pc-dmg-range--kill' : ''}">${min}-${max}</span>`;
-      html += '<span class="pc-dmg-label">dmg</span>';
-      if (data.willKill) {
-        html += '<span class="pc-dmg-kill">Kill</span>';
-      }
-    }
 
-    html += '</div>';
-
-    // Secondary row: hit chance and crit info
-    if (!isHeal) {
-      html += '<div class="pc-dmg-secondary">';
-      html += `<span class="pc-dmg-hit ${hitClass}">${hitPercent}% hit</span>`;
-      if (critPercent > 0) {
-        html += `<span class="pc-dmg-crit">${critPercent}% crit \u2192 ${data.critDamage}</span>`;
+      case 'mp_restore': {
+        const min = data.minRestore;
+        const max = data.maxRestore;
+        html = '<div class="pc-dmg-row">';
+        html += `<span class="pc-dmg-range pc-dmg-range--mp">+${min}${min !== max ? `-${max}` : ''}</span>`;
+        html += '<span class="pc-dmg-label">MP</span>';
+        if (data.isOverheal) {
+          html += '<span class="pc-dmg-label" style="color: #8a7a60;">(excess)</span>';
+        }
+        html += '</div>';
+        modifierClass = 'pc-damage-preview--mp';
+        break;
       }
-      html += '</div>';
+
+      case 'heal_both': {
+        html = '<div class="pc-dmg-row">';
+        html += `<span class="pc-dmg-range pc-dmg-range--heal">+${data.hpValue}</span>`;
+        html += '<span class="pc-dmg-label">HP</span>';
+        html += '</div>';
+        html += '<div class="pc-dmg-row">';
+        html += `<span class="pc-dmg-range pc-dmg-range--mp">+${data.mpValue}</span>`;
+        html += '<span class="pc-dmg-label">MP</span>';
+        html += '</div>';
+        modifierClass = 'pc-damage-preview--heal';
+        break;
+      }
+
+      case 'cure': {
+        html = '<div class="pc-dmg-row">';
+        if (data.willCure) {
+          const effects = data.activeEffects || data.curedEffects || [];
+          const effectList = effects.slice(0, 3).map(e => this.escapeHtml(e)).join(', ');
+          html += `<span class="pc-dmg-cure-list">Cures: ${effectList}</span>`;
+        } else {
+          html += '<span class="pc-dmg-label" style="color: #8a7a60;">No status to cure</span>';
+        }
+        html += '</div>';
+        modifierClass = 'pc-damage-preview--cure';
+        break;
+      }
+
+      case 'revive': {
+        html = '<div class="pc-dmg-row">';
+        if (data.willRevive) {
+          html += `<span class="pc-dmg-range pc-dmg-range--revive">Revive ${data.revivePercent}%</span>`;
+          html += '</div>';
+          html += '<div class="pc-dmg-secondary">';
+          html += `<span style="color: #6a5a48;">${data.reviveHp} HP</span>`;
+        } else {
+          html += '<span class="pc-dmg-label" style="color: #8a7a60;">Target not KO</span>';
+        }
+        html += '</div>';
+        modifierClass = 'pc-damage-preview--revive';
+        break;
+      }
+
+      case 'buff': {
+        html = '<div class="pc-dmg-row">';
+        const escapedBuffName = data.buffName ? this.escapeHtml(data.buffName) : 'Buff';
+        html += `<span class="pc-dmg-range pc-dmg-range--buff">${escapedBuffName}</span>`;
+        if (data.duration) {
+          html += `<span class="pc-dmg-label">${data.duration} turns</span>`;
+        }
+        html += '</div>';
+        modifierClass = 'pc-damage-preview--buff';
+        break;
+      }
+
+      default: {
+        // Physical/Magical damage (original behavior)
+        const min = data.minDamage;
+        const max = data.maxDamage;
+        const hitPercent = Math.round(data.hitChance * 100);
+        const critPercent = Math.round((data.critChance || 0) * 100);
+
+        let hitClass = '';
+        if (hitPercent < 70) hitClass = 'low';
+        else if (hitPercent < 90) hitClass = 'warning';
+
+        html = '<div class="pc-dmg-row">';
+        html += `<span class="pc-dmg-range ${data.willKill ? 'pc-dmg-range--kill' : ''}">${min}-${max}</span>`;
+        html += '<span class="pc-dmg-label">dmg</span>';
+        if (data.willKill) {
+          html += '<span class="pc-dmg-kill">Kill</span>';
+        }
+        html += '</div>';
+
+        html += '<div class="pc-dmg-secondary">';
+        html += `<span class="pc-dmg-hit ${hitClass}">${hitPercent}% hit</span>`;
+        if (critPercent > 0) {
+          html += `<span class="pc-dmg-crit">${critPercent}% crit \u2192 ${data.critDamage}</span>`;
+        }
+        html += '</div>';
+
+        modifierClass = data.willKill ? 'pc-damage-preview--kill' : '';
+        break;
+      }
     }
 
     this.damagePreviewElement.innerHTML = html;
 
     // Update modifier classes
-    this.damagePreviewElement.classList.remove('pc-damage-preview--kill', 'pc-damage-preview--heal');
-    if (isHeal) {
-      this.damagePreviewElement.classList.add('pc-damage-preview--heal');
-    } else if (data.willKill) {
-      this.damagePreviewElement.classList.add('pc-damage-preview--kill');
+    this.damagePreviewElement.classList.remove(
+      'pc-damage-preview--kill',
+      'pc-damage-preview--heal',
+      'pc-damage-preview--mp',
+      'pc-damage-preview--cure',
+      'pc-damage-preview--buff',
+      'pc-damage-preview--revive'
+    );
+    if (modifierClass) {
+      this.damagePreviewElement.classList.add(modifierClass);
     }
 
     // Show with animation

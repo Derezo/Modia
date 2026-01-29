@@ -1,3 +1,22 @@
+/**
+ * @module BattleUI
+ * @description User interface overlay for tactical turn-based combat.
+ *
+ * Key responsibilities:
+ * - Action menu display and button state management
+ * - Active unit and target info cards (ParchmentCard integration)
+ * - Turn order panel coordination (TurnOrderPanel)
+ * - Battle log display (BattleLogPanel)
+ * - Damage/heal preview overlays on target cards
+ * - PvP-specific UI (turn timer, surrender, disconnect overlay)
+ * - Skill, item, and zodiac ability selection panels
+ * - Confirmation dialogs and battle result display
+ *
+ * @see BattleScene.js - Orchestrates battle and calls UI methods
+ * @see ParchmentCard.js - Character/enemy info cards
+ * @see TurnOrderPanel.js - Turn order display
+ * @see BattleLogPanel.js - Combat history log
+ */
 import { ParchmentCard } from '../components/ParchmentCard.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import TurnOrderPanel from './TurnOrderPanel.js';
@@ -1012,6 +1031,25 @@ export class BattleUI {
   hideDamagePreview() {
     if (this.targetCard) {
       this.targetCard.hideDamagePreview();
+    }
+  }
+
+  /**
+   * Show damage preview on the active unit card (for self-targeting skills/items)
+   * @param {Object} data - Damage/heal preview data
+   */
+  showActiveUnitPreview(data) {
+    if (this.activeUnitCard) {
+      this.activeUnitCard.showDamagePreview(data);
+    }
+  }
+
+  /**
+   * Hide damage preview on the active unit card
+   */
+  hideActiveUnitPreview() {
+    if (this.activeUnitCard) {
+      this.activeUnitCard.hideDamagePreview();
     }
   }
 
