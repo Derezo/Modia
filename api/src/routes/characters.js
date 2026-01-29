@@ -90,14 +90,14 @@ router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, 
     throw new AppError(`Invalid gender. Must be one of: ${Object.values(GENDERS).join(', ')}`, 400);
   }
 
-  // Check character limit
-  const countResult = await query(
+  // Block manual character creation after first character
+  // Party members must be recruited through guild recruitment
+  const existingCount = await query(
     'SELECT COUNT(*) FROM characters WHERE user_id = $1',
     [req.user.userId]
   );
-
-  if (parseInt(countResult.rows[0].count, 10) >= MAX_PARTY_SIZE) {
-    throw new AppError(`Cannot have more than ${MAX_PARTY_SIZE} characters`, 400);
+  if (parseInt(existingCount.rows[0].count, 10) > 0) {
+    throw new AppError('Cannot create characters manually. Use guild recruitment.', 400);
   }
 
   // Calculate initial stats
@@ -290,6 +290,15 @@ router.delete('/:id', authenticate, characterDeleteLimiter, asyncHandler(async (
 
   if (checkResult.rows[0].in_battle) {
     throw new AppError('Cannot delete character while in battle', 400);
+  }
+
+  // Block deletion of main character (oldest character)
+  const oldestResult = await query(
+    'SELECT id FROM characters WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1',
+    [req.user.userId]
+  );
+  if (oldestResult.rows[0]?.id === parseInt(id, 10)) {
+    throw new AppError('Cannot delete main character', 400);
   }
 
   await query('DELETE FROM characters WHERE id = $1 AND user_id = $2', [id, req.user.userId]);

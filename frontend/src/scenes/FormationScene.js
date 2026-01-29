@@ -30,6 +30,7 @@ export class FormationScene extends Scene {
     this.activeModal = null;
     this.responsiveUnsubscribe = null;
     this.sortMethod = 'level';  // 'level' | 'class' | 'name'
+    this.mainCharacterId = null;
   }
 
   async enter() {
@@ -101,6 +102,15 @@ export class FormationScene extends Scene {
       ]);
       this.characters = charResult.characters || [];
       this.inventory = invResult.inventory || invResult || [];
+
+      // Identify main character (oldest by created_at)
+      this.mainCharacterId = null;
+      if (this.characters.length > 0) {
+        const sorted = [...this.characters].sort((a, b) =>
+          new Date(a.created_at) - new Date(b.created_at)
+        );
+        this.mainCharacterId = sorted[0].id;
+      }
     } catch (err) {
       console.error('Failed to load data:', err);
       parchmentToast.error('Failed to load party data');
@@ -416,11 +426,13 @@ export class FormationScene extends Scene {
       // Check for upgrade indicators
       const hasEquipmentUpgrade = this.checkHasEquipmentUpgrade(char);
       const hasSkillPoints = this.checkHasSkillPoints(char);
+      const isMainCharacter = char.id === this.mainCharacterId;
 
       const card = new CharacterCard({
         character: char,
         showUpgradeBadge: hasEquipmentUpgrade,
         showSkillBadge: hasSkillPoints,
+        showLeaderBadge: isMainCharacter,
         onClick: () => this.openCharacterModal(char)
       });
 

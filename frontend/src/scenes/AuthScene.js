@@ -681,7 +681,9 @@ export class AuthScene extends Scene {
       this.game.initNotificationSystem();
 
       if (this.mode === 'register') {
-        // New user goes to character creation
+        // New user goes to character creation wizard
+        // Set flag so CharacterCreateScene knows to show the full onboarding flow
+        this.game.state.set('isNewRegistration', true);
         this.game.scenes.switchTo('characterCreate');
       } else {
         // Check for active battle first

@@ -81,13 +81,22 @@ export class CharacterCard {
    * @param {Object} [options.badges] - Badge visibility flags
    * @param {boolean} [options.badges.hasEquipmentUpgrade] - Show red equipment badge
    * @param {boolean} [options.badges.hasSkillPoints] - Show yellow skill badge
+   * @param {boolean} [options.showUpgradeBadge] - Show red equipment badge (alt prop)
+   * @param {boolean} [options.showSkillBadge] - Show yellow skill badge (alt prop)
+   * @param {boolean} [options.showLeaderBadge] - Show gold leader/main character badge
    * @param {Function} [options.onClick] - Click callback (characterId)
    * @param {boolean} [options.selected] - Selected state
    */
   constructor(options = {}) {
+    // Support both badges object and individual showX props for flexibility
+    const badges = options.badges || {};
+    if (options.showUpgradeBadge !== undefined) badges.hasEquipmentUpgrade = options.showUpgradeBadge;
+    if (options.showSkillBadge !== undefined) badges.hasSkillPoints = options.showSkillBadge;
+    if (options.showLeaderBadge !== undefined) badges.hasLeaderBadge = options.showLeaderBadge;
+
     this.options = {
       character: options.character || {},
-      badges: options.badges || {},
+      badges,
       onClick: options.onClick || null,
       selected: options.selected || false
     };
@@ -266,6 +275,35 @@ export class CharacterCard {
         background: #ffc107;
       }
 
+      .character-card__badge--leader {
+        top: 4px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: auto;
+        height: auto;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background: linear-gradient(to bottom, #ffd700, #daa520);
+        border: 1px solid #b8860b;
+        font-size: 9px;
+        font-weight: bold;
+        color: #4a3000;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+        display: flex;
+        align-items: center;
+        gap: 2px;
+      }
+
+      .character-card__badge--leader::before {
+        content: '';
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%234a3000'%3E%3Cpath d='M12 1L15.09 7.26L22 8.27L17 13.14L18.18 20.02L12 16.77L5.82 20.02L7 13.14L2 8.27L8.91 7.26L12 1Z'/%3E%3C/svg%3E");
+        background-size: contain;
+        background-repeat: no-repeat;
+      }
+
       /* Responsive sizing */
       @media (max-width: 768px) {
         .character-card {
@@ -349,6 +387,7 @@ export class CharacterCard {
     this.element.innerHTML = `
       ${badges.hasEquipmentUpgrade ? '<span class="character-card__badge character-card__badge--equipment" title="Equipment upgrade available"></span>' : ''}
       ${badges.hasSkillPoints ? '<span class="character-card__badge character-card__badge--skills" title="Skill points available"></span>' : ''}
+      ${badges.hasLeaderBadge ? '<span class="character-card__badge character-card__badge--leader" title="Main Character">MAIN</span>' : ''}
 
       <div class="character-card__portrait">
         <div class="character-card__portrait-bg" style="background: ${classColor};"></div>
@@ -430,6 +469,14 @@ export class CharacterCard {
       const badge = document.createElement('span');
       badge.className = 'character-card__badge character-card__badge--skills';
       badge.title = 'Skill points available';
+      this.element.appendChild(badge);
+    }
+
+    if (badges.hasLeaderBadge) {
+      const badge = document.createElement('span');
+      badge.className = 'character-card__badge character-card__badge--leader';
+      badge.title = 'Main Character';
+      badge.textContent = 'MAIN';
       this.element.appendChild(badge);
     }
   }

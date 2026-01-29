@@ -243,6 +243,12 @@ GET /api/auth/me
 
 ## 3. Character Endpoints
 
+> **Main Character Concept:**
+> - The first character created by a user is designated as the "main character"
+> - The main character cannot be deleted
+> - The main character must always remain in party slot 1
+> - Additional party members are obtained through guild recruitment (see Section 9.5-9.6), not direct character creation
+
 ### 3.1 List Characters
 
 Get all characters for the authenticated user.
@@ -338,7 +344,10 @@ POST /api/characters
 | 400 | Invalid race |
 | 400 | Invalid class |
 | 400 | Cannot have more than 12 characters |
+| 400 | Cannot create characters manually. Use guild recruitment. |
 | 409 | Character name already exists |
+
+> **Note:** After creating your first (main) character, additional party members must be recruited from guild nodes. Direct character creation is only available for the initial main character. See Section 9.5 for guild recruitment.
 
 ---
 
@@ -446,6 +455,7 @@ DELETE /api/characters/:id
 | Code | Message |
 |------|---------|
 | 400 | Cannot delete character while in battle |
+| 400 | Cannot delete main character |
 | 404 | Character not found |
 
 ---
@@ -569,6 +579,7 @@ PUT /api/party
 | 400 | Formation must be an array |
 | 400 | Slot must be between 1 and 12 |
 | 400 | Duplicate slot assignment |
+| 400 | Main character must remain in slot 1 |
 | 404 | One or more characters not found |
 
 ---

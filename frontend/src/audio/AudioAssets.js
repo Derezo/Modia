@@ -67,7 +67,7 @@ export const PLACEHOLDER_CONFIG = {
   music: {
     // Core tracks
     title_theme: { frequency: 262, type: 'sine', duration: 0.5, silent: true },
-    character_select: { frequency: 294, type: 'sine', duration: 0.5, silent: true },
+    character_create: { frequency: 294, type: 'sine', duration: 0.5, silent: true },
     victory_fanfare: { frequency: 440, type: 'sine', duration: 2, silent: false },
     defeat_jingle: { frequency: 165, type: 'sine', duration: 2, silent: false },
     level_up_fanfare: { frequency: 880, type: 'sine', duration: 0.5, silent: false },

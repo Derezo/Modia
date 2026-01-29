@@ -116,6 +116,33 @@ describe('Characters API', () => {
 
       assert.strictEqual(res.status, 401);
     });
+
+    it('should block manual character creation when user already has characters', async () => {
+      // Create a fresh user to ensure test isolation
+      const freshUser = await createTestUser();
+
+      // Create the first character - this should succeed
+      const firstRes = await request('POST', '/api/characters', {
+        name: `FirstChar_${Date.now()}`,
+        race: 'human',
+        characterClass: 'warrior',
+        gender: 'male'
+      }, freshUser.accessToken);
+
+      assert.strictEqual(firstRes.status, 201, 'First character creation should succeed');
+
+      // Try to create a second character - this should be blocked
+      const secondRes = await request('POST', '/api/characters', {
+        name: 'SecondManualChar',
+        race: 'human',
+        characterClass: 'warrior',
+        gender: 'male'
+      }, freshUser.accessToken);
+
+      assert.strictEqual(secondRes.status, 400);
+      assert.ok(secondRes.body.error.includes('guild recruitment'),
+        `Expected error about guild recruitment, got: ${secondRes.body.error}`);
+    });
   });
 
   describe('GET /api/characters', () => {
@@ -202,6 +229,23 @@ describe('Characters API', () => {
       const res = await request('DELETE', `/api/characters/${otherChar.id}`, null, user.accessToken);
 
       assert.strictEqual(res.status, 404);
+    });
+
+    it('should block deletion of main character (oldest character)', async () => {
+      // Get characters and identify main character
+      const listRes = await request('GET', '/api/characters', null, user.accessToken);
+      const characters = listRes.body.characters;
+
+      assert.ok(characters.length > 0, 'User should have at least one character');
+
+      // Main character is the one with party_slot = 1 (or oldest by created_at)
+      const mainChar = characters.find(c => c.party_slot === 1) || characters[0];
+
+      const res = await request('DELETE', `/api/characters/${mainChar.id}`, null, user.accessToken);
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('main character'),
+        `Expected error about main character, got: ${res.body.error}`);
     });
   });
 });
