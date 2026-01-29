@@ -125,42 +125,55 @@ export class ProfileDropdown {
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       }
 
-      /* Trigger Button */
+      /* Trigger Button - Minimal transparent container */
       .profile-dropdown__trigger {
         display: flex;
         align-items: center;
-        gap: 10px;
-        padding: 8px 14px 8px 8px;
-        background: ${getParchmentGradient('to bottom')};
-        border: ${getParchmentBorder()};
-        border-radius: ${PARCHMENT_RADIUS.lg};
+        gap: 0;
+        padding: 0;
+        background: transparent;
+        border: none;
         cursor: pointer;
-        box-shadow: ${getParchmentShadow(false)};
-        transition: transform 0.15s, box-shadow 0.15s;
+        box-shadow: none;
         position: relative;
       }
 
-      .profile-dropdown__trigger:hover {
-        transform: translateY(-1px);
-        box-shadow: ${getParchmentShadow(true)};
-      }
-
+      .profile-dropdown__trigger:hover,
       .profile-dropdown__trigger:active {
-        transform: translateY(0);
+        transform: none;
+        box-shadow: none;
       }
 
-      /* Avatar */
+      .profile-dropdown__trigger:focus-visible .profile-dropdown__avatar {
+        outline: 2px solid #4a9eff;
+        outline-offset: 2px;
+      }
+
+      /* Avatar - 48px copper ring */
       .profile-dropdown__avatar {
-        width: 40px;
-        height: 40px;
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
-        border: 2px solid ${PARCHMENT_COLORS.border};
-        background: ${PARCHMENT_COLORS.dark};
+        border: 2.5px solid #b87333;
+        background: transparent;
         display: flex;
         align-items: center;
         justify-content: center;
         overflow: hidden;
         flex-shrink: 0;
+        box-shadow:
+          0 2px 8px rgba(0, 0, 0, 0.4),
+          0 1px 3px rgba(0, 0, 0, 0.3),
+          inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      }
+
+      .profile-dropdown__avatar:hover {
+        transform: scale(1.05);
+        box-shadow:
+          0 2px 12px rgba(184, 115, 51, 0.5),
+          0 4px 16px rgba(0, 0, 0, 0.4);
+        border-color: #c98343;
       }
 
       .profile-dropdown__avatar img {
@@ -170,49 +183,49 @@ export class ProfileDropdown {
       }
 
       .profile-dropdown__avatar-fallback {
-        font-size: 20px;
-        color: ${PARCHMENT_COLORS.text.secondary};
+        font-size: 24px;
+        color: #5a4a3a;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
       }
 
-      /* Gold Display - Floating below profile button */
-      .profile-dropdown__gold-float {
+      /* Gold Display - Inline floating text */
+      .profile-dropdown__gold-inline {
         display: flex;
         align-items: center;
-        justify-content: center;
-        gap: 6px;
-        padding: 6px 12px;
-        margin-top: 8px;
-        background: rgba(0, 0, 0, 0.6);
-        border: 1px solid ${PARCHMENT_COLORS.border};
-        border-radius: ${PARCHMENT_RADIUS.md};
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        gap: 4px;
+        margin-left: 10px;
+        padding: 0;
+        background: transparent;
+        border: none;
       }
 
-      .profile-dropdown__gold-float .profile-dropdown__gold-icon {
-        font-size: 16px;
+      .profile-dropdown__gold-inline .profile-dropdown__gold-icon {
+        font-size: 18px;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
       }
 
-      .profile-dropdown__gold-float .profile-dropdown__gold-value {
-        color: ${PARCHMENT_COLORS.accent.burgundy};
+      .profile-dropdown__gold-inline .profile-dropdown__gold-value {
+        color: #c9a227;
         font-weight: bold;
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+        font-size: 15px;
         text-shadow:
-          -1px -1px 0 #000,
-          1px -1px 0 #000,
-          -1px 1px 0 #000,
-          1px 1px 0 #000,
-          0 0 3px rgba(0, 0, 0, 0.8);
+          -1px -1px 0 #1a1a1a,
+          1px -1px 0 #1a1a1a,
+          -1px 1px 0 #1a1a1a,
+          1px 1px 0 #1a1a1a,
+          0 0 4px rgba(0, 0, 0, 0.8),
+          0 2px 4px rgba(0, 0, 0, 0.6);
       }
 
-      /* Notification Badge */
+      /* Notification Badge - Repositioned for portrait */
       .profile-dropdown__badge {
         position: absolute;
-        top: -4px;
-        right: -4px;
-        min-width: 20px;
-        height: 20px;
+        top: -2px;
+        left: 34px;
+        min-width: 18px;
+        height: 18px;
         background: #ef4444;
-        border-radius: 10px;
+        border-radius: 9px;
         color: white;
         font-size: 11px;
         font-weight: bold;
@@ -221,8 +234,10 @@ export class ProfileDropdown {
         align-items: center;
         justify-content: center;
         padding: 0 5px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        border: 2px solid ${PARCHMENT_COLORS.light};
+        box-shadow:
+          0 2px 4px rgba(0, 0, 0, 0.4),
+          0 0 0 2px rgba(255, 255, 255, 0.9);
+        z-index: 1;
       }
 
       .profile-dropdown__badge--visible {
@@ -233,7 +248,7 @@ export class ProfileDropdown {
       .profile-dropdown__menu {
         position: absolute;
         top: calc(100% + 8px);
-        right: 0;
+        right: -8px;
         width: 260px;
         background: ${getParchmentGradient('to bottom')};
         border: ${getParchmentBorder()};
@@ -484,14 +499,17 @@ export class ProfileDropdown {
     this.avatarElement = this.triggerElement.querySelector('.profile-dropdown__avatar');
     this.badgeElement = this.triggerElement.querySelector('.profile-dropdown__badge');
 
-    // Floating gold display (below trigger)
-    this.goldFloatElement = document.createElement('div');
-    this.goldFloatElement.className = 'profile-dropdown__gold-float';
-    this.goldFloatElement.innerHTML = `
+    // Inline gold display (inside trigger, after avatar)
+    this.goldInlineElement = document.createElement('div');
+    this.goldInlineElement.className = 'profile-dropdown__gold-inline';
+    this.goldInlineElement.innerHTML = `
       <span class="profile-dropdown__gold-icon">${Icon.html('resources', 'gold', { size: 'sm' })}</span>
       <span class="profile-dropdown__gold-value">0</span>
     `;
-    this.goldElement = this.goldFloatElement.querySelector('.profile-dropdown__gold-value');
+    this.goldElement = this.goldInlineElement.querySelector('.profile-dropdown__gold-value');
+
+    // Add gold display inside trigger for horizontal inline layout
+    this.triggerElement.appendChild(this.goldInlineElement);
 
     // Dropdown menu
     this.dropdownElement = document.createElement('div');
@@ -500,7 +518,6 @@ export class ProfileDropdown {
     this.renderDropdownContent();
 
     container.appendChild(this.triggerElement);
-    container.appendChild(this.goldFloatElement);
     container.appendChild(this.dropdownElement);
 
     this.element = container;
@@ -1019,6 +1036,12 @@ export class ProfileDropdown {
     const notification = this.notifications.find(n => n.id === notificationId);
     if (!notification) return;
 
+    // Prevent double-click by removing notification immediately (optimistic update)
+    this.notifications = this.notifications.filter(n => n.id !== notificationId);
+    this.unreadCount = Math.max(0, this.unreadCount - 1);
+    this.updateBadge();
+    this.renderDropdownContent();
+
     try {
       switch (notification.type) {
         case 'friend_request':
@@ -1051,12 +1074,17 @@ export class ProfileDropdown {
           break;
       }
 
-      // Dismiss notification after action
-      await this.dismissNotification(notificationId);
+      // Dismiss notification on server (local state already updated above)
+      await this.game.api.delete(`/notifications/${notificationId}`);
 
     } catch (error) {
       console.error('Notification action failed:', error);
       this.game.toastManager?.error('Action Failed', error.message || 'Something went wrong');
+      // Restore notification on failure
+      this.notifications.unshift(notification);
+      this.unreadCount++;
+      this.updateBadge();
+      this.renderDropdownContent();
     }
   }
 
@@ -1200,6 +1228,7 @@ export class ProfileDropdown {
     this.dropdownElement = null;
     this.badgeElement = null;
     this.goldElement = null;
+    this.goldInlineElement = null;
     this.avatarElement = null;
     this.notificationListElement = null;
   }
