@@ -22,13 +22,14 @@ api/src/services/
 ├── ai/                          # Utility AI module
 │   ├── index.js                 # Module exports
 │   ├── utilityAI.js             # Main coordinator class
-│   ├── utilityFactors.js        # Factor calculation functions
-│   ├── patternWeights.js        # Weight configurations
+│   ├── utilityFactors.js        # Factor calculation functions (11 factors)
+│   ├── patternWeights.js        # Weight configurations (9 patterns)
 │   ├── stateEvaluator.js        # Board state evaluation
 │   ├── actionGenerator.js       # Enumerate legal actions
 │   ├── lookahead.js             # Multi-actor minimax
+│   ├── strategicPathfinding.js  # Multi-turn path planning
 │   └── cache.js                 # Transposition table
-├── aiService.js                 # Entry point (uses utility AI)
+├── aiService.js                 # Entry point, legacy fallback
 ├── battleUnitFactory.js         # Unified unit creation
 ├── npcSkillService.js           # NPC skill generation
 └── battleService.js             # Battle logic + available actions
@@ -68,8 +69,18 @@ Each action is scored using these factors:
 | `ALLY_SUPPORT` | Proximity to friendly units | 0-50 |
 | `HEALING_VALUE` | Value of support actions | 0-500 |
 | `SURVIVAL_PRIORITY` | Self-preservation importance | 0-200 |
-| `MP_EFFICIENCY` | Value of conserving MP | 0-100 |
+| `MP_EFFICIENCY` | Value of conserving MP | -200 to +100 |
 | `TARGET_PRIORITY` | Preference for specific targets | 0-100 |
+| `strategicPathProgress` | Reward for following optimal path to enemies | 0-1 |
+| `waitingPenalty` | Penalty for idle waiting when enemies far (use negative weight) | 0-1 |
+
+### Factor Details
+
+**strategicPathProgress**: Calculates how well a move follows the optimal path toward enemies. Uses `calculateStrategicPath()` to find the best route, then `scoreStrategicMovement()` to evaluate tiles. Returns normalized 0-1 score.
+
+**waitingPenalty**: Discourages waiting when enemies are out of attack range. Returns 0 if an enemy is within range (waiting may be tactically valid), 0.3 if enemies are 1 turn away, or 0.8 if enemies are 2+ turns away. Applied with negative weight to penalize.
+
+**MP_EFFICIENCY**: Returns -200 for zero-benefit actions (e.g., healing full-HP targets) to strongly penalize wasted MP. Otherwise scales 0-100 based on MP remaining and skill cost.
 
 ## AI Patterns
 
@@ -103,6 +114,13 @@ Each action is scored using these factors:
 - Position-focused
 - Waits for optimal strikes
 
+### Berserker
+- Maximum aggression, ignores safety
+- Pure damage focus (3.0 weight)
+- Zero survival priority
+- Highest strategic path progress (0.35)
+- Strongest waiting penalty (-0.5)
+
 ### Ranged
 - Maintains safe distance
 - Kiting behavior
@@ -112,6 +130,42 @@ Each action is scored using these factors:
 - Adaptive behavior
 - Balanced across factors
 - Hard to predict
+
+## Pattern Weight Reference
+
+Complete weight values for all AI patterns:
+
+| Factor | Aggressive | Defensive | Support | Tactical | Pack | Ambush | Berserker | Ranged | Boss |
+|--------|-----------|-----------|---------|----------|------|--------|-----------|--------|------|
+| DAMAGE_DEALT | 2.0 | 0.8 | 0.5 | 1.5 | 1.5 | 2.5 | **3.0** | 1.8 | 1.5 |
+| DAMAGE_RECEIVED | 0.3 | 2.0 | 1.8 | 1.2 | 0.8 | 1.5 | **0.0** | 1.5 | 1.0 |
+| KILL_POTENTIAL | 2.5 | 1.0 | 0.5 | **3.0** | 1.5 | **3.5** | 2.0 | 1.5 | 2.0 |
+| POSITION_QUALITY | 0.8 | 1.5 | 1.2 | 2.0 | 1.5 | 2.5 | 0.3 | **2.5** | 1.5 |
+| ALLY_SUPPORT | 0.5 | 1.5 | 2.5 | 1.0 | **3.0** | 0.3 | 0.0 | 0.8 | 1.0 |
+| HEALING_VALUE | 0.3 | 1.5 | **3.0** | 1.0 | 1.2 | 0.2 | 0.0 | 0.5 | 1.5 |
+| SURVIVAL_PRIORITY | 0.3 | **2.5** | 2.0 | 1.5 | 1.0 | 1.8 | 0.0 | 1.8 | 1.5 |
+| MP_EFFICIENCY | 0.5 | 1.0 | 1.5 | 1.2 | 0.8 | 1.0 | 0.0 | 1.5 | 1.0 |
+| TARGET_PRIORITY | 1.2 | 0.8 | 0.5 | 2.0 | 1.5 | 2.5 | 1.0 | 1.5 | 1.8 |
+| strategicPathProgress | 0.25 | 0.10 | 0.15 | 0.20 | 0.20 | 0.10 | **0.35** | 0.15 | 0.20 |
+| waitingPenalty | -0.3 | -0.1 | -0.1 | -0.2 | -0.25 | -0.05 | **-0.5** | -0.15 | -0.2 |
+
+**Bold** values indicate the highest (or most extreme) weight for that factor.
+
+### Optimal Player Weights
+
+Used when simulating player behavior in lookahead:
+
+| Factor | Weight |
+|--------|--------|
+| DAMAGE_DEALT | 1.8 |
+| DAMAGE_RECEIVED | 1.2 |
+| KILL_POTENTIAL | 2.5 |
+| POSITION_QUALITY | 1.5 |
+| ALLY_SUPPORT | 1.0 |
+| HEALING_VALUE | 1.5 |
+| SURVIVAL_PRIORITY | 1.5 |
+| MP_EFFICIENCY | 0.8 |
+| TARGET_PRIORITY | 2.0 |
 
 ## Multi-Actor Lookahead
 
@@ -139,6 +193,105 @@ Round 3:
 | Allied NPCs | Same pattern weights |
 | Player characters | Optimal/aggressive play assumed |
 | Other enemy NPCs | Their pattern weights |
+
+## Strategic Pathfinding
+
+The AI uses strategic pathfinding to plan movement over multiple turns, preventing units from getting stuck or waiting when enemies are far away.
+
+### calculateStrategicPath()
+
+Finds the optimal path from an AI unit to the nearest enemy:
+
+```javascript
+calculateStrategicPath(unit, state)
+// Returns: { path, nextWaypoint, turnsToReach, targetEnemy }
+```
+
+- Uses A* pathfinding from `shared/pathfinding.js`
+- Considers terrain and unit obstacles
+- Calculates `turnsToReach` based on unit's movement range
+- Returns the tile the unit should reach this turn (`nextWaypoint`)
+
+### scoreStrategicMovement()
+
+Scores a tile based on strategic path progress:
+
+```javascript
+scoreStrategicMovement(tile, strategicInfo, unit)
+// Returns: 0-100 score
+```
+
+Scoring algorithm:
+- **+40 points**: Tile is on the optimal path
+- **+0-30 points**: Proximity to next waypoint (30 - distance * 5)
+- **+0-30 points**: Progress toward enemy ((currentDist - newDist) * 10)
+
+### Integration with Utility Factors
+
+Strategic pathfinding integrates with utility factors:
+
+1. **strategicPathProgress factor**: Calls `calculateStrategicPath()` and `scoreStrategicMovement()`, normalizes to 0-1
+2. **waitingPenalty factor**: Uses `turnsToReach` to determine penalty severity
+3. Both factors are weighted by pattern (berserker has highest path progress weight at 0.35)
+
+### Example: Berserker Movement
+
+```javascript
+// Berserker pattern weights encourage aggressive advancement
+{
+  DAMAGE_DEALT: 3.0,          // Max damage focus
+  SURVIVAL_PRIORITY: 0.0,     // No self-preservation
+  strategicPathProgress: 0.35, // Strong path-following incentive
+  waitingPenalty: -0.5        // Heavy penalty for waiting
+}
+// Result: Berserker always moves toward enemies, never waits
+```
+
+## Legacy AI Fallback
+
+The AI system maintains legacy pattern functions as a fallback when utility AI fails or is disabled.
+
+### Configuration Flags
+
+```javascript
+// api/src/services/aiService.js
+const USE_UTILITY_AI = true;        // Enable/disable utility AI
+const UTILITY_AI_TIME_BUDGET = 450; // Max decision time in ms
+```
+
+### Hybrid Decision Logic
+
+When `USE_UTILITY_AI` is enabled, the system uses a hybrid approach:
+
+```
+1. Get quick decision (no lookahead) as baseline
+2. Get lookahead decision (2-round simulation)
+3. Compare results and choose:
+   - If quick has offensive action + lookahead is passive + quick score > 100:
+     → Use quick (prefer immediate offense)
+   - If quick has 2-action sequence with offense + lookahead has 1 action + quick score > 50:
+     → Use quick (prefer efficient sequences)
+   - Otherwise:
+     → Use lookahead (trust multi-turn planning)
+```
+
+This prevents the lookahead from being overly conservative when immediate action is better.
+
+### Legacy Pattern Functions
+
+If utility AI fails (returns null or throws), the system falls back to pattern-specific functions:
+
+| AI Type | Legacy Function | Strategy |
+|---------|-----------------|----------|
+| aggressive | `aggressiveTurnAI()` | Move toward lowest-defense target, attack |
+| defensive | `defensiveTurnAI()` | Retreat at low HP, protect wounded allies |
+| support | `supportTurnAI()` | Heal allies, debuff enemies, maintain distance |
+| tactical | `tacticalTurnAI()` | Target weakest enemy, smart positioning |
+| pack | `packTurnAI()` | Coordinate with allies, swarm single target |
+| hit-and-run | `hitAndRunTurnAI()` | Attack first, then retreat |
+| ambush | `ambushTurnAI()` | Wait hidden, spring attack when close |
+
+Legacy functions use simpler heuristics but provide robust fallback behavior.
 
 ## NPC Skill System
 
@@ -296,6 +449,46 @@ newPattern: {
 2. Add to migration `011_npc_skills.sql`
 3. Skills auto-populate via `npcSkillService.generateEnemySkills()`
 
+### Debug Logging
+
+Enable verbose AI logging via environment variable:
+
+```bash
+AI_DEBUG=true npm run dev:api
+```
+
+**Output includes:**
+- `[AI] Lookahead: <unit> (<pattern>) | <action> | score: <score>` - Lookahead decisions
+- `[AI] Quick: <unit> (<pattern>) | <action> | score: <score>` - Quick decisions
+- `[AI] Sequences evaluated: <count>` - Number of move+action combinations
+- `[AI] Top sequences:` - Top 3 alternatives with factor breakdowns
+- `[AI] Execute: <unit> | <action summary>` - Turn execution start
+- `[AI] Action: <unit> | <action type> <details>` - Individual action execution
+- `[AI] Result: <unit> | <outcome>` - Action results with damage/healing values
+
+**Action format in logs:**
+- `move(x,y)` - Movement to tile
+- `attack(targetId)` - Basic attack
+- `skill:skillId(x,y)` - Skill usage
+- `item:itemId` - Item usage
+- Sequences: `move(x,y)+attack(target)` - Combined actions
+
+### Two-Action Sequence Evaluation
+
+The AI evaluates two-action sequences (move + action combinations) rather than individual actions. This allows for more intelligent decision-making where movement and action are considered together.
+
+**Key methods:**
+- `quickDecision()` - Returns a sequence of up to 2 actions without lookahead
+- `getBestSequence()` - Evaluates all valid move+action combinations and returns the highest-scoring sequence
+
+**Sequence scoring:**
+1. Generate all reachable tiles for the unit
+2. For each tile, generate all valid actions from that position
+3. Score each (move, action) pair using utility factors
+4. Return the sequence with the highest combined score
+
+This approach prevents situations where the AI moves to a suboptimal position because it evaluated movement and action separately.
+
 ## Testing
 
 ### Manual Testing
@@ -315,13 +508,14 @@ newPattern: {
 | File | Purpose |
 |------|---------|
 | `api/src/services/ai/utilityAI.js` | Main AI coordinator |
-| `api/src/services/ai/patternWeights.js` | Weight configurations |
-| `api/src/services/ai/utilityFactors.js` | Factor calculations |
+| `api/src/services/ai/patternWeights.js` | Weight configurations for 9 patterns |
+| `api/src/services/ai/utilityFactors.js` | Factor calculations (11 factors) |
 | `api/src/services/ai/stateEvaluator.js` | Action/state scoring |
 | `api/src/services/ai/actionGenerator.js` | Legal action enumeration |
 | `api/src/services/ai/lookahead.js` | Multi-actor minimax |
 | `api/src/services/ai/cache.js` | Transposition table |
-| `api/src/services/aiService.js` | Entry point |
+| `api/src/services/ai/strategicPathfinding.js` | Multi-turn path planning |
+| `api/src/services/aiService.js` | Entry point, legacy fallback |
 | `api/src/services/battleUnitFactory.js` | Unified unit creation |
 | `api/src/services/npcSkillService.js` | NPC skill generation |
 | `api/src/config/monsterSkillTrees.js` | Monster skill definitions |

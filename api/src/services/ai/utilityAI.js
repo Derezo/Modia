@@ -7,7 +7,7 @@
 
 import { StateEvaluator } from './stateEvaluator.js';
 import { getWeights, patternExists } from './patternWeights.js';
-import { generateAllActions, generateThreatResponseActions } from './actionGenerator.js';
+import { generateAllActions, generateMoveActionSequences, generateThreatResponseActions } from './actionGenerator.js';
 import { Lookahead, quickEvaluate } from './lookahead.js';
 import { PerformanceTracker } from './cache.js';
 
@@ -80,21 +80,36 @@ class UtilityAI {
 
       // Debug logging (enabled via AI_DEBUG env var or options.debug)
       if (AI_DEBUG || this.options.debug) {
-        const actionType = Array.isArray(decision.action)
-          ? decision.action.map(a => a.type).join('+')
-          : decision.action.type;
-        const actionTarget = Array.isArray(decision.action)
-          ? decision.action.find(a => a.targetId)?.targetId
-          : decision.action.targetId || decision.action.position;
+        // Format action for logging
+        const formatAction = (action) => {
+          if (!action) return 'none';
+          if (Array.isArray(action)) {
+            return action.map(a => {
+              if (a.type === 'move') return `move(${a.position?.x},${a.position?.y})`;
+              if (a.type === 'attack') return `attack(${a.targetId || 'target'})`;
+              if (a.type === 'skill') return `skill:${a.skillId || a.skill?.id}`;
+              return a.type;
+            }).join('+');
+          }
+          if (action.type === 'move') return `move(${action.position?.x},${action.position?.y})`;
+          if (action.type === 'attack') return `attack(${action.targetId || 'target'})`;
+          if (action.type === 'skill') return `skill:${action.skillId || action.skill?.id}`;
+          return action.type;
+        };
 
-        console.log(`[AI] ${unit.name} (${this.pattern}): ${actionType} → ${JSON.stringify(actionTarget)} | score: ${typeof decision.score === 'number' ? decision.score.toFixed(1) : decision.score}`);
+        console.log(`[AI] Lookahead: ${unit.name} (${this.pattern}) | ${formatAction(decision.action)} | score: ${typeof decision.score === 'number' ? decision.score.toFixed(1) : decision.score}`);
 
-        // Log top 3 alternative actions for debugging
+        // Log top 3 alternative sequences for debugging
         if (result.alternatives && result.alternatives.length > 0) {
-          console.log('[AI] Top alternatives:');
+          console.log('[AI] Alternatives:');
           result.alternatives.slice(0, 3).forEach((alt, i) => {
-            console.log(`  ${i + 1}. ${alt.action.type}: ${alt.score.toFixed(1)}`);
+            console.log(`[AI]   ${i + 1}. ${formatAction(alt.action)} | score: ${typeof alt.score === 'number' ? alt.score.toFixed(1) : alt.score}`);
           });
+        }
+
+        // Log factor breakdown for the best action if available
+        if (result.stats) {
+          console.log(`[AI] Stats: nodes=${result.stats.nodesEvaluated || 0}, time=${result.stats.timeMs || 0}ms, depth=${result.stats.depth || 1}`);
         }
       }
 
@@ -230,16 +245,60 @@ function createAIForUnit(unit, options = {}) {
 
 /**
  * Quick decision without full lookahead (for performance)
+ * Now returns action sequences (move + action) instead of single actions.
  * @param {Object} unit - Acting unit
  * @param {Object} state - Battle state
  * @param {string} pattern - AI pattern
- * @returns {Object} Quick decision
+ * @returns {Object} Quick decision with bestAction as array (sequence)
  */
 function quickDecision(unit, state, pattern = 'aggressive') {
   const weightConfig = getWeights(pattern);
   const evaluator = new StateEvaluator(weightConfig);
-  const actions = generateAllActions(unit, state);
-  return evaluator.getBestAction(unit, actions, state);
+  const sequences = generateMoveActionSequences(unit, state);
+  const result = evaluator.getBestSequence(unit, sequences, state);
+
+  if (AI_DEBUG) {
+    // Format action for logging
+    const formatAction = (action) => {
+      if (!action) return 'none';
+      if (Array.isArray(action)) {
+        return action.map(a => {
+          if (a.type === 'move') return `move(${a.position?.x},${a.position?.y})`;
+          if (a.type === 'attack') return `attack(${a.targetId || 'target'})`;
+          if (a.type === 'skill') return `skill:${a.skillId || a.skill?.id}`;
+          return a.type;
+        }).join('+');
+      }
+      if (action.type === 'move') return `move(${action.position?.x},${action.position?.y})`;
+      if (action.type === 'attack') return `attack(${action.targetId || 'target'})`;
+      if (action.type === 'skill') return `skill:${action.skillId || action.skill?.id}`;
+      return action.type;
+    };
+
+    console.log(`[AI] Quick: ${unit.name} (${pattern}) | ${formatAction(result.bestAction)} | score: ${typeof result.score === 'number' ? result.score.toFixed(1) : result.score}`);
+    console.log(`[AI] Sequences evaluated: ${sequences.length}`);
+
+    // Log top 3 alternatives with factor breakdowns
+    if (result.allScores && result.allScores.length > 1) {
+      console.log('[AI] Top sequences:');
+      result.allScores.slice(0, 3).forEach((item, i) => {
+        const factors = item.factors || {};
+        // Extract key factors for display
+        const actionFactors = factors.action0 || factors.action1 || {};
+        const keyFactors = [];
+        if (actionFactors.DAMAGE_DEALT) keyFactors.push(`dmg=${actionFactors.DAMAGE_DEALT.toFixed(0)}`);
+        if (actionFactors.KILL_POTENTIAL) keyFactors.push(`kill=${actionFactors.KILL_POTENTIAL.toFixed(0)}`);
+        if (actionFactors.HEALING_VALUE) keyFactors.push(`heal=${actionFactors.HEALING_VALUE.toFixed(0)}`);
+        if (actionFactors.POSITION_QUALITY) keyFactors.push(`pos=${actionFactors.POSITION_QUALITY.toFixed(0)}`);
+        if (factors.twoActionBonus) keyFactors.push(`2act=+${factors.twoActionBonus}`);
+
+        const factorStr = keyFactors.length > 0 ? ` [${keyFactors.join(', ')}]` : '';
+        console.log(`[AI]   ${i + 1}. ${formatAction(item.action)} | score: ${item.score.toFixed(1)}${factorStr}`);
+      });
+    }
+  }
+
+  return result;
 }
 
 /**

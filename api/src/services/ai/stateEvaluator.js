@@ -422,6 +422,100 @@ class StateEvaluator {
 
     return { bestAction, score: bestScore, allScores };
   }
+
+  /**
+   * Get the best action sequence (move + action) from a list of sequences
+   * Evaluates two-action turns, giving bonus for efficient move+attack sequences.
+   * @param {Object} unit - Acting unit
+   * @param {Array} sequences - List of action sequences (each is an array of 1-2 actions)
+   * @param {Object} state - Battle state
+   * @returns {Object} { bestAction (array), score, allScores, alternatives }
+   */
+  getBestSequence(unit, sequences, state) {
+    if (!sequences || sequences.length === 0) {
+      return { bestAction: [{ type: 'wait' }], score: 0, allScores: [], alternatives: [] };
+    }
+
+    let bestSequence = sequences[0];
+    let bestScore = -Infinity;
+    const allScores = [];
+
+    for (const sequence of sequences) {
+      const { score, factors } = this.evaluateSequence(unit, sequence, state);
+      allScores.push({ action: sequence, score, factors });
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestSequence = sequence;
+      }
+    }
+
+    // Sort for debugging/logging
+    allScores.sort((a, b) => b.score - a.score);
+
+    // Collect top alternatives for debugging
+    const alternatives = allScores.slice(1, 4).map(s => ({
+      action: s.action,
+      score: s.score
+    }));
+
+    return { bestAction: bestSequence, score: bestScore, allScores, alternatives };
+  }
+
+  /**
+   * Evaluate a sequence of actions (typically move + action)
+   * @param {Object} unit - Acting unit
+   * @param {Array} sequence - Array of 1-2 actions
+   * @param {Object} state - Battle state
+   * @returns {Object} { score, factors }
+   */
+  evaluateSequence(unit, sequence, state) {
+    if (!sequence || sequence.length === 0) {
+      return { score: -1000, factors: {} };
+    }
+
+    let totalScore = 0;
+    const allFactors = {};
+    let hypotheticalUnit = { ...unit };
+
+    for (let i = 0; i < sequence.length; i++) {
+      const action = sequence[i];
+
+      // Evaluate this action with the unit at its current (possibly hypothetical) position
+      const { score, factors } = this.evaluateAction(hypotheticalUnit, action, state);
+      totalScore += score;
+
+      // Store factors with index prefix for debugging
+      allFactors[`action${i}`] = factors;
+
+      // Update hypothetical position after a move
+      if (action.type === 'move' && action.position) {
+        hypotheticalUnit = {
+          ...hypotheticalUnit,
+          tileX: action.position.x,
+          tileY: action.position.y
+        };
+      }
+    }
+
+    // Bonus for efficient two-action turns (move + offensive action)
+    if (sequence.length === 2) {
+      const hasMove = sequence.some(a => a.type === 'move');
+      const hasOffensive = sequence.some(a => a.type === 'attack' || a.type === 'skill');
+      const hasHealing = sequence.some(a =>
+        (a.type === 'item' && a.item?.effectType?.includes('heal')) ||
+        (a.type === 'skill' && (a.skill?.healPercent > 0 || a.skill?.damageType === 'heal'))
+      );
+
+      if (hasMove && (hasOffensive || hasHealing)) {
+        // +30 bonus for using both actions efficiently
+        totalScore += 30;
+        allFactors.twoActionBonus = 30;
+      }
+    }
+
+    return { score: totalScore, factors: allFactors };
+  }
 }
 
 export { StateEvaluator };

@@ -113,6 +113,9 @@ export function getAvailableActions(unit, state) {
     }
 
     // Items for players (from state.consumables) or NPCs (from unit.consumables)
+    // AUTO-BATTLE NOTE: This abstraction allows the AI system to work for player
+    // auto-battle without modification. The AI's actionGenerator.js relies on this
+    // method to provide available items regardless of unit type.
     const consumables = unit.type === 'player' ? state.consumables : unit.consumables;
     if (consumables && consumables.length > 0) {
       actions.items = consumables
@@ -735,6 +738,9 @@ function processItemAction(state, unit, targetTile, itemId) {
   result.itemUsed = itemId;
 
   // Look up item from appropriate source
+  // AUTO-BATTLE NOTE: Player items are in state.consumables (shared party pool),
+  // NPC items are in unit.consumables (per-unit). This abstraction ensures the AI
+  // system works for player auto-battle without modification.
   const consumables = unit.type === 'player' ? (state.consumables || []) : (unit.consumables || []);
   const consumable = consumables.find(c => c.itemId === parseInt(itemId, 10) || c.itemId === itemId);
 

@@ -3,6 +3,16 @@
  *
  * Generates the complete action space for AI decision making,
  * including moves, attacks, skills, and composite actions.
+ *
+ * AUTO-BATTLE COMPATIBILITY NOTE:
+ * This module is unit-type agnostic and will work for player auto-battle.
+ * Item availability is determined by getAvailableActions() in actionProcessor.js,
+ * which handles the storage location difference:
+ *   - Player items: state.consumables (shared party pool)
+ *   - NPC items: unit.consumables (per-unit storage)
+ *
+ * To enable player auto-battle, simply invoke the AI system for player units.
+ * No changes to this file are required.
  */
 
 import { getAvailableActions } from '../battleService.js';
