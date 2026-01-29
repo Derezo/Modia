@@ -68,10 +68,11 @@
       "generated": true,
       "generatedAt": "2026-01-27T19:53:28.374Z",
       "prompt": "human features balanced proportions warm skin tone male masculine features monk martial artist wrappings disciplined serene focused",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
       "needsRegeneration": false,
       "loraModel": "retro-pixel"
     },
@@ -83,16 +84,14 @@
       "seed": 10004,
       "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "prompt": "human features balanced proportions warm skin tone male masculine features chemist apothecary vials pouches herbs practical clever",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T19:54:13.253Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "generatedAt": "2026-01-27T19:54:13.253Z"
     },
     {
       "id": "human_female_warrior",
@@ -102,16 +101,14 @@
       "seed": 10005,
       "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "prompt": "human features balanced proportions warm skin tone female feminine features warrior heavy armor sword shield battle-worn determined",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T19:54:58.157Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "generatedAt": "2026-01-27T19:54:58.157Z"
     },
     {
       "id": "human_female_wizard",

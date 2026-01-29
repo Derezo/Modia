@@ -7,6 +7,7 @@
  *   node scripts/ai-images/validate-metadata.js              # Run all checks
  *   node scripts/ai-images/validate-metadata.js --fix        # Auto-add stub entries
  *   node scripts/ai-images/validate-metadata.js --check itemCoverage  # Specific check
+ *   node scripts/ai-images/validate-metadata.js --strict     # Treat warnings as errors
  *
  * Checks:
  *   - itemCoverage: Item templates vs metadata
@@ -14,6 +15,8 @@
  *   - nodeCoverage: World map node types
  *   - iconCoverage: Battle actions and status effects
  *   - promptQuality: Embedded theme phrases in prompts
+ *   - schemaConsistency: Validate evaluation format, orphaned fields, generated state
+ *   - deprecatedAssets: Detect entries with deprecated: true flag
  */
 
 const path = require('path');
@@ -65,7 +68,9 @@ function parseArgs() {
     fix: false,
     check: null,
     verbose: false,
-    help: false
+    help: false,
+    strict: false,
+    skipDeprecated: true  // Default to skipping deprecated assets in counts
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -84,6 +89,12 @@ function parseArgs() {
       case '--help':
       case '-h':
         options.help = true;
+        break;
+      case '--strict':
+        options.strict = true;
+        break;
+      case '--include-deprecated':
+        options.skipDeprecated = false;
         break;
       default:
         if (arg.startsWith('--')) {
@@ -107,10 +118,12 @@ Usage:
   node scripts/ai-images/validate-metadata.js [options]
 
 Options:
-  --fix              Auto-add stub entries for missing items
-  --check <name>     Run specific check only
-  --verbose, -v      Show detailed validation results
-  --help, -h         Show this help message
+  --fix                  Auto-add stub entries for missing items
+  --check <name>         Run specific check only
+  --verbose, -v          Show detailed validation results
+  --strict               Treat schema warnings as errors (fail on warnings)
+  --include-deprecated   Include deprecated assets in coverage counts
+  --help, -h             Show this help message
 
 Available Checks:
   itemCoverage       Item templates vs image metadata
@@ -118,6 +131,8 @@ Available Checks:
   nodeCoverage       World map node types
   iconCoverage       Battle actions and status effects
   promptQuality      Embedded theme phrases in prompts
+  schemaConsistency  Validate metadata schema format
+  deprecatedAssets   Detect deprecated asset entries
 
 Examples:
   node scripts/ai-images/validate-metadata.js --fix
@@ -407,6 +422,236 @@ function checkPromptQuality(options) {
 }
 
 /**
+ * Check schema consistency across all metadata files
+ * Validates:
+ * - evaluation format (should be object {score, issues, regenerate}, not integer)
+ * - orphaned artifact fields (top-level issues, notes, priority strings/numbers)
+ * - generated state consistency (generatedAt with generated: false)
+ */
+function checkSchemaConsistency(options) {
+  const fs = require('fs');
+  const results = {
+    name: 'schemaConsistency',
+    passed: true,
+    total: 0,
+    covered: 0,
+    warnings: [],
+    errors: []
+  };
+
+  // Categories to check with their asset array field names
+  const categories = [
+    { name: 'items/weapons', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'weapons.json')), field: 'items' },
+    { name: 'items/armor', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'armor.json')), field: 'items' },
+    { name: 'items/consumables', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'consumables.json')), field: 'items' },
+    { name: 'items/accessories', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'accessories.json')), field: 'items' },
+    { name: 'portraits/combinations', load: () => loadMetadata(path.join(METADATA_DIR, 'portraits', 'combinations.json')), field: 'portraits' },
+    { name: 'portraits/enemies', load: () => loadMetadata(path.join(METADATA_DIR, 'portraits', 'enemies.json')), field: 'portraits' },
+    { name: 'nodes/locations', load: loadNodeMetadata, field: 'nodes' },
+    { name: 'icons/actions', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'actions.json')), field: 'icons' },
+    { name: 'icons/status', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'status.json')), field: 'icons' },
+    { name: 'icons/menu', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'menu.json')), field: 'icons' },
+    { name: 'icons/resources', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'resources.json')), field: 'icons' },
+    { name: 'icons/augments', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'augments.json')), field: 'icons' }
+  ];
+
+  // Add tile categories
+  const tileTypes = ['floors', 'walls', 'slopes'];
+  const biomes = ['forest', 'cave', 'mountain', 'bridge', 'castle'];
+  for (const tileType of tileTypes) {
+    for (const biome of biomes) {
+      const filePath = path.join(METADATA_DIR, 'tiles', tileType, `${biome}.json`);
+      if (fs.existsSync(filePath)) {
+        categories.push({
+          name: `tiles/${tileType}/${biome}`,
+          load: () => loadMetadata(filePath),
+          field: 'tiles'
+        });
+      }
+    }
+  }
+
+  // Orphaned artifact fields that should be inside evaluation object
+  const orphanedFields = ['issues', 'notes', 'priority'];
+
+  for (const cat of categories) {
+    try {
+      const data = cat.load();
+      if (!data) continue;
+
+      const assets = data[cat.field] || [];
+
+      for (const asset of assets) {
+        results.total++;
+        const assetId = asset.id || asset.name || 'unknown';
+        let hasIssue = false;
+
+        // Check 1: Evaluation format consistency
+        if (asset.evaluation !== undefined) {
+          if (typeof asset.evaluation === 'number') {
+            results.warnings.push({
+              category: cat.name,
+              id: assetId,
+              type: 'evaluation_format',
+              message: `evaluation is integer (${asset.evaluation}), should be object {score, issues, regenerate}`
+            });
+            hasIssue = true;
+          } else if (typeof asset.evaluation === 'object' && asset.evaluation !== null) {
+            // Validate structure of evaluation object
+            const expectedKeys = ['score', 'issues', 'regenerate'];
+            const hasAllKeys = expectedKeys.every(k => k in asset.evaluation);
+            if (!hasAllKeys) {
+              const missingKeys = expectedKeys.filter(k => !(k in asset.evaluation));
+              results.warnings.push({
+                category: cat.name,
+                id: assetId,
+                type: 'evaluation_incomplete',
+                message: `evaluation object missing keys: ${missingKeys.join(', ')}`
+              });
+              hasIssue = true;
+            }
+          }
+        }
+
+        // Check 2: Orphaned artifact field detection
+        for (const field of orphanedFields) {
+          if (asset[field] !== undefined) {
+            // Check if it's a non-empty value that should be in evaluation
+            const value = asset[field];
+            const isOrphaned = (
+              (field === 'issues' && typeof value === 'string') ||
+              (field === 'notes' && typeof value === 'string') ||
+              (field === 'priority' && typeof value === 'number')
+            );
+            if (isOrphaned) {
+              results.warnings.push({
+                category: cat.name,
+                id: assetId,
+                type: 'orphaned_field',
+                message: `top-level "${field}" field should be in evaluation object (value: ${JSON.stringify(value).substring(0, 50)})`
+              });
+              hasIssue = true;
+            }
+          }
+        }
+
+        // Check 3: Generated state consistency
+        if (asset.generatedAt && asset.generated === false) {
+          results.warnings.push({
+            category: cat.name,
+            id: assetId,
+            type: 'generated_state_inconsistent',
+            message: `has generatedAt timestamp but generated: false`
+          });
+          hasIssue = true;
+        }
+
+        if (!hasIssue) {
+          results.covered++;
+        }
+      }
+    } catch (error) {
+      log(`Warning: Failed to check ${cat.name}: ${error.message}`, 'warn');
+    }
+  }
+
+  // In strict mode, warnings become errors
+  if (options.strict && results.warnings.length > 0) {
+    results.errors = results.warnings;
+    results.passed = false;
+  } else {
+    // Schema warnings don't fail the check by default
+    results.passed = results.errors.length === 0;
+  }
+
+  return results;
+}
+
+/**
+ * Check for deprecated asset entries
+ */
+function checkDeprecatedAssets(options) {
+  const fs = require('fs');
+  const results = {
+    name: 'deprecatedAssets',
+    passed: true,
+    total: 0,
+    covered: 0,
+    deprecated: [],
+    byCategory: {}
+  };
+
+  // Categories to check with their asset array field names
+  const categories = [
+    { name: 'items/weapons', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'weapons.json')), field: 'items' },
+    { name: 'items/armor', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'armor.json')), field: 'items' },
+    { name: 'items/consumables', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'consumables.json')), field: 'items' },
+    { name: 'items/accessories', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'accessories.json')), field: 'items' },
+    { name: 'portraits/combinations', load: () => loadMetadata(path.join(METADATA_DIR, 'portraits', 'combinations.json')), field: 'portraits' },
+    { name: 'portraits/enemies', load: () => loadMetadata(path.join(METADATA_DIR, 'portraits', 'enemies.json')), field: 'portraits' },
+    { name: 'nodes/locations', load: loadNodeMetadata, field: 'nodes' },
+    { name: 'icons/actions', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'actions.json')), field: 'icons' },
+    { name: 'icons/status', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'status.json')), field: 'icons' },
+    { name: 'icons/menu', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'menu.json')), field: 'icons' },
+    { name: 'icons/resources', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'resources.json')), field: 'icons' },
+    { name: 'icons/augments', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'augments.json')), field: 'icons' }
+  ];
+
+  // Add tile categories
+  const tileTypes = ['floors', 'walls', 'slopes'];
+  const biomes = ['forest', 'cave', 'mountain', 'bridge', 'castle'];
+  for (const tileType of tileTypes) {
+    for (const biome of biomes) {
+      const filePath = path.join(METADATA_DIR, 'tiles', tileType, `${biome}.json`);
+      if (fs.existsSync(filePath)) {
+        categories.push({
+          name: `tiles/${tileType}/${biome}`,
+          load: () => loadMetadata(filePath),
+          field: 'tiles'
+        });
+      }
+    }
+  }
+
+  for (const cat of categories) {
+    try {
+      const data = cat.load();
+      if (!data) continue;
+
+      const assets = data[cat.field] || [];
+
+      for (const asset of assets) {
+        results.total++;
+        const assetId = asset.id || asset.name || 'unknown';
+
+        if (asset.deprecated === true) {
+          results.deprecated.push({
+            category: cat.name,
+            id: assetId,
+            name: asset.name || assetId
+          });
+
+          if (!results.byCategory[cat.name]) {
+            results.byCategory[cat.name] = [];
+          }
+          results.byCategory[cat.name].push(assetId);
+        } else {
+          results.covered++;
+        }
+      }
+    } catch (error) {
+      log(`Warning: Failed to check ${cat.name}: ${error.message}`, 'warn');
+    }
+  }
+
+  // Deprecated assets are informational, not a failure
+  // But report them for visibility
+  results.passed = true;
+
+  return results;
+}
+
+/**
  * Create stub entries for missing items
  */
 function fixMissingItems(results, options) {
@@ -547,9 +792,18 @@ function printResultsTable(results) {
 
   // Results
   for (const result of results) {
-    const status = result.passed ? 'PASS' : 'FAIL';
-    const statusColor = result.passed ? '\x1b[32m' : '\x1b[31m';
+    // Determine status and color
+    let status = result.passed ? 'PASS' : 'FAIL';
+    let statusColor = result.passed ? '\x1b[32m' : '\x1b[31m';
     const resetColor = '\x1b[0m';
+    const warnColor = '\x1b[33m';
+
+    // Check for warnings (schema consistency may pass with warnings)
+    const hasWarnings = result.warnings && result.warnings.length > 0;
+    if (result.passed && hasWarnings) {
+      status = 'WARN';
+      statusColor = warnColor;
+    }
 
     const coverage = result.total > 0
       ? `${result.covered}/${result.total} (${Math.round((result.covered / result.total) * 100)}%)`
@@ -561,6 +815,15 @@ function printResultsTable(results) {
     }
     if (result.issues && result.issues.length > 0) {
       details = `${result.issues.length} issues`;
+    }
+    if (result.warnings && result.warnings.length > 0) {
+      details = `${result.warnings.length} warnings`;
+    }
+    if (result.deprecated && result.deprecated.length > 0) {
+      details = `${result.deprecated.length} deprecated`;
+    }
+    if (result.errors && result.errors.length > 0) {
+      details = `${result.errors.length} errors`;
     }
 
     console.log(
@@ -584,7 +847,15 @@ function printDetailedResults(results, options) {
   console.log('================');
 
   for (const result of results) {
-    if (result.passed && result.missing?.length === 0) continue;
+    // Skip if passed with no issues to report
+    const hasIssues = (
+      (result.missing?.length > 0) ||
+      (result.issues?.length > 0) ||
+      (result.warnings?.length > 0) ||
+      (result.deprecated?.length > 0) ||
+      (result.errors?.length > 0)
+    );
+    if (result.passed && !hasIssues) continue;
 
     console.log('');
     console.log(`${result.name}:`);
@@ -631,6 +902,60 @@ function printDetailedResults(results, options) {
         }
       }
     }
+
+    // Schema consistency warnings
+    if (result.warnings && result.warnings.length > 0) {
+      console.log('  Schema Warnings:');
+      // Group by type for better readability
+      const byType = {};
+      for (const warning of result.warnings) {
+        if (!byType[warning.type]) {
+          byType[warning.type] = [];
+        }
+        byType[warning.type].push(warning);
+      }
+
+      for (const [type, warnings] of Object.entries(byType)) {
+        console.log(`    [${type}] (${warnings.length} occurrences):`);
+        const displayCount = Math.min(warnings.length, 5);
+        for (let i = 0; i < displayCount; i++) {
+          const w = warnings[i];
+          console.log(`      - ${w.category}/${w.id}: ${w.message}`);
+        }
+        if (warnings.length > displayCount) {
+          console.log(`      ... and ${warnings.length - displayCount} more`);
+        }
+      }
+    }
+
+    // Deprecated assets
+    if (result.deprecated && result.deprecated.length > 0) {
+      console.log('  Deprecated Assets:');
+      // Group by category
+      for (const [category, assets] of Object.entries(result.byCategory || {})) {
+        console.log(`    ${category}: ${assets.length} deprecated`);
+        const displayCount = Math.min(assets.length, 5);
+        for (let i = 0; i < displayCount; i++) {
+          console.log(`      - ${assets[i]}`);
+        }
+        if (assets.length > displayCount) {
+          console.log(`      ... and ${assets.length - displayCount} more`);
+        }
+      }
+    }
+
+    // Errors (in strict mode)
+    if (result.errors && result.errors.length > 0 && result.errors !== result.warnings) {
+      console.log('  Errors (strict mode):');
+      const displayCount = Math.min(result.errors.length, 10);
+      for (let i = 0; i < displayCount; i++) {
+        const e = result.errors[i];
+        console.log(`    - ${e.category}/${e.id}: ${e.message}`);
+      }
+      if (result.errors.length > displayCount) {
+        console.log(`    ... and ${result.errors.length - displayCount} more`);
+      }
+    }
   }
 }
 
@@ -654,7 +979,9 @@ async function main() {
     portraitCoverage: checkPortraitCoverage,
     nodeCoverage: checkNodeCoverage,
     iconCoverage: checkIconCoverage,
-    promptQuality: checkPromptQuality
+    promptQuality: checkPromptQuality,
+    schemaConsistency: checkSchemaConsistency,
+    deprecatedAssets: checkDeprecatedAssets
   };
 
   // Validate check name if specified
@@ -699,15 +1026,29 @@ async function main() {
   // Summary
   const allPassed = results.every(r => r.passed);
   const failCount = results.filter(r => !r.passed).length;
+  const warnCount = results.filter(r => r.warnings && r.warnings.length > 0).length;
+  const deprecatedCount = results.reduce((sum, r) => sum + (r.deprecated?.length || 0), 0);
 
   console.log('');
-  if (allPassed) {
+  if (allPassed && warnCount === 0) {
     log('All checks passed!', 'success');
+  } else if (allPassed) {
+    log(`All checks passed with ${warnCount} warning(s)`, 'success');
+    if (warnCount > 0 && !options.verbose) {
+      log('Run with --verbose to see warning details', 'info');
+    }
+    if (options.strict) {
+      log('Note: In --strict mode, warnings would be treated as errors', 'info');
+    }
   } else {
     log(`${failCount} check(s) failed`, 'warn');
     if (!options.fix) {
       log('Run with --fix to auto-add stub entries for missing items', 'info');
     }
+  }
+
+  if (deprecatedCount > 0) {
+    log(`${deprecatedCount} deprecated asset(s) found (excluded from coverage counts)`, 'info');
   }
 
   process.exit(allPassed ? 0 : 1);

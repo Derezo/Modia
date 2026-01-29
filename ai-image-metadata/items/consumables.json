@@ -11,11 +11,8 @@
       "rarity": "common",
       "seed": 22001,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:34:45.430Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "potion_health_large",
@@ -24,11 +21,8 @@
       "rarity": "uncommon",
       "seed": 22002,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:35:29.161Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "potion_mana",
@@ -37,15 +31,13 @@
       "rarity": "common",
       "seed": 22011,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-28T20:30:50.337Z",
-      "generationFailureCount": null,
-      "lastError": null,
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
       "loraModel": "retro-pixel"
     },
     {
@@ -55,11 +47,8 @@
       "rarity": "uncommon",
       "seed": 22012,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:36:56.832Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "potion_stamina",
@@ -68,11 +57,8 @@
       "rarity": "common",
       "seed": 22021,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:37:41.359Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "potion_strength",
@@ -81,15 +67,13 @@
       "rarity": "rare",
       "seed": 22031,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-28T20:30:50.337Z",
-      "generationFailureCount": null,
-      "lastError": null,
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
       "loraModel": "retro-pixel"
     },
     {
@@ -99,11 +83,8 @@
       "rarity": "rare",
       "seed": 22032,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:39:09.618Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "potion_defense",
@@ -112,11 +93,8 @@
       "rarity": "rare",
       "seed": 22033,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:39:53.106Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "antidote",
@@ -125,11 +103,8 @@
       "rarity": "common",
       "seed": 22041,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:40:36.892Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "elixir_life",
@@ -138,15 +113,13 @@
       "rarity": "epic",
       "seed": 22051,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-28T20:34:10.146Z",
-      "generationFailureCount": null,
-      "lastError": null,
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
       "loraModel": "retro-pixel"
     },
     {
@@ -156,11 +129,8 @@
       "rarity": "epic",
       "seed": 22052,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:42:05.180Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "status_cure",
@@ -169,11 +139,8 @@
       "rarity": "uncommon",
       "seed": 22053,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:42:48.463Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "scroll_fire",
@@ -182,11 +149,8 @@
       "rarity": "uncommon",
       "seed": 22061,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:43:32.858Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "scroll_teleport",
@@ -195,11 +159,8 @@
       "rarity": "rare",
       "seed": 22062,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:44:16.569Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "food_bread",
@@ -208,11 +169,8 @@
       "rarity": "common",
       "seed": 22071,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:45:01.135Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "food_meat",
@@ -221,11 +179,8 @@
       "rarity": "common",
       "seed": 22072,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:45:47.348Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "food_cheese",
@@ -234,15 +189,13 @@
       "rarity": "common",
       "seed": 22073,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-28T20:30:50.338Z",
-      "generationFailureCount": null,
-      "lastError": null,
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
       "loraModel": "retro-pixel"
     },
     {
@@ -252,11 +205,8 @@
       "rarity": "common",
       "seed": 22074,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:47:24.252Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "food_feast",
@@ -265,11 +215,8 @@
       "rarity": "rare",
       "seed": 22075,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:48:11.356Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     }
   ]
 }

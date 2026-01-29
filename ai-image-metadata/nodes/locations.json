@@ -32,12 +32,8 @@
         "regenerate": true
       },
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T22:33:25.164Z",
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-27T22:33:25.164Z"
     },
     {
       "id": "village",
@@ -51,7 +47,6 @@
         "regenerate": false
       },
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "loraModel": "retro-pixel",
       "generatedAt": "2026-01-27T20:51:04.151Z"
     },
@@ -70,7 +65,6 @@
         "regenerate": true
       },
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "loraModel": "retro-pixel",
       "generatedAt": "2026-01-27T20:51:50.965Z"
     },
@@ -87,11 +81,7 @@
         ],
         "regenerate": true
       },
-      "issues": "",
-      "notes": "",
-      "priority": 0,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "loraModel": "retro-pixel",
       "generatedAt": "2026-01-27T22:34:05.739Z"
     },
@@ -110,7 +100,6 @@
         "regenerate": true
       },
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "loraModel": "retro-pixel",
       "generatedAt": "2026-01-27T20:53:25.168Z"
     },
@@ -196,7 +185,6 @@
         "regenerate": false
       },
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "loraModel": "retro-pixel",
       "generatedAt": "2026-01-27T20:58:15.593Z"
     },
@@ -230,11 +218,7 @@
       },
       "loraModel": "retro-pixel",
       "generatedAt": "2026-01-27T21:09:28.851Z",
-      "issues": "",
-      "notes": "",
-      "priority": 0,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "needsRegeneration": false
     },
     {
       "id": "shop",

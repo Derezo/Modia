@@ -11,11 +11,8 @@
       "seed": 30001,
       "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T05:13:51.142Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "generatedAt": "2026-01-29T07:44:23.416Z"
     },
     {
       "id": "action_defend",
@@ -24,11 +21,8 @@
       "seed": 30002,
       "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T05:14:45.708Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "generatedAt": "2026-01-29T07:45:06.875Z"
     },
     {
       "id": "action_move",
@@ -37,11 +31,8 @@
       "seed": 30003,
       "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:15:38.848Z",
-      "loraModel": "retro-pixel",
-      "generationFailureCount": null,
-      "lastError": null
+      "generatedAt": "2026-01-29T07:45:51.720Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "action_wait",
@@ -50,15 +41,13 @@
       "seed": 30004,
       "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T05:16:31.444Z",
-      "generationFailureCount": null,
-      "lastError": null,
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T07:46:37.639Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "action_item",
@@ -68,14 +57,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:17:25.431Z",
-      "generationFailureCount": null,
-      "lastError": null,
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T07:47:24.488Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "action_skill",
@@ -85,14 +72,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:18:19.678Z",
-      "generationFailureCount": null,
-      "lastError": null,
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T07:48:11.757Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "action_flee",
@@ -102,10 +87,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:19:13.383Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "generatedAt": "2026-01-29T07:49:00.482Z"
     },
     {
       "id": "action_heal",
@@ -113,14 +95,14 @@
       "prompt": "heart cross heal restore health plus",
       "seed": 30011,
       "generated": true,
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
       "needsRegeneration": false,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T05:20:06.722Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-01-29T07:49:48.792Z"
     },
     {
       "id": "action_magic_fire",
@@ -130,8 +112,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:21:01.122Z"
+      "generatedAt": "2026-01-29T07:50:37.462Z"
     },
     {
       "id": "action_magic_ice",
@@ -141,8 +122,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:21:55.178Z"
+      "generatedAt": "2026-01-29T07:51:27.220Z"
     },
     {
       "id": "action_magic_lightning",
@@ -152,12 +132,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:22:49.746Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T07:52:16.102Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "action_magic_earth",
@@ -167,12 +147,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:23:45.152Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T07:53:05.115Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "action_magic_holy",
@@ -182,12 +162,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:24:41.508Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T07:53:55.216Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "action_magic_dark",
@@ -197,8 +177,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:25:37.799Z"
+      "generatedAt": "2026-01-29T07:54:44.740Z"
     },
     {
       "id": "action_buff",
@@ -208,8 +187,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:26:32.582Z"
+      "generatedAt": "2026-01-29T07:55:34.323Z"
     },
     {
       "id": "action_debuff",
@@ -219,12 +197,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:27:28.410Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T07:56:24.038Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "action_taunt",
@@ -234,8 +212,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:28:25.744Z"
+      "generatedAt": "2026-01-29T07:57:14.181Z"
     },
     {
       "id": "action_stealth",
@@ -245,12 +222,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:29:25.975Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T07:58:04.361Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "action_summon",
@@ -260,8 +237,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:30:26.058Z"
+      "generatedAt": "2026-01-29T07:58:54.912Z"
     },
     {
       "id": "action_counter",
@@ -271,8 +247,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:31:24.138Z"
+      "generatedAt": "2026-01-29T07:59:44.763Z"
     }
   ]
 }

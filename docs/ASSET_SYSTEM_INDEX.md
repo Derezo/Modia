@@ -7,8 +7,9 @@ This document provides unified navigation for Modia's asset pipeline documentati
 1. [Overview Diagram](#overview-diagram)
 2. [Quick Reference](#quick-reference)
 3. [Document Navigation](#document-navigation)
-4. [Asset Type Reference](#asset-type-reference)
-5. [Related Documents](#related-documents)
+4. [Metadata Consistency](#metadata-consistency)
+5. [Asset Type Reference](#asset-type-reference)
+6. [Related Documents](#related-documents)
 
 ---
 
@@ -203,6 +204,57 @@ AI_IMAGE_GENERATION.md         AUDIO_STYLE_GUIDE.md
          "How do I use
           them in UI?"
 ```
+
+---
+
+## Metadata Consistency
+
+### Schema Reference
+
+All asset metadata files follow a consistent JSON schema documented in [AI_IMAGE_GENERATION.md - Metadata Schema Reference](AI_IMAGE_GENERATION.md#metadata-schema-reference). Key points:
+
+- **Required fields** for all assets: `id` (or `key` for tiles), `name`, `prompt`, `seed`, `generated`
+- **Conditional fields** appear only when relevant: `generatedAt`, `loraModel`, `needsRegeneration`, `evaluation`
+- **Category-specific fields** vary by asset type (see schema reference)
+
+### Validation
+
+Run metadata validation to check for schema compliance and missing assets:
+
+```bash
+# Full validation - checks schema, file existence, and consistency
+npm run ai:validate
+
+# Quick status check - summary counts only
+npm run ai:status
+
+# Validate specific category
+npm run ai:validate -- --category tiles --verbose
+```
+
+The validation script checks:
+- Required fields present in all asset entries
+- `generated: true` assets have corresponding files
+- `generatedAt` timestamp present when `generated: true`
+- No orphaned files without metadata entries
+- Consistent naming conventions
+
+### Common Schema Patterns
+
+| Pattern | Example | Used By |
+|---------|---------|---------|
+| `{type}_{name}` | `action_attack`, `rarity_epic` | Icons, overlays |
+| `{race}_{gender}_{class}` | `human_male_warrior` | Portraits |
+| `{terrain}_{variant}` | `grass_0`, `stone_3` | Tiles (via `key`) |
+| `{category}_{material}` | `sword_short`, `armor_plate` | Items |
+
+### Overlay System Status
+
+Overlays (18 total) are defined in metadata for future AI generation:
+- **Rarity overlays** (4): uncommon, rare, epic, legendary auras
+- **Augment overlays** (14): fire, ice, lightning, poison, holy, dark, earth, wind, critical, lifesteal, speed, pierce, stun, chain
+
+**Current status:** All 18 overlays have `generated: false`. The game currently renders rarity and augment effects using CSS styling (borders, shadows, gradients) rather than AI-generated image overlays. The metadata definitions preserve the art direction for future AI generation when needed.
 
 ---
 
@@ -432,4 +484,4 @@ See [AI_IMAGE_GENERATION.md](AI_IMAGE_GENERATION.md) for complete art direction 
 
 ---
 
-*Last updated: 2026-01-29 (added overlay documentation, ItemIcon component)*
+*Last updated: 2026-01-29 (added Metadata Consistency section, overlay status note)*

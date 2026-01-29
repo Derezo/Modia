@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "description": "Master manifest for Modia AI-generated image assets",
-  "totalAssets": 660,
+  "totalAssets": 612,
   "artDirection": {
     "mood": "cozy_nostalgic",
     "technique": "ink_wash",
@@ -11,21 +11,18 @@
   "categories": {
     "tiles": {
       "description": "Isometric terrain tiles for battle maps",
-      "assetCount": 291,
+      "assetCount": 243,
       "files": [
-        "tiles/floors/base.json",
         "tiles/floors/forest.json",
         "tiles/floors/cave.json",
         "tiles/floors/mountain.json",
         "tiles/floors/bridge.json",
         "tiles/floors/castle.json",
-        "tiles/walls/base.json",
         "tiles/walls/forest.json",
         "tiles/walls/cave.json",
         "tiles/walls/mountain.json",
         "tiles/walls/bridge.json",
         "tiles/walls/castle.json",
-        "tiles/slopes/base.json",
         "tiles/slopes/forest.json",
         "tiles/slopes/cave.json",
         "tiles/slopes/mountain.json",
