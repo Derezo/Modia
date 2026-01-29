@@ -218,7 +218,8 @@ router.get('/:nodeId/:shopType', authenticate, asyncHandler(async (req, res) => 
        it.stat_bonuses,
        it.level_requirement,
        it.base_price,
-       it.rarity
+       it.rarity,
+       it.sprite_id
      FROM npc_shop_inventory nsi
      JOIN item_templates it ON nsi.item_template_id = it.id
      WHERE nsi.node_id = $1 AND nsi.shop_type = $2
@@ -246,7 +247,8 @@ router.get('/:nodeId/:shopType', authenticate, asyncHandler(async (req, res) => 
       quantity: item.quantity,
       supplyLevel: supply.level,
       supplyLabel: supply.label,
-      priceModifier: supply.modifier
+      priceModifier: supply.modifier,
+      spriteId: item.sprite_id
     };
   });
 
@@ -619,7 +621,8 @@ router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async
        it.item_type,
        it.base_price,
        it.rarity,
-       it.is_tradeable
+       it.is_tradeable,
+       it.sprite_id
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
      WHERE ci.user_id = $1
@@ -641,7 +644,8 @@ router.get('/:nodeId/:shopType/sell-inventory', authenticate, asyncHandler(async
     rarity: item.rarity,
     quantity: item.quantity,
     basePrice: item.base_price,
-    sellPrice: calculateSellPrice(item.base_price)
+    sellPrice: calculateSellPrice(item.base_price),
+    spriteId: item.sprite_id
   }));
 
   res.json({

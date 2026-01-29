@@ -43,7 +43,9 @@ function formatItem(item) {
     description: item.description,
     // Equipment requirements for filtering
     level_requirement: item.level_requirement || 0,
-    class_restriction: item.class_restriction || []
+    class_restriction: item.class_restriction || [],
+    // Sprite ID for item icon display
+    spriteId: item.sprite_id
   };
 }
 
@@ -55,7 +57,8 @@ router.get('/shared', authenticate, gameReadLimiter, asyncHandler(async (req, re
   const itemsResult = await query(
     `SELECT ci.id as instance_id, ci.quantity, ci.modifications,
             it.id as template_id, it.name, it.item_type, it.rarity,
-            it.stat_bonuses, it.description, it.level_requirement, it.class_restriction
+            it.stat_bonuses, it.description, it.level_requirement, it.class_restriction,
+            it.sprite_id
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
      WHERE ci.user_id = $1 AND ci.equipped_slot IS NULL
@@ -87,7 +90,8 @@ router.get('/:characterId', authenticate, gameReadLimiter, asyncHandler(async (r
   const itemsResult = await query(
     `SELECT ci.id as instance_id, ci.quantity, ci.equipped_slot, ci.modifications,
             it.id as template_id, it.name, it.item_type, it.rarity,
-            it.stat_bonuses, it.description, it.level_requirement, it.class_restriction
+            it.stat_bonuses, it.description, it.level_requirement, it.class_restriction,
+            it.sprite_id
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
      WHERE ci.character_id = $1 AND ci.equipped_slot IS NOT NULL
@@ -410,7 +414,8 @@ async function getCharacterInventory(characterId) {
   const itemsResult = await query(
     `SELECT ci.id as instance_id, ci.quantity, ci.equipped_slot, ci.modifications,
             it.id as template_id, it.name, it.item_type, it.rarity,
-            it.stat_bonuses, it.description
+            it.stat_bonuses, it.description, it.level_requirement, it.class_restriction,
+            it.sprite_id
      FROM character_items ci
      JOIN item_templates it ON ci.item_template_id = it.id
      WHERE ci.character_id = $1

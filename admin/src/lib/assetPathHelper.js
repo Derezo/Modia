@@ -6,6 +6,23 @@
 import { getAssetPath, DEFAULT_SIZES } from '@shared/assetPaths.js';
 
 /**
+ * Normalize icon IDs by stripping the category prefix if present.
+ * Icon metadata uses full IDs (e.g., 'menu_fishing') but files are
+ * saved with stripped names ('fishing.png').
+ *
+ * @param {string} id - The icon ID (may include category prefix)
+ * @param {string} subcategory - The icon category/subcategory
+ * @returns {string} The normalized ID without prefix
+ */
+function normalizeIconId(id, subcategory) {
+  const prefix = `${subcategory}_`;
+  if (id.startsWith(prefix)) {
+    return id.slice(prefix.length);
+  }
+  return id;
+}
+
+/**
  * Get subcategory for an asset based on category and asset metadata
  */
 export function getAssetSubcategory(asset, category) {
@@ -80,12 +97,18 @@ export function getAssetImageUrl(asset, category) {
   const extraOptions = getAssetExtraOptions(asset, category);
   const size = DEFAULT_SIZES[category];
 
+  // Normalize icon IDs to match file naming convention
+  // Icon metadata uses full IDs (menu_fishing) but files use stripped names (fishing.png)
+  const normalizedId = category === 'icons'
+    ? normalizeIconId(id, subcategory)
+    : id;
+
   // For tiles, use the canonical path directly (tiles work correctly)
   if (category === 'tiles') {
     return getAssetPath(category, id, { subcategory, size, ...extraOptions });
   }
 
   // For other categories, get canonical URLs and return the first one
-  const urls = getAssetUrls(category, id, { subcategory, size, ...extraOptions });
+  const urls = getAssetUrls(category, normalizedId, { subcategory, size, ...extraOptions });
   return urls[0] || null;
 }

@@ -1933,9 +1933,48 @@ POST /api/guild/:nodeId/recruit/:recruitId/purchase
 
 ## 10. Inventory Endpoints
 
-### 10.1 Get Inventory
+### 10.1 Get Shared Inventory
 
-Get character inventory.
+Get user's shared inventory pool (unequipped items accessible by all characters).
+
+```
+GET /api/inventory/shared
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "inventory": [
+    {
+      "instanceId": 1,
+      "templateId": 101,
+      "name": "Iron Sword",
+      "displayName": "Iron Sword",
+      "templateName": "Iron Sword",
+      "type": "weapon",
+      "rarity": "common",
+      "quantity": 1,
+      "baseStats": { "strength": 5, "attack": 10 },
+      "bonusStats": {},
+      "augments": [],
+      "material": null,
+      "itemData": {},
+      "description": "A sturdy iron blade",
+      "level_requirement": 1,
+      "class_restriction": [],
+      "spriteId": "sword_iron"
+    }
+  ]
+}
+```
+
+---
+
+### 10.2 Get Character Equipment
+
+Get equipped items for a specific character.
 
 ```
 GET /api/inventory/:characterId
@@ -1946,34 +1985,35 @@ GET /api/inventory/:characterId
 **Response (200 OK):**
 ```json
 {
-  "items": [
-    {
+  "equipped": {
+    "main_hand": {
       "instanceId": 1,
       "templateId": 101,
       "name": "Iron Sword",
-      "itemType": "weapon",
+      "displayName": "Iron Sword",
+      "type": "weapon",
       "rarity": "common",
       "quantity": 1,
-      "isEquipped": true,
-      "equippedSlot": "main_hand"
-    }
-  ],
-  "capacity": 50,
-  "equipped": {
-    "main_hand": { "instanceId": 1, "name": "Iron Sword" },
+      "baseStats": { "strength": 5 },
+      "bonusStats": {},
+      "description": "A sturdy iron blade",
+      "level_requirement": 1,
+      "class_restriction": [],
+      "spriteId": "sword_iron"
+    },
     "off_hand": null,
     "head": null,
     "body": null,
+    "legs": null,
     "feet": null,
-    "accessory1": null,
-    "accessory2": null
+    "accessory": null
   }
 }
 ```
 
 ---
 
-### 10.2 Equip Item
+### 10.3 Equip Item
 
 Equip an item to a slot.
 
@@ -2016,7 +2056,7 @@ POST /api/inventory/equip
 
 ---
 
-### 10.3 Unequip Item
+### 10.4 Unequip Item
 
 Unequip an item from a slot.
 
@@ -2045,7 +2085,7 @@ POST /api/inventory/unequip
 
 ---
 
-### 10.4 Use Item
+### 10.5 Use Item
 
 Use a consumable item.
 
@@ -2078,7 +2118,7 @@ POST /api/inventory/use
 
 ---
 
-### 10.5 Discard Item
+### 10.6 Discard Item
 
 Remove an item from inventory.
 
@@ -2149,7 +2189,8 @@ GET /api/shops/:nodeId/:shopType
       "quantity": 8,
       "supplyLevel": "medium",
       "supplyLabel": "Medium",
-      "priceModifier": 0.85
+      "priceModifier": 0.85,
+      "spriteId": "sword_iron"
     }
   ]
 }
@@ -2337,7 +2378,8 @@ GET /api/shops/:nodeId/:shopType/sell-inventory
       "rarity": "common",
       "quantity": 1,
       "basePrice": 150,
-      "sellPrice": 75
+      "sellPrice": 75,
+      "spriteId": "sword_iron"
     }
   ]
 }
