@@ -474,23 +474,23 @@ export class NodeActionMenu {
     const btn = document.createElement('button');
     btn.className = `node-action-menu__button${isPrimary ? ' node-action-menu__button--primary' : ''}`;
 
-    // Icon mapping
+    // Icon mapping - menu category for locations, actions for combat
     const iconMap = {
-      blacksmith: { category: 'actions', name: 'blacksmith' },
-      marketplace: { category: 'actions', name: 'marketplace' },
-      tavern: { category: 'actions', name: 'tavern' },
-      apothecary: { category: 'actions', name: 'apothecary' },
-      coliseum: { category: 'actions', name: 'battle' },
-      farm: { category: 'actions', name: 'harvest' },
-      guild_hall: { category: 'actions', name: 'recruit' },
-      guild_advancement: { category: 'actions', name: 'advance' },
-      courtyard: { category: 'actions', name: 'social' },
-      battle: { category: 'actions', name: 'battle' },
-      caravan: { category: 'actions', name: 'marketplace' },
-      explore_ruins: { category: 'actions', name: 'search' },
-      fishing: { category: 'actions', name: 'harvest' },
-      fast_travel: { category: 'actions', name: 'travel' },
-      stamina_restore: { category: 'actions', name: 'rest' }
+      blacksmith: { category: 'menu', name: 'shop' },
+      marketplace: { category: 'menu', name: 'shop' },
+      tavern: { category: 'menu', name: 'tavern' },
+      apothecary: { category: 'menu', name: 'shop' },
+      coliseum: { category: 'menu', name: 'coliseum' },
+      farm: { category: 'menu', name: 'caravan' },
+      guild_hall: { category: 'menu', name: 'guild' },
+      guild_advancement: { category: 'menu', name: 'guild' },
+      courtyard: { category: 'menu', name: 'party' },
+      battle: { category: 'actions', name: 'attack' },
+      caravan: { category: 'menu', name: 'caravan' },
+      explore_ruins: { category: 'menu', name: 'ruins' },
+      fishing: { category: 'menu', name: 'fishing' },
+      fast_travel: { category: 'actions', name: 'move' },
+      stamina_restore: { category: 'actions', name: 'heal' }
     };
 
     // Get label text

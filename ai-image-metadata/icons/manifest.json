@@ -14,11 +14,12 @@
   "trigger": "wbgmsst",
   "stylePrefix": "wbgmsst, simplified bold design, ink and wash style, thick black outlines, flat watercolor fills, high contrast silhouette, clean edges, white background,",
   "negativePrompt": "photorealistic, 3D render, CGI, anime style, chibi, blurry, low quality, watermark, signature, text, logo, modern elements, neon colors, oversaturated, complex backgrounds, multiple subjects, deformed, messy lines, muddy colors, detailed",
-  "categories": ["actions", "status", "menu", "augments"],
+  "categories": ["actions", "status", "menu", "augments", "resources"],
   "categoryFiles": {
     "actions": "actions.json",
     "status": "status.json",
     "menu": "menu.json",
-    "augments": "augments.json"
+    "augments": "augments.json",
+    "resources": "resources.json"
   }
 }

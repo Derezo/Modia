@@ -61,15 +61,15 @@ const NODE_TYPE_INFO = {
   discovery: { name: 'Discovery', icon: 'special', color: '#daa520' }
 };
 
-// Feature icons for settlements
+// Feature icons for settlements - use menu category for location icons
 const FEATURE_ICONS = {
-  blacksmith: { category: 'actions', name: 'blacksmith', label: 'Blacksmith' },
-  marketplace: { category: 'actions', name: 'marketplace', label: 'Marketplace' },
-  tavern: { category: 'actions', name: 'tavern', label: 'Tavern' },
-  apothecary: { category: 'actions', name: 'apothecary', label: 'Apothecary' },
-  coliseum: { category: 'actions', name: 'battle', label: 'Coliseum' },
-  guild_hall: { category: 'actions', name: 'recruit', label: 'Guild Hall' },
-  courtyard: { category: 'actions', name: 'social', label: 'Courtyard' }
+  blacksmith: { category: 'menu', name: 'shop', label: 'Blacksmith' },
+  marketplace: { category: 'menu', name: 'shop', label: 'Marketplace' },
+  tavern: { category: 'menu', name: 'tavern', label: 'Tavern' },
+  apothecary: { category: 'menu', name: 'shop', label: 'Apothecary' },
+  coliseum: { category: 'menu', name: 'coliseum', label: 'Coliseum' },
+  guild_hall: { category: 'menu', name: 'guild', label: 'Guild Hall' },
+  courtyard: { category: 'menu', name: 'party', label: 'Courtyard' }
 };
 
 // Extended delay for showing full tooltip (ms)

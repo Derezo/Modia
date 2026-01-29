@@ -98,9 +98,27 @@ Examples:
 
 /**
  * Get the output path for an icon
+ * Strips the category prefix from the id since icons are organized in category subdirectories.
+ * e.g., icon.id = 'menu_settings', category = 'menu' -> filename = 'settings.png'
  */
 function getOutputPath(icon) {
-  return path.join(OUTPUT_DIR, icon._iconCategory, `${icon.id}.png`);
+  // Strip category prefix from id if present (e.g., 'menu_settings' -> 'settings')
+  const category = icon._iconCategory;
+  const filename = icon.id.startsWith(`${category}_`)
+    ? icon.id.slice(category.length + 1)
+    : icon.id;
+  return path.join(OUTPUT_DIR, category, `${filename}.png`);
+}
+
+/**
+ * Get the icon filename (without category prefix)
+ * Used for size variant generation
+ */
+function getIconFilename(icon) {
+  const category = icon._iconCategory;
+  return icon.id.startsWith(`${category}_`)
+    ? icon.id.slice(category.length + 1)
+    : icon.id;
 }
 
 /**
@@ -250,7 +268,7 @@ async function main() {
   }
 
   // Ensure output directories exist
-  for (const cat of ['actions', 'status', 'menu', 'augments']) {
+  for (const cat of ['actions', 'status', 'menu', 'augments', 'resources']) {
     ensureDirectoryExists(path.join(OUTPUT_DIR, cat));
   }
 
@@ -301,10 +319,12 @@ async function main() {
         // Post-process to generate canonical size variants
         if (checkImageMagick()) {
           const outputPath = getOutputPath(icon);
+          // Use stripped filename (without category prefix) for size variants
+          const iconFilename = getIconFilename(icon);
           const postResult = await generateCanonicalSizeVariants(
             outputPath,
             'icons',
-            icon.id,
+            iconFilename,
             {
               subcategory: icon._iconCategory,
               sizes: [16, 24, 32, 48, 64, 128],

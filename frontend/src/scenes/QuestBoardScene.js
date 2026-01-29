@@ -31,18 +31,18 @@ const DIFFICULTY_COLORS = {
   elite: '#9C27B0'
 };
 
-// Objective type icons
+// Objective type icons - use menu for locations, actions for combat
 const OBJECTIVE_ICONS = {
-  kill_enemies: { category: 'actions', name: 'battle' },
-  complete_battles: { category: 'actions', name: 'battle' },
-  party_battles: { category: 'actions', name: 'social' },
-  visit_nodes: { category: 'actions', name: 'explore' },
-  visit_regions: { category: 'actions', name: 'explore' },
-  fish_catches: { category: 'actions', name: 'harvest' },
-  puzzle_solves: { category: 'misc', name: 'scroll' },
+  kill_enemies: { category: 'actions', name: 'attack' },
+  complete_battles: { category: 'actions', name: 'attack' },
+  party_battles: { category: 'menu', name: 'party' },
+  visit_nodes: { category: 'actions', name: 'move' },
+  visit_regions: { category: 'actions', name: 'move' },
+  fish_catches: { category: 'menu', name: 'fishing' },
+  puzzle_solves: { category: 'menu', name: 'ruins' },
   gold_earned: { category: 'resources', name: 'gold' },
-  items_sold: { category: 'actions', name: 'marketplace' },
-  coliseum_wins: { category: 'actions', name: 'battle' }
+  items_sold: { category: 'menu', name: 'shop' },
+  coliseum_wins: { category: 'menu', name: 'coliseum' }
 };
 
 export class QuestBoardScene extends Scene {
