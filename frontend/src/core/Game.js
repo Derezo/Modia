@@ -276,13 +276,28 @@ export class Game {
           this.scenes.switchTo('worldMap');
         }
       } catch (err) {
-        // Token invalid, stop refresh manager and clear state
-        this.tokenRefreshManager.stop();
-        this.state.set('token', null);
-        this.state.set('refreshToken', null);
-        this.state.set('user', null);
-        this.state.persist();
-        this.scenes.switchTo('login');
+        // Distinguish between auth failures and network failures
+        // Note: 'Unable to connect to server' is thrown by ApiClient when fetch fails
+        // 'Failed to fetch' is the raw browser error message
+        // TypeError with 'fetch' in message catches browser variations
+        const isNetworkError = err.message === 'Unable to connect to server' ||
+                              err.message === 'Failed to fetch' ||
+                              (err.name === 'TypeError' && err.message.toLowerCase().includes('fetch'));
+
+        if (isNetworkError) {
+          // Network failure - preserve auth state, show error, go to login with option to retry
+          console.warn('[Session] Network error during session check:', err.message);
+          parchmentToast.error('Connection Error', 'Unable to reach server. Please check your connection.');
+          this.scenes.switchTo('login');
+        } else {
+          // Auth failure (401, invalid token, etc.) - clear state and redirect
+          this.tokenRefreshManager.stop();
+          this.state.set('token', null);
+          this.state.set('refreshToken', null);
+          this.state.set('user', null);
+          this.state.persist();
+          this.scenes.switchTo('login');
+        }
       }
     } else {
       // Always show the title intro animation

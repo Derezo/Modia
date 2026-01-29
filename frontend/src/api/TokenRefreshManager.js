@@ -159,6 +159,22 @@ export class TokenRefreshManager {
       return true;
 
     } catch (err) {
+      // Distinguish between network errors and auth errors
+      const isNetworkError = err.message === 'Unable to connect to server' ||
+                            err.message === 'Failed to fetch' ||
+                            (err.name === 'TypeError' && err.message.toLowerCase().includes('fetch'));
+
+      if (isNetworkError) {
+        // Network failure - don't clear tokens, retry later
+        console.warn('[TokenRefresh] Network error during refresh, will retry:', err.message);
+        // Schedule retry in 30 seconds
+        this.refreshTimer = setTimeout(() => {
+          this.performRefresh();
+        }, 30000);
+        return false;
+      }
+
+      // Auth error (invalid/expired refresh token) - clear state
       console.error('[TokenRefresh] Token refresh failed:', err);
       this.handleRefreshFailure();
       return false;
