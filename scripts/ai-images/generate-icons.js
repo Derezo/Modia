@@ -102,11 +102,8 @@ Examples:
  * e.g., icon.id = 'menu_settings', category = 'menu' -> filename = 'settings.png'
  */
 function getOutputPath(icon) {
-  // Strip category prefix from id if present (e.g., 'menu_settings' -> 'settings')
   const category = icon._iconCategory;
-  const filename = icon.id.startsWith(`${category}_`)
-    ? icon.id.slice(category.length + 1)
-    : icon.id;
+  const filename = getIconFilename(icon);
   return path.join(OUTPUT_DIR, category, `${filename}.png`);
 }
 
@@ -289,9 +286,12 @@ async function main() {
     try {
       // Determine LoRA model: CLI override > asset-level > category default
       const effectiveLoraModel = options.lora || getEffectiveLoraModel(icon, 'icons');
+      // Use stripped filename for generation so Python saves with correct name
+      // e.g., "menu_formation" -> "formation" since files are in category subdirs
+      const iconFilename = getIconFilename(icon);
       const result = await generateIcon({
         prompt: icon.prompt,
-        key: icon.id,
+        key: iconFilename,
         category: icon._iconCategory,
         seed: icon.seed,
         loraModel: effectiveLoraModel
