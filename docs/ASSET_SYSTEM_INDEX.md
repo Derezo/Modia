@@ -324,10 +324,10 @@ Transparent overlay effects for item compositing (rarity auras, augment effects)
 | Rarity | Asset | Alpha | Description |
 |--------|-------|-------|-------------|
 | Common | `common.png` | 0.0 | No overlay (transparent) |
-| Uncommon | `uncommon.png` | 0.15 | Subtle green glow |
-| Rare | `rare.png` | 0.25 | Blue radiance |
-| Epic | `epic.png` | 0.35 | Purple aura |
-| Legendary | `legendary.png` | 0.45 | Golden shimmer |
+| Uncommon | `uncommon.png` | 0.5 | Subtle green glow |
+| Rare | `rare.png` | 0.65 | Blue radiance |
+| Epic | `epic.png` | 0.75 | Purple aura |
+| Legendary | `legendary.png` | 0.85 | Golden shimmer |
 
 **Augment Overlays:**
 

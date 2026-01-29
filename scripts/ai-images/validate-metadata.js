@@ -19,6 +19,7 @@
  *   - deprecatedAssets: Detect entries with deprecated: true flag
  */
 
+const fs = require('fs');
 const path = require('path');
 const {
   log,
@@ -148,7 +149,6 @@ function loadItemTemplates() {
     // Dynamic import of ESM module from CommonJS
     const templatePath = path.join(PROJECT_ROOT, 'api/src/db/templates/items.js');
     // Read the file and extract item names (simple parse for CommonJS context)
-    const fs = require('fs');
     const content = fs.readFileSync(templatePath, 'utf8');
 
     // Extract item names from the template array
@@ -422,40 +422,27 @@ function checkPromptQuality(options) {
 }
 
 /**
- * Check schema consistency across all metadata files
- * Validates:
- * - evaluation format (should be object {score, issues, regenerate}, not integer)
- * - orphaned artifact fields (top-level issues, notes, priority strings/numbers)
- * - generated state consistency (generatedAt with generated: false)
+ * Get all category configurations for validation checks.
+ * Used by both schema consistency and deprecated asset checks.
+ * @returns {Array<{name: string, load: Function, field: string}>}
  */
-function checkSchemaConsistency(options) {
-  const fs = require('fs');
-  const results = {
-    name: 'schemaConsistency',
-    passed: true,
-    total: 0,
-    covered: 0,
-    warnings: [],
-    errors: []
-  };
-
-  // Categories to check with their asset array field names
+function getAllCategoryConfigs() {
   const categories = [
     { name: 'items/weapons', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'weapons.json')), field: 'items' },
     { name: 'items/armor', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'armor.json')), field: 'items' },
-    { name: 'items/consumables', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'consumables.json')), field: 'items' },
     { name: 'items/accessories', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'accessories.json')), field: 'items' },
-    { name: 'portraits/combinations', load: () => loadMetadata(path.join(METADATA_DIR, 'portraits', 'combinations.json')), field: 'portraits' },
-    { name: 'portraits/enemies', load: () => loadMetadata(path.join(METADATA_DIR, 'portraits', 'enemies.json')), field: 'portraits' },
-    { name: 'nodes/locations', load: loadNodeMetadata, field: 'nodes' },
+    { name: 'items/consumables', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'consumables.json')), field: 'items' },
+    { name: 'portraits', load: () => loadMetadata(path.join(METADATA_DIR, 'portraits', 'combinations.json')), field: 'portraits' },
+    { name: 'portraits/enemies', load: () => loadMetadata(path.join(METADATA_DIR, 'portraits', 'enemies.json')), field: 'enemies' },
+    { name: 'nodes', load: () => loadMetadata(path.join(METADATA_DIR, 'nodes', 'locations.json')), field: 'nodes' },
     { name: 'icons/actions', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'actions.json')), field: 'icons' },
     { name: 'icons/status', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'status.json')), field: 'icons' },
     { name: 'icons/menu', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'menu.json')), field: 'icons' },
+    { name: 'icons/augments', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'augments.json')), field: 'icons' },
     { name: 'icons/resources', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'resources.json')), field: 'icons' },
-    { name: 'icons/augments', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'augments.json')), field: 'icons' }
   ];
 
-  // Add tile categories
+  // Add tile categories dynamically
   const tileTypes = ['floors', 'walls', 'slopes'];
   const biomes = ['forest', 'cave', 'mountain', 'bridge', 'castle'];
   for (const tileType of tileTypes) {
@@ -470,6 +457,27 @@ function checkSchemaConsistency(options) {
       }
     }
   }
+  return categories;
+}
+
+/**
+ * Check schema consistency across all metadata files
+ * Validates:
+ * - evaluation format (should be object {score, issues, regenerate}, not integer)
+ * - orphaned artifact fields (top-level issues, notes, priority strings/numbers)
+ * - generated state consistency (generatedAt with generated: false)
+ */
+function checkSchemaConsistency(options) {
+  const results = {
+    name: 'schemaConsistency',
+    passed: true,
+    total: 0,
+    covered: 0,
+    warnings: [],
+    errors: []
+  };
+
+  const categories = getAllCategoryConfigs();
 
   // Orphaned artifact fields that should be inside evaluation object
   const orphanedFields = ['issues', 'notes', 'priority'];
@@ -541,7 +549,7 @@ function checkSchemaConsistency(options) {
             category: cat.name,
             id: assetId,
             type: 'generated_state_inconsistent',
-            message: `has generatedAt timestamp but generated: false`
+            message: 'has generatedAt timestamp but generated: false'
           });
           hasIssue = true;
         }
@@ -571,7 +579,6 @@ function checkSchemaConsistency(options) {
  * Check for deprecated asset entries
  */
 function checkDeprecatedAssets(options) {
-  const fs = require('fs');
   const results = {
     name: 'deprecatedAssets',
     passed: true,
@@ -581,37 +588,7 @@ function checkDeprecatedAssets(options) {
     byCategory: {}
   };
 
-  // Categories to check with their asset array field names
-  const categories = [
-    { name: 'items/weapons', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'weapons.json')), field: 'items' },
-    { name: 'items/armor', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'armor.json')), field: 'items' },
-    { name: 'items/consumables', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'consumables.json')), field: 'items' },
-    { name: 'items/accessories', load: () => loadMetadata(path.join(METADATA_DIR, 'items', 'accessories.json')), field: 'items' },
-    { name: 'portraits/combinations', load: () => loadMetadata(path.join(METADATA_DIR, 'portraits', 'combinations.json')), field: 'portraits' },
-    { name: 'portraits/enemies', load: () => loadMetadata(path.join(METADATA_DIR, 'portraits', 'enemies.json')), field: 'portraits' },
-    { name: 'nodes/locations', load: loadNodeMetadata, field: 'nodes' },
-    { name: 'icons/actions', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'actions.json')), field: 'icons' },
-    { name: 'icons/status', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'status.json')), field: 'icons' },
-    { name: 'icons/menu', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'menu.json')), field: 'icons' },
-    { name: 'icons/resources', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'resources.json')), field: 'icons' },
-    { name: 'icons/augments', load: () => loadMetadata(path.join(METADATA_DIR, 'icons', 'augments.json')), field: 'icons' }
-  ];
-
-  // Add tile categories
-  const tileTypes = ['floors', 'walls', 'slopes'];
-  const biomes = ['forest', 'cave', 'mountain', 'bridge', 'castle'];
-  for (const tileType of tileTypes) {
-    for (const biome of biomes) {
-      const filePath = path.join(METADATA_DIR, 'tiles', tileType, `${biome}.json`);
-      if (fs.existsSync(filePath)) {
-        categories.push({
-          name: `tiles/${tileType}/${biome}`,
-          load: () => loadMetadata(filePath),
-          field: 'tiles'
-        });
-      }
-    }
-  }
+  const categories = getAllCategoryConfigs();
 
   for (const cat of categories) {
     try {

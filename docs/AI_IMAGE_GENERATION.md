@@ -78,7 +78,8 @@ Modia/
 │   │   ├── actions.json
 │   │   ├── status.json
 │   │   ├── menu.json
-│   │   └── augments.json
+│   │   ├── augments.json
+│   │   └── resources.json
 │   └── nodes/                   # World map node metadata
 │       ├── manifest.json
 │       └── locations.json
@@ -463,12 +464,13 @@ npm run ai:validate -- --category tiles --verbose
 
 | Category | Count | Notes |
 |----------|-------|-------|
+| Terrain Tiles | 243 | Floors, walls, slopes across biomes |
+| Item Sprites | 123 | Weapons, armor, consumables |
+| Icons | 83 | Actions, status, menu, augments, resources |
 | Portraits | 60 | 5 races × 3 genders × 4 base classes |
-| Terrain Tiles | ~96 | 8 types × 4 variants × 3 biomes |
-| World Map Nodes | 20 | Location landmarks |
-| Icons | 80 | Actions, status, menu, augments |
-| Item Sprites | 49 | Weapons, armor, consumables |
-| **Total** | **~305** | |
+| World Map Nodes | 26 | Location landmarks |
+| Overlays | 18 | Rarity auras, augment effects |
+| **Total** | **612** | |
 
 ## Troubleshooting
 
