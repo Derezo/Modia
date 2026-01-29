@@ -12,8 +12,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:51:35.754Z"
+      "generatedAt": "2026-01-29T08:16:59.118Z"
     },
     {
       "id": "menu_equipment",
@@ -23,8 +22,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:52:31.738Z"
+      "generatedAt": "2026-01-29T08:17:45.548Z"
     },
     {
       "id": "menu_skills",
@@ -34,8 +32,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:53:28.641Z"
+      "generatedAt": "2026-01-29T08:18:31.794Z"
     },
     {
       "id": "menu_party",
@@ -45,8 +42,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:54:25.350Z"
+      "generatedAt": "2026-01-29T08:19:19.036Z"
     },
     {
       "id": "menu_map",
@@ -56,12 +52,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:55:22.321Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T08:20:05.871Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "menu_quest",
@@ -71,8 +67,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:56:18.940Z"
+      "generatedAt": "2026-01-29T08:20:52.871Z"
     },
     {
       "id": "menu_settings",
@@ -82,8 +77,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:57:15.930Z"
+      "generatedAt": "2026-01-29T08:21:39.128Z"
     },
     {
       "id": "menu_shop",
@@ -93,12 +87,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:58:13.899Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T08:22:26.648Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "menu_chat",
@@ -108,8 +102,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:59:12.164Z"
+      "generatedAt": "2026-01-29T08:23:13.773Z"
     },
     {
       "id": "menu_guild",
@@ -119,8 +112,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T06:00:08.621Z"
+      "generatedAt": "2026-01-29T08:23:59.645Z"
     },
     {
       "id": "menu_tavern",
@@ -130,12 +122,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T06:01:05.887Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T08:24:46.094Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "menu_coliseum",
@@ -145,8 +137,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T06:02:03.861Z"
+      "generatedAt": "2026-01-29T08:25:32.330Z"
     },
     {
       "id": "menu_fishing",
@@ -156,12 +147,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T06:03:02.215Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T08:26:18.749Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "menu_ruins",
@@ -171,8 +162,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T06:03:58.293Z"
+      "generatedAt": "2026-01-29T08:27:04.984Z"
     },
     {
       "id": "menu_caravan",
@@ -182,12 +172,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T06:04:55.280Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T08:27:51.251Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "menu_close",
@@ -197,8 +187,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T06:05:52.586Z"
+      "generatedAt": "2026-01-29T08:28:37.439Z"
     },
     {
       "id": "menu_confirm",
@@ -208,12 +197,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T06:06:51.157Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T08:29:23.840Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "menu_back",
@@ -223,8 +212,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T06:07:53.578Z"
+      "generatedAt": "2026-01-29T08:30:10.053Z"
     },
     {
       "id": "menu_help",
@@ -234,12 +222,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T06:08:47.057Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T08:30:56.195Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "menu_notifications",
@@ -249,8 +237,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T06:09:36.279Z"
+      "generatedAt": "2026-01-29T08:31:42.207Z"
     },
     {
       "id": "menu_formation",
@@ -259,7 +246,7 @@
       "seed": 32021,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T06:10:27.798Z"
+      "generatedAt": "2026-01-29T08:32:28.864Z"
     },
     {
       "id": "menu_characters",
@@ -268,7 +255,7 @@
       "seed": 32022,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T07:00:37.744Z"
+      "generatedAt": "2026-01-29T08:33:15.184Z"
     },
     {
       "id": "menu_friends",
@@ -277,7 +264,7 @@
       "seed": 32023,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T07:21:44.779Z"
+      "generatedAt": "2026-01-29T08:34:01.431Z"
     },
     {
       "id": "menu_leaderboard",
@@ -286,7 +273,7 @@
       "seed": 32024,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T07:22:39.589Z"
+      "generatedAt": "2026-01-29T08:34:47.552Z"
     },
     {
       "id": "menu_logout",
@@ -295,7 +282,7 @@
       "seed": 32025,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T07:23:30.596Z"
+      "generatedAt": "2026-01-29T08:35:33.679Z"
     }
   ]
 }

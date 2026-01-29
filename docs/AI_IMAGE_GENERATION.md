@@ -540,6 +540,216 @@ cd ~/Projects/image-generator
 python modia-generators/generate_tile.py --list-models
 ```
 
+## Metadata Schema Reference
+
+This section documents the JSON schema used across all asset metadata files in `ai-image-metadata/`.
+
+### Required Fields (All Assets)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier (tiles use `key` as alias) |
+| `name` | string | Human-readable display name |
+| `prompt` | string | AI generation prompt |
+| `seed` | integer | Generation seed for reproducibility |
+| `generated` | boolean | Whether asset has been generated |
+
+### Conditional Fields
+
+| Field | Type | When Present |
+|-------|------|--------------|
+| `generatedAt` | ISO timestamp | Only when `generated: true` |
+| `loraModel` | string | When overriding category default |
+| `needsRegeneration` | boolean | When queued for regeneration |
+| `regenerationQueuedAt` | ISO timestamp or null | When regeneration was queued |
+| `evaluation` | object | After quality review |
+| `generationFailureCount` | integer or null | After failed generation attempts |
+| `lastError` | string or null | Error message from last failed generation |
+
+### Evaluation Object Schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `score` | integer (0-10) | Quality rating |
+| `issues` | string[] | Issue codes (e.g., `["too_cluttered", "hard_to_read"]`) |
+| `regenerate` | boolean | Whether marked for regeneration |
+
+### Category-Specific Fields
+
+#### Tiles
+
+Tiles use `key` instead of `id` and include terrain metadata:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `key` | string | Unique identifier (alias for `id`) |
+| `terrain` | string | Terrain type (grass, stone, rock, water, lava, cliff, tree, etc.) |
+| `variant` | integer | Variant number (0-3 for base tiles) |
+| `outputPath` | string | Biome subdirectory for output |
+| `bonus` | boolean | Optional flag for bonus/special tiles |
+
+Example:
+```json
+{
+  "key": "grass_0",
+  "terrain": "grass",
+  "variant": 0,
+  "prompt": "lush forest meadow grass with dappled sunlight",
+  "outputPath": "forest",
+  "generated": true,
+  "generatedAt": "2026-01-25T19:54:17.684Z"
+}
+```
+
+#### Portraits
+
+Portraits include character trait references:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Format: `{race}_{gender}_{class}` |
+| `race` | string | human, elf, dwarf, vampire, orc |
+| `gender` | string | male, female, other |
+| `class` | string | Base or advanced class name |
+| `_type` | string | Optional: `"enemy"` for enemy portraits |
+
+Example:
+```json
+{
+  "id": "human_male_warrior",
+  "race": "human",
+  "gender": "male",
+  "class": "warrior",
+  "seed": 10001,
+  "generated": true,
+  "loraModel": "retro-pixel",
+  "generatedAt": "2026-01-27T19:52:03.258Z"
+}
+```
+
+#### Nodes (World Map)
+
+Nodes use the standard `id` field with evaluation data:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Node type identifier |
+| `name` | string | Human-readable location name |
+
+Example:
+```json
+{
+  "id": "castle",
+  "name": "Castle",
+  "prompt": "castle fortress towers battlements medieval stronghold",
+  "seed": 40001,
+  "generated": true,
+  "evaluation": { "score": 8, "issues": [], "regenerate": false },
+  "loraModel": "retro-pixel",
+  "generatedAt": "2026-01-27T20:49:34.825Z"
+}
+```
+
+#### Icons
+
+Icons include category context:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Format: `{category}_{action}` (e.g., `action_attack`) |
+| `name` | string | Human-readable action name |
+
+Example:
+```json
+{
+  "id": "action_attack",
+  "name": "Attack",
+  "prompt": "crossed swords attack action combat strike",
+  "seed": 30001,
+  "generated": true,
+  "loraModel": "retro-pixel",
+  "generatedAt": "2026-01-29T07:44:23.416Z"
+}
+```
+
+#### Items
+
+Items include category information:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Item identifier (e.g., `sword_short`) |
+| `name` | string | Human-readable item name |
+| `_itemCategory` | string | Optional: weapon, armor, accessory, consumable |
+
+Example:
+```json
+{
+  "id": "sword_short",
+  "name": "Short Sword",
+  "prompt": "short sword simple blade leather grip compact",
+  "seed": 20001,
+  "generated": true,
+  "loraModel": "v2",
+  "generatedAt": "2026-01-26T14:16:47.202Z"
+}
+```
+
+#### Overlays
+
+Overlays include blending metadata:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Format: `{type}_{name}` (e.g., `rarity_epic`, `augment_fire`) |
+| `rarity` | string | For rarity overlays: uncommon, rare, epic, legendary |
+| `element` | string | For elemental augments: fire, ice, lightning, poison, holy, dark, earth, wind |
+| `effect` | string | For effect augments: critical, lifesteal, speed, pierce, stun, chain |
+| `alpha` | number | Blend opacity (0.0-1.0) |
+
+Example:
+```json
+{
+  "id": "augment_fire",
+  "name": "Fire Augment",
+  "element": "fire",
+  "alpha": 0.6,
+  "prompt": "orange red flames dancing around edges flickering fire particles",
+  "seed": 25001,
+  "generated": false
+}
+```
+
+**Note on Overlay Status:** Overlays (18 total: 4 rarity + 14 augments) are defined for future AI generation but currently all have `generated: false`. The game uses CSS/procedural rendering for rarity and augment effects. See the Overlays section in [ASSET_SYSTEM_INDEX.md](ASSET_SYSTEM_INDEX.md) for current implementation details.
+
+### File-Level Metadata
+
+Each category JSON file includes top-level metadata:
+
+```json
+{
+  "version": "1.0.0",
+  "category": "actions",
+  "description": "Battle action icons",
+  "size": "32x32",
+  "icons": [...]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `version` | string | Schema version |
+| `category` | string | Asset category name |
+| `subcategory` | string | Optional: subcategory (e.g., "rarity", "augments") |
+| `description` | string | Human-readable description |
+| `size` | string | Target output size (e.g., "32x32", "128x128") |
+| `biome` | string | For tiles: biome name |
+| `palette` | object | For tiles: color palette with primary, secondary, accent |
+| `outputPath` | string | For tiles: output subdirectory |
+| `blendMode` | string | For overlays: CSS blend mode (e.g., "lighter") |
+
+---
+
 ## Quality Evaluation System
 
 ### Overview

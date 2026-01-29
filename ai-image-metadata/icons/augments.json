@@ -12,8 +12,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:21:57.012Z"
+      "generatedAt": "2026-01-29T08:36:19.585Z"
     },
     {
       "id": "augment_range",
@@ -23,8 +22,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:22:40.166Z"
+      "generatedAt": "2026-01-29T08:37:05.835Z"
     },
     {
       "id": "augment_area",
@@ -34,8 +32,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:23:22.383Z"
+      "generatedAt": "2026-01-29T08:37:52.411Z"
     },
     {
       "id": "augment_duration",
@@ -45,8 +42,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:24:05.584Z"
+      "generatedAt": "2026-01-29T08:38:38.448Z"
     },
     {
       "id": "augment_cooldown",
@@ -56,8 +52,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:24:48.663Z"
+      "generatedAt": "2026-01-29T08:39:24.734Z"
     },
     {
       "id": "augment_cost",
@@ -67,8 +62,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:25:31.755Z"
+      "generatedAt": "2026-01-29T08:40:09.909Z"
     },
     {
       "id": "augment_crit",
@@ -78,8 +72,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:26:13.824Z"
+      "generatedAt": "2026-01-29T08:40:56.221Z"
     },
     {
       "id": "augment_pierce",
@@ -89,12 +82,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-28T20:45:00.995Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T08:41:42.243Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "augment_lifesteal",
@@ -104,8 +97,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:27:38.992Z"
+      "generatedAt": "2026-01-29T08:42:28.458Z"
     },
     {
       "id": "augment_chain",
@@ -115,8 +107,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:28:22.164Z"
+      "generatedAt": "2026-01-29T08:43:13.488Z"
     },
     {
       "id": "augment_splash",
@@ -126,12 +117,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-28T20:45:00.995Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T08:43:59.115Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "augment_stagger",
@@ -141,12 +132,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-28T20:57:06.283Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T08:44:46.200Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "augment_elemental_fire",
@@ -156,8 +147,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:30:30.892Z"
+      "generatedAt": "2026-01-29T08:45:33.196Z"
     },
     {
       "id": "augment_elemental_ice",
@@ -167,8 +157,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:31:13.950Z"
+      "generatedAt": "2026-01-29T08:46:19.209Z"
     },
     {
       "id": "augment_elemental_lightning",
@@ -178,8 +167,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:31:57.147Z"
+      "generatedAt": "2026-01-29T08:47:05.050Z"
     },
     {
       "id": "augment_healing",
@@ -189,12 +177,12 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-28T20:45:00.995Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T08:47:50.828Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "augment_accuracy",
@@ -204,8 +192,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:33:23.193Z"
+      "generatedAt": "2026-01-29T08:48:37.134Z"
     },
     {
       "id": "augment_evasion",
@@ -215,8 +202,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:34:06.213Z"
+      "generatedAt": "2026-01-29T08:49:22.396Z"
     },
     {
       "id": "augment_shield",
@@ -226,8 +212,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-27T15:34:49.405Z"
+      "generatedAt": "2026-01-29T08:50:08.495Z"
     },
     {
       "id": "augment_cleanse",
@@ -235,10 +220,9 @@
       "prompt": "sparkle cleanse purify remove debuff holy",
       "seed": 33020,
       "generated": true,
-      "generatedAt": "2026-01-28T20:52:27.657Z",
+      "generatedAt": "2026-01-29T08:50:54.323Z",
       "loraModel": "retro-pixel",
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "needsRegeneration": false
     }
   ]
 }

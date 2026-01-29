@@ -91,13 +91,13 @@
       "seed": 21021,
       "generated": true,
       "generatedAt": "2026-01-28T20:36:44.006Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
       "needsRegeneration": false,
-      "loraModel": "retro-pixel",
-      "regenerationQueuedAt": null
+      "loraModel": "retro-pixel"
     },
     {
       "id": "robe_padded",
@@ -138,13 +138,13 @@
       "seed": 21031,
       "generated": true,
       "generatedAt": "2026-01-28T20:34:10.313Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
       "needsRegeneration": false,
-      "loraModel": "retro-pixel",
-      "regenerationQueuedAt": null
+      "loraModel": "retro-pixel"
     },
     {
       "id": "shield_round",
@@ -217,13 +217,13 @@
       "seed": 21045,
       "generated": true,
       "generatedAt": "2026-01-28T20:34:10.313Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
       "needsRegeneration": false,
-      "loraModel": "retro-pixel",
-      "regenerationQueuedAt": null
+      "loraModel": "retro-pixel"
     },
     {
       "id": "helm_wizard_hat",

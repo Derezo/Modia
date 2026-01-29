@@ -90,16 +90,14 @@
       "outputPath": "castle",
       "generated": true,
       "seed": null,
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
       "needsRegeneration": false,
       "loraModel": null,
-      "generatedAt": "2026-01-28T05:41:53.860Z",
-      "regenerationQueuedAt": null,
-      "generationFailureCount": null,
-      "lastError": null
+      "generatedAt": "2026-01-28T05:41:53.860Z"
     },
     {
       "key": "rock_1",

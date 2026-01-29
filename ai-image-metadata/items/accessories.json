@@ -11,13 +11,13 @@
       "seed": 23001,
       "generated": true,
       "generatedAt": "2026-01-28T20:24:29.955Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
       "needsRegeneration": false,
-      "loraModel": "retro-pixel",
-      "regenerationQueuedAt": null
+      "loraModel": "retro-pixel"
     },
     {
       "id": "ring_silver",
@@ -26,13 +26,13 @@
       "seed": 23002,
       "generated": true,
       "generatedAt": "2026-01-28T20:20:55.685Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
       "needsRegeneration": false,
-      "loraModel": "retro-pixel",
-      "regenerationQueuedAt": null
+      "loraModel": "retro-pixel"
     },
     {
       "id": "ring_gold",
@@ -41,10 +41,11 @@
       "seed": 23003,
       "generated": true,
       "generatedAt": "2026-01-28T20:14:29.594Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
       "needsRegeneration": false,
       "loraModel": "retro-pixel"
     },
@@ -126,11 +127,8 @@
       "prompt": "royal cape rich fabric fur trim elegant regal",
       "seed": 23023,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:28:43.948Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "cloak_mage",
@@ -138,11 +136,8 @@
       "prompt": "enchanted mantle magical fabric runic patterns",
       "seed": 23024,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:29:27.628Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "cloak_feather",
@@ -150,11 +145,8 @@
       "prompt": "feathered cloak bird plumes colorful tribal",
       "seed": 23025,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:30:11.982Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "belt_leather",
@@ -162,15 +154,13 @@
       "prompt": "practical leather belt simple buckle",
       "seed": 23031,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-28T20:24:29.956Z",
-      "generationFailureCount": null,
-      "lastError": null,
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0,
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      },
+      "needsRegeneration": false,
       "loraModel": "retro-pixel"
     },
     {
@@ -179,11 +169,8 @@
       "prompt": "warrior belt wide reinforced metal studs",
       "seed": 23032,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:31:44.356Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "belt_pouch",
@@ -191,11 +178,8 @@
       "prompt": "utility belt multiple pouches adventurer gear",
       "seed": 23033,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:32:29.137Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "gloves_leather",
@@ -203,11 +187,8 @@
       "prompt": "leather gloves fingerless grip practical",
       "seed": 23041,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:33:13.828Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     },
     {
       "id": "gauntlets_steel",
@@ -215,11 +196,8 @@
       "prompt": "steel gauntlets armored hands articulated",
       "seed": 23042,
       "generated": true,
-      "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "generatedAt": "2026-01-27T17:33:59.553Z",
-      "generationFailureCount": null,
-      "lastError": null
+      "needsRegeneration": false
     }
   ]
 }

@@ -12,8 +12,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:32:22.766Z"
+      "generatedAt": "2026-01-29T08:00:34.117Z"
     },
     {
       "id": "status_burn",
@@ -23,8 +22,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:33:20.380Z"
+      "generatedAt": "2026-01-29T08:01:23.666Z"
     },
     {
       "id": "status_freeze",
@@ -34,8 +32,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:34:17.230Z"
+      "generatedAt": "2026-01-29T08:02:13.286Z"
     },
     {
       "id": "status_stun",
@@ -45,8 +42,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:35:15.964Z"
+      "generatedAt": "2026-01-29T08:03:03.269Z"
     },
     {
       "id": "status_sleep",
@@ -56,8 +52,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:36:12.194Z"
+      "generatedAt": "2026-01-29T08:03:53.038Z"
     },
     {
       "id": "status_blind",
@@ -67,8 +62,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:37:10.994Z"
+      "generatedAt": "2026-01-29T08:04:42.793Z"
     },
     {
       "id": "status_silence",
@@ -77,13 +71,13 @@
       "seed": 31007,
       "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T05:38:10.738Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T08:05:32.180Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "status_slow",
@@ -92,9 +86,8 @@
       "seed": 31008,
       "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T05:39:07.509Z"
+      "generatedAt": "2026-01-29T08:06:21.823Z"
     },
     {
       "id": "status_haste",
@@ -103,13 +96,13 @@
       "seed": 31009,
       "generated": true,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T05:40:04.230Z",
-      "evaluation": 0,
-      "issues": "",
-      "notes": "",
-      "priority": 0
+      "generatedAt": "2026-01-29T08:07:11.347Z",
+      "evaluation": {
+        "score": 0,
+        "issues": [],
+        "regenerate": false
+      }
     },
     {
       "id": "status_regen",
@@ -119,8 +112,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:40:59.538Z"
+      "generatedAt": "2026-01-29T08:08:01.897Z"
     },
     {
       "id": "status_protect",
@@ -130,8 +122,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:41:54.996Z"
+      "generatedAt": "2026-01-29T08:08:51.493Z"
     },
     {
       "id": "status_shell",
@@ -141,8 +132,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:42:54.235Z"
+      "generatedAt": "2026-01-29T08:09:41.137Z"
     },
     {
       "id": "status_strength_up",
@@ -152,8 +142,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:43:52.578Z"
+      "generatedAt": "2026-01-29T08:10:30.816Z"
     },
     {
       "id": "status_strength_down",
@@ -163,8 +152,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:44:51.094Z"
+      "generatedAt": "2026-01-29T08:11:21.736Z"
     },
     {
       "id": "status_defense_up",
@@ -174,8 +162,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:45:52.801Z"
+      "generatedAt": "2026-01-29T08:12:12.336Z"
     },
     {
       "id": "status_defense_down",
@@ -185,8 +172,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:46:54.085Z"
+      "generatedAt": "2026-01-29T08:13:02.324Z"
     },
     {
       "id": "status_berserk",
@@ -196,8 +182,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:47:51.846Z"
+      "generatedAt": "2026-01-29T08:13:52.537Z"
     },
     {
       "id": "status_confusion",
@@ -207,8 +192,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:48:47.935Z"
+      "generatedAt": "2026-01-29T08:14:38.662Z"
     },
     {
       "id": "status_charm",
@@ -218,8 +202,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:49:44.175Z"
+      "generatedAt": "2026-01-29T08:15:25.937Z"
     },
     {
       "id": "status_doom",
@@ -229,8 +212,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-29T05:50:41.097Z"
+      "generatedAt": "2026-01-29T08:16:12.990Z"
     }
   ]
 }
