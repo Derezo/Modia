@@ -99,12 +99,6 @@ export class BattleUnit {
     this.updateScreenPosition();
   }
 
-  // Snake_case aliases for ParchmentCard compatibility
-  get hp_current() { return this.hp; }
-  get hp_max() { return this.maxHp; }
-  get mp_current() { return this.mp; }
-  get mp_max() { return this.maxMp; }
-
   /**
    * Set asset loader for sprite rendering
    */
