@@ -361,6 +361,44 @@ import { SeededRandom } from '@shared/constants.js';
 
 **Why this happens:** The `@shared` alias is a Vite-specific path mapping. Node.js doesn't recognize it. ESLint is configured to catch this error (`no-restricted-imports` rule in `api/.eslintrc.json`).
 
+### HP/MP Property Naming Convention
+
+Character HP/MP properties use **different naming conventions** depending on the data source:
+
+| Context | Format | Example | Used By |
+|---------|--------|---------|---------|
+| Database/API | snake_case | `hp_current`, `hp_max`, `mp_current`, `mp_max` | PostgreSQL columns, API responses |
+| Battle State | camelCase | `hp`, `maxHp`, `mp`, `maxMp` | BattleUnit, battle services |
+
+**Why two formats exist:**
+- PostgreSQL convention uses snake_case for column names
+- JavaScript convention uses camelCase for object properties
+- `battleUnitFactory.js` transforms snake_case → camelCase when creating battle units
+
+**Component expectations:**
+
+| Component | Expects | Receives Data From |
+|-----------|---------|-------------------|
+| `ParchmentCard` | camelCase | Battle state (BattleUnit, BattleIntro) |
+| `CharacterCard` | snake_case | API responses directly |
+| `CharacterModal` | snake_case | API responses directly |
+| `CharacterSelectScene` | snake_case | API responses directly |
+
+**Common mistake:** Passing API data (snake_case) to `ParchmentCard` without transforming to camelCase causes HP/MP to display as "0/1".
+
+**Fix pattern for API data → ParchmentCard:**
+```javascript
+// Transform API snake_case to camelCase for ParchmentCard
+const cardData = {
+  ...apiCharacter,
+  hp: apiCharacter.hp_current,
+  maxHp: apiCharacter.hp_max,
+  mp: apiCharacter.mp_current,
+  maxMp: apiCharacter.mp_max
+};
+parchmentCard.setCharacter(cardData);
+```
+
 ## File Size Guidelines
 
 File size enforcement prevents monolithic files that harm maintainability. Oversized files **block plan validation and commits**.
