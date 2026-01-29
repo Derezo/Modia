@@ -99,15 +99,46 @@ export const COLUMN_RENDERERS = {
 
   /**
    * Icon + Name column
+   * Uses composited icons for items with augments (lazy loaded to avoid blocking)
    */
   iconName: (item) => {
+    // Initial render uses standard icon (non-blocking)
     const iconHtml = ItemIcon.html({ item, size: 'sm' });
     const rarityClass = `rarity-${item.rarity || 'common'}`;
     const name = escapeHtml(item.name || item.templateName || 'Unknown Item');
 
+    // Generate unique ID for async update
+    const itemId = item.id || item.inventory_id || Math.random().toString(36).slice(2);
+    const iconContainerId = `item-icon-${itemId}`;
+
+    // Check if compositing is needed (has augments and valid rarity/sprite)
+    const hasAugments = item.augments && item.augments.length > 0;
+    const canComposite = hasAugments && (item.sprite_id || item.spriteId);
+
+    if (canComposite) {
+      // Schedule async compositing after initial render
+      queueMicrotask(() => {
+        const container = document.getElementById(iconContainerId);
+        if (!container) return;
+
+        // Use ItemIcon.compositeHtml for augmented items
+        ItemIcon.compositeHtml({ item, size: 'sm' })
+          .then(compositeIconHtml => {
+            // Only update if container still exists
+            const current = document.getElementById(iconContainerId);
+            if (current) {
+              current.innerHTML = compositeIconHtml;
+            }
+          })
+          .catch(() => {
+            // On failure, keep the standard icon (already rendered)
+          });
+      });
+    }
+
     return `
       <div class="item-data-table-icon-name">
-        ${iconHtml}
+        <span id="${iconContainerId}">${iconHtml}</span>
         <span class="item-data-table-item-name ${rarityClass}">${name}</span>
       </div>
     `;
@@ -221,6 +252,7 @@ export const COLUMN_RENDERERS = {
 
   /**
    * Equipped item column - shows currently equipped item or "Empty"
+   * Uses composited icons for items with augments (lazy loaded to avoid blocking)
    * @param {Object} row - Row with item property (can be null)
    * @returns {string} HTML for equipped item
    */
@@ -229,13 +261,41 @@ export const COLUMN_RENDERERS = {
       return '<span class="item-data-table-empty-slot">Empty</span>';
     }
 
-    const iconHtml = ItemIcon.html({ item: row.item, size: 'sm' });
-    const rarityClass = `rarity-${row.item.rarity || 'common'}`;
-    const name = escapeHtml(row.item.name || 'Unknown');
+    const item = row.item;
+    const iconHtml = ItemIcon.html({ item, size: 'sm' });
+    const rarityClass = `rarity-${item.rarity || 'common'}`;
+    const name = escapeHtml(item.name || 'Unknown');
+
+    // Generate unique ID for async update
+    const itemId = item.id || item.inventory_id || Math.random().toString(36).slice(2);
+    const iconContainerId = `equipped-icon-${itemId}`;
+
+    // Check if compositing is needed (has augments and valid rarity/sprite)
+    const hasAugments = item.augments && item.augments.length > 0;
+    const canComposite = hasAugments && (item.sprite_id || item.spriteId);
+
+    if (canComposite) {
+      // Schedule async compositing after initial render
+      queueMicrotask(() => {
+        const container = document.getElementById(iconContainerId);
+        if (!container) return;
+
+        ItemIcon.compositeHtml({ item, size: 'sm' })
+          .then(compositeIconHtml => {
+            const current = document.getElementById(iconContainerId);
+            if (current) {
+              current.innerHTML = compositeIconHtml;
+            }
+          })
+          .catch(() => {
+            // On failure, keep the standard icon
+          });
+      });
+    }
 
     return `
       <div class="item-data-table-icon-name">
-        ${iconHtml}
+        <span id="${iconContainerId}">${iconHtml}</span>
         <span class="item-data-table-item-name ${rarityClass}">${name}</span>
       </div>
     `;

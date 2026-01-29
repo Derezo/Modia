@@ -872,7 +872,8 @@ export class AssetLoader {
     // Load rarity overlay if not common
     let rarityOverlay = null;
     if (rarity && rarity !== 'common') {
-      const rarityPath = `${this.basePath}/overlays/rarity/rarity_${rarity}.png`;
+      const size = AssetLoader.COMPOSITE_SIZE;
+      const rarityPath = `${this.basePath}/overlays/${size}/rarity/rarity_${rarity}.png`;
       try {
         rarityOverlay = await this.loadImage(rarityPath);
       } catch {
@@ -883,7 +884,8 @@ export class AssetLoader {
     // Load augment overlay if specified
     let augmentOverlay = null;
     if (augment) {
-      const augmentPath = `${this.basePath}/overlays/augments/augment_${augment}.png`;
+      const size = AssetLoader.COMPOSITE_SIZE;
+      const augmentPath = `${this.basePath}/overlays/${size}/augments/augment_${augment}.png`;
       try {
         augmentOverlay = await this.loadImage(augmentPath);
       } catch {
@@ -979,18 +981,21 @@ export class AssetLoader {
       // Elemental augments
       'fire', 'ice', 'lightning', 'poison', 'holy', 'dark', 'earth', 'wind',
       // Combat augments
-      'critical', 'lifesteal', 'speed', 'pierce', 'stun', 'chain'
+      'critical', 'lifesteal', 'speed', 'pierce', 'stun', 'chain',
+      // Special augments
+      'arcane', 'fortune', 'vitality', 'slayer'
     ];
 
+    const size = AssetLoader.COMPOSITE_SIZE;
     const promises = [
       // Preload rarity overlays
       ...rarities.map(rarity =>
-        this.loadImage(`${this.basePath}/overlays/rarity/rarity_${rarity}.png`)
+        this.loadImage(`${this.basePath}/overlays/${size}/rarity/rarity_${rarity}.png`)
           .catch(() => null) // Don't fail if overlay doesn't exist
       ),
       // Preload augment overlays
       ...augments.map(augment =>
-        this.loadImage(`${this.basePath}/overlays/augments/augment_${augment}.png`)
+        this.loadImage(`${this.basePath}/overlays/${size}/augments/augment_${augment}.png`)
           .catch(() => null) // Don't fail if overlay doesn't exist
       )
     ];

@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "category": "overlays",
   "description": "Effect overlays for layered item composition - rarity auras and augment effects",
-  "totalAssets": 18,
+  "totalAssets": 22,
   "outputDir": "/assets/overlays/",
   "size": "128x128",
   "format": "png",

@@ -312,6 +312,9 @@ export class ItemDetailModal {
 
     this.modal.open();
     this.setupEventListeners();
+
+    // If item has augments, update icon with composited version
+    this.updateCompositedIcon();
   }
 
   /**
@@ -333,7 +336,7 @@ export class ItemDetailModal {
       <div class="item-detail-content">
         <!-- Header -->
         <div class="item-detail-header">
-          <div class="item-detail-icon-wrapper rarity-${rarity}">
+          <div class="item-detail-icon-wrapper rarity-${rarity}" data-icon-container>
             ${ItemIcon.html({ item, size: 'lg' })}
           </div>
           <div class="item-detail-title-section">
@@ -450,6 +453,43 @@ export class ItemDetailModal {
     const useBtn = contentEl.querySelector('[data-action="use"]');
     if (useBtn) {
       useBtn.addEventListener('click', () => this.handleUseClick());
+    }
+  }
+
+  /**
+   * Update the icon with a composited version including augment overlays
+   * This is called after the modal is opened to asynchronously render the composited icon
+   */
+  async updateCompositedIcon() {
+    const item = this.item;
+
+    // Only composite if the item has augments
+    const augments = item.augments || [];
+    if (augments.length === 0) {
+      return; // No augments, keep the standard icon
+    }
+
+    const iconContainer = this.modal?.contentElement?.querySelector('[data-icon-container]');
+    if (!iconContainer) {
+      return;
+    }
+
+    try {
+      // Extract augment types for compositing
+      const augmentTypes = augments.map(aug => aug.category || aug.type).filter(Boolean);
+
+      // Generate composited HTML with augment overlays
+      const compositedHtml = await ItemIcon.compositeHtml({
+        item,
+        size: 'lg',
+        augments: augmentTypes
+      });
+
+      // Update the container with the composited icon
+      iconContainer.innerHTML = compositedHtml;
+    } catch (error) {
+      // On error, keep the existing non-composited icon
+      console.warn('Failed to composite item icon:', error);
     }
   }
 

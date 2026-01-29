@@ -21,6 +21,7 @@
 
 import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
 import { responsive } from '../core/Responsive.js';
+import { overlayCompositor } from '../utils/OverlayCompositor.js';
 
 /**
  * Size mappings matching Icon component for consistency
@@ -198,6 +199,85 @@ export class ItemIcon {
            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
       <span class="modia-item-icon__fallback" style="display:none;font-size:${fallbackSize}px;">${fallbackEmoji}</span>
     </span>`;
+  }
+
+  /**
+   * Generate HTML with composited overlay sprite
+   *
+   * Asynchronously composites item sprite with rarity and augment overlays,
+   * returning HTML with a data URL for the composited image.
+   *
+   * @param {Object} options - Configuration options
+   * @param {string} [options.spriteId] - Sprite ID from item template (e.g., 'sword_short')
+   * @param {string} [options.itemType] - Item type (weapon, armor, accessory, consumable)
+   * @param {string|number} [options.rarity] - Rarity for border styling and overlay
+   * @param {string[]} [options.augments=[]] - Array of augment types (fire, ice, etc.)
+   * @param {Object} [options.item] - Full item object (alternative to individual props)
+   * @param {'sm'|'md'|'lg'|'xl'} [options.size='md'] - Size category
+   * @param {string} [options.className] - Additional CSS classes
+   * @param {string} [options.title] - Tooltip text
+   * @returns {Promise<string>} HTML string with composited image
+   */
+  static async compositeHtml(options = {}) {
+    // Inject styles once
+    ItemIcon.injectStyles();
+
+    // Extract from item object if provided
+    const item = options.item || {};
+    const spriteId = options.spriteId || item.sprite_id || item.spriteId;
+    const itemType = options.itemType || item.item_type || item.itemType || item.type || 'weapon';
+    const rarity = options.rarity || item.rarity || 'common';
+    const augments = options.augments || item.augments || [];
+    const size = options.size || 'md';
+    const className = options.className || '';
+    const title = options.title || item.name || '';
+
+    // Get subcategory and sizes
+    const subcategory = getSubcategory(itemType);
+    const pixelSize = getPixelSize(size);
+
+    // Get rarity class
+    const rarityClass = RARITY_CLASSES[rarity] || 'common';
+
+    // Build class names
+    const classes = ['modia-item-icon', `modia-item-icon--${size}`, `modia-item-icon--${rarityClass}`];
+    if (className) classes.push(className);
+
+    // Build title attribute
+    const titleAttr = title ? `title="${escapeHtml(title)}"` : '';
+
+    // If no spriteId, return fallback
+    if (!spriteId) {
+      const fallbackEmoji = FALLBACK_EMOJI[subcategory] || '\u2753';
+      return `<span class="${classes.join(' ')}" ${titleAttr}>
+        <span class="modia-item-icon__fallback" style="font-size: ${pixelSize * 0.6}px;">${fallbackEmoji}</span>
+      </span>`;
+    }
+
+    // Composite the sprite with overlays
+    try {
+      const dataUrl = await overlayCompositor.composite({
+        spriteId,
+        subcategory,
+        size: pixelSize,
+        rarity,
+        augments
+      });
+
+      return `<span class="${classes.join(' ')}" ${titleAttr}>
+        <img class="modia-item-icon__img" src="${dataUrl}" alt=""
+             style="width: ${pixelSize}px; height: ${pixelSize}px;"
+             draggable="false">
+      </span>`;
+    } catch {
+      // Fall back to non-composited version on error
+      const fallbackEmoji = FALLBACK_EMOJI[subcategory] || '\u2753';
+      const fallbackSize = Math.round(pixelSize * 0.6);
+
+      return `<span class="${classes.join(' ')}" ${titleAttr}>
+        <span class="modia-item-icon__fallback" style="font-size:${fallbackSize}px;">${fallbackEmoji}</span>
+      </span>`;
+    }
   }
 
   /**
