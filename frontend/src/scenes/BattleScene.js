@@ -82,6 +82,7 @@ export class BattleScene extends Scene {
     this.selectedSkillId = null;
     this.selectedItemId = null;
     this.selectedInventoryId = null;
+    this.lockedTarget = null; // { tile: {x,y}, unit: <unit or null> } - prevents tile cycling during targeting
 
     // Mobile/touch support for terrain preview
     this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -557,7 +558,12 @@ export class BattleScene extends Scene {
       }
 
       // Update target info if hovering over unit
-      if (this.hoveredTile) {
+      // When target is locked (during confirmation), keep showing locked target's info
+      if (this.lockedTarget?.unit) {
+        this.ui.showTargetInfo(this.lockedTarget.unit);
+        // Use locked tile for damage preview to maintain consistency
+        this.updateDamagePreview(this.lockedTarget.tile, pos);
+      } else if (this.hoveredTile) {
         const unit = this.getUnitAt(this.hoveredTile.x, this.hoveredTile.y);
         if (unit && unit.type === 'enemy') {
           this.ui.showTargetInfo(unit);
@@ -869,6 +875,8 @@ export class BattleScene extends Scene {
       // Tile-based targeting: allow attacking any valid tile
       const target = this.getUnitAt(x, y);
       this.pendingAction = { type: 'attack', targetTile: { x, y }, target };
+      // Lock target to prevent tile cycling from changing it during confirmation
+      this.lockedTarget = { tile: { x, y }, unit: target };
 
       // Confirm message based on target
       if (target) {
@@ -881,6 +889,8 @@ export class BattleScene extends Scene {
       const target = this.getUnitAt(x, y);
       const skill = this.getUnitActiveSkills(this.getActiveUnit()).find(s => s.id === this.selectedSkillId);
       this.pendingAction = { type: 'skill', targetTile: { x, y }, target, skillId: this.selectedSkillId };
+      // Lock target to prevent tile cycling from changing it during confirmation
+      this.lockedTarget = { tile: { x, y }, unit: target };
 
       // Confirm message based on target
       if (target) {
@@ -897,6 +907,8 @@ export class BattleScene extends Scene {
       }
       const item = (this.battleState.consumables || []).find(i => i.itemId === this.selectedItemId);
       this.pendingAction = { type: 'item', targetTile: { x, y }, target, itemId: this.selectedItemId };
+      // Lock target to prevent tile cycling from changing it during confirmation
+      this.lockedTarget = { tile: { x, y }, unit: target };
 
       this.ui.showConfirmation(`Use ${item?.name || 'item'} on ${target.name}?`);
     }
@@ -1460,6 +1472,8 @@ export class BattleScene extends Scene {
       target: activeUnit,
       isSelfTarget: true
     };
+    // Lock target to prevent tile cycling from changing it during confirmation
+    this.lockedTarget = { tile: { x: activeUnit.gridX, y: activeUnit.gridY }, unit: activeUnit };
 
     // Show confirmation UI
     this.ui.hideSkillPanel();
@@ -1487,6 +1501,8 @@ export class BattleScene extends Scene {
 
   /**
    * Start item action - show valid target tiles for item
+   * Without Throw Item skill: self-only with immediate confirmation
+   * With Throw Item skill (Chemist): ranged ally targeting
    * @param {Object} itemData - Object with itemId and inventoryId
    */
   startItemAction(itemData) {
@@ -1496,27 +1512,53 @@ export class BattleScene extends Scene {
     this.selectedInventoryId = itemData.inventoryId;
 
     const activeUnit = this.getActiveUnit();
+    const throwItemSkill = this.getThrowItemSkill(activeUnit);
 
-    // Items can target self or allies within range
-    // For now, allow targeting any ally tile (range of map)
-    this.validTiles = this.pathfinding.getAttackableTiles(
-      activeUnit.gridX,
-      activeUnit.gridY,
-      10 // Items have a long range for targeting allies
-    );
+    if (throwItemSkill) {
+      // Has Throw Item skill - allow ranged ally targeting
+      // Range: 2 + floor(level / 5) tiles
+      const range = 2 + Math.floor(throwItemSkill.level / 5);
+      this.validTiles = this.pathfinding.getAttackableTiles(
+        activeUnit.gridX,
+        activeUnit.gridY,
+        range
+      );
 
-    // Filter to only include tiles with ally units (or empty for self-use)
-    const allyPositions = this.battleState.units
-      .filter(u => u.type === 'player' && u.hp > 0)
-      .map(u => ({ x: u.tileX, y: u.tileY }));
+      // Filter to only include tiles with ally units (including self)
+      const allyPositions = this.battleState.units
+        .filter(u => u.type === 'player' && u.hp > 0)
+        .map(u => ({ x: u.tileX, y: u.tileY }));
 
-    this.validTiles = this.validTiles.filter(tile =>
-      allyPositions.some(pos => pos.x === tile.x && pos.y === tile.y)
-    );
+      this.validTiles = this.validTiles.filter(tile =>
+        allyPositions.some(pos => pos.x === tile.x && pos.y === tile.y)
+      );
 
-    this.ui.hideItemPanel();
-    this.ui.setActionsEnabled(false);
-    this.ui.showTargetingMode();
+      this.ui.hideItemPanel();
+      this.ui.setActionsEnabled(false);
+      this.ui.showTargetingMode();
+    } else {
+      // No Throw Item skill - self-only with confirmation dialog
+      this.validTiles = [];
+      const item = this.battleState.consumables?.find(i => i.itemId === this.selectedItemId);
+      this.pendingAction = {
+        type: 'item',
+        targetTile: { x: activeUnit.gridX, y: activeUnit.gridY },
+        target: activeUnit,
+        itemId: this.selectedItemId
+      };
+      this.ui.hideItemPanel();
+      this.ui.showConfirmation(`Use ${item?.name || 'item'} on ${activeUnit.name}?`);
+    }
+  }
+
+  /**
+   * Get the Throw Item skill from a unit's skills array
+   * @param {Object} unit - The unit to check
+   * @returns {Object|null} The throw_item skill with level, or null if not found
+   */
+  getThrowItemSkill(unit) {
+    if (!unit?.skills) return null;
+    return unit.skills.find(s => s.id === 'throw_item');
   }
 
   /**
@@ -1526,6 +1568,12 @@ export class BattleScene extends Scene {
     this.ui.hideConfirmation();
 
     if (this.pendingAction) {
+      // Validate locked target is still valid (could have died via concurrent action)
+      if (this.lockedTarget?.unit && this.lockedTarget.unit.hp <= 0) {
+        parchmentToast.warning('Target Defeated', 'The target was defeated');
+        this.cancelAction();
+        return;
+      }
       await this.submitAction(this.pendingAction.type, this.pendingAction.targetTile);
     }
 
@@ -1540,6 +1588,7 @@ export class BattleScene extends Scene {
     this.currentAction = null;
     this.validTiles = [];
     this.pendingAction = null;
+    this.lockedTarget = null; // Clear target lock
     this.selectedSkillId = null;
     this.selectedItemId = null;
     this.selectedInventoryId = null;
@@ -1831,6 +1880,7 @@ export class BattleScene extends Scene {
     this.currentAction = null;
     this.validTiles = [];
     this.pendingAction = null;
+    this.lockedTarget = null; // Clear target lock
 
     // Clear sticky target and damage preview when action completes
     this.ui.clearTargetSticky();
@@ -2533,6 +2583,9 @@ export class BattleScene extends Scene {
    * @param {number} deltaTime - Time since last frame in milliseconds
    */
   updateTileCycling(deltaTime) {
+    // Skip if target is locked (during spell/attack targeting confirmation)
+    if (this.lockedTarget) return;
+
     // Skip if only 0 or 1 candidate, or if cycling is paused (manual selection)
     if (this.tileCandidates.length <= 1 || this.tileCyclePaused) {
       return;
@@ -2659,6 +2712,48 @@ export class BattleScene extends Scene {
   }
 
   /**
+   * Render tile elevation indicator when hovering a single tile
+   * Shows elevation as +N or -N in a small pill at top-right of tile
+   * @param {CanvasRenderingContext2D} ctx - Canvas context
+   */
+  renderTileElevationIndicator(ctx) {
+    // Skip if cycle indicator already showing (it has elevation)
+    if (this.tileCandidates.length > 1) return;
+    if (!this.hoveredTile) return;
+
+    const elevation = this.grid.getElevation(this.hoveredTile.x, this.hoveredTile.y);
+    if (elevation === 0) return;
+
+    const worldPos = this.grid.gridToScreenWorld(this.hoveredTile.x, this.hoveredTile.y);
+    const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
+
+    // Position at top-right of tile diamond
+    const indicatorX = screenPos.x + 20;
+    const indicatorY = screenPos.y - this.grid.tileHeight / 2 - 6;
+
+    const elevText = elevation > 0 ? `+${elevation}` : `${elevation}`;
+
+    ctx.save();
+    ctx.font = 'bold 10px Arial';
+    const textWidth = ctx.measureText(elevText).width;
+    const pillWidth = textWidth + 8;
+    const pillHeight = 14;
+
+    // Background pill
+    ctx.beginPath();
+    ctx.roundRect(indicatorX - pillWidth / 2, indicatorY - pillHeight / 2, pillWidth, pillHeight, 4);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fill();
+
+    // Text - blue-ish for positive, orange for negative
+    ctx.fillStyle = elevation > 0 ? 'rgba(150, 200, 255, 1)' : 'rgba(255, 150, 100, 1)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(elevText, indicatorX, indicatorY);
+    ctx.restore();
+  }
+
+  /**
    * Render the battle scene
    */
   render(ctx) {
@@ -2782,6 +2877,9 @@ export class BattleScene extends Scene {
 
     // Render tile cycle indicator when multiple tiles overlap
     this.renderTileCycleIndicator(ctx);
+
+    // Render elevation indicator for single hovered tile
+    this.renderTileElevationIndicator(ctx);
 
     // Sort and render units (by Y position for depth)
     const allUnits = Array.from(this.units.values());
