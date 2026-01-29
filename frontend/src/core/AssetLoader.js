@@ -34,6 +34,10 @@ export class AssetLoader {
     this.basePath = '/assets';
     this.initialized = false;
 
+    // Track failed lookups to avoid spamming console with duplicate warnings
+    // Key format: "type:biome:terrain" or "type:biome:direction:levels"
+    this.failedLookups = new Set();
+
     // Node type aliases (worldgen name → sprite name)
     this.nodeTypeAliases = {
       fishing_spot: 'fishing',
@@ -127,6 +131,20 @@ export class AssetLoader {
         tree: '#228b22'     // Forest green
       }
     };
+  }
+
+  /**
+   * Log a warning once per unique lookup key to prevent console spam during render loops.
+   * Used by getWallTexture, loadWallTexture, getSlopeSprite, loadSlopeSprite.
+   * @param {string} lookupKey - Unique key identifying the failed lookup (e.g., "wall:cave:rock")
+   * @param {string} message - Warning message to log
+   * @private
+   */
+  _warnOnce(lookupKey, message) {
+    if (!this.failedLookups.has(lookupKey)) {
+      this.failedLookups.add(lookupKey);
+      console.warn(message);
+    }
   }
 
   /**
@@ -1020,12 +1038,18 @@ export class AssetLoader {
     const key = `${this.basePath}/sprites/terrain/${biome}/walls/${terrain}_wall.png`;
     const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/walls/default_wall.png`;
     const baseFallbackKey = `${this.basePath}/sprites/terrain/forest/walls/${terrain}_wall.png`;
+    // Additional fallback: base biome which has generic terrain walls
+    const baseDefaultKey = `${this.basePath}/sprites/terrain/base/walls/${terrain}_wall.png`;
+    const ultimateFallbackKey = `${this.basePath}/sprites/terrain/base/walls/default_wall.png`;
 
     const result = this.cache.get(key) ||
                    this.cache.get(fallbackKey) ||
-                   this.cache.get(baseFallbackKey);
+                   this.cache.get(baseFallbackKey) ||
+                   this.cache.get(baseDefaultKey) ||
+                   this.cache.get(ultimateFallbackKey);
+
     if (!result) {
-      console.error(`[AssetLoader] Wall texture not found: biome=${biome}, terrain=${terrain}`);
+      this._warnOnce(`wall:${biome}:${terrain}`, `[AssetLoader] Wall texture not found: biome=${biome}, terrain=${terrain}`);
     }
     return result || null;
   }
@@ -1040,7 +1064,10 @@ export class AssetLoader {
     const paths = [
       `${this.basePath}/sprites/terrain/${biome}/walls/${terrain}_wall.png`,
       `${this.basePath}/sprites/terrain/${biome}/walls/default_wall.png`,
-      `${this.basePath}/sprites/terrain/forest/walls/${terrain}_wall.png`
+      `${this.basePath}/sprites/terrain/forest/walls/${terrain}_wall.png`,
+      // Additional fallback: base biome which has generic terrain walls
+      `${this.basePath}/sprites/terrain/base/walls/${terrain}_wall.png`,
+      `${this.basePath}/sprites/terrain/base/walls/default_wall.png`
     ];
 
     for (const path of paths) {
@@ -1050,7 +1077,8 @@ export class AssetLoader {
         // Try next path
       }
     }
-    console.error(`[AssetLoader] Failed to load wall texture: biome=${biome}, terrain=${terrain}`);
+
+    this._warnOnce(`wall:${biome}:${terrain}`, `[AssetLoader] Failed to load wall texture: biome=${biome}, terrain=${terrain}`);
     return null;
   }
 
@@ -1065,12 +1093,18 @@ export class AssetLoader {
     const key = `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_${levels}.png`;
     const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_1.png`;
     const baseFallbackKey = `${this.basePath}/sprites/terrain/forest/slopes/${direction}_${levels}.png`;
+    // Additional fallback: base biome
+    const baseKey = `${this.basePath}/sprites/terrain/base/slopes/${direction}_${levels}.png`;
+    const baseDefaultKey = `${this.basePath}/sprites/terrain/base/slopes/${direction}_1.png`;
 
     const result = this.cache.get(key) ||
                    this.cache.get(fallbackKey) ||
-                   this.cache.get(baseFallbackKey);
+                   this.cache.get(baseFallbackKey) ||
+                   this.cache.get(baseKey) ||
+                   this.cache.get(baseDefaultKey);
+
     if (!result) {
-      console.error(`[AssetLoader] Slope sprite not found: biome=${biome}, direction=${direction}, levels=${levels}`);
+      this._warnOnce(`slope:${biome}:${direction}:${levels}`, `[AssetLoader] Slope sprite not found: biome=${biome}, direction=${direction}, levels=${levels}`);
     }
     return result || null;
   }
@@ -1086,7 +1120,10 @@ export class AssetLoader {
     const paths = [
       `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_${levels}.png`,
       `${this.basePath}/sprites/terrain/${biome}/slopes/${direction}_1.png`,
-      `${this.basePath}/sprites/terrain/forest/slopes/${direction}_${levels}.png`
+      `${this.basePath}/sprites/terrain/forest/slopes/${direction}_${levels}.png`,
+      // Additional fallback: base biome
+      `${this.basePath}/sprites/terrain/base/slopes/${direction}_${levels}.png`,
+      `${this.basePath}/sprites/terrain/base/slopes/${direction}_1.png`
     ];
 
     for (const path of paths) {
@@ -1096,7 +1133,8 @@ export class AssetLoader {
         // Try next path
       }
     }
-    console.error(`[AssetLoader] Failed to load slope sprite: biome=${biome}, direction=${direction}, levels=${levels}`);
+
+    this._warnOnce(`slope:${biome}:${direction}:${levels}`, `[AssetLoader] Failed to load slope sprite: biome=${biome}, direction=${direction}, levels=${levels}`);
     return null;
   }
 
@@ -1467,11 +1505,12 @@ export class AssetLoader {
   }
 
   /**
-   * Clear cache
+   * Clear cache and failed lookup tracking
    */
   clearCache() {
     this.cache.clear();
     this.loading.clear();
+    this.failedLookups.clear();
   }
 
   /**
