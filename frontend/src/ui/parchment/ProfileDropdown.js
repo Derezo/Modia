@@ -997,7 +997,8 @@ export class ProfileDropdown {
         this.game.scenes.switchTo('formation');
         break;
       case 'characters':
-        this.game.scenes.switchTo('characterSelect');
+        // Characters are managed in the Formation scene
+        this.game.scenes.switchTo('formation');
         break;
       case 'party':
         // Could open party panel or navigate to party scene

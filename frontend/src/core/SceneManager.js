@@ -1,6 +1,5 @@
 import { TitleIntroScene } from '../scenes/TitleIntroScene.js';
 import { AuthScene } from '../scenes/AuthScene.js';
-import { CharacterSelectScene } from '../scenes/CharacterSelectScene.js';
 import { CharacterCreateScene } from '../scenes/CharacterCreateScene.js';
 import { WorldMapScene } from '../scenes/WorldMapScene.js';
 import { BattleScene } from '../scenes/BattleScene.js';
@@ -37,7 +36,6 @@ export class SceneManager {
       titleIntro: new TitleIntroScene(this.game),
       login: authScene,
       register: authScene,
-      characterSelect: new CharacterSelectScene(this.game),
       characterCreate: new CharacterCreateScene(this.game),
       worldMap: new WorldMapScene(this.game),
       battle: new BattleScene(this.game),

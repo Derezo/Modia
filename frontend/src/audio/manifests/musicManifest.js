@@ -15,8 +15,8 @@ export const MUSIC_MANIFEST = {
     fadeOut: 1000,
     category: 'core'
   },
-  character_select: {
-    path: '/assets/audio/music/core/character_select.mp3',
+  character_create: {
+    path: '/assets/audio/music/core/character_create.mp3',
     volume: 0.7,
     loop: true,
     fadeIn: 1500,

@@ -45,6 +45,7 @@ export class CharacterCreateScene extends Scene {
     this.selectedClass = null;
     this.selectedGender = null;
     this.loading = false;
+    this.isWizardMode = false;
   }
 
   enter() {
@@ -52,12 +53,13 @@ export class CharacterCreateScene extends Scene {
     this.selectedClass = null;
     this.selectedGender = null;
     this.loading = false;
+    this.isWizardMode = this.game.state.get('isNewRegistration') === true;
     this.addStyles();
     this.createUI();
 
-    // Continue character select music (don't restart if already playing)
+    // Play character creation music
     if (this.game.musicContext) {
-      this.game.musicContext.playCharacterSelect();
+      this.game.musicContext.playCharacterCreate();
     }
   }
 
@@ -370,7 +372,7 @@ export class CharacterCreateScene extends Scene {
     container.className = 'charcreate-container';
 
     container.innerHTML = `
-      <h1 class="charcreate-title">Create Character</h1>
+      <h1 class="charcreate-title">${this.isWizardMode ? 'Create Your Hero' : 'Create Character'}</h1>
       <div class="charcreate-panel">
         <div id="create-error" class="charcreate-error" style="display: none;"></div>
 
@@ -425,7 +427,7 @@ export class CharacterCreateScene extends Scene {
         </div>
 
         <div class="charcreate-button-row">
-          <button class="charcreate-btn charcreate-btn-secondary" id="back-btn">Back</button>
+          <button class="charcreate-btn charcreate-btn-secondary" id="back-btn" ${this.isWizardMode ? 'style="display:none;"' : ''}>Back</button>
           <button class="charcreate-btn charcreate-btn-primary" id="create-btn" disabled>Create Character</button>
         </div>
       </div>
@@ -466,7 +468,8 @@ export class CharacterCreateScene extends Scene {
       this.game.audio?.playUI('button_click');
       const characters = this.game.state.get('characters') || [];
       if (characters.length > 0) {
-        this.game.scenes.switchTo('characterSelect');
+        // Go back to world map if user has characters (e.g., accessed from recruitment)
+        this.game.scenes.switchTo('worldMap');
       } else {
         this.game.scenes.switchTo('login');
       }
@@ -576,6 +579,9 @@ export class CharacterCreateScene extends Scene {
       characters.push(result.character);
       this.game.state.set('characters', characters);
       this.game.state.set('activeCharacter', result.character);
+
+      // Clear wizard mode flag
+      this.game.state.set('isNewRegistration', false);
 
       // Go to world map
       this.game.scenes.switchTo('worldMap');

@@ -142,7 +142,7 @@
       ]
     },
     {
-      "id": "character_select",
+      "id": "character_create",
       "name": "Choose Your Path",
       "category": "core",
       "region": null,
@@ -151,7 +151,7 @@
       "sunoPrompt": "JRPG character selection theme, contemplative orchestral, gentle strings and soft brass, choosing destiny, anticipation and wonder, five races five paths, moderate calm tempo, thoughtful decision making",
       "style": "Contemplative orchestral",
       "model": "V5",
-      "path": "/assets/audio/music/core/character_select.mp3",
+      "path": "/assets/audio/music/core/character_create.mp3",
       "loop": true,
       "volume": 0.7,
       "fadeIn": 1500,
@@ -264,21 +264,21 @@
       ],
       "variants": [
         {
-          "id": "character_select_v1",
-          "path": "/assets/audio/music/core/character_select.mp3",
-          "filename": "character_select.mp3",
+          "id": "character_create_v1",
+          "path": "/assets/audio/music/core/character_create.mp3",
+          "filename": "character_create.mp3",
           "fileSize": 3209046,
           "isPrimary": true
         },
         {
-          "id": "character_select_v2",
-          "path": "/assets/audio/music/core/character_select_v2.mp3",
-          "filename": "character_select_v2.mp3",
+          "id": "character_create_v2",
+          "path": "/assets/audio/music/core/character_create_v2.mp3",
+          "filename": "character_create_v2.mp3",
           "fileSize": 2900886,
           "isPrimary": false
         }
       ],
-      "primaryVariantId": "character_select_v1"
+      "primaryVariantId": "character_create_v1"
     },
     {
       "id": "victory_fanfare",

@@ -170,13 +170,13 @@ export class MusicContext {
   }
 
   /**
-   * Play character selection screen theme
+   * Play character creation screen theme
    */
-  playCharacterSelect() {
+  playCharacterCreate() {
     this.currentNodeType = null;
     this.isInBattle = false;
     this.currentBattleType = null;
-    this.audio.playMusic('character_select');
+    this.audio.playMusic('character_create');
   }
 
   /**

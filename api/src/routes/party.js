@@ -51,6 +51,19 @@ router.put('/', authenticate, asyncHandler(async (req, res) => {
     throw new AppError('One or more characters not found', 404);
   }
 
+  // Ensure main character (oldest) stays in slot 1
+  const mainCharResult = await query(
+    'SELECT id FROM characters WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1',
+    [req.user.userId]
+  );
+  if (mainCharResult.rows.length > 0) {
+    const mainCharId = mainCharResult.rows[0].id;
+    const slot1Assignment = formation.find(f => f.slot === 1);
+    if (!slot1Assignment || slot1Assignment.characterId !== mainCharId) {
+      throw new AppError('Main character must remain in slot 1', 400);
+    }
+  }
+
   // Clear existing slots first
   await query(
     'UPDATE characters SET party_slot = NULL WHERE user_id = $1',
