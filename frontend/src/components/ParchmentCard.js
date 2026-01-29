@@ -34,7 +34,7 @@ export class ParchmentCard {
     this.element = null;
     this.damagePreviewElement = null;
     // Track last known values for change detection (objects may be mutated in place)
-    this.lastKnownValues = { hp_current: null, mp_current: null };
+    this.lastKnownValues = { hp: null, mp: null };
 
     this.createElement();
   }
@@ -427,19 +427,19 @@ export class ParchmentCard {
     // Skip if same character AND no HP/MP changes (prevent flicker on mouse move)
     if (this.character && character && this.character.id === character.id) {
       // Compare against lastKnownValues, not the object itself (object may be mutated in place)
-      const currentHp = character.hp_current ?? 0;
-      const currentMp = character.mp_current ?? 0;
+      const currentHp = character.hp ?? 0;
+      const currentMp = character.mp ?? 0;
       const needsUpdate =
-        this.lastKnownValues.hp_current !== currentHp ||
-        this.lastKnownValues.mp_current !== currentMp;
+        this.lastKnownValues.hp !== currentHp ||
+        this.lastKnownValues.mp !== currentMp;
       if (!needsUpdate) return;
     }
     this.character = character;
     this.render();
 
     // Store current values for future comparison
-    this.lastKnownValues.hp_current = character?.hp_current ?? 0;
-    this.lastKnownValues.mp_current = character?.mp_current ?? 0;
+    this.lastKnownValues.hp = character?.hp ?? 0;
+    this.lastKnownValues.mp = character?.mp ?? 0;
   }
 
   update(updates) {
@@ -458,11 +458,11 @@ export class ParchmentCard {
     this.element.classList.remove('empty', 'hidden');
     const c = this.character;
 
-    // Calculate HP/MP
-    const hpMax = c.hp_max || 1;
-    const mpMax = c.mp_max || 1;
-    const hpCurrent = c.hp_current ?? 0;
-    const mpCurrent = c.mp_current ?? 0;
+    // Calculate HP/MP (supports camelCase from battle state)
+    const hpMax = c.maxHp || 1;
+    const mpMax = c.maxMp || 1;
+    const hpCurrent = c.hp ?? 0;
+    const mpCurrent = c.mp ?? 0;
     const hpPercent = Math.min(100, Math.max(0, (hpCurrent / hpMax) * 100));
     const mpPercent = Math.min(100, Math.max(0, (mpCurrent / mpMax) * 100));
 
@@ -492,7 +492,7 @@ export class ParchmentCard {
     // Display size is 56px, optimal size is 64px
     const optimalSize = getOptimalSize('portraits', 56);
     const portraitUrl = this.type === 'enemy'
-      ? getAssetPath('portraits', enemySpriteId || charClass, { subcategory: 'enemies', size: optimalSize })
+      ? getAssetPath('portraits', `enemy_${enemySpriteId || charClass}`, { size: optimalSize })
       : getAssetPath('portraits', `${race}_${gender}_${charClass}`, { size: optimalSize });
 
     // Class colors for fallback
