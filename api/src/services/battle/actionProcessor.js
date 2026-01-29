@@ -648,6 +648,72 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
 }
 
 /**
+ * Get the Throw Item skill from a unit's skills array
+ * @param {Object} unit - The unit to check
+ * @returns {Object|null} The throw_item skill with level, or null if not found
+ */
+function getThrowItemSkill(unit) {
+  if (!unit?.skills) return null;
+  if (Array.isArray(unit.skills)) {
+    return unit.skills.find(s => s.id === 'throw_item');
+  }
+  // Handle object format { skillId: level }
+  if (unit.skills.throw_item) {
+    return { id: 'throw_item', level: unit.skills.throw_item };
+  }
+  return null;
+}
+
+/**
+ * Get the Efficient Mixing skill from a unit's skills array
+ * @param {Object} unit - The unit to check
+ * @returns {Object|null} The efficient_mixing skill with level, or null if not found
+ */
+function getEfficientMixingSkill(unit) {
+  if (!unit?.skills) return null;
+  if (Array.isArray(unit.skills)) {
+    return unit.skills.find(s => s.id === 'efficient_mixing');
+  }
+  // Handle object format { skillId: level }
+  if (unit.skills.efficient_mixing) {
+    return { id: 'efficient_mixing', level: unit.skills.efficient_mixing };
+  }
+  return null;
+}
+
+/**
+ * Calculate item effectiveness multiplier based on Throw Item and Efficient Mixing skills
+ * @param {Object} unit - The unit using the item
+ * @param {boolean} isTargetingSelf - Whether targeting self
+ * @returns {number} Effectiveness multiplier (1.0 = 100%)
+ */
+function calculateItemEffectiveness(unit, isTargetingSelf) {
+  let effectiveness = 1.0;
+
+  // If targeting others, apply Throw Item penalty/scaling
+  if (!isTargetingSelf) {
+    const throwItemSkill = getThrowItemSkill(unit);
+    if (throwItemSkill) {
+      // Effectiveness: 60% + (level * 2)%
+      // At level 1: 62%, at level 10: 80%, at level 20: 100%
+      effectiveness = 0.6 + (throwItemSkill.level * 0.02);
+    }
+    // Note: If no throw_item skill and targeting others, this shouldn't happen
+    // as frontend/backend validation should prevent it
+  }
+
+  // Apply Efficient Mixing bonus (stacks multiplicatively)
+  const efficientMixingSkill = getEfficientMixingSkill(unit);
+  if (efficientMixingSkill) {
+    // +10% item effectiveness per level
+    const mixingBonus = 1.0 + (efficientMixingSkill.level * 0.1);
+    effectiveness *= mixingBonus;
+  }
+
+  return effectiveness;
+}
+
+/**
  * Process an item action
  */
 function processItemAction(state, unit, targetTile, itemId) {
@@ -679,19 +745,46 @@ function processItemAction(state, unit, targetTile, itemId) {
 
   // Find target (self or ally at tile)
   let itemTarget = unit;
+  let isTargetingSelf = true;
   if (targetTile) {
     const tileTarget = state.units.find(u =>
       u.tileX === targetTile.x && u.tileY === targetTile.y && u.type === unit.type
     );
-    if (tileTarget) {
+    if (tileTarget && tileTarget.id !== unit.id) {
       itemTarget = tileTarget;
+      isTargetingSelf = false;
     }
   }
+
+  // SECURITY: Validate targeting restrictions (anti-cheat)
+  // Without Throw Item skill, can only target self
+  if (!isTargetingSelf) {
+    const throwItemSkill = getThrowItemSkill(unit);
+    if (!throwItemSkill) {
+      result.error = 'Cannot target allies without Throw Item skill';
+      return result;
+    }
+
+    // Validate range based on Throw Item skill level
+    // Range: 2 + floor(level / 5) tiles
+    const maxRange = 2 + Math.floor(throwItemSkill.level / 5);
+    const distance = getManhattanDistance(unit.tileX, unit.tileY, targetTile.x, targetTile.y);
+    if (distance > maxRange) {
+      result.error = `Target out of throw range (max: ${maxRange}, attempted: ${distance})`;
+      return result;
+    }
+  }
+
+  // Calculate item effectiveness multiplier
+  const effectiveness = calculateItemEffectiveness(unit, isTargetingSelf);
+  result.effectiveness = effectiveness;
 
   // Apply item effects based on canonical effectType from database
   // Canonical types: heal_hp, heal_mp, heal_both, cure_poison, cure_all, revive
   const effectType = consumable.effectType;
-  const effectValue = consumable.effectValue || 0;
+  const baseEffectValue = consumable.effectValue || 0;
+  // Apply effectiveness multiplier to effect value
+  const effectValue = Math.floor(baseEffectValue * effectiveness);
 
   // Guard: non-revive items cannot target dead units
   if (effectType !== 'revive' && itemTarget.hp <= 0) {
@@ -732,6 +825,7 @@ function processItemAction(state, unit, targetTile, itemId) {
   }
 
   if (effectType === 'cure_poison' || effectType === 'cure_all') {
+    // Cure effects are not affected by effectiveness multiplier
     const cleansableEffects = effectType === 'cure_poison' ? CURE_POISON_EFFECTS : CURE_ALL_EFFECTS;
     itemTarget.statusEffects = (itemTarget.statusEffects || []).filter(e =>
       !cleansableEffects.includes(e.type)
@@ -741,7 +835,9 @@ function processItemAction(state, unit, targetTile, itemId) {
 
   if (effectType === 'revive') {
     // Guard above ensures itemTarget.hp <= 0
-    const reviveHp = Math.floor(itemTarget.maxHp * effectValue / 100);
+    // Apply effectiveness to revive HP percentage
+    const revivePercent = baseEffectValue * effectiveness;
+    const reviveHp = Math.floor(itemTarget.maxHp * revivePercent / 100);
     itemTarget.hp = reviveHp;
     result.itemEffects.push({ type: 'revive', amount: reviveHp, targetId: itemTarget.id });
   }

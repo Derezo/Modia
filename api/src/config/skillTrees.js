@@ -128,6 +128,28 @@ const SKILL_TREES = {
           { id: 'chemist_luck', name: 'Chemist Luck', description: '+5% LCK per level', maxLevel: 100, baseCost: 30, type: 'passive', icon: '🍀', statBonus: { stat: 'luck', percentPerLevel: 0.05 } },
           { id: 'efficient_mixing', name: 'Efficient Mixing', description: 'Item effects +10% per level', maxLevel: 100, baseCost: 50, type: 'passive', icon: '📈', statBonus: { stat: 'itemEffectiveness', percentPerLevel: 0.1 } }
         ]
+      },
+      {
+        name: 'Support',
+        skills: [
+          {
+            id: 'throw_item',
+            name: 'Throw Item',
+            description: 'Throw consumable items at allies. Range and effectiveness scale with level. Range: 2 + floor(level/5). Effectiveness: 60% + (level * 2)%.',
+            maxLevel: 20,
+            baseCost: 50,
+            type: 'passive',
+            icon: '🎯',
+            // Range: 2 + floor(level / 5) tiles (max 6 at level 20)
+            // Effectiveness: 60% + (level * 2)% (max 100% at level 20)
+            throwItem: {
+              baseRange: 2,
+              rangeBonusPerLevel: 0.2, // +1 range per 5 levels
+              baseEffectiveness: 0.6,
+              effectivenessPerLevel: 0.02
+            }
+          }
+        ]
       }
     ]
   },

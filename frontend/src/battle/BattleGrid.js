@@ -502,8 +502,13 @@ export class BattleGrid {
     const unitVisualY = unitZ * WALL_HEIGHT_PER_LEVEL;
 
     // Check if tile's wall would visually overlap with unit's position
+    // Tighten depth check - only tiles immediately in front can occlude
     const depthDiff = tileDepth - unitDepth;
-    if (depthDiff > 2) return false; // Too far away to matter
+    if (depthDiff > 1) return false; // Only 1 row forward can occlude
+
+    // Add horizontal proximity check - tile must be near the unit
+    const horizontalDist = Math.abs(tileX - unitX) + Math.abs(tileY - unitY);
+    if (horizontalDist > 2) return false; // Too far away horizontally
 
     return tileHeight > unitVisualY + 8; // 8px buffer
   }
