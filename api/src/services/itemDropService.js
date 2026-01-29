@@ -398,7 +398,7 @@ function generateAugments(rng, bonusSlots, isConsumable) {
 async function generateItem(templateId, seed, targetLevel, forcedRarity) {
   // Get template from database
   const result = await query(
-    `SELECT id, name, item_type, equipment_slot, stat_bonuses, level_requirement, base_price, rarity
+    `SELECT id, name, item_type, equipment_slot, stat_bonuses, level_requirement, base_price, rarity, sprite_id
      FROM item_templates WHERE id = $1`,
     [templateId]
   );
@@ -481,6 +481,7 @@ async function generateItem(templateId, seed, targetLevel, forcedRarity) {
     quality: materialTier.quality,
     generationSeed: seed,
     value: scaledPrice,
+    spriteId: template.sprite_id,
     modifications: {
       generationSeed: seed,
       material,
@@ -488,7 +489,8 @@ async function generateItem(templateId, seed, targetLevel, forcedRarity) {
       baseStats: scaledStats,
       bonusStats,
       augments,
-      generatedName
+      generatedName,
+      spriteId: template.sprite_id
     }
   };
 }
@@ -617,7 +619,8 @@ function formatDropsForResponse(drops) {
     baseStats: item.baseStats,
     bonusStats: item.bonusStats,
     levelRequirement: item.levelRequirement,
-    value: item.value
+    value: item.value,
+    spriteId: item.spriteId
   }));
 }
 
