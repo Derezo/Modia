@@ -772,7 +772,7 @@ export class AuthScene extends Scene {
     }
 
     // Set the active character
-    this.game.setCharacter(result.character);
+    this.game.state.set('activeCharacter', result.character);
 
     // Initialize notification system
     this.game.initNotificationSystem();

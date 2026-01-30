@@ -759,13 +759,20 @@ export class BattleScene extends Scene {
   addBattleLogEntry(actor, actionType, target, result) {
     if (!this.ui) return;
 
-    // Build log entry
+    // Build log entry with full portrait data for rendering
     const entry = {
       timestamp: Date.now(),
       turn: this.battleLogTurnCounter || 1,
       actor: actor ? {
+        id: actor.id,
         name: actor.name,
-        isPlayer: actor.type === 'player'
+        isPlayer: actor.type === 'player',
+        // Portrait data for rendering
+        type: actor.type,
+        race: actor.race,
+        gender: actor.gender,
+        class: actor.class,
+        enemyId: actor.enemyId
       } : { name: 'Unknown', isPlayer: false },
       action: {
         type: actionType,
@@ -773,8 +780,15 @@ export class BattleScene extends Scene {
       },
       element: result?.element || 'physical',
       target: target ? {
+        id: target.id,
         name: target.name,
-        isPlayer: target.type === 'player'
+        isPlayer: target.type === 'player',
+        // Portrait data for rendering
+        type: target.type,
+        race: target.race,
+        gender: target.gender,
+        class: target.class,
+        enemyId: target.enemyId
       } : null,
       result: {
         damage: result?.damage || 0,
@@ -1877,6 +1891,36 @@ export class BattleScene extends Scene {
           }
         }
       }
+    }
+
+    // Add battle log entry for player action
+    // (WebSocket excludes the acting player, so we create the entry from HTTP response)
+    if (this.pendingAction && actionResult) {
+      const activeUnit = this.units.get(this.getActiveUnit()?.id);
+      const targetUnit = actionResult.targetId ? this.units.get(actionResult.targetId) : null;
+      const actionType = this.pendingAction.type;
+
+      // Build result object with all relevant data
+      const logResult = {
+        damage: actionResult.damage || 0,
+        isCritical: actionResult.isCritical || false,
+        missed: actionResult.missed || false,
+        healing: actionResult.healing || 0,
+        mpRestored: actionResult.mpRestored || 0,
+        skillName: actionResult.skillName,
+        itemName: actionResult.itemName,
+        statusApplied: actionResult.effectApplied || actionResult.statusApplied,
+        element: actionResult.element,
+        damageType: actionResult.damageType
+      };
+
+      // For movement, add position data
+      if (actionType === 'move' && this.pendingAction.targetTile) {
+        logResult.from = { x: activeUnit?.gridX, y: activeUnit?.gridY };
+        logResult.to = this.pendingAction.targetTile;
+      }
+
+      this.addBattleLogEntry(activeUnit, actionType, targetUnit, logResult);
     }
 
     // Sync enemy action results from HTTP response

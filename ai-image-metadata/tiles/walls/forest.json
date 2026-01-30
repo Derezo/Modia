@@ -13,7 +13,8 @@
       "terrain": "default",
       "prompt": "seamless vertical earth cliff texture with exposed soil layers and grass roots, tileable horizontal pattern, side view cross-section, natural brown and green tones",
       "seed": 11001,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-30T14:15:37.645Z"
     },
     {
       "key": "wall_forest_stone",

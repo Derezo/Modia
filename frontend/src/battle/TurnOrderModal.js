@@ -26,7 +26,7 @@ import {
 import {
   formatHPBar,
   formatCTBar,
-  getUnitIconHtml,
+  getUnitPortraitHtml,
   BAR_COLORS
 } from './turnOrderUtils.js';
 import { escapeHtml } from './battleLogUtils.js';
@@ -664,20 +664,21 @@ export default class TurnOrderModal {
 
   /**
    * Render unit portrait
+   * Uses portrait assets (race_gender_class for players, enemy_id for enemies)
    * @param {Object} unit - Unit data
    * @returns {Promise<string>} HTML string
    */
   async renderPortrait(unit) {
     const size = 64;
-    const iconHtml = await getUnitIconHtml(unit, this.iconCache, size);
+    const portraitHtml = await getUnitPortraitHtml(unit, this.iconCache, size);
 
     // Check if we got an image or fallback
-    if (iconHtml.includes('<img')) {
-      return iconHtml;
+    if (portraitHtml.includes('<img')) {
+      return portraitHtml;
     }
 
     // Return styled fallback
-    return `<div class="turn-order-unit__portrait-fallback">${iconHtml.replace(/<[^>]*>/g, '').trim()}</div>`;
+    return `<div class="turn-order-unit__portrait-fallback">${portraitHtml.replace(/<[^>]*>/g, '').trim()}</div>`;
   }
 
   /**

@@ -4,22 +4,47 @@
   "classTraits": {
     "warrior": {
       "visualTraits": "armored fighter sword shield sturdy muscular battle-ready",
-      "defaultAnimations": ["idle", "walk", "attack", "hurt", "death"],
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
       "attackStyle": "sword slash overhead swing"
     },
     "wizard": {
       "visualTraits": "robed mage staff arcane glowing mystical",
-      "defaultAnimations": ["idle", "walk", "attack", "hurt", "death", "cast"],
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
       "attackStyle": "staff thrust magical bolt"
     },
     "monk": {
       "visualTraits": "martial artist wrapped hands disciplined agile focused",
-      "defaultAnimations": ["idle", "walk", "attack", "hurt", "death"],
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
       "attackStyle": "punch kick martial arts strike"
     },
     "chemist": {
       "visualTraits": "alchemist vials pouch apron practical clever",
-      "defaultAnimations": ["idle", "walk", "attack", "hurt", "death"],
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
       "attackStyle": "throw vial toss potion"
     }
   },
@@ -28,23 +53,62 @@
     {
       "id": "warrior",
       "class": "warrior",
-      "animations": ["idle", "walk", "attack", "hurt", "death"],
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
       "seed": 50001,
       "generated": false,
-      "loraModel": "v1"
+      "loraModel": "v1",
+      "generatedAnimations": {
+        "idle": true,
+        "walk": true,
+        "attack": true
+      },
+      "generatedAt": "2026-01-30T15:45:19.847Z"
     },
     {
       "id": "wizard",
       "class": "wizard",
-      "animations": ["idle", "walk", "attack", "hurt", "death", "cast"],
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
       "seed": 50002,
       "generated": false,
-      "loraModel": "v1"
+      "loraModel": "retro-pixel",
+      "prompt": "",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "generatedAnimations": {
+        "idle": true,
+        "walk": true,
+        "attack": true,
+        "hurt": true,
+        "death": true
+      },
+      "generatedAt": "2026-01-30T17:27:26.713Z"
     },
     {
       "id": "monk",
       "class": "monk",
-      "animations": ["idle", "walk", "attack", "hurt", "death"],
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
       "seed": 50003,
       "generated": false,
       "loraModel": "v1"
@@ -52,7 +116,13 @@
     {
       "id": "chemist",
       "class": "chemist",
-      "animations": ["idle", "walk", "attack", "hurt", "death"],
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
       "seed": 50004,
       "generated": false,
       "loraModel": "v1"

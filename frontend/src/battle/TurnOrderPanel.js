@@ -10,7 +10,7 @@
  */
 
 import { PARCHMENT_COLORS, PARCHMENT_TYPOGRAPHY, PARCHMENT_SPACING } from '../ui/parchment/ParchmentTheme.js';
-import { getUnitIconHtml, getClassLetter } from './turnOrderUtils.js';
+import { getUnitPortraitHtml, getClassLetter } from './turnOrderUtils.js';
 
 const P = PARCHMENT_COLORS;
 const T = PARCHMENT_TYPOGRAPHY;
@@ -368,12 +368,14 @@ export default class TurnOrderPanel {
   }
 
   /**
-   * Get icon HTML for a prediction using shared utilities
+   * Get portrait HTML for a prediction using shared utilities
+   * Uses portrait assets (race_gender_class for players, enemy_id for enemies)
    * @param {Object} prediction - Turn prediction data
-   * @returns {Promise<string>} Icon HTML
+   * @returns {Promise<string>} Portrait HTML
    */
   async getIconHtml(prediction) {
-    return getUnitIconHtml(prediction, this.iconCache);
+    // Use 32px for compact panel display
+    return getUnitPortraitHtml(prediction, this.iconCache, 32);
   }
 
   /**

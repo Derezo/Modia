@@ -607,6 +607,15 @@ async function seedDeveloperTestData(castleId) {
   // Initialize fog of war discovery for the user
   await pool.query('SELECT discover_node_and_adjacent($1, $2)', [userId, castleId]);
 
+  // Award Aries zodiac crystal to derezo for testing
+  await pool.query(
+    `INSERT INTO user_zodiac_crystals (user_id, zodiac_sign, shrine_node_id)
+     VALUES ($1, 'aries', NULL)
+     ON CONFLICT (user_id, zodiac_sign) DO NOTHING`,
+    [userId]
+  );
+  console.log('  Awarded zodiac crystal: Aries (for testing zodiac modal)');
+
   console.log(`Developer seed data created: user 'derezo' with ${createdCount} items`);
   console.log('  Login: derezo / password');
   console.log('  Gold: 30,000');

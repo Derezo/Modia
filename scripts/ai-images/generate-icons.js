@@ -35,8 +35,10 @@ const {
   loadRegenerationQueue,
   clearRegenerationMarker,
   parseBaseArgs,
-  applyKeyFilter
+  applyKeyFilter,
+  loadCategoryManifest
 } = require('./lib');
+const { ICON_PREFIX_MAP, ICON_SUBCATEGORIES } = require('../../shared/iconCategories.cjs');
 
 // Configuration
 const PROJECT_ROOT = getProjectRoot();
@@ -96,24 +98,6 @@ Examples:
 `);
 }
 
-/**
- * Map subcategory to expected ID prefix.
- * Subcategories are plural (actions, augments) but metadata ID prefixes are singular
- * (action_, augment_), so we need this mapping.
- *
- * NOTE: This mapping is duplicated in:
- * - api/src/routes/admin.js (server-side normalization)
- * - admin/src/lib/assetPathHelper.js (client-side URL generation)
- * Keep all three in sync when adding new icon subcategories.
- */
-const ICON_PREFIX_MAP = {
-  actions: 'action_',
-  augments: 'augment_',
-  status: 'status_',
-  menu: 'menu_',
-  resources: 'resource_',
-  zodiac: 'zodiac_'
-};
 
 /**
  * Get the output path for an icon
@@ -288,8 +272,10 @@ async function main() {
     }
   }
 
-  // Ensure output directories exist
-  for (const cat of ['actions', 'status', 'menu', 'augments', 'resources', 'zodiac']) {
+  // Ensure output directories exist (read categories from manifest)
+  const manifest = loadCategoryManifest('icons');
+  const categories = manifest.categories || Object.keys(manifest.categoryFiles || {});
+  for (const cat of categories) {
     ensureDirectoryExists(path.join(OUTPUT_DIR, cat));
   }
 

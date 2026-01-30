@@ -2,19 +2,18 @@
   "version": "2.0.0",
   "category": "items",
   "description": "Item sprites for layered composition system - base sprites combined with overlays at runtime",
-  "totalAssets": 144,
+  "totalAssets": 133,
   "outputDir": "/assets/items/",
   "size": "128x128",
   "format": "png",
   "loraModel": "V2",
   "trigger": "wbgmsst",
-  "categories": ["weapons", "armor", "accessories", "consumables", "zodiac"],
+  "categories": ["weapons", "armor", "accessories", "consumables"],
   "categoryFiles": {
     "weapons": "weapons.json",
     "armor": "armor.json",
     "accessories": "accessories.json",
-    "consumables": "consumables.json",
-    "zodiac": "zodiac.json"
+    "consumables": "consumables.json"
   },
   "layeredComposition": {
     "enabled": true,

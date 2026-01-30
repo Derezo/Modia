@@ -57,7 +57,13 @@
       "seed": 10002,
       "generated": true,
       "generatedAt": "2026-01-27T19:52:44.700Z",
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "prompt": "human features balanced proportions warm skin tone male masculine features blue wizard robes with hood staff arcane symbols mystical scholarly",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "human_male_monk",
@@ -118,7 +124,13 @@
       "seed": 10006,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T19:55:43.097Z"
+      "generatedAt": "2026-01-27T19:55:43.097Z",
+      "prompt": "human features balanced proportions warm skin tone female feminine features blue wizard robes with hood staff arcane symbols mystical scholarly",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "human_female_monk",
@@ -160,7 +172,13 @@
       "seed": 10010,
       "generated": true,
       "generatedAt": "2026-01-27T19:58:49.594Z",
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "prompt": "human features balanced proportions warm skin tone androgynous features non-binary blue wizard robes with hood staff arcane symbols mystical scholarly",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "human_other_monk",
@@ -242,7 +260,13 @@
       "seed": 10106,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:05:06.275Z"
+      "generatedAt": "2026-01-27T20:05:06.275Z",
+      "prompt": "elf pointed ears angular features fair complexion luminous eyes female feminine features blue wizard robes with hood staff arcane symbols mystical scholarly",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "elf_female_monk",
@@ -322,7 +346,13 @@
       "seed": 10202,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:11:16.336Z"
+      "generatedAt": "2026-01-27T20:11:16.336Z",
+      "prompt": "dwarf stout build thick beard braided hair sturdy male masculine features blue wizard robes with hood staff arcane symbols mystical scholarly",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "dwarf_male_monk",
@@ -362,7 +392,13 @@
       "seed": 10206,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:14:18.631Z"
+      "generatedAt": "2026-01-27T20:14:18.631Z",
+      "prompt": "dwarf stout build thick beard braided hair sturdy female feminine features blue wizard robes with hood staff arcane symbols mystical scholarly",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "dwarf_female_monk",
@@ -402,7 +438,13 @@
       "seed": 10210,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:17:18.864Z"
+      "generatedAt": "2026-01-27T20:17:18.864Z",
+      "prompt": "dwarf stout build thick beard braided hair sturdy androgynous features non-binary blue wizard robes with hood staff arcane symbols mystical scholarly",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "dwarf_other_monk",
@@ -442,7 +484,13 @@
       "seed": 10302,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:20:18.709Z"
+      "generatedAt": "2026-01-27T20:20:18.709Z",
+      "prompt": "vampire pale skin red eyes fangs aristocratic elegant male masculine features blue wizard robes with hood staff arcane symbols mystical scholarly",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "vampire_male_monk",
@@ -482,7 +530,13 @@
       "seed": 10306,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:23:18.724Z"
+      "generatedAt": "2026-01-27T20:23:18.724Z",
+      "prompt": "vampire pale skin red eyes fangs aristocratic elegant female feminine features blue wizard robes with hood staff arcane symbols mystical scholarly",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "vampire_female_monk",
@@ -522,7 +576,13 @@
       "seed": 10310,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:26:27.787Z"
+      "generatedAt": "2026-01-27T20:26:27.787Z",
+      "prompt": "vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary blue wizard robes with hood staff arcane symbols mystical scholarly",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "vampire_other_monk",
@@ -562,7 +622,13 @@
       "seed": 10402,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:29:29.981Z"
+      "generatedAt": "2026-01-27T20:29:29.981Z",
+      "prompt": "orc green skin tusks muscular tribal markings fierce male masculine features blue wizard robes with hood staff arcane symbols mystical scholarly",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "orc_male_monk",
@@ -602,7 +668,13 @@
       "seed": 10406,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:32:33.199Z"
+      "generatedAt": "2026-01-27T20:32:33.199Z",
+      "prompt": "orc green skin tusks muscular tribal markings fierce female feminine features blue wizard robes with hood staff arcane symbols mystical scholarly",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "orc_female_monk",
@@ -642,7 +714,13 @@
       "seed": 10410,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:36:19.248Z"
+      "generatedAt": "2026-01-27T20:36:19.248Z",
+      "prompt": "orc green skin tusks muscular tribal markings fierce androgynous features non-binary blue wizard robes with hood staff arcane symbols mystical scholarly",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "orc_other_monk",

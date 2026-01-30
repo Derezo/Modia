@@ -2,7 +2,7 @@
  * ZodiacCrystalModal - Collection grid modal for zodiac crystals
  *
  * Displays all 12 zodiac crystals in a 4x3 grid with element filtering.
- * Features animated crystal orbs, progress tracking, and collection bonuses.
+ * Features zodiac icon images, progress tracking, and collection bonuses.
  *
  * Key responsibilities:
  * - Render 4x3 grid of zodiac crystals with element-based styling
@@ -11,7 +11,10 @@
  * - Display collection bonus status
  * - Trigger detail modal on crystal selection
  *
- * @see CrystalOrb.js - Individual crystal rendering
+ * Icons: Uses zodiac PNG icons from /assets/icons/png/32/zodiac/
+ * - Collected: {sign}.png (e.g., aries.png)
+ * - Locked: {sign}_locked.png (e.g., aries_locked.png)
+ *
  * @see ConstellationData.js - Zodiac info and element colors
  */
 
@@ -22,8 +25,8 @@ import {
   getParchmentShadow,
   getParchmentScrollbarCSS
 } from '../ui/parchment/index.js';
-import { CrystalOrb } from './zodiac/CrystalOrb.js';
 import { ZODIAC_INFO, ELEMENT_COLORS } from './zodiac/ConstellationData.js';
+import { iconLoader } from '../core/IconLoader.js';
 
 const P = PARCHMENT_COLORS;
 const STYLE_ID = 'zodiac-crystal-modal-styles';
@@ -586,19 +589,28 @@ export class ZodiacCrystalModal {
     cell.style.setProperty('--element-color', colors.primary);
     cell.style.setProperty('--element-glow', colors.glow);
 
-    // Create CrystalOrb canvas
-    const orb = new CrystalOrb({
-      sign,
-      size: 32,
-      collected,
-      showConstellation: true,
-      animated: collected
-    });
-    this.crystalOrbs.set(sign, orb);
+    // Create icon image element
+    // Use sign for collected, sign_locked for undiscovered
+    const iconName = collected ? sign : `${sign}_locked`;
+    const iconPath = iconLoader.getIconPath('zodiac', iconName, 32);
 
     const orbContainer = document.createElement('div');
     orbContainer.className = 'zodiac-crystal-orb';
-    orbContainer.appendChild(orb.canvas);
+
+    const img = document.createElement('img');
+    img.src = iconPath;
+    img.alt = collected ? info?.name || sign : 'Unknown Crystal';
+    img.width = 32;
+    img.height = 32;
+    img.style.cssText = 'image-rendering: pixelated; display: block;';
+    img.draggable = false;
+
+    // Add glow effect for collected crystals
+    if (collected) {
+      img.style.filter = `drop-shadow(0 0 4px ${colors.glow})`;
+    }
+
+    orbContainer.appendChild(img);
     cell.appendChild(orbContainer);
 
     // Name

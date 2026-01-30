@@ -22,6 +22,8 @@ import {
   getEntryType,
   escapeHtml
 } from './battleLogUtils.js';
+import { buildPortraitId, getClassLetter } from './turnOrderUtils.js';
+import { getAssetPath } from '@shared/assetPaths.js';
 
 const P = PARCHMENT_COLORS;
 const T = PARCHMENT_TYPOGRAPHY;
@@ -243,6 +245,51 @@ export default class BattleLogModal {
         margin-bottom: 4px;
         flex-wrap: wrap;
         gap: 4px;
+      }
+
+      .battle-log-entry-unit-wrapper {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .battle-log-entry-portrait {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 1px solid ${P.border.medium};
+        vertical-align: middle;
+        flex-shrink: 0;
+      }
+
+      .battle-log-entry-portrait--player {
+        border-color: ${P.state.info};
+      }
+
+      .battle-log-entry-portrait--enemy {
+        border-color: ${P.state.error};
+      }
+
+      .battle-log-entry-portrait-fallback {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: ${T.sizes.xs};
+        font-weight: ${T.weights.bold};
+        color: ${P.text.inverse};
+        flex-shrink: 0;
+      }
+
+      .battle-log-entry-portrait-fallback--player {
+        background: ${P.state.info};
+      }
+
+      .battle-log-entry-portrait-fallback--enemy {
+        background: ${P.state.error};
       }
 
       .battle-log-entry-unit {
@@ -639,7 +686,32 @@ export default class BattleLogModal {
   }
 
   /**
-   * Render entry header with actor and target
+   * Render portrait HTML for a unit (synchronous - uses img tag with src)
+   * @param {Object} unit - Unit info with portrait data
+   * @param {string} typeClass - 'player' or 'enemy'
+   * @returns {string} HTML string
+   */
+  renderUnitPortrait(unit, typeClass) {
+    // Check if we have portrait data
+    if (unit?.race || unit?.class || unit?.enemyId) {
+      const portraitId = buildPortraitId(unit);
+      const portraitSrc = getAssetPath('portraits', portraitId, { size: 64 });
+
+      return `<img
+        src="${portraitSrc}"
+        alt=""
+        class="battle-log-entry-portrait battle-log-entry-portrait--${typeClass}"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';"
+      ><span class="battle-log-entry-portrait-fallback battle-log-entry-portrait-fallback--${typeClass}" style="display:none;">${getClassLetter(unit.class)}</span>`;
+    }
+
+    // Fallback to letter only
+    const letter = getClassLetter(unit?.class);
+    return `<span class="battle-log-entry-portrait-fallback battle-log-entry-portrait-fallback--${typeClass}">${letter}</span>`;
+  }
+
+  /**
+   * Render entry header with actor and target portraits
    * @param {Object} actor - Actor info
    * @param {Object} target - Target info (optional)
    * @returns {string} HTML string
@@ -651,15 +723,18 @@ export default class BattleLogModal {
 
     let html = `
       <div class="battle-log-entry-header">
-        <span class="battle-log-entry-unit battle-log-entry-unit--${actorClass}"
-              data-unit-id="${actorId}"
-              data-unit-name="${actorName}"
-              data-unit-is-player="${actor?.isPlayer || false}"
-              tabindex="0"
-              role="button"
-              title="${actorName}"
-              aria-label="View ${actorName}">
-          ${actorName}
+        <span class="battle-log-entry-unit-wrapper">
+          ${this.renderUnitPortrait(actor, actorClass)}
+          <span class="battle-log-entry-unit battle-log-entry-unit--${actorClass}"
+                data-unit-id="${actorId}"
+                data-unit-name="${actorName}"
+                data-unit-is-player="${actor?.isPlayer || false}"
+                tabindex="0"
+                role="button"
+                title="${actorName}"
+                aria-label="View ${actorName}">
+            ${actorName}
+          </span>
         </span>
     `;
 
@@ -670,15 +745,18 @@ export default class BattleLogModal {
 
       html += `
         <span class="battle-log-entry-arrow" aria-hidden="true">-></span>
-        <span class="battle-log-entry-unit battle-log-entry-unit--${targetClass}"
-              data-unit-id="${targetId}"
-              data-unit-name="${targetName}"
-              data-unit-is-player="${target?.isPlayer || false}"
-              tabindex="0"
-              role="button"
-              title="${targetName}"
-              aria-label="View ${targetName}">
-          ${targetName}
+        <span class="battle-log-entry-unit-wrapper">
+          ${this.renderUnitPortrait(target, targetClass)}
+          <span class="battle-log-entry-unit battle-log-entry-unit--${targetClass}"
+                data-unit-id="${targetId}"
+                data-unit-name="${targetName}"
+                data-unit-is-player="${target?.isPlayer || false}"
+                tabindex="0"
+                role="button"
+                title="${targetName}"
+                aria-label="View ${targetName}">
+            ${targetName}
+          </span>
         </span>
       `;
     }

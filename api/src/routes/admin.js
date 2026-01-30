@@ -139,6 +139,46 @@ function constructPortraitPrompt(portrait, traitData) {
 }
 
 /**
+ * Construct a prompt for a character sprite asset
+ * Characters have different trait data than portraits:
+ * - Players: classTraits (visualTraits, attackStyle) + stylePrefix
+ * - Enemies: biomeTraits + archetypeTraits
+ * @param {object} character - Character asset metadata
+ * @returns {object} { basePrompt, components }
+ */
+function constructCharacterPrompt(character) {
+  const isPlayer = character._type === 'player';
+  const stylePrefix = character._stylePrefix || '';
+
+  if (isPlayer) {
+    // Player characters: stylePrefix + class visual traits
+    const classTraits = character._classTraits || {};
+    const visualTraits = classTraits.visualTraits || '';
+
+    return {
+      basePrompt: [stylePrefix, visualTraits].filter(Boolean).join(' ').trim(),
+      components: {
+        stylePrefix: { value: stylePrefix },
+        class: { key: character.class, visualTraits },
+      },
+    };
+  } else {
+    // Enemy characters: stylePrefix + biome traits + archetype traits
+    const biomeTraits = character._biomeTraits || '';
+    const archetypeTraits = character._archetypeTraits || '';
+
+    return {
+      basePrompt: [stylePrefix, biomeTraits, archetypeTraits].filter(Boolean).join(' ').trim(),
+      components: {
+        stylePrefix: { value: stylePrefix },
+        biome: { key: character._biome, value: biomeTraits },
+        archetype: { key: character.archetype, value: archetypeTraits },
+      },
+    };
+  }
+}
+
+/**
  * Construct full prompt with theme data for any asset
  * @param {object} asset - Asset metadata
  * @param {string} category - Asset category
@@ -158,6 +198,13 @@ function constructFullPrompt(asset, category, theme, traitData = null) {
   // For portraits, construct from traits if no custom prompt
   if (category === 'portraits' && traitData && !asset.prompt) {
     const constructed = constructPortraitPrompt(asset, traitData);
+    basePrompt = constructed.basePrompt;
+    traitComponents = constructed.components;
+  }
+
+  // For characters (sprite sheets), construct from class/biome traits if no custom prompt
+  if (category === 'characters' && !asset.prompt) {
+    const constructed = constructCharacterPrompt(asset);
     basePrompt = constructed.basePrompt;
     traitComponents = constructed.components;
   }
@@ -353,6 +400,17 @@ router.get('/assets/:category', asyncHandler(async (req, res) => {
         }
         const data = metadataUtils.loadCharacterMetadata(options);
         assets = data.characters || [];
+
+        // Enrich characters with constructed prompts (similar to portraits)
+        assets = assets.map((character) => {
+          const { basePrompt, components } = constructCharacterPrompt(character);
+          return {
+            ...character,
+            // Only add constructed prompt if no custom prompt exists
+            prompt: character.prompt || basePrompt,
+            promptComponents: components,
+          };
+        });
         break;
       }
     }
@@ -426,6 +484,21 @@ router.get('/assets/:category/:id', asyncHandler(async (req, res) => {
       prompt: asset.prompt || basePrompt,
       promptComponents: components,
     };
+  }
+
+  // Enrich characters with constructed prompts
+  // Note: loadCategoryAssets doesn't populate trait fields, so we load via loadCharacterMetadata
+  if (category === 'characters') {
+    const charData = metadataUtils.loadCharacterMetadata({ id });
+    const charWithTraits = charData.characters.find(c => c.id === id);
+    if (charWithTraits) {
+      const { basePrompt, components } = constructCharacterPrompt(charWithTraits);
+      asset = {
+        ...charWithTraits,
+        prompt: charWithTraits.prompt || basePrompt,
+        promptComponents: components,
+      };
+    }
   }
 
   res.json(asset);
