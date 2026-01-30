@@ -182,15 +182,19 @@ export class WorldMapEffects {
    * Layer 1: Tiled parchment background with vignette
    */
   renderParchmentBackground(ctx, canvasWidth, canvasHeight) {
-    if (!this.parchmentTexture) {
-      ctx.fillStyle = '#f4e4bc';
-      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-      return;
-    }
-
-    const pattern = ctx.createPattern(this.parchmentTexture, 'repeat');
-    ctx.fillStyle = pattern;
+    // DEBUG: Test if solid fill works but pattern doesn't
+    ctx.fillStyle = '#f4e4bc';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // Temporarily skip pattern fill to test
+    // if (!this.parchmentTexture) {
+    //   ctx.fillStyle = '#f4e4bc';
+    //   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    //   return;
+    // }
+    // const pattern = ctx.createPattern(this.parchmentTexture, 'repeat');
+    // ctx.fillStyle = pattern;
+    // ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
     // Subtle vignette effect
     const gradient = ctx.createRadialGradient(

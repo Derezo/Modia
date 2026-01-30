@@ -304,6 +304,17 @@ export class WorldMapMinimap {
   renderContent(nodes, connections, currentNode, discoveredNodes, visitedNodes) {
     const ctx = this.contentCtx;
 
+    // DEBUG: Log minimap render details once
+    if (!this._renderDebugLogged && nodes.length > 0) {
+      console.log('[DEBUG] Minimap renderContent - worldScale:', this.worldScale, 'worldBounds:', this.worldBounds);
+      console.log('[DEBUG] Minimap contentCanvas:', this.contentCanvas?.width, 'x', this.contentCanvas?.height);
+      // Log first node position
+      const firstNode = nodes[0];
+      const firstPos = this.worldToMinimap(firstNode.x_coord, firstNode.y_coord);
+      console.log('[DEBUG] First node world coords:', firstNode.x_coord, firstNode.y_coord, '-> minimap:', firstPos);
+      this._renderDebugLogged = true;
+    }
+
     // Clear with parchment background
     ctx.fillStyle = '#f4e4bc';
     ctx.fillRect(0, 0, this.size, this.size);
