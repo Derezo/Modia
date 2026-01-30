@@ -1,0 +1,356 @@
+{
+  "version": "1.0.0",
+  "category": "zodiac",
+  "description": "Zodiac crystal constellation orb icons for collection grid display",
+  "size": "32x32",
+  "styleGuide": {
+    "concept": "Constellation Orbs",
+    "description": "Translucent magical spheres with constellation patterns glowing inside. Each zodiac sign has its distinct constellation visible within a crystalline orb.",
+    "elements": {
+      "orb": "Translucent crystal sphere with subtle glass-like reflections",
+      "constellation": "Connected star pattern specific to each zodiac sign glowing within",
+      "glow": "Element-appropriate color aura emanating from the orb",
+      "stars": "Bright points for major stars in each constellation"
+    },
+    "elementColors": {
+      "fire": {
+        "signs": [
+          "aries",
+          "leo",
+          "sagittarius"
+        ],
+        "primary": "warm orange",
+        "secondary": "red",
+        "glow": "fiery amber aura"
+      },
+      "earth": {
+        "signs": [
+          "taurus",
+          "virgo",
+          "capricorn"
+        ],
+        "primary": "emerald green",
+        "secondary": "earthy brown",
+        "glow": "verdant green aura"
+      },
+      "air": {
+        "signs": [
+          "gemini",
+          "libra",
+          "aquarius"
+        ],
+        "primary": "light blue",
+        "secondary": "white",
+        "glow": "ethereal silver-blue aura"
+      },
+      "water": {
+        "signs": [
+          "cancer",
+          "scorpio",
+          "pisces"
+        ],
+        "primary": "deep blue",
+        "secondary": "purple",
+        "glow": "mystical indigo aura"
+      }
+    }
+  },
+  "icons": [
+    {
+      "id": "zodiac_aries",
+      "name": "Aries Crystal",
+      "zodiacSign": "aries",
+      "element": "fire",
+      "constellation": "Ram",
+      "prompt": "translucent crystal orb sphere with glowing zodiac ram aries constellation inside orange fiery glow magical mystical fantasy",
+      "seed": 36001,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
+    },
+    {
+      "id": "zodiac_taurus",
+      "name": "Taurus Crystal",
+      "zodiacSign": "taurus",
+      "element": "earth",
+      "constellation": "Bull",
+      "prompt": "translucent crystal orb sphere with glowing zodiac bull taurus constellation inside green earthy glow magical mystical fantasy",
+      "seed": 36002,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
+    },
+    {
+      "id": "zodiac_gemini",
+      "name": "Gemini Crystal",
+      "zodiacSign": "gemini",
+      "element": "air",
+      "constellation": "Twins",
+      "prompt": "translucent crystal orb sphere with glowing zodiac twins gemini constellation inside light blue ethereal glow magical mystical fantasy",
+      "seed": 36003,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
+    },
+    {
+      "id": "zodiac_cancer",
+      "name": "Cancer Crystal",
+      "zodiacSign": "cancer",
+      "element": "water",
+      "constellation": "Crab",
+      "prompt": "translucent crystal orb sphere with glowing zodiac crab cancer constellation inside deep blue mystical glow magical fantasy",
+      "seed": 36004,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
+    },
+    {
+      "id": "zodiac_leo",
+      "name": "Leo Crystal",
+      "zodiacSign": "leo",
+      "element": "fire",
+      "constellation": "Lion",
+      "prompt": "translucent crystal orb sphere with glowing lion constellation inside orange fiery glow magical mystical fantasy",
+      "seed": 36005,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_virgo",
+      "name": "Virgo Crystal",
+      "zodiacSign": "virgo",
+      "element": "earth",
+      "constellation": "Maiden",
+      "prompt": "translucent crystal orb sphere with glowing maiden constellation inside green earthy glow magical mystical fantasy",
+      "seed": 36006,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_libra",
+      "name": "Libra Crystal",
+      "zodiacSign": "libra",
+      "element": "air",
+      "constellation": "Scales",
+      "prompt": "translucent crystal orb sphere with glowing scales constellation inside light blue ethereal glow magical mystical fantasy",
+      "seed": 36007,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_scorpio",
+      "name": "Scorpio Crystal",
+      "zodiacSign": "scorpio",
+      "element": "water",
+      "constellation": "Scorpion",
+      "prompt": "translucent crystal orb sphere with glowing scorpion constellation inside deep blue purple mystical glow magical fantasy",
+      "seed": 36008,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_sagittarius",
+      "name": "Sagittarius Crystal",
+      "zodiacSign": "sagittarius",
+      "element": "fire",
+      "constellation": "Archer",
+      "prompt": "translucent crystal orb sphere with glowing archer centaur constellation inside orange fiery glow magical mystical fantasy",
+      "seed": 36009,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_capricorn",
+      "name": "Capricorn Crystal",
+      "zodiacSign": "capricorn",
+      "element": "earth",
+      "constellation": "Sea-Goat",
+      "prompt": "translucent crystal orb sphere with glowing sea goat constellation inside green earthy glow magical mystical fantasy",
+      "seed": 36010,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_aquarius",
+      "name": "Aquarius Crystal",
+      "zodiacSign": "aquarius",
+      "element": "air",
+      "constellation": "Water Bearer",
+      "prompt": "translucent crystal orb sphere with glowing water bearer constellation inside light blue ethereal glow magical mystical fantasy",
+      "seed": 36011,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_pisces",
+      "name": "Pisces Crystal",
+      "zodiacSign": "pisces",
+      "element": "water",
+      "constellation": "Fish",
+      "prompt": "translucent crystal orb sphere with glowing twin fish constellation inside deep blue purple mystical glow magical fantasy",
+      "seed": 36012,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_aries_locked",
+      "name": "Aries Crystal (Locked)",
+      "zodiacSign": "aries",
+      "element": "fire",
+      "constellation": "Ram",
+      "variant": "locked",
+      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "seed": 36101,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_taurus_locked",
+      "name": "Taurus Crystal (Locked)",
+      "zodiacSign": "taurus",
+      "element": "earth",
+      "constellation": "Bull",
+      "variant": "locked",
+      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "seed": 36102,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_gemini_locked",
+      "name": "Gemini Crystal (Locked)",
+      "zodiacSign": "gemini",
+      "element": "air",
+      "constellation": "Twins",
+      "variant": "locked",
+      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "seed": 36103,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_cancer_locked",
+      "name": "Cancer Crystal (Locked)",
+      "zodiacSign": "cancer",
+      "element": "water",
+      "constellation": "Crab",
+      "variant": "locked",
+      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "seed": 36104,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_leo_locked",
+      "name": "Leo Crystal (Locked)",
+      "zodiacSign": "leo",
+      "element": "fire",
+      "constellation": "Lion",
+      "variant": "locked",
+      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "seed": 36105,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_virgo_locked",
+      "name": "Virgo Crystal (Locked)",
+      "zodiacSign": "virgo",
+      "element": "earth",
+      "constellation": "Maiden",
+      "variant": "locked",
+      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "seed": 36106,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_libra_locked",
+      "name": "Libra Crystal (Locked)",
+      "zodiacSign": "libra",
+      "element": "air",
+      "constellation": "Scales",
+      "variant": "locked",
+      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "seed": 36107,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_scorpio_locked",
+      "name": "Scorpio Crystal (Locked)",
+      "zodiacSign": "scorpio",
+      "element": "water",
+      "constellation": "Scorpion",
+      "variant": "locked",
+      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "seed": 36108,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_sagittarius_locked",
+      "name": "Sagittarius Crystal (Locked)",
+      "zodiacSign": "sagittarius",
+      "element": "fire",
+      "constellation": "Archer",
+      "variant": "locked",
+      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "seed": 36109,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_capricorn_locked",
+      "name": "Capricorn Crystal (Locked)",
+      "zodiacSign": "capricorn",
+      "element": "earth",
+      "constellation": "Sea-Goat",
+      "variant": "locked",
+      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "seed": 36110,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_aquarius_locked",
+      "name": "Aquarius Crystal (Locked)",
+      "zodiacSign": "aquarius",
+      "element": "air",
+      "constellation": "Water Bearer",
+      "variant": "locked",
+      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "seed": 36111,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_pisces_locked",
+      "name": "Pisces Crystal (Locked)",
+      "zodiacSign": "pisces",
+      "element": "water",
+      "constellation": "Fish",
+      "variant": "locked",
+      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "seed": 36112,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    }
+  ]
+}

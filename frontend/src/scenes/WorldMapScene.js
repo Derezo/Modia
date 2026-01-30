@@ -2,13 +2,11 @@ import { Scene } from './Scene.js';
 import { WorldMapEffects } from '../worldmap/WorldMapEffects.js';
 import { WorldMapMinimap } from '../worldmap/WorldMapMinimap.js';
 import { WorldMapCharacter } from '../worldmap/WorldMapCharacter.js';
-import { StaminaBar } from '../worldmap/StaminaBar.js';
-import { TravelProgressBar } from '../worldmap/TravelProgressBar.js';
+import { WorldMapHUDPanel } from '../worldmap/WorldMapHUDPanel.js';
 import { NodeActionMenu } from '../worldmap/NodeActionMenu.js';
 import { NodeHoverTooltip } from '../worldmap/NodeHoverTooltip.js';
 import { QuestMarkerManager } from '../worldmap/QuestMarkerManager.js';
 import { QuestProgressHUD } from '../worldmap/QuestProgressHUD.js';
-import { ZodiacIndicator } from '../worldmap/ZodiacIndicator.js';
 import { generatePathControlPoints, generateSplinePoints } from '../worldmap/PathRenderer.js';
 import { ProfileDropdown } from '../ui/parchment/ProfileDropdown.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
@@ -72,11 +70,8 @@ export class WorldMapScene extends Scene {
     // Character display on map
     this.mapCharacter = null;
 
-    // Stamina bar
-    this.staminaBar = null;
-
-    // Travel progress bar
-    this.travelProgressBar = null;
+    // Unified HUD panel (stamina, travel progress, zodiac)
+    this.hudPanel = null;
 
     // Travel state
     this.isTraveling = false;
@@ -130,9 +125,8 @@ export class WorldMapScene extends Scene {
     this.questMarkerManager = null; // Manages quest marker data
     this.questProgressHUD = null;   // Collapsible quest progress panel
 
-    // Zodiac collection indicator
-    this.zodiacIndicator = null;
-    this.zodiacCollectionData = null; // Cache for tooltip display
+    // Zodiac collection data cache for tooltip display
+    this.zodiacCollectionData = null;
   }
 
   async enter() {
@@ -196,17 +190,11 @@ export class WorldMapScene extends Scene {
     this.mapCharacter = new WorldMapCharacter(this.assetLoader);
     await this.initMapCharacter();
 
-    // Initialize stamina bar
-    this.staminaBar = new StaminaBar();
+    // Initialize unified HUD panel (stamina, travel progress, zodiac)
+    this.hudPanel = new WorldMapHUDPanel();
+    this.hudPanel.setZodiacClickHandler(() => this.openZodiacCrystalModal());
+    this.hudPanel.checkZodiacNewCrystalFlag(); // Check for new crystal notification
     await this.refreshStamina();
-
-    // Initialize travel progress bar
-    this.travelProgressBar = new TravelProgressBar();
-
-    // Initialize zodiac indicator
-    this.zodiacIndicator = new ZodiacIndicator();
-    this.zodiacIndicator.setClickHandler(() => this.openRelicCollectionModal());
-    this.zodiacIndicator.checkNewCrystalFlag(); // Check for new crystal notification
     this.refreshZodiacCollection(); // Fetch collection data (non-blocking)
 
     // Preload node sprites in background
@@ -247,7 +235,7 @@ export class WorldMapScene extends Scene {
         const result = await this.game.api.getCharacterStamina(partyLeader.id);
         console.log('refreshStamina - API result:', result);
         if (result.stamina) {
-          this.staminaBar.setStamina(result.stamina);
+          this.hudPanel.setStamina(result.stamina);
         }
       } else {
         console.warn('refreshStamina - no party leader found');
@@ -290,11 +278,11 @@ export class WorldMapScene extends Scene {
    * Refresh zodiac crystal collection from the server
    */
   async refreshZodiacCollection() {
-    if (!this.zodiacIndicator) return;
+    if (!this.hudPanel) return;
 
     try {
       const result = await this.game.api.get('/world/zodiac-collection');
-      this.zodiacIndicator.setCollection(result);
+      this.hudPanel.setZodiacCollection(result);
       this.zodiacCollectionData = result; // Cache for tooltip use
     } catch (err) {
       console.warn('Failed to refresh zodiac collection:', err);
@@ -311,16 +299,58 @@ export class WorldMapScene extends Scene {
         game: this.game,
         onClose: () => {
           modal.destroy();
-          // Clear glow after viewing the collection
-          if (this.zodiacIndicator) {
-            this.zodiacIndicator.showNewCrystalGlow = false;
-          }
         }
       });
       await modal.show();
     } catch (err) {
       console.error('Failed to open relic collection modal:', err);
       parchmentToast.error('Error', 'Failed to load relic collection.');
+    }
+  }
+
+  /**
+   * Open the zodiac crystal collection modal
+   */
+  async openZodiacCrystalModal() {
+    try {
+      const { ZodiacCrystalModal } = await import('../modals/ZodiacCrystalModal.js');
+      const modal = new ZodiacCrystalModal({
+        game: this.game,
+        onClose: () => {
+          modal.destroy();
+        },
+        onCrystalSelect: (sign, crystal) => {
+          modal.destroy();
+          this.openZodiacCrystalDetailModal(sign, crystal);
+        }
+      });
+      await modal.show();
+    } catch (err) {
+      console.error('Failed to open zodiac crystal modal:', err);
+      parchmentToast.error('Error', 'Failed to load zodiac collection.');
+    }
+  }
+
+  /**
+   * Open the zodiac crystal detail modal for a specific crystal
+   * @param {string} sign - Zodiac sign (e.g., 'aries', 'taurus')
+   * @param {Object} crystal - Crystal data object
+   */
+  async openZodiacCrystalDetailModal(sign, crystal) {
+    try {
+      const { ZodiacCrystalDetailModal } = await import('../modals/ZodiacCrystalDetailModal.js');
+      const modal = new ZodiacCrystalDetailModal({
+        game: this.game,
+        sign,
+        crystal,
+        onClose: () => {
+          modal.destroy();
+        }
+      });
+      await modal.show();
+    } catch (err) {
+      console.error('Failed to open zodiac crystal detail modal:', err);
+      parchmentToast.error('Error', 'Failed to load crystal details.');
     }
   }
 
@@ -425,7 +455,7 @@ export class WorldMapScene extends Scene {
       const cached = this.pathPreviewCache.get(cacheKey);
       this.previewPath = cached.path;
       this.previewCost = cached.cost;
-      this.previewAffordable = this.staminaBar ? this.staminaBar.current >= cached.cost : true;
+      this.previewAffordable = this.hudPanel ? this.hudPanel.staminaSegment.current >= cached.cost : true;
       this.previewBlockedNodes = cached.blockedNodes || [];
       this.previewPathBlocked = cached.pathBlocked || false;
       this.previewOriginBlocked = cached.originBlocked || false;
@@ -516,7 +546,7 @@ export class WorldMapScene extends Scene {
       previewCannotReach: this.previewCannotReach || false,
       isDiscovered: this.isNodeDiscovered(node),
       isVisited: node.visited === true,
-      currentStamina: this.staminaBar?.current || 0,
+      currentStamina: this.hudPanel?.staminaSegment?.current || 0,
       zodiacCollection: this.zodiacCollectionData // Pass for shrine tooltips
     };
 
@@ -628,6 +658,12 @@ export class WorldMapScene extends Scene {
     // Hide ProfileDropdown
     if (this.profileDropdown) {
       this.profileDropdown.hide();
+    }
+
+    // Destroy HUD panel
+    if (this.hudPanel) {
+      this.hudPanel.destroy();
+      this.hudPanel = null;
     }
 
     // Destroy party invite modal
@@ -1176,7 +1212,7 @@ export class WorldMapScene extends Scene {
 
             // Update stamina display
             if (travelResult.stamina) {
-              this.staminaBar.setStamina(travelResult.stamina);
+              this.hudPanel.setStamina(travelResult.stamina);
             }
 
             // Update node action menu
@@ -1260,7 +1296,7 @@ export class WorldMapScene extends Scene {
 
             // Update stamina display
             if (result.stamina) {
-              this.staminaBar.setStamina(result.stamina);
+              this.hudPanel.setStamina(result.stamina);
             }
 
             modal.destroy();
@@ -1393,9 +1429,8 @@ export class WorldMapScene extends Scene {
     canvas.addEventListener('click', () => {
       const pos = this.game.input.getPointerPosition();
 
-      // Check zodiac indicator click first
-      if (this.zodiacIndicator && this.zodiacIndicator.containsPoint(pos.x, pos.y)) {
-        this.zodiacIndicator.handleClick();
+      // Check HUD panel click first (handles zodiac and other elements)
+      if (this.hudPanel && this.hudPanel.handleClick(pos.x, pos.y)) {
         return;
       }
 
@@ -1590,8 +1625,8 @@ export class WorldMapScene extends Scene {
         const estimatedDuration = (totalDistance / 200) * 1.3 * 1000;
 
         // Start travel progress bar
-        if (this.travelProgressBar) {
-          this.travelProgressBar.startTravel(result.currentNode.name, estimatedDuration);
+        if (this.hudPanel) {
+          this.hudPanel.startTravel(result.currentNode.name, estimatedDuration);
         }
 
         // Start walking animation
@@ -1631,8 +1666,8 @@ export class WorldMapScene extends Scene {
     }
 
     // Update stamina from travel result
-    if (result.stamina && this.staminaBar) {
-      this.staminaBar.setStamina(result.stamina);
+    if (result.stamina && this.hudPanel) {
+      this.hudPanel.setStamina(result.stamina);
     }
 
     // Reload world data to get newly discovered nodes (fog of war reveal)
@@ -1664,8 +1699,8 @@ export class WorldMapScene extends Scene {
     }
 
     // Complete travel progress bar (triggers fade out)
-    if (this.travelProgressBar) {
-      this.travelProgressBar.complete();
+    if (this.hudPanel) {
+      this.hudPanel.completeTravel();
     }
 
     // Switch node rooms for WebSocket presence
@@ -1708,19 +1743,9 @@ export class WorldMapScene extends Scene {
       }
     }
 
-    // Update stamina bar
-    if (this.staminaBar) {
-      this.staminaBar.update(deltaTime);
-    }
-
-    // Update travel progress bar
-    if (this.travelProgressBar) {
-      this.travelProgressBar.update(deltaTime);
-    }
-
-    // Update zodiac indicator
-    if (this.zodiacIndicator) {
-      this.zodiacIndicator.update(deltaTime);
+    // Update HUD panel (stamina, travel progress, zodiac)
+    if (this.hudPanel) {
+      this.hudPanel.update(deltaTime);
     }
 
     // Update effects
@@ -2142,19 +2167,9 @@ export class WorldMapScene extends Scene {
 
     ctx.restore();
 
-    // Render stamina bar (UI layer)
-    if (this.staminaBar) {
-      this.staminaBar.render(ctx);
-    }
-
-    // Render travel progress bar (below stamina bar)
-    if (this.travelProgressBar) {
-      this.travelProgressBar.render(ctx);
-    }
-
-    // Render zodiac indicator (below travel bar)
-    if (this.zodiacIndicator) {
-      this.zodiacIndicator.render(ctx);
+    // Render HUD panel (stamina, travel progress, zodiac)
+    if (this.hudPanel) {
+      this.hudPanel.render(ctx);
     }
 
     // Render minimap (on top of everything)
@@ -2417,7 +2432,7 @@ export class WorldMapScene extends Scene {
         if (this.previewAffordable) {
           costLine = { text: `${this.previewCost} stamina`, color: '#6a8a6a' };
         } else {
-          const currentStamina = this.staminaBar?.current || 0;
+          const currentStamina = this.hudPanel?.staminaSegment?.current || 0;
           costLine = { text: `Need ${this.previewCost - currentStamina} more stamina`, color: '#c54545' };
         }
       }

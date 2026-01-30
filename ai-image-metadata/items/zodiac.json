@@ -1,0 +1,206 @@
+{
+  "version": "1.0.0",
+  "category": "zodiac",
+  "description": "Zodiac crystal constellation orb detail images for collection modal display",
+  "size": "256x256",
+  "styleGuide": {
+    "concept": "Constellation Orbs - Detail View",
+    "description": "High-detail translucent magical spheres with intricate constellation patterns glowing inside. Larger format shows more detail in the crystal facets and star arrangements.",
+    "elements": {
+      "orb": "Highly detailed translucent crystal sphere with visible glass-like facets and internal reflections",
+      "constellation": "Detailed connected star pattern with major and minor stars visible within the orb",
+      "glow": "Rich element-appropriate color aura with subtle particle effects",
+      "stars": "Bright glowing points with light rays for major stars",
+      "backdrop": "Dark mystical background to enhance the orb's luminosity"
+    },
+    "elementColors": {
+      "fire": {
+        "signs": ["aries", "leo", "sagittarius"],
+        "primary": "warm orange #FF8C00",
+        "secondary": "crimson red #DC143C",
+        "glow": "fiery amber aura with ember particles",
+        "starColor": "golden white"
+      },
+      "earth": {
+        "signs": ["taurus", "virgo", "capricorn"],
+        "primary": "emerald green #50C878",
+        "secondary": "earthy brown #8B4513",
+        "glow": "verdant green aura with leaf-like particles",
+        "starColor": "pale green white"
+      },
+      "air": {
+        "signs": ["gemini", "libra", "aquarius"],
+        "primary": "sky blue #87CEEB",
+        "secondary": "silver white #C0C0C0",
+        "glow": "ethereal silver-blue aura with wisp particles",
+        "starColor": "brilliant white"
+      },
+      "water": {
+        "signs": ["cancer", "scorpio", "pisces"],
+        "primary": "deep ocean blue #000080",
+        "secondary": "royal purple #7851A9",
+        "glow": "mystical indigo aura with bubble particles",
+        "starColor": "pale blue white"
+      }
+    },
+    "promptPattern": "Detailed translucent crystal orb with {constellation} constellation glowing inside, {element_description}, ornate medieval fantasy style, dark mystical background, magical artifact"
+  },
+  "items": [
+    {
+      "id": "zodiac_aries_detail",
+      "name": "Aries Constellation Orb",
+      "zodiacSign": "aries",
+      "element": "fire",
+      "constellation": "Ram",
+      "dateRange": "March 21 - April 19",
+      "prompt": "detailed translucent crystal orb with glowing ram constellation inside fiery orange and red glow ember particles mystical magical artifact ornate medieval fantasy dark background",
+      "seed": 37001,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_taurus_detail",
+      "name": "Taurus Constellation Orb",
+      "zodiacSign": "taurus",
+      "element": "earth",
+      "constellation": "Bull",
+      "dateRange": "April 20 - May 20",
+      "prompt": "detailed translucent crystal orb with glowing bull constellation inside emerald green and brown earthy glow nature particles mystical magical artifact ornate medieval fantasy dark background",
+      "seed": 37002,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_gemini_detail",
+      "name": "Gemini Constellation Orb",
+      "zodiacSign": "gemini",
+      "element": "air",
+      "constellation": "Twins",
+      "dateRange": "May 21 - June 20",
+      "prompt": "detailed translucent crystal orb with glowing twins constellation inside light blue and silver ethereal glow wisp particles mystical magical artifact ornate medieval fantasy dark background",
+      "seed": 37003,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_cancer_detail",
+      "name": "Cancer Constellation Orb",
+      "zodiacSign": "cancer",
+      "element": "water",
+      "constellation": "Crab",
+      "dateRange": "June 21 - July 22",
+      "prompt": "detailed translucent crystal orb with glowing crab constellation inside deep blue and purple oceanic glow bubble particles mystical magical artifact ornate medieval fantasy dark background",
+      "seed": 37004,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_leo_detail",
+      "name": "Leo Constellation Orb",
+      "zodiacSign": "leo",
+      "element": "fire",
+      "constellation": "Lion",
+      "dateRange": "July 23 - August 22",
+      "prompt": "detailed translucent crystal orb with glowing lion constellation inside fiery orange and golden glow ember particles mystical magical artifact ornate medieval fantasy dark background",
+      "seed": 37005,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_virgo_detail",
+      "name": "Virgo Constellation Orb",
+      "zodiacSign": "virgo",
+      "element": "earth",
+      "constellation": "Maiden",
+      "dateRange": "August 23 - September 22",
+      "prompt": "detailed translucent crystal orb with glowing maiden constellation inside emerald green and brown earthy glow nature particles mystical magical artifact ornate medieval fantasy dark background",
+      "seed": 37006,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_libra_detail",
+      "name": "Libra Constellation Orb",
+      "zodiacSign": "libra",
+      "element": "air",
+      "constellation": "Scales",
+      "dateRange": "September 23 - October 22",
+      "prompt": "detailed translucent crystal orb with glowing scales constellation inside light blue and silver ethereal glow wisp particles mystical magical artifact ornate medieval fantasy dark background",
+      "seed": 37007,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_scorpio_detail",
+      "name": "Scorpio Constellation Orb",
+      "zodiacSign": "scorpio",
+      "element": "water",
+      "constellation": "Scorpion",
+      "dateRange": "October 23 - November 21",
+      "prompt": "detailed translucent crystal orb with glowing scorpion constellation inside deep blue and purple mystical glow bubble particles magical artifact ornate medieval fantasy dark background",
+      "seed": 37008,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_sagittarius_detail",
+      "name": "Sagittarius Constellation Orb",
+      "zodiacSign": "sagittarius",
+      "element": "fire",
+      "constellation": "Archer",
+      "dateRange": "November 22 - December 21",
+      "prompt": "detailed translucent crystal orb with glowing archer centaur constellation inside fiery orange and red glow ember particles mystical magical artifact ornate medieval fantasy dark background",
+      "seed": 37009,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_capricorn_detail",
+      "name": "Capricorn Constellation Orb",
+      "zodiacSign": "capricorn",
+      "element": "earth",
+      "constellation": "Sea-Goat",
+      "dateRange": "December 22 - January 19",
+      "prompt": "detailed translucent crystal orb with glowing sea goat constellation inside emerald green and brown earthy glow nature particles mystical magical artifact ornate medieval fantasy dark background",
+      "seed": 37010,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_aquarius_detail",
+      "name": "Aquarius Constellation Orb",
+      "zodiacSign": "aquarius",
+      "element": "air",
+      "constellation": "Water Bearer",
+      "dateRange": "January 20 - February 18",
+      "prompt": "detailed translucent crystal orb with glowing water bearer constellation inside light blue and silver ethereal glow wisp particles mystical magical artifact ornate medieval fantasy dark background",
+      "seed": 37011,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_pisces_detail",
+      "name": "Pisces Constellation Orb",
+      "zodiacSign": "pisces",
+      "element": "water",
+      "constellation": "Fish",
+      "dateRange": "February 19 - March 20",
+      "prompt": "detailed translucent crystal orb with glowing twin fish constellation inside deep blue and purple oceanic glow bubble particles mystical magical artifact ornate medieval fantasy dark background",
+      "seed": 37012,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "zodiac_locked_detail",
+      "name": "Unknown Constellation Orb",
+      "zodiacSign": "unknown",
+      "element": "none",
+      "constellation": "Unknown",
+      "variant": "locked",
+      "prompt": "detailed dark shadowy crystal orb silhouette mysterious unknown constellation faded gray monochrome locked magical artifact ornate medieval fantasy dark background question mark",
+      "seed": 37100,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    }
+  ]
+}
