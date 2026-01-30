@@ -75,6 +75,9 @@ function loadCategoryAssets(category) {
     ];
   } else if (manifest.categoryFiles) {
     files = Object.values(manifest.categoryFiles);
+  } else if (manifest.subcategoryFiles) {
+    // Overlays use subcategoryFiles
+    files = Object.values(manifest.subcategoryFiles);
   } else if (manifest.locationFile) {
     files = [manifest.locationFile];
   }
@@ -487,7 +490,7 @@ function updateAssetStatus(category, sourceFile, assetId, updates) {
   }
 
   // Find the asset array (different names in different files)
-  const assetArray = data.tiles || data.portraits || data.enemies || data.items || data.icons || data.nodes;
+  const assetArray = data.tiles || data.portraits || data.enemies || data.items || data.icons || data.nodes || data.overlays;
 
   if (!assetArray) {
     log(`No asset array found in ${category}/${sourceFile}`, 'error');
@@ -553,7 +556,7 @@ function getCategoryStats(category) {
  * @returns {Object} Statistics for all categories
  */
 function getAllStats() {
-  const categories = ['tiles', 'portraits', 'items', 'icons', 'nodes'];
+  const categories = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays'];
   const stats = {
     categories: {},
     total: { total: 0, generated: 0, pending: 0 }
