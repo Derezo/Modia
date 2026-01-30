@@ -2,7 +2,7 @@ import express from 'express';
 import { query } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
-import { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats, STARTING_EXPERIENCE } from '../config/constants.js';
+import { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats, STARTING_EXPERIENCE, RACE_BASE_STATS } from '../config/constants.js';
 import * as staminaService from '../services/staminaService.js';
 import { discoverNodeAndAdjacent } from '../services/world/discoveryService.js';
 import {
@@ -180,6 +180,23 @@ router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, 
     }
   }
 
+  // Grant starting trait based on race/class combination
+  const startingTraitResult = await query(
+    'SELECT trait_id FROM starting_trait_mappings WHERE race = $1 AND class = $2',
+    [race, characterClass]
+  );
+
+  if (startingTraitResult.rows.length > 0) {
+    const traitId = startingTraitResult.rows[0].trait_id;
+    await query(
+      `INSERT INTO character_traits (character_id, trait_id)
+       VALUES ($1, $2)
+       ON CONFLICT (character_id, trait_id) DO NOTHING`,
+      [character.id, traitId]
+    );
+    console.log(`[CharacterCreate] Assigned starting trait ${traitId} to character ${character.id}`);
+  }
+
   // Initialize node discovery for character's spawn location
   // This ensures the racial homeland castle and adjacent nodes are visible on the world map
   console.log(`[CharacterCreate] Discovering spawn node for user ${req.user.userId}: nodeId=${spawnNodeId}`);
@@ -203,6 +220,84 @@ router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, 
   }
 
   res.status(201).json({ character });
+}));
+
+// Racial trait display names (for preview)
+const RACIAL_TRAIT_NAMES = {
+  exp_bonus: 'Quick Learner',
+  mp_regen: 'Arcane Flow',
+  gold_bonus: 'Lucky Find',
+  lifesteal: 'Blood Hunger',
+  crit_damage: 'Savage Strikes'
+};
+
+const RACIAL_TRAIT_DESCRIPTIONS = {
+  exp_bonus: '+10% experience gained',
+  mp_regen: '+20% MP regeneration',
+  gold_bonus: '+15% gold from battles',
+  lifesteal: '10% of damage dealt heals HP',
+  crit_damage: '+25% critical hit damage'
+};
+
+// GET /api/characters/preview - Get character preview for race/class combination
+router.get('/preview', asyncHandler(async (req, res) => {
+  const { race, characterClass } = req.query;
+
+  // Validation
+  if (!race || !characterClass) {
+    throw new AppError('Race and class are required', 400);
+  }
+
+  if (!Object.values(RACES).includes(race)) {
+    throw new AppError(`Invalid race. Must be one of: ${Object.values(RACES).join(', ')}`, 400);
+  }
+
+  if (!Object.values(CLASSES).includes(characterClass)) {
+    throw new AppError(`Invalid class. Must be one of: ${Object.values(CLASSES).join(', ')}`, 400);
+  }
+
+  // Calculate level 1 stats
+  const stats = calculateStats(race, characterClass, 1);
+
+  // Get racial trait from RACE_BASE_STATS
+  const raceStats = RACE_BASE_STATS[race];
+  const racialTrait = {
+    name: RACIAL_TRAIT_NAMES[raceStats.trait] || raceStats.trait,
+    description: RACIAL_TRAIT_DESCRIPTIONS[raceStats.trait] || `${raceStats.trait}: ${raceStats.traitValue}`,
+    type: 'racial',
+    effectType: raceStats.trait,
+    effectValue: raceStats.traitValue
+  };
+
+  // Get starting trait from database
+  const traitResult = await query(
+    `SELECT t.id, t.name, t.description, t.effect_type, t.effect_value
+     FROM starting_trait_mappings stm
+     JOIN traits t ON stm.trait_id = t.id
+     WHERE stm.race = $1 AND stm.class = $2`,
+    [race, characterClass]
+  );
+
+  let startingTrait = null;
+  if (traitResult.rows.length > 0) {
+    const row = traitResult.rows[0];
+    startingTrait = {
+      id: row.id,
+      name: row.name,
+      description: row.description,
+      type: 'starting',
+      effectType: row.effect_type,
+      effectValue: parseFloat(row.effect_value)
+    };
+  }
+
+  res.json({
+    stats,
+    traits: {
+      racial: racialTrait,
+      starting: startingTrait
+    }
+  });
 }));
 
 // GET /api/characters/:id - Get character details

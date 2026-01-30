@@ -183,7 +183,8 @@ router.get('/:nodeId/:shopType', authenticate, asyncHandler(async (req, res) => 
       effect: item.effect || null,
       equipSlot: item.equipSlot || null,
       statBonuses: item.statBonuses || null,
-      inStock: item.inStock
+      inStock: item.inStock,
+      spriteId: item.spriteId || item.sprite_id || null
     }));
 
     // Calculate time until next refresh in milliseconds

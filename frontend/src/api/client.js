@@ -149,6 +149,16 @@ export class ApiClient {
     return this.post('/characters', { name, race, characterClass, gender });
   }
 
+  /**
+   * Get character preview for race/class combination
+   * @param {string} race - Character race
+   * @param {string} characterClass - Character class
+   * @returns {Promise<{stats: Object, traits: {racial: Object, starting: Object}}>}
+   */
+  getCharacterPreview(race, characterClass) {
+    return this.get(`/characters/preview?race=${encodeURIComponent(race)}&characterClass=${encodeURIComponent(characterClass)}`);
+  }
+
   deleteCharacter(id) {
     return this.delete(`/characters/${id}`);
   }

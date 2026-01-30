@@ -223,6 +223,182 @@
       "generatedAt": "2026-01-29T08:50:54.323Z",
       "loraModel": "retro-pixel",
       "needsRegeneration": false
+    },
+    {
+      "id": "fire",
+      "name": "Fire Augment",
+      "prompt": "flame icon fire element burning orange red glow",
+      "seed": 33021,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.791Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "ice",
+      "name": "Ice Augment",
+      "prompt": "snowflake icon ice element frost blue cold crystal",
+      "seed": 33022,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.791Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "lightning",
+      "name": "Lightning Augment",
+      "prompt": "lightning bolt icon electric shock yellow spark energy",
+      "seed": 33023,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.792Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "poison",
+      "name": "Poison Augment",
+      "prompt": "poison drop icon toxic green venom drip bubbles",
+      "seed": 33024,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.792Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "holy",
+      "name": "Holy Augment",
+      "prompt": "holy light icon divine golden radiance halo glow",
+      "seed": 33025,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.792Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "dark",
+      "name": "Dark Augment",
+      "prompt": "darkness icon shadow void purple wisp ominous",
+      "seed": 33026,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.793Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "strength",
+      "name": "Strength Augment",
+      "prompt": "muscle arm icon power red strength flex bicep",
+      "seed": 33027,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.793Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "intelligence",
+      "name": "Intelligence Augment",
+      "prompt": "brain icon wisdom blue magic knowledge sparkle",
+      "seed": 33028,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.794Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "agility",
+      "name": "Agility Augment",
+      "prompt": "wind speed icon swift green fast motion blur",
+      "seed": 33029,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.802Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "vitality",
+      "name": "Vitality Augment",
+      "prompt": "heart icon health life red robust pulse glow",
+      "seed": 33030,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.802Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "luck",
+      "name": "Luck Augment",
+      "prompt": "four leaf clover icon fortune gold lucky shine",
+      "seed": 33031,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.803Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "critical",
+      "name": "Critical Augment",
+      "prompt": "star burst icon critical hit yellow sharp impact",
+      "seed": 33032,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.803Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "defense",
+      "name": "Defense Augment",
+      "prompt": "shield icon protection armor blue solid sturdy",
+      "seed": 33033,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.803Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "dragon-slayer",
+      "name": "Dragon Slayer",
+      "prompt": "dragon skull icon beast hunter red fang claw",
+      "seed": 33034,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.804Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "undead-slayer",
+      "name": "Undead Slayer",
+      "prompt": "skull crossbones icon undead hunter silver holy",
+      "seed": 33035,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.804Z",
+      "regenerationQueuedAt": null
+    },
+    {
+      "id": "demon-slayer",
+      "name": "Demon Slayer",
+      "prompt": "demon horn icon fiend hunter purple flame dark",
+      "seed": 33036,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T03:13:50.805Z",
+      "regenerationQueuedAt": null
     }
   ]
 }

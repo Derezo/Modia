@@ -34,7 +34,8 @@ export const CARAVAN_ITEMS = [
     type: 'consumable',
     description: 'Restores 150 HP. A concentrated brew far stronger than standard potions.',
     effect: { hp_restore: 150 },
-    basePrice: 150
+    basePrice: 150,
+    sprite_id: 'potion_health_large'
   },
   {
     id: 'full_restore',
@@ -42,7 +43,8 @@ export const CARAVAN_ITEMS = [
     type: 'consumable',
     description: 'Fully restores HP and cures all status effects. The ultimate healing draught.',
     effect: { hp_full: true, cure_all: true },
-    basePrice: 300
+    basePrice: 300,
+    sprite_id: 'elixir_life'
   },
   {
     id: 'mega_ether',
@@ -50,7 +52,8 @@ export const CARAVAN_ITEMS = [
     type: 'consumable',
     description: 'Restores 100 MP. Distilled from rare magical herbs.',
     effect: { mp_restore: 100 },
-    basePrice: 200
+    basePrice: 200,
+    sprite_id: 'potion_mana_large'
   },
   {
     id: 'elixir_supreme',
@@ -58,7 +61,8 @@ export const CARAVAN_ITEMS = [
     type: 'consumable',
     description: 'Restores 200 HP and 100 MP. A legendary alchemical masterpiece.',
     effect: { hp_restore: 200, mp_restore: 100 },
-    basePrice: 400
+    basePrice: 400,
+    sprite_id: 'elixir_life'
   },
   {
     id: 'revival_herb',
@@ -66,7 +70,8 @@ export const CARAVAN_ITEMS = [
     type: 'consumable',
     description: 'Revives a fallen ally with 50% HP. Extremely rare herb from distant lands.',
     effect: { revive: true, hp_percent: 50 },
-    basePrice: 350
+    basePrice: 350,
+    sprite_id: 'phoenix_feather'
   },
 
   // ============================================
@@ -78,7 +83,8 @@ export const CARAVAN_ITEMS = [
     type: 'consumable',
     description: 'Contains a random rare item. Could be equipment, materials, or even something legendary.',
     effect: { opens_to: 'random_rare' },
-    basePrice: 500
+    basePrice: 500,
+    sprite_id: 'mystery_box'
   },
   {
     id: 'mystery_box_premium',
@@ -86,7 +92,8 @@ export const CARAVAN_ITEMS = [
     type: 'consumable',
     description: 'Contains a guaranteed rare or better item. The merchant swears by its value.',
     effect: { opens_to: 'random_rare_plus' },
-    basePrice: 1000
+    basePrice: 1000,
+    sprite_id: 'mystery_box_premium'
   },
 
   // ============================================
@@ -97,42 +104,48 @@ export const CARAVAN_ITEMS = [
     name: 'Dragon Scale',
     type: 'material',
     description: 'A shimmering scale from a dragon. Used in advanced armor crafting.',
-    basePrice: 250
+    basePrice: 250,
+    sprite_id: 'material_dragon_scale'
   },
   {
     id: 'moon_ore',
     name: 'Moon Ore',
     type: 'material',
     description: 'Ore that glows with lunar energy. Prized by enchanters.',
-    basePrice: 200
+    basePrice: 200,
+    sprite_id: 'material_moon_ore'
   },
   {
     id: 'phoenix_ash',
     name: 'Phoenix Ash',
     type: 'material',
     description: 'Ashes from a reborn phoenix. Essential for fire enchantments.',
-    basePrice: 400
+    basePrice: 400,
+    sprite_id: 'material_phoenix_ash'
   },
   {
     id: 'void_crystal',
     name: 'Void Crystal',
     type: 'material',
     description: 'A crystal infused with void energy. Dangerously powerful.',
-    basePrice: 450
+    basePrice: 450,
+    sprite_id: 'material_void_crystal'
   },
   {
     id: 'ancient_wood',
     name: 'Ancient Wood',
     type: 'material',
     description: 'Petrified wood from trees that witnessed the First Age.',
-    basePrice: 180
+    basePrice: 180,
+    sprite_id: 'material_ancient_wood'
   },
   {
     id: 'starlight_essence',
     name: 'Starlight Essence',
     type: 'material',
     description: 'Captured starlight in liquid form. Enhances magical properties.',
-    basePrice: 320
+    basePrice: 320,
+    sprite_id: 'material_starlight_essence'
   },
 
   // ============================================
@@ -148,7 +161,8 @@ export const CARAVAN_ITEMS = [
     description: 'A badge of honor from the Human Kingdom. Worn by those who serve the crown.',
     equipSlot: 'accessory',
     statBonuses: { strength: 3, vitality: 2 },
-    basePrice: 350
+    basePrice: 350,
+    sprite_id: 'amulet_silver'
   },
   {
     id: 'royal_signet',
@@ -158,7 +172,8 @@ export const CARAVAN_ITEMS = [
     description: 'A ring bearing the royal seal. Grants authority and resilience.',
     equipSlot: 'accessory',
     statBonuses: { vitality: 4, luck: 2 },
-    basePrice: 420
+    basePrice: 420,
+    sprite_id: 'ring_gem'
   },
 
   // Elven Forest (Sylvan Reaches)
@@ -170,7 +185,8 @@ export const CARAVAN_ITEMS = [
     description: 'An elven bow infused with nature magic. Light as a feather, swift as the wind.',
     equipSlot: 'main_hand',
     statBonuses: { dexterity: 4, intelligence: 2 },
-    basePrice: 400
+    basePrice: 400,
+    sprite_id: 'bow_elven'
   },
   {
     id: 'moonweave_cloak',
@@ -180,7 +196,8 @@ export const CARAVAN_ITEMS = [
     description: 'A cloak woven from moonlight threads. Favored by elven rangers.',
     equipSlot: 'body',
     statBonuses: { agility: 4, intelligence: 2 },
-    basePrice: 380
+    basePrice: 380,
+    sprite_id: 'robe_mage'
   },
 
   // Dwarven Mountains (Iron Depths)
@@ -192,7 +209,8 @@ export const CARAVAN_ITEMS = [
     description: 'A masterwork dwarven hammer. Each strike echoes with the might of the mountain.',
     equipSlot: 'main_hand',
     statBonuses: { strength: 5, vitality: 1 },
-    basePrice: 450
+    basePrice: 450,
+    sprite_id: 'mace_war'
   },
   {
     id: 'stonekin_shield',
@@ -202,7 +220,8 @@ export const CARAVAN_ITEMS = [
     description: 'A shield carved from living stone. Unyielding in defense.',
     equipSlot: 'off_hand',
     statBonuses: { vitality: 5, strength: 1 },
-    basePrice: 420
+    basePrice: 420,
+    sprite_id: 'shield_tower'
   },
 
   // Orcish Steppes (Bloodplains)
@@ -214,7 +233,8 @@ export const CARAVAN_ITEMS = [
     description: 'A war trophy that inspires rage. The previous owner fell in glorious battle.',
     equipSlot: 'accessory',
     statBonuses: { strength: 4, agility: 2 },
-    basePrice: 380
+    basePrice: 380,
+    sprite_id: 'amulet_bone'
   },
   {
     id: 'warchief_axe',
@@ -224,7 +244,8 @@ export const CARAVAN_ITEMS = [
     description: 'A brutal axe once wielded by a warchief. Demands respect and blood.',
     equipSlot: 'main_hand',
     statBonuses: { strength: 6 },
-    basePrice: 480
+    basePrice: 480,
+    sprite_id: 'axe_battle'
   },
 
   // Vampire Dominion (Shadowmere)
@@ -235,7 +256,8 @@ export const CARAVAN_ITEMS = [
     region: 'vampire',
     description: 'A vial of enchanted blood. Heals and grants temporary lifesteal.',
     effect: { hp_restore: 100, lifesteal_buff: 30 },
-    basePrice: 300
+    basePrice: 300,
+    sprite_id: 'potion_blood'
   },
   {
     id: 'nightwalker_fang',
@@ -245,7 +267,8 @@ export const CARAVAN_ITEMS = [
     description: 'A fang from an ancient vampire lord. Pulses with dark hunger.',
     equipSlot: 'accessory',
     statBonuses: { agility: 3, intelligence: 3 },
-    basePrice: 400
+    basePrice: 400,
+    sprite_id: 'amulet_crystal'
   }
 ];
 

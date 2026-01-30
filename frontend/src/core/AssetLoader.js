@@ -148,31 +148,16 @@ export class AssetLoader {
   }
 
   /**
-   * Initialize asset loader and load manifest
+   * Initialize asset loader
    */
   async init() {
     if (this.initialized) return;
 
-    try {
-      await this.loadManifest();
-    } catch (error) {
-      console.warn('Asset manifest not found, sprites may not be available:', error.message);
-      this.manifest = { version: 0, terrain: {}, characters: {}, enemies: {}, nodes: {}, items: {} };
-    }
+    // Manifest is reserved for future use (asset versioning, preload lists)
+    // but is not currently needed for asset loading
+    this.manifest = { version: 0, terrain: {}, characters: {}, enemies: {}, nodes: {}, items: {} };
 
     this.initialized = true;
-  }
-
-  /**
-   * Load asset manifest
-   */
-  async loadManifest() {
-    const response = await fetch(`${this.basePath}/manifest.json`);
-    if (!response.ok) {
-      throw new Error(`Failed to load manifest: ${response.status}`);
-    }
-    this.manifest = await response.json();
-    return this.manifest;
   }
 
   /**

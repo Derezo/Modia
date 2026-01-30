@@ -64,13 +64,14 @@
       "constellation": "Ram",
       "prompt": "translucent crystal orb sphere with glowing zodiac ram aries constellation inside orange fiery glow magical mystical fantasy",
       "seed": 36001,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T04:11:55.613Z"
     },
     {
       "id": "zodiac_taurus",
@@ -80,13 +81,14 @@
       "constellation": "Bull",
       "prompt": "translucent crystal orb sphere with glowing zodiac bull taurus constellation inside green earthy glow magical mystical fantasy",
       "seed": 36002,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T04:37:25.122Z"
     },
     {
       "id": "zodiac_gemini",
@@ -126,10 +128,15 @@
       "zodiacSign": "leo",
       "element": "fire",
       "constellation": "Lion",
-      "prompt": "translucent crystal orb sphere with glowing lion constellation inside orange fiery glow magical mystical fantasy",
+      "prompt": "translucent crystal orb sphere with glowing zodiac lion leo constellation inside orange fiery glow magical mystical fantasy",
       "seed": 36005,
       "generated": false,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "zodiac_virgo",
@@ -137,10 +144,15 @@
       "zodiacSign": "virgo",
       "element": "earth",
       "constellation": "Maiden",
-      "prompt": "translucent crystal orb sphere with glowing maiden constellation inside green earthy glow magical mystical fantasy",
+      "prompt": "translucent crystal orb sphere with glowing zodiac maiden virgo constellation inside green earthy glow magical mystical fantasy",
       "seed": 36006,
       "generated": false,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "zodiac_libra",
@@ -148,10 +160,15 @@
       "zodiacSign": "libra",
       "element": "air",
       "constellation": "Scales",
-      "prompt": "translucent crystal orb sphere with glowing scales constellation inside light blue ethereal glow magical mystical fantasy",
+      "prompt": "translucent crystal orb sphere with glowing zodiac scales libra constellation inside light blue ethereal glow magical mystical fantasy",
       "seed": 36007,
       "generated": false,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "zodiac_scorpio",
@@ -159,10 +176,15 @@
       "zodiacSign": "scorpio",
       "element": "water",
       "constellation": "Scorpion",
-      "prompt": "translucent crystal orb sphere with glowing scorpion constellation inside deep blue purple mystical glow magical fantasy",
+      "prompt": "translucent crystal orb sphere with glowing zodiac scorpion scorpio constellation inside deep blue purple mystical glow magical fantasy",
       "seed": 36008,
       "generated": false,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "zodiac_sagittarius",
@@ -170,10 +192,15 @@
       "zodiacSign": "sagittarius",
       "element": "fire",
       "constellation": "Archer",
-      "prompt": "translucent crystal orb sphere with glowing archer centaur constellation inside orange fiery glow magical mystical fantasy",
+      "prompt": "translucent crystal orb sphere with glowing zodiac archer centaur sagittarius constellation inside orange fiery glow magical mystical fantasy",
       "seed": 36009,
       "generated": false,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "zodiac_capricorn",
@@ -181,10 +208,15 @@
       "zodiacSign": "capricorn",
       "element": "earth",
       "constellation": "Sea-Goat",
-      "prompt": "translucent crystal orb sphere with glowing sea goat constellation inside green earthy glow magical mystical fantasy",
+      "prompt": "translucent crystal orb sphere with glowing zodiac sea goat capricorn constellation inside green earthy glow magical mystical fantasy",
       "seed": 36010,
       "generated": false,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "zodiac_aquarius",
@@ -192,10 +224,15 @@
       "zodiacSign": "aquarius",
       "element": "air",
       "constellation": "Water Bearer",
-      "prompt": "translucent crystal orb sphere with glowing water bearer constellation inside light blue ethereal glow magical mystical fantasy",
+      "prompt": "translucent crystal orb sphere with glowing zodiac water bearer aquarius constellation inside light blue ethereal glow magical mystical fantasy",
       "seed": 36011,
       "generated": false,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "zodiac_pisces",
@@ -203,10 +240,15 @@
       "zodiacSign": "pisces",
       "element": "water",
       "constellation": "Fish",
-      "prompt": "translucent crystal orb sphere with glowing twin fish constellation inside deep blue purple mystical glow magical fantasy",
+      "prompt": "translucent crystal orb sphere with glowing zodiac twin fish pisces constellation inside deep blue purple mystical glow magical fantasy",
       "seed": 36012,
       "generated": false,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "zodiac_aries_locked",

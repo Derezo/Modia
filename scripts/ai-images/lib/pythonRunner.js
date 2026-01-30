@@ -40,11 +40,18 @@ async function runPythonScript(scriptName, args = [], options = {}) {
   const scriptPath = path.join(generatorRoot, scriptName);
   const modiaRoot = getProjectRoot();
 
+  // Build extended PATH to ensure conda/python are discoverable
+  // This fixes ENOENT errors when spawning from environments without conda in PATH
+  const homeDir = process.env.HOME || '/home/wizard';
+  const condaBase = process.env.CONDA_PREFIX || `${homeDir}/miniconda3`;
+  const extendedPath = `${condaBase}/bin:${condaBase}/condabin:${process.env.PATH || ''}`;
+
   // Build environment
   const env = {
     ...process.env,
     MODIA_ROOT: modiaRoot,
-    PYTHONUNBUFFERED: '1'  // Ensure Python output is not buffered
+    PYTHONUNBUFFERED: '1',  // Ensure Python output is not buffered
+    PATH: extendedPath
   };
 
   // Build full command for logging
@@ -136,7 +143,14 @@ async function runPythonScript(scriptName, args = [], options = {}) {
     });
 
     proc.on('error', (error) => {
-      reject(new Error(`Failed to spawn Python process: ${error.message}`));
+      console.error(`[pythonRunner] Spawn error for ${pythonCommand}:`, {
+        command: pythonCommand,
+        args: pythonArgs.slice(0, 3),
+        cwd: generatorRoot,
+        PATH: env.PATH?.split(':').slice(0, 5).join(':') + '...',
+        error: error.message
+      });
+      reject(new Error(`Failed to spawn Python process: ${error.message}. Check AI_IMAGE_PYTHON env var or conda installation.`));
     });
   });
 }
@@ -499,9 +513,15 @@ async function removeBackground(inputPath, outputPath, options = {}) {
     pythonArgs = [scriptPath, ...fullArgs];
   }
 
+  // Build extended PATH to ensure conda/python are discoverable
+  const homeDir = process.env.HOME || '/home/wizard';
+  const condaBase = process.env.CONDA_PREFIX || `${homeDir}/miniconda3`;
+  const extendedPath = `${condaBase}/bin:${condaBase}/condabin:${process.env.PATH || ''}`;
+
   const env = {
     ...process.env,
-    PYTHONUNBUFFERED: '1'
+    PYTHONUNBUFFERED: '1',
+    PATH: extendedPath
   };
 
   return new Promise((resolve, reject) => {
@@ -544,7 +564,14 @@ async function removeBackground(inputPath, outputPath, options = {}) {
     });
 
     proc.on('error', (error) => {
-      reject(new Error(`Failed to spawn rembg process: ${error.message}`));
+      console.error(`[pythonRunner] Spawn error for rembg ${pythonCommand}:`, {
+        command: pythonCommand,
+        args: pythonArgs.slice(0, 3),
+        cwd: generatorRoot,
+        PATH: env.PATH?.split(':').slice(0, 5).join(':') + '...',
+        error: error.message
+      });
+      reject(new Error(`Failed to spawn rembg process: ${error.message}. Check AI_IMAGE_PYTHON env var or conda installation.`));
     });
   });
 }

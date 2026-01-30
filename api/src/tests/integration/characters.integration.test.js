@@ -1,6 +1,6 @@
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert';
-import { request, createTestUser, createTestCharacter } from '../testHelper.js';
+import { request, createTestUser, createTestCharacter, query } from '../testHelper.js';
 
 describe('Characters API', () => {
   let user = null;
@@ -117,6 +117,62 @@ describe('Characters API', () => {
       assert.strictEqual(res.status, 401);
     });
 
+    it('should assign starting trait to new character', async () => {
+      // Create a fresh user to ensure test isolation
+      const freshUser = await createTestUser();
+
+      const res = await request('POST', '/api/characters', {
+        name: `TraitTest_${Date.now()}`,
+        race: 'human',
+        characterClass: 'warrior',
+        gender: 'male'
+      }, freshUser.accessToken);
+
+      assert.strictEqual(res.status, 201, 'Character creation should succeed');
+
+      const characterId = res.body.character.id;
+
+      // Verify starting trait was assigned in database
+      const traitResult = await query(
+        `SELECT t.name, t.description
+         FROM character_traits ct
+         JOIN traits t ON ct.trait_id = t.id
+         WHERE ct.character_id = $1`,
+        [characterId]
+      );
+
+      assert.strictEqual(traitResult.rows.length, 1, 'Character should have exactly one starting trait');
+      assert.strictEqual(traitResult.rows[0].name, 'Tough Skin', 'Human warrior should get Tough Skin trait');
+    });
+
+    it('should assign correct starting trait for elf wizard', async () => {
+      // Create a fresh user to ensure test isolation
+      const freshUser = await createTestUser();
+
+      const res = await request('POST', '/api/characters', {
+        name: `ElfWiz_${Date.now()}`,
+        race: 'elf',
+        characterClass: 'wizard',
+        gender: 'female'
+      }, freshUser.accessToken);
+
+      assert.strictEqual(res.status, 201, 'Character creation should succeed');
+
+      const characterId = res.body.character.id;
+
+      // Verify starting trait was assigned in database
+      const traitResult = await query(
+        `SELECT t.name
+         FROM character_traits ct
+         JOIN traits t ON ct.trait_id = t.id
+         WHERE ct.character_id = $1`,
+        [characterId]
+      );
+
+      assert.strictEqual(traitResult.rows.length, 1, 'Character should have exactly one starting trait');
+      assert.strictEqual(traitResult.rows[0].name, 'Arcane Affinity', 'Elf wizard should get Arcane Affinity trait');
+    });
+
     it('should block manual character creation when user already has characters', async () => {
       // Create a fresh user to ensure test isolation
       const freshUser = await createTestUser();
@@ -199,6 +255,104 @@ describe('Characters API', () => {
       const res = await request('GET', '/api/characters/999999', null, user.accessToken);
 
       assert.strictEqual(res.status, 404);
+    });
+  });
+
+  describe('GET /api/characters/preview', () => {
+    it('should return stats and traits for valid race/class combo', async () => {
+      const res = await request('GET', '/api/characters/preview?race=human&characterClass=warrior');
+
+      assert.strictEqual(res.status, 200);
+      assert.ok(res.body.stats, 'Response should include stats');
+      assert.ok(res.body.traits, 'Response should include traits');
+
+      // Check stats structure
+      assert.ok(res.body.stats.hpMax > 0, 'HP max should be positive');
+      assert.ok(res.body.stats.mpMax >= 0, 'MP max should be non-negative');
+      assert.ok(res.body.stats.strength > 0, 'Strength should be positive');
+      assert.ok(res.body.stats.intelligence > 0, 'Intelligence should be positive');
+      assert.ok(res.body.stats.agility > 0, 'Agility should be positive');
+      assert.ok(res.body.stats.vitality > 0, 'Vitality should be positive');
+
+      // Check racial trait
+      assert.ok(res.body.traits.racial, 'Should have racial trait');
+      assert.strictEqual(res.body.traits.racial.type, 'racial');
+      assert.ok(res.body.traits.racial.name, 'Racial trait should have name');
+      assert.ok(res.body.traits.racial.description, 'Racial trait should have description');
+
+      // Check starting trait
+      assert.ok(res.body.traits.starting, 'Should have starting trait');
+      assert.strictEqual(res.body.traits.starting.type, 'starting');
+      assert.ok(res.body.traits.starting.name, 'Starting trait should have name');
+      assert.ok(res.body.traits.starting.description, 'Starting trait should have description');
+    });
+
+    it('should return correct racial trait for human', async () => {
+      const res = await request('GET', '/api/characters/preview?race=human&characterClass=warrior');
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.traits.racial.name, 'Quick Learner');
+    });
+
+    it('should return correct starting trait for human warrior (Tough Skin)', async () => {
+      const res = await request('GET', '/api/characters/preview?race=human&characterClass=warrior');
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.traits.starting.name, 'Tough Skin');
+    });
+
+    it('should return correct starting trait for elf wizard (Arcane Affinity)', async () => {
+      const res = await request('GET', '/api/characters/preview?race=elf&characterClass=wizard');
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.traits.starting.name, 'Arcane Affinity');
+    });
+
+    it('should work for all race/class combinations', async () => {
+      const races = ['human', 'elf', 'dwarf', 'vampire', 'orc'];
+      const classes = ['warrior', 'wizard', 'monk', 'chemist'];
+
+      for (const race of races) {
+        for (const charClass of classes) {
+          const res = await request('GET', `/api/characters/preview?race=${race}&characterClass=${charClass}`);
+
+          assert.strictEqual(res.status, 200, `Should succeed for ${race} ${charClass}`);
+          assert.ok(res.body.stats, `Should have stats for ${race} ${charClass}`);
+          assert.ok(res.body.traits.racial, `Should have racial trait for ${race} ${charClass}`);
+          assert.ok(res.body.traits.starting, `Should have starting trait for ${race} ${charClass}`);
+        }
+      }
+    });
+
+    it('should reject missing race parameter', async () => {
+      const res = await request('GET', '/api/characters/preview?characterClass=warrior');
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    it('should reject missing class parameter', async () => {
+      const res = await request('GET', '/api/characters/preview?race=human');
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    it('should reject invalid race', async () => {
+      const res = await request('GET', '/api/characters/preview?race=dragon&characterClass=warrior');
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    it('should reject invalid class', async () => {
+      const res = await request('GET', '/api/characters/preview?race=human&characterClass=ninja');
+
+      assert.strictEqual(res.status, 400);
+    });
+
+    it('should not require authentication', async () => {
+      // Preview endpoint should be accessible without auth for better UX
+      const res = await request('GET', '/api/characters/preview?race=human&characterClass=warrior');
+
+      assert.strictEqual(res.status, 200);
     });
   });
 

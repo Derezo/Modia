@@ -55,12 +55,14 @@ export class IconLoader {
   }
 
   /**
-   * Normalize icon name to kebab-case (file naming convention)
-   * @param {string} name - Icon name (snake_case or kebab-case)
-   * @returns {string} Normalized kebab-case name
+   * Normalize icon name for file lookup
+   * Icon files use snake_case (e.g., magic_dark.png), so names are passed through unchanged.
+   * @param {string} name - Icon name
+   * @returns {string} Normalized name (unchanged)
    */
   normalizeName(name) {
-    return name.replace(/_/g, '-');
+    // Icon files use snake_case, so pass through unchanged
+    return name;
   }
 
   /**

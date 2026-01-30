@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "description": "Master manifest for Modia AI-generated image assets",
-  "totalAssets": 612,
+  "totalAssets": 649,
   "artDirection": {
     "mood": "cozy_nostalgic",
     "technique": "ink_wash",
@@ -38,23 +38,25 @@
       ]
     },
     "items": {
-      "description": "Equipment and consumable item sprites",
-      "assetCount": 131,
+      "description": "Equipment, consumable, and collectible item sprites",
+      "assetCount": 144,
       "files": [
         "items/weapons.json",
         "items/armor.json",
         "items/consumables.json",
-        "items/accessories.json"
+        "items/accessories.json",
+        "items/zodiac.json"
       ]
     },
     "icons": {
-      "description": "UI icons for actions, status effects, and menus",
-      "assetCount": 80,
+      "description": "UI icons for actions, status effects, menus, and zodiac crystals",
+      "assetCount": 104,
       "files": [
         "icons/actions.json",
         "icons/status.json",
         "icons/menu.json",
-        "icons/augments.json"
+        "icons/augments.json",
+        "icons/zodiac.json"
       ]
     },
     "nodes": {

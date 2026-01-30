@@ -436,6 +436,15 @@ export class EquipmentSlotModal {
         background: #4a7c4e;
       }
 
+      .equipment-slot-available-icon {
+        width: 24px;
+        height: 24px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
       .equipment-slot-available-info {
         flex: 1;
         min-width: 0;
@@ -815,6 +824,7 @@ export class EquipmentSlotModal {
       const itemId = item.instanceId || item.id || index;
       const isSelected = this.selectedItem &&
         (this.selectedItem.instanceId || this.selectedItem.id) === (item.instanceId || item.id);
+      const iconHtml = ItemIcon.html({ item, size: 'sm' });
 
       return `
         <div
@@ -823,6 +833,7 @@ export class EquipmentSlotModal {
           data-index="${index}"
         >
           <div class="equipment-slot-available-radio"></div>
+          <div class="equipment-slot-available-icon">${iconHtml}</div>
           <div class="equipment-slot-available-info">
             <div class="equipment-slot-available-name">
               ${this.escapeHtml(item.name)}

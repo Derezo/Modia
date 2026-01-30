@@ -73,7 +73,8 @@ export function generateCaravanInventory(seed, regionRace) {
       quantity,
       maxQuantity: quantity, // Track original stock for display
       price,
-      basePrice: item.basePrice
+      basePrice: item.basePrice,
+      sprite_id: item.sprite_id || null
     });
   }
 

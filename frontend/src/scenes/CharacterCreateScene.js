@@ -1,4 +1,5 @@
 import { Scene } from './Scene.js';
+import { ParchmentCard } from '../components/ParchmentCard.js';
 import {
   PARCHMENT_COLORS,
   PARCHMENT_TYPOGRAPHY,
@@ -17,25 +18,34 @@ const P = PARCHMENT_COLORS;
 const STYLE_ID = 'charcreate-scene-styles';
 
 const RACES = [
-  { id: 'human', name: 'Human', emoji: '👤', desc: '+10% EXP gain, balanced stats' },
-  { id: 'elf', name: 'Elf', emoji: '🧝', desc: '+20% MP regen, high INT/AGI' },
-  { id: 'dwarf', name: 'Dwarf', emoji: '🧔', desc: '+15% gold find, high STR/VIT' },
-  { id: 'vampire', name: 'Vampire', emoji: '🧛', desc: '10% lifesteal, high AGI' },
-  { id: 'orc', name: 'Orc', emoji: '👹', desc: '+25% crit damage, high STR' }
+  { id: 'human', name: 'Human', emoji: '&#x1F464;', desc: '+10% EXP gain, balanced stats' },
+  { id: 'elf', name: 'Elf', emoji: '&#x1F9DD;', desc: '+20% MP regen, high INT/AGI' },
+  { id: 'dwarf', name: 'Dwarf', emoji: '&#x1F9D4;', desc: '+15% gold find, high STR/VIT' },
+  { id: 'vampire', name: 'Vampire', emoji: '&#x1F9DB;', desc: '10% lifesteal, high AGI' },
+  { id: 'orc', name: 'Orc', emoji: '&#x1F479;', desc: '+25% crit damage, high STR' }
 ];
 
 const CLASSES = [
-  { id: 'warrior', name: 'Warrior', emoji: '⚔️', desc: 'Tank/DPS, high HP and STR' },
-  { id: 'wizard', name: 'Wizard', emoji: '🧙', desc: 'Magic DPS, high MP and INT' },
-  { id: 'monk', name: 'Monk', emoji: '🥋', desc: 'Mobile DPS, high AGI' },
-  { id: 'chemist', name: 'Chemist', emoji: '⚗️', desc: 'Support/Healer, balanced' }
+  { id: 'warrior', name: 'Warrior', emoji: '&#x2694;&#xFE0F;', desc: 'Tank/DPS, high HP and STR' },
+  { id: 'wizard', name: 'Wizard', emoji: '&#x1F9D9;', desc: 'Magic DPS, high MP and INT' },
+  { id: 'monk', name: 'Monk', emoji: '&#x1F94B;', desc: 'Mobile DPS, high AGI' },
+  { id: 'chemist', name: 'Chemist', emoji: '&#x2697;&#xFE0F;', desc: 'Support/Healer, balanced' }
 ];
 
 const GENDERS = [
-  { id: 'male', name: 'Male', emoji: '♂️' },
-  { id: 'female', name: 'Female', emoji: '♀️' },
-  { id: 'other', name: 'Other', emoji: '⚧️' }
+  { id: 'male', name: 'Male', emoji: '&#x2642;&#xFE0F;' },
+  { id: 'female', name: 'Female', emoji: '&#x2640;&#xFE0F;' },
+  { id: 'other', name: 'Other', emoji: '&#x26A7;&#xFE0F;' }
 ];
+
+// Racial trait data for preview before API call
+const RACIAL_TRAITS = {
+  human: { name: 'Quick Learner', description: '+10% experience gained', type: 'racial' },
+  elf: { name: 'Arcane Flow', description: '+20% MP regeneration', type: 'racial' },
+  dwarf: { name: 'Lucky Find', description: '+15% gold from battles', type: 'racial' },
+  vampire: { name: 'Blood Hunger', description: '10% of damage dealt heals HP', type: 'racial' },
+  orc: { name: 'Savage Strikes', description: '+25% critical hit damage', type: 'racial' }
+};
 
 export class CharacterCreateScene extends Scene {
   constructor(game) {
@@ -46,6 +56,9 @@ export class CharacterCreateScene extends Scene {
     this.selectedGender = null;
     this.loading = false;
     this.isWizardMode = false;
+    this.previewCard = null;
+    this.previewData = null;
+    this.previewFetchAbort = null;
   }
 
   enter() {
@@ -54,6 +67,7 @@ export class CharacterCreateScene extends Scene {
     this.selectedGender = null;
     this.loading = false;
     this.isWizardMode = this.game.state.get('isNewRegistration') === true;
+    this.previewData = null;
     this.addStyles();
     this.createUI();
 
@@ -64,6 +78,18 @@ export class CharacterCreateScene extends Scene {
   }
 
   exit() {
+    // Cancel pending preview fetch
+    if (this.previewFetchAbort) {
+      this.previewFetchAbort.abort();
+      this.previewFetchAbort = null;
+    }
+
+    // Clean up preview card
+    if (this.previewCard) {
+      this.previewCard.destroy();
+      this.previewCard = null;
+    }
+
     if (this.uiElement) {
       this.uiElement.remove();
       this.uiElement = null;
@@ -84,7 +110,7 @@ export class CharacterCreateScene extends Scene {
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 520px;
+        width: 900px;
         max-width: 95%;
       }
 
@@ -107,6 +133,66 @@ export class CharacterCreateScene extends Scene {
         padding: ${PARCHMENT_SPACING.xl};
       }
 
+      .charcreate-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+
+      .charcreate-selection-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .charcreate-preview-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 20px;
+        background: rgba(212, 196, 168, 0.3);
+        border-radius: 8px;
+        border: 1px solid rgba(139, 115, 85, 0.3);
+      }
+
+      .charcreate-preview-title {
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        color: ${P.text.secondary};
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: ${PARCHMENT_SPACING.xs};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      }
+
+      .charcreate-preview-card-wrapper {
+        display: flex;
+        justify-content: center;
+      }
+
+      .charcreate-preview-card-wrapper .parchment-card {
+        min-width: 280px;
+        width: 100%;
+        max-width: 320px;
+      }
+
+      .charcreate-traits-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .charcreate-trait-placeholder {
+        color: ${P.text.muted};
+        font-style: italic;
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        padding: 8px 12px;
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: ${PARCHMENT_RADIUS.sm};
+        text-align: center;
+      }
+
       .charcreate-error {
         background: rgba(139, 68, 68, 0.15);
         border: 1px solid ${P.state.error};
@@ -120,7 +206,6 @@ export class CharacterCreateScene extends Scene {
       }
 
       .charcreate-form-group {
-        margin-bottom: ${PARCHMENT_SPACING.lg};
         text-align: left;
       }
 
@@ -204,16 +289,6 @@ export class CharacterCreateScene extends Scene {
         font-style: italic;
       }
 
-      .charcreate-gender-row {
-        display: flex;
-        gap: ${PARCHMENT_SPACING.lg};
-        align-items: flex-start;
-      }
-
-      .charcreate-gender-options {
-        flex: 1;
-      }
-
       .charcreate-gender-grid {
         display: flex;
         gap: ${PARCHMENT_SPACING.sm};
@@ -251,37 +326,6 @@ export class CharacterCreateScene extends Scene {
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
         color: ${P.text.primary};
         margin-top: ${PARCHMENT_SPACING.xs};
-      }
-
-      .charcreate-portrait {
-        width: 80px;
-        height: 80px;
-        background: ${P.light};
-        border: 2px solid ${P.border};
-        border-radius: ${PARCHMENT_RADIUS.md};
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        transition: border-color 0.2s ease;
-      }
-
-      .charcreate-portrait.has-portrait {
-        border-color: ${P.accent.burgundy};
-      }
-
-      .charcreate-portrait-placeholder {
-        color: ${P.text.muted};
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
-        text-align: center;
-        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
-        line-height: 1.3;
-      }
-
-      .charcreate-portrait img {
-        width: 64px;
-        height: 64px;
-        image-rendering: pixelated;
       }
 
       .charcreate-button-row {
@@ -325,15 +369,31 @@ export class CharacterCreateScene extends Scene {
         background: ${P.border};
       }
 
+      .charcreate-back-row {
+        display: flex;
+        justify-content: flex-start;
+        margin-top: ${PARCHMENT_SPACING.lg};
+        padding-top: ${PARCHMENT_SPACING.md};
+        border-top: 1px solid rgba(139, 115, 85, 0.2);
+      }
+
       @keyframes charcreate-shake {
         0%, 100% { transform: translateX(0); }
         25% { transform: translateX(-5px); }
         75% { transform: translateX(5px); }
       }
 
-      @media (max-width: 600px) {
+      @media (max-width: 768px) {
         .charcreate-container {
           width: 95%;
+        }
+
+        .charcreate-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .charcreate-preview-panel {
+          order: -1;
         }
 
         .charcreate-option {
@@ -352,15 +412,6 @@ export class CharacterCreateScene extends Scene {
         .charcreate-class-option {
           min-width: 70px;
         }
-
-        .charcreate-gender-row {
-          flex-direction: column;
-          gap: ${PARCHMENT_SPACING.md};
-        }
-
-        .charcreate-portrait {
-          align-self: center;
-        }
       }
     `;
 
@@ -376,40 +427,36 @@ export class CharacterCreateScene extends Scene {
       <div class="charcreate-panel">
         <div id="create-error" class="charcreate-error" style="display: none;"></div>
 
-        <div class="charcreate-form-group">
-          <label for="char-name" class="charcreate-label">Character Name</label>
-          <input type="text" id="char-name" class="charcreate-input" placeholder="2-24 characters" maxlength="24" required>
-        </div>
-
-        <div class="charcreate-form-group">
-          <label class="charcreate-label">Race</label>
-          <div id="race-select" class="charcreate-option-grid">
-            ${RACES.map(race => `
-              <div class="charcreate-option" data-race="${race.id}">
-                <div class="charcreate-option-emoji">${race.emoji}</div>
-                <div class="charcreate-option-name">${race.name}</div>
+        <div class="charcreate-layout">
+          <!-- Left Column: Selection Panel -->
+          <div class="charcreate-selection-panel">
+            <div class="charcreate-form-group">
+              <label class="charcreate-label">Race</label>
+              <div id="race-select" class="charcreate-option-grid">
+                ${RACES.map(race => `
+                  <div class="charcreate-option" data-race="${race.id}">
+                    <div class="charcreate-option-emoji">${race.emoji}</div>
+                    <div class="charcreate-option-name">${race.name}</div>
+                  </div>
+                `).join('')}
               </div>
-            `).join('')}
-          </div>
-          <div id="race-desc" class="charcreate-desc"></div>
-        </div>
+              <div id="race-desc" class="charcreate-desc"></div>
+            </div>
 
-        <div class="charcreate-form-group">
-          <label class="charcreate-label">Class</label>
-          <div id="class-select" class="charcreate-option-grid">
-            ${CLASSES.map(cls => `
-              <div class="charcreate-option charcreate-class-option" data-class="${cls.id}">
-                <div class="charcreate-option-emoji">${cls.emoji}</div>
-                <div class="charcreate-option-name">${cls.name}</div>
+            <div class="charcreate-form-group">
+              <label class="charcreate-label">Class</label>
+              <div id="class-select" class="charcreate-option-grid">
+                ${CLASSES.map(cls => `
+                  <div class="charcreate-option charcreate-class-option" data-class="${cls.id}">
+                    <div class="charcreate-option-emoji">${cls.emoji}</div>
+                    <div class="charcreate-option-name">${cls.name}</div>
+                  </div>
+                `).join('')}
               </div>
-            `).join('')}
-          </div>
-          <div id="class-desc" class="charcreate-desc"></div>
-        </div>
+              <div id="class-desc" class="charcreate-desc"></div>
+            </div>
 
-        <div class="charcreate-form-group">
-          <div class="charcreate-gender-row">
-            <div class="charcreate-gender-options">
+            <div class="charcreate-form-group">
               <label class="charcreate-label">Gender</label>
               <div id="gender-select" class="charcreate-gender-grid">
                 ${GENDERS.map(gender => `
@@ -420,15 +467,34 @@ export class CharacterCreateScene extends Scene {
                 `).join('')}
               </div>
             </div>
-            <div id="portrait-preview" class="charcreate-portrait">
-              <span class="charcreate-portrait-placeholder">Select all<br>options</span>
+          </div>
+
+          <!-- Right Column: Preview Panel -->
+          <div class="charcreate-preview-panel">
+            <div class="charcreate-preview-title">Character Preview</div>
+            <div id="preview-card-container" class="charcreate-preview-card-wrapper"></div>
+
+            <div class="charcreate-traits-section">
+              <div class="charcreate-preview-title">Traits</div>
+              <div id="traits-placeholder" class="charcreate-trait-placeholder">
+                Select race and class to see traits
+              </div>
+            </div>
+
+            <div class="charcreate-form-group">
+              <label for="char-name" class="charcreate-label">Character Name</label>
+              <input type="text" id="char-name" class="charcreate-input" placeholder="2-24 characters" maxlength="24" required>
+            </div>
+
+            <div class="charcreate-button-row">
+              <button class="charcreate-btn charcreate-btn-primary" id="create-btn" disabled>Create Character</button>
             </div>
           </div>
         </div>
 
-        <div class="charcreate-button-row">
-          <button class="charcreate-btn charcreate-btn-secondary" id="back-btn" ${this.isWizardMode ? 'style="display:none;"' : ''}>Back</button>
-          <button class="charcreate-btn charcreate-btn-primary" id="create-btn" disabled>Create Character</button>
+        <!-- Back button row (outside columns) -->
+        <div class="charcreate-back-row" ${this.isWizardMode ? 'style="display:none;"' : ''}>
+          <button class="charcreate-btn charcreate-btn-secondary" id="back-btn">Back</button>
         </div>
       </div>
     `;
@@ -436,12 +502,22 @@ export class CharacterCreateScene extends Scene {
     this.game.uiOverlay.appendChild(container);
     this.uiElement = container;
 
+    // Create ParchmentCard for preview
+    this.previewCard = new ParchmentCard({
+      mode: 'detailed',
+      showTraits: true,
+      showStats: true
+    });
+    const cardContainer = container.querySelector('#preview-card-container');
+    cardContainer.appendChild(this.previewCard.element);
+
     // Race selection
     container.querySelectorAll('.charcreate-option[data-race]').forEach(option => {
       option.addEventListener('click', () => {
         this.game.audio?.playUI('button_click');
         this.selectedRace = option.dataset.race;
         this.updateRaceSelection();
+        this.updatePreview();
       });
     });
 
@@ -451,6 +527,7 @@ export class CharacterCreateScene extends Scene {
         this.game.audio?.playUI('button_click');
         this.selectedClass = option.dataset.class;
         this.updateClassSelection();
+        this.updatePreview();
       });
     });
 
@@ -460,6 +537,7 @@ export class CharacterCreateScene extends Scene {
         this.game.audio?.playUI('button_click');
         this.selectedGender = option.dataset.gender;
         this.updateGenderSelection();
+        this.updatePreview();
       });
     });
 
@@ -483,7 +561,8 @@ export class CharacterCreateScene extends Scene {
     // Name input validation
     container.querySelector('#char-name').addEventListener('input', () => this.updateCreateButton());
 
-    container.querySelector('#char-name').focus();
+    // Initialize with empty state
+    this.updatePreview();
   }
 
   updateRaceSelection() {
@@ -497,7 +576,6 @@ export class CharacterCreateScene extends Scene {
 
     const race = RACES.find(r => r.id === this.selectedRace);
     document.getElementById('race-desc').textContent = race ? race.desc : '';
-    this.updatePortraitPreview();
     this.updateCreateButton();
   }
 
@@ -512,7 +590,6 @@ export class CharacterCreateScene extends Scene {
 
     const cls = CLASSES.find(c => c.id === this.selectedClass);
     document.getElementById('class-desc').textContent = cls ? cls.desc : '';
-    this.updatePortraitPreview();
     this.updateCreateButton();
   }
 
@@ -525,31 +602,194 @@ export class CharacterCreateScene extends Scene {
       }
     });
 
-    this.updatePortraitPreview();
     this.updateCreateButton();
   }
 
-  updatePortraitPreview() {
-    const previewEl = document.getElementById('portrait-preview');
-    if (!previewEl) return;
+  updatePreview() {
+    const traitsPlaceholder = document.getElementById('traits-placeholder');
 
-    if (this.selectedRace && this.selectedClass && this.selectedGender) {
-      const portraitUrl = this.game.assetLoader.getPortraitUrl({
+    // Nothing selected - show empty placeholder card
+    if (!this.selectedRace && !this.selectedClass) {
+      this.previewCard.setCharacter(null);
+      this.previewCard.setTraits([]);
+      if (traitsPlaceholder) {
+        traitsPlaceholder.textContent = 'Select race and class to see traits';
+        traitsPlaceholder.style.display = 'block';
+      }
+      return;
+    }
+
+    // Race only - show racial trait, placeholder stats
+    if (this.selectedRace && !this.selectedClass) {
+      const racialTrait = RACIAL_TRAITS[this.selectedRace];
+      const traits = racialTrait ? [racialTrait] : [];
+
+      // Show placeholder character with just race info
+      const placeholderChar = {
+        name: 'Your Hero',
+        level: 1,
         race: this.selectedRace,
-        gender: this.selectedGender,
-        class: this.selectedClass
-      }, 64);
-      previewEl.classList.add('has-portrait');
-      previewEl.innerHTML = `
-        <img
-          src="${portraitUrl}"
-          alt="Portrait Preview"
-          onerror="this.parentElement.innerHTML = '<span class=\\'charcreate-portrait-placeholder\\'>Portrait<br>pending</span>'; this.parentElement.classList.remove('has-portrait');"
-        >
-      `;
-    } else {
-      previewEl.classList.remove('has-portrait');
-      previewEl.innerHTML = '<span class="charcreate-portrait-placeholder">Select all<br>options</span>';
+        class: 'unknown',
+        gender: this.selectedGender || 'other',
+        hp: 1,
+        maxHp: 1,
+        mp: 1,
+        maxMp: 1,
+        strength: '?',
+        intelligence: '?',
+        agility: '?',
+        vitality: '?',
+        luck: '?'
+      };
+
+      this.previewCard.setCharacter(placeholderChar);
+      this.previewCard.setTraits(traits);
+
+      if (traitsPlaceholder) {
+        traitsPlaceholder.textContent = 'Select a class to see full preview';
+        traitsPlaceholder.style.display = 'block';
+      }
+      return;
+    }
+
+    // Class only - show placeholder, no traits yet
+    if (!this.selectedRace && this.selectedClass) {
+      const placeholderChar = {
+        name: 'Your Hero',
+        level: 1,
+        race: 'unknown',
+        class: this.selectedClass,
+        gender: this.selectedGender || 'other',
+        hp: 1,
+        maxHp: 1,
+        mp: 1,
+        maxMp: 1,
+        strength: '?',
+        intelligence: '?',
+        agility: '?',
+        vitality: '?',
+        luck: '?'
+      };
+
+      this.previewCard.setCharacter(placeholderChar);
+      this.previewCard.setTraits([]);
+
+      if (traitsPlaceholder) {
+        traitsPlaceholder.textContent = 'Select a race to see traits';
+        traitsPlaceholder.style.display = 'block';
+      }
+      return;
+    }
+
+    // Both race and class selected - fetch full preview from API
+    if (traitsPlaceholder) {
+      traitsPlaceholder.textContent = 'Loading preview...';
+      traitsPlaceholder.style.display = 'block';
+    }
+
+    this.fetchPreview();
+  }
+
+  async fetchPreview() {
+    // Cancel any pending fetch
+    if (this.previewFetchAbort) {
+      this.previewFetchAbort.abort();
+    }
+    this.previewFetchAbort = new AbortController();
+
+    try {
+      const response = await this.game.api.getCharacterPreview(
+        this.selectedRace,
+        this.selectedClass
+      );
+
+      // Check if we're still on this scene and selections haven't changed
+      if (!this.uiElement) return;
+
+      const { stats, traits } = response;
+      const traitsPlaceholder = document.getElementById('traits-placeholder');
+
+      // Build preview character data
+      const previewChar = {
+        name: 'Your Hero',
+        level: 1,
+        race: this.selectedRace,
+        class: this.selectedClass,
+        gender: this.selectedGender || 'other',
+        // Transform API snake_case to camelCase for ParchmentCard
+        hp: stats.hp_max || stats.maxHp || 100,
+        maxHp: stats.hp_max || stats.maxHp || 100,
+        mp: stats.mp_max || stats.maxMp || 50,
+        maxMp: stats.mp_max || stats.maxMp || 50,
+        strength: stats.strength || stats.str || 10,
+        intelligence: stats.intelligence || stats.int || 10,
+        agility: stats.agility || stats.agi || 10,
+        vitality: stats.vitality || stats.vit || 10,
+        luck: stats.luck || stats.lck || 10
+      };
+
+      this.previewData = previewChar;
+      this.previewCard.setCharacter(previewChar);
+
+      // Build traits array from response
+      const traitList = [];
+      if (traits?.racial) {
+        traitList.push({
+          name: traits.racial.name,
+          description: traits.racial.description,
+          type: 'racial'
+        });
+      }
+      if (traits?.starting) {
+        traitList.push({
+          name: traits.starting.name,
+          description: traits.starting.description,
+          type: 'starting'
+        });
+      }
+
+      this.previewCard.setTraits(traitList);
+
+      // Hide placeholder since traits are now shown in the card
+      if (traitsPlaceholder) {
+        traitsPlaceholder.style.display = 'none';
+      }
+
+    } catch (err) {
+      // Ignore abort errors
+      if (err.name === 'AbortError') return;
+
+      console.error('Failed to fetch character preview:', err);
+
+      // Fallback to local data on error
+      const racialTrait = RACIAL_TRAITS[this.selectedRace];
+      const traits = racialTrait ? [racialTrait] : [];
+
+      const fallbackChar = {
+        name: 'Your Hero',
+        level: 1,
+        race: this.selectedRace,
+        class: this.selectedClass,
+        gender: this.selectedGender || 'other',
+        hp: 100,
+        maxHp: 100,
+        mp: 50,
+        maxMp: 50,
+        strength: 10,
+        intelligence: 10,
+        agility: 10,
+        vitality: 10,
+        luck: 10
+      };
+
+      this.previewCard.setCharacter(fallbackChar);
+      this.previewCard.setTraits(traits);
+
+      const traitsPlaceholder = document.getElementById('traits-placeholder');
+      if (traitsPlaceholder) {
+        traitsPlaceholder.textContent = 'Preview unavailable - using defaults';
+        traitsPlaceholder.style.display = 'block';
+      }
     }
   }
 

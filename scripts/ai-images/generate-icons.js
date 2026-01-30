@@ -97,9 +97,23 @@ Examples:
 }
 
 /**
+ * Map subcategory to expected ID prefix.
+ * Subcategories are plural (actions, augments) but metadata ID prefixes are singular
+ * (action_, augment_), so we need this mapping.
+ */
+const ICON_PREFIX_MAP = {
+  actions: 'action_',
+  augments: 'augment_',
+  status: 'status_',
+  menu: 'menu_',
+  resources: 'resource_',
+  zodiac: 'zodiac_'
+};
+
+/**
  * Get the output path for an icon
  * Strips the category prefix from the id since icons are organized in category subdirectories.
- * e.g., icon.id = 'menu_settings', category = 'menu' -> filename = 'settings.png'
+ * e.g., icon.id = 'action_attack', category = 'actions' -> filename = 'attack.png'
  */
 function getOutputPath(icon) {
   const category = icon._iconCategory;
@@ -109,13 +123,18 @@ function getOutputPath(icon) {
 
 /**
  * Get the icon filename (without category prefix)
- * Used for size variant generation
+ * Used for size variant generation.
+ * Strips the singular prefix from ID to get the base filename.
+ * e.g., 'action_attack' -> 'attack', 'augment_damage' -> 'damage'
  */
 function getIconFilename(icon) {
   const category = icon._iconCategory;
-  return icon.id.startsWith(`${category}_`)
-    ? icon.id.slice(category.length + 1)
-    : icon.id;
+  const prefix = ICON_PREFIX_MAP[category];
+
+  if (prefix && icon.id.startsWith(prefix)) {
+    return icon.id.slice(prefix.length);
+  }
+  return icon.id;
 }
 
 /**

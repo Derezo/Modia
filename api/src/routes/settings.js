@@ -5,6 +5,10 @@ import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// SECURITY: Developer mode is STRICTLY disabled in production
+// This mirrors the security pattern in debug.js
+const isProduction = process.env.NODE_ENV === 'production';
+
 // Default settings structure (8 categories, ~55 settings)
 // IMPORTANT: This structure is mirrored in:
 // - frontend/src/core/Game.js (defaults)
@@ -333,6 +337,12 @@ function validateSettings(settings) {
       return { valid: false, error: 'developer settings must be an object' };
     }
 
+    // SECURITY: Block developer mode from being enabled in production
+    if (isProduction && settings.developer.enabled === true) {
+      console.warn('[SECURITY] Attempted to enable developer mode in production');
+      return { valid: false, error: 'Developer mode cannot be enabled in production' };
+    }
+
     // Validate enabled (master toggle)
     if (settings.developer.enabled !== undefined && typeof settings.developer.enabled !== 'boolean') {
       return { valid: false, error: 'developer.enabled must be a boolean' };
@@ -407,6 +417,26 @@ function validateSettings(settings) {
   return { valid: true };
 }
 
+/**
+ * Sanitize settings for production - ensures developer mode is always disabled
+ * @param {Object} settings - Settings object
+ * @returns {Object} Sanitized settings
+ */
+function sanitizeSettingsForProduction(settings) {
+  if (!isProduction) {
+    return settings;
+  }
+
+  // Force developer mode off in production
+  return {
+    ...settings,
+    developer: {
+      ...DEFAULT_SETTINGS.developer,
+      enabled: false
+    }
+  };
+}
+
 // GET /api/settings - Get current user's settings
 router.get('/', authenticate, asyncHandler(async (req, res) => {
   const userId = req.user.userId;
@@ -426,16 +456,27 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
       [userId, JSON.stringify(DEFAULT_SETTINGS)]
     );
 
-    return res.json({ settings: insertResult.rows[0].settings });
+    return res.json({
+      settings: sanitizeSettingsForProduction(insertResult.rows[0].settings)
+    });
   }
 
-  res.json({ settings: result.rows[0].settings });
+  res.json({
+    settings: sanitizeSettingsForProduction(result.rows[0].settings)
+  });
 }));
 
 // PUT /api/settings - Update user settings (deep merge)
 router.put('/', authenticate, asyncHandler(async (req, res) => {
   const userId = req.user.userId;
   const newSettings = req.body;
+
+  // SECURITY: In production, strip all developer settings from the request
+  // This prevents any attempt to modify developer settings via API
+  if (isProduction && newSettings.developer) {
+    console.warn(`[SECURITY] User ${userId} attempted to modify developer settings in production`);
+    delete newSettings.developer;
+  }
 
   // Validate incoming settings
   const validation = validateSettings(newSettings);
@@ -455,7 +496,12 @@ router.put('/', authenticate, asyncHandler(async (req, res) => {
   }
 
   // Deep merge new settings into existing
-  const mergedSettings = deepMerge(currentSettings, newSettings);
+  let mergedSettings = deepMerge(currentSettings, newSettings);
+
+  // SECURITY: Ensure developer mode is always disabled in production
+  if (isProduction) {
+    mergedSettings = sanitizeSettingsForProduction(mergedSettings);
+  }
 
   // Upsert the settings
   const result = await query(
@@ -467,7 +513,9 @@ router.put('/', authenticate, asyncHandler(async (req, res) => {
     [userId, JSON.stringify(mergedSettings)]
   );
 
-  res.json({ settings: result.rows[0].settings });
+  res.json({
+    settings: sanitizeSettingsForProduction(result.rows[0].settings)
+  });
 }));
 
 export default router;

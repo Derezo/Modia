@@ -14,7 +14,8 @@
       "prompt": "subtle green shimmer particle effect faint sparkles and light wisps around edges ethereal glow",
       "seed": 24001,
       "generated": true,
-      "generatedAt": "2025-01-29T17:31:00.000Z"
+      "generatedAt": "2026-01-30T01:46:30.243Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "rarity_rare",
@@ -24,7 +25,8 @@
       "prompt": "soft blue radial glow particle effect gentle energy wisps and floating particles magical shine",
       "seed": 24002,
       "generated": true,
-      "generatedAt": "2025-01-29T15:39:00.000Z"
+      "generatedAt": "2026-01-30T01:47:10.455Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "rarity_epic",
@@ -34,7 +36,8 @@
       "prompt": "bright purple radiance particle effect swirling energy and glowing particles intense magical",
       "seed": 24003,
       "generated": true,
-      "generatedAt": "2025-01-29T15:39:00.000Z"
+      "generatedAt": "2026-01-30T01:47:51.839Z",
+      "loraModel": "retro-pixel"
     },
     {
       "id": "rarity_legendary",
@@ -44,7 +47,8 @@
       "prompt": "intense golden burst particle effect radiant rays and animated sparkles divine legendary power",
       "seed": 24004,
       "generated": true,
-      "generatedAt": "2025-01-29T15:40:00.000Z"
+      "generatedAt": "2026-01-30T01:48:33.373Z",
+      "loraModel": "retro-pixel"
     }
   ]
 }
