@@ -22,7 +22,7 @@ const FILTER_CONFIG = {
     subcategory: ['weapons', 'armor', 'accessories', 'consumables'],
   },
   icons: {
-    subcategory: ['actions', 'status', 'menu', 'augments'],
+    subcategory: ['actions', 'status', 'menu', 'augments', 'resources', 'zodiac'],
   },
   nodes: {
     // No category-specific filters, just status
