@@ -265,7 +265,7 @@ async function main() {
   }
 
   // Ensure output directories exist
-  for (const cat of ['actions', 'status', 'menu', 'augments', 'resources']) {
+  for (const cat of ['actions', 'status', 'menu', 'augments', 'resources', 'zodiac']) {
     ensureDirectoryExists(path.join(OUTPUT_DIR, cat));
   }
 
