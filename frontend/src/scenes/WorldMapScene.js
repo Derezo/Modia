@@ -225,11 +225,10 @@ export class WorldMapScene extends Scene {
     if (this.game.musicContext) {
       // Set region based on current node's race (map to region name for music)
       // API returns region_race ('human', 'elf', etc.), music uses region names ('heartlands', etc.)
+      // Default to 'heartlands' if region cannot be determined or race not in mapping
       const regionRace = this.currentNode?.region_race;
-      const regionName = regionRace ? RACE_TO_REGION[regionRace] : null;
-      if (regionName) {
-        this.game.musicContext.setRegion(regionName);
-      }
+      const regionName = (regionRace && RACE_TO_REGION[regionRace]) || 'heartlands';
+      this.game.musicContext.setRegion(regionName);
       this.game.musicContext.playExplorationMusic();
     }
   }

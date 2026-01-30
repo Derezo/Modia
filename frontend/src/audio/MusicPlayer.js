@@ -236,6 +236,12 @@ export class MusicPlayer {
 
     this.isCrossfading = true;
 
+    // Store old track info BEFORE updating currentTrack
+    // This ensures we use the correct fade-out duration from the old track's config
+    // Note: oldGain is used for fade-out; _completeCrossfade() handles stopping via this.currentSource
+    const oldTrackId = this.currentTrack;
+    const oldGain = this.currentGain;
+
     // Update currentTrack immediately to prevent duplicate requests for same track
     // (the check in play() uses currentTrack to skip redundant requests)
     this.currentTrack = trackId;
@@ -267,15 +273,15 @@ export class MusicPlayer {
     this.nextSource = nextSource;
     this.nextGain = nextGain;
 
-    // Get fade durations
-    const oldConfig = AUDIO_MANIFEST.music?.[this.currentTrack];
+    // Get fade durations - use stored oldTrackId for correct config lookup
+    const oldConfig = AUDIO_MANIFEST.music?.[oldTrackId];
     const fadeOutMs = oldConfig?.fadeOut || fadeInMs;
     const fadeDuration = Math.max(fadeInMs, fadeOutMs) / 1000;
     const timeConstant = fadeDuration / 3;
 
-    // Fade out old track
-    if (this.currentGain) {
-      this.currentGain.gain.setTargetAtTime(0, this.context.currentTime, timeConstant);
+    // Fade out old track (use stored oldGain reference)
+    if (oldGain) {
+      oldGain.gain.setTargetAtTime(0, this.context.currentTime, timeConstant);
     }
 
     // Fade in new track
@@ -285,11 +291,15 @@ export class MusicPlayer {
       timeConstant
     );
 
-    debugLog('audio.logMusicChanges', 'Crossfading to:', trackId, { from: this.currentTrack, fadeMs: fadeDuration * 1000 });
+    debugLog('audio.logMusicChanges', 'Crossfading to:', trackId, { from: oldTrackId, fadeMs: fadeDuration * 1000 });
 
     // Complete crossfade after duration
+    // Store reference to detect if this crossfade was superseded by another
+    const expectedNextSource = nextSource;
     const crossfadeDuration = fadeDuration * 3 * 1000; // 3 time constants for ~95% complete
     this.fadeTimer = setTimeout(() => {
+      // Skip if this crossfade was superseded by a newer one
+      if (this.nextSource !== expectedNextSource) return;
       this._completeCrossfade();
       this.currentSource = nextSource;
       this.currentGain = nextGain;
