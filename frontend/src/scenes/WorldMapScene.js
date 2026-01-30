@@ -772,6 +772,7 @@ export class WorldMapScene extends Scene {
       // Update discovery state for fog of war rendering (filtered by reachability)
       if (this.effects) {
         this.effects.updateDiscoveryState(this.nodes, this.connections, this.reachableNodes);
+        console.log('[DEBUG] updateDiscoveryState called - discoveredNodes:', this.effects.discoveredNodes.size, 'visitedNodes:', this.effects.visitedNodes.size);
       }
 
       // Update minimap bounds if nodes changed
@@ -2139,6 +2140,11 @@ export class WorldMapScene extends Scene {
     // Render fog of war overlay (before character and labels so player/text is always visible)
     // Guard: Only render when world data has loaded (nodes populated)
     if (this.effects && this.nodes.length > 0) {
+      // DEBUG: Log fog render once after data loaded
+      if (!this._fogRenderDebugLogged) {
+        console.log('[DEBUG] Fog render - nodes:', this.nodes.length, 'discoveredNodes:', this.effects.discoveredNodes.size);
+        this._fogRenderDebugLogged = true;
+      }
       this.effects.renderFogOfWar(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height, this.nodes, this.connections, this.watchtowerView);
     }
 
@@ -2175,6 +2181,11 @@ export class WorldMapScene extends Scene {
 
     // Render minimap (on top of everything)
     if (this.minimap && this.effects) {
+      // DEBUG: Log minimap data once
+      if (!this._minimapDebugLogged && this.nodes.length > 0) {
+        console.log('[DEBUG] Minimap render - nodes:', this.nodes.length, 'discoveredNodes:', this.effects.discoveredNodes.size, 'visitedNodes:', this.effects.visitedNodes.size);
+        this._minimapDebugLogged = true;
+      }
       this.minimap.render(ctx, {
         nodes: this.nodes,
         connections: this.connections,
