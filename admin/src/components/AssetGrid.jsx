@@ -190,6 +190,7 @@ export default function AssetGrid({
   const closeTimeoutRef = useRef(null);
   const refetchTimeoutRef = useRef(null);
   const searchInputRef = useRef(null);
+  const scrollPositionRef = useRef(null);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -222,6 +223,16 @@ export default function AssetGrid({
       }
     }
   }, [data?.assets, detailAsset]);
+
+  // Restore scroll position after data updates (from detail panel save/regenerate)
+  useEffect(() => {
+    if (scrollPositionRef.current !== null && data?.assets && !loading) {
+      requestAnimationFrame(() => {
+        window.scrollTo(0, scrollPositionRef.current);
+        scrollPositionRef.current = null;
+      });
+    }
+  }, [data?.assets, loading]);
 
   // Filter assets by search query (client-side)
   const filteredAssets = useMemo(() => {
@@ -307,7 +318,8 @@ export default function AssetGrid({
    * Handle asset update from detail panel
    */
   const handleDetailUpdate = useCallback(() => {
-    // Refetch to get updated data
+    // Save scroll position before refetch
+    scrollPositionRef.current = window.scrollY;
     refetch();
   }, [refetch]);
 
@@ -333,7 +345,8 @@ export default function AssetGrid({
       // Clear selection after marking
       clearSelection();
 
-      // Refresh to show updated markers
+      // Refresh to show updated markers (preserve scroll)
+      scrollPositionRef.current = window.scrollY;
       if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
       refetchTimeoutRef.current = setTimeout(() => {
         refetch();
@@ -376,7 +389,8 @@ export default function AssetGrid({
       // Clear selection after queueing
       clearSelection();
 
-      // Refresh after a delay to show updated status
+      // Refresh after a delay to show updated status (preserve scroll)
+      scrollPositionRef.current = window.scrollY;
       if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
       refetchTimeoutRef.current = setTimeout(() => {
         refetch();
@@ -441,7 +455,8 @@ export default function AssetGrid({
     try {
       await api.generateAssetsByIds(category, [id], { force: true });
       toast.success(`Regenerating ${id}...`);
-      // Refresh after a delay
+      // Refresh after a delay (preserve scroll)
+      scrollPositionRef.current = window.scrollY;
       if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
       refetchTimeoutRef.current = setTimeout(() => {
         refetch();
@@ -458,7 +473,8 @@ export default function AssetGrid({
     try {
       await api.markForRegeneration(category, id, mark);
       toast.success(mark ? `Marked ${id} for regeneration` : `Removed ${id} from queue`);
-      // Refresh to show updated status
+      // Refresh to show updated status (preserve scroll)
+      scrollPositionRef.current = window.scrollY;
       if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
       refetchTimeoutRef.current = setTimeout(() => {
         refetch();
@@ -484,6 +500,8 @@ export default function AssetGrid({
    */
   const handleBulkEditUpdate = useCallback(() => {
     clearSelection();
+    // Preserve scroll position after bulk edit
+    scrollPositionRef.current = window.scrollY;
     refetch();
   }, [clearSelection, refetch]);
 
@@ -550,7 +568,8 @@ export default function AssetGrid({
     try {
       await api.generateAssetsByIds(category, selectedAssetIds, { force: true });
       toast.success(`Regenerating ${selectedAssetIds.length} asset(s)...`);
-      // Refresh after a delay
+      // Refresh after a delay (preserve scroll)
+      scrollPositionRef.current = window.scrollY;
       if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
       refetchTimeoutRef.current = setTimeout(() => {
         refetch();
@@ -582,7 +601,8 @@ export default function AssetGrid({
           ? `Removed ${selectedAssetIds.length} item(s) from queue`
           : `Marked ${selectedAssetIds.length} item(s) for regeneration`
       );
-      // Refresh to show updated status
+      // Refresh to show updated status (preserve scroll)
+      scrollPositionRef.current = window.scrollY;
       if (refetchTimeoutRef.current) clearTimeout(refetchTimeoutRef.current);
       refetchTimeoutRef.current = setTimeout(() => {
         refetch();

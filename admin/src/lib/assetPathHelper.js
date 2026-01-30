@@ -7,16 +7,29 @@ import { getAssetPath, DEFAULT_SIZES } from '@shared/assetPaths.js';
 
 /**
  * Normalize icon IDs by stripping the category prefix if present.
- * Icon metadata uses full IDs (e.g., 'menu_fishing') but files are
- * saved with stripped names ('fishing.png').
+ * Icon metadata uses full IDs (e.g., 'action_attack') but files are
+ * saved with stripped names ('attack.png').
+ *
+ * Note: Subcategories are plural (actions, augments) but prefixes are singular
+ * (action_, augment_), so we need a mapping table.
  *
  * @param {string} id - The icon ID (may include category prefix)
- * @param {string} subcategory - The icon category/subcategory
+ * @param {string} subcategory - The icon category/subcategory (e.g., 'actions', 'augments')
  * @returns {string} The normalized ID without prefix
  */
 function normalizeIconId(id, subcategory) {
-  const prefix = `${subcategory}_`;
-  if (id.startsWith(prefix)) {
+  // Map subcategory to expected prefix (subcategories are plural, prefixes are singular)
+  const prefixMap = {
+    actions: 'action_',
+    augments: 'augment_',
+    status: 'status_',
+    menu: 'menu_',
+    resources: 'resource_',
+    zodiac: 'zodiac_'
+  };
+
+  const prefix = prefixMap[subcategory];
+  if (prefix && id.startsWith(prefix)) {
     return id.slice(prefix.length);
   }
   return id;

@@ -156,7 +156,7 @@ export class FormationScene extends Scene {
             ${Icon.html('menu', 'inventory', { label: responsive.showLabels() ? 'Items' : '', size: 'md' })}
           </button>
           <button class="parchment-btn parchment-btn-secondary" id="back-btn">
-            ${Icon.html('actions', 'back', { label: responsive.showLabels() ? 'Back' : '', size: 'md' })}
+            ${Icon.html('menu', 'back', { label: responsive.showLabels() ? 'Back' : '', size: 'md' })}
           </button>
         </div>
       </div>

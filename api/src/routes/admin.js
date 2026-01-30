@@ -197,6 +197,33 @@ function getAssetSubcategory(asset, category) {
 }
 
 /**
+ * Normalize icon ID by stripping category prefix to match file naming convention.
+ * Icon metadata uses full IDs (e.g., 'action_attack') but files are saved
+ * with stripped names ('attack.png') in category subdirectories.
+ *
+ * @param {string} id - Icon ID from metadata
+ * @param {string} subcategory - Icon subcategory (e.g., 'actions', 'augments')
+ * @returns {string} Normalized ID without prefix
+ */
+function normalizeIconId(id, subcategory) {
+  // Map subcategory to expected prefix
+  const prefixMap = {
+    actions: 'action_',
+    augments: 'augment_',
+    status: 'status_',
+    menu: 'menu_',
+    resources: 'resource_',
+    zodiac: 'zodiac_'
+  };
+
+  const prefix = prefixMap[subcategory];
+  if (prefix && id.startsWith(prefix)) {
+    return id.slice(prefix.length);
+  }
+  return id;
+}
+
+/**
  * Add computed path to asset
  */
 function enrichAssetWithPath(asset, category) {
@@ -210,7 +237,13 @@ function enrichAssetWithPath(asset, category) {
       extraOptions.tileCategory = asset._tileCategory;
     }
 
-    asset.path = getAssetPath(category, id, {
+    // Normalize icon IDs to match file naming convention
+    // Icon metadata uses prefixed IDs (action_attack) but files use stripped names (attack.png)
+    const normalizedId = category === 'icons'
+      ? normalizeIconId(id, subcategory)
+      : id;
+
+    asset.path = getAssetPath(category, normalizedId, {
       subcategory,
       size,
       ...extraOptions

@@ -27,9 +27,9 @@
  * | [Frame Padding: 6px]             |
  * |   Zodiac Segment (36px)          |
  * | [Divider: 4px]                   |
- * |   Travel Progress Segment (30px) |
- * | [Divider: 4px]                   |
  * |   Stamina Segment (36px)         |
+ * | [Divider: 4px]                   |
+ * |   Travel Progress Segment (30px) |
  * | [Frame Padding: 6px]             |
  * +----------------------------------+
  *
@@ -195,18 +195,18 @@ export class WorldMapHUDPanel {
     this.renderDivider(ctx, contentX, contentY, contentWidth);
     contentY += DIVIDER_HEIGHT;
 
-    // Travel segment (if visible)
-    if (this.travelSegment.isVisible()) {
-      this.travelSegment.render(ctx, contentX, contentY, contentWidth);
-      contentY += this.travelSegment.getHeight();
-
-      // Divider after travel
-      this.renderDivider(ctx, contentX, contentY, contentWidth);
-      contentY += DIVIDER_HEIGHT;
-    }
-
     // Stamina segment (36px)
     this.staminaSegment.render(ctx, contentX, contentY, contentWidth);
+    contentY += 36;
+
+    // Travel segment (if visible) - rendered at bottom to reduce animation jitter
+    if (this.travelSegment.isVisible()) {
+      // Divider before travel
+      this.renderDivider(ctx, contentX, contentY, contentWidth);
+      contentY += DIVIDER_HEIGHT;
+
+      this.travelSegment.render(ctx, contentX, contentY, contentWidth);
+    }
 
     // Render particles on top of everything
     this.particleSystem.render(ctx);

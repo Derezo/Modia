@@ -17,7 +17,8 @@
       "outputPath": "castle",
       "generated": true,
       "notes": null,
-      "generatedAt": "2026-01-25T19:57:35.400Z"
+      "generatedAt": "2026-01-25T19:57:35.400Z",
+      "loraModel": "v1"
     },
     {
       "key": "grass_1",

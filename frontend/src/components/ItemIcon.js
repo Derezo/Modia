@@ -105,14 +105,9 @@ const RARITY_CLASSES = {
 };
 
 /**
- * Fallback emoji for missing sprites
+ * Fallback display for missing sprites - shows red X to make errors visible
  */
-const FALLBACK_EMOJI = {
-  weapons: '\u2694\uFE0F', // crossed swords
-  armor: '\uD83D\uDEE1\uFE0F', // shield
-  accessories: '\uD83D\uDC8D', // ring
-  consumables: '\uD83E\uDDEA' // test tube
-};
+const FALLBACK_DISPLAY = '✗';
 
 /**
  * Escape HTML special characters
@@ -182,22 +177,21 @@ export class ItemIcon {
     const titleAttr = title ? `title="${escapeHtml(title)}"` : '';
 
     if (useFallback) {
-      const fallbackEmoji = FALLBACK_EMOJI[subcategory] || '\u2753'; // question mark
-      return `<span class="${classes.join(' ')}" ${titleAttr}>
-        <span class="modia-item-icon__fallback" style="font-size: ${pixelSize * 0.6}px;">${fallbackEmoji}</span>
+      console.error('[ItemIcon] No spriteId provided for item:', item.name || 'unknown');
+      return `<span class="${classes.join(' ')} modia-item-icon--error" ${titleAttr}>
+        <span class="modia-item-icon__fallback">${FALLBACK_DISPLAY}</span>
       </span>`;
     }
 
     // Pre-compute fallback for onerror - use static values only
-    const fallbackEmoji = FALLBACK_EMOJI[subcategory] || '\u2753';
     const fallbackSize = Math.round(pixelSize * 0.6);
 
     return `<span class="${classes.join(' ')}" ${titleAttr}>
       <img class="modia-item-icon__img" src="${imgPath}" alt=""
            style="width: ${pixelSize}px; height: ${pixelSize}px;"
            draggable="false"
-           onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-      <span class="modia-item-icon__fallback" style="display:none;font-size:${fallbackSize}px;">${fallbackEmoji}</span>
+           onerror="console.error('[ItemIcon] Image load failed:', this.src); this.style.display='none'; this.nextElementSibling.style.display='flex'; this.parentElement.classList.add('modia-item-icon--error');">
+      <span class="modia-item-icon__fallback" style="display:none;font-size:${fallbackSize}px;">${FALLBACK_DISPLAY}</span>
     </span>`;
   }
 
@@ -246,11 +240,11 @@ export class ItemIcon {
     // Build title attribute
     const titleAttr = title ? `title="${escapeHtml(title)}"` : '';
 
-    // If no spriteId, return fallback
+    // If no spriteId, return error fallback
     if (!spriteId) {
-      const fallbackEmoji = FALLBACK_EMOJI[subcategory] || '\u2753';
-      return `<span class="${classes.join(' ')}" ${titleAttr}>
-        <span class="modia-item-icon__fallback" style="font-size: ${pixelSize * 0.6}px;">${fallbackEmoji}</span>
+      console.error('[ItemIcon] No spriteId provided for compositeHtml, item:', item.name || 'unknown');
+      return `<span class="${classes.join(' ')} modia-item-icon--error" ${titleAttr}>
+        <span class="modia-item-icon__fallback">${FALLBACK_DISPLAY}</span>
       </span>`;
     }
 
@@ -269,13 +263,11 @@ export class ItemIcon {
              style="width: ${pixelSize}px; height: ${pixelSize}px;"
              draggable="false">
       </span>`;
-    } catch {
-      // Fall back to non-composited version on error
-      const fallbackEmoji = FALLBACK_EMOJI[subcategory] || '\u2753';
-      const fallbackSize = Math.round(pixelSize * 0.6);
-
-      return `<span class="${classes.join(' ')}" ${titleAttr}>
-        <span class="modia-item-icon__fallback" style="font-size:${fallbackSize}px;">${fallbackEmoji}</span>
+    } catch (err) {
+      // Show error state instead of masking with emoji
+      console.error('[ItemIcon] Composite failed for:', spriteId, err);
+      return `<span class="${classes.join(' ')} modia-item-icon--error" ${titleAttr}>
+        <span class="modia-item-icon__fallback">${FALLBACK_DISPLAY}</span>
       </span>`;
     }
   }
@@ -356,14 +348,22 @@ export class ItemIcon {
         image-rendering: crisp-edges;
       }
 
-      /* Fallback emoji */
+      /* Fallback display */
       .modia-item-icon__fallback {
         display: flex;
         align-items: center;
         justify-content: center;
         width: 100%;
         height: 100%;
-        opacity: 0.6;
+        font-size: 16px;
+        color: #cc3333;
+        font-weight: bold;
+      }
+
+      /* Error state - red border to make missing sprites obvious */
+      .modia-item-icon--error {
+        border-color: #cc3333;
+        background: rgba(204, 51, 51, 0.15);
       }
     `;
     document.head.appendChild(style);

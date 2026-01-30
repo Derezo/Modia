@@ -23,8 +23,8 @@ const ICONS_BASE = path.join(PROJECT_ROOT, 'frontend/public/assets/icons');
 const PNG_DIR = path.join(ICONS_BASE, 'png');
 const ORIGINALS_DIR = path.join(ICONS_BASE, 'originals');
 
-const ICON_CATEGORIES = ['actions', 'status', 'menu', 'augments', 'resources'];
-const SIZES = [16, 24, 32, 48, 64, 128];
+const ICON_CATEGORIES = ['actions', 'status', 'menu', 'augments', 'resources', 'zodiac'];
+const SIZES = [16, 24, 32, 48, 64, 128, 256];
 
 // Mapping from category to prefix patterns to strip
 const CATEGORY_PREFIXES = {
@@ -32,7 +32,8 @@ const CATEGORY_PREFIXES = {
   status: 'status_',
   menu: 'menu_',
   augments: 'augment_',
-  resources: 'resource_'
+  resources: 'resource_',
+  zodiac: 'zodiac_'
 };
 
 function parseArgs() {

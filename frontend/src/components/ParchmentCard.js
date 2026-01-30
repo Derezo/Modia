@@ -23,14 +23,17 @@ export class ParchmentCard {
    * @param {string} options.type - 'player' or 'enemy' (default: 'player')
    * @param {boolean} options.showStats - Whether to show stats grid (default: true)
    * @param {boolean} options.showPortrait - Whether to show portrait (default: true)
+   * @param {boolean} options.showTraits - Whether to show trait badges (default: false)
    */
   constructor(options = {}) {
     this.mode = options.mode || 'compact';
     this.type = options.type || 'player';
     this.showStats = options.showStats !== false;
     this.showPortrait = options.showPortrait !== false;
+    this.showTraits = options.showTraits || false;
 
     this.character = null;
+    this.traits = [];
     this.element = null;
     this.damagePreviewElement = null;
     // Track last known values for change detection (objects may be mutated in place)
@@ -465,6 +468,59 @@ export class ParchmentCard {
       .pc-dmg-range--revive {
         color: #8a5520;
       }
+
+      /* Trait Badges Section */
+      .pc-traits {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(139, 115, 85, 0.3);
+      }
+
+      .pc-trait-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        cursor: help;
+        transition: background-color 0.15s ease;
+      }
+
+      .pc-trait-badge:hover {
+        filter: brightness(1.05);
+      }
+
+      .pc-trait-icon {
+        font-size: 12px;
+        line-height: 1;
+      }
+
+      .pc-trait-name {
+        font-weight: 600;
+        color: #3d3020;
+      }
+
+      .pc-trait-racial {
+        background: rgba(100, 140, 180, 0.15);
+        border: 1px solid rgba(100, 140, 180, 0.3);
+      }
+
+      .pc-trait-racial .pc-trait-name {
+        color: #35527a;
+      }
+
+      .pc-trait-starting {
+        background: rgba(180, 150, 80, 0.15);
+        border: 1px solid rgba(180, 150, 80, 0.3);
+      }
+
+      .pc-trait-starting .pc-trait-name {
+        color: #6a5520;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -495,6 +551,15 @@ export class ParchmentCard {
   update(updates) {
     if (!this.character) return;
     Object.assign(this.character, updates);
+    this.render();
+  }
+
+  /**
+   * Set traits to display on the card
+   * @param {Array<{name: string, description: string, type: 'racial'|'starting'}>} traits
+   */
+  setTraits(traits) {
+    this.traits = traits || [];
     this.render();
   }
 
@@ -624,6 +689,21 @@ export class ParchmentCard {
     }
 
     html += '</div>';
+
+    // Traits section (for character creation preview)
+    if (this.showTraits && this.traits.length > 0) {
+      html += `
+        <div class="pc-traits">
+          ${this.traits.map(t => `
+            <div class="pc-trait-badge pc-trait-${t.type || 'starting'}" title="${this.escapeHtml(t.description || '')}">
+              <span class="pc-trait-icon">${t.type === 'racial' ? '&#x1F9EC;' : '&#x2B50;'}</span>
+              <span class="pc-trait-name">${this.escapeHtml(t.name || 'Unknown')}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
+
     this.element.innerHTML = html;
   }
 

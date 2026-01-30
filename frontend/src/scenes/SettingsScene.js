@@ -100,6 +100,7 @@ const DEFAULT_SETTINGS = {
 /**
  * SettingsScene - Full-screen settings configuration
  * Features: 8 tabs - Battle, Audio, Display, Accessibility, Gameplay, Controls, Social, Developer
+ * Note: Developer tab is only shown in development mode (localhost)
  */
 export class SettingsScene extends Scene {
   constructor(game) {
@@ -113,6 +114,11 @@ export class SettingsScene extends Scene {
     this.originalSettings = null; // For cancel/reset
     this.loading = false;
     this.hasChanges = false;
+
+    // SECURITY: Developer options are only available in development mode
+    // This matches the backend security in settings.js and debug.js
+    this.isDevelopment = window.location.hostname === 'localhost' ||
+                         window.location.hostname === '127.0.0.1';
   }
 
   async enter(_data = {}) {
@@ -659,10 +665,12 @@ export class SettingsScene extends Scene {
             <span class="settings-tab-icon">&#128101;</span>
             <span class="settings-tab-label">Social</span>
           </button>
+          ${this.isDevelopment ? `
           <button class="settings-tab" data-tab="developer">
             <span class="settings-tab-icon">&#128295;</span>
             <span class="settings-tab-label">Developer</span>
           </button>
+          ` : ''}
           <button class="settings-tab" data-tab="help">
             <span class="settings-tab-icon">&#10068;</span>
             <span class="settings-tab-label">Help</span>
@@ -677,7 +685,7 @@ export class SettingsScene extends Scene {
           ${this.renderGameplayPanel()}
           ${this.renderControlsPanel()}
           ${this.renderSocialPanel()}
-          ${this.renderDeveloperPanel()}
+          ${this.isDevelopment ? this.renderDeveloperPanel() : ''}
           ${this.renderHelpPanel()}
         </div>
       </div>

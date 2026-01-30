@@ -248,6 +248,21 @@
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
       "generatedAt": "2026-01-29T07:59:44.763Z"
+    },
+    {
+      "id": "action_travel",
+      "name": "Travel",
+      "prompt": "walking path icon",
+      "seed": 30027,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T04:47:18.472Z",
+      "regenerationQueuedAt": null,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     }
   ]
 }

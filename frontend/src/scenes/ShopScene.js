@@ -10,6 +10,7 @@ import {
 } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { Icon } from '../components/Icon.js';
+import { ItemIcon } from '../components/ItemIcon.js';
 import { ItemDataTable } from '../components/ItemDataTable/index.js';
 
 // Local alias for cleaner access
@@ -921,6 +922,7 @@ export class ShopScene extends Scene {
       type: item.type,
       rarity,
       description: item.description,
+      spriteId: item.spriteId || item.sprite_id,
       quantity: isCaravan ? item.stock : item.quantity,
       price: isCaravan ? item.price : (isBuyMode ? item.buyPrice : item.sellPrice),
 
@@ -971,7 +973,7 @@ export class ShopScene extends Scene {
     this.renderDetailPanel();
   }
 
-  renderDetailPanel() {
+  async renderDetailPanel() {
     const detailEl = this.uiElement.querySelector('#detail-content');
 
     if (!this.selectedItem) {
@@ -992,6 +994,14 @@ export class ShopScene extends Scene {
 
     const statsHtml = this.renderDetailStats(item);
 
+    // Generate composited 64x64 item image with rarity/augment overlays
+    const itemImageHtml = await ItemIcon.compositeHtml({
+      item: item,
+      size: 'xl',  // 64x64
+      rarity: item.rarity,
+      augments: item.augments || []
+    });
+
     // Build badges HTML
     let badgesHtml = '';
     if (isCaravan || item.caravanExclusive) {
@@ -1002,6 +1012,9 @@ export class ShopScene extends Scene {
     }
 
     detailEl.innerHTML = `
+      <div class="shop-detail-image" style="text-align: center; margin-bottom: 16px;">
+        ${itemImageHtml}
+      </div>
       <div class="detail-header">
         <div class="detail-name">${item.name}${badgesHtml}</div>
         <div class="detail-type">${item.type}${item.equipmentSlot ? ` - ${this.formatSlot(item.equipmentSlot)}` : ''}</div>
@@ -1043,17 +1056,17 @@ export class ShopScene extends Scene {
     `;
 
     // Event listeners for detail panel
-    detailEl.querySelector('#qty-minus')?.addEventListener('click', () => {
+    detailEl.querySelector('#qty-minus')?.addEventListener('click', async () => {
       if (this.purchaseQuantity > 1) {
         this.purchaseQuantity--;
-        this.renderDetailPanel();
+        await this.renderDetailPanel();
       }
     });
 
-    detailEl.querySelector('#qty-plus')?.addEventListener('click', () => {
+    detailEl.querySelector('#qty-plus')?.addEventListener('click', async () => {
       if (this.purchaseQuantity < maxQty) {
         this.purchaseQuantity++;
-        this.renderDetailPanel();
+        await this.renderDetailPanel();
       }
     });
 

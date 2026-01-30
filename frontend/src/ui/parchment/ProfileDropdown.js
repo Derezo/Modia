@@ -43,35 +43,6 @@ const NOTIFICATION_TYPES = {
   system: { category: 'notifications', name: 'system', color: '#6b7280', label: 'System' }
 };
 
-// Class icon mappings for avatar fallback
-const CLASS_ICONS = {
-  // Base classes
-  warrior: { category: 'classes', name: 'warrior' },
-  wizard: { category: 'classes', name: 'wizard' },
-  monk: { category: 'classes', name: 'monk' },
-  chemist: { category: 'classes', name: 'chemist' },
-  // Advanced classes - Warrior line
-  berserker: { category: 'classes', name: 'berserker' },
-  paladin: { category: 'classes', name: 'paladin' },
-  guardian: { category: 'classes', name: 'guardian' },
-  warlord: { category: 'classes', name: 'warlord' },
-  // Advanced classes - Wizard line
-  sorcerer: { category: 'classes', name: 'sorcerer' },
-  summoner: { category: 'classes', name: 'summoner' },
-  conjurer: { category: 'classes', name: 'conjurer' },
-  oracle: { category: 'classes', name: 'oracle' },
-  // Advanced classes - Monk line
-  ninja: { category: 'classes', name: 'ninja' },
-  martial_artist: { category: 'classes', name: 'martial_artist' },
-  brawler: { category: 'classes', name: 'brawler' },
-  ascetic: { category: 'classes', name: 'ascetic' },
-  // Advanced classes - Chemist line
-  alchemist: { category: 'classes', name: 'alchemist' },
-  medic: { category: 'classes', name: 'medic' },
-  plague_doctor: { category: 'classes', name: 'plague_doctor' },
-  artificer: { category: 'classes', name: 'artificer' }
-};
-
 export class ProfileDropdown {
   /**
    * @param {Object} game - Game instance
@@ -868,20 +839,23 @@ export class ProfileDropdown {
       const optimalSize = getOptimalSize('portraits', 48);
       const portraitUrl = getAssetPath('portraits', portraitId, { size: optimalSize });
 
-      // Create img with fallback on error
-      const fallbackIcon = Icon.html('menu', 'characters', { size: 'md' }).replace(/'/g, "\\'");
-      this.avatarElement.innerHTML = `<img src="${portraitUrl}" alt="Avatar" onerror="this.parentElement.innerHTML='<span class=\\'profile-dropdown__avatar-fallback\\'>${fallbackIcon}</span>'">`;
+      // Create img element with JS-based error handler to avoid inline HTML injection issues
+      const img = document.createElement('img');
+      img.src = portraitUrl;
+      img.alt = 'Avatar';
+      img.onerror = () => {
+        // Simple text fallback - first letter of class name
+        const initial = charClass.charAt(0).toUpperCase();
+        this.avatarElement.innerHTML = `<span class="profile-dropdown__avatar-fallback">${initial}</span>`;
+      };
+      this.avatarElement.innerHTML = '';
+      this.avatarElement.appendChild(img);
     } else if (leader?.class) {
-      // Use class icon fallback from Icon component
-      const classKey = leader.class.toLowerCase();
-      const classConfig = CLASS_ICONS[classKey];
-      if (classConfig) {
-        this.avatarElement.innerHTML = `<span class="profile-dropdown__avatar-fallback">${Icon.html(classConfig.category, classConfig.name, { size: 'md' })}</span>`;
-      } else {
-        this.avatarElement.innerHTML = `<span class="profile-dropdown__avatar-fallback">${Icon.html('menu', 'characters', { size: 'md' })}</span>`;
-      }
+      // Use class initial as fallback
+      const initial = leader.class.charAt(0).toUpperCase();
+      this.avatarElement.innerHTML = `<span class="profile-dropdown__avatar-fallback">${initial}</span>`;
     } else {
-      this.avatarElement.innerHTML = `<span class="profile-dropdown__avatar-fallback">${Icon.html('menu', 'characters', { size: 'md' })}</span>`;
+      this.avatarElement.innerHTML = '<span class="profile-dropdown__avatar-fallback">?</span>';
     }
   }
 
