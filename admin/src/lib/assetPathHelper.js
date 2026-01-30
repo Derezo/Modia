@@ -13,6 +13,11 @@ import { getAssetPath, DEFAULT_SIZES } from '@shared/assetPaths.js';
  * Note: Subcategories are plural (actions, augments) but prefixes are singular
  * (action_, augment_), so we need a mapping table.
  *
+ * NOTE: This mapping is duplicated in:
+ * - api/src/routes/admin.js (server-side normalization)
+ * - scripts/ai-images/generate-icons.js (build-time file naming)
+ * Keep all three in sync when adding new icon subcategories.
+ *
  * @param {string} id - The icon ID (may include category prefix)
  * @param {string} subcategory - The icon category/subcategory (e.g., 'actions', 'augments')
  * @returns {string} The normalized ID without prefix

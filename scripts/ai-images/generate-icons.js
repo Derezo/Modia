@@ -100,6 +100,11 @@ Examples:
  * Map subcategory to expected ID prefix.
  * Subcategories are plural (actions, augments) but metadata ID prefixes are singular
  * (action_, augment_), so we need this mapping.
+ *
+ * NOTE: This mapping is duplicated in:
+ * - api/src/routes/admin.js (server-side normalization)
+ * - admin/src/lib/assetPathHelper.js (client-side URL generation)
+ * Keep all three in sync when adding new icon subcategories.
  */
 const ICON_PREFIX_MAP = {
   actions: 'action_',
