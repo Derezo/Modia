@@ -6,11 +6,10 @@
  * - Shimmer sweep on regenerating segment (1.5s cycle)
  * - Particle spawning on stamina gain
  *
- * Structure (40px height):
+ * Structure (36px height):
  * +--------------------------------+
  * | Stamina        [7/8] [ICON]   |  <- 16px header
- * | [====|====|====|====|  | | |] |  <- 20px segmented bar
- * | [Regen progress shimmer     ] |  <- 4px regen indicator
+ * | [====|====|====|====|  | | |] |  <- 20px segmented bar (shimmer on regen segment)
  * +--------------------------------+
  *
  * @module StaminaSegment
@@ -23,9 +22,6 @@ const HEADER_HEIGHT = 16;
 
 /** Segmented bar height in pixels */
 const BAR_HEIGHT = 20;
-
-/** Regen indicator height in pixels */
-const REGEN_INDICATOR_HEIGHT = 4;
 
 /** Wave animation frequency in Hz */
 const WAVE_FREQUENCY = 2;
@@ -186,10 +182,6 @@ export class StaminaSegment {
     // Render segmented bar
     const barY = y + HEADER_HEIGHT;
     this.renderBar(ctx, x, barY, width);
-
-    // Render regen indicator
-    const regenY = barY + BAR_HEIGHT;
-    this.renderRegenIndicator(ctx, x, regenY, width);
 
     ctx.restore();
   }
@@ -427,56 +419,6 @@ export class StaminaSegment {
   }
 
   /**
-   * Render the regen indicator bar at the bottom
-   * @param {CanvasRenderingContext2D} ctx
-   * @param {number} x - Left edge X
-   * @param {number} y - Top edge Y
-   * @param {number} width - Available width
-   */
-  renderRegenIndicator(ctx, x, y, width) {
-    const barWidth = width - 8;
-    const barX = x + 4;
-
-    if (this.current >= this.max) {
-      // Full stamina - no indicator needed, just subtle line
-      ctx.fillStyle = 'rgba(139, 115, 85, 0.2)';
-      ctx.fillRect(barX, y, barWidth, REGEN_INDICATOR_HEIGHT);
-      return;
-    }
-
-    // Background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    ctx.fillRect(barX, y, barWidth, REGEN_INDICATOR_HEIGHT);
-
-    // Progress fill
-    const progress = this.getRegenProgress();
-    if (progress > 0) {
-      const progressWidth = barWidth * progress;
-      const progressGradient = ctx.createLinearGradient(barX, y, barX + progressWidth, y);
-      progressGradient.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
-      progressGradient.addColorStop(1, 'rgba(255, 215, 0, 0.3)');
-
-      ctx.fillStyle = progressGradient;
-      ctx.fillRect(barX, y, progressWidth, REGEN_INDICATOR_HEIGHT);
-
-      // Shimmer on progress bar
-      const shimmerX = barX + progressWidth * this.shimmerPhase;
-      const shimmerGrad = ctx.createLinearGradient(shimmerX - 10, y, shimmerX + 10, y);
-      shimmerGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
-      shimmerGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.5)');
-      shimmerGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
-      ctx.fillStyle = shimmerGrad;
-      ctx.fillRect(barX, y, progressWidth, REGEN_INDICATOR_HEIGHT);
-    }
-
-    // Border
-    ctx.strokeStyle = 'rgba(90, 74, 58, 0.5)';
-    ctx.lineWidth = 0.5;
-    ctx.strokeRect(barX, y, barWidth, REGEN_INDICATOR_HEIGHT);
-  }
-
-  /**
    * Check if stamina was gained and spawn particles at fill edge
    * @param {number} barX - Bar start X
    * @param {number} barY - Bar Y
@@ -505,7 +447,7 @@ export class StaminaSegment {
    * @returns {number}
    */
   getHeight() {
-    return HEADER_HEIGHT + BAR_HEIGHT + REGEN_INDICATOR_HEIGHT;
+    return 36; // 16px header + 20px bar
   }
 }
 

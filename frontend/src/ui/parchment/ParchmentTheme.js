@@ -116,13 +116,11 @@ export const PARCHMENT_RADIUS = {
  * Used by WorldMapHUDPanel and its segments (Stamina, Travel, Zodiac)
  */
 export const HUD_COLORS = {
-  // Frame colors for ornate medieval border
+  // Frame colors for clean wood border with subtle brass accent
   frame: {
     outer: '#3d2914',           // Dark wood
-    inner: '#5a4030',           // Mid wood
-    filigree: '#c9a959',        // Gold
-    filigreeHighlight: '#ffd700', // Bright gold
-    filigreeShadow: '#8b7355',  // Dark gold
+    inner: '#5a4030',           // Mid wood for bevel
+    accent: '#8b7355',          // Muted brass/bronze
   },
 
   // Panel background
