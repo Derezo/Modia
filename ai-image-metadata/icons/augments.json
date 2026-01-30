@@ -399,6 +399,132 @@
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.805Z",
       "regenerationQueuedAt": null
+    },
+    {
+      "id": "speed",
+      "name": "Speed Augment",
+      "prompt": "wind trail icon swift velocity blue blur motion fast",
+      "seed": 33037,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
+    },
+    {
+      "id": "damage",
+      "name": "Damage Augment",
+      "prompt": "sword slash icon attack power red sharp edge strike",
+      "seed": 33038,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
+    },
+    {
+      "id": "power",
+      "name": "Power Augment",
+      "prompt": "fist icon mighty force red energy impact punch",
+      "seed": 33039,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
+    },
+    {
+      "id": "magic_defense",
+      "name": "Magic Defense Augment",
+      "prompt": "arcane shield icon magic ward purple mystical barrier rune",
+      "seed": 33040,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
+    },
+    {
+      "id": "armor",
+      "name": "Armor Augment",
+      "prompt": "metal plate icon reinforced sturdy gray steel chest",
+      "seed": 33041,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
+    },
+    {
+      "id": "hp",
+      "name": "HP Augment",
+      "prompt": "red heart icon health life full pulse glow vitality",
+      "seed": 33042,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
+    },
+    {
+      "id": "mp",
+      "name": "MP Augment",
+      "prompt": "blue crystal icon mana magic energy orb glow sphere",
+      "seed": 33043,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
+    },
+    {
+      "id": "regen",
+      "name": "Regeneration Augment",
+      "prompt": "green pulse icon healing restore heartbeat wave renew",
+      "seed": 33044,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
+    },
+    {
+      "id": "mp_regen",
+      "name": "MP Regen Augment",
+      "prompt": "blue sparkle icon mana restore flowing energy refresh",
+      "seed": 33045,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
+    },
+    {
+      "id": "accuracy",
+      "name": "Accuracy Augment",
+      "prompt": "crosshair icon precision target aim bullseye hit",
+      "seed": 33046,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
+    },
+    {
+      "id": "crit",
+      "name": "Crit Augment",
+      "prompt": "gold star burst icon lethal strike critical impact sharp",
+      "seed": 33047,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
+    },
+    {
+      "id": "block",
+      "name": "Block Augment",
+      "prompt": "tower shield icon bulwark sturdy defend brown solid",
+      "seed": 33048,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
+    },
+    {
+      "id": "spell_resist",
+      "name": "Spell Resist Augment",
+      "prompt": "magic ward icon arcane deflect purple shield rune",
+      "seed": 33049,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
+    },
+    {
+      "id": "protection",
+      "name": "Protection Augment",
+      "prompt": "guardian shield icon damage reduce silver glow aegis",
+      "seed": 33050,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "needsRegeneration": false
     }
   ]
 }

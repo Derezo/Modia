@@ -22,7 +22,21 @@ const AUGMENT_ICONS = {
   defense: { category: 'augments', name: 'defense' },
   dragon_slayer: { category: 'augments', name: 'dragon-slayer' },
   undead_slayer: { category: 'augments', name: 'undead-slayer' },
-  demon_slayer: { category: 'augments', name: 'demon-slayer' }
+  demon_slayer: { category: 'augments', name: 'demon-slayer' },
+  speed: { category: 'augments', name: 'speed' },
+  damage: { category: 'augments', name: 'damage' },
+  power: { category: 'augments', name: 'power' },
+  magic_defense: { category: 'augments', name: 'magic_defense' },
+  armor: { category: 'augments', name: 'armor' },
+  hp: { category: 'augments', name: 'hp' },
+  mp: { category: 'augments', name: 'mp' },
+  regen: { category: 'augments', name: 'regen' },
+  mp_regen: { category: 'augments', name: 'mp_regen' },
+  accuracy: { category: 'augments', name: 'accuracy' },
+  crit: { category: 'augments', name: 'crit' },
+  block: { category: 'augments', name: 'block' },
+  spell_resist: { category: 'augments', name: 'spell_resist' },
+  protection: { category: 'augments', name: 'protection' }
 };
 
 // Parchment theme colors (shared with marketplace scene)
