@@ -39,3 +39,9 @@ coverage/
 
 # Generated assets (AI-generated images, audio, sprites)
 frontend/public/assets/
+
+# Temporary generation outputs (AI image/audio generation in progress)
+ai-images-temp/
+ai-audio-temp/
+*-temp/
+*.tmp
