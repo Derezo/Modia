@@ -10,7 +10,7 @@
  */
 
 import { PARCHMENT_COLORS, PARCHMENT_TYPOGRAPHY, PARCHMENT_SPACING } from '../ui/parchment/ParchmentTheme.js';
-import { iconLoader } from '../core/IconLoader.js';
+import { getUnitIconHtml, getClassLetter } from './turnOrderUtils.js';
 
 const P = PARCHMENT_COLORS;
 const T = PARCHMENT_TYPOGRAPHY;
@@ -354,7 +354,7 @@ export default class TurnOrderPanel {
       this.selectedPreviewUnit.id === prediction.id;
 
     // Get icon HTML
-    const iconHtml = await this.getIconHtml(prediction, isPlayer);
+    const iconHtml = await this.getIconHtml(prediction);
 
     return `
       <div class="turn-order-item turn-order-item--${typeClass}${isSelected ? ' turn-order-item--selected' : ''}"
@@ -368,38 +368,12 @@ export default class TurnOrderPanel {
   }
 
   /**
-   * Get icon HTML for a prediction
+   * Get icon HTML for a prediction using shared utilities
    * @param {Object} prediction - Turn prediction data
-   * @param {boolean} isPlayer - Whether this is a player unit
    * @returns {Promise<string>} Icon HTML
    */
-  async getIconHtml(prediction, isPlayer) {
-    const category = isPlayer ? 'classes' : 'enemies';
-    const iconName = this.normalizeIconName(prediction.class);
-    const cacheKey = `${category}-${iconName}`;
-
-    // Check cache
-    if (this.iconCache.has(cacheKey)) {
-      const cached = this.iconCache.get(cacheKey);
-      if (cached === 'fallback') {
-        return this.getFallbackIcon(prediction.class);
-      }
-      return `<img src="${cached}" alt="">`;
-    }
-
-    // Try to load icon
-    try {
-      const img = await iconLoader.load(category, iconName, 24);
-      if (img && img.src) {
-        this.iconCache.set(cacheKey, img.src);
-        return `<img src="${img.src}" alt="">`;
-      }
-    } catch (e) {
-      // Icon not found, use fallback
-    }
-
-    this.iconCache.set(cacheKey, 'fallback');
-    return this.getFallbackIcon(prediction.class);
+  async getIconHtml(prediction) {
+    return getUnitIconHtml(prediction, this.iconCache);
   }
 
   /**
@@ -408,52 +382,8 @@ export default class TurnOrderPanel {
    * @returns {string} Fallback icon HTML
    */
   getFallbackIcon(className) {
-    const letter = this.getClassLetter(className);
+    const letter = getClassLetter(className);
     return `<div class="turn-order-item__icon-fallback">${letter}</div>`;
-  }
-
-  /**
-   * Get single letter abbreviation for class
-   * @param {string} className - Class name
-   * @returns {string} Single letter
-   */
-  getClassLetter(className) {
-    const name = (className || '').toLowerCase();
-    const letters = {
-      warrior: 'W',
-      wizard: 'M',
-      monk: 'K',
-      chemist: 'C',
-      berserker: 'B',
-      paladin: 'P',
-      guardian: 'G',
-      warlord: 'L',
-      sorcerer: 'S',
-      summoner: 'U',
-      conjurer: 'J',
-      oracle: 'O',
-      ninja: 'N',
-      martial_artist: 'A',
-      brawler: 'R',
-      ascetic: 'T',
-      alchemist: 'A',
-      medic: 'M',
-      plague_doctor: 'D',
-      artificer: 'F',
-      monster: 'E',
-      enemy: 'E'
-    };
-    return letters[name] || name.charAt(0).toUpperCase() || '?';
-  }
-
-  /**
-   * Normalize class/enemy name to icon file name
-   * @param {string} className - Class or enemy name
-   * @returns {string} Normalized name (lowercase, underscores)
-   */
-  normalizeIconName(className) {
-    if (!className) return 'unknown';
-    return className.toLowerCase().replace(/\s+/g, '_');
   }
 
   /**

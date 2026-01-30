@@ -10,26 +10,17 @@
  */
 
 import { PARCHMENT_COLORS, PARCHMENT_TYPOGRAPHY, PARCHMENT_SPACING } from '../ui/parchment/ParchmentTheme.js';
+import {
+  LOG_COLORS,
+  formatDamageResult,
+  formatStatusEffect,
+  getEntryType,
+  escapeHtml
+} from './battleLogUtils.js';
 
 const P = PARCHMENT_COLORS;
 const T = PARCHMENT_TYPOGRAPHY;
 const S = PARCHMENT_SPACING;
-
-/**
- * Color palette for log entry types
- */
-const LOG_COLORS = {
-  damage: '#cc4444',      // Red for damage dealt
-  healing: '#44aa66',     // Green for healing
-  buff: '#4488cc',        // Blue for buffs
-  debuff: '#cc8844',      // Orange for debuffs
-  status: '#ccaa44',      // Yellow for status effects
-  movement: '#888888',    // Gray for movement
-  critical: '#ffcc00',    // Gold for critical hits
-  miss: '#666666',        // Dark gray for misses
-  wait: '#999999',        // Light gray for wait actions
-  item: '#aa88cc'         // Purple for item usage
-};
 
 export default class BattleLogPanel {
   /**
@@ -406,7 +397,7 @@ export default class BattleLogPanel {
    */
   renderEntry(entry) {
     const { turn, actor, action, target, result } = entry;
-    const entryType = this.getEntryType(action, result);
+    const entryType = getEntryType(action, result);
     const isCritical = result?.isCritical;
 
     const actorClass = actor?.isPlayer ? 'player' : 'enemy';
@@ -418,7 +409,7 @@ export default class BattleLogPanel {
       <div class="battle-log-entry battle-log-entry--${entryType}${criticalClass}">
         <div class="battle-log-entry__header">
           <span class="battle-log-entry__actor battle-log-entry__actor--${actorClass}">
-            ${this.escapeHtml(actor?.name || 'Unknown')}
+            ${escapeHtml(actor?.name || 'Unknown')}
           </span>
           <span class="battle-log-entry__turn">T${turn || '?'}</span>
         </div>
@@ -455,7 +446,7 @@ export default class BattleLogPanel {
         return this.renderItemContent(actionName, target, result);
 
       default:
-        return `<span class="battle-log-entry__action">${this.escapeHtml(actionName)}</span>`;
+        return `<span class="battle-log-entry__action">${escapeHtml(actionName)}</span>`;
     }
   }
 
@@ -467,40 +458,23 @@ export default class BattleLogPanel {
     let html = '';
 
     if (isSkill) {
-      html += `<span class="battle-log-entry__action">${this.escapeHtml(actionName)}</span>`;
+      html += `<span class="battle-log-entry__action">${escapeHtml(actionName)}</span>`;
     } else {
       html += '<span class="battle-log-entry__action">Attack</span>';
     }
 
-    html += ` &rarr; ${this.escapeHtml(targetName)}`;
+    html += ` &rarr; ${escapeHtml(targetName)}`;
 
-    if (result?.missed) {
-      html += '<div class="battle-log-entry__result"><span class="battle-log-entry__miss">MISS</span></div>';
-    } else if (result?.damage > 0) {
-      const critText = result.isCritical ? '<span class="battle-log-entry__critical"> CRIT!</span>' : '';
-      html += `<div class="battle-log-entry__result">
-        <span class="battle-log-entry__damage" style="color: ${LOG_COLORS.damage}">
-          -${result.damage} HP
-        </span>${critText}
-      </div>`;
-
-      // Show breakdown if available
-      if (result.baseDamage && result.isCritical && result.critBonus) {
-        html += `<div style="font-size: 9px; color: ${P.text.muted};">
-          (${result.baseDamage} base + ${result.critBonus} crit)
-        </div>`;
-      }
-    } else if (result?.healing > 0) {
-      html += `<div class="battle-log-entry__result">
-        <span class="battle-log-entry__healing">+${result.healing} HP</span>
-      </div>`;
+    // Use shared formatDamageResult utility
+    const damageFormatted = formatDamageResult(result, { mutedColor: P.text.muted });
+    if (!damageFormatted.isEmpty) {
+      html += `<div class="battle-log-entry__result">${damageFormatted.html}</div>`;
     }
 
-    // Status effects
+    // Status effects using shared formatStatusEffect utility
     if (result?.statusApplied) {
-      html += `<div class="battle-log-entry__status">
-        Applied: ${this.escapeHtml(result.statusApplied)}
-      </div>`;
+      const statusFormatted = formatStatusEffect(result.statusApplied);
+      html += `<div>${statusFormatted.html}</div>`;
     }
 
     return html;
@@ -523,8 +497,8 @@ export default class BattleLogPanel {
    */
   renderItemContent(itemName, target, result) {
     const targetName = target?.name || 'self';
-    let html = `<span class="battle-log-entry__action">Used ${this.escapeHtml(itemName)}</span>`;
-    html += ` on ${this.escapeHtml(targetName)}`;
+    let html = `<span class="battle-log-entry__action">Used ${escapeHtml(itemName)}</span>`;
+    html += ` on ${escapeHtml(targetName)}`;
 
     if (result?.healing > 0) {
       html += `<div class="battle-log-entry__result">
@@ -539,30 +513,6 @@ export default class BattleLogPanel {
     }
 
     return html;
-  }
-
-  /**
-   * Determine entry type for styling
-   */
-  getEntryType(action, result) {
-    const actionType = action?.type || 'unknown';
-
-    if (actionType === 'move') return 'movement';
-    if (actionType === 'wait') return 'wait';
-    if (actionType === 'item') return 'item';
-
-    if (result?.healing > 0) return 'healing';
-    if (result?.damage > 0) return 'damage';
-    if (result?.statusApplied) {
-      // Determine if buff or debuff based on status type
-      const status = result.statusApplied.toLowerCase();
-      if (['poison', 'blind', 'slow', 'silence', 'paralyze', 'confuse', 'bleed'].includes(status)) {
-        return 'debuff';
-      }
-      return 'buff';
-    }
-
-    return 'damage'; // Default
   }
 
   /**
@@ -585,17 +535,6 @@ export default class BattleLogPanel {
    */
   hide() {
     this.element.style.display = 'none';
-  }
-
-  /**
-   * Escape HTML special characters
-   * @param {string} text - Text to escape
-   * @returns {string} Escaped text
-   */
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   }
 
   /**
