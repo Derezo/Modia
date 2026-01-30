@@ -69,8 +69,14 @@ export function getAssetUrls(category, id, options = {}) {
   const urls = [];
   const size = options.size || DEFAULT_SIZES[category];
 
+  // Normalize icon IDs to match file naming convention
+  // Icon metadata uses full IDs (menu_fishing) but files use stripped names (fishing.png)
+  const normalizedId = category === 'icons' && options.subcategory
+    ? normalizeIconId(id, options.subcategory)
+    : id;
+
   try {
-    urls.push(getAssetPath(category, id, { ...options, size }));
+    urls.push(getAssetPath(category, normalizedId, { ...options, size }));
   } catch (e) {
     // Category not supported
   }
