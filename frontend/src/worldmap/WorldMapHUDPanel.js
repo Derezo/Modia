@@ -8,29 +8,29 @@
  * - x: 10, y: 70 (below player info panel)
  * - width: 180px (expanded from old 160px)
  * - Height: Dynamic based on visible segments
- *   - Normal (no travel): 94px
- *   - During travel: 134px (adds travel segment + divider)
+ *   - Normal (no travel): 90px
+ *   - During travel: 124px (adds travel segment + divider)
  *
  * Layout States:
  *
  * Normal (no travel):
  * +----------------------------------+
- * | [Ornate Header: 6px]             |
- * |   Stamina Segment (40px)         |
- * | [Divider: 4px]                   |
+ * | [Frame Padding: 6px]             |
  * |   Zodiac Segment (36px)          |
- * | [Ornate Footer: 6px]             |
+ * | [Divider: 4px]                   |
+ * |   Stamina Segment (36px)         |
+ * | [Frame Padding: 6px]             |
  * +----------------------------------+
  *
  * During Travel (animated expansion):
  * +----------------------------------+
- * | [Ornate Header: 6px]             |
- * |   Stamina Segment (40px)         |
+ * | [Frame Padding: 6px]             |
+ * |   Zodiac Segment (36px)          |
  * | [Divider: 4px]                   |
  * |   Travel Progress Segment (30px) |
  * | [Divider: 4px]                   |
- * |   Zodiac Segment (36px)          |
- * | [Ornate Footer: 6px]             |
+ * |   Stamina Segment (36px)         |
+ * | [Frame Padding: 6px]             |
  * +----------------------------------+
  *
  * @module WorldMapHUDPanel
@@ -53,7 +53,7 @@ const PANEL_Y = 70;
 const PANEL_WIDTH = 180;
 
 /** Base panel height (no travel segment) */
-const BASE_HEIGHT = 94; // header 6px + stamina 40px + divider 4px + zodiac 36px + footer 6px + 2px buffer
+const BASE_HEIGHT = 90; // header 6px + zodiac 36px + divider 4px + stamina 36px + footer 6px + 2px buffer
 
 /** Travel segment height including its divider */
 const TRAVEL_HEIGHT_WITH_DIVIDER = 34; // travel 30px + divider 4px
@@ -154,7 +154,6 @@ export class WorldMapHUDPanel {
    */
   update(deltaTime) {
     // Update all child components
-    this.frameRenderer.update(deltaTime);
     this.particleSystem.update(deltaTime);
     this.staminaSegment.update(deltaTime);
     this.travelSegment.update(deltaTime);
@@ -188,11 +187,11 @@ export class WorldMapHUDPanel {
     const contentWidth = width - CONTENT_PADDING * 2;
     let contentY = y + CONTENT_PADDING;
 
-    // Stamina segment (40px)
-    this.staminaSegment.render(ctx, contentX, contentY, contentWidth);
-    contentY += 40;
+    // Zodiac segment (36px)
+    this.zodiacSegment.render(ctx, contentX, contentY, contentWidth);
+    contentY += 36;
 
-    // Divider after stamina
+    // Divider after zodiac
     this.renderDivider(ctx, contentX, contentY, contentWidth);
     contentY += DIVIDER_HEIGHT;
 
@@ -206,8 +205,8 @@ export class WorldMapHUDPanel {
       contentY += DIVIDER_HEIGHT;
     }
 
-    // Zodiac segment (36px)
-    this.zodiacSegment.render(ctx, contentX, contentY, contentWidth);
+    // Stamina segment (36px)
+    this.staminaSegment.render(ctx, contentX, contentY, contentWidth);
 
     // Render particles on top of everything
     this.particleSystem.render(ctx);
