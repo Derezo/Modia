@@ -1,0 +1,227 @@
+{
+  "version": "1.0.0",
+  "category": "enemies",
+  "biome": "bridge",
+  "description": "Bridge biome enemy sprite sheets",
+  "biomeTraits": "weathered crossing structure near water worn traveled",
+  "totalAssets": 6,
+  "totalAnimations": 24,
+  "enemies": [
+    {
+      "id": "bandit",
+      "name": "Bandit",
+      "archetype": "humanoid",
+      "visualTraits": "hooded figure leather armor daggers mask scar sneaky",
+      "animations": {
+        "idle": {
+          "id": "bandit_idle",
+          "frameCount": 8,
+          "seed": 44001,
+          "generated": false,
+          "prompt": "bandit idle, crouched stance, daggers ready, eyes scanning"
+        },
+        "attack": {
+          "id": "bandit_attack",
+          "frameCount": 8,
+          "seed": 44002,
+          "generated": false,
+          "prompt": "bandit attacking, lunging with dagger, quick stab, dirty fighting"
+        },
+        "hit": {
+          "id": "bandit_hit",
+          "frameCount": 8,
+          "seed": 44003,
+          "generated": false,
+          "prompt": "bandit hit, stumbling backward, hood falling, cursing"
+        },
+        "death": {
+          "id": "bandit_death",
+          "frameCount": 8,
+          "seed": 44004,
+          "generated": false,
+          "prompt": "bandit dying, clutching wound, falling, dropping loot"
+        }
+      }
+    },
+    {
+      "id": "toll_collector",
+      "name": "Toll Collector",
+      "archetype": "humanoid",
+      "visualTraits": "burly man heavy armor mace coin pouch stern expression",
+      "animations": {
+        "idle": {
+          "id": "toll_collector_idle",
+          "frameCount": 8,
+          "seed": 44011,
+          "generated": false,
+          "prompt": "toll collector idle, standing firm, mace over shoulder, demanding"
+        },
+        "attack": {
+          "id": "toll_collector_attack",
+          "frameCount": 8,
+          "seed": 44012,
+          "generated": false,
+          "prompt": "toll collector attacking, swinging heavy mace, brutal overhead"
+        },
+        "hit": {
+          "id": "toll_collector_hit",
+          "frameCount": 8,
+          "seed": 44013,
+          "generated": false,
+          "prompt": "toll collector hit, armor denting, grunting, angry"
+        },
+        "death": {
+          "id": "toll_collector_death",
+          "frameCount": 8,
+          "seed": 44014,
+          "generated": false,
+          "prompt": "toll collector dying, coins spilling, collapsing, mace clattering"
+        }
+      }
+    },
+    {
+      "id": "bridge_troll",
+      "name": "Bridge Troll",
+      "archetype": "humanoid",
+      "visualTraits": "blue-gray skin barnacles algae massive tusks river smell webbed fingers",
+      "animations": {
+        "idle": {
+          "id": "bridge_troll_idle",
+          "frameCount": 8,
+          "seed": 44021,
+          "generated": false,
+          "prompt": "bridge troll idle, lurking under bridge, water dripping, hungry"
+        },
+        "attack": {
+          "id": "bridge_troll_attack",
+          "frameCount": 8,
+          "seed": 44022,
+          "generated": false,
+          "prompt": "bridge troll attacking, emerging from below, grabbing and smashing"
+        },
+        "hit": {
+          "id": "bridge_troll_hit",
+          "frameCount": 8,
+          "seed": 44023,
+          "generated": false,
+          "prompt": "bridge troll hit, roaring, splashing, slippery retreat"
+        },
+        "death": {
+          "id": "bridge_troll_death",
+          "frameCount": 8,
+          "seed": 44024,
+          "generated": false,
+          "prompt": "bridge troll dying, falling into water, sinking, bubbles rising"
+        }
+      }
+    },
+    {
+      "id": "mercenary",
+      "name": "Mercenary",
+      "archetype": "humanoid",
+      "visualTraits": "professional soldier chainmail sword veteran scars disciplined",
+      "animations": {
+        "idle": {
+          "id": "mercenary_idle",
+          "frameCount": 8,
+          "seed": 44031,
+          "generated": false,
+          "prompt": "mercenary idle, professional stance, sword ready, calculating"
+        },
+        "attack": {
+          "id": "mercenary_attack",
+          "frameCount": 8,
+          "seed": 44032,
+          "generated": false,
+          "prompt": "mercenary attacking, precise sword thrust, trained technique"
+        },
+        "hit": {
+          "id": "mercenary_hit",
+          "frameCount": 8,
+          "seed": 44033,
+          "generated": false,
+          "prompt": "mercenary hit, blocking partially, grunting, repositioning"
+        },
+        "death": {
+          "id": "mercenary_death",
+          "frameCount": 8,
+          "seed": 44034,
+          "generated": false,
+          "prompt": "mercenary dying, professional to the end, saluting, falling"
+        }
+      }
+    },
+    {
+      "id": "highwayman",
+      "name": "Highwayman",
+      "archetype": "humanoid",
+      "visualTraits": "flamboyant hat feather cape rapier pistol confident smile",
+      "animations": {
+        "idle": {
+          "id": "highwayman_idle",
+          "frameCount": 8,
+          "seed": 44041,
+          "generated": false,
+          "prompt": "highwayman idle, theatrical pose, rapier flourish, cocky"
+        },
+        "attack": {
+          "id": "highwayman_attack",
+          "frameCount": 8,
+          "seed": 44042,
+          "generated": false,
+          "prompt": "highwayman attacking, quick rapier thrust, fancy footwork, dueling"
+        },
+        "hit": {
+          "id": "highwayman_hit",
+          "frameCount": 8,
+          "seed": 44043,
+          "generated": false,
+          "prompt": "highwayman hit, hat flying off, dramatic stagger, outraged"
+        },
+        "death": {
+          "id": "highwayman_death",
+          "frameCount": 8,
+          "seed": 44044,
+          "generated": false,
+          "prompt": "highwayman dying, dramatic death pose, cape billowing, theatrical end"
+        }
+      }
+    },
+    {
+      "id": "guard",
+      "name": "Guard",
+      "archetype": "humanoid",
+      "visualTraits": "uniformed watchman spear shield tabard badge of office stern",
+      "animations": {
+        "idle": {
+          "id": "guard_idle",
+          "frameCount": 8,
+          "seed": 44051,
+          "generated": false,
+          "prompt": "guard idle, standing at attention, spear upright, vigilant"
+        },
+        "attack": {
+          "id": "guard_attack",
+          "frameCount": 8,
+          "seed": 44052,
+          "generated": false,
+          "prompt": "guard attacking, spear thrust forward, shield up, by the book"
+        },
+        "hit": {
+          "id": "guard_hit",
+          "frameCount": 8,
+          "seed": 44053,
+          "generated": false,
+          "prompt": "guard hit, shield absorbing blow, staggering, calling for backup"
+        },
+        "death": {
+          "id": "guard_death",
+          "frameCount": 8,
+          "seed": 44054,
+          "generated": false,
+          "prompt": "guard dying, falling at post, dutiful to the end, honorable"
+        }
+      }
+    }
+  ]
+}

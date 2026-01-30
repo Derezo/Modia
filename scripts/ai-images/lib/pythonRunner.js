@@ -205,6 +205,53 @@ async function generateTile(tileConfig, options = {}) {
 }
 
 /**
+ * Generate a wall texture using the Python generator
+ * Walls are 64x16 pixel strips for elevation stacking
+ * @param {Object} wallConfig - Wall configuration
+ * @param {string} wallConfig.prompt - Wall texture description
+ * @param {string} wallConfig.key - Asset key/filename
+ * @param {string} wallConfig.biome - Biome modifier
+ * @param {string} wallConfig.terrain - Terrain type (default, stone, etc.)
+ * @param {string} wallConfig.outputPath - Explicit output path
+ * @param {number} wallConfig.seed - Random seed
+ * @param {Object} options - Additional options
+ * @param {boolean} options.huggingface - Use HuggingFace API instead
+ * @param {boolean} options.verbose - Enable verbose output
+ * @param {boolean} options.quiet - Suppress output
+ * @returns {Promise<PythonResult>}
+ */
+async function generateWall(wallConfig, options = {}) {
+  const { prompt, key, biome = 'default', terrain = 'default', outputPath, seed = 42, loraModel } = wallConfig;
+  const { huggingface = false, verbose = false, quiet = false } = options;
+
+  const args = [
+    '--prompt', prompt,
+    '--key', key,
+    '--biome', biome,
+    '--seed', String(seed ?? 42),
+    '--wall'  // Signal to Python that this is a wall texture
+  ];
+
+  // Pass explicit output path if specified
+  if (outputPath) {
+    args.push('--output-path', outputPath);
+  }
+
+  if (options.dryRun) {
+    args.push('--dry-run');
+  }
+
+  if (huggingface) {
+    args.push('--huggingface');
+  }
+
+  // Pass LoRA model override if specified
+  const effectiveLoraModel = loraModel || options.loraModel;
+
+  return runPythonScript('generate_tile.py', args, { ...options, verbose, quiet, loraModel: effectiveLoraModel });
+}
+
+/**
  * Generate a portrait using the Python generator
  * @param {Object} portraitConfig - Portrait configuration
  * @param {string} portraitConfig.race - Character race (player only)
@@ -401,6 +448,49 @@ async function generateNode(nodeConfig, options = {}) {
 }
 
 /**
+ * Generate an obstacle sprite using the Python generator
+ * @param {Object} obstacleConfig - Obstacle configuration
+ * @param {string} obstacleConfig.prompt - Obstacle description
+ * @param {string} obstacleConfig.key - Asset key/filename
+ * @param {string} obstacleConfig.category - Obstacle category ('rocks', 'trees', etc.)
+ * @param {string} obstacleConfig.biome - Biome modifier (optional, default: 'default')
+ * @param {number} obstacleConfig.seed - Random seed
+ * @param {Object} options - Additional options
+ * @param {boolean} options.local - [DEPRECATED] Local is now default, this option is ignored
+ * @param {boolean} options.huggingface - Use HuggingFace API instead
+ * @param {boolean} options.verbose - Enable verbose output
+ * @param {boolean} options.quiet - Suppress output
+ * @returns {Promise<PythonResult>}
+ */
+async function generateObstacle(obstacleConfig, options = {}) {
+  const { prompt, key, category = 'decorations', biome = 'default', seed = 42, loraModel } = obstacleConfig;
+  const { local = true, huggingface = false, verbose = false, quiet = false } = options;
+
+  const args = [
+    '--prompt', prompt,
+    '--key', key,
+    '--category', category,
+    '--biome', biome,
+    '--seed', String(seed ?? 42)
+  ];
+
+  if (options.dryRun) {
+    args.push('--dry-run');
+  }
+
+  // Pass generation mode to Python script (local is now default)
+  if (huggingface) {
+    args.push('--huggingface');
+  }
+  // Note: --local flag is no longer needed as local ComfyUI is now the default
+
+  // Pass LoRA model override if specified (config takes precedence over options)
+  const effectiveLoraModel = loraModel || options.loraModel;
+
+  return runPythonScript('generate_obstacle.py', args, { ...options, verbose, quiet, loraModel: effectiveLoraModel });
+}
+
+/**
  * Generate an overlay sprite using the Python generator
  * @param {Object} overlayConfig - Overlay configuration
  * @param {string} overlayConfig.prompt - Overlay description
@@ -576,14 +666,90 @@ async function removeBackground(inputPath, outputPath, options = {}) {
   });
 }
 
+/**
+ * Generate a single character animation frame using the Python generator
+ * Used to generate individual 64x64 frames that will be concatenated into sprite sheets
+ *
+ * @param {Object} frameConfig - Frame configuration
+ * @param {string} frameConfig.prompt - Frame description including pose/action
+ * @param {string} frameConfig.key - Output filename (without extension)
+ * @param {string} frameConfig.characterType - 'player' or 'enemy'
+ * @param {string} frameConfig.characterClass - Class name (warrior, wizard, etc.) for players
+ * @param {string} frameConfig.biome - Biome for enemies (forest, cave, etc.)
+ * @param {string} frameConfig.characterId - Character ID for enemies
+ * @param {string} frameConfig.animation - Animation name (idle, walk, attack, etc.)
+ * @param {number} frameConfig.frameIndex - Frame number (0-7)
+ * @param {number} frameConfig.seed - Random seed (same seed for all frames in animation)
+ * @param {string} frameConfig.outputPath - Explicit output path for the frame
+ * @param {Object} options - Additional options
+ * @param {boolean} options.huggingface - Use HuggingFace API instead
+ * @param {boolean} options.verbose - Enable verbose output
+ * @param {boolean} options.quiet - Suppress output
+ * @returns {Promise<PythonResult>}
+ */
+async function generateCharacterFrame(frameConfig, options = {}) {
+  const {
+    prompt,
+    key,
+    characterType = 'player',
+    characterClass,
+    biome,
+    characterId,
+    animation,
+    frameIndex,
+    seed = 42,
+    outputPath,
+    loraModel
+  } = frameConfig;
+  const { huggingface = false, verbose = false, quiet = false } = options;
+
+  const args = [
+    '--prompt', prompt,
+    '--key', key,
+    '--character-type', characterType,
+    '--animation', animation,
+    '--frame', String(frameIndex),
+    '--seed', String(seed ?? 42)
+  ];
+
+  // Add type-specific arguments
+  if (characterType === 'player' && characterClass) {
+    args.push('--class', characterClass);
+  } else if (characterType === 'enemy') {
+    if (biome) args.push('--biome', biome);
+    if (characterId) args.push('--character-id', characterId);
+  }
+
+  // Pass explicit output path if provided
+  if (outputPath) {
+    args.push('--output-path', outputPath);
+  }
+
+  if (options.dryRun) {
+    args.push('--dry-run');
+  }
+
+  if (huggingface) {
+    args.push('--huggingface');
+  }
+
+  // Pass LoRA model override if specified
+  const effectiveLoraModel = loraModel || options.loraModel;
+
+  return runPythonScript('generate_character_frame.py', args, { ...options, verbose, quiet, loraModel: effectiveLoraModel });
+}
+
 module.exports = {
   runPythonScript,
   generateTile,
+  generateWall,
   generatePortrait,
   generateIcon,
   generateItem,
   generateNode,
+  generateObstacle,
   generateOverlay,
   runBatchGeneration,
-  removeBackground
+  removeBackground,
+  generateCharacterFrame
 };

@@ -111,7 +111,7 @@ export class BattlePathfinding {
         effectiveRange,
         this.grid.terrain,
         this.grid.elevation,
-        this.grid.elevationConnections || null,
+        null, // connections parameter (unused)
         unitsArray,
         this.grid.width,
         this.grid.height
@@ -252,7 +252,7 @@ export class BattlePathfinding {
         endY,
         this.grid.terrain,
         this.grid.elevation,
-        this.grid.elevationConnections || null,
+        null, // connections parameter (unused)
         unitsArray,
         this.grid.width,
         this.grid.height

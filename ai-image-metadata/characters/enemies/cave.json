@@ -1,0 +1,227 @@
+{
+  "version": "1.0.0",
+  "category": "enemies",
+  "biome": "cave",
+  "description": "Cave biome enemy sprite sheets",
+  "biomeTraits": "dark rocky underground subterranean crystalline damp",
+  "totalAssets": 6,
+  "totalAnimations": 24,
+  "enemies": [
+    {
+      "id": "bat_swarm",
+      "name": "Bat Swarm",
+      "archetype": "beast",
+      "visualTraits": "cluster of bats red eyes wing membranes fangs screeching",
+      "animations": {
+        "idle": {
+          "id": "bat_swarm_idle",
+          "frameCount": 8,
+          "seed": 42001,
+          "generated": false,
+          "prompt": "bat swarm idle, circling in formation, wings flapping, eyes glowing"
+        },
+        "attack": {
+          "id": "bat_swarm_attack",
+          "frameCount": 8,
+          "seed": 42002,
+          "generated": false,
+          "prompt": "bat swarm attacking, diving forward as mass, fangs bared, screeching"
+        },
+        "hit": {
+          "id": "bat_swarm_hit",
+          "frameCount": 8,
+          "seed": 42003,
+          "generated": false,
+          "prompt": "bat swarm hit, scattering briefly, bats tumbling, reforming"
+        },
+        "death": {
+          "id": "bat_swarm_death",
+          "frameCount": 8,
+          "seed": 42004,
+          "generated": false,
+          "prompt": "bat swarm dying, bats falling individually, dispersing, defeated"
+        }
+      }
+    },
+    {
+      "id": "cave_spider",
+      "name": "Cave Spider",
+      "archetype": "beast",
+      "visualTraits": "pale white body multiple eyes venomous fangs spindly legs web spinner",
+      "animations": {
+        "idle": {
+          "id": "cave_spider_idle",
+          "frameCount": 8,
+          "seed": 42011,
+          "generated": false,
+          "prompt": "cave spider idle, legs tapping, pale body pulsing, waiting in shadow"
+        },
+        "attack": {
+          "id": "cave_spider_attack",
+          "frameCount": 8,
+          "seed": 42012,
+          "generated": false,
+          "prompt": "cave spider attacking, shooting web, then lunging, fangs dripping"
+        },
+        "hit": {
+          "id": "cave_spider_hit",
+          "frameCount": 8,
+          "seed": 42013,
+          "generated": false,
+          "prompt": "cave spider hit, scrambling backward, legs flailing, wounded"
+        },
+        "death": {
+          "id": "cave_spider_death",
+          "frameCount": 8,
+          "seed": 42014,
+          "generated": false,
+          "prompt": "cave spider dying, legs curling tight, body deflating, still"
+        }
+      }
+    },
+    {
+      "id": "goblin",
+      "name": "Goblin",
+      "archetype": "humanoid",
+      "visualTraits": "gray-green skin cave adapted eyes rusty dagger tattered clothes",
+      "animations": {
+        "idle": {
+          "id": "goblin_idle",
+          "frameCount": 8,
+          "seed": 42021,
+          "generated": false,
+          "prompt": "cave goblin idle, crouched in shadow, dagger ready, eyes gleaming"
+        },
+        "attack": {
+          "id": "goblin_attack",
+          "frameCount": 8,
+          "seed": 42022,
+          "generated": false,
+          "prompt": "cave goblin attacking, slashing with dagger, quick stabbing motion"
+        },
+        "hit": {
+          "id": "goblin_hit",
+          "frameCount": 8,
+          "seed": 42023,
+          "generated": false,
+          "prompt": "cave goblin hit, stumbling, dropping weapon, yelping"
+        },
+        "death": {
+          "id": "goblin_death",
+          "frameCount": 8,
+          "seed": 42024,
+          "generated": false,
+          "prompt": "cave goblin dying, clutching wound, falling forward, expired"
+        }
+      }
+    },
+    {
+      "id": "cave_troll",
+      "name": "Cave Troll",
+      "archetype": "humanoid",
+      "visualTraits": "massive gray body stone-like skin glowing eyes huge club tusks",
+      "animations": {
+        "idle": {
+          "id": "cave_troll_idle",
+          "frameCount": 8,
+          "seed": 42031,
+          "generated": false,
+          "prompt": "cave troll idle, hunched over, club resting, breathing heavily"
+        },
+        "attack": {
+          "id": "cave_troll_attack",
+          "frameCount": 8,
+          "seed": 42032,
+          "generated": false,
+          "prompt": "cave troll attacking, swinging massive club overhead, ground shaking"
+        },
+        "hit": {
+          "id": "cave_troll_hit",
+          "frameCount": 8,
+          "seed": 42033,
+          "generated": false,
+          "prompt": "cave troll hit, roaring in anger, stumbling back, enraged"
+        },
+        "death": {
+          "id": "cave_troll_death",
+          "frameCount": 8,
+          "seed": 42034,
+          "generated": false,
+          "prompt": "cave troll dying, dropping club, crashing down, earth trembling"
+        }
+      }
+    },
+    {
+      "id": "crystal_golem",
+      "name": "Crystal Golem",
+      "archetype": "elemental",
+      "visualTraits": "body of purple crystals glowing core faceted limbs sharp edges",
+      "animations": {
+        "idle": {
+          "id": "crystal_golem_idle",
+          "frameCount": 8,
+          "seed": 42041,
+          "generated": false,
+          "prompt": "crystal golem idle, light refracting through body, humming with energy"
+        },
+        "attack": {
+          "id": "crystal_golem_attack",
+          "frameCount": 8,
+          "seed": 42042,
+          "generated": false,
+          "prompt": "crystal golem attacking, fist extending, crystals shooting forward"
+        },
+        "hit": {
+          "id": "crystal_golem_hit",
+          "frameCount": 8,
+          "seed": 42043,
+          "generated": false,
+          "prompt": "crystal golem hit, crystals cracking, shards flying, reforming"
+        },
+        "death": {
+          "id": "crystal_golem_death",
+          "frameCount": 8,
+          "seed": 42044,
+          "generated": false,
+          "prompt": "crystal golem dying, shattering apart, crystals scattering, core fading"
+        }
+      }
+    },
+    {
+      "id": "shadow",
+      "name": "Shadow",
+      "archetype": "undead",
+      "visualTraits": "formless darkness glowing red eyes wispy tendrils ethereal presence",
+      "animations": {
+        "idle": {
+          "id": "shadow_idle",
+          "frameCount": 8,
+          "seed": 42051,
+          "generated": false,
+          "prompt": "shadow creature idle, shifting formlessly, eyes floating, tendrils waving"
+        },
+        "attack": {
+          "id": "shadow_attack",
+          "frameCount": 8,
+          "seed": 42052,
+          "generated": false,
+          "prompt": "shadow attacking, lunging forward, darkness extending, grasping"
+        },
+        "hit": {
+          "id": "shadow_hit",
+          "frameCount": 8,
+          "seed": 42053,
+          "generated": false,
+          "prompt": "shadow hit, form disrupted, light piercing through, reforming"
+        },
+        "death": {
+          "id": "shadow_death",
+          "frameCount": 8,
+          "seed": 42054,
+          "generated": false,
+          "prompt": "shadow dying, dissipating into wisps, eyes fading last, vanishing"
+        }
+      }
+    }
+  ]
+}

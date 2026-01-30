@@ -1,7 +1,7 @@
 {
   "biome": "castle",
   "category": "walls",
-  "description": "Castle biome wall textures - hewn stone, brick patterns, fortification walls",
+  "description": "Castle biome wall textures - seamless vertical strips for elevation stacking",
   "palette": {
     "primary": "#708090",
     "secondary": "#696969",
@@ -10,27 +10,24 @@
   "tiles": [
     {
       "key": "wall_castle_default",
-      "prompt": "hewn castle stone wall with fitted blocks and mortar lines in slate grey #708090 #696969",
-      "seed": 51001,
-      "generated": true,
       "terrain": "default",
-      "generatedAt": "2026-01-28T06:16:18.038Z"
+      "prompt": "seamless vertical hewn castle stone wall texture with fitted blocks and mortar lines, tileable horizontal pattern, side view cross-section, slate grey tones",
+      "seed": 51001,
+      "generated": false
     },
     {
       "key": "wall_castle_brick",
-      "prompt": "castle brick wall with weathered red and grey masonry pattern #8B0000 #696969",
-      "seed": 51011,
-      "generated": true,
       "terrain": "brick",
-      "generatedAt": "2026-01-28T06:16:59.297Z"
+      "prompt": "seamless vertical castle brick wall texture with weathered red and grey masonry pattern, tileable horizontal pattern, side view cross-section, red and grey tones",
+      "seed": 51011,
+      "generated": false
     },
     {
       "key": "wall_castle_dungeon",
-      "prompt": "damp dungeon wall with moss growth and rusted iron rings in dark tones #2F4F4F #696969",
-      "seed": 51021,
-      "generated": true,
       "terrain": "dungeon",
-      "generatedAt": "2026-01-28T06:17:40.458Z"
+      "prompt": "seamless vertical damp dungeon wall texture with moss growth and rusted iron rings, tileable horizontal pattern, side view cross-section, dark grey and green tones",
+      "seed": 51021,
+      "generated": false
     }
   ]
 }

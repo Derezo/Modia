@@ -1,0 +1,227 @@
+{
+  "version": "1.0.0",
+  "category": "enemies",
+  "biome": "forest",
+  "description": "Forest biome enemy sprite sheets",
+  "biomeTraits": "leafy green natural woodland undergrowth dappled light",
+  "totalAssets": 6,
+  "totalAnimations": 24,
+  "enemies": [
+    {
+      "id": "forest_slime",
+      "name": "Forest Slime",
+      "archetype": "elemental",
+      "visualTraits": "translucent green gelatinous body glowing core dripping tendrils bubbles",
+      "animations": {
+        "idle": {
+          "id": "forest_slime_idle",
+          "frameCount": 8,
+          "seed": 41001,
+          "generated": false,
+          "prompt": "green slime idle, wobbling, translucent body pulsing"
+        },
+        "attack": {
+          "id": "forest_slime_attack",
+          "frameCount": 8,
+          "seed": 41002,
+          "generated": false,
+          "prompt": "green slime attacking, launching acidic tendril, stretching forward"
+        },
+        "hit": {
+          "id": "forest_slime_hit",
+          "frameCount": 8,
+          "seed": 41003,
+          "generated": false,
+          "prompt": "green slime hit, body rippling violently, splashing"
+        },
+        "death": {
+          "id": "forest_slime_death",
+          "frameCount": 8,
+          "seed": 41004,
+          "generated": false,
+          "prompt": "green slime dying, body dissolving, puddle forming"
+        }
+      }
+    },
+    {
+      "id": "giant_spider",
+      "name": "Giant Spider",
+      "archetype": "beast",
+      "visualTraits": "eight red eyes hairy body segmented legs fangs dripping venom",
+      "animations": {
+        "idle": {
+          "id": "giant_spider_idle",
+          "frameCount": 8,
+          "seed": 41011,
+          "generated": false,
+          "prompt": "giant spider idle, legs shifting, fangs clicking, watching"
+        },
+        "attack": {
+          "id": "giant_spider_attack",
+          "frameCount": 8,
+          "seed": 41012,
+          "generated": false,
+          "prompt": "giant spider attacking, lunging forward, fangs extended, pouncing"
+        },
+        "hit": {
+          "id": "giant_spider_hit",
+          "frameCount": 8,
+          "seed": 41013,
+          "generated": false,
+          "prompt": "giant spider hit, recoiling, legs curling defensively, hissing"
+        },
+        "death": {
+          "id": "giant_spider_death",
+          "frameCount": 8,
+          "seed": 41014,
+          "generated": false,
+          "prompt": "giant spider dying, legs curling inward, collapsing, twitching"
+        }
+      }
+    },
+    {
+      "id": "wolf",
+      "name": "Wolf",
+      "archetype": "beast",
+      "visualTraits": "gray fur amber eyes snarling maw sharp fangs alert ears",
+      "animations": {
+        "idle": {
+          "id": "wolf_idle",
+          "frameCount": 8,
+          "seed": 41021,
+          "generated": false,
+          "prompt": "wolf idle, standing alert, ears perked, sniffing air"
+        },
+        "attack": {
+          "id": "wolf_attack",
+          "frameCount": 8,
+          "seed": 41022,
+          "generated": false,
+          "prompt": "wolf attacking, leaping forward, jaws open, claws extended"
+        },
+        "hit": {
+          "id": "wolf_hit",
+          "frameCount": 8,
+          "seed": 41023,
+          "generated": false,
+          "prompt": "wolf hit, yelping, knocked sideways, recovering"
+        },
+        "death": {
+          "id": "wolf_death",
+          "frameCount": 8,
+          "seed": 41024,
+          "generated": false,
+          "prompt": "wolf dying, collapsing, final whimper, lying still"
+        }
+      }
+    },
+    {
+      "id": "forest_goblin",
+      "name": "Forest Goblin",
+      "archetype": "humanoid",
+      "visualTraits": "green skin pointed ears yellow eyes crude weapon loincloth war paint",
+      "animations": {
+        "idle": {
+          "id": "forest_goblin_idle",
+          "frameCount": 8,
+          "seed": 41031,
+          "generated": false,
+          "prompt": "forest goblin idle, hunched over, weapon ready, sneering"
+        },
+        "attack": {
+          "id": "forest_goblin_attack",
+          "frameCount": 8,
+          "seed": 41032,
+          "generated": false,
+          "prompt": "forest goblin attacking, swinging crude club, wild strike"
+        },
+        "hit": {
+          "id": "forest_goblin_hit",
+          "frameCount": 8,
+          "seed": 41033,
+          "generated": false,
+          "prompt": "forest goblin hit, tumbling backward, squealing in pain"
+        },
+        "death": {
+          "id": "forest_goblin_death",
+          "frameCount": 8,
+          "seed": 41034,
+          "generated": false,
+          "prompt": "forest goblin dying, dropping weapon, collapsing, defeated"
+        }
+      }
+    },
+    {
+      "id": "treant",
+      "name": "Treant",
+      "archetype": "elemental",
+      "visualTraits": "bark skin branch arms glowing eyes leaves for hair massive trunk body",
+      "animations": {
+        "idle": {
+          "id": "treant_idle",
+          "frameCount": 8,
+          "seed": 41041,
+          "generated": false,
+          "prompt": "treant idle, swaying gently, leaves rustling, roots shifting"
+        },
+        "attack": {
+          "id": "treant_attack",
+          "frameCount": 8,
+          "seed": 41042,
+          "generated": false,
+          "prompt": "treant attacking, branch arm sweeping, massive swing, crushing blow"
+        },
+        "hit": {
+          "id": "treant_hit",
+          "frameCount": 8,
+          "seed": 41043,
+          "generated": false,
+          "prompt": "treant hit, bark cracking, leaves falling, groaning"
+        },
+        "death": {
+          "id": "treant_death",
+          "frameCount": 8,
+          "seed": 41044,
+          "generated": false,
+          "prompt": "treant dying, toppling over, branches snapping, returning to earth"
+        }
+      }
+    },
+    {
+      "id": "dryad",
+      "name": "Dryad",
+      "archetype": "elemental",
+      "visualTraits": "green skin flower hair vine clothing ethereal beauty nature magic glow",
+      "animations": {
+        "idle": {
+          "id": "dryad_idle",
+          "frameCount": 8,
+          "seed": 41051,
+          "generated": false,
+          "prompt": "dryad idle, floating gracefully, flowers blooming around, serene"
+        },
+        "attack": {
+          "id": "dryad_attack",
+          "frameCount": 8,
+          "seed": 41052,
+          "generated": false,
+          "prompt": "dryad attacking, vines shooting forward, thorns extended, nature magic"
+        },
+        "hit": {
+          "id": "dryad_hit",
+          "frameCount": 8,
+          "seed": 41053,
+          "generated": false,
+          "prompt": "dryad hit, petals scattering, recoiling, pained expression"
+        },
+        "death": {
+          "id": "dryad_death",
+          "frameCount": 8,
+          "seed": 41054,
+          "generated": false,
+          "prompt": "dryad dying, dissolving into leaves and petals, fading away"
+        }
+      }
+    }
+  ]
+}

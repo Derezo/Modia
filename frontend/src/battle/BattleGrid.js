@@ -55,9 +55,6 @@ export class BattleGrid {
     // Elevation data (0 = ground level, 1-3 = elevated, -1 = pit)
     this.elevation = [];
 
-    // Elevation connections for transition indicators
-    this.elevationConnections = [];
-
     // Asset loader reference (set externally)
     this.assetLoader = null;
 
@@ -1191,7 +1188,6 @@ export class BattleGrid {
     this.elevation = null;
     this.tileVariants = null;
     this.obstacles = null;
-    this.elevationConnections = null;
     this.occlusionCache.clear();
     this.occlusionCache = null;
   }

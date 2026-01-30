@@ -1,0 +1,227 @@
+{
+  "version": "1.0.0",
+  "category": "enemies",
+  "biome": "mountain",
+  "description": "Mountain biome enemy sprite sheets",
+  "biomeTraits": "rocky alpine windswept rugged high altitude harsh",
+  "totalAssets": 6,
+  "totalAnimations": 24,
+  "enemies": [
+    {
+      "id": "mountain_goat",
+      "name": "Mountain Goat",
+      "archetype": "beast",
+      "visualTraits": "thick white fur curved horns sturdy hooves fierce eyes sure-footed",
+      "animations": {
+        "idle": {
+          "id": "mountain_goat_idle",
+          "frameCount": 8,
+          "seed": 43001,
+          "generated": false,
+          "prompt": "mountain goat idle, standing on rocks, chewing, watching warily"
+        },
+        "attack": {
+          "id": "mountain_goat_attack",
+          "frameCount": 8,
+          "seed": 43002,
+          "generated": false,
+          "prompt": "mountain goat attacking, charging forward, horns lowered, ramming"
+        },
+        "hit": {
+          "id": "mountain_goat_hit",
+          "frameCount": 8,
+          "seed": 43003,
+          "generated": false,
+          "prompt": "mountain goat hit, knocked sideways, bleating, scrambling"
+        },
+        "death": {
+          "id": "mountain_goat_death",
+          "frameCount": 8,
+          "seed": 43004,
+          "generated": false,
+          "prompt": "mountain goat dying, legs giving way, tumbling, lying still"
+        }
+      }
+    },
+    {
+      "id": "harpy",
+      "name": "Harpy",
+      "archetype": "beast",
+      "visualTraits": "feathered body sharp talons woman face bird wings fierce screech",
+      "animations": {
+        "idle": {
+          "id": "harpy_idle",
+          "frameCount": 8,
+          "seed": 43011,
+          "generated": false,
+          "prompt": "harpy idle, hovering with wings spread, talons ready, screeching"
+        },
+        "attack": {
+          "id": "harpy_attack",
+          "frameCount": 8,
+          "seed": 43012,
+          "generated": false,
+          "prompt": "harpy attacking, diving down, talons extended, wind screaming"
+        },
+        "hit": {
+          "id": "harpy_hit",
+          "frameCount": 8,
+          "seed": 43013,
+          "generated": false,
+          "prompt": "harpy hit, knocked off balance, feathers flying, shrieking"
+        },
+        "death": {
+          "id": "harpy_death",
+          "frameCount": 8,
+          "seed": 43014,
+          "generated": false,
+          "prompt": "harpy dying, wings folding, falling from sky, crashing down"
+        }
+      }
+    },
+    {
+      "id": "rock_elemental",
+      "name": "Rock Elemental",
+      "archetype": "elemental",
+      "visualTraits": "living stone body glowing orange cracks boulder fists runic markings",
+      "animations": {
+        "idle": {
+          "id": "rock_elemental_idle",
+          "frameCount": 8,
+          "seed": 43021,
+          "generated": false,
+          "prompt": "rock elemental idle, slowly shifting, magma glowing in cracks, rumbling"
+        },
+        "attack": {
+          "id": "rock_elemental_attack",
+          "frameCount": 8,
+          "seed": 43022,
+          "generated": false,
+          "prompt": "rock elemental attacking, boulder fist swinging, earth trembling"
+        },
+        "hit": {
+          "id": "rock_elemental_hit",
+          "frameCount": 8,
+          "seed": 43023,
+          "generated": false,
+          "prompt": "rock elemental hit, chunks breaking off, magma spraying, reforming"
+        },
+        "death": {
+          "id": "rock_elemental_death",
+          "frameCount": 8,
+          "seed": 43024,
+          "generated": false,
+          "prompt": "rock elemental dying, crumbling apart, light fading, pile of rocks"
+        }
+      }
+    },
+    {
+      "id": "wyvern",
+      "name": "Wyvern",
+      "archetype": "beast",
+      "visualTraits": "dragon-like wings talons spiked tail venomous stinger fierce jaws",
+      "animations": {
+        "idle": {
+          "id": "wyvern_idle",
+          "frameCount": 8,
+          "seed": 43031,
+          "generated": false,
+          "prompt": "wyvern idle, wings folded, tail swaying, snapping jaws"
+        },
+        "attack": {
+          "id": "wyvern_attack",
+          "frameCount": 8,
+          "seed": 43032,
+          "generated": false,
+          "prompt": "wyvern attacking, lunging forward, wings flaring, tail striking"
+        },
+        "hit": {
+          "id": "wyvern_hit",
+          "frameCount": 8,
+          "seed": 43033,
+          "generated": false,
+          "prompt": "wyvern hit, screeching, wing injured, stumbling backward"
+        },
+        "death": {
+          "id": "wyvern_death",
+          "frameCount": 8,
+          "seed": 43034,
+          "generated": false,
+          "prompt": "wyvern dying, wings crumpling, collapsing heavily, final breath"
+        }
+      }
+    },
+    {
+      "id": "frost_giant",
+      "name": "Frost Giant",
+      "archetype": "humanoid",
+      "visualTraits": "blue skin massive build frost-covered beard ice armor frozen weapon",
+      "animations": {
+        "idle": {
+          "id": "frost_giant_idle",
+          "frameCount": 8,
+          "seed": 43041,
+          "generated": false,
+          "prompt": "frost giant idle, breath misting, ice crackling, weapon ready"
+        },
+        "attack": {
+          "id": "frost_giant_attack",
+          "frameCount": 8,
+          "seed": 43042,
+          "generated": false,
+          "prompt": "frost giant attacking, massive ice axe swinging, freezing wind"
+        },
+        "hit": {
+          "id": "frost_giant_hit",
+          "frameCount": 8,
+          "seed": 43043,
+          "generated": false,
+          "prompt": "frost giant hit, staggering, ice armor cracking, roaring"
+        },
+        "death": {
+          "id": "frost_giant_death",
+          "frameCount": 8,
+          "seed": 43044,
+          "generated": false,
+          "prompt": "frost giant dying, falling like avalanche, ice shattering, frozen still"
+        }
+      }
+    },
+    {
+      "id": "yeti",
+      "name": "Yeti",
+      "archetype": "beast",
+      "visualTraits": "white fur massive claws fanged maw glowing blue eyes muscular",
+      "animations": {
+        "idle": {
+          "id": "yeti_idle",
+          "frameCount": 8,
+          "seed": 43051,
+          "generated": false,
+          "prompt": "yeti idle, standing tall, beating chest, snow falling from fur"
+        },
+        "attack": {
+          "id": "yeti_attack",
+          "frameCount": 8,
+          "seed": 43052,
+          "generated": false,
+          "prompt": "yeti attacking, swiping with massive claws, roaring, brutal"
+        },
+        "hit": {
+          "id": "yeti_hit",
+          "frameCount": 8,
+          "seed": 43053,
+          "generated": false,
+          "prompt": "yeti hit, howling in pain, clutching wound, enraged"
+        },
+        "death": {
+          "id": "yeti_death",
+          "frameCount": 8,
+          "seed": 43054,
+          "generated": false,
+          "prompt": "yeti dying, falling forward, final roar, snow settling over body"
+        }
+      }
+    }
+  ]
+}

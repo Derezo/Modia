@@ -1221,6 +1221,74 @@ async function generateCanonicalSizeVariants(sourcePath, category, id, options =
   return results;
 }
 
+/**
+ * Concatenate multiple images into a vertical strip (sprite sheet)
+ * Used for character animation frames: 8 frames stacked vertically = 64x512 sprite sheet
+ *
+ * @param {string[]} framePaths - Array of paths to frame images (in order, top to bottom)
+ * @param {string} outputPath - Path to save the concatenated sprite sheet
+ * @param {Object} options - Additional options
+ * @param {boolean} options.verbose - Log progress
+ * @returns {Promise<{success: boolean, outputPath: string, error?: string}>}
+ *
+ * @example
+ * // Create 64x512 sprite sheet from 8 64x64 frames
+ * await concatenateVerticalStrip([
+ *   '/tmp/frame_0.png', '/tmp/frame_1.png', '/tmp/frame_2.png', '/tmp/frame_3.png',
+ *   '/tmp/frame_4.png', '/tmp/frame_5.png', '/tmp/frame_6.png', '/tmp/frame_7.png'
+ * ], '/assets/characters/player/warrior/warrior_idle.png');
+ */
+async function concatenateVerticalStrip(framePaths, outputPath, options = {}) {
+  const { verbose = false } = options;
+
+  // Validate all frame paths exist
+  for (const framePath of framePaths) {
+    if (!fileExists(framePath)) {
+      return { success: false, outputPath, error: `Frame not found: ${framePath}` };
+    }
+  }
+
+  // Ensure output directory exists
+  ensureDirectoryExists(path.dirname(outputPath));
+
+  // Build ImageMagick command: -append stacks images vertically
+  // Input images are listed in order, then -append combines them top-to-bottom
+  const args = [...framePaths, '-append', outputPath];
+
+  if (verbose) {
+    log(`Concatenating ${framePaths.length} frames into vertical strip: ${outputPath}`, 'info');
+  }
+
+  return new Promise((resolve) => {
+    const proc = spawn('convert', args);
+    let stderr = '';
+    let resolved = false;
+
+    proc.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    proc.on('close', (code) => {
+      if (resolved) return;
+      resolved = true;
+      if (code === 0) {
+        if (verbose) {
+          log(`Created sprite sheet: ${outputPath}`, 'success');
+        }
+        resolve({ success: true, outputPath });
+      } else {
+        resolve({ success: false, outputPath, error: stderr || `Exit code ${code}` });
+      }
+    });
+
+    proc.on('error', (err) => {
+      if (resolved) return;
+      resolved = true;
+      resolve({ success: false, outputPath, error: err.message });
+    });
+  });
+}
+
 module.exports = {
   STANDARD_SIZES,
   SIZE_PRESETS,
@@ -1247,5 +1315,6 @@ module.exports = {
   postProcessByType,
   postProcessWithDualWrite,
   getCanonicalSizedPath,
-  generateCanonicalSizeVariants
+  generateCanonicalSizeVariants,
+  concatenateVerticalStrip
 };

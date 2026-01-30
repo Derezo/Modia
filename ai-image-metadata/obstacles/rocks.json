@@ -1,0 +1,62 @@
+{
+  "version": "1.0.0",
+  "category": "rocks",
+  "description": "Rock and stone obstacles for battle maps",
+  "obstacles": [
+    {
+      "id": "rock_small",
+      "name": "Small Rock",
+      "prompt": "small weathered boulder, mossy patches, fantasy game obstacle",
+      "dimensions": {
+        "width": 64,
+        "height": 64
+      },
+      "seed": 50001,
+      "generated": false
+    },
+    {
+      "id": "rock_medium",
+      "name": "Medium Rock",
+      "prompt": "medium sized boulder, rough granite texture, scattered pebbles around base",
+      "dimensions": {
+        "width": 80,
+        "height": 80
+      },
+      "seed": 50002,
+      "generated": false
+    },
+    {
+      "id": "rock_large",
+      "name": "Large Rock",
+      "prompt": "large imposing boulder, cracks and weathering, moss growth, game obstacle",
+      "dimensions": {
+        "width": 96,
+        "height": 96
+      },
+      "seed": 50003,
+      "generated": false
+    },
+    {
+      "id": "stalagmite",
+      "name": "Stalagmite",
+      "prompt": "tall pointed stalagmite, cave formation, crystalline mineral deposits",
+      "dimensions": {
+        "width": 64,
+        "height": 96
+      },
+      "seed": 50004,
+      "generated": false
+    },
+    {
+      "id": "mountain_boulder",
+      "name": "Mountain Boulder",
+      "prompt": "massive mountain boulder, snow-dusted top, alpine rocky texture, imposing",
+      "dimensions": {
+        "width": 128,
+        "height": 128
+      },
+      "seed": 50005,
+      "generated": false
+    }
+  ]
+}

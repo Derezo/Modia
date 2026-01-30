@@ -271,37 +271,6 @@ export class AssetLoader {
   }
 
   /**
-   * Load elevation transition indicator sprite
-   * @param {string} indicatorType - Type: 'ramp', 'stairs', 'ledge', 'cliff'
-   * @param {string} nodeType - Node type for biome lookup
-   */
-  async loadElevationIndicator(indicatorType, nodeType) {
-    const biome = this.getSpriteBiome(nodeType);
-    const path = `${this.basePath}/sprites/terrain/${biome}/indicators/${indicatorType}_indicator.png`;
-    try {
-      return await this.loadImage(path);
-    } catch {
-      // Fallback to forest biome
-      try {
-        return await this.loadImage(`${this.basePath}/sprites/terrain/forest/indicators/${indicatorType}_indicator.png`);
-      } catch {
-        return null;
-      }
-    }
-  }
-
-  /**
-   * Get elevation transition indicator (sync)
-   */
-  getElevationIndicator(indicatorType, nodeType) {
-    const biome = this.getSpriteBiome(nodeType);
-    const primaryPath = `${this.basePath}/sprites/terrain/${biome}/indicators/${indicatorType}_indicator.png`;
-    const fallbackPath = `${this.basePath}/sprites/terrain/forest/indicators/${indicatorType}_indicator.png`;
-
-    return this.cache.get(primaryPath) || this.cache.get(fallbackPath) || null;
-  }
-
-  /**
    * Load character sprite sheet
    *
    * SPRITE SHEET FORMAT: Vertical strip, 64x512 pixels (8 frames stacked vertically)
@@ -1256,7 +1225,6 @@ export class AssetLoader {
   static TERRAIN_TYPES = ['grass', 'stone', 'rock', 'forest', 'water', 'lava', 'cliff', 'tree'];
   static VARIANTS_PER_TERRAIN = 4;
   static ELEVATION_LEVELS = [1, 2, 3];
-  static INDICATOR_TYPES = ['ramp', 'stairs', 'ledge', 'cliff'];
 
   /**
    * Size presets from shared module (exposed for convenience)
@@ -1280,11 +1248,10 @@ export class AssetLoader {
    * @param {string} nodeType - Node type for biome-specific sprites
    * @param {Object} options - Preload options
    * @param {boolean} options.includeElevation - DEPRECATED: ignored, elevation sprites no longer used
-   * @param {boolean} options.includeIndicators - Also preload transition indicators
    * @param {boolean} options.includeWalls - Also preload wall textures (default: true)
    */
   async preloadTerrainSet(nodeType, options = {}) {
-    const { includeIndicators = true, includeWalls = true } = options;
+    const { includeWalls = true } = options;
     const promises = [];
     const biome = this.getSpriteBiome(nodeType);
 
@@ -1303,13 +1270,6 @@ export class AssetLoader {
     // Load default wall texture for fallback
     if (includeWalls) {
       promises.push(this.loadWallTexture(biome, 'default'));
-    }
-
-    // Load transition indicators if requested
-    if (includeIndicators) {
-      for (const indicator of AssetLoader.INDICATOR_TYPES) {
-        promises.push(this.loadElevationIndicator(indicator, nodeType));
-      }
     }
 
     const results = await Promise.allSettled(promises);

@@ -90,7 +90,7 @@ function loadCategoryAssets(category) {
     }
 
     // Get assets from the appropriate field
-    const assetArray = data.tiles || data.portraits || data.enemies || data.items || data.icons || data.nodes || data.overlays || [];
+    const assetArray = data.tiles || data.portraits || data.enemies || data.items || data.icons || data.nodes || data.obstacles || data.overlays || [];
 
     for (const asset of assetArray) {
       asset._sourceFile = file;
@@ -433,6 +433,50 @@ function loadNodeMetadata() {
 }
 
 /**
+ * Load obstacle metadata by category
+ * @param {string} obstacleCategory - Optional obstacle category filter (rocks, trees, or null for all)
+ * @returns {Object} Obstacle data
+ */
+function loadObstacleMetadata(obstacleCategory = null) {
+  const manifest = loadCategoryManifest('obstacles');
+  if (!manifest) {
+    throw new Error('Failed to load obstacles manifest');
+  }
+
+  const result = {
+    manifest,
+    obstacles: [],
+    byCategory: {}
+  };
+
+  const categoryFiles = manifest.categoryFiles || {};
+  const categoriesToLoad = obstacleCategory
+    ? { [obstacleCategory]: categoryFiles[obstacleCategory] }
+    : categoryFiles;
+
+  for (const [catName, fileName] of Object.entries(categoriesToLoad)) {
+    if (!fileName) continue;
+
+    const data = loadMetadata(getMetadataPath(`obstacles/${fileName}`));
+    if (!data) {
+      log(`Failed to load metadata: obstacles/${fileName}`, 'warn');
+      continue;
+    }
+
+    result.byCategory[catName] = data;
+
+    for (const obstacle of data.obstacles || []) {
+      obstacle._obstacleCategory = catName;
+      obstacle._sourceFile = fileName;
+      obstacle._category = 'obstacles';
+      result.obstacles.push(obstacle);
+    }
+  }
+
+  return result;
+}
+
+/**
  * Load overlay metadata by subcategory
  * @param {string} subcategory - Optional subcategory filter ('rarity', 'augments', or null for all)
  * @returns {Object} Overlay data
@@ -559,7 +603,7 @@ function getCategoryStats(category) {
  * @returns {Object} Statistics for all categories
  */
 function getAllStats() {
-  const categories = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays'];
+  const categories = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'obstacles', 'overlays'];
   const stats = {
     categories: {},
     total: { total: 0, generated: 0, pending: 0 }
@@ -608,6 +652,11 @@ function loadRegenerationQueue(category) {
   if (category === 'overlays') {
     const metadata = loadOverlayMetadata();
     return metadata.overlays.filter(o => o.needsRegeneration === true);
+  }
+
+  if (category === 'obstacles') {
+    const metadata = loadObstacleMetadata();
+    return metadata.obstacles.filter(o => o.needsRegeneration === true);
   }
 
   // Other categories (portraits, nodes) use loadCategoryAssets
@@ -716,6 +765,109 @@ function getEffectiveLoraModel(asset, categoryOverride = null) {
   return category === 'tiles' ? 'v2' : 'v1';
 }
 
+/**
+ * Load character sprite sheet metadata
+ * Characters are player classes or enemy sprites with animation sequences
+ *
+ * @param {Object} options - Filter options
+ * @param {string} options.type - Filter by type: 'player', 'enemy', or null for all
+ * @param {string} options.class - Filter player characters by class
+ * @param {string} options.biome - Filter enemies by biome
+ * @param {string} options.id - Filter by specific character ID
+ * @returns {Object} Character data with manifest, animations, and characters array
+ */
+function loadCharacterMetadata(options = {}) {
+  const manifest = loadCategoryManifest('characters');
+  if (!manifest) {
+    throw new Error('Failed to load characters manifest');
+  }
+
+  const result = {
+    manifest,
+    animations: manifest.animations || {},
+    characters: [],
+    byId: {}
+  };
+
+  // Determine which files to load based on type filter
+  const loadPlayer = !options.type || options.type === 'player';
+  const loadEnemies = !options.type || options.type === 'enemies' || options.type === 'enemy';
+
+  // Load player characters
+  if (loadPlayer) {
+    const playerData = loadMetadata(getMetadataPath('characters/player.json'));
+    if (playerData && playerData.characters) {
+      for (const char of playerData.characters) {
+        // Apply class filter
+        if (options.class && char.class !== options.class) continue;
+        // Apply id filter
+        if (options.id && char.id !== options.id) continue;
+
+        char._type = 'player';
+        char._sourceFile = 'player.json';
+        char._classTraits = playerData.classTraits?.[char.class] || {};
+        char._stylePrefix = playerData.stylePrefix || '';
+        result.characters.push(char);
+        result.byId[char.id] = char;
+      }
+    }
+  }
+
+  // Load enemy characters
+  if (loadEnemies) {
+    const enemyData = loadMetadata(getMetadataPath('characters/enemies.json'));
+    if (enemyData) {
+      // Handle new format: biomeFiles pointing to separate files
+      if (enemyData.biomeFiles) {
+        const biomesToLoad = options.biome
+          ? { [options.biome]: enemyData.biomeFiles[options.biome] }
+          : enemyData.biomeFiles;
+
+        for (const [biomeName, fileName] of Object.entries(biomesToLoad)) {
+          if (!fileName) continue;
+
+          const biomeData = loadMetadata(getMetadataPath(`characters/${fileName}`));
+          if (!biomeData || !biomeData.enemies) continue;
+
+          for (const enemy of biomeData.enemies) {
+            // Apply id filter
+            if (options.id && enemy.id !== options.id) continue;
+
+            enemy._type = 'enemy';
+            enemy._sourceFile = fileName;
+            enemy._biome = biomeName;
+            enemy._biomeTraits = enemyData.archetypes?.[enemy.archetype] || '';
+            enemy._archetypeTraits = enemyData.archetypes?.[enemy.archetype] || '';
+            enemy._stylePrefix = enemyData.stylePrefix || '';
+            enemy.biome = biomeName; // Ensure biome is set
+            result.characters.push(enemy);
+            result.byId[enemy.id] = enemy;
+          }
+        }
+      }
+      // Handle old format: enemies array directly in enemies.json
+      else if (enemyData.enemies) {
+        for (const enemy of enemyData.enemies) {
+          // Apply biome filter
+          if (options.biome && enemy.biome !== options.biome) continue;
+          // Apply id filter
+          if (options.id && enemy.id !== options.id) continue;
+
+          enemy._type = 'enemy';
+          enemy._sourceFile = 'enemies.json';
+          enemy._biomeTraits = enemyData.biomeTraits?.[enemy.biome] || '';
+          enemy._archetypeTraits = enemyData.archetypeTraits?.[enemy.archetype] || '';
+          enemy._stylePrefix = enemyData.stylePrefix || '';
+          result.characters.push(enemy);
+          result.byId[enemy.id] = enemy;
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
 module.exports = {
   getMetadataPath,
   loadMasterManifest,
@@ -727,7 +879,9 @@ module.exports = {
   loadItemMetadata,
   loadIconMetadata,
   loadNodeMetadata,
+  loadObstacleMetadata,
   loadOverlayMetadata,
+  loadCharacterMetadata,
   updateAssetStatus,
   markAssetGenerated,
   loadRegenerationQueue,

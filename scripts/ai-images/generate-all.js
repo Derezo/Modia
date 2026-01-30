@@ -30,7 +30,9 @@ const CATEGORY_SCRIPTS = {
   portraits: 'generate-portraits.js',
   items: 'generate-items.js',
   icons: 'generate-icons.js',
-  nodes: 'generate-nodes.js'
+  nodes: 'generate-nodes.js',
+  obstacles: 'generate-obstacles.js',
+  characters: 'generate-characters.js'
 };
 
 /**
@@ -124,6 +126,8 @@ Categories:
   items      - Equipment and consumable sprites
   icons      - UI icons (actions, status, menu, augments)
   nodes      - World map node icons
+  obstacles  - Environment obstacles for battle maps (rocks, trees)
+  characters - Animated character sprite sheets (64x512 vertical strips)
 
 Environment variables:
   HUGGINGFACE_API_TOKEN  Required API token for HuggingFace

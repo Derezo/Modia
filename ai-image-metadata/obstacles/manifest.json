@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "description": "Environment obstacle metadata for battle maps",
+  "category": "obstacles",
+  "totalAssets": 10,
+  "outputDir": "/assets/obstacles/",
+  "format": "png",
+  "loraModel": "v2",
+  "trigger": "wbgmsst",
+  "stylePrefix": "wbgmsst, fantasy RPG obstacle sprite, isometric view, ink and wash watercolor style, bold black outlines, transparent background, aged parchment aesthetic",
+  "negativePrompt": "realistic, photograph, 3d render, blurry, low quality",
+  "categories": ["rocks", "trees"],
+  "categoryFiles": {
+    "rocks": "rocks.json",
+    "trees": "trees.json"
+  }
+}
