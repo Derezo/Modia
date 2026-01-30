@@ -1,0 +1,62 @@
+{
+  "version": "1.0.0",
+  "category": "trees",
+  "description": "Tree and plant obstacles for battle maps",
+  "obstacles": [
+    {
+      "id": "oak_tree",
+      "name": "Oak Tree",
+      "prompt": "majestic oak tree, thick trunk, spreading branches, lush green foliage canopy",
+      "dimensions": {
+        "width": 96,
+        "height": 128
+      },
+      "seed": 50101,
+      "generated": false
+    },
+    {
+      "id": "pine_tree",
+      "name": "Pine Tree",
+      "prompt": "tall conifer pine tree, triangular shape, dark green needles, forest tree",
+      "dimensions": {
+        "width": 64,
+        "height": 128
+      },
+      "seed": 50102,
+      "generated": false
+    },
+    {
+      "id": "dead_tree",
+      "name": "Dead Tree",
+      "prompt": "gnarled dead tree, bare twisted branches, cracked bark, spooky atmosphere",
+      "dimensions": {
+        "width": 80,
+        "height": 112
+      },
+      "seed": 50103,
+      "generated": false
+    },
+    {
+      "id": "mushroom_large",
+      "name": "Large Mushroom",
+      "prompt": "giant fantasy mushroom, spotted cap, glowing bioluminescent spots, magical fungus",
+      "dimensions": {
+        "width": 64,
+        "height": 96
+      },
+      "seed": 50104,
+      "generated": false
+    },
+    {
+      "id": "mountain_pine",
+      "name": "Mountain Pine",
+      "prompt": "hardy mountain pine tree, windswept shape, snow on branches, alpine conifer",
+      "dimensions": {
+        "width": 80,
+        "height": 144
+      },
+      "seed": 50105,
+      "generated": false
+    }
+  ]
+}

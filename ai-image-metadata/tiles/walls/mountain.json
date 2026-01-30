@@ -1,7 +1,7 @@
 {
   "biome": "mountain",
   "category": "walls",
-  "description": "Mountain biome wall textures - rocky cliffs, ice faces, alpine stone",
+  "description": "Mountain biome wall textures - seamless vertical strips for elevation stacking",
   "palette": {
     "primary": "#8B8682",
     "secondary": "#A0A0A0",
@@ -10,27 +10,24 @@
   "tiles": [
     {
       "key": "wall_mountain_default",
-      "prompt": "rugged mountain cliff face with exposed rock layers and weathered surface in grey stone #8B8682 #708090",
-      "seed": 31001,
-      "generated": true,
       "terrain": "default",
-      "generatedAt": "2026-01-28T06:12:10.755Z"
+      "prompt": "seamless vertical rugged mountain rock texture with exposed rock layers and weathered surface, tileable horizontal pattern, side view cross-section, grey stone tones",
+      "seed": 31001,
+      "generated": false
     },
     {
       "key": "wall_mountain_ice",
-      "prompt": "frozen ice cliff face with blue glacial ice and frost patterns #87CEEB #B0C4DE",
-      "seed": 31011,
-      "generated": true,
       "terrain": "ice",
-      "generatedAt": "2026-01-28T06:12:51.956Z"
+      "prompt": "seamless vertical frozen ice cliff texture with blue glacial ice and frost patterns, tileable horizontal pattern, side view cross-section, icy blue and white tones",
+      "seed": 31011,
+      "generated": false
     },
     {
       "key": "wall_mountain_snow",
-      "prompt": "snow-covered cliff face with icy rock showing through in white and grey #F5F5F5 #8B8682",
-      "seed": 31021,
-      "generated": true,
       "terrain": "snow",
-      "generatedAt": "2026-01-28T06:13:33.296Z"
+      "prompt": "seamless vertical snow-covered cliff texture with icy rock showing through, tileable horizontal pattern, side view cross-section, white and grey tones",
+      "seed": 31021,
+      "generated": false
     }
   ]
 }

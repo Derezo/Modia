@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "description": "Master manifest for Modia AI-generated image assets",
-  "totalAssets": 649,
+  "totalAssets": 778,
   "artDirection": {
     "mood": "cozy_nostalgic",
     "technique": "ink_wash",
@@ -39,13 +39,12 @@
     },
     "items": {
       "description": "Equipment, consumable, and collectible item sprites",
-      "assetCount": 144,
+      "assetCount": 133,
       "files": [
         "items/weapons.json",
         "items/armor.json",
         "items/consumables.json",
-        "items/accessories.json",
-        "items/zodiac.json"
+        "items/accessories.json"
       ]
     },
     "icons": {
@@ -72,6 +71,35 @@
       "files": [
         "overlays/rarity.json",
         "overlays/augments.json"
+      ]
+    },
+    "obstacles": {
+      "description": "Environment obstacles for battle maps (rocks, trees, etc.)",
+      "assetCount": 10,
+      "files": [
+        "obstacles/rocks.json",
+        "obstacles/trees.json"
+      ]
+    },
+    "characters": {
+      "description": "Animated character sprite sheets (64x512 vertical strips, 8 frames)",
+      "assetCount": 140,
+      "spriteSheets": 34,
+      "format": {
+        "type": "vertical_strip",
+        "frameWidth": 64,
+        "frameHeight": 64,
+        "frameCount": 8,
+        "sheetDimensions": "64x512"
+      },
+      "files": [
+        "characters/player.json",
+        "characters/enemies.json",
+        "characters/enemies/forest.json",
+        "characters/enemies/cave.json",
+        "characters/enemies/mountain.json",
+        "characters/enemies/bridge.json",
+        "characters/enemies/castle.json"
       ]
     }
   },
@@ -165,7 +193,9 @@
     "items": "v1",
     "icons": "v1",
     "nodes": "v1",
-    "overlays": "v1"
+    "overlays": "v1",
+    "obstacles": "v2",
+    "characters": "v1"
   },
   "outputPaths": {
     "tiles": "/assets/sprites/terrain/",
@@ -173,7 +203,9 @@
     "items": "/assets/items/",
     "icons": "/assets/icons/",
     "nodes": "/assets/nodes/",
-    "overlays": "/assets/overlays/"
+    "overlays": "/assets/overlays/",
+    "obstacles": "/assets/sprites/obstacles/",
+    "characters": "/assets/characters/"
   },
   "layeredComposition": {
     "enabled": true,

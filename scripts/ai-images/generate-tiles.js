@@ -24,6 +24,7 @@ const {
   loadRegenerationQueue,
   clearRegenerationMarker,
   generateTile,
+  generateWall,
   runBatchGeneration,
   log,
   fileExists,
@@ -31,6 +32,7 @@ const {
   ensureDirectoryExists,
   getProjectRoot,
   buildFlatTilePrompt,
+  buildWallPrompt,
   createBackup,
   loadBatchConfig,
   getBatchConfigSummary,
@@ -356,7 +358,8 @@ async function main() {
   // Display what will be generated
   for (const tile of tilesToGenerate) {
     const biomeData = metadata.byBiome[tile._biome];
-    const prompt = buildFlatTilePrompt(tile, biomeData);
+    const isWall = tile._tileCategory === 'walls';
+    const prompt = isWall ? buildWallPrompt(tile, biomeData) : buildFlatTilePrompt(tile, biomeData);
     const loraModel = options.lora || getEffectiveLoraModel(tile, 'tiles');
 
     console.log(`  - ${tile.id}`);
@@ -422,20 +425,44 @@ async function main() {
       // Determine LoRA model: CLI override > asset-level > category default
       const effectiveLoraModel = options.lora || getEffectiveLoraModel(tile, 'tiles');
 
-      const result = await generateTile({
-        prompt: tile.prompt,
-        key: tile.id,
-        biome: pythonBiome,
-        outputDir: outputDir,
-        seed: tile.seed,
-        variants: tile.variants || 1,
-        loraModel: effectiveLoraModel
-      }, {
-        verbose: options.verbose,
-        quiet: options.quiet,
-        local: options.local,
-        huggingface: options.huggingface
-      });
+      // Detect wall tiles and use appropriate generator
+      const isWall = tile._tileCategory === 'walls';
+
+      let result;
+      if (isWall) {
+        // Wall texture - 64x16 strip
+        const wallOutputPath = getOutputPath(tile, tile._biome);
+        result = await generateWall({
+          prompt: tile.prompt,
+          key: tile.id,
+          biome: pythonBiome,
+          terrain: tile.terrain || 'default',
+          outputPath: wallOutputPath,
+          seed: tile.seed,
+          loraModel: effectiveLoraModel
+        }, {
+          verbose: options.verbose,
+          quiet: options.quiet,
+          local: options.local,
+          huggingface: options.huggingface
+        });
+      } else {
+        // Floor or slope tile - 64x64 diamond
+        result = await generateTile({
+          prompt: tile.prompt,
+          key: tile.id,
+          biome: pythonBiome,
+          outputDir: outputDir,
+          seed: tile.seed,
+          variants: tile.variants || 1,
+          loraModel: effectiveLoraModel
+        }, {
+          verbose: options.verbose,
+          quiet: options.quiet,
+          local: options.local,
+          huggingface: options.huggingface
+        });
+      }
 
       if (result.success) {
         // For "base" biome tiles, move from default/ to base/ directory

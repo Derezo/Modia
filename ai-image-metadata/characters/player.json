@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "description": "Player character sprite sheet definitions",
+  "classTraits": {
+    "warrior": {
+      "visualTraits": "armored fighter sword shield sturdy muscular battle-ready",
+      "defaultAnimations": ["idle", "walk", "attack", "hurt", "death"],
+      "attackStyle": "sword slash overhead swing"
+    },
+    "wizard": {
+      "visualTraits": "robed mage staff arcane glowing mystical",
+      "defaultAnimations": ["idle", "walk", "attack", "hurt", "death", "cast"],
+      "attackStyle": "staff thrust magical bolt"
+    },
+    "monk": {
+      "visualTraits": "martial artist wrapped hands disciplined agile focused",
+      "defaultAnimations": ["idle", "walk", "attack", "hurt", "death"],
+      "attackStyle": "punch kick martial arts strike"
+    },
+    "chemist": {
+      "visualTraits": "alchemist vials pouch apron practical clever",
+      "defaultAnimations": ["idle", "walk", "attack", "hurt", "death"],
+      "attackStyle": "throw vial toss potion"
+    }
+  },
+  "stylePrefix": "pixel art character sprite full body side view 64x64 transparent background",
+  "characters": [
+    {
+      "id": "warrior",
+      "class": "warrior",
+      "animations": ["idle", "walk", "attack", "hurt", "death"],
+      "seed": 50001,
+      "generated": false,
+      "loraModel": "v1"
+    },
+    {
+      "id": "wizard",
+      "class": "wizard",
+      "animations": ["idle", "walk", "attack", "hurt", "death", "cast"],
+      "seed": 50002,
+      "generated": false,
+      "loraModel": "v1"
+    },
+    {
+      "id": "monk",
+      "class": "monk",
+      "animations": ["idle", "walk", "attack", "hurt", "death"],
+      "seed": 50003,
+      "generated": false,
+      "loraModel": "v1"
+    },
+    {
+      "id": "chemist",
+      "class": "chemist",
+      "animations": ["idle", "walk", "attack", "hurt", "death"],
+      "seed": 50004,
+      "generated": false,
+      "loraModel": "v1"
+    }
+  ]
+}

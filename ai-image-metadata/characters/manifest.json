@@ -1,0 +1,108 @@
+{
+  "version": "1.0.0",
+  "description": "Character sprite sheet metadata - animated 64x512 vertical strips (8 frames per animation)",
+  "spriteConvention": {
+    "frameWidth": 64,
+    "frameHeight": 64,
+    "framesPerAnimation": 8,
+    "sheetWidth": 64,
+    "sheetHeight": 512,
+    "layout": "vertical_strip"
+  },
+  "animations": {
+    "idle": {
+      "description": "Standing idle animation loop",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "standing neutral pose",
+        "slight breathing motion inhale",
+        "subtle weight shift left",
+        "breathing exhale",
+        "standing neutral pose",
+        "slight breathing motion inhale",
+        "subtle weight shift right",
+        "breathing exhale"
+      ]
+    },
+    "walk": {
+      "description": "Walking movement cycle",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "walk cycle start left foot forward",
+        "left foot plant mid stride",
+        "passing position feet together",
+        "right foot reaching forward",
+        "right foot forward full stride",
+        "right foot plant mid stride",
+        "passing position feet together",
+        "left foot reaching forward"
+      ]
+    },
+    "attack": {
+      "description": "Basic attack animation",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "attack windup stance",
+        "pulling back weapon or fist",
+        "maximum pullback ready to strike",
+        "beginning forward swing",
+        "mid swing motion blur",
+        "attack impact extended",
+        "follow through momentum",
+        "returning to neutral"
+      ]
+    },
+    "hurt": {
+      "description": "Taking damage reaction",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "initial impact flinch",
+        "recoiling backward",
+        "maximum stagger pose",
+        "beginning recovery",
+        "stumbling forward",
+        "regaining balance",
+        "almost recovered",
+        "back to ready stance"
+      ]
+    },
+    "death": {
+      "description": "Death/defeat animation",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "fatal hit reaction",
+        "losing balance",
+        "beginning to fall",
+        "mid fall diagonal",
+        "hitting ground",
+        "bouncing slightly",
+        "settling on ground",
+        "final rest position"
+      ]
+    },
+    "cast": {
+      "description": "Spell casting animation (for magic users)",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "preparing to cast stance",
+        "gathering magical energy",
+        "hands glowing with power",
+        "maximum energy buildup",
+        "beginning to release",
+        "spell release burst",
+        "magical discharge",
+        "returning to neutral"
+      ]
+    }
+  },
+  "categories": ["player", "enemies"],
+  "categoryFiles": {
+    "player": "player.json",
+    "enemies": "enemies.json"
+  },
+  "outputPaths": {
+    "player": "/assets/characters/player/{class}/{class}_{animation}.png",
+    "enemies": "/assets/characters/enemies/{biome}/{id}/{id}_{animation}.png"
+  },
+  "tempDirectory": "ai-images-temp/characters"
+}

@@ -24,13 +24,16 @@ const {
 const {
   runPythonScript,
   generateTile,
+  generateWall,
   generatePortrait,
   generateIcon,
   generateItem,
   generateNode,
+  generateObstacle,
   generateOverlay,
   runBatchGeneration,
-  removeBackground
+  removeBackground,
+  generateCharacterFrame
 } = require('./pythonRunner');
 
 const {
@@ -43,7 +46,9 @@ const {
   loadItemMetadata,
   loadIconMetadata,
   loadNodeMetadata,
+  loadObstacleMetadata,
   loadOverlayMetadata,
+  loadCharacterMetadata,
   updateAssetStatus,
   markAssetGenerated,
   loadRegenerationQueue,
@@ -138,7 +143,8 @@ const {
   postProcessByType,
   postProcessWithDualWrite,
   getCanonicalSizedPath,
-  generateCanonicalSizeVariants
+  generateCanonicalSizeVariants,
+  concatenateVerticalStrip
 } = require('./resizeUtils');
 
 module.exports = {
@@ -162,13 +168,16 @@ module.exports = {
   // Python runners
   runPythonScript,
   generateTile,
+  generateWall,
   generatePortrait,
   generateIcon,
   generateItem,
   generateNode,
+  generateObstacle,
   generateOverlay,
   runBatchGeneration,
   removeBackground,
+  generateCharacterFrame,
 
   // Metadata utilities
   getMetadataPath,
@@ -180,7 +189,9 @@ module.exports = {
   loadItemMetadata,
   loadIconMetadata,
   loadNodeMetadata,
+  loadObstacleMetadata,
   loadOverlayMetadata,
+  loadCharacterMetadata,
   updateAssetStatus,
   markAssetGenerated,
   loadRegenerationQueue,
@@ -264,6 +275,7 @@ module.exports = {
   postProcessWithDualWrite,
   getCanonicalSizedPath,
   generateCanonicalSizeVariants,
+  concatenateVerticalStrip,
 
   // Shared argument parsing
   parseBaseArgs,

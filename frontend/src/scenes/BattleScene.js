@@ -2750,48 +2750,6 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Render tile elevation indicator when hovering a single tile
-   * Shows elevation as +N or -N in a small pill at top-right of tile
-   * @param {CanvasRenderingContext2D} ctx - Canvas context
-   */
-  renderTileElevationIndicator(ctx) {
-    // Skip if cycle indicator already showing (it has elevation)
-    if (this.tileCandidates.length > 1) return;
-    if (!this.hoveredTile) return;
-
-    const elevation = this.grid.getElevation(this.hoveredTile.x, this.hoveredTile.y);
-    if (elevation === 0) return;
-
-    const worldPos = this.grid.gridToScreenWorld(this.hoveredTile.x, this.hoveredTile.y);
-    const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
-
-    // Position at top-right of tile diamond
-    const indicatorX = screenPos.x + 20;
-    const indicatorY = screenPos.y - this.grid.tileHeight / 2 - 6;
-
-    const elevText = elevation > 0 ? `+${elevation}` : `${elevation}`;
-
-    ctx.save();
-    ctx.font = 'bold 10px Arial';
-    const textWidth = ctx.measureText(elevText).width;
-    const pillWidth = textWidth + 8;
-    const pillHeight = 14;
-
-    // Background pill
-    ctx.beginPath();
-    ctx.roundRect(indicatorX - pillWidth / 2, indicatorY - pillHeight / 2, pillWidth, pillHeight, 4);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fill();
-
-    // Text - blue-ish for positive, orange for negative
-    ctx.fillStyle = elevation > 0 ? 'rgba(150, 200, 255, 1)' : 'rgba(255, 150, 100, 1)';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(elevText, indicatorX, indicatorY);
-    ctx.restore();
-  }
-
-  /**
    * Render the battle scene
    */
   render(ctx) {
@@ -2915,9 +2873,6 @@ export class BattleScene extends Scene {
 
     // Render tile cycle indicator when multiple tiles overlap
     this.renderTileCycleIndicator(ctx);
-
-    // Render elevation indicator for single hovered tile
-    this.renderTileElevationIndicator(ctx);
 
     // Sort and render units (by Y position for depth)
     const allUnits = Array.from(this.units.values());
