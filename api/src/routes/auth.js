@@ -8,6 +8,7 @@ import { refreshLimiter } from '../middleware/refreshRateLimiter.js';
 import { authenticate } from '../middleware/auth.js';
 import { STARTING_GOLD } from '../config/constants.js';
 import { validateAndRepairDiscovery, fixOrphanedCharacters } from '../services/world/discoveryValidationService.js';
+import { registerUserWithCharacter } from '../services/registrationService.js';
 
 const router = express.Router();
 
@@ -73,6 +74,18 @@ router.post('/register', authLimiter, asyncHandler(async (req, res) => {
     accessToken,
     refreshToken
   });
+}));
+
+// POST /api/auth/register-with-character
+// Atomic registration: creates user + first character in single transaction
+router.post('/register-with-character', authLimiter, asyncHandler(async (req, res) => {
+  const { username, email, password, characterName, race, characterClass, gender } = req.body;
+
+  const result = await registerUserWithCharacter({
+    username, email, password, characterName, race, characterClass, gender
+  });
+
+  res.status(201).json(result);
 }));
 
 // POST /api/auth/login

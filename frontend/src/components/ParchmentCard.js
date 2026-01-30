@@ -1,4 +1,5 @@
 import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
+import { getParchmentTooltip } from '../ui/parchment/index.js';
 
 /**
  * ParchmentCard - Unified character/enemy card with classic RPG parchment styling
@@ -37,7 +38,7 @@ export class ParchmentCard {
     this.element = null;
     this.damagePreviewElement = null;
     // Track last known values for change detection (objects may be mutated in place)
-    this.lastKnownValues = { hp: null, mp: null };
+    this.lastKnownValues = { hp: null, mp: null, race: null, class: null, gender: null };
 
     this.createElement();
   }
@@ -530,23 +531,33 @@ export class ParchmentCard {
   }
 
   setCharacter(character) {
-    // Skip if same character AND no HP/MP changes (prevent flicker on mouse move)
+    // Skip if same character AND no HP/MP/portrait changes (prevent flicker on mouse move)
     // Only apply this optimization for characters with IDs (not preview/synthetic characters)
     if (this.character && character && this.character.id && this.character.id === character.id) {
       // Compare against lastKnownValues, not the object itself (object may be mutated in place)
       const currentHp = character.hp ?? 0;
       const currentMp = character.mp ?? 0;
+      const currentRace = character.race ?? null;
+      const currentClass = character.class ?? character.type ?? null;
+      const currentGender = character.gender ?? null;
       const needsUpdate =
         this.lastKnownValues.hp !== currentHp ||
-        this.lastKnownValues.mp !== currentMp;
+        this.lastKnownValues.mp !== currentMp ||
+        this.lastKnownValues.race !== currentRace ||
+        this.lastKnownValues.class !== currentClass ||
+        this.lastKnownValues.gender !== currentGender;
       if (!needsUpdate) return;
     }
     this.character = character;
     this.render();
+    this.attachTooltipListeners();
 
     // Store current values for future comparison
     this.lastKnownValues.hp = character?.hp ?? 0;
     this.lastKnownValues.mp = character?.mp ?? 0;
+    this.lastKnownValues.race = character?.race ?? null;
+    this.lastKnownValues.class = character?.class ?? character?.type ?? null;
+    this.lastKnownValues.gender = character?.gender ?? null;
   }
 
   update(updates) {
@@ -696,7 +707,7 @@ export class ParchmentCard {
       html += `
         <div class="pc-traits">
           ${this.traits.map(t => `
-            <div class="pc-trait-badge pc-trait-${t.type || 'starting'}" title="${this.escapeHtml(t.description || '')}">
+            <div class="pc-trait-badge pc-trait-${t.type || 'starting'}" data-tooltip="${this.escapeHtml(t.description || '')}">
               <span class="pc-trait-icon">${t.type === 'racial' ? '&#x1F9EC;' : '&#x2B50;'}</span>
               <span class="pc-trait-name">${this.escapeHtml(t.name || 'Unknown')}</span>
             </div>
@@ -895,6 +906,26 @@ export class ParchmentCard {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  /**
+   * Attach tooltip listeners to trait badges
+   * Uses ParchmentTooltip for consistent styling
+   */
+  attachTooltipListeners() {
+    if (!this.element) return;
+    const tooltip = getParchmentTooltip();
+    this.element.querySelectorAll('[data-tooltip]').forEach(el => {
+      const text = el.dataset.tooltip;
+      if (!text) return;
+      el.addEventListener('mouseenter', () => {
+        const rect = el.getBoundingClientRect();
+        tooltip.show(text, rect.left + rect.width / 2, rect.top);
+      });
+      el.addEventListener('mouseleave', () => {
+        tooltip.hide();
+      });
+    });
   }
 
   destroy() {

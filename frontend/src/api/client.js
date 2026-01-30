@@ -119,6 +119,26 @@ export class ApiClient {
     return result;
   }
 
+  /**
+   * Register a new user with their first character atomically.
+   * @param {Object} params Registration parameters
+   * @param {string} params.username Username (3-32 chars)
+   * @param {string} params.email Valid email address
+   * @param {string} params.password Password (8+ chars)
+   * @param {string} params.characterName Character name (2-24 chars)
+   * @param {string} params.race Race (human|elf|dwarf|vampire|orc)
+   * @param {string} params.characterClass Class (warrior|wizard|monk|chemist)
+   * @param {string} params.gender Gender (male|female|other)
+   * @returns {Promise<{user: Object, character: Object, accessToken: string, refreshToken: string}>}
+   */
+  async registerWithCharacter({ username, email, password, characterName, race, characterClass, gender }) {
+    const result = await this.post('/auth/register-with-character', {
+      username, email, password, characterName, race, characterClass, gender
+    });
+    this.token = result.accessToken;
+    return result;
+  }
+
   async login(username, password) {
     const result = await this.post('/auth/login', { username, password });
     this.token = result.accessToken;
