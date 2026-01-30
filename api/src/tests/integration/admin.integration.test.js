@@ -68,7 +68,7 @@ describe('Admin Assets API', { skip: isProduction }, () => {
       assert.strictEqual(typeof res.body.defaultLoraByCategory, 'object', 'defaultLoraByCategory should be an object');
 
       // Verify expected categories have defaults
-      const expectedCategories = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays'];
+      const expectedCategories = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays', 'obstacles', 'characters'];
       for (const category of expectedCategories) {
         assert.ok(
           res.body.defaultLoraByCategory[category],
@@ -268,6 +268,43 @@ describe('Admin Assets API', { skip: isProduction }, () => {
       if (updatedAsset) {
         assert.strictEqual(updatedAsset.loraModel, 'v1');
       }
+    });
+  });
+
+  describe('GET /api/admin/assets/obstacles', () => {
+    it('should list obstacles assets', async () => {
+      const res = await request('GET', '/api/admin/assets/obstacles');
+      assert.strictEqual(res.status, 200);
+      assert.ok('assets' in res.body, 'Response should include assets');
+      assert.ok('summary' in res.body, 'Response should include summary');
+    });
+
+    it('should filter obstacles by subcategory', async () => {
+      const res = await request('GET', '/api/admin/assets/obstacles?subcategory=rocks');
+      assert.strictEqual(res.status, 200);
+    });
+  });
+
+  describe('GET /api/admin/assets/characters', () => {
+    it('should list character assets', async () => {
+      const res = await request('GET', '/api/admin/assets/characters');
+      assert.strictEqual(res.status, 200);
+      assert.ok('assets' in res.body, 'Response should include assets');
+    });
+
+    it('should filter characters by subcategory (players)', async () => {
+      const res = await request('GET', '/api/admin/assets/characters?subcategory=players');
+      assert.strictEqual(res.status, 200);
+    });
+
+    it('should filter characters by subcategory (enemies)', async () => {
+      const res = await request('GET', '/api/admin/assets/characters?subcategory=enemies');
+      assert.strictEqual(res.status, 200);
+    });
+
+    it('should filter enemies by biome', async () => {
+      const res = await request('GET', '/api/admin/assets/characters?subcategory=enemies&biome=forest');
+      assert.strictEqual(res.status, 200);
     });
   });
 

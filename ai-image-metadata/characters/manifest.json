@@ -95,13 +95,19 @@
       ]
     }
   },
-  "categories": ["player", "enemies"],
+  "categories": ["players", "enemies"],
   "categoryFiles": {
-    "player": "player.json",
-    "enemies": "enemies.json"
+    "players": "players.json",
+    "enemies": {
+      "forest": "enemies/forest.json",
+      "cave": "enemies/cave.json",
+      "mountain": "enemies/mountain.json",
+      "bridge": "enemies/bridge.json",
+      "castle": "enemies/castle.json"
+    }
   },
   "outputPaths": {
-    "player": "/assets/characters/player/{class}/{class}_{animation}.png",
+    "players": "/assets/characters/player/{class}/{class}_{animation}.png",
     "enemies": "/assets/characters/enemies/{biome}/{id}/{id}_{animation}.png"
   },
   "tempDirectory": "ai-images-temp/characters"

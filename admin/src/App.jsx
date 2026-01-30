@@ -15,6 +15,8 @@ import ItemsPage from './pages/ItemsPage';
 import IconsPage from './pages/IconsPage';
 import NodesPage from './pages/NodesPage';
 import OverlaysPage from './pages/OverlaysPage';
+import ObstaclesPage from './pages/ObstaclesPage';
+import CharactersPage from './pages/CharactersPage';
 import MusicPage from './pages/MusicPage';
 import SoundEffectsPage from './pages/SoundEffectsPage';
 import SettingsPage from './pages/SettingsPage';
@@ -32,6 +34,8 @@ export default function App() {
             <Route path="icons" element={<IconsPage />} />
             <Route path="nodes" element={<NodesPage />} />
             <Route path="overlays" element={<OverlaysPage />} />
+            <Route path="obstacles" element={<ObstaclesPage />} />
+            <Route path="characters" element={<CharactersPage />} />
             <Route path="music" element={<MusicPage />} />
             <Route path="sfx" element={<SoundEffectsPage />} />
             <Route path="settings" element={<SettingsPage />} />

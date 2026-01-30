@@ -30,6 +30,13 @@ const FILTER_CONFIG = {
   overlays: {
     subcategory: ['rarity', 'augments'],
   },
+  obstacles: {
+    subcategory: ['rocks', 'trees'],
+  },
+  characters: {
+    subcategory: ['players', 'enemies'],
+    biome: ['forest', 'cave', 'mountain', 'bridge', 'castle'],
+  },
 };
 
 /**

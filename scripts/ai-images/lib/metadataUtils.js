@@ -73,6 +73,18 @@ function loadCategoryAssets(category) {
       manifest.combinationsFile || 'combinations.json',
       manifest.enemiesFile || 'enemies.json'
     ];
+  } else if (category === 'characters') {
+    // Characters have nested structure: players.json + enemies/{biome}.json
+    if (manifest.categoryFiles) {
+      // Add players file if it exists
+      if (manifest.categoryFiles.players) {
+        files.push(manifest.categoryFiles.players);
+      }
+      // Add enemy biome files - enemies is an object mapping biome -> file path
+      if (manifest.categoryFiles.enemies && typeof manifest.categoryFiles.enemies === 'object') {
+        files.push(...Object.values(manifest.categoryFiles.enemies));
+      }
+    }
   } else if (manifest.categoryFiles) {
     files = Object.values(manifest.categoryFiles);
   } else if (manifest.subcategoryFiles) {
@@ -90,7 +102,7 @@ function loadCategoryAssets(category) {
     }
 
     // Get assets from the appropriate field
-    const assetArray = data.tiles || data.portraits || data.enemies || data.items || data.icons || data.nodes || data.obstacles || data.overlays || [];
+    const assetArray = data.tiles || data.portraits || data.enemies || data.players || data.items || data.icons || data.nodes || data.obstacles || data.overlays || [];
 
     for (const asset of assetArray) {
       asset._sourceFile = file;
@@ -535,7 +547,7 @@ function updateAssetStatus(category, sourceFile, assetId, updates) {
   }
 
   // Find the asset array (different names in different files)
-  const assetArray = data.tiles || data.portraits || data.enemies || data.items || data.icons || data.nodes || data.overlays;
+  const assetArray = data.tiles || data.portraits || data.enemies || data.players || data.items || data.icons || data.nodes || data.obstacles || data.overlays;
 
   if (!assetArray) {
     const error = `No asset array found in ${category}/${sourceFile}`;
@@ -603,7 +615,7 @@ function getCategoryStats(category) {
  * @returns {Object} Statistics for all categories
  */
 function getAllStats() {
-  const categories = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'obstacles', 'overlays'];
+  const categories = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'obstacles', 'overlays', 'characters'];
   const stats = {
     categories: {},
     total: { total: 0, generated: 0, pending: 0 }
@@ -657,6 +669,11 @@ function loadRegenerationQueue(category) {
   if (category === 'obstacles') {
     const metadata = loadObstacleMetadata();
     return metadata.obstacles.filter(o => o.needsRegeneration === true);
+  }
+
+  if (category === 'characters') {
+    const metadata = loadCharacterMetadata();
+    return metadata.characters.filter(c => c.needsRegeneration === true);
   }
 
   // Other categories (portraits, nodes) use loadCategoryAssets
@@ -790,21 +807,21 @@ function loadCharacterMetadata(options = {}) {
   };
 
   // Determine which files to load based on type filter
-  const loadPlayer = !options.type || options.type === 'player';
+  const loadPlayer = !options.type || options.type === 'player' || options.type === 'players';
   const loadEnemies = !options.type || options.type === 'enemies' || options.type === 'enemy';
 
-  // Load player characters
+  // Load player characters from players.json
   if (loadPlayer) {
-    const playerData = loadMetadata(getMetadataPath('characters/player.json'));
-    if (playerData && playerData.characters) {
-      for (const char of playerData.characters) {
+    const playerData = loadMetadata(getMetadataPath('characters/players.json'));
+    if (playerData && playerData.players) {
+      for (const char of playerData.players) {
         // Apply class filter
         if (options.class && char.class !== options.class) continue;
         // Apply id filter
         if (options.id && char.id !== options.id) continue;
 
         char._type = 'player';
-        char._sourceFile = 'player.json';
+        char._sourceFile = 'players.json';
         char._classTraits = playerData.classTraits?.[char.class] || {};
         char._stylePrefix = playerData.stylePrefix || '';
         result.characters.push(char);
@@ -813,51 +830,39 @@ function loadCharacterMetadata(options = {}) {
     }
   }
 
-  // Load enemy characters
+  // Load enemy characters from per-biome files via manifest.categoryFiles.enemies
   if (loadEnemies) {
-    const enemyData = loadMetadata(getMetadataPath('characters/enemies.json'));
-    if (enemyData) {
-      // Handle new format: biomeFiles pointing to separate files
-      if (enemyData.biomeFiles) {
-        const biomesToLoad = options.biome
-          ? { [options.biome]: enemyData.biomeFiles[options.biome] }
-          : enemyData.biomeFiles;
+    const enemyFiles = manifest.categoryFiles?.enemies;
+    if (enemyFiles && typeof enemyFiles === 'object') {
+      // New format: categoryFiles.enemies is an object mapping biome -> file path
+      const biomesToLoad = options.biome
+        ? { [options.biome]: enemyFiles[options.biome] }
+        : enemyFiles;
 
-        for (const [biomeName, fileName] of Object.entries(biomesToLoad)) {
-          if (!fileName) continue;
+      for (const [biomeName, fileName] of Object.entries(biomesToLoad)) {
+        if (!fileName) continue;
 
-          const biomeData = loadMetadata(getMetadataPath(`characters/${fileName}`));
-          if (!biomeData || !biomeData.enemies) continue;
+        const biomeData = loadMetadata(getMetadataPath(`characters/${fileName}`));
+        if (!biomeData || !biomeData.enemies) continue;
 
-          for (const enemy of biomeData.enemies) {
-            // Apply id filter
-            if (options.id && enemy.id !== options.id) continue;
-
-            enemy._type = 'enemy';
-            enemy._sourceFile = fileName;
-            enemy._biome = biomeName;
-            enemy._biomeTraits = enemyData.archetypes?.[enemy.archetype] || '';
-            enemy._archetypeTraits = enemyData.archetypes?.[enemy.archetype] || '';
-            enemy._stylePrefix = enemyData.stylePrefix || '';
-            enemy.biome = biomeName; // Ensure biome is set
-            result.characters.push(enemy);
-            result.byId[enemy.id] = enemy;
-          }
-        }
-      }
-      // Handle old format: enemies array directly in enemies.json
-      else if (enemyData.enemies) {
-        for (const enemy of enemyData.enemies) {
-          // Apply biome filter
-          if (options.biome && enemy.biome !== options.biome) continue;
+        for (const enemy of biomeData.enemies) {
           // Apply id filter
           if (options.id && enemy.id !== options.id) continue;
 
           enemy._type = 'enemy';
-          enemy._sourceFile = 'enemies.json';
-          enemy._biomeTraits = enemyData.biomeTraits?.[enemy.biome] || '';
-          enemy._archetypeTraits = enemyData.archetypeTraits?.[enemy.archetype] || '';
-          enemy._stylePrefix = enemyData.stylePrefix || '';
+          enemy._sourceFile = fileName;
+          enemy._biome = biomeName;
+          enemy._biomeTraits = biomeData.biomeTraits || '';
+          enemy._archetypeTraits = biomeData.archetypeTraits?.[enemy.archetype] || '';
+          enemy._stylePrefix = biomeData.stylePrefix || '';
+          enemy.biome = biomeName; // Ensure biome is set
+
+          // Convert animations object to array if needed (per-biome files use object format)
+          if (enemy.animations && typeof enemy.animations === 'object' && !Array.isArray(enemy.animations)) {
+            enemy._animationsObject = enemy.animations; // Preserve original for prompt access
+            enemy.animations = Object.keys(enemy.animations);
+          }
+
           result.characters.push(enemy);
           result.byId[enemy.id] = enemy;
         }

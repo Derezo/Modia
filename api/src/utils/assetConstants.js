@@ -11,7 +11,7 @@
  * Valid asset categories for AI image generation
  * @type {string[]}
  */
-export const VALID_CATEGORIES = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays'];
+export const VALID_CATEGORIES = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays', 'obstacles', 'characters'];
 
 /**
  * Valid LoRA models for image generation
@@ -42,7 +42,9 @@ export const DEFAULT_LORA_BY_CATEGORY = {
   items: 'v1',
   icons: 'v1',
   nodes: 'v2',
-  overlays: 'v1'
+  overlays: 'v1',
+  obstacles: 'v2',
+  characters: 'v1'
 };
 
 /**
@@ -55,7 +57,9 @@ export const CATEGORY_SCRIPT_MAP = {
   items: 'generate-items.js',
   icons: 'generate-icons.js',
   nodes: 'generate-nodes.js',
-  overlays: 'generate-overlays.js'
+  overlays: 'generate-overlays.js',
+  obstacles: 'generate-obstacles.js',
+  characters: 'generate-characters.js'
 };
 
 /**

@@ -463,6 +463,46 @@ Unified the generation pipeline to eliminate dual post-processing and quality lo
 - `scripts/ai-images/generate-overlays.js` - Unconditional canonical variants [32-128]
 - `frontend/src/core/AssetLoader.js` - Updated preloadNodesAtSizes, comments
 
+### 7.17 Battle Asset Generation Pipeline Expansion (Completed Jan 2026)
+
+Expanded the AI image generation pipeline to support battle-specific asset categories: obstacles and character sprites.
+
+- [x] Created obstacle metadata structure (`ai-image-metadata/obstacles/`)
+  - `manifest.json` with categoryFiles for rocks and trees
+  - `rocks.json` - 5 rock types
+  - `trees.json` - 5 tree types
+- [x] Created character sprite metadata structure (`ai-image-metadata/characters/`)
+  - `manifest.json` with sprite convention (64x512 vertical strips, 8 frames)
+  - `players.json` - 4 classes with animation definitions
+  - Per-biome enemy files in `enemies/` subdirectory (forest, cave, mountain, bridge, castle)
+- [x] Added admin dashboard pages for new asset categories
+  - `ObstaclesPage.jsx` - Subcategory filtering (rocks/trees)
+  - `CharactersPage.jsx` - Biome filtering, animation preview
+  - `SpritePreview.jsx` - Animated sprite rendering component
+
+**Naming Convention Fixes:**
+| Original | Corrected | Reason |
+|----------|-----------|--------|
+| `player.json` | `players.json` | Plural consistency |
+| Array key `"characters"` | `"players"` | Descriptive alignment |
+| Flat `enemies.json` | Per-biome `enemies/*.json` | Matches asset loading |
+
+**Manifest Structure:**
+```json
+{
+  "categoryFiles": {
+    "players": "players.json",
+    "enemies": {
+      "forest": "enemies/forest.json",
+      "cave": "enemies/cave.json",
+      ...
+    }
+  }
+}
+```
+
+**Design Document:** `docs/archive/design-docs/2026-01-30-battle-asset-generation-design.md`
+
 ### 7.7 Pending
 
 - [ ] Regenerate all ~300 floor tiles with new diamond prompts
@@ -778,6 +818,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 3.9 | Jan 2026 | Battle Asset Generation Pipeline Expansion: Added Section 7.17 documenting expanded AI image pipeline for battle assets. Created obstacle metadata (rocks.json, trees.json) with manifest.json categoryFiles. Created character sprite metadata (players.json, per-biome enemies/*.json) with 64x512 vertical strip convention. Added admin dashboard pages (ObstaclesPage.jsx, CharactersPage.jsx) with SpritePreview component for animated sprites. Fixed naming conventions (player.json to players.json, flat enemies.json to per-biome structure). Design doc archived to docs/archive/design-docs/2026-01-30-battle-asset-generation-design.md. |
 | 3.8 | Jan 2026 | Image Pipeline Refactor (v10.8): Added Section 7.16 documenting standardized generation & post-processing. Python saves 1024x1024 processed originals via process_to_original(), Node.js generates all size variants via ImageMagick. Extended node sizes from [48,96] to [48,64,96,128,256]. Added icon 128px variant. Removed portrait rembg workaround. Created Python overlay generator. Updated AI_IMAGE_GENERATION.md resolution tables. |
 | 3.7 | Jan 2026 | Major Test Suite Expansion (v10.7): Added ~4,900 lines across 13 new files + 7 extended files. Shared tests: battleMath.test.js +660 lines (16 new function suites), constants.test.js +235 lines (5 new sections), pathfinding.test.js +3 suites (performance, mixed terrain, water). Created 9 AI unit test files (224 tests/72 suites): patternWeights, cache, utilityFactors, stateEvaluator, actionGenerator, lookahead, utilityAI, aiPatternBehavior with mockHelpers. Created 4 worldgen unit test files (125 tests/19 suites): castlePlacement, nodeGeneration, internalConnections, validation. Extended 4 balance tests: classBalance (all 16 advanced classes), damageScaling (elemental), formulaValidation (CT/status), economyBalance (fishing/caravan). Added npm scripts: test:unit:ai, test:unit:worldgen. Updated test:unit glob for subdirectories. Final counts: Shared 360 tests, API unit 754 tests, all passing. Testing status updated to 90%, coverage to ~75%. |
 | 3.6 | Jan 2026 | Asset Path Remediation: Added Section 7.15 documenting resolution of all asset path discrepancies between Python OutputManager, JS scripts, and canonical shared/assetPaths.js. Updated backupUtils.js, validate-images.js, validate-paths.js to use canonical paths. Updated 5 category manifest.json outputDir fields. Deleted obsolete migrate-sizes.js (398 lines). Cleaned up legacy asset files and admin test factories. Removed dead sizePattern code branches. |
