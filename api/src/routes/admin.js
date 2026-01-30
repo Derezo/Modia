@@ -201,12 +201,17 @@ function getAssetSubcategory(asset, category) {
  * Icon metadata uses full IDs (e.g., 'action_attack') but files are saved
  * with stripped names ('attack.png') in category subdirectories.
  *
+ * NOTE: This mapping is duplicated in:
+ * - admin/src/lib/assetPathHelper.js (client-side URL generation)
+ * - scripts/ai-images/generate-icons.js (build-time file naming)
+ * Keep all three in sync when adding new icon subcategories.
+ *
  * @param {string} id - Icon ID from metadata
  * @param {string} subcategory - Icon subcategory (e.g., 'actions', 'augments')
  * @returns {string} Normalized ID without prefix
  */
 function normalizeIconId(id, subcategory) {
-  // Map subcategory to expected prefix
+  // Map subcategory to expected prefix (subcategories are plural, prefixes are singular)
   const prefixMap = {
     actions: 'action_',
     augments: 'augment_',
