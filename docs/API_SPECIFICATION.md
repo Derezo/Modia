@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| API Version | 2.5 |
+| API Version | 2.6 |
 | Base URL | `/api` |
 | Last Updated | January 2026 |
 
@@ -112,7 +112,87 @@ POST /api/auth/register
 
 ---
 
-### 2.2 Login
+### 2.2 Register with Character
+
+Atomic registration endpoint that creates a user account and first character in a single transaction. If any step fails, the entire operation rolls back.
+
+```
+POST /api/auth/register-with-character
+```
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| username | string | Yes | 3-32 characters |
+| email | string | Yes | Valid email format |
+| password | string | Yes | Minimum 8 characters |
+| characterName | string | Yes | 2-24 characters |
+| race | string | Yes | One of: human, elf, dwarf, vampire, orc |
+| characterClass | string | Yes | One of: warrior, wizard, monk, chemist |
+| gender | string | No | One of: male, female, other (defaults to 'other') |
+
+**Response (201 Created):**
+```json
+{
+  "user": {
+    "id": 1,
+    "username": "newplayer",
+    "email": "player@example.com",
+    "gold": 500
+  },
+  "character": {
+    "id": 1,
+    "name": "Hero",
+    "race": "human",
+    "class": "warrior",
+    "level": 1,
+    "hp_current": 100,
+    "hp_max": 100,
+    "mp_current": 30,
+    "mp_max": 30,
+    "strength": 12,
+    "intelligence": 10,
+    "agility": 10,
+    "vitality": 12,
+    "luck": 10,
+    "party_slot": 1,
+    "current_node_id": 1,
+    "in_battle": false,
+    "created_at": "2026-01-30T12:00:00.000Z"
+  },
+  "accessToken": "eyJhbGciOiJIUzI1NiIs...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 400 | Username, email, and password are required |
+| 400 | Character name, race, and class are required |
+| 400 | Username must be between 3 and 32 characters |
+| 400 | Password must be at least 8 characters |
+| 400 | Invalid email format |
+| 400 | Character name must be between 2 and 24 characters |
+| 400 | Invalid race |
+| 400 | Invalid class |
+| 400 | Invalid gender |
+| 409 | Username already exists |
+| 409 | Email already exists |
+| 409 | Character name already exists |
+| 429 | Too many requests (10 per 15 minutes) |
+
+**Notes:**
+- Character spawns at the castle of their race's homeland region
+- Starter equipment granted based on class
+- Starter skills granted based on class
+- Starting trait granted based on race/class combination
+- Spawn node and adjacent nodes are auto-discovered
+
+---
+
+### 2.3 Login
 
 Authenticate an existing user.
 
@@ -152,7 +232,7 @@ POST /api/auth/login
 
 ---
 
-### 2.3 Refresh Token
+### 2.4 Refresh Token
 
 Get a new access token using a refresh token.
 
@@ -189,7 +269,7 @@ POST /api/auth/refresh
 
 ---
 
-### 2.4 Logout
+### 2.5 Logout
 
 Invalidate refresh token(s).
 
@@ -215,7 +295,7 @@ POST /api/auth/logout
 
 ---
 
-### 2.5 Get Current User
+### 2.6 Get Current User
 
 Get the authenticated user's profile.
 
@@ -3021,6 +3101,7 @@ GET /api/marketplace/stats/:itemTemplateId
 |----------|-------|
 | POST /api/auth/login | 10 per 15 minutes |
 | POST /api/auth/register | 10 per 15 minutes |
+| POST /api/auth/register-with-character | 10 per 15 minutes |
 | All other endpoints | 100 per minute |
 
 **Rate Limit Response (429):**
@@ -3374,3 +3455,4 @@ GET /api/feedback/my
 | 2.3 | Jan 2026 | - | Documentation audit: Verified all 24 route files have corresponding API documentation sections |
 | 2.4 | Jan 2026 | - | Shop/Marketplace sync: Fixed shop endpoints (11.1-11.4) to match implementation with supply-based pricing, caravan support, sell-inventory. Rewrote marketplace section (12.1-12.16) adding item listings system, search, price suggestions, my-trades, stats. Updated request/response schemas to match actual code. |
 | 2.5 | Jan 2026 | - | Added feedback endpoints (Section 26) for user submissions (enhancement, bug, abuse reports). Updated error response format to include requestId field for exception correlation. |
+| 2.6 | Jan 2026 | - | Added register-with-character endpoint (Section 2.2) for atomic user+character creation. Updated auth section numbering (2.3-2.6). Added rate limit entry for new endpoint. |

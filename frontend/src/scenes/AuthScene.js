@@ -1,5 +1,6 @@
 import { Scene } from './Scene.js';
 import { AuthTransitionRenderer } from './auth/AuthTransitionRenderer.js';
+import { RegistrationWizard } from './auth/RegistrationWizard.js';
 import {
   PARCHMENT_COLORS,
   PARCHMENT_TYPOGRAPHY,
@@ -33,6 +34,9 @@ export class AuthScene extends Scene {
     this.transitionRenderer = null;
     this.fontLoaded = false;
     this.modalVisible = false;
+
+    // Registration wizard
+    this.wizard = null;
   }
 
   enter(params = {}) {
@@ -66,6 +70,12 @@ export class AuthScene extends Scene {
     }
     const styleEl = document.getElementById(STYLE_ID);
     if (styleEl) styleEl.remove();
+
+    // Clean up registration wizard
+    if (this.wizard) {
+      this.wizard.destroy();
+      this.wizard = null;
+    }
 
     this.transitionRenderer = null;
     this.modalVisible = false;
@@ -467,15 +477,6 @@ export class AuthScene extends Scene {
     this.transitioning = true;
 
     const newMode = this.mode === 'login' ? 'register' : 'login';
-    const emailGroup = document.getElementById('email-group');
-    const confirmGroup = document.getElementById('confirm-group');
-    const header = document.getElementById('auth-header');
-    const btn = document.getElementById('auth-btn');
-    const switchText = document.getElementById('auth-switch');
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    const emailInput = document.getElementById('email');
-    const confirmInput = document.getElementById('confirm-password');
 
     // Clear errors and reset touched state
     this.clearGlobalError();
@@ -483,47 +484,28 @@ export class AuthScene extends Scene {
     this.clearAllFieldErrors();
 
     if (newMode === 'register') {
-      // Show email and confirm fields
-      emailGroup.classList.remove('hidden');
-      emailGroup.classList.add('visible');
-      confirmGroup.classList.remove('hidden');
-      confirmGroup.classList.add('visible');
-      emailInput.required = true;
-      confirmInput.required = true;
-      // Restore tab order for visible fields
-      emailInput.tabIndex = 0;
-      confirmInput.tabIndex = 0;
-
-      header.textContent = 'Create Account';
-      btn.textContent = 'Create Account';
-      switchText.innerHTML = 'Already have an account? <a id="mode-toggle">Login</a>';
-      usernameInput.placeholder = '3-32 characters';
-      passwordInput.placeholder = '8+ characters';
-      passwordInput.autocomplete = 'new-password';
-    } else {
-      // Hide email and confirm fields
-      emailGroup.classList.remove('visible');
-      emailGroup.classList.add('hidden');
-      confirmGroup.classList.remove('visible');
-      confirmGroup.classList.add('hidden');
-      emailInput.required = false;
-      confirmInput.required = false;
-      // Remove hidden fields from tab order
-      emailInput.tabIndex = -1;
-      confirmInput.tabIndex = -1;
-
-      header.textContent = 'Welcome Back';
-      btn.textContent = 'Login';
-      switchText.innerHTML = 'Don\'t have an account? <a id="mode-toggle">Register</a>';
-      usernameInput.placeholder = 'Enter username';
-      passwordInput.placeholder = 'Enter password';
-      passwordInput.autocomplete = 'current-password';
+      // Switch to registration wizard
+      this.mode = newMode;
+      this.showRegistrationWizard();
+      this.transitioning = false;
+      return;
     }
 
-    // Re-attach click listener to new toggle link
-    document.getElementById('mode-toggle').addEventListener('click', () => this.toggleMode());
+    // Switching back to login mode
+    // Clean up wizard if it exists
+    if (this.wizard) {
+      this.wizard.destroy();
+      this.wizard = null;
+    }
 
+    // Re-create the login modal
+    if (this.formElement) {
+      this.formElement.remove();
+      this.formElement = null;
+    }
+    this.modalVisible = false;
     this.mode = newMode;
+    this.createModal();
 
     // Allow next toggle after animation completes
     setTimeout(() => {
@@ -758,6 +740,81 @@ export class AuthScene extends Scene {
     if (panel) {
       panel.classList.toggle('form-loading', this.loading);
     }
+  }
+
+  /**
+   * Handle completion of the registration wizard.
+   * Sets up auth state and transitions to worldMap.
+   * @param {Object} result - Result from wizard containing accessToken, refreshToken, character, user
+   */
+  handleWizardComplete(result) {
+    // Clear any stale state from previous session
+    this.game.state.clear();
+
+    // Store auth tokens
+    this.game.api.token = result.accessToken;
+    localStorage.setItem('refreshToken', result.refreshToken);
+
+    // Store user and token in state
+    this.game.state.set('user', result.user);
+    this.game.state.set('token', result.accessToken);
+    this.game.state.set('refreshToken', result.refreshToken);
+    this.game.state.persist();
+
+    // Start token refresh manager
+    if (this.game.tokenRefreshManager) {
+      this.game.tokenRefreshManager.start(result.accessToken);
+    }
+
+    // Connect WebSocket
+    if (this.game.socket) {
+      this.game.socket.connect(result.accessToken);
+    }
+
+    // Set the active character
+    this.game.setCharacter(result.character);
+
+    // Initialize notification system
+    this.game.initNotificationSystem();
+
+    // Load settings then transition to world map
+    this.game.loadSettings().then(() => {
+      this.game.scenes.switchTo('worldMap');
+    }).catch(() => {
+      // Even if settings fail to load, still transition
+      this.game.scenes.switchTo('worldMap');
+    });
+  }
+
+  /**
+   * Show the registration wizard, hiding the login modal.
+   */
+  showRegistrationWizard() {
+    // Hide and remove the login modal if it exists
+    if (this.formElement) {
+      this.formElement.remove();
+      this.formElement = null;
+    }
+    this.modalVisible = false;
+
+    // Create wizard container
+    const wizardContainer = document.createElement('div');
+    wizardContainer.className = 'auth-container visible';
+    wizardContainer.style.width = 'auto';
+    wizardContainer.style.maxWidth = '900px';
+    this.game.uiOverlay.appendChild(wizardContainer);
+
+    // Store reference so we can clean up
+    this.formElement = wizardContainer;
+
+    // Instantiate the wizard
+    this.wizard = new RegistrationWizard(
+      this.game,
+      wizardContainer,
+      (result) => this.handleWizardComplete(result)
+    );
+
+    this.modalVisible = true;
   }
 
   update(deltaTime) {
