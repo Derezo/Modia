@@ -30,7 +30,7 @@ export const SIZE_PRESETS = {
   tiles: [64],
   portraits: [64, 128, 256],
   items: [32, 64, 128],
-  icons: [16, 24, 32, 48, 64, 128],
+  icons: [16, 24, 32, 48, 64, 128, 256],
   nodes: [48, 64, 96, 128, 256],
   overlays: [32, 48, 64, 128]
 };

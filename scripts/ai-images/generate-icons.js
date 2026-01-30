@@ -327,7 +327,7 @@ async function main() {
             iconFilename,
             {
               subcategory: icon._iconCategory,
-              sizes: [16, 24, 32, 48, 64, 128],
+              sizes: [16, 24, 32, 48, 64, 128, 256],
               force: options.force,
               verbose: options.verbose
             }
