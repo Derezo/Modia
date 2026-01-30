@@ -524,10 +524,6 @@ export class ProfileDropdown {
           <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'formation', { size: 'sm' })}</span>
           <span class="profile-dropdown__menu-label">Formation</span>
         </div>
-        <div class="profile-dropdown__menu-item" data-action="characters">
-          <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'characters', { size: 'sm' })}</span>
-          <span class="profile-dropdown__menu-label">Characters</span>
-        </div>
         ${hasParty ? `
         <div class="profile-dropdown__menu-item" data-action="party">
           <span class="profile-dropdown__menu-icon">${Icon.html('menu', 'party', { size: 'sm' })}</span>
@@ -968,10 +964,6 @@ export class ProfileDropdown {
 
     switch (action) {
       case 'formation':
-        this.game.scenes.switchTo('formation');
-        break;
-      case 'characters':
-        // Characters are managed in the Formation scene
         this.game.scenes.switchTo('formation');
         break;
       case 'party':

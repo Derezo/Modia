@@ -14,6 +14,7 @@ import {
 import { ZODIAC_SHRINE_BUFFS, ZODIAC_CRYSTALS } from '@shared/constants.js';
 import { CrystalOrb } from './zodiac/CrystalOrb.js';
 import { ZODIAC_INFO, ELEMENT_COLORS } from './zodiac/ConstellationData.js';
+import { iconLoader } from '../core/IconLoader.js';
 
 const P = PARCHMENT_COLORS;
 const STYLE_ID = 'zodiac-crystal-detail-modal-styles';
@@ -233,9 +234,17 @@ export class ZodiacCrystalDetailModal {
       }
 
       .zodiac-detail-unknown-badge {
-        background: rgba(60, 50, 40, 0.6);
-        color: ${P.text.muted};
-        border: 1px dashed ${P.border};
+        background: rgba(180, 50, 50, 0.85);
+        color: #4a1515;
+        border: 1px solid rgba(120, 30, 30, 0.8);
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.2);
+      }
+
+      .zodiac-detail-orb-image {
+        width: 256px;
+        height: 256px;
+        image-rendering: pixelated;
+        display: block;
       }
 
       .zodiac-detail-hint {
@@ -313,11 +322,25 @@ export class ZodiacCrystalDetailModal {
     orbContainer.className = 'zodiac-detail-orb-container';
     this.orbContainer = orbContainer;
 
-    this.orbCanvas = document.createElement('canvas');
-    this.orbCanvas.className = 'zodiac-detail-orb-canvas';
-    this.orbCanvas.width = 256;
-    this.orbCanvas.height = 256;
-    orbContainer.appendChild(this.orbCanvas);
+    if (this.crystal.collected) {
+      // Use animated CrystalOrb canvas for collected crystals
+      this.orbCanvas = document.createElement('canvas');
+      this.orbCanvas.className = 'zodiac-detail-orb-canvas';
+      this.orbCanvas.width = 256;
+      this.orbCanvas.height = 256;
+      orbContainer.appendChild(this.orbCanvas);
+    } else {
+      // Use static locked icon image for uncollected crystals
+      const iconName = `${this.sign}_locked`;
+      const iconPath = iconLoader.getIconPath('zodiac', iconName, 256);
+
+      const img = document.createElement('img');
+      img.src = iconPath;
+      img.alt = `${this.zodiacInfo.name} Crystal (Locked)`;
+      img.className = 'zodiac-detail-orb-image';
+      img.draggable = false;
+      orbContainer.appendChild(img);
+    }
     content.appendChild(orbContainer);
 
     // Crystal info
@@ -431,24 +454,24 @@ export class ZodiacCrystalDetailModal {
   createUncollectedContent() {
     const fragment = document.createDocumentFragment();
 
-    // Unknown title
+    // Crystal name (show actual name, not unknown)
     const name = document.createElement('h2');
     name.className = 'zodiac-detail-name zodiac-detail-unknown-title';
-    name.textContent = '??? Unknown Crystal';
+    name.textContent = this.crystalInfo?.name || `Crystal of ${this.zodiacInfo.name}`;
     fragment.appendChild(name);
 
-    // Question mark symbol
+    // Zodiac symbol (show actual symbol)
     const symbol = document.createElement('div');
     symbol.className = 'zodiac-detail-symbol';
     symbol.style.color = P.text.muted;
-    symbol.textContent = '?';
+    symbol.textContent = this.zodiacInfo.symbol;
     fragment.appendChild(symbol);
 
-    // Unknown sign
+    // Sign name (show actual sign)
     const sign = document.createElement('div');
     sign.className = 'zodiac-detail-sign';
     sign.style.color = P.text.muted;
-    sign.textContent = 'Unknown Sign';
+    sign.textContent = this.zodiacInfo.name;
     fragment.appendChild(sign);
 
     // Undiscovered badge
@@ -479,15 +502,22 @@ export class ZodiacCrystalDetailModal {
   }
 
   createOrb() {
-    this.crystalOrb = new CrystalOrb({
-      sign: this.sign,
-      size: 256,
-      collected: this.crystal.collected,
-      animated: true
-    });
+    // Only create animated CrystalOrb for collected crystals
+    // Uncollected crystals use static icon images
+    if (this.crystal.collected) {
+      this.crystalOrb = new CrystalOrb({
+        sign: this.sign,
+        size: 256,
+        collected: true,
+        animated: true
+      });
+    }
   }
 
   startAnimation() {
+    // Only start animation loop for collected crystals with CrystalOrb
+    if (!this.crystalOrb) return;
+
     let lastTime = performance.now();
 
     const animate = (time) => {

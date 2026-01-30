@@ -184,13 +184,11 @@ function buildScriptArgs(job, config) {
   // comfyui (local) is default, no flag needed
 
   // === LORA MODEL ===
-  // Job-level override > config default for category > hardcoded default
-  const loraModel = job.options?.lora ||
-    config.loraDefaults?.[job.category] ||
-    DEFAULT_LORA[job.category];
-
-  if (loraModel && VALID_LORA_MODELS.includes(loraModel)) {
-    args.push('--lora', loraModel);
+  // Only pass --lora if explicitly specified at job level
+  // Otherwise, let the generation script use per-asset loraModel via getEffectiveLoraModel()
+  // This allows assets to have individual LoRA model overrides (e.g., retro-pixel for one character)
+  if (job.options?.lora && VALID_LORA_MODELS.includes(job.options.lora)) {
+    args.push('--lora', job.options.lora);
   }
 
   // === SEED ===

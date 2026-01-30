@@ -163,7 +163,12 @@
         "regenerate": false
       },
       "generatedAt": "2026-01-27T19:40:25.998Z",
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "prompt": "bone necklace staff with orb purple magic glow, feather necklace, intelligent bipedal troll capable of speech armor or clothing rocky alpine windswept rugged high altitude harsh",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "enemy_harpy",
@@ -245,7 +250,12 @@
         "regenerate": false
       },
       "generatedAt": "2026-01-27T19:44:06.957Z",
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "prompt": "dark ornate plate armor red piercing eyes purple dark aura intelligent bipedal lizardman capable of speech armor is ornate with regal dark gothic corrupted once-grand and very sinister",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "enemy_shadow_assassin",
@@ -261,7 +271,12 @@
         "regenerate": false
       },
       "generatedAt": "2026-01-27T19:44:51.486Z",
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "prompt": "deep hood void only red glowing eyes visible shadow tendrils intelligent bipedal lizardman capable of speech armor or clothing ornate regal dark gothic corrupted once-grand sinister",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "enemy_palace_guard",
@@ -277,7 +292,12 @@
         "regenerate": false
       },
       "generatedAt": "2026-01-27T19:45:36.141Z",
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "prompt": "polished plate armor golden trim royal emblem stern visor intelligent bipedal lizardman capable of speech armor or clothing ornate regal dark gothic corrupted once-grand sinister",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     }
   ]
 }

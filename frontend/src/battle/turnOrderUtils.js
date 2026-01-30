@@ -13,6 +13,7 @@
 
 import { PARCHMENT_COLORS } from '../ui/parchment/ParchmentTheme.js';
 import { iconLoader } from '../core/IconLoader.js';
+import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
 
 // ============================================================================
 // Constants
@@ -160,6 +161,97 @@ export async function getUnitIconHtml(unit, cache, size = BAR_DIMENSIONS.iconSiz
   }
 
   return `<div class="turn-order-item__icon-fallback">${iconData.letter}</div>`;
+}
+
+/**
+ * Build portrait ID from unit data
+ * @param {Object} unit - Unit data with type, race, gender, class, enemyId
+ * @returns {string} Portrait identifier for asset path
+ */
+export function buildPortraitId(unit) {
+  const isPlayer = unit.type === 'player';
+
+  if (isPlayer) {
+    // Player portraits: {race}_{gender}_{class}
+    const race = (unit.race || 'human').toLowerCase();
+    const gender = (unit.gender || 'male').toLowerCase();
+    const className = normalizeIconName(unit.class || 'warrior');
+    return `${race}_${gender}_${className}`;
+  } else {
+    // Enemy portraits: enemy_{enemyId or class}
+    const enemyId = unit.enemyId || normalizeIconName(unit.class || 'monster');
+    return `enemy_${enemyId}`;
+  }
+}
+
+/**
+ * Load unit portrait with caching
+ * @param {Object} unit - Unit data
+ * @param {number} size - Desired display size (will be mapped to valid portrait size)
+ * @param {Map} cache - Portrait cache map
+ * @returns {Promise<{type: 'image'|'fallback', src?: string, letter?: string}>}
+ */
+export async function loadUnitPortrait(unit, size, cache) {
+  const portraitId = buildPortraitId(unit);
+  // Get optimal available portrait size (portraits only exist at 64, 128, 256)
+  const actualSize = getOptimalSize('portraits', size);
+  const cacheKey = `portrait-${portraitId}-${actualSize}`;
+
+  // Check cache
+  if (cache && cache.has(cacheKey)) {
+    return cache.get(cacheKey);
+  }
+
+  // Build portrait path with valid size
+  const portraitPath = getAssetPath('portraits', portraitId, { size: actualSize });
+
+  // Try to load portrait
+  try {
+    const img = new Image();
+    img.src = portraitPath;
+
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+    });
+
+    const result = { type: 'image', src: portraitPath };
+    if (cache) cache.set(cacheKey, result);
+    return result;
+  } catch (e) {
+    // Portrait not found, fallback to icon system
+    const isPlayer = unit.type === 'player';
+    const category = isPlayer ? 'classes' : 'enemies';
+    const iconResult = await loadUnitIcon(category, unit.class, size, cache);
+
+    // Cache the fallback result under portrait key too
+    if (cache) cache.set(cacheKey, iconResult);
+    return iconResult;
+  }
+}
+
+/**
+ * Get portrait HTML for DOM-based rendering
+ * Uses portrait assets instead of class/enemy icons for better visuals
+ * @param {Object} unit - Unit data with type, race, gender, class, enemyId
+ * @param {Map} cache - Portrait cache map
+ * @param {number} size - Portrait size (default 64)
+ * @returns {Promise<string>} HTML string for portrait
+ */
+export async function getUnitPortraitHtml(unit, cache, size = 64) {
+  try {
+    const portraitData = await loadUnitPortrait(unit, size, cache);
+
+    if (portraitData.type === 'image') {
+      return `<img src="${portraitData.src}" alt="" class="unit-portrait">`;
+    }
+
+    return `<div class="turn-order-item__icon-fallback">${portraitData.letter}</div>`;
+  } catch (e) {
+    // Fallback to letter if anything fails
+    const letter = getClassLetter(unit?.class);
+    return `<div class="turn-order-item__icon-fallback">${letter}</div>`;
+  }
 }
 
 /**

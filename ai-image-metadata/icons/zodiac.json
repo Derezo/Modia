@@ -285,10 +285,16 @@
       "element": "earth",
       "constellation": "Bull",
       "variant": "locked",
-      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
-      "seed": 36102,
-      "generated": false,
-      "loraModel": "retro-pixel"
+      "prompt": "dark silhouette of a black orb sphere mysterious locked faded gray monochrome magical fantasy",
+      "seed": 36108,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T14:18:09.887Z"
     },
     {
       "id": "zodiac_gemini_locked",
@@ -297,10 +303,16 @@
       "element": "air",
       "constellation": "Twins",
       "variant": "locked",
-      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
-      "seed": 36103,
-      "generated": false,
-      "loraModel": "retro-pixel"
+      "prompt": "dark silhouette of a black orb sphere mysterious locked faded gray monochrome magical fantasy",
+      "seed": 31102,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T14:18:44.465Z"
     },
     {
       "id": "zodiac_cancer_locked",
@@ -309,10 +321,15 @@
       "element": "water",
       "constellation": "Crab",
       "variant": "locked",
-      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
-      "seed": 36104,
+      "prompt": "dark silhouette of a black orb sphere mysterious locked faded gray monochrome magical fantasy",
+      "seed": 26104,
       "generated": false,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "zodiac_leo_locked",
@@ -321,10 +338,15 @@
       "element": "fire",
       "constellation": "Lion",
       "variant": "locked",
-      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "prompt": "dark silhouette of a black orb sphere mysterious locked faded gray monochrome magical fantasy",
       "seed": 36105,
       "generated": false,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "zodiac_virgo_locked",
@@ -333,10 +355,15 @@
       "element": "earth",
       "constellation": "Maiden",
       "variant": "locked",
-      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
-      "seed": 36106,
+      "prompt": "dark silhouette of a black orb sphere mysterious locked faded gray monochrome magical fantasy",
+      "seed": 3610692,
       "generated": false,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "zodiac_libra_locked",
@@ -345,10 +372,15 @@
       "element": "air",
       "constellation": "Scales",
       "variant": "locked",
-      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
-      "seed": 36107,
+      "prompt": "dark silhouette of a black orb sphere mysterious locked faded gray monochrome magical fantasy",
+      "seed": 1362107,
       "generated": false,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "zodiac_scorpio_locked",
@@ -357,10 +389,15 @@
       "element": "water",
       "constellation": "Scorpion",
       "variant": "locked",
-      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
-      "seed": 36108,
+      "prompt": "dark silhouette of a black orb sphere mysterious locked faded gray monochrome magical fantasy",
+      "seed": 42444236108,
       "generated": false,
-      "loraModel": "retro-pixel"
+      "loraModel": "retro-pixel",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "zodiac_sagittarius_locked",
@@ -371,8 +408,9 @@
       "variant": "locked",
       "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
       "seed": 36109,
-      "generated": false,
-      "loraModel": "retro-pixel"
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-30T05:59:57.911Z"
     },
     {
       "id": "zodiac_capricorn_locked",
@@ -383,8 +421,9 @@
       "variant": "locked",
       "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
       "seed": 36110,
-      "generated": false,
-      "loraModel": "retro-pixel"
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-30T06:00:38.563Z"
     },
     {
       "id": "zodiac_aquarius_locked",
@@ -395,8 +434,9 @@
       "variant": "locked",
       "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
       "seed": 36111,
-      "generated": false,
-      "loraModel": "retro-pixel"
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-30T06:01:15.641Z"
     },
     {
       "id": "zodiac_pisces_locked",
@@ -407,8 +447,9 @@
       "variant": "locked",
       "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
       "seed": 36112,
-      "generated": false,
-      "loraModel": "retro-pixel"
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-30T06:01:53.354Z"
     }
   ]
 }
