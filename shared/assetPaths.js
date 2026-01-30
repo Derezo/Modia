@@ -138,7 +138,7 @@ function getItemPath(id, options = {}) {
  * @param {string} id - The icon identifier (e.g., 'attack')
  * @param {Object} options - Options
  * @param {string} [options.subcategory='actions'] - Icon category
- * @param {number} [options.size] - Size variant (16, 24, 32, 48, 64, 128)
+ * @param {number} [options.size] - Size variant (16, 24, 32, 48, 64, 128, 256)
  * @returns {string} The icon path
  */
 function getIconPath(id, options = {}) {
