@@ -6,7 +6,7 @@
  * They are only available when NODE_ENV is 'development' or 'test'.
  *
  * Key responsibilities:
- * - Asset listing and filtering by category (tiles, portraits, items, icons, nodes, overlays)
+ * - Asset listing and filtering by category (tiles, portraits, items, icons, nodes, overlays, obstacles, characters)
  * - Asset metadata updates (prompts, seeds, evaluation status)
  * - Theme management and preset system for style configuration
  * - Generation queue management (queue, cancel, pause, resume jobs)
@@ -35,6 +35,7 @@ import { VALID_CATEGORIES, VALID_LORA_MODELS } from '../utils/assetConstants.js'
 import { assertValidAssetId, validateAssetIds, fileLocks } from '../utils/assetLocking.js';
 import adminGenerationService from '../services/adminGenerationService.js';
 import { getAssetPath, DEFAULT_SIZES } from '../../../shared/assetPaths.js';
+import { normalizeIconId } from '../../../shared/iconCategories.js';
 
 const router = express.Router();
 
@@ -191,42 +192,16 @@ function getAssetSubcategory(asset, category) {
       return asset._iconCategory || asset._subcategory || 'actions';
     case 'overlays':
       return asset._overlayCategory || asset._subcategory || 'rarity';
+    case 'obstacles':
+      return asset._obstacleCategory || asset._subcategory || 'rocks';
+    case 'characters':
+      // Characters use _type (player/enemy) as the subcategory
+      return asset._type || 'player';
     default:
       return null;
   }
 }
 
-/**
- * Normalize icon ID by stripping category prefix to match file naming convention.
- * Icon metadata uses full IDs (e.g., 'action_attack') but files are saved
- * with stripped names ('attack.png') in category subdirectories.
- *
- * NOTE: This mapping is duplicated in:
- * - admin/src/lib/assetPathHelper.js (client-side URL generation)
- * - scripts/ai-images/generate-icons.js (build-time file naming)
- * Keep all three in sync when adding new icon subcategories.
- *
- * @param {string} id - Icon ID from metadata
- * @param {string} subcategory - Icon subcategory (e.g., 'actions', 'augments')
- * @returns {string} Normalized ID without prefix
- */
-function normalizeIconId(id, subcategory) {
-  // Map subcategory to expected prefix (subcategories are plural, prefixes are singular)
-  const prefixMap = {
-    actions: 'action_',
-    augments: 'augment_',
-    status: 'status_',
-    menu: 'menu_',
-    resources: 'resource_',
-    zodiac: 'zodiac_'
-  };
-
-  const prefix = prefixMap[subcategory];
-  if (prefix && id.startsWith(prefix)) {
-    return id.slice(prefix.length);
-  }
-  return id;
-}
 
 /**
  * Add computed path to asset
@@ -357,6 +332,27 @@ router.get('/assets/:category', asyncHandler(async (req, res) => {
       case 'overlays': {
         const data = metadataUtils.loadOverlayMetadata(subcategory || null);
         assets = data.overlays || [];
+        break;
+      }
+      case 'obstacles': {
+        const data = metadataUtils.loadObstacleMetadata(subcategory || null);
+        assets = data.obstacles || [];
+        break;
+      }
+      case 'characters': {
+        const options = {};
+        // Support subcategory filter for 'players' or 'enemies'
+        if (subcategory === 'players' || subcategory === 'player') {
+          options.type = 'player';
+        } else if (subcategory === 'enemies' || subcategory === 'enemy') {
+          options.type = 'enemies';
+        }
+        // Support biome filter for enemies
+        if (biome) {
+          options.biome = biome;
+        }
+        const data = metadataUtils.loadCharacterMetadata(options);
+        assets = data.characters || [];
         break;
       }
     }

@@ -13,6 +13,7 @@
 import { useState, memo, useCallback } from 'react';
 import { CheckIcon, ImageIcon, ReloadIcon, BookmarkIcon, CopyIcon } from '@radix-ui/react-icons';
 import { getAssetImageUrl, getAssetSubcategory } from '../lib/assetPathHelper.js';
+import SpritePreview from './SpritePreview.jsx';
 
 /**
  * Determine the current state of an asset based on its properties and queue status
@@ -235,24 +236,41 @@ const AssetCard = memo(function AssetCard({
       <div className="aspect-square bg-midnight-950 flex items-center justify-center overflow-hidden">
         {!imageError && imageUrl && (isGenerated || asset.generated) ? (
           <>
-            {/* Loading placeholder */}
-            {!imageLoaded && (
-              <div className="absolute inset-0 flex items-center justify-center bg-midnight-950">
-                <div className="w-8 h-8 border-2 border-midnight-600 border-t-accent-gold rounded-full animate-spin" />
-              </div>
+            {/* Animated sprite preview for character sprite sheets */}
+            {category === 'characters' ? (
+              <SpritePreview
+                src={imageUrl}
+                frameWidth={64}
+                frameHeight={64}
+                frameCount={8}
+                fps={8}
+                animate={true}
+                className="w-full h-full flex items-center justify-center"
+                onLoad={() => setImageLoaded(true)}
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <>
+                {/* Loading placeholder */}
+                {!imageLoaded && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-midnight-950">
+                    <div className="w-8 h-8 border-2 border-midnight-600 border-t-accent-gold rounded-full animate-spin" />
+                  </div>
+                )}
+                <img
+                  src={imageUrl}
+                  alt={id}
+                  loading="lazy"
+                  onLoad={() => setImageLoaded(true)}
+                  onError={() => setImageError(true)}
+                  className={`
+                    w-full h-full object-contain
+                    transition-opacity duration-300
+                    ${imageLoaded ? 'opacity-100' : 'opacity-0'}
+                  `}
+                />
+              </>
             )}
-            <img
-              src={imageUrl}
-              alt={id}
-              loading="lazy"
-              onLoad={() => setImageLoaded(true)}
-              onError={() => setImageError(true)}
-              className={`
-                w-full h-full object-contain
-                transition-opacity duration-300
-                ${imageLoaded ? 'opacity-100' : 'opacity-0'}
-              `}
-            />
           </>
         ) : (
           // Placeholder for pending or errored images

@@ -24,7 +24,7 @@
     }
   },
   "stylePrefix": "pixel art character sprite full body side view 64x64 transparent background",
-  "characters": [
+  "players": [
     {
       "id": "warrior",
       "class": "warrior",

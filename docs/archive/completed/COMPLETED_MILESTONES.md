@@ -10,6 +10,7 @@ This document archives all completed features, resolved issues, and historical d
 
 | Version | Date | Major Accomplishments |
 |---------|------|----------------------|
+| 10.9 | Jan 2026 | Battle Asset Generation Pipeline Expansion - Obstacle metadata (rocks/trees), character sprite metadata (players/per-biome enemies), admin dashboard pages (ObstaclesPage, CharactersPage, SpritePreview), naming convention fixes |
 | 10.8 | Jan 2026 | Battle Consumable Item System - Fixed 5 critical bugs, item animations with sprite arcs, AI urgency-based healing, standardized effect types, 165 new unit tests |
 | 9.11 | Jan 2026 | Battle Tile Rendering & Height System - Tile cycling for overlapping elevations, occlusion transparency, height movement animation with parabolic arc |
 | 9.10 | Jan 2026 | Security & Testing Infrastructure - Redis-backed rate limiting, 70+ endpoint protection, Artillery load testing, E2E expansion (character creation, battle flow, error handling), enhanced health checks |
@@ -59,6 +60,70 @@ This document archives all completed features, resolved issues, and historical d
 | 10.6 | Jan 2026 | Asset Path Remediation - Unified all asset pipeline tools to canonical shared/assetPaths.js, deleted migrate-sizes.js, fixed test factories |
 | 10.5 | Jan 2026 | Asset Pipeline Bug Fix & Deduplication - Multi-key generation bug fix, shared argument parser, audio service normalization, admin UX count badges |
 | 10.4 | Jan 2026 | Legacy Code Cleanup - 4-phase dead code removal, API migration, legacy fallback removal, property name standardization |
+
+---
+
+## 10.9 - Battle Asset Generation Pipeline Expansion (Jan 2026)
+
+Expanded the AI image generation pipeline to support battle-specific asset categories: obstacles (rocks, trees) and character sprites (players, enemies).
+
+### New Metadata Categories
+
+**Obstacles (`ai-image-metadata/obstacles/`):**
+| File | Content |
+|------|---------|
+| `manifest.json` | Category config with `categoryFiles` mapping |
+| `rocks.json` | 5 rock sprite definitions |
+| `trees.json` | 5 tree sprite definitions |
+
+**Characters (`ai-image-metadata/characters/`):**
+| File | Content |
+|------|---------|
+| `manifest.json` | Sprite format config (64x512 vertical strips, 8 frames) |
+| `players.json` | 4 classes with animation definitions |
+| `enemies/forest.json` | Forest biome enemy sprites |
+| `enemies/cave.json` | Cave biome enemy sprites |
+| `enemies/mountain.json` | Mountain biome enemy sprites |
+| `enemies/bridge.json` | Bridge biome enemy sprites |
+| `enemies/castle.json` | Castle biome enemy sprites |
+
+### Naming Convention Fixes
+
+| Original | Corrected | Reason |
+|----------|-----------|--------|
+| `player.json` | `players.json` | Plural consistency with other category files |
+| Array key `"characters"` | `"players"` | Descriptive alignment with file name |
+| Flat `enemies.json` | Per-biome `enemies/*.json` | Matches biome-organized asset loading |
+
+### Admin Dashboard Integration
+
+**New Pages:**
+- `admin/src/pages/ObstaclesPage.jsx` - Obstacle asset management with subcategory filtering (rocks/trees)
+- `admin/src/pages/CharactersPage.jsx` - Character sprite management with biome filtering and animation preview
+
+**New Components:**
+- `admin/src/components/SpritePreview.jsx` - Animated sprite rendering from vertical strip format
+  - Frame-by-frame animation playback
+  - Configurable frame rate
+  - Animation selection dropdown
+
+### Files Created/Modified
+
+| File | Changes |
+|------|---------|
+| `ai-image-metadata/obstacles/manifest.json` | New - category config |
+| `ai-image-metadata/obstacles/rocks.json` | New - rock sprite definitions |
+| `ai-image-metadata/obstacles/trees.json` | New - tree sprite definitions |
+| `ai-image-metadata/characters/manifest.json` | New - sprite format config with nested categoryFiles |
+| `ai-image-metadata/characters/players.json` | New - player class definitions |
+| `ai-image-metadata/characters/enemies/*.json` | New - per-biome enemy definitions |
+| `admin/src/pages/ObstaclesPage.jsx` | New - admin page |
+| `admin/src/pages/CharactersPage.jsx` | New - admin page |
+| `admin/src/components/SpritePreview.jsx` | New - animated sprite component |
+
+### Design Document
+
+Full design documentation archived at: `docs/archive/design-docs/2026-01-30-battle-asset-generation-design.md`
 
 ---
 

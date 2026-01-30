@@ -165,7 +165,8 @@ function getTempDir(character, animation) {
  * Build prompt for a specific frame
  */
 function buildFramePrompt(character, animation, frameIndex, animationConfig) {
-  const frameDesc = animationConfig.frameDescriptions[frameIndex] || `frame ${frameIndex + 1} of ${FRAME_COUNT}`;
+  // Get frame description from manifest config, or use generic fallback
+  const frameDesc = animationConfig?.frameDescriptions?.[frameIndex] || `frame ${frameIndex + 1} of ${FRAME_COUNT}`;
 
   let basePrompt = '';
 
@@ -178,8 +179,15 @@ function buildFramePrompt(character, animation, frameIndex, animationConfig) {
       basePrompt += ` ${classTraits.attackStyle}`;
     }
   } else {
-    // Enemy character
-    basePrompt = `${character._stylePrefix} ${character.visualTraits} ${character._archetypeTraits} ${character._biomeTraits} ${animation} animation ${frameDesc}`;
+    // Enemy character - check for custom prompt in per-biome format
+    const customAnimData = character._animationsObject?.[animation];
+    if (customAnimData?.prompt) {
+      // Use custom prompt from per-biome file
+      basePrompt = `${character._stylePrefix || ''} ${character.visualTraits} ${customAnimData.prompt}`;
+    } else {
+      // Fallback to generic prompt construction
+      basePrompt = `${character._stylePrefix || ''} ${character.visualTraits} ${character._archetypeTraits || ''} ${character._biomeTraits || ''} ${animation} animation ${frameDesc}`;
+    }
   }
 
   // Add frame context for consistency
@@ -304,8 +312,8 @@ function markAnimationGenerated(character, animation) {
     return;
   }
 
-  // Find and update the character
-  const charArray = data.characters || data.enemies;
+  // Find and update the character - check players, characters, or enemies array
+  const charArray = data.players || data.characters || data.enemies;
   const charIndex = charArray.findIndex(c => c.id === character.id);
 
   if (charIndex === -1) {

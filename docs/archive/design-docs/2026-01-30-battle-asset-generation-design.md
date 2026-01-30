@@ -2,6 +2,7 @@
 
 **Date:** 2026-01-30
 **Status:** Implementation Complete
+**Archived:** 2026-01-30
 
 ## Overview
 
@@ -39,7 +40,7 @@ The current pipeline generates tiles, portraits, items, icons, nodes, and overla
 
 ### D2: Vertical Strip Format for Character Sprites
 
-**Decision:** Generate character animations as 64×512 PNG files (8 frames stacked vertically).
+**Decision:** Generate character animations as 64x512 PNG files (8 frames stacked vertically).
 
 **Rationale:**
 - Matches existing sprite format documented in CLAUDE.md
@@ -143,24 +144,24 @@ async function concatenateVerticalStrip(framePaths, outputPath) {
 ### Wall Textures
 | Property | Value |
 |----------|-------|
-| Dimensions | 64×16 pixels |
+| Dimensions | 64x16 pixels |
 | Format | PNG with transparency |
-| Variants | 7 terrain types × 5 biomes = 35 files |
+| Variants | 7 terrain types x 5 biomes = 35 files |
 | Path | `/assets/sprites/terrain/{biome}/wall_{biome}_{terrain}.png` |
 
 ### Elevation Indicators
 | Property | Value |
 |----------|-------|
-| Dimensions | 64×64 pixels |
+| Dimensions | 64x64 pixels |
 | Format | PNG with transparency |
 | Types | ramp, stairs, ledge, cliff |
-| Variants | 4 types × 5 biomes = 20 files |
+| Variants | 4 types x 5 biomes = 20 files |
 | Path | `/assets/sprites/terrain/{biome}/indicators/{type}_indicator.png` |
 
 ### Obstacle Sprites
 | Property | Value |
 |----------|-------|
-| Dimensions | 64×64 to 128×256 (varies by type) |
+| Dimensions | 64x64 to 128x256 (varies by type) |
 | Format | PNG with transparency |
 | Categories | rocks (5 types), trees (5 types) |
 | Path | `/assets/obstacles/{category}/{type}.png` |
@@ -168,9 +169,9 @@ async function concatenateVerticalStrip(framePaths, outputPath) {
 ### Character Sprites
 | Property | Value |
 |----------|-------|
-| Dimensions | 64×512 pixels (8 frames × 64px) |
+| Dimensions | 64x512 pixels (8 frames x 64px) |
 | Format | PNG with transparency |
-| Frame size | 64×64 pixels |
+| Frame size | 64x64 pixels |
 | Animations | idle, walk, attack, hit, death |
 | Player path | `/assets/characters/player/{class}/{class}_{animation}.png` |
 | Enemy path | `/assets/characters/enemies/{biome}/{id}/{id}_{animation}.png` |

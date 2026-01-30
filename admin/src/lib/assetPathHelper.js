@@ -4,41 +4,7 @@
  */
 
 import { getAssetPath, DEFAULT_SIZES } from '@shared/assetPaths.js';
-
-/**
- * Normalize icon IDs by stripping the category prefix if present.
- * Icon metadata uses full IDs (e.g., 'action_attack') but files are
- * saved with stripped names ('attack.png').
- *
- * Note: Subcategories are plural (actions, augments) but prefixes are singular
- * (action_, augment_), so we need a mapping table.
- *
- * NOTE: This mapping is duplicated in:
- * - api/src/routes/admin.js (server-side normalization)
- * - scripts/ai-images/generate-icons.js (build-time file naming)
- * Keep all three in sync when adding new icon subcategories.
- *
- * @param {string} id - The icon ID (may include category prefix)
- * @param {string} subcategory - The icon category/subcategory (e.g., 'actions', 'augments')
- * @returns {string} The normalized ID without prefix
- */
-function normalizeIconId(id, subcategory) {
-  // Map subcategory to expected prefix (subcategories are plural, prefixes are singular)
-  const prefixMap = {
-    actions: 'action_',
-    augments: 'augment_',
-    status: 'status_',
-    menu: 'menu_',
-    resources: 'resource_',
-    zodiac: 'zodiac_'
-  };
-
-  const prefix = prefixMap[subcategory];
-  if (prefix && id.startsWith(prefix)) {
-    return id.slice(prefix.length);
-  }
-  return id;
-}
+import { normalizeIconId } from '@shared/iconCategories.js';
 
 /**
  * Get subcategory for an asset based on category and asset metadata
@@ -59,6 +25,12 @@ export function getAssetSubcategory(asset, category) {
   }
   if (category === 'overlays') {
     return asset._overlayCategory || asset._subcategory || asset.subcategory || 'rarity';
+  }
+  if (category === 'characters') {
+    return asset._type || 'players';  // 'players' or 'enemies'
+  }
+  if (category === 'obstacles') {
+    return asset._obstacleCategory || asset._subcategory || 'rocks';
   }
   return asset._subcategory || asset.subcategory;
 }
@@ -130,6 +102,21 @@ export function getAssetImageUrl(asset, category) {
   // For tiles, use the canonical path directly (tiles work correctly)
   if (category === 'tiles') {
     return getAssetPath(category, id, { subcategory, size, ...extraOptions });
+  }
+
+  // For characters, use type-based path structure (players vs enemies)
+  // Pattern: /assets/sprites/characters/{type}/{size}/{id}.png
+  if (category === 'characters') {
+    const type = subcategory || 'players';  // 'players' or 'enemies'
+    const charSize = size || 64;
+    return `/assets/sprites/characters/${type}/${charSize}/${id}.png`;
+  }
+
+  // For obstacles, use category-based path structure
+  // Pattern: /assets/sprites/obstacles/{obstacleCategory}/{id}.png
+  if (category === 'obstacles') {
+    const obstacleCategory = subcategory || 'rocks';
+    return `/assets/sprites/obstacles/${obstacleCategory}/${id}.png`;
   }
 
   // For other categories, get canonical URLs and return the first one

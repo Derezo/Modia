@@ -45,7 +45,52 @@ export const mockAssets = {
   ],
   items: [],
   icons: [],
-  nodes: []
+  nodes: [],
+  overlays: [],
+  obstacles: [
+    {
+      id: 'rock_forest_1',
+      category: 'obstacles',
+      _obstacleCategory: 'rocks',
+      biome: 'forest',
+      status: 'exists',
+      generated: true,
+      file: 'rock_forest_1.png',
+      needsRegeneration: false
+    },
+    {
+      id: 'tree_forest_1',
+      category: 'obstacles',
+      _obstacleCategory: 'trees',
+      biome: 'forest',
+      status: 'exists',
+      generated: true,
+      file: 'tree_forest_1.png',
+      needsRegeneration: false
+    }
+  ],
+  characters: [
+    {
+      id: 'warrior_player',
+      category: 'characters',
+      _type: 'players',
+      class: 'warrior',
+      status: 'exists',
+      generated: true,
+      file: 'warrior.png',
+      needsRegeneration: false
+    },
+    {
+      id: 'goblin_forest',
+      category: 'characters',
+      _type: 'enemies',
+      biome: 'forest',
+      status: 'exists',
+      generated: true,
+      file: 'goblin_forest.png',
+      needsRegeneration: false
+    }
+  ]
 };
 
 export const mockAudioAssets = {
@@ -96,7 +141,10 @@ export const mockStats = {
   portraits: { total: 50, existing: 40, missing: 10 },
   items: { total: 30, existing: 30, missing: 0 },
   icons: { total: 20, existing: 15, missing: 5 },
-  nodes: { total: 10, existing: 10, missing: 0 }
+  nodes: { total: 10, existing: 10, missing: 0 },
+  overlays: { total: 15, existing: 12, missing: 3 },
+  obstacles: { total: 40, existing: 35, missing: 5 },
+  characters: { total: 60, existing: 50, missing: 10 }
 };
 
 export const mockAudioStats = {
@@ -105,7 +153,7 @@ export const mockAudioStats = {
 };
 
 export const mockConfig = {
-  categories: ['tiles', 'portraits', 'items', 'icons', 'nodes'],
+  categories: ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays', 'obstacles', 'characters'],
   audioTypes: ['music', 'sfx'],
   defaultModel: 'flux-pro',
   version: '1.0.0'
@@ -140,6 +188,9 @@ export const mockRegenerationQueue = {
   items: [],
   icons: [],
   nodes: [],
+  overlays: [],
+  obstacles: [],
+  characters: [],
   music: [],
   sfx: []
 };
