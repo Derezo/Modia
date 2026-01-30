@@ -10,7 +10,7 @@
  * - Overlay configuration
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { InfoCircledIcon, UpdateIcon } from '@radix-ui/react-icons';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -32,7 +32,7 @@ const VALID_LORA_MODELS = [
  */
 export function GenerationTab({ theme, status, onThemeUpdate, onLoraUpdate }) {
   const toast = useToast();
-  const loraDefaults = theme?.loraDefaults || {};
+  const loraDefaults = useMemo(() => theme?.loraDefaults || {}, [theme?.loraDefaults]);
   const categories = Object.keys(loraDefaults).filter((k) => !k.startsWith('_'));
 
   // Local state for editable settings

@@ -31,7 +31,7 @@ import {
   VALID_MUSIC_CATEGORIES,
   VALID_SFX_CATEGORIES
 } from '../utils/assetConstants.js';
-import { assertValidAssetId, validateAssetIds, fileLocks } from '../utils/assetLocking.js';
+import { assertValidAssetId } from '../utils/assetLocking.js';
 import { validateSFXPrompt } from '../utils/audioValidation.js';
 import {
   generateWaveformWithFFmpeg,

@@ -185,7 +185,7 @@ export async function atomicQueueClear(options) {
   // If any write fails, we've already collected the error but continue with others
   for (const { filePath, data } of pending) {
     try {
-      await saveJsonFileAtomic(filePath, data);
+      await saveFile(filePath, data);
     } catch (error) {
       errors.push(`Failed to save ${filePath}: ${error.message}`);
       // Note: Some changes may have been applied. In a production system,

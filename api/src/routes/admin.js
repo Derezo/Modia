@@ -618,7 +618,7 @@ router.put('/assets/mark-multiple', asyncHandler(async (req, res) => {
       // Re-load data inside lock to get current state (TOCTOU fix)
       const freshData = metadataUtils.loadCategoryAssets(category);
 
-      for (const { id, asset } of assets) {
+      for (const { id, asset: _asset } of assets) {
         // Re-verify asset exists with fresh data
         const freshAsset = freshData.byId[id];
         if (!freshAsset) {
