@@ -5,8 +5,9 @@
  * Key responsibilities:
  * - Action menu display and button state management
  * - Active unit and target info cards (ParchmentCard integration)
- * - Turn order panel coordination (TurnOrderPanel)
- * - Battle log display (BattleLogPanel)
+ * - Turn order panel coordination (TurnOrderPanel - legacy, hidden)
+ * - Battle log display (BattleLogPanel - legacy, hidden)
+ * - New modal-based UI: BattleMenuDropdown, TurnOrderModal, BattleLogModal
  * - Damage/heal preview overlays on target cards
  * - PvP-specific UI (turn timer, surrender, disconnect overlay)
  * - Skill, item, and zodiac ability selection panels
@@ -14,13 +15,19 @@
  *
  * @see BattleScene.js - Orchestrates battle and calls UI methods
  * @see ParchmentCard.js - Character/enemy info cards
- * @see TurnOrderPanel.js - Turn order display
- * @see BattleLogPanel.js - Combat history log
+ * @see TurnOrderPanel.js - Turn order display (legacy, replaced by TurnOrderModal)
+ * @see BattleLogPanel.js - Combat history log (legacy, replaced by BattleLogModal)
+ * @see BattleMenuDropdown.js - Compact menu trigger with badge
+ * @see TurnOrderModal.js - Full turn order modal with rich unit info
+ * @see BattleLogModal.js - Full battle log modal with filtering
  */
 import { ParchmentCard } from '../components/ParchmentCard.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import TurnOrderPanel from './TurnOrderPanel.js';
 import BattleLogPanel from './BattleLogPanel.js';
+import BattleMenuDropdown from './BattleMenuDropdown.js';
+import TurnOrderModal from './TurnOrderModal.js';
+import BattleLogModal from './BattleLogModal.js';
 
 /**
  * BattleUI - User interface for tactical combat
@@ -35,12 +42,18 @@ export class BattleUI {
     this.activeUnitCard = null;  // ParchmentCard for active unit
     this.targetCard = null;      // ParchmentCard for target/enemy
     this.targetSticky = false;   // Keep target panel visible during targeting
-    this.turnOrderPanel = null;  // TurnOrderPanel for turn order display
-    this.battleLogPanel = null;  // BattleLogPanel for combat history
+    this.turnOrderPanel = null;  // TurnOrderPanel for turn order display (legacy, kept for backwards compat)
+    this.battleLogPanel = null;  // BattleLogPanel for combat history (legacy, kept for backwards compat)
     this.previewUnit = null;     // Unit being previewed from turn order
     this.hoveredBattleUnit = null; // Unit hovered/tapped on battlefield
     this.confirmTargetUnit = null; // Unit being targeted for attack confirmation
     this.activeEnemyUnit = null;   // Active enemy unit (on enemy turn)
+
+    // New modal-based UI components
+    this.menuDropdown = null;    // BattleMenuDropdown - compact menu trigger
+    this.turnOrderModal = null;  // TurnOrderModal - full turn order modal
+    this.battleLogModal = null;  // BattleLogModal - full battle log modal
+    this.scene = null;           // Reference to BattleScene for camera pan
   }
 
   /**
@@ -354,17 +367,21 @@ export class BattleUI {
       targetPanel.appendChild(this.targetCard.element);
     }
 
-    // Initialize TurnOrderPanel (top left)
+    // Initialize TurnOrderPanel (top left) - LEGACY: kept for backwards compatibility
+    // The new BattleMenuDropdown + TurnOrderModal replaces this for the primary UI
     this.turnOrderPanel = new TurnOrderPanel({
       onUnitTap: (unit) => this.handleTurnOrderTap(unit),
       onPreviewUnit: (unit) => this.handleTurnOrderPreview(unit)
     });
     const turnOrderContainer = container.querySelector('#turn-order-container');
     if (turnOrderContainer) {
+      // Hide the legacy turn order panel - replaced by menuDropdown
+      turnOrderContainer.style.display = 'none';
       turnOrderContainer.appendChild(this.turnOrderPanel.element);
     }
 
-    // Initialize BattleLogPanel (top right)
+    // Initialize BattleLogPanel (top right) - LEGACY: kept for backwards compatibility
+    // The new BattleMenuDropdown + BattleLogModal replaces this for the primary UI
     const battleSettings = this.game.state?.settings?.battle || {};
     const logPosition = battleSettings.battleLogPosition || 'right';
     const logVisible = battleSettings.battleLogVisible !== false; // Default to true
@@ -375,6 +392,8 @@ export class BattleUI {
     });
     const battleLogContainer = container.querySelector('#battle-log-container');
     if (battleLogContainer) {
+      // Hide the legacy battle log panel - replaced by battleLogModal
+      battleLogContainer.style.display = 'none';
       battleLogContainer.appendChild(this.battleLogPanel.element);
       // Update position based on settings
       if (logPosition === 'left') {
@@ -386,6 +405,26 @@ export class BattleUI {
         this.battleLogPanel.hide();
       }
     }
+
+    // Initialize new modal-based UI components
+    // TurnOrderModal - full modal showing next 10 turns with rich unit info
+    this.turnOrderModal = new TurnOrderModal({
+      onUnitClick: (unit) => this.handleModalUnitClick(unit),
+      onClose: () => {}
+    });
+
+    // BattleLogModal - full modal showing complete battle history with filtering
+    this.battleLogModal = new BattleLogModal({
+      onUnitClick: (unit) => this.handleModalUnitClick(unit),
+      onClose: () => {}
+    });
+
+    // BattleMenuDropdown - compact menu trigger at top-left
+    this.menuDropdown = new BattleMenuDropdown({
+      onOpenTurnOrder: () => this.openTurnOrderModal(),
+      onOpenBattleLog: () => this.openBattleLogModal()
+    });
+    this.menuDropdown.show();
 
     // Initial update
     this.updateTurnOrder(battleState);
@@ -903,11 +942,9 @@ export class BattleUI {
   }
 
   /**
-   * Update turn order display using TurnOrderPanel
+   * Update turn order display using TurnOrderPanel and new modal/dropdown system
    */
   updateTurnOrder(battleState) {
-    if (!this.turnOrderPanel) return;
-
     // Use turn predictions if available, otherwise build from units
     let predictions = battleState.turnPredictions || [];
 
@@ -919,12 +956,30 @@ export class BattleUI {
           id: u.id,
           name: u.name,
           type: u.type,
-          class: u.class
+          class: u.class,
+          hp: u.hp,
+          maxHp: u.maxHp,
+          ct: u.ct,
+          statusEffects: u.statusEffects
         }));
     }
 
-    // Update the panel
-    this.turnOrderPanel.update(predictions, battleState.activeUnitIndex || 0);
+    // Update the legacy panel (kept for backwards compatibility)
+    if (this.turnOrderPanel) {
+      this.turnOrderPanel.update(predictions, battleState.activeUnitIndex || 0);
+    }
+
+    // Update the menu dropdown's "Next: [Unit]" indicator
+    if (this.menuDropdown) {
+      // Get the next unit (after the current one)
+      const nextUnit = predictions.length > 1 ? predictions[1] : predictions[0];
+      this.menuDropdown.setNextUnit(nextUnit || null);
+    }
+
+    // Update the turn order modal if it's open
+    if (this.turnOrderModal && this.turnOrderModal.isOpen()) {
+      this.turnOrderModal.updateTurnOrder(predictions);
+    }
   }
 
   /**
@@ -1505,6 +1560,61 @@ export class BattleUI {
     }
   }
 
+  // ==========================================
+  // Modal-Based UI Methods
+  // ==========================================
+
+  /**
+   * Set reference to the BattleScene for camera pan functionality
+   * @param {Object} scene - BattleScene instance
+   */
+  setScene(scene) {
+    this.scene = scene;
+  }
+
+  /**
+   * Open the turn order modal
+   */
+  openTurnOrderModal() {
+    if (this.turnOrderModal) {
+      this.turnOrderModal.open();
+    }
+  }
+
+  /**
+   * Open the battle log modal (resets badge count)
+   */
+  openBattleLogModal() {
+    // Reset badge count when opening the log
+    if (this.menuDropdown) {
+      this.menuDropdown.resetBadge();
+    }
+    if (this.battleLogModal) {
+      this.battleLogModal.open();
+    }
+  }
+
+  /**
+   * Handle unit click from modals - pans camera to unit and shows info card
+   * @param {Object} unit - The clicked unit
+   */
+  handleModalUnitClick(unit) {
+    if (!unit) return;
+
+    // Pan camera to unit position
+    if (this.scene && this.scene.camera && unit.position) {
+      this.scene.camera.panTo(unit.position.x, unit.position.y);
+    }
+
+    // Also trigger the existing preview callback if available
+    if (this.actionCallbacks.onUnitPreview) {
+      this.actionCallbacks.onUnitPreview(unit);
+    }
+
+    // Show in target panel
+    this.showTargetInfo(unit);
+  }
+
   /**
    * Destroy the UI
    */
@@ -1533,6 +1643,20 @@ export class BattleUI {
       this.battleLogPanel.destroy();
       this.battleLogPanel = null;
     }
+    // Clean up new modal-based components
+    if (this.menuDropdown) {
+      this.menuDropdown.destroy();
+      this.menuDropdown = null;
+    }
+    if (this.turnOrderModal) {
+      this.turnOrderModal.destroy();
+      this.turnOrderModal = null;
+    }
+    if (this.battleLogModal) {
+      this.battleLogModal.destroy();
+      this.battleLogModal = null;
+    }
+    this.scene = null;
     if (this.element) {
       this.element.remove();
       this.element = null;
@@ -1544,8 +1668,19 @@ export class BattleUI {
    * @param {Object} entry - Log entry data
    */
   addBattleLogEntry(entry) {
+    // Add to legacy panel (kept for backwards compatibility)
     if (this.battleLogPanel) {
       this.battleLogPanel.addEntry(entry);
+    }
+
+    // Add to new battle log modal
+    if (this.battleLogModal) {
+      this.battleLogModal.addEntry(entry);
+    }
+
+    // Increment badge count on menu dropdown (only if modal is not open)
+    if (this.menuDropdown && this.battleLogModal && !this.battleLogModal.isVisible()) {
+      this.menuDropdown.incrementBadge();
     }
   }
 
@@ -1553,8 +1688,19 @@ export class BattleUI {
    * Clear battle log (for new battle)
    */
   clearBattleLog() {
+    // Clear legacy panel
     if (this.battleLogPanel) {
       this.battleLogPanel.clear();
+    }
+
+    // Clear new battle log modal
+    if (this.battleLogModal) {
+      this.battleLogModal.clear();
+    }
+
+    // Reset badge count on menu dropdown
+    if (this.menuDropdown) {
+      this.menuDropdown.resetBadge();
     }
   }
 
