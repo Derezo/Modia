@@ -98,13 +98,14 @@
       "constellation": "Twins",
       "prompt": "translucent crystal orb sphere with glowing zodiac twins gemini constellation inside light blue ethereal glow magical mystical fantasy",
       "seed": 36003,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T05:18:05.644Z"
     },
     {
       "id": "zodiac_cancer",
@@ -114,13 +115,14 @@
       "constellation": "Crab",
       "prompt": "translucent crystal orb sphere with glowing zodiac crab cancer constellation inside deep blue mystical glow magical fantasy",
       "seed": 36004,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T05:18:54.190Z"
     },
     {
       "id": "zodiac_leo",
@@ -130,13 +132,14 @@
       "constellation": "Lion",
       "prompt": "translucent crystal orb sphere with glowing zodiac lion leo constellation inside orange fiery glow magical mystical fantasy",
       "seed": 36005,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T05:19:44.819Z"
     },
     {
       "id": "zodiac_virgo",
@@ -146,13 +149,14 @@
       "constellation": "Maiden",
       "prompt": "translucent crystal orb sphere with glowing zodiac maiden virgo constellation inside green earthy glow magical mystical fantasy",
       "seed": 36006,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T05:20:35.736Z"
     },
     {
       "id": "zodiac_libra",
@@ -162,13 +166,14 @@
       "constellation": "Scales",
       "prompt": "translucent crystal orb sphere with glowing zodiac scales libra constellation inside light blue ethereal glow magical mystical fantasy",
       "seed": 36007,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T05:21:25.139Z"
     },
     {
       "id": "zodiac_scorpio",
