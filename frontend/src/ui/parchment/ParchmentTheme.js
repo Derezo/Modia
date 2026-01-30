@@ -111,6 +111,60 @@ export const PARCHMENT_RADIUS = {
   lg: '6px'
 };
 
+/**
+ * Color constants for the World Map HUD panel
+ * Used by WorldMapHUDPanel and its segments (Stamina, Travel, Zodiac)
+ */
+export const HUD_COLORS = {
+  // Frame colors for ornate medieval border
+  frame: {
+    outer: '#3d2914',           // Dark wood
+    inner: '#5a4030',           // Mid wood
+    filigree: '#c9a959',        // Gold
+    filigreeHighlight: '#ffd700', // Bright gold
+    filigreeShadow: '#8b7355',  // Dark gold
+  },
+
+  // Panel background
+  panel: {
+    background: 'rgba(60, 45, 30, 0.92)',
+    divider: 'rgba(139, 115, 85, 0.5)',
+  },
+
+  // Stamina bar colors
+  stamina: {
+    full: '#ffd700',
+    mid: '#daa520',
+    low: '#b8860b',
+    empty: 'rgba(0, 0, 0, 0.5)',
+    shimmer: 'rgba(255, 255, 255, 0.4)',
+    wave: 'rgba(255, 223, 128, 0.3)',
+  },
+
+  // Zodiac crystal colors
+  zodiac: {
+    collected: '#ffd700',
+    empty: 'rgba(139, 115, 85, 0.3)',
+    glow: 'rgba(255, 215, 0, 0.6)',
+    pulse: 'rgba(255, 215, 0, 0.8)',
+  },
+
+  // Element colors for zodiac signs
+  element: {
+    fire: { primary: '#FF8C00', secondary: '#DC143C', glow: 'rgba(255, 140, 0, 0.5)' },
+    earth: { primary: '#50C878', secondary: '#8B4513', glow: 'rgba(80, 200, 120, 0.5)' },
+    air: { primary: '#87CEEB', secondary: '#C0C0C0', glow: 'rgba(135, 206, 235, 0.5)' },
+    water: { primary: '#000080', secondary: '#7851A9', glow: 'rgba(120, 81, 169, 0.5)' },
+  },
+
+  // Travel bar colors
+  travel: {
+    fill: '#daa520',
+    background: 'rgba(0, 0, 0, 0.5)',
+    text: '#c4a574',
+  }
+};
+
 const STYLE_ID = 'parchment-theme-styles';
 
 /**
@@ -453,6 +507,7 @@ export default {
   PARCHMENT_TYPOGRAPHY,
   PARCHMENT_SPACING,
   PARCHMENT_RADIUS,
+  HUD_COLORS,
   injectParchmentTheme,
   getParchmentGradient,
   getParchmentGradientTextured,
