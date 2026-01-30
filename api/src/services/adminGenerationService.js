@@ -11,7 +11,7 @@
  * - Full configuration support (backend, LoRA, seed, variants, etc.)
  */
 
-import { spawn, execSync } from 'child_process';
+import { spawn } from 'child_process';
 import path from 'path';
 import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
