@@ -12,7 +12,7 @@
     "test": "node --test src/**/__tests__/*.test.js"
   },
   "devDependencies": {
-    "eslint": "^8.56.0",
+    "eslint": "^9.39.2",
     "vite": "^5.4.21"
   },
   "engines": {
