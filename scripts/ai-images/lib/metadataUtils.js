@@ -485,23 +485,26 @@ function updateAssetStatus(category, sourceFile, assetId, updates) {
   const data = loadMetadata(filePath);
 
   if (!data) {
-    log(`Failed to load ${category}/${sourceFile} for update`, 'error');
-    return;
+    const error = `Failed to load ${category}/${sourceFile} for update`;
+    log(error, 'error');
+    throw new Error(error);
   }
 
   // Find the asset array (different names in different files)
   const assetArray = data.tiles || data.portraits || data.enemies || data.items || data.icons || data.nodes || data.overlays;
 
   if (!assetArray) {
-    log(`No asset array found in ${category}/${sourceFile}`, 'error');
-    return;
+    const error = `No asset array found in ${category}/${sourceFile}`;
+    log(error, 'error');
+    throw new Error(error);
   }
 
   // Search by 'id' or 'key' (tiles use 'key' in JSON, normalized to 'id' at runtime)
   const assetIndex = assetArray.findIndex(a => a.id === assetId || a.key === assetId);
   if (assetIndex === -1) {
-    log(`Asset ${assetId} not found in ${category}/${sourceFile}`, 'error');
-    return;
+    const error = `Asset ${assetId} not found in ${category}/${sourceFile}`;
+    log(error, 'error');
+    throw new Error(error);
   }
 
   // Apply updates

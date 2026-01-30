@@ -6,7 +6,7 @@
   "outputDir": "/assets/overlays/",
   "size": "128x128",
   "format": "png",
-  "loraModel": "V2",
+  "loraModel": "v1",
   "trigger": "wbgmsst",
   "subcategories": ["rarity", "augments"],
   "subcategoryFiles": {
