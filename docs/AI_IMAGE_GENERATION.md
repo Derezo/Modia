@@ -414,6 +414,92 @@ npm run ai:generate:tiles -- --key forest_mushroom_2
 npm run ai:validate -- --category tiles --verbose
 ```
 
+## Adding New Asset Categories
+
+When adding an entirely new category (e.g., zodiac icons) or subcategory, follow this complete checklist. Missing any step will cause generation or display failures.
+
+### Checklist
+
+> **See also:** [Metadata Schema](#metadata-schema) section below for detailed manifest structure.
+
+#### Metadata Layer
+1. **Create category JSON file**: `ai-image-metadata/{category}/{subcategory}.json`
+   - Include version, category name, description, styleGuide
+   - Define each asset with id, prompt, seed, generated flag
+
+2. **Update category manifest**: `ai-image-metadata/{category}/manifest.json`
+   - Add new file to `categoryFiles` array
+   - Update `totalAssets` count
+
+3. **Update master manifest**: `ai-image-metadata/manifest.json`
+   - Add new category file to file list
+   - Update `assetCount` total
+
+#### Generation Script Layer
+4. **Update output directory list** in `scripts/ai-images/generate-{category}.js`
+   - Find the hardcoded category array for directory creation
+   - Add your new subcategory name
+
+5. **Verify metadata loading** works for new category:
+   ```bash
+   node scripts/ai-images/generate-{category}.js --category {subcategory} --dry-run
+   ```
+
+#### Path Configuration Layer
+6. **Verify SIZE_PRESETS** in `shared/assetPaths.js` includes your category
+   - Add new category if top-level (e.g., new asset type)
+   - Subcategories use parent category's size presets
+   ```javascript
+   // Example structure in shared/assetPaths.js:
+   SIZE_PRESETS = {
+     icons: [16, 24, 32, 48, 64, 128, 256],  // Zodiac uses this (subcategory of icons)
+     items: [32, 64, 128],
+     // Add here for new top-level categories
+   }
+   ```
+
+#### Admin Dashboard Layer
+7. **Subcategory filter** appears automatically if metadata is correct
+   - The admin loads categories from metadata files
+   - Verify filter works in Icons/Items page
+
+#### Frontend Layer
+8. **AssetLoader** typically handles new subcategories automatically
+   - Uses canonical paths from `@shared/assetPaths.js`
+   - Test loading in game context
+
+### Example: Adding Zodiac Icons
+
+```bash
+# 1. Create metadata file
+# ai-image-metadata/icons/zodiac.json with 12 zodiac sign icons
+
+# 2. Update icons manifest
+# Add "zodiac.json" to categoryFiles in ai-image-metadata/icons/manifest.json
+
+# 3. Update master manifest
+# Add "icons/zodiac.json" to ai-image-metadata/manifest.json
+
+# 4. Add to generation script output dirs
+# Add 'zodiac' to output directory array in generate-icons.js (search for "ensureDirectoryExists")
+
+# 5. Generate icons
+npm run ai:generate:icons -- --category zodiac
+
+# 6. Verify in admin dashboard
+npm run dev:admin
+# Navigate to Icons > filter by zodiac
+```
+
+### Common Pitfalls
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| 404 in admin panel | Missing from output dir list | Add to generation script category array |
+| Icon shows wrong name | ID normalization mismatch | Check if ID includes category prefix |
+| Missing size variant | Size not in SIZE_PRESETS | Add size to appropriate preset array |
+| Filter not showing | Manifest not updated | Update categoryFiles in manifest |
+
 ## Metadata Schema
 
 ### Master Manifest (manifest.json)
