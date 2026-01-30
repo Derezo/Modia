@@ -31,7 +31,7 @@ const SIZE_PRESETS = {
   tiles: [64],                        // 128x128 AI -> 64x64 with diamond mask
   portraits: [64, 128, 256],          // 256x256 AI -> 64, 128, 256 variants
   items: [32, 64, 128],               // 128x128 AI -> 32, 64, 128 variants
-  icons: [16, 24, 32, 48, 64, 128],   // 128x128 AI -> 16, 24, 32, 48, 64, 128 variants
+  icons: [16, 24, 32, 48, 64, 128, 256],   // 1024x1024 AI -> 16, 24, 32, 48, 64, 128, 256 variants
   nodes: [48, 64, 96, 128, 256],       // 1024x1024 AI -> 48, 64, 96, 128, 256 variants
   walls: [64],                        // 128x32 AI -> 64x16 (resize-specific)
   slopes: [64],                       // 128x160 AI -> 64x80 (resize-specific)
