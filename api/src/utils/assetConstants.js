@@ -42,7 +42,7 @@ export const DEFAULT_LORA_BY_CATEGORY = {
   items: 'v1',
   icons: 'v1',
   nodes: 'v2',
-  overlays: 'v2'
+  overlays: 'v1'
 };
 
 /**

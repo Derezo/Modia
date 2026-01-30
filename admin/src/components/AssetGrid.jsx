@@ -212,6 +212,17 @@ export default function AssetGrid({
     wasGeneratingRef.current = isActive;
   }, [unified?.anyActive, refetch]);
 
+  // Update detail panel when assets refetch (e.g., after bulk edit)
+  useEffect(() => {
+    if (detailAsset && data?.assets) {
+      const detailId = detailAsset.key || detailAsset.id;
+      const updatedAsset = data.assets.find(a => (a.key || a.id) === detailId);
+      if (updatedAsset && JSON.stringify(updatedAsset) !== JSON.stringify(detailAsset)) {
+        setDetailAsset(updatedAsset);
+      }
+    }
+  }, [data?.assets, detailAsset]);
+
   // Filter assets by search query (client-side)
   const filteredAssets = useMemo(() => {
     if (!data?.assets) return [];
