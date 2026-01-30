@@ -80,11 +80,11 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@playwright/test": "^1.40.0",
-    "artillery": "^2.0.0",
-    "concurrently": "^8.2.2",
+    "@playwright/test": "^1.58.0",
+    "artillery": "^2.0.29",
+    "concurrently": "^9.2.1",
     "husky": "^9.1.7",
-    "knip": "^5.81.0"
+    "knip": "^5.82.1"
   },
   "engines": {
     "node": ">=18.0.0"
