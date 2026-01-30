@@ -96,7 +96,7 @@
       "zodiacSign": "gemini",
       "element": "air",
       "constellation": "Twins",
-      "prompt": "translucent crystal orb sphere with glowing zodiac twins gemini constellation inside light blue ethereal glow magical mystical fantasy",
+      "prompt": "translucent crystal orb sphere with glowing zodiac twin greek angels gemini constellation inside soft blue ethereal glow magical mystical fantasy",
       "seed": 36003,
       "generated": true,
       "loraModel": "retro-pixel",
@@ -181,7 +181,7 @@
       "zodiacSign": "scorpio",
       "element": "water",
       "constellation": "Scorpion",
-      "prompt": "translucent crystal orb sphere with glowing zodiac scorpion scorpio constellation inside deep blue purple mystical glow magical fantasy",
+      "prompt": "translucent crystal orb sphere with glowing zodiac scorpion with stinger tail scorpio constellation inside deep blue purple mystical glow magical fantasy",
       "seed": 36008,
       "generated": true,
       "loraModel": "retro-pixel",
@@ -189,8 +189,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false,
-      "generatedAt": "2026-01-30T05:22:10.623Z"
+      "needsRegeneration": true,
+      "generatedAt": "2026-01-30T05:28:28.652Z"
     },
     {
       "id": "zodiac_sagittarius",
@@ -200,13 +200,14 @@
       "constellation": "Archer",
       "prompt": "translucent crystal orb sphere with glowing zodiac archer centaur sagittarius constellation inside orange fiery glow magical mystical fantasy",
       "seed": 36009,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T05:22:56.212Z"
     },
     {
       "id": "zodiac_capricorn",
@@ -216,13 +217,14 @@
       "constellation": "Sea-Goat",
       "prompt": "translucent crystal orb sphere with glowing zodiac sea goat capricorn constellation inside green earthy glow magical mystical fantasy",
       "seed": 36010,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T05:23:44.552Z"
     },
     {
       "id": "zodiac_aquarius",
@@ -230,15 +232,16 @@
       "zodiacSign": "aquarius",
       "element": "air",
       "constellation": "Water Bearer",
-      "prompt": "translucent crystal orb sphere with glowing zodiac water bearer aquarius constellation inside light blue ethereal glow magical mystical fantasy",
+      "prompt": "translucent crystal orb sphere with glowing zodiac water jug pouring aquarius constellation light blue ethereal glow magical mystical fantasy",
       "seed": 36011,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": true,
+      "generatedAt": "2026-01-30T05:29:14.693Z"
     },
     {
       "id": "zodiac_pisces",
@@ -248,13 +251,14 @@
       "constellation": "Fish",
       "prompt": "translucent crystal orb sphere with glowing zodiac twin fish pisces constellation inside deep blue purple mystical glow magical fantasy",
       "seed": 36012,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T05:25:19.108Z"
     },
     {
       "id": "zodiac_aries_locked",
@@ -263,10 +267,16 @@
       "element": "fire",
       "constellation": "Ram",
       "variant": "locked",
-      "prompt": "dark silhouette crystal orb sphere shadowy mysterious locked faded gray monochrome magical fantasy",
+      "prompt": "dark silhouette of a black orb sphere mysterious locked faded gray monochrome magical fantasy",
       "seed": 36101,
-      "generated": false,
-      "loraModel": "retro-pixel"
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-01-30T05:31:25.793Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "zodiac_taurus_locked",

@@ -448,11 +448,15 @@
     {
       "id": "hp",
       "name": "HP Augment",
-      "prompt": "red heart icon health life full pulse glow vitality",
+      "prompt": "red heart icon health life full vitality",
       "seed": 33042,
       "generated": false,
       "loraModel": "retro-pixel",
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "mp",
