@@ -2137,7 +2137,8 @@ export class WorldMapScene extends Scene {
     }
 
     // Render fog of war overlay (before character and labels so player/text is always visible)
-    if (this.effects) {
+    // Guard: Only render when world data has loaded (nodes populated)
+    if (this.effects && this.nodes.length > 0) {
       this.effects.renderFogOfWar(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height, this.nodes, this.connections, this.watchtowerView);
     }
 

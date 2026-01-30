@@ -82,7 +82,7 @@
         "cast"
       ],
       "seed": 50002,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "prompt": "",
       "evaluation": 0,
@@ -95,9 +95,10 @@
         "walk": true,
         "attack": true,
         "hurt": true,
-        "death": true
+        "death": true,
+        "cast": true
       },
-      "generatedAt": "2026-01-30T17:27:26.713Z"
+      "generatedAt": "2026-01-30T17:35:24.908Z"
     },
     {
       "id": "monk",

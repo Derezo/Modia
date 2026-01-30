@@ -27,7 +27,7 @@ export function getAssetSubcategory(asset, category) {
     return asset._overlayCategory || asset._subcategory || asset.subcategory || 'rarity';
   }
   if (category === 'characters') {
-    return asset._type || 'players';  // 'players' or 'enemies'
+    return asset._type || 'player';  // 'player' or 'enemies'
   }
   if (category === 'obstacles') {
     return asset._obstacleCategory || asset._subcategory || 'rocks';
@@ -104,12 +104,12 @@ export function getAssetImageUrl(asset, category) {
     return getAssetPath(category, id, { subcategory, size, ...extraOptions });
   }
 
-  // For characters, use type-based path structure (players vs enemies)
-  // Pattern: /assets/sprites/characters/{type}/{size}/{id}.png
+  // For characters, use type-based path structure (player vs enemies)
+  // Pattern: /assets/characters/{type}/{class}/{class}_{animation}.png
+  // All character sprites MUST have an _idle animation for preview
   if (category === 'characters') {
-    const type = subcategory || 'players';  // 'players' or 'enemies'
-    const charSize = size || 64;
-    return `/assets/sprites/characters/${type}/${charSize}/${id}.png`;
+    const type = subcategory || 'player';  // 'player' or 'enemies'
+    return `/assets/characters/${type}/${id}/${id}_idle.png`;
   }
 
   // For obstacles, use category-based path structure
