@@ -531,7 +531,8 @@ export class ParchmentCard {
 
   setCharacter(character) {
     // Skip if same character AND no HP/MP changes (prevent flicker on mouse move)
-    if (this.character && character && this.character.id === character.id) {
+    // Only apply this optimization for characters with IDs (not preview/synthetic characters)
+    if (this.character && character && this.character.id && this.character.id === character.id) {
       // Compare against lastKnownValues, not the object itself (object may be mutated in place)
       const currentHp = character.hp ?? 0;
       const currentMp = character.mp ?? 0;
