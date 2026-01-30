@@ -183,13 +183,14 @@
       "constellation": "Scorpion",
       "prompt": "translucent crystal orb sphere with glowing zodiac scorpion scorpio constellation inside deep blue purple mystical glow magical fantasy",
       "seed": 36008,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T05:22:10.623Z"
     },
     {
       "id": "zodiac_sagittarius",
