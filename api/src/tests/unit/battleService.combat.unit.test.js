@@ -104,7 +104,9 @@ describe('calculatePhysicalDamage', () => {
   });
 
   test('should produce critical hits with high luck', () => {
-    // Statistically, with luck 200, crit chance = 200/200 = 100%
+    // Crit formula: 5% base + LCK/300 (capped at 50%)
+    // With luck 200: 5% + 66.7% = capped at 50%
+    // Over 100 trials with 50% crit chance, expect ~50 crits with variance
     let critCount = 0;
     const trials = 100;
 
@@ -117,8 +119,8 @@ describe('calculatePhysicalDamage', () => {
       if (result.isCritical) critCount++;
     }
 
-    // With 100% base crit chance (luck 200), should get many crits
-    assert.ok(critCount > 80, 'Should get many crits with max luck, got ' + critCount + '/100');
+    // With 50% crit chance, expect ~35-65 crits over 100 trials (statistical variance)
+    assert.ok(critCount > 25 && critCount < 75, 'Crit count should be around 50% (~25-75), got ' + critCount + '/100');
   });
 
   test('should apply 1.5x critical hit multiplier', () => {
