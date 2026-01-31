@@ -53,6 +53,15 @@ export const api = {
   updateAsset: assets.updateAsset,
   bulkUpdateAssets: assets.bulkUpdateAssets,
 
+  // Character Animation Controls (SD1.5)
+  getCharacterAnimations: assets.getCharacterAnimations,
+  updateCharacterWeights: assets.updateCharacterWeights,
+  getWeightPresets: assets.getWeightPresets,
+  getReferenceImageStatus: assets.getReferenceImageStatus,
+  generateReferenceImage: assets.generateReferenceImage,
+  generateCharacterAnimation: assets.generateCharacterAnimation,
+  generateCharacterAnimations: assets.generateCharacterAnimations,
+
   // Audio Assets
   getAudioAssets: audio.getAudioAssets,
   getAudioAsset: audio.getAudioAsset,

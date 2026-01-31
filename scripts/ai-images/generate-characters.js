@@ -33,6 +33,8 @@ const {
   saveMetadata,
   markAssetGenerated,
   generateCharacterFrame,
+  generateAnimation,
+  generateReferenceImage,
   log,
   fileExists,
   delay,
@@ -40,6 +42,8 @@ const {
   getProjectRoot,
   getMetadataDir,
   buildThemedPrompt,
+  buildSD15CharacterPrompt,
+  buildSD15ReferencePrompt,
   createBackup,
   checkImageMagick,
   getEffectiveLoraModel,
@@ -80,7 +84,13 @@ function parseArgs() {
       class: { flag: '--class', type: 'string', default: null },
       biome: { flag: '--biome', type: 'string', default: null },
       id: { flag: '--id', type: 'string', default: null },
-      animation: { flag: '--animation', type: 'string', default: null }
+      animation: { flag: '--animation', type: 'string', default: null },
+      // SD1.5 animation generation mode
+      mode: { flag: '--mode', type: 'string', default: 'flux' },
+      controlnetWeight: { flag: '--controlnet-weight', type: 'number', default: 0.7 },
+      ipadapterWeight: { flag: '--ipadapter-weight', type: 'number', default: 0.6 },
+      reference: { flag: '--reference', type: 'string', default: null },
+      referenceOnly: { flag: '--reference-only', type: 'boolean', default: false }
     }
   });
 }
@@ -124,16 +134,38 @@ Options:
                         retro-pixel - Classic 8-bit pixel art
   --help, -h          Show this help message
 
+SD1.5 Animation Mode Options:
+  --mode <flux|sd15>          Generation mode (default: flux)
+                                flux - Frame-by-frame Flux generation (current default)
+                                sd15 - SD1.5 with ControlNet pose + IP-Adapter
+  --controlnet-weight <0-1>   ControlNet pose guidance weight (default: 0.7)
+                                Higher = stricter pose adherence
+  --ipadapter-weight <0-1>    IP-Adapter reference weight (default: 0.6)
+                                Higher = more style consistency with reference
+  --reference <path>          Path to reference image for style consistency
+                                If not provided, generates one automatically
+  --reference-only            Generate only the reference image (skip animations)
+                                Useful for creating/reviewing reference images first
+
 Environment variables:
   IMAGE_GENERATOR_ROOT   Path to image-generator project (required)
   HUGGINGFACE_API_TOKEN  Required only for --huggingface mode
 
 Examples:
+  # Standard Flux generation (default)
   node scripts/ai-images/generate-characters.js --dry-run
   node scripts/ai-images/generate-characters.js --type player
   node scripts/ai-images/generate-characters.js --type enemies --biome forest
   node scripts/ai-images/generate-characters.js --id warrior --animation idle --force
   node scripts/ai-images/generate-characters.js --class wizard --animation cast
+
+  # SD1.5 animation generation
+  node scripts/ai-images/generate-characters.js --mode sd15 --id warrior
+  node scripts/ai-images/generate-characters.js --mode sd15 --controlnet-weight 0.8 --id goblin
+  node scripts/ai-images/generate-characters.js --mode sd15 --reference ./ref.png --id warrior
+
+  # Generate reference image only
+  node scripts/ai-images/generate-characters.js --mode sd15 --reference-only --id warrior
 `);
 }
 
@@ -280,6 +312,128 @@ function cleanupTempFrames(tempDir) {
 }
 
 /**
+ * Get reference image path for a character
+ */
+function getReferenceImagePath(character) {
+  if (character._type === 'player') {
+    return path.join(OUTPUT_BASE_DIR, 'player', character.class, `${character.class}_reference.png`);
+  } else {
+    return path.join(OUTPUT_BASE_DIR, 'enemies', character.biome, character.id, `${character.id}_reference.png`);
+  }
+}
+
+/**
+ * Generate animation using SD1.5 with ControlNet and IP-Adapter
+ * This generates all frames in a single pass with pose guidance
+ */
+async function generateSD15Animation(character, animation, animationConfig, options) {
+  const outputPath = getOutputPath(character, animation);
+  const referenceImagePath = options.reference || getReferenceImagePath(character);
+
+  // Check if reference image exists, generate if needed
+  if (!options.reference && !fileExists(referenceImagePath)) {
+    log(`  Generating reference image for ${character.id}...`, 'info');
+
+    const referencePrompt = buildSD15ReferencePrompt(character, {
+      loraModel: options.lora
+    });
+
+    const refResult = await generateReferenceImage({
+      characterId: character.id,
+      prompt: referencePrompt,
+      seed: character.seed,
+      outputPath: referenceImagePath,
+      loraModel: options.lora
+    }, {
+      verbose: options.verbose,
+      quiet: options.quiet,
+      dryRun: options.dryRun
+    });
+
+    if (!refResult.success) {
+      return {
+        success: false,
+        error: `Failed to generate reference image: ${refResult.stderr || 'Unknown error'}`
+      };
+    }
+
+    log(`  Reference image saved: ${referenceImagePath}`, 'success');
+  }
+
+  // Build SD1.5 prompt for this animation
+  const prompt = buildSD15CharacterPrompt(character, animation, {
+    loraModel: options.lora
+  });
+
+  if (options.verbose) {
+    log(`  SD1.5 Prompt: ${prompt}`, 'debug');
+    log(`  Reference: ${referenceImagePath}`, 'debug');
+    log(`  ControlNet weight: ${options.controlnetWeight}`, 'debug');
+    log(`  IP-Adapter weight: ${options.ipadapterWeight}`, 'debug');
+  }
+
+  // Generate animation with SD1.5 pipeline
+  const result = await generateAnimation({
+    characterId: character.id,
+    animation,
+    controlnetWeight: options.controlnetWeight,
+    ipadapterWeight: options.ipadapterWeight,
+    referenceImage: referenceImagePath,
+    loraModel: options.lora,
+    seed: character.seed,
+    outputPath
+  }, {
+    verbose: options.verbose,
+    quiet: options.quiet,
+    dryRun: options.dryRun
+  });
+
+  return result;
+}
+
+/**
+ * Generate only the reference image for a character (--reference-only mode)
+ */
+async function generateReferenceOnly(character, options) {
+  const referenceImagePath = getReferenceImagePath(character);
+
+  // Check if already exists and not forcing
+  if (fileExists(referenceImagePath) && !options.force) {
+    log(`Reference image already exists: ${referenceImagePath}`, 'info');
+    return { success: true, skipped: true };
+  }
+
+  // Ensure output directory exists
+  ensureDirectoryExists(path.dirname(referenceImagePath));
+
+  const referencePrompt = buildSD15ReferencePrompt(character, {
+    loraModel: options.lora
+  });
+
+  if (options.verbose) {
+    log(`  Reference prompt: ${referencePrompt}`, 'debug');
+  }
+
+  const result = await generateReferenceImage({
+    characterId: character.id,
+    prompt: referencePrompt,
+    seed: character.seed,
+    outputPath: referenceImagePath,
+    loraModel: options.lora
+  }, {
+    verbose: options.verbose,
+    quiet: options.quiet,
+    dryRun: options.dryRun
+  });
+
+  if (result.success) {
+    log(`Reference image saved: ${referenceImagePath}`, 'success');
+  }
+
+  return result;
+}
+
+/**
  * Validate required environment variables
  */
 function validateEnvVars(options) {
@@ -364,8 +518,21 @@ async function main() {
   log('Character Sprite Sheet Generation Script', 'info');
   log('========================================', 'info');
 
-  // Check ImageMagick availability (required for concatenation)
-  if (!options.dryRun && !checkImageMagick()) {
+  // Display mode
+  const isSD15Mode = options.mode === 'sd15';
+  if (isSD15Mode) {
+    log(`Mode: SD1.5 with ControlNet + IP-Adapter`, 'info');
+    log(`  ControlNet weight: ${options.controlnetWeight}`, 'info');
+    log(`  IP-Adapter weight: ${options.ipadapterWeight}`, 'info');
+    if (options.reference) {
+      log(`  Reference image: ${options.reference}`, 'info');
+    }
+  } else {
+    log(`Mode: Flux (frame-by-frame generation)`, 'info');
+  }
+
+  // Check ImageMagick availability (required for concatenation in Flux mode)
+  if (!options.dryRun && !isSD15Mode && !checkImageMagick()) {
     log('ImageMagick not found. Required for sprite sheet concatenation.', 'error');
     log('Install with: sudo apt-get install imagemagick', 'info');
     process.exit(1);
@@ -388,6 +555,57 @@ async function main() {
   if (filteredCharacters.length === 0) {
     log('No characters match the specified filters', 'info');
     process.exit(0);
+  }
+
+  // Handle --reference-only mode for SD1.5
+  if (options.referenceOnly) {
+    if (!isSD15Mode) {
+      log('--reference-only requires --mode sd15', 'error');
+      process.exit(1);
+    }
+
+    log(`\nGenerating reference images for ${filteredCharacters.length} characters...`, 'info');
+
+    const refResults = { success: [], failed: [], skipped: [] };
+
+    for (let i = 0; i < filteredCharacters.length; i++) {
+      const character = filteredCharacters[i];
+      log(`[${i + 1}/${filteredCharacters.length}] ${character.id}`, 'info');
+
+      try {
+        const result = await generateReferenceOnly(character, options);
+        if (result.skipped) {
+          refResults.skipped.push(character.id);
+        } else if (result.success) {
+          refResults.success.push(character.id);
+        } else {
+          refResults.failed.push({ id: character.id, error: result.error || 'Unknown error' });
+        }
+      } catch (error) {
+        refResults.failed.push({ id: character.id, error: error.message });
+        log(`Failed: ${error.message}`, 'error');
+      }
+
+      if (i < filteredCharacters.length - 1 && options.delay > 0) {
+        await delay(options.delay);
+      }
+    }
+
+    console.log('\n========================================');
+    log('Reference Image Generation Summary', 'info');
+    console.log('========================================');
+    console.log(`  Generated: ${refResults.success.length}`);
+    console.log(`  Skipped:   ${refResults.skipped.length}`);
+    console.log(`  Failed:    ${refResults.failed.length}`);
+
+    if (refResults.failed.length > 0) {
+      log('Failed characters:', 'error');
+      for (const item of refResults.failed) {
+        console.log(`  - ${item.id}: ${item.error}`);
+      }
+    }
+
+    process.exit(refResults.failed.length > 0 ? 1 : 0);
   }
 
   // Build list of animations to generate
@@ -429,12 +647,19 @@ async function main() {
     const { character, animation, animationConfig } = item;
     console.log(`  - ${character.id} / ${animation}`);
     console.log(`    Type: ${character._type}`);
+    console.log(`    Mode: ${isSD15Mode ? 'SD1.5 (ControlNet + IP-Adapter)' : 'Flux (frame-by-frame)'}`);
     console.log(`    Frames: ${FRAME_COUNT} (${FRAME_SIZE}x${FRAME_SIZE} each)`);
     console.log(`    Output: ${getOutputPath(character, animation)}`);
 
     if (options.verbose) {
-      const samplePrompt = buildFramePrompt(character, animation, 0, animationConfig);
-      console.log(`    Sample prompt (frame 0): ${samplePrompt}`);
+      if (isSD15Mode) {
+        const sd15Prompt = buildSD15CharacterPrompt(character, animation, { loraModel: options.lora });
+        console.log(`    SD1.5 prompt: ${sd15Prompt}`);
+        console.log(`    Reference: ${options.reference || getReferenceImagePath(character)}`);
+      } else {
+        const samplePrompt = buildFramePrompt(character, animation, 0, animationConfig);
+        console.log(`    Sample prompt (frame 0): ${samplePrompt}`);
+      }
     }
     console.log('');
   }
@@ -442,7 +667,11 @@ async function main() {
   // Dry run - just display
   if (options.dryRun) {
     log(`\nDry run complete. Would generate ${animationsToGenerate.length} sprite sheets.`, 'success');
-    log(`Total frames: ${animationsToGenerate.length * FRAME_COUNT}`, 'info');
+    if (isSD15Mode) {
+      log(`Mode: SD1.5 with ControlNet (weight: ${options.controlnetWeight}) + IP-Adapter (weight: ${options.ipadapterWeight})`, 'info');
+    } else {
+      log(`Total frames: ${animationsToGenerate.length * FRAME_COUNT}`, 'info');
+    }
     process.exit(0);
   }
 
@@ -490,87 +719,114 @@ async function main() {
       const outputPath = getOutputPath(character, animation);
       ensureDirectoryExists(path.dirname(outputPath));
 
-      // Create temp directory for frames
-      const tempDir = getTempDir(character, animation);
-      ensureDirectoryExists(tempDir);
-
       // Determine LoRA model
       const effectiveLoraModel = options.lora || getEffectiveLoraModel(character, 'characters') || 'v1';
 
-      // Generate all 8 frames
-      const framePaths = [];
-      let framesFailed = false;
+      // Mode-specific generation
+      if (isSD15Mode) {
+        // SD1.5 mode: Use ControlNet + IP-Adapter for consistent animations
+        log(`  Using SD1.5 pipeline...`, 'info');
 
-      for (let frameIndex = 0; frameIndex < FRAME_COUNT; frameIndex++) {
-        const frameKey = `${character.id}_${animation}_frame${frameIndex}`;
-        const framePath = path.join(tempDir, `frame_${frameIndex}.png`);
-
-        log(`  Frame ${frameIndex + 1}/${FRAME_COUNT}...`, 'info');
-
-        const prompt = buildFramePrompt(character, animation, frameIndex, animationConfig);
-
-        const result = await generateCharacterFrame({
-          prompt,
-          key: frameKey,
-          characterType: character._type,
-          characterClass: character.class,
-          biome: character.biome,
-          characterId: character.id,
-          animation,
-          frameIndex,
-          seed: character.seed, // Same seed for all frames ensures consistency
-          outputPath: framePath,
-          loraModel: effectiveLoraModel
-        }, {
-          verbose: options.verbose,
-          quiet: options.quiet,
-          local: options.local,
-          huggingface: options.huggingface
+        const result = await generateSD15Animation(character, animation, animationConfig, {
+          ...options,
+          lora: effectiveLoraModel
         });
 
-        if (!result.success) {
-          log(`    Frame ${frameIndex} failed: ${result.stderr || 'Unknown error'}`, 'error');
-          framesFailed = true;
-          break;
-        }
+        if (result.success) {
+          results.success.push({ id: animationKey, character, animation });
+          markAnimationGenerated(character, animation);
+          log(`Generated: ${animationKey}`, 'success');
+          log(`Saved: ${outputPath}`, 'info');
 
-        framePaths.push(framePath);
-
-        // Rate limit delay between frames
-        if (frameIndex < FRAME_COUNT - 1 && options.delay > 0) {
-          await delay(Math.min(options.delay / 4, 500)); // Shorter delay between frames
-        }
-      }
-
-      if (framesFailed) {
-        results.failed.push({ id: animationKey, error: 'Frame generation failed' });
-        cleanupTempFrames(tempDir);
-        continue;
-      }
-
-      // Concatenate frames into vertical strip
-      log(`  Concatenating ${FRAME_COUNT} frames...`, 'info');
-      const concatResult = await concatenateVerticalStrip(framePaths, outputPath, {
-        verbose: options.verbose
-      });
-
-      if (concatResult.success) {
-        results.success.push({ id: animationKey, character, animation });
-        markAnimationGenerated(character, animation);
-        log(`Generated: ${animationKey}`, 'success');
-        log(`Saved: ${outputPath}`, 'info');
-
-        // Clear regeneration marker if applicable
-        if (options.queue && character.needsRegeneration) {
-          clearRegenerationMarker(character);
+          // Clear regeneration marker if applicable
+          if (options.queue && character.needsRegeneration) {
+            clearRegenerationMarker(character);
+          }
+        } else {
+          results.failed.push({ id: animationKey, error: result.error || 'SD1.5 generation failed' });
+          log(`Failed: ${animationKey} - ${result.error}`, 'error');
         }
       } else {
-        results.failed.push({ id: animationKey, error: concatResult.error || 'Concatenation failed' });
-        log(`Failed: ${animationKey} - ${concatResult.error}`, 'error');
-      }
+        // Flux mode: Frame-by-frame generation with concatenation
+        // Create temp directory for frames
+        const tempDir = getTempDir(character, animation);
+        ensureDirectoryExists(tempDir);
 
-      // Cleanup temp frames
-      cleanupTempFrames(tempDir);
+        // Generate all 8 frames
+        const framePaths = [];
+        let framesFailed = false;
+
+        for (let frameIndex = 0; frameIndex < FRAME_COUNT; frameIndex++) {
+          const frameKey = `${character.id}_${animation}_frame${frameIndex}`;
+          const framePath = path.join(tempDir, `frame_${frameIndex}.png`);
+
+          log(`  Frame ${frameIndex + 1}/${FRAME_COUNT}...`, 'info');
+
+          const prompt = buildFramePrompt(character, animation, frameIndex, animationConfig);
+
+          const result = await generateCharacterFrame({
+            prompt,
+            key: frameKey,
+            characterType: character._type,
+            characterClass: character.class,
+            biome: character.biome,
+            characterId: character.id,
+            animation,
+            frameIndex,
+            seed: character.seed, // Same seed for all frames ensures consistency
+            outputPath: framePath,
+            loraModel: effectiveLoraModel
+          }, {
+            verbose: options.verbose,
+            quiet: options.quiet,
+            local: options.local,
+            huggingface: options.huggingface
+          });
+
+          if (!result.success) {
+            log(`    Frame ${frameIndex} failed: ${result.stderr || 'Unknown error'}`, 'error');
+            framesFailed = true;
+            break;
+          }
+
+          framePaths.push(framePath);
+
+          // Rate limit delay between frames
+          if (frameIndex < FRAME_COUNT - 1 && options.delay > 0) {
+            await delay(Math.min(options.delay / 4, 500)); // Shorter delay between frames
+          }
+        }
+
+        if (framesFailed) {
+          results.failed.push({ id: animationKey, error: 'Frame generation failed' });
+          cleanupTempFrames(tempDir);
+          continue;
+        }
+
+        // Concatenate frames into vertical strip
+        log(`  Concatenating ${FRAME_COUNT} frames...`, 'info');
+        const concatResult = await concatenateVerticalStrip(framePaths, outputPath, {
+          verbose: options.verbose
+        });
+
+        if (concatResult.success) {
+          results.success.push({ id: animationKey, character, animation });
+          markAnimationGenerated(character, animation);
+          log(`Generated: ${animationKey}`, 'success');
+          log(`Saved: ${outputPath}`, 'info');
+
+          // Clear regeneration marker if applicable
+          if (options.queue && character.needsRegeneration) {
+            clearRegenerationMarker(character);
+          }
+        } else {
+          results.failed.push({ id: animationKey, error: concatResult.error || 'Concatenation failed' });
+          log(`Failed: ${animationKey} - ${concatResult.error}`, 'error');
+        }
+
+        // Cleanup temp frames
+        cleanupTempFrames(tempDir);
+      } // End of Flux mode else block
 
       // Rate limit delay between animations
       if (i < animationsToGenerate.length - 1 && options.delay > 0) {
@@ -587,8 +843,11 @@ async function main() {
   console.log('\n========================================');
   log('Generation Summary', 'info');
   console.log('========================================');
+  console.log(`  Mode: ${isSD15Mode ? 'SD1.5 (ControlNet + IP-Adapter)' : 'Flux (frame-by-frame)'}`);
   console.log(`  Sprite sheets: ${results.success.length}`);
-  console.log(`  Total frames generated: ${results.success.length * FRAME_COUNT}`);
+  if (!isSD15Mode) {
+    console.log(`  Total frames generated: ${results.success.length * FRAME_COUNT}`);
+  }
   console.log(`  Failed:  ${results.failed.length}`);
   console.log('');
 

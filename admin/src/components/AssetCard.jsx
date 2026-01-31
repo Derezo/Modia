@@ -8,12 +8,19 @@
  * - Queued: In generation queue (blue)
  * - Generating: Currently being generated (green, animated)
  * - Generated: Complete and up-to-date (emerald)
+ *
+ * For character assets, also shows animation status indicators.
  */
 
 import { useState, memo, useCallback } from 'react';
 import { CheckIcon, ImageIcon, ReloadIcon, BookmarkIcon, CopyIcon } from '@radix-ui/react-icons';
 import { getAssetImageUrl, getAssetSubcategory } from '../lib/assetPathHelper.js';
 import SpritePreview from './SpritePreview.jsx';
+
+/**
+ * Standard animation types for character sprites
+ */
+const CHARACTER_ANIMATIONS = ['idle', 'walk', 'attack', 'hurt', 'death', 'cast', 'victory'];
 
 /**
  * Determine the current state of an asset based on its properties and queue status
@@ -297,8 +304,31 @@ const AssetCard = memo(function AssetCard({
             {asset._biome || asset.outputPath} / {asset._tileCategory}
           </p>
         )}
-        {/* Show type/subcategory for other categories */}
-        {category !== 'tiles' && (
+        {/* Show animation status for character assets */}
+        {category === 'characters' && asset.animations && (
+          <div className="flex items-center gap-0.5 mt-1" title="Animation status">
+            {CHARACTER_ANIMATIONS.map((anim) => {
+              const animStatus = asset.animations?.[anim];
+              const isGenerated = animStatus?.generated === true;
+              const isPending = animStatus?.generated === false;
+              return (
+                <div
+                  key={anim}
+                  className={`w-2 h-2 rounded-full ${
+                    isGenerated
+                      ? 'bg-accent-emerald'
+                      : isPending
+                      ? 'bg-parchment-600'
+                      : 'bg-midnight-700'
+                  }`}
+                  title={`${anim}: ${isGenerated ? 'generated' : 'pending'}`}
+                />
+              );
+            })}
+          </div>
+        )}
+        {/* Show type/subcategory for other categories (not tiles or characters with animations) */}
+        {category !== 'tiles' && !(category === 'characters' && asset.animations) && (
           <p className="text-xs text-parchment-500 truncate">
             {getAssetSubcategory(asset, category) || '-'}
           </p>

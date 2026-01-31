@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "category": "enemies",
   "biome": "bridge",
   "description": "Bridge biome enemy sprite sheets",
@@ -12,6 +12,12 @@
       "name": "Bandit",
       "archetype": "humanoid",
       "visualTraits": "hooded figure leather armor daggers mask scar sneaky",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "bandit_idle",
@@ -48,6 +54,12 @@
       "name": "Toll Collector",
       "archetype": "humanoid",
       "visualTraits": "burly man heavy armor mace coin pouch stern expression",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "toll_collector_idle",
@@ -84,6 +96,12 @@
       "name": "Bridge Troll",
       "archetype": "humanoid",
       "visualTraits": "blue-gray skin barnacles algae massive tusks river smell webbed fingers",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "bridge_troll_idle",
@@ -120,6 +138,12 @@
       "name": "Mercenary",
       "archetype": "humanoid",
       "visualTraits": "professional soldier chainmail sword veteran scars disciplined",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "mercenary_idle",
@@ -156,6 +180,12 @@
       "name": "Highwayman",
       "archetype": "humanoid",
       "visualTraits": "flamboyant hat feather cape rapier pistol confident smile",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "highwayman_idle",
@@ -192,6 +222,12 @@
       "name": "Guard",
       "archetype": "humanoid",
       "visualTraits": "uniformed watchman spear shield tabard badge of office stern",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "guard_idle",

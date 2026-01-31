@@ -21,6 +21,20 @@ const DEFAULT_FRAME_HEIGHT = 64;
 const DEFAULT_FRAME_COUNT = 8;
 const DEFAULT_FPS = 8;
 
+/**
+ * Animation-specific frame counts for SD1.5 generated sprites
+ * Default is 8 frames, but some animations may have different counts
+ */
+export const ANIMATION_FRAME_COUNTS = {
+  idle: 8,
+  walk: 8,
+  attack: 8,
+  hurt: 8,
+  death: 8,
+  cast: 8,
+  victory: 8,
+};
+
 export default function SpritePreview({
   src,
   frameWidth = DEFAULT_FRAME_WIDTH,
@@ -28,10 +42,15 @@ export default function SpritePreview({
   frameCount = DEFAULT_FRAME_COUNT,
   fps = DEFAULT_FPS,
   animate = true,
+  animationType = null, // Optional: 'idle', 'walk', 'attack', etc. - overrides frameCount
   className = '',
   onLoad,
   onError,
 }) {
+  // Use animation-specific frame count if animationType is provided
+  const effectiveFrameCount = animationType && ANIMATION_FRAME_COUNTS[animationType]
+    ? ANIMATION_FRAME_COUNTS[animationType]
+    : frameCount;
   const [currentFrame, setCurrentFrame] = useState(0);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -130,7 +149,7 @@ export default function SpritePreview({
       const elapsed = timestamp - lastFrameTimeRef.current;
 
       if (elapsed >= frameDuration) {
-        setCurrentFrame((f) => (f + 1) % frameCount);
+        setCurrentFrame((f) => (f + 1) % effectiveFrameCount);
         lastFrameTimeRef.current = timestamp - (elapsed % frameDuration);
       }
 
@@ -146,7 +165,7 @@ export default function SpritePreview({
       }
       lastFrameTimeRef.current = 0;
     };
-  }, [animate, imageLoaded, isVisible, fps, frameCount, drawFrame]);
+  }, [animate, imageLoaded, isVisible, fps, effectiveFrameCount, drawFrame]);
 
   /**
    * Intersection Observer to pause animation when not visible

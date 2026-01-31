@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "category": "enemies",
   "biome": "cave",
   "description": "Cave biome enemy sprite sheets",
@@ -12,6 +12,12 @@
       "name": "Bat Swarm",
       "archetype": "beast",
       "visualTraits": "cluster of bats red eyes wing membranes fangs screeching",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "bat_swarm_idle",
@@ -48,6 +54,12 @@
       "name": "Cave Spider",
       "archetype": "beast",
       "visualTraits": "pale white body multiple eyes venomous fangs spindly legs web spinner",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "cave_spider_idle",
@@ -84,6 +96,12 @@
       "name": "Goblin",
       "archetype": "humanoid",
       "visualTraits": "gray-green skin cave adapted eyes rusty dagger tattered clothes",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "goblin_idle",
@@ -120,6 +138,12 @@
       "name": "Cave Troll",
       "archetype": "humanoid",
       "visualTraits": "massive gray body stone-like skin glowing eyes huge club tusks",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "cave_troll_idle",
@@ -156,6 +180,12 @@
       "name": "Crystal Golem",
       "archetype": "elemental",
       "visualTraits": "body of purple crystals glowing core faceted limbs sharp edges",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "crystal_golem_idle",
@@ -192,6 +222,12 @@
       "name": "Shadow",
       "archetype": "undead",
       "visualTraits": "formless darkness glowing red eyes wispy tendrils ethereal presence",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "shadow_idle",
