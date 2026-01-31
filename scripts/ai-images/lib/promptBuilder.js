@@ -443,6 +443,134 @@ function getRegionalPalette(region) {
   return REGIONAL_PALETTES[region] || null;
 }
 
+/**
+ * SD1.5 LoRA trigger words mapping
+ * These are different from Flux LoRA triggers and optimized for SD1.5 checkpoints
+ */
+const SD15_LORA_TRIGGERS = {
+  'pixel-art-xl': 'pixel art style',
+  '16-bit-pixel': '16bit pixel art',
+  'pixel-sprite': 'pixel sprite',
+  'retro-game': 'retro game style',
+  null: ''
+};
+
+/**
+ * Get the SD1.5 LoRA trigger word
+ * @param {string|null} loraModel - LoRA model identifier
+ * @returns {string} Trigger word for the LoRA model
+ */
+function getSD15LoraTrigger(loraModel) {
+  return SD15_LORA_TRIGGERS[loraModel] || SD15_LORA_TRIGGERS[null];
+}
+
+/**
+ * Build an SD1.5-compatible character prompt for animation generation
+ * SD1.5 requires different prompt structure than Flux for optimal results
+ *
+ * @param {Object} character - Character metadata
+ * @param {string} character.id - Character identifier
+ * @param {string} character.visualTraits - Visual description traits
+ * @param {string} character.class - Character class (for players)
+ * @param {string} character.biome - Biome (for enemies)
+ * @param {string} animation - Animation name (idle, walk, attack, etc.)
+ * @param {Object} options - Additional options
+ * @param {string} options.loraModel - Optional LoRA model for trigger word
+ * @param {number} options.frameIndex - Optional frame index for frame-specific prompts
+ * @param {string} options.poseDescription - Optional pose description from ControlNet
+ * @returns {string} SD1.5-optimized prompt
+ */
+function buildSD15CharacterPrompt(character, animation, options = {}) {
+  const loraTrigger = getSD15LoraTrigger(options.loraModel);
+
+  const parts = [];
+
+  // Add LoRA trigger if present
+  if (loraTrigger) {
+    parts.push(loraTrigger);
+  }
+
+  // Core style keywords for SD1.5
+  parts.push('pixel art character sprite');
+
+  // Character visual traits
+  if (character.visualTraits) {
+    parts.push(character.visualTraits);
+  }
+
+  // Animation context
+  parts.push(`${animation} animation`);
+
+  // Frame-specific pose if provided
+  if (options.poseDescription) {
+    parts.push(options.poseDescription);
+  }
+
+  // View and size constraints
+  parts.push('side view');
+  parts.push('64x64');
+  parts.push('transparent background');
+
+  // Quality boosters for SD1.5
+  parts.push('clean lines');
+  parts.push('game asset');
+
+  return parts.filter(Boolean).join(', ');
+}
+
+/**
+ * Build an SD1.5-compatible reference image prompt
+ * Reference images should be higher quality and more detailed
+ *
+ * @param {Object} character - Character metadata
+ * @param {Object} options - Additional options
+ * @param {string} options.loraModel - Optional LoRA model
+ * @returns {string} SD1.5-optimized reference prompt
+ */
+function buildSD15ReferencePrompt(character, options = {}) {
+  const loraTrigger = getSD15LoraTrigger(options.loraModel);
+
+  const parts = [];
+
+  if (loraTrigger) {
+    parts.push(loraTrigger);
+  }
+
+  // Higher quality keywords for reference
+  parts.push('detailed pixel art character');
+  parts.push('game sprite reference sheet');
+
+  if (character.visualTraits) {
+    parts.push(character.visualTraits);
+  }
+
+  // Neutral pose for reference
+  parts.push('standing pose');
+  parts.push('front view');
+  parts.push('full body');
+
+  // Quality and style
+  parts.push('clean pixel art');
+  parts.push('consistent style');
+  parts.push('transparent background');
+  parts.push('128x128');
+
+  return parts.filter(Boolean).join(', ');
+}
+
+/**
+ * Get SD1.5 negative prompt for character animation
+ * SD1.5 benefits from specific negative prompts different from Flux
+ * @returns {string} Negative prompt for SD1.5 character generation
+ */
+function getSD15NegativePrompt() {
+  return 'blurry, low quality, watermark, signature, text, logo, ' +
+    'photorealistic, 3D render, anime style, chibi, ' +
+    'bad anatomy, extra limbs, missing limbs, ' +
+    'multiple characters, crowded, busy background, ' +
+    'jpeg artifacts, noise, grain';
+}
+
 module.exports = {
   // Theme functions (new unified approach)
   loadTheme,
@@ -458,6 +586,13 @@ module.exports = {
   // NEW: Flat texture tile system (isometric transform in post-processing)
   buildFlatTilePrompt,
   buildWallPrompt,
+
+  // SD1.5 animation generation support
+  SD15_LORA_TRIGGERS,
+  getSD15LoraTrigger,
+  buildSD15CharacterPrompt,
+  buildSD15ReferencePrompt,
+  getSD15NegativePrompt,
 
   // Legacy functions (for backward compatibility and tiles)
   NEGATIVE_PROMPT,

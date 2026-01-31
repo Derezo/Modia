@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "category": "enemies",
   "biome": "forest",
   "description": "Forest biome enemy sprite sheets",
@@ -12,6 +12,12 @@
       "name": "Forest Slime",
       "archetype": "elemental",
       "visualTraits": "translucent green gelatinous body glowing core dripping tendrils bubbles",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "forest_slime_idle",
@@ -48,6 +54,12 @@
       "name": "Giant Spider",
       "archetype": "beast",
       "visualTraits": "eight red eyes hairy body segmented legs fangs dripping venom",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "giant_spider_idle",
@@ -84,6 +96,12 @@
       "name": "Wolf",
       "archetype": "beast",
       "visualTraits": "gray fur amber eyes snarling maw sharp fangs alert ears",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "wolf_idle",
@@ -120,6 +138,12 @@
       "name": "Forest Goblin",
       "archetype": "humanoid",
       "visualTraits": "green skin pointed ears yellow eyes crude weapon loincloth war paint",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "forest_goblin_idle",
@@ -156,6 +180,12 @@
       "name": "Treant",
       "archetype": "elemental",
       "visualTraits": "bark skin branch arms glowing eyes leaves for hair massive trunk body",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "treant_idle",
@@ -192,6 +222,12 @@
       "name": "Dryad",
       "archetype": "elemental",
       "visualTraits": "green skin flower hair vine clothing ethereal beauty nature magic glow",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "dryad_idle",

@@ -739,6 +739,112 @@ async function generateCharacterFrame(frameConfig, options = {}) {
   return runPythonScript('generate_character_frame.py', args, { ...options, verbose, quiet, loraModel: effectiveLoraModel });
 }
 
+/**
+ * Generate a character animation using SD1.5 with ControlNet pose guidance and IP-Adapter
+ * This is an alternative to the Flux-based frame generation for consistent multi-frame animations
+ *
+ * @param {Object} animationConfig - Animation configuration
+ * @param {string} animationConfig.characterId - Character identifier (e.g., 'warrior', 'goblin_scout')
+ * @param {string} animationConfig.animation - Animation name (idle, walk, attack, etc.)
+ * @param {number} animationConfig.controlnetWeight - ControlNet pose weight (0.0-1.0, default 0.7)
+ * @param {number} animationConfig.ipadapterWeight - IP-Adapter reference weight (0.0-1.0, default 0.6)
+ * @param {string} animationConfig.referenceImage - Path to reference image for style consistency
+ * @param {string} animationConfig.loraModel - Optional LoRA model override
+ * @param {number} animationConfig.seed - Random seed for reproducibility
+ * @param {string} animationConfig.outputPath - Explicit output path for the animation sheet
+ * @param {Object} options - Additional options
+ * @param {boolean} options.dryRun - If true, skip actual execution
+ * @param {boolean} options.verbose - If true, stream output to console
+ * @param {boolean} options.quiet - If true, suppress all output except errors
+ * @returns {Promise<PythonResult>} Execution result
+ */
+async function generateAnimation(animationConfig, options = {}) {
+  const {
+    characterId,
+    animation,
+    controlnetWeight = 0.7,
+    ipadapterWeight = 0.6,
+    referenceImage,
+    loraModel,
+    seed = 42,
+    outputPath
+  } = animationConfig;
+  const { verbose = false, quiet = false } = options;
+
+  const args = [
+    '--character', characterId,
+    '--animation', animation,
+    '--controlnet-weight', String(controlnetWeight),
+    '--ipadapter-weight', String(ipadapterWeight),
+    '--seed', String(seed)
+  ];
+
+  if (referenceImage) {
+    args.push('--reference', referenceImage);
+  }
+
+  if (loraModel) {
+    args.push('--lora', loraModel);
+  }
+
+  if (outputPath) {
+    args.push('--output-path', outputPath);
+  }
+
+  if (options.dryRun) {
+    args.push('--dry-run');
+  }
+
+  return runPythonScript('generate_animation.py', args, { ...options, verbose, quiet });
+}
+
+/**
+ * Generate a reference image for SD1.5 animation generation
+ * Creates a high-quality single frame to use as IP-Adapter reference
+ *
+ * @param {Object} referenceConfig - Reference image configuration
+ * @param {string} referenceConfig.characterId - Character identifier
+ * @param {string} referenceConfig.prompt - Full character description prompt
+ * @param {number} referenceConfig.seed - Random seed for reproducibility
+ * @param {string} referenceConfig.outputPath - Output path for the reference image
+ * @param {string} referenceConfig.loraModel - Optional LoRA model (default uses Flux for quality)
+ * @param {Object} options - Additional options
+ * @returns {Promise<PythonResult>} Execution result
+ */
+async function generateReferenceImage(referenceConfig, options = {}) {
+  const {
+    characterId,
+    prompt,
+    seed = 42,
+    outputPath,
+    loraModel
+  } = referenceConfig;
+  const { verbose = false, quiet = false } = options;
+
+  const args = [
+    '--character', characterId,
+    '--prompt', prompt,
+    '--seed', String(seed),
+    '--reference-only'
+  ];
+
+  if (outputPath) {
+    args.push('--output-path', outputPath);
+  }
+
+  if (loraModel) {
+    args.push('--lora', loraModel);
+  }
+
+  if (options.dryRun) {
+    args.push('--dry-run');
+  }
+
+  // Reference images are typically generated with Flux for higher quality
+  // unless a specific LoRA is requested
+  return runPythonScript('generate_animation.py', args, { ...options, verbose, quiet });
+}
+
 module.exports = {
   runPythonScript,
   generateTile,
@@ -751,5 +857,7 @@ module.exports = {
   generateOverlay,
   runBatchGeneration,
   removeBackground,
-  generateCharacterFrame
+  generateCharacterFrame,
+  generateAnimation,
+  generateReferenceImage
 };

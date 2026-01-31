@@ -319,4 +319,539 @@ describe('Admin Assets API', { skip: isProduction }, () => {
       }
     });
   });
+
+  // ============================================================================
+  // SD1.5 ANIMATION MANAGEMENT ENDPOINTS
+  // ============================================================================
+
+  describe('GET /api/admin/assets/characters/:id/animations', () => {
+    it('should return animations list with status for valid character', async () => {
+      // First get a character ID from the list
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        // Skip if no character assets available
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('GET', `/api/admin/assets/characters/${characterId}/animations`);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.characterId, characterId);
+      assert.ok('characterType' in res.body, 'Response should include characterType');
+      assert.ok('totalAnimations' in res.body, 'Response should include totalAnimations');
+      assert.ok('generatedCount' in res.body, 'Response should include generatedCount');
+      assert.ok('sd15Config' in res.body, 'Response should include sd15Config');
+      assert.ok(Array.isArray(res.body.animations), 'Response should include animations array');
+
+      // Verify animation structure
+      if (res.body.animations.length > 0) {
+        const anim = res.body.animations[0];
+        assert.ok('animation' in anim, 'Animation should have animation name');
+        assert.ok('generated' in anim, 'Animation should have generated flag');
+        assert.ok('description' in anim, 'Animation should have description');
+        assert.ok('frameCount' in anim, 'Animation should have frameCount');
+      }
+    });
+
+    it('should return 404 for non-existent character', async () => {
+      const res = await request('GET', '/api/admin/assets/characters/nonexistent_character_12345/animations');
+
+      assert.strictEqual(res.status, 404);
+      assert.ok(res.body.error.includes('not found'), 'Error should mention not found');
+    });
+
+    it('should return 400 for path traversal attempt in character ID', async () => {
+      const res = await request('GET', '/api/admin/assets/characters/..%2F..%2Fetc%2Fpasswd/animations');
+
+      // Should be rejected by assertValidAssetId
+      assert.ok(res.status === 400 || res.status === 404, 'Should reject path traversal');
+    });
+  });
+
+  describe('POST /api/admin/assets/characters/:id/animations/:animation/generate', () => {
+    it('should return 404 for non-existent character', async () => {
+      const res = await request('POST', '/api/admin/assets/characters/nonexistent_char/animations/idle/generate', {});
+
+      assert.strictEqual(res.status, 404);
+      assert.ok(res.body.error.includes('not found'));
+    });
+
+    it('should return 400 for invalid animation name (invalid characters)', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('POST', `/api/admin/assets/characters/${characterId}/animations/invalid-anim!/generate`, {});
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('Invalid animation name'));
+    });
+
+    it('should return 400 for animation not defined for this character', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      // Use a valid format but nonexistent animation
+      const res = await request('POST', `/api/admin/assets/characters/${characterId}/animations/nonexistent_animation/generate`, {});
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('not valid for character'));
+    });
+
+    it('should return 400 for controlnetWeight out of range (>1)', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      // Get valid animation for this character
+      const animRes = await request('GET', `/api/admin/assets/characters/${characterId}/animations`);
+      if (animRes.body.animations?.length === 0) {
+        return;
+      }
+      const validAnimation = animRes.body.animations[0].animation;
+
+      const res = await request('POST', `/api/admin/assets/characters/${characterId}/animations/${validAnimation}/generate`, {
+        controlnetWeight: 1.5
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('controlnetWeight must be between 0 and 1'));
+    });
+
+    it('should return 400 for controlnetWeight out of range (<0)', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const animRes = await request('GET', `/api/admin/assets/characters/${characterId}/animations`);
+      if (animRes.body.animations?.length === 0) {
+        return;
+      }
+      const validAnimation = animRes.body.animations[0].animation;
+
+      const res = await request('POST', `/api/admin/assets/characters/${characterId}/animations/${validAnimation}/generate`, {
+        controlnetWeight: -0.5
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('controlnetWeight must be between 0 and 1'));
+    });
+
+    it('should return 400 for ipadapterWeight out of range (>1)', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const animRes = await request('GET', `/api/admin/assets/characters/${characterId}/animations`);
+      if (animRes.body.animations?.length === 0) {
+        return;
+      }
+      const validAnimation = animRes.body.animations[0].animation;
+
+      const res = await request('POST', `/api/admin/assets/characters/${characterId}/animations/${validAnimation}/generate`, {
+        ipadapterWeight: 2.0
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('ipadapterWeight must be between 0 and 1'));
+    });
+
+    it('should return 400 for invalid preset name', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const animRes = await request('GET', `/api/admin/assets/characters/${characterId}/animations`);
+      if (animRes.body.animations?.length === 0) {
+        return;
+      }
+      const validAnimation = animRes.body.animations[0].animation;
+
+      const res = await request('POST', `/api/admin/assets/characters/${characterId}/animations/${validAnimation}/generate`, {
+        preset: 'invalid_preset_name'
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('Invalid preset'));
+    });
+
+    it('should return 400 when reference image not generated', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      // Find a character without reference image
+      let testCharacter = null;
+      for (const char of listRes.body.assets) {
+        const charId = char.key || char.id;
+        const refRes = await request('GET', `/api/admin/assets/characters/${charId}/reference`);
+        if (!refRes.body.hasReference) {
+          testCharacter = char;
+          break;
+        }
+      }
+
+      if (!testCharacter) {
+        // Skip if all characters have reference images
+        return;
+      }
+
+      const characterId = testCharacter.key || testCharacter.id;
+      const animRes = await request('GET', `/api/admin/assets/characters/${characterId}/animations`);
+      if (animRes.body.animations?.length === 0) {
+        return;
+      }
+      const validAnimation = animRes.body.animations[0].animation;
+
+      const res = await request('POST', `/api/admin/assets/characters/${characterId}/animations/${validAnimation}/generate`, {
+        controlnetWeight: 0.5,
+        ipadapterWeight: 0.5
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('Reference image required'));
+    });
+  });
+
+  describe('GET /api/admin/assets/characters/:id/reference', () => {
+    it('should return reference status for valid character', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('GET', `/api/admin/assets/characters/${characterId}/reference`);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.characterId, characterId);
+      assert.ok('hasReference' in res.body, 'Response should include hasReference');
+      assert.ok('referenceImage' in res.body, 'Response should include referenceImage');
+      assert.ok('referenceGeneratedAt' in res.body, 'Response should include referenceGeneratedAt');
+      assert.ok('referenceExists' in res.body, 'Response should include referenceExists');
+      assert.ok('sd15Weights' in res.body, 'Response should include sd15Weights');
+    });
+
+    it('should return 404 for non-existent character', async () => {
+      const res = await request('GET', '/api/admin/assets/characters/nonexistent_char_99999/reference');
+
+      assert.strictEqual(res.status, 404);
+      assert.ok(res.body.error.includes('not found'));
+    });
+
+    it('should reject path traversal in character ID', async () => {
+      const res = await request('GET', '/api/admin/assets/characters/../../../etc/passwd/reference');
+
+      assert.ok(res.status === 400 || res.status === 404, 'Should reject path traversal');
+    });
+  });
+
+  describe('POST /api/admin/assets/characters/:id/reference/generate', () => {
+    it('should return 404 for non-existent character', async () => {
+      const res = await request('POST', '/api/admin/assets/characters/nonexistent_char/reference/generate', {});
+
+      assert.strictEqual(res.status, 404);
+      assert.ok(res.body.error.includes('not found'));
+    });
+
+    it('should accept valid request for character without reference (queues generation)', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      // Find a character without reference image
+      let testCharacter = null;
+      for (const char of listRes.body.assets) {
+        const charId = char.key || char.id;
+        const refRes = await request('GET', `/api/admin/assets/characters/${charId}/reference`);
+        if (!refRes.body.hasReference) {
+          testCharacter = char;
+          break;
+        }
+      }
+
+      if (!testCharacter) {
+        // Skip if all characters have reference images
+        return;
+      }
+
+      const characterId = testCharacter.key || testCharacter.id;
+      const res = await request('POST', `/api/admin/assets/characters/${characterId}/reference/generate`, {});
+
+      // 202 means job queued successfully
+      assert.strictEqual(res.status, 202);
+      assert.ok(res.body.message.includes('Queued'));
+      assert.strictEqual(res.body.characterId, characterId);
+    });
+
+    it('should return 200 with message if reference already exists (without force)', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      // Find a character WITH reference image
+      let testCharacter = null;
+      for (const char of listRes.body.assets) {
+        const charId = char.key || char.id;
+        const refRes = await request('GET', `/api/admin/assets/characters/${charId}/reference`);
+        if (refRes.body.hasReference && refRes.body.referenceExists) {
+          testCharacter = char;
+          break;
+        }
+      }
+
+      if (!testCharacter) {
+        // Skip if no characters have reference images
+        return;
+      }
+
+      const characterId = testCharacter.key || testCharacter.id;
+      const res = await request('POST', `/api/admin/assets/characters/${characterId}/reference/generate`, {});
+
+      // Should return 200 with message about existing reference
+      assert.strictEqual(res.status, 200);
+      assert.ok(res.body.message.includes('already exists'));
+    });
+  });
+
+  describe('PUT /api/admin/assets/characters/:id/weights', () => {
+    it('should return 404 for non-existent character', async () => {
+      const res = await request('PUT', '/api/admin/assets/characters/nonexistent_char/weights', {
+        controlnetWeight: 0.5
+      });
+
+      assert.strictEqual(res.status, 404);
+      assert.ok(res.body.error.includes('not found'));
+    });
+
+    it('should return 400 for controlnetWeight > 1', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/weights`, {
+        controlnetWeight: 1.5
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('controlnetWeight must be between 0 and 1'));
+    });
+
+    it('should return 400 for controlnetWeight < 0', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/weights`, {
+        controlnetWeight: -0.1
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('controlnetWeight must be between 0 and 1'));
+    });
+
+    it('should return 400 for ipadapterWeight > 1', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/weights`, {
+        ipadapterWeight: 1.1
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('ipadapterWeight must be between 0 and 1'));
+    });
+
+    it('should return 400 for ipadapterWeight < 0', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/weights`, {
+        ipadapterWeight: -0.5
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('ipadapterWeight must be between 0 and 1'));
+    });
+
+    it('should return 400 for invalid preset', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/weights`, {
+        preset: 'nonexistent_preset'
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('Invalid preset'));
+    });
+
+    it('should update weights successfully with valid values', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/weights`, {
+        controlnetWeight: 0.6,
+        ipadapterWeight: 0.4
+      });
+
+      assert.strictEqual(res.status, 200);
+      assert.ok(res.body.message.includes('updated successfully'));
+      assert.strictEqual(res.body.characterId, characterId);
+      assert.ok('sd15Config' in res.body, 'Response should include sd15Config');
+      assert.strictEqual(res.body.sd15Config.controlnetWeight, 0.6);
+      assert.strictEqual(res.body.sd15Config.ipadapterWeight, 0.4);
+    });
+
+    it('should accept valid preset name', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      // balanced is a known preset from the manifest
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/weights`, {
+        preset: 'balanced'
+      });
+
+      assert.strictEqual(res.status, 200);
+      assert.ok(res.body.message.includes('updated successfully'));
+      assert.strictEqual(res.body.appliedPreset, 'balanced');
+    });
+
+    it('should reject path traversal in character ID', async () => {
+      const res = await request('PUT', '/api/admin/assets/characters/..%2F..%2Fetc%2Fpasswd/weights', {
+        controlnetWeight: 0.5
+      });
+
+      assert.ok(res.status === 400 || res.status === 404, 'Should reject path traversal');
+    });
+  });
+
+  describe('GET /api/admin/assets/characters/:id/weights/presets', () => {
+    it('should return presets for valid character', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('GET', `/api/admin/assets/characters/${characterId}/weights/presets`);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.characterId, characterId);
+      assert.ok('currentConfig' in res.body, 'Response should include currentConfig');
+      assert.ok('generationDefaults' in res.body, 'Response should include generationDefaults');
+      assert.ok(Array.isArray(res.body.presets), 'Response should include presets array');
+
+      // Verify preset structure
+      if (res.body.presets.length > 0) {
+        const preset = res.body.presets[0];
+        assert.ok('name' in preset, 'Preset should have name');
+        assert.ok('controlnetWeight' in preset, 'Preset should have controlnetWeight');
+        assert.ok('ipadapterWeight' in preset, 'Preset should have ipadapterWeight');
+        assert.ok('description' in preset, 'Preset should have description');
+      }
+    });
+
+    it('should return known preset names', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('GET', `/api/admin/assets/characters/${characterId}/weights/presets`);
+
+      assert.strictEqual(res.status, 200);
+
+      const presetNames = res.body.presets.map(p => p.name);
+      const expectedPresets = ['balanced', 'maxConsistency', 'precisePoses', 'creative'];
+
+      for (const expected of expectedPresets) {
+        assert.ok(presetNames.includes(expected), `Should include ${expected} preset`);
+      }
+    });
+
+    it('should return 404 for non-existent character', async () => {
+      const res = await request('GET', '/api/admin/assets/characters/nonexistent_char/weights/presets');
+
+      assert.strictEqual(res.status, 404);
+      assert.ok(res.body.error.includes('not found'));
+    });
+
+    it('should reject path traversal in character ID', async () => {
+      const res = await request('GET', '/api/admin/assets/characters/..%2Fetc%2Fpasswd/weights/presets');
+
+      assert.ok(res.status === 400 || res.status === 404, 'Should reject path traversal');
+    });
+  });
 });

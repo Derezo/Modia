@@ -13,12 +13,31 @@ import {
   CheckIcon,
   ExclamationTriangleIcon,
   EyeOpenIcon,
+  ImageIcon,
+  CheckCircledIcon,
+  PlayIcon,
 } from '@radix-ui/react-icons';
 
 import { api } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
 import { DEFAULT_SIZES, SIZE_PRESETS } from '@shared/assetPaths.js';
 import { getAssetSubcategory, getAssetExtraOptions, getAssetUrls } from '../lib/assetPathHelper.js';
+import SpritePreview from './SpritePreview.jsx';
+
+/**
+ * Standard animation types for character sprites
+ */
+const CHARACTER_ANIMATIONS = ['idle', 'walk', 'attack', 'hurt', 'death', 'cast', 'victory'];
+
+/**
+ * Weight preset definitions for SD1.5 generation
+ */
+const WEIGHT_PRESETS = {
+  balanced: { label: 'Balanced', controlnetWeight: 0.7, ipadapterWeight: 0.7, description: 'Good balance of consistency and creativity' },
+  maxConsistency: { label: 'Max Consistency', controlnetWeight: 0.9, ipadapterWeight: 0.9, description: 'Highest character consistency' },
+  precisePoses: { label: 'Precise Poses', controlnetWeight: 0.9, ipadapterWeight: 0.5, description: 'Accurate poses, moderate style matching' },
+  creative: { label: 'Creative', controlnetWeight: 0.5, ipadapterWeight: 0.5, description: 'More variation in outputs' },
+};
 
 /**
  * Category-specific size options for preview
@@ -318,6 +337,296 @@ function FullPromptModal({ open, onClose, promptData, loading, category, error }
   );
 }
 
+// ============================================================================
+// SD1.5 Animation Control Components (Characters only)
+// ============================================================================
+
+/**
+ * AnimationSelector - Tabs for selecting which animation to preview
+ */
+function AnimationSelector({ animations, selectedAnimation, onSelect }) {
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-parchment-300">
+        Animation Preview
+      </label>
+      <div className="flex flex-wrap gap-1">
+        {CHARACTER_ANIMATIONS.map((anim) => {
+          const status = animations?.[anim];
+          const isGenerated = status?.generated === true;
+          const isSelected = selectedAnimation === anim;
+
+          return (
+            <button
+              key={anim}
+              type="button"
+              onClick={() => onSelect(anim)}
+              className={`
+                px-3 py-1.5 text-xs font-medium rounded-lg transition-all
+                flex items-center gap-1.5
+                ${isSelected
+                  ? 'bg-accent-gold text-midnight-950'
+                  : 'bg-midnight-800 text-parchment-300 hover:bg-midnight-700'}
+              `}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isGenerated ? 'bg-accent-emerald' : 'bg-parchment-600'
+                }`}
+              />
+              {anim}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * WeightSlider - Individual weight slider control
+ */
+function WeightSlider({ label, value, onChange, disabled = false }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-parchment-400">{label}</label>
+        <span className="text-xs text-parchment-500">{value.toFixed(2)}</span>
+      </div>
+      <input
+        type="range"
+        min="0"
+        max="1"
+        step="0.05"
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        disabled={disabled}
+        className="w-full h-2 bg-midnight-700 rounded-lg appearance-none cursor-pointer
+                   accent-accent-gold disabled:opacity-50 disabled:cursor-not-allowed"
+      />
+    </div>
+  );
+}
+
+/**
+ * WeightControls - Dual sliders with presets for SD1.5 weights
+ */
+function WeightControls({ weights, onWeightsChange, onPresetSelect, loading = false }) {
+  const { controlnetWeight = 0.7, ipadapterWeight = 0.7 } = weights || {};
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-medium text-parchment-300">
+        SD1.5 Generation Weights
+      </label>
+
+      {/* Weight sliders */}
+      <div className="space-y-3 p-3 bg-midnight-800/50 border border-midnight-700 rounded-lg">
+        <WeightSlider
+          label="ControlNet Weight"
+          value={controlnetWeight}
+          onChange={(v) => onWeightsChange({ ...weights, controlnetWeight: v })}
+          disabled={loading}
+        />
+        <WeightSlider
+          label="IP-Adapter Weight"
+          value={ipadapterWeight}
+          onChange={(v) => onWeightsChange({ ...weights, ipadapterWeight: v })}
+          disabled={loading}
+        />
+      </div>
+
+      {/* Preset buttons */}
+      <div className="flex flex-wrap gap-1">
+        {Object.entries(WEIGHT_PRESETS).map(([key, preset]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onPresetSelect(key, preset)}
+            disabled={loading}
+            className="px-2 py-1 text-xs bg-midnight-800 text-parchment-400 rounded
+                       hover:bg-midnight-700 hover:text-parchment-200 transition-colors
+                       disabled:opacity-50 disabled:cursor-not-allowed"
+            title={preset.description}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ReferenceImageManager - Shows reference image status and generation controls
+ */
+function ReferenceImageManager({ characterId: _characterId, referenceStatus, onGenerate, loading = false }) {
+  const hasReference = referenceStatus?.exists === true;
+
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-parchment-300">
+        Reference Image
+      </label>
+      <div className="p-3 bg-midnight-800/50 border border-midnight-700 rounded-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {hasReference ? (
+              <>
+                <CheckCircledIcon className="w-4 h-4 text-accent-emerald" />
+                <span className="text-sm text-parchment-300">Reference available</span>
+              </>
+            ) : (
+              <>
+                <ImageIcon className="w-4 h-4 text-parchment-500" />
+                <span className="text-sm text-parchment-400">No reference image</span>
+              </>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onGenerate}
+            disabled={loading}
+            className="px-3 py-1 text-xs bg-midnight-700 text-parchment-300 rounded
+                       hover:bg-midnight-600 transition-colors
+                       disabled:opacity-50 disabled:cursor-not-allowed
+                       flex items-center gap-1.5"
+          >
+            {loading ? (
+              <ReloadIcon className="w-3 h-3 animate-spin" />
+            ) : (
+              <ReloadIcon className="w-3 h-3" />
+            )}
+            {hasReference ? 'Regenerate' : 'Generate'}
+          </button>
+        </div>
+        {hasReference && referenceStatus?.path && (
+          <div className="mt-2 pt-2 border-t border-midnight-700">
+            <img
+              src={referenceStatus.path}
+              alt="Reference"
+              className="w-16 h-16 object-contain rounded bg-midnight-900"
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * AnimationGenerationControls - Selective animation generation
+ */
+function AnimationGenerationControls({
+  animations,
+  selectedAnimations,
+  onSelectionChange,
+  onGenerate,
+  loading = false,
+}) {
+  const handleToggle = (anim) => {
+    const newSelection = new Set(selectedAnimations);
+    if (newSelection.has(anim)) {
+      newSelection.delete(anim);
+    } else {
+      newSelection.add(anim);
+    }
+    onSelectionChange(newSelection);
+  };
+
+  const handleSelectAll = () => {
+    onSelectionChange(new Set(CHARACTER_ANIMATIONS));
+  };
+
+  const handleSelectPending = () => {
+    const pending = CHARACTER_ANIMATIONS.filter(
+      (anim) => animations?.[anim]?.generated !== true
+    );
+    onSelectionChange(new Set(pending));
+  };
+
+  const pendingCount = CHARACTER_ANIMATIONS.filter(
+    (anim) => animations?.[anim]?.generated !== true
+  ).length;
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-medium text-parchment-300">
+        Generate Animations
+      </label>
+
+      {/* Selection checkboxes */}
+      <div className="grid grid-cols-4 gap-2 p-3 bg-midnight-800/50 border border-midnight-700 rounded-lg">
+        {CHARACTER_ANIMATIONS.map((anim) => {
+          const status = animations?.[anim];
+          const isGenerated = status?.generated === true;
+          const isSelected = selectedAnimations.has(anim);
+
+          return (
+            <label
+              key={anim}
+              className={`
+                flex items-center gap-2 p-2 rounded cursor-pointer
+                transition-colors text-xs
+                ${isSelected ? 'bg-midnight-700' : 'hover:bg-midnight-800'}
+              `}
+            >
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => handleToggle(anim)}
+                className="w-3.5 h-3.5 rounded border-midnight-600 bg-midnight-800
+                           text-accent-gold focus:ring-accent-gold/30"
+              />
+              <span className={isGenerated ? 'text-parchment-300' : 'text-parchment-500'}>
+                {anim}
+              </span>
+            </label>
+          );
+        })}
+      </div>
+
+      {/* Quick select buttons and generate */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleSelectAll}
+          className="px-2 py-1 text-xs bg-midnight-800 text-parchment-400 rounded
+                     hover:bg-midnight-700 transition-colors"
+        >
+          Select All
+        </button>
+        <button
+          type="button"
+          onClick={handleSelectPending}
+          disabled={pendingCount === 0}
+          className="px-2 py-1 text-xs bg-midnight-800 text-parchment-400 rounded
+                     hover:bg-midnight-700 transition-colors
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Select Pending ({pendingCount})
+        </button>
+
+        <div className="flex-1" />
+
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={loading || selectedAnimations.size === 0}
+          className="btn-gold text-sm flex items-center gap-2 disabled:opacity-50"
+        >
+          {loading ? (
+            <ReloadIcon className="w-4 h-4 animate-spin" />
+          ) : (
+            <PlayIcon className="w-4 h-4" />
+          )}
+          Generate ({selectedAnimations.size})
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Main AssetDetail component
  */
@@ -357,6 +666,16 @@ export default function AssetDetail({
   const [regenerating, setRegenerating] = useState(false);
   const [showFullPrompt, setShowFullPrompt] = useState(false);
   const [fullPromptData, setFullPromptData] = useState({ loading: false, prompt: '' });
+
+  // SD1.5 Animation state (characters only)
+  const [selectedAnimation, setSelectedAnimation] = useState('idle');
+  const [animationData, setAnimationData] = useState(null);
+  const [animationWeights, setAnimationWeights] = useState({ controlnetWeight: 0.7, ipadapterWeight: 0.7 });
+  const [referenceStatus, setReferenceStatus] = useState(null);
+  const [selectedAnimationsForGen, setSelectedAnimationsForGen] = useState(new Set());
+  const [animationLoading, setAnimationLoading] = useState(false);
+  const [weightsLoading, setWeightsLoading] = useState(false);
+  const [referenceLoading, setReferenceLoading] = useState(false);
 
   // Load LoRA config on mount
   useEffect(() => {
@@ -407,6 +726,157 @@ export default function AssetDetail({
     CATEGORY_SIZE_OPTIONS[category] || [64],
     [category]
   );
+
+  // Load animation data for characters
+  const isCharacter = category === 'characters';
+  const characterId = asset?.key || asset?.id;
+
+  useEffect(() => {
+    if (!isCharacter || !characterId || !open) return;
+
+    async function loadAnimationData() {
+      try {
+        const [animData, refData, presetsData] = await Promise.all([
+          api.getCharacterAnimations(characterId).catch(() => null),
+          api.getReferenceImageStatus(characterId).catch(() => null),
+          api.getWeightPresets(characterId).catch(() => null),
+        ]);
+
+        if (animData) {
+          setAnimationData(animData.animations || {});
+        }
+        if (refData) {
+          setReferenceStatus(refData);
+        }
+        if (presetsData?.current) {
+          setAnimationWeights(presetsData.current);
+        }
+      } catch (err) {
+        console.error('Failed to load animation data:', err);
+      }
+    }
+
+    loadAnimationData();
+  }, [isCharacter, characterId, open]);
+
+  // Reset animation state when asset changes
+  useEffect(() => {
+    setSelectedAnimation('idle');
+    setSelectedAnimationsForGen(new Set());
+    setAnimationData(null);
+    setReferenceStatus(null);
+  }, [characterId]);
+
+  /**
+   * Handle weight preset selection
+   */
+  const handlePresetSelect = useCallback(async (presetKey, preset) => {
+    if (!characterId) return;
+
+    const newWeights = {
+      controlnetWeight: preset.controlnetWeight,
+      ipadapterWeight: preset.ipadapterWeight,
+    };
+
+    setAnimationWeights(newWeights);
+
+    // Save to API
+    setWeightsLoading(true);
+    try {
+      await api.updateCharacterWeights(characterId, newWeights);
+      toast.success(`Applied "${preset.label}" preset`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to update weights');
+    } finally {
+      setWeightsLoading(false);
+    }
+  }, [characterId, toast]);
+
+  /**
+   * Handle weights change (from sliders)
+   */
+  const handleWeightsChange = useCallback(async (newWeights) => {
+    setAnimationWeights(newWeights);
+
+    // Debounce API calls for slider changes would be ideal here
+    // For now, we'll save on blur or preset selection
+  }, []);
+
+  /**
+   * Save current weights to API
+   */
+  const saveWeights = useCallback(async () => {
+    if (!characterId) return;
+
+    setWeightsLoading(true);
+    try {
+      await api.updateCharacterWeights(characterId, animationWeights);
+      toast.success('Weights saved');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save weights');
+    } finally {
+      setWeightsLoading(false);
+    }
+  }, [characterId, animationWeights, toast]);
+
+  /**
+   * Generate reference image
+   */
+  const handleGenerateReference = useCallback(async () => {
+    if (!characterId) return;
+
+    setReferenceLoading(true);
+    try {
+      await api.generateReferenceImage(characterId);
+      toast.success('Reference image generation queued');
+
+      // Refresh status after a delay
+      setTimeout(async () => {
+        const refData = await api.getReferenceImageStatus(characterId).catch(() => null);
+        if (refData) setReferenceStatus(refData);
+        setReferenceLoading(false);
+      }, 2000);
+    } catch (err) {
+      toast.error(err.message || 'Failed to generate reference');
+      setReferenceLoading(false);
+    }
+  }, [characterId, toast]);
+
+  /**
+   * Generate selected animations
+   */
+  const handleGenerateAnimations = useCallback(async () => {
+    if (!characterId || selectedAnimationsForGen.size === 0) return;
+
+    setAnimationLoading(true);
+    try {
+      const animations = Array.from(selectedAnimationsForGen);
+      await api.generateCharacterAnimations(characterId, animations, {
+        controlnetWeight: animationWeights.controlnetWeight,
+        ipadapterWeight: animationWeights.ipadapterWeight,
+      });
+      toast.success(`Queued ${animations.length} animation(s) for generation`);
+
+      // Clear selection
+      setSelectedAnimationsForGen(new Set());
+
+      // Trigger parent update
+      onUpdate?.();
+    } catch (err) {
+      toast.error(err.message || 'Failed to queue animations');
+    } finally {
+      setAnimationLoading(false);
+    }
+  }, [characterId, selectedAnimationsForGen, animationWeights, toast, onUpdate]);
+
+  /**
+   * Get animation sprite URL for preview
+   */
+  const getAnimationUrl = useCallback((anim) => {
+    if (!characterId) return null;
+    const type = asset?._type || 'player';
+    return `/assets/characters/${type}/${characterId}/${characterId}_${anim}.png`;
+  }, [characterId, asset?._type]);
 
   // Get image URLs with fallback support (memoized for performance)
   const imageUrls = useMemo(() =>
@@ -567,33 +1037,69 @@ export default function AssetDetail({
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {/* Image Preview */}
+                  {/* Image Preview - different for characters vs other assets */}
                   <div className="space-y-3">
                     <div className="aspect-square bg-midnight-950 rounded-lg overflow-hidden flex items-center justify-center border border-midnight-700">
-                      {isGenerated && !imageError && previewSize ? (
-                        <img
-                          src={getImageUrl(previewSize)}
-                          alt={assetId}
-                          onError={handleImageError}
-                          className="max-w-full max-h-full object-contain"
-                        />
-                      ) : (
-                        <div className="text-center text-parchment-500 px-4">
-                          <ExclamationTriangleIcon className="w-12 h-12 mx-auto mb-2" />
-                          <p className="font-medium">
-                            {!isGenerated ? 'Not yet generated' : 'Image not found'}
-                          </p>
-                          {isGenerated && imageError && previewSize && (
-                            <p className="text-xs mt-2 text-parchment-600 break-all">
-                              Tried: {imageUrls.join(', ')}
+                      {isCharacter ? (
+                        // Character: Show animated sprite preview
+                        animationData?.[selectedAnimation]?.generated ? (
+                          <SpritePreview
+                            src={getAnimationUrl(selectedAnimation)}
+                            frameWidth={64}
+                            frameHeight={64}
+                            animationType={selectedAnimation}
+                            fps={8}
+                            animate={true}
+                            className="w-full h-full flex items-center justify-center scale-[2]"
+                            onError={() => setImageError(true)}
+                          />
+                        ) : (
+                          <div className="text-center text-parchment-500 px-4">
+                            <ExclamationTriangleIcon className="w-12 h-12 mx-auto mb-2" />
+                            <p className="font-medium">
+                              Animation not generated
                             </p>
-                          )}
-                        </div>
+                            <p className="text-xs mt-2 text-parchment-600">
+                              {selectedAnimation} animation is pending
+                            </p>
+                          </div>
+                        )
+                      ) : (
+                        // Non-character: Show static image
+                        isGenerated && !imageError && previewSize ? (
+                          <img
+                            src={getImageUrl(previewSize)}
+                            alt={assetId}
+                            onError={handleImageError}
+                            className="max-w-full max-h-full object-contain"
+                          />
+                        ) : (
+                          <div className="text-center text-parchment-500 px-4">
+                            <ExclamationTriangleIcon className="w-12 h-12 mx-auto mb-2" />
+                            <p className="font-medium">
+                              {!isGenerated ? 'Not yet generated' : 'Image not found'}
+                            </p>
+                            {isGenerated && imageError && previewSize && (
+                              <p className="text-xs mt-2 text-parchment-600 break-all">
+                                Tried: {imageUrls.join(', ')}
+                              </p>
+                            )}
+                          </div>
+                        )
                       )}
                     </div>
 
-                    {/* Size switcher - only show if multiple sizes available */}
-                    {sizeOptions.length > 1 && (
+                    {/* Animation selector for characters */}
+                    {isCharacter && (
+                      <AnimationSelector
+                        animations={animationData}
+                        selectedAnimation={selectedAnimation}
+                        onSelect={setSelectedAnimation}
+                      />
+                    )}
+
+                    {/* Size switcher - only show if multiple sizes available (not for characters) */}
+                    {!isCharacter && sizeOptions.length > 1 && (
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm text-parchment-400">Size:</span>
                         {sizeOptions.map((size) => (
@@ -618,8 +1124,8 @@ export default function AssetDetail({
                       </div>
                     )}
 
-                    {/* Show asset info for single-size categories */}
-                    {sizeOptions.length === 1 && (
+                    {/* Show asset info for single-size categories (not characters) */}
+                    {!isCharacter && sizeOptions.length === 1 && (
                       <div className="text-sm text-parchment-500">
                         Size: {sizeOptions[0]}px (original)
                       </div>
@@ -642,6 +1148,55 @@ export default function AssetDetail({
                       </span>
                     )}
                   </div>
+
+                  {/* SD1.5 Animation Controls (characters only) */}
+                  {isCharacter && (
+                    <div className="space-y-4 p-4 bg-midnight-800/30 border border-midnight-700 rounded-lg">
+                      <h3 className="text-sm font-medium text-accent-gold flex items-center gap-2">
+                        <PlayIcon className="w-4 h-4" />
+                        SD1.5 Animation Controls
+                      </h3>
+
+                      {/* Reference Image Manager */}
+                      <ReferenceImageManager
+                        characterId={characterId}
+                        referenceStatus={referenceStatus}
+                        onGenerate={handleGenerateReference}
+                        loading={referenceLoading}
+                      />
+
+                      {/* Weight Controls */}
+                      <WeightControls
+                        weights={animationWeights}
+                        onWeightsChange={handleWeightsChange}
+                        onPresetSelect={handlePresetSelect}
+                        loading={weightsLoading}
+                      />
+
+                      {/* Save weights button (for manual slider changes) */}
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={saveWeights}
+                          disabled={weightsLoading}
+                          className="px-3 py-1 text-xs bg-midnight-700 text-parchment-300 rounded
+                                     hover:bg-midnight-600 transition-colors
+                                     disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {weightsLoading ? 'Saving...' : 'Save Weights'}
+                        </button>
+                      </div>
+
+                      {/* Animation Generation Controls */}
+                      <AnimationGenerationControls
+                        animations={animationData}
+                        selectedAnimations={selectedAnimationsForGen}
+                        onSelectionChange={setSelectedAnimationsForGen}
+                        onGenerate={handleGenerateAnimations}
+                        loading={animationLoading}
+                      />
+                    </div>
+                  )}
 
                   {/* Portrait Trait Summary (for portraits only) */}
                   {category === 'portraits' && asset?.promptComponents && (

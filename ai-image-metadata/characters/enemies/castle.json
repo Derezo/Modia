@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "category": "enemies",
   "biome": "castle",
   "description": "Castle biome enemy sprite sheets",
@@ -12,6 +12,12 @@
       "name": "Skeleton",
       "archetype": "undead",
       "visualTraits": "animated bones purple eye glow rusted sword tattered armor rattling",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "skeleton_idle",
@@ -48,6 +54,12 @@
       "name": "Ghost",
       "archetype": "undead",
       "visualTraits": "translucent form wailing face ethereal chains trailing wisps sorrowful",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "ghost_idle",
@@ -84,6 +96,12 @@
       "name": "Dark Knight",
       "archetype": "humanoid",
       "visualTraits": "black plate armor glowing red visor corrupted greatsword dark aura",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "knight_idle",
@@ -120,6 +138,12 @@
       "name": "Vampire",
       "archetype": "undead",
       "visualTraits": "pale aristocrat red eyes fangs cape clawed hands elegant menace",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "vampire_idle",
@@ -156,6 +180,12 @@
       "name": "Dark Mage",
       "archetype": "humanoid",
       "visualTraits": "black robes skull staff purple magic crackling hood shadow",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "dark_mage_idle",
@@ -192,6 +222,12 @@
       "name": "Demon",
       "archetype": "elemental",
       "visualTraits": "red skin horns bat wings clawed hands fire wreathed infernal",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "demon_idle",

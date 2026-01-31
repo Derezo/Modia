@@ -33,7 +33,9 @@ const {
   generateOverlay,
   runBatchGeneration,
   removeBackground,
-  generateCharacterFrame
+  generateCharacterFrame,
+  generateAnimation,
+  generateReferenceImage
 } = require('./pythonRunner');
 
 const {
@@ -73,6 +75,12 @@ const {
   // NEW: Flat texture tile system
   buildFlatTilePrompt,
   buildWallPrompt,
+  // SD1.5 animation generation support
+  SD15_LORA_TRIGGERS,
+  getSD15LoraTrigger,
+  buildSD15CharacterPrompt,
+  buildSD15ReferencePrompt,
+  getSD15NegativePrompt,
   // Legacy functions
   NEGATIVE_PROMPT,
   STYLE_PREFIXES,
@@ -178,6 +186,8 @@ module.exports = {
   runBatchGeneration,
   removeBackground,
   generateCharacterFrame,
+  generateAnimation,
+  generateReferenceImage,
 
   // Metadata utilities
   getMetadataPath,
@@ -216,6 +226,13 @@ module.exports = {
   // NEW: Flat texture tile system
   buildFlatTilePrompt,
   buildWallPrompt,
+
+  // SD1.5 animation generation support
+  SD15_LORA_TRIGGERS,
+  getSD15LoraTrigger,
+  buildSD15CharacterPrompt,
+  buildSD15ReferencePrompt,
+  getSD15NegativePrompt,
 
   // Prompt builders (legacy)
   NEGATIVE_PROMPT,

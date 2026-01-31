@@ -567,7 +567,7 @@ router.put('/assets/:category/:id', asyncHandler(async (req, res) => {
   }
 
   // Validate allowed update fields
-  const allowedFields = ['prompt', 'seed', 'evaluation', 'issues', 'notes', 'priority', 'generated', 'generatedAt', 'needsRegeneration', 'loraModel'];
+  const allowedFields = ['prompt', 'seed', 'evaluation', 'issues', 'notes', 'priority', 'generated', 'generatedAt', 'needsRegeneration', 'loraModel', 'controlnetWeight', 'ipadapterWeight', 'referenceImage', 'referenceImageStatus'];
   const invalidFields = Object.keys(updates).filter(key => !allowedFields.includes(key));
   if (invalidFields.length > 0) {
     throw new AppError(`Invalid update fields: ${invalidFields.join(', ')}. Allowed: ${allowedFields.join(', ')}`, 400);
@@ -1183,6 +1183,399 @@ router.get('/stats', asyncHandler(async (req, res) => {
     throw new AppError(`Failed to get stats: ${error.message}`, 500);
   }
 }));
+
+// ============================================================================
+// SD1.5 ANIMATION MANAGEMENT ROUTES
+// ============================================================================
+
+/**
+ * GET /api/admin/assets/characters/:id/animations
+ * List animations for a character with generation status
+ * Returns all animations defined for the character with their generation status
+ */
+router.get('/assets/characters/:id/animations', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { id } = req.params;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Character');
+
+  // Load character metadata
+  const charData = metadataUtils.loadCharacterMetadata({ id });
+  const character = charData.characters.find(c => c.id === id);
+
+  if (!character) {
+    throw new AppError(`Character not found: ${id}`, 404);
+  }
+
+  // Get animations list - either from character or from class traits
+  const animations = character.animations || character._classTraits?.defaultAnimations || [];
+  const generatedAnimations = character.generatedAnimations || {};
+
+  // Build animation status list
+  const animationStatus = animations.map(animation => ({
+    animation,
+    generated: generatedAnimations[animation] === true,
+    generatedAt: generatedAnimations[`${animation}_generatedAt`] || null
+  }));
+
+  // Load manifest for animation descriptions
+  const manifest = charData.manifest;
+  const animationDescriptions = manifest?.animations || {};
+
+  res.json({
+    characterId: id,
+    characterType: character._type,
+    totalAnimations: animations.length,
+    generatedCount: animationStatus.filter(a => a.generated).length,
+    sd15Config: character.sd15Config || {
+      controlnetWeight: null,
+      ipadapterWeight: null,
+      referenceImage: null,
+      referenceGeneratedAt: null
+    },
+    animations: animationStatus.map(status => ({
+      ...status,
+      description: animationDescriptions[status.animation]?.description || null,
+      frameCount: animationDescriptions[status.animation]?.frameCount || 8
+    }))
+  });
+}));
+
+/**
+ * POST /api/admin/assets/characters/:id/animations/:animation/generate
+ * Generate a single animation for a character using SD1.5
+ * Body: { controlnetWeight?: number, ipadapterWeight?: number, force?: boolean }
+ */
+router.post('/assets/characters/:id/animations/:animation/generate', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { id, animation } = req.params;
+  const { controlnetWeight, ipadapterWeight, force = false, preset } = req.body;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Character');
+
+  // Validate animation name (alphanumeric and underscore only)
+  if (!/^[a-zA-Z0-9_]+$/.test(animation)) {
+    throw new AppError('Invalid animation name', 400);
+  }
+
+  // Load character metadata
+  const charData = metadataUtils.loadCharacterMetadata({ id });
+  const character = charData.characters.find(c => c.id === id);
+
+  if (!character) {
+    throw new AppError(`Character not found: ${id}`, 404);
+  }
+
+  // Verify the animation exists for this character
+  const validAnimations = character.animations || character._classTraits?.defaultAnimations || [];
+  if (!validAnimations.includes(animation)) {
+    throw new AppError(`Animation '${animation}' not valid for character '${id}'. Valid: ${validAnimations.join(', ')}`, 400);
+  }
+
+  // Load weight presets from manifest if preset specified
+  let effectiveControlnetWeight = controlnetWeight;
+  let effectiveIpadapterWeight = ipadapterWeight;
+
+  if (preset) {
+    const weightPresets = charData.manifest?.weightPresets || {};
+    const selectedPreset = weightPresets[preset];
+    if (!selectedPreset) {
+      throw new AppError(`Invalid preset: ${preset}. Valid: ${Object.keys(weightPresets).join(', ')}`, 400);
+    }
+    effectiveControlnetWeight = effectiveControlnetWeight ?? selectedPreset.controlnet;
+    effectiveIpadapterWeight = effectiveIpadapterWeight ?? selectedPreset.ipadapter;
+  }
+
+  // Fall back to character's sd15Config, then manifest defaults
+  const sd15Config = character.sd15Config || {};
+  const manifestDefaults = charData.manifest?.generationDefaults?.sd15 || {};
+
+  effectiveControlnetWeight = effectiveControlnetWeight ?? sd15Config.controlnetWeight ?? manifestDefaults.controlnetWeight ?? 0.5;
+  effectiveIpadapterWeight = effectiveIpadapterWeight ?? sd15Config.ipadapterWeight ?? manifestDefaults.ipadapterWeight ?? 0.5;
+
+  // Validate weight ranges
+  if (effectiveControlnetWeight < 0 || effectiveControlnetWeight > 1) {
+    throw new AppError('controlnetWeight must be between 0 and 1', 400);
+  }
+  if (effectiveIpadapterWeight < 0 || effectiveIpadapterWeight > 1) {
+    throw new AppError('ipadapterWeight must be between 0 and 1', 400);
+  }
+
+  // Check if reference image exists (required for SD1.5 mode)
+  if (!sd15Config.referenceImage) {
+    throw new AppError('Reference image required for SD1.5 generation. Generate reference image first.', 400);
+  }
+
+  try {
+    // Queue the generation job with SD1.5 options
+    const result = adminGenerationService.queueJob(
+      'characters',
+      {
+        keys: [id],
+        animation // Pass specific animation to generate
+      },
+      {
+        force,
+        sd15Mode: true,
+        controlnetWeight: effectiveControlnetWeight,
+        ipadapterWeight: effectiveIpadapterWeight,
+        animation // Specific animation to generate
+      }
+    );
+
+    res.status(202).json({
+      message: `Queued SD1.5 generation for ${id}/${animation}`,
+      characterId: id,
+      animation,
+      weights: {
+        controlnet: effectiveControlnetWeight,
+        ipadapter: effectiveIpadapterWeight
+      },
+      ...result
+    });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    throw new AppError(err.message, 500);
+  }
+}));
+
+/**
+ * GET /api/admin/assets/characters/:id/reference
+ * Get reference image status for a character
+ */
+router.get('/assets/characters/:id/reference', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { id } = req.params;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Character');
+
+  // Load character metadata
+  const charData = metadataUtils.loadCharacterMetadata({ id });
+  const character = charData.characters.find(c => c.id === id);
+
+  if (!character) {
+    throw new AppError(`Character not found: ${id}`, 404);
+  }
+
+  const sd15Config = character.sd15Config || {};
+
+  // Check if reference image file exists
+  let referenceExists = false;
+  if (sd15Config.referenceImage) {
+    const refPath = path.join(PROJECT_ROOT, 'frontend/public', sd15Config.referenceImage);
+    referenceExists = existsSync(refPath);
+  }
+
+  res.json({
+    characterId: id,
+    hasReference: !!sd15Config.referenceImage && referenceExists,
+    referenceImage: sd15Config.referenceImage || null,
+    referenceGeneratedAt: sd15Config.referenceGeneratedAt || null,
+    referenceExists,
+    sd15Weights: {
+      controlnet: sd15Config.controlnetWeight,
+      ipadapter: sd15Config.ipadapterWeight
+    }
+  });
+}));
+
+/**
+ * POST /api/admin/assets/characters/:id/reference/generate
+ * Generate reference image for a character (used for SD1.5 IP-Adapter)
+ * Body: { force?: boolean }
+ */
+router.post('/assets/characters/:id/reference/generate', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { id } = req.params;
+  const { force = false } = req.body;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Character');
+
+  // Load character metadata
+  const charData = metadataUtils.loadCharacterMetadata({ id });
+  const character = charData.characters.find(c => c.id === id);
+
+  if (!character) {
+    throw new AppError(`Character not found: ${id}`, 404);
+  }
+
+  // Check if reference already exists (unless force)
+  const sd15Config = character.sd15Config || {};
+  if (sd15Config.referenceImage && !force) {
+    const refPath = path.join(PROJECT_ROOT, 'frontend/public', sd15Config.referenceImage);
+    if (existsSync(refPath)) {
+      return res.status(200).json({
+        message: 'Reference image already exists. Use force=true to regenerate.',
+        characterId: id,
+        referenceImage: sd15Config.referenceImage,
+        referenceGeneratedAt: sd15Config.referenceGeneratedAt
+      });
+    }
+  }
+
+  try {
+    // Queue the generation job for reference image only
+    const result = adminGenerationService.queueJob(
+      'characters',
+      {
+        keys: [id]
+      },
+      {
+        force,
+        referenceOnly: true // Special flag for reference image generation
+      }
+    );
+
+    res.status(202).json({
+      message: `Queued reference image generation for ${id}`,
+      characterId: id,
+      ...result
+    });
+  } catch (err) {
+    if (err instanceof AppError) throw err;
+    throw new AppError(err.message, 500);
+  }
+}));
+
+/**
+ * PUT /api/admin/assets/characters/:id/weights
+ * Update character SD1.5 weights
+ * Body: { controlnetWeight?: number, ipadapterWeight?: number, preset?: string }
+ */
+router.put('/assets/characters/:id/weights', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { id } = req.params;
+  const { controlnetWeight, ipadapterWeight, preset } = req.body;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Character');
+
+  // Load character metadata
+  const charData = metadataUtils.loadCharacterMetadata({ id });
+  const character = charData.characters.find(c => c.id === id);
+
+  if (!character) {
+    throw new AppError(`Character not found: ${id}`, 404);
+  }
+
+  // Determine effective weights
+  let effectiveControlnetWeight = controlnetWeight;
+  let effectiveIpadapterWeight = ipadapterWeight;
+
+  // Apply preset if specified
+  if (preset) {
+    const weightPresets = charData.manifest?.weightPresets || {};
+    const selectedPreset = weightPresets[preset];
+    if (!selectedPreset) {
+      throw new AppError(`Invalid preset: ${preset}. Valid: ${Object.keys(weightPresets).join(', ')}`, 400);
+    }
+    effectiveControlnetWeight = effectiveControlnetWeight ?? selectedPreset.controlnet;
+    effectiveIpadapterWeight = effectiveIpadapterWeight ?? selectedPreset.ipadapter;
+  }
+
+  // Validate weight ranges
+  if (effectiveControlnetWeight !== undefined && effectiveControlnetWeight !== null) {
+    if (effectiveControlnetWeight < 0 || effectiveControlnetWeight > 1) {
+      throw new AppError('controlnetWeight must be between 0 and 1', 400);
+    }
+  }
+  if (effectiveIpadapterWeight !== undefined && effectiveIpadapterWeight !== null) {
+    if (effectiveIpadapterWeight < 0 || effectiveIpadapterWeight > 1) {
+      throw new AppError('ipadapterWeight must be between 0 and 1', 400);
+    }
+  }
+
+  // Build update object for sd15Config
+  const sd15Config = character.sd15Config || {};
+  const updates = {
+    sd15Config: {
+      ...sd15Config,
+      ...(effectiveControlnetWeight !== undefined && { controlnetWeight: effectiveControlnetWeight }),
+      ...(effectiveIpadapterWeight !== undefined && { ipadapterWeight: effectiveIpadapterWeight })
+    }
+  };
+
+  // Apply updates with file locking
+  const filePath = path.join(METADATA_DIR, 'characters', character._sourceFile);
+  await fileLocks.withFileLock(filePath, async () => {
+    try {
+      metadataUtils.updateAssetStatus('characters', character._sourceFile, id, updates);
+    } catch (error) {
+      throw new AppError(`Failed to update character weights: ${error.message}`, 500);
+    }
+  });
+
+  // Reload to return updated character
+  const updatedCharData = metadataUtils.loadCharacterMetadata({ id });
+  const updatedCharacter = updatedCharData.characters.find(c => c.id === id);
+
+  res.json({
+    message: 'Character SD1.5 weights updated successfully',
+    characterId: id,
+    sd15Config: updatedCharacter.sd15Config,
+    appliedPreset: preset || null
+  });
+}));
+
+/**
+ * GET /api/admin/assets/characters/:id/weights/presets
+ * Get available weight presets for SD1.5 generation
+ */
+router.get('/assets/characters/:id/weights/presets', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { id } = req.params;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Character');
+
+  // Load character manifest for presets
+  const charData = metadataUtils.loadCharacterMetadata({ id });
+  const character = charData.characters.find(c => c.id === id);
+
+  if (!character) {
+    throw new AppError(`Character not found: ${id}`, 404);
+  }
+
+  const weightPresets = charData.manifest?.weightPresets || {};
+  const generationDefaults = charData.manifest?.generationDefaults || {};
+
+  res.json({
+    characterId: id,
+    currentConfig: character.sd15Config || {},
+    generationDefaults: generationDefaults.sd15 || {},
+    presets: Object.entries(weightPresets).map(([name, values]) => ({
+      name,
+      controlnetWeight: values.controlnet,
+      ipadapterWeight: values.ipadapter,
+      description: getPresetDescription(name)
+    }))
+  });
+}));
+
+/**
+ * Get human-readable description for a weight preset
+ * @param {string} presetName - Name of the preset
+ * @returns {string} Description
+ */
+function getPresetDescription(presetName) {
+  const descriptions = {
+    balanced: 'Equal weight between pose accuracy and character consistency',
+    maxConsistency: 'Prioritizes character appearance consistency over pose accuracy',
+    precisePoses: 'Prioritizes accurate pose matching over character consistency',
+    creative: 'Lower weights for more creative/varied outputs'
+  };
+  return descriptions[presetName] || 'Custom preset';
+}
 
 // ============================================================================
 // THEME ROUTES

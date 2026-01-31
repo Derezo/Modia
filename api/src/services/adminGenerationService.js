@@ -251,6 +251,33 @@ function buildScriptArgs(job, config) {
     if (job.options.backup) args.push('--backup');
   }
 
+  // === SD1.5 ANIMATION MODE ===
+  // Used for character animation generation with ControlNet and IP-Adapter
+  if (job.options?.sd15Mode) {
+    args.push('--mode', 'sd15');
+    if (job.options.controlnetWeight !== undefined) {
+      args.push('--controlnet-weight', String(job.options.controlnetWeight));
+    }
+    if (job.options.ipadapterWeight !== undefined) {
+      args.push('--ipadapter-weight', String(job.options.ipadapterWeight));
+    }
+  }
+
+  // Reference image only mode - generates just the reference for IP-Adapter
+  if (job.options?.referenceOnly) {
+    args.push('--reference-only');
+  }
+
+  // Specific animation to generate (for single animation generation)
+  if (job.options?.animation) {
+    args.push('--animation', job.options.animation);
+  }
+
+  // Animation filter from filters object
+  if (job.filters?.animation) {
+    args.push('--animation', job.filters.animation);
+  }
+
   return args;
 }
 

@@ -1,6 +1,24 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Character sprite sheet metadata - animated 64x512 vertical strips (8 frames per animation)",
+  "generationDefaults": {
+    "mode": "flux",
+    "sd15": {
+      "controlnetWeight": 0.5,
+      "ipadapterWeight": 0.5,
+      "loraModel": null
+    }
+  },
+  "weightPresets": {
+    "balanced": { "controlnet": 0.5, "ipadapter": 0.5 },
+    "maxConsistency": { "controlnet": 0.4, "ipadapter": 0.6 },
+    "precisePoses": { "controlnet": 0.6, "ipadapter": 0.4 },
+    "creative": { "controlnet": 0.3, "ipadapter": 0.3 }
+  },
+  "poseTemplates": {
+    "basePath": "poses/humanoid",
+    "animations": ["idle", "walk", "attack", "hurt", "death", "cast", "victory"]
+  },
   "spriteConvention": {
     "frameWidth": 64,
     "frameHeight": 64,

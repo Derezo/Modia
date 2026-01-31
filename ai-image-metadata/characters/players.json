@@ -68,7 +68,13 @@
         "walk": true,
         "attack": true
       },
-      "generatedAt": "2026-01-30T15:45:19.847Z"
+      "generatedAt": "2026-01-30T15:45:19.847Z",
+      "sd15Config": {
+        "controlnetWeight": 0.5,
+        "ipadapterWeight": 0.5,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      }
     },
     {
       "id": "wizard",
@@ -98,7 +104,13 @@
         "death": true,
         "cast": true
       },
-      "generatedAt": "2026-01-30T17:35:24.908Z"
+      "generatedAt": "2026-01-30T17:35:24.908Z",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      }
     },
     {
       "id": "monk",
@@ -112,7 +124,13 @@
       ],
       "seed": 50003,
       "generated": false,
-      "loraModel": "v1"
+      "loraModel": "v1",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      }
     },
     {
       "id": "chemist",
@@ -126,7 +144,13 @@
       ],
       "seed": 50004,
       "generated": false,
-      "loraModel": "v1"
+      "loraModel": "v1",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      }
     }
   ]
 }

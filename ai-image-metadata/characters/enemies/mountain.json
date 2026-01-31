@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "category": "enemies",
   "biome": "mountain",
   "description": "Mountain biome enemy sprite sheets",
@@ -12,6 +12,12 @@
       "name": "Mountain Goat",
       "archetype": "beast",
       "visualTraits": "thick white fur curved horns sturdy hooves fierce eyes sure-footed",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "mountain_goat_idle",
@@ -48,6 +54,12 @@
       "name": "Harpy",
       "archetype": "beast",
       "visualTraits": "feathered body sharp talons woman face bird wings fierce screech",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "harpy_idle",
@@ -84,6 +96,12 @@
       "name": "Rock Elemental",
       "archetype": "elemental",
       "visualTraits": "living stone body glowing orange cracks boulder fists runic markings",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "rock_elemental_idle",
@@ -120,6 +138,12 @@
       "name": "Wyvern",
       "archetype": "beast",
       "visualTraits": "dragon-like wings talons spiked tail venomous stinger fierce jaws",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "wyvern_idle",
@@ -156,6 +180,12 @@
       "name": "Frost Giant",
       "archetype": "humanoid",
       "visualTraits": "blue skin massive build frost-covered beard ice armor frozen weapon",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "frost_giant_idle",
@@ -192,6 +222,12 @@
       "name": "Yeti",
       "archetype": "beast",
       "visualTraits": "white fur massive claws fanged maw glowing blue eyes muscular",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
       "animations": {
         "idle": {
           "id": "yeti_idle",

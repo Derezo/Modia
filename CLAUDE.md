@@ -100,6 +100,34 @@ npm run ai:generate:icons -- --category actions
 
 # Preview without generating:
 npm run ai:generate:tiles -- --dry-run
+
+# SD1.5 Animation Generation (ControlNet + IP-Adapter)
+# Uses Stable Diffusion 1.5 with pose control and style reference for character animations
+
+# Basic SD1.5 generation (uses default weights):
+npm run ai:generate:characters -- --mode sd15 --id warrior
+npm run ai:generate:characters -- --mode sd15 --id goblin
+
+# Custom ControlNet weight (pose accuracy, 0-1):
+npm run ai:generate:characters -- --mode sd15 --controlnet-weight 0.8 --id warrior
+
+# Custom IP-Adapter weight (style/character consistency, 0-1):
+npm run ai:generate:characters -- --mode sd15 --ipadapter-weight 0.8 --id warrior
+
+# Both weights customized:
+npm run ai:generate:characters -- --mode sd15 --controlnet-weight 0.8 --ipadapter-weight 0.6 --id warrior
+
+# Generate only reference image (for testing style transfer):
+npm run ai:generate:characters -- --mode sd15 --reference-only --id warrior
+
+# Use external reference image:
+npm run ai:generate:characters -- --mode sd15 --reference ./assets/my-character.png --id warrior
+
+# SD1.5 Weight Presets (recommended combinations):
+# - balanced:        --controlnet-weight 0.7 --ipadapter-weight 0.7  (equal pose/style priority)
+# - maxConsistency:  --controlnet-weight 0.9 --ipadapter-weight 0.9  (highest character consistency)
+# - precisePoses:    --controlnet-weight 0.9 --ipadapter-weight 0.5  (accurate poses, more style variation)
+# - creative:        --controlnet-weight 0.5 --ipadapter-weight 0.5  (more generation variation)
 ```
 
 ### Workspace Structure
