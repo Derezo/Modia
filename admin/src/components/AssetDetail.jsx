@@ -507,9 +507,12 @@ function ReferenceImageManager({ characterId: _characterId, referenceStatus, onG
   const hasReference = referenceStatus?.exists === true;
   const [selectedPose, setSelectedPose] = useState('idle');
 
-  // Call onGenerate with the selected pose
+  // Call onGenerate with the selected pose (and force=true if regenerating)
   const handleGenerate = () => {
-    onGenerate({ referencePose: selectedPose });
+    onGenerate({
+      referencePose: selectedPose,
+      force: hasReference  // Force regeneration if reference already exists
+    });
   };
 
   return (
@@ -942,7 +945,7 @@ export default function AssetDetail({
 
   /**
    * Generate reference image
-   * @param {object} poseOptions - Options from ReferenceImageManager { referencePose: 'idle' | 'tpose' }
+   * @param {object} poseOptions - Options from ReferenceImageManager { referencePose: 'idle' | 'tpose', force?: boolean }
    */
   const handleGenerateReference = useCallback(async (poseOptions = {}) => {
     if (!characterId) return;
@@ -957,6 +960,10 @@ export default function AssetDetail({
       // Include reference pose if specified
       if (poseOptions.referencePose) {
         options.referencePose = poseOptions.referencePose;
+      }
+      // Include force flag for regeneration
+      if (poseOptions.force) {
+        options.force = true;
       }
       await api.generateReferenceImage(characterId, options);
       toast.success('Reference image generation queued');
