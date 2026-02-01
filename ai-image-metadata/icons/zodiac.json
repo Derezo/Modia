@@ -189,8 +189,9 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true,
-      "generatedAt": "2026-01-30T05:28:28.652Z"
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T05:28:28.652Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "zodiac_sagittarius",
@@ -240,8 +241,9 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true,
-      "generatedAt": "2026-01-30T05:29:14.693Z"
+      "needsRegeneration": false,
+      "generatedAt": "2026-01-30T05:29:14.693Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "zodiac_pisces",
@@ -276,7 +278,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "zodiac_taurus_locked",
@@ -323,13 +326,17 @@
       "variant": "locked",
       "prompt": "dark silhouette of a black orb sphere mysterious locked faded gray monochrome magical fantasy",
       "seed": 26104,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:34:43.356Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "zodiac_leo_locked",
@@ -340,13 +347,17 @@
       "variant": "locked",
       "prompt": "dark silhouette of a black orb sphere mysterious locked faded gray monochrome magical fantasy",
       "seed": 36105,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:36:14.662Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "zodiac_virgo_locked",
@@ -357,13 +368,17 @@
       "variant": "locked",
       "prompt": "dark silhouette of a black orb sphere mysterious locked faded gray monochrome magical fantasy",
       "seed": 3610692,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:37:44.869Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "zodiac_libra_locked",
@@ -374,13 +389,17 @@
       "variant": "locked",
       "prompt": "dark silhouette of a black orb sphere mysterious locked faded gray monochrome magical fantasy",
       "seed": 1362107,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:39:15.716Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "zodiac_scorpio_locked",
@@ -391,13 +410,17 @@
       "variant": "locked",
       "prompt": "dark silhouette of a black orb sphere mysterious locked faded gray monochrome magical fantasy",
       "seed": 42444236108,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:40:45.958Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "zodiac_sagittarius_locked",

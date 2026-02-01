@@ -24,30 +24,41 @@
           "frameCount": 8,
           "seed": 41001,
           "generated": false,
-          "prompt": "green slime idle, wobbling, translucent body pulsing"
+          "prompt": "pixel art sprite side view 64x64, translucent green slime creature with glowing core and dripping tendrils, idle breathing animation, gentle wobble pulsing motion with bubbles rising, forest dappled light"
         },
         "attack": {
           "id": "forest_slime_attack",
           "frameCount": 8,
           "seed": 41002,
           "generated": false,
-          "prompt": "green slime attacking, launching acidic tendril, stretching forward"
+          "prompt": "pixel art sprite side view 64x64, translucent green slime creature with glowing core and dripping tendrils, attack lunge animation, stretching forward launching acidic tendril strike, forest dappled light"
         },
         "hit": {
           "id": "forest_slime_hit",
           "frameCount": 8,
           "seed": 41003,
           "generated": false,
-          "prompt": "green slime hit, body rippling violently, splashing"
+          "prompt": "pixel art sprite side view 64x64, translucent green slime creature with glowing core and dripping tendrils, hurt recoil animation, body rippling violently with splashing reaction, forest dappled light"
         },
         "death": {
           "id": "forest_slime_death",
           "frameCount": 8,
           "seed": 41004,
           "generated": false,
-          "prompt": "green slime dying, body dissolving, puddle forming"
+          "prompt": "pixel art sprite side view 64x64, translucent green slime creature with glowing core and dripping tendrils, death collapse animation, body dissolving into puddle and fading away, forest dappled light"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true
+      },
+      "generatedAt": "2026-01-31T21:46:36.523Z",
+      "generated": true,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "giant_spider",
@@ -66,34 +77,51 @@
           "frameCount": 8,
           "seed": 41011,
           "generated": false,
-          "prompt": "giant spider idle, legs shifting, fangs clicking, watching"
+          "prompt": "pixel art sprite side view 64x64, giant hairy spider with eight red eyes and venomous fangs, idle alert animation, legs shifting and fangs clicking watchfully, forest undergrowth shadows"
         },
         "attack": {
           "id": "giant_spider_attack",
           "frameCount": 8,
           "seed": 41012,
           "generated": false,
-          "prompt": "giant spider attacking, lunging forward, fangs extended, pouncing"
+          "prompt": "pixel art sprite side view 64x64, giant hairy spider with eight red eyes and venomous fangs, attack lunge animation, aggressive pouncing forward with fangs extended, forest undergrowth shadows"
         },
         "hit": {
           "id": "giant_spider_hit",
           "frameCount": 8,
           "seed": 41013,
           "generated": false,
-          "prompt": "giant spider hit, recoiling, legs curling defensively, hissing"
+          "prompt": "pixel art sprite side view 64x64, giant hairy spider with eight red eyes and venomous fangs, hurt recoil animation, legs curling defensively while hissing in pain, forest undergrowth shadows"
         },
         "death": {
           "id": "giant_spider_death",
           "frameCount": 8,
           "seed": 41014,
           "generated": false,
-          "prompt": "giant spider dying, legs curling inward, collapsing, twitching"
+          "prompt": "pixel art sprite side view 64x64, giant hairy spider with eight red eyes and venomous fangs, death collapse animation, legs curling inward and body twitching to stillness, forest undergrowth shadows"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true
+      },
+      "generatedAt": "2026-01-31T22:09:17.993Z",
+      "generated": true,
+      "prompt": "leafy green natural woodland undergrowth dappled light",
+      "seed": null,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "loraModel": "retro-pixel"
     },
     {
-      "id": "wolf",
-      "name": "Wolf",
+      "id": "gray_wolf",
+      "name": "Gray Wolf",
       "archetype": "beast",
       "visualTraits": "gray fur amber eyes snarling maw sharp fangs alert ears",
       "sd15Config": {
@@ -104,38 +132,49 @@
       },
       "animations": {
         "idle": {
-          "id": "wolf_idle",
+          "id": "gray_wolf_idle",
           "frameCount": 8,
           "seed": 41021,
           "generated": false,
-          "prompt": "wolf idle, standing alert, ears perked, sniffing air"
+          "prompt": "pixel art sprite side view 64x64, gray wolf with amber eyes and sharp fangs, idle alert animation, standing with ears perked and sniffing the air, forest woodland clearing"
         },
         "attack": {
-          "id": "wolf_attack",
+          "id": "gray_wolf_attack",
           "frameCount": 8,
           "seed": 41022,
           "generated": false,
-          "prompt": "wolf attacking, leaping forward, jaws open, claws extended"
+          "prompt": "pixel art sprite side view 64x64, gray wolf with amber eyes and sharp fangs, attack lunge animation, leaping forward with jaws open and claws extended, forest woodland clearing"
         },
         "hit": {
-          "id": "wolf_hit",
+          "id": "gray_wolf_hit",
           "frameCount": 8,
           "seed": 41023,
           "generated": false,
-          "prompt": "wolf hit, yelping, knocked sideways, recovering"
+          "prompt": "pixel art sprite side view 64x64, gray wolf with amber eyes and sharp fangs, hurt stagger animation, yelping and knocked sideways then recovering, forest woodland clearing"
         },
         "death": {
-          "id": "wolf_death",
+          "id": "gray_wolf_death",
           "frameCount": 8,
           "seed": 41024,
           "generated": false,
-          "prompt": "wolf dying, collapsing, final whimper, lying still"
+          "prompt": "pixel art sprite side view 64x64, gray wolf with amber eyes and sharp fangs, death collapse animation, falling with final whimper and lying still, forest woodland clearing"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": false,
+        "attack": false,
+        "hit": false,
+        "death": false
+      },
+      "generatedAt": null,
+      "generated": false,
+      "loraModel": "retro-pixel"
     },
     {
-      "id": "forest_goblin",
-      "name": "Forest Goblin",
+      "id": "goblin_warrior",
+      "name": "Goblin Warrior",
       "archetype": "humanoid",
       "visualTraits": "green skin pointed ears yellow eyes crude weapon loincloth war paint",
       "sd15Config": {
@@ -146,34 +185,45 @@
       },
       "animations": {
         "idle": {
-          "id": "forest_goblin_idle",
+          "id": "goblin_warrior_idle",
           "frameCount": 8,
           "seed": 41031,
           "generated": false,
-          "prompt": "forest goblin idle, hunched over, weapon ready, sneering"
+          "prompt": "pixel art sprite side view 64x64, green-skinned goblin with pointed ears and yellow eyes holding crude club, idle ready animation, hunched stance with weapon raised and sneering, forest undergrowth"
         },
         "attack": {
-          "id": "forest_goblin_attack",
+          "id": "goblin_warrior_attack",
           "frameCount": 8,
           "seed": 41032,
           "generated": false,
-          "prompt": "forest goblin attacking, swinging crude club, wild strike"
+          "prompt": "pixel art sprite side view 64x64, green-skinned goblin with pointed ears and yellow eyes holding crude club, attack swing animation, wild overhead strike lunging forward aggressively, forest undergrowth"
         },
         "hit": {
-          "id": "forest_goblin_hit",
+          "id": "goblin_warrior_hit",
           "frameCount": 8,
           "seed": 41033,
           "generated": false,
-          "prompt": "forest goblin hit, tumbling backward, squealing in pain"
+          "prompt": "pixel art sprite side view 64x64, green-skinned goblin with pointed ears and yellow eyes holding crude club, hurt flinch animation, tumbling backward and squealing in pain, forest undergrowth"
         },
         "death": {
-          "id": "forest_goblin_death",
+          "id": "goblin_warrior_death",
           "frameCount": 8,
           "seed": 41034,
           "generated": false,
-          "prompt": "forest goblin dying, dropping weapon, collapsing, defeated"
+          "prompt": "pixel art sprite side view 64x64, green-skinned goblin with pointed ears and yellow eyes holding crude club, death collapse animation, dropping weapon and crumpling defeated, forest undergrowth"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": false,
+        "attack": false,
+        "hit": false,
+        "death": false
+      },
+      "generatedAt": null,
+      "generated": false,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "treant",
@@ -192,30 +242,41 @@
           "frameCount": 8,
           "seed": 41041,
           "generated": false,
-          "prompt": "treant idle, swaying gently, leaves rustling, roots shifting"
+          "prompt": "pixel art sprite side view 64x64, massive treant with bark skin and glowing eyes and leafy crown, idle breathing animation, swaying gently with leaves rustling and roots shifting, ancient forest"
         },
         "attack": {
           "id": "treant_attack",
           "frameCount": 8,
           "seed": 41042,
           "generated": false,
-          "prompt": "treant attacking, branch arm sweeping, massive swing, crushing blow"
+          "prompt": "pixel art sprite side view 64x64, massive treant with bark skin and glowing eyes and leafy crown, attack sweep animation, branch arm swinging in crushing horizontal blow, ancient forest"
         },
         "hit": {
           "id": "treant_hit",
           "frameCount": 8,
           "seed": 41043,
           "generated": false,
-          "prompt": "treant hit, bark cracking, leaves falling, groaning"
+          "prompt": "pixel art sprite side view 64x64, massive treant with bark skin and glowing eyes and leafy crown, hurt stagger animation, bark cracking with leaves falling and wooden groan, ancient forest"
         },
         "death": {
           "id": "treant_death",
           "frameCount": 8,
           "seed": 41044,
           "generated": false,
-          "prompt": "treant dying, toppling over, branches snapping, returning to earth"
+          "prompt": "pixel art sprite side view 64x64, massive treant with bark skin and glowing eyes and leafy crown, death collapse animation, toppling over with branches snapping and returning to earth, ancient forest"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true
+      },
+      "generatedAt": "2026-01-31T14:35:38.433Z",
+      "generated": true,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "dryad",
@@ -234,30 +295,41 @@
           "frameCount": 8,
           "seed": 41051,
           "generated": false,
-          "prompt": "dryad idle, floating gracefully, flowers blooming around, serene"
+          "prompt": "pixel art sprite side view 64x64, ethereal dryad with green skin and flower hair and vine dress, idle floating animation, hovering gracefully with flowers blooming around serene form, enchanted forest glade"
         },
         "attack": {
           "id": "dryad_attack",
           "frameCount": 8,
           "seed": 41052,
           "generated": false,
-          "prompt": "dryad attacking, vines shooting forward, thorns extended, nature magic"
+          "prompt": "pixel art sprite side view 64x64, ethereal dryad with green skin and flower hair and vine dress, attack cast animation, vines shooting forward with thorns extended channeling nature magic, enchanted forest glade"
         },
         "hit": {
           "id": "dryad_hit",
           "frameCount": 8,
           "seed": 41053,
           "generated": false,
-          "prompt": "dryad hit, petals scattering, recoiling, pained expression"
+          "prompt": "pixel art sprite side view 64x64, ethereal dryad with green skin and flower hair and vine dress, hurt recoil animation, petals scattering with pained expression while recoiling, enchanted forest glade"
         },
         "death": {
           "id": "dryad_death",
           "frameCount": 8,
           "seed": 41054,
           "generated": false,
-          "prompt": "dryad dying, dissolving into leaves and petals, fading away"
+          "prompt": "pixel art sprite side view 64x64, ethereal dryad with green skin and flower hair and vine dress, death fade animation, dissolving into leaves and flower petals drifting away, enchanted forest glade"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true
+      },
+      "generatedAt": "2026-01-31T14:59:27.785Z",
+      "generated": true,
+      "loraModel": "retro-pixel"
     }
   ]
 }

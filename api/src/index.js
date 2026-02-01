@@ -56,6 +56,10 @@ import { startCleanupScheduler as startQuestCleanupScheduler } from './services/
 // Trait effects system
 import { initializeTraitEffects } from './services/traits/index.js';
 
+// Admin generation services (for queue initialization)
+import adminGenerationService from './services/adminGenerationService.js';
+import adminAudioGenerationService from './services/adminAudioGenerationService.js';
+
 const app = express();
 const server = http.createServer(app);
 
@@ -177,6 +181,12 @@ server.listen(PORT, () => {
   startRefreshScheduler();
   startExpirationScheduler();
   startQuestCleanupScheduler();
+
+  // Initialize generation queues (check for orphaned items)
+  const imageInit = adminGenerationService.initializeQueue();
+  console.log('[Startup] Image queue:', imageInit);
+  const audioInit = adminAudioGenerationService.initializeQueue();
+  console.log('[Startup] Audio queue:', audioInit);
 });
 
 export { app, server };

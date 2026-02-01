@@ -1027,6 +1027,33 @@ router.get('/generate/queue', asyncHandler(async (req, res) => {
 }));
 
 /**
+ * GET /api/admin/audio/health
+ * Health check for queue status - returns whether queue is healthy
+ */
+router.get('/health', (req, res) => {
+  const status = audioGenerationService.getQueueStatus();
+  res.json({
+    healthy: !status.current || status.pending.length === 0,
+    current: status.current ? {
+      id: status.current.id,
+      type: status.current.type,
+      startedAt: status.current.startedAt
+    } : null,
+    pendingCount: status.pending.length,
+    paused: status.paused
+  });
+});
+
+/**
+ * POST /api/admin/audio/recover
+ * Manual queue recovery - clears stuck job and restarts processing
+ */
+router.post('/recover', (req, res) => {
+  const result = audioGenerationService.recoverQueue();
+  res.json(result);
+});
+
+/**
  * POST /api/admin/audio/generate/cancel
  * Cancel current/all jobs
  * Body: { all?: boolean, jobId?: string }

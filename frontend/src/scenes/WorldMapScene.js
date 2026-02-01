@@ -772,7 +772,6 @@ export class WorldMapScene extends Scene {
       // Update discovery state for fog of war rendering (filtered by reachability)
       if (this.effects) {
         this.effects.updateDiscoveryState(this.nodes, this.connections, this.reachableNodes);
-        console.log('[DEBUG] updateDiscoveryState called - discoveredNodes:', this.effects.discoveredNodes.size, 'visitedNodes:', this.effects.visitedNodes.size);
       }
 
       // Update minimap bounds if nodes changed
@@ -2140,11 +2139,6 @@ export class WorldMapScene extends Scene {
     // Render fog of war overlay (before character and labels so player/text is always visible)
     // Guard: Only render when world data has loaded (nodes populated)
     if (this.effects && this.nodes.length > 0) {
-      // DEBUG: Log fog render once after data loaded
-      if (!this._fogRenderDebugLogged) {
-        console.log('[DEBUG] Fog render - nodes:', this.nodes.length, 'discoveredNodes:', this.effects.discoveredNodes.size);
-        this._fogRenderDebugLogged = true;
-      }
       this.effects.renderFogOfWar(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height, this.nodes, this.connections, this.watchtowerView);
     }
 
@@ -2179,27 +2173,6 @@ export class WorldMapScene extends Scene {
       this.hudPanel.render(ctx);
     }
 
-    // Render minimap (on top of everything)
-    if (this.minimap && this.effects) {
-      // DEBUG: Log minimap data once
-      if (!this._minimapDebugLogged && this.nodes.length > 0) {
-        console.log('[DEBUG] Minimap render - nodes:', this.nodes.length, 'discoveredNodes:', this.effects.discoveredNodes.size, 'visitedNodes:', this.effects.visitedNodes.size);
-        this._minimapDebugLogged = true;
-      }
-      this.minimap.render(ctx, {
-        nodes: this.nodes,
-        connections: this.connections,
-        currentNode: this.currentNode,
-        discoveredNodes: this.effects.discoveredNodes,
-        visitedNodes: this.effects.visitedNodes,
-        cameraX: this.cameraX,
-        cameraY: this.cameraY,
-        canvasWidth: ctx.canvas.width,
-        canvasHeight: ctx.canvas.height,
-        nodeSpacing: this.nodeSpacing
-      });
-    }
-
     // Update node action menu position (DOM element follows current node)
     if (this.nodeActionMenu && this.currentNode) {
       const position = this.getNodeScreenPosition(this.currentNode);
@@ -2214,6 +2187,23 @@ export class WorldMapScene extends Scene {
       if (position) {
         this.nodeHoverTooltip.updatePosition(position.x, position.y, position.nodeSize, position.canvasHeight);
       }
+    }
+
+    // Render minimap (on top of everything)
+    if (this.minimap && this.effects) {
+      //console.log("MINIMAP: ", this.nodes, this.connections, this.currentNode, this.effects.discoveredNodes, this.effects.visitedNodes, this.nodeSpacing)
+      this.minimap.render(ctx, {
+        nodes: this.nodes,
+        connections: this.connections,
+        currentNode: this.currentNode,
+        discoveredNodes: this.effects.discoveredNodes,
+        visitedNodes: this.effects.visitedNodes,
+        cameraX: this.cameraX,
+        cameraY: this.cameraY,
+        canvasWidth: ctx.canvas.width,
+        canvasHeight: ctx.canvas.height,
+        nodeSpacing: this.nodeSpacing
+      });
     }
   }
 

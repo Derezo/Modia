@@ -13,21 +13,24 @@
       "terrain": "default",
       "prompt": "seamless vertical wooden bridge support texture with weathered timber grain and iron brackets, tileable horizontal pattern, side view cross-section, warm brown tones",
       "seed": 41001,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T10:06:09.890Z"
     },
     {
       "key": "wall_bridge_rope",
       "terrain": "rope",
       "prompt": "seamless vertical thick hemp rope railing texture with braided knots and frayed fibers, tileable horizontal pattern, side view cross-section, tan and brown tones",
       "seed": 41011,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T10:06:57.717Z"
     },
     {
       "key": "wall_bridge_stone",
       "terrain": "stone",
       "prompt": "seamless vertical stone bridge abutment texture with carved blocks and weathered mortar lines, tileable horizontal pattern, side view cross-section, grey brown tones",
       "seed": 41021,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T10:07:44.489Z"
     }
   ]
 }

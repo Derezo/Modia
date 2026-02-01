@@ -12,7 +12,12 @@
         "height": 64
       },
       "seed": 50001,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T01:59:38.433Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "rock_medium",
@@ -23,7 +28,12 @@
         "height": 80
       },
       "seed": 50002,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:14:41.690Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "rock_large",
@@ -34,7 +44,12 @@
         "height": 96
       },
       "seed": 50003,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:16:21.398Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "stalagmite",
@@ -45,7 +60,12 @@
         "height": 96
       },
       "seed": 50004,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:18:44.512Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "mountain_boulder",
@@ -56,7 +76,12 @@
         "height": 128
       },
       "seed": 50005,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:21:08.797Z",
+      "generationFailureCount": null,
+      "lastError": null
     }
   ]
 }

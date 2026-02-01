@@ -13,21 +13,24 @@
       "terrain": "default",
       "prompt": "seamless vertical rough cave rock texture with natural crevices and mineral deposits, tileable horizontal pattern, side view cross-section, dark grey stone tones",
       "seed": 21001,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T10:01:15.463Z"
     },
     {
       "key": "wall_cave_crystal",
       "terrain": "crystal",
       "prompt": "seamless vertical cave wall texture with embedded crystal formations and blue mineral veins, tileable horizontal pattern, side view cross-section, grey with blue crystal accents",
       "seed": 21011,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T10:02:03.408Z"
     },
     {
       "key": "wall_cave_wet",
       "terrain": "wet",
       "prompt": "seamless vertical wet cave rock texture with moisture seeping and algae growth, tileable horizontal pattern, side view cross-section, dark teal and grey tones",
       "seed": 21021,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T10:02:53.189Z"
     }
   ]
 }

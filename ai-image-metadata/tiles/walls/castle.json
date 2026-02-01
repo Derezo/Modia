@@ -13,21 +13,24 @@
       "terrain": "default",
       "prompt": "seamless vertical hewn castle stone wall texture with fitted blocks and mortar lines, tileable horizontal pattern, side view cross-section, slate grey tones",
       "seed": 51001,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T10:08:32.369Z"
     },
     {
       "key": "wall_castle_brick",
       "terrain": "brick",
       "prompt": "seamless vertical castle brick wall texture with weathered red and grey masonry pattern, tileable horizontal pattern, side view cross-section, red and grey tones",
       "seed": 51011,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T10:09:20.180Z"
     },
     {
       "key": "wall_castle_dungeon",
       "terrain": "dungeon",
       "prompt": "seamless vertical damp dungeon wall texture with moss growth and rusted iron rings, tileable horizontal pattern, side view cross-section, dark grey and green tones",
       "seed": 51021,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T10:10:08.030Z"
     }
   ]
 }

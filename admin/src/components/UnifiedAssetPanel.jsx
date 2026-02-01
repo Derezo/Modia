@@ -25,6 +25,11 @@ import { useGenerationContext } from '../contexts/GenerationContext';
 import { useRegenerationQueue } from '../hooks/useRegenerationQueue';
 import AssetPreviewCard from './AssetPreviewCard';
 import ProgressBar from './ProgressBar';
+import {
+  IMAGE_CATEGORIES,
+  AUDIO_CATEGORIES,
+  getCategoryLabel,
+} from '../constants/categories';
 
 // Panel tabs
 const PANEL_TABS = {
@@ -46,17 +51,6 @@ const SOURCE_TAGS = {
   sfx: '[SFX]',
 };
 
-// Category display labels
-const CATEGORY_LABELS = {
-  tiles: 'Tiles',
-  portraits: 'Portraits',
-  items: 'Items',
-  icons: 'Icons',
-  nodes: 'Nodes',
-  overlays: 'Overlays',
-  music: 'Music',
-  sfx: 'SFX',
-};
 
 /**
  * Queue panel showing items marked for regeneration
@@ -72,17 +66,20 @@ function QueuePanel({
 }) {
   // Group queue items by source type (images vs audio)
   const groupedQueue = useMemo(() => {
-    const imageCategories = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays'];
-    const audioCategories = ['music', 'sfx'];
-
     const images = {};
     const audio = {};
 
     for (const [category, items] of Object.entries(queue)) {
-      if (imageCategories.includes(category)) {
+      if (IMAGE_CATEGORIES.includes(category)) {
         images[category] = items;
-      } else if (audioCategories.includes(category)) {
+      } else if (AUDIO_CATEGORIES.includes(category)) {
         audio[category] = items;
+      } else {
+        // Handle unknown categories - warn and add to images as fallback
+        if (import.meta.env.DEV) {
+          console.warn(`[QueuePanel] Unknown category "${category}" - adding to images group`);
+        }
+        images[category] = items;
       }
     }
 
@@ -210,7 +207,7 @@ function QueueCategorySection({ category, items, onRemoveItem, onClearCategory }
       >
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-parchment-200">
-            {CATEGORY_LABELS[category] || category}
+            {getCategoryLabel(category)}
           </span>
           <span className="text-xs text-parchment-500">({items.length})</span>
         </div>
@@ -501,13 +498,20 @@ export default function UnifiedAssetPanel({
 
   const handleStartGeneration = useCallback(async () => {
     try {
+      // Resume any paused queues before starting generation
+      const anyPaused = queues.images.paused || queues.music.paused || queues.sfx.paused;
+      if (anyPaused) {
+        if (queues.images.paused) resumeQueue('images');
+        if (queues.music.paused) resumeQueue('music');
+        if (queues.sfx.paused) resumeQueue('sfx');
+      }
       await internalQueue.startBatchGeneration();
       // Switch to console to watch progress
       handlePanelChange(PANEL_TABS.CONSOLE);
     } catch (err) {
       console.error('[UnifiedAssetPanel] Failed to start generation:', err);
     }
-  }, [internalQueue, handlePanelChange]);
+  }, [internalQueue, handlePanelChange, queues, resumeQueue]);
 
   // Get current active job for progress display
   const activeJob = useMemo(() => {

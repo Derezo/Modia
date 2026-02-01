@@ -46,6 +46,190 @@
         "death"
       ],
       "attackStyle": "throw vial toss potion"
+    },
+    "berserker": {
+      "visualTraits": "savage warrior spiked armor dual axes wild hair war paint scarred",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "attackStyle": "dual axe cleave frenzied slash"
+    },
+    "paladin": {
+      "visualTraits": "holy knight gleaming plate armor glowing sword divine aura cape",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "attackStyle": "holy blade smite radiant strike"
+    },
+    "guardian": {
+      "visualTraits": "heavy armor tower shield fortified stance bulky protective plated",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "attackStyle": "shield bash defensive thrust"
+    },
+    "warlord": {
+      "visualTraits": "commanding officer ornate armor banner flag tactical decorated veteran",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "attackStyle": "polearm sweep commanding strike"
+    },
+    "sorcerer": {
+      "visualTraits": "dark robes crackling energy arcane tattoos powerful hood intense gaze",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "attackStyle": "elemental blast energy surge"
+    },
+    "summoner": {
+      "visualTraits": "flowing robes summoning circle grimoire ethereal wisps mystical orbs",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "attackStyle": "summoning gesture conjure creature"
+    },
+    "conjurer": {
+      "visualTraits": "elemental mage crystal staff swirling elements nature magic earth fire ice",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "attackStyle": "elemental wave conjured strike"
+    },
+    "oracle": {
+      "visualTraits": "mystic seer blindfold ornate robes floating runes prophetic ethereal",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "attackStyle": "psychic pulse vision strike"
+    },
+    "ninja": {
+      "visualTraits": "masked assassin dark cloth kunai shuriken stealthy agile shadowy",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "attackStyle": "swift blade shuriken throw"
+    },
+    "martial_artist": {
+      "visualTraits": "gi uniform headband focused stance bare fists athletic powerful",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "attackStyle": "rapid combo flying kick"
+    },
+    "brawler": {
+      "visualTraits": "street fighter spiked knuckles tough rugged scarred bandaged tank top",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "attackStyle": "heavy punch uppercut"
+    },
+    "ascetic": {
+      "visualTraits": "enlightened monk prayer beads simple robes glowing aura levitating serene",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "attackStyle": "spirit palm chi blast"
+    },
+    "alchemist": {
+      "visualTraits": "master chemist elaborate vials bubbling potions leather apron goggles transmutation circle",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "attackStyle": "explosive flask alchemical bomb"
+    },
+    "medic": {
+      "visualTraits": "field healer medical bag bandages white coat caring determined satchel",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "attackStyle": "syringe jab healing touch"
+    },
+    "plague_doctor": {
+      "visualTraits": "beaked mask dark coat plague doctor censer toxic fumes ominous mysterious",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "attackStyle": "poison spray toxic cloud"
+    },
+    "artificer": {
+      "visualTraits": "inventor gadgets goggles mechanical arm clockwork gears toolbelt steampunk",
+      "defaultAnimations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "attackStyle": "gadget deploy mechanical strike"
     }
   },
   "stylePrefix": "pixel art character sprite full body side view 64x64 transparent background",
@@ -60,21 +244,33 @@
         "hurt",
         "death"
       ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, armored warrior with sword and shield, idle ready stance, slight breathing motion, alert battle posture",
+        "walk": "pixel art sprite side view 64x64, armored warrior with sword and shield, walking forward, steady marching pace, armor shifting motion",
+        "attack": "pixel art sprite side view 64x64, armored warrior with sword and shield, powerful sword slash, overhead swing motion, aggressive strike",
+        "hurt": "pixel art sprite side view 64x64, armored warrior with sword and shield, recoiling from impact, staggering backward, pain reaction",
+        "death": "pixel art sprite side view 64x64, armored warrior with sword and shield, collapsing to ground, falling defeated, dropping weapon"
+      },
       "seed": 50001,
-      "generated": false,
-      "loraModel": "v1",
+      "generated": true,
+      "loraModel": "retro-pixel",
       "generatedAnimations": {
         "idle": true,
         "walk": true,
-        "attack": true
+        "attack": true,
+        "hurt": true,
+        "death": true
       },
-      "generatedAt": "2026-01-30T15:45:19.847Z",
+      "generatedAt": "2026-01-31T11:01:07.699Z",
       "sd15Config": {
-        "controlnetWeight": 0.5,
-        "ipadapterWeight": 0.5,
-        "referenceImage": null,
-        "referenceGeneratedAt": null
-      }
+        "controlnetWeight": 0.7,
+        "ipadapterWeight": 0.7,
+        "referenceImage": "/assets/characters/player/warrior/warrior_reference.png",
+        "referenceGeneratedAt": "2026-02-01T18:47:51.315Z"
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "frameDescriptionOverrides": null
     },
     {
       "id": "wizard",
@@ -87,10 +283,18 @@
         "death",
         "cast"
       ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, robed wizard with magical staff, idle contemplative stance, subtle arcane energy, mystical presence",
+        "walk": "pixel art sprite side view 64x64, robed wizard with magical staff, walking forward, robes flowing, staff held ready",
+        "attack": "pixel art sprite side view 64x64, robed wizard with magical staff, staff thrust forward, magical bolt release, quick strike motion",
+        "cast": "pixel art sprite side view 64x64, robed wizard with magical staff, channeling spell, arcane runes glowing, mystic energy gathering",
+        "hurt": "pixel art sprite side view 64x64, robed wizard with magical staff, flinching backward, magical barrier flickering, stumbling motion",
+        "death": "pixel art sprite side view 64x64, robed wizard with magical staff, collapsing weakly, staff falling, robes settling"
+      },
       "seed": 50002,
       "generated": true,
       "loraModel": "retro-pixel",
-      "prompt": "",
+      "prompt": "pixel art character sprite full body side view 64x64 transparent background robed mage staff arcane glowing mystical",
       "evaluation": 0,
       "issues": "",
       "notes": "",
@@ -104,12 +308,12 @@
         "death": true,
         "cast": true
       },
-      "generatedAt": "2026-01-30T17:35:24.908Z",
+      "generatedAt": "2026-01-31T11:39:26.815Z",
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": null,
-        "referenceGeneratedAt": null
+        "referenceImage": "/assets/characters/player/wizard/wizard_reference.png",
+        "referenceGeneratedAt": "2026-02-01T18:43:47.509Z"
       }
     },
     {
@@ -122,15 +326,32 @@
         "hurt",
         "death"
       ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, martial artist with wrapped hands, balanced fighting stance, focused breathing, disciplined posture",
+        "walk": "pixel art sprite side view 64x64, martial artist with wrapped hands, light stepping forward, agile movement, balanced gait",
+        "attack": "pixel art sprite side view 64x64, martial artist with wrapped hands, swift punch strike, martial arts motion, precise powerful blow",
+        "hurt": "pixel art sprite side view 64x64, martial artist with wrapped hands, absorbing impact, defensive recoil, controlled recovery",
+        "death": "pixel art sprite side view 64x64, martial artist with wrapped hands, falling gracefully, defeated pose, peaceful collapse"
+      },
       "seed": 50003,
-      "generated": false,
-      "loraModel": "v1",
+      "generated": true,
+      "loraModel": "retro-pixel",
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": null,
-        "referenceGeneratedAt": null
-      }
+        "referenceImage": "/assets/characters/player/monk/monk_reference.png",
+        "referenceGeneratedAt": "2026-02-01T18:58:13.379Z"
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": true,
+        "walk": true,
+        "attack": true,
+        "hurt": true,
+        "death": true
+      },
+      "generatedAt": "2026-01-31T12:08:36.002Z"
     },
     {
       "id": "chemist",
@@ -142,15 +363,533 @@
         "hurt",
         "death"
       ],
-      "seed": 50004,
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, alchemist with vials and pouch, ready stance examining flask, curious alert posture, practical demeanor",
+        "walk": "pixel art sprite side view 64x64, alchemist with vials and pouch, careful walking pace, protecting potions, steady movement",
+        "attack": "pixel art sprite side view 64x64, alchemist with vials and pouch, throwing potion vial, arcing toss motion, precise aim",
+        "hurt": "pixel art sprite side view 64x64, alchemist with vials and pouch, stumbling backward, protecting vials, surprised reaction",
+        "death": "pixel art sprite side view 64x64, alchemist with vials and pouch, falling down, potions spilling, defeated collapse"
+      },
+      "seed": 50005,
+      "generated": true,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": "/assets/characters/player/chemist/chemist_reference.png",
+        "referenceGeneratedAt": "2026-02-01T18:52:43.043Z"
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": true,
+        "walk": true,
+        "attack": true,
+        "hurt": true,
+        "death": true
+      },
+      "generatedAt": "2026-01-31T12:37:46.474Z",
+      "prompt": "pixel art character sprite full body side view transparent background alchemist vials pouch apron practical clever",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
+    },
+    {
+      "id": "berserker",
+      "class": "berserker",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, savage berserker with dual axes and war paint, aggressive ready stance, heavy breathing rage, wild intimidating posture",
+        "walk": "pixel art sprite side view 64x64, savage berserker with dual axes and war paint, heavy stomping forward, menacing approach, feral movement",
+        "attack": "pixel art sprite side view 64x64, savage berserker with dual axes and war paint, frenzied dual axe cleave, wild slashing motion, brutal powerful strike",
+        "hurt": "pixel art sprite side view 64x64, savage berserker with dual axes and war paint, enraged recoil, snarling in pain, defiant stagger",
+        "death": "pixel art sprite side view 64x64, savage berserker with dual axes and war paint, crashing down heavily, final roar, defeated collapse"
+      },
+      "seed": 50005,
       "generated": false,
-      "loraModel": "v1",
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": "/assets/characters/player/berserker/berserker_reference.png",
+        "referenceGeneratedAt": "2026-02-01T18:59:19.903Z"
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "paladin",
+      "class": "paladin",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, holy knight in gleaming plate armor with glowing sword, noble ready stance, divine aura shimmering, righteous posture",
+        "walk": "pixel art sprite side view 64x64, holy knight in gleaming plate armor with glowing sword, marching forward, cape flowing, dignified stride",
+        "attack": "pixel art sprite side view 64x64, holy knight in gleaming plate armor with glowing sword, radiant blade smite, holy strike motion, righteous slash",
+        "cast": "pixel art sprite side view 64x64, holy knight in gleaming plate armor, channeling divine light, holy blessing, golden aura radiating",
+        "hurt": "pixel art sprite side view 64x64, holy knight in gleaming plate armor with glowing sword, armor absorbing blow, steadfast recoil, protected stagger",
+        "death": "pixel art sprite side view 64x64, holy knight in gleaming plate armor with glowing sword, falling nobly, divine light fading, honorable collapse"
+      },
+      "seed": 50006,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": "/assets/characters/player/paladin/paladin_reference.png",
+        "referenceGeneratedAt": "2026-02-01T19:00:54.401Z"
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "guardian",
+      "class": "guardian",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, heavy armored guardian with tower shield, fortified defensive stance, immovable posture, protective ready position",
+        "walk": "pixel art sprite side view 64x64, heavy armored guardian with tower shield, slow heavy march, shield held forward, armored advance",
+        "attack": "pixel art sprite side view 64x64, heavy armored guardian with tower shield, powerful shield bash, crushing forward strike, defensive thrust",
+        "hurt": "pixel art sprite side view 64x64, heavy armored guardian with tower shield, bracing behind shield, absorbing impact, sturdy recoil",
+        "death": "pixel art sprite side view 64x64, heavy armored guardian with tower shield, collapsing heavily, shield falling, armored defeat"
+      },
+      "seed": 50007,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": "/assets/characters/player/guardian/guardian_reference.png",
+        "referenceGeneratedAt": "2026-02-01T19:08:16.922Z"
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "warlord",
+      "class": "warlord",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, commanding warlord in ornate armor with polearm and banner, tactical stance, veteran posture, leadership presence",
+        "walk": "pixel art sprite side view 64x64, commanding warlord in ornate armor with polearm, confident stride forward, banner flowing, authoritative march",
+        "attack": "pixel art sprite side view 64x64, commanding warlord in ornate armor with polearm, sweeping polearm strike, commanding slash, powerful arc",
+        "hurt": "pixel art sprite side view 64x64, commanding warlord in ornate armor with polearm, controlled recoil, tactical retreat step, veteran recovery",
+        "death": "pixel art sprite side view 64x64, commanding warlord in ornate armor with polearm, falling with honor, banner dropping, dignified collapse"
+      },
+      "seed": 50008,
+      "generated": false,
+      "loraModel": "retro-pixel",
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
         "referenceImage": null,
         "referenceGeneratedAt": null
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "sorcerer",
+      "class": "sorcerer",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, dark sorcerer in hooded robes with arcane tattoos, crackling energy stance, intense focused gaze, dangerous presence",
+        "walk": "pixel art sprite side view 64x64, dark sorcerer in hooded robes with arcane tattoos, gliding movement, dark energy trailing, ominous approach",
+        "attack": "pixel art sprite side view 64x64, dark sorcerer in hooded robes, elemental blast release, raw energy surge, explosive force",
+        "cast": "pixel art sprite side view 64x64, dark sorcerer in hooded robes with arcane tattoos, channeling dark power, crackling lightning, intense spell weaving",
+        "hurt": "pixel art sprite side view 64x64, dark sorcerer in hooded robes, magical backlash recoil, energy dispersing, staggering backward",
+        "death": "pixel art sprite side view 64x64, dark sorcerer in hooded robes with arcane tattoos, collapsing as power fades, energy dissipating, defeated fall"
+      },
+      "seed": 50009,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "summoner",
+      "class": "summoner",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, summoner in flowing robes with grimoire and ethereal wisps, mystical ready stance, orbs floating nearby, arcane presence",
+        "walk": "pixel art sprite side view 64x64, summoner in flowing robes with grimoire, graceful movement, ethereal wisps following, mystical advance",
+        "attack": "pixel art sprite side view 64x64, summoner in flowing robes, commanding gesture, directing summoned force, magical projectile",
+        "cast": "pixel art sprite side view 64x64, summoner in flowing robes with grimoire, drawing summoning circle, conjuring creature, ethereal portal forming",
+        "hurt": "pixel art sprite side view 64x64, summoner in flowing robes, mystical barrier breaking, wisps scattering, magical recoil",
+        "death": "pixel art sprite side view 64x64, summoner in flowing robes with grimoire, fading away, wisps dispersing, ethereal collapse"
+      },
+      "seed": 50010,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "conjurer",
+      "class": "conjurer",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, elemental conjurer with crystal staff and swirling elements, nature magic stance, elemental aura, balanced presence",
+        "walk": "pixel art sprite side view 64x64, elemental conjurer with crystal staff, flowing movement, elements swirling around, natural grace",
+        "attack": "pixel art sprite side view 64x64, elemental conjurer with crystal staff, elemental wave release, conjured strike, nature force",
+        "cast": "pixel art sprite side view 64x64, elemental conjurer with crystal staff, channeling earth fire ice, elements merging, powerful conjuration",
+        "hurt": "pixel art sprite side view 64x64, elemental conjurer with crystal staff, elemental shield shattering, elements scattering, magical recoil",
+        "death": "pixel art sprite side view 64x64, elemental conjurer with crystal staff, returning to elements, crystal dimming, peaceful dissolution"
+      },
+      "seed": 50011,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "oracle",
+      "class": "oracle",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, mystic oracle with blindfold and ornate robes, floating runes around, prophetic stance, ethereal presence",
+        "walk": "pixel art sprite side view 64x64, mystic oracle with blindfold and ornate robes, gliding movement, runes trailing, otherworldly motion",
+        "attack": "pixel art sprite side view 64x64, mystic oracle with blindfold, psychic pulse release, mental strike, vision force",
+        "cast": "pixel art sprite side view 64x64, mystic oracle with blindfold and ornate robes, channeling prophecy, runes glowing intensely, future sight",
+        "hurt": "pixel art sprite side view 64x64, mystic oracle with blindfold, visions shattering, psychic feedback, disoriented stagger",
+        "death": "pixel art sprite side view 64x64, mystic oracle with blindfold and ornate robes, ascending peacefully, runes fading, transcendent collapse"
+      },
+      "seed": 50012,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "ninja",
+      "class": "ninja",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, masked ninja in dark cloth with kunai, crouched ready stance, stealthy posture, shadowy alert position",
+        "walk": "pixel art sprite side view 64x64, masked ninja in dark cloth with kunai, silent stepping forward, agile movement, shadowy advance",
+        "attack": "pixel art sprite side view 64x64, masked ninja in dark cloth with kunai, swift blade strike, quick slashing motion, deadly precision",
+        "hurt": "pixel art sprite side view 64x64, masked ninja in dark cloth, nimble dodge attempt, glancing hit, acrobatic recoil",
+        "death": "pixel art sprite side view 64x64, masked ninja in dark cloth with kunai, falling silently, fading into shadows, stealthy defeat"
+      },
+      "seed": 50013,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "martial_artist",
+      "class": "martial_artist",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, martial artist in gi uniform with headband, focused fighting stance, powerful ready posture, athletic presence",
+        "walk": "pixel art sprite side view 64x64, martial artist in gi uniform with headband, confident stride forward, balanced movement, purposeful advance",
+        "attack": "pixel art sprite side view 64x64, martial artist in gi uniform with headband, rapid combo strike, flying kick motion, powerful technique",
+        "hurt": "pixel art sprite side view 64x64, martial artist in gi uniform, blocking impact, controlled stagger, recovery stance",
+        "death": "pixel art sprite side view 64x64, martial artist in gi uniform with headband, falling defeated, honorable collapse, final bow"
+      },
+      "seed": 50014,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "brawler",
+      "class": "brawler",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, street brawler with spiked knuckles and tank top, aggressive fighting stance, tough intimidating posture, scarred ready position",
+        "walk": "pixel art sprite side view 64x64, street brawler with spiked knuckles and tank top, swagger forward, confident menacing stride, street tough approach",
+        "attack": "pixel art sprite side view 64x64, street brawler with spiked knuckles, heavy punch swing, brutal uppercut motion, devastating blow",
+        "hurt": "pixel art sprite side view 64x64, street brawler with spiked knuckles, absorbing hit, tough recoil, defiant stagger",
+        "death": "pixel art sprite side view 64x64, street brawler with spiked knuckles and tank top, crashing down hard, street fighter defeat, brutal collapse"
+      },
+      "seed": 50015,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "ascetic",
+      "class": "ascetic",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, enlightened ascetic with prayer beads and simple robes, serene floating stance, glowing aura, transcendent presence",
+        "walk": "pixel art sprite side view 64x64, enlightened ascetic with prayer beads and simple robes, graceful gliding movement, levitating slightly, peaceful advance",
+        "attack": "pixel art sprite side view 64x64, enlightened ascetic with prayer beads, spirit palm strike, chi force projection, inner power release",
+        "cast": "pixel art sprite side view 64x64, enlightened ascetic with prayer beads and simple robes, channeling inner chi, spiritual aura expanding, enlightened meditation",
+        "hurt": "pixel art sprite side view 64x64, enlightened ascetic with prayer beads, spiritual shield disrupted, serene acceptance, controlled recoil",
+        "death": "pixel art sprite side view 64x64, enlightened ascetic with prayer beads and simple robes, ascending peacefully, achieving nirvana, transcendent release"
+      },
+      "seed": 50016,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "alchemist",
+      "class": "alchemist",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, master alchemist with goggles and leather apron, examining bubbling vial, curious ready stance, scientific presence",
+        "walk": "pixel art sprite side view 64x64, master alchemist with goggles and leather apron, careful stride, protecting potions, methodical advance",
+        "attack": "pixel art sprite side view 64x64, master alchemist with goggles, hurling explosive flask, alchemical bomb throw, calculated strike",
+        "hurt": "pixel art sprite side view 64x64, master alchemist with goggles and leather apron, chemical splash recoil, protecting face, startled stagger",
+        "death": "pixel art sprite side view 64x64, master alchemist with goggles and leather apron, potions shattering, chemical reaction, explosive collapse"
+      },
+      "seed": 50017,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "medic",
+      "class": "medic",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, field medic with medical bag and white coat, alert caring stance, ready to help, compassionate presence",
+        "walk": "pixel art sprite side view 64x64, field medic with medical bag and white coat, quick purposeful stride, rushing to aid, determined advance",
+        "attack": "pixel art sprite side view 64x64, field medic with medical bag, syringe jab strike, defensive injection, precise quick motion",
+        "cast": "pixel art sprite side view 64x64, field medic with medical bag and white coat, healing touch, bandaging motion, restorative energy",
+        "hurt": "pixel art sprite side view 64x64, field medic with medical bag, protecting supplies, flinching back, concerned recoil",
+        "death": "pixel art sprite side view 64x64, field medic with medical bag and white coat, falling while reaching to help, selfless collapse, caring defeat"
+      },
+      "seed": 50018,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "plague_doctor",
+      "class": "plague_doctor",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death",
+        "cast"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, plague doctor with beaked mask and dark coat, ominous stance with censer, toxic fumes rising, mysterious presence",
+        "walk": "pixel art sprite side view 64x64, plague doctor with beaked mask and dark coat, sinister gliding approach, censer swinging, unsettling advance",
+        "attack": "pixel art sprite side view 64x64, plague doctor with beaked mask, poison spray release, toxic cloud burst, infectious strike",
+        "cast": "pixel art sprite side view 64x64, plague doctor with beaked mask and dark coat, spreading contagion, toxic cloud forming, plague ritual",
+        "hurt": "pixel art sprite side view 64x64, plague doctor with beaked mask, mask tilting, cloak billowing, stumbling recoil",
+        "death": "pixel art sprite side view 64x64, plague doctor with beaked mask and dark coat, dissolving into toxic mist, mask falling, mysterious collapse"
+      },
+      "seed": 50019,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
+    },
+    {
+      "id": "artificer",
+      "class": "artificer",
+      "animations": [
+        "idle",
+        "walk",
+        "attack",
+        "hurt",
+        "death"
+      ],
+      "animationPrompts": {
+        "idle": "pixel art sprite side view 64x64, steampunk artificer with goggles and mechanical arm, tinkering stance, clockwork gears turning, inventive presence",
+        "walk": "pixel art sprite side view 64x64, steampunk artificer with goggles and mechanical arm, mechanical stride, gadgets clanking, inventive advance",
+        "attack": "pixel art sprite side view 64x64, steampunk artificer with mechanical arm, deploying gadget strike, mechanical punch, clockwork assault",
+        "hurt": "pixel art sprite side view 64x64, steampunk artificer with goggles, mechanical arm sparking, gadgets malfunctioning, technical recoil",
+        "death": "pixel art sprite side view 64x64, steampunk artificer with goggles and mechanical arm, systems failing, gears scattering, mechanical collapse"
+      },
+      "seed": 50020,
+      "generated": false,
+      "loraModel": "retro-pixel",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {}
     }
   ]
 }

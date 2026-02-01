@@ -111,25 +111,44 @@ export class WorldMapEffects {
     this.discoveredNodes.clear();
     this.visitedNodes.clear();
 
-    // Filter nodes by reachability if provided
-    // This ensures fog of war only reveals nodes that are actually reachable
-    const filteredNodes = reachableNodes
-      ? nodes.filter(node => reachableNodes.has(node.id))
-      : nodes;
-
-    for (const node of filteredNodes) {
-      this.discoveredNodes.add(node.id);
+    // Build visited set first (always valid - these are nodes player has traveled to)
+    for (const node of nodes) {
       if (node.visited) {
         this.visitedNodes.add(node.id);
       }
     }
 
-    // Filter connections to only include those between reachable nodes
-    const filteredConnections = reachableNodes
-      ? connections.filter(conn =>
-        reachableNodes.has(conn.from_node_id) && reachableNodes.has(conn.to_node_id)
-      )
-      : connections;
+    // Try filtered approach first
+    let filteredNodes = reachableNodes
+      ? nodes.filter(node => reachableNodes.has(node.id))
+      : nodes;
+
+    // FALLBACK 1: If filtering produced empty result, use nodes with discovery data
+    if (filteredNodes.length === 0 && nodes.length > 0) {
+      console.warn('[WorldMapEffects] Empty reachableNodes filter, using discovery-based fallback');
+      filteredNodes = nodes.filter(node => node.visited || node.discovery_method);
+    }
+
+    // FALLBACK 2: If still empty, use visited nodes only
+    if (filteredNodes.length === 0 && this.visitedNodes.size > 0) {
+      console.warn('[WorldMapEffects] No discovered nodes, falling back to visited nodes');
+      filteredNodes = nodes.filter(node => this.visitedNodes.has(node.id));
+    }
+
+    // FALLBACK 3: Emergency - show ALL nodes to prevent blank map
+    if (filteredNodes.length === 0 && nodes.length > 0) {
+      console.warn('[WorldMapEffects] Emergency fallback: showing all nodes');
+      filteredNodes = nodes;
+    }
+
+    for (const node of filteredNodes) {
+      this.discoveredNodes.add(node.id);
+    }
+
+    // Filter connections to only include those between discovered nodes
+    const filteredConnections = connections.filter(conn =>
+      this.discoveredNodes.has(conn.from_node_id) && this.discoveredNodes.has(conn.to_node_id)
+    );
 
     // Update enhanced fog state with polygon detection
     this.fogState.updateFromNodes(filteredNodes, filteredConnections);
@@ -182,19 +201,20 @@ export class WorldMapEffects {
    * Layer 1: Tiled parchment background with vignette
    */
   renderParchmentBackground(ctx, canvasWidth, canvasHeight) {
-    // DEBUG: Test if solid fill works but pattern doesn't
-    ctx.fillStyle = '#f4e4bc';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-    // Temporarily skip pattern fill to test
-    // if (!this.parchmentTexture) {
-    //   ctx.fillStyle = '#f4e4bc';
-    //   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-    //   return;
-    // }
-    // const pattern = ctx.createPattern(this.parchmentTexture, 'repeat');
-    // ctx.fillStyle = pattern;
-    // ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    // Fill with parchment texture pattern
+    if (!this.parchmentTexture) {
+      ctx.fillStyle = '#f4e4bc';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    } else {
+      const pattern = ctx.createPattern(this.parchmentTexture, 'repeat');
+      // Guard: createPattern can return null if source has 0 dimensions
+      if (pattern) {
+        ctx.fillStyle = pattern;
+      } else {
+        ctx.fillStyle = '#f4e4bc'; // Fallback to solid color
+      }
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    }
 
     // Subtle vignette effect
     const gradient = ctx.createRadialGradient(
@@ -867,8 +887,20 @@ export class WorldMapEffects {
 
     this.fogCtx.globalCompositeOperation = 'source-over';
 
+    // Validate fog canvas before drawing
+    const fogValid = this.fogCanvas && this.fogCanvas.width > 0 && this.fogCanvas.height > 0;
+    if (!this._fogValidationLogged && !fogValid) {
+      console.error('[WorldMapEffects] Fog canvas invalid:', {
+        fogCanvas: this.fogCanvas ? `${this.fogCanvas.width}x${this.fogCanvas.height}` : 'null',
+        fogCtx: !!this.fogCtx
+      });
+      this._fogValidationLogged = true;
+    }
+
     // Draw fog to main canvas
-    ctx.drawImage(this.fogCanvas, 0, 0, canvasWidth, canvasHeight);
+    if (fogValid) {
+      ctx.drawImage(this.fogCanvas, 0, 0, canvasWidth, canvasHeight);
+    }
   }
 
   /**
