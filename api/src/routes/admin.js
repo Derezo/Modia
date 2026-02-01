@@ -1393,7 +1393,9 @@ router.get('/assets/characters/:id/reference', asyncHandler(async (req, res) => 
     sd15Weights: {
       controlnet: sd15Config.controlnetWeight,
       ipadapter: sd15Config.ipadapterWeight,
-      loraModel: sd15Config.loraModel || null
+      loraModel: sd15Config.loraModel || null,
+      referenceLoraModel: sd15Config.referenceLoraModel || null,
+      animationLoraModel: sd15Config.animationLoraModel || null
     }
   });
 }));
@@ -1476,14 +1478,21 @@ router.post('/assets/characters/:id/reference/generate', asyncHandler(async (req
 
 /**
  * PUT /api/admin/assets/characters/:id/weights
- * Update character SD1.5 weights and LoRA model
- * Body: { controlnetWeight?: number, ipadapterWeight?: number, preset?: string, loraModel?: string }
+ * Update character SD1.5 weights and LoRA models
+ * Body: {
+ *   controlnetWeight?: number,
+ *   ipadapterWeight?: number,
+ *   preset?: string,
+ *   loraModel?: string,           // Legacy: single LoRA for both (deprecated)
+ *   referenceLoraModel?: string,  // LoRA for reference image generation
+ *   animationLoraModel?: string   // LoRA for animation frame generation
+ * }
  */
 router.put('/assets/characters/:id/weights', asyncHandler(async (req, res) => {
   ensureUtilities();
 
   const { id } = req.params;
-  const { controlnetWeight, ipadapterWeight, preset, loraModel } = req.body;
+  const { controlnetWeight, ipadapterWeight, preset, loraModel, referenceLoraModel, animationLoraModel } = req.body;
 
   // Validate asset ID to prevent path traversal
   assertValidAssetId(id, 'Character');
@@ -1523,9 +1532,15 @@ router.put('/assets/characters/:id/weights', asyncHandler(async (req, res) => {
     }
   }
 
-  // Validate loraModel if provided
+  // Validate loraModel fields if provided
   if (loraModel && !VALID_SD15_LORA_MODELS.includes(loraModel)) {
     throw new AppError(`Invalid loraModel: ${loraModel}. Valid: ${VALID_SD15_LORA_MODELS.join(', ')}`, 400);
+  }
+  if (referenceLoraModel && !VALID_SD15_LORA_MODELS.includes(referenceLoraModel)) {
+    throw new AppError(`Invalid referenceLoraModel: ${referenceLoraModel}. Valid: ${VALID_SD15_LORA_MODELS.join(', ')}`, 400);
+  }
+  if (animationLoraModel && !VALID_SD15_LORA_MODELS.includes(animationLoraModel)) {
+    throw new AppError(`Invalid animationLoraModel: ${animationLoraModel}. Valid: ${VALID_SD15_LORA_MODELS.join(', ')}`, 400);
   }
 
   // Build update object for sd15Config
@@ -1535,7 +1550,9 @@ router.put('/assets/characters/:id/weights', asyncHandler(async (req, res) => {
       ...sd15Config,
       ...(effectiveControlnetWeight !== undefined && { controlnetWeight: effectiveControlnetWeight }),
       ...(effectiveIpadapterWeight !== undefined && { ipadapterWeight: effectiveIpadapterWeight }),
-      ...(loraModel !== undefined && { loraModel: loraModel || null })
+      ...(loraModel !== undefined && { loraModel: loraModel || null }),
+      ...(referenceLoraModel !== undefined && { referenceLoraModel: referenceLoraModel || null }),
+      ...(animationLoraModel !== undefined && { animationLoraModel: animationLoraModel || null })
     }
   };
 
