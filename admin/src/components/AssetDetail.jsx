@@ -849,6 +849,13 @@ export default function AssetDetail({
         }
         if (refData) {
           setReferenceStatus(refData);
+          // Load saved LoRA selections from sd15Weights
+          if (refData.sd15Weights) {
+            setSd15Config({
+              referenceLoraModel: refData.sd15Weights.referenceLoraModel || null,
+              animationLoraModel: refData.sd15Weights.animationLoraModel || null,
+            });
+          }
         }
         if (presetsData?.current) {
           setAnimationWeights(presetsData.current);
@@ -942,6 +949,27 @@ export default function AssetDetail({
       setWeightsLoading(false);
     }
   }, [characterId, animationWeights, toast]);
+
+  /**
+   * Handle SD1.5 LoRA model change - updates local state and saves to backend
+   * @param {'referenceLoraModel' | 'animationLoraModel'} field - Which LoRA field to update
+   * @param {string|null} value - New LoRA model value (null = use default)
+   */
+  const handleLoraChange = useCallback(async (field, value) => {
+    if (!characterId) return;
+
+    // Update local state immediately for responsive UI
+    setSd15Config(prev => ({ ...prev, [field]: value }));
+
+    // Save to backend
+    try {
+      await api.updateCharacterWeights(characterId, { [field]: value });
+      toast.success('LoRA model saved');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save LoRA model');
+      // Revert on error (optional - could reload from server instead)
+    }
+  }, [characterId, toast]);
 
   /**
    * Generate reference image
@@ -1362,7 +1390,7 @@ export default function AssetDetail({
                           <SD15LoraSelector
                             label="Reference LoRA"
                             value={sd15Config.referenceLoraModel}
-                            onChange={(val) => setSd15Config(prev => ({ ...prev, referenceLoraModel: val }))}
+                            onChange={(val) => handleLoraChange('referenceLoraModel', val)}
                             models={loraConfig.sd15LoraModels}
                             defaultModel={loraConfig.sd15Defaults.referenceLoraModel}
                             loading={loraConfig.loading}
@@ -1371,7 +1399,7 @@ export default function AssetDetail({
                           <SD15LoraSelector
                             label="Animation LoRA"
                             value={sd15Config.animationLoraModel}
-                            onChange={(val) => setSd15Config(prev => ({ ...prev, animationLoraModel: val }))}
+                            onChange={(val) => handleLoraChange('animationLoraModel', val)}
                             models={loraConfig.sd15LoraModels}
                             defaultModel={loraConfig.sd15Defaults.loraModel}
                             loading={loraConfig.loading}
