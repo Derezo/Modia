@@ -4,12 +4,12 @@
   "biome": "castle",
   "description": "Castle biome enemy sprite sheets",
   "biomeTraits": "ornate regal dark gothic corrupted once-grand sinister",
-  "totalAssets": 6,
-  "totalAnimations": 24,
+  "totalAssets": 7,
+  "totalAnimations": 28,
   "enemies": [
     {
-      "id": "skeleton",
-      "name": "Skeleton",
+      "id": "skeleton_warrior",
+      "name": "Skeleton Warrior",
       "archetype": "undead",
       "visualTraits": "animated bones purple eye glow rusted sword tattered armor rattling",
       "sd15Config": {
@@ -20,34 +20,45 @@
       },
       "animations": {
         "idle": {
-          "id": "skeleton_idle",
+          "id": "skeleton_warrior_idle",
           "frameCount": 8,
           "seed": 45001,
           "generated": false,
-          "prompt": "skeleton idle, bones rattling, jaw clicking, eternal vigilance"
+          "prompt": "pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, idle rattle animation, bones rattling with jaw clicking in eternal vigilance, dark castle corridor"
         },
         "attack": {
-          "id": "skeleton_attack",
+          "id": "skeleton_warrior_attack",
           "frameCount": 8,
           "seed": 45002,
           "generated": false,
-          "prompt": "skeleton attacking, sword swinging, bones creaking, relentless"
+          "prompt": "pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, attack swing animation, sword swinging with bones creaking in relentless strike, dark castle corridor"
         },
         "hit": {
-          "id": "skeleton_hit",
+          "id": "skeleton_warrior_hit",
           "frameCount": 8,
           "seed": 45003,
           "generated": false,
-          "prompt": "skeleton hit, bones scattering, reassembling, undying"
+          "prompt": "pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, hurt scatter animation, bones scattering and reassembling with undying persistence, dark castle corridor"
         },
         "death": {
-          "id": "skeleton_death",
+          "id": "skeleton_warrior_death",
           "frameCount": 8,
           "seed": 45004,
           "generated": false,
-          "prompt": "skeleton dying, collapsing into pile, eye glow fading, bones still"
+          "prompt": "pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, death collapse animation, collapsing into pile with eye glow fading to stillness, dark castle corridor"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": false,
+        "attack": false,
+        "hit": false,
+        "death": false
+      },
+      "generatedAt": null,
+      "generated": false,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "ghost",
@@ -66,33 +77,36 @@
           "frameCount": 8,
           "seed": 45011,
           "generated": false,
-          "prompt": "ghost idle, floating eerily, form wavering, chains rattling"
+          "prompt": "pixel art sprite side view 64x64, translucent ghost with wailing face and ethereal chains and trailing wisps, idle drift animation, floating eerily with form wavering and chains rattling, haunted castle hall"
         },
         "attack": {
           "id": "ghost_attack",
           "frameCount": 8,
           "seed": 45012,
           "generated": false,
-          "prompt": "ghost attacking, lunging through air, chilling touch, wailing"
+          "prompt": "pixel art sprite side view 64x64, translucent ghost with wailing face and ethereal chains and trailing wisps, attack lunge animation, lunging through air with chilling touch and wailing cry, haunted castle hall"
         },
         "hit": {
           "id": "ghost_hit",
           "frameCount": 8,
           "seed": 45013,
           "generated": false,
-          "prompt": "ghost hit, form disrupted, screaming, reforming angrily"
+          "prompt": "pixel art sprite side view 64x64, translucent ghost with wailing face and ethereal chains and trailing wisps, hurt disrupt animation, form disrupted screaming and reforming angrily, haunted castle hall"
         },
         "death": {
           "id": "ghost_death",
           "frameCount": 8,
           "seed": 45014,
           "generated": false,
-          "prompt": "ghost dying, fading away, peaceful expression, finally at rest"
+          "prompt": "pixel art sprite side view 64x64, translucent ghost with wailing face and ethereal chains and trailing wisps, death fade animation, fading away with peaceful expression finally at rest, haunted castle hall"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "loraModel": "retro-pixel"
     },
     {
-      "id": "knight",
+      "id": "dark_knight",
       "name": "Dark Knight",
       "archetype": "humanoid",
       "visualTraits": "black plate armor glowing red visor corrupted greatsword dark aura",
@@ -104,34 +118,98 @@
       },
       "animations": {
         "idle": {
-          "id": "knight_idle",
+          "id": "dark_knight_idle",
           "frameCount": 8,
           "seed": 45021,
           "generated": false,
-          "prompt": "dark knight idle, imposing stance, greatsword planted, darkness seeping"
+          "prompt": "pixel art sprite side view 64x64, dark knight with black plate armor and glowing red visor and corrupted greatsword, idle menace animation, imposing stance with greatsword planted and darkness seeping around, corrupted throne room"
         },
         "attack": {
-          "id": "knight_attack",
+          "id": "dark_knight_attack",
           "frameCount": 8,
           "seed": 45022,
           "generated": false,
-          "prompt": "dark knight attacking, massive sword sweep, dark energy trailing"
+          "prompt": "pixel art sprite side view 64x64, dark knight with black plate armor and glowing red visor and corrupted greatsword, attack sweep animation, massive sword sweeping with dark energy trailing behind strike, corrupted throne room"
         },
         "hit": {
-          "id": "knight_hit",
+          "id": "dark_knight_hit",
           "frameCount": 8,
           "seed": 45023,
           "generated": false,
-          "prompt": "dark knight hit, armor sparking, staggering, roaring defiance"
+          "prompt": "pixel art sprite side view 64x64, dark knight with black plate armor and glowing red visor and corrupted greatsword, hurt stagger animation, armor sparking and staggering while roaring defiance, corrupted throne room"
         },
         "death": {
-          "id": "knight_death",
+          "id": "dark_knight_death",
           "frameCount": 8,
           "seed": 45024,
           "generated": false,
-          "prompt": "dark knight dying, armor crumbling, darkness releasing, empty husk"
+          "prompt": "pixel art sprite side view 64x64, dark knight with black plate armor and glowing red visor and corrupted greatsword, death crumble animation, armor crumbling with darkness releasing leaving empty husk, corrupted throne room"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": false,
+        "attack": false,
+        "hit": false,
+        "death": false
+      },
+      "generatedAt": null,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "palace_guard",
+      "name": "Palace Guard",
+      "archetype": "humanoid",
+      "visualTraits": "ornate plate armor royal tabard halberd plumed helmet elite disciplined",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "animations": {
+        "idle": {
+          "id": "palace_guard_idle",
+          "frameCount": 8,
+          "seed": 45061,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, elite palace guard with ornate plate armor and royal tabard and halberd and plumed helmet, idle attention animation, standing at attention with halberd upright as vigilant elite soldier, grand castle entrance"
+        },
+        "attack": {
+          "id": "palace_guard_attack",
+          "frameCount": 8,
+          "seed": 45062,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, elite palace guard with ornate plate armor and royal tabard and halberd and plumed helmet, attack swing animation, halberd swing with precise trained deadly strike, grand castle entrance"
+        },
+        "hit": {
+          "id": "palace_guard_hit",
+          "frameCount": 8,
+          "seed": 45063,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, elite palace guard with ornate plate armor and royal tabard and halberd and plumed helmet, hurt endure animation, armor ringing and grunting while maintaining formation, grand castle entrance"
+        },
+        "death": {
+          "id": "palace_guard_death",
+          "frameCount": 8,
+          "seed": 45064,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, elite palace guard with ornate plate armor and royal tabard and halberd and plumed helmet, death honor animation, saluting then falling at post in honorable end, grand castle entrance"
+        }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": false,
+        "attack": false,
+        "hit": false,
+        "death": false
+      },
+      "generatedAt": null,
+      "generated": false,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "vampire",
@@ -150,30 +228,33 @@
           "frameCount": 8,
           "seed": 45031,
           "generated": false,
-          "prompt": "vampire idle, regal pose, cape flowing, eyes gleaming hungrily"
+          "prompt": "pixel art sprite side view 64x64, vampire aristocrat with pale skin and red eyes and fangs and flowing cape, idle pose animation, regal pose with cape flowing and eyes gleaming hungrily, gothic castle chamber"
         },
         "attack": {
           "id": "vampire_attack",
           "frameCount": 8,
           "seed": 45032,
           "generated": false,
-          "prompt": "vampire attacking, lunging with claws, fangs bared, supernatural speed"
+          "prompt": "pixel art sprite side view 64x64, vampire aristocrat with pale skin and red eyes and fangs and flowing cape, attack lunge animation, lunging with claws extended and fangs bared at supernatural speed, gothic castle chamber"
         },
         "hit": {
           "id": "vampire_hit",
           "frameCount": 8,
           "seed": 45033,
           "generated": false,
-          "prompt": "vampire hit, hissing in pain, recoiling from light, furious"
+          "prompt": "pixel art sprite side view 64x64, vampire aristocrat with pale skin and red eyes and fangs and flowing cape, hurt recoil animation, hissing in pain recoiling from strike with furious expression, gothic castle chamber"
         },
         "death": {
           "id": "vampire_death",
           "frameCount": 8,
           "seed": 45034,
           "generated": false,
-          "prompt": "vampire dying, turning to ash, cape collapsing, dust scattered"
+          "prompt": "pixel art sprite side view 64x64, vampire aristocrat with pale skin and red eyes and fangs and flowing cape, death dissolve animation, turning to ash with cape collapsing as dust scatters, gothic castle chamber"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "dark_mage",
@@ -192,30 +273,33 @@
           "frameCount": 8,
           "seed": 45041,
           "generated": false,
-          "prompt": "dark mage idle, dark energy swirling, staff pulsing, plotting"
+          "prompt": "pixel art sprite side view 64x64, dark mage with black robes and skull staff and shadowed hood, idle channel animation, dark energy swirling with staff pulsing purple while plotting, castle arcane sanctum"
         },
         "attack": {
           "id": "dark_mage_attack",
           "frameCount": 8,
           "seed": 45042,
           "generated": false,
-          "prompt": "dark mage attacking, casting dark bolt, purple lightning, cackling"
+          "prompt": "pixel art sprite side view 64x64, dark mage with black robes and skull staff and shadowed hood, attack cast animation, casting dark bolt with purple lightning crackling and cackling, castle arcane sanctum"
         },
         "hit": {
           "id": "dark_mage_hit",
           "frameCount": 8,
           "seed": 45043,
           "generated": false,
-          "prompt": "dark mage hit, barrier breaking, staggering, spellwork disrupted"
+          "prompt": "pixel art sprite side view 64x64, dark mage with black robes and skull staff and shadowed hood, hurt disrupt animation, magical barrier breaking and staggering with spellwork disrupted, castle arcane sanctum"
         },
         "death": {
           "id": "dark_mage_death",
           "frameCount": 8,
           "seed": 45044,
           "generated": false,
-          "prompt": "dark mage dying, magic exploding outward, robes crumpling, consumed"
+          "prompt": "pixel art sprite side view 64x64, dark mage with black robes and skull staff and shadowed hood, death consume animation, magic exploding outward with robes crumpling consumed by own power, castle arcane sanctum"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "demon",
@@ -234,30 +318,33 @@
           "frameCount": 8,
           "seed": 45051,
           "generated": false,
-          "prompt": "demon idle, wings folded, flames licking skin, grinning malevolently"
+          "prompt": "pixel art sprite side view 64x64, infernal demon with red skin and horns and bat wings and clawed hands wreathed in flames, idle menace animation, wings folded with flames licking skin and grinning malevolently, hellish castle depths"
         },
         "attack": {
           "id": "demon_attack",
           "frameCount": 8,
           "seed": 45052,
           "generated": false,
-          "prompt": "demon attacking, claws slashing, fire breath, hellish fury"
+          "prompt": "pixel art sprite side view 64x64, infernal demon with red skin and horns and bat wings and clawed hands wreathed in flames, attack slash animation, claws slashing with fire breath in hellish fury, hellish castle depths"
         },
         "hit": {
           "id": "demon_hit",
           "frameCount": 8,
           "seed": 45053,
           "generated": false,
-          "prompt": "demon hit, roaring in rage, flames flaring, wounded pride"
+          "prompt": "pixel art sprite side view 64x64, infernal demon with red skin and horns and bat wings and clawed hands wreathed in flames, hurt rage animation, roaring in rage with flames flaring from wounded pride, hellish castle depths"
         },
         "death": {
           "id": "demon_death",
           "frameCount": 8,
           "seed": 45054,
           "generated": false,
-          "prompt": "demon dying, flames consuming self, returning to hell, portal closing"
+          "prompt": "pixel art sprite side view 64x64, infernal demon with red skin and horns and bat wings and clawed hands wreathed in flames, death banish animation, flames consuming self returning to hell through closing portal, hellish castle depths"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "loraModel": "retro-pixel"
     }
   ]
 }

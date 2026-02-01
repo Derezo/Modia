@@ -168,7 +168,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "enemy_harpy",
@@ -255,7 +256,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "enemy_shadow_assassin",
@@ -276,7 +278,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "enemy_palace_guard",
@@ -297,7 +300,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": false
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     }
   ]
 }

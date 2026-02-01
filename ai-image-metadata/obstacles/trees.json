@@ -12,7 +12,12 @@
         "height": 128
       },
       "seed": 50101,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:23:34.245Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "pine_tree",
@@ -23,7 +28,12 @@
         "height": 128
       },
       "seed": 50102,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:25:59.392Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "dead_tree",
@@ -34,7 +44,12 @@
         "height": 112
       },
       "seed": 50103,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:28:25.754Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "mushroom_large",
@@ -45,7 +60,12 @@
         "height": 96
       },
       "seed": 50104,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:30:50.222Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "mountain_pine",
@@ -56,7 +76,12 @@
         "height": 144
       },
       "seed": 50105,
-      "generated": false
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-01-31T10:33:14.292Z",
+      "generationFailureCount": null,
+      "lastError": null
     }
   ]
 }

@@ -5,6 +5,9 @@
  * Used by unified components to render type-specific UI.
  */
 
+// Re-export shared category utilities
+export { CATEGORY_LABELS, getCategoryLabel } from '../../constants/categories';
+
 /**
  * Image asset filter configurations
  */
@@ -27,6 +30,12 @@ export const IMAGE_FILTER_CONFIG = {
   },
   overlays: {
     subcategory: ['rarity', 'augments'],
+  },
+  obstacles: {
+    subcategory: ['rocks', 'trees'],
+  },
+  characters: {
+    subcategory: ['players', 'enemies'],
   },
 };
 
@@ -103,6 +112,16 @@ export const GRID_CONFIG = {
     gridCols: { sm: 4, md: 5, lg: 6, xl: 8 },
     showVariants: false,
   },
+  obstacles: {
+    cardAspect: 'square',
+    gridCols: { sm: 3, md: 4, lg: 5, xl: 6 },
+    showVariants: false,
+  },
+  characters: {
+    cardAspect: 'portrait',
+    gridCols: { sm: 2, md: 3, lg: 4, xl: 5 },
+    showVariants: true,
+  },
   music: {
     cardAspect: 'video', // 16:9
     gridCols: { sm: 1, md: 2, lg: 3, xl: 4 },
@@ -166,25 +185,3 @@ export function isImageType(assetType) {
   return !isAudioType(assetType);
 }
 
-/**
- * Category display labels
- */
-export const CATEGORY_LABELS = {
-  tiles: 'Tiles',
-  portraits: 'Portraits',
-  items: 'Items',
-  icons: 'Icons',
-  nodes: 'Nodes',
-  overlays: 'Overlays',
-  music: 'Music',
-  sfx: 'Sound Effects',
-};
-
-/**
- * Get human-readable label for a category
- * @param {string} assetType - Asset type
- * @returns {string} Display label
- */
-export function getCategoryLabel(assetType) {
-  return CATEGORY_LABELS[assetType] || assetType.charAt(0).toUpperCase() + assetType.slice(1);
-}

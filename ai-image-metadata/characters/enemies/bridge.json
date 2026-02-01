@@ -4,12 +4,12 @@
   "biome": "bridge",
   "description": "Bridge biome enemy sprite sheets",
   "biomeTraits": "weathered crossing structure near water worn traveled",
-  "totalAssets": 6,
-  "totalAnimations": 24,
+  "totalAssets": 7,
+  "totalAnimations": 28,
   "enemies": [
     {
-      "id": "bandit",
-      "name": "Bandit",
+      "id": "bridge_bandit",
+      "name": "Bridge Bandit",
       "archetype": "humanoid",
       "visualTraits": "hooded figure leather armor daggers mask scar sneaky",
       "sd15Config": {
@@ -20,34 +20,98 @@
       },
       "animations": {
         "idle": {
-          "id": "bandit_idle",
+          "id": "bridge_bandit_idle",
           "frameCount": 8,
           "seed": 44001,
           "generated": false,
-          "prompt": "bandit idle, crouched stance, daggers ready, eyes scanning"
+          "prompt": "pixel art sprite side view 64x64, hooded bandit with leather armor and mask and daggers, idle crouch animation, crouched stance with daggers ready and eyes scanning for targets, weathered stone bridge"
         },
         "attack": {
-          "id": "bandit_attack",
+          "id": "bridge_bandit_attack",
           "frameCount": 8,
           "seed": 44002,
           "generated": false,
-          "prompt": "bandit attacking, lunging with dagger, quick stab, dirty fighting"
+          "prompt": "pixel art sprite side view 64x64, hooded bandit with leather armor and mask and daggers, attack stab animation, lunging forward with quick dagger stab dirty fighting style, weathered stone bridge"
         },
         "hit": {
-          "id": "bandit_hit",
+          "id": "bridge_bandit_hit",
           "frameCount": 8,
           "seed": 44003,
           "generated": false,
-          "prompt": "bandit hit, stumbling backward, hood falling, cursing"
+          "prompt": "pixel art sprite side view 64x64, hooded bandit with leather armor and mask and daggers, hurt stumble animation, stumbling backward with hood falling and cursing in pain, weathered stone bridge"
         },
         "death": {
-          "id": "bandit_death",
+          "id": "bridge_bandit_death",
           "frameCount": 8,
           "seed": 44004,
           "generated": false,
-          "prompt": "bandit dying, clutching wound, falling, dropping loot"
+          "prompt": "pixel art sprite side view 64x64, hooded bandit with leather armor and mask and daggers, death collapse animation, clutching wound and falling forward dropping stolen loot, weathered stone bridge"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": false,
+        "attack": false,
+        "hit": false,
+        "death": false
+      },
+      "generatedAt": null,
+      "generated": false,
+      "loraModel": "retro-pixel"
+    },
+    {
+      "id": "bandit_captain",
+      "name": "Bandit Captain",
+      "archetype": "humanoid",
+      "visualTraits": "scarred face heavy armor dual swords cape commanding presence battle-worn",
+      "sd15Config": {
+        "controlnetWeight": null,
+        "ipadapterWeight": null,
+        "referenceImage": null,
+        "referenceGeneratedAt": null
+      },
+      "animations": {
+        "idle": {
+          "id": "bandit_captain_idle",
+          "frameCount": 8,
+          "seed": 44061,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, bandit captain with scarred face and heavy armor and dual swords and cape, idle command animation, arms crossed surveying territory with menacing presence, bridge crossing outpost"
+        },
+        "attack": {
+          "id": "bandit_captain_attack",
+          "frameCount": 8,
+          "seed": 44062,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, bandit captain with scarred face and heavy armor and dual swords and cape, attack slash animation, dual sword slash with powerful expert technique swing, bridge crossing outpost"
+        },
+        "hit": {
+          "id": "bandit_captain_hit",
+          "frameCount": 8,
+          "seed": 44063,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, bandit captain with scarred face and heavy armor and dual swords and cape, hurt endure animation, armor sparking grunting while maintaining defiant stance, bridge crossing outpost"
+        },
+        "death": {
+          "id": "bandit_captain_death",
+          "frameCount": 8,
+          "seed": 44064,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, bandit captain with scarred face and heavy armor and dual swords and cape, death fall animation, swords falling as kneeling then collapsing defeated leader, bridge crossing outpost"
+        }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": false,
+        "attack": false,
+        "hit": false,
+        "death": false
+      },
+      "generatedAt": null,
+      "generated": false,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "toll_collector",
@@ -66,30 +130,41 @@
           "frameCount": 8,
           "seed": 44011,
           "generated": false,
-          "prompt": "toll collector idle, standing firm, mace over shoulder, demanding"
+          "prompt": "pixel art sprite side view 64x64, burly toll collector with heavy armor and mace and coin pouch, idle demand animation, standing firm with mace over shoulder demanding payment, bridge toll gate"
         },
         "attack": {
           "id": "toll_collector_attack",
           "frameCount": 8,
           "seed": 44012,
           "generated": false,
-          "prompt": "toll collector attacking, swinging heavy mace, brutal overhead"
+          "prompt": "pixel art sprite side view 64x64, burly toll collector with heavy armor and mace and coin pouch, attack smash animation, swinging heavy mace in brutal overhead crushing blow, bridge toll gate"
         },
         "hit": {
           "id": "toll_collector_hit",
           "frameCount": 8,
           "seed": 44013,
           "generated": false,
-          "prompt": "toll collector hit, armor denting, grunting, angry"
+          "prompt": "pixel art sprite side view 64x64, burly toll collector with heavy armor and mace and coin pouch, hurt grunt animation, armor denting and grunting with angry expression, bridge toll gate"
         },
         "death": {
           "id": "toll_collector_death",
           "frameCount": 8,
           "seed": 44014,
           "generated": false,
-          "prompt": "toll collector dying, coins spilling, collapsing, mace clattering"
+          "prompt": "pixel art sprite side view 64x64, burly toll collector with heavy armor and mace and coin pouch, death collapse animation, coins spilling as mace clatters and body collapses, bridge toll gate"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true
+      },
+      "generatedAt": "2026-01-31T20:33:06.442Z",
+      "generated": true,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "bridge_troll",
@@ -108,30 +183,41 @@
           "frameCount": 8,
           "seed": 44021,
           "generated": false,
-          "prompt": "bridge troll idle, lurking under bridge, water dripping, hungry"
+          "prompt": "pixel art sprite side view 64x64, bridge troll with blue-gray skin and barnacles and massive tusks and webbed fingers, idle lurk animation, lurking under bridge with water dripping and hungry expression, stone bridge over river"
         },
         "attack": {
           "id": "bridge_troll_attack",
           "frameCount": 8,
           "seed": 44022,
           "generated": false,
-          "prompt": "bridge troll attacking, emerging from below, grabbing and smashing"
+          "prompt": "pixel art sprite side view 64x64, bridge troll with blue-gray skin and barnacles and massive tusks and webbed fingers, attack grab animation, emerging from below grabbing and smashing with massive force, stone bridge over river"
         },
         "hit": {
           "id": "bridge_troll_hit",
           "frameCount": 8,
           "seed": 44023,
           "generated": false,
-          "prompt": "bridge troll hit, roaring, splashing, slippery retreat"
+          "prompt": "pixel art sprite side view 64x64, bridge troll with blue-gray skin and barnacles and massive tusks and webbed fingers, hurt roar animation, roaring and splashing with slippery retreat backward, stone bridge over river"
         },
         "death": {
           "id": "bridge_troll_death",
           "frameCount": 8,
           "seed": 44024,
           "generated": false,
-          "prompt": "bridge troll dying, falling into water, sinking, bubbles rising"
+          "prompt": "pixel art sprite side view 64x64, bridge troll with blue-gray skin and barnacles and massive tusks and webbed fingers, death sink animation, falling into water sinking with bubbles rising, stone bridge over river"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAnimations": {
+        "idle": true,
+        "attack": true,
+        "hit": true,
+        "death": true
+      },
+      "generatedAt": "2026-01-31T21:01:03.476Z",
+      "generated": true,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "mercenary",
@@ -150,30 +236,33 @@
           "frameCount": 8,
           "seed": 44031,
           "generated": false,
-          "prompt": "mercenary idle, professional stance, sword ready, calculating"
+          "prompt": "pixel art sprite side view 64x64, professional mercenary with chainmail armor and sword and veteran scars, idle ready animation, professional combat stance with sword ready calculating next move, bridge checkpoint"
         },
         "attack": {
           "id": "mercenary_attack",
           "frameCount": 8,
           "seed": 44032,
           "generated": false,
-          "prompt": "mercenary attacking, precise sword thrust, trained technique"
+          "prompt": "pixel art sprite side view 64x64, professional mercenary with chainmail armor and sword and veteran scars, attack thrust animation, precise sword thrust forward with trained disciplined technique, bridge checkpoint"
         },
         "hit": {
           "id": "mercenary_hit",
           "frameCount": 8,
           "seed": 44033,
           "generated": false,
-          "prompt": "mercenary hit, blocking partially, grunting, repositioning"
+          "prompt": "pixel art sprite side view 64x64, professional mercenary with chainmail armor and sword and veteran scars, hurt block animation, partially blocking and grunting while repositioning, bridge checkpoint"
         },
         "death": {
           "id": "mercenary_death",
           "frameCount": 8,
           "seed": 44034,
           "generated": false,
-          "prompt": "mercenary dying, professional to the end, saluting, falling"
+          "prompt": "pixel art sprite side view 64x64, professional mercenary with chainmail armor and sword and veteran scars, death honor animation, professional to the end saluting then falling, bridge checkpoint"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "highwayman",
@@ -192,30 +281,33 @@
           "frameCount": 8,
           "seed": 44041,
           "generated": false,
-          "prompt": "highwayman idle, theatrical pose, rapier flourish, cocky"
+          "prompt": "pixel art sprite side view 64x64, flamboyant highwayman with feathered hat and cape and rapier, idle flourish animation, theatrical pose with rapier flourishing and cocky confident expression, road crossing bridge"
         },
         "attack": {
           "id": "highwayman_attack",
           "frameCount": 8,
           "seed": 44042,
           "generated": false,
-          "prompt": "highwayman attacking, quick rapier thrust, fancy footwork, dueling"
+          "prompt": "pixel art sprite side view 64x64, flamboyant highwayman with feathered hat and cape and rapier, attack thrust animation, quick rapier thrust with fancy footwork dueling style, road crossing bridge"
         },
         "hit": {
           "id": "highwayman_hit",
           "frameCount": 8,
           "seed": 44043,
           "generated": false,
-          "prompt": "highwayman hit, hat flying off, dramatic stagger, outraged"
+          "prompt": "pixel art sprite side view 64x64, flamboyant highwayman with feathered hat and cape and rapier, hurt stagger animation, hat flying off with dramatic stagger and outraged expression, road crossing bridge"
         },
         "death": {
           "id": "highwayman_death",
           "frameCount": 8,
           "seed": 44044,
           "generated": false,
-          "prompt": "highwayman dying, dramatic death pose, cape billowing, theatrical end"
+          "prompt": "pixel art sprite side view 64x64, flamboyant highwayman with feathered hat and cape and rapier, death dramatic animation, dramatic death pose with cape billowing in theatrical final end, road crossing bridge"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "loraModel": "retro-pixel"
     },
     {
       "id": "guard",
@@ -234,30 +326,33 @@
           "frameCount": 8,
           "seed": 44051,
           "generated": false,
-          "prompt": "guard idle, standing at attention, spear upright, vigilant"
+          "prompt": "pixel art sprite side view 64x64, uniformed guard with spear and shield and official tabard, idle attention animation, standing at attention with spear upright and vigilant watch, bridge guard post"
         },
         "attack": {
           "id": "guard_attack",
           "frameCount": 8,
           "seed": 44052,
           "generated": false,
-          "prompt": "guard attacking, spear thrust forward, shield up, by the book"
+          "prompt": "pixel art sprite side view 64x64, uniformed guard with spear and shield and official tabard, attack thrust animation, spear thrust forward with shield raised in trained technique, bridge guard post"
         },
         "hit": {
           "id": "guard_hit",
           "frameCount": 8,
           "seed": 44053,
           "generated": false,
-          "prompt": "guard hit, shield absorbing blow, staggering, calling for backup"
+          "prompt": "pixel art sprite side view 64x64, uniformed guard with spear and shield and official tabard, hurt block animation, shield absorbing blow and staggering while calling for backup, bridge guard post"
         },
         "death": {
           "id": "guard_death",
           "frameCount": 8,
           "seed": 44054,
           "generated": false,
-          "prompt": "guard dying, falling at post, dutiful to the end, honorable"
+          "prompt": "pixel art sprite side view 64x64, uniformed guard with spear and shield and official tabard, death fall animation, falling at post dutiful to the end in honorable death, bridge guard post"
         }
-      }
+      },
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "loraModel": "retro-pixel"
     }
   ]
 }

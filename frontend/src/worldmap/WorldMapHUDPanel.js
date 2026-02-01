@@ -46,8 +46,8 @@ import { ZodiacSegment } from './hud/ZodiacSegment.js';
 /** Panel X position */
 const PANEL_X = 10;
 
-/** Panel Y position (below player info panel) */
-const PANEL_Y = 70;
+/** Panel Y position */
+const PANEL_Y = 10;
 
 /** Panel width */
 const PANEL_WIDTH = 180;

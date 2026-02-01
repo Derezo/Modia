@@ -24,6 +24,7 @@ export class WorldMapMinimap {
 
     // Animation state
     this.pulsePhase = 0;
+    this.renderDebug = false;
 
     // Node symbols configuration
     this.nodeSymbols = {
@@ -276,6 +277,11 @@ export class WorldMapMinimap {
       nodeSpacing
     } = state;
 
+    let debugData = { nodes: nodes, connections: connections, currentNode: currentNode, discoveredNodes: discoveredNodes, visitedNodes: visitedNodes };
+    if(this.renderDebug.nodes != debugData.nodes) {
+      this.renderDebug = debugData;
+      console.log(debugData);
+    }
     // Update animation
     this.pulsePhase = (Date.now() * 0.004) % (Math.PI * 2);
 
@@ -287,11 +293,45 @@ export class WorldMapMinimap {
     const x = canvasWidth - totalSize - this.margin;
     const y = canvasHeight - totalSize - this.margin;
 
+    // Validate canvas state before drawing
+    const frameValid = this.frameCanvas && this.frameCanvas.width > 0 && this.frameCanvas.height > 0;
+    const contentValid = this.contentCanvas && this.contentCanvas.width > 0 && this.contentCanvas.height > 0;
+
+    // One-time diagnostic if canvases are invalid
+    if (!this._canvasValidationLogged && (!frameValid || !contentValid)) {
+      console.error('[Minimap] Canvas validation failed:', {
+        frameCanvas: this.frameCanvas ? `${this.frameCanvas.width}x${this.frameCanvas.height}` : 'null',
+        contentCanvas: this.contentCanvas ? `${this.contentCanvas.width}x${this.contentCanvas.height}` : 'null',
+        frameCtx: !!this.frameCtx,
+        contentCtx: !!this.contentCtx
+      });
+      this._canvasValidationLogged = true;
+    }
+
     // Draw frame
-    ctx.drawImage(this.frameCanvas, x, y);
+    if (frameValid) {
+      ctx.drawImage(this.frameCanvas, x, y);
+    }
 
     // Draw content
-    ctx.drawImage(this.contentCanvas, x + this.frameWidth, y + this.frameWidth);
+    if (contentValid) {
+      ctx.drawImage(this.contentCanvas, x + this.frameWidth, y + this.frameWidth);
+    }
+
+    // One-time test: verify drawImage actually produced output
+    if (!this._drawImageTestDone && frameValid) {
+      try {
+        const testPixel = ctx.getImageData(x + 5, y + 5, 1, 1).data;
+        const hasContent = testPixel[3] > 0; // Check alpha channel
+        if (!hasContent) {
+          console.error('[Minimap] drawImage produced no visible output! Canvas may be in bad state.');
+          console.error('[Minimap] Test pixel at', x + 5, y + 5, ':', testPixel);
+        }
+        this._drawImageTestDone = true;
+      } catch (e) {
+        console.error('[Minimap] getImageData failed:', e.message);
+      }
+    }
 
     // Draw viewport rectangle (dynamic, on top)
     this.renderViewport(ctx, x + this.frameWidth, y + this.frameWidth,
@@ -304,16 +344,39 @@ export class WorldMapMinimap {
   renderContent(nodes, connections, currentNode, discoveredNodes, visitedNodes) {
     const ctx = this.contentCtx;
 
-    // DEBUG: Log minimap render details once
-    if (!this._renderDebugLogged && nodes.length > 0) {
-      console.log('[DEBUG] Minimap renderContent - worldScale:', this.worldScale, 'worldBounds:', this.worldBounds);
-      console.log('[DEBUG] Minimap contentCanvas:', this.contentCanvas?.width, 'x', this.contentCanvas?.height);
-      // Log first node position
-      const firstNode = nodes[0];
-      const firstPos = this.worldToMinimap(firstNode.x_coord, firstNode.y_coord);
-      console.log('[DEBUG] First node world coords:', firstNode.x_coord, firstNode.y_coord, '-> minimap:', firstPos);
-      this._renderDebugLogged = true;
+    // Guard: Skip if content canvas not initialized
+    if (!ctx) {
+      console.error("Canvas not initialized!")
+      return;
     }
+
+    // FALLBACK: If discoveredNodes is empty, create a set from all nodes
+    const effectiveDiscovered = discoveredNodes.size > 0
+      ? discoveredNodes
+      : new Set(nodes.map(n => n.id));
+
+    const effectiveVisited = visitedNodes.size > 0
+      ? visitedNodes
+      : new Set(nodes.filter(n => n.visited).map(n => n.id));
+
+    // Log fallback activation once for debugging
+    if (!this._fallbackLogged && discoveredNodes.size === 0 && nodes.length > 0) {
+      console.warn('[WorldMapMinimap] discoveredNodes empty, using fallback with all', nodes.length, 'nodes');
+      this._fallbackLogged = true;
+    }
+
+    // Verify canvas dimensions match expected size
+    if (this.contentCanvas.width !== this.size || this.contentCanvas.height !== this.size) {
+      this.contentCanvas.width = this.size;
+      this.contentCanvas.height = this.size;
+    }
+
+    // Save context state and perform complete reset
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);  // Reset transform matrix
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.setLineDash([]);
 
     // Clear with parchment background
     ctx.fillStyle = '#f4e4bc';
@@ -323,21 +386,23 @@ export class WorldMapMinimap {
     this.renderFogBase(ctx);
 
     // Render path and node reveals (cut through fog)
-    this.renderFogReveals(ctx, nodes, connections, discoveredNodes, visitedNodes);
+    this.renderFogReveals(ctx, nodes, connections, effectiveDiscovered, effectiveVisited);
 
     // Render paths on top of fog
-    this.renderPaths(ctx, nodes, connections, discoveredNodes, visitedNodes);
+    this.renderPaths(ctx, nodes, connections, effectiveDiscovered, effectiveVisited);
 
     // Render node symbols
-    this.renderNodes(ctx, nodes, currentNode, discoveredNodes, visitedNodes);
+    this.renderNodes(ctx, nodes, currentNode, effectiveDiscovered, effectiveVisited);
 
     // Render quest markers (small dots on nodes with quests)
-    this.renderQuestMarkers(ctx, nodes, discoveredNodes);
+    this.renderQuestMarkers(ctx, nodes, effectiveDiscovered);
 
     // Render current player marker
     if (currentNode) {
       this.renderPlayerMarker(ctx, currentNode);
     }
+
+    ctx.restore();
   }
 
   /**
@@ -352,6 +417,7 @@ export class WorldMapMinimap {
    * Render fog reveals for discovered areas
    */
   renderFogReveals(ctx, nodes, connections, discoveredNodes, visitedNodes) {
+    ctx.save();
     ctx.globalCompositeOperation = 'destination-out';
 
     // Reveal paths
@@ -407,13 +473,14 @@ export class WorldMapMinimap {
       ctx.fill();
     }
 
-    ctx.globalCompositeOperation = 'source-over';
+    ctx.restore();
   }
 
   /**
    * Render paths between discovered nodes
    */
   renderPaths(ctx, nodes, connections, discoveredNodes, visitedNodes) {
+    ctx.save();
     const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
     ctx.lineCap = 'round';
@@ -453,6 +520,7 @@ export class WorldMapMinimap {
       ctx.stroke();
       ctx.setLineDash([]);
     }
+    ctx.restore();
   }
 
   /**
@@ -480,6 +548,8 @@ export class WorldMapMinimap {
    * @param {boolean} isVisited - Whether node has been visited
    */
   renderNodeSymbol(ctx, x, y, node, isCurrent, isVisited) {
+    ctx.save();
+
     const nodeType = typeof node === 'object' ? node.node_type : node;
     const regionRace = typeof node === 'object' ? node.region_race : null;
 
@@ -542,7 +612,7 @@ export class WorldMapMinimap {
         break;
     }
 
-    ctx.globalAlpha = 1.0;
+    ctx.restore();
   }
 
   /**
@@ -628,6 +698,8 @@ export class WorldMapMinimap {
    * Render pulsing player marker
    */
   renderPlayerMarker(ctx, currentNode) {
+    ctx.save();
+
     const pos = this.worldToMinimap(currentNode.x_coord, currentNode.y_coord);
     const symbol = this.nodeSymbols[currentNode.node_type] || { size: 3 };
     const baseSize = symbol.size + 2;
@@ -642,7 +714,8 @@ export class WorldMapMinimap {
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, ringSize, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.globalAlpha = 1.0;
+
+    ctx.restore();
   }
 
   /**
@@ -691,17 +764,22 @@ export class WorldMapMinimap {
       return;
     }
 
+    // Save context state before drawing
+    ctx.save();
+
     // Draw viewport rectangle
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([4, 4]);
     ctx.strokeRect(rectX, rectY, rectW, rectH);
-    ctx.setLineDash([]);
 
     // Inner glow
+    ctx.setLineDash([]);
     ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
     ctx.lineWidth = 1;
     ctx.strokeRect(rectX + 1, rectY + 1, rectW - 2, rectH - 2);
+
+    ctx.restore();
   }
 
   /**

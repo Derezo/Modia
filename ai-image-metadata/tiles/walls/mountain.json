@@ -13,21 +13,24 @@
       "terrain": "default",
       "prompt": "seamless vertical rugged mountain rock texture with exposed rock layers and weathered surface, tileable horizontal pattern, side view cross-section, grey stone tones",
       "seed": 31001,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T10:03:43.289Z"
     },
     {
       "key": "wall_mountain_ice",
       "terrain": "ice",
       "prompt": "seamless vertical frozen ice cliff texture with blue glacial ice and frost patterns, tileable horizontal pattern, side view cross-section, icy blue and white tones",
       "seed": 31011,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T10:04:33.229Z"
     },
     {
       "key": "wall_mountain_snow",
       "terrain": "snow",
       "prompt": "seamless vertical snow-covered cliff texture with icy rock showing through, tileable horizontal pattern, side view cross-section, white and grey tones",
       "seed": 31021,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T10:05:21.149Z"
     }
   ]
 }

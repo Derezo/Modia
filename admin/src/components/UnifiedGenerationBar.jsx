@@ -76,7 +76,7 @@ function QueueStatus({ icon: Icon, label, isActive, pendingCount, isPaused, prog
 /**
  * Main UnifiedGenerationBar component
  */
-export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCount = 0, activePanel, onPanelChange, onBadgeClick, sourceFilter = 'all' }) {
+export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCount = 0, activePanel, onPanelChange, onBadgeClick, sourceFilter = 'all', onResumeAll }) {
   const { unified } = useGenerationContext();
   const {
     connected,
@@ -87,13 +87,20 @@ export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCo
     generatedAssets
   } = unified;
 
-  // Overall status for the bar
+  // Check if any queue is paused
+  const anyPaused = queueSummary.images.isPaused ||
+                   queueSummary.music.isPaused ||
+                   queueSummary.sfx.isPaused;
+
+  // Overall status for the bar - proper state machine handling paused states
   const overallStatus = useMemo(() => {
     if (!connected) return { color: 'text-parchment-500', label: 'Disconnected' };
     if (anyActive) return { color: 'text-accent-emerald', label: 'Generating' };
-    if (totalPending > 0) return { color: 'text-accent-gold', label: `${totalPending} Pending` };
+    if (anyPaused && totalPending > 0) return { color: 'text-accent-gold', label: `Paused (${totalPending})` };
+    if (anyPaused) return { color: 'text-accent-gold', label: 'Paused' };
+    if (totalPending > 0) return { color: 'text-accent-gold', label: `${totalPending} Queued` };
     return { color: 'text-parchment-400', label: 'Idle' };
-  }, [connected, anyActive, totalPending]);
+  }, [connected, anyActive, anyPaused, totalPending]);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-midnight-900 border-t border-midnight-700 shadow-lg">
@@ -104,12 +111,22 @@ export default function UnifiedGenerationBar({ expanded, onExpandChange, queueCo
           <div className="flex items-center gap-2 mr-4">
             {anyActive ? (
               <PlayIcon className="w-4 h-4 text-accent-emerald animate-pulse" />
+            ) : anyPaused ? (
+              <PauseIcon className="w-4 h-4 text-accent-gold" />
             ) : (
               <PauseIcon className="w-4 h-4 text-parchment-500" />
             )}
             <span className={`text-sm font-semibold ${overallStatus.color}`}>
               {overallStatus.label}
             </span>
+            {anyPaused && totalPending > 0 && (
+              <button
+                onClick={onResumeAll}
+                className="px-2 py-1 text-xs bg-accent-emerald/20 text-accent-emerald hover:bg-accent-emerald/30 rounded transition-colors"
+              >
+                Resume
+              </button>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

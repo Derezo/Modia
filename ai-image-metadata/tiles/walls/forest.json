@@ -21,14 +21,16 @@
       "terrain": "stone",
       "prompt": "seamless vertical natural stone cliff texture with moss patches and vegetation cracks, tileable horizontal pattern, side view cross-section, grey and green tones",
       "seed": 11011,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T09:59:39.684Z"
     },
     {
       "key": "wall_forest_dirt",
       "terrain": "dirt",
       "prompt": "seamless vertical layered soil cliff texture with dark earth strata and root tendrils, tileable horizontal pattern, side view cross-section, rich brown tones",
       "seed": 11021,
-      "generated": false
+      "generated": true,
+      "generatedAt": "2026-01-31T10:00:26.312Z"
     }
   ]
 }

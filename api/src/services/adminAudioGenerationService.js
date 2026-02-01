@@ -52,6 +52,47 @@ const state = {
   generatedAssets: []  // Assets generated in current job
 };
 
+/**
+ * Safely trigger next job processing with error handling
+ * Prevents queue from getting stuck if processNextJob throws
+ */
+function safeProcessNext() {
+  setImmediate(() => {
+    processNextJob().catch(err => {
+      console.error('[Audio Generation] processNextJob failed:', err);
+      if (state.current) {
+        console.warn('[Audio Generation] Clearing stuck current job:', state.current.id);
+        state.current = null;
+        broadcastQueueUpdate();
+      }
+    });
+  });
+}
+
+/**
+ * Initialize queue on server startup - check for orphaned items
+ * @returns {Object} Initialization result with queue state info
+ */
+function initializeQueue() {
+  const result = {
+    pendingCount: state.queue.length,
+    paused: state.paused,
+    hasCurrentJob: state.current !== null,
+    action: 'none'
+  };
+
+  if (state.queue.length > 0 && !state.paused && !state.current) {
+    console.log('[Audio Generation] Startup: Found orphaned queue with', state.queue.length, 'items. Starting processing.');
+    safeProcessNext();
+    result.action = 'started';
+  } else if (state.queue.length > 0 && state.paused) {
+    console.log('[Audio Generation] Startup: Queue paused with', state.queue.length, 'pending items.');
+    result.action = 'paused';
+  }
+
+  return result;
+}
+
 // Pending Suno tasks for auto-polling
 const pendingSunoTasks = new Map();
 
@@ -346,55 +387,57 @@ async function processNextJob() {
  * @param {string|null} error - Error message if failed
  */
 function completeJob(job, status, error = null) {
-  job.status = status;
-  job.completedAt = new Date().toISOString();
-  job.error = error;
-  job.generatedAssets = [...state.generatedAssets];
-  job.stdout = [...state.stdout];
+  try {
+    job.status = status;
+    job.completedAt = new Date().toISOString();
+    job.error = error;
+    job.generatedAssets = [...state.generatedAssets];
+    job.stdout = [...state.stdout];
 
-  // Add to history, keep last 50
-  state.history.unshift(job);
-  if (state.history.length > 50) {
-    state.history.pop();
-  }
-
-  state.current = null;
-  state.stdout = [];
-  state.generatedAssets = [];
-
-  // Enable post-completion polling for 15 seconds to catch final Suno task updates
-  enablePostCompletionPolling();
-
-  broadcast('audio:job_completed', { job });
-
-  // Broadcast unified completed/failed event
-  // Convert file system paths to web paths (e.g., /home/.../public/assets/... -> /assets/...)
-  const webAssets = job.generatedAssets.map(fsPath => {
-    const publicIndex = fsPath.indexOf('/public/');
-    const webPath = publicIndex !== -1 ? fsPath.slice(publicIndex + 7) : fsPath;
-    return {
-      type: job.type === 'music' ? 'music' : 'sfx',
-      path: webPath,
-      timestamp: new Date().toISOString()
-    };
-  });
-
-  broadcastUnified(status, job.type, {
-    jobId: job.id,
-    job: {
-      id: job.id,
-      type: job.type,
-      filters: job.filters,
-      status,
-      error: job.error || null,
-      generatedAssets: webAssets
+    // Add to history, keep last 50
+    state.history.unshift(job);
+    if (state.history.length > 50) {
+      state.history.pop();
     }
-  });
 
-  broadcastQueueUpdate();
+    state.current = null;
+    state.stdout = [];
+    state.generatedAssets = [];
 
-  // Process next job
-  setImmediate(processNextJob);
+    // Enable post-completion polling for 15 seconds to catch final Suno task updates
+    enablePostCompletionPolling();
+
+    broadcast('audio:job_completed', { job });
+
+    // Broadcast unified completed/failed event
+    // Convert file system paths to web paths (e.g., /home/.../public/assets/... -> /assets/...)
+    const webAssets = job.generatedAssets.map(fsPath => {
+      const publicIndex = fsPath.indexOf('/public/');
+      const webPath = publicIndex !== -1 ? fsPath.slice(publicIndex + 7) : fsPath;
+      return {
+        type: job.type === 'music' ? 'music' : 'sfx',
+        path: webPath,
+        timestamp: new Date().toISOString()
+      };
+    });
+
+    broadcastUnified(status, job.type, {
+      jobId: job.id,
+      job: {
+        id: job.id,
+        type: job.type,
+        filters: job.filters,
+        status,
+        error: job.error || null,
+        generatedAssets: webAssets
+      }
+    });
+
+    broadcastQueueUpdate();
+  } finally {
+    // Always process next job, even if broadcasting fails
+    safeProcessNext();
+  }
 }
 
 // Note: validateSFXPrompt is imported from ../utils/audioValidation.js
@@ -449,7 +492,7 @@ function queueJob(type, filters = {}, options = {}) {
   });
 
   // Start processing if not already
-  setImmediate(processNextJob);
+  safeProcessNext();
 
   return { jobId: job.id, position };
 }
@@ -508,7 +551,7 @@ function pauseQueue() {
 function resumeQueue() {
   state.paused = false;
   broadcastQueueUpdate();
-  setImmediate(processNextJob);
+  safeProcessNext();
   return { paused: false };
 }
 
@@ -517,11 +560,24 @@ function resumeQueue() {
  * @returns {object} Queue status
  */
 function getQueueStatus() {
+  // Determine detailed state for diagnostics
+  let detailedState = 'idle';
+  if (state.paused && state.queue.length > 0) {
+    detailedState = 'paused_with_pending';
+  } else if (state.paused) {
+    detailedState = 'paused_empty';
+  } else if (state.current !== null) {
+    detailedState = 'processing';
+  } else if (state.queue.length > 0) {
+    detailedState = 'ready'; // Has items but not started (unusual)
+  }
+
   return {
     current: state.current,
     pending: state.queue,
     history: state.history.slice(0, 10), // Last 10 jobs
     paused: state.paused,
+    detailedState,
     stats: {
       pendingCount: state.queue.length,
       historyCount: state.history.length,
@@ -881,6 +937,34 @@ function getCurrentSeed() {
   return readSeedState();
 }
 
+/**
+ * Recover from a stuck queue state
+ * Clears the current job if stuck and restarts processing
+ * @returns {object} Recovery result
+ */
+function recoverQueue() {
+  const wasStuck = state.current !== null;
+  const stuckJob = state.current;
+
+  if (wasStuck) {
+    console.warn('[Audio Generation] Manual recovery: clearing stuck job', stuckJob.id);
+    state.current = null;
+    broadcastQueueUpdate();
+  }
+
+  // Trigger next job if any pending
+  if (state.queue.length > 0 && !state.paused) {
+    safeProcessNext();
+  }
+
+  return {
+    recovered: wasStuck,
+    clearedJob: stuckJob ? { id: stuckJob.id, type: stuckJob.type } : null,
+    pendingCount: state.queue.length,
+    willProcess: state.queue.length > 0 && !state.paused
+  };
+}
+
 // ============================================================================
 // START POLLER ON SERVICE LOAD
 // ============================================================================
@@ -908,7 +992,11 @@ export default {
   readSeedState,
   saveSeedState,
   getNextSeed,
-  getCurrentSeed
+  getCurrentSeed,
+  // Queue recovery
+  recoverQueue,
+  // Queue initialization
+  initializeQueue
 };
 
 // Named export for registerSunoTask (frequently used)

@@ -393,6 +393,49 @@ export function useUnifiedGeneration() {
     };
   }, [fetchAllQueueStates, addStdoutLine, addGeneratedAsset]);
 
+  // Stuck queue detection watchdog
+  useEffect(() => {
+    const POLL_INTERVAL = 30000; // 30 seconds
+    const STUCK_THRESHOLD = 60000; // 1 minute without progress
+
+    const checkForStuckQueues = async () => {
+      if (!connected) return;
+
+      const sources = ['images', 'music', 'sfx'];
+
+      for (const source of sources) {
+        const queue = queuesRef.current[source];
+        if (!queue) continue;
+
+        // Check if queue might be stuck
+        if (queue.current && !queue.paused && queue.pending?.length > 0) {
+          const lastActivity = queue.progress?.timestamp
+            ? new Date(queue.progress.timestamp).getTime()
+            : queue.current.startedAt
+              ? new Date(queue.current.startedAt).getTime()
+              : Date.now();
+
+          if (Date.now() - lastActivity > STUCK_THRESHOLD) {
+            console.warn(`[Watchdog] Stuck queue detected: ${source}, triggering recovery`);
+            try {
+              const endpoint = source === 'images'
+                ? '/api/admin/generate/recover'
+                : '/api/admin/audio/recover';
+              const response = await fetch(endpoint, { method: 'POST' });
+              const result = await response.json();
+              console.log(`[Watchdog] Recovery result for ${source}:`, result);
+            } catch (err) {
+              console.error(`[Watchdog] Recovery failed for ${source}:`, err);
+            }
+          }
+        }
+      }
+    };
+
+    const interval = setInterval(checkForStuckQueues, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [connected]);
+
   // Control actions
   const cancelJob = useCallback(async (source, jobId) => {
     try {

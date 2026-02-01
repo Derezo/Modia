@@ -63,7 +63,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "human_male_monk",
@@ -121,26 +122,33 @@
       "race": "human",
       "gender": "female",
       "class": "wizard",
-      "seed": 10006,
+      "seed": 10007,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T19:55:43.097Z",
+      "generatedAt": "2026-02-01T01:57:16.271Z",
       "prompt": "human features balanced proportions warm skin tone female feminine features blue wizard robes with hood staff arcane symbols mystical scholarly",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "human_female_monk",
       "race": "human",
       "gender": "female",
       "class": "monk",
-      "seed": 10007,
+      "seed": 10008,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T19:56:29.268Z"
+      "generatedAt": "2026-02-01T01:58:02.836Z",
+      "prompt": "human features balanced proportions warm skin tone female feminine features monk martial artist wrappings disciplined serene focused",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "human_female_chemist",
@@ -178,7 +186,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "human_other_monk",
@@ -266,7 +275,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "elf_female_monk",
@@ -352,7 +362,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "dwarf_male_monk",
@@ -398,7 +409,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "dwarf_female_monk",
@@ -444,7 +456,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "dwarf_other_monk",
@@ -490,7 +503,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "vampire_male_monk",
@@ -536,7 +550,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "vampire_female_monk",
@@ -582,7 +597,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "vampire_other_monk",
@@ -628,7 +644,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "orc_male_monk",
@@ -674,7 +691,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "orc_female_monk",
@@ -720,7 +738,8 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "orc_other_monk",
@@ -2541,10 +2560,17 @@
       "gender": "female",
       "class": "warlord",
       "isAdvanced": true,
-      "seed": 23020,
+      "seed": 23026,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:27:04.323Z"
+      "generatedAt": "2026-01-28T00:27:04.323Z",
+      "prompt": "vampire pale skin red eyes fangs aristocratic elegant female feminine features warlord commanding presence battle standard ornate plate inspiring leader",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "vampire_female_sorcerer",
@@ -2629,10 +2655,17 @@
       "gender": "female",
       "class": "ascetic",
       "isAdvanced": true,
-      "seed": 23028,
+      "seed": 239281,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:32:41.298Z"
+      "generatedAt": "2026-01-28T00:32:41.298Z",
+      "prompt": "vampire pale skin red eyes fangs aristocratic elegant female feminine features ascetic enlightened monk minimal robes spiritual aura meditation peaceful",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "vampire_female_alchemist",
@@ -2673,10 +2706,17 @@
       "gender": "female",
       "class": "artificer",
       "isAdvanced": true,
-      "seed": 23032,
+      "seed": 23042,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:35:29.569Z"
+      "generatedAt": "2026-01-28T00:35:29.569Z",
+      "prompt": "vampire pale skin red eyes fangs aristocratic elegant female feminine features artificer mechanical genius goggles tools gadgets steampunk inventor",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "vampire_other_berserker",

@@ -10,10 +10,14 @@ import KeyboardShortcutsHelp from './KeyboardShortcutsHelp';
 import UnifiedGenerationBar from './UnifiedGenerationBar';
 import UnifiedAssetPanel from './UnifiedAssetPanel';
 import { useRegenerationQueue } from '../hooks/useRegenerationQueue';
+import { useGenerationContext } from '../contexts/GenerationContext';
 
 export default function Layout() {
   // Enable global navigation shortcuts (1-6 for category tabs)
   useNavigationShortcuts();
+
+  // Get resume function from generation context
+  const { resume } = useGenerationContext();
 
   // Track whether the unified panel is expanded
   const [panelExpanded, setPanelExpanded] = useState(false);
@@ -88,6 +92,7 @@ export default function Layout() {
         onPanelChange={handlePanelChange}
         onBadgeClick={handleBadgeClick}
         sourceFilter={sourceFilter}
+        onResumeAll={resume}
       />
     </div>
   );
