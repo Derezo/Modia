@@ -850,9 +850,11 @@ async function generateReferenceImage(referenceConfig, options = {}) {
   const { verbose = false, quiet = false } = options;
 
   // Use generate_animation.py with --reference-only flag
+  // Reference images should preserve background for better IP-Adapter style transfer
   const args = [
     '--character', characterId,
     '--reference-only',
+    '--no-background-removal',
     '--reference-pose', referencePose,
     '--prompt', prompt,
     '--seed', String(seed)

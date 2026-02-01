@@ -433,11 +433,11 @@ export class AudioManager {
         { category: 'music', id: 'battle_combat' },
         { category: 'music', id: 'victory_fanfare' },
         { category: 'music', id: 'defeat_jingle' },
-        { category: 'sfx', id: 'attack_hit' },
+        { category: 'sfx', id: 'impact_hit' },
         { category: 'sfx', id: 'skill_cast' },
-        { category: 'sfx', id: 'critical_hit' },
-        { category: 'sfx', id: 'heal' },
-        { category: 'sfx', id: 'miss' },
+        { category: 'sfx', id: 'impact_critical' },
+        { category: 'sfx', id: 'skill_heal' },
+        { category: 'sfx', id: 'impact_miss' },
         { category: 'sfx', id: 'turn_start' }
       ],
       shop: [

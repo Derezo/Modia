@@ -155,10 +155,16 @@
       "race": "human",
       "gender": "female",
       "class": "chemist",
-      "seed": 10008,
+      "seed": 10010,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T19:57:15.304Z"
+      "generatedAt": "2026-02-01T21:56:06.856Z",
+      "prompt": "human features balanced proportions warm skin tone female feminine features chemist apothecary vials pouches herbs practical clever",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "human_other_warrior",
@@ -259,7 +265,13 @@
       "seed": 10105,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:04:20.126Z"
+      "generatedAt": "2026-01-27T20:04:20.126Z",
+      "prompt": "elf pointed ears angular features fair complexion luminous eyes female feminine features warrior heavy armor sword shield battle-worn determined",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "elf_female_wizard",
@@ -283,20 +295,36 @@
       "race": "elf",
       "gender": "female",
       "class": "monk",
-      "seed": 10107,
+      "seed": 10109,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:05:50.945Z"
+      "generatedAt": "2026-02-01T23:36:21.374Z",
+      "prompt": "elf pointed ears angular features fair complexion luminous eyes female feminine features monk martial artist wrappings disciplined serene focused",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "elf_female_chemist",
       "race": "elf",
       "gender": "female",
       "class": "chemist",
-      "seed": 10108,
+      "seed": 10110,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:06:35.919Z"
+      "generatedAt": "2026-02-01T22:01:09.431Z",
+      "prompt": "elf pointed ears angular features fair complexion luminous eyes female feminine features chemist apothecary vials pouches herbs practical clever",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "elf_other_warrior",
@@ -541,17 +569,19 @@
       "race": "vampire",
       "gender": "female",
       "class": "wizard",
-      "seed": 10306,
+      "seed": 10308,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:23:18.724Z",
+      "generatedAt": "2026-02-01T23:37:58.115Z",
       "prompt": "vampire pale skin red eyes fangs aristocratic elegant female feminine features blue wizard robes with hood staff arcane symbols mystical scholarly",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "vampire_female_monk",
@@ -1053,10 +1083,16 @@
       "gender": "female",
       "class": "brawler",
       "isAdvanced": true,
-      "seed": 20027,
+      "seed": 20028,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T22:49:08.655Z"
+      "generatedAt": "2026-02-01T21:54:23.512Z",
+      "prompt": "human features balanced proportions warm skin tone female feminine features brawler street fighter wrapped fists scarred knuckles tough intimidating",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "human_female_ascetic",
@@ -1955,10 +1991,17 @@
       "gender": "male",
       "class": "alchemist",
       "isAdvanced": true,
-      "seed": 22013,
+      "seed": 22018,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:48:28.844Z"
+      "generatedAt": "2026-02-01T22:01:09.434Z",
+      "prompt": "dwarf stout build thick beard braided hair sturdy male masculine features alchemist master transmuter philosopher stone golden vials advanced equipment",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "dwarf_male_medic",
@@ -2175,10 +2218,17 @@
       "gender": "other",
       "class": "berserker",
       "isAdvanced": true,
-      "seed": 22033,
+      "seed": 22037,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:02:32.100Z"
+      "generatedAt": "2026-02-01T22:01:09.436Z",
+      "prompt": "dwarf stout build thick beard braided hair sturdy androgynous features non-binary berserker raging warrior spiked armor wild hair battle scars fury aura",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "dwarf_other_paladin",
@@ -2252,10 +2302,17 @@
       "gender": "other",
       "class": "oracle",
       "isAdvanced": true,
-      "seed": 22040,
+      "seed": 22043,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:07:28.157Z"
+      "generatedAt": "2026-02-01T22:01:09.437Z",
+      "prompt": "dwarf stout build thick beard braided hair sturdy androgynous features non-binary oracle seer blindfolded third eye mystical visions ethereal clothing",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "dwarf_other_ninja",
@@ -2673,10 +2730,19 @@
       "gender": "female",
       "class": "alchemist",
       "isAdvanced": true,
-      "seed": 23029,
+      "seed": 23031,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:33:22.885Z"
+      "generatedAt": "2026-02-01T23:40:19.680Z",
+      "prompt": "vampire pale skin red eyes fangs aristocratic elegant female feminine features alchemist master transmuter philosopher stone golden vials advanced equipment",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "vampire_female_medic",
@@ -2793,7 +2859,13 @@
       "seed": 23039,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:40:23.530Z"
+      "generatedAt": "2026-01-28T00:40:23.530Z",
+      "prompt": "vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary conjurer elemental master swirling elements dual casting dynamic pose",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true
     },
     {
       "id": "vampire_other_oracle",

@@ -24,7 +24,9 @@ export class WorldMapMinimap {
 
     // Animation state
     this.pulsePhase = 0;
-    this.renderDebug = false;
+
+    // Debug mode (enabled via URL parameter ?fogDebug=true)
+    this.fogDebugMode = new URLSearchParams(window.location.search).get('fogDebug') === 'true';
 
     // Node symbols configuration
     this.nodeSymbols = {
@@ -90,6 +92,52 @@ export class WorldMapMinimap {
     this.contentCanvas.width = this.size;
     this.contentCanvas.height = this.size;
     this.contentCtx = this.contentCanvas.getContext('2d');
+
+    if (this.fogDebugMode) {
+      console.log('[WorldMapMinimap] Content canvas created:', this.size, 'x', this.size);
+    }
+  }
+
+  /**
+   * Validate canvas state and attempt recovery if invalid
+   * Called per-frame to detect and recover from canvas context loss
+   * @returns {boolean} True if canvas is valid (or was recovered)
+   */
+  validateAndRecoverCanvas() {
+    // Check if content canvas and context exist
+    if (!this.contentCanvas || !this.contentCtx) {
+      console.warn('[WorldMapMinimap] Canvas/context missing, recreating...');
+      this.createContentCanvas();
+      return !!this.contentCtx;
+    }
+
+    // Check if canvas has valid dimensions
+    if (this.contentCanvas.width === 0 || this.contentCanvas.height === 0) {
+      console.warn('[WorldMapMinimap] Canvas has zero dimensions, recreating...');
+      this.createContentCanvas();
+      return !!this.contentCtx;
+    }
+
+    // Test actual drawing capability
+    try {
+      // Draw a 1px test and verify it worked
+      this.contentCtx.fillStyle = '#000000';
+      this.contentCtx.fillRect(0, 0, 1, 1);
+      const testData = this.contentCtx.getImageData(0, 0, 1, 1);
+
+      if (!testData || testData.data[3] === 0) {
+        // Drawing produced no output - context may be lost
+        console.warn('[WorldMapMinimap] Canvas drawing test failed, recreating...');
+        this.createContentCanvas();
+        return !!this.contentCtx;
+      }
+
+      return true;
+    } catch (e) {
+      console.error('[WorldMapMinimap] Canvas validation error:', e.message);
+      this.createContentCanvas();
+      return !!this.contentCtx;
+    }
   }
 
   /**
@@ -277,11 +325,6 @@ export class WorldMapMinimap {
       nodeSpacing
     } = state;
 
-    let debugData = { nodes: nodes, connections: connections, currentNode: currentNode, discoveredNodes: discoveredNodes, visitedNodes: visitedNodes };
-    if(this.renderDebug.nodes != debugData.nodes) {
-      this.renderDebug = debugData;
-      console.log(debugData);
-    }
     // Update animation
     this.pulsePhase = (Date.now() * 0.004) % (Math.PI * 2);
 
@@ -342,13 +385,13 @@ export class WorldMapMinimap {
    * Render minimap content to offscreen canvas
    */
   renderContent(nodes, connections, currentNode, discoveredNodes, visitedNodes) {
-    const ctx = this.contentCtx;
-
-    // Guard: Skip if content canvas not initialized
-    if (!ctx) {
-      console.error("Canvas not initialized!")
+    // Per-frame validation with automatic recovery
+    if (!this.validateAndRecoverCanvas()) {
+      console.warn('[WorldMapMinimap] Canvas recovery failed, skipping render');
       return;
     }
+
+    const ctx = this.contentCtx;
 
     // FALLBACK: If discoveredNodes is empty, create a set from all nodes
     const effectiveDiscovered = discoveredNodes.size > 0
@@ -409,8 +452,16 @@ export class WorldMapMinimap {
    * Render fog of war base layer
    */
   renderFogBase(ctx) {
-    ctx.fillStyle = 'rgba(60, 45, 30, 0.85)';
+    // Use 50% opacity in debug mode for visibility
+    const opacity = this.fogDebugMode ? 0.5 : 0.85;
+    ctx.fillStyle = `rgba(60, 45, 30, ${opacity})`;
     ctx.fillRect(0, 0, this.size, this.size);
+
+    // Debug mode: draw green corner square to confirm rendering
+    if (this.fogDebugMode) {
+      ctx.fillStyle = '#00ff00';
+      ctx.fillRect(this.size - 12, this.size - 12, 10, 10);
+    }
   }
 
   /**
