@@ -620,6 +620,18 @@ async function main() {
 
   // Display mode
   const isSD15Mode = options.mode === 'sd15';
+
+  // Validate LoRA is appropriate for the mode
+  const { VALID_LORA_MODELS, VALID_SD15_LORA_MODELS } = require('./lib/parseArgs');
+  if (options.lora) {
+    if (isSD15Mode && !VALID_SD15_LORA_MODELS.includes(options.lora)) {
+      log(`Warning: LoRA '${options.lora}' is not an SD1.5 model. Valid SD1.5 LoRAs: ${VALID_SD15_LORA_MODELS.join(', ')}`, 'warn');
+    }
+    if (!isSD15Mode && !VALID_LORA_MODELS.includes(options.lora)) {
+      log(`Warning: LoRA '${options.lora}' is not a Flux model. Valid Flux LoRAs: ${VALID_LORA_MODELS.join(', ')}`, 'warn');
+    }
+  }
+
   if (isSD15Mode) {
     log(`Mode: SD1.5 with ControlNet + IP-Adapter`, 'info');
     log(`  ControlNet weight: ${options.controlnetWeight}`, 'info');

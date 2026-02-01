@@ -7,7 +7,7 @@
       "controlnetWeight": 0.7,
       "ipadapterWeight": 0.7,
       "loraModel": "pixel-art-xl",
-      "availableLoraModels": ["pixel-art-xl", "16-bit-pixel", "all-in-one-pixel"]
+      "availableLoraModels": ["pixel-art-xl", "16-bit-pixel", "all-in-one-pixel", "retro-game-art", "cps2-pixel-art"]
     }
   },
   "weightPresets": {
@@ -30,6 +30,29 @@
       "controlnet": 0.4,
       "ipadapter": 0.4,
       "description": "More generation variation and artistic freedom"
+    }
+  },
+  "qualityPresets": {
+    "fast": {
+      "steps": 15,
+      "cfgScale": 7.0,
+      "sampler": "euler",
+      "scheduler": "normal",
+      "description": "Quick testing - reduced steps"
+    },
+    "balanced": {
+      "steps": 20,
+      "cfgScale": 7.0,
+      "sampler": "euler",
+      "scheduler": "normal",
+      "description": "Good balance of speed and quality"
+    },
+    "quality": {
+      "steps": 32,
+      "cfgScale": 8.0,
+      "sampler": "euler_ancestral",
+      "scheduler": "karras",
+      "description": "Best quality - more steps"
     }
   },
   "poseTemplates": {

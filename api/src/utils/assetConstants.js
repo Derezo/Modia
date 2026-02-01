@@ -23,13 +23,25 @@ export const VALID_LORA_MODELS = ['v1', 'v2', 'modern-pixel', 'retro-pixel'];
  * Valid SD1.5 LoRA models for character animation generation
  * @type {string[]}
  */
-export const VALID_SD15_LORA_MODELS = ['pixel-art-xl', '16-bit-pixel', 'all-in-one-pixel'];
+export const VALID_SD15_LORA_MODELS = ['pixel-art-xl', '16-bit-pixel', 'all-in-one-pixel', 'retro-game-art', 'cps2-pixel-art'];
 
 /**
  * Default SD1.5 LoRA for character animations
  * @type {string}
  */
 export const DEFAULT_SD15_LORA = 'pixel-art-xl';
+
+/**
+ * Valid quality presets for SD1.5 generation
+ * @type {string[]}
+ */
+export const VALID_QUALITY_PRESETS = ['fast', 'balanced', 'quality'];
+
+/**
+ * Default quality preset
+ * @type {string}
+ */
+export const DEFAULT_QUALITY_PRESET = 'quality';
 
 /**
  * Valid generation backends
@@ -106,6 +118,8 @@ export default {
   VALID_LORA_MODELS,
   VALID_SD15_LORA_MODELS,
   DEFAULT_SD15_LORA,
+  VALID_QUALITY_PRESETS,
+  DEFAULT_QUALITY_PRESET,
   VALID_BACKENDS,
   VALID_SEED_MODES,
   DEFAULT_LORA_BY_CATEGORY,

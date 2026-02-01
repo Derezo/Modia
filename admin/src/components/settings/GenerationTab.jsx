@@ -22,6 +22,22 @@ const VALID_LORA_MODELS = [
   { value: 'retro-pixel', label: 'Retro Pixel', description: 'Classic retro 8-bit style' },
 ];
 
+// SD1.5 LoRA models for character animation (must match backend VALID_SD15_LORA_MODELS)
+const VALID_SD15_LORA_MODELS = [
+  { value: 'pixel-art-xl', label: 'Pixel Art XL', description: 'General purpose pixel art (default)' },
+  { value: '16-bit-pixel', label: '16-bit Pixel', description: 'SNES/retro 16-bit style' },
+  { value: 'all-in-one-pixel', label: 'All-in-One Pixel', description: 'Versatile pixel art fallback' },
+  { value: 'retro-game-art', label: 'Retro Game Art', description: 'MS-DOS/Amiga retro style' },
+  { value: 'cps2-pixel-art', label: 'CPS2 Pixel Art', description: 'Arcade/CPS II fighting game style' },
+];
+
+// Quality presets for SD1.5 generation (must match backend VALID_QUALITY_PRESETS)
+const QUALITY_PRESETS = [
+  { value: 'fast', label: 'Fast', description: '15 steps - quick testing' },
+  { value: 'balanced', label: 'Balanced', description: '20 steps - good balance' },
+  { value: 'quality', label: 'Quality', description: '32 steps - best quality (default)' },
+];
+
 /**
  * Generation tab content
  * @param {object} props
@@ -323,6 +339,72 @@ export function GenerationTab({ theme, status, onThemeUpdate, onLoraUpdate }) {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* SD1.5 Character Animation Settings */}
+      <div className="card p-6">
+        <h3 className="text-lg font-display font-semibold text-parchment-100 mb-4">
+          SD1.5 Character Animation
+        </h3>
+        <div className="flex items-start gap-2 mb-4 p-3 bg-midnight-800 rounded-lg">
+          <InfoCircledIcon className="w-4 h-4 text-accent-gold flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-parchment-400">
+            Settings for SD1.5-based character animation generation using ControlNet and IP-Adapter.
+            These apply when using <code className="text-accent-gold">--mode sd15</code> in the CLI.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-3 bg-midnight-800 rounded-lg">
+            <label className="text-sm text-parchment-400 block mb-2">SD1.5 LoRA Model</label>
+            <select
+              value={theme?.sd15Defaults?.loraModel || 'pixel-art-xl'}
+              onChange={async (e) => {
+                try {
+                  await onThemeUpdate({ sd15Defaults: { ...theme?.sd15Defaults, loraModel: e.target.value } });
+                  toast.success('SD1.5 LoRA updated');
+                } catch (err) {
+                  toast.error(err.message || 'Failed to update SD1.5 LoRA');
+                }
+              }}
+              className="w-full px-3 py-2 bg-midnight-900 border border-midnight-600 rounded-lg
+                         text-parchment-200 focus:outline-none focus:border-accent-gold"
+            >
+              {VALID_SD15_LORA_MODELS.map((lora) => (
+                <option key={lora.value} value={lora.value}>
+                  {lora.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-parchment-500 mt-1">
+              {VALID_SD15_LORA_MODELS.find(l => l.value === (theme?.sd15Defaults?.loraModel || 'pixel-art-xl'))?.description}
+            </p>
+          </div>
+          <div className="p-3 bg-midnight-800 rounded-lg">
+            <label className="text-sm text-parchment-400 block mb-2">Quality Preset</label>
+            <select
+              value={theme?.sd15Defaults?.qualityPreset || 'quality'}
+              onChange={async (e) => {
+                try {
+                  await onThemeUpdate({ sd15Defaults: { ...theme?.sd15Defaults, qualityPreset: e.target.value } });
+                  toast.success('Quality preset updated');
+                } catch (err) {
+                  toast.error(err.message || 'Failed to update quality preset');
+                }
+              }}
+              className="w-full px-3 py-2 bg-midnight-900 border border-midnight-600 rounded-lg
+                         text-parchment-200 focus:outline-none focus:border-accent-gold"
+            >
+              {QUALITY_PRESETS.map((preset) => (
+                <option key={preset.value} value={preset.value}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-parchment-500 mt-1">
+              {QUALITY_PRESETS.find(p => p.value === (theme?.sd15Defaults?.qualityPreset || 'quality'))?.description}
+            </p>
+          </div>
         </div>
       </div>
 

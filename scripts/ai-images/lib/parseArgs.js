@@ -16,7 +16,14 @@
 
 const { log } = require('./imageUtils');
 
+// Flux LoRA models for standard image generation
 const VALID_LORA_MODELS = ['v1', 'v2', 'modern-pixel', 'retro-pixel'];
+
+// SD1.5 LoRA models for character animation generation
+const VALID_SD15_LORA_MODELS = ['pixel-art-xl', '16-bit-pixel', 'all-in-one-pixel', 'retro-game-art', 'cps2-pixel-art'];
+
+// Combined list for validation (allows all valid LoRAs during parsing)
+const ALL_VALID_LORA_MODELS = [...VALID_LORA_MODELS, ...VALID_SD15_LORA_MODELS];
 
 /**
  * Base defaults shared by all generation scripts.
@@ -202,12 +209,13 @@ function parseBaseArgs(argv, extraConfig = {}) {
 
       case '--lora': {
         if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
-          log(`--lora requires a value (${VALID_LORA_MODELS.join(', ')})`, 'error');
+          log(`--lora requires a value (Flux: ${VALID_LORA_MODELS.join(', ')} | SD1.5: ${VALID_SD15_LORA_MODELS.join(', ')})`, 'error');
           process.exit(1);
         }
         options.lora = args[++i];
-        if (!VALID_LORA_MODELS.includes(options.lora)) {
-          log(`Invalid --lora value: ${options.lora}. Valid options: ${VALID_LORA_MODELS.join(', ')}`, 'error');
+        // Validate against combined list - mode-specific validation happens in the script
+        if (!ALL_VALID_LORA_MODELS.includes(options.lora)) {
+          log(`Invalid --lora value: ${options.lora}. Valid options: Flux(${VALID_LORA_MODELS.join(', ')}) SD1.5(${VALID_SD15_LORA_MODELS.join(', ')})`, 'error');
           process.exit(1);
         }
         break;
@@ -237,4 +245,4 @@ function parseBaseArgs(argv, extraConfig = {}) {
   return options;
 }
 
-module.exports = { parseBaseArgs, VALID_LORA_MODELS, BASE_DEFAULTS };
+module.exports = { parseBaseArgs, VALID_LORA_MODELS, VALID_SD15_LORA_MODELS, ALL_VALID_LORA_MODELS, BASE_DEFAULTS };
