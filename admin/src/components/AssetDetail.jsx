@@ -885,12 +885,20 @@ export default function AssetDetail({
 
   /**
    * Get animation sprite URL for preview
+   * Players: /assets/characters/player/{class}/{class}_{animation}.png
+   * Enemies: /assets/characters/enemies/{biome}/{id}/{id}_{animation}.png
    */
   const getAnimationUrl = useCallback((anim) => {
     if (!characterId) return null;
     const type = asset?._type || 'player';
-    return `/assets/characters/${type}/${characterId}/${characterId}_${anim}.png`;
-  }, [characterId, asset?._type]);
+    if (type === 'enemy' || type === 'enemies') {
+      // Enemy characters include biome in path (use 'enemies' plural for directory)
+      const biome = asset?._biome || asset?.biome || 'unknown';
+      return `/assets/characters/enemies/${biome}/${characterId}/${characterId}_${anim}.png`;
+    }
+    // Player characters
+    return `/assets/characters/player/${characterId}/${characterId}_${anim}.png`;
+  }, [characterId, asset?._type, asset?._biome, asset?.biome]);
 
   // Get image URLs with fallback support (memoized for performance)
   const imageUrls = useMemo(() =>
