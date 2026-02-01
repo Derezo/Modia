@@ -27,7 +27,9 @@ import SpritePreview from './SpritePreview.jsx';
 /**
  * Standard animation types for character sprites
  */
-const CHARACTER_ANIMATIONS = ['idle', 'walk', 'attack', 'hurt', 'death', 'cast', 'victory'];
+// Animation types for character sprites
+// Players use 'hurt', enemies use 'hit' - both should be included for completeness
+const CHARACTER_ANIMATIONS = ['idle', 'walk', 'attack', 'hurt', 'hit', 'death', 'cast', 'victory'];
 
 /**
  * Weight preset definitions for SD1.5 generation
@@ -742,8 +744,20 @@ export default function AssetDetail({
           api.getWeightPresets(characterId).catch(() => null),
         ]);
 
-        if (animData) {
-          setAnimationData(animData.animations || {});
+        if (animData?.animations) {
+          // API returns animations as array, but frontend expects object keyed by animation name
+          // Transform: [{animation: 'idle', generated: true}, ...] → {idle: {animation: 'idle', generated: true}, ...}
+          if (Array.isArray(animData.animations)) {
+            const animationObj = {};
+            for (const anim of animData.animations) {
+              if (anim.animation) {
+                animationObj[anim.animation] = anim;
+              }
+            }
+            setAnimationData(animationObj);
+          } else {
+            setAnimationData(animData.animations);
+          }
         }
         if (refData) {
           setReferenceStatus(refData);

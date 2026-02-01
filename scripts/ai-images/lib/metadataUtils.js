@@ -104,6 +104,10 @@ function loadCategoryAssets(category) {
     // Get assets from the appropriate field
     const assetArray = data.tiles || data.portraits || data.enemies || data.players || data.items || data.icons || data.nodes || data.obstacles || data.overlays || [];
 
+    // Extract subcategory from file's top-level category field (for icons, items, etc.)
+    // e.g., resources.json has "category": "resources" at the top level
+    const fileCategory = data.category || null;
+
     for (const asset of assetArray) {
       asset._sourceFile = file;
       asset._category = category;
@@ -111,6 +115,19 @@ function loadCategoryAssets(category) {
       if (asset.key && !asset.id) {
         asset.id = asset.key;
       }
+
+      // Propagate subcategory fields from file-level category if not already set
+      // This ensures icons loaded via loadCategoryAssets have _iconCategory set
+      if (category === 'icons' && !asset._iconCategory && fileCategory) {
+        asset._iconCategory = fileCategory;
+      }
+      if (category === 'items' && !asset._itemCategory && fileCategory) {
+        asset._itemCategory = fileCategory;
+      }
+      if (category === 'obstacles' && !asset._obstacleCategory && fileCategory) {
+        asset._obstacleCategory = fileCategory;
+      }
+
       result.assets.push(asset);
       result.byId[asset.id] = asset;
     }

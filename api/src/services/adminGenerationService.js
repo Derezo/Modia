@@ -108,6 +108,47 @@ const state = {
   generatedImages: []  // Images generated in current job
 };
 
+/**
+ * Safely trigger the next job in queue
+ * Wraps processNextJob() with error handling to prevent queue from getting stuck
+ */
+function safeProcessNext() {
+  setImmediate(() => {
+    processNextJob().catch(err => {
+      console.error('[Image Generation] processNextJob failed:', err);
+      if (state.current) {
+        console.warn('[Image Generation] Clearing stuck current job:', state.current.id);
+        state.current = null;
+        broadcastQueueUpdate();
+      }
+    });
+  });
+}
+
+/**
+ * Initialize queue on server startup - check for orphaned items
+ * @returns {Object} Initialization result with queue state info
+ */
+export function initializeQueue() {
+  const result = {
+    pendingCount: state.queue.length,
+    paused: state.paused,
+    hasCurrentJob: state.current !== null,
+    action: 'none'
+  };
+
+  if (state.queue.length > 0 && !state.paused && !state.current) {
+    console.log('[Image Generation] Startup: Found orphaned queue with', state.queue.length, 'items. Starting processing.');
+    safeProcessNext();
+    result.action = 'started';
+  } else if (state.queue.length > 0 && state.paused) {
+    console.log('[Image Generation] Startup: Queue paused with', state.queue.length, 'pending items.');
+    result.action = 'paused';
+  }
+
+  return result;
+}
+
 // Note: generateJobId imported from generationUtils.js
 
 /**
@@ -491,12 +532,27 @@ async function processNextJob() {
 /**
  * Extract asset ID from a generated image path
  * @param {string} imagePath - Path like '/assets/sprites/terrain/forest/grass_1.png'
+ * @param {string} category - Asset category (used for category-specific ID extraction)
  * @returns {string} Asset ID like 'grass_1'
  */
-function extractAssetId(imagePath) {
+function extractAssetId(imagePath, category) {
   const filename = path.basename(imagePath);
   // Remove extension and any size suffix (e.g., _32, _48, _64)
-  return filename.replace(/\.png$/i, '').replace(/_\d+$/, '');
+  let id = filename.replace(/\.png$/i, '').replace(/_\d+$/, '');
+
+  // For characters, strip animation suffix (e.g., giant_spider_idle → giant_spider)
+  // Character filenames follow pattern: {id}_{animation}.png
+  if (category === 'characters') {
+    const animationSuffixes = ['_idle', '_walk', '_attack', '_hurt', '_death', '_cast', '_hit', '_victory'];
+    for (const suffix of animationSuffixes) {
+      if (id.endsWith(suffix)) {
+        id = id.slice(0, -suffix.length);
+        break;
+      }
+    }
+  }
+
+  return id;
 }
 
 /**
@@ -513,7 +569,7 @@ async function clearGeneratedAssetFlags(category, generatedImages) {
     // Extract unique asset IDs and group by source file
     const assetIds = new Set();
     for (const img of generatedImages) {
-      const id = extractAssetId(img.path);
+      const id = extractAssetId(img.path, category);
       if (data.byId[id] && data.byId[id].needsRegeneration) {
         assetIds.add(id);
       }
@@ -623,10 +679,8 @@ function finishJob(job, status, error = null) {
     broadcastQueueUpdate();
   } finally {
     // Always attempt to process next job, even if finish had issues
-    // Use setImmediate to ensure the call stack clears first
-    setImmediate(() => {
-      processNextJob();
-    });
+    // Use safeProcessNext to handle errors and prevent queue getting stuck
+    safeProcessNext();
   }
 }
 
@@ -706,8 +760,8 @@ export function queueJob(category, filters = {}, options = {}) {
     }
   });
 
-  // Start processing if idle
-  processNextJob();
+  // Start processing if idle (use safeProcessNext to handle errors)
+  safeProcessNext();
 
   return {
     jobId: job.id,
@@ -780,7 +834,7 @@ export function pauseQueue() {
 export function resumeQueue() {
   state.paused = false;
   broadcastQueueUpdate();
-  processNextJob();
+  safeProcessNext();
   return { paused: false };
 }
 
@@ -788,6 +842,18 @@ export function resumeQueue() {
  * Get queue status
  */
 export function getQueueStatus() {
+  // Determine detailed state for diagnostics
+  let detailedState = 'idle';
+  if (state.paused && state.queue.length > 0) {
+    detailedState = 'paused_with_pending';
+  } else if (state.paused) {
+    detailedState = 'paused_empty';
+  } else if (state.current !== null) {
+    detailedState = 'processing';
+  } else if (state.queue.length > 0) {
+    detailedState = 'ready'; // Has items but not started (unusual)
+  }
+
   return {
     current: state.current,
     pending: state.queue,
@@ -795,6 +861,7 @@ export function getQueueStatus() {
     paused: state.paused,
     stdout: state.stdout.slice(-100),
     generatedImages: state.generatedImages,
+    detailedState,
     stats: {
       pendingCount: state.queue.length,
       historyCount: state.history.length,
@@ -910,6 +977,34 @@ export function getValidBackends() {
   return [...VALID_BACKENDS];
 }
 
+/**
+ * Recover the queue from a stuck state
+ * Clears the current job if stuck and restarts processing
+ * @returns {Object} Recovery result with details
+ */
+export function recoverQueue() {
+  const wasStuck = state.current !== null;
+  const stuckJob = state.current;
+
+  if (wasStuck) {
+    console.warn('[Image Generation] Manual recovery: clearing stuck job', stuckJob.id);
+    state.current = null;
+    broadcastQueueUpdate();
+  }
+
+  // Trigger next job if any pending
+  if (state.queue.length > 0 && !state.paused) {
+    safeProcessNext();
+  }
+
+  return {
+    recovered: wasStuck,
+    clearedJob: stuckJob ? { id: stuckJob.id, type: stuckJob.type, category: stuckJob.category } : null,
+    pendingCount: state.queue.length,
+    willProcess: state.queue.length > 0 && !state.paused
+  };
+}
+
 export default {
   queueJob,
   cancelJobs,
@@ -924,5 +1019,7 @@ export default {
   resetIncrementalSeed,
   setGenerationBackend,
   getGenerationBackend,
-  getValidBackends
+  getValidBackends,
+  recoverQueue,
+  initializeQueue
 };
