@@ -125,9 +125,9 @@ npm run ai:generate:characters -- --mode sd15 --reference ./assets/my-character.
 
 # SD1.5 Weight Presets (recommended combinations):
 # - balanced:        --controlnet-weight 0.7 --ipadapter-weight 0.7  (equal pose/style priority)
-# - maxConsistency:  --controlnet-weight 0.9 --ipadapter-weight 0.9  (highest character consistency)
-# - precisePoses:    --controlnet-weight 0.9 --ipadapter-weight 0.5  (accurate poses, more style variation)
-# - creative:        --controlnet-weight 0.5 --ipadapter-weight 0.5  (more generation variation)
+# - maxConsistency:  --controlnet-weight 0.6 --ipadapter-weight 0.8  (maximum character consistency)
+# - precisePoses:    --controlnet-weight 0.8 --ipadapter-weight 0.5  (accurate poses, more style variation)
+# - creative:        --controlnet-weight 0.4 --ipadapter-weight 0.4  (more generation variation)
 ```
 
 ### Workspace Structure

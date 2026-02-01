@@ -52,7 +52,8 @@ const {
   parseBaseArgs,
   applyKeyFilter,
   concatenateVerticalStrip,
-  loadCharacterMetadata
+  loadCharacterMetadata,
+  updateAssetStatus
 } = require('./lib');
 
 // Configuration
@@ -88,9 +89,11 @@ function parseArgs() {
       // SD1.5 animation generation mode
       mode: { flag: '--mode', type: 'string', default: 'flux' },
       controlnetWeight: { flag: '--controlnet-weight', type: 'number', default: 0.7 },
-      ipadapterWeight: { flag: '--ipadapter-weight', type: 'number', default: 0.6 },
+      ipadapterWeight: { flag: '--ipadapter-weight', type: 'number', default: 0.4 },
       reference: { flag: '--reference', type: 'string', default: null },
-      referenceOnly: { flag: '--reference-only', type: 'boolean', default: false }
+      referenceOnly: { flag: '--reference-only', type: 'boolean', default: false },
+      referencePose: { flag: '--reference-pose', type: 'string', default: 'idle' },
+      autoReference: { flag: '--auto-reference', type: 'boolean', default: false }
     }
   });
 }
@@ -146,6 +149,11 @@ SD1.5 Animation Mode Options:
                                 If not provided, generates one automatically
   --reference-only            Generate only the reference image (skip animations)
                                 Useful for creating/reviewing reference images first
+  --reference-pose <pose>     Pose template for reference generation (default: idle)
+                                Preset poses: 'idle', 'tpose'
+                                Or custom path to pose image
+  --auto-reference            Auto-generate reference if missing (default: false)
+                                When set, animations will auto-generate reference first
 
 Environment variables:
   IMAGE_GENERATOR_ROOT   Path to image-generator project (required)
@@ -164,8 +172,14 @@ Examples:
   node scripts/ai-images/generate-characters.js --mode sd15 --controlnet-weight 0.8 --id goblin
   node scripts/ai-images/generate-characters.js --mode sd15 --reference ./ref.png --id warrior
 
-  # Generate reference image only
+  # Generate reference image only (with custom pose)
   node scripts/ai-images/generate-characters.js --mode sd15 --reference-only --id warrior
+  node scripts/ai-images/generate-characters.js --mode sd15 --reference-only --reference-pose tpose --id warrior
+  node scripts/ai-images/generate-characters.js --mode sd15 --reference-only --reference-pose ./custom_pose.png --id warrior
+
+  # Auto-generate reference during animation generation
+  node scripts/ai-images/generate-characters.js --mode sd15 --auto-reference --id warrior
+  node scripts/ai-images/generate-characters.js --mode sd15 --auto-reference --reference-pose tpose --id goblin
 `);
 }
 
@@ -195,10 +209,17 @@ function getTempDir(character, animation) {
 
 /**
  * Build prompt for a specific frame
+ * Supports character-specific frame description overrides
  */
 function buildFramePrompt(character, animation, frameIndex, animationConfig) {
-  // Get frame description from manifest config, or use generic fallback
-  const frameDesc = animationConfig?.frameDescriptions?.[frameIndex] || `frame ${frameIndex + 1} of ${FRAME_COUNT}`;
+  // Check for character-specific overrides first, then manifest defaults, then generic fallback
+  const characterOverride = character.frameDescriptionOverrides?.[animation]?.[frameIndex];
+  const manifestDefault = animationConfig?.frameDescriptions?.[frameIndex];
+
+  // Use override if it exists and is non-empty, otherwise use manifest default
+  const frameDesc = (characterOverride && characterOverride.trim() !== '')
+    ? characterOverride
+    : (manifestDefault || `frame ${frameIndex + 1} of ${FRAME_COUNT}`);
 
   let basePrompt = '';
 
@@ -330,9 +351,21 @@ async function generateSD15Animation(character, animation, animationConfig, opti
   const outputPath = getOutputPath(character, animation);
   const referenceImagePath = options.reference || getReferenceImagePath(character);
 
-  // Check if reference image exists, generate if needed
-  if (!options.reference && !fileExists(referenceImagePath)) {
+  // Check if reference image exists, generate if needed (when autoReference is enabled or reference is missing)
+  const needsReferenceGeneration = !options.reference && !fileExists(referenceImagePath);
+
+  if (needsReferenceGeneration) {
+    if (!options.autoReference) {
+      return {
+        success: false,
+        error: `Reference image not found: ${referenceImagePath}. Use --auto-reference to generate automatically, or provide --reference <path>`
+      };
+    }
+
     log(`  Generating reference image for ${character.id}...`, 'info');
+    if (options.referencePose && options.referencePose !== 'idle') {
+      log(`  Using reference pose: ${options.referencePose}`, 'info');
+    }
 
     const referencePrompt = buildSD15ReferencePrompt(character, {
       loraModel: options.lora
@@ -340,10 +373,15 @@ async function generateSD15Animation(character, animation, animationConfig, opti
 
     const refResult = await generateReferenceImage({
       characterId: character.id,
+      characterType: character._type,
+      biome: character.biome,
       prompt: referencePrompt,
       seed: character.seed,
       outputPath: referenceImagePath,
-      loraModel: options.lora
+      loraModel: options.lora,
+      controlnetWeight: options.controlnetWeight,
+      ipadapterWeight: options.ipadapterWeight,
+      referencePose: options.referencePose
     }, {
       verbose: options.verbose,
       quiet: options.quiet,
@@ -365,11 +403,39 @@ async function generateSD15Animation(character, animation, animationConfig, opti
     loraModel: options.lora
   });
 
+  // Get frame descriptions - check for character-specific overrides first
+  // Character overrides are stored in character.frameDescriptionOverrides[animation]
+  const characterOverrides = character.frameDescriptionOverrides?.[animation];
+  const manifestDefaults = animationConfig?.frameDescriptions || null;
+
+  // Merge overrides with defaults: use override if non-empty, otherwise use default
+  let effectiveFrameDescriptions = null;
+  if (characterOverrides?.length > 0 || manifestDefaults?.length > 0) {
+    const frameCount = 8;
+    effectiveFrameDescriptions = Array.from({ length: frameCount }, (_, i) => {
+      // Use character override if it exists and is non-empty
+      if (characterOverrides?.[i] && characterOverrides[i].trim() !== '') {
+        return characterOverrides[i];
+      }
+      // Fall back to manifest default
+      return manifestDefaults?.[i] || `frame ${i + 1} of ${frameCount}`;
+    });
+  }
+
   if (options.verbose) {
     log(`  SD1.5 Prompt: ${prompt}`, 'debug');
     log(`  Reference: ${referenceImagePath}`, 'debug');
     log(`  ControlNet weight: ${options.controlnetWeight}`, 'debug');
     log(`  IP-Adapter weight: ${options.ipadapterWeight}`, 'debug');
+    if (options.referencePose && options.referencePose !== 'idle') {
+      log(`  Reference pose: ${options.referencePose}`, 'debug');
+    }
+    if (options.autoReference) {
+      log(`  Auto-reference: enabled`, 'debug');
+    }
+    if (characterOverrides?.some(o => o && o.trim() !== '')) {
+      log(`  Using custom frame descriptions (overrides found)`, 'debug');
+    }
   }
 
   // Generate animation with SD1.5 pipeline
@@ -381,7 +447,9 @@ async function generateSD15Animation(character, animation, animationConfig, opti
     referenceImage: referenceImagePath,
     loraModel: options.lora,
     seed: character.seed,
-    outputPath
+    outputPath,
+    frameDescriptions: effectiveFrameDescriptions,  // Per-frame motion prompts (with overrides merged)
+    autoReference: options.autoReference
   }, {
     verbose: options.verbose,
     quiet: options.quiet,
@@ -416,17 +484,49 @@ async function generateReferenceOnly(character, options) {
 
   const result = await generateReferenceImage({
     characterId: character.id,
+    characterType: character._type,
+    biome: character.biome,
     prompt: referencePrompt,
     seed: character.seed,
     outputPath: referenceImagePath,
-    loraModel: options.lora
+    loraModel: options.lora,
+    controlnetWeight: options.controlnetWeight,
+    ipadapterWeight: options.ipadapterWeight,
+    referencePose: options.referencePose
   }, {
     verbose: options.verbose,
     quiet: options.quiet,
     dryRun: options.dryRun
   });
 
-  if (result.success) {
+  if (result.success && !options.dryRun) {
+    log(`Reference image saved: ${referenceImagePath}`, 'success');
+
+    // Update metadata with reference image path
+    // Convert absolute path to relative for storage
+    const relativePath = referenceImagePath.replace(
+      path.join(PROJECT_ROOT, 'frontend/public'),
+      ''
+    );
+
+    try {
+      updateAssetStatus(
+        'characters',
+        character._sourceFile,
+        character.id,
+        {
+          sd15Config: {
+            ...character.sd15Config,
+            referenceImage: relativePath,
+            referenceGeneratedAt: new Date().toISOString()
+          }
+        }
+      );
+      log(`  Metadata updated with reference path: ${relativePath}`, 'debug');
+    } catch (metadataError) {
+      log(`  Warning: Failed to update metadata: ${metadataError.message}`, 'warn');
+    }
+  } else if (result.success) {
     log(`Reference image saved: ${referenceImagePath}`, 'success');
   }
 
@@ -526,6 +626,12 @@ async function main() {
     log(`  IP-Adapter weight: ${options.ipadapterWeight}`, 'info');
     if (options.reference) {
       log(`  Reference image: ${options.reference}`, 'info');
+    }
+    if (options.referencePose && options.referencePose !== 'idle') {
+      log(`  Reference pose: ${options.referencePose}`, 'info');
+    }
+    if (options.autoReference) {
+      log(`  Auto-reference: enabled`, 'info');
     }
   } else {
     log(`Mode: Flux (frame-by-frame generation)`, 'info');

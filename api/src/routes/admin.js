@@ -31,7 +31,7 @@ import { promises as fs, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { AppError, asyncHandler } from '../middleware/errorHandler.js';
 import { loadJsonFile, saveJsonFile } from '../utils/jsonFileUtils.js';
-import { VALID_CATEGORIES, VALID_LORA_MODELS } from '../utils/assetConstants.js';
+import { VALID_CATEGORIES, VALID_LORA_MODELS, VALID_SD15_LORA_MODELS } from '../utils/assetConstants.js';
 import { assertValidAssetId, validateAssetIds, fileLocks } from '../utils/assetLocking.js';
 import adminGenerationService from '../services/adminGenerationService.js';
 import { getAssetPath, DEFAULT_SIZES } from '../../../shared/assetPaths.js';
@@ -1246,13 +1246,13 @@ router.get('/assets/characters/:id/animations', asyncHandler(async (req, res) =>
 /**
  * POST /api/admin/assets/characters/:id/animations/:animation/generate
  * Generate a single animation for a character using SD1.5
- * Body: { controlnetWeight?: number, ipadapterWeight?: number, force?: boolean }
+ * Body: { controlnetWeight?: number, ipadapterWeight?: number, force?: boolean, loraModel?: string }
  */
 router.post('/assets/characters/:id/animations/:animation/generate', asyncHandler(async (req, res) => {
   ensureUtilities();
 
   const { id, animation } = req.params;
-  const { controlnetWeight, ipadapterWeight, force = false, preset } = req.body;
+  const { controlnetWeight, ipadapterWeight, force = false, preset, loraModel } = req.body;
 
   // Validate asset ID to prevent path traversal
   assertValidAssetId(id, 'Character');
@@ -1305,6 +1305,11 @@ router.post('/assets/characters/:id/animations/:animation/generate', asyncHandle
     throw new AppError('ipadapterWeight must be between 0 and 1', 400);
   }
 
+  // Validate loraModel if provided
+  if (loraModel && !VALID_SD15_LORA_MODELS.includes(loraModel)) {
+    throw new AppError(`Invalid loraModel: ${loraModel}. Valid: ${VALID_SD15_LORA_MODELS.join(', ')}`, 400);
+  }
+
   // Check if reference image exists (required for SD1.5 mode)
   if (!sd15Config.referenceImage) {
     throw new AppError('Reference image required for SD1.5 generation. Generate reference image first.', 400);
@@ -1323,7 +1328,8 @@ router.post('/assets/characters/:id/animations/:animation/generate', asyncHandle
         sd15Mode: true,
         controlnetWeight: effectiveControlnetWeight,
         ipadapterWeight: effectiveIpadapterWeight,
-        animation // Specific animation to generate
+        animation, // Specific animation to generate
+        loraModel  // SD1.5 LoRA model for animation generation
       }
     );
 
@@ -1335,6 +1341,7 @@ router.post('/assets/characters/:id/animations/:animation/generate', asyncHandle
         controlnet: effectiveControlnetWeight,
         ipadapter: effectiveIpadapterWeight
       },
+      loraModel: loraModel || null,
       ...result
     });
   } catch (err) {
@@ -1374,13 +1381,19 @@ router.get('/assets/characters/:id/reference', asyncHandler(async (req, res) => 
 
   res.json({
     characterId: id,
+    // Fields expected by UI
+    exists: !!sd15Config.referenceImage && referenceExists,
+    path: sd15Config.referenceImage || null,
+    generatedAt: sd15Config.referenceGeneratedAt || null,
+    // Backward compatibility
     hasReference: !!sd15Config.referenceImage && referenceExists,
     referenceImage: sd15Config.referenceImage || null,
     referenceGeneratedAt: sd15Config.referenceGeneratedAt || null,
     referenceExists,
     sd15Weights: {
       controlnet: sd15Config.controlnetWeight,
-      ipadapter: sd15Config.ipadapterWeight
+      ipadapter: sd15Config.ipadapterWeight,
+      loraModel: sd15Config.loraModel || null
     }
   });
 }));
@@ -1388,13 +1401,13 @@ router.get('/assets/characters/:id/reference', asyncHandler(async (req, res) => 
 /**
  * POST /api/admin/assets/characters/:id/reference/generate
  * Generate reference image for a character (used for SD1.5 IP-Adapter)
- * Body: { force?: boolean }
+ * Body: { force?: boolean, loraModel?: string, referencePose?: 'idle' | 'tpose' }
  */
 router.post('/assets/characters/:id/reference/generate', asyncHandler(async (req, res) => {
   ensureUtilities();
 
   const { id } = req.params;
-  const { force = false } = req.body;
+  const { force = false, loraModel, referencePose } = req.body;
 
   // Validate asset ID to prevent path traversal
   assertValidAssetId(id, 'Character');
@@ -1405,6 +1418,17 @@ router.post('/assets/characters/:id/reference/generate', asyncHandler(async (req
 
   if (!character) {
     throw new AppError(`Character not found: ${id}`, 404);
+  }
+
+  // Validate loraModel if provided
+  if (loraModel && !VALID_SD15_LORA_MODELS.includes(loraModel)) {
+    throw new AppError(`Invalid loraModel: ${loraModel}. Valid: ${VALID_SD15_LORA_MODELS.join(', ')}`, 400);
+  }
+
+  // Validate referencePose if provided
+  const validPoses = ['idle', 'tpose'];
+  if (referencePose && !validPoses.includes(referencePose)) {
+    throw new AppError(`Invalid referencePose: ${referencePose}. Valid: ${validPoses.join(', ')}`, 400);
   }
 
   // Check if reference already exists (unless force)
@@ -1430,13 +1454,18 @@ router.post('/assets/characters/:id/reference/generate', asyncHandler(async (req
       },
       {
         force,
-        referenceOnly: true // Special flag for reference image generation
+        referenceOnly: true, // Special flag for reference image generation
+        sd15Mode: true,      // Required for reference-only generation
+        loraModel,           // SD1.5 LoRA model for reference generation
+        referencePose        // Reference pose: 'idle' or 'tpose'
       }
     );
 
     res.status(202).json({
       message: `Queued reference image generation for ${id}`,
       characterId: id,
+      loraModel: loraModel || null,
+      referencePose: referencePose || 'idle',
       ...result
     });
   } catch (err) {
@@ -1447,14 +1476,14 @@ router.post('/assets/characters/:id/reference/generate', asyncHandler(async (req
 
 /**
  * PUT /api/admin/assets/characters/:id/weights
- * Update character SD1.5 weights
- * Body: { controlnetWeight?: number, ipadapterWeight?: number, preset?: string }
+ * Update character SD1.5 weights and LoRA model
+ * Body: { controlnetWeight?: number, ipadapterWeight?: number, preset?: string, loraModel?: string }
  */
 router.put('/assets/characters/:id/weights', asyncHandler(async (req, res) => {
   ensureUtilities();
 
   const { id } = req.params;
-  const { controlnetWeight, ipadapterWeight, preset } = req.body;
+  const { controlnetWeight, ipadapterWeight, preset, loraModel } = req.body;
 
   // Validate asset ID to prevent path traversal
   assertValidAssetId(id, 'Character');
@@ -1494,13 +1523,19 @@ router.put('/assets/characters/:id/weights', asyncHandler(async (req, res) => {
     }
   }
 
+  // Validate loraModel if provided
+  if (loraModel && !VALID_SD15_LORA_MODELS.includes(loraModel)) {
+    throw new AppError(`Invalid loraModel: ${loraModel}. Valid: ${VALID_SD15_LORA_MODELS.join(', ')}`, 400);
+  }
+
   // Build update object for sd15Config
   const sd15Config = character.sd15Config || {};
   const updates = {
     sd15Config: {
       ...sd15Config,
       ...(effectiveControlnetWeight !== undefined && { controlnetWeight: effectiveControlnetWeight }),
-      ...(effectiveIpadapterWeight !== undefined && { ipadapterWeight: effectiveIpadapterWeight })
+      ...(effectiveIpadapterWeight !== undefined && { ipadapterWeight: effectiveIpadapterWeight }),
+      ...(loraModel !== undefined && { loraModel: loraModel || null })
     }
   };
 
@@ -1576,6 +1611,238 @@ function getPresetDescription(presetName) {
   };
   return descriptions[presetName] || 'Custom preset';
 }
+
+// ============================================================================
+// FRAME DESCRIPTION OVERRIDES ROUTES
+// ============================================================================
+
+/**
+ * GET /api/admin/assets/characters/:id/frame-descriptions
+ * Get frame description overrides for a character
+ * Returns both default descriptions from manifest and any character-specific overrides
+ */
+router.get('/assets/characters/:id/frame-descriptions', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { id } = req.params;
+  const { animation } = req.query;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Character');
+
+  // Load character metadata
+  const charData = metadataUtils.loadCharacterMetadata({ id });
+  const character = charData.characters.find(c => c.id === id);
+
+  if (!character) {
+    throw new AppError(`Character not found: ${id}`, 404);
+  }
+
+  // Get animations from manifest
+  const manifestAnimations = charData.manifest?.animations || {};
+
+  // Get character's frame description overrides
+  const overrides = character.frameDescriptionOverrides || {};
+
+  // Build response with defaults and overrides per animation
+  const animations = character.animations || character._classTraits?.defaultAnimations || [];
+
+  // If specific animation requested, return just that one
+  if (animation) {
+    if (!animations.includes(animation)) {
+      throw new AppError(`Animation '${animation}' not valid for character '${id}'`, 400);
+    }
+
+    const animConfig = manifestAnimations[animation] || {};
+    const animOverrides = overrides[animation] || [];
+
+    return res.json({
+      characterId: id,
+      animation,
+      defaults: animConfig.frameDescriptions || [],
+      overrides: animOverrides,
+      description: animConfig.description || null,
+      frameCount: animConfig.frameCount || 8
+    });
+  }
+
+  // Return all animations
+  const result = {};
+  for (const anim of animations) {
+    const animConfig = manifestAnimations[anim] || {};
+    result[anim] = {
+      defaults: animConfig.frameDescriptions || [],
+      overrides: overrides[anim] || [],
+      description: animConfig.description || null,
+      frameCount: animConfig.frameCount || 8
+    };
+  }
+
+  res.json({
+    characterId: id,
+    animations: result,
+    hasOverrides: Object.keys(overrides).length > 0
+  });
+}));
+
+/**
+ * PUT /api/admin/assets/characters/:id/frame-descriptions
+ * Update frame description overrides for a character
+ * Body: { frameDescriptionOverrides: { animation: [frame1, frame2, ...], ... } }
+ */
+router.put('/assets/characters/:id/frame-descriptions', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { id } = req.params;
+  const { frameDescriptionOverrides } = req.body;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Character');
+
+  // Validate input structure
+  if (frameDescriptionOverrides !== undefined && frameDescriptionOverrides !== null) {
+    if (typeof frameDescriptionOverrides !== 'object' || Array.isArray(frameDescriptionOverrides)) {
+      throw new AppError('frameDescriptionOverrides must be an object', 400);
+    }
+
+    // Validate each animation's overrides
+    for (const [animation, frames] of Object.entries(frameDescriptionOverrides)) {
+      // Validate animation name (alphanumeric and underscore only)
+      if (!/^[a-zA-Z0-9_]+$/.test(animation)) {
+        throw new AppError(`Invalid animation name: ${animation}`, 400);
+      }
+
+      // Validate frames array
+      if (!Array.isArray(frames)) {
+        throw new AppError(`Frame descriptions for '${animation}' must be an array`, 400);
+      }
+
+      if (frames.length > 8) {
+        throw new AppError(`Frame descriptions for '${animation}' cannot exceed 8 elements`, 400);
+      }
+
+      // Validate each frame description
+      for (let i = 0; i < frames.length; i++) {
+        if (frames[i] !== '' && typeof frames[i] !== 'string') {
+          throw new AppError(`Frame ${i + 1} in '${animation}' must be a string`, 400);
+        }
+        // Limit frame description length
+        if (frames[i] && frames[i].length > 500) {
+          throw new AppError(`Frame ${i + 1} description in '${animation}' exceeds 500 characters`, 400);
+        }
+      }
+    }
+  }
+
+  // Load character metadata
+  const charData = metadataUtils.loadCharacterMetadata({ id });
+  const character = charData.characters.find(c => c.id === id);
+
+  if (!character) {
+    throw new AppError(`Character not found: ${id}`, 404);
+  }
+
+  // Clean up overrides - remove animations with all empty frames
+  const cleanedOverrides = {};
+  if (frameDescriptionOverrides) {
+    for (const [animation, frames] of Object.entries(frameDescriptionOverrides)) {
+      // Check if any frames have content
+      const hasContent = frames.some(f => f && f.trim() !== '');
+      if (hasContent) {
+        // Pad array to 8 elements with empty strings
+        const paddedFrames = Array.from({ length: 8 }, (_, i) => frames[i] || '');
+        cleanedOverrides[animation] = paddedFrames;
+      }
+    }
+  }
+
+  // Build update object
+  const updates = {
+    frameDescriptionOverrides: Object.keys(cleanedOverrides).length > 0 ? cleanedOverrides : null
+  };
+
+  // Apply updates with file locking
+  const filePath = path.join(METADATA_DIR, 'characters', character._sourceFile);
+  await fileLocks.withFileLock(filePath, async () => {
+    try {
+      metadataUtils.updateAssetStatus('characters', character._sourceFile, id, updates);
+    } catch (error) {
+      throw new AppError(`Failed to update frame descriptions: ${error.message}`, 500);
+    }
+  });
+
+  // Reload to return updated character
+  const updatedCharData = metadataUtils.loadCharacterMetadata({ id });
+  const updatedCharacter = updatedCharData.characters.find(c => c.id === id);
+
+  res.json({
+    message: 'Frame descriptions updated successfully',
+    characterId: id,
+    frameDescriptionOverrides: updatedCharacter.frameDescriptionOverrides || null,
+    overrideCount: Object.keys(updatedCharacter.frameDescriptionOverrides || {}).length
+  });
+}));
+
+/**
+ * DELETE /api/admin/assets/characters/:id/frame-descriptions/:animation
+ * Remove frame description overrides for a specific animation
+ */
+router.delete('/assets/characters/:id/frame-descriptions/:animation', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { id, animation } = req.params;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Character');
+
+  // Validate animation name
+  if (!/^[a-zA-Z0-9_]+$/.test(animation)) {
+    throw new AppError('Invalid animation name', 400);
+  }
+
+  // Load character metadata
+  const charData = metadataUtils.loadCharacterMetadata({ id });
+  const character = charData.characters.find(c => c.id === id);
+
+  if (!character) {
+    throw new AppError(`Character not found: ${id}`, 404);
+  }
+
+  // Remove the specific animation from overrides
+  const currentOverrides = character.frameDescriptionOverrides || {};
+  if (!currentOverrides[animation]) {
+    return res.json({
+      message: `No overrides found for animation '${animation}'`,
+      characterId: id,
+      animation
+    });
+  }
+
+  const newOverrides = { ...currentOverrides };
+  delete newOverrides[animation];
+
+  // Build update object
+  const updates = {
+    frameDescriptionOverrides: Object.keys(newOverrides).length > 0 ? newOverrides : null
+  };
+
+  // Apply updates with file locking
+  const filePath = path.join(METADATA_DIR, 'characters', character._sourceFile);
+  await fileLocks.withFileLock(filePath, async () => {
+    try {
+      metadataUtils.updateAssetStatus('characters', character._sourceFile, id, updates);
+    } catch (error) {
+      throw new AppError(`Failed to remove frame descriptions: ${error.message}`, 500);
+    }
+  });
+
+  res.json({
+    message: `Removed frame description overrides for '${animation}'`,
+    characterId: id,
+    animation,
+    remainingOverrides: Object.keys(newOverrides)
+  });
+}));
 
 // ============================================================================
 // THEME ROUTES
@@ -1900,6 +2167,34 @@ router.get('/generate/queue', asyncHandler(async (req, res) => {
 }));
 
 /**
+ * GET /api/admin/generate/health
+ * Get queue health status for monitoring
+ */
+router.get('/generate/health', (req, res) => {
+  const status = adminGenerationService.getQueueStatus();
+  res.json({
+    healthy: !status.current || status.pending.length === 0,
+    current: status.current ? {
+      id: status.current.id,
+      type: status.current.type,
+      category: status.current.category,
+      startedAt: status.current.startedAt
+    } : null,
+    pendingCount: status.pending.length,
+    paused: status.paused
+  });
+});
+
+/**
+ * POST /api/admin/generate/recover
+ * Clear stuck job and restart queue processing
+ */
+router.post('/generate/recover', (req, res) => {
+  const result = adminGenerationService.recoverQueue();
+  res.json(result);
+});
+
+/**
  * GET /api/admin/generate/job/:jobId
  * Get specific job status
  */
@@ -2189,7 +2484,13 @@ router.get('/config', asyncHandler(async (req, res) => {
     // Full model metadata object (for display names, descriptions)
     loraModels: manifest.loraModels || {},
     // Category to default model mapping
-    defaultLoraByCategory: manifest.categoryDefaults || {}
+    defaultLoraByCategory: manifest.categoryDefaults || {},
+    // SD1.5 LoRA models for character animations
+    sd15LoraModels: manifest.sd15LoraModels || {},
+    sd15Defaults: manifest.sd15Defaults || {
+      loraModel: 'pixel-art-xl',
+      referenceLoraModel: 'pixel-art-xl'
+    }
   });
 }));
 

@@ -70,6 +70,20 @@ const BASE_DEFAULTS = {
  *   },
  *   noQueue: true
  * });
+ *
+ * @example
+ * // In generate-characters.js (SD1.5 animation generation):
+ * const options = parseBaseArgs(process.argv.slice(2), {
+ *   extraFlags: {
+ *     mode: { flag: '--mode', type: 'string', default: 'flux' },
+ *     controlnetWeight: { flag: '--controlnet-weight', type: 'number', default: 0.7 },
+ *     ipadapterWeight: { flag: '--ipadapter-weight', type: 'number', default: 0.4 },
+ *     reference: { flag: '--reference', type: 'string', default: null },
+ *     referenceOnly: { flag: '--reference-only', type: 'boolean', default: false },
+ *     referencePose: { flag: '--reference-pose', type: 'string', default: 'idle' },
+ *     autoReference: { flag: '--auto-reference', type: 'boolean', default: false }
+ *   }
+ * });
  */
 function parseBaseArgs(argv, extraConfig = {}) {
   const { extraFlags = {}, defaults = {}, noQueue = false } = extraConfig;
@@ -109,13 +123,24 @@ function parseBaseArgs(argv, extraConfig = {}) {
     // Check extra flags first so they can shadow base flags if needed
     const extraMatch = extraFlagLookup.get(arg);
     if (extraMatch) {
-      if (extraMatch.type === 'string') {
+      if (extraMatch.type === 'string' || extraMatch.type === 'number') {
         if (i + 1 >= args.length || args[i + 1].startsWith('--')) {
           log(`${arg} requires a value`, 'error');
           process.exit(1);
         }
-        options[extraMatch.name] = args[++i];
+        const rawValue = args[++i];
+        if (extraMatch.type === 'number') {
+          const numValue = parseFloat(rawValue);
+          if (isNaN(numValue)) {
+            log(`${arg} requires a numeric value, got: ${rawValue}`, 'error');
+            process.exit(1);
+          }
+          options[extraMatch.name] = numValue;
+        } else {
+          options[extraMatch.name] = rawValue;
+        }
       } else {
+        // Boolean flag
         options[extraMatch.name] = true;
       }
       continue;

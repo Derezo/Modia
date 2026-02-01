@@ -62,6 +62,11 @@ export const api = {
   generateCharacterAnimation: assets.generateCharacterAnimation,
   generateCharacterAnimations: assets.generateCharacterAnimations,
 
+  // Frame Description Overrides
+  getFrameDescriptions: assets.getFrameDescriptions,
+  updateFrameDescriptions: assets.updateFrameDescriptions,
+  deleteFrameDescriptionOverrides: assets.deleteFrameDescriptionOverrides,
+
   // Audio Assets
   getAudioAssets: audio.getAudioAssets,
   getAudioAsset: audio.getAudioAsset,

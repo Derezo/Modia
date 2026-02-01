@@ -747,11 +747,13 @@ async function generateCharacterFrame(frameConfig, options = {}) {
  * @param {string} animationConfig.characterId - Character identifier (e.g., 'warrior', 'goblin_scout')
  * @param {string} animationConfig.animation - Animation name (idle, walk, attack, etc.)
  * @param {number} animationConfig.controlnetWeight - ControlNet pose weight (0.0-1.0, default 0.7)
- * @param {number} animationConfig.ipadapterWeight - IP-Adapter reference weight (0.0-1.0, default 0.6)
+ * @param {number} animationConfig.ipadapterWeight - IP-Adapter reference weight (0.0-1.0, default 0.4)
  * @param {string} animationConfig.referenceImage - Path to reference image for style consistency
  * @param {string} animationConfig.loraModel - Optional LoRA model override
  * @param {number} animationConfig.seed - Random seed for reproducibility
  * @param {string} animationConfig.outputPath - Explicit output path for the animation sheet
+ * @param {string[]} animationConfig.frameDescriptions - Per-frame prompt variations for animation motion
+ * @param {boolean} animationConfig.autoReference - Auto-generate reference image if missing (default false)
  * @param {Object} options - Additional options
  * @param {boolean} options.dryRun - If true, skip actual execution
  * @param {boolean} options.verbose - If true, stream output to console
@@ -763,11 +765,13 @@ async function generateAnimation(animationConfig, options = {}) {
     characterId,
     animation,
     controlnetWeight = 0.7,
-    ipadapterWeight = 0.6,
+    ipadapterWeight = 0.4,  // Reduced from 0.6 to allow more motion variation
     referenceImage,
     loraModel,
     seed = 42,
-    outputPath
+    outputPath,
+    frameDescriptions = null,  // Per-frame prompt variations for animation motion
+    autoReference = false  // Auto-generate reference image if missing
   } = animationConfig;
   const { verbose = false, quiet = false } = options;
 
@@ -791,6 +795,16 @@ async function generateAnimation(animationConfig, options = {}) {
     args.push('--output-path', outputPath);
   }
 
+  // Pass frame descriptions as JSON for per-frame prompt variation
+  if (frameDescriptions && Array.isArray(frameDescriptions) && frameDescriptions.length > 0) {
+    args.push('--frame-descriptions', JSON.stringify(frameDescriptions));
+  }
+
+  // Auto-generate reference image if missing
+  if (autoReference) {
+    args.push('--auto-reference');
+  }
+
   if (options.dryRun) {
     args.push('--dry-run');
   }
@@ -802,46 +816,87 @@ async function generateAnimation(animationConfig, options = {}) {
  * Generate a reference image for SD1.5 animation generation
  * Creates a high-quality single frame to use as IP-Adapter reference
  *
+ * Uses generate_animation.py with --reference-only flag to generate a reference
+ * image using SD1.5 with ControlNet pose guidance for consistent style.
+ *
  * @param {Object} referenceConfig - Reference image configuration
  * @param {string} referenceConfig.characterId - Character identifier
+ * @param {string} referenceConfig.characterType - 'player' or 'enemy'
+ * @param {string} referenceConfig.biome - Biome name for enemies
  * @param {string} referenceConfig.prompt - Full character description prompt
  * @param {number} referenceConfig.seed - Random seed for reproducibility
- * @param {string} referenceConfig.outputPath - Output path for the reference image
- * @param {string} referenceConfig.loraModel - Optional LoRA model (default uses Flux for quality)
+ * @param {string} referenceConfig.outputPath - Output path for the reference image (optional)
+ * @param {string} referenceConfig.referencePose - Pose template: 'idle' (default), 'tpose', or custom path
+ * @param {string} referenceConfig.loraModel - Optional LoRA model override
+ * @param {number} referenceConfig.controlnetWeight - ControlNet weight (0.0-1.0, optional)
+ * @param {number} referenceConfig.ipadapterWeight - IP-Adapter weight (0.0-1.0, optional)
  * @param {Object} options - Additional options
+ * @param {boolean} options.dryRun - If true, skip actual execution
+ * @param {boolean} options.verbose - If true, enable verbose output
+ * @param {boolean} options.quiet - If true, suppress output
  * @returns {Promise<PythonResult>} Execution result
  */
 async function generateReferenceImage(referenceConfig, options = {}) {
   const {
     characterId,
+    characterType = 'player',
+    biome,
     prompt,
     seed = 42,
     outputPath,
-    loraModel
+    referencePose = 'idle',
+    loraModel,
+    controlnetWeight,
+    ipadapterWeight
   } = referenceConfig;
   const { verbose = false, quiet = false } = options;
 
+  // Use generate_animation.py with --reference-only flag
   const args = [
     '--character', characterId,
+    '--reference-only',
+    '--reference-pose', referencePose,
     '--prompt', prompt,
-    '--seed', String(seed),
-    '--reference-only'
+    '--seed', String(seed)
   ];
 
+  // Add output path if specified
   if (outputPath) {
     args.push('--output-path', outputPath);
   }
 
+  // Add LoRA model if specified
   if (loraModel) {
     args.push('--lora', loraModel);
+  }
+
+  // Add character type
+  args.push('--character-type', characterType);
+
+  // Add biome for enemy characters
+  if (characterType === 'enemy' && biome) {
+    args.push('--biome', biome);
+  }
+
+  // Add ControlNet weight if specified
+  if (controlnetWeight !== undefined) {
+    args.push('--controlnet-weight', String(controlnetWeight));
+  }
+
+  // Add IP-Adapter weight if specified
+  if (ipadapterWeight !== undefined) {
+    args.push('--ipadapter-weight', String(ipadapterWeight));
   }
 
   if (options.dryRun) {
     args.push('--dry-run');
   }
 
-  // Reference images are typically generated with Flux for higher quality
-  // unless a specific LoRA is requested
+  if (verbose) {
+    args.push('--verbose');
+  }
+
+  // Reference images are generated with SD1.5 via generate_animation.py
   return runPythonScript('generate_animation.py', args, { ...options, verbose, quiet });
 }
 
