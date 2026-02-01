@@ -231,7 +231,11 @@ describe('Admin Assets API', { skip: isProduction }, () => {
 
         const testAsset = listRes.body.assets[0];
         const assetId = testAsset.key || testAsset.id;
-        const originalPrompt = testAsset.prompt;
+
+        // Use single-asset GET to capture original prompt for this specific asset
+        // This avoids list ordering issues that could cause flaky tests
+        const originalAsset = await request('GET', `/api/admin/assets/tiles/${assetId}`);
+        const originalPrompt = originalAsset.body.prompt;
 
         // Update only loraModel
         await request('PUT', `/api/admin/assets/tiles/${assetId}`, {
@@ -260,14 +264,11 @@ describe('Admin Assets API', { skip: isProduction }, () => {
         loraModel: 'v1'
       });
 
-      // List assets and verify loraModel is included
-      const res = await request('GET', '/api/admin/assets/tiles');
-      assert.strictEqual(res.status, 200);
-
-      const updatedAsset = res.body.assets.find(a => (a.key || a.id) === assetId);
-      if (updatedAsset) {
-        assert.strictEqual(updatedAsset.loraModel, 'v1');
-      }
+      // Use single-asset GET endpoint to verify loraModel is set
+      // This avoids list ordering issues that could cause flaky tests
+      const getRes = await request('GET', `/api/admin/assets/tiles/${assetId}`);
+      assert.strictEqual(getRes.status, 200);
+      assert.strictEqual(getRes.body.loraModel, 'v1');
     });
   });
 
@@ -852,6 +853,325 @@ describe('Admin Assets API', { skip: isProduction }, () => {
       const res = await request('GET', '/api/admin/assets/characters/..%2Fetc%2Fpasswd/weights/presets');
 
       assert.ok(res.status === 400 || res.status === 404, 'Should reject path traversal');
+    });
+  });
+
+  // ============================================================================
+  // FRAME DESCRIPTION OVERRIDES ENDPOINTS
+  // ============================================================================
+
+  describe('GET /api/admin/assets/characters/:id/frame-descriptions', () => {
+    it('should return frame descriptions for valid character', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        // Skip if no character assets available
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('GET', `/api/admin/assets/characters/${characterId}/frame-descriptions`);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.characterId, characterId);
+      assert.ok('animations' in res.body, 'Response should include animations');
+      assert.ok('hasOverrides' in res.body, 'Response should include hasOverrides');
+    });
+
+    it('should return frame descriptions for specific animation when queried', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      // Get animations list first
+      const animRes = await request('GET', `/api/admin/assets/characters/${characterId}/animations`);
+      if (animRes.body.animations?.length === 0) {
+        return;
+      }
+      const validAnimation = animRes.body.animations[0].animation;
+
+      const res = await request('GET', `/api/admin/assets/characters/${characterId}/frame-descriptions?animation=${validAnimation}`);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.characterId, characterId);
+      assert.strictEqual(res.body.animation, validAnimation);
+      assert.ok('defaults' in res.body, 'Response should include defaults');
+      assert.ok('overrides' in res.body, 'Response should include overrides');
+      assert.ok('frameCount' in res.body, 'Response should include frameCount');
+    });
+
+    it('should return 404 for non-existent character', async () => {
+      const res = await request('GET', '/api/admin/assets/characters/nonexistent_char_99999/frame-descriptions');
+
+      assert.strictEqual(res.status, 404);
+      assert.ok(res.body.error.includes('not found'));
+    });
+
+    it('should return 400 for invalid animation query parameter', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('GET', `/api/admin/assets/characters/${characterId}/frame-descriptions?animation=nonexistent_animation`);
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('not valid for character'));
+    });
+
+    it('should reject path traversal in character ID', async () => {
+      const res = await request('GET', '/api/admin/assets/characters/..%2F..%2Fetc%2Fpasswd/frame-descriptions');
+
+      assert.ok(res.status === 400 || res.status === 404, 'Should reject path traversal');
+    });
+  });
+
+  describe('PUT /api/admin/assets/characters/:id/frame-descriptions', () => {
+    it('should return 404 for non-existent character', async () => {
+      const res = await request('PUT', '/api/admin/assets/characters/nonexistent_char/frame-descriptions', {
+        frameDescriptionOverrides: { idle: ['frame 1', 'frame 2'] }
+      });
+
+      assert.strictEqual(res.status, 404);
+      assert.ok(res.body.error.includes('not found'));
+    });
+
+    it('should reject path traversal in character ID', async () => {
+      const res = await request('PUT', '/api/admin/assets/characters/..%2F..%2Fetc%2Fpasswd/frame-descriptions', {
+        frameDescriptionOverrides: { idle: ['test'] }
+      });
+
+      assert.ok(res.status === 400 || res.status === 404, 'Should reject path traversal');
+    });
+
+    it('should return 400 for non-object frameDescriptionOverrides', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/frame-descriptions`, {
+        frameDescriptionOverrides: 'not an object'
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('must be an object'));
+    });
+
+    it('should return 400 for array frameDescriptionOverrides', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/frame-descriptions`, {
+        frameDescriptionOverrides: ['not', 'an', 'object']
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('must be an object'));
+    });
+
+    it('should return 400 for invalid animation name in overrides', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/frame-descriptions`, {
+        frameDescriptionOverrides: { 'invalid-name!': ['frame 1'] }
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('Invalid animation name'));
+    });
+
+    it('should return 400 for non-array frame descriptions', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/frame-descriptions`, {
+        frameDescriptionOverrides: { idle: 'not an array' }
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('must be an array'));
+    });
+
+    it('should return 400 when frame descriptions exceed 8 elements', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/frame-descriptions`, {
+        frameDescriptionOverrides: { idle: ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9'] }
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('cannot exceed 8 elements'));
+    });
+
+    it('should return 400 for non-string frame description', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/frame-descriptions`, {
+        frameDescriptionOverrides: { idle: ['valid', 123, 'also valid'] }
+      });
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('must be a string'));
+    });
+
+    it('should update frame descriptions successfully with valid data', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      // Get valid animation for this character
+      const animRes = await request('GET', `/api/admin/assets/characters/${characterId}/animations`);
+      if (animRes.body.animations?.length === 0) {
+        return;
+      }
+      const validAnimation = animRes.body.animations[0].animation;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/frame-descriptions`, {
+        frameDescriptionOverrides: { [validAnimation]: ['test frame 1', 'test frame 2'] }
+      });
+
+      assert.strictEqual(res.status, 200);
+      assert.ok(res.body.message.includes('updated successfully'));
+      assert.strictEqual(res.body.characterId, characterId);
+      assert.ok('overrideCount' in res.body, 'Response should include overrideCount');
+    });
+
+    it('should accept null to clear all overrides', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('PUT', `/api/admin/assets/characters/${characterId}/frame-descriptions`, {
+        frameDescriptionOverrides: null
+      });
+
+      assert.strictEqual(res.status, 200);
+      assert.ok(res.body.message.includes('updated successfully'));
+    });
+  });
+
+  describe('DELETE /api/admin/assets/characters/:id/frame-descriptions/:animation', () => {
+    it('should return 404 for non-existent character', async () => {
+      const res = await request('DELETE', '/api/admin/assets/characters/nonexistent_char/frame-descriptions/idle');
+
+      assert.strictEqual(res.status, 404);
+      assert.ok(res.body.error.includes('not found'));
+    });
+
+    it('should reject path traversal in character ID', async () => {
+      const res = await request('DELETE', '/api/admin/assets/characters/..%2F..%2Fetc/frame-descriptions/idle');
+
+      assert.ok(res.status === 400 || res.status === 404, 'Should reject path traversal');
+    });
+
+    it('should return 400 for invalid animation name format', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      const res = await request('DELETE', `/api/admin/assets/characters/${characterId}/frame-descriptions/invalid-name!`);
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('Invalid animation name'));
+    });
+
+    it('should return success message for animation without overrides', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      // Use a valid format animation name that likely has no overrides
+      const res = await request('DELETE', `/api/admin/assets/characters/${characterId}/frame-descriptions/nonexistent_anim`);
+
+      assert.strictEqual(res.status, 200);
+      assert.ok(res.body.message.includes('No overrides found'));
+      assert.strictEqual(res.body.characterId, characterId);
+    });
+
+    it('should delete frame description overrides successfully', async () => {
+      const listRes = await request('GET', '/api/admin/assets/characters');
+      if (listRes.body.assets?.length === 0) {
+        return;
+      }
+
+      const testCharacter = listRes.body.assets[0];
+      const characterId = testCharacter.key || testCharacter.id;
+
+      // Get valid animation for this character
+      const animRes = await request('GET', `/api/admin/assets/characters/${characterId}/animations`);
+      if (animRes.body.animations?.length === 0) {
+        return;
+      }
+      const validAnimation = animRes.body.animations[0].animation;
+
+      // First set some overrides to ensure there's something to delete
+      await request('PUT', `/api/admin/assets/characters/${characterId}/frame-descriptions`, {
+        frameDescriptionOverrides: { [validAnimation]: ['test frame for deletion'] }
+      });
+
+      // Now delete the overrides
+      const res = await request('DELETE', `/api/admin/assets/characters/${characterId}/frame-descriptions/${validAnimation}`);
+
+      assert.strictEqual(res.status, 200);
+      assert.ok(res.body.message.includes('Removed') || res.body.message.includes('No overrides found'));
+      assert.strictEqual(res.body.characterId, characterId);
+      assert.strictEqual(res.body.animation, validAnimation);
     });
   });
 });

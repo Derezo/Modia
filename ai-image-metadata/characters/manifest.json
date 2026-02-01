@@ -11,10 +11,26 @@
     }
   },
   "weightPresets": {
-    "balanced": { "controlnet": 0.5, "ipadapter": 0.5 },
-    "maxConsistency": { "controlnet": 0.4, "ipadapter": 0.6 },
-    "precisePoses": { "controlnet": 0.6, "ipadapter": 0.4 },
-    "creative": { "controlnet": 0.3, "ipadapter": 0.3 }
+    "balanced": {
+      "controlnet": 0.7,
+      "ipadapter": 0.7,
+      "description": "Equal priority for pose accuracy and style consistency"
+    },
+    "maxConsistency": {
+      "controlnet": 0.6,
+      "ipadapter": 0.8,
+      "description": "Maximum character consistency across frames"
+    },
+    "precisePoses": {
+      "controlnet": 0.8,
+      "ipadapter": 0.5,
+      "description": "Accurate pose reproduction with more style variation"
+    },
+    "creative": {
+      "controlnet": 0.4,
+      "ipadapter": 0.4,
+      "description": "More generation variation and artistic freedom"
+    }
   },
   "poseTemplates": {
     "basePath": "poses/humanoid",

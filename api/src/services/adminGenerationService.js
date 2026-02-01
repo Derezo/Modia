@@ -21,6 +21,7 @@ import { broadcastToRoom } from '../websocket/index.js';
 import {
   VALID_CATEGORIES,
   VALID_LORA_MODELS,
+  VALID_SD15_LORA_MODELS,
   VALID_BACKENDS,
   DEFAULT_LORA_BY_CATEGORY,
   CATEGORY_SCRIPT_MAP
@@ -295,6 +296,7 @@ function buildScriptArgs(job, config) {
   // === SD1.5 ANIMATION MODE ===
   // Used for character animation generation with ControlNet and IP-Adapter
   if (job.options?.sd15Mode) {
+    console.log('[buildScriptArgs] SD1.5 mode enabled, adding --mode sd15');
     args.push('--mode', 'sd15');
     if (job.options.controlnetWeight !== undefined) {
       args.push('--controlnet-weight', String(job.options.controlnetWeight));
@@ -302,11 +304,24 @@ function buildScriptArgs(job, config) {
     if (job.options.ipadapterWeight !== undefined) {
       args.push('--ipadapter-weight', String(job.options.ipadapterWeight));
     }
+    // SD1.5 LoRA model (different from Flux LoRA models)
+    if (job.options.loraModel && VALID_SD15_LORA_MODELS.includes(job.options.loraModel)) {
+      args.push('--lora', job.options.loraModel);
+    }
+  } else {
+    console.log('[buildScriptArgs] SD1.5 mode NOT enabled. job.options:', JSON.stringify(job.options));
   }
 
   // Reference image only mode - generates just the reference for IP-Adapter
   if (job.options?.referenceOnly) {
+    console.log('[buildScriptArgs] Reference-only mode enabled');
     args.push('--reference-only');
+
+    // Reference pose selection (idle or tpose)
+    if (job.options.referencePose) {
+      console.log('[buildScriptArgs] Reference pose:', job.options.referencePose);
+      args.push('--reference-pose', job.options.referencePose);
+    }
   }
 
   // Specific animation to generate (for single animation generation)
@@ -319,6 +334,7 @@ function buildScriptArgs(job, config) {
     args.push('--animation', job.filters.animation);
   }
 
+  console.log('[buildScriptArgs] Final args:', args.join(' '));
   return args;
 }
 

@@ -105,11 +105,13 @@ export const getReferenceImageStatus = (characterId) =>
 /**
  * Generate reference image for a character
  * @param {string} characterId - Character ID
+ * @param {object} options - Generation options (loraModel, etc.)
  * @returns {Promise<object>} Generation result
  */
-export const generateReferenceImage = (characterId) =>
+export const generateReferenceImage = (characterId, options = {}) =>
   fetchAPI(`/assets/characters/${characterId}/reference/generate`, {
     method: 'POST',
+    body: JSON.stringify(options),
   });
 
 /**
@@ -142,4 +144,42 @@ export const generateCharacterAnimations = (characterId, animations, options = {
         ...options,
       },
     }),
+  });
+
+// ============================================================================
+// Frame Description Overrides (Character Assets)
+// ============================================================================
+
+/**
+ * Get frame description overrides for a character
+ * @param {string} characterId - Character ID
+ * @param {string|null} animation - Optional specific animation to get
+ * @returns {Promise<object>} Frame descriptions { defaults, overrides, ... }
+ */
+export const getFrameDescriptions = (characterId, animation = null) => {
+  const query = animation ? `?animation=${encodeURIComponent(animation)}` : '';
+  return fetchAPI(`/assets/characters/${characterId}/frame-descriptions${query}`);
+};
+
+/**
+ * Update frame description overrides for a character
+ * @param {string} characterId - Character ID
+ * @param {object} frameDescriptionOverrides - Overrides by animation { animation: [frame1, frame2, ...] }
+ * @returns {Promise<object>} Updated overrides
+ */
+export const updateFrameDescriptions = (characterId, frameDescriptionOverrides) =>
+  fetchAPI(`/assets/characters/${characterId}/frame-descriptions`, {
+    method: 'PUT',
+    body: JSON.stringify({ frameDescriptionOverrides }),
+  });
+
+/**
+ * Remove frame description overrides for a specific animation
+ * @param {string} characterId - Character ID
+ * @param {string} animation - Animation to remove overrides for
+ * @returns {Promise<object>} Result
+ */
+export const deleteFrameDescriptionOverrides = (characterId, animation) =>
+  fetchAPI(`/assets/characters/${characterId}/frame-descriptions/${animation}`, {
+    method: 'DELETE',
   });

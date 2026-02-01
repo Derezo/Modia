@@ -23,6 +23,7 @@ import { useToast } from '../contexts/ToastContext';
 import { DEFAULT_SIZES, SIZE_PRESETS } from '@shared/assetPaths.js';
 import { getAssetSubcategory, getAssetExtraOptions, getAssetUrls } from '../lib/assetPathHelper.js';
 import SpritePreview from './SpritePreview.jsx';
+import FrameDescriptionEditor from './FrameDescriptionEditor.jsx';
 
 /**
  * Standard animation types for character sprites
@@ -460,10 +461,56 @@ function WeightControls({ weights, onWeightsChange, onPresetSelect, loading = fa
 }
 
 /**
+ * SD15LoraSelector - Dropdown for selecting SD1.5 LoRA models
+ * Used for both reference image and animation generation
+ */
+function SD15LoraSelector({ label, value, onChange, models, defaultModel, loading = false, hint = null }) {
+  return (
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-parchment-300">
+        {label}
+      </label>
+      <select
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value || null)}
+        disabled={loading}
+        className="w-full px-3 py-2 bg-midnight-800 border border-midnight-700 rounded-lg
+                   text-parchment-200 text-sm focus:outline-none focus:border-accent-gold
+                   cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <option value="">
+          Default ({models[defaultModel]?.name || defaultModel})
+        </option>
+        {Object.entries(models).map(([modelId, model]) => (
+          <option key={modelId} value={modelId}>
+            {model.name}
+          </option>
+        ))}
+      </select>
+      {hint && <p className="text-xs text-parchment-500">{hint}</p>}
+    </div>
+  );
+}
+
+/**
+ * Reference pose options for SD1.5 generation
+ */
+const REFERENCE_POSE_OPTIONS = {
+  idle: { label: 'Idle Pose', description: 'Neutral standing pose' },
+  tpose: { label: 'T-Pose', description: 'Arms at 45 degrees - better for clothing details' },
+};
+
+/**
  * ReferenceImageManager - Shows reference image status and generation controls
  */
 function ReferenceImageManager({ characterId: _characterId, referenceStatus, onGenerate, loading = false }) {
   const hasReference = referenceStatus?.exists === true;
+  const [selectedPose, setSelectedPose] = useState('idle');
+
+  // Call onGenerate with the selected pose
+  const handleGenerate = () => {
+    onGenerate({ referencePose: selectedPose });
+  };
 
   return (
     <div className="space-y-2">
@@ -485,22 +532,39 @@ function ReferenceImageManager({ characterId: _characterId, referenceStatus, onG
               </>
             )}
           </div>
-          <button
-            type="button"
-            onClick={onGenerate}
-            disabled={loading}
-            className="px-3 py-1 text-xs bg-midnight-700 text-parchment-300 rounded
-                       hover:bg-midnight-600 transition-colors
-                       disabled:opacity-50 disabled:cursor-not-allowed
-                       flex items-center gap-1.5"
-          >
-            {loading ? (
-              <ReloadIcon className="w-3 h-3 animate-spin" />
-            ) : (
-              <ReloadIcon className="w-3 h-3" />
-            )}
-            {hasReference ? 'Regenerate' : 'Generate'}
-          </button>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedPose}
+              onChange={(e) => setSelectedPose(e.target.value)}
+              disabled={loading}
+              className="px-2 py-1 text-xs bg-midnight-700 border border-midnight-600 rounded
+                         text-parchment-300 focus:outline-none focus:border-accent-gold
+                         cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              title={REFERENCE_POSE_OPTIONS[selectedPose]?.description}
+            >
+              {Object.entries(REFERENCE_POSE_OPTIONS).map(([pose, { label }]) => (
+                <option key={pose} value={pose}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={loading}
+              className="px-3 py-1 text-xs bg-midnight-700 text-parchment-300 rounded
+                         hover:bg-midnight-600 transition-colors
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         flex items-center gap-1.5"
+            >
+              {loading ? (
+                <ReloadIcon className="w-3 h-3 animate-spin" />
+              ) : (
+                <ReloadIcon className="w-3 h-3" />
+              )}
+              {hasReference ? 'Regenerate' : 'Generate'}
+            </button>
+          </div>
         </div>
         {hasReference && referenceStatus?.path && (
           <div className="mt-2 pt-2 border-t border-midnight-700">
@@ -654,10 +718,15 @@ export default function AssetDetail({
     loraModel: '', // Empty string means use category default
   });
 
-  // Config state for LoRA models
+  // Config state for LoRA models (Flux for assets, SD1.5 for character animations)
   const [loraConfig, setLoraConfig] = useState({
-    loraModels: {},       // { v1: { name, triggerWord, description }, ... }
-    categoryDefaults: {}, // { tiles: 'v2', portraits: 'v1', ... }
+    loraModels: {},           // Flux: { v1: { name, triggerWord, description }, ... }
+    categoryDefaults: {},     // Flux: { tiles: 'v2', portraits: 'v1', ... }
+    sd15LoraModels: {},       // SD1.5: { pixel-art-xl: { name, description }, ... }
+    sd15Defaults: {           // SD1.5 defaults for character animations
+      loraModel: 'pixel-art-xl',
+      referenceLoraModel: 'pixel-art-xl'
+    },
     loading: true,
   });
 
@@ -678,17 +747,33 @@ export default function AssetDetail({
   const [animationLoading, setAnimationLoading] = useState(false);
   const [weightsLoading, setWeightsLoading] = useState(false);
   const [referenceLoading, setReferenceLoading] = useState(false);
+  // SD1.5 LoRA model selections (null = use default from config)
+  const [sd15Config, setSd15Config] = useState({
+    referenceLoraModel: null, // LoRA for generating the reference image
+    animationLoraModel: null, // LoRA for generating animation frames
+  });
+
+  // Frame description overrides state
+  const [frameDescriptionData, setFrameDescriptionData] = useState(null);
+  const [frameDescriptionLoading, setFrameDescriptionLoading] = useState(false);
 
   // Load LoRA config on mount
   useEffect(() => {
     async function loadConfig() {
       try {
         const config = await api.getConfig();
-        // API returns validLoraModels (array), loraModels (full metadata), and defaultLoraByCategory (object)
+        // API returns validLoraModels (array), loraModels (full metadata), defaultLoraByCategory (object),
+        // and SD1.5 models (sd15LoraModels, sd15Defaults)
         setLoraConfig({
-          // Use full model metadata from API (includes name, triggerWord, description)
+          // Flux LoRA models (for static assets)
           loraModels: config.loraModels || {},
           categoryDefaults: config.defaultLoraByCategory || {},
+          // SD1.5 LoRA models (for character animations)
+          sd15LoraModels: config.sd15LoraModels || {},
+          sd15Defaults: config.sd15Defaults || {
+            loraModel: 'pixel-art-xl',
+            referenceLoraModel: 'pixel-art-xl'
+          },
           loading: false,
         });
       } catch (err) {
@@ -779,7 +864,29 @@ export default function AssetDetail({
     setSelectedAnimationsForGen(new Set());
     setAnimationData(null);
     setReferenceStatus(null);
+    setFrameDescriptionData(null);
+    // Reset SD1.5 LoRA selections (will use defaults)
+    setSd15Config({
+      referenceLoraModel: null,
+      animationLoraModel: null,
+    });
   }, [characterId]);
+
+  // Load frame descriptions for characters
+  useEffect(() => {
+    if (!isCharacter || !characterId || !open) return;
+
+    async function loadFrameDescriptions() {
+      try {
+        const data = await api.getFrameDescriptions(characterId);
+        setFrameDescriptionData(data);
+      } catch (err) {
+        console.error('Failed to load frame descriptions:', err);
+      }
+    }
+
+    loadFrameDescriptions();
+  }, [isCharacter, characterId, open]);
 
   /**
    * Handle weight preset selection
@@ -835,13 +942,23 @@ export default function AssetDetail({
 
   /**
    * Generate reference image
+   * @param {object} poseOptions - Options from ReferenceImageManager { referencePose: 'idle' | 'tpose' }
    */
-  const handleGenerateReference = useCallback(async () => {
+  const handleGenerateReference = useCallback(async (poseOptions = {}) => {
     if (!characterId) return;
 
     setReferenceLoading(true);
     try {
-      await api.generateReferenceImage(characterId);
+      // Include LoRA model if explicitly selected (otherwise API uses default)
+      const options = {};
+      if (sd15Config.referenceLoraModel) {
+        options.loraModel = sd15Config.referenceLoraModel;
+      }
+      // Include reference pose if specified
+      if (poseOptions.referencePose) {
+        options.referencePose = poseOptions.referencePose;
+      }
+      await api.generateReferenceImage(characterId, options);
       toast.success('Reference image generation queued');
 
       // Refresh status after a delay
@@ -854,7 +971,7 @@ export default function AssetDetail({
       toast.error(err.message || 'Failed to generate reference');
       setReferenceLoading(false);
     }
-  }, [characterId, toast]);
+  }, [characterId, sd15Config.referenceLoraModel, toast]);
 
   /**
    * Generate selected animations
@@ -865,10 +982,15 @@ export default function AssetDetail({
     setAnimationLoading(true);
     try {
       const animations = Array.from(selectedAnimationsForGen);
-      await api.generateCharacterAnimations(characterId, animations, {
+      const options = {
         controlnetWeight: animationWeights.controlnetWeight,
         ipadapterWeight: animationWeights.ipadapterWeight,
-      });
+      };
+      // Include LoRA model if explicitly selected (otherwise API uses default)
+      if (sd15Config.animationLoraModel) {
+        options.loraModel = sd15Config.animationLoraModel;
+      }
+      await api.generateCharacterAnimations(characterId, animations, options);
       toast.success(`Queued ${animations.length} animation(s) for generation`);
 
       // Clear selection
@@ -881,7 +1003,36 @@ export default function AssetDetail({
     } finally {
       setAnimationLoading(false);
     }
-  }, [characterId, selectedAnimationsForGen, animationWeights, toast, onUpdate]);
+  }, [characterId, selectedAnimationsForGen, animationWeights, sd15Config.animationLoraModel, toast, onUpdate]);
+
+  /**
+   * Save frame description overrides
+   */
+  const handleSaveFrameDescriptions = useCallback(async (newOverrides) => {
+    if (!characterId) return;
+
+    setFrameDescriptionLoading(true);
+    try {
+      await api.updateFrameDescriptions(characterId, newOverrides);
+      // Update local state with the saved overrides
+      setFrameDescriptionData(prev => ({
+        ...prev,
+        hasOverrides: Object.keys(newOverrides || {}).length > 0,
+        // Update each animation's overrides in the animations object
+        animations: prev?.animations ? Object.fromEntries(
+          Object.entries(prev.animations).map(([anim, data]) => [
+            anim,
+            { ...data, overrides: newOverrides?.[anim] || [] }
+          ])
+        ) : prev?.animations
+      }));
+      toast.success('Frame descriptions saved');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save frame descriptions');
+    } finally {
+      setFrameDescriptionLoading(false);
+    }
+  }, [characterId, toast]);
 
   /**
    * Get animation sprite URL for preview
@@ -1195,6 +1346,33 @@ export default function AssetDetail({
                         loading={weightsLoading}
                       />
 
+                      {/* SD1.5 LoRA Model Selectors */}
+                      {!loraConfig.loading && Object.keys(loraConfig.sd15LoraModels).length > 0 && (
+                        <div className="space-y-3 p-3 bg-midnight-800/50 border border-midnight-700 rounded-lg">
+                          <h4 className="text-xs font-medium text-parchment-500 uppercase tracking-wide">
+                            Style Models (LoRA)
+                          </h4>
+                          <SD15LoraSelector
+                            label="Reference LoRA"
+                            value={sd15Config.referenceLoraModel}
+                            onChange={(val) => setSd15Config(prev => ({ ...prev, referenceLoraModel: val }))}
+                            models={loraConfig.sd15LoraModels}
+                            defaultModel={loraConfig.sd15Defaults.referenceLoraModel}
+                            loading={loraConfig.loading}
+                            hint="Style model for generating the reference image"
+                          />
+                          <SD15LoraSelector
+                            label="Animation LoRA"
+                            value={sd15Config.animationLoraModel}
+                            onChange={(val) => setSd15Config(prev => ({ ...prev, animationLoraModel: val }))}
+                            models={loraConfig.sd15LoraModels}
+                            defaultModel={loraConfig.sd15Defaults.loraModel}
+                            loading={loraConfig.loading}
+                            hint="Style model for generating animation frames"
+                          />
+                        </div>
+                      )}
+
                       {/* Save weights button (for manual slider changes) */}
                       <div className="flex justify-end">
                         <button
@@ -1217,6 +1395,25 @@ export default function AssetDetail({
                         onGenerate={handleGenerateAnimations}
                         loading={animationLoading}
                       />
+
+                      {/* Frame Description Editor */}
+                      {frameDescriptionData?.animations && (
+                        <FrameDescriptionEditor
+                          characterId={characterId}
+                          animation={selectedAnimation}
+                          animationConfig={frameDescriptionData.animations[selectedAnimation]}
+                          overrides={
+                            // Build overrides object from all animations
+                            Object.fromEntries(
+                              Object.entries(frameDescriptionData.animations)
+                                .filter(([, data]) => data.overrides?.length > 0)
+                                .map(([anim, data]) => [anim, data.overrides])
+                            )
+                          }
+                          onSave={handleSaveFrameDescriptions}
+                          loading={frameDescriptionLoading}
+                        />
+                      )}
                     </div>
                   )}
 
