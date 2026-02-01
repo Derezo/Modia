@@ -14,10 +14,22 @@
 export const VALID_CATEGORIES = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays', 'obstacles', 'characters'];
 
 /**
- * Valid LoRA models for image generation
+ * Valid LoRA models for Flux image generation
  * @type {string[]}
  */
 export const VALID_LORA_MODELS = ['v1', 'v2', 'modern-pixel', 'retro-pixel'];
+
+/**
+ * Valid SD1.5 LoRA models for character animation generation
+ * @type {string[]}
+ */
+export const VALID_SD15_LORA_MODELS = ['pixel-art-xl', '16-bit-pixel', 'all-in-one-pixel'];
+
+/**
+ * Default SD1.5 LoRA for character animations
+ * @type {string}
+ */
+export const DEFAULT_SD15_LORA = 'pixel-art-xl';
 
 /**
  * Valid generation backends
@@ -92,6 +104,8 @@ export const AUDIO_SCRIPT_MAP = {
 export default {
   VALID_CATEGORIES,
   VALID_LORA_MODELS,
+  VALID_SD15_LORA_MODELS,
+  DEFAULT_SD15_LORA,
   VALID_BACKENDS,
   VALID_SEED_MODES,
   DEFAULT_LORA_BY_CATEGORY,
