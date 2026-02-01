@@ -20,7 +20,9 @@ import SpritePreview from './SpritePreview.jsx';
 /**
  * Standard animation types for character sprites
  */
-const CHARACTER_ANIMATIONS = ['idle', 'walk', 'attack', 'hurt', 'death', 'cast', 'victory'];
+// Animation types for character sprites
+// Players use 'hurt', enemies use 'hit' - both should be included for completeness
+const CHARACTER_ANIMATIONS = ['idle', 'walk', 'attack', 'hurt', 'hit', 'death', 'cast', 'victory'];
 
 /**
  * Determine the current state of an asset based on its properties and queue status
