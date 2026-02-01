@@ -444,6 +444,11 @@ function getRegionalPalette(region) {
 }
 
 /**
+ * Default SD1.5 LoRA model (matches assetConstants.js)
+ */
+const DEFAULT_SD15_LORA = 'pixel-art-xl';
+
+/**
  * SD1.5 LoRA trigger words mapping
  * These are different from Flux LoRA triggers and optimized for SD1.5 checkpoints
  * Trigger words must match image-generator/sd15_animation/config.py exactly
@@ -453,17 +458,41 @@ const SD15_LORA_TRIGGERS = {
   '16-bit-pixel': '16bitscene',
   'all-in-one-pixel': 'pixel art',
   'retro-game-art': 'r3tr0',
-  'cps2-pixel-art': 'cpsii',
-  null: ''
+  'cps2-pixel-art': 'cpsii'
 };
 
 /**
  * Get the SD1.5 LoRA trigger word
- * @param {string|null} loraModel - LoRA model identifier
+ * @param {string|null} loraModel - LoRA model identifier (uses default if not specified)
  * @returns {string} Trigger word for the LoRA model
  */
 function getSD15LoraTrigger(loraModel) {
-  return SD15_LORA_TRIGGERS[loraModel] || SD15_LORA_TRIGGERS[null];
+  // Use default LoRA if not specified
+  const effectiveModel = loraModel || DEFAULT_SD15_LORA;
+  return SD15_LORA_TRIGGERS[effectiveModel] || '';
+}
+
+/**
+ * Extract visual traits from character metadata
+ * For players: traits are in character._classTraits.visualTraits
+ * For enemies: traits are in character.visualTraits directly
+ * @param {Object} character - Character metadata
+ * @returns {string} Visual traits string
+ */
+function getCharacterVisualTraits(character) {
+  // Try direct visualTraits first (enemies)
+  if (character.visualTraits) {
+    return character.visualTraits;
+  }
+  // Try _classTraits.visualTraits (players)
+  if (character._classTraits?.visualTraits) {
+    return character._classTraits.visualTraits;
+  }
+  // Fallback: try to use class name as basic descriptor
+  if (character.class) {
+    return `${character.class} character`;
+  }
+  return '';
 }
 
 /**
@@ -484,6 +513,7 @@ function getSD15LoraTrigger(loraModel) {
  */
 function buildSD15CharacterPrompt(character, animation, options = {}) {
   const loraTrigger = getSD15LoraTrigger(options.loraModel);
+  const visualTraits = getCharacterVisualTraits(character);
 
   const parts = [];
 
@@ -496,8 +526,8 @@ function buildSD15CharacterPrompt(character, animation, options = {}) {
   parts.push('pixel art character sprite');
 
   // Character visual traits
-  if (character.visualTraits) {
-    parts.push(character.visualTraits);
+  if (visualTraits) {
+    parts.push(visualTraits);
   }
 
   // Animation context
@@ -531,6 +561,7 @@ function buildSD15CharacterPrompt(character, animation, options = {}) {
  */
 function buildSD15ReferencePrompt(character, options = {}) {
   const loraTrigger = getSD15LoraTrigger(options.loraModel);
+  const visualTraits = getCharacterVisualTraits(character);
 
   const parts = [];
 
@@ -542,8 +573,8 @@ function buildSD15ReferencePrompt(character, options = {}) {
   parts.push('detailed pixel art character');
   parts.push('game sprite reference sheet');
 
-  if (character.visualTraits) {
-    parts.push(character.visualTraits);
+  if (visualTraits) {
+    parts.push(visualTraits);
   }
 
   // Neutral pose for reference
@@ -590,8 +621,10 @@ module.exports = {
   buildWallPrompt,
 
   // SD1.5 animation generation support
+  DEFAULT_SD15_LORA,
   SD15_LORA_TRIGGERS,
   getSD15LoraTrigger,
+  getCharacterVisualTraits,
   buildSD15CharacterPrompt,
   buildSD15ReferencePrompt,
   getSD15NegativePrompt,
