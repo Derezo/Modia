@@ -446,12 +446,14 @@ function getRegionalPalette(region) {
 /**
  * SD1.5 LoRA trigger words mapping
  * These are different from Flux LoRA triggers and optimized for SD1.5 checkpoints
+ * Trigger words must match image-generator/sd15_animation/config.py exactly
  */
 const SD15_LORA_TRIGGERS = {
-  'pixel-art-xl': 'pixel art style',
-  '16-bit-pixel': '16bit pixel art',
-  'pixel-sprite': 'pixel sprite',
-  'retro-game': 'retro game style',
+  'pixel-art-xl': 'pixelart',
+  '16-bit-pixel': '16bitscene',
+  'all-in-one-pixel': 'pixel art',
+  'retro-game-art': 'r3tr0',
+  'cps2-pixel-art': 'cpsii',
   null: ''
 };
 

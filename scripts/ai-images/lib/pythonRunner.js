@@ -84,9 +84,8 @@ async function runPythonScript(scriptName, args = [], options = {}) {
     };
   }
 
-  if (verbose) {
-    log(`Executing: ${command}`, 'debug');
-  }
+  // Always log the command being executed for visibility
+  log(`Executing: ${command}`, 'info');
 
   // Use conda environment for local ComfyUI generation, otherwise system python
   let pythonCommand;
@@ -588,9 +587,8 @@ async function removeBackground(inputPath, outputPath, options = {}) {
     ? `conda run -n image-gen-comfyui python ${scriptPath} ${fullArgs.join(' ')}`
     : `python3 ${scriptPath} ${fullArgs.join(' ')}`;
 
-  if (verbose) {
-    log(`Executing rembg: ${command}`, 'debug');
-  }
+  // Always log the command being executed for visibility
+  log(`Executing rembg: ${command}`, 'info');
 
   let pythonCommand;
   let pythonArgs;

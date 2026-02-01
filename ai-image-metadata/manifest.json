@@ -199,6 +199,14 @@
     "all-in-one-pixel": {
       "name": "All-in-One Pixel",
       "description": "Versatile fallback style"
+    },
+    "retro-game-art": {
+      "name": "Retro Game Art",
+      "description": "MS-DOS/Amiga retro style"
+    },
+    "cps2-pixel-art": {
+      "name": "CPS2 Pixel Art",
+      "description": "Arcade/CPS II fighting game style"
     }
   },
   "sd15Defaults": {

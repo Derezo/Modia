@@ -115,7 +115,7 @@ const {
   getBatchConfigSummary
 } = require('./batchConfig');
 
-const { parseBaseArgs, VALID_LORA_MODELS, BASE_DEFAULTS } = require('./parseArgs');
+const { parseBaseArgs, VALID_LORA_MODELS, VALID_SD15_LORA_MODELS, ALL_VALID_LORA_MODELS, BASE_DEFAULTS } = require('./parseArgs');
 const { applyKeyFilter } = require('./filterAssets');
 
 const {
@@ -297,6 +297,8 @@ module.exports = {
   // Shared argument parsing
   parseBaseArgs,
   VALID_LORA_MODELS,
+  VALID_SD15_LORA_MODELS,
+  ALL_VALID_LORA_MODELS,
   BASE_DEFAULTS,
 
   // Shared asset filtering
