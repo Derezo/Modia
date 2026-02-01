@@ -27,7 +27,14 @@ export function getAssetSubcategory(asset, category) {
     return asset._overlayCategory || asset._subcategory || asset.subcategory || 'rarity';
   }
   if (category === 'characters') {
-    return asset._type || 'player';  // 'player' or 'enemies'
+    // Characters have two-level subcategory for enemies: type + biome
+    // For path construction, we need to know both type and biome
+    const type = asset._type || 'player';
+    if (type === 'enemy' || type === 'enemies') {
+      // Return biome for enemies (path will be /enemies/{biome}/{id}/)
+      return asset._biome || asset.biome || 'unknown';
+    }
+    return 'player';
   }
   if (category === 'obstacles') {
     return asset._obstacleCategory || asset._subcategory || 'rocks';
@@ -105,11 +112,18 @@ export function getAssetImageUrl(asset, category) {
   }
 
   // For characters, use type-based path structure (player vs enemies)
-  // Pattern: /assets/characters/{type}/{class}/{class}_{animation}.png
+  // Players: /assets/characters/player/{class}/{class}_{animation}.png
+  // Enemies: /assets/characters/enemies/{biome}/{id}/{id}_{animation}.png
   // All character sprites MUST have an _idle animation for preview
   if (category === 'characters') {
-    const type = subcategory || 'player';  // 'player' or 'enemies'
-    return `/assets/characters/${type}/${id}/${id}_idle.png`;
+    const type = asset._type || 'player';
+    if (type === 'enemy' || type === 'enemies') {
+      // Enemy characters include biome in path
+      const biome = asset._biome || asset.biome || 'unknown';
+      return `/assets/characters/enemies/${biome}/${id}/${id}_idle.png`;
+    }
+    // Player characters
+    return `/assets/characters/player/${id}/${id}_idle.png`;
   }
 
   // For obstacles, use category-based path structure
