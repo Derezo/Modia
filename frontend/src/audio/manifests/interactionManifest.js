@@ -1,5 +1,5 @@
 /**
- * Interaction Sound Manifest - 25 effects
+ * Interaction Sound Manifest - 26 effects
  * Equipment, inventory, and game interaction sounds
  */
 
@@ -141,7 +141,7 @@ export const INTERACTION_MANIFEST = {
   },
 
   // -------------------------------------------------------------------------
-  // Activities (4)
+  // Activities (5)
   // -------------------------------------------------------------------------
   fishing_cast: {
     path: '/assets/audio/sfx/interactions/fishing_cast.mp3',
@@ -152,6 +152,12 @@ export const INTERACTION_MANIFEST = {
   fishing_reel: {
     path: '/assets/audio/sfx/interactions/fishing_reel.mp3',
     volume: 0.8,
+    category: 'interaction',
+    subcategory: 'activity'
+  },
+  fishing_catch: {
+    path: '/assets/audio/sfx/interactions/fishing_catch.mp3',
+    volume: 0.75,
     category: 'interaction',
     subcategory: 'activity'
   },

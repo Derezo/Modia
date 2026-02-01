@@ -307,11 +307,17 @@ export const SFX_MANIFEST = {
   },
 
   // -------------------------------------------------------------------------
-  // Generic Skill Sounds
+  // Generic Skill Sounds (2)
   // -------------------------------------------------------------------------
   skill_cast: {
     path: '/assets/audio/sfx/skills/skill_cast.mp3',
     volume: 0.7,
+    category: 'skill',
+    subcategory: 'generic'
+  },
+  skill_heal: {
+    path: '/assets/audio/sfx/skills/heal.mp3',
+    volume: 0.75,
     category: 'skill',
     subcategory: 'generic'
   },

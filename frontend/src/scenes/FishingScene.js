@@ -646,7 +646,7 @@ export class FishingScene extends Scene {
       const result = await this.game.api.registerCatch(this.nodeId);
 
       // Play fish catch sound
-      this.game.audio?.playSFX('fish_catch');
+      this.game.audio?.playSFX('fishing_catch');
 
       // Add catch to list
       this.catches.unshift(result.catch);
@@ -682,7 +682,7 @@ export class FishingScene extends Scene {
     this.bigOneExpires = Date.now() + bigOneData.expiresIn;
 
     // Play big one alert sound
-    this.game.audio?.playSFX('fish_big_one');
+    this.game.audio?.playSFX('fishing_big_one');
 
     const mainPanel = this.uiElement.querySelector('#main-panel');
     if (!mainPanel) return;

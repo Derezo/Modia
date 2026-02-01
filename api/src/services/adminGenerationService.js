@@ -316,6 +316,8 @@ function buildScriptArgs(job, config) {
   if (job.options?.referenceOnly) {
     console.log('[buildScriptArgs] Reference-only mode enabled');
     args.push('--reference-only');
+    // Reference images should preserve background for better IP-Adapter style transfer
+    args.push('--no-background-removal');
 
     // Reference pose selection (idle or tpose)
     if (job.options.referencePose) {

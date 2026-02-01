@@ -20,7 +20,8 @@ import {
   CARAVAN_REFRESH_INTERVAL,
   getStockLimits,
   getItemsForRegion,
-  getRegionalItems
+  getRegionalItems,
+  calculateRefreshOffset
 } from '../db/templates/caravanItems.js';
 
 /**
@@ -106,7 +107,7 @@ export function generateCaravanInventory(seed, regionRace) {
 export async function getCaravanData(nodeId) {
   const nodeResult = await query(
     `SELECT
-       id, name, node_type, local_seed, region_id,
+       id, name, node_type, local_seed, region_id, region_race,
        caravan_inventory_seed, caravan_last_refresh
      FROM world_nodes
      WHERE id = $1 AND node_type = 'merchant_caravan'`,
@@ -134,29 +135,43 @@ export async function getCaravanData(nodeId) {
     regionRace = node.region_race;
   }
 
-  // Determine if refresh is needed
+  // Determine if refresh is needed using staggered timing
+  // Each caravan has a different refresh offset based on its local_seed,
+  // so not all caravans refresh at midnight UTC
   const now = new Date();
   const lastRefresh = node.caravan_last_refresh
     ? new Date(node.caravan_last_refresh)
     : null;
-  const needsRefresh = !lastRefresh ||
-    (now.getTime() - lastRefresh.getTime()) >= CARAVAN_REFRESH_INTERVAL;
+
+  // Calculate staggered refresh timing based on node's local_seed
+  const refreshOffset = calculateRefreshOffset(node.local_seed);
+  const adjustedTime = now.getTime() - refreshOffset;
+  const currentWindow = Math.floor(adjustedTime / CARAVAN_REFRESH_INTERVAL);
+  const windowStart = (currentWindow * CARAVAN_REFRESH_INTERVAL) + refreshOffset;
+  const needsRefresh = !lastRefresh || lastRefresh.getTime() < windowStart;
 
   // Use existing seed or generate based on node seed + time window
   let inventorySeed = node.caravan_inventory_seed;
   if (needsRefresh || !inventorySeed) {
     // Generate new seed based on node local_seed and current 48-hour window
-    const timeWindow = Math.floor(now.getTime() / CARAVAN_REFRESH_INTERVAL);
-    inventorySeed = (node.local_seed * 31337) ^ timeWindow;
+    // Use modulo to keep within INTEGER range (max ~2.1 billion)
+    inventorySeed = ((node.local_seed * 31337) % 2147483647) ^ currentWindow;
+
+    // Defensive auto-persistence: persist the regenerated seed (fire-and-forget)
+    query(
+      `UPDATE world_nodes
+       SET caravan_inventory_seed = $1, caravan_last_refresh = $2
+       WHERE id = $3`,
+      [inventorySeed, now, nodeId]
+    ).catch(err => console.error(`Failed to persist caravan seed for node ${nodeId}:`, err));
   }
 
   // Generate inventory
   const inventory = generateCaravanInventory(inventorySeed, regionRace);
 
-  // Calculate time until next refresh
-  const nextRefresh = lastRefresh
-    ? new Date(lastRefresh.getTime() + CARAVAN_REFRESH_INTERVAL)
-    : new Date(now.getTime() + CARAVAN_REFRESH_INTERVAL);
+  // Calculate time until next refresh (next window start)
+  const nextWindowStart = windowStart + CARAVAN_REFRESH_INTERVAL;
+  const nextRefresh = new Date(nextWindowStart);
   const msUntilRefresh = Math.max(0, nextRefresh.getTime() - now.getTime());
   const hoursUntilRefresh = Math.ceil(msUntilRefresh / (60 * 60 * 1000));
 
@@ -180,10 +195,6 @@ export async function getCaravanData(nodeId) {
  * @returns {Promise<Object>} New caravan data
  */
 export async function refreshCaravanInventory(nodeId) {
-  // Generate new seed
-  const now = new Date();
-  const timeWindow = Math.floor(now.getTime() / CARAVAN_REFRESH_INTERVAL);
-
   // Get node to use its local_seed
   const nodeResult = await query(
     'SELECT local_seed FROM world_nodes WHERE id = $1',
@@ -194,7 +205,15 @@ export async function refreshCaravanInventory(nodeId) {
     throw new Error(`Caravan node ${nodeId} not found`);
   }
 
-  const newSeed = (nodeResult.rows[0].local_seed * 31337) ^ timeWindow;
+  const localSeed = nodeResult.rows[0].local_seed;
+
+  // Generate new seed using staggered timing
+  const now = new Date();
+  const refreshOffset = calculateRefreshOffset(localSeed);
+  const adjustedTime = now.getTime() - refreshOffset;
+  const currentWindow = Math.floor(adjustedTime / CARAVAN_REFRESH_INTERVAL);
+  // Use modulo to keep within INTEGER range (max ~2.1 billion)
+  const newSeed = ((localSeed * 31337) % 2147483647) ^ currentWindow;
 
   // Update database
   await query(

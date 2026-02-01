@@ -256,6 +256,9 @@ async function generateWorld(seed) {
     }
     usedCoords.add(coordKey);
 
+    // Generate a local seed for this node
+    const localSeed = rng.nextInt(1, 1000000);
+
     const nodeObj = {
       node_type: node.nodeType,
       name: name,
@@ -264,7 +267,7 @@ async function generateWorld(seed) {
       distance_from_center: distFromCenter,
       features: JSON.stringify(generateNodeFeatures(rng, node.nodeType)),
       guild_class: node.guildClass || null,
-      local_seed: rng.nextInt(1, 1000000),
+      local_seed: localSeed,
       difficulty_tier: node.difficultyTier || calculateDifficultyTier(node),
       recruit_refresh_hour: null,
       is_terminator: node.isTerminator || false,
@@ -273,7 +276,12 @@ async function generateWorld(seed) {
       // NEW regional columns
       region_id: node.regionId || null,
       region_race: getRegionRace(node.regionId, castles),
-      ring_distance: node.ringDistance || null
+      ring_distance: node.ringDistance || null,
+      // Caravan columns - use modulo to keep within INTEGER range (max ~2.1 billion)
+      caravan_inventory_seed: node.nodeType === 'merchant_caravan'
+        ? ((localSeed * 31337) % 2147483647)
+        : null,
+      caravan_last_refresh: null
     };
 
     // Assign staggered refresh hours to guild nodes
@@ -818,8 +826,8 @@ async function main() {
     const nodeIds = [];
     for (const node of nodes) {
       const result = await client.query(
-        `INSERT INTO world_nodes (node_type, name, x_coord, y_coord, distance_from_center, features, guild_class, local_seed, difficulty_tier, recruit_refresh_hour, is_terminator, shrine_buff_type, lore_key, region_id, region_race, ring_distance)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        `INSERT INTO world_nodes (node_type, name, x_coord, y_coord, distance_from_center, features, guild_class, local_seed, difficulty_tier, recruit_refresh_hour, is_terminator, shrine_buff_type, lore_key, region_id, region_race, ring_distance, caravan_inventory_seed, caravan_last_refresh)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
          RETURNING id`,
         [
           node.node_type,
@@ -837,7 +845,9 @@ async function main() {
           node.lore_key,
           node.region_id,
           node.region_race,
-          node.ring_distance
+          node.ring_distance,
+          node.caravan_inventory_seed,
+          node.caravan_last_refresh
         ]
       );
       nodeIds.push(result.rows[0].id);

@@ -7,6 +7,7 @@ import { NodeActionMenu } from '../worldmap/NodeActionMenu.js';
 import { NodeHoverTooltip } from '../worldmap/NodeHoverTooltip.js';
 import { QuestMarkerManager } from '../worldmap/QuestMarkerManager.js';
 import { QuestProgressHUD } from '../worldmap/QuestProgressHUD.js';
+import { DOMFogOverlay } from '../worldmap/DOMFogOverlay.js';
 import { generatePathControlPoints, generateSplinePoints } from '../worldmap/PathRenderer.js';
 import { ProfileDropdown } from '../ui/parchment/ProfileDropdown.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
@@ -73,6 +74,10 @@ export class WorldMapScene extends Scene {
     // Unified HUD panel (stamina, travel progress, zodiac)
     this.hudPanel = null;
 
+    // Separate HUD canvas layer (renders above fog overlay)
+    this.hudCanvas = null;
+    this.hudCtx = null;
+
     // Travel state
     this.isTraveling = false;
     this.cameraSettling = false; // Camera continues smooth follow after travel ends
@@ -127,6 +132,9 @@ export class WorldMapScene extends Scene {
 
     // Zodiac collection data cache for tooltip display
     this.zodiacCollectionData = null;
+
+    // DOM-based fog of war overlay (replaces canvas-based fog rendering)
+    this.fogOverlay = null;
   }
 
   async enter() {
@@ -136,6 +144,12 @@ export class WorldMapScene extends Scene {
     // Initialize effects system
     this.effects = new WorldMapEffects(this.assetLoader);
     await this.effects.init();
+
+    // Initialize DOM-based fog overlay (replaces canvas fog rendering)
+    // Pass the canvas so the overlay can match its position and dimensions
+    this.fogOverlay = new DOMFogOverlay(this.game.canvas);
+    this.fogOverlay.init();
+    this.fogOverlay.setNodeSpacing(this.nodeSpacing);
 
     await this.loadWorldData();
     await this.loadRegionData();  // Load region boundaries and castle info
@@ -196,6 +210,9 @@ export class WorldMapScene extends Scene {
     this.hudPanel.checkZodiacNewCrystalFlag(); // Check for new crystal notification
     await this.refreshStamina();
     this.refreshZodiacCollection(); // Fetch collection data (non-blocking)
+
+    // Create separate HUD canvas layer (renders above fog overlay)
+    this.createHUDCanvas();
 
     // Preload node sprites in background
     this.preloadNodeSprites();
@@ -405,6 +422,64 @@ export class WorldMapScene extends Scene {
         node.y_coord * this.nodeSpacing
       );
     }
+  }
+
+  /**
+   * Create a separate canvas for HUD rendering above the fog overlay
+   */
+  createHUDCanvas() {
+    // Create canvas element
+    this.hudCanvas = document.createElement('canvas');
+    this.hudCanvas.id = 'hud-canvas';
+    this.hudCanvas.width = 200;  // Enough for HUD panel (180px + padding)
+    this.hudCanvas.height = 150; // Enough for expanded HUD (~130px + padding)
+
+    // Position to match main canvas top-left, above fog overlay
+    this.hudCanvas.style.cssText = `
+      position: absolute;
+      pointer-events: none;
+      z-index: 3;
+    `;
+
+    // Get context
+    this.hudCtx = this.hudCanvas.getContext('2d');
+
+    // Insert into game container
+    this.game.canvas.parentElement.appendChild(this.hudCanvas);
+
+    // Position to match main canvas
+    this.updateHUDCanvasPosition();
+
+    // Listen for window resize to keep position updated
+    this._hudResizeHandler = () => this.updateHUDCanvasPosition();
+    window.addEventListener('resize', this._hudResizeHandler);
+  }
+
+  /**
+   * Update HUD canvas position to align with main canvas top-left
+   */
+  updateHUDCanvasPosition() {
+    if (!this.hudCanvas) return;
+
+    const mainCanvas = this.game.canvas;
+    const mainRect = mainCanvas.getBoundingClientRect();
+    const containerRect = mainCanvas.parentElement.getBoundingClientRect();
+
+    // Calculate offset from container
+    const offsetX = mainRect.left - containerRect.left;
+    const offsetY = mainRect.top - containerRect.top;
+
+    // Calculate scale factor (main canvas CSS size vs logical size)
+    const scaleX = mainRect.width / mainCanvas.width;
+    const scaleY = mainRect.height / mainCanvas.height;
+
+    // Position HUD canvas at top-left of main canvas
+    this.hudCanvas.style.left = `${offsetX}px`;
+    this.hudCanvas.style.top = `${offsetY}px`;
+
+    // Scale HUD canvas to match main canvas scaling
+    this.hudCanvas.style.width = `${this.hudCanvas.width * scaleX}px`;
+    this.hudCanvas.style.height = `${this.hudCanvas.height * scaleY}px`;
   }
 
   /**
@@ -694,6 +769,25 @@ export class WorldMapScene extends Scene {
       this.questProgressHUD = null;
     }
 
+    // Destroy fog overlay
+    if (this.fogOverlay) {
+      this.fogOverlay.destroy();
+      this.fogOverlay = null;
+    }
+
+    // Clean up HUD canvas
+    if (this.hudCanvas) {
+      if (this._hudResizeHandler) {
+        window.removeEventListener('resize', this._hudResizeHandler);
+        this._hudResizeHandler = null;
+      }
+      if (this.hudCanvas.parentNode) {
+        this.hudCanvas.parentNode.removeChild(this.hudCanvas);
+      }
+      this.hudCanvas = null;
+      this.hudCtx = null;
+    }
+
     // Unsubscribe from responsive changes
     if (this.responsiveUnsubscribe) {
       this.responsiveUnsubscribe();
@@ -772,6 +866,17 @@ export class WorldMapScene extends Scene {
       // Update discovery state for fog of war rendering (filtered by reachability)
       if (this.effects) {
         this.effects.updateDiscoveryState(this.nodes, this.connections, this.reachableNodes);
+      }
+
+      // Update DOM fog overlay discovery state
+      if (this.fogOverlay && this.effects) {
+        this.fogOverlay.updateDiscoveryState(
+          this.nodes,
+          this.connections,
+          this.effects.discoveredNodes,
+          this.effects.visitedNodes,
+          this.effects.fogState
+        );
       }
 
       // Update minimap bounds if nodes changed
@@ -2136,10 +2241,10 @@ export class WorldMapScene extends Scene {
       }
     }
 
-    // Render fog of war overlay (before character and labels so player/text is always visible)
-    // Guard: Only render when world data has loaded (nodes populated)
-    if (this.effects && this.nodes.length > 0) {
-      this.effects.renderFogOfWar(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height, this.nodes, this.connections, this.watchtowerView);
+    // Update DOM fog overlay camera position (DOM-based, no canvas rendering)
+    // The fog overlay is a DOM element positioned over the canvas
+    if (this.fogOverlay) {
+      this.fogOverlay.updateCamera(this.cameraX, this.cameraY);
     }
 
     // Second pass: Render node tooltips AFTER fog of war so they're always visible
@@ -2168,9 +2273,12 @@ export class WorldMapScene extends Scene {
 
     ctx.restore();
 
-    // Render HUD panel (stamina, travel progress, zodiac)
-    if (this.hudPanel) {
-      this.hudPanel.render(ctx);
+    // Render HUD panel to separate canvas (above fog overlay)
+    if (this.hudPanel && this.hudCtx) {
+      // Clear HUD canvas with transparent background
+      this.hudCtx.clearRect(0, 0, this.hudCanvas.width, this.hudCanvas.height);
+      // Render HUD panel
+      this.hudPanel.render(this.hudCtx);
     }
 
     // Update node action menu position (DOM element follows current node)

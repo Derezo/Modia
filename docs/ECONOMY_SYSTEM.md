@@ -949,10 +949,10 @@ The merchant caravan is a traveling shop that offers exclusive items not found i
 | Feature | Details |
 |---------|---------|
 | Location | `merchant_caravan` node type |
-| Refresh Cycle | 48 hours (deterministic per caravan) |
+| Refresh Cycle | 48 hours (staggered per caravan based on local_seed) |
 | Price Modifier | 115% of base price (15% premium) |
-| Item Pool | 23 exclusive caravan-only items |
-| Regional Items | 2 unique items per region race |
+| Item Pool | 50 exclusive caravan-only items |
+| Regional Items | 3 unique items per region race |
 
 ### 4.2 Inventory Generation
 
@@ -1002,17 +1002,40 @@ This ensures:
 - All players see the same items at the same caravan
 - Inventory changes predictably every 48 hours
 
+#### Staggered Refresh Timing
+
+Each caravan refreshes at a different time within the 48-hour window based on its `local_seed`:
+
+```javascript
+// Calculate per-caravan refresh offset (0-47 hours)
+const refreshOffset = calculateRefreshOffset(node.local_seed);
+// = (local_seed % 48) * 60 * 60 * 1000
+
+// Determine current window adjusted for this caravan's offset
+const adjustedTime = now.getTime() - refreshOffset;
+const currentWindow = floor(adjustedTime / CARAVAN_REFRESH_INTERVAL);
+const windowStart = (currentWindow * CARAVAN_REFRESH_INTERVAL) + refreshOffset;
+```
+
+This means:
+- A caravan with `local_seed = 0` refreshes at the start of the window (offset 0h)
+- A caravan with `local_seed = 24` refreshes 24 hours into the window
+- A caravan with `local_seed = 47` refreshes 47 hours into the window
+
+This creates variety in caravan availability across the game world, encouraging players to visit different caravans at different times.
+
 ### 4.3 Regional Specialty Items
 
-Each region race has 2 exclusive items only available when the caravan visits that region:
+Each region race has 3 exclusive items only available when the caravan visits that region:
 
-| Region | Race | Item 1 | Item 2 |
-|--------|------|--------|--------|
-| Heartlands | Human | Knight's Crest (accessory) | Royal Signet Ring (accessory) |
-| Sylvan Reaches | Elf | Fey Bow (weapon) | Moonweave Cloak (armor) |
-| Iron Depths | Dwarf | Ironforge Hammer (weapon) | Stonekin Shield (off-hand) |
-| Bloodplains | Orc | Berserker Tusk (accessory) | Warchief's Axe (weapon) |
-| Shadowmere | Vampire | Blood Vial (consumable) | Nightwalker Fang (accessory) |
+| Region | Race | Item 1 | Item 2 | Item 3 |
+|--------|------|--------|--------|--------|
+| Heartlands | Human | Knight's Crest (accessory) | Royal Signet Ring (accessory) | Crown Guard's Helm (head) |
+| Sylvan Reaches | Elf | Fey Bow (weapon) | Moonweave Cloak (armor) | Elven Dream Catcher (accessory) |
+| Iron Depths | Dwarf | Ironforge Hammer (weapon) | Stonekin Shield (off-hand) | Deepforge Gauntlets (hands) |
+| Bloodplains | Orc | Berserker Tusk (accessory) | Warchief's Axe (weapon) | Trophy Necklace (accessory) |
+| Shadowmere | Vampire | Blood Vial (consumable) | Nightwalker Fang (accessory) | Nightstalker Cloak (body) |
+| Palace | Palace | Palace Emblem (accessory) | - | - |
 
 Regional items provide unique stat combinations not found elsewhere.
 
@@ -1030,6 +1053,31 @@ More potent versions of standard potions:
 | Supreme Elixir | Restores 200 HP + 100 MP | 400g |
 | Revival Herb | Revive with 50% HP | 350g |
 
+#### Utility Consumables
+
+Overworld utility items:
+
+| Item | Effect | Base Price |
+|------|--------|------------|
+| Waypoint Scroll | Teleport to nearest castle | 200g |
+| Escape Smoke | Guaranteed battle escape | 150g |
+| Scout's Lens | Reveal 3-node fog radius | 250g |
+| Stamina Tonic | Restore 3 stamina | 175g |
+| Caravan Pass | 10% discount next purchase | 100g |
+| Treasure Map | Mark nearest treasure node | 300g |
+
+#### Battle Buff Consumables
+
+Temporary stat boosts for combat:
+
+| Item | Effect | Duration | Base Price |
+|------|--------|----------|------------|
+| Warrior's Draught | +10 STR | 5 turns | 180g |
+| Sage's Elixir | +10 INT | 5 turns | 180g |
+| Swiftfoot Philter | +5 AGI | 5 turns | 160g |
+| Ironhide Brew | +8 VIT | 5 turns | 175g |
+| Fortune's Flask | +15 LUK | 3 turns | 200g |
+
 #### Mystery Boxes
 
 Random loot containers:
@@ -1038,6 +1086,19 @@ Random loot containers:
 |------|----------|------------|
 | Mystery Box | Random rare item | 500g |
 | Premium Mystery Box | Guaranteed rare+ item | 1,000g |
+
+#### Level-Scaled Equipment
+
+Mid-tier gear (Lvl 12-20) not found in regular shops:
+
+| Item | Type | Stats | Level Req | Base Price |
+|------|------|-------|-----------|------------|
+| Traveler's Blade | weapon | STR +10, AGI +4 | 12 | 350g |
+| Wanderer's Staff | weapon | INT +12, MP +25 | 14 | 380g |
+| Nomad's Wraps | weapon | AGI +8, STR +6 | 12 | 320g |
+| Caravan Guard Armor | body | VIT +8, HP +40 | 15 | 450g |
+| Merchant's Cowl | head | INT +5, LUK +4 | 12 | 200g |
+| Pathfinder Boots | feet | AGI +5 | 12 | 350g |
 
 #### Crafting Materials
 
@@ -1051,6 +1112,10 @@ Components for future crafting system:
 | Void Crystal | Dangerous power source | 450g |
 | Ancient Wood | First Age petrified wood | 180g |
 | Starlight Essence | Magical enhancement | 320g |
+| Ethereal Dust | Spirit realm essence | 280g |
+| Demon Horn | Powerful demon fragment | 380g |
+| Mermaid Scale | Water affinity scale | 350g |
+| Titan Fragment | Ancient giant armor piece | 420g |
 
 ### 4.5 Stock and Pricing
 
@@ -1059,10 +1124,13 @@ Components for future crafting system:
 | Type | Min Stock | Max Stock |
 |------|-----------|-----------|
 | Consumable | 3 | 5 |
+| Utility Consumable | 2 | 4 |
+| Battle Buff | 2 | 3 |
 | Material | 5 | 10 |
 | Weapon | 1 | 2 |
 | Armor | 1 | 2 |
 | Accessory | 1 | 2 |
+| Level-Scaled Equipment | 1 | 1 |
 
 **Special Stock Overrides:**
 
@@ -1072,6 +1140,8 @@ Components for future crafting system:
 | Premium Mystery Box | Exactly 1 |
 | Full Restore | 2-3 |
 | Revival Herb | 1-2 |
+| Level-Scaled Weapons/Armor | Exactly 1 (ultra-rare) |
+| Crafting Materials | 1-2 |
 
 #### Pricing Formula
 

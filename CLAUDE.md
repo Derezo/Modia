@@ -118,6 +118,7 @@ npm run ai:generate:characters -- --mode sd15 --ipadapter-weight 0.8 --id warrio
 npm run ai:generate:characters -- --mode sd15 --controlnet-weight 0.8 --ipadapter-weight 0.6 --id warrior
 
 # Generate only reference image (for testing style transfer):
+# Note: Reference images preserve background (--no-background-removal) for better IP-Adapter style transfer
 npm run ai:generate:characters -- --mode sd15 --reference-only --id warrior
 
 # Use external reference image:
