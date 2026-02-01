@@ -45,3 +45,4 @@ ai-images-temp/
 ai-audio-temp/
 *-temp/
 *.tmp
+.claude/
