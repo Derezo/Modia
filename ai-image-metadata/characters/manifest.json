@@ -4,9 +4,10 @@
   "generationDefaults": {
     "mode": "flux",
     "sd15": {
-      "controlnetWeight": 0.5,
-      "ipadapterWeight": 0.5,
-      "loraModel": null
+      "controlnetWeight": 0.7,
+      "ipadapterWeight": 0.7,
+      "loraModel": "pixel-art-xl",
+      "availableLoraModels": ["pixel-art-xl", "16-bit-pixel", "all-in-one-pixel"]
     }
   },
   "weightPresets": {
@@ -111,6 +112,20 @@
         "magical discharge",
         "returning to neutral"
       ]
+    },
+    "victory": {
+      "description": "Victory/celebration animation",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "initial victory pose",
+        "raising arms up",
+        "arms fully raised",
+        "pumping fist",
+        "celebration gesture",
+        "turning to crowd",
+        "final pose hold",
+        "returning to neutral"
+      ]
     }
   },
   "categories": ["players", "enemies"],
@@ -124,6 +139,14 @@
       "castle": "enemies/castle.json"
     }
   },
+  "enemyCounts": {
+    "forest": 6,
+    "cave": 6,
+    "mountain": 8,
+    "bridge": 7,
+    "castle": 7
+  },
+  "totalEnemies": 34,
   "outputPaths": {
     "players": "/assets/characters/player/{class}/{class}_{animation}.png",
     "enemies": "/assets/characters/enemies/{biome}/{id}/{id}_{animation}.png"
