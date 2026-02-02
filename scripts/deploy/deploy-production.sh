@@ -11,12 +11,14 @@
 #   --skip-build      Skip frontend build step for quick redeploys
 #   --version <ver>   Tag release version (e.g., v1.0.0)
 #   --force           Allow deployment with uncommitted changes
+#   --reseed          Run migrations and reseed database after deploy
 #   --help            Show this help message
 #
 # Example:
 #   ./deploy-production.sh --version v1.0.0
 #   ./deploy-production.sh --dry-run --version v1.0.0
 #   ./deploy-production.sh --skip-build
+#   ./deploy-production.sh --reseed
 #
 
 set -e
@@ -40,6 +42,7 @@ DRY_RUN=false
 SKIP_BUILD=false
 VERSION=""
 FORCE=false
+RESEED=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -58,6 +61,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --force)
       FORCE=true
+      shift
+      ;;
+    --reseed)
+      RESEED=true
       shift
       ;;
     --help|-h)
@@ -108,6 +115,7 @@ echo "Server:    ${SERVER_USER}@${SERVER_HOST}"
 echo "Version:   ${VERSION_TAG}"
 echo "Tarball:   ${TARBALL_NAME}"
 echo "Dry Run:   ${DRY_RUN}"
+echo "Reseed:    ${RESEED}"
 echo ""
 
 # ============================================
@@ -257,15 +265,15 @@ else
   TARBALL_SIZE_BYTES=$(stat -c%s "$TARBALL_PATH" 2>/dev/null || stat -f%z "$TARBALL_PATH")
   TARBALL_SIZE_MB=$((TARBALL_SIZE_BYTES / 1024 / 1024))
 
-  # For files over 50MB, show transfer rate with pv if available
-  if [ "$TARBALL_SIZE_MB" -gt 50 ] && command -v pv >/dev/null 2>&1; then
-    log "Uploading ${TARBALL_SIZE_MB}MB via pipe with progress..."
+  # Always show progress bar with pv if available
+  if command -v pv >/dev/null 2>&1; then
+    log "Uploading ${TARBALL_SIZE_MB}MB with progress..."
     pv -pterab "$TARBALL_PATH" | ssh $SSH_OPTS "${SERVER_USER}@${SERVER_HOST}" "cat > /tmp/${TARBALL_NAME}"
   else
-    # Use scp for single-file transfer (less overhead than rsync)
-    # The -O flag uses legacy SCP protocol which can be faster for large files
-    log "Uploading ${TARBALL_SIZE_MB}MB..."
-    scp $SSH_OPTS -O "$TARBALL_PATH" "${SERVER_USER}@${SERVER_HOST}:/tmp/"
+    # Fallback: scp with verbose output for progress indication
+    log "Uploading ${TARBALL_SIZE_MB}MB... (install 'pv' for progress bar)"
+    scp $SSH_OPTS -v -O "$TARBALL_PATH" "${SERVER_USER}@${SERVER_HOST}:/tmp/" 2>&1 | \
+      grep -E "^(Sending|Transferred)" || true
   fi
 
   # Upload install script (small file, compression doesn't matter)
@@ -294,9 +302,38 @@ REMOTE_SCRIPT
 fi
 
 # ============================================
-# Step 6: Health check
+# Step 6: Run migrations and reseed (optional)
 # ============================================
-step "Verifying deployment..."
+if [ "$RESEED" = true ]; then
+  step "Running migrations and reseeding database..."
+
+  if [ "$DRY_RUN" = true ]; then
+    dry_run "Would SSH to ${SERVER_HOST} and execute:"
+    dry_run "  cd ${SERVER_DEPLOY_DIR}/current && npm run db:migrate && npm run db:seed"
+  else
+    ssh "${SERVER_USER}@${SERVER_HOST}" << RESEED_SCRIPT
+      set -e
+      cd "${SERVER_DEPLOY_DIR}/current"
+
+      echo "Running database migrations..."
+      npm run db:migrate
+
+      echo ""
+      echo "Reseeding database..."
+      npm run db:seed
+
+      echo ""
+      echo "Database refresh complete!"
+RESEED_SCRIPT
+
+    log "Database migrations and reseed complete"
+  fi
+fi
+
+# ============================================
+# Step 7: Health check
+# ============================================
+step "Verifying deployment (health check)..."
 
 HEALTH_URL="https://modia-api.mittonvillage.com/api/health"
 
@@ -326,7 +363,7 @@ else
 fi
 
 # ============================================
-# Step 7: Cleanup and summary
+# Step 8: Cleanup and summary
 # ============================================
 if [ "$DRY_RUN" = false ]; then
   # Clean up local tarball
