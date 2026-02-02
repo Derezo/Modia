@@ -223,16 +223,6 @@
     "obstacles": "v2",
     "characters": "v1"
   },
-  "outputPaths": {
-    "tiles": "/assets/sprites/terrain/",
-    "portraits": "/assets/portraits/",
-    "items": "/assets/items/",
-    "icons": "/assets/icons/",
-    "nodes": "/assets/nodes/",
-    "overlays": "/assets/overlays/",
-    "obstacles": "/assets/sprites/obstacles/",
-    "characters": "/assets/characters/"
-  },
   "layeredComposition": {
     "enabled": true,
     "description": "Items are generated as clean base sprites. Rarity and augment effects are applied at runtime via overlay compositing.",

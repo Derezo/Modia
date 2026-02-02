@@ -1,12 +1,27 @@
 /**
- * Image Resize Utilities
- * Generate multiple size variants from source images using ImageMagick
+ * @module resizeUtils
+ * @description Image resize utilities for AI-generated asset post-processing.
+ *
+ * Key responsibilities:
+ * - Generate size variants from source images (1024x1024) using ImageMagick
+ * - Apply isometric transforms for terrain tiles (walls, slopes)
+ * - Post-process assets by type (tiles, portraits, icons, items, nodes, overlays)
+ * - Support canonical path generation via assetPathsBridge
+ *
+ * Size presets are sourced from shared/assetPaths.js (canonical) with resize-specific
+ * additions for non-square tiles (walls, slopes) in assetPathsBridge.js.
+ *
+ * @see assetPathsBridge.js - Bridge to shared/assetPaths.js for CommonJS compatibility
+ * @see shared/assetPaths.js - Canonical path and size definitions
  */
 
 const { execSync, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const { log, fileExists, ensureDirectoryExists, convertToWebp } = require('./imageUtils');
+
+// Use centralized bridge for ESM import and SIZE_PRESETS
+const { getAssetPathsModule, getSizePresets, RESIZE_SPECIFIC_PRESETS } = require('./assetPathsBridge');
 
 /**
  * Project root directory (Modia/)
@@ -20,23 +35,16 @@ const PROJECT_ROOT = path.resolve(__dirname, '../../..');
 const STANDARD_SIZES = [16, 24, 32, 48, 64, 128];
 
 /**
- * Size presets for different asset categories.
- * Standard categories (tiles, portraits, items, icons, nodes, overlays) are
- * canonically defined in shared/assetPaths.js SIZE_PRESETS.
- * The walls/slopes entries are resize-specific and only used here.
+ * SIZE_PRESETS - imported from shared/assetPaths.js via bridge
  *
- * @see shared/assetPaths.js for the canonical source of truth
+ * Canonical size presets for standard asset categories are defined in
+ * shared/assetPaths.js. Resize-specific presets for non-square tiles
+ * (walls, slopes) are defined in assetPathsBridge.js.
+ *
+ * Use getSizePresets() for async access to merged presets.
+ * @see shared/assetPaths.js for canonical definitions
+ * @see assetPathsBridge.js for RESIZE_SPECIFIC_PRESETS
  */
-const SIZE_PRESETS = {
-  tiles: [64],                        // 128x128 AI -> 64x64 with diamond mask
-  portraits: [64, 128, 256],          // 256x256 AI -> 64, 128, 256 variants
-  items: [32, 64, 128],               // 128x128 AI -> 32, 64, 128 variants
-  icons: [16, 24, 32, 48, 64, 128, 256],   // 1024x1024 AI -> 16, 24, 32, 48, 64, 128, 256 variants
-  nodes: [48, 64, 96, 128, 256],       // 1024x1024 AI -> 48, 64, 96, 128, 256 variants
-  walls: [64],                        // 128x32 AI -> 64x16 (resize-specific)
-  slopes: [64],                       // 128x160 AI -> 64x80 (resize-specific)
-  overlays: [32, 48, 64, 128]         // Match item sizes for compositing
-};
 
 /**
  * AI generation resolution for each asset type
@@ -240,7 +248,8 @@ async function generateSizeVariants(sourcePath, options = {}) {
     verbose = false
   } = options;
 
-  // Determine which sizes to generate
+  // Determine which sizes to generate - use async getSizePresets()
+  const SIZE_PRESETS = await getSizePresets();
   let targetSizes = sizes;
   if (!targetSizes && preset && SIZE_PRESETS[preset]) {
     targetSizes = SIZE_PRESETS[preset];
@@ -353,6 +362,7 @@ async function generateSizeVariantsForDirectory(sourceDir, options = {}) {
  * @returns {Promise<{success: boolean, variants: string[]}>}
  */
 async function postProcessGenerated(imagePath, category, options = {}) {
+  const SIZE_PRESETS = await getSizePresets();
   const preset = SIZE_PRESETS[category] ? category : null;
   const result = await generateSizeVariants(imagePath, {
     preset,
@@ -688,6 +698,7 @@ async function postProcessTile(imagePath, options = {}) {
  */
 async function postProcessPortrait(imagePath, options = {}) {
   const { force = false, verbose = false } = options;
+  const SIZE_PRESETS = await getSizePresets();
   const allSizes = SIZE_PRESETS.portraits; // [64, 128, 256]
   const results = { success: true, variants: [], failed: [], sourceSize: 0 };
 
@@ -749,6 +760,7 @@ async function postProcessPortrait(imagePath, options = {}) {
  */
 async function postProcessItem(imagePath, options = {}) {
   const { force = false, verbose = false } = options;
+  const SIZE_PRESETS = await getSizePresets();
   const sizes = SIZE_PRESETS.items; // [32, 64, 128]
   const results = { success: true, variants: [], failed: [] };
 
@@ -790,7 +802,8 @@ async function postProcessItem(imagePath, options = {}) {
  */
 async function postProcessIcon(imagePath, options = {}) {
   const { force = false, verbose = false } = options;
-  const sizes = SIZE_PRESETS.icons; // [16, 24, 32, 48, 64, 128]
+  const SIZE_PRESETS = await getSizePresets();
+  const sizes = SIZE_PRESETS.icons; // [16, 24, 32, 48, 64, 128, 256]
   const results = { success: true, variants: [], failed: [] };
 
   for (const size of sizes) {
@@ -840,6 +853,7 @@ async function postProcessIcon(imagePath, options = {}) {
  */
 async function postProcessNode(imagePath, options = {}) {
   const { force = false, verbose = false } = options;
+  const SIZE_PRESETS = await getSizePresets();
   const allSizes = SIZE_PRESETS.nodes; // [48, 64, 96, 128, 256]
   const results = { success: true, variants: [], failed: [], sourceSize: 0 };
 
@@ -1043,6 +1057,7 @@ async function postProcessWithDualWrite(imagePath, category, options = {}) {
   }
 
   // 2. Generate standardized paths
+  const SIZE_PRESETS = await getSizePresets();
   const sizes = SIZE_PRESETS[category] || [64];
   const standardizedResults = { success: true, variants: [], failed: [] };
 
@@ -1076,9 +1091,6 @@ async function postProcessWithDualWrite(imagePath, category, options = {}) {
 
   return { legacy: legacyResults, standardized: standardizedResults };
 }
-
-// Use centralized bridge for ESM import (eliminates duplicate cached import)
-const { getAssetPathsModule } = require('./assetPathsBridge');
 
 /**
  * Get canonical sized path for an asset using assetPaths.js conventions
@@ -1308,7 +1320,8 @@ async function concatenateVerticalStrip(framePaths, outputPath, options = {}) {
 
 module.exports = {
   STANDARD_SIZES,
-  SIZE_PRESETS,
+  getSizePresets,  // Async function to get merged SIZE_PRESETS from canonical source
+  RESIZE_SPECIFIC_PRESETS,  // Walls/slopes presets for resize-specific use
   AI_RESOLUTIONS,
   checkImageMagick,
   getImageDimensions,

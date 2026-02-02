@@ -75,6 +75,8 @@
     "ai:status": "node scripts/ai-images/validate-images.js --status",
     "ai:validate": "node scripts/ai-images/validate-metadata.js",
     "ai:validate:images": "node scripts/ai-images/validate-images.js",
+    "ai:validate:paths": "node scripts/ai-images/validate-paths.js",
+    "ai:validate:asset-paths": "node scripts/ai-images/validate-asset-paths.js",
     "ai:regenerate-prompts": "node scripts/ai-images/regenerate-prompts.js",
     "ai:restore": "node scripts/ai-images/restore-backup.js",
     "ai:migrate-paths": "node scripts/ai-images/migrate-asset-paths.js",

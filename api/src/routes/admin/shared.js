@@ -17,7 +17,6 @@ import { AppError } from '../../middleware/errorHandler.js';
 import { loadJsonFile } from '../../utils/jsonFileUtils.js';
 import { VALID_CATEGORIES } from '../../utils/assetConstants.js';
 import { getAssetPath, DEFAULT_SIZES } from '../../../../shared/assetPaths.js';
-import { normalizeIconId } from '../../../../shared/iconCategories.js';
 
 // Get project paths
 const __filename = fileURLToPath(import.meta.url);
@@ -267,13 +266,9 @@ export function enrichAssetWithPath(asset, category) {
       extraOptions.tileCategory = asset._tileCategory;
     }
 
-    // Normalize icon IDs to match file naming convention
-    // Icon metadata uses prefixed IDs (action_attack) but files use stripped names (attack.png)
-    const normalizedId = category === 'icons'
-      ? normalizeIconId(id, subcategory)
-      : id;
-
-    asset.path = getAssetPath(category, normalizedId, {
+    // Icon IDs are now unprefixed in metadata (Phase 5 cleanup)
+    // so we can use the ID directly without normalization
+    asset.path = getAssetPath(category, id, {
       subcategory,
       size,
       ...extraOptions

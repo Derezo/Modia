@@ -725,6 +725,8 @@ Detailed specifications in `docs/`. Key files:
 
 **UI & Assets:**
 - `ASSET_SYSTEM_INDEX.md` - Unified asset pipeline navigation and quick reference
+- `ASSET_PATH_CONFIGURATION.md` - Single source of truth (`shared/assetPaths.js`), consumer integration
+- `ASSET_METADATA_SCHEMA.md` - JSON metadata conventions, underscore prefix pattern, category schemas
 - `DESIGN_SYSTEM.md` - Parchment UI components, theming, responsive patterns
 - `AI_IMAGE_GENERATION.md` - AI image generation pipeline, style guide, prompts
 - `AUDIO_STYLE_GUIDE.md` - Audio prompt guidelines, regional music profiles, SFX patterns

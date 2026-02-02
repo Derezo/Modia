@@ -365,9 +365,6 @@ async function main() {
 
     console.log(`  - ${tile.id}`);
     console.log(`    Biome: ${tile._biome}`);
-    if (tile._biome === 'base') {
-      console.log(`    Note: Base biome generates via 'default' then moves to 'base'`);
-    }
     console.log(`    Variants: ${tile.variants || 1}`);
     console.log(`    LoRA: ${loraModel}${tile.loraModel ? ' (asset-level)' : options.lora ? ' (CLI override)' : ' (default)'}`);
     console.log(`    Final path: ${getOutputPath(tile, tile._biome)}`);
@@ -418,27 +415,25 @@ async function main() {
     log(`[${i + 1}/${tilesToGenerate.length}] Generating: ${tile.id}`, 'info');
 
     try {
-      // Map "base" biome to "default" for Python script compatibility
-      // but pass explicit output directory to preserve "base" folder structure
-      const pythonBiome = tile._biome === 'base' ? 'default' : tile._biome;
-      const outputDir = tile._biome === 'base' ? path.join(OUTPUT_DIR, 'base') : null;
-
       // Determine LoRA model: CLI override > asset-level > category default
       const effectiveLoraModel = options.lora || getEffectiveLoraModel(tile, 'tiles');
 
       // Detect wall tiles and use appropriate generator
       const isWall = tile._tileCategory === 'walls';
 
+      // Compute canonical output path upfront - no biome mapping needed
+      // Python receives the exact output path from assetPaths.js
+      const tileOutputPath = getOutputPath(tile, tile._biome);
+
       let result;
       if (isWall) {
         // Wall texture - 64x16 strip
-        const wallOutputPath = getOutputPath(tile, tile._biome);
         result = await generateWall({
           prompt: tile.prompt,
           key: tile.id,
-          biome: pythonBiome,
+          biome: tile._biome,  // Pass actual biome for prompt context
           terrain: tile.terrain || 'default',
-          outputPath: wallOutputPath,
+          outputPath: tileOutputPath,
           seed: tile.seed,
           loraModel: effectiveLoraModel
         }, {
@@ -452,8 +447,8 @@ async function main() {
         result = await generateTile({
           prompt: tile.prompt,
           key: tile.id,
-          biome: pythonBiome,
-          outputDir: outputDir,
+          biome: tile._biome,  // Pass actual biome for prompt context
+          outputPath: tileOutputPath,  // Explicit canonical path
           seed: tile.seed,
           variants: tile.variants || 1,
           loraModel: effectiveLoraModel
@@ -466,28 +461,6 @@ async function main() {
       }
 
       if (result.success) {
-        // For "base" biome tiles, move from default/ to base/ directory
-        // (Python script doesn't respect --output-dir, uses --biome for path)
-        if (tile._biome === 'base') {
-          if (options.verbose) {
-            console.log(`    (Note: Python OUTPUT above is intermediate; file will be moved to base/)`);
-          }
-          const numVariants = tile.variants || 1;
-          for (let v = 0; v < numVariants; v++) {
-            const filename = numVariants > 1 ? `${tile.id}_${v}.png` : `${tile.id}.png`;
-            const srcPath = path.join(OUTPUT_DIR, 'default', filename);
-            const destPath = path.join(OUTPUT_DIR, 'base', filename);
-            if (fs.existsSync(srcPath)) {
-              ensureDirectoryExists(path.join(OUTPUT_DIR, 'base'));
-              fs.renameSync(srcPath, destPath);
-              if (options.verbose) {
-                console.log(`    MOVED: ${srcPath}`);
-                console.log(`    FINAL PATH: ${destPath}`);
-              }
-            }
-          }
-        }
-
         // Convert PNG to WebP format
         const pngPaths = [];
         if (isWall) {
@@ -496,10 +469,9 @@ async function main() {
         } else {
           // Floor/slope tiles may have multiple variants
           const numVariants = tile.variants || 1;
-          const biomeDir = tile._biome === 'base' ? 'base' : tile._biome;
           for (let v = 0; v < numVariants; v++) {
             const filename = numVariants > 1 ? `${tile.id}_${v}.png` : `${tile.id}.png`;
-            pngPaths.push(path.join(OUTPUT_DIR, biomeDir, filename));
+            pngPaths.push(path.join(OUTPUT_DIR, tile._biome, filename));
           }
         }
 

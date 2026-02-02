@@ -5,6 +5,9 @@
  * Checks that all generated assets have proper size variants in the correct locations.
  * Reports coverage percentages per category and size.
  *
+ * Uses shared/assetPaths.js (via assetPathsBridge) as the single source of truth
+ * for SIZE_PRESETS - no longer duplicates size definitions.
+ *
  * Usage:
  *   node scripts/ai-images/validate-paths.js
  *   node scripts/ai-images/validate-paths.js --category icons
@@ -16,8 +19,7 @@ const path = require('path');
 const fs = require('fs');
 const { program } = require('commander');
 const { fileExists, getProjectRoot } = require('./lib/imageUtils');
-const { CATEGORY_BASE_DIRS } = require('./lib/assetPathsBridge');
-const { SIZE_PRESETS } = require('./lib/resizeUtils');
+const { CATEGORY_BASE_DIRS, getSizePresets } = require('./lib/assetPathsBridge');
 
 const PROJECT_ROOT = getProjectRoot();
 const ASSETS_ROOT = path.join(PROJECT_ROOT, 'frontend/public/assets');
@@ -79,9 +81,10 @@ const CATEGORY_CONFIGS = {
  * Find all assets for a given category by scanning directories
  * @param {string} category - Category name
  * @param {Object} config - Category configuration
+ * @param {Object} SIZE_PRESETS - Size presets object
  * @returns {Array<{id: string, subcategory?: string, basePath: string}>}
  */
-function findAssetsForCategory(category, config) {
+function findAssetsForCategory(category, config, SIZE_PRESETS) {
   const assets = [];
   const baseDir = path.join(ASSETS_ROOT, config.baseDir);
 
@@ -114,10 +117,11 @@ function findAssetsForCategory(category, config) {
 
       if (!sizeSubdir) continue;
 
-      const files = fs.readdirSync(sizeSubdir).filter(f => f.endsWith('.png'));
+      const files = fs.readdirSync(sizeSubdir).filter(f => f.endsWith('.png') || f.endsWith('.webp'));
       for (const file of files) {
+        const ext = path.extname(file);
         assets.push({
-          id: path.basename(file, '.png'),
+          id: path.basename(file, ext),
           subcategory: subcat || undefined,
           basePath: path.join(sizeSubdir, file),
           _referenceSize: foundSize
@@ -134,12 +138,13 @@ function findAssetsForCategory(category, config) {
 
       const entries = fs.readdirSync(searchDir, { withFileTypes: true });
       for (const entry of entries) {
-        if (entry.isFile() && entry.name.endsWith('.png')) {
+        if (entry.isFile() && (entry.name.endsWith('.png') || entry.name.endsWith('.webp'))) {
           // Skip variant files (e.g., forest_grass_1_v0.png)
-          const isVariant = /_v\d+\.png$/.test(entry.name);
+          const isVariant = /_v\d+\.(png|webp)$/.test(entry.name);
           if (!isVariant) {
+            const ext = path.extname(entry.name);
             assets.push({
-              id: path.basename(entry.name, '.png'),
+              id: path.basename(entry.name, ext),
               subcategory: subcat || undefined,
               basePath: path.join(searchDir, entry.name)
             });
@@ -182,9 +187,10 @@ function getExpectedPath(category, asset, size, config) {
  * Validate a single category
  * @param {string} category - Category name
  * @param {Object} options - Validation options
+ * @param {Object} SIZE_PRESETS - Size presets object
  * @returns {Object} Validation results
  */
-function validateCategory(category, options = {}) {
+function validateCategory(category, options = {}, SIZE_PRESETS) {
   const { verbose = false } = options;
   const config = CATEGORY_CONFIGS[category];
 
@@ -220,7 +226,7 @@ function validateCategory(category, options = {}) {
   }
 
   // Find all assets for this category
-  const assets = findAssetsForCategory(category, config);
+  const assets = findAssetsForCategory(category, config, SIZE_PRESETS);
   results.totalAssets = assets.length;
 
   // For categories without size variants
@@ -234,7 +240,9 @@ function validateCategory(category, options = {}) {
     for (const size of sizes) {
       const expectedPath = getExpectedPath(category, asset, size, config);
 
-      if (fileExists(expectedPath)) {
+      // Check both .png and .webp versions
+      const webpPath = expectedPath.replace(/\.png$/, '.webp');
+      if (fileExists(expectedPath) || fileExists(webpPath)) {
         results.sizeVariants[size].found++;
       } else {
         results.sizeVariants[size].missing++;
@@ -428,42 +436,54 @@ program
 
 const options = program.opts();
 
-// List categories
-if (options.listCategories) {
-  console.log('Available categories:');
-  for (const [name, config] of Object.entries(CATEGORY_CONFIGS)) {
-    const sizes = SIZE_PRESETS[name] || [];
-    console.log(`  ${name}: ${config.baseDir} (${config.sizePattern}, sizes: ${sizes.join(', ') || 'none'})`);
+// Main async function
+async function main() {
+  // Get SIZE_PRESETS asynchronously
+  const SIZE_PRESETS = await getSizePresets();
+
+  // List categories
+  if (options.listCategories) {
+    console.log('Available categories:');
+    for (const [name, config] of Object.entries(CATEGORY_CONFIGS)) {
+      const sizes = SIZE_PRESETS[name] || [];
+      console.log(`  ${name}: ${config.baseDir} (${config.sizePattern}, sizes: ${sizes.join(', ') || 'none'})`);
+    }
+    process.exit(0);
   }
-  process.exit(0);
+
+  // Determine which categories to validate
+  const categoriesToValidate = options.category
+    ? [options.category]
+    : Object.keys(CATEGORY_CONFIGS);
+
+  // Validate unknown category
+  if (options.category && !CATEGORY_CONFIGS[options.category]) {
+    console.error(colors.red + `Unknown category: ${options.category}` + colors.reset);
+    console.error(`Valid categories: ${Object.keys(CATEGORY_CONFIGS).join(', ')}`);
+    process.exit(1);
+  }
+
+  // Run validation
+  const results = [];
+  for (const category of categoriesToValidate) {
+    const result = validateCategory(category, { verbose: options.verbose }, SIZE_PRESETS);
+    results.push(result);
+  }
+
+  // Output results
+  if (options.json) {
+    printJson(results);
+  } else {
+    printReport(results, options.verbose);
+  }
+
+  // Exit with error code if missing files found
+  const totalMissing = results.reduce((sum, r) => sum + r.missing.length, 0);
+  process.exit(totalMissing > 0 ? 1 : 0);
 }
 
-// Determine which categories to validate
-const categoriesToValidate = options.category
-  ? [options.category]
-  : Object.keys(CATEGORY_CONFIGS);
-
-// Validate unknown category
-if (options.category && !CATEGORY_CONFIGS[options.category]) {
-  console.error(colors.red + `Unknown category: ${options.category}` + colors.reset);
-  console.error(`Valid categories: ${Object.keys(CATEGORY_CONFIGS).join(', ')}`);
+// Run the main function
+main().catch(err => {
+  console.error(colors.red + 'Error:' + colors.reset, err.message);
   process.exit(1);
-}
-
-// Run validation
-const results = [];
-for (const category of categoriesToValidate) {
-  const result = validateCategory(category, { verbose: options.verbose });
-  results.push(result);
-}
-
-// Output results
-if (options.json) {
-  printJson(results);
-} else {
-  printReport(results, options.verbose);
-}
-
-// Exit with error code if missing files found
-const totalMissing = results.reduce((sum, r) => sum + r.missing.length, 0);
-process.exit(totalMissing > 0 ? 1 : 0);
+});

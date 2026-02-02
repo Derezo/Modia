@@ -57,7 +57,7 @@
   },
   "icons": [
     {
-      "id": "zodiac_aries",
+      "id": "aries",
       "name": "Aries Crystal",
       "zodiacSign": "aries",
       "element": "fire",
@@ -74,7 +74,7 @@
       "generatedAt": "2026-01-30T04:11:55.613Z"
     },
     {
-      "id": "zodiac_taurus",
+      "id": "taurus",
       "name": "Taurus Crystal",
       "zodiacSign": "taurus",
       "element": "earth",
@@ -91,7 +91,7 @@
       "generatedAt": "2026-01-30T04:37:25.122Z"
     },
     {
-      "id": "zodiac_gemini",
+      "id": "gemini",
       "name": "Gemini Crystal",
       "zodiacSign": "gemini",
       "element": "air",
@@ -108,7 +108,7 @@
       "generatedAt": "2026-01-30T05:18:05.644Z"
     },
     {
-      "id": "zodiac_cancer",
+      "id": "cancer",
       "name": "Cancer Crystal",
       "zodiacSign": "cancer",
       "element": "water",
@@ -125,7 +125,7 @@
       "generatedAt": "2026-01-30T05:18:54.190Z"
     },
     {
-      "id": "zodiac_leo",
+      "id": "leo",
       "name": "Leo Crystal",
       "zodiacSign": "leo",
       "element": "fire",
@@ -142,7 +142,7 @@
       "generatedAt": "2026-01-30T05:19:44.819Z"
     },
     {
-      "id": "zodiac_virgo",
+      "id": "virgo",
       "name": "Virgo Crystal",
       "zodiacSign": "virgo",
       "element": "earth",
@@ -159,7 +159,7 @@
       "generatedAt": "2026-01-30T05:20:35.736Z"
     },
     {
-      "id": "zodiac_libra",
+      "id": "libra",
       "name": "Libra Crystal",
       "zodiacSign": "libra",
       "element": "air",
@@ -176,7 +176,7 @@
       "generatedAt": "2026-01-30T05:21:25.139Z"
     },
     {
-      "id": "zodiac_scorpio",
+      "id": "scorpio",
       "name": "Scorpio Crystal",
       "zodiacSign": "scorpio",
       "element": "water",
@@ -194,7 +194,7 @@
       "regenerationQueuedAt": null
     },
     {
-      "id": "zodiac_sagittarius",
+      "id": "sagittarius",
       "name": "Sagittarius Crystal",
       "zodiacSign": "sagittarius",
       "element": "fire",
@@ -211,7 +211,7 @@
       "generatedAt": "2026-01-30T05:22:56.212Z"
     },
     {
-      "id": "zodiac_capricorn",
+      "id": "capricorn",
       "name": "Capricorn Crystal",
       "zodiacSign": "capricorn",
       "element": "earth",
@@ -228,7 +228,7 @@
       "generatedAt": "2026-01-30T05:23:44.552Z"
     },
     {
-      "id": "zodiac_aquarius",
+      "id": "aquarius",
       "name": "Aquarius Crystal",
       "zodiacSign": "aquarius",
       "element": "air",
@@ -246,7 +246,7 @@
       "regenerationQueuedAt": null
     },
     {
-      "id": "zodiac_pisces",
+      "id": "pisces",
       "name": "Pisces Crystal",
       "zodiacSign": "pisces",
       "element": "water",
@@ -263,7 +263,7 @@
       "generatedAt": "2026-01-30T05:25:19.108Z"
     },
     {
-      "id": "zodiac_aries_locked",
+      "id": "aries_locked",
       "name": "Aries Crystal (Locked)",
       "zodiacSign": "aries",
       "element": "fire",
@@ -282,7 +282,7 @@
       "regenerationQueuedAt": null
     },
     {
-      "id": "zodiac_taurus_locked",
+      "id": "taurus_locked",
       "name": "Taurus Crystal (Locked)",
       "zodiacSign": "taurus",
       "element": "earth",
@@ -300,7 +300,7 @@
       "generatedAt": "2026-01-30T14:18:09.887Z"
     },
     {
-      "id": "zodiac_gemini_locked",
+      "id": "gemini_locked",
       "name": "Gemini Crystal (Locked)",
       "zodiacSign": "gemini",
       "element": "air",
@@ -318,7 +318,7 @@
       "generatedAt": "2026-01-30T14:18:44.465Z"
     },
     {
-      "id": "zodiac_cancer_locked",
+      "id": "cancer_locked",
       "name": "Cancer Crystal (Locked)",
       "zodiacSign": "cancer",
       "element": "water",
@@ -339,7 +339,7 @@
       "lastError": null
     },
     {
-      "id": "zodiac_leo_locked",
+      "id": "leo_locked",
       "name": "Leo Crystal (Locked)",
       "zodiacSign": "leo",
       "element": "fire",
@@ -360,7 +360,7 @@
       "lastError": null
     },
     {
-      "id": "zodiac_virgo_locked",
+      "id": "virgo_locked",
       "name": "Virgo Crystal (Locked)",
       "zodiacSign": "virgo",
       "element": "earth",
@@ -381,7 +381,7 @@
       "lastError": null
     },
     {
-      "id": "zodiac_libra_locked",
+      "id": "libra_locked",
       "name": "Libra Crystal (Locked)",
       "zodiacSign": "libra",
       "element": "air",
@@ -402,7 +402,7 @@
       "lastError": null
     },
     {
-      "id": "zodiac_scorpio_locked",
+      "id": "scorpio_locked",
       "name": "Scorpio Crystal (Locked)",
       "zodiacSign": "scorpio",
       "element": "water",
@@ -423,7 +423,7 @@
       "lastError": null
     },
     {
-      "id": "zodiac_sagittarius_locked",
+      "id": "sagittarius_locked",
       "name": "Sagittarius Crystal (Locked)",
       "zodiacSign": "sagittarius",
       "element": "fire",
@@ -436,7 +436,7 @@
       "generatedAt": "2026-01-30T05:59:57.911Z"
     },
     {
-      "id": "zodiac_capricorn_locked",
+      "id": "capricorn_locked",
       "name": "Capricorn Crystal (Locked)",
       "zodiacSign": "capricorn",
       "element": "earth",
@@ -449,7 +449,7 @@
       "generatedAt": "2026-01-30T06:00:38.563Z"
     },
     {
-      "id": "zodiac_aquarius_locked",
+      "id": "aquarius_locked",
       "name": "Aquarius Crystal (Locked)",
       "zodiacSign": "aquarius",
       "element": "air",
@@ -462,7 +462,7 @@
       "generatedAt": "2026-01-30T06:01:15.641Z"
     },
     {
-      "id": "zodiac_pisces_locked",
+      "id": "pisces_locked",
       "name": "Pisces Crystal (Locked)",
       "zodiacSign": "pisces",
       "element": "water",

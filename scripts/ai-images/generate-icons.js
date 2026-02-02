@@ -8,7 +8,7 @@
  *   node scripts/ai-images/generate-icons.js                    # Generate using local ComfyUI
  *   node scripts/ai-images/generate-icons.js --huggingface      # Use HuggingFace API instead
  *   node scripts/ai-images/generate-icons.js --dry-run          # Preview
- *   node scripts/ai-images/generate-icons.js --key action_attack  # Generate specific
+ *   node scripts/ai-images/generate-icons.js --key attack          # Generate specific
  *   node scripts/ai-images/generate-icons.js --category actions   # Filter by category
  *   node scripts/ai-images/generate-icons.js --force            # Regenerate existing
  *
@@ -93,36 +93,29 @@ Environment variables:
 Examples:
   node scripts/ai-images/generate-icons.js --dry-run
   node scripts/ai-images/generate-icons.js --category actions
-  node scripts/ai-images/generate-icons.js --key action_attack --force
+  node scripts/ai-images/generate-icons.js --key attack --force
   node scripts/ai-images/generate-icons.js --huggingface --category menu  # Use HF API
 `);
 }
 
 
 /**
- * Get the output path for an icon
- * Strips the category prefix from the id since icons are organized in category subdirectories.
- * e.g., icon.id = 'action_attack', category = 'actions' -> filename = 'attack.png'
+ * Get the output path for an icon.
+ * Post-Phase 5: Icon IDs are now unprefixed in metadata, matching file names.
+ * e.g., icon.id = 'attack', category = 'actions' -> filename = 'attack.png'
  */
 function getOutputPath(icon) {
   const category = icon._iconCategory;
-  const filename = getIconFilename(icon);
-  return path.join(OUTPUT_DIR, category, `${filename}.png`);
+  return path.join(OUTPUT_DIR, category, `${icon.id}.png`);
 }
 
 /**
- * Get the icon filename (without category prefix)
+ * Get the icon filename (same as ID post-Phase 5).
  * Used for size variant generation.
- * Strips the singular prefix from ID to get the base filename.
- * e.g., 'action_attack' -> 'attack', 'augment_damage' -> 'damage'
+ * Post-Phase 5: IDs are already unprefixed, so we return them directly.
+ * e.g., 'attack' -> 'attack', 'damage' -> 'damage'
  */
 function getIconFilename(icon) {
-  const category = icon._iconCategory;
-  const prefix = ICON_PREFIX_MAP[category];
-
-  if (prefix && icon.id.startsWith(prefix)) {
-    return icon.id.slice(prefix.length);
-  }
   return icon.id;
 }
 

@@ -5,7 +5,7 @@
   "size": "24x24",
   "icons": [
     {
-      "id": "augment_damage",
+      "id": "damage_boost",
       "name": "Damage Boost",
       "prompt": "sword damage boost increase power red up",
       "seed": 33001,
@@ -15,7 +15,7 @@
       "generatedAt": "2026-01-29T08:36:19.585Z"
     },
     {
-      "id": "augment_range",
+      "id": "range",
       "name": "Range Extend",
       "prompt": "crosshair target range extend distance arrows",
       "seed": 33002,
@@ -25,7 +25,7 @@
       "generatedAt": "2026-01-29T08:37:05.835Z"
     },
     {
-      "id": "augment_area",
+      "id": "area",
       "name": "Area Effect",
       "prompt": "explosion area effect blast radius circle",
       "seed": 33003,
@@ -35,7 +35,7 @@
       "generatedAt": "2026-01-29T08:37:52.411Z"
     },
     {
-      "id": "augment_duration",
+      "id": "duration",
       "name": "Duration Extend",
       "prompt": "clock hourglass duration extend time longer",
       "seed": 33004,
@@ -45,7 +45,7 @@
       "generatedAt": "2026-01-29T08:38:38.448Z"
     },
     {
-      "id": "augment_cooldown",
+      "id": "cooldown",
       "name": "Cooldown Reduce",
       "prompt": "clock fast cooldown reduce refresh quick",
       "seed": 33005,
@@ -55,7 +55,7 @@
       "generatedAt": "2026-01-29T08:39:24.734Z"
     },
     {
-      "id": "augment_cost",
+      "id": "cost",
       "name": "Cost Reduce",
       "prompt": "mana crystal cost reduce efficient blue",
       "seed": 33006,
@@ -65,7 +65,7 @@
       "generatedAt": "2026-01-29T08:40:09.909Z"
     },
     {
-      "id": "augment_crit",
+      "id": "crit_chance",
       "name": "Critical Chance",
       "prompt": "star burst critical chance lucky hit yellow",
       "seed": 33007,
@@ -75,7 +75,7 @@
       "generatedAt": "2026-01-29T08:40:56.221Z"
     },
     {
-      "id": "augment_pierce",
+      "id": "pierce",
       "name": "Armor Pierce",
       "prompt": "metal arrow piercing armor break through red",
       "seed": 33008,
@@ -90,7 +90,7 @@
       }
     },
     {
-      "id": "augment_lifesteal",
+      "id": "lifesteal",
       "name": "Life Steal",
       "prompt": "heart drain lifesteal vampire blood red",
       "seed": 33009,
@@ -100,7 +100,7 @@
       "generatedAt": "2026-01-29T08:42:28.458Z"
     },
     {
-      "id": "augment_chain",
+      "id": "chain",
       "name": "Chain Effect",
       "prompt": "chain lightning link multiple targets electric",
       "seed": 33010,
@@ -110,7 +110,7 @@
       "generatedAt": "2026-01-29T08:43:13.488Z"
     },
     {
-      "id": "augment_splash",
+      "id": "splash",
       "name": "Splash Damage",
       "prompt": "water splash damage spread ripple blue",
       "seed": 33011,
@@ -125,7 +125,7 @@
       }
     },
     {
-      "id": "augment_stagger",
+      "id": "stagger",
       "name": "Stagger",
       "prompt": "impact stagger knockback interrupt force",
       "seed": 33012,
@@ -140,7 +140,7 @@
       }
     },
     {
-      "id": "augment_elemental_fire",
+      "id": "elemental_fire",
       "name": "Fire Element",
       "prompt": "flame elemental fire infuse ember orange",
       "seed": 33013,
@@ -150,7 +150,7 @@
       "generatedAt": "2026-01-29T08:45:33.196Z"
     },
     {
-      "id": "augment_elemental_ice",
+      "id": "elemental_ice",
       "name": "Ice Element",
       "prompt": "snowflake elemental ice infuse frost blue",
       "seed": 33014,
@@ -160,7 +160,7 @@
       "generatedAt": "2026-01-29T08:46:19.209Z"
     },
     {
-      "id": "augment_elemental_lightning",
+      "id": "elemental_lightning",
       "name": "Lightning Element",
       "prompt": "lightning elemental electric infuse shock yellow",
       "seed": 33015,
@@ -170,7 +170,7 @@
       "generatedAt": "2026-01-29T08:47:05.050Z"
     },
     {
-      "id": "augment_healing",
+      "id": "healing_boost",
       "name": "Healing Boost",
       "prompt": "heart plus healing boost increase green",
       "seed": 33016,
@@ -185,7 +185,7 @@
       }
     },
     {
-      "id": "augment_accuracy",
+      "id": "accuracy_boost",
       "name": "Accuracy",
       "prompt": "bullseye target accuracy hit chance precise",
       "seed": 33017,
@@ -195,7 +195,7 @@
       "generatedAt": "2026-01-29T08:48:37.134Z"
     },
     {
-      "id": "augment_evasion",
+      "id": "evasion",
       "name": "Evasion",
       "prompt": "ghost dodge evasion miss avoid shadow",
       "seed": 33018,
@@ -205,7 +205,7 @@
       "generatedAt": "2026-01-29T08:49:22.396Z"
     },
     {
-      "id": "augment_shield",
+      "id": "shield",
       "name": "Shield Generate",
       "prompt": "shield barrier generate protect absorb blue",
       "seed": 33019,
@@ -215,7 +215,7 @@
       "generatedAt": "2026-01-29T08:50:08.495Z"
     },
     {
-      "id": "augment_cleanse",
+      "id": "cleanse",
       "name": "Cleanse",
       "prompt": "sparkle cleanse purify remove debuff holy",
       "seed": 33020,

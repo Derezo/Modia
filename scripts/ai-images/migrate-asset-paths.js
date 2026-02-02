@@ -42,7 +42,7 @@ const fs = require('fs');
 const path = require('path');
 const { log, ensureDirectoryExists, fileExists, getProjectRoot } = require('./lib/imageUtils');
 const {
-  SIZE_PRESETS,
+  getSizePresets,
   resizeImage,
   getImageDimensions
 } = require('./lib/resizeUtils');
@@ -55,34 +55,38 @@ const SPRITES_DIR = path.join(ASSETS_DIR, 'sprites');
 const IMAGE_GENERATOR_ORIGINALS = path.join(PROJECT_ROOT, '..', 'image-generator', 'outputs', 'originals');
 
 /**
- * Legacy path mappings to canonical locations
+ * Build legacy path mappings with SIZE_PRESETS (async)
+ * @returns {Promise<Object>} LEGACY_MAPPINGS object
  */
-const LEGACY_MAPPINGS = {
-  portraits: {
-    // Player portraits
-    legacy: path.join(SPRITES_DIR, 'portraits'),
-    // Enemy portraits (alternative location)
-    legacyEnemy: path.join(SPRITES_DIR, 'enemies/portraits'),
-    canonical: path.join(ASSETS_DIR, 'portraits'),
-    originals: path.join(ASSETS_DIR, 'portraits/originals'),
-    // External originals from image-generator project (1024x1024)
-    externalOriginals: path.join(IMAGE_GENERATOR_ORIGINALS, 'portraits'),
-    sizes: SIZE_PRESETS.portraits // [64, 128, 256]
-  },
-  items: {
-    legacy: path.join(SPRITES_DIR, 'items'),
-    canonical: path.join(ASSETS_DIR, 'items'),
-    originals: path.join(ASSETS_DIR, 'items/originals'),
-    sizes: SIZE_PRESETS.items, // [32, 64, 128]
-    hasSubcategories: true
-  },
-  nodes: {
-    legacy: path.join(SPRITES_DIR, 'nodes'),
-    canonical: path.join(ASSETS_DIR, 'nodes'),
-    originals: path.join(ASSETS_DIR, 'nodes/originals'),
-    sizes: SIZE_PRESETS.nodes // [48, 96]
-  }
-};
+async function buildLegacyMappings() {
+  const SIZE_PRESETS = await getSizePresets();
+  return {
+    portraits: {
+      // Player portraits
+      legacy: path.join(SPRITES_DIR, 'portraits'),
+      // Enemy portraits (alternative location)
+      legacyEnemy: path.join(SPRITES_DIR, 'enemies/portraits'),
+      canonical: path.join(ASSETS_DIR, 'portraits'),
+      originals: path.join(ASSETS_DIR, 'portraits/originals'),
+      // External originals from image-generator project (1024x1024)
+      externalOriginals: path.join(IMAGE_GENERATOR_ORIGINALS, 'portraits'),
+      sizes: SIZE_PRESETS.portraits // [64, 128, 256]
+    },
+    items: {
+      legacy: path.join(SPRITES_DIR, 'items'),
+      canonical: path.join(ASSETS_DIR, 'items'),
+      originals: path.join(ASSETS_DIR, 'items/originals'),
+      sizes: SIZE_PRESETS.items, // [32, 64, 128]
+      hasSubcategories: true
+    },
+    nodes: {
+      legacy: path.join(SPRITES_DIR, 'nodes'),
+      canonical: path.join(ASSETS_DIR, 'nodes'),
+      originals: path.join(ASSETS_DIR, 'nodes/originals'),
+      sizes: SIZE_PRESETS.nodes // [48, 96]
+    }
+  };
+}
 
 /**
  * Parse command line arguments
@@ -389,9 +393,10 @@ async function migrateAsset(sourcePath, mapping, options, subcategory = null) {
 /**
  * Migrate all portraits from legacy locations
  * @param {Object} options - Migration options
+ * @param {Object} LEGACY_MAPPINGS - Legacy path mappings
  * @returns {Object} Migration summary
  */
-async function migratePortraits(options) {
+async function migratePortraits(options, LEGACY_MAPPINGS) {
   const mapping = LEGACY_MAPPINGS.portraits;
   const results = {
     category: 'portraits',
@@ -603,9 +608,10 @@ async function migratePortraits(options) {
 /**
  * Migrate all items from legacy locations
  * @param {Object} options - Migration options
+ * @param {Object} LEGACY_MAPPINGS - Legacy path mappings
  * @returns {Object} Migration summary
  */
-async function migrateItems(options) {
+async function migrateItems(options, LEGACY_MAPPINGS) {
   const mapping = LEGACY_MAPPINGS.items;
   const results = {
     category: 'items',
@@ -661,9 +667,10 @@ async function migrateItems(options) {
 /**
  * Migrate all nodes from legacy locations
  * @param {Object} options - Migration options
+ * @param {Object} LEGACY_MAPPINGS - Legacy path mappings
  * @returns {Object} Migration summary
  */
-async function migrateNodes(options) {
+async function migrateNodes(options, LEGACY_MAPPINGS) {
   const mapping = LEGACY_MAPPINGS.nodes;
   const results = {
     category: 'nodes',
@@ -775,6 +782,9 @@ async function main() {
     log('CLEANUP MODE - Legacy files will be removed after migration', 'info');
   }
 
+  // Build LEGACY_MAPPINGS with SIZE_PRESETS (async)
+  const LEGACY_MAPPINGS = await buildLegacyMappings();
+
   const categoriesToMigrate = options.category
     ? [options.category]
     : ['portraits', 'items', 'nodes'];
@@ -786,13 +796,13 @@ async function main() {
 
     switch (category) {
       case 'portraits':
-        result = await migratePortraits(options);
+        result = await migratePortraits(options, LEGACY_MAPPINGS);
         break;
       case 'items':
-        result = await migrateItems(options);
+        result = await migrateItems(options, LEGACY_MAPPINGS);
         break;
       case 'nodes':
-        result = await migrateNodes(options);
+        result = await migrateNodes(options, LEGACY_MAPPINGS);
         break;
       default:
         log(`Unknown category: ${category}`, 'error');
