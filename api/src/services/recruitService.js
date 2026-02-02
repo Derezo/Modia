@@ -8,61 +8,19 @@ import { RACES, GENDERS, calculateStats, MAX_PARTY_SIZE } from '../config/consta
 import { generateName } from '../utils/nameGenerator.js';
 import { SKILL_TREES } from '../config/skillTrees.js';
 import { findSkillDefinition, validateSkillPrerequisites } from '../utils/skillValidation.js';
-
-// Base price for recruits
-const BASE_RECRUIT_PRICE = 2000;
-const TRAIT_BONUS_PRICE = 8000;
-const SKILL_BONUS_PRICE = 750;
-
-// Trait rarity weights: 70% common, 20% uncommon, 8% rare, 2% legendary
-const TRAIT_RARITY_WEIGHTS = {
-  common: 70,
-  uncommon: 20,
-  rare: 8,
-  legendary: 2
-};
-
-// Trait count weights: 92% get 1 trait, 8% get 2 traits
-const TRAIT_COUNT_WEIGHTS = {
-  1: 92,
-  2: 8
-};
-
-// Skill count weights: 60% get 0, 30% get 1, 10% get 2
-const SKILL_COUNT_WEIGHTS = {
-  0: 60,
-  1: 30,
-  2: 10
-};
-
-/**
- * Roll a value based on weighted probabilities
- * @param {Object} weights - { option1: weight1, option2: weight2, ... }
- * @returns {string|number} Selected option key
- */
-function weightedRandom(weights) {
-  const totalWeight = Object.values(weights).reduce((sum, w) => sum + w, 0);
-  let random = Math.random() * totalWeight;
-
-  for (const [option, weight] of Object.entries(weights)) {
-    random -= weight;
-    if (random <= 0) {
-      // Return as number if it parses as one
-      const num = Number(option);
-      return isNaN(num) ? option : num;
-    }
-  }
-
-  // Fallback to first option
-  const firstKey = Object.keys(weights)[0];
-  const num = Number(firstKey);
-  return isNaN(num) ? firstKey : num;
-}
+import {
+  TRAIT_RARITY_WEIGHTS,
+  TRAIT_COUNT_WEIGHTS,
+  ADDITIONAL_SKILL_COUNT_WEIGHTS,
+  weightedRandom,
+  calculateRecruitPrice,
+  getStarterSkillId
+} from '../utils/recruitmentUtils.js';
 
 /**
  * Get tier 1-2 skills for a class (skills without requirements or with only tier-1 requirements)
  * @param {string} guildClass - The class to get skills for
- * @returns {Array} Array of skill objects
+ * @returns {Array} Array of skill objects with tier information
  */
 function getTier1And2Skills(guildClass) {
   const classTree = SKILL_TREES[guildClass];
@@ -76,7 +34,7 @@ function getTier1And2Skills(guildClass) {
     for (const skill of branch.skills) {
       if (skill.type === 'active' && !skill.requires) {
         tier1SkillIds.add(skill.id);
-        skills.push(skill);
+        skills.push({ ...skill, tier: 1 });
       }
     }
   }
@@ -92,54 +50,13 @@ function getTier1And2Skills(guildClass) {
           ([reqId, reqLevel]) => tier1SkillIds.has(reqId) && reqLevel <= 1
         );
         if (requiresOnlyTier1AtLevel1) {
-          skills.push(skill);
+          skills.push({ ...skill, tier: 2 });
         }
       }
     }
   }
 
   return skills;
-}
-
-/**
- * Get the default starter skill for a class
- * @param {string} guildClass - The class
- * @returns {string|null} Starter skill ID
- */
-function getStarterSkillId(guildClass) {
-  const starterSkills = {
-    warrior: 'power_strike',
-    wizard: 'fireball',
-    monk: 'palm_strike',
-    chemist: 'potion_toss'
-  };
-  return starterSkills[guildClass] || null;
-}
-
-/**
- * Calculate the price for a recruit based on their attributes
- * @param {Object} recruit - Recruit data with stat_variance_percent, traits, skills
- * @returns {number} Price in gold
- */
-function calculateRecruitPrice(recruit) {
-  // Base price
-  let price = BASE_RECRUIT_PRICE;
-
-  // Multiply by (1 + stat_variance_percent/100) for stat bonus
-  const varianceMultiplier = 1 + (recruit.stat_variance_percent || 0) / 100;
-  price = Math.floor(price * varianceMultiplier);
-
-  // Add 8000g for each trait beyond the first
-  const traitCount = recruit.traitCount || 0;
-  if (traitCount > 1) {
-    price += TRAIT_BONUS_PRICE * (traitCount - 1);
-  }
-
-  // Add 750g per pre-learned skill
-  const skillCount = recruit.skillCount || 0;
-  price += SKILL_BONUS_PRICE * skillCount;
-
-  return Math.max(price, BASE_RECRUIT_PRICE); // Never below base price
 }
 
 /**
@@ -191,45 +108,17 @@ async function generateRecruit(nodeId, guildClass, isEmergency = false) {
     traitCount = Math.min(1, traitCount); // Cap at 1 for emergency
   }
 
-  // Roll skill count
-  const skillCount = weightedRandom(SKILL_COUNT_WEIGHTS);
+  // Roll additional skill count (beyond the guaranteed starter skill)
+  const additionalSkillCount = weightedRandom(ADDITIONAL_SKILL_COUNT_WEIGHTS);
 
   // Generate XP pool (50-150)
   const xpPool = Math.floor(Math.random() * 101) + 50; // 50 to 150
 
-  // Create recruit data for price calculation
-  const recruitData = {
-    stat_variance_percent: variancePercent,
-    traitCount,
-    skillCount
-  };
-
-  // Calculate price
-  const price = calculateRecruitPrice(recruitData);
-
   // Use transaction to insert recruit, traits, and skills
   return await withTransaction(async (client) => {
-    // Insert recruit
-    const recruitResult = await client.query(
-      `INSERT INTO guild_recruits (
-        node_id, name, race, gender, class, level,
-        hp_max, mp_max, strength, intelligence, agility, vitality, luck,
-        stat_variance_percent, xp_pool, price, is_emergency_restock
-      )
-      VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-      RETURNING *`,
-      [
-        nodeId, name, race, gender, guildClass,
-        variedStats.hpMax, variedStats.mpMax,
-        variedStats.strength, variedStats.intelligence,
-        variedStats.agility, variedStats.vitality, variedStats.luck,
-        variancePercent, xpPool, price, isEmergency
-      ]
-    );
+    // Determine traits first (for price calculation)
+    const assignedTraits = []; // Array of { id, rarity }
 
-    const recruit = recruitResult.rows[0];
-
-    // Assign traits
     if (traitCount > 0) {
       // Get all traits grouped by rarity
       const traitsResult = await client.query(
@@ -270,41 +159,84 @@ async function generateRecruit(nodeId, guildClass, isEmergency = false) {
         if (traitPool.length > 0) {
           const selectedTrait = traitPool[Math.floor(Math.random() * traitPool.length)];
           assignedTraitIds.add(selectedTrait.id);
-
-          await client.query(
-            'INSERT INTO recruit_traits (recruit_id, trait_id) VALUES ($1, $2)',
-            [recruit.id, selectedTrait.id]
-          );
+          assignedTraits.push({ id: selectedTrait.id, rarity: selectedTrait.rarity });
         }
       }
     }
 
-    // Assign skills
-    if (skillCount > 0) {
-      const availableSkills = getTier1And2Skills(guildClass);
-      const starterSkillId = getStarterSkillId(guildClass);
+    // Determine skills (starter + additional)
+    const assignedSkills = []; // Array of { id, tier, level }
+    const starterSkillId = getStarterSkillId(guildClass);
 
-      // Filter out starter skill if possible
+    // Always add the starter skill (Tier 1, Level 1)
+    if (starterSkillId) {
+      assignedSkills.push({ id: starterSkillId, tier: 1, level: 1 });
+    }
+
+    // Add additional skills if any
+    if (additionalSkillCount > 0) {
+      const availableSkills = getTier1And2Skills(guildClass);
+
+      // Filter out starter skill from additional skill pool
       let skillPool = availableSkills.filter(s => s.id !== starterSkillId);
       if (skillPool.length === 0) {
         skillPool = availableSkills; // Fall back to including starter if no other options
       }
 
-      const assignedSkillIds = new Set();
+      const assignedSkillIds = new Set(assignedSkills.map(s => s.id));
 
-      for (let i = 0; i < skillCount && skillPool.length > 0; i++) {
+      for (let i = 0; i < additionalSkillCount && skillPool.length > 0; i++) {
         // Filter out already assigned skills
         const remaining = skillPool.filter(s => !assignedSkillIds.has(s.id));
         if (remaining.length === 0) break;
 
         const selectedSkill = remaining[Math.floor(Math.random() * remaining.length)];
         assignedSkillIds.add(selectedSkill.id);
-
-        await client.query(
-          'INSERT INTO recruit_skills (recruit_id, skill_id) VALUES ($1, $2)',
-          [recruit.id, selectedSkill.id]
-        );
+        assignedSkills.push({ id: selectedSkill.id, tier: selectedSkill.tier, level: 1 });
       }
+    }
+
+    // Calculate price using the new shared utility
+    const price = calculateRecruitPrice({
+      stat_variance_percent: variancePercent,
+      traits: assignedTraits,
+      skills: assignedSkills
+    });
+
+    // Insert recruit
+    const recruitResult = await client.query(
+      `INSERT INTO guild_recruits (
+        node_id, name, race, gender, class, level,
+        hp_max, mp_max, strength, intelligence, agility, vitality, luck,
+        stat_variance_percent, xp_pool, price, is_emergency_restock
+      )
+      VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      RETURNING *`,
+      [
+        nodeId, name, race, gender, guildClass,
+        variedStats.hpMax, variedStats.mpMax,
+        variedStats.strength, variedStats.intelligence,
+        variedStats.agility, variedStats.vitality, variedStats.luck,
+        variancePercent, xpPool, price, isEmergency
+      ]
+    );
+
+    const recruit = recruitResult.rows[0];
+
+    // Insert traits
+    for (const trait of assignedTraits) {
+      await client.query(
+        'INSERT INTO recruit_traits (recruit_id, trait_id) VALUES ($1, $2)',
+        [recruit.id, trait.id]
+      );
+    }
+
+    // Insert skills
+    for (const skill of assignedSkills) {
+      await client.query(
+        'INSERT INTO recruit_skills (recruit_id, skill_id) VALUES ($1, $2)',
+        [recruit.id, skill.id]
+      );
     }
 
     return recruit;
@@ -388,40 +320,15 @@ async function generateRecruitWithClient(client, nodeId, guildClass, isEmergency
   let traitCount = weightedRandom(TRAIT_COUNT_WEIGHTS);
   if (isEmergency) traitCount = Math.min(1, traitCount);
 
-  // Roll skill count
-  const skillCount = weightedRandom(SKILL_COUNT_WEIGHTS);
+  // Roll additional skill count (beyond the guaranteed starter skill)
+  const additionalSkillCount = weightedRandom(ADDITIONAL_SKILL_COUNT_WEIGHTS);
 
   // XP pool
   const xpPool = Math.floor(Math.random() * 101) + 50;
 
-  // Calculate price
-  const price = calculateRecruitPrice({
-    stat_variance_percent: variancePercent,
-    traitCount,
-    skillCount
-  });
+  // Determine traits first (for price calculation)
+  const assignedTraits = []; // Array of { id, rarity }
 
-  // Insert recruit
-  const recruitResult = await client.query(
-    `INSERT INTO guild_recruits (
-      node_id, name, race, gender, class, level,
-      hp_max, mp_max, strength, intelligence, agility, vitality, luck,
-      stat_variance_percent, xp_pool, price, is_emergency_restock
-    )
-    VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-    RETURNING *`,
-    [
-      nodeId, name, race, gender, guildClass,
-      variedStats.hpMax, variedStats.mpMax,
-      variedStats.strength, variedStats.intelligence,
-      variedStats.agility, variedStats.vitality, variedStats.luck,
-      variancePercent, xpPool, price, isEmergency
-    ]
-  );
-
-  const recruit = recruitResult.rows[0];
-
-  // Assign traits
   if (traitCount > 0) {
     const traitsResult = await client.query(
       'SELECT id, name, rarity FROM traits ORDER BY rarity, name'
@@ -450,34 +357,79 @@ async function generateRecruitWithClient(client, nodeId, guildClass, isEmergency
       if (traitPool.length > 0) {
         const selectedTrait = traitPool[Math.floor(Math.random() * traitPool.length)];
         assignedTraitIds.add(selectedTrait.id);
-        await client.query(
-          'INSERT INTO recruit_traits (recruit_id, trait_id) VALUES ($1, $2)',
-          [recruit.id, selectedTrait.id]
-        );
+        assignedTraits.push({ id: selectedTrait.id, rarity: selectedTrait.rarity });
       }
     }
   }
 
-  // Assign skills
-  if (skillCount > 0) {
+  // Determine skills (starter + additional)
+  const assignedSkills = []; // Array of { id, tier, level }
+  const starterSkillId = getStarterSkillId(guildClass);
+
+  // Always add the starter skill (Tier 1, Level 1)
+  if (starterSkillId) {
+    assignedSkills.push({ id: starterSkillId, tier: 1, level: 1 });
+  }
+
+  // Add additional skills if any
+  if (additionalSkillCount > 0) {
     const availableSkills = getTier1And2Skills(guildClass);
-    const starterSkillId = getStarterSkillId(guildClass);
     let skillPool = availableSkills.filter(s => s.id !== starterSkillId);
     if (skillPool.length === 0) skillPool = availableSkills;
 
-    const assignedSkillIds = new Set();
+    const assignedSkillIds = new Set(assignedSkills.map(s => s.id));
 
-    for (let i = 0; i < skillCount && skillPool.length > 0; i++) {
+    for (let i = 0; i < additionalSkillCount && skillPool.length > 0; i++) {
       const remaining = skillPool.filter(s => !assignedSkillIds.has(s.id));
       if (remaining.length === 0) break;
 
       const selectedSkill = remaining[Math.floor(Math.random() * remaining.length)];
       assignedSkillIds.add(selectedSkill.id);
-      await client.query(
-        'INSERT INTO recruit_skills (recruit_id, skill_id) VALUES ($1, $2)',
-        [recruit.id, selectedSkill.id]
-      );
+      assignedSkills.push({ id: selectedSkill.id, tier: selectedSkill.tier, level: 1 });
     }
+  }
+
+  // Calculate price using the new shared utility
+  const price = calculateRecruitPrice({
+    stat_variance_percent: variancePercent,
+    traits: assignedTraits,
+    skills: assignedSkills
+  });
+
+  // Insert recruit
+  const recruitResult = await client.query(
+    `INSERT INTO guild_recruits (
+      node_id, name, race, gender, class, level,
+      hp_max, mp_max, strength, intelligence, agility, vitality, luck,
+      stat_variance_percent, xp_pool, price, is_emergency_restock
+    )
+    VALUES ($1, $2, $3, $4, $5, 1, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    RETURNING *`,
+    [
+      nodeId, name, race, gender, guildClass,
+      variedStats.hpMax, variedStats.mpMax,
+      variedStats.strength, variedStats.intelligence,
+      variedStats.agility, variedStats.vitality, variedStats.luck,
+      variancePercent, xpPool, price, isEmergency
+    ]
+  );
+
+  const recruit = recruitResult.rows[0];
+
+  // Insert traits
+  for (const trait of assignedTraits) {
+    await client.query(
+      'INSERT INTO recruit_traits (recruit_id, trait_id) VALUES ($1, $2)',
+      [recruit.id, trait.id]
+    );
+  }
+
+  // Insert skills
+  for (const skill of assignedSkills) {
+    await client.query(
+      'INSERT INTO recruit_skills (recruit_id, skill_id) VALUES ($1, $2)',
+      [recruit.id, skill.id]
+    );
   }
 
   return recruit;
@@ -861,14 +813,17 @@ export {
   refreshGuildRecruits,
   spawnEmergencyRecruits,
   checkAndRefreshIfNeeded,
-  calculateRecruitPrice,
   getAvailableRecruits,
-  purchaseRecruit,
-  // Export constants for testing
-  BASE_RECRUIT_PRICE,
-  TRAIT_BONUS_PRICE,
-  SKILL_BONUS_PRICE,
+  purchaseRecruit
+};
+
+// Re-export shared utilities for convenience and backward compatibility
+export {
+  RECRUIT_PRICING,
   TRAIT_RARITY_WEIGHTS,
   TRAIT_COUNT_WEIGHTS,
-  SKILL_COUNT_WEIGHTS
-};
+  ADDITIONAL_SKILL_COUNT_WEIGHTS,
+  weightedRandom,
+  calculateRecruitPrice,
+  getStarterSkillId
+} from '../utils/recruitmentUtils.js';
