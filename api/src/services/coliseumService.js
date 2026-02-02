@@ -18,8 +18,8 @@ import {
   recordDisconnect as recordDisconnectEvent,
   forgiveDisconnect
 } from './ratingService.js';
-import { getTier } from '../../../shared/coliseum.js';
-import { checkAndAwardBadges } from './achievementService.js';
+import { getTier, getUserBadges, getPriorityBadges } from '../../../shared/coliseum.js';
+import { checkAndAwardBadges, getBatchUserAchievements } from './achievementService.js';
 
 // PvP Turn Timer Constants
 const PVP_TURN_TIMEOUT = 60000;          // 60 seconds per turn
@@ -339,6 +339,39 @@ async function tryMatchmaking(queueType) {
 
   activeMatches.set(matchId, match);
 
+  // Fetch achievements and ratings for badge display
+  const userIds = [player1.userId, player2.userId];
+  const [achievementsMap, ratingsResult] = await Promise.all([
+    getBatchUserAchievements(userIds),
+    query(
+      `SELECT user_id, rating, win_streak FROM pvp_ratings
+       WHERE user_id = ANY($1) AND queue_type = $2`,
+      [userIds, queueType]
+    )
+  ]);
+
+  // Build ratings lookup
+  const ratingsMap = new Map();
+  for (const row of ratingsResult.rows) {
+    ratingsMap.set(row.user_id, { rating: row.rating, winStreak: row.win_streak || 0 });
+  }
+
+  // Compute badges for each player
+  const player1Badges = getPriorityBadges(
+    getUserBadges(
+      achievementsMap.get(player1.userId) || [],
+      ratingsMap.get(player1.userId)?.winStreak || 0
+    ),
+    3
+  );
+  const player2Badges = getPriorityBadges(
+    getUserBadges(
+      achievementsMap.get(player2.userId) || [],
+      ratingsMap.get(player2.userId)?.winStreak || 0
+    ),
+    3
+  );
+
   // Notify both players of match found with ACK tracking - critical message
   getWebsocket().then(ws => {
     const matchPayload = {
@@ -358,7 +391,10 @@ async function tryMatchmaking(queueType) {
           opponent: {
             username: player2.username,
             partyLevel: player2.partyLevel,
-            ppr: player2.ppr
+            ppr: player2.ppr,
+            rating: ratingsMap.get(player2.userId)?.rating || 1000,
+            winStreak: ratingsMap.get(player2.userId)?.winStreak || 0,
+            badges: player2Badges
           }
         }
       }));
@@ -374,7 +410,10 @@ async function tryMatchmaking(queueType) {
           opponent: {
             username: player1.username,
             partyLevel: player1.partyLevel,
-            ppr: player1.ppr
+            ppr: player1.ppr,
+            rating: ratingsMap.get(player1.userId)?.rating || 1000,
+            winStreak: ratingsMap.get(player1.userId)?.winStreak || 0,
+            badges: player1Badges
           }
         }
       }));
