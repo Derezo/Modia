@@ -18,6 +18,7 @@ import {
   recordDisconnect as recordDisconnectEvent,
   forgiveDisconnect
 } from './ratingService.js';
+import { getTier } from '../../../shared/coliseum.js';
 
 // PvP Turn Timer Constants
 const PVP_TURN_TIMEOUT = 60000;          // 60 seconds per turn
@@ -53,6 +54,12 @@ const matchmakingQueues = new Map();
 
 // Active matches: matchId -> { player1, player2, status, createdAt }
 const activeMatches = new Map();
+
+// Match ready check timers: matchId -> timerId (for the 31s ready timeout)
+const matchReadyTimers = new Map();
+
+// Match start timers: matchId -> timerId (for the 3s start delay)
+const matchStartTimers = new Map();
 
 // Queue settings by type
 const QUEUE_SETTINGS = {
@@ -149,6 +156,11 @@ async function joinQueue(queueType, userId, username, partyLevel, partySize) {
   // Broadcast global queue status to lobby (fire and forget)
   broadcastGlobalQueueStatus();
 
+  // Broadcast queue players update to all in queue
+  broadcastQueuePlayersUpdate(queueType).catch(err =>
+    console.error('Failed to broadcast queue players update:', err)
+  );
+
   return {
     success: true,
     position: queue.length,
@@ -194,6 +206,11 @@ function removeFromQueue(queueType, userId) {
 
     // Broadcast global queue status to lobby (fire and forget)
     broadcastGlobalQueueStatus();
+
+    // Broadcast queue players update to remaining players
+    broadcastQueuePlayersUpdate(queueType).catch(err =>
+      console.error('Failed to broadcast queue players update:', err)
+    );
 
     // Leave coliseum room (async, fire and forget)
     getWebsocket().then(ws => {
@@ -366,8 +383,9 @@ async function tryMatchmaking(queueType) {
     broadcastQueueUpdate(queueType);
   }).catch(err => console.error('Failed to notify match found:', err));
 
-  // Set timeout for ready check
-  setTimeout(() => checkMatchReady(matchId), 31000);
+  // Set timeout for ready check (tracked for test cleanup)
+  const readyTimerId = setTimeout(() => checkMatchReady(matchId), 31000);
+  matchReadyTimers.set(matchId, readyTimerId);
 
   return { matched: true, matchId };
 }
@@ -420,8 +438,9 @@ function playerReady(matchId, userId) {
       });
     }).catch(err => console.error('Failed to notify match ready:', err));
 
-    // Schedule match start
-    setTimeout(() => startMatch(matchId), 3000);
+    // Schedule match start (tracked for test cleanup)
+    const startTimerId = setTimeout(() => startMatch(matchId), 3000);
+    matchStartTimers.set(matchId, startTimerId);
   } else {
     // Notify opponent that player is ready (async)
     getWebsocket().then(ws => {
@@ -443,6 +462,9 @@ function playerReady(matchId, userId) {
  * Check if match is ready (called after timeout)
  */
 function checkMatchReady(matchId) {
+  // Clean up the ready timer for this match
+  matchReadyTimers.delete(matchId);
+
   const match = activeMatches.get(matchId);
   if (!match || match.status !== 'pending') return;
 
@@ -517,6 +539,10 @@ function checkMatchReady(matchId) {
  * Start the match (create PvP battle)
  */
 async function startMatch(matchId) {
+  // Clean up timers for this match
+  matchReadyTimers.delete(matchId);
+  matchStartTimers.delete(matchId);
+
   const match = activeMatches.get(matchId);
   if (!match || match.status !== 'ready') return;
 
@@ -558,11 +584,12 @@ async function startMatch(matchId) {
       log: [{ type: 'battle_start', message: 'PvP Battle begins!', timestamp: Date.now() }]
     };
 
-    // Add player 1's units (bottom side of map)
+    // Add player 1's units (bottom side of map) - Team 1
     player1Party.forEach((char, idx) => {
       initialState.units.push({
         id: char.id,
         type: 'player',
+        teamId: 1, // Player 1's units are on team 1
         ownerId: match.player1.userId,
         name: char.name,
         class: char.class,
@@ -589,11 +616,12 @@ async function startMatch(matchId) {
       });
     });
 
-    // Add player 2's units (top side of map)
+    // Add player 2's units (top side of map) - Team 2
     player2Party.forEach((char, idx) => {
       initialState.units.push({
         id: char.id,
         type: 'player',
+        teamId: 2, // Player 2's units are on team 2
         ownerId: match.player2.userId,
         name: char.name,
         class: char.class,
@@ -632,7 +660,7 @@ async function startMatch(matchId) {
     // Create battle record in database
     const battleResult = await query(
       `INSERT INTO battles (battle_type, status, battle_state, map_seed, map_width, map_height, player1_id, player2_id)
-       VALUES ('pvp', 'active', $1, $2, 32, 32, $3, $4)
+       VALUES ('pvp_coliseum', 'active', $1, $2, 32, 32, $3, $4)
        RETURNING id`,
       [JSON.stringify(initialState), mapSeed, match.player1.userId, match.player2.userId]
     );
@@ -849,6 +877,123 @@ function getQueueStatus(queueType) {
  */
 function getAllQueueStatuses() {
   return Object.keys(QUEUE_SETTINGS).map(type => getQueueStatus(type));
+}
+
+/**
+ * Get players in a queue with their details
+ * @param {string} queueType - Queue type (1v1, 3v3, 5v5)
+ * @param {number|null} requestingUserId - The user requesting the list (for isCurrentUser flag)
+ * @returns {Promise<Array>} Array of player objects with details
+ */
+async function getQueuePlayers(queueType, requestingUserId = null) {
+  const queue = matchmakingQueues.get(queueType) || [];
+  if (queue.length === 0) return [];
+
+  const now = Date.now();
+
+  // Get all user IDs in queue
+  const userIds = queue.map(p => p.userId);
+
+  // Batch fetch ratings from database
+  const ratingsResult = await query(
+    `SELECT user_id, rating, tier FROM pvp_ratings
+     WHERE user_id = ANY($1) AND queue_type = $2`,
+    [userIds, queueType]
+  );
+
+  const ratingsMap = new Map();
+  for (const row of ratingsResult.rows) {
+    ratingsMap.set(row.user_id, { rating: row.rating, tier: row.tier });
+  }
+
+  // Build player list with enriched data
+  const players = queue.map((player, index) => {
+    const ratingData = ratingsMap.get(player.userId) || { rating: 1000, tier: null };
+    const tierInfo = getTier(ratingData.rating);
+    const waitTimeSeconds = Math.floor((now - player.queuedAt) / 1000);
+
+    return {
+      position: index + 1,
+      oduscatedId: obfuscateUserId(player.userId),
+      username: player.username,
+      rating: ratingData.rating,
+      tier: ratingData.tier || tierInfo.name.toLowerCase(),
+      tierColor: tierInfo.color,
+      tierIcon: tierInfo.icon,
+      partyLevel: player.partyLevel,
+      waitTime: waitTimeSeconds,
+      isCurrentUser: requestingUserId !== null && player.userId === requestingUserId
+    };
+  });
+
+  return players;
+}
+
+/**
+ * Simple obfuscation for user IDs in queue display
+ * @param {number} userId - User ID
+ * @returns {string} Obfuscated ID
+ */
+function obfuscateUserId(userId) {
+  // Simple hash for display purposes (not cryptographic)
+  const hash = (userId * 2654435761) >>> 0;
+  return hash.toString(36).substring(0, 8);
+}
+
+/**
+ * Broadcast queue players update to all players in a specific queue
+ * @param {string} queueType - Queue type
+ */
+async function broadcastQueuePlayersUpdate(queueType) {
+  const queue = matchmakingQueues.get(queueType) || [];
+  if (queue.length === 0) return;
+
+  const ws = await getWebsocket();
+  const now = Date.now();
+
+  // Get ratings for all players in batch
+  const userIds = queue.map(p => p.userId);
+  const ratingsResult = await query(
+    `SELECT user_id, rating, tier FROM pvp_ratings
+     WHERE user_id = ANY($1) AND queue_type = $2`,
+    [userIds, queueType]
+  );
+
+  const ratingsMap = new Map();
+  for (const row of ratingsResult.rows) {
+    ratingsMap.set(row.user_id, { rating: row.rating, tier: row.tier });
+  }
+
+  // Send personalized update to each player in the queue
+  for (const player of queue) {
+    const players = queue.map((p, index) => {
+      const ratingData = ratingsMap.get(p.userId) || { rating: 1000, tier: null };
+      const tierInfo = getTier(ratingData.rating);
+      const waitTimeSeconds = Math.floor((now - p.queuedAt) / 1000);
+
+      return {
+        position: index + 1,
+        oduscatedId: obfuscateUserId(p.userId),
+        username: p.username,
+        rating: ratingData.rating,
+        tier: ratingData.tier || tierInfo.name.toLowerCase(),
+        tierColor: tierInfo.color,
+        tierIcon: tierInfo.icon,
+        partyLevel: p.partyLevel,
+        waitTime: waitTimeSeconds,
+        isCurrentUser: p.userId === player.userId
+      };
+    });
+
+    ws.sendToUser(player.userId, {
+      type: 'coliseum:queue_players_update',
+      payload: {
+        queueType,
+        players,
+        totalPlayers: players.length
+      }
+    });
+  }
 }
 
 /**
@@ -1588,6 +1733,45 @@ async function _getPlayerRank(userId, queueType = '1v1') {
   return result.rows[0];
 }
 
+/**
+ * Reset all internal state and cancel all timers (for test cleanup)
+ * @private - Only for testing
+ */
+function _resetForTests() {
+  // Cancel match ready timers
+  for (const timerId of matchReadyTimers.values()) {
+    clearTimeout(timerId);
+  }
+  matchReadyTimers.clear();
+
+  // Cancel match start timers
+  for (const timerId of matchStartTimers.values()) {
+    clearTimeout(timerId);
+  }
+  matchStartTimers.clear();
+
+  // Cancel turn timers
+  for (const timer of turnTimers.values()) {
+    clearTimeout(timer.timerId);
+  }
+  turnTimers.clear();
+
+  // Cancel disconnect tracking timers
+  for (const tracking of disconnectTracking.values()) {
+    for (const playerTracking of Object.values(tracking)) {
+      if (playerTracking.timerId) {
+        clearTimeout(playerTracking.timerId);
+      }
+    }
+  }
+  disconnectTracking.clear();
+
+  // Clear remaining state
+  turnTimeoutCounts.clear();
+  matchmakingQueues.clear();
+  activeMatches.clear();
+}
+
 // Only export functions used externally - internal functions remain private
 export {
   // Queue management (used by websocket/index.js and tests)
@@ -1596,9 +1780,12 @@ export {
   playerReady,
   getQueueStatus,
   getAllQueueStatuses,
+  getQueuePlayers,
   broadcastGlobalQueueStatus,
   cleanupPlayer,
-  QUEUE_SETTINGS
+  QUEUE_SETTINGS,
+  // Test cleanup
+  _resetForTests
 };
 
 export default {
@@ -1607,7 +1794,9 @@ export default {
   playerReady,
   getQueueStatus,
   getAllQueueStatuses,
+  getQueuePlayers,
   broadcastGlobalQueueStatus,
   cleanupPlayer,
-  QUEUE_SETTINGS
+  QUEUE_SETTINGS,
+  _resetForTests
 };

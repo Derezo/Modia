@@ -828,7 +828,8 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   }
 
   // Check if battle ended from player action
-  const battleStatus = battleService.checkBattleEnd(state);
+  const battleEndResult = battleService.checkBattleEnd(state);
+  const battleStatus = battleService.getBattleStatusString(battleEndResult);
 
   // Track if turn continues (two-action system: move + act)
   const turnContinues = !result.turnEnded && battleStatus === 'active';

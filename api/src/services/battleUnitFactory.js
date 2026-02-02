@@ -13,7 +13,8 @@ import traitService from './traitService.js';
  * {
  *   // Identity
  *   id: string | number,      // Unique identifier
- *   type: 'player' | 'enemy', // Team affiliation
+ *   type: 'player' | 'npc',   // Source type (player-controlled vs AI-controlled)
+ *   teamId: 1 | 2,            // Team allegiance (determines allies vs opponents)
  *   name: string,
  *   class: string,            // Guild/class (warrior, wizard, monster, dragon, etc.)
  *   level: number,
@@ -57,7 +58,7 @@ import traitService from './traitService.js';
  * @param {Object} character - Character from database
  * @param {Object} formation - Formation position data (optional)
  * @param {Array} skills - Loaded skills array
- * @param {Object} options - Additional options (defaultX, defaultY, traits, zodiacAbilities)
+ * @param {Object} options - Additional options (defaultX, defaultY, traits, zodiacAbilities, teamId)
  * @returns {Object} BattleUnit object
  */
 function createPlayerBattleUnit(character, formation = null, skills = [], options = {}) {
@@ -65,11 +66,13 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
   const defaultY = options.defaultY ?? 15;
   const traits = options.traits || [];
   const zodiacAbilities = options.zodiacAbilities || [];
+  const teamId = options.teamId ?? 1; // Default to team 1 for player units
 
   const unit = {
     // Identity
     id: character.id,
     type: 'player',
+    teamId: teamId, // Team allegiance for PvP support
     name: character.name,
     class: character.class,
     level: character.level || 1,
@@ -203,6 +206,7 @@ function createEnemyBattleUnit(template, partyLevel, difficultyTier, index, posi
     // Identity
     id: `enemy_${index}`,
     type: 'enemy',
+    teamId: 2, // Enemy units are always on team 2
     name: template.name,
     class: enemyClass,
     level: enemyLevel,
@@ -284,6 +288,8 @@ function normalizeUnit(unit) {
   return {
     ...unit,
     // Ensure required properties exist
+    // teamId falls back to type-based assignment for backwards compatibility
+    teamId: unit.teamId ?? (unit.type === 'enemy' ? 2 : 1),
     statusEffects: unit.statusEffects || [],
     skillCooldowns: unit.skillCooldowns || {},
     skills: unit.skills || unit.abilities || [],
@@ -319,11 +325,45 @@ function isEnemyUnit(unit) {
 
 /**
  * Get the opposite type
+ * @deprecated Use getOpposingUnits() or getAlliedUnits() for team-based logic
  * @param {string} type - 'player' or 'enemy'
  * @returns {string}
  */
 function getOppositeType(type) {
   return type === 'player' ? 'enemy' : 'player';
+}
+
+/**
+ * Get a unit's team ID with fallback for backwards compatibility
+ * @param {Object} unit - BattleUnit
+ * @returns {number} Team ID (1 or 2)
+ */
+function getUnitTeamId(unit) {
+  if (unit.teamId !== undefined) {
+    return unit.teamId;
+  }
+  // Fallback: type 'enemy' implies team 2, all others imply team 1
+  return unit.type === 'enemy' ? 2 : 1;
+}
+
+/**
+ * Check if two units are on opposing teams
+ * @param {Object} unitA - First unit
+ * @param {Object} unitB - Second unit
+ * @returns {boolean} True if units are opponents
+ */
+function areOpponents(unitA, unitB) {
+  return getUnitTeamId(unitA) !== getUnitTeamId(unitB);
+}
+
+/**
+ * Check if two units are on the same team
+ * @param {Object} unitA - First unit
+ * @param {Object} unitB - Second unit
+ * @returns {boolean} True if units are allies
+ */
+function areAllies(unitA, unitB) {
+  return getUnitTeamId(unitA) === getUnitTeamId(unitB);
 }
 
 /**
@@ -353,7 +393,10 @@ export {
   isEnemyUnit,
   getOppositeType,
   isAlive,
-  getAliveUnitsOfType
+  getAliveUnitsOfType,
+  getUnitTeamId,
+  areOpponents,
+  areAllies
 };
 
 export default {
@@ -364,5 +407,8 @@ export default {
   isEnemyUnit,
   getOppositeType,
   isAlive,
-  getAliveUnitsOfType
+  getAliveUnitsOfType,
+  getUnitTeamId,
+  areOpponents,
+  areAllies
 };

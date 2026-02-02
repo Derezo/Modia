@@ -44,6 +44,10 @@ export {
   getTargetsInRange,
   findAdjacentTileToTarget,
   getOppositeType,
+  getOpposingUnits,
+  getAlliedUnits,
+  areOpponents,
+  areAllies,
   calculatePathCost,
   getManhattanDistance
 } from './movementService.js';
@@ -87,5 +91,6 @@ export {
 export {
   getAvailableActions,
   processAction,
-  checkBattleEnd
+  checkBattleEnd,
+  getBattleStatusString
 } from './actionProcessor.js';
