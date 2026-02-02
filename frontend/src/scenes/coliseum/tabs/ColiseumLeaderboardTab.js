@@ -21,6 +21,25 @@ function renderTierBadge(rating, tierData = null) {
 }
 
 /**
+ * Render achievement badges for a player
+ * @param {Array} badges - Array of badge objects with key, name, icon, type
+ * @returns {string} HTML string for badges
+ */
+function renderAchievementBadges(badges) {
+  if (!badges || badges.length === 0) {
+    return '';
+  }
+
+  return `<span class="coliseum-achievement-badges">
+    ${badges.map(badge => `
+      <span class="coliseum-achievement-badge coliseum-badge-${badge.type}" title="${badge.name}">
+        ${badge.icon}
+      </span>
+    `).join('')}
+  </span>`;
+}
+
+/**
  * Render leaderboard content
  * @param {Object} context - Shared context from ColiseumScene
  * @returns {string} HTML string
@@ -80,11 +99,15 @@ export function renderLeaderboard(context) {
     const isCurrentUser = entry.userId === game.userId;
     const crownIcon = rank === 1 ? '<span class="coliseum-crown-icon">&#128081;</span>' : '';
     const tierData = entry.tierColor ? { name: entry.tier, color: entry.tierColor, icon: entry.tierIcon } : null;
+    const badges = entry.badges || [];
 
     return `
                 <tr class="${isCurrentUser ? 'current-user' : ''}">
                   <td class="coliseum-rank-cell coliseum-rank-${rank <= 3 ? rank : ''}">#${rank}${crownIcon}</td>
-                  <td class="coliseum-player-name">${entry.username}</td>
+                  <td class="coliseum-player-name">
+                    <span class="coliseum-player-name-text">${entry.username}</span>
+                    ${renderAchievementBadges(badges)}
+                  </td>
                   <td class="coliseum-tier-cell">${renderTierBadge(entry.rating, tierData)}</td>
                   <td class="coliseum-rating-cell">${entry.rating}</td>
                   <td class="coliseum-winloss-cell">

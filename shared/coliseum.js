@@ -177,3 +177,188 @@ export function getTierIcon(iconName) {
   if (!iconName) return '';
   return TIER_ICONS[iconName] || '';
 }
+
+// =============================================================================
+// ACHIEVEMENT BADGES SYSTEM
+// =============================================================================
+
+/**
+ * Achievement badge definitions for Coliseum PvP
+ * Includes milestone badges (permanent), skill badges (earned through feats),
+ * and streak badges (dynamic, computed from winStreak)
+ */
+export const ACHIEVEMENT_BADGES = {
+  // Milestone Badges (Permanent) - Earned through cumulative progress
+  first_blood: {
+    name: 'First Blood',
+    icon: '\u{2694}\u{FE0F}',  // Crossed swords
+    description: 'Win your first PvP match',
+    type: 'milestone'
+  },
+  veteran: {
+    name: 'Veteran',
+    icon: '\u{1F3AF}',  // Target/Bullseye
+    description: 'Win 50 PvP matches',
+    type: 'milestone'
+  },
+  legend: {
+    name: 'Coliseum Legend',
+    icon: '\u{1F3DB}\u{FE0F}',  // Classical building
+    description: 'Win 200 PvP matches',
+    type: 'milestone'
+  },
+  climber: {
+    name: 'Climber',
+    icon: '\u{1F4C8}',  // Chart increasing
+    description: 'Reach Gold tier',
+    type: 'milestone'
+  },
+  elite: {
+    name: 'Elite',
+    icon: '\u{1F451}',  // Crown
+    description: 'Reach Master tier',
+    type: 'milestone'
+  },
+  champion: {
+    name: 'Champion',
+    icon: '\u{1F3C6}',  // Trophy
+    description: 'Reach Grandmaster tier',
+    type: 'milestone'
+  },
+
+  // Skill Badges (Earned Through Feats) - Earned in specific matches
+  giant_slayer: {
+    name: 'Giant Slayer',
+    icon: '\u{1F4AA}',  // Flexed biceps
+    description: 'Beat opponent 200+ ELO above you',
+    type: 'skill'
+  },
+  underdog: {
+    name: 'Underdog',
+    icon: '\u{1F423}',  // Hatching chick
+    description: 'Win with 20%+ PPR disadvantage',
+    type: 'skill'
+  },
+  flawless: {
+    name: 'Flawless',
+    icon: '\u{2728}',  // Sparkles
+    description: 'Win without losing a single unit',
+    type: 'skill'
+  },
+  comeback: {
+    name: 'Comeback Kid',
+    icon: '\u{1F504}',  // Counterclockwise arrows
+    description: 'Win after losing 50%+ of units first',
+    type: 'skill'
+  },
+
+  // Streak Badges (Dynamic - not stored, computed from winStreak)
+  on_fire: {
+    name: 'On Fire',
+    icon: '\u{1F525}',  // Fire
+    description: 'Active 3+ win streak',
+    type: 'streak',
+    minStreak: 3
+  },
+  unstoppable: {
+    name: 'Unstoppable',
+    icon: '\u{1F480}',  // Skull
+    description: 'Active 5+ win streak',
+    type: 'streak',
+    minStreak: 5
+  },
+  dominating: {
+    name: 'Dominating',
+    icon: '\u{26A1}',  // Lightning bolt
+    description: 'Active 10+ win streak',
+    type: 'streak',
+    minStreak: 10
+  }
+};
+
+/**
+ * Get the streak badge for a given win streak
+ * Returns the highest applicable streak badge or null
+ * @param {number} winStreak - Current win streak
+ * @returns {Object|null} Badge info or null if no streak badge applies
+ */
+export function getStreakBadge(winStreak) {
+  if (winStreak >= 10) {
+    return { key: 'dominating', ...ACHIEVEMENT_BADGES.dominating };
+  }
+  if (winStreak >= 5) {
+    return { key: 'unstoppable', ...ACHIEVEMENT_BADGES.unstoppable };
+  }
+  if (winStreak >= 3) {
+    return { key: 'on_fire', ...ACHIEVEMENT_BADGES.on_fire };
+  }
+  return null;
+}
+
+/**
+ * Get all badges for a user, combining stored achievements with dynamic streak badge
+ * @param {Array} achievements - Array of achievement records from database
+ * @param {number} winStreak - Current win streak for dynamic badges
+ * @returns {Array} Array of badge objects with key, name, icon, description, earnedAt
+ */
+export function getUserBadges(achievements = [], winStreak = 0) {
+  const badges = [];
+
+  // Add stored achievements
+  for (const achievement of achievements) {
+    const badgeDef = ACHIEVEMENT_BADGES[achievement.achievement_key];
+    if (badgeDef) {
+      badges.push({
+        key: achievement.achievement_key,
+        ...badgeDef,
+        earnedAt: achievement.earned_at
+      });
+    }
+  }
+
+  // Add dynamic streak badge
+  const streakBadge = getStreakBadge(winStreak);
+  if (streakBadge) {
+    badges.push({
+      ...streakBadge,
+      earnedAt: null,  // Dynamic badges have no earned date
+      isDynamic: true
+    });
+  }
+
+  return badges;
+}
+
+/**
+ * Get priority-sorted badges for display (max count limited)
+ * Priority: streak > tier (champion/elite/climber) > skill > milestone
+ * @param {Array} badges - Array of badge objects
+ * @param {number} maxBadges - Maximum badges to return (default 3)
+ * @returns {Array} Priority-sorted array of badges
+ */
+export function getPriorityBadges(badges, maxBadges = 3) {
+  // Define priority scores (higher = more important)
+  const getPriority = (badge) => {
+    // Streak badges always highest priority
+    if (badge.type === 'streak') return 100 + (badge.minStreak || 0);
+
+    // Tier badges second priority
+    if (badge.key === 'champion') return 50;
+    if (badge.key === 'elite') return 45;
+    if (badge.key === 'climber') return 40;
+
+    // Skill badges third priority
+    if (badge.type === 'skill') return 30;
+
+    // Milestone badges (non-tier) lowest priority
+    if (badge.key === 'legend') return 20;
+    if (badge.key === 'veteran') return 15;
+    if (badge.key === 'first_blood') return 10;
+
+    return 0;
+  };
+
+  return [...badges]
+    .sort((a, b) => getPriority(b) - getPriority(a))
+    .slice(0, maxBadges);
+}
