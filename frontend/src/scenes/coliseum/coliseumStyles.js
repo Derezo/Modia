@@ -1037,5 +1037,160 @@ export function getColiseumStyles() {
       color: ${P.text.secondary};
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
     }
+
+    /* ============================================ */
+    /* QUEUE PLAYERS LIST STYLES                   */
+    /* ============================================ */
+
+    /* Expanded queue panel when showing player list */
+    .coliseum-queue-with-players {
+      max-width: 600px;
+    }
+
+    /* Queue players panel container */
+    .coliseum-queue-players-panel {
+      margin-top: ${PARCHMENT_SPACING.xl};
+      background: ${P.dark};
+      border: 1px solid ${P.border};
+      border-radius: ${PARCHMENT_RADIUS.md};
+      overflow: hidden;
+    }
+
+    /* Players list header */
+    .coliseum-queue-players-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: ${PARCHMENT_SPACING.md} ${PARCHMENT_SPACING.lg};
+      background: linear-gradient(to bottom, ${P.border} 0%, ${P.borderDark} 100%);
+      border-bottom: 1px solid ${P.border};
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+      color: ${P.text.inverse};
+      text-transform: uppercase;
+    }
+
+    .coliseum-queue-players-count {
+      background: ${ARENA_COLORS.primary};
+      color: white;
+      padding: 2px 8px;
+      border-radius: ${PARCHMENT_RADIUS.sm};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+    }
+
+    /* Scrollable player list */
+    .coliseum-queue-players-list {
+      max-height: 280px;
+      overflow-y: auto;
+      ${getParchmentScrollbarCSS('.coliseum-queue-players-list')}
+    }
+
+    /* Individual player row */
+    .coliseum-queue-player-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: ${PARCHMENT_SPACING.md} ${PARCHMENT_SPACING.lg};
+      border-bottom: 1px solid ${P.border};
+      transition: background 0.2s;
+    }
+
+    .coliseum-queue-player-row:last-child {
+      border-bottom: none;
+    }
+
+    .coliseum-queue-player-row:hover {
+      background: ${P.mid};
+    }
+
+    /* Current user highlight */
+    .coliseum-queue-player-row.current-user {
+      background: rgba(74, 107, 138, 0.15);
+      border-left: 3px solid ${ARENA_COLORS.primary};
+    }
+
+    .coliseum-queue-player-row.current-user:hover {
+      background: rgba(74, 107, 138, 0.2);
+    }
+
+    /* Player main info (left side) */
+    .coliseum-queue-player-main {
+      display: flex;
+      align-items: center;
+      gap: ${PARCHMENT_SPACING.md};
+    }
+
+    /* Position number */
+    .coliseum-queue-player-position {
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+      color: ${P.text.muted};
+      min-width: 32px;
+    }
+
+    /* Player info container */
+    .coliseum-queue-player-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    /* Player name row with tier icon */
+    .coliseum-queue-player-name-row {
+      display: flex;
+      align-items: center;
+      gap: ${PARCHMENT_SPACING.xs};
+    }
+
+    .coliseum-queue-player-name {
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+      color: ${P.text.primary};
+    }
+
+    /* YOU badge for current user */
+    .queue-player-you-badge {
+      background: ${ARENA_COLORS.primary};
+      color: white;
+      font-size: 10px;
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      padding: 2px 6px;
+      border-radius: ${PARCHMENT_RADIUS.sm};
+      margin-left: ${PARCHMENT_SPACING.xs};
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Player stats row */
+    .coliseum-queue-player-stats {
+      display: flex;
+      align-items: center;
+      gap: ${PARCHMENT_SPACING.md};
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+    }
+
+    .coliseum-queue-player-tier {
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+    }
+
+    .coliseum-queue-player-rating {
+      color: ${ARENA_COLORS.primary};
+    }
+
+    .coliseum-queue-player-level {
+      color: ${P.text.muted};
+    }
+
+    /* Wait time (right side) */
+    .coliseum-queue-player-wait {
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+      color: ${P.text.muted};
+      white-space: nowrap;
+    }
   `;
 }

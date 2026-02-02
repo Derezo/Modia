@@ -20,6 +20,7 @@ export class ColiseumScene extends Scene {
     this.selectedQueue = null; // '1v1', '3v3', '5v5'
     this.queueStatus = null; // { position, queueSize, estimatedWait }
     this.isInQueue = false;
+    this.queuePlayers = []; // Array of players in queue
 
     // Match state
     this.currentMatch = null; // { matchId, opponent, readyDeadline }
@@ -153,6 +154,7 @@ export class ColiseumScene extends Scene {
       get selectedQueue() { return scene.selectedQueue; },
       get queueStatus() { return scene.queueStatus; },
       get isInQueue() { return scene.isInQueue; },
+      get queuePlayers() { return scene.queuePlayers; },
       get currentMatch() { return scene.currentMatch; },
       get isReady() { return scene.isReady; },
       get opponentReady() { return scene.opponentReady; },
@@ -321,11 +323,14 @@ export class ColiseumScene extends Scene {
           estimatedWait: payload.estimatedWait
         };
         this.updateContent();
+        // Load queue players list
+        this.loadQueuePlayers();
       },
 
       'coliseum:queue_left': (_payload) => {
         this.isInQueue = false;
         this.queueStatus = null;
+        this.queuePlayers = [];
         this.updateContent();
       },
 
@@ -335,6 +340,15 @@ export class ColiseumScene extends Scene {
           queueSize: payload.queueSize,
           estimatedWait: payload.estimatedWait
         };
+        this.updateContent();
+      },
+
+      'coliseum:queue_players_update': (payload) => {
+        this.queuePlayers = payload.players || [];
+        // Also update queue status from the player count
+        if (this.queueStatus) {
+          this.queueStatus.queueSize = payload.totalPlayers || this.queuePlayers.length;
+        }
         this.updateContent();
       },
 
@@ -469,6 +483,19 @@ export class ColiseumScene extends Scene {
     }
   }
 
+  async loadQueuePlayers() {
+    if (!this.selectedQueue) return;
+
+    try {
+      const data = await this.game.api.getColiseumQueuePlayers(this.selectedQueue);
+      this.queuePlayers = data.players || [];
+      this.updateContent();
+    } catch (err) {
+      console.error('Failed to load queue players:', err);
+      // Don't clear - keep whatever we had
+    }
+  }
+
   async loadLeaderboard() {
     this.loadingLeaderboard = true;
     this.updateContent();
@@ -565,6 +592,7 @@ export class ColiseumScene extends Scene {
 
     this.isInQueue = false;
     this.queueStatus = null;
+    this.queuePlayers = [];
     this.updateContent();
   }
 

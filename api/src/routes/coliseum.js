@@ -36,6 +36,31 @@ router.get('/queues', queuesLimiter, async (req, res) => {
 });
 
 /**
+ * GET /api/coliseum/queue/:queueType/players
+ * Get detailed player list for a specific queue
+ */
+router.get('/queue/:queueType/players', queuesLimiter, async (req, res) => {
+  try {
+    const { queueType } = req.params;
+    const userId = req.user.id;
+
+    // Validate queue type
+    const validQueues = ['1v1', '3v3', '5v5'];
+    if (!validQueues.includes(queueType)) {
+      return res.status(400).json({ success: false, error: 'Invalid queue type' });
+    }
+
+    const coliseumService = await import('../services/coliseumService.js');
+    const players = await coliseumService.getQueuePlayers(queueType, userId);
+
+    res.json({ success: true, players });
+  } catch (error) {
+    console.error('Failed to get queue players:', error);
+    res.status(500).json({ success: false, error: 'Failed to get queue players' });
+  }
+});
+
+/**
  * GET /api/coliseum/leaderboard
  * Get PvP leaderboard for a specific queue type
  * Query params: queue (1v1|3v3|5v5), limit, time (all|week|today)
