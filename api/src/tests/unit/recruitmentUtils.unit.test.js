@@ -682,3 +682,194 @@ describe('Recruitment Constants', () => {
     });
   });
 });
+
+// ============================================================================
+// getTier1And2Skills() Tests
+// ============================================================================
+
+import { getTier1And2Skills } from '../../utils/recruitmentUtils.js';
+
+describe('getTier1And2Skills', () => {
+  describe('basic functionality', () => {
+    it('should return an array of skills for warrior', () => {
+      const skills = getTier1And2Skills('warrior');
+
+      assert.ok(Array.isArray(skills), 'Should return an array');
+      assert.ok(skills.length > 0, 'Warrior should have tier 1-2 skills');
+    });
+
+    it('should return an array of skills for wizard', () => {
+      const skills = getTier1And2Skills('wizard');
+
+      assert.ok(Array.isArray(skills), 'Should return an array');
+      assert.ok(skills.length > 0, 'Wizard should have tier 1-2 skills');
+    });
+
+    it('should return an array of skills for monk', () => {
+      const skills = getTier1And2Skills('monk');
+
+      assert.ok(Array.isArray(skills), 'Should return an array');
+      assert.ok(skills.length > 0, 'Monk should have tier 1-2 skills');
+    });
+
+    it('should return an array of skills for chemist', () => {
+      const skills = getTier1And2Skills('chemist');
+
+      assert.ok(Array.isArray(skills), 'Should return an array');
+      assert.ok(skills.length > 0, 'Chemist should have tier 1-2 skills');
+    });
+
+    it('should return empty array for unknown class', () => {
+      const skills = getTier1And2Skills('paladin');
+
+      assert.deepStrictEqual(skills, []);
+    });
+
+    it('should return empty array for undefined class', () => {
+      const skills = getTier1And2Skills(undefined);
+
+      assert.deepStrictEqual(skills, []);
+    });
+
+    it('should return empty array for null class', () => {
+      const skills = getTier1And2Skills(null);
+
+      assert.deepStrictEqual(skills, []);
+    });
+  });
+
+  describe('tier classification', () => {
+    it('should mark skills without requirements as tier 1', () => {
+      const skills = getTier1And2Skills('warrior');
+      const tier1Skills = skills.filter(s => s.tier === 1);
+
+      assert.ok(tier1Skills.length > 0, 'Should have tier 1 skills');
+
+      for (const skill of tier1Skills) {
+        assert.ok(
+          !skill.requires || Object.keys(skill.requires).length === 0,
+          `Tier 1 skill ${skill.id} should have no requirements`
+        );
+      }
+    });
+
+    it('should mark skills with tier 1 requirements (level <= 1) as tier 2', () => {
+      const skills = getTier1And2Skills('warrior');
+      const tier2Skills = skills.filter(s => s.tier === 2);
+      const tier1Ids = new Set(skills.filter(s => s.tier === 1).map(s => s.id));
+
+      for (const skill of tier2Skills) {
+        assert.ok(skill.requires, `Tier 2 skill ${skill.id} should have requirements`);
+
+        for (const [reqId, reqLevel] of Object.entries(skill.requires)) {
+          assert.ok(
+            tier1Ids.has(reqId),
+            `Tier 2 skill ${skill.id} requires ${reqId} which should be tier 1`
+          );
+          assert.ok(
+            reqLevel <= 1,
+            `Tier 2 skill ${skill.id} requires ${reqId} at level ${reqLevel}, should be <= 1`
+          );
+        }
+      }
+    });
+
+    it('should only include active skills (not passives)', () => {
+      const skills = getTier1And2Skills('wizard');
+
+      for (const skill of skills) {
+        assert.strictEqual(
+          skill.type,
+          'active',
+          `Skill ${skill.id} should be active, got ${skill.type}`
+        );
+      }
+    });
+
+    it('should have tier property set to 1 or 2', () => {
+      const skills = getTier1And2Skills('monk');
+
+      for (const skill of skills) {
+        assert.ok(
+          skill.tier === 1 || skill.tier === 2,
+          `Skill ${skill.id} tier should be 1 or 2, got ${skill.tier}`
+        );
+      }
+    });
+  });
+
+  describe('skill preservation', () => {
+    it('should preserve original skill properties', () => {
+      const skills = getTier1And2Skills('chemist');
+
+      for (const skill of skills) {
+        assert.ok(skill.id, 'Skill should have id');
+        assert.ok(skill.name, 'Skill should have name');
+        // The tier property is added
+        assert.ok(skill.tier, 'Skill should have tier');
+      }
+    });
+
+    it('should include starter skill for each class', () => {
+      const classes = ['warrior', 'wizard', 'monk', 'chemist'];
+      const starterSkills = {
+        warrior: 'power_strike',
+        wizard: 'fireball',
+        monk: 'palm_strike',
+        chemist: 'potion_toss'
+      };
+
+      for (const cls of classes) {
+        const skills = getTier1And2Skills(cls);
+        const starterSkill = skills.find(s => s.id === starterSkills[cls]);
+
+        assert.ok(
+          starterSkill,
+          `${cls} should include starter skill ${starterSkills[cls]}`
+        );
+        assert.strictEqual(starterSkill.tier, 1, 'Starter skill should be tier 1');
+      }
+    });
+  });
+
+  describe('no tier 3+ skills', () => {
+    it('should not include skills requiring tier 2 skills', () => {
+      const classes = ['warrior', 'wizard', 'monk', 'chemist'];
+
+      for (const cls of classes) {
+        const skills = getTier1And2Skills(cls);
+        const tier2Ids = new Set(skills.filter(s => s.tier === 2).map(s => s.id));
+
+        for (const skill of skills) {
+          if (skill.requires) {
+            for (const reqId of Object.keys(skill.requires)) {
+              assert.ok(
+                !tier2Ids.has(reqId),
+                `Skill ${skill.id} requires tier 2 skill ${reqId}, should be excluded`
+              );
+            }
+          }
+        }
+      }
+    });
+
+    it('should not include skills requiring level > 1 of tier 1 skills', () => {
+      const classes = ['warrior', 'wizard', 'monk', 'chemist'];
+
+      for (const cls of classes) {
+        const skills = getTier1And2Skills(cls);
+
+        for (const skill of skills) {
+          if (skill.requires) {
+            for (const [reqId, reqLevel] of Object.entries(skill.requires)) {
+              assert.ok(
+                reqLevel <= 1,
+                `Skill ${skill.id} in ${cls} requires ${reqId} at level ${reqLevel}, exceeds L1`
+              );
+            }
+          }
+        }
+      }
+    });
+  });
+});
