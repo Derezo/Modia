@@ -1,5 +1,18 @@
 /**
- * Coliseum Service - Handles PvP matchmaking, turn timers, and match completion
+ * @module coliseumService
+ * @description Orchestrates PvP matchmaking, rating calculations, and match lifecycle.
+ *
+ * Key responsibilities:
+ * - Matchmaking queue management (PPR-based pairing with time-based range expansion)
+ * - Match creation and ready-check timeout handling
+ * - PvP turn timeout tracking and forfeit penalties
+ * - Battle completion and rating updates (via ratingService)
+ * - Achievement badge awarding (via achievementService)
+ * - WebSocket notifications and real-time queue/match updates
+ *
+ * @see ratingService.js - ELO rating calculations and updates
+ * @see achievementService.js - Badge checking and awarding
+ * @see battleService.js - Battle state management (delegated)
  */
 
 import { query, pool } from '../config/database.js';
