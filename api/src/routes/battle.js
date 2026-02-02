@@ -872,6 +872,9 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   // Cancel turn timer since player submitted a valid action (for multiplayer battles)
   cancelTurnTimer(battleId);
 
+  // Capture old position BEFORE processAction modifies the unit (for movement broadcast)
+  const oldPosition = { x: activeUnit.tileX, y: activeUnit.tileY };
+
   // Process player action using service
   const result = battleService.processAction(state, activeUnit, actionType, targetTile, skillId);
 
@@ -985,6 +988,13 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
         }
       }
     });
+  }
+
+  // Broadcast unit movement if player moved (so opponents see movement animation)
+  // This uses the same event as enemy moves for consistent handling
+  if (actionType === 'move' && result.moved) {
+    const newPosition = { x: activeUnit.tileX, y: activeUnit.tileY };
+    battleWebsocket.broadcastUnitMoved(battleId, unitId, oldPosition, newPosition, req.user.userId);
   }
 
   // Broadcast action executed via WebSocket

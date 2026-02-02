@@ -139,6 +139,21 @@ describe('battleWebsocket service', () => {
       assert.ok(true, 'Movement broadcast completed without error');
     });
 
+    test('broadcastUnitMoved accepts submitterId parameter for deduplication', async () => {
+      const battleId = getUniqueBattleId();
+      const userId = getUniqueUserId();
+      const unitId = 'player_1';
+      const from = { x: 5, y: 5 };
+      const to = { x: 6, y: 5 };
+      const submitterId = userId;
+
+      await battleWs.joinBattle(battleId, userId);
+      // Should not throw when submitterId is provided
+      await battleWs.broadcastUnitMoved(battleId, unitId, from, to, submitterId);
+
+      assert.ok(true, 'Movement broadcast with submitterId completed without error');
+    });
+
     test('broadcastActionExecuted sends action result', async () => {
       const battleId = getUniqueBattleId();
       const userId = getUniqueUserId();
@@ -154,6 +169,21 @@ describe('battleWebsocket service', () => {
       await battleWs.broadcastActionExecuted(battleId, actorId, actionType, result);
 
       assert.ok(true, 'Action broadcast completed without error');
+    });
+
+    test('broadcastActionExecuted accepts submitterId parameter for deduplication', async () => {
+      const battleId = getUniqueBattleId();
+      const userId = getUniqueUserId();
+      const actorId = 'player_1';
+      const actionType = 'move';
+      const result = { moved: true, from: { x: 5, y: 5 }, to: { x: 6, y: 5 } };
+      const submitterId = userId;
+
+      await battleWs.joinBattle(battleId, userId);
+      // Should not throw when submitterId is provided
+      await battleWs.broadcastActionExecuted(battleId, actorId, actionType, result, submitterId);
+
+      assert.ok(true, 'Action broadcast with submitterId completed without error');
     });
   });
 

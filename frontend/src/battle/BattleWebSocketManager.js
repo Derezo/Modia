@@ -1,13 +1,18 @@
 /**
- * BattleWebSocketManager - Handles WebSocket events for battle synchronization
+ * @module BattleWebSocketManager
+ * @description Handles WebSocket events for battle synchronization in PvE and PvP.
  *
- * Manages:
- * - WebSocket event subscriptions
+ * Key responsibilities:
+ * - WebSocket event subscriptions and cleanup
  * - Remote state updates and synchronization
- * - Turn event queue processing
- * - Reconnection logic
+ * - Turn event queue for sequential processing
+ * - State drift detection and correction via BattleStatePoller
+ * - Reconnection handling after disconnects
+ * - Coliseum match result handling for PvP
  *
- * Uses delegate pattern - receives scene reference for state/component access
+ * @see BattleScene.js - Orchestrates battle, owns this manager
+ * @see BattleStatePoller.js - Defensive state synchronization
+ * @see BattleAnimations.js - Animation timing constants
  */
 
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
@@ -37,6 +42,9 @@ export class BattleWebSocketManager {
 
     // Setup guard to prevent handler stacking
     this.isSetup = false;
+
+    // Deferred input enable (when your_turn arrives before turn_start)
+    this.pendingInputEnable = false;
   }
 
   // ===========================================================================
@@ -94,6 +102,12 @@ export class BattleWebSocketManager {
     // Handle unit movement from other players
     const unitMovedUnsub = socket.on('battle:unit_moved', (payload) => {
       if (payload.battleId === this.battleId) {
+        // Skip own movement - already processed via HTTP response in processActionResult
+        // Use explicit null check to handle edge case where userId could be 0
+        if (payload.submitterId != null && payload.submitterId === this.game.localUserId) {
+          console.log('[Battle WS] Skipping own movement (already processed via HTTP)');
+          return;
+        }
         this.handleRemoteUnitMoved(payload);
       }
     });
@@ -103,7 +117,8 @@ export class BattleWebSocketManager {
     const actionExecutedUnsub = socket.on('battle:action_executed', (payload) => {
       if (payload.battleId === this.battleId) {
         // Skip own action - already processed via HTTP response
-        if (payload.submitterId && payload.submitterId === this.game.localUserId) {
+        // Use explicit null check to handle edge case where userId could be 0
+        if (payload.submitterId != null && payload.submitterId === this.game.localUserId) {
           console.log('[Battle WS] Skipping own action (already processed via HTTP)');
           return;
         }
@@ -122,6 +137,19 @@ export class BattleWebSocketManager {
       }
     });
     this.wsUnsubscribers.push(battleEndUnsub);
+
+    // Handle coliseum match result (PvP-specific with enhanced stats)
+    const matchResultUnsub = socket.on('coliseum:match_result', (payload) => {
+      if (payload.battleId === this.battleId) {
+        console.log('[Battle WS] Coliseum match result received:', {
+          isWinner: payload.isWinner,
+          hasUnitStats: !!payload.unitStats,
+          hasPvpResult: !!payload.pvpResult
+        });
+        this.scene.handleColiseumResult(payload);
+      }
+    });
+    this.wsUnsubscribers.push(matchResultUnsub);
 
     // Handle enemy actions batch
     const enemyActionsUnsub = socket.on('battle:enemy_actions', (payload) => {
@@ -492,7 +520,6 @@ export class BattleWebSocketManager {
    */
   handleRemoteYourTurn(payload) {
     const { unitId, availableActions } = payload;
-    console.log('[Battle WS] Your turn:', unitId, '(input enabled, queue handles camera)');
 
     // Play turn start sound for player
     this.scene.audioManager.playSound('turn_start');
@@ -500,10 +527,21 @@ export class BattleWebSocketManager {
     // Store server-provided available actions for use in action methods
     this.scene.serverAvailableActions = availableActions || null;
 
-    // Enable player input (but don't set activeUnitId - queue handles that)
-    this.scene.inputEnabled = true;
-    this.scene.currentAction = null;
-    this.scene.validTiles = [];
+    // Check if queue has pending turn_start - if so, defer input enable
+    // This prevents players from submitting actions before seeing their turn start animation
+    const hasPendingTurnStart = this.turnEventQueue.some(e => e.type === 'turn_start');
+
+    if (hasPendingTurnStart) {
+      // Mark that input should be enabled after queue processes turn_start
+      this.pendingInputEnable = true;
+      console.log('[Battle WS] Your turn:', unitId, '(deferring input enable until turn_start processes)');
+    } else {
+      // No pending turn_start - enable input immediately
+      this.scene.inputEnabled = true;
+      this.scene.currentAction = null;
+      this.scene.validTiles = [];
+      console.log('[Battle WS] Your turn:', unitId, '(input enabled immediately)');
+    }
 
     // NOTE: Don't call updateUI() - the queue's processTurnStartEvent handles that
     // NOTE: Don't set activeUnitId - the queue's processTurnStartEvent handles that
@@ -1038,6 +1076,15 @@ export class BattleWebSocketManager {
 
         // Enable player controls after camera pan
         this.scene.updateUI();
+
+        // Apply deferred input enable if your_turn arrived before turn_start
+        if (this.pendingInputEnable) {
+          this.scene.inputEnabled = true;
+          this.scene.currentAction = null;
+          this.scene.validTiles = [];
+          this.pendingInputEnable = false;
+          console.log('[Battle WS] Deferred input enable applied after turn_start');
+        }
       } else {
         // Enemy turn OR opponent's turn in PvP
         this.inEnemySequence = true;
@@ -1099,6 +1146,13 @@ export class BattleWebSocketManager {
       const distance = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
       const moveDuration = Math.max(ANIMATION_TIMING.MOVEMENT_MIN_MS, distance * ANIMATION_TIMING.MOVEMENT_PER_TILE_MS);
       await this.scene.waitForAnimation(moveDuration);
+
+      // Add settling delay if next event is an action (move-then-act sequence)
+      // This provides visual breathing room between movement and action
+      const nextEvent = this.turnEventQueue[0];
+      if (nextEvent && (nextEvent.type === 'action_executed' || nextEvent.type === 'intent_highlight')) {
+        await this.scene.waitForAnimation(ANIMATION_TIMING.TURN_SETTLE_DELAY);
+      }
     }
   }
 
@@ -1112,6 +1166,13 @@ export class BattleWebSocketManager {
     const actor = this.units.get(actorId);
     if (actor) {
       actor.setThinking(false);
+    }
+
+    // Handle move action (animation handled by unit_moved event)
+    // This is a fallback - movement is primarily broadcast via unit_moved for consistency
+    if (actionType === 'move') {
+      this.scene.addBattleLogEntry(actor, actionType, null, result);
+      return; // Animation already handled by unit_moved event
     }
 
     // Get target unit for logging

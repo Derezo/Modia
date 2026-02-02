@@ -103,9 +103,9 @@ async function broadcastStateUpdate(battleId, state, excludeUserId = null) {
  * @param {number} unitId - Unit that moved
  * @param {Object} from - Previous position { x, y }
  * @param {Object} to - New position { x, y }
- * @param {number} excludeUserId - Optional user to exclude (NOTE: ACK broadcast doesn't support exclude)
+ * @param {number} submitterId - Optional userId who submitted the move (for frontend dedup)
  */
-async function broadcastUnitMoved(battleId, unitId, from, to, _excludeUserId = null) {
+async function broadcastUnitMoved(battleId, unitId, from, to, submitterId = null) {
   const roomName = `battle:${battleId}`;
 
   // Use ACK-required broadcast for position consistency
@@ -116,6 +116,7 @@ async function broadcastUnitMoved(battleId, unitId, from, to, _excludeUserId = n
       unitId,
       from,
       to,
+      submitterId,  // Include submitter's userId for frontend filtering
       timestamp: Date.now()
     }
   }, battleId);

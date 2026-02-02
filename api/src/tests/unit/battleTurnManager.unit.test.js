@@ -112,11 +112,11 @@ function createMockBattleWebsocket() {
     broadcastIntentHighlight: mock.fn((battleId, unitId, highlightType, tiles, duration) => {
       mockBroadcasts.push({ type: 'intent_highlight', battleId, unitId, highlightType, tiles, duration });
     }),
-    broadcastUnitMoved: mock.fn((battleId, unitId, from, to) => {
-      mockBroadcasts.push({ type: 'unit_moved', battleId, unitId, from, to });
+    broadcastUnitMoved: mock.fn((battleId, unitId, from, to, submitterId = null) => {
+      mockBroadcasts.push({ type: 'unit_moved', battleId, unitId, from, to, submitterId });
     }),
-    broadcastActionExecuted: mock.fn((battleId, unitId, actionType, result) => {
-      mockBroadcasts.push({ type: 'action_executed', battleId, unitId, actionType, result });
+    broadcastActionExecuted: mock.fn((battleId, unitId, actionType, result, submitterId = null) => {
+      mockBroadcasts.push({ type: 'action_executed', battleId, unitId, actionType, result, submitterId });
     }),
     sendYourTurn: mock.fn((ownerId, battleId, unitId, state, actions) => {
       mockBroadcasts.push({ type: 'your_turn', ownerId, battleId, unitId, actions });
