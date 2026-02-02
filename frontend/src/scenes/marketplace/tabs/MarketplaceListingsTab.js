@@ -90,6 +90,7 @@ function transformListingForTable(listing) {
     type: listing.itemType,
     rarity,
     price: listing.askPrice,
+    spriteId: listing.spriteId,
 
     // Stats
     baseStats: listing.baseStats || {},

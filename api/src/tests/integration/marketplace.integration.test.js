@@ -429,6 +429,7 @@ describe('Marketplace API', () => {
         assert.ok(item.name !== undefined, 'Should have name');
         assert.ok(item.type !== undefined, 'Should have type');
         assert.ok(item.quantity !== undefined, 'Should have quantity');
+        assert.ok(item.spriteId !== undefined, 'Should have spriteId for icon rendering');
         assert.strictEqual(item.quantity, 7, 'Quantity should be 7');
 
       } catch (err) {

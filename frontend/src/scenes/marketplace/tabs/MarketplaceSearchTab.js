@@ -100,6 +100,7 @@ export function transformItemForBrowseTable(item) {
     rarity,
     description: item.description,
     price: displayPrice,
+    spriteId: item.spriteId,
 
     // Stats (from base stats if available)
     baseStats: item.baseStats || {},

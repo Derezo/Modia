@@ -87,6 +87,7 @@ function transformSellableItemForTable(item) {
     description: item.description,
     quantity: item.quantity,
     estimatedPrice: item.estimatedPrice,
+    spriteId: item.spriteId,
 
     // Stats
     baseStats: item.baseStats || {},

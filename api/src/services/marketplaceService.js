@@ -1155,6 +1155,7 @@ async function searchItems(client, searchTerm = '', itemType = null, limit = 50)
       it.base_price,
       it.rarity,
       it.is_stackable,
+      it.sprite_id,
       COALESCE(ask.best_ask, 0) as best_ask,
       COALESCE(bid.best_bid, 0) as best_bid,
       COALESCE(vol.volume_24h, 0) as volume_24h,
@@ -1233,6 +1234,7 @@ async function searchItems(client, searchTerm = '', itemType = null, limit = 50)
     basePrice: row.base_price,
     rarity: row.rarity,
     isStackable: row.is_stackable || false,
+    spriteId: row.sprite_id,
     bestAsk: row.best_ask ? parseInt(row.best_ask, 10) : null,
     bestBid: row.best_bid ? parseInt(row.best_bid, 10) : null,
     volume24h: parseInt(row.volume_24h, 10) || 0,
@@ -1367,6 +1369,7 @@ async function getItemListings(client, itemTemplateId) {
        it.base_price,
        it.item_type,
        it.stat_bonuses as template_stats,
+       it.sprite_id,
        u.username as seller_name
      FROM item_listings il
      JOIN character_items ci ON il.character_item_id = ci.id
@@ -1389,6 +1392,7 @@ async function getItemListings(client, itemTemplateId) {
       baseStats: mods.baseStats || row.template_stats || {},
       bonusStats: mods.bonusStats || {},
       augments: mods.augments || [],
+      spriteId: row.sprite_id,
       askPrice: parseInt(row.price, 10),
       suggestedPrice: row.suggested_price ? parseInt(row.suggested_price, 10) : null,
       sellerId: row.seller_id,
@@ -1689,7 +1693,8 @@ async function getUserListings(client, userId) {
        il.modifications_snapshot as modifications,
        il.item_template_id,
        it.name as template_name,
-       it.item_type
+       it.item_type,
+       it.sprite_id
      FROM item_listings il
      JOIN item_templates it ON il.item_template_id = it.id
      WHERE il.seller_id = $1 AND il.status = 'active'
@@ -1706,6 +1711,7 @@ async function getUserListings(client, userId) {
       templateName: row.template_name,
       itemType: row.item_type,
       rarity: mods.rarity || 'common',
+      spriteId: row.sprite_id,
       price: parseInt(row.price, 10),
       suggestedPrice: row.suggested_price ? parseInt(row.suggested_price, 10) : null,
       createdAt: row.created_at
@@ -1771,6 +1777,7 @@ async function searchItemsWithAugments(client, searchTerm = '', itemType = null,
       it.base_price,
       it.rarity,
       it.is_stackable,
+      it.sprite_id,
       COALESCE(ask.best_ask, 0) as best_ask,
       COALESCE(bid.best_bid, 0) as best_bid,
       COALESCE(vol.volume_24h, 0) as volume_24h,
@@ -1841,6 +1848,7 @@ async function searchItemsWithAugments(client, searchTerm = '', itemType = null,
     basePrice: row.base_price,
     rarity: row.rarity,
     isStackable: row.is_stackable,
+    spriteId: row.sprite_id,
     bestAsk: row.best_ask ? parseInt(row.best_ask, 10) : null,
     bestBid: row.best_bid ? parseInt(row.best_bid, 10) : null,
     volume24h: parseInt(row.volume_24h, 10) || 0,
@@ -1874,7 +1882,8 @@ async function getSellableInventory(client, userId) {
       it.level_requirement,
       it.base_price,
       it.rarity,
-      it.is_stackable
+      it.is_stackable,
+      it.sprite_id
     FROM character_items ci
     JOIN item_templates it ON ci.item_template_id = it.id
     WHERE ci.user_id = $1
@@ -1921,6 +1930,7 @@ async function getSellableInventory(client, userId) {
       quantity: row.quantity,
       augments,
       modifications,
+      spriteId: row.sprite_id,
       estimatedPrice: suggestedPrice
     };
   });
