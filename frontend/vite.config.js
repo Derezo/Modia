@@ -27,6 +27,19 @@ export default defineConfig({
   appType: 'spa',
   plugins: [
     {
+      name: 'cache-control-assets',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          // Set long cache duration for static assets
+          // Works with Cache API to prevent unnecessary revalidation
+          if (req.url?.startsWith('/assets/')) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          }
+          next();
+        });
+      }
+    },
+    {
       name: 'return-404-for-missing-assets',
       configureServer(server) {
         server.middlewares.use((req, res, next) => {

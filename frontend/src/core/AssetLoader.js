@@ -26,6 +26,7 @@ import {
   DEFAULT_SIZES,
   getOptimalSize
 } from '@shared/assetPaths.js';
+import { assetCache } from './AssetCache.js';
 export class AssetLoader {
   constructor() {
     this.cache = new Map();
@@ -149,9 +150,13 @@ export class AssetLoader {
 
   /**
    * Initialize asset loader
+   * Sets up the persistent Cache API storage for cross-session caching
    */
   async init() {
     if (this.initialized) return;
+
+    // Initialize persistent cache (Cache API for cross-session storage)
+    await assetCache.init();
 
     // Manifest is reserved for future use (asset versioning, preload lists)
     // but is not currently needed for asset loading
@@ -161,33 +166,64 @@ export class AssetLoader {
   }
 
   /**
-   * Load an image with caching
+   * Load an image with multi-layer caching
+   *
+   * Cache layers (checked in order):
+   * 1. In-memory Map (hot access during gameplay)
+   * 2. Cache API (persistent across browser sessions)
+   * 3. Network fetch (stores result in both caches)
+   *
+   * @param {string} src - Image URL to load
+   * @returns {Promise<HTMLImageElement>} Loaded image element
    */
   async loadImage(src) {
-    // Check cache
+    // Layer 1: Check in-memory cache (hot access)
     if (this.cache.has(src)) {
       return this.cache.get(src);
     }
 
-    // Check if already loading
+    // Deduplication: Check if already loading this image
     if (this.loading.has(src)) {
       return this.loading.get(src);
     }
 
-    // Start loading
-    const loadPromise = new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        this.cache.set(src, img);
+    // Start loading with Cache API integration
+    const loadPromise = (async () => {
+      try {
+        // Layer 2 & 3: Use Cache API (checks cache, falls back to network)
+        const response = await assetCache.fetchWithCache(src);
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        // Convert response to blob URL for Image element
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        // Create Image from blob URL
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => {
+            // Store in in-memory cache for hot access
+            this.cache.set(src, img);
+            this.loading.delete(src);
+            // Note: blobUrl is intentionally not revoked to keep image valid
+            // Browser will reclaim memory when img is garbage collected
+            resolve(img);
+          };
+          img.onerror = () => {
+            URL.revokeObjectURL(blobUrl);
+            this.loading.delete(src);
+            reject(new Error(`Failed to decode image: ${src}`));
+          };
+          img.src = blobUrl;
+        });
+      } catch (error) {
         this.loading.delete(src);
-        resolve(img);
-      };
-      img.onerror = () => {
-        this.loading.delete(src);
-        reject(new Error(`Failed to load image: ${src}`));
-      };
-      img.src = src;
-    });
+        throw new Error(`Failed to load image: ${src} - ${error.message}`);
+      }
+    })();
 
     this.loading.set(src, loadPromise);
     return loadPromise;
@@ -1249,11 +1285,24 @@ export class AssetLoader {
    * @param {Object} options - Preload options
    * @param {boolean} options.includeElevation - DEPRECATED: ignored, elevation sprites no longer used
    * @param {boolean} options.includeWalls - Also preload wall textures (default: true)
+   * @param {Function} options.onProgress - Optional callback (loaded, total) for progress tracking
    */
   async preloadTerrainSet(nodeType, options = {}) {
-    const { includeWalls = true } = options;
+    const { includeWalls = true, onProgress } = options;
     const promises = [];
     const biome = this.getSpriteBiome(nodeType);
+    let loaded = 0;
+
+    // Progress tracking wrapper
+    const trackProgress = (promise) => promise.then(result => {
+      loaded++;
+      onProgress?.(loaded, promises.length);
+      return result;
+    }).catch(err => {
+      loaded++;
+      onProgress?.(loaded, promises.length);
+      throw err;
+    });
 
     // Load base floor tile variants for all terrain types
     for (const terrain of AssetLoader.TERRAIN_TYPES) {
@@ -1272,10 +1321,12 @@ export class AssetLoader {
       promises.push(this.loadWallTexture(biome, 'default'));
     }
 
-    const results = await Promise.allSettled(promises);
-    const loaded = results.filter(r => r.status === 'fulfilled' && r.value).length;
+    // Track progress for each promise
+    const trackedPromises = promises.map(p => trackProgress(p));
+    const results = await Promise.allSettled(trackedPromises);
+    const loadedCount = results.filter(r => r.status === 'fulfilled' && r.value).length;
     const failed = results.filter(r => r.status === 'rejected');
-    console.log(`[AssetLoader] Terrain preload for ${nodeType}: ${loaded}/${results.length} loaded`);
+    console.log(`[AssetLoader] Terrain preload for ${nodeType}: ${loadedCount}/${results.length} loaded`);
     if (failed.length > 0) {
       console.warn(`[AssetLoader] ${failed.length} terrain tiles failed:`, failed[0]?.reason?.message);
     }
@@ -1284,18 +1335,43 @@ export class AssetLoader {
 
   /**
    * Preload character sprites
+   * @param {string} charClass - Character class to preload
+   * @param {Object} options - Preload options
+   * @param {string[]} options.animations - Animation types to preload (default: idle, walk, attack, hit, death)
+   * @param {Function} options.onProgress - Optional callback (loaded, total) for progress tracking
    */
-  async preloadCharacter(charClass, animations = ['idle', 'walk', 'attack', 'hit', 'death']) {
+  async preloadCharacter(charClass, options = {}) {
+    const { animations = ['idle', 'walk', 'attack', 'hit', 'death'], onProgress } = options;
     const promises = animations.map(anim => this.loadCharacterSprite(charClass, anim));
-    return Promise.allSettled(promises);
+    let loaded = 0;
+
+    // Progress tracking wrapper
+    const trackProgress = (promise) => promise.then(result => {
+      loaded++;
+      onProgress?.(loaded, promises.length);
+      return result;
+    }).catch(err => {
+      loaded++;
+      onProgress?.(loaded, promises.length);
+      throw err;
+    });
+
+    const trackedPromises = promises.map(p => trackProgress(p));
+    return Promise.allSettled(trackedPromises);
   }
 
   /**
    * Preload enemies for a biome
+   * @param {string} biome - Biome type for enemy sprites
+   * @param {string[]} enemyIds - Array of enemy IDs to preload
+   * @param {Object} options - Preload options
+   * @param {Function} options.onProgress - Optional callback (loaded, total) for progress tracking
    */
-  async preloadEnemies(biome, enemyIds) {
+  async preloadEnemies(biome, enemyIds, options = {}) {
+    const { onProgress } = options;
     const animations = ['idle', 'attack', 'hit', 'death'];
     const promises = [];
+    let loaded = 0;
 
     for (const enemyId of enemyIds) {
       for (const anim of animations) {
@@ -1303,7 +1379,19 @@ export class AssetLoader {
       }
     }
 
-    return Promise.allSettled(promises);
+    // Progress tracking wrapper
+    const trackProgress = (promise) => promise.then(result => {
+      loaded++;
+      onProgress?.(loaded, promises.length);
+      return result;
+    }).catch(err => {
+      loaded++;
+      onProgress?.(loaded, promises.length);
+      throw err;
+    });
+
+    const trackedPromises = promises.map(p => trackProgress(p));
+    return Promise.allSettled(trackedPromises);
   }
 
   /**
@@ -1397,8 +1485,11 @@ export class AssetLoader {
   /**
    * Preload obstacle sprites for all categories
    * This should be called before battles to ensure obstacles render correctly
+   * @param {Object} options - Preload options
+   * @param {Function} options.onProgress - Optional callback (loaded, total) for progress tracking
    */
-  async preloadObstacles() {
+  async preloadObstacles(options = {}) {
+    const { onProgress } = options;
     // Define all obstacles by category matching generate-obstacles.js
     const obstacles = {
       rocks: ['rock_small', 'rock_medium', 'rock_large', 'stalagmite', 'mountain_boulder'],
@@ -1406,6 +1497,7 @@ export class AssetLoader {
     };
 
     const promises = [];
+    let loaded = 0;
 
     for (const [category, obstacleTypes] of Object.entries(obstacles)) {
       for (const obstacleType of obstacleTypes) {
@@ -1413,9 +1505,21 @@ export class AssetLoader {
       }
     }
 
-    const results = await Promise.allSettled(promises);
-    const loaded = results.filter(r => r.status === 'fulfilled' && r.value).length;
-    console.log(`Preloaded ${loaded}/${results.length} obstacle sprites`);
+    // Progress tracking wrapper
+    const trackProgress = (promise) => promise.then(result => {
+      loaded++;
+      onProgress?.(loaded, promises.length);
+      return result;
+    }).catch(err => {
+      loaded++;
+      onProgress?.(loaded, promises.length);
+      throw err;
+    });
+
+    const trackedPromises = promises.map(p => trackProgress(p));
+    const results = await Promise.allSettled(trackedPromises);
+    const loadedCount = results.filter(r => r.status === 'fulfilled' && r.value).length;
+    console.log(`Preloaded ${loadedCount}/${results.length} obstacle sprites`);
     return results;
   }
 
@@ -1444,21 +1548,47 @@ export class AssetLoader {
 
   /**
    * Get cache statistics
+   * @returns {Object} Cache statistics including in-memory and persistent storage info
    */
   getStats() {
     return {
       cachedImages: this.cache.size,
-      loadingImages: this.loading.size
+      loadingImages: this.loading.size,
+      persistentCacheAvailable: assetCache.isAvailable()
+    };
+  }
+
+  /**
+   * Get detailed cache statistics including persistent storage
+   * @returns {Promise<Object>} Detailed cache statistics
+   */
+  async getDetailedStats() {
+    const basicStats = this.getStats();
+    const storageEstimate = await assetCache.getStorageEstimate();
+
+    return {
+      ...basicStats,
+      persistentStorage: storageEstimate
     };
   }
 
   /**
    * Clear cache and failed lookup tracking
+   * @param {Object} options - Clear options
+   * @param {boolean} options.clearPersistent - Also clear the persistent Cache API storage (default: false)
    */
-  clearCache() {
+  async clearCache(options = {}) {
+    const { clearPersistent = false } = options;
+
+    // Clear in-memory caches
     this.cache.clear();
     this.loading.clear();
     this.failedLookups.clear();
+
+    // Optionally clear persistent cache
+    if (clearPersistent) {
+      await assetCache.clear();
+    }
   }
 
   /**

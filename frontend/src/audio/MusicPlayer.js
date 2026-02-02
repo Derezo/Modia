@@ -2,7 +2,8 @@
  * MusicPlayer - Background music playback with crossfade support
  *
  * Handles music playback with smooth transitions between tracks.
- * Uses Web Audio API for precise control over volume and fading.
+ * Uses HTML5 Audio with MediaElementSourceNode for streaming playback,
+ * allowing music to start playing before the entire file downloads.
  */
 
 import { AUDIO_MANIFEST } from './AudioAssets.js';
@@ -11,16 +12,20 @@ import { debugLog } from '../utils/debugLogger.js';
 export class MusicPlayer {
   constructor(audioContext, audioAssets) {
     this.context = audioContext;
-    this.assets = audioAssets;
+    this.assets = audioAssets; // Keep reference for potential fallback use
+
+    // Two audio elements for crossfade (A/B switching)
+    this.audioElements = [new Audio(), new Audio()];
+    this.mediaSources = [null, null];
+    this.elementGains = [null, null];
+    this.activeIndex = 0;
 
     // Current track state
     this.currentTrack = null;
-    this.currentSource = null;
-    this.currentGain = null;
+    this.currentSource = null; // Reference to active Audio element
+    this.currentGain = null;   // Reference to active GainNode
 
     // Crossfade state
-    this.nextSource = null;
-    this.nextGain = null;
     this.isCrossfading = false;
 
     // Volume settings (0-1)
@@ -35,6 +40,42 @@ export class MusicPlayer {
 
     // Fade timers
     this.fadeTimer = null;
+
+    // Configure audio elements for streaming
+    this._initAudioElements();
+  }
+
+  /**
+   * Initialize audio elements with optimal settings
+   * @private
+   */
+  _initAudioElements() {
+    for (const audio of this.audioElements) {
+      // Enable preloading metadata but not full audio
+      audio.preload = 'metadata';
+      // Cross-origin for CDN assets if needed
+      audio.crossOrigin = 'anonymous';
+    }
+  }
+
+  /**
+   * Ensure MediaElementSource is created for an audio element
+   * Note: MediaElementSource can only be created once per Audio element
+   * @private
+   */
+  _ensureMediaSource(index) {
+    if (!this.mediaSources[index]) {
+      const audio = this.audioElements[index];
+      this.mediaSources[index] = this.context.createMediaElementSource(audio);
+      this.elementGains[index] = this.context.createGain();
+      this.mediaSources[index].connect(this.elementGains[index]);
+      this.elementGains[index].connect(this.context.destination);
+    }
+    return {
+      audio: this.audioElements[index],
+      source: this.mediaSources[index],
+      gain: this.elementGains[index]
+    };
   }
 
   /**
@@ -67,20 +108,20 @@ export class MusicPlayer {
         await this.context.resume();
       }
 
-      // Load the audio buffer
-      const buffer = await this.assets.getBuffer('music', trackId);
+      // Get the track path directly from config
+      const trackPath = config.path;
 
       // Determine fade duration
       const fadeIn = fadeInMs !== null ? fadeInMs : config.fadeIn;
 
       if (crossfade && this.isPlaying && this.currentSource) {
-        await this._crossfadeTo(buffer, trackId, config, fadeIn);
+        await this._crossfadeTo(trackPath, trackId, config, fadeIn);
       } else {
         // Stop current track immediately if no crossfade
-        if (this.currentSource) {
+        if (this.isPlaying) {
           this._stopCurrentTrack(0);
         }
-        await this._startTrack(buffer, trackId, config, fadeIn);
+        await this._startTrack(trackPath, trackId, config, fadeIn);
       }
     } catch (error) {
       console.warn(`Failed to play music track ${trackId}:`, error.message);
@@ -108,10 +149,9 @@ export class MusicPlayer {
   pause() {
     if (!this.isPlaying || this.isPaused) return;
 
-    // Web Audio API doesn't have native pause, so we fade out quickly
-    // and mark as paused for resume
-    if (this.currentGain) {
-      this.currentGain.gain.setTargetAtTime(0, this.context.currentTime, 0.1);
+    // Use native HTML5 Audio pause
+    if (this.currentSource && this.currentSource.pause) {
+      this.currentSource.pause();
     }
     this.isPaused = true;
   }
@@ -122,12 +162,16 @@ export class MusicPlayer {
   resume() {
     if (!this.isPaused || !this.currentSource) return;
 
-    if (this.currentGain) {
-      this.currentGain.gain.setTargetAtTime(
-        this.effectiveVolume * (AUDIO_MANIFEST.music?.[this.currentTrack]?.volume || 1.0),
-        this.context.currentTime,
-        0.1
-      );
+    // Resume audio context if needed
+    if (this.context.state === 'suspended') {
+      this.context.resume();
+    }
+
+    // Use native HTML5 Audio play
+    if (this.currentSource && this.currentSource.play) {
+      this.currentSource.play().catch(err => {
+        console.warn('Failed to resume music:', err.message);
+      });
     }
     this.isPaused = false;
   }
@@ -175,29 +219,25 @@ export class MusicPlayer {
   }
 
   /**
-   * Start playing a track
+   * Start playing a track using HTML5 Audio streaming
    * @private
    */
-  async _startTrack(buffer, trackId, config, fadeInMs) {
-    // Create source node
-    const source = this.context.createBufferSource();
-    source.buffer = buffer;
-    source.loop = config.loop !== false;
+  async _startTrack(trackPath, trackId, config, fadeInMs) {
+    // Use the next audio element (A/B switching)
+    const newIndex = this.activeIndex === 0 ? 1 : 0;
+    const { audio, gain } = this._ensureMediaSource(newIndex);
 
-    // Create gain node for volume control
-    const gain = this.context.createGain();
-    gain.gain.value = fadeInMs > 0 ? 0 : this.effectiveVolume * config.volume;
+    // Set initial volume (0 if fading in, full volume otherwise)
+    const targetVolume = this.effectiveVolume * config.volume;
+    gain.gain.value = fadeInMs > 0 ? 0 : targetVolume;
 
-    // Connect nodes: source -> gain -> destination
-    source.connect(gain);
-    gain.connect(this.context.destination);
-
-    // Start playback
-    source.start(0);
+    // Set up the audio element
+    audio.src = trackPath;
+    audio.loop = config.loop !== false;
 
     // Handle track ending (for non-looping tracks)
-    source.onended = () => {
-      if (this.currentTrack === trackId && !source.loop) {
+    audio.onended = () => {
+      if (this.currentTrack === trackId && !audio.loop) {
         this.currentTrack = null;
         this.currentSource = null;
         this.currentGain = null;
@@ -205,19 +245,33 @@ export class MusicPlayer {
       }
     };
 
+    // Handle loading errors
+    audio.onerror = () => {
+      console.warn(`Failed to load music track: ${trackPath}`);
+    };
+
+    // Start playback (streams immediately, doesn't wait for full download)
+    try {
+      await audio.play();
+    } catch (error) {
+      console.warn(`Failed to play music track ${trackId}:`, error.message);
+      return;
+    }
+
     // Store references
-    this.currentSource = source;
+    this.currentSource = audio;
     this.currentGain = gain;
     this.currentTrack = trackId;
+    this.activeIndex = newIndex;
     this.isPlaying = true;
     this.isPaused = false;
 
-    debugLog('audio.logMusicChanges', 'Now playing:', trackId, { loop: config.loop !== false, fadeIn: fadeInMs });
+    debugLog('audio.logMusicChanges', 'Now playing (streaming):', trackId, { loop: config.loop !== false, fadeIn: fadeInMs });
 
     // Fade in if needed
     if (fadeInMs > 0) {
       gain.gain.setTargetAtTime(
-        this.effectiveVolume * config.volume,
+        targetVolume,
         this.context.currentTime,
         fadeInMs / 1000 / 3 // Time constant (reaches ~95% in 3 time constants)
       );
@@ -228,41 +282,38 @@ export class MusicPlayer {
    * Crossfade to a new track
    * @private
    */
-  async _crossfadeTo(buffer, trackId, config, fadeInMs) {
+  async _crossfadeTo(trackPath, trackId, config, fadeInMs) {
     if (this.isCrossfading) {
-      // If already crossfading, complete immediately and promote nextSource to current
+      // If already crossfading, complete immediately
       this._completeCrossfade(true);
     }
 
     this.isCrossfading = true;
 
     // Store old track info BEFORE updating currentTrack
-    // This ensures we use the correct fade-out duration from the old track's config
-    // Note: oldGain is used for fade-out; _completeCrossfade() handles stopping via this.currentSource
     const oldTrackId = this.currentTrack;
+    const oldAudio = this.currentSource;
     const oldGain = this.currentGain;
+    const oldIndex = this.activeIndex;
 
-    // Update currentTrack immediately to prevent duplicate requests for same track
-    // (the check in play() uses currentTrack to skip redundant requests)
+    // Update currentTrack immediately to prevent duplicate requests
     this.currentTrack = trackId;
 
-    // Create new source
-    const nextSource = this.context.createBufferSource();
-    nextSource.buffer = buffer;
-    nextSource.loop = config.loop !== false;
+    // Use the other audio element for the new track
+    const newIndex = oldIndex === 0 ? 1 : 0;
+    const { audio: newAudio, gain: newGain } = this._ensureMediaSource(newIndex);
 
-    const nextGain = this.context.createGain();
-    nextGain.gain.value = 0;
+    // Set up the new audio element
+    newAudio.src = trackPath;
+    newAudio.loop = config.loop !== false;
 
-    nextSource.connect(nextGain);
-    nextGain.connect(this.context.destination);
-
-    // Start the new track at zero volume
-    nextSource.start(0);
+    // Start at zero volume
+    const targetVolume = this.effectiveVolume * config.volume;
+    newGain.gain.value = 0;
 
     // Handle track ending
-    nextSource.onended = () => {
-      if (this.currentTrack === trackId && !nextSource.loop) {
+    newAudio.onended = () => {
+      if (this.currentTrack === trackId && !newAudio.loop) {
         this.currentTrack = null;
         this.currentSource = null;
         this.currentGain = null;
@@ -270,78 +321,74 @@ export class MusicPlayer {
       }
     };
 
-    this.nextSource = nextSource;
-    this.nextGain = nextGain;
+    // Start the new track
+    try {
+      await newAudio.play();
+    } catch (error) {
+      console.warn(`Failed to play music track ${trackId}:`, error.message);
+      this.isCrossfading = false;
+      return;
+    }
 
-    // Get fade durations - use stored oldTrackId for correct config lookup
+    // Get fade durations
     const oldConfig = AUDIO_MANIFEST.music?.[oldTrackId];
     const fadeOutMs = oldConfig?.fadeOut || fadeInMs;
     const fadeDuration = Math.max(fadeInMs, fadeOutMs) / 1000;
     const timeConstant = fadeDuration / 3;
 
-    // Fade out old track (use stored oldGain reference)
+    // Fade out old track
     if (oldGain) {
       oldGain.gain.setTargetAtTime(0, this.context.currentTime, timeConstant);
     }
 
     // Fade in new track
-    nextGain.gain.setTargetAtTime(
-      this.effectiveVolume * config.volume,
+    newGain.gain.setTargetAtTime(
+      targetVolume,
       this.context.currentTime,
       timeConstant
     );
 
     debugLog('audio.logMusicChanges', 'Crossfading to:', trackId, { from: oldTrackId, fadeMs: fadeDuration * 1000 });
 
-    // Complete crossfade after duration
-    // Store reference to detect if this crossfade was superseded by another
-    const expectedNextSource = nextSource;
+    // Update references to new track
+    this.currentSource = newAudio;
+    this.currentGain = newGain;
+    this.activeIndex = newIndex;
+
+    // Complete crossfade after duration - stop old audio
     const crossfadeDuration = fadeDuration * 3 * 1000; // 3 time constants for ~95% complete
+    const expectedOldAudio = oldAudio;
     this.fadeTimer = setTimeout(() => {
-      // Skip if this crossfade was superseded by a newer one
-      if (this.nextSource !== expectedNextSource) return;
-      this._completeCrossfade();
-      this.currentSource = nextSource;
-      this.currentGain = nextGain;
-      this.currentTrack = trackId;
-      this.nextSource = null;
-      this.nextGain = null;
+      // Stop the old audio element
+      if (expectedOldAudio) {
+        expectedOldAudio.pause();
+        expectedOldAudio.currentTime = 0;
+      }
+      this.isCrossfading = false;
     }, crossfadeDuration);
   }
 
   /**
    * Complete an in-progress crossfade
-   * @param {boolean} promoteNext - If true, promote nextSource to currentSource before clearing
+   * @param {boolean} immediate - If true, stop old track immediately
    * @private
    */
-  _completeCrossfade(promoteNext = false) {
+  _completeCrossfade(immediate = false) {
     if (this.fadeTimer) {
       clearTimeout(this.fadeTimer);
       this.fadeTimer = null;
     }
 
-    // Stop old source
-    if (this.currentSource && this.currentSource !== this.nextSource) {
-      try {
-        this.currentSource.stop();
-      } catch (e) {
-        // Already stopped
-      }
-      if (this.currentGain) {
-        this.currentGain.disconnect();
+    if (immediate) {
+      // Stop the inactive audio element
+      const inactiveIndex = this.activeIndex === 0 ? 1 : 0;
+      const inactiveAudio = this.audioElements[inactiveIndex];
+      if (inactiveAudio) {
+        inactiveAudio.pause();
+        inactiveAudio.currentTime = 0;
       }
     }
 
-    // If requested and we have a nextSource, promote it to current
-    // This prevents orphaned audio sources when interrupting a crossfade
-    if (promoteNext && this.nextSource) {
-      this.currentSource = this.nextSource;
-      this.currentGain = this.nextGain;
-      // Note: currentTrack is already set by the caller
-    }
-
-    this.nextSource = null;
-    this.nextGain = null;
     this.isCrossfading = false;
   }
 
@@ -352,31 +399,23 @@ export class MusicPlayer {
   _stopCurrentTrack(fadeOutMs) {
     if (!this.currentSource) return;
 
-    // Capture references before timeout to prevent race conditions
-    // (a new track could start before the timeout fires)
-    const sourceToStop = this.currentSource;
-    const gainToDisconnect = this.currentGain;
+    const audioToStop = this.currentSource;
+    const gainToFade = this.currentGain;
     const _trackToStop = this.currentTrack;
 
-    if (fadeOutMs > 0 && gainToDisconnect) {
+    if (fadeOutMs > 0 && gainToFade) {
       // Fade out
       const timeConstant = fadeOutMs / 1000 / 3;
-      gainToDisconnect.gain.setTargetAtTime(0, this.context.currentTime, timeConstant);
+      gainToFade.gain.setTargetAtTime(0, this.context.currentTime, timeConstant);
 
       // Stop after fade completes
       setTimeout(() => {
-        try {
-          if (sourceToStop) {
-            sourceToStop.stop();
-          }
-        } catch (e) {
-          // Already stopped
+        if (audioToStop) {
+          audioToStop.pause();
+          audioToStop.currentTime = 0;
         }
-        if (gainToDisconnect) {
-          gainToDisconnect.disconnect();
-        }
-        // Only clear refs if they haven't changed (no new track started)
-        if (this.currentSource === sourceToStop) {
+        // Only clear refs if they haven't changed
+        if (this.currentSource === audioToStop) {
           this.currentSource = null;
           this.currentGain = null;
           this.currentTrack = null;
@@ -384,13 +423,9 @@ export class MusicPlayer {
       }, fadeOutMs);
     } else {
       // Stop immediately
-      try {
-        sourceToStop.stop();
-      } catch (e) {
-        // Already stopped
-      }
-      if (gainToDisconnect) {
-        gainToDisconnect.disconnect();
+      if (audioToStop) {
+        audioToStop.pause();
+        audioToStop.currentTime = 0;
       }
       this.currentSource = null;
       this.currentGain = null;
@@ -421,5 +456,28 @@ export class MusicPlayer {
       clearTimeout(this.fadeTimer);
       this.fadeTimer = null;
     }
+
+    // Clean up audio elements
+    for (let i = 0; i < this.audioElements.length; i++) {
+      const audio = this.audioElements[i];
+      if (audio) {
+        audio.pause();
+        audio.src = '';
+        audio.onended = null;
+        audio.onerror = null;
+      }
+      // Disconnect gain nodes
+      if (this.elementGains[i]) {
+        this.elementGains[i].disconnect();
+      }
+      // Disconnect media sources
+      if (this.mediaSources[i]) {
+        this.mediaSources[i].disconnect();
+      }
+    }
+
+    this.audioElements = [null, null];
+    this.mediaSources = [null, null];
+    this.elementGains = [null, null];
   }
 }

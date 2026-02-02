@@ -47,6 +47,7 @@ import { getSkillSoundKey, RACE_TO_REGION } from '../audio/AudioAssets.js';
 import { calculateDamagePreview, calculateItemPreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { BattleLoadingScreen } from '../ui/parchment/BattleLoadingScreen.js';
 
 /**
  * BattleScene - Tactical turn-based combat on an isometric grid with camera
@@ -134,6 +135,9 @@ export class BattleScene extends Scene {
 
     // Asset loading state - prevents rendering before terrain sprites are cached
     this.isLoadingAssets = true;
+
+    // Loading screen overlay with progress
+    this.loadingScreen = null;
   }
 
   /**
@@ -179,6 +183,10 @@ export class BattleScene extends Scene {
     this.isLoadingAssets = true;
     const nodeType = this.getNodeType();
 
+    // Create and show loading screen
+    this.loadingScreen = new BattleLoadingScreen(this.game);
+    this.loadingScreen.show();
+
     // Debug: log unit data to see enemyId values
     console.log('[BattleScene] Unit data from server:', data.state.units.map(u => ({
       id: u.id, name: u.name, type: u.type, enemyId: u.enemyId, biome: u.biome
@@ -199,13 +207,37 @@ export class BattleScene extends Scene {
     )];
     console.log(`[BattleScene] Player classes to preload: [${playerClasses.join(', ')}]`);
 
+    // Estimate total assets for accurate progress bar
+    const { AssetLoader } = await import('../core/AssetLoader.js');
+    const terrainCount = AssetLoader.TERRAIN_TYPES.length * AssetLoader.VARIANTS_PER_TERRAIN + 9; // +9 for walls
+    const obstacleCount = 10; // rocks + trees
+    const enemyCount = enemyIds.length * 4; // 4 animations each
+    const playerCount = playerClasses.length * 5; // 5 animations each
+    const totalAssets = terrainCount + obstacleCount + enemyCount + playerCount;
+    let loadedTotal = 0;
+
+    const makeProgressCallback = (phase) => () => {
+      loadedTotal++;
+      this.loadingScreen.updateProgress(loadedTotal, totalAssets, phase);
+    };
+
     // AWAIT preload to ensure terrain sprites are cached before rendering
     try {
       await Promise.all([
-        this.game.assetLoader.preloadTerrainSet(nodeType),
-        this.game.assetLoader.preloadObstacles(),
-        this.game.assetLoader.preloadEnemies(nodeType, enemyIds),
-        ...playerClasses.map(cls => this.game.assetLoader.preloadCharacter(cls))
+        this.game.assetLoader.preloadTerrainSet(nodeType, {
+          onProgress: makeProgressCallback('Loading terrain...')
+        }),
+        this.game.assetLoader.preloadObstacles({
+          onProgress: makeProgressCallback('Loading obstacles...')
+        }),
+        this.game.assetLoader.preloadEnemies(nodeType, enemyIds, {
+          onProgress: makeProgressCallback('Loading enemies...')
+        }),
+        ...playerClasses.map(cls =>
+          this.game.assetLoader.preloadCharacter(cls, {
+            onProgress: makeProgressCallback('Loading characters...')
+          })
+        )
       ]);
       console.log(`[BattleScene] Preloaded terrain, obstacles, ${enemyIds.length} enemy types, and ${playerClasses.length} player classes for ${nodeType}`);
 
@@ -219,6 +251,7 @@ export class BattleScene extends Scene {
     }
 
     this.isLoadingAssets = false;
+    this.loadingScreen.hide();
 
     // Initialize camera after units so we can center on first player
     this.camera = new BattleCamera(this.game.canvas.width, this.game.canvas.height);
@@ -407,6 +440,11 @@ export class BattleScene extends Scene {
     if (this.rewardsModal) {
       this.rewardsModal.destroy();
       this.rewardsModal = null;
+    }
+
+    if (this.loadingScreen) {
+      this.loadingScreen.destroy();
+      this.loadingScreen = null;
     }
 
     this.units.clear();
@@ -2587,6 +2625,11 @@ export class BattleScene extends Scene {
    * Update game logic
    */
   update(deltaTime) {
+    // Update loading screen if visible (even before full initialization)
+    if (this.loadingScreen) {
+      this.loadingScreen.update(deltaTime);
+    }
+
     // Safety check - don't update if not fully initialized
     if (!this.camera || !this.grid) return;
 
@@ -2801,18 +2844,17 @@ export class BattleScene extends Scene {
     ctx.fillStyle = '#0a0a1a';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
+    // Render loading screen overlay if visible
+    if (this.loadingScreen) {
+      this.loadingScreen.render(ctx);
+      // Don't render battle content until assets are loaded
+      if (this.isLoadingAssets) {
+        return;
+      }
+    }
+
     // Safety check - don't render if not fully initialized
     if (!this.camera || !this.grid) return;
-
-    // Show loading indicator while terrain sprites are being cached
-    if (this.isLoadingAssets) {
-      ctx.fillStyle = '#e8dcc4';
-      ctx.font = '24px serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('Preparing battle...', ctx.canvas.width / 2, ctx.canvas.height / 2);
-      return; // Don't render battle content until assets are loaded
-    }
 
     // Build tile highlights
     const highlights = {};
