@@ -16,7 +16,7 @@
 
 import { BattleFireworks } from './BattleFireworks.js';
 import { BattleStatsTable } from './BattleStatsTable.js';
-import { getTier, getTierColor, getNextTierProgress, getTierIcon } from '@shared/coliseum.js';
+import { getTier, getTierColor, getTierIcon } from '@shared/coliseum.js';
 
 // Rarity color palette (matches RewardsModal)
 const RARITY_COLORS = {
@@ -342,7 +342,8 @@ export class BattleOutroSequence {
       if (statsProgress < 0.1 && !this.statsTableShown) {
         this.statsTableShown = true;
         const localUserId = this.scene.game.api?.userId || this.scene.game.localUserId;
-        this.statsTable.show(this.unitStats, this.isPvP, this.status === 'victory', localUserId);
+        const localUsername = this.scene.game.state?.get('user')?.username || '';
+        this.statsTable.show(this.unitStats, this.isPvP, this.status === 'victory', localUserId, localUsername);
       }
     } else if (t < tl.finaleEnd) {
       // Finale - all items revealed
@@ -406,8 +407,8 @@ export class BattleOutroSequence {
       this.renderPvPPanel(ctx, w, h);
     }
 
-    // Draw summary (defeat only - during summary and confirmation phases)
-    if (this.status === 'defeat' && (this.phase === 'summary' || this.phase === 'awaiting_confirmation')) {
+    // Draw summary (PvE defeat only - PvP uses renderPvPPanel instead)
+    if (this.status === 'defeat' && !this.isPvP && (this.phase === 'summary' || this.phase === 'awaiting_confirmation')) {
       this.renderSummary(ctx, w, h);
     }
 
@@ -419,6 +420,8 @@ export class BattleOutroSequence {
     // Draw continue button (victory/defeat confirmation)
     if (this.showContinueButton) {
       this.renderContinueButton(ctx, w, h);
+      // Draw surrender penalty message (if applicable)
+      this.renderSurrenderPenaltyMessage(ctx, w, h);
     }
   }
 
@@ -465,7 +468,7 @@ export class BattleOutroSequence {
     }
 
     const alpha = Math.min(1, this.bannerProgress * 2);
-    const y = h * (isVictory ? 0.25 : 0.35);
+    const y = h * (isVictory ? 0.15 : 0.18);
 
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -705,127 +708,86 @@ export class BattleOutroSequence {
   }
 
   /**
-   * Render comprehensive PvP panel with tier, rating, and progress
+   * Render compact PvP rating panel below banner
+   * Shows: Tier Icon | Rating (+/-change) | Rank change
    */
   renderPvPPanel(ctx, w, h) {
     if (!this.pvpResult) return;
 
     const pvp = this.pvpResult;
     const centerX = w / 2;
-    const panelY = h * 0.35;
-    const panelWidth = 340;
-    const panelHeight = 200;
+    // Position below banner (which is now at 0.15-0.18), above stats
+    const panelY = h * 0.28;
+    const panelWidth = 320;
+    const panelHeight = 60;
 
-    // Panel background
+    // Panel background - compact horizontal bar
     ctx.save();
     ctx.fillStyle = 'rgba(30, 25, 20, 0.9)';
-    this.roundRect(ctx, centerX - panelWidth / 2, panelY, panelWidth, panelHeight, 12);
+    this.roundRect(ctx, centerX - panelWidth / 2, panelY, panelWidth, panelHeight, 8);
     ctx.fill();
 
     // Border with tier color
     ctx.strokeStyle = getTierColor(pvp.newRating);
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Tier badge (emoji + name)
-    const tier = getTier(pvp.newRating);
-    ctx.font = 'bold 20px Georgia, serif';
-    ctx.textAlign = 'center';
-    ctx.fillStyle = tier.color;
-    const tierIcon = getTierIcon(tier.icon);
-    ctx.fillText(`${tierIcon} ${tier.name}`, centerX, panelY + 35);
-
-    // Animated rating counter
+    // Calculate animated rating
     const displayRating = Math.floor(pvp.oldRating + (pvp.newRating - pvp.oldRating) * this.ratingProgress);
-    ctx.font = 'bold 42px Georgia, serif';
-    ctx.fillStyle = '#e8d4b8';
-    ctx.fillText(displayRating.toLocaleString(), centerX, panelY + 80);
 
-    // Rating change indicator
+    // Tier icon and name (left section)
+    const tier = getTier(pvp.newRating);
+    const tierIcon = getTierIcon(tier.icon);
+    ctx.font = 'bold 16px Georgia, serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = tier.color;
+    ctx.fillText(`${tierIcon} ${tier.name}`, centerX - panelWidth / 2 + 16, panelY + panelHeight / 2);
+
+    // Rating with change (center section)
     const changeColor = pvp.ratingChange >= 0 ? '#4a7548' : '#c45a5a';
     const changePrefix = pvp.ratingChange >= 0 ? '+' : '';
-    ctx.font = 'bold 20px Georgia, serif';
+    ctx.font = 'bold 18px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#e8d4b8';
+    ctx.fillText(`${displayRating.toLocaleString()}`, centerX, panelY + panelHeight / 2 - 8);
+
+    ctx.font = '14px Georgia, serif';
     ctx.fillStyle = changeColor;
-    ctx.fillText(`(${changePrefix}${pvp.ratingChange})`, centerX, panelY + 105);
+    ctx.fillText(`(${changePrefix}${pvp.ratingChange})`, centerX, panelY + panelHeight / 2 + 10);
 
-    // Tier change notification (if applicable)
-    if (pvp.tierChanged) {
-      ctx.font = 'bold 18px Georgia, serif';
-      ctx.fillStyle = '#ffd700';
-      ctx.shadowColor = 'rgba(255, 215, 0, 0.6)';
-      ctx.shadowBlur = 10;
-      const direction = pvp.newRating > pvp.oldRating ? 'PROMOTED!' : 'DEMOTED!';
-      ctx.fillText(direction, centerX, panelY + 130);
-      ctx.shadowBlur = 0;
-    }
-
-    // Rank change (if available)
+    // Rank change (right section) - if available
     if (pvp.oldRank && pvp.newRank) {
-      ctx.font = '16px Georgia, serif';
-      ctx.fillStyle = '#bfae8a';
       const rankArrow = pvp.newRank < pvp.oldRank ? '\u2191' : (pvp.newRank > pvp.oldRank ? '\u2193' : '\u2192');
       const rankColor = pvp.newRank < pvp.oldRank ? '#4a7548' : (pvp.newRank > pvp.oldRank ? '#c45a5a' : '#bfae8a');
-      ctx.fillStyle = rankColor;
-      ctx.fillText(`Rank #${pvp.oldRank} ${rankArrow} #${pvp.newRank}`, centerX, panelY + 155);
-    }
-
-    // Progress to next tier (if not at max)
-    if (pvp.pointsToNextTier && !pvp.tierChanged) {
-      this.renderTierProgressBar(ctx, centerX, panelY + 175, pvp);
-    }
-
-    // Surrender penalty indicator (defeat only)
-    if (pvp.surrenderPenalty && this.status === 'defeat') {
       ctx.font = '14px Georgia, serif';
-      ctx.fillStyle = '#8a5a5a';
-      ctx.fillText('\u26A0 Surrender Penalty Applied', centerX, panelY + 195);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = rankColor;
+      ctx.fillText(`#${pvp.oldRank} ${rankArrow} #${pvp.newRank}`, centerX + panelWidth / 2 - 16, panelY + panelHeight / 2);
+    }
+
+    // Tier promotion/demotion badge (if applicable)
+    if (pvp.tierChanged) {
+      const badgeY = panelY - 12;
+      const direction = pvp.newRating > pvp.oldRating ? 'PROMOTED!' : 'DEMOTED';
+      ctx.font = 'bold 12px Georgia, serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffd700';
+      ctx.shadowColor = 'rgba(255, 215, 0, 0.6)';
+      ctx.shadowBlur = 8;
+      ctx.fillText(direction, centerX, badgeY);
+      ctx.shadowBlur = 0;
     }
 
     ctx.restore();
   }
 
   /**
-   * Render progress bar showing distance to next tier
-   */
-  renderTierProgressBar(ctx, centerX, y, pvp) {
-    const barWidth = 200;
-    const barHeight = 8;
-    const x = centerX - barWidth / 2;
-
-    // Background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-    this.roundRect(ctx, x, y, barWidth, barHeight, 4);
-    ctx.fill();
-
-    // Calculate progress within current tier
-    const nextTierInfo = getNextTierProgress(pvp.newRating);
-    if (nextTierInfo) {
-      const currentTier = getTier(pvp.newRating);
-      const ratingInTier = pvp.newRating - currentTier.minRating;
-      const tierRange = nextTierInfo.nextTier.minRating - currentTier.minRating;
-      const progress = Math.min(1, ratingInTier / tierRange);
-
-      // Fill
-      if (progress > 0) {
-        ctx.fillStyle = currentTier.color;
-        this.roundRect(ctx, x, y, barWidth * progress, barHeight, 4);
-        ctx.fill();
-      }
-
-      // Points needed text
-      ctx.font = '11px Georgia, serif';
-      ctx.fillStyle = '#bfae8a';
-      ctx.textAlign = 'center';
-      ctx.fillText(`${pvp.pointsToNextTier} pts to ${nextTierInfo.nextTier.name}`, centerX, y + 20);
-    }
-  }
-
-  /**
    * Render the continue button at the bottom of the screen
    */
   renderContinueButton(ctx, w, h) {
-    const buttonWidth = 180;
-    const buttonHeight = 48;
+    const buttonWidth = 140;
+    const buttonHeight = 40;
     const buttonX = (w - buttonWidth) / 2;
     const buttonY = h - 100;
 
@@ -853,12 +815,30 @@ export class BattleOutroSequence {
     ctx.shadowBlur = 0;
 
     // Button text
-    ctx.font = 'bold 20px Georgia, serif';
+    ctx.font = 'bold 16px Georgia, serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = isHovered ? '#4a3a2a' : '#5a4a3a';
     ctx.fillText('Continue', w / 2, buttonY + buttonHeight / 2);
 
+    ctx.restore();
+  }
+
+  /**
+   * Render surrender penalty message below continue button
+   */
+  renderSurrenderPenaltyMessage(ctx, w, h) {
+    // Only show for defeat with surrender penalty
+    if (this.status !== 'defeat' || !this.pvpResult?.surrenderPenalty) return;
+
+    const messageY = h - 50; // Below the continue button (which is at h - 100)
+
+    ctx.save();
+    ctx.font = '14px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#8a5a5a';
+    ctx.fillText('\u26A0 Surrender penalty applied (-25% additional rating loss)', w / 2, messageY);
     ctx.restore();
   }
 

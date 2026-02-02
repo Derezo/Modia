@@ -233,10 +233,10 @@ export class BattleUI {
         </div>
       </div>
 
-      <!-- Turn Indicator (shown briefly when turn changes) -->
+      <!-- Turn Indicator (sticky at top, shows until next turn) -->
       <div id="turn-indicator" style="
         position: absolute;
-        top: 80px;
+        top: 10px;
         left: 50%;
         transform: translateX(-50%);
         pointer-events: none;
@@ -651,37 +651,51 @@ export class BattleUI {
         white-space: nowrap;
       }
 
-      /* Turn Indicator Styles */
+      /* Turn Indicator Styles - Frosted Glass */
       .turn-indicator-content {
-        background: rgba(0, 0, 0, 0.85);
-        border: 2px solid #ffd700;
+        background: rgba(20, 20, 30, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
         border-radius: 8px;
-        padding: 12px 24px;
-        font-size: 18px;
-        font-weight: bold;
+        padding: 10px 20px;
+        font-size: 15px;
+        font-weight: 600;
         text-align: center;
-        animation: turnIndicatorPulse 0.5s ease-out;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        animation: turnIndicatorFadeIn 0.3s ease-out;
       }
+
+      /* Player's turn (local) - subtle green */
       .turn-indicator-content.player {
-        border-color: #4a90d9;
-        color: #4a90d9;
+        border-color: rgba(74, 144, 217, 0.4);
+        color: #7ab8ff;
+        text-shadow: 0 0 8px rgba(74, 144, 217, 0.3);
       }
       .turn-indicator-content.player_local {
-        border-color: #4aff4a;
-        color: #4aff4a;
+        border-color: rgba(74, 255, 74, 0.4);
+        color: #7aff7a;
+        text-shadow: 0 0 8px rgba(74, 255, 74, 0.3);
       }
+
+      /* Remote player's turn - subtle yellow */
       .turn-indicator-content.player_remote {
-        border-color: #d9d94a;
-        color: #d9d94a;
+        border-color: rgba(217, 217, 74, 0.4);
+        color: #e9e97a;
+        text-shadow: 0 0 8px rgba(217, 217, 74, 0.3);
       }
+
+      /* Enemy turn - subtle red */
       .turn-indicator-content.enemy {
-        border-color: #d94a4a;
-        color: #d94a4a;
+        border-color: rgba(217, 74, 74, 0.4);
+        color: #ff7a7a;
+        text-shadow: 0 0 8px rgba(217, 74, 74, 0.3);
       }
-      @keyframes turnIndicatorPulse {
-        0% { transform: scale(0.8); opacity: 0; }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); opacity: 1; }
+
+      /* Softer animation */
+      @keyframes turnIndicatorFadeIn {
+        0% { opacity: 0; transform: translateY(-10px); }
+        100% { opacity: 1; transform: translateY(0); }
       }
 
       /* Notification Styles */
@@ -1472,12 +1486,11 @@ export class BattleUI {
 
   /**
    * Show turn indicator (displays whose turn it is)
-   * @param {string} unitName - Name of the unit whose turn it is
+   * @param {Object} unitData - Unit data object with: { name, level, race, class, type }
    * @param {string} unitType - Type of unit: 'player', 'player_local', 'player_remote', 'enemy'
-   * @param {number} duration - How long to show the indicator (ms), default 2000
    */
-  showTurnIndicator(unitName, unitType, duration = 2000) {
-    this.confirmationUI?.showTurnIndicator(unitName, unitType, duration);
+  showTurnIndicator(unitData, unitType) {
+    this.confirmationUI?.showTurnIndicator(unitData, unitType);
   }
 
   /**
@@ -1485,6 +1498,28 @@ export class BattleUI {
    */
   hideTurnIndicator() {
     this.confirmationUI?.hideTurnIndicator();
+  }
+
+  /**
+   * Hide UI elements during outro sequence (victory/defeat screen)
+   * Hides portrait cards, turn indicator, and other battle HUD elements
+   */
+  hideForOutro() {
+    // Hide active unit panel (bottom-left portrait card)
+    const activePanel = this.element?.querySelector('#active-unit-panel');
+    if (activePanel) activePanel.style.display = 'none';
+
+    // Hide target panel (bottom-right portrait card)
+    const targetPanel = this.element?.querySelector('#target-panel');
+    if (targetPanel) targetPanel.style.display = 'none';
+
+    // Hide turn indicator
+    this.confirmationUI?.hideTurnIndicator();
+
+    // Hide menu dropdown (top-left battle menu)
+    if (this.menuDropdown) {
+      this.menuDropdown.hide();
+    }
   }
 
   /**
