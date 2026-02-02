@@ -403,12 +403,24 @@ export class FormationGrid {
     const sprite = this.getCharacterSprite(char);
 
     if (sprite) {
-      // Draw sprite
       const spriteSize = 48;
+      // Sprite sheets are 64x512 (8 directions stacked vertically)
+      const frameWidth = sprite.width;        // 64
+      const frameHeight = sprite.height / 8;  // 64
+
+      // Warn on unexpected sprite dimensions (helps catch asset issues)
+      if (sprite.width !== 64 || sprite.height !== 512) {
+        console.warn(`[FormationGrid] Unexpected sprite dimensions for ${char.class}: ${sprite.width}x${sprite.height}, expected 64x512`);
+      }
+
+      // Use direction 6 (East) - facing the enemy side on the right
+      const sourceY = 6 * frameHeight;
+
       ctx.drawImage(
         sprite,
+        0, sourceY, frameWidth, frameHeight,  // Source: first frame of East direction
         x - spriteSize / 2,
-        y - spriteSize - 8, // Offset up to stand on tile
+        y - spriteSize - 8,                   // Offset up to stand on tile
         spriteSize,
         spriteSize
       );

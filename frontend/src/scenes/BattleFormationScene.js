@@ -76,9 +76,13 @@ export class BattleFormationScene extends Scene {
     // Animation
     this.lastTime = 0;
     this.animationId = null;
+
+    // Scene lifecycle flag for async operation safety
+    this._isActive = false;
   }
 
   async enter(data = {}) {
+    this._isActive = true;
     this.battleContext = data;
     this.abortController = new AbortController();
 
@@ -91,9 +95,15 @@ export class BattleFormationScene extends Scene {
 
     // Load battle party
     await this.loadBattleParty();
+    if (!this._isActive) return; // Scene exited during async load
+
+    // Preload character sprites for all party classes
+    await this.preloadCharacterSprites();
+    if (!this._isActive) return; // Scene exited during async load
 
     // Load enemy preview data
     await this.loadEnemies(data);
+    if (!this._isActive) return; // Scene exited during async load
 
     // Detect mobile layout
     this.isMobile = window.innerWidth < 768;
@@ -122,6 +132,7 @@ export class BattleFormationScene extends Scene {
   }
 
   exit() {
+    this._isActive = false;
     this.stopAnimationLoop();
 
     // Clear long press timer if active
@@ -232,6 +243,34 @@ export class BattleFormationScene extends Scene {
       console.error('Failed to load party characters:', err);
       this.selectableCharacters = [];
     }
+  }
+
+  /**
+   * Preload character sprites for all party classes.
+   * Ensures sprites are in cache before FormationGrid tries to render them.
+   * Only loads 'idle' animation as that's what the formation grid displays.
+   *
+   * @returns {Promise<void>} Resolves when all sprites are loaded (or failed gracefully)
+   * @private
+   */
+  async preloadCharacterSprites() {
+    // Get unique classes from party
+    const classes = [...new Set(
+      this.selectableCharacters
+        .map(c => c.class?.toLowerCase())
+        .filter(Boolean)
+    )];
+
+    if (classes.length === 0) return;
+
+    console.log(`[BattleFormationScene] Preloading sprites for: [${classes.join(', ')}]`);
+
+    // Preload idle animation for each class
+    const promises = classes.map(cls =>
+      this.game.assetLoader.preloadCharacter(cls, { animations: ['idle'] })
+    );
+
+    await Promise.allSettled(promises);
   }
 
   async loadEnemies(data) {
