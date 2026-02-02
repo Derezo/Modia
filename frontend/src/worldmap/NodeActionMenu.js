@@ -406,8 +406,8 @@ export class NodeActionMenu {
         ...decorativeFeatures.filter(f => features.includes(f))
       ];
 
-      // Show up to 4 features for important nodes, 3 for others
-      const maxFeatures = ['castle', 'palace', 'city'].includes(node.node_type) ? 4 : 3;
+      // Show up to 6 features for important nodes, 3 for others
+      const maxFeatures = ['castle', 'palace', 'city'].includes(node.node_type) ? 6 : 3;
 
       prioritizedFeatures.slice(0, maxFeatures).forEach(feature => {
         const btn = this.createButton(feature, false, node);
