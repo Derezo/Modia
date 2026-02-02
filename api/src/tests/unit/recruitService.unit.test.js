@@ -10,12 +10,11 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import {
   calculateRecruitPrice,
-  BASE_RECRUIT_PRICE,
-  TRAIT_BONUS_PRICE,
-  SKILL_BONUS_PRICE,
+  RECRUIT_PRICING,
   TRAIT_RARITY_WEIGHTS,
   TRAIT_COUNT_WEIGHTS,
-  SKILL_COUNT_WEIGHTS
+  ADDITIONAL_SKILL_COUNT_WEIGHTS,
+  getStarterSkillId
 } from '../../services/recruitService.js';
 
 describe('calculateRecruitPrice', () => {
@@ -23,32 +22,32 @@ describe('calculateRecruitPrice', () => {
     it('should return base price for neutral recruit', () => {
       const recruit = {
         stat_variance_percent: 0,
-        traitCount: 0,
-        skillCount: 0
+        traits: [],
+        skills: []
       };
 
       const price = calculateRecruitPrice(recruit);
 
-      assert.strictEqual(price, BASE_RECRUIT_PRICE);
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE);
     });
 
-    it('should never go below base price', () => {
+    it('should return base price with only starter skill (first T1L1 is free)', () => {
       const recruit = {
-        stat_variance_percent: -15,
-        traitCount: 0,
-        skillCount: 0
+        stat_variance_percent: 0,
+        traits: [],
+        skills: [{ tier: 1, level: 1 }]
       };
 
       const price = calculateRecruitPrice(recruit);
 
-      assert.ok(price >= BASE_RECRUIT_PRICE, 'Price should not be below base');
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE);
     });
   });
 
   describe('stat variance', () => {
     it('should increase price for positive stat variance', () => {
-      const baseRecruit = { stat_variance_percent: 0, traitCount: 0, skillCount: 0 };
-      const buffedRecruit = { stat_variance_percent: 10, traitCount: 0, skillCount: 0 };
+      const baseRecruit = { stat_variance_percent: 0, traits: [], skills: [] };
+      const buffedRecruit = { stat_variance_percent: 10, traits: [], skills: [] };
 
       const basePrice = calculateRecruitPrice(baseRecruit);
       const buffedPrice = calculateRecruitPrice(buffedRecruit);
@@ -56,168 +55,202 @@ describe('calculateRecruitPrice', () => {
       assert.ok(buffedPrice > basePrice, 'Positive variance should increase price');
     });
 
-    it('should decrease price for negative stat variance', () => {
-      const baseRecruit = { stat_variance_percent: 0, traitCount: 0, skillCount: 0 };
-      const nerfedRecruit = { stat_variance_percent: -10, traitCount: 0, skillCount: 0 };
+    it('should not decrease price for negative stat variance (no discount)', () => {
+      const baseRecruit = { stat_variance_percent: 0, traits: [], skills: [] };
+      const nerfedRecruit = { stat_variance_percent: -10, traits: [], skills: [] };
 
       const basePrice = calculateRecruitPrice(baseRecruit);
       const nerfedPrice = calculateRecruitPrice(nerfedRecruit);
 
-      // Negative variance should lower price (but still >= base due to min check)
-      assert.ok(nerfedPrice <= basePrice, 'Negative variance should not increase price');
+      // New pricing: no discount for below-average stats
+      assert.strictEqual(nerfedPrice, basePrice, 'Negative variance should not change price');
     });
 
     it('should calculate variance correctly (+15%)', () => {
-      const recruit = { stat_variance_percent: 15, traitCount: 0, skillCount: 0 };
+      const recruit = { stat_variance_percent: 15, traits: [], skills: [] };
 
       const price = calculateRecruitPrice(recruit);
 
-      // 1 + 15/100 = 1.15
-      // BASE_RECRUIT_PRICE * 1.15 = 2000 * 1.15 = 2300
-      assert.strictEqual(price, Math.floor(BASE_RECRUIT_PRICE * 1.15));
-    });
-
-    it('should calculate variance correctly (-15%)', () => {
-      const recruit = { stat_variance_percent: -15, traitCount: 0, skillCount: 0 };
-
-      const price = calculateRecruitPrice(recruit);
-
-      // 1 + (-15)/100 = 0.85
-      // BASE_RECRUIT_PRICE * 0.85 = 2000 * 0.85 = 1700
-      // But should be capped at BASE_RECRUIT_PRICE
-      assert.strictEqual(price, Math.max(BASE_RECRUIT_PRICE, Math.floor(BASE_RECRUIT_PRICE * 0.85)));
+      // BASE_PRICE + (15 * STAT_VARIANCE_BONUS) = 400 + (15 * 5) = 475
+      const expectedPrice = RECRUIT_PRICING.BASE_PRICE + (15 * RECRUIT_PRICING.STAT_VARIANCE_BONUS);
+      assert.strictEqual(price, expectedPrice);
     });
 
     it('should handle undefined stat_variance_percent', () => {
-      const recruit = { traitCount: 0, skillCount: 0 };
+      const recruit = { traits: [], skills: [] };
 
       const price = calculateRecruitPrice(recruit);
 
-      assert.strictEqual(price, BASE_RECRUIT_PRICE);
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE);
     });
   });
 
-  describe('trait bonus', () => {
-    it('should not add bonus for single trait', () => {
-      const recruit = { stat_variance_percent: 0, traitCount: 1, skillCount: 0 };
+  describe('trait pricing', () => {
+    it('should add price for common trait', () => {
+      const recruit = { stat_variance_percent: 0, traits: [{ rarity: 'common' }], skills: [] };
 
       const price = calculateRecruitPrice(recruit);
 
-      assert.strictEqual(price, BASE_RECRUIT_PRICE);
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE + RECRUIT_PRICING.TRAIT_PRICES.common);
     });
 
-    it('should add bonus for second trait', () => {
-      const recruit = { stat_variance_percent: 0, traitCount: 2, skillCount: 0 };
+    it('should add price for uncommon trait', () => {
+      const recruit = { stat_variance_percent: 0, traits: [{ rarity: 'uncommon' }], skills: [] };
 
       const price = calculateRecruitPrice(recruit);
 
-      // BASE + 8000 for extra trait
-      assert.strictEqual(price, BASE_RECRUIT_PRICE + TRAIT_BONUS_PRICE);
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE + RECRUIT_PRICING.TRAIT_PRICES.uncommon);
     });
 
-    it('should add bonus for each trait beyond first', () => {
-      const recruit = { stat_variance_percent: 0, traitCount: 3, skillCount: 0 };
+    it('should add price for rare trait', () => {
+      const recruit = { stat_variance_percent: 0, traits: [{ rarity: 'rare' }], skills: [] };
 
       const price = calculateRecruitPrice(recruit);
 
-      // BASE + 8000 * 2 for 2 extra traits
-      assert.strictEqual(price, BASE_RECRUIT_PRICE + (TRAIT_BONUS_PRICE * 2));
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE + RECRUIT_PRICING.TRAIT_PRICES.rare);
     });
 
-    it('should handle undefined traitCount', () => {
-      const recruit = { stat_variance_percent: 0, skillCount: 0 };
+    it('should add price for legendary trait', () => {
+      const recruit = { stat_variance_percent: 0, traits: [{ rarity: 'legendary' }], skills: [] };
 
       const price = calculateRecruitPrice(recruit);
 
-      assert.strictEqual(price, BASE_RECRUIT_PRICE);
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE + RECRUIT_PRICING.TRAIT_PRICES.legendary);
+    });
+
+    it('should add price for multiple traits', () => {
+      const recruit = {
+        stat_variance_percent: 0,
+        traits: [{ rarity: 'common' }, { rarity: 'rare' }],
+        skills: []
+      };
+
+      const price = calculateRecruitPrice(recruit);
+
+      const expectedTraitPrice = RECRUIT_PRICING.TRAIT_PRICES.common + RECRUIT_PRICING.TRAIT_PRICES.rare;
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE + expectedTraitPrice);
+    });
+
+    it('should handle undefined traits', () => {
+      const recruit = { stat_variance_percent: 0, skills: [] };
+
+      const price = calculateRecruitPrice(recruit);
+
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE);
     });
   });
 
-  describe('skill bonus', () => {
-    it('should add bonus for each pre-learned skill', () => {
-      const recruit = { stat_variance_percent: 0, traitCount: 0, skillCount: 1 };
+  describe('skill pricing', () => {
+    it('should make first T1L1 skill free', () => {
+      const recruit = { stat_variance_percent: 0, traits: [], skills: [{ tier: 1, level: 1 }] };
 
       const price = calculateRecruitPrice(recruit);
 
-      assert.strictEqual(price, BASE_RECRUIT_PRICE + SKILL_BONUS_PRICE);
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE);
     });
 
-    it('should add bonus for multiple skills', () => {
-      const recruit = { stat_variance_percent: 0, traitCount: 0, skillCount: 2 };
+    it('should charge for second T1L1 skill', () => {
+      const recruit = {
+        stat_variance_percent: 0,
+        traits: [],
+        skills: [{ tier: 1, level: 1 }, { tier: 1, level: 1 }]
+      };
 
       const price = calculateRecruitPrice(recruit);
 
-      assert.strictEqual(price, BASE_RECRUIT_PRICE + (SKILL_BONUS_PRICE * 2));
+      // First free, second costs 250 * 1 * 1 = 250
+      const expectedSkillPrice = RECRUIT_PRICING.SKILL_PRICE_MULTIPLIER * 1 * 1;
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE + expectedSkillPrice);
     });
 
-    it('should handle undefined skillCount', () => {
-      const recruit = { stat_variance_percent: 0, traitCount: 0 };
+    it('should charge more for tier 2 skills', () => {
+      const recruit = {
+        stat_variance_percent: 0,
+        traits: [],
+        skills: [{ tier: 1, level: 1 }, { tier: 2, level: 1 }]
+      };
 
       const price = calculateRecruitPrice(recruit);
 
-      assert.strictEqual(price, BASE_RECRUIT_PRICE);
+      // First T1L1 free, T2L1 costs 250 * 2 * 1 = 500
+      const expectedSkillPrice = RECRUIT_PRICING.SKILL_PRICE_MULTIPLIER * 2 * 1;
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE + expectedSkillPrice);
+    });
+
+    it('should handle undefined skills', () => {
+      const recruit = { stat_variance_percent: 0, traits: [] };
+
+      const price = calculateRecruitPrice(recruit);
+
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE);
     });
   });
 
   describe('combined pricing', () => {
     it('should combine all price factors', () => {
       const recruit = {
-        stat_variance_percent: 10,  // +10% to base
-        traitCount: 2,              // +8000 for extra trait
-        skillCount: 2               // +1500 for 2 skills
+        stat_variance_percent: 10,                             // +50 (10 * 5)
+        traits: [{ rarity: 'common' }, { rarity: 'rare' }],    // +100 + 1000
+        skills: [{ tier: 1, level: 1 }, { tier: 2, level: 1 }] // 0 (first free) + 500
       };
 
       const price = calculateRecruitPrice(recruit);
 
-      // Base: 2000 * 1.10 = 2200
-      // Traits: 8000 * (2-1) = 8000
-      // Skills: 750 * 2 = 1500
-      // Total: 2200 + 8000 + 1500 = 11700
-      const expectedBaseWithVariance = Math.floor(BASE_RECRUIT_PRICE * 1.10);
-      const expectedTraitBonus = TRAIT_BONUS_PRICE * 1;
-      const expectedSkillBonus = SKILL_BONUS_PRICE * 2;
+      // Base: 400
+      // Variance: 10 * 5 = 50
+      // Traits: 100 + 1000 = 1100
+      // Skills: 0 + 500 = 500
+      // Total: 400 + 50 + 1100 + 500 = 2050
+      const expectedVariance = 10 * RECRUIT_PRICING.STAT_VARIANCE_BONUS;
+      const expectedTraits = RECRUIT_PRICING.TRAIT_PRICES.common + RECRUIT_PRICING.TRAIT_PRICES.rare;
+      const expectedSkills = RECRUIT_PRICING.SKILL_PRICE_MULTIPLIER * 2 * 1; // Second skill (T2L1)
 
-      assert.strictEqual(price, expectedBaseWithVariance + expectedTraitBonus + expectedSkillBonus);
+      assert.strictEqual(price, RECRUIT_PRICING.BASE_PRICE + expectedVariance + expectedTraits + expectedSkills);
     });
 
     it('should floor intermediate calculations', () => {
       const recruit = {
-        stat_variance_percent: 7,  // Will create non-integer intermediate
-        traitCount: 0,
-        skillCount: 0
+        stat_variance_percent: 7,  // 7 * 5 = 35 (integer)
+        traits: [],
+        skills: []
       };
 
       const price = calculateRecruitPrice(recruit);
 
-      // 2000 * 1.07 = 2140
-      assert.strictEqual(price, Math.floor(BASE_RECRUIT_PRICE * 1.07));
+      // BASE + (7 * 5) = 400 + 35 = 435
+      const expected = RECRUIT_PRICING.BASE_PRICE + Math.floor(7 * RECRUIT_PRICING.STAT_VARIANCE_BONUS);
+      assert.strictEqual(price, expected);
       assert.ok(Number.isInteger(price), 'Price should be an integer');
     });
   });
 });
 
 describe('Recruit Service Constants', () => {
-  describe('BASE_RECRUIT_PRICE', () => {
-    it('should be a positive number', () => {
-      assert.ok(BASE_RECRUIT_PRICE > 0);
+  describe('RECRUIT_PRICING', () => {
+    it('should have base price', () => {
+      assert.ok(RECRUIT_PRICING.BASE_PRICE > 0);
     });
 
-    it('should be an integer', () => {
-      assert.ok(Number.isInteger(BASE_RECRUIT_PRICE));
+    it('should have stat variance bonus', () => {
+      assert.ok(RECRUIT_PRICING.STAT_VARIANCE_BONUS > 0);
     });
-  });
 
-  describe('TRAIT_BONUS_PRICE', () => {
-    it('should be greater than base price', () => {
-      // Extra traits should be valuable
-      assert.ok(TRAIT_BONUS_PRICE > BASE_RECRUIT_PRICE * 0.5);
+    it('should have trait prices for all rarities', () => {
+      assert.ok(RECRUIT_PRICING.TRAIT_PRICES.common > 0);
+      assert.ok(RECRUIT_PRICING.TRAIT_PRICES.uncommon > 0);
+      assert.ok(RECRUIT_PRICING.TRAIT_PRICES.rare > 0);
+      assert.ok(RECRUIT_PRICING.TRAIT_PRICES.legendary > 0);
     });
-  });
 
-  describe('SKILL_BONUS_PRICE', () => {
-    it('should be reasonable', () => {
-      assert.ok(SKILL_BONUS_PRICE > 0);
-      assert.ok(SKILL_BONUS_PRICE < BASE_RECRUIT_PRICE);
+    it('should have increasing trait prices by rarity', () => {
+      const { common, uncommon, rare, legendary } = RECRUIT_PRICING.TRAIT_PRICES;
+      assert.ok(uncommon > common, 'Uncommon should cost more than common');
+      assert.ok(rare > uncommon, 'Rare should cost more than uncommon');
+      assert.ok(legendary > rare, 'Legendary should cost more than rare');
+    });
+
+    it('should have skill price multiplier', () => {
+      assert.ok(RECRUIT_PRICING.SKILL_PRICE_MULTIPLIER > 0);
     });
   });
 
@@ -257,21 +290,43 @@ describe('Recruit Service Constants', () => {
     });
   });
 
-  describe('SKILL_COUNT_WEIGHTS', () => {
-    it('should have options for 0, 1, and 2 skills', () => {
-      assert.ok(0 in SKILL_COUNT_WEIGHTS);
-      assert.ok(1 in SKILL_COUNT_WEIGHTS);
-      assert.ok(2 in SKILL_COUNT_WEIGHTS);
+  describe('ADDITIONAL_SKILL_COUNT_WEIGHTS', () => {
+    it('should have options for 0, 1, and 2 additional skills', () => {
+      assert.ok(0 in ADDITIONAL_SKILL_COUNT_WEIGHTS);
+      assert.ok(1 in ADDITIONAL_SKILL_COUNT_WEIGHTS);
+      assert.ok(2 in ADDITIONAL_SKILL_COUNT_WEIGHTS);
     });
 
     it('should favor no extra skills', () => {
-      assert.ok(SKILL_COUNT_WEIGHTS[0] >= SKILL_COUNT_WEIGHTS[1]);
-      assert.ok(SKILL_COUNT_WEIGHTS[1] >= SKILL_COUNT_WEIGHTS[2]);
+      assert.ok(ADDITIONAL_SKILL_COUNT_WEIGHTS[0] >= ADDITIONAL_SKILL_COUNT_WEIGHTS[1]);
+      assert.ok(ADDITIONAL_SKILL_COUNT_WEIGHTS[1] >= ADDITIONAL_SKILL_COUNT_WEIGHTS[2]);
     });
 
     it('should sum to 100', () => {
-      const total = Object.values(SKILL_COUNT_WEIGHTS).reduce((a, b) => a + b, 0);
+      const total = Object.values(ADDITIONAL_SKILL_COUNT_WEIGHTS).reduce((a, b) => a + b, 0);
       assert.strictEqual(total, 100);
+    });
+  });
+
+  describe('getStarterSkillId', () => {
+    it('should return power_strike for warrior', () => {
+      assert.strictEqual(getStarterSkillId('warrior'), 'power_strike');
+    });
+
+    it('should return fireball for wizard', () => {
+      assert.strictEqual(getStarterSkillId('wizard'), 'fireball');
+    });
+
+    it('should return palm_strike for monk', () => {
+      assert.strictEqual(getStarterSkillId('monk'), 'palm_strike');
+    });
+
+    it('should return potion_toss for chemist', () => {
+      assert.strictEqual(getStarterSkillId('chemist'), 'potion_toss');
+    });
+
+    it('should return null for unknown class', () => {
+      assert.strictEqual(getStarterSkillId('unknown'), null);
     });
   });
 });

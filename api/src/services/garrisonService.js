@@ -20,54 +20,15 @@ import {
 } from '../../../shared/constants.js';
 import { generateName } from '../utils/nameGenerator.js';
 import { SKILL_TREES } from '../config/skillTrees.js';
-
-// Pricing constants (same as recruitService.js for consistency)
-const BASE_RECRUIT_PRICE = 2000;
-const TRAIT_BONUS_PRICE = 8000;
-const SKILL_BONUS_PRICE = 750;
-
-// Trait rarity weights: 70% common, 20% uncommon, 8% rare, 2% legendary
-const TRAIT_RARITY_WEIGHTS = {
-  common: 70,
-  uncommon: 20,
-  rare: 8,
-  legendary: 2
-};
-
-// Trait count weights: 92% get 1 trait, 8% get 2 traits
-const TRAIT_COUNT_WEIGHTS = {
-  1: 92,
-  2: 8
-};
-
-// Skill count weights: 60% get 0, 30% get 1, 10% get 2
-const SKILL_COUNT_WEIGHTS = {
-  0: 60,
-  1: 30,
-  2: 10
-};
-
-/**
- * Roll a value based on weighted probabilities
- * @param {Object} weights - { option1: weight1, option2: weight2, ... }
- * @returns {string|number} Selected option key
- */
-function weightedRandom(weights) {
-  const totalWeight = Object.values(weights).reduce((sum, w) => sum + w, 0);
-  let random = Math.random() * totalWeight;
-
-  for (const [option, weight] of Object.entries(weights)) {
-    random -= weight;
-    if (random <= 0) {
-      const num = Number(option);
-      return isNaN(num) ? option : num;
-    }
-  }
-
-  const firstKey = Object.keys(weights)[0];
-  const num = Number(firstKey);
-  return isNaN(num) ? firstKey : num;
-}
+import {
+  RECRUIT_PRICING,
+  TRAIT_RARITY_WEIGHTS,
+  TRAIT_COUNT_WEIGHTS,
+  ADDITIONAL_SKILL_COUNT_WEIGHTS,
+  weightedRandom,
+  calculateRecruitPrice,
+  getStarterSkillId
+} from '../utils/recruitmentUtils.js';
 
 /**
  * Get region data by region ID
@@ -176,46 +137,6 @@ function getTier1And2Skills(guildClass) {
 }
 
 /**
- * Get the default starter skill for a class
- * @param {string} guildClass - The class
- * @returns {string|null} Starter skill ID
- */
-function getStarterSkillId(guildClass) {
-  const starterSkills = {
-    warrior: 'power_strike',
-    wizard: 'fireball',
-    monk: 'palm_strike',
-    chemist: 'potion_toss'
-  };
-  return starterSkills[guildClass] || null;
-}
-
-/**
- * Calculate the price for a recruit based on their attributes
- * @param {Object} recruit - Recruit data with stat_variance_percent, traitCount, skillCount
- * @returns {number} Price in gold
- */
-function calculateRecruitPrice(recruit) {
-  let price = BASE_RECRUIT_PRICE;
-
-  // Multiply by (1 + stat_variance_percent/100) for stat bonus
-  const varianceMultiplier = 1 + (recruit.stat_variance_percent || 0) / 100;
-  price = Math.floor(price * varianceMultiplier);
-
-  // Add 8000g for each trait beyond the first
-  const traitCount = recruit.traitCount || 0;
-  if (traitCount > 1) {
-    price += TRAIT_BONUS_PRICE * (traitCount - 1);
-  }
-
-  // Add 750g per pre-learned skill
-  const skillCount = recruit.skillCount || 0;
-  price += SKILL_BONUS_PRICE * skillCount;
-
-  return Math.max(price, BASE_RECRUIT_PRICE);
-}
-
-/**
  * Generate garrison recruits for a castle node
  * @param {number} castleNodeId - The castle node ID
  * @param {number} regionId - The region ID for weighting
@@ -274,8 +195,8 @@ async function generateRecruitWithClient(client, castleNodeId, regionId) {
   // Roll trait count
   const traitCount = weightedRandom(TRAIT_COUNT_WEIGHTS);
 
-  // Roll skill count
-  const skillCount = weightedRandom(SKILL_COUNT_WEIGHTS);
+  // Roll additional skill count (beyond the guaranteed starter skill)
+  const additionalSkillCount = weightedRandom(ADDITIONAL_SKILL_COUNT_WEIGHTS);
 
   // Generate traits
   const traits = [];
@@ -320,32 +241,46 @@ async function generateRecruitWithClient(client, castleNodeId, regionId) {
     }
   }
 
-  // Generate skills
+  // Generate skills - all recruits get the starter skill, plus potentially additional skills
   const skills = [];
-  if (skillCount > 0) {
+  const starterSkillId = getStarterSkillId(guildClass);
+
+  // Always add the starter skill (Tier 1, Level 1)
+  if (starterSkillId) {
+    skills.push({ id: starterSkillId, tier: 1, level: 1 });
+  }
+
+  // Add additional skills if rolled
+  if (additionalSkillCount > 0) {
     const availableSkills = getTier1And2Skills(guildClass);
-    const starterSkillId = getStarterSkillId(guildClass);
+    // Exclude the starter skill from additional skill pool
     let skillPool = availableSkills.filter(s => s.id !== starterSkillId);
     if (skillPool.length === 0) skillPool = availableSkills;
 
-    const assignedSkillIds = new Set();
+    const assignedSkillIds = new Set([starterSkillId]);
 
-    for (let i = 0; i < skillCount && skillPool.length > 0; i++) {
+    for (let i = 0; i < additionalSkillCount && skillPool.length > 0; i++) {
       const remaining = skillPool.filter(s => !assignedSkillIds.has(s.id));
       if (remaining.length === 0) break;
 
       const selectedSkill = remaining[Math.floor(Math.random() * remaining.length)];
       assignedSkillIds.add(selectedSkill.id);
-      skills.push(selectedSkill.id);
+      // Additional skills are tier 1-2 at level 1
+      const tier = selectedSkill.requires ? 2 : 1;
+      skills.push({ id: selectedSkill.id, tier, level: 1 });
     }
   }
 
-  // Calculate price
+  // Calculate price using the shared utility
+  // Expects { stat_variance_percent, traits: [{rarity}], skills: [{tier, level}] }
   const price = calculateRecruitPrice({
     stat_variance_percent: variancePercent,
-    traitCount: traits.length,
-    skillCount: skills.length
+    traits: traits,
+    skills: skills
   });
+
+  // Extract skill IDs for database storage (DB stores array of skill IDs)
+  const skillIds = skills.map(s => s.id);
 
   // Insert recruit
   const recruitResult = await client.query(
@@ -363,7 +298,7 @@ async function generateRecruitWithClient(client, castleNodeId, regionId) {
       JSON.stringify(stats),
       JSON.stringify(traits),
       JSON.stringify([]), // Empty starting equipment
-      JSON.stringify(skills),
+      JSON.stringify(skillIds),
       price
     ]
   );
@@ -700,12 +635,12 @@ export {
   purchaseRecruit,
   refreshAllGarrisons,
   checkAndRefreshIfStale,
+  // Re-export from shared utils for backward compatibility with tests
   calculateRecruitPrice,
-  // Export for testing
-  BASE_RECRUIT_PRICE,
-  TRAIT_BONUS_PRICE,
-  SKILL_BONUS_PRICE,
+  RECRUIT_PRICING,
   TRAIT_RARITY_WEIGHTS,
   TRAIT_COUNT_WEIGHTS,
-  SKILL_COUNT_WEIGHTS
+  ADDITIONAL_SKILL_COUNT_WEIGHTS,
+  weightedRandom,
+  getStarterSkillId
 };
