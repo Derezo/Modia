@@ -1015,6 +1015,14 @@ export class ApiClient {
     return this.post('/coliseum/surrender', { battleId });
   }
 
+  /**
+   * Get current user's PvP stats including tier info
+   * @returns {Promise<{ratings: Array, recentMatches: Array}>}
+   */
+  getColiseumStats() {
+    return this.get('/coliseum/stats');
+  }
+
   // ============================================
   // RELIC METHODS
   // ============================================

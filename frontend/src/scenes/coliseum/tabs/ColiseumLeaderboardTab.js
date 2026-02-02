@@ -2,6 +2,24 @@
  * ColiseumLeaderboardTab - Leaderboard display and filtering
  */
 
+import { getTier, getTierIcon } from '@shared/coliseum.js';
+
+/**
+ * Render a tier badge with icon and color
+ * @param {number} rating - Player rating
+ * @param {Object} tierData - Optional pre-computed tier data from API
+ * @returns {string} HTML string for tier badge
+ */
+function renderTierBadge(rating, tierData = null) {
+  const tier = tierData || getTier(rating);
+  const icon = tier.icon ? getTierIcon(tier.icon) : '';
+
+  return `<span class="coliseum-tier-badge" style="color: ${tier.color};" title="${tier.name}">
+    ${icon ? `<span class="tier-icon">${icon}</span>` : ''}
+    <span class="tier-name">${tier.name}</span>
+  </span>`;
+}
+
 /**
  * Render leaderboard content
  * @param {Object} context - Shared context from ColiseumScene
@@ -50,6 +68,7 @@ export function renderLeaderboard(context) {
             <tr>
               <th>Rank</th>
               <th>Player</th>
+              <th>Tier</th>
               <th>Rating</th>
               <th>W/L</th>
               <th>Streak</th>
@@ -60,11 +79,13 @@ export function renderLeaderboard(context) {
     const rank = index + 1;
     const isCurrentUser = entry.userId === game.userId;
     const crownIcon = rank === 1 ? '<span class="coliseum-crown-icon">&#128081;</span>' : '';
+    const tierData = entry.tierColor ? { name: entry.tier, color: entry.tierColor, icon: entry.tierIcon } : null;
 
     return `
                 <tr class="${isCurrentUser ? 'current-user' : ''}">
                   <td class="coliseum-rank-cell coliseum-rank-${rank <= 3 ? rank : ''}">#${rank}${crownIcon}</td>
                   <td class="coliseum-player-name">${entry.username}</td>
+                  <td class="coliseum-tier-cell">${renderTierBadge(entry.rating, tierData)}</td>
                   <td class="coliseum-rating-cell">${entry.rating}</td>
                   <td class="coliseum-winloss-cell">
                     <span class="wins">${entry.wins}</span> / <span class="losses">${entry.losses}</span>

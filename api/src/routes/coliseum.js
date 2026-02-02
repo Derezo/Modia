@@ -5,7 +5,8 @@
 import express from 'express';
 import { query } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
-import { createRateLimiter } from '../middleware/rateLimiterFactory.js';
+import { createLimiter } from '../middleware/rateLimiterFactory.js';
+import { getTier } from '../../../shared/coliseum.js';
 
 const router = express.Router();
 
@@ -13,8 +14,9 @@ const router = express.Router();
 router.use(authenticate);
 
 // Rate limiter for queues endpoint
-const queuesLimiter = createRateLimiter('coliseum/queues', {
-  max: 30,
+const queuesLimiter = createLimiter({
+  name: 'coliseum/queues',
+  maxRequests: 30,
   windowMs: 60000
 });
 
@@ -58,7 +60,7 @@ router.get('/leaderboard', async (req, res) => {
       timeCondition = 'AND pr.last_match_at >= NOW() - INTERVAL \'1 day\'';
     }
 
-    // Get leaderboard
+    // Get leaderboard with tier data
     const leaderboardResult = await query(
       `SELECT
         pr.user_id as "userId",
@@ -68,7 +70,9 @@ router.get('/leaderboard', async (req, res) => {
         pr.losses,
         pr.win_streak as "winStreak",
         pr.best_win_streak as "bestWinStreak",
-        pr.peak_rating as "peakRating"
+        pr.peak_rating as "peakRating",
+        pr.tier,
+        pr.peak_tier as "peakTier"
        FROM pvp_ratings pr
        JOIN users u ON u.id = pr.user_id
        WHERE pr.queue_type = $1
@@ -78,6 +82,17 @@ router.get('/leaderboard', async (req, res) => {
        LIMIT $2`,
       [queue, parsedLimit]
     );
+
+    // Add tier info to each entry (in case tier column is null for legacy data)
+    leaderboardResult.rows = leaderboardResult.rows.map(entry => {
+      const tierInfo = getTier(entry.rating);
+      return {
+        ...entry,
+        tier: entry.tier || tierInfo.name,
+        tierColor: tierInfo.color,
+        tierIcon: tierInfo.icon
+      };
+    });
 
     // Get user's rank if not in top 100
     let userRank = null;
@@ -144,17 +159,38 @@ router.get('/matches', async (req, res) => {
         cm.loser_rating_change as "loserRatingChange",
         cm.match_duration_seconds as "duration",
         (cm.match_stats->>'turnCount')::int as "turnCount",
-        cm.created_at as "createdAt"
+        cm.created_at as "createdAt",
+        wpr.rating as "winnerRating",
+        wpr.tier as "winnerTier",
+        lpr.rating as "loserRating",
+        lpr.tier as "loserTier"
        FROM coliseum_matches cm
        JOIN users w ON w.id = cm.winner_user_id
        JOIN users l ON l.id = cm.loser_user_id
+       LEFT JOIN pvp_ratings wpr ON wpr.user_id = cm.winner_user_id AND wpr.queue_type = cm.queue_type
+       LEFT JOIN pvp_ratings lpr ON lpr.user_id = cm.loser_user_id AND lpr.queue_type = cm.queue_type
        ${whereClause}
        ORDER BY cm.created_at DESC
        LIMIT $1 OFFSET $2`,
       params
     );
 
-    res.json({ matches: result.rows });
+    // Add tier colors to match data
+    const matches = result.rows.map(match => {
+      const winnerTierInfo = getTier(match.winnerRating || 1000);
+      const loserTierInfo = getTier(match.loserRating || 1000);
+      return {
+        ...match,
+        winnerTier: match.winnerTier || winnerTierInfo.name,
+        winnerTierColor: winnerTierInfo.color,
+        winnerTierIcon: winnerTierInfo.icon,
+        loserTier: match.loserTier || loserTierInfo.name,
+        loserTierColor: loserTierInfo.color,
+        loserTierIcon: loserTierInfo.icon
+      };
+    });
+
+    res.json({ matches });
   } catch (err) {
     console.error('Error fetching match history:', err);
     res.status(500).json({ error: 'Failed to fetch match history' });
@@ -266,11 +302,27 @@ router.get('/stats', async (req, res) => {
         draws,
         win_streak as "winStreak",
         best_win_streak as "bestWinStreak",
-        last_match_at as "lastMatchAt"
+        last_match_at as "lastMatchAt",
+        tier,
+        peak_tier as "peakTier"
        FROM pvp_ratings
        WHERE user_id = $1`,
       [userId]
     );
+
+    // Add tier info to each rating entry
+    result.rows = result.rows.map(entry => {
+      const tierInfo = getTier(entry.rating);
+      const peakTierInfo = getTier(entry.peakRating);
+      return {
+        ...entry,
+        tier: entry.tier || tierInfo.name,
+        tierColor: tierInfo.color,
+        tierIcon: tierInfo.icon,
+        peakTier: entry.peakTier || peakTierInfo.name,
+        peakTierColor: peakTierInfo.color
+      };
+    });
 
     // Get recent matches
     const recentMatchesResult = await query(

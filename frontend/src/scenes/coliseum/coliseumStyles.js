@@ -965,5 +965,77 @@ export function getColiseumStyles() {
 
     /* Parchment spinner (use alongside coliseum-queue-spinner for consistency) */
     ${getParchmentSpinnerCSS()}
+
+    /* ============================================ */
+    /* TIER BADGE STYLES                            */
+    /* ============================================ */
+
+    /* Full tier badge with icon and name */
+    .coliseum-tier-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .coliseum-tier-badge .tier-icon {
+      font-size: 14px;
+    }
+
+    .coliseum-tier-badge .tier-name {
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Compact tier badge for match history (icon only) */
+    .coliseum-tier-badge-compact {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      margin-right: 4px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Tier cell in leaderboard table */
+    .coliseum-tier-cell {
+      white-space: nowrap;
+    }
+
+    /* Tier colors for reference (applied via inline styles) */
+    /* Grandmaster: #c45a5a (Crimson) */
+    /* Master: #9a6ab8 (Purple) */
+    /* Platinum: #7ec8e8 (Ice Blue) */
+    /* Gold: #b8956a (Gold) */
+    /* Silver: #a8a8a8 (Silver) */
+    /* Bronze: #cd7f32 (Bronze) */
+    /* Unranked: #6a6a6a (Gray) */
+
+    /* Tier badge glow effects for high tiers */
+    .coliseum-tier-badge[style*="#c45a5a"] {
+      text-shadow: 0 0 8px rgba(196, 90, 90, 0.6), 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .coliseum-tier-badge[style*="#9a6ab8"] {
+      text-shadow: 0 0 8px rgba(154, 106, 184, 0.6), 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .coliseum-tier-badge[style*="#7ec8e8"] {
+      text-shadow: 0 0 8px rgba(126, 200, 232, 0.6), 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .coliseum-tier-badge[style*="#b8956a"] {
+      text-shadow: 0 0 6px rgba(184, 149, 106, 0.5), 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Opponent tier display in match found */
+    .coliseum-opponent-tier {
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+      color: ${P.text.secondary};
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+    }
   `;
 }
