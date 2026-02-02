@@ -20,6 +20,11 @@ export class BattleUnit {
     this.enemyId = unitData.enemyId || null; // For enemy sprite lookup
     this.biome = unitData.biome || 'forest'; // For enemy sprite lookup
 
+    // Ownership tracking for PvP (backend sends ownerId and teamId)
+    this.ownerId = unitData.ownerId || null;
+    // Default teamId based on type for backward compatibility with PvE
+    this.teamId = unitData.teamId ?? (this.type === 'enemy' ? 2 : 1);
+
     // Stats
     this.level = unitData.level || 1;
     this.hp = unitData.hp;
@@ -608,6 +613,42 @@ export class BattleUnit {
   }
 
   /**
+   * Check if this unit is controlled by the local player
+   * @param {number|string} localUserId - The local player's user ID
+   * @returns {boolean} True if this unit belongs to the local player
+   */
+  isLocalPlayerUnit(localUserId) {
+    return this.ownerId != null && this.ownerId === localUserId;
+  }
+
+  /**
+   * Check if this unit is an opponent of the local player
+   * For PvP: opponent is on a different team
+   * For PvE: enemies are always opponents
+   * @param {number|string} localUserId - The local player's user ID
+   * @param {number} localTeamId - The local player's team ID (defaults to 1)
+   * @returns {boolean} True if this unit is an opponent
+   */
+  isOpponent(localUserId, localTeamId = 1) {
+    // In PvE, enemies are always opponents
+    if (this.type === 'enemy') {
+      return true;
+    }
+    // In PvP, check team membership
+    return this.teamId !== localTeamId;
+  }
+
+  /**
+   * Check if this unit is an ally of the local player
+   * @param {number|string} localUserId - The local player's user ID
+   * @param {number} localTeamId - The local player's team ID (defaults to 1)
+   * @returns {boolean} True if this unit is an ally (same team)
+   */
+  isAlly(localUserId, localTeamId = 1) {
+    return this.teamId === localTeamId;
+  }
+
+  /**
    * Get class icon for display
    */
   getClassIcon() {
@@ -626,27 +667,35 @@ export class BattleUnit {
   }
 
   /**
-   * Get unit color based on type
+   * Get unit color based on team allegiance
+   * In PvP, uses teamId comparison; in PvE, falls back to type-based coloring
+   * @param {number} localTeamId - The local player's team ID (defaults to 1)
+   * @returns {string} Hex color for the unit
    */
-  getColor() {
+  getColor(localTeamId = 1) {
     if (!this.isAlive()) return '#555555';
-    return this.type === 'player' ? '#4a90d9' : '#d94a4a';
+    // Team-based coloring: same team = blue (ally), different team = red (opponent)
+    return this.teamId === localTeamId ? '#4a90d9' : '#d94a4a';
   }
 
   /**
-   * Get highlight color based on type
+   * Get highlight color based on team allegiance
+   * @param {number} localTeamId - The local player's team ID (defaults to 1)
+   * @returns {string} Hex color for the unit highlight
    */
-  getHighlightColor() {
+  getHighlightColor(localTeamId = 1) {
     if (!this.isAlive()) return '#777777';
-    return this.type === 'player' ? '#6ab0f3' : '#f36a6a';
+    // Team-based coloring: same team = light blue, different team = light red
+    return this.teamId === localTeamId ? '#6ab0f3' : '#f36a6a';
   }
 
   /**
    * Render the unit
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    * @param {BattleCamera} camera - Optional camera for world-to-screen transform
+   * @param {number} localTeamId - The local player's team ID for coloring (defaults to 1)
    */
-  render(ctx, camera = null) {
+  render(ctx, camera = null, localTeamId = 1) {
     // Get screen position from world position
     let drawX = this.screenX;
     let drawY = this.screenY;
@@ -699,11 +748,11 @@ export class BattleUnit {
       // Draw unit body (colored circle)
       ctx.beginPath();
       ctx.arc(drawX, renderY, unitRadius, 0, Math.PI * 2);
-      ctx.fillStyle = this.getColor();
+      ctx.fillStyle = this.getColor(localTeamId);
       ctx.fill();
 
       // Draw border
-      ctx.strokeStyle = this.getHighlightColor();
+      ctx.strokeStyle = this.getHighlightColor(localTeamId);
       ctx.lineWidth = this.isSelected ? 3 : 2;
       ctx.stroke();
 
