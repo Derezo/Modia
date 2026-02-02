@@ -815,10 +815,18 @@ export class BattleWebSocketManager {
             // Update screen position to match grid position
             if (this.scene.grid) {
               const screenPos = this.scene.grid.gridToScreenWorld(serverUnit.x, serverUnit.y);
-              localUnit.screenX = screenPos.x;
-              localUnit.screenY = screenPos.y;
-              localUnit.targetScreenX = screenPos.x;
-              localUnit.targetScreenY = screenPos.y;
+              if (localUnit.isMoving) {
+                // Unit is mid-animation: only update target, let animation continue
+                // This matches how syncUnitsWithState handles moving units
+                localUnit.targetScreenX = screenPos.x;
+                localUnit.targetScreenY = screenPos.y;
+              } else {
+                // Unit is stationary: snap to new position immediately
+                localUnit.screenX = screenPos.x;
+                localUnit.screenY = screenPos.y;
+                localUnit.targetScreenX = screenPos.x;
+                localUnit.targetScreenY = screenPos.y;
+              }
             }
           }
           localUnit.hp = serverUnit.hp;
