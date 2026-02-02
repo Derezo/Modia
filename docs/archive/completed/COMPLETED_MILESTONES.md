@@ -10,6 +10,7 @@ This document archives all completed features, resolved issues, and historical d
 
 | Version | Date | Major Accomplishments |
 |---------|------|----------------------|
+| 11.0 | Feb 2026 | WebSocket Reliability System - Message ACK protocol with retry logic, bidirectional heartbeat with zombie detection, sequence-based message ordering, auto-recovery via full state sync |
 | 10.9 | Jan 2026 | Battle Asset Generation Pipeline Expansion - Obstacle metadata (rocks/trees), character sprite metadata (players/per-biome enemies), admin dashboard pages (ObstaclesPage, CharactersPage, SpritePreview), naming convention fixes |
 | 10.8 | Jan 2026 | Battle Consumable Item System - Fixed 5 critical bugs, item animations with sprite arcs, AI urgency-based healing, standardized effect types, 165 new unit tests |
 | 9.11 | Jan 2026 | Battle Tile Rendering & Height System - Tile cycling for overlapping elevations, occlusion transparency, height movement animation with parabolic arc |
@@ -60,6 +61,132 @@ This document archives all completed features, resolved issues, and historical d
 | 10.6 | Jan 2026 | Asset Path Remediation - Unified all asset pipeline tools to canonical shared/assetPaths.js, deleted migrate-sizes.js, fixed test factories |
 | 10.5 | Jan 2026 | Asset Pipeline Bug Fix & Deduplication - Multi-key generation bug fix, shared argument parser, audio service normalization, admin UX count badges |
 | 10.4 | Jan 2026 | Legacy Code Cleanup - 4-phase dead code removal, API migration, legacy fallback removal, property name standardization |
+
+---
+
+## 11.0 - WebSocket Reliability System (Feb 2026)
+
+Comprehensive WebSocket reliability layer ensuring message delivery, connection health monitoring, and automatic recovery from network failures.
+
+### Core Features
+
+#### 1. Message ACK Protocol (`messageReliability.js`)
+
+- **Sequence-based delivery**: Per-battle sequence numbers for message ordering guarantees
+- **ACK tracking**: Pending ACKs stored per-connection with retry queuing
+- **Automatic retry**: Up to 3 retries at 2s intervals before triggering full state sync
+- **Timeout handling**: Scheduled timeouts before send (prevents race conditions)
+- **Cleanup on success**: ACK receipt immediately clears timeout and removes from pending map
+
+**Key Functions:**
+- `sendWithAck()` - Send with sequence, store pending, schedule retry
+- `handleAck()` - Process incoming ACKs, clear timeouts, verify battle ID match
+- `scheduleRetry()` - Retry unacknowledged messages, trigger state sync on max retries
+- `broadcastWithAck()` - Broadcast to room with ACK tracking per-user
+- `triggerFullStateSync()` - Fetch current state from DB, send fire-and-forget update
+
+**Configuration:**
+- `ACK_TIMEOUT_MS = 2000` - Wait time before retry
+- `MAX_RETRIES = 3` - Retry attempts before state sync
+- `CLEANUP_INTERVAL_MS = 30000` - Stale ACK cleanup interval
+
+#### 2. Bidirectional Heartbeat (`websocket/index.js`)
+
+**Server-side ping/pong (30s interval):**
+- Detects dead connections by tracking `isAlive` flag
+- Pings all connected clients
+- Terminates connections that don't respond with pong
+
+**Client-side heartbeat tracking (15s cleanup):**
+- Clients send periodic `heartbeat` messages
+- Server records `lastHeartbeat` timestamp per userId
+- Zombie detector closes connections after 45s of inactivity
+- Prevents half-open connections from consuming resources
+
+**Constants:**
+- `HEARTBEAT_TIMEOUT_MS = 45000` - Max time without client heartbeat
+- Server ping interval: 30s
+- Cleanup check interval: 15s
+
+**Message Types:**
+- Client sends: `{ type: 'heartbeat', timestamp: Date.now() }`
+- Server responds: `{ type: 'heartbeat_ack', timestamp: ..., serverTime: ... }`
+
+#### 3. Integration Architecture
+
+```
+Player Action (HTTP)
+    ↓
+submitAction() in BattleScene
+    ↓
+HTTP POST /api/battle/action
+    ↓
+Backend validates & processes
+    ↓
+Database persists state
+    ↓
+broadcastWithAck() sends via WebSocket
+    ↓
+Client receives message with seq, immediately sends ACK via WebSocket
+    ↓
+Server handleAck() clears retry timeout
+    ↓
+Message confirmed delivered
+    ↓
+If no ACK after 2s, retry (up to 3x)
+    ↓
+If still no ACK, trigger full state sync
+    ↓
+Client receives state:update with full battle state from DB
+```
+
+### Implementation Details
+
+**Files Modified:**
+- `api/src/services/messageReliability.js` (new 533-line module)
+- `api/src/services/messageReliability.test.js` (new test suite)
+- `api/src/websocket/index.js` (heartbeat/zombie detection at lines 191-1560)
+- `api/src/services/battleWebsocket.js` (uses sendWithAck, handles ACKs)
+
+**Database Changes:**
+- Uses existing `battle_state` JSONB for recovery (no schema changes)
+- Sequence numbers stored in memory (battleSequences map)
+
+**Frontend Integration:**
+- BattleScene.js submits actions via HTTP (guaranteed delivery)
+- BattleWebSocketManager.js handles incoming WebSocket broadcasts
+- Automatically sends ACK upon receiving messages with seq/ack flags
+- Falls back to HTTP polling if WebSocket becomes unresponsive
+
+### Testing
+
+**Unit tests (`messageReliability.test.js`):**
+- ACK timeout and retry logic (3 retries then state sync)
+- Sequence number generation and overflow handling
+- Connection cleanup on disconnect
+- Battle cleanup on end
+- Stale ACK cleanup at 30s interval
+- Broadcast to multiple connections with per-user seq assignment
+
+**Integration tests:**
+- Full battle with connection drop during action
+- ACK lost scenario with automatic retry
+- Max retries exhausted → full state sync
+- Reconnection with stale pending ACKs
+- Hero reconnection tests (existing: `battleReconnection.integration.test.js`)
+
+### Performance Impact
+
+- **Memory overhead**: ~40 bytes per pending ACK (message, ws, seq, retries, timeout ID)
+- **Latency**: +0 ms (ACK protocol runs in parallel with message processing)
+- **CPU**: Negligible (cleanup runs once per 30s)
+- **Network**: +1 ACK message per broadcast (typically small ~50 bytes)
+
+### Related Documentation
+
+- `BATTLE_RECONNECTION.md` - Full state persistence strategy
+- `BATTLE_MESSAGING_PROTOCOL.md` - HTTP/WebSocket hybrid architecture
+- `docs/ROADMAP_TECHNICAL.md` Section 4.4 - WebSocket efficiency tracking
 
 ---
 
