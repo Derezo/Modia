@@ -213,10 +213,28 @@ function needsGeneration(effect, options) {
 }
 
 /**
+ * Extract actual duration from audio file using FFprobe
+ * @param {string} audioPath - Path to audio file
+ * @returns {Promise<number|null>} Duration in seconds or null if extraction fails
+ */
+async function extractActualDuration(audioPath) {
+  try {
+    // Dynamic import for ESM module from CommonJS
+    const { extractDurationWithFallback } = await import('../../api/src/utils/audioDurationExtractor.js');
+    const duration = await extractDurationWithFallback(audioPath);
+    return duration;
+  } catch (error) {
+    log(`Warning: Could not extract duration from ${audioPath}: ${error.message}`, 'warn');
+    return null;
+  }
+}
+
+/**
  * Mark effect as generated in metadata
  * @param {Object} effect - Effect that was generated
+ * @param {number} [actualDuration] - Actual duration extracted from file
  */
-function markEffectGenerated(effect) {
+function markEffectGenerated(effect, actualDuration = null) {
   const filePath = path.join(METADATA_DIR, effect._sourceFile);
   const data = loadMetadata(filePath);
 
@@ -229,6 +247,10 @@ function markEffectGenerated(effect) {
   if (effectIndex !== -1) {
     data.effects[effectIndex].generated = true;
     data.effects[effectIndex].generatedAt = new Date().toISOString();
+    // Store actual duration if extracted, otherwise keep the configured duration
+    if (actualDuration !== null) {
+      data.effects[effectIndex].actualDuration = actualDuration;
+    }
     saveMetadata(filePath, data);
   }
 }
@@ -417,17 +439,22 @@ async function main() {
             promptInfluence: 0.5
           });
 
+      // Extract actual duration from the generated file using FFprobe
+      const actualDuration = await extractActualDuration(result.path);
+
       results.successful.push({
         id: effect.id,
         name: effect.name,
         path: result.path,
-        size: result.size
+        size: result.size,
+        actualDuration: actualDuration
       });
 
-      // Mark as generated in metadata
-      markEffectGenerated(effect);
+      // Mark as generated in metadata with actual duration
+      markEffectGenerated(effect, actualDuration);
 
-      log(`Generated ${effect.id} (${result.size} bytes)`, 'success');
+      const durationInfo = actualDuration !== null ? ` (actual: ${actualDuration.toFixed(2)}s)` : '';
+      log(`Generated ${effect.id} (${result.size} bytes${durationInfo})`, 'success');
 
       // Rate limit delay between requests
       if (i < effectsToGenerate.length - 1) {

@@ -251,6 +251,23 @@ function updateTrackMetadata(track, result) {
 }
 
 /**
+ * Extract actual duration from audio file using FFprobe
+ * @param {string} audioPath - Path to audio file
+ * @returns {Promise<number|null>} Duration in seconds or null if extraction fails
+ */
+async function extractActualDuration(audioPath) {
+  try {
+    // Dynamic import for ESM module from CommonJS
+    const { extractDurationWithFallback } = await import('../../api/src/utils/audioDurationExtractor.js');
+    const duration = await extractDurationWithFallback(audioPath);
+    return duration;
+  } catch (error) {
+    log(`Warning: Could not extract duration from ${audioPath}: ${error.message}`, 'warn');
+    return null;
+  }
+}
+
+/**
  * Mark track as generated in metadata
  * @param {Object} track - Track that was generated
  * @param {Object} [downloadResult] - Download result with variants info
@@ -455,13 +472,23 @@ async function main() {
         log(`Downloading all variants: ${item.id}`, 'info');
         const downloadResult = await client.downloadAllTracks(item.taskId, outputPath);
 
-        // Mark as generated in metadata (with variant info)
+        // Extract actual duration from downloaded files using FFprobe
+        for (const dl of downloadResult.downloads) {
+          const actualDuration = await extractActualDuration(dl.path);
+          if (actualDuration !== null) {
+            dl.duration = actualDuration;
+            log(`  Extracted duration: ${actualDuration.toFixed(2)}s from ${path.basename(dl.path)}`, 'info');
+          }
+        }
+
+        // Mark as generated in metadata (with variant info including actual durations)
         markTrackGenerated(item.track, downloadResult);
 
         const totalSize = downloadResult.downloads.reduce((sum, d) => sum + d.size, 0);
         log(`Downloaded: ${item.id} (${downloadResult.totalTracks} tracks, ${totalSize} bytes total)`, 'success');
         for (const dl of downloadResult.downloads) {
-          log(`  - ${dl.path} (${dl.size} bytes)`, 'info');
+          const durationInfo = dl.duration ? `, ${dl.duration.toFixed(2)}s` : '';
+          log(`  - ${dl.path} (${dl.size} bytes${durationInfo})`, 'info');
         }
       } catch (error) {
         log(`Failed to download ${item.id}: ${error.message}`, 'error');

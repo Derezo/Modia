@@ -92,3 +92,25 @@ export const validateSfxPrompt = (prompt) =>
     method: 'POST',
     body: JSON.stringify({ prompt }),
   });
+
+// ============================================
+// Duration Sync
+// ============================================
+
+/**
+ * Verify duration mismatches between metadata and actual audio files
+ * @param {string} audioType - 'music' or 'sfx'
+ * @returns {Promise<object>} Verification results with mismatch details
+ */
+export const verifyDurations = (audioType) => fetchAPI(`/audio/verify-durations?type=${audioType}`);
+
+/**
+ * Sync durations from actual audio files to metadata
+ * @param {string} audioType - 'music' or 'sfx'
+ * @param {boolean} [dryRun=false] - If true, report changes without applying
+ * @returns {Promise<object>} Sync results
+ */
+export const syncDurations = (audioType, dryRun = false) =>
+  fetchAPI(`/audio/sync-durations?type=${audioType}${dryRun ? '&dryRun=true' : ''}`, {
+    method: 'POST',
+  });

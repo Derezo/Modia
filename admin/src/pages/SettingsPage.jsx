@@ -7,7 +7,7 @@
  * - Backups: List, create, restore, delete backups
  */
 
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import {
   GearIcon,
@@ -15,15 +15,19 @@ import {
   ArchiveIcon,
   ReloadIcon,
   ExclamationTriangleIcon,
+  TrashIcon,
 } from '@radix-ui/react-icons';
 import { useApiStatus, useBackups } from '../hooks/useAssets';
 import { useTheme } from '../hooks/useTheme';
+import { useToast } from '../contexts/ToastContext';
 import { ThemeTab, GenerationTab, BackupsTab } from '../components/settings';
+import { clearAllWaveformCache, getCacheStats } from '../lib/waveformCache';
 
 /**
  * Main Settings Page
  */
 export default function SettingsPage() {
+  const toast = useToast();
   const { status, loading: statusLoading, error: statusError } = useApiStatus();
   const {
     theme,
@@ -46,6 +50,37 @@ export default function SettingsPage() {
     restoreBackup,
     deleteBackup,
   } = useBackups();
+
+  // Waveform cache state
+  const [cacheStats, setCacheStats] = useState({ count: 0, oldestTimestamp: null, newestTimestamp: null });
+  const [cacheClearLoading, setCacheClearLoading] = useState(false);
+
+  // Load cache stats on mount
+  useEffect(() => {
+    const loadCacheStats = async () => {
+      const stats = await getCacheStats();
+      setCacheStats(stats);
+    };
+    loadCacheStats();
+  }, []);
+
+  // Handle clearing waveform cache
+  const handleClearWaveformCache = useCallback(async () => {
+    setCacheClearLoading(true);
+    try {
+      const success = await clearAllWaveformCache();
+      if (success) {
+        toast.success(`Cleared ${cacheStats.count} cached waveform(s)`);
+        setCacheStats({ count: 0, oldestTimestamp: null, newestTimestamp: null });
+      } else {
+        toast.error('Failed to clear waveform cache');
+      }
+    } catch (err) {
+      toast.error(err.message || 'Failed to clear cache');
+    } finally {
+      setCacheClearLoading(false);
+    }
+  }, [cacheStats.count, toast]);
 
   const handleUpdateField = useCallback(async (path, value) => {
     try {
@@ -118,6 +153,46 @@ export default function SettingsPage() {
             </span>
           </div>
         ) : null}
+      </div>
+
+      {/* Cache Management Card */}
+      <div className="card p-6 mb-6">
+        <h2 className="text-lg font-display font-semibold text-parchment-100 mb-4">
+          Cache Management
+        </h2>
+
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-parchment-200 font-medium">Waveform Cache</h3>
+            <p className="text-parchment-400 text-sm">
+              {cacheStats.count > 0 ? (
+                <>
+                  {cacheStats.count} cached waveform{cacheStats.count !== 1 ? 's' : ''}
+                  {cacheStats.oldestTimestamp && (
+                    <span className="ml-2">
+                      (oldest: {new Date(cacheStats.oldestTimestamp).toLocaleDateString()})
+                    </span>
+                  )}
+                </>
+              ) : (
+                'No cached waveforms'
+              )}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClearWaveformCache}
+            disabled={cacheClearLoading || cacheStats.count === 0}
+            className="btn-ghost flex items-center gap-2 disabled:opacity-50"
+          >
+            {cacheClearLoading ? (
+              <ReloadIcon className="w-4 h-4 animate-spin" />
+            ) : (
+              <TrashIcon className="w-4 h-4" />
+            )}
+            Clear Cache
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}

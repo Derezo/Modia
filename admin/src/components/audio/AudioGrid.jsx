@@ -14,6 +14,7 @@ import {
   ReloadIcon,
   ExclamationTriangleIcon,
   SpeakerLoudIcon,
+  ClockIcon,
 } from '@radix-ui/react-icons';
 
 import AudioCard from './AudioCard';
@@ -139,6 +140,10 @@ export default function AudioGrid({
   // Detail panel state
   const [detailAsset, setDetailAsset] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // Duration sync state
+  const [durationSyncLoading, setDurationSyncLoading] = useState(false);
+  const [durationMismatches, setDurationMismatches] = useState(null);
 
   // Audio playback state
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
@@ -415,6 +420,58 @@ export default function AudioGrid({
     }
   }, [selectedIds, displayAssets, handleAssetClick]);
 
+  /**
+   * Handle duration sync - verify then fix mismatches
+   */
+  const handleDurationSync = useCallback(async () => {
+    setDurationSyncLoading(true);
+    setDurationMismatches(null);
+
+    try {
+      // First verify to check for mismatches
+      const verifyResult = await api.verifyDurations(audioType);
+
+      if (verifyResult.mismatches === 0) {
+        toast.success('All durations are in sync');
+        setDurationMismatches(null);
+        return;
+      }
+
+      // Found mismatches - show count and offer to fix
+      setDurationMismatches(verifyResult);
+      toast.info(`Found ${verifyResult.mismatches} duration mismatch(es)`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to verify durations');
+    } finally {
+      setDurationSyncLoading(false);
+    }
+  }, [audioType, toast]);
+
+  /**
+   * Apply duration fixes after verification
+   */
+  const handleApplyDurationFixes = useCallback(async () => {
+    setDurationSyncLoading(true);
+
+    try {
+      const result = await api.syncDurations(audioType);
+
+      if (result.fixed > 0) {
+        toast.success(`Fixed ${result.fixed} duration(s)`);
+        // Refresh data to show updated durations
+        refetch();
+      } else {
+        toast.info('No durations needed fixing');
+      }
+
+      setDurationMismatches(null);
+    } catch (err) {
+      toast.error(err.message || 'Failed to sync durations');
+    } finally {
+      setDurationSyncLoading(false);
+    }
+  }, [audioType, refetch, toast]);
+
   // Register keyboard shortcuts
   useKeyboardShortcuts({
     onGenerate: handleGenerateSelected,
@@ -438,16 +495,61 @@ export default function AudioGrid({
           <p className="text-parchment-400">{pageDescription}</p>
         </div>
 
-        {/* Select all button */}
-        {displayAssets.length > 0 && (
-          <button
-            type="button"
-            onClick={handleSelectAll}
-            className="btn-ghost text-sm"
-          >
-            {selectedIds.size === displayAssets.length ? 'Deselect All' : 'Select All'}
-          </button>
-        )}
+        {/* Duration sync button */}
+        <div className="flex items-center gap-2">
+          {durationMismatches ? (
+            <>
+              <span className="text-sm text-accent-gold">
+                {durationMismatches.mismatches} mismatch(es)
+              </span>
+              <button
+                type="button"
+                onClick={handleApplyDurationFixes}
+                disabled={durationSyncLoading}
+                className="btn-gold text-sm flex items-center gap-1.5"
+              >
+                {durationSyncLoading ? (
+                  <ReloadIcon className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ClockIcon className="w-4 h-4" />
+                )}
+                Fix Durations
+              </button>
+              <button
+                type="button"
+                onClick={() => setDurationMismatches(null)}
+                className="btn-ghost text-sm"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={handleDurationSync}
+              disabled={durationSyncLoading}
+              className="btn-ghost text-sm flex items-center gap-1.5"
+            >
+              {durationSyncLoading ? (
+                <ReloadIcon className="w-4 h-4 animate-spin" />
+              ) : (
+                <ClockIcon className="w-4 h-4" />
+              )}
+              Sync Durations
+            </button>
+          )}
+
+          {/* Select all button */}
+          {displayAssets.length > 0 && (
+            <button
+              type="button"
+              onClick={handleSelectAll}
+              className="btn-ghost text-sm"
+            >
+              {selectedIds.size === displayAssets.length ? 'Deselect All' : 'Select All'}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filter bar */}
