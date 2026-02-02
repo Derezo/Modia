@@ -5,11 +5,33 @@
 import express from 'express';
 import { query } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
+import { createRateLimiter } from '../middleware/rateLimiterFactory.js';
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticate);
+
+// Rate limiter for queues endpoint
+const queuesLimiter = createRateLimiter('coliseum/queues', {
+  max: 30,
+  windowMs: 60000
+});
+
+/**
+ * GET /api/coliseum/queues
+ * Get current queue sizes for all queue types
+ */
+router.get('/queues', queuesLimiter, async (req, res) => {
+  try {
+    const coliseumService = await import('../services/coliseumService.js');
+    const statuses = coliseumService.getAllQueueStatuses();
+    res.json({ success: true, queues: statuses });
+  } catch (error) {
+    console.error('Failed to get queue statuses:', error);
+    res.status(500).json({ success: false, error: 'Failed to get queue statuses' });
+  }
+});
 
 /**
  * GET /api/coliseum/leaderboard

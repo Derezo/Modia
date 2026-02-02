@@ -18,7 +18,6 @@ import {
   recordDisconnect as recordDisconnectEvent,
   forgiveDisconnect
 } from './ratingService.js';
-import { sendWithAck } from './messageReliability.js';
 
 // PvP Turn Timer Constants
 const PVP_TURN_TIMEOUT = 60000;          // 60 seconds per turn
@@ -330,10 +329,10 @@ async function tryMatchmaking(queueType) {
       readyDeadline: match.readyDeadline
     };
 
-    // Use sendWithAck for reliable match_found delivery
+    // Send match_found directly (coliseum has its own ready timeout/cancellation logic)
     const player1Ws = ws.connections?.get(player1.userId);
     if (player1Ws && player1Ws.readyState === 1) {
-      sendWithAck(player1Ws, {
+      player1Ws.send(JSON.stringify({
         type: 'coliseum:match_found',
         payload: {
           ...matchPayload,
@@ -344,12 +343,12 @@ async function tryMatchmaking(queueType) {
             ppr: player2.ppr
           }
         }
-      }, `coliseum:match:${matchId}`, player1.userId);
+      }));
     }
 
     const player2Ws = ws.connections?.get(player2.userId);
     if (player2Ws && player2Ws.readyState === 1) {
-      sendWithAck(player2Ws, {
+      player2Ws.send(JSON.stringify({
         type: 'coliseum:match_found',
         payload: {
           ...matchPayload,
@@ -360,7 +359,7 @@ async function tryMatchmaking(queueType) {
             ppr: player1.ppr
           }
         }
-      }, `coliseum:match:${matchId}`, player2.userId);
+      }));
     }
 
     // Update queue for remaining players
@@ -454,14 +453,14 @@ function checkMatchReady(matchId) {
   if (!match.player2.ready) notReadyUsers.push(match.player2);
 
   getWebsocket().then(ws => {
-    // Notify and return ready player to queue with ACK tracking
+    // Notify and return ready player to queue
     if (match.player1.ready && !match.player2.ready) {
       const player1Ws = ws.connections?.get(match.player1.userId);
       if (player1Ws && player1Ws.readyState === 1) {
-        sendWithAck(player1Ws, {
+        player1Ws.send(JSON.stringify({
           type: 'coliseum:match_cancelled',
           payload: { matchId, reason: 'Opponent did not ready' }
-        }, `coliseum:match:${matchId}`, match.player1.userId);
+        }));
       }
       // Re-queue ready player at front (preserve PPR)
       const queue = matchmakingQueues.get(match.queueType) || [];
@@ -480,10 +479,10 @@ function checkMatchReady(matchId) {
     if (match.player2.ready && !match.player1.ready) {
       const player2Ws = ws.connections?.get(match.player2.userId);
       if (player2Ws && player2Ws.readyState === 1) {
-        sendWithAck(player2Ws, {
+        player2Ws.send(JSON.stringify({
           type: 'coliseum:match_cancelled',
           payload: { matchId, reason: 'Opponent did not ready' }
-        }, `coliseum:match:${matchId}`, match.player2.userId);
+        }));
       }
       const queue = matchmakingQueues.get(match.queueType) || [];
       queue.unshift({
@@ -498,14 +497,14 @@ function checkMatchReady(matchId) {
       }
     }
 
-    // Notify non-ready players with ACK tracking
+    // Notify non-ready players
     for (const user of notReadyUsers) {
       const userWs = ws.connections?.get(user.userId);
       if (userWs && userWs.readyState === 1) {
-        sendWithAck(userWs, {
+        userWs.send(JSON.stringify({
           type: 'coliseum:match_cancelled',
           payload: { matchId, reason: 'Failed to ready in time' }
-        }, `coliseum:match:${matchId}`, user.userId);
+        }));
       }
     }
   }).catch(err => console.error('Failed to handle match ready check:', err));
@@ -748,10 +747,10 @@ async function getPlayerBattleParty(userId) {
   const characters = result.rows;
   for (const char of characters) {
     const skillsResult = await query(
-      'SELECT skill_id, skill_level FROM character_skills WHERE character_id = $1',
+      'SELECT skill_id, level FROM character_skills WHERE character_id = $1',
       [char.id]
     );
-    char.skills = skillsResult.rows.map(s => ({ id: s.skill_id, level: s.skill_level }));
+    char.skills = skillsResult.rows.map(s => ({ id: s.skill_id, level: s.level }));
   }
 
   return characters;
@@ -766,21 +765,21 @@ async function cancelMatch(matchId, reason) {
 
   const ws = await getWebsocket();
 
-  // Use sendWithAck for reliable match_cancelled delivery
+  // Send match_cancelled directly
   const player1Ws = ws.connections?.get(match.player1.userId);
   if (player1Ws && player1Ws.readyState === 1) {
-    sendWithAck(player1Ws, {
+    player1Ws.send(JSON.stringify({
       type: 'coliseum:match_cancelled',
       payload: { matchId, reason }
-    }, `coliseum:match:${matchId}`, match.player1.userId);
+    }));
   }
 
   const player2Ws = ws.connections?.get(match.player2.userId);
   if (player2Ws && player2Ws.readyState === 1) {
-    sendWithAck(player2Ws, {
+    player2Ws.send(JSON.stringify({
       type: 'coliseum:match_cancelled',
       payload: { matchId, reason }
-    }, `coliseum:match:${matchId}`, match.player2.userId);
+    }));
   }
 
   activeMatches.delete(matchId);
@@ -870,13 +869,13 @@ async function cleanupPlayer(userId) {
           ? match.player2.userId
           : match.player1.userId;
 
-        // Use sendWithAck for reliable match_cancelled delivery
+        // Send match_cancelled directly
         const opponentWs = ws.connections?.get(opponentId);
         if (opponentWs && opponentWs.readyState === 1) {
-          sendWithAck(opponentWs, {
+          opponentWs.send(JSON.stringify({
             type: 'coliseum:match_cancelled',
             payload: { matchId, reason: 'Opponent disconnected' }
-          }, `coliseum:match:${matchId}`, opponentId);
+          }));
         }
 
         // Re-queue opponent (preserve PPR)

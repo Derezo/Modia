@@ -263,6 +263,18 @@ export class AudioManager {
   }
 
   /**
+   * Play an interaction sound
+   * @param {string} effectId - Interaction identifier (e.g., 'match_found', 'level_up')
+   * @param {Object} options - Playback options
+   */
+  playInteraction(effectId, options = {}) {
+    if (!this.isInitialized || !this.sfx) {
+      return;
+    }
+    this.sfx.play(effectId, { ...options, category: 'interactions' });
+  }
+
+  /**
    * Play a combat sound effect (with slight pitch variation)
    * @param {string} effectId - Combat effect identifier
    * @param {Object} options - Playback options

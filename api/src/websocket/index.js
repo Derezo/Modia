@@ -1409,7 +1409,7 @@ function setupWebSocket(server) {
             // Send immediate response
             ws.send(JSON.stringify({
               type: 'heartbeat_ack',
-              timestamp: payload.timestamp,
+              timestamp: payload?.timestamp ?? Date.now(),
               serverTime: Date.now()
             }));
             break;
