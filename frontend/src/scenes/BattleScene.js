@@ -150,9 +150,12 @@ export class BattleScene extends Scene {
     this.battleState = data.state;
     this.nodeType = data.nodeType || null; // Store nodeType from server for terrain generation
     this.initialEnemyActions = data.initialEnemyActions || null;
-    this.battleType = data.battleType || 'pve'; // 'pve', 'pvp', 'pve_coop'
+    this.battleType = data.battleType || 'pve'; // 'pve', 'pvp', 'pvp_coliseum', 'pve_coop'
     this.opponentUsername = data.opponentUsername || null;
-    this.isPvP = this.battleType === 'pvp';
+    // Detect PvP: explicit battleType OR player2Id present in state (indicates two human players)
+    this.isPvP = this.battleType === 'pvp' ||
+                 this.battleType === 'pvp_coliseum' ||
+                 data.state?.player2Id != null;
     this.isBossBattle = data.isBossBattle || false;
     this.guildmasterData = data.guildmaster || null;
 

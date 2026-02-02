@@ -228,6 +228,14 @@ export class Game {
     return this.audio?.musicContext;
   }
 
+  /**
+   * Get the local user's ID for player identity checks
+   * @returns {number|null} The current user's ID, or null if not logged in
+   */
+  get localUserId() {
+    return this.state.get('user')?.id ?? null;
+  }
+
   getApiUrl() {
     // In development, API runs on port 3000. In production, same origin with /api prefix
     if (window.location.hostname === 'localhost') {
