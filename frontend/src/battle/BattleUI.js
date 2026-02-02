@@ -320,6 +320,22 @@ export class BattleUI {
         </div>
       </div>
 
+      <!-- PvP Opponent Turn Indicator -->
+      <div id="opponent-turn-indicator" style="
+        position: absolute;
+        top: 80px;
+        left: 50%;
+        transform: translateX(-50%);
+        pointer-events: none;
+        display: none;
+        z-index: 102;
+      ">
+        <div class="opponent-turn-content">
+          <span class="opponent-turn-icon">&#9203;</span>
+          <span id="opponent-turn-text">Waiting for opponent...</span>
+        </div>
+      </div>
+
       <!-- Notification Container (for temporary messages) -->
       <div id="notification-container" style="
         position: absolute;
@@ -765,6 +781,31 @@ export class BattleUI {
         color: #ffd700;
         margin-top: 8px;
       }
+
+      /* Opponent Turn Indicator */
+      .opponent-turn-content {
+        background: linear-gradient(135deg, rgba(40, 40, 60, 0.95), rgba(30, 30, 45, 0.95));
+        border: 2px solid #d4af37;
+        border-radius: 8px;
+        padding: 12px 24px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+      }
+      .opponent-turn-icon {
+        font-size: 20px;
+        animation: opponentPulse 1.5s ease-in-out infinite;
+      }
+      #opponent-turn-text {
+        color: #f0e6d2;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      @keyframes opponentPulse {
+        0%, 100% { opacity: 0.6; }
+        50% { opacity: 1; }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -945,6 +986,30 @@ export class BattleUI {
     const overlay = this.element.querySelector('#opponent-disconnected-overlay');
     if (overlay) {
       overlay.style.display = 'none';
+    }
+  }
+
+  /**
+   * Show opponent turn indicator (PvP - waiting for opponent's action)
+   * @param {string} opponentName - Name of the opponent
+   */
+  showOpponentTurnIndicator(opponentName) {
+    const indicator = this.element?.querySelector('#opponent-turn-indicator');
+    const text = this.element?.querySelector('#opponent-turn-text');
+
+    if (indicator && text) {
+      text.textContent = `Waiting for ${opponentName}...`;
+      indicator.style.display = 'block';
+    }
+  }
+
+  /**
+   * Hide opponent turn indicator
+   */
+  hideOpponentTurnIndicator() {
+    const indicator = this.element?.querySelector('#opponent-turn-indicator');
+    if (indicator) {
+      indicator.style.display = 'none';
     }
   }
 

@@ -608,9 +608,15 @@ export class BattleScene extends Scene {
         const unit = this.getUnitAt(this.hoveredTile.x, this.hoveredTile.y);
         if (unit) {
           // Show target info for enemies always, or allies when targeting with skill/item
-          const isTargetingAlly = ['skill', 'item'].includes(this.currentAction) &&
-                                  unit.type === 'player';
-          if (unit.type === 'enemy' || isTargetingAlly) {
+          // In PvP, determine ally/enemy using teamId comparison
+          const localUserId = this.game.localUserId;
+          const localTeamId = this.isPvP
+            ? (Array.from(this.units.values()).find(u => u.ownerId === localUserId)?.teamId ?? 1)
+            : 1;
+          const isAllyUnit = this.isPvP ? unit.isAlly(localUserId, localTeamId) : unit.type === 'player';
+          const isEnemyUnit = this.isPvP ? unit.isOpponent(localUserId, localTeamId) : unit.type === 'enemy';
+          const isTargetingAlly = ['skill', 'item'].includes(this.currentAction) && isAllyUnit;
+          if (isEnemyUnit || isTargetingAlly) {
             this.ui.showTargetInfo(unit);
           } else {
             this.ui.hideTargetInfo();
@@ -898,8 +904,13 @@ export class BattleScene extends Scene {
     }
 
     // Check if clicking on active player unit - show action menu
+    // In PvP, only show for local player's units
     const activeUnit = this.getActiveUnit();
-    if (!this.currentAction && activeUnit && activeUnit.type === 'player') {
+    const localUserId = this.game.localUserId;
+    const isLocalUnit = this.isPvP
+      ? activeUnit?.isLocalPlayerUnit(localUserId)
+      : activeUnit?.type === 'player';
+    if (!this.currentAction && activeUnit && isLocalUnit) {
       if (x === activeUnit.gridX && y === activeUnit.gridY) {
         this.showActionMenu(mousePos);
         return;
@@ -1615,8 +1626,19 @@ export class BattleScene extends Scene {
       );
 
       // Filter to only include tiles with ally units (including self)
+      // In PvP, use teamId to determine allies
+      const localUserId = this.game.localUserId;
+      const localTeamId = this.isPvP
+        ? (Array.from(this.units.values()).find(u => u.ownerId === localUserId)?.teamId ?? 1)
+        : 1;
       const allyPositions = this.battleState.units
-        .filter(u => u.type === 'player' && u.hp > 0)
+        .filter(u => {
+          if (this.isPvP) {
+            // In PvP, allies are units on the same team
+            return (u.teamId ?? 1) === localTeamId && u.hp > 0;
+          }
+          return u.type === 'player' && u.hp > 0;
+        })
         .map(u => ({ x: u.tileX, y: u.tileY }));
 
       this.validTiles = this.validTiles.filter(tile =>
@@ -2385,11 +2407,17 @@ export class BattleScene extends Scene {
   playTurnStartSound(unit) {
     if (!this.game.audio) return;
 
-    // Different sounds for player vs enemy turns
-    if (unit.type === 'player' || unit.type === 'player_local') {
+    // Play sound for local player's units
+    // In PvP, only play for units the local player controls
+    const localUserId = this.game.localUserId;
+    const isLocalUnit = this.isPvP
+      ? unit.isLocalPlayerUnit(localUserId)
+      : (unit.type === 'player' || unit.type === 'player_local');
+
+    if (isLocalUnit) {
       this.game.audio.playSFX('turn_start');
     }
-    // Note: We don't play enemy turn sounds to avoid audio clutter during fast enemy sequences
+    // Note: We don't play enemy/opponent turn sounds to avoid audio clutter
   }
 
   /**
@@ -2580,8 +2608,14 @@ export class BattleScene extends Scene {
         }
       }
 
-      // Show action UI for player units
-      if (activeUnit.type === 'player') {
+      // Show action UI for local player's units only
+      // In PvP, only enable controls when it's the local player's unit's turn
+      const localUserId = this.game.localUserId;
+      const isLocalPlayerTurn = this.isPvP
+        ? activeUnit.isLocalPlayerUnit(localUserId)
+        : activeUnit.type === 'player';
+
+      if (isLocalPlayerTurn) {
         // Two-action system: update available actions for new turn
         this.ui.updateAvailableActions(this.canMove, this.canAct);
         this.ui.setActionsEnabled(true);
@@ -2606,20 +2640,32 @@ export class BattleScene extends Scene {
             this.showActionMenu();
           }
         }, 300);
+
+        // Hide opponent turn indicator (PvP)
+        if (this.isPvP) {
+          this.ui.hideOpponentTurnIndicator();
+        }
       } else {
         this.hideRadialMenu();
         this.ui.hideActionMenu();
-        // Hide action bar during enemy turns
+        // Hide action bar during enemy/opponent turns
         if (this.actionBar) {
           this.actionBar.hide();
         }
-        // Hide context menu during enemy turns
+        // Hide context menu during enemy/opponent turns
         if (this.contextMenu) {
           this.contextMenu.hide();
         }
-        // Hide grid cursor during enemy turns
+        // Hide grid cursor during enemy/opponent turns
         if (this.gridCursor) {
           this.gridCursor.hide();
+        }
+
+        // Show opponent turn indicator in PvP when it's opponent's human-controlled unit's turn
+        if (this.isPvP && activeUnit.type === 'player' && !activeUnit.isLocalPlayerUnit(localUserId)) {
+          this.ui.showOpponentTurnIndicator(this.opponentUsername || 'Opponent');
+        } else if (this.isPvP) {
+          this.ui.hideOpponentTurnIndicator();
         }
       }
     }
@@ -2895,12 +2941,21 @@ export class BattleScene extends Scene {
     }
 
     // Attack range highlights (tile-based targeting)
+    // In PvP, use teamId to determine ally/enemy coloring
     if (this.currentAction === 'attack') {
+      const localUserId = this.game.localUserId;
+      const localTeamId = this.isPvP
+        ? (Array.from(this.units.values()).find(u => u.ownerId === localUserId)?.teamId ?? 1)
+        : 1;
+
       for (const tile of this.validTiles) {
         const unit = this.getUnitAt(tile.x, tile.y);
-        if (unit && unit.type === 'enemy') {
+        const isEnemy = unit && (this.isPvP ? unit.isOpponent(localUserId, localTeamId) : unit.type === 'enemy');
+        const isAlly = unit && (this.isPvP ? unit.isAlly(localUserId, localTeamId) : unit.type === 'player');
+
+        if (isEnemy) {
           highlights[`${tile.x},${tile.y}`] = 'rgba(217, 74, 74, 0.6)';  // Bright red for enemies
-        } else if (unit && unit.type === 'player') {
+        } else if (isAlly) {
           highlights[`${tile.x},${tile.y}`] = 'rgba(217, 174, 74, 0.5)'; // Orange for allies
         } else {
           highlights[`${tile.x},${tile.y}`] = 'rgba(217, 74, 74, 0.3)';  // Dim red for empty tiles
@@ -2909,15 +2964,23 @@ export class BattleScene extends Scene {
     }
 
     // Skill range highlights (tile-based targeting)
+    // In PvP, use teamId to determine ally/enemy coloring
     if (this.currentAction === 'skill') {
       const activeUnit = this.getActiveUnit();
       const skill = activeUnit ? this.getUnitActiveSkills(activeUnit).find(s => s.id === this.selectedSkillId) : null;
+      const localUserId = this.game.localUserId;
+      const localTeamId = this.isPvP
+        ? (Array.from(this.units.values()).find(u => u.ownerId === localUserId)?.teamId ?? 1)
+        : 1;
 
       for (const tile of this.validTiles) {
         const unit = this.getUnitAt(tile.x, tile.y);
-        if (unit && unit.type === 'enemy') {
+        const isEnemy = unit && (this.isPvP ? unit.isOpponent(localUserId, localTeamId) : unit.type === 'enemy');
+        const isAlly = unit && (this.isPvP ? unit.isAlly(localUserId, localTeamId) : unit.type === 'player');
+
+        if (isEnemy) {
           highlights[`${tile.x},${tile.y}`] = 'rgba(148, 74, 217, 0.6)';  // Purple for enemies
-        } else if (unit && unit.type === 'player') {
+        } else if (isAlly) {
           highlights[`${tile.x},${tile.y}`] = 'rgba(74, 144, 217, 0.5)';  // Blue for allies
         } else {
           highlights[`${tile.x},${tile.y}`] = 'rgba(148, 74, 217, 0.3)';  // Dim purple for empty tiles
