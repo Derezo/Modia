@@ -76,6 +76,8 @@ export const api = {
   setMusicPrimaryVariant: audio.setMusicPrimaryVariant,
   getSunoTaskStatus: audio.getSunoTaskStatus,
   validateSfxPrompt: audio.validateSfxPrompt,
+  verifyDurations: audio.verifyDurations,
+  syncDurations: audio.syncDurations,
 
   // Image Generation
   generateAssets: generation.generateAssets,

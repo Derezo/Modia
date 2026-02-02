@@ -6,7 +6,7 @@
  * @description Individual audio asset card for use in AudioGrid layouts.
  */
 
-import { useState, useCallback, memo } from 'react';
+import { useState, useCallback, useEffect, useRef, memo } from 'react';
 import { CheckIcon, PlayIcon, PauseIcon, SpeakerLoudIcon } from '@radix-ui/react-icons';
 import WaveformDisplay from './WaveformDisplay';
 import { formatDuration } from '../../utils/timeFormat';
@@ -56,15 +56,45 @@ const AudioCard = memo(function AudioCard({
   playProgress = 0,
 }) {
   const [isHovered, setIsHovered] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const containerRef = useRef(null);
 
   const id = asset.key || asset.id;
   const isGenerated = asset.generated === true;
   const audioUrl = getAudioUrl(asset);
   const duration = asset.duration;
 
-  // Fetch waveform data for generated assets
+  /**
+   * Intersection Observer to only load waveform when card is visible.
+   * Uses 100px rootMargin to preload cards just before they scroll into view.
+   */
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setIsVisible(entry.isIntersecting);
+        });
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '100px',
+      }
+    );
+
+    observer.observe(container);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
+  // Fetch waveform data for generated assets only when visible
   // API returns { id, type, waveform: [...] } so extract the array
-  const { waveform: fetchedWaveform } = useWaveform(audioType, id, isGenerated);
+  const waveformEnabled = isGenerated && isVisible;
+  const { waveform: fetchedWaveform } = useWaveform(audioType, id, waveformEnabled);
   const peaks = fetchedWaveform?.waveform || asset.peaks || asset.waveform || [];
 
   /**
@@ -102,6 +132,7 @@ const AudioCard = memo(function AudioCard({
 
   return (
     <div
+      ref={containerRef}
       role="button"
       tabIndex={0}
       onClick={handleCardClick}

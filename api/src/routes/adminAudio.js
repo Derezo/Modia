@@ -39,6 +39,7 @@ import {
 } from '../utils/waveformGenerator.js';
 import audioGenerationService from '../services/adminAudioGenerationService.js';
 import { existsSync } from 'fs';
+import { extractDurationWithFallback } from '../utils/audioDurationExtractor.js';
 
 const router = express.Router();
 
@@ -344,7 +345,7 @@ router.put('/music/:id', asyncHandler(async (req, res) => {
   const allowedFields = [
     'name', 'sunoPrompt', 'style', 'model', 'volume', 'fadeIn', 'fadeOut',
     'loop', 'generated', 'generatedAt', 'taskId', 'status', 'notes',
-    'needsRegeneration', 'priority', 'primaryVariantId'
+    'needsRegeneration', 'priority', 'primaryVariantId', 'duration'
   ];
   const invalidFields = Object.keys(updates).filter(key => !allowedFields.includes(key));
 
@@ -797,6 +798,9 @@ router.get('/:type/:id/waveform', asyncHandler(async (req, res) => {
 
   // Return cached waveform if available
   if (asset.waveform) {
+    // Persisted waveform - cache for 7 days (immutable since tied to generatedAt)
+    res.set('Cache-Control', 'public, max-age=604800, immutable');
+    res.set('ETag', `"${id}-${asset.generatedAt}"`);
     return res.json({
       id,
       type,
@@ -830,6 +834,9 @@ router.get('/:type/:id/waveform', asyncHandler(async (req, res) => {
       console.warn(`Failed to persist waveform for ${type}/${id}:`, persistErr.message);
     }
 
+    // Freshly generated waveform - cache for 7 days (immutable since tied to generatedAt)
+    res.set('Cache-Control', 'public, max-age=604800, immutable');
+    res.set('ETag', `"${id}-${asset.generatedAt}"`);
     res.json({
       id,
       type,
@@ -850,6 +857,8 @@ router.get('/:type/:id/waveform', asyncHandler(async (req, res) => {
       console.warn(`Failed to persist fallback waveform for ${type}/${id}:`, persistErr.message);
     }
 
+    // Fallback waveform - shorter cache (1 day) since real waveform may be regenerated
+    res.set('Cache-Control', 'public, max-age=86400');
     res.json({
       id,
       type,
@@ -1340,6 +1349,202 @@ router.get('/verify-status', asyncHandler(async (req, res) => {
     filter: type || 'all',
     results,
     healthy: results.mismatches === 0
+  });
+}));
+
+// ============================================================================
+// DURATION SYNC ROUTES
+// ============================================================================
+
+/**
+ * Resolve audio file path from metadata path to absolute filesystem path
+ * @param {string} metadataPath - Path from metadata (e.g., '/assets/audio/music/...')
+ * @returns {string} Absolute path to the audio file
+ */
+function resolveAudioPath(metadataPath) {
+  if (!metadataPath) return null;
+  // Remove leading slash and resolve from frontend public dir
+  const relativePath = metadataPath.startsWith('/') ? metadataPath.slice(1) : metadataPath;
+  return path.join(PROJECT_ROOT, 'frontend', 'public', relativePath);
+}
+
+/**
+ * GET /api/admin/audio/verify-durations
+ * Non-destructive check for duration mismatches between metadata and actual audio files
+ * Query params: ?type=music|sfx (required)
+ */
+router.get('/verify-durations', asyncHandler(async (req, res) => {
+  const { type } = req.query;
+
+  // Validate type is required
+  if (!type || !VALID_AUDIO_TYPES.includes(type)) {
+    throw new AppError(`type query param is required. Valid: ${VALID_AUDIO_TYPES.join(', ')}`, 400);
+  }
+
+  const results = {
+    total: 0,
+    checked: 0,
+    mismatches: 0,
+    details: []
+  };
+
+  // Threshold for considering durations mismatched (in seconds)
+  const MISMATCH_THRESHOLD = 0.5;
+
+  // Helper to verify duration for an asset
+  const verifyAssetDuration = async (asset) => {
+    results.total++;
+
+    // Only check generated assets with a path
+    if (!asset.generated || !asset.path) {
+      return;
+    }
+
+    const audioPath = resolveAudioPath(asset.path);
+    if (!audioPath || !existsSync(audioPath)) {
+      return;
+    }
+
+    results.checked++;
+
+    // Extract actual duration from file
+    const actualDuration = await extractDurationWithFallback(audioPath);
+    if (actualDuration === null) {
+      return;
+    }
+
+    const metadataDuration = asset.duration || 0;
+    const diff = Math.abs(actualDuration - metadataDuration);
+
+    // Flag if difference exceeds threshold
+    if (diff > MISMATCH_THRESHOLD) {
+      results.mismatches++;
+      results.details.push({
+        id: asset.id,
+        name: asset.name || asset.id,
+        metadataDuration: metadataDuration,
+        actualDuration: Math.round(actualDuration * 100) / 100,
+        diff: Math.round(diff * 100) / 100
+      });
+    }
+  };
+
+  // Process requested type
+  if (type === 'music') {
+    const { tracks } = await loadMusicMetadata();
+    for (const track of tracks) {
+      await verifyAssetDuration(track);
+    }
+  } else {
+    const { effects } = await loadSFXMetadata();
+    for (const effect of effects) {
+      await verifyAssetDuration(effect);
+    }
+  }
+
+  res.json({
+    type,
+    ...results
+  });
+}));
+
+/**
+ * POST /api/admin/audio/sync-durations
+ * Scan generated assets, extract actual duration, update metadata
+ * Query params: ?type=music|sfx (required), ?dryRun=true (optional)
+ */
+router.post('/sync-durations', asyncHandler(async (req, res) => {
+  const { type, dryRun = false } = req.query;
+
+  // Validate type is required
+  if (!type || !VALID_AUDIO_TYPES.includes(type)) {
+    throw new AppError(`type query param is required. Valid: ${VALID_AUDIO_TYPES.join(', ')}`, 400);
+  }
+
+  const results = {
+    scanned: 0,
+    mismatches: 0,
+    fixed: 0,
+    details: []
+  };
+
+  // Threshold for considering durations mismatched (in seconds)
+  const MISMATCH_THRESHOLD = 0.5;
+
+  // Helper to sync duration for an asset
+  const syncAssetDuration = async (asset, assetType) => {
+    results.scanned++;
+
+    // Only process generated assets with a path
+    if (!asset.generated || !asset.path) {
+      return;
+    }
+
+    const audioPath = resolveAudioPath(asset.path);
+    if (!audioPath || !existsSync(audioPath)) {
+      return;
+    }
+
+    // Extract actual duration from file
+    const actualDuration = await extractDurationWithFallback(audioPath);
+    if (actualDuration === null) {
+      return;
+    }
+
+    const metadataDuration = asset.duration || 0;
+    const diff = Math.abs(actualDuration - metadataDuration);
+
+    // Only process if difference exceeds threshold
+    if (diff <= MISMATCH_THRESHOLD) {
+      return;
+    }
+
+    results.mismatches++;
+
+    const roundedDuration = Math.round(actualDuration * 100) / 100;
+    const detailEntry = {
+      id: asset.id,
+      name: asset.name || asset.id,
+      oldDuration: metadataDuration,
+      newDuration: roundedDuration,
+      status: dryRun === 'true' ? 'would_fix' : 'pending'
+    };
+
+    // Apply fix if not dry run
+    if (dryRun !== 'true') {
+      try {
+        await updateAudioMetadata(assetType, asset.id, {
+          duration: roundedDuration
+        });
+        results.fixed++;
+        detailEntry.status = 'fixed';
+      } catch (err) {
+        detailEntry.status = 'error';
+        detailEntry.error = err.message;
+      }
+    }
+
+    results.details.push(detailEntry);
+  };
+
+  // Process requested type
+  if (type === 'music') {
+    const { tracks } = await loadMusicMetadata();
+    for (const track of tracks) {
+      await syncAssetDuration(track, 'music');
+    }
+  } else {
+    const { effects } = await loadSFXMetadata();
+    for (const effect of effects) {
+      await syncAssetDuration(effect, 'sfx');
+    }
+  }
+
+  res.json({
+    message: dryRun === 'true' ? 'Dry run complete - no changes made' : 'Duration sync complete',
+    type,
+    dryRun: dryRun === 'true',
+    ...results
   });
 }));
 
