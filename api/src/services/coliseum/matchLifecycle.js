@@ -27,7 +27,7 @@ import {
   ensureRating,
   applyForfeitPenalty
 } from '../ratingService.js';
-import { getUserBadges, getPriorityBadges } from '../../../../shared/coliseum.js';
+import { getUserBadges, getPriorityBadges, getTier, getNextTierProgress } from '../../../../shared/coliseum.js';
 import { checkAndAwardBadges, getBatchUserAchievements } from '../achievementService.js';
 import {
   activeMatches,
@@ -38,7 +38,7 @@ import {
   getWebsocket
 } from './constants.js';
 import { broadcastQueueUpdate } from './queueBroadcaster.js';
-import { captureTeamSnapshots, calculateMatchStats } from './statistics.js';
+import { captureTeamSnapshots, calculateMatchStats, calculateEnhancedMatchStats, getPlayerRank } from './statistics.js';
 import { setCompleteMatchFn, cancelTurnTimer, startTurnTimer } from './turnTimer.js';
 
 // Register completeMatch with turnTimer to break circular dependency
@@ -323,7 +323,7 @@ function checkMatchReady(matchId) {
  */
 async function getPlayerBattleParty(userId) {
   const result = await query(
-    `SELECT c.id, c.name, c.class, c.level,
+    `SELECT c.id, c.name, c.class, c.level, c.race, c.gender,
             c.hp_current, c.hp_max, c.mp_current, c.mp_max,
             c.strength, c.intelligence, c.agility, c.vitality, c.luck,
             COALESCE(eq.equip_strength, 0) as equip_strength,
@@ -463,6 +463,8 @@ async function startMatch(matchId) {
         name: char.name,
         class: char.class,
         level: char.level,
+        race: char.race,
+        gender: char.gender,
         hp: char.hp_current,
         maxHp: char.hp_max + (parseInt(char.equip_hp, 10) || 0),
         mp: char.mp_current,
@@ -495,6 +497,8 @@ async function startMatch(matchId) {
         name: char.name,
         class: char.class,
         level: char.level,
+        race: char.race,
+        gender: char.gender,
         hp: char.hp_current,
         maxHp: char.hp_max + (parseInt(char.equip_hp, 10) || 0),
         mp: char.mp_current,
@@ -564,7 +568,8 @@ async function startMatch(matchId) {
       status: 'started',
       battleType: 'pvp',
       battleId,
-      mapSeed
+      mapSeed,
+      nodeType: 'arena'
     };
 
     ws.sendToUser(match.player1.userId, {
@@ -686,6 +691,16 @@ export async function completeMatch(battleId, winnerId, loserId, reason = 'victo
     const winnerCurrentRating = winnerRating?.rating || 1000;
     const loserCurrentRating = loserRating?.rating || 1000;
 
+    // Snapshot pre-match ranks
+    const [winnerOldRank, loserOldRank] = await Promise.all([
+      getPlayerRank(winnerId, queueType),
+      getPlayerRank(loserId, queueType)
+    ]);
+
+    // Calculate old tiers
+    const winnerOldTier = getTier(winnerCurrentRating);
+    const loserOldTier = getTier(loserCurrentRating);
+
     // Get PPR values from match or calculate
     const winnerPPR = match?.player1?.userId === winnerId
       ? match.player1.ppr
@@ -714,6 +729,21 @@ export async function completeMatch(battleId, winnerId, loserId, reason = 'victo
       updatePvpRating(loserId, queueType, -ratingChange.loserLoss, false)
     ]);
 
+    // Snapshot post-match ranks
+    const [winnerNewRank, loserNewRank] = await Promise.all([
+      getPlayerRank(winnerId, queueType),
+      getPlayerRank(loserId, queueType)
+    ]);
+
+    // Calculate new tiers
+    const winnerNewRating = winnerCurrentRating + ratingChange.winnerGain;
+    const loserNewRating = Math.max(0, loserCurrentRating - ratingChange.loserLoss);
+    const winnerNewTier = getTier(winnerNewRating);
+    const loserNewTier = getTier(loserNewRating);
+
+    // Calculate enhanced stats
+    const enhancedStats = await calculateEnhancedMatchStats(battleId);
+
     // Record match in database
     await query(
       `INSERT INTO coliseum_matches
@@ -739,6 +769,21 @@ export async function completeMatch(battleId, winnerId, loserId, reason = 'victo
       'UPDATE battles SET status = \'victory\', winner_id = $2 WHERE id = $1',
       [battleId, winnerId]
     );
+
+    // Reset in_battle flag for BOTH players' characters
+    // This is critical - without this, characters remain stuck unable to use shops, travel, etc.
+    await Promise.all([
+      query(
+        `UPDATE characters SET in_battle = false
+         WHERE user_id = $1 AND party_slot <= $2`,
+        [winnerId, MAX_BATTLE_PARTY_SIZE]
+      ),
+      query(
+        `UPDATE characters SET in_battle = false
+         WHERE user_id = $1 AND party_slot <= $2`,
+        [loserId, MAX_BATTLE_PARTY_SIZE]
+      )
+    ]);
 
     // Clean up active match
     if (match) {
@@ -788,12 +833,46 @@ export async function completeMatch(battleId, winnerId, loserId, reason = 'victo
 
     ws.sendToUser(winnerId, {
       type: 'coliseum:match_result',
-      payload: { ...resultPayload, isWinner: true }
+      payload: {
+        ...resultPayload,
+        isWinner: true,
+        unitStats: enhancedStats?.unitStats || null,
+        battleSummary: enhancedStats?.battleSummary || null,
+        pvpResult: {
+          oldRating: winnerCurrentRating,
+          newRating: winnerNewRating,
+          ratingChange: ratingChange.winnerGain,
+          oldTier: winnerOldTier.name,
+          newTier: winnerNewTier.name,
+          tierChanged: winnerOldTier.name !== winnerNewTier.name,
+          oldRank: winnerOldRank.rank,
+          newRank: winnerNewRank.rank,
+          pointsToNextTier: getNextTierProgress(winnerNewRating)?.pointsNeeded || null,
+          surrenderPenalty: false
+        }
+      }
     });
 
     ws.sendToUser(loserId, {
       type: 'coliseum:match_result',
-      payload: { ...resultPayload, isWinner: false }
+      payload: {
+        ...resultPayload,
+        isWinner: false,
+        unitStats: enhancedStats?.unitStats || null,
+        battleSummary: enhancedStats?.battleSummary || null,
+        pvpResult: {
+          oldRating: loserCurrentRating,
+          newRating: loserNewRating,
+          ratingChange: -ratingChange.loserLoss,
+          oldTier: loserOldTier.name,
+          newTier: loserNewTier.name,
+          tierChanged: loserOldTier.name !== loserNewTier.name,
+          oldRank: loserOldRank.rank,
+          newRank: loserNewRank.rank,
+          pointsToNextTier: getNextTierProgress(loserNewRating)?.pointsNeeded || null,
+          surrenderPenalty: isForfeit && applyPenalty
+        }
+      }
     });
 
     // Daily/Weekly quest progress hooks (fire-and-forget pattern)

@@ -213,6 +213,8 @@ Turn Transition Flow:
 | `BattleFireworks.js` | `frontend/src/battle/` | Victory celebration effects | BATTLE_ANIMATIONS.md |
 | `BossPhaseIndicator.js` | `frontend/src/battle/` | Boss phase transitions | BATTLE_MODES.md |
 | `SkillEffectCategories.js` | `frontend/src/battle/` | Skill visual categories | BATTLE_ANIMATIONS.md |
+| `BattleStatsTable.js` | `frontend/src/battle/` | Post-battle statistics display | BATTLE_MODES.md |
+| `BattleStatsAggregator.js` | `frontend/src/battle/` | Unit battle statistics aggregation | BATTLE_MODES.md |
 
 ### 4.2 Backend Services
 
@@ -300,3 +302,4 @@ Turn Transition Flow:
 | Version | Date | Changes |
 |---------|------|---------|
 | 1.0 | January 2026 | Initial index document |
+| 1.1 | February 2026 | Added BattleStatsTable.js and BattleStatsAggregator.js to frontend components |

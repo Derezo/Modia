@@ -8,11 +8,15 @@
  * - rewards_reveal: (Victory) Gold, XP, items with fireworks
  * - summary: (Defeat) Battle summary message
  * - pvp_details: (PvP) Opponent info & rating changes (1000ms)
+ * - stats_reveal: (If unitStats) Battle statistics table (1500ms)
+ * - awaiting_confirmation: Continue button shown, waits for user click
  * - fade_out: Everything fades to black (400ms)
  * - complete: Trigger scene transition
  */
 
 import { BattleFireworks } from './BattleFireworks.js';
+import { BattleStatsTable } from './BattleStatsTable.js';
+import { getTier, getTierColor, getNextTierProgress, getTierIcon } from '@shared/coliseum.js';
 
 // Rarity color palette (matches RewardsModal)
 const RARITY_COLORS = {
@@ -31,6 +35,7 @@ const TIMINGS = {
   xpReveal: 400,
   itemReveal: 400,
   pvpDetails: 1000,
+  statsReveal: 1500,
   finaleHold: 800,
   fadeOut: 400,
   defeatTotal: 3000  // Total defeat sequence time
@@ -52,6 +57,12 @@ export class BattleOutroSequence {
     this.opponentName = null;
     this.ratingChange = null;
 
+    // Battle stats and PvP result
+    this.unitStats = null;
+    this.pvpResult = null;
+    this.statsTable = null;
+    this.ratingProgress = 0;  // For animated rating counter
+
     // Components
     this.fireworks = null;
     this.overlayAlpha = 0;
@@ -63,6 +74,9 @@ export class BattleOutroSequence {
     this.currentItemIndex = -1;
     this.itemProgress = [];
     this.fadeProgress = 0;
+
+    // Stats table tracking
+    this.statsTableShown = false;
 
     // Firework wave tracking
     this.fireworkWaves = {
@@ -87,7 +101,7 @@ export class BattleOutroSequence {
    * Start the outro sequence
    * @param {string} status - 'victory' or 'defeat'
    * @param {Object} rewards - { gold, experience, items, levelUps, partyXP }
-   * @param {Object} options - { isPvP, opponentName, ratingChange, onComplete }
+   * @param {Object} options - { isPvP, opponentName, ratingChange, unitStats, pvpResult, onComplete }
    */
   start(status, rewards, options = {}) {
     this.status = status;
@@ -96,6 +110,15 @@ export class BattleOutroSequence {
     this.opponentName = options.opponentName || null;
     this.ratingChange = options.ratingChange || null;
     this.onComplete = options.onComplete;
+
+    // Battle stats and PvP result
+    this.unitStats = options.unitStats || null;
+    this.pvpResult = options.pvpResult || null;
+
+    // Initialize stats table if we have unit stats
+    if (this.unitStats) {
+      this.statsTable = new BattleStatsTable(this.scene);
+    }
 
     // Initialize item progress array
     const itemCount = this.rewards.items?.length || 0;
@@ -162,6 +185,13 @@ export class BattleOutroSequence {
         this.timeline.pvpEnd = currentTime;
       }
 
+      // Stats reveal phase (1500ms)
+      if (this.unitStats) {
+        this.timeline.statsStart = currentTime;
+        currentTime += t.statsReveal;
+        this.timeline.statsEnd = currentTime;
+      }
+
       // Finale hold
       currentTime += t.finaleHold;
       this.timeline.finaleEnd = currentTime;
@@ -213,22 +243,25 @@ export class BattleOutroSequence {
       this.overlayAlpha = 0.7;
       this.bannerProgress = (t - tl.dimEnd) / TIMINGS.bannerAppear;
       this.phase = 'banner_appear';
-    } else if (this.isPvP && t < tl.pvpEnd) {
+    } else if (this.isPvP && tl.pvpEnd && t < tl.pvpEnd) {
       // PvP details
       this.bannerProgress = 1;
       this.phase = 'pvp_details';
-    } else if (t < tl.fadeStart) {
-      // Holding
+    } else if (this.phase !== 'awaiting_confirmation' && this.phase !== 'fade_out' && this.phase !== 'complete') {
+      // After summary/PvP details, show continue button and wait for user confirmation
       this.bannerProgress = 1;
-      this.phase = 'summary';
-    } else if (t < tl.fadeEnd) {
-      // Fading out
-      this.fadeProgress = (t - tl.fadeStart) / TIMINGS.fadeOut;
+      this.showContinueButton = true;
+      this.phase = 'awaiting_confirmation';
+      // Stay in this phase until user clicks continue
+    } else if (this.phase === 'fade_out') {
+      // Fading out (triggered by proceedToFadeOut)
+      const fadeElapsed = t - this.fadeStartTime;
+      this.fadeProgress = Math.min(1, fadeElapsed / TIMINGS.fadeOut);
       this.overlayAlpha = 0.7 + 0.3 * this.fadeProgress;
-      this.phase = 'fade_out';
-    } else {
-      // Complete
-      this.complete();
+
+      if (this.fadeProgress >= 1) {
+        this.complete();
+      }
     }
   }
 
@@ -258,10 +291,20 @@ export class BattleOutroSequence {
       this.bannerProgress = 1;
       this.goldProgress = (t - tl.goldStart) / TIMINGS.goldReveal;
       this.phase = 'rewards_reveal';
+
+      // Also animate rating counter for PvP
+      if (this.pvpResult) {
+        this.ratingProgress = Math.min(1, (t - tl.goldStart) / (TIMINGS.goldReveal + TIMINGS.xpReveal));
+      }
     } else if (t < tl.xpEnd) {
       // XP reveal
       this.goldProgress = 1;
       this.xpProgress = (t - tl.xpStart) / TIMINGS.xpReveal;
+
+      // Continue rating animation
+      if (this.pvpResult) {
+        this.ratingProgress = Math.min(1, (t - tl.goldStart) / (TIMINGS.goldReveal + TIMINGS.xpReveal));
+      }
 
       // Midway fireworks
       if (!this.fireworkWaves.midway) {
@@ -290,6 +333,17 @@ export class BattleOutroSequence {
     } else if (this.isPvP && tl.pvpEnd && t < tl.pvpEnd) {
       // PvP details
       this.phase = 'pvp_details';
+    } else if (this.unitStats && tl.statsEnd && t < tl.statsEnd) {
+      // Stats reveal phase
+      this.phase = 'stats_reveal';
+      const statsProgress = (t - tl.statsStart) / TIMINGS.statsReveal;
+
+      // Show stats table when entering phase
+      if (statsProgress < 0.1 && !this.statsTableShown) {
+        this.statsTableShown = true;
+        const localUserId = this.scene.game.api?.userId || this.scene.game.localUserId;
+        this.statsTable.show(this.unitStats, this.isPvP, this.status === 'victory', localUserId);
+      }
     } else if (t < tl.finaleEnd) {
       // Finale - all items revealed
       for (let i = 0; i < this.itemProgress.length; i++) {
@@ -342,23 +396,28 @@ export class BattleOutroSequence {
     // Draw banner
     this.renderBanner(ctx, w, h);
 
-    // Draw rewards (victory only - during reveal and confirmation phases)
-    if (this.status === 'victory' && (this.phase === 'rewards_reveal' || this.phase === 'awaiting_confirmation')) {
+    // Draw rewards (victory only - during reveal and confirmation phases, but not for PvP)
+    if (this.status === 'victory' && (this.phase === 'rewards_reveal' || this.phase === 'stats_reveal' || this.phase === 'awaiting_confirmation')) {
       this.renderRewards(ctx, w, h);
     }
 
-    // Draw summary (defeat only)
-    if (this.status === 'defeat' && this.phase === 'summary') {
+    // Draw PvP panel (replaces rewards for PvP battles)
+    if (this.isPvP && this.pvpResult && (this.phase === 'rewards_reveal' || this.phase === 'pvp_details' || this.phase === 'stats_reveal' || this.phase === 'awaiting_confirmation')) {
+      this.renderPvPPanel(ctx, w, h);
+    }
+
+    // Draw summary (defeat only - during summary and confirmation phases)
+    if (this.status === 'defeat' && (this.phase === 'summary' || this.phase === 'awaiting_confirmation')) {
       this.renderSummary(ctx, w, h);
     }
 
-    // Draw PvP details
-    if (this.isPvP && this.phase === 'pvp_details') {
+    // Draw PvP details (during pvp_details and confirmation phases) - legacy fallback
+    if (this.isPvP && !this.pvpResult && (this.phase === 'pvp_details' || this.phase === 'awaiting_confirmation')) {
       this.renderPvPDetails(ctx, w, h);
     }
 
-    // Draw continue button (victory confirmation)
-    if (this.showContinueButton && this.status === 'victory') {
+    // Draw continue button (victory/defeat confirmation)
+    if (this.showContinueButton) {
       this.renderContinueButton(ctx, w, h);
     }
   }
@@ -433,6 +492,11 @@ export class BattleOutroSequence {
    * Render rewards (gold, XP, items)
    */
   renderRewards(ctx, w, h) {
+    // Don't show gold/XP rewards for PvP battles
+    if (this.isPvP) {
+      return;
+    }
+
     // Gold counter
     if (this.goldProgress > 0) {
       this.renderGoldCounter(ctx, w, h);
@@ -608,7 +672,7 @@ export class BattleOutroSequence {
   }
 
   /**
-   * Render PvP details (opponent name, rating change)
+   * Render PvP details (opponent name, rating change) - legacy fallback
    */
   renderPvPDetails(ctx, w, h) {
     const y = this.status === 'victory' ? h * 0.75 : h * 0.55;
@@ -638,6 +702,122 @@ export class BattleOutroSequence {
     }
 
     ctx.restore();
+  }
+
+  /**
+   * Render comprehensive PvP panel with tier, rating, and progress
+   */
+  renderPvPPanel(ctx, w, h) {
+    if (!this.pvpResult) return;
+
+    const pvp = this.pvpResult;
+    const centerX = w / 2;
+    const panelY = h * 0.35;
+    const panelWidth = 340;
+    const panelHeight = 200;
+
+    // Panel background
+    ctx.save();
+    ctx.fillStyle = 'rgba(30, 25, 20, 0.9)';
+    this.roundRect(ctx, centerX - panelWidth / 2, panelY, panelWidth, panelHeight, 12);
+    ctx.fill();
+
+    // Border with tier color
+    ctx.strokeStyle = getTierColor(pvp.newRating);
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Tier badge (emoji + name)
+    const tier = getTier(pvp.newRating);
+    ctx.font = 'bold 20px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = tier.color;
+    const tierIcon = getTierIcon(tier.icon);
+    ctx.fillText(`${tierIcon} ${tier.name}`, centerX, panelY + 35);
+
+    // Animated rating counter
+    const displayRating = Math.floor(pvp.oldRating + (pvp.newRating - pvp.oldRating) * this.ratingProgress);
+    ctx.font = 'bold 42px Georgia, serif';
+    ctx.fillStyle = '#e8d4b8';
+    ctx.fillText(displayRating.toLocaleString(), centerX, panelY + 80);
+
+    // Rating change indicator
+    const changeColor = pvp.ratingChange >= 0 ? '#4a7548' : '#c45a5a';
+    const changePrefix = pvp.ratingChange >= 0 ? '+' : '';
+    ctx.font = 'bold 20px Georgia, serif';
+    ctx.fillStyle = changeColor;
+    ctx.fillText(`(${changePrefix}${pvp.ratingChange})`, centerX, panelY + 105);
+
+    // Tier change notification (if applicable)
+    if (pvp.tierChanged) {
+      ctx.font = 'bold 18px Georgia, serif';
+      ctx.fillStyle = '#ffd700';
+      ctx.shadowColor = 'rgba(255, 215, 0, 0.6)';
+      ctx.shadowBlur = 10;
+      const direction = pvp.newRating > pvp.oldRating ? 'PROMOTED!' : 'DEMOTED!';
+      ctx.fillText(direction, centerX, panelY + 130);
+      ctx.shadowBlur = 0;
+    }
+
+    // Rank change (if available)
+    if (pvp.oldRank && pvp.newRank) {
+      ctx.font = '16px Georgia, serif';
+      ctx.fillStyle = '#bfae8a';
+      const rankArrow = pvp.newRank < pvp.oldRank ? '\u2191' : (pvp.newRank > pvp.oldRank ? '\u2193' : '\u2192');
+      const rankColor = pvp.newRank < pvp.oldRank ? '#4a7548' : (pvp.newRank > pvp.oldRank ? '#c45a5a' : '#bfae8a');
+      ctx.fillStyle = rankColor;
+      ctx.fillText(`Rank #${pvp.oldRank} ${rankArrow} #${pvp.newRank}`, centerX, panelY + 155);
+    }
+
+    // Progress to next tier (if not at max)
+    if (pvp.pointsToNextTier && !pvp.tierChanged) {
+      this.renderTierProgressBar(ctx, centerX, panelY + 175, pvp);
+    }
+
+    // Surrender penalty indicator (defeat only)
+    if (pvp.surrenderPenalty && this.status === 'defeat') {
+      ctx.font = '14px Georgia, serif';
+      ctx.fillStyle = '#8a5a5a';
+      ctx.fillText('\u26A0 Surrender Penalty Applied', centerX, panelY + 195);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Render progress bar showing distance to next tier
+   */
+  renderTierProgressBar(ctx, centerX, y, pvp) {
+    const barWidth = 200;
+    const barHeight = 8;
+    const x = centerX - barWidth / 2;
+
+    // Background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    this.roundRect(ctx, x, y, barWidth, barHeight, 4);
+    ctx.fill();
+
+    // Calculate progress within current tier
+    const nextTierInfo = getNextTierProgress(pvp.newRating);
+    if (nextTierInfo) {
+      const currentTier = getTier(pvp.newRating);
+      const ratingInTier = pvp.newRating - currentTier.minRating;
+      const tierRange = nextTierInfo.nextTier.minRating - currentTier.minRating;
+      const progress = Math.min(1, ratingInTier / tierRange);
+
+      // Fill
+      if (progress > 0) {
+        ctx.fillStyle = currentTier.color;
+        this.roundRect(ctx, x, y, barWidth * progress, barHeight, 4);
+        ctx.fill();
+      }
+
+      // Points needed text
+      ctx.font = '11px Georgia, serif';
+      ctx.fillStyle = '#bfae8a';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${pvp.pointsToNextTier} pts to ${nextTierInfo.nextTier.name}`, centerX, y + 20);
+    }
   }
 
   /**
@@ -741,6 +921,12 @@ export class BattleOutroSequence {
     // Cleanup
     if (this.fireworks) {
       this.fireworks.clear();
+    }
+
+    // Cleanup stats table
+    if (this.statsTable) {
+      this.statsTable.destroy();
+      this.statsTable = null;
     }
 
     // Execute callback

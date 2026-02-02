@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| API Version | 2.8 |
+| API Version | 2.9 |
 | Base URL | `/api` |
 | Last Updated | February 2026 |
 
@@ -1719,6 +1719,127 @@ Production:    wss://modia.example.com/ws
   }
 }
 ```
+
+### 7.11 Coliseum Match Result
+
+**Match Result (Server → Both Players):**
+
+Sent to both players when a PvP match completes. The `isWinner` field is player-specific (true for winner, false for loser).
+
+```json
+{
+  "type": "coliseum:match_result",
+  "payload": {
+    "battleId": 123,
+    "winnerId": 5,
+    "loserId": 12,
+    "reason": "victory",
+    "winnerRatingChange": 25,
+    "loserRatingChange": -20,
+    "winnerNewRating": 1525,
+    "loserNewRating": 1480,
+    "isWinner": true,
+    "unitStats": [
+      {
+        "id": 1,
+        "name": "Hero",
+        "class": "warrior",
+        "race": "human",
+        "level": 25,
+        "teamId": 1,
+        "ownerId": 5,
+        "damageDealt": 1250,
+        "damageTaken": 800,
+        "healingDone": 0,
+        "kills": 2,
+        "deaths": 0,
+        "survivedWith": 150
+      },
+      {
+        "id": 2,
+        "name": "Rival",
+        "class": "wizard",
+        "race": "elf",
+        "level": 24,
+        "teamId": 2,
+        "ownerId": 12,
+        "damageDealt": 800,
+        "damageTaken": 1250,
+        "healingDone": 100,
+        "kills": 0,
+        "deaths": 1,
+        "survivedWith": 0
+      }
+    ],
+    "battleSummary": {
+      "totalTurns": 15,
+      "durationSeconds": 180
+    },
+    "pvpResult": {
+      "oldRating": 1500,
+      "newRating": 1525,
+      "ratingChange": 25,
+      "oldTier": "Silver",
+      "newTier": "Silver",
+      "tierChanged": false,
+      "oldRank": 45,
+      "newRank": 42,
+      "pointsToNextTier": 75,
+      "surrenderPenalty": false
+    }
+  }
+}
+```
+
+**Payload Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `battleId` | number | Battle identifier |
+| `winnerId` | number | Winner's user ID |
+| `loserId` | number | Loser's user ID |
+| `reason` | string | Match end reason: `victory`, `surrender`, `timeout_forfeit`, `disconnect_forfeit` |
+| `winnerRatingChange` | number | Rating points gained by winner |
+| `loserRatingChange` | number | Rating points lost by loser (negative) |
+| `winnerNewRating` | number | Winner's rating after match |
+| `loserNewRating` | number | Loser's rating after match |
+| `isWinner` | boolean | Player-specific: true for winner, false for loser |
+| `unitStats` | array | Per-unit battle statistics |
+| `battleSummary` | object | Match summary |
+| `pvpResult` | object | Detailed rating/tier information |
+
+**Unit Stats Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | number | Unit identifier |
+| `name` | string | Display name |
+| `class` | string | Character class |
+| `race` | string | Race |
+| `level` | number | Character level |
+| `teamId` | number | Team identifier (1 or 2) |
+| `ownerId` | number | Owner user ID |
+| `damageDealt` | number | Total damage dealt |
+| `damageTaken` | number | Total damage received |
+| `healingDone` | number | Total healing performed |
+| `kills` | number | Enemy units defeated |
+| `deaths` | number | 0 or 1 (was unit defeated) |
+| `survivedWith` | number | HP remaining (0 if dead) |
+
+**PvP Result Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `oldRating` | number | Rating before match |
+| `newRating` | number | Rating after match |
+| `ratingChange` | number | +/- change |
+| `oldTier` | string | Tier name before (e.g., "Bronze", "Silver") |
+| `newTier` | string | Tier name after |
+| `tierChanged` | boolean | Whether tier promotion/demotion occurred |
+| `oldRank` | number | Leaderboard rank before match |
+| `newRank` | number | Leaderboard rank after match |
+| `pointsToNextTier` | number\|null | Points needed for next tier (null if max tier) |
+| `surrenderPenalty` | boolean | Whether forfeit penalty was applied |
 
 ---
 
@@ -3663,3 +3784,4 @@ GET /api/feedback/my
 | 2.6 | Jan 2026 | - | Added register-with-character endpoint (Section 2.2) for atomic user+character creation. Updated auth section numbering (2.3-2.6). Added rate limit entry for new endpoint. |
 | 2.7 | Feb 2026 | - | Added garrison endpoints (Section 10) for castle recruit system with regional race/class bias. Added garrison WebSocket events (Section 7.10). Updated starting gold to 1000 (was 100). Renumbered sections 10-28 to accommodate new garrison section. |
 | 2.8 | Feb 2026 | - | Updated guild and garrison recruit price examples to reflect new pricing formula: base 400g + trait rarity costs + skill costs + stat variance bonus. Added price calculation notes with cross-reference to ECONOMY_SYSTEM.md. |
+| 2.9 | Feb 2026 | - | Added coliseum:match_result WebSocket event (Section 7.11) for PvP match completion with detailed payload schema including unit stats, battle summary, and rating information. |

@@ -2013,7 +2013,79 @@ export class BattleScene extends Scene {
   }
 
   /**
+   * Handle coliseum match result with enhanced PvP data
+   * @param {Object} payload - Match result payload from WebSocket
+   */
+  handleColiseumResult(payload) {
+    console.log('[BattleScene] handleColiseumResult called:', {
+      isWinner: payload.isWinner,
+      hasUnitStats: !!payload.unitStats,
+      hasPvpResult: !!payload.pvpResult,
+      battleEnded: this.battleEnded
+    });
+
+    // Don't process if battle already ended
+    if (this.battleEnded) {
+      console.log('[BattleScene] Coliseum result skipped - battle already ended');
+      return;
+    }
+
+    // Determine battle status from isWinner
+    const status = payload.isWinner ? 'victory' : 'defeat';
+
+    // Call handleBattleEndWithStats with the enhanced data
+    this.handleBattleEndWithStats(status, null, payload.pvpResult, payload.unitStats);
+  }
+
+  /**
+   * Handle battle end with optional enhanced PvP stats
+   * @param {string} status - 'victory' or 'defeat'
+   * @param {Object} rewards - PvE rewards (gold, xp, items)
+   * @param {Object} pvpResult - PvP result data (rating, tier, rank changes)
+   * @param {Array} unitStats - Per-unit battle statistics
+   */
+  handleBattleEndWithStats(status, rewards = null, pvpResult = null, unitStats = null) {
+    console.log('[BattleScene] handleBattleEndWithStats called:', {
+      status,
+      hasRewards: !!rewards,
+      hasPvpResult: !!pvpResult,
+      hasUnitStats: !!unitStats,
+      battleEnded: this.battleEnded
+    });
+
+    // Guard against double-trigger
+    if (this.battleEnded) {
+      console.log('[BattleScene] handleBattleEndWithStats skipped - already ended');
+      return;
+    }
+    this.battleEnded = true;
+
+    // Guard against UI being null
+    if (this.ui) {
+      this.ui.hideActionMenu();
+    }
+
+    // Play victory or defeat fanfare
+    this.audioManager.playBattleEndMusic(status);
+
+    // Create outro sequence with enhanced options
+    console.log('[BattleScene] Creating outro sequence with enhanced stats');
+    this.outroSequence = new BattleOutroSequence(this);
+    this.outroSequence.start(status, rewards, {
+      isPvP: this.isPvP,
+      opponentName: this.opponentUsername,
+      pvpResult: pvpResult,
+      unitStats: unitStats,
+      onComplete: () => {
+        console.log('[BattleScene] Outro sequence completed, calling endBattle');
+        this.endBattle();
+      }
+    });
+  }
+
+  /**
    * Handle battle end (victory or defeat)
+   * Legacy method - delegates to handleBattleEndWithStats for backward compatibility
    */
   handleBattleEnd(status, rewards = null) {
     console.log('[BattleScene] handleBattleEnd called:', {
@@ -2033,35 +2105,8 @@ export class BattleScene extends Scene {
       });
     }
 
-    // Guard against double-trigger from both HTTP response and WebSocket
-    if (this.battleEnded) {
-      console.log('[BattleScene] handleBattleEnd skipped - already ended');
-      return;
-    }
-    this.battleEnded = true;
-
-    // Guard against UI being null (shouldn't happen, but prevent crash)
-    if (this.ui) {
-      this.ui.hideActionMenu();
-    } else {
-      console.warn('[BattleScene] UI was null when hiding action menu');
-    }
-
-    // Play victory or defeat fanfare via AudioManager
-    this.audioManager.playBattleEndMusic(status);
-
-    // Use BattleOutroSequence for animated victory/defeat display
-    console.log('[BattleScene] Creating outro sequence for:', status);
-    this.outroSequence = new BattleOutroSequence(this);
-    this.outroSequence.start(status, rewards, {
-      isPvP: this.isPvP,
-      opponentName: this.opponentUsername,
-      onComplete: () => {
-        console.log('[BattleScene] Outro sequence completed, calling endBattle');
-        this.endBattle();
-      }
-    });
-    console.log('[BattleScene] Outro sequence started, phase:', this.outroSequence.phase);
+    // Delegate to the enhanced method (without pvpResult/unitStats for legacy calls)
+    this.handleBattleEndWithStats(status, rewards, null, null);
   }
 
   /**

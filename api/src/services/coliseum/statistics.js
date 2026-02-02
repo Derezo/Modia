@@ -238,6 +238,95 @@ export async function getMatchDetails(matchId) {
 }
 
 /**
+ * Calculate enhanced per-unit match statistics from battle state
+ * @param {number} battleId - Battle ID
+ * @returns {Promise<Object|null>} Enhanced match statistics with per-unit breakdown
+ */
+export async function calculateEnhancedMatchStats(battleId) {
+  const result = await query(
+    'SELECT battle_state, started_at FROM battles WHERE id = $1',
+    [battleId]
+  );
+
+  if (result.rows.length === 0) return null;
+
+  const { battle_state: state, started_at } = result.rows[0];
+
+  if (!state || !state.units) return null;
+
+  // Build unit stats map for O(1) lookup
+  const unitStatsMap = new Map();
+
+  for (const unit of state.units) {
+    unitStatsMap.set(unit.id, {
+      id: unit.id,
+      name: unit.name,
+      class: unit.class,
+      race: unit.race,
+      level: unit.level,
+      teamId: unit.teamId,
+      ownerId: unit.ownerId,
+      damageDealt: 0,
+      damageTaken: 0,
+      healingDone: 0,
+      kills: 0,
+      deaths: unit.hp <= 0 ? 1 : 0,
+      survivedWith: Math.max(0, unit.hp)
+    });
+  }
+
+  // Parse battle log for damage/healing/kills
+  if (state.log && Array.isArray(state.log)) {
+    for (const entry of state.log) {
+      const actorId = entry.actorId;
+      const targetId = entry.targetId;
+
+      // Check for damage at both nesting levels
+      const damage = entry.damage ?? entry.result?.damage ?? 0;
+      if (damage > 0) {
+        const actorStats = unitStatsMap.get(actorId);
+        if (actorStats) {
+          actorStats.damageDealt += damage;
+        }
+        const targetStats = unitStatsMap.get(targetId);
+        if (targetStats) {
+          targetStats.damageTaken += damage;
+        }
+      }
+
+      // Check for healing at both nesting levels
+      const healing = entry.healing ?? entry.result?.healing ?? 0;
+      if (healing > 0) {
+        const actorStats = unitStatsMap.get(actorId);
+        if (actorStats) {
+          actorStats.healingDone += healing;
+        }
+      }
+
+      // Check for kills at both nesting levels
+      const targetDefeated = entry.targetDefeated ?? entry.result?.targetDefeated ?? false;
+      if (targetDefeated) {
+        const actorStats = unitStatsMap.get(actorId);
+        if (actorStats) {
+          actorStats.kills += 1;
+        }
+      }
+    }
+  }
+
+  // Convert map to array for return value
+  const unitStats = Array.from(unitStatsMap.values());
+
+  return {
+    unitStats,
+    battleSummary: {
+      totalTurns: state.turn || 0,
+      durationSeconds: Math.floor((Date.now() - new Date(started_at).getTime()) / 1000)
+    }
+  };
+}
+
+/**
  * Get a player's rank in the leaderboard
  * @param {number} userId - User ID
  * @param {string} queueType - Queue type
