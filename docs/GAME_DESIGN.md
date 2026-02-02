@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 4.0 |
+| Version | 4.1 |
 | Last Updated | January 2026 |
 | Genre | Tactical RPG / MMORPG |
 
@@ -334,8 +334,9 @@ The world is a **node-based graph** procedurally generated from a global seed. A
 
 #### Castle (Central Hub)
 - **Spawn Point**: All new characters start here
-- **Features**: Coliseum, Tavern, Courtyard, Throne, Blacksmith, Apothecary, Temple, Stables, Marketplace
+- **Features**: Coliseum, Tavern, Courtyard, Throne, Blacksmith, Apothecary, Temple, Stables, Marketplace, Garrison
 - **Count**: Exactly 1 (at origin)
+- **Garrison**: Hire mixed-class recruits with regional race/class bias, refreshed hourly
 
 #### City
 - **Features**: Tavern + 2 random from (Blacksmith, Apothecary, Temple, Stables)
@@ -391,6 +392,7 @@ The world is a **node-based graph** procedurally generated from a global seed. A
 | Temple | Castle, City | Remove curses/debuffs (future) |
 | Stables | Castle, City | Fast travel (future) |
 | Marketplace | Castle | Player-to-player trading |
+| Garrison | Castle | Hire mixed-class recruits with regional bias |
 | Farm | Village | Buy food items |
 
 ### 3.4 World Generation Rules
@@ -666,3 +668,4 @@ Real-time chat in Tavern nodes with 160 character limit and 100 message scroll-b
 | 2.1 | Jan 2026 | - | Added battle modes overview, CT-based turn system references |
 | 3.0 | Jan 2026 | - | Added Related Documents section with battle system docs |
 | 4.0 | Jan 2026 | - | Refactored to index document: condensed combat/economy/multiplayer sections, added Document Index, links to specialized docs |
+| 4.1 | Feb 2026 | - | Added Garrison feature to castle: hire mixed-class recruits with regional race/class bias, refreshed hourly |

@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 2.3 |
+| Version | 2.4 |
 | Last Updated | January 2026 |
 | Last Validated | 2026-01-26 |
 
@@ -369,7 +369,7 @@ Message Types:
 | username | VARCHAR(32) | UNIQUE NOT NULL | Login username |
 | email | VARCHAR(255) | UNIQUE NOT NULL | Email address |
 | password_hash | VARCHAR(255) | NOT NULL | bcrypt hash |
-| gold | INTEGER | DEFAULT 100 | Currency balance |
+| gold | INTEGER | DEFAULT 1000 | Currency balance |
 | created_at | TIMESTAMP | DEFAULT NOW() | Registration time |
 | last_login | TIMESTAMP | | Last login time |
 | is_banned | BOOLEAN | DEFAULT FALSE | Account status |
@@ -711,6 +711,41 @@ User-submitted feedback including enhancement requests, bug reports, and abuse r
 - `idx_user_feedback_type` on `(feedback_type, status)`
 - `idx_user_feedback_reported` on `reported_user_id` WHERE reported_user_id IS NOT NULL
 - `idx_user_feedback_status` on `(status, created_at DESC)`
+
+#### 3.2.18 garrison_recruits
+
+Castle garrison recruitment pool with regional race/class bias (shared across all players).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | SERIAL | PRIMARY KEY | Unique identifier |
+| node_id | INTEGER | FK -> world_nodes.id NOT NULL | Castle node |
+| name | VARCHAR(50) | NOT NULL | Recruit name |
+| race | race_type | NOT NULL | Character race (regional bias) |
+| gender | VARCHAR(20) | NOT NULL | male, female, other |
+| class | class_type | NOT NULL | Character class (mixed classes) |
+| level | INTEGER | DEFAULT 1 | Starting level |
+| hp_max | INTEGER | NOT NULL | Maximum HP |
+| mp_max | INTEGER | NOT NULL | Maximum MP |
+| strength | INTEGER | NOT NULL | STR stat |
+| intelligence | INTEGER | NOT NULL | INT stat |
+| agility | INTEGER | NOT NULL | AGI stat |
+| vitality | INTEGER | NOT NULL | VIT stat |
+| luck | INTEGER | NOT NULL | LUK stat |
+| stat_variance_percent | DECIMAL(5,2) | DEFAULT 0 | Variance from baseline |
+| xp_pool | INTEGER | NOT NULL | Starting XP |
+| price | INTEGER | NOT NULL | Gold cost |
+| purchased_by | INTEGER | FK -> users.id | Buyer (null if available) |
+| purchased_at | TIMESTAMP | | Purchase time |
+| created_at | TIMESTAMP | DEFAULT NOW() | Generation time |
+
+**Constraints:**
+- Only castle nodes can have garrison recruits
+- Recruits regenerate hourly with regional race bias
+
+**Indexes:**
+- `idx_garrison_recruits_node` on `(node_id, purchased_by)`
+- `idx_garrison_recruits_available` on `node_id` WHERE purchased_by IS NULL
 
 **Enemy Level Scaling Formula:**
 ```
@@ -1498,3 +1533,4 @@ If database becomes bottleneck:
 | 2.1 | Jan 2026 | - | Added battle WebSocket events (turn_start, intent_highlight, action_result, turn_end, your_turn, player_disconnected, player_reconnected, state_sync, end); added Section 2.5 Battle Turn Architecture; added battleTurnManager.js and battleReconnection.js to services directory |
 | 2.2 | Jan 2026 | - | Section 5.1 World Generation: Clarified two-phase ring distance calculation (Euclidean in Phase 3, BFS in Phase 4); documented Lloyd's relaxation inversion; noted Voronoi 0-indexed vs nodesByRegion 1-indexed; added reference to WORLDGEN_TECHNICAL_DEEP_DIVE.md |
 | 2.3 | Jan 2026 | - | Added migration 040 (error tracking); added tables exception_groups (3.2.15), exception_events (3.2.16), user_feedback (3.2.17); added feedback_type and feedback_status ENUMs (3.3) |
+| 2.4 | Feb 2026 | - | Added garrison_recruits table (3.2.18) for castle recruitment with regional race/class bias. Updated default gold to 1000 (was 100). |

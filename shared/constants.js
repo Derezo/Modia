@@ -80,6 +80,20 @@ export const TERRAIN_DISTRIBUTION = {
   SECONDARY_WEIGHT: 0.30
 };
 
+// Garrison configuration for castle recruitment
+export const GARRISON_CONFIG = {
+  recruitsPerCastle: { min: 8, max: 12 },
+  raceWeight: { regional: 0.7, random: 0.3 },
+  classWeight: { regional: 0.7, random: 0.3 },
+  regionalClasses: {
+    heartlands: ['warrior', 'chemist'],
+    elven_glade: ['wizard', 'monk'],
+    dwarven_holds: ['warrior', 'monk'],
+    orcish_steppes: ['warrior', 'chemist'],
+    feral_wilds: ['monk', 'chemist'],
+  },
+};
+
 // Character Classes
 export const CLASSES = {
   WARRIOR: 'warrior',
@@ -312,8 +326,16 @@ export const CITY_OPTIONS = ['blacksmith', 'apothecary', 'temple', 'stables'];
 export const MAX_PARTY_SIZE = 12;
 export const MAX_BATTLE_PARTY_SIZE = 5;
 export const MAX_CHARACTER_LEVEL = 256;
-export const STARTING_GOLD = 500;
+export const STARTING_GOLD = 1000;
 export const STARTING_EXPERIENCE = 150;
+
+// Starting consumables for new characters (templateId from items.js)
+export const STARTING_CONSUMABLES = [
+  { templateId: 29, quantity: 3 },  // Hi-Potion (150 HP)
+  { templateId: 31, quantity: 1 },  // Elixir (100 HP + MP)
+  { templateId: 14, quantity: 2 },  // Antidote
+  { templateId: 13, quantity: 2 },  // Mana Potion (30 MP)
+];
 export const MAX_GOLD = 2147483647; // PostgreSQL INT max - prevents overflow
 export const MAX_XP = 2147483647; // PostgreSQL INT max - prevents overflow
 export const MAX_OPEN_ORDERS_PER_USER = 10; // Maximum concurrent marketplace orders
