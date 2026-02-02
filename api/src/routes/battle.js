@@ -745,7 +745,7 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
     mapSeed: battle.map_seed,
     mapWidth: battle.map_width,
     mapHeight: battle.map_height,
-    nodeType: battle.node_type,
+    nodeType: (battle.battle_type === 'pvp' || battle.battle_type === 'pvp_coliseum') ? 'arena' : battle.node_type,
     nodeName: battle.node_name,
     state: state,
     availableActions,
@@ -814,7 +814,7 @@ router.get('/:battleId/rejoin', authenticate, rejoinLimiter, asyncHandler(async 
     mapSeed: battle.map_seed,
     mapWidth: battle.map_width,
     mapHeight: battle.map_height,
-    nodeType: battle.node_type,
+    nodeType: (battle.battle_type === 'pvp' || battle.battle_type === 'pvp_coliseum') ? 'arena' : battle.node_type,
     nodeName: battle.node_name,
     state: battleState,
     gracePeriod: reconnectResult?.gracePeriod || 0,
@@ -1070,16 +1070,17 @@ router.get('/:id/state', authenticate, stateLimiter, asyncHandler(async (req, re
 
   // Build lightweight state for polling
   // Note: Battle units use tileX/tileY for position (not x/y)
+  // CRITICAL: Ensure positions are always valid numbers to prevent client NaN issues
   const state = {
     activeUnitId: battleState.activeUnitId || null,
     turnCount: battleState.turn || 0,
     status: battle.status || 'active',
     units: (battleState.units || []).map(u => ({
       id: u.id,
-      x: u.tileX,
-      y: u.tileY,
-      hp: u.hp,
-      mp: u.mp,
+      x: u.tileX ?? 0,
+      y: u.tileY ?? 0,
+      hp: u.hp ?? 0,
+      mp: u.mp ?? 0,
       statusEffects: (u.statusEffects || []).map(e => e.type || e)
     }))
   };

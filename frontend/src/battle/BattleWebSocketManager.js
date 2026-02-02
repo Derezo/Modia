@@ -383,6 +383,9 @@ export class BattleWebSocketManager {
       this.battleState.activeUnitId = currentActiveId;
     }
     // Don't call updateUI() - let queue system handle camera and UI updates
+
+    // Update poller baseline to prevent false drift detection
+    this.updatePollerState();
   }
 
   /**
@@ -808,13 +811,22 @@ export class BattleWebSocketManager {
       for (const serverUnit of serverState.units) {
         const localUnit = this.units.get(serverUnit.id);
         if (localUnit) {
+          // Validate server position data - skip invalid positions to prevent NaN
+          const serverX = serverUnit.x;
+          const serverY = serverUnit.y;
+          if (typeof serverX !== 'number' || typeof serverY !== 'number' ||
+              isNaN(serverX) || isNaN(serverY)) {
+            console.warn(`[Battle WS] Invalid position for unit ${serverUnit.id}: x=${serverX}, y=${serverY}`);
+            continue; // Skip this unit's position update
+          }
+
           // Fix: Use gridX/gridY (BattleUnit properties), not x/y
-          if (localUnit.gridX !== serverUnit.x || localUnit.gridY !== serverUnit.y) {
-            localUnit.gridX = serverUnit.x;
-            localUnit.gridY = serverUnit.y;
+          if (localUnit.gridX !== serverX || localUnit.gridY !== serverY) {
+            localUnit.gridX = serverX;
+            localUnit.gridY = serverY;
             // Update screen position to match grid position
             if (this.scene.grid) {
-              const screenPos = this.scene.grid.gridToScreenWorld(serverUnit.x, serverUnit.y);
+              const screenPos = this.scene.grid.gridToScreenWorld(serverX, serverY);
               if (localUnit.isMoving) {
                 // Unit is mid-animation: only update target, let animation continue
                 // This matches how syncUnitsWithState handles moving units
@@ -829,7 +841,7 @@ export class BattleWebSocketManager {
               }
             }
           }
-          localUnit.hp = serverUnit.hp;
+          localUnit.hp = serverUnit.hp ?? localUnit.hp;
           localUnit.mp = serverUnit.mp ?? localUnit.mp;
           // Update status effects if provided
           if (serverUnit.statusEffects) {
