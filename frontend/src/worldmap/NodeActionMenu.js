@@ -380,6 +380,11 @@ export class NodeActionMenu {
       features = [...features, 'fast_travel'];
     }
 
+    // Add garrison action for castle nodes
+    if (node.node_type === 'castle' && !features.includes('garrison')) {
+      features = [...features, 'garrison'];
+    }
+
     // Add stamina restore action for town nodes (requires relic, checked in handler)
     if (node.node_type === 'town' && !features.includes('stamina_restore')) {
       features = [...features, 'stamina_restore'];
@@ -390,7 +395,7 @@ export class NodeActionMenu {
       const essentialFeatures = [
         'blacksmith', 'marketplace', 'tavern', 'apothecary',
         'coliseum', 'farm', 'guild_hall', 'guild_advancement', 'courtyard', 'caravan', 'explore_ruins', 'fishing',
-        'fast_travel', 'stamina_restore'
+        'fast_travel', 'stamina_restore', 'garrison'
       ];
       const decorativeFeatures = ['throne', 'temple', 'stables', 'training_ground'];
 
@@ -490,7 +495,8 @@ export class NodeActionMenu {
       explore_ruins: { category: 'menu', name: 'ruins' },
       fishing: { category: 'menu', name: 'fishing' },
       fast_travel: { category: 'actions', name: 'move' },
-      stamina_restore: { category: 'actions', name: 'heal' }
+      stamina_restore: { category: 'actions', name: 'heal' },
+      garrison: { category: 'menu', name: 'formation' }
     };
 
     // Get label text
@@ -515,6 +521,9 @@ export class NodeActionMenu {
     }
     if (feature === 'stamina_restore') {
       label = 'Rest';
+    }
+    if (feature === 'garrison') {
+      label = 'Garrison';
     }
 
     // Icon

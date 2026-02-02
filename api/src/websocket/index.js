@@ -5,6 +5,7 @@ import presenceService from '../services/presenceService.js';
 import coliseumService from '../services/coliseumService.js';
 import * as partyWebsocket from '../services/partyWebsocket.js';
 import * as marketplaceWebsocket from '../services/marketplaceWebsocket.js';
+import * as garrisonWebsocket from './garrisonWebsocket.js';
 import adminGenerationService from '../services/adminGenerationService.js';
 import audioGenerationService from '../services/adminAudioGenerationService.js';
 import { query } from '../config/database.js';
@@ -283,6 +284,29 @@ async function validateRoomAccess(userId, roomName) {
   // Courtyard room is allowed for all authenticated users (social hub)
   if (roomName === 'courtyard') {
     return { authorized: true };
+  }
+
+  // Garrison rooms: verify user's character is at that node
+  if (roomName.startsWith('garrison:')) {
+    const nodeId = parseInt(roomName.split(':')[1], 10);
+    if (isNaN(nodeId)) {
+      return { authorized: false, error: 'Invalid node ID' };
+    }
+
+    try {
+      const result = await query(
+        `SELECT c.id FROM characters c
+         WHERE c.user_id = $1 AND c.current_node_id = $2 AND c.party_slot IS NOT NULL
+         LIMIT 1`,
+        [userId, nodeId]
+      );
+      if (result.rows.length === 0) {
+        return { authorized: false, error: 'Character not at this garrison location' };
+      }
+      return { authorized: true };
+    } catch {
+      return { authorized: false, error: 'Failed to verify garrison access' };
+    }
   }
 
   // Admin generation rooms - allowed for all authenticated users in dev/test mode
@@ -1064,6 +1088,63 @@ function setupWebSocket(server) {
             break;
           }
 
+          // Garrison subscription handlers
+          case 'join_garrison': {
+            if (!userId) break;
+            const { nodeId: garrisonNodeId } = payload;
+            if (!garrisonNodeId) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { message: 'Node ID required' }
+              }));
+              break;
+            }
+
+            const garrisonRoom = `garrison:${garrisonNodeId}`;
+
+            // SECURITY: Validate user's character is at this garrison node
+            const garrisonAccessResult = await validateRoomAccess(userId, garrisonRoom);
+            if (!garrisonAccessResult.authorized) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { message: garrisonAccessResult.error || 'Access denied to garrison' }
+              }));
+              break;
+            }
+
+            if (!rooms.has(garrisonRoom)) {
+              rooms.set(garrisonRoom, new Set());
+            }
+            rooms.get(garrisonRoom).add(userId);
+
+            ws.send(JSON.stringify({
+              type: 'garrison_room_joined',
+              payload: { nodeId: garrisonNodeId }
+            }));
+            break;
+          }
+
+          case 'leave_garrison': {
+            if (!userId) break;
+            const { nodeId: leaveGarrisonNodeId } = payload;
+            if (!leaveGarrisonNodeId) break;
+
+            const leaveGarrisonRoom = `garrison:${leaveGarrisonNodeId}`;
+
+            if (rooms.has(leaveGarrisonRoom)) {
+              rooms.get(leaveGarrisonRoom).delete(userId);
+              if (rooms.get(leaveGarrisonRoom).size === 0) {
+                rooms.delete(leaveGarrisonRoom);
+              }
+            }
+
+            ws.send(JSON.stringify({
+              type: 'garrison_room_left',
+              payload: { nodeId: leaveGarrisonNodeId }
+            }));
+            break;
+          }
+
           // Admin generation control handlers (dev/test only)
           case 'generation:cancel': {
             if (!userId) break;
@@ -1285,6 +1366,9 @@ function setupWebSocket(server) {
         // Clean up marketplace item subscriptions
         marketplaceWebsocket.cleanupUserSubscriptions(userId);
 
+        // Clean up garrison subscriptions
+        garrisonWebsocket.cleanupUserGarrisonSubscriptions(userId, rooms);
+
         // Broadcast presence change
         broadcastPresenceChange(userId, username, 'offline');
 
@@ -1394,6 +1478,9 @@ function isUserOnline(userId) {
   return connections.has(userId);
 }
 
+// Re-export garrison broadcast functions for use by routes/services
+const { broadcastGarrisonPurchase, broadcastGarrisonRefresh } = garrisonWebsocket;
+
 export {
   setupWebSocket,
   broadcastToRoom,
@@ -1402,7 +1489,9 @@ export {
   getOnlineCount,
   isUserOnline,
   connections,
-  rooms
+  rooms,
+  broadcastGarrisonPurchase,
+  broadcastGarrisonRefresh
 };
 
 export default {
@@ -1413,5 +1502,7 @@ export default {
   getOnlineCount,
   isUserOnline,
   connections,
-  rooms
+  rooms,
+  broadcastGarrisonPurchase,
+  broadcastGarrisonRefresh
 };

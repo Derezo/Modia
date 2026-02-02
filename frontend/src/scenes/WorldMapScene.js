@@ -406,6 +406,11 @@ export class WorldMapScene extends Scene {
       await this.mapCharacter.setCharacter(partyLeader);
       this.updateCharacterPosition();
       console.log('Map character initialized, position:', this.mapCharacter.x, this.mapCharacter.y);
+
+      // Ensure activeCharacter is set in state for marketplace and other scenes
+      if (!this.game.state.get('activeCharacter')) {
+        this.game.state.set('activeCharacter', partyLeader);
+      }
     }
   }
 
@@ -1244,6 +1249,16 @@ export class WorldMapScene extends Scene {
     // Stamina restore at town nodes (requires Vitality Charm relic)
     if (feature === 'stamina_restore') {
       this.openStaminaRestoreModal();
+      return;
+    }
+
+    // Garrison feature opens the garrison scene for castle nodes
+    if (feature === 'garrison') {
+      this.game.scenes.switchTo('garrison', {
+        nodeId: this.currentNode.id,
+        nodeName: this.currentNode.name,
+        regionId: this.currentNode.region_id
+      });
       return;
     }
 

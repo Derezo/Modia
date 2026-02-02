@@ -5,7 +5,7 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| API Version | 2.6 |
+| API Version | 2.7 |
 | Base URL | `/api` |
 | Last Updated | January 2026 |
 
@@ -93,7 +93,7 @@ POST /api/auth/register
     "id": 1,
     "username": "player1",
     "email": "player1@example.com",
-    "gold": 100
+    "gold": 1000
   },
   "accessToken": "eyJhbGciOiJIUzI1NiIs...",
   "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
@@ -1660,6 +1660,66 @@ Production:    wss://modia.example.com/ws
 }
 ```
 
+### 7.10 Garrison Events
+
+**Room Pattern:** `garrison:{nodeId}`
+
+**Join Garrison Room:**
+```json
+{
+  "type": "join_garrison",
+  "payload": {
+    "nodeId": 1
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "type": "garrison_joined",
+  "payload": {
+    "nodeId": 1,
+    "nodeName": "Heartlands Castle"
+  }
+}
+```
+
+**Leave Garrison Room:**
+```json
+{
+  "type": "leave_garrison",
+  "payload": {
+    "nodeId": 1
+  }
+}
+```
+
+**Garrison Purchase (broadcast to room):**
+```json
+{
+  "type": "garrison_purchase",
+  "payload": {
+    "nodeId": 1,
+    "recruitId": 456,
+    "recruitName": "Alaric",
+    "purchasedBy": "player123"
+  }
+}
+```
+
+**Garrison Refresh (broadcast to room):**
+```json
+{
+  "type": "garrison_refresh",
+  "payload": {
+    "nodeId": 1,
+    "recruitCount": 6,
+    "nextRefresh": "2026-01-11T12:00:00.000Z"
+  }
+}
+```
+
 ---
 
 ## 8. Skill Endpoints
@@ -2022,9 +2082,150 @@ POST /api/guild/:nodeId/recruit/:recruitId/purchase
 
 ---
 
-## 10. Inventory Endpoints
+## 10. Garrison Endpoints
 
-### 10.1 Get Shared Inventory
+Garrison recruitment at castle nodes for mixed-class party members with regional race/class bias.
+
+### 10.1 Get Garrison Recruits
+
+Get available recruits at a castle garrison.
+
+```
+GET /api/garrison/:nodeId
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "nodeId": 1,
+  "nodeName": "Heartlands Castle",
+  "recruits": [
+    {
+      "id": 456,
+      "name": "Alaric",
+      "race": "human",
+      "gender": "male",
+      "class": "warrior",
+      "level": 1,
+      "hp_max": 115,
+      "mp_max": 53,
+      "strength": 13,
+      "intelligence": 10,
+      "agility": 10,
+      "vitality": 12,
+      "luck": 10,
+      "stat_variance_percent": 5.2,
+      "xp_pool": 50,
+      "price": 1500,
+      "traits": [
+        {
+          "id": 3,
+          "name": "Quick Learner",
+          "description": "+5% XP gain",
+          "category": "utility",
+          "rarity": "common",
+          "effect_type": "xp_bonus",
+          "effect_value": 5.0
+        }
+      ],
+      "skills": ["power_slash"]
+    }
+  ],
+  "nextRefresh": "2026-01-10T12:00:00.000Z"
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 404 | Node not found |
+| 400 | This node does not have a garrison |
+| 403 | You have not discovered this node |
+
+---
+
+### 10.2 Purchase Garrison Recruit
+
+Purchase a recruit from a castle garrison.
+
+```
+POST /api/garrison/:nodeId/purchase/:recruitId
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Successfully recruited Alaric",
+  "character": {
+    "id": 789,
+    "name": "Alaric",
+    "race": "human",
+    "class": "warrior",
+    "level": 1,
+    "hp_current": 115,
+    "hp_max": 115,
+    "mp_current": 53,
+    "mp_max": 53,
+    "strength": 13,
+    "intelligence": 10,
+    "agility": 10,
+    "vitality": 12,
+    "luck": 10,
+    "traits": [...],
+    "skills": [...]
+  },
+  "goldSpent": 1500,
+  "remainingGold": 8500
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 404 | Node not found |
+| 400 | This node does not have a garrison |
+| 403 | You have not discovered this node |
+| 400 | Insufficient gold |
+| 400 | Party is full (max 12 characters) |
+| 404 | Recruit not found or already purchased |
+
+---
+
+### 10.3 Get Garrison Refresh Time
+
+Get seconds until the garrison refreshes its recruit pool.
+
+```
+GET /api/garrison/:nodeId/refresh-time
+```
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response (200 OK):**
+```json
+{
+  "nodeId": 1,
+  "secondsUntilRefresh": 2847,
+  "nextRefresh": "2026-01-10T12:00:00.000Z"
+}
+```
+
+**Errors:**
+| Code | Message |
+|------|---------|
+| 404 | Node not found |
+| 400 | This node does not have a garrison |
+
+---
+
+## 11. Inventory Endpoints
+
+### 11.1 Get Shared Inventory
 
 Get user's shared inventory pool (unequipped items accessible by all characters).
 
@@ -2063,7 +2264,7 @@ GET /api/inventory/shared
 
 ---
 
-### 10.2 Get Character Equipment
+### 11.2 Get Character Equipment
 
 Get equipped items for a specific character.
 
@@ -2104,7 +2305,7 @@ GET /api/inventory/:characterId
 
 ---
 
-### 10.3 Equip Item
+### 11.3 Equip Item
 
 Equip an item to a slot.
 
@@ -2147,7 +2348,7 @@ POST /api/inventory/equip
 
 ---
 
-### 10.4 Unequip Item
+### 11.4 Unequip Item
 
 Unequip an item from a slot.
 
@@ -2176,7 +2377,7 @@ POST /api/inventory/unequip
 
 ---
 
-### 10.5 Use Item
+### 11.5 Use Item
 
 Use a consumable item.
 
@@ -2209,7 +2410,7 @@ POST /api/inventory/use
 
 ---
 
-### 10.6 Discard Item
+### 11.6 Discard Item
 
 Remove an item from inventory.
 
@@ -2241,11 +2442,11 @@ POST /api/inventory/discard
 
 ---
 
-## 11. Shop Endpoints
+## 12. Shop Endpoints
 
 Shop types: `blacksmith` (weapons, armor), `apothecary` (consumables), `farm` (materials, consumables), `caravan` (exclusive items at merchant_caravan nodes).
 
-### 11.1 Get Shop Inventory
+### 12.1 Get Shop Inventory
 
 Get items available in a shop at a node.
 
@@ -2334,7 +2535,7 @@ GET /api/shops/:nodeId/:shopType
 
 ---
 
-### 11.2 Buy Item
+### 12.2 Buy Item
 
 Purchase an item from a shop.
 
@@ -2401,7 +2602,7 @@ POST /api/shops/:nodeId/:shopType/buy
 
 ---
 
-### 11.3 Sell Item
+### 12.3 Sell Item
 
 Sell an item to a shop. Sell price is always 50% of base price.
 
@@ -2444,7 +2645,7 @@ POST /api/shops/:nodeId/:shopType/sell
 
 ---
 
-### 11.4 Get Sellable Inventory
+### 12.4 Get Sellable Inventory
 
 Get items from shared inventory that can be sold at a shop.
 
@@ -2483,13 +2684,13 @@ GET /api/shops/:nodeId/:shopType/sell-inventory
 
 ---
 
-## 12. Marketplace Endpoints
+## 13. Marketplace Endpoints
 
 The marketplace supports two trading systems:
 1. **Order Book** - For stackable/fungible items (commodities). Uses limit/market orders.
 2. **Item Listings** - For unique items with augments. Individual item listings with specific prices.
 
-### 12.1 Get Order Book
+### 13.1 Get Order Book
 
 Get current buy/sell orders for a stackable item.
 
@@ -2529,7 +2730,7 @@ GET /api/marketplace/orderbook/:itemTemplateId
 
 ---
 
-### 12.2 Get My Orders
+### 13.2 Get My Orders
 
 Get the player's active orders.
 
@@ -2563,7 +2764,7 @@ GET /api/marketplace/orders/mine
 
 ---
 
-### 12.3 Create Limit Order
+### 13.3 Create Limit Order
 
 Create a buy or sell limit order for stackable items.
 
@@ -2621,7 +2822,7 @@ POST /api/marketplace/orders/limit
 
 ---
 
-### 12.4 Create Market Order
+### 13.4 Create Market Order
 
 Execute immediately at best available price.
 
@@ -2669,7 +2870,7 @@ POST /api/marketplace/orders/market
 
 ---
 
-### 12.5 Cancel Order
+### 13.5 Cancel Order
 
 Cancel an active limit order.
 
@@ -2702,7 +2903,7 @@ DELETE /api/marketplace/orders/:orderId
 
 ---
 
-### 12.6 Search Items
+### 13.6 Search Items
 
 Search for tradeable items on the marketplace.
 
@@ -2737,7 +2938,7 @@ GET /api/marketplace/search
 
 ---
 
-### 12.7 Get Item Listings
+### 13.7 Get Item Listings
 
 Get all individual listings for items with a specific template (for unique/augmented items).
 
@@ -2773,7 +2974,7 @@ GET /api/marketplace/items/:templateId
 
 ---
 
-### 12.8 Get My Listings
+### 13.8 Get My Listings
 
 Get the player's active item listings.
 
@@ -2802,7 +3003,7 @@ GET /api/marketplace/listings/mine
 
 ---
 
-### 12.9 Get Sellable Inventory
+### 13.9 Get Sellable Inventory
 
 Get items from inventory that can be listed on the marketplace.
 
@@ -2837,7 +3038,7 @@ GET /api/marketplace/inventory/sellable
 
 ---
 
-### 12.10 Create Item Listing
+### 13.10 Create Item Listing
 
 List an individual item for sale (for unique/augmented items).
 
@@ -2887,7 +3088,7 @@ POST /api/marketplace/listings
 
 ---
 
-### 12.11 Buy Item Listing
+### 13.11 Buy Item Listing
 
 Purchase a listed item.
 
@@ -2930,7 +3131,7 @@ POST /api/marketplace/listings/:listingId/buy
 
 ---
 
-### 12.12 Cancel Item Listing
+### 13.12 Cancel Item Listing
 
 Cancel an active item listing.
 
@@ -2961,7 +3162,7 @@ DELETE /api/marketplace/listings/:listingId
 
 ---
 
-### 12.13 Get Price Suggestion
+### 13.13 Get Price Suggestion
 
 Get suggested price for an item based on rarity and augments.
 
@@ -3001,7 +3202,7 @@ GET /api/marketplace/price-suggestion
 
 ---
 
-### 12.14 Get Trade History
+### 13.14 Get Trade History
 
 Get recent trades for an item.
 
@@ -3032,7 +3233,7 @@ GET /api/marketplace/history/:itemTemplateId
 
 ---
 
-### 12.15 Get My Trades
+### 13.15 Get My Trades
 
 Get the player's trade history.
 
@@ -3065,7 +3266,7 @@ GET /api/marketplace/my-trades
 
 ---
 
-### 12.16 Get Item Stats
+### 13.16 Get Item Stats
 
 Get 24-hour market statistics for an item.
 
@@ -3095,7 +3296,7 @@ GET /api/marketplace/stats/:itemTemplateId
 
 ---
 
-## 13. Rate Limits
+## 14. Rate Limits
 
 | Endpoint | Limit |
 |----------|-------|
@@ -3113,9 +3314,9 @@ GET /api/marketplace/stats/:itemTemplateId
 
 ---
 
-## 14. Settings Endpoints
+## 15. Settings Endpoints
 
-### 14.1 Get User Settings
+### 15.1 Get User Settings
 
 Get current user's settings.
 
@@ -3143,7 +3344,7 @@ GET /api/settings
 
 ---
 
-### 14.2 Update User Settings
+### 15.2 Update User Settings
 
 Update user settings (deep merge with existing settings).
 
@@ -3181,7 +3382,7 @@ PUT /api/settings
 
 ---
 
-## 15. Fishing Endpoints
+## 16. Fishing Endpoints
 
 Activity node for auto-fishing with chance of rare catches.
 
@@ -3195,7 +3396,7 @@ Activity node for auto-fishing with chance of rare catches.
 
 ---
 
-## 16. Ruins Endpoints
+## 17. Ruins Endpoints
 
 Activity node for sliding puzzle minigame with regional themes.
 
@@ -3207,7 +3408,7 @@ Activity node for sliding puzzle minigame with regional themes.
 
 ---
 
-## 17. Relics Endpoints
+## 18. Relics Endpoints
 
 Collection system for permanent stat bonuses.
 
@@ -3219,7 +3420,7 @@ Collection system for permanent stat bonuses.
 
 ---
 
-## 18. Friends Endpoints
+## 19. Friends Endpoints
 
 Social system for friend management and invites.
 
@@ -3237,7 +3438,7 @@ Social system for friend management and invites.
 
 ---
 
-## 19. LFG Endpoints
+## 20. LFG Endpoints
 
 Looking-for-group system for party formation.
 
@@ -3250,7 +3451,7 @@ Looking-for-group system for party formation.
 
 ---
 
-## 20. Notifications Endpoints
+## 21. Notifications Endpoints
 
 In-game notification system.
 
@@ -3264,7 +3465,7 @@ In-game notification system.
 
 ---
 
-## 21. Advancement Quest Endpoints
+## 22. Advancement Quest Endpoints
 
 Guild advancement quest system for class progression.
 
@@ -3280,7 +3481,7 @@ Guild advancement quest system for class progression.
 
 ---
 
-## 22. Daily/Weekly Quests Endpoints
+## 23. Daily/Weekly Quests Endpoints
 
 Repeatable quest system with daily and weekly resets.
 
@@ -3296,7 +3497,7 @@ Repeatable quest system with daily and weekly resets.
 
 ---
 
-## 23. Coliseum Endpoints
+## 24. Coliseum Endpoints
 
 PvP arena with matchmaking and rankings.
 
@@ -3313,7 +3514,7 @@ PvP arena with matchmaking and rankings.
 
 ---
 
-## 24. Clans Endpoints
+## 25. Clans Endpoints
 
 Clan system for player organizations.
 
@@ -3328,7 +3529,7 @@ Clan system for player organizations.
 
 ---
 
-## 25. Chat Endpoints
+## 26. Chat Endpoints
 
 Chat message history retrieval (real-time via WebSocket).
 
@@ -3341,11 +3542,11 @@ Chat message history retrieval (real-time via WebSocket).
 
 ---
 
-## 26. Feedback Endpoints
+## 27. Feedback Endpoints
 
 User feedback submission for enhancements, bug reports, and abuse reports.
 
-### 26.1 Submit Feedback
+### 27.1 Submit Feedback
 
 Submit user feedback.
 
@@ -3390,7 +3591,7 @@ POST /api/feedback
 
 ---
 
-### 26.2 Get My Feedback
+### 27.2 Get My Feedback
 
 Get the authenticated user's feedback submissions.
 
@@ -3428,7 +3629,7 @@ GET /api/feedback/my
 
 ---
 
-## 27. Error Codes
+## 28. Error Codes
 
 | Code | HTTP Status | Description |
 |------|-------------|-------------|
@@ -3444,7 +3645,7 @@ GET /api/feedback/my
 
 ---
 
-## 28. Document History
+## 29. Document History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
@@ -3456,3 +3657,4 @@ GET /api/feedback/my
 | 2.4 | Jan 2026 | - | Shop/Marketplace sync: Fixed shop endpoints (11.1-11.4) to match implementation with supply-based pricing, caravan support, sell-inventory. Rewrote marketplace section (12.1-12.16) adding item listings system, search, price suggestions, my-trades, stats. Updated request/response schemas to match actual code. |
 | 2.5 | Jan 2026 | - | Added feedback endpoints (Section 26) for user submissions (enhancement, bug, abuse reports). Updated error response format to include requestId field for exception correlation. |
 | 2.6 | Jan 2026 | - | Added register-with-character endpoint (Section 2.2) for atomic user+character creation. Updated auth section numbering (2.3-2.6). Added rate limit entry for new endpoint. |
+| 2.7 | Feb 2026 | - | Added garrison endpoints (Section 10) for castle recruit system with regional race/class bias. Added garrison WebSocket events (Section 7.10). Updated starting gold to 1000 (was 100). Renumbered sections 10-28 to accommodate new garrison section. |

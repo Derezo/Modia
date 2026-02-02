@@ -14,6 +14,7 @@ import { withTransaction } from '../config/database.js';
 import { generateAccessToken, generateRefreshToken } from '../config/jwt.js';
 import { calculateStats, STARTING_EXPERIENCE, RACES, CLASSES, GENDERS } from '../config/constants.js';
 import { STARTING_GOLD } from '../config/constants.js';
+import { STARTING_CONSUMABLES } from '../../../shared/constants.js';
 import { discoverNodeAndAdjacent } from './world/discoveryService.js';
 
 const SALT_ROUNDS = 12;
@@ -209,6 +210,15 @@ export async function registerUserWithCharacter({
           [character.id, skillId]
         );
       }
+    }
+
+    // Grant starting consumables to shared inventory (character_id NULL)
+    for (const { templateId, quantity } of STARTING_CONSUMABLES) {
+      await client.query(
+        `INSERT INTO character_items (user_id, character_id, item_template_id, quantity, is_equipped)
+         VALUES ($1, NULL, $2, $3, false)`,
+        [user.id, templateId, quantity]
+      );
     }
 
     // Grant starting trait based on race/class combination

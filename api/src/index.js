@@ -47,11 +47,13 @@ import healthRoutes from './routes/health.js';
 import adminRoutes from './routes/admin.js';
 import adminAudioRoutes from './routes/adminAudio.js';
 import feedbackRoutes from './routes/feedback.js';
+import garrisonRoutes from './routes/garrison.js';
 
 // Scheduled services
 import { startRefreshScheduler } from './services/shopRefreshService.js';
 import { startExpirationScheduler } from './services/orderExpirationService.js';
 import { startCleanupScheduler as startQuestCleanupScheduler } from './services/dailyQuestService.js';
+import { startGarrisonRefreshScheduler } from './services/garrisonRefreshService.js';
 
 // Trait effects system
 import { initializeTraitEffects } from './services/traits/index.js';
@@ -153,6 +155,7 @@ app.use('/api/debug', debugRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/audio', adminAudioRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/garrison', garrisonRoutes);
 
 // 404 handler for API routes - must come before error handler
 // Returns JSON instead of Express's default HTML response
@@ -181,6 +184,7 @@ server.listen(PORT, () => {
   startRefreshScheduler();
   startExpirationScheduler();
   startQuestCleanupScheduler();
+  startGarrisonRefreshScheduler();
 
   // Initialize generation queues (check for orphaned items)
   const imageInit = adminGenerationService.initializeQueue();
