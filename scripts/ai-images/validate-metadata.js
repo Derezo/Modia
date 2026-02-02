@@ -323,10 +323,10 @@ function checkIconCoverage(options) {
     results.covered += catIcons.length;
   }
 
-  // Check for expected action icons
+  // Check for expected action icons (unprefixed IDs since Phase 5 cleanup)
   const expectedActions = [
-    'action_attack', 'action_defend', 'action_move', 'action_wait',
-    'action_item', 'action_skill', 'action_flee'
+    'attack', 'defend', 'move', 'wait',
+    'item', 'skill', 'flee'
   ];
 
   const actionIds = new Set(
@@ -340,10 +340,10 @@ function checkIconCoverage(options) {
     }
   }
 
-  // Check for expected status icons
+  // Check for expected status icons (unprefixed IDs since Phase 5 cleanup)
   const expectedStatus = [
-    'status_poison', 'status_burn', 'status_freeze', 'status_stun',
-    'status_sleep', 'status_blind', 'status_silence', 'status_slow'
+    'poison', 'burn', 'freeze', 'stun',
+    'sleep', 'blind', 'silence', 'slow'
   ];
 
   const statusIds = new Set(

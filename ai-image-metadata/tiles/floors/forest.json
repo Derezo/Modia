@@ -7,14 +7,12 @@
     "secondary": "#8B7355",
     "accent": "#4A6B2A"
   },
-  "outputPath": "forest",
   "tiles": [
     {
       "key": "grass_0",
       "terrain": "grass",
       "variant": 0,
       "prompt": "lush forest meadow grass with dappled sunlight and small wildflowers in rich green tones #6B8E4A #4A6B2A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-25T19:54:17.684Z",
       "loraModel": "v1"
@@ -24,7 +22,6 @@
       "terrain": "grass",
       "variant": 1,
       "prompt": "shaded forest grass #6B8E4A #8B7355",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-02-02T04:22:05.059Z",
       "seed": null,
@@ -40,7 +37,6 @@
       "terrain": "grass",
       "variant": 2,
       "prompt": "tall forest grass with seed heads bending on the forest floor #4A6B2A #6B8E4A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-02-02T04:40:12.586Z",
       "seed": null,
@@ -57,7 +53,6 @@
       "terrain": "grass",
       "variant": 3,
       "prompt": "patchy forest grass with exposed roots and mushroom caps in earthy green brown #6B8E4A #5C4033",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:09:42.575Z"
     },
@@ -66,7 +61,6 @@
       "terrain": "stone",
       "variant": 0,
       "prompt": "moss-covered forest path stone worn smooth by travelers in grey green tones #708090 #6B8E4A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:10:23.869Z"
     },
@@ -75,7 +69,6 @@
       "terrain": "stone",
       "variant": 1,
       "prompt": "ancient forest flagstone with lichen and leaf litter in weathered grey #696969 #8B7355",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:11:05.478Z"
     },
@@ -84,7 +77,6 @@
       "terrain": "stone",
       "variant": 2,
       "prompt": "cracked forest stone with fern fronds growing through gaps in earthy tones #808080 #4A6B2A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:11:48.074Z"
     },
@@ -93,7 +85,6 @@
       "terrain": "stone",
       "variant": 3,
       "prompt": "weathered forest cobblestone overgrown with creeping moss in grey green #696969 #6B8E4A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:12:30.394Z"
     },
@@ -102,7 +93,6 @@
       "terrain": "rock",
       "variant": 0,
       "prompt": "moss-covered forest boulder surface with natural crevices in grey green #8B8682 #6B8E4A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:13:12.676Z"
     },
@@ -111,7 +101,6 @@
       "terrain": "rock",
       "variant": 1,
       "prompt": "forest rock face with thick moss carpet and tiny ferns in woodland tones #A0A0A0 #4A6B2A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-26T05:01:01.183Z"
     },
@@ -120,7 +109,6 @@
       "terrain": "rock",
       "variant": 2,
       "prompt": "weathered forest rock with lichen patches and fallen twigs in earthy grey #696969 #8B7355",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:13:54.995Z"
     },
@@ -129,7 +117,6 @@
       "terrain": "rock",
       "variant": 3,
       "prompt": "ancient forest stone with deep green moss and small mushrooms in woodland tones #505050 #6B8E4A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:14:37.291Z"
     },
@@ -138,7 +125,6 @@
       "terrain": "forest",
       "variant": 0,
       "prompt": "dense forest floor with thick leaf litter and decomposing matter in rich brown #5C4033 #4A6B2A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:15:18.924Z"
     },
@@ -147,7 +133,6 @@
       "terrain": "forest",
       "variant": 1,
       "prompt": "shaded forest undergrowth with fern fronds and fallen branches in deep woodland green #2F4F2F #5C4033",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-27T12:40:24.154Z"
     },
@@ -156,7 +141,6 @@
       "terrain": "forest",
       "variant": 2,
       "prompt": "mossy forest floor with scattered pinecones and acorns in earthy brown green #5C4033 #6B8E4A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:16:01.237Z"
     },
@@ -165,7 +149,6 @@
       "terrain": "forest",
       "variant": 3,
       "prompt": "forest floor carpet of fallen leaves and exposed roots in autumn brown #8B7355 #5C4033",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:16:43.546Z"
     },
@@ -174,7 +157,6 @@
       "terrain": "water",
       "variant": 0,
       "prompt": "clear forest stream with pebbles visible through rippling water in cool blue #4682B4 #6B8E4A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:17:25.814Z"
     },
@@ -183,7 +165,6 @@
       "terrain": "water",
       "variant": 1,
       "prompt": "shaded forest pool reflecting green canopy above in teal green #20B2AA #4A6B2A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:18:08.091Z"
     },
@@ -192,7 +173,6 @@
       "terrain": "water",
       "variant": 2,
       "prompt": "babbling forest brook with moss-covered stones at edges in cool blue green #4169E1 #6B8E4A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:18:50.393Z"
     },
@@ -201,7 +181,6 @@
       "terrain": "water",
       "variant": 3,
       "prompt": "deep forest pond with lily pads and reflected trees in dark green blue #191970 #2F4F2F",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:19:31.740Z"
     },
@@ -210,7 +189,6 @@
       "terrain": "lava",
       "variant": 0,
       "prompt": "volcanic forest floor with glowing lava cracks through charred earth in fiery orange #FF4500 #5C4033",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:20:14.030Z"
     },
@@ -219,7 +197,6 @@
       "terrain": "lava",
       "variant": 1,
       "prompt": "cooling lava flow through burnt forest with ember glow in orange black #FF4500 #2F2F2F",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:20:56.374Z"
     },
@@ -228,7 +205,6 @@
       "terrain": "lava",
       "variant": 2,
       "prompt": "smoldering forest floor with bubbling magma pools in intense orange red #FF6347 #8B0000",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:21:38.680Z"
     },
@@ -237,7 +213,6 @@
       "terrain": "lava",
       "variant": 3,
       "prompt": "hardened lava crust in burnt forest clearing with glowing fissures in dark red #8B0000 #FF4500",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:22:18.828Z"
     },
@@ -246,7 +221,6 @@
       "terrain": "cliff",
       "variant": 0,
       "prompt": "forest cliff edge with exposed rock and hanging roots in grey brown #696969 #5C4033",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:22:59.953Z"
     },
@@ -255,7 +229,6 @@
       "terrain": "cliff",
       "variant": 1,
       "prompt": "mossy forest cliff face with ferns growing from cracks in grey green #8B8682 #6B8E4A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:23:41.121Z"
     },
@@ -264,7 +237,6 @@
       "terrain": "cliff",
       "variant": 2,
       "prompt": "steep forest cliff with crumbling stone and vine growth in dark grey #505050 #4A6B2A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:24:21.265Z"
     },
@@ -273,7 +245,6 @@
       "terrain": "cliff",
       "variant": 3,
       "prompt": "weathered forest cliff covered in thick green moss and small plants in grey green #696969 #6B8E4A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-28T04:25:01.432Z"
     },
@@ -282,7 +253,6 @@
       "terrain": "tree",
       "variant": 0,
       "prompt": "massive forest tree trunk base with spreading roots and bark texture in rich brown #5C4033 #8B7355",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-02-02T04:41:00.250Z"
     },
@@ -291,7 +261,6 @@
       "terrain": "tree",
       "variant": 1,
       "prompt": "ancient forest tree roots crossing ground with moss covering in dark brown green #3D2B1F #6B8E4A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-01-26T05:22:21.321Z"
     },
@@ -300,7 +269,6 @@
       "terrain": "tree",
       "variant": 2,
       "prompt": "fallen forest log covered in shelf fungus and green moss in woodland brown #5C4033 #6B8E4A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-02-02T04:41:44.679Z"
     },
@@ -309,7 +277,6 @@
       "terrain": "tree",
       "variant": 3,
       "prompt": "old forest stump with new growth sprouting and mushrooms in aged brown #8B7355 #4A6B2A",
-      "outputPath": "forest",
       "generated": true,
       "generatedAt": "2026-02-02T04:42:30.008Z"
     },
@@ -318,7 +285,6 @@
       "terrain": "fern",
       "variant": 0,
       "prompt": "dense fern ground cover in dappled forest light in deep green tones #228B22 #4A6B2A",
-      "outputPath": "forest",
       "bonus": true,
       "generated": true,
       "generatedAt": "2026-01-28T04:27:45.081Z"
@@ -328,7 +294,6 @@
       "terrain": "fern",
       "variant": 1,
       "prompt": "unfurling fern fronds on forest floor with morning dew in vibrant green #6B8E4A #228B22",
-      "outputPath": "forest",
       "bonus": true,
       "generated": true,
       "generatedAt": "2026-01-28T04:28:25.228Z"
@@ -338,7 +303,6 @@
       "terrain": "mushroom",
       "variant": 0,
       "prompt": "fairy ring mushroom patch on forest floor with glowing caps in mystical purple and green #6B8E4A #8B008B",
-      "outputPath": "forest",
       "bonus": true,
       "generated": true,
       "generatedAt": "2026-01-28T04:29:06.417Z"
@@ -348,7 +312,6 @@
       "terrain": "mushroom",
       "variant": 1,
       "prompt": "cluster of forest mushrooms with spotted red caps in woodland brown and red #8B7355 #CD5C5C",
-      "outputPath": "forest",
       "bonus": true,
       "generated": true,
       "generatedAt": "2026-01-28T04:29:47.594Z"

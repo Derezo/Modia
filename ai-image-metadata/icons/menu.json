@@ -5,7 +5,7 @@
   "size": "32x32",
   "icons": [
     {
-      "id": "menu_inventory",
+      "id": "inventory",
       "name": "Inventory",
       "prompt": "backpack bag inventory storage pouch",
       "seed": 32001,
@@ -15,7 +15,7 @@
       "generatedAt": "2026-01-29T08:16:59.118Z"
     },
     {
-      "id": "menu_equipment",
+      "id": "equipment",
       "name": "Equipment",
       "prompt": "helmet armor equipment gear loadout",
       "seed": 32002,
@@ -25,7 +25,7 @@
       "generatedAt": "2026-01-29T08:17:45.548Z"
     },
     {
-      "id": "menu_skills",
+      "id": "skills",
       "name": "Skills",
       "prompt": "book spellbook skills abilities magic tome",
       "seed": 32003,
@@ -35,7 +35,7 @@
       "generatedAt": "2026-01-29T08:18:31.794Z"
     },
     {
-      "id": "menu_party",
+      "id": "party",
       "name": "Party",
       "prompt": "group people party team characters",
       "seed": 32004,
@@ -45,7 +45,7 @@
       "generatedAt": "2026-01-29T08:19:19.036Z"
     },
     {
-      "id": "menu_map",
+      "id": "map",
       "name": "Map",
       "prompt": "scroll map parchment fictional world navigation",
       "seed": 32005,
@@ -60,7 +60,7 @@
       }
     },
     {
-      "id": "menu_quest",
+      "id": "quest",
       "name": "Quests",
       "prompt": "exclamation scroll quest mission objective",
       "seed": 32006,
@@ -70,7 +70,7 @@
       "generatedAt": "2026-01-29T08:20:52.871Z"
     },
     {
-      "id": "menu_settings",
+      "id": "settings",
       "name": "Settings",
       "prompt": "gear cog settings options configure",
       "seed": 32007,
@@ -80,7 +80,7 @@
       "generatedAt": "2026-01-29T08:21:39.128Z"
     },
     {
-      "id": "menu_shop",
+      "id": "shop",
       "name": "Shop",
       "prompt": "medieval shop store purchase merchant",
       "seed": 32008,
@@ -95,7 +95,7 @@
       }
     },
     {
-      "id": "menu_chat",
+      "id": "chat",
       "name": "Chat",
       "prompt": "speech bubble chat message communication",
       "seed": 32009,
@@ -105,7 +105,7 @@
       "generatedAt": "2026-01-29T08:23:13.773Z"
     },
     {
-      "id": "menu_guild",
+      "id": "guild",
       "name": "Guild",
       "prompt": "banner flag guild clan organization",
       "seed": 32010,
@@ -115,7 +115,7 @@
       "generatedAt": "2026-01-29T08:23:59.645Z"
     },
     {
-      "id": "menu_tavern",
+      "id": "tavern",
       "name": "Tavern",
       "prompt": "mug full of beer tavern inn social drink",
       "seed": 32011,
@@ -130,7 +130,7 @@
       }
     },
     {
-      "id": "menu_coliseum",
+      "id": "coliseum",
       "name": "Coliseum",
       "prompt": "arena coliseum pvp battle swords crossed",
       "seed": 32012,
@@ -140,7 +140,7 @@
       "generatedAt": "2026-01-29T08:25:32.330Z"
     },
     {
-      "id": "menu_fishing",
+      "id": "fishing",
       "name": "Fishing",
       "prompt": "fishing rod hook fish catch water",
       "seed": 32013,
@@ -155,7 +155,7 @@
       }
     },
     {
-      "id": "menu_ruins",
+      "id": "ruins",
       "name": "Ruins",
       "prompt": "ancient ruins puzzle temple mystery stones",
       "seed": 32014,
@@ -165,7 +165,7 @@
       "generatedAt": "2026-01-29T08:27:04.984Z"
     },
     {
-      "id": "menu_caravan",
+      "id": "caravan",
       "name": "Caravan",
       "prompt": "wooden covered wagon caravan trade merchant cart with two horses pulling the cart",
       "seed": 32015,
@@ -180,7 +180,7 @@
       }
     },
     {
-      "id": "menu_close",
+      "id": "close",
       "name": "Close",
       "prompt": "x close exit cancel cross",
       "seed": 32016,
@@ -190,7 +190,7 @@
       "generatedAt": "2026-01-29T08:28:37.439Z"
     },
     {
-      "id": "menu_confirm",
+      "id": "confirm",
       "name": "Confirm",
       "prompt": "green checkmark confirm accept yes approve",
       "seed": 32017,
@@ -205,7 +205,7 @@
       }
     },
     {
-      "id": "menu_back",
+      "id": "back",
       "name": "Back",
       "prompt": "arrow left back return previous",
       "seed": 32018,
@@ -215,7 +215,7 @@
       "generatedAt": "2026-01-29T08:30:10.053Z"
     },
     {
-      "id": "menu_help",
+      "id": "help",
       "name": "Help",
       "prompt": "blue question mark help info tutorial",
       "seed": 32019,
@@ -230,7 +230,7 @@
       }
     },
     {
-      "id": "menu_notifications",
+      "id": "notifications",
       "name": "Notifications",
       "prompt": "bell notification alert message new",
       "seed": 32020,
@@ -240,7 +240,7 @@
       "generatedAt": "2026-01-29T08:31:42.207Z"
     },
     {
-      "id": "menu_formation",
+      "id": "formation",
       "name": "Formation",
       "prompt": "chess pieces formation tactical grid position",
       "seed": 32021,
@@ -249,7 +249,7 @@
       "generatedAt": "2026-01-29T08:32:28.864Z"
     },
     {
-      "id": "menu_characters",
+      "id": "characters",
       "name": "Characters",
       "prompt": "warrior knight character portrait adventurer",
       "seed": 32022,
@@ -258,7 +258,7 @@
       "generatedAt": "2026-01-29T08:33:15.184Z"
     },
     {
-      "id": "menu_friends",
+      "id": "friends",
       "name": "Friends",
       "prompt": "two people friends social handshake partner",
       "seed": 32023,
@@ -267,7 +267,7 @@
       "generatedAt": "2026-01-29T08:34:01.431Z"
     },
     {
-      "id": "menu_leaderboard",
+      "id": "leaderboard",
       "name": "Leaderboard",
       "prompt": "trophy podium rankings leaderboard first place",
       "seed": 32024,
@@ -276,7 +276,7 @@
       "generatedAt": "2026-01-29T08:34:47.552Z"
     },
     {
-      "id": "menu_logout",
+      "id": "logout",
       "name": "Logout",
       "prompt": "door exit logout leave arrow right",
       "seed": 32025,

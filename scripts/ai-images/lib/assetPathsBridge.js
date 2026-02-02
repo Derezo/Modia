@@ -25,6 +25,34 @@ async function getAssetPathsModule() {
 }
 
 /**
+ * Resize-specific size presets not defined in shared/assetPaths.js
+ * These are only used for resize operations on non-square tile types.
+ * @type {Object.<string, number[]>}
+ */
+const RESIZE_SPECIFIC_PRESETS = {
+  walls: [64],   // 128x32 AI -> 64x16 (non-square resize)
+  slopes: [64]   // 128x160 AI -> 64x80 (non-square resize)
+};
+
+// Cached merged SIZE_PRESETS
+let _mergedSizePresets = null;
+
+/**
+ * Get SIZE_PRESETS merged with resize-specific additions (cached)
+ * @returns {Promise<Object>} Merged size presets object
+ */
+async function getSizePresets() {
+  if (!_mergedSizePresets) {
+    const assetPaths = await getAssetPathsModule();
+    _mergedSizePresets = {
+      ...assetPaths.SIZE_PRESETS,
+      ...RESIZE_SPECIFIC_PRESETS
+    };
+  }
+  return _mergedSizePresets;
+}
+
+/**
  * Synchronous base directory mapping: category -> relative path under assets/
  * Matches the canonical paths in shared/assetPaths.js.
  */
@@ -126,6 +154,8 @@ async function getObstacleOutputPath(id, category, options = {}) {
 
 module.exports = {
   getAssetPathsModule,
+  getSizePresets,
+  RESIZE_SPECIFIC_PRESETS,
   CATEGORY_BASE_DIRS,
   getOutputDir,
   getOriginalsFilePath,

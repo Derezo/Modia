@@ -7,14 +7,12 @@
     "secondary": "#A0A0A0",
     "accent": "#708090"
   },
-  "outputPath": "mountain",
   "tiles": [
     {
       "key": "grass_0",
       "terrain": "grass",
       "variant": 0,
       "prompt": "hardy alpine grass tufts growing between mountain rocks in pale green #6B8E4A #8B8682",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-25T19:55:54.497Z"
     },
@@ -23,7 +21,6 @@
       "terrain": "grass",
       "variant": 1,
       "prompt": "windswept mountain meadow grass with exposed soil in muted green brown #4A6B2A #8B7355",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-02-02T03:56:33.258Z"
     },
@@ -32,7 +29,6 @@
       "terrain": "grass",
       "variant": 2,
       "prompt": "sparse alpine grass with frost-touched tips in grey green tones #6B8E4A #A0A0A0",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-02-02T04:46:16.779Z"
     },
@@ -41,7 +37,6 @@
       "terrain": "grass",
       "variant": 3,
       "prompt": "patchy mountain grass with gravel and small stones in earthy green grey #4A6B2A #8B8682",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T04:51:04.064Z"
     },
@@ -50,7 +45,6 @@
       "terrain": "stone",
       "variant": 0,
       "prompt": "weathered mountain stone with wind erosion patterns in grey tones #8B8682 #708090",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T04:51:45.269Z"
     },
@@ -59,7 +53,6 @@
       "terrain": "stone",
       "variant": 1,
       "prompt": "granite mountain path worn by climbers in speckled grey #A0A0A0 #696969",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T04:52:26.447Z"
     },
@@ -68,7 +61,6 @@
       "terrain": "stone",
       "variant": 2,
       "prompt": "cracked alpine stone with frost damage in cool grey #808080 #708090",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T04:53:07.719Z"
     },
@@ -77,7 +69,6 @@
       "terrain": "stone",
       "variant": 3,
       "prompt": "rough mountain slate with natural layering in dark grey #696969 #8B8682",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T04:53:51.038Z"
     },
@@ -86,7 +77,6 @@
       "terrain": "rock",
       "variant": 0,
       "prompt": "solid mountain rock surface with natural striations in grey stone tones #8B8682 #708090",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T04:54:33.741Z"
     },
@@ -95,7 +85,6 @@
       "terrain": "rock",
       "variant": 1,
       "prompt": "granite boulder surface with quartz inclusions in light grey #A0A0A0 #F5F5F5",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-26T05:02:30.935Z"
     },
@@ -104,7 +93,6 @@
       "terrain": "rock",
       "variant": 2,
       "prompt": "dark basalt mountain rock with rough texture in charcoal grey #505050 #696969",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T04:55:17.156Z"
     },
@@ -113,7 +101,6 @@
       "terrain": "rock",
       "variant": 3,
       "prompt": "iron-rich mountain rock with rust streaks in grey brown #8B8682 #A0522D",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T04:56:00.524Z"
     },
@@ -122,7 +109,6 @@
       "terrain": "forest",
       "variant": 0,
       "prompt": "alpine pine forest floor with needles and pinecones in brown green #5C4033 #4A6B2A",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T04:56:44.955Z"
     },
@@ -131,7 +117,6 @@
       "terrain": "forest",
       "variant": 1,
       "prompt": "sparse mountain woodland floor with rocky patches in grey brown #2F4F2F #8B8682",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-27T12:41:53.077Z"
     },
@@ -140,7 +125,6 @@
       "terrain": "forest",
       "variant": 2,
       "prompt": "high altitude tree line floor with stunted growth in earthy tones #5C4033 #A0A0A0",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T04:57:28.259Z"
     },
@@ -149,7 +133,6 @@
       "terrain": "forest",
       "variant": 3,
       "prompt": "mountain conifer floor with fallen bark and snow patches in brown white #8B7355 #F5F5F5",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T04:58:12.647Z"
     },
@@ -158,7 +141,6 @@
       "terrain": "water",
       "variant": 0,
       "prompt": "crystal clear mountain stream with smooth stones visible below in ice blue #4682B4 #87CEEB",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T04:58:56.207Z"
     },
@@ -167,7 +149,6 @@
       "terrain": "water",
       "variant": 1,
       "prompt": "alpine lake surface reflecting snow peaks in deep blue #20B2AA #F5F5F5",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T04:59:40.627Z"
     },
@@ -176,7 +157,6 @@
       "terrain": "water",
       "variant": 2,
       "prompt": "rushing mountain waterfall pool with white foam in blue white #4169E1 #F5F5F5",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T05:00:24.947Z"
     },
@@ -185,7 +165,6 @@
       "terrain": "water",
       "variant": 3,
       "prompt": "glacial meltwater with milky blue color from rock flour in pale blue #B0C4DE #87CEEB",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T05:01:10.339Z"
     },
@@ -194,7 +173,6 @@
       "terrain": "lava",
       "variant": 0,
       "prompt": "volcanic mountain crater with fresh lava flow in fiery orange grey #FF4500 #8B8682",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T05:01:54.745Z"
     },
@@ -203,7 +181,6 @@
       "terrain": "lava",
       "variant": 1,
       "prompt": "cooling volcanic rock on mountain slope with bright veins in orange black #FF4500 #505050",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T05:02:40.203Z"
     },
@@ -212,7 +189,6 @@
       "terrain": "lava",
       "variant": 2,
       "prompt": "active volcanic vent with bubbling magma in intense orange red #FF6347 #8B0000",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T05:03:25.624Z"
     },
@@ -221,7 +197,6 @@
       "terrain": "lava",
       "variant": 3,
       "prompt": "obsidian mountain flow with glowing fissures in glass black orange #2F2F2F #FF4500",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T05:04:12.062Z"
     },
@@ -230,7 +205,6 @@
       "terrain": "cliff",
       "variant": 0,
       "prompt": "sheer mountain cliff face with exposed rock strata in layered grey #696969 #8B8682",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T05:04:57.461Z"
     },
@@ -239,7 +213,6 @@
       "terrain": "cliff",
       "variant": 1,
       "prompt": "weathered mountain precipice with crumbling edges in warm grey #8B8682 #A0A0A0",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T05:05:42.827Z"
     },
@@ -248,7 +221,6 @@
       "terrain": "cliff",
       "variant": 2,
       "prompt": "jagged alpine cliff with sharp wind-carved edges in dark grey #505050 #708090",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T05:06:28.335Z"
     },
@@ -257,7 +229,6 @@
       "terrain": "cliff",
       "variant": 3,
       "prompt": "snow-dusted mountain cliff face with ice patches in grey white #696969 #F5F5F5",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-28T05:07:15.061Z"
     },
@@ -266,7 +237,6 @@
       "terrain": "tree",
       "variant": 0,
       "prompt": "gnarled mountain pine trunk  #5C4033 #8B8682",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-02-02T04:47:02.139Z",
       "seed": null,
@@ -283,7 +253,6 @@
       "terrain": "tree",
       "variant": 1,
       "prompt": "windswept alpine tree roots gripping rocky ground in dark brown grey #3D2B1F #A0A0A0",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-01-26T05:23:52.001Z"
     },
@@ -292,7 +261,6 @@
       "terrain": "tree",
       "variant": 2,
       "prompt": "fallen mountain timber weathered by elements in grey brown #5C4033 #8B8682",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-02-02T04:47:46.527Z"
     },
@@ -301,7 +269,6 @@
       "terrain": "tree",
       "variant": 3,
       "prompt": "ancient alpine slog bleached by sun  #8B7355 #A0A0A0",
-      "outputPath": "mountain",
       "generated": true,
       "generatedAt": "2026-02-02T04:48:30.852Z",
       "seed": null,
@@ -318,7 +285,6 @@
       "terrain": "snow",
       "variant": 0,
       "prompt": "pristine mountain snow cover with subtle blue shadows in white #F5F5F5 #87CEEB",
-      "outputPath": "mountain",
       "bonus": true,
       "generated": true,
       "generatedAt": "2026-01-28T05:10:17.731Z"
@@ -328,7 +294,6 @@
       "terrain": "snow",
       "variant": 1,
       "prompt": "wind-packed mountain snow with ice crust sparkle in bright white #FFFFFF #B0C4DE",
-      "outputPath": "mountain",
       "bonus": true,
       "generated": true,
       "generatedAt": "2026-01-28T05:11:02.256Z"
@@ -338,7 +303,6 @@
       "terrain": "ice",
       "variant": 0,
       "prompt": "frozen mountain ice sheet with translucent blue surface in pale blue #87CEEB #B0C4DE",
-      "outputPath": "mountain",
       "bonus": true,
       "generated": true,
       "generatedAt": "2026-01-28T05:11:47.736Z"
@@ -348,7 +312,6 @@
       "terrain": "ice",
       "variant": 1,
       "prompt": "cracked glacier ice with deep blue crevasses in ice blue #B0C4DE #4682B4",
-      "outputPath": "mountain",
       "bonus": true,
       "generated": true,
       "generatedAt": "2026-01-28T05:12:33.199Z"
@@ -358,7 +321,6 @@
       "terrain": "lichen",
       "variant": 0,
       "prompt": "alpine rock surface with orange and green lichen growth in earth tones #8B8682 #DAA520",
-      "outputPath": "mountain",
       "bonus": true,
       "generated": true,
       "generatedAt": "2026-01-28T05:13:18.572Z"
@@ -368,7 +330,6 @@
       "terrain": "lichen",
       "variant": 1,
       "prompt": "boulder face covered in map lichen patterns in grey yellow green #A0A0A0 #9ACD32",
-      "outputPath": "mountain",
       "bonus": true,
       "generated": true,
       "generatedAt": "2026-01-28T05:14:03.044Z"

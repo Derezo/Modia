@@ -5,7 +5,7 @@
   "size": "16x16",
   "icons": [
     {
-      "id": "status_poison",
+      "id": "poison",
       "name": "Poison",
       "prompt": "poison drop skull toxic green drip",
       "seed": 31001,
@@ -15,7 +15,7 @@
       "generatedAt": "2026-01-29T08:00:34.117Z"
     },
     {
-      "id": "status_burn",
+      "id": "burn",
       "name": "Burn",
       "prompt": "flame burn fire damage ember",
       "seed": 31002,
@@ -25,7 +25,7 @@
       "generatedAt": "2026-01-29T08:01:23.666Z"
     },
     {
-      "id": "status_freeze",
+      "id": "freeze",
       "name": "Freeze",
       "prompt": "ice crystal freeze frozen cold snowflake",
       "seed": 31003,
@@ -35,7 +35,7 @@
       "generatedAt": "2026-01-29T08:02:13.286Z"
     },
     {
-      "id": "status_stun",
+      "id": "stun",
       "name": "Stun",
       "prompt": "stars spinning stun dazed dizzy spiral",
       "seed": 31004,
@@ -45,7 +45,7 @@
       "generatedAt": "2026-01-29T08:03:03.269Z"
     },
     {
-      "id": "status_sleep",
+      "id": "sleep",
       "name": "Sleep",
       "prompt": "zzz sleep rest unconscious moon",
       "seed": 31005,
@@ -55,7 +55,7 @@
       "generatedAt": "2026-01-29T08:03:53.038Z"
     },
     {
-      "id": "status_blind",
+      "id": "blind",
       "name": "Blind",
       "prompt": "closed eye blind darkness unable to see",
       "seed": 31006,
@@ -65,7 +65,7 @@
       "generatedAt": "2026-01-29T08:04:42.793Z"
     },
     {
-      "id": "status_silence",
+      "id": "silence",
       "name": "Silence",
       "prompt": "mouth crossed silence mute no sound",
       "seed": 31007,
@@ -80,7 +80,7 @@
       }
     },
     {
-      "id": "status_slow",
+      "id": "slow",
       "name": "Slow",
       "prompt": "snail slow sluggish turtle speed down",
       "seed": 31008,
@@ -90,7 +90,7 @@
       "generatedAt": "2026-01-29T08:06:21.823Z"
     },
     {
-      "id": "status_haste",
+      "id": "haste",
       "name": "Haste",
       "prompt": "vibrating stopwatch speed haste fast quick motion lines",
       "seed": 31009,
@@ -105,7 +105,7 @@
       }
     },
     {
-      "id": "status_regen",
+      "id": "regen",
       "name": "Regeneration",
       "prompt": "heart pulse regeneration heal over time green",
       "seed": 31010,
@@ -115,7 +115,7 @@
       "generatedAt": "2026-01-29T08:08:01.897Z"
     },
     {
-      "id": "status_protect",
+      "id": "protect",
       "name": "Protect",
       "prompt": "shield protect defense barrier buff blue",
       "seed": 31011,
@@ -125,7 +125,7 @@
       "generatedAt": "2026-01-29T08:08:51.493Z"
     },
     {
-      "id": "status_shell",
+      "id": "shell",
       "name": "Shell",
       "prompt": "magic shell bubble protect magic defense",
       "seed": 31012,
@@ -135,7 +135,7 @@
       "generatedAt": "2026-01-29T08:09:41.137Z"
     },
     {
-      "id": "status_strength_up",
+      "id": "strength_up",
       "name": "Strength Up",
       "prompt": "muscle bicep strength up power red",
       "seed": 31013,
@@ -145,7 +145,7 @@
       "generatedAt": "2026-01-29T08:10:30.816Z"
     },
     {
-      "id": "status_strength_down",
+      "id": "strength_down",
       "name": "Strength Down",
       "prompt": "broken arm strength down weakness blue",
       "seed": 31014,
@@ -155,7 +155,7 @@
       "generatedAt": "2026-01-29T08:11:21.736Z"
     },
     {
-      "id": "status_defense_up",
+      "id": "defense_up",
       "name": "Defense Up",
       "prompt": "shield plus defense up armor gold",
       "seed": 31015,
@@ -165,7 +165,7 @@
       "generatedAt": "2026-01-29T08:12:12.336Z"
     },
     {
-      "id": "status_defense_down",
+      "id": "defense_down",
       "name": "Defense Down",
       "prompt": "cracked shield defense down vulnerable",
       "seed": 31016,
@@ -175,7 +175,7 @@
       "generatedAt": "2026-01-29T08:13:02.324Z"
     },
     {
-      "id": "status_berserk",
+      "id": "berserk",
       "name": "Berserk",
       "prompt": "angry face berserk rage fury red",
       "seed": 31017,
@@ -185,7 +185,7 @@
       "generatedAt": "2026-01-29T08:13:52.537Z"
     },
     {
-      "id": "status_confusion",
+      "id": "confusion",
       "name": "Confusion",
       "prompt": "question mark confusion confused spiral",
       "seed": 31018,
@@ -195,7 +195,7 @@
       "generatedAt": "2026-01-29T08:14:38.662Z"
     },
     {
-      "id": "status_charm",
+      "id": "charm",
       "name": "Charm",
       "prompt": "heart charm love infatuation pink",
       "seed": 31019,
@@ -205,7 +205,7 @@
       "generatedAt": "2026-01-29T08:15:25.937Z"
     },
     {
-      "id": "status_doom",
+      "id": "doom",
       "name": "Doom",
       "prompt": "skull countdown doom death timer dark",
       "seed": 31020,

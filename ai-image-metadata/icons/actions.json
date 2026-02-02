@@ -5,7 +5,7 @@
   "size": "32x32",
   "icons": [
     {
-      "id": "action_attack",
+      "id": "attack",
       "name": "Attack",
       "prompt": "crossed swords attack action combat strike",
       "seed": 30001,
@@ -15,7 +15,7 @@
       "generatedAt": "2026-01-29T07:44:23.416Z"
     },
     {
-      "id": "action_defend",
+      "id": "defend",
       "name": "Defend",
       "prompt": "raised shield defend block protection stance",
       "seed": 30002,
@@ -25,7 +25,7 @@
       "generatedAt": "2026-01-29T07:45:06.875Z"
     },
     {
-      "id": "action_move",
+      "id": "move",
       "name": "Move",
       "prompt": "boot footprint movement walk arrow direction",
       "seed": 30003,
@@ -35,7 +35,7 @@
       "loraModel": "retro-pixel"
     },
     {
-      "id": "action_wait",
+      "id": "wait",
       "name": "Wait",
       "prompt": "tilted hourglass wait time pause clock",
       "seed": 30004,
@@ -50,7 +50,7 @@
       }
     },
     {
-      "id": "action_item",
+      "id": "item",
       "name": "Use Item",
       "prompt": "potion bottle item use consume hand",
       "seed": 30005,
@@ -65,7 +65,7 @@
       }
     },
     {
-      "id": "action_skill",
+      "id": "skill",
       "name": "Skill",
       "prompt": "magic sparkle skill ability star burst",
       "seed": 30006,
@@ -80,7 +80,7 @@
       }
     },
     {
-      "id": "action_flee",
+      "id": "flee",
       "name": "Flee",
       "prompt": "running figure escape flee retreat arrow",
       "seed": 30007,
@@ -90,7 +90,7 @@
       "generatedAt": "2026-01-29T07:49:00.482Z"
     },
     {
-      "id": "action_heal",
+      "id": "heal",
       "name": "Heal",
       "prompt": "heart cross heal restore health plus",
       "seed": 30011,
@@ -105,7 +105,7 @@
       "generatedAt": "2026-01-29T07:49:48.792Z"
     },
     {
-      "id": "action_magic_fire",
+      "id": "magic_fire",
       "name": "Fire Magic",
       "prompt": "fireball flame fire magic spell blaze",
       "seed": 30012,
@@ -115,7 +115,7 @@
       "generatedAt": "2026-01-29T07:50:37.462Z"
     },
     {
-      "id": "action_magic_ice",
+      "id": "magic_ice",
       "name": "Ice Magic",
       "prompt": "ice crystal frost cold magic spell snowflake",
       "seed": 30013,
@@ -125,7 +125,7 @@
       "generatedAt": "2026-01-29T07:51:27.220Z"
     },
     {
-      "id": "action_magic_lightning",
+      "id": "magic_lightning",
       "name": "Lightning Magic",
       "prompt": "yellow lightning bolt electric shock magic spell",
       "seed": 30014,
@@ -140,7 +140,7 @@
       }
     },
     {
-      "id": "action_magic_earth",
+      "id": "magic_earth",
       "name": "Earth Magic",
       "prompt": "brown rock boulder earth magic spell stone",
       "seed": 30015,
@@ -155,7 +155,7 @@
       }
     },
     {
-      "id": "action_magic_holy",
+      "id": "magic_holy",
       "name": "Holy Magic",
       "prompt": "radiant blue light holy magic divine blessing",
       "seed": 30016,
@@ -170,7 +170,7 @@
       }
     },
     {
-      "id": "action_magic_dark",
+      "id": "magic_dark",
       "name": "Dark Magic",
       "prompt": "shadow darkness dark magic curse wispy",
       "seed": 30017,
@@ -180,7 +180,7 @@
       "generatedAt": "2026-01-29T07:54:44.740Z"
     },
     {
-      "id": "action_buff",
+      "id": "buff",
       "name": "Buff",
       "prompt": "upward arrow buff enhance boost power up",
       "seed": 30021,
@@ -190,7 +190,7 @@
       "generatedAt": "2026-01-29T07:55:34.323Z"
     },
     {
-      "id": "action_debuff",
+      "id": "debuff",
       "name": "Debuff",
       "prompt": "downward arrow debuff down",
       "seed": 30022,
@@ -205,7 +205,7 @@
       }
     },
     {
-      "id": "action_taunt",
+      "id": "taunt",
       "name": "Taunt",
       "prompt": "shouting face taunt provoke aggro anger",
       "seed": 30023,
@@ -215,7 +215,7 @@
       "generatedAt": "2026-01-29T07:57:14.181Z"
     },
     {
-      "id": "action_stealth",
+      "id": "stealth",
       "name": "Stealth",
       "prompt": "eye slash hidden stealth invisible cloak",
       "seed": 30024,
@@ -230,7 +230,7 @@
       }
     },
     {
-      "id": "action_summon",
+      "id": "summon",
       "name": "Summon",
       "prompt": "magic circle summon portal conjure creature",
       "seed": 30025,
@@ -240,7 +240,7 @@
       "generatedAt": "2026-01-29T07:58:54.912Z"
     },
     {
-      "id": "action_counter",
+      "id": "counter",
       "name": "Counter",
       "prompt": "circular arrow counter reflect retaliate response",
       "seed": 30026,
@@ -250,7 +250,7 @@
       "generatedAt": "2026-01-29T07:59:44.763Z"
     },
     {
-      "id": "action_travel",
+      "id": "travel",
       "name": "Travel",
       "prompt": "walking path icon",
       "seed": 30027,

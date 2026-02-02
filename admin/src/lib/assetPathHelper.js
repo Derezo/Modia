@@ -10,7 +10,6 @@ import {
   DEFAULT_SIZES,
   CHARACTER_ANIMATIONS
 } from '@shared/assetPaths.js';
-import { normalizeIconId } from '@shared/iconCategories.js';
 
 // Re-export for components
 export { CHARACTER_ANIMATIONS };
@@ -75,14 +74,10 @@ export function getAssetUrls(category, id, options = {}) {
   const urls = [];
   const size = options.size || DEFAULT_SIZES[category];
 
-  // Normalize icon IDs to match file naming convention
-  // Icon metadata uses full IDs (menu_fishing) but files use stripped names (fishing.png)
-  const normalizedId = category === 'icons' && options.subcategory
-    ? normalizeIconId(id, options.subcategory)
-    : id;
-
+  // Icon IDs are now unprefixed in metadata (Phase 5 cleanup)
+  // so we can use the ID directly without normalization
   try {
-    urls.push(getAssetPath(category, normalizedId, { ...options, size }));
+    urls.push(getAssetPath(category, id, { ...options, size }));
   } catch (e) {
     // Category not supported
   }
@@ -109,11 +104,8 @@ export function getAssetImageUrl(asset, category) {
   const extraOptions = getAssetExtraOptions(asset, category);
   const size = DEFAULT_SIZES[category];
 
-  // Normalize icon IDs to match file naming convention
-  // Icon metadata uses full IDs (menu_fishing) but files use stripped names (fishing.png)
-  const normalizedId = category === 'icons'
-    ? normalizeIconId(id, subcategory)
-    : id;
+  // Icon IDs are now unprefixed in metadata (Phase 5 cleanup)
+  // so we can use the ID directly without normalization
 
   // For tiles, use the canonical path directly (tiles work correctly)
   if (category === 'tiles') {
@@ -142,6 +134,6 @@ export function getAssetImageUrl(asset, category) {
   }
 
   // For other categories, get canonical URLs and return the first one
-  const urls = getAssetUrls(category, normalizedId, { subcategory, size, ...extraOptions });
+  const urls = getAssetUrls(category, id, { subcategory, size, ...extraOptions });
   return urls[0] || null;
 }

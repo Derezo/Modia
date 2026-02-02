@@ -19,7 +19,8 @@
  * @returns {Array} Filtered assets (or all assets if no keys provided)
  *
  * @example
- * const filtered = applyKeyFilter(allIcons, ['action_attack', 'action_defend']);
+ * // Icon IDs are unprefixed (post-Phase 5 cleanup)
+ * const filtered = applyKeyFilter(allIcons, ['attack', 'defend']);
  *
  * @example
  * // Use a custom ID field

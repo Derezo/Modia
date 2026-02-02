@@ -162,8 +162,8 @@ async function runPythonScript(scriptName, args = [], options = {}) {
  * @param {Object} tileConfig - Tile configuration
  * @param {string} tileConfig.prompt - Terrain description
  * @param {string} tileConfig.key - Asset key/filename
- * @param {string} tileConfig.biome - Biome modifier
- * @param {string} tileConfig.outputDir - Override output directory
+ * @param {string} tileConfig.biome - Biome modifier (used for prompt context only)
+ * @param {string} tileConfig.outputPath - REQUIRED: Explicit absolute output path from assetPaths.js
  * @param {number} tileConfig.seed - Random seed
  * @param {number} tileConfig.variants - Number of variants to generate
  * @param {Object} options - Additional options
@@ -174,21 +174,22 @@ async function runPythonScript(scriptName, args = [], options = {}) {
  * @returns {Promise<PythonResult>}
  */
 async function generateTile(tileConfig, options = {}) {
-  const { prompt, key, biome = 'default', outputDir, seed = 42, variants = 1, loraModel } = tileConfig;
+  const { prompt, key, biome = 'default', outputPath, seed = 42, variants = 1, loraModel } = tileConfig;
   const { local = true, huggingface = false, verbose = false, quiet = false } = options;
+
+  // outputPath is now required - Python scripts no longer resolve paths internally
+  if (!outputPath) {
+    throw new Error('outputPath is required for tile generation. Pass absolute path from assetPaths.js');
+  }
 
   const args = [
     '--prompt', prompt,
     '--key', key,
-    '--biome', biome,
+    '--biome', biome,  // Still passed for prompt context (biome affects style)
     '--seed', String(seed ?? 42),
-    '--variants', String(variants)
+    '--variants', String(variants),
+    '--output-path', outputPath  // Always use explicit path
   ];
-
-  // Pass explicit output directory if specified (e.g., for "base" biome tiles)
-  if (outputDir) {
-    args.push('--output-dir', outputDir);
-  }
 
   if (options.dryRun) {
     args.push('--dry-run');

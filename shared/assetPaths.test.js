@@ -1,6 +1,14 @@
+/**
+ * Asset Paths Unit Tests
+ *
+ * Comprehensive tests for the single source of truth asset path module.
+ * Tests all path generation functions, size presets, and edge cases.
+ */
+
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import {
+  // Constants
   CHARACTER_ANIMATIONS,
   CHARACTER_TYPES,
   ENEMY_BIOMES,
@@ -8,20 +16,34 @@ import {
   ASSET_CATEGORIES,
   SIZE_PRESETS,
   DEFAULT_SIZES,
+  // Character functions
   getCharacterPath,
   getCharacterAnimationPaths,
   getCharacterDirectory,
   getCharacterReferencePath,
+  // Obstacle function
   getObstaclePath,
+  // Core path functions
   getAssetPath,
   getOriginalsPath,
-  getOutputPath
+  getOutputPath,
+  getAllSizeVariants,
+  // Size utilities
+  isValidSize,
+  getDefaultSize,
+  getOptimalSize,
+  parseAssetFilename
 } from './assetPaths.js';
 
-describe('assetPaths', () => {
-  describe('constants', () => {
-    it('should export CHARACTER_ANIMATIONS with all animation types', () => {
+// =============================================================================
+// Constants Tests
+// =============================================================================
+
+describe('assetPaths constants', () => {
+  describe('CHARACTER_ANIMATIONS', () => {
+    it('should export all required animation types', () => {
       assert.ok(Array.isArray(CHARACTER_ANIMATIONS));
+      assert.strictEqual(CHARACTER_ANIMATIONS.length, 8);
       assert.ok(CHARACTER_ANIMATIONS.includes('idle'));
       assert.ok(CHARACTER_ANIMATIONS.includes('walk'));
       assert.ok(CHARACTER_ANIMATIONS.includes('attack'));
@@ -31,159 +53,338 @@ describe('assetPaths', () => {
       assert.ok(CHARACTER_ANIMATIONS.includes('cast'));
       assert.ok(CHARACTER_ANIMATIONS.includes('victory'));
     });
+  });
 
-    it('should export CHARACTER_TYPES', () => {
+  describe('CHARACTER_TYPES', () => {
+    it('should include player and enemy types', () => {
       assert.deepStrictEqual(CHARACTER_TYPES, ['player', 'enemy']);
     });
+  });
 
-    it('should export ENEMY_BIOMES', () => {
+  describe('ENEMY_BIOMES', () => {
+    it('should include all biome types', () => {
       assert.deepStrictEqual(ENEMY_BIOMES, ['forest', 'cave', 'mountain', 'bridge', 'castle']);
     });
+  });
 
-    it('should export OBSTACLE_CATEGORIES', () => {
+  describe('OBSTACLE_CATEGORIES', () => {
+    it('should include rocks and trees', () => {
       assert.deepStrictEqual(OBSTACLE_CATEGORIES, ['rocks', 'trees']);
     });
+  });
 
-    it('should include characters and obstacles in ASSET_CATEGORIES', () => {
-      assert.ok(ASSET_CATEGORIES.includes('characters'));
-      assert.ok(ASSET_CATEGORIES.includes('obstacles'));
+  describe('ASSET_CATEGORIES', () => {
+    it('should include all asset categories', () => {
+      const expected = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays', 'characters', 'obstacles'];
+      assert.deepStrictEqual(ASSET_CATEGORIES, expected);
+    });
+  });
+
+  describe('SIZE_PRESETS', () => {
+    it('should have correct sizes for tiles (single size)', () => {
+      assert.deepStrictEqual(SIZE_PRESETS.tiles, [64]);
     });
 
-    it('should have SIZE_PRESETS for characters and obstacles', () => {
+    it('should have correct sizes for portraits', () => {
+      assert.deepStrictEqual(SIZE_PRESETS.portraits, [64, 128, 256]);
+    });
+
+    it('should have correct sizes for items', () => {
+      assert.deepStrictEqual(SIZE_PRESETS.items, [32, 64, 128]);
+    });
+
+    it('should have correct sizes for icons (including 256)', () => {
+      assert.deepStrictEqual(SIZE_PRESETS.icons, [16, 24, 32, 48, 64, 128, 256]);
+    });
+
+    it('should have correct sizes for nodes', () => {
+      assert.deepStrictEqual(SIZE_PRESETS.nodes, [48, 64, 96, 128, 256]);
+    });
+
+    it('should have correct sizes for overlays', () => {
+      assert.deepStrictEqual(SIZE_PRESETS.overlays, [32, 48, 64, 128]);
+    });
+
+    it('should have correct sizes for characters', () => {
       assert.deepStrictEqual(SIZE_PRESETS.characters, [64]);
+    });
+
+    it('should have correct sizes for obstacles', () => {
       assert.deepStrictEqual(SIZE_PRESETS.obstacles, [64]);
     });
 
-    it('should have DEFAULT_SIZES for characters and obstacles', () => {
+    it('should have sizes sorted in ascending order for all categories', () => {
+      for (const [category, sizes] of Object.entries(SIZE_PRESETS)) {
+        const sorted = [...sizes].sort((a, b) => a - b);
+        assert.deepStrictEqual(sizes, sorted, `${category} sizes should be ascending`);
+      }
+    });
+  });
+
+  describe('DEFAULT_SIZES', () => {
+    it('should have defaults for all categories', () => {
+      assert.strictEqual(DEFAULT_SIZES.tiles, 64);
+      assert.strictEqual(DEFAULT_SIZES.portraits, 64);
+      assert.strictEqual(DEFAULT_SIZES.items, 64);
+      assert.strictEqual(DEFAULT_SIZES.icons, 32);
+      assert.strictEqual(DEFAULT_SIZES.nodes, 96);
+      assert.strictEqual(DEFAULT_SIZES.overlays, 64);
       assert.strictEqual(DEFAULT_SIZES.characters, 64);
       assert.strictEqual(DEFAULT_SIZES.obstacles, 64);
     });
-  });
 
-  describe('getCharacterPath', () => {
-    it('should generate player character path with default animation', () => {
-      const path = getCharacterPath('warrior');
-      assert.strictEqual(path, '/assets/characters/player/warrior/warrior_idle.webp');
-    });
-
-    it('should generate player character path with specified animation', () => {
-      const path = getCharacterPath('mage', { animation: 'attack' });
-      assert.strictEqual(path, '/assets/characters/player/mage/mage_attack.webp');
-    });
-
-    it('should generate enemy character path', () => {
-      const path = getCharacterPath('goblin_warrior', { type: 'enemy', biome: 'forest' });
-      assert.strictEqual(path, '/assets/characters/enemies/forest/goblin_warrior/goblin_warrior_idle.webp');
-    });
-
-    it('should generate enemy character path with animation', () => {
-      const path = getCharacterPath('skeleton', { type: 'enemy', biome: 'cave', animation: 'dead' });
-      assert.strictEqual(path, '/assets/characters/enemies/cave/skeleton/skeleton_dead.webp');
-    });
-
-    it('should accept "enemies" as type alias', () => {
-      const path = getCharacterPath('orc', { type: 'enemies', biome: 'mountain' });
-      assert.strictEqual(path, '/assets/characters/enemies/mountain/orc/orc_idle.webp');
-    });
-
-    it('should support custom extension', () => {
-      const path = getCharacterPath('warrior', { animation: 'idle', extension: 'png' });
-      assert.strictEqual(path, '/assets/characters/player/warrior/warrior_idle.png');
-    });
-
-    it('should throw error for enemy without biome', () => {
-      assert.throws(() => {
-        getCharacterPath('goblin', { type: 'enemy' });
-      }, /biome required/);
+    it('should have defaults that exist in SIZE_PRESETS', () => {
+      for (const [category, defaultSize] of Object.entries(DEFAULT_SIZES)) {
+        const presets = SIZE_PRESETS[category];
+        assert.ok(presets.includes(defaultSize),
+          `Default ${defaultSize} for ${category} should be in SIZE_PRESETS`);
+      }
     });
   });
+});
 
-  describe('getCharacterAnimationPaths', () => {
-    it('should return all animation paths by default', () => {
-      const paths = getCharacterAnimationPaths('warrior');
-      assert.strictEqual(paths.length, CHARACTER_ANIMATIONS.length);
-      assert.ok(paths.some(p => p.animation === 'idle'));
-      assert.ok(paths.some(p => p.animation === 'dead'));
+// =============================================================================
+// Character Path Tests
+// =============================================================================
+
+describe('getCharacterPath', () => {
+  it('should generate player character path with default animation', () => {
+    const path = getCharacterPath('warrior');
+    assert.strictEqual(path, '/assets/characters/player/warrior/warrior_idle.webp');
+  });
+
+  it('should generate player character path with specified animation', () => {
+    const path = getCharacterPath('mage', { animation: 'attack' });
+    assert.strictEqual(path, '/assets/characters/player/mage/mage_attack.webp');
+  });
+
+  it('should generate enemy character path', () => {
+    const path = getCharacterPath('goblin_warrior', { type: 'enemy', biome: 'forest' });
+    assert.strictEqual(path, '/assets/characters/enemies/forest/goblin_warrior/goblin_warrior_idle.webp');
+  });
+
+  it('should generate enemy character path with animation', () => {
+    const path = getCharacterPath('skeleton', { type: 'enemy', biome: 'cave', animation: 'dead' });
+    assert.strictEqual(path, '/assets/characters/enemies/cave/skeleton/skeleton_dead.webp');
+  });
+
+  it('should accept "enemies" as type alias', () => {
+    const path = getCharacterPath('orc', { type: 'enemies', biome: 'mountain' });
+    assert.strictEqual(path, '/assets/characters/enemies/mountain/orc/orc_idle.webp');
+  });
+
+  it('should support custom extension', () => {
+    const path = getCharacterPath('warrior', { animation: 'idle', extension: 'png' });
+    assert.strictEqual(path, '/assets/characters/player/warrior/warrior_idle.png');
+  });
+
+  it('should throw error for enemy without biome', () => {
+    assert.throws(() => {
+      getCharacterPath('goblin', { type: 'enemy' });
+    }, /biome required/);
+  });
+
+  it('should handle all animation types', () => {
+    for (const animation of CHARACTER_ANIMATIONS) {
+      const path = getCharacterPath('warrior', { animation });
+      assert.ok(path.includes(`warrior_${animation}.webp`), `Should include ${animation}`);
+    }
+  });
+});
+
+describe('getCharacterAnimationPaths', () => {
+  it('should return all animation paths by default', () => {
+    const paths = getCharacterAnimationPaths('warrior');
+    assert.strictEqual(paths.length, CHARACTER_ANIMATIONS.length);
+    assert.ok(paths.some(p => p.animation === 'idle'));
+    assert.ok(paths.some(p => p.animation === 'dead'));
+  });
+
+  it('should filter by specified animations', () => {
+    const paths = getCharacterAnimationPaths('warrior', { animations: ['idle', 'attack'] });
+    assert.strictEqual(paths.length, 2);
+    assert.strictEqual(paths[0].animation, 'idle');
+    assert.strictEqual(paths[1].animation, 'attack');
+  });
+
+  it('should work for enemies', () => {
+    const paths = getCharacterAnimationPaths('goblin', {
+      type: 'enemy',
+      biome: 'forest',
+      animations: ['idle', 'dead']
+    });
+    assert.strictEqual(paths.length, 2);
+    assert.strictEqual(paths[0].path, '/assets/characters/enemies/forest/goblin/goblin_idle.webp');
+    assert.strictEqual(paths[1].path, '/assets/characters/enemies/forest/goblin/goblin_dead.webp');
+  });
+
+  it('should return path objects with animation and path properties', () => {
+    const paths = getCharacterAnimationPaths('warrior', { animations: ['idle'] });
+    assert.strictEqual(paths.length, 1);
+    assert.ok('animation' in paths[0]);
+    assert.ok('path' in paths[0]);
+  });
+});
+
+describe('getCharacterDirectory', () => {
+  it('should return player character directory', () => {
+    const dir = getCharacterDirectory('warrior');
+    assert.strictEqual(dir, '/assets/characters/player/warrior');
+  });
+
+  it('should return enemy character directory', () => {
+    const dir = getCharacterDirectory('goblin', { type: 'enemy', biome: 'forest' });
+    assert.strictEqual(dir, '/assets/characters/enemies/forest/goblin');
+  });
+
+  it('should throw for enemy without biome', () => {
+    assert.throws(() => {
+      getCharacterDirectory('goblin', { type: 'enemy' });
+    }, /biome required/);
+  });
+});
+
+describe('getCharacterReferencePath', () => {
+  it('should return player reference path', () => {
+    const path = getCharacterReferencePath('warrior');
+    assert.strictEqual(path, '/assets/characters/player/warrior/warrior_reference.png');
+  });
+
+  it('should return enemy reference path', () => {
+    const path = getCharacterReferencePath('goblin', { type: 'enemy', biome: 'forest' });
+    assert.strictEqual(path, '/assets/characters/enemies/forest/goblin/goblin_reference.png');
+  });
+});
+
+// =============================================================================
+// Obstacle Path Tests
+// =============================================================================
+
+describe('getObstaclePath', () => {
+  it('should generate rock obstacle path', () => {
+    const path = getObstaclePath('rock_small', 'rocks');
+    assert.strictEqual(path, '/assets/obstacles/rocks/rock_small.webp');
+  });
+
+  it('should generate tree obstacle path', () => {
+    const path = getObstaclePath('tree_oak', 'trees');
+    assert.strictEqual(path, '/assets/obstacles/trees/tree_oak.webp');
+  });
+
+  it('should support custom extension', () => {
+    const path = getObstaclePath('rock_large', 'rocks', { extension: 'png' });
+    assert.strictEqual(path, '/assets/obstacles/rocks/rock_large.png');
+  });
+
+  it('should throw for invalid category', () => {
+    assert.throws(() => {
+      getObstaclePath('boulder', 'invalid');
+    }, /Invalid obstacle category/);
+  });
+});
+
+// =============================================================================
+// Core Path Function Tests
+// =============================================================================
+
+describe('getAssetPath', () => {
+  describe('portraits', () => {
+    it('should generate player portrait path', () => {
+      const path = getAssetPath('portraits', 'human_male_warrior', { size: 64 });
+      assert.strictEqual(path, '/assets/portraits/64/human_male_warrior.webp');
     });
 
-    it('should filter by specified animations', () => {
-      const paths = getCharacterAnimationPaths('warrior', { animations: ['idle', 'attack'] });
-      assert.strictEqual(paths.length, 2);
-      assert.strictEqual(paths[0].animation, 'idle');
-      assert.strictEqual(paths[1].animation, 'attack');
+    it('should generate enemy portrait path (with enemy_ prefix)', () => {
+      const path = getAssetPath('portraits', 'enemy_goblin_warrior', { size: 64 });
+      assert.strictEqual(path, '/assets/portraits/64/enemy_goblin_warrior.webp');
     });
 
-    it('should work for enemies', () => {
-      const paths = getCharacterAnimationPaths('goblin', {
-        type: 'enemy',
-        biome: 'forest',
-        animations: ['idle', 'dead']
-      });
-      assert.strictEqual(paths.length, 2);
-      assert.strictEqual(paths[0].path, '/assets/characters/enemies/forest/goblin/goblin_idle.webp');
-      assert.strictEqual(paths[1].path, '/assets/characters/enemies/forest/goblin/goblin_dead.webp');
+    it('should use default size when not specified', () => {
+      const path = getAssetPath('portraits', 'human_male_warrior');
+      assert.strictEqual(path, '/assets/portraits/64/human_male_warrior.webp');
+    });
+
+    it('should support all portrait sizes', () => {
+      for (const size of SIZE_PRESETS.portraits) {
+        const path = getAssetPath('portraits', 'test', { size });
+        assert.ok(path.includes(`/${size}/`), `Should include size ${size}`);
+      }
     });
   });
 
-  describe('getCharacterDirectory', () => {
-    it('should return player character directory', () => {
-      const dir = getCharacterDirectory('warrior');
-      assert.strictEqual(dir, '/assets/characters/player/warrior');
+  describe('nodes', () => {
+    it('should generate node path without node_ prefix', () => {
+      const path = getAssetPath('nodes', 'castle', { size: 96 });
+      assert.strictEqual(path, '/assets/nodes/96/castle.webp');
     });
 
-    it('should return enemy character directory', () => {
-      const dir = getCharacterDirectory('goblin', { type: 'enemy', biome: 'forest' });
-      assert.strictEqual(dir, '/assets/characters/enemies/forest/goblin');
-    });
-
-    it('should throw for enemy without biome', () => {
-      assert.throws(() => {
-        getCharacterDirectory('goblin', { type: 'enemy' });
-      }, /biome required/);
+    it('should use default size (96) when not specified', () => {
+      const path = getAssetPath('nodes', 'tavern');
+      assert.strictEqual(path, '/assets/nodes/96/tavern.webp');
     });
   });
 
-  describe('getCharacterReferencePath', () => {
-    it('should return player reference path', () => {
-      const path = getCharacterReferencePath('warrior');
-      assert.strictEqual(path, '/assets/characters/player/warrior/warrior_reference.png');
+  describe('items', () => {
+    it('should generate item path with subcategory', () => {
+      const path = getAssetPath('items', 'sword_iron', { subcategory: 'weapons', size: 64 });
+      assert.strictEqual(path, '/assets/items/64/weapons/sword_iron.webp');
     });
 
-    it('should return enemy reference path', () => {
-      const path = getCharacterReferencePath('goblin', { type: 'enemy', biome: 'forest' });
-      assert.strictEqual(path, '/assets/characters/enemies/forest/goblin/goblin_reference.png');
-    });
-  });
-
-  describe('getObstaclePath', () => {
-    it('should generate rock obstacle path', () => {
-      const path = getObstaclePath('rock_small', 'rocks');
-      assert.strictEqual(path, '/assets/obstacles/rocks/rock_small.webp');
-    });
-
-    it('should generate tree obstacle path', () => {
-      const path = getObstaclePath('tree_oak', 'trees');
-      assert.strictEqual(path, '/assets/obstacles/trees/tree_oak.webp');
-    });
-
-    it('should support custom extension', () => {
-      const path = getObstaclePath('rock_large', 'rocks', { extension: 'png' });
-      assert.strictEqual(path, '/assets/obstacles/rocks/rock_large.png');
-    });
-
-    it('should throw for invalid category', () => {
-      assert.throws(() => {
-        getObstaclePath('boulder', 'invalid');
-      }, /Invalid obstacle category/);
+    it('should default to weapons subcategory', () => {
+      const path = getAssetPath('items', 'sword_iron', { size: 64 });
+      assert.strictEqual(path, '/assets/items/64/weapons/sword_iron.webp');
     });
   });
 
-  describe('getAssetPath with new categories', () => {
+  describe('icons', () => {
+    it('should generate icon path with png subdirectory', () => {
+      const path = getAssetPath('icons', 'attack', { subcategory: 'actions', size: 32 });
+      assert.strictEqual(path, '/assets/icons/png/32/actions/attack.webp');
+    });
+
+    it('should default to actions subcategory', () => {
+      const path = getAssetPath('icons', 'attack', { size: 32 });
+      assert.strictEqual(path, '/assets/icons/png/32/actions/attack.webp');
+    });
+
+    it('should use default size (32) when not specified', () => {
+      const path = getAssetPath('icons', 'attack');
+      assert.strictEqual(path, '/assets/icons/png/32/actions/attack.webp');
+    });
+  });
+
+  describe('tiles', () => {
+    it('should generate terrain tile path with biome', () => {
+      const path = getAssetPath('tiles', 'grass_0', { subcategory: 'forest' });
+      assert.strictEqual(path, '/assets/sprites/terrain/forest/grass_0.webp');
+    });
+
+    it('should support wall tile naming', () => {
+      const path = getAssetPath('tiles', 'wall_forest_default', { subcategory: 'forest' });
+      assert.strictEqual(path, '/assets/sprites/terrain/forest/wall_forest_default.webp');
+    });
+
+    it('should support slope tile naming', () => {
+      const path = getAssetPath('tiles', 'slope_forest_north_1', { subcategory: 'forest' });
+      assert.strictEqual(path, '/assets/sprites/terrain/forest/slope_forest_north_1.webp');
+    });
+  });
+
+  describe('overlays', () => {
+    it('should generate overlay path', () => {
+      const path = getAssetPath('overlays', 'rare', { subcategory: 'rarity', size: 64 });
+      assert.strictEqual(path, '/assets/overlays/64/rarity/rare.webp');
+    });
+  });
+
+  describe('characters', () => {
     it('should handle characters category', () => {
       const path = getAssetPath('characters', 'warrior', { animation: 'attack' });
       assert.strictEqual(path, '/assets/characters/player/warrior/warrior_attack.webp');
     });
+  });
 
+  describe('obstacles', () => {
     it('should handle obstacles category with default subcategory', () => {
       const path = getAssetPath('obstacles', 'rock_small');
       assert.strictEqual(path, '/assets/obstacles/rocks/rock_small.webp');
@@ -195,32 +396,347 @@ describe('assetPaths', () => {
     });
   });
 
-  describe('getOriginalsPath with new categories', () => {
-    it('should return character reference path for characters', () => {
-      const path = getOriginalsPath('characters', 'warrior');
-      assert.strictEqual(path, '/assets/characters/player/warrior/warrior_reference.png');
+  describe('error handling', () => {
+    it('should throw for invalid category', () => {
+      assert.throws(() => {
+        getAssetPath('invalid_category', 'test');
+      }, /Invalid asset category/);
+    });
+  });
+});
+
+describe('getOriginalsPath', () => {
+  it('should return portrait originals path', () => {
+    const path = getOriginalsPath('portraits', 'human_male_warrior');
+    assert.strictEqual(path, '/assets/portraits/originals/human_male_warrior.webp');
+  });
+
+  it('should return node originals path', () => {
+    const path = getOriginalsPath('nodes', 'castle');
+    assert.strictEqual(path, '/assets/nodes/originals/castle.webp');
+  });
+
+  it('should return item originals path with subcategory', () => {
+    const path = getOriginalsPath('items', 'sword_iron', { subcategory: 'weapons' });
+    assert.strictEqual(path, '/assets/items/originals/weapons/sword_iron.webp');
+  });
+
+  it('should return icon originals path with subcategory', () => {
+    const path = getOriginalsPath('icons', 'attack', { subcategory: 'actions' });
+    assert.strictEqual(path, '/assets/icons/originals/actions/attack.webp');
+  });
+
+  it('should return tile originals path with biome', () => {
+    const path = getOriginalsPath('tiles', 'grass_0', { subcategory: 'forest' });
+    assert.strictEqual(path, '/assets/sprites/terrain/originals/forest/grass_0.webp');
+  });
+
+  it('should return overlay originals path', () => {
+    const path = getOriginalsPath('overlays', 'rare', { subcategory: 'rarity' });
+    assert.strictEqual(path, '/assets/overlays/originals/rarity/rare.webp');
+  });
+
+  it('should return character reference path for characters', () => {
+    const path = getOriginalsPath('characters', 'warrior');
+    assert.strictEqual(path, '/assets/characters/player/warrior/warrior_reference.png');
+  });
+
+  it('should return enemy reference path for enemy characters', () => {
+    const path = getOriginalsPath('characters', 'goblin', { type: 'enemy', biome: 'forest' });
+    assert.strictEqual(path, '/assets/characters/enemies/forest/goblin/goblin_reference.png');
+  });
+
+  it('should return obstacle originals path', () => {
+    const path = getOriginalsPath('obstacles', 'rock_small', { subcategory: 'rocks' });
+    assert.strictEqual(path, '/assets/obstacles/originals/rocks/rock_small.webp');
+  });
+
+  it('should use default subcategories when not specified', () => {
+    const itemPath = getOriginalsPath('items', 'sword');
+    assert.ok(itemPath.includes('/weapons/'));
+
+    const iconPath = getOriginalsPath('icons', 'attack');
+    assert.ok(iconPath.includes('/actions/'));
+
+    const overlayPath = getOriginalsPath('overlays', 'rare');
+    assert.ok(overlayPath.includes('/rarity/'));
+  });
+});
+
+describe('getOutputPath', () => {
+  it('should prepend frontend/public to portrait paths', () => {
+    const path = getOutputPath('portraits', 'human_male_warrior', { size: 64 });
+    assert.strictEqual(path, 'frontend/public/assets/portraits/64/human_male_warrior.webp');
+  });
+
+  it('should prepend frontend/public to node paths', () => {
+    const path = getOutputPath('nodes', 'castle', { size: 96 });
+    assert.strictEqual(path, 'frontend/public/assets/nodes/96/castle.webp');
+  });
+
+  it('should return originals path when original option is true', () => {
+    const path = getOutputPath('portraits', 'human_male_warrior', { original: true });
+    assert.strictEqual(path, 'frontend/public/assets/portraits/originals/human_male_warrior.webp');
+  });
+
+  it('should prepend frontend/public to character paths', () => {
+    const path = getOutputPath('characters', 'warrior', { animation: 'idle' });
+    assert.strictEqual(path, 'frontend/public/assets/characters/player/warrior/warrior_idle.webp');
+  });
+
+  it('should prepend frontend/public to obstacle paths', () => {
+    const path = getOutputPath('obstacles', 'rock_small', { subcategory: 'rocks' });
+    assert.strictEqual(path, 'frontend/public/assets/obstacles/rocks/rock_small.webp');
+  });
+});
+
+describe('getAllSizeVariants', () => {
+  it('should return all size variants for portraits', () => {
+    const variants = getAllSizeVariants('portraits', 'human_male_warrior');
+    assert.strictEqual(variants.length, SIZE_PRESETS.portraits.length);
+    assert.deepStrictEqual(variants.map(v => v.size), [64, 128, 256]);
+  });
+
+  it('should return all size variants for icons', () => {
+    const variants = getAllSizeVariants('icons', 'attack', { subcategory: 'actions' });
+    assert.strictEqual(variants.length, SIZE_PRESETS.icons.length);
+    assert.deepStrictEqual(variants.map(v => v.size), [16, 24, 32, 48, 64, 128, 256]);
+  });
+
+  it('should include correct paths for each size', () => {
+    const variants = getAllSizeVariants('portraits', 'test');
+    for (const { size, path } of variants) {
+      assert.ok(path.includes(`/${size}/`), `Path should include size ${size}`);
+    }
+  });
+
+  it('should throw for invalid category', () => {
+    assert.throws(() => {
+      getAllSizeVariants('invalid', 'test');
+    }, /Invalid asset category/);
+  });
+});
+
+// =============================================================================
+// Size Utility Tests
+// =============================================================================
+
+describe('isValidSize', () => {
+  it('should return true for valid icon sizes', () => {
+    assert.strictEqual(isValidSize('icons', 32), true);
+    assert.strictEqual(isValidSize('icons', 16), true);
+    assert.strictEqual(isValidSize('icons', 256), true);
+  });
+
+  it('should return false for invalid icon sizes', () => {
+    assert.strictEqual(isValidSize('icons', 50), false);
+    assert.strictEqual(isValidSize('icons', 100), false);
+    assert.strictEqual(isValidSize('icons', 512), false);
+  });
+
+  it('should work for all categories', () => {
+    for (const [category, sizes] of Object.entries(SIZE_PRESETS)) {
+      for (const size of sizes) {
+        assert.strictEqual(isValidSize(category, size), true,
+          `${size} should be valid for ${category}`);
+      }
+      // Test an invalid size
+      assert.strictEqual(isValidSize(category, 999), false,
+        `999 should be invalid for ${category}`);
+    }
+  });
+
+  it('should throw for invalid category', () => {
+    assert.throws(() => {
+      isValidSize('invalid', 32);
+    }, /Invalid asset category/);
+  });
+});
+
+describe('getDefaultSize', () => {
+  it('should return correct defaults', () => {
+    assert.strictEqual(getDefaultSize('tiles'), 64);
+    assert.strictEqual(getDefaultSize('portraits'), 64);
+    assert.strictEqual(getDefaultSize('items'), 64);
+    assert.strictEqual(getDefaultSize('icons'), 32);
+    assert.strictEqual(getDefaultSize('nodes'), 96);
+    assert.strictEqual(getDefaultSize('overlays'), 64);
+    assert.strictEqual(getDefaultSize('characters'), 64);
+    assert.strictEqual(getDefaultSize('obstacles'), 64);
+  });
+
+  it('should throw for invalid category', () => {
+    assert.throws(() => {
+      getDefaultSize('invalid');
+    }, /Invalid asset category/);
+  });
+});
+
+describe('getOptimalSize', () => {
+  describe('portraits (64, 128, 256)', () => {
+    it('should return 64 for sizes <= 64', () => {
+      assert.strictEqual(getOptimalSize('portraits', 32), 64);
+      assert.strictEqual(getOptimalSize('portraits', 48), 64);
+      assert.strictEqual(getOptimalSize('portraits', 64), 64);
     });
 
-    it('should return enemy reference path for enemy characters', () => {
-      const path = getOriginalsPath('characters', 'goblin', { type: 'enemy', biome: 'forest' });
-      assert.strictEqual(path, '/assets/characters/enemies/forest/goblin/goblin_reference.png');
+    it('should return 128 for sizes 65-128', () => {
+      assert.strictEqual(getOptimalSize('portraits', 65), 128);
+      assert.strictEqual(getOptimalSize('portraits', 100), 128);
+      assert.strictEqual(getOptimalSize('portraits', 128), 128);
     });
 
-    it('should return obstacle originals path', () => {
-      const path = getOriginalsPath('obstacles', 'rock_small', { subcategory: 'rocks' });
-      assert.strictEqual(path, '/assets/obstacles/originals/rocks/rock_small.webp');
+    it('should return 256 for sizes 129-256', () => {
+      assert.strictEqual(getOptimalSize('portraits', 129), 256);
+      assert.strictEqual(getOptimalSize('portraits', 200), 256);
+      assert.strictEqual(getOptimalSize('portraits', 256), 256);
+    });
+
+    it('should return largest (256) for sizes > 256', () => {
+      assert.strictEqual(getOptimalSize('portraits', 300), 256);
+      assert.strictEqual(getOptimalSize('portraits', 512), 256);
     });
   });
 
-  describe('getOutputPath with new categories', () => {
-    it('should prepend frontend/public to character paths', () => {
-      const path = getOutputPath('characters', 'warrior', { animation: 'idle' });
-      assert.strictEqual(path, 'frontend/public/assets/characters/player/warrior/warrior_idle.webp');
+  describe('nodes (48, 64, 96, 128, 256)', () => {
+    it('should return 48 for sizes <= 48', () => {
+      assert.strictEqual(getOptimalSize('nodes', 32), 48);
+      assert.strictEqual(getOptimalSize('nodes', 40), 48);
+      assert.strictEqual(getOptimalSize('nodes', 48), 48);
     });
 
-    it('should prepend frontend/public to obstacle paths', () => {
-      const path = getOutputPath('obstacles', 'rock_small', { subcategory: 'rocks' });
-      assert.strictEqual(path, 'frontend/public/assets/obstacles/rocks/rock_small.webp');
+    it('should return 64 for sizes 49-64', () => {
+      assert.strictEqual(getOptimalSize('nodes', 49), 64);
+      assert.strictEqual(getOptimalSize('nodes', 60), 64);
+      assert.strictEqual(getOptimalSize('nodes', 64), 64);
     });
+
+    it('should return 96 for sizes 65-96', () => {
+      assert.strictEqual(getOptimalSize('nodes', 65), 96);
+      assert.strictEqual(getOptimalSize('nodes', 80), 96);
+      assert.strictEqual(getOptimalSize('nodes', 96), 96);
+    });
+
+    it('should return 128 for sizes 97-128', () => {
+      assert.strictEqual(getOptimalSize('nodes', 97), 128);
+      assert.strictEqual(getOptimalSize('nodes', 120), 128);
+      assert.strictEqual(getOptimalSize('nodes', 128), 128);
+    });
+
+    it('should return 256 for sizes > 128', () => {
+      assert.strictEqual(getOptimalSize('nodes', 129), 256);
+      assert.strictEqual(getOptimalSize('nodes', 300), 256);
+    });
+  });
+
+  describe('icons (16, 24, 32, 48, 64, 128, 256)', () => {
+    it('should return 16 for sizes <= 16', () => {
+      assert.strictEqual(getOptimalSize('icons', 8), 16);
+      assert.strictEqual(getOptimalSize('icons', 16), 16);
+    });
+
+    it('should return 24 for sizes 17-24', () => {
+      assert.strictEqual(getOptimalSize('icons', 17), 24);
+      assert.strictEqual(getOptimalSize('icons', 24), 24);
+    });
+
+    it('should return 32 for sizes 25-32', () => {
+      assert.strictEqual(getOptimalSize('icons', 25), 32);
+      assert.strictEqual(getOptimalSize('icons', 32), 32);
+    });
+  });
+
+  it('should throw for invalid category', () => {
+    assert.throws(() => {
+      getOptimalSize('invalid', 64);
+    }, /Invalid asset category/);
+  });
+});
+
+describe('parseAssetFilename', () => {
+  it('should extract id from portrait filename', () => {
+    const result = parseAssetFilename('human_male_warrior.webp', 'portraits');
+    assert.deepStrictEqual(result, { id: 'human_male_warrior' });
+  });
+
+  it('should extract id from icon filename', () => {
+    const result = parseAssetFilename('attack.webp', 'icons');
+    assert.deepStrictEqual(result, { id: 'attack' });
+  });
+
+  it('should extract id from item filename', () => {
+    const result = parseAssetFilename('sword_iron.webp', 'items');
+    assert.deepStrictEqual(result, { id: 'sword_iron' });
+  });
+
+  it('should handle filenames without .webp extension', () => {
+    const result = parseAssetFilename('test', 'portraits');
+    assert.deepStrictEqual(result, { id: 'test' });
+  });
+
+  it('should throw for invalid category', () => {
+    assert.throws(() => {
+      parseAssetFilename('test.webp', 'invalid');
+    }, /Invalid asset category/);
+  });
+});
+
+// =============================================================================
+// Edge Cases and Consistency Tests
+// =============================================================================
+
+describe('path consistency', () => {
+  it('should use consistent webp extension by default', () => {
+    const paths = [
+      getAssetPath('portraits', 'test', { size: 64 }),
+      getAssetPath('nodes', 'test', { size: 96 }),
+      getAssetPath('items', 'test', { size: 64 }),
+      getAssetPath('icons', 'test', { size: 32 }),
+      getAssetPath('overlays', 'test', { size: 64 }),
+      getAssetPath('tiles', 'test', { subcategory: 'forest' })
+    ];
+
+    for (const path of paths) {
+      assert.ok(path.endsWith('.webp'), `Path should end with .webp: ${path}`);
+    }
+  });
+
+  it('should place size in directory, not filename for sized assets', () => {
+    // Size should be in path, not in filename (e.g., /64/sword_iron.webp, not /sword_iron_64.webp)
+    const itemPath = getAssetPath('items', 'sword_iron', { size: 32, subcategory: 'weapons' });
+    assert.ok(itemPath.includes('/32/'), 'Size should be in directory path');
+    assert.ok(!itemPath.includes('_32.'), 'Size should not be in filename');
+  });
+
+  it('should not use node_ prefix for nodes', () => {
+    const nodePath = getAssetPath('nodes', 'castle', { size: 96 });
+    assert.ok(!nodePath.includes('node_castle'), 'Should not have node_ prefix');
+    assert.ok(nodePath.includes('/castle.'), 'Should use castle directly');
+  });
+
+  it('should handle enemy_ prefix consistently for enemy portraits', () => {
+    const enemyPath = getAssetPath('portraits', 'enemy_goblin', { size: 64 });
+    assert.ok(enemyPath.includes('enemy_goblin'), 'Should preserve enemy_ prefix');
+  });
+});
+
+describe('SIZE_PRESETS consistency with resizeUtils', () => {
+  it('should have same categories as in the source of truth', () => {
+    // The categories defined here should be complete
+    const expectedCategories = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays', 'characters', 'obstacles'];
+
+    for (const category of expectedCategories) {
+      assert.ok(SIZE_PRESETS[category], `SIZE_PRESETS should include ${category}`);
+      assert.ok(DEFAULT_SIZES[category] !== undefined, `DEFAULT_SIZES should include ${category}`);
+    }
+  });
+
+  it('icons should include 256 for high-DPI displays', () => {
+    assert.ok(SIZE_PRESETS.icons.includes(256), 'Icons should support 256px for high-DPI');
+  });
+
+  it('nodes should include 48 for small display and 256 for large', () => {
+    assert.ok(SIZE_PRESETS.nodes.includes(48), 'Nodes should support 48px minimum');
+    assert.ok(SIZE_PRESETS.nodes.includes(256), 'Nodes should support 256px maximum');
   });
 });

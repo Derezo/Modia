@@ -20,85 +20,86 @@ vi.mock('@shared/assetPaths.js', () => ({
 import { getAssetUrls, getAssetImageUrl, getAssetSubcategory } from '../../lib/assetPathHelper.js';
 
 describe('assetPathHelper', () => {
-  describe('icon ID normalization via getAssetUrls', () => {
-    it('should strip category prefix from zodiac icon IDs', () => {
-      const urls = getAssetUrls('icons', 'zodiac_aries', { subcategory: 'zodiac', size: 64 });
+  describe('icon ID handling via getAssetUrls (Phase 5 - unprefixed IDs)', () => {
+    // Post-Phase 5: Icon metadata IDs are now unprefixed to match file names
+    it('should use unprefixed zodiac icon ID directly', () => {
+      const urls = getAssetUrls('icons', 'aries', { subcategory: 'zodiac', size: 64 });
       expect(urls[0]).toBe('/assets/icons/png/64/zodiac/aries.png');
     });
 
-    it('should strip category prefix from menu icon IDs', () => {
-      const urls = getAssetUrls('icons', 'menu_settings', { subcategory: 'menu', size: 32 });
+    it('should use unprefixed menu icon ID directly', () => {
+      const urls = getAssetUrls('icons', 'settings', { subcategory: 'menu', size: 32 });
       expect(urls[0]).toBe('/assets/icons/png/32/menu/settings.png');
     });
 
-    it('should strip category prefix from action icon IDs', () => {
-      const urls = getAssetUrls('icons', 'action_attack', { subcategory: 'actions', size: 32 });
-      expect(urls[0]).toBe('/assets/icons/png/32/actions/attack.png');
-    });
-
-    it('should strip category prefix from augment icon IDs', () => {
-      const urls = getAssetUrls('icons', 'augment_fire', { subcategory: 'augments', size: 32 });
-      expect(urls[0]).toBe('/assets/icons/png/32/augments/fire.png');
-    });
-
-    it('should strip category prefix from status icon IDs', () => {
-      const urls = getAssetUrls('icons', 'status_poisoned', { subcategory: 'status', size: 32 });
-      expect(urls[0]).toBe('/assets/icons/png/32/status/poisoned.png');
-    });
-
-    it('should strip category prefix from resource icon IDs', () => {
-      const urls = getAssetUrls('icons', 'resource_gold', { subcategory: 'resources', size: 32 });
-      expect(urls[0]).toBe('/assets/icons/png/32/resources/gold.png');
-    });
-
-    it('should not strip non-matching prefixes', () => {
-      const urls = getAssetUrls('icons', 'fire_bolt', { subcategory: 'actions', size: 32 });
-      expect(urls[0]).toBe('/assets/icons/png/32/actions/fire_bolt.png');
-    });
-
-    it('should pass through IDs without subcategory prefix', () => {
+    it('should use unprefixed action icon ID directly', () => {
       const urls = getAssetUrls('icons', 'attack', { subcategory: 'actions', size: 32 });
       expect(urls[0]).toBe('/assets/icons/png/32/actions/attack.png');
     });
 
-    it('should not normalize non-icon categories', () => {
-      const urls = getAssetUrls('items', 'weapons_sword', { subcategory: 'weapons', size: 64 });
-      expect(urls[0]).toBe('/assets/items/64/weapons_sword.png');
+    it('should use unprefixed augment icon ID directly', () => {
+      const urls = getAssetUrls('icons', 'fire', { subcategory: 'augments', size: 32 });
+      expect(urls[0]).toBe('/assets/icons/png/32/augments/fire.png');
     });
 
-    it('should not normalize when subcategory is not provided', () => {
-      const urls = getAssetUrls('icons', 'zodiac_aries', { size: 32 });
-      expect(urls[0]).toBe('/assets/icons/png/32/actions/zodiac_aries.png');
+    it('should use unprefixed status icon ID directly', () => {
+      const urls = getAssetUrls('icons', 'poison', { subcategory: 'status', size: 32 });
+      expect(urls[0]).toBe('/assets/icons/png/32/status/poison.png');
+    });
+
+    it('should use unprefixed resource icon ID directly', () => {
+      const urls = getAssetUrls('icons', 'gold', { subcategory: 'resources', size: 32 });
+      expect(urls[0]).toBe('/assets/icons/png/32/resources/gold.png');
+    });
+
+    it('should handle IDs with underscores that are not prefixes', () => {
+      const urls = getAssetUrls('icons', 'fire_bolt', { subcategory: 'actions', size: 32 });
+      expect(urls[0]).toBe('/assets/icons/png/32/actions/fire_bolt.png');
+    });
+
+    it('should handle IDs with compound names', () => {
+      const urls = getAssetUrls('icons', 'magic_fire', { subcategory: 'actions', size: 32 });
+      expect(urls[0]).toBe('/assets/icons/png/32/actions/magic_fire.png');
+    });
+
+    it('should not process non-icon categories', () => {
+      const urls = getAssetUrls('items', 'sword', { subcategory: 'weapons', size: 64 });
+      expect(urls[0]).toBe('/assets/items/64/sword.png');
+    });
+
+    it('should work without subcategory (defaults to actions)', () => {
+      const urls = getAssetUrls('icons', 'attack', { size: 32 });
+      expect(urls[0]).toBe('/assets/icons/png/32/actions/attack.png');
     });
   });
 
-  describe('getAssetImageUrl', () => {
-    it('should normalize zodiac icon IDs for grid display', () => {
-      const asset = { key: 'zodiac_aries', _iconCategory: 'zodiac' };
+  describe('getAssetImageUrl (Phase 5 - unprefixed IDs)', () => {
+    it('should use unprefixed zodiac icon ID for grid display', () => {
+      const asset = { key: 'aries', _iconCategory: 'zodiac' };
       const url = getAssetImageUrl(asset, 'icons');
       expect(url).toBe('/assets/icons/png/32/zodiac/aries.png');
     });
 
-    it('should normalize menu icon IDs', () => {
-      const asset = { id: 'menu_fishing', _iconCategory: 'menu' };
+    it('should use unprefixed menu icon ID', () => {
+      const asset = { id: 'fishing', _iconCategory: 'menu' };
       const url = getAssetImageUrl(asset, 'icons');
       expect(url).toBe('/assets/icons/png/32/menu/fishing.png');
     });
 
-    it('should normalize action icon IDs', () => {
-      const asset = { key: 'action_defend', _iconCategory: 'actions' };
+    it('should use unprefixed action icon ID', () => {
+      const asset = { key: 'defend', _iconCategory: 'actions' };
       const url = getAssetImageUrl(asset, 'icons');
       expect(url).toBe('/assets/icons/png/32/actions/defend.png');
     });
 
     it('should use key over id when both present', () => {
-      const asset = { key: 'menu_settings', id: 'menu_other', _iconCategory: 'menu' };
+      const asset = { key: 'settings', id: 'other', _iconCategory: 'menu' };
       const url = getAssetImageUrl(asset, 'icons');
       expect(url).toBe('/assets/icons/png/32/menu/settings.png');
     });
 
     it('should fall back to id when key is not present', () => {
-      const asset = { id: 'augment_ice', _iconCategory: 'augments' };
+      const asset = { id: 'ice', _iconCategory: 'augments' };
       const url = getAssetImageUrl(asset, 'icons');
       expect(url).toBe('/assets/icons/png/32/augments/ice.png');
     });

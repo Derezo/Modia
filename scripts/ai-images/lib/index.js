@@ -129,7 +129,8 @@ const {
 
 const {
   STANDARD_SIZES,
-  SIZE_PRESETS,
+  getSizePresets,
+  RESIZE_SPECIFIC_PRESETS,
   AI_RESOLUTIONS,
   checkImageMagick,
   getImageDimensions,
@@ -271,7 +272,8 @@ module.exports = {
 
   // Resize utilities
   STANDARD_SIZES,
-  SIZE_PRESETS,
+  getSizePresets,  // Async function to get merged SIZE_PRESETS
+  RESIZE_SPECIFIC_PRESETS,  // Walls/slopes presets for resize-specific use
   AI_RESOLUTIONS,
   checkImageMagick,
   getImageDimensions,

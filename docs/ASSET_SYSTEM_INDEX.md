@@ -178,6 +178,8 @@ npm run ai:generate:tiles -- --key grass_0 --huggingface
 | [AI_IMAGE_GENERATION.md](AI_IMAGE_GENERATION.md) | AI image generation pipeline | HuggingFace Flux, prompts, art direction |
 | [AUDIO_STYLE_GUIDE.md](AUDIO_STYLE_GUIDE.md) | Audio generation guidelines | SFX prompts, music, regional profiles |
 | [ASSET_PATH_STANDARD.md](ASSET_PATH_STANDARD.md) | Directory structure and naming | Path patterns, size conventions |
+| [ASSET_PATH_CONFIGURATION.md](ASSET_PATH_CONFIGURATION.md) | Path system architecture | Single source of truth, consumer integration |
+| [ASSET_METADATA_SCHEMA.md](ASSET_METADATA_SCHEMA.md) | Metadata JSON conventions | Underscore prefix, category schemas |
 | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | Parchment UI components | Colors, tokens, components |
 
 ### Document Purpose Map
@@ -192,6 +194,11 @@ AI_IMAGE_GENERATION.md         AUDIO_STYLE_GUIDE.md
           +------+               +-------+
                  |               |
                  v               v
+    ASSET_PATH_CONFIGURATION.md  <----  ASSET_METADATA_SCHEMA.md
+    "How does the path             |    "What fields do I use
+     system work?"                 |     in metadata JSON?"
+                 |                 |
+                 v                 v
          ASSET_PATH_STANDARD.md
                  |
                  v
@@ -212,11 +219,12 @@ AI_IMAGE_GENERATION.md         AUDIO_STYLE_GUIDE.md
 
 ### Schema Reference
 
-All asset metadata files follow a consistent JSON schema documented in [AI_IMAGE_GENERATION.md - Metadata Schema Reference](AI_IMAGE_GENERATION.md#metadata-schema-reference). Key points:
+All asset metadata files follow a consistent JSON schema documented in [ASSET_METADATA_SCHEMA.md](ASSET_METADATA_SCHEMA.md). Key points:
 
 - **Required fields** for all assets: `id` (or `key` for tiles), `name`, `prompt`, `seed`, `generated`
 - **Conditional fields** appear only when relevant: `generatedAt`, `loraModel`, `needsRegeneration`, `evaluation`
-- **Category-specific fields** vary by asset type (see schema reference)
+- **Category-specific fields** vary by asset type (see [Category Schemas](ASSET_METADATA_SCHEMA.md#category-schemas))
+- **Underscore prefix** (`_biome`, `_category`, etc.) denotes runtime-enriched fields (see [Underscore Prefix Convention](ASSET_METADATA_SCHEMA.md#underscore-prefix-convention))
 
 ### Validation
 
@@ -244,7 +252,8 @@ The validation script checks:
 
 | Pattern | Example | Used By |
 |---------|---------|---------|
-| `{type}_{name}` | `action_attack`, `rarity_epic` | Icons, overlays |
+| `{name}` | `attack`, `defend`, `poison` | Icons (unprefixed) |
+| `{type}_{name}` | `rarity_epic`, `augment_fire` | Overlays |
 | `{race}_{gender}_{class}` | `human_male_warrior` | Portraits |
 | `{terrain}_{variant}` | `grass_0`, `stone_3` | Tiles (via `key`) |
 | `{category}_{material}` | `sword_short`, `armor_plate` | Items |
@@ -505,6 +514,11 @@ audio-metadata/
 
 ## Related Documents
 
+### Asset Pipeline
+
+- [ASSET_PATH_CONFIGURATION.md](ASSET_PATH_CONFIGURATION.md) - Path system architecture, single source of truth
+- [ASSET_METADATA_SCHEMA.md](ASSET_METADATA_SCHEMA.md) - JSON metadata conventions, underscore prefix
+
 ### Architecture
 
 - [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) - System design overview
@@ -549,4 +563,4 @@ See [AI_IMAGE_GENERATION.md](AI_IMAGE_GENERATION.md) for complete art direction 
 
 ---
 
-*Last updated: 2026-01-29 (added Overlay System section with category mapping and usage documentation)*
+*Last updated: 2026-02-02 (added ASSET_PATH_CONFIGURATION.md and ASSET_METADATA_SCHEMA.md references)*

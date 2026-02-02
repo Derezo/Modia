@@ -740,17 +740,17 @@ Example:
 
 #### Icons
 
-Icons include category context:
+Icons use unprefixed IDs (matching the filename without extension):
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `id` | string | Format: `{category}_{action}` (e.g., `action_attack`) |
+| `id` | string | Unprefixed action name (e.g., `attack`, `defend`, `poison`) |
 | `name` | string | Human-readable action name |
 
 Example:
 ```json
 {
-  "id": "action_attack",
+  "id": "attack",
   "name": "Attack",
   "prompt": "crossed swords attack action combat strike",
   "seed": 30001,
