@@ -36,7 +36,8 @@ const {
   parseBaseArgs,
   applyKeyFilter,
   loadCategoryManifest,
-  resizeImageNonSquare
+  resizeImageNonSquare,
+  convertToWebp
 } = require('./lib');
 
 // Configuration
@@ -317,6 +318,14 @@ async function main() {
       });
 
       if (result.success) {
+        const pngPath = getOutputPath(obstacle);
+
+        // Convert PNG to WebP format
+        const webpResult = await convertToWebp(pngPath, { verbose: options.verbose });
+        if (!webpResult.success) {
+          log(`Warning: WebP conversion failed for ${pngPath}: ${webpResult.error}`, 'warn');
+        }
+
         results.success.push({ id: obstacle.id, obstacle });
 
         obstacle._category = 'obstacles';
@@ -328,12 +337,10 @@ async function main() {
         }
 
         log(`Generated: ${obstacle.id}`, 'success');
-        log(`Saved: ${getOutputPath(obstacle)}`, 'info');
+        log(`Saved: ${webpResult.success ? webpResult.webpPath : pngPath}`, 'info');
 
         // Post-process: resize to target dimensions if ImageMagick available
         if (checkImageMagick() && obstacle.dimensions) {
-          const outputPath = getOutputPath(obstacle);
-
           // The Python script saves to the originals path
           // We need to resize from there to the final output
           // For now, the Python script handles the initial save

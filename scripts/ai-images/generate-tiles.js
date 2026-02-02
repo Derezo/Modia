@@ -38,7 +38,8 @@ const {
   getBatchConfigSummary,
   getEffectiveLoraModel,
   parseBaseArgs,
-  applyKeyFilter
+  applyKeyFilter,
+  convertToWebp
 } = require('./lib');
 
 // Configuration
@@ -117,10 +118,10 @@ Examples:
 function getOutputPath(tile, biome, variantIndex = 0) {
   const category = tile._tileCategory || 'floors';
 
-  // For walls: {biome}/walls/{terrain}_wall.png
+  // For walls: {biome}/wall_{biome}_{terrain}.png (matches assetPaths.js convention)
   if (category === 'walls') {
     const terrain = tile.terrain || 'default';
-    return path.join(OUTPUT_DIR, biome, 'walls', `${terrain}_wall.png`);
+    return path.join(OUTPUT_DIR, biome, `wall_${biome}_${terrain}.png`);
   }
 
   // For slopes: {biome}/slopes/{direction}_{levels}.png
@@ -395,9 +396,9 @@ async function main() {
   }
 
   // Ensure output directories exist
+  // Note: walls use flat path {biome}/wall_{biome}_{terrain}.png, no subdirectory needed
   for (const biome of Object.keys(metadata.byBiome)) {
     ensureDirectoryExists(path.join(OUTPUT_DIR, biome));
-    ensureDirectoryExists(path.join(OUTPUT_DIR, biome, 'walls'));
     ensureDirectoryExists(path.join(OUTPUT_DIR, biome, 'slopes'));
   }
 
@@ -487,6 +488,30 @@ async function main() {
           }
         }
 
+        // Convert PNG to WebP format
+        const pngPaths = [];
+        if (isWall) {
+          // Wall tiles have single output
+          pngPaths.push(getOutputPath(tile, tile._biome));
+        } else {
+          // Floor/slope tiles may have multiple variants
+          const numVariants = tile.variants || 1;
+          const biomeDir = tile._biome === 'base' ? 'base' : tile._biome;
+          for (let v = 0; v < numVariants; v++) {
+            const filename = numVariants > 1 ? `${tile.id}_${v}.png` : `${tile.id}.png`;
+            pngPaths.push(path.join(OUTPUT_DIR, biomeDir, filename));
+          }
+        }
+
+        for (const pngPath of pngPaths) {
+          if (fs.existsSync(pngPath)) {
+            const webpResult = await convertToWebp(pngPath, { verbose: options.verbose });
+            if (!webpResult.success) {
+              log(`Warning: WebP conversion failed for ${pngPath}: ${webpResult.error}`, 'warn');
+            }
+          }
+        }
+
         results.success.push({
           id: tile.id,
           biome: tile._biome,
@@ -503,7 +528,7 @@ async function main() {
         }
 
         log(`Generated: ${tile.id}`, 'success');
-        log(`Saved: ${getOutputPath(tile, tile._biome)}`, 'info');
+        log(`Saved: ${getOutputPath(tile, tile._biome).replace(/\.png$/, '.webp')}`, 'info');
       } else {
         results.failed.push({
           id: tile.id,

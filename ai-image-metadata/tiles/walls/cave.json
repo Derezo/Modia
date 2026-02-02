@@ -31,6 +31,78 @@
       "seed": 21021,
       "generated": true,
       "generatedAt": "2026-01-31T10:02:53.189Z"
+    },
+    {
+      "key": "wall_cave_grass",
+      "terrain": "grass",
+      "prompt": "seamless vertical bioluminescent moss-covered cave wall texture with glowing green patches, tileable horizontal pattern, side view cross-section, teal green tones",
+      "seed": 21031,
+      "generated": true,
+      "loraModel": "v2",
+      "generatedAt": "2026-02-02T03:38:20.184Z"
+    },
+    {
+      "key": "wall_cave_stone",
+      "terrain": "stone",
+      "prompt": "seamless vertical smooth polished cave stone texture with subtle mineral striations, tileable horizontal pattern, side view cross-section, dark grey tones",
+      "seed": 21041,
+      "generated": true,
+      "loraModel": "v2",
+      "generatedAt": "2026-02-02T03:39:06.469Z"
+    },
+    {
+      "key": "wall_cave_rock",
+      "terrain": "rock",
+      "prompt": "seamless vertical rough jagged cave rock texture with sharp edges and deep crevices, tileable horizontal pattern, side view cross-section, charcoal grey tones",
+      "seed": 21051,
+      "generated": true,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "v2",
+      "generatedAt": "2026-02-02T03:25:00.208Z"
+    },
+    {
+      "key": "wall_cave_forest",
+      "terrain": "forest",
+      "prompt": "seamless vertical petrified roots and underground vegetation wall texture with fossilized tendrils, tileable horizontal pattern, side view cross-section, brown grey tones",
+      "seed": 21061,
+      "generated": false,
+      "loraModel": "v2"
+    },
+    {
+      "key": "wall_cave_water",
+      "terrain": "water",
+      "prompt": "seamless vertical wet dripping cave wall texture with water stains and mineral deposits, tileable horizontal pattern, side view cross-section, blue grey tones",
+      "seed": 21071,
+      "generated": false,
+      "loraModel": "v2"
+    },
+    {
+      "key": "wall_cave_lava",
+      "terrain": "lava",
+      "prompt": "seamless vertical volcanic cave wall texture with glowing molten veins and obsidian patches, tileable horizontal pattern, side view cross-section, black orange tones",
+      "seed": 21081,
+      "generated": false,
+      "loraModel": "v2"
+    },
+    {
+      "key": "wall_cave_cliff",
+      "terrain": "cliff",
+      "prompt": "seamless vertical steep cave cliff face texture with layered sedimentary rock, tileable horizontal pattern, side view cross-section, slate grey tones",
+      "seed": 21091,
+      "generated": false,
+      "loraModel": "v2"
+    },
+    {
+      "key": "wall_cave_tree",
+      "terrain": "tree",
+      "prompt": "seamless vertical petrified wood cave wall texture with fossilized tree rings and bark patterns, tileable horizontal pattern, side view cross-section, grey brown tones",
+      "seed": 21101,
+      "generated": false,
+      "loraModel": "v2"
     }
   ]
 }
