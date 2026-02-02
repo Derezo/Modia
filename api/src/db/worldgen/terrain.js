@@ -11,7 +11,7 @@
  */
 
 import { OBSTACLE_TYPES, PALACE_FEATURES } from './constants.js';
-import { CASTLE_FEATURES, CITY_OPTIONS } from '../../config/constants.js';
+import { CASTLE_FEATURES, CITY_OPTIONS } from '../../../../shared/constants.js';
 
 /**
  * Generate terrain obstacles (lakes, mountain ranges, dense forests)

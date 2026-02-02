@@ -11,9 +11,9 @@
  * - Display collection bonus status
  * - Trigger detail modal on crystal selection
  *
- * Icons: Uses zodiac PNG icons from /assets/icons/png/32/zodiac/
- * - Collected: {sign}.png (e.g., aries.png)
- * - Locked: {sign}_locked.png (e.g., aries_locked.png)
+ * Icons: Uses zodiac WebP icons from /assets/icons/png/32/zodiac/
+ * - Collected: {sign}.webp (e.g., aries.webp)
+ * - Locked: {sign}_locked.webp (e.g., aries_locked.webp)
  *
  * @see ConstellationData.js - Zodiac info and element colors
  */

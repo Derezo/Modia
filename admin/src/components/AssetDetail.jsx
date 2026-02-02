@@ -1145,9 +1145,27 @@ export default function AssetDetail({
         loraModel: formData.loraModel || null,
       };
 
-      await api.updateAsset(category, asset.key || asset.id, updates);
+      // Include biome for tiles disambiguation
+      const options = category === 'tiles' ? { biome: asset._biome } : {};
+      const response = await api.updateAsset(category, asset.key || asset.id, updates, options);
+      const updatedAsset = response.asset;
+
+      // Re-initialize form with saved data to ensure consistency
+      if (updatedAsset) {
+        setFormData({
+          prompt: updatedAsset.prompt || '',
+          seed: updatedAsset.seed?.toString() || '',
+          evaluation: updatedAsset.evaluation || 0,
+          issues: updatedAsset.issues || '',
+          notes: updatedAsset.notes || '',
+          priority: updatedAsset.priority || 0,
+          needsRegeneration: updatedAsset.needsRegeneration || false,
+          loraModel: updatedAsset.loraModel || '',
+        });
+      }
+
       toast.success('Asset saved');
-      onUpdate?.();
+      onUpdate?.(updatedAsset);
     } catch (err) {
       toast.error(err.message || 'Failed to save changes');
     } finally {
@@ -1162,7 +1180,16 @@ export default function AssetDetail({
     setRegenerating(true);
 
     try {
-      await api.generateAssetsByIds(category, [asset.key || asset.id], { force: true });
+      // Build extra filters for disambiguation (e.g., biome for tiles)
+      const extraFilters = {};
+      if (category === 'tiles' && asset._biome) {
+        extraFilters.biome = asset._biome;
+      }
+      if (asset._tileCategory) {
+        extraFilters.subcategory = asset._tileCategory;
+      }
+
+      await api.generateAssetsByIds(category, [asset.key || asset.id], { force: true }, extraFilters);
       toast.success('Queued for regeneration');
       onUpdate?.();
     } catch (err) {
@@ -1184,7 +1211,9 @@ export default function AssetDetail({
 
     try {
       const assetKey = asset?.key || asset?.id;
-      const promptData = await api.getAssetPrompt(category, assetKey);
+      // Include biome for tiles disambiguation
+      const options = category === 'tiles' ? { biome: asset._biome } : {};
+      const promptData = await api.getAssetPrompt(category, assetKey, options);
       setFullPromptData({
         loading: false,
         data: promptData,

@@ -22,14 +22,15 @@ export const generateAssets = (category, filters = {}, options = {}) =>
  * @param {string} category - Asset category
  * @param {string[]} assetIds - Array of asset IDs
  * @param {object} options - Generation options
+ * @param {object} extraFilters - Additional filters (biome, subcategory, etc.)
  * @returns {Promise<object>} Generation job info
  */
-export const generateAssetsByIds = (category, assetIds, options = {}) =>
+export const generateAssetsByIds = (category, assetIds, options = {}, extraFilters = {}) =>
   fetchAPI('/generate', {
     method: 'POST',
     body: JSON.stringify({
       category,
-      filters: { ids: assetIds },
+      filters: { ids: assetIds, ...extraFilters },
       options,
     }),
   });

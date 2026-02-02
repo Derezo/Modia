@@ -100,9 +100,11 @@ if [ "$ROLLBACK" = true ]; then
   log "Rolling back to: $PREVIOUS"
   ln -sfn "$RELEASES_DIR/$PREVIOUS" "$CURRENT_LINK"
 
-  step "Reloading PM2..."
+  step "Restarting PM2..."
   cd "$CURRENT_LINK"
-  pm2 reload ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
+  # Must delete and restart (not reload) to update cwd to new release
+  pm2 delete modia-api 2>/dev/null || true
+  pm2 start ecosystem.config.js --env production
 
   log "Rollback complete!"
   exit 0
@@ -161,14 +163,14 @@ npm run db:migrate
 step "Swapping current symlink..."
 ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
 
-# 7. Reload PM2 (zero-downtime)
-step "Reloading PM2..."
+# 7. Restart PM2 (must delete + start to update cwd)
+step "Restarting PM2..."
 cd "$CURRENT_LINK"
+# IMPORTANT: pm2 reload does NOT update cwd/script path, so we must delete and restart
 if pm2 list | grep -q "modia-api"; then
-  pm2 reload ecosystem.config.js --env production
-else
-  pm2 start ecosystem.config.js --env production
+  pm2 delete modia-api
 fi
+pm2 start ecosystem.config.js --env production
 
 # Save PM2 process list
 pm2 save

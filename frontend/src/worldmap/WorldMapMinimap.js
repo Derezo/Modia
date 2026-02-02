@@ -118,23 +118,17 @@ export class WorldMapMinimap {
       return !!this.contentCtx;
     }
 
-    // Test actual drawing capability
+    // Check for context loss (WebGL-style detection for 2D context)
+    // The isContextLost() method doesn't exist on 2D contexts, but we can check
+    // if the context is still valid by attempting a basic operation
     try {
-      // Draw a 1px test and verify it worked
-      this.contentCtx.fillStyle = '#000000';
-      this.contentCtx.fillRect(0, 0, 1, 1);
-      const testData = this.contentCtx.getImageData(0, 0, 1, 1);
-
-      if (!testData || testData.data[3] === 0) {
-        // Drawing produced no output - context may be lost
-        console.warn('[WorldMapMinimap] Canvas drawing test failed, recreating...');
-        this.createContentCanvas();
-        return !!this.contentCtx;
-      }
-
+      // Simple validation: check if we can read a property
+      // This is much cheaper than drawing and reading pixels
+      // eslint-disable-next-line no-unused-vars
+      const _ = this.contentCtx.canvas;
       return true;
     } catch (e) {
-      console.error('[WorldMapMinimap] Canvas validation error:', e.message);
+      console.error('[WorldMapMinimap] Canvas context invalid:', e.message);
       this.createContentCanvas();
       return !!this.contentCtx;
     }

@@ -68,6 +68,7 @@ function StarRating({ value, onChange, disabled = false }) {
  * @param {Function} props.onClose - Callback when modal closes
  * @param {string[]} props.selectedIds - Array of selected asset IDs
  * @param {string} props.category - Asset category (tiles, portraits, etc.)
+ * @param {Object[]} props.assets - All available assets (for looking up biome info)
  * @param {Function} props.onUpdate - Callback after successful update
  */
 export default function BulkEditModal({
@@ -75,6 +76,7 @@ export default function BulkEditModal({
   onClose,
   selectedIds,
   category,
+  assets = [],
   onUpdate,
 }) {
   const toast = useToast();
@@ -198,13 +200,47 @@ export default function BulkEditModal({
     setSaving(true);
 
     try {
-      const result = await api.bulkUpdateAssets(category, selectedIds, updates);
+      let totalUpdated = 0;
+      let totalErrors = [];
 
-      const message = result.updated === selectedIds.length
-        ? `Updated ${result.updated} asset(s)`
-        : `Updated ${result.updated} of ${selectedIds.length} asset(s)`;
+      // For tiles, group by biome since IDs may not be unique across biomes
+      if (category === 'tiles') {
+        // Build biome map from assets
+        const selectedIdSet = new Set(selectedIds);
+        const selectedAssets = assets.filter(a => selectedIdSet.has(a.key || a.id));
+        const byBiome = new Map();
+        for (const asset of selectedAssets) {
+          const biome = asset._biome || 'unknown';
+          if (!byBiome.has(biome)) byBiome.set(biome, []);
+          byBiome.get(biome).push(asset.key || asset.id);
+        }
 
-      if (result.errors?.length > 0) {
+        // Make parallel API calls for each biome
+        const results = await Promise.all(
+          Array.from(byBiome.entries()).map(([biome, ids]) =>
+            api.bulkUpdateAssets(category, ids, updates, { biome })
+          )
+        );
+
+        // Aggregate results
+        for (const result of results) {
+          totalUpdated += result.updated || 0;
+          if (result.errors?.length > 0) {
+            totalErrors.push(...result.errors);
+          }
+        }
+      } else {
+        // Non-tiles: IDs are unique, no grouping needed
+        const result = await api.bulkUpdateAssets(category, selectedIds, updates);
+        totalUpdated = result.updated || 0;
+        totalErrors = result.errors || [];
+      }
+
+      const message = totalUpdated === selectedIds.length
+        ? `Updated ${totalUpdated} asset(s)`
+        : `Updated ${totalUpdated} of ${selectedIds.length} asset(s)`;
+
+      if (totalErrors.length > 0) {
         toast.warning(`${message}. Some errors occurred.`);
       } else {
         toast.success(message);

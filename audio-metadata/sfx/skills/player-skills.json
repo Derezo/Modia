@@ -2,7 +2,7 @@
   "category": "skills",
   "subcategory": "player",
   "description": "Sound effects for player guild skills",
-  "totalEffects": 73,
+  "totalEffects": 74,
   "guilds": [
     "warrior",
     "wizard",
@@ -1105,6 +1105,17 @@
       "volume": 0.7,
       "generated": true,
       "generatedAt": "2026-01-21T10:10:13.951Z"
+    },
+    {
+      "id": "skill_heal",
+      "name": "Generic Heal",
+      "category": "skill",
+      "subcategory": "generic",
+      "prompt": "Fantasy healing magic with warm restorative glow and soothing divine energy shimmer",
+      "path": "/assets/audio/sfx/skills/heal.mp3",
+      "duration": 1.0,
+      "volume": 0.75,
+      "generated": false
     }
   ]
 }

@@ -113,13 +113,12 @@ rollback_to_previous() {
   ln -sfn "$PREVIOUS_DIR" "${CURRENT_LINK}.new"
   mv -Tf "${CURRENT_LINK}.new" "$CURRENT_LINK"
 
-  # Reload PM2
+  # Restart PM2 (delete + start to update cwd)
   cd "$CURRENT_LINK"
   if pm2 list | grep -q "modia-api"; then
-    pm2 reload modia-api --update-env
-  else
-    pm2 start ecosystem.config.js --env production
+    pm2 delete modia-api
   fi
+  pm2 start ecosystem.config.js --env production
   pm2 save
 
   log "Rollback complete!"
@@ -310,19 +309,23 @@ mv -Tf "${CURRENT_LINK}.new" "$CURRENT_LINK"
 log "Release activated: $CURRENT_LINK -> $RELEASE_DIR"
 
 # ============================================
-# Step 10: Reload PM2
+# Step 10: Restart PM2 (delete + start to update cwd)
 # ============================================
-step "Reloading PM2..."
+step "Restarting PM2..."
 
 cd "$CURRENT_LINK"
 
+# IMPORTANT: We must delete and restart (not just reload) because pm2 reload
+# does NOT update the working directory or script path. It only restarts the
+# process from its saved configuration, which would keep running the old release.
+# By deleting and starting fresh, pm2 captures the new cwd from our cd above.
 if pm2 list | grep -q "modia-api"; then
-  pm2 reload modia-api --update-env
-  log "PM2 reloaded"
-else
-  pm2 start ecosystem.config.js --env production
-  log "PM2 started"
+  log "Stopping existing modia-api process..."
+  pm2 delete modia-api
 fi
+
+log "Starting modia-api from new release..."
+pm2 start ecosystem.config.js --env production
 
 pm2 save
 

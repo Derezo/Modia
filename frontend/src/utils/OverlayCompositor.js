@@ -154,7 +154,7 @@ class OverlayCompositor {
     // Load rarity overlay if not common
     let rarityOverlay = null;
     if (normalizedRarity && normalizedRarity !== 'common') {
-      const rarityPath = `${ASSETS_BASE}/overlays/${OVERLAY_ASSET_SIZE}/rarity/rarity_${normalizedRarity}.png`;
+      const rarityPath = `${ASSETS_BASE}/overlays/${OVERLAY_ASSET_SIZE}/rarity/rarity_${normalizedRarity}.webp`;
       try {
         rarityOverlay = await this.loadImage(rarityPath);
       } catch {
@@ -166,7 +166,7 @@ class OverlayCompositor {
     const augmentOverlays = [];
     for (const augment of augments) {
       if (augment) {
-        const augmentPath = `${ASSETS_BASE}/overlays/${OVERLAY_ASSET_SIZE}/augments/augment_${augment}.png`;
+        const augmentPath = `${ASSETS_BASE}/overlays/${OVERLAY_ASSET_SIZE}/augments/augment_${augment}.webp`;
         try {
           const overlay = await this.loadImage(augmentPath);
           augmentOverlays.push(overlay);
@@ -259,11 +259,11 @@ class OverlayCompositor {
 
     const promises = [
       ...rarities.map(rarity =>
-        this.loadImage(`${ASSETS_BASE}/overlays/${OVERLAY_ASSET_SIZE}/rarity/rarity_${rarity}.png`)
+        this.loadImage(`${ASSETS_BASE}/overlays/${OVERLAY_ASSET_SIZE}/rarity/rarity_${rarity}.webp`)
           .catch(() => null)
       ),
       ...augments.map(augment =>
-        this.loadImage(`${ASSETS_BASE}/overlays/${OVERLAY_ASSET_SIZE}/augments/augment_${augment}.png`)
+        this.loadImage(`${ASSETS_BASE}/overlays/${OVERLAY_ASSET_SIZE}/augments/augment_${augment}.webp`)
           .catch(() => null)
       )
     ];

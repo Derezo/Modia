@@ -3,9 +3,9 @@
  *
  * Dedicated component for rendering item sprites (weapons, armor, accessories,
  * consumables). Uses the items asset pipeline path structure:
- *   /assets/items/{size}/{subcategory}/{sprite_id}.png
+ *   /assets/items/{size}/{subcategory}/{sprite_id}.webp
  *
- * Unlike Icon which uses /assets/icons/png/{size}/{category}/{name}.png,
+ * Unlike Icon which uses /assets/icons/png/{size}/{category}/{name}.webp,
  * ItemIcon uses the items asset structure with proper subcategory mapping.
  *
  * Usage:

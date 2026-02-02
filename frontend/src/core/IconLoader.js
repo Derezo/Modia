@@ -56,7 +56,7 @@ export class IconLoader {
 
   /**
    * Normalize icon name for file lookup
-   * Icon files use snake_case (e.g., magic_dark.png), so names are passed through unchanged.
+   * Icon files use snake_case (e.g., magic_dark.webp), so names are passed through unchanged.
    * @param {string} name - Icon name
    * @returns {string} Normalized name (unchanged)
    */

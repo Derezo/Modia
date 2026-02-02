@@ -25,16 +25,23 @@
       "prompt": "pale cave grass growing near underground light shaft in muted green #6B8E4A #696969",
       "outputPath": "cave",
       "generated": true,
-      "generatedAt": "2026-01-25T20:01:51.805Z"
+      "generatedAt": "2026-02-02T03:55:52.044Z"
     },
     {
       "key": "grass_2",
       "terrain": "grass",
       "variant": 2,
-      "prompt": "glowing underground fungal grass with ethereal blue light in teal tones #20B2AA #2F4F4F",
+      "prompt": "glowing fungal grass texture with ethereal blue light #20B2AA #2F4F4F",
       "outputPath": "cave",
       "generated": true,
-      "generatedAt": "2026-01-25T20:06:36.944Z"
+      "generatedAt": "2026-02-02T04:33:58.368Z",
+      "seed": null,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true,
+      "loraModel": "v1"
     },
     {
       "key": "grass_3",
@@ -268,7 +275,7 @@
       "prompt": "giant mushroom stem base with spreading mycelium in brown grey #5C4033 #696969",
       "outputPath": "cave",
       "generated": true,
-      "generatedAt": "2026-01-28T04:46:16.747Z"
+      "generatedAt": "2026-02-02T04:28:32.053Z"
     },
     {
       "key": "tree_1",
@@ -283,10 +290,17 @@
       "key": "tree_2",
       "terrain": "tree",
       "variant": 2,
-      "prompt": "fallen giant mushroom with bioluminescent decay in brown blue #5C4033 #4682B4",
+      "prompt": "fallen mushroom with bioluminescent decay on the forest floor #5C4033 #4682B4",
       "outputPath": "cave",
       "generated": true,
-      "generatedAt": "2026-01-28T04:46:57.881Z"
+      "generatedAt": "2026-02-02T04:29:19.529Z",
+      "seed": null,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true,
+      "loraModel": null
     },
     {
       "key": "tree_3",
@@ -295,7 +309,7 @@
       "prompt": "petrified ancient root system emerging from cave floor in stone grey #8B7355 #696969",
       "outputPath": "cave",
       "generated": true,
-      "generatedAt": "2026-01-28T04:47:39.061Z"
+      "generatedAt": "2026-02-02T04:30:09.633Z"
     },
     {
       "key": "cave_crystal_0",

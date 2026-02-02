@@ -128,6 +128,16 @@ function loadCategoryAssets(category) {
         asset._obstacleCategory = fileCategory;
       }
 
+      // Extract biome and tileCategory from file path for tiles
+      // File paths are like: "floors/forest.json" -> tileCategory: floors, biome: forest
+      if (category === 'tiles' && !asset._biome) {
+        const pathParts = file.split('/');
+        if (pathParts.length >= 2) {
+          asset._tileCategory = pathParts[0]; // floors, walls, slopes
+          asset._biome = pathParts[1].replace('.json', ''); // forest, cave, etc.
+        }
+      }
+
       result.assets.push(asset);
       result.byId[asset.id] = asset;
     }

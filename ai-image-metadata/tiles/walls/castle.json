@@ -37,56 +37,72 @@
       "terrain": "grass",
       "prompt": "seamless vertical castle courtyard wall texture with grass growing through cracks, tileable horizontal pattern, side view cross-section, grey green tones",
       "seed": 51031,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.425Z"
     },
     {
       "key": "wall_castle_stone",
       "terrain": "stone",
       "prompt": "seamless vertical castle stone masonry wall texture with mortar joints, tileable horizontal pattern, side view cross-section, grey tones",
       "seed": 51041,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.425Z"
     },
     {
       "key": "wall_castle_rock",
       "terrain": "rock",
       "prompt": "seamless vertical rough castle foundation wall texture with uncut stones, tileable horizontal pattern, side view cross-section, dark grey tones",
       "seed": 51051,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.426Z"
     },
     {
       "key": "wall_castle_forest",
       "terrain": "forest",
       "prompt": "seamless vertical castle wall with ivy overgrowth texture, tileable horizontal pattern, side view cross-section, grey green tones",
       "seed": 51061,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.426Z"
     },
     {
       "key": "wall_castle_water",
       "terrain": "water",
       "prompt": "seamless vertical castle moat wall texture with water stains and moss, tileable horizontal pattern, side view cross-section, grey blue tones",
       "seed": 51071,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.426Z"
     },
     {
       "key": "wall_castle_lava",
       "terrain": "lava",
       "prompt": "seamless vertical volcanic fortress wall texture with heat damage and lava seepage, tileable horizontal pattern, side view cross-section, black red tones",
       "seed": 51081,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.426Z"
     },
     {
       "key": "wall_castle_cliff",
       "terrain": "cliff",
       "prompt": "seamless vertical castle built into cliff face texture with natural and cut stone, tileable horizontal pattern, side view cross-section, grey tones",
       "seed": 51091,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.426Z"
     },
     {
       "key": "wall_castle_tree",
       "terrain": "tree",
       "prompt": "seamless vertical castle wooden rampart wall texture with timber and iron fittings, tileable horizontal pattern, side view cross-section, brown grey tones",
       "seed": 51101,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.427Z"
     }
   ]
 }
