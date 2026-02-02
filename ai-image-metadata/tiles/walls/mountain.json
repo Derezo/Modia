@@ -31,6 +31,62 @@
       "seed": 31021,
       "generated": true,
       "generatedAt": "2026-01-31T10:05:21.149Z"
+    },
+    {
+      "key": "wall_mountain_grass",
+      "terrain": "grass",
+      "prompt": "seamless vertical alpine meadow edge texture with hardy grass roots in thin soil, tileable horizontal pattern, side view cross-section, grey green tones",
+      "seed": 31031,
+      "generated": false
+    },
+    {
+      "key": "wall_mountain_stone",
+      "terrain": "stone",
+      "prompt": "seamless vertical granite mountain wall texture with quartz veins and weathering, tileable horizontal pattern, side view cross-section, light grey tones",
+      "seed": 31041,
+      "generated": false
+    },
+    {
+      "key": "wall_mountain_rock",
+      "terrain": "rock",
+      "prompt": "seamless vertical rugged mountain rock face texture with sharp edges and frost cracks, tileable horizontal pattern, side view cross-section, slate grey tones",
+      "seed": 31051,
+      "generated": false
+    },
+    {
+      "key": "wall_mountain_forest",
+      "terrain": "forest",
+      "prompt": "seamless vertical alpine treeline wall texture with pine roots and rocky soil, tileable horizontal pattern, side view cross-section, grey brown tones",
+      "seed": 31061,
+      "generated": false
+    },
+    {
+      "key": "wall_mountain_water",
+      "terrain": "water",
+      "prompt": "seamless vertical frozen waterfall wall texture with ice formations and wet rock, tileable horizontal pattern, side view cross-section, blue white tones",
+      "seed": 31071,
+      "generated": false
+    },
+    {
+      "key": "wall_mountain_lava",
+      "terrain": "lava",
+      "prompt": "seamless vertical volcanic mountain wall texture with lava flows and ash deposits, tileable horizontal pattern, side view cross-section, black red tones",
+      "seed": 31081,
+      "generated": false
+    },
+    {
+      "key": "wall_mountain_cliff",
+      "terrain": "cliff",
+      "prompt": "seamless vertical sheer mountain cliff texture with vertical striations and erosion, tileable horizontal pattern, side view cross-section, dark grey tones",
+      "seed": 31091,
+      "generated": false
+    },
+    {
+      "key": "wall_mountain_tree",
+      "terrain": "tree",
+      "prompt": "seamless vertical ancient pine trunk wall texture with weathered bark and snow, tileable horizontal pattern, side view cross-section, grey brown tones",
+      "seed": 31101,
+      "generated": false
     }
   ]
 }

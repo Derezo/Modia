@@ -18,7 +18,9 @@ const {
   sanitizeFilename,
   getProjectRoot,
   getMetadataDir,
-  getImageGeneratorRoot
+  getImageGeneratorRoot,
+  convertToWebp,
+  convertManyToWebp
 } = require('./imageUtils');
 
 const {
@@ -172,6 +174,8 @@ module.exports = {
   getProjectRoot,
   getMetadataDir,
   getImageGeneratorRoot,
+  convertToWebp,
+  convertManyToWebp,
 
   // Python runners
   runPythonScript,

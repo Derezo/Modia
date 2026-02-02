@@ -53,7 +53,8 @@ const {
   applyKeyFilter,
   concatenateVerticalStrip,
   loadCharacterMetadata,
-  updateAssetStatus
+  updateAssetStatus,
+  convertToWebp
 } = require('./lib');
 
 // Configuration
@@ -851,10 +852,18 @@ async function main() {
         });
 
         if (result.success) {
+          // Convert PNG sprite sheet to WebP format
+          const webpResult = await convertToWebp(outputPath, { verbose: options.verbose });
+          const finalPath = webpResult.success ? webpResult.webpPath : outputPath;
+
+          if (!webpResult.success) {
+            log(`Warning: WebP conversion failed for ${outputPath}: ${webpResult.error}`, 'warn');
+          }
+
           results.success.push({ id: animationKey, character, animation });
           markAnimationGenerated(character, animation);
           log(`Generated: ${animationKey}`, 'success');
-          log(`Saved: ${outputPath}`, 'info');
+          log(`Saved: ${finalPath}`, 'info');
 
           // Clear regeneration marker if applicable
           if (options.queue && character.needsRegeneration) {
@@ -928,10 +937,18 @@ async function main() {
         });
 
         if (concatResult.success) {
+          // Convert PNG sprite sheet to WebP format
+          const webpResult = await convertToWebp(outputPath, { verbose: options.verbose });
+          const finalPath = webpResult.success ? webpResult.webpPath : outputPath;
+
+          if (!webpResult.success) {
+            log(`Warning: WebP conversion failed for ${outputPath}: ${webpResult.error}`, 'warn');
+          }
+
           results.success.push({ id: animationKey, character, animation });
           markAnimationGenerated(character, animation);
           log(`Generated: ${animationKey}`, 'success');
-          log(`Saved: ${outputPath}`, 'info');
+          log(`Saved: ${finalPath}`, 'info');
 
           // Clear regeneration marker if applicable
           if (options.queue && character.needsRegeneration) {

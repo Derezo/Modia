@@ -31,6 +31,62 @@
       "seed": 11021,
       "generated": true,
       "generatedAt": "2026-01-31T10:00:26.312Z"
+    },
+    {
+      "key": "wall_forest_grass",
+      "terrain": "grass",
+      "prompt": "seamless vertical earth cross-section texture with grass roots and soil layers, tileable horizontal pattern, side view, rich brown green tones",
+      "seed": 11031,
+      "generated": false
+    },
+    {
+      "key": "wall_forest_rock",
+      "terrain": "rock",
+      "prompt": "seamless vertical mossy boulder wall texture with lichen and forest growth, tileable horizontal pattern, side view cross-section, grey green tones",
+      "seed": 11041,
+      "generated": false
+    },
+    {
+      "key": "wall_forest_forest",
+      "terrain": "forest",
+      "prompt": "seamless vertical dense tree trunk wall texture with bark patterns and ivy, tileable horizontal pattern, side view cross-section, deep brown tones",
+      "seed": 11051,
+      "generated": false
+    },
+    {
+      "key": "wall_forest_water",
+      "terrain": "water",
+      "prompt": "seamless vertical muddy riverbank wall texture with exposed roots and wet soil, tileable horizontal pattern, side view cross-section, dark brown blue tones",
+      "seed": 11061,
+      "generated": true,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "generatedAt": "2026-02-02T03:36:27.710Z"
+    },
+    {
+      "key": "wall_forest_lava",
+      "terrain": "lava",
+      "prompt": "seamless vertical scorched earth wall texture with charred wood and embers, tileable horizontal pattern, side view cross-section, black orange tones",
+      "seed": 11071,
+      "generated": false
+    },
+    {
+      "key": "wall_forest_cliff",
+      "terrain": "cliff",
+      "prompt": "seamless vertical forested cliff face texture with exposed rocks and hanging vines, tileable horizontal pattern, side view cross-section, grey green tones",
+      "seed": 11081,
+      "generated": false
+    },
+    {
+      "key": "wall_forest_tree",
+      "terrain": "tree",
+      "prompt": "seamless vertical solid tree trunk cross-section texture with growth rings and bark, tileable horizontal pattern, side view, warm brown tones",
+      "seed": 11091,
+      "generated": false
     }
   ]
 }

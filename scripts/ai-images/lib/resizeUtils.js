@@ -6,7 +6,7 @@
 const { execSync, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const { log, fileExists, ensureDirectoryExists } = require('./imageUtils');
+const { log, fileExists, ensureDirectoryExists, convertToWebp } = require('./imageUtils');
 
 /**
  * Project root directory (Modia/)
@@ -1137,7 +1137,7 @@ async function getCanonicalSizedPath(category, id, size, options = {}) {
  * //            /assets/portraits/256/human_male_warrior.png (if source is large enough)
  */
 async function generateCanonicalSizeVariants(sourcePath, category, id, options = {}) {
-  const { subcategory, sizes, force = false, verbose = false } = options;
+  const { subcategory, sizes, force = false, verbose = false, webp = true } = options;
 
   const assetPaths = await getAssetPathsModule();
 
@@ -1177,12 +1177,14 @@ async function generateCanonicalSizeVariants(sourcePath, category, id, options =
     }
 
     const destPath = await getCanonicalSizedPath(category, id, size, { subcategory });
+    const webpPath = destPath.replace(/\.png$/i, '.webp');
 
-    // Check if file already exists
-    if (!force && fileExists(destPath)) {
-      results.skipped.push({ size, path: destPath });
+    // Check if file already exists (check webp path when webp conversion is enabled)
+    const checkPath = webp ? webpPath : destPath;
+    if (!force && fileExists(checkPath)) {
+      results.skipped.push({ size, path: checkPath });
       if (verbose) {
-        log(`Skipped (exists): ${destPath}`, 'info');
+        log(`Skipped (exists): ${checkPath}`, 'info');
       }
       continue;
     }
@@ -1198,9 +1200,24 @@ async function generateCanonicalSizeVariants(sourcePath, category, id, options =
       const result = await resizeImage(sourcePath, destPath, size, resizeOptions);
 
       if (result.success) {
-        results.generated.push({ size, path: destPath });
+        let finalPath = destPath;
+
+        // Convert to WebP format if enabled
+        if (webp) {
+          const webpResult = await convertToWebp(destPath, { verbose });
+          if (webpResult.success) {
+            finalPath = webpResult.webpPath;
+          } else {
+            // WebP conversion failed, but PNG was created - warn but don't fail
+            if (verbose) {
+              log(`Warning: WebP conversion failed for ${destPath}: ${webpResult.error}`, 'warn');
+            }
+          }
+        }
+
+        results.generated.push({ size, path: finalPath });
         if (verbose) {
-          log(`Generated: ${destPath}`, 'success');
+          log(`Generated: ${finalPath}`, 'success');
         }
       } else {
         results.errors.push({ size, path: destPath, error: result.error });
