@@ -12,6 +12,10 @@ export const ANIMATION_TIMING = {
   DAMAGE_NUMBER_DURATION: 1200,
   ACTION_WAIT_SHORT: 600,      // Minimum wait after attack animations
   ACTION_WAIT_FULL: 1200,      // Wait for damage numbers to complete
+  TURN_SETTLE_DELAY: 400,      // Buffer after actions before next turn
+  CAMERA_PAN_DURATION: 500,    // Standard camera pan time
+  MOVEMENT_PER_TILE_MS: 150,   // Consistent timing per tile moved
+  MOVEMENT_MIN_MS: 400,        // Minimum movement wait
 };
 
 export class BattleAnimations {
@@ -821,6 +825,16 @@ export class BattleAnimations {
    */
   clear() {
     this.animations = [];
+  }
+
+  /**
+   * Force all animations to complete immediately
+   * Used when queue times out to prevent animation hangs
+   */
+  forceComplete() {
+    for (const anim of this.animations) {
+      anim.timer = anim.duration;
+    }
   }
 
   /**

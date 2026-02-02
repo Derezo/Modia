@@ -274,13 +274,15 @@ Secondary guilds (2 per region) are assigned **globally** after all regions have
 **Constants:**
 ```javascript
 GUILD_CONFIG = {
-  MIN_SAME_TYPE_SPACING: 100,  // ~3000px between same guild types
+  MIN_SAME_TYPE_SPACING: 40,   // Geometrically achievable with ~25-unit castle spacing
   GLOBAL_MAX_PER_TYPE: 4,      // Max 4 of each type worldwide
   GLOBAL_MIN_PER_TYPE: 3,      // Min 3 of each type worldwide
 }
 ```
 
 **Note:** Elf and Vampire regions both have wizard primaries - this is acceptable as race-alignment is a hard requirement.
+
+**Spacing Rationale:** The 40-unit threshold was chosen based on geometric analysis of the world layout. With castles approximately 25 units apart and guild placement constrained to Ring 2-3 (12-25 units from castle), the best achievable same-type spacing is typically 40-80 units. A 100-unit threshold was mathematically impossible on this world scale.
 
 ### Battle Terrain Anti-Clustering
 
@@ -297,12 +299,18 @@ Prevents clusters of same-type battle nodes (caves, forests, mountains) from app
 **Constants:**
 ```javascript
 TERRAIN_ANTI_CLUSTERING = {
-  ANTI_CLUSTER_RADIUS: 5.0,     // Check distance
+  // Assignment phase
+  ANTI_CLUSTER_RADIUS: 5.0,     // Check distance during node assignment
   SAME_TYPE_PENALTY: 0.4,       // Weight reduction per neighbor
   MAX_SAME_TYPE_NEARBY: 2,      // Hard cap triggers alternate type
   MIN_DOMINANT_RATIO: 0.55,     // Preserve regional identity
+  // Validation phase
+  MAX_CLUSTER_SIZE: 3,          // Max same-type nodes within N hops
+  CLUSTER_HOP_DISTANCE: 1,      // Check immediate neighbors only
 }
 ```
+
+**Clustering Validation Rationale:** The validation uses 1-hop distance to align with the ~5-unit radius used during assignment (both check immediate neighbors). MAX_CLUSTER_SIZE=3 allows natural small clusters while catching problematic 4+ node clusters. With 40-55% dominant terrain per region, some clustering is mathematically inevitable.
 
 ### Key Constants
 

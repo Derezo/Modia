@@ -10,6 +10,8 @@
  * @see FogOfWarState.js - Provides reveal radii and polygon detection
  */
 
+import { generateSVGPathData } from './PathRenderer.js';
+
 export class DOMFogOverlay {
   constructor(canvas) {
     this.canvas = canvas;
@@ -278,6 +280,7 @@ export class DOMFogOverlay {
     oldGradients.forEach(g => g.remove());
 
     // Add connection reveals (paths between nodes)
+    // Uses Catmull-Rom splines to match the visible path rendering in PathRenderer
     for (const conn of this.connectionData) {
       const x1 = conn.from.x * this.nodeSpacing;
       const y1 = conn.from.y * this.nodeSpacing;
@@ -287,11 +290,11 @@ export class DOMFogOverlay {
       const pathWidth = conn.bothVisited ? 44 : 32;
       const opacity = conn.bothVisited ? 1.0 : 0.6;
 
-      // Create curved path using quadratic bezier
-      const control = this.getPathControlPoint(x1, y1, x2, y2, conn.from.id, conn.to.id);
+      // Generate SVG path data using Catmull-Rom splines (matches visible paths)
+      const pathData = generateSVGPathData(x1, y1, x2, y2, conn.from.id, conn.to.id);
 
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', `M ${x1} ${y1} Q ${control.x} ${control.y} ${x2} ${y2}`);
+      path.setAttribute('d', pathData);
       path.setAttribute('stroke', `rgba(0, 0, 0, ${opacity})`);
       path.setAttribute('stroke-width', String(pathWidth));
       path.setAttribute('stroke-linecap', 'round');
@@ -343,35 +346,6 @@ export class DOMFogOverlay {
 
       this.revealsGroup.appendChild(circle);
     }
-  }
-
-  /**
-   * Calculate bezier control point for curved path (matches WorldMapEffects algorithm)
-   */
-  getPathControlPoint(x1, y1, x2, y2, fromNodeId, toNodeId) {
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2;
-
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const length = Math.sqrt(dx * dx + dy * dy);
-
-    if (length < 1) return { x: midX, y: midY };
-
-    // Perpendicular vector
-    const perpX = -dy / length;
-    const perpY = dx / length;
-
-    // Curve amount proportional to path length (capped)
-    const curveAmount = Math.min(length * 0.2, 40);
-
-    // Consistent direction based on node ID ordering
-    const direction = fromNodeId < toNodeId ? 1 : -1;
-
-    return {
-      x: midX + perpX * curveAmount * direction,
-      y: midY + perpY * curveAmount * direction
-    };
   }
 
   /**

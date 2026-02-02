@@ -62,8 +62,15 @@ function getPathVarianceLevel(seedValue) {
  * @returns {Array<{x: number, y: number}>} Array of control points including endpoints
  */
 export function generatePathControlPoints(x1, y1, x2, y2, fromNodeId, toNodeId) {
+  // Normalize coordinates: always generate from smaller ID to larger ID
+  // This ensures identical curves regardless of which direction coordinates are passed,
+  // preventing flickering when the perpendicular vector calculation depends on dx/dy sign
+  const needsSwap = fromNodeId > toNodeId;
+  const [nx1, ny1, nx2, ny2] = needsSwap ? [x2, y2, x1, y1] : [x1, y1, x2, y2];
+  const [nFromId, nToId] = needsSwap ? [toNodeId, fromNodeId] : [fromNodeId, toNodeId];
+
   // Create deterministic seed from both node IDs (order-independent)
-  const seedValue = Math.min(fromNodeId, toNodeId) * 1000000 + Math.max(fromNodeId, toNodeId);
+  const seedValue = nFromId * 1000000 + nToId;
   const rng = new SeededRandom(seedValue);
 
   // Determine variance level for this path
@@ -71,15 +78,15 @@ export function generatePathControlPoints(x1, y1, x2, y2, fromNodeId, toNodeId) 
   const variance = VARIANCE_CONFIG[varianceLevel];
 
   // Calculate path length and number of control points (2-5 based on distance, plus variance bonus)
-  const dx = x2 - x1;
-  const dy = y2 - y1;
+  const dx = nx2 - nx1;
+  const dy = ny2 - ny1;
   const length = Math.sqrt(dx * dx + dy * dy);
   const baseNumPoints = Math.max(2, Math.min(5, Math.floor(length / 80) + 2));
   const numPoints = baseNumPoints + variance.controlPointBonus;
 
   // Handle zero-length paths
   if (length < 1) {
-    return [{ x: x1, y: y1 }, { x: x2, y: y2 }];
+    return [{ x: nx1, y: ny1 }, { x: nx2, y: ny2 }];
   }
 
   // Calculate tangent and perpendicular vectors
@@ -89,14 +96,14 @@ export function generatePathControlPoints(x1, y1, x2, y2, fromNodeId, toNodeId) 
   const perpY = tangentX;
 
   // Generate intermediate control points with seeded offsets
-  const points = [{ x: x1, y: y1 }];
+  const points = [{ x: nx1, y: ny1 }];
 
   for (let i = 1; i < numPoints - 1; i++) {
     const t = i / (numPoints - 1);
 
     // Base position along straight line
-    const baseX = x1 + dx * t;
-    const baseY = y1 + dy * t;
+    const baseX = nx1 + dx * t;
+    const baseY = ny1 + dy * t;
 
     // Seeded perpendicular offset (creates S-curves)
     // Use sin wave modulated by random to create natural curves
@@ -113,7 +120,7 @@ export function generatePathControlPoints(x1, y1, x2, y2, fromNodeId, toNodeId) 
     });
   }
 
-  points.push({ x: x2, y: y2 });
+  points.push({ x: nx2, y: ny2 });
   return points;
 }
 
@@ -198,6 +205,33 @@ export function generateSplinePoints(controlPoints, segmentsPerSpan = 8) {
   }
 
   return result;
+}
+
+/**
+ * Generate SVG path data string from spline points
+ * Used by DOMFogOverlay to render fog cutouts matching visible paths
+ * @param {number} x1 - Start X
+ * @param {number} y1 - Start Y
+ * @param {number} x2 - End X
+ * @param {number} y2 - End Y
+ * @param {number} fromNodeId - Source node ID
+ * @param {number} toNodeId - Destination node ID
+ * @param {number} segmentsPerSpan - Number of line segments per span between control points
+ * @returns {string} SVG path data string (M/L commands)
+ */
+export function generateSVGPathData(x1, y1, x2, y2, fromNodeId, toNodeId, segmentsPerSpan = 10) {
+  const controlPoints = generatePathControlPoints(x1, y1, x2, y2, fromNodeId, toNodeId);
+  const splinePoints = generateSplinePoints(controlPoints, segmentsPerSpan);
+
+  if (splinePoints.length < 2) {
+    return `M ${x1} ${y1} L ${x2} ${y2}`;
+  }
+
+  let d = `M ${splinePoints[0].x} ${splinePoints[0].y}`;
+  for (let i = 1; i < splinePoints.length; i++) {
+    d += ` L ${splinePoints[i].x} ${splinePoints[i].y}`;
+  }
+  return d;
 }
 
 /**

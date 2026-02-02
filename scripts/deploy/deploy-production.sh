@@ -368,9 +368,9 @@ if [ "$REFRESH_DB" = true ]; then
         DB_NAME="${DB_NAME:-modia}"
       fi
 
-      # Safety check: Only allow dropping 'modia' database
-      if [ "$DB_NAME" != "modia" ]; then
-        echo "ERROR: Database name is '$DB_NAME', not 'modia'. Refusing to drop for safety."
+      # Safety check: Only allow dropping 'modia' or 'modia_production' database
+      if [ "$DB_NAME" != "modia" ] && [ "$DB_NAME" != "modia_production" ]; then
+        echo "ERROR: Database name is '$DB_NAME', not 'modia' or 'modia_production'. Refusing to drop for safety."
         exit 1
       fi
 
@@ -388,17 +388,17 @@ if [ "$REFRESH_DB" = true ]; then
         DB_PORT="${DB_PORT:-5432}"
       fi
 
-      echo "Terminating active connections to modia database..."
-      sudo -u postgres psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'modia' AND pid <> pg_backend_pid();" 2>/dev/null || true
+      echo "Terminating active connections to $DB_NAME database..."
+      sudo -u postgres psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$DB_NAME' AND pid <> pg_backend_pid();" 2>/dev/null || true
 
-      echo "Dropping modia database..."
-      sudo -u postgres psql -c "DROP DATABASE IF EXISTS modia;"
+      echo "Dropping $DB_NAME database..."
+      sudo -u postgres psql -c "DROP DATABASE IF EXISTS $DB_NAME;"
 
-      echo "Creating fresh modia database..."
-      sudo -u postgres psql -c "CREATE DATABASE modia OWNER $DB_USER;"
+      echo "Creating fresh $DB_NAME database..."
+      sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
 
       echo ""
-      echo "Database 'modia' has been refreshed (dropped and recreated)."
+      echo "Database '$DB_NAME' has been refreshed (dropped and recreated)."
 REFRESH_SCRIPT
 
     log "Database refresh complete - modia database is now empty"

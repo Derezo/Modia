@@ -9,13 +9,17 @@
  * - Battle log display (BattleLogPanel - legacy, hidden)
  * - New modal-based UI: BattleMenuDropdown, TurnOrderModal, BattleLogModal
  * - Damage/heal preview overlays on target cards
- * - PvP-specific UI (turn timer, surrender, disconnect overlay)
  * - Skill, item, and zodiac ability selection panels
- * - Confirmation dialogs and battle result display
  * - Connection quality indicator (Canvas-based, rendered via BattleScene)
+ *
+ * Delegated to sub-modules:
+ * - BattlePvPUI.js: PvP turn timer, surrender button/modal, opponent disconnect overlay
+ * - BattleConfirmationUI.js: Turn indicators, confirmation dialogs, battle results, notifications
  *
  * @see BattleScene.js - Orchestrates battle and calls UI methods
  * @see ParchmentCard.js - Character/enemy info cards
+ * @see BattlePvPUI.js - PvP-specific UI elements
+ * @see BattleConfirmationUI.js - Dialogs and notifications
  * @see TurnOrderPanel.js - Turn order display (legacy, replaced by TurnOrderModal)
  * @see BattleLogPanel.js - Combat history log (legacy, replaced by BattleLogModal)
  * @see BattleMenuDropdown.js - Compact menu trigger with badge
@@ -31,6 +35,8 @@ import BattleMenuDropdown from './BattleMenuDropdown.js';
 import TurnOrderModal from './TurnOrderModal.js';
 import BattleLogModal from './BattleLogModal.js';
 import { ConnectionIndicator } from '../ui/ConnectionIndicator.js';
+import { BattlePvPUI } from './BattlePvPUI.js';
+import { BattleConfirmationUI } from './BattleConfirmationUI.js';
 
 /**
  * BattleUI - User interface for tactical combat
@@ -61,6 +67,10 @@ export class BattleUI {
     // Connection quality indicator (Canvas-based, rendered by BattleScene)
     this.connectionIndicator = null;
     this.canvas = null;          // Reference to canvas for indicator positioning
+
+    // Delegated UI modules
+    this.pvpUI = null;           // BattlePvPUI - PvP-specific UI
+    this.confirmationUI = null;  // BattleConfirmationUI - Dialogs/notifications
   }
 
   /**
@@ -449,6 +459,13 @@ export class BattleUI {
     });
     this.menuDropdown.show();
 
+    // Initialize delegated UI modules
+    this.pvpUI = new BattlePvPUI(this);
+    this.confirmationUI = new BattleConfirmationUI(this);
+
+    // Setup delegated event listeners
+    this.setupDelegatedEventListeners();
+
     // Initial update
     this.updateTurnOrder(battleState);
   }
@@ -836,60 +853,44 @@ export class BattleUI {
       this.actionCallbacks.onItem?.();
     }, opts);
 
-    this.element.querySelector('#btn-confirm')?.addEventListener('click', () => {
-      this.actionCallbacks.onConfirm?.();
-    }, opts);
-
-    this.element.querySelector('#btn-cancel')?.addEventListener('click', () => {
-      this.actionCallbacks.onCancel?.();
-    }, opts);
-
     this.element.querySelector('#btn-cancel-targeting')?.addEventListener('click', () => {
       this.actionCallbacks.onCancel?.();
     }, opts);
+  }
 
-    this.element.querySelector('#btn-continue')?.addEventListener('click', () => {
-      this.actionCallbacks.onContinue?.();
-    }, opts);
+  /**
+   * Setup event listeners for delegated UI modules (called after modules are initialized)
+   */
+  setupDelegatedEventListeners() {
+    const signal = this.abortController.signal;
 
-    // PvP Surrender button
-    this.element.querySelector('#btn-surrender')?.addEventListener('click', () => {
-      this.showSurrenderModal();
-    }, opts);
+    // Setup PvP-specific event listeners
+    if (this.pvpUI) {
+      this.pvpUI.setupEventListeners(this.actionCallbacks, signal);
+    }
 
-    // Surrender modal confirm
-    this.element.querySelector('#btn-confirm-surrender')?.addEventListener('click', () => {
-      this.hideSurrenderModal();
-      this.actionCallbacks.onSurrender?.();
-    }, opts);
-
-    // Surrender modal cancel
-    this.element.querySelector('#btn-cancel-surrender')?.addEventListener('click', () => {
-      this.hideSurrenderModal();
-    }, opts);
+    // Setup confirmation-specific event listeners
+    if (this.confirmationUI) {
+      this.confirmationUI.setupEventListeners(this.actionCallbacks, signal);
+    }
   }
 
   // ==========================================
-  // PvP-Specific Methods
+  // PvP-Specific Methods (delegated to BattlePvPUI)
   // ==========================================
 
   /**
    * Enable PvP mode - shows PvP-specific UI elements
    */
   enablePvPMode() {
-    this.isPvPMode = true;
+    this.pvpUI?.enablePvPMode();
+  }
 
-    // Show surrender button
-    const surrenderPanel = this.element.querySelector('#pvp-surrender-panel');
-    if (surrenderPanel) {
-      surrenderPanel.style.display = 'block';
-    }
-
-    // Show turn timer
-    const timerPanel = this.element.querySelector('#pvp-turn-timer');
-    if (timerPanel) {
-      timerPanel.style.display = 'block';
-    }
+  /**
+   * Disable PvP mode - hides PvP-specific UI elements
+   */
+  disablePvPMode() {
+    this.pvpUI?.disablePvPMode();
   }
 
   /**
@@ -898,69 +899,35 @@ export class BattleUI {
    * @param {number} totalSeconds - Total turn time (default 60)
    */
   updateTurnTimer(remainingSeconds, totalSeconds = 60) {
-    const timerText = this.element.querySelector('#pvp-timer-text');
-    const timerProgress = this.element.querySelector('.pvp-timer-progress');
-
-    if (!timerText || !timerProgress) return;
-
-    // Update text
-    timerText.textContent = Math.ceil(remainingSeconds);
-
-    // Update progress circle (283 is the circumference of r=45 circle)
-    const circumference = 283;
-    const progress = remainingSeconds / totalSeconds;
-    const offset = circumference * (1 - progress);
-    timerProgress.style.strokeDashoffset = offset;
-
-    // Update color based on remaining time
-    timerProgress.classList.remove('warning', 'critical');
-    if (remainingSeconds <= 10) {
-      timerProgress.classList.add('critical');
-    } else if (remainingSeconds <= 15) {
-      timerProgress.classList.add('warning');
-    }
+    this.pvpUI?.updateTurnTimer(remainingSeconds, totalSeconds);
   }
 
   /**
    * Hide turn timer (during opponent's turn in PvP)
    */
   hideTurnTimer() {
-    const timerPanel = this.element.querySelector('#pvp-turn-timer');
-    if (timerPanel) {
-      timerPanel.style.display = 'none';
-    }
+    this.pvpUI?.hideTurnTimer();
   }
 
   /**
    * Show turn timer (during player's turn in PvP)
    */
   showTurnTimer() {
-    if (!this.isPvPMode) return;
-
-    const timerPanel = this.element.querySelector('#pvp-turn-timer');
-    if (timerPanel) {
-      timerPanel.style.display = 'block';
-    }
+    this.pvpUI?.showTurnTimer();
   }
 
   /**
    * Show surrender confirmation modal
    */
   showSurrenderModal() {
-    const modal = this.element.querySelector('#surrender-confirm-modal');
-    if (modal) {
-      modal.style.display = 'flex';
-    }
+    this.pvpUI?.showSurrenderModal();
   }
 
   /**
    * Hide surrender confirmation modal
    */
   hideSurrenderModal() {
-    const modal = this.element.querySelector('#surrender-confirm-modal');
-    if (modal) {
-      modal.style.display = 'none';
-    }
+    this.pvpUI?.hideSurrenderModal();
   }
 
   /**
@@ -968,25 +935,14 @@ export class BattleUI {
    * @param {number} remainingSeconds - Seconds until forfeit
    */
   showDisconnectedOverlay(remainingSeconds) {
-    const overlay = this.element.querySelector('#opponent-disconnected-overlay');
-    const countdown = this.element.querySelector('#disconnect-countdown');
-
-    if (overlay && countdown) {
-      overlay.style.display = 'flex';
-      const minutes = Math.floor(remainingSeconds / 60);
-      const seconds = remainingSeconds % 60;
-      countdown.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    }
+    this.pvpUI?.showDisconnectedOverlay(remainingSeconds);
   }
 
   /**
    * Hide opponent disconnected overlay
    */
   hideDisconnectedOverlay() {
-    const overlay = this.element.querySelector('#opponent-disconnected-overlay');
-    if (overlay) {
-      overlay.style.display = 'none';
-    }
+    this.pvpUI?.hideDisconnectedOverlay();
   }
 
   /**
@@ -994,23 +950,14 @@ export class BattleUI {
    * @param {string} opponentName - Name of the opponent
    */
   showOpponentTurnIndicator(opponentName) {
-    const indicator = this.element?.querySelector('#opponent-turn-indicator');
-    const text = this.element?.querySelector('#opponent-turn-text');
-
-    if (indicator && text) {
-      text.textContent = `Waiting for ${opponentName}...`;
-      indicator.style.display = 'block';
-    }
+    this.pvpUI?.showOpponentTurnIndicator(opponentName);
   }
 
   /**
    * Hide opponent turn indicator
    */
   hideOpponentTurnIndicator() {
-    const indicator = this.element?.querySelector('#opponent-turn-indicator');
-    if (indicator) {
-      indicator.style.display = 'none';
-    }
+    this.pvpUI?.hideOpponentTurnIndicator();
   }
 
   /**
@@ -1202,18 +1149,14 @@ export class BattleUI {
    * Show confirmation panel
    */
   showConfirmation(text) {
-    const panel = this.element.querySelector('#confirm-panel');
-    const textEl = this.element.querySelector('#confirm-text');
-    if (panel) panel.style.display = 'block';
-    if (textEl) textEl.textContent = text;
+    this.confirmationUI?.showConfirmation(text);
   }
 
   /**
    * Hide confirmation panel
    */
   hideConfirmation() {
-    const panel = this.element.querySelector('#confirm-panel');
-    if (panel) panel.style.display = 'none';
+    this.confirmationUI?.hideConfirmation();
   }
 
   /**
@@ -1499,40 +1442,18 @@ export class BattleUI {
 
   /**
    * Show battle result
+   * @param {string} status - 'victory', 'defeat', 'surrender', or 'draw'
+   * @param {Object|null} rewards - Optional rewards object
    */
   showResult(status, rewards = null) {
-    const panel = this.element.querySelector('#battle-result');
-    const title = this.element.querySelector('#result-title');
-    const rewardsEl = this.element.querySelector('#result-rewards');
+    this.confirmationUI?.showResult(status, rewards);
+  }
 
-    if (!panel) return;
-
-    panel.style.display = 'block';
-
-    if (title) {
-      if (status === 'victory') {
-        title.textContent = 'Victory!';
-        title.style.color = '#ffd700';
-      } else if (status === 'defeat') {
-        title.textContent = 'Defeat';
-        title.style.color = '#f44336';
-      }
-    }
-
-    if (rewardsEl && rewards) {
-      rewardsEl.innerHTML = `
-        <div style="margin-bottom: 8px;">
-          <span style="color: #ffd700;">Gold:</span>
-          <span style="color: #fff;">+${rewards.gold}</span>
-        </div>
-        <div>
-          <span style="color: #4caf50;">Experience:</span>
-          <span style="color: #fff;">+${rewards.experience}</span>
-        </div>
-      `;
-    } else if (rewardsEl) {
-      rewardsEl.innerHTML = '';
-    }
+  /**
+   * Hide battle result panel
+   */
+  hideResult() {
+    this.confirmationUI?.hideResult();
   }
 
   /**
@@ -1556,58 +1477,14 @@ export class BattleUI {
    * @param {number} duration - How long to show the indicator (ms), default 2000
    */
   showTurnIndicator(unitName, unitType, duration = 2000) {
-    const indicator = this.element?.querySelector('#turn-indicator');
-    const content = this.element?.querySelector('.turn-indicator-content');
-    const text = this.element?.querySelector('#turn-indicator-text');
-
-    if (!indicator || !content || !text) return;
-
-    // Clear any existing timeout
-    if (this.turnIndicatorTimeout) {
-      clearTimeout(this.turnIndicatorTimeout);
-    }
-
-    // Set text and style based on unit type
-    let displayText = '';
-    if (unitType === 'player_local') {
-      displayText = 'Your Turn!';
-    } else if (unitType === 'player_remote') {
-      displayText = `${unitName}'s Turn`;
-    } else if (unitType === 'enemy') {
-      displayText = `Enemy: ${unitName}`;
-    } else {
-      displayText = `${unitName}'s Turn`;
-    }
-
-    text.textContent = displayText;
-
-    // Remove old type classes and add new one
-    content.classList.remove('player', 'player_local', 'player_remote', 'enemy');
-    content.classList.add(unitType || 'player');
-
-    // Reset animation by forcing reflow
-    indicator.style.display = 'none';
-    void indicator.offsetWidth; // Force reflow
-    indicator.style.display = 'block';
-
-    // Hide after duration
-    this.turnIndicatorTimeout = setTimeout(() => {
-      indicator.style.display = 'none';
-    }, duration);
+    this.confirmationUI?.showTurnIndicator(unitName, unitType, duration);
   }
 
   /**
    * Hide turn indicator immediately
    */
   hideTurnIndicator() {
-    const indicator = this.element?.querySelector('#turn-indicator');
-    if (indicator) {
-      indicator.style.display = 'none';
-    }
-    if (this.turnIndicatorTimeout) {
-      clearTimeout(this.turnIndicatorTimeout);
-      this.turnIndicatorTimeout = null;
-    }
+    this.confirmationUI?.hideTurnIndicator();
   }
 
   /**
@@ -1617,19 +1494,14 @@ export class BattleUI {
    * @param {number} duration - How long to show (ms), default 3000
    */
   showNotification(message, type = 'info', duration = 3000) {
-    // Use unified parchment toast system for consistent styling
-    const toastMethod = parchmentToast[type] || parchmentToast.info;
-    toastMethod.call(parchmentToast, message, '', duration);
+    this.confirmationUI?.showNotification(message, type, duration);
   }
 
   /**
    * Clear all notifications
    */
   clearNotifications() {
-    const container = this.element?.querySelector('#notification-container');
-    if (container) {
-      container.innerHTML = '';
-    }
+    this.confirmationUI?.clearNotifications();
   }
 
   // ==========================================
@@ -1806,10 +1678,6 @@ export class BattleUI {
    * Destroy the UI
    */
   destroy() {
-    if (this.turnIndicatorTimeout) {
-      clearTimeout(this.turnIndicatorTimeout);
-      this.turnIndicatorTimeout = null;
-    }
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -1847,6 +1715,15 @@ export class BattleUI {
     if (this.connectionIndicator) {
       this.connectionIndicator.destroy();
       this.connectionIndicator = null;
+    }
+    // Clean up delegated UI modules
+    if (this.pvpUI) {
+      this.pvpUI.destroy();
+      this.pvpUI = null;
+    }
+    if (this.confirmationUI) {
+      this.confirmationUI.destroy();
+      this.confirmationUI = null;
     }
     this.canvas = null;
     this.scene = null;

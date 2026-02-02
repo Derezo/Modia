@@ -25,7 +25,8 @@ export class SFXPlayer {
     this.uiVolume = 0.7;
     this.effectiveVolume = {
       sfx: this.masterVolume * this.sfxVolume,
-      ui: this.masterVolume * this.uiVolume
+      ui: this.masterVolume * this.uiVolume,
+      interactions: this.masterVolume * this.sfxVolume  // Use SFX volume for interactions
     };
 
     // State
@@ -264,7 +265,8 @@ export class SFXPlayer {
   _updateEffectiveVolume() {
     this.effectiveVolume = {
       sfx: this.masterVolume * this.sfxVolume,
-      ui: this.masterVolume * this.uiVolume
+      ui: this.masterVolume * this.uiVolume,
+      interactions: this.masterVolume * this.sfxVolume  // Use SFX volume for interactions
     };
   }
 

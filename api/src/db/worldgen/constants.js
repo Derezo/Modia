@@ -272,8 +272,9 @@ export const GUILD_CONFIG = {
   MIN_GUILD_SPACING: 8,                   // Minimum distance between guilds in same region
 
   // Global same-type spacing (prevent wizard guilds from clustering)
-  // ~100 units = ~3000px - ensures same guild types spread across world
-  MIN_SAME_TYPE_SPACING: 100,
+  // 40 units is geometrically achievable with current world layout (castles ~25 units apart)
+  // Still prevents same-type guilds in immediately adjacent regions
+  MIN_SAME_TYPE_SPACING: 40,
   GLOBAL_MAX_PER_TYPE: 4,                 // Max 4 of each guild type worldwide
   GLOBAL_MIN_PER_TYPE: 3,                 // Min 3 of each guild type worldwide
 
@@ -330,8 +331,8 @@ export const TERRAIN_ANTI_CLUSTERING = {
 
   // Validation phase settings
   VALIDATION_ENABLED: true,
-  MAX_CLUSTER_SIZE: 2,                    // Max same-type nodes within N hops before flagging
-  CLUSTER_HOP_DISTANCE: 2,                // Check within this many graph hops
+  MAX_CLUSTER_SIZE: 3,                    // Max same-type nodes within N hops before flagging
+  CLUSTER_HOP_DISTANCE: 1,                // Check within this many graph hops (aligns with ANTI_CLUSTER_RADIUS)
 
   // Preserve regional identity: don't drop below this dominant ratio
   MIN_DOMINANT_RATIO: 0.55,

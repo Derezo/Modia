@@ -23,6 +23,37 @@ const shouldEnableRateLimiting = () => {
   return true; // Always enabled in dev/prod
 };
 
+// Test bypass header - allows integration tests to skip rate limiting on dev servers
+// Only works in non-production environments
+const TEST_BYPASS_HEADER = 'x-test-bypass-rate-limit';
+const TEST_BYPASS_SECRET = 'modia-test-bypass-2024';
+
+/**
+ * Check if a request should skip rate limiting
+ * @param {Request} req - Express request object
+ * @param {boolean} rateLimitingEnabled - Whether rate limiting is enabled
+ * @returns {boolean} - True if request should skip rate limiting
+ */
+const shouldSkipRateLimit = (req, rateLimitingEnabled) => {
+  // If rate limiting is already disabled (test mode), skip
+  if (!rateLimitingEnabled) {
+    return true;
+  }
+
+  // In production, never allow bypass
+  if (isProduction) {
+    return false;
+  }
+
+  // In dev mode, allow bypass with correct header (for integration tests)
+  const bypassHeader = req.get(TEST_BYPASS_HEADER);
+  if (bypassHeader === TEST_BYPASS_SECRET) {
+    return true;
+  }
+
+  return false;
+};
+
 // Log warning if NODE_ENV is not set
 if (!process.env.NODE_ENV) {
   console.warn('WARNING: NODE_ENV not set. Rate limiting is enabled. Set NODE_ENV=development for higher limits.');
@@ -133,7 +164,7 @@ export function createLimiter({ name, windowMs, maxRequests, message, useUserKey
     windowMs,
     max,
     keyGenerator,
-    skip: () => !rateLimitingEnabled,
+    skip: (req) => shouldSkipRateLimit(req, rateLimitingEnabled),
     message: { error: message },
     standardHeaders: true,
     legacyHeaders: false,
@@ -304,3 +335,6 @@ export function isUsingRedisStore() {
 
 // Export environment detection for use in other modules
 export { isTest, isDev, isProduction, testRateLimitsEnabled };
+
+// Export test bypass constants for test utilities
+export { TEST_BYPASS_HEADER, TEST_BYPASS_SECRET };

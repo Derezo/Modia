@@ -252,11 +252,12 @@ describe('Message Reliability Service', () => {
       const battleId = uniqueId('battle');
       const connectionId = uniqueId('conn');
 
-      sendWithAck(mockWs, { type: 'test' }, battleId, connectionId);
+      const seq = sendWithAck(mockWs, { type: 'test' }, battleId, connectionId);
 
       assert.strictEqual(mockWs.send.mock.callCount(), 0, 'Should not send to closed socket');
-      // But should still track the pending message
-      assert.strictEqual(getPendingCount(connectionId), 1, 'Should still track pending');
+      // Should NOT track the message (prevents sequence gaps)
+      assert.strictEqual(seq, -1, 'Should return -1 when connection not open');
+      assert.strictEqual(getPendingCount(connectionId), 0, 'Should not track pending for closed connection');
 
       // Cleanup
       cleanupConnection(connectionId);
@@ -783,9 +784,9 @@ describe('Message Reliability Service', () => {
       // Should not throw
       const seq = sendWithAck(mockWs, { type: 'test' }, battleId, connectionId);
 
-      // Should still track pending even though send failed
-      assert.strictEqual(seq, 1, 'Should return seq');
-      assert.strictEqual(getPendingCount(connectionId), 1, 'Should track pending');
+      // Should NOT track pending when send fails (prevents sequence gaps)
+      assert.strictEqual(seq, -1, 'Should return -1 when send fails');
+      assert.strictEqual(getPendingCount(connectionId), 0, 'Should not track pending when send fails');
 
       // Cleanup
       cleanupConnection(connectionId);

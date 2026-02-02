@@ -141,6 +141,7 @@ The monorepo uses npm workspaces (defined in root `package.json`):
 | `frontend/` | 8080 | Vanilla JS game client (Vite) |
 | `admin/` | 5173 | React asset manager dashboard (Vite) |
 | `shared/` | - | Constants and utilities used by api/frontend |
+| `e2e/` | - | Playwright E2E tests (auto-starts servers) |
 
 Workspace-specific commands use `-w` flag: `npm run test -w api`, `npm run lint -w frontend`
 
@@ -204,6 +205,12 @@ The `generate-sfx.js` script blocks 2+ commas. Run with `--dry-run` to validate.
   - Theme customization and backup management
 - **API routes:** `api/src/routes/admin.js`, `api/src/routes/adminAudio.js`
 - **Testing:** Vitest + React Testing Library + MSW for mocking
+
+### E2E Tests (`e2e/`)
+- **Config:** `playwright.config.js` - Auto-starts API and frontend servers
+- **Browsers:** Chromium, Firefox, WebKit, Mobile Chrome
+- **Debug output:** `playwright-report/` (HTML), screenshots/video on failure
+- **Pattern:** Page Object Model in `e2e/fixtures/` for reusable interactions
 
 ### Data Flow
 1. Frontend scenes call `api/client.js` for HTTP requests
@@ -572,21 +579,21 @@ ai-image-metadata/
 
 ### Tech Debt: Existing Large Files
 
-These files exceed or approach limits and are tracked in `docs/ROADMAP_TECHNICAL.md` section 8.1:
+All previously flagged large files have been refactored and are under the 3,500-line blocking threshold. Run `wc -l` on suspected files to verify current line counts before flagging.
 
-| File | Lines | Status |
-|------|-------|--------|
-| `frontend/src/scenes/BattleScene.js` | 3,083 | WARNING - approaching 3,500 blocking threshold |
-| `frontend/src/scenes/WorldMapScene.js` | 2,951 | WARNING - plan modularization |
-| `api/src/services/marketplaceService.js` | 1,956 | WARNING |
-| `frontend/src/battle/BattleUI.js` | 1,594 | WARNING - exceeds 1,500 threshold |
-| `api/src/services/coliseumService.js` | 1,552 | WARNING |
+**Notable modularizations:**
+- `BattleScene.js` → `BattleInputHandler.js`, `BattleAudioManager.js`
+- `WorldMapScene.js` → `WorldMapPathSystem.js`, `WorldMapNodeRenderer.js`
+- `marketplaceService.js` → `marketplace/` directory (6 modules)
+- `coliseumService.js` → `coliseum/` directory (6 modules)
+- `admin.js` → `admin/` directory (5 sub-routers)
+- `websocket/index.js` → `rateLimiter.js`, `roomManager.js`, `messageRouter.js`, `messageHandlers.js`
+- `SettingsScene.js` → `settings/` directory (3 modules)
+- `world.js` → `world/` directory (4 sub-routers)
+- `TavernScene.js` → `tavern/` directory (2 modules)
+- `BattleUI.js` → `BattlePvPUI.js`, `BattleConfirmationUI.js`
 
-*Last updated: 2026-01-29*
-
-**Recent refactoring:** BattleScene.js WebSocket handling extracted to `BattleWebSocketManager.js` (766 lines). All files are now under the 3500-line blocking threshold but BattleScene.js is approaching it.
-
-**Note:** Changes to tech debt files do NOT block validation unless they increase the line count. New files must comply with the 3500-line limit.
+New files must comply with the 3,500-line limit.
 
 ## Subagents
 

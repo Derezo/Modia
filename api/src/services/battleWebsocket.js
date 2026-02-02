@@ -128,9 +128,9 @@ async function broadcastUnitMoved(battleId, unitId, from, to, _excludeUserId = n
  * @param {number} actorId - Unit that performed action
  * @param {string} actionType - Type of action (attack, skill, wait)
  * @param {Object} result - Action result (damage, missed, etc.)
- * @param {number} excludeUserId - Optional user to exclude (NOTE: ACK broadcast doesn't support exclude)
+ * @param {number} submitterId - Optional userId who submitted the action (for frontend dedup)
  */
-async function broadcastActionExecuted(battleId, actorId, actionType, result, _excludeUserId = null) {
+async function broadcastActionExecuted(battleId, actorId, actionType, result, submitterId = null) {
   const roomName = `battle:${battleId}`;
 
   // Use ACK-required broadcast - players must see damage/effects
@@ -141,6 +141,7 @@ async function broadcastActionExecuted(battleId, actorId, actionType, result, _e
       actorId,
       actionType,
       result,
+      submitterId,  // Include submitter's userId for frontend filtering
       timestamp: Date.now()
     }
   }, battleId);

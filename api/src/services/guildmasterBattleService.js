@@ -120,13 +120,13 @@ async function createSoloPlayerUnit(character) {
 
   // Get character skills
   const skillsResult = await query(
-    'SELECT skill_id, skill_level FROM character_skills WHERE character_id = $1',
+    'SELECT skill_id, level FROM character_skills WHERE character_id = $1',
     [character.id]
   );
 
   const skills = skillsResult.rows.map(s => ({
     id: s.skill_id,
-    level: s.skill_level
+    level: s.level
   }));
 
   return {

@@ -739,13 +739,24 @@ File size limits are enforced during plan validation and code review:
 **Tracked Large Files:**
 | File | Lines | Status |
 |------|-------|--------|
-| `frontend/src/scenes/WorldMapScene.js` | 2,861 | WARNING - plan modularization |
-| `frontend/src/scenes/BattleScene.js` | 2,680 | WARNING - plan modularization |
-| `api/src/services/marketplaceService.js` | 1,956 | WARNING |
-| `frontend/src/battle/BattleUI.js` | 1,556 | WARNING - exceeds 1,500 |
-| `api/src/services/coliseumService.js` | 1,552 | WARNING |
+| `frontend/src/scenes/BattleScene.js` | 2,708 | OK - reduced from 3,215 |
+| `frontend/src/scenes/WorldMapScene.js` | 2,338 | OK - reduced from 3,099 |
+| `frontend/src/battle/BattleUI.js` | 1,810 | OK |
 
-*Last updated: 2026-01-22*
+*Last updated: 2026-02-02*
+
+**Completed Large File Refactoring (Feb 2026):**
+All previously flagged files have been modularized:
+- `BattleScene.js`: Extracted `BattleInputHandler.js`, `BattleAudioManager.js`
+- `WorldMapScene.js`: Extracted `WorldMapPathSystem.js`, `WorldMapNodeRenderer.js`
+- `marketplaceService.js`: Split into `marketplace/` (6 modules, 47-line wrapper)
+- `coliseumService.js`: Split into `coliseum/` (6 modules, 71-line wrapper)
+- `admin.js`: Split into `admin/` (5 sub-routers, 136-line wrapper)
+- `websocket/index.js`: Extracted 4 utility modules (508 lines)
+- `SettingsScene.js`: Extracted 3 modules (833 lines)
+- `world.js`: Split into `world/` (4 sub-routers, 55-line wrapper)
+- `TavernScene.js`: Extracted 2 chat modules (1,112 lines)
+- `BattleUI.js`: Extracted `BattlePvPUI.js`, `BattleConfirmationUI.js`
 
 All files are now under the 3500-line blocking threshold.
 
@@ -844,6 +855,7 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 | 2.4 | Jan 2026 | Security & Testing Infrastructure (v9.4): Added Redis-backed rate limiting with graceful fallback. Comprehensive endpoint protection (70+ endpoints via economyRateLimiter, characterRateLimiter, socialRateLimiter). Gated debug endpoints in production. Enhanced health checks with Redis, rate limiter stats, liveness/readiness endpoints. Artillery.io load testing infrastructure for 25 concurrent users. E2E tests: character creation, battle flow, error handling. Shared test helpers. Updated status: Testing 85%, Monitoring 60%, Infrastructure 75%. |
 | 2.3 | Jan 2026 | Post-Processing Pipeline Overhaul: Added Section 7.4 documenting new asset-specific post-processing functions. Removed --sizes flag, standardized resolutions (256 portraits/nodes, 128 tiles/items/icons). Added diamond mask for tiles, improved prompts for geometry. Renumbered pending items to 7.5. Commit 91ac94b. |
 | 2.2 | Jan 2026 | AI Image Quality Evaluation: Added Section 7 for AI Image Generation System. Documented prompt builder improvements (removed white background, added composition constraints). Added quality evaluation system with scoring criteria. Section numbering updated (7→8 for Technical Debt). |
+| 2.2 | Feb 2026 | Large File Refactoring Phase 2: Modularized 10 oversized files. Backend: admin.js (5 sub-routers), world.js (4 sub-routers), marketplaceService.js (6 modules), coliseumService.js (6 modules), websocket/index.js (4 modules). Frontend: BattleScene.js (2 extractors), WorldMapScene.js (2 extractors), SettingsScene.js (3 modules), TavernScene.js (2 modules), BattleUI.js (2 components). All files now under 3500-line threshold. |
 | 2.1 | Jan 2026 | Documentation Audit: Updated file size table with verified line counts. Audited known issues - resolved party:invite mismatch (uses party:invite_received) and SkillTreePanel.js (file removed). Added status column to known issues. |
 | 2.0 | Jan 2026 | ESLint Warning Cleanup: Resolved all 138 `no-unused-vars` warnings (69 API + 69 frontend) across 58 files. Used `_` prefix convention for intentionally unused parameters required by signatures (Express middleware, base class methods, callbacks). |
 | 1.9 | Jan 2026 | File Size Enforcement: Added Section 7.1 with 2500-line blocking threshold, tracked large files table. Fixed section numbering (7.1-7.4). Cross-references CLAUDE.md > File Size Guidelines for patterns. |
