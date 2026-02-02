@@ -320,23 +320,96 @@ async function sendStateSync(userId, battleId, state, reason = 'reconnect') {
 /**
  * Broadcast battle end event
  * CRITICAL: Uses ACK-required messaging - players must know battle is over
+ *
+ * For PvP battles: Sends player-perspective status to each player
+ * - Winner receives status: 'victory'
+ * - Loser receives status: 'defeat'
+ *
+ * For PvE battles: Broadcasts same status to all participants
+ *
  * @param {number} battleId - Battle ID
- * @param {string} status - 'victory' | 'defeat'
+ * @param {string} status - 'victory' | 'defeat' (for PvE, or default for PvP)
  * @param {Object} rewards - Rewards data (gold, exp, items)
+ * @param {Object} pvpInfo - Optional PvP-specific info { player1Id, player2Id, winningTeamId }
  */
-async function broadcastBattleEnd(battleId, status, rewards = null) {
+async function broadcastBattleEnd(battleId, status, rewards = null, pvpInfo = null) {
   const roomName = `battle:${battleId}`;
+  const ws = await getWebsocket();
+  const { rooms, connections } = ws;
 
-  // Use ACK-required broadcast - players must know battle is over
-  await broadcastWithAck(null, roomName, {
-    type: 'battle:end',
-    payload: {
-      battleId,
-      status,
-      rewards,
-      timestamp: Date.now()
+  // Get all user IDs in the room
+  const roomUsers = rooms.get(roomName);
+
+  // For PvP battles with player info, send player-perspective status
+  if (pvpInfo && pvpInfo.player1Id && pvpInfo.player2Id && pvpInfo.winningTeamId) {
+    const { player1Id, player2Id, winningTeamId } = pvpInfo;
+    const winnerId = winningTeamId === 1 ? player1Id : player2Id;
+    const loserId = winningTeamId === 1 ? player2Id : player1Id;
+
+    console.log(`[BattleWS] PvP battle:end - battleId=${battleId}, winnerId=${winnerId}, loserId=${loserId}, winningTeamId=${winningTeamId}`);
+
+    // Send victory to winner
+    const winnerWs = connections.get(winnerId);
+    if (winnerWs && winnerWs.readyState === 1) { // WebSocket.OPEN = 1
+      sendWithAck(winnerWs, {
+        type: 'battle:end',
+        payload: {
+          battleId,
+          status: 'victory',
+          rewards,
+          timestamp: Date.now()
+        }
+      }, battleId, winnerId);
+      console.log(`[BattleWS] Sent 'victory' to player ${winnerId}`);
     }
-  }, battleId);
+
+    // Send defeat to loser
+    const loserWs = connections.get(loserId);
+    if (loserWs && loserWs.readyState === 1) {
+      sendWithAck(loserWs, {
+        type: 'battle:end',
+        payload: {
+          battleId,
+          status: 'defeat',
+          rewards: null, // Loser doesn't get rewards
+          timestamp: Date.now()
+        }
+      }, battleId, loserId);
+      console.log(`[BattleWS] Sent 'defeat' to player ${loserId}`);
+    }
+
+    // Send to any other spectators in the room (if any)
+    if (roomUsers) {
+      for (const userId of roomUsers) {
+        if (userId !== winnerId && userId !== loserId) {
+          const spectatorWs = connections.get(userId);
+          if (spectatorWs && spectatorWs.readyState === 1) {
+            sendWithAck(spectatorWs, {
+              type: 'battle:end',
+              payload: {
+                battleId,
+                status, // Use the provided status for spectators
+                rewards,
+                timestamp: Date.now()
+              }
+            }, battleId, userId);
+          }
+        }
+      }
+    }
+  } else {
+    // PvE battle - broadcast same status to all participants
+    console.log(`[BattleWS] PvE battle:end - battleId=${battleId}, status=${status}`);
+    await broadcastWithAck(null, roomName, {
+      type: 'battle:end',
+      payload: {
+        battleId,
+        status,
+        rewards,
+        timestamp: Date.now()
+      }
+    }, battleId);
+  }
 
   // Clean up battle room and ACK tracking after broadcast
   setTimeout(() => {
