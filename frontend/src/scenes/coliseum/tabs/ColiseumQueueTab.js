@@ -7,8 +7,23 @@ import {
   PARCHMENT_TYPOGRAPHY,
   PARCHMENT_SPACING
 } from '../../../ui/parchment/index.js';
+import { getTier, getTierIcon } from '@shared/coliseum.js';
 
 const P = PARCHMENT_COLORS;
+
+/**
+ * Render tier badge for queue/match displays
+ * @param {number} rating - Player rating
+ * @returns {string} HTML string
+ */
+function renderTierBadge(rating) {
+  const tier = getTier(rating);
+  const icon = tier.icon ? getTierIcon(tier.icon) : '';
+  return `<span class="coliseum-tier-badge" style="color: ${tier.color};">
+    ${icon ? `<span class="tier-icon">${icon}</span>` : ''}
+    <span class="tier-name">${tier.name}</span>
+  </span>`;
+}
 
 /**
  * Render queue content based on current state
@@ -117,7 +132,7 @@ function renderQueueStatus(context) {
  * @returns {string} HTML string
  */
 function renderMatchFound(context) {
-  const { currentMatch, isReady, opponentReady } = context;
+  const { currentMatch, isReady, opponentReady, playerRating } = context;
   const isStarting = isReady && opponentReady;
 
   return `
@@ -130,6 +145,11 @@ function renderMatchFound(context) {
         <div class="coliseum-opponent-label">Your Opponent</div>
         <div class="coliseum-opponent-name">${currentMatch.opponent?.username || 'Unknown'}</div>
         <div class="coliseum-opponent-level">Avg Level: ${currentMatch.opponent?.partyLevel || '?'}</div>
+        ${playerRating ? `
+          <div class="coliseum-opponent-tier" style="margin-top: 8px;">
+            Your Tier: ${renderTierBadge(playerRating)}
+          </div>
+        ` : ''}
       </div>
 
       <div class="coliseum-ready-section">

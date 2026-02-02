@@ -9,6 +9,7 @@
  */
 
 import { query } from '../config/database.js';
+import { getTierName } from '../../../shared/coliseum.js';
 
 // Base K-factor for ELO calculations
 const K_FACTOR = 32;
@@ -81,13 +82,16 @@ async function ensureRating(userId, queueType = '1v1') {
   );
 
   if (result.rows.length === 0) {
-    // Create new rating record
+    // Calculate initial tier
+    const initialTier = getTierName(DEFAULT_RATING);
+
+    // Create new rating record with tier
     result = await query(
-      `INSERT INTO pvp_ratings (user_id, queue_type, rating, peak_rating)
-       VALUES ($1, $2, $3, $3)
+      `INSERT INTO pvp_ratings (user_id, queue_type, rating, peak_rating, tier, peak_tier)
+       VALUES ($1, $2, $3, $3, $4, $4)
        ON CONFLICT (user_id, queue_type) DO NOTHING
        RETURNING *`,
-      [userId, queueType, DEFAULT_RATING]
+      [userId, queueType, DEFAULT_RATING, initialTier]
     );
 
     // If ON CONFLICT triggered, fetch the existing record
@@ -143,19 +147,38 @@ async function updatePvpRating(userId, queueType, ratingChange, isWin) {
   // Ensure rating exists
   await ensureRating(userId, queueType);
 
+  // First, get current rating to calculate new tier
+  const currentResult = await query(
+    'SELECT rating, peak_rating FROM pvp_ratings WHERE user_id = $1 AND queue_type = $2',
+    [userId, queueType]
+  );
+
+  const currentRating = currentResult.rows[0]?.rating || DEFAULT_RATING;
+  const currentPeakRating = currentResult.rows[0]?.peak_rating || DEFAULT_RATING;
+
+  // Calculate new ratings
+  const newRating = Math.max(0, currentRating + ratingChange);
+  const newPeakRating = Math.max(currentPeakRating, newRating);
+
+  // Calculate tiers
+  const newTier = getTierName(newRating);
+  const newPeakTier = getTierName(newPeakRating);
+
   const result = await query(
     `UPDATE pvp_ratings SET
-       rating = GREATEST(0, rating + $3),
-       peak_rating = GREATEST(peak_rating, rating + $3),
-       wins = wins + CASE WHEN $4 THEN 1 ELSE 0 END,
-       losses = losses + CASE WHEN NOT $4 THEN 1 ELSE 0 END,
-       win_streak = CASE WHEN $4 THEN win_streak + 1 ELSE 0 END,
-       best_win_streak = GREATEST(best_win_streak, CASE WHEN $4 THEN win_streak + 1 ELSE win_streak END),
+       rating = $3,
+       peak_rating = $4,
+       tier = $5,
+       peak_tier = $6,
+       wins = wins + CASE WHEN $7 THEN 1 ELSE 0 END,
+       losses = losses + CASE WHEN NOT $7 THEN 1 ELSE 0 END,
+       win_streak = CASE WHEN $7 THEN win_streak + 1 ELSE 0 END,
+       best_win_streak = GREATEST(best_win_streak, CASE WHEN $7 THEN win_streak + 1 ELSE win_streak END),
        last_match_at = NOW(),
        updated_at = NOW()
      WHERE user_id = $1 AND queue_type = $2
      RETURNING *`,
-    [userId, queueType, ratingChange, isWin]
+    [userId, queueType, newRating, newPeakRating, newTier, newPeakTier, isWin]
   );
 
   return result.rows[0];

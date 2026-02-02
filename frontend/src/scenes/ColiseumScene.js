@@ -49,6 +49,10 @@ export class ColiseumScene extends Scene {
     this.selectedMatchDetails = null;
     this.loadingMatchDetails = false;
 
+    // Player stats (rating/tier)
+    this.playerStats = null;
+    this.playerRating = null;
+
     // WebSocket handlers
     this.wsHandlers = {};
   }
@@ -67,8 +71,11 @@ export class ColiseumScene extends Scene {
       this.game.musicContext.playColiseumTheme();
     }
 
-    // Load queue statuses
-    await this.loadQueueStatuses();
+    // Load queue statuses and player stats
+    await Promise.all([
+      this.loadQueueStatuses(),
+      this.loadPlayerStats()
+    ]);
   }
 
   exit() {
@@ -160,6 +167,8 @@ export class ColiseumScene extends Scene {
       get loadingHistory() { return scene.loadingHistory; },
       get selectedMatchDetails() { return scene.selectedMatchDetails; },
       get loadingMatchDetails() { return scene.loadingMatchDetails; },
+      get playerStats() { return scene.playerStats; },
+      get playerRating() { return scene.playerRating; },
 
       // Bound methods
       formatWaitTime: (s) => scene.formatWaitTime(s),
@@ -441,6 +450,22 @@ export class ColiseumScene extends Scene {
         { queueType: '3v3', queueSize: 0 },
         { queueType: '5v5', queueSize: 0 }
       ];
+    }
+  }
+
+  async loadPlayerStats() {
+    try {
+      const data = await this.game.api.getColiseumStats();
+      this.playerStats = data.ratings || [];
+
+      // Get 1v1 rating as default (or first available)
+      const primaryRating = this.playerStats.find(r => r.queueType === '1v1')
+        || this.playerStats[0];
+      this.playerRating = primaryRating?.rating || null;
+    } catch (err) {
+      console.error('Failed to load player stats:', err);
+      this.playerStats = [];
+      this.playerRating = null;
     }
   }
 

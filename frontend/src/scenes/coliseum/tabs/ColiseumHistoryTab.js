@@ -3,8 +3,21 @@
  */
 
 import { PARCHMENT_COLORS } from '../../../ui/parchment/index.js';
+import { getTier, getTierIcon } from '@shared/coliseum.js';
 
 const P = PARCHMENT_COLORS;
+
+/**
+ * Render a compact tier badge for match history
+ * @param {string} tierName - Tier name
+ * @param {string} tierColor - Tier color
+ * @param {string} tierIcon - Tier icon name
+ * @returns {string} HTML string
+ */
+function renderCompactTierBadge(tierName, tierColor, tierIcon) {
+  const icon = tierIcon ? getTierIcon(tierIcon) : '';
+  return `<span class="coliseum-tier-badge-compact" style="color: ${tierColor};" title="${tierName}">${icon || tierName.charAt(0)}</span>`;
+}
 
 /**
  * Render match history content
@@ -56,12 +69,22 @@ export function renderMatchHistory(context) {
     const resultClass = isMyMatch ? (isWinner ? 'victory' : 'defeat') : '';
     const ratingChange = isWinner ? match.winnerRatingChange : (isLoser ? match.loserRatingChange : null);
 
+    // Get tier info for winner and loser
+    const winnerTierInfo = match.winnerTierColor
+      ? { name: match.winnerTier, color: match.winnerTierColor, icon: match.winnerTierIcon }
+      : getTier(match.winnerRating || 1000);
+    const loserTierInfo = match.loserTierColor
+      ? { name: match.loserTier, color: match.loserTierColor, icon: match.loserTierIcon }
+      : getTier(match.loserRating || 1000);
+
     return `
               <div class="coliseum-match-card ${resultClass}">
                 <div class="coliseum-match-info">
                   <div class="coliseum-match-result">
+                    ${renderCompactTierBadge(winnerTierInfo.name, winnerTierInfo.color, winnerTierInfo.icon)}
                     <span class="winner">${match.winnerUsername}</span>
                     <span style="color: ${P.text.muted};"> defeated </span>
+                    ${renderCompactTierBadge(loserTierInfo.name, loserTierInfo.color, loserTierInfo.icon)}
                     <span class="loser">${match.loserUsername}</span>
                   </div>
                   <div class="coliseum-match-meta">
