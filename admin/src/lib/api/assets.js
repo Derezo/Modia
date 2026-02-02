@@ -24,29 +24,56 @@ export const getAssets = (category, params = {}) => {
  * Get a single asset by ID
  * @param {string} category - Asset category
  * @param {string} id - Asset ID
+ * @param {object} options - Disambiguation options
+ * @param {string} options.biome - Required for tiles category
+ * @param {string} options.sourceFile - Alternative to biome (more precise)
  * @returns {Promise<object>} Asset details
  */
-export const getAsset = (category, id) => fetchAPI(`/assets/${category}/${id}`);
+export const getAsset = (category, id, options = {}) => {
+  const params = new URLSearchParams();
+  if (options.biome) params.set('biome', options.biome);
+  if (options.sourceFile) params.set('sourceFile', options.sourceFile);
+
+  const query = params.toString();
+  return fetchAPI(`/assets/${category}/${id}${query ? `?${query}` : ''}`);
+};
 
 /**
  * Get full prompt construction breakdown for an asset
  * @param {string} category - Asset category
  * @param {string} id - Asset ID
+ * @param {object} options - Disambiguation options
+ * @param {string} options.biome - Required for tiles category
+ * @param {string} options.sourceFile - Alternative to biome (more precise)
  * @returns {Promise<object>} Prompt breakdown
  */
-export const getAssetPrompt = (category, id) => fetchAPI(`/assets/${category}/${id}/prompt`);
+export const getAssetPrompt = (category, id, options = {}) => {
+  const params = new URLSearchParams();
+  if (options.biome) params.set('biome', options.biome);
+  if (options.sourceFile) params.set('sourceFile', options.sourceFile);
+
+  const query = params.toString();
+  return fetchAPI(`/assets/${category}/${id}/prompt${query ? `?${query}` : ''}`);
+};
 
 /**
  * Update an asset's metadata
  * @param {string} category - Asset category
  * @param {string} id - Asset ID
  * @param {object} updates - Fields to update
+ * @param {object} options - Disambiguation options
+ * @param {string} options.biome - Required for tiles category
+ * @param {string} options.sourceFile - Alternative to biome (more precise)
  * @returns {Promise<object>} Updated asset
  */
-export const updateAsset = (category, id, updates) =>
+export const updateAsset = (category, id, updates, options = {}) =>
   fetchAPI(`/assets/${category}/${id}`, {
     method: 'PUT',
-    body: JSON.stringify(updates),
+    body: JSON.stringify({
+      ...updates,
+      biome: options.biome,
+      sourceFile: options.sourceFile,
+    }),
   });
 
 /**
@@ -54,12 +81,14 @@ export const updateAsset = (category, id, updates) =>
  * @param {string} category - Asset category
  * @param {string[]} assetIds - Array of asset IDs to update
  * @param {object} updates - Fields to update (qualityScore, priority, loraModel, note)
+ * @param {object} options - Additional options
+ * @param {string} options.biome - Required for tiles category
  * @returns {Promise<object>} Result with updated count and any errors
  */
-export const bulkUpdateAssets = (category, assetIds, updates) =>
+export const bulkUpdateAssets = (category, assetIds, updates, options = {}) =>
   fetchAPI('/assets/bulk-update', {
     method: 'POST',
-    body: JSON.stringify({ assetIds, category, updates }),
+    body: JSON.stringify({ assetIds, category, updates, biome: options.biome }),
   });
 
 // ============================================================================

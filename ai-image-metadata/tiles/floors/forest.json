@@ -22,19 +22,33 @@
       "key": "grass_1",
       "terrain": "grass",
       "variant": 1,
-      "prompt": "shaded forest grass with fallen leaves scattered between blades in woodland green #6B8E4A #8B7355",
+      "prompt": "shaded forest grass #6B8E4A #8B7355",
       "outputPath": "forest",
       "generated": true,
-      "generatedAt": "2026-01-25T20:01:01.251Z"
+      "generatedAt": "2026-02-02T04:22:05.059Z",
+      "seed": null,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": null
     },
     {
       "key": "grass_2",
       "terrain": "grass",
       "variant": 2,
-      "prompt": "tall forest grass with seed heads bending in gentle breeze in deep green #4A6B2A #6B8E4A",
+      "prompt": "tall forest grass with seed heads bending on the forest floor #4A6B2A #6B8E4A",
       "outputPath": "forest",
       "generated": true,
-      "generatedAt": "2026-01-25T20:05:48.601Z"
+      "generatedAt": "2026-02-02T04:40:12.586Z",
+      "seed": null,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true,
+      "loraModel": null
     },
     {
       "key": "grass_3",
@@ -268,7 +282,7 @@
       "prompt": "massive forest tree trunk base with spreading roots and bark texture in rich brown #5C4033 #8B7355",
       "outputPath": "forest",
       "generated": true,
-      "generatedAt": "2026-01-28T04:25:41.608Z"
+      "generatedAt": "2026-02-02T04:41:00.250Z"
     },
     {
       "key": "tree_1",
@@ -286,7 +300,7 @@
       "prompt": "fallen forest log covered in shelf fungus and green moss in woodland brown #5C4033 #6B8E4A",
       "outputPath": "forest",
       "generated": true,
-      "generatedAt": "2026-01-28T04:26:22.776Z"
+      "generatedAt": "2026-02-02T04:26:10.319Z"
     },
     {
       "key": "tree_3",
@@ -295,7 +309,7 @@
       "prompt": "old forest stump with new growth sprouting and mushrooms in aged brown #8B7355 #4A6B2A",
       "outputPath": "forest",
       "generated": true,
-      "generatedAt": "2026-01-28T04:27:03.898Z"
+      "generatedAt": "2026-02-02T04:26:54.533Z"
     },
     {
       "key": "forest_fern_0",

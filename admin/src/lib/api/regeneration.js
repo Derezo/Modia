@@ -32,12 +32,14 @@ export const markForRegeneration = (category, id, mark = true) =>
  * @param {string} category - Asset category
  * @param {string[]} ids - Array of asset IDs
  * @param {boolean} mark - True to mark, false to unmark
+ * @param {object} options - Additional options
+ * @param {string} options.biome - Required for tiles category
  * @returns {Promise<object>} Result with updated count
  */
-export const markMultipleForRegeneration = (category, ids, mark = true) =>
+export const markMultipleForRegeneration = (category, ids, mark = true, options = {}) =>
   fetchAPI('/assets/mark-multiple', {
     method: 'PUT',
-    body: JSON.stringify({ category, ids, mark }),
+    body: JSON.stringify({ category, ids, mark, biome: options.biome }),
   });
 
 /**

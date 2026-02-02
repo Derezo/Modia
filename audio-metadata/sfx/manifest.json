@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "description": "Master manifest for Modia sound effects",
-  "totalEffects": 244,
+  "totalEffects": 246,
   "categories": {
     "combat": {
       "description": "Weapon attacks, impacts, and combat sounds",
@@ -15,7 +15,7 @@
     },
     "skills": {
       "description": "Player and monster skill sound effects",
-      "effectCount": 140,
+      "effectCount": 141,
       "files": [
         "skills/skill-templates.json",
         "skills/player-skills.json",
@@ -31,7 +31,7 @@
     },
     "interactions": {
       "description": "Game interaction and event sounds",
-      "effectCount": 25,
+      "effectCount": 26,
       "files": [
         "interactions/interactions.json"
       ]

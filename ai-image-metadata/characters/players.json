@@ -455,7 +455,7 @@
         "controlnetWeight": 0.7,
         "ipadapterWeight": 0.7,
         "referenceImage": "/assets/characters/player/warrior/warrior_reference.png",
-        "referenceGeneratedAt": "2026-02-01T22:11:27.146Z",
+        "referenceGeneratedAt": "2026-02-02T03:36:58.665Z",
         "referenceLoraModel": "cps2-pixel-art",
         "animationLoraModel": "cps2-pixel-art"
       },
@@ -756,8 +756,8 @@
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": null,
-        "referenceGeneratedAt": null
+        "referenceImage": "/assets/characters/player/sorcerer/sorcerer_reference.png",
+        "referenceGeneratedAt": "2026-02-02T02:31:46.636Z"
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
@@ -788,8 +788,8 @@
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": null,
-        "referenceGeneratedAt": null
+        "referenceImage": "/assets/characters/player/summoner/summoner_reference.png",
+        "referenceGeneratedAt": "2026-02-02T02:38:07.287Z"
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
@@ -825,8 +825,8 @@
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
-        "referenceImage": null,
-        "referenceGeneratedAt": null
+        "referenceImage": "/assets/characters/player/conjurer/conjurer_reference.png",
+        "referenceGeneratedAt": "2026-02-02T02:44:44.816Z"
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,

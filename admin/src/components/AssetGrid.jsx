@@ -191,6 +191,7 @@ export default function AssetGrid({
   const refetchTimeoutRef = useRef(null);
   const searchInputRef = useRef(null);
   const scrollPositionRef = useRef(null);
+  const lastSaveTimeRef = useRef(0); // Tracks when detailAsset was last saved via API
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -216,8 +217,26 @@ export default function AssetGrid({
   // Update detail panel when assets refetch (e.g., after bulk edit)
   useEffect(() => {
     if (detailAsset && data?.assets) {
+      // Skip sync if we just saved (within last 2 seconds)
+      // This prevents stale cached refetch data from overwriting fresh API save response
+      const timeSinceLastSave = Date.now() - lastSaveTimeRef.current;
+      if (timeSinceLastSave < 2000) {
+        return;
+      }
+
+      // Find asset by unique compound key (id + sourceFile for tiles, or just id for others)
+      // This handles cases where multiple assets have the same id (e.g., grass_1 in different biomes)
       const detailId = detailAsset.key || detailAsset.id;
-      const updatedAsset = data.assets.find(a => (a.key || a.id) === detailId);
+      const detailSourceFile = detailAsset._sourceFile;
+      const updatedAsset = data.assets.find(a => {
+        const assetId = a.key || a.id;
+        if (assetId !== detailId) return false;
+        // For tiles (and other categories with _sourceFile), also match by source file
+        if (detailSourceFile && a._sourceFile) {
+          return a._sourceFile === detailSourceFile;
+        }
+        return true;
+      });
       if (updatedAsset && JSON.stringify(updatedAsset) !== JSON.stringify(detailAsset)) {
         setDetailAsset(updatedAsset);
       }
@@ -317,9 +336,18 @@ export default function AssetGrid({
   /**
    * Handle asset update from detail panel
    */
-  const handleDetailUpdate = useCallback(() => {
+  const handleDetailUpdate = useCallback((updatedAsset) => {
     // Save scroll position before refetch
     scrollPositionRef.current = window.scrollY;
+
+    if (updatedAsset) {
+      // We have fresh data from the API response - use it directly
+      // Record save time so sync useEffect won't overwrite with stale refetch data
+      lastSaveTimeRef.current = Date.now();
+      setDetailAsset(updatedAsset);
+    }
+
+    // Always refetch to keep grid in sync
     refetch();
   }, [refetch]);
 
@@ -337,8 +365,27 @@ export default function AssetGrid({
     try {
       const selectedAssetIds = Array.from(selectedIds);
 
-      // Mark items for regeneration instead of immediate execution
-      await api.markMultipleForRegeneration(category, selectedAssetIds, true);
+      // For tiles, group by biome since IDs may not be unique across biomes
+      if (category === 'tiles') {
+        // Get actual asset objects to access biome info
+        const selectedAssets = filteredAssets.filter(a => selectedIds.has(a.key || a.id));
+        const byBiome = new Map();
+        for (const asset of selectedAssets) {
+          const biome = asset._biome || 'unknown';
+          if (!byBiome.has(biome)) byBiome.set(biome, []);
+          byBiome.get(biome).push(asset.key || asset.id);
+        }
+
+        // Make parallel API calls for each biome
+        await Promise.all(
+          Array.from(byBiome.entries()).map(([biome, ids]) =>
+            api.markMultipleForRegeneration(category, ids, true, { biome })
+          )
+        );
+      } else {
+        // Non-tiles: IDs are unique, no grouping needed
+        await api.markMultipleForRegeneration(category, selectedAssetIds, true);
+      }
 
       toast.success(`Added ${selectedAssetIds.length} item(s) to regeneration queue`);
 
@@ -356,7 +403,7 @@ export default function AssetGrid({
     } finally {
       setActionLoading(false);
     }
-  }, [selectedIds, category, clearSelection, refetch, toast]);
+  }, [selectedIds, category, filteredAssets, clearSelection, refetch, toast]);
 
   /**
    * Generate selected assets immediately (bypasses queue)
@@ -593,9 +640,28 @@ export default function AssetGrid({
     const anyMarked = filteredAssets.some(
       (a) => selectedIds.has(a.key || a.id) && a.needsRegeneration
     );
+    const mark = !anyMarked;
 
     try {
-      await api.markMultipleForRegeneration(category, selectedAssetIds, !anyMarked);
+      // For tiles, group by biome since IDs may not be unique across biomes
+      if (category === 'tiles') {
+        const selectedAssets = filteredAssets.filter(a => selectedIds.has(a.key || a.id));
+        const byBiome = new Map();
+        for (const asset of selectedAssets) {
+          const biome = asset._biome || 'unknown';
+          if (!byBiome.has(biome)) byBiome.set(biome, []);
+          byBiome.get(biome).push(asset.key || asset.id);
+        }
+
+        await Promise.all(
+          Array.from(byBiome.entries()).map(([biome, ids]) =>
+            api.markMultipleForRegeneration(category, ids, mark, { biome })
+          )
+        );
+      } else {
+        await api.markMultipleForRegeneration(category, selectedAssetIds, mark);
+      }
+
       toast.success(
         anyMarked
           ? `Removed ${selectedAssetIds.length} item(s) from queue`
@@ -748,6 +814,7 @@ export default function AssetGrid({
         onClose={() => setBulkEditOpen(false)}
         selectedIds={Array.from(selectedIds)}
         category={category}
+        assets={filteredAssets}
         onUpdate={handleBulkEditUpdate}
       />
     </div>

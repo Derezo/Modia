@@ -25,7 +25,7 @@
       "prompt": "windswept mountain meadow grass with exposed soil in muted green brown #4A6B2A #8B7355",
       "outputPath": "mountain",
       "generated": true,
-      "generatedAt": "2026-01-25T20:02:37.438Z"
+      "generatedAt": "2026-02-02T03:56:33.258Z"
     },
     {
       "key": "grass_2",
@@ -265,10 +265,17 @@
       "key": "tree_0",
       "terrain": "tree",
       "variant": 0,
-      "prompt": "gnarled mountain pine trunk base with exposed roots in weathered brown #5C4033 #8B8682",
+      "prompt": "gnarled mountain pine trunk  #5C4033 #8B8682",
       "outputPath": "mountain",
       "generated": true,
-      "generatedAt": "2026-01-28T05:08:00.486Z"
+      "generatedAt": "2026-01-28T05:08:00.486Z",
+      "seed": null,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true,
+      "loraModel": null
     },
     {
       "key": "tree_1",
@@ -292,10 +299,17 @@
       "key": "tree_3",
       "terrain": "tree",
       "variant": 3,
-      "prompt": "ancient alpine stump bleached by sun and snow in pale brown #8B7355 #A0A0A0",
+      "prompt": "ancient alpine slog bleached by sun  #8B7355 #A0A0A0",
       "outputPath": "mountain",
       "generated": true,
-      "generatedAt": "2026-01-28T05:09:32.330Z"
+      "generatedAt": "2026-01-28T05:09:32.330Z",
+      "seed": null,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": true,
+      "loraModel": null
     },
     {
       "key": "mountain_snow_0",

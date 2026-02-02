@@ -37,49 +37,63 @@
       "terrain": "grass",
       "prompt": "seamless vertical overgrown bridge support texture with grass and vines, tileable horizontal pattern, side view cross-section, green brown tones",
       "seed": 41031,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.421Z"
     },
     {
       "key": "wall_bridge_rock",
       "terrain": "rock",
       "prompt": "seamless vertical natural rock bridge support texture with weathered stone, tileable horizontal pattern, side view cross-section, tan grey tones",
       "seed": 41051,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.421Z"
     },
     {
       "key": "wall_bridge_forest",
       "terrain": "forest",
       "prompt": "seamless vertical wooden bridge pillar texture with moss and age cracks, tileable horizontal pattern, side view cross-section, warm brown tones",
       "seed": 41061,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.422Z"
     },
     {
       "key": "wall_bridge_water",
       "terrain": "water",
       "prompt": "seamless vertical wet bridge foundation texture with water damage and algae, tileable horizontal pattern, side view cross-section, grey green tones",
       "seed": 41071,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.422Z"
     },
     {
       "key": "wall_bridge_lava",
       "terrain": "lava",
       "prompt": "seamless vertical heat-damaged bridge wall texture with scorch marks, tileable horizontal pattern, side view cross-section, black orange tones",
       "seed": 41081,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.422Z"
     },
     {
       "key": "wall_bridge_cliff",
       "terrain": "cliff",
       "prompt": "seamless vertical bridge abutment cliff texture with carved stone supports, tileable horizontal pattern, side view cross-section, sandstone tones",
       "seed": 41091,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.422Z"
     },
     {
       "key": "wall_bridge_tree",
       "terrain": "tree",
       "prompt": "seamless vertical wooden bridge beam texture with timber grain and iron bands, tileable horizontal pattern, side view cross-section, oak brown tones",
       "seed": 41101,
-      "generated": false
+      "generated": false,
+      "needsRegeneration": true,
+      "regenerationQueuedAt": "2026-02-02T04:39:49.423Z"
     }
   ]
 }

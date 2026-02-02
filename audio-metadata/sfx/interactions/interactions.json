@@ -2,7 +2,7 @@
   "category": "interactions",
   "subcategory": "game",
   "description": "Game interaction and event sound effects",
-  "totalEffects": 25,
+  "totalEffects": 26,
   "effects": [
     {
       "id": "footstep",
@@ -268,6 +268,17 @@
       "volume": 0.85,
       "generated": true,
       "generatedAt": "2026-01-21T10:15:18.501Z"
+    },
+    {
+      "id": "interaction_fishing_catch",
+      "name": "Fishing Catch",
+      "category": "interaction",
+      "subcategory": "activity",
+      "prompt": "Fantasy successful fish catch with splashing water and satisfying rewarding tug confirmation",
+      "path": "/assets/audio/sfx/interactions/fishing_catch.mp3",
+      "duration": 1.0,
+      "volume": 0.75,
+      "generated": false
     },
     {
       "id": "interaction_puzzle_solve",

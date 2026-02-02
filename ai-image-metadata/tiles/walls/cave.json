@@ -69,40 +69,45 @@
       "terrain": "forest",
       "prompt": "seamless vertical petrified roots and underground vegetation wall texture with fossilized tendrils, tileable horizontal pattern, side view cross-section, brown grey tones",
       "seed": 21061,
-      "generated": false,
-      "loraModel": "v2"
+      "generated": true,
+      "loraModel": "v2",
+      "generatedAt": "2026-02-02T04:03:28.179Z"
     },
     {
       "key": "wall_cave_water",
       "terrain": "water",
       "prompt": "seamless vertical wet dripping cave wall texture with water stains and mineral deposits, tileable horizontal pattern, side view cross-section, blue grey tones",
       "seed": 21071,
-      "generated": false,
-      "loraModel": "v2"
+      "generated": true,
+      "loraModel": "v2",
+      "generatedAt": "2026-02-02T04:04:17.683Z"
     },
     {
       "key": "wall_cave_lava",
       "terrain": "lava",
       "prompt": "seamless vertical volcanic cave wall texture with glowing molten veins and obsidian patches, tileable horizontal pattern, side view cross-section, black orange tones",
       "seed": 21081,
-      "generated": false,
-      "loraModel": "v2"
+      "generated": true,
+      "loraModel": "v2",
+      "generatedAt": "2026-02-02T04:05:06.255Z"
     },
     {
       "key": "wall_cave_cliff",
       "terrain": "cliff",
       "prompt": "seamless vertical steep cave cliff face texture with layered sedimentary rock, tileable horizontal pattern, side view cross-section, slate grey tones",
       "seed": 21091,
-      "generated": false,
-      "loraModel": "v2"
+      "generated": true,
+      "loraModel": "v2",
+      "generatedAt": "2026-02-02T04:05:59.858Z"
     },
     {
       "key": "wall_cave_tree",
       "terrain": "tree",
       "prompt": "seamless vertical petrified wood cave wall texture with fossilized tree rings and bark patterns, tileable horizontal pattern, side view cross-section, grey brown tones",
       "seed": 21101,
-      "generated": false,
-      "loraModel": "v2"
+      "generated": true,
+      "loraModel": "v2",
+      "generatedAt": "2026-02-02T04:06:47.571Z"
     }
   ]
 }

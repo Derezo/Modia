@@ -283,6 +283,43 @@ function enrichAssetWithPath(asset, category) {
 }
 
 /**
+ * Find an asset by ID, with biome disambiguation for tiles
+ * @param {object} data - Result from loadCategoryAssets
+ * @param {string} category - Asset category
+ * @param {string} id - Asset ID
+ * @param {object} options - Disambiguation options
+ * @param {string} options.biome - Required for tiles category
+ * @param {string} options.sourceFile - Alternative to biome (more precise)
+ * @returns {object|null} Asset or null if not found
+ */
+function findAssetById(data, category, id, options = {}) {
+  // For non-tiles, byId lookup is safe (IDs are globally unique)
+  if (category !== 'tiles') {
+    return data.byId[id] || null;
+  }
+
+  // For tiles, must search with disambiguation
+  const { biome, sourceFile } = options;
+
+  // Prefer sourceFile if provided (most precise)
+  if (sourceFile) {
+    return data.assets.find(a =>
+      (a.id === id || a.key === id) && a._sourceFile === sourceFile
+    ) || null;
+  }
+
+  // Fall back to biome filter
+  if (biome) {
+    return data.assets.find(a =>
+      (a.id === id || a.key === id) && a._biome === biome
+    ) || null;
+  }
+
+  // No disambiguation provided - return null for tiles
+  return null;
+}
+
+/**
  * Middleware to check admin mode is enabled
  * SECURITY: Explicitly blocks production even if DEBUG=true is set
  */
@@ -451,22 +488,29 @@ router.get('/assets/:category', asyncHandler(async (req, res) => {
 /**
  * GET /api/admin/assets/:category/:id
  * Get single asset details
+ * Query params for tiles: biome (required) or sourceFile
  */
 router.get('/assets/:category/:id', asyncHandler(async (req, res) => {
   ensureUtilities();
 
   const { category, id } = req.params;
+  const { biome, sourceFile } = req.query;
 
   // Use module-level constant
   if (!VALID_CATEGORIES.includes(category)) {
     throw new AppError(`Invalid category: ${category}`, 400);
   }
 
+  // Require biome for tiles (due to ID collisions across biomes)
+  if (category === 'tiles' && !biome && !sourceFile) {
+    throw new AppError('biome or sourceFile query parameter required for tiles', 400);
+  }
+
   let asset = null;
 
   try {
     const data = metadataUtils.loadCategoryAssets(category);
-    asset = data.byId[id];
+    asset = findAssetById(data, category, id, { biome, sourceFile });
   } catch (error) {
     throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
   }
@@ -508,21 +552,28 @@ router.get('/assets/:category/:id', asyncHandler(async (req, res) => {
  * GET /api/admin/assets/:category/:id/prompt
  * Get full prompt construction breakdown with theme data
  * Returns structured prompt parts for display in editor
+ * Query params for tiles: biome (required) or sourceFile
  */
 router.get('/assets/:category/:id/prompt', asyncHandler(async (req, res) => {
   ensureUtilities();
 
   const { category, id } = req.params;
+  const { biome, sourceFile } = req.query;
 
   if (!VALID_CATEGORIES.includes(category)) {
     throw new AppError(`Invalid category: ${category}`, 400);
+  }
+
+  // Require biome for tiles (due to ID collisions across biomes)
+  if (category === 'tiles' && !biome && !sourceFile) {
+    throw new AppError('biome or sourceFile query parameter required for tiles', 400);
   }
 
   // Load asset
   let asset = null;
   try {
     const data = metadataUtils.loadCategoryAssets(category);
-    asset = data.byId[id];
+    asset = findAssetById(data, category, id, { biome, sourceFile });
   } catch (error) {
     throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
   }
@@ -551,12 +602,13 @@ router.get('/assets/:category/:id/prompt', asyncHandler(async (req, res) => {
 /**
  * PUT /api/admin/assets/:category/:id
  * Update asset metadata (prompt, seed, evaluation, issues)
+ * Body for tiles must include: biome or sourceFile
  */
 router.put('/assets/:category/:id', asyncHandler(async (req, res) => {
   ensureUtilities();
 
   const { category, id } = req.params;
-  const updates = req.body;
+  const { biome, sourceFile, ...updates } = req.body;
 
   // Validate asset ID to prevent path traversal
   assertValidAssetId(id, 'Asset');
@@ -564,6 +616,11 @@ router.put('/assets/:category/:id', asyncHandler(async (req, res) => {
   // Use module-level constant
   if (!VALID_CATEGORIES.includes(category)) {
     throw new AppError(`Invalid category: ${category}`, 400);
+  }
+
+  // Require biome for tiles (due to ID collisions across biomes)
+  if (category === 'tiles' && !biome && !sourceFile) {
+    throw new AppError('biome or sourceFile required in body for tiles', 400);
   }
 
   // Validate allowed update fields
@@ -582,7 +639,7 @@ router.put('/assets/:category/:id', asyncHandler(async (req, res) => {
   let asset = null;
   try {
     const data = metadataUtils.loadCategoryAssets(category);
-    asset = data.byId[id];
+    asset = findAssetById(data, category, id, { biome, sourceFile });
   } catch (error) {
     throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
   }
@@ -598,9 +655,9 @@ router.put('/assets/:category/:id', asyncHandler(async (req, res) => {
     throw new AppError(`Failed to update asset: ${error.message}`, 500);
   }
 
-  // Reload to return updated asset
+  // Reload to return updated asset - use same disambiguation
   const updatedData = metadataUtils.loadCategoryAssets(category);
-  const updatedAsset = updatedData.byId[id];
+  const updatedAsset = findAssetById(updatedData, category, id, { biome, sourceFile });
 
   res.json({
     message: 'Asset updated successfully',
@@ -611,12 +668,13 @@ router.put('/assets/:category/:id', asyncHandler(async (req, res) => {
 /**
  * PUT /api/admin/assets/:category/:id/mark-regeneration
  * Mark an asset for regeneration (adds to regeneration queue)
+ * Body for tiles must include: biome or sourceFile
  */
 router.put('/assets/:category/:id/mark-regeneration', asyncHandler(async (req, res) => {
   ensureUtilities();
 
   const { category, id } = req.params;
-  const { mark = true } = req.body;  // Allow unmarking too
+  const { mark = true, biome, sourceFile } = req.body;
 
   // Validate asset ID to prevent path traversal
   assertValidAssetId(id, 'Asset');
@@ -625,11 +683,16 @@ router.put('/assets/:category/:id/mark-regeneration', asyncHandler(async (req, r
     throw new AppError(`Invalid category: ${category}`, 400);
   }
 
+  // Require biome for tiles (due to ID collisions across biomes)
+  if (category === 'tiles' && !biome && !sourceFile) {
+    throw new AppError('biome or sourceFile required in body for tiles', 400);
+  }
+
   // Find the asset to get its source file
   let asset = null;
   try {
     const data = metadataUtils.loadCategoryAssets(category);
-    asset = data.byId[id];
+    asset = findAssetById(data, category, id, { biome, sourceFile });
   } catch (error) {
     throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
   }
@@ -655,9 +718,9 @@ router.put('/assets/:category/:id/mark-regeneration', asyncHandler(async (req, r
     throw new AppError(`Failed to update asset: ${error.message}`, 500);
   }
 
-  // Reload to return updated asset
+  // Reload to return updated asset - use same disambiguation
   const updatedData = metadataUtils.loadCategoryAssets(category);
-  const updatedAsset = updatedData.byId[id];
+  const updatedAsset = findAssetById(updatedData, category, id, { biome, sourceFile });
 
   res.json({
     message: mark ? 'Asset marked for regeneration' : 'Regeneration marker cleared',
@@ -668,7 +731,8 @@ router.put('/assets/:category/:id/mark-regeneration', asyncHandler(async (req, r
 /**
  * PUT /api/admin/assets/mark-multiple
  * Mark multiple assets for regeneration at once
- * Body: { category: string, ids: string[], mark: boolean }
+ * Body: { category: string, ids: string[], mark: boolean, biome?: string }
+ * Note: For tiles, biome is required to disambiguate assets with same ID
  *
  * SECURITY: Validates all IDs before processing
  * ATOMICITY: Groups updates by source file with file locking
@@ -676,7 +740,7 @@ router.put('/assets/:category/:id/mark-regeneration', asyncHandler(async (req, r
 router.put('/assets/mark-multiple', asyncHandler(async (req, res) => {
   ensureUtilities();
 
-  const { category, ids, mark = true } = req.body;
+  const { category, ids, mark = true, biome } = req.body;
 
   if (!category || !Array.isArray(ids)) {
     throw new AppError('category and ids array required', 400);
@@ -684,6 +748,11 @@ router.put('/assets/mark-multiple', asyncHandler(async (req, res) => {
 
   if (!VALID_CATEGORIES.includes(category)) {
     throw new AppError(`Invalid category: ${category}`, 400);
+  }
+
+  // Require biome for tiles (due to ID collisions across biomes)
+  if (category === 'tiles' && !biome) {
+    throw new AppError('biome required in body for tiles category', 400);
   }
 
   // Validate all IDs upfront to prevent path traversal
@@ -706,7 +775,7 @@ router.put('/assets/mark-multiple', asyncHandler(async (req, res) => {
   // Group assets by source file to enable atomic updates per file
   const byFile = new Map();
   for (const id of ids) {
-    const asset = data.byId[id];
+    const asset = findAssetById(data, category, id, { biome });
     if (!asset) {
       results.notFound++;
       continue;
@@ -726,8 +795,8 @@ router.put('/assets/mark-multiple', asyncHandler(async (req, res) => {
       const freshData = metadataUtils.loadCategoryAssets(category);
 
       for (const { id, asset: _asset } of assets) {
-        // Re-verify asset exists with fresh data
-        const freshAsset = freshData.byId[id];
+        // Re-verify asset exists with fresh data - use same disambiguation
+        const freshAsset = findAssetById(freshData, category, id, { biome });
         if (!freshAsset) {
           results.errors.push({ id, error: 'Asset disappeared during update' });
           continue;
@@ -767,7 +836,8 @@ router.put('/assets/mark-multiple', asyncHandler(async (req, res) => {
 /**
  * POST /api/admin/assets/bulk-update
  * Bulk update metadata for multiple assets
- * Body: { assetIds: string[], category: string, updates: { loraModel?, priority?, qualityScore?, note? } }
+ * Body: { assetIds: string[], category: string, updates: { loraModel?, priority?, qualityScore?, note? }, biome?: string }
+ * Note: For tiles, biome is required to disambiguate assets with same ID
  *
  * SECURITY: Validates all IDs before processing
  * ATOMICITY: Groups updates by source file with file locking
@@ -775,7 +845,7 @@ router.put('/assets/mark-multiple', asyncHandler(async (req, res) => {
 router.post('/assets/bulk-update', asyncHandler(async (req, res) => {
   ensureUtilities();
 
-  const { assetIds, category, updates } = req.body;
+  const { assetIds, category, updates, biome } = req.body;
 
   if (!category || !Array.isArray(assetIds) || !updates) {
     throw new AppError('category, assetIds array, and updates object required', 400);
@@ -787,6 +857,11 @@ router.post('/assets/bulk-update', asyncHandler(async (req, res) => {
 
   if (!VALID_CATEGORIES.includes(category)) {
     throw new AppError(`Invalid category: ${category}`, 400);
+  }
+
+  // Require biome for tiles (due to ID collisions across biomes)
+  if (category === 'tiles' && !biome) {
+    throw new AppError('biome required in body for tiles category', 400);
   }
 
   // Validate all IDs upfront to prevent path traversal
@@ -838,7 +913,7 @@ router.post('/assets/bulk-update', asyncHandler(async (req, res) => {
   // Group assets by source file to enable atomic updates per file
   const byFile = new Map();
   for (const id of assetIds) {
-    const asset = data.byId[id];
+    const asset = findAssetById(data, category, id, { biome });
     if (!asset) {
       results.notFound++;
       continue;
@@ -858,8 +933,8 @@ router.post('/assets/bulk-update', asyncHandler(async (req, res) => {
       const freshData = metadataUtils.loadCategoryAssets(category);
 
       for (const { id } of assets) {
-        // Re-verify asset exists with fresh data
-        const freshAsset = freshData.byId[id];
+        // Re-verify asset exists with fresh data - use same disambiguation
+        const freshAsset = findAssetById(freshData, category, id, { biome });
         if (!freshAsset) {
           results.errors.push({ id, error: 'Asset disappeared during update' });
           continue;

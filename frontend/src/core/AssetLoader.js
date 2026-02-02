@@ -297,12 +297,12 @@ export class AssetLoader {
    */
   getTile(terrain, nodeType, variant = 0) {
     const biome = this.getSpriteBiome(nodeType);
-    const primaryPath = `${this.basePath}/sprites/terrain/${biome}/${terrain}_${variant}.png`;
-    const fallbackPath = `${this.basePath}/sprites/terrain/forest/${terrain}_${variant}.png`;
+    const primaryPath = `${this.basePath}/sprites/terrain/${biome}/${terrain}_${variant}.webp`;
+    const fallbackPath = `${this.basePath}/sprites/terrain/forest/${terrain}_${variant}.webp`;
 
     return this.cache.get(primaryPath) ||
            this.cache.get(fallbackPath) ||
-           this.cache.get(`${this.basePath}/sprites/terrain/forest/${terrain}.png`) ||
+           this.cache.get(`${this.basePath}/sprites/terrain/forest/${terrain}.webp`) ||
            null;
   }
 
@@ -331,7 +331,7 @@ export class AssetLoader {
       ? `${this.basePath}/characters/player/${charClass}`
       : `${this.basePath}/characters/enemies/${charClass}`;
 
-    const path = `${basePath}/${charClass}_${animation}.png`;
+    const path = `${basePath}/${charClass}_${animation}.webp`;
     try {
       return await this.loadImage(path);
     } catch {
@@ -346,7 +346,7 @@ export class AssetLoader {
     const basePath = type === 'player'
       ? `${this.basePath}/characters/player/${charClass}`
       : `${this.basePath}/characters/enemies/${charClass}`;
-    return this.cache.get(`${basePath}/${charClass}_${animation}.png`) || null;
+    return this.cache.get(`${basePath}/${charClass}_${animation}.webp`) || null;
   }
 
   // =====================
@@ -393,7 +393,7 @@ export class AssetLoader {
     const race = character.race?.toLowerCase() || 'human';
     const charClass = character.class?.toLowerCase() || 'wizard';
     const hash = this.generateEquipmentHash(character);
-    return `${this.basePath}/characters/equipped/${race}_${charClass}_${hash}/${animation}.png`;
+    return `${this.basePath}/characters/equipped/${race}_${charClass}_${hash}/${animation}.webp`;
   }
 
   /**
@@ -473,7 +473,7 @@ export class AssetLoader {
    * @param {string} biome - Biome (forest, cave, mountain, bridge)
    */
   async loadEnemySprite(enemyId, animation = 'idle', biome = 'forest') {
-    const path = `${this.basePath}/characters/enemies/${biome}/${enemyId}/${enemyId}_${animation}.png`;
+    const path = `${this.basePath}/characters/enemies/${biome}/${enemyId}/${enemyId}_${animation}.webp`;
     try {
       return await this.loadImage(path);
     } catch {
@@ -485,13 +485,13 @@ export class AssetLoader {
    * Get enemy sprite (sync)
    */
   getEnemySprite(enemyId, animation = 'idle', biome = 'forest') {
-    const path = `${this.basePath}/characters/enemies/${biome}/${enemyId}/${enemyId}_${animation}.png`;
+    const path = `${this.basePath}/characters/enemies/${biome}/${enemyId}/${enemyId}_${animation}.webp`;
     return this.cache.get(path) || null;
   }
 
   /**
    * Load world map node sprite
-   * Node filenames no longer have 'node_' prefix (e.g., castle.png not node_castle.png)
+   * Node filenames no longer have 'node_' prefix (e.g., castle.webp not node_castle.webp)
    * @param {string} nodeType - Node type (castle, city, village, etc.)
    * @param {string} [guildClass] - For guild nodes, the class (warrior, wizard, monk, chemist)
    */
@@ -557,12 +557,12 @@ export class AssetLoader {
    * @example
    * // Get URL for 48px display (will use 64px asset)
    * const url = assetLoader.getPortraitUrl(character, 48);
-   * // => '/assets/portraits/64/human_male_warrior.png'
+   * // => '/assets/portraits/64/human_male_warrior.webp'
    *
    * @example
    * // Get URL for 100px display (will use 128px asset)
    * const url = assetLoader.getPortraitUrl(character, 100);
-   * // => '/assets/portraits/128/human_male_warrior.png'
+   * // => '/assets/portraits/128/human_male_warrior.webp'
    */
   getPortraitUrl(character, displaySize = 64) {
     const race = (character.race || 'human').toLowerCase();
@@ -583,7 +583,7 @@ export class AssetLoader {
    *
    * @example
    * const url = assetLoader.getEnemyPortraitUrl('giant_spider', 40);
-   * // => '/assets/portraits/64/enemy_giant_spider.png'
+   * // => '/assets/portraits/64/enemy_giant_spider.webp'
    */
   getEnemyPortraitUrl(enemyId, displaySize = 64) {
     const optimalSize = getOptimalSize('portraits', displaySize);
@@ -735,13 +735,13 @@ export class AssetLoader {
     const material = item.material || 'default';
 
     // Try material-specific
-    const path = `${this.basePath}/items/${category}/${templateId}_${material}.png`;
+    const path = `${this.basePath}/items/${category}/${templateId}_${material}.webp`;
     try {
       return await this.loadImage(path);
     } catch {
       // Try base template
       try {
-        return await this.loadImage(`${this.basePath}/items/${category}/${templateId}.png`);
+        return await this.loadImage(`${this.basePath}/items/${category}/${templateId}.webp`);
       } catch {
         return null;
       }
@@ -756,8 +756,8 @@ export class AssetLoader {
     const templateId = item.templateId || item.template_id || item.type;
     const material = item.material || 'default';
 
-    return this.cache.get(`${this.basePath}/items/${category}/${templateId}_${material}.png`)
-      || this.cache.get(`${this.basePath}/items/${category}/${templateId}.png`)
+    return this.cache.get(`${this.basePath}/items/${category}/${templateId}_${material}.webp`)
+      || this.cache.get(`${this.basePath}/items/${category}/${templateId}.webp`)
       || null;
   }
 
@@ -767,7 +767,7 @@ export class AssetLoader {
    * @param {string} category - Category (rocks, trees)
    */
   async loadObstacle(obstacleType, category) {
-    const path = `${this.basePath}/obstacles/${category}/${obstacleType}.png`;
+    const path = `${this.basePath}/obstacles/${category}/${obstacleType}.webp`;
     try {
       return await this.loadImage(path);
     } catch {
@@ -779,7 +779,7 @@ export class AssetLoader {
    * Get obstacle sprite (sync)
    */
   getObstacle(obstacleType, category) {
-    return this.cache.get(`${this.basePath}/obstacles/${category}/${obstacleType}.png`) || null;
+    return this.cache.get(`${this.basePath}/obstacles/${category}/${obstacleType}.webp`) || null;
   }
 
   /**
@@ -850,7 +850,7 @@ export class AssetLoader {
     }
 
     // Load base item sprite
-    const basePath = `${this.basePath}/items/${category}/${itemId}.png`;
+    const basePath = `${this.basePath}/items/${category}/${itemId}.webp`;
     let baseImage;
     try {
       baseImage = await this.loadImage(basePath);
@@ -863,7 +863,7 @@ export class AssetLoader {
     let rarityOverlay = null;
     if (rarity && rarity !== 'common') {
       const size = AssetLoader.COMPOSITE_SIZE;
-      const rarityPath = `${this.basePath}/overlays/${size}/rarity/rarity_${rarity}.png`;
+      const rarityPath = `${this.basePath}/overlays/${size}/rarity/rarity_${rarity}.webp`;
       try {
         rarityOverlay = await this.loadImage(rarityPath);
       } catch {
@@ -875,7 +875,7 @@ export class AssetLoader {
     let augmentOverlay = null;
     if (augment) {
       const size = AssetLoader.COMPOSITE_SIZE;
-      const augmentPath = `${this.basePath}/overlays/${size}/augments/augment_${augment}.png`;
+      const augmentPath = `${this.basePath}/overlays/${size}/augments/augment_${augment}.webp`;
       try {
         augmentOverlay = await this.loadImage(augmentPath);
       } catch {
@@ -980,12 +980,12 @@ export class AssetLoader {
     const promises = [
       // Preload rarity overlays
       ...rarities.map(rarity =>
-        this.loadImage(`${this.basePath}/overlays/${size}/rarity/rarity_${rarity}.png`)
+        this.loadImage(`${this.basePath}/overlays/${size}/rarity/rarity_${rarity}.webp`)
           .catch(() => null) // Don't fail if overlay doesn't exist
       ),
       // Preload augment overlays
       ...augments.map(augment =>
-        this.loadImage(`${this.basePath}/overlays/${size}/augments/augment_${augment}.png`)
+        this.loadImage(`${this.basePath}/overlays/${size}/augments/augment_${augment}.webp`)
           .catch(() => null) // Don't fail if overlay doesn't exist
       )
     ];
@@ -1030,12 +1030,12 @@ export class AssetLoader {
    * @returns {HTMLImageElement|null} Wall texture image or null if not found
    */
   getWallTexture(biome, terrain = 'default') {
-    // Wall files use flat path: {biome}/wall_{biome}_{terrain}.png
-    const key = `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_${terrain}.png`;
-    const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_default.png`;
+    // Wall files use flat path: {biome}/wall_{biome}_{terrain}.webp
+    const key = `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_${terrain}.webp`;
+    const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_default.webp`;
     // Additional fallback: base biome which has generic terrain walls
-    const baseFallbackKey = `${this.basePath}/sprites/terrain/base/wall_base_${terrain}.png`;
-    const ultimateFallbackKey = `${this.basePath}/sprites/terrain/base/wall_base_default.png`;
+    const baseFallbackKey = `${this.basePath}/sprites/terrain/base/wall_base_${terrain}.webp`;
+    const ultimateFallbackKey = `${this.basePath}/sprites/terrain/base/wall_base_default.webp`;
 
     const result = this.cache.get(key) ||
                    this.cache.get(fallbackKey) ||
@@ -1055,13 +1055,13 @@ export class AssetLoader {
    * @returns {Promise<HTMLImageElement|null>}
    */
   async loadWallTexture(biome, terrain = 'default') {
-    // Wall files use flat path: {biome}/wall_{biome}_{terrain}.png
+    // Wall files use flat path: {biome}/wall_{biome}_{terrain}.webp
     const paths = [
-      `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_${terrain}.png`,
-      `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_default.png`,
+      `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_${terrain}.webp`,
+      `${this.basePath}/sprites/terrain/${biome}/wall_${biome}_default.webp`,
       // Additional fallback: base biome which has generic terrain walls
-      `${this.basePath}/sprites/terrain/base/wall_base_${terrain}.png`,
-      `${this.basePath}/sprites/terrain/base/wall_base_default.png`
+      `${this.basePath}/sprites/terrain/base/wall_base_${terrain}.webp`,
+      `${this.basePath}/sprites/terrain/base/wall_base_default.webp`
     ];
 
     for (const path of paths) {
@@ -1084,12 +1084,12 @@ export class AssetLoader {
    * @returns {HTMLImageElement|null} Slope sprite or null if not found
    */
   getSlopeSprite(biome, direction, levels = 1) {
-    // Slope files use flat path: {biome}/slope_{biome}_{direction}_{levels}.png
-    const key = `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`;
-    const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_1.png`;
+    // Slope files use flat path: {biome}/slope_{biome}_{direction}_{levels}.webp
+    const key = `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_${levels}.webp`;
+    const fallbackKey = `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_1.webp`;
     // Additional fallback: base biome
-    const baseFallbackKey = `${this.basePath}/sprites/terrain/base/slope_base_${direction}_${levels}.png`;
-    const baseDefaultKey = `${this.basePath}/sprites/terrain/base/slope_base_${direction}_1.png`;
+    const baseFallbackKey = `${this.basePath}/sprites/terrain/base/slope_base_${direction}_${levels}.webp`;
+    const baseDefaultKey = `${this.basePath}/sprites/terrain/base/slope_base_${direction}_1.webp`;
 
     const result = this.cache.get(key) ||
                    this.cache.get(fallbackKey) ||
@@ -1110,13 +1110,13 @@ export class AssetLoader {
    * @returns {Promise<HTMLImageElement|null>}
    */
   async loadSlopeSprite(biome, direction, levels = 1) {
-    // Slope files use flat path: {biome}/slope_{biome}_{direction}_{levels}.png
+    // Slope files use flat path: {biome}/slope_{biome}_{direction}_{levels}.webp
     const paths = [
-      `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_${levels}.png`,
-      `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_1.png`,
+      `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_${levels}.webp`,
+      `${this.basePath}/sprites/terrain/${biome}/slope_${biome}_${direction}_1.webp`,
       // Additional fallback: base biome
-      `${this.basePath}/sprites/terrain/base/slope_base_${direction}_${levels}.png`,
-      `${this.basePath}/sprites/terrain/base/slope_base_${direction}_1.png`
+      `${this.basePath}/sprites/terrain/base/slope_base_${direction}_${levels}.webp`,
+      `${this.basePath}/sprites/terrain/base/slope_base_${direction}_1.webp`
     ];
 
     for (const path of paths) {
@@ -1139,11 +1139,11 @@ export class AssetLoader {
    */
   getTopTileSprite(biome, terrain) {
     // First try new naming convention with _top suffix
-    const newKey = `${this.basePath}/sprites/terrain/${biome}/${terrain}_top.png`;
+    const newKey = `${this.basePath}/sprites/terrain/${biome}/${terrain}_top.webp`;
     // Then try biome-specific terrain without suffix (current system)
-    const biomeKey = `${this.basePath}/sprites/terrain/${biome}/${terrain}.png`;
+    const biomeKey = `${this.basePath}/sprites/terrain/${biome}/${terrain}.webp`;
     // Fall back to base biome with variant
-    const baseKey = `${this.basePath}/sprites/terrain/forest/${terrain}_0.png`;
+    const baseKey = `${this.basePath}/sprites/terrain/forest/${terrain}_0.webp`;
 
     return this.cache.get(newKey) ||
            this.cache.get(biomeKey) ||
@@ -1159,9 +1159,9 @@ export class AssetLoader {
    */
   async loadTopTileSprite(biome, terrain) {
     const paths = [
-      `${this.basePath}/sprites/terrain/${biome}/${terrain}_top.png`,
-      `${this.basePath}/sprites/terrain/${biome}/${terrain}.png`,
-      `${this.basePath}/sprites/terrain/forest/${terrain}_0.png`
+      `${this.basePath}/sprites/terrain/${biome}/${terrain}_top.webp`,
+      `${this.basePath}/sprites/terrain/${biome}/${terrain}.webp`,
+      `${this.basePath}/sprites/terrain/forest/${terrain}_0.webp`
     ];
 
     for (const path of paths) {
@@ -1428,7 +1428,7 @@ export class AssetLoader {
    * @param {string} tileName - Tile name (world_grass, world_water, etc.)
    */
   async loadBackdropTile(tileName) {
-    const path = `${this.basePath}/nodes/backdrop/${tileName}.png`;
+    const path = `${this.basePath}/nodes/backdrop/${tileName}.webp`;
     try {
       return await this.loadImage(path);
     } catch {
@@ -1440,7 +1440,7 @@ export class AssetLoader {
    * Get backdrop tile (sync)
    */
   getBackdropTile(tileName) {
-    return this.cache.get(`${this.basePath}/nodes/backdrop/${tileName}.png`) || null;
+    return this.cache.get(`${this.basePath}/nodes/backdrop/${tileName}.webp`) || null;
   }
 
   /**
@@ -1448,7 +1448,7 @@ export class AssetLoader {
    * @param {string} pathType - Path type (dirt_road, stone_path, bridge_planks)
    */
   async loadPathTexture(pathType) {
-    const path = `${this.basePath}/nodes/paths/${pathType}.png`;
+    const path = `${this.basePath}/nodes/paths/${pathType}.webp`;
     try {
       return await this.loadImage(path);
     } catch {
@@ -1460,7 +1460,7 @@ export class AssetLoader {
    * Get path texture (sync)
    */
   getPathTexture(pathType) {
-    return this.cache.get(`${this.basePath}/nodes/paths/${pathType}.png`) || null;
+    return this.cache.get(`${this.basePath}/nodes/paths/${pathType}.webp`) || null;
   }
 
   /**

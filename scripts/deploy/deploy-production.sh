@@ -12,6 +12,7 @@
 #   --version <ver>   Tag release version (e.g., v1.0.0)
 #   --force           Allow deployment with uncommitted changes
 #   --reseed          Run migrations and reseed database after deploy
+#   --refresh-db      DANGEROUS: Drop and recreate modia database (wipes all data)
 #   --help            Show this help message
 #
 # Example:
@@ -19,6 +20,7 @@
 #   ./deploy-production.sh --dry-run --version v1.0.0
 #   ./deploy-production.sh --skip-build
 #   ./deploy-production.sh --reseed
+#   ./deploy-production.sh --refresh-db   # DANGEROUS: wipes production database
 #
 
 set -e
@@ -43,6 +45,7 @@ SKIP_BUILD=false
 VERSION=""
 FORCE=false
 RESEED=false
+REFRESH_DB=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -67,8 +70,12 @@ while [[ $# -gt 0 ]]; do
       RESEED=true
       shift
       ;;
+    --refresh-db)
+      REFRESH_DB=true
+      shift
+      ;;
     --help|-h)
-      head -24 "$0" | tail -20
+      head -25 "$0" | tail -21
       exit 0
       ;;
     *)
@@ -116,6 +123,9 @@ echo "Version:   ${VERSION_TAG}"
 echo "Tarball:   ${TARBALL_NAME}"
 echo "Dry Run:   ${DRY_RUN}"
 echo "Reseed:    ${RESEED}"
+if [ "$REFRESH_DB" = true ]; then
+  echo -e "Refresh DB: ${RED}YES - WILL DROP ALL DATA${NC}"
+fi
 echo ""
 
 # ============================================
@@ -299,6 +309,106 @@ else
 REMOTE_SCRIPT
 
   log "Remote installation complete"
+fi
+
+# ============================================
+# Step 5.5: Refresh database (optional - DANGEROUS)
+# ============================================
+if [ "$REFRESH_DB" = true ]; then
+  step "DANGEROUS: Refreshing production database..."
+
+  echo ""
+  echo -e "${RED}╔════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "${RED}║                    ⚠️  WARNING ⚠️                            ║${NC}"
+  echo -e "${RED}║                                                            ║${NC}"
+  echo -e "${RED}║  This will PERMANENTLY DELETE all data in the modia       ║${NC}"
+  echo -e "${RED}║  database including:                                      ║${NC}"
+  echo -e "${RED}║    - All user accounts                                    ║${NC}"
+  echo -e "${RED}║    - All characters and progress                          ║${NC}"
+  echo -e "${RED}║    - All marketplace listings                             ║${NC}"
+  echo -e "${RED}║    - All guilds and clans                                 ║${NC}"
+  echo -e "${RED}║    - ALL OTHER DATA                                       ║${NC}"
+  echo -e "${RED}║                                                            ║${NC}"
+  echo -e "${RED}║  Only the 'modia' database will be affected.              ║${NC}"
+  echo -e "${RED}║  Other databases on the server will NOT be touched.       ║${NC}"
+  echo -e "${RED}╚════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+
+  if [ "$DRY_RUN" = true ]; then
+    dry_run "Would drop and recreate the 'modia' database"
+    dry_run "Would run: DROP DATABASE modia; CREATE DATABASE modia;"
+  else
+    # Require explicit confirmation
+    echo -e "${YELLOW}Type 'DELETE MODIA DATABASE' to confirm:${NC}"
+    read -r CONFIRM_TEXT
+
+    if [ "$CONFIRM_TEXT" != "DELETE MODIA DATABASE" ]; then
+      error "Confirmation text did not match. Aborting database refresh."
+    fi
+
+    echo ""
+    log "Dropping and recreating modia database..."
+
+    ssh "${SERVER_USER}@${SERVER_HOST}" << 'REFRESH_SCRIPT'
+      set -e
+
+      # Load environment to get database credentials
+      if [ -f /var/www/modia/shared/.env ]; then
+        source /var/www/modia/shared/.env
+      else
+        echo "ERROR: .env file not found"
+        exit 1
+      fi
+
+      # Extract database name from DATABASE_URL or use default
+      # DATABASE_URL format: postgres://user:pass@host:port/dbname
+      if [ -n "$DATABASE_URL" ]; then
+        DB_NAME=$(echo "$DATABASE_URL" | sed -E 's|.*://[^/]+/([^?]+).*|\1|')
+      else
+        DB_NAME="${DB_NAME:-modia}"
+      fi
+
+      # Safety check: Only allow dropping 'modia' database
+      if [ "$DB_NAME" != "modia" ]; then
+        echo "ERROR: Database name is '$DB_NAME', not 'modia'. Refusing to drop for safety."
+        exit 1
+      fi
+
+      echo "Verified database name: $DB_NAME"
+      echo ""
+
+      # Get postgres user from DATABASE_URL or use default
+      if [ -n "$DATABASE_URL" ]; then
+        DB_USER=$(echo "$DATABASE_URL" | sed -E 's|.*://([^:]+):.*|\1|')
+        DB_HOST=$(echo "$DATABASE_URL" | sed -E 's|.*@([^:]+):.*|\1|')
+        DB_PORT=$(echo "$DATABASE_URL" | sed -E 's|.*:([0-9]+)/.*|\1|')
+      else
+        DB_USER="${DB_USER:-modia}"
+        DB_HOST="${DB_HOST:-localhost}"
+        DB_PORT="${DB_PORT:-5432}"
+      fi
+
+      echo "Terminating active connections to modia database..."
+      sudo -u postgres psql -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'modia' AND pid <> pg_backend_pid();" 2>/dev/null || true
+
+      echo "Dropping modia database..."
+      sudo -u postgres psql -c "DROP DATABASE IF EXISTS modia;"
+
+      echo "Creating fresh modia database..."
+      sudo -u postgres psql -c "CREATE DATABASE modia OWNER $DB_USER;"
+
+      echo ""
+      echo "Database 'modia' has been refreshed (dropped and recreated)."
+REFRESH_SCRIPT
+
+    log "Database refresh complete - modia database is now empty"
+
+    # Auto-enable reseed since database is empty
+    if [ "$RESEED" = false ]; then
+      warn "Auto-enabling --reseed since database was refreshed"
+      RESEED=true
+    fi
+  fi
 fi
 
 # ============================================

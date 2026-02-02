@@ -75,8 +75,8 @@ export class MarketplaceScene extends Scene {
     this.activeCharacter = this.game.state.get('activeCharacter');
 
     if (!this.activeCharacter) {
-      parchmentToast.error('No Character', 'No character available for trading. Please create a character first.');
-      this.game.scenes.switchTo('characterCreate');
+      parchmentToast.error('No Character', 'No character available for trading. Please reload the page.');
+      this.game.scenes.switchTo('worldMap');
       return;
     }
 
