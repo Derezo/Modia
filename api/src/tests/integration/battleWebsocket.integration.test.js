@@ -328,3 +328,259 @@ describe('battleWebsocket service', () => {
     });
   });
 });
+describe('PvP Battle End', () => {
+  let wsModule;
+  let battleWs;
+
+  beforeEach(async () => {
+    // Get the websocket module to inject mock connections
+    wsModule = await import('../../websocket/index.js');
+    // Import battleWebsocket service
+    battleWs = await import('../../services/battleWebsocket.js');
+  });
+
+  /**
+   * Create a mock WebSocket connection that captures sent messages
+   */
+  function createMockWsConnection(userId) {
+    const sentMessages = [];
+    return {
+      userId,
+      readyState: 1, // WebSocket.OPEN
+      sentMessages,
+      send(data) {
+        const message = typeof data === 'string' ? JSON.parse(data) : data;
+        sentMessages.push(message);
+      },
+      getLastSent() {
+        return sentMessages[sentMessages.length - 1];
+      },
+      getSentByType(type) {
+        return sentMessages.filter(m => m.type === type);
+      }
+    };
+  }
+
+  test('PvP battle end sends victory to winner (team 1 wins)', async () => {
+    const battleId = getUniqueBattleId();
+    const player1Id = getUniqueUserId();
+    const player2Id = getUniqueUserId();
+
+    // Create mock WebSocket connections
+    const player1Ws = createMockWsConnection(player1Id);
+    const player2Ws = createMockWsConnection(player2Id);
+
+    // Inject mock connections into the websocket module
+    wsModule.connections.set(player1Id, player1Ws);
+    wsModule.connections.set(player2Id, player2Ws);
+
+    try {
+      // Join both players to battle
+      await battleWs.joinBattle(battleId, player1Id);
+      await battleWs.joinBattle(battleId, player2Id);
+
+      // Call broadcastBattleEnd with pvpInfo where team 1 wins
+      const rewards = { gold: 100, exp: 50 };
+      const pvpInfo = {
+        player1Id,
+        player2Id,
+        winningTeamId: 1 // Player 1 wins
+      };
+
+      await battleWs.broadcastBattleEnd(battleId, 'victory', rewards, pvpInfo);
+
+      // Verify player 1 (winner) received victory
+      const player1Messages = player1Ws.getSentByType('battle:end');
+      assert.strictEqual(player1Messages.length, 1, 'Player 1 should receive exactly one battle:end message');
+      assert.strictEqual(player1Messages[0].payload.status, 'victory', 'Player 1 should receive victory status');
+      assert.deepStrictEqual(player1Messages[0].payload.rewards, rewards, 'Player 1 should receive rewards');
+      assert.strictEqual(player1Messages[0].payload.battleId, battleId, 'Battle ID should match');
+
+      // Verify player 2 (loser) received defeat
+      const player2Messages = player2Ws.getSentByType('battle:end');
+      assert.strictEqual(player2Messages.length, 1, 'Player 2 should receive exactly one battle:end message');
+      assert.strictEqual(player2Messages[0].payload.status, 'defeat', 'Player 2 should receive defeat status');
+      assert.strictEqual(player2Messages[0].payload.rewards, null, 'Loser should not receive rewards');
+      assert.strictEqual(player2Messages[0].payload.battleId, battleId, 'Battle ID should match');
+    } finally {
+      // Clean up mock connections
+      wsModule.connections.delete(player1Id);
+      wsModule.connections.delete(player2Id);
+      await battleWs.cleanupBattleRoom(battleId);
+    }
+  });
+
+  test('PvP battle end sends victory to winner (team 2 wins)', async () => {
+    const battleId = getUniqueBattleId();
+    const player1Id = getUniqueUserId();
+    const player2Id = getUniqueUserId();
+
+    // Create mock WebSocket connections
+    const player1Ws = createMockWsConnection(player1Id);
+    const player2Ws = createMockWsConnection(player2Id);
+
+    // Inject mock connections
+    wsModule.connections.set(player1Id, player1Ws);
+    wsModule.connections.set(player2Id, player2Ws);
+
+    try {
+      await battleWs.joinBattle(battleId, player1Id);
+      await battleWs.joinBattle(battleId, player2Id);
+
+      // Team 2 wins this time
+      const rewards = { gold: 150, exp: 75 };
+      const pvpInfo = {
+        player1Id,
+        player2Id,
+        winningTeamId: 2 // Player 2 wins
+      };
+
+      await battleWs.broadcastBattleEnd(battleId, 'victory', rewards, pvpInfo);
+
+      // Verify player 1 (loser) received defeat
+      const player1Messages = player1Ws.getSentByType('battle:end');
+      assert.strictEqual(player1Messages.length, 1, 'Player 1 should receive exactly one battle:end message');
+      assert.strictEqual(player1Messages[0].payload.status, 'defeat', 'Player 1 should receive defeat status');
+      assert.strictEqual(player1Messages[0].payload.rewards, null, 'Loser should not receive rewards');
+
+      // Verify player 2 (winner) received victory
+      const player2Messages = player2Ws.getSentByType('battle:end');
+      assert.strictEqual(player2Messages.length, 1, 'Player 2 should receive exactly one battle:end message');
+      assert.strictEqual(player2Messages[0].payload.status, 'victory', 'Player 2 should receive victory status');
+      assert.deepStrictEqual(player2Messages[0].payload.rewards, rewards, 'Player 2 should receive rewards');
+    } finally {
+      wsModule.connections.delete(player1Id);
+      wsModule.connections.delete(player2Id);
+      await battleWs.cleanupBattleRoom(battleId);
+    }
+  });
+
+  test('Non-PvP battle (no pvpInfo) broadcasts normally', async () => {
+    const battleId = getUniqueBattleId();
+    const userId = getUniqueUserId();
+
+    // Create mock WebSocket connection
+    const userWs = createMockWsConnection(userId);
+    wsModule.connections.set(userId, userWs);
+
+    try {
+      await battleWs.joinBattle(battleId, userId);
+
+      // Call without pvpInfo (PvE battle)
+      const rewards = { gold: 50, exp: 25 };
+      await battleWs.broadcastBattleEnd(battleId, 'victory', rewards, null);
+
+      // Verify the user received the broadcast
+      const messages = userWs.getSentByType('battle:end');
+      assert.strictEqual(messages.length, 1, 'User should receive battle:end message');
+      assert.strictEqual(messages[0].payload.status, 'victory', 'Status should be as provided');
+      assert.deepStrictEqual(messages[0].payload.rewards, rewards, 'Rewards should be as provided');
+    } finally {
+      wsModule.connections.delete(userId);
+      await battleWs.cleanupBattleRoom(battleId);
+    }
+  });
+
+  test('PvP battle handles disconnected winner gracefully', async () => {
+    const battleId = getUniqueBattleId();
+    const player1Id = getUniqueUserId();
+    const player2Id = getUniqueUserId();
+
+    // Only player 2 is connected (player 1 disconnected)
+    const player2Ws = createMockWsConnection(player2Id);
+    wsModule.connections.set(player2Id, player2Ws);
+    // player1 has no connection (simulates disconnect)
+
+    try {
+      await battleWs.joinBattle(battleId, player1Id);
+      await battleWs.joinBattle(battleId, player2Id);
+
+      const pvpInfo = {
+        player1Id,
+        player2Id,
+        winningTeamId: 1 // Player 1 wins but is disconnected
+      };
+
+      // Should not throw even though winner is disconnected
+      await battleWs.broadcastBattleEnd(battleId, 'victory', { gold: 100 }, pvpInfo);
+
+      // Player 2 (loser, connected) should still receive defeat
+      const player2Messages = player2Ws.getSentByType('battle:end');
+      assert.strictEqual(player2Messages.length, 1, 'Connected loser should still receive message');
+      assert.strictEqual(player2Messages[0].payload.status, 'defeat', 'Should receive defeat status');
+    } finally {
+      wsModule.connections.delete(player2Id);
+      await battleWs.cleanupBattleRoom(battleId);
+    }
+  });
+
+  test('PvP battle handles disconnected loser gracefully', async () => {
+    const battleId = getUniqueBattleId();
+    const player1Id = getUniqueUserId();
+    const player2Id = getUniqueUserId();
+
+    // Only player 1 is connected (player 2 disconnected)
+    const player1Ws = createMockWsConnection(player1Id);
+    wsModule.connections.set(player1Id, player1Ws);
+    // player2 has no connection
+
+    try {
+      await battleWs.joinBattle(battleId, player1Id);
+      await battleWs.joinBattle(battleId, player2Id);
+
+      const pvpInfo = {
+        player1Id,
+        player2Id,
+        winningTeamId: 1 // Player 1 wins
+      };
+
+      // Should not throw even though loser is disconnected
+      await battleWs.broadcastBattleEnd(battleId, 'victory', { gold: 100 }, pvpInfo);
+
+      // Player 1 (winner, connected) should receive victory
+      const player1Messages = player1Ws.getSentByType('battle:end');
+      assert.strictEqual(player1Messages.length, 1, 'Connected winner should receive message');
+      assert.strictEqual(player1Messages[0].payload.status, 'victory', 'Should receive victory status');
+    } finally {
+      wsModule.connections.delete(player1Id);
+      await battleWs.cleanupBattleRoom(battleId);
+    }
+  });
+
+  test('PvP battle end includes timestamp in payload', async () => {
+    const battleId = getUniqueBattleId();
+    const player1Id = getUniqueUserId();
+    const player2Id = getUniqueUserId();
+
+    const player1Ws = createMockWsConnection(player1Id);
+    const player2Ws = createMockWsConnection(player2Id);
+    wsModule.connections.set(player1Id, player1Ws);
+    wsModule.connections.set(player2Id, player2Ws);
+
+    try {
+      await battleWs.joinBattle(battleId, player1Id);
+      await battleWs.joinBattle(battleId, player2Id);
+
+      const beforeTime = Date.now();
+      await battleWs.broadcastBattleEnd(battleId, 'victory', { gold: 100 }, {
+        player1Id,
+        player2Id,
+        winningTeamId: 1
+      });
+      const afterTime = Date.now();
+
+      // Both messages should have timestamps
+      const player1Msg = player1Ws.getLastSent();
+      const player2Msg = player2Ws.getLastSent();
+
+      assert.ok(player1Msg.payload.timestamp >= beforeTime, 'Winner timestamp should be valid');
+      assert.ok(player1Msg.payload.timestamp <= afterTime, 'Winner timestamp should be valid');
+      assert.ok(player2Msg.payload.timestamp >= beforeTime, 'Loser timestamp should be valid');
+      assert.ok(player2Msg.payload.timestamp <= afterTime, 'Loser timestamp should be valid');
+    } finally {
+      wsModule.connections.delete(player1Id);
+      wsModule.connections.delete(player2Id);
+      await battleWs.cleanupBattleRoom(battleId);
+    }
+  });
+});
