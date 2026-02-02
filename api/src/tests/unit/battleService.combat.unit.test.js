@@ -1073,7 +1073,11 @@ describe('checkBattleEnd', () => {
       ]
     });
 
-    assert.strictEqual(battleService.checkBattleEnd(state), 'victory');
+    const result = battleService.checkBattleEnd(state);
+    assert.strictEqual(result.status, 'ended');
+    assert.strictEqual(result.winningTeamId, 1);
+    // Backwards compatibility: valueOf() returns 'victory' for team 1 win
+    assert.strictEqual(result.valueOf(), 'victory');
   });
 
   test('should return defeat when all players defeated', () => {
@@ -1084,7 +1088,11 @@ describe('checkBattleEnd', () => {
       ]
     });
 
-    assert.strictEqual(battleService.checkBattleEnd(state), 'defeat');
+    const result = battleService.checkBattleEnd(state);
+    assert.strictEqual(result.status, 'ended');
+    assert.strictEqual(result.winningTeamId, 2);
+    // Backwards compatibility: valueOf() returns 'defeat' for team 2 win
+    assert.strictEqual(result.valueOf(), 'defeat');
   });
 
   test('should return active when both sides have units alive', () => {
@@ -1095,7 +1103,11 @@ describe('checkBattleEnd', () => {
       ]
     });
 
-    assert.strictEqual(battleService.checkBattleEnd(state), 'active');
+    const result = battleService.checkBattleEnd(state);
+    assert.strictEqual(result.status, 'active');
+    assert.strictEqual(result.winningTeamId, null);
+    // Backwards compatibility: valueOf() returns 'active'
+    assert.strictEqual(result.valueOf(), 'active');
   });
 
   test('should return victory with multiple dead enemies', () => {
@@ -1109,7 +1121,9 @@ describe('checkBattleEnd', () => {
       ]
     });
 
-    assert.strictEqual(battleService.checkBattleEnd(state), 'victory');
+    const result = battleService.checkBattleEnd(state);
+    assert.strictEqual(result.status, 'ended');
+    assert.strictEqual(result.winningTeamId, 1);
   });
 
   test('should return defeat with multiple dead players', () => {
@@ -1121,7 +1135,39 @@ describe('checkBattleEnd', () => {
       ]
     });
 
-    assert.strictEqual(battleService.checkBattleEnd(state), 'defeat');
+    const result = battleService.checkBattleEnd(state);
+    assert.strictEqual(result.status, 'ended');
+    assert.strictEqual(result.winningTeamId, 2);
+  });
+
+  test('should work with PvP battles using teamId', () => {
+    // Simulate PvP: both sides are 'player' type but different teams
+    const state = createMockBattleState({
+      units: [
+        { ...createMockPlayerUnit({ hp: 50 }), teamId: 1 },
+        { ...createMockPlayerUnit({ id: 'p2', hp: 30 }), teamId: 1 },
+        { ...createMockPlayerUnit({ id: 'p3', hp: 0 }), teamId: 2 },
+        { ...createMockPlayerUnit({ id: 'p4', hp: 0 }), teamId: 2 }
+      ]
+    });
+
+    const result = battleService.checkBattleEnd(state);
+    assert.strictEqual(result.status, 'ended');
+    assert.strictEqual(result.winningTeamId, 1, 'Team 1 should win when team 2 is eliminated');
+  });
+
+  test('should fall back to type-based teams when teamId missing', () => {
+    // Legacy PvE: no teamId set, should use type to infer team
+    const state = createMockBattleState({
+      units: [
+        { id: 'p1', type: 'player', hp: 50, tileX: 0, tileY: 0 },
+        { id: 'e1', type: 'enemy', hp: 0, tileX: 1, tileY: 0 }
+      ]
+    });
+
+    const result = battleService.checkBattleEnd(state);
+    assert.strictEqual(result.status, 'ended');
+    assert.strictEqual(result.winningTeamId, 1, 'Should infer team 1 for player type');
   });
 });
 

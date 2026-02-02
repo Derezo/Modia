@@ -70,6 +70,7 @@ export {
   processAction,
   advanceToNextActorWithCT,
   checkBattleEnd,
+  getBattleStatusString,
   // Pathfinding (for AI movement validation)
   calculatePathCost
 } from './battle/index.js';

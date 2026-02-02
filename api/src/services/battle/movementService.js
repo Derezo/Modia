@@ -107,23 +107,36 @@ export function getReachableTiles(unit, state) {
 
 /**
  * Get targets in range for attacks or skills
+ * Uses team-based targeting for PvP compatibility
  * @param {Object} unit - The acting unit
  * @param {Object} state - Battle state
  * @param {number} range - Maximum range (Manhattan distance)
- * @param {string} targetType - 'enemy' or 'player' or 'ally' (same type as unit)
+ * @param {string} targetType - 'enemy' or 'player' or 'ally' (same team as unit) or 'opponent' (different team)
  * @returns {Array} Array of valid targets with positions
  */
 export function getTargetsInRange(unit, state, range, targetType) {
   const targets = [];
-  const actualTargetType = targetType === 'ally' ? unit.type : targetType;
+  const unitTeamId = getUnitTeamId(unit);
 
   for (const other of state.units) {
     if (other.hp <= 0) continue;
     if (other.id === unit.id) continue; // Can't target self for attacks
 
-    // Check type matching
-    if (targetType === 'ally' && other.type !== unit.type) continue;
-    if (targetType !== 'ally' && other.type !== actualTargetType) continue;
+    const otherTeamId = getUnitTeamId(other);
+
+    // Team-based targeting logic
+    if (targetType === 'ally') {
+      // Ally targeting: same team
+      if (otherTeamId !== unitTeamId) continue;
+    } else if (targetType === 'opponent' || targetType === 'enemy') {
+      // Opponent/enemy targeting: different team
+      // 'enemy' is kept for backwards compatibility but uses team-based logic
+      if (otherTeamId === unitTeamId) continue;
+    } else if (targetType === 'player') {
+      // Legacy type-based targeting (for backwards compatibility with old code)
+      // In new code, prefer 'opponent' or 'ally'
+      if (other.type !== 'player') continue;
+    }
 
     const distance = getManhattanDistance(unit.tileX, unit.tileY, other.tileX, other.tileY);
     if (distance > 0 && distance <= range) {
@@ -212,11 +225,67 @@ export function findAdjacentTileToTarget(state, unit, targetTile) {
 
 /**
  * Get the opposite unit type
+ * @deprecated Use getOpposingUnits() or getAlliedUnits() for team-based logic
  * @param {string} type - 'player' or 'enemy'
  * @returns {string}
  */
 export function getOppositeType(type) {
   return type === 'player' ? 'enemy' : 'player';
+}
+
+/**
+ * Get a unit's team ID with fallback for backwards compatibility
+ * @param {Object} unit - BattleUnit
+ * @returns {number} Team ID (1 or 2)
+ */
+function getUnitTeamId(unit) {
+  if (unit.teamId !== undefined) {
+    return unit.teamId;
+  }
+  // Fallback: type 'enemy' implies team 2, all others imply team 1
+  return unit.type === 'enemy' ? 2 : 1;
+}
+
+/**
+ * Get all alive units on the opposing team
+ * @param {Object} unit - The reference unit
+ * @param {Object} state - Battle state containing units array
+ * @returns {Array} Array of opposing units that are alive
+ */
+export function getOpposingUnits(unit, state) {
+  const unitTeamId = getUnitTeamId(unit);
+  return state.units.filter(u => u.hp > 0 && getUnitTeamId(u) !== unitTeamId);
+}
+
+/**
+ * Get all alive units on the same team (including self)
+ * @param {Object} unit - The reference unit
+ * @param {Object} state - Battle state containing units array
+ * @returns {Array} Array of allied units that are alive
+ */
+export function getAlliedUnits(unit, state) {
+  const unitTeamId = getUnitTeamId(unit);
+  return state.units.filter(u => u.hp > 0 && getUnitTeamId(u) === unitTeamId);
+}
+
+/**
+ * Check if two units are on opposing teams
+ * @param {Object} unitA - First unit
+ * @param {Object} unitB - Second unit
+ * @returns {boolean} True if units are opponents
+ */
+export function areOpponents(unitA, unitB) {
+  return getUnitTeamId(unitA) !== getUnitTeamId(unitB);
+}
+
+/**
+ * Check if two units are on the same team
+ * @param {Object} unitA - First unit
+ * @param {Object} unitB - Second unit
+ * @returns {boolean} True if units are allies
+ */
+export function areAllies(unitA, unitB) {
+  return getUnitTeamId(unitA) === getUnitTeamId(unitB);
 }
 
 /**

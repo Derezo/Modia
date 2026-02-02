@@ -9,6 +9,7 @@
 
 import battleWebsocket from './battleWebsocket.js';
 import { query } from '../config/database.js';
+import { getBattleStatusString } from './battle/index.js';
 
 /**
  * Check if AI debug logging is enabled via user settings in battle state
@@ -42,14 +43,14 @@ const TIMING = {
  */
 async function processEnemyTurnsAsync(battleId, state, aiService, battleService) {
   const enemyActions = [];
-  let battleStatus = 'active';
+  let battleStatus = { status: 'active', winningTeamId: null };
   let iterations = 0;
   const maxIterations = 50; // Safety limit
 
   console.log('[AsyncTurnManager] Starting enemy turn processing for battle', battleId);
 
   // Process enemy turns until it's a player's turn again
-  while (battleStatus === 'active' && iterations < maxIterations) {
+  while (battleStatus.status === 'active' && iterations < maxIterations) {
     const activeUnit = state.units.find(u => u.id === state.activeUnitId);
 
     if (!activeUnit) {
@@ -99,8 +100,8 @@ async function processEnemyTurnsAsync(battleId, state, aiService, battleService)
     // Check if battle ended
     battleStatus = battleService.checkBattleEnd(state);
 
-    if (battleStatus !== 'active') {
-      console.log('[AsyncTurnManager] Battle ended with status:', battleStatus);
+    if (battleStatus.status !== 'active') {
+      console.log('[AsyncTurnManager] Battle ended with status:', battleStatus.status, 'winner:', battleStatus.winningTeamId);
       break;
     }
 
@@ -118,7 +119,9 @@ async function processEnemyTurnsAsync(battleId, state, aiService, battleService)
 
   console.log('[AsyncTurnManager] Finished processing', enemyActions.length, 'enemy actions');
 
-  return { state, battleStatus, enemyActions };
+  // Convert battleStatus object to string for backwards compatibility with callers
+  const battleStatusString = getBattleStatusString(battleStatus);
+  return { state, battleStatus: battleStatusString, enemyActions };
 }
 
 /**
@@ -310,8 +313,8 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       }
 
       // Check if battle ended after this action
-      const battleStatus = battleService.checkBattleEnd(state);
-      if (battleStatus !== 'active') {
+      const battleEndCheck = battleService.checkBattleEnd(state);
+      if (battleEndCheck.status !== 'active') {
         break;
       }
 
@@ -383,8 +386,8 @@ async function processEnemyTurnWithVisualization(battleId, state, enemy, aiServi
       }
 
       // Check if battle ended
-      const battleStatus = battleService.checkBattleEnd(state);
-      if (battleStatus !== 'active') {
+      const battleEndCheck = battleService.checkBattleEnd(state);
+      if (battleEndCheck.status !== 'active') {
         break;
       }
 

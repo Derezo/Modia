@@ -933,15 +933,88 @@ export function processAction(state, unit, actionType, targetTile, skillId = nul
 }
 
 /**
- * Check if battle has ended
+ * Get a unit's team ID with fallback for backwards compatibility
+ * @param {Object} unit - BattleUnit
+ * @returns {number} Team ID (1 or 2)
+ */
+function getUnitTeamId(unit) {
+  if (unit.teamId !== undefined) {
+    return unit.teamId;
+  }
+  // Fallback: type 'enemy' implies team 2, all others imply team 1
+  return unit.type === 'enemy' ? 2 : 1;
+}
+
+/**
+ * Check if battle has ended using team-based victory conditions
+ * Supports both PvE (type-based fallback) and PvP (team-based)
+ *
+ * Returns a result object with:
+ *   - status: 'active' | 'ended'
+ *   - winningTeamId: 1 | 2 (only when status is 'ended')
+ *
+ * The result object also has a valueOf() method for backwards compatibility:
+ *   - Returns 'active' when battle continues
+ *   - Returns 'victory' when team 1 wins (player team in PvE)
+ *   - Returns 'defeat' when team 2 wins (enemy team in PvE)
+ *
+ * This allows existing code like `if (result === 'active')` to still work,
+ * while new code can use `result.status` and `result.winningTeamId`.
+ *
  * @param {Object} state - Battle state
- * @returns {string} 'active' | 'victory' | 'defeat'
+ * @returns {Object} Battle end status with backwards-compatible valueOf()
  */
 export function checkBattleEnd(state) {
-  const playerUnitsAlive = state.units.filter(u => u.type === 'player' && u.hp > 0).length;
-  const enemyUnitsAlive = state.units.filter(u => u.type === 'enemy' && u.hp > 0).length;
+  // Count alive units per team
+  const team1Alive = state.units.filter(u => u.hp > 0 && getUnitTeamId(u) === 1).length;
+  const team2Alive = state.units.filter(u => u.hp > 0 && getUnitTeamId(u) === 2).length;
 
-  if (enemyUnitsAlive === 0) return 'victory';
-  if (playerUnitsAlive === 0) return 'defeat';
-  return 'active';
+  if (team2Alive === 0 && team1Alive > 0) {
+    return createBattleEndResult('ended', 1);
+  }
+  if (team1Alive === 0 && team2Alive > 0) {
+    return createBattleEndResult('ended', 2);
+  }
+
+  return createBattleEndResult('active', null);
+}
+
+/**
+ * Create a battle end result object with backwards-compatible valueOf()
+ * @param {string} status - 'active' | 'ended'
+ * @param {number|null} winningTeamId - 1 | 2 | null
+ * @returns {Object} Result object with valueOf() for string comparison
+ */
+function createBattleEndResult(status, winningTeamId) {
+  const result = {
+    status,
+    winningTeamId,
+    // valueOf() enables backwards-compatible string comparisons
+    // e.g., `if (checkBattleEnd(state) === 'active')` still works
+    valueOf() {
+      if (status === 'active') return 'active';
+      // For backwards compatibility: team 1 win = 'victory', team 2 win = 'defeat'
+      return winningTeamId === 1 ? 'victory' : 'defeat';
+    },
+    // toString() for consistent string representation
+    toString() {
+      return this.valueOf();
+    }
+  };
+  return result;
+}
+
+/**
+ * Get the legacy status string from a battle end result
+ * For backwards compatibility with code expecting 'active', 'victory', or 'defeat'
+ * @param {Object} result - Result from checkBattleEnd()
+ * @returns {string} 'active' | 'victory' | 'defeat'
+ */
+export function getBattleStatusString(result) {
+  if (!result || result.status === 'active') {
+    return 'active';
+  }
+  // Team 1 win = 'victory' (player team in PvE)
+  // Team 2 win = 'defeat' (enemy team in PvE)
+  return result.winningTeamId === 1 ? 'victory' : 'defeat';
 }
