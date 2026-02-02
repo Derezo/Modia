@@ -5,9 +5,9 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| API Version | 2.7 |
+| API Version | 2.8 |
 | Base URL | `/api` |
-| Last Updated | January 2026 |
+| Last Updated | February 2026 |
 
 ---
 
@@ -2004,7 +2004,7 @@ GET /api/guild/:nodeId/recruits
       "luck": 10,
       "stat_variance_percent": 8.5,
       "xp_pool": 87,
-      "price": 2170,
+      "price": 543,
       "traits": [
         {
           "id": 5,
@@ -2022,6 +2022,8 @@ GET /api/guild/:nodeId/recruits
   "nextRefresh": "2026-01-10T12:00:00.000Z"
 }
 ```
+
+**Price Calculation:** Base price (400g) + trait cost (100g for common) + stat variance (8.5% × 5g = 43g) = 543g. See [ECONOMY_SYSTEM.md](ECONOMY_SYSTEM.md#guild-recruitment-pricing) for full formula.
 
 **Errors:**
 | Code | Message |
@@ -2065,8 +2067,8 @@ POST /api/guild/:nodeId/recruit/:recruitId/purchase
     "traits": [...],
     "skills": [...]
   },
-  "goldSpent": 2170,
-  "remainingGold": 5830
+  "goldSpent": 543,
+  "remainingGold": 9457
 }
 ```
 
@@ -2118,7 +2120,7 @@ GET /api/garrison/:nodeId
       "luck": 10,
       "stat_variance_percent": 5.2,
       "xp_pool": 50,
-      "price": 1500,
+      "price": 526,
       "traits": [
         {
           "id": 3,
@@ -2136,6 +2138,8 @@ GET /api/garrison/:nodeId
   "nextRefresh": "2026-01-10T12:00:00.000Z"
 }
 ```
+
+**Price Calculation:** Base price (400g) + trait cost (100g for common) + stat variance (5.2% × 5g = 26g) = 526g. See [ECONOMY_SYSTEM.md](ECONOMY_SYSTEM.md#guild-recruitment-pricing) for full formula.
 
 **Errors:**
 | Code | Message |
@@ -2179,8 +2183,8 @@ POST /api/garrison/:nodeId/purchase/:recruitId
     "traits": [...],
     "skills": [...]
   },
-  "goldSpent": 1500,
-  "remainingGold": 8500
+  "goldSpent": 526,
+  "remainingGold": 9474
 }
 ```
 
@@ -3658,3 +3662,4 @@ GET /api/feedback/my
 | 2.5 | Jan 2026 | - | Added feedback endpoints (Section 26) for user submissions (enhancement, bug, abuse reports). Updated error response format to include requestId field for exception correlation. |
 | 2.6 | Jan 2026 | - | Added register-with-character endpoint (Section 2.2) for atomic user+character creation. Updated auth section numbering (2.3-2.6). Added rate limit entry for new endpoint. |
 | 2.7 | Feb 2026 | - | Added garrison endpoints (Section 10) for castle recruit system with regional race/class bias. Added garrison WebSocket events (Section 7.10). Updated starting gold to 1000 (was 100). Renumbered sections 10-28 to accommodate new garrison section. |
+| 2.8 | Feb 2026 | - | Updated guild and garrison recruit price examples to reflect new pricing formula: base 400g + trait rarity costs + skill costs + stat variance bonus. Added price calculation notes with cross-reference to ECONOMY_SYSTEM.md. |

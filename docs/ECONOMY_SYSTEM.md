@@ -2,7 +2,7 @@
 
 | Document | Version | Last Updated |
 |----------|---------|--------------|
-| Economy System Specification | 2.2 | 2026-01-25 |
+| Economy System Specification | 2.3 | 2026-02-01 |
 
 ## Table of Contents
 
@@ -77,7 +77,7 @@ Modia's economy consists of two primary trading systems:
 │  NPC SHOPS    │  │  MARKETPLACE  │  │ GUILD RECRUITS │
 │ (Gold Sink)   │  │  (Gold Sink)  │  │  (Gold Sink)   │
 │               │  │               │  │                │
-│ Buy at 50%    │  │ Player ↔ Player│  │ 2,000-12,000g │
+│ Buy at 50%    │  │ Player ↔ Player│  │   400-6,000g  │
 │ Sell at 60-120%│ │ 5% seller tax │  │  per recruit   │
 └───────────────┘  └───────────────┘  └────────────────┘
 ```
@@ -1598,23 +1598,56 @@ Response:
 | NPC Buy Rate | 50% loss | Player sells at 50%, buys at 60-120% |
 | NPC Stock Purchases | 60-120% | Base stock is gold creation |
 | Marketplace Tax | 5% per trade | Seller tax on completed trades |
-| Guild Recruitment | 2,000-12,000g | Major gold sink for party expansion |
+| Guild/Garrison Recruitment | 400-6,000g | Major gold sink for party expansion |
 | Caravan Purchases | 115% premium | Exclusive items at higher prices |
 | Stables (future) | Variable | Fast travel costs |
 | Repair (future) | 10-20% value | Equipment durability |
 
 #### Guild Recruitment Pricing
 
-Guild recruitment is a significant gold sink. Price ranges:
+Recruit prices are calculated from a base price plus modifiers for traits, skills, and stat variance.
 
-| Recruit Type | Price Range | Factors |
-|--------------|-------------|---------|
-| Basic (1 trait, avg stats) | 1,700-2,300g | Stat variance only |
-| Good (1 trait, +skills) | 2,500-4,000g | +skills, better stats |
-| Premium (2 traits) | 8,000-10,000g | Extra trait adds 8,000g |
-| Exceptional (2 traits, +skills, +15% stats) | 10,000-12,000g | Maximum quality |
+**Formula:**
+```
+total_price = base_price + trait_cost + skill_cost + stat_variance_cost
 
-See [GUILD_RECRUITMENT_SYSTEM.md](GUILD_RECRUITMENT_SYSTEM.md) for detailed pricing formula.
+Where:
+  base_price = 400g
+  trait_cost = sum of trait rarity values (see table)
+  skill_cost = 250g × tier × level for additional skills (first T1L1 free)
+  stat_variance_cost = +5g per 1% above average (no discount for below)
+```
+
+**Trait Rarity Costs:**
+
+| Rarity | Cost |
+|--------|------|
+| Common | +100g |
+| Uncommon | +300g |
+| Rare | +1,000g |
+| Legendary | +4,000g |
+
+**Skill Cost Formula:**
+- First Tier 1, Level 1 skill is free (baseline training)
+- Additional skills: `250g × tier × level`
+- Example: A T2L3 skill costs 250 × 2 × 3 = 1,500g
+
+**Stat Variance Cost:**
+- +5g per 1% above average baseline stats
+- No discount for below-average stats
+- Example: +8% variance adds 40g
+
+**Price Examples:**
+
+| Recruit Type | Traits | Skills | Variance | Total |
+|--------------|--------|--------|----------|-------|
+| Basic (1 common trait, avg stats) | +100g | 0g | 0g | ~500g |
+| Good (1 uncommon trait, +5% stats) | +300g | 0g | +25g | ~725g |
+| Skilled (1 common trait, +1 T2L1 skill) | +100g | +500g | 0g | ~1,000g |
+| Premium (1 rare trait, +10% stats) | +1,000g | 0g | +50g | ~1,450g |
+| Exceptional (1 legendary trait, +2 skills, +15% stats) | +4,000g | +1,000g | +75g | ~5,475g |
+
+> **Code Reference:** `api/src/utils/recruitmentUtils.js`
 
 ### 8.3 Gold Flow Analysis
 
@@ -1660,3 +1693,4 @@ See [GUILD_RECRUITMENT_SYSTEM.md](GUILD_RECRUITMENT_SYSTEM.md) for detailed pric
 | 2.0 | 2026-01-06 | Removed temple revival; updated max orders to 10 |
 | 2.1 | 2026-01-25 | Fixed P1-1: Documented 5% seller tax and tax ledger system |
 | 2.2 | 2026-01-25 | P2-3: Added shop restock mechanics, item listing system, caravan shop system |
+| 2.3 | 2026-02-01 | Updated guild recruitment pricing formula: base 400g, trait costs by rarity, skill costs, stat variance bonus |

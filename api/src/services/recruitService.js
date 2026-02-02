@@ -6,7 +6,6 @@
 import { query, withTransaction } from '../config/database.js';
 import { RACES, GENDERS, calculateStats, MAX_PARTY_SIZE } from '../config/constants.js';
 import { generateName } from '../utils/nameGenerator.js';
-import { SKILL_TREES } from '../config/skillTrees.js';
 import { findSkillDefinition, validateSkillPrerequisites } from '../utils/skillValidation.js';
 import {
   TRAIT_RARITY_WEIGHTS,
@@ -14,50 +13,9 @@ import {
   ADDITIONAL_SKILL_COUNT_WEIGHTS,
   weightedRandom,
   calculateRecruitPrice,
-  getStarterSkillId
+  getStarterSkillId,
+  getTier1And2Skills
 } from '../utils/recruitmentUtils.js';
-
-/**
- * Get tier 1-2 skills for a class (skills without requirements or with only tier-1 requirements)
- * @param {string} guildClass - The class to get skills for
- * @returns {Array} Array of skill objects with tier information
- */
-function getTier1And2Skills(guildClass) {
-  const classTree = SKILL_TREES[guildClass];
-  if (!classTree) return [];
-
-  const skills = [];
-  const tier1SkillIds = new Set();
-
-  // First pass: collect tier 1 skills (no requirements)
-  for (const branch of classTree.branches) {
-    for (const skill of branch.skills) {
-      if (skill.type === 'active' && !skill.requires) {
-        tier1SkillIds.add(skill.id);
-        skills.push({ ...skill, tier: 1 });
-      }
-    }
-  }
-
-  // Second pass: collect tier 2 skills (require only tier 1 skills AT LEVEL 1)
-  // Recruits get skills at level 1, so we can only include skills whose
-  // prerequisites can be satisfied at level 1
-  for (const branch of classTree.branches) {
-    for (const skill of branch.skills) {
-      if (skill.type === 'active' && skill.requires) {
-        // Check if all requirements are tier 1 skills AND require level 1 or less
-        const requiresOnlyTier1AtLevel1 = Object.entries(skill.requires).every(
-          ([reqId, reqLevel]) => tier1SkillIds.has(reqId) && reqLevel <= 1
-        );
-        if (requiresOnlyTier1AtLevel1) {
-          skills.push({ ...skill, tier: 2 });
-        }
-      }
-    }
-  }
-
-  return skills;
-}
 
 /**
  * Generate a single recruit for a guild node
