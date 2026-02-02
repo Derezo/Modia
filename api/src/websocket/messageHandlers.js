@@ -537,13 +537,18 @@ async function handleBattleSyncRequest(ws, userId, payload) {
 
 /**
  * Handle ACK
+ * @param {string} userId - The user ID
+ * @param {Object} message - The full message object (ACK messages send battleId/seq at root level)
  */
-function handleAckMessage(userId, payload) {
+function handleAckMessage(userId, message) {
   if (!userId) return;
-  const battleId = payload.battleId;
-  const seq = parseInt(payload.seq, 10);
+
+  // ACK messages send battleId and seq at root level, not in payload
+  const battleId = message?.battleId;
+  const seq = parseInt(message?.seq, 10);
+
   if (!battleId || isNaN(seq)) {
-    console.warn('[WS] Invalid ACK payload:', payload);
+    console.warn('[WS] Invalid ACK message:', message);
     return;
   }
   handleAck(userId, battleId, seq);
