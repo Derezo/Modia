@@ -19,7 +19,6 @@ import {
   MAX_PARTY_SIZE
 } from '../../../shared/constants.js';
 import { generateName } from '../utils/nameGenerator.js';
-import { SKILL_TREES } from '../config/skillTrees.js';
 import {
   RECRUIT_PRICING,
   TRAIT_RARITY_WEIGHTS,
@@ -27,7 +26,8 @@ import {
   ADDITIONAL_SKILL_COUNT_WEIGHTS,
   weightedRandom,
   calculateRecruitPrice,
-  getStarterSkillId
+  getStarterSkillId,
+  getTier1And2Skills
 } from '../utils/recruitmentUtils.js';
 
 /**
@@ -95,45 +95,6 @@ function selectClassForRegion(regionId) {
     const classValues = Object.values(CLASSES);
     return classValues[Math.floor(Math.random() * classValues.length)];
   }
-}
-
-/**
- * Get tier 1-2 skills for a class (skills without requirements or with only tier-1 requirements at level 1)
- * @param {string} guildClass - The class to get skills for
- * @returns {Array} Array of skill objects
- */
-function getTier1And2Skills(guildClass) {
-  const classTree = SKILL_TREES[guildClass];
-  if (!classTree) return [];
-
-  const skills = [];
-  const tier1SkillIds = new Set();
-
-  // First pass: collect tier 1 skills (no requirements)
-  for (const branch of classTree.branches) {
-    for (const skill of branch.skills) {
-      if (skill.type === 'active' && !skill.requires) {
-        tier1SkillIds.add(skill.id);
-        skills.push(skill);
-      }
-    }
-  }
-
-  // Second pass: collect tier 2 skills (require only tier 1 skills at level 1)
-  for (const branch of classTree.branches) {
-    for (const skill of branch.skills) {
-      if (skill.type === 'active' && skill.requires) {
-        const requiresOnlyTier1AtLevel1 = Object.entries(skill.requires).every(
-          ([reqId, reqLevel]) => tier1SkillIds.has(reqId) && reqLevel <= 1
-        );
-        if (requiresOnlyTier1AtLevel1) {
-          skills.push(skill);
-        }
-      }
-    }
-  }
-
-  return skills;
 }
 
 /**

@@ -5,6 +5,8 @@
  * selection logic used by both recruitService.js and garrisonService.js.
  */
 
+import { SKILL_TREES } from '../config/skillTrees.js';
+
 // ============================================================================
 // Pricing Constants
 // ============================================================================
@@ -175,4 +177,58 @@ export const STARTER_SKILLS = {
  */
 export function getStarterSkillId(guildClass) {
   return STARTER_SKILLS[guildClass] || null;
+}
+
+// ============================================================================
+// Skill Tier Classification
+// ============================================================================
+
+/**
+ * Get tier 1-2 skills for a class (skills without requirements or with only tier-1 requirements at level 1)
+ *
+ * Tier 1 skills: No prerequisites (skill.requires is undefined/null)
+ * Tier 2 skills: Require only tier 1 skills at level 1 or less
+ *
+ * @param {string} guildClass - The class to get skills for (warrior, wizard, monk, chemist)
+ * @returns {Array<Object>} Array of skill objects with tier information ({ ...skill, tier: 1|2 })
+ *
+ * @example
+ * const skills = getTier1And2Skills('warrior');
+ * // Returns: [{ id: 'power_strike', tier: 1, ... }, { id: 'cleave', tier: 2, requires: {...}, ... }]
+ */
+export function getTier1And2Skills(guildClass) {
+  const classTree = SKILL_TREES[guildClass];
+  if (!classTree) return [];
+
+  const skills = [];
+  const tier1SkillIds = new Set();
+
+  // First pass: collect tier 1 skills (no requirements)
+  for (const branch of classTree.branches) {
+    for (const skill of branch.skills) {
+      if (skill.type === 'active' && !skill.requires) {
+        tier1SkillIds.add(skill.id);
+        skills.push({ ...skill, tier: 1 });
+      }
+    }
+  }
+
+  // Second pass: collect tier 2 skills (require only tier 1 skills AT LEVEL 1)
+  // Recruits get skills at level 1, so we can only include skills whose
+  // prerequisites can be satisfied at level 1
+  for (const branch of classTree.branches) {
+    for (const skill of branch.skills) {
+      if (skill.type === 'active' && skill.requires) {
+        // Check if all requirements are tier 1 skills AND require level 1 or less
+        const requiresOnlyTier1AtLevel1 = Object.entries(skill.requires).every(
+          ([reqId, reqLevel]) => tier1SkillIds.has(reqId) && reqLevel <= 1
+        );
+        if (requiresOnlyTier1AtLevel1) {
+          skills.push({ ...skill, tier: 2 });
+        }
+      }
+    }
+  }
+
+  return skills;
 }

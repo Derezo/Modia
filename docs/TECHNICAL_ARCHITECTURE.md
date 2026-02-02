@@ -5,9 +5,9 @@
 | Field | Value |
 |-------|-------|
 | Project Name | Modia |
-| Version | 2.4 |
-| Last Updated | January 2026 |
-| Last Validated | 2026-01-26 |
+| Version | 2.5 |
+| Last Updated | February 2026 |
+| Last Validated | 2026-02-01 |
 
 ---
 
@@ -117,6 +117,9 @@ api/
     ├── db/
     │   ├── migrate.js           # Migration runner
     │   └── seed.js              # Database seeding script
+    │
+    ├── utils/
+    │   └── recruitmentUtils.js  # Shared recruit pricing and generation utilities
     │
     └── migrations/
         └── 001_initial_schema.sql
@@ -1534,3 +1537,4 @@ If database becomes bottleneck:
 | 2.2 | Jan 2026 | - | Section 5.1 World Generation: Clarified two-phase ring distance calculation (Euclidean in Phase 3, BFS in Phase 4); documented Lloyd's relaxation inversion; noted Voronoi 0-indexed vs nodesByRegion 1-indexed; added reference to WORLDGEN_TECHNICAL_DEEP_DIVE.md |
 | 2.3 | Jan 2026 | - | Added migration 040 (error tracking); added tables exception_groups (3.2.15), exception_events (3.2.16), user_feedback (3.2.17); added feedback_type and feedback_status ENUMs (3.3) |
 | 2.4 | Feb 2026 | - | Added garrison_recruits table (3.2.18) for castle recruitment with regional race/class bias. Updated default gold to 1000 (was 100). |
+| 2.5 | Feb 2026 | - | Added utils directory with recruitmentUtils.js for shared recruit pricing and generation utilities. |

@@ -189,7 +189,9 @@ router.post('/:nodeId/purchase/:recruitId', authenticate, garrisonPurchaseLimite
 
     // Broadcast purchase to other users viewing this garrison
     broadcastGarrisonPurchase(nodeIdNum, recruitIdNum, {
-      recruitName: result.recruit?.name || result.character?.name,
+      userId: req.user.userId,
+      username: req.user.username,
+      characterName: result.character.name
     });
 
     res.json({
