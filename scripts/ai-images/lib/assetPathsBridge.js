@@ -34,7 +34,9 @@ const CATEGORY_BASE_DIRS = {
   items: 'items',
   icons: 'icons',
   nodes: 'nodes',
-  overlays: 'overlays'
+  overlays: 'overlays',
+  characters: 'characters',
+  obstacles: 'obstacles'
 };
 
 /**
@@ -64,9 +66,71 @@ async function getOriginalsFilePath(category, id, options = {}) {
   return path.join(getProjectRoot(), 'frontend/public', urlPath);
 }
 
+/**
+ * Get absolute filesystem path for a character sprite sheet (async)
+ * @param {string} id - Character identifier (class for players, id for enemies)
+ * @param {Object} [options] - Options
+ * @param {string} [options.type='player'] - Character type ('player' or 'enemy')
+ * @param {string} [options.biome] - Biome (required for enemies)
+ * @param {string} [options.animation='idle'] - Animation type
+ * @param {string} [options.extension='png'] - File extension (PNG for generation output)
+ * @returns {Promise<string>} Absolute filesystem path
+ */
+async function getCharacterOutputPath(id, options = {}) {
+  const assetPaths = await getAssetPathsModule();
+  const urlPath = assetPaths.getCharacterPath(id, { ...options, extension: options.extension || 'png' });
+  return path.join(getProjectRoot(), 'frontend/public', urlPath);
+}
+
+/**
+ * Get absolute filesystem path for a character reference image (async)
+ * @param {string} id - Character identifier
+ * @param {Object} [options] - Options
+ * @param {string} [options.type='player'] - Character type
+ * @param {string} [options.biome] - Biome (required for enemies)
+ * @returns {Promise<string>} Absolute filesystem path to reference image
+ */
+async function getCharacterReferencePath(id, options = {}) {
+  const assetPaths = await getAssetPathsModule();
+  const urlPath = assetPaths.getCharacterReferencePath(id, options);
+  return path.join(getProjectRoot(), 'frontend/public', urlPath);
+}
+
+/**
+ * Get absolute filesystem path for a character directory (async)
+ * @param {string} id - Character identifier
+ * @param {Object} [options] - Options
+ * @param {string} [options.type='player'] - Character type
+ * @param {string} [options.biome] - Biome (required for enemies)
+ * @returns {Promise<string>} Absolute filesystem path to character directory
+ */
+async function getCharacterDirectoryPath(id, options = {}) {
+  const assetPaths = await getAssetPathsModule();
+  const urlPath = assetPaths.getCharacterDirectory(id, options);
+  return path.join(getProjectRoot(), 'frontend/public', urlPath);
+}
+
+/**
+ * Get obstacle output path (async)
+ * @param {string} id - Obstacle identifier
+ * @param {string} category - Obstacle category ('rocks' or 'trees')
+ * @param {Object} [options] - Options
+ * @param {string} [options.extension='png'] - File extension
+ * @returns {Promise<string>} Absolute filesystem path
+ */
+async function getObstacleOutputPath(id, category, options = {}) {
+  const assetPaths = await getAssetPathsModule();
+  const urlPath = assetPaths.getObstaclePath(id, category, { extension: options.extension || 'png' });
+  return path.join(getProjectRoot(), 'frontend/public', urlPath);
+}
+
 module.exports = {
   getAssetPathsModule,
   CATEGORY_BASE_DIRS,
   getOutputDir,
-  getOriginalsFilePath
+  getOriginalsFilePath,
+  getCharacterOutputPath,
+  getCharacterReferencePath,
+  getCharacterDirectoryPath,
+  getObstacleOutputPath
 };

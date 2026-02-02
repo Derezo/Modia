@@ -3,8 +3,17 @@
  * All assets use the canonical path structure from shared/assetPaths.js
  */
 
-import { getAssetPath, DEFAULT_SIZES } from '@shared/assetPaths.js';
+import {
+  getAssetPath,
+  getCharacterPath,
+  getObstaclePath,
+  DEFAULT_SIZES,
+  CHARACTER_ANIMATIONS
+} from '@shared/assetPaths.js';
 import { normalizeIconId } from '@shared/iconCategories.js';
+
+// Re-export for components
+export { CHARACTER_ANIMATIONS };
 
 /**
  * Get subcategory for an asset based on category and asset metadata
@@ -111,26 +120,25 @@ export function getAssetImageUrl(asset, category) {
     return getAssetPath(category, id, { subcategory, size, ...extraOptions });
   }
 
-  // For characters, use type-based path structure (player vs enemies)
+  // For characters, use shared/assetPaths.js getCharacterPath
   // Players: /assets/characters/player/{class}/{class}_{animation}.webp
   // Enemies: /assets/characters/enemies/{biome}/{id}/{id}_{animation}.webp
   // All character sprites MUST have an _idle animation for preview
   if (category === 'characters') {
     const type = asset._type || 'player';
-    if (type === 'enemy' || type === 'enemies') {
-      // Enemy characters include biome in path
-      const biome = asset._biome || asset.biome || 'unknown';
-      return `/assets/characters/enemies/${biome}/${id}/${id}_idle.webp`;
-    }
-    // Player characters
-    return `/assets/characters/player/${id}/${id}_idle.webp`;
+    const biome = asset._biome || asset.biome;
+    return getCharacterPath(id, {
+      type: type === 'enemies' ? 'enemy' : type,
+      biome,
+      animation: 'idle'  // Default to idle for preview
+    });
   }
 
-  // For obstacles, use category-based path structure
+  // For obstacles, use shared/assetPaths.js getObstaclePath
   // Pattern: /assets/obstacles/{obstacleCategory}/{id}.webp
   if (category === 'obstacles') {
     const obstacleCategory = subcategory || 'rocks';
-    return `/assets/obstacles/${obstacleCategory}/${id}.webp`;
+    return getObstaclePath(id, obstacleCategory);
   }
 
   // For other categories, get canonical URLs and return the first one
