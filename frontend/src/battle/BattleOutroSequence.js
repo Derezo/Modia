@@ -16,6 +16,7 @@
 
 import { BattleFireworks } from './BattleFireworks.js';
 import { BattleStatsTable } from './BattleStatsTable.js';
+import { BattleRatingPanel } from './BattleRatingPanel.js';
 import { getTier, getTierColor, getTierIcon } from '@shared/coliseum.js';
 
 // Rarity color palette (matches RewardsModal)
@@ -61,7 +62,9 @@ export class BattleOutroSequence {
     this.unitStats = null;
     this.pvpResult = null;
     this.statsTable = null;
-    this.ratingProgress = 0;  // For animated rating counter
+    this.ratingPanel = null;  // DOM-based rating panel
+    this.ratingPanelShown = false;
+    this.ratingProgress = 0;  // For animated rating counter (legacy)
 
     // Components
     this.fireworks = null;
@@ -118,6 +121,11 @@ export class BattleOutroSequence {
     // Initialize stats table if we have unit stats
     if (this.unitStats) {
       this.statsTable = new BattleStatsTable(this.scene);
+    }
+
+    // Initialize DOM-based rating panel for PvP battles
+    if (this.isPvP && this.pvpResult) {
+      this.ratingPanel = new BattleRatingPanel(this.scene);
     }
 
     // Initialize item progress array
@@ -267,10 +275,10 @@ export class BattleOutroSequence {
       this.bannerProgress = 1;
       this.phase = 'pvp_details';
 
-      // Animate rating counter for PvP
-      if (this.pvpResult) {
-        const pvpProgress = (t - tl.pvpStart) / TIMINGS.pvpDetails;
-        this.ratingProgress = Math.min(1, pvpProgress);
+      // Show DOM-based rating panel when entering phase
+      if (!this.ratingPanelShown && this.ratingPanel) {
+        this.ratingPanelShown = true;
+        this.ratingPanel.show(this.pvpResult);
       }
     } else if (this.unitStats && tl.statsEnd && t < tl.statsEnd) {
       // Stats reveal phase
@@ -371,6 +379,12 @@ export class BattleOutroSequence {
     } else if (this.isPvP && tl.pvpEnd && t < tl.pvpEnd) {
       // PvP details
       this.phase = 'pvp_details';
+
+      // Show DOM-based rating panel when entering phase
+      if (!this.ratingPanelShown && this.ratingPanel) {
+        this.ratingPanelShown = true;
+        this.ratingPanel.show(this.pvpResult);
+      }
     } else if (this.unitStats && tl.statsEnd && t < tl.statsEnd) {
       // Stats reveal phase
       this.phase = 'stats_reveal';
@@ -440,10 +454,8 @@ export class BattleOutroSequence {
       this.renderRewards(ctx, w, h);
     }
 
-    // Draw PvP panel (replaces rewards for PvP battles)
-    if (this.isPvP && this.pvpResult && (this.phase === 'rewards_reveal' || this.phase === 'pvp_details' || this.phase === 'stats_reveal' || this.phase === 'awaiting_confirmation')) {
-      this.renderPvPPanel(ctx, w, h);
-    }
+    // PvP rating panel is now DOM-based (BattleRatingPanel.js)
+    // Shown via this.ratingPanel.show() during pvp_details phase
 
     // Draw summary (PvE defeat only - PvP uses renderPvPPanel instead)
     if (this.status === 'defeat' && !this.isPvP && (this.phase === 'summary' || this.phase === 'awaiting_confirmation')) {
@@ -928,6 +940,14 @@ export class BattleOutroSequence {
     this.continueButtonRect = null;
     this.fadeStartTime = this.timer;
     this.phase = 'fade_out';
+
+    // Hide DOM elements during fade
+    if (this.statsTable) {
+      this.statsTable.hide();
+    }
+    if (this.ratingPanel) {
+      this.ratingPanel.hide();
+    }
   }
 
   /**
@@ -945,6 +965,12 @@ export class BattleOutroSequence {
     if (this.statsTable) {
       this.statsTable.destroy();
       this.statsTable = null;
+    }
+
+    // Cleanup rating panel
+    if (this.ratingPanel) {
+      this.ratingPanel.destroy();
+      this.ratingPanel = null;
     }
 
     // Execute callback
