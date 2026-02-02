@@ -79,6 +79,8 @@
     "ai:restore": "node scripts/ai-images/restore-backup.js",
     "ai:migrate-paths": "node scripts/ai-images/migrate-asset-paths.js",
     "ai:reprocess:portraits": "node scripts/ai-images/reprocess-portraits.js",
+    "assets:convert-webp": "node scripts/convert-to-webp.js",
+    "assets:convert-webp:dry-run": "node scripts/convert-to-webp.js --dry-run",
     "doctor": "bash scripts/doctor.sh",
     "dev:setup": "bash scripts/dev-setup.sh",
     "prepare": "husky"

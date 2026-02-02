@@ -86,7 +86,7 @@ function getEffectiveSize(category, size) {
 
 /**
  * Generates path for portraits (unified player + enemy)
- * Pattern: /assets/portraits/{size}/{id}.png
+ * Pattern: /assets/portraits/{size}/{id}.webp
  * - Player IDs: {race}_{gender}_{class} (e.g., 'human_male_warrior')
  * - Enemy IDs: enemy_{name} (e.g., 'enemy_goblin_warrior')
  *
@@ -97,12 +97,12 @@ function getEffectiveSize(category, size) {
  */
 function getPortraitPath(id, options = {}) {
   const size = getEffectiveSize('portraits', options.size);
-  return `${ASSETS_BASE}/portraits/${size}/${id}.png`;
+  return `${ASSETS_BASE}/portraits/${size}/${id}.webp`;
 }
 
 /**
  * Generates path for world map nodes
- * Pattern: /assets/nodes/{size}/{id}.png
+ * Pattern: /assets/nodes/{size}/{id}.webp
  * IDs no longer have 'node_' prefix (e.g., 'castle', not 'node_castle')
  *
  * @param {string} id - The node identifier (e.g., 'castle', 'tavern', 'guild_warrior')
@@ -112,12 +112,12 @@ function getPortraitPath(id, options = {}) {
  */
 function getNodePath(id, options = {}) {
   const size = getEffectiveSize('nodes', options.size);
-  return `${ASSETS_BASE}/nodes/${size}/${id}.png`;
+  return `${ASSETS_BASE}/nodes/${size}/${id}.webp`;
 }
 
 /**
  * Generates path for items
- * Pattern: /assets/items/{size}/{subcategory}/{id}.png
+ * Pattern: /assets/items/{size}/{subcategory}/{id}.webp
  *
  * @param {string} id - The item identifier (e.g., 'sword_iron')
  * @param {Object} options - Options
@@ -128,12 +128,12 @@ function getNodePath(id, options = {}) {
 function getItemPath(id, options = {}) {
   const { subcategory = 'weapons' } = options;
   const size = getEffectiveSize('items', options.size);
-  return `${ASSETS_BASE}/items/${size}/${subcategory}/${id}.png`;
+  return `${ASSETS_BASE}/items/${size}/${subcategory}/${id}.webp`;
 }
 
 /**
  * Generates path for icons
- * Pattern: /assets/icons/png/{size}/{subcategory}/{id}.png
+ * Pattern: /assets/icons/png/{size}/{subcategory}/{id}.webp
  *
  * @param {string} id - The icon identifier (e.g., 'attack')
  * @param {Object} options - Options
@@ -144,16 +144,16 @@ function getItemPath(id, options = {}) {
 function getIconPath(id, options = {}) {
   const { subcategory = 'actions' } = options;
   const size = getEffectiveSize('icons', options.size);
-  return `${ASSETS_BASE}/icons/png/${size}/${subcategory}/${id}.png`;
+  return `${ASSETS_BASE}/icons/png/${size}/${subcategory}/${id}.webp`;
 }
 
 /**
  * Generates path for terrain tiles
- * Pattern: /assets/sprites/terrain/{biome}/{id}.png
+ * Pattern: /assets/sprites/terrain/{biome}/{id}.webp
  * All tiles (floors, walls, slopes) use flat paths matching generated file structure:
- * - Walls: wall_{biome}_{terrain}.png (e.g., wall_forest_default.png)
- * - Slopes: slope_{biome}_{direction}_{levels}.png (e.g., slope_forest_north_1.png)
- * - Floors: {terrain}_{variant}.png (e.g., grass_0.png)
+ * - Walls: wall_{biome}_{terrain}.webp (e.g., wall_forest_default.webp)
+ * - Slopes: slope_{biome}_{direction}_{levels}.webp (e.g., slope_forest_north_1.webp)
+ * - Floors: {terrain}_{variant}.webp (e.g., grass_0.webp)
  *
  * @param {string} id - The tile identifier (e.g., 'grass_0', 'wall_forest_default', 'slope_forest_north_1')
  * @param {Object} options - Options
@@ -162,14 +162,14 @@ function getIconPath(id, options = {}) {
  */
 function getTilePath(id, options = {}) {
   const { subcategory = 'forest' } = options;
-  // All tiles use flat path: {biome}/{id}.png
+  // All tiles use flat path: {biome}/{id}.webp
   // Wall IDs: wall_{biome}_{terrain}, Slope IDs: slope_{biome}_{dir}_{levels}
-  return `${ASSETS_BASE}/sprites/terrain/${subcategory}/${id}.png`;
+  return `${ASSETS_BASE}/sprites/terrain/${subcategory}/${id}.webp`;
 }
 
 /**
  * Generates path for overlays
- * Pattern: /assets/overlays/{size}/{subcategory}/{id}.png
+ * Pattern: /assets/overlays/{size}/{subcategory}/{id}.webp
  *
  * @param {string} id - The overlay identifier (e.g., 'rare', 'fire')
  * @param {Object} options - Options
@@ -180,7 +180,7 @@ function getTilePath(id, options = {}) {
 function getOverlayPath(id, options = {}) {
   const { subcategory = 'rarity' } = options;
   const size = getEffectiveSize('overlays', options.size);
-  return `${ASSETS_BASE}/overlays/${size}/${subcategory}/${id}.png`;
+  return `${ASSETS_BASE}/overlays/${size}/${subcategory}/${id}.webp`;
 }
 
 /**
@@ -200,37 +200,37 @@ function getOverlayPath(id, options = {}) {
  * @example
  * // Portrait (player)
  * getAssetPath('portraits', 'human_male_warrior', { size: 64 });
- * // => '/assets/portraits/64/human_male_warrior.png'
+ * // => '/assets/portraits/64/human_male_warrior.webp'
  *
  * @example
  * // Portrait (enemy)
  * getAssetPath('portraits', 'enemy_goblin_warrior', { size: 64 });
- * // => '/assets/portraits/64/enemy_goblin_warrior.png'
+ * // => '/assets/portraits/64/enemy_goblin_warrior.webp'
  *
  * @example
  * // Node (no node_ prefix)
  * getAssetPath('nodes', 'castle', { size: 96 });
- * // => '/assets/nodes/96/castle.png'
+ * // => '/assets/nodes/96/castle.webp'
  *
  * @example
  * // Item (size in path, not filename)
  * getAssetPath('items', 'sword_iron', { subcategory: 'weapons', size: 64 });
- * // => '/assets/items/64/weapons/sword_iron.png'
+ * // => '/assets/items/64/weapons/sword_iron.webp'
  *
  * @example
  * // Icon
  * getAssetPath('icons', 'attack', { subcategory: 'actions', size: 32 });
- * // => '/assets/icons/png/32/actions/attack.png'
+ * // => '/assets/icons/png/32/actions/attack.webp'
  *
  * @example
  * // Terrain tile
  * getAssetPath('tiles', 'grass_0', { subcategory: 'forest' });
- * // => '/assets/sprites/terrain/forest/grass_0.png'
+ * // => '/assets/sprites/terrain/forest/grass_0.webp'
  *
  * @example
  * // Overlay
  * getAssetPath('overlays', 'rare', { subcategory: 'rarity', size: 64 });
- * // => '/assets/overlays/64/rarity/rare.png'
+ * // => '/assets/overlays/64/rarity/rare.webp'
  */
 export function getAssetPath(category, id, options = {}) {
   validateCategory(category);
@@ -267,15 +267,15 @@ export function getAssetPath(category, id, options = {}) {
  *
  * @example
  * getOriginalsPath('portraits', 'human_male_warrior');
- * // => '/assets/portraits/originals/human_male_warrior.png'
+ * // => '/assets/portraits/originals/human_male_warrior.webp'
  *
  * @example
  * getOriginalsPath('items', 'sword_iron', { subcategory: 'weapons' });
- * // => '/assets/items/originals/weapons/sword_iron.png'
+ * // => '/assets/items/originals/weapons/sword_iron.webp'
  *
  * @example
  * getOriginalsPath('tiles', 'grass_0', { subcategory: 'forest' });
- * // => '/assets/sprites/terrain/originals/forest/grass_0.png'
+ * // => '/assets/sprites/terrain/originals/forest/grass_0.webp'
  */
 export function getOriginalsPath(category, id, options = {}) {
   validateCategory(category);
@@ -285,18 +285,18 @@ export function getOriginalsPath(category, id, options = {}) {
   switch (category) {
     case 'portraits':
     case 'nodes':
-      return `${ASSETS_BASE}/${category}/originals/${id}.png`;
+      return `${ASSETS_BASE}/${category}/originals/${id}.webp`;
 
     case 'items':
     case 'icons':
     case 'overlays': {
       const sub = subcategory || (category === 'items' ? 'weapons' : category === 'icons' ? 'actions' : 'rarity');
-      return `${ASSETS_BASE}/${category}/originals/${sub}/${id}.png`;
+      return `${ASSETS_BASE}/${category}/originals/${sub}/${id}.webp`;
     }
 
     case 'tiles': {
       const biome = subcategory || 'forest';
-      return `${ASSETS_BASE}/sprites/terrain/originals/${biome}/${id}.png`;
+      return `${ASSETS_BASE}/sprites/terrain/originals/${biome}/${id}.webp`;
     }
 
     default:
@@ -320,15 +320,15 @@ export function getOriginalsPath(category, id, options = {}) {
  *
  * @example
  * getOutputPath('portraits', 'human_male_warrior', { size: 64 });
- * // => 'frontend/public/assets/portraits/64/human_male_warrior.png'
+ * // => 'frontend/public/assets/portraits/64/human_male_warrior.webp'
  *
  * @example
  * getOutputPath('nodes', 'castle', { size: 96 });
- * // => 'frontend/public/assets/nodes/96/castle.png'
+ * // => 'frontend/public/assets/nodes/96/castle.webp'
  *
  * @example
  * getOutputPath('portraits', 'human_male_warrior', { original: true });
- * // => 'frontend/public/assets/portraits/originals/human_male_warrior.png'
+ * // => 'frontend/public/assets/portraits/originals/human_male_warrior.webp'
  */
 export function getOutputPath(category, id, options = {}) {
   const { original, ...pathOptions } = options;
@@ -354,9 +354,9 @@ export function getOutputPath(category, id, options = {}) {
  * @example
  * getAllSizeVariants('portraits', 'human_male_warrior');
  * // => [
- * //   { size: 64, path: '/assets/portraits/64/human_male_warrior.png' },
- * //   { size: 128, path: '/assets/portraits/128/human_male_warrior.png' },
- * //   { size: 256, path: '/assets/portraits/256/human_male_warrior.png' }
+ * //   { size: 64, path: '/assets/portraits/64/human_male_warrior.webp' },
+ * //   { size: 128, path: '/assets/portraits/128/human_male_warrior.webp' },
+ * //   { size: 256, path: '/assets/portraits/256/human_male_warrior.webp' }
  * // ]
  */
 export function getAllSizeVariants(category, id, options = {}) {
@@ -440,22 +440,22 @@ export function getOptimalSize(category, displaySize) {
  * @returns {Object|null} Parsed info or null if unable to parse
  *
  * @example
- * parseAssetFilename('human_male_warrior.png', 'portraits');
+ * parseAssetFilename('human_male_warrior.webp', 'portraits');
  * // => { id: 'human_male_warrior' }
  *
  * @example
- * parseAssetFilename('attack.png', 'icons');
+ * parseAssetFilename('attack.webp', 'icons');
  * // => { id: 'attack' }
  *
  * @example
- * parseAssetFilename('sword_iron.png', 'items');
+ * parseAssetFilename('sword_iron.webp', 'items');
  * // => { id: 'sword_iron' }
  */
 export function parseAssetFilename(filename, category) {
   validateCategory(category);
 
-  // Remove .png extension
-  const baseName = filename.replace(/\.png$/, '');
+  // Remove .webp extension
+  const baseName = filename.replace(/\.webp$/, '');
 
   // All categories now use simple id without embedded size/subcategory
   return { id: baseName };
