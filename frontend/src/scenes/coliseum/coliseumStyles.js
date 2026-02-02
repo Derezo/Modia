@@ -18,23 +18,29 @@ import {
 // Alias for concise color access
 const P = PARCHMENT_COLORS;
 
-// Arena-specific colors for the blood/gold PvP aesthetic
+// Arena-specific colors for the Slate Arena tactical aesthetic
 export const ARENA_COLORS = {
-  blood: '#ff4444',
-  bloodLight: '#ff6666',
-  bloodDark: '#cc0000',
-  bloodDeep: '#8b0000',
-  gold: '#ffd700',
-  goldLight: '#ffe44d',
-  goldDark: '#c9a227',
-  backgroundDark: '#1a0a0a',
-  backgroundMid: '#2a1a1a',
-  victory: '#4caf50',
-  victoryDark: '#388e3c',
-  defeat: '#f44336',
-  defeatDark: '#d32f2f',
-  readyGreen: '#00ff00',
-  readyGreenDark: '#00cc00'
+  // Primary Accent - Steel Blue (replaces blood red)
+  primary: '#4a6b8a',
+  primaryLight: '#5a80a8',
+  primaryDark: '#3a556a',
+
+  // Secondary Accent - Bronze (replaces gold)
+  gold: '#b8956a',
+  goldLight: '#caa87a',
+  goldDark: '#9a7855',
+
+  // Backgrounds - Cool Stone
+  backgroundDark: '#1a2025',
+  backgroundMid: '#2a3035',
+
+  // States
+  victory: '#5a8c75',       // Muted teal-green
+  victoryDark: '#4a7a65',
+  defeat: '#8b6a6a',        // Muted dusty rose
+  defeatDark: '#7a5a5a',
+  readyGreen: '#6aa688',    // Softer green (replaces neon #00ff00)
+  readyGreenDark: '#5a9678'
 };
 
 /**
@@ -76,9 +82,9 @@ export function getColiseumStyles() {
 
     .coliseum-title h2 {
       margin: 0;
-      color: ${ARENA_COLORS.blood};
+      color: ${ARENA_COLORS.primary};
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
-      text-shadow: 0 0 10px rgba(255, 68, 68, 0.5);
+      text-shadow: 0 0 10px rgba(74, 107, 138, 0.5);
     }
 
     .coliseum-title-icon {
@@ -222,14 +228,14 @@ export function getColiseumStyles() {
     }
 
     .coliseum-queue-btn.join {
-      background: linear-gradient(180deg, ${ARENA_COLORS.blood}, ${ARENA_COLORS.bloodDark});
+      background: linear-gradient(180deg, ${ARENA_COLORS.primary}, ${ARENA_COLORS.primaryDark});
       color: white;
-      border: 1px solid ${ARENA_COLORS.bloodDeep};
+      border: 1px solid ${ARENA_COLORS.primaryDark};
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
     .coliseum-queue-btn.join:hover:not(:disabled) {
-      background: linear-gradient(180deg, ${ARENA_COLORS.bloodLight}, ${ARENA_COLORS.blood});
+      background: linear-gradient(180deg, ${ARENA_COLORS.primaryLight}, ${ARENA_COLORS.primary});
       transform: scale(1.05);
     }
 
@@ -260,7 +266,7 @@ export function getColiseumStyles() {
     .coliseum-queue-position {
       font-size: 36px;
       font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
-      color: ${ARENA_COLORS.blood};
+      color: ${ARENA_COLORS.primary};
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       margin-bottom: ${PARCHMENT_SPACING.sm};
     }
@@ -285,7 +291,7 @@ export function getColiseumStyles() {
       width: 20px;
       height: 20px;
       border: 3px solid ${P.border};
-      border-top-color: ${ARENA_COLORS.blood};
+      border-top-color: ${ARENA_COLORS.primary};
       border-radius: 50%;
       animation: coliseum-spin 1s linear infinite;
     }
@@ -294,9 +300,9 @@ export function getColiseumStyles() {
       to { transform: rotate(360deg); }
     }
 
-    /* Match Found Panel - Arena themed (gold/excitement) */
+    /* Match Found Panel - Arena themed (bronze accent) */
     .coliseum-match-found-panel {
-      background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 140, 0, 0.1));
+      background: linear-gradient(135deg, rgba(184, 149, 106, 0.15), rgba(154, 120, 85, 0.1));
       border: 3px solid ${ARENA_COLORS.gold};
       border-radius: ${PARCHMENT_RADIUS.lg};
       padding: ${PARCHMENT_SPACING.xxl};
@@ -307,8 +313,8 @@ export function getColiseumStyles() {
     }
 
     @keyframes coliseum-pulse {
-      0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
-      50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.6); }
+      0%, 100% { box-shadow: 0 0 20px rgba(184, 149, 106, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(184, 149, 106, 0.6); }
     }
 
     .coliseum-match-found-title {
@@ -317,7 +323,7 @@ export function getColiseumStyles() {
       color: ${ARENA_COLORS.gold};
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       margin-bottom: ${PARCHMENT_SPACING.xl};
-      text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+      text-shadow: 0 0 10px rgba(184, 149, 106, 0.5);
     }
 
     /* Opponent Info - Parchment panel inside match found */
@@ -336,7 +342,7 @@ export function getColiseumStyles() {
 
     .coliseum-opponent-name {
       font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
-      color: ${ARENA_COLORS.blood};
+      color: ${ARENA_COLORS.primary};
       font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
     }
@@ -366,7 +372,7 @@ export function getColiseumStyles() {
     }
 
     .coliseum-ready-btn:hover:not(:disabled) {
-      background: linear-gradient(180deg, #5dbf5d, ${ARENA_COLORS.victory});
+      background: linear-gradient(180deg, ${ARENA_COLORS.readyGreen}, ${ARENA_COLORS.victory});
       transform: scale(1.05);
     }
 
@@ -405,12 +411,12 @@ export function getColiseumStyles() {
 
     .coliseum-ready-indicator .dot.ready {
       background: ${ARENA_COLORS.readyGreen};
-      box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+      box-shadow: 0 0 10px rgba(106, 166, 136, 0.5);
     }
 
     .coliseum-countdown {
       font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
-      color: ${ARENA_COLORS.blood};
+      color: ${ARENA_COLORS.primary};
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       margin-top: ${PARCHMENT_SPACING.lg};
     }
@@ -421,7 +427,7 @@ export function getColiseumStyles() {
     }
 
     .coliseum-match-starting {
-      background: rgba(0, 255, 0, 0.1);
+      background: rgba(106, 166, 136, 0.1);
       border-color: ${ARENA_COLORS.readyGreen};
     }
 
@@ -527,7 +533,7 @@ export function getColiseumStyles() {
     }
 
     .coliseum-rating-cell {
-      color: ${ARENA_COLORS.blood};
+      color: ${ARENA_COLORS.primary};
       font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
     }
 
