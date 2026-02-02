@@ -1,12 +1,13 @@
 /**
  * @module BattleStatsTable
- * @description DOM-based character stats table for post-battle summary display.
+ * @description DOM-based battle statistics table for post-battle summary display.
  *
- * Displays team performance metrics in a two-column layout with parchment styling.
- * Features slide-in/out animations and MVP highlighting for the winning team.
+ * Displays team performance metrics in a data table format with character portraits,
+ * grouped by ownerUsername. Features slide-in/out animations and MVP highlighting.
  *
  * Key responsibilities:
- * - Render battle statistics for both teams
+ * - Render battle statistics in tabular format with portraits
+ * - Group units by owner username with separator rows
  * - Determine MVP based on highest damage dealt
  * - Handle responsive layout for mobile devices
  * - Animate show/hide transitions
@@ -22,7 +23,7 @@ import { escapeHtml } from './battleLogUtils.js';
  *
  * Usage:
  *   const statsTable = new BattleStatsTable(battleScene);
- *   statsTable.show(unitStats, isPvP, isVictory, localUserId);
+ *   statsTable.show(unitStats, isPvP, isVictory, localUserId, localUsername);
  *   // Later...
  *   statsTable.hide();
  *   statsTable.destroy();
@@ -41,13 +42,14 @@ export class BattleStatsTable {
    * @param {boolean} isPvP - Whether this is a PvP battle
    * @param {boolean} isVictory - Whether the local player won
    * @param {number} localUserId - The local player's user ID
+   * @param {string} localUsername - The local player's username
    */
-  show(unitStats, isPvP, isVictory, localUserId) {
+  show(unitStats, isPvP, isVictory, localUserId, localUsername) {
     if (this.isVisible) {
       this.hide();
     }
 
-    this.createDOM(unitStats, isPvP, isVictory, localUserId);
+    this.createTableDOM(unitStats, isPvP, isVictory, localUserId, localUsername);
     this.isVisible = true;
 
     // Trigger slide-in animation after DOM insertion
@@ -73,35 +75,40 @@ export class BattleStatsTable {
   }
 
   /**
-   * Create the DOM structure for the stats table
+   * Create the DOM structure for the stats table in data table format
    * @param {Array} unitStats - Array of unit stat objects
    * @param {boolean} isPvP - Whether this is a PvP battle
    * @param {boolean} isVictory - Whether the local player won
    * @param {number} localUserId - The local player's user ID
+   * @param {string} localUsername - The local player's username
    */
-  createDOM(unitStats, isPvP, isVictory, localUserId) {
+  createTableDOM(unitStats, isPvP, isVictory, localUserId, localUsername) {
     this.addStyles();
 
-    // Separate units into teams
-    const { allies, opponents, mvpId } = this.categorizeUnits(unitStats, isPvP, isVictory, localUserId);
+    // Group units by owner and determine MVP
+    const { groups, mvpId } = this.groupUnitsByOwner(unitStats, isPvP, isVictory, localUserId, localUsername);
 
     // Create container
     this.container = document.createElement('div');
     this.container.className = 'battle-stats-table';
     this.container.innerHTML = `
-      <div class="bst-content">
-        <div class="bst-team-column bst-allies">
-          <div class="bst-team-header bst-header-ally">Your Team</div>
-          <div class="bst-cards-container">
-            ${this.renderTeamColumn(allies, true, mvpId)}
-          </div>
-        </div>
-        <div class="bst-team-column bst-opponents">
-          <div class="bst-team-header bst-header-opponent">Opponent Team</div>
-          <div class="bst-cards-container">
-            ${this.renderTeamColumn(opponents, false, mvpId)}
-          </div>
-        </div>
+      <div class="bst-header">BATTLE STATISTICS</div>
+      <div class="bst-table-wrapper">
+        <table class="bst-table">
+          <thead>
+            <tr class="bst-table-header">
+              <th class="bst-col-character">Character</th>
+              <th class="bst-col-stat">DMG Dealt</th>
+              <th class="bst-col-stat">DMG Taken</th>
+              <th class="bst-col-stat">Healing</th>
+              <th class="bst-col-stat bst-col-narrow">Kills</th>
+              <th class="bst-col-stat bst-col-narrow">Deaths</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${this.renderTableBody(groups, mvpId)}
+          </tbody>
+        </table>
       </div>
     `;
 
@@ -110,94 +117,211 @@ export class BattleStatsTable {
   }
 
   /**
-   * Categorize units into allies and opponents, determine MVP
+   * Group units by owner username
    * @param {Array} unitStats - Array of unit stat objects
    * @param {boolean} isPvP - Whether this is a PvP battle
    * @param {boolean} isVictory - Whether the local player won
    * @param {number} localUserId - The local player's user ID
-   * @returns {Object} { allies, opponents, mvpId }
+   * @param {string} localUsername - The local player's username
+   * @returns {Object} { groups: Array<{username, units}>, mvpId }
    */
-  categorizeUnits(unitStats, isPvP, isVictory, localUserId) {
-    let allies = [];
-    let opponents = [];
+  groupUnitsByOwner(unitStats, isPvP, isVictory, localUserId, localUsername) {
+    const groups = [];
+    let mvpId = null;
 
     if (isPvP) {
-      // PvP: allies = units owned by local player
-      allies = unitStats.filter(u => u.ownerId === localUserId);
-      opponents = unitStats.filter(u => u.ownerId !== localUserId);
+      // PvP: Group by ownerUsername
+      // First group: Local player's units
+      const localUnits = unitStats.filter(u => u.ownerId === localUserId);
+      const opponentUnits = unitStats.filter(u => u.ownerId !== localUserId);
+
+      if (localUnits.length > 0) {
+        const displayName = localUnits[0].ownerUsername || localUsername || 'You';
+        groups.push({
+          username: displayName,
+          units: localUnits,
+          isLocal: true
+        });
+      }
+
+      // Group opponent units by their ownerUsername
+      const opponentsByOwner = new Map();
+      for (const unit of opponentUnits) {
+        const ownerName = unit.ownerUsername || 'Opponent';
+        if (!opponentsByOwner.has(ownerName)) {
+          opponentsByOwner.set(ownerName, []);
+        }
+        opponentsByOwner.get(ownerName).push(unit);
+      }
+
+      for (const [ownerName, units] of opponentsByOwner) {
+        groups.push({
+          username: ownerName,
+          units: units,
+          isLocal: false
+        });
+      }
+
+      // Determine MVP (highest damage dealt on winning team)
+      if (isVictory && localUnits.length > 0) {
+        const topUnit = localUnits.reduce((best, unit) => {
+          const damage = unit.damageDealt || 0;
+          return damage > (best.damageDealt || 0) ? unit : best;
+        }, localUnits[0]);
+        mvpId = topUnit.id;
+      }
     } else {
-      // PvE: allies = player type, opponents = enemy type
-      allies = unitStats.filter(u => u.type === 'player');
-      opponents = unitStats.filter(u => u.type === 'enemy');
+      // PvE: Players first, then enemies
+      const playerUnits = unitStats.filter(u => u.type === 'player');
+      const enemyUnits = unitStats.filter(u => u.type === 'enemy');
+
+      // Group players by ownerUsername
+      const playersByOwner = new Map();
+      for (const unit of playerUnits) {
+        const ownerName = unit.ownerUsername || localUsername || 'Your Party';
+        if (!playersByOwner.has(ownerName)) {
+          playersByOwner.set(ownerName, []);
+        }
+        playersByOwner.get(ownerName).push(unit);
+      }
+
+      for (const [ownerName, units] of playersByOwner) {
+        groups.push({
+          username: ownerName,
+          units: units,
+          isLocal: true
+        });
+      }
+
+      // Enemies grouped together
+      if (enemyUnits.length > 0) {
+        groups.push({
+          username: 'Enemies',
+          units: enemyUnits,
+          isLocal: false
+        });
+      }
+
+      // Determine MVP (highest damage dealt on player team)
+      if (isVictory && playerUnits.length > 0) {
+        const topUnit = playerUnits.reduce((best, unit) => {
+          const damage = unit.damageDealt || 0;
+          return damage > (best.damageDealt || 0) ? unit : best;
+        }, playerUnits[0]);
+        mvpId = topUnit.id;
+      }
     }
 
-    // Determine MVP (highest damage dealt on winning team)
-    let mvpId = null;
-    if (isVictory && allies.length > 0) {
-      const topAlly = allies.reduce((best, unit) => {
-        const damage = unit.damageDealt || 0;
-        return damage > (best.damageDealt || 0) ? unit : best;
-      }, allies[0]);
-      mvpId = topAlly.id;
-    }
-
-    return { allies, opponents, mvpId };
+    return { groups, mvpId };
   }
 
   /**
-   * Render a team column of stat cards
-   * @param {Array} units - Array of units for this team
-   * @param {boolean} isAlly - Whether this is the ally team
-   * @param {string|null} mvpId - ID of the MVP unit (if any)
-   * @returns {string} HTML string for the cards
+   * Render the table body with groups and unit rows
+   * @param {Array} groups - Array of group objects {username, units, isLocal}
+   * @param {string|null} mvpId - ID of the MVP unit
+   * @returns {string} HTML string for table body
    */
-  renderTeamColumn(units, isAlly, mvpId) {
-    if (units.length === 0) {
-      return '<div class="bst-empty">No units</div>';
+  renderTableBody(groups, mvpId) {
+    if (groups.length === 0) {
+      return `
+        <tr>
+          <td colspan="6" class="bst-empty">No battle statistics available</td>
+        </tr>
+      `;
     }
 
-    return units.map(unit => {
-      const isMvp = unit.id === mvpId;
-      const cardClass = `bst-card ${isAlly ? 'bst-card-ally' : 'bst-card-opponent'} ${isMvp ? 'bst-card-mvp' : ''}`;
+    let html = '';
+    let rowIndex = 0;
 
-      return `
-        <div class="${cardClass}">
-          ${isMvp ? '<div class="bst-mvp-badge">MVP</div>' : ''}
-          <div class="bst-card-header">
-            <div class="bst-unit-info">
-              <div class="bst-unit-name">${escapeHtml(unit.name || 'Unknown')}</div>
-              <div class="bst-unit-details">
-                <span class="bst-unit-class">${this.capitalize(unit.class || unit.type || 'Unknown')}</span>
-                ${unit.race ? `<span class="bst-unit-race">${this.capitalize(unit.race)}</span>` : ''}
-              </div>
-            </div>
-            <div class="bst-unit-level">Lv.${unit.level || 1}</div>
-          </div>
-          <div class="bst-stats-grid">
-            <div class="bst-stat-row">
-              <span class="bst-stat-label">DMG Dealt:</span>
-              <span class="bst-stat-value bst-stat-damage">${this.formatNumber(unit.damageDealt || 0)}</span>
-            </div>
-            <div class="bst-stat-row">
-              <span class="bst-stat-label">DMG Taken:</span>
-              <span class="bst-stat-value bst-stat-taken">${this.formatNumber(unit.damageTaken || 0)}</span>
-            </div>
-            <div class="bst-stat-row">
-              <span class="bst-stat-label">Healing:</span>
-              <span class="bst-stat-value bst-stat-healing">${this.formatNumber(unit.healingDone || 0)}</span>
-            </div>
-            <div class="bst-stat-row">
-              <span class="bst-stat-label">K / D:</span>
-              <span class="bst-stat-value bst-stat-kd">
-                <span class="bst-kills">${unit.kills || 0}</span>
-                <span class="bst-separator">/</span>
-                <span class="bst-deaths">${unit.deaths || 0}</span>
-              </span>
-            </div>
-          </div>
-        </div>
+    for (const group of groups) {
+      // Add separator row for group
+      html += `
+        <tr class="bst-separator-row">
+          <td colspan="6" class="bst-separator-cell">
+            <span class="bst-separator-text">${escapeHtml(group.username)}</span>
+          </td>
+        </tr>
       `;
-    }).join('');
+
+      // Add unit rows
+      for (const unit of group.units) {
+        const isMvp = unit.id === mvpId;
+        const zebraClass = rowIndex % 2 === 0 ? 'bst-row-even' : 'bst-row-odd';
+        const mvpClass = isMvp ? 'bst-row-mvp' : '';
+
+        html += this.renderUnitRow(unit, isMvp, zebraClass, mvpClass);
+        rowIndex++;
+      }
+    }
+
+    return html;
+  }
+
+  /**
+   * Render a single unit row
+   * @param {Object} unit - Unit stat object
+   * @param {boolean} isMvp - Whether this unit is MVP
+   * @param {string} zebraClass - Zebra striping class
+   * @param {string} mvpClass - MVP styling class
+   * @returns {string} HTML string for the row
+   */
+  renderUnitRow(unit, isMvp, zebraClass, mvpClass) {
+    const portraitPath = this.getPortraitPath(unit);
+    const fallbackLetter = (unit.name || 'U').charAt(0).toUpperCase();
+    const fallbackColor = unit.type === 'enemy' ? '#8b4444' : '#4a6088';
+
+    const levelInfo = `Lv.${unit.level || 1}`;
+    const raceClass = unit.race
+      ? `${this.capitalize(unit.race)} ${this.capitalize(unit.class || unit.type || '')}`
+      : this.capitalize(unit.class || unit.type || 'Unknown');
+
+    return `
+      <tr class="bst-unit-row ${zebraClass} ${mvpClass}">
+        <td class="bst-col-character">
+          <div class="bst-character-cell">
+            <div class="bst-portrait-container">
+              <img
+                src="${escapeHtml(portraitPath)}"
+                alt="${escapeHtml(unit.name || 'Unit')}"
+                class="bst-portrait"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+              />
+              <div class="bst-portrait-fallback" style="display:none; background-color: ${fallbackColor};">
+                ${escapeHtml(fallbackLetter)}
+              </div>
+              ${isMvp ? '<div class="bst-mvp-badge">MVP</div>' : ''}
+            </div>
+            <div class="bst-character-info">
+              <div class="bst-unit-name">${escapeHtml(unit.name || 'Unknown')}</div>
+              <div class="bst-unit-details">${escapeHtml(levelInfo)} ${escapeHtml(raceClass)}</div>
+            </div>
+          </div>
+        </td>
+        <td class="bst-col-stat bst-stat-damage">${this.formatNumber(unit.damageDealt || 0)}</td>
+        <td class="bst-col-stat bst-stat-taken">${this.formatNumber(unit.damageTaken || 0)}</td>
+        <td class="bst-col-stat bst-stat-healing">${this.formatNumber(unit.healingDone || 0)}</td>
+        <td class="bst-col-stat bst-col-narrow bst-stat-kills">${unit.kills || 0}</td>
+        <td class="bst-col-stat bst-col-narrow bst-stat-deaths">${unit.deaths || 0}</td>
+      </tr>
+    `;
+  }
+
+  /**
+   * Get the portrait path for a unit
+   * @param {Object} unit - Unit object with type, race, class, enemyType
+   * @returns {string} Path to portrait image
+   */
+  getPortraitPath(unit) {
+    if (unit.type === 'enemy') {
+      // Enemy portrait path
+      const enemyType = unit.enemyType || unit.class || 'unknown';
+      return `/assets/portraits/enemies/${enemyType.toLowerCase()}.png`;
+    } else {
+      // Player portrait path
+      const race = (unit.race || 'human').toLowerCase();
+      const charClass = (unit.class || 'warrior').toLowerCase();
+      return `/assets/portraits/players/${race}_${charClass}.png`;
+    }
   }
 
   /**
@@ -218,10 +342,8 @@ export class BattleStatsTable {
         background: rgba(40, 35, 30, 0.95);
         border: 3px solid #5a4a3a;
         border-radius: 8px;
-        padding: 20px;
         max-width: 90vw;
-        max-height: 70vh;
-        overflow-y: auto;
+        max-height: 75vh;
         opacity: 0;
         transition: opacity 0.35s ease, transform 0.35s ease;
         z-index: 150;
@@ -229,6 +351,8 @@ export class BattleStatsTable {
           0 8px 32px rgba(0, 0, 0, 0.5),
           inset 0 1px 0 rgba(255, 255, 255, 0.1);
         font-family: 'Georgia', 'Times New Roman', serif;
+        display: flex;
+        flex-direction: column;
       }
 
       .battle-stats-table.visible {
@@ -236,120 +360,176 @@ export class BattleStatsTable {
         transform: translate(-50%, -50%) scale(1);
       }
 
-      /* Content Layout */
-      .bst-content {
-        display: flex;
-        gap: 24px;
+      /* Header */
+      .bst-header {
+        font-size: 18px;
+        font-weight: bold;
+        text-align: center;
+        padding: 16px 20px 12px;
+        color: #d4c4a8;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        border-bottom: 2px solid #5a4a3a;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      /* Table Wrapper - scrollable */
+      .bst-table-wrapper {
+        overflow-y: auto;
+        overflow-x: auto;
+        flex: 1;
+        padding: 0 4px 4px;
+      }
+
+      /* Table */
+      .bst-table {
+        width: 100%;
+        border-collapse: collapse;
         min-width: 600px;
       }
 
-      /* Team Columns */
-      .bst-team-column {
-        flex: 1;
-        min-width: 280px;
+      /* Table Header */
+      .bst-table-header th {
+        position: sticky;
+        top: 0;
+        background: rgba(50, 45, 38, 0.98);
+        color: #b8a888;
+        font-size: 12px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        padding: 12px 8px;
+        text-align: right;
+        border-bottom: 2px solid #5a4a3a;
+        z-index: 10;
       }
 
-      /* Team Headers */
-      .bst-team-header {
-        font-size: 16px;
-        font-weight: bold;
+      .bst-table-header th.bst-col-character {
+        text-align: left;
+        min-width: 200px;
+      }
+
+      .bst-col-stat {
+        min-width: 80px;
+      }
+
+      .bst-col-narrow {
+        min-width: 50px;
+      }
+
+      /* Separator Row */
+      .bst-separator-row {
+        background: rgba(90, 74, 58, 0.4);
+      }
+
+      .bst-separator-cell {
+        padding: 8px 16px;
         text-align: center;
-        padding: 8px 12px;
-        margin-bottom: 12px;
-        border-radius: 4px;
-        text-transform: uppercase;
+      }
+
+      .bst-separator-text {
+        color: #c4b494;
+        font-size: 13px;
+        font-weight: bold;
         letter-spacing: 1px;
       }
 
-      .bst-header-ally {
-        color: #a8c4e8;
-        background: rgba(74, 96, 136, 0.3);
-        border: 1px solid #4a6088;
+      .bst-separator-text::before,
+      .bst-separator-text::after {
+        content: '\\2500\\2500';
+        margin: 0 12px;
+        color: #7a6a5a;
       }
 
-      .bst-header-opponent {
-        color: #e8a8a8;
-        background: rgba(139, 68, 68, 0.3);
-        border: 1px solid #8b4444;
+      /* Unit Rows */
+      .bst-unit-row {
+        transition: background-color 0.2s ease;
       }
 
-      /* Cards Container */
-      .bst-cards-container {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
+      .bst-row-even {
+        background: rgba(60, 52, 42, 0.6);
       }
 
-      /* Individual Cards */
-      .bst-card {
-        position: relative;
-        background: rgba(191, 174, 138, 0.95);
-        border-radius: 4px;
-        padding: 10px 12px;
-        box-shadow:
-          0 2px 6px rgba(0, 0, 0, 0.25),
-          inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      .bst-row-odd {
+        background: rgba(50, 44, 36, 0.6);
       }
 
-      .bst-card-ally {
-        border: 2px solid #4a6088;
+      .bst-unit-row:hover {
+        background: rgba(80, 70, 55, 0.7);
       }
 
-      .bst-card-opponent {
-        border: 2px solid #8b4444;
+      .bst-row-mvp {
+        background: rgba(255, 215, 0, 0.1) !important;
+        animation: mvpRowGlow 2s ease-in-out infinite alternate;
       }
 
-      .bst-card-mvp {
-        border-color: #ffd700;
-        box-shadow:
-          0 0 12px rgba(255, 215, 0, 0.4),
-          0 2px 6px rgba(0, 0, 0, 0.25),
-          inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        animation: mvpGlow 2s ease-in-out infinite alternate;
-      }
-
-      @keyframes mvpGlow {
+      @keyframes mvpRowGlow {
         from {
-          box-shadow:
-            0 0 8px rgba(255, 215, 0, 0.3),
-            0 2px 6px rgba(0, 0, 0, 0.25),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+          background: rgba(255, 215, 0, 0.08);
         }
         to {
-          box-shadow:
-            0 0 16px rgba(255, 215, 0, 0.5),
-            0 2px 6px rgba(0, 0, 0, 0.25),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3);
+          background: rgba(255, 215, 0, 0.15);
         }
+      }
+
+      /* Character Cell */
+      .bst-character-cell {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+      }
+
+      /* Portrait Container */
+      .bst-portrait-container {
+        position: relative;
+        width: 64px;
+        height: 64px;
+        flex-shrink: 0;
+      }
+
+      .bst-portrait {
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+        border-radius: 4px;
+        border: 2px solid #5a4a3a;
+        background: rgba(30, 25, 20, 0.8);
+      }
+
+      .bst-portrait-fallback {
+        width: 64px;
+        height: 64px;
+        border-radius: 4px;
+        border: 2px solid #5a4a3a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        font-weight: bold;
+        color: #fff;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
       }
 
       /* MVP Badge */
       .bst-mvp-badge {
         position: absolute;
-        top: -8px;
-        right: 8px;
+        top: -6px;
+        right: -6px;
         background: linear-gradient(to bottom, #ffd700, #c9a227);
         color: #2a1f0a;
-        font-size: 10px;
+        font-size: 9px;
         font-weight: bold;
-        padding: 2px 8px;
+        padding: 2px 6px;
         border-radius: 3px;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+        z-index: 5;
       }
 
-      /* Card Header */
-      .bst-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 8px;
-        padding-bottom: 6px;
-        border-bottom: 1px solid rgba(90, 74, 58, 0.3);
-      }
-
-      .bst-unit-info {
+      /* Character Info */
+      .bst-character-info {
         flex: 1;
         min-width: 0;
       }
@@ -357,94 +537,47 @@ export class BattleStatsTable {
       .bst-unit-name {
         font-size: 14px;
         font-weight: bold;
-        color: #2d2418;
+        color: #e8dcc8;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
       }
 
       .bst-unit-details {
         font-size: 11px;
-        color: #5a4a3a;
-        margin-top: 2px;
+        color: #a8988a;
+        margin-top: 3px;
       }
 
-      .bst-unit-class {
-        font-weight: 600;
-      }
-
-      .bst-unit-race::before {
-        content: ' - ';
-        color: #7a6a5a;
-      }
-
-      .bst-unit-level {
-        font-size: 12px;
-        font-weight: bold;
-        color: #4a3c2a;
-        background: rgba(0, 0, 0, 0.1);
-        padding: 2px 8px;
-        border-radius: 3px;
-        flex-shrink: 0;
-      }
-
-      /* Stats Grid */
-      .bst-stats-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-
-      .bst-stat-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 12px;
-      }
-
-      .bst-stat-label {
-        color: #5a4a3a;
-        font-weight: 500;
-      }
-
-      .bst-stat-value {
+      /* Stat Columns */
+      .bst-unit-row td.bst-col-stat {
         font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 13px;
         font-weight: bold;
-        color: #2d2418;
-        min-width: 60px;
         text-align: right;
+        padding: 8px 12px;
+        vertical-align: middle;
       }
 
       .bst-stat-damage {
-        color: #8b4444;
+        color: #e87070;
       }
 
       .bst-stat-taken {
-        color: #6a5a4a;
+        color: #a89888;
       }
 
       .bst-stat-healing {
-        color: #3d6b35;
+        color: #70c870;
       }
 
-      .bst-stat-kd {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        justify-content: flex-end;
+      .bst-stat-kills {
+        color: #88b8e8;
       }
 
-      .bst-kills {
-        color: #4a6088;
-      }
-
-      .bst-separator {
-        color: #7a6a5a;
-      }
-
-      .bst-deaths {
-        color: #8b4444;
+      .bst-stat-deaths {
+        color: #e87070;
       }
 
       /* Empty State */
@@ -452,75 +585,121 @@ export class BattleStatsTable {
         text-align: center;
         color: #7a6a5a;
         font-style: italic;
-        padding: 20px;
+        padding: 40px 20px;
+      }
+
+      /* Scrollbar Styling */
+      .bst-table-wrapper::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      .bst-table-wrapper::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 4px;
+      }
+
+      .bst-table-wrapper::-webkit-scrollbar-thumb {
+        background: rgba(139, 115, 85, 0.6);
+        border-radius: 4px;
+      }
+
+      .bst-table-wrapper::-webkit-scrollbar-thumb:hover {
+        background: rgba(139, 115, 85, 0.8);
+      }
+
+      .bst-table-wrapper::-webkit-scrollbar-corner {
+        background: transparent;
       }
 
       /* Mobile Styles */
-      @media (max-width: 600px) {
+      @media (max-width: 700px) {
         .battle-stats-table {
-          padding: 12px;
-          max-height: 50vh;
+          max-height: 60vh;
         }
 
-        .bst-content {
-          flex-direction: column;
-          min-width: unset;
-          gap: 16px;
+        .bst-header {
+          font-size: 15px;
+          padding: 12px 16px 10px;
+          letter-spacing: 1px;
         }
 
-        .bst-team-column {
-          min-width: unset;
+        .bst-table {
+          min-width: 500px;
         }
 
-        .bst-team-header {
-          font-size: 14px;
-          padding: 6px 10px;
-          margin-bottom: 8px;
+        .bst-table-header th {
+          font-size: 10px;
+          padding: 8px 6px;
         }
 
-        .bst-card {
-          padding: 8px 10px;
+        .bst-portrait-container {
+          width: 48px;
+          height: 48px;
+        }
+
+        .bst-portrait,
+        .bst-portrait-fallback {
+          width: 48px;
+          height: 48px;
+        }
+
+        .bst-portrait-fallback {
+          font-size: 20px;
+        }
+
+        .bst-character-cell {
+          gap: 8px;
+          padding: 6px 8px;
         }
 
         .bst-unit-name {
-          font-size: 13px;
+          font-size: 12px;
         }
 
         .bst-unit-details {
           font-size: 10px;
         }
 
-        .bst-unit-level {
+        .bst-unit-row td.bst-col-stat {
           font-size: 11px;
-          padding: 2px 6px;
+          padding: 6px 8px;
         }
 
-        .bst-stat-row {
+        .bst-separator-cell {
+          padding: 6px 12px;
+        }
+
+        .bst-separator-text {
           font-size: 11px;
         }
 
-        .bst-stat-value {
-          min-width: 50px;
+        .bst-separator-text::before,
+        .bst-separator-text::after {
+          margin: 0 8px;
+        }
+
+        .bst-mvp-badge {
+          font-size: 8px;
+          padding: 1px 4px;
+          top: -4px;
+          right: -4px;
         }
       }
 
-      /* Scrollbar Styling */
-      .battle-stats-table::-webkit-scrollbar {
-        width: 8px;
-      }
+      /* Very small screens */
+      @media (max-width: 500px) {
+        .bst-table {
+          min-width: 450px;
+        }
 
-      .battle-stats-table::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.2);
-        border-radius: 4px;
-      }
+        .bst-col-stat {
+          min-width: 55px;
+        }
 
-      .battle-stats-table::-webkit-scrollbar-thumb {
-        background: rgba(139, 115, 85, 0.6);
-        border-radius: 4px;
-      }
-
-      .battle-stats-table::-webkit-scrollbar-thumb:hover {
-        background: rgba(139, 115, 85, 0.8);
+        .bst-col-narrow {
+          min-width: 40px;
+        }
       }
     `;
     document.head.appendChild(style);

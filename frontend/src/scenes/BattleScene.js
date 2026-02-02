@@ -2060,9 +2060,14 @@ export class BattleScene extends Scene {
     }
     this.battleEnded = true;
 
-    // Guard against UI being null
+    // Hide battle UI elements for outro
     if (this.ui) {
       this.ui.hideActionMenu();
+      this.ui.hideForOutro();
+      // Also disable PvP mode to hide surrender button
+      if (this.isPvP) {
+        this.ui.pvpUI?.disablePvPMode();
+      }
     }
 
     // Play victory or defeat fanfare

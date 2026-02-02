@@ -255,6 +255,7 @@ export async function calculateEnhancedMatchStats(battleId) {
   if (!state || !state.units) return null;
 
   // Build unit stats map for O(1) lookup
+  // Use unit's tracked stats as fallback (handles surrender before combat)
   const unitStatsMap = new Map();
 
   for (const unit of state.units) {
@@ -266,16 +267,31 @@ export async function calculateEnhancedMatchStats(battleId) {
       level: unit.level,
       teamId: unit.teamId,
       ownerId: unit.ownerId,
-      damageDealt: 0,
-      damageTaken: 0,
-      healingDone: 0,
-      kills: 0,
+      type: unit.type || 'player',
+      // Fallback to unit's tracked values for surrender scenarios
+      damageDealt: unit.damageDealt || 0,
+      damageTaken: unit.damageTaken || 0,
+      healingDone: unit.healingDone || 0,
+      kills: unit.kills || 0,
       deaths: unit.hp <= 0 ? 1 : 0,
       survivedWith: Math.max(0, unit.hp)
     });
   }
 
-  // Parse battle log for damage/healing/kills
+  // Track which units have pre-tracked stats (from battle state) vs need log accumulation
+  const hasPreTrackedDamageDealt = new Set();
+  const hasPreTrackedDamageTaken = new Set();
+  const hasPreTrackedHealingDone = new Set();
+  const hasPreTrackedKills = new Set();
+
+  for (const unit of state.units) {
+    if (unit.damageDealt) hasPreTrackedDamageDealt.add(unit.id);
+    if (unit.damageTaken) hasPreTrackedDamageTaken.add(unit.id);
+    if (unit.healingDone) hasPreTrackedHealingDone.add(unit.id);
+    if (unit.kills) hasPreTrackedKills.add(unit.id);
+  }
+
+  // Parse battle log for damage/healing/kills (only for units without pre-tracked stats)
   if (state.log && Array.isArray(state.log)) {
     for (const entry of state.log) {
       const actorId = entry.actorId;
@@ -285,11 +301,11 @@ export async function calculateEnhancedMatchStats(battleId) {
       const damage = entry.damage ?? entry.result?.damage ?? 0;
       if (damage > 0) {
         const actorStats = unitStatsMap.get(actorId);
-        if (actorStats) {
+        if (actorStats && !hasPreTrackedDamageDealt.has(actorId)) {
           actorStats.damageDealt += damage;
         }
         const targetStats = unitStatsMap.get(targetId);
-        if (targetStats) {
+        if (targetStats && !hasPreTrackedDamageTaken.has(targetId)) {
           targetStats.damageTaken += damage;
         }
       }
@@ -298,7 +314,7 @@ export async function calculateEnhancedMatchStats(battleId) {
       const healing = entry.healing ?? entry.result?.healing ?? 0;
       if (healing > 0) {
         const actorStats = unitStatsMap.get(actorId);
-        if (actorStats) {
+        if (actorStats && !hasPreTrackedHealingDone.has(actorId)) {
           actorStats.healingDone += healing;
         }
       }
@@ -307,10 +323,25 @@ export async function calculateEnhancedMatchStats(battleId) {
       const targetDefeated = entry.targetDefeated ?? entry.result?.targetDefeated ?? false;
       if (targetDefeated) {
         const actorStats = unitStatsMap.get(actorId);
-        if (actorStats) {
+        if (actorStats && !hasPreTrackedKills.has(actorId)) {
           actorStats.kills += 1;
         }
       }
+    }
+  }
+
+  // Get usernames for all owners
+  const ownerIds = [...new Set(state.units.map(u => u.ownerId).filter(Boolean))];
+  if (ownerIds.length > 0) {
+    const usersResult = await query(
+      'SELECT id, username FROM users WHERE id = ANY($1)',
+      [ownerIds]
+    );
+    const usernameMap = new Map(usersResult.rows.map(u => [u.id, u.username]));
+
+    // Add ownerUsername to each unit stats
+    for (const stats of unitStatsMap.values()) {
+      stats.ownerUsername = usernameMap.get(stats.ownerId) || null;
     }
   }
 

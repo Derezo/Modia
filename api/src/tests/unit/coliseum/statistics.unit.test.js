@@ -42,6 +42,7 @@ async function calculateEnhancedMatchStatsLogic(battleId, queryFn) {
   if (!state || !state.units) return null;
 
   // Build unit stats map for O(1) lookup
+  // Use unit's tracked stats as fallback (handles surrender before combat)
   const unitStatsMap = new Map();
 
   for (const unit of state.units) {
@@ -53,16 +54,31 @@ async function calculateEnhancedMatchStatsLogic(battleId, queryFn) {
       level: unit.level,
       teamId: unit.teamId,
       ownerId: unit.ownerId,
-      damageDealt: 0,
-      damageTaken: 0,
-      healingDone: 0,
-      kills: 0,
+      type: unit.type || 'player',
+      // Fallback to unit's tracked values for surrender scenarios
+      damageDealt: unit.damageDealt || 0,
+      damageTaken: unit.damageTaken || 0,
+      healingDone: unit.healingDone || 0,
+      kills: unit.kills || 0,
       deaths: unit.hp <= 0 ? 1 : 0,
       survivedWith: Math.max(0, unit.hp)
     });
   }
 
-  // Parse battle log for damage/healing/kills
+  // Track which units have pre-tracked stats (from battle state) vs need log accumulation
+  const hasPreTrackedDamageDealt = new Set();
+  const hasPreTrackedDamageTaken = new Set();
+  const hasPreTrackedHealingDone = new Set();
+  const hasPreTrackedKills = new Set();
+
+  for (const unit of state.units) {
+    if (unit.damageDealt) hasPreTrackedDamageDealt.add(unit.id);
+    if (unit.damageTaken) hasPreTrackedDamageTaken.add(unit.id);
+    if (unit.healingDone) hasPreTrackedHealingDone.add(unit.id);
+    if (unit.kills) hasPreTrackedKills.add(unit.id);
+  }
+
+  // Parse battle log for damage/healing/kills (only for units without pre-tracked stats)
   if (state.log && Array.isArray(state.log)) {
     for (const entry of state.log) {
       const actorId = entry.actorId;
@@ -72,11 +88,11 @@ async function calculateEnhancedMatchStatsLogic(battleId, queryFn) {
       const damage = entry.damage ?? entry.result?.damage ?? 0;
       if (damage > 0) {
         const actorStats = unitStatsMap.get(actorId);
-        if (actorStats) {
+        if (actorStats && !hasPreTrackedDamageDealt.has(actorId)) {
           actorStats.damageDealt += damage;
         }
         const targetStats = unitStatsMap.get(targetId);
-        if (targetStats) {
+        if (targetStats && !hasPreTrackedDamageTaken.has(targetId)) {
           targetStats.damageTaken += damage;
         }
       }
@@ -85,7 +101,7 @@ async function calculateEnhancedMatchStatsLogic(battleId, queryFn) {
       const healing = entry.healing ?? entry.result?.healing ?? 0;
       if (healing > 0) {
         const actorStats = unitStatsMap.get(actorId);
-        if (actorStats) {
+        if (actorStats && !hasPreTrackedHealingDone.has(actorId)) {
           actorStats.healingDone += healing;
         }
       }
@@ -94,7 +110,7 @@ async function calculateEnhancedMatchStatsLogic(battleId, queryFn) {
       const targetDefeated = entry.targetDefeated ?? entry.result?.targetDefeated ?? false;
       if (targetDefeated) {
         const actorStats = unitStatsMap.get(actorId);
-        if (actorStats) {
+        if (actorStats && !hasPreTrackedKills.has(actorId)) {
           actorStats.kills += 1;
         }
       }
@@ -910,6 +926,168 @@ describe('calculateEnhancedMatchStats', () => {
       // Verify battle summary
       assert.strictEqual(result.battleSummary.totalTurns, 7);
       assert.ok(result.battleSummary.durationSeconds >= 179 && result.battleSummary.durationSeconds <= 181);
+    });
+  });
+
+  // =========================================================================
+  // TYPE FIELD AND SURRENDER FALLBACKS (v4.0 additions)
+  // =========================================================================
+
+  describe('type field handling', () => {
+    it('should include type field from unit', async () => {
+      const playerUnit = createMockUnit({ id: 'player1', teamId: 1, type: 'player' });
+      const enemyUnit = createMockUnit({ id: 'enemy1', teamId: 2, type: 'enemy' });
+
+      const mockQueryFn = createMockQueryFn({
+        rows: [{
+          battle_state: createMockBattleState({
+            units: [playerUnit, enemyUnit],
+            log: []
+          }),
+          started_at: new Date(Date.now() - 60000)
+        }]
+      });
+
+      const result = await calculateEnhancedMatchStatsLogic(1, mockQueryFn);
+
+      assert.ok(result);
+      const playerStats = result.unitStats.find(u => u.id === 'player1');
+      const enemyStats = result.unitStats.find(u => u.id === 'enemy1');
+
+      assert.strictEqual(playerStats.type, 'player');
+      assert.strictEqual(enemyStats.type, 'enemy');
+    });
+
+    it('should default type to "player" when not specified', async () => {
+      const unitWithoutType = createMockUnit({ id: 'unit1', teamId: 1 });
+      delete unitWithoutType.type; // Ensure type is not present
+
+      const mockQueryFn = createMockQueryFn({
+        rows: [{
+          battle_state: createMockBattleState({
+            units: [unitWithoutType],
+            log: []
+          }),
+          started_at: new Date(Date.now() - 60000)
+        }]
+      });
+
+      const result = await calculateEnhancedMatchStatsLogic(1, mockQueryFn);
+
+      assert.ok(result);
+      assert.strictEqual(result.unitStats[0].type, 'player');
+    });
+  });
+
+  describe('surrender scenario fallbacks', () => {
+    it('should use pre-tracked unit stats when no log entries exist', async () => {
+      const unitWithPreTrackedStats = {
+        id: 'unit1',
+        name: 'TestUnit',
+        class: 'warrior',
+        race: 'human',
+        level: 10,
+        teamId: 1,
+        ownerId: 1,
+        hp: 80,
+        type: 'player',
+        // Pre-tracked stats (e.g., from battle state before surrender)
+        damageDealt: 150,
+        damageTaken: 40,
+        healingDone: 25,
+        kills: 1
+      };
+
+      const mockQueryFn = createMockQueryFn({
+        rows: [{
+          battle_state: {
+            units: [unitWithPreTrackedStats],
+            log: [], // Empty log (surrender scenario)
+            turn: 2
+          },
+          started_at: new Date(Date.now() - 30000)
+        }]
+      });
+
+      const result = await calculateEnhancedMatchStatsLogic(1, mockQueryFn);
+
+      assert.ok(result);
+      const stats = result.unitStats[0];
+
+      // Should use pre-tracked values from unit object
+      assert.strictEqual(stats.damageDealt, 150);
+      assert.strictEqual(stats.damageTaken, 40);
+      assert.strictEqual(stats.healingDone, 25);
+      assert.strictEqual(stats.kills, 1);
+    });
+
+    it('should not overwrite pre-tracked stats with log entries', async () => {
+      const unitWithPreTrackedStats = {
+        id: 'unit1',
+        name: 'TestUnit',
+        class: 'warrior',
+        race: 'human',
+        level: 10,
+        teamId: 1,
+        ownerId: 1,
+        hp: 100,
+        type: 'player',
+        damageDealt: 200 // Pre-tracked value
+      };
+
+      const mockQueryFn = createMockQueryFn({
+        rows: [{
+          battle_state: {
+            units: [unitWithPreTrackedStats],
+            log: [
+              // Log entry that would add damage, but should be ignored
+              { actorId: 'unit1', targetId: 'enemy1', damage: 50 }
+            ],
+            turn: 5
+          },
+          started_at: new Date(Date.now() - 60000)
+        }]
+      });
+
+      const result = await calculateEnhancedMatchStatsLogic(1, mockQueryFn);
+
+      assert.ok(result);
+      const stats = result.unitStats[0];
+
+      // Should keep pre-tracked value, NOT add log entry damage
+      assert.strictEqual(stats.damageDealt, 200);
+    });
+
+    it('should accumulate log entries when unit has no pre-tracked stats', async () => {
+      const unitWithoutPreTrackedStats = createMockUnit({
+        id: 'unit1',
+        teamId: 1
+        // No damageDealt, damageTaken, etc. properties
+      });
+
+      const enemy = createMockUnit({ id: 'enemy1', teamId: 2 });
+
+      const mockQueryFn = createMockQueryFn({
+        rows: [{
+          battle_state: {
+            units: [unitWithoutPreTrackedStats, enemy],
+            log: [
+              { actorId: 'unit1', targetId: 'enemy1', damage: 75 },
+              { actorId: 'unit1', targetId: 'enemy1', damage: 25 }
+            ],
+            turn: 3
+          },
+          started_at: new Date(Date.now() - 60000)
+        }]
+      });
+
+      const result = await calculateEnhancedMatchStatsLogic(1, mockQueryFn);
+
+      assert.ok(result);
+      const stats = result.unitStats.find(u => u.id === 'unit1');
+
+      // Should accumulate all log entries since no pre-tracked stats
+      assert.strictEqual(stats.damageDealt, 100); // 75 + 25
     });
   });
 });
