@@ -2197,7 +2197,22 @@ export class BattleScene extends Scene {
    * Handle battle end (victory or defeat)
    */
   handleBattleEnd(status, rewards = null) {
-    console.log('[BattleScene] handleBattleEnd called:', { status, hasRewards: !!rewards, battleEnded: this.battleEnded });
+    console.log('[BattleScene] handleBattleEnd called:', {
+      status,
+      hasRewards: !!rewards,
+      battleEnded: this.battleEnded,
+      isPvP: this.isPvP,
+      opponentUsername: this.opponentUsername || null
+    });
+
+    // For PvP battles, log additional context
+    if (this.isPvP) {
+      console.log('[BattleScene] PvP battle outcome:', {
+        status,
+        myUserId: this.game.api?.userId || 'unknown',
+        result: status === 'victory' ? 'I won!' : 'I lost'
+      });
+    }
 
     // Guard against double-trigger from both HTTP response and WebSocket
     if (this.battleEnded) {

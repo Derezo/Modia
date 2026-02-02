@@ -121,7 +121,13 @@ async function processEnemyTurnsAsync(battleId, state, aiService, battleService)
 
   // Convert battleStatus object to string for backwards compatibility with callers
   const battleStatusString = getBattleStatusString(battleStatus);
-  return { state, battleStatus: battleStatusString, enemyActions };
+  // Also return winningTeamId for PvP battles
+  return {
+    state,
+    battleStatus: battleStatusString,
+    battleEndResult: battleStatus, // Full result object with winningTeamId
+    enemyActions
+  };
 }
 
 /**

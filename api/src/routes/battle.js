@@ -30,9 +30,10 @@ const router = express.Router();
  * @param {string} status - 'victory' | 'defeat'
  * @param {Object} state - Final battle state
  * @param {number} userId - User ID who owns the battle
+ * @param {Object} battleEndResult - Result from checkBattleEnd() with winningTeamId
  * @returns {Object} Rewards data if victory
  */
-async function handleBattleEnd(battleId, status, state, userId) {
+async function handleBattleEnd(battleId, status, state, userId, battleEndResult = null) {
   // Update characters to no longer be in battle
   await query(
     `UPDATE characters SET in_battle = false
@@ -214,7 +215,19 @@ async function handleBattleEnd(battleId, status, state, userId) {
   }
 
   // Broadcast battle end via WebSocket
-  battleWebsocket.broadcastBattleEnd(battleId, status, rewards);
+  // For PvP battles, include player IDs and winning team so each player gets their perspective
+  const isPvP = state.battleType === 'pvp' && state.player1Id && state.player2Id;
+  const pvpInfo = isPvP && battleEndResult?.winningTeamId ? {
+    player1Id: state.player1Id,
+    player2Id: state.player2Id,
+    winningTeamId: battleEndResult.winningTeamId
+  } : null;
+
+  if (isPvP) {
+    console.log(`[Battle] PvP battle end - battleId=${battleId}, winningTeamId=${battleEndResult?.winningTeamId}, player1=${state.player1Id}, player2=${state.player2Id}`);
+  }
+
+  battleWebsocket.broadcastBattleEnd(battleId, status, rewards, pvpInfo);
 
   // Leave battle room (for all users in battle)
   const participants = battleWebsocket.getBattleParticipants(battleId);
@@ -566,7 +579,7 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     // Async enemy turn processing - starts after response is sent via WebSocket
     setImmediate(async () => {
       try {
-        const { state: updatedState, battleStatus } =
+        const { state: updatedState, battleStatus, battleEndResult } =
           await battleTurnManager.processEnemyTurnsAsync(battleId, initialState, aiService, battleService);
 
         // Update final state
@@ -576,7 +589,7 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
         );
 
         if (battleStatus !== 'active') {
-          await handleBattleEnd(battleId, battleStatus, updatedState, req.user.userId);
+          await handleBattleEnd(battleId, battleStatus, updatedState, req.user.userId, battleEndResult);
         } else {
           battleTurnManager.notifyPlayerTurn(battleId, updatedState);
         }
@@ -636,7 +649,7 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
     console.log('[Battle] Resuming enemy turn processing for battle', battleId, '- active unit:', activeUnit.name);
     setImmediate(async () => {
       try {
-        const { state: updatedState, battleStatus } =
+        const { state: updatedState, battleStatus, battleEndResult } =
           await battleTurnManager.processEnemyTurnsAsync(battleId, state, aiService, battleService);
 
         // Update final state
@@ -646,7 +659,7 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
         );
 
         if (battleStatus !== 'active') {
-          await handleBattleEnd(battleId, battleStatus, updatedState, req.user.userId);
+          await handleBattleEnd(battleId, battleStatus, updatedState, req.user.userId, battleEndResult);
         } else {
           battleTurnManager.notifyPlayerTurn(battleId, updatedState);
         }
@@ -847,7 +860,7 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
     // Process enemy turns asynchronously (don't await)
     setImmediate(async () => {
       try {
-        const { state: updatedState, battleStatus: finalStatus } =
+        const { state: updatedState, battleStatus: finalStatus, battleEndResult } =
           await battleTurnManager.processEnemyTurnsAsync(battleId, state, aiService, battleService);
 
         // Update final state and status
@@ -858,7 +871,7 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
 
         // Handle battle end
         if (finalStatus !== 'active') {
-          await handleBattleEnd(battleId, finalStatus, updatedState, req.user.userId);
+          await handleBattleEnd(battleId, finalStatus, updatedState, req.user.userId, battleEndResult);
         } else {
           // Notify next player it's their turn
           battleTurnManager.notifyPlayerTurn(battleId, updatedState);
@@ -916,7 +929,7 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
       'UPDATE battles SET battle_state = $1, status = $2 WHERE id = $3',
       [JSON.stringify(state), battleStatus, battleId]
     );
-    result.rewards = await handleBattleEnd(battleId, battleStatus, state, req.user.userId);
+    result.rewards = await handleBattleEnd(battleId, battleStatus, state, req.user.userId, battleEndResult);
   }
 
   res.json({
