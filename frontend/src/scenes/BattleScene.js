@@ -1968,8 +1968,8 @@ export class BattleScene extends Scene {
     for (const unitData of stateUnits) {
       const unit = this.units.get(unitData.id);
       if (unit) {
-        unit.hp = unitData.hp;
-        unit.mp = unitData.mp;
+        unit.hp = unitData.hp ?? unit.hp;
+        unit.mp = unitData.mp ?? unit.mp;
         unit.ct = unitData.ct || 0; // Sync CT for turn order display
         unit.hasActed = unitData.hasActed;
         unit.statusEffects = unitData.statusEffects || [];
@@ -1979,24 +1979,33 @@ export class BattleScene extends Scene {
         unit.actUsed = unitData.actUsed ?? false;
         unit.turnPhase = unitData.turnPhase ?? 'ready';
 
+        // Validate position data - skip if invalid to prevent NaN issues
+        const tileX = unitData.tileX;
+        const tileY = unitData.tileY;
+        if (typeof tileX !== 'number' || typeof tileY !== 'number' ||
+            isNaN(tileX) || isNaN(tileY)) {
+          console.warn(`[BattleScene] Invalid position for unit ${unitData.id}: tileX=${tileX}, tileY=${tileY}`);
+          continue; // Skip position update for this unit
+        }
+
         // Update position if changed - but DON'T interrupt ongoing movement animations
         // WebSocket unit_moved calls moveTo() for smooth animation
-        if (unit.gridX !== unitData.tileX || unit.gridY !== unitData.tileY) {
+        if (unit.gridX !== tileX || unit.gridY !== tileY) {
           if (unit.isMoving) {
             // Unit is animating - update target grid position AND animation target
             // so the animation reaches the correct destination
-            unit.gridX = unitData.tileX;
-            unit.gridY = unitData.tileY;
+            unit.gridX = tileX;
+            unit.gridY = tileY;
             // Update animation target to match new grid position
             if (this.grid) {
-              const target = this.grid.gridToScreenWorld(unitData.tileX, unitData.tileY);
+              const target = this.grid.gridToScreenWorld(tileX, tileY);
               unit.targetScreenX = target.x;
               unit.targetScreenY = target.y;
             }
           } else {
             // Unit is stationary - animate to new position for smooth visual
             // This handles missed WebSocket events without jarring teleportation
-            unit.moveTo(unitData.tileX, unitData.tileY);
+            unit.moveTo(tileX, tileY);
           }
         }
       }
