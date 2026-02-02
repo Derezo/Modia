@@ -132,7 +132,14 @@ function createPlayerBattleUnit(character, formation = null, skills = [], option
     equipment: character.equipment || null,
 
     // Death save tracking (for Second Wind trait)
-    deathSaveUsed: false
+    deathSaveUsed: false,
+
+    // Battle statistics tracking
+    damageDealt: 0,
+    damageTaken: 0,
+    healingDone: 0,
+    kills: 0,
+    deaths: 0
   };
 
   // Apply battle-start trait effects (HP/MP bonuses, movement/range bonuses)
@@ -274,7 +281,14 @@ function createEnemyBattleUnit(template, partyLevel, difficultyTier, index, posi
 
     // Special states (ambush AI, etc.)
     isHidden: template.ai_type === 'ambush',
-    hasAmbushed: false
+    hasAmbushed: false,
+
+    // Battle statistics tracking
+    damageDealt: 0,
+    damageTaken: 0,
+    healingDone: 0,
+    kills: 0,
+    deaths: 0
   };
 }
 

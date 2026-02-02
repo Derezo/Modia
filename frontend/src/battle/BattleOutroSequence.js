@@ -144,15 +144,34 @@ export class BattleOutroSequence {
     const itemCount = this.rewards.items?.length || 0;
 
     if (this.status === 'defeat') {
-      // Defeat: fixed 3 second sequence
-      this.timeline = {
-        dimEnd: t.dimScene,
-        bannerEnd: t.dimScene + t.bannerAppear,
-        pvpStart: this.isPvP ? t.dimScene + t.bannerAppear : null,
-        pvpEnd: this.isPvP ? t.dimScene + t.bannerAppear + t.pvpDetails : null,
-        fadeStart: t.defeatTotal - t.fadeOut,
-        fadeEnd: t.defeatTotal
-      };
+      // Defeat: variable timeline based on content
+      let currentTime = 0;
+
+      currentTime += t.dimScene;
+      this.timeline.dimEnd = currentTime;
+
+      currentTime += t.bannerAppear;
+      this.timeline.bannerEnd = currentTime;
+
+      // PvP details phase
+      if (this.isPvP) {
+        this.timeline.pvpStart = currentTime;
+        currentTime += t.pvpDetails;
+        this.timeline.pvpEnd = currentTime;
+      }
+
+      // Stats reveal phase (show stats table on defeat too)
+      if (this.unitStats) {
+        this.timeline.statsStart = currentTime;
+        currentTime += t.statsReveal;
+        this.timeline.statsEnd = currentTime;
+      }
+
+      // Finale hold before fade
+      currentTime += t.finaleHold || 400;
+      this.timeline.fadeStart = currentTime;
+      currentTime += t.fadeOut;
+      this.timeline.fadeEnd = currentTime;
     } else {
       // Victory: variable based on rewards
       let currentTime = 0;
@@ -247,8 +266,27 @@ export class BattleOutroSequence {
       // PvP details
       this.bannerProgress = 1;
       this.phase = 'pvp_details';
+
+      // Animate rating counter for PvP
+      if (this.pvpResult) {
+        const pvpProgress = (t - tl.pvpStart) / TIMINGS.pvpDetails;
+        this.ratingProgress = Math.min(1, pvpProgress);
+      }
+    } else if (this.unitStats && tl.statsEnd && t < tl.statsEnd) {
+      // Stats reveal phase
+      this.bannerProgress = 1;
+      this.phase = 'stats_reveal';
+      const statsProgress = (t - tl.statsStart) / TIMINGS.statsReveal;
+
+      // Show stats table when entering phase
+      if (statsProgress < 0.1 && !this.statsTableShown) {
+        this.statsTableShown = true;
+        const localUserId = this.scene.game.api?.userId || this.scene.game.localUserId;
+        const localUsername = this.scene.game.state?.get('user')?.username || '';
+        this.statsTable.show(this.unitStats, this.isPvP, false, localUserId, localUsername);
+      }
     } else if (this.phase !== 'awaiting_confirmation' && this.phase !== 'fade_out' && this.phase !== 'complete') {
-      // After summary/PvP details, show continue button and wait for user confirmation
+      // After summary/PvP details/stats, show continue button and wait for user confirmation
       this.bannerProgress = 1;
       this.showContinueButton = true;
       this.phase = 'awaiting_confirmation';
@@ -468,7 +506,7 @@ export class BattleOutroSequence {
     }
 
     const alpha = Math.min(1, this.bannerProgress * 2);
-    const y = h * (isVictory ? 0.15 : 0.18);
+    const y = h * (isVictory ? 0.08 : 0.10);
 
     ctx.save();
     ctx.globalAlpha = alpha;
@@ -831,7 +869,7 @@ export class BattleOutroSequence {
     // Only show for defeat with surrender penalty
     if (this.status !== 'defeat' || !this.pvpResult?.surrenderPenalty) return;
 
-    const messageY = h - 50; // Below the continue button (which is at h - 100)
+    const messageY = h - 25; // Closer to bottom, below the continue button
 
     ctx.save();
     ctx.font = '14px Georgia, serif';

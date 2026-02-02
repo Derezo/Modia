@@ -34,6 +34,7 @@ export class BattleStatsTable {
     this.container = null;
     this.isVisible = false;
     this.animationTimeout = null;
+    this.isPvP = false; // Track PvP mode for fallback color logic
   }
 
   /**
@@ -49,6 +50,7 @@ export class BattleStatsTable {
       this.hide();
     }
 
+    this.isPvP = isPvP; // Store for fallback color logic
     this.createTableDOM(unitStats, isPvP, isVictory, localUserId, localUsername);
     this.isVisible = true;
 
@@ -168,7 +170,10 @@ export class BattleStatsTable {
           const damage = unit.damageDealt || 0;
           return damage > (best.damageDealt || 0) ? unit : best;
         }, localUnits[0]);
-        mvpId = topUnit.id;
+        // Only assign MVP if the top unit actually dealt damage
+        if ((topUnit.damageDealt || 0) > 0) {
+          mvpId = topUnit.id;
+        }
       }
     } else {
       // PvE: Players first, then enemies
@@ -208,7 +213,10 @@ export class BattleStatsTable {
           const damage = unit.damageDealt || 0;
           return damage > (best.damageDealt || 0) ? unit : best;
         }, playerUnits[0]);
-        mvpId = topUnit.id;
+        // Only assign MVP if the top unit actually dealt damage
+        if ((topUnit.damageDealt || 0) > 0) {
+          mvpId = topUnit.id;
+        }
       }
     }
 
@@ -249,7 +257,7 @@ export class BattleStatsTable {
         const zebraClass = rowIndex % 2 === 0 ? 'bst-row-even' : 'bst-row-odd';
         const mvpClass = isMvp ? 'bst-row-mvp' : '';
 
-        html += this.renderUnitRow(unit, isMvp, zebraClass, mvpClass);
+        html += this.renderUnitRow(unit, isMvp, zebraClass, mvpClass, group.isLocal);
         rowIndex++;
       }
     }
@@ -263,12 +271,16 @@ export class BattleStatsTable {
    * @param {boolean} isMvp - Whether this unit is MVP
    * @param {string} zebraClass - Zebra striping class
    * @param {string} mvpClass - MVP styling class
+   * @param {boolean} isLocal - Whether this unit belongs to the local player's team
    * @returns {string} HTML string for the row
    */
-  renderUnitRow(unit, isMvp, zebraClass, mvpClass) {
+  renderUnitRow(unit, isMvp, zebraClass, mvpClass, isLocal = true) {
     const portraitPath = this.getPortraitPath(unit);
     const fallbackLetter = (unit.name || 'U').charAt(0).toUpperCase();
-    const fallbackColor = unit.type === 'enemy' ? '#8b4444' : '#4a6088';
+    // In PvP, use isLocal to determine color (both sides are type:'player')
+    // In PvE, fall back to type-based coloring
+    const isOpponent = this.isPvP ? !isLocal : unit.type === 'enemy';
+    const fallbackColor = isOpponent ? '#8b4444' : '#4a6088';
 
     const levelInfo = `Lv.${unit.level || 1}`;
     const raceClass = unit.race
@@ -308,19 +320,21 @@ export class BattleStatsTable {
 
   /**
    * Get the portrait path for a unit
-   * @param {Object} unit - Unit object with type, race, class, enemyType
+   * @param {Object} unit - Unit object with type, race, class, gender, enemyType, enemyId
    * @returns {string} Path to portrait image
    */
   getPortraitPath(unit) {
+    const size = 48; // Use compact portrait size
     if (unit.type === 'enemy') {
-      // Enemy portrait path
-      const enemyType = unit.enemyType || unit.class || 'unknown';
-      return `/assets/portraits/enemies/${enemyType.toLowerCase()}.png`;
+      // Enemy portrait path: /assets/portraits/{size}/enemy_{enemyType}.webp
+      const enemyType = unit.enemyId || unit.enemyType || unit.class || 'unknown';
+      return `/assets/portraits/${size}/enemy_${enemyType.toLowerCase()}.webp`;
     } else {
-      // Player portrait path
+      // Player portrait path: /assets/portraits/{size}/{race}_{gender}_{class}.webp
       const race = (unit.race || 'human').toLowerCase();
+      const gender = (unit.gender || 'male').toLowerCase();
       const charClass = (unit.class || 'warrior').toLowerCase();
-      return `/assets/portraits/players/${race}_${charClass}.png`;
+      return `/assets/portraits/${size}/${race}_${gender}_${charClass}.webp`;
     }
   }
 
@@ -423,7 +437,7 @@ export class BattleStatsTable {
       }
 
       .bst-separator-cell {
-        padding: 8px 16px;
+        padding: 4px 12px;
         text-align: center;
       }
 
@@ -476,21 +490,21 @@ export class BattleStatsTable {
       .bst-character-cell {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 8px 12px;
+        gap: 8px;
+        padding: 4px 8px;
       }
 
       /* Portrait Container */
       .bst-portrait-container {
         position: relative;
-        width: 64px;
-        height: 64px;
+        width: 48px;
+        height: 48px;
         flex-shrink: 0;
       }
 
       .bst-portrait {
-        width: 64px;
-        height: 64px;
+        width: 48px;
+        height: 48px;
         object-fit: contain;
         border-radius: 4px;
         border: 2px solid #5a4a3a;
@@ -498,14 +512,14 @@ export class BattleStatsTable {
       }
 
       .bst-portrait-fallback {
-        width: 64px;
-        height: 64px;
+        width: 48px;
+        height: 48px;
         border-radius: 4px;
         border: 2px solid #5a4a3a;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 28px;
+        font-size: 22px;
         font-weight: bold;
         color: #fff;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -553,10 +567,10 @@ export class BattleStatsTable {
       /* Stat Columns */
       .bst-unit-row td.bst-col-stat {
         font-family: 'Consolas', 'Monaco', monospace;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: bold;
         text-align: right;
-        padding: 8px 12px;
+        padding: 4px 8px;
         vertical-align: middle;
       }
 
@@ -634,40 +648,40 @@ export class BattleStatsTable {
         }
 
         .bst-portrait-container {
-          width: 48px;
-          height: 48px;
+          width: 32px;
+          height: 32px;
         }
 
         .bst-portrait,
         .bst-portrait-fallback {
-          width: 48px;
-          height: 48px;
+          width: 32px;
+          height: 32px;
         }
 
         .bst-portrait-fallback {
-          font-size: 20px;
+          font-size: 14px;
         }
 
         .bst-character-cell {
-          gap: 8px;
-          padding: 6px 8px;
+          gap: 6px;
+          padding: 3px 6px;
         }
 
         .bst-unit-name {
-          font-size: 12px;
+          font-size: 11px;
         }
 
         .bst-unit-details {
-          font-size: 10px;
+          font-size: 9px;
         }
 
         .bst-unit-row td.bst-col-stat {
-          font-size: 11px;
-          padding: 6px 8px;
+          font-size: 10px;
+          padding: 3px 6px;
         }
 
         .bst-separator-cell {
-          padding: 6px 12px;
+          padding: 3px 10px;
         }
 
         .bst-separator-text {

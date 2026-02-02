@@ -246,6 +246,14 @@ function processAttackAction(state, unit, targetTile) {
         target.hp = Math.max(0, target.hp - actualDamage);
       }
 
+      // Track battle statistics
+      unit.damageDealt = (unit.damageDealt || 0) + actualDamage;
+      target.damageTaken = (target.damageTaken || 0) + actualDamage;
+      if (target.hp <= 0) {
+        unit.kills = (unit.kills || 0) + 1;
+        target.deaths = (target.deaths || 0) + 1;
+      }
+
       result.damage = actualDamage;
       result.isCritical = damageResult.isCritical;
       result.targetId = target.id;
@@ -352,7 +360,10 @@ function processSkillAction(state, unit, targetTile, skillId) {
     }
     if (skill.healPercent) {
       const healAmount = Math.floor(unit.maxHp * skill.healPercent / 100);
+      const actualHeal = Math.min(healAmount, unit.maxHp - unit.hp);
       unit.hp = Math.min(unit.maxHp, unit.hp + healAmount);
+      // Track healing statistics
+      unit.healingDone = (unit.healingDone || 0) + actualHeal;
       result.healing = healAmount;
       result.targetId = unit.id;
     }
@@ -395,7 +406,10 @@ function processSkillAction(state, unit, targetTile, skillId) {
   if (skill.targetAlly && target && target.type === unit.type) {
     if (skill.healPercent) {
       const healAmount = Math.floor(target.maxHp * skill.healPercent / 100);
+      const actualHeal = Math.min(healAmount, target.maxHp - target.hp);
       target.hp = Math.min(target.maxHp, target.hp + healAmount);
+      // Track healing statistics
+      unit.healingDone = (unit.healingDone || 0) + actualHeal;
       result.healing = healAmount;
       result.targetId = target.id;
     }
@@ -502,6 +516,14 @@ function processAoESkill(state, unit, targetTile, skill, skillId, result) {
       affectedUnit.hp = 1;
     } else {
       affectedUnit.hp = Math.max(0, affectedUnit.hp - totalDamage);
+    }
+
+    // Track battle statistics for AoE
+    unit.damageDealt = (unit.damageDealt || 0) + totalDamage;
+    affectedUnit.damageTaken = (affectedUnit.damageTaken || 0) + totalDamage;
+    if (affectedUnit.hp <= 0) {
+      unit.kills = (unit.kills || 0) + 1;
+      affectedUnit.deaths = (affectedUnit.deaths || 0) + 1;
     }
 
     totalAoEDamage += totalDamage;
@@ -611,6 +633,14 @@ function processSingleTargetSkill(state, unit, target, skill, skillId, result) {
     result.deathSaveUnitId = target.id;
   } else {
     target.hp = Math.max(0, target.hp - totalDamage);
+  }
+
+  // Track battle statistics
+  unit.damageDealt = (unit.damageDealt || 0) + totalDamage;
+  target.damageTaken = (target.damageTaken || 0) + totalDamage;
+  if (target.hp <= 0) {
+    unit.kills = (unit.kills || 0) + 1;
+    target.deaths = (target.deaths || 0) + 1;
   }
 
   result.damage = totalDamage;
@@ -808,6 +838,8 @@ function processItemAction(state, unit, targetTile, itemId) {
   if (effectType === 'heal_hp') {
     const healAmount = Math.min(effectValue, itemTarget.maxHp - itemTarget.hp);
     itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + effectValue);
+    // Track healing statistics
+    unit.healingDone = (unit.healingDone || 0) + healAmount;
     result.healing = healAmount;
     result.itemEffects.push({ type: 'heal', amount: healAmount, targetId: itemTarget.id });
   }
@@ -824,6 +856,8 @@ function processItemAction(state, unit, targetTile, itemId) {
     const mpAmount = Math.min(Math.floor(effectValue / 2), itemTarget.maxMp - itemTarget.mp);
     itemTarget.hp = Math.min(itemTarget.maxHp, itemTarget.hp + effectValue);
     itemTarget.mp = Math.min(itemTarget.maxMp, itemTarget.mp + Math.floor(effectValue / 2));
+    // Track healing statistics
+    unit.healingDone = (unit.healingDone || 0) + healAmount;
     result.healing = healAmount;
     result.mpRestored = mpAmount;
     result.itemEffects.push({ type: 'heal', amount: healAmount, targetId: itemTarget.id });
@@ -845,6 +879,10 @@ function processItemAction(state, unit, targetTile, itemId) {
     const revivePercent = baseEffectValue * effectiveness;
     const reviveHp = Math.floor(itemTarget.maxHp * revivePercent / 100);
     itemTarget.hp = reviveHp;
+    // Track healing statistics (revive counts as healing)
+    unit.healingDone = (unit.healingDone || 0) + reviveHp;
+    // Reset death counter since unit was revived
+    itemTarget.deaths = 0;
     result.itemEffects.push({ type: 'revive', amount: reviveHp, targetId: itemTarget.id });
   }
 
