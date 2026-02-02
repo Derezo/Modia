@@ -793,6 +793,9 @@ export class BattleWebSocketManager {
 
     // Update connection quality
     connectionQuality.onAckReceived();
+
+    // Fix: Update poller baseline so it doesn't detect drift again
+    this.updatePollerState();
   }
 
   /**
@@ -805,8 +808,19 @@ export class BattleWebSocketManager {
       for (const serverUnit of serverState.units) {
         const localUnit = this.units.get(serverUnit.id);
         if (localUnit) {
-          localUnit.x = serverUnit.x;
-          localUnit.y = serverUnit.y;
+          // Fix: Use gridX/gridY (BattleUnit properties), not x/y
+          if (localUnit.gridX !== serverUnit.x || localUnit.gridY !== serverUnit.y) {
+            localUnit.gridX = serverUnit.x;
+            localUnit.gridY = serverUnit.y;
+            // Update screen position to match grid position
+            if (this.scene.grid) {
+              const screenPos = this.scene.grid.gridToScreenWorld(serverUnit.x, serverUnit.y);
+              localUnit.screenX = screenPos.x;
+              localUnit.screenY = screenPos.y;
+              localUnit.targetScreenX = screenPos.x;
+              localUnit.targetScreenY = screenPos.y;
+            }
+          }
           localUnit.hp = serverUnit.hp;
           localUnit.mp = serverUnit.mp ?? localUnit.mp;
           // Update status effects if provided
@@ -954,7 +968,16 @@ export class BattleWebSocketManager {
     // Update turn order UI
     if (this.ui) {
       this.ui.updateTurnOrder(this.battleState);
-      this.ui.showTurnIndicator(unitName, displayUnitType);
+
+      // Build unit data object for turn indicator display
+      const unitData = {
+        name: activeUnit?.name || unitName,
+        level: activeUnit?.level || 1,
+        race: activeUnit?.race || null,
+        class: activeUnit?.class || null,
+        type: activeUnit?.type || 'enemy'
+      };
+      this.ui.showTurnIndicator(unitData, displayUnitType);
     }
 
     // Camera handling - ALWAYS pan to active unit for awareness

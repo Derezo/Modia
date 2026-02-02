@@ -175,11 +175,12 @@ export class Responsive {
    */
   setupListeners() {
     this._boundResizeHandler = debounce(() => {
+      const previousBreakpoint = this.currentBreakpoint;
       const breakpointChanged = this.detect();
 
       if (breakpointChanged) {
         this.injectCSSVariables();
-        this.notifyListeners();
+        this.notifyListeners(previousBreakpoint);
       }
     }, 150);
 
@@ -189,10 +190,11 @@ export class Responsive {
     window.addEventListener('orientationchange', () => {
       // Small delay to ensure viewport has updated after orientation change
       setTimeout(() => {
+        const previousBreakpoint = this.currentBreakpoint;
         const breakpointChanged = this.detect();
         if (breakpointChanged) {
           this.injectCSSVariables();
-          this.notifyListeners();
+          this.notifyListeners(previousBreakpoint);
         }
       }, 100);
     });
@@ -200,11 +202,13 @@ export class Responsive {
 
   /**
    * Notify all registered listeners of a breakpoint change
+   * @param {string|null} previousBreakpoint - The breakpoint before the change
    */
-  notifyListeners() {
+  notifyListeners(previousBreakpoint = null) {
     for (const callback of this.listeners) {
       try {
         callback(this.currentBreakpoint, {
+          previous: previousBreakpoint,
           isMobile: this.isMobile(),
           isTablet: this.isTablet(),
           isDesktop: this.isDesktop(),
@@ -398,10 +402,11 @@ export class Responsive {
    * Useful after dynamic DOM changes that might affect viewport
    */
   refresh() {
+    const previousBreakpoint = this.currentBreakpoint;
     const breakpointChanged = this.detect();
     this.injectCSSVariables();
     if (breakpointChanged) {
-      this.notifyListeners();
+      this.notifyListeners(previousBreakpoint);
     }
   }
 

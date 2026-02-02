@@ -34,6 +34,10 @@ export class MessageReliabilityManager {
     this.fireAndForgetCache = new Map(); // key -> timestamp
     this.fireAndForgetWindow = 100; // ms window for deduplication
     this.fireAndForgetMaxSize = 50; // Max entries before cleanup
+
+    // Resync request debounce (prevents overwhelming sync mechanism)
+    this.lastResyncTime = new Map(); // battleId -> timestamp
+    this.resyncCooldownMs = 5000;    // 5 second cooldown between resyncs
   }
 
   /**
@@ -171,9 +175,20 @@ export class MessageReliabilityManager {
 
   /**
    * Request a full state resync from the server
+   * Debounced with 5-second cooldown to prevent overwhelming sync mechanism
    * @param {string} battleId - The battle ID
    */
   requestResync(battleId) {
+    const now = Date.now();
+    const lastResync = this.lastResyncTime.get(battleId);
+
+    // Check cooldown - skip if we've recently requested a resync
+    if (lastResync && (now - lastResync) < this.resyncCooldownMs) {
+      console.log(`[Reliability] Resync for battle=${battleId} skipped - cooldown active`);
+      return;
+    }
+
+    this.lastResyncTime.set(battleId, now);
     console.log(`[Reliability] Requesting resync for battle=${battleId}`);
     this.send({
       type: 'battle:request_sync',
@@ -189,6 +204,7 @@ export class MessageReliabilityManager {
   cleanup(battleId) {
     this.processedSeqs.delete(battleId);
     this.lastSeq.delete(battleId);
+    this.lastResyncTime.delete(battleId);
     // Clear fire-and-forget entries for this battle
     for (const [key] of this.fireAndForgetCache) {
       if (key.includes(battleId)) {
