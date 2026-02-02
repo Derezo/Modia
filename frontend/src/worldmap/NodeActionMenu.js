@@ -392,10 +392,11 @@ export class NodeActionMenu {
 
     if (Array.isArray(features)) {
       // Prioritize essential features over decorative ones
+      // Garrison comes early since it's a key castle-specific feature
       const essentialFeatures = [
-        'blacksmith', 'marketplace', 'tavern', 'apothecary',
+        'garrison', 'blacksmith', 'marketplace', 'tavern', 'apothecary',
         'coliseum', 'farm', 'guild_hall', 'guild_advancement', 'courtyard', 'caravan', 'explore_ruins', 'fishing',
-        'fast_travel', 'stamina_restore', 'garrison'
+        'fast_travel', 'stamina_restore'
       ];
       const decorativeFeatures = ['throne', 'temple', 'stables', 'training_ground'];
 
