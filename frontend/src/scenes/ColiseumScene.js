@@ -621,7 +621,7 @@ export class ColiseumScene extends Scene {
 
       if (countdownEl) {
         if (remaining > 0) {
-          countdownEl.innerHTML = `Time to ready: <span class="coliseum-countdown-number">${remaining}s</span>`;
+          countdownEl.innerHTML = `Time Remaining: <span class="countdown-number">${remaining}s</span>`;
         } else {
           countdownEl.innerHTML = 'Time expired!';
         }
