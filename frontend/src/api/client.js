@@ -966,6 +966,15 @@ export class ApiClient {
   }
 
   /**
+   * Get players in a specific coliseum queue
+   * @param {string} queueType - Queue type: '1v1', '3v3', '5v5'
+   * @returns {Promise<{success: boolean, players: Array}>}
+   */
+  async getColiseumQueuePlayers(queueType) {
+    return this.get(`/coliseum/queue/${queueType}/players`);
+  }
+
+  /**
    * Get coliseum leaderboard
    * @param {string} queueType - Queue type: '1v1', '3v3', '5v5'
    * @param {number} limit - Max results (default 100)
