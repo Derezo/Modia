@@ -5,7 +5,7 @@
   "description": "Castle biome enemy sprite sheets",
   "biomeTraits": "ornate regal dark gothic corrupted once-grand sinister",
   "totalAssets": 7,
-  "totalAnimations": 28,
+  "totalAnimations": 35,
   "enemies": [
     {
       "id": "skeleton_warrior",
@@ -46,6 +46,13 @@
           "seed": 45004,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, skeleton warrior with purple glowing eyes and rusted sword and tattered armor, death collapse animation, collapsing into pile with eye glow fading to stillness, dark castle corridor"
+        },
+        "dead": {
+          "id": "skeleton_warrior_dead",
+          "frameCount": 8,
+          "seed": 45014,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, animated bones purple eye glow rusted sword tattered armor rattling, dead static pose, lying defeated at final rest motionless, ornate regal"
         }
       },
       "needsRegeneration": false,
@@ -54,7 +61,8 @@
         "idle": false,
         "attack": false,
         "hit": false,
-        "death": false
+        "death": false,
+        "dead": false
       },
       "generatedAt": null,
       "generated": false,
@@ -99,6 +107,13 @@
           "seed": 45014,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, translucent ghost with wailing face and ethereal chains and trailing wisps, death fade animation, fading away with peaceful expression finally at rest, haunted castle hall"
+        },
+        "dead": {
+          "id": "ghost_dead",
+          "frameCount": 8,
+          "seed": 45024,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, translucent form wailing face ethereal chains trailing wisps sorrowful, dead static pose, lying defeated at final rest motionless, ornate regal"
         }
       },
       "needsRegeneration": false,
@@ -144,6 +159,13 @@
           "seed": 45024,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, dark knight with black plate armor and glowing red visor and corrupted greatsword, death crumble animation, armor crumbling with darkness releasing leaving empty husk, corrupted throne room"
+        },
+        "dead": {
+          "id": "dark_knight_dead",
+          "frameCount": 8,
+          "seed": 45034,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, black plate armor glowing red visor corrupted greatsword dark aura, dead static pose, lying defeated at final rest motionless, ornate regal"
         }
       },
       "needsRegeneration": false,
@@ -152,7 +174,8 @@
         "idle": false,
         "attack": false,
         "hit": false,
-        "death": false
+        "death": false,
+        "dead": false
       },
       "generatedAt": null,
       "generated": false,
@@ -197,6 +220,13 @@
           "seed": 45064,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, elite palace guard with ornate plate armor and royal tabard and halberd and plumed helmet, death honor animation, saluting then falling at post in honorable end, grand castle entrance"
+        },
+        "dead": {
+          "id": "palace_guard_dead",
+          "frameCount": 8,
+          "seed": 45074,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, ornate plate armor royal tabard halberd plumed helmet elite disciplined, dead static pose, lying defeated at final rest motionless, ornate regal"
         }
       },
       "needsRegeneration": false,
@@ -205,7 +235,8 @@
         "idle": false,
         "attack": false,
         "hit": false,
-        "death": false
+        "death": false,
+        "dead": false
       },
       "generatedAt": null,
       "generated": false,
@@ -250,6 +281,13 @@
           "seed": 45034,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, vampire aristocrat with pale skin and red eyes and fangs and flowing cape, death dissolve animation, turning to ash with cape collapsing as dust scatters, gothic castle chamber"
+        },
+        "dead": {
+          "id": "vampire_dead",
+          "frameCount": 8,
+          "seed": 45044,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, pale aristocrat red eyes fangs cape clawed hands elegant menace, dead static pose, lying defeated at final rest motionless, ornate regal"
         }
       },
       "needsRegeneration": false,
@@ -295,6 +333,13 @@
           "seed": 45044,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, dark mage with black robes and skull staff and shadowed hood, death consume animation, magic exploding outward with robes crumpling consumed by own power, castle arcane sanctum"
+        },
+        "dead": {
+          "id": "dark_mage_dead",
+          "frameCount": 8,
+          "seed": 45054,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, black robes skull staff purple magic crackling hood shadow, dead static pose, lying defeated at final rest motionless, ornate regal"
         }
       },
       "needsRegeneration": false,
@@ -340,6 +385,13 @@
           "seed": 45054,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, infernal demon with red skin and horns and bat wings and clawed hands wreathed in flames, death banish animation, flames consuming self returning to hell through closing portal, hellish castle depths"
+        },
+        "dead": {
+          "id": "demon_dead",
+          "frameCount": 8,
+          "seed": 45064,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, red skin horns bat wings clawed hands fire wreathed infernal, dead static pose, lying defeated at final rest motionless, ornate regal"
         }
       },
       "needsRegeneration": false,

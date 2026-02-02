@@ -95,6 +95,32 @@ function getMetadataDir() {
 }
 
 /**
+ * Wait for a file to exist on disk with retry mechanism
+ * Handles race conditions where the file is being written by another process
+ *
+ * @param {string} filePath - Path to the file
+ * @param {number} [maxRetries=5] - Maximum number of retries
+ * @param {number} [initialDelayMs=100] - Initial delay in milliseconds (doubles each retry)
+ * @returns {Promise<boolean>} True if file exists, false after all retries exhausted
+ */
+async function waitForFile(filePath, maxRetries = 5, initialDelayMs = 100) {
+  let delayMs = initialDelayMs;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (fileExists(filePath)) {
+      return true;
+    }
+
+    if (attempt < maxRetries) {
+      await delay(delayMs);
+      delayMs *= 2; // Exponential backoff
+    }
+  }
+
+  return false;
+}
+
+/**
  * Convert a PNG image to WebP format using Sharp
  *
  * @param {string} pngPath - Path to the source PNG file
@@ -121,8 +147,9 @@ async function convertToWebp(pngPath, options = {}) {
     return { success: true, webpPath: pngPath };
   }
 
-  // Check source exists
-  if (!fileExists(pngPath)) {
+  // Wait for source file to exist (handles race condition with file writers)
+  const fileReady = await waitForFile(pngPath);
+  if (!fileReady) {
     return { success: false, error: `Source PNG not found: ${pngPath}` };
   }
 
@@ -195,6 +222,7 @@ module.exports = {
   getImageGeneratorRoot,
 
   // WebP conversion utilities
+  waitForFile,
   convertToWebp,
   convertManyToWebp
 };

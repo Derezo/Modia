@@ -618,9 +618,18 @@ export class ParchmentCard {
     // Portrait URL - enemies use their sprite_id, players use race_gender_class
     // Display size is 56px, optimal size is 64px
     const optimalSize = getOptimalSize('portraits', 56);
-    const portraitUrl = this.type === 'enemy'
-      ? getAssetPath('portraits', `enemy_${enemySpriteId || charClass}`, { size: optimalSize })
-      : getAssetPath('portraits', `${race}_${gender}_${charClass}`, { size: optimalSize });
+
+    // Warn if player-type unit is missing portrait data
+    if (c.type === 'player' && (!c.race || !c.gender)) {
+      console.warn('[ParchmentCard] Player unit missing race/gender:', c.name, { race: c.race, gender: c.gender });
+    }
+
+    // Determine portrait source from unit data, not card visual type
+    // Units with race+gender are characters (player or NPC); units with only enemyId are enemies
+    const isCharacterUnit = race && gender && race !== 'unknown';
+    const portraitUrl = isCharacterUnit
+      ? getAssetPath('portraits', `${race}_${gender}_${charClass}`, { size: optimalSize })
+      : getAssetPath('portraits', `enemy_${enemySpriteId || charClass}`, { size: optimalSize });
 
     // Class colors for fallback
     const classColors = {

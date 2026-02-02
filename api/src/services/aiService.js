@@ -841,9 +841,9 @@ function isValidMove(x, y, battleState) {
   const mapHeight = battleState.mapHeight || 32;
   if (x < 0 || x >= mapWidth || y < 0 || y >= mapHeight) return false;
 
-  // Check if tile is occupied by living unit
+  // Check if tile is occupied by any unit (dead units block movement as corpses)
   const occupied = battleState.units.some(u =>
-    u.tileX === x && u.tileY === y && u.hp > 0
+    u.tileX === x && u.tileY === y
   );
   if (occupied) return false;
 

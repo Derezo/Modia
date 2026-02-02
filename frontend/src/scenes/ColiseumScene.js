@@ -409,7 +409,8 @@ export class ColiseumScene extends Scene {
               mapWidth: response.mapWidth || 32,
               mapHeight: response.mapHeight || 32,
               state: response.state,
-              opponentUsername: payload.opponentUsername
+              opponentUsername: payload.opponentUsername,
+              nodeType: response.nodeType || payload.nodeType || 'arena'
             });
           } else {
             throw new Error(response.message || 'Failed to load battle');

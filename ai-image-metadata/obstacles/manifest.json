@@ -4,7 +4,7 @@
   "category": "obstacles",
   "totalAssets": 10,
   "outputDir": "/assets/obstacles/",
-  "format": "png",
+  "format": "webp",
   "loraModel": "v2",
   "trigger": "wbgmsst",
   "stylePrefix": "wbgmsst, fantasy RPG obstacle sprite, isometric view, ink and wash watercolor style, bold black outlines, transparent background, aged parchment aesthetic",

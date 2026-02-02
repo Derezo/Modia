@@ -293,7 +293,7 @@ function setupWebSocket(server) {
             break;
 
           case 'battle:request_sync':
-            await handleBattleSyncRequest(ws, userId, payload);
+            await handleBattleSyncRequest(ws, userId, message);
             break;
 
           default:

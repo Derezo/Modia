@@ -5,7 +5,7 @@
   "description": "Mountain biome enemy sprite sheets",
   "biomeTraits": "rocky alpine windswept rugged high altitude harsh",
   "totalAssets": 8,
-  "totalAnimations": 32,
+  "totalAnimations": 40,
   "enemies": [
     {
       "id": "mountain_goat",
@@ -46,6 +46,13 @@
           "seed": 43004,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, mountain goat with thick white fur and curved horns and fierce eyes, death collapse animation, legs giving way and tumbling to lie still, rocky alpine peak"
+        },
+        "dead": {
+          "id": "mountain_goat_dead",
+          "frameCount": 8,
+          "seed": 43014,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, thick white fur curved horns sturdy hooves fierce eyes sure-footed, dead static pose, lying defeated at final rest motionless, rocky alpine"
         }
       },
       "needsRegeneration": false,
@@ -54,7 +61,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T17:45:34.949Z",
       "generated": true,
@@ -99,6 +107,13 @@
           "seed": 43014,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, harpy with feathered body and woman face and sharp talons and bird wings, death fall animation, wings folding as falling from sky and crashing down, windswept mountain cliff"
+        },
+        "dead": {
+          "id": "harpy_dead",
+          "frameCount": 8,
+          "seed": 43024,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, feathered body sharp talons woman face bird wings fierce screech, dead static pose, lying defeated at final rest motionless, rocky alpine"
         }
       },
       "needsRegeneration": false,
@@ -107,7 +122,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T18:09:18.572Z",
       "generated": true,
@@ -152,6 +168,13 @@
           "seed": 43024,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, stone golem with living rock body and glowing orange cracks and boulder fists, death crumble animation, crumbling apart with inner light fading into pile of rocks, rugged mountain terrain"
+        },
+        "dead": {
+          "id": "stone_golem_dead",
+          "frameCount": 8,
+          "seed": 43034,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, living stone body glowing orange cracks boulder fists runic markings, dead static pose, lying defeated at final rest motionless, rocky alpine"
         }
       },
       "needsRegeneration": false,
@@ -160,7 +183,8 @@
         "idle": false,
         "attack": false,
         "hit": false,
-        "death": false
+        "death": false,
+        "dead": false
       },
       "generatedAt": null,
       "generated": false,
@@ -205,6 +229,13 @@
           "seed": 43064,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, mountain troll with rocky skin and mossy patches and tusks holding stone club, death crash animation, crashing down heavily with club rolling away to stillness, high altitude crag"
+        },
+        "dead": {
+          "id": "mountain_troll_dead",
+          "frameCount": 8,
+          "seed": 43074,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, massive rocky skin mossy patches tusks crude stone club mountain hardy, dead static pose, lying defeated at final rest motionless, rocky alpine"
         }
       },
       "needsRegeneration": false,
@@ -213,7 +244,8 @@
         "idle": false,
         "attack": false,
         "hit": false,
-        "death": false
+        "death": false,
+        "dead": false
       },
       "generatedAt": null,
       "generated": false,
@@ -258,6 +290,13 @@
           "seed": 43074,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, troll shaman with rocky skin and bone necklace and crystal staff and tribal markings, death collapse animation, staff shattering with magical energy dispersing as body falls, mountain shrine"
+        },
+        "dead": {
+          "id": "troll_shaman_dead",
+          "frameCount": 8,
+          "seed": 43084,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, rocky troll skin bone necklace staff with glowing crystal tribal markings feathers, dead static pose, lying defeated at final rest motionless, rocky alpine"
         }
       },
       "needsRegeneration": false,
@@ -266,7 +305,8 @@
         "idle": false,
         "attack": false,
         "hit": false,
-        "death": false
+        "death": false,
+        "dead": false
       },
       "generatedAt": null,
       "generated": false,
@@ -311,6 +351,13 @@
           "seed": 43034,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, wyvern with dragon-like wings and talons and spiked venomous tail, death crash animation, wings crumpling and collapsing heavily with final breath, mountain aerie"
+        },
+        "dead": {
+          "id": "wyvern_dead",
+          "frameCount": 8,
+          "seed": 43044,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, dragon-like wings talons spiked tail venomous stinger fierce jaws, dead static pose, lying defeated at final rest motionless, rocky alpine"
         }
       },
       "needsRegeneration": false,
@@ -319,7 +366,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T18:56:57.599Z",
       "generated": true,
@@ -364,6 +412,13 @@
           "seed": 43044,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, frost giant with blue skin and massive build and frost-covered beard and ice armor, death fall animation, falling like avalanche with ice shattering frozen still, frozen mountain peak"
+        },
+        "dead": {
+          "id": "frost_giant_dead",
+          "frameCount": 8,
+          "seed": 43054,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, blue skin massive build frost-covered beard ice armor frozen weapon, dead static pose, lying defeated at final rest motionless, rocky alpine"
         }
       },
       "needsRegeneration": false,
@@ -372,7 +427,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T19:20:48.758Z",
       "generated": true,
@@ -417,6 +473,13 @@
           "seed": 43054,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, yeti with white fur and massive claws and fanged maw and glowing blue eyes, death collapse animation, falling forward with final roar as snow settles over body, snowy mountain pass"
+        },
+        "dead": {
+          "id": "yeti_dead",
+          "frameCount": 8,
+          "seed": 43064,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, white fur massive claws fanged maw glowing blue eyes muscular, dead static pose, lying defeated at final rest motionless, rocky alpine"
         }
       },
       "needsRegeneration": false,
@@ -425,7 +488,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T19:44:43.069Z",
       "generated": true,

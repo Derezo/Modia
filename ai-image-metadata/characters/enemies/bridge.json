@@ -5,7 +5,7 @@
   "description": "Bridge biome enemy sprite sheets",
   "biomeTraits": "weathered crossing structure near water worn traveled",
   "totalAssets": 7,
-  "totalAnimations": 28,
+  "totalAnimations": 35,
   "enemies": [
     {
       "id": "bridge_bandit",
@@ -46,6 +46,13 @@
           "seed": 44004,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, hooded bandit with leather armor and mask and daggers, death collapse animation, clutching wound and falling forward dropping stolen loot, weathered stone bridge"
+        },
+        "dead": {
+          "id": "bridge_bandit_dead",
+          "frameCount": 8,
+          "seed": 44014,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, hooded figure leather armor daggers mask scar sneaky, dead static pose, lying defeated at final rest motionless, weathered crossing"
         }
       },
       "needsRegeneration": false,
@@ -54,7 +61,8 @@
         "idle": false,
         "attack": false,
         "hit": false,
-        "death": false
+        "death": false,
+        "dead": false
       },
       "generatedAt": null,
       "generated": false,
@@ -99,6 +107,13 @@
           "seed": 44064,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, bandit captain with scarred face and heavy armor and dual swords and cape, death fall animation, swords falling as kneeling then collapsing defeated leader, bridge crossing outpost"
+        },
+        "dead": {
+          "id": "bandit_captain_dead",
+          "frameCount": 8,
+          "seed": 44074,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, scarred face heavy armor dual swords cape commanding presence battle-worn, dead static pose, lying defeated at final rest motionless, weathered crossing"
         }
       },
       "needsRegeneration": false,
@@ -107,7 +122,8 @@
         "idle": false,
         "attack": false,
         "hit": false,
-        "death": false
+        "death": false,
+        "dead": false
       },
       "generatedAt": null,
       "generated": false,
@@ -152,6 +168,13 @@
           "seed": 44014,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, burly toll collector with heavy armor and mace and coin pouch, death collapse animation, coins spilling as mace clatters and body collapses, bridge toll gate"
+        },
+        "dead": {
+          "id": "toll_collector_dead",
+          "frameCount": 8,
+          "seed": 44024,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, burly man heavy armor mace coin pouch stern expression, dead static pose, lying defeated at final rest motionless, weathered crossing"
         }
       },
       "needsRegeneration": false,
@@ -160,7 +183,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T20:33:06.442Z",
       "generated": true,
@@ -205,6 +229,13 @@
           "seed": 44024,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, bridge troll with blue-gray skin and barnacles and massive tusks and webbed fingers, death sink animation, falling into water sinking with bubbles rising, stone bridge over river"
+        },
+        "dead": {
+          "id": "bridge_troll_dead",
+          "frameCount": 8,
+          "seed": 44034,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, blue-gray skin barnacles algae massive tusks river smell webbed fingers, dead static pose, lying defeated at final rest motionless, weathered crossing"
         }
       },
       "needsRegeneration": false,
@@ -213,7 +244,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T21:01:03.476Z",
       "generated": true,
@@ -258,6 +290,13 @@
           "seed": 44034,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, professional mercenary with chainmail armor and sword and veteran scars, death honor animation, professional to the end saluting then falling, bridge checkpoint"
+        },
+        "dead": {
+          "id": "mercenary_dead",
+          "frameCount": 8,
+          "seed": 44044,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, professional soldier chainmail sword veteran scars disciplined, dead static pose, lying defeated at final rest motionless, weathered crossing"
         }
       },
       "needsRegeneration": false,
@@ -303,6 +342,13 @@
           "seed": 44044,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, flamboyant highwayman with feathered hat and cape and rapier, death dramatic animation, dramatic death pose with cape billowing in theatrical final end, road crossing bridge"
+        },
+        "dead": {
+          "id": "highwayman_dead",
+          "frameCount": 8,
+          "seed": 44054,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, flamboyant hat feather cape rapier pistol confident smile, dead static pose, lying defeated at final rest motionless, weathered crossing"
         }
       },
       "needsRegeneration": false,
@@ -348,6 +394,13 @@
           "seed": 44054,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, uniformed guard with spear and shield and official tabard, death fall animation, falling at post dutiful to the end in honorable death, bridge guard post"
+        },
+        "dead": {
+          "id": "guard_dead",
+          "frameCount": 8,
+          "seed": 44064,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, uniformed watchman spear shield tabard badge of office stern, dead static pose, lying defeated at final rest motionless, weathered crossing"
         }
       },
       "needsRegeneration": false,

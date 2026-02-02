@@ -509,16 +509,33 @@ function handleLeaveBattle(userId, payload) {
 
 /**
  * Handle battle sync request
+ * @param {WebSocket} ws - The WebSocket connection
+ * @param {string} userId - The user ID
+ * @param {Object} message - The full message object (sync requests send battleId at root level)
  */
-async function handleBattleSyncRequest(ws, userId, payload) {
+async function handleBattleSyncRequest(ws, userId, message) {
   if (!userId) return;
+
+  // Sync requests send battleId at root level, not in payload
+  const battleId = message?.battleId;
+  if (!battleId) {
+    console.warn('[WS] Invalid battle sync request - missing battleId:', message);
+    ws.send(JSON.stringify({
+      type: 'error',
+      payload: { message: 'Missing battleId in sync request' }
+    }));
+    return;
+  }
+
   try {
-    const battleState = await getBattleStateForSync(payload.battleId);
+    const battleState = await getBattleStateForSync(battleId);
     if (battleState) {
       ws.send(JSON.stringify({
         type: 'battle:state_update',
-        battleId: payload.battleId,
-        state: battleState
+        payload: {
+          battleId,
+          state: battleState
+        }
       }));
     } else {
       ws.send(JSON.stringify({

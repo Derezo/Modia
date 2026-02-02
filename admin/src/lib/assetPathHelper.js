@@ -112,25 +112,25 @@ export function getAssetImageUrl(asset, category) {
   }
 
   // For characters, use type-based path structure (player vs enemies)
-  // Players: /assets/characters/player/{class}/{class}_{animation}.png
-  // Enemies: /assets/characters/enemies/{biome}/{id}/{id}_{animation}.png
+  // Players: /assets/characters/player/{class}/{class}_{animation}.webp
+  // Enemies: /assets/characters/enemies/{biome}/{id}/{id}_{animation}.webp
   // All character sprites MUST have an _idle animation for preview
   if (category === 'characters') {
     const type = asset._type || 'player';
     if (type === 'enemy' || type === 'enemies') {
       // Enemy characters include biome in path
       const biome = asset._biome || asset.biome || 'unknown';
-      return `/assets/characters/enemies/${biome}/${id}/${id}_idle.png`;
+      return `/assets/characters/enemies/${biome}/${id}/${id}_idle.webp`;
     }
     // Player characters
-    return `/assets/characters/player/${id}/${id}_idle.png`;
+    return `/assets/characters/player/${id}/${id}_idle.webp`;
   }
 
   // For obstacles, use category-based path structure
-  // Pattern: /assets/sprites/obstacles/{obstacleCategory}/{id}.png
+  // Pattern: /assets/obstacles/{obstacleCategory}/{id}.webp
   if (category === 'obstacles') {
     const obstacleCategory = subcategory || 'rocks';
-    return `/assets/sprites/obstacles/${obstacleCategory}/${id}.png`;
+    return `/assets/obstacles/${obstacleCategory}/${id}.webp`;
   }
 
   // For other categories, get canonical URLs and return the first one

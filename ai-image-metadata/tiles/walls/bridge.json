@@ -37,36 +37,48 @@
       "terrain": "grass",
       "prompt": "seamless vertical overgrown bridge support texture with grass and vines, tileable horizontal pattern, side view cross-section, green brown tones",
       "seed": 41031,
-      "generated": false,
-      "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T04:39:49.421Z"
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-02-02T19:17:39.500Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "wall_bridge_rock",
       "terrain": "rock",
       "prompt": "seamless vertical natural rock bridge support texture with weathered stone, tileable horizontal pattern, side view cross-section, tan grey tones",
       "seed": 41051,
-      "generated": false,
-      "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T04:39:49.421Z"
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-02-02T19:18:25.084Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "wall_bridge_forest",
       "terrain": "forest",
       "prompt": "seamless vertical wooden bridge pillar texture with moss and age cracks, tileable horizontal pattern, side view cross-section, warm brown tones",
       "seed": 41061,
-      "generated": false,
-      "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T04:39:49.422Z"
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-02-02T19:19:11.449Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "wall_bridge_water",
       "terrain": "water",
       "prompt": "seamless vertical wet bridge foundation texture with water damage and algae, tileable horizontal pattern, side view cross-section, grey green tones",
       "seed": 41071,
-      "generated": false,
-      "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T04:39:49.422Z"
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-02-02T19:19:56.882Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "wall_bridge_lava",
@@ -75,7 +87,7 @@
       "seed": 41081,
       "generated": false,
       "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T04:39:49.422Z"
+      "regenerationQueuedAt": "2026-02-02T19:13:12.255Z"
     },
     {
       "key": "wall_bridge_cliff",
@@ -84,7 +96,7 @@
       "seed": 41091,
       "generated": false,
       "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T04:39:49.422Z"
+      "regenerationQueuedAt": "2026-02-02T19:13:12.255Z"
     },
     {
       "key": "wall_bridge_tree",
@@ -93,7 +105,7 @@
       "seed": 41101,
       "generated": false,
       "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T04:39:49.423Z"
+      "regenerationQueuedAt": "2026-02-02T19:13:12.255Z"
     }
   ]
 }

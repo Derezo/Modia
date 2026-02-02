@@ -30,7 +30,7 @@ import FrameDescriptionEditor from './FrameDescriptionEditor.jsx';
  */
 // Animation types for character sprites
 // Players use 'hurt', enemies use 'hit' - both should be included for completeness
-const CHARACTER_ANIMATIONS = ['idle', 'walk', 'attack', 'hurt', 'hit', 'death', 'cast', 'victory'];
+const CHARACTER_ANIMATIONS = ['idle', 'walk', 'attack', 'hurt', 'hit', 'death', 'cast', 'victory', 'dead'];
 
 /**
  * Weight preset definitions for SD1.5 generation
@@ -1071,8 +1071,8 @@ export default function AssetDetail({
 
   /**
    * Get animation sprite URL for preview
-   * Players: /assets/characters/player/{class}/{class}_{animation}.png
-   * Enemies: /assets/characters/enemies/{biome}/{id}/{id}_{animation}.png
+   * Players: /assets/characters/player/{class}/{class}_{animation}.webp
+   * Enemies: /assets/characters/enemies/{biome}/{id}/{id}_{animation}.webp
    */
   const getAnimationUrl = useCallback((anim) => {
     if (!characterId) return null;
@@ -1080,10 +1080,10 @@ export default function AssetDetail({
     if (type === 'enemy' || type === 'enemies') {
       // Enemy characters include biome in path (use 'enemies' plural for directory)
       const biome = asset?._biome || asset?.biome || 'unknown';
-      return `/assets/characters/enemies/${biome}/${characterId}/${characterId}_${anim}.png`;
+      return `/assets/characters/enemies/${biome}/${characterId}/${characterId}_${anim}.webp`;
     }
     // Player characters
-    return `/assets/characters/player/${characterId}/${characterId}_${anim}.png`;
+    return `/assets/characters/player/${characterId}/${characterId}_${anim}.webp`;
   }, [characterId, asset?._type, asset?._biome, asset?.biome]);
 
   // Get image URLs with fallback support (memoized for performance)

@@ -136,27 +136,30 @@ export class BattleIntro {
   }
 
   /**
-   * Build ParchmentCard instances for players and enemies
+   * Build ParchmentCard instances for allies (left) and opponents (right)
+   * In PvE: allies = player characters, opponents = enemy monsters
+   * In PvP: allies = local player's party, opponents = other player's party
    */
   buildCharacterCards() {
     const state = this.scene.battleState;
     if (!state || !state.units) return;
 
-    // Player cards on LEFT side (stacked vertically)
-    const players = state.units.filter(u => u.type === 'player');
-    const playerCardHeight = 85;
-    const playerStartY = 80;
+    const { allies, opponents } = this.getTeamUnits();
 
-    this.playerCardInstances = players.map((unit, i) => {
+    // Ally cards on LEFT side (stacked vertically)
+    const allyCardHeight = 85;
+    const allyStartY = 80;
+
+    this.playerCardInstances = allies.map((unit, i) => {
       const card = new ParchmentCard({
         mode: 'compact',
-        type: 'player',
+        type: 'player',  // Blue styling for local player's team
         showStats: false
       });
       card.setCharacter(unit);
 
       // Position card on left, initially hidden
-      const targetY = playerStartY + i * (playerCardHeight + 10);
+      const targetY = allyStartY + i * (allyCardHeight + 10);
       card.element.style.cssText = `
         position: absolute;
         left: 15px;
@@ -172,21 +175,20 @@ export class BattleIntro {
       return card;
     });
 
-    // Enemy cards on RIGHT side (stacked vertically, starting off-screen)
-    const enemies = state.units.filter(u => u.type === 'enemy');
-    const enemyCardHeight = 85;
-    const enemyStartY = 80;
+    // Opponent cards on RIGHT side (stacked vertically, starting off-screen)
+    const opponentCardHeight = 85;
+    const opponentStartY = 80;
 
-    this.enemyCardInstances = enemies.map((unit, i) => {
+    this.enemyCardInstances = opponents.map((unit, i) => {
       const card = new ParchmentCard({
         mode: 'compact',
-        type: 'enemy',
+        type: 'enemy',  // Red styling for opponents
         showStats: false
       });
       card.setCharacter(unit);
 
       // Position card starting off-screen right (using CSS right positioning)
-      const targetY = enemyStartY + i * (enemyCardHeight + 10);
+      const targetY = opponentStartY + i * (opponentCardHeight + 10);
 
       card.element.style.cssText = `
         position: absolute;
@@ -205,16 +207,17 @@ export class BattleIntro {
 
   /**
    * Calculate camera waypoints for the pan sequence
+   * In PvE: start -> each enemy -> player lead -> active unit
+   * In PvP: start -> each opponent -> ally lead -> active unit
    */
   calculateCameraWaypoints() {
     const state = this.scene.battleState;
     if (!state || !state.units) return;
 
-    const enemies = state.units.filter(u => u.type === 'enemy');
-    const players = state.units.filter(u => u.type === 'player');
+    const { allies, opponents } = this.getTeamUnits();
     const activeUnit = state.units.find(u => u.id === state.activeUnitId);
 
-    // Build waypoints: start position -> each enemy -> player lead -> active unit
+    // Build waypoints: start position -> each opponent -> ally lead -> active unit
     this.cameraWaypoints = [];
 
     // Add starting camera position for smooth transition
@@ -222,14 +225,14 @@ export class BattleIntro {
       this.cameraWaypoints.push({ x: this.cameraStartPos.x, y: this.cameraStartPos.y });
     }
 
-    // Add each enemy as a waypoint
-    for (const enemy of enemies) {
-      this.cameraWaypoints.push(this.getUnitScreenPos(enemy));
+    // Add each opponent as a waypoint (camera pans to opponents FIRST)
+    for (const opponent of opponents) {
+      this.cameraWaypoints.push(this.getUnitScreenPos(opponent));
     }
 
-    // Add player lead
-    if (players.length > 0) {
-      this.cameraWaypoints.push(this.getUnitScreenPos(players[0]));
+    // Add ally lead (controlling player's first character)
+    if (allies.length > 0) {
+      this.cameraWaypoints.push(this.getUnitScreenPos(allies[0]));
     }
 
     // Add active unit if different
@@ -249,6 +252,28 @@ export class BattleIntro {
     this.totalDuration = this.titleFadeInDuration + this.titleHoldDuration +
                          this.cameraPanDuration + this.postPanPauseDuration +
                          this.cardsFadeOutDuration;
+  }
+
+  /**
+   * Get ally and opponent units based on battle mode
+   * PvE: allies = type 'player', opponents = type 'enemy'
+   * PvP: allies = units owned by local player, opponents = other player's units
+   */
+  getTeamUnits() {
+    const state = this.scene.battleState;
+    if (!state?.units) return { allies: [], opponents: [] };
+
+    if (this.scene.isPvP) {
+      const localUserId = this.scene.game.localUserId;
+      const allies = state.units.filter(u => u.ownerId === localUserId);
+      const opponents = state.units.filter(u => u.ownerId !== localUserId && u.type === 'player');
+      return { allies, opponents };
+    } else {
+      // PvE mode - use existing type-based logic
+      const allies = state.units.filter(u => u.type === 'player');
+      const opponents = state.units.filter(u => u.type === 'enemy');
+      return { allies, opponents };
+    }
   }
 
   /**

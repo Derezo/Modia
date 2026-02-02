@@ -117,16 +117,16 @@ describe('getReachableTiles', () => {
     assert.strictEqual(result.length, 3, 'Should have 3 reachable tiles');
   });
 
-  it('should ignore dead units', () => {
+  it('should block movement on dead units (corpses remain on battlefield)', () => {
     const terrain = createGrid(10, 10);
     const units = [
-      { tileX: 6, tileY: 5, hp: 0 } // Dead unit
+      { tileX: 6, tileY: 5, hp: 0 } // Dead unit (corpse)
     ];
     const result = getReachableTiles(5, 5, 1, terrain, units, 10, 10);
 
     const hasTile = result.some(t => t.x === 6 && t.y === 5);
-    assert.ok(hasTile, 'Should include tile with dead unit');
-    assert.strictEqual(result.length, 4, 'Should have 4 reachable tiles');
+    assert.strictEqual(hasTile, false, 'Should NOT include tile with dead unit corpse');
+    assert.strictEqual(result.length, 3, 'Should have 3 reachable tiles (corpse blocks one)');
   });
 
   it('should handle forest terrain with higher movement cost', () => {

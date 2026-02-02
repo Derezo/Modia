@@ -118,7 +118,7 @@ export class BattleUnit {
   initializeSprites() {
     if (!this.assetLoader) return;
 
-    const animations = ['idle', 'walk', 'attack', 'hit', 'death'];
+    const animations = ['idle', 'walk', 'attack', 'hit', 'death', 'dead'];
 
     for (const anim of animations) {
       const sprite = this.getSpriteForAnimation(anim);
@@ -169,7 +169,8 @@ export class BattleUnit {
       walk: { frameCount: 1, frameRate: 12, loop: true },
       attack: { frameCount: 1, frameRate: 12, loop: false },
       hit: { frameCount: 1, frameRate: 10, loop: false },
-      death: { frameCount: 1, frameRate: 8, loop: false }
+      death: { frameCount: 1, frameRate: 8, loop: false },
+      dead: { frameCount: 1, frameRate: 8, loop: false }
     };
 
     const config = animConfigs[animationType] || animConfigs.idle;
@@ -299,7 +300,10 @@ export class BattleUnit {
     if (completedState === 'attack' || completedState === 'hit') {
       this.setAnimationState('idle');
     }
-    // Death animation stays on last frame (no transition)
+    // After death animation, switch to static dead sprite
+    if (completedState === 'death') {
+      this.setAnimationState('dead');
+    }
   }
 
   /**
