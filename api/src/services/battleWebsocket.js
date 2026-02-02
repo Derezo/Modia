@@ -1,6 +1,19 @@
 /**
- * Battle WebSocket Service - Handles real-time battle event broadcasting
+ * @module battleWebsocket
+ * @description Battle WebSocket Service - Handles real-time battle event broadcasting
+ * with message reliability for critical events.
+ *
+ * Key responsibilities:
+ * - Room management for battle participants
+ * - Broadcasting state updates and turn events
+ * - ACK-required messaging for critical battle events
+ * - Fire-and-forget for non-critical/self-correcting messages
+ *
+ * @see messageReliability.js - ACK tracking and retry system
+ * @see websocket/index.js - WebSocket connection/room management
  */
+
+import { broadcastWithAck, sendWithAck, cleanupBattle as cleanupBattleAcks } from './messageReliability.js';
 
 // Lazy-load websocket to avoid circular dependency
 let _websocket = null;
@@ -64,6 +77,7 @@ async function leaveBattle(battleId, userId) {
 
 /**
  * Broadcast battle state update to all participants
+ * NOTE: Fire-and-forget - state updates are self-correcting
  * @param {number} battleId - Battle ID
  * @param {Object} state - Full battle state
  * @param {number} excludeUserId - Optional user to exclude from broadcast
@@ -84,17 +98,18 @@ async function broadcastStateUpdate(battleId, state, excludeUserId = null) {
 
 /**
  * Broadcast unit movement event
+ * CRITICAL: Uses ACK-required messaging for position consistency
  * @param {number} battleId - Battle ID
  * @param {number} unitId - Unit that moved
  * @param {Object} from - Previous position { x, y }
  * @param {Object} to - New position { x, y }
- * @param {number} excludeUserId - Optional user to exclude
+ * @param {number} excludeUserId - Optional user to exclude (NOTE: ACK broadcast doesn't support exclude)
  */
-async function broadcastUnitMoved(battleId, unitId, from, to, excludeUserId = null) {
+async function broadcastUnitMoved(battleId, unitId, from, to, _excludeUserId = null) {
   const roomName = `battle:${battleId}`;
 
-  const ws = await getWebsocket();
-  ws.broadcastToRoom(roomName, {
+  // Use ACK-required broadcast for position consistency
+  await broadcastWithAck(null, roomName, {
     type: 'battle:unit_moved',
     payload: {
       battleId,
@@ -103,22 +118,23 @@ async function broadcastUnitMoved(battleId, unitId, from, to, excludeUserId = nu
       to,
       timestamp: Date.now()
     }
-  }, excludeUserId);
+  }, battleId);
 }
 
 /**
  * Broadcast action execution result
+ * CRITICAL: Uses ACK-required messaging - players must see damage/effects
  * @param {number} battleId - Battle ID
  * @param {number} actorId - Unit that performed action
  * @param {string} actionType - Type of action (attack, skill, wait)
  * @param {Object} result - Action result (damage, missed, etc.)
- * @param {number} excludeUserId - Optional user to exclude
+ * @param {number} excludeUserId - Optional user to exclude (NOTE: ACK broadcast doesn't support exclude)
  */
-async function broadcastActionExecuted(battleId, actorId, actionType, result, excludeUserId = null) {
+async function broadcastActionExecuted(battleId, actorId, actionType, result, _excludeUserId = null) {
   const roomName = `battle:${battleId}`;
 
-  const ws = await getWebsocket();
-  ws.broadcastToRoom(roomName, {
+  // Use ACK-required broadcast - players must see damage/effects
+  await broadcastWithAck(null, roomName, {
     type: 'battle:action_executed',
     payload: {
       battleId,
@@ -127,7 +143,7 @@ async function broadcastActionExecuted(battleId, actorId, actionType, result, ex
       result,
       timestamp: Date.now()
     }
-  }, excludeUserId);
+  }, battleId);
 }
 
 /**
@@ -158,6 +174,7 @@ async function broadcastTurnChanged(battleId, activeUnitIndex, turn, excludeUser
 
 /**
  * Broadcast turn start event (new protocol - triggers camera pan)
+ * CRITICAL: Uses ACK-required messaging for turn flow
  * @param {number} battleId - Battle ID
  * @param {Object} unit - Active unit info { id, name, type, position }
  * @param {string} unitType - 'player_local' | 'player_remote' | 'enemy'
@@ -166,8 +183,8 @@ async function broadcastTurnChanged(battleId, activeUnitIndex, turn, excludeUser
 async function broadcastTurnStart(battleId, unit, unitType, turnPredictions = null) {
   const roomName = `battle:${battleId}`;
 
-  const ws = await getWebsocket();
-  ws.broadcastToRoom(roomName, {
+  // Use ACK-required broadcast - critical for turn flow
+  await broadcastWithAck(null, roomName, {
     type: 'battle:turn_start',
     payload: {
       battleId,
@@ -178,11 +195,12 @@ async function broadcastTurnStart(battleId, unit, unitType, turnPredictions = nu
       turnPredictions,
       timestamp: Date.now()
     }
-  });
+  }, battleId);
 }
 
 /**
  * Broadcast intent highlight for enemy visualization
+ * NOTE: Fire-and-forget - visual-only, not critical
  * @param {number} battleId - Battle ID
  * @param {string} unitId - Unit showing intent
  * @param {string} highlightType - 'movement_range' | 'attack_range' | 'target_path' | 'target_tile' | 'aoe'
@@ -208,6 +226,7 @@ async function broadcastIntentHighlight(battleId, unitId, highlightType, tiles, 
 
 /**
  * Send "your turn" notification to a specific player
+ * CRITICAL: Uses ACK-required messaging - must enable player input
  * @param {number} userId - User whose turn it is
  * @param {number} battleId - Battle ID
  * @param {string} unitId - Active unit ID
@@ -216,20 +235,27 @@ async function broadcastIntentHighlight(battleId, unitId, highlightType, tiles, 
  */
 async function sendYourTurn(userId, battleId, unitId, state, availableActions = ['move', 'attack', 'skill', 'item', 'wait']) {
   const ws = await getWebsocket();
-  ws.sendToUser(userId, {
-    type: 'battle:your_turn',
-    payload: {
-      battleId,
-      unitId,
-      state,
-      availableActions,
-      timestamp: Date.now()
-    }
-  });
+  const { connections } = ws;
+  const connection = connections.get(userId);
+
+  if (connection && connection.readyState === 1) { // WebSocket.OPEN = 1
+    // Use ACK-required send - must enable player input
+    sendWithAck(connection, {
+      type: 'battle:your_turn',
+      payload: {
+        battleId,
+        unitId,
+        state,
+        availableActions,
+        timestamp: Date.now()
+      }
+    }, battleId, userId);
+  }
 }
 
 /**
  * Broadcast player disconnection
+ * NOTE: Fire-and-forget - informational only
  * @param {number} battleId - Battle ID
  * @param {number} playerId - Disconnected player's user ID
  * @param {string} playerName - Disconnected player's name
@@ -272,6 +298,7 @@ async function broadcastPlayerReconnected(battleId, playerId, playerName) {
 
 /**
  * Send full state sync to a specific user (for reconnection)
+ * NOTE: Fire-and-forget - full sync is self-correcting
  * @param {number} userId - User to sync
  * @param {number} battleId - Battle ID
  * @param {Object} state - Full battle state
@@ -292,6 +319,7 @@ async function sendStateSync(userId, battleId, state, reason = 'reconnect') {
 
 /**
  * Broadcast battle end event
+ * CRITICAL: Uses ACK-required messaging - players must know battle is over
  * @param {number} battleId - Battle ID
  * @param {string} status - 'victory' | 'defeat'
  * @param {Object} rewards - Rewards data (gold, exp, items)
@@ -299,8 +327,8 @@ async function sendStateSync(userId, battleId, state, reason = 'reconnect') {
 async function broadcastBattleEnd(battleId, status, rewards = null) {
   const roomName = `battle:${battleId}`;
 
-  const ws = await getWebsocket();
-  ws.broadcastToRoom(roomName, {
+  // Use ACK-required broadcast - players must know battle is over
+  await broadcastWithAck(null, roomName, {
     type: 'battle:end',
     payload: {
       battleId,
@@ -308,9 +336,9 @@ async function broadcastBattleEnd(battleId, status, rewards = null) {
       rewards,
       timestamp: Date.now()
     }
-  });
+  }, battleId);
 
-  // Clean up battle room after broadcast
+  // Clean up battle room and ACK tracking after broadcast
   setTimeout(() => {
     cleanupBattleRoom(battleId);
   }, 5000);
@@ -337,6 +365,7 @@ async function broadcastPhaseTransition(battleId, transition) {
 
 /**
  * Send battle state to a specific user (for rejoin)
+ * NOTE: Fire-and-forget - state updates are self-correcting
  * @param {number} userId - User ID
  * @param {number} battleId - Battle ID
  * @param {Object} state - Battle state
@@ -375,7 +404,7 @@ async function broadcastEnemyActions(battleId, enemyActions, excludeUserId = nul
 }
 
 /**
- * Clean up battle room
+ * Clean up battle room and ACK tracking
  * @param {number} battleId - Battle ID
  */
 async function cleanupBattleRoom(battleId) {
@@ -390,6 +419,9 @@ async function cleanupBattleRoom(battleId) {
   if (rooms.has(roomName)) {
     rooms.delete(roomName);
   }
+
+  // Clean up ACK tracking for this battle
+  cleanupBattleAcks(battleId);
 }
 
 /**
@@ -408,26 +440,26 @@ export {
   cleanupBattleRoom,
   getBattleParticipants,
 
-  // State updates
+  // State updates (fire-and-forget)
   broadcastStateUpdate,
   sendBattleState,
   sendStateSync,
 
-  // Turn-based protocol (new)
-  broadcastTurnStart,
-  broadcastTurnChanged,
-  broadcastIntentHighlight,
-  sendYourTurn,
+  // Turn-based protocol
+  broadcastTurnStart,      // ACK-required
+  broadcastTurnChanged,    // fire-and-forget (legacy)
+  broadcastIntentHighlight, // fire-and-forget
+  sendYourTurn,            // ACK-required
 
   // Action events
-  broadcastUnitMoved,
-  broadcastActionExecuted,
-  broadcastEnemyActions,
+  broadcastUnitMoved,      // ACK-required
+  broadcastActionExecuted, // ACK-required
+  broadcastEnemyActions,   // fire-and-forget
 
   // Battle lifecycle
-  broadcastBattleEnd,
+  broadcastBattleEnd,      // ACK-required
   broadcastPhaseTransition,
-  broadcastPlayerDisconnected,
+  broadcastPlayerDisconnected, // fire-and-forget
   broadcastPlayerReconnected
 };
 

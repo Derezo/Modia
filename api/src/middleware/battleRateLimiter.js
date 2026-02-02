@@ -44,3 +44,12 @@ export const rewardsLimiter = createLimiter({
   maxRequests: 10, // Base: 10, actual: 20 prod, 50 dev
   message: 'Too many reward requests. Please wait.'
 });
+
+// State polling - 60/min
+// Lightweight endpoint for defensive polling (ETag support reduces actual load)
+export const stateLimiter = createLimiter({
+  name: 'battle:state',
+  windowMs: 60 * 1000,
+  maxRequests: 30, // Base: 30, actual: 60 prod, 150 dev
+  message: 'Too many state requests. Please wait.'
+});

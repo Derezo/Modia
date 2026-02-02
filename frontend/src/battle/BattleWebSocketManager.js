@@ -13,6 +13,10 @@
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { debugLog } from '../utils/debugLogger.js';
 import { ANIMATION_TIMING } from './BattleAnimations.js';
+import { BattleStatePoller } from './BattleStatePoller.js';
+import { connectionQuality } from '../api/connectionQuality.js';
+
+const QUEUE_TIMEOUT_MS = 5000; // 5 second timeout for queue events
 
 export class BattleWebSocketManager {
   /**
@@ -25,6 +29,11 @@ export class BattleWebSocketManager {
     // Turn event queue state
     this.turnEventQueue = [];
     this.isProcessingQueue = false;
+
+    // Timeout and polling state
+    this.timeoutCount = 0;
+    this.statePoller = null;
+    this.connectionQuality = connectionQuality;
   }
 
   // ===========================================================================
@@ -178,12 +187,31 @@ export class BattleWebSocketManager {
       }
     });
     this.wsUnsubscribers.push(reconnectUnsub);
+
+    // Initialize state poller for defensive synchronization
+    this.statePoller = new BattleStatePoller(
+      this.battleId,
+      (serverState) => this.handleStateDrift(serverState),
+      this.game
+    );
+    this.statePoller.start();
   }
 
   /**
    * Clean up WebSocket handlers
    */
   cleanup() {
+    // Stop state poller
+    this.statePoller?.stop();
+    this.statePoller = null;
+    this.timeoutCount = 0;
+
+    // Clean up reliability manager for this battle
+    const websocket = this.game?.websocket;
+    if (websocket?.getReliabilityManager) {
+      websocket.getReliabilityManager().cleanup(this.battleId);
+    }
+
     // Unsubscribe from all WebSocket events
     for (const unsub of this.wsUnsubscribers) {
       if (typeof unsub === 'function') {
@@ -520,11 +548,14 @@ export class BattleWebSocketManager {
     if (this.isProcessingQueue) return;
     this.isProcessingQueue = true;
 
+    // Pause state poller during queue processing to avoid false drift detection
+    this.statePoller?.pause();
+
     try {
       while (this.turnEventQueue.length > 0) {
         const event = this.turnEventQueue.shift();
         try {
-          await this.processSingleTurnEvent(event);
+          await this.processSingleTurnEventWithTimeout(event);
         } catch (eventError) {
           console.error(`[Battle Queue] Error processing ${event.type} event:`, eventError);
           // Continue processing remaining events even if one fails
@@ -542,7 +573,156 @@ export class BattleWebSocketManager {
     } finally {
       // Always reset the flag, even if an error occurred
       this.isProcessingQueue = false;
+
+      // Resume state poller and update local state
+      this.statePoller?.resume();
+      this.updatePollerState();
     }
+  }
+
+  /**
+   * Process a single turn event with a timeout wrapper
+   * If the event takes longer than QUEUE_TIMEOUT_MS, it is forcefully skipped
+   */
+  async processSingleTurnEventWithTimeout(event) {
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Queue event timeout')), QUEUE_TIMEOUT_MS);
+    });
+
+    try {
+      await Promise.race([
+        this.processSingleTurnEvent(event),
+        timeoutPromise
+      ]);
+    } catch (error) {
+      if (error.message === 'Queue event timeout') {
+        console.warn(`[Battle Queue] Queue timeout: ${event.type}`, event);
+        this.handleQueueTimeout(event);
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Handle a queue event timeout
+   * Forces animations to complete, tracks timeout count, and triggers resync if needed
+   * @param {Object} _event - The timed out event (unused but kept for debugging)
+   */
+  handleQueueTimeout(_event) {
+    // Force-complete pending animations
+    if (this.animations?.forceComplete) {
+      this.animations.forceComplete();
+    }
+
+    // Increment timeout counter
+    this.timeoutCount++;
+
+    // Update connection quality
+    connectionQuality.onRetryScheduled();
+
+    // If multiple timeouts, trigger full resync
+    if (this.timeoutCount >= 3) {
+      console.warn('[Battle Queue] Multiple queue timeouts - requesting full state sync');
+      this.requestFullStateSync();
+      this.timeoutCount = 0;
+    }
+  }
+
+  /**
+   * Request a full state sync from the server via WebSocket
+   */
+  requestFullStateSync() {
+    const socket = this.game?.socket;
+    if (socket) {
+      socket.send({
+        type: 'battle:request_sync',
+        battleId: this.battleId
+      });
+    }
+  }
+
+  /**
+   * Handle state drift detected by the poller
+   * Applies the authoritative server state
+   */
+  handleStateDrift(serverState) {
+    console.warn('[Battle WS] State drift detected - applying server state');
+
+    // Apply the server state to the battle
+    this.applyServerState(serverState);
+
+    // Reset timeout counter since we've synced
+    this.timeoutCount = 0;
+
+    // Update connection quality
+    connectionQuality.onAckReceived();
+  }
+
+  /**
+   * Apply server state to local battle state
+   * Updates unit positions, HP, MP, and turn state
+   */
+  applyServerState(serverState) {
+    // Update units from server state
+    if (serverState.units && this.units) {
+      for (const serverUnit of serverState.units) {
+        const localUnit = this.units.get(serverUnit.id);
+        if (localUnit) {
+          localUnit.x = serverUnit.x;
+          localUnit.y = serverUnit.y;
+          localUnit.hp = serverUnit.hp;
+          localUnit.mp = serverUnit.mp ?? localUnit.mp;
+          // Update status effects if provided
+          if (serverUnit.statusEffects) {
+            localUnit.statusEffects = serverUnit.statusEffects;
+          }
+        }
+      }
+    }
+
+    // Update turn state
+    if (serverState.activeUnitId !== undefined) {
+      this.battleState.activeUnitId = serverState.activeUnitId;
+    }
+    if (serverState.turnCount !== undefined) {
+      this.scene.battleLogTurnCounter = serverState.turnCount;
+    }
+
+    // Emit event for scene to handle full refresh if needed
+    if (this.scene.onStateSync) {
+      this.scene.onStateSync(serverState);
+    }
+  }
+
+  /**
+   * Update the poller's local state for drift comparison
+   */
+  updatePollerState() {
+    if (!this.statePoller || !this.scene) return;
+
+    const state = {
+      activeUnitId: this.battleState?.activeUnitId,
+      turnCount: this.battleLogTurnCounter || 0,
+      status: this.battleState?.status || 'active',
+      units: this.units ? Array.from(this.units.values()).map(u => ({
+        id: u.id,
+        x: u.x,
+        y: u.y,
+        hp: u.hp,
+        mp: u.mp
+      })) : []
+    };
+
+    this.statePoller.setLocalState(state);
+  }
+
+  /**
+   * Expose connection quality manager for UI components
+   * @returns {ConnectionQualityManager}
+   */
+  getConnectionQualityManager() {
+    return this.connectionQuality;
   }
 
   /**

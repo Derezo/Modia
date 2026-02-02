@@ -1,4 +1,7 @@
 import { debugLog } from '../utils/debugLogger.js';
+import { MessageReliabilityManager } from './messageReliability.js';
+import { HeartbeatManager } from './heartbeat.js';
+import { connectionQuality } from './connectionQuality.js';
 
 export class GameWebSocket {
   constructor(url) {
@@ -10,6 +13,23 @@ export class GameWebSocket {
     this.reconnectDelay = 1000;
     this.token = null;
     this.connected = false;
+
+    // Initialize reliability manager
+    this.reliabilityManager = new MessageReliabilityManager((msg) => {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify(msg));
+      }
+    });
+
+    // Initialize heartbeat manager
+    this.heartbeatManager = new HeartbeatManager(
+      (msg) => {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          this.ws.send(JSON.stringify(msg));
+        }
+      },
+      () => this.handleUnhealthyConnection()
+    );
   }
 
   connect(token) {
@@ -23,13 +43,38 @@ export class GameWebSocket {
         this.reconnectAttempts = 0;
         this.connected = true;
 
+        // Update connection quality state
+        connectionQuality.onConnected();
+
+        // Start heartbeat monitoring
+        this.heartbeatManager.start();
+
         // Authenticate
         this.send('auth', { token: this.token });
       };
 
       this.ws.onmessage = (event) => {
         try {
-          const { type, payload } = JSON.parse(event.data);
+          const message = JSON.parse(event.data);
+
+          // Handle heartbeat_ack specially (before reliability manager)
+          if (message.type === 'heartbeat_ack') {
+            const latency = this.heartbeatManager.handleAck(message.timestamp);
+            connectionQuality.updateLatency(latency);
+            return;
+          }
+
+          // Process through reliability manager for ACK handling and deduplication
+          const processedMessage = this.reliabilityManager.handleMessage(message);
+          if (!processedMessage) {
+            return; // Duplicate message, skip
+          }
+
+          // Update connection quality on any message
+          connectionQuality.onMessageReceived();
+
+          // Continue with normal message routing
+          const { type, payload } = processedMessage;
           this.handleMessage(type, payload);
         } catch (err) {
           console.error('Failed to parse WebSocket message:', err);
@@ -39,6 +84,13 @@ export class GameWebSocket {
       this.ws.onclose = () => {
         console.log('WebSocket disconnected');
         this.connected = false;
+
+        // Update connection quality state
+        connectionQuality.onDisconnect();
+
+        // Stop heartbeat monitoring
+        this.heartbeatManager.stop();
+
         this.attemptReconnect();
       };
 
@@ -62,11 +114,33 @@ export class GameWebSocket {
 
     console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
 
+    // Update connection quality state
+    connectionQuality.onReconnecting();
+
     setTimeout(() => {
       if (this.token) {
         this.connect(this.token);
       }
     }, delay);
+  }
+
+  /**
+   * Handle an unhealthy connection detected by the heartbeat manager.
+   * Triggers a reconnection attempt.
+   */
+  handleUnhealthyConnection() {
+    console.warn('Connection unhealthy - triggering reconnect');
+    connectionQuality.onReconnecting();
+    this.reconnect();
+  }
+
+  /**
+   * Force a reconnection by closing the current connection.
+   */
+  reconnect() {
+    if (this.ws) {
+      this.ws.close();
+    }
   }
 
   handleMessage(type, payload) {
@@ -114,12 +188,48 @@ export class GameWebSocket {
   }
 
   disconnect() {
+    // Stop heartbeat monitoring
+    this.heartbeatManager.stop();
+
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
     this.connected = false;
     this.token = null;
+  }
+
+  /**
+   * Clean up all resources.
+   * Call this when the WebSocket client is being destroyed.
+   */
+  destroy() {
+    this.heartbeatManager.stop();
+    this.disconnect();
+  }
+
+  /**
+   * Get the current connection quality state.
+   * @returns {{state: string, latencyMs: number, pendingRetries: number, lastMessageTime: number|null}}
+   */
+  getConnectionQuality() {
+    return connectionQuality.getState();
+  }
+
+  /**
+   * Get the connection quality manager for external use (e.g., BattleWebSocketManager).
+   * @returns {ConnectionQualityManager}
+   */
+  getConnectionQualityManager() {
+    return connectionQuality;
+  }
+
+  /**
+   * Get the reliability manager for external use (e.g., cleanup on battle end).
+   * @returns {MessageReliabilityManager}
+   */
+  getReliabilityManager() {
+    return this.reliabilityManager;
   }
 
   // Convenience methods

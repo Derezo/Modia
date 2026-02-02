@@ -10,6 +10,7 @@ import adminGenerationService from '../services/adminGenerationService.js';
 import audioGenerationService from '../services/adminAudioGenerationService.js';
 import { query } from '../config/database.js';
 import { getRedisClient, isRedisConnected } from '../config/redis.js';
+import { handleAck, cleanupConnection } from '../services/messageReliability.js';
 
 // ============================================================
 // WebSocket Rate Limiting
@@ -187,6 +188,10 @@ const connections = new Map();
 // Room subscriptions: roomName -> Set of userIds
 const rooms = new Map();
 
+// Heartbeat tracking for zombie connection detection
+const lastHeartbeat = new Map(); // userId -> timestamp
+const HEARTBEAT_TIMEOUT_MS = 45000; // Close zombie connections after 45s
+
 /**
  * SECURITY: Validate that a user has authorization to join a specific room
  * @param {number} userId - The user's ID
@@ -322,6 +327,42 @@ async function validateRoomAccess(userId, roomName) {
   return { authorized: false, error: 'Unknown room type' };
 }
 
+/**
+ * Get battle state for sync request
+ * @param {number} battleId - Battle ID
+ * @returns {Object|null} Battle state or null if not found
+ */
+async function getBattleStateForSync(battleId) {
+  try {
+    const result = await query(
+      'SELECT battle_state FROM battles WHERE id = $1 AND status = \'active\'',
+      [battleId]
+    );
+
+    if (result.rows.length === 0) {
+      return null;
+    }
+
+    const state = result.rows[0].battle_state;
+    return {
+      activeUnitId: state.activeUnitId,
+      turnCount: state.turnCount || 0,
+      status: state.status || 'active',
+      units: state.units?.map(u => ({
+        id: u.id,
+        x: u.x,
+        y: u.y,
+        hp: u.hp,
+        mp: u.mp,
+        statusEffects: u.statusEffects || []
+      })) || []
+    };
+  } catch (error) {
+    console.error('Error getting battle state for sync:', error);
+    return null;
+  }
+}
+
 function setupWebSocket(server) {
   const wss = new WebSocketServer({ server, path: '/ws' });
 
@@ -386,6 +427,9 @@ function setupWebSocket(server) {
                 // Store connection so broadcasts can find this WebSocket
                 connections.set(userId, ws);
 
+                // Record initial heartbeat
+                lastHeartbeat.set(userId, Date.now());
+
                 // Don't set presence for admin dashboard
                 clearTimeout(authTimeout);
 
@@ -411,6 +455,9 @@ function setupWebSocket(server) {
               }
 
               connections.set(userId, ws);
+
+              // Record initial heartbeat
+              lastHeartbeat.set(userId, Date.now());
 
               // Clear authentication timeout on successful auth
               clearTimeout(authTimeout);
@@ -576,7 +623,7 @@ function setupWebSocket(server) {
             if (!userId) break;
             try {
               const { queueType, partyLevel, partySize } = payload;
-              const result = coliseumService.joinQueue(
+              const result = await coliseumService.joinQueue(
                 queueType || '1v1',
                 userId,
                 username,
@@ -585,12 +632,16 @@ function setupWebSocket(server) {
               );
               if (!result.success) {
                 ws.send(JSON.stringify({
-                  type: 'error',
+                  type: 'coliseum:error',
                   payload: { message: result.error }
                 }));
               }
             } catch (err) {
               console.error('Coliseum queue join error:', err);
+              ws.send(JSON.stringify({
+                type: 'coliseum:error',
+                payload: { message: 'Failed to join queue' }
+              }));
             }
             break;
 
@@ -598,7 +649,7 @@ function setupWebSocket(server) {
             if (!userId) break;
             try {
               const { queueType: leaveQueueType } = payload;
-              coliseumService.leaveQueue(leaveQueueType, userId);
+              await coliseumService.leaveQueue(leaveQueueType, userId);
             } catch (err) {
               console.error('Coliseum queue leave error:', err);
             }
@@ -608,17 +659,40 @@ function setupWebSocket(server) {
             if (!userId) break;
             try {
               const { matchId } = payload;
-              const readyResult = coliseumService.playerReady(matchId, userId);
+              const readyResult = await coliseumService.playerReady(matchId, userId);
               if (!readyResult.success) {
                 ws.send(JSON.stringify({
-                  type: 'error',
+                  type: 'coliseum:error',
                   payload: { message: readyResult.error }
                 }));
               }
             } catch (err) {
               console.error('Coliseum ready error:', err);
+              ws.send(JSON.stringify({
+                type: 'coliseum:error',
+                payload: { message: 'Failed to mark as ready' }
+              }));
             }
             break;
+
+          case 'coliseum_lobby_join': {
+            if (!userId) break;
+            const lobbyRoom = 'coliseum:lobby';
+            if (!rooms.has(lobbyRoom)) {
+              rooms.set(lobbyRoom, new Set());
+            }
+            rooms.get(lobbyRoom).add(userId);
+            break;
+          }
+
+          case 'coliseum_lobby_leave': {
+            if (!userId) break;
+            const lobbyRoomLeave = 'coliseum:lobby';
+            if (rooms.has(lobbyRoomLeave)) {
+              rooms.get(lobbyRoomLeave).delete(userId);
+            }
+            break;
+          }
 
           case 'private_message':
             if (!userId) {
@@ -1309,6 +1383,65 @@ function setupWebSocket(server) {
             break;
           }
 
+          // Message reliability ACK handler
+          case 'ack': {
+            if (!userId) break;
+            const battleId = payload.battleId;
+            const seq = parseInt(payload.seq, 10);
+            if (!battleId || isNaN(seq)) {
+              console.warn('[WS] Invalid ACK payload:', payload);
+              break;
+            }
+            handleAck(
+              userId,  // connectionId is userId in this system
+              battleId,
+              seq
+            );
+            break;
+          }
+
+          // Heartbeat handler for client-side keep-alive
+          case 'heartbeat': {
+            if (!userId) break;
+            // Record heartbeat
+            lastHeartbeat.set(userId, Date.now());
+
+            // Send immediate response
+            ws.send(JSON.stringify({
+              type: 'heartbeat_ack',
+              timestamp: payload.timestamp,
+              serverTime: Date.now()
+            }));
+            break;
+          }
+
+          // Battle state sync request handler
+          case 'battle:request_sync': {
+            if (!userId) break;
+            try {
+              const battleState = await getBattleStateForSync(payload.battleId);
+              if (battleState) {
+                ws.send(JSON.stringify({
+                  type: 'battle:state_update',
+                  battleId: payload.battleId,
+                  state: battleState
+                }));
+              } else {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  payload: { message: 'Battle not found or not active' }
+                }));
+              }
+            } catch (err) {
+              console.error('Battle sync request error:', err);
+              ws.send(JSON.stringify({
+                type: 'error',
+                payload: { message: 'Failed to sync battle state' }
+              }));
+            }
+            break;
+          }
+
           default:
             ws.send(JSON.stringify({
               type: 'error',
@@ -1330,6 +1463,12 @@ function setupWebSocket(server) {
 
       if (userId) {
         connections.delete(userId);
+
+        // Clean up heartbeat tracking
+        lastHeartbeat.delete(userId);
+
+        // Clean up message reliability pending ACKs
+        cleanupConnection(userId);
 
         // Clean up rate limit tracking
         cleanupUserRateLimits(userId);
@@ -1394,7 +1533,7 @@ function setupWebSocket(server) {
     });
   });
 
-  // Heartbeat to detect dead connections
+  // Heartbeat to detect dead connections (server-side ping/pong)
   const heartbeatInterval = setInterval(() => {
     wss.clients.forEach((ws) => {
       if (!ws.isAlive) {
@@ -1405,8 +1544,24 @@ function setupWebSocket(server) {
     });
   }, 30000);
 
+  // Zombie connection cleanup based on client heartbeats (runs every 15 seconds)
+  const heartbeatCleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [connId, lastTime] of lastHeartbeat) {
+      if (now - lastTime > HEARTBEAT_TIMEOUT_MS) {
+        const ws = connections.get(connId);
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          console.log(`[WebSocket] Closing zombie connection: userId=${connId}`);
+          ws.close(1000, 'Heartbeat timeout');
+        }
+        lastHeartbeat.delete(connId);
+      }
+    }
+  }, 15000);
+
   wss.on('close', () => {
     clearInterval(heartbeatInterval);
+    clearInterval(heartbeatCleanupInterval);
   });
 
   return wss;

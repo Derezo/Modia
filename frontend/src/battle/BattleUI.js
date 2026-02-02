@@ -12,6 +12,7 @@
  * - PvP-specific UI (turn timer, surrender, disconnect overlay)
  * - Skill, item, and zodiac ability selection panels
  * - Confirmation dialogs and battle result display
+ * - Connection quality indicator (Canvas-based, rendered via BattleScene)
  *
  * @see BattleScene.js - Orchestrates battle and calls UI methods
  * @see ParchmentCard.js - Character/enemy info cards
@@ -20,6 +21,7 @@
  * @see BattleMenuDropdown.js - Compact menu trigger with badge
  * @see TurnOrderModal.js - Full turn order modal with rich unit info
  * @see BattleLogModal.js - Full battle log modal with filtering
+ * @see ConnectionIndicator.js - WebSocket connection quality display
  */
 import { ParchmentCard } from '../components/ParchmentCard.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
@@ -28,6 +30,7 @@ import BattleLogPanel from './BattleLogPanel.js';
 import BattleMenuDropdown from './BattleMenuDropdown.js';
 import TurnOrderModal from './TurnOrderModal.js';
 import BattleLogModal from './BattleLogModal.js';
+import { ConnectionIndicator } from '../ui/ConnectionIndicator.js';
 
 /**
  * BattleUI - User interface for tactical combat
@@ -54,6 +57,10 @@ export class BattleUI {
     this.turnOrderModal = null;  // TurnOrderModal - full turn order modal
     this.battleLogModal = null;  // BattleLogModal - full battle log modal
     this.scene = null;           // Reference to BattleScene for camera pan
+
+    // Connection quality indicator (Canvas-based, rendered by BattleScene)
+    this.connectionIndicator = null;
+    this.canvas = null;          // Reference to canvas for indicator positioning
   }
 
   /**
@@ -1572,6 +1579,121 @@ export class BattleUI {
     this.scene = scene;
   }
 
+  // ==========================================
+  // Connection Quality Indicator Methods
+  // ==========================================
+
+  /**
+   * Initialize the connection quality indicator.
+   * The indicator is Canvas-based and rendered by BattleScene.
+   * @param {import('../api/connectionQuality.js').ConnectionQualityManager} connectionQualityManager - Connection quality manager instance
+   * @param {HTMLCanvasElement} canvas - Canvas element for positioning calculations
+   */
+  initConnectionIndicator(connectionQualityManager, canvas) {
+    if (!connectionQualityManager) {
+      console.warn('[BattleUI] No connection quality manager provided');
+      return;
+    }
+
+    this.canvas = canvas;
+    this.connectionIndicator = new ConnectionIndicator(connectionQualityManager);
+
+    // Position in top-right of battle area
+    this.updateIndicatorPosition();
+  }
+
+  /**
+   * Update the connection indicator position based on canvas size.
+   * Called on initialization and when canvas resizes.
+   */
+  updateIndicatorPosition() {
+    if (!this.connectionIndicator) return;
+
+    // Position in top-right corner, accounting for HUD elements
+    // Leave room for PvP surrender button (right: 10px, ~100px wide)
+    const x = this.canvas?.width ? this.canvas.width - 130 : 650;
+    const y = 20; // Below any top UI elements
+
+    this.connectionIndicator.setPosition(x, y);
+  }
+
+  /**
+   * Update the connection indicator animation.
+   * Called by BattleScene in its update loop.
+   * @param {number} deltaTime - Time since last update in milliseconds
+   */
+  updateConnectionIndicator(deltaTime) {
+    this.connectionIndicator?.update(deltaTime);
+  }
+
+  /**
+   * Render the connection indicator on the canvas.
+   * Called by BattleScene in its render loop.
+   * @param {CanvasRenderingContext2D} ctx - Canvas rendering context
+   */
+  renderConnectionIndicator(ctx) {
+    this.connectionIndicator?.render(ctx);
+  }
+
+  /**
+   * Handle mouse move for connection indicator tooltip.
+   * @param {number} x - Mouse X coordinate in canvas space
+   * @param {number} y - Mouse Y coordinate in canvas space
+   */
+  handleConnectionIndicatorMouseMove(x, y) {
+    this.connectionIndicator?.handleMouseMove(x, y);
+  }
+
+  /**
+   * Handle click on connection indicator.
+   * @param {number} x - Click X coordinate in canvas space
+   * @param {number} y - Click Y coordinate in canvas space
+   * @returns {boolean} True if click was handled by the indicator
+   */
+  handleConnectionIndicatorClick(x, y) {
+    if (this.connectionIndicator?.handleClick(x, y)) {
+      this.showConnectionDetails();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Show connection details (currently logs to console).
+   * Could be extended to show a modal with full diagnostics.
+   */
+  showConnectionDetails() {
+    if (this.connectionIndicator?.qualityManager) {
+      const state = this.connectionIndicator.qualityManager.getState();
+      console.log('[BattleUI] Connection Details:', state);
+
+      // Show a toast with connection info
+      const label = {
+        healthy: 'Connected',
+        degraded: 'Slow Connection',
+        unstable: 'Unstable Connection',
+        disconnected: 'Disconnected',
+        reconnecting: 'Reconnecting...'
+      }[state.state] || 'Unknown';
+
+      parchmentToast.info(
+        `${label} - Latency: ${state.latencyMs}ms`,
+        'Connection Status'
+      );
+    }
+  }
+
+  /**
+   * Handle canvas resize - update indicator position.
+   * @param {number} _width - New canvas width (unused, canvas already updated)
+   * @param {number} _height - New canvas height (unused, canvas already updated)
+   */
+  onResize(_width, _height) {
+    // Canvas dimensions are already updated by the caller
+    // Just update the indicator position based on new canvas size
+    this.updateIndicatorPosition();
+  }
+
   /**
    * Open the turn order modal
    */
@@ -1656,6 +1778,12 @@ export class BattleUI {
       this.battleLogModal.destroy();
       this.battleLogModal = null;
     }
+    // Clean up connection indicator
+    if (this.connectionIndicator) {
+      this.connectionIndicator.destroy();
+      this.connectionIndicator = null;
+    }
+    this.canvas = null;
     this.scene = null;
     if (this.element) {
       this.element.remove();
