@@ -285,7 +285,7 @@ function setupWebSocket(server) {
             break;
 
           case 'ack':
-            handleAckMessage(userId, payload);
+            handleAckMessage(userId, message);
             break;
 
           case 'heartbeat':
