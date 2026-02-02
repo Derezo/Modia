@@ -3,6 +3,8 @@
  * Handles real-time order book updates and trade notifications
  */
 
+import { sendWithAck } from './messageReliability.js';
+
 let _wss = null;
 let _rooms = null;
 let _userSockets = null;
@@ -83,24 +85,33 @@ export function broadcastOrderBookUpdate(itemTemplateId, orderBook) {
 
 /**
  * Notify user when their order is filled (fully or partially)
+ * Uses ACK tracking for reliable delivery - financial confirmation is critical
  */
 export function notifyOrderFilled(userId, trade) {
-  sendToUser(userId, {
-    type: 'marketplace:order_filled',
-    payload: {
-      orderId: trade.orderId,
-      side: trade.side,
-      itemTemplateId: trade.itemTemplateId,
-      itemName: trade.itemName,
-      price: trade.price,
-      quantity: trade.quantity,
-      totalGold: trade.totalGold,
-      remainingQuantity: trade.remainingQuantity,
-      orderStatus: trade.orderStatus, // 'filled' or 'partial'
-      newGoldBalance: trade.newGoldBalance,
-      timestamp: Date.now()
+  const userIdStr = String(userId);
+  if (_userSockets?.has(userIdStr)) {
+    const ws = _userSockets.get(userIdStr);
+    if (ws.readyState === 1) { // WebSocket.OPEN
+      // Use sendWithAck for reliable order_filled delivery
+      // Use orderId as context ID for sequence tracking
+      sendWithAck(ws, {
+        type: 'marketplace:order_filled',
+        payload: {
+          orderId: trade.orderId,
+          side: trade.side,
+          itemTemplateId: trade.itemTemplateId,
+          itemName: trade.itemName,
+          price: trade.price,
+          quantity: trade.quantity,
+          totalGold: trade.totalGold,
+          remainingQuantity: trade.remainingQuantity,
+          orderStatus: trade.orderStatus, // 'filled' or 'partial'
+          newGoldBalance: trade.newGoldBalance,
+          timestamp: Date.now()
+        }
+      }, `marketplace:order:${trade.orderId}`, userId);
     }
-  });
+  }
 }
 
 /**

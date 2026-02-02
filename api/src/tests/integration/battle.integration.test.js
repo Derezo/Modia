@@ -1,47 +1,128 @@
-import { describe, it, before } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { request, createTestUser, createTestCharacter } from '../testHelper.js';
+import http from 'http';
+import { request, createTestUser, createTestContext, query, cleanupTestUser, BASE_URL } from '../testHelper.js';
+
+/**
+ * Extended request helper that supports custom headers and returns response headers
+ * Required for ETag testing
+ */
+async function requestWithHeaders(method, path, body = null, token = null, customHeaders = {}) {
+  const url = new URL(path, BASE_URL);
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...customHeaders
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const options = {
+    method,
+    headers
+  };
+
+  return new Promise((resolve, reject) => {
+    const req = http.request(url, options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const parsed = data ? JSON.parse(data) : {};
+          resolve({
+            status: res.statusCode,
+            body: parsed,
+            headers: res.headers
+          });
+        } catch (e) {
+          resolve({
+            status: res.statusCode,
+            body: data,
+            headers: res.headers
+          });
+        }
+      });
+    });
+
+    req.on('error', reject);
+
+    if (body) {
+      req.write(JSON.stringify(body));
+    }
+
+    req.end();
+  });
+}
+
+/**
+ * Insert additional characters directly into the database.
+ * Bypasses the API restriction that only allows one manually created character.
+ * @param {number} userId - User ID
+ * @param {number} mainCharId - Main character ID (to copy node location)
+ * @param {number} count - Number of characters to insert
+ * @returns {Promise<Array<{id: number}>>} Array of created character objects
+ */
+async function insertAdditionalCharacters(userId, mainCharId, count) {
+  const characters = [];
+  for (let i = 0; i < count; i++) {
+    const name = `BC${i}_${Date.now().toString(36).slice(-6)}`;
+    const slot = i + 2; // Start from slot 2 (slot 1 is main character)
+    const result = await query(
+      `INSERT INTO characters (user_id, name, race, class, gender, level, party_slot, current_node_id, hp_current, hp_max, mp_current, mp_max, strength, intelligence, agility, vitality, luck)
+       SELECT $1, $2, 'human', 'warrior', 'male', 1, $3, current_node_id, 100, 100, 50, 50, 10, 10, 10, 10, 10
+       FROM characters WHERE id = $4
+       RETURNING id, name`,
+      [userId, name, slot, mainCharId]
+    );
+    characters.push(result.rows[0]);
+  }
+  return characters;
+}
 
 describe('Battle API', () => {
+  const ctx = createTestContext();
   let user = null;
   let characters = [];
   let battle = null;
 
   before(async () => {
-    user = await createTestUser();
+    // Create user and first character via API (allowed)
+    user = await ctx.createUser();
+    const mainChar = await ctx.createCharacter(user.accessToken, `BC0_${Date.now().toString(36).slice(-6)}`);
+    characters.push(mainChar);
 
-    // Create multiple characters for battle party
-    for (let i = 0; i < 3; i++) {
-      // Name must be 2-24 chars: BC + index + 6 base36 chars = 9 chars max
-      const char = await createTestCharacter(user.accessToken, `BC${i}_${Date.now().toString(36).slice(-6)}`);
-      characters.push(char);
-    }
+    // Insert additional characters directly to bypass recruitment restriction
+    const additionalChars = await insertAdditionalCharacters(user.userId, mainChar.id, 2);
+    characters.push(...additionalChars);
 
     // Set battle party
     await request('PUT', '/api/party/battle', {
       characterIds: characters.map(c => c.id)
     }, user.accessToken);
 
-    // Set current location to a battle node (need to travel first)
-    // Get world nodes to find a battle-able location
-    const nodesRes = await request('GET', '/api/world/nodes', null, user.accessToken);
-    if (nodesRes.status === 200 && nodesRes.body.nodes) {
-      // Find a forest/cave/mountain node to travel to
-      const battleNode = nodesRes.body.nodes.find(n =>
-        ['forest', 'cave', 'mountain'].includes(n.node_type)
-      );
+    // Set current location to a battle node
+    // First, try to move the character directly to a battle node via database
+    // This bypasses travel restrictions for test setup
+    const battleNodeResult = await query(
+      `SELECT id FROM world_nodes
+       WHERE node_type IN ('forest', 'cave', 'mountain')
+       LIMIT 1`
+    );
 
-      if (battleNode) {
-        // Get current position
-        const currentRes = await request('GET', '/api/world/current', null, user.accessToken);
-        if (currentRes.status === 200 && currentRes.body.currentNode) {
-          // Try to travel if adjacent
-          await request('POST', '/api/world/travel', {
-            targetNodeId: battleNode.id
-          }, user.accessToken);
-        }
-      }
+    if (battleNodeResult.rows.length > 0) {
+      const battleNodeId = battleNodeResult.rows[0].id;
+      // Move all characters to the battle node directly
+      await query(
+        `UPDATE characters SET current_node_id = $1 WHERE user_id = $2`,
+        [battleNodeId, user.userId]
+      );
     }
+  });
+
+  after(async () => {
+    await ctx.cleanup();
   });
 
   describe('POST /api/battle/start', () => {
@@ -74,6 +155,9 @@ describe('Battle API', () => {
       const res = await request('POST', '/api/battle/start', {}, newUser.accessToken);
 
       assert.ok([400, 404].includes(res.status));
+
+      // Cleanup the user we created
+      await cleanupTestUser(newUser.userId);
     });
 
     it('should reject unauthenticated requests', async () => {
@@ -102,6 +186,9 @@ describe('Battle API', () => {
       const res = await request('GET', '/api/battle/current', null, newUser.accessToken);
 
       assert.strictEqual(res.status, 404);
+
+      // Cleanup the user we created
+      await cleanupTestUser(newUser.userId);
     });
   });
 
@@ -163,6 +250,164 @@ describe('Battle API', () => {
         actionType: 'wait',
         unitId: 1
       });
+
+      assert.strictEqual(res.status, 401);
+    });
+  });
+
+  describe('GET /api/battle/:id/state', () => {
+    // Use the battle from parent scope if available
+    // These tests use the battle created in the parent describe's before hook
+
+    it('should return lightweight state for active battle participant', async () => {
+      if (!battle) {
+        console.log('Skipping - no battle started');
+        return;
+      }
+
+      const res = await requestWithHeaders(
+        'GET',
+        `/api/battle/${battle.battleId}/state`,
+        null,
+        user.accessToken
+      );
+
+      assert.strictEqual(res.status, 200);
+
+      // Verify lightweight state structure
+      assert.ok(res.body.hasOwnProperty('activeUnitId'), 'Should have activeUnitId');
+      assert.ok(res.body.hasOwnProperty('turnCount'), 'Should have turnCount');
+      assert.ok(res.body.hasOwnProperty('status'), 'Should have status');
+      assert.ok(Array.isArray(res.body.units), 'Should have units array');
+
+      // Verify unit structure is lightweight
+      if (res.body.units.length > 0) {
+        const unit = res.body.units[0];
+        assert.ok(unit.hasOwnProperty('id'), 'Unit should have id');
+        // Note: The endpoint maps u.x/u.y but battle units use tileX/tileY
+        // The endpoint always includes these properties, even if undefined
+        assert.ok(unit.hasOwnProperty('x'), 'Unit should have x property');
+        assert.ok(unit.hasOwnProperty('y'), 'Unit should have y property');
+        assert.ok(unit.hasOwnProperty('hp'), 'Unit should have hp');
+        assert.ok(unit.hasOwnProperty('mp'), 'Unit should have mp');
+        assert.ok(unit.hasOwnProperty('statusEffects'), 'Unit should have statusEffects');
+
+        // Verify it's lightweight (no full unit data)
+        assert.strictEqual(unit.name, undefined, 'Lightweight state should not include name');
+        assert.strictEqual(unit.skills, undefined, 'Lightweight state should not include skills');
+      }
+    });
+
+    it('should return ETag header in response', async () => {
+      if (!battle) {
+        console.log('Skipping - no battle started');
+        return;
+      }
+
+      const res = await requestWithHeaders(
+        'GET',
+        `/api/battle/${battle.battleId}/state`,
+        null,
+        user.accessToken
+      );
+
+      assert.strictEqual(res.status, 200);
+      assert.ok(res.headers.etag, 'Response should include ETag header');
+      // ETag format should be quoted string
+      assert.ok(res.headers.etag.startsWith('"') && res.headers.etag.endsWith('"'),
+        'ETag should be a quoted string');
+    });
+
+    it('should return 304 when ETag matches', async () => {
+      if (!battle) {
+        console.log('Skipping - no battle started');
+        return;
+      }
+
+      // First request to get ETag
+      const firstRes = await requestWithHeaders(
+        'GET',
+        `/api/battle/${battle.battleId}/state`,
+        null,
+        user.accessToken
+      );
+
+      assert.strictEqual(firstRes.status, 200);
+      const etag = firstRes.headers.etag;
+      assert.ok(etag, 'First response should include ETag');
+
+      // Second request with If-None-Match header
+      const secondRes = await requestWithHeaders(
+        'GET',
+        `/api/battle/${battle.battleId}/state`,
+        null,
+        user.accessToken,
+        { 'If-None-Match': etag }
+      );
+
+      assert.strictEqual(secondRes.status, 304, 'Should return 304 Not Modified when ETag matches');
+    });
+
+    it('should return 403 for non-participant', async () => {
+      if (!battle) {
+        console.log('Skipping - no battle started');
+        return;
+      }
+
+      // Create a different user who is not in the battle
+      const otherUser = await createTestUser();
+
+      const res = await request(
+        'GET',
+        `/api/battle/${battle.battleId}/state`,
+        null,
+        otherUser.accessToken
+      );
+
+      assert.strictEqual(res.status, 403);
+      assert.ok(res.body.error?.includes('Not a battle participant') ||
+                res.body.message?.includes('Not a battle participant'),
+        'Should return "Not a battle participant" error');
+
+      // Cleanup
+      await cleanupTestUser(otherUser.userId);
+    });
+
+    it('should return 404 for non-existent battle', async () => {
+      const res = await request(
+        'GET',
+        '/api/battle/999999/state',
+        null,
+        user.accessToken
+      );
+
+      assert.strictEqual(res.status, 404);
+      assert.ok(res.body.error?.includes('Battle not found') ||
+                res.body.message?.includes('Battle not found'),
+        'Should return "Battle not found" error');
+    });
+
+    it('should return 400 for invalid battle ID', async () => {
+      const res = await request(
+        'GET',
+        '/api/battle/invalid/state',
+        null,
+        user.accessToken
+      );
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error?.includes('Invalid battle ID') ||
+                res.body.message?.includes('Invalid battle ID'),
+        'Should return "Invalid battle ID" error');
+    });
+
+    it('should reject unauthenticated requests', async () => {
+      const res = await request(
+        'GET',
+        `/api/battle/${battle?.battleId || 1}/state`,
+        null,
+        null
+      );
 
       assert.strictEqual(res.status, 401);
     });

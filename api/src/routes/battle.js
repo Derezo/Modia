@@ -2,7 +2,7 @@ import express from 'express';
 import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
-import { actionLimiter, startLimiter, readLimiter, rejoinLimiter, rewardsLimiter } from '../middleware/battleRateLimiter.js';
+import { actionLimiter, startLimiter, readLimiter, rejoinLimiter, rewardsLimiter, stateLimiter } from '../middleware/battleRateLimiter.js';
 import { BATTLE_NODE_TYPES, MAX_BATTLE_PARTY_SIZE, MAX_GOLD } from '../config/constants.js';
 import * as battleService from '../services/battleService.js';
 import * as aiService from '../services/aiService.js';
@@ -945,6 +945,88 @@ router.get('/rewards/:battleId', authenticate, rewardsLimiter, asyncHandler(asyn
 
   res.json({ rewards: result.rows[0].rewards });
 }));
+
+// GET /api/battle/:id/state - Lightweight battle state for defensive polling
+router.get('/:id/state', authenticate, stateLimiter, asyncHandler(async (req, res) => {
+  const battleId = parseInt(req.params.id, 10);
+
+  if (isNaN(battleId)) {
+    throw new AppError('Invalid battle ID', 400);
+  }
+
+  // Get battle and verify participation
+  const result = await query(
+    `SELECT b.id, b.battle_state, b.status, b.player1_id, b.player2_id
+     FROM battles b
+     WHERE b.id = $1`,
+    [battleId]
+  );
+
+  if (result.rows.length === 0) {
+    throw new AppError('Battle not found', 404);
+  }
+
+  const battle = result.rows[0];
+  const battleState = battle.battle_state;
+
+  // Verify user is a participant (player1, player2, or in battle_players table for co-op)
+  const isPlayer1 = battle.player1_id === req.user.userId;
+  const isPlayer2 = battle.player2_id === req.user.userId;
+
+  if (!isPlayer1 && !isPlayer2) {
+    // Check battle_players table for co-op battles
+    const participantCheck = await query(
+      'SELECT 1 FROM battle_players WHERE battle_id = $1 AND user_id = $2',
+      [battleId, req.user.userId]
+    );
+    if (participantCheck.rows.length === 0) {
+      throw new AppError('Not a battle participant', 403);
+    }
+  }
+
+  // Build lightweight state for polling
+  // Note: Battle units use tileX/tileY for position (not x/y)
+  const state = {
+    activeUnitId: battleState.activeUnitId || null,
+    turnCount: battleState.turn || 0,
+    status: battle.status || 'active',
+    units: (battleState.units || []).map(u => ({
+      id: u.id,
+      x: u.tileX,
+      y: u.tileY,
+      hp: u.hp,
+      mp: u.mp,
+      statusEffects: (u.statusEffects || []).map(e => e.type || e)
+    }))
+  };
+
+  // Generate ETag for caching
+  const etag = generateETag(state);
+
+  // Check If-None-Match header for 304 response
+  if (req.headers['if-none-match'] === etag) {
+    return res.status(304).end();
+  }
+
+  res.set('ETag', etag);
+  res.json(state);
+}));
+
+/**
+ * Generate a simple hash-based ETag from state object
+ * @param {Object} state - The state object to hash
+ * @returns {string} ETag string in quotes
+ */
+function generateETag(state) {
+  const str = JSON.stringify(state);
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return `"${hash.toString(16)}"`;
+}
 
 // ============================================================================
 // ZODIAC SIGNATURE ABILITIES

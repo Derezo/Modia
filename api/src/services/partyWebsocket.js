@@ -3,6 +3,7 @@
  */
 
 import { query } from '../config/database.js';
+import { sendWithAck, broadcastWithAck } from './messageReliability.js';
 
 // Lazy-load websocket to avoid circular dependency
 // websocket/index.js imports this file, so we can't import at top level
@@ -71,19 +72,23 @@ async function sendInvite(fromUserId, fromUsername, toUserId, characterId, party
 
   pendingInvites.set(inviteId, invite);
 
-  // Send invite to target user
+  // Send invite to target user with ACK tracking
+  // Use inviteId as context for sequence tracking
   const ws = await getWebsocket();
-  ws.sendToUser(toUserId, {
-    type: 'party:invite_received',
-    payload: {
-      inviteId,
-      fromUserId,
-      fromUsername,
-      partyId: invite.partyId,
-      partyName: invite.partyName,
-      expiresAt: invite.expiresAt
-    }
-  });
+  const targetWs = ws.connections?.get(toUserId);
+  if (targetWs && targetWs.readyState === 1) {
+    sendWithAck(targetWs, {
+      type: 'party:invite_received',
+      payload: {
+        inviteId,
+        fromUserId,
+        fromUsername,
+        partyId: invite.partyId,
+        partyName: invite.partyName,
+        expiresAt: invite.expiresAt
+      }
+    }, `party:invite:${inviteId}`, toUserId);
+  }
 
   return { success: true, inviteId };
 }
@@ -124,25 +129,31 @@ async function acceptInvite(inviteId, userId, username) {
 
   const ws = await getWebsocket();
 
-  // Notify the inviter
-  ws.sendToUser(invite.fromUserId, {
-    type: 'party:invite_accepted',
-    payload: {
-      inviteId,
-      userId,
-      username
-    }
-  });
+  // Notify the inviter with ACK tracking
+  const inviterWs = ws.connections?.get(invite.fromUserId);
+  if (inviterWs && inviterWs.readyState === 1) {
+    sendWithAck(inviterWs, {
+      type: 'party:invite_accepted',
+      payload: {
+        inviteId,
+        userId,
+        username
+      }
+    }, `party:invite:${inviteId}`, invite.fromUserId);
+  }
 
-  // Notify the new member
-  ws.sendToUser(userId, {
-    type: 'party:joined',
-    payload: {
-      inviteId,
-      leaderId: invite.fromUserId,
-      leaderUsername: invite.fromUsername
-    }
-  });
+  // Notify the new member with ACK tracking
+  const memberWs = ws.connections?.get(userId);
+  if (memberWs && memberWs.readyState === 1) {
+    sendWithAck(memberWs, {
+      type: 'party:joined',
+      payload: {
+        inviteId,
+        leaderId: invite.fromUserId,
+        leaderUsername: invite.fromUsername
+      }
+    }, `party:invite:${inviteId}`, userId);
+  }
 
   // In a full implementation, you'd:
   // 1. Create or get the party from database
@@ -224,8 +235,8 @@ async function expireInvite(inviteId) {
 async function broadcastMemberJoined(partyId, userId, username, characterName) {
   const roomName = `party:${partyId}`;
 
-  const ws = await getWebsocket();
-  ws.broadcastToRoom(roomName, {
+  // Use broadcastWithAck for reliable delivery - party join is critical
+  await broadcastWithAck(null, roomName, {
     type: 'party:member_joined',
     payload: {
       partyId,
@@ -234,7 +245,7 @@ async function broadcastMemberJoined(partyId, userId, username, characterName) {
       characterName,
       timestamp: Date.now()
     }
-  });
+  }, `party:${partyId}`);
 }
 
 /**
@@ -247,8 +258,8 @@ async function broadcastMemberJoined(partyId, userId, username, characterName) {
 async function broadcastMemberLeft(partyId, userId, username, reason = 'left') {
   const roomName = `party:${partyId}`;
 
-  const ws = await getWebsocket();
-  ws.broadcastToRoom(roomName, {
+  // Use broadcastWithAck for reliable delivery - party leave/kick is critical
+  await broadcastWithAck(null, roomName, {
     type: 'party:member_left',
     payload: {
       partyId,
@@ -257,7 +268,7 @@ async function broadcastMemberLeft(partyId, userId, username, reason = 'left') {
       reason,
       timestamp: Date.now()
     }
-  });
+  }, `party:${partyId}`);
 }
 
 /**
@@ -268,17 +279,18 @@ async function broadcastMemberLeft(partyId, userId, username, reason = 'left') {
 async function broadcastPartyDisbanded(partyId, reason = 'Leader left') {
   const roomName = `party:${partyId}`;
 
-  const ws = await getWebsocket();
-  ws.broadcastToRoom(roomName, {
+  // Use broadcastWithAck for reliable delivery - party disband is critical
+  await broadcastWithAck(null, roomName, {
     type: 'party:disbanded',
     payload: {
       partyId,
       reason,
       timestamp: Date.now()
     }
-  });
+  }, `party:${partyId}`);
 
   // Clean up room via websocket module
+  const ws = await getWebsocket();
   if (ws.rooms && ws.rooms.has(roomName)) {
     ws.rooms.delete(roomName);
   }
