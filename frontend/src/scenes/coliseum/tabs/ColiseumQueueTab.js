@@ -254,50 +254,128 @@ function capitalizeFirst(str) {
 }
 
 /**
+ * Format a number with comma separators
+ * @param {number} num - Number to format
+ * @returns {string} Formatted number string
+ */
+function formatNumber(num) {
+  if (num == null || isNaN(num)) return '0';
+  return num.toLocaleString();
+}
+
+/**
+ * Calculate win rate percentage from wins and total matches
+ * @param {number} wins - Number of wins
+ * @param {number} total - Total matches
+ * @returns {string} Win rate as percentage string
+ */
+function calculateWinRate(wins, total) {
+  if (!total || total === 0) return 'N/A';
+  const rate = (wins / total) * 100;
+  return `${rate.toFixed(1)}%`;
+}
+
+/**
+ * Render the opponent stats row (3 columns: Win Rate, Matches, Streak)
+ * @param {Object} opponent - Opponent data
+ * @returns {string} HTML string
+ */
+function renderOpponentStatsRow(opponent) {
+  const wins = opponent.wins ?? null;
+  const totalMatches = opponent.totalMatches ?? null;
+  const winStreak = opponent.winStreak || 0;
+
+  const winRate = (wins !== null && totalMatches !== null)
+    ? calculateWinRate(wins, totalMatches)
+    : 'N/A';
+
+  const matchCount = totalMatches !== null ? formatNumber(totalMatches) : 'N/A';
+  const streakDisplay = winStreak > 0 ? `\u{1F525} ${winStreak}` : '-';
+
+  return `
+    <div class="coliseum-opponent-stats-row">
+      <div class="coliseum-opponent-stat-col">
+        <div class="coliseum-opponent-stat-value">${winRate}</div>
+        <div class="coliseum-opponent-stat-label">Win Rate</div>
+      </div>
+      <div class="coliseum-opponent-stat-col">
+        <div class="coliseum-opponent-stat-value">${matchCount}</div>
+        <div class="coliseum-opponent-stat-label">Matches</div>
+      </div>
+      <div class="coliseum-opponent-stat-col">
+        <div class="coliseum-opponent-stat-value ${winStreak >= 3 ? 'streak-active' : ''}">${streakDisplay}</div>
+        <div class="coliseum-opponent-stat-label">Streak</div>
+      </div>
+    </div>
+  `;
+}
+
+/**
  * Render match found screen with ready check
  * @param {Object} context - Shared context
  * @returns {string} HTML string
  */
 function renderMatchFound(context) {
-  const { currentMatch, isReady, opponentReady, playerRating } = context;
+  const { currentMatch, isReady, opponentReady } = context;
   const isStarting = isReady && opponentReady;
-  const opponentBadges = currentMatch.opponent?.badges || [];
+  const opponent = currentMatch.opponent || {};
+  const opponentBadges = opponent.badges || [];
+
+  // Get opponent tier info
+  const opponentRating = opponent.rating || 0;
+  const opponentTier = getTier(opponentRating);
+  const tierIcon = opponentTier.icon ? getTierIcon(opponentTier.icon) : '';
 
   return `
     <div class="coliseum-match-found-panel ${isStarting ? 'coliseum-match-starting' : ''}">
       <div class="coliseum-match-found-title">
-        ${isStarting ? 'MATCH STARTING!' : 'MATCH FOUND!'}
+        \u{2694}\u{FE0F} ${isStarting ? 'MATCH STARTING!' : 'MATCH FOUND!'} \u{2694}\u{FE0F}
       </div>
 
-      <div class="coliseum-opponent-info">
-        <div class="coliseum-opponent-label">Your Opponent</div>
-        <div class="coliseum-opponent-name">${currentMatch.opponent?.username || 'Unknown'}</div>
-        <div class="coliseum-opponent-level">Avg Level: ${currentMatch.opponent?.partyLevel || '?'}</div>
-        ${opponentBadges.length > 0 ? renderOpponentBadges(opponentBadges) : ''}
-        ${playerRating ? `
-          <div class="coliseum-opponent-tier" style="margin-top: 8px;">
-            Your Tier: ${renderTierBadge(playerRating)}
+      <div class="coliseum-opponent-card">
+        <div class="coliseum-opponent-card-header">YOUR OPPONENT</div>
+
+        <div class="coliseum-opponent-card-body">
+          <div class="coliseum-opponent-name-row">
+            <span class="coliseum-opponent-username">${opponent.username || 'Unknown'}</span>
+            <span class="coliseum-opponent-tier-display" style="color: ${opponentTier.color};">
+              ${opponentTier.name} ${tierIcon}
+            </span>
           </div>
-        ` : ''}
+
+          <div class="coliseum-opponent-elo">
+            ${formatNumber(opponentRating)} ELO
+          </div>
+
+          ${renderOpponentStatsRow(opponent)}
+
+          <div class="coliseum-opponent-party-row">
+            <span class="coliseum-opponent-party-level">Party Level: ${opponent.partyLevel || '?'}</span>
+            ${opponentBadges.length > 0 ? renderOpponentBadges(opponentBadges) : ''}
+          </div>
+        </div>
       </div>
 
       <div class="coliseum-ready-section">
-        <button class="coliseum-ready-btn ${isReady ? 'ready' : ''}" id="ready-btn" ${isReady ? 'disabled' : ''}>
-          ${isReady ? 'READY!' : 'Click to Ready'}
+        <button class="coliseum-ready-btn-large ${isReady ? 'ready' : ''}" id="ready-btn" ${isReady ? 'disabled' : ''}>
+          ${isReady ? 'READY!' : 'READY'}
         </button>
 
-        <div class="coliseum-ready-status">
-          <div class="coliseum-ready-indicator">
-            <div class="dot ${isReady ? 'ready' : ''}"></div>
-            <span>You</span>
-          </div>
-          <div class="coliseum-ready-indicator">
-            <div class="dot ${opponentReady ? 'ready' : ''}"></div>
-            <span>Opponent</span>
+        <div class="coliseum-ready-status-enhanced">
+          <span class="coliseum-ready-label">Ready Status:</span>
+          <div class="coliseum-ready-indicators">
+            <span class="coliseum-ready-indicator-item">
+              <span class="ready-dot ${isReady ? 'filled' : ''}">${isReady ? '\u25CF' : '\u25CB'}</span>
+              <span>You</span>
+            </span>
+            <span class="coliseum-ready-indicator-item">
+              <span class="ready-dot ${opponentReady ? 'filled' : ''}">${opponentReady ? '\u25CF' : '\u25CB'}</span>
+              <span>Opponent</span>
+            </span>
           </div>
         </div>
 
-        <div class="coliseum-countdown" id="ready-countdown"></div>
+        <div class="coliseum-countdown-enhanced" id="ready-countdown"></div>
       </div>
     </div>
   `;

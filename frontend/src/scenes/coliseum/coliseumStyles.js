@@ -300,6 +300,10 @@ export function getColiseumStyles() {
       to { transform: rotate(360deg); }
     }
 
+    /* ============================================ */
+    /* MATCH FOUND PANEL - Enhanced Design         */
+    /* ============================================ */
+
     /* Match Found Panel - Arena themed (bronze accent) */
     .coliseum-match-found-panel {
       background: linear-gradient(135deg, rgba(184, 149, 106, 0.15), rgba(154, 120, 85, 0.1));
@@ -308,25 +312,147 @@ export function getColiseumStyles() {
       padding: ${PARCHMENT_SPACING.xxl};
       text-align: center;
       width: 100%;
-      max-width: 500px;
-      animation: coliseum-pulse 2s ease-in-out infinite;
+      max-width: 520px;
+      animation: coliseum-bronze-glow 2s ease-in-out infinite;
     }
 
-    @keyframes coliseum-pulse {
-      0%, 100% { box-shadow: 0 0 20px rgba(184, 149, 106, 0.3); }
-      50% { box-shadow: 0 0 40px rgba(184, 149, 106, 0.6); }
+    @keyframes coliseum-bronze-glow {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(184, 149, 106, 0.3),
+                    0 0 40px rgba(184, 149, 106, 0.1);
+      }
+      50% {
+        box-shadow: 0 0 30px rgba(184, 149, 106, 0.5),
+                    0 0 60px rgba(184, 149, 106, 0.2);
+      }
     }
 
     .coliseum-match-found-title {
-      font-size: 28px;
+      font-size: 26px;
       font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
       color: ${ARENA_COLORS.gold};
       font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
       margin-bottom: ${PARCHMENT_SPACING.xl};
-      text-shadow: 0 0 10px rgba(184, 149, 106, 0.5);
+      text-shadow: 0 0 12px rgba(184, 149, 106, 0.6);
+      animation: coliseum-title-pulse 2s ease-in-out infinite;
     }
 
-    /* Opponent Info - Parchment panel inside match found */
+    @keyframes coliseum-title-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.85; }
+    }
+
+    /* Enhanced Opponent Card */
+    .coliseum-opponent-card {
+      ${getParchmentPanelCSS()}
+      overflow: hidden;
+      margin-bottom: ${PARCHMENT_SPACING.xl};
+    }
+
+    .coliseum-opponent-card-header {
+      background: linear-gradient(to bottom, ${P.border} 0%, ${P.borderDark} 100%);
+      color: ${P.text.inverse};
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: ${PARCHMENT_SPACING.md} ${PARCHMENT_SPACING.lg};
+      border-bottom: 1px solid ${P.border};
+    }
+
+    .coliseum-opponent-card-body {
+      padding: ${PARCHMENT_SPACING.lg};
+    }
+
+    /* Opponent name row with tier */
+    .coliseum-opponent-name-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: ${PARCHMENT_SPACING.sm};
+    }
+
+    .coliseum-opponent-username {
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      color: ${P.text.primary};
+    }
+
+    .coliseum-opponent-tier-display {
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+
+    .coliseum-opponent-elo {
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.lg};
+      color: ${ARENA_COLORS.primary};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      margin-bottom: ${PARCHMENT_SPACING.lg};
+    }
+
+    /* Stats row - 3 columns */
+    .coliseum-opponent-stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: ${PARCHMENT_SPACING.sm};
+      background: ${P.dark};
+      border: 1px solid ${P.border};
+      border-radius: ${PARCHMENT_RADIUS.md};
+      padding: ${PARCHMENT_SPACING.md};
+      margin-bottom: ${PARCHMENT_SPACING.lg};
+    }
+
+    .coliseum-opponent-stat-col {
+      text-align: center;
+      padding: ${PARCHMENT_SPACING.sm};
+    }
+
+    .coliseum-opponent-stat-col:not(:last-child) {
+      border-right: 1px solid ${P.border};
+    }
+
+    .coliseum-opponent-stat-value {
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.lg};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      color: ${P.text.primary};
+      margin-bottom: 2px;
+    }
+
+    .coliseum-opponent-stat-value.streak-active {
+      color: #ff6b35;
+      text-shadow: 0 0 6px rgba(255, 107, 53, 0.4);
+    }
+
+    .coliseum-opponent-stat-label {
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+      color: ${P.text.muted};
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Party level row with badges */
+    .coliseum-opponent-party-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: ${PARCHMENT_SPACING.md};
+      border-top: 1px solid ${P.border};
+    }
+
+    .coliseum-opponent-party-level {
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+      color: ${P.text.secondary};
+    }
+
+    /* Legacy opponent info styles (kept for backwards compat) */
     .coliseum-opponent-info {
       ${getParchmentPanelCSS()}
       padding: ${PARCHMENT_SPACING.lg};
@@ -354,10 +480,47 @@ export function getColiseumStyles() {
       margin-top: ${PARCHMENT_SPACING.xs};
     }
 
+    /* Ready Section */
     .coliseum-ready-section {
       margin-top: ${PARCHMENT_SPACING.xl};
     }
 
+    /* Large Ready Button */
+    .coliseum-ready-btn-large {
+      width: 100%;
+      padding: ${PARCHMENT_SPACING.lg} ${PARCHMENT_SPACING.xxl};
+      font-size: 22px;
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      background: linear-gradient(180deg, ${ARENA_COLORS.victory}, ${ARENA_COLORS.victoryDark});
+      color: white;
+      border: 2px solid ${ARENA_COLORS.victoryDark};
+      border-radius: ${PARCHMENT_RADIUS.md};
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .coliseum-ready-btn-large:hover:not(:disabled) {
+      background: linear-gradient(180deg, ${ARENA_COLORS.readyGreen}, ${ARENA_COLORS.victory});
+      transform: scale(1.02);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .coliseum-ready-btn-large.ready {
+      background: linear-gradient(180deg, ${P.mid}, ${P.dark});
+      border-color: ${P.border};
+      color: ${ARENA_COLORS.readyGreen};
+      box-shadow: 0 0 10px rgba(106, 166, 136, 0.3);
+    }
+
+    .coliseum-ready-btn-large:disabled {
+      cursor: not-allowed;
+    }
+
+    /* Legacy ready button styles */
     .coliseum-ready-btn {
       padding: ${PARCHMENT_SPACING.lg} 50px;
       font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
@@ -386,6 +549,52 @@ export function getColiseumStyles() {
       cursor: not-allowed;
     }
 
+    /* Enhanced Ready Status Display */
+    .coliseum-ready-status-enhanced {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: ${PARCHMENT_SPACING.sm};
+      margin-top: ${PARCHMENT_SPACING.lg};
+      padding: ${PARCHMENT_SPACING.md};
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: ${PARCHMENT_RADIUS.md};
+    }
+
+    .coliseum-ready-label {
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+      color: ${P.text.inverse};
+      opacity: 0.8;
+    }
+
+    .coliseum-ready-indicators {
+      display: flex;
+      justify-content: center;
+      gap: ${PARCHMENT_SPACING.xxl};
+    }
+
+    .coliseum-ready-indicator-item {
+      display: flex;
+      align-items: center;
+      gap: ${PARCHMENT_SPACING.sm};
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.base};
+      color: ${P.text.inverse};
+    }
+
+    .ready-dot {
+      font-size: 16px;
+      color: ${P.border};
+      transition: color 0.2s, text-shadow 0.2s;
+    }
+
+    .ready-dot.filled {
+      color: ${ARENA_COLORS.primary};
+      text-shadow: 0 0 8px rgba(74, 107, 138, 0.6);
+    }
+
+    /* Legacy ready status styles */
     .coliseum-ready-status {
       display: flex;
       justify-content: center;
@@ -414,6 +623,21 @@ export function getColiseumStyles() {
       box-shadow: 0 0 10px rgba(106, 166, 136, 0.5);
     }
 
+    /* Enhanced Countdown Display */
+    .coliseum-countdown-enhanced {
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.lg};
+      color: ${ARENA_COLORS.gold};
+      margin-top: ${PARCHMENT_SPACING.lg};
+      text-shadow: 0 0 6px rgba(184, 149, 106, 0.4);
+    }
+
+    .coliseum-countdown-enhanced .countdown-number {
+      font-size: 32px;
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+    }
+
+    /* Legacy countdown styles */
     .coliseum-countdown {
       font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
       color: ${ARENA_COLORS.primary};
@@ -426,13 +650,27 @@ export function getColiseumStyles() {
       font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
     }
 
+    /* Match Starting State */
     .coliseum-match-starting {
-      background: rgba(106, 166, 136, 0.1);
+      background: linear-gradient(135deg, rgba(106, 166, 136, 0.15), rgba(90, 150, 120, 0.1));
       border-color: ${ARENA_COLORS.readyGreen};
+      animation: coliseum-starting-glow 1.5s ease-in-out infinite;
+    }
+
+    @keyframes coliseum-starting-glow {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(106, 166, 136, 0.4),
+                    0 0 40px rgba(106, 166, 136, 0.2);
+      }
+      50% {
+        box-shadow: 0 0 35px rgba(106, 166, 136, 0.6),
+                    0 0 70px rgba(106, 166, 136, 0.3);
+      }
     }
 
     .coliseum-match-starting .coliseum-match-found-title {
       color: ${ARENA_COLORS.readyGreen};
+      text-shadow: 0 0 12px rgba(106, 166, 136, 0.6);
     }
 
     /* Leaderboard Styles - Parchment themed */
@@ -1257,14 +1495,25 @@ export function getColiseumStyles() {
     /* Opponent badges on match found screen */
     .coliseum-opponent-badges {
       display: flex;
-      justify-content: center;
+      justify-content: flex-end;
       gap: 6px;
+    }
+
+    .coliseum-opponent-badges .coliseum-achievement-badge {
+      width: 26px;
+      height: 26px;
+      font-size: 16px;
+    }
+
+    /* Legacy opponent badges layout (centered with border) */
+    .coliseum-opponent-info .coliseum-opponent-badges {
+      justify-content: center;
       margin-top: ${PARCHMENT_SPACING.md};
       padding-top: ${PARCHMENT_SPACING.sm};
       border-top: 1px solid ${P.border};
     }
 
-    .coliseum-opponent-badges .coliseum-achievement-badge {
+    .coliseum-opponent-info .coliseum-opponent-badges .coliseum-achievement-badge {
       width: 28px;
       height: 28px;
       font-size: 18px;
