@@ -957,6 +957,15 @@ export class ApiClient {
   // Coliseum / PvP endpoints
 
   /**
+   * Get current queue sizes for all coliseum queue types
+   * @returns {Promise<Array<{queueType: string, queueSize: number}>>}
+   */
+  async getColiseumQueueStatuses() {
+    const response = await this.request('GET', '/coliseum/queues');
+    return response.queues || [];
+  }
+
+  /**
    * Get coliseum leaderboard
    * @param {string} queueType - Queue type: '1v1', '3v3', '5v5'
    * @param {number} limit - Max results (default 100)

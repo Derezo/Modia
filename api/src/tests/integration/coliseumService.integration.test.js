@@ -9,6 +9,9 @@ import assert from 'node:assert';
 // Import the service
 import * as coliseumService from '../../services/coliseumService.js';
 
+// Import test helpers for HTTP API tests
+import { request, createTestContext, resetRateLimitersViaApi } from '../testHelper.js';
+
 // Counter for unique IDs - start high to avoid conflicts
 let userIdCounter = 200000;
 
@@ -252,6 +255,66 @@ describe('coliseumService', () => {
       assert.strictEqual(typeof defaultExport.getQueueStatus, 'function');
       assert.strictEqual(typeof defaultExport.getAllQueueStatuses, 'function');
       assert.strictEqual(typeof defaultExport.cleanupPlayer, 'function');
+    });
+  });
+});
+
+// ============================================================================
+// HTTP API Integration Tests
+// ============================================================================
+
+describe('Coliseum API Endpoints', () => {
+  const ctx = createTestContext();
+  let user;
+
+  beforeEach(async () => {
+    await resetRateLimitersViaApi();
+    user = await ctx.createUser();
+  });
+
+  afterEach(async () => {
+    await ctx.cleanup();
+  });
+
+  describe('GET /api/coliseum/queues', () => {
+    test('returns queue statuses for all queue types', async () => {
+      const res = await request('GET', '/api/coliseum/queues', null, user.accessToken);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.ok(Array.isArray(res.body.queues));
+      assert.strictEqual(res.body.queues.length, 3);
+
+      // Verify all queue types are present
+      const queueTypes = res.body.queues.map(q => q.queueType);
+      assert.ok(queueTypes.includes('1v1'), 'Should include 1v1 queue');
+      assert.ok(queueTypes.includes('3v3'), 'Should include 3v3 queue');
+      assert.ok(queueTypes.includes('5v5'), 'Should include 5v5 queue');
+    });
+
+    test('returns queue sizes as numbers', async () => {
+      const res = await request('GET', '/api/coliseum/queues', null, user.accessToken);
+
+      assert.strictEqual(res.status, 200);
+
+      for (const queue of res.body.queues) {
+        assert.strictEqual(typeof queue.queueType, 'string', 'queueType should be a string');
+        assert.strictEqual(typeof queue.queueSize, 'number', 'queueSize should be a number');
+        assert.ok(queue.queueSize >= 0, 'queueSize should be non-negative');
+        assert.strictEqual(typeof queue.averageWait, 'number', 'averageWait should be a number');
+      }
+    });
+
+    test('requires authentication', async () => {
+      const res = await request('GET', '/api/coliseum/queues', null, null);
+
+      assert.strictEqual(res.status, 401);
+    });
+
+    test('rejects invalid token', async () => {
+      const res = await request('GET', '/api/coliseum/queues', null, 'invalid-token');
+
+      assert.strictEqual(res.status, 401);
     });
   });
 });

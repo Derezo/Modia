@@ -59,6 +59,9 @@ export class ColiseumScene extends Scene {
     this.setupEventListeners();
     this.setupWebSocketHandlers();
 
+    // Join coliseum lobby for real-time queue updates
+    this.game.socket.send({ type: 'coliseum_lobby_join' });
+
     // Play coliseum theme music
     if (this.game.musicContext) {
       this.game.musicContext.playColiseumTheme();
@@ -73,6 +76,9 @@ export class ColiseumScene extends Scene {
     if (this.isInQueue) {
       this.leaveQueue();
     }
+
+    // Leave coliseum lobby
+    this.game.socket.send({ type: 'coliseum_lobby_leave' });
 
     // Clear countdown if running
     if (this.matchCountdown) {
@@ -337,7 +343,7 @@ export class ColiseumScene extends Scene {
         this.updateContent();
         this.startReadyCountdown();
         // Play match found notification sound
-        this.game.audio?.playSFX('match_found');
+        this.game.audio?.playInteraction('match_found');
         parchmentToast.success('Match Found', 'Get ready!');
       },
 
@@ -403,6 +409,16 @@ export class ColiseumScene extends Scene {
         }
         this.updateContent();
         parchmentToast.warning('Match Cancelled', payload.reason || 'Match cancelled');
+      },
+
+      'coliseum:queue_stats_update': (payload) => {
+        this.queueStatuses = payload.queues;
+        this.updateContent();
+      },
+
+      'coliseum:error': (payload) => {
+        console.warn('Coliseum error:', payload);
+        parchmentToast.error('Coliseum Error', payload.message || 'An error occurred');
       }
     };
 
@@ -414,16 +430,17 @@ export class ColiseumScene extends Scene {
 
   async loadQueueStatuses() {
     try {
-      // Use WebSocket to get queue statuses or fetch from API
-      // For now, initialize with empty data
+      const queues = await this.game.api.getColiseumQueueStatuses();
+      this.queueStatuses = queues;
+      this.updateContent();
+    } catch (err) {
+      console.error('Failed to load queue statuses:', err);
+      // Fallback to zeros on error
       this.queueStatuses = [
         { queueType: '1v1', queueSize: 0 },
         { queueType: '3v3', queueSize: 0 },
         { queueType: '5v5', queueSize: 0 }
       ];
-      this.updateContent();
-    } catch (err) {
-      console.error('Failed to load queue statuses:', err);
     }
   }
 
