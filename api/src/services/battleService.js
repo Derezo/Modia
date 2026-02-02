@@ -47,6 +47,11 @@ export {
   getTargetsInRange,
   getAvailableActions,
   getOppositeType,
+  // Team-based unit filtering
+  getOpposingUnits,
+  getAlliedUnits,
+  areOpponents,
+  areAllies,
   // AoE system
   getAoETiles,
   // Charge time system

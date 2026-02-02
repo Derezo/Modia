@@ -1368,3 +1368,291 @@ describe('getOppositeType', () => {
     assert.strictEqual(battleService.getOppositeType('enemy'), 'player');
   });
 });
+
+// =============================================================================
+// TEAM-BASED UNIT FILTERING TESTS
+// =============================================================================
+
+describe('getOpposingUnits', () => {
+  test('should return enemy units for a player unit', () => {
+    const player = createMockPlayerUnit({ id: 'p1', hp: 100 });
+    const enemy1 = createMockEnemyUnit({ id: 'e1', hp: 50 });
+    const enemy2 = createMockEnemyUnit({ id: 'e2', hp: 30 });
+    const state = createMockBattleState({
+      units: [player, enemy1, enemy2]
+    });
+
+    const opponents = battleService.getOpposingUnits(player, state);
+
+    assert.strictEqual(opponents.length, 2, 'Should find 2 enemies');
+    assert.ok(opponents.some(u => u.id === 'e1'), 'Should include enemy1');
+    assert.ok(opponents.some(u => u.id === 'e2'), 'Should include enemy2');
+  });
+
+  test('should return player units for an enemy unit', () => {
+    const player1 = createMockPlayerUnit({ id: 'p1', hp: 100 });
+    const player2 = createMockPlayerUnit({ id: 'p2', hp: 80 });
+    const enemy = createMockEnemyUnit({ id: 'e1', hp: 50 });
+    const state = createMockBattleState({
+      units: [player1, player2, enemy]
+    });
+
+    const opponents = battleService.getOpposingUnits(enemy, state);
+
+    assert.strictEqual(opponents.length, 2, 'Should find 2 players');
+    assert.ok(opponents.some(u => u.id === 'p1'), 'Should include player1');
+    assert.ok(opponents.some(u => u.id === 'p2'), 'Should include player2');
+  });
+
+  test('should exclude dead units from results', () => {
+    const player = createMockPlayerUnit({ id: 'p1', hp: 100 });
+    const aliveEnemy = createMockEnemyUnit({ id: 'e1', hp: 50 });
+    const deadEnemy = createMockEnemyUnit({ id: 'e2', hp: 0 });
+    const state = createMockBattleState({
+      units: [player, aliveEnemy, deadEnemy]
+    });
+
+    const opponents = battleService.getOpposingUnits(player, state);
+
+    assert.strictEqual(opponents.length, 1, 'Should only find alive enemies');
+    assert.strictEqual(opponents[0].id, 'e1', 'Should be the alive enemy');
+  });
+
+  test('should use teamId when present (PvP scenario)', () => {
+    // Both are players but on different teams
+    const team1Player = { ...createMockPlayerUnit({ id: 'p1', hp: 100 }), teamId: 1 };
+    const team2Player = { ...createMockPlayerUnit({ id: 'p2', hp: 80 }), teamId: 2 };
+    const team1Ally = { ...createMockPlayerUnit({ id: 'p3', hp: 90 }), teamId: 1 };
+    const state = createMockBattleState({
+      units: [team1Player, team2Player, team1Ally]
+    });
+
+    const opponents = battleService.getOpposingUnits(team1Player, state);
+
+    assert.strictEqual(opponents.length, 1, 'Should find 1 opponent');
+    assert.strictEqual(opponents[0].id, 'p2', 'Should be the team 2 player');
+  });
+
+  test('should fall back to type-based teams when teamId missing', () => {
+    // No teamId set, should use type to infer team
+    const player = createMockPlayerUnit({ id: 'p1', hp: 100 });
+    const enemy = createMockEnemyUnit({ id: 'e1', hp: 50 });
+    const state = createMockBattleState({
+      units: [player, enemy]
+    });
+
+    const opponents = battleService.getOpposingUnits(player, state);
+
+    assert.strictEqual(opponents.length, 1, 'Should find enemy');
+    assert.strictEqual(opponents[0].id, 'e1', 'Should be the enemy');
+  });
+
+  test('should return empty array when no opponents alive', () => {
+    const player = createMockPlayerUnit({ id: 'p1', hp: 100 });
+    const deadEnemy = createMockEnemyUnit({ id: 'e1', hp: 0 });
+    const state = createMockBattleState({
+      units: [player, deadEnemy]
+    });
+
+    const opponents = battleService.getOpposingUnits(player, state);
+
+    assert.strictEqual(opponents.length, 0, 'Should return empty array');
+  });
+});
+
+describe('getAlliedUnits', () => {
+  test('should return all player units for a player unit (including self)', () => {
+    const player1 = createMockPlayerUnit({ id: 'p1', hp: 100 });
+    const player2 = createMockPlayerUnit({ id: 'p2', hp: 80 });
+    const enemy = createMockEnemyUnit({ id: 'e1', hp: 50 });
+    const state = createMockBattleState({
+      units: [player1, player2, enemy]
+    });
+
+    const allies = battleService.getAlliedUnits(player1, state);
+
+    assert.strictEqual(allies.length, 2, 'Should find 2 allies (including self)');
+    assert.ok(allies.some(u => u.id === 'p1'), 'Should include self');
+    assert.ok(allies.some(u => u.id === 'p2'), 'Should include player2');
+  });
+
+  test('should return all enemy units for an enemy unit', () => {
+    const player = createMockPlayerUnit({ id: 'p1', hp: 100 });
+    const enemy1 = createMockEnemyUnit({ id: 'e1', hp: 50 });
+    const enemy2 = createMockEnemyUnit({ id: 'e2', hp: 30 });
+    const state = createMockBattleState({
+      units: [player, enemy1, enemy2]
+    });
+
+    const allies = battleService.getAlliedUnits(enemy1, state);
+
+    assert.strictEqual(allies.length, 2, 'Should find 2 allies');
+    assert.ok(allies.some(u => u.id === 'e1'), 'Should include self');
+    assert.ok(allies.some(u => u.id === 'e2'), 'Should include enemy2');
+  });
+
+  test('should exclude dead units from results', () => {
+    const alivePlayer = createMockPlayerUnit({ id: 'p1', hp: 100 });
+    const deadPlayer = createMockPlayerUnit({ id: 'p2', hp: 0 });
+    const enemy = createMockEnemyUnit({ id: 'e1', hp: 50 });
+    const state = createMockBattleState({
+      units: [alivePlayer, deadPlayer, enemy]
+    });
+
+    const allies = battleService.getAlliedUnits(alivePlayer, state);
+
+    assert.strictEqual(allies.length, 1, 'Should only find alive ally');
+    assert.strictEqual(allies[0].id, 'p1', 'Should be the alive player');
+  });
+
+  test('should use teamId when present (PvP scenario)', () => {
+    const team1Player1 = { ...createMockPlayerUnit({ id: 'p1', hp: 100 }), teamId: 1 };
+    const team1Player2 = { ...createMockPlayerUnit({ id: 'p2', hp: 90 }), teamId: 1 };
+    const team2Player = { ...createMockPlayerUnit({ id: 'p3', hp: 80 }), teamId: 2 };
+    const state = createMockBattleState({
+      units: [team1Player1, team1Player2, team2Player]
+    });
+
+    const allies = battleService.getAlliedUnits(team1Player1, state);
+
+    assert.strictEqual(allies.length, 2, 'Should find 2 team 1 allies');
+    assert.ok(allies.some(u => u.id === 'p1'), 'Should include self');
+    assert.ok(allies.some(u => u.id === 'p2'), 'Should include teammate');
+  });
+
+  test('should fall back to type-based teams when teamId missing', () => {
+    const player1 = createMockPlayerUnit({ id: 'p1', hp: 100 });
+    const player2 = createMockPlayerUnit({ id: 'p2', hp: 80 });
+    const state = createMockBattleState({
+      units: [player1, player2]
+    });
+
+    const allies = battleService.getAlliedUnits(player1, state);
+
+    assert.strictEqual(allies.length, 2, 'Should find both players');
+  });
+});
+
+describe('areOpponents', () => {
+  test('should return true for player vs enemy', () => {
+    const player = createMockPlayerUnit({ id: 'p1' });
+    const enemy = createMockEnemyUnit({ id: 'e1' });
+
+    assert.strictEqual(battleService.areOpponents(player, enemy), true);
+  });
+
+  test('should return true for enemy vs player', () => {
+    const player = createMockPlayerUnit({ id: 'p1' });
+    const enemy = createMockEnemyUnit({ id: 'e1' });
+
+    assert.strictEqual(battleService.areOpponents(enemy, player), true);
+  });
+
+  test('should return false for player vs player (same type)', () => {
+    const player1 = createMockPlayerUnit({ id: 'p1' });
+    const player2 = createMockPlayerUnit({ id: 'p2' });
+
+    assert.strictEqual(battleService.areOpponents(player1, player2), false);
+  });
+
+  test('should return false for enemy vs enemy (same type)', () => {
+    const enemy1 = createMockEnemyUnit({ id: 'e1' });
+    const enemy2 = createMockEnemyUnit({ id: 'e2' });
+
+    assert.strictEqual(battleService.areOpponents(enemy1, enemy2), false);
+  });
+
+  test('should use teamId when present', () => {
+    const team1Player = { ...createMockPlayerUnit({ id: 'p1' }), teamId: 1 };
+    const team2Player = { ...createMockPlayerUnit({ id: 'p2' }), teamId: 2 };
+
+    assert.strictEqual(battleService.areOpponents(team1Player, team2Player), true,
+      'Different teams should be opponents');
+  });
+
+  test('should return false for same teamId even with different types', () => {
+    const player = { ...createMockPlayerUnit({ id: 'p1' }), teamId: 1 };
+    const enemy = { ...createMockEnemyUnit({ id: 'e1' }), teamId: 1 };
+
+    assert.strictEqual(battleService.areOpponents(player, enemy), false,
+      'Same teamId should not be opponents');
+  });
+
+  test('should fall back to type when teamId missing', () => {
+    const player = createMockPlayerUnit({ id: 'p1' });
+    const enemy = createMockEnemyUnit({ id: 'e1' });
+
+    // Ensure no teamId
+    delete player.teamId;
+    delete enemy.teamId;
+
+    assert.strictEqual(battleService.areOpponents(player, enemy), true,
+      'Should fall back to type-based check');
+  });
+});
+
+describe('areAllies', () => {
+  test('should return true for player vs player (same type)', () => {
+    const player1 = createMockPlayerUnit({ id: 'p1' });
+    const player2 = createMockPlayerUnit({ id: 'p2' });
+
+    assert.strictEqual(battleService.areAllies(player1, player2), true);
+  });
+
+  test('should return true for enemy vs enemy (same type)', () => {
+    const enemy1 = createMockEnemyUnit({ id: 'e1' });
+    const enemy2 = createMockEnemyUnit({ id: 'e2' });
+
+    assert.strictEqual(battleService.areAllies(enemy1, enemy2), true);
+  });
+
+  test('should return false for player vs enemy', () => {
+    const player = createMockPlayerUnit({ id: 'p1' });
+    const enemy = createMockEnemyUnit({ id: 'e1' });
+
+    assert.strictEqual(battleService.areAllies(player, enemy), false);
+  });
+
+  test('should return false for enemy vs player', () => {
+    const player = createMockPlayerUnit({ id: 'p1' });
+    const enemy = createMockEnemyUnit({ id: 'e1' });
+
+    assert.strictEqual(battleService.areAllies(enemy, player), false);
+  });
+
+  test('should use teamId when present', () => {
+    const team1Player1 = { ...createMockPlayerUnit({ id: 'p1' }), teamId: 1 };
+    const team1Player2 = { ...createMockPlayerUnit({ id: 'p2' }), teamId: 1 };
+
+    assert.strictEqual(battleService.areAllies(team1Player1, team1Player2), true,
+      'Same team should be allies');
+  });
+
+  test('should return false for different teamId even with same type', () => {
+    const team1Player = { ...createMockPlayerUnit({ id: 'p1' }), teamId: 1 };
+    const team2Player = { ...createMockPlayerUnit({ id: 'p2' }), teamId: 2 };
+
+    assert.strictEqual(battleService.areAllies(team1Player, team2Player), false,
+      'Different teams should not be allies');
+  });
+
+  test('should return true for same teamId even with different types', () => {
+    const player = { ...createMockPlayerUnit({ id: 'p1' }), teamId: 1 };
+    const enemy = { ...createMockEnemyUnit({ id: 'e1' }), teamId: 1 };
+
+    assert.strictEqual(battleService.areAllies(player, enemy), true,
+      'Same teamId should be allies');
+  });
+
+  test('should fall back to type when teamId missing', () => {
+    const player1 = createMockPlayerUnit({ id: 'p1' });
+    const player2 = createMockPlayerUnit({ id: 'p2' });
+
+    // Ensure no teamId
+    delete player1.teamId;
+    delete player2.teamId;
+
+    assert.strictEqual(battleService.areAllies(player1, player2), true,
+      'Should fall back to type-based check');
+  });
+});
