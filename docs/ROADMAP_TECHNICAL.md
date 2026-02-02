@@ -4,8 +4,8 @@
 
 | Field | Value |
 |-------|-------|
-| Version | 3.8 |
-| Last Updated | January 2026 |
+| Version | 3.9 |
+| Last Updated | February 2026 |
 | Focus | Infrastructure, deployment, testing, performance |
 
 ---
@@ -208,8 +208,15 @@
 
 ### 4.4 WebSocket Efficiency
 
+- [x] **WebSocket Reliability System** (2026-02-02)
+  - Message ACK protocol with retry logic (messageReliability.js)
+  - Bidirectional heartbeat with zombie detection (45s timeout)
+  - Server-side ping/pong for dead connection detection (30s interval)
+  - Client heartbeat ACK tracking for responsive failover
+  - Sequence-based message ordering for battle events
+  - Auto-recovery via full state sync after max retries
+  - Per-connection pending ACK tracking with cleanup
 - [ ] Message size audit
-- [ ] Heartbeat tuning
 - [ ] Room subscription cleanup
 - [ ] Connection multiplexing
 
@@ -818,7 +825,8 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 3.9 | Jan 2026 | Battle Asset Generation Pipeline Expansion: Added Section 7.17 documenting expanded AI image pipeline for battle assets. Created obstacle metadata (rocks.json, trees.json) with manifest.json categoryFiles. Created character sprite metadata (players.json, per-biome enemies/*.json) with 64x512 vertical strip convention. Added admin dashboard pages (ObstaclesPage.jsx, CharactersPage.jsx) with SpritePreview component for animated sprites. Fixed naming conventions (player.json to players.json, flat enemies.json to per-biome structure). Design doc archived to docs/archive/design-docs/2026-01-30-battle-asset-generation-design.md. |
+| 3.9 | Feb 2026 | WebSocket Reliability System: Updated Section 4.4 (WebSocket Efficiency) to mark implementation as completed (2026-02-02). Documented message ACK protocol with retry logic, bidirectional heartbeat with zombie detection, sequence-based message ordering, auto-recovery via full state sync. Added implementation details for messageReliability.js (ACK tracking, retry queuing, state sync on max retries), websocket/index.js (ping/pong, zombie cleanup), and battleWebsocket.js integration. Related PR references: battle reconnection tests, hero state persistence. |
+| 3.8 | Jan 2026 | Battle Asset Generation Pipeline Expansion: Added Section 7.17 documenting expanded AI image pipeline for battle assets. Created obstacle metadata (rocks.json, trees.json) with manifest.json categoryFiles. Created character sprite metadata (players.json, per-biome enemies/*.json) with 64x512 vertical strip convention. Added admin dashboard pages (ObstaclesPage.jsx, CharactersPage.jsx) with SpritePreview component for animated sprites. Fixed naming conventions (player.json to players.json, flat enemies.json to per-biome structure). Design doc archived to docs/archive/design-docs/2026-01-30-battle-asset-generation-design.md. |
 | 3.8 | Jan 2026 | Image Pipeline Refactor (v10.8): Added Section 7.16 documenting standardized generation & post-processing. Python saves 1024x1024 processed originals via process_to_original(), Node.js generates all size variants via ImageMagick. Extended node sizes from [48,96] to [48,64,96,128,256]. Added icon 128px variant. Removed portrait rembg workaround. Created Python overlay generator. Updated AI_IMAGE_GENERATION.md resolution tables. |
 | 3.7 | Jan 2026 | Major Test Suite Expansion (v10.7): Added ~4,900 lines across 13 new files + 7 extended files. Shared tests: battleMath.test.js +660 lines (16 new function suites), constants.test.js +235 lines (5 new sections), pathfinding.test.js +3 suites (performance, mixed terrain, water). Created 9 AI unit test files (224 tests/72 suites): patternWeights, cache, utilityFactors, stateEvaluator, actionGenerator, lookahead, utilityAI, aiPatternBehavior with mockHelpers. Created 4 worldgen unit test files (125 tests/19 suites): castlePlacement, nodeGeneration, internalConnections, validation. Extended 4 balance tests: classBalance (all 16 advanced classes), damageScaling (elemental), formulaValidation (CT/status), economyBalance (fishing/caravan). Added npm scripts: test:unit:ai, test:unit:worldgen. Updated test:unit glob for subdirectories. Final counts: Shared 360 tests, API unit 754 tests, all passing. Testing status updated to 90%, coverage to ~75%. |
 | 3.6 | Jan 2026 | Asset Path Remediation: Added Section 7.15 documenting resolution of all asset path discrepancies between Python OutputManager, JS scripts, and canonical shared/assetPaths.js. Updated backupUtils.js, validate-images.js, validate-paths.js to use canonical paths. Updated 5 category manifest.json outputDir fields. Deleted obsolete migrate-sizes.js (398 lines). Cleaned up legacy asset files and admin test factories. Removed dead sizePattern code branches. |
