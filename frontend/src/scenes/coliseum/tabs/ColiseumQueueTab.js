@@ -16,7 +16,7 @@ const P = PARCHMENT_COLORS;
  * @param {number} rating - Player rating
  * @returns {string} HTML string
  */
-function renderTierBadge(rating) {
+function renderTierBadge(rating) { // eslint-disable-line no-unused-vars
   const tier = getTier(rating);
   const icon = tier.icon ? getTierIcon(tier.icon) : '';
   return `<span class="coliseum-tier-badge" style="color: ${tier.color};">

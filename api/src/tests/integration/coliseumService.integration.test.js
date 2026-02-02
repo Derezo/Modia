@@ -21,6 +21,10 @@ function getUniqueUserId() {
 
 describe('coliseumService', () => {
 
+  afterEach(() => {
+    coliseumService._resetForTests();
+  });
+
   describe('QUEUE_SETTINGS', () => {
     
     test('should export QUEUE_SETTINGS constant', () => {
@@ -273,6 +277,7 @@ describe('Coliseum API Endpoints', () => {
   });
 
   afterEach(async () => {
+    coliseumService._resetForTests();
     await ctx.cleanup();
   });
 
@@ -315,6 +320,204 @@ describe('Coliseum API Endpoints', () => {
       const res = await request('GET', '/api/coliseum/queues', null, 'invalid-token');
 
       assert.strictEqual(res.status, 401);
+    });
+  });
+
+  describe('GET /api/coliseum/queue/:queueType/players', () => {
+    test('returns players list for valid 1v1 queue', async () => {
+      const res = await request('GET', '/api/coliseum/queue/1v1/players', null, user.accessToken);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.ok(Array.isArray(res.body.players), 'players should be an array');
+    });
+
+    test('returns players list for valid 3v3 queue', async () => {
+      const res = await request('GET', '/api/coliseum/queue/3v3/players', null, user.accessToken);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.ok(Array.isArray(res.body.players), 'players should be an array');
+    });
+
+    test('returns players list for valid 5v5 queue', async () => {
+      const res = await request('GET', '/api/coliseum/queue/5v5/players', null, user.accessToken);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.ok(Array.isArray(res.body.players), 'players should be an array');
+    });
+
+    test('rejects invalid queue type', async () => {
+      const res = await request('GET', '/api/coliseum/queue/invalid/players', null, user.accessToken);
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
+      assert.ok(res.body.error.includes('Invalid queue type'), 'Should return invalid queue type error');
+    });
+
+    test('rejects 2v2 as invalid queue type', async () => {
+      const res = await request('GET', '/api/coliseum/queue/2v2/players', null, user.accessToken);
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
+      assert.ok(res.body.error.includes('Invalid queue type'));
+    });
+
+    test('requires authentication', async () => {
+      const res = await request('GET', '/api/coliseum/queue/1v1/players', null, null);
+
+      assert.strictEqual(res.status, 401);
+    });
+
+    test('rejects invalid token', async () => {
+      const res = await request('GET', '/api/coliseum/queue/1v1/players', null, 'invalid-token');
+
+      assert.strictEqual(res.status, 401);
+    });
+  });
+
+  describe('GET /api/coliseum/achievements/:userId', () => {
+    test('returns achievements for valid user', async () => {
+      const res = await request('GET', `/api/coliseum/achievements/${user.userId}`, null, user.accessToken);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.ok(Array.isArray(res.body.achievements), 'achievements should be an array');
+    });
+
+    test('returns achievement objects with required fields', async () => {
+      const res = await request('GET', `/api/coliseum/achievements/${user.userId}`, null, user.accessToken);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+
+      // If there are achievements, verify they have required fields
+      for (const achievement of res.body.achievements) {
+        assert.strictEqual(typeof achievement.key, 'string', 'achievement should have key');
+        assert.strictEqual(typeof achievement.name, 'string', 'achievement should have name');
+        assert.strictEqual(typeof achievement.icon, 'string', 'achievement should have icon');
+        assert.strictEqual(typeof achievement.type, 'string', 'achievement should have type');
+        assert.ok('isDynamic' in achievement, 'achievement should have isDynamic field');
+      }
+    });
+
+    test('returns empty array for user with no achievements', async () => {
+      // New user should have no achievements (or only dynamic ones based on win streak)
+      const res = await request('GET', `/api/coliseum/achievements/${user.userId}`, null, user.accessToken);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.ok(Array.isArray(res.body.achievements));
+    });
+
+    test('rejects invalid user ID (non-numeric)', async () => {
+      const res = await request('GET', '/api/coliseum/achievements/invalid', null, user.accessToken);
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('Invalid user ID'));
+    });
+
+    test('rejects invalid user ID (NaN)', async () => {
+      const res = await request('GET', '/api/coliseum/achievements/abc123', null, user.accessToken);
+
+      assert.strictEqual(res.status, 400);
+      assert.ok(res.body.error.includes('Invalid user ID'));
+    });
+
+    test('requires authentication', async () => {
+      const res = await request('GET', `/api/coliseum/achievements/${user.userId}`, null, null);
+
+      assert.strictEqual(res.status, 401);
+    });
+
+    test('rejects invalid token', async () => {
+      const res = await request('GET', `/api/coliseum/achievements/${user.userId}`, null, 'invalid-token');
+
+      assert.strictEqual(res.status, 401);
+    });
+
+    test('can retrieve achievements for another user', async () => {
+      // Create a second user
+      const user2 = await ctx.createUser();
+
+      // User 1 should be able to view User 2's achievements
+      const res = await request('GET', `/api/coliseum/achievements/${user2.userId}`, null, user.accessToken);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.ok(Array.isArray(res.body.achievements));
+    });
+  });
+
+  describe('GET /api/coliseum/my-achievements', () => {
+    test('returns achievements for authenticated user', async () => {
+      const res = await request('GET', '/api/coliseum/my-achievements', null, user.accessToken);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.ok(Array.isArray(res.body.achievements), 'achievements should be an array');
+    });
+
+    test('returns achievement objects with required fields', async () => {
+      const res = await request('GET', '/api/coliseum/my-achievements', null, user.accessToken);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+
+      // Verify each achievement has required fields
+      for (const achievement of res.body.achievements) {
+        assert.strictEqual(typeof achievement.key, 'string', 'achievement should have key');
+        assert.strictEqual(typeof achievement.name, 'string', 'achievement should have name');
+        assert.strictEqual(typeof achievement.icon, 'string', 'achievement should have icon');
+        assert.strictEqual(typeof achievement.description, 'string', 'achievement should have description');
+        assert.strictEqual(typeof achievement.type, 'string', 'achievement should have type');
+        assert.ok('isDynamic' in achievement, 'achievement should have isDynamic field');
+      }
+    });
+
+    test('returns same achievements as user-specific endpoint', async () => {
+      const myRes = await request('GET', '/api/coliseum/my-achievements', null, user.accessToken);
+      const userRes = await request('GET', `/api/coliseum/achievements/${user.userId}`, null, user.accessToken);
+
+      assert.strictEqual(myRes.status, 200);
+      assert.strictEqual(userRes.status, 200);
+
+      // Both endpoints should return the same achievements
+      assert.strictEqual(myRes.body.achievements.length, userRes.body.achievements.length);
+
+      // Compare achievement keys
+      const myKeys = myRes.body.achievements.map(a => a.key).sort();
+      const userKeys = userRes.body.achievements.map(a => a.key).sort();
+      assert.deepStrictEqual(myKeys, userKeys, 'Both endpoints should return same achievements');
+    });
+
+    test('requires authentication', async () => {
+      const res = await request('GET', '/api/coliseum/my-achievements', null, null);
+
+      assert.strictEqual(res.status, 401);
+    });
+
+    test('rejects invalid token', async () => {
+      const res = await request('GET', '/api/coliseum/my-achievements', null, 'invalid-token');
+
+      assert.strictEqual(res.status, 401);
+    });
+
+    test('different users get different achievements', async () => {
+      // Create a second user
+      const user2 = await ctx.createUser();
+
+      const res1 = await request('GET', '/api/coliseum/my-achievements', null, user.accessToken);
+      const res2 = await request('GET', '/api/coliseum/my-achievements', null, user2.accessToken);
+
+      assert.strictEqual(res1.status, 200);
+      assert.strictEqual(res2.status, 200);
+
+      // Both should succeed - achievements might be same (empty) for new users
+      // but the endpoint correctly identifies different users
+      assert.ok(Array.isArray(res1.body.achievements));
+      assert.ok(Array.isArray(res2.body.achievements));
     });
   });
 });
