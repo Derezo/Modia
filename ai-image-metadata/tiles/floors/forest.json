@@ -48,8 +48,9 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true,
-      "loraModel": null
+      "needsRegeneration": false,
+      "loraModel": null,
+      "regenerationQueuedAt": null
     },
     {
       "key": "grass_3",

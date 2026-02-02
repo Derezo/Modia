@@ -57,7 +57,7 @@
   },
   "poseTemplates": {
     "basePath": "poses/humanoid",
-    "animations": ["idle", "walk", "attack", "hurt", "death", "cast", "victory"]
+    "animations": ["idle", "walk", "attack", "hurt", "death", "cast", "victory", "dead"]
   },
   "spriteConvention": {
     "frameWidth": 64,
@@ -165,6 +165,20 @@
         "final pose hold",
         "returning to neutral"
       ]
+    },
+    "dead": {
+      "description": "Static dead/defeated pose (shown after death animation completes)",
+      "frameCount": 8,
+      "frameDescriptions": [
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest",
+        "lying defeated on ground final rest"
+      ]
     }
   },
   "categories": ["players", "enemies"],
@@ -187,8 +201,8 @@
   },
   "totalEnemies": 34,
   "outputPaths": {
-    "players": "/assets/characters/player/{class}/{class}_{animation}.png",
-    "enemies": "/assets/characters/enemies/{biome}/{id}/{id}_{animation}.png"
+    "players": "/assets/characters/player/{class}/{class}_{animation}.webp",
+    "enemies": "/assets/characters/enemies/{biome}/{id}/{id}_{animation}.webp"
   },
   "tempDirectory": "ai-images-temp/characters"
 }

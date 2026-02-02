@@ -152,8 +152,8 @@ app.use('/api/fishing', fishingRoutes);
 app.use('/api/relics', relicRoutes);
 app.use('/api/quests', questRoutes);
 app.use('/api/debug', debugRoutes);
+app.use('/api/admin/audio', adminAudioRoutes);  // More specific - must come first
 app.use('/api/admin', adminRoutes);
-app.use('/api/admin/audio', adminAudioRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/garrison', garrisonRoutes);
 

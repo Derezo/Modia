@@ -61,45 +61,58 @@
       "terrain": "forest",
       "prompt": "seamless vertical alpine treeline wall texture with pine roots and rocky soil, tileable horizontal pattern, side view cross-section, grey brown tones",
       "seed": 31061,
-      "generated": false,
-      "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T04:39:49.414Z"
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-02-02T15:50:52.625Z"
     },
     {
       "key": "wall_mountain_water",
       "terrain": "water",
       "prompt": "seamless vertical frozen waterfall wall texture with ice formations and wet rock, tileable horizontal pattern, side view cross-section, blue white tones",
       "seed": 31071,
-      "generated": false,
-      "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T04:39:49.415Z"
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-02-02T19:14:38.198Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "wall_mountain_lava",
       "terrain": "lava",
       "prompt": "seamless vertical volcanic mountain wall texture with lava flows and ash deposits, tileable horizontal pattern, side view cross-section, black red tones",
       "seed": 31081,
-      "generated": false,
-      "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T04:39:49.418Z"
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-02-02T19:15:23.245Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "wall_mountain_cliff",
       "terrain": "cliff",
       "prompt": "seamless vertical sheer mountain cliff texture with vertical striations and erosion, tileable horizontal pattern, side view cross-section, dark grey tones",
       "seed": 31091,
-      "generated": false,
-      "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T04:39:49.418Z"
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-02-02T19:16:08.624Z",
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "key": "wall_mountain_tree",
       "terrain": "tree",
       "prompt": "seamless vertical ancient pine trunk wall texture with weathered bark and snow, tileable horizontal pattern, side view cross-section, grey brown tones",
       "seed": 31101,
-      "generated": false,
-      "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T04:39:49.418Z"
+      "generated": true,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null,
+      "generatedAt": "2026-02-02T19:16:53.972Z",
+      "generationFailureCount": null,
+      "lastError": null
     }
   ]
 }

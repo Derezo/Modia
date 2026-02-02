@@ -149,6 +149,15 @@ export class MusicContext {
 
       if (nodeType === 'exploration') {
         this.playExplorationMusic();
+      } else if (nodeType === 'coliseum') {
+        // Coliseum uses global theme, not regional
+        this.playColiseum();
+      } else if (nodeType === 'social') {
+        // Social hub uses global theme
+        this.playSocialHub();
+      } else if (nodeType === 'guild') {
+        // Guild uses global theme
+        this.playGuildAdvancement();
       } else if (nodeType) {
         this.playNodeMusic(nodeType);
       }

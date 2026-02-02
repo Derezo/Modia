@@ -40,8 +40,9 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true,
-      "loraModel": "v1"
+      "needsRegeneration": false,
+      "loraModel": "v1",
+      "regenerationQueuedAt": null
     },
     {
       "key": "grass_3",
@@ -299,8 +300,9 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true,
-      "loraModel": null
+      "needsRegeneration": false,
+      "loraModel": null,
+      "regenerationQueuedAt": null
     },
     {
       "key": "tree_3",

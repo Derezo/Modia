@@ -230,11 +230,11 @@ function QueueCategorySection({ category, items, onRemoveItem, onClearCategory }
         <div className="px-3 pb-3 flex flex-wrap gap-2">
           {items.map((item) => (
             <div
-              key={item.id}
+              key={`${item._sourceFile || item._biome || ''}-${item.id}`}
               className="flex items-center gap-1.5 px-2 py-1 bg-midnight-700 rounded text-xs text-parchment-300 group"
             >
-              <span className="truncate max-w-[150px]" title={item.id}>
-                {item.id}
+              <span className="truncate max-w-[150px]" title={item._biome ? `${item._biome}/${item.id}` : item.id}>
+                {item._biome ? `${item._biome}/${item.id}` : item.id}
               </span>
               <button
                 onClick={() => onRemoveItem(category, item.id)}

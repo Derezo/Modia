@@ -50,12 +50,17 @@ router.post('/', asyncHandler(async (req, res) => {
   }
 
   try {
+    // Default force: true for explicit generation requests from the UI
+    // Users clicking "Generate" expect regeneration, not skipping existing files
+    const effectiveOptions = { force: true, ...options };
+    console.log('[admin/generation] POST /generate - effectiveOptions:', JSON.stringify(effectiveOptions));
+
     // Handle animations array - queue one job per animation
-    if (category === 'characters' && Array.isArray(options.animations) && options.animations.length > 0) {
+    if (category === 'characters' && Array.isArray(effectiveOptions.animations) && effectiveOptions.animations.length > 0) {
       const jobs = [];
-      for (const animation of options.animations) {
+      for (const animation of effectiveOptions.animations) {
         // Create job with singular 'animation' instead of 'animations' array
-        const jobOptions = { ...options, animation };
+        const jobOptions = { ...effectiveOptions, animation };
         delete jobOptions.animations;  // Remove the array to avoid confusion
         const result = adminGenerationService.queueJob(category, filters, jobOptions);
         jobs.push(result);
@@ -67,7 +72,7 @@ router.post('/', asyncHandler(async (req, res) => {
     }
 
     // Original single-job handling
-    const result = adminGenerationService.queueJob(category, filters, options);
+    const result = adminGenerationService.queueJob(category, filters, effectiveOptions);
     res.status(202).json({
       message: 'Generation job queued',
       ...result

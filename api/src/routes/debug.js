@@ -163,6 +163,42 @@ router.get('/status', (req, res) => {
 });
 
 /**
+ * POST /api/debug/reset-battle-state
+ * Reset in_battle flag for all characters owned by the authenticated user
+ * Used when characters get stuck in battle state after coliseum/connection issues
+ */
+router.post('/reset-battle-state', authenticate, asyncHandler(async (req, res) => {
+  const userId = req.user.userId;
+
+  // Check current state
+  const beforeResult = await query(
+    'SELECT id, name, in_battle FROM characters WHERE user_id = $1 AND in_battle = true',
+    [userId]
+  );
+
+  if (beforeResult.rows.length === 0) {
+    return res.json({
+      message: 'No characters were in battle state',
+      updated: 0
+    });
+  }
+
+  // Reset battle state
+  const updateResult = await query(
+    'UPDATE characters SET in_battle = false WHERE user_id = $1 AND in_battle = true RETURNING id, name',
+    [userId]
+  );
+
+  console.log(`[DEBUG] Reset in_battle for user ${userId}: ${updateResult.rows.map(c => c.name).join(', ')}`);
+
+  res.json({
+    message: 'Battle state reset for characters',
+    updated: updateResult.rowCount,
+    characters: updateResult.rows.map(c => ({ id: c.id, name: c.name }))
+  });
+}));
+
+/**
  * GET /api/debug/verify-traits/:characterId
  * Debug endpoint to verify trait loading for a character
  * Returns both loaded traits and raw database entries for comparison

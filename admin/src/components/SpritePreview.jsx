@@ -33,6 +33,7 @@ export const ANIMATION_FRAME_COUNTS = {
   death: 8,
   cast: 8,
   victory: 8,
+  dead: 8,  // Static pose, 8 identical frames
 };
 
 export default function SpritePreview({

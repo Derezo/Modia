@@ -2613,12 +2613,10 @@ export class BattleScene extends Scene {
       unit.render(ctx, this.camera);
     }
 
-    // Render dead units (faded)
+    // Render dead units (using dead sprite at full opacity)
     for (const unit of this.units.values()) {
       if (!unit.isAlive()) {
-        ctx.globalAlpha = 0.3;
         unit.render(ctx, this.camera);
-        ctx.globalAlpha = 1;
       }
     }
 

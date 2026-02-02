@@ -5,7 +5,7 @@
   "description": "Forest biome enemy sprite sheets",
   "biomeTraits": "leafy green natural woodland undergrowth dappled light",
   "totalAssets": 6,
-  "totalAnimations": 24,
+  "totalAnimations": 30,
   "enemies": [
     {
       "id": "forest_slime",
@@ -46,6 +46,13 @@
           "seed": 41004,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, translucent green slime creature with glowing core and dripping tendrils, death collapse animation, body dissolving into puddle and fading away, forest dappled light"
+        },
+        "dead": {
+          "id": "forest_slime_dead",
+          "frameCount": 8,
+          "seed": 41014,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, translucent green gelatinous body glowing core dripping tendrils bubbles, dead static pose, lying defeated at final rest motionless, leafy green"
         }
       },
       "needsRegeneration": false,
@@ -54,7 +61,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T21:46:36.523Z",
       "generated": true,
@@ -99,6 +107,13 @@
           "seed": 41014,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, giant hairy spider with eight red eyes and venomous fangs, death collapse animation, legs curling inward and body twitching to stillness, forest undergrowth shadows"
+        },
+        "dead": {
+          "id": "giant_spider_dead",
+          "frameCount": 8,
+          "seed": 41024,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, eight red eyes hairy body segmented legs fangs dripping venom, dead static pose, lying defeated at final rest motionless, leafy green"
         }
       },
       "needsRegeneration": false,
@@ -107,7 +122,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T22:09:17.993Z",
       "generated": true,
@@ -158,6 +174,13 @@
           "seed": 41024,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, gray wolf with amber eyes and sharp fangs, death collapse animation, falling with final whimper and lying still, forest woodland clearing"
+        },
+        "dead": {
+          "id": "gray_wolf_dead",
+          "frameCount": 8,
+          "seed": 41034,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, gray fur amber eyes snarling maw sharp fangs alert ears, dead static pose, lying defeated at final rest motionless, leafy green"
         }
       },
       "needsRegeneration": false,
@@ -166,7 +189,8 @@
         "idle": false,
         "attack": false,
         "hit": false,
-        "death": false
+        "death": false,
+        "dead": false
       },
       "generatedAt": null,
       "generated": false,
@@ -211,6 +235,13 @@
           "seed": 41034,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, green-skinned goblin with pointed ears and yellow eyes holding crude club, death collapse animation, dropping weapon and crumpling defeated, forest undergrowth"
+        },
+        "dead": {
+          "id": "goblin_warrior_dead",
+          "frameCount": 8,
+          "seed": 41044,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, green skin pointed ears yellow eyes crude weapon loincloth war paint, dead static pose, lying defeated at final rest motionless, leafy green"
         }
       },
       "needsRegeneration": false,
@@ -219,7 +250,8 @@
         "idle": false,
         "attack": false,
         "hit": false,
-        "death": false
+        "death": false,
+        "dead": false
       },
       "generatedAt": null,
       "generated": false,
@@ -264,6 +296,13 @@
           "seed": 41044,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, massive treant with bark skin and glowing eyes and leafy crown, death collapse animation, toppling over with branches snapping and returning to earth, ancient forest"
+        },
+        "dead": {
+          "id": "treant_dead",
+          "frameCount": 8,
+          "seed": 41054,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, bark skin branch arms glowing eyes leaves for hair massive trunk body, dead static pose, lying defeated at final rest motionless, leafy green"
         }
       },
       "needsRegeneration": false,
@@ -272,7 +311,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T14:35:38.433Z",
       "generated": true,
@@ -317,6 +357,13 @@
           "seed": 41054,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, ethereal dryad with green skin and flower hair and vine dress, death fade animation, dissolving into leaves and flower petals drifting away, enchanted forest glade"
+        },
+        "dead": {
+          "id": "dryad_dead",
+          "frameCount": 8,
+          "seed": 41064,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, green skin flower hair vine clothing ethereal beauty nature magic glow, dead static pose, lying defeated at final rest motionless, leafy green"
         }
       },
       "needsRegeneration": false,
@@ -325,7 +372,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T14:59:27.785Z",
       "generated": true,

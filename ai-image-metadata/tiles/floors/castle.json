@@ -312,7 +312,7 @@
       "prompt": "ancient oak log in castle courtyard floor #5C4033 #708090",
       "outputPath": "castle",
       "generated": true,
-      "needsRegeneration": true,
+      "needsRegeneration": false,
       "regenerationQueuedAt": null,
       "generatedAt": "2026-02-02T04:52:59.109Z",
       "generationFailureCount": null,

@@ -181,12 +181,12 @@ export class BattlePathfinding {
   }
 
   /**
-   * Get unit at position
+   * Get unit at position (returns all units including dead ones for collision)
    */
   getUnitAt(x, y) {
     for (const unit of this.units.values()) {
-      if (unit.gridX === x && unit.gridY === y && unit.isAlive()) {
-        return unit;
+      if (unit.gridX === x && unit.gridY === y) {
+        return unit;  // Return all units, including dead (corpses block tiles)
       }
     }
     return null;
@@ -429,18 +429,18 @@ export class BattlePathfinding {
 
   /**
    * Convert units Map to array format for shared pathfinding module
+   * Includes all units (dead and alive) since dead units block movement
    * @private
    */
   _getUnitsArray() {
     const unitsArray = [];
     for (const unit of this.units.values()) {
-      if (unit.isAlive()) {
-        unitsArray.push({
-          gridX: unit.gridX,
-          gridY: unit.gridY,
-          hp: unit.hp
-        });
-      }
+      // Include all units - dead units block movement (corpses on battlefield)
+      unitsArray.push({
+        gridX: unit.gridX,
+        gridY: unit.gridY,
+        hp: unit.hp
+      });
     }
     return unitsArray;
   }

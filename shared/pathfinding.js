@@ -290,7 +290,8 @@ function reconstructPath(node) {
 }
 
 /**
- * Check if a tile is occupied by a living unit
+ * Check if a tile is occupied by a unit (including dead units)
+ * Dead units block movement as their corpses remain on the battlefield.
  * Supports both { tileX, tileY } and { x, y } formats
  *
  * @param {number} x - X position to check
@@ -307,10 +308,8 @@ function isOccupied(x, y, units, excludeX = null, excludeY = null) {
     // Support both server format (tileX/tileY) and client format (gridX/gridY or x/y)
     const unitX = unit.tileX ?? unit.gridX ?? unit.x;
     const unitY = unit.tileY ?? unit.gridY ?? unit.y;
-    const unitHP = unit.hp ?? unit.currentHp ?? 1;
 
-    // Skip dead units
-    if (unitHP <= 0) continue;
+    // Dead units now block movement (corpses remain on battlefield)
 
     // Skip the excluded position (the unit that's moving)
     if (excludeX !== null && excludeY !== null &&

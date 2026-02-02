@@ -5,7 +5,7 @@
   "description": "Cave biome enemy sprite sheets",
   "biomeTraits": "dark rocky underground subterranean crystalline damp",
   "totalAssets": 6,
-  "totalAnimations": 24,
+  "totalAnimations": 30,
   "enemies": [
     {
       "id": "cave_bat",
@@ -46,6 +46,13 @@
           "seed": 42004,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, swarm of cave bats with glowing red eyes and leathery wings, death disperse animation, bats falling individually and dispersing into darkness, dark cavern depths"
+        },
+        "dead": {
+          "id": "cave_bat_dead",
+          "frameCount": 8,
+          "seed": 42014,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, cluster of bats red eyes wing membranes fangs screeching, dead static pose, lying defeated at final rest motionless, dark rocky"
         }
       },
       "needsRegeneration": false,
@@ -54,7 +61,8 @@
         "idle": false,
         "attack": false,
         "hit": false,
-        "death": false
+        "death": false,
+        "dead": false
       },
       "generatedAt": null,
       "generated": false,
@@ -99,6 +107,13 @@
           "seed": 42014,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, pale cave spider with multiple eyes and venomous fangs and spindly legs, death curl animation, legs curling tight with body deflating to stillness, underground cave"
+        },
+        "dead": {
+          "id": "cave_spider_dead",
+          "frameCount": 8,
+          "seed": 42024,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, pale white body multiple eyes venomous fangs spindly legs web spinner, dead static pose, lying defeated at final rest motionless, dark rocky"
         }
       },
       "needsRegeneration": false,
@@ -107,7 +122,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T15:46:48.709Z",
       "generated": true,
@@ -152,6 +168,13 @@
           "seed": 42024,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, cave goblin with gray-green skin and large eyes holding rusty dagger, death collapse animation, clutching wound and falling forward defeated, rocky cavern"
+        },
+        "dead": {
+          "id": "goblin_dead",
+          "frameCount": 8,
+          "seed": 42034,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, gray-green skin cave adapted eyes rusty dagger tattered clothes, dead static pose, lying defeated at final rest motionless, dark rocky"
         }
       },
       "needsRegeneration": false,
@@ -160,7 +183,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T16:10:31.142Z",
       "generated": true,
@@ -205,6 +229,13 @@
           "seed": 42034,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, massive cave troll with stone-like gray skin and glowing eyes and tusks, death collapse animation, dropping club and crashing down with earth trembling, subterranean cavern"
+        },
+        "dead": {
+          "id": "cave_troll_dead",
+          "frameCount": 8,
+          "seed": 42044,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, massive gray body stone-like skin glowing eyes huge club tusks, dead static pose, lying defeated at final rest motionless, dark rocky"
         }
       },
       "needsRegeneration": false,
@@ -213,7 +244,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T16:34:10.308Z",
       "generated": true,
@@ -258,6 +290,13 @@
           "seed": 42044,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, crystal golem with purple crystalline body and glowing core and faceted limbs, death shatter animation, shattering apart with crystals scattering and core fading, crystalline cave"
+        },
+        "dead": {
+          "id": "crystal_golem_dead",
+          "frameCount": 8,
+          "seed": 42054,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, body of purple crystals glowing core faceted limbs sharp edges, dead static pose, lying defeated at final rest motionless, dark rocky"
         }
       },
       "needsRegeneration": false,
@@ -266,7 +305,8 @@
         "idle": true,
         "attack": true,
         "hit": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T16:58:04.841Z",
       "generated": true,
@@ -311,6 +351,13 @@
           "seed": 42054,
           "generated": false,
           "prompt": "pixel art sprite side view 64x64, shadow assassin made of formless darkness with glowing red eyes and wispy tendrils, death dissipate animation, dissipating into wisps with eyes fading last, deep cave darkness"
+        },
+        "dead": {
+          "id": "shadow_assassin_dead",
+          "frameCount": 8,
+          "seed": 42064,
+          "generated": false,
+          "prompt": "pixel art sprite side view 64x64, formless darkness glowing red eyes wispy tendrils ethereal presence, dead static pose, lying defeated at final rest motionless, dark rocky"
         }
       },
       "needsRegeneration": false,
@@ -319,7 +366,8 @@
         "idle": false,
         "attack": false,
         "hit": false,
-        "death": false
+        "death": false,
+        "dead": false
       },
       "generatedAt": null,
       "generated": false,

@@ -11,14 +11,16 @@
         "walk": "marching steadfast purposeful",
         "attack": "fierce determined crushing",
         "hurt": "grunting enduring defiant",
-        "death": "falling with honor final stand"
+        "death": "falling with honor final stand",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "attackStyle": "sword slash overhead swing"
     },
@@ -32,7 +34,8 @@
         "attack": "channeling intense releasing",
         "cast": "concentrated mystical powerful",
         "hurt": "startled disrupted recovering",
-        "death": "fading transcending peaceful"
+        "death": "fading transcending peaceful",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
@@ -40,7 +43,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "attackStyle": "staff thrust magical bolt"
     },
@@ -53,14 +57,16 @@
         "walk": "balanced light grounded",
         "attack": "explosive precise channeled",
         "hurt": "absorbing redirecting recovering",
-        "death": "peaceful accepting graceful"
+        "death": "peaceful accepting graceful",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "attackStyle": "punch kick martial arts strike"
     },
@@ -73,14 +79,16 @@
         "walk": "cautious protective steady",
         "attack": "calculating precise confident",
         "hurt": "startled fumbling alarmed",
-        "death": "collapsing spilling defeated"
+        "death": "collapsing spilling defeated",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "attackStyle": "throw vial toss potion"
     },
@@ -93,14 +101,16 @@
         "walk": "predatory stalking hungry",
         "attack": "frenzied unleashed devastating",
         "hurt": "enraged defiant furious",
-        "death": "roaring final defiance"
+        "death": "roaring final defiance",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "attackStyle": "dual axe cleave frenzied slash"
     },
@@ -114,7 +124,8 @@
         "attack": "smiting righteous divine-fury",
         "cast": "praying channeling holy-light",
         "hurt": "steadfast protected resilient",
-        "death": "ascending martyred peaceful"
+        "death": "ascending martyred peaceful",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
@@ -122,7 +133,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "attackStyle": "holy blade smite radiant strike"
     },
@@ -135,14 +147,16 @@
         "walk": "deliberate advancing immovable",
         "attack": "crushing overwhelming forceful",
         "hurt": "bracing absorbing unyielding",
-        "death": "crumbling final-stand heroic"
+        "death": "crumbling final-stand heroic",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "attackStyle": "shield bash defensive thrust"
     },
@@ -155,14 +169,16 @@
         "walk": "leading purposeful authoritative",
         "attack": "decisive devastating commanding",
         "hurt": "controlled tactical recovering",
-        "death": "defiant honorable legendary"
+        "death": "defiant honorable legendary",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "attackStyle": "polearm sweep commanding strike"
     },
@@ -176,7 +192,8 @@
         "attack": "unleashing devastating overwhelming",
         "cast": "channeling corrupting overwhelming",
         "hurt": "volatile unstable backlash",
-        "death": "exploding consuming destructive"
+        "death": "exploding consuming destructive",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
@@ -184,7 +201,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "attackStyle": "elemental blast energy surge"
     },
@@ -198,7 +216,8 @@
         "attack": "commanding directing unleashing",
         "cast": "invoking channeling binding",
         "hurt": "severed disrupted weakened",
-        "death": "dissolving returning fading"
+        "death": "dissolving returning fading",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
@@ -206,7 +225,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "attackStyle": "summoning gesture conjure creature"
     },
@@ -220,7 +240,8 @@
         "attack": "unleashing primal surging",
         "cast": "weaving harmonizing channeling",
         "hurt": "elemental-clash disrupted scattered",
-        "death": "returning dissolving elemental-release"
+        "death": "returning dissolving elemental-release",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
@@ -228,7 +249,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "attackStyle": "elemental wave conjured strike"
     },
@@ -242,7 +264,8 @@
         "attack": "foretelling striking inevitable",
         "cast": "channeling visions prophesying",
         "hurt": "vision-shattered disoriented overwhelmed",
-        "death": "ascending transcending peaceful"
+        "death": "ascending transcending peaceful",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
@@ -250,7 +273,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "attackStyle": "psychic pulse vision strike"
     },
@@ -263,14 +287,16 @@
         "walk": "stalking silent ghostlike",
         "attack": "striking lethal vanishing",
         "hurt": "evading rolling recovering",
-        "death": "fading dissolving shadow-return"
+        "death": "fading dissolving shadow-return",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "attackStyle": "swift blade shuriken throw"
     },
@@ -283,14 +309,16 @@
         "walk": "confident balanced purposeful",
         "attack": "explosive devastating precise",
         "hurt": "blocking absorbing recovering",
-        "death": "honorable accepting graceful"
+        "death": "honorable accepting graceful",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "attackStyle": "rapid combo flying kick"
     },
@@ -303,14 +331,16 @@
         "walk": "swagger menacing confident",
         "attack": "brutal devastating crushing",
         "hurt": "taking-it laughing defiant",
-        "death": "falling fighting refusing"
+        "death": "falling fighting refusing",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "attackStyle": "heavy punch uppercut"
     },
@@ -324,7 +354,8 @@
         "attack": "channeling releasing focused",
         "cast": "blessing radiating divine",
         "hurt": "accepting enduring calm",
-        "death": "ascending enlightened peaceful"
+        "death": "ascending enlightened peaceful",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
@@ -332,7 +363,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "attackStyle": "spirit palm chi blast"
     },
@@ -345,14 +377,16 @@
         "walk": "careful protective excited",
         "attack": "throwing calculated explosive",
         "hurt": "fumbling shielding alarmed",
-        "death": "exploding reacting volatile"
+        "death": "exploding reacting volatile",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "attackStyle": "explosive flask alchemical bomb"
     },
@@ -366,7 +400,8 @@
         "attack": "defensive precise protective",
         "cast": "healing soothing mending",
         "hurt": "concerned wincing determined",
-        "death": "reaching helping selfless"
+        "death": "reaching helping selfless",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
@@ -374,7 +409,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "attackStyle": "syringe jab healing touch"
     },
@@ -388,7 +424,8 @@
         "attack": "spreading releasing corrupting",
         "cast": "brewing invoking poisoning",
         "hurt": "unfazed tilting observing",
-        "death": "dissolving dispersing infectious"
+        "death": "dissolving dispersing infectious",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
@@ -396,7 +433,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "attackStyle": "poison spray toxic cloud"
     },
@@ -409,14 +447,16 @@
         "walk": "clanking mechanical purposeful",
         "attack": "deploying activating firing",
         "hurt": "sparking malfunctioning alarmed",
-        "death": "shutting-down collapsing powering-off"
+        "death": "shutting-down collapsing powering-off",
+        "dead": "lying defeated at rest"
       },
       "defaultAnimations": [
         "idle",
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "attackStyle": "gadget deploy mechanical strike"
     }
@@ -431,14 +471,16 @@
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, disciplined warrior in sturdy plate armor with longsword and kite shield, vigilant ready stance with sword at guard and shield braced, alert watchful eyes scanning for threats, resolute battle-ready posture with slight breathing motion",
         "walk": "pixel art sprite side view 64x64 transparent background, warrior in plate armor with sword and shield, steady marching stride with armor plates shifting, purposeful steadfast advance with weapon ready, deliberate grounded movement showing trained soldier",
         "attack": "pixel art sprite side view 64x64 transparent background, warrior in plate armor, powerful overhead sword slash with full body rotation, fierce determined strike with crushing force, disciplined technique with shield held for counter",
         "hurt": "pixel art sprite side view 64x64 transparent background, warrior in plate armor with sword and shield, staggering backward from impact with defiant grunt, shield arm absorbing blow while maintaining stance, enduring pain with gritted teeth and refusing to fall",
-        "death": "pixel art sprite side view 64x64 transparent background, warrior in plate armor, collapsing to one knee then falling with honor, sword planted in ground as final stand gesture, stoic acceptance in defeat"
+        "death": "pixel art sprite side view 64x64 transparent background, warrior in plate armor, collapsing to one knee then falling with honor, sword planted in ground as final stand gesture, stoic acceptance in defeat",
+        "dead": "pixel art sprite side view 64x64 transparent background, warrior in plate armor lying defeated on ground, fallen warrior at final rest with sword nearby, still honorable pose in defeat"
       },
       "seed": 50001,
       "generated": true,
@@ -448,20 +490,47 @@
         "walk": true,
         "attack": true,
         "hurt": true,
-        "death": true
+        "death": true,
+        "dead": true
       },
-      "generatedAt": "2026-01-31T11:01:07.699Z",
+      "generatedAt": "2026-02-02T18:56:43.725Z",
       "sd15Config": {
         "controlnetWeight": 0.7,
         "ipadapterWeight": 0.7,
         "referenceImage": "/assets/characters/player/warrior/warrior_reference.png",
-        "referenceGeneratedAt": "2026-02-02T03:36:58.665Z",
+        "referenceGeneratedAt": "2026-02-02T18:29:25.950Z",
         "referenceLoraModel": "cps2-pixel-art",
         "animationLoraModel": "cps2-pixel-art"
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "frameDescriptionOverrides": null
+      "frameDescriptionOverrides": {
+        "idle": [
+          "warrior is laying on the ground",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "dead": [
+          "warrior is laying dead on the ground",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ]
+      },
+      "prompt": "full body transparent background, fully armored medieval warrior with sword shield sturdy muscular battle-ready",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "wizard",
@@ -472,7 +541,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, scholarly wizard in flowing blue robes with glowing crystal-topped staff and tome at belt, contemplative serene stance with staff resting lightly, subtle arcane energy swirling around staff head, wise patient presence of ancient knowledge",
@@ -480,7 +550,8 @@
         "attack": "pixel art sprite side view 64x64 transparent background, wizard in robes, staff thrust forward channeling magical bolt of crackling energy, intense focused release with eyes blazing arcane light, quick precise motion directing spell at target",
         "cast": "pixel art sprite side view 64x64 transparent background, wizard in flowing robes, arms raised channeling powerful spell with staff overhead, glowing arcane runes circling as mystic energy gathers, concentrated focused expression weaving complex magic",
         "hurt": "pixel art sprite side view 64x64 transparent background, wizard in robes with staff, flinching backward as magical barrier flickers and disrupts, startled expression with spell concentration broken, stumbling recovering while arcane energies scatter",
-        "death": "pixel art sprite side view 64x64 transparent background, wizard in flowing robes, collapsing peacefully with staff falling from grasp, arcane energy fading from crystal, robes settling gently as magic returns to the aether"
+        "death": "pixel art sprite side view 64x64 transparent background, wizard in flowing robes, collapsing peacefully with staff falling from grasp, arcane energy fading from crystal, robes settling gently as magic returns to the aether",
+        "dead": "pixel art sprite side view 64x64 transparent background, wizard in flowing robes lying defeated on ground, peaceful final rest with staff beside, robes spread gently around form"
       },
       "seed": 50002,
       "generated": true,
@@ -497,7 +568,8 @@
         "attack": true,
         "hurt": true,
         "death": true,
-        "cast": true
+        "cast": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T11:39:26.815Z",
       "sd15Config": {
@@ -515,14 +587,16 @@
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, centered monk with cloth-wrapped hands and simple training garb, balanced meditative fighting stance with hands ready, focused breathing visible in slight chest movement, disciplined patient posture from years of training",
         "walk": "pixel art sprite side view 64x64 transparent background, monk with wrapped hands and training clothes, light balanced steps barely disturbing ground, agile fluid movement with centered weight, grounded purposeful gait of inner calm",
         "attack": "pixel art sprite side view 64x64 transparent background, monk with wrapped hands, swift precise punch strike with full body alignment, explosive channeled power through disciplined form, clean martial arts motion with perfect technique",
         "hurt": "pixel art sprite side view 64x64 transparent background, monk with wrapped hands, absorbing impact with redirecting stance, controlled defensive recoil maintaining balance, immediate recovery flowing into ready position",
-        "death": "pixel art sprite side view 64x64 transparent background, monk with wrapped hands, falling gracefully with accepting peaceful expression, defeated pose maintaining dignity, gentle collapse finding rest"
+        "death": "pixel art sprite side view 64x64 transparent background, monk with wrapped hands, falling gracefully with accepting peaceful expression, defeated pose maintaining dignity, gentle collapse finding rest",
+        "dead": "pixel art sprite side view 64x64 transparent background, monk with wrapped hands lying peacefully defeated on ground, serene acceptance in final rest, dignified pose in defeat"
       },
       "seed": 50003,
       "generated": true,
@@ -540,7 +614,8 @@
         "walk": true,
         "attack": true,
         "hurt": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T12:08:36.002Z"
     },
@@ -552,14 +627,16 @@
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, practical chemist with leather apron belt of colorful vials and shoulder pouch, curious observant stance examining bubbling flask, alert eyes analyzing surroundings for useful components, clever resourceful demeanor ready to concoct",
         "walk": "pixel art sprite side view 64x64 transparent background, chemist with apron vials and pouch, careful measured steps protecting volatile potions, cautious steady movement with hand near reagents, methodical advance with analytical scanning",
         "attack": "pixel art sprite side view 64x64 transparent background, chemist with vial belt, arm swinging forward releasing potion in precise arcing throw, calculating trajectory with confident aim, glass vial spinning toward target",
         "hurt": "pixel art sprite side view 64x64 transparent background, chemist with apron and vials, stumbling backward clutching precious vials protectively, startled alarmed expression, fumbling to prevent breakage while staggering",
-        "death": "pixel art sprite side view 64x64 transparent background, chemist with apron and vials, falling down with potions spilling and mixing in colorful puddle, defeated collapse surrounded by wasted reagents, final reaching for one last vial"
+        "death": "pixel art sprite side view 64x64 transparent background, chemist with apron and vials, falling down with potions spilling and mixing in colorful puddle, defeated collapse surrounded by wasted reagents, final reaching for one last vial",
+        "dead": "pixel art sprite side view 64x64 transparent background, chemist with apron lying defeated on ground, vials scattered nearby, final rest surrounded by spilled reagents"
       },
       "seed": 50005,
       "generated": true,
@@ -577,7 +654,8 @@
         "walk": true,
         "attack": true,
         "hurt": true,
-        "death": true
+        "death": true,
+        "dead": false
       },
       "generatedAt": "2026-01-31T12:37:46.474Z",
       "prompt": "pixel art character sprite full body side view transparent background alchemist vials pouch apron practical clever",
@@ -594,23 +672,25 @@
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, savage berserker with spiked armor dual axes wild tangled hair war paint and battle scars, fury barely contained stance with muscles tensed and axes gripped white-knuckle, heavy heaving chest with veins bulging, feral intensity with eyes burning bloodlust",
         "walk": "pixel art sprite side view 64x64 transparent background, savage berserker with spiked armor dual axes wild hair and war paint, predatory stalking forward with heavy footfalls, shoulders hunched and head low like a hunting beast, hungry anticipation with axes dragging sparks",
         "attack": "pixel art sprite side view 64x64 transparent background, savage berserker with spiked armor and dual axes, frenzied whirlwind of steel with axes crossing in devastating cleave, wild slashing arc with spray of motion blur, unleashed rage with primal scream frozen in moment",
         "hurt": "pixel art sprite side view 64x64 transparent background, savage berserker with spiked armor dual axes and war paint, enraged snarl as blow lands, staggering but refusing to fall, defiant roar with fury intensifying rather than diminishing",
-        "death": "pixel art sprite side view 64x64 transparent background, savage berserker with spiked armor and dual axes, crashing down like felled tree with final defiant roar, axes still gripped in death, going down fighting with last breath"
+        "death": "pixel art sprite side view 64x64 transparent background, savage berserker with spiked armor and dual axes, crashing down like felled tree with final defiant roar, axes still gripped in death, going down fighting with last breath",
+        "dead": "pixel art sprite side view 64x64 transparent background, berserker with spiked armor lying defeated on ground, axes still gripped in death, savage warrior at final rest"
       },
       "seed": 50005,
-      "generated": false,
+      "generated": true,
       "loraModel": "retro-pixel",
       "sd15Config": {
         "controlnetWeight": null,
         "ipadapterWeight": null,
         "referenceImage": "/assets/characters/player/berserker/berserker_reference.png",
-        "referenceGeneratedAt": "2026-02-01T23:34:40.436Z",
+        "referenceGeneratedAt": "2026-02-02T18:11:18.985Z",
         "referenceLoraModel": "cps2-pixel-art",
         "animationLoraModel": "cps2-pixel-art"
       },
@@ -618,14 +698,18 @@
       "regenerationQueuedAt": null,
       "generatedAnimations": {
         "idle": true,
-        "walk": true
+        "walk": true,
+        "attack": true,
+        "hurt": true,
+        "dead": false,
+        "death": true
       },
       "prompt": "pixel art character sprite full body side view 64x64 transparent background savage warrior with spiked armor wielding dual axes, wild hair war paint scarred",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "generatedAt": "2026-02-01T23:38:21.995Z"
+      "generatedAt": "2026-02-02T18:34:52.236Z"
     },
     {
       "id": "paladin",
@@ -636,7 +720,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, holy paladin in gleaming white plate armor with golden trim radiant glowing sword and flowing cape, serene righteous stance with blade held in reverent guard, divine golden aura pulsing gently around form, composed noble bearing with prayer beads at belt",
@@ -644,7 +729,8 @@
         "attack": "pixel art sprite side view 64x64 transparent background, holy paladin in gleaming plate armor, radiant blade descending in holy smite with divine light trailing, righteous fury channeled through blessed steel, golden burst at point of impact",
         "cast": "pixel art sprite side view 64x64 transparent background, holy paladin in gleaming plate armor kneeling or standing tall, hands raised channeling divine blessing, golden holy light radiating outward in protective circle, serene focused prayer",
         "hurt": "pixel art sprite side view 64x64 transparent background, holy paladin in gleaming plate armor with glowing sword, divine barrier flickering as blow absorbed, steadfast resolve showing no fear, protected by faith with aura flaring defensively",
-        "death": "pixel art sprite side view 64x64 transparent background, holy paladin in gleaming plate armor, falling nobly to knees as divine light ascends heavenward, peaceful martyred expression, sword planted before as final prayer"
+        "death": "pixel art sprite side view 64x64 transparent background, holy paladin in gleaming plate armor, falling nobly to knees as divine light ascends heavenward, peaceful martyred expression, sword planted before as final prayer",
+        "dead": "pixel art sprite side view 64x64 transparent background, paladin in gleaming plate armor lying defeated on ground, divine glow faded, noble warrior at peaceful final rest"
       },
       "seed": 50006,
       "generated": false,
@@ -657,7 +743,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {},
+      "generatedAnimations": {
+        "dead": false
+      },
       "prompt": "pixel art character sprite full body side view 64x64 transparent background holy knight gleaming plate armor glowing sword divine aura cape",
       "evaluation": 0,
       "issues": "",
@@ -672,14 +760,16 @@
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, massive guardian in heavy plate armor with tower shield taller than torso, fortified immovable stance planted like a fortress, unshakeable vigilant watch with shield angled to deflect, bulky protective silhouette ready to absorb any blow",
         "walk": "pixel art sprite side view 64x64 transparent background, guardian in heavy plate armor with massive tower shield, slow deliberate march with each step shaking ground, shield held forward as advancing wall, unyielding armored advance like mobile fortress",
         "attack": "pixel art sprite side view 64x64 transparent background, guardian in heavy armor, shield thrust forward in devastating bash, crushing overwhelming force behind wall of steel, forceful impact that sends enemies flying",
         "hurt": "pixel art sprite side view 64x64 transparent background, guardian in heavy plate armor with tower shield, bracing behind shield absorbing massive impact, unyielding even as blow lands, minor stagger with immediate recovery",
-        "death": "pixel art sprite side view 64x64 transparent background, guardian in heavy plate armor, crumbling like fallen fortress with shield clattering down, heroic final stand posture, going down protecting others to last moment"
+        "death": "pixel art sprite side view 64x64 transparent background, guardian in heavy plate armor, crumbling like fallen fortress with shield clattering down, heroic final stand posture, going down protecting others to last moment",
+        "dead": "pixel art sprite side view 64x64 transparent background, guardian in heavy armor lying defeated on ground, shield fallen beside, fortress fallen at final rest"
       },
       "seed": 50007,
       "generated": false,
@@ -692,7 +782,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {}
+      "generatedAnimations": {
+        "dead": false
+      }
     },
     {
       "id": "warlord",
@@ -702,14 +794,16 @@
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, commanding warlord in ornate decorated armor with medals and flowing battle standard, tactical surveying stance with polearm at rest, calculating veteran eyes scanning the field, authoritative leadership presence inspiring all who see",
         "walk": "pixel art sprite side view 64x64 transparent background, warlord in ornate armor with polearm and banner, confident authoritative stride leading from front, banner flowing proudly behind, powerful march of experienced commander",
         "attack": "pixel art sprite side view 64x64 transparent background, warlord in ornate armor, polearm sweeping in devastating commanding arc, decisive overwhelming strike from battle-hardened veteran, powerful technique honed in countless campaigns",
         "hurt": "pixel art sprite side view 64x64 transparent background, warlord in ornate armor with polearm, controlled tactical recoil maintaining composure, veteran recovery never showing weakness to troops, measured retreat step assessing situation",
-        "death": "pixel art sprite side view 64x64 transparent background, warlord in ornate armor, falling with defiant honor still gripping banner, legendary final stand of great commander, dignified collapse becoming part of history"
+        "death": "pixel art sprite side view 64x64 transparent background, warlord in ornate armor, falling with defiant honor still gripping banner, legendary final stand of great commander, dignified collapse becoming part of history",
+        "dead": "pixel art sprite side view 64x64 transparent background, warlord in ornate armor lying defeated on ground, banner fallen nearby, legendary commander at final rest"
       },
       "seed": 50008,
       "generated": false,
@@ -724,7 +818,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {},
+      "generatedAnimations": {
+        "dead": false
+      },
       "prompt": "pixel art character sprite full body side view 64x64 transparent background commanding officer ornate armor banner flag tactical decorated veteran",
       "evaluation": 0,
       "issues": "",
@@ -740,7 +836,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, dark sorcerer in deep hooded robes with glowing arcane tattoos visible on arms and face, crackling dark energy orbiting hands, intense burning gaze from shadowed hood, dangerous barely-contained power simmering with ambient lightning arcs",
@@ -748,7 +845,8 @@
         "attack": "pixel art sprite side view 64x64 transparent background, dark sorcerer in hooded robes, hands thrust forward unleashing devastating surge of raw arcane energy, chaotic elemental blast tearing through air, overwhelming destructive force with tattoos blazing",
         "cast": "pixel art sprite side view 64x64 transparent background, dark sorcerer in hooded robes with arcane tattoos flaring bright, arms raised channeling massive dark spell with crackling lightning between palms, corrupting overwhelming power building to release, intense concentrated fury",
         "hurt": "pixel art sprite side view 64x64 transparent background, dark sorcerer in hooded robes, magical backlash causing unstable energy discharge, volatile power turning inward, staggering with arcs of wild energy escaping control",
-        "death": "pixel art sprite side view 64x64 transparent background, dark sorcerer in hooded robes, collapsing as dark power explodes outward consuming form, energy dissipating in destructive cascade, tattoos fading as magic devours its vessel"
+        "death": "pixel art sprite side view 64x64 transparent background, dark sorcerer in hooded robes, collapsing as dark power explodes outward consuming form, energy dissipating in destructive cascade, tattoos fading as magic devours its vessel",
+        "dead": "pixel art sprite side view 64x64 transparent background, sorcerer in dark robes lying defeated on ground, arcane tattoos dimmed, dark power extinguished at final rest"
       },
       "seed": 50009,
       "generated": false,
@@ -761,7 +859,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {}
+      "generatedAnimations": {
+        "dead": false
+      }
     },
     {
       "id": "summoner",
@@ -772,7 +872,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, mysterious summoner in flowing dark robes with ancient grimoire and ethereal wisps orbiting, connected mystical stance sensing other realms, glowing orbs floating nearby pulsing with bound spirits, patient commanding presence waiting to unleash",
@@ -780,7 +881,8 @@
         "attack": "pixel art sprite side view 64x64 transparent background, summoner in flowing robes, commanding gesture directing bound spirit forward, ethereal projectile of summoned force streaking toward target, imperious expression controlling unseen ally",
         "cast": "pixel art sprite side view 64x64 transparent background, summoner in robes with grimoire open, arms spread drawing glowing summoning circle in air, ethereal portal forming with creature emerging, invoking binding ritual with intense concentration",
         "hurt": "pixel art sprite side view 64x64 transparent background, summoner in flowing robes, mystical barrier shattering with wisps scattering in panic, severed connection causing recoil, weakened with bonds disrupted",
-        "death": "pixel art sprite side view 64x64 transparent background, summoner in flowing robes, form dissolving as bound spirits return to their realms, wisps dispersing into the ether, fading peacefully releasing all pacts"
+        "death": "pixel art sprite side view 64x64 transparent background, summoner in flowing robes, form dissolving as bound spirits return to their realms, wisps dispersing into the ether, fading peacefully releasing all pacts",
+        "dead": "pixel art sprite side view 64x64 transparent background, summoner in flowing robes lying defeated on ground, wisps faded away, mystical bonds severed at final rest"
       },
       "seed": 50010,
       "generated": false,
@@ -793,7 +895,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {},
+      "generatedAnimations": {
+        "dead": false
+      },
       "prompt": "pixel art character sprite full body side view 64x64 transparent background flowing robes summoning circle grimoire ethereal wisps mystical orbs",
       "evaluation": 0,
       "issues": "",
@@ -809,7 +913,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, primal conjurer in nature-touched robes with gleaming crystal staff, balanced harmonized stance with fire ice and earth swirling in orbit, attuned to elemental forces with each element represented, wild versatile presence crackling with natural power",
@@ -817,7 +922,8 @@
         "attack": "pixel art sprite side view 64x64 transparent background, conjurer with crystal staff, staff thrust forward releasing wave of combined elemental fury, primal surging force of nature itself, fire ice and earth merged into devastating strike",
         "cast": "pixel art sprite side view 64x64 transparent background, conjurer with crystal staff held high, arms spread weaving and harmonizing fire ice earth together, elements merging into powerful conjuration, channeling raw natural forces into unified spell",
         "hurt": "pixel art sprite side view 64x64 transparent background, conjurer with crystal staff, elemental shield shattering with elements scattering in chaos, disrupted harmony causing elemental clash around form, magical recoil from destabilized forces",
-        "death": "pixel art sprite side view 64x64 transparent background, conjurer with crystal staff, returning to the elements as body dissolves into earth fire and ice, crystal dimming as power releases, peaceful dissolution becoming one with nature"
+        "death": "pixel art sprite side view 64x64 transparent background, conjurer with crystal staff, returning to the elements as body dissolves into earth fire and ice, crystal dimming as power releases, peaceful dissolution becoming one with nature",
+        "dead": "pixel art sprite side view 64x64 transparent background, conjurer with crystal staff lying defeated on ground, elements dispersed, one with nature at final rest"
       },
       "seed": 50011,
       "generated": false,
@@ -830,7 +936,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {}
+      "generatedAnimations": {
+        "dead": false
+      }
     },
     {
       "id": "oracle",
@@ -841,7 +949,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, ethereal oracle with elegant blindfold and flowing ornate robes, floating slightly above ground with ancient runes orbiting, calm all-knowing stance seeing beyond physical realm, serene enigmatic presence radiating prophetic power",
@@ -849,7 +958,8 @@
         "attack": "pixel art sprite side view 64x64 transparent background, oracle with blindfold, hands extended releasing psychic pulse of visible distortion, foretelling strike hitting with inevitable precision, mental energy rippling outward in concentric waves",
         "cast": "pixel art sprite side view 64x64 transparent background, oracle with blindfold and flowing robes, arms raised channeling blinding prophetic vision, runes blazing intensely as future reveals itself, transcendent state with power flowing through third eye",
         "hurt": "pixel art sprite side view 64x64 transparent background, oracle with blindfold, visions shattering like breaking glass around head, psychic feedback causing disoriented stagger, overwhelmed by fractured futures",
-        "death": "pixel art sprite side view 64x64 transparent background, oracle with blindfold and ornate robes, ascending peacefully as form becomes translucent, runes spiraling upward as soul transcends, serene smile accepting final vision"
+        "death": "pixel art sprite side view 64x64 transparent background, oracle with blindfold and ornate robes, ascending peacefully as form becomes translucent, runes spiraling upward as soul transcends, serene smile accepting final vision",
+        "dead": "pixel art sprite side view 64x64 transparent background, oracle with blindfold lying peacefully defeated on ground, runes faded, seer at transcendent final rest"
       },
       "seed": 50012,
       "generated": false,
@@ -862,7 +972,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {}
+      "generatedAnimations": {
+        "dead": false
+      }
     },
     {
       "id": "ninja",
@@ -872,14 +984,16 @@
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, masked ninja in dark fitted cloth with kunai visible and shuriken pouch, coiled predatory crouch with weight on balls of feet ready to spring, cold calculating eyes visible above mask, shadowy stillness like a waiting viper",
         "walk": "pixel art sprite side view 64x64 transparent background, masked ninja in dark cloth with kunai and shuriken, silent ghost-like steps barely touching ground, fluid movement from shadow to shadow, hunting stalking patient approach with hands ready",
         "attack": "pixel art sprite side view 64x64 transparent background, masked ninja in dark cloth, blurring strike with kunai leaving silver arc, swift lethal precision in single deadly motion, cold efficiency with target already marked for death",
         "hurt": "pixel art sprite side view 64x64 transparent background, masked ninja in dark cloth, acrobatic evasive roll with cloth rippling, glancing blow turned into momentum, controlled recovery flowing into ready stance",
-        "death": "pixel art sprite side view 64x64 transparent background, masked ninja in dark cloth with kunai, collapsing silently into pooling shadows, fading into darkness with final breath, dissolving like smoke into the void"
+        "death": "pixel art sprite side view 64x64 transparent background, masked ninja in dark cloth with kunai, collapsing silently into pooling shadows, fading into darkness with final breath, dissolving like smoke into the void",
+        "dead": "pixel art sprite side view 64x64 transparent background, ninja in dark cloth lying defeated on ground, kunai fallen nearby, shadow warrior at silent final rest"
       },
       "seed": 50013,
       "generated": false,
@@ -892,7 +1006,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {}
+      "generatedAnimations": {
+        "dead": false
+      }
     },
     {
       "id": "martial_artist",
@@ -902,14 +1018,16 @@
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, disciplined martial artist in white gi uniform with tied headband and bare powerful fists, centered fighting stance with weight perfectly balanced, focused intense eyes burning with dedication, athletic coiled power ready to explode",
         "walk": "pixel art sprite side view 64x64 transparent background, martial artist in gi uniform with headband, confident purposeful stride with perfect balance, fluid athletic movement showing years of training, determined focused approach ready for combat",
         "attack": "pixel art sprite side view 64x64 transparent background, martial artist in gi uniform with headband, explosive flying kick or devastating combo with motion blur, precise devastating technique with perfect form, raw athletic power channeled through disciplined strike",
         "hurt": "pixel art sprite side view 64x64 transparent background, martial artist in gi uniform, arm raised blocking incoming blow, controlled absorbing stagger maintaining fighting stance, immediate recovery with counter-ready posture",
-        "death": "pixel art sprite side view 64x64 transparent background, martial artist in gi uniform with headband, falling with honorable grace and accepting expression, final bow of respect to worthy opponent, graceful defeated collapse maintaining dignity"
+        "death": "pixel art sprite side view 64x64 transparent background, martial artist in gi uniform with headband, falling with honorable grace and accepting expression, final bow of respect to worthy opponent, graceful defeated collapse maintaining dignity",
+        "dead": "pixel art sprite side view 64x64 transparent background, martial artist in gi uniform lying defeated on ground, honorable rest after worthy battle, disciplined pose in defeat"
       },
       "seed": 50014,
       "generated": false,
@@ -922,7 +1040,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {}
+      "generatedAnimations": {
+        "dead": false
+      }
     },
     {
       "id": "brawler",
@@ -932,14 +1052,16 @@
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, rough street brawler in torn tank top with spiked knuckle dusters and taped hands, aggressive cocky stance with fists raised, scarred face showing years of fights, itching for a brawl with intimidating swagger",
         "walk": "pixel art sprite side view 64x64 transparent background, brawler with spiked knuckles and tank top, rolling confident swagger showing who owns the street, menacing approach cracking knuckles, fearless advance looking for trouble",
         "attack": "pixel art sprite side view 64x64 transparent background, brawler with spiked knuckles, massive haymaker punch or devastating uppercut with full body behind it, brutal raw power with no technique just force, crushing blow meant to end fights",
         "hurt": "pixel art sprite side view 64x64 transparent background, brawler with spiked knuckles and tank top, taking hit with defiant grin, laughing off pain as fuel for anger, tough stagger spitting blood and coming back harder",
-        "death": "pixel art sprite side view 64x64 transparent background, brawler with spiked knuckles, crashing down hard still swinging, refusing to stay down even in defeat, street fighter collapse with fist raised one last time"
+        "death": "pixel art sprite side view 64x64 transparent background, brawler with spiked knuckles, crashing down hard still swinging, refusing to stay down even in defeat, street fighter collapse with fist raised one last time",
+        "dead": "pixel art sprite side view 64x64 transparent background, brawler with spiked knuckles lying defeated on ground, street fighter down but defiant even in final rest"
       },
       "seed": 50015,
       "generated": false,
@@ -952,7 +1074,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {}
+      "generatedAnimations": {
+        "dead": false
+      }
     },
     {
       "id": "ascetic",
@@ -963,7 +1087,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, enlightened ascetic in simple flowing robes with prayer beads around neck, serene levitating stance with legs crossed in meditation, soft glowing aura emanating from within, transcendent peaceful presence beyond worldly concerns",
@@ -971,7 +1096,8 @@
         "attack": "pixel art sprite side view 64x64 transparent background, ascetic in simple robes with prayer beads, palm thrust forward releasing visible chi force in spiraling wave, spirit energy projection with focused calm, inner power manifesting as external strike",
         "cast": "pixel art sprite side view 64x64 transparent background, ascetic in simple robes with prayer beads glowing, arms spread wide channeling divine inner chi, spiritual golden aura expanding outward blessing all, deep meditation radiating healing light",
         "hurt": "pixel art sprite side view 64x64 transparent background, ascetic in simple robes with prayer beads, accepting blow with serene calm expression, spiritual aura flickering but face peaceful, controlled endurance with inner strength unwavering",
-        "death": "pixel art sprite side view 64x64 transparent background, ascetic in simple robes, ascending peacefully with body becoming pure light, achieving nirvana as form transcends, blissful smile releasing attachment to physical world"
+        "death": "pixel art sprite side view 64x64 transparent background, ascetic in simple robes, ascending peacefully with body becoming pure light, achieving nirvana as form transcends, blissful smile releasing attachment to physical world",
+        "dead": "pixel art sprite side view 64x64 transparent background, ascetic in simple robes lying peacefully on ground, aura faded, enlightened one at transcendent final rest"
       },
       "seed": 50016,
       "generated": false,
@@ -984,7 +1110,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {}
+      "generatedAnimations": {
+        "dead": false
+      }
     },
     {
       "id": "alchemist",
@@ -994,14 +1122,16 @@
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, brilliant master alchemist with brass goggles thick leather apron and bandolier of elaborate bubbling vials, experimenting stance examining transmutation with eager eyes, eccentric genius surrounded by volatile concoctions, obsessive studying of dangerous reactions",
         "walk": "pixel art sprite side view 64x64 transparent background, alchemist with goggles apron and vial bandolier, careful excited stride protecting precious volatile experiments, methodical advance with dangerous cargo, inventive purpose in every careful step",
         "attack": "pixel art sprite side view 64x64 transparent background, alchemist with goggles pushed up, arm cocked hurling explosive alchemical flask, calculated precise throw of volatile compound, dangerous mixture arcing toward target trailing sparks",
         "hurt": "pixel art sprite side view 64x64 transparent background, alchemist with goggles and apron, fumbling as chemicals splash and react unexpectedly, shielding face from volatile reaction, alarmed stagger with vials clinking dangerously",
-        "death": "pixel art sprite side view 64x64 transparent background, alchemist with goggles and apron, collapsing as potions shatter in chain reaction, volatile explosions and colorful chemical sprays, final experiment gone catastrophically wrong"
+        "death": "pixel art sprite side view 64x64 transparent background, alchemist with goggles and apron, collapsing as potions shatter in chain reaction, volatile explosions and colorful chemical sprays, final experiment gone catastrophically wrong",
+        "dead": "pixel art sprite side view 64x64 transparent background, alchemist with goggles and apron lying defeated on ground, vials shattered nearby, inventor at final rest"
       },
       "seed": 50017,
       "generated": false,
@@ -1014,7 +1144,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {}
+      "generatedAnimations": {
+        "dead": false
+      }
     },
     {
       "id": "medic",
@@ -1025,7 +1157,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, dedicated field medic in stained white coat with worn medical satchel and rolled bandages, alert watchful stance ready to rush to wounded, compassionate determined eyes scanning for those in need, calm under pressure presence",
@@ -1033,7 +1166,8 @@
         "attack": "pixel art sprite side view 64x64 transparent background, medic in white coat, defensive syringe jab with precise medical precision, protective strike to defend patients, quick efficient motion of trained healer turned defender",
         "cast": "pixel art sprite side view 64x64 transparent background, medic in white coat kneeling or reaching, hands glowing with healing energy while bandaging, soothing restorative light mending wounds, compassionate focused expression bringing relief",
         "hurt": "pixel art sprite side view 64x64 transparent background, medic in white coat with medical bag, flinching while clutching supplies protectively, concerned wincing expression more worried about medicines than self, determined to keep healing despite injury",
-        "death": "pixel art sprite side view 64x64 transparent background, medic in white coat, falling while still reaching toward someone to help, selfless final gesture of compassion, medical bag spilling supplies in caring defeat"
+        "death": "pixel art sprite side view 64x64 transparent background, medic in white coat, falling while still reaching toward someone to help, selfless final gesture of compassion, medical bag spilling supplies in caring defeat",
+        "dead": "pixel art sprite side view 64x64 transparent background, medic in white coat lying defeated on ground, medical bag spilled, healer at selfless final rest"
       },
       "seed": 50018,
       "generated": false,
@@ -1046,7 +1180,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {}
+      "generatedAnimations": {
+        "dead": false
+      }
     },
     {
       "id": "plague_doctor",
@@ -1057,7 +1193,8 @@
         "attack",
         "hurt",
         "death",
-        "cast"
+        "cast",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, sinister plague doctor with iconic long-beaked mask wide-brimmed hat dark flowing leather coat and swinging brass censer, unsettling stillness stance with head tilted observing, toxic green-yellow fumes curling from censer vents, menacing clinical presence with hidden eyes watching",
@@ -1065,7 +1202,8 @@
         "attack": "pixel art sprite side view 64x64 transparent background, plague doctor with beaked mask, censer thrust forward releasing billowing cloud of toxic miasma, poison spray erupting in sickly green burst, clinical detachment while spreading corruption",
         "cast": "pixel art sprite side view 64x64 transparent background, plague doctor with beaked mask and dark coat, arms raised invoking plague ritual with censer orbiting, toxic cloud forming massive and swirling, dark incantation brewing pestilence",
         "hurt": "pixel art sprite side view 64x64 transparent background, plague doctor with beaked mask and coat, mask tilting at unsettling angle as blow lands, unfazed observation of own damage, coat billowing with no cry of pain only clinical interest",
-        "death": "pixel art sprite side view 64x64 transparent background, plague doctor with beaked mask, body dissolving into dispersing toxic mist, mask falling last as form becomes cloud of pestilence, infectious even in death"
+        "death": "pixel art sprite side view 64x64 transparent background, plague doctor with beaked mask, body dissolving into dispersing toxic mist, mask falling last as form becomes cloud of pestilence, infectious even in death",
+        "dead": "pixel art sprite side view 64x64 transparent background, plague doctor with beaked mask lying defeated on ground, censer fallen silent, ominous figure at eerie final rest"
       },
       "seed": 50019,
       "generated": false,
@@ -1078,7 +1216,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {}
+      "generatedAnimations": {
+        "dead": false
+      }
     },
     {
       "id": "artificer",
@@ -1088,14 +1228,16 @@
         "walk",
         "attack",
         "hurt",
-        "death"
+        "death",
+        "dead"
       ],
       "animationPrompts": {
         "idle": "pixel art sprite side view 64x64 transparent background, steampunk artificer with brass goggles on forehead and gleaming mechanical arm with visible gears, tinkering adjusting stance calibrating devices, clockwork mechanisms whirring and clicking, inventive genius with toolbelt full of gadgets",
         "walk": "pixel art sprite side view 64x64 transparent background, artificer with goggles and mechanical arm, mechanical stride with arm pistons pumping, gadgets clanking and steam venting from joints, purposeful inventor walk with gears turning",
         "attack": "pixel art sprite side view 64x64 transparent background, artificer with mechanical arm, arm extending deploying built-in weapon or hurling gadget, mechanical precision strike with steam burst, clockwork assault with calculated accuracy",
         "hurt": "pixel art sprite side view 64x64 transparent background, artificer with goggles and mechanical arm, mechanical arm sparking with exposed wires, gadgets flickering and malfunctioning, alarmed expression checking damage to precious inventions",
-        "death": "pixel art sprite side view 64x64 transparent background, artificer with goggles and mechanical arm, systems failing with gears scattering and steam escaping, mechanical arm going limp as power drains, final shutdown collapse surrounded by fallen components"
+        "death": "pixel art sprite side view 64x64 transparent background, artificer with goggles and mechanical arm, systems failing with gears scattering and steam escaping, mechanical arm going limp as power drains, final shutdown collapse surrounded by fallen components",
+        "dead": "pixel art sprite side view 64x64 transparent background, artificer with mechanical arm lying defeated on ground, gears scattered, inventor powered down at final rest"
       },
       "seed": 50020,
       "generated": false,
@@ -1108,7 +1250,9 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAnimations": {}
+      "generatedAnimations": {
+        "dead": false
+      }
     }
   ]
 }

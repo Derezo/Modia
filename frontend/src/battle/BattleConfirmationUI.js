@@ -36,32 +36,46 @@ export class BattleConfirmationUI {
 
   /**
    * Show turn indicator (displays whose turn it is)
-   * @param {string} unitName - Name of the unit whose turn it is
+   * @param {Object} unitData - Unit data object with: { name, level, race, class, type }
    * @param {string} unitType - Type of unit: 'player', 'player_local', 'player_remote', 'enemy'
-   * @param {number} duration - How long to show the indicator (ms), default 2000
    */
-  showTurnIndicator(unitName, unitType, duration = 2000) {
+  showTurnIndicator(unitData, unitType) {
     const indicator = this.element?.querySelector('#turn-indicator');
     const content = this.element?.querySelector('.turn-indicator-content');
     const text = this.element?.querySelector('#turn-indicator-text');
 
     if (!indicator || !content || !text) return;
 
-    // Clear any existing timeout
+    // Clear any existing timeout (no longer used, but kept for cleanup)
     if (this.turnIndicatorTimeout) {
       clearTimeout(this.turnIndicatorTimeout);
+      this.turnIndicatorTimeout = null;
     }
 
-    // Set text and style based on unit type
+    // Helper for capitalizing strings
+    const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
+
+    // Format display text based on unit type
+    const name = unitData?.name || 'Unknown';
+    const level = unitData?.level || 1;
+    const race = capitalize(unitData?.race);
+    const unitClass = capitalize(unitData?.class);
+
     let displayText = '';
-    if (unitType === 'player_local') {
-      displayText = 'Your Turn!';
-    } else if (unitType === 'player_remote') {
-      displayText = `${unitName}'s Turn`;
+    if (unitType === 'player_local' || unitType === 'player_remote' || unitType === 'player') {
+      // Players: "Name: Lv. X Race Class"
+      if (race && unitClass) {
+        displayText = `${name}: Lv. ${level} ${race} ${unitClass}`;
+      } else if (unitClass) {
+        displayText = `${name}: Lv. ${level} ${unitClass}`;
+      } else {
+        displayText = `${name}: Lv. ${level}`;
+      }
     } else if (unitType === 'enemy') {
-      displayText = `Enemy: ${unitName}`;
+      // Enemies: "Name: Lv. X Monster"
+      displayText = `${name}: Lv. ${level} Monster`;
     } else {
-      displayText = `${unitName}'s Turn`;
+      displayText = `${name}: Lv. ${level}`;
     }
 
     text.textContent = displayText;
@@ -75,10 +89,7 @@ export class BattleConfirmationUI {
     void indicator.offsetWidth; // Force reflow
     indicator.style.display = 'block';
 
-    // Hide after duration
-    this.turnIndicatorTimeout = setTimeout(() => {
-      indicator.style.display = 'none';
-    }, duration);
+    // Note: Indicator stays visible until next turn (no auto-hide timeout)
   }
 
   /**

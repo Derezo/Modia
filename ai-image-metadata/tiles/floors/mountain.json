@@ -274,8 +274,9 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true,
-      "loraModel": null
+      "needsRegeneration": false,
+      "loraModel": null,
+      "regenerationQueuedAt": null
     },
     {
       "key": "tree_1",
@@ -308,8 +309,9 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true,
-      "loraModel": null
+      "needsRegeneration": false,
+      "loraModel": null,
+      "regenerationQueuedAt": null
     },
     {
       "key": "mountain_snow_0",

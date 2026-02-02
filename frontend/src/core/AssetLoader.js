@@ -242,6 +242,7 @@ export class AssetLoader {
       mountain: 'mountain',
       bridge: 'bridge',
       castle: 'castle',
+      arena: 'castle',  // Arena uses castle tiles for gladiatorial theme
       // Village/city use forest since they don't have unique terrain
       village: 'forest',
       city: 'forest',
@@ -433,7 +434,7 @@ export class AssetLoader {
    * Preload equipped character sprites
    * Loads all animations for the character's current equipment
    */
-  async preloadEquippedCharacter(character, animations = ['idle', 'walk', 'attack', 'hit', 'death']) {
+  async preloadEquippedCharacter(character, animations = ['idle', 'walk', 'attack', 'hit', 'death', 'dead']) {
     const promises = animations.map(anim =>
       this.loadEquippedCharacterSprite(character, anim)
     );
@@ -1337,11 +1338,11 @@ export class AssetLoader {
    * Preload character sprites
    * @param {string} charClass - Character class to preload
    * @param {Object} options - Preload options
-   * @param {string[]} options.animations - Animation types to preload (default: idle, walk, attack, hit, death)
+   * @param {string[]} options.animations - Animation types to preload (default: idle, walk, attack, hit, death, dead)
    * @param {Function} options.onProgress - Optional callback (loaded, total) for progress tracking
    */
   async preloadCharacter(charClass, options = {}) {
-    const { animations = ['idle', 'walk', 'attack', 'hit', 'death'], onProgress } = options;
+    const { animations = ['idle', 'walk', 'attack', 'hit', 'death', 'dead'], onProgress } = options;
     const promises = animations.map(anim => this.loadCharacterSprite(charClass, anim));
     let loaded = 0;
 
@@ -1369,7 +1370,7 @@ export class AssetLoader {
    */
   async preloadEnemies(biome, enemyIds, options = {}) {
     const { onProgress } = options;
-    const animations = ['idle', 'attack', 'hit', 'death'];
+    const animations = ['idle', 'attack', 'hit', 'death', 'dead'];
     const promises = [];
     let loaded = 0;
 

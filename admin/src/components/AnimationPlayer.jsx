@@ -13,7 +13,7 @@
  *
  * @example
  * <AnimationPlayer
- *   spriteSheet="/assets/characters/player/warrior/warrior_idle.png"
+ *   spriteSheet="/assets/characters/player/warrior/warrior_idle.webp"
  *   frameWidth={64}
  *   frameHeight={64}
  *   frameCount={8}
