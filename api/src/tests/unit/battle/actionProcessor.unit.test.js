@@ -14,7 +14,8 @@ import assert from 'node:assert';
 
 import {
   checkBattleEnd,
-  getBattleStatusString
+  getBattleStatusString,
+  processAction
 } from '../../../services/battle/actionProcessor.js';
 
 // =============================================================================
@@ -448,5 +449,194 @@ describe('checkBattleEnd result object structure', () => {
 
     assert.strictEqual(typeof result.winningTeamId, 'number');
     assert.ok([1, 2].includes(result.winningTeamId));
+  });
+});
+
+// =============================================================================
+// Battle Statistics Tracking
+// =============================================================================
+
+describe('Battle Statistics Tracking', () => {
+  /**
+   * Create a minimal battle state for testing stat tracking
+   */
+  function createBattleState(overrides = {}) {
+    return {
+      units: [
+        {
+          id: 'attacker',
+          type: 'player',
+          teamId: 1,
+          tileX: 0,
+          tileY: 0,
+          hp: 100,
+          maxHp: 100,
+          mp: 50,
+          maxMp: 50,
+          strength: 50,
+          intelligence: 20,
+          agility: 20,
+          vitality: 20,
+          luck: 10,
+          attack: 20,
+          defense: 10,
+          attackRange: 1,
+          movement: 3,
+          actUsed: false,
+          moveUsed: false,
+          turnPhase: 'ready',
+          statusEffects: [],
+          skillCooldowns: {},
+          skills: [],
+          // Stat tracking fields
+          damageDealt: 0,
+          damageTaken: 0,
+          healingDone: 0,
+          kills: 0,
+          deaths: 0,
+          ...overrides.attacker
+        },
+        {
+          id: 'defender',
+          type: 'enemy',
+          teamId: 2,
+          tileX: 1,
+          tileY: 0,
+          hp: 50,
+          maxHp: 100,
+          mp: 30,
+          maxMp: 50,
+          strength: 30,
+          intelligence: 15,
+          agility: 15,
+          vitality: 10,
+          luck: 5,
+          attack: 10,
+          defense: 5,
+          attackRange: 1,
+          movement: 3,
+          actUsed: false,
+          moveUsed: false,
+          turnPhase: 'ready',
+          statusEffects: [],
+          skillCooldowns: {},
+          skills: [],
+          // Stat tracking fields
+          damageDealt: 0,
+          damageTaken: 0,
+          healingDone: 0,
+          kills: 0,
+          deaths: 0,
+          ...overrides.defender
+        }
+      ],
+      mapWidth: 10,
+      mapHeight: 10,
+      terrain: [],
+      ...overrides.state
+    };
+  }
+
+  describe('attack damage tracking', () => {
+    it('tracks damageDealt for attacker on successful attack', () => {
+      const state = createBattleState();
+      const attacker = state.units[0];
+      const defender = state.units[1];
+
+      const result = processAction(state, attacker, 'attack', { x: 1, y: 0 });
+
+      // Attack should deal damage (not miss)
+      if (!result.missed) {
+        assert.ok(attacker.damageDealt > 0, 'Attacker damageDealt should be tracked');
+        assert.strictEqual(
+          attacker.damageDealt,
+          defender.damageTaken,
+          'damageDealt should equal damageTaken'
+        );
+      }
+    });
+
+    it('tracks damageTaken for defender when attacked', () => {
+      const state = createBattleState();
+      const attacker = state.units[0];
+      const defender = state.units[1];
+
+      const result = processAction(state, attacker, 'attack', { x: 1, y: 0 });
+
+      if (!result.missed) {
+        assert.ok(defender.damageTaken > 0, 'Defender damageTaken should be tracked');
+      }
+    });
+
+    it('tracks kills when target HP reaches 0', () => {
+      const state = createBattleState({
+        attacker: { strength: 200, attack: 100 }, // Very strong attacker
+        defender: { hp: 1, maxHp: 100, defense: 0, vitality: 1 } // Nearly dead defender
+      });
+      const attacker = state.units[0];
+      const defender = state.units[1];
+
+      processAction(state, attacker, 'attack', { x: 1, y: 0 });
+
+      // If defender died (hp <= 0)
+      if (defender.hp <= 0) {
+        assert.strictEqual(attacker.kills, 1, 'Attacker should have 1 kill');
+        assert.ok(defender.deaths >= 1, 'Defender should have at least 1 death');
+      }
+    });
+
+    it('increments deaths counter (does not reset to 1)', () => {
+      const state = createBattleState({
+        attacker: { strength: 200, attack: 100 },
+        defender: { hp: 1, maxHp: 100, defense: 0, vitality: 1, deaths: 1 } // Already died once
+      });
+      const attacker = state.units[0];
+      const defender = state.units[1];
+
+      processAction(state, attacker, 'attack', { x: 1, y: 0 });
+
+      // If defender died again
+      if (defender.hp <= 0) {
+        assert.strictEqual(defender.deaths, 2, 'Deaths should increment, not reset to 1');
+      }
+    });
+
+    it('accumulates damageDealt across multiple attacks', () => {
+      const state = createBattleState({
+        attacker: { strength: 30, attack: 10 },
+        defender: { hp: 500, maxHp: 500 } // Tanky defender
+      });
+      const attacker = state.units[0];
+
+      // First attack
+      processAction(state, attacker, 'attack', { x: 1, y: 0 });
+      const damageAfterFirst = attacker.damageDealt;
+
+      // Reset for second attack
+      attacker.actUsed = false;
+
+      // Second attack
+      processAction(state, attacker, 'attack', { x: 1, y: 0 });
+
+      assert.ok(
+        attacker.damageDealt > damageAfterFirst,
+        'damageDealt should accumulate across attacks'
+      );
+    });
+  });
+
+  describe('wait action does not affect stats', () => {
+    it('wait does not change any stat counters', () => {
+      const state = createBattleState();
+      const attacker = state.units[0];
+
+      processAction(state, attacker, 'wait', null);
+
+      assert.strictEqual(attacker.damageDealt, 0, 'damageDealt unchanged');
+      assert.strictEqual(attacker.damageTaken, 0, 'damageTaken unchanged');
+      assert.strictEqual(attacker.healingDone, 0, 'healingDone unchanged');
+      assert.strictEqual(attacker.kills, 0, 'kills unchanged');
+      assert.strictEqual(attacker.deaths, 0, 'deaths unchanged');
+    });
   });
 });

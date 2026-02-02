@@ -1051,3 +1051,83 @@ describe('getAliveUnitsOfType', () => {
     assert.strictEqual(result.length, 0);
   });
 });
+
+// ============================================================================
+// Battle Statistics Tracking Fields
+// ============================================================================
+
+describe('Battle Statistics Tracking Fields', () => {
+  describe('createPlayerBattleUnit', () => {
+    it('initializes damageDealt to 0', () => {
+      const character = createMockCharacter();
+      const unit = createPlayerBattleUnit(character);
+
+      assert.strictEqual(unit.damageDealt, 0, 'damageDealt should initialize to 0');
+    });
+
+    it('initializes damageTaken to 0', () => {
+      const character = createMockCharacter();
+      const unit = createPlayerBattleUnit(character);
+
+      assert.strictEqual(unit.damageTaken, 0, 'damageTaken should initialize to 0');
+    });
+
+    it('initializes healingDone to 0', () => {
+      const character = createMockCharacter();
+      const unit = createPlayerBattleUnit(character);
+
+      assert.strictEqual(unit.healingDone, 0, 'healingDone should initialize to 0');
+    });
+
+    it('initializes kills to 0', () => {
+      const character = createMockCharacter();
+      const unit = createPlayerBattleUnit(character);
+
+      assert.strictEqual(unit.kills, 0, 'kills should initialize to 0');
+    });
+
+    it('initializes deaths to 0', () => {
+      const character = createMockCharacter();
+      const unit = createPlayerBattleUnit(character);
+
+      assert.strictEqual(unit.deaths, 0, 'deaths should initialize to 0');
+    });
+  });
+
+  describe('createEnemyBattleUnit', () => {
+    it('initializes damageDealt to 0', () => {
+      const template = createMockEnemyTemplate();
+      const unit = createEnemyBattleUnit(template, 10, 2, 0, { x: 5, y: 5 });
+
+      assert.strictEqual(unit.damageDealt, 0, 'damageDealt should initialize to 0');
+    });
+
+    it('initializes damageTaken to 0', () => {
+      const template = createMockEnemyTemplate();
+      const unit = createEnemyBattleUnit(template, 10, 2, 0, { x: 5, y: 5 });
+
+      assert.strictEqual(unit.damageTaken, 0, 'damageTaken should initialize to 0');
+    });
+
+    it('initializes healingDone to 0', () => {
+      const template = createMockEnemyTemplate();
+      const unit = createEnemyBattleUnit(template, 10, 2, 0, { x: 5, y: 5 });
+
+      assert.strictEqual(unit.healingDone, 0, 'healingDone should initialize to 0');
+    });
+
+    it('initializes kills to 0', () => {
+      const template = createMockEnemyTemplate();
+      const unit = createEnemyBattleUnit(template, 10, 2, 0, { x: 5, y: 5 });
+
+      assert.strictEqual(unit.kills, 0, 'kills should initialize to 0');
+    });
+
+    it('initializes deaths to 0', () => {
+      const template = createMockEnemyTemplate();
+      const unit = createEnemyBattleUnit(template, 10, 2, 0, { x: 5, y: 5 });
+
+      assert.strictEqual(unit.deaths, 0, 'deaths should initialize to 0');
+    });
+  });
+});
