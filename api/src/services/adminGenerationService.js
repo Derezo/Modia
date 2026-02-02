@@ -273,11 +273,12 @@ function buildScriptArgs(job, config) {
       if (job.filters.race) args.push('--race', job.filters.race);
       if (job.filters.class) args.push('--class', job.filters.class);
       if (job.filters.subcategory) args.push('--category', job.filters.subcategory);
-      // Normalize key/keys/ids into a single array
+      // Normalize key/keys/ids/id into a single array
       const keys = Array.isArray(job.filters.ids) ? job.filters.ids
         : Array.isArray(job.filters.keys) ? job.filters.keys
           : job.filters.key ? [job.filters.key]
-            : [];
+            : job.filters.id ? [job.filters.id]
+              : [];
       if (keys.length > 0) {
         keys.forEach(k => args.push('--key', k));
       }

@@ -50,6 +50,23 @@ router.post('/', asyncHandler(async (req, res) => {
   }
 
   try {
+    // Handle animations array - queue one job per animation
+    if (category === 'characters' && Array.isArray(options.animations) && options.animations.length > 0) {
+      const jobs = [];
+      for (const animation of options.animations) {
+        // Create job with singular 'animation' instead of 'animations' array
+        const jobOptions = { ...options, animation };
+        delete jobOptions.animations;  // Remove the array to avoid confusion
+        const result = adminGenerationService.queueJob(category, filters, jobOptions);
+        jobs.push(result);
+      }
+      return res.status(202).json({
+        message: `Queued ${jobs.length} animation job(s)`,
+        jobs
+      });
+    }
+
+    // Original single-job handling
     const result = adminGenerationService.queueJob(category, filters, options);
     res.status(202).json({
       message: 'Generation job queued',
