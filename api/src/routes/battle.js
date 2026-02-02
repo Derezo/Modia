@@ -17,6 +17,7 @@ import * as bossService from '../services/bossService.js';
 import * as battleTurnManager from '../services/battleTurnManager.js';
 import { generateTerrain } from '../../../shared/mapGeneration.js';
 import * as zodiacAbilityService from '../services/zodiacAbilityService.js';
+import { completeMatch as completeColiseumMatch, cancelTurnTimer } from '../services/coliseumService.js';
 
 const router = express.Router();
 
@@ -228,6 +229,38 @@ async function handleBattleEnd(battleId, status, state, userId, battleEndResult 
   }
 
   battleWebsocket.broadcastBattleEnd(battleId, status, rewards, pvpInfo);
+
+  // Record Coliseum match results and update ratings/leaderboards
+  if (isPvP && battleEndResult?.winningTeamId) {
+    try {
+      // Check if this is a Coliseum battle
+      const battleTypeResult = await query(
+        'SELECT battle_type FROM battles WHERE id = $1',
+        [battleId]
+      );
+      const battleType = battleTypeResult.rows[0]?.battle_type;
+
+      if (battleType === 'pvp_coliseum') {
+        // Validate player IDs exist before recording match
+        if (!state.player1Id || !state.player2Id) {
+          console.error('[Battle] Missing player IDs for Coliseum match:', {
+            battleId,
+            player1Id: state.player1Id,
+            player2Id: state.player2Id
+          });
+        } else {
+          const winnerId = battleEndResult.winningTeamId === 1 ? state.player1Id : state.player2Id;
+          const loserId = battleEndResult.winningTeamId === 1 ? state.player2Id : state.player1Id;
+
+          console.log(`[Battle] Recording Coliseum match - battleId=${battleId}, winnerId=${winnerId}, loserId=${loserId}`);
+          await completeColiseumMatch(battleId, winnerId, loserId, 'victory', false);
+        }
+      }
+    } catch (err) {
+      // Log but don't fail the battle end - match recording is non-critical
+      console.error('[Battle] Failed to record Coliseum match:', err);
+    }
+  }
 
   // Leave battle room (for all users in battle)
   const participants = battleWebsocket.getBattleParticipants(battleId);
@@ -619,11 +652,12 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
 // GET /api/battle/current - Get current battle state
 router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) => {
   // Check for active battle where user is player1, player2, or in battle_players (for PvP/coop)
+  // Use LEFT JOIN because PvP battles (coliseum) have NULL node_id
   const result = await query(
     `SELECT b.id, b.battle_type, b.battle_state, b.map_seed, b.map_width, b.map_height,
             wn.node_type, wn.name as node_name
      FROM battles b
-     JOIN world_nodes wn ON b.node_id = wn.id
+     LEFT JOIN world_nodes wn ON b.node_id = wn.id
      WHERE b.status = 'active'
        AND (b.player1_id = $1 OR b.player2_id = $1 OR
             EXISTS (SELECT 1 FROM battle_players bp WHERE bp.battle_id = b.id AND bp.user_id = $1))
@@ -640,11 +674,41 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
   const state = battle.battle_state;
   const battleId = battle.id;
 
+  // Detect PvP battles and get opponent username
+  const isPvP = battle.battle_type === 'pvp' || battle.battle_type === 'pvp_coliseum';
+  let opponentUsername = null;
+
+  if (isPvP) {
+    // Get opponent's username for PvP battles
+    const opponentResult = await query(
+      `SELECT u.id, u.username FROM battles b
+       JOIN users u ON (
+         CASE WHEN b.player1_id = $2 THEN b.player2_id = u.id
+              ELSE b.player1_id = u.id END
+       )
+       WHERE b.id = $1`,
+      [battleId, req.user.userId]
+    );
+    opponentUsername = opponentResult.rows[0]?.username || null;
+  }
+
   // Join battle WebSocket room for updates
   battleWebsocket.joinBattle(battleId, req.user.userId);
 
-  // Check if it's an enemy's turn - if so, resume enemy turn processing
+  // For PvP battles, restart turn timer if it's this player's turn
+  // This handles the case where a player refreshes during their turn
   const activeUnit = state.units?.find(u => u.id === state.activeUnitId);
+  if (isPvP && activeUnit && activeUnit.type === 'player' && activeUnit.ownerId === req.user.userId) {
+    // Import coliseumService to restart turn timer with grace period
+    const { startTurnTimer } = await import('../services/coliseumService.js');
+    // Give player a grace period (5 seconds) to orient themselves after reconnection
+    setTimeout(() => {
+      startTurnTimer(battleId, req.user.userId, false);
+    }, 5000);
+    console.log(`[Battle] PvP turn timer will restart in 5s for player ${req.user.userId} (reconnection via /current)`);
+  }
+
+  // Check if it's an enemy's turn - if so, resume enemy turn processing
   if (activeUnit && activeUnit.type === 'enemy' && activeUnit.hp > 0) {
     console.log('[Battle] Resuming enemy turn processing for battle', battleId, '- active unit:', activeUnit.name);
     setImmediate(async () => {
@@ -684,7 +748,10 @@ router.get('/current', authenticate, readLimiter, asyncHandler(async (req, res) 
     nodeType: battle.node_type,
     nodeName: battle.node_name,
     state: state,
-    availableActions
+    availableActions,
+    // PvP-specific fields for reconnection
+    isPvP,
+    opponentUsername
   });
 }));
 
@@ -801,6 +868,9 @@ router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res
   if (activeUnit.ownerId && activeUnit.ownerId !== req.user.userId) {
     throw new AppError('You do not control this unit', 403);
   }
+
+  // Cancel turn timer since player submitted a valid action (for multiplayer battles)
+  cancelTurnTimer(battleId);
 
   // Process player action using service
   const result = battleService.processAction(state, activeUnit, actionType, targetTile, skillId);

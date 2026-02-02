@@ -22,11 +22,14 @@ export class GameWebSocket {
     });
 
     // Initialize heartbeat manager
+    // Send callback returns true if send succeeded, false otherwise
     this.heartbeatManager = new HeartbeatManager(
       (msg) => {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify(msg));
+          return true;
         }
+        return false;
       },
       () => this.handleUnhealthyConnection()
     );
@@ -59,8 +62,11 @@ export class GameWebSocket {
 
           // Handle heartbeat_ack specially (before reliability manager)
           if (message.type === 'heartbeat_ack') {
-            const latency = this.heartbeatManager.handleAck(message.timestamp);
-            connectionQuality.updateLatency(latency);
+            const latency = this.heartbeatManager.handleAck(message.timestamp, message.id);
+            // Only update latency if ACK was valid (not stale)
+            if (latency >= 0) {
+              connectionQuality.updateLatency(latency);
+            }
             return;
           }
 

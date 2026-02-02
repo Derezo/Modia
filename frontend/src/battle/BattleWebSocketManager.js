@@ -34,6 +34,9 @@ export class BattleWebSocketManager {
     this.timeoutCount = 0;
     this.statePoller = null;
     this.connectionQuality = connectionQuality;
+
+    // Setup guard to prevent handler stacking
+    this.isSetup = false;
   }
 
   // ===========================================================================
@@ -66,6 +69,13 @@ export class BattleWebSocketManager {
    * Setup WebSocket handlers for real-time battle events
    */
   setup() {
+    // Guard against duplicate setup calls (prevents handler stacking)
+    if (this.isSetup) {
+      console.log('[Battle WS] Setup already called, skipping duplicate setup');
+      return;
+    }
+    this.isSetup = true;
+
     const socket = this.game.socket;
     if (!socket) return;
 
@@ -92,6 +102,11 @@ export class BattleWebSocketManager {
     // Handle action execution from other players
     const actionExecutedUnsub = socket.on('battle:action_executed', (payload) => {
       if (payload.battleId === this.battleId) {
+        // Skip own action - already processed via HTTP response
+        if (payload.submitterId && payload.submitterId === this.game.localUserId) {
+          console.log('[Battle WS] Skipping own action (already processed via HTTP)');
+          return;
+        }
         this.handleRemoteActionExecuted(payload);
       }
     });
@@ -172,6 +187,22 @@ export class BattleWebSocketManager {
     });
     this.wsUnsubscribers.push(stateSyncUnsub);
 
+    // Handle turn timer started (for PvP/multiplayer battles)
+    const turnTimerStartedUnsub = socket.on('battle:turn_timer_started', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleTurnTimerStarted(payload);
+      }
+    });
+    this.wsUnsubscribers.push(turnTimerStartedUnsub);
+
+    // Handle turn skipped (player timed out)
+    const turnSkippedUnsub = socket.on('battle:turn_skipped', (payload) => {
+      if (payload.battleId === this.battleId) {
+        this.handleTurnSkipped(payload);
+      }
+    });
+    this.wsUnsubscribers.push(turnSkippedUnsub);
+
     // Handle socket disconnect - trigger auto-reconnect
     const disconnectUnsub = socket.on('disconnect', () => {
       this.handleSocketDisconnect();
@@ -201,6 +232,9 @@ export class BattleWebSocketManager {
    * Clean up WebSocket handlers
    */
   cleanup() {
+    // Reset setup guard so setup() can be called again if needed
+    this.isSetup = false;
+
     // Stop state poller
     this.statePoller?.stop();
     this.statePoller = null;
@@ -458,7 +492,7 @@ export class BattleWebSocketManager {
     console.log('[Battle WS] Your turn:', unitId, '(input enabled, queue handles camera)');
 
     // Play turn start sound for player
-    this.scene.playSound('turn_start');
+    this.scene.audioManager.playSound('turn_start');
 
     // Store server-provided available actions for use in action methods
     this.scene.serverAvailableActions = availableActions || null;
@@ -526,15 +560,117 @@ export class BattleWebSocketManager {
     this.scene.updateUI();
   }
 
+  /**
+   * Handle turn timer started event (for PvP/multiplayer battles)
+   */
+  handleTurnTimerStarted(payload) {
+    const { playerId, duration, startTime } = payload;
+    const localUserId = this.game?.user?.id;
+
+    // Convert duration from milliseconds to seconds
+    const durationSeconds = Math.floor(duration / 1000);
+
+    // Calculate remaining time accounting for network latency
+    const elapsed = Date.now() - startTime;
+    const remainingSeconds = Math.max(0, Math.floor((duration - elapsed) / 1000));
+
+    console.log(`[Battle WS] Turn timer started for player ${playerId}, duration: ${durationSeconds}s, remaining: ${remainingSeconds}s`);
+
+    // Only show timer if it's for the local player's turn
+    if (playerId === localUserId) {
+      this.scene.startPvPTurnTimer(remainingSeconds);
+    } else {
+      // It's the opponent's turn - stop showing our timer
+      this.scene.stopPvPTurnTimer();
+    }
+  }
+
+  /**
+   * Handle turn skipped event (player timed out)
+   * Shows escalating warnings based on timeouts remaining:
+   * - First timeout: info level
+   * - Second timeout (2 remaining): warning level with badge
+   * - Final timeout (1 remaining): error level with critical sound and badge
+   */
+  handleTurnSkipped(payload) {
+    const { playerId, timeoutsRemaining, reason } = payload;
+    const localUserId = this.game?.user?.id;
+
+    console.log(`[Battle WS] Turn skipped for player ${playerId}, reason: ${reason}, timeouts remaining: ${timeoutsRemaining}`);
+
+    if (playerId === localUserId && timeoutsRemaining !== null) {
+      // Local player's turn was skipped - show escalating warnings
+      if (timeoutsRemaining === 1) {
+        // FINAL WARNING - next timeout forfeits
+        parchmentToast.error('FINAL WARNING',
+          'Your turn was skipped! One more timeout will forfeit the match!',
+          { duration: 5000 });
+        this.game.audio?.playSFX?.('warning_critical');
+        // Show persistent warning badge
+        this.scene.pvpUI?.showTimeoutWarning(timeoutsRemaining);
+      } else if (timeoutsRemaining === 2) {
+        // Second timeout - yellow warning
+        parchmentToast.warning('Turn Skipped',
+          `Your turn was skipped! ${timeoutsRemaining} timeouts remaining before forfeit.`);
+        // Show persistent warning badge
+        this.scene.pvpUI?.showTimeoutWarning(timeoutsRemaining);
+      } else {
+        // First timeout - info level
+        parchmentToast.info('Turn Skipped', 'Your turn was skipped due to timeout.');
+      }
+      this.scene.stopPvPTurnTimer();
+    } else if (playerId === localUserId) {
+      // PvE or null timeoutsRemaining
+      parchmentToast.info('Turn Skipped', 'Your turn was skipped due to timeout.');
+      this.scene.stopPvPTurnTimer();
+    } else {
+      // Opponent's turn was skipped
+      parchmentToast.info('Turn Skipped', "Opponent's turn was skipped due to timeout.");
+    }
+  }
+
   // ===========================================================================
   // TURN EVENT QUEUE
   // ===========================================================================
+
+  /**
+   * Generate a deduplication key for a turn event
+   * @param {Object} event - The turn event
+   * @returns {string} A unique key for this logical event
+   */
+  getEventDeduplicationKey(event) {
+    switch (event.type) {
+      case 'turn_start':
+        return `turn_start:${event.unitId}`;
+      case 'unit_moved':
+        return `unit_moved:${event.unitId}:${event.to?.x},${event.to?.y}`;
+      case 'action_executed':
+        return `action_executed:${event.actorId}:${event.actionType}:${event.result?.targetId || 'none'}`;
+      case 'intent_highlight':
+        return `intent_highlight:${event.unitId}:${event.highlightType}`;
+      case 'battle_end':
+        return `battle_end:${event.status}`;
+      default:
+        return `${event.type}:${Date.now()}`; // Unique key for unknown types
+    }
+  }
 
   /**
    * Queue a turn event for sequential processing
    * This ensures animations play in order without interruption
    */
   queueTurnEvent(event) {
+    // Check for logical duplicate already in queue
+    const newKey = this.getEventDeduplicationKey(event);
+    const isDuplicate = this.turnEventQueue.some(
+      queued => this.getEventDeduplicationKey(queued) === newKey
+    );
+
+    if (isDuplicate) {
+      console.log(`[Battle Queue] Skipping duplicate event: ${event.type}`, newKey);
+      return;
+    }
+
     this.turnEventQueue.push(event);
     this.processTurnEventQueue();
   }
@@ -707,8 +843,8 @@ export class BattleWebSocketManager {
       status: this.battleState?.status || 'active',
       units: this.units ? Array.from(this.units.values()).map(u => ({
         id: u.id,
-        x: u.x,
-        y: u.y,
+        x: u.gridX,  // BattleUnit uses gridX/gridY, not x/y
+        y: u.gridY,
         hp: u.hp,
         mp: u.mp
       })) : []
@@ -800,56 +936,51 @@ export class BattleWebSocketManager {
       activeUnit.isSelected = true;
     }
 
+    // Determine if this is the local player's unit for UI display
+    // Server sends 'player_local' to ALL clients, but we need to show
+    // "Your Turn!" only to the actual owner of the unit
+    const localUserId = this.game.localUserId;
+    const isLocalUnit = activeUnit?.isLocalPlayerUnit(localUserId);
+
+    // Determine display unit type:
+    // - 'player_local' if it's our turn (shows "Your Turn!")
+    // - 'player_remote' if it's opponent's player unit (shows "Player's Turn")
+    // - 'enemy' for AI enemies
+    let displayUnitType = unitType;
+    if (isPlayerTurn) {
+      displayUnitType = isLocalUnit ? 'player_local' : 'player_remote';
+    }
+
     // Update turn order UI
     if (this.ui) {
       this.ui.updateTurnOrder(this.battleState);
-      this.ui.showTurnIndicator(unitName, unitType);
+      this.ui.showTurnIndicator(unitName, displayUnitType);
     }
 
-    // Determine camera panning behavior
-    // In PvP: only pan for local player's units (not opponent player units)
-    // In PvE: pan to all units including enemies (for awareness)
-    const localUserId = this.game.localUserId;
-    const isPvP = this.scene.isPvP;
-    const isLocalUnit = activeUnit?.isLocalPlayerUnit(localUserId);
-    const isNpcEnemy = activeUnit?.type === 'enemy' && !isPvP;
-    const isOpponentPlayerUnit = isPvP && !isLocalUnit && unitType !== 'enemy';
+    // Camera handling - ALWAYS pan to active unit for awareness
+    // In PvP, players need to see what their opponent is doing
 
-    // Pan camera only if:
-    // 1. It's the local player's unit (always pan in both PvE and PvP)
-    // 2. It's an NPC enemy in PvE (for awareness)
-    // Skip panning for opponent player's units in PvP
-    const shouldPanCamera = isLocalUnit || isNpcEnemy;
-
-    // Show opponent turn notification in PvP
-    if (isOpponentPlayerUnit && isPvP) {
-      parchmentToast.info('Opponent\'s Turn', `${unitName} is acting...`, { duration: 2000 });
-    }
-
-    // Camera handling
     if (position && this.camera && this.grid) {
       // Clear intent highlights at start of each turn
       if (this.grid) this.grid.clearIntentHighlights();
 
-      if (shouldPanCamera) {
-        const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
+      const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
 
-        // CRITICAL: Set follow target to current active unit BEFORE panning
-        // This prevents camera from drifting back to player after transition ends
-        if (activeUnit) {
-          this.camera.setFollowTarget(activeUnit);
-        }
-
-        // Pan to active unit and wait for animation to complete
-        console.log(`[Queue] Panning to ${unitName} at (${position.x}, ${position.y})`);
-        await new Promise(resolve => {
-          this.camera.startTurnTransition(worldPos.x, worldPos.y, resolve, 300);
-        });
-      } else {
-        // Don't pan, but still give a brief moment for the notification
-        console.log(`[Queue] Skipping camera pan for opponent ${unitName} in PvP`);
-        await this.scene.waitForAnimation(100);
+      // CRITICAL: Set follow target to current active unit BEFORE panning
+      // This prevents camera from drifting back to player after transition ends
+      if (activeUnit) {
+        this.camera.setFollowTarget(activeUnit);
       }
+
+      // Pan to active unit and wait for animation to complete
+      // Use consistent timing for all units
+      console.log(`[Queue] Panning to ${unitName} at (${position.x}, ${position.y})`);
+      await new Promise(resolve => {
+        this.camera.startTurnTransition(worldPos.x, worldPos.y, resolve, ANIMATION_TIMING.CAMERA_PAN_DURATION);
+      });
+
+      // Add settling delay after camera pan for smooth transitions
+      await this.scene.waitForAnimation(ANIMATION_TIMING.TURN_SETTLE_DELAY);
 
       if (isPlayerTurn && isLocalUnit) {
         // Local player's turn
@@ -923,7 +1054,7 @@ export class BattleWebSocketManager {
 
       // Wait for movement animation to complete (estimate based on distance)
       const distance = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
-      const moveDuration = Math.max(300, distance * 150); // 150ms per tile, minimum 300ms
+      const moveDuration = Math.max(ANIMATION_TIMING.MOVEMENT_MIN_MS, distance * ANIMATION_TIMING.MOVEMENT_PER_TILE_MS);
       await this.scene.waitForAnimation(moveDuration);
     }
   }
@@ -950,7 +1081,7 @@ export class BattleWebSocketManager {
     if (actionType === 'attack' || actionType === 'skill') {
       // Play skill sound if this is a skill action
       if (actionType === 'skill' && result.skillId) {
-        this.scene.playSkillSound({ id: result.skillId }, actor);
+        this.scene.audioManager.playSkillSound({ id: result.skillId }, actor);
       }
 
       // Find target and play damage animation
@@ -968,20 +1099,20 @@ export class BattleWebSocketManager {
           });
           target.playHitAnimation();
           // Play impact sound based on result
-          this.scene.playImpactSound(result);
+          this.scene.audioManager.playImpactSound(result);
           this.animations.addDamageNumber(target.screenX, target.screenY - 40, result.damage, result.isCritical);
           this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
           target.hp = Math.max(0, target.hp - result.damage);
         } else if (result.missed) {
           // Play miss sound
-          this.scene.playImpactSound({ missed: true });
+          this.scene.audioManager.playImpactSound({ missed: true });
           this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
         }
       }
 
       // Play status effect sound if effect was applied
       if (result.effectApplied || result.statusApplied) {
-        this.scene.playStatusEffectSound(result.effectApplied || result.statusApplied);
+        this.scene.audioManager.playStatusEffectSound(result.effectApplied || result.statusApplied);
       }
 
       // Wait longer if camera will pan to different unit (so damage numbers complete)
@@ -992,6 +1123,11 @@ export class BattleWebSocketManager {
         ? ANIMATION_TIMING.ACTION_WAIT_FULL
         : ANIMATION_TIMING.ACTION_WAIT_SHORT;
       await this.scene.waitForAnimation(waitDuration);
+
+      // Add settling delay before turn transition for smooth visual feedback
+      if (willPanToDifferentUnit) {
+        await this.scene.waitForAnimation(ANIMATION_TIMING.TURN_SETTLE_DELAY);
+      }
     }
 
     // Play item animation

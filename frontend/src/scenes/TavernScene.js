@@ -1,5 +1,22 @@
+/**
+ * @module TavernScene
+ * @description Social hub scene for chat, online players, and direct messages.
+ *
+ * Key responsibilities:
+ * - UI creation and layout management
+ * - Tab switching (global, party, DM)
+ * - Online player list management
+ * - Presence status updates
+ * - WebSocket event coordination
+ *
+ * @see TavernChatManager.js - Chat message handling
+ * @see TavernDMSystem.js - Direct messaging subsystem
+ */
+
 import { Scene } from './Scene.js';
 import { PARCHMENT_COLORS, injectParchmentTheme, getParchmentScrollbarCSS } from '../ui/parchment/index.js';
+import { TavernChatManager } from '../tavern/TavernChatManager.js';
+import { TavernDMSystem } from '../tavern/TavernDMSystem.js';
 
 // Shorthand for colors in CSS template
 const P = PARCHMENT_COLORS;
@@ -14,33 +31,24 @@ export class TavernScene extends Scene {
     this.uiElement = null;
     this.abortController = null;
 
-    // Chat state
+    // Tab state
     this.activeTab = 'global'; // 'global', 'party', 'dm'
-    this.messages = [];
     this.onlinePlayers = [];
-    this.dmConversations = [];
-    this.activeDMUser = null; // { userId, username } for active DM
 
-    // Typing state
-    this.typingUsers = new Map(); // room -> Set of usernames
-    this.typingTimeout = null;
-    this.isTyping = false;
-
-    // Pagination
-    this.hasMoreMessages = true;
-    this.loadingMessages = false;
-
-    // Emoji picker
-    this.showEmojiPicker = false;
-    this.commonEmojis = [
-      '128578', '128512', '128514', '128516', '128518', '128519', '128521', '128522',
-      '128525', '128536', '128540', '128557', '128563', '128564', '128577', '128580',
-      '129315', '129316', '129320', '129321', '129325', '129327', '128293', '128077',
-      '128078', '128079', '128591', '128170', '127881', '127873', '128142', '128161'
-    ];
+    // Subsystems
+    this.chatManager = new TavernChatManager(this);
+    this.dmSystem = new TavernDMSystem(this);
 
     // WebSocket handlers
     this.wsHandlers = {};
+  }
+
+  /**
+   * Get active DM user (delegated to DM system)
+   * @returns {{userId: number, username: string}|null}
+   */
+  get activeDMUser() {
+    return this.dmSystem.getActiveDMUser();
   }
 
   async enter(_data = {}) {
@@ -61,9 +69,9 @@ export class TavernScene extends Scene {
 
     // Load initial data
     await Promise.all([
-      this.loadChatHistory(),
+      this.chatManager.loadChatHistory(),
       this.loadOnlinePlayers(),
-      this.loadDMConversations()
+      this.dmSystem.loadConversations()
     ]);
   }
 
@@ -80,6 +88,10 @@ export class TavernScene extends Scene {
       this.game.socket.off(type, handler);
     });
     this.wsHandlers = {};
+
+    // Clean up subsystems
+    this.chatManager.destroy();
+    this.dmSystem.destroy();
 
     if (this.abortController) {
       this.abortController.abort();
@@ -731,9 +743,6 @@ export class TavernScene extends Scene {
     const container = document.createElement('div');
     container.className = 'tavern-container';
 
-    const _userId = this.game.state.get('user')?.id;
-    const _username = this.game.state.get('user')?.username;
-
     container.innerHTML = `
       <div class="tavern-header">
         <div class="tavern-title">
@@ -785,7 +794,7 @@ export class TavernScene extends Scene {
                 ></textarea>
                 <button class="emoji-btn" id="emoji-btn">&#128512;</button>
                 <div class="emoji-picker" id="emoji-picker" style="display: none;">
-                  ${this.commonEmojis.map(code => `
+                  ${this.chatManager.commonEmojis.map(code => `
                     <button class="emoji-picker-btn" data-emoji="&#${code};">&#${code};</button>
                   `).join('')}
                 </div>
@@ -840,29 +849,29 @@ export class TavernScene extends Scene {
     chatInput?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        this.sendMessage();
+        this.chatManager.sendMessage();
       }
     }, opts);
 
     chatInput?.addEventListener('input', () => {
-      this.handleTyping();
-      this.autoResizeInput(chatInput);
+      this.chatManager.handleTyping();
+      this.chatManager.autoResizeInput(chatInput);
     }, opts);
 
     // Send button
     this.uiElement.querySelector('#send-btn')?.addEventListener('click', () => {
       this.game.audio?.playUI('button_click');
-      this.sendMessage();
+      this.chatManager.sendMessage();
     }, opts);
 
     // Emoji picker
     this.uiElement.querySelector('#emoji-btn')?.addEventListener('click', () => {
-      this.toggleEmojiPicker();
+      this.chatManager.toggleEmojiPicker();
     }, opts);
 
     this.uiElement.querySelectorAll('.emoji-picker-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        this.insertEmoji(btn.dataset.emoji);
+        this.chatManager.insertEmoji(btn.dataset.emoji);
       }, opts);
     });
 
@@ -883,8 +892,8 @@ export class TavernScene extends Scene {
     // Scroll to load more
     const messagesEl = this.uiElement.querySelector('#chat-messages');
     messagesEl?.addEventListener('scroll', () => {
-      if (messagesEl.scrollTop === 0 && this.hasMoreMessages && !this.loadingMessages) {
-        this.loadMoreMessages();
+      if (messagesEl.scrollTop === 0 && this.chatManager.hasMoreMessages && !this.chatManager.loadingMessages) {
+        this.chatManager.loadMoreMessages();
       }
     }, opts);
   }
@@ -893,7 +902,7 @@ export class TavernScene extends Scene {
     const handlers = {
       'chat_message': (payload) => {
         if (this.activeTab === 'global' && payload.room === 'global') {
-          this.addMessage({
+          this.chatManager.addMessage({
             id: Date.now(),
             senderUserId: payload.userId,
             senderUsername: payload.username,
@@ -905,18 +914,7 @@ export class TavernScene extends Scene {
       },
 
       'private_message_received': (payload) => {
-        if (this.activeTab === 'dm' && this.activeDMUser?.userId === payload.senderId) {
-          this.addMessage({
-            id: payload.id,
-            senderUserId: payload.senderId,
-            senderUsername: payload.senderUsername,
-            message: payload.message,
-            createdAt: new Date(payload.timestamp),
-            reactions: []
-          });
-        }
-        // Update badge
-        this.updateDMBadge();
+        this.dmSystem.handleIncomingDM(payload);
       },
 
       'private_message_sent': (_payload) => {
@@ -929,16 +927,16 @@ export class TavernScene extends Scene {
 
       'user_typing': (payload) => {
         if (payload.userId !== this.game.state.get('user')?.id) {
-          this.showTypingIndicator(payload.room, payload.username, payload.isTyping);
+          this.chatManager.showTypingIndicator(payload.room, payload.username, payload.isTyping);
         }
       },
 
       'reaction_added': (payload) => {
-        this.updateMessageReactions(payload.messageId, payload.reactions);
+        this.chatManager.updateMessageReactions(payload.messageId, payload.reactions);
       },
 
       'reaction_removed': (payload) => {
-        this.updateMessageReactions(payload.messageId, payload.reactions);
+        this.chatManager.updateMessageReactions(payload.messageId, payload.reactions);
       },
 
       'user_joined': (payload) => {
@@ -961,60 +959,6 @@ export class TavernScene extends Scene {
     });
   }
 
-  async loadChatHistory() {
-    try {
-      let messages;
-
-      if (this.activeTab === 'dm' && this.activeDMUser) {
-        const result = await this.game.api.getDMHistory(this.activeDMUser.userId);
-        messages = result.messages;
-      } else {
-        const roomType = this.activeTab === 'party' ? 'party' : 'global';
-        const result = await this.game.api.getChatHistory(roomType);
-        messages = result.messages;
-      }
-
-      this.messages = messages || [];
-      this.hasMoreMessages = this.messages.length >= 50;
-      this.renderMessages();
-      this.scrollToBottom();
-    } catch (err) {
-      console.error('Failed to load chat history:', err);
-      this.messages = [];
-      this.renderMessages();
-    }
-  }
-
-  async loadMoreMessages() {
-    if (this.loadingMessages || !this.hasMoreMessages || this.messages.length === 0) return;
-
-    this.loadingMessages = true;
-    const oldestMessage = this.messages[0];
-
-    try {
-      let result;
-      if (this.activeTab === 'dm' && this.activeDMUser) {
-        result = await this.game.api.getDMHistory(this.activeDMUser.userId, {
-          before: oldestMessage.createdAt
-        });
-      } else {
-        const roomType = this.activeTab === 'party' ? 'party' : 'global';
-        result = await this.game.api.getChatHistory(roomType, {
-          before: oldestMessage.createdAt
-        });
-      }
-
-      const newMessages = result.messages || [];
-      this.hasMoreMessages = newMessages.length >= 50;
-      this.messages = [...newMessages, ...this.messages];
-      this.renderMessages(true);
-    } catch (err) {
-      console.error('Failed to load more messages:', err);
-    } finally {
-      this.loadingMessages = false;
-    }
-  }
-
   async loadOnlinePlayers() {
     try {
       const result = await this.game.api.getOnlinePlayers();
@@ -1027,20 +971,9 @@ export class TavernScene extends Scene {
     }
   }
 
-  async loadDMConversations() {
-    try {
-      const result = await this.game.api.getDMConversations();
-      this.dmConversations = result.conversations || [];
-      this.renderDMList();
-    } catch (err) {
-      console.error('Failed to load DM conversations:', err);
-    }
-  }
-
   switchTab(tab) {
     this.activeTab = tab;
-    this.messages = [];
-    this.hasMoreMessages = true;
+    this.chatManager.resetState();
 
     // Update tab UI
     this.uiElement.querySelectorAll('.tavern-tab').forEach(t => {
@@ -1055,7 +988,7 @@ export class TavernScene extends Scene {
 
     // Reset active DM if switching away
     if (tab !== 'dm') {
-      this.activeDMUser = null;
+      this.dmSystem.resetActiveDM();
     }
 
     // Update placeholder
@@ -1070,100 +1003,7 @@ export class TavernScene extends Scene {
       }
     }
 
-    this.loadChatHistory();
-  }
-
-  renderMessages(preserveScroll = false) {
-    const container = this.uiElement.querySelector('#chat-messages');
-    if (!container) return;
-
-    const scrollPos = container.scrollTop;
-    const scrollHeight = container.scrollHeight;
-
-    if (this.messages.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <div class="empty-state-icon">&#128172;</div>
-          <div>No messages yet. Be the first to say hello!</div>
-        </div>
-      `;
-      return;
-    }
-
-    const userId = this.game.state.get('user')?.id;
-
-    let html = '';
-
-    if (this.hasMoreMessages) {
-      html += '<button class="load-more-btn" id="load-more-btn">Load older messages</button>';
-    }
-
-    html += this.messages.map(msg => this.renderMessage(msg, userId)).join('');
-
-    container.innerHTML = html;
-
-    // Add event listeners for reactions
-    container.querySelectorAll('.add-reaction-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.showReactionPicker(parseInt(btn.dataset.messageId));
-      });
-    });
-
-    container.querySelectorAll('.chat-reaction').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.toggleReaction(parseInt(btn.dataset.messageId), btn.dataset.emoji);
-      });
-    });
-
-    // Load more button
-    container.querySelector('#load-more-btn')?.addEventListener('click', () => {
-      this.loadMoreMessages();
-    });
-
-    if (preserveScroll) {
-      container.scrollTop = scrollPos + (container.scrollHeight - scrollHeight);
-    }
-  }
-
-  renderMessage(msg, currentUserId) {
-    const isSelf = msg.senderUserId === currentUserId;
-    const time = this.formatTime(msg.createdAt || msg.created_at);
-    const reactions = msg.reactions || [];
-
-    let reactionsHtml = '';
-    if (reactions.length > 0) {
-      reactionsHtml = `
-        <div class="chat-message-reactions">
-          ${reactions.map(r => `
-            <button class="chat-reaction ${r.userIds?.includes(currentUserId) ? 'user-reacted' : ''}"
-                    data-message-id="${msg.id}"
-                    data-emoji="${r.emoji}">
-              <span>${r.emoji}</span>
-              <span class="chat-reaction-count">${r.count}</span>
-            </button>
-          `).join('')}
-          <button class="add-reaction-btn" data-message-id="${msg.id}">+</button>
-        </div>
-      `;
-    } else {
-      reactionsHtml = `
-        <div class="chat-message-reactions" style="display: none;">
-          <button class="add-reaction-btn" data-message-id="${msg.id}">+</button>
-        </div>
-      `;
-    }
-
-    return `
-      <div class="chat-message" data-message-id="${msg.id}">
-        <div class="chat-message-header">
-          <span class="chat-message-author ${isSelf ? 'self' : ''}">${msg.senderUsername || msg.sender_username}</span>
-          <span class="chat-message-time">${time}</span>
-        </div>
-        <div class="chat-message-text">${this.escapeHtml(msg.message)}</div>
-        ${reactionsHtml}
-      </div>
-    `;
+    this.chatManager.loadChatHistory();
   }
 
   renderPlayerList() {
@@ -1202,215 +1042,9 @@ export class TavernScene extends Scene {
     container.querySelectorAll('.dm-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.startDM(parseInt(btn.dataset.userId), btn.dataset.username);
+        this.dmSystem.startDM(parseInt(btn.dataset.userId), btn.dataset.username);
       });
     });
-  }
-
-  renderDMList() {
-    const container = this.uiElement.querySelector('#dm-list');
-    if (!container) return;
-
-    if (this.dmConversations.length === 0) {
-      container.innerHTML = `
-        <div class="empty-state" style="padding: 20px;">
-          No conversations yet
-        </div>
-      `;
-      return;
-    }
-
-    container.innerHTML = this.dmConversations.map(conv => `
-      <div class="dm-item ${this.activeDMUser?.userId === conv.other_user_id ? 'active' : ''}"
-           data-user-id="${conv.other_user_id}"
-           data-username="${conv.other_username}">
-        <div class="dm-item-info">
-          <div class="dm-item-name">${conv.other_username}</div>
-          <div class="dm-item-preview">${this.escapeHtml(conv.last_message || '')}</div>
-        </div>
-        <div class="dm-item-time">${this.formatTime(conv.last_message_at)}</div>
-      </div>
-    `).join('');
-
-    // Add click handlers
-    container.querySelectorAll('.dm-item').forEach(item => {
-      item.addEventListener('click', () => {
-        this.startDM(parseInt(item.dataset.userId), item.dataset.username);
-      });
-    });
-  }
-
-  startDM(userId, username) {
-    this.activeDMUser = { userId, username };
-    this.switchTab('dm');
-    this.renderDMList();
-
-    const input = this.uiElement.querySelector('#chat-input');
-    if (input) {
-      input.placeholder = `Message ${username}...`;
-      input.focus();
-    }
-  }
-
-  addMessage(msg) {
-    this.messages.push(msg);
-    this.renderMessages();
-    this.scrollToBottom();
-  }
-
-  async sendMessage() {
-    const input = this.uiElement.querySelector('#chat-input');
-    const message = input?.value.trim();
-
-    if (!message) return;
-
-    input.value = '';
-    this.autoResizeInput(input);
-
-    // Stop typing indicator
-    this.stopTyping();
-
-    const userId = this.game.state.get('user')?.id;
-    const username = this.game.state.get('user')?.username;
-
-    // Get party leader character ID for chat messages
-    const characters = this.game.state.get('characters') || [];
-    const partyLeader = characters.find(c => c.party_slot === 1) || characters[0];
-    const characterId = partyLeader?.id || null;
-
-    if (this.activeTab === 'dm' && this.activeDMUser) {
-      // Send DM via WebSocket
-      this.game.socket.send('private_message', {
-        targetUserId: this.activeDMUser.userId,
-        message,
-        characterId
-      });
-
-      // Add to local messages immediately
-      this.addMessage({
-        id: Date.now(),
-        senderUserId: userId,
-        senderUsername: username,
-        message,
-        createdAt: new Date(),
-        reactions: []
-      });
-    } else if (this.activeTab === 'global') {
-      // Send to global room
-      this.game.socket.sendChatMessage('global', message, characterId);
-    } else if (this.activeTab === 'party') {
-      // Send to party room
-      this.game.socket.sendChatMessage('party', message, characterId);
-    }
-  }
-
-  handleTyping() {
-    if (this.typingTimeout) {
-      clearTimeout(this.typingTimeout);
-    }
-
-    if (!this.isTyping) {
-      this.isTyping = true;
-      const room = this.activeTab === 'dm' ? `dm:${this.activeDMUser?.userId}` : this.activeTab;
-      this.game.socket.send('typing_indicator', { room, isTyping: true });
-    }
-
-    this.typingTimeout = setTimeout(() => {
-      this.stopTyping();
-    }, 2000);
-  }
-
-  stopTyping() {
-    if (this.isTyping) {
-      this.isTyping = false;
-      const room = this.activeTab === 'dm' ? `dm:${this.activeDMUser?.userId}` : this.activeTab;
-      this.game.socket.send('typing_indicator', { room, isTyping: false });
-    }
-    if (this.typingTimeout) {
-      clearTimeout(this.typingTimeout);
-      this.typingTimeout = null;
-    }
-  }
-
-  showTypingIndicator(room, username, isTyping) {
-    const indicator = this.uiElement.querySelector('#typing-indicator');
-    if (!indicator) return;
-
-    const currentRoom = this.activeTab === 'dm' ? `dm:${this.activeDMUser?.userId}` : this.activeTab;
-
-    // Only show if in same room
-    if (room !== currentRoom && room !== 'global') return;
-
-    if (!this.typingUsers.has(room)) {
-      this.typingUsers.set(room, new Set());
-    }
-
-    const roomTyping = this.typingUsers.get(room);
-
-    if (isTyping) {
-      roomTyping.add(username);
-    } else {
-      roomTyping.delete(username);
-    }
-
-    if (roomTyping.size === 0) {
-      indicator.textContent = '';
-    } else if (roomTyping.size === 1) {
-      indicator.textContent = `${Array.from(roomTyping)[0]} is typing...`;
-    } else if (roomTyping.size === 2) {
-      const names = Array.from(roomTyping);
-      indicator.textContent = `${names[0]} and ${names[1]} are typing...`;
-    } else {
-      indicator.textContent = 'Several people are typing...';
-    }
-  }
-
-  toggleEmojiPicker() {
-    const picker = this.uiElement.querySelector('#emoji-picker');
-    if (picker) {
-      picker.style.display = picker.style.display === 'none' ? 'grid' : 'none';
-    }
-  }
-
-  insertEmoji(emoji) {
-    const input = this.uiElement.querySelector('#chat-input');
-    if (input) {
-      const start = input.selectionStart;
-      const end = input.selectionEnd;
-      const text = input.value;
-      input.value = text.substring(0, start) + emoji + text.substring(end);
-      input.selectionStart = input.selectionEnd = start + emoji.length;
-      input.focus();
-    }
-    this.toggleEmojiPicker();
-  }
-
-  showReactionPicker(messageId) {
-    // For simplicity, just add a thumbs up
-    this.toggleReaction(messageId, String.fromCodePoint(128077));
-  }
-
-  async toggleReaction(messageId, emoji) {
-    const room = this.activeTab === 'dm' ? `dm:${this.activeDMUser?.userId}` : this.activeTab;
-
-    // Check if user already reacted
-    const msg = this.messages.find(m => m.id === messageId);
-    const userId = this.game.state.get('user')?.id;
-    const existingReaction = msg?.reactions?.find(r => r.emoji === emoji && r.userIds?.includes(userId));
-
-    if (existingReaction) {
-      this.game.socket.send('remove_reaction', { messageId, emoji, room });
-    } else {
-      this.game.socket.send('add_reaction', { messageId, emoji, room });
-    }
-  }
-
-  updateMessageReactions(messageId, reactions) {
-    const msg = this.messages.find(m => m.id === messageId);
-    if (msg) {
-      msg.reactions = reactions;
-      this.renderMessages();
-    }
   }
 
   updatePlayerPresence(userId, status, username) {
@@ -1438,46 +1072,6 @@ export class TavernScene extends Scene {
     } catch (err) {
       console.error('Failed to update presence:', err);
     }
-  }
-
-  updateDMBadge() {
-    // Placeholder - would track unread messages
-    const badge = this.uiElement.querySelector('#dm-badge');
-    if (badge) {
-      // badge.style.display = count > 0 ? 'inline' : 'none';
-      // badge.textContent = count;
-    }
-  }
-
-  autoResizeInput(input) {
-    input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-  }
-
-  scrollToBottom() {
-    const container = this.uiElement.querySelector('#chat-messages');
-    if (container) {
-      container.scrollTop = container.scrollHeight;
-    }
-  }
-
-  formatTime(dateStr) {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diff = now - date;
-
-    if (diff < 60000) return 'now';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
-
-    return date.toLocaleDateString();
-  }
-
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   }
 
   update(_deltaTime) {

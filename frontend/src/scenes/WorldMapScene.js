@@ -8,6 +8,8 @@ import { NodeHoverTooltip } from '../worldmap/NodeHoverTooltip.js';
 import { QuestMarkerManager } from '../worldmap/QuestMarkerManager.js';
 import { QuestProgressHUD } from '../worldmap/QuestProgressHUD.js';
 import { DOMFogOverlay } from '../worldmap/DOMFogOverlay.js';
+import { WorldMapPathSystem } from '../worldmap/WorldMapPathSystem.js';
+import { WorldMapNodeRenderer } from '../worldmap/WorldMapNodeRenderer.js';
 import { generatePathControlPoints, generateSplinePoints } from '../worldmap/PathRenderer.js';
 import { ProfileDropdown } from '../ui/parchment/ProfileDropdown.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
@@ -16,7 +18,6 @@ import { Icon } from '../components/Icon.js';
 import { responsive } from '../core/Responsive.js';
 import { PARCHMENT_COLORS } from '../ui/parchment/ParchmentTheme.js';
 import { RACE_TO_REGION } from '../audio/AudioAssets.js';
-import { COMBAT_NODE_TYPES } from '@shared/constants.js';
 
 // Class-specific action labels for guild recruitment buttons
 const GUILD_ACTION_LABELS = {
@@ -24,18 +25,6 @@ const GUILD_ACTION_LABELS = {
   wizard: 'Take on Apprentice',
   monk: 'Accept Initiate',
   chemist: 'Hire Assistant'
-};
-
-// Cache size limit for path preview calculations (LRU eviction when exceeded)
-const PATH_CACHE_MAX_SIZE = 100;
-
-// Region colors by race - used for node tinting and boundary rendering
-const REGION_COLORS = {
-  human: { primary: '#8B7355', secondary: '#A08060', border: '#6B5335' },    // Brown/earth
-  elf: { primary: '#2E8B57', secondary: '#3A9D68', border: '#1E6B40' },      // Forest green
-  dwarf: { primary: '#708090', secondary: '#8090A0', border: '#506070' },    // Slate gray
-  vampire: { primary: '#4B0082', secondary: '#5B1092', border: '#3A0062' },  // Indigo/purple
-  orc: { primary: '#8B0000', secondary: '#9B1010', border: '#6B0000' }       // Dark red
 };
 
 export class WorldMapScene extends Scene {
@@ -58,6 +47,9 @@ export class WorldMapScene extends Scene {
     // Node rendering
     this.nodeSize = 30;
     this.nodeSpacing = 60;
+
+    // Node renderer (handles all node visual rendering)
+    this.nodeRenderer = new WorldMapNodeRenderer(this);
 
     // Asset loader reference
     this.assetLoader = null;
@@ -82,19 +74,8 @@ export class WorldMapScene extends Scene {
     this.isTraveling = false;
     this.cameraSettling = false; // Camera continues smooth follow after travel ends
 
-    // Path preview state
-    this.previewPath = null; // Array of node IDs for hover path preview
-    this.previewCost = 0;
-    this.previewAffordable = true;
-    this.previewBlockedNodes = []; // Node IDs that are blocked in the path
-    this.previewPathBlocked = false; // True if path is blocked by intermediate nodes
-    this.previewOriginBlocked = false; // True if current node is blocked
-    this.previewCannotReach = false; // True if destination cannot be reached from origin
-    this.pathPreviewCache = new Map(); // Cache path calculations
-    this._pathPreviewRequestId = 0; // Track async requests to prevent stale updates
-
-    // Reachability state (for node blocking system)
-    this.reachableNodes = new Set(); // Set of node IDs reachable from current position
+    // Path system (handles preview, caching, reachability)
+    this.pathSystem = new WorldMapPathSystem(this);
 
     // Event listener cleanup
     this.abortController = null;
@@ -503,100 +484,6 @@ export class WorldMapScene extends Scene {
   }
 
   /**
-   * Update path preview when hovering over a node
-   */
-  async updatePathPreview(node) {
-    // Track request ID to handle race conditions from rapid mouse movements
-    const requestId = ++this._pathPreviewRequestId;
-
-    // Clear preview if no node hovered, traveling, or hovering current node
-    if (!node || this.isTraveling || !this.currentNode || node.id === this.currentNode.id) {
-      this.previewPath = null;
-      this.previewCost = 0;
-      this.previewAffordable = true;
-      this.previewOriginBlocked = false;
-      this.previewCannotReach = false;
-      return;
-    }
-
-    // Check if node is discovered
-    if (!this.isNodeDiscovered(node)) {
-      this.previewPath = null;
-      this.previewCost = 0;
-      this.previewAffordable = false;
-      this.previewOriginBlocked = false;
-      this.previewCannotReach = false;
-      return;
-    }
-
-    // Check cache first
-    const cacheKey = `${this.currentNode.id}-${node.id}`;
-    if (this.pathPreviewCache.has(cacheKey)) {
-      const cached = this.pathPreviewCache.get(cacheKey);
-      this.previewPath = cached.path;
-      this.previewCost = cached.cost;
-      this.previewAffordable = this.hudPanel ? this.hudPanel.staminaSegment.current >= cached.cost : true;
-      this.previewBlockedNodes = cached.blockedNodes || [];
-      this.previewPathBlocked = cached.pathBlocked || false;
-      this.previewOriginBlocked = cached.originBlocked || false;
-      this.previewCannotReach = cached.cannotReachFromOrigin || false;
-      return;
-    }
-
-    // Fetch path from server
-    try {
-      const result = await this.game.api.getPathPreview(node.id);
-
-      // Discard stale response if a newer request was made
-      if (requestId !== this._pathPreviewRequestId) return;
-
-      this.previewPath = result.path;
-      this.previewCost = result.cost;
-      this.previewAffordable = result.affordable;
-      this.previewBlockedNodes = result.blockedNodes || [];
-      this.previewPathBlocked = result.pathBlocked || false;
-      this.previewOriginBlocked = result.originBlocked || false;
-      this.previewCannotReach = result.cannotReachFromOrigin || false;
-
-      // Cache the result with LRU eviction
-      if (this.pathPreviewCache.size >= PATH_CACHE_MAX_SIZE) {
-        // Evict oldest entry (first key in Map maintains insertion order)
-        const firstKey = this.pathPreviewCache.keys().next().value;
-        this.pathPreviewCache.delete(firstKey);
-      }
-      this.pathPreviewCache.set(cacheKey, {
-        path: result.path,
-        cost: result.cost,
-        blockedNodes: result.blockedNodes || [],
-        pathBlocked: result.pathBlocked || false,
-        originBlocked: result.originBlocked || false,
-        cannotReachFromOrigin: result.cannotReachFromOrigin || false
-      });
-    } catch (err) {
-      // Log for debugging but don't show user-facing error
-      console.warn('Path preview fetch failed:', err.message);
-
-      // Discard if stale request
-      if (requestId !== this._pathPreviewRequestId) return;
-
-      this.previewPath = null;
-      this.previewCost = 0;
-      this.previewAffordable = false;
-      this.previewBlockedNodes = [];
-      this.previewPathBlocked = false;
-      this.previewOriginBlocked = false;
-      this.previewCannotReach = false;
-    }
-  }
-
-  /**
-   * Clear path cache (called after travel or world data reload)
-   */
-  clearPathCache() {
-    this.pathPreviewCache.clear();
-  }
-
-  /**
    * Update hover tooltip for a node (shows rich contextual info)
    * @param {Object|null} node - The hovered node or null to hide
    */
@@ -620,10 +507,10 @@ export class WorldMapScene extends Scene {
     const context = {
       nodeSize: position.nodeSize,
       canvasHeight: position.canvasHeight,
-      previewCost: this.previewCost || 0,
-      previewAffordable: this.previewAffordable !== false,
-      previewPathBlocked: this.previewPathBlocked || false,
-      previewCannotReach: this.previewCannotReach || false,
+      previewCost: this.pathSystem.previewCost || 0,
+      previewAffordable: this.pathSystem.previewAffordable !== false,
+      previewPathBlocked: this.pathSystem.previewPathBlocked || false,
+      previewCannotReach: this.pathSystem.previewCannotReach || false,
       isDiscovered: this.isNodeDiscovered(node),
       isVisited: node.visited === true,
       currentStamina: this.hudPanel?.staminaSegment?.current || 0,
@@ -632,80 +519,6 @@ export class WorldMapScene extends Scene {
 
     // Show the tooltip
     this.nodeHoverTooltip.show(node, position.x, position.y, context);
-  }
-
-  /**
-   * Calculate which nodes are reachable from the current position.
-   * Uses BFS traversal through connections, considering node blocking.
-   *
-   * Rules:
-   * - Can reach adjacent nodes including blocked ones (to show them as potential targets)
-   * - Cannot traverse THROUGH blocked nodes (they block further paths)
-   * - Only considers discovered nodes
-   *
-   * @returns {Set<number>} Set of reachable node IDs
-   */
-  calculateReachableNodes() {
-    this.reachableNodes = new Set();
-
-    if (!this.currentNode || !this.nodes.length || !this.connections.length) {
-      return this.reachableNodes;
-    }
-
-    // Build adjacency map from connections
-    const adjacency = new Map();
-    for (const conn of this.connections) {
-      if (!adjacency.has(conn.from_node_id)) {
-        adjacency.set(conn.from_node_id, []);
-      }
-      if (!adjacency.has(conn.to_node_id)) {
-        adjacency.set(conn.to_node_id, []);
-      }
-      adjacency.get(conn.from_node_id).push(conn.to_node_id);
-      adjacency.get(conn.to_node_id).push(conn.from_node_id);
-    }
-
-    // Create node lookup for quick access to blocked status
-    const nodeMap = new Map();
-    for (const node of this.nodes) {
-      nodeMap.set(node.id, node);
-    }
-
-    // BFS from current node
-    const visited = new Set();
-    const queue = [this.currentNode.id];
-    visited.add(this.currentNode.id);
-    this.reachableNodes.add(this.currentNode.id);
-
-    while (queue.length > 0) {
-      const currentId = queue.shift();
-      const currentNodeData = nodeMap.get(currentId);
-
-      // If this node is blocked (and not the starting node), we can reach it but not traverse through it
-      const isBlocked = currentNodeData?.blocked && currentId !== this.currentNode.id;
-
-      const neighbors = adjacency.get(currentId) || [];
-      for (const neighborId of neighbors) {
-        if (visited.has(neighborId)) continue;
-
-        const neighborNode = nodeMap.get(neighborId);
-        if (!neighborNode) continue;
-
-        // Only consider discovered nodes
-        if (!this.isNodeDiscovered(neighborNode)) continue;
-
-        visited.add(neighborId);
-        this.reachableNodes.add(neighborId);
-
-        // Only continue BFS from this neighbor if the current node is not blocked
-        // (we can reach neighbors of a blocked node, but we can't traverse through it)
-        if (!isBlocked) {
-          queue.push(neighborId);
-        }
-      }
-    }
-
-    return this.reachableNodes;
   }
 
   /**
@@ -723,8 +536,10 @@ export class WorldMapScene extends Scene {
   }
 
   exit() {
-    // Clear path preview cache to prevent memory buildup
-    this.pathPreviewCache.clear();
+    // Clean up path system
+    if (this.pathSystem) {
+      this.pathSystem.destroy();
+    }
 
     // Abort all event listeners
     if (this.abortController) {
@@ -866,11 +681,11 @@ export class WorldMapScene extends Scene {
       }
 
       // Calculate reachable nodes first (needed for filtering)
-      this.calculateReachableNodes();
+      this.pathSystem.calculateReachableNodes();
 
       // Update discovery state for fog of war rendering (filtered by reachability)
       if (this.effects) {
-        this.effects.updateDiscoveryState(this.nodes, this.connections, this.reachableNodes);
+        this.effects.updateDiscoveryState(this.nodes, this.connections, this.pathSystem.reachableNodes);
       }
 
       // Update DOM fog overlay discovery state
@@ -925,7 +740,7 @@ export class WorldMapScene extends Scene {
     }
 
     // Clear path cache since node states changed
-    this.clearPathCache();
+    this.pathSystem.clearPathCache();
   }
 
   /**
@@ -966,15 +781,6 @@ export class WorldMapScene extends Scene {
       console.warn('Failed to load region data:', err);
       this.regions = [];
     }
-  }
-
-  /**
-   * Get region color configuration for a given race
-   * @param {string} race - The region race (human, elf, dwarf, vampire, orc)
-   * @returns {Object} Color configuration with primary, secondary, and border colors
-   */
-  getRegionColor(race) {
-    return REGION_COLORS[race] || REGION_COLORS.human;
   }
 
   centerOnCurrentNode() {
@@ -1328,7 +1134,7 @@ export class WorldMapScene extends Scene {
             // Reload world data to update position
             await this.loadWorldData();
             this.centerOnCurrentNode();
-            this.clearPathCache();
+            this.pathSystem.clearPathCache();
 
             // Update stamina display
             if (travelResult.stamina) {
@@ -1450,7 +1256,7 @@ export class WorldMapScene extends Scene {
     // Handle player entering current node
     const enteredUnsub = socket.on('player:entered_node', (payload) => {
       if (payload.nodeId === this.currentNode?.id) {
-        parchmentToast.info('Traveler Arrived', `${payload.username} has arrived at ${this.currentNode.name}.`);
+        // Toast notification removed - was spammy
       }
     });
     this.wsUnsubscribers.push(enteredUnsub);
@@ -1458,7 +1264,7 @@ export class WorldMapScene extends Scene {
     // Handle player leaving current node
     const leftUnsub = socket.on('player:left_node', (payload) => {
       if (payload.nodeId === this.currentNode?.id) {
-        parchmentToast.info('Traveler Departed', `${payload.username} has left ${this.currentNode.name}.`);
+        // Toast notification removed - was spammy
       }
     });
     this.wsUnsubscribers.push(leftUnsub);
@@ -1537,7 +1343,7 @@ export class WorldMapScene extends Scene {
       // If hovered node changed, update path preview and tooltip
       if (newHoveredNode?.id !== this.hoveredNode?.id) {
         this.hoveredNode = newHoveredNode;
-        this.updatePathPreview(newHoveredNode);
+        this.pathSystem.updatePathPreview(newHoveredNode);
         this.updateHoverTooltip(newHoveredNode);
       }
     }, opts);
@@ -1601,7 +1407,7 @@ export class WorldMapScene extends Scene {
 
         if (touchedNode?.id !== this.hoveredNode?.id) {
           this.hoveredNode = touchedNode;
-          this.updatePathPreview(touchedNode);
+          this.pathSystem.updatePathPreview(touchedNode);
           this.updateHoverTooltip(touchedNode);
         }
       }
@@ -1646,7 +1452,7 @@ export class WorldMapScene extends Scene {
   getNodeAtPosition(screenX, screenY) {
     for (const node of this.nodes) {
       // Skip nodes that are not reachable from current position
-      if (this.reachableNodes.size > 0 && !this.reachableNodes.has(node.id)) {
+      if (!this.pathSystem.isNodeReachable(node.id)) {
         continue;
       }
 
@@ -1799,7 +1605,7 @@ export class WorldMapScene extends Scene {
     }
 
     // Clear path cache since we're at a new position
-    this.clearPathCache();
+    this.pathSystem.clearPathCache();
 
     // Update character position to final node
     this.updateCharacterPosition();
@@ -1920,9 +1726,8 @@ export class WorldMapScene extends Scene {
 
       if (fromNode && toNode) {
         // Skip connections where either endpoint is not reachable
-        if (this.reachableNodes.size > 0 &&
-            !this.reachableNodes.has(fromNode.id) &&
-            !this.reachableNodes.has(toNode.id)) {
+        if (!this.pathSystem.isNodeReachable(fromNode.id) &&
+            !this.pathSystem.isNodeReachable(toNode.id)) {
           continue;
         }
 
@@ -2067,14 +1872,14 @@ export class WorldMapScene extends Scene {
     }
 
     // Draw path preview (golden glow along the path)
-    if (this.previewPath && this.previewPath.length > 1) {
-      this.renderPathPreview(ctx);
+    if (this.pathSystem.hasPathPreview()) {
+      this.pathSystem.renderPathPreview(ctx);
     }
 
-    // Draw nodes
+    // Draw nodes using the node renderer
     for (const node of this.nodes) {
       // Skip nodes that are not reachable from current position
-      if (this.reachableNodes.size > 0 && !this.reachableNodes.has(node.id)) {
+      if (!this.pathSystem.isNodeReachable(node.id)) {
         continue;
       }
 
@@ -2086,154 +1891,8 @@ export class WorldMapScene extends Scene {
         continue;
       }
 
-      const isCurrent = this.currentNode && node.id === this.currentNode.id;
-      const isHovered = this.hoveredNode && node.id === this.hoveredNode.id;
-      const isAdjacent = this.isNodeAdjacent(node);
-      const isImportant = ['castle', 'palace', 'city'].includes(node.node_type);
-      const isVisited = node.visited;
-      const isMystery = !isVisited && !isCurrent;  // Discovered but not visited = mystery
-
-      // Render glow effect for important/selected nodes (skip for mystery nodes)
-      if (this.effects && (isCurrent || isImportant) && !isMystery) {
-        const glowColor = isCurrent ? '#ffd700' : this.getNodeGlowColor(node.node_type);
-        this.effects.renderNodeGlow(ctx, x, y, this.nodeSize, glowColor, isCurrent || isImportant);
-      }
-
-      // Try to render node sprite (but not for mystery nodes - they get a generic marker)
-      const nodeSprite = isMystery ? null : this.getNodeSprite(node.node_type);
-
-      if (nodeSprite) {
-        // Draw sprite with selection/hover effects
-        const spriteSize = this.getNodeSpriteSize(node.node_type);
-        const drawSize = isCurrent ? spriteSize + 8 : spriteSize;
-        const offset = drawSize / 2;
-
-        // Draw shadow under sprite
-        ctx.save();
-        ctx.globalAlpha = 0.3;
-        ctx.filter = 'blur(4px)';
-        ctx.drawImage(nodeSprite, x - offset + 3, y - offset + 3, drawSize, drawSize);
-        ctx.restore();
-
-        // Draw main sprite
-        ctx.drawImage(nodeSprite, x - offset, y - offset, drawSize, drawSize);
-
-        // Draw region color tint overlay (subtle ring around node)
-        if (this.showRegionTint && node.region_race && !isCurrent) {
-          const regionColors = this.getRegionColor(node.region_race);
-          ctx.save();
-          ctx.globalAlpha = 0.3;
-          ctx.strokeStyle = regionColors.primary;
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.arc(x, y, drawSize / 2 + 6, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.restore();
-        }
-
-        // Draw selection ring (only for adjacent nodes, not current - character sprite shows current location)
-        if (isAdjacent) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(x, y, drawSize / 2 + 2, 0, Math.PI * 2);
-          ctx.strokeStyle = 'rgba(106, 176, 243, 0.6)';
-          ctx.lineWidth = 2;
-          ctx.setLineDash([4, 4]);
-          ctx.stroke();
-          ctx.restore();
-        }
-
-        // Draw blocked/cleared indicator for combat nodes (only for VISITED nodes)
-        // Mystery/undiscovered nodes should not reveal blocked status
-        const isCombatNode = COMBAT_NODE_TYPES.includes(node.node_type);
-        if (isCombatNode && !isCurrent && !isMystery) {
-          if (node.blocked) {
-            // Red tint overlay for blocked nodes
-            ctx.save();
-            ctx.globalAlpha = 0.4;
-            ctx.fillStyle = '#ff4444';
-            ctx.beginPath();
-            ctx.arc(x, y, drawSize / 2 + 4, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.restore();
-
-            // Lock icon (isolated state)
-            ctx.save();
-            ctx.fillStyle = '#ff4444';
-            ctx.font = 'bold 16px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText('\u{1F512}', x, y - drawSize / 2 - 2); // Lock emoji
-            ctx.restore();
-          } else if (node.cleared) {
-            // Green checkmark for cleared nodes (isolated state)
-            ctx.save();
-            ctx.fillStyle = '#44ff44';
-            ctx.font = 'bold 14px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText('\u2713', x, y - drawSize / 2 - 2); // Checkmark
-            ctx.restore();
-          }
-        }
-      } else {
-        // Fallback: Draw colored circle with icon
-        // Mystery nodes get grayed style
-        ctx.beginPath();
-        ctx.arc(x, y, this.nodeSize, 0, Math.PI * 2);
-
-        if (isMystery) {
-          // Mystery node: grayed out appearance
-          ctx.fillStyle = isHovered ? '#7a7a8a' : '#5a5a6a';
-        } else if (isHovered && isAdjacent) {
-          ctx.fillStyle = '#4a90d9';
-        } else {
-          ctx.fillStyle = this.getNodeColor(node.node_type);
-        }
-        ctx.fill();
-
-        // Node border - mystery nodes have purple tint
-        if (isMystery) {
-          ctx.strokeStyle = isAdjacent ? '#8a7ab3' : '#4a4a5a';
-        } else {
-          ctx.strokeStyle = isAdjacent ? '#6ab0f3' : '#2a2a4a';
-        }
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Node icon - mystery nodes show "?" (isolated state for text properties)
-        ctx.save();
-        ctx.fillStyle = isMystery ? '#9a9aaa' : '#fff';
-        ctx.font = isMystery ? 'bold 18px Arial' : '16px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(this.getNodeIcon(node.node_type, isVisited), x, y);
-        ctx.restore();
-
-        // Draw blocked/cleared indicator for combat nodes (fallback style)
-        const isCombatNode = COMBAT_NODE_TYPES.includes(node.node_type);
-        if (isCombatNode && !isCurrent && !isMystery) {
-          if (node.blocked) {
-            // Red border for blocked
-            ctx.save();
-            ctx.strokeStyle = '#ff4444';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            ctx.restore();
-          } else if (node.cleared) {
-            // Green checkmark above (isolated state)
-            ctx.save();
-            ctx.fillStyle = '#44ff44';
-            ctx.font = 'bold 12px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'bottom';
-            ctx.fillText('\u2713', x, y - this.nodeSize - 4);
-            ctx.restore();
-          }
-        }
-      }
-
-      // Note: tooltips are rendered after fog of war for visibility
+      // Delegate node rendering to the node renderer
+      this.nodeRenderer.renderNode(ctx, node, x, y);
     }
 
     // Render quest markers on nodes (after nodes, before watchtower/fog)
@@ -2241,7 +1900,7 @@ export class WorldMapScene extends Scene {
 
     // Render watchtower-revealed nodes at reduced opacity
     if (this.watchtowerView) {
-      this.renderWatchtowerRevealedNodes(ctx);
+      this.nodeRenderer.renderWatchtowerRevealedNodes(ctx);
     }
 
     // Render golden glow around active watchtower
@@ -2265,7 +1924,7 @@ export class WorldMapScene extends Scene {
     // Second pass: Render node tooltips AFTER fog of war so they're always visible
     for (const node of this.nodes) {
       // Skip nodes that are not reachable from current position
-      if (this.reachableNodes.size > 0 && !this.reachableNodes.has(node.id)) {
+      if (!this.pathSystem.isNodeReachable(node.id)) {
         continue;
       }
 
@@ -2342,7 +2001,7 @@ export class WorldMapScene extends Scene {
       if (!this.questMarkerManager.hasMarker(node.id)) continue;
 
       // Skip nodes that are not reachable
-      if (this.reachableNodes.size > 0 && !this.reachableNodes.has(node.id)) continue;
+      if (!this.pathSystem.isNodeReachable(node.id)) continue;
 
       const x = node.x_coord * this.nodeSpacing + this.cameraX;
       const y = node.y_coord * this.nodeSpacing + this.cameraY;
@@ -2372,8 +2031,8 @@ export class WorldMapScene extends Scene {
     if (badges.length === 0) return;
 
     // Position badges above and to the right of the node
-    const nodeSprite = node ? this.getNodeSprite(node.node_type) : null;
-    const spriteSize = nodeSprite ? this.getNodeSpriteSize(node.node_type) : this.nodeSize;
+    const nodeSprite = node ? this.nodeRenderer.getNodeSprite(node.node_type) : null;
+    const spriteSize = nodeSprite ? this.nodeRenderer.getNodeSpriteSize(node.node_type) : this.nodeSize;
     const badgeRadius = 5;
     const badgeSpacing = 4;
     const startX = x + spriteSize / 2 - 4;
@@ -2442,187 +2101,6 @@ export class WorldMapScene extends Scene {
   }
 
   /**
-   * Render path preview (golden glow along the path) using organic curves
-   * Color coding:
-   * - gold = affordable path
-   * - red = not affordable (insufficient stamina)
-   * - orange = path blocked by intermediate node
-   * - maroon = cannot reach from origin (origin is blocked)
-   */
-  renderPathPreview(ctx) {
-    if (!this.previewPath || this.previewPath.length < 2) return;
-
-    // Determine path color based on blocking/affordability state
-    let pathColor, glowColor;
-    if (this.previewCannotReach) {
-      pathColor = 'rgba(128, 0, 64, 0.6)'; // Maroon for unreachable from origin
-      glowColor = 'rgba(128, 0, 64, 0.2)';
-    } else if (this.previewPathBlocked) {
-      pathColor = 'rgba(255, 140, 0, 0.6)'; // Orange for blocked intermediate
-      glowColor = 'rgba(255, 140, 0, 0.2)';
-    } else if (!this.previewAffordable) {
-      pathColor = 'rgba(180, 80, 80, 0.6)'; // Red for not affordable
-      glowColor = 'rgba(180, 80, 80, 0.2)';
-    } else {
-      pathColor = 'rgba(255, 215, 0, 0.6)'; // Gold for affordable
-      glowColor = 'rgba(255, 215, 0, 0.2)';
-    }
-
-    ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    // Draw glow effect along the path using organic curves
-    for (let i = 0; i < this.previewPath.length - 1; i++) {
-      const fromNode = this.nodes.find(n => n.id === this.previewPath[i]);
-      const toNode = this.nodes.find(n => n.id === this.previewPath[i + 1]);
-
-      if (!fromNode || !toNode) continue;
-
-      // CRITICAL: Normalize node ordering for spline generation
-      // Always generate spline with smaller ID first for consistent curves
-      const startNode = fromNode.id < toNode.id ? fromNode : toNode;
-      const endNode = fromNode.id < toNode.id ? toNode : fromNode;
-
-      const x1 = startNode.x_coord * this.nodeSpacing + this.cameraX;
-      const y1 = startNode.y_coord * this.nodeSpacing + this.cameraY;
-      const x2 = endNode.x_coord * this.nodeSpacing + this.cameraX;
-      const y2 = endNode.y_coord * this.nodeSpacing + this.cameraY;
-
-      // Skip if off screen
-      const margin = 100;
-      if (Math.max(x1, x2) < -margin || Math.min(x1, x2) > ctx.canvas.width + margin ||
-          Math.max(y1, y2) < -margin || Math.min(y1, y2) > ctx.canvas.height + margin) {
-        continue;
-      }
-
-      // Generate organic spline points (using normalized node IDs)
-      const controlPoints = generatePathControlPoints(x1, y1, x2, y2, startNode.id, endNode.id);
-      const splinePoints = generateSplinePoints(controlPoints, 10);
-
-      if (splinePoints.length < 2) continue;
-
-      // Draw glow (wider, semi-transparent)
-      ctx.beginPath();
-      ctx.moveTo(splinePoints[0].x, splinePoints[0].y);
-      for (let j = 1; j < splinePoints.length; j++) {
-        ctx.lineTo(splinePoints[j].x, splinePoints[j].y);
-      }
-      ctx.strokeStyle = glowColor;
-      ctx.lineWidth = 12;
-      ctx.stroke();
-
-      // Draw main path highlight
-      ctx.beginPath();
-      ctx.moveTo(splinePoints[0].x, splinePoints[0].y);
-      for (let j = 1; j < splinePoints.length; j++) {
-        ctx.lineTo(splinePoints[j].x, splinePoints[j].y);
-      }
-      ctx.strokeStyle = pathColor;
-      ctx.lineWidth = 4;
-      ctx.stroke();
-    }
-
-    ctx.restore();
-  }
-
-  /**
-   * Render node tooltip with name and travel info
-   * Shows "Undiscovered" for discovered-but-unvisited mystery nodes
-   */
-  renderNodeTooltip(ctx, node, x, y, isCurrent) {
-    const isVisited = node.visited;
-    const isDiscovered = this.isNodeDiscovered(node);
-
-    // Mystery nodes show "Undiscovered" instead of actual name
-    const nodeName = (isDiscovered && !isVisited && !isCurrent) ? 'Undiscovered' : node.name;
-
-    // Calculate tooltip content
-    let costLine = null;
-
-    if (!isCurrent) {
-      if (!isDiscovered) {
-        // Completely undiscovered - shouldn't normally be shown
-        costLine = { text: 'Unknown territory', color: '#8a6a6a' };
-      } else if (!isVisited) {
-        // Mystery node - discovered but not visited
-        costLine = { text: 'Mystery location', color: '#6a6a8a' };
-      } else if (this.previewCannotReach) {
-        // Cannot reach from origin (origin is blocked)
-        costLine = { text: 'Clear area first', color: '#800040' };
-      } else if (this.previewPathBlocked) {
-        // Path is blocked by intermediate node
-        costLine = { text: 'Path blocked', color: '#ff8c00' };
-      } else if (this.previewCost > 0) {
-        if (this.previewAffordable) {
-          costLine = { text: `${this.previewCost} stamina`, color: '#6a8a6a' };
-        } else {
-          const currentStamina = this.hudPanel?.staminaSegment?.current || 0;
-          costLine = { text: `Need ${this.previewCost - currentStamina} more stamina`, color: '#c54545' };
-        }
-      }
-    }
-
-    // Add blocked indicator if destination is blocked (only for VISITED nodes)
-    // Undiscovered blocked nodes should still show "Mystery location"
-    const isCombatNode = COMBAT_NODE_TYPES.includes(node.node_type);
-    if (isCombatNode && node.blocked && !isCurrent && isVisited) {
-      costLine = { text: 'Blocked - defeat enemies first', color: '#ff4444' };
-    }
-
-    // Measure text
-    ctx.font = 'bold 12px Arial';
-    const nameWidth = ctx.measureText(nodeName).width;
-    let tooltipWidth = nameWidth + 16;
-
-    if (costLine) {
-      ctx.font = '11px Arial';
-      const costWidth = ctx.measureText(costLine.text).width;
-      tooltipWidth = Math.max(tooltipWidth, costWidth + 16);
-    }
-
-    const tooltipHeight = costLine ? 36 : 22;
-    const tooltipY = y + this.nodeSize + 8;
-
-    // Draw background - mystery nodes have slightly different style
-    const isMystery = isDiscovered && !isVisited && !isCurrent;
-    ctx.fillStyle = isMystery ? 'rgba(50, 45, 60, 0.9)' : 'rgba(40, 30, 20, 0.9)';
-    const radius = 4;
-    const tx = x - tooltipWidth / 2;
-    ctx.beginPath();
-    ctx.moveTo(tx + radius, tooltipY);
-    ctx.lineTo(tx + tooltipWidth - radius, tooltipY);
-    ctx.quadraticCurveTo(tx + tooltipWidth, tooltipY, tx + tooltipWidth, tooltipY + radius);
-    ctx.lineTo(tx + tooltipWidth, tooltipY + tooltipHeight - radius);
-    ctx.quadraticCurveTo(tx + tooltipWidth, tooltipY + tooltipHeight, tx + tooltipWidth - radius, tooltipY + tooltipHeight);
-    ctx.lineTo(tx + radius, tooltipY + tooltipHeight);
-    ctx.quadraticCurveTo(tx, tooltipY + tooltipHeight, tx, tooltipY + tooltipHeight - radius);
-    ctx.lineTo(tx, tooltipY + radius);
-    ctx.quadraticCurveTo(tx, tooltipY, tx + radius, tooltipY);
-    ctx.closePath();
-    ctx.fill();
-
-    // Draw border - mystery nodes have purple tint
-    ctx.strokeStyle = isMystery ? 'rgba(120, 100, 150, 0.6)' : 'rgba(139, 115, 85, 0.6)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Draw name - mystery nodes are grayed
-    ctx.font = 'bold 12px Arial';
-    ctx.fillStyle = isCurrent ? '#ffd700' : (isMystery ? '#9a9aaa' : '#e0d0b0');
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText(nodeName, x, tooltipY + 4);
-
-    // Draw cost line
-    if (costLine) {
-      ctx.font = '11px Arial';
-      ctx.fillStyle = costLine.color;
-      ctx.fillText(costLine.text, x, tooltipY + 20);
-    }
-  }
-
-  /**
    * Render region boundaries as subtle colored zones
    * Uses convex hull approximation based on region castle nodes
    */
@@ -2635,13 +2113,13 @@ export class WorldMapScene extends Scene {
       // Find all nodes belonging to this region
       const regionNodes = this.nodes.filter(n =>
         n.region_race === region.race &&
-        this.reachableNodes.has(n.id)
+        this.pathSystem.isNodeReachable(n.id)
       );
 
       if (regionNodes.length < 3) continue;
 
       // Get region colors
-      const colors = this.getRegionColor(region.race);
+      const colors = this.nodeRenderer.getRegionColor(region.race);
 
       // Calculate convex hull of region nodes for boundary
       const points = regionNodes.map(n => ({
@@ -2728,151 +2206,6 @@ export class WorldMapScene extends Scene {
     }
 
     return hull;
-  }
-
-  /**
-   * Get glow color for node type
-   */
-  getNodeGlowColor(nodeType) {
-    const colors = {
-      castle: '#c0c0c0',
-      city: '#4a90d9',
-      village: '#4a7c4a',
-      forest: '#2d5a2d',
-      cave: '#5a5a7a',
-      mountain: '#7a7a9a',
-      bridge: '#8b7355',
-      guild: '#9a6acd',
-      palace: '#ffd700'
-    };
-    return colors[nodeType] || '#4a4a6a';
-  }
-
-  /**
-   * Get sprite size based on node type (important nodes are larger)
-   */
-  getNodeSpriteSize(nodeType) {
-    const sizes = {
-      castle: 56,
-      city: 52,
-      village: 44,
-      forest: 44,
-      cave: 44,
-      mountain: 52,
-      bridge: 44,
-      palace: 64,
-      guild_warrior: 44,
-      guild_wizard: 44,
-      guild_monk: 44,
-      guild_chemist: 44
-    };
-    return sizes[nodeType] || 44;
-  }
-
-  /**
-   * Get node sprite from asset loader
-   */
-  getNodeSprite(nodeType) {
-    if (!this.assetLoader) return null;
-
-    // Handle guild nodes specially
-    if (nodeType.startsWith('guild_')) {
-      const guildClass = nodeType.replace('guild_', '');
-      return this.assetLoader.getNodeSprite('guild', guildClass);
-    }
-
-    return this.assetLoader.getNodeSprite(nodeType);
-  }
-
-  getNodeColor(type) {
-    const colors = {
-      // Settlements
-      castle: '#8b4513',
-      city: '#4a4a6a',
-      village: '#2e7d32',
-      keep: '#6d4c41',
-      palace: '#c9a227',
-      // Battle terrain
-      forest: '#1b5e20',
-      cave: '#37474f',
-      mountain: '#5d4037',
-      bridge: '#795548',
-      // Activity nodes
-      fishing_spot: '#4682b4',
-      fishing: '#4682b4',
-      ruins: '#696969',
-      watchtower: '#a0522d',
-      farm: '#9acd32',
-      caravan: '#cd853f',
-      merchant_caravan: '#cd853f',
-      // Terminators
-      chest: '#daa520',
-      shrine: '#9370db',
-      discovery: '#20b2aa',
-      // Commerce
-      tavern: '#8b4513',
-      shop: '#daa520',
-      blacksmith: '#4a4a4a',
-      apothecary: '#228b22',
-      // Guilds
-      guild: '#7b1fa2',
-      guild_warrior: '#b22222',
-      guild_wizard: '#4169e1',
-      guild_monk: '#ffd700',
-      guild_chemist: '#32cd32'
-    };
-    return colors[type] || '#4a4a6a';
-  }
-
-  /**
-   * Get node icon for fallback rendering
-   * @param {string} type - Node type
-   * @param {boolean} isVisited - Whether the node has been visited
-   * @returns {string} Icon character
-   */
-  getNodeIcon(type, isVisited = true) {
-    // Mystery nodes show "?" instead of type icon
-    if (!isVisited) {
-      return '?';
-    }
-
-    const icons = {
-      // Settlements
-      castle: '🏰',
-      city: '🏛️',
-      village: '🏘️',
-      keep: '🏯',
-      palace: '👑',
-      // Battle terrain
-      forest: '🌲',
-      cave: '🕳️',
-      mountain: '⛰️',
-      bridge: '🌉',
-      // Activity nodes
-      fishing_spot: '🎣',
-      fishing: '🎣',
-      ruins: '🏚️',
-      watchtower: '🗼',
-      farm: '🌾',
-      caravan: '🐫',
-      merchant_caravan: '🐫',
-      // Terminators
-      chest: '📦',
-      shrine: '⛩️',
-      discovery: '✨',
-      // Commerce
-      tavern: '🍺',
-      shop: '🏪',
-      blacksmith: '⚒️',
-      apothecary: '⚗️',
-      // Guilds
-      guild: '⚔️',
-      guild_warrior: '⚔️',
-      guild_wizard: '🔮',
-      guild_monk: '☯️',
-      guild_chemist: '⚗️'
-    };
-    return icons[type] || '📍';
   }
 
   /**
@@ -2977,12 +2310,21 @@ export class WorldMapScene extends Scene {
         continue;
       }
 
-      // Draw dashed connection line
-      const control = this.getPathControlPoint(x1, y1, x2, y2, conn.from_node_id, conn.to_node_id);
+      // Use Catmull-Rom splines to match visible path rendering
+      // generatePathControlPoints already handles coordinate normalization
+      const controlPoints = generatePathControlPoints(x1, y1, x2, y2, fromNode.id, toNode.id);
+      const splinePoints = generateSplinePoints(controlPoints, 10);
 
       ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.quadraticCurveTo(control.x, control.y, x2, y2);
+      if (splinePoints.length >= 2) {
+        ctx.moveTo(splinePoints[0].x, splinePoints[0].y);
+        for (let i = 1; i < splinePoints.length; i++) {
+          ctx.lineTo(splinePoints[i].x, splinePoints[i].y);
+        }
+      } else {
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+      }
       ctx.strokeStyle = 'rgba(180, 160, 100, 0.6)'; // Golden-brown for watchtower reveal
       ctx.lineWidth = 2;
       ctx.setLineDash([6, 4]);
@@ -2993,98 +2335,4 @@ export class WorldMapScene extends Scene {
     ctx.restore();
   }
 
-  /**
-   * Render watchtower-revealed nodes at 50% opacity
-   * Shows node type icon but uses "?" for name unless already discovered
-   */
-  renderWatchtowerRevealedNodes(ctx) {
-    if (!this.watchtowerView) return;
-
-    const { revealedNodes } = this.watchtowerView;
-
-    // Create set of already-discovered node IDs for quick lookup
-    const discoveredNodeIds = new Set(this.nodes.map(n => n.id));
-
-    for (const node of revealedNodes) {
-      // Skip nodes that are already in the main nodes list (already discovered)
-      if (discoveredNodeIds.has(node.id)) {
-        continue;
-      }
-
-      const x = node.x_coord * this.nodeSpacing + this.cameraX;
-      const y = node.y_coord * this.nodeSpacing + this.cameraY;
-
-      // Skip if off screen
-      if (x < -50 || x > ctx.canvas.width + 50 || y < -50 || y > ctx.canvas.height + 50) {
-        continue;
-      }
-
-      ctx.save();
-      ctx.globalAlpha = 0.5;
-
-      // Try to render node sprite at reduced opacity
-      const nodeSprite = this.getNodeSprite(node.node_type);
-
-      if (nodeSprite) {
-        const spriteSize = this.getNodeSpriteSize(node.node_type);
-        const offset = spriteSize / 2;
-
-        // Draw shadow under sprite
-        ctx.save();
-        ctx.globalAlpha = 0.15;
-        ctx.filter = 'blur(4px)';
-        ctx.drawImage(nodeSprite, x - offset + 3, y - offset + 3, spriteSize, spriteSize);
-        ctx.restore();
-
-        // Draw main sprite at 50% opacity
-        ctx.globalAlpha = 0.5;
-        ctx.drawImage(nodeSprite, x - offset, y - offset, spriteSize, spriteSize);
-
-        // Draw watchtower reveal indicator (subtle golden ring)
-        ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]);
-        ctx.beginPath();
-        ctx.arc(x, y, spriteSize / 2 + 4, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      } else {
-        // Fallback: Draw colored circle with icon
-        ctx.beginPath();
-        ctx.arc(x, y, this.nodeSize, 0, Math.PI * 2);
-        ctx.fillStyle = this.getNodeColor(node.node_type);
-        ctx.fill();
-
-        // Golden border for watchtower-revealed nodes
-        ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 4]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Node icon
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.font = '16px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(this.getNodeIcon(node.node_type, true), x, y);
-      }
-
-      // Draw node name - show actual name (backend now always provides it for watchtower reveals)
-      const displayName = node.name || '?';
-      ctx.font = 'bold 11px Arial';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-
-      // Text shadow
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-      ctx.fillText(displayName, x + 1, y + this.nodeSize + 5);
-
-      // Main text - golden/amber for watchtower-revealed (undiscovered), white for discovered
-      ctx.fillStyle = node.discovered ? 'rgba(255, 255, 255, 0.8)' : 'rgba(255, 220, 130, 0.9)';
-      ctx.fillText(displayName, x, y + this.nodeSize + 4);
-
-      ctx.restore();
-    }
-  }
 }

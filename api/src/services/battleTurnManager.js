@@ -10,6 +10,7 @@
 import battleWebsocket from './battleWebsocket.js';
 import { query } from '../config/database.js';
 import { getBattleStatusString } from './battle/index.js';
+import { startTurnTimer } from './coliseumService.js';
 
 /**
  * Check if AI debug logging is enabled via user settings in battle state
@@ -586,7 +587,7 @@ async function notifyPlayerTurn(battleId, state) {
       turnPredictions
     );
 
-    // Send personal notification if ownerId is set
+    // Send personal notification if ownerId is set (multiplayer battles)
     if (activeUnit.ownerId) {
       battleWebsocket.sendYourTurn(
         activeUnit.ownerId,
@@ -595,6 +596,21 @@ async function notifyPlayerTurn(battleId, state) {
         state,
         ['move', 'attack', 'skill', 'item', 'wait']
       );
+
+      // Determine if this is a multiplayer battle (multiple human players)
+      // Check for multiple unique ownerIds among player units, or explicit PvP battle type
+      const playerUnits = state.units.filter(u => u.type === 'player' && u.ownerId);
+      const uniqueOwners = new Set(playerUnits.map(u => u.ownerId));
+      const isPvP = state.battleType === 'pvp' || state.battleType === 'pvp_coliseum';
+      const isMultiplayerPvE = !isPvP && uniqueOwners.size > 1;
+      const isMultiplayer = isPvP || isMultiplayerPvE;
+
+      // Only start turn timers for multiplayer battles
+      // Solo PvE battles have no turn timer (single player, no need to wait)
+      if (isMultiplayer) {
+        // isPvE = true for co-op PvE (turns skip but never forfeit), false for PvP (can forfeit)
+        startTurnTimer(battleId, activeUnit.ownerId, isMultiplayerPvE);
+      }
     }
   }
 }

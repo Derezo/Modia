@@ -280,13 +280,19 @@ export class WorldMapMinimap {
 
   /**
    * Calculate bezier control point for curved path (matches WorldMapEffects)
+   * Uses coordinate normalization to ensure consistent curve direction
    */
   getPathControlPoint(x1, y1, x2, y2, fromNodeId, toNodeId) {
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2;
+    // Normalize coordinates: always calculate from smaller ID to larger ID
+    // This ensures consistent curve direction regardless of which endpoint is passed first
+    const needsSwap = fromNodeId > toNodeId;
+    const [nx1, ny1, nx2, ny2] = needsSwap ? [x2, y2, x1, y1] : [x1, y1, x2, y2];
 
-    const dx = x2 - x1;
-    const dy = y2 - y1;
+    const midX = (nx1 + nx2) / 2;
+    const midY = (ny1 + ny2) / 2;
+
+    const dx = nx2 - nx1;
+    const dy = ny2 - ny1;
     const length = Math.sqrt(dx * dx + dy * dy);
 
     if (length < 1) return { x: midX, y: midY };
@@ -294,11 +300,10 @@ export class WorldMapMinimap {
     const perpX = -dy / length;
     const perpY = dx / length;
     const curveAmount = Math.min(length * 0.2, 8); // Scaled for minimap
-    const direction = fromNodeId < toNodeId ? 1 : -1;
 
     return {
-      x: midX + perpX * curveAmount * direction,
-      y: midY + perpY * curveAmount * direction
+      x: midX + perpX * curveAmount,
+      y: midY + perpY * curveAmount
     };
   }
 

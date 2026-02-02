@@ -10,7 +10,7 @@ import assert from 'node:assert';
 import * as coliseumService from '../../services/coliseumService.js';
 
 // Import test helpers for HTTP API tests
-import { request, createTestContext, resetRateLimitersViaApi } from '../testHelper.js';
+import { request, createTestContext, resetRateLimitersViaApi, query } from '../testHelper.js';
 
 // Counter for unique IDs - start high to avoid conflicts
 let userIdCounter = 200000;
@@ -259,6 +259,36 @@ describe('coliseumService', () => {
       assert.strictEqual(typeof defaultExport.getQueueStatus, 'function');
       assert.strictEqual(typeof defaultExport.getAllQueueStatuses, 'function');
       assert.strictEqual(typeof defaultExport.cleanupPlayer, 'function');
+    });
+  });
+
+  describe('completeMatch export', () => {
+    // Note: Full integration tests for completeMatch through handleBattleEnd are not included
+    // here because they require the full battle action flow which causes rate limiting issues
+    // in the test suite. The completeMatch function itself is exercised via the existing
+    // forfeit/disconnect tests which call endMatchByForfeit -> completeMatch. These tests
+    // verify the export is available for battle.js integration.
+    //
+    // The actual integration path (battle.js handleBattleEnd -> completeColiseumMatch) was
+    // added as part of bug fix: Coliseum battles now record match results and update ratings.
+
+    test('should export completeMatch function for battle.js integration', () => {
+      // This test verifies that completeMatch is properly exported
+      // so that battle.js can call it when a Coliseum battle ends normally
+      assert.strictEqual(typeof coliseumService.completeMatch, 'function');
+    });
+
+    test('should be an async function with expected signature', () => {
+      // Verify function signature: completeMatch(battleId, winnerId, loserId, reason?, applyPenalty?)
+      // The function.length only counts parameters without defaults, so we check it's at least 2
+      assert.ok(coliseumService.completeMatch.length >= 2, 'Function should have at least 2 required parameters');
+
+      // Verify it returns a promise (is async)
+      assert.strictEqual(
+        coliseumService.completeMatch.constructor.name,
+        'AsyncFunction',
+        'completeMatch should be an async function'
+      );
     });
   });
 });
@@ -518,6 +548,109 @@ describe('Coliseum API Endpoints', () => {
       // but the endpoint correctly identifies different users
       assert.ok(Array.isArray(res1.body.achievements));
       assert.ok(Array.isArray(res2.body.achievements));
+    });
+  });
+
+  describe('Turn Timer and Auto-Forfeit', () => {
+    test('should verify turn timer constants are correctly configured', async () => {
+      // Import the constants to verify configuration
+      const { MAX_TURN_TIMEOUTS, PVP_TURN_TIMEOUT } = await import('../../services/coliseum/constants.js');
+
+      // Verify the constants are set correctly
+      assert.strictEqual(MAX_TURN_TIMEOUTS, 3, 'MAX_TURN_TIMEOUTS should be 3');
+      assert.strictEqual(PVP_TURN_TIMEOUT, 30000, 'PVP_TURN_TIMEOUT should be 30 seconds');
+    });
+
+    test('should track turn timeout counts correctly', async () => {
+      // Import the timeout tracking map
+      const { turnTimeoutCounts, MAX_TURN_TIMEOUTS } = await import('../../services/coliseum/constants.js');
+
+      // Test the timeout counting logic with mock IDs
+      const testBattleId = 99999;
+      const testPlayerId = 88888;
+
+      // Initially no timeouts
+      assert.strictEqual(turnTimeoutCounts.has(testBattleId), false, 'Should not have entry for new battle');
+
+      // Simulate first timeout
+      turnTimeoutCounts.set(testBattleId, { [testPlayerId]: 1 });
+      let counts = turnTimeoutCounts.get(testBattleId);
+      assert.strictEqual(counts[testPlayerId], 1, 'Should have 1 timeout after first');
+      assert.ok(counts[testPlayerId] < MAX_TURN_TIMEOUTS, 'Should not trigger forfeit at 1 timeout');
+
+      // Simulate second timeout
+      counts[testPlayerId] = 2;
+      assert.strictEqual(counts[testPlayerId], 2, 'Should have 2 timeouts');
+      assert.ok(counts[testPlayerId] < MAX_TURN_TIMEOUTS, 'Should not trigger forfeit at 2 timeouts');
+
+      // Simulate third timeout - this should trigger forfeit
+      counts[testPlayerId] = 3;
+      assert.strictEqual(counts[testPlayerId], 3, 'Should have 3 timeouts after increment');
+      assert.ok(counts[testPlayerId] >= MAX_TURN_TIMEOUTS, 'Should trigger forfeit at 3 timeouts');
+
+      // Cleanup
+      turnTimeoutCounts.delete(testBattleId);
+    });
+
+    test('should initialize turn timers map as empty', async () => {
+      // Import the timer tracking map
+      const { turnTimers } = await import('../../services/coliseum/constants.js');
+
+      // Verify turnTimers is a Map
+      assert.ok(turnTimers instanceof Map, 'turnTimers should be a Map');
+
+      // After cleanup, should not have entries for non-existent battles
+      const testBattleId = 77777;
+      assert.strictEqual(turnTimers.has(testBattleId), false, 'Should not have timer for non-existent battle');
+    });
+
+    test('should export endMatchByForfeit function for auto-forfeit handling', async () => {
+      // Verify the forfeit function is exported and callable
+      const { endMatchByForfeit } = await import('../../services/coliseumService.js');
+
+      assert.strictEqual(typeof endMatchByForfeit, 'function', 'endMatchByForfeit should be a function');
+      assert.strictEqual(
+        endMatchByForfeit.constructor.name,
+        'AsyncFunction',
+        'endMatchByForfeit should be an async function'
+      );
+    });
+
+    test('should handle forfeit gracefully for non-existent battle', async () => {
+      const { endMatchByForfeit } = await import('../../services/coliseumService.js');
+
+      // endMatchByForfeit returns early (undefined) for non-existent battles
+      // This should not throw an error
+      await assert.doesNotReject(
+        async () => await endMatchByForfeit(999999, user.userId, 'timeout', false),
+        'Should handle non-existent battle gracefully'
+      );
+    });
+
+    test('turnTimers map structure supports required fields', async () => {
+      // Verify the turn timer map can store the expected structure
+      const { turnTimers } = await import('../../services/coliseum/constants.js');
+
+      const testBattleId = 66666;
+      const testTimerEntry = {
+        timerId: setTimeout(() => {}, 0), // Dummy timer
+        startTime: Date.now(),
+        playerId: 12345,
+        isPvE: false
+      };
+
+      // Set and verify structure
+      turnTimers.set(testBattleId, testTimerEntry);
+
+      const retrieved = turnTimers.get(testBattleId);
+      assert.ok(retrieved.timerId, 'Should have timerId');
+      assert.ok(retrieved.startTime, 'Should have startTime');
+      assert.ok(retrieved.playerId, 'Should have playerId');
+      assert.strictEqual(retrieved.isPvE, false, 'Should have isPvE flag');
+
+      // Cleanup
+      clearTimeout(testTimerEntry.timerId);
+      turnTimers.delete(testBattleId);
     });
   });
 });

@@ -91,17 +91,24 @@ export function getNextSequence(battleId) {
  * @param {Object} message - Message to send (will have seq and ack added)
  * @param {number} battleId - Battle ID
  * @param {number} connectionId - Connection identifier (userId)
- * @returns {number} Sequence number assigned to the message
+ * @returns {number} Sequence number assigned to the message, or -1 if connection not open
  */
 export function sendWithAck(ws, message, battleId, connectionId) {
-  // Get next sequence number
+  // Check connection state BEFORE incrementing sequence to prevent gaps
+  if (ws.readyState !== WebSocket.OPEN) {
+    console.warn(`[MessageReliability] Cannot send - connection not open for connection=${connectionId}, readyState=${ws.readyState}`);
+    return -1;
+  }
+
+  // Get next sequence number (only after confirming connection is open)
   const seq = getNextSequence(battleId);
 
   // Add reliability fields to message
   const reliableMessage = {
     ...message,
     seq,
-    ack: true
+    ack: true,
+    battleId
   };
 
   // Create pending message record
@@ -120,14 +127,14 @@ export function sendWithAck(ws, message, battleId, connectionId) {
   }, ACK_TIMEOUT_MS);
 
   // Send the message
-  if (ws.readyState === WebSocket.OPEN) {
-    try {
-      ws.send(JSON.stringify(reliableMessage));
-    } catch (error) {
-      // Clear the timeout since we failed to send
-      clearTimeout(pending.timeoutId);
-      console.error(`[MessageReliability] Failed to send message seq=${seq} to connection=${connectionId}:`, error);
-    }
+  try {
+    ws.send(JSON.stringify(reliableMessage));
+  } catch (error) {
+    // Clear the timeout and remove pending since we failed to send
+    clearTimeout(pending.timeoutId);
+    pendingAcks.get(connectionId).delete(seq);
+    console.error(`[MessageReliability] Failed to send message seq=${seq} to connection=${connectionId}:`, error);
+    return -1;
   }
 
   return seq;
@@ -236,8 +243,15 @@ export function scheduleRetry(connectionId, battleId, seq) {
  * @param {number} connectionId - Connection identifier (userId)
  */
 export async function triggerFullStateSync(ws, battleId, connectionId) {
+  // Validate battleId is a positive integer before any operations
+  const numericBattleId = parseInt(battleId, 10);
+  if (isNaN(numericBattleId) || numericBattleId <= 0 || String(numericBattleId) !== String(battleId)) {
+    console.warn(`[MessageReliability] Cannot sync - invalid battleId: ${battleId}`);
+    return { success: false, reason: 'invalid_battle_id' };
+  }
+
   // Clear all pending ACKs for this battle/connection
-  cleanupConnectionPendingForBattle(connectionId, battleId);
+  cleanupConnectionPendingForBattle(connectionId, numericBattleId);
 
   // Check if connection is still open
   if (ws.readyState !== WebSocket.OPEN) {
@@ -251,7 +265,7 @@ export async function triggerFullStateSync(ws, battleId, connectionId) {
     // Fetch current battle state from database
     const result = await query(
       'SELECT battle_state FROM battles WHERE id = $1 AND status = \'active\'',
-      [battleId]
+      [numericBattleId]
     );
 
     if (result.rows.length > 0) {
@@ -259,16 +273,16 @@ export async function triggerFullStateSync(ws, battleId, connectionId) {
       ws.send(JSON.stringify({
         type: 'battle:state_update',
         payload: {
-          battleId,
+          battleId: numericBattleId,
           state,
           reason: 'full_sync',
           timestamp: Date.now()
         }
       }));
-      console.log(`[MessageReliability] Full state sync sent for battle=${battleId}, connection=${connectionId}`);
+      console.log(`[MessageReliability] Full state sync sent for battle=${numericBattleId}, connection=${connectionId}`);
       return { success: true };
     } else {
-      console.log(`[MessageReliability] No active battle found for battle=${battleId}`);
+      console.log(`[MessageReliability] No active battle found for battle=${numericBattleId}`);
       return { success: false, reason: 'battle_not_found' };
     }
   } catch (error) {
@@ -376,7 +390,7 @@ export function cleanupBattle(battleId) {
  * @param {string} roomName - Room name (e.g., 'battle:123')
  * @param {Object} message - Message to broadcast
  * @param {number} battleId - Battle ID
- * @returns {Promise<Map<number, number>>} Map of connectionId -> sequence number
+ * @returns {Promise<Map<number, number>>} Map of connectionId -> sequence number (only successful sends)
  */
 export async function broadcastWithAck(wss, roomName, message, battleId) {
   // Lazy-load websocket module to avoid circular dependency
@@ -394,9 +408,12 @@ export async function broadcastWithAck(wss, roomName, message, battleId) {
   // Send to each connection with ACK tracking
   for (const userId of roomUsers) {
     const ws = connections.get(userId);
-    if (ws && ws.readyState === WebSocket.OPEN) {
+    if (ws) {
       const seq = sendWithAck(ws, message, battleId, userId);
-      results.set(userId, seq);
+      // Only include successful sends (seq >= 1) in results
+      if (seq >= 1) {
+        results.set(userId, seq);
+      }
     }
   }
 

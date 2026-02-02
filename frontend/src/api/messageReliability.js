@@ -29,6 +29,11 @@ export class MessageReliabilityManager {
     this.processedSeqs = new Map(); // battleId -> Set<seq>
     this.lastSeq = new Map();       // battleId -> lastProcessedSeq
     this.maxStoredSeqs = 100;       // Rolling window size
+
+    // Fire-and-forget deduplication (for non-ACK messages)
+    this.fireAndForgetCache = new Map(); // key -> timestamp
+    this.fireAndForgetWindow = 100; // ms window for deduplication
+    this.fireAndForgetMaxSize = 50; // Max entries before cleanup
   }
 
   /**
@@ -184,6 +189,12 @@ export class MessageReliabilityManager {
   cleanup(battleId) {
     this.processedSeqs.delete(battleId);
     this.lastSeq.delete(battleId);
+    // Clear fire-and-forget entries for this battle
+    for (const [key] of this.fireAndForgetCache) {
+      if (key.includes(battleId)) {
+        this.fireAndForgetCache.delete(key);
+      }
+    }
     debugLog('network.logWebSocketMessages', `[Reliability] Cleaned up tracking for battle=${battleId}`);
   }
 
@@ -201,5 +212,70 @@ export class MessageReliabilityManager {
       };
     }
     return info;
+  }
+
+  /**
+   * Generate a deduplication key for fire-and-forget messages
+   * @param {Object} message - The message
+   * @returns {string} A unique key for this message
+   */
+  getFireAndForgetKey(message) {
+    const type = message.type || '';
+    const battleId = message.battleId || '';
+
+    // Create key based on message content that defines uniqueness
+    switch (type) {
+      case 'battle:state_update':
+        return `${type}:${battleId}:${message.state?.activeUnitId}`;
+      case 'battle:intent_highlight':
+        return `${type}:${battleId}:${message.unitId}:${message.highlightType}`;
+      case 'battle:enemy_actions':
+        return `${type}:${battleId}:${message.actions?.length}`;
+      default:
+        return `${type}:${battleId}:${JSON.stringify(message).slice(0, 100)}`;
+    }
+  }
+
+  /**
+   * Check if a fire-and-forget message is a duplicate within the time window
+   * @param {Object} message - The message to check
+   * @returns {boolean} True if this is a duplicate that should be skipped
+   */
+  isFireAndForgetDuplicate(message) {
+    const key = this.getFireAndForgetKey(message);
+    const now = Date.now();
+
+    // Check if we've seen this message recently
+    const lastSeen = this.fireAndForgetCache.get(key);
+    if (lastSeen && (now - lastSeen) < this.fireAndForgetWindow) {
+      debugLog('network.logWebSocketMessages', `[Reliability] Fire-and-forget duplicate: ${key}`);
+      return true;
+    }
+
+    // Track this message
+    this.fireAndForgetCache.set(key, now);
+
+    // Cleanup if cache is too large
+    if (this.fireAndForgetCache.size > this.fireAndForgetMaxSize) {
+      this.cleanupFireAndForgetCache();
+    }
+
+    return false;
+  }
+
+  /**
+   * Remove old entries from the fire-and-forget cache
+   */
+  cleanupFireAndForgetCache() {
+    const now = Date.now();
+    const expiry = this.fireAndForgetWindow * 2; // Keep entries for 2x the window
+
+    for (const [key, timestamp] of this.fireAndForgetCache) {
+      if (now - timestamp > expiry) {
+        this.fireAndForgetCache.delete(key);
+      }
+    }
+
+    debugLog('network.logWebSocketMessages', `[Reliability] Fire-and-forget cache cleaned, size: ${this.fireAndForgetCache.size}`);
   }
 }

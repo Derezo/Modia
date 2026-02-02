@@ -743,6 +743,10 @@ function startSunoPoller() {
   }
 
   sunoPollerInterval = setInterval(pollSunoTasks, SUNO_POLL_INTERVAL_MS);
+  // Don't keep process alive just for this poller - allows clean exit in tests
+  if (sunoPollerInterval.unref) {
+    sunoPollerInterval.unref();
+  }
   console.log(`[Suno Poller] Started polling every ${SUNO_POLL_INTERVAL_MS / 1000}s`);
 }
 

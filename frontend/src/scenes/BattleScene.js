@@ -4,33 +4,29 @@
  *
  * Key responsibilities:
  * - Battle initialization and state management (units, turns, actions)
- * - Isometric grid rendering with tile cycling for overlapping elevations
+ * - Isometric grid rendering with terrain and unit display
  * - Unit movement with height animation and occlusion transparency
- * - Input handling (mouse, touch, keyboard) with radial/context menus
- * - WebSocket event handling for multiplayer sync
+ * - Action submission and turn management
  * - Camera control and battle intro/outro sequences
- *
- * Tile Cycling System:
- * - Auto-cycles through overlapping elevated tiles every 1.5 seconds
- * - Manual cycling via Tab key or mobile long-press (400ms)
- * - Visual indicator shows current/total candidates and cycle progress
  *
  * Height Movement:
  * - Units animate with parabolic arc when moving between elevations
  * - Shadow follows terrain surface during movement
  * - Occlusion cache updates per-frame for transparent blocking tiles
  *
+ * @see BattleInputHandler.js - Mouse/touch/keyboard input and tile cycling
+ * @see BattleWebSocketManager.js - Real-time event handling
+ * @see BattleAudioManager.js - Audio playback and music management
  * @see BattleGrid.js - Grid rendering and coordinate conversion
  * @see BattleUnit.js - Unit state, animation, and elevation tracking
  * @see BattleUI.js - HUD elements and action menus
- * @see BattleWebSocketManager.js - Real-time event handling
  * @see BattleCamera.js - Viewport and follow behavior
  */
 import { Scene } from './Scene.js';
 import { BattleGrid } from '../battle/BattleGrid.js';
 import { BattleUnit } from '../battle/BattleUnit.js';
 import { BattleUI } from '../battle/BattleUI.js';
-import { BattleAnimations } from '../battle/BattleAnimations.js';
+import { BattleAnimations, ANIMATION_TIMING } from '../battle/BattleAnimations.js';
 import { BattlePathfinding } from '../battle/BattlePathfinding.js';
 import { BattleCamera } from '../battle/BattleCamera.js';
 import { BattleIntro } from '../battle/BattleIntro.js';
@@ -42,8 +38,9 @@ import { BattleContextMenu } from '../battle/BattleContextMenu.js';
 import { GridCursor } from '../battle/GridCursor.js';
 import { BossPhaseIndicator } from '../battle/BossPhaseIndicator.js';
 import { BattleWebSocketManager } from '../battle/BattleWebSocketManager.js';
+import { BattleInputHandler } from '../battle/BattleInputHandler.js';
+import { BattleAudioManager } from '../battle/BattleAudioManager.js';
 import { isSelfTargetingSkill, getVisualCategory } from '../battle/SkillEffectCategories.js';
-import { getSkillSoundKey, RACE_TO_REGION } from '../audio/AudioAssets.js';
 import { calculateDamagePreview, calculateItemPreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
@@ -89,15 +86,8 @@ export class BattleScene extends Scene {
     this.isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.selectedMoveTile = null; // For two-tap movement on mobile
 
-    // Tile cycling for overlapping elevations
-    this.tileCandidates = [];           // All candidate tiles at hover position
-    this.tileCycleIndex = 0;            // Currently selected candidate index
-    this.tileCycleTimer = 0;            // Timer for auto-cycling (ms)
-    this.tileCyclePaused = false;       // Pause when user manually selects
-    this.tileCycleDuration = 1500;      // 1.5 second auto-cycle interval
-    this.lastTileCyclePosition = null;  // Track position changes to reset cycling
-    this.longPressTimer = null;         // Mobile long-press timer for manual cycling
-    this.longPressStartPos = null;      // Position at long-press start
+    // Input handler manages mouse/touch/keyboard events and tile cycling
+    this.inputHandler = null;
 
     // Movement range (base value, could be modified by stats)
     this.movementRange = 3;
@@ -118,12 +108,12 @@ export class BattleScene extends Scene {
     this.wsManager = null;
     this.playerTurnPending = false; // True when player's turn is queued but not yet shown
 
+    // Audio manager handles all battle audio/music
+    this.audioManager = new BattleAudioManager(this);
+
     // Battle end state
     this.battleEnded = false;
     this.outroSequence = null;
-
-    // Event cleanup
-    this.abortController = null;
 
     // Boss phase indicator
     this.bossPhaseIndicator = null;
@@ -355,8 +345,9 @@ export class BattleScene extends Scene {
     this.terrainTooltip = new TerrainTooltip();
     this.terrainTooltip.attachTo(this.game.container);
 
-    // Setup input handlers
-    this.setupInputHandlers();
+    // Setup input handler for mouse/touch/keyboard events
+    this.inputHandler = new BattleInputHandler(this);
+    this.inputHandler.setup();
 
     // Setup WebSocket handlers for real-time events
     this.setupWebSocketHandlers();
@@ -368,7 +359,7 @@ export class BattleScene extends Scene {
     this.ui.hide(); // Hide action menu during intro
 
     // Start battle music using MusicContext for region-aware playback
-    this.playBattleMusic();
+    this.audioManager.playBattleMusic();
 
     // Update UI with initial state (will show after intro)
     this.updateUI();
@@ -378,18 +369,11 @@ export class BattleScene extends Scene {
    * Exit the battle scene
    */
   exit() {
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
+    // Clean up input handler (events and tile cycling timers)
+    if (this.inputHandler) {
+      this.inputHandler.cleanup();
+      this.inputHandler = null;
     }
-
-    // Clean up tile cycling long-press timer
-    if (this.longPressTimer) {
-      clearTimeout(this.longPressTimer);
-      this.longPressTimer = null;
-    }
-    this.longPressStartPos = null;
-    this.tileCandidates = [];
 
     // Clean up PvP turn timer
     if (this.pvpTurnTimer) {
@@ -555,215 +539,13 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Setup canvas input handlers
-   */
-  setupInputHandlers() {
-    this.abortController = new AbortController();
-    const opts = { signal: this.abortController.signal };
-    const canvas = this.game.canvas;
-
-    // Mouse move - hover detection and pan tracking
-    canvas.addEventListener('mousemove', (_e) => {
-      const pos = this.game.input.getPointerPosition();
-
-      // Update outro sequence button hover state
-      if (this.outroSequence) {
-        this.outroSequence.handleMouseMove(pos.x, pos.y);
-      }
-
-      // Update pan if dragging
-      if (this.camera.isPanning) {
-        this.camera.updatePan(pos.x, pos.y);
-      }
-
-      // Get all tile candidates for cycling (overlapping elevations)
-      const candidates = this.grid.getTileAtScreen(pos.x, pos.y, this.camera, true);
-
-      // Check if position changed significantly (reset cycling)
-      const posKey = `${Math.round(pos.x / 10)},${Math.round(pos.y / 10)}`;
-      if (this.lastTileCyclePosition !== posKey) {
-        this.lastTileCyclePosition = posKey;
-        this.tileCandidates = candidates;
-        this.tileCycleIndex = 0;
-        this.tileCycleTimer = 0;
-        this.tileCyclePaused = false;
-      }
-
-      // Update hovered tile based on current cycle index (with bounds check)
-      if (candidates.length > 0) {
-        const safeIndex = Math.min(this.tileCycleIndex, candidates.length - 1);
-        const selectedCandidate = candidates[safeIndex];
-        this.hoveredTile = { x: selectedCandidate.x, y: selectedCandidate.y };
-      } else {
-        this.hoveredTile = null;
-      }
-
-      // Update target info if hovering over unit
-      // When target is locked (during confirmation), keep showing locked target's info
-      if (this.lockedTarget?.unit) {
-        this.ui.showTargetInfo(this.lockedTarget.unit);
-        // Use locked tile for damage preview to maintain consistency
-        this.updateDamagePreview(this.lockedTarget.tile, pos);
-      } else if (this.hoveredTile) {
-        const unit = this.getUnitAt(this.hoveredTile.x, this.hoveredTile.y);
-        if (unit) {
-          // Show target info for enemies always, or allies when targeting with skill/item
-          // In PvP, determine ally/enemy using teamId comparison
-          const localUserId = this.game.localUserId;
-          const localTeamId = this.isPvP
-            ? (Array.from(this.units.values()).find(u => u.ownerId === localUserId)?.teamId ?? 1)
-            : 1;
-          const isAllyUnit = this.isPvP ? unit.isAlly(localUserId, localTeamId) : unit.type === 'player';
-          const isEnemyUnit = this.isPvP ? unit.isOpponent(localUserId, localTeamId) : unit.type === 'enemy';
-          const isTargetingAlly = ['skill', 'item'].includes(this.currentAction) && isAllyUnit;
-          if (isEnemyUnit || isTargetingAlly) {
-            this.ui.showTargetInfo(unit);
-          } else {
-            this.ui.hideTargetInfo();
-          }
-        } else {
-          this.ui.hideTargetInfo();
-        }
-
-        // Show damage preview when hovering over valid targets during attack/skill/item mode
-        this.updateDamagePreview(this.hoveredTile, pos);
-      } else {
-        // Hide damage preview when not hovering a tile
-        this.ui.hideDamagePreview();
-      }
-    }, opts);
-
-    // Mouse down - start panning
-    canvas.addEventListener('mousedown', (_e) => {
-      const pos = this.game.input.getPointerPosition();
-      this.camera.startPan(pos.x, pos.y);
-    }, opts);
-
-    // Mouse up - end panning and handle click
-    canvas.addEventListener('mouseup', (e) => {
-      const panDistance = this.camera.getPanDistance();
-      this.camera.endPan();
-
-      // Only register as click if pan distance was small (not a drag)
-      if (panDistance < 10) {
-        const pos = this.game.input.getPointerPosition();
-
-        // Check if outro sequence is showing continue button
-        if (this.outroSequence && this.outroSequence.handleClick(pos.x, pos.y)) {
-          return; // Click was handled by outro sequence
-        }
-
-        const tile = this.grid.getTileAtScreen(pos.x, pos.y, this.camera);
-        if (tile) {
-          this.handleTileClick(tile.x, tile.y, { mouseX: e.clientX, mouseY: e.clientY });
-        }
-      }
-    }, opts);
-
-    // Right-click - cancel pending action or show FFT-style context menu (desktop only)
-    canvas.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-
-      // If there's a pending action, right-click cancels it
-      if (this.pendingAction || this.currentAction) {
-        this.cancelAction();
-        return;
-      }
-
-      // Only show context menu if it's player's turn and no action in progress
-      const activeUnit = this.getActiveUnit();
-      if (!activeUnit || activeUnit.type !== 'player') {
-        return;
-      }
-
-      // Hide radial menu if visible
-      this.hideRadialMenu();
-
-      // Show context menu at mouse position
-      this.contextMenu.show(
-        e.clientX,
-        e.clientY,
-        this.canMove,
-        this.canAct,
-        activeUnit.mp
-      );
-    }, opts);
-
-    // Keyboard input for camera and actions
-    window.addEventListener('keydown', (e) => {
-      // Spacebar - return to follow mode
-      if (e.code === 'Space') {
-        e.preventDefault();
-        this.camera.returnToFollowMode();
-      }
-
-      // Escape - cancel current action and return to action menu
-      if (e.code === 'Escape' && this.currentAction !== null) {
-        e.preventDefault();
-        this.cancelAction();
-      }
-
-      // Tab - manual tile cycling (for overlapping tiles)
-      if (e.code === 'Tab' && this.tileCandidates.length > 1) {
-        e.preventDefault();
-        this.cycleTileManual();
-      }
-    }, opts);
-
-    // Mobile long-press for tile cycling
-    canvas.addEventListener('touchstart', (e) => {
-      if (this.tileCandidates.length <= 1) return;
-
-      const touch = e.touches[0];
-      this.longPressStartPos = { x: touch.clientX, y: touch.clientY };
-
-      // Start long-press timer (400ms)
-      this.longPressTimer = setTimeout(() => {
-        this.cycleTileManual();
-        // Provide haptic feedback if available
-        if (navigator.vibrate) {
-          navigator.vibrate(50);
-        }
-      }, 400);
-    }, opts);
-
-    canvas.addEventListener('touchmove', (e) => {
-      if (!this.longPressTimer || !this.longPressStartPos) return;
-
-      const touch = e.touches[0];
-      const dx = touch.clientX - this.longPressStartPos.x;
-      const dy = touch.clientY - this.longPressStartPos.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-
-      // Cancel long-press if finger moved more than 10px
-      if (dist > 10) {
-        clearTimeout(this.longPressTimer);
-        this.longPressTimer = null;
-        this.longPressStartPos = null;
-      }
-    }, opts);
-
-    canvas.addEventListener('touchend', () => {
-      if (this.longPressTimer) {
-        clearTimeout(this.longPressTimer);
-        this.longPressTimer = null;
-      }
-      this.longPressStartPos = null;
-    }, opts);
-
-    canvas.addEventListener('touchcancel', () => {
-      if (this.longPressTimer) {
-        clearTimeout(this.longPressTimer);
-        this.longPressTimer = null;
-      }
-      this.longPressStartPos = null;
-    }, opts);
-  }
-
-  /**
    * Setup WebSocket handlers for real-time battle events
    */
   setupWebSocketHandlers() {
+    // Defensive cleanup to prevent handler stacking if setup is called twice
+    if (this.wsManager) {
+      this.wsManager.cleanup();
+    }
     this.wsManager = new BattleWebSocketManager(this);
     this.wsManager.setup();
   }
@@ -1741,7 +1523,7 @@ export class BattleScene extends Scene {
       if (actionType === 'skill') {
         actionData.skillId = this.selectedSkillId;
         // Play specific skill sound (e.g., skill_fireball, skill_inferno)
-        this.playSkillSound({ id: this.selectedSkillId }, this.units.get(activeUnit?.id));
+        this.audioManager.playSkillSound({ id: this.selectedSkillId }, this.units.get(activeUnit?.id));
       } else if (actionType === 'item') {
         // For items, we use skillId field to pass the item's itemId
         // (backend expects skillId for item type lookups)
@@ -1771,8 +1553,13 @@ export class BattleScene extends Scene {
     if (actionResult.moved && this.pendingAction?.targetTile) {
       const unit = this.units.get(this.getActiveUnit()?.id);
       if (unit) {
-        unit.moveTo(this.pendingAction.targetTile.x, this.pendingAction.targetTile.y);
-        await this.waitForAnimation(500);
+        const from = { x: unit.gridX, y: unit.gridY };
+        const to = this.pendingAction.targetTile;
+        unit.moveTo(to.x, to.y);
+        // Use consistent distance-based timing
+        const distance = Math.abs(to.x - from.x) + Math.abs(to.y - from.y);
+        const moveDuration = Math.max(ANIMATION_TIMING.MOVEMENT_MIN_MS, distance * ANIMATION_TIMING.MOVEMENT_PER_TILE_MS);
+        await this.waitForAnimation(moveDuration);
       }
     }
 
@@ -1820,7 +1607,7 @@ export class BattleScene extends Scene {
 
         // Play hit animation and impact sound
         target.playHitAnimation();
-        this.playImpactSound({ damage: targetInfo.damage, isCritical: targetInfo.isCritical });
+        this.audioManager.playImpactSound({ damage: targetInfo.damage, isCritical: targetInfo.isCritical });
 
         // Show damage number
         this.animations.addDamageNumber(
@@ -1845,7 +1632,7 @@ export class BattleScene extends Scene {
 
         // Show status effect if applied and play sound
         if (targetInfo.effectApplied) {
-          this.playStatusEffectSound(targetInfo.effectApplied);
+          this.audioManager.playStatusEffectSound(targetInfo.effectApplied);
           this.animations.addDamageNumber(
             target.screenX,
             target.screenY - 60,
@@ -1882,7 +1669,7 @@ export class BattleScene extends Scene {
         // Target plays hit animation
         target.playHitAnimation();
         // Use impact sound system
-        this.playImpactSound(actionResult);
+        this.audioManager.playImpactSound(actionResult);
         this.animations.addDamageNumber(target.screenX, target.screenY - 40, actionResult.damage, actionResult.isCritical);
         this.animations.addFlash(target.screenX, target.screenY - 32, '#ff4444');
         this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#ff4444');
@@ -1890,7 +1677,7 @@ export class BattleScene extends Scene {
 
         // Play status effect sound if effect was applied
         if (actionResult.effectApplied || actionResult.statusApplied) {
-          this.playStatusEffectSound(actionResult.effectApplied || actionResult.statusApplied);
+          this.audioManager.playStatusEffectSound(actionResult.effectApplied || actionResult.statusApplied);
         }
 
         await this.waitForAnimation(300);
@@ -1907,7 +1694,7 @@ export class BattleScene extends Scene {
     if (actionResult.missed && actionResult.targetId) {
       const target = this.units.get(actionResult.targetId);
       if (target) {
-        this.playImpactSound({ missed: true });
+        this.audioManager.playImpactSound({ missed: true });
         this.animations.addDamageNumber(target.screenX, target.screenY - 40, 'MISS', false);
         await this.waitForAnimation(300);
       }
@@ -1920,23 +1707,23 @@ export class BattleScene extends Scene {
         if (!target) continue;
 
         if (effect.type === 'heal') {
-          this.playSound('heal');
+          this.audioManager.playSound('heal');
           target.hp = Math.min(target.maxHp, target.hp + effect.amount);
           this.animations.addHealNumber(target.screenX, target.screenY - 40, effect.amount);
           this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#44ff44');
           await this.waitForAnimation(300);
         } else if (effect.type === 'mpRestore') {
-          this.playSound('heal');
+          this.audioManager.playSound('heal');
           target.mp = Math.min(target.maxMp, target.mp + effect.amount);
           this.animations.addHealNumber(target.screenX, target.screenY - 40, effect.amount);
           this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#4488ff');
           await this.waitForAnimation(300);
         } else if (effect.type === 'cleanse') {
-          this.playSound('heal');
+          this.audioManager.playSound('heal');
           this.animations.addHealNumber(target.screenX, target.screenY - 40, 'Cleansed');
           await this.waitForAnimation(300);
         } else if (effect.type === 'revive') {
-          this.playSound('heal');
+          this.audioManager.playSound('heal');
           target.hp = effect.amount;
           this.animations.addHealNumber(target.screenX, target.screenY - 40, 'Revive!');
           this.animations.addParticleBurst(target.screenX, target.screenY - 32, '#ffdd44');
@@ -2193,7 +1980,7 @@ export class BattleScene extends Scene {
         unit.turnPhase = unitData.turnPhase ?? 'ready';
 
         // Update position if changed - but DON'T interrupt ongoing movement animations
-        // WebSocket unit_moved calls moveTo() for smooth animation; we only snap if unit is stationary
+        // WebSocket unit_moved calls moveTo() for smooth animation
         if (unit.gridX !== unitData.tileX || unit.gridY !== unitData.tileY) {
           if (unit.isMoving) {
             // Unit is animating - update target grid position AND animation target
@@ -2207,8 +1994,9 @@ export class BattleScene extends Scene {
               unit.targetScreenY = target.y;
             }
           } else {
-            // Unit is stationary - safe to snap to new position (fallback for missed WebSocket)
-            unit.setPosition(unitData.tileX, unitData.tileY);
+            // Unit is stationary - animate to new position for smooth visual
+            // This handles missed WebSocket events without jarring teleportation
+            unit.moveTo(unitData.tileX, unitData.tileY);
           }
         }
       }
@@ -2250,18 +2038,8 @@ export class BattleScene extends Scene {
       console.warn('[BattleScene] UI was null when hiding action menu');
     }
 
-    // Play victory or defeat fanfare via MusicContext
-    if (this.game.musicContext) {
-      if (status === 'victory') {
-        this.game.musicContext.playVictory();
-      } else {
-        this.game.musicContext.playDefeat();
-      }
-    } else if (this.game.audio) {
-      // Fallback to direct audio playback
-      const track = status === 'victory' ? 'victory_fanfare' : 'defeat_jingle';
-      this.game.audio.playMusic(track, { crossfade: false });
-    }
+    // Play victory or defeat fanfare via AudioManager
+    this.audioManager.playBattleEndMusic(status);
 
     // Use BattleOutroSequence for animated victory/defeat display
     console.log('[BattleScene] Creating outro sequence for:', status);
@@ -2278,149 +2056,6 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Play sound effect using game audio system
-   * @param {string} soundId - Sound effect identifier
-   * @param {Object} options - Playback options (volume, pitch, etc.)
-   */
-  playSound(soundId, options = {}) {
-    if (!this.game.audio) {
-      console.debug(`[Sound] ${soundId} (audio not initialized)`);
-      return;
-    }
-    this.game.audio.playCombat(soundId, options);
-  }
-
-  // ===========================================================================
-  // BATTLE AUDIO SYSTEM
-  // ===========================================================================
-
-  /**
-   * Determine the battle type for music selection
-   * @returns {string} Battle type: 'regular', 'boss', 'pvp', or 'story'
-   */
-  getBattleType() {
-    if (this.isPvP || this.battleType === 'pvp') return 'pvp';
-    if (this.isBossBattle || this.guildmasterData) return 'boss';
-    // Could add story battle detection here if implemented
-    return 'regular';
-  }
-
-  /**
-   * Get the current region for music selection
-   * @returns {string} Region ID (e.g., 'heartlands', 'sylvan_reaches')
-   */
-  getCurrentRegion() {
-    // Try to get region from current node in game state
-    // API returns region_race ('Human', 'Elf', etc.), map to region name ('heartlands', etc.)
-    const currentNode = this.game.state.get('currentNode');
-    if (currentNode?.region_race) {
-      const regionName = RACE_TO_REGION[currentNode.region_race];
-      if (regionName) {
-        return regionName;
-      }
-    }
-    // Fallback to musicContext's current region if available
-    if (this.game.musicContext?.getRegion()) {
-      return this.game.musicContext.getRegion();
-    }
-    // Default fallback
-    return 'heartlands';
-  }
-
-  /**
-   * Play battle music based on battle type and current region
-   * Uses MusicContext for region-aware playback
-   */
-  playBattleMusic() {
-    if (this.game.musicContext) {
-      // Ensure region is set for music context
-      const region = this.getCurrentRegion();
-      if (!this.game.musicContext.getRegion()) {
-        this.game.musicContext.setRegion(region);
-      }
-      // Play region-appropriate battle music
-      const battleType = this.getBattleType();
-      this.game.musicContext.playBattleMusic(battleType);
-    } else if (this.game.audio) {
-      // Fallback to generic battle music
-      this.game.audio.playMusic('battle_combat');
-    }
-  }
-
-  /**
-   * Play sound for a skill execution
-   * Tries specific skill sound first, falls back to visual category
-   * @param {Object} skill - The skill being used
-   * @param {Object} attacker - The unit using the skill
-   */
-  playSkillSound(skill, attacker) {
-    if (!this.game.audio) return;
-
-    const isMonster = attacker?.type === 'enemy';
-    const skillId = skill.id || skill.skillId;
-
-    // Get the skill sound key using AudioAssets helper
-    const soundKey = getSkillSoundKey(skillId, isMonster);
-
-    // Try to play the specific skill sound
-    // The audio system will handle fallback if the sound doesn't exist
-    this.game.audio.playCombat(soundKey);
-
-    // Log for debugging
-    console.debug(`[BattleAudio] Playing skill sound: ${soundKey}`);
-  }
-
-  /**
-   * Play sound for a status effect being applied
-   * @param {string} effectType - The status effect type (burn, freeze, poison, etc.)
-   */
-  playStatusEffectSound(effectType) {
-    if (!this.game.audio || !effectType) return;
-
-    // Map effect types to sound keys
-    const soundKey = `status_${effectType.toLowerCase()}`;
-    this.game.audio.playCombat(soundKey);
-  }
-
-  /**
-   * Play combat impact sound based on attack result
-   * @param {Object} result - The attack result containing damage, isCritical, missed
-   */
-  playImpactSound(result) {
-    if (!this.game.audio) return;
-
-    if (result.missed) {
-      this.game.audio.playCombat('impact_miss');
-    } else if (result.isCritical) {
-      this.game.audio.playCombat('impact_critical');
-    } else if (result.blocked) {
-      this.game.audio.playCombat('impact_block');
-    } else if (result.damage > 0) {
-      this.game.audio.playCombat('impact_hit');
-    }
-  }
-
-  /**
-   * Play sound when a unit's turn starts
-   * @param {Object} unit - The unit whose turn is starting
-   */
-  playTurnStartSound(unit) {
-    if (!this.game.audio) return;
-
-    // Play sound for local player's units
-    // In PvP, only play for units the local player controls
-    const localUserId = this.game.localUserId;
-    const isLocalUnit = this.isPvP
-      ? unit.isLocalPlayerUnit(localUserId)
-      : (unit.type === 'player' || unit.type === 'player_local');
-
-    if (isLocalUnit) {
-      this.game.audio.playSFX('turn_start');
-    }
-    // Note: We don't play enemy/opponent turn sounds to avoid audio clutter
-  }
-
-  /**
    * End battle and return to appropriate scene
    */
   endBattle() {
@@ -2432,9 +2067,7 @@ export class BattleScene extends Scene {
 
     // Resume previous music after a short delay (after victory/defeat fanfare)
     setTimeout(() => {
-      if (this.game.musicContext) {
-        this.game.musicContext.resumeAfterBattle();
-      }
+      this.audioManager.resumeAfterBattle();
     }, 3000);
 
     // Return to coliseum for PvP battles, world map otherwise
@@ -2477,9 +2110,9 @@ export class BattleScene extends Scene {
 
   /**
    * Start PvP turn timer
-   * @param {number} durationSeconds - Total turn duration
+   * @param {number} durationSeconds - Total turn duration (default 30s)
    */
-  startPvPTurnTimer(durationSeconds = 60) {
+  startPvPTurnTimer(durationSeconds = 30) {
     if (!this.isPvP || !this.ui) return;
 
     // Clear existing timer
@@ -2759,145 +2392,13 @@ export class BattleScene extends Scene {
     // Update terrain tooltip (DOM-based)
     this.updateTerrainTooltip();
 
-    // Update tile cycling for overlapping elevations
-    this.updateTileCycling(deltaTime);
+    // Update tile cycling for overlapping elevations (delegated to input handler)
+    if (this.inputHandler) {
+      this.inputHandler.updateTileCycling(deltaTime);
+    }
 
     // Clear input state
     this.game.input.clearFrameState();
-  }
-
-  /**
-   * Update tile cycling for overlapping elevated tiles
-   * Auto-cycles through candidates every 1.5 seconds when multiple tiles overlap
-   * @param {number} deltaTime - Time since last frame in milliseconds
-   */
-  updateTileCycling(deltaTime) {
-    // Skip if target is locked (during spell/attack targeting confirmation)
-    if (this.lockedTarget) return;
-
-    // Skip if only 0 or 1 candidate, or if cycling is paused (manual selection)
-    if (this.tileCandidates.length <= 1 || this.tileCyclePaused) {
-      return;
-    }
-
-    // Accumulate time
-    this.tileCycleTimer += deltaTime;
-
-    // Cycle to next candidate when timer reaches threshold
-    if (this.tileCycleTimer >= this.tileCycleDuration) {
-      this.tileCycleTimer = 0;
-      this.tileCycleIndex = (this.tileCycleIndex + 1) % this.tileCandidates.length;
-
-      // Update hovered tile
-      const selectedCandidate = this.tileCandidates[this.tileCycleIndex];
-      this.hoveredTile = { x: selectedCandidate.x, y: selectedCandidate.y };
-
-      // Update damage preview for new hovered tile
-      const pos = this.game.input.getPointerPosition();
-      this.updateDamagePreview(this.hoveredTile, pos);
-    }
-  }
-
-  /**
-   * Manually cycle to next tile candidate (for mobile long-press or keyboard)
-   */
-  cycleTileManual() {
-    if (this.tileCandidates.length <= 1) return;
-
-    // Pause auto-cycling when user manually cycles
-    this.tileCyclePaused = true;
-    this.tileCycleTimer = 0;
-
-    // Cycle to next candidate
-    this.tileCycleIndex = (this.tileCycleIndex + 1) % this.tileCandidates.length;
-
-    // Update hovered tile
-    const selectedCandidate = this.tileCandidates[this.tileCycleIndex];
-    this.hoveredTile = { x: selectedCandidate.x, y: selectedCandidate.y };
-
-    // Update damage preview
-    const pos = this.game.input.getPointerPosition();
-    this.updateDamagePreview(this.hoveredTile, pos);
-  }
-
-  /**
-   * Render tile cycle indicator when multiple tiles overlap at hover position
-   * Shows "1/3" style counter with progress arc for auto-cycle timer
-   * @param {CanvasRenderingContext2D} ctx - Canvas context
-   */
-  renderTileCycleIndicator(ctx) {
-    // Only show when multiple candidates exist
-    if (this.tileCandidates.length <= 1 || !this.hoveredTile) return;
-
-    // Get screen position of hovered tile
-    const worldPos = this.grid.gridToScreenWorld(this.hoveredTile.x, this.hoveredTile.y);
-    const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
-
-    // Position indicator at top-right of tile
-    const indicatorX = screenPos.x + 24;
-    const indicatorY = screenPos.y - 20;
-    const radius = 14;
-
-    // Draw background circle
-    ctx.beginPath();
-    ctx.arc(indicatorX, indicatorY, radius, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fill();
-
-    // Draw progress arc (if not paused)
-    if (!this.tileCyclePaused) {
-      const progress = this.tileCycleTimer / this.tileCycleDuration;
-      const startAngle = -Math.PI / 2; // Start from top
-      const endAngle = startAngle + (progress * Math.PI * 2);
-
-      ctx.beginPath();
-      ctx.arc(indicatorX, indicatorY, radius - 2, startAngle, endAngle);
-      ctx.strokeStyle = 'rgba(100, 180, 255, 0.8)';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-    } else {
-      // Show paused indicator (full ring in different color)
-      ctx.beginPath();
-      ctx.arc(indicatorX, indicatorY, radius - 2, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255, 200, 100, 0.6)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-
-    // Draw border
-    ctx.beginPath();
-    ctx.arc(indicatorX, indicatorY, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // Draw counter text "1/3"
-    const currentIndex = this.tileCycleIndex + 1;
-    const totalCount = this.tileCandidates.length;
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 10px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`${currentIndex}/${totalCount}`, indicatorX, indicatorY);
-
-    // Draw elevation info below counter
-    const currentCandidate = this.tileCandidates[this.tileCycleIndex];
-    if (currentCandidate && currentCandidate.elevation !== 0) {
-      const elevText = currentCandidate.elevation > 0
-        ? `+${currentCandidate.elevation}`
-        : `${currentCandidate.elevation}`;
-      ctx.fillStyle = 'rgba(200, 200, 255, 0.9)';
-      ctx.font = '9px Arial';
-      ctx.fillText(elevText, indicatorX, indicatorY + radius + 8);
-    }
-
-    // Draw hint text (Tab to cycle)
-    if (!this.isTouchDevice && this.tileCandidates.length > 1) {
-      ctx.fillStyle = 'rgba(180, 180, 180, 0.7)';
-      ctx.font = '8px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('Tab', indicatorX, indicatorY - radius - 6);
-    }
   }
 
   /**
@@ -3038,8 +2539,10 @@ export class BattleScene extends Scene {
       this.gridCursor.render(ctx, this.camera);
     }
 
-    // Render tile cycle indicator when multiple tiles overlap
-    this.renderTileCycleIndicator(ctx);
+    // Render tile cycle indicator when multiple tiles overlap (delegated to input handler)
+    if (this.inputHandler) {
+      this.inputHandler.renderTileCycleIndicator(ctx);
+    }
 
     // Sort and render units (by Y position for depth)
     const allUnits = Array.from(this.units.values());

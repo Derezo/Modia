@@ -107,21 +107,36 @@ export class StateManager {
   }
 
   persist() {
-    const toPersist = {
+    const authData = {
       token: this.state.token,
       refreshToken: this.state.refreshToken,
       user: this.state.user
     };
     try {
-      localStorage.setItem('modia_state', JSON.stringify(toPersist));
+      sessionStorage.setItem('modia_auth', JSON.stringify(authData));
     } catch (err) {
-      console.warn('Failed to persist state:', err);
+      console.warn('Failed to persist auth state:', err);
     }
   }
 
   hydrate() {
     try {
-      const saved = localStorage.getItem('modia_state');
+      // Check sessionStorage first (current location)
+      let saved = sessionStorage.getItem('modia_auth');
+
+      // Migrate from old localStorage if present and sessionStorage empty
+      if (!saved) {
+        const oldSaved = localStorage.getItem('modia_state');
+        if (oldSaved) {
+          saved = oldSaved;
+          // Migrate to sessionStorage
+          sessionStorage.setItem('modia_auth', oldSaved);
+          // Clear old localStorage to prevent future conflicts
+          localStorage.removeItem('modia_state');
+          debugLog('state.logStateChanges', 'Migrated auth tokens from localStorage to sessionStorage');
+        }
+      }
+
       if (saved) {
         const { token, refreshToken, user } = JSON.parse(saved);
         this.state.token = token;
@@ -129,7 +144,7 @@ export class StateManager {
         this.state.user = user;
       }
     } catch (err) {
-      console.warn('Failed to hydrate state:', err);
+      console.warn('Failed to hydrate auth state:', err);
     }
   }
 
@@ -139,6 +154,10 @@ export class StateManager {
     this.state.user = null;
     this.state.characters = [];
     this.state.activeCharacter = null;
-    this.persist();
+    try {
+      sessionStorage.removeItem('modia_auth');
+    } catch (err) {
+      console.warn('Failed to clear auth state:', err);
+    }
   }
 }

@@ -10,6 +10,7 @@
 
 import battleWebsocket from './battleWebsocket.js';
 import { query } from '../config/database.js';
+import { startTurnTimer } from './coliseumService.js';
 
 // Track disconnected players: Map<battleId, Map<playerId, { disconnectTime, timeout }>>
 const disconnectedPlayers = new Map();
@@ -104,6 +105,23 @@ async function handleReconnect(battleId, playerId, playerName) {
 
     // Rejoin the battle room
     // Note: This should be called by the route handler with socket access
+
+    // For PvP battles, restart turn timer if it's this player's turn
+    const isPvP = battleState.battleType === 'pvp' || battleState.battleType === 'pvp_coliseum';
+    if (isPvP && battleState.state) {
+      const state = battleState.state;
+      const activeUnit = state.units?.find(u => u.id === state.activeUnitId);
+      if (activeUnit && activeUnit.ownerId === playerId) {
+        // Give player a grace period (minimum 5 seconds) to orient themselves
+        // after reconnection before their turn timer starts
+        const gracePeriodMs = Math.max(5000, RECONNECT_GRACE_PERIOD);
+        setTimeout(() => {
+          startTurnTimer(battleId, playerId, false);
+        }, gracePeriodMs);
+
+        console.log(`[Reconnection] PvP turn timer will restart in ${gracePeriodMs}ms for player ${playerId}`);
+      }
+    }
 
     return {
       state: battleState,
@@ -254,7 +272,7 @@ async function getBattleStateForReconnect(battleId, playerId) {
      FROM battles b
      WHERE b.id = $1
        AND (b.player1_id = $2 OR b.player2_id = $2 OR
-            EXISTS (SELECT 1 FROM battle_players bp WHERE bp.battle_id = b.id AND bp.player_id = $2))`,
+            EXISTS (SELECT 1 FROM battle_players bp WHERE bp.battle_id = b.id AND bp.user_id = $2))`,
     [battleId, playerId]
   );
 
