@@ -14,15 +14,9 @@
 
 import { useState, memo, useCallback } from 'react';
 import { CheckIcon, ImageIcon, ReloadIcon, BookmarkIcon, CopyIcon } from '@radix-ui/react-icons';
+import { CHARACTER_ANIMATIONS } from '@shared/assetPaths.js';
 import { getAssetImageUrl, getAssetSubcategory } from '../lib/assetPathHelper.js';
 import SpritePreview from './SpritePreview.jsx';
-
-/**
- * Standard animation types for character sprites
- */
-// Animation types for character sprites
-// Players use 'hurt', enemies use 'hit' - both should be included for completeness
-const CHARACTER_ANIMATIONS = ['idle', 'walk', 'attack', 'hurt', 'hit', 'death', 'cast', 'victory', 'dead'];
 
 /**
  * Determine the current state of an asset based on its properties and queue status

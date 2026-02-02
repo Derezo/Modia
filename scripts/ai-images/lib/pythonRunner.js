@@ -47,6 +47,8 @@ async function runPythonScript(scriptName, args = [], options = {}) {
   const extendedPath = `${condaBase}/bin:${condaBase}/condabin:${process.env.PATH || ''}`;
 
   // Build environment
+  // Note: MODIA_ROOT is still set for backwards compatibility but Python scripts
+  // should use explicit --output-path instead of relying on this
   const env = {
     ...process.env,
     MODIA_ROOT: modiaRoot,
@@ -55,7 +57,8 @@ async function runPythonScript(scriptName, args = [], options = {}) {
   };
 
   // Build full command for logging
-  const fullArgs = ['--modia-root', modiaRoot, ...args];
+  // Note: --modia-root is no longer passed; Python scripts should use explicit --output-path
+  const fullArgs = [...args];
 
   // Pass --verbose flag to Python script for detailed prompt construction output
   if (verbose) {
@@ -678,7 +681,7 @@ async function removeBackground(inputPath, outputPath, options = {}) {
  * @param {string} frameConfig.animation - Animation name (idle, walk, attack, etc.)
  * @param {number} frameConfig.frameIndex - Frame number (0-7)
  * @param {number} frameConfig.seed - Random seed (same seed for all frames in animation)
- * @param {string} frameConfig.outputPath - Explicit output path for the frame
+ * @param {string} frameConfig.outputPath - REQUIRED: Explicit output path for the frame
  * @param {Object} options - Additional options
  * @param {boolean} options.huggingface - Use HuggingFace API instead
  * @param {boolean} options.verbose - Enable verbose output
@@ -701,13 +704,19 @@ async function generateCharacterFrame(frameConfig, options = {}) {
   } = frameConfig;
   const { huggingface = false, verbose = false, quiet = false } = options;
 
+  // outputPath is required - Python scripts no longer resolve paths internally
+  if (!outputPath) {
+    throw new Error('outputPath is required for character frame generation');
+  }
+
   const args = [
     '--prompt', prompt,
     '--key', key,
     '--character-type', characterType,
     '--animation', animation,
     '--frame', String(frameIndex),
-    '--seed', String(seed ?? 42)
+    '--seed', String(seed ?? 42),
+    '--output-path', outputPath  // Always required
   ];
 
   // Add type-specific arguments
@@ -716,11 +725,6 @@ async function generateCharacterFrame(frameConfig, options = {}) {
   } else if (characterType === 'enemy') {
     if (biome) args.push('--biome', biome);
     if (characterId) args.push('--character-id', characterId);
-  }
-
-  // Pass explicit output path if provided
-  if (outputPath) {
-    args.push('--output-path', outputPath);
   }
 
   if (options.dryRun) {
@@ -749,7 +753,7 @@ async function generateCharacterFrame(frameConfig, options = {}) {
  * @param {string} animationConfig.referenceImage - Path to reference image for style consistency
  * @param {string} animationConfig.loraModel - Optional LoRA model override
  * @param {number} animationConfig.seed - Random seed for reproducibility
- * @param {string} animationConfig.outputPath - Explicit output path for the animation sheet
+ * @param {string} animationConfig.outputPath - REQUIRED: Explicit output path for the animation sheet
  * @param {string[]} animationConfig.frameDescriptions - Per-frame prompt variations for animation motion
  * @param {boolean} animationConfig.autoReference - Auto-generate reference image if missing (default false)
  * @param {Object} options - Additional options
@@ -773,12 +777,18 @@ async function generateAnimation(animationConfig, options = {}) {
   } = animationConfig;
   const { verbose = false, quiet = false } = options;
 
+  // outputPath is required - Python scripts no longer resolve paths internally
+  if (!outputPath) {
+    throw new Error('outputPath is required for animation generation');
+  }
+
   const args = [
     '--character', characterId,
     '--animation', animation,
     '--controlnet-weight', String(controlnetWeight),
     '--ipadapter-weight', String(ipadapterWeight),
-    '--seed', String(seed)
+    '--seed', String(seed),
+    '--output-path', outputPath  // Always required
   ];
 
   if (referenceImage) {
@@ -787,10 +797,6 @@ async function generateAnimation(animationConfig, options = {}) {
 
   if (loraModel) {
     args.push('--lora', loraModel);
-  }
-
-  if (outputPath) {
-    args.push('--output-path', outputPath);
   }
 
   // Pass frame descriptions as JSON for per-frame prompt variation
@@ -823,7 +829,7 @@ async function generateAnimation(animationConfig, options = {}) {
  * @param {string} referenceConfig.biome - Biome name for enemies
  * @param {string} referenceConfig.prompt - Full character description prompt
  * @param {number} referenceConfig.seed - Random seed for reproducibility
- * @param {string} referenceConfig.outputPath - Output path for the reference image (optional)
+ * @param {string} referenceConfig.outputPath - REQUIRED: Output path for the reference image
  * @param {string} referenceConfig.referencePose - Pose template: 'idle' (default), 'tpose', or custom path
  * @param {string} referenceConfig.loraModel - Optional LoRA model override
  * @param {number} referenceConfig.controlnetWeight - ControlNet weight (0.0-1.0, optional)
@@ -849,6 +855,11 @@ async function generateReferenceImage(referenceConfig, options = {}) {
   } = referenceConfig;
   const { verbose = false, quiet = false } = options;
 
+  // outputPath is required - Python scripts no longer resolve paths internally
+  if (!outputPath) {
+    throw new Error('outputPath is required for reference image generation');
+  }
+
   // Use generate_animation.py with --reference-only flag
   // Reference images should preserve background for better IP-Adapter style transfer
   const args = [
@@ -857,13 +868,9 @@ async function generateReferenceImage(referenceConfig, options = {}) {
     '--no-background-removal',
     '--reference-pose', referencePose,
     '--prompt', prompt,
-    '--seed', String(seed)
+    '--seed', String(seed),
+    '--output-path', outputPath  // Always required
   ];
-
-  // Add output path if specified
-  if (outputPath) {
-    args.push('--output-path', outputPath);
-  }
 
   // Add LoRA model if specified
   if (loraModel) {

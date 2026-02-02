@@ -57,6 +57,13 @@ const {
   convertToWebp
 } = require('./lib');
 
+const {
+  getCharacterOutputPath,
+  getCharacterReferencePath,
+  getCharacterDirectoryPath,
+  getAssetPathsModule
+} = require('./lib/assetPathsBridge');
+
 // Configuration
 const PROJECT_ROOT = getProjectRoot();
 const METADATA_DIR = getMetadataDir();
@@ -186,15 +193,16 @@ Examples:
 
 /**
  * Get output path for a character animation sprite sheet
+ * Uses shared/assetPaths.js via the bridge module for canonical path construction
  */
-function getOutputPath(character, animation) {
-  if (character._type === 'player') {
-    // Player: /assets/characters/player/{class}/{class}_{animation}.png
-    return path.join(OUTPUT_BASE_DIR, 'player', character.class, `${character.class}_${animation}.png`);
-  } else {
-    // Enemy: /assets/characters/enemies/{biome}/{id}/{id}_{animation}.png
-    return path.join(OUTPUT_BASE_DIR, 'enemies', character.biome, character.id, `${character.id}_${animation}.png`);
-  }
+async function getOutputPath(character, animation) {
+  const id = character._type === 'player' ? character.class : character.id;
+  return getCharacterOutputPath(id, {
+    type: character._type,
+    biome: character.biome,
+    animation,
+    extension: 'png'  // Generation outputs PNG first (converted to WebP after)
+  });
 }
 
 /**
@@ -253,11 +261,11 @@ function buildFramePrompt(character, animation, frameIndex, animationConfig) {
 /**
  * Check if a character animation needs generation
  */
-function needsGeneration(character, animation, options) {
+async function needsGeneration(character, animation, options) {
   if (options.force) return true;
 
   // Check if the animation sheet already exists
-  const outputPath = getOutputPath(character, animation);
+  const outputPath = await getOutputPath(character, animation);
   if (fileExists(outputPath)) return false;
 
   // Check per-animation generated status if available
@@ -335,13 +343,14 @@ function cleanupTempFrames(tempDir) {
 
 /**
  * Get reference image path for a character
+ * Uses shared/assetPaths.js via the bridge module for canonical path construction
  */
-function getReferenceImagePath(character) {
-  if (character._type === 'player') {
-    return path.join(OUTPUT_BASE_DIR, 'player', character.class, `${character.class}_reference.png`);
-  } else {
-    return path.join(OUTPUT_BASE_DIR, 'enemies', character.biome, character.id, `${character.id}_reference.png`);
-  }
+async function getReferenceImagePath(character) {
+  const id = character._type === 'player' ? character.class : character.id;
+  return getCharacterReferencePath(id, {
+    type: character._type,
+    biome: character.biome
+  });
 }
 
 /**
@@ -349,8 +358,8 @@ function getReferenceImagePath(character) {
  * This generates all frames in a single pass with pose guidance
  */
 async function generateSD15Animation(character, animation, animationConfig, options) {
-  const outputPath = getOutputPath(character, animation);
-  const referenceImagePath = options.reference || getReferenceImagePath(character);
+  const outputPath = await getOutputPath(character, animation);
+  const referenceImagePath = options.reference || await getReferenceImagePath(character);
 
   // Check if reference image exists, generate if needed (when autoReference is enabled or reference is missing)
   const needsReferenceGeneration = !options.reference && !fileExists(referenceImagePath);
@@ -464,7 +473,7 @@ async function generateSD15Animation(character, animation, animationConfig, opti
  * Generate only the reference image for a character (--reference-only mode)
  */
 async function generateReferenceOnly(character, options) {
-  const referenceImagePath = getReferenceImagePath(character);
+  const referenceImagePath = await getReferenceImagePath(character);
 
   // Check if already exists and not forcing
   if (fileExists(referenceImagePath) && !options.force) {
@@ -734,7 +743,7 @@ async function main() {
     const animations = getAnimationsToGenerate(character, options, metadata.animations);
 
     for (const animation of animations) {
-      if (needsGeneration(character, animation, options)) {
+      if (await needsGeneration(character, animation, options)) {
         animationsToGenerate.push({
           character,
           animation,
@@ -744,10 +753,16 @@ async function main() {
     }
   }
 
-  const skippedCount = filteredCharacters.reduce((count, char) => {
+  // Calculate skipped count (need async iteration)
+  let skippedCount = 0;
+  for (const char of filteredCharacters) {
     const anims = getAnimationsToGenerate(char, options, metadata.animations);
-    return count + anims.filter(a => !needsGeneration(char, a, options)).length;
-  }, 0);
+    for (const a of anims) {
+      if (!(await needsGeneration(char, a, options))) {
+        skippedCount++;
+      }
+    }
+  }
 
   if (skippedCount > 0) {
     log(`Skipping ${skippedCount} animations (already exist or generated)`, 'info');
@@ -768,13 +783,13 @@ async function main() {
     console.log(`    Type: ${character._type}`);
     console.log(`    Mode: ${isSD15Mode ? 'SD1.5 (ControlNet + IP-Adapter)' : 'Flux (frame-by-frame)'}`);
     console.log(`    Frames: ${FRAME_COUNT} (${FRAME_SIZE}x${FRAME_SIZE} each)`);
-    console.log(`    Output: ${getOutputPath(character, animation)}`);
+    console.log(`    Output: ${await getOutputPath(character, animation)}`);
 
     if (options.verbose) {
       if (isSD15Mode) {
         const sd15Prompt = buildSD15CharacterPrompt(character, animation, { loraModel: options.lora });
         console.log(`    SD1.5 prompt: ${sd15Prompt}`);
-        console.log(`    Reference: ${options.reference || getReferenceImagePath(character)}`);
+        console.log(`    Reference: ${options.reference || await getReferenceImagePath(character)}`);
       } else {
         const samplePrompt = buildFramePrompt(character, animation, 0, animationConfig);
         console.log(`    Sample prompt (frame 0): ${samplePrompt}`);
@@ -797,10 +812,11 @@ async function main() {
   // Create backup if requested
   if (options.backup) {
     log('Creating backup of existing files...', 'info');
-    // Collect existing output paths
-    const existingPaths = animationsToGenerate
-      .map(item => getOutputPath(item.character, item.animation))
-      .filter(p => fileExists(p));
+    // Collect existing output paths (async)
+    const outputPaths = await Promise.all(
+      animationsToGenerate.map(item => getOutputPath(item.character, item.animation))
+    );
+    const existingPaths = outputPaths.filter(p => fileExists(p));
 
     if (existingPaths.length > 0) {
       const backupResult = createBackup(existingPaths.map(p => ({ _outputPath: p })), { reason: 'character regeneration' });
@@ -835,7 +851,7 @@ async function main() {
 
     try {
       // Ensure output directory exists
-      const outputPath = getOutputPath(character, animation);
+      const outputPath = await getOutputPath(character, animation);
       ensureDirectoryExists(path.dirname(outputPath));
 
       // Determine LoRA model

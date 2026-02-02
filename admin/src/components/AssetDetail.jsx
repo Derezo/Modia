@@ -1,6 +1,22 @@
 /**
- * AssetDetail - Slide-over panel for viewing and editing asset details
- * Uses Radix Dialog for accessibility and smooth animations
+ * @module AssetDetail
+ * @description Slide-over panel for viewing and editing individual asset details.
+ * Uses Radix Dialog for accessibility and smooth animations.
+ *
+ * Key responsibilities:
+ * - Display asset metadata, preview images, and generation status
+ * - Handle character sprite sheet preview with animation selection
+ * - Manage asset regeneration requests and prompt editing
+ * - Support frame description editing for SD1.5 animation generation
+ * - Coordinate with asset path helpers for canonical URL construction
+ *
+ * Character animation support uses shared constants from @shared/assetPaths.js
+ * for consistent animation lists across admin dashboard and generation scripts.
+ *
+ * @see AssetCard.jsx - Grid display component for asset thumbnails
+ * @see SpritePreview.jsx - Animated sprite sheet preview component
+ * @see FrameDescriptionEditor.jsx - SD1.5 frame prompt editing
+ * @see @shared/assetPaths.js - Canonical path functions and CHARACTER_ANIMATIONS
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
@@ -20,17 +36,13 @@ import {
 
 import { api } from '../lib/api';
 import { useToast } from '../contexts/ToastContext';
-import { DEFAULT_SIZES, SIZE_PRESETS } from '@shared/assetPaths.js';
+import { DEFAULT_SIZES, SIZE_PRESETS, getCharacterPath, CHARACTER_ANIMATIONS } from '@shared/assetPaths.js';
 import { getAssetSubcategory, getAssetExtraOptions, getAssetUrls } from '../lib/assetPathHelper.js';
 import SpritePreview from './SpritePreview.jsx';
 import FrameDescriptionEditor from './FrameDescriptionEditor.jsx';
 
-/**
- * Standard animation types for character sprites
- */
-// Animation types for character sprites
-// Players use 'hurt', enemies use 'hit' - both should be included for completeness
-const CHARACTER_ANIMATIONS = ['idle', 'walk', 'attack', 'hurt', 'hit', 'death', 'cast', 'victory', 'dead'];
+// Note: CHARACTER_ANIMATIONS is now imported from @shared/assetPaths.js
+// It includes: idle, walk, attack, hurt, death, dead, cast, victory
 
 /**
  * Weight preset definitions for SD1.5 generation
@@ -1071,19 +1083,17 @@ export default function AssetDetail({
 
   /**
    * Get animation sprite URL for preview
-   * Players: /assets/characters/player/{class}/{class}_{animation}.webp
-   * Enemies: /assets/characters/enemies/{biome}/{id}/{id}_{animation}.webp
+   * Uses shared/assetPaths.js getCharacterPath for canonical path construction
    */
   const getAnimationUrl = useCallback((anim) => {
     if (!characterId) return null;
     const type = asset?._type || 'player';
-    if (type === 'enemy' || type === 'enemies') {
-      // Enemy characters include biome in path (use 'enemies' plural for directory)
-      const biome = asset?._biome || asset?.biome || 'unknown';
-      return `/assets/characters/enemies/${biome}/${characterId}/${characterId}_${anim}.webp`;
-    }
-    // Player characters
-    return `/assets/characters/player/${characterId}/${characterId}_${anim}.webp`;
+    const biome = asset?._biome || asset?.biome;
+    return getCharacterPath(characterId, {
+      type: type === 'enemies' ? 'enemy' : type,
+      biome,
+      animation: anim
+    });
   }, [characterId, asset?._type, asset?._biome, asset?.biome]);
 
   // Get image URLs with fallback support (memoized for performance)

@@ -23,6 +23,32 @@
  */
 
 /**
+ * Animation types for character sprites - single source of truth
+ * @type {string[]}
+ */
+export const CHARACTER_ANIMATIONS = [
+  'idle', 'walk', 'attack', 'hurt', 'death', 'dead', 'cast', 'victory'
+];
+
+/**
+ * Character types for path generation
+ * @type {string[]}
+ */
+export const CHARACTER_TYPES = ['player', 'enemy'];
+
+/**
+ * Enemy biomes for path organization
+ * @type {string[]}
+ */
+export const ENEMY_BIOMES = ['forest', 'cave', 'mountain', 'bridge', 'castle'];
+
+/**
+ * Obstacle categories for path organization
+ * @type {string[]}
+ */
+export const OBSTACLE_CATEGORIES = ['rocks', 'trees'];
+
+/**
  * Available size options for each asset category
  * @type {Object.<string, number[]>}
  */
@@ -32,7 +58,9 @@ export const SIZE_PRESETS = {
   items: [32, 64, 128],
   icons: [16, 24, 32, 48, 64, 128, 256],
   nodes: [48, 64, 96, 128, 256],
-  overlays: [32, 48, 64, 128]
+  overlays: [32, 48, 64, 128],
+  characters: [64],    // Always 64x512 sprite sheets
+  obstacles: [64]      // No size variants
 };
 
 /**
@@ -45,14 +73,16 @@ export const DEFAULT_SIZES = {
   items: 64,
   icons: 32,
   nodes: 96,
-  overlays: 64
+  overlays: 64,
+  characters: 64,
+  obstacles: 64
 };
 
 /**
  * Valid asset categories
  * @type {string[]}
  */
-export const ASSET_CATEGORIES = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays'];
+export const ASSET_CATEGORIES = ['tiles', 'portraits', 'items', 'icons', 'nodes', 'overlays', 'characters', 'obstacles'];
 
 /**
  * Base path for assets (relative to public directory)
@@ -184,6 +214,132 @@ function getOverlayPath(id, options = {}) {
 }
 
 /**
+ * Gets path for character sprite sheets
+ *
+ * Players:  /assets/characters/player/{class}/{class}_{animation}.webp
+ * Enemies:  /assets/characters/enemies/{biome}/{id}/{id}_{animation}.webp
+ *
+ * @param {string} id - The character identifier (class for players, id for enemies)
+ * @param {Object} options - Options
+ * @param {string} [options.type='player'] - Character type ('player' or 'enemy'/'enemies')
+ * @param {string} [options.biome] - Biome (required for enemies)
+ * @param {string} [options.animation='idle'] - Animation type
+ * @param {string} [options.extension='webp'] - File extension
+ * @returns {string} The character sprite path
+ *
+ * @example
+ * // Player sprite
+ * getCharacterPath('warrior', { animation: 'attack' });
+ * // => '/assets/characters/player/warrior/warrior_attack.webp'
+ *
+ * @example
+ * // Enemy sprite
+ * getCharacterPath('goblin_warrior', { type: 'enemy', biome: 'forest', animation: 'idle' });
+ * // => '/assets/characters/enemies/forest/goblin_warrior/goblin_warrior_idle.webp'
+ */
+export function getCharacterPath(id, options = {}) {
+  const { type = 'player', biome, animation = 'idle', extension = 'webp' } = options;
+
+  if (type === 'enemy' || type === 'enemies') {
+    if (!biome) throw new Error('biome required for enemy characters');
+    return `${ASSETS_BASE}/characters/enemies/${biome}/${id}/${id}_${animation}.${extension}`;
+  }
+  return `${ASSETS_BASE}/characters/player/${id}/${id}_${animation}.${extension}`;
+}
+
+/**
+ * Gets all animation paths for a character (for preloading)
+ *
+ * @param {string} id - The character identifier
+ * @param {Object} options - Options
+ * @param {string[]} [options.animations] - Animation types to include (defaults to CHARACTER_ANIMATIONS)
+ * @param {string} [options.type='player'] - Character type
+ * @param {string} [options.biome] - Biome (required for enemies)
+ * @param {string} [options.extension='webp'] - File extension
+ * @returns {Array<{animation: string, path: string}>} Array of animation/path pairs
+ *
+ * @example
+ * getCharacterAnimationPaths('warrior', { animations: ['idle', 'attack'] });
+ * // => [
+ * //   { animation: 'idle', path: '/assets/characters/player/warrior/warrior_idle.webp' },
+ * //   { animation: 'attack', path: '/assets/characters/player/warrior/warrior_attack.webp' }
+ * // ]
+ */
+export function getCharacterAnimationPaths(id, options = {}) {
+  const { animations = CHARACTER_ANIMATIONS, ...pathOptions } = options;
+  return animations.map(animation => ({
+    animation,
+    path: getCharacterPath(id, { ...pathOptions, animation })
+  }));
+}
+
+/**
+ * Gets character directory (for mkdir operations)
+ *
+ * @param {string} id - The character identifier
+ * @param {Object} options - Options
+ * @param {string} [options.type='player'] - Character type
+ * @param {string} [options.biome] - Biome (required for enemies)
+ * @returns {string} The character directory path
+ *
+ * @example
+ * getCharacterDirectory('warrior');
+ * // => '/assets/characters/player/warrior'
+ *
+ * @example
+ * getCharacterDirectory('goblin_warrior', { type: 'enemy', biome: 'forest' });
+ * // => '/assets/characters/enemies/forest/goblin_warrior'
+ */
+export function getCharacterDirectory(id, options = {}) {
+  const { type = 'player', biome } = options;
+  if (type === 'enemy' || type === 'enemies') {
+    if (!biome) throw new Error('biome required for enemy characters');
+    return `${ASSETS_BASE}/characters/enemies/${biome}/${id}`;
+  }
+  return `${ASSETS_BASE}/characters/player/${id}`;
+}
+
+/**
+ * Gets reference image path for SD1.5 generation
+ *
+ * @param {string} id - The character identifier
+ * @param {Object} options - Options
+ * @param {string} [options.type='player'] - Character type
+ * @param {string} [options.biome] - Biome (required for enemies)
+ * @returns {string} The reference image path
+ *
+ * @example
+ * getCharacterReferencePath('warrior');
+ * // => '/assets/characters/player/warrior/warrior_reference.png'
+ */
+export function getCharacterReferencePath(id, options = {}) {
+  const dir = getCharacterDirectory(id, options);
+  return `${dir}/${id}_reference.png`;
+}
+
+/**
+ * Gets path for obstacle sprites
+ * Pattern: /assets/obstacles/{category}/{id}.webp
+ *
+ * @param {string} id - The obstacle identifier (e.g., 'rock_small', 'tree_oak')
+ * @param {string} category - Obstacle category ('rocks' or 'trees')
+ * @param {Object} [options] - Options
+ * @param {string} [options.extension='webp'] - File extension
+ * @returns {string} The obstacle path
+ *
+ * @example
+ * getObstaclePath('rock_small', 'rocks');
+ * // => '/assets/obstacles/rocks/rock_small.webp'
+ */
+export function getObstaclePath(id, category, options = {}) {
+  const { extension = 'webp' } = options;
+  if (!OBSTACLE_CATEGORIES.includes(category)) {
+    throw new Error(`Invalid obstacle category: ${category}. Must be one of: ${OBSTACLE_CATEGORIES.join(', ')}`);
+  }
+  return `${ASSETS_BASE}/obstacles/${category}/${id}.${extension}`;
+}
+
+/**
  * Gets the asset path for any category
  *
  * This is the main function for retrieving asset paths. It generates
@@ -248,6 +404,10 @@ export function getAssetPath(category, id, options = {}) {
       return getTilePath(id, options);
     case 'overlays':
       return getOverlayPath(id, options);
+    case 'characters':
+      return getCharacterPath(id, options);
+    case 'obstacles':
+      return getObstaclePath(id, options.subcategory || 'rocks', options);
     default:
       throw new Error(`Unhandled category: ${category}`);
   }
@@ -297,6 +457,17 @@ export function getOriginalsPath(category, id, options = {}) {
     case 'tiles': {
       const biome = subcategory || 'forest';
       return `${ASSETS_BASE}/sprites/terrain/originals/${biome}/${id}.webp`;
+    }
+
+    case 'characters': {
+      // Characters don't have traditional originals - reference images serve this purpose
+      const dir = getCharacterDirectory(id, options);
+      return `${dir}/${id}_reference.png`;
+    }
+
+    case 'obstacles': {
+      const obsCategory = subcategory || 'rocks';
+      return `${ASSETS_BASE}/obstacles/originals/${obsCategory}/${id}.webp`;
     }
 
     default:
