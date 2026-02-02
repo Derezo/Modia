@@ -806,26 +806,53 @@ export class BattleWebSocketManager {
       this.ui.showTurnIndicator(unitName, unitType);
     }
 
-    // Camera handling - pan to EVERY active unit (queue handles timing)
-    if (position && this.camera && this.grid) {
-      const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
+    // Determine camera panning behavior
+    // In PvP: only pan for local player's units (not opponent player units)
+    // In PvE: pan to all units including enemies (for awareness)
+    const localUserId = this.game.localUserId;
+    const isPvP = this.scene.isPvP;
+    const isLocalUnit = activeUnit?.isLocalPlayerUnit(localUserId);
+    const isNpcEnemy = activeUnit?.type === 'enemy' && !isPvP;
+    const isOpponentPlayerUnit = isPvP && !isLocalUnit && unitType !== 'enemy';
 
+    // Pan camera only if:
+    // 1. It's the local player's unit (always pan in both PvE and PvP)
+    // 2. It's an NPC enemy in PvE (for awareness)
+    // Skip panning for opponent player's units in PvP
+    const shouldPanCamera = isLocalUnit || isNpcEnemy;
+
+    // Show opponent turn notification in PvP
+    if (isOpponentPlayerUnit && isPvP) {
+      parchmentToast.info('Opponent\'s Turn', `${unitName} is acting...`, { duration: 2000 });
+    }
+
+    // Camera handling
+    if (position && this.camera && this.grid) {
       // Clear intent highlights at start of each turn
       if (this.grid) this.grid.clearIntentHighlights();
 
-      // CRITICAL: Set follow target to current active unit BEFORE panning
-      // This prevents camera from drifting back to player after transition ends
-      if (activeUnit) {
-        this.camera.setFollowTarget(activeUnit);
+      if (shouldPanCamera) {
+        const worldPos = this.grid.gridToScreenWorld(position.x, position.y);
+
+        // CRITICAL: Set follow target to current active unit BEFORE panning
+        // This prevents camera from drifting back to player after transition ends
+        if (activeUnit) {
+          this.camera.setFollowTarget(activeUnit);
+        }
+
+        // Pan to active unit and wait for animation to complete
+        console.log(`[Queue] Panning to ${unitName} at (${position.x}, ${position.y})`);
+        await new Promise(resolve => {
+          this.camera.startTurnTransition(worldPos.x, worldPos.y, resolve, 300);
+        });
+      } else {
+        // Don't pan, but still give a brief moment for the notification
+        console.log(`[Queue] Skipping camera pan for opponent ${unitName} in PvP`);
+        await this.scene.waitForAnimation(100);
       }
 
-      // Pan to active unit and wait for animation to complete
-      console.log(`[Queue] Panning to ${unitName} at (${position.x}, ${position.y})`);
-      await new Promise(resolve => {
-        this.camera.startTurnTransition(worldPos.x, worldPos.y, resolve, 300);
-      });
-
-      if (isPlayerTurn) {
+      if (isPlayerTurn && isLocalUnit) {
+        // Local player's turn
         this.inEnemySequence = false;
         this.lastTurnWasEnemy = false;
 
@@ -838,16 +865,16 @@ export class BattleWebSocketManager {
         // Enable player controls after camera pan
         this.scene.updateUI();
       } else {
-        // Enemy turn
+        // Enemy turn OR opponent's turn in PvP
         this.inEnemySequence = true;
         this.lastTurnWasEnemy = true;
 
-        // Show thinking indicator for enemy
+        // Show thinking indicator for enemy/opponent
         if (activeUnit) {
           activeUnit.setThinking(true);
         }
 
-        // Show enemy's parchment card during their turn
+        // Show enemy/opponent's parchment card during their turn
         if (activeUnit && this.ui) {
           this.ui.showTargetInfo(activeUnit);
           this.ui.setTargetSticky(activeUnit);
