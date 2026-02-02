@@ -43,6 +43,7 @@ frontend/public/assets/
 # Temporary generation outputs (AI image/audio generation in progress)
 ai-images-temp/
 ai-audio-temp/
+ai-image-backups/
 *-temp/
 *.tmp
 .claude/
