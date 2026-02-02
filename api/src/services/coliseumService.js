@@ -19,6 +19,7 @@ import {
   forgiveDisconnect
 } from './ratingService.js';
 import { getTier } from '../../../shared/coliseum.js';
+import { checkAndAwardBadges } from './achievementService.js';
 
 // PvP Turn Timer Constants
 const PVP_TURN_TIMEOUT = 60000;          // 60 seconds per turn
@@ -894,21 +895,21 @@ async function getQueuePlayers(queueType, requestingUserId = null) {
   // Get all user IDs in queue
   const userIds = queue.map(p => p.userId);
 
-  // Batch fetch ratings from database
+  // Batch fetch ratings from database (including win_streak for badges)
   const ratingsResult = await query(
-    `SELECT user_id, rating, tier FROM pvp_ratings
+    `SELECT user_id, rating, tier, win_streak FROM pvp_ratings
      WHERE user_id = ANY($1) AND queue_type = $2`,
     [userIds, queueType]
   );
 
   const ratingsMap = new Map();
   for (const row of ratingsResult.rows) {
-    ratingsMap.set(row.user_id, { rating: row.rating, tier: row.tier });
+    ratingsMap.set(row.user_id, { rating: row.rating, tier: row.tier, winStreak: row.win_streak || 0 });
   }
 
   // Build player list with enriched data
   const players = queue.map((player, index) => {
-    const ratingData = ratingsMap.get(player.userId) || { rating: 1000, tier: null };
+    const ratingData = ratingsMap.get(player.userId) || { rating: 1000, tier: null, winStreak: 0 };
     const tierInfo = getTier(ratingData.rating);
     const waitTimeSeconds = Math.floor((now - player.queuedAt) / 1000);
 
@@ -922,6 +923,7 @@ async function getQueuePlayers(queueType, requestingUserId = null) {
       tierIcon: tierInfo.icon,
       partyLevel: player.partyLevel,
       waitTime: waitTimeSeconds,
+      winStreak: ratingData.winStreak,
       isCurrentUser: requestingUserId !== null && player.userId === requestingUserId
     };
   });
@@ -951,23 +953,23 @@ async function broadcastQueuePlayersUpdate(queueType) {
   const ws = await getWebsocket();
   const now = Date.now();
 
-  // Get ratings for all players in batch
+  // Get ratings for all players in batch (including win_streak for badges)
   const userIds = queue.map(p => p.userId);
   const ratingsResult = await query(
-    `SELECT user_id, rating, tier FROM pvp_ratings
+    `SELECT user_id, rating, tier, win_streak FROM pvp_ratings
      WHERE user_id = ANY($1) AND queue_type = $2`,
     [userIds, queueType]
   );
 
   const ratingsMap = new Map();
   for (const row of ratingsResult.rows) {
-    ratingsMap.set(row.user_id, { rating: row.rating, tier: row.tier });
+    ratingsMap.set(row.user_id, { rating: row.rating, tier: row.tier, winStreak: row.win_streak || 0 });
   }
 
   // Send personalized update to each player in the queue
   for (const player of queue) {
     const players = queue.map((p, index) => {
-      const ratingData = ratingsMap.get(p.userId) || { rating: 1000, tier: null };
+      const ratingData = ratingsMap.get(p.userId) || { rating: 1000, tier: null, winStreak: 0 };
       const tierInfo = getTier(ratingData.rating);
       const waitTimeSeconds = Math.floor((now - p.queuedAt) / 1000);
 
@@ -981,6 +983,7 @@ async function broadcastQueuePlayersUpdate(queueType) {
         tierIcon: tierInfo.icon,
         partyLevel: p.partyLevel,
         waitTime: waitTimeSeconds,
+        winStreak: ratingData.winStreak,
         isCurrentUser: p.userId === player.userId
       };
     });
@@ -1569,6 +1572,26 @@ async function completeMatch(battleId, winnerId, loserId, reason = 'victory', ap
         }
       })
       .catch(err => console.warn('[Quest] Failed to get characterId for coliseum:', err.message));
+
+    // Check and award achievement badges (fire-and-forget pattern)
+    const battleState = matchResult.rows[0]?.battle_state;
+    checkAndAwardBadges(winnerId, {
+      winnerRating: winnerCurrentRating,
+      loserRating: loserCurrentRating,
+      winnerPPR,
+      loserPPR,
+      battleState,
+      winnerNewRating: winnerCurrentRating + ratingChange.winnerGain
+    }).then(newBadges => {
+      if (newBadges.length > 0) {
+        console.log(`[Coliseum] Awarded badges to ${winnerId}:`, newBadges.map(b => b.key).join(', '));
+        // Notify winner of new badges
+        ws.sendToUser(winnerId, {
+          type: 'coliseum:badges_earned',
+          payload: { badges: newBadges }
+        });
+      }
+    }).catch(err => console.warn('[Coliseum] Badge check failed:', err.message));
 
     console.log(`[Coliseum] Match completed: Battle ${battleId}, Winner: ${winnerId} (+${ratingChange.winnerGain}), Loser: ${loserId} (-${ratingChange.loserLoss}), Reason: ${reason}`);
 

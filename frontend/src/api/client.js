@@ -1032,6 +1032,23 @@ export class ApiClient {
     return this.get('/coliseum/stats');
   }
 
+  /**
+   * Get achievements for a specific user
+   * @param {number} userId - User ID
+   * @returns {Promise<{success: boolean, achievements: Array}>}
+   */
+  getColiseumAchievements(userId) {
+    return this.get(`/coliseum/achievements/${userId}`);
+  }
+
+  /**
+   * Get current user's achievements
+   * @returns {Promise<{success: boolean, achievements: Array}>}
+   */
+  getMyColiseumAchievements() {
+    return this.get('/coliseum/my-achievements');
+  }
+
   // ============================================
   // RELIC METHODS
   // ============================================

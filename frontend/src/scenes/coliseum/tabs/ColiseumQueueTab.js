@@ -7,7 +7,7 @@ import {
   PARCHMENT_TYPOGRAPHY,
   PARCHMENT_SPACING
 } from '../../../ui/parchment/index.js';
-import { getTier, getTierIcon } from '@shared/coliseum.js';
+import { getTier, getTierIcon, getStreakBadge } from '@shared/coliseum.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -35,6 +35,41 @@ function renderCompactTierBadge(player) {
   return `<span class="coliseum-tier-badge-compact" style="color: ${player.tierColor};">
     ${icon}
   </span>`;
+}
+
+/**
+ * Render streak badge for a player
+ * @param {number} winStreak - Current win streak
+ * @returns {string} HTML string
+ */
+function renderStreakBadge(winStreak) {
+  const streakBadge = getStreakBadge(winStreak);
+  if (!streakBadge) {
+    return '';
+  }
+
+  return `<span class="coliseum-streak-badge coliseum-badge-streak" title="${streakBadge.name}: ${streakBadge.description}">
+    ${streakBadge.icon}
+  </span>`;
+}
+
+/**
+ * Render achievement badges for opponent on match found screen
+ * @param {Array} badges - Array of badge objects with key, name, icon, type
+ * @returns {string} HTML string for badges
+ */
+function renderOpponentBadges(badges) {
+  if (!badges || badges.length === 0) {
+    return '';
+  }
+
+  return `<div class="coliseum-opponent-badges">
+    ${badges.map(badge => `
+      <span class="coliseum-achievement-badge coliseum-badge-${badge.type}" title="${badge.name}">
+        ${badge.icon}
+      </span>
+    `).join('')}
+  </div>`;
 }
 
 /**
@@ -180,6 +215,8 @@ function renderQueuePlayersList(players) {
 function renderQueuePlayerRow(player) {
   const isCurrentUser = player.isCurrentUser;
   const waitTimeStr = formatWaitTimeDisplay(player.waitTime);
+  // Get streak badge based on current win streak (if available from server)
+  const streakBadgeHtml = player.winStreak ? renderStreakBadge(player.winStreak) : '';
 
   return `
     <div class="coliseum-queue-player-row ${isCurrentUser ? 'current-user' : ''}">
@@ -189,6 +226,7 @@ function renderQueuePlayerRow(player) {
           <div class="coliseum-queue-player-name-row">
             ${renderCompactTierBadge(player)}
             <span class="coliseum-queue-player-name">${player.username}</span>
+            ${streakBadgeHtml}
             ${isCurrentUser ? '<span class="queue-player-you-badge">YOU</span>' : ''}
           </div>
           <div class="coliseum-queue-player-stats">
@@ -223,6 +261,7 @@ function capitalizeFirst(str) {
 function renderMatchFound(context) {
   const { currentMatch, isReady, opponentReady, playerRating } = context;
   const isStarting = isReady && opponentReady;
+  const opponentBadges = currentMatch.opponent?.badges || [];
 
   return `
     <div class="coliseum-match-found-panel ${isStarting ? 'coliseum-match-starting' : ''}">
@@ -234,6 +273,7 @@ function renderMatchFound(context) {
         <div class="coliseum-opponent-label">Your Opponent</div>
         <div class="coliseum-opponent-name">${currentMatch.opponent?.username || 'Unknown'}</div>
         <div class="coliseum-opponent-level">Avg Level: ${currentMatch.opponent?.partyLevel || '?'}</div>
+        ${opponentBadges.length > 0 ? renderOpponentBadges(opponentBadges) : ''}
         ${playerRating ? `
           <div class="coliseum-opponent-tier" style="margin-top: 8px;">
             Your Tier: ${renderTierBadge(playerRating)}

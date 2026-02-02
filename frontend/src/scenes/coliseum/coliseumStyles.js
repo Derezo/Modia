@@ -1192,5 +1192,115 @@ export function getColiseumStyles() {
       color: ${P.text.muted};
       white-space: nowrap;
     }
+
+    /* ============================================ */
+    /* ACHIEVEMENT BADGE STYLES                    */
+    /* ============================================ */
+
+    /* Achievement badges container (in leaderboard) */
+    .coliseum-achievement-badges {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: ${PARCHMENT_SPACING.sm};
+    }
+
+    /* Individual achievement badge */
+    .coliseum-achievement-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      width: 22px;
+      height: 22px;
+      border-radius: ${PARCHMENT_RADIUS.sm};
+      background: rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .coliseum-achievement-badge:hover {
+      transform: scale(1.15);
+      z-index: 1;
+    }
+
+    /* Badge type styles */
+    .coliseum-badge-streak {
+      background: linear-gradient(135deg, rgba(255, 100, 0, 0.3), rgba(255, 50, 0, 0.2));
+      box-shadow: 0 0 6px rgba(255, 100, 0, 0.4);
+      animation: streak-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes streak-pulse {
+      0%, 100% { box-shadow: 0 0 6px rgba(255, 100, 0, 0.4); }
+      50% { box-shadow: 0 0 12px rgba(255, 100, 0, 0.7); }
+    }
+
+    .coliseum-badge-milestone {
+      background: linear-gradient(135deg, rgba(107, 45, 61, 0.3), rgba(139, 115, 85, 0.2));
+      box-shadow: 0 0 4px rgba(107, 45, 61, 0.3);
+    }
+
+    .coliseum-badge-skill {
+      background: linear-gradient(135deg, rgba(74, 107, 138, 0.3), rgba(90, 128, 168, 0.2));
+      box-shadow: 0 0 4px rgba(74, 107, 138, 0.3);
+    }
+
+    /* Streak badge in queue list */
+    .coliseum-streak-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      margin-left: ${PARCHMENT_SPACING.xs};
+    }
+
+    /* Opponent badges on match found screen */
+    .coliseum-opponent-badges {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-top: ${PARCHMENT_SPACING.md};
+      padding-top: ${PARCHMENT_SPACING.sm};
+      border-top: 1px solid ${P.border};
+    }
+
+    .coliseum-opponent-badges .coliseum-achievement-badge {
+      width: 28px;
+      height: 28px;
+      font-size: 18px;
+    }
+
+    /* Player name cell in leaderboard (flex container for name + badges) */
+    .coliseum-player-name {
+      display: flex;
+      align-items: center;
+      color: ${P.state.info};
+      font-weight: 500;
+    }
+
+    .coliseum-player-name-text {
+      color: ${P.state.info};
+      font-weight: 500;
+    }
+
+    /* Responsive badge sizing for mobile */
+    @media (max-width: 768px) {
+      .coliseum-achievement-badges {
+        gap: 2px;
+        margin-left: ${PARCHMENT_SPACING.xs};
+      }
+
+      .coliseum-achievement-badge {
+        width: 18px;
+        height: 18px;
+        font-size: 12px;
+      }
+
+      .coliseum-opponent-badges .coliseum-achievement-badge {
+        width: 24px;
+        height: 24px;
+        font-size: 14px;
+      }
+    }
   `;
 }

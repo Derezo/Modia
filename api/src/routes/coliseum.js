@@ -6,7 +6,8 @@ import express from 'express';
 import { query } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { createLimiter } from '../middleware/rateLimiterFactory.js';
-import { getTier } from '../../../shared/coliseum.js';
+import { getTier, getUserBadges, getPriorityBadges } from '../../../shared/coliseum.js';
+import { getUserAchievements, getBatchUserAchievements } from '../services/achievementService.js';
 
 const router = express.Router();
 
@@ -108,14 +109,28 @@ router.get('/leaderboard', async (req, res) => {
       [queue, parsedLimit]
     );
 
-    // Add tier info to each entry (in case tier column is null for legacy data)
+    // Get achievements for all users in leaderboard (batch query)
+    const userIds = leaderboardResult.rows.map(r => r.userId);
+    const achievementsMap = await getBatchUserAchievements(userIds);
+
+    // Add tier info and badges to each entry
     leaderboardResult.rows = leaderboardResult.rows.map(entry => {
       const tierInfo = getTier(entry.rating);
+      const userAchievements = achievementsMap.get(entry.userId) || [];
+      const allBadges = getUserBadges(userAchievements, entry.winStreak);
+      const priorityBadges = getPriorityBadges(allBadges, 3);
+
       return {
         ...entry,
         tier: entry.tier || tierInfo.name,
         tierColor: tierInfo.color,
-        tierIcon: tierInfo.icon
+        tierIcon: tierInfo.icon,
+        badges: priorityBadges.map(b => ({
+          key: b.key,
+          name: b.name,
+          icon: b.icon,
+          type: b.type
+        }))
       };
     });
 
@@ -306,6 +321,91 @@ router.post('/surrender', async (req, res) => {
   } catch (err) {
     console.error('Error processing surrender:', err);
     res.status(500).json({ error: 'Failed to process surrender' });
+  }
+});
+
+/**
+ * GET /api/coliseum/achievements/:userId
+ * Get achievements for a specific user
+ */
+router.get('/achievements/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const parsedUserId = parseInt(userId, 10);
+
+    if (isNaN(parsedUserId)) {
+      return res.status(400).json({ error: 'Invalid user ID' });
+    }
+
+    // Get user's achievements
+    const achievements = await getUserAchievements(parsedUserId);
+
+    // Get user's win streak for dynamic badges
+    const ratingResult = await query(
+      `SELECT win_streak FROM pvp_ratings
+       WHERE user_id = $1 AND queue_type = '1v1'`,
+      [parsedUserId]
+    );
+    const winStreak = ratingResult.rows[0]?.win_streak || 0;
+
+    // Build full badge list with definitions
+    const badges = getUserBadges(achievements, winStreak);
+
+    res.json({
+      success: true,
+      achievements: badges.map(badge => ({
+        key: badge.key,
+        name: badge.name,
+        icon: badge.icon,
+        description: badge.description,
+        type: badge.type,
+        earnedAt: badge.earnedAt,
+        isDynamic: badge.isDynamic || false
+      }))
+    });
+  } catch (err) {
+    console.error('Error fetching achievements:', err);
+    res.status(500).json({ error: 'Failed to fetch achievements' });
+  }
+});
+
+/**
+ * GET /api/coliseum/my-achievements
+ * Get achievements for the current user
+ */
+router.get('/my-achievements', async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get user's achievements
+    const achievements = await getUserAchievements(userId);
+
+    // Get user's win streak for dynamic badges
+    const ratingResult = await query(
+      `SELECT win_streak FROM pvp_ratings
+       WHERE user_id = $1 AND queue_type = '1v1'`,
+      [userId]
+    );
+    const winStreak = ratingResult.rows[0]?.win_streak || 0;
+
+    // Build full badge list with definitions
+    const badges = getUserBadges(achievements, winStreak);
+
+    res.json({
+      success: true,
+      achievements: badges.map(badge => ({
+        key: badge.key,
+        name: badge.name,
+        icon: badge.icon,
+        description: badge.description,
+        type: badge.type,
+        earnedAt: badge.earnedAt,
+        isDynamic: badge.isDynamic || false
+      }))
+    });
+  } catch (err) {
+    console.error('Error fetching achievements:', err);
+    res.status(500).json({ error: 'Failed to fetch achievements' });
   }
 });
 
