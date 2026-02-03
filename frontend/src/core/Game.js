@@ -15,6 +15,8 @@ import { NotificationCenter } from '../components/NotificationCenter.js';
 import { PartyStatusBar } from '../components/PartyStatusBar.js';
 import { PartyInviteModal } from '../components/PartyInviteModal.js';
 import { setGameInstance as setDebugGameInstance, debugLog, isDebugEnabled } from '../utils/debugLogger.js';
+import { ConnectionIndicatorDOM } from '../ui/ConnectionIndicatorDOM.js';
+import { connectionQuality } from '../api/connectionQuality.js';
 
 // Default settings structure
 // IMPORTANT: This structure is mirrored in:
@@ -147,6 +149,9 @@ export class Game {
     // Party system
     this.partyStatusBar = null;
     this.partyInviteModal = null;
+
+    // Connection indicator (DOM-based, global)
+    this.connectionIndicator = null;
 
     // Bound handler references for cleanup (window-level listeners)
     this._boundResize = null;
@@ -910,6 +915,14 @@ export class Game {
     // Create party components
     this.partyStatusBar = new PartyStatusBar(this);
 
+    // Create connection indicator (DOM-based, global)
+    // Position in top-right, show latency in tooltip, hide when healthy to reduce visual noise
+    this.connectionIndicator = new ConnectionIndicatorDOM(connectionQuality, {
+      showLatency: true,
+      hideWhenHealthy: true,
+      position: 'top-right'
+    });
+
     // Show the profile dropdown (replaces old notification bell + menu)
     this.profileDropdown.show();
 
@@ -980,11 +993,13 @@ export class Game {
     this.notificationCenter?.destroy();
     this.partyStatusBar?.destroy();
     this.partyInviteModal?.destroy();
+    this.connectionIndicator?.destroy();
 
     this.profileDropdown = null;
     this.notificationCenter = null;
     this.partyStatusBar = null;
     this.partyInviteModal = null;
+    this.connectionIndicator = null;
   }
 
   /**

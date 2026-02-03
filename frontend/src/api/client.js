@@ -252,8 +252,8 @@ export class ApiClient {
   }
 
   submitBattleAction(data) {
-    const { battleId, actionType, unitId, targetTile, skillId } = data;
-    return this.post('/battle/action', { battleId, actionType, unitId, targetTile, skillId });
+    const { battleId, actionType, unitId, targetTile, skillId, actionSequence } = data;
+    return this.post('/battle/action', { battleId, actionType, unitId, targetTile, skillId, actionSequence });
   }
 
   getBattleRewards(battleId) {

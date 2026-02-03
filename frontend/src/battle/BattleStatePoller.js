@@ -8,6 +8,11 @@ import { debugLog } from '../utils/debugLogger.js';
  * and server state. When drift is detected, triggers a callback to
  * apply the authoritative server state.
  *
+ * Supports two modes:
+ * - Full sync mode: Compares all state fields and triggers full resync on drift
+ * - Critical-only mode: Only checks critical fields (activeUnitId, turnCount, status)
+ *   and notifies via callback without applying full sync (useful during animations)
+ *
  * Uses ETag-based caching to minimize bandwidth when state is unchanged.
  *
  * @see BattleWebSocketManager.js - Primary real-time sync mechanism
@@ -17,19 +22,24 @@ export class BattleStatePoller {
   /**
    * Create a new BattleStatePoller
    * @param {number} battleId - The battle ID to poll
-   * @param {function} onDriftDetected - Callback when state drift is detected
+   * @param {function} onDriftDetected - Callback when state drift is detected (full sync mode)
    * @param {Object} game - Game instance for API access
+   * @param {function} [onCriticalDrift] - Callback when critical drift is detected (critical-only mode)
    */
-  constructor(battleId, onDriftDetected, game) {
+  constructor(battleId, onDriftDetected, game, onCriticalDrift = null) {
     this.battleId = battleId;
     this.onDriftDetected = onDriftDetected;
+    this.onCriticalDrift = onCriticalDrift;
     this.game = game;
     this.pollIntervalMs = 10000; // Poll every 10 seconds
+    this.criticalPollIntervalMs = 3000; // Poll every 3 seconds in critical mode
     this.interval = null;
     this.lastETag = null;
     this.lastPollTime = null;
     this.paused = false;
+    this.criticalOnly = false; // When true, only check critical fields
     this.localState = null; // For comparison
+    this.pendingFullSync = false; // Track if full sync needed after critical mode ends
   }
 
   /**
@@ -71,6 +81,49 @@ export class BattleStatePoller {
   resume() {
     this.paused = false;
     debugLog('battle.stateSync', 'BattleStatePoller resumed');
+
+    // If we had drift during critical mode, do a full sync now
+    if (this.pendingFullSync) {
+      this.pendingFullSync = false;
+      debugLog('battle.stateSync', 'Triggering deferred full sync after resume');
+      this.poll(); // Immediate poll to sync state
+    }
+  }
+
+  /**
+   * Enable or disable critical-only mode
+   * In critical mode, only checks activeUnitId, turnCount, and status
+   * and notifies via onCriticalDrift instead of triggering full sync.
+   * This allows detecting important state changes during animations
+   * without disrupting ongoing visual feedback.
+   * @param {boolean} enabled - Whether to enable critical-only mode
+   */
+  setCriticalMode(enabled) {
+    const wasEnabled = this.criticalOnly;
+    this.criticalOnly = enabled;
+
+    if (enabled && !wasEnabled) {
+      // Switching to critical mode - restart interval with faster polling
+      if (this.interval) {
+        clearInterval(this.interval);
+        this.interval = setInterval(() => this.poll(), this.criticalPollIntervalMs);
+        debugLog('battle.stateSync', 'BattleStatePoller switched to critical mode (faster polling)');
+      }
+    } else if (!enabled && wasEnabled) {
+      // Switching back to normal mode - restore normal interval
+      if (this.interval) {
+        clearInterval(this.interval);
+        this.interval = setInterval(() => this.poll(), this.pollIntervalMs);
+        debugLog('battle.stateSync', 'BattleStatePoller switched to normal mode');
+      }
+
+      // If we accumulated drift during critical mode, sync now
+      if (this.pendingFullSync) {
+        this.pendingFullSync = false;
+        debugLog('battle.stateSync', 'Triggering deferred full sync after critical mode');
+        this.poll();
+      }
+    }
   }
 
   /**
@@ -90,6 +143,7 @@ export class BattleStatePoller {
   /**
    * Poll the server for current battle state
    * Compares with local state and triggers callback if drift detected
+   * In critical-only mode, only checks critical fields and notifies via onCriticalDrift
    */
   async poll() {
     if (this.paused) {
@@ -109,7 +163,8 @@ export class BattleStatePoller {
       };
 
       // Add If-None-Match header for ETag caching
-      if (this.lastETag) {
+      // Skip ETag in critical mode since we need fresh data
+      if (this.lastETag && !this.criticalOnly) {
         headers['If-None-Match'] = this.lastETag;
       }
 
@@ -141,7 +196,21 @@ export class BattleStatePoller {
       const serverState = await response.json();
       debugLog('battle.stateSync', 'Poll received server state', serverState);
 
-      // Check for drift
+      // In critical-only mode, only check critical fields
+      if (this.criticalOnly) {
+        const criticalDrift = this.hasCriticalDrift(serverState);
+        if (criticalDrift) {
+          debugLog('battle.stateSync', 'Critical drift detected during animation', criticalDrift);
+          if (this.onCriticalDrift) {
+            this.onCriticalDrift(criticalDrift.type, criticalDrift.serverValue, serverState);
+          }
+          // Mark that we need a full sync when critical mode ends
+          this.pendingFullSync = true;
+        }
+        return;
+      }
+
+      // Full drift check in normal mode
       if (this.hasStateDrift(serverState)) {
         debugLog('battle.stateSync', 'Drift detected - triggering callback');
         if (this.onDriftDetected) {
@@ -153,6 +222,46 @@ export class BattleStatePoller {
     } catch (error) {
       debugLog('battle.stateSync', 'Poll error:', error.message);
     }
+  }
+
+  /**
+   * Check only critical fields for drift (used during animations)
+   * @param {Object} serverState - State from server
+   * @returns {Object|null} Drift info with type and serverValue, or null if no critical drift
+   */
+  hasCriticalDrift(serverState) {
+    if (!this.localState) {
+      return null;
+    }
+
+    // Check active unit changed (turn changed on server)
+    if (serverState.activeUnitId !== this.localState.activeUnitId) {
+      return {
+        type: 'turn_changed',
+        serverValue: serverState.activeUnitId,
+        localValue: this.localState.activeUnitId
+      };
+    }
+
+    // Check turn count changed
+    if (serverState.turnCount !== this.localState.turnCount) {
+      return {
+        type: 'turn_count_changed',
+        serverValue: serverState.turnCount,
+        localValue: this.localState.turnCount
+      };
+    }
+
+    // Check battle status changed (battle ended)
+    if (serverState.status !== this.localState.status) {
+      return {
+        type: 'status_changed',
+        serverValue: serverState.status,
+        localValue: this.localState.status
+      };
+    }
+
+    return null;
   }
 
   /**

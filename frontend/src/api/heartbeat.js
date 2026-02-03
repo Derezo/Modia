@@ -45,6 +45,18 @@ export class HeartbeatManager {
     // ID correlation state - eliminates race conditions with late/stale ACKs
     this.heartbeatId = 0;           // Monotonically increasing ID
     this.pendingHeartbeatId = null; // ID of heartbeat currently awaiting ACK
+
+    // Connection ID for server-side connection tracking
+    this.connectionId = null;
+  }
+
+  /**
+   * Set the connection ID for this heartbeat manager.
+   * Called by WebSocketManager when a new connection is established.
+   * @param {string} connectionId - The unique connection identifier
+   */
+  setConnectionId(connectionId) {
+    this.connectionId = connectionId;
   }
 
   /**
@@ -87,6 +99,8 @@ export class HeartbeatManager {
 
     this.pendingTimestamp = null;
     this.pendingHeartbeatId = null;
+    // Note: connectionId is NOT cleared here - it's managed by WebSocketManager
+    // and will be updated via setConnectionId() on new connection attempts
   }
 
   /**
@@ -114,12 +128,20 @@ export class HeartbeatManager {
     // Record when we sent this heartbeat
     this.pendingTimestamp = Date.now();
 
-    // Send heartbeat message with ID for correlation
-    const sendSucceeded = this.send({
+    // Build heartbeat message with ID for correlation
+    const heartbeatMessage = {
       type: 'heartbeat',
       timestamp: this.pendingTimestamp,
       id: currentId
-    });
+    };
+
+    // Include connectionId if available (for server-side connection tracking)
+    if (this.connectionId) {
+      heartbeatMessage.connectionId = this.connectionId;
+    }
+
+    // Send heartbeat message
+    const sendSucceeded = this.send(heartbeatMessage);
 
     // Only start timeout if send actually succeeded
     if (sendSucceeded === false) {

@@ -13,6 +13,8 @@ export class GameWebSocket {
     this.reconnectDelay = 1000;
     this.token = null;
     this.connected = false;
+    this.reconnecting = false;
+    this.connectionId = null;
 
     // Initialize reliability manager
     this.reliabilityManager = new MessageReliabilityManager((msg) => {
@@ -35,16 +37,36 @@ export class GameWebSocket {
     );
   }
 
+  /**
+   * Generate a unique connection ID for this connection attempt.
+   * Uses crypto.randomUUID() when available, falls back to timestamp + random.
+   * @returns {string} A unique connection identifier
+   */
+  generateConnectionId() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Fallback for older browsers
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  }
+
   connect(token) {
     this.token = token;
+
+    // Generate a new connectionId for this connection attempt
+    this.connectionId = this.generateConnectionId();
+
+    // Pass connectionId to heartbeat manager
+    this.heartbeatManager.setConnectionId(this.connectionId);
 
     try {
       this.ws = new WebSocket(this.url);
 
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connected with connectionId:', this.connectionId);
         this.reconnectAttempts = 0;
         this.connected = true;
+        this.reconnecting = false;
 
         // Update connection quality state
         connectionQuality.onConnected();
@@ -52,8 +74,8 @@ export class GameWebSocket {
         // Start heartbeat monitoring
         this.heartbeatManager.start();
 
-        // Authenticate
-        this.send('auth', { token: this.token });
+        // Authenticate with connectionId
+        this.send('auth', { token: this.token, connectionId: this.connectionId });
       };
 
       this.ws.onmessage = (event) => {
@@ -110,11 +132,19 @@ export class GameWebSocket {
   }
 
   attemptReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached');
+    // Prevent multiple concurrent reconnection attempts
+    if (this.reconnecting) {
+      console.log('Reconnection already in progress, skipping');
       return;
     }
 
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.error('Max reconnection attempts reached');
+      this.reconnecting = false;
+      return;
+    }
+
+    this.reconnecting = true;
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
 
@@ -125,7 +155,16 @@ export class GameWebSocket {
 
     setTimeout(() => {
       if (this.token) {
-        this.connect(this.token);
+        try {
+          this.connect(this.token);
+        } catch (err) {
+          // Ensure reconnecting flag is cleared even if connect() throws synchronously
+          console.error('Reconnection connect() failed:', err);
+          this.reconnecting = false;
+        }
+      } else {
+        // No token, can't reconnect - clear the flag
+        this.reconnecting = false;
       }
     }, delay);
   }
@@ -202,7 +241,9 @@ export class GameWebSocket {
       this.ws = null;
     }
     this.connected = false;
+    this.reconnecting = false;
     this.token = null;
+    this.connectionId = null;
   }
 
   /**
@@ -236,6 +277,14 @@ export class GameWebSocket {
    */
   getReliabilityManager() {
     return this.reliabilityManager;
+  }
+
+  /**
+   * Get the current connection ID.
+   * @returns {string|null} The current connection identifier, or null if not connected
+   */
+  getConnectionId() {
+    return this.connectionId;
   }
 
   // Convenience methods

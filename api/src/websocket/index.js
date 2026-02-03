@@ -38,6 +38,28 @@ import {
   broadcastPresenceChange
 } from './roomManager.js';
 
+// Import metrics and logging
+import {
+  wsLog,
+  LogLevel,
+  incrementHeartbeatsReceived,
+  incrementHeartbeatAcksSent,
+  incrementHeartbeatTimeouts,
+  incrementConnectionsOpened,
+  incrementConnectionsClosed,
+  incrementAuthSuccesses,
+  incrementAuthFailures,
+  incrementAuthTimeouts,
+  incrementSessionsReplaced,
+  incrementZombiesCleaned,
+  incrementStaleConnectionsRejected,
+  incrementRateLimitHits,
+  incrementMessageErrors,
+  incrementUnknownMessageTypes,
+  startMetricsReporting,
+  stopMetricsReporting
+} from './wsMetrics.js';
+
 // Import message handlers
 import {
   handleChatMessage,
@@ -83,7 +105,15 @@ import {
 // ============================================================
 
 const lastHeartbeat = new Map(); // userId -> timestamp
-const HEARTBEAT_TIMEOUT_MS = 45000; // Close zombie connections after 45s
+const HEARTBEAT_TIMEOUT_MS = 30000; // Close zombie connections after 30s (aligned with client 10-25s detection)
+
+// ============================================================
+// Connection ID Tracking (for reconnection validation)
+// ============================================================
+
+// Maps userId -> current valid connectionId
+// Used to detect and reject messages from stale connections
+const activeConnectionIds = new Map();
 
 // ============================================================
 // WebSocket Server Setup
@@ -98,15 +128,33 @@ function setupWebSocket(server) {
   // Authentication timeout duration (10 seconds)
   const AUTH_TIMEOUT_MS = 10000;
 
+  // Start metrics reporting
+  // Note: interval is managed internally by wsMetrics, stopMetricsReporting() called on close
+  startMetricsReporting(
+    () => connections.size,
+    () => rooms.size
+  );
+
   wss.on('connection', (ws) => {
     let userId = null;
     let username = null;
+    let connectionId = null; // Track this connection's unique ID
 
     ws.isAlive = true;
+    incrementConnectionsOpened();
+
+    wsLog(LogLevel.DEBUG, 'connection_opened', {
+      clientCount: wss.clients.size
+    });
 
     // SECURITY: Set authentication timeout
     const authTimeout = setTimeout(() => {
       if (!userId) {
+        incrementAuthTimeouts();
+        wsLog(LogLevel.WARN, 'auth_timeout', {
+          reason: 'No authentication within timeout period',
+          timeoutMs: AUTH_TIMEOUT_MS
+        });
         ws.send(JSON.stringify({
           type: 'auth_timeout',
           payload: { message: 'Authentication required within 10 seconds' }
@@ -124,10 +172,42 @@ function setupWebSocket(server) {
         const message = JSON.parse(data);
         const { type, payload } = message;
 
+        // Connection ID validation (skip for auth messages)
+        // Reject messages from stale connections that haven't been fully closed yet
+        if (userId && type !== 'auth' && connectionId) {
+          const activeConnId = activeConnectionIds.get(userId);
+          if (activeConnId && activeConnId !== connectionId) {
+            incrementStaleConnectionsRejected();
+            wsLog(LogLevel.WARN, 'stale_connection_rejected', {
+              userId,
+              staleConnectionId: connectionId,
+              activeConnectionId: activeConnId,
+              messageType: type
+            });
+            ws.send(JSON.stringify({
+              type: 'error',
+              payload: {
+                message: 'Connection superseded by newer session',
+                code: 'STALE_CONNECTION'
+              }
+            }));
+            // Close this stale connection
+            ws.close(1000, 'Connection superseded');
+            return;
+          }
+        }
+
         // Rate limit check (skip for auth)
         if (userId && type !== 'auth') {
           const rateCheck = await checkRateLimit(userId, type);
           if (rateCheck.limited) {
+            incrementRateLimitHits();
+            wsLog(LogLevel.WARN, 'rate_limited', {
+              userId,
+              messageType: type,
+              category: rateCheck.category,
+              retryAfter: rateCheck.retryAfter
+            });
             ws.send(JSON.stringify({
               type: 'rate_limited',
               payload: {
@@ -142,9 +222,10 @@ function setupWebSocket(server) {
 
         switch (type) {
           case 'auth':
-            handleAuth(ws, payload, authTimeout, (id, name) => {
+            handleAuth(ws, payload, authTimeout, (id, name, connId) => {
               userId = id;
               username = name;
+              connectionId = connId;
             });
             break;
 
@@ -297,13 +378,22 @@ function setupWebSocket(server) {
             break;
 
           default:
+            incrementUnknownMessageTypes();
+            wsLog(LogLevel.WARN, 'unknown_message_type', {
+              userId,
+              messageType: type
+            });
             ws.send(JSON.stringify({
               type: 'error',
               payload: { message: 'Unknown message type' }
             }));
         }
       } catch (err) {
-        console.error('WebSocket message error:', err);
+        incrementMessageErrors();
+        wsLog(LogLevel.ERROR, 'message_error', {
+          userId,
+          error: err.message
+        });
         ws.send(JSON.stringify({
           type: 'error',
           payload: { message: 'Invalid message format' }
@@ -311,13 +401,33 @@ function setupWebSocket(server) {
       }
     });
 
-    ws.on('close', () => {
+    ws.on('close', (code, reason) => {
+      incrementConnectionsClosed();
       clearTimeout(authTimeout);
+
+      // Log close with reason (but not for every normal close)
+      if (code !== 1000 && code !== 1001) {
+        wsLog(LogLevel.INFO, 'connection_closed', {
+          userId,
+          code,
+          reason: reason?.toString() || 'unknown'
+        });
+      } else {
+        wsLog(LogLevel.DEBUG, 'connection_closed', {
+          userId,
+          code,
+          reason: reason?.toString() || 'normal'
+        });
+      }
+
       handleDisconnect(userId, username);
     });
 
     ws.on('error', (err) => {
-      console.error('WebSocket error:', err);
+      wsLog(LogLevel.ERROR, 'connection_error', {
+        userId,
+        error: err.message
+      });
     });
   });
 
@@ -335,21 +445,46 @@ function setupWebSocket(server) {
   // Zombie connection cleanup based on client heartbeats
   const heartbeatCleanupInterval = setInterval(() => {
     const now = Date.now();
+    let zombiesThisCycle = 0;
     for (const [connId, lastTime] of lastHeartbeat) {
       if (now - lastTime > HEARTBEAT_TIMEOUT_MS) {
         const ws = connections.get(connId);
         if (ws && ws.readyState === WebSocket.OPEN) {
-          console.log(`[WebSocket] Closing zombie connection: userId=${connId}`);
+          incrementZombiesCleaned();
+          incrementHeartbeatTimeouts();
+          zombiesThisCycle++;
+          // Suppress log noise for dev admin dashboard (userId=-999)
+          if (connId !== -999) {
+            wsLog(LogLevel.WARN, 'zombie_connection_cleaned', {
+              userId: connId,
+              lastHeartbeatAgo: now - lastTime,
+              timeoutMs: HEARTBEAT_TIMEOUT_MS
+            });
+          }
           ws.close(1000, 'Heartbeat timeout');
+          // Explicit cleanup in case handleDisconnect doesn't fire
+          activeConnectionIds.delete(connId);
         }
         lastHeartbeat.delete(connId);
       }
+    }
+    // Log summary if any zombies were cleaned
+    if (zombiesThisCycle > 0) {
+      wsLog(LogLevel.INFO, 'zombie_cleanup_cycle', {
+        zombiesCleaned: zombiesThisCycle,
+        remainingConnections: connections.size
+      });
     }
   }, 15000);
 
   wss.on('close', () => {
     clearInterval(heartbeatInterval);
     clearInterval(heartbeatCleanupInterval);
+    stopMetricsReporting();
+    wsLog(LogLevel.INFO, 'server_closed', {
+      finalConnectionCount: connections.size,
+      finalRoomCount: rooms.size
+    });
   });
 
   return wss;
@@ -361,18 +496,32 @@ function setupWebSocket(server) {
 
 function handleAuth(ws, payload, authTimeout, setCredentials) {
   try {
+    // Extract connectionId from payload (may be missing for legacy clients)
+    const clientConnectionId = payload.connectionId;
+
     // DEV ONLY: Special admin token
     if (payload.token === 'dev_admin_token' && process.env.NODE_ENV !== 'production') {
       const userId = -999;
       const username = 'admin_dashboard';
-      setCredentials(userId, username);
+      const connectionId = clientConnectionId || `admin_${Date.now()}`;
+
+      setCredentials(userId, username, connectionId);
       setConnection(userId, ws);
       lastHeartbeat.set(userId, Date.now());
+      activeConnectionIds.set(userId, connectionId);
       clearTimeout(authTimeout);
+      incrementAuthSuccesses();
+
+      wsLog(LogLevel.DEBUG, 'auth_success', {
+        userId,
+        username,
+        isAdmin: true,
+        connectionId
+      });
 
       ws.send(JSON.stringify({
         type: 'auth_success',
-        payload: { userId, username, isAdmin: true }
+        payload: { userId, username, isAdmin: true, connectionId }
       }));
       return;
     }
@@ -381,32 +530,83 @@ function handleAuth(ws, payload, authTimeout, setCredentials) {
     const userId = decoded.userId;
     const username = decoded.username;
 
-    // SECURITY: Limit to 1 connection per user
+    // Generate connectionId: use client-provided or generate server-side fallback
+    const connectionId = clientConnectionId || `server_${userId}_${Date.now()}`;
+
+    // Log connectionId status for debugging
+    if (!clientConnectionId) {
+      wsLog(LogLevel.DEBUG, 'connection_id_generated', {
+        userId,
+        connectionId,
+        reason: 'No client connectionId provided'
+      });
+    } else {
+      wsLog(LogLevel.DEBUG, 'connection_id_received', {
+        userId,
+        connectionId
+      });
+    }
+
+    // SECURITY: Limit to 1 connection per user - IMMEDIATE handoff
     const existingConnection = connections.get(userId);
     if (existingConnection && existingConnection !== ws && existingConnection.readyState === WebSocket.OPEN) {
+      // Immediately invalidate old connection's heartbeat tracking
+      // This prevents race conditions where old connection might still send messages
+      lastHeartbeat.delete(userId);
+
+      // Get old connectionId before replacing
+      const oldConnectionId = activeConnectionIds.get(userId);
+      incrementSessionsReplaced();
+
+      wsLog(LogLevel.INFO, 'session_replaced', {
+        userId,
+        oldConnectionId: oldConnectionId || 'unknown',
+        newConnectionId: connectionId
+      });
+
+      // Send session_replaced and close immediately (don't wait for zombie cleanup)
       existingConnection.send(JSON.stringify({
         type: 'session_replaced',
-        payload: { message: 'Another session has connected' }
+        payload: {
+          message: 'Another session has connected',
+          replacedBy: connectionId
+        }
       }));
       existingConnection.close(1000, 'Session replaced by new connection');
     }
 
-    setCredentials(userId, username);
+    setCredentials(userId, username, connectionId);
     setConnection(userId, ws);
     lastHeartbeat.set(userId, Date.now());
+    activeConnectionIds.set(userId, connectionId);
     clearTimeout(authTimeout);
+    incrementAuthSuccesses();
+
+    wsLog(LogLevel.INFO, 'auth_success', {
+      userId,
+      username,
+      connectionId,
+      totalConnections: connections.size
+    });
 
     presenceService.setPresence(userId, 'online').catch(err => {
-      console.error('Failed to set presence:', err);
+      wsLog(LogLevel.ERROR, 'presence_error', {
+        userId,
+        error: err.message
+      });
     });
 
     broadcastPresenceChange(userId, username, 'online');
 
     ws.send(JSON.stringify({
       type: 'auth_success',
-      payload: { userId, username }
+      payload: { userId, username, connectionId }
     }));
   } catch {
+    incrementAuthFailures();
+    wsLog(LogLevel.WARN, 'auth_failure', {
+      reason: 'Invalid token'
+    });
     ws.send(JSON.stringify({
       type: 'auth_error',
       payload: { message: 'Invalid token' }
@@ -421,6 +621,16 @@ function handleAuth(ws, payload, authTimeout, setCredentials) {
 function handleHeartbeat(ws, userId, payload) {
   if (!userId) return;
   lastHeartbeat.set(userId, Date.now());
+  incrementHeartbeatsReceived();
+  incrementHeartbeatAcksSent();
+
+  // Don't log every heartbeat - too noisy
+  // Only log in DEBUG mode for troubleshooting
+  wsLog(LogLevel.DEBUG, 'heartbeat', {
+    userId,
+    clientTimestamp: payload?.timestamp,
+    id: payload?.id
+  });
 
   ws.send(JSON.stringify({
     type: 'heartbeat_ack',
@@ -437,13 +647,22 @@ function handleHeartbeat(ws, userId, payload) {
 function handleDisconnect(userId, username) {
   if (!userId) return;
 
+  wsLog(LogLevel.DEBUG, 'disconnect_cleanup', {
+    userId,
+    username
+  });
+
   removeConnection(userId);
   lastHeartbeat.delete(userId);
+  activeConnectionIds.delete(userId);
   cleanupConnection(userId);
   cleanupUserRateLimits(userId);
 
   presenceService.setOffline(userId).catch(err => {
-    console.error('Failed to set offline:', err);
+    wsLog(LogLevel.ERROR, 'presence_offline_error', {
+      userId,
+      error: err.message
+    });
   });
 
   const removedNodes = presenceService.clearUserFromAllNodes(userId);
