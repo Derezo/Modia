@@ -1,3 +1,18 @@
+/**
+ * @module BattleFormationScene
+ * @description Pre-battle character placement on isometric grid with theming.
+ *
+ * Key responsibilities:
+ * - Character placement on 5x4 isometric grid (up to 5 characters)
+ * - Context-aware theming for PvE, PvP/Coliseum, and Guild battles
+ * - Coliseum mode: 20-second countdown, formation submission via WebSocket
+ * - Responsive layouts for desktop and mobile
+ * - Character selection and preview via ParchmentCard
+ *
+ * @see FormationGrid.js - Isometric grid rendering and interaction
+ * @see StartBattleButton.js - Themed battle start button with animations
+ * @see themes/ - Context-specific visual themes (Battlefield, PitFighter, etc.)
+ */
 import { Scene } from './Scene.js';
 import { ParchmentCard } from '../components/ParchmentCard.js';
 import { FormationGrid } from './formation/FormationGrid.js';
@@ -79,6 +94,16 @@ export class BattleFormationScene extends Scene {
 
     // Scene lifecycle flag for async operation safety
     this._isActive = false;
+
+    // Coliseum-specific state
+    this.coliseumMatchId = null;
+    this.formationDeadline = null;
+    this.formationCountdownInterval = null;
+    this.opponentFormationSubmitted = false;
+    this.formationSubmitted = false;
+    this.opponentName = null;
+    this.gridLocked = false;
+    this.coliseumHandlers = null;
   }
 
   async enter(data = {}) {
@@ -129,6 +154,58 @@ export class BattleFormationScene extends Scene {
         this.game.musicContext.playExplorationMusic();
       }
     }
+
+    // Coliseum-specific setup
+    if (data.type === 'coliseum') {
+      this.coliseumMatchId = data.matchId;
+      this.formationDeadline = data.deadline;
+      this.opponentName = data.opponentName || 'opponent';
+      this.setupColiseumWebSocketHandlers();
+    }
+  }
+
+  /**
+   * Set up WebSocket handlers for coliseum formation phase
+   */
+  setupColiseumWebSocketHandlers() {
+    if (!this.game.socket) return;
+
+    this.coliseumHandlers = {
+      'coliseum:opponent_formation_submitted': (payload) => {
+        if (payload.matchId === this.coliseumMatchId) {
+          this.opponentFormationSubmitted = true;
+          this.updateStartButtonState();
+        }
+      },
+      'coliseum:match_started': (payload) => {
+        if (payload.battleId) {
+          // Transition to battle scene
+          this.game.scenes.switchTo('battle', {
+            battleId: payload.battleId,
+            mapSeed: payload.mapSeed,
+            nodeType: 'arena',
+            battleType: 'pvp'
+          });
+        }
+      },
+      'coliseum:formation_timeout': (payload) => {
+        if (payload.matchId === this.coliseumMatchId) {
+          parchmentToast.error('Formation Timeout', `You have been banned for ${Math.floor(payload.banDuration / 60000)} minutes`);
+          this.game.scenes.switchTo('coliseum');
+        }
+      },
+      'coliseum:match_cancelled': (payload) => {
+        if (payload.matchId === this.coliseumMatchId) {
+          parchmentToast.warning('Match Cancelled', payload.reason || 'Match was cancelled');
+          this.game.scenes.switchTo('coliseum');
+        }
+      }
+    };
+
+    // Register handlers
+    for (const [event, handler] of Object.entries(this.coliseumHandlers)) {
+      this.game.socket.on(event, handler);
+    }
   }
 
   exit() {
@@ -140,6 +217,27 @@ export class BattleFormationScene extends Scene {
       clearTimeout(this.longPressTimer);
       this.longPressTimer = null;
     }
+
+    // Clean up coliseum WebSocket handlers
+    if (this.coliseumHandlers && this.game.socket) {
+      for (const [event, handler] of Object.entries(this.coliseumHandlers)) {
+        this.game.socket.off(event, handler);
+      }
+      this.coliseumHandlers = null;
+    }
+
+    // Clear countdown interval
+    if (this.formationCountdownInterval) {
+      clearInterval(this.formationCountdownInterval);
+      this.formationCountdownInterval = null;
+    }
+
+    // Reset coliseum state
+    this.coliseumMatchId = null;
+    this.formationDeadline = null;
+    this.formationSubmitted = false;
+    this.opponentFormationSubmitted = false;
+    this.gridLocked = false;
 
     if (this.abortController) {
       this.abortController.abort();
@@ -329,19 +427,64 @@ export class BattleFormationScene extends Scene {
 
     // Add styles
     this.addStyles();
+
+    // Start coliseum countdown if applicable
+    if (this.battleType === 'coliseum' && this.formationDeadline) {
+      this.startCountdown();
+    }
+  }
+
+  /**
+   * Start the formation countdown timer
+   */
+  startCountdown() {
+    this.updateCountdownDisplay();
+    this.formationCountdownInterval = setInterval(() => {
+      this.updateCountdownDisplay();
+    }, 1000);
+  }
+
+  /**
+   * Update the countdown display
+   */
+  updateCountdownDisplay() {
+    const timerValue = this.uiElement?.querySelector('#bf-timer-value');
+    if (!timerValue) return;
+
+    const remaining = Math.max(0, Math.ceil((this.formationDeadline - Date.now()) / 1000));
+    timerValue.textContent = remaining;
+
+    // Add urgent styling when low
+    const timerContainer = this.uiElement?.querySelector('#bf-countdown-timer');
+    if (timerContainer) {
+      timerContainer.classList.toggle('urgent', remaining <= 5);
+    }
+
+    // Auto-submit if time runs out and we haven't submitted
+    if (remaining <= 0 && !this.formationSubmitted && this.placedCharacters.size > 0) {
+      this.submitColiseumFormation();
+    }
   }
 
   getDesktopLayout(nodeName, themeTitle) {
     return `
       <!-- Header -->
       <div class="bf-formation-header">
-        <button class="bf-back-btn" id="bf-back-btn">
-          <span class="bf-back-icon">&#8592;</span>
-        </button>
+        ${this.battleType !== 'coliseum' ? `
+          <button class="bf-back-btn" id="bf-back-btn">
+            <span class="bf-back-icon">&#8592;</span>
+          </button>
+        ` : ''}
         <div class="bf-header-titles">
           <h2 class="bf-battle-title-animated">${themeTitle}</h2>
           <div class="bf-node-name">${nodeName}</div>
         </div>
+        ${this.battleType === 'coliseum' ? `
+          <div class="bf-countdown-timer" id="bf-countdown-timer">
+            <span class="bf-timer-label">Time remaining:</span>
+            <span class="bf-timer-value" id="bf-timer-value">20</span>
+          </div>
+        ` : ''}
       </div>
 
       <!-- Main Content -->
@@ -391,12 +534,20 @@ export class BattleFormationScene extends Scene {
     return `
       <!-- Header (compact) -->
       <div class="bf-formation-header bf-formation-header--mobile">
-        <button class="bf-back-btn" id="bf-back-btn">
-          <span class="bf-back-icon">&#8592;</span>
-        </button>
+        ${this.battleType !== 'coliseum' ? `
+          <button class="bf-back-btn" id="bf-back-btn">
+            <span class="bf-back-icon">&#8592;</span>
+          </button>
+        ` : ''}
         <div class="bf-header-titles">
           <h2 class="bf-battle-title-animated bf-battle-title--mobile">${themeTitle}</h2>
         </div>
+        ${this.battleType === 'coliseum' ? `
+          <div class="bf-countdown-timer" id="bf-countdown-timer">
+            <span class="bf-timer-label">Time:</span>
+            <span class="bf-timer-value" id="bf-timer-value">20</span>
+          </div>
+        ` : ''}
       </div>
 
       <!-- Enemy Roster (horizontal scroll) -->
@@ -536,6 +687,11 @@ export class BattleFormationScene extends Scene {
   }
 
   goBack() {
+    // Prevent leaving during coliseum formation phase
+    if (this.battleType === 'coliseum' && !this.formationSubmitted) {
+      parchmentToast.warning('Cannot Leave', 'You must complete formation selection');
+      return;
+    }
     // Return to world map
     this.game.scenes.switchTo('worldMap');
   }
@@ -593,6 +749,9 @@ export class BattleFormationScene extends Scene {
 
   // Grid interactions
   handleGridClick(e) {
+    // Prevent grid interactions when locked (coliseum formation submitted)
+    if (this.gridLocked) return;
+
     if (this.justRemovedByLongPress) {
       this.justRemovedByLongPress = false;
       return;
@@ -630,6 +789,9 @@ export class BattleFormationScene extends Scene {
   }
 
   handleGridMouseDown(e) {
+    // Prevent grid interactions when locked (coliseum formation submitted)
+    if (this.gridLocked) return;
+
     const tile = this.formationGrid?.screenToGrid(e.offsetX, e.offsetY);
     if (!tile) return;
 
@@ -662,6 +824,9 @@ export class BattleFormationScene extends Scene {
 
   // Character placement logic
   placeCharacterOnTile(gridKey) {
+    // Prevent placement when grid is locked
+    if (this.gridLocked) return;
+
     const placedIds = new Set(
       Array.from(this.placedCharacters.values()).map(c => c.id)
     );
@@ -709,6 +874,9 @@ export class BattleFormationScene extends Scene {
   }
 
   cycleCharacterOnTile(gridKey) {
+    // Prevent cycling when grid is locked
+    if (this.gridLocked) return;
+
     const currentChar = this.placedCharacters.get(gridKey);
     const currentIdx = this.selectableCharacters.findIndex(c => c.id === currentChar.id);
 
@@ -767,7 +935,24 @@ export class BattleFormationScene extends Scene {
   }
 
   updateStartButton() {
-    if (this.startButton) {
+    this.updateStartButtonState();
+  }
+
+  /**
+   * Update the start button state based on coliseum progress
+   */
+  updateStartButtonState() {
+    if (!this.startButton) return;
+
+    if (this.battleType === 'coliseum') {
+      if (this.formationSubmitted) {
+        // Show waiting state
+        this.startButton.setWaitingState(true, this.opponentName);
+        this.startButton.setDisabled(true);
+      } else {
+        this.startButton.setDisabled(this.placedCharacters.size === 0);
+      }
+    } else {
       this.startButton.setDisabled(this.placedCharacters.size === 0);
     }
   }
@@ -866,6 +1051,13 @@ export class BattleFormationScene extends Scene {
       return;
     }
 
+    // For coliseum, submit formation via WebSocket
+    if (this.battleType === 'coliseum') {
+      await this.submitColiseumFormation();
+      return;
+    }
+
+    // Standard PvE flow
     const formation = {};
     for (const [key, char] of this.placedCharacters) {
       const [x, y] = key.split(',').map(Number);
@@ -882,6 +1074,36 @@ export class BattleFormationScene extends Scene {
     } catch (err) {
       parchmentToast.error('Battle Error', err.message || 'Failed to start battle');
     }
+  }
+
+  /**
+   * Submit formation for coliseum match
+   */
+  async submitColiseumFormation() {
+    if (this.formationSubmitted) return;
+
+    const formation = {};
+    for (const [key, char] of this.placedCharacters) {
+      const [x, y] = key.split(',').map(Number);
+      formation[char.id] = { tileX: x, tileY: y };
+    }
+
+    this.formationSubmitted = true;
+    this.gridLocked = true;
+
+    // Send formation via WebSocket
+    if (this.game.socket) {
+      this.game.socket.send('coliseum_formation_submit', {
+        matchId: this.coliseumMatchId,
+        formation
+      });
+    }
+
+    // Update button state
+    this.updateStartButtonState();
+
+    // Visual feedback
+    this.formationGrid?.setGridLocked?.(true);
   }
 
   // Utility methods
@@ -986,6 +1208,47 @@ export class BattleFormationScene extends Scene {
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
         font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
         margin-top: ${PARCHMENT_SPACING.xs};
+      }
+
+      /* ========== COUNTDOWN TIMER (COLISEUM) ========== */
+
+      .bf-countdown-timer {
+        display: flex;
+        align-items: center;
+        gap: ${PARCHMENT_SPACING.sm};
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: ${PARCHMENT_RADIUS.lg};
+        margin-left: auto;
+      }
+
+      .bf-countdown-timer.urgent {
+        background: rgba(139, 0, 0, 0.4);
+        animation: bf-pulse-urgent 0.5s ease-in-out infinite;
+      }
+
+      .bf-timer-label {
+        color: ${P.text.muted};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.sm};
+      }
+
+      .bf-timer-value {
+        color: ${P.text.inverse};
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
+        font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+        min-width: 2ch;
+        text-align: center;
+      }
+
+      .bf-countdown-timer.urgent .bf-timer-value {
+        color: ${P.state.error};
+      }
+
+      @keyframes bf-pulse-urgent {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
       }
 
       /* ========== MAIN CONTENT (DESKTOP) ========== */

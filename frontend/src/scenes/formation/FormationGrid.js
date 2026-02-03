@@ -104,6 +104,10 @@ export class FormationGrid {
     this.pressedTile = key;
   }
 
+  setGridLocked(locked) {
+    this.isLocked = locked;
+  }
+
   // Animation update
   update(deltaTime) {
     this.animationFrame += deltaTime;

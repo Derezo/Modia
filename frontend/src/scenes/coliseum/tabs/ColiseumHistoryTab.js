@@ -142,10 +142,19 @@ function renderMatchDetailsModal(context) {
   const isMyMatch = isWinner || isLoser;
 
   // Parse snapshots if they exist
-  const winnerTeam = details.matchSnapshot?.winner || [];
-  const loserTeam = details.matchSnapshot?.loser || [];
+  const winnerTeam = details.matchSnapshot?.winner?.team || [];
+  const loserTeam = details.matchSnapshot?.loser?.team || [];
   const stats = details.matchStats || {};
-  const mvp = stats.mvp || null;
+
+  // Calculate MVP from unitStats if not already set
+  // MVP is the highest damage dealer on the winning team
+  const winnerTeamId = stats.unitStats?.find(u => u.ownerId === details.winnerId)?.teamId;
+  const calculatedMvp = stats.mvp || (stats.unitStats?.length > 0
+    ? stats.unitStats
+      .filter(u => u.teamId === winnerTeamId)
+      .sort((a, b) => (b.damageDealt || 0) - (a.damageDealt || 0))[0]
+    : null);
+  const mvp = calculatedMvp;
 
   return `
     <div class="coliseum-match-details-modal" id="match-details-modal">
@@ -229,14 +238,35 @@ function renderMatchDetailsModal(context) {
           </div>
         ` : ''}
 
+        ${stats.unitStats && stats.unitStats.length > 0 ? `
+          <div class="coliseum-unit-stats-section">
+            <div class="coliseum-stats-header">Unit Performance</div>
+            <div class="coliseum-unit-stats-list">
+              ${stats.unitStats.map(unit => {
+    const isMvp = mvp && unit.id === mvp.id;
+    return `
+                <div class="coliseum-unit-stat-row${isMvp ? ' mvp-unit' : ''}">
+                  <span class="unit-name">${unit.name} (${unit.class})${isMvp ? '<span class="mvp-badge">MVP</span>' : ''}</span>
+                  <span class="unit-stats">
+                    ${unit.damageDealt ? `DMG: ${unit.damageDealt}` : ''}
+                    ${unit.healingDone ? ` | HEAL: ${unit.healingDone}` : ''}
+                    ${unit.kills ? ` | KILLS: ${unit.kills}` : ''}
+                  </span>
+                </div>
+              `;
+  }).join('')}
+            </div>
+          </div>
+        ` : ''}
+
         ${mvp ? `
           <div class="coliseum-mvp-section">
             <div class="coliseum-mvp-header">Most Valuable Player</div>
             <div class="coliseum-mvp-name">${mvp.name}</div>
             <div class="coliseum-mvp-stats">
-              ${mvp.damage ? `Damage: ${mvp.damage}` : ''}
+              ${mvp.damageDealt || mvp.damage ? `Damage: ${mvp.damageDealt || mvp.damage}` : ''}
               ${mvp.kills ? ` | Kills: ${mvp.kills}` : ''}
-              ${mvp.healing ? ` | Healing: ${mvp.healing}` : ''}
+              ${mvp.healingDone || mvp.healing ? ` | Healing: ${mvp.healingDone || mvp.healing}` : ''}
             </div>
           </div>
         ` : ''}

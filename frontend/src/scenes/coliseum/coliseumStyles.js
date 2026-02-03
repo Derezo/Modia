@@ -1196,6 +1196,55 @@ export function getColiseumStyles() {
       margin-top: ${PARCHMENT_SPACING.sm};
     }
 
+    /* Unit Stats Section - Per-unit performance breakdown */
+    .coliseum-unit-stats-section {
+      margin-top: ${PARCHMENT_SPACING.lg};
+      padding: ${PARCHMENT_SPACING.md};
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: ${PARCHMENT_RADIUS.md};
+    }
+
+    .coliseum-unit-stats-list {
+      display: flex;
+      flex-direction: column;
+      gap: ${PARCHMENT_SPACING.sm};
+      margin-top: ${PARCHMENT_SPACING.md};
+    }
+
+    .coliseum-unit-stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+      font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      color: ${P.text.muted};
+      padding: ${PARCHMENT_SPACING.xs} ${PARCHMENT_SPACING.sm};
+      background: ${P.mid};
+      border-radius: ${PARCHMENT_RADIUS.sm};
+    }
+
+    .coliseum-unit-stat-row .unit-name {
+      color: ${P.text.primary};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+    }
+
+    .coliseum-unit-stat-row .unit-stats {
+      color: ${P.text.secondary};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+    }
+
+    .coliseum-unit-stat-row.mvp-unit {
+      border: 1px solid ${P.accent.burgundy};
+      background: linear-gradient(135deg, rgba(107, 45, 61, 0.15), rgba(139, 115, 85, 0.1));
+    }
+
+    .coliseum-unit-stat-row .mvp-badge {
+      color: ${P.accent.burgundy};
+      font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xs};
+      font-weight: ${PARCHMENT_TYPOGRAPHY.weights.bold};
+      margin-left: ${PARCHMENT_SPACING.xs};
+    }
+
     /* Themed Scrollbars */
     ${getParchmentScrollbarCSS('.coliseum-content')}
     ${getParchmentScrollbarCSS('.coliseum-match-details-content')}

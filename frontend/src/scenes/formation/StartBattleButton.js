@@ -539,6 +539,30 @@ export class StartBattleButton {
           height: 36px;
         }
       }
+
+      /* Waiting state (coliseum) */
+      .start-battle-btn.waiting {
+        opacity: 0.7;
+        pointer-events: none;
+      }
+
+      .start-battle-btn.waiting .btn-glow {
+        animation: none;
+        display: none;
+      }
+
+      .sb-waiting-spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: sb-spin 1s linear infinite;
+      }
+
+      @keyframes sb-spin {
+        to { transform: rotate(360deg); }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -719,6 +743,13 @@ export class StartBattleButton {
 
   setType(type) {
     this.type = type;
+    this.updateContent();
+  }
+
+  /**
+   * Update button content (restores normal state)
+   */
+  updateContent() {
     const content = this.element.querySelector('.btn-content');
     if (content) {
       content.innerHTML = `
@@ -727,6 +758,29 @@ export class StartBattleButton {
       `;
     }
     this.svgElement = this.element.querySelector('svg');
+  }
+
+  /**
+   * Set the waiting state for coliseum
+   * @param {boolean} waiting - Whether we're waiting for opponent
+   * @param {string} opponentName - Opponent's name
+   */
+  setWaitingState(waiting, opponentName = 'opponent') {
+    this.isWaiting = waiting;
+    const content = this.element.querySelector('.btn-content');
+    if (!content) return;
+
+    if (waiting) {
+      content.innerHTML = `
+        <div class="sb-waiting-spinner"></div>
+        <span class="btn-text">Waiting for ${opponentName}...</span>
+      `;
+      this.element.classList.add('waiting');
+    } else {
+      // Restore normal state
+      this.updateContent();
+      this.element.classList.remove('waiting');
+    }
   }
 
   destroy() {

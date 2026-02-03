@@ -19,6 +19,7 @@ import { WebSocket } from 'ws';
 import chatService from '../services/chatService.js';
 import presenceService from '../services/presenceService.js';
 import coliseumService from '../services/coliseumService.js';
+import { submitFormation } from '../services/coliseum/matchLifecycle.js';
 import { handleSurrender as coliseumHandleSurrender } from '../services/coliseum/turnTimer.js';
 import * as partyWebsocket from '../services/partyWebsocket.js';
 import adminGenerationService from '../services/adminGenerationService.js';
@@ -460,6 +461,29 @@ function handleColiseumLobbyJoin(userId) {
 function handleColiseumLobbyLeave(userId) {
   if (!userId) return;
   removeUserFromRoom('coliseum:lobby', userId);
+}
+
+/**
+ * Handle coliseum formation submit
+ */
+async function handleColiseumFormationSubmit(ws, userId, payload) {
+  if (!userId) return;
+  try {
+    const { matchId, formation } = payload;
+    const result = await submitFormation(matchId, userId, formation);
+    if (!result.success) {
+      ws.send(JSON.stringify({
+        type: 'coliseum:error',
+        payload: { message: result.error }
+      }));
+    }
+  } catch (err) {
+    console.error('Coliseum formation submit error:', err);
+    ws.send(JSON.stringify({
+      type: 'coliseum:error',
+      payload: { message: 'Failed to submit formation' }
+    }));
+  }
 }
 
 // ============================================================
@@ -1098,6 +1122,7 @@ export {
   handleColiseumReady,
   handleColiseumLobbyJoin,
   handleColiseumLobbyLeave,
+  handleColiseumFormationSubmit,
 
   // Battle
   handleJoinBattle,

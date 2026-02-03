@@ -30,7 +30,7 @@ import {
   broadcastGlobalQueueStatus,
   broadcastQueuePlayersUpdate
 } from './queueBroadcaster.js';
-import { createMatch } from './matchLifecycle.js';
+import { createMatch, checkQueueBan } from './matchLifecycle.js';
 import { handlePlayerDisconnect } from './turnTimer.js';
 
 /**
@@ -133,6 +133,17 @@ export async function joinQueue(queueType, userId, username, partyLevel, partySi
   // Validate party size
   if (partySize > settings.partySize) {
     return { success: false, error: `Maximum ${settings.partySize} characters allowed for ${queueType}` };
+  }
+
+  // Check for active queue ban
+  const ban = await checkQueueBan(userId, queueType);
+  if (ban) {
+    const ws = await getWebsocket();
+    ws.sendToUser(userId, {
+      type: 'coliseum:queue_banned',
+      payload: { banUntil: ban.banUntil, reason: ban.reason }
+    });
+    return { success: false, error: `You are banned from this queue until ${new Date(ban.banUntil).toLocaleTimeString()}` };
   }
 
   // Check if player already has an active battle (prevents queueing while in battle)

@@ -35,7 +35,11 @@ import {
   matchStartTimers,
   matchmakingQueues,
   matchIdCounter,
-  getWebsocket
+  getWebsocket,
+  formationTimers,
+  pendingFormations,
+  FORMATION_SELECTION_TIMEOUT,
+  FORMATION_TIMEOUT_BAN_DURATION
 } from './constants.js';
 import { broadcastQueueUpdate } from './queueBroadcaster.js';
 import { captureTeamSnapshots, calculateMatchStats, calculateEnhancedMatchStats, getPlayerRank } from './statistics.js';
@@ -84,7 +88,7 @@ export async function createMatch(queueType, player1, player2) {
   const [achievementsMap, ratingsResult] = await Promise.all([
     getBatchUserAchievements(userIds),
     query(
-      `SELECT user_id, rating, win_streak FROM pvp_ratings
+      `SELECT user_id, rating, win_streak, wins, losses FROM pvp_ratings
        WHERE user_id = ANY($1) AND queue_type = $2`,
       [userIds, queueType]
     )
@@ -93,7 +97,12 @@ export async function createMatch(queueType, player1, player2) {
   // Build ratings lookup
   const ratingsMap = new Map();
   for (const row of ratingsResult.rows) {
-    ratingsMap.set(row.user_id, { rating: row.rating, winStreak: row.win_streak || 0 });
+    ratingsMap.set(row.user_id, {
+      rating: row.rating,
+      winStreak: row.win_streak || 0,
+      wins: row.wins || 0,
+      losses: row.losses || 0
+    });
   }
 
   // Compute badges for each player
@@ -134,7 +143,9 @@ export async function createMatch(queueType, player1, player2) {
             ppr: player2.ppr,
             rating: ratingsMap.get(player2.userId)?.rating || 1000,
             winStreak: ratingsMap.get(player2.userId)?.winStreak || 0,
-            badges: player2Badges
+            badges: player2Badges,
+            wins: ratingsMap.get(player2.userId)?.wins || 0,
+            totalMatches: (ratingsMap.get(player2.userId)?.wins || 0) + (ratingsMap.get(player2.userId)?.losses || 0)
           }
         }
       }));
@@ -153,7 +164,9 @@ export async function createMatch(queueType, player1, player2) {
             ppr: player1.ppr,
             rating: ratingsMap.get(player1.userId)?.rating || 1000,
             winStreak: ratingsMap.get(player1.userId)?.winStreak || 0,
-            badges: player1Badges
+            badges: player1Badges,
+            wins: ratingsMap.get(player1.userId)?.wins || 0,
+            totalMatches: (ratingsMap.get(player1.userId)?.wins || 0) + (ratingsMap.get(player1.userId)?.losses || 0)
           }
         }
       }));
@@ -199,28 +212,8 @@ export function playerReady(matchId, userId) {
   if (match.player1.ready && match.player2.ready) {
     match.status = 'ready';
 
-    // Notify both players match is ready to start (async)
-    getWebsocket().then(ws => {
-      const readyPayload = {
-        matchId,
-        status: 'ready',
-        startIn: 3000 // 3 second countdown
-      };
-
-      ws.sendToUser(match.player1.userId, {
-        type: 'coliseum:match_ready',
-        payload: readyPayload
-      });
-
-      ws.sendToUser(match.player2.userId, {
-        type: 'coliseum:match_ready',
-        payload: readyPayload
-      });
-    }).catch(err => console.error('Failed to notify match ready:', err));
-
-    // Schedule match start (tracked for test cleanup)
-    const startTimerId = setTimeout(() => startMatch(matchId), 3000);
-    matchStartTimers.set(matchId, startTimerId);
+    // Start formation selection phase
+    startFormationPhase(matchId);
   } else {
     // Notify opponent that player is ready (async)
     getWebsocket().then(ws => {
@@ -236,6 +229,272 @@ export function playerReady(matchId, userId) {
   }
 
   return { success: true, bothReady: match.player1.ready && match.player2.ready };
+}
+
+/**
+ * Start formation selection phase
+ * @param {number} matchId - Match ID
+ */
+function startFormationPhase(matchId) {
+  const match = activeMatches.get(matchId);
+  if (!match) return;
+
+  match.status = 'formation_selection';
+  match.formationDeadline = Date.now() + FORMATION_SELECTION_TIMEOUT;
+
+  // Initialize pending formations for this match
+  pendingFormations.set(matchId, {});
+
+  // Set formation timeout
+  const timerId = setTimeout(() => checkFormationTimeout(matchId), FORMATION_SELECTION_TIMEOUT + 1000);
+  formationTimers.set(matchId, timerId);
+
+  // Notify both players of formation phase start
+  getWebsocket().then(ws => {
+    const formationPayload = {
+      matchId,
+      status: 'formation_selection',
+      deadline: match.formationDeadline
+    };
+
+    ws.sendToUser(match.player1.userId, {
+      type: 'coliseum:formation_started',
+      payload: formationPayload
+    });
+
+    ws.sendToUser(match.player2.userId, {
+      type: 'coliseum:formation_started',
+      payload: formationPayload
+    });
+  }).catch(err => console.error('Failed to notify formation phase start:', err));
+
+  console.log(`[Coliseum] Formation phase started for match ${matchId}`);
+}
+
+/**
+ * Submit formation for a player
+ * @param {number} matchId - Match ID
+ * @param {number} userId - User ID
+ * @param {Object} formation - Formation data { [characterId]: { tileX, tileY } }
+ * @returns {Promise<Object>} Result
+ */
+export async function submitFormation(matchId, userId, formation) {
+  const match = activeMatches.get(matchId);
+  if (!match) {
+    return { success: false, error: 'Match not found' };
+  }
+
+  if (match.status !== 'formation_selection') {
+    return { success: false, error: 'Not in formation selection phase' };
+  }
+
+  // Validate player is in match
+  const isPlayer1 = match.player1.userId === userId;
+  const isPlayer2 = match.player2.userId === userId;
+  if (!isPlayer1 && !isPlayer2) {
+    return { success: false, error: 'You are not in this match' };
+  }
+
+  // Validate formation
+  const queueType = match.queueType;
+  const validationResult = await validateFormation(userId, formation, queueType);
+  if (!validationResult.success) {
+    return validationResult;
+  }
+
+  // Store formation
+  const pending = pendingFormations.get(matchId) || {};
+  pending[userId] = {
+    formation,
+    submittedAt: Date.now()
+  };
+  pendingFormations.set(matchId, pending);
+
+  // Notify opponent
+  const opponentId = isPlayer1 ? match.player2.userId : match.player1.userId;
+  getWebsocket().then(ws => {
+    ws.sendToUser(opponentId, {
+      type: 'coliseum:opponent_formation_submitted',
+      payload: { matchId }
+    });
+  }).catch(err => console.error('Failed to notify opponent formation submitted:', err));
+
+  // Check if both submitted
+  const player1Submitted = !!pending[match.player1.userId];
+  const player2Submitted = !!pending[match.player2.userId];
+
+  if (player1Submitted && player2Submitted) {
+    // Clear formation timeout
+    const timerId = formationTimers.get(matchId);
+    if (timerId) {
+      clearTimeout(timerId);
+      formationTimers.delete(matchId);
+    }
+
+    // Start battle with formations
+    await startMatchWithFormations(matchId);
+  }
+
+  return { success: true, bothSubmitted: player1Submitted && player2Submitted };
+}
+
+/**
+ * Validate a player's formation
+ * @param {number} userId - User ID
+ * @param {Object} formation - Formation data { [characterId]: { tileX, tileY } }
+ * @param {string} _queueType - Queue type (reserved for future queue-specific validation)
+ * @returns {Promise<Object>} Validation result
+ */
+async function validateFormation(userId, formation, _queueType) {
+  if (!formation || typeof formation !== 'object') {
+    return { success: false, error: 'Invalid formation data' };
+  }
+
+  const characterIds = Object.keys(formation).map(id => parseInt(id, 10));
+  if (characterIds.length === 0 || characterIds.some(id => isNaN(id) || id <= 0)) {
+    return { success: false, error: 'Invalid formation data' };
+  }
+
+  if (characterIds.length > 5) {
+    return { success: false, error: 'Formation cannot have more than 5 characters' };
+  }
+
+  // Verify all characters belong to the user and are in battle party
+  const result = await query(
+    `SELECT id FROM characters
+     WHERE user_id = $1 AND id = ANY($2) AND party_slot IS NOT NULL AND party_slot <= 5`,
+    [userId, characterIds]
+  );
+
+  if (result.rows.length !== characterIds.length) {
+    return { success: false, error: 'Invalid character selection' };
+  }
+
+  // Validate positions are within grid bounds (5x4 grid)
+  const positions = new Set();
+  for (const [_charId, pos] of Object.entries(formation)) {
+    if (typeof pos.tileX !== 'number' || typeof pos.tileY !== 'number') {
+      return { success: false, error: 'Invalid position data' };
+    }
+    if (pos.tileX < 0 || pos.tileX > 4 || pos.tileY < 0 || pos.tileY > 3) {
+      return { success: false, error: 'Position out of bounds' };
+    }
+    const key = `${pos.tileX},${pos.tileY}`;
+    if (positions.has(key)) {
+      return { success: false, error: 'Duplicate positions not allowed' };
+    }
+    positions.add(key);
+  }
+
+  return { success: true };
+}
+
+/**
+ * Check if formation timeout occurred
+ * @param {number} matchId - Match ID
+ */
+async function checkFormationTimeout(matchId) {
+  formationTimers.delete(matchId);
+
+  const match = activeMatches.get(matchId);
+  if (!match || match.status !== 'formation_selection') return;
+
+  const pending = pendingFormations.get(matchId) || {};
+  const player1Submitted = !!pending[match.player1.userId];
+  const player2Submitted = !!pending[match.player2.userId];
+
+  const ws = await getWebsocket();
+
+  if (!player1Submitted && !player2Submitted) {
+    // Both timed out - cancel match, ban both
+    await applyQueueBan(match.player1.userId, match.queueType, 'formation_timeout');
+    await applyQueueBan(match.player2.userId, match.queueType, 'formation_timeout');
+
+    ws.sendToUser(match.player1.userId, {
+      type: 'coliseum:formation_timeout',
+      payload: { matchId, banDuration: FORMATION_TIMEOUT_BAN_DURATION, reason: 'Formation timeout' }
+    });
+    ws.sendToUser(match.player2.userId, {
+      type: 'coliseum:formation_timeout',
+      payload: { matchId, banDuration: FORMATION_TIMEOUT_BAN_DURATION, reason: 'Formation timeout' }
+    });
+
+    activeMatches.delete(matchId);
+    pendingFormations.delete(matchId);
+  } else if (!player1Submitted) {
+    // Player 1 timed out
+    await applyQueueBan(match.player1.userId, match.queueType, 'formation_timeout');
+
+    ws.sendToUser(match.player1.userId, {
+      type: 'coliseum:formation_timeout',
+      payload: { matchId, banDuration: FORMATION_TIMEOUT_BAN_DURATION, reason: 'Formation timeout' }
+    });
+    ws.sendToUser(match.player2.userId, {
+      type: 'coliseum:match_cancelled',
+      payload: { matchId, reason: 'Opponent failed to submit formation' }
+    });
+
+    activeMatches.delete(matchId);
+    pendingFormations.delete(matchId);
+  } else if (!player2Submitted) {
+    // Player 2 timed out
+    await applyQueueBan(match.player2.userId, match.queueType, 'formation_timeout');
+
+    ws.sendToUser(match.player2.userId, {
+      type: 'coliseum:formation_timeout',
+      payload: { matchId, banDuration: FORMATION_TIMEOUT_BAN_DURATION, reason: 'Formation timeout' }
+    });
+    ws.sendToUser(match.player1.userId, {
+      type: 'coliseum:match_cancelled',
+      payload: { matchId, reason: 'Opponent failed to submit formation' }
+    });
+
+    activeMatches.delete(matchId);
+    pendingFormations.delete(matchId);
+  }
+
+  console.log(`[Coliseum] Formation timeout for match ${matchId}`);
+}
+
+/**
+ * Apply queue ban to a user
+ * @param {number} userId - User ID
+ * @param {string} queueType - Queue type
+ * @param {string} reason - Ban reason
+ */
+export async function applyQueueBan(userId, queueType, reason) {
+  const banUntil = new Date(Date.now() + FORMATION_TIMEOUT_BAN_DURATION);
+
+  await query(
+    `INSERT INTO coliseum_queue_bans (user_id, queue_type, ban_until, reason)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (user_id, queue_type)
+     DO UPDATE SET ban_until = $3, reason = $4`,
+    [userId, queueType, banUntil, reason]
+  );
+
+  console.log(`[Coliseum] Applied queue ban to user ${userId} for ${queueType} until ${banUntil}`);
+}
+
+/**
+ * Check if a user has an active queue ban
+ * @param {number} userId - User ID
+ * @param {string} queueType - Queue type
+ * @returns {Promise<Object|null>} Ban info or null if not banned
+ */
+export async function checkQueueBan(userId, queueType) {
+  const result = await query(
+    `SELECT ban_until, reason FROM coliseum_queue_bans
+     WHERE user_id = $1 AND queue_type = $2 AND ban_until > NOW()`,
+    [userId, queueType]
+  );
+
+  if (result.rows.length === 0) return null;
+
+  return {
+    banUntil: result.rows[0].ban_until,
+    reason: result.rows[0].reason
+  };
 }
 
 /**
@@ -405,18 +664,27 @@ async function getPlayerBattleParty(userId) {
 }
 
 /**
- * Start the match (create PvP battle)
+ * Start the match with submitted formations (create PvP battle)
  * @param {number} matchId - Match ID
  */
-async function startMatch(matchId) {
+async function startMatchWithFormations(matchId) {
   // Clean up timers for this match
   matchReadyTimers.delete(matchId);
   matchStartTimers.delete(matchId);
+  formationTimers.delete(matchId);
 
   const match = activeMatches.get(matchId);
-  if (!match || match.status !== 'ready') return;
+  if (!match || (match.status !== 'ready' && match.status !== 'formation_selection')) return;
 
   match.status = 'starting';
+
+  // Get submitted formations
+  const pending = pendingFormations.get(matchId) || {};
+  const player1Formation = pending[match.player1.userId]?.formation || {};
+  const player2Formation = pending[match.player2.userId]?.formation || {};
+
+  // Clean up pending formations
+  pendingFormations.delete(matchId);
 
   try {
     // Get battle party characters for both players
@@ -463,7 +731,20 @@ async function startMatch(matchId) {
     };
 
     // Add player 1's units (bottom side of map) - Team 1
+    // Use submitted formation if available, otherwise use default positions
     player1Party.forEach((char, idx) => {
+      const formationPos = player1Formation[char.id];
+      let tileX = 4 + (idx % 3) * 2;  // Default
+      let tileY = 26 - Math.floor(idx / 3) * 2;  // Default bottom
+
+      if (formationPos) {
+        // Map 5x4 formation grid to battle map
+        // Formation X: 0-4 -> Battle X: 2-10 (spread across center-bottom)
+        // Formation Y: 0-3 -> Battle Y: 24-27 (bottom of map)
+        tileX = 2 + formationPos.tileX * 2;
+        tileY = 27 - formationPos.tileY;
+      }
+
       initialState.units.push({
         id: char.id,
         type: 'player',
@@ -487,8 +768,8 @@ async function startMatch(matchId) {
         defense: parseInt(char.equip_defense, 10) || 0,
         magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
         magicDefense: parseInt(char.equip_magic_defense, 10) || 0,
-        tileX: 4 + (idx % 3) * 2,
-        tileY: 26 - Math.floor(idx / 3) * 2,  // Bottom side
+        tileX,
+        tileY,
         ct: 0,
         hasActed: false,
         statusEffects: [],
@@ -497,7 +778,19 @@ async function startMatch(matchId) {
     });
 
     // Add player 2's units (top side of map) - Team 2
+    // Use submitted formation if available, otherwise use default positions
     player2Party.forEach((char, idx) => {
+      const formationPos = player2Formation[char.id];
+      let tileX = 4 + (idx % 3) * 2;  // Default
+      let tileY = 5 + Math.floor(idx / 3) * 2;  // Default top
+
+      if (formationPos) {
+        // Map 5x4 formation grid to battle map
+        // Player 2 is at top of map
+        tileX = 2 + formationPos.tileX * 2;
+        tileY = 4 + formationPos.tileY;
+      }
+
       initialState.units.push({
         id: char.id,
         type: 'player',
@@ -521,8 +814,8 @@ async function startMatch(matchId) {
         defense: parseInt(char.equip_defense, 10) || 0,
         magicAttack: parseInt(char.equip_magic_attack, 10) || 0,
         magicDefense: parseInt(char.equip_magic_defense, 10) || 0,
-        tileX: 4 + (idx % 3) * 2,
-        tileY: 5 + Math.floor(idx / 3) * 2,  // Top side
+        tileX,
+        tileY,
         ct: 0,
         hasActed: false,
         statusEffects: [],
@@ -645,6 +938,14 @@ export async function cancelMatch(matchId, reason) {
     }));
   }
 
+  // Clean up formation-related state
+  const formationTimerId = formationTimers.get(matchId);
+  if (formationTimerId) {
+    clearTimeout(formationTimerId);
+    formationTimers.delete(matchId);
+  }
+  pendingFormations.delete(matchId);
+
   activeMatches.delete(matchId);
 }
 
@@ -753,6 +1054,17 @@ export async function completeMatch(battleId, winnerId, loserId, reason = 'victo
     // Calculate enhanced stats
     const enhancedStats = await calculateEnhancedMatchStats(battleId);
 
+    // Aggregate enhanced stats for storage
+    const enhancedStatsToStore = {
+      ...stats,
+      unitStats: enhancedStats?.unitStats || [],
+      battleSummary: enhancedStats?.battleSummary || null,
+      totalDamage: enhancedStats?.unitStats?.reduce((sum, u) => sum + (u.damageDealt || 0), 0) || 0,
+      totalHealing: enhancedStats?.unitStats?.reduce((sum, u) => sum + (u.healingDone || 0), 0) || 0,
+      totalKills: enhancedStats?.unitStats?.reduce((sum, u) => sum + (u.kills || 0), 0) || 0,
+      turnCount: enhancedStats?.battleSummary?.totalTurns || stats?.totalTurns || 0
+    };
+
     // Record match in database
     await query(
       `INSERT INTO coliseum_matches
@@ -769,7 +1081,7 @@ export async function completeMatch(battleId, winnerId, loserId, reason = 'victo
         -ratingChange.loserLoss,
         stats?.duration || 0,
         JSON.stringify(snapshot),
-        JSON.stringify(stats)
+        JSON.stringify(enhancedStatsToStore)
       ]
     );
 

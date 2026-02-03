@@ -74,6 +74,7 @@ import {
   handleColiseumReady,
   handleColiseumLobbyJoin,
   handleColiseumLobbyLeave,
+  handleColiseumFormationSubmit,
   handleJoinBattle,
   handleLeaveBattle,
   handleBattleSyncRequest,
@@ -276,6 +277,10 @@ function setupWebSocket(server) {
 
           case 'coliseum_lobby_leave':
             handleColiseumLobbyLeave(userId);
+            break;
+
+          case 'coliseum_formation_submit':
+            await handleColiseumFormationSubmit(ws, userId, payload);
             break;
 
           case 'join_battle':
