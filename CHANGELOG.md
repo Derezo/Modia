@@ -4,6 +4,7 @@ All notable changes to Modia.
 
 ## 0.4
 
+- 0.4.31: Improved asset image quality
 - 0.4.30: Added Coliseum formation selection phase with timeout bans
 - 0.4.29: Improved multiplayer battle synchronization and rate limiting
 - 0.4.28: Enhanced WebSocket connection stability and reliability
