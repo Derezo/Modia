@@ -871,7 +871,8 @@ async function startMatchWithFormations(matchId) {
       battleType: 'pvp',
       battleId,
       mapSeed,
-      nodeType: 'arena'
+      nodeType: 'arena',
+      state: initialState
     };
 
     ws.sendToUser(match.player1.userId, {
