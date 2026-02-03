@@ -121,6 +121,14 @@ const { parseBaseArgs, VALID_LORA_MODELS, VALID_SD15_LORA_MODELS, ALL_VALID_LORA
 const { applyKeyFilter } = require('./filterAssets');
 
 const {
+  getBackgroundRemovalConfig,
+  clearConfigCache: clearBackgroundRemovalConfigCache,
+  shouldRemoveBackground,
+  getBackgroundRemovalModel,
+  processWithBackgroundRemoval
+} = require('./backgroundRemovalUtils');
+
+const {
   getAssetPathsModule,
   CATEGORY_BASE_DIRS,
   getOutputDir,
@@ -314,5 +322,12 @@ module.exports = {
   getAssetPathsModule,
   CATEGORY_BASE_DIRS,
   getOutputDir,
-  getOriginalsFilePath
+  getOriginalsFilePath,
+
+  // Background removal utilities
+  getBackgroundRemovalConfig,
+  clearBackgroundRemovalConfigCache,
+  shouldRemoveBackground,
+  getBackgroundRemovalModel,
+  processWithBackgroundRemoval
 };

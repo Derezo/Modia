@@ -230,5 +230,29 @@
     "overlaySize": "128x128",
     "blendMode": "lighter",
     "combinations": "10,000+ visual variations from ~200 base assets"
+  },
+  "backgroundRemoval": {
+    "enabled": true,
+    "defaultModel": "isnet-general-use",
+    "categorySettings": {
+      "portraits": { "enabled": true, "model": "isnet-general-use" },
+      "items": { "enabled": true, "model": "isnet-general-use" },
+      "icons": { "enabled": true, "model": "u2net" },
+      "nodes": { "enabled": false },
+      "overlays": { "enabled": false },
+      "characters": { "enabled": true, "model": "isnet-anime" },
+      "obstacles": { "enabled": true, "model": "isnet-general-use" },
+      "tiles": { "enabled": false }
+    },
+    "availableModels": [
+      "u2net",
+      "u2netp",
+      "u2net_human_seg",
+      "u2net_cloth_seg",
+      "silueta",
+      "isnet-general-use",
+      "isnet-anime",
+      "sam"
+    ]
   }
 }
