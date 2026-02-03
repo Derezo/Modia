@@ -332,10 +332,17 @@
       "race": "elf",
       "gender": "other",
       "class": "warrior",
-      "seed": 10109,
+      "seed": 10106,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:07:21.943Z"
+      "generatedAt": "2026-02-03T06:27:27.231Z",
+      "prompt": "elf pointed ears angular features fair complexion luminous eyes androgynous features non-binary warrior heavy armor sword shield battle-worn determined",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "elf_other_wizard",
@@ -429,10 +436,10 @@
       "race": "dwarf",
       "gender": "female",
       "class": "wizard",
-      "seed": 10206,
+      "seed": 10208,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:14:18.631Z",
+      "generatedAt": "2026-02-03T08:15:01.341Z",
       "prompt": "dwarf stout build thick beard braided hair sturdy female feminine features blue wizard robes with hood staff arcane symbols mystical scholarly",
       "evaluation": 0,
       "issues": "",
@@ -449,7 +456,14 @@
       "seed": 10207,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:15:04.453Z"
+      "generatedAt": "2026-02-03T08:45:13.911Z",
+      "prompt": "dwarf stout build thick beard braided hair sturdy female feminine features monk martial artist wrappings disciplined serene focused",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "dwarf_female_chemist",
@@ -622,7 +636,7 @@
       "seed": 10310,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:26:27.787Z",
+      "generatedAt": "2026-02-03T08:45:13.913Z",
       "prompt": "vampire pale skin red eyes fangs aristocratic elegant androgynous features non-binary blue wizard robes with hood staff arcane symbols mystical scholarly",
       "evaluation": 0,
       "issues": "",
@@ -823,7 +837,14 @@
       "seed": 20003,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:40:03.337Z"
+      "generatedAt": "2026-02-03T08:45:13.915Z",
+      "prompt": "human features balanced proportions warm skin tone male masculine features guardian defensive warrior tower shield fortified armor protective stance",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "human_male_warlord",
@@ -911,7 +932,14 @@
       "seed": 20011,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T22:36:49.358Z"
+      "generatedAt": "2026-02-03T08:45:13.917Z",
+      "prompt": "human features balanced proportions warm skin tone male masculine features brawler street fighter wrapped fists scarred knuckles tough intimidating",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "human_male_ascetic",
@@ -1126,7 +1154,14 @@
       "seed": 20030,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T22:51:27.000Z"
+      "generatedAt": "2026-02-03T08:45:13.918Z",
+      "prompt": "human features balanced proportions warm skin tone female feminine features medic battlefield healer white robes red cross medical supplies compassionate",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "human_female_plague_doctor",
@@ -1302,7 +1337,14 @@
       "seed": 20046,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:03:37.467Z"
+      "generatedAt": "2026-01-27T23:03:37.467Z",
+      "prompt": "human features balanced proportions warm skin tone androgynous features non-binary medic battlefield healer white robes red cross medical supplies compassionate",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "human_other_plague_doctor",
@@ -1321,10 +1363,17 @@
       "gender": "other",
       "class": "artificer",
       "isAdvanced": true,
-      "seed": 20048,
+      "seed": 20052,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:05:08.355Z"
+      "generatedAt": "2026-02-03T06:29:49.919Z",
+      "prompt": "human features balanced proportions warm skin tone androgynous features non-binary artificer mechanical genius goggles tools gadgets steampunk inventor",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "elf_male_berserker",
@@ -1830,7 +1879,14 @@
       "seed": 21046,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:37:55.460Z"
+      "generatedAt": "2026-02-03T08:45:13.919Z",
+      "prompt": "elf pointed ears angular features fair complexion luminous eyes androgynous features non-binary medic battlefield healer white robes red cross medical supplies compassionate",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "elf_other_plague_doctor",
@@ -2010,10 +2066,17 @@
       "gender": "male",
       "class": "medic",
       "isAdvanced": true,
-      "seed": 22014,
+      "seed": 22015,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T23:49:11.384Z"
+      "generatedAt": "2026-02-03T06:30:56.980Z",
+      "prompt": "dwarf stout build thick beard braided hair sturdy male masculine features medic battlefield healer dirty robes red cross medical supplies compassionate",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "dwarf_male_plague_doctor",
@@ -2251,7 +2314,14 @@
       "seed": 22035,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:03:56.970Z"
+      "generatedAt": "2026-02-03T08:45:13.921Z",
+      "prompt": "dwarf stout build thick beard braided hair sturdy androgynous features non-binary guardian defensive warrior tower shield fortified armor protective stance",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "dwarf_other_warlord",
@@ -2306,7 +2376,7 @@
       "seed": 22043,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-02-01T22:01:09.437Z",
+      "generatedAt": "2026-02-03T08:45:13.922Z",
       "prompt": "dwarf stout build thick beard braided hair sturdy androgynous features non-binary oracle seer blindfolded third eye mystical visions ethereal clothing",
       "evaluation": 0,
       "issues": "",
@@ -2324,7 +2394,14 @@
       "seed": 22041,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:08:09.725Z"
+      "generatedAt": "2026-02-03T08:45:13.923Z",
+      "prompt": "dwarf stout build thick beard braided hair sturdy androgynous features non-binary ninja shadow warrior dark cloth face mask throwing stars stealthy",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "dwarf_other_martial_artist",
@@ -2346,7 +2423,14 @@
       "seed": 22043,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:09:34.879Z"
+      "generatedAt": "2026-02-03T08:45:13.924Z",
+      "prompt": "dwarf stout build thick beard braided hair sturdy androgynous features non-binary brawler street fighter wrapped fists scarred knuckles tough intimidating",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "dwarf_other_ascetic",
@@ -2357,7 +2441,14 @@
       "seed": 22044,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:10:17.290Z"
+      "generatedAt": "2026-02-03T08:45:13.926Z",
+      "prompt": "dwarf stout build thick beard braided hair sturdy androgynous features non-binary ascetic enlightened monk minimal robes spiritual aura meditation peaceful",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "dwarf_other_alchemist",
@@ -2379,7 +2470,14 @@
       "seed": 22046,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:11:40.376Z"
+      "generatedAt": "2026-02-03T08:45:13.927Z",
+      "prompt": "dwarf stout build thick beard braided hair sturdy androgynous features non-binary medic battlefield healer white robes red cross medical supplies compassionate",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "dwarf_other_plague_doctor",
@@ -2434,7 +2532,13 @@
       "seed": 23003,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:15:10.222Z"
+      "generatedAt": "2026-02-03T07:27:10.659Z",
+      "prompt": "vampire pale skin red eyes, fangs, aristocratic elegant male masculine features, heavy armor guardian defensive warrior tower shield fortified armor protective stance",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "vampire_male_warlord",
@@ -2533,7 +2637,14 @@
       "seed": 23012,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:21:29.667Z"
+      "generatedAt": "2026-02-03T08:45:13.928Z",
+      "prompt": "vampire pale skin red eyes fangs aristocratic elegant male masculine features ascetic enlightened monk minimal robes spiritual aura meditation peaceful",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "vampire_male_alchemist",
@@ -2544,7 +2655,14 @@
       "seed": 23013,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:22:12.089Z"
+      "generatedAt": "2026-02-03T08:45:13.929Z",
+      "prompt": "vampire pale skin red eyes fangs aristocratic elegant male masculine features alchemist master transmuter philosopher stone golden vials advanced equipment",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "vampire_male_medic",
@@ -2555,7 +2673,14 @@
       "seed": 23014,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:22:53.720Z"
+      "generatedAt": "2026-02-03T08:45:13.930Z",
+      "prompt": "vampire pale skin red eyes fangs aristocratic elegant male masculine features medic battlefield healer white robes red cross medical supplies compassionate",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "vampire_male_plague_doctor",
@@ -2618,11 +2743,11 @@
       "gender": "female",
       "class": "warlord",
       "isAdvanced": true,
-      "seed": 23026,
+      "seed": 23037,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:27:04.323Z",
-      "prompt": "vampire pale skin red eyes fangs aristocratic elegant female feminine features warlord commanding presence battle standard ornate plate inspiring leader",
+      "generatedAt": "2026-02-03T08:10:26.214Z",
+      "prompt": "vampire pale skin red eyes fangs aristocratic elegant female features warlord commanding presence battle standard ornate plate inspiring leader",
       "evaluation": 0,
       "issues": "",
       "notes": "",
@@ -2713,10 +2838,10 @@
       "gender": "female",
       "class": "ascetic",
       "isAdvanced": true,
-      "seed": 239281,
+      "seed": 239284,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:32:41.298Z",
+      "generatedAt": "2026-02-03T06:32:04.252Z",
       "prompt": "vampire pale skin red eyes fangs aristocratic elegant female feminine features ascetic enlightened monk minimal robes spiritual aura meditation peaceful",
       "evaluation": 0,
       "issues": "",
@@ -2773,10 +2898,10 @@
       "gender": "female",
       "class": "artificer",
       "isAdvanced": true,
-      "seed": 23042,
+      "seed": 23048,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:35:29.569Z",
+      "generatedAt": "2026-02-03T06:33:10.669Z",
       "prompt": "vampire pale skin red eyes fangs aristocratic elegant female feminine features artificer mechanical genius goggles tools gadgets steampunk inventor",
       "evaluation": 0,
       "issues": "",
@@ -2988,7 +3113,14 @@
       "seed": 24002,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:48:05.342Z"
+      "generatedAt": "2026-02-03T08:45:13.932Z",
+      "prompt": "orc green skin tusks muscular tribal markings fierce male masculine features paladin holy knight white armor golden trim divine light prayer beads",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "orc_male_guardian",
@@ -3076,7 +3208,14 @@
       "seed": 24010,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:53:42.145Z"
+      "generatedAt": "2026-02-03T08:45:13.933Z",
+      "prompt": "orc green skin tusks muscular tribal markings fierce male masculine features martial artist disciplined fighter gi headband fierce stance focused",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "orc_male_brawler",
@@ -3120,7 +3259,14 @@
       "seed": 24014,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T00:56:29.558Z"
+      "generatedAt": "2026-02-03T08:45:13.934Z",
+      "prompt": "orc green skin tusks muscular tribal markings fierce male masculine features medic battlefield healer white robes red cross medical supplies compassionate",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "orc_male_plague_doctor",
@@ -3230,7 +3376,14 @@
       "seed": 24024,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T01:03:30.334Z"
+      "generatedAt": "2026-02-03T08:45:13.936Z",
+      "prompt": "orc green skin tusks muscular tribal markings fierce female feminine features oracle seer blindfolded third eye mystical visions ethereal clothing",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "orc_female_ninja",
@@ -3241,7 +3394,14 @@
       "seed": 24025,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T01:04:12.835Z"
+      "generatedAt": "2026-02-03T08:45:13.937Z",
+      "prompt": "orc green skin tusks muscular tribal markings fierce female feminine features ninja shadow warrior dark cloth face mask throwing stars stealthy",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "orc_female_martial_artist",
@@ -3273,8 +3433,14 @@
       "isAdvanced": true,
       "seed": 24028,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T01:06:18.323Z"
+      "loraModel": "v2",
+      "generatedAt": "2026-02-03T07:54:54.889Z",
+      "prompt": "orc green skin tusks muscular tribal markings fierce female feminine features ascetic enlightened monk minimal robes spiritual aura meditation peaceful",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false
     },
     {
       "id": "orc_female_alchemist",
@@ -3296,7 +3462,14 @@
       "seed": 24030,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T01:07:42.618Z"
+      "generatedAt": "2026-02-03T08:45:13.938Z",
+      "prompt": "orc green skin tusks muscular tribal markings fierce female feminine features medic battlefield healer white robes red cross medical supplies compassionate",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "orc_female_plague_doctor",
@@ -3472,7 +3645,14 @@
       "seed": 24046,
       "generated": true,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-28T01:18:55.036Z"
+      "generatedAt": "2026-02-03T08:45:13.939Z",
+      "prompt": "orc green skin tusks muscular tribal markings fierce androgynous features non-binary medic battlefield healer white robes red cross medical supplies compassionate",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "orc_other_plague_doctor",

@@ -331,6 +331,16 @@ function loadPortraitMetadata(filters = {}) {
         if (filters.archetype && enemy.archetype !== filters.archetype) continue;
         if (filters.region && enemy.region !== filters.region) continue;
 
+        // Validate enemy portrait ID has required 'enemy_' prefix
+        if (!enemy.id.startsWith('enemy_')) {
+          log(
+            `WARNING: Enemy portrait ID missing 'enemy_' prefix: ${enemy.id}\n` +
+            `  Expected: enemy_${enemy.id}\n` +
+            `  Fix in ai-image-metadata/portraits/enemies.json before generating`,
+            'warn'
+          );
+        }
+
         enemy._sourceFile = 'enemies.json';
         enemy._type = 'enemy';
         enemy._category = 'portraits';

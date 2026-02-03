@@ -152,11 +152,12 @@ const AssetCard = memo(function AssetCard({
 
   /**
    * Handle toggle mark for regeneration
+   * Passes the full asset so parent can extract subcategory info for disambiguation
    */
   const handleToggleMark = useCallback((e) => {
     e.stopPropagation();
-    onToggleMark?.(id, !isMarked);
-  }, [id, isMarked, onToggleMark]);
+    onToggleMark?.(asset, !isMarked);
+  }, [asset, isMarked, onToggleMark]);
 
   return (
     <div

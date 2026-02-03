@@ -1164,8 +1164,19 @@ export default function AssetDetail({
         loraModel: formData.loraModel || null,
       };
 
-      // Include biome for tiles disambiguation
-      const options = category === 'tiles' ? { biome: asset._biome } : {};
+      // Include disambiguation options for categories with ID collisions
+      const options = {};
+      if (category === 'tiles' && asset._biome) {
+        options.biome = asset._biome;
+      } else if (category === 'icons' && asset._iconCategory) {
+        options.iconCategory = asset._iconCategory;
+      } else if (category === 'items' && asset._itemCategory) {
+        options.itemCategory = asset._itemCategory;
+      }
+      // sourceFile is most precise fallback
+      if (asset._sourceFile) {
+        options.sourceFile = asset._sourceFile;
+      }
       const response = await api.updateAsset(category, asset.key || asset.id, updates, options);
       const updatedAsset = response.asset;
 
@@ -1199,13 +1210,23 @@ export default function AssetDetail({
     setRegenerating(true);
 
     try {
-      // Build extra filters for disambiguation (e.g., biome for tiles)
+      // Build extra filters for disambiguation (categories with ID collisions)
       const extraFilters = {};
       if (category === 'tiles' && asset._biome) {
         extraFilters.biome = asset._biome;
       }
       if (asset._tileCategory) {
         extraFilters.subcategory = asset._tileCategory;
+      }
+      if (category === 'icons' && asset._iconCategory) {
+        extraFilters.iconCategory = asset._iconCategory;
+      }
+      if (category === 'items' && asset._itemCategory) {
+        extraFilters.itemCategory = asset._itemCategory;
+      }
+      // sourceFile is most precise
+      if (asset._sourceFile) {
+        extraFilters.sourceFile = asset._sourceFile;
       }
 
       await api.generateAssetsByIds(category, [asset.key || asset.id], { force: true }, extraFilters);

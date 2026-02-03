@@ -10,8 +10,10 @@
       "prompt": "gold coins pile treasure currency money",
       "seed": 35001,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T14:58:25.167Z"
+      "loraModel": "v2",
+      "generatedAt": "2026-01-29T14:58:25.167Z",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "xp",
@@ -19,8 +21,10 @@
       "prompt": "blue star experience points level up sparkle",
       "seed": 35002,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T14:59:11.434Z"
+      "loraModel": "v2",
+      "generatedAt": "2026-01-29T14:59:11.434Z",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "stamina",
@@ -28,8 +32,10 @@
       "prompt": "green lightning bolt energy stamina power",
       "seed": 35003,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T14:59:59.622Z"
+      "loraModel": "v2",
+      "generatedAt": "2026-01-29T14:59:59.622Z",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     }
   ]
 }

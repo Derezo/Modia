@@ -10,9 +10,10 @@
       "prompt": "backpack bag inventory storage pouch",
       "seed": 32001,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:16:59.118Z"
+      "generatedAt": "2026-01-29T08:16:59.118Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "equipment",
@@ -20,9 +21,10 @@
       "prompt": "helmet armor equipment gear loadout",
       "seed": 32002,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:17:45.548Z"
+      "generatedAt": "2026-01-29T08:17:45.548Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "skills",
@@ -30,9 +32,10 @@
       "prompt": "book spellbook skills abilities magic tome",
       "seed": 32003,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:18:31.794Z"
+      "generatedAt": "2026-01-29T08:18:31.794Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "party",
@@ -40,9 +43,10 @@
       "prompt": "group people party team characters",
       "seed": 32004,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:19:19.036Z"
+      "generatedAt": "2026-01-29T08:19:19.036Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "map",
@@ -50,14 +54,15 @@
       "prompt": "scroll map parchment fictional world navigation",
       "seed": 32005,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-29T08:20:05.871Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null
     },
     {
       "id": "quest",
@@ -65,9 +70,10 @@
       "prompt": "exclamation scroll quest mission objective",
       "seed": 32006,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:20:52.871Z"
+      "generatedAt": "2026-01-29T08:20:52.871Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "settings",
@@ -75,24 +81,28 @@
       "prompt": "gear cog settings options configure",
       "seed": 32007,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:21:39.128Z"
+      "generatedAt": "2026-01-29T08:21:39.128Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "shop",
       "name": "Shop",
-      "prompt": "medieval shop store purchase merchant",
+      "prompt": "round white item sack with tight rope tassle",
       "seed": 32008,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:22:26.648Z",
+      "generatedAt": "2026-02-03T09:17:21.151Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "chat",
@@ -100,9 +110,14 @@
       "prompt": "speech bubble chat message communication",
       "seed": 32009,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:23:13.773Z"
+      "generatedAt": "2026-01-29T08:23:13.773Z",
+      "regenerationQueuedAt": null,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "guild",
@@ -110,9 +125,10 @@
       "prompt": "banner flag guild clan organization",
       "seed": 32010,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:23:59.645Z"
+      "generatedAt": "2026-01-29T08:23:59.645Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "tavern",
@@ -120,14 +136,15 @@
       "prompt": "mug full of beer tavern inn social drink",
       "seed": 32011,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-29T08:24:46.094Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null
     },
     {
       "id": "coliseum",
@@ -135,9 +152,10 @@
       "prompt": "arena coliseum pvp battle swords crossed",
       "seed": 32012,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:25:32.330Z"
+      "generatedAt": "2026-01-29T08:25:32.330Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "fishing",
@@ -145,7 +163,7 @@
       "prompt": "fishing rod hook fish catch water",
       "seed": 32013,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-29T08:26:18.749Z",
       "evaluation": {
@@ -160,9 +178,10 @@
       "prompt": "ancient ruins puzzle temple mystery stones",
       "seed": 32014,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:27:04.984Z"
+      "generatedAt": "2026-01-29T08:27:04.984Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "caravan",
@@ -170,14 +189,15 @@
       "prompt": "wooden covered wagon caravan trade merchant cart with two horses pulling the cart",
       "seed": 32015,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-29T08:27:51.251Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null
     },
     {
       "id": "close",
@@ -185,9 +205,10 @@
       "prompt": "x close exit cancel cross",
       "seed": 32016,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:28:37.439Z"
+      "generatedAt": "2026-01-29T08:28:37.439Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "confirm",
@@ -195,14 +216,15 @@
       "prompt": "green checkmark confirm accept yes approve",
       "seed": 32017,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-29T08:29:23.840Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null
     },
     {
       "id": "back",
@@ -210,9 +232,10 @@
       "prompt": "arrow left back return previous",
       "seed": 32018,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:30:10.053Z"
+      "generatedAt": "2026-01-29T08:30:10.053Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "help",
@@ -220,14 +243,15 @@
       "prompt": "blue question mark help info tutorial",
       "seed": 32019,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-29T08:30:56.195Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null
     },
     {
       "id": "notifications",
@@ -235,9 +259,10 @@
       "prompt": "bell notification alert message new",
       "seed": 32020,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:31:42.207Z"
+      "generatedAt": "2026-01-29T08:31:42.207Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "formation",
@@ -245,8 +270,10 @@
       "prompt": "chess pieces formation tactical grid position",
       "seed": 32021,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T08:32:28.864Z"
+      "loraModel": "v2",
+      "generatedAt": "2026-01-29T08:32:28.864Z",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "characters",
@@ -254,8 +281,10 @@
       "prompt": "warrior knight character portrait adventurer",
       "seed": 32022,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T08:33:15.184Z"
+      "loraModel": "v2",
+      "generatedAt": "2026-01-29T08:33:15.184Z",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "friends",
@@ -263,8 +292,10 @@
       "prompt": "two people friends social handshake partner",
       "seed": 32023,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T08:34:01.431Z"
+      "loraModel": "v2",
+      "generatedAt": "2026-01-29T08:34:01.431Z",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "leaderboard",
@@ -272,8 +303,10 @@
       "prompt": "trophy podium rankings leaderboard first place",
       "seed": 32024,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T08:34:47.552Z"
+      "loraModel": "v2",
+      "generatedAt": "2026-01-29T08:34:47.552Z",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "logout",
@@ -281,8 +314,10 @@
       "prompt": "door exit logout leave arrow right",
       "seed": 32025,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T08:35:33.679Z"
+      "loraModel": "v2",
+      "generatedAt": "2026-01-29T08:35:33.679Z",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     }
   ]
 }

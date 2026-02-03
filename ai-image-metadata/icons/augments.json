@@ -10,13 +10,14 @@
       "prompt": "sword damage boost increase power red up",
       "seed": 33003,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "needsRegeneration": true,
+      "loraModel": "v2",
+      "needsRegeneration": false,
       "generatedAt": "2026-01-29T08:36:19.585Z",
       "evaluation": 0,
       "issues": "",
       "notes": "",
-      "priority": 0
+      "priority": 0,
+      "regenerationQueuedAt": null
     },
     {
       "id": "range",
@@ -24,9 +25,10 @@
       "prompt": "crosshair target range extend distance arrows",
       "seed": 33002,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:37:05.835Z"
+      "generatedAt": "2026-01-29T08:37:05.835Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "area",
@@ -34,9 +36,10 @@
       "prompt": "explosion area effect blast radius circle",
       "seed": 33003,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:37:52.411Z"
+      "generatedAt": "2026-01-29T08:37:52.411Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "duration",
@@ -44,9 +47,10 @@
       "prompt": "clock hourglass duration extend time longer",
       "seed": 33004,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:38:38.448Z"
+      "generatedAt": "2026-01-29T08:38:38.448Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "cooldown",
@@ -54,9 +58,10 @@
       "prompt": "clock fast cooldown reduce refresh quick",
       "seed": 33005,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:39:24.734Z"
+      "generatedAt": "2026-01-29T08:39:24.734Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "cost",
@@ -64,9 +69,10 @@
       "prompt": "mana crystal cost reduce efficient blue",
       "seed": 33006,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:40:09.909Z"
+      "generatedAt": "2026-01-29T08:40:09.909Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "crit_chance",
@@ -74,13 +80,14 @@
       "prompt": "star burst critical chance lucky hit yellow",
       "seed": 33008,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-29T08:40:56.221Z",
       "evaluation": 0,
       "issues": "",
       "notes": "",
-      "priority": 0
+      "priority": 0,
+      "regenerationQueuedAt": null
     },
     {
       "id": "pierce",
@@ -88,14 +95,15 @@
       "prompt": "metal arrow piercing armor break through red",
       "seed": 33008,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-29T08:41:42.243Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null
     },
     {
       "id": "lifesteal",
@@ -103,9 +111,10 @@
       "prompt": "heart drain lifesteal vampire blood red",
       "seed": 33009,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:42:28.458Z"
+      "generatedAt": "2026-01-29T08:42:28.458Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "chain",
@@ -113,9 +122,10 @@
       "prompt": "chain lightning link multiple targets electric",
       "seed": 33010,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:43:13.488Z"
+      "generatedAt": "2026-01-29T08:43:13.488Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "splash",
@@ -123,14 +133,15 @@
       "prompt": "water splash damage spread ripple blue",
       "seed": 33011,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-29T08:43:59.115Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null
     },
     {
       "id": "stagger",
@@ -138,14 +149,15 @@
       "prompt": "impact stagger knockback interrupt force",
       "seed": 33012,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-29T08:44:46.200Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null
     },
     {
       "id": "elemental_fire",
@@ -153,9 +165,10 @@
       "prompt": "flame elemental fire infuse ember orange",
       "seed": 33013,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:45:33.196Z"
+      "generatedAt": "2026-01-29T08:45:33.196Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "elemental_ice",
@@ -163,9 +176,10 @@
       "prompt": "snowflake elemental ice infuse frost blue",
       "seed": 33014,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:46:19.209Z"
+      "generatedAt": "2026-02-03T09:36:18.808Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "elemental_lightning",
@@ -173,9 +187,10 @@
       "prompt": "lightning elemental electric infuse shock yellow",
       "seed": 33015,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:47:05.050Z"
+      "generatedAt": "2026-01-29T08:47:05.050Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "healing_boost",
@@ -183,8 +198,8 @@
       "prompt": "heart plus healing boost increase green",
       "seed": 33017,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "needsRegeneration": true,
+      "loraModel": "v2",
+      "needsRegeneration": false,
       "generatedAt": "2026-01-29T08:47:50.828Z",
       "evaluation": {
         "score": 0,
@@ -193,7 +208,8 @@
       },
       "issues": "",
       "notes": "",
-      "priority": 0
+      "priority": 0,
+      "regenerationQueuedAt": null
     },
     {
       "id": "accuracy_boost",
@@ -201,13 +217,14 @@
       "prompt": "bullseye target accuracy hit chance precise",
       "seed": 33017,
       "generated": true,
-      "loraModel": "retro-pixel",
-      "needsRegeneration": true,
+      "loraModel": "v2",
+      "needsRegeneration": false,
       "generatedAt": "2026-01-29T08:48:37.134Z",
       "evaluation": 0,
       "issues": "",
       "notes": "",
-      "priority": 0
+      "priority": 0,
+      "regenerationQueuedAt": null
     },
     {
       "id": "evasion",
@@ -215,9 +232,10 @@
       "prompt": "ghost dodge evasion miss avoid shadow",
       "seed": 33018,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:49:22.396Z"
+      "generatedAt": "2026-01-29T08:49:22.396Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "shield",
@@ -225,9 +243,10 @@
       "prompt": "shield barrier generate protect absorb blue",
       "seed": 33019,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:50:08.495Z"
+      "generatedAt": "2026-01-29T08:50:08.495Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "cleanse",
@@ -236,8 +255,9 @@
       "seed": 33020,
       "generated": true,
       "generatedAt": "2026-01-29T08:50:54.323Z",
-      "loraModel": "retro-pixel",
-      "needsRegeneration": false
+      "loraModel": "v2",
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "fire",
@@ -245,7 +265,7 @@
       "prompt": "flame icon fire element burning orange red glow",
       "seed": 33021,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.791Z",
       "regenerationQueuedAt": null
@@ -256,7 +276,7 @@
       "prompt": "snowflake icon ice element frost blue cold crystal",
       "seed": 33022,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.791Z",
       "regenerationQueuedAt": null
@@ -267,7 +287,7 @@
       "prompt": "lightning bolt icon electric shock yellow spark energy",
       "seed": 33023,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.792Z",
       "regenerationQueuedAt": null
@@ -275,13 +295,17 @@
     {
       "id": "poison",
       "name": "Poison Augment",
-      "prompt": "poison drop icon toxic green venom drip bubbles",
-      "seed": 33024,
+      "prompt": "poison drop skull toxic green drip",
+      "seed": 31001,
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.792Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T09:26:36.832Z",
+      "regenerationQueuedAt": null,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "holy",
@@ -289,7 +313,7 @@
       "prompt": "holy light icon divine golden radiance halo glow",
       "seed": 33025,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.792Z",
       "regenerationQueuedAt": null
@@ -300,7 +324,7 @@
       "prompt": "darkness icon shadow void purple wisp ominous",
       "seed": 33026,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.793Z",
       "regenerationQueuedAt": null
@@ -311,7 +335,7 @@
       "prompt": "muscle arm icon power red strength flex bicep",
       "seed": 33027,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.793Z",
       "regenerationQueuedAt": null
@@ -322,7 +346,7 @@
       "prompt": "brain icon wisdom blue magic knowledge sparkle",
       "seed": 33028,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.794Z",
       "regenerationQueuedAt": null
@@ -333,7 +357,7 @@
       "prompt": "wind speed icon swift green fast motion blur",
       "seed": 33029,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.802Z",
       "regenerationQueuedAt": null
@@ -344,7 +368,7 @@
       "prompt": "heart icon health life red robust pulse glow",
       "seed": 33030,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.802Z",
       "regenerationQueuedAt": null
@@ -355,7 +379,7 @@
       "prompt": "four leaf clover icon fortune gold lucky shine",
       "seed": 33031,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.803Z",
       "regenerationQueuedAt": null
@@ -366,7 +390,7 @@
       "prompt": "star burst icon critical hit yellow sharp impact",
       "seed": 33032,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.803Z",
       "regenerationQueuedAt": null
@@ -377,7 +401,7 @@
       "prompt": "shield icon protection armor blue solid sturdy",
       "seed": 33033,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.803Z",
       "regenerationQueuedAt": null
@@ -388,7 +412,7 @@
       "prompt": "dragon skull icon beast hunter red fang claw",
       "seed": 33034,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.804Z",
       "regenerationQueuedAt": null
@@ -399,7 +423,7 @@
       "prompt": "skull crossbones icon undead hunter silver holy",
       "seed": 33035,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.804Z",
       "regenerationQueuedAt": null
@@ -410,7 +434,7 @@
       "prompt": "demon horn icon fiend hunter purple flame dark",
       "seed": 33036,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T03:13:50.805Z",
       "regenerationQueuedAt": null
@@ -421,7 +445,7 @@
       "prompt": "wind trail icon swift velocity blue blur motion fast",
       "seed": 33037,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
       "generatedAt": "2026-01-31T01:57:30.964Z",
@@ -460,7 +484,7 @@
       "prompt": "arcane shield icon magic ward purple mystical barrier rune",
       "seed": 33040,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
       "generatedAt": "2026-01-31T10:13:56.294Z",
@@ -473,7 +497,7 @@
       "prompt": "metal plate icon reinforced sturdy gray steel chest",
       "seed": 33041,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
       "generatedAt": "2026-01-31T10:15:34.266Z",
@@ -529,7 +553,7 @@
       "prompt": "blue sparkle icon mana restore flowing energy refresh",
       "seed": 33045,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
       "generatedAt": "2026-01-31T10:25:11.772Z",
@@ -542,7 +566,7 @@
       "prompt": "crosshair icon precision target aim bullseye hit",
       "seed": 33046,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
       "generatedAt": "2026-01-31T10:27:36.900Z",

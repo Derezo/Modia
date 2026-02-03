@@ -515,10 +515,27 @@ export default function AssetGrid({
 
   /**
    * Quick action: Toggle mark for regeneration
+   * @param {object} asset - The full asset object (includes subcategory info for disambiguation)
+   * @param {boolean} mark - Whether to mark or unmark
    */
-  const handleQuickToggleMark = useCallback(async (id, mark) => {
+  const handleQuickToggleMark = useCallback(async (asset, mark) => {
+    const id = asset.key || asset.id;
+    // Build disambiguation options for categories with ID collisions
+    const options = {};
+    if (category === 'tiles') {
+      options.biome = asset._biome;
+    } else if (category === 'icons') {
+      options.iconCategory = asset._iconCategory;
+    } else if (category === 'items') {
+      options.itemCategory = asset._itemCategory;
+    }
+    // sourceFile is most precise fallback
+    if (asset._sourceFile) {
+      options.sourceFile = asset._sourceFile;
+    }
+
     try {
-      await api.markForRegeneration(category, id, mark);
+      await api.markForRegeneration(category, id, mark, options);
       toast.success(mark ? `Marked ${id} for regeneration` : `Removed ${id} from queue`);
       // Refresh to show updated status (preserve scroll)
       scrollPositionRef.current = window.scrollY;
@@ -757,13 +774,20 @@ export default function AssetGrid({
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {filteredAssets.map((asset) => {
             const id = asset.key || asset.id;
-            // For tiles, include biome AND tileCategory to ensure unique keys
-            // across different biomes (e.g., forest/floors/grass_0 vs cave/floors/grass_0)
-            const uniqueKey = category === 'tiles' && asset._biome && asset._tileCategory
-              ? `${asset._biome}_${asset._tileCategory}_${id}`
-              : category === 'tiles' && asset._tileCategory
-              ? `${asset._tileCategory}_${id}`
-              : id;
+            // Create unique keys across different subcategories:
+            // - Tiles: include biome AND tileCategory (e.g., forest/floors/grass_0 vs cave/floors/grass_0)
+            // - Icons: include iconCategory (e.g., status/poison vs augments/poison)
+            // - Items: include itemCategory (e.g., weapons/sword vs armor/sword)
+            let uniqueKey = id;
+            if (category === 'tiles' && asset._biome && asset._tileCategory) {
+              uniqueKey = `${asset._biome}_${asset._tileCategory}_${id}`;
+            } else if (category === 'tiles' && asset._tileCategory) {
+              uniqueKey = `${asset._tileCategory}_${id}`;
+            } else if (category === 'icons' && asset._iconCategory) {
+              uniqueKey = `${asset._iconCategory}_${id}`;
+            } else if (category === 'items' && asset._itemCategory) {
+              uniqueKey = `${asset._itemCategory}_${id}`;
+            }
             return (
               <AssetCard
                 key={uniqueKey}

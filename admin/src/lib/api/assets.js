@@ -61,9 +61,11 @@ export const getAssetPrompt = (category, id, options = {}) => {
  * @param {string} category - Asset category
  * @param {string} id - Asset ID
  * @param {object} updates - Fields to update
- * @param {object} options - Disambiguation options
- * @param {string} options.biome - Required for tiles category
- * @param {string} options.sourceFile - Alternative to biome (more precise)
+ * @param {object} options - Disambiguation options for categories with ID collisions
+ * @param {string} options.biome - For tiles category
+ * @param {string} options.iconCategory - For icons category (status, augments, etc.)
+ * @param {string} options.itemCategory - For items category (weapons, armor, etc.)
+ * @param {string} options.sourceFile - Most precise (works for any category)
  * @returns {Promise<object>} Updated asset
  */
 export const updateAsset = (category, id, updates, options = {}) =>
@@ -72,6 +74,8 @@ export const updateAsset = (category, id, updates, options = {}) =>
     body: JSON.stringify({
       ...updates,
       biome: options.biome,
+      iconCategory: options.iconCategory,
+      itemCategory: options.itemCategory,
       sourceFile: options.sourceFile,
     }),
   });

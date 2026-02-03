@@ -194,7 +194,7 @@ import { SIZE_PRESETS, DEFAULT_SIZES, ASSET_CATEGORIES } from '@shared/assetPath
 
 SIZE_PRESETS = {
   tiles: [64],
-  portraits: [64, 128, 256],
+  portraits: [32, 48, 64, 128, 256],
   items: [32, 64, 128],
   icons: [16, 24, 32, 48, 64, 128, 256],
   nodes: [48, 64, 96, 128, 256],

@@ -19,12 +19,17 @@ export const getRegenerationQueue = () => fetchAPI('/regeneration-queue');
  * @param {string} category - Asset category
  * @param {string} id - Asset ID
  * @param {boolean} mark - True to mark, false to unmark
+ * @param {object} options - Disambiguation options for categories with ID collisions
+ * @param {string} options.biome - For tiles category
+ * @param {string} options.iconCategory - For icons category (status, augments, etc.)
+ * @param {string} options.itemCategory - For items category (weapons, armor, etc.)
+ * @param {string} options.sourceFile - Most precise (works for any category)
  * @returns {Promise<object>} Updated asset status
  */
-export const markForRegeneration = (category, id, mark = true) =>
+export const markForRegeneration = (category, id, mark = true, options = {}) =>
   fetchAPI(`/assets/${category}/${id}/mark-regeneration`, {
     method: 'PUT',
-    body: JSON.stringify({ mark }),
+    body: JSON.stringify({ mark, ...options }),
   });
 
 /**

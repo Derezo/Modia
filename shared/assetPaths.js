@@ -64,18 +64,19 @@ export const SIZE_PRESETS = {
 };
 
 /**
- * Default size for each asset category when not specified
+ * Default size for each asset category when not specified.
+ * Set to largest available size for high-quality admin dashboard previews.
  * @type {Object.<string, number>}
  */
 export const DEFAULT_SIZES = {
-  tiles: 64,
-  portraits: 64,
-  items: 64,
-  icons: 32,
-  nodes: 96,
-  overlays: 64,
-  characters: 64,
-  obstacles: 64
+  tiles: 64,           // Only size available
+  portraits: 256,      // Max: 256 (from [32, 48, 64, 128, 256])
+  items: 128,          // Max: 128 (from [32, 64, 128])
+  icons: 256,          // Max: 256 (from [16, 24, 32, 48, 64, 128, 256])
+  nodes: 256,          // Max: 256 (from [48, 64, 96, 128, 256])
+  overlays: 128,       // Max: 128 (from [32, 48, 64, 128])
+  characters: 64,      // Only size (64x512 sprite sheets)
+  obstacles: 64        // Only size available
 };
 
 /**

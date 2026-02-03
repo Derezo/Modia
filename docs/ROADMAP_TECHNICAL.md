@@ -397,7 +397,7 @@ Major refactoring to consolidate and standardize the asset system with unified d
 **Directory Structure:**
 ```
 /assets/
-├── portraits/{64,128,256}/       # Player: {race}_{gender}_{class}, Enemy: enemy_{id}
+├── portraits/{32,48,64,128,256}/ # Player: {race}_{gender}_{class}, Enemy: enemy_{id}
 ├── nodes/{48,96}/                # No node_ prefix
 ├── items/{32,64,128}/{category}/ # Size in path, not filename
 ├── icons/png/{size}/{category}/  # PNG icons with size directories
