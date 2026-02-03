@@ -55,7 +55,8 @@ export class ConnectionIndicatorDOM {
       [ConnectionState.DEGRADED]: '#eab308',     // Yellow
       [ConnectionState.UNSTABLE]: '#f97316',     // Orange
       [ConnectionState.DISCONNECTED]: '#ef4444', // Red
-      [ConnectionState.RECONNECTING]: '#9ca3af'  // Gray
+      [ConnectionState.RECONNECTING]: '#9ca3af', // Gray
+      [ConnectionState.RATE_LIMITED]: '#a855f7'  // Purple
     };
 
     // State labels for tooltip
@@ -64,7 +65,8 @@ export class ConnectionIndicatorDOM {
       [ConnectionState.DEGRADED]: 'Slow Connection',
       [ConnectionState.UNSTABLE]: 'Unstable Connection',
       [ConnectionState.DISCONNECTED]: 'Disconnected',
-      [ConnectionState.RECONNECTING]: 'Reconnecting...'
+      [ConnectionState.RECONNECTING]: 'Reconnecting...',
+      [ConnectionState.RATE_LIMITED]: 'Rate Limited'
     };
 
     // Subscribe to state changes

@@ -1,12 +1,18 @@
 /**
  * TerrainTooltip - DOM-based tooltip for battle terrain tiles
  *
- * Shows terrain information when hovering during move action:
+ * Shows terrain information when hovering over tiles:
  * - Terrain name (capitalized)
  * - Movement cost (infinity symbol for impassable)
  * - Numeric height (always shown, including ground level)
  *
+ * Uses fixed positioning in top-left corner for consistent UX.
  * Uses Parchment UI theme for consistent visual style.
+ *
+ * Performance optimizations (Firefox-safe):
+ * - Fixed position (no layout calculations)
+ * - Throttled updates (max 20fps)
+ * - Batched DOM writes (only when content changes)
  */
 
 import {
@@ -16,19 +22,25 @@ import {
   getParchmentBorder,
   getParchmentShadow
 } from '../ui/parchment/ParchmentTheme.js';
-import { responsive } from '../core/Responsive.js';
 
 const STYLE_ID = 'terrain-tooltip-styles';
+
+// Throttle interval in ms (50ms = 20fps, plenty for a tooltip)
+const THROTTLE_MS = 50;
 
 export class TerrainTooltip {
   constructor() {
     this.element = null;
     this.isVisible = false;
-    this.isMobile = responsive.isMobile();
+
+    // Throttling state
+    this.lastUpdateTime = 0;
+
+    // Cache last content to avoid redundant DOM writes
+    this.lastContent = null;
 
     this.injectStyles();
     this.createElement();
-    this.setupResponsive();
   }
 
   /**
@@ -43,13 +55,23 @@ export class TerrainTooltip {
     style.id = STYLE_ID;
     style.textContent = `
       .terrain-tooltip {
-        position: absolute;
+        position: fixed;
+        /* Aligned with battle menu (left: 16px, top: 16px + 44px height + 8px gap) */
+        left: 16px;
+        top: 68px;
         pointer-events: none;
         z-index: 100;
         opacity: 0;
         visibility: hidden;
-        transition: opacity 0.1s ease-out, visibility 0.1s ease-out;
-        will-change: transform, opacity;
+        transition: opacity 0.15s ease-out, visibility 0.15s ease-out;
+      }
+
+      @media (max-width: 480px) {
+        .terrain-tooltip {
+          /* Match mobile menu position (left: 8px, top: 8px) */
+          left: 8px;
+          top: 60px;
+        }
       }
 
       .terrain-tooltip--visible {
@@ -169,15 +191,6 @@ export class TerrainTooltip {
   }
 
   /**
-   * Setup responsive listener
-   */
-  setupResponsive() {
-    this.responsiveUnsubscribe = responsive.onChange(() => {
-      this.isMobile = responsive.isMobile();
-    });
-  }
-
-  /**
    * Attach tooltip to a container element
    * @param {HTMLElement} container
    */
@@ -188,15 +201,41 @@ export class TerrainTooltip {
   }
 
   /**
-   * Show tooltip with terrain information
+   * Show tooltip with terrain information (throttled, fixed position)
    * @param {Object} options
    * @param {string} options.terrain - Terrain type (e.g., 'grass', 'stone')
    * @param {number} options.movementCost - Movement cost (Infinity for impassable)
    * @param {number} options.elevation - Elevation level (-1 to 3)
-   * @param {number} options.x - Viewport X position
-   * @param {number} options.y - Viewport Y position
    */
-  show({ terrain, movementCost, elevation, x, y }) {
+  show({ terrain, movementCost, elevation }) {
+    const now = performance.now();
+
+    // Throttle updates to avoid excessive DOM writes
+    if (now - this.lastUpdateTime < THROTTLE_MS) {
+      return;
+    }
+    this.lastUpdateTime = now;
+
+    // Build content key to detect changes
+    const contentKey = `${terrain}|${movementCost}|${elevation}`;
+
+    // Only update DOM content if it changed
+    if (contentKey !== this.lastContent) {
+      this.updateContent(terrain, movementCost, elevation);
+      this.lastContent = contentKey;
+    }
+
+    // Show if not visible
+    if (!this.isVisible) {
+      this.isVisible = true;
+      this.element.classList.add('terrain-tooltip--visible');
+    }
+  }
+
+  /**
+   * Update tooltip content (DOM writes batched here)
+   */
+  updateContent(terrain, movementCost, elevation) {
     // Format terrain name (capitalize first letter)
     const terrainName = terrain.charAt(0).toUpperCase() + terrain.slice(1);
     this.terrainElement.textContent = terrainName;
@@ -211,7 +250,6 @@ export class TerrainTooltip {
     }
 
     // Format height - always show numeric values
-    // h:0 for ground, ↑1/↑2/↑3 for elevated, ↓1 for pits
     let heightText;
     let heightClass = 'terrain-tooltip__stat terrain-tooltip__stat--height';
 
@@ -227,60 +265,14 @@ export class TerrainTooltip {
 
     this.heightElement.textContent = heightText;
     this.heightElement.className = heightClass;
-
-    // Position tooltip
-    this.updatePosition(x, y);
-
-    // Show
-    this.isVisible = true;
-    this.element.classList.add('terrain-tooltip--visible');
-  }
-
-  /**
-   * Update tooltip position
-   * @param {number} x - Viewport X position
-   * @param {number} y - Viewport Y position
-   */
-  updatePosition(x, y) {
-    if (!this.element) return;
-
-    // Get tooltip dimensions
-    const tooltipRect = this.element.getBoundingClientRect();
-    const tooltipWidth = tooltipRect.width || 150;
-    const tooltipHeight = tooltipRect.height || 30;
-
-    // Get container bounds
-    const container = this.element.parentElement;
-    const containerRect = container?.getBoundingClientRect() || {
-      width: window.innerWidth,
-      height: window.innerHeight,
-      left: 0,
-      top: 0
-    };
-
-    // Offset from cursor
-    const offsetX = this.isMobile ? 0 : 15;
-    const offsetY = this.isMobile ? -40 : -25;
-
-    // Calculate position relative to container
-    let posX = x + offsetX;
-    let posY = y + offsetY;
-
-    // Keep on screen
-    const maxX = containerRect.width - tooltipWidth - 10;
-    const maxY = containerRect.height - tooltipHeight - 10;
-
-    posX = Math.max(10, Math.min(posX, maxX));
-    posY = Math.max(10, Math.min(posY, maxY));
-
-    this.element.style.left = `${posX}px`;
-    this.element.style.top = `${posY}px`;
   }
 
   /**
    * Hide tooltip
    */
   hide() {
+    if (!this.isVisible) return;
+
     this.isVisible = false;
     this.element.classList.remove('terrain-tooltip--visible');
   }
@@ -289,15 +281,9 @@ export class TerrainTooltip {
    * Clean up resources
    */
   destroy() {
-    if (this.responsiveUnsubscribe) {
-      this.responsiveUnsubscribe();
-      this.responsiveUnsubscribe = null;
-    }
-
     if (this.element?.parentNode) {
       this.element.parentNode.removeChild(this.element);
     }
-
     this.element = null;
   }
 }

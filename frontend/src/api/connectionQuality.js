@@ -23,7 +23,8 @@ export const ConnectionState = {
   DEGRADED: 'degraded',
   UNSTABLE: 'unstable',
   DISCONNECTED: 'disconnected',
-  RECONNECTING: 'reconnecting'
+  RECONNECTING: 'reconnecting',
+  RATE_LIMITED: 'rate_limited'
 };
 
 /**
@@ -51,6 +52,12 @@ export class ConnectionQualityManager {
 
     /** @type {Array<function>} Registered change listeners */
     this.listeners = [];
+
+    /** @type {number} Timestamp when rate limit expires (0 if not rate limited) */
+    this.rateLimitedUntil = 0;
+
+    /** @type {number|null} Timer ID for rate limit auto-clear */
+    this.rateLimitTimer = null;
   }
 
   /**
@@ -128,8 +135,34 @@ export class ConnectionQualityManager {
   onConnected() {
     this.connected = true;
     this.reconnecting = false;
+    this.rateLimitedUntil = 0;
     this.state = ConnectionState.HEALTHY;
     this.notify();
+  }
+
+  /**
+   * Called when the server sends a rate_limited response.
+   * Sets state to rate limited with auto-recovery after the backoff period.
+   * @param {number} retryAfterMs - Time in milliseconds until rate limit expires
+   */
+  onRateLimited(retryAfterMs) {
+    this.rateLimitedUntil = Date.now() + retryAfterMs;
+    this.state = ConnectionState.RATE_LIMITED;
+    this.notify();
+
+    // Clear any existing timer
+    if (this.rateLimitTimer) {
+      clearTimeout(this.rateLimitTimer);
+    }
+
+    // Auto-clear rate limited state after backoff period
+    this.rateLimitTimer = setTimeout(() => {
+      this.rateLimitTimer = null;
+      if (this.state === ConnectionState.RATE_LIMITED) {
+        this.rateLimitedUntil = 0;
+        this.recalculateState();
+      }
+    }, retryAfterMs);
   }
 
   /**
@@ -154,6 +187,10 @@ export class ConnectionQualityManager {
     }
     if (this.reconnecting) {
       return ConnectionState.RECONNECTING;
+    }
+    // Check if still rate limited
+    if (this.rateLimitedUntil > 0 && Date.now() < this.rateLimitedUntil) {
+      return ConnectionState.RATE_LIMITED;
     }
     if (this.pendingRetries >= 3 || this.latencyMs > 500) {
       return ConnectionState.UNSTABLE;

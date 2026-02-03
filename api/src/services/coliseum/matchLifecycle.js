@@ -40,6 +40,7 @@ import {
 import { broadcastQueueUpdate } from './queueBroadcaster.js';
 import { captureTeamSnapshots, calculateMatchStats, calculateEnhancedMatchStats, getPlayerRank } from './statistics.js';
 import { setCompleteMatchFn, cancelTurnTimer, startTurnTimer } from './turnTimer.js';
+import { generateTerrain } from '../../../../shared/mapGeneration.js';
 
 // Register completeMatch with turnTimer to break circular dependency
 setCompleteMatchFn(completeMatch);
@@ -439,6 +440,10 @@ async function startMatch(matchId) {
     // Generate map seed
     const mapSeed = Math.floor(Math.random() * 2147483647);
 
+    // Generate terrain with elevation for server-side movement validation
+    // This ensures server pathfinding matches client terrain exactly
+    const mapData = generateTerrain(mapSeed, 'arena', 32, 32, { elevation: true });
+
     // Build initial battle state
     const initialState = {
       turn: 1,
@@ -449,6 +454,10 @@ async function startMatch(matchId) {
       player1Id: match.player1.userId,
       player2Id: match.player2.userId,
       units: [],
+      terrain: mapData.terrain,
+      elevation: mapData.elevation,
+      mapWidth: 32,
+      mapHeight: 32,
       consumables: [],
       log: [{ type: 'battle_start', message: 'PvP Battle begins!', timestamp: Date.now() }]
     };

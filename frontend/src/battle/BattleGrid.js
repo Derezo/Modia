@@ -115,6 +115,16 @@ export class BattleGrid {
   }
 
   /**
+   * Set terrain data directly (for server-provided battle state)
+   * @param {string[][]} terrainGrid - 2D grid of terrain type strings
+   */
+  setTerrain(terrainGrid) {
+    if (terrainGrid && Array.isArray(terrainGrid)) {
+      this.terrain = terrainGrid;
+    }
+  }
+
+  /**
    * Get elevation at position (discrete level)
    * Uses shared discretizeElevation for consistency with pathfinding
    * @param {number} x - Grid X coordinate

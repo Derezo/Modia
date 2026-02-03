@@ -493,7 +493,7 @@
         "death": true,
         "dead": true
       },
-      "generatedAt": "2026-02-02T18:56:43.725Z",
+      "generatedAt": "2026-02-02T19:45:54.898Z",
       "sd15Config": {
         "controlnetWeight": 0.7,
         "ipadapterWeight": 0.7,
@@ -517,13 +517,13 @@
         ],
         "dead": [
           "warrior is laying dead on the ground",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          ""
+          "warrior is laying dead on the ground",
+          "warrior is laying dead on the ground",
+          "warrior is laying dead on the ground",
+          "warrior is laying dead on the ground",
+          "warrior is laying dead on the ground",
+          "warrior is laying dead on the ground",
+          "warrior is laying dead on the ground"
         ]
       },
       "prompt": "full body transparent background, fully armored medieval warrior with sword shield sturdy muscular battle-ready",
@@ -701,7 +701,7 @@
         "walk": true,
         "attack": true,
         "hurt": true,
-        "dead": false,
+        "dead": true,
         "death": true
       },
       "prompt": "pixel art character sprite full body side view 64x64 transparent background savage warrior with spiked armor wielding dual axes, wild hair war paint scarred",
@@ -709,7 +709,7 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "generatedAt": "2026-02-02T18:34:52.236Z"
+      "generatedAt": "2026-02-02T21:10:45.647Z"
     },
     {
       "id": "paladin",
@@ -739,18 +739,22 @@
         "controlnetWeight": null,
         "ipadapterWeight": null,
         "referenceImage": "/assets/characters/player/paladin/paladin_reference.png",
-        "referenceGeneratedAt": "2026-02-01T19:00:54.401Z"
+        "referenceGeneratedAt": "2026-02-02T21:20:41.583Z",
+        "referenceLoraModel": "retro-game-art",
+        "animationLoraModel": "retro-game-art"
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
       "generatedAnimations": {
-        "dead": false
+        "dead": false,
+        "idle": true
       },
       "prompt": "pixel art character sprite full body side view 64x64 transparent background holy knight gleaming plate armor glowing sword divine aura cape",
       "evaluation": 0,
       "issues": "",
       "notes": "",
-      "priority": 0
+      "priority": 0,
+      "generatedAt": "2026-02-02T21:21:50.593Z"
     },
     {
       "id": "guardian",

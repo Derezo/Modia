@@ -11,6 +11,7 @@ import battleWebsocket from './battleWebsocket.js';
 import { query } from '../config/database.js';
 import { getBattleStatusString } from './battle/index.js';
 import { startTurnTimer } from './coliseumService.js';
+import { getAvailableActions } from './battle/actionProcessor.js';
 
 /**
  * Check if AI debug logging is enabled via user settings in battle state
@@ -589,12 +590,14 @@ async function notifyPlayerTurn(battleId, state) {
 
     // Send personal notification if ownerId is set (multiplayer battles)
     if (activeUnit.ownerId) {
+      // Compute full available actions including reachableTiles for movement validation
+      const availableActions = getAvailableActions(activeUnit, state);
       battleWebsocket.sendYourTurn(
         activeUnit.ownerId,
         battleId,
         activeUnit.id,
         state,
-        ['move', 'attack', 'skill', 'item', 'wait']
+        availableActions
       );
 
       // Determine if this is a multiplayer battle (multiple human players)
