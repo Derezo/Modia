@@ -86,7 +86,7 @@ describe('assetPaths constants', () => {
     });
 
     it('should have correct sizes for portraits', () => {
-      assert.deepStrictEqual(SIZE_PRESETS.portraits, [64, 128, 256]);
+      assert.deepStrictEqual(SIZE_PRESETS.portraits, [32, 48, 64, 128, 256]);
     });
 
     it('should have correct sizes for items', () => {
@@ -406,49 +406,49 @@ describe('getAssetPath', () => {
 });
 
 describe('getOriginalsPath', () => {
-  it('should return portrait originals path', () => {
+  it('should return portrait originals path with PNG extension', () => {
     const path = getOriginalsPath('portraits', 'human_male_warrior');
-    assert.strictEqual(path, '/assets/portraits/originals/human_male_warrior.webp');
+    assert.strictEqual(path, '/assets/portraits/originals/human_male_warrior.png');
   });
 
-  it('should return node originals path', () => {
+  it('should return node originals path with PNG extension', () => {
     const path = getOriginalsPath('nodes', 'castle');
-    assert.strictEqual(path, '/assets/nodes/originals/castle.webp');
+    assert.strictEqual(path, '/assets/nodes/originals/castle.png');
   });
 
-  it('should return item originals path with subcategory', () => {
+  it('should return item originals path with subcategory and PNG extension', () => {
     const path = getOriginalsPath('items', 'sword_iron', { subcategory: 'weapons' });
-    assert.strictEqual(path, '/assets/items/originals/weapons/sword_iron.webp');
+    assert.strictEqual(path, '/assets/items/originals/weapons/sword_iron.png');
   });
 
-  it('should return icon originals path with subcategory', () => {
+  it('should return icon originals path with subcategory and PNG extension', () => {
     const path = getOriginalsPath('icons', 'attack', { subcategory: 'actions' });
-    assert.strictEqual(path, '/assets/icons/originals/actions/attack.webp');
+    assert.strictEqual(path, '/assets/icons/originals/actions/attack.png');
   });
 
-  it('should return tile originals path with biome', () => {
+  it('should return tile originals path with biome and PNG extension', () => {
     const path = getOriginalsPath('tiles', 'grass_0', { subcategory: 'forest' });
-    assert.strictEqual(path, '/assets/sprites/terrain/originals/forest/grass_0.webp');
+    assert.strictEqual(path, '/assets/sprites/terrain/originals/forest/grass_0.png');
   });
 
-  it('should return overlay originals path', () => {
+  it('should return overlay originals path with PNG extension', () => {
     const path = getOriginalsPath('overlays', 'rare', { subcategory: 'rarity' });
-    assert.strictEqual(path, '/assets/overlays/originals/rarity/rare.webp');
+    assert.strictEqual(path, '/assets/overlays/originals/rarity/rare.png');
   });
 
-  it('should return character reference path for characters', () => {
+  it('should return character reference path for characters (already PNG)', () => {
     const path = getOriginalsPath('characters', 'warrior');
     assert.strictEqual(path, '/assets/characters/player/warrior/warrior_reference.png');
   });
 
-  it('should return enemy reference path for enemy characters', () => {
+  it('should return enemy reference path for enemy characters (already PNG)', () => {
     const path = getOriginalsPath('characters', 'goblin', { type: 'enemy', biome: 'forest' });
     assert.strictEqual(path, '/assets/characters/enemies/forest/goblin/goblin_reference.png');
   });
 
-  it('should return obstacle originals path', () => {
+  it('should return obstacle originals path with PNG extension', () => {
     const path = getOriginalsPath('obstacles', 'rock_small', { subcategory: 'rocks' });
-    assert.strictEqual(path, '/assets/obstacles/originals/rocks/rock_small.webp');
+    assert.strictEqual(path, '/assets/obstacles/originals/rocks/rock_small.png');
   });
 
   it('should use default subcategories when not specified', () => {
@@ -474,9 +474,9 @@ describe('getOutputPath', () => {
     assert.strictEqual(path, 'frontend/public/assets/nodes/96/castle.webp');
   });
 
-  it('should return originals path when original option is true', () => {
+  it('should return originals path when original option is true (PNG for originals)', () => {
     const path = getOutputPath('portraits', 'human_male_warrior', { original: true });
-    assert.strictEqual(path, 'frontend/public/assets/portraits/originals/human_male_warrior.webp');
+    assert.strictEqual(path, 'frontend/public/assets/portraits/originals/human_male_warrior.png');
   });
 
   it('should prepend frontend/public to character paths', () => {
@@ -494,7 +494,7 @@ describe('getAllSizeVariants', () => {
   it('should return all size variants for portraits', () => {
     const variants = getAllSizeVariants('portraits', 'human_male_warrior');
     assert.strictEqual(variants.length, SIZE_PRESETS.portraits.length);
-    assert.deepStrictEqual(variants.map(v => v.size), [64, 128, 256]);
+    assert.deepStrictEqual(variants.map(v => v.size), [32, 48, 64, 128, 256]);
   });
 
   it('should return all size variants for icons', () => {
@@ -573,10 +573,22 @@ describe('getDefaultSize', () => {
 });
 
 describe('getOptimalSize', () => {
-  describe('portraits (64, 128, 256)', () => {
-    it('should return 64 for sizes <= 64', () => {
-      assert.strictEqual(getOptimalSize('portraits', 32), 64);
-      assert.strictEqual(getOptimalSize('portraits', 48), 64);
+  describe('portraits (32, 48, 64, 128, 256)', () => {
+    it('should return 32 for sizes <= 32', () => {
+      assert.strictEqual(getOptimalSize('portraits', 16), 32);
+      assert.strictEqual(getOptimalSize('portraits', 24), 32);
+      assert.strictEqual(getOptimalSize('portraits', 32), 32);
+    });
+
+    it('should return 48 for sizes 33-48', () => {
+      assert.strictEqual(getOptimalSize('portraits', 33), 48);
+      assert.strictEqual(getOptimalSize('portraits', 40), 48);
+      assert.strictEqual(getOptimalSize('portraits', 48), 48);
+    });
+
+    it('should return 64 for sizes 49-64', () => {
+      assert.strictEqual(getOptimalSize('portraits', 49), 64);
+      assert.strictEqual(getOptimalSize('portraits', 56), 64);
       assert.strictEqual(getOptimalSize('portraits', 64), 64);
     });
 

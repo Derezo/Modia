@@ -54,7 +54,7 @@ export const OBSTACLE_CATEGORIES = ['rocks', 'trees'];
  */
 export const SIZE_PRESETS = {
   tiles: [64],
-  portraits: [64, 128, 256],
+  portraits: [32, 48, 64, 128, 256],
   items: [32, 64, 128],
   icons: [16, 24, 32, 48, 64, 128, 256],
   nodes: [48, 64, 96, 128, 256],
@@ -445,18 +445,21 @@ export function getOriginalsPath(category, id, options = {}) {
   switch (category) {
     case 'portraits':
     case 'nodes':
-      return `${ASSETS_BASE}/${category}/originals/${id}.webp`;
+      // Originals are always PNG (the true AI-generated source images)
+      return `${ASSETS_BASE}/${category}/originals/${id}.png`;
 
     case 'items':
     case 'icons':
     case 'overlays': {
       const sub = subcategory || (category === 'items' ? 'weapons' : category === 'icons' ? 'actions' : 'rarity');
-      return `${ASSETS_BASE}/${category}/originals/${sub}/${id}.webp`;
+      // Originals are always PNG (the true AI-generated source images)
+      return `${ASSETS_BASE}/${category}/originals/${sub}/${id}.png`;
     }
 
     case 'tiles': {
       const biome = subcategory || 'forest';
-      return `${ASSETS_BASE}/sprites/terrain/originals/${biome}/${id}.webp`;
+      // Originals are always PNG (the true AI-generated source images)
+      return `${ASSETS_BASE}/sprites/terrain/originals/${biome}/${id}.png`;
     }
 
     case 'characters': {
@@ -467,7 +470,8 @@ export function getOriginalsPath(category, id, options = {}) {
 
     case 'obstacles': {
       const obsCategory = subcategory || 'rocks';
-      return `${ASSETS_BASE}/obstacles/originals/${obsCategory}/${id}.webp`;
+      // Originals are always PNG (the true AI-generated source images)
+      return `${ASSETS_BASE}/obstacles/originals/${obsCategory}/${id}.png`;
     }
 
     default:
