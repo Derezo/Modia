@@ -1124,7 +1124,7 @@ async function getCanonicalSizedPath(category, id, size, options = {}) {
   const assetPaths = await getAssetPathsModule();
 
   // getOutputPath returns path relative to project root
-  // e.g., 'frontend/public/assets/portraits/64/human_male_warrior.png'
+  // e.g., 'frontend/public/assets/portraits/64/human_male_warrior.webp'
   const relativePath = assetPaths.getOutputPath(category, id, {
     ...options,
     size

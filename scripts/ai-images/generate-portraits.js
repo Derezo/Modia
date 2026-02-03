@@ -113,6 +113,21 @@ Examples:
 }
 
 /**
+ * Validate enemy portrait ID has required 'enemy_' prefix
+ * @param {Object} portrait - Portrait object
+ * @throws {Error} If enemy portrait ID doesn't start with 'enemy_'
+ */
+function validateEnemyPortraitId(portrait) {
+  if (portrait._type === 'enemy' && !portrait.id.startsWith('enemy_')) {
+    throw new Error(
+      `Enemy portrait ID must start with 'enemy_': ${portrait.id}\n` +
+      `Expected: enemy_${portrait.id}\n` +
+      `Fix the ID in ai-image-metadata/portraits/enemies.json`
+    );
+  }
+}
+
+/**
  * Get the output path for a portrait
  * Enemy portraits use 'enemy_' prefix in filename
  */
@@ -331,6 +346,9 @@ async function main() {
     log(`[${i + 1}/${portraitsToGenerate.length}] Generating: ${portrait.id}`, 'info');
 
     try {
+      // Validate enemy portrait IDs have required prefix before generation
+      validateEnemyPortraitId(portrait);
+
       let result;
 
       if (portrait._type === 'enemy') {
@@ -433,7 +451,6 @@ async function main() {
             'portraits',
             portraitId,
             {
-              sizes: [64, 128, 256],
               force: options.force,
               verbose: options.verbose
             }

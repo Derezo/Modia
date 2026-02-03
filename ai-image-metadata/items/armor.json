@@ -247,7 +247,16 @@
       "prompt": "sandals simple straps monk traveler comfortable",
       "seed": 21051,
       "generated": true,
-      "generatedAt": "2026-01-26T15:25:54.532Z"
+      "generatedAt": "2026-02-03T09:32:23.947Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "boots_leather",
@@ -279,7 +288,16 @@
       "prompt": "mage slippers cloth enchanted runic symbols",
       "seed": 21055,
       "generated": true,
-      "generatedAt": "2026-01-26T15:29:18.568Z"
+      "generatedAt": "2026-02-03T09:33:59.229Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "boots_war",

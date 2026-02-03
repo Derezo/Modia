@@ -39,7 +39,7 @@
       "id": "village",
       "name": "Village",
       "prompt": "small village cottages thatched roofs rustic hamlet",
-      "seed": 40003,
+      "seed": 40008,
       "generated": true,
       "evaluation": {
         "score": 7,
@@ -48,7 +48,11 @@
       },
       "needsRegeneration": false,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:51:04.151Z"
+      "generatedAt": "2026-02-03T08:59:07.035Z",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "regenerationQueuedAt": null
     },
     {
       "id": "forest",
@@ -71,8 +75,8 @@
     {
       "id": "cave",
       "name": "Cave",
-      "prompt": "cave entrance with visible rocky opening crack, warm torch glow inside in the distance, stone cavern",
-      "seed": 40005,
+      "prompt": "cave entrance with visible rocky opening crack, warm torch glow inside in the distance, stone cavern, circular rock mountain",
+      "seed": 40016,
       "generated": true,
       "evaluation": {
         "score": 5,
@@ -83,7 +87,11 @@
       },
       "needsRegeneration": false,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T22:34:05.739Z"
+      "generatedAt": "2026-02-03T08:51:20.486Z",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "regenerationQueuedAt": null
     },
     {
       "id": "mountain",
@@ -107,7 +115,7 @@
       "id": "bridge",
       "name": "Bridge",
       "prompt": "stone bridge crossing river arch medieval",
-      "seed": 40007,
+      "seed": 40015,
       "generated": true,
       "evaluation": {
         "score": 7,
@@ -115,7 +123,12 @@
         "regenerate": false
       },
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T20:54:13.095Z"
+      "generatedAt": "2026-02-03T08:59:07.039Z",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "guild",
@@ -246,7 +259,12 @@
         "regenerate": false
       },
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T21:01:29.746Z"
+      "generatedAt": "2026-02-03T08:59:07.040Z",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "apothecary",
@@ -291,7 +309,12 @@
         "regenerate": false
       },
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T21:03:53.688Z"
+      "generatedAt": "2026-02-03T08:47:07.905Z",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "watchtower",
@@ -319,7 +342,12 @@
         "regenerate": false
       },
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T21:05:29.545Z"
+      "generatedAt": "2026-02-03T08:59:07.040Z",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "caravan",
@@ -347,7 +375,12 @@
         "regenerate": false
       },
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-27T21:07:05.719Z"
+      "generatedAt": "2026-02-03T08:59:07.041Z",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "guild_wizard",

@@ -63,8 +63,16 @@
       "prompt": "katana curved single-edge blade wrapped handle tsuba guard",
       "seed": 20005,
       "generated": true,
-      "generatedAt": "2026-01-26T14:19:50.505Z",
-      "needsRegeneration": false
+      "generatedAt": "2026-02-03T09:27:25.875Z",
+      "needsRegeneration": false,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "sword_scimitar",
@@ -86,9 +94,18 @@
       "id": "sword_falchion",
       "name": "Falchion",
       "prompt": "falchion single-edge cleaver-like blade broad tip",
-      "seed": 20008,
+      "seed": 20015,
       "generated": true,
-      "generatedAt": "2026-01-26T14:22:07.706Z"
+      "generatedAt": "2026-02-03T09:28:18.025Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "axe_hatchet",
@@ -119,8 +136,16 @@
       "prompt": "battle axe crescent blade long handle reinforced",
       "seed": 20013,
       "generated": true,
-      "generatedAt": "2026-01-26T14:24:23.785Z",
-      "needsRegeneration": false
+      "generatedAt": "2026-02-03T09:29:13.911Z",
+      "needsRegeneration": false,
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "axe_great",
@@ -632,7 +657,16 @@
       "prompt": "great bow massive war bow steel-tipped deadly range",
       "seed": 20094,
       "generated": true,
-      "generatedAt": "2026-01-26T15:02:15.032Z"
+      "generatedAt": "2026-02-03T09:30:49.339Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "loraModel": "retro-pixel",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     }
   ]
 }

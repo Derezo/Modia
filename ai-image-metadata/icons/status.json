@@ -12,7 +12,7 @@
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:00:34.117Z"
+      "generatedAt": "2026-02-03T09:25:40.319Z"
     },
     {
       "id": "burn",
@@ -20,9 +20,10 @@
       "prompt": "flame burn fire damage ember",
       "seed": 31002,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:01:23.666Z"
+      "generatedAt": "2026-01-29T08:01:23.666Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "freeze",
@@ -30,9 +31,10 @@
       "prompt": "ice crystal freeze frozen cold snowflake",
       "seed": 31003,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:02:13.286Z"
+      "generatedAt": "2026-01-29T08:02:13.286Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "stun",
@@ -40,9 +42,10 @@
       "prompt": "stars spinning stun dazed dizzy spiral",
       "seed": 31004,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:03:03.269Z"
+      "generatedAt": "2026-01-29T08:03:03.269Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "sleep",
@@ -50,9 +53,10 @@
       "prompt": "zzz sleep rest unconscious moon",
       "seed": 31005,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:03:53.038Z"
+      "generatedAt": "2026-01-29T08:03:53.038Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "blind",
@@ -60,9 +64,10 @@
       "prompt": "closed eye blind darkness unable to see",
       "seed": 31006,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:04:42.793Z"
+      "generatedAt": "2026-01-29T08:04:42.793Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "silence",
@@ -71,13 +76,14 @@
       "seed": 31007,
       "generated": true,
       "needsRegeneration": false,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "generatedAt": "2026-01-29T08:05:32.180Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null
     },
     {
       "id": "slow",
@@ -86,8 +92,9 @@
       "seed": 31008,
       "generated": true,
       "needsRegeneration": false,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T08:06:21.823Z"
+      "loraModel": "v2",
+      "generatedAt": "2026-01-29T08:06:21.823Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "haste",
@@ -96,13 +103,14 @@
       "seed": 31009,
       "generated": true,
       "needsRegeneration": false,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "generatedAt": "2026-01-29T08:07:11.347Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null
     },
     {
       "id": "regen",
@@ -120,9 +128,10 @@
       "prompt": "shield protect defense barrier buff blue",
       "seed": 31011,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:08:51.493Z"
+      "generatedAt": "2026-01-29T08:08:51.493Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "shell",
@@ -130,9 +139,10 @@
       "prompt": "magic shell bubble protect magic defense",
       "seed": 31012,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:09:41.137Z"
+      "generatedAt": "2026-01-29T08:09:41.137Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "strength_up",
@@ -140,9 +150,10 @@
       "prompt": "muscle bicep strength up power red",
       "seed": 31013,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:10:30.816Z"
+      "generatedAt": "2026-01-29T08:10:30.816Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "strength_down",
@@ -150,9 +161,10 @@
       "prompt": "broken arm strength down weakness blue",
       "seed": 31014,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:11:21.736Z"
+      "generatedAt": "2026-01-29T08:11:21.736Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "defense_up",
@@ -160,9 +172,10 @@
       "prompt": "shield plus defense up armor gold",
       "seed": 31015,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:12:12.336Z"
+      "generatedAt": "2026-01-29T08:12:12.336Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "defense_down",
@@ -170,9 +183,10 @@
       "prompt": "cracked shield defense down vulnerable",
       "seed": 31016,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:13:02.324Z"
+      "generatedAt": "2026-01-29T08:13:02.324Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "berserk",
@@ -180,9 +194,10 @@
       "prompt": "angry face berserk rage fury red",
       "seed": 31017,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:13:52.537Z"
+      "generatedAt": "2026-01-29T08:13:52.537Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "confusion",
@@ -190,9 +205,10 @@
       "prompt": "question mark confusion confused spiral",
       "seed": 31018,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:14:38.662Z"
+      "generatedAt": "2026-01-29T08:14:38.662Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "charm",
@@ -200,9 +216,10 @@
       "prompt": "heart charm love infatuation pink",
       "seed": 31019,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:15:25.937Z"
+      "generatedAt": "2026-01-29T08:15:25.937Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "doom",
@@ -210,9 +227,10 @@
       "prompt": "skull countdown doom death timer dark",
       "seed": 31020,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:16:12.990Z"
+      "generatedAt": "2026-01-29T08:16:12.990Z",
+      "regenerationQueuedAt": null
     }
   ]
 }

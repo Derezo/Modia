@@ -576,15 +576,23 @@ export class AssetLoader {
 
   /**
    * Get enemy portrait URL with appropriate size
-   * Enemy portraits are in unified portraits directory with 'enemy_' prefix
    *
-   * @param {string} enemyId - Enemy identifier (e.g., 'goblin_warrior', 'wolf')
+   * IMPORTANT: This method adds the 'enemy_' prefix to the enemyId.
+   * Pass the database sprite_id (e.g., 'goblin_warrior'), NOT the full
+   * portrait ID (e.g., 'enemy_goblin_warrior').
+   *
+   * @param {string} enemyId - Enemy identifier from database sprite_id
    * @param {number} [displaySize=64] - Target display size in pixels
    * @returns {string} Enemy portrait URL with optimal size
    *
    * @example
+   * // Correct: pass sprite_id from database
    * const url = assetLoader.getEnemyPortraitUrl('giant_spider', 40);
    * // => '/assets/portraits/64/enemy_giant_spider.webp'
+   *
+   * // Wrong: do NOT pass the full portrait ID with prefix
+   * // assetLoader.getEnemyPortraitUrl('enemy_giant_spider', 40);
+   * // Would incorrectly produce: '/assets/portraits/64/enemy_enemy_giant_spider.webp'
    */
   getEnemyPortraitUrl(enemyId, displaySize = 64) {
     const optimalSize = getOptimalSize('portraits', displaySize);

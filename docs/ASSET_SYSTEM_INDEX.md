@@ -145,7 +145,7 @@ npm run ai:generate:tiles -- --key grass_0 --huggingface
 | Directory | Purpose | Sizes |
 |-----------|---------|-------|
 | `assets/sprites/terrain/{biome}/` | Battle map tiles | 64x64 |
-| `assets/portraits/` | Character/enemy portraits | 64, 128, 256 |
+| `assets/portraits/` | Character/enemy portraits | 32, 48, 64, 128, 256 |
 | `assets/items/{subcategory}/` | Equipment/consumable icons | 32, 64, 128 |
 | `assets/icons/png/` | UI action/status icons | 16, 24, 32, 48, 64 |
 | `assets/icons/svg/` | Hand-crafted SVG icons | Scalable |

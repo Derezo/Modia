@@ -59,6 +59,9 @@ export class ColiseumScene extends Scene {
   }
 
   async enter(_data = {}) {
+    // Reset match state from any previous battle
+    this.resetMatchState();
+
     this.addStyles();
     this.createUI();
     this.setupEventListeners();
@@ -80,7 +83,7 @@ export class ColiseumScene extends Scene {
   }
 
   exit() {
-    // Leave queue if in one
+    // Leave queue if in one (before resetting state)
     if (this.isInQueue) {
       this.leaveQueue();
     }
@@ -88,11 +91,8 @@ export class ColiseumScene extends Scene {
     // Leave coliseum lobby
     this.game.socket.send({ type: 'coliseum_lobby_leave' });
 
-    // Clear countdown if running
-    if (this.matchCountdown) {
-      clearInterval(this.matchCountdown);
-      this.matchCountdown = null;
-    }
+    // Reset match state (includes clearing countdown)
+    this.resetMatchState();
 
     // Remove WebSocket handlers
     Object.entries(this.wsHandlers).forEach(([type, handler]) => {
@@ -104,6 +104,28 @@ export class ColiseumScene extends Scene {
       this.uiElement.remove();
       this.uiElement = null;
     }
+  }
+
+  /**
+   * Reset match-related state when entering scene
+   * Called on entry to clear stale state from completed matches
+   */
+  resetMatchState() {
+    // Clear any running countdown timer
+    if (this.matchCountdown) {
+      clearInterval(this.matchCountdown);
+      this.matchCountdown = null;
+    }
+
+    // Reset match state
+    this.currentMatch = null;
+    this.isReady = false;
+    this.opponentReady = false;
+
+    // Reset queue state (match was found, so queue was left)
+    this.isInQueue = false;
+    this.queueStatus = null;
+    this.selectedQueue = null;
   }
 
   addStyles() {

@@ -853,12 +853,14 @@ router.get('/:category/:id/prompt', asyncHandler(async (req, res) => {
  * PUT /assets/:category/:id
  * Update asset metadata (prompt, seed, evaluation, issues)
  * Body for tiles must include: biome or sourceFile
+ * Body for icons may include: iconCategory
+ * Body for items may include: itemCategory
  */
 router.put('/:category/:id', asyncHandler(async (req, res) => {
   ensureUtilities();
 
   const { category, id } = req.params;
-  const { biome, sourceFile, ...updates } = req.body;
+  const { biome, sourceFile, iconCategory, itemCategory, ...updates } = req.body;
 
   // Validate asset ID to prevent path traversal
   assertValidAssetId(id, 'Asset');
@@ -871,6 +873,9 @@ router.put('/:category/:id', asyncHandler(async (req, res) => {
   if (category === 'tiles' && !biome && !sourceFile) {
     throw new AppError('biome or sourceFile required in body for tiles', 400);
   }
+
+  // Build disambiguation options
+  const disambiguationOpts = { biome, sourceFile, iconCategory, itemCategory };
 
   // Validate allowed update fields
   const allowedFields = ['prompt', 'seed', 'evaluation', 'issues', 'notes', 'priority', 'generated', 'generatedAt', 'needsRegeneration', 'loraModel', 'controlnetWeight', 'ipadapterWeight', 'referenceImage', 'referenceImageStatus'];
@@ -888,7 +893,7 @@ router.put('/:category/:id', asyncHandler(async (req, res) => {
   let asset = null;
   try {
     const data = metadataUtils.loadCategoryAssets(category);
-    asset = findAssetById(data, category, id, { biome, sourceFile });
+    asset = findAssetById(data, category, id, disambiguationOpts);
   } catch (error) {
     throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
   }
@@ -906,7 +911,7 @@ router.put('/:category/:id', asyncHandler(async (req, res) => {
 
   // Reload to return updated asset - use same disambiguation
   const updatedData = metadataUtils.loadCategoryAssets(category);
-  const updatedAsset = findAssetById(updatedData, category, id, { biome, sourceFile });
+  const updatedAsset = findAssetById(updatedData, category, id, disambiguationOpts);
 
   res.json({
     message: 'Asset updated successfully',
@@ -923,7 +928,7 @@ router.put('/:category/:id/mark-regeneration', asyncHandler(async (req, res) => 
   ensureUtilities();
 
   const { category, id } = req.params;
-  const { mark = true, biome, sourceFile } = req.body;
+  const { mark = true, biome, sourceFile, iconCategory, itemCategory } = req.body;
 
   // Validate asset ID to prevent path traversal
   assertValidAssetId(id, 'Asset');
@@ -932,16 +937,19 @@ router.put('/:category/:id/mark-regeneration', asyncHandler(async (req, res) => 
     throw new AppError(`Invalid category: ${category}`, 400);
   }
 
-  // Require biome for tiles (due to ID collisions across biomes)
+  // Require disambiguation for categories with ID collisions
   if (category === 'tiles' && !biome && !sourceFile) {
     throw new AppError('biome or sourceFile required in body for tiles', 400);
   }
+
+  // Build disambiguation options
+  const disambiguationOpts = { biome, sourceFile, iconCategory, itemCategory };
 
   // Find the asset to get its source file
   let asset = null;
   try {
     const data = metadataUtils.loadCategoryAssets(category);
-    asset = findAssetById(data, category, id, { biome, sourceFile });
+    asset = findAssetById(data, category, id, disambiguationOpts);
   } catch (error) {
     throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
   }
@@ -969,7 +977,7 @@ router.put('/:category/:id/mark-regeneration', asyncHandler(async (req, res) => 
 
   // Reload to return updated asset - use same disambiguation
   const updatedData = metadataUtils.loadCategoryAssets(category);
-  const updatedAsset = findAssetById(updatedData, category, id, { biome, sourceFile });
+  const updatedAsset = findAssetById(updatedData, category, id, disambiguationOpts);
 
   res.json({
     message: mark ? 'Asset marked for regeneration' : 'Regeneration marker cleared',

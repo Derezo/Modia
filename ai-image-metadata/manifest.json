@@ -235,11 +235,11 @@
     "enabled": true,
     "defaultModel": "isnet-general-use",
     "categorySettings": {
-      "portraits": { "enabled": true, "model": "isnet-general-use" },
+      "portraits": { "enabled": true, "model": "isnet-anime" },
       "items": { "enabled": true, "model": "isnet-general-use" },
       "icons": { "enabled": true, "model": "u2net" },
-      "nodes": { "enabled": false },
-      "overlays": { "enabled": false },
+      "nodes": { "enabled": true, "model": "isnet-general-use" },
+      "overlays": { "enabled": true, "model": "isnet-general-use" },
       "characters": { "enabled": true, "model": "isnet-anime" },
       "obstacles": { "enabled": true, "model": "isnet-general-use" },
       "tiles": { "enabled": false }

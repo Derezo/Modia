@@ -29,8 +29,14 @@
         "issues": [],
         "regenerate": false
       },
-      "generatedAt": "2026-01-27T19:34:47.757Z",
-      "loraModel": "retro-pixel"
+      "generatedAt": "2026-02-03T08:45:13.940Z",
+      "loraModel": "retro-pixel",
+      "prompt": "green skin pointed ears yellow eyes tusks war paint crude iron helmet intelligent bipedal capable of speech armor or clothing leafy green natural woodland undergrowth dappled light",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "enemy_gray_wolf",
@@ -162,9 +168,9 @@
         "issues": [],
         "regenerate": false
       },
-      "generatedAt": "2026-01-27T19:40:25.998Z",
+      "generatedAt": "2026-02-03T08:45:13.941Z",
       "loraModel": "retro-pixel",
-      "prompt": "bone necklace staff with orb purple magic glow, feather necklace, intelligent bipedal troll capable of speech armor or clothing rocky alpine windswept rugged high altitude harsh",
+      "prompt": "troll shaman with bone and feather necklace and gnarled staff with orb purple magic glow, intelligent bipedal troll capable of speech armor, clothing rocky alpine windswept rugged high altitude harsh",
       "issues": "",
       "notes": "",
       "priority": 0,
@@ -184,8 +190,14 @@
         "issues": [],
         "regenerate": false
       },
-      "generatedAt": "2026-01-27T19:41:10.413Z",
-      "loraModel": "retro-pixel"
+      "generatedAt": "2026-02-03T08:45:13.941Z",
+      "loraModel": "retro-pixel",
+      "prompt": "feathered head plume sharp beak fierce yellow eyes talons animal creature feral wild natural predator instinctual rocky alpine windswept rugged high altitude harsh",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "enemy_bridge_bandit",
@@ -216,8 +228,14 @@
         "issues": [],
         "regenerate": false
       },
-      "generatedAt": "2026-01-27T19:42:38.413Z",
-      "loraModel": "retro-pixel"
+      "generatedAt": "2026-02-03T08:45:13.941Z",
+      "loraModel": "retro-pixel",
+      "prompt": "fancy hat with feathers goatee confident smirk fine clothes intelligent bandit with weathered armor, well traveled",
+      "issues": "",
+      "notes": "",
+      "priority": 0,
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "id": "enemy_bridge_troll",
@@ -250,13 +268,13 @@
         "issues": [],
         "regenerate": false
       },
-      "generatedAt": "2026-01-27T19:44:06.957Z",
+      "generatedAt": "2026-02-03T08:45:13.942Z",
       "loraModel": "retro-pixel",
       "prompt": "dark ornate plate armor red piercing eyes purple dark aura intelligent bipedal lizardman capable of speech armor is ornate with regal dark gothic corrupted once-grand and very sinister",
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true,
+      "needsRegeneration": false,
       "regenerationQueuedAt": null
     },
     {
@@ -272,13 +290,13 @@
         "issues": [],
         "regenerate": false
       },
-      "generatedAt": "2026-01-27T19:44:51.486Z",
+      "generatedAt": "2026-02-03T08:45:13.942Z",
       "loraModel": "retro-pixel",
       "prompt": "deep hood void only red glowing eyes visible shadow tendrils intelligent bipedal lizardman capable of speech armor or clothing ornate regal dark gothic corrupted once-grand sinister",
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true,
+      "needsRegeneration": false,
       "regenerationQueuedAt": null
     },
     {
@@ -287,20 +305,20 @@
       "archetype": "humanoid",
       "region": "palace",
       "visualTraits": "polished plate armor golden trim royal emblem stern visor",
-      "seed": 35003,
+      "seed": 35007,
       "generated": true,
       "evaluation": {
         "score": 7,
         "issues": [],
         "regenerate": false
       },
-      "generatedAt": "2026-01-27T19:45:36.141Z",
+      "generatedAt": "2026-02-03T08:45:13.942Z",
       "loraModel": "retro-pixel",
       "prompt": "polished plate armor golden trim royal emblem stern visor intelligent bipedal lizardman capable of speech armor or clothing ornate regal dark gothic corrupted once-grand sinister",
       "issues": "",
       "notes": "",
       "priority": 0,
-      "needsRegeneration": true,
+      "needsRegeneration": false,
       "regenerationQueuedAt": null
     }
   ]

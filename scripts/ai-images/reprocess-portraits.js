@@ -283,7 +283,6 @@ async function main() {
         'portraits',
         key,
         {
-          sizes: [64, 128, 256],
           force: true,
           verbose: options.verbose
         }

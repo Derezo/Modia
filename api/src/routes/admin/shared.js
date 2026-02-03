@@ -281,40 +281,52 @@ export function enrichAssetWithPath(asset, category) {
 }
 
 /**
- * Find an asset by ID, with biome disambiguation for tiles
+ * Find an asset by ID, with disambiguation for categories with ID collisions
  * @param {object} data - Result from loadCategoryAssets
  * @param {string} category - Asset category
  * @param {string} id - Asset ID
  * @param {object} options - Disambiguation options
- * @param {string} options.biome - Required for tiles category
- * @param {string} options.sourceFile - Alternative to biome (more precise)
+ * @param {string} options.biome - For tiles category
+ * @param {string} options.sourceFile - Most precise (works for any category)
+ * @param {string} options.iconCategory - For icons category (status, augments, etc.)
+ * @param {string} options.itemCategory - For items category (weapons, armor, etc.)
  * @returns {object|null} Asset or null if not found
  */
 export function findAssetById(data, category, id, options = {}) {
-  // For non-tiles, byId lookup is safe (IDs are globally unique)
-  if (category !== 'tiles') {
-    return data.byId[id] || null;
-  }
+  const { biome, sourceFile, iconCategory, itemCategory } = options;
 
-  // For tiles, must search with disambiguation
-  const { biome, sourceFile } = options;
-
-  // Prefer sourceFile if provided (most precise)
+  // sourceFile is most precise - works for any category
   if (sourceFile) {
     return data.assets.find(a =>
       (a.id === id || a.key === id) && a._sourceFile === sourceFile
     ) || null;
   }
 
-  // Fall back to biome filter
-  if (biome) {
+  // Category-specific disambiguation
+  if (category === 'tiles') {
+    if (biome) {
+      return data.assets.find(a =>
+        (a.id === id || a.key === id) && a._biome === biome
+      ) || null;
+    }
+    // No disambiguation for tiles - return null
+    return null;
+  }
+
+  if (category === 'icons' && iconCategory) {
     return data.assets.find(a =>
-      (a.id === id || a.key === id) && a._biome === biome
+      (a.id === id || a.key === id) && a._iconCategory === iconCategory
     ) || null;
   }
 
-  // No disambiguation provided - return null for tiles
-  return null;
+  if (category === 'items' && itemCategory) {
+    return data.assets.find(a =>
+      (a.id === id || a.key === id) && a._itemCategory === itemCategory
+    ) || null;
+  }
+
+  // For categories without disambiguation needs, byId lookup is safe
+  return data.byId[id] || null;
 }
 
 // Re-export constants

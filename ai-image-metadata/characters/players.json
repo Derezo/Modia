@@ -504,28 +504,7 @@
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "frameDescriptionOverrides": {
-        "idle": [
-          "warrior is laying on the ground",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          ""
-        ],
-        "dead": [
-          "warrior is laying dead on the ground",
-          "warrior is laying dead on the ground",
-          "warrior is laying dead on the ground",
-          "warrior is laying dead on the ground",
-          "warrior is laying dead on the ground",
-          "warrior is laying dead on the ground",
-          "warrior is laying dead on the ground",
-          "warrior is laying dead on the ground"
-        ]
-      },
+      "frameDescriptionOverrides": null,
       "prompt": "full body transparent background, fully armored medieval warrior with sword shield sturdy muscular battle-ready",
       "evaluation": 0,
       "issues": "",
@@ -782,7 +761,7 @@
         "controlnetWeight": null,
         "ipadapterWeight": null,
         "referenceImage": "/assets/characters/player/guardian/guardian_reference.png",
-        "referenceGeneratedAt": "2026-02-01T19:08:16.922Z"
+        "referenceGeneratedAt": "2026-02-03T06:28:26.383Z"
       },
       "needsRegeneration": false,
       "regenerationQueuedAt": null,

@@ -11,18 +11,22 @@
       "seed": 30001,
       "generated": true,
       "needsRegeneration": false,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T07:44:23.416Z"
+      "loraModel": "v2",
+      "generatedAt": "2026-02-03T09:09:49.189Z"
     },
     {
       "id": "defend",
       "name": "Defend",
-      "prompt": "raised shield defend block protection stance",
+      "prompt": "raised shield icon",
       "seed": 30002,
       "generated": true,
       "needsRegeneration": false,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T07:45:06.875Z"
+      "loraModel": "v2",
+      "generatedAt": "2026-02-03T09:18:38.439Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "move",
@@ -31,23 +35,26 @@
       "seed": 30003,
       "generated": true,
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:45:51.720Z",
-      "loraModel": "retro-pixel"
+      "generatedAt": "2026-02-03T09:12:13.499Z",
+      "loraModel": "v2"
     },
     {
       "id": "wait",
       "name": "Wait",
       "prompt": "tilted hourglass wait time pause clock",
-      "seed": 30004,
+      "seed": 30008,
       "generated": true,
       "needsRegeneration": false,
       "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T07:46:37.639Z",
+      "generatedAt": "2026-02-03T09:07:39.332Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "item",
@@ -55,9 +62,9 @@
       "prompt": "potion bottle item use consume hand",
       "seed": 30005,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:47:24.488Z",
+      "generatedAt": "2026-02-03T09:12:58.894Z",
       "evaluation": {
         "score": 0,
         "issues": [],
@@ -70,14 +77,17 @@
       "prompt": "magic sparkle skill ability star burst",
       "seed": 30006,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:48:11.757Z",
+      "generatedAt": "2026-02-03T09:29:59.119Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "flee",
@@ -85,9 +95,12 @@
       "prompt": "running figure escape flee retreat arrow",
       "seed": 30007,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:49:00.482Z"
+      "generatedAt": "2026-02-03T09:31:35.134Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "heal",
@@ -101,8 +114,9 @@
         "regenerate": false
       },
       "needsRegeneration": false,
-      "loraModel": "retro-pixel",
-      "generatedAt": "2026-01-29T07:49:48.792Z"
+      "loraModel": "v2",
+      "generatedAt": "2026-02-03T09:23:24.383Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "magic_fire",
@@ -110,9 +124,12 @@
       "prompt": "fireball flame fire magic spell blaze",
       "seed": 30012,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:50:37.462Z"
+      "generatedAt": "2026-02-03T09:33:10.205Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "magic_ice",
@@ -120,9 +137,12 @@
       "prompt": "ice crystal frost cold magic spell snowflake",
       "seed": 30013,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:51:27.220Z"
+      "generatedAt": "2026-02-03T09:34:42.628Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "magic_lightning",
@@ -130,14 +150,17 @@
       "prompt": "yellow lightning bolt electric shock magic spell",
       "seed": 30014,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:52:16.102Z",
+      "generatedAt": "2026-02-03T09:39:14.828Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "magic_earth",
@@ -145,14 +168,17 @@
       "prompt": "brown rock boulder earth magic spell stone",
       "seed": 30015,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:53:05.115Z",
+      "generatedAt": "2026-02-03T09:37:02.905Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "magic_holy",
@@ -160,14 +186,17 @@
       "prompt": "radiant blue light holy magic divine blessing",
       "seed": 30016,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:53:55.216Z",
+      "generatedAt": "2026-02-03T09:38:30.083Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "magic_dark",
@@ -175,9 +204,12 @@
       "prompt": "shadow darkness dark magic curse wispy",
       "seed": 30017,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:54:44.740Z"
+      "generatedAt": "2026-02-03T09:39:56.477Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "buff",
@@ -185,9 +217,10 @@
       "prompt": "upward arrow buff enhance boost power up",
       "seed": 30021,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:55:34.323Z"
+      "generatedAt": "2026-01-29T07:55:34.323Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "debuff",
@@ -195,14 +228,15 @@
       "prompt": "downward arrow debuff down",
       "seed": 30022,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-29T07:56:24.038Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null
     },
     {
       "id": "taunt",
@@ -210,9 +244,10 @@
       "prompt": "shouting face taunt provoke aggro anger",
       "seed": 30023,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:57:14.181Z"
+      "generatedAt": "2026-01-29T07:57:14.181Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "stealth",
@@ -220,14 +255,15 @@
       "prompt": "eye slash hidden stealth invisible cloak",
       "seed": 30024,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-29T07:58:04.361Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "regenerationQueuedAt": null
     },
     {
       "id": "summon",
@@ -235,9 +271,10 @@
       "prompt": "magic circle summon portal conjure creature",
       "seed": 30025,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:58:54.912Z"
+      "generatedAt": "2026-01-29T07:58:54.912Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "counter",
@@ -245,17 +282,18 @@
       "prompt": "circular arrow counter reflect retaliate response",
       "seed": 30026,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:59:44.763Z"
+      "generatedAt": "2026-01-29T07:59:44.763Z",
+      "regenerationQueuedAt": null
     },
     {
       "id": "travel",
       "name": "Travel",
-      "prompt": "walking path icon",
+      "prompt": "dirt walking path icon",
       "seed": 30027,
       "generated": true,
-      "loraModel": "retro-pixel",
+      "loraModel": "v2",
       "needsRegeneration": false,
       "generatedAt": "2026-01-30T04:47:18.472Z",
       "regenerationQueuedAt": null,

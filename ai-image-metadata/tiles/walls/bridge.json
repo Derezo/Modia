@@ -86,8 +86,8 @@
       "prompt": "seamless vertical heat-damaged bridge wall texture with scorch marks, tileable horizontal pattern, side view cross-section, black orange tones",
       "seed": 41081,
       "generated": false,
-      "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T19:13:12.255Z"
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "key": "wall_bridge_cliff",
@@ -95,8 +95,8 @@
       "prompt": "seamless vertical bridge abutment cliff texture with carved stone supports, tileable horizontal pattern, side view cross-section, sandstone tones",
       "seed": 41091,
       "generated": false,
-      "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T19:13:12.255Z"
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     },
     {
       "key": "wall_bridge_tree",
@@ -104,8 +104,8 @@
       "prompt": "seamless vertical wooden bridge beam texture with timber grain and iron bands, tileable horizontal pattern, side view cross-section, oak brown tones",
       "seed": 41101,
       "generated": false,
-      "needsRegeneration": true,
-      "regenerationQueuedAt": "2026-02-02T19:13:12.255Z"
+      "needsRegeneration": false,
+      "regenerationQueuedAt": null
     }
   ]
 }
