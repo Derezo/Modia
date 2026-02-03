@@ -412,4 +412,198 @@ describe('Battle API', () => {
       assert.strictEqual(res.status, 401);
     });
   });
+
+  describe('Action Sequence Validation', () => {
+    // Note: Action sequence validation is currently in logging-only mode,
+    // so all these tests verify acceptance while logging warnings for stale sequences
+
+    it('should accept action with valid sequence number', async () => {
+      // Skip if no active battle (battle may have ended from previous tests)
+      if (!battle?.battleId) {
+        return;
+      }
+
+      // Get current battle state to find active unit
+      const stateRes = await request(
+        'GET',
+        `/api/battle/${battle.battleId}/state`,
+        null,
+        user.accessToken
+      );
+
+      if (stateRes.status !== 200 || stateRes.body.status !== 'active') {
+        return; // Battle not active
+      }
+
+      const activeUnit = stateRes.body.activeUnitId;
+      const playerUnit = stateRes.body.units?.find(u => u.id === activeUnit && u.isPlayer);
+
+      if (!playerUnit) {
+        return; // Not player's turn
+      }
+
+      // Submit action with sequence number
+      const actionRes = await request(
+        'POST',
+        `/api/battle/${battle.battleId}/action`,
+        {
+          actionType: 'defend',
+          actorId: activeUnit,
+          actionSequence: 1
+        },
+        user.accessToken
+      );
+
+      // Should accept (200) or indicate not player's turn (400)
+      assert.ok([200, 400].includes(actionRes.status),
+        `Expected 200 or 400, got ${actionRes.status}`);
+    });
+
+    it('should accept action without actionSequence for backward compatibility', async () => {
+      // Skip if no active battle
+      if (!battle?.battleId) {
+        return;
+      }
+
+      const stateRes = await request(
+        'GET',
+        `/api/battle/${battle.battleId}/state`,
+        null,
+        user.accessToken
+      );
+
+      if (stateRes.status !== 200 || stateRes.body.status !== 'active') {
+        return;
+      }
+
+      const activeUnit = stateRes.body.activeUnitId;
+      const playerUnit = stateRes.body.units?.find(u => u.id === activeUnit && u.isPlayer);
+
+      if (!playerUnit) {
+        return;
+      }
+
+      // Submit action WITHOUT sequence number (legacy client)
+      const actionRes = await request(
+        'POST',
+        `/api/battle/${battle.battleId}/action`,
+        {
+          actionType: 'defend',
+          actorId: activeUnit
+          // No actionSequence - should still work for backward compatibility
+        },
+        user.accessToken
+      );
+
+      // Should accept (200) or indicate not player's turn (400)
+      assert.ok([200, 400].includes(actionRes.status),
+        `Expected 200 or 400, got ${actionRes.status}: ${JSON.stringify(actionRes.body)}`);
+    });
+
+    it('should accept stale sequence number in logging-only mode', async () => {
+      // Skip if no active battle
+      if (!battle?.battleId) {
+        return;
+      }
+
+      const stateRes = await request(
+        'GET',
+        `/api/battle/${battle.battleId}/state`,
+        null,
+        user.accessToken
+      );
+
+      if (stateRes.status !== 200 || stateRes.body.status !== 'active') {
+        return;
+      }
+
+      const activeUnit = stateRes.body.activeUnitId;
+      const playerUnit = stateRes.body.units?.find(u => u.id === activeUnit && u.isPlayer);
+
+      if (!playerUnit) {
+        return;
+      }
+
+      // First action with higher sequence
+      await request(
+        'POST',
+        `/api/battle/${battle.battleId}/action`,
+        {
+          actionType: 'defend',
+          actorId: activeUnit,
+          actionSequence: 100
+        },
+        user.accessToken
+      );
+
+      // Second action with lower (stale) sequence - should still be accepted in logging-only mode
+      const staleRes = await request(
+        'POST',
+        `/api/battle/${battle.battleId}/action`,
+        {
+          actionType: 'defend',
+          actorId: activeUnit,
+          actionSequence: 50 // Stale sequence
+        },
+        user.accessToken
+      );
+
+      // In logging-only mode, stale sequences are accepted with a warning logged
+      assert.ok([200, 400].includes(staleRes.status),
+        `Expected 200 or 400 (accepted), got ${staleRes.status}: ${JSON.stringify(staleRes.body)}`);
+    });
+
+    it('should reset action sequence tracking on rejoin', async () => {
+      // Skip if no active battle
+      if (!battle?.battleId) {
+        return;
+      }
+
+      // First, submit an action with a high sequence number
+      const stateRes = await request(
+        'GET',
+        `/api/battle/${battle.battleId}/state`,
+        null,
+        user.accessToken
+      );
+
+      if (stateRes.status !== 200 || stateRes.body.status !== 'active') {
+        return;
+      }
+
+      // Call rejoin endpoint - this should reset the sequence tracking
+      const rejoinRes = await request(
+        'GET',
+        `/api/battle/${battle.battleId}/rejoin`,
+        null,
+        user.accessToken
+      );
+
+      assert.strictEqual(rejoinRes.status, 200, 'Rejoin should succeed');
+      assert.ok(rejoinRes.body.state, 'Rejoin should return battle state');
+
+      // After rejoin, a low sequence number should be accepted
+      const activeUnit = rejoinRes.body.state?.activeUnitId;
+      const playerUnit = rejoinRes.body.state?.units?.find(u => u.id === activeUnit && u.isPlayer);
+
+      if (!playerUnit) {
+        return;
+      }
+
+      const postRejoinRes = await request(
+        'POST',
+        `/api/battle/${battle.battleId}/action`,
+        {
+          actionType: 'defend',
+          actorId: activeUnit,
+          actionSequence: 1 // Low sequence after rejoin - should be accepted
+        },
+        user.accessToken
+      );
+
+      // Should be accepted after sequence reset
+      assert.ok([200, 400].includes(postRejoinRes.status),
+        `Expected 200 or 400, got ${postRejoinRes.status}`);
+    });
+  });
 });

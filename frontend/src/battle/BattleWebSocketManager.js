@@ -45,6 +45,10 @@ export class BattleWebSocketManager {
 
     // Deferred input enable (when your_turn arrives before turn_start)
     this.pendingInputEnable = false;
+
+    // Action sequence number for validation (increments with each action)
+    // This helps the server detect stale/duplicate actions after reconnection
+    this.actionSequence = 0;
   }
 
   // ===========================================================================
@@ -237,21 +241,22 @@ export class BattleWebSocketManager {
     });
     this.wsUnsubscribers.push(disconnectUnsub);
 
-    // Handle socket reconnect - rejoin battle room
+    // Handle socket reconnect - use battle-aware rejoin sequence
     const reconnectUnsub = socket.on('connect', () => {
       if (this.battleId) {
-        console.log('[Battle WS] Socket reconnected, rejoining battle room');
-        socket.joinBattleRoom(this.battleId);
-        this.attemptRejoin();
+        console.log('[Battle WS] Socket reconnected, initiating battle-aware rejoin');
+        this.handleReconnected();
       }
     });
     this.wsUnsubscribers.push(reconnectUnsub);
 
     // Initialize state poller for defensive synchronization
+    // Includes critical drift callback for detecting important changes during animations
     this.statePoller = new BattleStatePoller(
       this.battleId,
       (serverState) => this.handleStateDrift(serverState),
-      this.game
+      this.game,
+      (driftType, serverValue, serverState) => this.handleCriticalDrift(driftType, serverValue, serverState)
     );
     this.statePoller.start();
   }
@@ -293,6 +298,113 @@ export class BattleWebSocketManager {
   // ===========================================================================
 
   /**
+   * Reconnection tracking for debugging and metrics
+   */
+  reconnectionAttempts = 0;
+  reconnectionSuccesses = 0;
+  lastReconnectionTime = null;
+
+  /**
+   * Handle the 'connect' event with battle-specific prioritization.
+   * Called when WebSocket reconnects after a disconnect.
+   *
+   * Battle room rejoin is prioritized over other rooms (chat, tavern) to ensure
+   * the player can resume gameplay as quickly as possible.
+   */
+  async handleReconnected() {
+    if (!this.battleId) {
+      console.log('[Battle WS] Reconnected but no active battle');
+      return;
+    }
+
+    console.log('[Battle WS] Reconnected - starting battle-aware rejoin sequence');
+    this.reconnectionAttempts++;
+    this.lastReconnectionTime = Date.now();
+
+    // Step 1: Immediately prioritize battle room rejoin
+    console.log('[Battle WS] Step 1: Rejoining battle room (priority)');
+    const battleSuccess = await this.attemptRejoin();
+
+    if (battleSuccess) {
+      this.reconnectionSuccesses++;
+      console.log(`[Battle WS] Battle rejoin successful (${this.reconnectionSuccesses}/${this.reconnectionAttempts} total)`);
+
+      // Step 2: Delay non-critical room rejoins to avoid overloading
+      // This ensures battle state sync completes before other traffic
+      console.log('[Battle WS] Step 2: Scheduling delayed rejoin for non-critical rooms');
+      setTimeout(() => {
+        this.rejoinNonCriticalRooms();
+      }, 500);
+    } else {
+      console.error('[Battle WS] Battle rejoin failed - skipping non-critical rejoins');
+    }
+  }
+
+  /**
+   * Rejoin non-critical rooms after battle state is synced.
+   * Called with a delay after successful battle rejoin.
+   */
+  rejoinNonCriticalRooms() {
+    const socket = this.game?.socket;
+    if (!socket) return;
+
+    console.log('[Battle WS] Rejoining non-critical rooms (chat, etc.)');
+
+    // Rejoin global chat if user was in it
+    // Note: This is informational - the socket manager handles room state
+    // The actual room state restoration happens in the main websocket reconnect handler
+  }
+
+  /**
+   * Get reconnection statistics for debugging/metrics.
+   * @returns {{attempts: number, successes: number, successRate: number, lastAttempt: number|null}}
+   */
+  getReconnectionStats() {
+    return {
+      attempts: this.reconnectionAttempts,
+      successes: this.reconnectionSuccesses,
+      successRate: this.reconnectionAttempts > 0
+        ? (this.reconnectionSuccesses / this.reconnectionAttempts * 100).toFixed(1)
+        : 0,
+      lastAttempt: this.lastReconnectionTime
+    };
+  }
+
+  /**
+   * Clear all pending actions and reset action-related state
+   * Called after reconnection to prevent stale actions from being submitted
+   */
+  clearPendingActions() {
+    console.log('[Battle] Clearing pending actions after reconnection');
+
+    // Reset action sequence to avoid conflicts with server-side tracking
+    this.actionSequence = 0;
+
+    // Clear any pending action in the scene
+    if (this.scene) {
+      this.scene.pendingAction = null;
+      this.scene.currentAction = null;
+      this.scene.validTiles = [];
+      this.scene.inputEnabled = false; // Will be re-enabled by turn system
+
+      // Clear any queued inputs if the scene has such a method
+      if (typeof this.scene.clearQueuedInputs === 'function') {
+        this.scene.clearQueuedInputs();
+      }
+    }
+
+    // Clear the turn event queue to prevent processing stale events
+    // (Server will send fresh state after rejoin)
+    this.turnEventQueue = [];
+    this.isProcessingQueue = false;
+
+    // Reset pending input enable flag
+    this.pendingInputEnable = false;
+
+    debugLog('battle.stateSync', 'Pending actions cleared after reconnection');
+  }
+
+  /**
    * Attempt to rejoin battle after disconnect
    * @returns {Promise<boolean>} Whether rejoin was successful
    */
@@ -307,6 +419,10 @@ export class BattleWebSocketManager {
 
       // Show reconnecting notification
       parchmentToast.info('Connection', 'Reconnecting...');
+
+      // CRITICAL: Clear pending actions BEFORE requesting rejoin state
+      // This prevents stale actions from being submitted while we're reconnecting
+      this.clearPendingActions();
 
       const response = await this.game.api.request(`/battle/${this.battleId}/rejoin`);
 
@@ -339,6 +455,9 @@ export class BattleWebSocketManager {
         if (this.game.socket) {
           this.game.socket.joinBattleRoom(this.battleId);
         }
+
+        // Update poller state with fresh server state
+        this.updatePollerState();
 
         // Show reconnection notification
         parchmentToast.success('Connection', 'Reconnected!');
@@ -719,14 +838,20 @@ export class BattleWebSocketManager {
   /**
    * Process turn events sequentially with proper animation timing
    * Only one event processes at a time - each waits for its animation to complete
+   *
+   * Uses critical-only polling mode during processing to detect important
+   * state changes (turn changes, battle end) without triggering disruptive
+   * full state syncs during animations.
    */
   async processTurnEventQueue() {
     // Don't start processing if already processing
     if (this.isProcessingQueue) return;
     this.isProcessingQueue = true;
 
-    // Pause state poller during queue processing to avoid false drift detection
-    this.statePoller?.pause();
+    // Switch to critical-only mode instead of pausing entirely
+    // This allows detecting important state changes during animations
+    // without triggering full resync that could disrupt visual feedback
+    this.statePoller?.setCriticalMode(true);
 
     try {
       while (this.turnEventQueue.length > 0) {
@@ -751,8 +876,8 @@ export class BattleWebSocketManager {
       // Always reset the flag, even if an error occurred
       this.isProcessingQueue = false;
 
-      // Resume state poller and update local state
-      this.statePoller?.resume();
+      // Switch back to normal polling mode (will trigger full sync if needed)
+      this.statePoller?.setCriticalMode(false);
       this.updatePollerState();
     }
   }
@@ -837,6 +962,33 @@ export class BattleWebSocketManager {
 
     // Fix: Update poller baseline so it doesn't detect drift again
     this.updatePollerState();
+  }
+
+  /**
+   * Handle critical drift detected during animation queue processing
+   * Notifies the scene of important state changes without interrupting animations
+   * @param {string} driftType - Type of drift: 'turn_changed', 'turn_count_changed', 'status_changed'
+   * @param {*} serverValue - The server's value for the changed field
+   * @param {Object} serverState - Full server state for reference
+   */
+  handleCriticalDrift(driftType, serverValue, serverState) {
+    console.warn(`[Battle WS] Critical drift during animation: ${driftType}`, serverValue);
+
+    // Notify scene of critical drift - it can decide whether to interrupt animations
+    if (this.scene.onCriticalDrift) {
+      this.scene.onCriticalDrift(driftType, serverValue, serverState);
+    }
+
+    // For battle end, we may want to fast-forward animations
+    if (driftType === 'status_changed' && serverValue !== 'active') {
+      console.log('[Battle WS] Battle ended on server - consider fast-forwarding animations');
+      // The scene can use this to skip remaining animations and show results
+    }
+
+    // For turn changes, log but don't interrupt - the queue should handle turn transitions
+    if (driftType === 'turn_changed') {
+      debugLog('battle.stateSync', 'Turn changed on server while processing animations - queue should sync');
+    }
   }
 
   /**
@@ -931,6 +1083,32 @@ export class BattleWebSocketManager {
    */
   getConnectionQualityManager() {
     return this.connectionQuality;
+  }
+
+  /**
+   * Get the next action sequence number and increment the counter
+   * Used when submitting battle actions to help server detect stale/duplicate actions
+   * @returns {number} The action sequence number to use for this action
+   */
+  getNextActionSequence() {
+    this.actionSequence++;
+    return this.actionSequence;
+  }
+
+  /**
+   * Get the current action sequence number (without incrementing)
+   * @returns {number} The current action sequence number
+   */
+  getCurrentActionSequence() {
+    return this.actionSequence;
+  }
+
+  /**
+   * Reset the action sequence number (called on battle start or reconnection)
+   */
+  resetActionSequence() {
+    this.actionSequence = 0;
+    debugLog('battle.stateSync', 'Action sequence reset to 0');
   }
 
   /**

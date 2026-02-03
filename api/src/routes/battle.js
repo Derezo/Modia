@@ -22,6 +22,88 @@ import { completeMatch as completeColiseumMatch, cancelTurnTimer } from '../serv
 const router = express.Router();
 
 // ============================================================================
+// ACTION SEQUENCE TRACKING (for stale/duplicate action detection)
+// ============================================================================
+
+// In-memory store for last action sequence per battle/user
+// Key format: `${battleId}:${userId}` -> { sequence: number, timestamp: number }
+const lastActionSequences = new Map();
+
+// TTL-based cleanup constants
+const SEQUENCE_ENTRY_TTL_MS = 60 * 60 * 1000; // 1 hour
+const SEQUENCE_CLEANUP_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+
+// Periodic cleanup of stale action sequence entries (handles abandoned battles)
+setInterval(() => {
+  const now = Date.now();
+  let cleanedCount = 0;
+  for (const [key, value] of lastActionSequences.entries()) {
+    if (now - value.timestamp > SEQUENCE_ENTRY_TTL_MS) {
+      lastActionSequences.delete(key);
+      cleanedCount++;
+    }
+  }
+  if (cleanedCount > 0) {
+    console.log(`[Battle] Cleaned ${cleanedCount} stale action sequence entries`);
+  }
+}, SEQUENCE_CLEANUP_INTERVAL_MS);
+
+/**
+ * Validate action sequence to detect stale/duplicate actions
+ * @param {number} battleId - Battle ID
+ * @param {number} userId - User ID
+ * @param {number|undefined} actionSequence - Sequence number from client
+ * @returns {{valid: boolean, warning?: string}} Validation result
+ */
+function validateActionSequence(battleId, userId, actionSequence) {
+  const key = `${battleId}:${userId}`;
+  const entry = lastActionSequences.get(key);
+  const lastSequence = entry ? entry.sequence : 0;
+
+  // If no sequence provided (legacy client), accept but don't track
+  if (actionSequence === undefined || actionSequence === null) {
+    return { valid: true };
+  }
+
+  // Sequence should be greater than last seen
+  if (actionSequence <= lastSequence) {
+    console.warn(`[Battle] Stale action sequence: battle=${battleId}, user=${userId}, received=${actionSequence}, last=${lastSequence}`);
+    // For now, just warn and accept (logging-only mode)
+    // TODO: Once verified stable, can change to hard reject
+    return {
+      valid: true,
+      warning: `Potentially stale action (seq=${actionSequence}, last=${lastSequence})`
+    };
+  }
+
+  // Update last seen sequence with timestamp
+  lastActionSequences.set(key, { sequence: actionSequence, timestamp: Date.now() });
+  return { valid: true };
+}
+
+/**
+ * Reset action sequence tracking for a battle/user (on battle start or reconnection)
+ * @param {number} battleId - Battle ID
+ * @param {number} userId - User ID
+ */
+function resetActionSequence(battleId, userId) {
+  const key = `${battleId}:${userId}`;
+  lastActionSequences.delete(key);
+}
+
+/**
+ * Clean up action sequence tracking for a completed battle
+ * @param {number} battleId - Battle ID
+ */
+function cleanupBattleSequences(battleId) {
+  for (const key of lastActionSequences.keys()) {
+    if (key.startsWith(`${battleId}:`)) {
+      lastActionSequences.delete(key);
+    }
+  }
+}
+
+// ============================================================================
 // BATTLE END HELPER (for async processing)
 // ============================================================================
 
@@ -272,6 +354,9 @@ async function handleBattleEnd(battleId, status, state, userId, battleEndResult 
   bossService.cleanupBossEncounter(battleId).catch(err => {
     console.error('[Battle] Failed to cleanup boss encounter:', err);
   });
+
+  // Clean up action sequence tracking for this battle
+  cleanupBattleSequences(battleId);
 
   return rewards;
 }
@@ -797,6 +882,10 @@ router.get('/:battleId/rejoin', authenticate, rejoinLimiter, asyncHandler(async 
     playerName
   );
 
+  // Reset action sequence tracking for this user on reconnection
+  // This allows the client to start fresh with sequence numbers
+  resetActionSequence(parseInt(battleId), req.user.userId);
+
   // Get disconnected players info
   const disconnectedPlayers = battleReconnection.getDisconnectedPlayers(parseInt(battleId));
 
@@ -825,7 +914,13 @@ router.get('/:battleId/rejoin', authenticate, rejoinLimiter, asyncHandler(async 
 
 // POST /api/battle/action - Submit battle action
 router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res) => {
-  const { battleId, actionType, unitId, targetTile, skillId } = req.body;
+  const { battleId, actionType, unitId, targetTile, skillId, actionSequence } = req.body;
+
+  // Validate action sequence (logging-only mode for now)
+  const sequenceValidation = validateActionSequence(battleId, req.user.userId, actionSequence);
+  if (sequenceValidation.warning) {
+    console.log(`[Battle] Action sequence warning: ${sequenceValidation.warning}`);
+  }
 
   // Get battle - allow both player1 AND player2 to submit actions (for PvP)
   const battleResult = await query(

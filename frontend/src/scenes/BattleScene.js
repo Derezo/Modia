@@ -1519,6 +1519,12 @@ export class BattleScene extends Scene {
         targetTile
       };
 
+      // Add action sequence number for server-side validation
+      // This helps detect stale/duplicate actions after reconnection
+      if (this.wsManager) {
+        actionData.actionSequence = this.wsManager.getNextActionSequence();
+      }
+
       // Add skill or item ID depending on action type
       if (actionType === 'skill') {
         actionData.skillId = this.selectedSkillId;
@@ -2009,6 +2015,60 @@ export class BattleScene extends Scene {
           }
         }
       }
+    }
+  }
+
+  /**
+   * Clear all queued inputs and pending actions
+   * Called after reconnection to prevent stale inputs from being processed
+   */
+  clearQueuedInputs() {
+    console.log('[BattleScene] Clearing queued inputs');
+
+    this.pendingAction = null;
+    this.currentAction = null;
+    this.validTiles = [];
+    this.inputEnabled = false;
+    this.selectedSkillId = null;
+    this.selectedItemId = null;
+    this.selectedInventoryId = null;
+
+    // Hide any open menus
+    this.hideRadialMenu();
+    if (this.ui) {
+      this.ui.hideSkillMenu?.();
+      this.ui.hideItemMenu?.();
+    }
+  }
+
+  /**
+   * Handle critical drift detected during animation queue processing
+   * Called by BattleWebSocketManager when the poller detects important state changes
+   * (turn changed, battle ended) while animations are playing.
+   * @param {string} driftType - Type of drift: 'turn_changed', 'turn_count_changed', 'status_changed'
+   * @param {*} serverValue - The server's value for the changed field
+   * @param {Object} _serverState - Full server state for reference (unused, for future extensions)
+   */
+  onCriticalDrift(driftType, serverValue, _serverState) {
+    console.log(`[BattleScene] Critical drift notification: ${driftType}`, serverValue);
+
+    // For battle end, we may want to interrupt animations and show results
+    if (driftType === 'status_changed' && serverValue !== 'active') {
+      console.log('[BattleScene] Battle ended on server during animations - queueing end');
+
+      // Force complete pending animations if available
+      if (this.animations?.forceComplete) {
+        this.animations.forceComplete();
+      }
+
+      // The battle end will be processed when the queue finishes
+      // since the poller will trigger a full sync after critical mode ends
+    }
+
+    // For turn changes during animations, just log - the queue handles turn transitions
+    // The full sync after critical mode will catch any missed state
+    if (driftType === 'turn_changed') {
+      console.log('[BattleScene] Turn changed on server during animations - will sync after queue');
     }
   }
 

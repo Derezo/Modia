@@ -19,9 +19,11 @@ let connectionId = 0; // Incremented on each connect to track stale callbacks
 let reconnectAttempts = 0;
 let reconnectTimeoutId = null;
 let authTimeoutId = null;
+let heartbeatIntervalId = null;
 const maxReconnectAttempts = 10;
 const baseReconnectDelay = 1000;
 const authTimeout = 10000; // 10 seconds to authenticate
+const HEARTBEAT_INTERVAL_MS = 15000; // Send heartbeat every 15 seconds to prevent zombie cleanup
 
 // Event handlers map
 const handlers = new Map();
@@ -62,7 +64,7 @@ function setConnectionState(newState) {
 }
 
 /**
- * Clear all pending timeouts
+ * Clear all pending timeouts and intervals
  */
 function clearPendingTimeouts() {
   if (reconnectTimeoutId) {
@@ -72,6 +74,52 @@ function clearPendingTimeouts() {
   if (authTimeoutId) {
     clearTimeout(authTimeoutId);
     authTimeoutId = null;
+  }
+  if (heartbeatIntervalId) {
+    clearInterval(heartbeatIntervalId);
+    heartbeatIntervalId = null;
+  }
+}
+
+/**
+ * Start sending heartbeat messages to prevent zombie cleanup
+ */
+function startHeartbeat() {
+  // Clear any existing heartbeat interval
+  if (heartbeatIntervalId) {
+    clearInterval(heartbeatIntervalId);
+  }
+
+  heartbeatIntervalId = setInterval(() => {
+    if (ws && ws.readyState === WebSocket.OPEN && connectionState === ConnectionState.AUTHENTICATED) {
+      try {
+        ws.send(JSON.stringify({
+          type: 'heartbeat',
+          payload: {
+            timestamp: Date.now(),
+            id: `admin_hb_${Date.now()}`
+          }
+        }));
+      } catch (err) {
+        console.error('[WS] Failed to send heartbeat:', err);
+        // Heartbeat failure likely means connection is broken
+        // Close the socket to trigger the onclose handler which will call reconnect()
+        stopHeartbeat();
+        if (ws && ws.readyState !== WebSocket.CLOSED) {
+          ws.close(4001, 'Heartbeat send failed');
+        }
+      }
+    }
+  }, HEARTBEAT_INTERVAL_MS);
+}
+
+/**
+ * Stop sending heartbeat messages
+ */
+function stopHeartbeat() {
+  if (heartbeatIntervalId) {
+    clearInterval(heartbeatIntervalId);
+    heartbeatIntervalId = null;
   }
 }
 
@@ -188,6 +236,9 @@ export function connect() {
         console.log('[WS] Authenticated, joining admin rooms');
         setConnectionState(ConnectionState.AUTHENTICATED);
 
+        // Start heartbeat to prevent zombie cleanup
+        startHeartbeat();
+
         try {
           // Join image generation room
           socket.send(JSON.stringify({
@@ -202,6 +253,11 @@ export function connect() {
         } catch (err) {
           console.error('[WS] Failed to join rooms:', err);
         }
+        return;
+      }
+
+      // Handle heartbeat acknowledgment (silently ignore)
+      if (type === 'heartbeat_ack') {
         return;
       }
 
@@ -261,6 +317,9 @@ export function connect() {
     }
 
     console.log('[WS] Disconnected:', event.code, event.reason);
+
+    // Stop heartbeat
+    stopHeartbeat();
 
     // Clear auth timeout if pending
     if (authTimeoutId) {
