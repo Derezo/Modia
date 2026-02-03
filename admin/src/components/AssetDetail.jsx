@@ -742,8 +742,15 @@ export default function AssetDetail({
       loraModel: 'pixel-art-xl',
       referenceLoraModel: 'pixel-art-xl'
     },
+    backgroundRemoval: {      // Background removal config
+      availableModels: [],
+    },
     loading: true,
   });
+
+  // Background removal reprocessing state
+  const [reprocessModel, setReprocessModel] = useState('');
+  const [reprocessing, setReprocessing] = useState(false);
 
   // UI state - preview size will be initialized per category
   const [previewSize, setPreviewSize] = useState(null);
@@ -778,7 +785,7 @@ export default function AssetDetail({
       try {
         const config = await api.getConfig();
         // API returns validLoraModels (array), loraModels (full metadata), defaultLoraByCategory (object),
-        // and SD1.5 models (sd15LoraModels, sd15Defaults)
+        // SD1.5 models (sd15LoraModels, sd15Defaults), and backgroundRemoval config
         setLoraConfig({
           // Flux LoRA models (for static assets)
           loraModels: config.loraModels || {},
@@ -789,6 +796,8 @@ export default function AssetDetail({
             loraModel: 'pixel-art-xl',
             referenceLoraModel: 'pixel-art-xl'
           },
+          // Background removal models
+          backgroundRemoval: config.backgroundRemoval || { availableModels: [] },
           loading: false,
         });
       } catch (err) {
@@ -1212,6 +1221,39 @@ export default function AssetDetail({
   // Mark for regeneration
   const handleMarkForRegen = () => {
     handleChange('needsRegeneration', true);
+  };
+
+  // Reprocess asset with background removal
+  const handleReprocess = async () => {
+    if (!asset) return;
+
+    setReprocessing(true);
+
+    try {
+      // Build options for reprocessing
+      const options = {};
+      if (reprocessModel) {
+        options.model = reprocessModel;
+      }
+      // Include biome for tiles disambiguation
+      if (category === 'tiles' && asset._biome) {
+        options.biome = asset._biome;
+      }
+
+      await api.reprocessAsset(category, asset.key || asset.id, options);
+      toast.success('Asset reprocessed successfully');
+
+      // Refresh the preview by incrementing fallback index to force reload
+      setFallbackIndex(0);
+      setImageError(false);
+
+      // Trigger parent update
+      onUpdate?.();
+    } catch (err) {
+      toast.error(err.message || 'Failed to reprocess asset');
+    } finally {
+      setReprocessing(false);
+    }
   };
 
   // Preview full prompt with theme - uses API endpoint for structured breakdown
@@ -1711,6 +1753,41 @@ export default function AssetDetail({
                   <ExclamationTriangleIcon className="w-4 h-4" />
                   Mark for Regen
                 </button>
+
+                {/* Background Removal Reprocessing Controls */}
+                {loraConfig.backgroundRemoval?.availableModels?.length > 0 && (
+                  <div className="flex items-center gap-2 ml-auto">
+                    <select
+                      value={reprocessModel}
+                      onChange={(e) => setReprocessModel(e.target.value)}
+                      disabled={reprocessing || !isGenerated}
+                      className="px-2 py-1.5 text-sm bg-midnight-800 border border-midnight-700 rounded-lg
+                                 text-parchment-200 focus:outline-none focus:border-accent-gold
+                                 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="">Default Model</option>
+                      {loraConfig.backgroundRemoval.availableModels.map((model) => (
+                        <option key={model} value={model}>
+                          {model}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleReprocess}
+                      disabled={reprocessing || !isGenerated}
+                      className="btn-ghost flex items-center gap-2 disabled:opacity-50"
+                      title="Reprocess the original image with background removal"
+                    >
+                      {reprocessing ? (
+                        <ReloadIcon className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <ImageIcon className="w-4 h-4" />
+                      )}
+                      Reprocess Original
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </Dialog.Content>

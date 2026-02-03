@@ -212,3 +212,25 @@ export const deleteFrameDescriptionOverrides = (characterId, animation) =>
   fetchAPI(`/assets/characters/${characterId}/frame-descriptions/${animation}`, {
     method: 'DELETE',
   });
+
+// ============================================================================
+// Background Removal & Reprocessing
+// ============================================================================
+
+/**
+ * Reprocess an asset with background removal and regenerate size variants
+ * @param {string} category - Asset category
+ * @param {string} id - Asset ID
+ * @param {object} options - Reprocessing options
+ * @param {string} options.model - rembg model to use (optional, uses category default)
+ * @param {string} options.biome - Required for tiles category
+ * @returns {Promise<object>} Reprocessing result { success, model, variants, backgroundRemovalApplied }
+ */
+export const reprocessAsset = (category, id, options = {}) =>
+  fetchAPI(`/assets/${category}/${id}/reprocess`, {
+    method: 'POST',
+    body: JSON.stringify({
+      model: options.model || undefined,
+      biome: options.biome || undefined,
+    }),
+  });

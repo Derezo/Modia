@@ -23,6 +23,13 @@ const { log, fileExists, ensureDirectoryExists, convertToWebp } = require('./ima
 // Use centralized bridge for ESM import and SIZE_PRESETS
 const { getAssetPathsModule, getSizePresets, RESIZE_SPECIFIC_PRESETS } = require('./assetPathsBridge');
 
+// Background removal utilities
+const {
+  shouldRemoveBackground,
+  getBackgroundRemovalModel,
+  processWithBackgroundRemoval
+} = require('./backgroundRemovalUtils');
+
 /**
  * Project root directory (Modia/)
  */
@@ -687,10 +694,12 @@ async function postProcessTile(imagePath, options = {}) {
  * Post-process a portrait image: generate size variants from source
  * Detects source size and only generates variants <= source size.
  *
- * Expected sizes: [64, 128, 256]
- * - If source is 256x256: generates 64, 128, keeps 256
- * - If source is 128x128: generates 64, keeps 128 (skips 256)
- * - If source is 64x64: keeps 64 only (skips 128, 256)
+ * Expected sizes: [32, 48, 64, 128, 256]
+ * - If source is 256x256: generates 32, 48, 64, 128, keeps 256
+ * - If source is 128x128: generates 32, 48, 64, keeps 128
+ * - If source is 64x64: generates 32, 48, keeps 64
+ * - If source is 48x48: generates 32, keeps 48
+ * - If source is 32x32: keeps 32 only
  *
  * @param {string} imagePath - Path to generated portrait image
  * @param {Object} options - Options (force, verbose)
@@ -1128,6 +1137,10 @@ async function getCanonicalSizedPath(category, id, size, options = {}) {
  * Generate all canonical size variants for an asset
  * Uses assetPaths.js for path conventions - size variants are siblings to originals/
  *
+ * Optionally applies background removal before resizing (controlled via manifest.json config).
+ * Background removal runs on the high-resolution source for better edge detection,
+ * then all variants are generated from the processed image.
+ *
  * @param {string} sourcePath - Path to source/original image
  * @param {string} category - Asset category (portraits, items, nodes, icons, tiles, overlays)
  * @param {string} id - Asset identifier
@@ -1136,6 +1149,12 @@ async function getCanonicalSizedPath(category, id, size, options = {}) {
  * @param {number[]} [options.sizes] - Override size presets (uses category defaults if not specified)
  * @param {boolean} [options.force=false] - Overwrite existing files
  * @param {boolean} [options.verbose=false] - Log progress
+ * @param {boolean} [options.webp=true] - Convert to WebP format
+ * @param {boolean|string} [options.backgroundRemoval='auto'] - Background removal mode:
+ *   - 'auto': Use manifest.json config (default)
+ *   - true: Force background removal
+ *   - false: Skip background removal
+ * @param {string} [options.backgroundRemovalModel] - Override rembg model (e.g., 'isnet-anime')
  * @returns {Promise<Object>} Results with generated paths and any errors
  *
  * @example
@@ -1147,16 +1166,33 @@ async function getCanonicalSizedPath(category, id, size, options = {}) {
  * // Generates: /assets/portraits/64/human_male_warrior.png
  * //            /assets/portraits/128/human_male_warrior.png
  * //            /assets/portraits/256/human_male_warrior.png (if source is large enough)
+ *
+ * @example
+ * // Force background removal with a specific model
+ * const results = await generateCanonicalSizeVariants(
+ *   '/path/to/originals/item.png',
+ *   'items',
+ *   'sword_iron',
+ *   { backgroundRemoval: true, backgroundRemovalModel: 'isnet-general-use' }
+ * );
  */
 async function generateCanonicalSizeVariants(sourcePath, category, id, options = {}) {
-  const { subcategory, sizes, force = false, verbose = false, webp = true } = options;
+  const {
+    subcategory,
+    sizes,
+    force = false,
+    verbose = false,
+    webp = true,
+    backgroundRemoval = 'auto',
+    backgroundRemovalModel
+  } = options;
 
   const assetPaths = await getAssetPathsModule();
 
   // Get size presets for category (from assetPaths.js)
   const targetSizes = sizes || assetPaths.SIZE_PRESETS[category] || [64];
 
-  const results = { success: true, generated: [], skipped: [], errors: [] };
+  const results = { success: true, generated: [], skipped: [], errors: [], backgroundRemovalApplied: false };
 
   // Check source exists
   if (!fileExists(sourcePath)) {
@@ -1165,11 +1201,52 @@ async function generateCanonicalSizeVariants(sourcePath, category, id, options =
     return results;
   }
 
+  // Determine effective source path (may change if background removal is applied)
+  let effectiveSourcePath = sourcePath;
+  let tempBgRemovedPath = null;
+
+  // Handle background removal
+  const shouldApplyBgRemoval =
+    backgroundRemoval === true ||
+    (backgroundRemoval === 'auto' && shouldRemoveBackground(category));
+
+  if (shouldApplyBgRemoval) {
+    const model = backgroundRemovalModel || getBackgroundRemovalModel(category);
+    if (verbose) {
+      log(`Applying background removal (model: ${model}) before resize...`, 'info');
+    }
+
+    const bgResult = await processWithBackgroundRemoval(sourcePath, {
+      category,
+      model,
+      verbose,
+      quiet: !verbose
+    });
+
+    if (bgResult.success) {
+      tempBgRemovedPath = bgResult.tempPath;
+      effectiveSourcePath = tempBgRemovedPath;
+      results.backgroundRemovalApplied = true;
+      if (verbose) {
+        log(`Background removed: ${tempBgRemovedPath}`, 'success');
+      }
+    } else {
+      // Background removal failed - log warning but continue with original
+      log(`Warning: Background removal failed: ${bgResult.error}. Using original.`, 'warning');
+    }
+  }
+
   // Get source dimensions using ImageMagick
-  const dimensions = await getImageDimensions(sourcePath);
+  const dimensions = await getImageDimensions(effectiveSourcePath);
   if (!dimensions) {
+    // Clean up temp file before early return
+    if (tempBgRemovedPath && fileExists(tempBgRemovedPath)) {
+      try {
+        fs.unlinkSync(tempBgRemovedPath);
+      } catch (e) { /* ignore cleanup errors */ }
+    }
     results.success = false;
-    results.errors.push({ size: 'all', error: `Cannot determine dimensions for: ${sourcePath}` });
+    results.errors.push({ size: 'all', error: `Cannot determine dimensions for: ${effectiveSourcePath}` });
     return results;
   }
 
@@ -1209,7 +1286,8 @@ async function generateCanonicalSizeVariants(sourcePath, category, id, options =
       }
 
       // Resize and save using existing resizeImage function
-      const result = await resizeImage(sourcePath, destPath, size, resizeOptions);
+      // Use effectiveSourcePath (may be bg-removed temp file)
+      const result = await resizeImage(effectiveSourcePath, destPath, size, resizeOptions);
 
       if (result.success) {
         let finalPath = destPath;
@@ -1244,6 +1322,19 @@ async function generateCanonicalSizeVariants(sourcePath, category, id, options =
       if (verbose) {
         log(`Failed: ${destPath} - ${error.message}`, 'error');
       }
+    }
+  }
+
+  // Clean up temporary background-removed file
+  if (tempBgRemovedPath && fileExists(tempBgRemovedPath)) {
+    try {
+      fs.unlinkSync(tempBgRemovedPath);
+      if (verbose) {
+        log(`Cleaned up temp file: ${tempBgRemovedPath}`, 'info');
+      }
+    } catch (cleanupError) {
+      // Non-fatal - just log warning
+      log(`Warning: Failed to clean up temp file: ${cleanupError.message}`, 'warning');
     }
   }
 

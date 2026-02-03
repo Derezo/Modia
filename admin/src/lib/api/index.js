@@ -67,6 +67,9 @@ export const api = {
   updateFrameDescriptions: assets.updateFrameDescriptions,
   deleteFrameDescriptionOverrides: assets.deleteFrameDescriptionOverrides,
 
+  // Background Removal & Reprocessing
+  reprocessAsset: assets.reprocessAsset,
+
   // Audio Assets
   getAudioAssets: audio.getAudioAssets,
   getAudioAsset: audio.getAudioAsset,

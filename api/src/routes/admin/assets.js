@@ -977,4 +977,129 @@ router.put('/:category/:id/mark-regeneration', asyncHandler(async (req, res) => 
   });
 }));
 
+// ============================================================================
+// REPROCESS (background removal and variant regeneration)
+// ============================================================================
+
+/**
+ * POST /assets/:category/:id/reprocess
+ * Reprocess an asset with background removal and regenerate size variants
+ * Body: { model?: string, biome?: string }
+ * - model: rembg model override (optional, uses category default if not specified)
+ * - biome: required for tiles to disambiguate
+ */
+router.post('/:category/:id/reprocess', asyncHandler(async (req, res) => {
+  ensureUtilities();
+
+  const { category, id } = req.params;
+  const { model, biome } = req.body;
+
+  // Validate asset ID to prevent path traversal
+  assertValidAssetId(id, 'Asset');
+
+  if (!VALID_CATEGORIES.includes(category)) {
+    throw new AppError(`Invalid category: ${category}`, 400);
+  }
+
+  // Require biome for tiles
+  if (category === 'tiles' && !biome) {
+    throw new AppError('biome required in body for tiles', 400);
+  }
+
+  // Load backgroundRemovalUtils from scripts
+  const { createRequire } = await import('module');
+  const require = createRequire(import.meta.url);
+  const backgroundRemovalUtils = require(path.join(PROJECT_ROOT, 'scripts/ai-images/lib/backgroundRemovalUtils.js'));
+  const resizeUtils = require(path.join(PROJECT_ROOT, 'scripts/ai-images/lib/resizeUtils.js'));
+
+  // Validate model if provided
+  const config = backgroundRemovalUtils.getBackgroundRemovalConfig();
+  if (model && !config.availableModels.includes(model)) {
+    throw new AppError(`Invalid background removal model: ${model}. Available: ${config.availableModels.join(', ')}`, 400);
+  }
+
+  // Find the asset to get its metadata
+  let asset = null;
+  try {
+    const data = metadataUtils.loadCategoryAssets(category);
+    asset = findAssetById(data, category, id, { biome });
+  } catch (error) {
+    throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
+  }
+
+  if (!asset) {
+    throw new AppError(`Asset not found: ${category}/${id}`, 404);
+  }
+
+  // Get the path to the original image
+  // Import assetPaths to get the originals path
+  const { getOriginalsPath } = await import('../../../../shared/assetPaths.js');
+
+  // Determine subcategory for path resolution
+  let subcategory = null;
+  if (category === 'tiles') {
+    subcategory = biome;
+  } else if (category === 'items') {
+    subcategory = asset._subcategory || asset.category || 'weapons';
+  } else if (category === 'icons') {
+    subcategory = asset._subcategory || asset.category || 'actions';
+  } else if (category === 'overlays') {
+    subcategory = asset._subcategory || asset.category || 'rarity';
+  } else if (category === 'obstacles') {
+    subcategory = asset._subcategory || asset.category || 'rocks';
+  }
+
+  // Get the originals path (relative to frontend/public)
+  const originalsRelPath = getOriginalsPath(category, id, { subcategory });
+  const originalsAbsPath = path.join(PROJECT_ROOT, 'frontend/public', originalsRelPath);
+
+  // Check if original exists (try both .webp and .png)
+  const fs = await import('fs');
+  let originalPath = originalsAbsPath;
+  if (!fs.existsSync(originalPath)) {
+    // Try .png extension
+    const pngPath = originalPath.replace(/\.webp$/, '.png');
+    if (fs.existsSync(pngPath)) {
+      originalPath = pngPath;
+    } else {
+      throw new AppError(`Original file not found: ${originalsAbsPath} (also tried .png)`, 404);
+    }
+  }
+
+  // Determine the effective model
+  const effectiveModel = model || backgroundRemovalUtils.getBackgroundRemovalModel(category);
+
+  // Run background removal and generate variants
+  try {
+    const result = await resizeUtils.generateCanonicalSizeVariants(
+      originalPath,
+      category,
+      id,
+      {
+        subcategory,
+        force: true,  // Always overwrite existing variants
+        verbose: true,
+        backgroundRemoval: true,  // Force background removal
+        backgroundRemovalModel: effectiveModel
+      }
+    );
+
+    if (!result.success && result.errors.length > 0) {
+      throw new AppError(`Reprocessing failed: ${result.errors.map(e => e.error).join(', ')}`, 500);
+    }
+
+    res.json({
+      success: true,
+      model: effectiveModel,
+      backgroundRemovalApplied: result.backgroundRemovalApplied,
+      variants: result.generated.map(v => v.path),
+      skipped: result.skipped.map(v => v.path),
+      errors: result.errors
+    });
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw new AppError(`Reprocessing failed: ${error.message}`, 500);
+  }
+}));
+
 export default router;

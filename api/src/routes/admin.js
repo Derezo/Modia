@@ -103,6 +103,13 @@ router.get('/config', asyncHandler(async (req, res) => {
     sd15Defaults: manifest.sd15Defaults || {
       loraModel: 'pixel-art-xl',
       referenceLoraModel: 'pixel-art-xl'
+    },
+    // Background removal configuration
+    backgroundRemoval: {
+      availableModels: manifest.backgroundRemoval?.availableModels || [],
+      categorySettings: manifest.backgroundRemoval?.categorySettings || {},
+      defaultModel: manifest.backgroundRemoval?.defaultModel || 'isnet-general-use',
+      enabled: manifest.backgroundRemoval?.enabled ?? false
     }
   });
 }));
