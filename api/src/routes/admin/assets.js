@@ -1053,16 +1053,16 @@ router.post('/:category/:id/reprocess', asyncHandler(async (req, res) => {
   const originalsRelPath = getOriginalsPath(category, id, { subcategory });
   const originalsAbsPath = path.join(PROJECT_ROOT, 'frontend/public', originalsRelPath);
 
-  // Check if original exists (try both .webp and .png)
+  // Check if original exists (.png is primary, .webp as legacy fallback)
   const fs = await import('fs');
   let originalPath = originalsAbsPath;
   if (!fs.existsSync(originalPath)) {
-    // Try .png extension
-    const pngPath = originalPath.replace(/\.webp$/, '.png');
-    if (fs.existsSync(pngPath)) {
-      originalPath = pngPath;
+    // Try .webp extension as legacy fallback
+    const webpPath = originalPath.replace(/\.png$/, '.webp');
+    if (fs.existsSync(webpPath)) {
+      originalPath = webpPath;
     } else {
-      throw new AppError(`Original file not found: ${originalsAbsPath} (also tried .png)`, 404);
+      throw new AppError(`Original file not found: ${originalsAbsPath} (also tried .webp)`, 404);
     }
   }
 

@@ -10,6 +10,7 @@ This document describes the architecture of Modia's asset path configuration sys
 4. [CommonJS Bridge Pattern](#commonjs-bridge-pattern)
 5. [Python Integration](#python-integration)
 6. [Configuration Reference](#configuration-reference)
+7. [Enemy Portrait Naming Convention](#enemy-portrait-naming-convention)
 
 ---
 
@@ -86,7 +87,7 @@ The `shared/assetPaths.js` module is the canonical source for all asset path con
 ```javascript
 SIZE_PRESETS = {
   tiles: [64],                           // Single size (isometric)
-  portraits: [64, 128, 256],             // UI, dialog, detail
+  portraits: [32, 48, 64, 128, 256],     // Compact, small, UI, dialog, detail
   items: [32, 64, 128],                  // Inventory, tooltip, detail
   icons: [16, 24, 32, 48, 64, 128, 256], // Various UI contexts
   nodes: [48, 64, 96, 128, 256],         // World map zoom levels
@@ -272,8 +273,10 @@ This separation ensures:
 python generate_portrait.py \
   --prompt "human male warrior portrait" \
   --seed 10001 \
-  --output-path /home/wizard/Projects/Modia/frontend/public/assets/portraits/originals/human_male_warrior.webp
+  --output-path /home/wizard/Projects/Modia/frontend/public/assets/portraits/originals/human_male_warrior.png
 ```
+
+> **Note:** Original (source) images are always saved as `.png` files. The resizing pipeline converts them to `.webp` for size variants.
 
 ---
 
@@ -322,6 +325,7 @@ All path patterns are defined in category-specific functions within `shared/asse
 | Category | Function | Pattern |
 |----------|----------|---------|
 | portraits | `getPortraitPath()` | `/assets/portraits/{size}/{id}.webp` |
+| enemy portraits | (via `getPortraitPath()`) | `/assets/portraits/{size}/enemy_{sprite_id}.webp` |
 | nodes | `getNodePath()` | `/assets/nodes/{size}/{id}.webp` |
 | items | `getItemPath()` | `/assets/items/{size}/{subcategory}/{id}.webp` |
 | icons | `getIconPath()` | `/assets/icons/png/{size}/{subcategory}/{id}.webp` |
@@ -329,6 +333,45 @@ All path patterns are defined in category-specific functions within `shared/asse
 | overlays | `getOverlayPath()` | `/assets/overlays/{size}/{subcategory}/{id}.webp` |
 | characters | `getCharacterPath()` | `/assets/characters/{type}/{...}/{id}_{animation}.webp` |
 | obstacles | `getObstaclePath()` | `/assets/obstacles/{category}/{id}.webp` |
+
+---
+
+## Enemy Portrait Naming Convention
+
+Enemy portraits use the `enemy_` prefix to distinguish from player portraits:
+
+| Context | Format | Example |
+|---------|--------|---------|
+| Metadata ID (enemies.json) | `enemy_{sprite_id}` | `enemy_goblin_warrior` |
+| Database sprite_id | `{sprite_id}` | `goblin_warrior` |
+| File path | `/assets/portraits/{size}/enemy_{sprite_id}.webp` | `/assets/portraits/64/enemy_goblin_warrior.webp` |
+
+### Frontend Usage
+
+```javascript
+// AssetLoader adds the 'enemy_' prefix automatically
+assetLoader.getEnemyPortraitUrl('goblin_warrior', 64)
+// Returns: /assets/portraits/64/enemy_goblin_warrior.webp
+
+// WRONG: Do not pass the prefix - it will be doubled
+assetLoader.getEnemyPortraitUrl('enemy_goblin_warrior', 64)
+// Would incorrectly return: /assets/portraits/64/enemy_enemy_goblin_warrior.webp
+```
+
+### Why the Prefix?
+
+The `enemy_` prefix serves two purposes:
+1. **Collision prevention**: Prevents overlap with player portrait IDs (e.g., `human_male_warrior`)
+2. **Asset identification**: Makes the asset type immediately identifiable in file listings and metadata
+
+### Data Flow
+
+```
+Database (enemies table)     AssetLoader              File System
+─────────────────────────────────────────────────────────────────
+sprite_id: 'goblin_warrior'  → adds 'enemy_' prefix → enemy_goblin_warrior.webp
+sprite_id: 'wolf'            → adds 'enemy_' prefix → enemy_wolf.webp
+```
 
 ---
 

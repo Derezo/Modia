@@ -237,6 +237,7 @@ INCLUDE_PATHS=(
 if [ "$DRY_RUN" = true ]; then
   dry_run "Would create tarball: $TARBALL_PATH"
   dry_run "Including: ${INCLUDE_PATHS[*]}"
+  dry_run "Excluding: */originals/* (source images not needed in production)"
 else
   # Build array of paths to include
   TAR_PATHS=()
@@ -248,7 +249,12 @@ else
     fi
   done
 
-  tar -czf "$TARBALL_PATH" "${TAR_PATHS[@]}"
+  # Exclude originals directories from tarball - these contain full-resolution
+  # AI-generated source images (~80MB) that are only needed for reprocessing.
+  # Production only needs the resized variants.
+  tar -czf "$TARBALL_PATH" \
+    --exclude='*/originals/*' \
+    "${TAR_PATHS[@]}"
 
   TARBALL_SIZE=$(du -h "$TARBALL_PATH" | cut -f1)
   log "Created tarball: $TARBALL_NAME ($TARBALL_SIZE)"
