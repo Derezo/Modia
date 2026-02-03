@@ -64,10 +64,15 @@ async function getBattleStateForSync(battleId) {
       status: state.status || 'active',
       units: state.units?.map(u => ({
         id: u.id,
-        x: u.x,
-        y: u.y,
+        tileX: u.tileX,
+        tileY: u.tileY,
         hp: u.hp,
         mp: u.mp,
+        ct: u.ct || 0,
+        hasActed: u.hasActed || false,
+        moveUsed: u.moveUsed ?? false,
+        actUsed: u.actUsed ?? false,
+        turnPhase: u.turnPhase ?? 'ready',
         statusEffects: u.statusEffects || []
       })) || []
     };

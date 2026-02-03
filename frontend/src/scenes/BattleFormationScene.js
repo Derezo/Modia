@@ -184,7 +184,8 @@ export class BattleFormationScene extends Scene {
             battleId: payload.battleId,
             mapSeed: payload.mapSeed,
             nodeType: 'arena',
-            battleType: 'pvp'
+            battleType: 'pvp',
+            state: payload.state
           });
         }
       },
