@@ -13,7 +13,7 @@
  * @see websocket/index.js - WebSocket connection/room management
  */
 
-import { broadcastWithAck, sendWithAck, cleanupBattle as cleanupBattleAcks } from './messageReliability.js';
+import { broadcastWithAck, sendWithAck, cleanupBattle as cleanupBattleAcks, cleanupUserSequence } from './messageReliability.js';
 
 // Lazy-load websocket to avoid circular dependency
 let _websocket = null;
@@ -73,6 +73,9 @@ async function leaveBattle(battleId, userId) {
       rooms.delete(roomName);
     }
   }
+
+  // Clean up user's sequence counter to prevent memory accumulation
+  cleanupUserSequence(battleId, userId);
 }
 
 /**

@@ -38,8 +38,10 @@ export const CLEANUP_INTERVAL_MS = 30000;
 const pendingAcks = new Map();
 
 /**
- * Sequence counters per battle: battleId -> currentSeq
- * @type {Map<number, number>}
+ * Sequence counters per battle per user: battleId -> Map<userId, currentSeq>
+ * Each user gets independent sequences within a battle to prevent gaps
+ * when broadcasting to multiple users.
+ * @type {Map<number, Map<number, number>>}
  */
 const battleSequences = new Map();
 
@@ -73,15 +75,21 @@ class PendingMessage {
 // ============================================================
 
 /**
- * Get the next sequence number for a battle
+ * Get the next sequence number for a battle and user
  * @param {number} battleId - Battle ID
+ * @param {number} userId - User/connection ID
  * @returns {number} Next sequence number
  */
-export function getNextSequence(battleId) {
-  const current = battleSequences.get(battleId) || 0;
+export function getNextSequence(battleId, userId) {
+  if (!battleSequences.has(battleId)) {
+    battleSequences.set(battleId, new Map());
+  }
+  const userSequences = battleSequences.get(battleId);
+
+  const current = userSequences.get(userId) || 0;
   // Reset at a reasonable upper bound to prevent overflow
   const next = current >= Number.MAX_SAFE_INTEGER - 1 ? 1 : current + 1;
-  battleSequences.set(battleId, next);
+  userSequences.set(userId, next);
   return next;
 }
 
@@ -101,7 +109,7 @@ export function sendWithAck(ws, message, battleId, connectionId) {
   }
 
   // Get next sequence number (only after confirming connection is open)
-  const seq = getNextSequence(battleId);
+  const seq = getNextSequence(battleId, connectionId);
 
   // Add reliability fields to message
   const reliableMessage = {
@@ -347,12 +355,28 @@ function cleanupConnectionPendingForBattle(connectionId, battleId) {
 }
 
 /**
+ * Clean up user sequence for a specific user in a battle
+ * Called when a user leaves a battle
+ * @param {number} battleId - Battle ID
+ * @param {number} userId - User ID
+ */
+export function cleanupUserSequence(battleId, userId) {
+  const userSequences = battleSequences.get(battleId);
+  if (userSequences) {
+    userSequences.delete(userId);
+    if (userSequences.size === 0) {
+      battleSequences.delete(battleId);
+    }
+  }
+}
+
+/**
  * Clean up all state for a battle (sequence counter and all pending ACKs)
  * Called when a battle ends
  * @param {number} battleId - Battle ID
  */
 export function cleanupBattle(battleId) {
-  // Clear sequence counter
+  // Clear sequence counter (entire battle map)
   battleSequences.delete(battleId);
 
   // Clear all pending ACKs for this battle across all connections
@@ -513,10 +537,24 @@ export function getPendingAcks(connectionId) {
 /**
  * Get current sequence number for a battle (for testing)
  * @param {number} battleId - Battle ID
+ * @param {number} [userId] - Optional user ID. If provided, returns that user's sequence.
+ *                            If not provided, returns max sequence across all users (backwards compat).
  * @returns {number} Current sequence number
  */
-export function getCurrentSequence(battleId) {
-  return battleSequences.get(battleId) || 0;
+export function getCurrentSequence(battleId, userId = null) {
+  const userSequences = battleSequences.get(battleId);
+  if (!userSequences) return 0;
+
+  if (userId !== null) {
+    return userSequences.get(userId) || 0;
+  }
+
+  // Backwards compat: return max sequence across all users
+  let maxSeq = 0;
+  for (const seq of userSequences.values()) {
+    if (seq > maxSeq) maxSeq = seq;
+  }
+  return maxSeq;
 }
 
 // ============================================================
@@ -536,6 +574,7 @@ export default {
   scheduleRetry,
   triggerFullStateSync,
   cleanupConnection,
+  cleanupUserSequence,
   cleanupBattle,
   broadcastWithAck,
 

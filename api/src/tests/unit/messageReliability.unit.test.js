@@ -21,6 +21,7 @@ import {
   handleAck,
   scheduleRetry,
   cleanupConnection,
+  cleanupUserSequence,
   cleanupBattle,
   getPendingCount,
   getPendingAcks,
@@ -103,12 +104,13 @@ describe('Message Reliability Service', () => {
   // ==========================================================================
 
   describe('getNextSequence', () => {
-    it('should return incrementing sequence numbers for a battle', () => {
+    it('should return incrementing sequence numbers for a battle and user', () => {
       const battleId = uniqueId('battle');
+      const userId = uniqueId('user');
 
-      const seq1 = getNextSequence(battleId);
-      const seq2 = getNextSequence(battleId);
-      const seq3 = getNextSequence(battleId);
+      const seq1 = getNextSequence(battleId, userId);
+      const seq2 = getNextSequence(battleId, userId);
+      const seq3 = getNextSequence(battleId, userId);
 
       assert.strictEqual(seq1, 1, 'First sequence should be 1');
       assert.strictEqual(seq2, 2, 'Second sequence should be 2');
@@ -121,11 +123,12 @@ describe('Message Reliability Service', () => {
     it('should maintain separate sequences per battle', () => {
       const battleA = uniqueId('battleA');
       const battleB = uniqueId('battleB');
+      const userId = uniqueId('user');
 
-      const seqA1 = getNextSequence(battleA);
-      const seqB1 = getNextSequence(battleB);
-      const seqA2 = getNextSequence(battleA);
-      const seqB2 = getNextSequence(battleB);
+      const seqA1 = getNextSequence(battleA, userId);
+      const seqB1 = getNextSequence(battleB, userId);
+      const seqA2 = getNextSequence(battleA, userId);
+      const seqB2 = getNextSequence(battleB, userId);
 
       assert.strictEqual(seqA1, 1, 'Battle A first sequence should be 1');
       assert.strictEqual(seqB1, 1, 'Battle B first sequence should be 1');
@@ -137,10 +140,30 @@ describe('Message Reliability Service', () => {
       cleanupBattle(battleB);
     });
 
+    it('should maintain separate sequences per user in same battle', () => {
+      const battleId = uniqueId('battle');
+      const userA = uniqueId('userA');
+      const userB = uniqueId('userB');
+
+      const seqA1 = getNextSequence(battleId, userA);
+      const seqB1 = getNextSequence(battleId, userB);
+      const seqA2 = getNextSequence(battleId, userA);
+      const seqB2 = getNextSequence(battleId, userB);
+
+      assert.strictEqual(seqA1, 1, 'User A first sequence should be 1');
+      assert.strictEqual(seqB1, 1, 'User B first sequence should be 1');
+      assert.strictEqual(seqA2, 2, 'User A second sequence should be 2');
+      assert.strictEqual(seqB2, 2, 'User B second sequence should be 2');
+
+      // Cleanup
+      cleanupBattle(battleId);
+    });
+
     it('should start sequences at 1 for new battles', () => {
       const battleId = uniqueId('battle');
+      const userId = uniqueId('user');
 
-      const seq = getNextSequence(battleId);
+      const seq = getNextSequence(battleId, userId);
 
       assert.strictEqual(seq, 1, 'New battle should start at sequence 1');
 
@@ -162,16 +185,57 @@ describe('Message Reliability Service', () => {
       assert.strictEqual(seq, 0, 'Unknown battle should have sequence 0');
     });
 
-    it('should return current sequence for active battles', () => {
+    it('should return 0 for unknown user in known battle', () => {
       const battleId = uniqueId('battle');
+      const userId = uniqueId('user');
+      const unknownUser = uniqueId('unknown');
 
-      getNextSequence(battleId);
-      getNextSequence(battleId);
-      getNextSequence(battleId);
+      getNextSequence(battleId, userId);
 
-      const current = getCurrentSequence(battleId);
+      const seq = getCurrentSequence(battleId, unknownUser);
 
-      assert.strictEqual(current, 3, 'Should return current sequence number');
+      assert.strictEqual(seq, 0, 'Unknown user should have sequence 0');
+
+      // Cleanup
+      cleanupBattle(battleId);
+    });
+
+    it('should return current sequence for specific user', () => {
+      const battleId = uniqueId('battle');
+      const userId = uniqueId('user');
+
+      getNextSequence(battleId, userId);
+      getNextSequence(battleId, userId);
+      getNextSequence(battleId, userId);
+
+      const current = getCurrentSequence(battleId, userId);
+
+      assert.strictEqual(current, 3, 'Should return current sequence number for user');
+
+      // Cleanup
+      cleanupBattle(battleId);
+    });
+
+    it('should return max sequence across all users when userId not provided', () => {
+      const battleId = uniqueId('battle');
+      const userA = uniqueId('userA');
+      const userB = uniqueId('userB');
+
+      // User A gets 2 messages
+      getNextSequence(battleId, userA);
+      getNextSequence(battleId, userA);
+      // User B gets 5 messages
+      for (let i = 0; i < 5; i++) {
+        getNextSequence(battleId, userB);
+      }
+
+      const maxSeq = getCurrentSequence(battleId);
+      const userASeq = getCurrentSequence(battleId, userA);
+      const userBSeq = getCurrentSequence(battleId, userB);
+
+      assert.strictEqual(userASeq, 2, 'User A should have sequence 2');
+      assert.strictEqual(userBSeq, 5, 'User B should have sequence 5');
+      assert.strictEqual(maxSeq, 5, 'Should return max sequence (5) across all users');
 
       // Cleanup
       cleanupBattle(battleId);
@@ -496,12 +560,72 @@ describe('Message Reliability Service', () => {
     });
   });
 
+  describe('cleanupUserSequence', () => {
+    it('should remove sequence counter for specific user in battle', () => {
+      const battleId = uniqueId('battle');
+      const userA = uniqueId('userA');
+      const userB = uniqueId('userB');
+
+      getNextSequence(battleId, userA);
+      getNextSequence(battleId, userA);
+      getNextSequence(battleId, userB);
+
+      assert.strictEqual(getCurrentSequence(battleId, userA), 2, 'User A should have sequence 2');
+      assert.strictEqual(getCurrentSequence(battleId, userB), 1, 'User B should have sequence 1');
+
+      cleanupUserSequence(battleId, userA);
+
+      assert.strictEqual(getCurrentSequence(battleId, userA), 0, 'User A sequence should be reset');
+      assert.strictEqual(getCurrentSequence(battleId, userB), 1, 'User B sequence should be unaffected');
+
+      // Cleanup
+      cleanupBattle(battleId);
+    });
+
+    it('should remove battle entry when last user is cleaned up', () => {
+      const battleId = uniqueId('battle');
+      const userId = uniqueId('user');
+
+      getNextSequence(battleId, userId);
+      assert.strictEqual(getCurrentSequence(battleId), 1, 'Should have sequence before cleanup');
+
+      cleanupUserSequence(battleId, userId);
+
+      assert.strictEqual(getCurrentSequence(battleId), 0, 'Battle should have no sequence after last user removed');
+    });
+
+    it('should handle cleanup of non-existent user gracefully', () => {
+      const battleId = uniqueId('battle');
+      const userId = uniqueId('user');
+      const unknownUser = uniqueId('unknown');
+
+      getNextSequence(battleId, userId);
+
+      // Should not throw
+      cleanupUserSequence(battleId, unknownUser);
+
+      assert.strictEqual(getCurrentSequence(battleId, userId), 1, 'Existing user should be unaffected');
+
+      // Cleanup
+      cleanupBattle(battleId);
+    });
+
+    it('should handle cleanup of non-existent battle gracefully', () => {
+      const unknownBattle = uniqueId('unknown');
+      const userId = uniqueId('user');
+
+      // Should not throw
+      cleanupUserSequence(unknownBattle, userId);
+    });
+  });
+
   describe('cleanupBattle', () => {
     it('should remove sequence counter for battle', () => {
       const battleId = uniqueId('battle');
+      const userId = uniqueId('user');
 
-      getNextSequence(battleId);
-      getNextSequence(battleId);
+      getNextSequence(battleId, userId);
+      getNextSequence(battleId, userId);
       assert.strictEqual(getCurrentSequence(battleId), 2, 'Should have sequence before cleanup');
 
       cleanupBattle(battleId);
@@ -744,30 +868,36 @@ describe('Message Reliability Service', () => {
       cleanupBattle(battleId);
     });
 
-    it('should handle multiple connections to same battle', () => {
+    it('should assign independent sequences to each connection in same battle', () => {
       const mockWs1 = createMockWs();
       const mockWs2 = createMockWs();
       const battleId = uniqueId('battle');
       const conn1 = uniqueId('conn1');
       const conn2 = uniqueId('conn2');
 
-      const seq1 = sendWithAck(mockWs1, { type: 'msg1' }, battleId, conn1);
-      const seq2 = sendWithAck(mockWs2, { type: 'msg2' }, battleId, conn2);
+      // Each connection starts at 1
+      const seq1_msg1 = sendWithAck(mockWs1, { type: 'msg1' }, battleId, conn1);
+      const seq2_msg1 = sendWithAck(mockWs2, { type: 'msg1' }, battleId, conn2);
+      assert.strictEqual(seq1_msg1, 1, 'Conn1 first message gets seq 1');
+      assert.strictEqual(seq2_msg1, 1, 'Conn2 first message also gets seq 1 (independent)');
 
-      // Both should use same battle sequence
-      assert.strictEqual(seq1, 1, 'First connection gets seq 1');
-      assert.strictEqual(seq2, 2, 'Second connection gets seq 2');
+      // Each connection increments independently
+      const seq1_msg2 = sendWithAck(mockWs1, { type: 'msg2' }, battleId, conn1);
+      const seq2_msg2 = sendWithAck(mockWs2, { type: 'msg2' }, battleId, conn2);
+      assert.strictEqual(seq1_msg2, 2, 'Conn1 second message gets seq 2');
+      assert.strictEqual(seq2_msg2, 2, 'Conn2 second message also gets seq 2 (independent)');
 
       // Each connection tracks its own pending
-      assert.strictEqual(getPendingCount(conn1), 1, 'Conn1 has 1 pending');
-      assert.strictEqual(getPendingCount(conn2), 1, 'Conn2 has 1 pending');
+      assert.strictEqual(getPendingCount(conn1), 2, 'Conn1 has 2 pending');
+      assert.strictEqual(getPendingCount(conn2), 2, 'Conn2 has 2 pending');
 
       // ACK for one doesn't affect the other
-      handleAck(conn1, battleId, seq1);
-      assert.strictEqual(getPendingCount(conn1), 0, 'Conn1 has 0 pending after ACK');
-      assert.strictEqual(getPendingCount(conn2), 1, 'Conn2 still has 1 pending');
+      handleAck(conn1, battleId, seq1_msg1);
+      assert.strictEqual(getPendingCount(conn1), 1, 'Conn1 has 1 pending after ACK');
+      assert.strictEqual(getPendingCount(conn2), 2, 'Conn2 still has 2 pending');
 
       // Cleanup
+      cleanupConnection(conn1);
       cleanupConnection(conn2);
       cleanupBattle(battleId);
     });
@@ -860,9 +990,15 @@ describe('Message Reliability Service', () => {
       const b1c2seq = sendWithAck(mockWs2, { type: 'b1c2' }, battle1, conn2);
       const b2c3seq = sendWithAck(mockWs3, { type: 'b2c3' }, battle2, conn3);
 
-      // Verify isolation
-      assert.strictEqual(getCurrentSequence(battle1), 2, 'Battle1 should have seq 2');
-      assert.strictEqual(getCurrentSequence(battle2), 1, 'Battle2 should have seq 1');
+      // With per-user sequences, each user starts at 1 independently
+      assert.strictEqual(b1c1seq, 1, 'Conn1 in battle1 gets seq 1');
+      assert.strictEqual(b1c2seq, 1, 'Conn2 in battle1 also gets seq 1 (independent)');
+      assert.strictEqual(b2c3seq, 1, 'Conn3 in battle2 gets seq 1');
+
+      // Verify per-user sequence isolation
+      assert.strictEqual(getCurrentSequence(battle1, conn1), 1, 'Conn1 in battle1 has seq 1');
+      assert.strictEqual(getCurrentSequence(battle1, conn2), 1, 'Conn2 in battle1 has seq 1');
+      assert.strictEqual(getCurrentSequence(battle2, conn3), 1, 'Conn3 in battle2 has seq 1');
 
       // ACK from different battles
       handleAck(conn1, battle1, b1c1seq);
