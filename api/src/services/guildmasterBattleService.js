@@ -56,7 +56,7 @@ export async function generateGuildmasterBattle(character, targetClass, _nodeId)
 
   // Generate battle map - use 'guild' node type for advancement battles
   const mapSeed = Date.now() % 1000000;
-  const terrainData = generateTerrain(mapSeed, 'guild', 32, 32);
+  const terrainData = generateTerrain(mapSeed, 'guild', 32, 32, { elevation: true });
 
   // Position units on map
   positionUnits([playerUnit], enemies, 32, 32);
@@ -68,7 +68,10 @@ export async function generateGuildmasterBattle(character, targetClass, _nodeId)
     currentActorIndex: 0,
     units: [playerUnit, ...enemies],
     terrain: terrainData.terrain,
+    elevation: terrainData.elevation,
     obstacles: terrainData.obstacles,
+    mapWidth: 32,
+    mapHeight: 32,
     bossStates: {}
   };
 

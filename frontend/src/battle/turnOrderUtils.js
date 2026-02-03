@@ -178,8 +178,8 @@ export function buildPortraitId(unit) {
     const className = normalizeIconName(unit.class || 'warrior');
     return `${race}_${gender}_${className}`;
   } else {
-    // Enemy portraits: enemy_{enemyId or class}
-    const enemyId = unit.enemyId || normalizeIconName(unit.class || 'monster');
+    // Enemy portraits: enemy_{enemyId or sprite_id or class}
+    const enemyId = unit.enemyId || unit.sprite_id || normalizeIconName(unit.class || 'monster');
     return `enemy_${enemyId}`;
   }
 }

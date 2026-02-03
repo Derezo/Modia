@@ -92,6 +92,12 @@ export class GameWebSocket {
             return;
           }
 
+          // Handle rate_limited response
+          if (message.type === 'rate_limited') {
+            this.handleRateLimited(message.payload);
+            return;
+          }
+
           // Process through reliability manager for ACK handling and deduplication
           const processedMessage = this.reliabilityManager.handleMessage(message);
           if (!processedMessage) {
@@ -177,6 +183,33 @@ export class GameWebSocket {
     console.warn('Connection unhealthy - triggering reconnect');
     connectionQuality.onReconnecting();
     this.reconnect();
+  }
+
+  /**
+   * Handle a rate_limited response from the server.
+   * Notifies heartbeat manager, updates connection quality, and passes to handlers.
+   * @param {Object} payload - Rate limit response payload
+   * @param {string} payload.message - Human-readable message
+   * @param {string} payload.category - Rate limit category that was hit
+   * @param {number} payload.retryAfter - Milliseconds until rate limit resets
+   * @param {string} [payload.blockedMessageType] - The message type that was blocked
+   */
+  handleRateLimited(payload) {
+    console.warn(
+      `Rate limited: ${payload.category}, blocked: ${payload.blockedMessageType || 'unknown'}, retry after ${payload.retryAfter}ms`
+    );
+
+    // If heartbeat was rate limited, notify heartbeat manager
+    // This prevents false "missed heartbeat" detection
+    if (payload.blockedMessageType === 'heartbeat') {
+      this.heartbeatManager.onRateLimited(payload.retryAfter);
+    }
+
+    // Update connection quality state
+    connectionQuality.onRateLimited(payload.retryAfter);
+
+    // Notify any registered handlers so UI can respond
+    this.handleMessage('rate_limited', payload);
   }
 
   /**

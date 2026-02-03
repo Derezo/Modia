@@ -8,11 +8,15 @@
       "id": "damage_boost",
       "name": "Damage Boost",
       "prompt": "sword damage boost increase power red up",
-      "seed": 33001,
+      "seed": 33003,
       "generated": true,
       "loraModel": "retro-pixel",
-      "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:36:19.585Z"
+      "needsRegeneration": true,
+      "generatedAt": "2026-01-29T08:36:19.585Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "range",
@@ -68,11 +72,15 @@
       "id": "crit_chance",
       "name": "Critical Chance",
       "prompt": "star burst critical chance lucky hit yellow",
-      "seed": 33007,
+      "seed": 33008,
       "generated": true,
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:40:56.221Z"
+      "generatedAt": "2026-01-29T08:40:56.221Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "pierce",
@@ -173,16 +181,19 @@
       "id": "healing_boost",
       "name": "Healing Boost",
       "prompt": "heart plus healing boost increase green",
-      "seed": 33016,
+      "seed": 33017,
       "generated": true,
       "loraModel": "retro-pixel",
-      "needsRegeneration": false,
+      "needsRegeneration": true,
       "generatedAt": "2026-01-29T08:47:50.828Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
-      }
+      },
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "accuracy_boost",
@@ -191,8 +202,12 @@
       "seed": 33017,
       "generated": true,
       "loraModel": "retro-pixel",
-      "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:48:37.134Z"
+      "needsRegeneration": true,
+      "generatedAt": "2026-01-29T08:48:37.134Z",
+      "evaluation": 0,
+      "issues": "",
+      "notes": "",
+      "priority": 0
     },
     {
       "id": "evasion",

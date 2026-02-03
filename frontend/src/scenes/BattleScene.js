@@ -139,6 +139,8 @@ export class BattleScene extends Scene {
     this.mapSeed = data.mapSeed;
     this.battleState = data.state;
     this.nodeType = data.nodeType || null; // Store nodeType from server for terrain generation
+    // Store initial available actions from server for first turn
+    this.serverAvailableActions = data.availableActions || null;
     this.initialEnemyActions = data.initialEnemyActions || null;
     this.battleType = data.battleType || 'pve'; // 'pve', 'pvp', 'pvp_coliseum', 'pve_coop'
     this.opponentUsername = data.opponentUsername || null;
@@ -160,7 +162,16 @@ export class BattleScene extends Scene {
     // Initialize grid with asset loader for sprite rendering
     this.grid = new BattleGrid(this.game.canvas, data.mapWidth || 32, data.mapHeight || 32);
     this.grid.setAssetLoader(this.game.assetLoader);
-    this.grid.generateTerrain(this.mapSeed, this.getNodeType());
+    // Prefer server-provided terrain/elevation for consistency
+    // Fall back to regeneration if not provided (backwards compatibility)
+    if (data.state?.terrain && data.state?.elevation) {
+      this.grid.setTerrain(data.state.terrain);
+      this.grid.setElevation(data.state.elevation);
+      this.grid.nodeType = this.getNodeType(); // Still needed for sprite selection
+    } else {
+      // Fallback: regenerate from seed (legacy battles or missing data)
+      this.grid.generateTerrain(this.mapSeed, this.getNodeType());
+    }
 
     // Initialize animations
     this.animations = new BattleAnimations();
@@ -343,7 +354,7 @@ export class BattleScene extends Scene {
 
     // Initialize terrain tooltip (DOM-based)
     this.terrainTooltip = new TerrainTooltip();
-    this.terrainTooltip.attachTo(this.game.container);
+    this.terrainTooltip.attachTo(this.game.uiOverlay);
 
     // Setup input handler for mouse/touch/keyboard events
     this.inputHandler = new BattleInputHandler(this);
@@ -2216,8 +2227,8 @@ export class BattleScene extends Scene {
   handleUnitPreview(prediction) {
     if (!prediction || !prediction.id) return;
 
-    // Find the actual unit in battleUnits
-    const unit = this.units.find(u => u.id === prediction.id);
+    // Find the actual unit in battleUnits (units is a Map)
+    const unit = this.units.get(prediction.id);
     if (!unit) return;
 
     // Get world position from grid position
@@ -2508,7 +2519,7 @@ export class BattleScene extends Scene {
       this.outroSequence.update(deltaTime);
     }
 
-    // Update terrain tooltip (DOM-based)
+    // Update terrain tooltip (DOM-based, throttled for Firefox performance)
     this.updateTerrainTooltip();
 
     // Update tile cycling for overlapping elevations (delegated to input handler)
@@ -2700,55 +2711,38 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Update terrain tooltip when hovering over tiles during move action.
-   * Uses DOM-based tooltip for better alignment and styling.
+   * Update terrain tooltip when hovering over tiles.
+   * Shows terrain name, movement cost, and elevation for any hovered tile.
+   * Uses fixed-position DOM tooltip in top-left corner.
    */
   updateTerrainTooltip() {
     if (!this.terrainTooltip) return;
 
-    // Only show during move action
-    if (this.currentAction !== 'move') {
+    // Hide during intro/outro sequences
+    if (this.isIntroPlaying || (this.outroSequence && !this.outroSequence.isComplete())) {
       this.terrainTooltip.hide();
       return;
     }
 
-    // Determine which tile to show tooltip for (hovered or selected on mobile)
-    const tooltipTile = this.isTouchDevice ? this.selectedMoveTile : this.hoveredTile;
+    // Determine which tile to show tooltip for
+    // During move action on mobile, use selected move tile; otherwise use hovered tile
+    const tooltipTile = (this.isTouchDevice && this.currentAction === 'move' && this.selectedMoveTile)
+      ? this.selectedMoveTile
+      : this.hoveredTile;
     if (!tooltipTile) {
       this.terrainTooltip.hide();
       return;
     }
 
-    // Get terrain info
+    // Get terrain info and show tooltip (fixed position, no coordinates needed)
     const terrain = this.grid.getTerrain(tooltipTile.x, tooltipTile.y);
     const moveCost = this.grid.getMovementCost(tooltipTile.x, tooltipTile.y);
     const elevation = this.grid.getElevation(tooltipTile.x, tooltipTile.y);
 
-    // Calculate position - convert canvas coords to viewport coords
-    // DOM tooltip is positioned relative to game container
-    let tooltipX, tooltipY;
-
-    if (this.isTouchDevice && this.selectedMoveTile) {
-      // On mobile, position tooltip above the selected tile
-      const worldPos = this.grid.gridToScreenWorld(tooltipTile.x, tooltipTile.y);
-      const screenPos = this.camera.worldToScreen(worldPos.x, worldPos.y);
-      // Scale canvas coords to viewport coords (tooltip is in game container)
-      const scale = this.game.scale || 1;
-      tooltipX = screenPos.x * scale;
-      tooltipY = screenPos.y * scale;
-    } else {
-      // On desktop, position near cursor (already in viewport coords)
-      const pos = this.game.input.getPointerPosition();
-      tooltipX = pos.x;
-      tooltipY = pos.y;
-    }
-
     this.terrainTooltip.show({
       terrain,
       movementCost: moveCost,
-      elevation,
-      x: tooltipX,
-      y: tooltipY
+      elevation
     });
   }
 

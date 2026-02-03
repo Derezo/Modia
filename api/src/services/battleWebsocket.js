@@ -235,7 +235,7 @@ async function broadcastIntentHighlight(battleId, unitId, highlightType, tiles, 
  * @param {Object} state - Current battle state
  * @param {Array} availableActions - List of available actions
  */
-async function sendYourTurn(userId, battleId, unitId, state, availableActions = ['move', 'attack', 'skill', 'item', 'wait']) {
+async function sendYourTurn(userId, battleId, unitId, state, availableActions = null) {
   const ws = await getWebsocket();
   const { connections } = ws;
   const connection = connections.get(userId);

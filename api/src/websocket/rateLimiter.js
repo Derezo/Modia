@@ -43,6 +43,25 @@ const MESSAGE_CATEGORIES = {
   join_node: 'roomJoins'
 };
 
+// Infrastructure messages that should bypass rate limiting entirely
+// These are essential for connection health and reliability
+const INFRASTRUCTURE_MESSAGES = new Set([
+  'heartbeat',
+  'ack',
+  'battle:request_sync',
+  'pong'
+]);
+
+/**
+ * Check if a message type is an infrastructure message that should bypass rate limiting.
+ * Infrastructure messages are essential for connection health and reliability.
+ * @param {string} messageType - WebSocket message type
+ * @returns {boolean} True if the message should bypass rate limiting
+ */
+function isInfrastructureMessage(messageType) {
+  return INFRASTRUCTURE_MESSAGES.has(messageType);
+}
+
 // Per-user rate tracking (in-memory fallback): userId -> { global: [timestamps], ... }
 const userRateLimits = new Map();
 
@@ -232,13 +251,16 @@ export {
   cleanupUserRateLimits,
   getMessageCategory,
   getRateLimitConfig,
+  isInfrastructureMessage,
   WS_RATE_LIMITS,
-  MESSAGE_CATEGORIES
+  MESSAGE_CATEGORIES,
+  INFRASTRUCTURE_MESSAGES
 };
 
 export default {
   checkRateLimit,
   cleanupUserRateLimits,
   getMessageCategory,
-  getRateLimitConfig
+  getRateLimitConfig,
+  isInfrastructureMessage
 };

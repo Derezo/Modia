@@ -24,7 +24,7 @@ import * as garrisonWebsocket from './garrisonWebsocket.js';
 import { cleanupConnection } from '../services/messageReliability.js';
 
 // Import extracted modules
-import { checkRateLimit, cleanupUserRateLimits } from './rateLimiter.js';
+import { checkRateLimit, cleanupUserRateLimits, isInfrastructureMessage } from './rateLimiter.js';
 import {
   connections,
   rooms,
@@ -197,8 +197,8 @@ function setupWebSocket(server) {
           }
         }
 
-        // Rate limit check (skip for auth)
-        if (userId && type !== 'auth') {
+        // Rate limit check (skip for auth and infrastructure messages)
+        if (userId && type !== 'auth' && !isInfrastructureMessage(type)) {
           const rateCheck = await checkRateLimit(userId, type);
           if (rateCheck.limited) {
             incrementRateLimitHits();
@@ -213,7 +213,8 @@ function setupWebSocket(server) {
               payload: {
                 message: 'Too many messages. Please slow down.',
                 category: rateCheck.category,
-                retryAfter: rateCheck.retryAfter
+                retryAfter: rateCheck.retryAfter,
+                blockedMessageType: type
               }
             }));
             return;

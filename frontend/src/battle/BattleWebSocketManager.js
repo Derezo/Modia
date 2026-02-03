@@ -433,6 +433,17 @@ export class BattleWebSocketManager {
         this.battleState = response.state;
         this.scene.syncUnitsWithState(response.state.units);
 
+        // Store server-provided available actions for movement validation
+        this.scene.serverAvailableActions = response.availableActions || null;
+
+        // Sync terrain from server state if available
+        if (response.state?.terrain) {
+          this.scene.grid.setTerrain(response.state.terrain);
+        }
+        if (response.state?.elevation) {
+          this.scene.grid.setElevation(response.state.elevation);
+        }
+
         // Apply turn state from availableActions (two-action system)
         if (response.availableActions) {
           this.scene.canMove = response.availableActions.canMove ?? true;

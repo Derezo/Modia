@@ -48,6 +48,10 @@ export class HeartbeatManager {
 
     // Connection ID for server-side connection tracking
     this.connectionId = null;
+
+    // Rate limit awareness - prevents false "missed" heartbeats when server is rate limiting
+    this.isRateLimited = false;
+    this.rateLimitedUntil = 0;
   }
 
   /**
@@ -104,12 +108,32 @@ export class HeartbeatManager {
   }
 
   /**
+   * Handle rate limiting notification from the server.
+   * Called when a heartbeat message was rate limited.
+   * @param {number} retryAfterMs - Time in milliseconds until rate limit expires
+   */
+  onRateLimited(retryAfterMs) {
+    this.isRateLimited = true;
+    this.rateLimitedUntil = Date.now() + retryAfterMs;
+
+    // Clear pending timeout - we got a response (just throttled)
+    // Don't count this as a missed heartbeat since the server IS responding
+    if (this.timeout) {
+      clearTimeout(this.timeout);
+      this.timeout = null;
+    }
+    this.pendingHeartbeatId = null;
+    // Note: missedCount is NOT incremented - server responded, just with rate_limited
+  }
+
+  /**
    * Send a heartbeat message to the server.
    * Starts a timeout to detect missed responses.
    *
    * Guards against:
    * - Overlapping heartbeats (skips if one is already pending)
    * - Send failures (doesn't start timeout if send fails)
+   * - Rate limited state (skips if still in backoff period)
    */
   sendHeartbeat() {
     if (!this.running) {
@@ -120,6 +144,12 @@ export class HeartbeatManager {
     if (this.pendingHeartbeatId !== null) {
       return;
     }
+
+    // Respect rate limit backoff period
+    if (this.isRateLimited && Date.now() < this.rateLimitedUntil) {
+      return;
+    }
+    this.isRateLimited = false;
 
     // Generate a unique ID for this heartbeat
     this.heartbeatId++;

@@ -148,7 +148,11 @@ export function predictTurnOrder(state, count = 10) {
       id: actor.id,
       name: actor.name,
       type: actor.type,
-      class: actor.class
+      class: actor.class,
+      // Portrait/icon path fields
+      enemyId: actor.enemyId,  // Enemy sprite ID (e.g., 'goblin_warrior')
+      race: actor.race,        // Player race
+      gender: actor.gender     // Player gender
     });
 
     // Consume CT in simulation
