@@ -1,6 +1,7 @@
 import { Scene } from './Scene.js';
 import { AuthTransitionRenderer } from './auth/AuthTransitionRenderer.js';
 import { RegistrationWizard } from './auth/RegistrationWizard.js';
+import { ChangelogModal } from '../components/modals/ChangelogModal.js';
 import {
   PARCHMENT_COLORS,
   PARCHMENT_TYPOGRAPHY,
@@ -37,6 +38,9 @@ export class AuthScene extends Scene {
 
     // Registration wizard
     this.wizard = null;
+
+    // Changelog modal
+    this.changelogModal = null;
   }
 
   enter(params = {}) {
@@ -336,6 +340,23 @@ export class AuthScene extends Scene {
         75% { transform: translateX(5px); }
       }
 
+      .version-info {
+        position: absolute;
+        bottom: 12px;
+        right: 16px;
+        font-size: 12px;
+        color: ${P.text.muted};
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+        font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
+      }
+
+      .version-info:hover {
+        opacity: 1;
+        text-decoration: underline;
+      }
+
       @media (max-width: 600px) {
         .auth-container {
           width: 90%;
@@ -413,6 +434,7 @@ export class AuthScene extends Scene {
         <div class="auth-switch" id="auth-switch">
           ${isRegister ? 'Already have an account? <a id="mode-toggle">Login</a>' : 'Don\'t have an account? <a id="mode-toggle">Register</a>'}
         </div>
+        <div class="version-info" id="version-info">v0.4.29</div>
       </div>
     `;
 
@@ -431,6 +453,18 @@ export class AuthScene extends Scene {
       this.game.audio?.playUI('button_click');
       this.toggleMode();
     });
+
+    // Version info click handler
+    const versionInfo = container.querySelector('#version-info');
+    if (versionInfo) {
+      versionInfo.addEventListener('click', () => {
+        this.game.audio?.playUI('button_click');
+        if (!this.changelogModal) {
+          this.changelogModal = new ChangelogModal();
+        }
+        this.changelogModal.open();
+      });
+    }
 
     // Setup field validation
     this.setupValidation(container);

@@ -36,6 +36,9 @@ export {
   playerReady,
   cancelMatch,
   completeMatch,
+  submitFormation,
+  applyQueueBan,
+  checkQueueBan,
 
   // Turn timer
   startTurnTimer,

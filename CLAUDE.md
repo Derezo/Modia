@@ -8,132 +8,27 @@ Modia is a browser-based MMORPG with tactical turn-based combat and procedural w
 
 ## Development Commands
 
+Essential commands for daily development. Full reference: `docs/DEVELOPMENT_COMMANDS.md`
+
 ```bash
-# Quick start (after initial setup)
+# Quick start
 npm run dev:setup                       # Smart startup: checks ports, Docker, migrations, seeds, launches
 
 # Manual startup
 docker compose up -d                    # Start PostgreSQL (required first)
 npm run dev                             # Start both API (port 3000) and frontend (port 8080)
 
-# Individual services
-npm run dev:api                         # API only
-npm run dev:frontend                    # Frontend only
-npm run dev:admin                       # Admin dashboard only (port 5173)
-npm run dev:all                         # API + frontend + admin concurrently
-
-# Testing (server must be running - integration tests hit live endpoints)
-npm run test                            # All workspaces (unit + integration + ratelimit)
+# Testing
 npm run test -w api                     # API tests only
-npm run test:unit -w api                # Unit tests + balance tests (fast, no server needed)
-npm run test:integration -w api         # Integration tests (requires running server)
-npm run test:ratelimit -w api           # Rate limit tests (TEST_RATE_LIMITS=true)
-npm run test:quick -w api               # Alias for test:unit
-npm run test -w shared                  # Shared module tests (battleMath, pathfinding, etc.)
-node --test api/src/tests/integration/auth.integration.test.js  # Single test file
+npm run test:unit -w api                # Unit tests (fast, no server needed)
+node --test path/to/file.test.js        # Single test file
 
-# E2E Testing (Playwright - auto-starts servers)
-npx playwright test                     # Run all E2E tests
-npx playwright test e2e/auth.spec.js    # Single spec file
-npx playwright test --ui                # Interactive UI mode
-npx playwright test --headed            # Run with visible browser
-npx playwright test --debug             # Debug mode with inspector
-
-# Database utilities
-npm run db:migrate                      # Run pending migrations
-npm run db:seed                         # Seed the world (procedural generation)
+# Database
 npm run db:reset                        # Re-run migrations + seed
-npm run db:fresh                        # Drop all tables, re-migrate, re-seed
-npm run db:status                       # Show migration status
-npm -w api run migrate:rollback         # Roll back last migration
-
-# Other
-npm run lint                            # Run ESLint
-npm run doctor                          # Validate dev environment
-
-# Asset Generation (requires Sharp)
-npm run generate:all                    # Generate all sprite assets
-npm run generate:characters             # Character sprites only
-npm run generate:enemies                # Enemy sprites only
-npm run generate:nodes                  # World map node icons
-npm run generate:items                  # Item/equipment icons
-npm run generate:icons                  # UI icons
-
-# Audio Generation (requires Suno/ElevenLabs API keys)
-npm run audio:generate                  # Generate all audio (music + SFX)
-npm run audio:generate:music            # Generate music tracks only
-npm run audio:generate:sfx              # Generate sound effects only
-npm run audio:download                  # Download generated audio from Suno
-npm run audio:validate                  # Validate audio file coverage
-npm run audio:status                    # Quick status check of audio files
-npm run audio:check                     # Full validation (status + manifest sync)
-
-# Single-track generation with automatic download:
-npm run audio:generate:music -- --key heartlands_tavern --wait
-
-# Batch generation (two-step process for music):
-npm run audio:generate:music -- --region heartlands
-npm run audio:download
-
-# SFX generation is synchronous (files download immediately):
-npm run audio:generate:sfx -- --key attack_sword_1
-
-# AI Image Generation (requires HuggingFace API token + image-generator project)
-npm run ai:generate                     # Generate all pending images
-npm run ai:generate:tiles               # Generate terrain tiles only
-npm run ai:generate:portraits           # Generate character portraits only
-npm run ai:generate:items               # Generate item sprites only
-npm run ai:generate:icons               # Generate UI icons only
-npm run ai:generate:nodes               # Generate world map nodes only
-npm run ai:generate:overlays            # Generate item overlay effects only
-npm run ai:status                       # Quick status check of generated images
-npm run ai:validate                     # Full validation of image files
-npm run ai:migrate-paths                # Migrate assets to canonical paths with size variants
-
-# Single asset generation:
-npm run ai:generate:tiles -- --key forest_grass_1 --force
-npm run ai:generate:portraits -- --race elf --class wizard
-
-# Batch generation by filter:
-npm run ai:generate:tiles -- --biome forest
-npm run ai:generate:icons -- --category actions
-
-# Preview without generating:
-npm run ai:generate:tiles -- --dry-run
-
-# SD1.5 Animation Generation (ControlNet + IP-Adapter)
-# Uses Stable Diffusion 1.5 with pose control and style reference for character animations
-
-# Basic SD1.5 generation (uses default weights):
-npm run ai:generate:characters -- --mode sd15 --id warrior
-npm run ai:generate:characters -- --mode sd15 --id goblin
-
-# Custom ControlNet weight (pose accuracy, 0-1):
-npm run ai:generate:characters -- --mode sd15 --controlnet-weight 0.8 --id warrior
-
-# Custom IP-Adapter weight (style/character consistency, 0-1):
-npm run ai:generate:characters -- --mode sd15 --ipadapter-weight 0.8 --id warrior
-
-# Both weights customized:
-npm run ai:generate:characters -- --mode sd15 --controlnet-weight 0.8 --ipadapter-weight 0.6 --id warrior
-
-# Generate only reference image (for testing style transfer):
-# Note: Reference images preserve background (--no-background-removal) for better IP-Adapter style transfer
-npm run ai:generate:characters -- --mode sd15 --reference-only --id warrior
-
-# Use external reference image:
-npm run ai:generate:characters -- --mode sd15 --reference ./assets/my-character.png --id warrior
-
-# SD1.5 Weight Presets (recommended combinations):
-# - balanced:        --controlnet-weight 0.7 --ipadapter-weight 0.7  (equal pose/style priority)
-# - maxConsistency:  --controlnet-weight 0.6 --ipadapter-weight 0.8  (maximum character consistency)
-# - precisePoses:    --controlnet-weight 0.8 --ipadapter-weight 0.5  (accurate poses, more style variation)
-# - creative:        --controlnet-weight 0.4 --ipadapter-weight 0.4  (more generation variation)
+npm run db:fresh                        # Drop all, re-migrate, re-seed
 ```
 
 ### Workspace Structure
-
-The monorepo uses npm workspaces (defined in root `package.json`):
 
 | Workspace | Port | Purpose |
 |-----------|------|---------|
@@ -144,19 +39,6 @@ The monorepo uses npm workspaces (defined in root `package.json`):
 | `e2e/` | - | Playwright E2E tests (auto-starts servers) |
 
 Workspace-specific commands use `-w` flag: `npm run test -w api`, `npm run lint -w frontend`
-
-### Audio Prompt Guidelines (ElevenLabs SFX)
-
-**CRITICAL: Maximum 1 comma per prompt.** ElevenLabs interprets commas as separate sounds, generating each sequentially (causing 16s files instead of 1s).
-
-| Commas | Status |
-|--------|--------|
-| 0-1 | OK |
-| 2+ | **BLOCKED** |
-
-**Pattern:** Use "with" and "and" instead of commas: `"Fantasy sword slash with sharp metallic whoosh and light impact"`
-
-The `generate-sfx.js` script blocks 2+ commas. Run with `--dry-run` to validate. See `docs/AUDIO_STYLE_GUIDE.md` for full guidelines.
 
 ## Architecture
 
@@ -232,6 +114,16 @@ Four activity node types with dedicated routes and services:
 - **Caravan** (`caravanService.js`, `ShopScene.js`) - 23 exclusive items with 48-hour seeded refresh
 - **Watchtower** (`world.js`) - Fog reveal endpoint for map exploration
 
+### Coliseum System (`api/src/services/coliseum/`)
+PvP matchmaking and ranked battles:
+- `index.js` - Main service orchestrator and public API
+- `matchmaking.js` - ELO-based queue and player matching
+- `matchLifecycle.js` - Match state machine (pending → active → complete)
+- `turnTimer.js` - Turn timeout enforcement
+- `statistics.js` - ELO calculations, win/loss tracking
+- `queueBroadcaster.js` - Real-time queue position updates
+- `constants.js` - Match config (turn limits, ELO K-factors)
+
 ### WebSocket Protocol
 Room-based subscriptions at `/ws`:
 - **Message types:** `auth`, `join_room`, `leave_room`, `chat_message`, `party_*`, `battle_*`, `coliseum_*`
@@ -274,6 +166,21 @@ Worldgen modules in `api/src/db/worldgen/`:
 
 **UI components:** Parchment UI system in `src/ui/parchment/` - use `ParchmentPanel`, `ParchmentModal`, `parchmentToast` for consistent game UI. Button variants: `primary`, `secondary`, `danger`, `ghost`.
 
+## Security Best Practices
+
+**CRITICAL:** The `validate-plan` skill (v4.1+) **blocks commits** for security violations. See `docs/ESTABLISHED_PATTERNS.md` Section 9 for full patterns.
+
+| Pattern | ✅ Do This | ❌ Not This |
+|---------|-----------|-------------|
+| DB queries | `query('...WHERE id=$1', [id])` | `query(\`...WHERE id=${id}\`)` |
+| User identity | `req.user.id` (from JWT) | `req.body.userId` (client-provided) |
+| Ownership | `WHERE id=$1 AND user_id=$2` | `WHERE id=$1` (no user check) |
+| Numeric input | `parseInt(val, 10)` + `isNaN()` | Direct `req.body.amount` usage |
+| User text | `element.textContent = text` | `element.innerHTML = text` |
+| Token validation | `jwt.verify(token, secret)` | `jwt.decode(token)` |
+| WS handlers | Check `userId` first line | Process without auth check |
+| Error responses | `{ error: 'Failed' }` | `{ error: err.stack }` |
+
 **Testing:** Tests are organized into subdirectories:
 - `integration/` - Require API server running (hit live endpoints)
 - `unit/` - Fast tests, no server required
@@ -299,301 +206,43 @@ await ctx.cleanup(); // Deletes all created users/characters
 
 ## Critical Technical Gotchas
 
-These are hard-won lessons from debugging sessions. Read before making changes to these systems.
+Hard-won lessons from debugging sessions. Full details: `docs/FRONTEND_TECHNICAL_PATTERNS.md`
 
-### Game Loop and DeltaTime
+| Gotcha | Symptom | Quick Fix |
+|--------|---------|-----------|
+| DeltaTime units | Animation 1000x too fast/slow | `deltaTime / 1000` for physics |
+| Sprite sheet layout | Blue/corrupted rendering | Vertical strips: `sourceY = frame * height` |
+| TIMESTAMP timezone | Negative stamina values | Type parser in `database.js` appends 'Z' |
+| BIGINT string coercion | Level shows 145 instead of 5 | Type parser converts to int |
+| Canvas state leaking | Sprites flipped/wrong | Always `ctx.save()` / `ctx.restore()` |
+| DOM over canvas | UI in wrong location | Convert with `getBoundingClientRect()` + scale |
+| @shared in API | Runtime import error | Use relative paths in API, `@shared` only in frontend |
+| HP/MP naming | Shows "0/1" health | API=snake_case, Battle=camelCase; transform when needed |
 
-**CRITICAL:** `Game.js` passes `deltaTime` in **milliseconds** to all scenes/components. Components that need physics/animation calculations must convert to seconds internally:
+**Most common issues:**
 
 ```javascript
+// DeltaTime: Game loop passes milliseconds
 update(deltaTime) {
-  const dt = deltaTime / 1000; // Convert ms to seconds for physics
-  this.velocity += this.acceleration * dt;
+  const dt = deltaTime / 1000; // Convert to seconds for physics
 }
-```
 
-See `docs/FRONTEND_TECHNICAL_PATTERNS.md` for the full convention and component reference table.
-
-### Character Sprite Sheets
-
-All character sprites are **vertical strips** (64x512 pixels = 8 frames stacked vertically):
-
-```
-Frame extraction: sourceY = frameIndex * frameHeight, NOT sourceX
-Frames 0-3: Idle animation
-Frames 4-7: Walk/action animation
-```
-
-**Common mistake:** Assuming horizontal layout causes blue/corrupted rendering.
-
-### PostgreSQL TIMESTAMP Timezone Bug
-
-PostgreSQL `TIMESTAMP` (without timezone) is parsed by Node.js as **local time**, not UTC. This caused stamina calculations to return -143 instead of 7.
-
-**Fix in `database.js`:**
-```javascript
-pg.types.setTypeParser(1114, (val) => val === null ? null : new Date(val + 'Z'));
-```
-
-See `docs/TECHNICAL_ARCHITECTURE.md` section 3.5 for details.
-
-### PostgreSQL BIGINT String Coercion
-
-PostgreSQL `BIGINT` columns are returned as **strings** by node-postgres because JavaScript Number can't safely represent all 64-bit integers. This causes arithmetic bugs when JavaScript performs string concatenation instead of addition:
-
-```javascript
-// BUG: String concatenation instead of numeric addition
-const spent_xp = character.spent_xp;  // "13235" (string from DB!)
-const newTotal = spent_xp + 1000;     // "132351000" (concatenation, not 14235!)
-```
-
-This caused the "Level 145" toast bug where skill purchases showed gaining 140+ levels.
-
-**Fix in `database.js`:**
-```javascript
-pg.types.setTypeParser(20, (val) => val === null ? null : parseInt(val, 10));
-```
-
-### Canvas Context State
-
-Always save/restore canvas state when making transformations:
-```javascript
-ctx.save();
-ctx.translate(x, y);
-ctx.scale(-1, 1);
-ctx.drawImage(sprite, ...);
-ctx.restore(); // CRITICAL
-```
-
-### Canvas-to-Viewport Coordinate Conversion
-
-When positioning DOM elements over canvas content, canvas coordinates do NOT equal viewport coordinates due to scaling and centering:
-
-```javascript
-// Convert canvas coords to viewport coords for DOM positioning
-const rect = this.game.canvas.getBoundingClientRect();
-const scale = this.game.scale;
-const viewportX = rect.left + (canvasX * scale);
-const viewportY = rect.top + (canvasY * scale);
-```
-
-**Common mistake:** Using canvas coordinates directly for DOM positioning causes elements to appear in wrong location, especially with non-square viewports.
-
-See `docs/FRONTEND_TECHNICAL_PATTERNS.md` Section 10 for full details and examples.
-
-### Shared Module Imports
-
-**CRITICAL:** The `@shared/` import alias ONLY works in the frontend (configured in Vite). The API must use relative paths:
-
-```javascript
-// WRONG - API code (will fail at runtime)
-import { SeededRandom } from '@shared/constants.js';
-
-// CORRECT - API code (use relative path)
-import { SeededRandom } from '../../../shared/constants.js';
-
-// CORRECT - Frontend code (Vite alias works)
-import { SeededRandom } from '@shared/constants.js';
-```
-
-**Why this happens:** The `@shared` alias is a Vite-specific path mapping. Node.js doesn't recognize it. ESLint is configured to catch this error (`no-restricted-imports` rule in `api/.eslintrc.json`).
-
-### HP/MP Property Naming Convention
-
-Character HP/MP properties use **different naming conventions** depending on the data source:
-
-| Context | Format | Example | Used By |
-|---------|--------|---------|---------|
-| Database/API | snake_case | `hp_current`, `hp_max`, `mp_current`, `mp_max` | PostgreSQL columns, API responses |
-| Battle State | camelCase | `hp`, `maxHp`, `mp`, `maxMp` | BattleUnit, battle services |
-
-**Why two formats exist:**
-- PostgreSQL convention uses snake_case for column names
-- JavaScript convention uses camelCase for object properties
-- `battleUnitFactory.js` transforms snake_case → camelCase when creating battle units
-
-**Component expectations:**
-
-| Component | Expects | Receives Data From |
-|-----------|---------|-------------------|
-| `ParchmentCard` | camelCase | Battle state (BattleUnit, BattleIntro) |
-| `CharacterCard` | snake_case | API responses directly |
-| `CharacterModal` | snake_case | API responses directly |
-| `CharacterSelectScene` | snake_case | API responses directly |
-
-**Common mistake:** Passing API data (snake_case) to `ParchmentCard` without transforming to camelCase causes HP/MP to display as "0/1".
-
-**Fix pattern for API data → ParchmentCard:**
-```javascript
-// Transform API snake_case to camelCase for ParchmentCard
-const cardData = {
-  ...apiCharacter,
-  hp: apiCharacter.hp_current,
-  maxHp: apiCharacter.hp_max,
-  mp: apiCharacter.mp_current,
-  maxMp: apiCharacter.mp_max
-};
-parchmentCard.setCharacter(cardData);
+// Shared imports: API must use relative paths
+// WRONG in API:  import { X } from '@shared/constants.js';
+// CORRECT in API: import { X } from '../../../shared/constants.js';
 ```
 
 ## File Size Guidelines
 
-File size enforcement prevents monolithic files that harm maintainability. Oversized files **block plan validation and commits**.
-
-### Thresholds
+File size limits prevent monolithic files. Full patterns: `docs/ESTABLISHED_PATTERNS.md` Section 10.
 
 | Lines | Level | Action |
 |-------|-------|--------|
 | 500 | Target | Ideal file size |
-| 1000 | Notice | Note in review, continue |
-| 1500 | Warning | Flag in report, requires module summary comment |
-| 2500 | Warning | Strong warning, plan modularization |
-| **3500** | **BLOCKING** | **Halt validation, require modularization** |
+| 1500 | Warning | Requires module summary comment |
+| **3500** | **BLOCKING** | Must modularize before commit |
 
-### Module Summary Requirements
-
-Files exceeding 1500 lines MUST include a module summary comment at the top:
-
-**JavaScript/TypeScript:**
-```javascript
-/**
- * @module BattleScene
- * @description Orchestrates tactical turn-based combat with grid-based movement.
- *
- * Key responsibilities:
- * - Battle initialization and state management
- * - Turn order and action processing
- * - Unit rendering and animation coordination
- * - WebSocket event handling for multiplayer sync
- *
- * @see BattleGrid.js - Grid rendering and pathfinding
- * @see BattleUnit.js - Individual unit rendering
- * @see BattleUI.js - HUD and action menus
- */
-```
-
-This helps AI assistants understand file purpose without reading the entire file.
-
-### Reading Large Files
-
-When working with files >2000 lines, use targeted reading to preserve context:
-
-1. **Read the module summary first** (first 50 lines)
-2. **Use grep to find specific functions/sections**
-3. **Read in chunks using offset/limit parameters**
-
-Example workflow:
-```
-# First, understand the file's purpose
-Read file_path with limit=50
-
-# Find the specific function you need
-Grep for "function handleTurnEnd"
-
-# Read just that section
-Read file_path with offset=450, limit=100
-```
-
-Avoid reading entire large files unless absolutely necessary.
-
-### Exemptions
-
-- `dist/`, `node_modules/`, `.min.js` files
-- Test files (`*.test.js`, `*.spec.js`)
-- Migration files (`*.sql`)
-- Generated files (sprites, audio metadata)
-
-### Modularization Patterns
-
-**1. Re-export Wrapper Pattern** (used for battleService.js)
-
-Keep the main file as a thin coordinator that re-exports from modules:
-
-```javascript
-// battleService.js (wrapper - stays small)
-export * from './battle/damageCalculations.js';
-export * from './battle/statusEffects.js';
-export * from './battle/rewards.js';
-export { BattleService } from './battle/BattleService.js';
-```
-
-```
-services/
-  battleService.js          # Re-export wrapper (~50 lines)
-  battle/
-    damageCalculations.js   # Damage formulas
-    statusEffects.js        # Status effect logic
-    rewards.js              # XP/loot calculations
-    BattleService.js        # Main service class
-```
-
-**2. Domain Module Directory**
-
-Group related functionality into a directory with an index:
-
-```
-services/ai/
-  index.js              # Public exports
-  utilityAI.js          # Scoring logic
-  lookahead.js          # Simulation
-  actionGenerator.js    # Action enumeration
-  stateEvaluator.js     # State analysis
-```
-
-**3. Scene Component Extraction** (frontend)
-
-Extract rendering/logic into separate files:
-
-```
-scenes/
-  BattleScene.js        # Orchestration only
-battle/
-  BattleGrid.js         # Grid rendering
-  BattleUnit.js         # Unit rendering
-  BattleUI.js           # HUD elements
-  BattleAnimations.js   # Animation logic
-```
-
-**4. Data Manifest Pattern** (config/templates)
-
-Split large data files by category:
-
-```
-audio-metadata/
-  sfx/
-    combat/
-      weapons.json      # Weapon sounds
-      deaths.json       # Death sounds
-      status-effects.json
-    manifest.json       # Index of all categories
-
-ai-image-metadata/
-  tiles/                # Battle terrain tiles by biome
-    floors/, walls/, slopes/
-  portraits/            # Character and enemy portraits
-  items/                # Weapons, armor, consumables
-  icons/                # UI action icons, status effects
-  nodes/                # World map node icons
-  manifest.json         # Master index
-```
-
-### Tech Debt: Existing Large Files
-
-All previously flagged large files have been refactored and are under the 3,500-line blocking threshold. Run `wc -l` on suspected files to verify current line counts before flagging.
-
-**Notable modularizations:**
-- `BattleScene.js` → `BattleInputHandler.js`, `BattleAudioManager.js`
-- `WorldMapScene.js` → `WorldMapPathSystem.js`, `WorldMapNodeRenderer.js`
-- `marketplaceService.js` → `marketplace/` directory (6 modules)
-- `coliseumService.js` → `coliseum/` directory (6 modules)
-- `admin.js` → `admin/` directory (5 sub-routers)
-- `websocket/index.js` → `rateLimiter.js`, `roomManager.js`, `messageRouter.js`, `messageHandlers.js`
-- `SettingsScene.js` → `settings/` directory (3 modules)
-- `world.js` → `world/` directory (4 sub-routers)
-- `TavernScene.js` → `tavern/` directory (2 modules)
-- `BattleUI.js` → `BattlePvPUI.js`, `BattleConfirmationUI.js`
-
-New files must comply with the 3,500-line limit.
+**Key patterns:** Re-export wrapper, domain module directories, scene component extraction. Use `wc -l` to check files.
 
 ## Subagents
 
@@ -699,11 +348,13 @@ Pull requests run: lint → API tests → E2E tests (Playwright) → build. The 
 Detailed specifications in `docs/`. Key files:
 
 **Planning & Architecture:**
+- `DEVELOPMENT_COMMANDS.md` - Full command reference for dev, test, assets, audio, AI generation
 - `DEVELOPMENT_ROADMAP.md` - Links to `ROADMAP_TECHNICAL.md` and `ROADMAP_GAMEPLAY.md`
 - `TECHNICAL_ARCHITECTURE.md` - System design, database schemas
 - `WORLDGEN_TECHNICAL_DEEP_DIVE.md` - 6-phase world generation algorithms, constants, gotchas
 - `API_SPECIFICATION.md` - REST and WebSocket endpoints
 - `FRONTEND_TECHNICAL_PATTERNS.md` - Critical gotchas and component patterns
+- `ESTABLISHED_PATTERNS.md` - Canonical code patterns, security patterns, conformance checklists
 
 **Game Systems:**
 - `GAME_DESIGN.md` - Combat mechanics, class progression, world design

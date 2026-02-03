@@ -376,51 +376,85 @@ export class ColiseumScene extends Scene {
       },
 
       'coliseum:match_ready': (_payload) => {
-        // Both players ready - match starting
+        // Both players ready - now waiting for formation_started
         this.isReady = true;
         this.opponentReady = true;
         this.updateContent();
-        parchmentToast.success('Ready', 'Match starting in 3 seconds!');
+        parchmentToast.success('Ready', 'Both players ready! Entering formation...');
+      },
+
+      'coliseum:formation_started': (payload) => {
+        // Both players are ready - transition to formation scene
+        if (this.currentMatch?.matchId === payload.matchId) {
+          // Clear ready check UI state
+          this.currentMatch.status = 'formation_selection';
+
+          // Clear countdown timer
+          if (this.matchCountdown) {
+            clearInterval(this.matchCountdown);
+            this.matchCountdown = null;
+          }
+
+          // Transition to formation scene
+          this.game.scenes.changeScene('battleFormation', {
+            type: 'coliseum',
+            matchId: payload.matchId,
+            deadline: payload.deadline,
+            opponentName: this.currentMatch?.opponent?.username || 'Opponent',
+            maxCharacters: 5
+          });
+        }
       },
 
       'coliseum:match_started': async (payload) => {
-        // Transition to battle scene
-        parchmentToast.success('Battle', 'Battle begins!');
+        // This should normally be handled by BattleFormationScene after formations are submitted.
+        // Handle here as a fallback in case player is still in ColiseumScene.
+        if (payload.battleId) {
+          parchmentToast.success('Battle', 'Battle begins!');
 
-        // Clear match state before transitioning
-        this.currentMatch = null;
-        this.isReady = false;
-        this.opponentReady = false;
-        if (this.matchCountdown) {
-          clearInterval(this.matchCountdown);
-          this.matchCountdown = null;
-        }
-
-        try {
-          // Fetch full battle state from the rejoin endpoint
-          const response = await this.game.api.request('GET', `/battle/${payload.battleId}/rejoin`);
-
-          if (response.success !== false) {
-            // Transition to BattleScene with full battle data
-            this.game.scenes.changeScene('battle', {
-              battleId: response.battleId || payload.battleId,
-              battleType: 'pvp',
-              mapSeed: response.mapSeed || payload.mapSeed,
-              mapWidth: response.mapWidth || 32,
-              mapHeight: response.mapHeight || 32,
-              state: response.state,
-              opponentUsername: payload.opponentUsername,
-              nodeType: response.nodeType || payload.nodeType || 'arena'
-            });
-          } else {
-            throw new Error(response.message || 'Failed to load battle');
+          // Clear match state before transitioning
+          this.currentMatch = null;
+          this.isReady = false;
+          this.opponentReady = false;
+          if (this.matchCountdown) {
+            clearInterval(this.matchCountdown);
+            this.matchCountdown = null;
           }
-        } catch (error) {
-          console.error('[Coliseum] Failed to load PvP battle:', error);
-          parchmentToast.error('Battle Error', 'Failed to load battle. Please try again.');
-          // Reset to queue view
-          this.updateContent();
+
+          try {
+            // Fetch full battle state from the rejoin endpoint
+            const response = await this.game.api.request('GET', `/battle/${payload.battleId}/rejoin`);
+
+            if (response.success !== false) {
+              // Transition to BattleScene with full battle data
+              this.game.scenes.changeScene('battle', {
+                battleId: response.battleId || payload.battleId,
+                battleType: 'pvp',
+                mapSeed: response.mapSeed || payload.mapSeed,
+                mapWidth: response.mapWidth || 32,
+                mapHeight: response.mapHeight || 32,
+                state: response.state,
+                opponentUsername: payload.opponentUsername,
+                nodeType: response.nodeType || payload.nodeType || 'arena'
+              });
+            } else {
+              throw new Error(response.message || 'Failed to load battle');
+            }
+          } catch (error) {
+            console.error('[Coliseum] Failed to load PvP battle:', error);
+            parchmentToast.error('Battle Error', 'Failed to load battle. Please try again.');
+            // Reset to queue view
+            this.updateContent();
+          }
         }
+      },
+
+      'coliseum:queue_banned': (payload) => {
+        // Handle queue ban notification
+        const banTime = new Date(payload.banUntil).toLocaleTimeString();
+        parchmentToast.error('Queue Banned', `You are banned until ${banTime}. Reason: ${payload.reason}`);
+        this.isInQueue = false;
+        this.updateContent();
       },
 
       'coliseum:match_cancelled': (payload) => {

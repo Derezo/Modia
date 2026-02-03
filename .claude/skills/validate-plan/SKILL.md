@@ -1,10 +1,10 @@
 ---
 name: validate-plan
 description: Use this skill when the user wants to validate completed work against a plan, perform code review, analyze gaps, remediate issues, and commit changes. Trigger on phrases like "validate plan", "review changes", "check implementation", "gap analysis", or "finalize and commit".
-version: 4.0.0
+version: 4.1.0
 ---
 
-# Plan Validation and Code Review Skill v4.0
+# Plan Validation and Code Review Skill v4.1
 
 This skill performs comprehensive validation of completed implementation work using a parallel subagent architecture for thorough review, **then remediates all issues before committing**.
 
@@ -26,13 +26,14 @@ Phase 1: Pre-Analysis (Parallel)
 ├── File Analyzer       → file_inventory
 ├── Lint Runner         → lint_results
 ├── Test Runner         → test_results
-└── Plan Parser         → plan_context
+├── Plan Parser         → plan_context
+└── Security Scanner    → security_scan_results (NEW in v4.1)
 
 Phase 2: Deep Analysis (Parallel)
 ├── code-reviewer       → code_review (always)
 ├── debt-detector       → debt_analysis (always)
 ├── qa-expert          → coverage_analysis (always)
-├── security-auditor   → security_review (conditional)
+├── security-auditor   → security_review (ALWAYS - two-tier, v4.1)
 ├── architect-reviewer → arch_review (conditional)
 └── documentation-checker → doc_sync (conditional)
 
@@ -131,16 +132,215 @@ Output: plan_context
 - implementation_order: [list]
 ```
 
+### Task 1.5: Security Scanner (NEW in v4.1)
+
+```
+Automated vulnerability detection on changed .js files:
+
+1. Collect all changed .js files from file_inventory
+2. Run detection patterns using Grep tool:
+   - SQL injection patterns (see Security Detection Patterns section)
+   - Server validation gap patterns
+   - WebSocket security patterns
+   - OWASP vulnerability patterns
+3. Filter out false positives (comments, test files, safe patterns)
+4. Classify findings by severity (BLOCKER/CRITICAL/WARNING)
+5. Generate structured output
+
+Output: security_scan_results
+- findings: [{ severity, pattern_name, file, line, code_snippet, remediation }]
+- blockers_count: N
+- criticals_count: N
+- warnings_count: N
+- passed: boolean (false if any BLOCKER)
+```
+
+**Pattern Execution:**
+
+For each pattern in the Security Detection Patterns section:
+```bash
+# Example grep command for SQL injection detection
+grep -rn "pool\.query\s*\(\s*\`" --include="*.js" api/src/
+grep -rn "query\s*\(\s*['\"].*\+.*\)" --include="*.js" api/src/
+```
+
+**False Positive Filters:**
+- Skip lines containing `// SAFE:` or `// eslint-disable`
+- Skip files in `__tests__/`, `tests/`, `*.test.js`, `*.spec.js`
+- Skip lines that are clearly parameterized (contain `$1`, `$2` with `[` nearby)
+
 ### Phase 1 Gate
 
 **STOP if any Phase 1 BLOCKERS:**
 
-| Blocker | Action |
-|---------|--------|
-| File > 3500 lines | Report, halt validation |
-| `@shared` in API | Report, halt validation |
-| Lint errors (not warnings) | Report, halt validation |
-| Test failures | Report, continue to Phase 2 with warning |
+| Blocker | Source | Action |
+|---------|--------|--------|
+| File > 3500 lines | File Analyzer | Report, halt validation |
+| `@shared` in API | Lint Runner | Report, halt validation |
+| Lint errors (not warnings) | Lint Runner | Report, halt validation |
+| SQL injection detected | Security Scanner | Report, halt validation |
+| Missing auth on protected route | Security Scanner | Report, halt validation |
+| Missing ownership check in query | Security Scanner | Report, halt validation |
+| WebSocket handler without auth | Security Scanner | Report, halt validation |
+| jwt.decode without verify | Security Scanner | Report, halt validation |
+| Trusting client-provided userId | Security Scanner | Report, halt validation |
+| Test failures | Test Runner | Report, continue to Phase 2 with warning |
+| Security CRITICAL issues | Security Scanner | Report, continue to Phase 2 |
+
+---
+
+## Security Detection Patterns (v4.1)
+
+These patterns are used by Task 1.5 (Security Scanner) and the security-auditor agent for automated vulnerability detection.
+
+### SQL Injection (BLOCKER)
+
+**Pattern 1: Template literal interpolation in queries**
+```regex
+(pool|query|client)\.query\s*\(\s*`[^`]*\$\{[^}]+\}[^`]*`
+```
+Example violation: `await pool.query(\`SELECT * FROM users WHERE id = ${userId}\`)`
+Remediation: Use parameterized queries with `$1` placeholders and pass values as array
+
+**Pattern 2: String concatenation in queries**
+```regex
+(pool|query|client)\.query\s*\([^)]*["'][^"']*["']\s*\+
+```
+Example violation: `await pool.query('SELECT * FROM users WHERE id = ' + userId)`
+Remediation: Use parameterized queries with `$1` placeholders
+
+**Pattern 3: Missing parameter array**
+```regex
+(pool|query|client)\.query\s*\(\s*['"`][^'"`]+\$\d+[^'"`]*['"`]\s*\)(?!\s*,\s*\[)
+```
+Example violation: `await pool.query('SELECT * FROM users WHERE id = $1')` (no params array)
+Remediation: Add parameter array as second argument: `pool.query('...', [value])`
+
+**Pattern 4: Dynamic table/column names**
+```regex
+(pool|query|client)\.query\s*\([^)]*\$\{[^}]*(Table|Column|Field|table|column|field)[^}]*\}
+```
+Example violation: `await pool.query(\`SELECT * FROM ${tableName} WHERE id = $1\`, [id])`
+Remediation: Use a whitelist of allowed table names, never interpolate directly
+
+### Server Validation Gaps (BLOCKER)
+
+**Pattern 5: Missing numeric validation on IDs/amounts**
+```regex
+(const|let|var)\s*\{[^}]*(Id|id|amount|quantity|price|gold|level|xp)[^}]*\}\s*=\s*req\.(body|params|query)(?![\s\S]{0,100}(parseInt|Number\(|Number\.isInteger|isNaN))
+```
+Example violation: `const { characterId } = req.body;` without parseInt validation
+Remediation: Always validate numeric inputs: `const characterId = parseInt(req.body.characterId, 10); if (isNaN(characterId)) return res.status(400)...`
+
+**Pattern 6: Trusting client-provided userId (CRITICAL)**
+```regex
+(const|let|var)\s*\{[^}]*userId[^}]*\}\s*=\s*req\.body
+```
+Example violation: `const { userId, amount } = req.body;` then using userId for authorization
+Remediation: ALWAYS use `req.user.id` from the authenticated JWT, never trust client-provided userId
+
+**Pattern 7: Missing ownership check in character queries (BLOCKER)**
+```regex
+(SELECT|UPDATE|DELETE)\s+[^;]*FROM\s+characters\s+WHERE\s+id\s*=\s*\$\d(?![\s\S]{0,50}AND\s+(user_id|userId))
+```
+Example violation: `SELECT * FROM characters WHERE id = $1` (no user_id check)
+Remediation: ALWAYS include `AND user_id = $2` in character queries
+
+**Pattern 8: Missing ownership check in inventory/items queries**
+```regex
+(SELECT|UPDATE|DELETE)\s+[^;]*FROM\s+(character_items|inventory|user_items)\s+WHERE\s+[^;]*(?<!user_id\s*=\s*\$\d)
+```
+Example violation: Inventory query without verifying ownership
+Remediation: Join with characters table or include user_id check
+
+### WebSocket Security (BLOCKER)
+
+**Pattern 9: Handler without auth check**
+```regex
+(async\s+)?function\s+handle\w+\s*\(\s*ws,\s*[^)]*\)\s*\{(?![\s\S]{0,100}if\s*\(\s*!userId)
+```
+Example violation: WebSocket message handler that doesn't check `if (!userId) return;`
+Remediation: Every handler must verify `const userId = wsUserMap.get(ws); if (!userId) return;`
+
+**Pattern 10: Broadcasting without sanitization**
+```regex
+broadcast(ToRoom|Message)\s*\([^)]*payload\.(message|content|text)(?![\s\S]{0,30}sanitize)
+```
+Example violation: `broadcastToRoom(room, { message: payload.message })`
+Remediation: Sanitize user content before broadcasting to prevent stored XSS
+
+**Pattern 11: Unvalidated room access**
+```regex
+(addUserToRoom|rooms\.get|joinRoom)\s*\([^)]+payload\.room
+```
+Example violation: `addUserToRoom(payload.room, userId)` without validating room access
+Remediation: Validate user has permission to join the requested room
+
+**Pattern 12: Missing rate limit in message handler**
+```regex
+ws\.on\s*\(\s*['"]message['"][\s\S]{0,300}(?!.*checkRateLimit|.*rateLimiter)
+```
+Example violation: WebSocket message handler without rate limiting
+Remediation: Apply rate limiting to prevent message flooding
+
+### OWASP Vulnerability Patterns
+
+**Pattern 13: Broken Authentication - jwt.decode without verify (BLOCKER)**
+```regex
+jwt\.decode\s*\((?!.*verify)
+```
+Example violation: `const data = jwt.decode(token)` without verification
+Remediation: ALWAYS use `jwt.verify(token, secret)` to validate tokens
+
+**Pattern 14: Broken Authentication - Plaintext password operations (BLOCKER)**
+```regex
+password[^_]*=\s*(req\.body\.|payload\.)password(?![\s\S]{0,50}(bcrypt|hash|compare))
+```
+Example violation: Storing or comparing passwords without hashing
+Remediation: Use bcrypt.hash() for storage, bcrypt.compare() for verification
+
+**Pattern 15: Sensitive Data Exposure - Logging sensitive data (CRITICAL)**
+```regex
+(console|logger)\.(log|info|warn|error|debug)\s*\([^)]*\b(password|token|secret|apiKey|refreshToken|accessToken)\b
+```
+Example violation: `console.log('Auth:', { password, token })`
+Remediation: Never log sensitive data; sanitize logs to remove credentials
+
+**Pattern 16: XSS - innerHTML usage (CRITICAL)**
+```regex
+\.innerHTML\s*=
+```
+Example violation: `element.innerHTML = userMessage`
+Remediation: Use textContent for text, or sanitize HTML with DOMPurify
+
+**Pattern 17: XSS - document.write (CRITICAL)**
+```regex
+document\.write\s*\(
+```
+Example violation: `document.write(userInput)`
+Remediation: Use DOM manipulation methods instead
+
+**Pattern 18: XSS - eval with user input (BLOCKER)**
+```regex
+eval\s*\(\s*(req\.|payload\.|data\.|user)
+```
+Example violation: `eval(payload.code)`
+Remediation: Never use eval with user input; use safe alternatives
+
+**Pattern 19: Broken Access Control - Missing role check (CRITICAL)**
+```regex
+router\.(get|post|put|delete|patch)\s*\(\s*['"]/(admin|mod|moderator)
+```
+Then check if handler has role verification
+Example violation: Admin route without role middleware
+Remediation: Add role verification middleware: `requireRole('admin')`
+
+**Pattern 20: Error Stack Exposure (WARNING)**
+```regex
+res\.(json|send)\s*\([^)]*err\.(stack|message)
+```
+Example violation: `res.json({ error: err.stack })`
+Remediation: Return generic error messages; log full errors server-side only
 
 ---
 
@@ -214,29 +414,66 @@ Complete edge case checklists for affected domains.
 Report missing tests as BLOCKERS.
 ```
 
-### Conditionally Invoked
+### Always Invoked (continued)
 
-#### 2.4: security-auditor (if auth/economy/transaction code touched)
+#### 2.4: security-auditor (ALWAYS - Two-Tier Scanning, v4.1)
 
+The security-auditor runs on EVERY validation with tiered depth.
+
+**Tier 1: Basic Security Scan (Always)**
 ```
-Trigger when affected_systems includes: auth, economy, marketplace, inventory
-
 Task tool with subagent_type: security-auditor
 
 Prompt:
-Security audit for changes in:
+Perform basic security scan on changed files:
+- [list files from file_inventory]
+
+AUTOMATED CHECKS:
+1. Review security_scan_results from Phase 1 Task 1.5
+2. Verify all flagged patterns are true positives (not in comments, test files, etc.)
+3. Check for false negatives (patterns that might have been missed)
+4. Validate parameterized query usage in all database calls
+5. Verify authentication middleware on all protected routes
+6. Check for input validation on all user inputs
+
+For each finding:
+- Confirm severity classification (BLOCKER/CRITICAL/WARNING)
+- Provide specific remediation steps
+- Reference codebase patterns from ESTABLISHED_PATTERNS.md
+
+Output format:
+- confirmed_blockers: [list]
+- confirmed_criticals: [list]
+- confirmed_warnings: [list]
+- false_positives_dismissed: [list with reason]
+- additional_findings: [list of issues not caught by patterns]
+```
+
+**Tier 2: Deep Security Audit (Conditional)**
+```
+Trigger when affected_systems includes: auth, economy, marketplace, inventory, websocket, battle
+
+Task tool with subagent_type: security-auditor
+
+Additional Prompt:
+Deep security audit for sensitive systems:
 - [list security-relevant files]
 
-Focus on:
-- SQL injection vectors
-- Authentication bypasses
-- Authorization checks
-- Transaction integrity
-- Rate limiting gaps
-- Input validation
+MANUAL ANALYSIS:
+1. Transaction integrity (race conditions, atomic operations)
+2. Game economy exploitation vectors (item duplication, gold manipulation)
+3. Battle state manipulation prevention
+4. Rate limiting adequacy for sensitive endpoints
+5. Error information leakage
+6. CSRF protection verification
+7. Session management security
+8. Input validation completeness
+9. WebSocket message authentication chain
 
-Report all findings with severity.
+Report findings with OWASP classification (A1-A10) and impact assessment.
 ```
+
+### Conditionally Invoked
 
 #### 2.5: architect-reviewer (if significant structural changes)
 
@@ -335,6 +572,66 @@ Use the appropriate subagent for each issue type:
 | Lint errors | `code-reviewer` | Error messages, file locations |
 | File size violations | `refactoring-specialist` | File path, modularization strategy |
 | Held-back features | Ask user → `frontend-developer` / `backend-developer` / `fullstack-developer` | Original requirements, plan context |
+
+### Step 3.2a: Security Issue Remediation Matrix (v4.1)
+
+Security issues require specific subagent combinations for fix and verification:
+
+| Issue Type | Primary Agent | Verifier | Context to Provide |
+|------------|---------------|----------|-------------------|
+| SQL injection | `backend-developer` | `security-auditor` | Query location, parameterization pattern from ESTABLISHED_PATTERNS |
+| Missing auth middleware | `backend-developer` | `security-auditor` | Route file, auth middleware pattern |
+| Missing ownership check | `backend-developer` | `postgres-pro` | Query, user_id join pattern |
+| Trusting client userId | `backend-developer` | `security-auditor` | Endpoint, req.user.id usage pattern |
+| WebSocket auth gap | `websocket-engineer` | `security-auditor` | Handler file, wsUserMap auth pattern |
+| WebSocket rate limiting | `websocket-engineer` | `security-auditor` | Message handler, rate limiter integration |
+| Input validation gap | `backend-developer` | `qa-expert` | Input type, parseInt/validation requirements |
+| XSS prevention | `frontend-developer` | `security-auditor` | DOM manipulation location, sanitization pattern |
+| Sensitive data logging | `backend-developer` | `security-auditor` | Log statement, sanitization requirement |
+| jwt.decode misuse | `backend-developer` | `security-auditor` | Token handling code, jwt.verify pattern |
+
+**Security Fix Task Template:**
+```
+Task tool prompt for security fix:
+
+You are fixing a SECURITY BLOCKER that prevents commit.
+
+Vulnerability: [type from detection pattern, e.g., "SQL Injection - Pattern 1"]
+OWASP Classification: [A1-A10, e.g., "A1 - Injection"]
+File: [file path]
+Line: [line number]
+Pattern matched: [pattern name from Security Detection Patterns]
+Code snippet:
+```
+[matched code]
+```
+
+Impact: [what an attacker could exploit]
+
+Required fix:
+- [specific remediation from pattern description]
+
+Reference pattern from ESTABLISHED_PATTERNS.md:
+```javascript
+[relevant safe code pattern]
+```
+
+REQUIREMENTS:
+1. Fix the vulnerability completely
+2. Ensure fix follows established patterns
+3. Add/update tests to verify security (if applicable)
+4. Return before/after code comparison
+
+Security-auditor will verify your fix passes the detection pattern.
+```
+
+**Security Verification Protocol:**
+
+After fix is applied:
+1. Re-run the specific detection pattern grep on the modified file
+2. Verify no matches (pattern should not trigger)
+3. Verify the fix doesn't break existing tests
+4. If fix introduces new patterns, verify they are safe
 
 ### Step 3.3: Remediation Flow
 
@@ -651,7 +948,7 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 | `code-reviewer` | Yes | Structured checklists, security, patterns |
 | `debt-detector` | Yes | Technical debt, pattern conformance |
 | `qa-expert` | Yes | Test coverage, edge cases |
-| `security-auditor` | Conditional | Auth/economy/transaction security |
+| `security-auditor` | Yes (v4.1) | Two-tier: Basic scan always, deep audit for sensitive systems |
 | `architect-reviewer` | Conditional | Structural changes, system design |
 | `documentation-checker` | Conditional | Doc sync, API documentation |
 
@@ -670,6 +967,43 @@ Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
 | Missing auth middleware | Protected routes |
 | Missing endpoint tests | New API endpoints |
 | Import violations | Runtime errors |
+
+### Security BLOCKER Thresholds (v4.1)
+
+| Check | Pattern | OWASP |
+|-------|---------|-------|
+| SQL injection - template literal | `query(\`...\${...\`\)` | A1 - Injection |
+| SQL injection - concatenation | `query('...' + var)` | A1 - Injection |
+| SQL injection - missing params | `query('...$1...')` no array | A1 - Injection |
+| Missing auth middleware | Route without `authenticate` | A2/A5 - Broken Auth/Access |
+| jwt.decode without verify | `jwt.decode()` alone | A2 - Broken Authentication |
+| Missing ownership check | Character/inventory query without user_id | A5 - Broken Access Control |
+| Trusting body userId | `req.body.userId` for authorization | A5 - Broken Access Control |
+| WebSocket handler no auth | Handler without userId check | A2 - Broken Authentication |
+| eval with user input | `eval(payload.*)` | A1 - Injection |
+| Plaintext password ops | Password without bcrypt | A2 - Broken Authentication |
+
+### Security CRITICAL Thresholds (v4.1)
+
+| Check | Pattern | OWASP |
+|-------|---------|-------|
+| XSS - innerHTML | `.innerHTML =` | A7 - Cross-Site Scripting |
+| XSS - document.write | `document.write()` | A7 - Cross-Site Scripting |
+| Sensitive data logging | Password/token in console/logger | A3 - Sensitive Data Exposure |
+| Missing input length validation | String inputs unvalidated | A1 - Injection |
+| Missing numeric validation | ID/amount without parseInt | A1 - Injection |
+| Broadcast without sanitization | User content in broadcast | A7 - Cross-Site Scripting |
+| Missing WebSocket rate limiting | Message handler no limiter | A2 - Broken Authentication |
+| Unvalidated room access | joinRoom without permission check | A5 - Broken Access Control |
+| Missing role verification | Admin routes without role check | A5 - Broken Access Control |
+
+### Security WARNING Thresholds (v4.1)
+
+| Check | Pattern | OWASP |
+|-------|---------|-------|
+| Error stack exposure | `err.stack` in response | A3 - Sensitive Data Exposure |
+| Missing CSRF tokens | State-changing POST without CSRF | A5 - Broken Access Control |
+| Insecure cookie settings | Missing httpOnly/secure flags | A2 - Broken Authentication |
 
 ### CRITICAL Thresholds
 

@@ -23,6 +23,10 @@ export const QUEUE_SETTINGS = {
   '5v5': { minPlayers: 2, maxPlayers: 2, partySize: 5 }
 };
 
+// Formation Selection Constants
+export const FORMATION_SELECTION_TIMEOUT = 20000;  // 20 seconds to select formation
+export const FORMATION_TIMEOUT_BAN_DURATION = 5 * 60 * 1000;  // 5 minutes ban
+
 // =============================================================================
 // In-Memory State Maps
 // =============================================================================
@@ -47,6 +51,12 @@ export const matchReadyTimers = new Map();
 
 // Match start timers: matchId -> timerId (for the 3s start delay)
 export const matchStartTimers = new Map();
+
+// Formation selection tracking: matchId -> timerId (for 20s formation timeout)
+export const formationTimers = new Map();
+
+// Pending formations: matchId -> { [userId]: { formation: {...}, submittedAt: timestamp } }
+export const pendingFormations = new Map();
 
 // Match ID counter (mutable)
 export const matchIdCounter = { value: 1 };

@@ -27,6 +27,8 @@ import {
   activeMatches,
   matchReadyTimers,
   matchStartTimers,
+  formationTimers,
+  pendingFormations,
   _resetWebsocketCache
 } from './constants.js';
 
@@ -44,7 +46,10 @@ import {
   createMatch,
   playerReady,
   cancelMatch,
-  completeMatch
+  completeMatch,
+  submitFormation,
+  applyQueueBan,
+  checkQueueBan
 } from './matchLifecycle.js';
 
 // Turn timer management
@@ -99,6 +104,9 @@ export {
   playerReady,
   cancelMatch,
   completeMatch,
+  submitFormation,
+  applyQueueBan,
+  checkQueueBan,
 
   // Turn timer
   startTurnTimer,
@@ -144,6 +152,15 @@ export function _resetForTests() {
   }
   matchStartTimers.clear();
 
+  // Cancel formation timers
+  for (const timerId of formationTimers.values()) {
+    clearTimeout(timerId);
+  }
+  formationTimers.clear();
+
+  // Clear pending formations
+  pendingFormations.clear();
+
   // Cancel turn timers
   for (const timer of turnTimers.values()) {
     clearTimeout(timer.timerId);
@@ -179,6 +196,8 @@ export default {
   // Match lifecycle
   playerReady,
   completeMatch,
+  submitFormation,
+  checkQueueBan,
 
   // Queue status
   getQueueStatus,
