@@ -123,12 +123,14 @@ describe('assetPaths constants', () => {
 
   describe('DEFAULT_SIZES', () => {
     it('should have defaults for all categories', () => {
+      // Defaults set to the largest available size for high-quality admin
+      // dashboard previews (see assetPaths.js doc comment).
       assert.strictEqual(DEFAULT_SIZES.tiles, 64);
-      assert.strictEqual(DEFAULT_SIZES.portraits, 64);
-      assert.strictEqual(DEFAULT_SIZES.items, 64);
-      assert.strictEqual(DEFAULT_SIZES.icons, 32);
-      assert.strictEqual(DEFAULT_SIZES.nodes, 96);
-      assert.strictEqual(DEFAULT_SIZES.overlays, 64);
+      assert.strictEqual(DEFAULT_SIZES.portraits, 256);
+      assert.strictEqual(DEFAULT_SIZES.items, 128);
+      assert.strictEqual(DEFAULT_SIZES.icons, 256);
+      assert.strictEqual(DEFAULT_SIZES.nodes, 256);
+      assert.strictEqual(DEFAULT_SIZES.overlays, 128);
       assert.strictEqual(DEFAULT_SIZES.characters, 64);
       assert.strictEqual(DEFAULT_SIZES.obstacles, 64);
     });
@@ -301,7 +303,7 @@ describe('getAssetPath', () => {
 
     it('should use default size when not specified', () => {
       const path = getAssetPath('portraits', 'human_male_warrior');
-      assert.strictEqual(path, '/assets/portraits/64/human_male_warrior.webp');
+      assert.strictEqual(path, '/assets/portraits/256/human_male_warrior.webp');
     });
 
     it('should support all portrait sizes', () => {
@@ -318,9 +320,9 @@ describe('getAssetPath', () => {
       assert.strictEqual(path, '/assets/nodes/96/castle.webp');
     });
 
-    it('should use default size (96) when not specified', () => {
+    it('should use default size when not specified', () => {
       const path = getAssetPath('nodes', 'tavern');
-      assert.strictEqual(path, '/assets/nodes/96/tavern.webp');
+      assert.strictEqual(path, '/assets/nodes/256/tavern.webp');
     });
   });
 
@@ -347,9 +349,9 @@ describe('getAssetPath', () => {
       assert.strictEqual(path, '/assets/icons/png/32/actions/attack.webp');
     });
 
-    it('should use default size (32) when not specified', () => {
+    it('should use default size when not specified', () => {
       const path = getAssetPath('icons', 'attack');
-      assert.strictEqual(path, '/assets/icons/png/32/actions/attack.webp');
+      assert.strictEqual(path, '/assets/icons/png/256/actions/attack.webp');
     });
   });
 
@@ -556,11 +558,11 @@ describe('isValidSize', () => {
 describe('getDefaultSize', () => {
   it('should return correct defaults', () => {
     assert.strictEqual(getDefaultSize('tiles'), 64);
-    assert.strictEqual(getDefaultSize('portraits'), 64);
-    assert.strictEqual(getDefaultSize('items'), 64);
-    assert.strictEqual(getDefaultSize('icons'), 32);
-    assert.strictEqual(getDefaultSize('nodes'), 96);
-    assert.strictEqual(getDefaultSize('overlays'), 64);
+    assert.strictEqual(getDefaultSize('portraits'), 256);
+    assert.strictEqual(getDefaultSize('items'), 128);
+    assert.strictEqual(getDefaultSize('icons'), 256);
+    assert.strictEqual(getDefaultSize('nodes'), 256);
+    assert.strictEqual(getDefaultSize('overlays'), 128);
     assert.strictEqual(getDefaultSize('characters'), 64);
     assert.strictEqual(getDefaultSize('obstacles'), 64);
   });

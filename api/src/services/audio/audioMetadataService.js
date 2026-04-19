@@ -429,10 +429,3 @@ export function getMetadataDir() {
   return METADATA_DIR;
 }
 
-/**
- * Get the project root path
- * @returns {string} Path to project root
- */
-export function getProjectRoot() {
-  return PROJECT_ROOT;
-}

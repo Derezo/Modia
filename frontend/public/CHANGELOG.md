@@ -4,6 +4,7 @@ All notable changes to Modia.
 
 ## 0.4
 
+- 0.4.42: Fixed shared test suite and remediation pass after plan validation
 - 0.4.41: Added CI tooling for dead-code, asset sizes, and mobile smoke tests
 - 0.4.40: Modularized admin audio route (extracted metadata service)
 - 0.4.39: Modularized AssetLoader (extracted item compositing)
