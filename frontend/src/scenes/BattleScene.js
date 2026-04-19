@@ -14,6 +14,13 @@
  * - Shadow follows terrain surface during movement
  * - Occlusion cache updates per-frame for transparent blocking tiles
  *
+ * Extracted modules (to reduce file size):
+ * - BattleHighlights.js - Tile highlight color computation
+ * - BattleMinimap.js - Minimap overlay rendering
+ * - battleCoords.js - Canvas-to-overlay coordinate conversion
+ * - skillIcons.js - Skill icon emoji mappings
+ * - battleLog.js - Battle log entry building
+ *
  * @see BattleInputHandler.js - Mouse/touch/keyboard input and tile cycling
  * @see BattleWebSocketManager.js - Real-time event handling
  * @see BattleAudioManager.js - Audio playback and music management
@@ -41,6 +48,11 @@ import { BattleWebSocketManager } from '../battle/BattleWebSocketManager.js';
 import { BattleInputHandler } from '../battle/BattleInputHandler.js';
 import { BattleAudioManager } from '../battle/BattleAudioManager.js';
 import { isSelfTargetingSkill, getVisualCategory } from '../battle/SkillEffectCategories.js';
+import { buildHighlights } from '../battle/BattleHighlights.js';
+import { renderMinimap as renderMinimapOverlay } from '../battle/BattleMinimap.js';
+import { canvasToOverlayCoords as convertCanvasToOverlay } from '../battle/battleCoords.js';
+import { getSkillIcon as lookupSkillIcon } from '../battle/skillIcons.js';
+import { buildBattleLogEntry, getActionName as lookupActionName } from '../battle/battleLog.js';
 import { calculateDamagePreview, calculateItemPreview } from '@shared/battleMath.js';
 import { CLASS_MOVEMENT } from '@shared/constants.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
@@ -605,6 +617,7 @@ export class BattleScene extends Scene {
 
   /**
    * Add an entry to the battle log
+   * Delegates to extracted battleLog module.
    * @param {Object} actor - The unit performing the action
    * @param {string} actionType - Type of action (attack, skill, move, wait, item)
    * @param {Object} target - The target unit (optional)
@@ -613,80 +626,26 @@ export class BattleScene extends Scene {
   addBattleLogEntry(actor, actionType, target, result) {
     if (!this.ui) return;
 
-    // Build log entry with full portrait data for rendering
-    const entry = {
-      timestamp: Date.now(),
-      turn: this.battleLogTurnCounter || 1,
-      actor: actor ? {
-        id: actor.id,
-        name: actor.name,
-        isPlayer: actor.type === 'player',
-        // Portrait data for rendering
-        type: actor.type,
-        race: actor.race,
-        gender: actor.gender,
-        class: actor.class,
-        enemyId: actor.enemyId
-      } : { name: 'Unknown', isPlayer: false },
-      action: {
-        type: actionType,
-        name: this.getActionName(actionType, result)
-      },
-      element: result?.element || 'physical',
-      target: target ? {
-        id: target.id,
-        name: target.name,
-        isPlayer: target.type === 'player',
-        // Portrait data for rendering
-        type: target.type,
-        race: target.race,
-        gender: target.gender,
-        class: target.class,
-        enemyId: target.enemyId
-      } : null,
-      result: {
-        damage: result?.damage || 0,
-        baseDamage: result?.baseDamage || null,
-        critBonus: result?.critBonus || null,
-        isCritical: result?.isCritical || false,
-        missed: result?.missed || false,
-        healing: result?.healing || 0,
-        mpRestored: result?.mpRestored || 0,
-        statusApplied: result?.statusApplied || null,
-        damageType: result?.damageType || 'physical'
-      }
-    };
-
-    // For movement, add position data if available
-    if (actionType === 'move' && result?.from && result?.to) {
-      entry.result.from = result.from;
-      entry.result.to = result.to;
-    }
+    const entry = buildBattleLogEntry({
+      actor,
+      actionType,
+      target,
+      result,
+      turnCounter: this.battleLogTurnCounter
+    });
 
     this.ui.addBattleLogEntry(entry);
   }
 
   /**
    * Get a display name for an action
+   * Delegates to extracted battleLog module.
    * @param {string} actionType - The action type
    * @param {Object} result - The action result (may contain skill/item name)
    * @returns {string} Display name
    */
   getActionName(actionType, result) {
-    switch (actionType) {
-      case 'attack':
-        return 'Attack';
-      case 'skill':
-        return result?.skillName || 'Skill';
-      case 'move':
-        return 'Move';
-      case 'wait':
-        return 'Wait';
-      case 'item':
-        return result?.itemName || 'Item';
-      default:
-        return actionType;
-    }
+    return lookupActionName(actionType, result);
   }
 
   /**
@@ -903,48 +862,14 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Get icon for a skill based on its ID and class
+   * Get icon for a skill based on its ID
+   * Delegates to extracted skillIcons module.
    * @param {string} skillId - The skill ID
-   * @param {string} unitClass - The unit's class
+   * @param {string} _unitClass - The unit's class (unused, for API compatibility)
    * @returns {string} Icon emoji
    */
   getSkillIcon(skillId, _unitClass) {
-    const skillIcons = {
-      // Warrior skills
-      slash: '⚔️', power_strike: '💥', bash: '🛡️', cleave: '🔪', rend: '🩸',
-      crushing_blow: '💪', whirlwind: '🌀', executioner: '☠️', blade_storm: '⚔️',
-      guard: '🛡️', shield_block: '🛡️', parry: '↩️', taunt: '😤', fortify: '🏰',
-      shield_wall: '🧱', aegis: '👼', last_stand: '💀', iron_fortress: '🏯',
-      charge: '🏃', knockback: '👊', war_cry: '📢', intimidate: '😠',
-      ground_slam: '💥', rally: '📣',
-
-      // Wizard skills
-      fire_bolt: '🔥', ignite: '🔥', fireball: '🔥', flame_shield: '🔥',
-      combustion: '💥', wall_of_fire: '🔥', inferno: '🔥', meteor: '☄️',
-      ice_shard: '❄️', frost: '❄️', blizzard: '❄️', ice_armor: '🧊',
-      frozen_prison: '🧊', glacial_spike: '❄️', absolute_zero: '❄️', ice_age: '❄️',
-      spark: '⚡', static: '⚡', lightning_bolt: '⚡', chain_lightning: '⚡',
-      thunder_strike: '⚡', paralysis: '⚡', overcharge: '⚡', tempest: '🌩️',
-
-      // Monk skills
-      palm_strike: '🤚', kick: '🦵', combo: '👊', flying_kick: '🦶',
-      chain_combo: '👊', counter_strike: '↩️', ultimate_combo: '💫', pressure_point: '👆',
-      fists_of_fury: '👊', meditate: '🧘', ki_strike: '✨', ki_shield: '💠',
-      focus: '🎯', ki_burst: '💥', inner_peace: '☮️', ki_storm: '🌊',
-      transcendence: '✨', dash: '💨', dodge: '🏃', swift_strike: '⚡',
-      afterimage: '👤', untouchable: '💫', phantom_step: '👻',
-
-      // Chemist skills
-      potion_throw: '🧪', antidote: '💊', mega_potion: '🧪', elixir: '✨',
-      cure_all: '💚', full_life: '💖', super_potion: '🧪', mass_heal: '💚',
-      panacea: '🌟', acid_flask: '⚗️', poison_vial: '☠️', toxic_cloud: '💨',
-      corrosive: '🧪', plague: '☣️', acid_rain: '🌧️', virulent: '☠️',
-      pandemic: '☣️', bomb_throw: '💣', flash_bomb: '💡', timed_bomb: '⏰',
-      cluster_bomb: '💣', smoke_bomb: '💨', mega_bomb: '💣', minefield: '💣',
-      nuclear_option: '☢️'
-    };
-
-    return skillIcons[skillId] || '✨';
+    return lookupSkillIcon(skillId);
   }
 
   /**
@@ -1032,38 +957,20 @@ export class BattleScene extends Scene {
 
   /**
    * Convert canvas logical coordinates to UI overlay screen coordinates
-   * The canvas uses a 800x600 logical coordinate system, but is scaled and centered
-   * via CSS. DOM elements in the UI overlay need screen pixel coordinates.
+   * Delegates to extracted battleCoords utility.
    * @param {number} canvasX - X coordinate in canvas logical space
    * @param {number} canvasY - Y coordinate in canvas logical space
    * @returns {Object} { x, y } in screen pixels relative to UI overlay
    */
   canvasToOverlayCoords(canvasX, canvasY) {
-    const canvas = this.game.canvas;
-    const canvasRect = canvas.getBoundingClientRect();
-    const overlayRect = this.game.uiOverlay.getBoundingClientRect();
-
-    // Canvas logical size (use target dimensions, not DPR-scaled backing store)
-    const logicalWidth = this.game.targetWidth;
-    const logicalHeight = this.game.targetHeight;
-
-    // Convert logical coords to screen coords
-    // Scale factor: canvasRect.width / logicalWidth
-    const scaleX = canvasRect.width / logicalWidth;
-    const scaleY = canvasRect.height / logicalHeight;
-
-    // Position in screen pixels relative to canvas
-    const canvasScreenX = canvasX * scaleX;
-    const canvasScreenY = canvasY * scaleY;
-
-    // Add canvas offset relative to overlay
-    const offsetX = canvasRect.left - overlayRect.left;
-    const offsetY = canvasRect.top - overlayRect.top;
-
-    return {
-      x: offsetX + canvasScreenX,
-      y: offsetY + canvasScreenY
-    };
+    return convertCanvasToOverlay({
+      canvasX,
+      canvasY,
+      canvas: this.game.canvas,
+      uiOverlay: this.game.uiOverlay,
+      logicalWidth: this.game.targetWidth,
+      logicalHeight: this.game.targetHeight
+    });
   }
 
   /**
@@ -2588,110 +2495,29 @@ export class BattleScene extends Scene {
     // Safety check - don't render if not fully initialized
     if (!this.camera || !this.grid) return;
 
-    // Build tile highlights
-    const highlights = {};
+    // Build tile highlights using extracted module
+    const localUserId = this.game.localUserId;
+    const localTeamId = this.isPvP
+      ? (Array.from(this.units.values()).find(u => u.ownerId === localUserId)?.teamId ?? 1)
+      : 1;
+    const activeUnit = this.getActiveUnit();
+    const skill = (this.currentAction === 'skill' && activeUnit)
+      ? this.getUnitActiveSkills(activeUnit).find(s => s.id === this.selectedSkillId)
+      : null;
 
-    // Movement range highlights with opacity gradient based on terrain cost
-    if (this.currentAction === 'move') {
-      for (const tile of this.validTiles) {
-        // Calculate opacity: tiles that cost more to reach are dimmer
-        // Formula: 0.2 (min) + (remaining movement / max range) * 0.5
-        const remainingMovement = this.movementRange - tile.cost;
-        const opacity = 0.2 + (remainingMovement / this.movementRange) * 0.5;
-        highlights[`${tile.x},${tile.y}`] = `rgba(74, 144, 217, ${opacity.toFixed(2)})`;
-      }
-
-      // Mobile: highlight selected tile brighter for two-tap feedback
-      if (this.selectedMoveTile) {
-        const key = `${this.selectedMoveTile.x},${this.selectedMoveTile.y}`;
-        highlights[key] = 'rgba(100, 180, 255, 0.75)'; // Brighter blue for selected
-      }
-    }
-
-    // Attack range highlights (tile-based targeting)
-    // In PvP, use teamId to determine ally/enemy coloring
-    if (this.currentAction === 'attack') {
-      const localUserId = this.game.localUserId;
-      const localTeamId = this.isPvP
-        ? (Array.from(this.units.values()).find(u => u.ownerId === localUserId)?.teamId ?? 1)
-        : 1;
-
-      for (const tile of this.validTiles) {
-        const unit = this.getUnitAt(tile.x, tile.y);
-        const isEnemy = unit && (this.isPvP ? unit.isOpponent(localUserId, localTeamId) : unit.type === 'enemy');
-        const isAlly = unit && (this.isPvP ? unit.isAlly(localUserId, localTeamId) : unit.type === 'player');
-
-        if (isEnemy) {
-          highlights[`${tile.x},${tile.y}`] = 'rgba(217, 74, 74, 0.6)';  // Bright red for enemies
-        } else if (isAlly) {
-          highlights[`${tile.x},${tile.y}`] = 'rgba(217, 174, 74, 0.5)'; // Orange for allies
-        } else {
-          highlights[`${tile.x},${tile.y}`] = 'rgba(217, 74, 74, 0.3)';  // Dim red for empty tiles
-        }
-      }
-    }
-
-    // Skill range highlights (tile-based targeting)
-    // In PvP, use teamId to determine ally/enemy coloring
-    if (this.currentAction === 'skill') {
-      const activeUnit = this.getActiveUnit();
-      const skill = activeUnit ? this.getUnitActiveSkills(activeUnit).find(s => s.id === this.selectedSkillId) : null;
-      const localUserId = this.game.localUserId;
-      const localTeamId = this.isPvP
-        ? (Array.from(this.units.values()).find(u => u.ownerId === localUserId)?.teamId ?? 1)
-        : 1;
-
-      for (const tile of this.validTiles) {
-        const unit = this.getUnitAt(tile.x, tile.y);
-        const isEnemy = unit && (this.isPvP ? unit.isOpponent(localUserId, localTeamId) : unit.type === 'enemy');
-        const isAlly = unit && (this.isPvP ? unit.isAlly(localUserId, localTeamId) : unit.type === 'player');
-
-        if (isEnemy) {
-          highlights[`${tile.x},${tile.y}`] = 'rgba(148, 74, 217, 0.6)';  // Purple for enemies
-        } else if (isAlly) {
-          highlights[`${tile.x},${tile.y}`] = 'rgba(74, 144, 217, 0.5)';  // Blue for allies
-        } else {
-          highlights[`${tile.x},${tile.y}`] = 'rgba(148, 74, 217, 0.3)';  // Dim purple for empty tiles
-        }
-      }
-
-      // Show AoE preview when hovering over a valid tile
-      if (this.hoveredTile && skill && skill.aoeRadius) {
-        const isValidHover = this.validTiles.some(t => t.x === this.hoveredTile.x && t.y === this.hoveredTile.y);
-        if (isValidHover) {
-          const aoeTiles = this.pathfinding.getAoETiles(
-            this.hoveredTile.x,
-            this.hoveredTile.y,
-            skill.aoeRadius,
-            skill.aoePattern || 'circle'
-          );
-
-          for (const aoeTile of aoeTiles) {
-            const key = `${aoeTile.x},${aoeTile.y}`;
-            if (aoeTile.isCenter) {
-              // Bright orange for center tile
-              highlights[key] = 'rgba(255, 140, 0, 0.8)';
-            } else {
-              // Softer orange for adjacent AoE tiles
-              highlights[key] = 'rgba(255, 165, 0, 0.5)';
-            }
-          }
-        }
-      }
-    }
-
-    // Hovered tile highlight - always show hover indicator
-    if (this.hoveredTile) {
-      const key = `${this.hoveredTile.x},${this.hoveredTile.y}`;
-      // If tile is already highlighted for targeting, make it brighter on hover
-      if (highlights[key]) {
-        // Intensify existing highlight on hover
-        highlights[key] = highlights[key].replace(/[\d.]+\)$/, '0.8)');
-      } else {
-        // Show white hover indicator for non-highlighted tiles
-        highlights[key] = 'rgba(255, 255, 255, 0.4)';
-      }
-    }
+    const highlights = buildHighlights({
+      currentAction: this.currentAction,
+      validTiles: this.validTiles,
+      movementRange: this.movementRange,
+      selectedMoveTile: this.selectedMoveTile,
+      hoveredTile: this.hoveredTile,
+      pathfinding: this.pathfinding,
+      skill,
+      getUnitAt: (x, y) => this.getUnitAt(x, y),
+      isPvP: this.isPvP,
+      localUserId,
+      localTeamId
+    });
 
     // Update occlusion cache with current unit positions before rendering
     const aliveUnits = Array.from(this.units.values()).filter(u => u.isAlive());
@@ -2813,66 +2639,16 @@ export class BattleScene extends Scene {
   }
 
   /**
-   * Render minimap in corner
+   * Render minimap in corner (delegates to extracted module)
    */
   renderMinimap(ctx) {
-    const minimapSize = 120;
-    // Use logical width, not DPR-backing-store width
-    const minimapX = this.game.targetWidth - minimapSize - 10;
-    const minimapY = 10;
-    const mapDim = this.grid.getMapPixelDimensions();
-
-    // Background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(minimapX, minimapY, minimapSize, minimapSize);
-
-    // Calculate scale to fit map in minimap
-    const scale = (minimapSize - 10) / Math.max(mapDim.width, mapDim.height);
-    const offsetX = minimapX + 5 + mapDim.offsetX * scale;
-    const offsetY = minimapY + 5 + mapDim.offsetY * scale;
-
-    // Draw units as dots
-    for (const unit of this.units.values()) {
-      if (!unit.isAlive()) continue;
-
-      const dotX = offsetX + unit.screenX * scale;
-      const dotY = offsetY + unit.screenY * scale;
-
-      ctx.beginPath();
-      ctx.arc(dotX, dotY, 3, 0, Math.PI * 2);
-      ctx.fillStyle = unit.type === 'player' ? '#4a90d9' : '#d94a4a';
-      ctx.fill();
-
-      // Highlight active unit
-      if (unit.isSelected) {
-        ctx.strokeStyle = '#ffd700';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-      }
-    }
-
-    // Draw camera viewport rectangle (visible world area shrinks as zoom grows)
-    const zoom = this.camera.zoom || 1;
-    const visibleW = this.game.targetWidth / zoom;
-    const visibleH = this.game.targetHeight / zoom;
-    const viewportWidth = visibleW * scale;
-    const viewportHeight = visibleH * scale;
-    const viewportX = offsetX + (this.camera.x - visibleW / 2) * scale;
-    const viewportY = offsetY + (this.camera.y - visibleH / 2) * scale;
-
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(viewportX, viewportY, viewportWidth, viewportHeight);
-
-    // Border
-    ctx.strokeStyle = '#4a4a6a';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(minimapX, minimapY, minimapSize, minimapSize);
-
-    // Label
-    ctx.fillStyle = '#888';
-    ctx.font = `${responsive.getCanvasFontSize('sm')}px Arial`;
-    ctx.textAlign = 'left';
-    ctx.fillText('WASD/Arrows: Pan | Space: Re-center', minimapX, minimapY + minimapSize + 12);
+    renderMinimapOverlay({
+      ctx,
+      units: this.units,
+      camera: this.camera,
+      grid: this.grid,
+      targetWidth: this.game.targetWidth,
+      targetHeight: this.game.targetHeight
+    });
   }
 }
