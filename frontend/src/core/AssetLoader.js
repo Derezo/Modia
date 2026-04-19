@@ -27,6 +27,15 @@ import {
   getOptimalSize
 } from '@shared/assetPaths.js';
 import { assetCache } from './AssetCache.js';
+import {
+  loadItemComposite as loadItemCompositeImpl,
+  composeItemSprite as composeItemSpriteImpl,
+  getItemComposite as getItemCompositeImpl,
+  preloadOverlays as preloadOverlaysImpl,
+  preloadItemComposites as preloadItemCompositesImpl,
+  RARITY_ALPHA,
+  COMPOSITE_SIZE
+} from './assetLoader/ItemCompositing.js';
 export class AssetLoader {
   constructor() {
     this.cache = new Map();
@@ -822,24 +831,18 @@ export class AssetLoader {
 
   // =====================
   // Layered Item Compositing System
+  // Delegates to ./assetLoader/ItemCompositing.js
   // =====================
 
   /**
-   * Rarity overlay alpha values for compositing
-   * Higher rarity = more visible glow effect
+   * Rarity overlay alpha values for compositing (re-exported from ItemCompositing)
    */
-  static RARITY_ALPHA = {
-    common: 0,        // No overlay for common items
-    uncommon: 0.5,
-    rare: 0.65,
-    epic: 0.75,
-    legendary: 0.85
-  };
+  static RARITY_ALPHA = RARITY_ALPHA;
 
   /**
-   * Standard overlay size for item compositing
+   * Standard overlay size for item compositing (re-exported from ItemCompositing)
    */
-  static COMPOSITE_SIZE = 128;
+  static COMPOSITE_SIZE = COMPOSITE_SIZE;
 
   /**
    * Load and composite an item sprite with rarity and augment overlays
@@ -850,55 +853,8 @@ export class AssetLoader {
    * @returns {Promise<HTMLImageElement|null>} Composited item image or null if base not found
    */
   async loadItemComposite(itemId, category, rarity = 'common', augment = null) {
-    // Generate cache key for this specific combination
-    const cacheKey = `item_${itemId}_${rarity}_${augment || 'none'}`;
-
-    // Return cached composite if available
-    if (this.cache.has(cacheKey)) {
-      return this.cache.get(cacheKey);
-    }
-
-    // Load base item sprite
-    const basePath = `${this.basePath}/items/${category}/${itemId}.webp`;
-    let baseImage;
-    try {
-      baseImage = await this.loadImage(basePath);
-    } catch {
-      console.warn(`[AssetLoader] Failed to load base item: ${basePath}`);
-      return null;
-    }
-
-    // Load rarity overlay if not common
-    let rarityOverlay = null;
-    if (rarity && rarity !== 'common') {
-      const size = AssetLoader.COMPOSITE_SIZE;
-      const rarityPath = `${this.basePath}/overlays/${size}/rarity/rarity_${rarity}.webp`;
-      try {
-        rarityOverlay = await this.loadImage(rarityPath);
-      } catch {
-        console.warn(`[AssetLoader] Rarity overlay not found: ${rarityPath}`);
-      }
-    }
-
-    // Load augment overlay if specified
-    let augmentOverlay = null;
-    if (augment) {
-      const size = AssetLoader.COMPOSITE_SIZE;
-      const augmentPath = `${this.basePath}/overlays/${size}/augments/augment_${augment}.webp`;
-      try {
-        augmentOverlay = await this.loadImage(augmentPath);
-      } catch {
-        console.warn(`[AssetLoader] Augment overlay not found: ${augmentPath}`);
-      }
-    }
-
-    // Compose the final sprite
-    const composite = this.composeItemSprite(baseImage, rarityOverlay, augmentOverlay, rarity);
-
-    // Cache the composited image
-    this.cache.set(cacheKey, composite);
-
-    return composite;
+    const context = { cache: this.cache, loadImage: this.loadImage.bind(this) };
+    return loadItemCompositeImpl(context, this.basePath, itemId, category, rarity, augment);
   }
 
   /**
@@ -910,48 +866,7 @@ export class AssetLoader {
    * @returns {HTMLImageElement} Composited image
    */
   composeItemSprite(base, rarityOverlay, augmentOverlay, rarity) {
-    const size = AssetLoader.COMPOSITE_SIZE;
-
-    // Create offscreen canvas
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-
-    // Clear canvas
-    ctx.clearRect(0, 0, size, size);
-
-    // Draw base sprite with normal blend mode
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 1.0;
-    ctx.drawImage(base, 0, 0, size, size);
-
-    // Apply rarity overlay with additive blend
-    if (rarityOverlay) {
-      const rarityAlpha = AssetLoader.RARITY_ALPHA[rarity] || 0;
-      if (rarityAlpha > 0) {
-        ctx.globalAlpha = rarityAlpha;
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.drawImage(rarityOverlay, 0, 0, size, size);
-      }
-    }
-
-    // Apply augment overlay with additive blend
-    if (augmentOverlay) {
-      ctx.globalAlpha = 0.6;
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.drawImage(augmentOverlay, 0, 0, size, size);
-    }
-
-    // Reset context state
-    ctx.globalAlpha = 1.0;
-    ctx.globalCompositeOperation = 'source-over';
-
-    // Convert canvas to Image
-    const compositeImage = new Image();
-    compositeImage.src = canvas.toDataURL('image/png');
-
-    return compositeImage;
+    return composeItemSpriteImpl(base, rarityOverlay, augmentOverlay, rarity);
   }
 
   /**
@@ -965,8 +880,7 @@ export class AssetLoader {
    * @returns {HTMLImageElement|null} Cached composite or null
    */
   getItemComposite(itemId, category, rarity = 'common', augment = null) {
-    const cacheKey = `item_${itemId}_${rarity}_${augment || 'none'}`;
-    return this.cache.get(cacheKey) || null;
+    return getItemCompositeImpl(this.cache, itemId, rarity, augment);
   }
 
   /**
@@ -975,34 +889,7 @@ export class AssetLoader {
    * @returns {Promise<PromiseSettledResult<HTMLImageElement>[]>}
    */
   async preloadOverlays() {
-    const rarities = ['uncommon', 'rare', 'epic', 'legendary'];
-    const augments = [
-      // Elemental augments
-      'fire', 'ice', 'lightning', 'poison', 'holy', 'dark', 'earth', 'wind',
-      // Combat augments
-      'critical', 'lifesteal', 'speed', 'pierce', 'stun', 'chain',
-      // Special augments
-      'arcane', 'fortune', 'vitality', 'slayer'
-    ];
-
-    const size = AssetLoader.COMPOSITE_SIZE;
-    const promises = [
-      // Preload rarity overlays
-      ...rarities.map(rarity =>
-        this.loadImage(`${this.basePath}/overlays/${size}/rarity/rarity_${rarity}.webp`)
-          .catch(() => null) // Don't fail if overlay doesn't exist
-      ),
-      // Preload augment overlays
-      ...augments.map(augment =>
-        this.loadImage(`${this.basePath}/overlays/${size}/augments/augment_${augment}.webp`)
-          .catch(() => null) // Don't fail if overlay doesn't exist
-      )
-    ];
-
-    const results = await Promise.allSettled(promises);
-    const loaded = results.filter(r => r.status === 'fulfilled' && r.value).length;
-    console.log(`[AssetLoader] Overlay preload: ${loaded}/${results.length} loaded`);
-    return results;
+    return preloadOverlaysImpl(this.loadImage.bind(this), this.basePath);
   }
 
   /**
@@ -1012,19 +899,8 @@ export class AssetLoader {
    * @returns {Promise<PromiseSettledResult<HTMLImageElement>[]>}
    */
   async preloadItemComposites(items) {
-    const promises = items.map(item =>
-      this.loadItemComposite(
-        item.itemId,
-        item.category,
-        item.rarity || 'common',
-        item.augment || null
-      )
-    );
-
-    const results = await Promise.allSettled(promises);
-    const loaded = results.filter(r => r.status === 'fulfilled' && r.value).length;
-    console.log(`[AssetLoader] Item composite preload: ${loaded}/${results.length} loaded`);
-    return results;
+    const context = { cache: this.cache, loadImage: this.loadImage.bind(this) };
+    return preloadItemCompositesImpl(context, this.basePath, items);
   }
 
   // =====================
