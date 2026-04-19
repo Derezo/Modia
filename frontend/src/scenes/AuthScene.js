@@ -434,7 +434,7 @@ export class AuthScene extends Scene {
         <div class="auth-switch" id="auth-switch">
           ${isRegister ? 'Already have an account? <a id="mode-toggle">Login</a>' : 'Don\'t have an account? <a id="mode-toggle">Register</a>'}
         </div>
-        <div class="version-info" id="version-info">v0.4.36</div>
+        <div class="version-info" id="version-info">v0.4.37</div>
       </div>
     `;
 
