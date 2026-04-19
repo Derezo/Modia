@@ -10,22 +10,15 @@ import { QuestProgressHUD } from '../worldmap/QuestProgressHUD.js';
 import { DOMFogOverlay } from '../worldmap/DOMFogOverlay.js';
 import { WorldMapPathSystem } from '../worldmap/WorldMapPathSystem.js';
 import { WorldMapNodeRenderer } from '../worldmap/WorldMapNodeRenderer.js';
-import { generatePathControlPoints, generateSplinePoints } from '../worldmap/PathRenderer.js';
+import { WorldMapConnectionRenderer } from '../worldmap/WorldMapConnectionRenderer.js';
+import { WorldMapRegionRenderer } from '../worldmap/WorldMapRegionRenderer.js';
+import { WorldMapQuestMarkerRenderer } from '../worldmap/WorldMapQuestMarkerRenderer.js';
+import { WorldMapInputHandler } from '../worldmap/WorldMapInputHandler.js';
 import { ProfileDropdown } from '../ui/parchment/ProfileDropdown.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { PartyInviteModal } from '../components/PartyInviteModal.js';
-import { Icon } from '../components/Icon.js';
 import { responsive } from '../core/Responsive.js';
-import { PARCHMENT_COLORS } from '../ui/parchment/ParchmentTheme.js';
 import { RACE_TO_REGION } from '../audio/AudioAssets.js';
-
-// Class-specific action labels for guild recruitment buttons
-const GUILD_ACTION_LABELS = {
-  warrior: 'Recruit Soldier',
-  wizard: 'Take on Apprentice',
-  monk: 'Accept Initiate',
-  chemist: 'Hire Assistant'
-};
 
 export class WorldMapScene extends Scene {
   constructor(game) {
@@ -50,6 +43,18 @@ export class WorldMapScene extends Scene {
 
     // Node renderer (handles all node visual rendering)
     this.nodeRenderer = new WorldMapNodeRenderer(this);
+
+    // Connection renderer (handles path and locked path rendering)
+    this.connectionRenderer = new WorldMapConnectionRenderer(this);
+
+    // Region renderer (handles region boundaries)
+    this.regionRenderer = new WorldMapRegionRenderer(this);
+
+    // Quest marker renderer (handles quest objective markers on nodes)
+    this.questMarkerRenderer = new WorldMapQuestMarkerRenderer(this);
+
+    // Input handler (manages mouse, touch, wheel events)
+    this.inputHandler = new WorldMapInputHandler(this);
 
     // Asset loader reference
     this.assetLoader = null;
@@ -76,9 +81,6 @@ export class WorldMapScene extends Scene {
 
     // Path system (handles preview, caching, reachability)
     this.pathSystem = new WorldMapPathSystem(this);
-
-    // Event listener cleanup
-    this.abortController = null;
 
     // WebSocket unsubscribers
     this.wsUnsubscribers = [];
@@ -136,7 +138,7 @@ export class WorldMapScene extends Scene {
     await this.loadRegionData();  // Load region boundaries and castle info
     this.createUI();
     this.centerOnCurrentNode();
-    this.setupInputHandlers();
+    this.inputHandler.setup();
     this.setupWebSocketHandlers();
 
     // Initialize node action menu (positioned near current node)
@@ -543,10 +545,9 @@ export class WorldMapScene extends Scene {
       this.pathSystem.destroy();
     }
 
-    // Abort all event listeners
-    if (this.abortController) {
-      this.abortController.abort();
-      this.abortController = null;
+    // Clean up input handler
+    if (this.inputHandler) {
+      this.inputHandler.destroy();
     }
 
     // Clean up WebSocket handlers
@@ -827,11 +828,6 @@ export class WorldMapScene extends Scene {
 
   // Menu functionality is now handled by ProfileDropdown
 
-  updateNodeInfo() {
-    // Legacy method - node info is now handled by NodeActionMenu component
-    // This method is kept for backwards compatibility but does nothing
-  }
-
   /**
    * Get viewport position for a node (for positioning DOM elements over canvas)
    * Converts canvas coordinates to viewport coordinates accounting for:
@@ -866,112 +862,6 @@ export class WorldMapScene extends Scene {
       nodeSize: this.nodeSize * scale,  // Scale the node size too
       canvasHeight: rect.height  // Use actual display height for edge detection
     };
-  }
-
-  /**
-   * Create a parchment-styled action button
-   * @param {string} feature - Feature/action name
-   * @param {boolean} isPrimary - Whether this is a primary (battle) button
-   * @returns {HTMLButtonElement}
-   */
-  createParchmentButton(feature, isPrimary = false) {
-    const isMobile = responsive.isMobile();
-    const btn = document.createElement('button');
-
-    // Get icon mapping for features
-    // Uses menu category for location/building icons, actions for combat
-    const iconMap = {
-      blacksmith: { category: 'menu', name: 'shop' },
-      marketplace: { category: 'menu', name: 'shop' },
-      tavern: { category: 'menu', name: 'tavern' },
-      apothecary: { category: 'menu', name: 'shop' },
-      coliseum: { category: 'menu', name: 'coliseum' },
-      farm: { category: 'menu', name: 'caravan' },
-      guild_hall: { category: 'menu', name: 'guild' },
-      guild_advancement: { category: 'menu', name: 'guild' },
-      courtyard: { category: 'menu', name: 'party' },
-      battle: { category: 'actions', name: 'attack' }
-    };
-
-    // Get label text
-    let label = this.capitalize(feature);
-    if (feature === 'guild_hall' && this.currentNode.guild_class) {
-      label = GUILD_ACTION_LABELS[this.currentNode.guild_class] || 'Guild Hall';
-    }
-    if (feature === 'guild_advancement') {
-      label = 'Advancement';
-    }
-
-    // Parchment button styling
-    const bgGradient = isPrimary
-      ? `linear-gradient(to bottom, ${PARCHMENT_COLORS.accent.copper}, #9a5f23)`
-      : `linear-gradient(to bottom, ${PARCHMENT_COLORS.light}, ${PARCHMENT_COLORS.dark})`;
-
-    const textColor = isPrimary ? PARCHMENT_COLORS.text.inverse : PARCHMENT_COLORS.text.primary;
-    const borderColor = isPrimary ? PARCHMENT_COLORS.borderDark : PARCHMENT_COLORS.border;
-
-    btn.style.cssText = `
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 6px;
-      padding: ${isMobile ? '6px 10px' : '6px 12px'};
-      background: ${bgGradient};
-      border: 1px solid ${borderColor};
-      border-radius: 4px;
-      color: ${textColor};
-      font-family: Georgia, serif;
-      font-size: ${isMobile ? '11px' : '12px'};
-      font-weight: bold;
-      cursor: pointer;
-      transition: transform 0.1s, box-shadow 0.15s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.25);
-      white-space: nowrap;
-      width: 100%;
-      text-align: left;
-    `;
-
-    // Hover effects
-    btn.addEventListener('mouseenter', () => {
-      btn.style.transform = 'translateY(-1px)';
-      btn.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.25)';
-    });
-    btn.addEventListener('mouseleave', () => {
-      btn.style.transform = 'translateY(0)';
-      btn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.25)';
-    });
-    btn.addEventListener('mousedown', () => {
-      btn.style.transform = 'translateY(0)';
-      btn.style.boxShadow = '0 0 2px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.25)';
-    });
-    btn.addEventListener('mouseup', () => {
-      btn.style.transform = 'translateY(-1px)';
-    });
-
-    // Use Icon component for visual consistency
-    const iconConfig = iconMap[feature];
-    if (iconConfig) {
-      // Show icon + label with proper alignment
-      const iconSize = isMobile ? 14 : 16;
-      btn.innerHTML = `
-        <span style="display: flex; align-items: center; justify-content: center; width: ${iconSize}px; height: ${iconSize}px; flex-shrink: 0;">
-          ${Icon.html(iconConfig.category, iconConfig.name, { size: 'sm' }).replace(/<span[^>]*>[^<]*<\/span>/g, '')}
-        </span>
-        <span style="flex: 1;">${label}</span>
-      `;
-    } else {
-      // Fallback to just label
-      btn.textContent = label;
-    }
-
-    // Click handler
-    if (feature === 'battle') {
-      btn.addEventListener('click', () => this.startBattle());
-    } else {
-      btn.addEventListener('click', () => this.handleFeature(feature));
-    }
-
-    return btn;
   }
 
   handleFeature(feature) {
@@ -1315,142 +1205,6 @@ export class WorldMapScene extends Scene {
     }
   }
 
-  setupInputHandlers() {
-    const canvas = this.game.canvas;
-
-    // Create abort controller for cleanup
-    this.abortController = new AbortController();
-    const opts = { signal: this.abortController.signal };
-
-    canvas.addEventListener('mousedown', (e) => {
-      this.dragging = true;
-      this.dragStartX = e.clientX;
-      this.dragStartY = e.clientY;
-    }, opts);
-
-    canvas.addEventListener('mousemove', (e) => {
-      if (this.dragging) {
-        const dx = e.clientX - this.dragStartX;
-        const dy = e.clientY - this.dragStartY;
-        this.cameraX += dx / this.game.scale;
-        this.cameraY += dy / this.game.scale;
-        this.dragStartX = e.clientX;
-        this.dragStartY = e.clientY;
-      }
-
-      // Update hovered node
-      const pos = this.game.input.getPointerPosition();
-      const newHoveredNode = this.getNodeAtPosition(pos.x, pos.y);
-
-      // If hovered node changed, update path preview and tooltip
-      if (newHoveredNode?.id !== this.hoveredNode?.id) {
-        this.hoveredNode = newHoveredNode;
-        this.pathSystem.updatePathPreview(newHoveredNode);
-        this.updateHoverTooltip(newHoveredNode);
-      }
-    }, opts);
-
-    canvas.addEventListener('mouseup', () => {
-      this.dragging = false;
-    }, opts);
-
-    canvas.addEventListener('click', () => {
-      const pos = this.game.input.getPointerPosition();
-
-      // Check HUD panel click first (handles zodiac and other elements)
-      if (this.hudPanel && this.hudPanel.handleClick(pos.x, pos.y)) {
-        return;
-      }
-
-      // Check minimap click first
-      if (this.minimap) {
-        const minimapNode = this.minimap.handleClick(
-          pos.x, pos.y,
-          canvas.width, canvas.height,
-          this.nodes,
-          this.currentNode?.id,
-          (node) => this.isNodeAdjacent(node)
-        );
-        if (minimapNode) {
-          this.travelToNode(minimapNode);
-          return;
-        }
-      }
-
-      // Regular map click
-      const clickedNode = this.getNodeAtPosition(pos.x, pos.y);
-
-      if (clickedNode && clickedNode.id !== this.currentNode?.id) {
-        this.travelToNode(clickedNode);
-      }
-    }, opts);
-
-    // Zoom with wheel
-    canvas.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-      this.zoom = Math.max(0.5, Math.min(2, this.zoom * zoomFactor));
-    }, opts);
-
-    // Mobile touch support for tooltips
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let touchMoved = false;
-
-    canvas.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1) {
-        touchStartX = e.touches[0].clientX;
-        touchStartY = e.touches[0].clientY;
-        touchMoved = false;
-
-        // Update hovered node on touch start for tooltip
-        const pos = this.game.input.getPointerPosition();
-        const touchedNode = this.getNodeAtPosition(pos.x, pos.y);
-
-        if (touchedNode?.id !== this.hoveredNode?.id) {
-          this.hoveredNode = touchedNode;
-          this.pathSystem.updatePathPreview(touchedNode);
-          this.updateHoverTooltip(touchedNode);
-        }
-      }
-    }, opts);
-
-    canvas.addEventListener('touchmove', (e) => {
-      if (e.touches.length === 1) {
-        const dx = e.touches[0].clientX - touchStartX;
-        const dy = e.touches[0].clientY - touchStartY;
-
-        // If moved more than 10px, consider it a drag
-        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-          touchMoved = true;
-          // Hide tooltip during drag
-          if (this.nodeHoverTooltip) {
-            this.nodeHoverTooltip.hide();
-          }
-        }
-      }
-    }, opts);
-
-    canvas.addEventListener('touchend', () => {
-      // If touch moved, don't handle as tap
-      if (touchMoved) {
-        touchMoved = false;
-        return;
-      }
-
-      // Hide tooltip when tapping on empty space
-      const pos = this.game.input.getPointerPosition();
-      const touchedNode = this.getNodeAtPosition(pos.x, pos.y);
-
-      if (!touchedNode) {
-        this.hoveredNode = null;
-        if (this.nodeHoverTooltip) {
-          this.nodeHoverTooltip.hide();
-        }
-      }
-    }, opts);
-  }
-
   getNodeAtPosition(screenX, screenY) {
     for (const node of this.nodes) {
       // Skip nodes that are not reachable from current position
@@ -1612,8 +1366,6 @@ export class WorldMapScene extends Scene {
     // Update character position to final node
     this.updateCharacterPosition();
 
-    this.updateNodeInfo();
-
     // Update node action menu with new node and expand
     if (this.nodeActionMenu && this.currentNode) {
       const position = this.getNodeScreenPosition(this.currentNode);
@@ -1711,167 +1463,19 @@ export class WorldMapScene extends Scene {
 
     // Render region boundaries (optional, subtle background layer)
     if (this.showRegionBoundaries && this.regions.length > 0) {
-      this.renderRegionBoundaries(ctx);
+      this.regionRenderer.renderRegionBoundaries(ctx);
     }
 
     ctx.save();
 
     // Draw watchtower-revealed connections with dashed lines at reduced opacity
-    if (this.watchtowerView) {
-      this.renderWatchtowerRevealedConnections(ctx);
-    }
+    this.connectionRenderer.renderWatchtowerConnections(ctx);
 
     // Draw connections with organic Catmull-Rom spline paths
-    for (const conn of this.connections) {
-      const fromNode = this.nodes.find(n => n.id === conn.from_node_id);
-      const toNode = this.nodes.find(n => n.id === conn.to_node_id);
+    this.connectionRenderer.renderConnections(ctx);
 
-      if (fromNode && toNode) {
-        // Skip connections where either endpoint is not reachable
-        if (!this.pathSystem.isNodeReachable(fromNode.id) &&
-            !this.pathSystem.isNodeReachable(toNode.id)) {
-          continue;
-        }
-
-        const x1 = fromNode.x_coord * this.nodeSpacing + this.cameraX;
-        const y1 = fromNode.y_coord * this.nodeSpacing + this.cameraY;
-        const x2 = toNode.x_coord * this.nodeSpacing + this.cameraX;
-        const y2 = toNode.y_coord * this.nodeSpacing + this.cameraY;
-
-        // Skip if completely off screen
-        const margin = 50;
-        const minX = Math.min(x1, x2) - margin;
-        const maxX = Math.max(x1, x2) + margin;
-        const minY = Math.min(y1, y2) - margin;
-        const maxY = Math.max(y1, y2) + margin;
-        if (maxX < 0 || minX > this.game.targetWidth || maxY < 0 || minY > this.game.targetHeight) {
-          continue;
-        }
-
-        // Calculate control point for bezier curve (legacy fallback)
-        const control = this.getPathControlPoint(x1, y1, x2, y2, conn.from_node_id, conn.to_node_id);
-
-        // Use effects system for path rendering (organic or textured)
-        if (this.effects) {
-          // Pass node IDs for organic path generation
-          this.effects.renderTexturedPath(ctx, x1, y1, x2, y2, conn.path_type, control, conn.from_node_id, conn.to_node_id);
-        } else {
-          // Fallback to simple bezier path (with proper state isolation)
-          ctx.save();
-          const style = this.getPathStyle(conn.path_type);
-
-          // Draw path shadow for depth
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.quadraticCurveTo(control.x, control.y, x2, y2);
-          ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-          ctx.lineWidth = style.width + 2;
-          ctx.stroke();
-
-          // Draw main path
-          ctx.beginPath();
-          ctx.moveTo(x1, y1);
-          ctx.quadraticCurveTo(control.x, control.y, x2, y2);
-          ctx.strokeStyle = style.color;
-          ctx.lineWidth = style.width;
-          if (style.dashed) {
-            ctx.setLineDash([5, 5]);
-          }
-          ctx.stroke();
-          ctx.restore();
-        }
-      }
-    }
-
-    // Draw locked path indicators ONLY when player is on a blocked node
-    // and the path leads to an undiscovered destination
-    const isCurrentNodeBlocked = this.currentNode?.blocked === true;
-
-    if (isCurrentNodeBlocked) {
-      for (const conn of this.connections) {
-        const fromNode = this.nodes.find(n => n.id === conn.from_node_id);
-        const toNode = this.nodes.find(n => n.id === conn.to_node_id);
-
-        if (!fromNode || !toNode) continue;
-
-        // Check if this connection involves the current node
-        const currentNodeId = this.currentNode.id;
-        const isCurrentNodeInConnection =
-          conn.from_node_id === currentNodeId || conn.to_node_id === currentNodeId;
-
-        if (!isCurrentNodeInConnection) continue;
-
-        // Determine which node is the destination (the one that's not current)
-        const destinationNode = conn.from_node_id === currentNodeId ? toNode : fromNode;
-
-        // Show lock if destination is discovered but not visited
-        // (discovered via adjacency, not by traveling there)
-        const isDestinationUndiscovered =
-          this.isNodeDiscovered(destinationNode) && !destinationNode.visited;
-
-        if (isDestinationUndiscovered) {
-          // Use normalized node ordering for consistent spline generation (smaller ID first)
-          const startNode = fromNode.id < toNode.id ? fromNode : toNode;
-          const endNode = fromNode.id < toNode.id ? toNode : fromNode;
-
-          const x1 = startNode.x_coord * this.nodeSpacing + this.cameraX;
-          const y1 = startNode.y_coord * this.nodeSpacing + this.cameraY;
-          const x2 = endNode.x_coord * this.nodeSpacing + this.cameraX;
-          const y2 = endNode.y_coord * this.nodeSpacing + this.cameraY;
-
-          // Skip if off screen (use same 50px margin as regular connections for consistency)
-          const margin = 50;
-          if (Math.max(x1, x2) < -margin || Math.min(x1, x2) > this.game.targetWidth + margin ||
-              Math.max(y1, y2) < -margin || Math.min(y1, y2) > this.game.targetHeight + margin) {
-            continue;
-          }
-
-          // Generate organic spline points matching the actual path curves
-          const controlPoints = generatePathControlPoints(x1, y1, x2, y2, startNode.id, endNode.id);
-          const splinePoints = generateSplinePoints(controlPoints, 10);
-
-          if (splinePoints.length < 2) continue;
-
-          // Draw locked path overlay following the organic curve
-          ctx.save();
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-
-          ctx.beginPath();
-          ctx.moveTo(splinePoints[0].x, splinePoints[0].y);
-          for (let j = 1; j < splinePoints.length; j++) {
-            ctx.lineTo(splinePoints[j].x, splinePoints[j].y);
-          }
-          ctx.strokeStyle = 'rgba(180, 80, 60, 0.5)';
-          ctx.lineWidth = 6;
-          ctx.stroke();
-          ctx.restore();
-
-          // Calculate midpoint along the spline for lock icon
-          const midIndex = Math.floor(splinePoints.length / 2);
-          const midX = splinePoints[midIndex].x;
-          const midY = splinePoints[midIndex].y;
-
-          // Draw lock icon background and icon (isolated canvas state)
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(midX, midY, 12, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(60, 40, 30, 0.85)';
-          ctx.fill();
-          ctx.strokeStyle = '#a85040';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-
-          // Draw lock icon
-          ctx.fillStyle = '#6b2d3d';  // Burgundy accent for blocked paths
-          ctx.font = 'bold 12px Arial';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText('\u{1F512}', midX, midY);
-          ctx.restore();
-        }
-      }
-    }
+    // Draw locked path indicators when on a blocked node
+    this.connectionRenderer.renderLockedPaths(ctx);
 
     // Draw path preview (golden glow along the path)
     if (this.pathSystem.hasPathPreview()) {
@@ -1898,7 +1502,7 @@ export class WorldMapScene extends Scene {
     }
 
     // Render quest markers on nodes (after nodes, before watchtower/fog)
-    this.renderQuestMarkers(ctx);
+    this.questMarkerRenderer.render(ctx);
 
     // Render watchtower-revealed nodes at reduced opacity
     if (this.watchtowerView) {
@@ -1921,25 +1525,6 @@ export class WorldMapScene extends Scene {
     // The fog overlay is a DOM element positioned over the canvas
     if (this.fogOverlay) {
       this.fogOverlay.updateCamera(this.cameraX, this.cameraY);
-    }
-
-    // Second pass: Render node tooltips AFTER fog of war so they're always visible
-    for (const node of this.nodes) {
-      // Skip nodes that are not reachable from current position
-      if (!this.pathSystem.isNodeReachable(node.id)) {
-        continue;
-      }
-
-      const x = node.x_coord * this.nodeSpacing + this.cameraX;
-      const y = node.y_coord * this.nodeSpacing + this.cameraY;
-
-      // Skip if off screen
-      if (x < -50 || x > this.game.targetWidth + 50 || y < -50 || y > this.game.targetHeight + 50) {
-        continue;
-      }
-
-      // Note: Node hover tooltip is now handled by DOM-based NodeHoverTooltip component
-      // The canvas-based renderNodeTooltip is kept for fallback but not called here
     }
 
     // Render character on map (after fog so always visible)
@@ -1975,7 +1560,6 @@ export class WorldMapScene extends Scene {
 
     // Render minimap (on top of everything)
     if (this.minimap && this.effects) {
-      //console.log("MINIMAP: ", this.nodes, this.connections, this.currentNode, this.effects.discoveredNodes, this.effects.visitedNodes, this.nodeSpacing)
       this.minimap.render(ctx, {
         nodes: this.nodes,
         connections: this.connections,
@@ -1989,267 +1573,6 @@ export class WorldMapScene extends Scene {
         nodeSpacing: this.nodeSpacing
       });
     }
-  }
-
-  /**
-   * Render quest markers on nodes that have active quest objectives
-   * Markers are small colored badges positioned above/to-the-side of nodes
-   */
-  renderQuestMarkers(ctx) {
-    if (!this.questMarkerManager) return;
-
-    for (const node of this.nodes) {
-      // Skip nodes without markers
-      if (!this.questMarkerManager.hasMarker(node.id)) continue;
-
-      // Skip nodes that are not reachable
-      if (!this.pathSystem.isNodeReachable(node.id)) continue;
-
-      const x = node.x_coord * this.nodeSpacing + this.cameraX;
-      const y = node.y_coord * this.nodeSpacing + this.cameraY;
-
-      // Skip if off screen
-      if (x < -50 || x > this.game.targetWidth + 50 || y < -50 || y > this.game.targetHeight + 50) {
-        continue;
-      }
-
-      const marker = this.questMarkerManager.getMarkerForNode(node.id);
-      this.renderMarkerBadge(ctx, x, y, marker, node);
-    }
-  }
-
-  /**
-   * Render a quest marker badge at a node position
-   * @param {CanvasRenderingContext2D} ctx - Canvas context
-   * @param {number} x - Node X position (screen coords)
-   * @param {number} y - Node Y position (screen coords)
-   * @param {Object} marker - Marker data from QuestMarkerManager
-   * @param {Object} node - Node object for sprite lookup
-   */
-  renderMarkerBadge(ctx, x, y, marker, node) {
-    if (!marker) return;
-
-    const badges = QuestMarkerManager.getBadgeColors(marker);
-    if (badges.length === 0) return;
-
-    // Position badges above and to the right of the node
-    const nodeSprite = node ? this.nodeRenderer.getNodeSprite(node.node_type) : null;
-    const spriteSize = nodeSprite ? this.nodeRenderer.getNodeSpriteSize(node.node_type) : this.nodeSize;
-    const badgeRadius = 5;
-    const badgeSpacing = 4;
-    const startX = x + spriteSize / 2 - 4;
-    const startY = y - spriteSize / 2 - 4;
-
-    ctx.save();
-
-    // Draw each badge (max 3, with overlap)
-    for (let i = 0; i < Math.min(badges.length, 3); i++) {
-      const badgeX = startX - i * badgeSpacing;
-      const badgeY = startY;
-      const color = badges[i];
-
-      // Badge background with glow
-      if (marker.nearComplete) {
-        // Pulse glow for near-complete quests
-        const pulse = 0.4 + Math.sin(Date.now() * 0.005) * 0.3;
-        ctx.beginPath();
-        ctx.arc(badgeX, badgeY, badgeRadius + 3, 0, Math.PI * 2);
-        ctx.fillStyle = color.replace(')', `, ${pulse})`).replace('rgb', 'rgba').replace('#', '');
-        // Convert hex to rgba for glow
-        const r = parseInt(color.slice(1, 3), 16);
-        const g = parseInt(color.slice(3, 5), 16);
-        const b = parseInt(color.slice(5, 7), 16);
-        ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${pulse})`;
-        ctx.fill();
-      }
-
-      // Badge circle
-      ctx.beginPath();
-      ctx.arc(badgeX, badgeY, badgeRadius, 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
-
-      // Badge border
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // Inner highlight
-      ctx.beginPath();
-      ctx.arc(badgeX - 1, badgeY - 1, badgeRadius - 2, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-
-    // Show "+N" indicator if more than 3 quests
-    if (marker.questCount > 3) {
-      const extraX = startX - 3 * badgeSpacing - 8;
-      const extraY = startY;
-
-      ctx.font = `bold ${responsive.getCanvasFontSize('sm')}px Arial`;
-      ctx.fillStyle = '#fff';
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
-      ctx.lineWidth = 2;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-
-      const text = `+${marker.questCount - 3}`;
-      ctx.strokeText(text, extraX, extraY);
-      ctx.fillText(text, extraX, extraY);
-    }
-
-    ctx.restore();
-  }
-
-  /**
-   * Render region boundaries as subtle colored zones
-   * Uses convex hull approximation based on region castle nodes
-   */
-  renderRegionBoundaries(ctx) {
-    ctx.save();
-
-    for (const region of this.regions) {
-      if (!region.race || !region.castleNodeId) continue;
-
-      // Find all nodes belonging to this region
-      const regionNodes = this.nodes.filter(n =>
-        n.region_race === region.race &&
-        this.pathSystem.isNodeReachable(n.id)
-      );
-
-      if (regionNodes.length < 3) continue;
-
-      // Get region colors
-      const colors = this.nodeRenderer.getRegionColor(region.race);
-
-      // Calculate convex hull of region nodes for boundary
-      const points = regionNodes.map(n => ({
-        x: n.x_coord * this.nodeSpacing + this.cameraX,
-        y: n.y_coord * this.nodeSpacing + this.cameraY
-      }));
-
-      const hull = this.computeConvexHull(points);
-      if (hull.length < 3) continue;
-
-      // Draw filled region with low opacity
-      ctx.beginPath();
-      ctx.moveTo(hull[0].x, hull[0].y);
-      for (let i = 1; i < hull.length; i++) {
-        ctx.lineTo(hull[i].x, hull[i].y);
-      }
-      ctx.closePath();
-
-      ctx.fillStyle = colors.primary;
-      ctx.globalAlpha = 0.05;
-      ctx.fill();
-
-      // Draw boundary line
-      ctx.strokeStyle = colors.border;
-      ctx.globalAlpha = 0.15;
-      ctx.lineWidth = 2;
-      ctx.setLineDash([8, 4]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    ctx.restore();
-  }
-
-  /**
-   * Compute convex hull using Graham scan algorithm
-   * @param {Array<{x: number, y: number}>} points - Points to compute hull for
-   * @returns {Array<{x: number, y: number}>} Convex hull vertices in CCW order
-   */
-  computeConvexHull(points) {
-    if (points.length < 3) return points;
-
-    // Find the bottommost point (or leftmost if tied)
-    let start = 0;
-    for (let i = 1; i < points.length; i++) {
-      if (points[i].y > points[start].y ||
-          (points[i].y === points[start].y && points[i].x < points[start].x)) {
-        start = i;
-      }
-    }
-
-    // Swap start point to beginning
-    [points[0], points[start]] = [points[start], points[0]];
-    const pivot = points[0];
-
-    // Sort by polar angle with respect to pivot
-    const sorted = points.slice(1).sort((a, b) => {
-      const angleA = Math.atan2(a.y - pivot.y, a.x - pivot.x);
-      const angleB = Math.atan2(b.y - pivot.y, b.x - pivot.x);
-      if (angleA !== angleB) return angleA - angleB;
-      // If same angle, sort by distance (closer first)
-      const distA = (a.x - pivot.x) ** 2 + (a.y - pivot.y) ** 2;
-      const distB = (b.x - pivot.x) ** 2 + (b.y - pivot.y) ** 2;
-      return distA - distB;
-    });
-
-    // Build hull using stack
-    const hull = [pivot];
-
-    for (const p of sorted) {
-      // Remove points that make a clockwise turn
-      while (hull.length > 1) {
-        const top = hull[hull.length - 1];
-        const second = hull[hull.length - 2];
-        const cross = (top.x - second.x) * (p.y - second.y) -
-                     (top.y - second.y) * (p.x - second.x);
-        if (cross <= 0) {
-          hull.pop();
-        } else {
-          break;
-        }
-      }
-      hull.push(p);
-    }
-
-    return hull;
-  }
-
-  /**
-   * Calculate bezier control point for curved path between two nodes
-   */
-  getPathControlPoint(x1, y1, x2, y2, fromNodeId, toNodeId) {
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2;
-
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const length = Math.sqrt(dx * dx + dy * dy);
-
-    if (length < 1) return { x: midX, y: midY }; // Avoid division by zero
-
-    // Perpendicular vector
-    const perpX = -dy / length;
-    const perpY = dx / length;
-
-    // Curve amount proportional to path length (capped)
-    const curveAmount = Math.min(length * 0.2, 40);
-
-    // Consistent direction based on node ID ordering
-    const direction = fromNodeId < toNodeId ? 1 : -1;
-
-    return {
-      x: midX + perpX * curveAmount * direction,
-      y: midY + perpY * curveAmount * direction
-    };
-  }
-
-  /**
-   * Get path styling based on path type
-   */
-  getPathStyle(pathType) {
-    const styles = {
-      road: { color: '#5a5a7a', width: 3 },
-      trail: { color: '#3a5a3a', width: 2 },
-      bridge: { color: '#8b7355', width: 4 },
-      tunnel: { color: '#2a2a3a', width: 3, dashed: true }
-    };
-    return styles[pathType] || styles.road;
   }
 
   /**
@@ -2274,72 +1597,4 @@ export class WorldMapScene extends Scene {
       this.hudPanel.setCollapsed(responsive.isMobile());
     }
   }
-
-  /**
-   * Render watchtower-revealed connections with dashed lines at reduced opacity
-   * These are connections that are visible from the watchtower but not yet discovered
-   */
-  renderWatchtowerRevealedConnections(ctx) {
-    if (!this.watchtowerView) return;
-
-    const { revealedNodes, revealedConnections } = this.watchtowerView;
-
-    // Create lookup for revealed nodes (not in main nodes list)
-    const discoveredNodeIds = new Set(this.nodes.map(n => n.id));
-    const revealedNodeMap = new Map(revealedNodes.map(n => [n.id, n]));
-
-    ctx.save();
-    ctx.globalAlpha = 0.5;
-
-    for (const conn of revealedConnections) {
-      // Skip if both nodes are already discovered (connection already rendered)
-      if (discoveredNodeIds.has(conn.from_node_id) && discoveredNodeIds.has(conn.to_node_id)) {
-        continue;
-      }
-
-      // Get node data from either revealed nodes or existing nodes
-      const fromNode = revealedNodeMap.get(conn.from_node_id) ||
-                       this.nodes.find(n => n.id === conn.from_node_id);
-      const toNode = revealedNodeMap.get(conn.to_node_id) ||
-                     this.nodes.find(n => n.id === conn.to_node_id);
-
-      if (!fromNode || !toNode) continue;
-
-      const x1 = fromNode.x_coord * this.nodeSpacing + this.cameraX;
-      const y1 = fromNode.y_coord * this.nodeSpacing + this.cameraY;
-      const x2 = toNode.x_coord * this.nodeSpacing + this.cameraX;
-      const y2 = toNode.y_coord * this.nodeSpacing + this.cameraY;
-
-      // Skip if off screen
-      const margin = 50;
-      if (Math.max(x1, x2) < -margin || Math.min(x1, x2) > this.game.targetWidth + margin ||
-          Math.max(y1, y2) < -margin || Math.min(y1, y2) > this.game.targetHeight + margin) {
-        continue;
-      }
-
-      // Use Catmull-Rom splines to match visible path rendering
-      // generatePathControlPoints already handles coordinate normalization
-      const controlPoints = generatePathControlPoints(x1, y1, x2, y2, fromNode.id, toNode.id);
-      const splinePoints = generateSplinePoints(controlPoints, 10);
-
-      ctx.beginPath();
-      if (splinePoints.length >= 2) {
-        ctx.moveTo(splinePoints[0].x, splinePoints[0].y);
-        for (let i = 1; i < splinePoints.length; i++) {
-          ctx.lineTo(splinePoints[i].x, splinePoints[i].y);
-        }
-      } else {
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-      }
-      ctx.strokeStyle = 'rgba(180, 160, 100, 0.6)'; // Golden-brown for watchtower reveal
-      ctx.lineWidth = 2;
-      ctx.setLineDash([6, 4]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    ctx.restore();
-  }
-
 }
