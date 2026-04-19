@@ -19,13 +19,13 @@
  *
  * @see admin.js - Image asset admin routes (pattern reference)
  * @see adminAudioGenerationService.js - Generation queue service
+ * @see services/audio/audioMetadataService.js - Metadata loading/updating
  */
 
 import express from 'express';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { AppError, asyncHandler } from '../middleware/errorHandler.js';
-import { loadJsonFile, saveJsonFile } from '../utils/jsonFileUtils.js';
+import { loadJsonFile } from '../utils/jsonFileUtils.js';
 import {
   VALID_AUDIO_TYPES,
   VALID_MUSIC_CATEGORIES,
@@ -40,14 +40,19 @@ import {
 import audioGenerationService from '../services/adminAudioGenerationService.js';
 import { existsSync } from 'fs';
 import { extractDurationWithFallback } from '../utils/audioDurationExtractor.js';
+import {
+  loadMusicMetadata,
+  loadSFXMetadata,
+  updateAudioMetadata,
+  transformAssetForResponse,
+  verifyFileExists,
+  resolveAudioPath,
+  markForRegeneration,
+  markMultipleForRegeneration,
+  getMetadataDir
+} from '../services/audio/audioMetadataService.js';
 
 const router = express.Router();
-
-// Get project paths
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const PROJECT_ROOT = path.resolve(__dirname, '../../..');
-const METADATA_DIR = path.join(PROJECT_ROOT, 'audio-metadata');
 
 // SECURITY: Admin mode is STRICTLY disabled in production
 const isProduction = process.env.NODE_ENV === 'production';
@@ -68,220 +73,6 @@ function requireDevMode(req, res, next) {
 
 // Apply dev mode check to all routes (rate limiting removed - requireDevMode already blocks production)
 router.use(requireDevMode);
-
-/**
- * Load all music tracks from metadata files
- * @param {object} filters - Optional filters (category, region, status)
- * @returns {object} { tracks, summary }
- */
-async function loadMusicMetadata(filters = {}) {
-  const manifest = await loadJsonFile(path.join(METADATA_DIR, 'music/manifest.json'));
-  if (!manifest) {
-    throw new AppError('Music manifest not found', 500);
-  }
-
-  const tracks = [];
-  const categoriesToLoad = filters.category
-    ? [filters.category]
-    : VALID_MUSIC_CATEGORIES;
-
-  for (const category of categoriesToLoad) {
-    const categoryInfo = manifest.categories[category];
-    if (!categoryInfo) continue;
-
-    for (const file of categoryInfo.files) {
-      const filePath = path.join(METADATA_DIR, 'music', file);
-      const data = await loadJsonFile(filePath);
-      if (!data) continue;
-
-      // Handle different file structures
-      const tracksInFile = data.tracks || [];
-      for (const track of tracksInFile) {
-        // Add source file reference for updates
-        tracks.push({
-          ...track,
-          _sourceFile: file,
-          _category: category,
-          _region: data.region || null
-        });
-      }
-    }
-  }
-
-  // Apply filters
-  let filteredTracks = tracks;
-
-  if (filters.region) {
-    filteredTracks = filteredTracks.filter(t => t.region === filters.region);
-  }
-
-  if (filters.status === 'generated') {
-    filteredTracks = filteredTracks.filter(t => t.generated === true);
-  } else if (filters.status === 'pending') {
-    filteredTracks = filteredTracks.filter(t => !t.generated);
-  }
-
-  // Calculate summary
-  const total = filteredTracks.length;
-  const generated = filteredTracks.filter(t => t.generated === true).length;
-  const pending = total - generated;
-
-  return {
-    tracks: filteredTracks,
-    summary: {
-      total,
-      generated,
-      pending,
-      percentComplete: total > 0 ? Math.round((generated / total) * 100) : 0
-    }
-  };
-}
-
-/**
- * Load all SFX effects from metadata files
- * @param {object} filters - Optional filters (category, subcategory, status)
- * @returns {object} { effects, summary }
- */
-async function loadSFXMetadata(filters = {}) {
-  const manifest = await loadJsonFile(path.join(METADATA_DIR, 'sfx/manifest.json'));
-  if (!manifest) {
-    throw new AppError('SFX manifest not found', 500);
-  }
-
-  const effects = [];
-  const categoriesToLoad = filters.category
-    ? [filters.category]
-    : VALID_SFX_CATEGORIES;
-
-  for (const category of categoriesToLoad) {
-    const categoryInfo = manifest.categories[category];
-    if (!categoryInfo) continue;
-
-    for (const file of categoryInfo.files) {
-      const filePath = path.join(METADATA_DIR, 'sfx', file);
-      const data = await loadJsonFile(filePath);
-      if (!data) continue;
-
-      // Handle different file structures
-      const effectsInFile = data.effects || [];
-      for (const effect of effectsInFile) {
-        // Add source file reference for updates
-        effects.push({
-          ...effect,
-          _sourceFile: file,
-          _category: category
-        });
-      }
-    }
-  }
-
-  // Apply filters
-  let filteredEffects = effects;
-
-  if (filters.subcategory) {
-    filteredEffects = filteredEffects.filter(e => e.subcategory === filters.subcategory);
-  }
-
-  if (filters.status === 'generated') {
-    filteredEffects = filteredEffects.filter(e => e.generated === true);
-  } else if (filters.status === 'pending') {
-    filteredEffects = filteredEffects.filter(e => !e.generated);
-  }
-
-  // Calculate summary
-  const total = filteredEffects.length;
-  const generated = filteredEffects.filter(e => e.generated === true).length;
-  const pending = total - generated;
-
-  return {
-    effects: filteredEffects,
-    summary: {
-      total,
-      generated,
-      pending,
-      percentComplete: total > 0 ? Math.round((generated / total) * 100) : 0
-    }
-  };
-}
-
-/**
- * Update audio metadata in source file
- * @param {string} type - 'music' or 'sfx'
- * @param {string} id - Asset ID
- * @param {object} updates - Fields to update
- * @returns {object} Updated asset
- */
-async function updateAudioMetadata(type, id, updates) {
-  // First find the asset to get its source file
-  let asset = null;
-  let sourceFilePath = null;
-  let arrayKey = null;
-
-  if (type === 'music') {
-    const { tracks } = await loadMusicMetadata();
-    asset = tracks.find(t => t.id === id);
-    if (asset) {
-      sourceFilePath = path.join(METADATA_DIR, 'music', asset._sourceFile);
-      arrayKey = 'tracks';
-    }
-  } else {
-    const { effects } = await loadSFXMetadata();
-    asset = effects.find(e => e.id === id);
-    if (asset) {
-      sourceFilePath = path.join(METADATA_DIR, 'sfx', asset._sourceFile);
-      arrayKey = 'effects';
-    }
-  }
-
-  if (!asset || !sourceFilePath) {
-    throw new AppError(`${type === 'music' ? 'Track' : 'Effect'} not found: ${id}`, 404);
-  }
-
-  // Load the source file
-  const fileData = await loadJsonFile(sourceFilePath);
-  if (!fileData) {
-    throw new AppError(`Source file not found: ${asset._sourceFile}`, 500);
-  }
-
-  // Find and update the asset in the array
-  const assetArray = fileData[arrayKey] || [];
-  const assetIndex = assetArray.findIndex(a => a.id === id);
-
-  if (assetIndex === -1) {
-    throw new AppError(`Asset not found in source file: ${id}`, 500);
-  }
-
-  // Apply updates (excluding internal fields)
-  const cleanUpdates = { ...updates };
-  delete cleanUpdates._sourceFile;
-  delete cleanUpdates._category;
-  delete cleanUpdates._region;
-
-  assetArray[assetIndex] = {
-    ...assetArray[assetIndex],
-    ...cleanUpdates
-  };
-
-  fileData[arrayKey] = assetArray;
-
-  // Save the file
-  await saveJsonFile(sourceFilePath, fileData);
-
-  return assetArray[assetIndex];
-}
-
-/**
- * Transform audio asset to include dashboard-expected status field
- * Maps `generated: true/false` to `status: 'exists'|'missing'`
- * @param {object} asset - The audio asset (track or effect)
- * @returns {object} Asset with status field added
- */
-function transformAssetForResponse(asset) {
-  return {
-    ...asset,
-    status: asset.generated ? 'exists' : 'missing'
-  };
-}
 
 // ============================================================================
 // MUSIC ROUTES
@@ -609,51 +400,8 @@ router.put('/:type/:id/mark-regeneration', asyncHandler(async (req, res) => {
     throw new AppError(`Invalid audio type: ${type}. Valid: ${VALID_AUDIO_TYPES.join(', ')}`, 400);
   }
 
-  // Load the appropriate metadata
-  let asset = null;
-  let assetPath = null;
-
-  if (type === 'music') {
-    const { tracks } = await loadMusicMetadata();
-    asset = tracks.find(t => t.id === id);
-    // Find the source file for this track
-    if (asset && asset._sourceFile) {
-      assetPath = path.join(METADATA_DIR, 'music', asset._sourceFile);
-    }
-  } else {
-    const { effects } = await loadSFXMetadata();
-    asset = effects.find(e => e.id === id);
-    if (asset && asset._sourceFile) {
-      assetPath = path.join(METADATA_DIR, 'sfx', asset._sourceFile);
-    }
-  }
-
-  if (!asset) {
-    throw new AppError(`Audio asset not found: ${type}/${id}`, 404);
-  }
-
-  // Update the asset in its source file
-  if (assetPath && existsSync(assetPath)) {
-    const fileData = await loadJsonFile(assetPath);
-    if (fileData) {
-      // Handle array-based structure (tracks[] for music, effects[] for SFX)
-      const arrayKey = type === 'music' ? 'tracks' : 'effects';
-      const items = fileData[arrayKey];
-      if (Array.isArray(items)) {
-        const item = items.find(i => i.id === id);
-        if (item) {
-          item.needsRegeneration = mark;
-          item.regenerationQueuedAt = mark ? new Date().toISOString() : null;
-          await saveJsonFile(assetPath, fileData);
-        }
-      }
-    }
-  }
-
-  res.json({
-    message: mark ? 'Audio asset marked for regeneration' : 'Regeneration marker cleared',
-    asset: { id, type, needsRegeneration: mark }
-  });
+  const result = await markForRegeneration(type, id, mark);
+  res.json(result);
 }));
 
 /**
@@ -672,100 +420,8 @@ router.put('/mark-multiple', asyncHandler(async (req, res) => {
     throw new AppError('ids array is required', 400);
   }
 
-  // Load the appropriate metadata
-  let assets = [];
-  let baseDir = '';
-
-  if (type === 'music') {
-    const { tracks } = await loadMusicMetadata();
-    assets = tracks;
-    baseDir = path.join(METADATA_DIR, 'music');
-  } else {
-    const { effects } = await loadSFXMetadata();
-    assets = effects;
-    baseDir = path.join(METADATA_DIR, 'sfx');
-  }
-
-  // Group assets by source file for efficient updates
-  const fileUpdates = new Map();
-  const results = { success: 0, notFound: 0 };
-
-  for (const id of ids) {
-    const asset = assets.find(a => a.id === id);
-    if (!asset) {
-      results.notFound++;
-      continue;
-    }
-
-    const sourceFile = asset._sourceFile;
-    if (!sourceFile) {
-      console.debug(`[adminAudio] Skipping asset ${id}: no _sourceFile metadata`);
-      continue;
-    }
-
-    if (!fileUpdates.has(sourceFile)) {
-      fileUpdates.set(sourceFile, []);
-    }
-    fileUpdates.get(sourceFile).push(id);
-  }
-
-  // Apply updates to each file
-  // Audio metadata files use arrays: { tracks: [...] } for music, root array or { effects: [...] } for SFX
-  const arrayKey = type === 'music' ? 'tracks' : null; // SFX files may be root arrays or have different structure
-
-  for (const [sourceFile, assetIds] of fileUpdates) {
-    const filePath = path.join(baseDir, sourceFile);
-    if (!existsSync(filePath)) continue;
-
-    try {
-      const fileData = await loadJsonFile(filePath);
-      if (!fileData) continue;
-
-      // Get the asset array from the file
-      let assetArray;
-      if (arrayKey && fileData[arrayKey]) {
-        assetArray = fileData[arrayKey];
-      } else if (Array.isArray(fileData)) {
-        assetArray = fileData;
-      } else {
-        // Try to find any array in the file
-        const possibleKeys = ['tracks', 'effects', 'sounds'];
-        for (const key of possibleKeys) {
-          if (Array.isArray(fileData[key])) {
-            assetArray = fileData[key];
-            break;
-          }
-        }
-      }
-
-      if (!assetArray) {
-        console.warn(`[AdminAudio] Could not find asset array in ${sourceFile}`);
-        continue;
-      }
-
-      for (const id of assetIds) {
-        const assetIndex = assetArray.findIndex(a => a.id === id);
-        if (assetIndex !== -1) {
-          assetArray[assetIndex].needsRegeneration = mark;
-          assetArray[assetIndex].regenerationQueuedAt = mark ? new Date().toISOString() : null;
-          results.success++;
-        }
-      }
-
-      await saveJsonFile(filePath, fileData);
-    } catch (error) {
-      console.warn(`[AdminAudio] Failed to update ${sourceFile}:`, error.message);
-    }
-  }
-
-  res.json({
-    message: mark
-      ? `Marked ${results.success} audio assets for regeneration`
-      : `Cleared regeneration marker for ${results.success} audio assets`,
-    updated: results.success,
-    total: ids.length,
-    notFound: results.notFound
-  });
+  const result = await markMultipleForRegeneration(type, ids, mark);
+  res.json(result);
 }));
 
 /**
@@ -814,12 +470,8 @@ router.get('/:type/:id/waveform', asyncHandler(async (req, res) => {
   }
 
   // Resolve audio file path
-  let audioPath;
-  if (asset.path) {
-    // Remove leading slash and resolve from frontend public dir
-    const relativePath = asset.path.startsWith('/') ? asset.path.slice(1) : asset.path;
-    audioPath = path.join(PROJECT_ROOT, 'frontend', 'public', relativePath);
-  } else {
+  const audioPath = resolveAudioPath(asset.path);
+  if (!audioPath) {
     throw new AppError('Asset path not found in metadata', 404);
   }
 
@@ -952,8 +604,7 @@ router.post('/waveforms/regenerate', asyncHandler(async (req, res) => {
       results.processed++;
 
       try {
-        const relativePath = asset.path.startsWith('/') ? asset.path.slice(1) : asset.path;
-        const audioPath = path.join(PROJECT_ROOT, 'frontend', 'public', relativePath);
+        const audioPath = resolveAudioPath(asset.path);
 
         // Use ffmpeg for real waveform generation
         const peaks = await generateWaveformWithFFmpeg(audioPath, 100);
@@ -1166,7 +817,7 @@ router.get('/suno/status/:taskId', asyncHandler(async (req, res) => {
  * Get music manifest
  */
 router.get('/manifest/music', asyncHandler(async (req, res) => {
-  const manifest = await loadJsonFile(path.join(METADATA_DIR, 'music/manifest.json'));
+  const manifest = await loadJsonFile(path.join(getMetadataDir(), 'music/manifest.json'));
   if (!manifest) {
     throw new AppError('Music manifest not found', 404);
   }
@@ -1178,7 +829,7 @@ router.get('/manifest/music', asyncHandler(async (req, res) => {
  * Get SFX manifest
  */
 router.get('/manifest/sfx', asyncHandler(async (req, res) => {
-  const manifest = await loadJsonFile(path.join(METADATA_DIR, 'sfx/manifest.json'));
+  const manifest = await loadJsonFile(path.join(getMetadataDir(), 'sfx/manifest.json'));
   if (!manifest) {
     throw new AppError('SFX manifest not found', 404);
   }
@@ -1186,23 +837,8 @@ router.get('/manifest/sfx', asyncHandler(async (req, res) => {
 }));
 
 // ============================================================================
-// SYNC STATUS ROUTE
+// SYNC STATUS ROUTES
 // ============================================================================
-
-/**
- * Verify if an audio file exists on disk
- * @param {string} audioPath - Path from metadata (e.g., '/audio/music/...')
- * @returns {boolean} Whether the file exists
- */
-function verifyFileExists(audioPath) {
-  if (!audioPath) return false;
-
-  // Remove leading slash and resolve from frontend public dir
-  const relativePath = audioPath.startsWith('/') ? audioPath.slice(1) : audioPath;
-  const fullPath = path.join(PROJECT_ROOT, 'frontend', 'public', relativePath);
-
-  return existsSync(fullPath);
-}
 
 /**
  * POST /api/admin/audio/sync-status
@@ -1355,18 +991,6 @@ router.get('/verify-status', asyncHandler(async (req, res) => {
 // ============================================================================
 // DURATION SYNC ROUTES
 // ============================================================================
-
-/**
- * Resolve audio file path from metadata path to absolute filesystem path
- * @param {string} metadataPath - Path from metadata (e.g., '/assets/audio/music/...')
- * @returns {string} Absolute path to the audio file
- */
-function resolveAudioPath(metadataPath) {
-  if (!metadataPath) return null;
-  // Remove leading slash and resolve from frontend public dir
-  const relativePath = metadataPath.startsWith('/') ? metadataPath.slice(1) : metadataPath;
-  return path.join(PROJECT_ROOT, 'frontend', 'public', relativePath);
-}
 
 /**
  * GET /api/admin/audio/verify-durations
@@ -1560,7 +1184,7 @@ router.get('/status', (req, res) => {
   res.json({
     enabled: true,
     environment: process.env.NODE_ENV || 'unknown',
-    metadataDir: METADATA_DIR,
+    metadataDir: getMetadataDir(),
     validMusicCategories: VALID_MUSIC_CATEGORIES,
     validSFXCategories: VALID_SFX_CATEGORIES,
     serviceLoaded: !!audioGenerationService
