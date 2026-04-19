@@ -17,16 +17,21 @@ npm run dev:setup                       # Smart startup: checks ports, Docker, m
 # Manual startup
 docker compose up -d                    # Start PostgreSQL (required first)
 npm run dev                             # Start both API (port 3000) and frontend (port 8080)
+npm run dev:all                         # Start API + frontend + admin (port 5173)
 
 # Testing
 npm run test -w api                     # API tests only
 npm run test:unit -w api                # Unit tests (fast, no server needed)
 node --test path/to/file.test.js        # Single test file
+npm run test:e2e                        # Playwright E2E (auto-starts servers)
+npm run test:load                       # Artillery load tests (load-tests/config.yml)
 
 # Database
 npm run db:reset                        # Re-run migrations + seed
 npm run db:fresh                        # Drop all, re-migrate, re-seed
 ```
+
+**Tooling:** `knip.json` configures dead-code detection (`npx knip`).
 
 ### Workspace Structure
 
@@ -310,34 +315,7 @@ This project has specialized subagents in `.claude/agents/`. **Using subagents i
 - Example: backend-developer finds security issue → dispatch security-auditor
 - Always pass context from the originating agent to the specialist
 
-### Subagent Quick Reference
-
-**By Layer:**
-| Layer | Implementation | Review |
-|-------|---------------|--------|
-| Database | `postgres-pro` | `architect-reviewer` |
-| API | `backend-developer` | `code-reviewer` |
-| Frontend | `frontend-developer` | `ui-ux-specialist` |
-| Full Stack | `fullstack-developer` | `architect-reviewer` |
-
-**By Domain:**
-| Domain | Implementation | Review |
-|--------|---------------|--------|
-| Battle | `battle-systems-developer` | `qa-expert` |
-| World Gen | `worldgen-specialist` | `architect-reviewer` |
-| Economy | `economy-balance-designer` | `qa-expert` |
-| WebSocket | `websocket-engineer` | `security-auditor` |
-| Assets | `asset-pipeline-specialist` | - |
-
-**By Task Type:**
-| Task | Subagent |
-|------|----------|
-| Debug/investigate | `debugger` |
-| Performance issue | `performance-engineer` |
-| Security concern | `security-auditor` |
-| Refactoring | `refactoring-specialist` |
-| Test coverage | `qa-expert`, `test-automator` |
-| Documentation | `documentation-maintainer` |
+**Review pairing:** After implementation, pair with a reviewer — `code-reviewer` for API, `ui-ux-specialist` for frontend, `architect-reviewer` for cross-cutting/database, `qa-expert` for battle/economy, `security-auditor` for WebSocket/auth surfaces.
 
 ## CI Pipeline
 
