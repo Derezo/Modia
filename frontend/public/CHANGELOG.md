@@ -4,6 +4,7 @@ All notable changes to Modia.
 
 ## 0.4
 
+- 0.4.40: Modularized admin audio route (extracted metadata service)
 - 0.4.39: Modularized AssetLoader (extracted item compositing)
 - 0.4.38: Modularized BattleFormationScene (extracted stylesheet)
 - 0.4.37: Modularized BattleUI (extracted styles and selection panels)
