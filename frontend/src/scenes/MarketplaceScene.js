@@ -1,6 +1,7 @@
 import { Scene } from './Scene.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { MarketplaceItemPanel } from '../components/MarketplaceItemPanel.js';
+import { responsive } from '../core/Responsive.js';
 
 // Import extracted CSS
 import './marketplace/marketplace.css';
@@ -57,6 +58,9 @@ export class MarketplaceScene extends Scene {
 
     // WebSocket handlers
     this.wsHandlers = null;
+
+    // Responsive subscription
+    this._responsiveUnsubscribe = null;
   }
 
   async enter(_data = {}) {
@@ -85,6 +89,9 @@ export class MarketplaceScene extends Scene {
     this.setupEventListeners();
     this.setupWebSocketHandlers();
     this.game.socket?.joinMarketplace();
+
+    // Subscribe to responsive breakpoint changes
+    this._responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
 
     // Initialize item panel for viewing unique item listings
     this.itemPanel = new MarketplaceItemPanel(this.game);
@@ -174,6 +181,12 @@ export class MarketplaceScene extends Scene {
   }
 
   exit() {
+    // Unsubscribe from responsive changes
+    if (this._responsiveUnsubscribe) {
+      this._responsiveUnsubscribe();
+      this._responsiveUnsubscribe = null;
+    }
+
     // Stop ambient sounds
     this.game.audio?.stopAmbient();
 
@@ -549,6 +562,16 @@ export class MarketplaceScene extends Scene {
     }
   }
 
+  /**
+   * Handle responsive breakpoint changes
+   * The marketplace CSS already handles responsive styles via media queries,
+   * but we re-render content to ensure any dynamically created elements adapt.
+   */
+  onBreakpointChange() {
+    // Re-render content to apply any responsive changes
+    this.renderContent();
+  }
+
   update(_deltaTime) {
     // No per-frame updates needed
   }
@@ -556,6 +579,6 @@ export class MarketplaceScene extends Scene {
   render(ctx) {
     // UI is HTML-based - draw parchment background
     ctx.fillStyle = '#c9b899';
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
   }
 }

@@ -14,6 +14,7 @@
  */
 
 import { Scene } from './Scene.js';
+import { responsive } from '../core/Responsive.js';
 import { PARCHMENT_COLORS, injectParchmentTheme, getParchmentScrollbarCSS } from '../ui/parchment/index.js';
 import { TavernChatManager } from '../tavern/TavernChatManager.js';
 import { TavernDMSystem } from '../tavern/TavernDMSystem.js';
@@ -30,6 +31,7 @@ export class TavernScene extends Scene {
     super(game);
     this.uiElement = null;
     this.abortController = null;
+    this.responsiveUnsubscribe = null;
 
     // Tab state
     this.activeTab = 'global'; // 'global', 'party', 'dm'
@@ -61,6 +63,9 @@ export class TavernScene extends Scene {
     this.game.socket.joinRoom('tavern');
     this.game.socket.joinRoom('global');
 
+    // Subscribe to responsive breakpoint changes
+    this.responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
+
     // Play regional tavern music and ambient sounds
     if (this.game.musicContext) {
       this.game.musicContext.playNodeMusic('tavern');
@@ -88,6 +93,12 @@ export class TavernScene extends Scene {
       this.game.socket.off(type, handler);
     });
     this.wsHandlers = {};
+
+    // Unsubscribe from responsive changes
+    if (this.responsiveUnsubscribe) {
+      this.responsiveUnsubscribe();
+      this.responsiveUnsubscribe = null;
+    }
 
     // Clean up subsystems
     this.chatManager.destroy();
@@ -150,11 +161,11 @@ export class TavernScene extends Scene {
         margin: 0;
         color: var(--parchment-burgundy);
         text-shadow: 0 1px 0 var(--parchment-highlight);
-        font-size: 22px;
+        font-size: var(--font-size-lg, 18px);
       }
 
       .tavern-title-icon {
-        font-size: 24px;
+        font-size: var(--font-size-lg, 18px);
       }
 
       .tavern-content {
@@ -179,7 +190,7 @@ export class TavernScene extends Scene {
       }
 
       .tavern-tab {
-        padding: 10px 20px;
+        padding: var(--space-sm, 8px) var(--space-lg, 16px);
         background: linear-gradient(to bottom, var(--parchment-mid) 0%, var(--parchment-dark) 100%);
         border: 2px solid var(--parchment-border);
         border-bottom: none;
@@ -188,12 +199,13 @@ export class TavernScene extends Scene {
         cursor: pointer;
         transition: all 0.2s;
         font-family: var(--parchment-font);
-        font-size: 14px;
+        font-size: var(--font-size-md, 14px);
         font-weight: bold;
         display: flex;
         align-items: center;
         gap: var(--parchment-spacing-sm);
         margin-bottom: -2px;
+        min-height: var(--touch-target, 36px);
       }
 
       .tavern-tab:hover:not(.active) {
@@ -210,7 +222,7 @@ export class TavernScene extends Scene {
       .tab-badge {
         background: ${P.copper};
         color: var(--parchment-text-inverse);
-        font-size: 10px;
+        font-size: var(--font-size-sm, 12px);
         padding: 2px 6px;
         border-radius: 10px;
         min-width: 18px;
@@ -272,7 +284,7 @@ export class TavernScene extends Scene {
       }
 
       .chat-message-time {
-        font-size: 11px;
+        font-size: var(--font-size-sm, 12px);
         color: var(--parchment-text-muted);
       }
 
@@ -297,9 +309,10 @@ export class TavernScene extends Scene {
         background: var(--parchment-highlight);
         border: 1px solid var(--parchment-border);
         border-radius: 12px;
-        font-size: 12px;
+        font-size: var(--font-size-sm, 12px);
         cursor: pointer;
         transition: all 0.2s;
+        min-height: var(--touch-target, 36px);
       }
 
       .chat-reaction:hover {
@@ -336,7 +349,7 @@ export class TavernScene extends Scene {
       .typing-indicator {
         height: 20px;
         padding: 0 var(--parchment-spacing-md);
-        font-size: 12px;
+        font-size: var(--font-size-sm, 12px);
         color: var(--parchment-text-muted);
         font-style: italic;
       }
@@ -361,9 +374,9 @@ export class TavernScene extends Scene {
         border-radius: var(--parchment-radius-lg);
         color: var(--parchment-text-primary);
         font-family: var(--parchment-font);
-        font-size: 14px;
+        font-size: var(--font-size-md, 14px);
         resize: none;
-        min-height: 44px;
+        min-height: var(--touch-target, 44px);
         max-height: 120px;
         box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
       }
@@ -434,10 +447,11 @@ export class TavernScene extends Scene {
         border: 2px solid var(--parchment-border-dark);
         border-radius: var(--parchment-radius-lg);
         font-family: var(--parchment-font);
-        font-size: 14px;
+        font-size: var(--font-size-md, 14px);
         cursor: pointer;
         transition: all 0.15s;
         text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+        min-height: var(--button-height, 36px);
       }
 
       .send-btn:hover {
@@ -450,6 +464,7 @@ export class TavernScene extends Scene {
 
       .sidebar {
         width: 280px;
+        min-width: 200px;
         background: linear-gradient(to bottom, var(--parchment-mid) 0%, var(--parchment-dark) 100%);
         border-left: 2px solid var(--parchment-border);
         display: flex;
@@ -472,7 +487,7 @@ export class TavernScene extends Scene {
       }
 
       .online-count {
-        font-size: 12px;
+        font-size: var(--font-size-sm, 12px);
         color: var(--parchment-text-secondary);
         font-weight: normal;
         background: rgba(139, 115, 85, 0.2);
@@ -494,6 +509,7 @@ export class TavernScene extends Scene {
         cursor: pointer;
         transition: all 0.2s;
         border: 1px solid transparent;
+        min-height: var(--touch-target, 36px);
       }
 
       .player-item:hover {
@@ -534,7 +550,7 @@ export class TavernScene extends Scene {
 
       .dm-btn {
         padding: var(--parchment-spacing-xs) 10px;
-        font-size: 11px;
+        font-size: var(--font-size-sm, 12px);
         opacity: 0;
         transition: all 0.2s;
         background: linear-gradient(to bottom, var(--parchment-border) 0%, var(--parchment-border-dark) 100%);
@@ -542,9 +558,12 @@ export class TavernScene extends Scene {
         border: 1px solid var(--parchment-border-dark);
         border-radius: var(--parchment-radius-md);
         cursor: pointer;
+        min-height: var(--touch-target, 36px);
+        min-width: var(--touch-target, 36px);
       }
 
-      .player-item:hover .dm-btn {
+      .player-item:hover .dm-btn,
+      .player-item .dm-btn.touch-visible {
         opacity: 1;
       }
 
@@ -561,12 +580,13 @@ export class TavernScene extends Scene {
         display: flex;
         align-items: center;
         gap: 10px;
-        padding: 10px var(--parchment-spacing-md);
+        padding: var(--space-sm, 8px) var(--parchment-spacing-md);
         border-radius: var(--parchment-radius-lg);
         cursor: pointer;
         transition: all 0.2s;
         border: 1px solid transparent;
         border-bottom: 1px solid rgba(139, 115, 85, 0.2);
+        min-height: var(--touch-target, 36px);
       }
 
       .dm-item:hover {
@@ -589,7 +609,7 @@ export class TavernScene extends Scene {
       }
 
       .dm-item-preview {
-        font-size: 12px;
+        font-size: var(--font-size-sm, 12px);
         color: var(--parchment-text-secondary);
         overflow: hidden;
         text-overflow: ellipsis;
@@ -597,7 +617,7 @@ export class TavernScene extends Scene {
       }
 
       .dm-item-time {
-        font-size: 11px;
+        font-size: var(--font-size-sm, 12px);
         color: var(--parchment-text-muted);
       }
 
@@ -648,8 +668,9 @@ export class TavernScene extends Scene {
         border-radius: var(--parchment-radius-lg);
         color: var(--parchment-text-primary);
         font-family: var(--parchment-font);
-        font-size: 13px;
+        font-size: var(--font-size-md, 14px);
         cursor: pointer;
+        min-height: var(--touch-target, 36px);
       }
 
       .presence-select:focus {
@@ -665,10 +686,11 @@ export class TavernScene extends Scene {
         border-radius: var(--parchment-radius-lg);
         color: var(--parchment-text-primary);
         font-family: var(--parchment-font);
-        font-size: 13px;
+        font-size: var(--font-size-md, 14px);
         font-weight: bold;
         cursor: pointer;
         transition: all 0.15s;
+        min-height: var(--button-height, 36px);
       }
 
       .tavern-back-btn:hover {
@@ -680,9 +702,10 @@ export class TavernScene extends Scene {
       }
 
       /* ============================================
-         Responsive Layout - Mobile
+         Responsive Layout - Mobile (<600px)
+         Matches responsive singleton breakpoint
          ============================================ */
-      @media (max-width: 768px) {
+      @media (max-width: 599px) {
         .tavern-content {
           flex-direction: column;
         }
@@ -691,41 +714,78 @@ export class TavernScene extends Scene {
           width: 100%;
           border-left: none;
           border-top: 2px solid var(--parchment-border);
-          max-height: 200px;
+          max-height: 180px;
+          order: 2;
+        }
+
+        .tavern-main {
+          order: 1;
         }
 
         .tavern-header {
-          padding: var(--parchment-spacing-md) var(--parchment-spacing-lg);
+          padding: var(--space-sm, 8px) var(--space-md, 12px);
           flex-wrap: wrap;
-          gap: var(--parchment-spacing-md);
+          gap: var(--space-sm, 8px);
+        }
+
+        .tavern-title h2 {
+          font-size: var(--font-size-md, 14px);
         }
 
         .tavern-tabs {
-          padding: var(--parchment-spacing-sm) var(--parchment-spacing-md) 0;
+          padding: var(--space-xs, 4px) var(--space-sm, 8px) 0;
           overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
         }
 
         .tavern-tab {
-          padding: var(--parchment-spacing-sm) 14px;
-          font-size: 13px;
+          padding: var(--space-xs, 4px) var(--space-sm, 8px);
           white-space: nowrap;
+          flex-shrink: 0;
         }
 
         .chat-panel {
-          padding: var(--parchment-spacing-md);
+          padding: var(--space-sm, 8px);
         }
 
         .chat-messages {
-          padding: var(--parchment-spacing-sm);
+          padding: var(--space-xs, 4px);
+        }
+
+        .chat-input-area {
+          flex-direction: column;
+          gap: var(--space-sm, 8px);
+        }
+
+        .send-btn {
+          width: 100%;
+        }
+
+        /* Always show DM button on touch devices */
+        .dm-btn {
+          opacity: 1;
+        }
+
+        .player-list {
+          max-height: 120px;
+        }
+
+        .emoji-picker {
+          max-width: 280px;
+          grid-template-columns: repeat(6, 1fr);
         }
       }
 
       /* ============================================
-         Responsive Layout - Tablet
+         Responsive Layout - Tablet (600-899px)
          ============================================ */
-      @media (min-width: 769px) and (max-width: 1024px) {
+      @media (min-width: 600px) and (max-width: 899px) {
         .sidebar {
-          width: 240px;
+          width: 220px;
+        }
+
+        .tavern-header {
+          padding: var(--space-md, 12px) var(--space-lg, 16px);
         }
       }
 
@@ -1081,32 +1141,29 @@ export class TavernScene extends Scene {
   render(ctx) {
     // UI is HTML-based, canvas shows parchment background
     ctx.fillStyle = P.light;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
   }
 
   /**
    * Handle responsive breakpoint changes
-   * @param {string} newBreakpoint - 'mobile', 'tablet', or 'desktop'
-   * @param {string} oldBreakpoint - Previous breakpoint
+   * Called when viewport crosses breakpoint thresholds
    */
-  onBreakpointChange(newBreakpoint, _oldBreakpoint) {
-    // Rebuild UI for new layout if needed
+  onBreakpointChange() {
+    // CSS media queries handle layout changes automatically
+    // This method exists for any JS-driven adjustments needed
     if (!this.uiElement) return;
 
-    // On mobile, sidebar moves to bottom
-    const sidebar = this.uiElement.querySelector('.sidebar');
-    const content = this.uiElement.querySelector('.tavern-content');
+    const isMobile = responsive.isMobile();
 
-    if (newBreakpoint === 'mobile') {
-      // Mobile layout: sidebar at bottom
-      if (sidebar && content) {
-        content.style.flexDirection = 'column';
-      }
+    // On touch devices, always show DM buttons (no hover state)
+    if (responsive.hasTouch() || isMobile) {
+      this.uiElement.querySelectorAll('.dm-btn').forEach(btn => {
+        btn.classList.add('touch-visible');
+      });
     } else {
-      // Desktop/tablet: sidebar on right
-      if (sidebar && content) {
-        content.style.flexDirection = 'row';
-      }
+      this.uiElement.querySelectorAll('.dm-btn').forEach(btn => {
+        btn.classList.remove('touch-visible');
+      });
     }
   }
 }

@@ -8,6 +8,7 @@
 
 import { FogOfWarState } from './FogOfWarState.js';
 import { renderOrganicPath } from './PathRenderer.js';
+import { responsive } from '../core/Responsive.js';
 
 export class WorldMapEffects {
   constructor(assetLoader) {
@@ -619,7 +620,7 @@ export class WorldMapEffects {
 
       // Node type icon
       ctx.fillStyle = '#3d2914';
-      ctx.font = '10px serif';
+      ctx.font = `${responsive.getCanvasFontSize('sm')}px serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
@@ -644,7 +645,7 @@ export class WorldMapEffects {
    * Note: Fog of war rendering moved to DOMFogOverlay.js
    */
   renderNodeLabels(ctx, cameraX, cameraY, nodes) {
-    ctx.font = '11px serif';
+    ctx.font = `${responsive.getCanvasFontSize('sm')}px serif`;
     ctx.textAlign = 'center';
 
     for (const node of nodes) {

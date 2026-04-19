@@ -846,11 +846,11 @@ export class FishingScene extends Scene {
 
   render(ctx) {
     // Draw water background
-    const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, this.game.targetHeight);
     gradient.addColorStop(0, '#4a90a4');
     gradient.addColorStop(0.5, '#3d7a8c');
     gradient.addColorStop(1, '#2d5a6b');
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
   }
 }

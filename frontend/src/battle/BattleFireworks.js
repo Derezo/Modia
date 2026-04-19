@@ -168,8 +168,10 @@ class Firework {
  * BattleFireworks - Manages multiple fireworks
  */
 export class BattleFireworks {
-  constructor(canvas) {
+  constructor(canvas, targetWidth = 800, targetHeight = 600) {
     this.canvas = canvas;
+    this.targetWidth = targetWidth;
+    this.targetHeight = targetHeight;
     this.fireworks = [];
   }
 
@@ -187,7 +189,7 @@ export class BattleFireworks {
     const fireworkColor = color ||
       FIREWORK_COLORS.primary[Math.floor(Math.random() * FIREWORK_COLORS.primary.length)];
 
-    this.fireworks.push(new Firework(x, targetY, fireworkColor, this.canvas.height));
+    this.fireworks.push(new Firework(x, targetY, fireworkColor, this.targetHeight));
   }
 
   /**
@@ -195,14 +197,14 @@ export class BattleFireworks {
    * @param {number} count - Number of fireworks to launch
    */
   launchWave(count) {
-    const margin = this.canvas.width * 0.15;
-    const width = this.canvas.width - margin * 2;
+    const margin = this.targetWidth * 0.15;
+    const width = this.targetWidth - margin * 2;
 
     for (let i = 0; i < count; i++) {
       // Stagger launches slightly
       setTimeout(() => {
         const x = margin + Math.random() * width;
-        const targetY = this.canvas.height * (0.25 + Math.random() * 0.25);
+        const targetY = this.targetHeight * (0.25 + Math.random() * 0.25);
         this.launchFirework(x, targetY);
       }, i * 100 + Math.random() * 100);
     }

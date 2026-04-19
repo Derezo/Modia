@@ -45,6 +45,7 @@ import { calculateDamagePreview, calculateItemPreview } from '@shared/battleMath
 import { CLASS_MOVEMENT } from '@shared/constants.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { BattleLoadingScreen } from '../ui/parchment/BattleLoadingScreen.js';
+import { responsive } from '../core/Responsive.js';
 
 /**
  * BattleScene - Tactical turn-based combat on an isometric grid with camera
@@ -258,7 +259,7 @@ export class BattleScene extends Scene {
     this.loadingScreen.hide();
 
     // Initialize camera after units so we can center on first player
-    this.camera = new BattleCamera(this.game.canvas.width, this.game.canvas.height);
+    this.camera = new BattleCamera(this.game.targetWidth, this.game.targetHeight);
     const mapDimensions = this.grid.getMapPixelDimensions();
     this.camera.setBoundsFromWorld(
       mapDimensions.worldMinX,
@@ -275,6 +276,13 @@ export class BattleScene extends Scene {
       const mapCenter = this.grid.getMapCenter();
       this.camera.centerOn(mapCenter.x, mapCenter.y, true);
     }
+
+    // Mobile auto-fit: scale zoom so the isometric grid fits the viewport.
+    // Re-applies on breakpoint changes (landscape <-> portrait).
+    this._applyMobileFitZoom(mapDimensions);
+    this._responsiveUnsubscribe = responsive.onChange(() => {
+      this._applyMobileFitZoom(this.grid.getMapPixelDimensions());
+    });
 
     // Update pathfinding with units
     this.pathfinding.setUnits(this.units);
@@ -380,6 +388,12 @@ export class BattleScene extends Scene {
    * Exit the battle scene
    */
   exit() {
+    // Clean up responsive subscription
+    if (this._responsiveUnsubscribe) {
+      this._responsiveUnsubscribe();
+      this._responsiveUnsubscribe = null;
+    }
+
     // Clean up input handler (events and tile cycling timers)
     if (this.inputHandler) {
       this.inputHandler.cleanup();
@@ -995,6 +1009,28 @@ export class BattleScene extends Scene {
   }
 
   /**
+   * Compute and apply a zoom that fits the battle grid inside the viewport
+   * on mobile. No-op on tablet/desktop where the default 1.0 is correct.
+   * Called on scene entry and on breakpoint changes.
+   */
+  _applyMobileFitZoom(mapDimensions) {
+    if (!this.camera || !mapDimensions) return;
+    if (!responsive.isMobile()) {
+      this.camera.setZoom(1);
+      return;
+    }
+    const mapW = mapDimensions.worldMaxX - mapDimensions.worldMinX;
+    const mapH = mapDimensions.worldMaxY - mapDimensions.worldMinY;
+    if (mapW <= 0 || mapH <= 0) return;
+    const fit = Math.min(
+      this.game.targetWidth / mapW,
+      this.game.targetHeight / mapH
+    );
+    // Keep some padding so the grid isn't edge-to-edge
+    this.camera.setZoom(fit * 0.9);
+  }
+
+  /**
    * Convert canvas logical coordinates to UI overlay screen coordinates
    * The canvas uses a 800x600 logical coordinate system, but is scaled and centered
    * via CSS. DOM elements in the UI overlay need screen pixel coordinates.
@@ -1007,9 +1043,9 @@ export class BattleScene extends Scene {
     const canvasRect = canvas.getBoundingClientRect();
     const overlayRect = this.game.uiOverlay.getBoundingClientRect();
 
-    // Canvas logical size
-    const logicalWidth = canvas.width;
-    const logicalHeight = canvas.height;
+    // Canvas logical size (use target dimensions, not DPR-scaled backing store)
+    const logicalWidth = this.game.targetWidth;
+    const logicalHeight = this.game.targetHeight;
 
     // Convert logical coords to screen coords
     // Scale factor: canvasRect.width / logicalWidth
@@ -2525,6 +2561,7 @@ export class BattleScene extends Scene {
     // Update tile cycling for overlapping elevations (delegated to input handler)
     if (this.inputHandler) {
       this.inputHandler.updateTileCycling(deltaTime);
+      this.inputHandler.updatePinchZoom();
     }
 
     // Clear input state
@@ -2535,9 +2572,9 @@ export class BattleScene extends Scene {
    * Render the battle scene
    */
   render(ctx) {
-    // Clear background
+    // Clear background (context is DPR-pre-scaled, so use logical dims)
     ctx.fillStyle = '#0a0a1a';
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
 
     // Render loading screen overlay if visible
     if (this.loadingScreen) {
@@ -2661,6 +2698,20 @@ export class BattleScene extends Scene {
     this.grid.invalidateOcclusionCache();
     this.grid.updateOcclusionCache(aliveUnits);
 
+    // Apply camera zoom as a visual scale around the viewport center.
+    // Grid, units, and animations share the same transform so hit-testing
+    // (which inverts via camera.screenToUnzoomed) stays consistent.
+    const zoom = this.camera?.zoom || 1;
+    const needsZoom = zoom !== 1;
+    if (needsZoom) {
+      const cx = this.game.targetWidth / 2;
+      const cy = this.game.targetHeight / 2;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(zoom, zoom);
+      ctx.translate(-cx, -cy);
+    }
+
     // Render grid with highlights and camera (includes intent highlights from WebSocket)
     this.grid.renderWithIntentHighlights(ctx, highlights, this.camera);
 
@@ -2693,6 +2744,10 @@ export class BattleScene extends Scene {
 
     // Render animations with camera transform
     this.renderAnimationsWithCamera(ctx);
+
+    if (needsZoom) {
+      ctx.restore();
+    }
 
     // Render minimap (hide during intro)
     if (!this.isIntroPlaying) {
@@ -2762,7 +2817,8 @@ export class BattleScene extends Scene {
    */
   renderMinimap(ctx) {
     const minimapSize = 120;
-    const minimapX = ctx.canvas.width - minimapSize - 10;
+    // Use logical width, not DPR-backing-store width
+    const minimapX = this.game.targetWidth - minimapSize - 10;
     const minimapY = 10;
     const mapDim = this.grid.getMapPixelDimensions();
 
@@ -2795,11 +2851,14 @@ export class BattleScene extends Scene {
       }
     }
 
-    // Draw camera viewport rectangle
-    const viewportWidth = ctx.canvas.width * scale;
-    const viewportHeight = ctx.canvas.height * scale;
-    const viewportX = offsetX + (this.camera.x - ctx.canvas.width / 2) * scale;
-    const viewportY = offsetY + (this.camera.y - ctx.canvas.height / 2) * scale;
+    // Draw camera viewport rectangle (visible world area shrinks as zoom grows)
+    const zoom = this.camera.zoom || 1;
+    const visibleW = this.game.targetWidth / zoom;
+    const visibleH = this.game.targetHeight / zoom;
+    const viewportWidth = visibleW * scale;
+    const viewportHeight = visibleH * scale;
+    const viewportX = offsetX + (this.camera.x - visibleW / 2) * scale;
+    const viewportY = offsetY + (this.camera.y - visibleH / 2) * scale;
 
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.lineWidth = 1;
@@ -2812,7 +2871,7 @@ export class BattleScene extends Scene {
 
     // Label
     ctx.fillStyle = '#888';
-    ctx.font = '10px Arial';
+    ctx.font = `${responsive.getCanvasFontSize('sm')}px Arial`;
     ctx.textAlign = 'left';
     ctx.fillText('WASD/Arrows: Pan | Space: Re-center', minimapX, minimapY + minimapSize + 12);
   }

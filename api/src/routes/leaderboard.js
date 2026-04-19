@@ -6,6 +6,7 @@
 import express from 'express';
 import { query } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
+import { gameReadLimiter } from '../middleware/gameplayRateLimiter.js';
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ router.use(authenticate);
  * Categories: pvp, level, gold, battles
  * Query params: time (all|week|today), limit, offset, queue (for pvp only)
  */
-router.get('/:category', async (req, res) => {
+router.get('/:category', gameReadLimiter, async (req, res) => {
   try {
     const { category } = req.params;
     const { time = 'all', limit = 50, offset = 0, queue = '1v1' } = req.query;

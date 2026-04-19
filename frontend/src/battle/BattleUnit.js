@@ -1,4 +1,5 @@
 import { AnimatedSprite } from '../core/AnimatedSprite.js';
+import { responsive } from '../core/Responsive.js';
 
 /**
  * BattleUnit - Represents a unit in tactical combat
@@ -812,7 +813,7 @@ export class BattleUnit {
     // Draw name on hover/select
     if (this.isSelected || this.isTargeted) {
       ctx.fillStyle = '#fff';
-      ctx.font = '11px Arial';
+      ctx.font = `${responsive.getCanvasFontSize('sm')}px Arial`;
       ctx.textAlign = 'center';
       ctx.fillText(this.name, drawX, renderY - unitRadius - 20);
 
@@ -878,7 +879,7 @@ export class BattleUnit {
 
     // "Charging..." text
     ctx.fillStyle = '#d8b4fe';
-    ctx.font = '8px Arial';
+    ctx.font = `${responsive.getCanvasFontSize('sm')}px Arial`;
     ctx.textAlign = 'center';
     ctx.fillText('Charging...', x, y - 2);
   }
@@ -921,7 +922,7 @@ export class BattleUnit {
 
       // Draw duration number on the icon
       if (effect.duration !== undefined && effect.duration > 0) {
-        ctx.font = 'bold 8px Arial';
+        ctx.font = `bold ${responsive.getCanvasFontSize('sm')}px Arial`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         // Draw text shadow for readability

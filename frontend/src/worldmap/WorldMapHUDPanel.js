@@ -58,6 +58,10 @@ const BASE_HEIGHT = 90; // header 6px + zodiac 36px + divider 4px + stamina 36px
 /** Travel segment height including its divider */
 const TRAVEL_HEIGHT_WITH_DIVIDER = 34; // travel 30px + divider 4px
 
+/** Collapsed size (mobile-friendly) */
+const COLLAPSED_WIDTH = 54;
+const COLLAPSED_HEIGHT = 54;
+
 /** Height animation smoothing factor (0-1, higher = faster) */
 const HEIGHT_ANIMATION_SPEED = 0.15;
 
@@ -68,11 +72,15 @@ const CONTENT_PADDING = 6;
 const DIVIDER_HEIGHT = 4;
 
 export class WorldMapHUDPanel {
-  constructor() {
+  constructor({ collapsed = false } = {}) {
     // Panel position and size
     this.x = PANEL_X;
     this.y = PANEL_Y;
     this.width = PANEL_WIDTH;
+
+    // Collapsed state — toggleable; renders a compact summary chip instead
+    // of the full panel. Expand by tapping.
+    this.collapsed = collapsed;
 
     // Create child components
     this.frameRenderer = new HUDFrameRenderer();
@@ -87,6 +95,10 @@ export class WorldMapHUDPanel {
     // Animation state for height changes
     this.currentHeight = BASE_HEIGHT;
     this.targetHeight = BASE_HEIGHT;
+  }
+
+  setCollapsed(value) {
+    this.collapsed = !!value;
   }
 
   // ========== Proxy Methods to Child Segments ==========
@@ -176,6 +188,11 @@ export class WorldMapHUDPanel {
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    */
   render(ctx) {
+    if (this.collapsed) {
+      this._renderCollapsed(ctx);
+      return;
+    }
+
     const { x, y, width } = this;
     const height = Math.ceil(this.currentHeight);
 
@@ -244,6 +261,12 @@ export class WorldMapHUDPanel {
       return false;
     }
 
+    // Collapsed chip: any tap on the chip expands the panel
+    if (this.collapsed) {
+      this.collapsed = false;
+      return true;
+    }
+
     // Check zodiac segment click
     if (this.zodiacSegment.containsPoint(canvasX, canvasY)) {
       this.zodiacSegment.handleClick();
@@ -260,8 +283,43 @@ export class WorldMapHUDPanel {
    * @returns {boolean}
    */
   containsPoint(x, y) {
+    if (this.collapsed) {
+      return x >= this.x && x <= this.x + COLLAPSED_WIDTH &&
+             y >= this.y && y <= this.y + COLLAPSED_HEIGHT;
+    }
     return x >= this.x && x <= this.x + this.width &&
            y >= this.y && y <= this.y + this.currentHeight;
+  }
+
+  /**
+   * Render the collapsed (mobile-friendly) summary chip.
+   * Shows stamina fraction on top and zodiac count on bottom inside a
+   * small tappable square. The whole chip is a tap target that expands.
+   */
+  _renderCollapsed(ctx) {
+    const { x, y } = this;
+    const w = COLLAPSED_WIDTH;
+    const h = COLLAPSED_HEIGHT;
+
+    // Frame (reuse frameRenderer for consistency)
+    this.frameRenderer.render(ctx, x, y, w, h);
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = HUD_COLORS.text?.primary || '#e8e0d5';
+
+    const stamina = this.staminaSegment.current ?? 0;
+    const staminaMax = this.staminaSegment.max ?? 0;
+    const zodiac = this.zodiacSegment.collected ?? 0;
+
+    ctx.font = 'bold 12px serif';
+    ctx.fillText(`${stamina}/${staminaMax}`, x + w / 2, y + h / 2 - 8);
+
+    ctx.font = '11px serif';
+    ctx.fillText(`☆ ${zodiac}`, x + w / 2, y + h / 2 + 10);
+
+    ctx.restore();
   }
 
   // ========== Cleanup ==========

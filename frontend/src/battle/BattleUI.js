@@ -1583,7 +1583,7 @@ export class BattleUI {
 
     // Position in top-right corner, accounting for HUD elements
     // Leave room for PvP surrender button (right: 10px, ~100px wide)
-    const x = this.canvas?.width ? this.canvas.width - 130 : 650;
+    const x = this.canvas?.width ? (this.canvas.width / (window.devicePixelRatio || 1)) - 130 : 650;
     const y = 20; // Below any top UI elements
 
     this.connectionIndicator.setPosition(x, y);

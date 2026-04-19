@@ -626,6 +626,6 @@ export class FormationScene extends Scene {
   render(ctx) {
     // UI is HTML-based, fill background for any canvas elements
     ctx.fillStyle = PARCHMENT_COLORS.mid;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
   }
 }

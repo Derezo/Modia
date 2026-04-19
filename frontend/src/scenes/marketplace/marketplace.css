@@ -78,11 +78,12 @@
   border-radius: 6px 6px 0 0;
   color: #5a4a3a;
   font-family: Georgia, serif;
-  font-size: 13px;
+  font-size: var(--font-size-md, 14px);
   font-weight: normal;
   cursor: pointer;
   transition: all 0.2s;
   margin-bottom: -2px;
+  min-height: var(--touch-target, 36px);
 }
 
 .marketplace-tab:hover {
@@ -114,6 +115,7 @@
 
 .marketplace-right {
   width: 340px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -172,7 +174,7 @@
   flex: 1;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 8px;
   padding: 4px;
 }
@@ -205,7 +207,7 @@
 .market-item-name {
   font-weight: bold;
   color: #2d2418;
-  font-size: 13px;
+  font-size: var(--font-size-md, 14px);
   margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
@@ -215,7 +217,7 @@
 .market-item-info {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--font-size-sm, 12px);
   color: #5a4a3a;
   margin-bottom: 4px;
 }
@@ -265,7 +267,7 @@
   padding: 8px 12px;
   background: linear-gradient(to bottom, #c9b899 0%, #bfae8a 100%);
   font-family: Georgia, serif;
-  font-size: 11px;
+  font-size: var(--font-size-sm, 12px);
   text-transform: uppercase;
   letter-spacing: 1px;
   color: #2d2418;
@@ -336,7 +338,7 @@
   padding: 6px;
   background: linear-gradient(to bottom, #d4c4a8 0%, #c9b899 100%);
   font-family: Consolas, monospace;
-  font-size: 11px;
+  font-size: var(--font-size-sm, 12px);
   color: #5a4a3a;
   border-top: 2px solid #8b7355;
   border-bottom: 2px solid #8b7355;
@@ -376,7 +378,7 @@
   border: 3px solid #4a3a2a;
   font-family: Georgia, serif;
   font-weight: bold;
-  font-size: 11px;
+  font-size: var(--font-size-sm, 12px);
   cursor: pointer;
   transition: all 0.2s;
   display: flex;
@@ -453,7 +455,7 @@
 .trade-input-group label {
   display: block;
   font-family: Georgia, serif;
-  font-size: 11px;
+  font-size: var(--font-size-sm, 12px);
   color: #5a4a3a;
   margin-bottom: 4px;
   text-transform: uppercase;
@@ -589,14 +591,14 @@
   font-weight: bold;
   font-family: Georgia, serif;
   color: #2d2418;
-  font-size: 13px;
+  font-size: var(--font-size-md, 14px);
 }
 
 .my-order-side {
   padding: 2px 8px;
   border-radius: 4px;
   font-family: Georgia, serif;
-  font-size: 11px;
+  font-size: var(--font-size-sm, 12px);
   font-weight: bold;
 }
 
@@ -674,7 +676,7 @@
 
 .trade-row-time {
   color: #7a6a5a;
-  font-size: 10px;
+  font-size: var(--font-size-sm, 12px);
   font-family: Consolas, monospace;
 }
 
@@ -683,7 +685,7 @@
   color: #7a6a5a;
   font-family: Georgia, serif;
   padding: 30px;
-  font-size: 13px;
+  font-size: var(--font-size-md, 14px);
   font-style: italic;
 }
 
@@ -842,4 +844,102 @@
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* ========================================
+   RESPONSIVE BREAKPOINTS
+   ======================================== */
+
+/* Tablet breakpoint - stack panels vertically */
+@media (max-width: 900px) {
+  .marketplace-content {
+    flex-direction: column;
+  }
+
+  .marketplace-right {
+    width: 100%;
+    max-height: 300px;
+  }
+
+  .marketplace-tabs {
+    flex-wrap: wrap;
+  }
+
+  .marketplace-tab {
+    padding: 8px 12px;
+  }
+}
+
+/* Mobile breakpoint - tighter layout */
+@media (max-width: 600px) {
+  .marketplace-header {
+    padding: 8px 12px;
+  }
+
+  .marketplace-title h2 {
+    font-size: 16px;
+  }
+
+  .marketplace-tabs {
+    padding: 8px 12px;
+    gap: 2px;
+  }
+
+  .marketplace-tab {
+    padding: 6px 10px;
+    flex: 1;
+    text-align: center;
+  }
+
+  .marketplace-content {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .marketplace-right {
+    max-height: 250px;
+  }
+
+  /* Single column grid on very small screens */
+  .items-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+
+  .search-bar {
+    flex-wrap: wrap;
+  }
+
+  .search-bar input {
+    flex: 1 1 100%;
+  }
+
+  .search-bar select {
+    flex: 1;
+  }
+
+  .trade-panel {
+    padding: 12px;
+  }
+
+  .side-toggle {
+    gap: 4px;
+  }
+
+  .side-btn {
+    width: 44px;
+    height: 44px;
+    font-size: var(--font-size-sm, 12px);
+  }
+}
+
+/* Very small screens - minimal padding */
+@media (max-width: 400px) {
+  .items-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .marketplace-tab {
+    font-size: var(--font-size-sm, 12px);
+    padding: 6px 8px;
+  }
 }

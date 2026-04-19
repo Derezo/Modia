@@ -147,8 +147,8 @@ export class TitleAnimationEngine {
 
     // Create effects
     this.dustEmitter = new DustEmitter();
-    this.lightBurst = new LightBurst(this.collisionX, this.collisionY);
-    this.transition = new TransitionOverlay();
+    this.lightBurst = new LightBurst(this.collisionX, this.collisionY, 800, 600);
+    this.transition = new TransitionOverlay(800, 600);
 
     // Start the animation
     this.phase = 'running';

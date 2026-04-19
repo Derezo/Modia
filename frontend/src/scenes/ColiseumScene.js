@@ -2,6 +2,7 @@ import { Scene } from './Scene.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { getColiseumStyles } from './coliseum/coliseumStyles.js';
 import { renderQueueContent, renderLeaderboard, renderMatchHistory } from './coliseum/tabs/index.js';
+import { responsive } from '../core/Responsive.js';
 
 /**
  * ColiseumScene - PvP Arena for matchmaking and battles
@@ -56,6 +57,9 @@ export class ColiseumScene extends Scene {
 
     // WebSocket handlers
     this.wsHandlers = {};
+
+    // Responsive subscription
+    this._responsiveUnsubscribe = null;
   }
 
   async enter(_data = {}) {
@@ -66,6 +70,9 @@ export class ColiseumScene extends Scene {
     this.createUI();
     this.setupEventListeners();
     this.setupWebSocketHandlers();
+
+    // Subscribe to responsive breakpoint changes
+    this._responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
 
     // Join coliseum lobby for real-time queue updates
     this.game.socket.send({ type: 'coliseum_lobby_join' });
@@ -83,6 +90,12 @@ export class ColiseumScene extends Scene {
   }
 
   exit() {
+    // Unsubscribe from responsive changes
+    if (this._responsiveUnsubscribe) {
+      this._responsiveUnsubscribe();
+      this._responsiveUnsubscribe = null;
+    }
+
     // Leave queue if in one (before resetting state)
     if (this.isInQueue) {
       this.leaveQueue();
@@ -747,6 +760,15 @@ export class ColiseumScene extends Scene {
         this.startReadyCountdown();
       }
     }
+  }
+
+  /**
+   * Handle responsive breakpoint changes
+   * Re-render content to adapt layout for new breakpoint
+   */
+  onBreakpointChange() {
+    // Re-render content - the CSS handles responsive styles
+    this.updateContent();
   }
 
   update(_deltaTime) {

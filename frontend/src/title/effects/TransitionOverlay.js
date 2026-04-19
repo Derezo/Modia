@@ -5,7 +5,9 @@ import { TITLE_COLORS } from '../TitleColors.js';
  * Manages fade overlays and cross-dissolve effects.
  */
 export class TransitionOverlay {
-  constructor() {
+  constructor(targetWidth = 800, targetHeight = 600) {
+    this.targetWidth = targetWidth;
+    this.targetHeight = targetHeight;
     this.phase = 'inactive'; // 'inactive' | 'fading' | 'complete'
     this.timer = 0;
     this.duration = 1200; // 1.2 second transition
@@ -71,12 +73,12 @@ export class TransitionOverlay {
    * Render the parchment background gradient.
    */
   renderParchmentBackground(ctx) {
-    const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, this.targetHeight);
     gradient.addColorStop(0, TITLE_COLORS.parchment.light);
     gradient.addColorStop(0.5, TITLE_COLORS.parchment.mid);
     gradient.addColorStop(1, TITLE_COLORS.parchment.dark);
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.targetWidth, this.targetHeight);
   }
 
   render(ctx) {
@@ -92,14 +94,14 @@ export class TransitionOverlay {
     if (this.whiteAlpha > 0) {
       ctx.globalAlpha = this.whiteAlpha;
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillRect(0, 0, this.targetWidth, this.targetHeight);
     }
 
     // Black overlay (for fade-in)
     if (this.blackAlpha > 0) {
       ctx.globalAlpha = this.blackAlpha;
       ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillRect(0, 0, this.targetWidth, this.targetHeight);
     }
 
     ctx.restore();

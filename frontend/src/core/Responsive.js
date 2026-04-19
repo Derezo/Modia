@@ -315,6 +315,21 @@ export class Responsive {
   }
 
   /**
+   * Get canvas font size for a given size category
+   * Returns pixel integer suitable for ctx.font strings
+   * @param {'sm'|'md'|'lg'} size - Size category
+   * @returns {number} Font size in pixels
+   */
+  getCanvasFontSize(size = 'md') {
+    const sizes = {
+      mobile: { sm: 12, md: 14, lg: 18 },
+      tablet: { sm: 11, md: 13, lg: 16 },
+      desktop: { sm: 11, md: 13, lg: 16 }
+    };
+    return sizes[this.currentBreakpoint]?.[size] ?? sizes.desktop[size];
+  }
+
+  /**
    * Get spacing value for a given size category
    * @param {'xs'|'sm'|'md'|'lg'|'xl'} size - Size category
    * @returns {number} Spacing value in pixels

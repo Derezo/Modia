@@ -99,3 +99,29 @@ export const clanManageLimiter = createLimiter({
   message: 'Too many clan management actions. Please wait a moment.',
   useUserKey: true
 });
+
+/**
+ * Chat reaction rate limiter
+ * For adding/removing reactions to messages
+ * Base: 30/min - allows active reaction usage
+ */
+export const chatReactionLimiter = createLimiter({
+  name: 'social:chat_reaction',
+  windowMs: 60 * 1000,       // 1 minute
+  maxRequests: 30,           // Base: 30, Prod: 60, Dev: 150
+  message: 'Too many reactions. Please wait a moment.',
+  useUserKey: true
+});
+
+/**
+ * Presence update rate limiter
+ * For updating user presence status
+ * Base: 10/min - presence changes should be infrequent
+ */
+export const presenceUpdateLimiter = createLimiter({
+  name: 'social:presence_update',
+  windowMs: 60 * 1000,       // 1 minute
+  maxRequests: 10,           // Base: 10, Prod: 20, Dev: 50
+  message: 'Too many presence updates. Please wait a moment.',
+  useUserKey: true
+});

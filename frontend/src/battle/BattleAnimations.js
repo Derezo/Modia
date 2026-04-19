@@ -3,6 +3,7 @@
  */
 import { SKILL_EFFECT_CATEGORIES, getRandomCategoryColor, ITEM_EFFECT_VISUAL_MAP } from './SkillEffectCategories.js';
 import { ELEMENT_COLORS } from '@shared/battleMath.js';
+import { responsive } from '../core/Responsive.js';
 
 /**
  * Animation timing constants (milliseconds)
@@ -603,7 +604,7 @@ export class BattleAnimations {
     }
     // Elemental effectiveness indicator (below critical if both exist)
     else if (anim.effectivenessText) {
-      ctx.font = '11px Arial';
+      ctx.font = `${responsive.getCanvasFontSize('sm')}px Arial`;
       // Color based on effectiveness: weak=red, resist=blue, immune=gray
       if (anim.elementalModifier > 1.0) {
         ctx.fillStyle = '#ff6644'; // Red/orange for weakness
@@ -633,7 +634,7 @@ export class BattleAnimations {
     ctx.fillText(`+${anim.value}`, anim.x, anim.y);
 
     // Absorb indicator
-    ctx.font = '11px Arial';
+    ctx.font = `${responsive.getCanvasFontSize('sm')}px Arial`;
     ctx.fillStyle = anim.color || '#44ff88';
     ctx.fillText('ABSORB', anim.x, anim.y - 18);
   }

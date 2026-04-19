@@ -5,9 +5,11 @@ import { TITLE_COLORS } from '../TitleColors.js';
  * Multi-layered radial explosion with rays and particles.
  */
 export class LightBurst {
-  constructor(x, y) {
+  constructor(x, y, targetWidth = 800, targetHeight = 600) {
     this.x = x;
     this.y = y;
+    this.targetWidth = targetWidth;
+    this.targetHeight = targetHeight;
 
     this.active = false;
     this.timer = 0;
@@ -132,7 +134,7 @@ export class LightBurst {
     // Layer 1: Full-screen white flash
     if (this.flashAlpha > 0) {
       ctx.fillStyle = `rgba(255, 255, 255, ${this.flashAlpha * 0.85})`;
-      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillRect(0, 0, this.targetWidth, this.targetHeight);
     }
 
     // Layer 2: Central radial glow
@@ -150,7 +152,7 @@ export class LightBurst {
       gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
 
       ctx.fillStyle = gradient;
-      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillRect(0, 0, this.targetWidth, this.targetHeight);
     }
 
     // Layer 3: Light rays

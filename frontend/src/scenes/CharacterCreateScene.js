@@ -1,5 +1,6 @@
 import { Scene } from './Scene.js';
 import { ParchmentCard } from '../components/ParchmentCard.js';
+import { responsive } from '../core/Responsive.js';
 import {
   PARCHMENT_COLORS,
   PARCHMENT_TYPOGRAPHY,
@@ -59,6 +60,9 @@ export class CharacterCreateScene extends Scene {
     this.previewCard = null;
     this.previewData = null;
     this.previewFetchAbort = null;
+
+    // Responsive subscription
+    this._responsiveUnsubscribe = null;
   }
 
   enter() {
@@ -71,6 +75,9 @@ export class CharacterCreateScene extends Scene {
     this.addStyles();
     this.createUI();
 
+    // Subscribe to responsive breakpoint changes
+    this._responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
+
     // Play character creation music
     if (this.game.musicContext) {
       this.game.musicContext.playCharacterCreate();
@@ -78,6 +85,12 @@ export class CharacterCreateScene extends Scene {
   }
 
   exit() {
+    // Unsubscribe from responsive changes
+    if (this._responsiveUnsubscribe) {
+      this._responsiveUnsubscribe();
+      this._responsiveUnsubscribe = null;
+    }
+
     // Cancel pending preview fetch
     if (this.previewFetchAbort) {
       this.previewFetchAbort.abort();
@@ -383,6 +396,7 @@ export class CharacterCreateScene extends Scene {
         75% { transform: translateX(5px); }
       }
 
+      /* Tablet breakpoint */
       @media (max-width: 768px) {
         .charcreate-container {
           width: 95%;
@@ -411,6 +425,80 @@ export class CharacterCreateScene extends Scene {
 
         .charcreate-class-option {
           min-width: 70px;
+        }
+      }
+
+      /* Mobile breakpoint - enhanced touch targets and font floors */
+      @media (max-width: 600px) {
+        .charcreate-container {
+          width: 100%;
+          max-width: 100%;
+          top: 0;
+          left: 0;
+          transform: none;
+          height: 100%;
+          position: absolute;
+          overflow-y: auto;
+        }
+
+        .charcreate-title {
+          font-size: 24px;
+          margin-bottom: ${PARCHMENT_SPACING.md};
+        }
+
+        .charcreate-panel {
+          padding: ${PARCHMENT_SPACING.md};
+          border-radius: 0;
+        }
+
+        .charcreate-option {
+          min-width: 56px;
+          min-height: var(--touch-target, 44px);
+          padding: ${PARCHMENT_SPACING.sm};
+        }
+
+        .charcreate-option-name {
+          font-size: var(--font-size-sm, 12px);
+        }
+
+        .charcreate-class-option {
+          min-width: 64px;
+        }
+
+        .charcreate-gender-option {
+          min-height: var(--touch-target, 44px);
+          padding: ${PARCHMENT_SPACING.sm};
+        }
+
+        .charcreate-gender-name {
+          font-size: var(--font-size-sm, 12px);
+        }
+
+        .charcreate-btn,
+        .charcreate-btn-secondary {
+          min-height: var(--touch-target, 44px);
+          font-size: var(--font-size-md, 14px);
+        }
+
+        .charcreate-input {
+          min-height: var(--input-height, 44px);
+          font-size: var(--font-size-md, 14px);
+        }
+
+        .charcreate-label {
+          font-size: var(--font-size-sm, 12px);
+        }
+
+        .charcreate-desc {
+          font-size: var(--font-size-sm, 12px);
+        }
+
+        .charcreate-preview-panel {
+          padding: ${PARCHMENT_SPACING.md};
+        }
+
+        .charcreate-button-row {
+          margin-top: ${PARCHMENT_SPACING.md};
         }
       }
     `;
@@ -859,16 +947,56 @@ export class CharacterCreateScene extends Scene {
     }
   }
 
+  /**
+   * Handle responsive breakpoint changes
+   * Rebuild UI to adapt layout for new breakpoint
+   */
+  onBreakpointChange() {
+    // Preserve current selections
+    const savedRace = this.selectedRace;
+    const savedClass = this.selectedClass;
+    const savedGender = this.selectedGender;
+    const savedName = document.getElementById('char-name')?.value || '';
+
+    // Rebuild UI
+    if (this.uiElement) {
+      this.uiElement.remove();
+      this.uiElement = null;
+    }
+    if (this.previewCard) {
+      this.previewCard.destroy();
+      this.previewCard = null;
+    }
+
+    this.createUI();
+
+    // Restore selections
+    this.selectedRace = savedRace;
+    this.selectedClass = savedClass;
+    this.selectedGender = savedGender;
+
+    const nameInput = document.getElementById('char-name');
+    if (nameInput) {
+      nameInput.value = savedName;
+    }
+
+    // Update UI state
+    this.updateRaceSelection();
+    this.updateClassSelection();
+    this.updateGenderSelection();
+    this.updatePreview();
+  }
+
   update(_deltaTime) {}
 
   render(ctx) {
     // Draw parchment-themed background gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, this.game.targetHeight);
     gradient.addColorStop(0, P.light);
     gradient.addColorStop(0.5, P.mid);
     gradient.addColorStop(1, P.dark);
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
 
     // Draw subtle decorative elements with gold accents
     ctx.fillStyle = 'rgba(201, 162, 39, 0.08)';
@@ -893,20 +1021,20 @@ export class CharacterCreateScene extends Scene {
 
     // Top-right flourish
     ctx.beginPath();
-    ctx.moveTo(ctx.canvas.width - 20, 60);
-    ctx.quadraticCurveTo(ctx.canvas.width - 20, 20, ctx.canvas.width - 60, 20);
+    ctx.moveTo(this.game.targetWidth - 20, 60);
+    ctx.quadraticCurveTo(this.game.targetWidth - 20, 20, this.game.targetWidth - 60, 20);
     ctx.stroke();
 
     // Bottom-left flourish
     ctx.beginPath();
-    ctx.moveTo(20, ctx.canvas.height - 60);
-    ctx.quadraticCurveTo(20, ctx.canvas.height - 20, 60, ctx.canvas.height - 20);
+    ctx.moveTo(20, this.game.targetHeight - 60);
+    ctx.quadraticCurveTo(20, this.game.targetHeight - 20, 60, this.game.targetHeight - 20);
     ctx.stroke();
 
     // Bottom-right flourish
     ctx.beginPath();
-    ctx.moveTo(ctx.canvas.width - 20, ctx.canvas.height - 60);
-    ctx.quadraticCurveTo(ctx.canvas.width - 20, ctx.canvas.height - 20, ctx.canvas.width - 60, ctx.canvas.height - 20);
+    ctx.moveTo(this.game.targetWidth - 20, this.game.targetHeight - 60);
+    ctx.quadraticCurveTo(this.game.targetWidth - 20, this.game.targetHeight - 20, this.game.targetWidth - 60, this.game.targetHeight - 20);
     ctx.stroke();
 
     ctx.globalAlpha = 1.0;

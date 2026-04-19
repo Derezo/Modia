@@ -828,6 +828,6 @@ export class SettingsScene extends Scene {
 
   render(ctx) {
     ctx.fillStyle = P.light;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
   }
 }

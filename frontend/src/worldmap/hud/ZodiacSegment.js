@@ -15,6 +15,7 @@
  */
 
 import { HUD_COLORS } from '../../ui/parchment/ParchmentTheme.js';
+import { responsive } from '../../core/Responsive.js';
 
 /** Total number of zodiac crystals */
 const TOTAL_CRYSTALS = 12;
@@ -176,7 +177,7 @@ export class ZodiacSegment {
     ctx.fillText('\u2726', x + 4, headerY); // Four-pointed star
 
     // Collection count
-    ctx.font = 'bold 11px serif';
+    ctx.font = `bold ${responsive.getCanvasFontSize('sm')}px serif`;
     const countText = `${this.collected}/${this.total}`;
 
     // Draw text outline for readability
@@ -189,7 +190,7 @@ export class ZodiacSegment {
     ctx.fillText(countText, x + 18, headerY);
 
     // Label text
-    ctx.font = '10px serif';
+    ctx.font = `${responsive.getCanvasFontSize('sm')}px serif`;
     ctx.fillStyle = '#a08565';
     ctx.textAlign = 'right';
     ctx.fillText('Zodiac Crystals', x + width - 4, headerY);
@@ -278,7 +279,7 @@ export class ZodiacSegment {
     // Collection complete indicator
     if (this.collectionComplete) {
       ctx.fillStyle = HUD_COLORS.zodiac.collected;
-      ctx.font = 'bold 10px Arial';
+      ctx.font = `bold ${responsive.getCanvasFontSize('sm')}px Arial`;
       ctx.textAlign = 'left';
       ctx.fillText('\u2713', x + 52, headerY); // Checkmark after count
     }

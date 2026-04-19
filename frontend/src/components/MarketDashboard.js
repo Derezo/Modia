@@ -22,6 +22,7 @@ import {
   getParchmentShadow,
   getParchmentButtonCSS
 } from '../ui/parchment/ParchmentTheme.js';
+import { responsive } from '../core/Responsive.js';
 
 /**
  * Helper function for hand-drawn wobble effect
@@ -529,7 +530,7 @@ export class MarketDashboard {
     const priceRange = maxPrice - minPrice || 1;
 
     ctx.fillStyle = PARCHMENT_COLORS.text.muted;
-    ctx.font = `10px ${PARCHMENT_TYPOGRAPHY.fontFamily}`;
+    ctx.font = `${responsive.getCanvasFontSize('sm')}px ${PARCHMENT_TYPOGRAPHY.fontFamily}`;
     ctx.textAlign = 'right';
 
     // Price labels on Y axis

@@ -178,7 +178,7 @@ export class BattleGrid {
     }
     // Fallback for non-camera usage (legacy)
     return {
-      x: world.x + this.canvas.width / 2,
+      x: world.x + (this.canvas.width / (window.devicePixelRatio || 1)) / 2,
       y: world.y + 120
     };
   }
@@ -195,12 +195,16 @@ export class BattleGrid {
   screenToGrid(screenX, screenY, camera = null) {
     let worldX, worldY;
     if (camera) {
-      const world = camera.screenToWorld(screenX, screenY);
+      // Reverse visual zoom transform before sampling world coords
+      const unzoomed = camera.screenToUnzoomed
+        ? camera.screenToUnzoomed(screenX, screenY)
+        : { x: screenX, y: screenY };
+      const world = camera.screenToWorld(unzoomed.x, unzoomed.y);
       worldX = world.x;
       worldY = world.y;
     } else {
       // Fallback for non-camera usage (legacy)
-      worldX = screenX - this.canvas.width / 2;
+      worldX = screenX - (this.canvas.width / (window.devicePixelRatio || 1)) / 2;
       worldY = screenY - 120;
     }
 
@@ -692,9 +696,9 @@ export class BattleGrid {
         if (camera) {
           const margin = 64; // Extra margin for tall elevated tiles
           if (screenPos.x < -this.tileWidth - margin ||
-              screenPos.x > this.canvas.width + this.tileWidth + margin ||
+              screenPos.x > (this.canvas.width / (window.devicePixelRatio || 1)) + this.tileWidth + margin ||
               screenPos.y < -this.tileHeight - margin ||
-              screenPos.y > this.canvas.height + this.tileHeight + margin * 3) {
+              screenPos.y > (this.canvas.height / (window.devicePixelRatio || 1)) + this.tileHeight + margin * 3) {
             continue;
           }
         }
@@ -777,11 +781,15 @@ export class BattleGrid {
   screenToGridCandidates(screenX, screenY, camera = null) {
     let worldX, worldY;
     if (camera) {
-      const world = camera.screenToWorld(screenX, screenY);
+      // Reverse visual zoom transform before sampling world coords
+      const unzoomed = camera.screenToUnzoomed
+        ? camera.screenToUnzoomed(screenX, screenY)
+        : { x: screenX, y: screenY };
+      const world = camera.screenToWorld(unzoomed.x, unzoomed.y);
       worldX = world.x;
       worldY = world.y;
     } else {
-      worldX = screenX - this.canvas.width / 2;
+      worldX = screenX - (this.canvas.width / (window.devicePixelRatio || 1)) / 2;
       worldY = screenY - 120;
     }
 

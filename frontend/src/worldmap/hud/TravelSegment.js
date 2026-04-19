@@ -14,6 +14,7 @@
  * +--------------------------------+
  */
 import { HUD_COLORS } from '../../ui/parchment/ParchmentTheme.js';
+import { responsive } from '../../core/Responsive.js';
 
 /** Segment height when fully visible */
 const SEGMENT_HEIGHT = 30;
@@ -178,7 +179,7 @@ export class TravelSegment {
    */
   renderDestination(ctx, x, y, maxWidth) {
     ctx.fillStyle = HUD_COLORS.travel.text;
-    ctx.font = 'bold 11px serif';
+    ctx.font = `bold ${responsive.getCanvasFontSize('sm')}px serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
@@ -241,7 +242,7 @@ export class TravelSegment {
     // Percentage text (right-aligned)
     const percent = Math.floor(this.progress * 100);
     ctx.fillStyle = HUD_COLORS.travel.text;
-    ctx.font = 'bold 10px serif';
+    ctx.font = `bold ${responsive.getCanvasFontSize('sm')}px serif`;
     ctx.textAlign = 'right';
     ctx.textBaseline = 'top';
     ctx.fillText(`${percent}%`, x + width, y + 1);

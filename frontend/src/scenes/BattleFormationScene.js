@@ -31,6 +31,7 @@ import {
   getParchmentBorder
 } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { responsive } from '../core/Responsive.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
@@ -95,6 +96,9 @@ export class BattleFormationScene extends Scene {
     // Scene lifecycle flag for async operation safety
     this._isActive = false;
 
+    // Responsive subscription
+    this.responsiveUnsubscribe = null;
+
     // Coliseum-specific state
     this.coliseumMatchId = null;
     this.formationDeadline = null;
@@ -130,12 +134,15 @@ export class BattleFormationScene extends Scene {
     await this.loadEnemies(data);
     if (!this._isActive) return; // Scene exited during async load
 
-    // Detect mobile layout
-    this.isMobile = window.innerWidth < 768;
+    // Detect mobile layout using responsive singleton (mobile = <600px)
+    this.isMobile = responsive.isMobile();
 
     // Create UI
     this.createUI();
     this.setupEventListeners();
+
+    // Subscribe to responsive breakpoint changes
+    this.responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
 
     // Start animation loop
     this.startAnimationLoop();
@@ -212,6 +219,12 @@ export class BattleFormationScene extends Scene {
   exit() {
     this._isActive = false;
     this.stopAnimationLoop();
+
+    // Unsubscribe from responsive changes
+    if (this.responsiveUnsubscribe) {
+      this.responsiveUnsubscribe();
+      this.responsiveUnsubscribe = null;
+    }
 
     // Clear long press timer if active
     if (this.longPressTimer) {
@@ -698,8 +711,17 @@ export class BattleFormationScene extends Scene {
   }
 
   handleResize() {
+    // Legacy resize handler - breakpoint changes now handled by onBreakpointChange
+    // Keep for any immediate viewport-related adjustments that don't require full rebuild
+  }
+
+  /**
+   * Handle responsive breakpoint changes
+   * Rebuilds UI when viewport size changes significantly
+   */
+  onBreakpointChange() {
     const wasMobile = this.isMobile;
-    this.isMobile = window.innerWidth < 768;
+    this.isMobile = responsive.isMobile();
 
     if (wasMobile !== this.isMobile) {
       // Layout changed, need to rebuild UI
@@ -1415,7 +1437,7 @@ export class BattleFormationScene extends Scene {
       .bf-enemy-level {
         color: ${P.text.muted};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
-        font-size: 9px;
+        font-size: var(--font-size-sm, 12px);
       }
 
       .bf-threat-aura {
@@ -1629,9 +1651,21 @@ export class BattleFormationScene extends Scene {
 
       /* ========== RESPONSIVE ========== */
 
-      @media (max-width: 768px) {
+      /* Mobile breakpoint (<600px) - use CSS vars from responsive singleton */
+      @media (max-width: 600px) {
         .bf-formation-drawer {
           display: none;
+        }
+
+        .bf-formation-header {
+          padding: var(--space-sm, 8px) var(--space-md, 12px);
+          gap: var(--space-sm, 8px);
+        }
+
+        .bf-back-btn {
+          min-height: var(--touch-target, 44px);
+          min-width: var(--touch-target, 44px);
+          padding: var(--space-sm, 8px);
         }
 
         .bf-enemy-roster {
@@ -1639,10 +1673,84 @@ export class BattleFormationScene extends Scene {
           flex-wrap: nowrap;
           overflow-x: auto;
           padding-bottom: ${PARCHMENT_SPACING.sm};
+          -webkit-overflow-scrolling: touch;
         }
 
         .bf-enemy-card {
           flex-shrink: 0;
+          min-width: var(--touch-target, 44px);
+          padding: var(--space-sm, 8px);
+        }
+
+        .bf-roster-char {
+          min-height: var(--touch-target, 44px);
+          padding: var(--space-sm, 8px) var(--space-md, 12px);
+        }
+
+        .bf-roster-portrait {
+          width: var(--touch-target, 44px);
+          height: var(--touch-target, 44px);
+        }
+
+        .bf-roster-name {
+          font-size: var(--font-size-md, 14px);
+        }
+
+        .bf-start-section--mobile {
+          padding: var(--space-md, 12px);
+        }
+
+        .bf-bottom-sheet {
+          max-height: 70vh;
+        }
+
+        .bf-sheet-handle {
+          min-height: var(--touch-target, 44px);
+          padding: var(--space-md, 12px) var(--space-lg, 16px);
+        }
+
+        .bf-sheet-content {
+          padding: 0 var(--space-md, 12px) var(--space-md, 12px);
+          max-height: calc(70vh - var(--touch-target, 44px));
+        }
+
+        .bf-grid-area--mobile {
+          padding: var(--space-sm, 8px);
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .bf-enemy-section--mobile {
+          padding: var(--space-sm, 8px) var(--space-md, 12px);
+        }
+
+        .bf-countdown-timer {
+          padding: var(--space-xs, 4px) var(--space-sm, 8px);
+        }
+
+        .bf-timer-label {
+          font-size: var(--font-size-sm, 12px);
+        }
+
+        .bf-timer-value {
+          font-size: var(--font-size-lg, 18px);
+        }
+      }
+
+      /* Tablet breakpoint (600-900px) */
+      @media (min-width: 601px) and (max-width: 900px) {
+        .bf-formation-drawer {
+          width: 240px;
+          min-width: 240px;
+          max-width: 240px;
+        }
+
+        .bf-roster-portrait {
+          width: var(--touch-target, 40px);
+          height: var(--touch-target, 40px);
         }
       }
     `;
@@ -1655,12 +1763,12 @@ export class BattleFormationScene extends Scene {
 
   render(ctx) {
     // Draw parchment-themed background gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, this.game.targetHeight);
     gradient.addColorStop(0, P.light);
     gradient.addColorStop(0.5, P.mid);
     gradient.addColorStop(1, P.dark);
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
 
     // Add subtle corner flourishes
     ctx.save();
@@ -1676,20 +1784,20 @@ export class BattleFormationScene extends Scene {
 
     // Top-right flourish
     ctx.beginPath();
-    ctx.moveTo(ctx.canvas.width - 20, 60);
-    ctx.quadraticCurveTo(ctx.canvas.width - 20, 20, ctx.canvas.width - 60, 20);
+    ctx.moveTo(this.game.targetWidth - 20, 60);
+    ctx.quadraticCurveTo(this.game.targetWidth - 20, 20, this.game.targetWidth - 60, 20);
     ctx.stroke();
 
     // Bottom-left flourish
     ctx.beginPath();
-    ctx.moveTo(20, ctx.canvas.height - 60);
-    ctx.quadraticCurveTo(20, ctx.canvas.height - 20, 60, ctx.canvas.height - 20);
+    ctx.moveTo(20, this.game.targetHeight - 60);
+    ctx.quadraticCurveTo(20, this.game.targetHeight - 20, 60, this.game.targetHeight - 20);
     ctx.stroke();
 
     // Bottom-right flourish
     ctx.beginPath();
-    ctx.moveTo(ctx.canvas.width - 20, ctx.canvas.height - 60);
-    ctx.quadraticCurveTo(ctx.canvas.width - 20, ctx.canvas.height - 20, ctx.canvas.width - 60, ctx.canvas.height - 20);
+    ctx.moveTo(this.game.targetWidth - 20, this.game.targetHeight - 60);
+    ctx.quadraticCurveTo(this.game.targetWidth - 20, this.game.targetHeight - 20, this.game.targetWidth - 60, this.game.targetHeight - 20);
     ctx.stroke();
 
     ctx.restore();
