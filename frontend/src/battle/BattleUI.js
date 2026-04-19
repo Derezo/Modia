@@ -37,6 +37,12 @@ import BattleLogModal from './BattleLogModal.js';
 import { ConnectionIndicator } from '../ui/ConnectionIndicator.js';
 import { BattlePvPUI } from './BattlePvPUI.js';
 import { BattleConfirmationUI } from './BattleConfirmationUI.js';
+import { injectBattleUIStyles } from './ui/BattleUIStyles.js';
+import {
+  renderSkillPanel,
+  renderItemPanel,
+  renderZodiacPanel
+} from './ui/BattleSelectionPanels.js';
 
 /**
  * BattleUI - User interface for tactical combat
@@ -564,281 +570,7 @@ export class BattleUI {
    * Add battle-specific CSS styles
    */
   addStyles() {
-    if (document.getElementById('battle-styles')) return;
-
-    const style = document.createElement('style');
-    style.id = 'battle-styles';
-    style.textContent = `
-      .stat-bar {
-        height: 8px;
-        background: #333;
-        border-radius: 4px;
-        overflow: hidden;
-      }
-      .stat-bar-fill {
-        height: 100%;
-        transition: width 0.3s ease;
-      }
-      .stat-bar-fill.hp {
-        background: linear-gradient(to right, #f44336, #4caf50);
-        background-size: 200% 100%;
-      }
-      .stat-bar-fill.mp {
-        background: #2196f3;
-      }
-      .action-btn {
-        min-width: 60px;
-        font-size: 12px;
-        padding: 8px 12px;
-        transition: opacity 0.2s ease;
-      }
-      .action-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-      .action-btn.action-unavailable {
-        background: #333 !important;
-        border-color: #555 !important;
-      }
-      #action-phase-indicator {
-        transition: color 0.3s ease;
-      }
-      #turn-order-list .turn-unit {
-        display: flex;
-        align-items: center;
-        padding: 4px 8px;
-        margin: 2px 0;
-        border-radius: 4px;
-        font-size: 11px;
-      }
-      #turn-order-list .turn-unit.active {
-        background: rgba(255, 215, 0, 0.2);
-        border: 1px solid #ffd700;
-      }
-      #turn-order-list .turn-unit.player {
-        color: #4a90d9;
-      }
-      #turn-order-list .turn-unit.enemy {
-        color: #d94a4a;
-      }
-      #turn-order-list .turn-unit.dead {
-        opacity: 0.4;
-        text-decoration: line-through;
-      }
-      .turn-number {
-        width: 18px;
-        font-size: 10px;
-        color: #666;
-        margin-right: 4px;
-        text-align: right;
-      }
-      .turn-unit-icon {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        margin-right: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 10px;
-        font-weight: bold;
-        color: #fff;
-      }
-      .turn-unit-name {
-        flex: 1;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      /* Turn Indicator Styles - Frosted Glass */
-      .turn-indicator-content {
-        background: rgba(20, 20, 30, 0.6);
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 8px;
-        padding: 10px 20px;
-        font-size: 15px;
-        font-weight: 600;
-        text-align: center;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-        animation: turnIndicatorFadeIn 0.3s ease-out;
-      }
-
-      /* Player's turn (local) - subtle green */
-      .turn-indicator-content.player {
-        border-color: rgba(74, 144, 217, 0.4);
-        color: #7ab8ff;
-        text-shadow: 0 0 8px rgba(74, 144, 217, 0.3);
-      }
-      .turn-indicator-content.player_local {
-        border-color: rgba(74, 255, 74, 0.4);
-        color: #7aff7a;
-        text-shadow: 0 0 8px rgba(74, 255, 74, 0.3);
-      }
-
-      /* Remote player's turn - subtle yellow */
-      .turn-indicator-content.player_remote {
-        border-color: rgba(217, 217, 74, 0.4);
-        color: #e9e97a;
-        text-shadow: 0 0 8px rgba(217, 217, 74, 0.3);
-      }
-
-      /* Enemy turn - subtle red */
-      .turn-indicator-content.enemy {
-        border-color: rgba(217, 74, 74, 0.4);
-        color: #ff7a7a;
-        text-shadow: 0 0 8px rgba(217, 74, 74, 0.3);
-      }
-
-      /* Softer animation */
-      @keyframes turnIndicatorFadeIn {
-        0% { opacity: 0; transform: translateY(-10px); }
-        100% { opacity: 1; transform: translateY(0); }
-      }
-
-      /* Notification Styles */
-      .battle-notification {
-        background: rgba(0, 0, 0, 0.9);
-        border-radius: 6px;
-        padding: 10px 16px;
-        font-size: 13px;
-        animation: notificationSlideIn 0.3s ease-out;
-        border-left: 4px solid #888;
-      }
-      .battle-notification.info {
-        border-left-color: #4a90d9;
-        color: #4a90d9;
-      }
-      .battle-notification.warning {
-        border-left-color: #d9a54a;
-        color: #d9a54a;
-      }
-      .battle-notification.error {
-        border-left-color: #d94a4a;
-        color: #d94a4a;
-      }
-      .battle-notification.success {
-        border-left-color: #4ad94a;
-        color: #4ad94a;
-      }
-      @keyframes notificationSlideIn {
-        0% { transform: translateX(100%); opacity: 0; }
-        100% { transform: translateX(0); opacity: 1; }
-      }
-      @keyframes notificationFadeOut {
-        0% { opacity: 1; }
-        100% { opacity: 0; transform: translateX(50%); }
-      }
-
-      /* PvP Turn Timer Styles */
-      .pvp-timer-container {
-        position: relative;
-        width: 80px;
-        height: 80px;
-      }
-      .pvp-timer-svg {
-        width: 100%;
-        height: 100%;
-        transform: rotate(-90deg);
-      }
-      .pvp-timer-bg {
-        fill: none;
-        stroke: rgba(0, 0, 0, 0.5);
-        stroke-width: 8;
-      }
-      .pvp-timer-progress {
-        fill: none;
-        stroke: #4caf50;
-        stroke-width: 8;
-        stroke-linecap: round;
-        stroke-dasharray: 283;
-        stroke-dashoffset: 0;
-        transition: stroke-dashoffset 0.5s linear, stroke 0.3s ease;
-      }
-      .pvp-timer-progress.warning {
-        stroke: #ff9800;
-        animation: timerPulse 1s ease-in-out infinite;
-      }
-      .pvp-timer-progress.critical {
-        stroke: #f44336;
-        animation: timerPulse 0.5s ease-in-out infinite;
-      }
-      @keyframes timerPulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.6; }
-      }
-      .pvp-timer-text {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 24px;
-        font-weight: bold;
-        color: #fff;
-        text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
-      }
-
-      /* PvP Surrender Button Styles */
-      .pvp-surrender-btn {
-        background: linear-gradient(180deg, #c62828, #8b1c1c) !important;
-        border-color: #e53935 !important;
-        padding: 8px 16px !important;
-        font-size: 12px !important;
-        opacity: 0.8;
-        transition: opacity 0.2s ease, transform 0.2s ease;
-      }
-      .pvp-surrender-btn:hover {
-        opacity: 1;
-        transform: scale(1.05);
-      }
-
-      /* Surrender Confirmation Modal */
-      .surrender-confirm-content {
-        padding: 24px;
-        max-width: 320px;
-        text-align: center;
-      }
-
-      /* Opponent Disconnected Overlay */
-      .disconnect-content {
-        padding: 24px;
-        text-align: center;
-      }
-      .disconnect-countdown {
-        font-size: 32px;
-        font-weight: bold;
-        color: #ffd700;
-        margin-top: 8px;
-      }
-
-      /* Opponent Turn Indicator */
-      .opponent-turn-content {
-        background: linear-gradient(135deg, rgba(40, 40, 60, 0.95), rgba(30, 30, 45, 0.95));
-        border: 2px solid #d4af37;
-        border-radius: 8px;
-        padding: 12px 24px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-      }
-      .opponent-turn-icon {
-        font-size: 20px;
-        animation: opponentPulse 1.5s ease-in-out infinite;
-      }
-      #opponent-turn-text {
-        color: #f0e6d2;
-        font-size: 14px;
-        font-weight: 600;
-      }
-      @keyframes opponentPulse {
-        0%, 100% { opacity: 0.6; }
-        50% { opacity: 1; }
-      }
-    `;
-    document.head.appendChild(style);
+    injectBattleUIStyles();
   }
 
   /**
@@ -1285,38 +1017,8 @@ export class BattleUI {
     const list = this.element.querySelector('#skill-list');
     if (!panel || !list) return;
 
-    list.innerHTML = skills.map(skill => {
-      const onCooldown = skill.currentCooldown && skill.currentCooldown > 0;
-      const notEnoughMp = skill.mpCost > currentMp;
-      const isDisabled = onCooldown || notEnoughMp;
-      const _cooldownText = onCooldown ? ` (${skill.currentCooldown}⏱)` : '';
-      const titleText = onCooldown
-        ? `On cooldown: ${skill.currentCooldown} turn(s) remaining`
-        : `${skill.description || skill.name} (${skill.mpCost} MP)`;
-
-      return `
-        <button class="btn btn-secondary skill-btn ${onCooldown ? 'on-cooldown' : ''}"
-                data-skill-id="${skill.id}"
-                ${isDisabled ? 'disabled' : ''}
-                title="${titleText}"
-                style="${onCooldown ? 'opacity: 0.5; position: relative;' : ''}">
-          ${skill.icon || ''} ${skill.name}
-          <span style="font-size: 10px; color: ${onCooldown ? '#f88' : '#6af'}; margin-left: 4px;">
-            ${onCooldown ? `${skill.currentCooldown}⏱` : `${skill.mpCost}MP`}
-          </span>
-        </button>
-      `;
-    }).join('');
-
+    renderSkillPanel(list, skills, currentMp, this.actionCallbacks.onSelectSkill);
     panel.style.display = 'block';
-
-    // Add click handlers for skill buttons
-    list.querySelectorAll('.skill-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const skillId = btn.dataset.skillId;
-        this.actionCallbacks.onSelectSkill?.(skillId);
-      });
-    });
   }
 
   /**
@@ -1337,31 +1039,7 @@ export class BattleUI {
     const noItems = this.element.querySelector('#no-items');
     if (!panel || !list) return;
 
-    if (!items || items.length === 0) {
-      list.innerHTML = '';
-      if (noItems) noItems.style.display = 'block';
-    } else {
-      if (noItems) noItems.style.display = 'none';
-      list.innerHTML = items.map(item => `
-        <button class="btn btn-secondary item-btn"
-                data-item-id="${item.itemId}"
-                data-inventory-id="${item.inventoryId}"
-                title="${item.description || item.name}">
-          ${this.getItemIcon(item.name)} ${item.name}
-          <span style="font-size: 10px; color: #8f8; margin-left: 4px;">x${item.quantity}</span>
-        </button>
-      `).join('');
-
-      // Add click handlers for item buttons
-      list.querySelectorAll('.item-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const itemId = btn.dataset.itemId;
-          const inventoryId = btn.dataset.inventoryId;
-          this.actionCallbacks.onSelectItem?.({ itemId, inventoryId });
-        });
-      });
-    }
-
+    renderItemPanel(list, noItems, items, this.actionCallbacks.onSelectItem);
     panel.style.display = 'block';
   }
 
@@ -1383,34 +1061,7 @@ export class BattleUI {
     const noZodiac = this.element.querySelector('#no-zodiac');
     if (!panel || !list) return;
 
-    if (!abilities || abilities.length === 0) {
-      list.innerHTML = '';
-      if (noZodiac) noZodiac.style.display = 'block';
-    } else {
-      if (noZodiac) noZodiac.style.display = 'none';
-      list.innerHTML = abilities.map(ability => {
-        const elementIcon = this.getElementIcon(ability.element);
-        return `
-          <button class="btn btn-secondary zodiac-btn"
-                  data-ability-key="${ability.key}"
-                  data-needs-target="${ability.needsTarget || false}"
-                  title="${ability.description || ability.name}"
-                  style="background: linear-gradient(135deg, #2a1f4e 0%, #1a1a2e 100%); border-color: #d4af37;">
-            ${elementIcon} ${ability.name}
-          </button>
-        `;
-      }).join('');
-
-      // Add click handlers for zodiac buttons
-      list.querySelectorAll('.zodiac-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const abilityKey = btn.dataset.abilityKey;
-          const needsTarget = btn.dataset.needsTarget === 'true';
-          this.actionCallbacks.onSelectZodiacAbility?.(abilityKey, needsTarget);
-        });
-      });
-    }
-
+    renderZodiacPanel(list, noZodiac, abilities, this.actionCallbacks.onSelectZodiacAbility);
     panel.style.display = 'block';
   }
 
@@ -1420,38 +1071,6 @@ export class BattleUI {
   hideZodiacPanel() {
     const panel = this.element.querySelector('#zodiac-panel');
     if (panel) panel.style.display = 'none';
-  }
-
-  /**
-   * Get element icon for zodiac abilities
-   */
-  getElementIcon(element) {
-    const icons = {
-      fire: String.fromCodePoint(0x1F525),    // Fire emoji
-      water: String.fromCodePoint(0x1F4A7),   // Droplet emoji
-      earth: String.fromCodePoint(0x26F0),    // Mountain emoji
-      air: String.fromCodePoint(0x1F4A8),     // Dashing away emoji
-      neutral: String.fromCodePoint(0x2728)   // Sparkles emoji
-    };
-    return icons[element] || icons.neutral;
-  }
-
-  /**
-   * Get icon for an item based on its name
-   * @param {string} itemName - The item name
-   * @returns {string} Icon emoji
-   */
-  getItemIcon(itemName) {
-    const name = itemName.toLowerCase();
-    if (name.includes('potion')) return '🧪';
-    if (name.includes('ether')) return '💧';
-    if (name.includes('elixir')) return '✨';
-    if (name.includes('antidote')) return '💊';
-    if (name.includes('remedy')) return '💚';
-    if (name.includes('phoenix')) return '🔥';
-    if (name.includes('bomb')) return '💣';
-    if (name.includes('eye')) return '👁️';
-    return '📦';
   }
 
   /**
