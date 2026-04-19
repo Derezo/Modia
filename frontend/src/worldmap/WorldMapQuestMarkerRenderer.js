@@ -84,15 +84,13 @@ export class WorldMapQuestMarkerRenderer {
 
       // Badge background with glow
       if (marker.nearComplete) {
-        // Pulse glow for near-complete quests
+        // Pulse glow for near-complete quests (convert hex color to rgba)
         const pulse = 0.4 + Math.sin(Date.now() * 0.005) * 0.3;
-        ctx.beginPath();
-        ctx.arc(badgeX, badgeY, badgeRadius + 3, 0, Math.PI * 2);
-        ctx.fillStyle = color.replace(')', `, ${pulse})`).replace('rgb', 'rgba').replace('#', '');
-        // Convert hex to rgba for glow
         const r = parseInt(color.slice(1, 3), 16);
         const g = parseInt(color.slice(3, 5), 16);
         const b = parseInt(color.slice(5, 7), 16);
+        ctx.beginPath();
+        ctx.arc(badgeX, badgeY, badgeRadius + 3, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${pulse})`;
         ctx.fill();
       }
