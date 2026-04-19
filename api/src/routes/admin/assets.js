@@ -46,6 +46,7 @@ import {
   constructFullPrompt,
   enrichAssetWithPath,
   findAssetById,
+  getAssetSubcategory,
 } from './shared.js';
 
 const router = express.Router();
@@ -1044,18 +1045,8 @@ router.post('/:category/:id/reprocess', asyncHandler(async (req, res) => {
   const { getOriginalsPath } = await import('../../../../shared/assetPaths.js');
 
   // Determine subcategory for path resolution
-  let subcategory = null;
-  if (category === 'tiles') {
-    subcategory = biome;
-  } else if (category === 'items') {
-    subcategory = asset._subcategory || asset.category || 'weapons';
-  } else if (category === 'icons') {
-    subcategory = asset._subcategory || asset.category || 'actions';
-  } else if (category === 'overlays') {
-    subcategory = asset._subcategory || asset.category || 'rarity';
-  } else if (category === 'obstacles') {
-    subcategory = asset._subcategory || asset.category || 'rocks';
-  }
+  // For tiles, use biome from request body; for other categories, use the helper
+  const subcategory = category === 'tiles' ? biome : getAssetSubcategory(asset, category);
 
   // Get the originals path (relative to frontend/public)
   const originalsRelPath = getOriginalsPath(category, id, { subcategory });

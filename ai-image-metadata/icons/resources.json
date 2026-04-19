@@ -11,9 +11,11 @@
       "seed": 35001,
       "generated": true,
       "loraModel": "v2",
-      "generatedAt": "2026-01-29T14:58:25.167Z",
+      "generatedAt": "2026-02-03T11:39:36.188Z",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "xp",
@@ -22,9 +24,11 @@
       "seed": 35002,
       "generated": true,
       "loraModel": "v2",
-      "generatedAt": "2026-01-29T14:59:11.434Z",
+      "generatedAt": "2026-02-03T11:40:19.270Z",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "stamina",
@@ -33,9 +37,11 @@
       "seed": 35003,
       "generated": true,
       "loraModel": "v2",
-      "generatedAt": "2026-01-29T14:59:59.622Z",
+      "generatedAt": "2026-02-03T11:41:01.285Z",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     }
   ]
 }
