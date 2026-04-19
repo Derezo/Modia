@@ -1,6 +1,6 @@
 {
   "name": "modia",
-  "version": "0.4.40",
+  "version": "0.4.41",
   "private": true,
   "description": "Modia - Browser-based MMORPG",
   "workspaces": [
@@ -30,6 +30,9 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug",
     "test:load": "artillery run load-tests/config.yml",
+    "dead-code": "knip",
+    "dead-code:report": "knip --reporter json > knip-report.json || true",
+    "assets:check-size": "node scripts/check-asset-sizes.js",
     "test:load:quick": "artillery quick --count 10 -n 20 http://localhost:3000/api/world/regions",
     "test:load:report": "artillery run --output load-tests/report.json load-tests/config.yml && artillery report load-tests/report.json",
     "test:load:gameplay": "artillery run load-tests/scenarios/gameplay.yml",

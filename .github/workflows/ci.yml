@@ -29,6 +29,17 @@ jobs:
       - name: Run linter
         run: npm run lint
 
+      # Non-blocking: surfaces unused exports/files without failing CI.
+      # Tighten to a blocking check after a cleanup sprint.
+      - name: Dead code check (knip)
+        run: npm run dead-code || true
+        continue-on-error: true
+
+      # Non-blocking: surfaces over-budget assets without failing CI.
+      - name: Asset size check
+        run: npm run assets:check-size
+        continue-on-error: true
+
   test-unit-api:
     name: API Unit Tests
     runs-on: ubuntu-latest
@@ -172,6 +183,9 @@ jobs:
 
       - name: Run E2E tests
         run: npm run test:e2e -- --project=chromium
+
+      - name: Run mobile smoke tests
+        run: npm run test:e2e -- --project="Mobile Chrome" e2e/mobile-smoke.spec.js
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
