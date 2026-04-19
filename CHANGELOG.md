@@ -4,6 +4,7 @@ All notable changes to Modia.
 
 ## 0.4
 
+- 0.4.35: Modularized BattleScene (extracted highlights, minimap, coord helpers)
 - 0.4.34: Mobile readiness, security fixes, and high-DPI canvas rendering
 - 0.4.33: Enhanced asset pipeline
 - 0.4.32: Improved asset handling
