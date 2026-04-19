@@ -14,6 +14,7 @@
 import { PARCHMENT_COLORS } from '../ui/parchment/ParchmentTheme.js';
 import { iconLoader } from '../core/IconLoader.js';
 import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
+import { responsive } from '../core/Responsive.js';
 
 // ============================================================================
 // Constants
@@ -301,7 +302,8 @@ export async function renderUnitIcon(ctx, unit, x, y, size, cache) {
 
     // Letter
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${Math.round(size * 0.5)}px Arial`;
+    const fontSize = Math.max(responsive.getCanvasFontSize('sm'), Math.round(size * 0.5));
+    ctx.font = `bold ${fontSize}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(iconData.letter, x, y);

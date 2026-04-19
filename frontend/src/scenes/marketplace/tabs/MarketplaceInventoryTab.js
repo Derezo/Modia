@@ -121,7 +121,7 @@ function showSellItemPanel(item, sidePanel, context) {
         <div style="text-align: center; margin-bottom: 16px;">
           <div style="font-size: 18px; font-weight: bold; color: #2d2418;">${item.name}</div>
           <div style="font-size: 12px; color: #5a4a3a; text-transform: capitalize;">${item.type || 'Item'}</div>
-          <div style="font-size: 11px; color: #7a6a5a; margin-top: 4px;">From: ${originalItem.characterName}</div>
+          <div style="font-size: 12px; color: #7a6a5a; margin-top: 4px;">From: ${originalItem.characterName}</div>
         </div>
 
         ${statsHtml ? `

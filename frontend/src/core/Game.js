@@ -328,13 +328,20 @@ export class Game {
     const scaleY = containerHeight / this.targetHeight;
     this.scale = Math.min(scaleX, scaleY);
 
-    // Set canvas size
-    this.canvas.width = this.targetWidth;
-    this.canvas.height = this.targetHeight;
+    // Get device pixel ratio for crisp rendering on high-DPI displays
+    const dpr = window.devicePixelRatio || 1;
+    this.dpr = dpr;
 
-    // Scale canvas with CSS
+    // Set canvas backing store size (DPR-scaled for crisp rendering)
+    this.canvas.width = this.targetWidth * dpr;
+    this.canvas.height = this.targetHeight * dpr;
+
+    // Scale canvas with CSS (logical size unchanged)
     this.canvas.style.width = `${this.targetWidth * this.scale}px`;
     this.canvas.style.height = `${this.targetHeight * this.scale}px`;
+
+    // Apply DPR transform to context for logical coordinate space
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     // Update input handler scale
     if (this.input) {
@@ -416,9 +423,13 @@ export class Game {
   }
 
   render() {
-    // Clear canvas
+    // Ensure DPR transform is set (in case any code reset it)
+    const dpr = this.dpr || 1;
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Clear canvas using logical dimensions (context is pre-scaled)
     this.ctx.fillStyle = '#1a1a2e';
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.fillRect(0, 0, this.targetWidth, this.targetHeight);
 
     // Render current scene
     this.scenes.render(this.ctx);

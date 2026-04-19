@@ -284,15 +284,15 @@ function renderEquipmentListingCard(listing) {
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
         <div>
           <div style="font-weight: bold; color: ${rarityColor};">${generatedName}</div>
-          <div style="font-size: 11px; color: #5a4a3a;">${[rarity, material].filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' • ')}</div>
+          <div style="font-size: 12px; color: #5a4a3a;">${[rarity, material].filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' • ')}</div>
         </div>
         <div style="text-align: right;">
           <div style="font-weight: bold; color: #2d2418;">${askPrice.toLocaleString()}g</div>
-          <div style="font-size: 10px; color: #7a6a5a;">by ${sellerName}</div>
+          <div style="font-size: 12px; color: #7a6a5a;">by ${sellerName}</div>
         </div>
       </div>
       ${(baseStatsHtml || bonusStatsHtml || augmentsHtml) ? `
-        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; font-size: 11px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; font-size: 12px;">
           ${baseStatsHtml}${bonusStatsHtml}${augmentsHtml}
         </div>
       ` : ''}

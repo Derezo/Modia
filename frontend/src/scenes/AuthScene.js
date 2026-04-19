@@ -51,8 +51,8 @@ export class AuthScene extends Scene {
 
     // Create transition renderer
     this.transitionRenderer = new AuthTransitionRenderer(
-      this.game.canvas.width,
-      this.game.canvas.height
+      this.game.targetWidth,
+      this.game.targetHeight
     );
 
     // Start font preload immediately
@@ -434,7 +434,7 @@ export class AuthScene extends Scene {
         <div class="auth-switch" id="auth-switch">
           ${isRegister ? 'Already have an account? <a id="mode-toggle">Login</a>' : 'Don\'t have an account? <a id="mode-toggle">Register</a>'}
         </div>
-        <div class="version-info" id="version-info">v0.4.33</div>
+        <div class="version-info" id="version-info">v0.4.34</div>
       </div>
     `;
 

@@ -270,8 +270,8 @@ export class WorldMapPathSystem {
 
       // Skip if off screen
       const margin = 100;
-      if (Math.max(x1, x2) < -margin || Math.min(x1, x2) > ctx.canvas.width + margin ||
-          Math.max(y1, y2) < -margin || Math.min(y1, y2) > ctx.canvas.height + margin) {
+      if (Math.max(x1, x2) < -margin || Math.min(x1, x2) > this.scene.game.targetWidth + margin ||
+          Math.max(y1, y2) < -margin || Math.min(y1, y2) > this.scene.game.targetHeight + margin) {
         continue;
       }
 

@@ -18,6 +18,7 @@ import { BattleFireworks } from './BattleFireworks.js';
 import { BattleStatsTable } from './BattleStatsTable.js';
 import { BattleRatingPanel } from './BattleRatingPanel.js';
 import { getTier, getTierColor, getTierIcon } from '@shared/coliseum.js';
+import { responsive } from '../core/Responsive.js';
 
 // Rarity color palette (matches RewardsModal)
 const RARITY_COLORS = {
@@ -137,7 +138,7 @@ export class BattleOutroSequence {
 
     // Initialize fireworks for victory
     if (status === 'victory') {
-      this.fireworks = new BattleFireworks(this.canvas);
+      this.fireworks = new BattleFireworks(this.canvas, this.scene.game.targetWidth, this.scene.game.targetHeight);
     }
 
     this.phase = 'dim_scene';
@@ -435,8 +436,8 @@ export class BattleOutroSequence {
   render(ctx) {
     if (this.phase === 'idle' || this.phase === 'complete') return;
 
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    const w = this.scene.game.targetWidth;
+    const h = this.scene.game.targetHeight;
 
     // Draw overlay
     this.renderOverlay(ctx, w, h);
@@ -693,13 +694,13 @@ export class BattleOutroSequence {
     ctx.fillText(item.name.charAt(0).toUpperCase(), 40, 32);
 
     // Item name (truncated)
-    ctx.font = '11px Georgia, serif';
+    ctx.font = `${responsive.getCanvasFontSize('sm')}px Georgia, serif`;
     ctx.fillStyle = rarityColor;
     const displayName = item.name.length > 12 ? item.name.substring(0, 11) + '...' : item.name;
     ctx.fillText(displayName, 40, 55);
 
     // Item type
-    ctx.font = '9px Georgia, serif';
+    ctx.font = `${responsive.getCanvasFontSize('sm')}px Georgia, serif`;
     ctx.fillStyle = '#6a5a4a';
     ctx.fillText(item.itemType || 'Item', 40, 68);
 

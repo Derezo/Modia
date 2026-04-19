@@ -152,17 +152,23 @@ export default class ParchmentButton {
       /* Size Variants */
       .parchment-btn--sm {
         padding: 6px 12px;
-        font-size: 12px;
+        font-size: var(--font-size-sm, 12px);
+        min-height: calc(var(--button-height, 36px) - 8px);
+        min-width: var(--touch-target, 36px);
       }
 
       .parchment-btn--md {
         padding: 10px 18px;
-        font-size: 14px;
+        font-size: var(--font-size-md, 14px);
+        min-height: var(--button-height, 36px);
+        min-width: var(--touch-target, 36px);
       }
 
       .parchment-btn--lg {
         padding: 14px 24px;
-        font-size: 16px;
+        font-size: var(--font-size-lg, 16px);
+        min-height: calc(var(--button-height, 36px) + 8px);
+        min-width: var(--touch-target, 36px);
       }
 
       /* Primary Variant - Brown gradient */

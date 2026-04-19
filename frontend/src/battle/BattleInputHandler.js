@@ -1,3 +1,5 @@
+import { responsive } from '../core/Responsive.js';
+
 /**
  * @module BattleInputHandler
  * @description Handles all user input for the battle scene including mouse, touch, and keyboard.
@@ -41,6 +43,10 @@ export class BattleInputHandler {
     // Mobile long-press state
     this.longPressTimer = null;         // Mobile long-press timer for manual cycling
     this.longPressStartPos = null;      // Position at long-press start
+
+    // Pinch-zoom state — consumed from game.input.getPinchState() each frame
+    this.wasPinching = false;
+    this.pinchReleaseCooldown = 0;      // frames to ignore taps after pinch release
 
     // Event cleanup
     this.abortController = null;
@@ -183,6 +189,7 @@ export class BattleInputHandler {
    * @param {MouseEvent} _e - Mouse event
    */
   handleMouseDown(_e) {
+    if (this.isSuppressedByPinch()) return;
     const pos = this.game.input.getPointerPosition();
     this.scene.camera.startPan(pos.x, pos.y);
   }
@@ -195,6 +202,9 @@ export class BattleInputHandler {
     const scene = this.scene;
     const panDistance = scene.camera.getPanDistance();
     scene.camera.endPan();
+
+    // Ignore the click that follows a pinch-gesture end
+    if (this.isSuppressedByPinch()) return;
 
     // Only register as click if pan distance was small (not a drag)
     if (panDistance < 10) {
@@ -276,6 +286,15 @@ export class BattleInputHandler {
    * @param {TouchEvent} e - Touch event
    */
   handleTouchStart(e) {
+    // Multi-touch: cancel long-press, leave pinch handling to InputHandler
+    if (e.touches.length >= 2) {
+      if (this.longPressTimer) {
+        clearTimeout(this.longPressTimer);
+        this.longPressTimer = null;
+      }
+      this.longPressStartPos = null;
+      return;
+    }
     if (this.tileCandidates.length <= 1) return;
 
     const touch = e.touches[0];
@@ -289,6 +308,51 @@ export class BattleInputHandler {
         navigator.vibrate(50);
       }
     }, 400);
+  }
+
+  /**
+   * Poll per-frame pinch gesture state and convert to camera zoom.
+   * Also suppresses panning/tap-to-select while pinch is active.
+   */
+  updatePinchZoom() {
+    const scene = this.scene;
+    if (!scene.camera) return;
+
+    const pinch = this.game.input.getPinchState();
+
+    if (pinch.active) {
+      // Cancel any active pan so pinch doesn't drag the camera sideways
+      if (scene.camera.isPanning) {
+        scene.camera.endPan();
+      }
+
+      // Translate distance delta (in screen pixels) to a multiplicative zoom
+      // factor. Reference distance of 200px makes a 50px pinch = ~1.25x zoom,
+      // which feels natural on a phone without being twitchy.
+      if (pinch.distanceDelta !== 0 && pinch.distance > 0) {
+        const prevDistance = pinch.distance - pinch.distanceDelta;
+        if (prevDistance > 10) {
+          const factor = pinch.distance / prevDistance;
+          scene.camera.zoomBy(factor);
+        }
+      }
+
+      this.wasPinching = true;
+      this.pinchReleaseCooldown = 8; // ~130ms at 60fps
+    } else if (this.wasPinching) {
+      this.wasPinching = false;
+    }
+
+    if (this.pinchReleaseCooldown > 0) {
+      this.pinchReleaseCooldown--;
+    }
+  }
+
+  /**
+   * Whether a recent pinch gesture should suppress tap/click handling.
+   */
+  isSuppressedByPinch() {
+    return this.wasPinching || this.pinchReleaseCooldown > 0;
   }
 
   /**
@@ -459,7 +523,7 @@ export class BattleInputHandler {
     const currentIndex = this.tileCycleIndex + 1;
     const totalCount = this.tileCandidates.length;
     ctx.fillStyle = '#fff';
-    ctx.font = 'bold 10px Arial';
+    ctx.font = `bold ${responsive.getCanvasFontSize('sm')}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(`${currentIndex}/${totalCount}`, indicatorX, indicatorY);
@@ -471,14 +535,14 @@ export class BattleInputHandler {
         ? `+${currentCandidate.elevation}`
         : `${currentCandidate.elevation}`;
       ctx.fillStyle = 'rgba(200, 200, 255, 0.9)';
-      ctx.font = '9px Arial';
+      ctx.font = `${responsive.getCanvasFontSize('sm')}px Arial`;
       ctx.fillText(elevText, indicatorX, indicatorY + radius + 8);
     }
 
     // Draw hint text (Tab to cycle)
     if (!scene.isTouchDevice && this.tileCandidates.length > 1) {
       ctx.fillStyle = 'rgba(180, 180, 180, 0.7)';
-      ctx.font = '8px Arial';
+      ctx.font = `${responsive.getCanvasFontSize('sm')}px Arial`;
       ctx.textAlign = 'center';
       ctx.fillText('Tab', indicatorX, indicatorY - radius - 6);
     }

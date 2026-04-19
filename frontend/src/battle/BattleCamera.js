@@ -35,6 +35,37 @@ export class BattleCamera {
     this.minY = 0;
     this.maxX = 0;
     this.maxY = 0;
+
+    // Zoom state — visual only (applied via ctx.scale around viewport center).
+    // worldToScreen / screenToWorld stay in logical space; screenToWorldZoomed
+    // inverts the zoom transform for hit-testing.
+    this.zoom = 1.0;
+    this.minZoom = 0.5;
+    this.maxZoom = 2.0;
+  }
+
+  setZoom(z) {
+    this.zoom = Math.max(this.minZoom, Math.min(this.maxZoom, z));
+    this._recomputeClampFromBounds();
+    this.clampTarget();
+  }
+
+  zoomBy(factor) {
+    this.setZoom(this.zoom * factor);
+  }
+
+  /**
+   * Convert a screen-space pixel (after ctx.scale has visually zoomed the grid)
+   * to the equivalent unscaled screen coord, so callers can pass it into
+   * screenToWorld() or grid.screenToGrid() without awareness of zoom.
+   */
+  screenToUnzoomed(screenX, screenY) {
+    const cx = this.viewportWidth / 2;
+    const cy = this.viewportHeight / 2;
+    return {
+      x: (screenX - cx) / this.zoom + cx,
+      y: (screenY - cy) / this.zoom + cy
+    };
   }
 
   /**
@@ -45,35 +76,40 @@ export class BattleCamera {
    * @param {number} worldMinY - Minimum Y in world coordinates (default: 0)
    */
   setBounds(mapPixelWidth, mapPixelHeight, worldMinX = null, worldMinY = null) {
-    // Camera position represents center of viewport in world coordinates
-    // For isometric grids, world coordinates can be negative
-    const halfViewportW = this.viewportWidth / 2;
-    const halfViewportH = this.viewportHeight / 2;
-
-    // If world bounds aren't specified, assume map is centered on X and starts at 0 for Y
+    // Store raw world bounds; clampTarget() applies zoom-aware half-viewport.
     const minWorldX = worldMinX !== null ? worldMinX : -mapPixelWidth / 2;
     const minWorldY = worldMinY !== null ? worldMinY : 0;
-    const maxWorldX = minWorldX + mapPixelWidth;
-    const maxWorldY = minWorldY + mapPixelHeight;
-
-    // Camera bounds: allow camera center to move such that viewport stays within map
-    this.minX = minWorldX + halfViewportW;
-    this.minY = minWorldY + halfViewportH;
-    this.maxX = Math.max(maxWorldX - halfViewportW, this.minX);
-    this.maxY = Math.max(maxWorldY - halfViewportH, this.minY);
+    this.worldBounds = {
+      minX: minWorldX,
+      minY: minWorldY,
+      maxX: minWorldX + mapPixelWidth,
+      maxY: minWorldY + mapPixelHeight
+    };
+    this._recomputeClampFromBounds();
   }
 
   /**
    * Set map bounds using world-space bounding box
    */
   setBoundsFromWorld(worldMinX, worldMinY, worldMaxX, worldMaxY) {
-    const halfViewportW = this.viewportWidth / 2;
-    const halfViewportH = this.viewportHeight / 2;
+    this.worldBounds = { minX: worldMinX, minY: worldMinY, maxX: worldMaxX, maxY: worldMaxY };
+    this._recomputeClampFromBounds();
+  }
 
-    this.minX = worldMinX + halfViewportW;
-    this.minY = worldMinY + halfViewportH;
-    this.maxX = Math.max(worldMaxX - halfViewportW, this.minX);
-    this.maxY = Math.max(worldMaxY - halfViewportH, this.minY);
+  /**
+   * Recompute min/max clamp bounds from the stored world bounds and current zoom.
+   * Visible world area shrinks as zoom increases (viewport/zoom), so the camera
+   * center can approach the map edges more closely.
+   */
+  _recomputeClampFromBounds() {
+    if (!this.worldBounds) return;
+    const zoom = this.zoom || 1;
+    const halfVisibleW = (this.viewportWidth / zoom) / 2;
+    const halfVisibleH = (this.viewportHeight / zoom) / 2;
+    this.minX = this.worldBounds.minX + halfVisibleW;
+    this.minY = this.worldBounds.minY + halfVisibleH;
+    this.maxX = Math.max(this.worldBounds.maxX - halfVisibleW, this.minX);
+    this.maxY = Math.max(this.worldBounds.maxY - halfVisibleH, this.minY);
   }
 
   /**
@@ -131,8 +167,11 @@ export class BattleCamera {
   updatePan(screenX, screenY) {
     if (!this.isPanning) return;
 
-    const dx = screenX - this.panStartX;
-    const dy = screenY - this.panStartY;
+    // Divide by zoom so 1 screen pixel of finger drag moves the world by
+    // 1 screen pixel regardless of current zoom level.
+    const zoom = this.zoom || 1;
+    const dx = (screenX - this.panStartX) / zoom;
+    const dy = (screenY - this.panStartY) / zoom;
 
     this.targetX = this.panStartCameraX - dx;
     this.targetY = this.panStartCameraY - dy;
@@ -232,15 +271,21 @@ export class BattleCamera {
   }
 
   /**
-   * Check if a world-space rectangle is visible in viewport
+   * Check if a world-space rectangle is visible in viewport.
+   * Visible area grows as zoom shrinks (viewport / zoom).
    */
   isVisible(worldX, worldY, width = 64, height = 64) {
     const screen = this.worldToScreen(worldX, worldY);
+    const zoom = this.zoom || 1;
+    const visibleW = this.viewportWidth / zoom;
+    const visibleH = this.viewportHeight / zoom;
+    const halfExtraW = (visibleW - this.viewportWidth) / 2;
+    const halfExtraH = (visibleH - this.viewportHeight) / 2;
     return (
-      screen.x + width > 0 &&
-      screen.x - width < this.viewportWidth &&
-      screen.y + height > 0 &&
-      screen.y - height < this.viewportHeight
+      screen.x + width > -halfExtraW &&
+      screen.x - width < this.viewportWidth + halfExtraW &&
+      screen.y + height > -halfExtraH &&
+      screen.y - height < this.viewportHeight + halfExtraH
     );
   }
 

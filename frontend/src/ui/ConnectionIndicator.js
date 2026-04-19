@@ -15,6 +15,7 @@
  */
 
 import { ConnectionState } from '../api/connectionQuality.js';
+import { responsive } from '../core/Responsive.js';
 
 /**
  * Visual indicator for WebSocket connection quality.
@@ -198,7 +199,7 @@ export class ConnectionIndicator {
 
     // Details text (muted)
     ctx.fillStyle = '#aaa';
-    ctx.font = '10px sans-serif';
+    ctx.font = `${responsive.getCanvasFontSize('sm')}px sans-serif`;
     ctx.fillText(details, tooltipX + 8, tooltipY + 22);
   }
 

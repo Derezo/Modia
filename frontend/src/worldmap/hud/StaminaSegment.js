@@ -16,6 +16,7 @@
  */
 
 import { HUD_COLORS } from '../../ui/parchment/ParchmentTheme.js';
+import { responsive } from '../../core/Responsive.js';
 
 /** Header row height in pixels */
 const HEADER_HEIGHT = 16;
@@ -196,7 +197,7 @@ export class StaminaSegment {
   renderHeader(ctx, x, y, width) {
     // Stamina label
     ctx.fillStyle = '#c4a574';
-    ctx.font = 'bold 11px serif';
+    ctx.font = `bold ${responsive.getCanvasFontSize('sm')}px serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText('Stamina', x + 4, y + 2);

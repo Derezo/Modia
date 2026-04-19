@@ -198,7 +198,7 @@ export class ProfileDropdown {
         background: #ef4444;
         border-radius: 9px;
         color: white;
-        font-size: 11px;
+        font-size: var(--font-size-sm, 12px);
         font-weight: bold;
         font-family: Arial, sans-serif;
         display: none;
@@ -270,7 +270,7 @@ export class ProfileDropdown {
       .profile-dropdown__notifications-count {
         background: #ef4444;
         color: white;
-        font-size: 10px;
+        font-size: var(--font-size-sm, 12px);
         padding: 2px 6px;
         border-radius: 8px;
         font-family: Arial, sans-serif;
@@ -302,6 +302,7 @@ export class ProfileDropdown {
         align-items: center;
         gap: 10px;
         padding: 10px 14px;
+        min-height: var(--touch-target, 36px);
         border-top: 1px solid ${PARCHMENT_COLORS.borderLight};
         cursor: pointer;
         transition: background 0.15s;
@@ -330,7 +331,7 @@ export class ProfileDropdown {
       }
 
       .profile-dropdown__notification-time {
-        font-size: 10px;
+        font-size: var(--font-size-sm, 12px);
         color: ${PARCHMENT_COLORS.text.muted};
       }
 
@@ -342,7 +343,8 @@ export class ProfileDropdown {
 
       .profile-dropdown__notification-action {
         padding: 4px 10px;
-        font-size: 11px;
+        font-size: var(--font-size-sm, 12px);
+        min-height: var(--touch-target, 36px);
         border-radius: 4px;
         cursor: pointer;
         transition: all 0.15s;
@@ -407,6 +409,7 @@ export class ProfileDropdown {
         align-items: center;
         gap: 12px;
         padding: 10px 14px;
+        min-height: var(--touch-target, 36px);
         cursor: pointer;
         transition: background 0.15s;
         color: ${PARCHMENT_COLORS.text.primary};

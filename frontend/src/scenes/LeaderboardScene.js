@@ -1,5 +1,6 @@
 import { Scene } from './Scene.js';
 import { PARCHMENT_COLORS, injectParchmentTheme, getParchmentScrollbarCSS, getParchmentSpinnerCSS } from '../ui/parchment/index.js';
+import { responsive } from '../core/Responsive.js';
 
 // Shorthand for colors in CSS template
 const P = PARCHMENT_COLORS;
@@ -22,6 +23,9 @@ export class LeaderboardScene extends Scene {
     this.userEntry = null;
     this.pagination = { limit: 50, offset: 0, total: 0, hasMore: false };
     this.loading = false;
+
+    // Responsive subscription
+    this._responsiveUnsubscribe = null;
   }
 
   async enter(_data = {}) {
@@ -29,6 +33,10 @@ export class LeaderboardScene extends Scene {
       this.addStyles();
       this.createUI();
       this.setupEventListeners();
+
+      // Subscribe to responsive breakpoint changes
+      this._responsiveUnsubscribe = responsive.onChange(() => this.onBreakpointChange());
+
       await this.loadLeaderboard();
 
       // Play exploration music (maintains regional context)
@@ -42,6 +50,12 @@ export class LeaderboardScene extends Scene {
   }
 
   exit() {
+    // Unsubscribe from responsive changes
+    if (this._responsiveUnsubscribe) {
+      this._responsiveUnsubscribe();
+      this._responsiveUnsubscribe = null;
+    }
+
     if (this.abortController) {
       this.abortController.abort();
       this.abortController = null;
@@ -452,7 +466,7 @@ export class LeaderboardScene extends Scene {
         background: linear-gradient(to bottom, var(--parchment-light) 0%, var(--parchment-mid) 100%);
       }
 
-      /* Responsive */
+      /* Responsive - Tablet */
       @media (max-width: 768px) {
         .leaderboard-header {
           padding: var(--parchment-spacing-md) var(--parchment-spacing-lg);
@@ -485,6 +499,107 @@ export class LeaderboardScene extends Scene {
 
         .leaderboard-content {
           padding: var(--parchment-spacing-md);
+        }
+      }
+
+      /* Responsive - Mobile (< 600px) */
+      @media (max-width: 600px) {
+        .leaderboard-header {
+          padding: var(--parchment-spacing-sm) var(--parchment-spacing-md);
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .leaderboard-title h2 {
+          font-size: 18px;
+        }
+
+        .leaderboard-back-btn {
+          min-height: var(--touch-target, 44px);
+          width: 100%;
+        }
+
+        .category-tabs {
+          padding: var(--parchment-spacing-xs);
+          gap: 2px;
+        }
+
+        .category-tab {
+          flex: 1 1 calc(50% - 2px);
+          min-height: var(--touch-target, 44px);
+          padding: var(--parchment-spacing-sm);
+          font-size: var(--font-size-sm, 12px);
+        }
+
+        .category-tab-icon {
+          font-size: 16px;
+        }
+
+        .time-filters {
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+
+        .time-filter-btn {
+          min-height: var(--touch-target, 44px);
+          padding: var(--parchment-spacing-sm) var(--parchment-spacing-md);
+          font-size: var(--font-size-sm, 12px);
+          flex: 1;
+        }
+
+        .pvp-queue-select {
+          min-height: var(--touch-target, 44px);
+          width: 100%;
+          font-size: var(--font-size-md, 14px);
+        }
+
+        .leaderboard-table th,
+        .leaderboard-table td {
+          padding: var(--parchment-spacing-xs) var(--parchment-spacing-sm);
+          font-size: var(--font-size-sm, 12px);
+        }
+
+        .leaderboard-table th:first-child,
+        .leaderboard-table td:first-child {
+          width: 40px;
+        }
+
+        .rank-badge {
+          width: 24px;
+          height: 24px;
+          font-size: var(--font-size-sm, 12px);
+        }
+
+        .user-entry-footer {
+          flex-direction: column;
+          gap: var(--parchment-spacing-md);
+          text-align: center;
+        }
+
+        .user-rank-value,
+        .user-score-value {
+          font-size: 16px;
+        }
+
+        .user-score-label,
+        .user-rank-label {
+          text-align: center;
+        }
+
+        .pagination-controls {
+          flex-wrap: wrap;
+          justify-content: center;
+        }
+
+        .pagination-btn {
+          min-height: var(--touch-target, 44px);
+          padding: var(--parchment-spacing-sm) var(--parchment-spacing-lg);
+          font-size: var(--font-size-sm, 12px);
+        }
+
+        .leaderboard-content {
+          padding: var(--parchment-spacing-sm);
+          gap: var(--parchment-spacing-sm);
         }
       }
 
@@ -865,6 +980,17 @@ export class LeaderboardScene extends Scene {
     return div.innerHTML;
   }
 
+  /**
+   * Handle responsive breakpoint changes
+   * Re-render the leaderboard table to adapt layout for new breakpoint
+   */
+  onBreakpointChange() {
+    // Re-render the leaderboard - CSS handles responsive styles
+    if (this.leaderboard.length > 0) {
+      this.renderLeaderboard();
+    }
+  }
+
   update(_deltaTime) {
     // No per-frame updates needed
   }
@@ -872,6 +998,6 @@ export class LeaderboardScene extends Scene {
   render(ctx) {
     // UI is HTML-based, canvas shows parchment background
     ctx.fillStyle = P.light;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
   }
 }

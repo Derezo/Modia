@@ -1207,12 +1207,12 @@ export class GarrisonScene extends Scene {
 
   render(ctx) {
     // Draw parchment-themed background gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, this.game.targetHeight);
     gradient.addColorStop(0, P.light);
     gradient.addColorStop(0.5, P.mid);
     gradient.addColorStop(1, P.dark);
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
 
     // Draw subtle decorative elements with gold accents
     ctx.fillStyle = 'rgba(201, 162, 39, 0.08)';
@@ -1237,20 +1237,20 @@ export class GarrisonScene extends Scene {
 
     // Top-right flourish
     ctx.beginPath();
-    ctx.moveTo(ctx.canvas.width - 20, 60);
-    ctx.quadraticCurveTo(ctx.canvas.width - 20, 20, ctx.canvas.width - 60, 20);
+    ctx.moveTo(this.game.targetWidth - 20, 60);
+    ctx.quadraticCurveTo(this.game.targetWidth - 20, 20, this.game.targetWidth - 60, 20);
     ctx.stroke();
 
     // Bottom-left flourish
     ctx.beginPath();
-    ctx.moveTo(20, ctx.canvas.height - 60);
-    ctx.quadraticCurveTo(20, ctx.canvas.height - 20, 60, ctx.canvas.height - 20);
+    ctx.moveTo(20, this.game.targetHeight - 60);
+    ctx.quadraticCurveTo(20, this.game.targetHeight - 20, 60, this.game.targetHeight - 20);
     ctx.stroke();
 
     // Bottom-right flourish
     ctx.beginPath();
-    ctx.moveTo(ctx.canvas.width - 20, ctx.canvas.height - 60);
-    ctx.quadraticCurveTo(ctx.canvas.width - 20, ctx.canvas.height - 20, ctx.canvas.width - 60, ctx.canvas.height - 20);
+    ctx.moveTo(this.game.targetWidth - 20, this.game.targetHeight - 60);
+    ctx.quadraticCurveTo(this.game.targetWidth - 20, this.game.targetHeight - 20, this.game.targetWidth - 60, this.game.targetHeight - 20);
     ctx.stroke();
 
     ctx.globalAlpha = 1.0;

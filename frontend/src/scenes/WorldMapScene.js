@@ -186,7 +186,8 @@ export class WorldMapScene extends Scene {
     await this.initMapCharacter();
 
     // Initialize unified HUD panel (stamina, travel progress, zodiac)
-    this.hudPanel = new WorldMapHUDPanel();
+    // Start collapsed on mobile to keep the map unobstructed
+    this.hudPanel = new WorldMapHUDPanel({ collapsed: responsive.isMobile() });
     this.hudPanel.setZodiacClickHandler(() => this.openZodiacCrystalModal());
     this.hudPanel.checkZodiacNewCrystalFlag(); // Check for new crystal notification
     await this.refreshStamina();
@@ -455,9 +456,10 @@ export class WorldMapScene extends Scene {
     const offsetX = mainRect.left - containerRect.left;
     const offsetY = mainRect.top - containerRect.top;
 
-    // Calculate scale factor (main canvas CSS size vs logical size)
-    const scaleX = mainRect.width / mainCanvas.width;
-    const scaleY = mainRect.height / mainCanvas.height;
+    // Scale factor = CSS pixels per logical pixel. mainCanvas.width is the
+    // DPR-multiplied backing store after P1.1, so use targetWidth/Height.
+    const scaleX = mainRect.width / this.game.targetWidth;
+    const scaleY = mainRect.height / this.game.targetHeight;
 
     // Position HUD canvas at top-left of main canvas
     this.hudCanvas.style.left = `${offsetX}px`;
@@ -474,8 +476,8 @@ export class WorldMapScene extends Scene {
   followCharacter() {
     if (!this.mapCharacter) return;
 
-    const targetX = -this.mapCharacter.x + this.game.canvas.width / 2;
-    const targetY = -this.mapCharacter.y + this.game.canvas.height / 2;
+    const targetX = -this.mapCharacter.x + this.game.targetWidth / 2;
+    const targetY = -this.mapCharacter.y + this.game.targetHeight / 2;
 
     // Smooth interpolation
     const smoothing = 0.1;
@@ -795,8 +797,8 @@ export class WorldMapScene extends Scene {
     }
 
     if (node && node.x_coord !== undefined && node.y_coord !== undefined) {
-      this.cameraX = -node.x_coord * this.nodeSpacing + this.game.canvas.width / 2;
-      this.cameraY = -node.y_coord * this.nodeSpacing + this.game.canvas.height / 2;
+      this.cameraX = -node.x_coord * this.nodeSpacing + this.game.targetWidth / 2;
+      this.cameraY = -node.y_coord * this.nodeSpacing + this.game.targetHeight / 2;
     } else {
       console.error('Cannot center camera - no coordinates for current node:', this.currentNode?.id);
 
@@ -804,8 +806,8 @@ export class WorldMapScene extends Scene {
       const anyCastle = this.nodes.find(n => n.node_type === 'castle');
       if (anyCastle && anyCastle.x_coord !== undefined) {
         console.log(`Centering on fallback castle: ${anyCastle.id} (${anyCastle.name})`);
-        this.cameraX = -anyCastle.x_coord * this.nodeSpacing + this.game.canvas.width / 2;
-        this.cameraY = -anyCastle.y_coord * this.nodeSpacing + this.game.canvas.height / 2;
+        this.cameraX = -anyCastle.x_coord * this.nodeSpacing + this.game.targetWidth / 2;
+        this.cameraY = -anyCastle.y_coord * this.nodeSpacing + this.game.targetHeight / 2;
 
         // Flag for UI - character may be orphaned
         this.characterOrphaned = true;
@@ -1658,8 +1660,8 @@ export class WorldMapScene extends Scene {
 
         // Check if camera has settled (close enough to target)
         if (!this.mapCharacter.isTraveling()) {
-          const targetX = -this.mapCharacter.x + this.game.canvas.width / 2;
-          const targetY = -this.mapCharacter.y + this.game.canvas.height / 2;
+          const targetX = -this.mapCharacter.x + this.game.targetWidth / 2;
+          const targetY = -this.mapCharacter.y + this.game.targetHeight / 2;
           const dx = targetX - this.cameraX;
           const dy = targetY - this.cameraY;
           if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
@@ -1684,8 +1686,8 @@ export class WorldMapScene extends Scene {
         const y = node.y_coord * this.nodeSpacing + this.cameraY;
 
         // Only spawn for visible nodes
-        if (x >= -100 && x <= this.game.canvas.width + 100 &&
-            y >= -100 && y <= this.game.canvas.height + 100) {
+        if (x >= -100 && x <= this.game.targetWidth + 100 &&
+            y >= -100 && y <= this.game.targetHeight + 100) {
           this.effects.spawnAmbientParticles(x, y, node.node_type);
         }
       }
@@ -1695,11 +1697,11 @@ export class WorldMapScene extends Scene {
   render(ctx) {
     // Render backdrop with effects system
     if (this.effects) {
-      this.effects.renderBackdrop(ctx, this.cameraX, this.cameraY, ctx.canvas.width, ctx.canvas.height);
+      this.effects.renderBackdrop(ctx, this.cameraX, this.cameraY, this.game.targetWidth, this.game.targetHeight);
     } else {
       // Fallback background
       ctx.fillStyle = '#0a0a1a';
-      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
     }
 
     // Render terrain obstacles (lakes, mountains, forests)
@@ -1742,7 +1744,7 @@ export class WorldMapScene extends Scene {
         const maxX = Math.max(x1, x2) + margin;
         const minY = Math.min(y1, y2) - margin;
         const maxY = Math.max(y1, y2) + margin;
-        if (maxX < 0 || minX > ctx.canvas.width || maxY < 0 || minY > ctx.canvas.height) {
+        if (maxX < 0 || minX > this.game.targetWidth || maxY < 0 || minY > this.game.targetHeight) {
           continue;
         }
 
@@ -1819,8 +1821,8 @@ export class WorldMapScene extends Scene {
 
           // Skip if off screen (use same 50px margin as regular connections for consistency)
           const margin = 50;
-          if (Math.max(x1, x2) < -margin || Math.min(x1, x2) > ctx.canvas.width + margin ||
-              Math.max(y1, y2) < -margin || Math.min(y1, y2) > ctx.canvas.height + margin) {
+          if (Math.max(x1, x2) < -margin || Math.min(x1, x2) > this.game.targetWidth + margin ||
+              Math.max(y1, y2) < -margin || Math.min(y1, y2) > this.game.targetHeight + margin) {
             continue;
           }
 
@@ -1887,7 +1889,7 @@ export class WorldMapScene extends Scene {
       const y = node.y_coord * this.nodeSpacing + this.cameraY;
 
       // Skip if off screen
-      if (x < -50 || x > ctx.canvas.width + 50 || y < -50 || y > ctx.canvas.height + 50) {
+      if (x < -50 || x > this.game.targetWidth + 50 || y < -50 || y > this.game.targetHeight + 50) {
         continue;
       }
 
@@ -1932,7 +1934,7 @@ export class WorldMapScene extends Scene {
       const y = node.y_coord * this.nodeSpacing + this.cameraY;
 
       // Skip if off screen
-      if (x < -50 || x > ctx.canvas.width + 50 || y < -50 || y > ctx.canvas.height + 50) {
+      if (x < -50 || x > this.game.targetWidth + 50 || y < -50 || y > this.game.targetHeight + 50) {
         continue;
       }
 
@@ -1942,7 +1944,7 @@ export class WorldMapScene extends Scene {
 
     // Render character on map (after fog so always visible)
     if (this.mapCharacter) {
-      this.mapCharacter.render(ctx, this.cameraX, this.cameraY);
+      this.mapCharacter.render(ctx, this.cameraX, this.cameraY, this.game.targetWidth, this.game.targetHeight);
     }
 
     ctx.restore();
@@ -1982,8 +1984,8 @@ export class WorldMapScene extends Scene {
         visitedNodes: this.effects.visitedNodes,
         cameraX: this.cameraX,
         cameraY: this.cameraY,
-        canvasWidth: ctx.canvas.width,
-        canvasHeight: ctx.canvas.height,
+        canvasWidth: this.game.targetWidth,
+        canvasHeight: this.game.targetHeight,
         nodeSpacing: this.nodeSpacing
       });
     }
@@ -2007,7 +2009,7 @@ export class WorldMapScene extends Scene {
       const y = node.y_coord * this.nodeSpacing + this.cameraY;
 
       // Skip if off screen
-      if (x < -50 || x > ctx.canvas.width + 50 || y < -50 || y > ctx.canvas.height + 50) {
+      if (x < -50 || x > this.game.targetWidth + 50 || y < -50 || y > this.game.targetHeight + 50) {
         continue;
       }
 
@@ -2085,7 +2087,7 @@ export class WorldMapScene extends Scene {
       const extraX = startX - 3 * badgeSpacing - 8;
       const extraY = startY;
 
-      ctx.font = 'bold 9px Arial';
+      ctx.font = `bold ${responsive.getCanvasFontSize('sm')}px Arial`;
       ctx.fillStyle = '#fff';
       ctx.strokeStyle = 'rgba(0, 0, 0, 0.7)';
       ctx.lineWidth = 2;
@@ -2266,6 +2268,11 @@ export class WorldMapScene extends Scene {
     if (this.profileDropdown) {
       this.profileDropdown.refresh();
     }
+
+    // Collapse HUD on mobile; expand on tablet/desktop.
+    if (this.hudPanel) {
+      this.hudPanel.setCollapsed(responsive.isMobile());
+    }
   }
 
   /**
@@ -2305,8 +2312,8 @@ export class WorldMapScene extends Scene {
 
       // Skip if off screen
       const margin = 50;
-      if (Math.max(x1, x2) < -margin || Math.min(x1, x2) > ctx.canvas.width + margin ||
-          Math.max(y1, y2) < -margin || Math.min(y1, y2) > ctx.canvas.height + margin) {
+      if (Math.max(x1, x2) < -margin || Math.min(x1, x2) > this.game.targetWidth + margin ||
+          Math.max(y1, y2) < -margin || Math.min(y1, y2) > this.game.targetHeight + margin) {
         continue;
       }
 

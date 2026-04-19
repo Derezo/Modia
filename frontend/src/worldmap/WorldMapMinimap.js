@@ -1,3 +1,5 @@
+import { responsive } from '../core/Responsive.js';
+
 /**
  * WorldMapMinimap - Parchment-style minimap for world navigation
  * Renders fog of war, node icons, paths, and viewport indicator
@@ -190,7 +192,7 @@ export class WorldMapMinimap {
 
     // Compass indicator (N) in top-right area
     ctx.fillStyle = '#3d2914';
-    ctx.font = 'bold 10px serif';
+    ctx.font = `bold ${responsive.getCanvasFontSize('sm')}px serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('N', w - 15, 15);

@@ -1268,11 +1268,11 @@ export class GuildAdvancementScene extends Scene {
 
   render(ctx) {
     // Draw parchment background
-    const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, this.game.targetHeight);
     gradient.addColorStop(0, P.light);
     gradient.addColorStop(0.5, P.mid);
     gradient.addColorStop(1, P.dark);
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
   }
 }

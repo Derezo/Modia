@@ -985,6 +985,6 @@ export class QuestBoardScene extends Scene {
   render(ctx) {
     // Canvas-based rendering not used for this UI scene
     ctx.fillStyle = '#3d3426';
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
   }
 }

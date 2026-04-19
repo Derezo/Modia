@@ -225,9 +225,6 @@ export class ShopScene extends Scene {
   addStyles() {
     if (document.getElementById('shop-scene-styles')) return;
 
-    const _isMobile = responsive.isMobile();
-    const _isTablet = responsive.isTablet();
-
     const style = document.createElement('style');
     style.id = 'shop-scene-styles';
     style.textContent = `
@@ -263,7 +260,7 @@ export class ShopScene extends Scene {
       .shop-title h2 {
         margin: 0;
         color: ${P.text.primary};
-        font-size: 22px;
+        font-size: var(--font-size-lg, 18px);
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
@@ -272,7 +269,7 @@ export class ShopScene extends Scene {
         align-items: center;
         gap: 8px;
         color: ${P.accent.burgundy};
-        font-size: 18px;
+        font-size: var(--font-size-lg, 18px);
         font-weight: bold;
         text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
       }
@@ -295,7 +292,7 @@ export class ShopScene extends Scene {
       }
 
       .shop-tab {
-        padding: 10px 24px;
+        padding: var(--space-sm, 8px) var(--space-lg, 16px);
         background: linear-gradient(to bottom, ${P.light}, ${P.mid});
         border: 2px solid ${P.border};
         border-bottom: none;
@@ -303,9 +300,10 @@ export class ShopScene extends Scene {
         color: ${P.text.secondary};
         cursor: pointer;
         transition: all 0.2s;
-        font-size: 14px;
+        font-size: var(--font-size-md, 14px);
         font-weight: bold;
         font-family: Georgia, serif;
+        min-height: var(--touch-target, 36px);
       }
 
       .shop-tab:hover {
@@ -328,13 +326,64 @@ export class ShopScene extends Scene {
         overflow: hidden;
       }
 
-      @media (max-width: 768px) {
+      /* ============================================
+         Responsive Layout - Mobile (<600px)
+         Matches responsive singleton breakpoint
+         ============================================ */
+      @media (max-width: 599px) {
         .shop-content {
           flex-direction: column;
+          padding: var(--space-sm, 8px);
+          gap: var(--space-sm, 8px);
         }
+
         .shop-detail-panel {
           width: 100% !important;
-          max-height: 280px;
+          max-height: 320px;
+          order: 1;
+        }
+
+        .shop-items-panel {
+          order: 2;
+          min-height: 200px;
+        }
+
+        .shop-header {
+          padding: var(--space-sm, 8px) var(--space-md, 12px);
+          flex-wrap: wrap;
+          gap: var(--space-sm, 8px);
+        }
+
+        .shop-title h2 {
+          font-size: var(--font-size-md, 14px);
+        }
+
+        .shop-tabs {
+          padding: var(--space-xs, 4px) var(--space-sm, 8px);
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        .shop-tab {
+          flex-shrink: 0;
+          white-space: nowrap;
+        }
+
+        .quantity-selector {
+          gap: var(--space-md, 12px);
+        }
+      }
+
+      /* ============================================
+         Responsive Layout - Tablet (600-899px)
+         ============================================ */
+      @media (min-width: 600px) and (max-width: 899px) {
+        .shop-detail-panel {
+          width: 260px;
+        }
+
+        .shop-header {
+          padding: var(--space-md, 12px) var(--space-lg, 16px);
         }
       }
 
@@ -349,13 +398,13 @@ export class ShopScene extends Scene {
       }
 
       .shop-panel-header {
-        padding: 12px 16px;
+        padding: var(--space-sm, 8px) var(--space-md, 12px);
         background: linear-gradient(to bottom, ${P.dark}, ${P.mid});
         border-bottom: ${getParchmentBorder()};
         border-radius: 4px 4px 0 0;
         color: ${P.text.primary};
         font-weight: bold;
-        font-size: 14px;
+        font-size: var(--font-size-md, 14px);
         text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
       }
 
@@ -415,13 +464,13 @@ export class ShopScene extends Scene {
       .shop-item-name {
         font-weight: bold;
         color: ${P.text.primary};
-        font-size: 14px;
+        font-size: var(--font-size-md, 14px);
       }
 
       .shop-item-price {
         color: ${P.accent.burgundy};
         font-weight: bold;
-        font-size: 14px;
+        font-size: var(--font-size-md, 14px);
         display: flex;
         align-items: center;
         gap: 4px;
@@ -430,7 +479,7 @@ export class ShopScene extends Scene {
       .shop-item-info {
         display: flex;
         gap: 12px;
-        font-size: 12px;
+        font-size: var(--font-size-sm, 12px);
         color: ${P.text.secondary};
         margin-bottom: 6px;
       }
@@ -442,7 +491,7 @@ export class ShopScene extends Scene {
       .shop-item-supply {
         padding: 2px 6px;
         border-radius: 4px;
-        font-size: 11px;
+        font-size: var(--font-size-sm, 12px);
         font-weight: bold;
       }
 
@@ -453,12 +502,12 @@ export class ShopScene extends Scene {
       .supply-surplus { background: ${P.state.info}; color: #fff; }
 
       .shop-item-stats {
-        font-size: 11px;
+        font-size: var(--font-size-sm, 12px);
         color: ${P.state.info};
       }
 
       .shop-item-desc {
-        font-size: 11px;
+        font-size: var(--font-size-sm, 12px);
         color: ${P.text.muted};
         margin-top: 4px;
         font-style: italic;
@@ -466,6 +515,7 @@ export class ShopScene extends Scene {
 
       .shop-detail-panel {
         width: 300px;
+        min-width: 260px;
         display: flex;
         flex-direction: column;
         background: ${getParchmentGradient()};
@@ -490,7 +540,7 @@ export class ShopScene extends Scene {
       }
 
       .detail-name {
-        font-size: 18px;
+        font-size: var(--font-size-lg, 18px);
         font-weight: bold;
         color: ${P.text.primary};
         margin-bottom: 4px;
@@ -499,7 +549,7 @@ export class ShopScene extends Scene {
 
       .detail-type {
         color: ${P.text.secondary};
-        font-size: 13px;
+        font-size: var(--font-size-md, 14px);
         text-transform: capitalize;
       }
 
@@ -529,13 +579,13 @@ export class ShopScene extends Scene {
 
       .detail-desc {
         color: ${P.text.secondary};
-        font-size: 13px;
+        font-size: var(--font-size-md, 14px);
         font-style: italic;
-        padding: 12px;
+        padding: var(--space-sm, 8px);
         background: linear-gradient(to bottom, ${P.mid}, ${P.dark});
         border: 1px solid ${P.border};
         border-radius: 4px;
-        margin-bottom: 16px;
+        margin-bottom: var(--space-md, 12px);
       }
 
       .detail-actions {
@@ -553,13 +603,13 @@ export class ShopScene extends Scene {
       }
 
       .quantity-btn {
-        width: 36px;
-        height: 36px;
+        width: var(--touch-target, 36px);
+        height: var(--touch-target, 36px);
         border-radius: 6px;
         background: linear-gradient(to bottom, ${P.light}, ${P.mid});
         border: 2px solid ${P.border};
         color: ${P.text.primary};
-        font-size: 18px;
+        font-size: var(--font-size-lg, 18px);
         font-weight: bold;
         cursor: pointer;
         transition: all 0.2s;
@@ -577,7 +627,7 @@ export class ShopScene extends Scene {
       }
 
       .quantity-value {
-        font-size: 18px;
+        font-size: var(--font-size-lg, 18px);
         font-weight: bold;
         color: ${P.text.primary};
         min-width: 40px;
@@ -591,12 +641,12 @@ export class ShopScene extends Scene {
 
       .total-label {
         color: ${P.text.secondary};
-        font-size: 12px;
+        font-size: var(--font-size-sm, 12px);
       }
 
       .total-value {
         color: ${P.accent.burgundy};
-        font-size: 20px;
+        font-size: var(--font-size-lg, 18px);
         font-weight: bold;
         text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
       }
@@ -607,13 +657,14 @@ export class ShopScene extends Scene {
 
       .action-btn {
         width: 100%;
-        padding: 12px;
-        font-size: 16px;
+        padding: var(--space-sm, 8px);
+        font-size: var(--font-size-lg, 16px);
         font-weight: bold;
         font-family: Georgia, serif;
         border-radius: 6px;
         cursor: pointer;
         transition: all 0.2s;
+        min-height: var(--button-height, 36px);
       }
 
       .action-btn.buy-btn {
@@ -648,8 +699,8 @@ export class ShopScene extends Scene {
       .empty-message {
         text-align: center;
         color: ${P.text.muted};
-        padding: 40px;
-        font-size: 14px;
+        padding: var(--space-xl, 24px);
+        font-size: var(--font-size-md, 14px);
         font-style: italic;
       }
 
@@ -664,16 +715,16 @@ export class ShopScene extends Scene {
       .caravan-refresh-info {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 8px 16px;
+        gap: var(--space-sm, 8px);
+        padding: var(--space-sm, 8px) var(--space-md, 12px);
         background: linear-gradient(to right, rgba(139, 90, 43, 0.2), transparent);
         border-bottom: 1px solid ${P.border};
-        font-size: 13px;
+        font-size: var(--font-size-md, 14px);
         color: ${P.text.secondary};
       }
 
       .caravan-refresh-icon {
-        font-size: 14px;
+        font-size: var(--font-size-md, 14px);
       }
 
       .caravan-exclusive-badge {
@@ -681,7 +732,7 @@ export class ShopScene extends Scene {
         padding: 2px 8px;
         background: linear-gradient(to bottom, #8B5A2B, #5D3A1A);
         color: #FFD700;
-        font-size: 10px;
+        font-size: var(--font-size-sm, 12px);
         font-weight: bold;
         border-radius: 4px;
         text-transform: uppercase;
@@ -696,7 +747,7 @@ export class ShopScene extends Scene {
         padding: 3px 10px;
         background: linear-gradient(to bottom, #8B0000, #4a0000);
         color: #fff;
-        font-size: 11px;
+        font-size: var(--font-size-sm, 12px);
         font-weight: bold;
         border-radius: 4px;
         text-transform: uppercase;
@@ -720,7 +771,7 @@ export class ShopScene extends Scene {
         padding: 2px 6px;
         background: linear-gradient(to bottom, ${P.state.info}, #3a5068);
         color: #fff;
-        font-size: 9px;
+        font-size: var(--font-size-sm, 12px);
         font-weight: bold;
         border-radius: 3px;
         text-transform: uppercase;
@@ -728,7 +779,7 @@ export class ShopScene extends Scene {
       }
 
       .character-tag {
-        font-size: 10px;
+        font-size: var(--font-size-sm, 12px);
         color: ${P.accent.burgundy};
         background: rgba(107, 45, 61, 0.15);
         padding: 2px 6px;
@@ -738,8 +789,8 @@ export class ShopScene extends Scene {
       }
 
       .back-btn {
-        padding: 10px 20px;
-        font-size: 14px;
+        padding: var(--space-sm, 8px) var(--space-lg, 16px);
+        font-size: var(--font-size-md, 14px);
         font-weight: bold;
         font-family: Georgia, serif;
         background: linear-gradient(to bottom, ${P.light}, ${P.mid});
@@ -748,6 +799,7 @@ export class ShopScene extends Scene {
         color: ${P.text.primary};
         cursor: pointer;
         transition: all 0.2s;
+        min-height: var(--button-height, 36px);
       }
 
       .back-btn:hover {
@@ -1244,11 +1296,11 @@ export class ShopScene extends Scene {
 
   render(ctx) {
     // UI is HTML-based, but draw a subtle parchment background on canvas
-    const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.height);
+    const gradient = ctx.createLinearGradient(0, 0, 0, this.game.targetHeight);
     gradient.addColorStop(0, P.light);
     gradient.addColorStop(0.5, P.mid);
     gradient.addColorStop(1, P.dark);
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillRect(0, 0, this.game.targetWidth, this.game.targetHeight);
   }
 }

@@ -1600,5 +1600,164 @@ export function getColiseumStyles() {
         font-size: 14px;
       }
     }
+
+    /* ============================================ */
+    /* MOBILE RESPONSIVE STYLES (< 600px)          */
+    /* ============================================ */
+
+    @media (max-width: 600px) {
+      .coliseum-container {
+        padding: ${PARCHMENT_SPACING.md};
+      }
+
+      .coliseum-header {
+        flex-direction: column;
+        gap: ${PARCHMENT_SPACING.md};
+        align-items: stretch;
+        margin-bottom: ${PARCHMENT_SPACING.md};
+      }
+
+      .coliseum-header button {
+        min-height: var(--touch-target, 44px);
+        width: 100%;
+      }
+
+      .coliseum-tabs {
+        flex-wrap: wrap;
+        margin-bottom: ${PARCHMENT_SPACING.md};
+        padding: ${PARCHMENT_SPACING.xs};
+      }
+
+      .coliseum-tab {
+        flex: 1 1 auto;
+        min-width: 80px;
+        min-height: var(--touch-target, 44px);
+        padding: ${PARCHMENT_SPACING.sm} ${PARCHMENT_SPACING.md};
+        font-size: var(--font-size-sm, 12px);
+      }
+
+      .coliseum-queue-selection {
+        flex-direction: column;
+        gap: ${PARCHMENT_SPACING.md};
+        margin-bottom: ${PARCHMENT_SPACING.lg};
+      }
+
+      .coliseum-queue-card {
+        min-width: 100%;
+        padding: ${PARCHMENT_SPACING.lg};
+      }
+
+      .coliseum-queue-panel {
+        padding: ${PARCHMENT_SPACING.lg};
+        max-width: 100%;
+      }
+
+      .coliseum-queue-btn {
+        min-height: var(--touch-target, 44px);
+        padding: ${PARCHMENT_SPACING.md} ${PARCHMENT_SPACING.xl};
+        font-size: var(--font-size-md, 14px);
+      }
+
+      .coliseum-ready-btn,
+      .coliseum-ready-btn-large {
+        min-height: var(--touch-target, 44px);
+        font-size: var(--font-size-lg, 18px);
+      }
+
+      .coliseum-leaderboard-filters {
+        flex-direction: column;
+        gap: ${PARCHMENT_SPACING.sm};
+      }
+
+      .coliseum-filter-group {
+        flex-wrap: wrap;
+      }
+
+      .coliseum-filter-group select {
+        min-height: var(--touch-target, 44px);
+        font-size: var(--font-size-md, 14px);
+      }
+
+      .coliseum-leaderboard-table th,
+      .coliseum-leaderboard-table td {
+        padding: ${PARCHMENT_SPACING.sm};
+        font-size: var(--font-size-sm, 12px);
+      }
+
+      .coliseum-history-filters {
+        flex-direction: column;
+        gap: ${PARCHMENT_SPACING.sm};
+      }
+
+      .coliseum-match-card {
+        flex-direction: column;
+        align-items: stretch;
+        gap: ${PARCHMENT_SPACING.md};
+      }
+
+      .coliseum-details-btn {
+        margin-left: 0;
+        min-height: var(--touch-target, 44px);
+      }
+
+      .coliseum-match-found-panel {
+        max-width: 100%;
+        padding: ${PARCHMENT_SPACING.lg};
+      }
+
+      .coliseum-match-found-title {
+        font-size: 20px;
+      }
+
+      .coliseum-opponent-stats-row {
+        grid-template-columns: 1fr;
+        gap: ${PARCHMENT_SPACING.xs};
+      }
+
+      .coliseum-opponent-stat-col {
+        border-right: none !important;
+        border-bottom: 1px solid ${P.border};
+        padding: ${PARCHMENT_SPACING.sm};
+      }
+
+      .coliseum-opponent-stat-col:last-child {
+        border-bottom: none;
+      }
+
+      .coliseum-teams-section {
+        grid-template-columns: 1fr;
+        gap: ${PARCHMENT_SPACING.lg};
+      }
+
+      .coliseum-match-details-content {
+        width: 95%;
+        padding: ${PARCHMENT_SPACING.md};
+      }
+
+      .coliseum-modal-close-btn {
+        min-width: var(--touch-target, 44px);
+        min-height: var(--touch-target, 44px);
+      }
+
+      .coliseum-load-more-btn {
+        min-height: var(--touch-target, 44px);
+        width: 100%;
+      }
+
+      .coliseum-queue-players-panel {
+        margin-top: ${PARCHMENT_SPACING.md};
+      }
+
+      .coliseum-queue-player-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: ${PARCHMENT_SPACING.xs};
+        padding: ${PARCHMENT_SPACING.md};
+      }
+
+      .coliseum-queue-player-wait {
+        align-self: flex-end;
+      }
+    }
   `;
 }

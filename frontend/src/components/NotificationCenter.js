@@ -247,9 +247,9 @@ export class NotificationCenter {
               <span style="color: ${PARCHMENT_COLORS.text.muted}; font-size: 11px;">${timeAgo}</span>
             </div>
             <div style="color: ${PARCHMENT_COLORS.text.primary}; font-weight: ${isUnread ? 'bold' : 'normal'}; margin-bottom: 4px;">
-              ${notification.title}
+              ${this.escapeHtml(notification.title)}
             </div>
-            ${notification.message ? `<div style="color: ${PARCHMENT_COLORS.text.secondary}; font-size: 13px;">${notification.message}</div>` : ''}
+            ${notification.message ? `<div style="color: ${PARCHMENT_COLORS.text.secondary}; font-size: 13px;">${this.escapeHtml(notification.message)}</div>` : ''}
             ${this.renderActions(notification, style.color)}
           </div>
           <button class="dismiss-btn" style="
@@ -525,6 +525,13 @@ export class NotificationCenter {
     } else {
       this.open();
     }
+  }
+
+  escapeHtml(str) {
+    if (str == null) return '';
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
   }
 
   /**

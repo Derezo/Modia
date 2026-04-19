@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
+import { chatReactionLimiter, presenceUpdateLimiter } from '../middleware/socialRateLimiter.js';
 import chatService from '../services/chatService.js';
 import presenceService from '../services/presenceService.js';
 
@@ -70,7 +71,7 @@ router.get('/conversations', authenticate, asyncHandler(async (req, res) => {
  * POST /api/chat/reaction
  * Add a reaction to a message
  */
-router.post('/reaction', authenticate, asyncHandler(async (req, res) => {
+router.post('/reaction', authenticate, chatReactionLimiter, asyncHandler(async (req, res) => {
   const { messageId, emoji } = req.body;
 
   if (!messageId || !emoji) {
@@ -99,7 +100,7 @@ router.post('/reaction', authenticate, asyncHandler(async (req, res) => {
  * DELETE /api/chat/reaction
  * Remove a reaction from a message
  */
-router.delete('/reaction', authenticate, asyncHandler(async (req, res) => {
+router.delete('/reaction', authenticate, chatReactionLimiter, asyncHandler(async (req, res) => {
   const { messageId, emoji } = req.body;
 
   if (!messageId || !emoji) {
@@ -130,7 +131,7 @@ router.get('/online', authenticate, asyncHandler(async (req, res) => {
  * PUT /api/chat/presence
  * Update current user's presence status
  */
-router.put('/presence', authenticate, asyncHandler(async (req, res) => {
+router.put('/presence', authenticate, presenceUpdateLimiter, asyncHandler(async (req, res) => {
   const { status, customMessage } = req.body;
 
   const validStatuses = ['online', 'away', 'busy'];

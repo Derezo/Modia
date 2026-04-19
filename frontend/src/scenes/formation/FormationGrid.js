@@ -1,3 +1,5 @@
+import { responsive } from '../../core/Responsive.js';
+
 /**
  * FormationGrid - Diorama-style grid for character placement
  *
@@ -251,7 +253,7 @@ export class FormationGrid {
     const labelY = (topCorner.y + bottomCorner.y) / 2;
 
     ctx.fillStyle = glowColor;
-    ctx.font = 'bold 10px Arial';
+    ctx.font = `bold ${responsive.getCanvasFontSize('sm')}px Arial`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
 
@@ -435,7 +437,7 @@ export class FormationGrid {
 
     // Character name below
     ctx.fillStyle = '#fff';
-    ctx.font = '9px Arial';
+    ctx.font = `${responsive.getCanvasFontSize('sm')}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText(char.name.substring(0, 8), x, y + 8);

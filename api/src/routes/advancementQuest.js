@@ -27,9 +27,9 @@ const router = express.Router();
  * Verify character ownership middleware
  */
 async function verifyCharacterOwnership(req, res, next) {
-  const characterId = parseInt(req.params.characterId || req.body.characterId, 10);
+  const characterId = parseInt(req.params.characterId, 10);
 
-  if (!characterId || isNaN(characterId)) {
+  if (!characterId || isNaN(characterId) || characterId <= 0) {
     throw new AppError('Valid characterId is required', 400);
   }
 

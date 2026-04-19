@@ -17,6 +17,7 @@
  */
 
 import { COMBAT_NODE_TYPES } from '@shared/constants.js';
+import { responsive } from '../core/Responsive.js';
 
 // Region colors by race - used for node tinting and boundary rendering
 const REGION_COLORS = {
@@ -477,7 +478,7 @@ export class WorldMapNodeRenderer {
       const y = node.y_coord * scene.nodeSpacing + scene.cameraY;
 
       // Skip if off screen
-      if (x < -50 || x > ctx.canvas.width + 50 || y < -50 || y > ctx.canvas.height + 50) {
+      if (x < -50 || x > this.game.targetWidth + 50 || y < -50 || y > this.game.targetHeight + 50) {
         continue;
       }
 
@@ -574,7 +575,7 @@ export class WorldMapNodeRenderer {
     const { scene } = this;
     const displayName = node.name || '?';
 
-    ctx.font = 'bold 11px Arial';
+    ctx.font = `bold ${responsive.getCanvasFontSize('sm')}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
 
@@ -643,7 +644,7 @@ export class WorldMapNodeRenderer {
     let tooltipWidth = nameWidth + 16;
 
     if (costLine) {
-      ctx.font = '11px Arial';
+      ctx.font = `${responsive.getCanvasFontSize('sm')}px Arial`;
       const costWidth = ctx.measureText(costLine.text).width;
       tooltipWidth = Math.max(tooltipWidth, costWidth + 16);
     }
@@ -685,7 +686,7 @@ export class WorldMapNodeRenderer {
 
     // Draw cost line
     if (costLine) {
-      ctx.font = '11px Arial';
+      ctx.font = `${responsive.getCanvasFontSize('sm')}px Arial`;
       ctx.fillStyle = costLine.color;
       ctx.fillText(costLine.text, x, tooltipY + 20);
     }

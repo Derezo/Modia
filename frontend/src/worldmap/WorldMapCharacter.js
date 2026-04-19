@@ -5,6 +5,7 @@
  */
 
 import { generatePathControlPoints, generateSplinePoints } from './PathRenderer.js';
+import { responsive } from '../core/Responsive.js';
 
 export class WorldMapCharacter {
   constructor(assetLoader) {
@@ -346,16 +347,18 @@ export class WorldMapCharacter {
    * @param {CanvasRenderingContext2D} ctx - Canvas context
    * @param {number} cameraX - Camera X offset
    * @param {number} cameraY - Camera Y offset
+   * @param {number} canvasWidth - Logical canvas width
+   * @param {number} canvasHeight - Logical canvas height
    */
-  render(ctx, cameraX, cameraY) {
+  render(ctx, cameraX, cameraY, canvasWidth, canvasHeight) {
     if (!this.character) return;
 
     const screenX = this.x + cameraX;
     const screenY = this.y + cameraY;
 
     // Skip if off screen
-    if (screenX < -50 || screenX > ctx.canvas.width + 50 ||
-        screenY < -50 || screenY > ctx.canvas.height + 50) {
+    if (screenX < -50 || screenX > canvasWidth + 50 ||
+        screenY < -50 || screenY > canvasHeight + 50) {
       return;
     }
 
@@ -474,7 +477,8 @@ export class WorldMapCharacter {
 
     // Draw class initial
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${this.size / 2}px serif`;
+    const fontSize = Math.max(responsive.getCanvasFontSize('sm'), this.size / 2);
+    ctx.font = `bold ${fontSize}px serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(

@@ -15,6 +15,13 @@ export class InputHandler {
     this.touching = false;
     this.touchTapped = false;
 
+    // Multi-touch / pinch state
+    this.pinchActive = false;
+    this.pinchDistance = 0;
+    this.pinchDistanceDelta = 0;
+    this.pinchMidX = 0;
+    this.pinchMidY = 0;
+
     // Keyboard state
     this.keys = new Set();
     this.keysPressed = new Set();
@@ -70,6 +77,10 @@ export class InputHandler {
   setupTouchEvents() {
     this.canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      if (e.touches.length >= 2) {
+        this._beginPinch(e.touches[0], e.touches[1]);
+        return;
+      }
       const touch = e.touches[0];
       const coords = this.getCanvasCoords(touch.clientX, touch.clientY);
       this.touchX = coords.x;
@@ -79,6 +90,17 @@ export class InputHandler {
 
     this.canvas.addEventListener('touchmove', (e) => {
       e.preventDefault();
+      if (e.touches.length >= 2) {
+        this._updatePinch(e.touches[0], e.touches[1]);
+        return;
+      }
+      if (this.pinchActive) {
+        // Dropped to single touch — leave pinch mode but don't tap
+        this.pinchActive = false;
+        this.pinchDistanceDelta = 0;
+        this.touching = false;
+        return;
+      }
       const touch = e.touches[0];
       const coords = this.getCanvasCoords(touch.clientX, touch.clientY);
       this.touchX = coords.x;
@@ -87,11 +109,70 @@ export class InputHandler {
 
     this.canvas.addEventListener('touchend', (e) => {
       e.preventDefault();
+      if (this.pinchActive) {
+        // End of multi-touch gesture — do not fire a tap
+        this.pinchActive = false;
+        this.pinchDistanceDelta = 0;
+        this.touching = false;
+        return;
+      }
       if (this.touching) {
         this.touchTapped = true;
       }
       this.touching = false;
     }, { passive: false });
+
+    this.canvas.addEventListener('touchcancel', () => {
+      this.pinchActive = false;
+      this.pinchDistanceDelta = 0;
+      this.touching = false;
+    }, { passive: false });
+  }
+
+  _beginPinch(t1, t2) {
+    this.pinchActive = true;
+    this.touching = false;
+    this.pinchDistance = this._touchDistance(t1, t2);
+    this.pinchDistanceDelta = 0;
+    const mid = this._touchMidpoint(t1, t2);
+    this.pinchMidX = mid.x;
+    this.pinchMidY = mid.y;
+  }
+
+  _updatePinch(t1, t2) {
+    if (!this.pinchActive) {
+      this._beginPinch(t1, t2);
+      return;
+    }
+    const prevDistance = this.pinchDistance;
+    this.pinchDistance = this._touchDistance(t1, t2);
+    this.pinchDistanceDelta = this.pinchDistance - prevDistance;
+    const mid = this._touchMidpoint(t1, t2);
+    this.pinchMidX = mid.x;
+    this.pinchMidY = mid.y;
+  }
+
+  _touchDistance(t1, t2) {
+    const dx = t2.clientX - t1.clientX;
+    const dy = t2.clientY - t1.clientY;
+    return Math.hypot(dx, dy);
+  }
+
+  _touchMidpoint(t1, t2) {
+    return this.getCanvasCoords(
+      (t1.clientX + t2.clientX) / 2,
+      (t1.clientY + t2.clientY) / 2
+    );
+  }
+
+  getPinchState() {
+    return {
+      active: this.pinchActive,
+      distance: this.pinchDistance,
+      distanceDelta: this.pinchDistanceDelta,
+      midX: this.pinchMidX,
+      midY: this.pinchMidY
+    };
   }
 
   setupKeyboardEvents() {
@@ -161,6 +242,7 @@ export class InputHandler {
     this.mouseClicked = false;
     this.touchTapped = false;
     this.keysPressed.clear();
+    this.pinchDistanceDelta = 0;
   }
 
   // Get current pointer position (mouse or touch)
