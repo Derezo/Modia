@@ -4,6 +4,7 @@ All notable changes to Modia.
 
 ## 0.4
 
+- 0.4.38: Modularized BattleFormationScene (extracted stylesheet)
 - 0.4.37: Modularized BattleUI (extracted styles and selection panels)
 - 0.4.36: Modularized WorldMapScene (extracted connection, region, quest marker renderers)
 - 0.4.35: Modularized BattleScene (extracted highlights, minimap, coord helpers)
