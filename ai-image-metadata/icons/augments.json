@@ -12,12 +12,14 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:36:19.585Z",
+      "generatedAt": "2026-02-03T10:50:55.056Z",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "range",
@@ -27,8 +29,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:37:05.835Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:52:10.765Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "area",
@@ -38,8 +42,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:37:52.411Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:53:26.379Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "duration",
@@ -49,8 +55,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:38:38.448Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:54:43.213Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "cooldown",
@@ -60,8 +68,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:39:24.734Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:55:59.690Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "cost",
@@ -71,8 +81,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:40:09.909Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:57:15.781Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "crit_chance",
@@ -82,12 +94,14 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:40:56.221Z",
+      "generatedAt": "2026-02-03T10:58:31.782Z",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "pierce",
@@ -97,13 +111,15 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:41:42.243Z",
+      "generatedAt": "2026-02-03T10:59:49.228Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
       },
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "lifesteal",
@@ -113,8 +129,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:42:28.458Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:01:04.767Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "chain",
@@ -124,8 +142,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:43:13.488Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:02:20.594Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "splash",
@@ -135,13 +155,15 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:43:59.115Z",
+      "generatedAt": "2026-02-03T11:03:35.168Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
       },
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "stagger",
@@ -151,13 +173,15 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:44:46.200Z",
+      "generatedAt": "2026-02-03T11:04:52.070Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
       },
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "elemental_fire",
@@ -167,8 +191,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:45:33.196Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:06:09.684Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "elemental_ice",
@@ -178,8 +204,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-02-03T09:36:18.808Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:07:27.357Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "elemental_lightning",
@@ -189,8 +217,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:47:05.050Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:08:44.405Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "healing_boost",
@@ -200,7 +230,7 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:47:50.828Z",
+      "generatedAt": "2026-02-03T11:10:01.519Z",
       "evaluation": {
         "score": 0,
         "issues": [],
@@ -209,7 +239,9 @@
       "issues": "",
       "notes": "",
       "priority": 0,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "accuracy_boost",
@@ -219,12 +251,14 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:48:37.134Z",
+      "generatedAt": "2026-02-03T11:11:17.866Z",
       "evaluation": 0,
       "issues": "",
       "notes": "",
       "priority": 0,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "evasion",
@@ -234,8 +268,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:49:22.396Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:12:35.198Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "shield",
@@ -245,8 +281,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:50:08.495Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:13:52.611Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "cleanse",
@@ -254,10 +292,12 @@
       "prompt": "sparkle cleanse purify remove debuff holy",
       "seed": 33020,
       "generated": true,
-      "generatedAt": "2026-01-29T08:50:54.323Z",
+      "generatedAt": "2026-02-03T11:15:08.983Z",
       "loraModel": "v2",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "fire",
@@ -267,8 +307,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.791Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:16:25.932Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "ice",
@@ -278,8 +320,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.791Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:17:42.550Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "lightning",
@@ -289,8 +333,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.792Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:18:58.939Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "poison",
@@ -315,8 +361,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.792Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:20:15.530Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "dark",
@@ -326,8 +374,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.793Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:21:32.818Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "strength",
@@ -337,8 +387,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.793Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:22:48.377Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "intelligence",
@@ -348,8 +400,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.794Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:24:04.808Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "agility",
@@ -359,8 +413,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.802Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:25:20.978Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "vitality",
@@ -370,8 +426,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.802Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:26:38.018Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "luck",
@@ -381,8 +439,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.803Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:27:54.964Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "critical",
@@ -392,8 +452,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.803Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:29:11.720Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "defense",
@@ -403,8 +465,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.803Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:30:28.779Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "dragon-slayer",
@@ -414,8 +478,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.804Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:31:47.505Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "undead-slayer",
@@ -425,8 +491,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.804Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:33:09.386Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "demon-slayer",
@@ -436,8 +504,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T03:13:50.805Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T11:34:25.518Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "speed",
@@ -487,7 +557,7 @@
       "loraModel": "v2",
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-31T10:13:56.294Z",
+      "generatedAt": "2026-02-03T11:29:50.470Z",
       "generationFailureCount": null,
       "lastError": null
     },
@@ -500,7 +570,7 @@
       "loraModel": "v2",
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-31T10:15:34.266Z",
+      "generatedAt": "2026-02-03T11:31:08.277Z",
       "generationFailureCount": null,
       "lastError": null
     },
@@ -543,7 +613,7 @@
       "loraModel": "retro-pixel",
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-31T10:22:45.644Z",
+      "generatedAt": "2026-02-03T11:35:45.587Z",
       "generationFailureCount": null,
       "lastError": null
     },
@@ -556,7 +626,7 @@
       "loraModel": "v2",
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-31T10:25:11.772Z",
+      "generatedAt": "2026-02-03T11:37:03.408Z",
       "generationFailureCount": null,
       "lastError": null
     },
@@ -569,7 +639,7 @@
       "loraModel": "v2",
       "needsRegeneration": false,
       "regenerationQueuedAt": null,
-      "generatedAt": "2026-01-31T10:27:36.900Z",
+      "generatedAt": "2026-02-03T11:38:20.343Z",
       "generationFailureCount": null,
       "lastError": null
     },

@@ -170,7 +170,7 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-02-03T09:37:02.905Z",
+      "generatedAt": "2026-02-03T09:40:40.804Z",
       "evaluation": {
         "score": 0,
         "issues": [],
@@ -188,7 +188,7 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-02-03T09:38:30.083Z",
+      "generatedAt": "2026-02-03T09:42:04.669Z",
       "evaluation": {
         "score": 0,
         "issues": [],
@@ -206,7 +206,7 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-02-03T09:39:56.477Z",
+      "generatedAt": "2026-02-03T09:43:27.804Z",
       "regenerationQueuedAt": null,
       "generationFailureCount": null,
       "lastError": null
@@ -219,8 +219,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:55:34.323Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T09:44:52.446Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "debuff",
@@ -230,13 +232,15 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:56:24.038Z",
+      "generatedAt": "2026-02-03T09:46:15.412Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
       },
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "taunt",
@@ -246,8 +250,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:57:14.181Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T09:47:39.547Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "stealth",
@@ -257,13 +263,15 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:58:04.361Z",
+      "generatedAt": "2026-02-03T09:49:02.782Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
       },
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "summon",
@@ -273,8 +281,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:58:54.912Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T09:50:27.726Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "counter",
@@ -284,8 +294,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T07:59:44.763Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T09:51:50.700Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "travel",
@@ -295,12 +307,14 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-30T04:47:18.472Z",
+      "generatedAt": "2026-02-03T09:53:13.694Z",
       "regenerationQueuedAt": null,
       "evaluation": 0,
       "issues": "",
       "notes": "",
-      "priority": 0
+      "priority": 0,
+      "generationFailureCount": null,
+      "lastError": null
     }
   ]
 }

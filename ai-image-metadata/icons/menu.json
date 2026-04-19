@@ -12,8 +12,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:16:59.118Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:20:21.859Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "equipment",
@@ -23,8 +25,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:17:45.548Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:21:39.699Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "skills",
@@ -34,8 +38,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:18:31.794Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:22:56.025Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "party",
@@ -45,8 +51,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:19:19.036Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:24:11.728Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "map",
@@ -56,13 +64,15 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:20:05.871Z",
+      "generatedAt": "2026-02-03T10:25:28.625Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
       },
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "quest",
@@ -72,8 +82,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:20:52.871Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:26:44.574Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "settings",
@@ -83,8 +95,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:21:39.128Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:28:01.092Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "shop",
@@ -112,12 +126,14 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:23:13.773Z",
+      "generatedAt": "2026-02-03T10:29:18.960Z",
       "regenerationQueuedAt": null,
       "evaluation": 0,
       "issues": "",
       "notes": "",
-      "priority": 0
+      "priority": 0,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "guild",
@@ -127,8 +143,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:23:59.645Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:30:34.772Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "tavern",
@@ -138,13 +156,15 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:24:46.094Z",
+      "generatedAt": "2026-02-03T10:31:51.360Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
       },
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "coliseum",
@@ -154,8 +174,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:25:32.330Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:33:07.544Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "fishing",
@@ -165,7 +187,7 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:26:18.749Z",
+      "generatedAt": "2026-02-03T10:34:24.404Z",
       "evaluation": {
         "score": 0,
         "issues": [],
@@ -180,8 +202,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:27:04.984Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:35:40.622Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "caravan",
@@ -191,13 +215,15 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:27:51.251Z",
+      "generatedAt": "2026-02-03T10:36:56.168Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
       },
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "close",
@@ -207,8 +233,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:28:37.439Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:38:11.273Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "confirm",
@@ -218,13 +246,15 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:29:23.840Z",
+      "generatedAt": "2026-02-03T10:39:28.163Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
       },
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "back",
@@ -234,8 +264,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:30:10.053Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:40:44.412Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "help",
@@ -245,13 +277,15 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:30:56.195Z",
+      "generatedAt": "2026-02-03T10:42:00.455Z",
       "evaluation": {
         "score": 0,
         "issues": [],
         "regenerate": false
       },
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "notifications",
@@ -261,8 +295,10 @@
       "generated": true,
       "loraModel": "v2",
       "needsRegeneration": false,
-      "generatedAt": "2026-01-29T08:31:42.207Z",
-      "regenerationQueuedAt": null
+      "generatedAt": "2026-02-03T10:43:16.299Z",
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "formation",
@@ -271,9 +307,11 @@
       "seed": 32021,
       "generated": true,
       "loraModel": "v2",
-      "generatedAt": "2026-01-29T08:32:28.864Z",
+      "generatedAt": "2026-02-03T10:44:32.016Z",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "characters",
@@ -282,9 +320,11 @@
       "seed": 32022,
       "generated": true,
       "loraModel": "v2",
-      "generatedAt": "2026-01-29T08:33:15.184Z",
+      "generatedAt": "2026-02-03T10:45:47.720Z",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "friends",
@@ -293,9 +333,11 @@
       "seed": 32023,
       "generated": true,
       "loraModel": "v2",
-      "generatedAt": "2026-01-29T08:34:01.431Z",
+      "generatedAt": "2026-02-03T10:47:04.562Z",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "leaderboard",
@@ -304,9 +346,11 @@
       "seed": 32024,
       "generated": true,
       "loraModel": "v2",
-      "generatedAt": "2026-01-29T08:34:47.552Z",
+      "generatedAt": "2026-02-03T10:48:21.363Z",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     },
     {
       "id": "logout",
@@ -315,9 +359,11 @@
       "seed": 32025,
       "generated": true,
       "loraModel": "v2",
-      "generatedAt": "2026-01-29T08:35:33.679Z",
+      "generatedAt": "2026-02-03T10:49:38.134Z",
       "needsRegeneration": false,
-      "regenerationQueuedAt": null
+      "regenerationQueuedAt": null,
+      "generationFailureCount": null,
+      "lastError": null
     }
   ]
 }
