@@ -5,5 +5,3 @@
 export * from './pathfindingService.js';
 export * from './discoveryService.js';
 export * from './discoveryValidationService.js';
-export * from './nodeService.js';
-export * from './regionService.js';

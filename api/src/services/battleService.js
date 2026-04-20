@@ -77,5 +77,12 @@ export {
   checkBattleEnd,
   getBattleStatusString,
   // Pathfinding (for AI movement validation)
-  calculatePathCost
+  calculatePathCost,
+  // Encounter generation
+  MAP_SEED_MODULUS,
+  DEFAULT_MAP_WIDTH,
+  DEFAULT_MAP_HEIGHT,
+  generateMapSeed,
+  generateBattleTerrain,
+  generateEncounterTerrain
 } from './battle/index.js';

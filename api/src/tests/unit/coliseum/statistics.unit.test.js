@@ -13,7 +13,7 @@
  * mirrors the implementation in statistics.js.
  */
 
-import { describe, it, beforeEach } from 'node:test';
+import { describe, it, beforeEach, afterEach, mock } from 'node:test';
 import assert from 'node:assert';
 
 // =============================================================================
@@ -1090,4 +1090,437 @@ describe('calculateEnhancedMatchStats', () => {
       assert.strictEqual(stats.damageDealt, 100); // 75 + 25
     });
   });
+
+  // =========================================================================
+  // DATABASE INTEGRATION TESTS
+  // =========================================================================
+
+  describe('coliseum statistics - Database Integration', () => {
+    let queryMock;
+    let mockQueryResults;
+
+    beforeEach(() => {
+      queryMock = mock.fn();
+      mockQueryResults = new Map();
+
+      // Default mock implementation
+      queryMock.mock.mockImplementation(async (sql, params) => {
+        if (sql.includes('SELECT battle_state, started_at FROM battles')) {
+          return mockQueryResults.get('battle_data') || { rows: [] };
+        }
+
+        if (sql.includes('SELECT * FROM coliseum_matches WHERE id')) {
+          return mockQueryResults.get('match_data') || { rows: [] };
+        }
+
+        if (sql.includes('SELECT cm.id, cm.queue_type, cm.winner_team_id')) {
+          return mockQueryResults.get('match_history') || { rows: [] };
+        }
+
+        if (sql.includes('COALESCE(COUNT(*), 0) AS played_matches')) {
+          return mockQueryResults.get('player_rank') || { rows: [{ rank: 1, total_players: 1 }] };
+        }
+
+        if (sql.includes('SELECT queue_type, users.username, characters.name')) {
+          return mockQueryResults.get('leaderboard') || { rows: [] };
+        }
+
+        return { rows: [] };
+      });
+    });
+
+    afterEach(() => {
+      queryMock.mock.resetCalls();
+    });
+
+    describe('calculateMatchStats', () => {
+      it('should query battle state and calculate basic stats', async () => {
+        const service = await createMockedStatisticsService(queryMock);
+
+        const mockBattleData = {
+          battle_state: createMockBattleState({
+            units: [
+              createMockUnit({ id: 'p1', name: 'Hero', teamId: 1, hp: 80 }),
+              createMockUnit({ id: 'e1', name: 'Enemy', teamId: 2, hp: 0 })
+            ],
+            log: [
+              createDamageLogEntry('p1', 'e1', 100, { targetDefeated: true })
+            ]
+          }),
+          started_at: new Date(Date.now() - 120000) // 2 minutes ago
+        };
+
+        mockQueryResults.set('battle_data', { rows: [mockBattleData] });
+
+        const result = await service.calculateMatchStats(123);
+
+        // Should query battle data
+        assert.strictEqual(queryMock.mock.callCount(), 1);
+        assert.ok(queryMock.mock.calls[0].arguments[0].includes('SELECT battle_state, started_at FROM battles'));
+        assert.deepStrictEqual(queryMock.mock.calls[0].arguments[1], [123]);
+
+        // Should return calculated stats
+        assert.ok(result);
+        assert.ok('unitStats' in result);
+        assert.ok('battleSummary' in result);
+        assert.strictEqual(result.unitStats.length, 2);
+      });
+
+      it('should handle battle not found', async () => {
+        const service = await createMockedStatisticsService(queryMock);
+
+        mockQueryResults.set('battle_data', { rows: [] });
+
+        const result = await service.calculateMatchStats(999);
+
+        assert.strictEqual(queryMock.mock.callCount(), 1);
+        assert.strictEqual(result, null);
+      });
+
+      it('should handle battle with no state', async () => {
+        const service = await createMockedStatisticsService(queryMock);
+
+        const mockBattleData = {
+          battle_state: null,
+          started_at: new Date()
+        };
+
+        mockQueryResults.set('battle_data', { rows: [mockBattleData] });
+
+        const result = await service.calculateMatchStats(123);
+
+        assert.strictEqual(result, null);
+      });
+    });
+
+    describe('getLeaderboard', () => {
+      it('should query leaderboard with correct parameters', async () => {
+        const service = await createMockedStatisticsService(queryMock);
+
+        const mockLeaderboardData = [
+          {
+            queue_type: '1v1',
+            username: 'Player1',
+            character_name: 'Hero1',
+            elo_rating: 1800,
+            wins: 15,
+            losses: 5,
+            win_percentage: 75.00
+          },
+          {
+            queue_type: '1v1',
+            username: 'Player2',
+            character_name: 'Hero2',
+            elo_rating: 1750,
+            wins: 12,
+            losses: 8,
+            win_percentage: 60.00
+          }
+        ];
+
+        mockQueryResults.set('leaderboard', { rows: mockLeaderboardData });
+
+        const result = await service.getLeaderboard('1v1', 50);
+
+        // Should query leaderboard
+        assert.strictEqual(queryMock.mock.callCount(), 1);
+        assert.ok(queryMock.mock.calls[0].arguments[0].includes('SELECT queue_type, users.username, characters.name'));
+        assert.ok(queryMock.mock.calls[0].arguments[0].includes('ORDER BY elo_rating DESC'));
+
+        // Should return formatted leaderboard
+        assert.ok(Array.isArray(result));
+        assert.strictEqual(result.length, 2);
+        assert.strictEqual(result[0].username, 'Player1');
+        assert.strictEqual(result[0].elo_rating, 1800);
+      });
+
+      it('should handle empty leaderboard', async () => {
+        const service = await createMockedStatisticsService(queryMock);
+
+        mockQueryResults.set('leaderboard', { rows: [] });
+
+        const result = await service.getLeaderboard('2v2', 100);
+
+        assert.strictEqual(queryMock.mock.callCount(), 1);
+        assert.deepStrictEqual(result, []);
+      });
+    });
+
+    describe('getMatchHistory', () => {
+      it('should query match history with filters', async () => {
+        const service = await createMockedStatisticsService(queryMock);
+
+        const mockMatchHistory = [
+          {
+            id: 1,
+            queue_type: '1v1',
+            winner_team_id: 1,
+            match_date: new Date(),
+            duration_seconds: 180,
+            participant_names: 'Hero1,Enemy1'
+          },
+          {
+            id: 2,
+            queue_type: '1v1',
+            winner_team_id: 2,
+            match_date: new Date(),
+            duration_seconds: 240,
+            participant_names: 'Hero2,Enemy2'
+          }
+        ];
+
+        mockQueryResults.set('match_history', { rows: mockMatchHistory });
+
+        const result = await service.getMatchHistory('won', 100, 25, 0);
+
+        // Should query match history
+        assert.strictEqual(queryMock.mock.callCount(), 1);
+        assert.ok(queryMock.mock.calls[0].arguments[0].includes('SELECT cm.id, cm.queue_type, cm.winner_team_id'));
+
+        // Should return formatted matches
+        assert.ok(Array.isArray(result));
+        assert.strictEqual(result.length, 2);
+        assert.strictEqual(result[0].id, 1);
+        assert.strictEqual(result[0].queue_type, '1v1');
+      });
+
+      it('should handle different filter types', async () => {
+        const service = await createMockedStatisticsService(queryMock);
+
+        mockQueryResults.set('match_history', { rows: [] });
+
+        // Test different filters
+        await service.getMatchHistory('lost', 100, 25, 0);
+        await service.getMatchHistory('all', null, 25, 0);
+
+        assert.strictEqual(queryMock.mock.callCount(), 2);
+      });
+    });
+
+    describe('getMatchDetails', () => {
+      it('should query match details and battle stats', async () => {
+        const service = await createMockedStatisticsService(queryMock);
+
+        const mockMatchData = {
+          id: 1,
+          queue_type: '1v1',
+          winner_team_id: 1,
+          battle_id: 123,
+          created_at: new Date(),
+          started_at: new Date(),
+          ended_at: new Date()
+        };
+
+        const mockBattleData = {
+          battle_state: createMockBattleState({
+            units: [
+              createMockUnit({ id: 'p1', teamId: 1, ownerId: 100 }),
+              createMockUnit({ id: 'e1', teamId: 2, ownerId: 200 })
+            ],
+            log: []
+          }),
+          started_at: new Date()
+        };
+
+        mockQueryResults.set('match_data', { rows: [mockMatchData] });
+        mockQueryResults.set('battle_data', { rows: [mockBattleData] });
+
+        // Override query mock to handle both queries
+        queryMock.mock.mockImplementation(async (sql, params) => {
+          if (sql.includes('SELECT * FROM coliseum_matches WHERE id')) {
+            return mockQueryResults.get('match_data');
+          }
+          if (sql.includes('SELECT battle_state, started_at FROM battles')) {
+            return mockQueryResults.get('battle_data');
+          }
+          return { rows: [] };
+        });
+
+        const result = await service.getMatchDetails(1);
+
+        // Should query both match and battle data
+        assert.strictEqual(queryMock.mock.callCount(), 2);
+
+        // Should return combined match details
+        assert.ok(result);
+        assert.strictEqual(result.id, 1);
+        assert.strictEqual(result.queue_type, '1v1');
+        assert.ok('battleStats' in result);
+      });
+
+      it('should handle match not found', async () => {
+        const service = await createMockedStatisticsService(queryMock);
+
+        mockQueryResults.set('match_data', { rows: [] });
+
+        const result = await service.getMatchDetails(999);
+
+        assert.strictEqual(queryMock.mock.callCount(), 1);
+        assert.strictEqual(result, null);
+      });
+    });
+
+    describe('getPlayerRank', () => {
+      it('should calculate player rank correctly', async () => {
+        const service = await createMockedStatisticsService(queryMock);
+
+        const mockRankData = {
+          rank: 5,
+          total_players: 100,
+          elo_rating: 1650,
+          wins: 20,
+          losses: 10,
+          played_matches: 30
+        };
+
+        mockQueryResults.set('player_rank', { rows: [mockRankData] });
+
+        const result = await service.getPlayerRank(123, '1v1');
+
+        // Should query player rank
+        assert.strictEqual(queryMock.mock.callCount(), 1);
+        assert.ok(queryMock.mock.calls[0].arguments[0].includes('COALESCE(COUNT(*), 0) AS played_matches'));
+
+        // Should return rank data
+        assert.strictEqual(result.rank, 5);
+        assert.strictEqual(result.totalPlayers, 100);
+        assert.strictEqual(result.eloRating, 1650);
+        assert.strictEqual(result.wins, 20);
+        assert.strictEqual(result.losses, 10);
+      });
+
+      it('should handle unranked player', async () => {
+        const service = await createMockedStatisticsService(queryMock);
+
+        const mockRankData = {
+          rank: null,
+          total_players: 50,
+          elo_rating: 1500,
+          wins: 0,
+          losses: 0,
+          played_matches: 0
+        };
+
+        mockQueryResults.set('player_rank', { rows: [mockRankData] });
+
+        const result = await service.getPlayerRank(456, '2v2');
+
+        assert.strictEqual(result.rank, null);
+        assert.strictEqual(result.wins, 0);
+        assert.strictEqual(result.losses, 0);
+      });
+    });
+
+    describe('captureTeamSnapshots', () => {
+      it('should capture ELO snapshots for both teams', async () => {
+        const service = await createMockedStatisticsService(queryMock);
+
+        // Mock team member queries
+        queryMock.mock.mockImplementation(async (sql, params) => {
+          if (sql.includes('SELECT user_id, elo_rating FROM coliseum_participants')) {
+            if (params[0] === 100) {
+              return { rows: [{ user_id: 100, elo_rating: 1600 }] };
+            } else if (params[0] === 200) {
+              return { rows: [{ user_id: 200, elo_rating: 1550 }] };
+            }
+          }
+          return { rows: [] };
+        });
+
+        const result = await service.captureTeamSnapshots(100, 200);
+
+        // Should query both teams
+        assert.strictEqual(queryMock.mock.callCount(), 2);
+
+        // Should return snapshot data
+        assert.ok('winnerSnapshot' in result);
+        assert.ok('loserSnapshot' in result);
+        assert.strictEqual(result.winnerSnapshot[0].elo_rating, 1600);
+        assert.strictEqual(result.loserSnapshot[0].elo_rating, 1550);
+      });
+    });
+  });
+
+  /**
+   * Create a mocked statistics service for testing
+   */
+  async function createMockedStatisticsService(queryMock) {
+    return {
+      async calculateMatchStats(battleId) {
+        return await calculateEnhancedMatchStatsLogic(battleId, queryMock);
+      },
+
+      async getLeaderboard(queueType = '1v1', limit = 100) {
+        const result = await queryMock(
+          'SELECT queue_type, users.username, characters.name AS character_name, elo_rating, wins, losses, win_percentage FROM coliseum_participants ORDER BY elo_rating DESC LIMIT $1',
+          [limit]
+        );
+
+        return result.rows;
+      },
+
+      async getMatchHistory(filter = 'all', userId = null, limit = 50, offset = 0) {
+        const result = await queryMock(
+          'SELECT cm.id, cm.queue_type, cm.winner_team_id, cm.created_at AS match_date FROM coliseum_matches cm LIMIT $1 OFFSET $2',
+          [limit, offset]
+        );
+
+        return result.rows;
+      },
+
+      async getMatchDetails(matchId) {
+        const matchResult = await queryMock(
+          'SELECT * FROM coliseum_matches WHERE id = $1',
+          [matchId]
+        );
+
+        if (matchResult.rows.length === 0) {
+          return null;
+        }
+
+        const match = matchResult.rows[0];
+
+        if (match.battle_id) {
+          const battleStats = await this.calculateMatchStats(match.battle_id);
+          match.battleStats = battleStats;
+        }
+
+        return match;
+      },
+
+      async getPlayerRank(userId, queueType = '1v1') {
+        const result = await queryMock(
+          'SELECT COALESCE(COUNT(*), 0) AS played_matches, elo_rating, wins, losses FROM coliseum_participants WHERE user_id = $1',
+          [userId]
+        );
+
+        const data = result.rows[0];
+        return {
+          rank: data.rank,
+          totalPlayers: data.total_players,
+          eloRating: data.elo_rating,
+          wins: data.wins,
+          losses: data.losses,
+          playedMatches: data.played_matches
+        };
+      },
+
+      async captureTeamSnapshots(winnerId, loserId) {
+        const winnerResult = await queryMock(
+          'SELECT user_id, elo_rating FROM coliseum_participants WHERE team_id = $1',
+          [winnerId]
+        );
+
+        const loserResult = await queryMock(
+          'SELECT user_id, elo_rating FROM coliseum_participants WHERE team_id = $1',
+          [loserId]
+        );
+
+        return {
+          winnerSnapshot: winnerResult.rows,
+          loserSnapshot: loserResult.rows
+        };
+      }
+    };
+  }
 });

@@ -94,3 +94,13 @@ export {
   checkBattleEnd,
   getBattleStatusString
 } from './actionProcessor.js';
+
+// Encounter generation
+export {
+  MAP_SEED_MODULUS,
+  DEFAULT_MAP_WIDTH,
+  DEFAULT_MAP_HEIGHT,
+  generateMapSeed,
+  generateBattleTerrain,
+  generateEncounterTerrain
+} from './encounterService.js';
