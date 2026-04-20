@@ -14,6 +14,7 @@ import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { questReadLimiter, questClaimLimiter, questRefreshLimiter } from '../middleware/gameplayRateLimiter.js';
 import * as dailyQuestService from '../services/dailyQuestService.js';
+import { parseIntOrThrow } from '../utils/validateNumericParam.js';
 
 const router = express.Router();
 
@@ -180,22 +181,20 @@ router.post('/:questId/claim', authenticate, questClaimLimiter, asyncHandler(asy
     throw new AppError('Invalid quest ID', 400);
   }
 
-  if (!characterId || isNaN(parseInt(characterId, 10))) {
-    throw new AppError('Character ID required', 400);
-  }
+  const parsedCharacterId = parseIntOrThrow(characterId, 'character ID');
 
   // Verify character ownership
   const { pool } = await import('../config/database.js');
   const charResult = await pool.query(
     'SELECT id FROM characters WHERE id = $1 AND user_id = $2',
-    [characterId, req.user.userId]
+    [parsedCharacterId, req.user.userId]
   );
 
   if (charResult.rows.length === 0) {
     throw new AppError('Character not found', 404);
   }
 
-  const reward = await dailyQuestService.claimReward(questId, parseInt(characterId, 10));
+  const reward = await dailyQuestService.claimReward(questId, parsedCharacterId);
 
   // Get updated user gold
   const goldResult = await pool.query(
@@ -216,23 +215,20 @@ router.post('/:questId/claim', authenticate, questClaimLimiter, asyncHandler(asy
  */
 router.post('/claim-all', authenticate, questClaimLimiter, asyncHandler(async (req, res) => {
   const { characterId } = req.body;
-
-  if (!characterId || isNaN(parseInt(characterId, 10))) {
-    throw new AppError('Character ID required', 400);
-  }
+  const parsedCharacterId = parseIntOrThrow(characterId, 'character ID');
 
   // Verify character ownership
   const { pool } = await import('../config/database.js');
   const charResult = await pool.query(
     'SELECT id FROM characters WHERE id = $1 AND user_id = $2',
-    [characterId, req.user.userId]
+    [parsedCharacterId, req.user.userId]
   );
 
   if (charResult.rows.length === 0) {
     throw new AppError('Character not found', 404);
   }
 
-  const result = await dailyQuestService.claimAllRewards(parseInt(characterId, 10));
+  const result = await dailyQuestService.claimAllRewards(parsedCharacterId);
 
   // Get updated user gold
   const goldResult = await pool.query(

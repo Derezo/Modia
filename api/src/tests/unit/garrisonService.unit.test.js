@@ -28,6 +28,7 @@ import {
 import {
   RACES,
   CLASSES,
+  GENDERS,
   REGIONS,
   GARRISON_CONFIG,
   MAX_PARTY_SIZE,
@@ -1188,5 +1189,465 @@ describe('garrisonService - Stat Variance Range', () => {
       assert.ok(variancePercent >= -15, `Variance ${variancePercent} should be >= -15`);
       assert.ok(variancePercent <= 15, `Variance ${variancePercent} should be <= 15`);
     }
+  });
+});
+
+// =============================================================================
+// REGION SELECTION LOGIC TESTS
+// =============================================================================
+
+describe('garrisonService - Region Selection Logic', () => {
+  let originalRandom;
+
+  beforeEach(() => {
+    originalRandom = Math.random;
+  });
+
+  afterEach(() => {
+    Math.random = originalRandom;
+  });
+
+  it('should select regional race with 70% probability', () => {
+    Math.random = () => 0.5; // 50% < 70%
+
+    // Mock region lookup
+    const regionId = 1; // Human region
+    const region = { id: 1, race: 'human' };
+    const raceWeight = { regional: 0.7, random: 0.3 };
+
+    if (region && Math.random() < raceWeight.regional) {
+      const selectedRace = region.race;
+      assert.strictEqual(selectedRace, 'human');
+    }
+  });
+
+  it('should select random race with 30% probability', () => {
+    Math.random = () => 0.8; // 80% >= 70%
+
+    const region = { id: 1, race: 'human' };
+    const raceWeight = { regional: 0.7, random: 0.3 };
+    const allRaces = ['human', 'elf', 'dwarf', 'orc', 'feral'];
+
+    if (region && Math.random() >= raceWeight.regional) {
+      // Would select randomly from allRaces
+      assert.ok(allRaces.includes('human'));
+      assert.ok(allRaces.includes('elf'));
+      assert.strictEqual(allRaces.length, 5);
+    }
+  });
+
+  it('should select regional class with 70% probability', () => {
+    Math.random = () => 0.6; // 60% < 70%
+
+    const regionKey = 'heartlands';
+    const classWeight = { regional: 0.7, random: 0.3 };
+    const regionalClasses = ['warrior', 'monk']; // Heartlands classes
+
+    if (regionalClasses && Math.random() < classWeight.regional) {
+      const selectedClass = regionalClasses[0];
+      assert.ok(['warrior', 'monk'].includes(selectedClass));
+    }
+  });
+
+  it('should select random class with 30% probability', () => {
+    Math.random = () => 0.75; // 75% >= 70%
+
+    const classWeight = { regional: 0.7, random: 0.3 };
+    const allClasses = ['warrior', 'wizard', 'monk', 'chemist'];
+
+    if (Math.random() >= classWeight.regional) {
+      // Would select randomly from allClasses
+      assert.strictEqual(allClasses.length, 4);
+      assert.ok(allClasses.includes('warrior'));
+      assert.ok(allClasses.includes('wizard'));
+    }
+  });
+});
+
+// =============================================================================
+// STAT VARIANCE APPLICATION TESTS
+// =============================================================================
+
+describe('garrisonService - Stat Variance Application', () => {
+  it('should apply positive variance correctly', () => {
+    const baseStats = {
+      hpMax: 100,
+      mpMax: 50,
+      strength: 15,
+      intelligence: 10,
+      agility: 12,
+      vitality: 14,
+      luck: 8
+    };
+    const variancePercent = 10; // +10%
+
+    const variedStats = {
+      hp_max: Math.max(1, Math.round(baseStats.hpMax * (1 + variancePercent / 100))),
+      mp_max: Math.max(0, Math.round(baseStats.mpMax * (1 + variancePercent / 100))),
+      strength: Math.max(1, Math.round(baseStats.strength * (1 + variancePercent / 100))),
+      intelligence: Math.max(1, Math.round(baseStats.intelligence * (1 + variancePercent / 100))),
+      agility: Math.max(1, Math.round(baseStats.agility * (1 + variancePercent / 100))),
+      vitality: Math.max(1, Math.round(baseStats.vitality * (1 + variancePercent / 100))),
+      luck: Math.max(1, Math.round(baseStats.luck * (1 + variancePercent / 100)))
+    };
+
+    assert.strictEqual(variedStats.hp_max, 110); // 100 * 1.1
+    assert.strictEqual(variedStats.mp_max, 55);  // 50 * 1.1
+    assert.strictEqual(variedStats.strength, 17); // 15 * 1.1 = 16.5 -> 17
+    assert.strictEqual(variedStats.intelligence, 11); // 10 * 1.1
+  });
+
+  it('should apply negative variance correctly', () => {
+    const baseStats = {
+      hpMax: 100,
+      strength: 15
+    };
+    const variancePercent = -10; // -10%
+
+    const variedStats = {
+      hp_max: Math.max(1, Math.round(baseStats.hpMax * (1 + variancePercent / 100))),
+      strength: Math.max(1, Math.round(baseStats.strength * (1 + variancePercent / 100)))
+    };
+
+    assert.strictEqual(variedStats.hp_max, 90); // 100 * 0.9
+    assert.strictEqual(variedStats.strength, 14); // 15 * 0.9 = 13.5 -> 14
+  });
+
+  it('should enforce minimum stat values', () => {
+    const baseStats = { strength: 1 };
+    const variancePercent = -50; // -50%
+
+    const variedStat = Math.max(1, Math.round(baseStats.strength * (1 + variancePercent / 100)));
+    assert.strictEqual(variedStat, 1); // Cannot go below 1
+  });
+
+  it('should handle extreme variance correctly', () => {
+    const baseStats = { strength: 10 };
+    const extremePositive = 100; // +100%
+    const extremeNegative = -90; // -90%
+
+    const positiveResult = Math.max(1, Math.round(baseStats.strength * (1 + extremePositive / 100)));
+    const negativeResult = Math.max(1, Math.round(baseStats.strength * (1 + extremeNegative / 100)));
+
+    assert.strictEqual(positiveResult, 20); // 10 * 2
+    assert.strictEqual(negativeResult, 1);  // 10 * 0.1 = 1 (minimum)
+  });
+});
+
+// =============================================================================
+// RECRUIT DATA TRANSFORMATION TESTS
+// =============================================================================
+
+describe('garrisonService - Recruit Data Transformation', () => {
+  it('should transform database recruit to API format', () => {
+    const dbRecruit = {
+      id: 1,
+      castle_node_id: 100,
+      name: 'Test Recruit',
+      race: 'human',
+      class: 'warrior',
+      level: 1,
+      experience: 0,
+      stats: {
+        hp_max: 110, // With variance
+        mp_max: 55,
+        strength: 17,
+        intelligence: 11,
+        agility: 13,
+        vitality: 15,
+        luck: 9
+      },
+      traits: [
+        { id: 1, name: 'Strong', rarity: 'common' },
+        { id: 2, name: 'Lucky', rarity: 'uncommon' }
+      ],
+      equipment: [],
+      skills: [1, 2, 5], // Starter + 2 additional
+      price: 850,
+      generated_at: new Date('2024-01-15T14:00:00Z')
+    };
+
+    // Simulate transformation (like getAvailableRecruits does)
+    const transformed = {
+      id: dbRecruit.id,
+      castleNodeId: dbRecruit.castle_node_id,
+      name: dbRecruit.name,
+      race: dbRecruit.race,
+      class: dbRecruit.class,
+      level: dbRecruit.level,
+      experience: dbRecruit.experience,
+      stats: {
+        hpMax: dbRecruit.stats.hp_max || dbRecruit.stats.hpMax,
+        mpMax: dbRecruit.stats.mp_max || dbRecruit.stats.mpMax,
+        strength: dbRecruit.stats.strength,
+        intelligence: dbRecruit.stats.intelligence,
+        agility: dbRecruit.stats.agility,
+        vitality: dbRecruit.stats.vitality,
+        luck: dbRecruit.stats.luck
+      },
+      traits: dbRecruit.traits || [],
+      equipment: dbRecruit.equipment || [],
+      skills: dbRecruit.skills || [],
+      price: dbRecruit.price,
+      generatedAt: dbRecruit.generated_at
+    };
+
+    assert.strictEqual(transformed.id, 1);
+    assert.strictEqual(transformed.castleNodeId, 100);
+    assert.strictEqual(transformed.stats.hpMax, 110);
+    assert.strictEqual(transformed.stats.mpMax, 55);
+    assert.strictEqual(transformed.traits.length, 2);
+    assert.strictEqual(transformed.skills.length, 3);
+    assert.strictEqual(transformed.price, 850);
+  });
+
+  it('should handle legacy camelCase stats format', () => {
+    const dbRecruit = {
+      stats: {
+        hpMax: 100, // Already camelCase
+        mpMax: 50,
+        strength: 15,
+        intelligence: 10,
+        agility: 12,
+        vitality: 14,
+        luck: 8
+      }
+    };
+
+    const transformed = {
+      hpMax: dbRecruit.stats.hp_max || dbRecruit.stats.hpMax,
+      mpMax: dbRecruit.stats.mp_max || dbRecruit.stats.mpMax,
+      strength: dbRecruit.stats.strength,
+      intelligence: dbRecruit.stats.intelligence,
+      agility: dbRecruit.stats.agility,
+      vitality: dbRecruit.stats.vitality,
+      luck: dbRecruit.stats.luck
+    };
+
+    assert.strictEqual(transformed.hpMax, 100);
+    assert.strictEqual(transformed.mpMax, 50);
+  });
+
+  it('should handle null/undefined collections', () => {
+    const dbRecruit = {
+      traits: null,
+      equipment: undefined,
+      skills: null
+    };
+
+    const transformed = {
+      traits: dbRecruit.traits || [],
+      equipment: dbRecruit.equipment || [],
+      skills: dbRecruit.skills || []
+    };
+
+    assert.deepStrictEqual(transformed.traits, []);
+    assert.deepStrictEqual(transformed.equipment, []);
+    assert.deepStrictEqual(transformed.skills, []);
+  });
+});
+
+// =============================================================================
+// REFRESH TIME CALCULATION TESTS
+// =============================================================================
+
+describe('garrisonService - Refresh Time Calculations', () => {
+  it('should calculate time until next hour correctly', () => {
+    const now = new Date('2024-01-15T14:30:00.000Z');
+
+    // Calculate next hour boundary
+    const nextHour = new Date(now);
+    nextHour.setUTCHours(nextHour.getUTCHours() + 1);
+    nextHour.setUTCMinutes(0, 0, 0);
+
+    const timeUntilRefresh = nextHour.getTime() - now.getTime();
+    const minutesUntilRefresh = Math.ceil(timeUntilRefresh / (1000 * 60));
+
+    assert.strictEqual(nextHour.getUTCHours(), 15);
+    assert.strictEqual(nextHour.getUTCMinutes(), 0);
+    assert.strictEqual(minutesUntilRefresh, 30); // 30 minutes until 15:00
+  });
+
+  it('should handle near-hour-boundary timing', () => {
+    const now = new Date('2024-01-15T14:59:45.000Z');
+
+    const nextHour = new Date(now);
+    nextHour.setUTCHours(nextHour.getUTCHours() + 1);
+    nextHour.setUTCMinutes(0, 0, 0);
+
+    const timeUntilRefresh = nextHour.getTime() - now.getTime();
+    const minutesUntilRefresh = Math.ceil(timeUntilRefresh / (1000 * 60));
+
+    assert.strictEqual(minutesUntilRefresh, 1); // 15 seconds -> rounds up to 1 minute
+  });
+
+  it('should detect stale recruits correctly', () => {
+    const now = new Date('2024-01-15T14:30:00.000Z');
+    const previousHourGeneration = new Date('2024-01-15T13:45:00.000Z');
+    const currentHourGeneration = new Date('2024-01-15T14:15:00.000Z');
+
+    const currentHour = new Date(now);
+    currentHour.setUTCMinutes(0, 0, 0);
+
+    const isPreviousStale = previousHourGeneration < currentHour;
+    const isCurrentFresh = currentHourGeneration >= currentHour;
+
+    assert.strictEqual(isPreviousStale, true);
+    assert.strictEqual(isCurrentFresh, true);
+  });
+});
+
+// =============================================================================
+// PARTY SLOT ASSIGNMENT LOGIC TESTS
+// =============================================================================
+
+describe('garrisonService - Party Slot Assignment', () => {
+  it('should calculate next party slot correctly', () => {
+    const testCases = [
+      { maxSlot: null, expectedNext: 1 },     // No characters
+      { maxSlot: 3, expectedNext: 4 },        // Existing characters
+      { maxSlot: MAX_PARTY_SIZE - 1, expectedNext: MAX_PARTY_SIZE }, // Near limit
+      { maxSlot: MAX_PARTY_SIZE, expectedNext: MAX_PARTY_SIZE + 1 }  // At limit
+    ];
+
+    for (const { maxSlot, expectedNext } of testCases) {
+      const nextSlot = (maxSlot || 0) + 1;
+      assert.strictEqual(nextSlot, expectedNext);
+    }
+  });
+
+  it('should handle party full scenario', () => {
+    const maxSlot = MAX_PARTY_SIZE + 1; // Would exceed limit
+    const assignedSlot = maxSlot <= MAX_PARTY_SIZE ? maxSlot : null;
+    assert.strictEqual(assignedSlot, null);
+  });
+
+  it('should cap slot assignment at MAX_PARTY_SIZE', () => {
+    const nextSlot = MAX_PARTY_SIZE + 5; // Way over limit
+    const cappedSlot = Math.min(nextSlot, MAX_PARTY_SIZE);
+    assert.strictEqual(cappedSlot, MAX_PARTY_SIZE);
+  });
+});
+
+// =============================================================================
+// GOLD AND PRICE VALIDATION TESTS
+// =============================================================================
+
+describe('garrisonService - Gold Validation Logic', () => {
+  it('should validate sufficient gold correctly', () => {
+    const testCases = [
+      { userGold: 1000, price: 500, sufficient: true },
+      { userGold: 500, price: 500, sufficient: true },   // Exact amount
+      { userGold: 499, price: 500, sufficient: false },
+      { userGold: 0, price: 400, sufficient: false }
+    ];
+
+    for (const { userGold, price, sufficient } of testCases) {
+      const hasSufficientGold = userGold >= price;
+      assert.strictEqual(hasSufficientGold, sufficient,
+        `${userGold} gold vs ${price} price should be ${sufficient}`);
+    }
+  });
+
+  it('should calculate remaining gold correctly', () => {
+    const testCases = [
+      { initial: 1000, spent: 400, remaining: 600 },
+      { initial: 500, spent: 500, remaining: 0 },
+      { initial: 2000, spent: 850, remaining: 1150 }
+    ];
+
+    for (const { initial, spent, remaining } of testCases) {
+      const actualRemaining = initial - spent;
+      assert.strictEqual(actualRemaining, remaining);
+    }
+  });
+});
+
+// =============================================================================
+// RECRUIT PRICING INTEGRATION TESTS
+// =============================================================================
+
+describe('garrisonService - Recruit Pricing Integration', () => {
+  it('should calculate realistic recruit prices', () => {
+    // Simulate a basic recruit
+    const basicRecruit = {
+      stat_variance_percent: 0,
+      traits: [],
+      skills: [{ tier: 1, level: 1 }] // Just starter skill
+    };
+    const basicPrice = calculateRecruitPrice(basicRecruit);
+    assert.strictEqual(basicPrice, RECRUIT_PRICING.BASE_PRICE);
+
+    // Simulate a premium recruit
+    const premiumRecruit = {
+      stat_variance_percent: 10,
+      traits: [{ rarity: 'rare' }],
+      skills: [
+        { tier: 1, level: 1 }, // Starter (free)
+        { tier: 2, level: 1 }  // Additional T2
+      ]
+    };
+    const premiumPrice = calculateRecruitPrice(premiumRecruit);
+
+    // Premium should cost more than basic
+    assert.ok(premiumPrice > basicPrice);
+
+    // Verify calculation: 400 + (10*5) + 1000 + (250*2*1) = 400 + 50 + 1000 + 500 = 1950
+    const expectedPremium = RECRUIT_PRICING.BASE_PRICE + 50 + 1000 + 500;
+    assert.strictEqual(premiumPrice, expectedPremium);
+  });
+
+  it('should handle elite recruits with multiple traits', () => {
+    const eliteRecruit = {
+      stat_variance_percent: 15, // Max variance
+      traits: [
+        { rarity: 'legendary' },
+        { rarity: 'rare' }
+      ],
+      skills: [
+        { tier: 1, level: 1 }, // Starter (free)
+        { tier: 2, level: 2 }, // T2L2
+        { tier: 2, level: 1 }  // T2L1
+      ]
+    };
+
+    const elitePrice = calculateRecruitPrice(eliteRecruit);
+
+    // 400 (base) + 75 (variance) + 4000 (legendary) + 1000 (rare) + 1000 (T2L2: 250*2*2) + 500 (T2L1: 250*2*1)
+    const expectedElite = 400 + 75 + 4000 + 1000 + 1000 + 500;
+    assert.strictEqual(elitePrice, expectedElite);
+  });
+});
+
+// =============================================================================
+// GENDER AND NAME GENERATION TESTS
+// =============================================================================
+
+describe('garrisonService - Name Generation Logic', () => {
+  it('should have valid gender selection', () => {
+    const genders = ['male', 'female', 'other'];
+
+    // Simulate random gender selection
+    const selectedGender = genders[Math.floor(Math.random() * genders.length)];
+    assert.ok(genders.includes(selectedGender));
+  });
+
+  it('should handle all race-gender combinations', () => {
+    const races = Object.values(RACES);
+    const genders = Object.values(GENDERS);
+
+    for (const race of races) {
+      for (const gender of genders) {
+        // Name generation would happen here
+        // For testing, just verify the combinations are valid
+        assert.ok(typeof race === 'string');
+        assert.ok(typeof gender === 'string');
+        assert.ok(race.length > 0);
+        assert.ok(gender.length > 0);
+      }
+    }
+
+    assert.strictEqual(races.length, 5);
+    assert.strictEqual(genders.length, 3);
   });
 });

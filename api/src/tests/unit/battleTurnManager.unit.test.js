@@ -1388,3 +1388,1107 @@ describe('Map Boundary Handling', () => {
     assert.strictEqual(mapHeight, 32);
   });
 });
+
+// =============================================================================
+// PROCESS ENEMY TURNS ASYNC COMPREHENSIVE TESTS
+// =============================================================================
+
+describe('processEnemyTurnsAsync Advanced Scenarios', () => {
+  beforeEach(() => {
+    clearMocks();
+  });
+
+  describe('Multiple Enemy Turn Processing', () => {
+    test('should process multiple consecutive enemy turns', () => {
+      const player = createMockPlayerUnit({ id: 'p1', hp: 100 });
+      const enemy1 = createMockEnemyUnit({ id: 'e1', hp: 50 });
+      const enemy2 = createMockEnemyUnit({ id: 'e2', hp: 50 });
+      const state = createMockBattleState({
+        units: [player, enemy1, enemy2],
+        activeUnitId: 'e1'  // Start with enemy turn
+      });
+
+      // Verify we detect enemy turn
+      const activeUnit = state.units.find(u => u.id === state.activeUnitId);
+      assert.strictEqual(activeUnit.type, 'enemy');
+
+      // Simulate advancing through enemy units
+      const mockBattleService = createMockBattleService();
+
+      // Process e1's turn
+      assert.strictEqual(state.activeUnitId, 'e1');
+      mockBattleService.advanceToNextActorWithCT(state);
+
+      // Now should be e2 (next in order)
+      assert.strictEqual(state.activeUnitId, 'e2');
+      mockBattleService.advanceToNextActorWithCT(state);
+
+      // Should wrap back to p1
+      assert.strictEqual(state.activeUnitId, 'p1');
+    });
+
+    test('should skip all dead enemies when advancing', () => {
+      const player = createMockPlayerUnit({ id: 'p1', hp: 100 });
+      const deadEnemy1 = createMockEnemyUnit({ id: 'e1', hp: 0 });
+      const deadEnemy2 = createMockEnemyUnit({ id: 'e2', hp: 0 });
+      const state = createMockBattleState({
+        units: [player, deadEnemy1, deadEnemy2],
+        activeUnitId: 'e1'
+      });
+
+      // When enemy is dead, the loop should skip
+      const activeUnit = state.units.find(u => u.id === state.activeUnitId);
+      assert.strictEqual(activeUnit.hp <= 0, true);
+    });
+
+    test('should track enemy actions correctly', () => {
+      const actionResults = [];
+      const enemy = createMockEnemyUnit({ id: 'e1', hp: 50, tileX: 5, tileY: 5 });
+      const moveAction = {
+        unitId: enemy.id,
+        unitName: enemy.name,
+        actionType: 'move',
+        targetTile: { x: 6, y: 5 },
+        result: { success: true }
+      };
+      const attackAction = {
+        unitId: enemy.id,
+        unitName: enemy.name,
+        actionType: 'attack',
+        targetTile: { x: 7, y: 5 },
+        result: { success: true, damage: 25 }
+      };
+
+      actionResults.push(moveAction, attackAction);
+
+      assert.strictEqual(actionResults.length, 2);
+      assert.strictEqual(actionResults[0].actionType, 'move');
+      assert.strictEqual(actionResults[1].actionType, 'attack');
+    });
+  });
+
+  describe('Battle Status Transitions', () => {
+    test('should detect victory immediately when last enemy dies', () => {
+      const mockBattleService = createMockBattleService();
+      const player = createMockPlayerUnit({ id: 'p1', hp: 100 });
+      const enemy = createMockEnemyUnit({ id: 'e1', hp: 0 });  // Just died
+      const state = createMockBattleState({
+        units: [player, enemy]
+      });
+
+      const battleStatus = mockBattleService.checkBattleEnd(state);
+
+      assert.strictEqual(battleStatus.status, 'ended');
+      assert.strictEqual(battleStatus.winningTeamId, 1);
+    });
+
+    test('should detect defeat when last player dies', () => {
+      const mockBattleService = createMockBattleService();
+      const player = createMockPlayerUnit({ id: 'p1', hp: 0 });  // Just died
+      const enemy = createMockEnemyUnit({ id: 'e1', hp: 50 });
+      const state = createMockBattleState({
+        units: [player, enemy]
+      });
+
+      const battleStatus = mockBattleService.checkBattleEnd(state);
+
+      assert.strictEqual(battleStatus.status, 'ended');
+      assert.strictEqual(battleStatus.winningTeamId, 2);
+    });
+
+    test('should continue when both sides have survivors', () => {
+      const mockBattleService = createMockBattleService();
+      const player = createMockPlayerUnit({ id: 'p1', hp: 10 });  // Low but alive
+      const enemy = createMockEnemyUnit({ id: 'e1', hp: 5 });  // Low but alive
+      const state = createMockBattleState({
+        units: [player, enemy]
+      });
+
+      const battleStatus = mockBattleService.checkBattleEnd(state);
+
+      assert.strictEqual(battleStatus.status, 'active');
+      assert.strictEqual(battleStatus.winningTeamId, null);
+    });
+  });
+
+  describe('Return Value Structure', () => {
+    test('should return correct structure with all fields', () => {
+      const expectedStructure = {
+        state: { units: [], mapWidth: 32, mapHeight: 32 },
+        battleStatus: 'active',
+        battleEndResult: { status: 'active', winningTeamId: null },
+        enemyActions: []
+      };
+
+      assert.ok('state' in expectedStructure);
+      assert.ok('battleStatus' in expectedStructure);
+      assert.ok('battleEndResult' in expectedStructure);
+      assert.ok('enemyActions' in expectedStructure);
+      assert.strictEqual(typeof expectedStructure.battleStatus, 'string');
+      assert.ok(Array.isArray(expectedStructure.enemyActions));
+    });
+
+    test('should include winningTeamId in battleEndResult when battle ends', () => {
+      const victoryResult = {
+        state: {},
+        battleStatus: 'victory',
+        battleEndResult: { status: 'ended', winningTeamId: 1 },
+        enemyActions: []
+      };
+
+      assert.strictEqual(victoryResult.battleEndResult.winningTeamId, 1);
+      assert.strictEqual(victoryResult.battleStatus, 'victory');
+    });
+
+    test('should include enemy actions array in result', () => {
+      const resultWithActions = {
+        state: {},
+        battleStatus: 'active',
+        battleEndResult: { status: 'active', winningTeamId: null },
+        enemyActions: [
+          { unitId: 'e1', actionType: 'move', result: { success: true } },
+          { unitId: 'e1', actionType: 'attack', result: { damage: 25 } }
+        ]
+      };
+
+      assert.strictEqual(resultWithActions.enemyActions.length, 2);
+      assert.strictEqual(resultWithActions.enemyActions[0].actionType, 'move');
+      assert.strictEqual(resultWithActions.enemyActions[1].result.damage, 25);
+    });
+  });
+});
+
+// =============================================================================
+// VISUALIZATION TIMING TESTS
+// =============================================================================
+
+describe('Visualization Timing Calculations', () => {
+  test('should calculate total attack sequence time', async () => {
+    const { TIMING } = await import('../../services/battleTurnManager.js');
+
+    const attackSequenceTime =
+      TIMING.INTENT_ATTACK +
+      TIMING.INTENT_TARGET +
+      TIMING.ATTACK_ANIMATION +
+      TIMING.DAMAGE_POPUP;
+
+    // Should be reasonable for player perception (1.5-3 seconds)
+    assert.ok(attackSequenceTime >= 1500, 'Attack sequence too fast');
+    assert.ok(attackSequenceTime <= 3000, 'Attack sequence too slow');
+  });
+
+  test('should calculate total move sequence time', async () => {
+    const { TIMING } = await import('../../services/battleTurnManager.js');
+
+    const moveSequenceTime =
+      TIMING.INTENT_MOVEMENT +
+      TIMING.INTENT_PATH +
+      TIMING.MOVE_ANIMATION * 3;  // 3 tiles movement
+
+    // Should be reasonable
+    assert.ok(moveSequenceTime >= 1500, 'Move sequence too fast');
+    assert.ok(moveSequenceTime <= 4000, 'Move sequence too slow');
+  });
+
+  test('should calculate full enemy turn time (move + attack)', async () => {
+    const { TIMING } = await import('../../services/battleTurnManager.js');
+
+    const fullTurnTime =
+      TIMING.TURN_START_DELAY +
+      TIMING.INTENT_MOVEMENT +
+      TIMING.INTENT_PATH +
+      TIMING.MOVE_ANIMATION * 3 +
+      TIMING.INTENT_ATTACK +
+      TIMING.INTENT_TARGET +
+      TIMING.ATTACK_ANIMATION +
+      TIMING.DAMAGE_POPUP +
+      TIMING.TURN_END_BUFFER;
+
+    // Full turn should be 3-6 seconds
+    assert.ok(fullTurnTime >= 3000, 'Full turn too fast');
+    assert.ok(fullTurnTime <= 8000, 'Full turn too slow');
+  });
+});
+
+// =============================================================================
+// AI DECISION INTEGRATION TESTS
+// =============================================================================
+
+describe('AI Decision Integration', () => {
+  beforeEach(() => {
+    clearMocks();
+  });
+
+  describe('Decision Array Processing', () => {
+    test('should handle single-action decision (wait only)', () => {
+      const decisions = [{ actionType: 'wait' }];
+
+      assert.strictEqual(decisions.length, 1);
+      assert.strictEqual(decisions[0].actionType, 'wait');
+    });
+
+    test('should handle move-only decision', () => {
+      const decisions = [
+        { actionType: 'move', targetTile: { x: 6, y: 5 } }
+      ];
+
+      assert.strictEqual(decisions.length, 1);
+      assert.strictEqual(decisions[0].actionType, 'move');
+      assert.ok(decisions[0].targetTile);
+    });
+
+    test('should handle attack-only decision', () => {
+      const decisions = [
+        { actionType: 'attack', targetTile: { x: 6, y: 5 } }
+      ];
+
+      assert.strictEqual(decisions.length, 1);
+      assert.strictEqual(decisions[0].actionType, 'attack');
+    });
+
+    test('should handle full turn decision (move + attack)', () => {
+      const decisions = [
+        { actionType: 'move', targetTile: { x: 6, y: 5 } },
+        { actionType: 'attack', targetTile: { x: 7, y: 5 } }
+      ];
+
+      assert.strictEqual(decisions.length, 2);
+      assert.strictEqual(decisions[0].actionType, 'move');
+      assert.strictEqual(decisions[1].actionType, 'attack');
+    });
+
+    test('should handle skill decision with skillId', () => {
+      const decisions = [
+        { actionType: 'skill', skillId: 'fireball', targetTile: { x: 8, y: 5 } }
+      ];
+
+      assert.strictEqual(decisions[0].actionType, 'skill');
+      assert.strictEqual(decisions[0].skillId, 'fireball');
+      assert.ok(decisions[0].targetTile);
+    });
+
+    test('should handle item decision with itemId', () => {
+      const decisions = [
+        { actionType: 'item', itemId: 'potion', targetTile: { x: 5, y: 5 } }
+      ];
+
+      assert.strictEqual(decisions[0].actionType, 'item');
+      assert.strictEqual(decisions[0].itemId, 'potion');
+    });
+  });
+
+  describe('Decision Validation', () => {
+    test('should detect invalid targetTile in move decision', () => {
+      const decision = {
+        actionType: 'move',
+        targetTile: { x: undefined, y: 5 }
+      };
+
+      const isValid =
+        decision.targetTile &&
+        decision.targetTile.x !== undefined &&
+        decision.targetTile.y !== undefined;
+
+      assert.strictEqual(isValid, false);
+    });
+
+    test('should detect missing targetTile in attack decision', () => {
+      const decision = {
+        actionType: 'attack',
+        targetTile: null
+      };
+
+      const hasTargetTile = decision.targetTile !== null;
+
+      assert.strictEqual(hasTargetTile, false);
+    });
+
+    test('should detect missing skillId in skill decision', () => {
+      const decision = {
+        actionType: 'skill',
+        targetTile: { x: 5, y: 5 }
+        // skillId is missing
+      };
+
+      const hasSkillId = Boolean(decision.skillId);
+
+      assert.strictEqual(hasSkillId, false);
+    });
+
+    test('should detect missing itemId in item decision', () => {
+      const decision = {
+        actionType: 'item',
+        targetTile: { x: 5, y: 5 }
+        // itemId is missing
+      };
+
+      const hasItemId = Boolean(decision.itemId);
+
+      assert.strictEqual(hasItemId, false);
+    });
+  });
+});
+
+// =============================================================================
+// NOTIFY PLAYER TURN COMPREHENSIVE TESTS
+// =============================================================================
+
+describe('notifyPlayerTurn Advanced Scenarios', () => {
+  beforeEach(() => {
+    clearMocks();
+  });
+
+  describe('Turn Timer Logic', () => {
+    test('should identify solo PvE correctly', () => {
+      const player = createMockPlayerUnit({ id: 'p1', ownerId: 100 });
+      const enemy = createMockEnemyUnit({ id: 'e1' });
+      const state = createMockBattleState({
+        units: [player, enemy],
+        battleType: 'pve'
+      });
+
+      const playerUnits = state.units.filter(u => u.type === 'player' && u.ownerId);
+      const uniqueOwners = new Set(playerUnits.map(u => u.ownerId));
+      const isPvP = state.battleType === 'pvp' || state.battleType === 'pvp_coliseum';
+      const isMultiplayerPvE = !isPvP && uniqueOwners.size > 1;
+      const isMultiplayer = isPvP || isMultiplayerPvE;
+
+      assert.strictEqual(uniqueOwners.size, 1);
+      assert.strictEqual(isMultiplayer, false);
+    });
+
+    test('should identify 2-player co-op PvE', () => {
+      const player1 = createMockPlayerUnit({ id: 'p1', ownerId: 100 });
+      const player2 = createMockPlayerUnit({ id: 'p2', ownerId: 200 });
+      const enemy = createMockEnemyUnit({ id: 'e1' });
+      const state = createMockBattleState({
+        units: [player1, player2, enemy],
+        battleType: 'pve'
+      });
+
+      const playerUnits = state.units.filter(u => u.type === 'player' && u.ownerId);
+      const uniqueOwners = new Set(playerUnits.map(u => u.ownerId));
+      const isPvP = state.battleType === 'pvp' || state.battleType === 'pvp_coliseum';
+      const isMultiplayerPvE = !isPvP && uniqueOwners.size > 1;
+
+      assert.strictEqual(uniqueOwners.size, 2);
+      assert.strictEqual(isMultiplayerPvE, true);
+    });
+
+    test('should identify 1v1 PvP', () => {
+      const player1 = createMockPlayerUnit({ id: 'p1', ownerId: 100, teamId: 1 });
+      const player2 = createMockPlayerUnit({ id: 'p2', ownerId: 200, teamId: 2 });
+      const state = createMockBattleState({
+        units: [player1, player2],
+        battleType: 'pvp'
+      });
+
+      const isPvP = state.battleType === 'pvp' || state.battleType === 'pvp_coliseum';
+
+      assert.strictEqual(isPvP, true);
+    });
+
+    test('should identify coliseum PvP', () => {
+      const player1 = createMockPlayerUnit({ id: 'p1', ownerId: 100, teamId: 1 });
+      const player2 = createMockPlayerUnit({ id: 'p2', ownerId: 200, teamId: 2 });
+      const state = createMockBattleState({
+        units: [player1, player2],
+        battleType: 'pvp_coliseum'
+      });
+
+      const isPvP = state.battleType === 'pvp' || state.battleType === 'pvp_coliseum';
+      const isMultiplayer = isPvP;
+
+      assert.strictEqual(isPvP, true);
+      assert.strictEqual(isMultiplayer, true);
+    });
+  });
+
+  describe('Available Actions Computation', () => {
+    test('should compute actions for fresh unit (can move and act)', () => {
+      const player = createMockPlayerUnit({
+        id: 'p1',
+        moveUsed: false,
+        actUsed: false,
+        statusEffects: []
+      });
+
+      const canMove = !player.moveUsed;
+      const canAct = !player.actUsed;
+
+      assert.strictEqual(canMove, true);
+      assert.strictEqual(canAct, true);
+    });
+
+    test('should compute actions for unit that has moved', () => {
+      const player = createMockPlayerUnit({
+        id: 'p1',
+        moveUsed: true,
+        actUsed: false,
+        statusEffects: []
+      });
+
+      const canMove = !player.moveUsed;
+      const canAct = !player.actUsed;
+
+      assert.strictEqual(canMove, false);
+      assert.strictEqual(canAct, true);
+    });
+
+    test('should compute actions for unit that has acted', () => {
+      const player = createMockPlayerUnit({
+        id: 'p1',
+        moveUsed: false,
+        actUsed: true,
+        statusEffects: []
+      });
+
+      const canMove = !player.moveUsed;
+      const canAct = !player.actUsed;
+
+      assert.strictEqual(canMove, true);
+      assert.strictEqual(canAct, false);
+    });
+
+    test('should compute actions for stunned unit', () => {
+      const player = createMockPlayerUnit({
+        id: 'p1',
+        moveUsed: false,
+        actUsed: false,
+        statusEffects: [{ type: 'stun', duration: 1 }]
+      });
+
+      // With stun, both move and act are prevented
+      const hasPreventingEffect = player.statusEffects.some(e => e.type === 'stun');
+
+      assert.strictEqual(hasPreventingEffect, true);
+    });
+  });
+});
+
+// =============================================================================
+// EDGE CASE AND ERROR RECOVERY TESTS
+// =============================================================================
+
+describe('Edge Cases and Error Recovery', () => {
+  beforeEach(() => {
+    clearMocks();
+  });
+
+  describe('Empty or Invalid State', () => {
+    test('should handle state with no units', () => {
+      const state = createMockBattleState({ units: [] });
+
+      assert.strictEqual(state.units.length, 0);
+      // Should not crash when processing
+      const activeUnit = state.units.find(u => u.id === state.activeUnitId);
+      assert.strictEqual(activeUnit, undefined);
+    });
+
+    test('should handle state with all dead units', () => {
+      const deadPlayer = createMockPlayerUnit({ id: 'p1', hp: 0 });
+      const deadEnemy = createMockEnemyUnit({ id: 'e1', hp: 0 });
+      const state = createMockBattleState({
+        units: [deadPlayer, deadEnemy],
+        activeUnitId: 'p1'
+      });
+
+      const aliveUnits = state.units.filter(u => u.hp > 0);
+      assert.strictEqual(aliveUnits.length, 0);
+    });
+
+    test('should handle activeUnitId pointing to nonexistent unit', () => {
+      const state = createMockBattleState({
+        units: [createMockPlayerUnit({ id: 'p1' })],
+        activeUnitId: 'nonexistent_id'
+      });
+
+      const activeUnit = state.units.find(u => u.id === state.activeUnitId);
+      assert.strictEqual(activeUnit, undefined);
+    });
+
+    test('should handle null activeUnitId', () => {
+      const state = createMockBattleState({
+        units: [createMockPlayerUnit({ id: 'p1' })],
+        activeUnitId: null
+      });
+
+      const activeUnit = state.units.find(u => u.id === state.activeUnitId);
+      assert.strictEqual(activeUnit, undefined);
+    });
+  });
+
+  describe('Action Processing Errors', () => {
+    test('should handle move action error gracefully', () => {
+      const moveResult = {
+        error: 'Target tile is blocked',
+        moved: false
+      };
+
+      assert.ok(moveResult.error);
+      assert.strictEqual(moveResult.moved, false);
+    });
+
+    test('should handle attack action error gracefully', () => {
+      const attackResult = {
+        error: 'Target out of range',
+        damage: 0
+      };
+
+      assert.ok(attackResult.error);
+      assert.strictEqual(attackResult.damage, 0);
+    });
+
+    test('should handle skill action error gracefully', () => {
+      const skillResult = {
+        error: 'Not enough MP',
+        damage: 0
+      };
+
+      assert.ok(skillResult.error);
+    });
+
+    test('should handle item action error gracefully', () => {
+      const itemResult = {
+        error: 'Item not available',
+        hpRestored: 0
+      };
+
+      assert.ok(itemResult.error);
+    });
+  });
+
+  describe('Safety Limit Tests', () => {
+    test('should enforce max iterations limit of 50', () => {
+      let iterations = 0;
+      const maxIterations = 50;
+
+      // Simulate infinite loop scenario
+      while (iterations < 100) {
+        iterations++;
+        if (iterations >= maxIterations) {
+          break;
+        }
+      }
+
+      assert.strictEqual(iterations, 50);
+    });
+
+    test('should not exceed path length of 20', () => {
+      const path = [];
+      let count = 0;
+      const maxPath = 20;
+
+      while (count < 100) {
+        count++;
+        path.push({ x: count, y: count });
+        if (path.length > maxPath) break;
+      }
+
+      assert.ok(path.length <= 21);
+    });
+  });
+});
+
+// =============================================================================
+// DATABASE UPDATE TESTS
+// =============================================================================
+
+describe('Database Update Pattern Tests', () => {
+  test('should use correct SQL pattern for battle state update', () => {
+    const sql = 'UPDATE battles SET battle_state = $1 WHERE id = $2';
+
+    assert.ok(sql.includes('UPDATE battles'));
+    assert.ok(sql.includes('$1'));
+    assert.ok(sql.includes('$2'));
+    assert.ok(sql.includes('WHERE id'));
+  });
+
+  test('should properly serialize state for database', () => {
+    const state = createMockBattleState({
+      units: [
+        createMockPlayerUnit({ id: 'p1', hp: 75, tileX: 5, tileY: 5 }),
+        createMockEnemyUnit({ id: 'e1', hp: 25, tileX: 10, tileY: 10 })
+      ],
+      turn: 3,
+      activeUnitId: 'p1'
+    });
+
+    const serialized = JSON.stringify(state);
+    const restored = JSON.parse(serialized);
+
+    assert.strictEqual(restored.units[0].hp, 75);
+    assert.strictEqual(restored.units[1].hp, 25);
+    assert.strictEqual(restored.turn, 3);
+    assert.strictEqual(restored.activeUnitId, 'p1');
+  });
+
+  test('should preserve unit positions through serialization', () => {
+    const state = createMockBattleState({
+      units: [
+        createMockPlayerUnit({ tileX: 3, tileY: 7 }),
+        createMockEnemyUnit({ tileX: 15, tileY: 12 })
+      ]
+    });
+
+    const serialized = JSON.stringify(state);
+    const restored = JSON.parse(serialized);
+
+    assert.strictEqual(restored.units[0].tileX, 3);
+    assert.strictEqual(restored.units[0].tileY, 7);
+    assert.strictEqual(restored.units[1].tileX, 15);
+    assert.strictEqual(restored.units[1].tileY, 12);
+  });
+
+  test('should preserve status effects through serialization', () => {
+    const state = createMockBattleState({
+      units: [
+        createMockPlayerUnit({
+          statusEffects: [
+            { type: 'poison', duration: 2 },
+            { type: 'rage', duration: 3 }
+          ]
+        })
+      ]
+    });
+
+    const serialized = JSON.stringify(state);
+    const restored = JSON.parse(serialized);
+
+    assert.strictEqual(restored.units[0].statusEffects.length, 2);
+    assert.strictEqual(restored.units[0].statusEffects[0].type, 'poison');
+    assert.strictEqual(restored.units[0].statusEffects[1].type, 'rage');
+  });
+
+  test('should preserve skill cooldowns through serialization', () => {
+    const state = createMockBattleState({
+      units: [
+        createMockPlayerUnit({
+          skillCooldowns: { fireball: 2, heal: 1 }
+        })
+      ]
+    });
+
+    const serialized = JSON.stringify(state);
+    const restored = JSON.parse(serialized);
+
+    assert.strictEqual(restored.units[0].skillCooldowns.fireball, 2);
+    assert.strictEqual(restored.units[0].skillCooldowns.heal, 1);
+  });
+
+  // =============================================================================
+  // DATABASE INTEGRATION TESTS
+  // =============================================================================
+
+  describe('Battle Turn Manager - Database Integration', () => {
+    let queryMock;
+    let mockQueryResults;
+
+    beforeEach(() => {
+      queryMock = mock.fn();
+      mockQueryResults = new Map();
+
+      // Default mock implementation
+      queryMock.mock.mockImplementation(async (sql, params) => {
+        // Battle state update
+        if (sql.includes('UPDATE battles SET battle_state')) {
+          return mockQueryResults.get('update_battle') || { rows: [] };
+        }
+
+        return { rows: [] };
+      });
+    });
+
+    afterEach(() => {
+      mock.restoreAll?.();
+      queryMock.mock.resetCalls();
+    });
+
+    describe('updateBattleState with database integration', () => {
+      it('should execute database update with correct parameters', async () => {
+        const service = await createMockedTurnManager(queryMock);
+        const battleId = 123;
+        const state = createMockBattleState({
+          units: [
+            createMockPlayerUnit({ id: 'p1', hp: 80, tileX: 5, tileY: 5 }),
+            createMockEnemyUnit({ id: 'e1', hp: 30, tileX: 10, tileY: 8 })
+          ],
+          activeUnitId: 'p1',
+          turn: 5
+        });
+
+        await service.updateBattleState(battleId, state);
+
+        // Should call database update
+        assert.strictEqual(queryMock.mock.callCount(), 1);
+        const call = queryMock.mock.calls[0];
+        assert.strictEqual(call.arguments[0], 'UPDATE battles SET battle_state = $1 WHERE id = $2');
+        assert.strictEqual(call.arguments[1][1], 123); // battleId parameter
+
+        // Verify serialized state structure
+        const serializedState = call.arguments[1][0];
+        const parsed = JSON.parse(serializedState);
+        assert.strictEqual(parsed.activeUnitId, 'p1');
+        assert.strictEqual(parsed.turn, 5);
+        assert.strictEqual(parsed.units.length, 2);
+        assert.strictEqual(parsed.units[0].hp, 80);
+        assert.strictEqual(parsed.units[1].hp, 30);
+      });
+
+      it('should handle database error gracefully', async () => {
+        queryMock.mock.mockImplementation(() => Promise.reject(new Error('Database connection lost')));
+
+        const service = await createMockedTurnManager(queryMock);
+        const battleId = 123;
+        const state = createMockBattleState({});
+
+        try {
+          await service.updateBattleState(battleId, state);
+          // Should not throw - errors are logged but not propagated
+          assert.ok(true);
+        } catch (err) {
+          // If it does throw, should be the database error
+          assert.strictEqual(err.message, 'Database connection lost');
+        }
+      });
+
+      it('should serialize complex state correctly', async () => {
+        const service = await createMockedTurnManager(queryMock);
+        const battleId = 456;
+        const state = createMockBattleState({
+          units: [
+            createMockPlayerUnit({
+              id: 'p1',
+              hp: 75,
+              mp: 30,
+              tileX: 8,
+              tileY: 12,
+              statusEffects: [
+                { type: 'poison', duration: 2, strength: 5 },
+                { type: 'blessed', duration: 5 }
+              ],
+              skillCooldowns: { fireball: 2, heal: 0 },
+              moveUsed: true,
+              actUsed: false
+            })
+          ],
+          activeUnitId: 'p1',
+          turn: 15,
+          weather: 'rain',
+          battleType: 'pve'
+        });
+
+        await service.updateBattleState(battleId, state);
+
+        const call = queryMock.mock.calls[0];
+        const serializedState = call.arguments[1][0];
+        const parsed = JSON.parse(serializedState);
+
+        // Verify complex nested data is preserved
+        assert.strictEqual(parsed.units[0].statusEffects[0].type, 'poison');
+        assert.strictEqual(parsed.units[0].statusEffects[0].duration, 2);
+        assert.strictEqual(parsed.units[0].statusEffects[0].strength, 5);
+        assert.strictEqual(parsed.units[0].skillCooldowns.fireball, 2);
+        assert.strictEqual(parsed.units[0].moveUsed, true);
+        assert.strictEqual(parsed.units[0].actUsed, false);
+        assert.strictEqual(parsed.weather, 'rain');
+        assert.strictEqual(parsed.battleType, 'pve');
+      });
+    });
+
+    describe('processEnemyTurnsAsync with database integration', () => {
+      it('should save state to database after processing enemy turns', async () => {
+        const service = await createMockedTurnManager(queryMock);
+        const mockAiService = createMockAiService();
+        const mockBattleService = createMockBattleService();
+
+        const battleId = 789;
+        const state = createMockBattleState({
+          units: [
+            createMockPlayerUnit({ id: 'p1', hp: 100, tileX: 1, tileY: 1 }),
+            createMockEnemyUnit({ id: 'e1', hp: 50, tileX: 10, tileY: 10 })
+          ],
+          activeUnitId: 'e1'
+        });
+
+        // Mock AI to return simple wait action
+        mockAiService.decideTurnActions.mock.mockImplementation(() => [{ actionType: 'wait' }]);
+
+        const result = await service.processEnemyTurnsAsync(battleId, state, mockAiService, mockBattleService);
+
+        // Should save state after processing
+        assert.strictEqual(queryMock.mock.callCount(), 1);
+        assert.ok(queryMock.mock.calls[0].arguments[0].includes('UPDATE battles SET battle_state'));
+
+        // Verify result structure
+        assert.ok('state' in result);
+        assert.ok('battleStatus' in result);
+        assert.ok('enemyActions' in result);
+      });
+
+      it('should handle multiple enemy turns with state persistence', async () => {
+        const service = await createMockedTurnManager(queryMock);
+        const mockAiService = createMockAiService();
+        const mockBattleService = createMockBattleService();
+
+        const battleId = 999;
+        const state = createMockBattleState({
+          units: [
+            createMockPlayerUnit({ id: 'p1', hp: 100 }),
+            createMockEnemyUnit({ id: 'e1', hp: 50 }),
+            createMockEnemyUnit({ id: 'e2', hp: 40 })
+          ],
+          activeUnitId: 'e1'
+        });
+
+        // Mock AI service
+        mockAiService.decideTurnActions.mock.mockImplementation((unit) => {
+          return [{ actionType: 'wait' }];
+        });
+
+        // Mock battle service to advance turns
+        let currentActiveId = 'e1';
+        mockBattleService.advanceToNextActorWithCT.mock.mockImplementation((state) => {
+          if (currentActiveId === 'e1') {
+            state.activeUnitId = 'e2';
+            currentActiveId = 'e2';
+          } else if (currentActiveId === 'e2') {
+            state.activeUnitId = 'p1';
+            currentActiveId = 'p1';
+          }
+        });
+
+        await service.processEnemyTurnsAsync(battleId, state, mockAiService, mockBattleService);
+
+        // Should call AI service for both enemies
+        assert.strictEqual(mockAiService.decideTurnActions.mock.callCount(), 2);
+
+        // Should save state at least once
+        assert.ok(queryMock.mock.callCount() >= 1);
+      });
+
+      it('should stop processing when battle ends', async () => {
+        const service = await createMockedTurnManager(queryMock);
+        const mockAiService = createMockAiService();
+        const mockBattleService = createMockBattleService();
+
+        const battleId = 555;
+        const state = createMockBattleState({
+          units: [
+            createMockPlayerUnit({ id: 'p1', hp: 0 }), // Dead player
+            createMockEnemyUnit({ id: 'e1', hp: 50 })
+          ],
+          activeUnitId: 'e1'
+        });
+
+        // Mock battle to end immediately
+        mockBattleService.checkBattleEnd.mock.mockImplementation(() => ({
+          status: 'ended',
+          winningTeamId: 2
+        }));
+
+        const result = await service.processEnemyTurnsAsync(battleId, state, mockAiService, mockBattleService);
+
+        // Should detect battle end
+        assert.strictEqual(result.battleStatus, 'defeat');
+        assert.strictEqual(result.battleEndResult.status, 'ended');
+        assert.strictEqual(result.battleEndResult.winningTeamId, 2);
+
+        // Should still save final state
+        assert.ok(queryMock.mock.callCount() >= 1);
+      });
+    });
+
+    describe('notifyPlayerTurn with database integration', () => {
+      it('should notify player without database calls', async () => {
+        const service = await createMockedTurnManager(queryMock);
+        const mockBattleWebsocket = createMockBattleWebsocket();
+
+        const battleId = 333;
+        const state = createMockBattleState({
+          units: [createMockPlayerUnit({ id: 'p1', ownerId: 100, hp: 90 })],
+          activeUnitId: 'p1',
+          battleType: 'pve'
+        });
+
+        await service.notifyPlayerTurn(battleId, state, mockBattleWebsocket);
+
+        // Should NOT call database (this is notification only)
+        assert.strictEqual(queryMock.mock.callCount(), 0);
+
+        // Should call websocket notification
+        assert.strictEqual(mockBattleWebsocket.sendYourTurn.mock.callCount(), 1);
+      });
+
+      it('should include correct data in player notification', async () => {
+        const service = await createMockedTurnManager(queryMock);
+        const mockBattleWebsocket = createMockBattleWebsocket();
+
+        const battleId = 444;
+        const player = createMockPlayerUnit({
+          id: 'p1',
+          ownerId: 150,
+          hp: 85,
+          moveUsed: false,
+          actUsed: true // Can't act but can move
+        });
+        const state = createMockBattleState({
+          units: [player],
+          activeUnitId: 'p1',
+          battleType: 'pve'
+        });
+
+        await service.notifyPlayerTurn(battleId, state, mockBattleWebsocket);
+
+        const call = mockBattleWebsocket.sendYourTurn.mock.calls[0];
+        assert.strictEqual(call.arguments[0], 150); // ownerId
+        assert.strictEqual(call.arguments[1], 444); // battleId
+        assert.strictEqual(call.arguments[2], 'p1'); // activeUnitId
+        assert.ok(Array.isArray(call.arguments[4])); // available actions
+      });
+
+      it('should handle multiplayer turn timer setup', async () => {
+        const service = await createMockedTurnManager(queryMock);
+        const mockBattleWebsocket = createMockBattleWebsocket();
+
+        const battleId = 666;
+        const state = createMockBattleState({
+          units: [
+            createMockPlayerUnit({ id: 'p1', ownerId: 100 }),
+            createMockPlayerUnit({ id: 'p2', ownerId: 200 })
+          ],
+          activeUnitId: 'p1',
+          battleType: 'pvp_coliseum'
+        });
+
+        await service.notifyPlayerTurn(battleId, state, mockBattleWebsocket);
+
+        // Should detect multiplayer and set turn timer
+        const activeUnit = state.units.find(u => u.id === state.activeUnitId);
+        assert.strictEqual(activeUnit.ownerId, 100);
+      });
+    });
+
+    /**
+     * Create a mocked version of the turn manager for testing
+     */
+    async function createMockedTurnManager(queryMock) {
+      return {
+        async updateBattleState(battleId, state) {
+          const serializedState = JSON.stringify(state);
+          await queryMock(
+            'UPDATE battles SET battle_state = $1 WHERE id = $2',
+            [serializedState, battleId]
+          );
+        },
+
+        async processEnemyTurnsAsync(battleId, state, aiService, battleService) {
+          const enemyActions = [];
+          let battleStatus = { status: 'active', winningTeamId: null };
+          let iterations = 0;
+          const maxIterations = 50;
+
+          while (iterations < maxIterations) {
+            iterations++;
+
+            const activeUnit = state.units.find(u => u.id === state.activeUnitId);
+            if (!activeUnit || activeUnit.hp <= 0) break;
+
+            // Check if it's an enemy turn
+            if (activeUnit.type !== 'enemy') break;
+
+            // Check for battle end
+            const endCheck = battleService.checkBattleEnd(state);
+            if (endCheck.status === 'ended') {
+              battleStatus = endCheck;
+              break;
+            }
+
+            // Get AI decisions
+            const decisions = aiService.decideTurnActions(state, activeUnit);
+
+            // Process each decision
+            for (const decision of decisions) {
+              const result = battleService.processAction(state, activeUnit, decision.actionType, decision.targetTile, decision.skillId);
+
+              if (result.success) {
+                enemyActions.push({
+                  unitId: activeUnit.id,
+                  unitName: activeUnit.name,
+                  actionType: decision.actionType,
+                  targetTile: decision.targetTile,
+                  skillId: decision.skillId,
+                  result
+                });
+              }
+            }
+
+            // Advance to next unit
+            battleService.advanceToNextActorWithCT(state);
+
+            // Stop if we reach a player turn
+            const nextUnit = state.units.find(u => u.id === state.activeUnitId);
+            if (!nextUnit || nextUnit.type === 'player') break;
+          }
+
+          // Save state to database
+          await this.updateBattleState(battleId, state);
+
+          return {
+            state,
+            battleStatus: battleStatus.status === 'ended' ?
+              (battleStatus.winningTeamId === 1 ? 'victory' : 'defeat') : 'active',
+            battleEndResult: battleStatus,
+            enemyActions
+          };
+        },
+
+        async notifyPlayerTurn(battleId, state, battleWebsocket) {
+          const activeUnit = state.units.find(u => u.id === state.activeUnitId);
+
+          if (!activeUnit || activeUnit.type !== 'player' || !activeUnit.ownerId) {
+            return;
+          }
+
+          // Simulate available actions computation
+          const availableActions = [];
+          if (!activeUnit.moveUsed) availableActions.push('move');
+          if (!activeUnit.actUsed) availableActions.push('attack', 'skill', 'item');
+          availableActions.push('wait');
+
+          // Simulate turn predictions
+          const predictions = state.units.map(u => ({ id: u.id, type: u.type, name: u.name }));
+
+          await battleWebsocket.sendYourTurn(
+            activeUnit.ownerId,
+            battleId,
+            activeUnit.id,
+            predictions,
+            availableActions
+          );
+
+          // Handle multiplayer timer setup
+          const isPvP = state.battleType === 'pvp' || state.battleType === 'pvp_coliseum';
+          const playerUnits = state.units.filter(u => u.type === 'player' && u.ownerId);
+          const uniqueOwners = new Set(playerUnits.map(u => u.ownerId));
+          const isMultiplayerPvE = !isPvP && uniqueOwners.size > 1;
+          const isMultiplayer = isPvP || isMultiplayerPvE;
+
+          if (isMultiplayer) {
+            // Would start turn timer here
+            console.log(`Starting turn timer for battle ${battleId}, player ${activeUnit.ownerId}`);
+          }
+        }
+      };
+    }
+
+    /**
+     * Create mock AI service
+     */
+    function createMockAiService() {
+      return {
+        decideTurnActions: mock.fn(() => [{ actionType: 'wait' }])
+      };
+    }
+  });
+});

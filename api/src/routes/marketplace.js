@@ -12,6 +12,7 @@ import {
 } from '../middleware/marketplaceRateLimiter.js';
 import * as marketplaceService from '../services/marketplaceService.js';
 import { logger } from '../utils/logger.js';
+import { parseIntOrThrow } from '../utils/validateNumericParam.js';
 
 const router = express.Router();
 
@@ -22,10 +23,8 @@ router.get('/orderbook/:itemTemplateId', authenticate, readLimiter, asyncHandler
   const { itemTemplateId } = req.params;
   const { depth = 20 } = req.query;
 
-  const templateId = parseInt(itemTemplateId, 10);
-  if (isNaN(templateId)) {
-    throw new AppError('Invalid item template ID', 400);
-  }
+  const templateId = parseIntOrThrow(itemTemplateId, 'item template ID');
+  const parsedDepth = parseIntOrThrow(depth, 'depth', { defaultValue: 20, min: 1, max: 100 });
 
   // Verify item exists and is tradeable
   const itemResult = await query(
@@ -43,7 +42,7 @@ router.get('/orderbook/:itemTemplateId', authenticate, readLimiter, asyncHandler
 
   const client = await getClient();
   try {
-    const orderBook = await marketplaceService.getOrderBook(client, templateId, parseInt(depth, 10));
+    const orderBook = await marketplaceService.getOrderBook(client, templateId, parsedDepth);
     orderBook.itemName = itemResult.rows[0].name;
     res.json(orderBook);
   } finally {
@@ -333,6 +332,7 @@ router.delete('/orders/:orderId', authenticate, requireMarketplaceAccess, cancel
 // ============================================
 router.get('/search', authenticate, searchLimiter, asyncHandler(async (req, res) => {
   const { q = '', type, augment, limit = 50 } = req.query;
+  const parsedLimit = parseIntOrThrow(limit, 'limit', { defaultValue: 50, min: 1, max: 100 });
 
   const client = await getClient();
   try {
@@ -343,13 +343,13 @@ router.get('/search', authenticate, searchLimiter, asyncHandler(async (req, res)
         q,
         type || null,
         augment,
-        parseInt(limit, 10)
+        parsedLimit
       )
       : await marketplaceService.searchItems(
         client,
         q,
         type || null,
-        parseInt(limit, 10)
+        parsedLimit
       );
     res.json({ items });
   } finally {
@@ -366,11 +366,7 @@ router.get('/search', authenticate, searchLimiter, asyncHandler(async (req, res)
 // ============================================
 router.get('/items/:templateId', authenticate, readLimiter, asyncHandler(async (req, res) => {
   const { templateId } = req.params;
-
-  const templateIdNum = parseInt(templateId, 10);
-  if (isNaN(templateIdNum)) {
-    throw new AppError('Invalid template ID', 400);
-  }
+  const templateIdNum = parseIntOrThrow(templateId, 'template ID');
 
   // Get template info
   const templateResult = await query(
@@ -594,10 +590,8 @@ router.get('/history/:itemTemplateId', authenticate, readLimiter, asyncHandler(a
   const { itemTemplateId } = req.params;
   const { limit = 50 } = req.query;
 
-  const templateId = parseInt(itemTemplateId, 10);
-  if (isNaN(templateId)) {
-    throw new AppError('Invalid item template ID', 400);
-  }
+  const templateId = parseIntOrThrow(itemTemplateId, 'item template ID');
+  const parsedLimit = parseIntOrThrow(limit, 'limit', { defaultValue: 50, min: 1, max: 100 });
 
   // Verify item exists
   const itemResult = await query(
@@ -611,7 +605,7 @@ router.get('/history/:itemTemplateId', authenticate, readLimiter, asyncHandler(a
 
   const client = await getClient();
   try {
-    const history = await marketplaceService.getTradeHistory(client, templateId, parseInt(limit, 10));
+    const history = await marketplaceService.getTradeHistory(client, templateId, parsedLimit);
     res.json({
       itemTemplateId: templateId,
       itemName: itemResult.rows[0].name,
@@ -627,6 +621,7 @@ router.get('/history/:itemTemplateId', authenticate, readLimiter, asyncHandler(a
 // ============================================
 router.get('/my-trades', authenticate, readLimiter, asyncHandler(async (req, res) => {
   const { limit = 50 } = req.query;
+  const parsedLimit = parseIntOrThrow(limit, 'limit', { defaultValue: 50, min: 1, max: 100 });
 
   const result = await query(
     `SELECT
@@ -643,7 +638,7 @@ router.get('/my-trades', authenticate, readLimiter, asyncHandler(async (req, res
      WHERE mt.buyer_id = $1 OR mt.seller_id = $1
      ORDER BY mt.executed_at DESC
      LIMIT $2`,
-    [req.user.userId, parseInt(limit, 10)]
+    [req.user.userId, parsedLimit]
   );
 
   res.json({

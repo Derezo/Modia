@@ -17,6 +17,7 @@
 
 import { WebSocket } from 'ws';
 import chatService from '../services/chatService.js';
+import { verifyCharacterOwnership } from '../services/characterService.js';
 import presenceService from '../services/presenceService.js';
 import coliseumService from '../services/coliseumService.js';
 import { submitFormation } from '../services/coliseum/matchLifecycle.js';
@@ -119,6 +120,16 @@ async function handleChatMessage(ws, userId, username, payload) {
         return;
       }
 
+      // Verify the user owns this character
+      const ownsCharacter = await verifyCharacterOwnership(payload.characterId, userId);
+      if (!ownsCharacter) {
+        ws.send(JSON.stringify({
+          type: 'error',
+          payload: { message: 'Invalid character' }
+        }));
+        return;
+      }
+
       const roomType = chatRoom === 'global' ? 'global' : 'party';
       const partyId = chatRoom.startsWith('party:') ? parseInt(chatRoom.split(':')[1], 10) : null;
 
@@ -167,6 +178,18 @@ async function handlePrivateMessage(ws, userId, username, payload) {
         payload: { message: 'Target user and message are required' }
       }));
       return;
+    }
+
+    // If characterId is provided, verify ownership (null is allowed for DMs without attribution)
+    if (characterId) {
+      const ownsCharacter = await verifyCharacterOwnership(characterId, userId);
+      if (!ownsCharacter) {
+        ws.send(JSON.stringify({
+          type: 'error',
+          payload: { message: 'Invalid character' }
+        }));
+        return;
+      }
     }
 
     const savedMessage = await chatService.saveMessage({
@@ -655,6 +678,19 @@ async function handlePartyInvite(ws, userId, username, payload) {
       }));
       return;
     }
+
+    // Verify the user owns this character
+    if (characterId) {
+      const ownsCharacter = await verifyCharacterOwnership(characterId, userId);
+      if (!ownsCharacter) {
+        ws.send(JSON.stringify({
+          type: 'error',
+          payload: { message: 'Invalid character' }
+        }));
+        return;
+      }
+    }
+
     const result = await partyWebsocket.sendInvite(userId, username, targetUserId, characterId);
     if (result.success) {
       ws.send(JSON.stringify({

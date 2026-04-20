@@ -18,6 +18,7 @@ import { asyncHandler, AppError } from '../../middleware/errorHandler.js';
 import presenceService from '../../services/presenceService.js';
 import * as staminaService from '../../services/staminaService.js';
 import * as dailyQuestService from '../../services/dailyQuestService.js';
+import { parseIntOrThrow } from '../../utils/validateNumericParam.js';
 import {
   getBlockedNodes,
   getVisitedNodes,
@@ -121,10 +122,7 @@ router.get('/regions', authenticate, asyncHandler(async (req, res) => {
 router.get('/regions/:regionId', authenticate, asyncHandler(async (req, res) => {
   const { regionId } = req.params;
   const userId = req.user.userId;
-
-  if (!regionId || isNaN(parseInt(regionId, 10))) {
-    throw new AppError('Invalid region ID', 400);
-  }
+  const parsedRegionId = parseIntOrThrow(regionId, 'region ID');
 
   const regionResult = await query(
     `SELECT
@@ -158,7 +156,7 @@ router.get('/regions/:regionId', authenticate, asyncHandler(async (req, res) => 
      LEFT JOIN world_nodes kn ON kn.id = wr.keep_node_id
      LEFT JOIN world_nodes gn ON gn.id = wr.guild_node_id
      WHERE wr.id = $1`,
-    [regionId]
+    [parsedRegionId]
   );
 
   if (regionResult.rows.length === 0) {
@@ -176,7 +174,7 @@ router.get('/regions/:regionId', authenticate, asyncHandler(async (req, res) => 
      WHERE region_id = $1
      GROUP BY node_type
      ORDER BY node_type`,
-    [regionId]
+    [parsedRegionId]
   );
 
   // Get ring distribution for this region

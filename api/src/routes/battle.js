@@ -15,7 +15,6 @@ import * as advancementQuestService from '../services/advancementQuestService.js
 import * as dailyQuestService from '../services/dailyQuestService.js';
 import * as bossService from '../services/bossService.js';
 import * as battleTurnManager from '../services/battleTurnManager.js';
-import { generateTerrain } from '../../../shared/mapGeneration.js';
 import * as zodiacAbilityService from '../services/zodiacAbilityService.js';
 import { completeMatch as completeColiseumMatch, cancelTurnTimer } from '../services/coliseumService.js';
 
@@ -522,20 +521,8 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     throw new AppError('Cannot battle at this location', 400);
   }
 
-  // Generate battle map seed
-  const mapSeed = Math.floor(Math.random() * 1000000);
-
-  // Generate terrain with elevation using shared module (server-side mirror of frontend)
-  const mapData = generateTerrain(mapSeed, node.node_type, 32, 32, { elevation: true });
-  const terrain = mapData.terrain;
-
-  // Validate elevation data before storing in battle state
-  let elevation = mapData.elevation;
-  if (elevation && (!Array.isArray(elevation) || elevation.length !== 32 ||
-      !elevation[0] || elevation[0].length !== 32)) {
-    console.warn('[Battle] Invalid elevation data dimensions, using flat map');
-    elevation = null;  // Fall back to 2D pathfinding
-  }
+  // Generate battle terrain using encounter service
+  const { terrain, elevation, mapSeed, mapWidth, mapHeight } = battleService.generateEncounterTerrain(node.node_type);
 
   // Load character traits for all party members
   const characterTraits = await traitService.loadCharacterTraits(characterIds);
@@ -559,8 +546,8 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
     phase: 'active',
     activeUnitIndex: 0,
     activeUnitId: null,
-    mapWidth: 32,
-    mapHeight: 32,
+    mapWidth,
+    mapHeight,
     terrain, // Store terrain for server-side movement validation
     elevation, // Store elevation for 3D pathfinding and rendering
     debugOptions, // User's debug settings for AI logging etc.
@@ -664,9 +651,9 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   // Create battle record
   const battleResult = await query(
     `INSERT INTO battles (battle_type, status, node_id, battle_state, map_seed, map_width, map_height, player1_id)
-     VALUES ('pve', 'active', $1, $2, $3, 32, 32, $4)
+     VALUES ('pve', 'active', $1, $2, $3, $4, $5, $6)
      RETURNING id`,
-    [currentNodeId, JSON.stringify(initialState), mapSeed, req.user.userId]
+    [currentNodeId, JSON.stringify(initialState), mapSeed, mapWidth, mapHeight, req.user.userId]
   );
 
   const battleId = battleResult.rows[0].id;
@@ -726,8 +713,8 @@ router.post('/start', authenticate, startLimiter, asyncHandler(async (req, res) 
   res.status(201).json({
     battleId,
     mapSeed,
-    mapWidth: 32,
-    mapHeight: 32,
+    mapWidth,
+    mapHeight,
     nodeType: node.node_type, // Critical: frontend needs this for terrain generation
     state: initialState,
     availableActions

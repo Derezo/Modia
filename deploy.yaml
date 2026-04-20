@@ -1,0 +1,51 @@
+schema_version: 1
+name: modia
+plugin: npm-workspace
+version_scheme: semver
+target: vps
+
+remote:
+  host: mittonvillage.com
+  user: modia
+  ssh_user: root
+  app_dir: /var/www/modia
+  releases_kept: 5
+
+# npm workspaces: frontend builds first, then both workspaces ship. The plugin
+# runs a hoisted `npm ci --omit=dev --workspaces --include-workspace-root` in
+# the stage dir.
+build:
+  commands:
+    - npm run build -w frontend
+  artifact_dir: "."
+  include:
+    - api/src
+    - api/package.json
+    - frontend/dist
+    - frontend/package.json
+    - shared
+    - package.json
+    - package-lock.json
+  env: {}
+
+services:
+  - name: modia-api
+    kind: pm2
+    script: api/src/index.js
+    exec_mode: cluster
+    instances: 2
+    max_memory: 512M
+
+health:
+  url: https://modia.mittonvillage.com/api/health
+  expect_status: 200
+
+nginx:
+  template: api.conf.tpl
+  server_name: modia.mittonvillage.com
+  vars:
+    upstream: "127.0.0.1:3100"
+
+hooks:
+  post_deploy:
+    - { id: db-migrate, cmd: npm run db:migrate, cwd: current }

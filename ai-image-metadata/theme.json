@@ -103,5 +103,6 @@
     "nodes": "v2",
     "obstacles": "v2",
     "overlays": "v2"
-  }
+  },
+  "generationBackend": "comfyui"
 }

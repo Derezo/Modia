@@ -7,6 +7,7 @@
 
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 import {
   startSession,
   registerCatch,
@@ -21,69 +22,49 @@ const router = Router();
  * POST /fishing/:nodeId/start
  * Start a new fishing session
  */
-router.post('/:nodeId/start', authenticate, async (req, res) => {
+router.post('/:nodeId/start', authenticate, asyncHandler(async (req, res) => {
   const { nodeId } = req.params;
   const userId = req.user.userId;
 
-  try {
-    const result = await startSession(userId, parseInt(nodeId, 10));
-    res.json(result);
-  } catch (err) {
-    console.error('Error starting fishing session:', err);
-    res.status(400).json({ error: err.message });
-  }
-});
+  const result = await startSession(userId, parseInt(nodeId, 10));
+  res.json(result);
+}));
 
 /**
  * POST /fishing/:nodeId/catch
  * Register a catch (called by client timer)
  */
-router.post('/:nodeId/catch', authenticate, async (req, res) => {
+router.post('/:nodeId/catch', authenticate, asyncHandler(async (req, res) => {
   const { nodeId } = req.params;
   const userId = req.user.userId;
 
-  try {
-    const result = await registerCatch(userId, parseInt(nodeId, 10));
-    res.json(result);
-  } catch (err) {
-    console.error('Error registering catch:', err);
-    res.status(400).json({ error: err.message });
-  }
-});
+  const result = await registerCatch(userId, parseInt(nodeId, 10));
+  res.json(result);
+}));
 
 /**
  * POST /fishing/:nodeId/big-one
  * Claim a Big One event catch
  */
-router.post('/:nodeId/big-one', authenticate, async (req, res) => {
+router.post('/:nodeId/big-one', authenticate, asyncHandler(async (req, res) => {
   const { nodeId } = req.params;
   const userId = req.user.userId;
 
-  try {
-    const result = await claimBigOne(userId, parseInt(nodeId, 10));
-    res.json(result);
-  } catch (err) {
-    console.error('Error claiming big one:', err);
-    res.status(400).json({ error: err.message });
-  }
-});
+  const result = await claimBigOne(userId, parseInt(nodeId, 10));
+  res.json(result);
+}));
 
 /**
  * POST /fishing/:nodeId/end
  * End fishing session and collect rewards
  */
-router.post('/:nodeId/end', authenticate, async (req, res) => {
+router.post('/:nodeId/end', authenticate, asyncHandler(async (req, res) => {
   const { nodeId } = req.params;
   const userId = req.user.userId;
 
-  try {
-    const result = await endSession(userId, parseInt(nodeId, 10));
-    res.json(result);
-  } catch (err) {
-    console.error('Error ending fishing session:', err);
-    res.status(400).json({ error: err.message });
-  }
-});
+  const result = await endSession(userId, parseInt(nodeId, 10));
+  res.json(result);
+}));
 
 /**
  * GET /fishing/:nodeId/status
