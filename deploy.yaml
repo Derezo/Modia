@@ -11,6 +11,9 @@ remote:
   app_dir: /var/www/modia
   releases_kept: 5
 
+runtime:
+  port: 3100
+
 # npm workspaces: frontend builds first, then both workspaces ship. The plugin
 # runs a hoisted `npm ci --omit=dev --workspaces --include-workspace-root` in
 # the stage dir.
@@ -41,7 +44,6 @@ secrets:
       - JWT_REFRESH_SECRET
       - WORLD_SEED
       - NODE_ENV
-      - PORT
 
 services:
   # Single instance for first deploy: WebSocket cluster routing requires
