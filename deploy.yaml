@@ -61,10 +61,15 @@ health:
   expect_status: 200
 
 nginx:
-  template: api.conf.tpl
+  # api-spa.conf.tpl serves the Vite SPA from frontend/dist as static files
+  # and proxies /api/ + /health to the Express API on :3110. The previous
+  # api.conf.tpl proxied /everything/ to the API, which 404'd on / because
+  # Express has no GET / route — that's the "Cannot GET /" symptom.
+  template: api-spa.conf.tpl
   server_name: modia.mittonvillage.com
   vars:
     upstream: "127.0.0.1:3110"
+    static_root: "frontend/dist"
 
 hooks:
   post_deploy:
