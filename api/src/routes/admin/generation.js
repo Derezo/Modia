@@ -78,7 +78,9 @@ router.post('/', asyncHandler(async (req, res) => {
       ...result
     });
   } catch (err) {
-    throw new AppError(err.message, 400);
+    if (err instanceof AppError) throw err;
+    console.error('Generation queue error:', err);
+    throw new AppError('Failed to queue generation job', 400);
   }
 }));
 
@@ -252,7 +254,9 @@ router.post('/settings', asyncHandler(async (req, res) => {
       backend: adminGenerationService.getGenerationBackend()
     });
   } catch (err) {
-    throw new AppError(err.message, 400);
+    if (err instanceof AppError) throw err;
+    console.error('Generation backend update error:', err);
+    throw new AppError('Failed to update generation backend', 400);
   }
 }));
 

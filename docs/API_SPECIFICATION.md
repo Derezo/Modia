@@ -919,9 +919,17 @@ POST /api/world/nodes/:id/claim-chest
 {
   "success": true,
   "gold_awarded": 250,
-  "items_awarded": [],
+  "items_awarded": [
+    {
+      "instanceId": 123,
+      "templateId": 45,
+      "name": "Health Potion",
+      "quantity": 2,
+      "rarity": "common"
+    }
+  ],
   "new_gold_balance": 5250,
-  "message": "You found 250 gold in the treasure chest!"
+  "message": "You found 250 gold and 2x Health Potion in the treasure chest!"
 }
 ```
 
@@ -984,11 +992,13 @@ POST /api/world/nodes/:id/discover
   "success": true,
   "already_discovered": false,
   "lore": {
-    "title": "Ancient Monument",
-    "text": "You discovered ancient secrets...",
-    "lore_key": "lore_monument_001"
+    "title": "Ancient Observatory",
+    "text": "The crumbling tower before you bears strange astronomical instruments. Runic inscriptions speak of ancient scholars who once studied the movements of celestial bodies to predict the ebb and flow of magical energies. Their knowledge allowed them to enhance spellcasting during specific lunar phases.",
+    "lore_key": "lore_observatory_001",
+    "region": "Heartlands",
+    "category": "ancient_knowledge"
   },
-  "message": "You have discovered Ancient Monument!"
+  "message": "You have discovered Ancient Observatory!"
 }
 ```
 
@@ -1180,7 +1190,8 @@ POST /api/battle/action
   "actionType": "move|attack|skill|item|wait",
   "unitId": 1,
   "targetTile": { "x": 2, "y": 5 },
-  "skillId": null
+  "skillId": null,
+  "actionSequence": 47
 }
 ```
 
@@ -1205,6 +1216,7 @@ POST /api/battle/action
 |------|---------|
 | 400 | Not this unit's turn |
 | 404 | Battle not found or not active |
+| 409 | Stale action sequence - battle state has changed |
 
 ---
 
@@ -3541,7 +3553,10 @@ Collection system for permanent stat bonuses.
 |--------|----------|-------------|
 | GET | `/api/relics` | Get all relics and completion status |
 | GET | `/api/relics/:relicId` | Get specific relic details |
+| POST | `/api/relics/:relicId/claim` | Claim a relic (requires real database validation) |
 | POST | `/api/relics/:relicId/activate` | Activate a collected relic |
+
+> **Note (2026-04-25):** Relic claim endpoints now use real database lookups for quest validation. No longer accepts client-supplied `questCompleted`, `guildRequirementMet`, or `achievementCompleted` flags. Validation is performed server-side via `character_quests`, `daily_quest_history`, character class tier validation, and `pvp_achievements` tables.
 
 ---
 

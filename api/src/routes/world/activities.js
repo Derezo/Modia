@@ -12,7 +12,7 @@
  * @see ../world.js - Main router that composes this module
  */
 import express from 'express';
-import { query } from '../../config/database.js';
+import { query, withTransaction } from '../../config/database.js';
 import { authenticate } from '../../middleware/auth.js';
 import {
   chestClaimLimiter,
@@ -27,6 +27,8 @@ import {
   ZODIAC_CRYSTALS,
   ZODIAC_COLLECTION_BONUS
 } from '../../../../shared/constants.js';
+import { generateChestLoot, addItemsToInventory } from '../../services/world/chestLootService.js';
+import { getLoreContent } from '../../../../shared/loreContent.js';
 
 const router = express.Router();
 
@@ -88,37 +90,51 @@ router.post('/nodes/:id/claim-chest', authenticate, chestClaimLimiter, asyncHand
   const goldVariance = Math.floor(baseGold * 0.2);
   const goldAwarded = baseGold + Math.floor(Math.random() * goldVariance * 2) - goldVariance;
 
-  // TODO: Add item drops based on distance tier
-  const itemsAwarded = [];
+  // Generate item drops based on distance tier
+  const itemsAwarded = generateChestLoot({ userId, nodeId, distance });
 
-  // Atomically insert claim - prevents race condition via unique constraint
-  // ON CONFLICT DO NOTHING returns 0 rows if already claimed
-  const claimResult = await query(
-    `INSERT INTO user_chest_claims (user_id, node_id, gold_awarded, items_awarded)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (user_id, node_id) DO NOTHING
-     RETURNING id`,
-    [userId, nodeId, goldAwarded, JSON.stringify(itemsAwarded)]
-  );
+  // Use transaction to atomically claim chest, add items, and award gold
+  const result = await withTransaction(async (client) => {
+    // Atomically insert claim - prevents race condition via unique constraint
+    // ON CONFLICT DO NOTHING returns 0 rows if already claimed
+    const claimResult = await client.query(
+      `INSERT INTO user_chest_claims (user_id, node_id, gold_awarded, items_awarded)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (user_id, node_id) DO NOTHING
+       RETURNING id`,
+      [userId, nodeId, goldAwarded, JSON.stringify(itemsAwarded)]
+    );
 
-  if (claimResult.rows.length === 0) {
-    throw new AppError('You have already claimed this treasure', 400);
-  }
+    if (claimResult.rows.length === 0) {
+      throw new AppError('You have already claimed this treasure', 400);
+    }
 
-  // Award gold to user's active character with overflow protection
-  const charResult = await query(
-    `UPDATE characters SET gold = LEAST(gold + $1, $3)
-     WHERE user_id = $2 AND is_active = true
-     RETURNING id, gold`,
-    [goldAwarded, userId, MAX_GOLD]
-  );
+    // Add items to user's shared inventory
+    if (itemsAwarded.length > 0) {
+      await addItemsToInventory(client, userId, itemsAwarded);
+    }
+
+    // Award gold to user's active character with overflow protection
+    const charResult = await client.query(
+      `UPDATE characters SET gold = LEAST(gold + $1, $3)
+       WHERE user_id = $2 AND is_active = true
+       RETURNING id, gold`,
+      [goldAwarded, userId, MAX_GOLD]
+    );
+
+    return {
+      newGoldBalance: charResult.rows[0]?.gold || null
+    };
+  });
 
   res.json({
     success: true,
     gold_awarded: goldAwarded,
     items_awarded: itemsAwarded,
-    new_gold_balance: charResult.rows[0]?.gold || null,
-    message: `You found ${goldAwarded} gold in the treasure chest!`
+    new_gold_balance: result.newGoldBalance,
+    message: itemsAwarded.length > 0
+      ? `You found ${goldAwarded} gold and ${itemsAwarded.length} item(s) in the treasure chest!`
+      : `You found ${goldAwarded} gold in the treasure chest!`
   });
 }));
 
@@ -368,7 +384,7 @@ router.post('/nodes/:id/discover', authenticate, discoveryLimiter, asyncHandler(
 
   // Verify the node exists and is a discovery type
   const nodeResult = await query(
-    'SELECT id, node_type, lore_key, name FROM world_nodes WHERE id = $1',
+    'SELECT id, node_type, lore_key, name, region_race FROM world_nodes WHERE id = $1',
     [nodeId]
   );
 
@@ -398,12 +414,8 @@ router.post('/nodes/:id/discover', authenticate, discoveryLimiter, asyncHandler(
     );
   }
 
-  // TODO: Return actual lore content based on lore_key
-  const loreContent = {
-    title: node.name,
-    text: `You discovered ancient secrets at ${node.name}. The mysteries of this place have been recorded in your journal.`,
-    lore_key: node.lore_key
-  };
+  // Generate lore content based on region and coordinates
+  const loreContent = getLoreContent(node.lore_key, node.name, node.region_race);
 
   res.json({
     success: true,

@@ -705,19 +705,53 @@ export class RequestsTab {
   }
 
   /**
-   * Accept clan invite (placeholder)
+   * Accept clan invite
    */
-  async acceptClanInvite(_inviteId, _buttonEl) {
-    // Will be implemented with clan system
-    parchmentToast.info('Coming Soon', 'Clan system is not yet implemented');
+  async acceptClanInvite(inviteId, buttonEl) {
+    try {
+      buttonEl.disabled = true;
+      buttonEl.textContent = 'Joining...';
+
+      const response = await this.game.api.acceptClanInvite(inviteId);
+      if (response.success) {
+        // Remove from list
+        this.clanInvites = this.clanInvites.filter(i => (i.inviteId || i.id) !== inviteId);
+        this.render();
+        this.updateBadge();
+        parchmentToast.success('Joined Clan', 'You have joined the clan!');
+
+        // Refresh should be called to update any clan-related UI
+        if (this.refresh) {
+          this.refresh();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to accept clan invite:', error);
+      buttonEl.disabled = false;
+      buttonEl.textContent = 'Join';
+      parchmentToast.error('Error', error.message || 'Failed to join clan');
+    }
   }
 
   /**
-   * Decline clan invite (placeholder)
+   * Decline clan invite
    */
-  async declineClanInvite(_inviteId, _buttonEl) {
-    // Will be implemented with clan system
-    parchmentToast.info('Coming Soon', 'Clan system is not yet implemented');
+  async declineClanInvite(inviteId, buttonEl) {
+    try {
+      buttonEl.disabled = true;
+
+      const response = await this.game.api.declineClanInvite(inviteId);
+      if (response.success) {
+        // Remove from list
+        this.clanInvites = this.clanInvites.filter(i => (i.inviteId || i.id) !== inviteId);
+        this.render();
+        this.updateBadge();
+      }
+    } catch (error) {
+      console.error('Failed to decline clan invite:', error);
+      buttonEl.disabled = false;
+      parchmentToast.error('Error', 'Failed to decline invite');
+    }
   }
 
   /**

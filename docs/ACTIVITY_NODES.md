@@ -279,7 +279,7 @@ Final Gold = baseGold +/- variance
 - One claim per user per chest
 - User must be physically at the node
 - Gold awarded to user account
-- Future: Item drops based on distance tier
+- Item drops based on distance tier (distance-scaled rewards including items)
 
 #### API Endpoint
 | Endpoint | Method | Purpose |

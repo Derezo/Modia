@@ -66,10 +66,8 @@ router.post('/:id/claim', authenticate, relicClaimLimiter, asyncHandler(async (r
     throw new AppError('Invalid relic ID', 400);
   }
 
-  // Context can include validation data (questCompleted, guildRequirementMet, etc.)
-  const context = req.body.context || {};
-
-  const result = await relicService.claimRelic(req.user.userId, relicId, context);
+  // Validation is now done server-side via DB lookups - no client context needed
+  const result = await relicService.claimRelic(req.user.userId, relicId);
 
   if (!result.success) {
     throw new AppError(result.message, 400);
@@ -102,7 +100,9 @@ router.post('/grant/:key', authenticate, asyncHandler(async (req, res) => {
       relic: result
     });
   } catch (err) {
-    throw new AppError(err.message, 400);
+    if (err instanceof AppError) throw err;
+    console.error('Relic claim error:', err);
+    throw new AppError('Failed to claim relic', 400);
   }
 }));
 

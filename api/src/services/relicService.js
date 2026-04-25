@@ -162,10 +162,9 @@ export async function grantRelic(userId, relicKey) {
  * Claim a relic (validates acquisition requirements)
  * @param {number} userId - User ID
  * @param {number} relicId - Relic template ID
- * @param {Object} context - Context for validation (questId, nodeId, etc.)
  * @returns {Promise<Object>} Result with claimed relic info
  */
-export async function claimRelic(userId, relicId, context = {}) {
+export async function claimRelic(userId, relicId) {
   // Get relic template
   const templateResult = await query(
     `SELECT id, key, name, description, rarity, acquisition_type, acquisition_id, effects
@@ -203,10 +202,31 @@ export async function claimRelic(userId, relicId, context = {}) {
 
   switch (template.acquisition_type) {
     case 'quest':
-      // TODO: Check if user has completed the required quest
-      // For now, allow claiming if context.questCompleted is true
-      canClaim = context.questCompleted === true;
-      validationMessage = canClaim ? '' : 'Complete the required quest to claim this relic';
+      // Check if user has completed the required advancement quest
+      // acquisition_id refers to the quest_template_id
+      if (template.acquisition_id) {
+        const questResult = await query(
+          `SELECT 1 FROM character_quests cq
+           JOIN characters c ON c.id = cq.character_id
+           WHERE c.user_id = $1
+             AND cq.quest_template_id = $2
+             AND cq.status = 'completed'`,
+          [userId, template.acquisition_id]
+        );
+        canClaim = questResult.rows.length > 0;
+        validationMessage = canClaim ? '' : 'Complete the required quest to claim this relic';
+      } else {
+        // No specific quest required - check daily quest history as fallback
+        const anyQuestResult = await query(
+          `SELECT 1 FROM daily_quest_history dqh
+           JOIN characters c ON c.id = dqh.character_id
+           WHERE c.user_id = $1
+           LIMIT 1`,
+          [userId]
+        );
+        canClaim = anyQuestResult.rows.length > 0;
+        validationMessage = canClaim ? '' : 'Complete at least one quest to claim this relic';
+      }
       break;
 
     case 'node':
@@ -231,17 +251,58 @@ export async function claimRelic(userId, relicId, context = {}) {
       break;
 
     case 'guild':
-      // Check guild advancement requirements
-      // For now, allow claiming if context.guildRequirementMet is true
-      canClaim = context.guildRequirementMet === true;
-      validationMessage = canClaim ? '' : 'Advance your guild rank to claim this relic';
+      // Check guild advancement rank by verifying character class tier
+      // acquisition_id is the minimum tier required (1-4)
+      // Characters in advanced classes have reached that tier
+      if (template.acquisition_id) {
+        const requiredTier = parseInt(template.acquisition_id, 10);
+        // Get highest tier class across all user's characters
+        const guildResult = await query(
+          `SELECT c.class FROM characters c
+           WHERE c.user_id = $1`,
+          [userId]
+        );
+        // Check if any character has achieved the required tier
+        const tierClasses = {
+          // Tier 1 advanced classes
+          1: ['knight', 'battlemage', 'elementalist', 'white_mage', 'martial_artist', 'brawler', 'medic', 'plague_doctor'],
+          // Tier 2 advanced classes
+          2: ['paladin', 'guardian', 'summoner', 'conjurer', 'martial_artist', 'brawler', 'medic', 'plague_doctor'],
+          // Tier 3 advanced classes
+          3: ['warlord', 'oracle', 'ascetic', 'artificer'],
+          // Tier 4 = max tier classes
+          4: ['warlord', 'oracle', 'ascetic', 'artificer']
+        };
+        const validClasses = tierClasses[requiredTier] || [];
+        const hasRequiredTier = guildResult.rows.some(row => validClasses.includes(row.class));
+        canClaim = hasRequiredTier;
+        validationMessage = canClaim ? '' : `Advance a character to guild tier ${requiredTier} to claim this relic`;
+      } else {
+        // No tier required - any guild membership counts
+        canClaim = true;
+      }
       break;
 
     case 'achievement':
-      // Check achievement requirements
-      // For now, allow claiming if context.achievementCompleted is true
-      canClaim = context.achievementCompleted === true;
-      validationMessage = canClaim ? '' : 'Complete the required achievement to claim this relic';
+      // Check PvP achievements (currently the only achievement system implemented)
+      // acquisition_id is the achievement_key
+      if (template.acquisition_id) {
+        const achievementResult = await query(
+          `SELECT 1 FROM pvp_achievements
+           WHERE user_id = $1 AND achievement_key = $2`,
+          [userId, template.acquisition_id]
+        );
+        canClaim = achievementResult.rows.length > 0;
+        validationMessage = canClaim ? '' : 'Complete the required achievement to claim this relic';
+      } else {
+        // No specific achievement required - check if user has any achievement
+        const anyAchievementResult = await query(
+          'SELECT 1 FROM pvp_achievements WHERE user_id = $1 LIMIT 1',
+          [userId]
+        );
+        canClaim = anyAchievementResult.rows.length > 0;
+        validationMessage = canClaim ? '' : 'Earn an achievement to claim this relic';
+      }
       break;
 
     default:

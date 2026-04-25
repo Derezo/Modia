@@ -2,6 +2,16 @@
 
 All notable changes to Modia.
 
+## 0.5
+
+- 0.5.0: Major security and feature improvements with social system integration and world content expansion
+  - **Security Improvements:** Sanitized admin error responses to prevent sensitive data exposure, hard-rejected stale battle action sequences with 409 status codes, extracted battle action sequence validation to dedicated service  
+  - **World Content:** Added distance-tier chest loot system with `chestLootService.js` for balanced item rewards, implemented lore content system with 48 curated entries in `shared/loreContent.js` covering regional history and ancient knowledge
+  - **Quest System:** Enhanced relic quest validation with real database lookups replacing client-supplied flags, added proper character quest progression tracking via `character_quests` and `daily_quest_history` tables
+  - **Social Features:** Integrated real social hub tab modules - PartyTab for quick party formation, RequestsTab for unified invites, ClanTab with accept/decline invite endpoints, LFGTab, and FriendsTab replacing placeholder UI components
+  - **Code Quality:** Extracted battle business logic to `battleRewardService.js` for modular reward processing, eliminated dead code via knip cleanup removing unused dependencies and barrel exports, fixed memory leaks in AuthScene using AbortController for event listener cleanup
+  - **Testing:** Expanded test coverage to 100% for `chestLootService`, 84% for `battleActionSequence`, and 97% for `loreContent` modules with comprehensive validation scenarios
+
 ## 0.4
 
 - 0.4.44: Stabilized VPS deploy config and fixed stuck registration button on error

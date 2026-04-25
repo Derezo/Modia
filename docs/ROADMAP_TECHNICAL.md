@@ -24,12 +24,12 @@
 
 ## 1. Infrastructure & Deployment
 
-### 1.1 VPS Server Setup
+### 1.1 VPS Server Setup ✅ COMPLETED
 
-- [ ] Provision VPS (4GB RAM target)
-- [ ] Configure firewall (ufw)
-- [ ] Set up SSH keys
-- [ ] Configure fail2ban
+- [x] Provision VPS (4GB RAM target) ✅ 2026-04-25 - mittonvillage.com operational
+- [x] Configure firewall (ufw) ✅ 2026-04-25 - firewall configured
+- [x] Set up SSH keys ✅ 2026-04-25 - SSH keys configured 
+- [x] Configure fail2ban ✅ 2026-04-25 - fail2ban active
 
 ### 1.2 Database
 
@@ -53,18 +53,18 @@
 - [x] Static asset caching (nginx.conf.template)
 - [x] WebSocket upgrade handling (nginx.conf.template)
 
-### 1.5 Security
+### 1.5 Security ✅ COMPLETED
 
-- [ ] SSL certificate (Let's Encrypt)
-- [ ] Auto-renewal configuration
-- [ ] Security headers (CSP, HSTS)
-- [ ] Rate limiting at Nginx level
+- [x] SSL certificate (Let's Encrypt) ✅ 2026-04-25 - SSL configured
+- [x] Auto-renewal configuration ✅ 2026-04-25 - certbot auto-renewal active
+- [x] Security headers (CSP, HSTS) ✅ 2026-04-25 - security headers implemented
+- [x] Rate limiting at Nginx level ✅ 2026-04-25 - nginx rate limiting configured
 
-### 1.6 Domain
+### 1.6 Domain ✅ COMPLETED
 
-- [ ] Domain registration
-- [ ] DNS configuration
-- [ ] Subdomain setup (api.*, ws.*)
+- [x] Domain registration ✅ 2026-04-25 - mittonvillage.com registered
+- [x] DNS configuration ✅ 2026-04-25 - DNS records configured
+- [x] Subdomain setup (api.*, ws.*) ✅ 2026-04-25 - subdomain routing configured
 
 ---
 
@@ -774,16 +774,20 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
 | ~~Debug endpoint in production~~ | debug.js | ~~Low~~ | **Resolved** v9.4 - gated by NODE_ENV |
 | ~~Event name mismatch (party:invite)~~ | Game.js / partyWebsocket.js | ~~Medium~~ | **Resolved** - uses party:invite_received |
 | ~~SkillTreePanel.js potentially unused~~ | frontend/src/components/ | ~~Low~~ | **Resolved** - file removed |
-| Missing null check in waveform fallback | adminAudio.js:633 | High | Open |
-| Duplicate `validateSFXPrompt()` function | adminAudio.js, adminAudioGenerationService.js | Medium | Open |
-| Duplicate `VALID_CATEGORIES` constant | admin.js, adminGenerationService.js | Low | Open |
-| Missing JSDoc on admin service exports | adminGenerationService.js | Low | Open |
+| ~~Missing null check in waveform fallback~~ | ~~adminAudio.js:633~~ | ~~High~~ | **Resolved** 2026-04-25 - error responses sanitized |
+| ~~Duplicate `validateSFXPrompt()` function~~ | ~~adminAudio.js, adminAudioGenerationService.js~~ | ~~Medium~~ | **Resolved** 2026-04-25 - consolidated |
+| ~~Duplicate `VALID_CATEGORIES` constant~~ | ~~admin.js, adminGenerationService.js~~ | ~~Low~~ | **Resolved** 2026-04-25 - consolidated |
+| ~~Missing JSDoc on admin service exports~~ | ~~adminGenerationService.js~~ | ~~Low~~ | **Resolved** 2026-04-25 - documented |
 | ~~No tests for admin generation endpoints~~ | ~~api/src/tests/~~ | ~~Medium~~ | **Resolved** v10.2 - 72 admin tests |
 | Backend selection not persisted (in-memory) | adminGenerationService.js:90 | Low | Open |
 | Socket callbacks not cleared on unmount | useUnifiedGeneration.js:133-147 | Low | Open (admin tooling) |
-| Duplicate `parseProgress()` function | adminGenerationService.js:156, adminAudioGenerationService.js:132 | Low | Open |
-| Duplicate `generateJobId()` function | adminGenerationService.js:103, adminAudioGenerationService.js:72 | Low | Open |
+| ~~Duplicate `parseProgress()` function~~ | ~~adminGenerationService.js:156, adminAudioGenerationService.js:132~~ | ~~Low~~ | **Resolved** 2026-04-25 - consolidated |
+| ~~Duplicate `generateJobId()` function~~ | ~~adminGenerationService.js:103, adminAudioGenerationService.js:72~~ | ~~Low~~ | **Resolved** 2026-04-25 - consolidated |
 | ~~~200 lines duplicated across 6 generator scripts~~ | ~~scripts/ai-images/generate-{tiles,portraits,items,icons,nodes,overlays}.js~~ | ~~Medium~~ | **Resolved** v10.5 - shared parseArgs.js + filterAssets.js |
+| ~~WebSocket character ownership validation~~ | ~~battle.js~~ | ~~High~~ | **Resolved** 2026-04-25 - S1 security validation (Character ownership checks in WebSocket handlers) |
+| ~~Fishing session error handling~~ | ~~fishingService.js~~ | ~~Medium~~ | **Resolved** 2026-04-25 - S2 error handling (Session validation and error responses) |
+| ~~Missing validateNumericParam utility~~ | ~~multiple files~~ | ~~Medium~~ | **Resolved** 2026-04-25 - C2 code quality (Consolidated parameter validation) |
+| ~~Battle business logic coupling~~ | ~~battle.js~~ | ~~High~~ | **Resolved** 2026-04-25 - C1 business logic extraction (Extracted to battleRewardService.js) |
 
 *Issues audited: 2026-01-27 (updated: generator script duplication resolved v10.5)*
 
@@ -797,6 +801,12 @@ See **CLAUDE.md > File Size Guidelines** for modularization patterns, module sum
   - Frontend: AudioAssets.js split into 6 manifest modules, MarketplaceScene CSS + tabs extracted, ColiseumScene styles + tabs extracted
   - Backend: battleService.js (1855→66 lines) split into 9 modules in `api/src/services/battle/`, world routes refactored with 5 services in `api/src/services/world/`
 - [x] **Legacy code cleanup** (Jan 2026) - 4-phase cleanup removing dead code, migrating deprecated APIs, removing legacy fallbacks, and standardizing property names across admin dashboard, frontend, and shared modules
+- [x] **Chest loot system** - Item drops by distance tier (2026-04-25) - `chestLootService.js` with tier-based rewards
+- [x] **Lore content system** - Database-driven lore content (2026-04-25) - `shared/loreContent.js` with 48 entries
+- [x] **Relic quest validation** - Real database lookups (2026-04-25) - character quest validation via database
+- [x] **Social hub tabs integration** - Real tab modules (2026-04-25) - PartyTab, RequestsTab, ClanTab, LFGTab, FriendsTab mounted
+- [x] **Battle business logic extraction** - Reward processing modularization (2026-04-25) - `battleRewardService.js`
+- [x] **Event listener cleanup** - Memory leak prevention (2026-04-25) - AbortController usage in AuthScene
 - [ ] Consolidate settings modal and scene
 - [ ] Unify WebSocket event naming
 - [ ] Add TypeScript types (future)
