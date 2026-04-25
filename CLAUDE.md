@@ -317,9 +317,26 @@ This project has specialized subagents in `.claude/agents/`. **Using subagents i
 
 **Review pairing:** After implementation, pair with a reviewer — `code-reviewer` for API, `ui-ux-specialist` for frontend, `architect-reviewer` for cross-cutting/database, `qa-expert` for battle/economy, `security-auditor` for WebSocket/auth surfaces.
 
+## Deployment
+
+**Production deploys are run from a workstation via the `lsd` CLI.** Configuration lives in `deploy.yaml`. There are no project-local deploy scripts (`scripts/deploy/` and `ecosystem.config.js` were removed in v0.5.0). PM2 process layout, nginx config, and `.env.production` are all rendered on the VPS by `lsd` at deploy time; secrets come from `lsd-vault`.
+
+```bash
+lsd plan modia              # print every phase + remote command (non-mutating)
+lsd deploy modia            # deploy latest git tag
+lsd deploy modia v0.5.0     # deploy a specific tag
+lsd status modia            # current version + health
+lsd history modia           # append-only ledger
+lsd rollback modia          # roll back to previous release
+```
+
+Standard release flow: bump `package.json` version → commit → `git tag v<X.Y.Z>` → `git push --tags` → `lsd deploy modia`. Full reference: `docs/DEPLOYMENT.md`.
+
+Health endpoint: `https://modia.mittonvillage.com/api/health`. Production runs on port 3110 (proxied by nginx).
+
 ## CI Pipeline
 
-Pull requests run: lint → API tests → E2E tests (Playwright) → build. The pipeline requires PostgreSQL and auto-starts servers for testing.
+No GitHub Actions are wired up after the v0.5.0 lsd migration — legacy `.github/workflows/` was removed alongside the bash deploy scripts. Reintroduce CI workflows against `lsd`-managed deploys when needed; in the meantime, run lint/tests locally before tagging.
 
 ## Documentation
 
@@ -329,6 +346,7 @@ Detailed specifications in `docs/`. Key files:
 - `DEVELOPMENT_COMMANDS.md` - Full command reference for dev, test, assets, audio, AI generation
 - `DEVELOPMENT_ROADMAP.md` - Links to `ROADMAP_TECHNICAL.md` and `ROADMAP_GAMEPLAY.md`
 - `TECHNICAL_ARCHITECTURE.md` - System design, database schemas
+- `DEPLOYMENT.md` - Production deploy workflow (lsd CLI, deploy.yaml, secrets, rollback)
 - `WORLDGEN_TECHNICAL_DEEP_DIVE.md` - 6-phase world generation algorithms, constants, gotchas
 - `API_SPECIFICATION.md` - REST and WebSocket endpoints
 - `FRONTEND_TECHNICAL_PATTERNS.md` - Critical gotchas and component patterns

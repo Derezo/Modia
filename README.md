@@ -114,6 +114,7 @@ Detailed documentation is available in the `docs/` directory:
 - [API Specification](docs/API_SPECIFICATION.md) - REST and WebSocket endpoints
 - [Game Design](docs/GAME_DESIGN.md) - Mechanics and formulas
 - [Development Roadmap](docs/DEVELOPMENT_ROADMAP.md) - Progress tracking
+- [Deployment](docs/DEPLOYMENT.md) - Production deploy workflow (lsd CLI)
 
 ## Game Overview
 

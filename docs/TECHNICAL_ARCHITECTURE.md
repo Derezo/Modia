@@ -1356,22 +1356,12 @@ docker compose exec postgres psql -U modia -d modia
 
 ### 6.2 PM2 Configuration
 
-```javascript
-// ecosystem.config.js
-module.exports = {
-  apps: [{
-    name: 'modia-api',
-    script: './api/src/index.js',
-    instances: 2,
-    exec_mode: 'cluster',
-    max_memory_restart: '1G',
-    env_production: {
-      NODE_ENV: 'production',
-      PORT: 3000
-    }
-  }]
-};
-```
+PM2 process layout is declared in `deploy.yaml` (`services:` block) and rendered on the VPS by `lsd` at deploy time — there is no checked-in `ecosystem.config.js`. Current production layout:
+
+- `modia-api` — `api/src/index.js`, fork mode, single instance, 512M cap
+- Single instance until WebSocket sticky sessions or Redis pub/sub are added
+
+See `deploy.yaml` for the source of truth and `docs/DEPLOYMENT.md` for the deploy workflow.
 
 ### 6.3 Nginx Configuration
 

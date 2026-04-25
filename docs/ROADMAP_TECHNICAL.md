@@ -33,25 +33,25 @@
 
 ### 1.2 Database
 
-- [x] PostgreSQL 14+ installation (via Docker Compose for dev, setup.sh for production)
-- [x] Database user configuration (via setup.sh)
+- [x] PostgreSQL 14+ installation (Docker Compose for dev; system service on VPS, provisioned out-of-band)
+- [x] Database user configuration (VPS-provisioned)
 - [ ] Connection pooling (pgBouncer)
-- [x] Automated backups (backup.sh with 7-day retention)
+- [x] Automated backups (cron + pg_dump on VPS, 7-day retention)
 
 ### 1.3 Application Server
 
-- [x] Node.js 20+ LTS installation (via setup.sh)
-- [x] PM2 process manager setup (via setup.sh, ecosystem.config.js)
-- [x] Environment variable management (.env template in deploy/)
+- [x] Node.js 20+ LTS installation (VPS-provisioned)
+- [x] PM2 process manager setup (rendered from `deploy.yaml` `services:` block by lsd)
+- [x] Environment variable management (lsd-vault → `.env.production` rendered VPS-side at deploy time)
 - [ ] Log rotation configuration
 
 ### 1.4 Web Server
 
-- [x] Nginx installation (via setup.sh)
-- [x] Reverse proxy configuration (nginx.conf.template)
-- [x] Gzip compression (nginx.conf.template)
-- [x] Static asset caching (nginx.conf.template)
-- [x] WebSocket upgrade handling (nginx.conf.template)
+- [x] Nginx installation (VPS-provisioned)
+- [x] Reverse proxy configuration (rendered from `api-spa.conf.tpl` per `deploy.yaml`)
+- [x] Gzip compression (nginx template)
+- [x] Static asset caching (nginx template)
+- [x] WebSocket upgrade handling (nginx template)
 
 ### 1.5 Security ✅ COMPLETED
 
@@ -70,28 +70,27 @@
 
 ## 2. CI/CD Pipeline
 
-### 2.1 GitHub Actions (Completed Jan 2026)
+### 2.1 GitHub Actions
 
-- [x] Lint on push (v9.12: ESLint in CI workflow)
-- [x] Test on pull request (v9.12: unit tests for API and shared modules)
-- [x] Build validation (v9.12: frontend build check)
-- [x] Dependency security scanning (v9.12: npm audit + Dependabot automation)
-- [x] Simplified CI pipeline (v9.12: removed integration tests from PR, main-only E2E)
-- [x] Code coverage reporting (v9.12: Codecov integration)
+- [ ] Lint / test / build workflow (legacy workflows removed during lsd migration; reintroduce against lsd-managed deploys when needed)
+- [x] Dependency automation (Dependabot config in `.github/dependabot.yml`)
 
-### 2.2 Deployment Scripts
+### 2.2 Deployment
 
-- [x] Zero-downtime deployment (v8.7: deploy.sh with PM2 reload)
-- [x] Database migration automation (v8.7: deploy.sh runs migrations)
-- [x] Rollback procedures (v8.7: deploy.sh --rollback)
+- [x] Versioned releases with atomic cutover (lsd: `releases/<v>` + `current` symlink)
+- [x] Zero-downtime PM2 reload (lsd Phase 5b)
+- [x] Database migration automation (lsd post-deploy hook: `npm run db:migrate`)
+- [x] Rollback procedures (`lsd rollback modia [version]`)
+- [x] Health probe gating (lsd Phase 7 against `/api/health`)
+- [x] Append-only ledger of every deploy (`lsd history modia`, `lsd log`)
 - [ ] Environment synchronization
 
 ### 2.3 Environment Management
 
+- [x] Production environment (mittonvillage.com)
+- [x] Secret management (lsd-vault on VPS; render-on-deploy)
 - [ ] Staging environment
-- [ ] Production environment
 - [ ] Environment parity
-- [ ] Secret management
 
 ---
 

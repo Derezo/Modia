@@ -92,7 +92,7 @@ Modia/
 ├── shared/                 # Shared constants and utilities
 ├── docs/                   # Project documentation
 ├── package.json            # Monorepo workspace configuration
-├── ecosystem.config.js     # PM2 deployment configuration
+├── deploy.yaml             # lsd deploy configuration (VPS, secrets, services)
 └── .env.example            # Environment variable template
 ```
 
