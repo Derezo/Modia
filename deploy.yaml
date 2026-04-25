@@ -60,6 +60,14 @@ health:
   url: https://modia.mittonvillage.com/api/health
   expect_status: 200
 
+# Catches the failure mode that prompted this whole audit: a deploy where
+# secrets point at an empty/wrong DB. modia_production carries 91 tables;
+# anything below ~50 means we're connected to the wrong target. lsd sources
+# the runtime .env.production for this check, so it sees the same DSN the
+# running app sees.
+db_sanity_check:
+  min_tables: 80
+
 nginx:
   # api-spa.conf.tpl serves the Vite SPA from frontend/dist as static files
   # and proxies /api/ + /health to the Express API on :3110. The previous
