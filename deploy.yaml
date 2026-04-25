@@ -12,7 +12,7 @@ remote:
   releases_kept: 5
 
 runtime:
-  port: 3100
+  port: 3110
 
 # npm workspaces: frontend builds first, then both workspaces ship. The plugin
 # runs a hoisted `npm ci --omit=dev --workspaces --include-workspace-root` in
@@ -64,7 +64,7 @@ nginx:
   template: api.conf.tpl
   server_name: modia.mittonvillage.com
   vars:
-    upstream: "127.0.0.1:3100"
+    upstream: "127.0.0.1:3110"
 
 hooks:
   post_deploy:
