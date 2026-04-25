@@ -46,9 +46,8 @@ secrets:
       - NODE_ENV
 
 services:
-  # Single instance for first deploy: WebSocket cluster routing requires
-  # sticky sessions or Redis pub/sub before scaling beyond 1 (per
-  # ecosystem.config.js comment).
+  # Single instance: WebSocket cluster routing requires sticky sessions
+  # or a Redis pub/sub adapter before scaling beyond 1 process.
   - name: modia-api
     kind: pm2
     script: api/src/index.js

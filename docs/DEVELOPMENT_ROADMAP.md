@@ -72,7 +72,7 @@ The roadmap is split into two focused documents:
 | Item | Location | Details |
 |------|----------|---------|
 | ~~Rate Limit Security~~ | ~~rateLimiterFactory.js, auth.js~~ | **COMPLETE** (v8.7) |
-| ~~VPS Deployment Scripts~~ | ~~Infrastructure~~ | **COMPLETE** (v8.7: setup.sh, deploy.sh, nginx, backup) |
+| ~~VPS Deployment~~ | ~~Infrastructure~~ | **COMPLETE** (v8.7 legacy bash scripts; v0.5.0 migrated to `lsd` CLI — see `docs/DEPLOYMENT.md`) |
 | E2E Tests | Playwright | Full gameplay coverage |
 
 ---

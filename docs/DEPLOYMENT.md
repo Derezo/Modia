@@ -1,504 +1,252 @@
-# Modia Production Deployment Guide
+# Modia Production Deployment
 
-This document provides comprehensive instructions for deploying Modia to production at mittonvillage.com.
+Modia is deployed to **mittonvillage.com** using the **`lsd`** CLI — the Lifestream Dynamics deployment tool. There are no project-local deploy scripts; everything is driven by `deploy.yaml` plus the `lsd` binary on your workstation.
 
-## Table of Contents
-
-1. [Overview](#overview)
-2. [Prerequisites](#prerequisites)
-3. [Server Compatibility](#server-compatibility)
-4. [First-Time Setup](#first-time-setup)
-5. [Deployment Workflow](#deployment-workflow)
-6. [Rollback Procedures](#rollback-procedures)
-7. [Troubleshooting](#troubleshooting)
-8. [Security Considerations](#security-considerations)
-9. [Architecture Diagram](#architecture-diagram)
+The legacy bash-based pipeline (`scripts/deploy/*.sh`, `ecosystem.config.js`, `.github/workflows/deploy.yml`) was removed in `v0.5.0`. If you find a reference to those, treat it as stale and report it.
 
 ---
 
-## Overview
+## Quick Reference
 
-Modia uses a **release-based deployment strategy** with:
-
-- **Timestamped release directories** for clean rollbacks
-- **Atomic symlink swaps** for zero-downtime deployments
-- **PM2 cluster mode** with graceful reloads
-- **Automatic rollback** on health check failure
-- **Shared resources** (.env, logs) persisted across releases
-
+```bash
+lsd doctor                      # Validate local environment (git, ssh, rsync, vault)
+lsd config validate             # Validate deploy.yaml
+lsd plan                        # Print every phase + remote command (non-mutating)
+lsd secrets ls modia            # List vault keys (names only, never values)
+lsd secrets diff modia          # Diff declared keys vs vault contents
+lsd status modia                # Currently deployed version + health
+lsd history modia               # Append-only deploy ledger
+lsd deploy modia                # Deploy latest git tag
+lsd deploy modia v0.5.0         # Deploy a specific tag
+lsd deploy modia --dry-run      # Plan only — no transport, no cutover
+lsd rollback modia              # Roll back to the previous release
+lsd rollback modia v0.4.44      # Roll back to a specific release
 ```
-/var/www/modia/
-├── releases/           # Timestamped release directories
-│   ├── 20260123_143000/
-│   └── 20260123_150000/
-├── shared/
-│   ├── .env           # Production environment (persisted)
-│   └── logs/          # PM2 log files (persisted)
-├── current -> releases/20260123_150000/  # Active release
-└── backups/           # Database backups
-```
+
+---
+
+## How a Deploy Works
+
+`lsd deploy modia` runs an 8-phase pipeline. Each phase is idempotent and the runner holds a per-app lock so concurrent deploys are impossible.
+
+| Phase | What happens |
+|-------|--------------|
+| **0. Resolve** | Resolve latest git tag + SHA in worktree. Acquire local `.deploy.lock`. |
+| **1. Preflight** | `git status --porcelain` clean check. SSH key perms (0600). Ping the VPS. |
+| **1.5. Secrets preflight** | Diff declared keys (`deploy.yaml`) against `lsd-vault`. Seed log scrubber from values. |
+| **2. Build + stage** | Run `build.commands` locally. `npm-workspace` plugin stages `api/`, `frontend/dist`, `shared/` into `.deploy-staging/<v>/app/`. |
+| **3. Transport** | Acquire remote lock. Ensure `/var/www/modia/{releases,shared}` layout. Reconcile any half-finished prior deploy. `rsync` to `releases/<v>.partial/`. Write `MANIFEST.json`. Atomic finalize: `mv <v>.partial → <v>` (previous → `<v>.old`). |
+| **3.5. Secrets write** | VPS-side: `lsd-vault-agent` decrypts and renders `<release>/.env.production` (mode 0600, owner `modia`). Secrets never touch the network in plaintext. |
+| **4. nginx** | Render `api-spa.conf.tpl` → `/etc/nginx/sites-available/modia.conf`. `nginx -t` (isolated) → move into place → `nginx -T` (full-tree). |
+| **5. Cutover** | **Point of no return.** Atomic `ln -sfn` swap + `mv -T` → `current/`. nginx reload under `nginx.reload` lock. |
+| **5b. Service reload** | PM2: `modia-api` (fork mode, singleton, 512M cap) reload. |
+| **6. Post-deploy hooks** | `npm run db:migrate` (declared in `deploy.yaml`'s `hooks.post_deploy`). |
+| **7. Health** | Probe `https://modia.mittonvillage.com/api/health`. Expect 200, retries 6, 30s timeout. Failure → fail the deploy (rollback responsibility is on the operator). |
+| **8. Prune + ledger** | Keep newest 5 finalized releases. Append entry to `lsd` ledger and git-push it. |
+
+Run `lsd plan modia` at any time to print the current pipeline for the latest tag — it's the source of truth.
 
 ---
 
 ## Prerequisites
 
-### Local Machine
+### Local workstation
 
-| Requirement | Version | Check Command |
-|-------------|---------|---------------|
-| Node.js | 18+ | `node -v` |
-| npm | 8+ | `npm -v` |
-| SSH access | - | `ssh root@mittonvillage.com` |
-| rsync | - | `rsync --version` |
+| Requirement | Check |
+|-------------|-------|
+| `lsd` CLI | `lsd version` |
+| Local environment OK | `lsd doctor` |
+| Git tag for the version you're deploying | `git tag -l` |
+| Clean working tree | `git status` |
+| SSH access to `root@mittonvillage.com` | `ssh root@mittonvillage.com true` |
 
-### Server (mittonvillage.com)
+> **`ControlMaster` recommendation.** Add to `~/.ssh/config` to avoid re-handshaking on every SSH call lsd makes:
+> ```
+> Host mittonvillage.com
+>     ControlMaster auto
+>     ControlPath ~/.ssh/cm-%r@%h:%p
+>     ControlPersist 10m
+> ```
 
-| Requirement | Version | Status |
-|-------------|---------|--------|
-| Ubuntu | 24.04 LTS | Verified |
-| Node.js | v20.20.0 | Verified |
-| npm | 10.8.2 | Verified |
-| PM2 | 6.0.14+ | Verified |
-| nginx | 1.24.0+ | Verified |
-| PostgreSQL | 16.x | System service (not Docker) |
-| Redis | 7.0.15 | Available at localhost:6379 |
+### Server (provisioned out-of-band)
 
-### DNS Configuration
-
-Before first deployment, configure DNS A records:
-
-| Subdomain | Points To | Purpose |
-|-----------|-----------|---------|
-| `modia.mittonvillage.com` | Server IP | Frontend (static files) |
-| `modia-api.mittonvillage.com` | Server IP | API (Node.js backend) |
-
----
-
-## Server Compatibility
-
-### Resource Analysis (Validated via SSH)
-
-| Resource | Total | Used | Available | Modia Needs | Status |
-|----------|-------|------|-----------|-------------|--------|
-| Memory | 3.8 GB | 1.0 GB | 2.8 GB | ~512 MB (1 instance) | OK |
-| Disk | 79 GB | 30 GB | 45 GB | ~2 GB per release | OK |
-| CPUs | 2 | - | 2 | 1 (single instance) | OK |
-| Port 3000 | - | - | Free | Required | OK |
-
-### Existing Services
-
-Other services running on the server (no conflicts):
-
-| Service | Port | Memory |
-|---------|------|--------|
-| accounting-api | 3100 | 284 MB |
-| chatbot-api (x2) | - | 232 MB |
-| chatbot-webhook-worker | - | 76 MB |
-| galaxy-miner | 3388 | 73 MB |
-| pm2-logrotate | - | 69 MB |
-
-### Database Compatibility
-
-- PostgreSQL runs as a **system service** (not Docker)
-- Existing databases: `accounting_api_production`, `chatbot_api_production`
-- Modia creates: `modia_production` database
-- Setup script uses `sudo -u postgres psql` for database creation
+| Component | Notes |
+|-----------|-------|
+| Ubuntu 24.04 LTS | |
+| Node.js 20+ | |
+| PostgreSQL 16 | System service (not Docker). DB `modia_production` carries ≥80 tables (sanity-check threshold). |
+| nginx 1.24+ | Templates rendered by lsd at deploy time. |
+| PM2 6+ | Process layout declared in `deploy.yaml`'s `services:` block. |
+| `lsd-vault-agent` | Installed once via `lsd vault init`; renders secrets into release dirs. |
 
 ---
 
-## First-Time Setup
+## `deploy.yaml` — the source of truth
 
-### Single-Command Deployment
+Source: `/home/eric/Projects/Modia/deploy.yaml`. Key fields:
 
-From your local machine, run:
-
-```bash
-./scripts/deploy/deploy-production.sh --version v1.0.0
+```yaml
+name: modia
+plugin: npm-workspace        # build/stage strategy: workspace-aware
+target: vps
+remote:
+  host: mittonvillage.com
+  user: modia                # runtime user for the app
+  ssh_user: root             # used for layout / nginx / pm2 ops
+  app_dir: /var/www/modia
+  releases_kept: 5
+runtime:
+  port: 3110
+build:
+  commands: [ npm run build -w frontend ]
+  include: [ api/src, api/package.json, frontend/dist, frontend/package.json,
+             shared, package.json, package-lock.json ]
+secrets:
+  provider: lsd-vault
+  lsd_vault:
+    keys: [ DB_HOST, DB_NAME, DB_PORT, DB_USER, DB_PASSWORD,
+            JWT_SECRET, JWT_REFRESH_SECRET, WORLD_SEED, NODE_ENV ]
+services:
+  - name: modia-api
+    kind: pm2
+    script: api/src/index.js
+    exec_mode: fork
+    singleton: true
+    max_memory: 512M
+health:
+  url: https://modia.mittonvillage.com/api/health
+  expect_status: 200
+db_sanity_check:
+  min_tables: 80
+nginx:
+  template: api-spa.conf.tpl
+  server_name: modia.mittonvillage.com
+  vars: { upstream: "127.0.0.1:3110", static_root: "frontend/dist" }
+hooks:
+  post_deploy:
+    - { id: db-migrate, cmd: npm run db:migrate, cwd: current }
 ```
 
-The deployment script automatically detects first-time setup and handles everything:
-1. Checks if server is configured (looks for `/var/www/modia/shared/.env`)
-2. If not configured, uploads and runs `setup-mittonvillage.sh --non-interactive`
-3. Creates directory structure at `/var/www/modia/`
-4. Creates PostgreSQL database and user
-5. Generates production `.env` with secure secrets
-6. Installs nginx site configurations
-7. **Attempts SSL certificate setup via certbot** (continues if DNS not ready)
-8. Proceeds with normal deployment (build, upload, install)
-9. Runs database migrations
-10. Seeds the world (if database is empty)
+When you change this file, run `lsd config validate modia` before committing.
 
-### Pre-requisites
+---
 
-**Before first deployment:**
+## Standard Deploy Workflow
 
-1. **DNS Configuration** - Add A records for HTTPS to work:
-   - `modia.mittonvillage.com` -> Server IP
-   - `modia-api.mittonvillage.com` -> Server IP
-
-2. **SSH Access** - Verify you can connect:
+1. **Land your changes on `main`.** Tests must pass; commit cleanly.
+2. **Tag the release.**
    ```bash
-   ssh root@mittonvillage.com
+   # Update root package.json "version" to match, then:
+   git tag v<X.Y.Z>
+   git push origin main --tags
+   ```
+3. **Plan the deploy** (optional but recommended for non-trivial changes):
+   ```bash
+   lsd plan modia
+   ```
+4. **Deploy.**
+   ```bash
+   lsd deploy modia                # latest tag
+   lsd deploy modia v0.5.0         # explicit version
+   ```
+5. **Verify.**
+   ```bash
+   lsd status modia
+   curl -s https://modia.mittonvillage.com/api/health
+   ```
+6. **Watch the ledger.**
+   ```bash
+   lsd history modia | head -5
    ```
 
-### If SSL Setup Failed
+---
 
-If DNS wasn't configured before the first deploy, SSL certificates won't be obtained. Once DNS is ready, run:
+## Secrets Management (`lsd-vault`)
 
-```bash
-ssh root@mittonvillage.com 'certbot --nginx -d modia.mittonvillage.com -d modia-api.mittonvillage.com'
-```
+Secrets live encrypted on the VPS in `lsd-vault` and are rendered into each release's `.env.production` at deploy time. They are **never** stored in this repo.
 
-### Optional: Customize Environment
+| Task | Command |
+|------|---------|
+| List declared keys | `lsd secrets ls modia` |
+| Diff declared vs vault | `lsd secrets diff modia` (exit 1 on drift — wire into CI when ready) |
+| Set one key (interactive) | `lsd secrets set modia DB_PASSWORD` (prompts for value) |
+| Set one key (stdin) | `printf '%s' "$VALUE" \| lsd secrets set modia DB_PASSWORD VALUE=-` |
+| Read one key | `lsd secrets get modia DB_PASSWORD` |
+| Bulk import from `.env` | `lsd secrets import modia ./.env.production` |
+| Edit all keys interactively | `lsd secrets edit modia` |
+| Delete a key | `lsd secrets delete modia OLD_KEY` |
 
-Review and update `/var/www/modia/shared/.env`:
+Vault administration:
 
-```bash
-ssh root@mittonvillage.com 'nano /var/www/modia/shared/.env'
-```
-
-Key settings:
-- `WORLD_SEED` - Change for different world layouts
-- `CORS_ORIGIN` - Should match frontend domain
-- `JWT_SECRET` / `JWT_REFRESH_SECRET` - Auto-generated (don't change unless rotating)
+| Task | Command |
+|------|---------|
+| Bootstrap on a fresh VPS | `lsd vault init` (one-time) |
+| Rotate the master key | `lsd vault rotate-master` |
+| Upgrade the agent binary | `lsd vault upgrade-agent` |
+| Disaster-recovery import | `lsd vault import-from-env modia ./backup.env` |
 
 ---
 
-## Deployment Workflow
+## Rollback
 
-### Standard Deployment
-
-```bash
-# From project root
-./scripts/deploy/deploy-production.sh --version v1.0.1
-```
-
-This will:
-1. Verify clean git state (no uncommitted changes)
-2. Build frontend (`npm run build -w frontend`)
-3. Create tarball of deployment files
-4. Upload to server via rsync
-5. Install production dependencies (`npm ci --omit=dev`)
-6. Run database migrations
-7. Atomic symlink swap to new release
-8. PM2 graceful reload
-9. Health check verification
-10. Cleanup old releases (keeps last 5)
-
-### Command Options
-
-| Option | Description |
-|--------|-------------|
-| `--version <ver>` | Tag release version (e.g., v1.0.0) |
-| `--dry-run` | Show what would happen without executing |
-| `--skip-build` | Skip frontend build (for quick redeploys) |
-| `--force` | Allow deployment with uncommitted changes |
-| `--help` | Show help message |
-
-### Examples
+**`lsd` keeps the last 5 releases.** Rollback is an atomic symlink flip — no rebuild, no re-staging.
 
 ```bash
-# Full deployment with version tag
-./scripts/deploy/deploy-production.sh --version v1.0.0
-
-# Preview deployment without changes
-./scripts/deploy/deploy-production.sh --dry-run --version v1.0.0
-
-# Quick redeploy (API changes only)
-./scripts/deploy/deploy-production.sh --skip-build
-
-# Deploy despite uncommitted changes (not recommended)
-./scripts/deploy/deploy-production.sh --force --version v1.0.0-dev
+lsd rollback modia                  # previous release
+lsd rollback modia v0.4.44          # specific release
 ```
 
----
+After rollback, run the same verification checklist (`lsd status`, health probe, smoke test).
 
-## Rollback Procedures
-
-### Automatic Rollback
-
-If the health check fails after deployment, the system automatically:
-1. Reverts symlink to previous release
-2. Reloads PM2 with previous code
-3. Removes the failed release directory
-
-### Manual Rollback
-
-To manually rollback to the previous release:
-
-```bash
-ssh root@mittonvillage.com '/var/www/modia/install-remote.sh --rollback'
-```
-
-Or specify via the deployment script output message.
-
-### Rollback to Specific Release
-
-SSH into the server:
-
-```bash
-ssh root@mittonvillage.com
-
-# List available releases
-ls -lt /var/www/modia/releases/
-
-# Manually switch to a specific release
-ln -sfn /var/www/modia/releases/20260123_120000 /var/www/modia/current.new
-mv -Tf /var/www/modia/current.new /var/www/modia/current
-
-# Reload PM2
-cd /var/www/modia/current
-pm2 reload modia-api --update-env
-```
+If a deploy fails between Phase 5 (cutover) and Phase 7 (health check), rollback is the recovery path. Failures in Phases 0–4 are non-destructive: the running release is untouched.
 
 ---
 
 ## Troubleshooting
 
-### Common Errors
+| Symptom | Action |
+|---------|--------|
+| `lsd doctor` warns about `ControlMaster` | Add the SSH config block above. Cosmetic — deploys still work. |
+| `LSD_VAULT_HOST unset` warning | `export LSD_VAULT_HOST=mittonvillage.com` in your shell rc. |
+| Phase 1 fails on dirty git | Commit/stash changes, or pass `--allow-dirty` (only for emergency hotfixes). |
+| Phase 1.5 fails — secret drift | `lsd secrets diff modia` → reconcile with `lsd secrets set` / `delete`. |
+| Phase 7 health probe fails | Check `pm2 logs modia-api` on the VPS, then `lsd rollback modia`. Investigate before the next deploy. |
+| `db_sanity_check` fails (< 80 tables) | The runtime `.env.production` is pointing at the wrong DB. Check `DB_NAME` / `DB_HOST` in vault. |
+| Need to skip a single preflight | `lsd deploy modia --skip-check <name>` (see `lsd deploy --help`). Use sparingly. |
+| Need to skip the health check | `lsd deploy modia --no-health` (dangerous — only when the health endpoint itself is broken and you're shipping the fix). |
 
-#### "Workspace node_modules not found"
-
-**Cause:** npm workspaces hoist dependencies to root `node_modules/`.
-
-**Solution:** This check has been updated. Ensure you have run `npm install` and have a `package-lock.json`.
-
-#### "Port 3000 is in use"
-
-**Cause:** Another process is using port 3000.
-
-**Solution:** The script checks for existing modia-api process. If it's a different process:
-
-```bash
-# Find what's using the port
-ssh root@mittonvillage.com 'lsof -i :3000'
-
-# Use --force to proceed anyway (will fail if port truly blocked)
-./scripts/deploy/deploy-production.sh --force --version v1.0.0
-```
-
-#### "Health check failed"
-
-**Cause:** Application didn't start correctly within timeout period.
-
-**Solution:**
-1. Check PM2 logs: `ssh root@mittonvillage.com 'pm2 logs modia-api --lines 50'`
-2. Check application logs: `ssh root@mittonvillage.com 'cat /var/www/modia/shared/logs/api-error.log'`
-3. Verify .env configuration
-4. Check database connectivity
-
-#### "No previous release found to rollback to"
-
-**Cause:** Only one release exists (first deployment failed).
-
-**Solution:**
-1. Fix the underlying issue
-2. Remove the failed release: `rm -rf /var/www/modia/releases/*`
-3. Redeploy
-
-#### "psql: connection refused"
-
-**Cause:** PostgreSQL not running or connection parameters wrong.
-
-**Solution:**
-```bash
-# Check PostgreSQL status
-ssh root@mittonvillage.com 'systemctl status postgresql'
-
-# Verify connection
-ssh root@mittonvillage.com 'sudo -u postgres psql -c "SELECT 1"'
-```
-
-### Debugging Commands
-
-```bash
-# Check PM2 status
-ssh root@mittonvillage.com 'pm2 list'
-
-# View PM2 logs
-ssh root@mittonvillage.com 'pm2 logs modia-api --lines 100'
-
-# Check nginx status
-ssh root@mittonvillage.com 'systemctl status nginx'
-
-# Test nginx configuration
-ssh root@mittonvillage.com 'nginx -t'
-
-# View nginx logs
-ssh root@mittonvillage.com 'tail -f /var/log/nginx/modia*.log'
-
-# Check health endpoint directly
-ssh root@mittonvillage.com 'curl -s http://localhost:3000/api/health'
-
-# Check current release
-ssh root@mittonvillage.com 'ls -la /var/www/modia/current'
-
-# List all releases
-ssh root@mittonvillage.com 'ls -lt /var/www/modia/releases/'
-
-# Check .env file
-ssh root@mittonvillage.com 'cat /var/www/modia/shared/.env | grep -v PASSWORD | grep -v SECRET'
-```
-
-### Log Locations
-
-| Log | Location |
-|-----|----------|
-| PM2 output | `/var/www/modia/shared/logs/api-out.log` |
-| PM2 errors | `/var/www/modia/shared/logs/api-error.log` |
-| nginx access | `/var/log/nginx/modia.access.log` |
-| nginx errors | `/var/log/nginx/modia.error.log` |
-| nginx API access | `/var/log/nginx/modia-api.access.log` |
-| nginx API errors | `/var/log/nginx/modia-api.error.log` |
+For a full list of escape hatches: `lsd deploy --help`.
 
 ---
 
-## Security Considerations
-
-### SSH Access
-
-The deployment scripts use root access for simplicity. For production systems, consider:
-
-1. Create a dedicated deploy user:
-   ```bash
-   useradd -m -s /bin/bash deploy
-   usermod -aG www-data deploy
-   ```
-
-2. Grant specific sudo permissions for PM2 and nginx reload
-
-3. Update `SERVER_USER` in `deploy-production.sh`
-
-### Secret Management
-
-- **JWT secrets** are auto-generated during setup
-- **Database password** is auto-generated with 32 characters
-- **.env file** is chmod 600 (owner read/write only)
-- **Never commit** `.env` to version control
-
-### Environment Variables
-
-Production `.env` should include:
-
-```bash
-NODE_ENV=production
-TRUST_PROXY=true          # Required behind nginx
-DEBUG=false               # Disable debug logging
-```
-
-### Rate Limiting
-
-Rate limiting is configured at multiple levels:
-
-1. **nginx** - `limit_req_zone` in site configs
-2. **Express** - `rateLimiterFactory.js` middleware
-3. **Production limits** - Stricter than development (600 base vs 1500)
-
-### CORS Configuration
-
-The API is configured for cross-origin requests from the frontend domain only:
-
-```bash
-CORS_ORIGIN=https://modia.mittonvillage.com
-```
-
-Update this if deploying to a different domain.
-
-### WebSocket Security
-
-- WebSocket connections require authentication after connection
-- Connections timeout after inactivity (configured in nginx)
-- Currently running single instance to avoid cluster state issues
-
----
-
-## Architecture Diagram
+## Architecture
 
 ```
-                    Internet
-                        │
-                        ▼
-                   ┌─────────┐
-                   │   DNS   │
-                   └────┬────┘
-                        │
-         ┌──────────────┴──────────────┐
-         │                             │
-         ▼                             ▼
-┌─────────────────┐         ┌─────────────────┐
-│modia.mitton...  │         │modia-api.mitton.│
-│  (Frontend)     │         │    (API)        │
-└────────┬────────┘         └────────┬────────┘
-         │                           │
-         └───────────┬───────────────┘
-                     │
-                     ▼
-              ┌─────────────┐
-              │   nginx     │
-              │ (reverse    │
-              │   proxy)    │
-              └──────┬──────┘
-                     │
-      ┌──────────────┼──────────────┐
-      │              │              │
-      ▼              ▼              ▼
-┌──────────┐  ┌──────────┐  ┌──────────┐
-│ Static   │  │   API    │  │WebSocket │
-│ Files    │  │ (HTTP)   │  │  (WS)    │
-│ /dist    │  │  :3000   │  │  :3000   │
-└──────────┘  └────┬─────┘  └────┬─────┘
-                   │             │
-                   └──────┬──────┘
-                          │
-                          ▼
-                   ┌─────────────┐
-                   │   PM2       │
-                   │ (modia-api) │
-                   └──────┬──────┘
-                          │
-            ┌─────────────┼─────────────┐
-            │             │             │
-            ▼             ▼             ▼
-     ┌───────────┐ ┌───────────┐ ┌───────────┐
-     │PostgreSQL │ │  Redis    │ │   Logs    │
-     │modia_prod │ │(optional) │ │ /shared/  │
-     └───────────┘ └───────────┘ └───────────┘
-```
-
-### Request Flow
-
-1. **Frontend requests** hit nginx → served from `/var/www/modia/current/frontend/dist`
-2. **API requests** (`/api/*`) → nginx proxy → PM2 → Node.js
-3. **WebSocket** (`/ws`) → nginx upgrade → PM2 → Node.js WebSocket handler
-4. **Database** → PM2 → PostgreSQL (system service, not Docker)
-
-### Release Activation
-
-```
-Before deployment:
-current -> releases/20260123_120000/
-
-During deployment:
-current.new -> releases/20260123_150000/  (temporary link)
-
-After atomic swap:
-current -> releases/20260123_150000/  (mv -Tf is atomic)
+Local workstation                                VPS (mittonvillage.com)
+┌──────────────────────┐                         ┌────────────────────────────────────────┐
+│  lsd CLI             │   ssh / rsync           │  /var/www/modia/                       │
+│  ├─ deploy.yaml      │ ──────────────────────► │  ├─ releases/                          │
+│  ├─ git tag          │                         │  │   ├─ v0.4.44/                       │
+│  ├─ build (npm)      │                         │  │   ├─ v0.5.0/        ← current       │
+│  └─ stage            │                         │  │   └─ ...                            │
+│                      │                         │  ├─ shared/  (logs, .env shared bits)  │
+└──────────────────────┘                         │  └─ current → releases/v0.5.0          │
+                                                 │                                        │
+                                                 │  lsd-vault-agent  →  .env.production   │
+                                                 │  pm2  →  modia-api (port 3110)         │
+                                                 │  nginx  →  modia.mittonvillage.com     │
+                                                 │            ├─ /          static SPA    │
+                                                 │            ├─ /api/      → :3110       │
+                                                 │            └─ /health    → :3110       │
+                                                 │  PostgreSQL 16  →  modia_production    │
+                                                 └────────────────────────────────────────┘
 ```
 
 ---
 
-## Related Documents
+## Related
 
-- [TECHNICAL_ARCHITECTURE.md](./TECHNICAL_ARCHITECTURE.md) - System architecture, backend structure, database schemas
-- [API_SPECIFICATION.md](./API_SPECIFICATION.md) - REST and WebSocket endpoint definitions
-- [PROJECT_REQUIREMENTS.md](./PROJECT_REQUIREMENTS.md) - Infrastructure targets, MVP specifications
-- [DEVELOPMENT_ROADMAP.md](./DEVELOPMENT_ROADMAP.md) - Project phases, milestone planning
-
----
-
-## Version History
-
-| Version | Date | Changes |
-|---------|------|---------|
-| 1.1.0 | 2026-01-23 | Single-command deployment with auto-setup detection |
-| 1.0.0 | 2026-01-23 | Initial deployment documentation |
+- `deploy.yaml` — deploy configuration (source of truth)
+- `lsd plan modia` — current pipeline for the latest tag
+- `lsd deploy --help` — flags reference
+- `~/.local/bin/lsd` — CLI binary (`lsd version` to inspect)
