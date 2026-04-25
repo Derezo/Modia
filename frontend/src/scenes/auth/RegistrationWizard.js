@@ -849,6 +849,7 @@ export class RegistrationWizard {
 
     } catch (err) {
       this.errors.global = err.message || 'Registration failed. Please try again.';
+      this.loading = false;
       this.render();
     } finally {
       this.loading = false;
