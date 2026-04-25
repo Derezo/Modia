@@ -7,8 +7,19 @@
       "ignore": ["src/tests/**", "src/**/*.test.js"]
     },
     "frontend": {
-      "entry": ["src/main.js"],
-      "project": ["src/**/*.js"]
+      "entry": ["src/main.js", "vite.config.js"],
+      "project": ["src/**/*.js"],
+      "paths": {
+        "@shared/*": ["../shared/*"]
+      }
+    },
+    "admin": {
+      "entry": ["src/main.jsx", "vite.config.js"],
+      "project": ["src/**/*.{js,jsx}"],
+      "ignore": ["src/tests/**"],
+      "paths": {
+        "@shared/*": ["../shared/*"]
+      }
     },
     "shared": {
       "entry": ["*.js"],
@@ -16,5 +27,6 @@
     }
   },
   "ignore": ["**/node_modules/**", "scripts/**", "**/*.test.js"],
-  "ignoreDependencies": ["sharp", "playwright"]
+  "ignoreDependencies": ["sharp", "playwright", "@modia/shared"],
+  "ignoreBinaries": ["pm2"]
 }

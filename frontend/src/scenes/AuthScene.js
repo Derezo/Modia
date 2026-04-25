@@ -41,6 +41,9 @@ export class AuthScene extends Scene {
 
     // Changelog modal
     this.changelogModal = null;
+
+    // Event listener cleanup
+    this.abortController = null;
   }
 
   enter(params = {}) {
@@ -48,6 +51,9 @@ export class AuthScene extends Scene {
     this.loading = false;
     this.modalVisible = false;
     this.resetFieldsTouched();
+
+    // Initialize event listener cleanup
+    this.abortController = new AbortController();
 
     // Create transition renderer
     this.transitionRenderer = new AuthTransitionRenderer(
@@ -68,6 +74,12 @@ export class AuthScene extends Scene {
   }
 
   exit() {
+    // Clean up event listeners
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+    }
+
     if (this.formElement) {
       this.formElement.remove();
       this.formElement = null;
@@ -448,11 +460,11 @@ export class AuthScene extends Scene {
     form.addEventListener('submit', (e) => {
       this.game.audio?.playUI('button_click');
       this.handleSubmit(e);
-    });
+    }, { signal: this.abortController.signal });
     modeToggle.addEventListener('click', () => {
       this.game.audio?.playUI('button_click');
       this.toggleMode();
-    });
+    }, { signal: this.abortController.signal });
 
     // Version info click handler
     const versionInfo = container.querySelector('#version-info');
@@ -463,7 +475,7 @@ export class AuthScene extends Scene {
           this.changelogModal = new ChangelogModal();
         }
         this.changelogModal.open();
-      });
+      }, { signal: this.abortController.signal });
     }
 
     // Setup field validation
@@ -491,7 +503,7 @@ export class AuthScene extends Scene {
       input.addEventListener('blur', () => {
         this.fieldsTouched[fieldName] = true;
         this.validateField(fieldName);
-      });
+      }, { signal: this.abortController.signal });
 
       input.addEventListener('input', () => {
         this.clearGlobalError();

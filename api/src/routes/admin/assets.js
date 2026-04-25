@@ -66,7 +66,9 @@ router.get('/stats', asyncHandler(async (req, res) => {
     const stats = metadataUtils.getAllStats();
     res.json(stats);
   } catch (error) {
-    throw new AppError(`Failed to get stats: ${error.message}`, 500);
+    if (error instanceof AppError) throw error;
+    console.error('Failed to get stats:', error);
+    throw new AppError('Failed to get stats', 500);
   }
 }));
 
@@ -329,7 +331,8 @@ router.post('/generate/regeneration-queue', asyncHandler(async (req, res) => {
     }
   } catch (err) {
     if (err instanceof AppError) throw err;
-    throw new AppError(err.message, 500);
+    console.error('Admin assets bulk queue error:', err);
+    throw new AppError('Failed to queue assets', 500);
   }
 }));
 
@@ -375,7 +378,9 @@ router.put('/mark-multiple', asyncHandler(async (req, res) => {
   try {
     data = metadataUtils.loadCategoryAssets(category);
   } catch (error) {
-    throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
+    if (error instanceof AppError) throw error;
+    console.error(`Failed to load ${category} assets:`, error);
+    throw new AppError('Failed to load assets for category', 500);
   }
 
   // Track results
@@ -425,7 +430,8 @@ router.put('/mark-multiple', asyncHandler(async (req, res) => {
           }
           results.success++;
         } catch (error) {
-          results.errors.push({ id, error: error.message });
+          console.error(`Failed to update regeneration status for ${id}:`, error);
+          results.errors.push({ id, error: 'Failed to update regeneration status' });
         }
       }
     });
@@ -513,7 +519,9 @@ router.post('/bulk-update', asyncHandler(async (req, res) => {
   try {
     data = metadataUtils.loadCategoryAssets(category);
   } catch (error) {
-    throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
+    if (error instanceof AppError) throw error;
+    console.error(`Failed to load ${category} assets:`, error);
+    throw new AppError('Failed to load assets for category', 500);
   }
 
   // Track results
@@ -579,7 +587,8 @@ router.post('/bulk-update', asyncHandler(async (req, res) => {
           metadataUtils.updateAssetStatus(category, sourceFile, id, metadataUpdates);
           results.success++;
         } catch (error) {
-          results.errors.push({ id, error: error.message });
+          console.error(`Failed to update asset ${id}:`, error);
+          results.errors.push({ id, error: 'Failed to update asset' });
         }
       }
     });
@@ -700,7 +709,9 @@ router.get('/:category', asyncHandler(async (req, res) => {
       }
     }
   } catch (error) {
-    throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
+    if (error instanceof AppError) throw error;
+    console.error(`Failed to load ${category} assets:`, error);
+    throw new AppError('Failed to load assets for category', 500);
   }
 
   // Apply status filter
@@ -759,7 +770,9 @@ router.get('/:category/:id', asyncHandler(async (req, res) => {
     const data = metadataUtils.loadCategoryAssets(category);
     asset = findAssetById(data, category, id, { biome, sourceFile });
   } catch (error) {
-    throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
+    if (error instanceof AppError) throw error;
+    console.error(`Failed to load ${category} assets:`, error);
+    throw new AppError('Failed to load assets for category', 500);
   }
 
   if (!asset) {
@@ -822,7 +835,9 @@ router.get('/:category/:id/prompt', asyncHandler(async (req, res) => {
     const data = metadataUtils.loadCategoryAssets(category);
     asset = findAssetById(data, category, id, { biome, sourceFile });
   } catch (error) {
-    throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
+    if (error instanceof AppError) throw error;
+    console.error(`Failed to load ${category} assets:`, error);
+    throw new AppError('Failed to load assets for category', 500);
   }
 
   if (!asset) {
@@ -896,7 +911,9 @@ router.put('/:category/:id', asyncHandler(async (req, res) => {
     const data = metadataUtils.loadCategoryAssets(category);
     asset = findAssetById(data, category, id, disambiguationOpts);
   } catch (error) {
-    throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
+    if (error instanceof AppError) throw error;
+    console.error(`Failed to load ${category} assets:`, error);
+    throw new AppError('Failed to load assets for category', 500);
   }
 
   if (!asset) {
@@ -907,7 +924,9 @@ router.put('/:category/:id', asyncHandler(async (req, res) => {
   try {
     metadataUtils.updateAssetStatus(category, asset._sourceFile, id, updates);
   } catch (error) {
-    throw new AppError(`Failed to update asset: ${error.message}`, 500);
+    if (error instanceof AppError) throw error;
+    console.error(`Failed to update asset ${id}:`, error);
+    throw new AppError('Failed to update asset', 500);
   }
 
   // Reload to return updated asset - use same disambiguation
@@ -952,7 +971,9 @@ router.put('/:category/:id/mark-regeneration', asyncHandler(async (req, res) => 
     const data = metadataUtils.loadCategoryAssets(category);
     asset = findAssetById(data, category, id, disambiguationOpts);
   } catch (error) {
-    throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
+    if (error instanceof AppError) throw error;
+    console.error(`Failed to load ${category} assets:`, error);
+    throw new AppError('Failed to load assets for category', 500);
   }
 
   if (!asset) {
@@ -973,7 +994,9 @@ router.put('/:category/:id/mark-regeneration', asyncHandler(async (req, res) => 
       });
     }
   } catch (error) {
-    throw new AppError(`Failed to update asset: ${error.message}`, 500);
+    if (error instanceof AppError) throw error;
+    console.error(`Failed to update regeneration marker for ${id}:`, error);
+    throw new AppError('Failed to update asset', 500);
   }
 
   // Reload to return updated asset - use same disambiguation
@@ -1033,7 +1056,9 @@ router.post('/:category/:id/reprocess', asyncHandler(async (req, res) => {
     const data = metadataUtils.loadCategoryAssets(category);
     asset = findAssetById(data, category, id, { biome });
   } catch (error) {
-    throw new AppError(`Failed to load ${category} assets: ${error.message}`, 500);
+    if (error instanceof AppError) throw error;
+    console.error(`Failed to load ${category} assets:`, error);
+    throw new AppError('Failed to load assets for category', 500);
   }
 
   if (!asset) {
@@ -1097,7 +1122,8 @@ router.post('/:category/:id/reprocess', asyncHandler(async (req, res) => {
     });
   } catch (error) {
     if (error instanceof AppError) throw error;
-    throw new AppError(`Reprocessing failed: ${error.message}`, 500);
+    console.error('Reprocessing failed:', error);
+    throw new AppError('Reprocessing failed', 500);
   }
 }));
 

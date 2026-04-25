@@ -338,33 +338,14 @@ export class SocialHubScene extends Scene {
         opacity: 0.7;
       }
 
-      /* Placeholder for unimplemented tabs */
-      .social-hub-placeholder {
+      /* Tab mounting state */
+      .social-hub-tab-mounting {
+        height: 100%;
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
-        height: 100%;
         color: ${P.text.muted};
         font-family: ${PARCHMENT_TYPOGRAPHY.fontFamily};
-        text-align: center;
-      }
-
-      .social-hub-placeholder-icon {
-        font-size: 64px;
-        margin-bottom: ${PARCHMENT_SPACING.lg};
-        opacity: 0.5;
-      }
-
-      .social-hub-placeholder-title {
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.xl};
-        color: ${P.text.secondary};
-        margin-bottom: ${PARCHMENT_SPACING.sm};
-      }
-
-      .social-hub-placeholder-text {
-        font-size: ${PARCHMENT_TYPOGRAPHY.sizes.md};
-        max-width: 400px;
       }
 
       /* Scrollbar styling */
@@ -434,102 +415,11 @@ export class SocialHubScene extends Scene {
     });
   }
 
-  renderTabContent(tabKey) {
-    // For now, render placeholder content - tabs will be implemented incrementally
-    switch (tabKey) {
-      case 'friends':
-        return this.renderFriendsTabPlaceholder();
-      case 'party':
-        return this.renderPartyTabPlaceholder();
-      case 'requests':
-        return this.renderRequestsTabPlaceholder();
-      case 'lfg':
-        return this.renderLFGTabPlaceholder();
-      case 'clan':
-        return this.renderClanTabPlaceholder();
-      default:
-        return this.renderGenericPlaceholder(tabKey);
-    }
+  renderTabContent(_tabKey) {
+    // Tab content will be rendered by the tab modules when they mount
+    return '<div class="social-hub-tab-mounting"><!-- Tab content will be mounted here --></div>';
   }
 
-  renderFriendsTabPlaceholder() {
-    return `
-      <div class="social-hub-panel">
-        <div class="social-hub-panel-header">
-          <h3 class="social-hub-panel-title">Friends</h3>
-        </div>
-        <div class="social-hub-panel-body">
-          <div class="social-hub-loading">
-            <div class="social-hub-loading-spinner"></div>
-            <span>Loading friends...</span>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  renderPartyTabPlaceholder() {
-    return `
-      <div class="social-hub-placeholder">
-        <div class="social-hub-placeholder-icon">⚔️</div>
-        <div class="social-hub-placeholder-title">Party Management</div>
-        <div class="social-hub-placeholder-text">
-          Create parties, invite friends, and manage your group here.
-          Quick party formation coming soon!
-        </div>
-      </div>
-    `;
-  }
-
-  renderRequestsTabPlaceholder() {
-    return `
-      <div class="social-hub-placeholder">
-        <div class="social-hub-placeholder-icon">📬</div>
-        <div class="social-hub-placeholder-title">Requests Inbox</div>
-        <div class="social-hub-placeholder-text">
-          View and manage friend requests, party invites, and clan invitations.
-          All your social notifications in one place.
-        </div>
-      </div>
-    `;
-  }
-
-  renderLFGTabPlaceholder() {
-    return `
-      <div class="social-hub-placeholder">
-        <div class="social-hub-placeholder-icon">🔍</div>
-        <div class="social-hub-placeholder-title">Looking for Group</div>
-        <div class="social-hub-placeholder-text">
-          Find groups for dungeons, raids, and adventures.
-          Post your own LFG listing or browse available parties.
-        </div>
-      </div>
-    `;
-  }
-
-  renderClanTabPlaceholder() {
-    return `
-      <div class="social-hub-placeholder">
-        <div class="social-hub-placeholder-icon">🏰</div>
-        <div class="social-hub-placeholder-title">Clan</div>
-        <div class="social-hub-placeholder-text">
-          Create or join a clan to connect with like-minded players.
-          Clan chat and member management coming soon!
-        </div>
-      </div>
-    `;
-  }
-
-  renderGenericPlaceholder(tabKey) {
-    const tab = this.tabs[tabKey];
-    return `
-      <div class="social-hub-placeholder">
-        <div class="social-hub-placeholder-icon">${tab?.icon || '📋'}</div>
-        <div class="social-hub-placeholder-title">${tab?.label || tabKey}</div>
-        <div class="social-hub-placeholder-text">This feature is coming soon!</div>
-      </div>
-    `;
-  }
 
   setupEventListeners() {
     const signal = this.abortController.signal;
@@ -621,79 +511,37 @@ export class SocialHubScene extends Scene {
 
   async initializeTab(tabKey) {
     const container = this.tabContents[tabKey];
-    if (!container) return;
+    if (!container || this.tabInstances[tabKey]) return;
 
-    switch (tabKey) {
-      case 'friends':
-        // Initialize FriendsTab component
-        if (!this.tabInstances.friends) {
-          this.tabInstances.friends = new FriendsTab({
-            container,
-            game: this.game,
-            onBadgeUpdate: (count) => {
-              this.badges.friends = count;
-              this.updateBadge('friends');
-            }
-          });
-          await this.tabInstances.friends.init();
+    // Map of tab keys to their respective classes
+    const tabClasses = {
+      friends: FriendsTab,
+      party: PartyTab,
+      requests: RequestsTab,
+      lfg: LFGTab,
+      clan: ClanTab
+    };
+
+    const TabClass = tabClasses[tabKey];
+    if (!TabClass) return;
+
+    try {
+      // Create tab instance
+      this.tabInstances[tabKey] = new TabClass({
+        container,
+        game: this.game,
+        onBadgeUpdate: (count) => {
+          this.badges[tabKey] = count;
+          this.updateBadge(tabKey);
         }
-        break;
-      case 'party':
-        // Initialize PartyTab component
-        if (!this.tabInstances.party) {
-          this.tabInstances.party = new PartyTab({
-            container,
-            game: this.game,
-            onBadgeUpdate: (count) => {
-              this.badges.party = count;
-              this.updateBadge('party');
-            }
-          });
-          await this.tabInstances.party.init();
-        }
-        break;
-      case 'requests':
-        // Initialize RequestsTab component
-        if (!this.tabInstances.requests) {
-          this.tabInstances.requests = new RequestsTab({
-            container,
-            game: this.game,
-            onBadgeUpdate: (count) => {
-              this.badges.requests = count;
-              this.updateBadge('requests');
-            }
-          });
-          await this.tabInstances.requests.init();
-        }
-        break;
-      case 'lfg':
-        // Initialize LFGTab component
-        if (!this.tabInstances.lfg) {
-          this.tabInstances.lfg = new LFGTab({
-            container,
-            game: this.game,
-            onBadgeUpdate: (count) => {
-              this.badges.lfg = count;
-              this.updateBadge('lfg');
-            }
-          });
-          await this.tabInstances.lfg.init();
-        }
-        break;
-      case 'clan':
-        // Initialize ClanTab component
-        if (!this.tabInstances.clan) {
-          this.tabInstances.clan = new ClanTab({
-            container,
-            game: this.game,
-            onBadgeUpdate: (count) => {
-              this.badges.clan = count;
-              this.updateBadge('clan');
-            }
-          });
-          await this.tabInstances.clan.init();
-        }
-        break;
+      });
+
+      // Initialize the tab
+      await this.tabInstances[tabKey].init();
+    } catch (error) {
+      console.error(`Failed to initialize ${tabKey} tab:`, error);
+      // Clean up failed instance
+      delete this.tabInstances[tabKey];
     }
   }
 

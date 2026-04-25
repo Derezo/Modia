@@ -202,7 +202,8 @@ router.post('/:id/animations/:animation/generate', asyncHandler(async (req, res)
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    throw new AppError(err.message, 500);
+    console.error('Admin character generation error:', err);
+    throw new AppError('Character generation failed', 500);
   }
 }));
 
@@ -332,7 +333,8 @@ router.post('/:id/reference/generate', asyncHandler(async (req, res) => {
     });
   } catch (err) {
     if (err instanceof AppError) throw err;
-    throw new AppError(err.message, 500);
+    console.error('Admin character pose generation error:', err);
+    throw new AppError('Pose generation failed', 500);
   }
 }));
 
@@ -426,7 +428,9 @@ router.put('/:id/weights', asyncHandler(async (req, res) => {
     try {
       metadataUtils.updateAssetStatus('characters', character._sourceFile, id, updates);
     } catch (error) {
-      throw new AppError(`Failed to update character weights: ${error.message}`, 500);
+      if (error instanceof AppError) throw error;
+      console.error(`Failed to update character weights for ${id}:`, error);
+      throw new AppError('Failed to update character weights', 500);
     }
   });
 
@@ -648,7 +652,9 @@ router.put('/:id/frame-descriptions', asyncHandler(async (req, res) => {
     try {
       metadataUtils.updateAssetStatus('characters', character._sourceFile, id, updates);
     } catch (error) {
-      throw new AppError(`Failed to update frame descriptions: ${error.message}`, 500);
+      if (error instanceof AppError) throw error;
+      console.error(`Failed to update frame descriptions for ${id}:`, error);
+      throw new AppError('Failed to update frame descriptions', 500);
     }
   });
 
@@ -713,7 +719,9 @@ router.delete('/:id/frame-descriptions/:animation', asyncHandler(async (req, res
     try {
       metadataUtils.updateAssetStatus('characters', character._sourceFile, id, updates);
     } catch (error) {
-      throw new AppError(`Failed to remove frame descriptions: ${error.message}`, 500);
+      if (error instanceof AppError) throw error;
+      console.error(`Failed to remove frame descriptions for ${id}:`, error);
+      throw new AppError('Failed to remove frame descriptions', 500);
     }
   });
 

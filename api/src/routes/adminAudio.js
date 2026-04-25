@@ -613,11 +613,12 @@ router.post('/waveforms/regenerate', asyncHandler(async (req, res) => {
         await audioGenerationService.persistWaveformData(assetType, asset.id, peaks);
         results.succeeded++;
       } catch (err) {
+        console.error(`Waveform regen error for ${assetType}/${asset.id}:`, err);
         results.failed++;
         results.errors.push({
           id: asset.id,
           type: assetType,
-          error: err.message
+          error: 'Waveform generation failed'
         });
 
         // Generate fallback waveform
@@ -673,7 +674,8 @@ router.post('/generate', asyncHandler(async (req, res) => {
       ...result
     });
   } catch (err) {
-    throw new AppError(err.message, 400);
+    console.error('Audio generation queue error:', err);
+    throw new AppError('Failed to queue audio generation job', 400);
   }
 }));
 
@@ -759,7 +761,8 @@ router.post('/generate/regeneration-queue', asyncHandler(async (req, res) => {
         const result = audioGenerationService.queueJob('music', { keys: musicKeys }, { ...options, force: true });
         jobsQueued.push({ type: 'music', count: musicKeys.length, ...result });
       } catch (err) {
-        errors.push({ type: 'music', error: err.message });
+        console.error('Failed to queue music regeneration:', err);
+        errors.push({ type: 'music', error: 'Failed to queue regeneration' });
       }
     }
   }
@@ -773,7 +776,8 @@ router.post('/generate/regeneration-queue', asyncHandler(async (req, res) => {
         const result = audioGenerationService.queueJob('sfx', { keys: sfxKeys }, { ...options, force: true });
         jobsQueued.push({ type: 'sfx', count: sfxKeys.length, ...result });
       } catch (err) {
-        errors.push({ type: 'sfx', error: err.message });
+        console.error('Failed to queue SFX regeneration:', err);
+        errors.push({ type: 'sfx', error: 'Failed to queue regeneration' });
       }
     }
   }
@@ -804,7 +808,8 @@ router.get('/suno/status/:taskId', asyncHandler(async (req, res) => {
     const status = await audioGenerationService.checkSunoStatus(taskId);
     res.json(status);
   } catch (err) {
-    throw new AppError(`Failed to check Suno status: ${err.message}`, 500);
+    console.error('Failed to check Suno status:', err);
+    throw new AppError('Failed to check Suno status', 500);
   }
 }));
 
@@ -895,7 +900,8 @@ router.post('/sync-status', asyncHandler(async (req, res) => {
             results.fixed++;
             mismatchInfo.fixed = true;
           } catch (err) {
-            mismatchInfo.error = err.message;
+            console.error(`Failed to fix sync for ${assetType}/${asset.id}:`, err);
+            mismatchInfo.error = 'Failed to update metadata';
             mismatchInfo.fixed = false;
           }
         }
@@ -1143,8 +1149,9 @@ router.post('/sync-durations', asyncHandler(async (req, res) => {
         results.fixed++;
         detailEntry.status = 'fixed';
       } catch (err) {
+        console.error(`Failed to sync duration for ${assetType}/${asset.id}:`, err);
         detailEntry.status = 'error';
-        detailEntry.error = err.message;
+        detailEntry.error = 'Failed to update metadata';
       }
     }
 

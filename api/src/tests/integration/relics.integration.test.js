@@ -86,22 +86,73 @@ describe('Relics API', () => {
       assert.strictEqual(res.status, 400);
     });
 
-    it('should successfully claim with valid requirements', async () => {
-      const relicsRes = await request('GET', '/api/relics', null, claimUser.accessToken);
-      const questRelic = relicsRes.body.relics.find(
-        r => r.acquisitionType === 'quest' && !r.owned
+    it('should successfully claim once the required quest is completed in the database', async () => {
+      const character = await ctx.createCharacter(claimUser.accessToken);
+
+      // Find a quest-acquisition relic the user does not yet own
+      const tplResult = await query(
+        `SELECT id, key, acquisition_id FROM relic_templates
+         WHERE acquisition_type = 'quest' AND acquisition_id IS NOT NULL
+           AND id NOT IN (SELECT relic_id FROM user_relics WHERE user_id = $1)
+         LIMIT 1`,
+        [claimUser.userId]
+      );
+      // If no quest-with-acquisition-id relic exists, skip silently
+      if (tplResult.rows.length === 0) return;
+      const questRelic = tplResult.rows[0];
+
+      // First attempt — without a completed quest, the claim must be rejected
+      const blockedRes = await request(
+        'POST',
+        `/api/relics/${questRelic.id}/claim`,
+        {},
+        claimUser.accessToken
+      );
+      assert.strictEqual(blockedRes.status, 400, 'claim must require a real completion');
+
+      // Insert a completed character_quest row tied to the relic's acquisition_id
+      await query(
+        `INSERT INTO character_quests (character_id, quest_template_id, status, completed_at)
+         VALUES ($1, $2, 'completed', NOW())
+         ON CONFLICT (character_id, quest_template_id) DO UPDATE SET status = 'completed', completed_at = NOW()`,
+        [character.id, questRelic.acquisition_id]
       );
 
       const res = await request(
         'POST',
         `/api/relics/${questRelic.id}/claim`,
-        { context: { questCompleted: true } },
+        {},
         claimUser.accessToken
       );
 
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.success, true);
       assert.strictEqual(res.body.relic.key, questRelic.key);
+
+      // Cleanup
+      await query(
+        'DELETE FROM character_quests WHERE character_id = $1 AND quest_template_id = $2',
+        [character.id, questRelic.acquisition_id]
+      );
+    });
+
+    it('should ignore client-supplied questCompleted context (no longer trusted)', async () => {
+      const tplResult = await query(
+        `SELECT id FROM relic_templates
+         WHERE acquisition_type = 'quest' AND acquisition_id IS NOT NULL
+           AND id NOT IN (SELECT relic_id FROM user_relics WHERE user_id = $1)
+         LIMIT 1`,
+        [claimUser.userId]
+      );
+      if (tplResult.rows.length === 0) return;
+
+      const res = await request(
+        'POST',
+        `/api/relics/${tplResult.rows[0].id}/claim`,
+        { context: { questCompleted: true, guildRequirementMet: true, achievementCompleted: true } },
+        claimUser.accessToken
+      );
+      assert.strictEqual(res.status, 400, 'service must not honor client-supplied flags');
     });
 
     it('should prevent claiming the same relic twice', async () => {

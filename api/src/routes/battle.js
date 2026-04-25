@@ -3,111 +3,37 @@ import { query, withTransaction } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { actionLimiter, startLimiter, readLimiter, rejoinLimiter, rewardsLimiter, stateLimiter } from '../middleware/battleRateLimiter.js';
-import { BATTLE_NODE_TYPES, MAX_BATTLE_PARTY_SIZE, MAX_GOLD } from '../config/constants.js';
+import { BATTLE_NODE_TYPES, MAX_BATTLE_PARTY_SIZE } from '../config/constants.js';
 import * as battleService from '../services/battleService.js';
+import * as battleRewardService from '../services/battleRewardService.js';
 import * as aiService from '../services/aiService.js';
 import * as enemyService from '../services/enemyService.js';
-import * as itemDropService from '../services/itemDropService.js';
 import battleWebsocket from '../services/battleWebsocket.js';
 import { createPlayerBattleUnit } from '../services/battleUnitFactory.js';
 import * as traitService from '../services/traitService.js';
-import * as advancementQuestService from '../services/advancementQuestService.js';
-import * as dailyQuestService from '../services/dailyQuestService.js';
 import * as bossService from '../services/bossService.js';
 import * as battleTurnManager from '../services/battleTurnManager.js';
 import * as zodiacAbilityService from '../services/zodiacAbilityService.js';
 import { completeMatch as completeColiseumMatch, cancelTurnTimer } from '../services/coliseumService.js';
+import {
+  validateActionSequence,
+  resetActionSequence,
+  cleanupBattleSequences,
+  startCleanupTimer
+} from '../services/battleActionSequence.js';
 
 const router = express.Router();
 
-// ============================================================================
-// ACTION SEQUENCE TRACKING (for stale/duplicate action detection)
-// ============================================================================
-
-// In-memory store for last action sequence per battle/user
-// Key format: `${battleId}:${userId}` -> { sequence: number, timestamp: number }
-const lastActionSequences = new Map();
-
-// TTL-based cleanup constants
-const SEQUENCE_ENTRY_TTL_MS = 60 * 60 * 1000; // 1 hour
-const SEQUENCE_CLEANUP_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
-
-// Periodic cleanup of stale action sequence entries (handles abandoned battles)
-setInterval(() => {
-  const now = Date.now();
-  let cleanedCount = 0;
-  for (const [key, value] of lastActionSequences.entries()) {
-    if (now - value.timestamp > SEQUENCE_ENTRY_TTL_MS) {
-      lastActionSequences.delete(key);
-      cleanedCount++;
-    }
-  }
-  if (cleanedCount > 0) {
-    console.log(`[Battle] Cleaned ${cleanedCount} stale action sequence entries`);
-  }
-}, SEQUENCE_CLEANUP_INTERVAL_MS);
-
-/**
- * Validate action sequence to detect stale/duplicate actions
- * @param {number} battleId - Battle ID
- * @param {number} userId - User ID
- * @param {number|undefined} actionSequence - Sequence number from client
- * @returns {{valid: boolean, warning?: string}} Validation result
- */
-function validateActionSequence(battleId, userId, actionSequence) {
-  const key = `${battleId}:${userId}`;
-  const entry = lastActionSequences.get(key);
-  const lastSequence = entry ? entry.sequence : 0;
-
-  // If no sequence provided (legacy client), accept but don't track
-  if (actionSequence === undefined || actionSequence === null) {
-    return { valid: true };
-  }
-
-  // Sequence should be greater than last seen
-  if (actionSequence <= lastSequence) {
-    console.warn(`[Battle] Stale action sequence: battle=${battleId}, user=${userId}, received=${actionSequence}, last=${lastSequence}`);
-    // For now, just warn and accept (logging-only mode)
-    // TODO: Once verified stable, can change to hard reject
-    return {
-      valid: true,
-      warning: `Potentially stale action (seq=${actionSequence}, last=${lastSequence})`
-    };
-  }
-
-  // Update last seen sequence with timestamp
-  lastActionSequences.set(key, { sequence: actionSequence, timestamp: Date.now() });
-  return { valid: true };
-}
-
-/**
- * Reset action sequence tracking for a battle/user (on battle start or reconnection)
- * @param {number} battleId - Battle ID
- * @param {number} userId - User ID
- */
-function resetActionSequence(battleId, userId) {
-  const key = `${battleId}:${userId}`;
-  lastActionSequences.delete(key);
-}
-
-/**
- * Clean up action sequence tracking for a completed battle
- * @param {number} battleId - Battle ID
- */
-function cleanupBattleSequences(battleId) {
-  for (const key of lastActionSequences.keys()) {
-    if (key.startsWith(`${battleId}:`)) {
-      lastActionSequences.delete(key);
-    }
-  }
-}
+startCleanupTimer();
 
 // ============================================================================
 // BATTLE END HELPER (for async processing)
 // ============================================================================
 
 /**
- * Handle battle end - calculate rewards and update database
+ * Handle battle end - calculate rewards and update database.
+ * Delegates reward calculation and distribution to battleRewardService.
+ *
  * @param {number} battleId - Battle ID
  * @param {string} status - 'victory' | 'defeat'
  * @param {Object} state - Final battle state
@@ -117,183 +43,47 @@ function cleanupBattleSequences(battleId) {
  */
 async function handleBattleEnd(battleId, status, state, userId, battleEndResult = null) {
   // Update characters to no longer be in battle
-  await query(
-    `UPDATE characters SET in_battle = false
-     WHERE user_id = $1 AND party_slot <= $2`,
-    [userId, MAX_BATTLE_PARTY_SIZE]
-  );
+  await battleRewardService.clearInBattleStatus(userId);
 
   let rewards = null;
 
-  // Calculate rewards for victory
+  // Calculate and distribute rewards for victory
   if (status === 'victory') {
-    const enemies = state.units.filter(u => u.type === 'enemy');
-    const players = state.units.filter(u => u.type === 'player');
-    const partyLevel = Math.floor(
-      players.reduce((sum, u) => sum + (u.level || 1), 0) / players.length
-    ) || 1;
+    // Compute rewards (gold, XP, items)
+    const rewardsData = await battleRewardService.computeRewards(state, battleId);
 
-    // Get node info for rewards calculation and clearance
-    const nodeResult = await query(
-      `SELECT wn.id as node_id, wn.difficulty_tier, wn.node_type
-       FROM world_nodes wn
-       WHERE wn.id = (SELECT node_id FROM battles WHERE id = $1)`,
-      [battleId]
-    );
-    const nodeId = nodeResult.rows[0]?.node_id;
-    const difficultyTier = nodeResult.rows[0]?.difficulty_tier || 1;
-    const nodeType = nodeResult.rows[0]?.node_type || 'forest';
+    // Distribute rewards in a transaction
+    await battleRewardService.distributeRewards(userId, rewardsData, battleId);
 
-    // Check if this is an advancement battle (guild boss trial)
-    const advancementCheck = await query(
-      `SELECT is_advancement_battle, challenger_character_id
-       FROM battles WHERE id = $1`,
-      [battleId]
-    );
-    const isAdvancementBattle = advancementCheck.rows[0]?.is_advancement_battle;
-    const challengerCharacterId = advancementCheck.rows[0]?.challenger_character_id;
+    // Get party leader for quest progress
+    const partyLeaderId = await battleRewardService.getPartyLeaderId(userId);
 
-    // Calculate rewards using service
-    const gold = battleService.calculateGoldReward(enemies, difficultyTier);
-    const exp = battleService.calculateExperienceReward(enemies, partyLevel);
-
-    // Roll item drops from each enemy
-    const droppedItems = [];
-    for (const enemy of enemies) {
-      const drops = await itemDropService.rollDrops(enemy, difficultyTier, nodeType);
-      droppedItems.push(...drops);
-    }
-
-    // Get party leader for item storage
-    const partyLeaderResult = await query(
-      'SELECT id FROM characters WHERE user_id = $1 AND party_slot = 1',
-      [userId]
-    );
-    const partyLeaderId = partyLeaderResult.rows[0]?.id;
-
-    // Use transaction for rewards distribution
-    await withTransaction(async (client) => {
-      // Update battle record
-      const rewardsData = {
-        gold,
-        experience: exp,
-        items: itemDropService.formatDropsForResponse(droppedItems)
-      };
-      await client.query(
-        'UPDATE battles SET rewards = $1, ended_at = NOW() WHERE id = $2',
-        [JSON.stringify(rewardsData), battleId]
-      );
-
-      // Award gold to user (capped at MAX_GOLD to prevent overflow)
-      await client.query(
-        'UPDATE users SET gold = LEAST(gold + $1, $2) WHERE id = $3',
-        [gold, MAX_GOLD, userId]
-      );
-
-      // Distribute XP to battle party characters
-      const xpPerCharacter = Math.floor(exp / players.length);
-      await client.query(
-        `UPDATE characters
-         SET experience = experience + $1
-         WHERE user_id = $2 AND party_slot <= $3 AND party_slot IS NOT NULL`,
-        [xpPerCharacter, userId, MAX_BATTLE_PARTY_SIZE]
-      );
-
-      // Store dropped items in user's shared inventory
-      for (const item of droppedItems) {
-        await itemDropService.storeDroppedItem(userId, item, client);
-      }
-
-      // Clear combat node on victory (allows player to pass through in future)
-      if (nodeId && BATTLE_NODE_TYPES.includes(nodeType)) {
-        await client.query(
-          `INSERT INTO user_node_clearance (user_id, node_id, battle_id)
-           VALUES ($1, $2, $3)
-           ON CONFLICT (user_id, node_id) DO NOTHING`,
-          [userId, nodeId, battleId]
-        );
-      }
-    });
-
-    // Update quest progress (outside transaction for non-critical updates)
+    // Update quest progress (non-transactional)
     if (partyLeaderId) {
-      // Track enemy kills
-      for (const enemy of enemies) {
-        const enemyType = enemy.archetype || enemy.type || enemy.name;
-        if (enemyType) {
-          try {
-            await advancementQuestService.updateEnemyProgress(partyLeaderId, enemyType);
-          } catch (err) {
-            console.warn(`Quest progress update failed for enemy ${enemyType}:`, err.message);
-          }
-        }
-      }
+      const { isAdvancementBattle, challengerCharacterId } =
+        await battleRewardService.getAdvancementBattleInfo(battleId);
 
-      // Track node visits
-      if (nodeId && nodeType) {
-        try {
-          await advancementQuestService.updateNodeProgress(partyLeaderId, nodeId, nodeType);
-        } catch (err) {
-          console.warn(`Quest progress update failed for node ${nodeId}:`, err.message);
-        }
-      }
+      const advancementResult = await battleRewardService.updateQuestProgress(
+        partyLeaderId,
+        rewardsData,
+        battleId,
+        isAdvancementBattle,
+        challengerCharacterId
+      );
 
-      // Track material collection from dropped items
-      for (const item of droppedItems) {
-        if (item.templateId) {
-          try {
-            await advancementQuestService.updateMaterialProgress(partyLeaderId, item.templateId);
-          } catch (err) {
-            console.warn(`Quest progress update failed for item ${item.templateId}:`, err.message);
-          }
-        }
-      }
-
-      // Daily/Weekly quest progress hooks (fire-and-forget pattern)
-      // Track enemy kills
-      dailyQuestService.updateProgress(partyLeaderId, 'kill_enemies', enemies.length, {})
-        .catch(err => console.warn('[Quest] kill_enemies progress failed:', err.message));
-
-      // Track battle completion
-      dailyQuestService.updateProgress(partyLeaderId, 'complete_battles', 1, {
-        tier: difficultyTier
-      }).catch(err => console.warn('[Quest] complete_battles progress failed:', err.message));
-
-      // Track gold earned
-      if (gold > 0) {
-        dailyQuestService.updateProgress(partyLeaderId, 'gold_earned', gold, {})
-          .catch(err => console.warn('[Quest] gold_earned progress failed:', err.message));
-      }
-
-      // Check if this was a party battle (multiple users)
-      const uniqueOwners = new Set(players.map(p => p.ownerId || p.userId).filter(Boolean));
-      if (uniqueOwners.size > 1) {
-        dailyQuestService.updateProgress(partyLeaderId, 'party_battles', 1, {})
-          .catch(err => console.warn('[Quest] party_battles progress failed:', err.message));
-      }
+      rewards = {
+        gold: rewardsData.gold,
+        experience: rewardsData.experience,
+        items: rewardsData.items,
+        advancementComplete: advancementResult
+      };
+    } else {
+      rewards = {
+        gold: rewardsData.gold,
+        experience: rewardsData.experience,
+        items: rewardsData.items
+      };
     }
-
-    // Handle advancement battle quest completion
-    let advancementResult = null;
-    if (isAdvancementBattle && challengerCharacterId) {
-      try {
-        advancementResult = await advancementQuestService.completeQuest(
-          challengerCharacterId,
-          battleId
-        );
-        console.log(`[Battle] Advancement quest completed for character ${challengerCharacterId}`);
-      } catch (err) {
-        console.error('[Battle] Advancement quest completion failed:', err);
-        advancementResult = { error: err.message };
-      }
-    }
-
-    rewards = {
-      gold,
-      experience: exp,
-      items: itemDropService.formatDropsForResponse(droppedItems),
-      advancementComplete: advancementResult
-    };
   }
 
   // Broadcast battle end via WebSocket
@@ -903,10 +693,10 @@ router.get('/:battleId/rejoin', authenticate, rejoinLimiter, asyncHandler(async 
 router.post('/action', authenticate, actionLimiter, asyncHandler(async (req, res) => {
   const { battleId, actionType, unitId, targetTile, skillId, actionSequence } = req.body;
 
-  // Validate action sequence (logging-only mode for now)
+  // Validate action sequence — reject stale or duplicate submissions
   const sequenceValidation = validateActionSequence(battleId, req.user.userId, actionSequence);
-  if (sequenceValidation.warning) {
-    console.log(`[Battle] Action sequence warning: ${sequenceValidation.warning}`);
+  if (!sequenceValidation.valid) {
+    throw new AppError('Battle state has changed - please retry', 409);
   }
 
   // Get battle - allow both player1 AND player2 to submit actions (for PvP)

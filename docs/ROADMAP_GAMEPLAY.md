@@ -16,10 +16,10 @@
 |----------|------------|--------|
 | Core Mechanics | 100% | Complete |
 | Combat System | 100% | Complete |
-| Economy & Items | 95% | Near Complete |
-| User Experience | 95% | Near Complete |
-| Social Features | 95% | Complete |
-| World & Progression | 98% | Near Complete |
+| Economy & Items | 100% | Complete |
+| User Experience | 98% | Near Complete |
+| Social Features | 100% | Complete |
+| World & Progression | 100% | Complete |
 
 ---
 
@@ -591,15 +591,15 @@ Per ITEM_SYSTEM.md specifications:
 | Guild Quest System | Non-advancement quests | Medium |
 | New Enemies | Additional enemy types (Tier 5+) | Medium |
 
-#### Code TODOs (from audit)
+#### Code TODOs (from audit) ✅ COMPLETED 2026-04-25
 
-| TODO | File:Line | Description |
-|------|-----------|-------------|
-| Quest completion verification | relicService.js:206 | Relic "quest" acquisition type needs real quest check |
-| Item drops from chests | world.js:973 | Chest treasure nodes only award gold, items stubbed |
-| Lore content system | world.js:1147 | Discovery nodes return generic lore, need database |
-| Quick party formation | SocialHubScene.js:479 | UI placeholder in Party tab |
-| Clan chat/management | SocialHubScene.js:518 | UI placeholder in Clan tab |
+| TODO | File:Line | Description | Status |
+|------|-----------|-------------|--------|
+| ~~Quest completion verification~~ | ~~relicService.js:206~~ | ~~Relic "quest" acquisition type needs real quest check~~ | **✅ COMPLETED** - Real database lookups implemented |
+| ~~Item drops from chests~~ | ~~world.js:973~~ | ~~Chest treasure nodes only award gold, items stubbed~~ | **✅ COMPLETED** - Distance-tier item drops via chestLootService.js |
+| ~~Lore content system~~ | ~~world.js:1147~~ | ~~Discovery nodes return generic lore, need database~~ | **✅ COMPLETED** - 48 lore entries in shared/loreContent.js |
+| ~~Quick party formation~~ | ~~SocialHubScene.js:479~~ | ~~UI placeholder in Party tab~~ | **✅ COMPLETED** - Real PartyTab module mounted |
+| ~~Clan chat/management~~ | ~~SocialHubScene.js:518~~ | ~~UI placeholder in Clan tab~~ | **✅ COMPLETED** - Real ClanTab with accept/decline endpoints |
 
 ### 6.2 Version 1.2
 
