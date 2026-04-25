@@ -28,12 +28,30 @@ build:
     - package-lock.json
   env: {}
 
+secrets:
+  provider: lsd-vault
+  lsd_vault:
+    keys:
+      - DB_HOST
+      - DB_PORT
+      - DB_NAME
+      - DB_USER
+      - DB_PASSWORD
+      - JWT_SECRET
+      - JWT_REFRESH_SECRET
+      - WORLD_SEED
+      - NODE_ENV
+      - PORT
+
 services:
+  # Single instance for first deploy: WebSocket cluster routing requires
+  # sticky sessions or Redis pub/sub before scaling beyond 1 (per
+  # ecosystem.config.js comment).
   - name: modia-api
     kind: pm2
     script: api/src/index.js
-    exec_mode: cluster
-    instances: 2
+    exec_mode: fork
+    singleton: true
     max_memory: 512M
 
 health:
