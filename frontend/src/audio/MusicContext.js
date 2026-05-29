@@ -71,6 +71,14 @@ export class MusicContext {
 
     const trackId = `${this.currentRegion}_exploration`;
     debugLog('audio.logRegionInfo', 'Building key:', trackId, { region: this.currentRegion, type: 'exploration' });
+
+    // Check if audio context is suspended - if so, queue for replay on first gesture
+    if (this.audio.isSuspended && this.audio.isSuspended()) {
+      debugLog('audio.logRegionInfo', 'Context suspended, queueing exploration music:', trackId);
+      this.audio.setPendingReplay(() => this.audio.playMusic(trackId));
+      return;
+    }
+
     this.audio.playMusic(trackId);
   }
 
@@ -117,6 +125,14 @@ export class MusicContext {
 
     const trackId = `${this.currentRegion}_battle_${battleType}`;
     debugLog('audio.logRegionInfo', 'Building key:', trackId, { region: this.currentRegion, type: `battle_${battleType}` });
+
+    // Check if audio context is suspended - if so, queue for replay on first gesture
+    if (this.audio.isSuspended && this.audio.isSuspended()) {
+      debugLog('audio.logRegionInfo', 'Context suspended, queueing battle music:', trackId);
+      this.audio.setPendingReplay(() => this.audio.playMusic(trackId));
+      return;
+    }
+
     this.audio.playMusic(trackId);
   }
 
@@ -146,6 +162,27 @@ export class MusicContext {
 
     if (this.previousTrack) {
       const { nodeType } = this.previousTrack;
+
+      // Check if audio context is suspended - if so, queue for replay on first gesture
+      if (this.audio.isSuspended && this.audio.isSuspended()) {
+        const queueReplay = () => {
+          if (nodeType === 'exploration') {
+            this.playExplorationMusic();
+          } else if (nodeType === 'coliseum') {
+            this.playColiseum();
+          } else if (nodeType === 'social') {
+            this.playSocialHub();
+          } else if (nodeType === 'guild') {
+            this.playGuildAdvancement();
+          } else if (nodeType) {
+            this.playNodeMusic(nodeType);
+          }
+        };
+        debugLog('audio.logRegionInfo', 'Context suspended, queueing resume music:', nodeType);
+        this.audio.setPendingReplay(queueReplay);
+        this.previousTrack = null;
+        return;
+      }
 
       if (nodeType === 'exploration') {
         this.playExplorationMusic();

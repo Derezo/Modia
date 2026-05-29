@@ -21,6 +21,10 @@ export class Scene {
   // Override in subclasses to rebuild UI for new breakpoint
   onBreakpointChange(_newBreakpoint, _oldBreakpoint) {}
 
+  // Called when canvas/viewport size changes
+  // Override in subclasses to update camera bounds, zoom, etc.
+  onResize() {}
+
   // Helper to get responsive utility reference
   get responsive() {
     return responsive;

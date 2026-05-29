@@ -50,6 +50,17 @@ export class BattleCamera {
     this.clampTarget();
   }
 
+  /**
+   * Update viewport dimensions and recompute bounds
+   * Call this when canvas/viewport size changes
+   */
+  updateViewport(width, height) {
+    this.viewportWidth = width;
+    this.viewportHeight = height;
+    this._recomputeClampFromBounds();
+    this.clampTarget();
+  }
+
   zoomBy(factor) {
     this.setZoom(this.zoom * factor);
   }

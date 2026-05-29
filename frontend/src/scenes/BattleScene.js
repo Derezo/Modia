@@ -296,6 +296,10 @@ export class BattleScene extends Scene {
       this._applyMobileFitZoom(this.grid.getMapPixelDimensions());
     });
 
+    // Apply mobile fit zoom once more after async loading completes
+    // to ensure correct sizing on first paint even if resize fired during await
+    this._applyMobileFitZoom(mapDimensions);
+
     // Update pathfinding with units
     this.pathfinding.setUnits(this.units);
 
@@ -394,6 +398,22 @@ export class BattleScene extends Scene {
 
     // Update UI with initial state (will show after intro)
     this.updateUI();
+  }
+
+  /**
+   * Handle viewport/canvas resize
+   * Re-applies mobile fit zoom and updates camera viewport dimensions
+   */
+  onResize() {
+    // Update camera viewport dimensions
+    if (this.camera) {
+      this.camera.updateViewport(this.game.targetWidth, this.game.targetHeight);
+    }
+
+    // Re-apply mobile fit zoom with current map dimensions
+    if (this.grid) {
+      this._applyMobileFitZoom(this.grid.getMapPixelDimensions());
+    }
   }
 
   /**

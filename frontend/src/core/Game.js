@@ -208,6 +208,19 @@ export class Game {
     this._boundResize = () => this.resize();
     window.addEventListener('resize', this._boundResize);
 
+    // Add visual viewport and orientation change listeners
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', this._boundResize);
+    }
+    window.addEventListener('orientationchange', this._boundResize);
+
+    // Add load listener for initial layout settling
+    this._boundLoad = () => this.resize();
+    window.addEventListener('load', this._boundLoad);
+
+    // Schedule deferred re-measure after layout settles
+    requestAnimationFrame(() => this.resize());
+
     // Setup global ESC handler for settings modal
     this.setupGlobalKeyHandler();
 
@@ -319,9 +332,19 @@ export class Game {
   }
 
   resize() {
-    const container = this.canvas.parentElement;
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
+    // Prefer visualViewport for accurate mobile viewport measurement
+    let containerWidth, containerHeight;
+
+    if (window.visualViewport) {
+      // Use visual viewport (excludes mobile browser chrome)
+      containerWidth = window.visualViewport.width;
+      containerHeight = window.visualViewport.height;
+    } else {
+      // Fallback to container or window dimensions
+      const container = this.canvas.parentElement;
+      containerWidth = container.clientWidth || window.innerWidth;
+      containerHeight = container.clientHeight || window.innerHeight;
+    }
 
     // Calculate scale to fit target dimensions
     const scaleX = containerWidth / this.targetWidth;
@@ -346,6 +369,12 @@ export class Game {
     // Update input handler scale
     if (this.input) {
       this.input.setScale(this.scale);
+    }
+
+    // Notify active scene of resize
+    const currentScene = this.scenes?.getCurrentScene();
+    if (currentScene?.onResize) {
+      currentScene.onResize();
     }
   }
 
@@ -1023,7 +1052,15 @@ export class Game {
     // Remove window-level event listeners
     if (this._boundResize) {
       window.removeEventListener('resize', this._boundResize);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', this._boundResize);
+      }
+      window.removeEventListener('orientationchange', this._boundResize);
       this._boundResize = null;
+    }
+    if (this._boundLoad) {
+      window.removeEventListener('load', this._boundLoad);
+      this._boundLoad = null;
     }
     if (this._boundKeyHandler) {
       window.removeEventListener('keydown', this._boundKeyHandler);

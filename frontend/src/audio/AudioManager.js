@@ -46,6 +46,7 @@ export class AudioManager {
     // User interaction tracking for autoplay policy
     this._hasUserInteraction = false;
     this._boundInteractionHandler = null;
+    this._pendingReplay = null; // Function to call once context is resumed
   }
 
   /**
@@ -101,9 +102,24 @@ export class AudioManager {
 
     this._boundInteractionHandler = () => {
       this._hasUserInteraction = true;
+
+      // Flush any music queued while audio was locked. Runs whether or not a
+      // resume was needed (the context may already be running by now), so a
+      // queued track never gets stranded.
+      const flushPendingReplay = () => {
+        if (this._pendingReplay) {
+          const replayFn = this._pendingReplay;
+          this._pendingReplay = null; // Clear before calling to prevent re-entrance
+          replayFn();
+        }
+      };
+
       if (this.context?.state === 'suspended') {
-        this.context.resume().catch(() => {});
+        this.context.resume().then(flushPendingReplay).catch(() => {});
+      } else {
+        flushPendingReplay();
       }
+
       // Remove listeners after first interaction
       document.removeEventListener('click', this._boundInteractionHandler);
       document.removeEventListener('keydown', this._boundInteractionHandler);
@@ -409,6 +425,25 @@ export class AudioManager {
   }
 
   /**
+   * Check if audio context is suspended (blocked by autoplay policy)
+   * @returns {boolean} True if context is suspended and awaiting user interaction
+   */
+  isSuspended() {
+    return this.context?.state === 'suspended';
+  }
+
+  /**
+   * Set a pending music replay function to be called once audio is unlocked
+   * @param {Function} replayFn - Function to call when context resumes
+   */
+  setPendingReplay(replayFn) {
+    // Only queue if we haven't had user interaction yet and context is suspended
+    if (!this._hasUserInteraction && this.isSuspended()) {
+      this._pendingReplay = replayFn;
+    }
+  }
+
+  /**
    * Get audio system state
    * @returns {Object} Current state including volumes and playing tracks
    */
@@ -418,6 +453,7 @@ export class AudioManager {
       isMuted: this.isMuted,
       hasUserInteraction: this._hasUserInteraction,
       contextState: this.context?.state || 'unavailable',
+      hasPendingReplay: !!this._pendingReplay,
       music: this.music?.getState() || null,
       sfx: this.sfx?.getState() || null,
       ambient: this.ambient?.getState() || null,
@@ -482,13 +518,14 @@ export class AudioManager {
       this._settingsUnsubscribe = null;
     }
 
-    // Remove interaction listener
+    // Remove interaction listener and clear pending replay
     if (this._boundInteractionHandler) {
       document.removeEventListener('click', this._boundInteractionHandler);
       document.removeEventListener('keydown', this._boundInteractionHandler);
       document.removeEventListener('touchstart', this._boundInteractionHandler);
       this._boundInteractionHandler = null;
     }
+    this._pendingReplay = null;
 
     // Clean up subsystems
     if (this.music) {
