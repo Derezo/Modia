@@ -57,7 +57,7 @@ Modia is a browser-based massively multiplayer online role-playing game (MMORPG)
 |-------------|---------------|
 | Server | 4GB RAM VPS (minimum) |
 | OS | Linux (Ubuntu 22.04 LTS recommended) |
-| Node.js | v18.0.0 or higher |
+| Node.js | v22.13.0 or higher (see `.nvmrc`) |
 | PostgreSQL | v14 or higher |
 | Storage | 20GB SSD minimum |
 | Bandwidth | 100 Mbps |
