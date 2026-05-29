@@ -26,7 +26,7 @@ A browser-based tactical MMORPG with turn-based combat, procedural world generat
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22.13+ (see `.nvmrc`)
 - Docker (for PostgreSQL)
 - npm 9+
 

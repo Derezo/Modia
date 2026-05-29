@@ -13,11 +13,11 @@
     "seed": "node src/db/seed.js",
     "lint": "eslint src/",
     "test": "npm run test:all",
-    "test:unit": "NODE_ENV=test node --test src/tests/unit/*.test.js src/tests/unit/**/*.test.js src/tests/balance/*.test.js",
-    "test:unit:ai": "NODE_ENV=test node --test src/tests/unit/ai/*.test.js",
-    "test:unit:worldgen": "NODE_ENV=test node --test src/tests/unit/worldgen/*.test.js",
-    "test:integration": "NODE_ENV=test node --test src/tests/integration/*.test.js",
-    "test:ratelimit": "NODE_ENV=test TEST_RATE_LIMITS=true node --test src/tests/ratelimit/*.test.js",
+    "test:unit": "NODE_ENV=test node --test --test-concurrency=4 src/tests/unit/*.test.js src/tests/unit/**/*.test.js src/tests/balance/*.test.js",
+    "test:unit:ai": "NODE_ENV=test node --test --test-concurrency=4 src/tests/unit/ai/*.test.js",
+    "test:unit:worldgen": "NODE_ENV=test node --test --test-concurrency=4 src/tests/unit/worldgen/*.test.js",
+    "test:integration": "NODE_ENV=test node --test --test-concurrency=4 src/tests/integration/*.test.js",
+    "test:ratelimit": "NODE_ENV=test TEST_RATE_LIMITS=true node --test --test-concurrency=4 src/tests/ratelimit/*.test.js",
     "test:quick": "npm run test:unit",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:ratelimit",
     "test:ci": "npm run test:unit && npm run test:integration",
@@ -25,7 +25,7 @@
     "test:coverage:all": "c8 --include='src/**/*.js' --exclude='src/tests/**' --exclude='src/migrations/**' --exclude='src/scripts/**' --reporter=text --reporter=html npm run test:all"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "d3-delaunay": "^6.0.4",
     "dotenv": "^16.3.1",
@@ -43,6 +43,6 @@
     "eslint": "^8.56.0"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.19.0"
   }
 }

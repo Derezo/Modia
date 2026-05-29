@@ -42,3 +42,35 @@ Issues identified during work but deliberately deferred. When closed, **delete t
 - **Why deferred:** None is exploitable for the public-repo / server-compromise threat model being closed in this pass; all are incremental hardening.
 - **Effort:** Low each.
 - **References:** plan `~/.claude/plans/perform-a-full-and-merry-owl.md` (F9–F12).
+
+### Pre-existing test-suite failures unrelated to dependencies (ratelimit + e2e auth)
+
+- **Status:** Open
+- **Surfaced:** 2026-05-29 (during dependency-remediation verification)
+- **Reproducer:**
+  - `api/src/tests/ratelimit/*.test.js` (with `TEST_RATE_LIMITS=true` on both runner and server): 23/32 fail with `expected: 5, actual: 0` — the server isn't blocking requests the tests expect to be rate-limited. Likely a harness/env coupling (in-memory store not shared the way the test assumes, or limits not engaging in this run mode).
+  - `e2e/auth.spec.js --project=chromium`: 5/5 fail at `getByPlaceholder('Username'/'Email')` not visible. Modia's auth UI is Canvas 2D-rendered (per CLAUDE.md), so there are no DOM form elements for Playwright's accessibility selectors to find. The specs are stale/aspirational against the canvas UI.
+- **Why deferred:** Confirmed pre-existing and unrelated — `git diff main..HEAD` is empty for `api/src/middleware/rateLimiter*.js`, `api/src/tests/ratelimit/`, and `e2e/auth.spec.js`. The only runtime dependency this branch changed is bcrypt (auth), verified separately (cross-version hash + 18/18 auth integration). vite/vitest/happy-dom are dev-tooling not imported by the API server; uuid is not imported by `api/src` at all.
+- **Why it matters:** Both suites are red on main, so they provide no regression signal. ratelimit tests need their harness fixed (or documented run procedure); e2e auth specs need rewriting against the canvas UI (or replacing with API-level auth e2e).
+- **Effort:** Medium each.
+- **References:** `api/src/tests/ratelimit/`, `api/src/middleware/rateLimiterFactory.js`, `e2e/auth.spec.js`, CLAUDE.md (Canvas 2D auth scene).
+
+### Stale character-creation integration tests (predate guild-recruitment gate)
+
+- **Status:** Open
+- **Surfaced:** 2026-05-29 (during dependency-remediation verification)
+- **Reproducer:** Run `api/src/tests/integration/characters.integration.test.js` against a seeded DB. 5 tests fail: "create characters of different races/classes" expect 201 but get 400, "reject duplicate character name" expects 409 but gets 400, "delete character successfully" throws a TypeError, and one dependent inventory test fails. The route now gates manual creation: `api/src/routes/characters.js:100` throws `"Cannot create characters manually. Use guild recruitment."` (400) once a user has their starting character. The tests predate that gameplay change and still assume free multi-character creation.
+- **Why deferred:** Confirmed pre-existing and unrelated to the dependency-remediation work — `git diff main..HEAD` for `characters.js` and the test files is empty (byte-identical to main). Fixing stale gameplay tests is out of scope for a security upgrade.
+- **Why it matters:** These 5 failures mask the real signal in the integration suite — a green characters suite would let genuine regressions surface. They should be rewritten against the guild-recruitment flow (or the tests deleted if superseded).
+- **Effort:** Medium. Rewrite character-creation tests to go through guild recruitment (`api/src/routes/clans.js` / recruitment services), or assert the new 400 gate. Fix the DELETE test's TypeError separately.
+- **References:** `api/src/routes/characters.js:94-100` (recruitment gate), `api/src/tests/integration/characters.integration.test.js`, `api/src/tests/integration/inventory.integration.test.js`.
+
+### No max-length validation on passwords (bcrypt 72-byte silent truncation)
+
+- **Status:** Open
+- **Surfaced:** 2026-05-29 (flagged by security-auditor during the bcrypt 5→6 upgrade; pre-existing, not a regression)
+- **Reproducer:** Register with a password longer than 72 UTF-8 bytes. `auth.js:30` enforces only a minimum (`password.length < 8`); there is no maximum. bcrypt silently truncates input at 72 bytes, so bytes beyond 72 are ignored — two distinct long passwords sharing a 72-byte prefix would authenticate interchangeably.
+- **Why deferred:** Not a regression (bcrypt 6 did not change truncation behavior) and out of scope for the dependency-remediation pass. Exploit value is low (requires a >72-byte password and a shared prefix).
+- **Why it matters:** Defense-in-depth + user clarity — silent truncation is surprising and weakens entropy for very long passphrases.
+- **Effort:** Low. Add a max-length check (e.g. reject > 72 bytes, or pre-hash with SHA-256 to bcrypt) alongside the existing min-length gate in `api/src/routes/auth.js:30` and `api/src/services/registrationService.js`.
+- **References:** `api/src/routes/auth.js:15,30` (SALT_ROUNDS=12, min-length), `api/src/services/registrationService.js:22`.
