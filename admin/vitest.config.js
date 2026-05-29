@@ -9,6 +9,13 @@ export default defineConfig({
     environment: 'happy-dom',
     setupFiles: ['./src/tests/setup.js'],
     include: ['src/**/*.{test,spec}.{js,jsx}'],
+    // Cap worker fan-out: the default is one fork per CPU core (~32 on this
+    // machine), which can exhaust memory and crash the host. Bound to 4.
+    pool: 'forks',
+    poolOptions: {
+      forks: { maxForks: 4, minForks: 1 }
+    },
+    fileParallelism: true,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

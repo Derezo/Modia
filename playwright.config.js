@@ -9,7 +9,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Cap local workers to 4. Default (undefined) uses ~half the CPU cores,
+  // which on this 32-core host spawns enough browser instances to crash it.
+  workers: process.env.CI ? 1 : 4,
   reporter: 'html',
 
   use: {
