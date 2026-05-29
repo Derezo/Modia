@@ -36,6 +36,7 @@ import {
   formatStatName,
   formatAugmentEffect as formatAugmentEffectUtil
 } from '../../utils/statDisplay.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const STYLE_ID = 'item-detail-modal-styles';
 
@@ -340,18 +341,18 @@ export class ItemDetailModal {
             ${ItemIcon.html({ item, size: 'lg' })}
           </div>
           <div class="item-detail-title-section">
-            <h3 class="item-detail-name rarity-${rarity}">${this.escapeHtml(item.name)}</h3>
+            <h3 class="item-detail-name rarity-${rarity}">${escapeHtml(item.name)}</h3>
             <div class="item-detail-badges">
-              <span class="item-detail-badge item-detail-badge--type">${this.escapeHtml(item.type)}</span>
-              <span class="item-detail-badge item-detail-badge--rarity">${this.escapeHtml(rarity)}</span>
-              ${item.material ? `<span class="item-detail-badge">${this.escapeHtml(item.material)}</span>` : ''}
+              <span class="item-detail-badge item-detail-badge--type">${escapeHtml(item.type)}</span>
+              <span class="item-detail-badge item-detail-badge--rarity">${escapeHtml(rarity)}</span>
+              ${item.material ? `<span class="item-detail-badge">${escapeHtml(item.material)}</span>` : ''}
             </div>
           </div>
         </div>
 
         <!-- Description -->
         ${item.description ? `
-          <p class="item-detail-description">${this.escapeHtml(item.description)}</p>
+          <p class="item-detail-description">${escapeHtml(item.description)}</p>
         ` : ''}
 
         <!-- Stats -->
@@ -427,7 +428,7 @@ export class ItemDetailModal {
         <span class="item-detail-augment-icon">
           ${Icon.html('augments', category, { size: 'sm' }) || ''}
         </span>
-        <span class="item-detail-augment-text">${this.escapeHtml(effect)}</span>
+        <span class="item-detail-augment-text">${escapeHtml(effect)}</span>
       </div>
     `;
   }
@@ -646,18 +647,6 @@ export class ItemDetailModal {
     if (this.modal) {
       this.modal.close();
     }
-  }
-
-  /**
-   * Escape HTML
-   * @param {string} str - String to escape
-   * @returns {string}
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   /**

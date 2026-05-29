@@ -29,6 +29,7 @@ import {
 } from './ParchmentTheme.js';
 import { Icon } from '../../components/Icon.js';
 import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const STYLE_ID = 'profile-dropdown-styles';
 
@@ -584,7 +585,7 @@ export class ProfileDropdown {
         <div class="profile-dropdown__notification-item" data-notification-id="${notification.id}">
           <span class="profile-dropdown__notification-icon">${notificationIcon}</span>
           <div class="profile-dropdown__notification-content">
-            <div class="profile-dropdown__notification-title">${this.escapeHtml(notification.title)}</div>
+            <div class="profile-dropdown__notification-title">${escapeHtml(notification.title)}</div>
             <div class="profile-dropdown__notification-time">${timeAgo}</div>
             ${actions}
           </div>
@@ -1116,16 +1117,6 @@ export class ProfileDropdown {
     if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
     if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
     return date.toLocaleDateString();
-  }
-
-  /**
-   * Escape HTML to prevent XSS
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   /**

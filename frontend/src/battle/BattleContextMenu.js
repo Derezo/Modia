@@ -8,6 +8,8 @@
  * - Keyboard navigation (arrows, enter, escape)
  * - Click outside dismisses
  */
+import { escapeHtml } from '../utils/escapeHtml.js';
+
 export class BattleContextMenu {
   constructor(game) {
     this.game = game;
@@ -624,7 +626,7 @@ export class BattleContextMenu {
         <div class="submenu-item ${canUse ? '' : 'disabled'}" data-skill-id="${skill.id}">
           <span class="submenu-item-icon">${icon}</span>
           <div class="submenu-item-info">
-            <div class="submenu-item-name">${skill.name}</div>
+            <div class="submenu-item-name">${escapeHtml(skill.name)}</div>
           </div>
           <span class="submenu-item-cost ${canUse ? '' : 'insufficient'}">${skill.mpCost}MP</span>
         </div>
@@ -657,7 +659,7 @@ export class BattleContextMenu {
         <div class="submenu-item" data-item-id="${item.itemId}" data-inventory-id="${item.inventoryId}">
           <span class="submenu-item-icon">${icon}</span>
           <div class="submenu-item-info">
-            <div class="submenu-item-name">${item.name}</div>
+            <div class="submenu-item-name">${escapeHtml(item.name)}</div>
           </div>
           <span class="submenu-item-cost">x${item.quantity || 1}</span>
         </div>

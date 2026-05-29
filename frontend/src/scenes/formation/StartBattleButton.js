@@ -4,6 +4,8 @@
  * Creates visually distinct buttons for each battle context with
  * idle animations, hover effects, and click animations.
  */
+
+import { escapeHtml } from '../../utils/escapeHtml.js';
 export class StartBattleButton {
   constructor(options = {}) {
     this.type = options.type || 'swords';
@@ -773,7 +775,7 @@ export class StartBattleButton {
     if (waiting) {
       content.innerHTML = `
         <div class="sb-waiting-spinner"></div>
-        <span class="btn-text">Waiting for ${opponentName}...</span>
+        <span class="btn-text">Waiting for ${escapeHtml(opponentName || 'opponent')}...</span>
       `;
       this.element.classList.add('waiting');
     } else {

@@ -12,6 +12,7 @@ import {
   getParchmentShadow
 } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -321,6 +322,8 @@ export class RuinsPuzzleModal {
   }
 
   async show(nodeId) {
+    this.teardown();
+
     this.nodeId = nodeId;
     this.moveCount = 0;
     this.startTime = null;
@@ -363,8 +366,8 @@ export class RuinsPuzzleModal {
       this.element.innerHTML = `
         <div class="ruins-puzzle-modal">
           <div class="ruins-puzzle-header">
-            <h2 class="ruins-puzzle-title">${data.nodeName}</h2>
-            <div class="ruins-puzzle-subtitle">${data.theme.name} - ${data.theme.description}</div>
+            <h2 class="ruins-puzzle-title">${escapeHtml(data.nodeName)}</h2>
+            <div class="ruins-puzzle-subtitle">${escapeHtml(data.theme.name)} - ${escapeHtml(data.theme.description)}</div>
           </div>
           <div class="ruins-puzzle-content">
             <div class="ruins-puzzle-completed">
@@ -386,8 +389,8 @@ export class RuinsPuzzleModal {
       this.element.innerHTML = `
         <div class="ruins-puzzle-modal">
           <div class="ruins-puzzle-header">
-            <h2 class="ruins-puzzle-title">${data.nodeName}</h2>
-            <div class="ruins-puzzle-subtitle">${data.theme.name} - ${data.theme.description}</div>
+            <h2 class="ruins-puzzle-title">${escapeHtml(data.nodeName)}</h2>
+            <div class="ruins-puzzle-subtitle">${escapeHtml(data.theme.name)} - ${escapeHtml(data.theme.description)}</div>
           </div>
           <div class="ruins-puzzle-content">
             <div class="ruins-puzzle-stats">
@@ -506,12 +509,17 @@ export class RuinsPuzzleModal {
   }
 
   startTimer() {
+    this.stopTimer();
     this.timerInterval = setInterval(() => {
       this.updateTimer();
     }, 1000);
   }
 
   updateTimer() {
+    if (!this.element) {
+      this.stopTimer();
+      return;
+    }
     const timerEl = this.element.querySelector('#timer');
     if (timerEl && this.startTime) {
       const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
@@ -611,7 +619,7 @@ export class RuinsPuzzleModal {
     }
   }
 
-  close() {
+  teardown() {
     this.stopTimer();
 
     if (this.abortController) {
@@ -623,6 +631,10 @@ export class RuinsPuzzleModal {
       this.element.remove();
       this.element = null;
     }
+  }
+
+  close() {
+    this.teardown();
 
     if (this.onClose) {
       this.onClose();

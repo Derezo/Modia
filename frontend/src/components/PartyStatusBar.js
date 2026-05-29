@@ -10,6 +10,7 @@ import {
   getParchmentBorder,
   getParchmentShadow
 } from '../ui/parchment/index.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 export class PartyStatusBar {
   constructor(game) {
@@ -203,7 +204,7 @@ export class PartyStatusBar {
           overflow: hidden;
           text-overflow: ellipsis;
           max-width: 120px;
-        ">${this.escapeHtml(this.party.name)}</div>
+        ">${escapeHtml(this.party.name)}</div>
         <div class="party-meta" style="font-size: 11px; color: ${PARCHMENT_COLORS.text.muted};">
           ${members.length}/${this.party.maxMembers || 4} members
         </div>
@@ -247,7 +248,7 @@ export class PartyStatusBar {
       return `
         <div class="member-avatar ${isReady ? 'ready' : 'not-ready'}"
              data-user-id="${member.user_id}"
-             title="${this.escapeHtml(member.username)}${isLeader ? ' (Leader)' : ''}${isReady ? ' - Ready' : ''}"
+             title="${escapeHtml(member.username)}${isLeader ? ' (Leader)' : ''}${isReady ? ' - Ready' : ''}"
              style="
                width: 28px;
                height: 28px;
@@ -431,15 +432,6 @@ export class PartyStatusBar {
       bard: '🎵'
     };
     return icons[characterClass?.toLowerCase()] || '👤';
-  }
-
-  /**
-   * Escape HTML to prevent XSS
-   */
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text || '';
-    return div.innerHTML;
   }
 
   /**

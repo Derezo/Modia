@@ -26,7 +26,7 @@ const shouldEnableRateLimiting = () => {
 // Test bypass header - allows integration tests to skip rate limiting on dev servers
 // Only works in non-production environments
 const TEST_BYPASS_HEADER = 'x-test-bypass-rate-limit';
-const TEST_BYPASS_SECRET = 'modia-test-bypass-2024';
+const TEST_BYPASS_SECRET = process.env.TEST_BYPASS_SECRET || 'modia-test-bypass-2024';
 
 /**
  * Check if a request should skip rate limiting

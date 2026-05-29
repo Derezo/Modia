@@ -7,6 +7,7 @@ import { marketConfirmDialog } from '../../../components/MarketConfirmDialog.js'
 import { parchmentToast } from '../../../ui/parchment/ParchmentToast.js';
 import { getRarityName, formatStatName, RARITY_COLORS } from '../marketplaceUtils.js';
 import { loadOrderBook, renderOrderBookAndTrade, initMarketDashboard } from './MarketplaceTradePanel.js';
+import { escapeHtml } from '../../../utils/escapeHtml.js';
 
 /**
  * Render the Search/Browse tab
@@ -209,7 +210,7 @@ function renderEquipmentDetailPanel(sidePanel, item, context) {
     ${dashboardHtml}
 
     <div class="ui-panel">
-      <div class="ui-panel-header">${item.name} - Available Listings</div>
+      <div class="ui-panel-header">${escapeHtml(item.name || '')} - Available Listings</div>
       <div class="equipment-listings-container" style="max-height: 400px; overflow-y: auto; padding: 8px;">
         ${listings.length > 0 ? listings.map(listing => renderEquipmentListingCard(listing)).join('') : `
           <div class="empty-message" style="padding: 20px; text-align: center; color: #7a6a5a; font-style: italic;">
@@ -283,12 +284,12 @@ function renderEquipmentListingCard(listing) {
     ">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
         <div>
-          <div style="font-weight: bold; color: ${rarityColor};">${generatedName}</div>
+          <div style="font-weight: bold; color: ${rarityColor};">${escapeHtml(generatedName || '')}</div>
           <div style="font-size: 12px; color: #5a4a3a;">${[rarity, material].filter(Boolean).map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' • ')}</div>
         </div>
         <div style="text-align: right;">
           <div style="font-weight: bold; color: #2d2418;">${askPrice.toLocaleString()}g</div>
-          <div style="font-size: 12px; color: #7a6a5a;">by ${sellerName}</div>
+          <div style="font-size: 12px; color: #7a6a5a;">by ${escapeHtml(sellerName || '')}</div>
         </div>
       </div>
       ${(baseStatsHtml || bonusStatsHtml || augmentsHtml) ? `

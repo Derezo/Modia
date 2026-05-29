@@ -40,6 +40,7 @@ import {
   getParchmentTextShadow,
   getParchmentInsetShadow
 } from './ParchmentTheme.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const STYLE_ID = 'parchment-accordion-styles';
 const STORAGE_PREFIX = 'accordion:';
@@ -246,8 +247,8 @@ export class Accordion {
     this.element.innerHTML = `
       <div class="parchment-accordion__header" role="button" tabindex="0" aria-expanded="false">
         <div class="parchment-accordion__title-group">
-          <h4 class="parchment-accordion__title">${this.escapeHtml(this.options.title)}</h4>
-          ${this.options.badge ? `<span class="parchment-accordion__badge">${this.escapeHtml(this.options.badge)}</span>` : ''}
+          <h4 class="parchment-accordion__title">${escapeHtml(this.options.title)}</h4>
+          ${this.options.badge ? `<span class="parchment-accordion__badge">${escapeHtml(this.options.badge)}</span>` : ''}
         </div>
         <span class="parchment-accordion__chevron">&#9660;</span>
       </div>
@@ -393,7 +394,7 @@ export class Accordion {
    * @param {string} message - Loading message
    */
   showLoading(message = 'Loading') {
-    this.setContent(`<div class="parchment-accordion__loading">${this.escapeHtml(message)}</div>`);
+    this.setContent(`<div class="parchment-accordion__loading">${escapeHtml(message)}</div>`);
   }
 
   /**
@@ -401,7 +402,7 @@ export class Accordion {
    * @param {string} message - Empty state message
    */
   showEmpty(message = 'No items') {
-    this.setContent(`<div class="parchment-accordion__empty">${this.escapeHtml(message)}</div>`);
+    this.setContent(`<div class="parchment-accordion__empty">${escapeHtml(message)}</div>`);
   }
 
   /**
@@ -477,18 +478,6 @@ export class Accordion {
    */
   isOpen() {
     return this.isExpanded;
-  }
-
-  /**
-   * Escape HTML to prevent XSS
-   * @param {string} str - String to escape
-   * @returns {string}
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   /**

@@ -4,6 +4,7 @@
  */
 
 import { Icon } from './Icon.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 // Augment icon mappings
 const AUGMENT_ICONS = {
@@ -364,7 +365,7 @@ export class MarketplaceItemPanel {
     this.element.className = 'marketplace-item-panel';
     this.element.innerHTML = `
       <div class="item-panel-header">
-        <span class="item-panel-title">${this.templateName}</span>
+        <span class="item-panel-title">${escapeHtml(this.templateName)}</span>
         <button class="item-panel-close">&times;</button>
       </div>
       <div class="item-panel-content"></div>
@@ -387,7 +388,7 @@ export class MarketplaceItemPanel {
 
   showError(message) {
     const content = this.element.querySelector('.item-panel-content');
-    content.innerHTML = `<div class="item-panel-empty">${message}</div>`;
+    content.innerHTML = `<div class="item-panel-empty">${escapeHtml(message)}</div>`;
   }
 
   render() {
@@ -462,8 +463,8 @@ export class MarketplaceItemPanel {
     return `
       <div class="listing-card">
         <div class="listing-header">
-          <div class="listing-name ${rarity || 'common'}">${generatedName}</div>
-          <div class="listing-meta">${metaLine}</div>
+          <div class="listing-name ${rarity || 'common'}">${escapeHtml(generatedName)}</div>
+          <div class="listing-meta">${escapeHtml(metaLine)}</div>
         </div>
         <div class="listing-body">
           ${(baseStatsHtml || bonusStatsHtml) ? `
@@ -481,7 +482,7 @@ export class MarketplaceItemPanel {
         <div class="listing-footer">
           <div>
             <div class="listing-price">${askPrice.toLocaleString()} gold</div>
-            <div class="listing-seller">Seller: ${sellerName}</div>
+            <div class="listing-seller">Seller: ${escapeHtml(sellerName)}</div>
           </div>
           <button class="listing-buy-btn" data-listing-id="${listingId}">Buy</button>
         </div>

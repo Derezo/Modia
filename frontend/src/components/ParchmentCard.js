@@ -1,5 +1,6 @@
 import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
 import { getParchmentTooltip } from '../ui/parchment/index.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 /**
  * ParchmentCard - Unified character/enemy card with classic RPG parchment styling
@@ -657,7 +658,7 @@ export class ParchmentCard {
             <img
               class="pc-portrait"
               src="${portraitUrl}"
-              alt="${this.escapeHtml(name)}"
+              alt="${escapeHtml(name)}"
               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
             >
             <div class="pc-portrait-fallback" style="display: none; background: ${fallbackColor};">
@@ -671,7 +672,7 @@ export class ParchmentCard {
     // Info section (name, subtitle, bars)
     html += `
       <div class="pc-info">
-        <div class="pc-name">${this.escapeHtml(name)}</div>
+        <div class="pc-name">${escapeHtml(name)}</div>
         <div class="pc-subtitle">${subtitle}</div>
         <div class="pc-bar-row">
           <span class="pc-bar-label hp">HP</span>
@@ -716,9 +717,9 @@ export class ParchmentCard {
       html += `
         <div class="pc-traits">
           ${this.traits.map(t => `
-            <div class="pc-trait-badge pc-trait-${t.type || 'starting'}" data-tooltip="${this.escapeHtml(t.description || '')}">
+            <div class="pc-trait-badge pc-trait-${t.type || 'starting'}" data-tooltip="${escapeHtml(t.description || '')}">
               <span class="pc-trait-icon">${t.type === 'racial' ? '&#x1F9EC;' : '&#x2B50;'}</span>
-              <span class="pc-trait-name">${this.escapeHtml(t.name || 'Unknown')}</span>
+              <span class="pc-trait-name">${escapeHtml(t.name || 'Unknown')}</span>
             </div>
           `).join('')}
         </div>
@@ -807,7 +808,7 @@ export class ParchmentCard {
         html = '<div class="pc-dmg-row">';
         if (data.willCure) {
           const effects = data.activeEffects || data.curedEffects || [];
-          const effectList = effects.slice(0, 3).map(e => this.escapeHtml(e)).join(', ');
+          const effectList = effects.slice(0, 3).map(e => escapeHtml(e)).join(', ');
           html += `<span class="pc-dmg-cure-list">Cures: ${effectList}</span>`;
         } else {
           html += '<span class="pc-dmg-label" style="color: #8a7a60;">No status to cure</span>';
@@ -834,7 +835,7 @@ export class ParchmentCard {
 
       case 'buff': {
         html = '<div class="pc-dmg-row">';
-        const escapedBuffName = data.buffName ? this.escapeHtml(data.buffName) : 'Buff';
+        const escapedBuffName = data.buffName ? escapeHtml(data.buffName) : 'Buff';
         html += `<span class="pc-dmg-range pc-dmg-range--buff">${escapedBuffName}</span>`;
         if (data.duration) {
           html += `<span class="pc-dmg-label">${data.duration} turns</span>`;
@@ -908,13 +909,6 @@ export class ParchmentCard {
   capitalize(str) {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   /**

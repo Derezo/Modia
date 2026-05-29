@@ -5,6 +5,8 @@
  * medieval parchment aesthetic for all game notifications.
  */
 
+import { escapeHtml } from '../../utils/escapeHtml.js';
+
 class ParchmentToastManager {
   constructor() {
     this.container = null;
@@ -288,8 +290,8 @@ class ParchmentToastManager {
     toast.innerHTML = `
       <div class="parchment-toast-icon">${icons[type] || icons.info}</div>
       <div class="parchment-toast-content">
-        <div class="parchment-toast-title">${this.escapeHtml(title)}</div>
-        ${message ? `<div class="parchment-toast-message">${this.escapeHtml(message)}</div>` : ''}
+        <div class="parchment-toast-title">${escapeHtml(title)}</div>
+        ${message ? `<div class="parchment-toast-message">${escapeHtml(message)}</div>` : ''}
       </div>
       <button class="parchment-toast-close" aria-label="Close notification">&times;</button>
       <div class="parchment-toast-progress"></div>
@@ -404,17 +406,6 @@ class ParchmentToastManager {
     this.toasts.splice(index, 1);
   }
 
-  /**
-   * Escape HTML to prevent XSS
-   * @param {string} str - String to escape
-   * @returns {string} Escaped string
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 
   /**
    * Show a success toast

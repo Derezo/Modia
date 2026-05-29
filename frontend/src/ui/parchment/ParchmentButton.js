@@ -19,6 +19,8 @@
  *   button.destroy(); // Clean up when done
  */
 
+import { escapeHtml } from '../../utils/escapeHtml.js';
+
 const COLORS = {
   light: '#d4c4a8',
   mid: '#c9b899',
@@ -92,7 +94,7 @@ export default class ParchmentButton {
       html += `<span class="parchment-btn__icon">${iconHtml}</span>`;
     }
 
-    html += `<span class="parchment-btn__label">${this.escapeHtml(this.label)}</span>`;
+    html += `<span class="parchment-btn__label">${escapeHtml(this.label)}</span>`;
 
     this.element.innerHTML = html;
 
@@ -310,18 +312,6 @@ export default class ParchmentButton {
   setLabel(label) {
     this.label = label;
     this.updateElement();
-  }
-
-  /**
-   * Escape HTML to prevent XSS
-   * @param {string} str
-   * @returns {string}
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   /**

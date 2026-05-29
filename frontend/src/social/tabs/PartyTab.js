@@ -6,6 +6,7 @@ import {
   getParchmentButtonCSS
 } from '../../ui/parchment/index.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -466,7 +467,7 @@ export class PartyTab {
     return `
       <div class="party-current">
         <div class="party-current-header">
-          <span class="party-current-name">${this.escapeHtml(this.party.name || 'Party')}</span>
+          <span class="party-current-name">${escapeHtml(this.party.name || 'Party')}</span>
           <span class="party-current-type">${this.party.partyType || 'PvE'}</span>
         </div>
 
@@ -504,7 +505,7 @@ export class PartyTab {
         <div class="party-member-avatar">&#x1F464;</div>
         <div class="party-member-info">
           <div class="party-member-name">
-            ${this.escapeHtml(member.username || member.characterName)}
+            ${escapeHtml(member.username || member.characterName)}
             ${isLeader ? '<span class="party-member-leader">&#x1F451;</span>' : ''}
             ${isYou ? ' (You)' : ''}
           </div>
@@ -609,10 +610,10 @@ export class PartyTab {
     return `
       <div class="quick-party-friend ${isSelected ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}"
            data-friend-id="${friend.id}"
-           data-friend-username="${this.escapeHtml(friend.username)}">
+           data-friend-username="${escapeHtml(friend.username)}">
         <div class="quick-party-friend-avatar">&#x1F464;</div>
         <div class="quick-party-friend-info">
-          <div class="quick-party-friend-name">${this.escapeHtml(friend.username)}</div>
+          <div class="quick-party-friend-name">${escapeHtml(friend.username)}</div>
           <div class="quick-party-friend-status">
             ${friend.characterLevel ? `Lv.${friend.characterLevel}` : ''} ${friend.characterClass || 'Online'}
           </div>
@@ -902,10 +903,4 @@ export class PartyTab {
   /**
    * Escape HTML
    */
-  escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }

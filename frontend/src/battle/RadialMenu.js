@@ -10,6 +10,8 @@
  *   ITEM    \/     SKILL
  *    (I)  (bottom)  (S)
  */
+import { escapeHtml } from '../utils/escapeHtml.js';
+
 export class RadialMenu {
   constructor(game) {
     this.game = game;
@@ -385,7 +387,7 @@ export class RadialMenu {
             : `<span style="color: #8f8; margin-left: 6px;">x${item.quantity}</span>`;
 
         btn.innerHTML = `
-          <span>${icon} ${item.name}</span>
+          <span>${icon} ${escapeHtml(item.name)}</span>
           ${costOrQty}
         `;
 

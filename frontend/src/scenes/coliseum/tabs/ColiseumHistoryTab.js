@@ -4,6 +4,7 @@
 
 import { PARCHMENT_COLORS } from '../../../ui/parchment/index.js';
 import { getTier, getTierIcon } from '@shared/coliseum.js';
+import { escapeHtml } from '../../../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -82,10 +83,10 @@ export function renderMatchHistory(context) {
                 <div class="coliseum-match-info">
                   <div class="coliseum-match-result">
                     ${renderCompactTierBadge(winnerTierInfo.name, winnerTierInfo.color, winnerTierInfo.icon)}
-                    <span class="winner">${match.winnerUsername}</span>
+                    <span class="winner">${escapeHtml(match.winnerUsername)}</span>
                     <span style="color: ${P.text.muted};"> defeated </span>
                     ${renderCompactTierBadge(loserTierInfo.name, loserTierInfo.color, loserTierInfo.icon)}
-                    <span class="loser">${match.loserUsername}</span>
+                    <span class="loser">${escapeHtml(match.loserUsername)}</span>
                   </div>
                   <div class="coliseum-match-meta">
                     <span>${match.queueType}</span>
@@ -171,17 +172,17 @@ function renderMatchDetailsModal(context) {
             </div>
           ` : `
             <div class="coliseum-result-text" style="color: ${P.text.primary};">
-              ${details.winnerUsername} defeated ${details.loserUsername}
+              ${escapeHtml(details.winnerUsername)} defeated ${escapeHtml(details.loserUsername)}
             </div>
           `}
 
           <div class="coliseum-rating-changes">
             <div class="coliseum-rating-change-item">
-              <div class="label">${details.winnerUsername}</div>
+              <div class="label">${escapeHtml(details.winnerUsername)}</div>
               <div class="value" style="color: ${P.state.success};">+${details.winnerRatingChange || 0}</div>
             </div>
             <div class="coliseum-rating-change-item">
-              <div class="label">${details.loserUsername}</div>
+              <div class="label">${escapeHtml(details.loserUsername)}</div>
               <div class="value" style="color: ${P.state.error};">${details.loserRatingChange || 0}</div>
             </div>
           </div>
@@ -189,7 +190,7 @@ function renderMatchDetailsModal(context) {
 
         <div class="coliseum-teams-section">
           <div class="coliseum-team-panel winner">
-            <div class="coliseum-team-header winner">${details.winnerUsername}'s Team</div>
+            <div class="coliseum-team-header winner">${escapeHtml(details.winnerUsername)}'s Team</div>
             <div class="coliseum-character-list">
               ${winnerTeam.length > 0 ? winnerTeam.map(char => renderCharacterItem(char)).join('') : `
                 <div class="coliseum-no-data-message" style="padding: 10px;">Team data not available</div>
@@ -197,7 +198,7 @@ function renderMatchDetailsModal(context) {
             </div>
           </div>
           <div class="coliseum-team-panel loser">
-            <div class="coliseum-team-header loser">${details.loserUsername}'s Team</div>
+            <div class="coliseum-team-header loser">${escapeHtml(details.loserUsername)}'s Team</div>
             <div class="coliseum-character-list">
               ${loserTeam.length > 0 ? loserTeam.map(char => renderCharacterItem(char)).join('') : `
                 <div class="coliseum-no-data-message" style="padding: 10px;">Team data not available</div>
@@ -246,7 +247,7 @@ function renderMatchDetailsModal(context) {
     const isMvp = mvp && unit.id === mvp.id;
     return `
                 <div class="coliseum-unit-stat-row${isMvp ? ' mvp-unit' : ''}">
-                  <span class="unit-name">${unit.name} (${unit.class})${isMvp ? '<span class="mvp-badge">MVP</span>' : ''}</span>
+                  <span class="unit-name">${escapeHtml(unit.name)} (${escapeHtml(unit.class)})${isMvp ? '<span class="mvp-badge">MVP</span>' : ''}</span>
                   <span class="unit-stats">
                     ${unit.damageDealt ? `DMG: ${unit.damageDealt}` : ''}
                     ${unit.healingDone ? ` | HEAL: ${unit.healingDone}` : ''}
@@ -262,7 +263,7 @@ function renderMatchDetailsModal(context) {
         ${mvp ? `
           <div class="coliseum-mvp-section">
             <div class="coliseum-mvp-header">Most Valuable Player</div>
-            <div class="coliseum-mvp-name">${mvp.name}</div>
+            <div class="coliseum-mvp-name">${escapeHtml(mvp.name)}</div>
             <div class="coliseum-mvp-stats">
               ${mvp.damageDealt || mvp.damage ? `Damage: ${mvp.damageDealt || mvp.damage}` : ''}
               ${mvp.kills ? ` | Kills: ${mvp.kills}` : ''}
@@ -284,12 +285,12 @@ function renderCharacterItem(char) {
   return `
     <div class="coliseum-character-item">
       <div>
-        <div class="coliseum-character-name">${char.name}</div>
-        <div class="coliseum-character-class">${char.class}</div>
+        <div class="coliseum-character-name">${escapeHtml(char.name)}</div>
+        <div class="coliseum-character-class">${escapeHtml(char.class)}</div>
         ${char.equipment && char.equipment.length > 0 ? `
           <div class="coliseum-equipment-list">
             ${char.equipment.map(item => `
-              <div class="coliseum-equipment-item ${item.rarity || 'common'}">${item.name}</div>
+              <div class="coliseum-equipment-item ${item.rarity || 'common'}">${escapeHtml(item.name)}</div>
             `).join('')}
           </div>
         ` : ''}

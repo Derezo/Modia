@@ -543,7 +543,8 @@ function getDevToken() {
 
   // DEV ONLY: This placeholder token is accepted by the WebSocket auth
   // system when NODE_ENV !== 'production'. Never deployed to production.
-  return 'dev_admin_token';
+  // Prefer env var if set (for custom dev environments), else use safe default.
+  return import.meta.env.VITE_ADMIN_WS_DEV_TOKEN || 'dev_admin_token';
 }
 
 /**

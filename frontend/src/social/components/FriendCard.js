@@ -4,6 +4,7 @@ import {
   PARCHMENT_SPACING,
   PARCHMENT_RADIUS
 } from '../../ui/parchment/index.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -367,20 +368,20 @@ export class FriendCard {
     this.element.innerHTML = `
       <div class="friend-card-avatar">
         ${this.friend.avatarUrl
-    ? `<img src="${this.escapeHtml(this.friend.avatarUrl)}" alt="">`
+    ? `<img src="${escapeHtml(this.friend.avatarUrl)}" alt="">`
     : `<span>${this.getClassIcon()}</span>`
 }
         <div class="friend-card-status ${this.getStatusClass()}"></div>
       </div>
       <div class="friend-card-info">
         <div class="friend-card-name-row">
-          <span class="friend-card-name">${this.escapeHtml(this.friend.username)}</span>
+          <span class="friend-card-name">${escapeHtml(this.friend.username)}</span>
           ${this.friend.isFavorite ? '<span class="friend-card-favorite">&#x2B50;</span>' : ''}
         </div>
         ${this.friend.characterLevel ? `
           <div class="friend-card-meta">Lv.${this.friend.characterLevel} ${this.friend.characterClass || ''}</div>
         ` : ''}
-        <div class="friend-card-activity ${activityClass}">${this.escapeHtml(activityText)}</div>
+        <div class="friend-card-activity ${activityClass}">${escapeHtml(activityText)}</div>
       </div>
       ${this.showActions ? `
         <div class="friend-card-actions">
@@ -464,10 +465,4 @@ export class FriendCard {
   /**
    * Escape HTML to prevent XSS
    */
-  escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }

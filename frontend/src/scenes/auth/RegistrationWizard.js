@@ -22,6 +22,7 @@ import {
   getParchmentInputCSS,
   getParchmentButtonCSS
 } from '../../ui/parchment/index.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 const STYLE_ID = 'registration-wizard-styles';
@@ -388,38 +389,38 @@ export class RegistrationWizard {
         </div>
 
         <div class="regwiz-content">
-          ${this.errors.global ? `<div class="regwiz-global-error">${this.escapeHtml(this.errors.global)}</div>` : ''}
+          ${this.errors.global ? `<div class="regwiz-global-error">${escapeHtml(this.errors.global)}</div>` : ''}
 
           <div class="regwiz-form-group">
             <label class="regwiz-label" for="regwiz-username">Username</label>
             <input type="text" id="regwiz-username" class="regwiz-input ${this.errors.username ? 'error' : ''}"
                    placeholder="3-32 characters" maxlength="32"
-                   value="${this.escapeHtml(this.formData.username)}">
-            ${this.errors.username ? `<div class="regwiz-error">${this.escapeHtml(this.errors.username)}</div>` : ''}
+                   value="${escapeHtml(this.formData.username)}">
+            ${this.errors.username ? `<div class="regwiz-error">${escapeHtml(this.errors.username)}</div>` : ''}
           </div>
 
           <div class="regwiz-form-group">
             <label class="regwiz-label" for="regwiz-email">Email</label>
             <input type="email" id="regwiz-email" class="regwiz-input ${this.errors.email ? 'error' : ''}"
                    placeholder="your@email.com"
-                   value="${this.escapeHtml(this.formData.email)}">
-            ${this.errors.email ? `<div class="regwiz-error">${this.escapeHtml(this.errors.email)}</div>` : ''}
+                   value="${escapeHtml(this.formData.email)}">
+            ${this.errors.email ? `<div class="regwiz-error">${escapeHtml(this.errors.email)}</div>` : ''}
           </div>
 
           <div class="regwiz-form-group">
             <label class="regwiz-label" for="regwiz-password">Password</label>
             <input type="password" id="regwiz-password" class="regwiz-input ${this.errors.pass ? 'error' : ''}"
                    placeholder="At least 8 characters"
-                   value="${this.escapeHtml(this.formData.pass)}">
-            ${this.errors.pass ? `<div class="regwiz-error">${this.escapeHtml(this.errors.pass)}</div>` : ''}
+                   value="${escapeHtml(this.formData.pass)}">
+            ${this.errors.pass ? `<div class="regwiz-error">${escapeHtml(this.errors.pass)}</div>` : ''}
           </div>
 
           <div class="regwiz-form-group">
             <label class="regwiz-label" for="regwiz-confirm">Confirm Password</label>
             <input type="password" id="regwiz-confirm" class="regwiz-input ${this.errors.confirmPass ? 'error' : ''}"
                    placeholder="Re-enter your password"
-                   value="${this.escapeHtml(this.formData.confirmPass)}">
-            ${this.errors.confirmPass ? `<div class="regwiz-error">${this.escapeHtml(this.errors.confirmPass)}</div>` : ''}
+                   value="${escapeHtml(this.formData.confirmPass)}">
+            ${this.errors.confirmPass ? `<div class="regwiz-error">${escapeHtml(this.errors.confirmPass)}</div>` : ''}
           </div>
 
           <div class="regwiz-button-row">
@@ -448,7 +449,7 @@ export class RegistrationWizard {
         </div>
 
         <div class="regwiz-content">
-          ${this.errors.global ? `<div class="regwiz-global-error">${this.escapeHtml(this.errors.global)}</div>` : ''}
+          ${this.errors.global ? `<div class="regwiz-global-error">${escapeHtml(this.errors.global)}</div>` : ''}
 
           <div class="regwiz-layout">
             <div class="regwiz-selection-panel">
@@ -499,8 +500,8 @@ export class RegistrationWizard {
                 <label class="regwiz-label" for="regwiz-charname">Character Name</label>
                 <input type="text" id="regwiz-charname" class="regwiz-input ${this.errors.characterName ? 'error' : ''}"
                        placeholder="2-24 characters" maxlength="24"
-                       value="${this.escapeHtml(this.formData.characterName)}">
-                ${this.errors.characterName ? `<div class="regwiz-error">${this.escapeHtml(this.errors.characterName)}</div>` : ''}
+                       value="${escapeHtml(this.formData.characterName)}">
+                ${this.errors.characterName ? `<div class="regwiz-error">${escapeHtml(this.errors.characterName)}</div>` : ''}
               </div>
             </div>
           </div>
@@ -538,7 +539,7 @@ export class RegistrationWizard {
 
         <div class="regwiz-content regwiz-success">
           <div class="regwiz-success-icon">&#x1F389;</div>
-          <h2 class="regwiz-success-title">Hello, ${this.escapeHtml(this.formData.characterName)}!</h2>
+          <h2 class="regwiz-success-title">Hello, ${escapeHtml(this.formData.characterName)}!</h2>
           <p class="regwiz-success-message">
             Your hero has been created and is ready to begin their adventure.<br>
             Explore the world, battle enemies, and grow stronger!
@@ -945,12 +946,6 @@ export class RegistrationWizard {
     return true;
   }
 
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 
   destroy() {
     if (this.previewFetchAbort) {

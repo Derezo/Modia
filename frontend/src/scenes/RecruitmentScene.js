@@ -14,6 +14,7 @@ import {
   getParchmentSpinnerCSS
 } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
@@ -834,14 +835,14 @@ export class RecruitmentScene extends Scene {
       <div class="recruit-card ${isSelected ? 'selected' : ''}" data-recruit-id="${recruit.id}">
         <div class="recruit-card-header">
           <div class="recruit-portrait">
-            <img src="${portraitUrl}" alt="${recruit.name}"
+            <img src="${portraitUrl}" alt="${escapeHtml(recruit.name || '')}"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
             <div class="recruit-portrait-fallback" style="display: none; background: ${this.getClassColor(recruit.class)};">
-              ${recruit.name.charAt(0)}
+              ${escapeHtml((recruit.name || '').charAt(0))}
             </div>
           </div>
           <div class="recruit-info">
-            <div class="recruit-name">${recruit.name}${varianceHtml}</div>
+            <div class="recruit-name">${escapeHtml(recruit.name || '')}${varianceHtml}</div>
             <div class="recruit-class-info">${this.capitalize(recruit.race)} ${this.capitalize(recruit.class)}</div>
             <div class="recruit-price ${canAfford ? '' : 'cannot-afford'}">${recruit.price}g</div>
           </div>

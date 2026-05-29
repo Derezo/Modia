@@ -8,6 +8,7 @@ import {
 } from '../../ui/parchment/index.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
 import { FriendCard } from '../components/FriendCard.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -334,7 +335,7 @@ export class FriendsTab {
                 type="text"
                 class="friends-tab-search-input"
                 placeholder="Search or add friends..."
-                value="${this.escapeHtml(this.searchQuery)}"
+                value="${escapeHtml(this.searchQuery)}"
               >
               <span class="friends-tab-search-icon">&#x1F50D;</span>
               <div class="friends-search-results" style="display: none;"></div>
@@ -627,7 +628,7 @@ export class FriendsTab {
           <div class="friends-search-result" data-player-id="${player.id}">
             <div class="friends-search-result-avatar">&#x1F464;</div>
             <div class="friends-search-result-info">
-              <div class="friends-search-result-name">${this.escapeHtml(player.username)}</div>
+              <div class="friends-search-result-name">${escapeHtml(player.username)}</div>
               <div class="friends-search-result-status">
                 ${player.characterLevel ? `Lv.${player.characterLevel}` : 'Player'}
               </div>
@@ -635,7 +636,7 @@ export class FriendsTab {
             <button
               class="friends-search-result-action ${actionClass}"
               data-action="add-friend"
-              data-username="${this.escapeHtml(player.username)}"
+              data-username="${escapeHtml(player.username)}"
               ${isFriend || isPending ? 'disabled' : ''}
             >
               ${actionText}
@@ -841,10 +842,4 @@ export class FriendsTab {
   /**
    * Escape HTML to prevent XSS
    */
-  escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }

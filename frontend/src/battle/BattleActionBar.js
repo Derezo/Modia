@@ -8,6 +8,8 @@
  * - Visual states: available, used, disabled
  * - Keyboard shortcuts: M, A, S, I, W
  */
+import { escapeHtml } from '../utils/escapeHtml.js';
+
 export class BattleActionBar {
   constructor(game) {
     this.game = game;
@@ -609,8 +611,8 @@ export class BattleActionBar {
         <div class="dropdown-item ${canUse ? '' : 'disabled'}" data-skill-id="${skill.id}">
           <span class="dropdown-item-icon">${icon}</span>
           <div class="dropdown-item-info">
-            <div class="dropdown-item-name">${skill.name}</div>
-            <div class="dropdown-item-desc">${skill.description || ''}</div>
+            <div class="dropdown-item-name">${escapeHtml(skill.name)}</div>
+            <div class="dropdown-item-desc">${escapeHtml(skill.description || '')}</div>
           </div>
           <span class="dropdown-item-cost ${canUse ? '' : 'insufficient'}">${skill.mpCost} MP</span>
         </div>
@@ -645,8 +647,8 @@ export class BattleActionBar {
         <div class="dropdown-item" data-item-id="${item.itemId}" data-inventory-id="${item.inventoryId}">
           <span class="dropdown-item-icon">${icon}</span>
           <div class="dropdown-item-info">
-            <div class="dropdown-item-name">${item.name}</div>
-            <div class="dropdown-item-desc">${item.description || ''}</div>
+            <div class="dropdown-item-name">${escapeHtml(item.name)}</div>
+            <div class="dropdown-item-desc">${escapeHtml(item.description || '')}</div>
           </div>
           <span class="dropdown-item-cost">x${item.quantity || 1}</span>
         </div>

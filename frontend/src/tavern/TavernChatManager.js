@@ -15,6 +15,8 @@
  * @see TavernDMSystem.js - Direct messaging subsystem
  */
 
+import { escapeHtml } from '../utils/escapeHtml.js';
+
 /**
  * Manages chat message functionality for the tavern
  */
@@ -301,10 +303,10 @@ export class TavernChatManager {
     return `
       <div class="chat-message ${isSelf ? 'own-message' : ''}" data-message-id="${msg.id}">
         <div class="chat-message-header">
-          <span class="chat-message-author ${isSelf ? 'self' : ''}">${msg.senderUsername || msg.sender_username}</span>
+          <span class="chat-message-author ${isSelf ? 'self' : ''}">${escapeHtml(msg.senderUsername || msg.sender_username || '')}</span>
           <span class="chat-message-time">${time}</span>
         </div>
-        <div class="chat-message-text">${this.escapeHtml(msg.message)}</div>
+        <div class="chat-message-text">${escapeHtml(msg.message)}</div>
         ${reactionsHtml}
       </div>
     `;
@@ -493,11 +495,6 @@ export class TavernChatManager {
    * @param {string} text - Text to escape
    * @returns {string} Escaped text
    */
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 
   /**
    * Clean up resources

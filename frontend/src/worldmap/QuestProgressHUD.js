@@ -19,6 +19,7 @@ import {
   getParchmentShadow
 } from '../ui/parchment/ParchmentTheme.js';
 import { responsive } from '../core/Responsive.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 const STYLE_ID = 'quest-progress-hud-styles';
 
@@ -407,7 +408,7 @@ export class QuestProgressHUD {
     const name = document.createElement('div');
     name.className = 'quest-progress-hud__name';
     name.textContent = quest.name;
-    name.title = quest.description || quest.name;
+    name.title = escapeHtml(quest.description || quest.name);
     info.appendChild(name);
 
     // Progress bar

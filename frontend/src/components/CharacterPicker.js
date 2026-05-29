@@ -35,6 +35,7 @@ import {
 } from '../ui/parchment/ParchmentTheme.js';
 import { getClassColor, getClassIcon } from './CharacterCard.js';
 import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 const STYLE_ID = 'character-picker-styles';
 
@@ -250,7 +251,7 @@ export class CharacterPicker {
 
     if (validChars.length === 0) {
       this.element.innerHTML = `
-        <div class="character-picker__empty">${this.escapeHtml(emptyMessage)}</div>
+        <div class="character-picker__empty">${escapeHtml(emptyMessage)}</div>
       `;
       return;
     }
@@ -287,17 +288,17 @@ export class CharacterPicker {
            data-index="${index}"
            tabindex="${tabIndex}"
            role="button"
-           aria-label="${char.name}, Level ${char.level} ${char.class}, ${hpPercent}% HP"
+           aria-label="${escapeHtml(char.name)}, Level ${char.level} ${escapeHtml(char.class)}, ${hpPercent}% HP"
            ${!isValid ? 'aria-disabled="true"' : ''}>
         <div class="character-picker__portrait" style="background: ${classColor};">
           ${portraitUrl
-    ? `<img src="${portraitUrl}" alt="${this.escapeHtml(char.name)}"
+    ? `<img src="${portraitUrl}" alt="${escapeHtml(char.name)}"
                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
              <span class="character-picker__portrait-fallback" style="display: none;">${classIcon}</span>`
     : `<span class="character-picker__portrait-fallback">${classIcon}</span>`}
         </div>
-        <span class="character-picker__name" title="${this.escapeHtml(char.name)}">${this.escapeHtml(char.name)}</span>
-        <span class="character-picker__info">Lv.${char.level} ${char.class}</span>
+        <span class="character-picker__name" title="${escapeHtml(char.name)}">${escapeHtml(char.name)}</span>
+        <span class="character-picker__info">Lv.${char.level} ${escapeHtml(char.class)}</span>
         <div class="character-picker__hp">
           <div class="character-picker__hp-fill ${hpClass}" style="width: ${hpPercent}%;"></div>
         </div>
@@ -453,17 +454,6 @@ export class CharacterPicker {
     return this.options.characters.filter(this.options.validTargets).length;
   }
 
-  /**
-   * Escape HTML to prevent XSS
-   * @param {string} str - String to escape
-   * @returns {string}
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 
   /**
    * Get portrait URL for character

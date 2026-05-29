@@ -3,6 +3,7 @@
  */
 
 import { COLUMN_CONFIGS } from './itemDataTableColumns.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 /**
  * Renders and manages the sortable header row
@@ -51,7 +52,7 @@ export class ItemDataTableHeader {
           data-sortable="${config.sortable}"
           style="${widthStyle} ${alignStyle}"
         >
-          ${this.escapeHtml(config.label)}
+          ${escapeHtml(config.label)}
           ${config.sortable ? `<span class="item-data-table-sort-icon">${sortIcon}</span>` : ''}
         </div>
       `;
@@ -132,17 +133,6 @@ export class ItemDataTableHeader {
     this.sortDirection = 'asc';
   }
 
-  /**
-   * Escape HTML entities
-   * @param {string} str - String to escape
-   * @returns {string} Escaped string
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 
   /**
    * Cleanup

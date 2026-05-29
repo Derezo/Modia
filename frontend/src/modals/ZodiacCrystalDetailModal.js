@@ -15,6 +15,7 @@ import { ZODIAC_SHRINE_BUFFS, ZODIAC_CRYSTALS } from '@shared/constants.js';
 import { CrystalOrb } from './zodiac/CrystalOrb.js';
 import { ZODIAC_INFO, ELEMENT_COLORS } from './zodiac/ConstellationData.js';
 import { iconLoader } from '../core/IconLoader.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 const STYLE_ID = 'zodiac-crystal-detail-modal-styles';
@@ -443,8 +444,8 @@ export class ZodiacCrystalDetailModal {
     const shrineName = this.crystal.shrine_name || this.getDefaultShrineName();
 
     collected.innerHTML = `
-      Collected: <span class="zodiac-detail-collected-date">${collectedDate}</span><br>
-      Shrine: ${shrineName}
+      Collected: <span class="zodiac-detail-collected-date">${escapeHtml(collectedDate)}</span><br>
+      Shrine: ${escapeHtml(shrineName)}
     `;
     fragment.appendChild(collected);
 
@@ -484,7 +485,7 @@ export class ZodiacCrystalDetailModal {
     const hint = document.createElement('div');
     hint.className = 'zodiac-detail-hint';
     const region = REGION_HINTS[this.zodiacInfo.element] || 'distant';
-    hint.innerHTML = `Seek the shrine in the <span class="zodiac-detail-hint-region">${region}</span> lands...`;
+    hint.innerHTML = `Seek the shrine in the <span class="zodiac-detail-hint-region">${escapeHtml(region)}</span> lands...`;
     fragment.appendChild(hint);
 
     return fragment;

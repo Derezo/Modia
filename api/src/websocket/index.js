@@ -505,8 +505,9 @@ function handleAuth(ws, payload, authTimeout, setCredentials) {
     // Extract connectionId from payload (may be missing for legacy clients)
     const clientConnectionId = payload.connectionId;
 
-    // DEV ONLY: Special admin token
-    if (payload.token === 'dev_admin_token' && process.env.NODE_ENV !== 'production') {
+    // DEV ONLY: Special admin token (env-configurable with safe default)
+    const adminDevToken = process.env.ADMIN_WS_DEV_TOKEN || 'dev_admin_token';
+    if (payload.token === adminDevToken && process.env.NODE_ENV !== 'production') {
       const userId = -999;
       const username = 'admin_dashboard';
       const connectionId = clientConnectionId || `admin_${Date.now()}`;

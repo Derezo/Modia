@@ -11,6 +11,7 @@
 
 import { PARCHMENT_COLORS, PARCHMENT_TYPOGRAPHY, PARCHMENT_SPACING } from '../ui/parchment/ParchmentTheme.js';
 import { getUnitPortraitHtml, getClassLetter } from './turnOrderUtils.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 const T = PARCHMENT_TYPOGRAPHY;
@@ -362,7 +363,7 @@ export default class TurnOrderPanel {
         <div class="turn-order-item__icon">
           ${iconHtml}
         </div>
-        <span class="turn-order-item__name">${prediction.name}</span>
+        <span class="turn-order-item__name">${escapeHtml(prediction.name)}</span>
       </div>
     `;
   }

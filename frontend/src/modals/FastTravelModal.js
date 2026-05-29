@@ -11,6 +11,7 @@ import {
   getParchmentBorder,
   getParchmentShadow
 } from '../ui/parchment/index.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -223,8 +224,8 @@ export class FastTravelModal {
 
       destEl.innerHTML = `
         <div class="fast-travel-dest-info">
-          <div class="fast-travel-dest-name">${dest.name}</div>
-          <div class="fast-travel-dest-region">${dest.regionRace} Homeland</div>
+          <div class="fast-travel-dest-name">${escapeHtml(dest.name)}</div>
+          <div class="fast-travel-dest-region">${escapeHtml(dest.regionRace)} Homeland</div>
         </div>
         <div class="fast-travel-dest-cost">${dest.isCurrentRegion ? 'Current' : dest.cost + 'g'}</div>
       `;

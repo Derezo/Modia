@@ -3,6 +3,7 @@ import {
   getParchmentGradient,
   getParchmentBorder
 } from '../ui/parchment/index.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -93,12 +94,12 @@ export class BossPhaseIndicator {
             font-size: 16px;
             font-weight: bold;
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-          ">${name}</div>
+          ">${escapeHtml(name)}</div>
           ${title ? `<div style="
             color: ${P.text.secondary};
             font-size: 11px;
             font-style: italic;
-          ">${title}</div>` : ''}
+          ">${escapeHtml(title)}</div>` : ''}
         </div>
 
         <!-- HP Bar -->

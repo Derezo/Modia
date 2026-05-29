@@ -1,6 +1,7 @@
 import { Scene } from './Scene.js';
 import { PARCHMENT_COLORS, injectParchmentTheme, getParchmentScrollbarCSS, getParchmentSpinnerCSS } from '../ui/parchment/index.js';
 import { responsive } from '../core/Responsive.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 // Shorthand for colors in CSS template
 const P = PARCHMENT_COLORS;
@@ -888,7 +889,7 @@ export class LeaderboardScene extends Scene {
   }
 
   renderPlayerCell(entry) {
-    const username = this.escapeHtml(entry.username);
+    const username = escapeHtml(entry.username);
     let badges = '';
 
     // Perfect Week badge (star)
@@ -898,7 +899,7 @@ export class LeaderboardScene extends Scene {
 
     // Equipped title
     if (entry.equippedTitle) {
-      badges += `<span class="equipped-title">${this.escapeHtml(entry.equippedTitle)}</span>`;
+      badges += `<span class="equipped-title">${escapeHtml(entry.equippedTitle)}</span>`;
     }
 
     if (badges) {
@@ -974,11 +975,6 @@ export class LeaderboardScene extends Scene {
     }
   }
 
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 
   /**
    * Handle responsive breakpoint changes

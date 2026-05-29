@@ -3,6 +3,8 @@
  * Parchment-styled modal for confirming marketplace transactions
  */
 
+import { escapeHtml } from '../utils/escapeHtml.js';
+
 export class MarketConfirmDialog {
   constructor() {
     this.overlay = null;
@@ -55,8 +57,8 @@ export class MarketConfirmDialog {
 
         <div class="confirm-item-preview" style="border-left-color: ${rarityColor};">
           <div>
-            <div class="confirm-item-name">${this.escapeHtml(item.name)}</div>
-            <div class="confirm-item-type">${this.escapeHtml(item.itemType || 'Item')}</div>
+            <div class="confirm-item-name">${escapeHtml(item.name)}</div>
+            <div class="confirm-item-type">${escapeHtml(item.itemType || 'Item')}</div>
           </div>
         </div>
 
@@ -358,12 +360,6 @@ export class MarketConfirmDialog {
     }
   }
 
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 }
 
 // Singleton for easy use

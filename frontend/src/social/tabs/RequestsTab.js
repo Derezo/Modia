@@ -5,6 +5,7 @@ import {
   PARCHMENT_RADIUS
 } from '../../ui/parchment/index.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -397,7 +398,7 @@ export class RequestsTab {
       <div class="request-card" data-type="friend" data-id="${request.id}">
         <div class="request-card-avatar">&#x1F464;</div>
         <div class="request-card-info">
-          <div class="request-card-title">${this.escapeHtml(request.fromUsername || request.username)}</div>
+          <div class="request-card-title">${escapeHtml(request.fromUsername || request.username)}</div>
           <div class="request-card-subtitle">wants to be your friend</div>
           <div class="request-card-subtitle">${timeAgo}</div>
         </div>
@@ -425,9 +426,9 @@ export class RequestsTab {
       <div class="request-card" data-type="party" data-id="${invite.inviteId || invite.id}">
         <div class="request-card-avatar">&#x2694;&#xFE0F;</div>
         <div class="request-card-info">
-          <div class="request-card-title">${this.escapeHtml(invite.partyName || 'Party')}</div>
+          <div class="request-card-title">${escapeHtml(invite.partyName || 'Party')}</div>
           <div class="request-card-subtitle">
-            Invited by ${this.escapeHtml(invite.fromUsername || invite.leaderUsername)}
+            Invited by ${escapeHtml(invite.fromUsername || invite.leaderUsername)}
           </div>
           <div class="request-card-timer ${isUrgent ? 'urgent' : ''}" data-countdown="${invite.inviteId || invite.id}">
             Expires in ${this.formatTimeLeft(timeLeft)}
@@ -453,9 +454,9 @@ export class RequestsTab {
       <div class="request-card" data-type="clan" data-id="${invite.id}">
         <div class="request-card-avatar">&#x1F3F0;</div>
         <div class="request-card-info">
-          <div class="request-card-title">[${this.escapeHtml(invite.clanTag)}] ${this.escapeHtml(invite.clanName)}</div>
+          <div class="request-card-title">[${escapeHtml(invite.clanTag)}] ${escapeHtml(invite.clanName)}</div>
           <div class="request-card-subtitle">
-            Invited by ${this.escapeHtml(invite.inviterUsername)}
+            Invited by ${escapeHtml(invite.inviterUsername)}
           </div>
         </div>
         <div class="request-card-actions">
@@ -832,10 +833,4 @@ export class RequestsTab {
   /**
    * Escape HTML to prevent XSS
    */
-  escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }

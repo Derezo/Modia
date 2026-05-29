@@ -18,6 +18,7 @@ import { ParchmentCard } from '../components/ParchmentCard.js';
 import { FormationGrid } from './formation/FormationGrid.js';
 import { StartBattleButton } from './formation/StartBattleButton.js';
 import { BattlefieldTheme } from './formation/themes/BattlefieldTheme.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 import { PitFighterTheme } from './formation/themes/PitFighterTheme.js';
 import { ArcaneChamberTheme } from './formation/themes/ArcaneChamberTheme.js';
 import { ArmoryTheme } from './formation/themes/ArmoryTheme.js';
@@ -610,13 +611,13 @@ export class BattleFormationScene extends Scene {
       return `
         <div class="bf-enemy-card ${threatClass}" data-enemy-index="${index}">
           <div class="bf-enemy-portrait">
-            <img class="bf-enemy-portrait-img" src="${portraitUrl}" alt="${enemy.name}"
+            <img class="bf-enemy-portrait-img" src="${portraitUrl}" alt="${escapeHtml(enemy.name || '')}"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
             <div class="bf-enemy-icon" style="display: none;">${enemy.name.charAt(0)}</div>
             ${isBoss ? '<div class="bf-boss-indicator">&#9760;</div>' : ''}
           </div>
           <div class="bf-enemy-info">
-            <div class="bf-enemy-name">${enemy.name}</div>
+            <div class="bf-enemy-name">${escapeHtml(enemy.name || '')}</div>
             <div class="bf-enemy-level">Lv.${enemy.level || '?'}</div>
           </div>
           ${isBoss ? '<div class="bf-threat-aura"></div>' : ''}
@@ -1004,14 +1005,14 @@ export class BattleFormationScene extends Scene {
         <div class="bf-roster-char ${isPlaced ? 'placed' : ''} ${isSelected ? 'selected' : ''}"
              data-char-id="${char.id}">
           <div class="bf-roster-portrait">
-            <img src="${portraitUrl}" alt="${char.name}"
+            <img src="${portraitUrl}" alt="${escapeHtml(char.name || '')}"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
             <div class="bf-roster-fallback" style="display:none; background:${this.getClassColor(char.class)}">
               ${this.getClassIcon(char.class)}
             </div>
             ${isPlaced ? '<div class="bf-placed-check">&#10003;</div>' : ''}
           </div>
-          <div class="bf-roster-name">${char.name}</div>
+          <div class="bf-roster-name">${escapeHtml(char.name || '')}</div>
         </div>
       `;
     }).join('');

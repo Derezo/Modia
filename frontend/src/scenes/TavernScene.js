@@ -18,6 +18,7 @@ import { responsive } from '../core/Responsive.js';
 import { PARCHMENT_COLORS, injectParchmentTheme, getParchmentScrollbarCSS } from '../ui/parchment/index.js';
 import { TavernChatManager } from '../tavern/TavernChatManager.js';
 import { TavernDMSystem } from '../tavern/TavernDMSystem.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 // Shorthand for colors in CSS template
 const P = PARCHMENT_COLORS;
@@ -1089,9 +1090,9 @@ export class TavernScene extends Scene {
     container.innerHTML = this.onlinePlayers.map(player => `
       <div class="player-item ${player.userId === userId ? 'self' : ''}" data-user-id="${player.userId}">
         <div class="player-status status-${player.status || 'online'}"></div>
-        <span class="player-name ${player.userId === userId ? 'self' : ''}">${player.username}</span>
+        <span class="player-name ${player.userId === userId ? 'self' : ''}">${escapeHtml(player.username || '')}</span>
         ${player.userId !== userId ? `
-          <button class="btn btn-secondary dm-btn" data-user-id="${player.userId}" data-username="${player.username}">
+          <button class="btn btn-secondary dm-btn" data-user-id="${player.userId}" data-username="${escapeHtml(player.username || '')}"
             DM
           </button>
         ` : ''}

@@ -15,6 +15,7 @@ import {
   getParchmentShadow
 } from '../ui/parchment/index.js';
 import { ZODIAC_SHRINE_BUFFS } from '@shared/constants.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 const STYLE_ID = 'relic-collection-modal-styles';
@@ -463,7 +464,7 @@ export class RelicCollectionModal {
     if (this.isLoading) {
       content.innerHTML = '<div class="relic-collection-loading">Loading collection...</div>';
     } else if (this.error) {
-      content.innerHTML = `<div class="relic-collection-error">${this.error}</div>`;
+      content.innerHTML = `<div class="relic-collection-error">${escapeHtml(this.error)}</div>`;
     } else {
       content.appendChild(this.createZodiacSection());
       content.appendChild(this.createRelicsSection());
@@ -523,7 +524,7 @@ export class RelicCollectionModal {
 
     if (collectionComplete && collectionBonus) {
       bonus.innerHTML = `
-        <div class="collection-bonus-title">${collectionBonus.title}</div>
+        <div class="collection-bonus-title">${escapeHtml(collectionBonus.title)}</div>
         <div class="collection-bonus-desc">+5% all stats, dual blessing slots unlocked</div>
       `;
     } else {
@@ -556,12 +557,12 @@ export class RelicCollectionModal {
 
     el.innerHTML = `
       <span class="zodiac-symbol">${info?.symbol || '?'}</span>
-      <span class="zodiac-name">${sign}</span>
+      <span class="zodiac-name">${escapeHtml(sign)}</span>
       <span class="zodiac-bonus">${bonusValue} ${bonusTypeDisplay}</span>
       <div class="zodiac-crystal-tooltip">
-        <div class="tooltip-crystal-name" style="color: ${colors.text}">${name}</div>
-        <div class="tooltip-blessing-name">${buffInfo?.name || 'Unknown Blessing'}</div>
-        <div class="tooltip-blessing-desc">${buffInfo?.description || ''}</div>
+        <div class="tooltip-crystal-name" style="color: ${colors.text}">${escapeHtml(name)}</div>
+        <div class="tooltip-blessing-name">${escapeHtml(buffInfo?.name || 'Unknown Blessing')}</div>
+        <div class="tooltip-blessing-desc">${escapeHtml(buffInfo?.description || '')}</div>
       </div>
     `;
 
@@ -629,8 +630,8 @@ export class RelicCollectionModal {
     el.innerHTML = `
       <span class="relic-icon">${icon}</span>
       <div class="relic-info">
-        <div class="relic-name">${relic.name}</div>
-        <div class="relic-desc">${relic.description || 'A mysterious artifact'}</div>
+        <div class="relic-name">${escapeHtml(relic.name)}</div>
+        <div class="relic-desc">${escapeHtml(relic.description || 'A mysterious artifact')}</div>
       </div>
       <span class="relic-status relic-status--owned">Owned</span>
     `;

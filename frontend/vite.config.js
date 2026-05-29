@@ -21,7 +21,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: process.env.NODE_ENV !== 'production'
   },
   // Return 404 for missing static assets instead of SPA fallback
   appType: 'spa',

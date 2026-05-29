@@ -81,6 +81,19 @@ const corsOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(o => o.trim())
   : ['http://localhost:8080', 'http://localhost:3000', 'http://127.0.0.1:8080'];
 
+// SECURITY: Production CORS guard - require explicit configuration
+if (process.env.NODE_ENV === 'production') {
+  if (!process.env.CORS_ORIGINS) {
+    throw new Error('CRITICAL: CORS_ORIGINS must be set explicitly in production');
+  }
+  if (corsOrigins.includes('*')) {
+    throw new Error('CRITICAL: CORS_ORIGINS must not contain "*" in production with credentials:true');
+  }
+}
+
+// Log resolved CORS origins at startup
+console.log(`[CORS] Allowed origins: ${corsOrigins.join(', ')}`);
+
 // SECURITY: Helmet middleware for security headers
 // Configured for API-only server (no CSP needed for API responses)
 app.use(helmet({

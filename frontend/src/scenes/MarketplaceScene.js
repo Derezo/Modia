@@ -2,6 +2,7 @@ import { Scene } from './Scene.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { MarketplaceItemPanel } from '../components/MarketplaceItemPanel.js';
 import { responsive } from '../core/Responsive.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 // Import extracted CSS
 import './marketplace/marketplace.css';
@@ -150,7 +151,7 @@ export class MarketplaceScene extends Scene {
           color: #7a6a5a;
           font-size: 14px;
           margin: 0 0 24px 0;
-        ">Current location: <strong>${currentNode?.name || 'Unknown'}</strong></p>
+        ">Current location: <strong>${escapeHtml(currentNode?.name || 'Unknown')}</strong></p>
         <div style="display: flex; gap: 12px; justify-content: center;">
           <button id="marketplace-back-btn" style="
             padding: 10px 20px;
@@ -401,7 +402,7 @@ export class MarketplaceScene extends Scene {
       <div class="marketplace-header">
         <div class="marketplace-title">
           <h2>Marketplace</h2>
-          <span style="font-size: 12px;">Trading as: ${this.activeCharacter?.name || 'Unknown'}</span>
+          <span style="font-size: 12px;">Trading as: ${escapeHtml(this.activeCharacter?.name || 'Unknown')}</span>
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
           <div class="marketplace-gold">

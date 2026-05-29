@@ -34,6 +34,7 @@ import {
   getParchmentBorder,
   getParchmentScrollbarCSS
 } from '../../ui/parchment/ParchmentTheme.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const STYLE_ID = 'skill-detail-modal-styles';
 
@@ -504,13 +505,13 @@ export class SkillDetailModal {
       <div class="skill-detail-header">
         <div class="skill-detail-icon">${skill.icon || '?'}</div>
         <div class="skill-detail-info">
-          <h3 class="skill-detail-name">${this.escapeHtml(skill.name)}</h3>
+          <h3 class="skill-detail-name">${escapeHtml(skill.name)}</h3>
           <div class="skill-detail-badges">
             ${skill.category ? `<span class="skill-detail-badge skill-detail-badge--category">${skill.category}</span>` : ''}
             <span class="skill-detail-badge skill-detail-badge--level">${levelText}</span>
             ${isLocked ? '<span class="skill-detail-badge skill-detail-badge--locked">Locked</span>' : ''}
           </div>
-          <div class="skill-detail-description">${this.escapeHtml(skill.description || 'No description available.')}</div>
+          <div class="skill-detail-description">${escapeHtml(skill.description || 'No description available.')}</div>
         </div>
       </div>
     `;
@@ -623,7 +624,7 @@ export class SkillDetailModal {
       return `
         <div class="skill-detail-prereq ${statusClass}">
           <span>${icon}</span>
-          <span>${this.escapeHtml(skillName)} Lv.${requiredLevel} (Current: ${currentLevel})</span>
+          <span>${escapeHtml(skillName)} Lv.${requiredLevel} (Current: ${currentLevel})</span>
         </div>
       `;
     }).join('');
@@ -979,18 +980,6 @@ export class SkillDetailModal {
         btn.textContent = 'Level Up';
       }
     }
-  }
-
-  /**
-   * Escape HTML
-   * @param {string} str - String to escape
-   * @returns {string}
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   /**

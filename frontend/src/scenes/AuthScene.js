@@ -799,7 +799,6 @@ export class AuthScene extends Scene {
 
     // Store auth tokens
     this.game.api.token = result.accessToken;
-    localStorage.setItem('refreshToken', result.refreshToken);
 
     // Store user and token in state
     this.game.state.set('user', result.user);

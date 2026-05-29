@@ -20,6 +20,8 @@
  *   input.destroy(); // Clean up when done
  */
 
+import { escapeHtml } from '../../utils/escapeHtml.js';
+
 const COLORS = {
   light: '#d4c4a8',
   mid: '#c9b899',
@@ -105,7 +107,7 @@ export default class ParchmentInput {
 
     // Label
     if (this.label) {
-      html += `<label class="parchment-input__label">${this.escapeHtml(this.label)}${this.required ? ' <span class="parchment-input__required">*</span>' : ''}</label>`;
+      html += `<label class="parchment-input__label">${escapeHtml(this.label)}${this.required ? ' <span class="parchment-input__required">*</span>' : ''}</label>`;
     }
 
     // Input container (for potential future additions like icons)
@@ -115,11 +117,11 @@ export default class ParchmentInput {
     const attrs = [
       `type="${this.type}"`,
       `class="parchment-input${this.error ? ' parchment-input--error' : ''}${this.disabled ? ' parchment-input--disabled' : ''}"`,
-      `placeholder="${this.escapeHtml(this.placeholder)}"`,
-      `value="${this.escapeHtml(this.value)}"`
+      `placeholder="${escapeHtml(this.placeholder)}"`,
+      `value="${escapeHtml(this.value)}"`
     ];
 
-    if (this.name) attrs.push(`name="${this.escapeHtml(this.name)}"`);
+    if (this.name) attrs.push(`name="${escapeHtml(this.name)}"`);
     if (this.required) attrs.push('required');
     if (this.disabled) attrs.push('disabled');
     if (this.min !== undefined) attrs.push(`min="${this.min}"`);
@@ -132,7 +134,7 @@ export default class ParchmentInput {
 
     // Error message
     if (this.error) {
-      html += `<div class="parchment-input__error">${this.escapeHtml(this.error)}</div>`;
+      html += `<div class="parchment-input__error">${escapeHtml(this.error)}</div>`;
     }
 
     this.element.innerHTML = html;
@@ -404,18 +406,6 @@ export default class ParchmentInput {
     if (options.onBlur !== undefined) this.onBlur = options.onBlur;
 
     this.updateElement();
-  }
-
-  /**
-   * Escape HTML to prevent XSS
-   * @param {string} str
-   * @returns {string}
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   /**

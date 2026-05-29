@@ -10,6 +10,7 @@ import {
   getParchmentBorder,
   getParchmentShadow
 } from '../ui/parchment/index.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 export class PartyInviteModal {
   constructor(game) {
@@ -309,8 +310,8 @@ export class PartyInviteModal {
 
       <div class="modal-body">
         <div class="party-info">
-          <div class="party-name">${this.escapeHtml(this.partyName)}</div>
-          <div class="party-leader">Led by <span>${this.escapeHtml(this.leaderUsername)}</span></div>
+          <div class="party-name">${escapeHtml(this.partyName)}</div>
+          <div class="party-leader">Led by <span>${escapeHtml(this.leaderUsername)}</span></div>
         </div>
 
         <div class="members-section">
@@ -337,7 +338,7 @@ export class PartyInviteModal {
         <div class="member-item">
           <div class="member-avatar">?</div>
           <div class="member-info">
-            <div class="member-name">${this.escapeHtml(this.leaderUsername)}</div>
+            <div class="member-name">${escapeHtml(this.leaderUsername)}</div>
             <div class="member-details">Party Leader</div>
           </div>
         </div>
@@ -353,9 +354,9 @@ export class PartyInviteModal {
         <div class="member-item">
           <div class="member-avatar">${classIcon}</div>
           <div class="member-info">
-            <div class="member-name">${this.escapeHtml(member.username || member.character_name || 'Unknown')}</div>
+            <div class="member-name">${escapeHtml(member.username || member.character_name || 'Unknown')}</div>
             <div class="member-details">
-              ${member.class ? `${member.class} ` : ''}
+              ${member.class ? `${escapeHtml(member.class)} ` : ''}
               ${member.level ? `Lv.${member.level}` : ''}
             </div>
           </div>
@@ -548,14 +549,6 @@ export class PartyInviteModal {
     }, 200);
   }
 
-  /**
-   * Escape HTML to prevent XSS
-   */
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text || '';
-    return div.innerHTML;
-  }
 
   /**
    * Clean up resources

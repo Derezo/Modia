@@ -9,6 +9,7 @@ import {
   getParchmentBorder
 } from '../../ui/parchment/index.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -677,14 +678,14 @@ export class ClanTab {
         <div class="my-clan-container">
           <div class="my-clan-info">
             <div class="my-clan-header">
-              <span class="my-clan-tag">[${this.escapeHtml(clan.tag)}]</span>
-              <span class="my-clan-name">${this.escapeHtml(clan.name)}</span>
+              <span class="my-clan-tag">[${escapeHtml(clan.tag)}]</span>
+              <span class="my-clan-name">${escapeHtml(clan.name)}</span>
             </div>
             <div class="my-clan-meta">
-              ${members.length}/${clan.maxMembers} members | Leader: ${this.escapeHtml(clan.leaderUsername)}
+              ${members.length}/${clan.maxMembers} members | Leader: ${escapeHtml(clan.leaderUsername)}
             </div>
             ${clan.description ? `
-              <div class="my-clan-description">${this.escapeHtml(clan.description)}</div>
+              <div class="my-clan-description">${escapeHtml(clan.description)}</div>
             ` : ''}
           </div>
           <div class="my-clan-content">
@@ -729,7 +730,7 @@ export class ClanTab {
     return members.map(member => `
       <div class="clan-member-item">
         <span class="clan-member-role">${this.getRoleIcon(member.role)}</span>
-        <span class="clan-member-name">${this.escapeHtml(member.username)}</span>
+        <span class="clan-member-name">${escapeHtml(member.username)}</span>
         <span class="clan-member-role-badge ${member.role}">${member.role}</span>
       </div>
     `).join('');
@@ -762,10 +763,10 @@ export class ClanTab {
     return this.messages.map(msg => `
       <div class="clan-chat-message">
         <div class="clan-chat-message-header">
-          <span class="clan-chat-message-author">${this.escapeHtml(msg.username)}</span>
+          <span class="clan-chat-message-author">${escapeHtml(msg.username)}</span>
           <span class="clan-chat-message-time">${this.formatTime(msg.createdAt)}</span>
         </div>
-        <div class="clan-chat-message-text">${this.escapeHtml(msg.message)}</div>
+        <div class="clan-chat-message-text">${escapeHtml(msg.message)}</div>
       </div>
     `).join('');
   }
@@ -812,7 +813,7 @@ export class ClanTab {
             <input type="text"
                    class="clan-search-input"
                    placeholder="Search clans..."
-                   value="${this.escapeHtml(this.searchQuery)}">
+                   value="${escapeHtml(this.searchQuery)}">
           </div>
           ${this.renderClanList()}
         </div>
@@ -829,10 +830,10 @@ export class ClanTab {
         <div class="clan-section-title">Pending Invites (${this.invites.length})</div>
         ${this.invites.map(invite => `
           <div class="clan-invite-item">
-            <span class="clan-card-tag">[${this.escapeHtml(invite.clanTag)}]</span>
+            <span class="clan-card-tag">[${escapeHtml(invite.clanTag)}]</span>
             <div class="clan-invite-info">
-              <div class="clan-invite-name">${this.escapeHtml(invite.clanName)}</div>
-              <div class="clan-invite-from">Invited by ${this.escapeHtml(invite.inviterUsername)}</div>
+              <div class="clan-invite-name">${escapeHtml(invite.clanName)}</div>
+              <div class="clan-invite-from">Invited by ${escapeHtml(invite.inviterUsername)}</div>
             </div>
             <div class="clan-invite-actions">
               <button class="clan-tab-btn primary" data-action="accept-invite" data-invite-id="${invite.id}">
@@ -875,11 +876,11 @@ export class ClanTab {
       <div class="clan-list">
         ${filteredClans.map(clan => `
           <div class="clan-card" data-clan-id="${clan.id}">
-            <span class="clan-card-tag">[${this.escapeHtml(clan.tag)}]</span>
+            <span class="clan-card-tag">[${escapeHtml(clan.tag)}]</span>
             <div class="clan-card-info">
-              <div class="clan-card-name">${this.escapeHtml(clan.name)}</div>
+              <div class="clan-card-name">${escapeHtml(clan.name)}</div>
               <div class="clan-card-meta">
-                ${clan.memberCount}/${clan.maxMembers} members | Leader: ${this.escapeHtml(clan.leaderUsername)}
+                ${clan.memberCount}/${clan.maxMembers} members | Leader: ${escapeHtml(clan.leaderUsername)}
               </div>
             </div>
           </div>
@@ -1247,12 +1248,6 @@ export class ClanTab {
   /**
    * Escape HTML
    */
-  escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 
   /**
    * Clean up resources

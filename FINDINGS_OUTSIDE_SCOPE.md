@@ -19,3 +19,26 @@ Issues identified during work but deliberately deferred. When closed, **delete t
   - `deploy.yaml` Phase 5b — `pm2[modia-api] script=api/src/index.js mode=fork(singleton)`
   - `docs/DEPLOYMENT.md`
 - **Companion ask:** Consider also adding external uptime monitoring against `https://modia.mittonvillage.com/api/health` so the next outage is detected in minutes, not days. (Out of scope for this repo; tracking here as a pointer.)
+
+### Server-side charset validation missing on other user-named entities
+
+- **Status:** Open
+- **Surfaced:** 2026-05-28 (security audit pre-public; flagged by security-auditor re-scan)
+- **Reproducer:** Create a clan/party/LFG post with a name containing `<img src=x onerror=...>`. It is stored (parameterized query, so no SQLi) and rendered. XSS is currently blocked at render because the client now `escapeHtml()`s these in `ClanTab.js`/`PartyTab.js`/`LFGTab.js`, but there is no server-side charset gate like the one added for character names.
+- **Why deferred:** The render-side escaping (shipped in this audit) closes the actual XSS. Server-side validation is defense-in-depth and touches several create/update paths; out of scope for the pre-public hardening pass.
+- **Why it matters:** Defense-in-depth — a future template that forgets to escape one of these would reintroduce stored XSS. Mirrors the character-name fix.
+- **Effort:** Low–Medium. Reuse the pattern in `api/src/utils/nameValidation.js`; apply a (looser, allows longer text) validator to: clan name (`api/src/services/clanService.js` ~line 90), party name (`api/src/routes/party.js` ~line 225), LFG title/description (`api/src/routes/lfg.js` ~lines 149-150). Clan tags already validated (`api/src/routes/clans.js:54`).
+- **References:** `api/src/utils/nameValidation.js` (reuse), `frontend/src/social/tabs/{ClanTab,PartyTab,LFGTab}.js` (render-side escaping already in place).
+
+### Deferred LOW-severity hardening from pre-public security audit
+
+- **Status:** Open
+- **Surfaced:** 2026-05-28 (security audit pre-public)
+- **Items:**
+  - **Admin dashboard frontend has no auth gate** — `admin/` React app does not verify a JWT/role before rendering. Mitigated today: admin API is dev-only (`requireDevMode` → 403 in prod) and admin is not deployed to prod. Add a JWT/role gate before shipping admin to production.
+  - **CSP uses `'unsafe-inline'` (style-src frontend; script-src+style-src admin)** — `frontend/index.html` and `admin/index.html` ship a CSP, but the game's inline `style="..."` attributes and Vite/React require `'unsafe-inline'` (and `'unsafe-eval'` for admin dev). Tighten over time (nonces/hashes, move inline styles to classes). Tracked as follow-up.
+  - **No HSTS in helmet config** (`api/src/index.js`) — likely set by nginx in prod; confirm, and add `hsts` to helmet for defense-in-depth if not.
+  - **Exception-tracking sanitizer uses substring blacklist** (`api/src/services/exceptionTrackingService.js`) — `token`/`password`/`secret`/`apiKey`/`authorization` substrings are caught (so `refreshToken`/`bearerToken` are covered), but an allowlist would be safer long-term.
+- **Why deferred:** None is exploitable for the public-repo / server-compromise threat model being closed in this pass; all are incremental hardening.
+- **Effort:** Low each.
+- **References:** plan `~/.claude/plans/perform-a-full-and-merry-owl.md` (F9–F12).

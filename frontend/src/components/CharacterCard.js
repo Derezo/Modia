@@ -39,6 +39,7 @@ import {
   getParchmentTextShadow
 } from '../ui/parchment/ParchmentTheme.js';
 import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 const STYLE_ID = 'character-card-styles';
 
@@ -393,7 +394,7 @@ export class CharacterCard {
         <div class="character-card__portrait-bg" style="background: ${classColor};"></div>
         <div class="character-card__class-icon" style="background: ${classColor};">
           ${portraitUrl
-    ? `<img class="character-card__portrait-img" src="${portraitUrl}" alt="${this.escapeHtml(character.name)}"
+    ? `<img class="character-card__portrait-img" src="${portraitUrl}" alt="${escapeHtml(character.name)}"
                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
              <span class="character-card__portrait-fallback" style="display: none;">${classIcon}</span>`
     : `<span class="character-card__portrait-fallback">${classIcon}</span>`}
@@ -402,8 +403,8 @@ export class CharacterCard {
       </div>
 
       <div class="character-card__info">
-        <h4 class="character-card__name" title="${this.escapeHtml(character.name)}">${this.escapeHtml(character.name)}</h4>
-        <p class="character-card__class">${this.escapeHtml(character.class)}</p>
+        <h4 class="character-card__name" title="${escapeHtml(character.name)}">${escapeHtml(character.name)}</h4>
+        <p class="character-card__class">${escapeHtml(character.class)}</p>
         <div class="character-card__hp-bar">
           <div class="character-card__hp-fill ${hpClass}" style="width: ${hpPercent}%;"></div>
         </div>
@@ -568,17 +569,6 @@ export class CharacterCard {
     return this.options.character.id || null;
   }
 
-  /**
-   * Escape HTML to prevent XSS
-   * @param {string} str - String to escape
-   * @returns {string}
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 
   /**
    * Clean up resources

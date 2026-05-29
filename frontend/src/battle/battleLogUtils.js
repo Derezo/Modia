@@ -12,6 +12,8 @@
  * @see BattleLogModal.js - Full-featured log modal dialog
  */
 
+import { escapeHtml } from '../utils/escapeHtml.js';
+
 /**
  * Color palette for log entry types
  */
@@ -157,14 +159,5 @@ export function getEntryType(action, result) {
   return 'damage'; // Default
 }
 
-/**
- * Escape HTML special characters
- * @param {string} text - Text to escape
- * @returns {string} Escaped text
- */
-export function escapeHtml(text) {
-  if (typeof text !== 'string') return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
+// Re-export the canonical escapeHtml utility
+export { escapeHtml } from '../utils/escapeHtml.js';

@@ -16,6 +16,8 @@ import { calculateStats, STARTING_EXPERIENCE, RACES, CLASSES, GENDERS } from '..
 import { STARTING_GOLD } from '../config/constants.js';
 import { STARTING_CONSUMABLES } from '../../../shared/constants.js';
 import { discoverNodeAndAdjacent } from './world/discoveryService.js';
+import { validateCharacterNameResult } from '../utils/nameValidation.js';
+import { AppError } from '../middleware/errorHandler.js';
 
 const SALT_ROUNDS = 12;
 
@@ -37,56 +39,58 @@ const STARTER_SKILLS = {
 
 /**
  * Validates registration input data
- * @throws {Error} If validation fails
+ * @throws {AppError} 400 error if validation fails
+ * @returns {string} The validated and trimmed character name
  */
 function validateInput({ username, email, password, characterName, race, characterClass, gender }) {
   // Username validation
   if (!username || typeof username !== 'string') {
-    throw new Error('Username is required');
+    throw new AppError('Username is required', 400);
   }
   if (username.length < 3 || username.length > 32) {
-    throw new Error('Username must be between 3 and 32 characters');
+    throw new AppError('Username must be between 3 and 32 characters', 400);
   }
 
   // Email validation
   if (!email || typeof email !== 'string') {
-    throw new Error('Email is required');
+    throw new AppError('Email is required', 400);
   }
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    throw new Error('Invalid email format');
+    throw new AppError('Invalid email format', 400);
   }
 
   // Password validation
   if (!password || typeof password !== 'string') {
-    throw new Error('Password is required');
+    throw new AppError('Password is required', 400);
   }
   if (password.length < 8) {
-    throw new Error('Password must be at least 8 characters');
+    throw new AppError('Password must be at least 8 characters', 400);
   }
 
-  // Character name validation
-  if (!characterName || typeof characterName !== 'string') {
-    throw new Error('Character name is required');
+  // Character name validation (defense-in-depth for XSS prevention)
+  const nameResult = validateCharacterNameResult(characterName);
+  if (!nameResult.valid) {
+    throw new AppError(nameResult.error, 400);
   }
-  if (characterName.length < 2 || characterName.length > 24) {
-    throw new Error('Character name must be between 2 and 24 characters');
-  }
+  const validatedCharacterName = nameResult.value;
 
   // Race validation
   if (!Object.values(RACES).includes(race)) {
-    throw new Error(`Invalid race. Must be one of: ${Object.values(RACES).join(', ')}`);
+    throw new AppError(`Invalid race. Must be one of: ${Object.values(RACES).join(', ')}`, 400);
   }
 
   // Class validation
   if (!Object.values(CLASSES).includes(characterClass)) {
-    throw new Error(`Invalid class. Must be one of: ${Object.values(CLASSES).join(', ')}`);
+    throw new AppError(`Invalid class. Must be one of: ${Object.values(CLASSES).join(', ')}`, 400);
   }
 
   // Gender validation (optional, defaults to 'other')
   if (gender && !Object.values(GENDERS).includes(gender)) {
-    throw new Error(`Invalid gender. Must be one of: ${Object.values(GENDERS).join(', ')}`);
+    throw new AppError(`Invalid gender. Must be one of: ${Object.values(GENDERS).join(', ')}`, 400);
   }
+
+  return validatedCharacterName;
 }
 
 /**
@@ -107,13 +111,14 @@ export async function registerUserWithCharacter({
   username,
   email,
   password,
-  characterName,
+  characterName: rawCharacterName,
   race,
   characterClass,
   gender = 'other'
 }) {
   // Validate all inputs before starting transaction
-  validateInput({ username, email, password, characterName, race, characterClass, gender });
+  // validateInput returns the trimmed/validated character name
+  const characterName = validateInput({ username, email, password, characterName: rawCharacterName, race, characterClass, gender });
 
   // Hash password before transaction (CPU-intensive, don't hold transaction open)
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);

@@ -3,6 +3,7 @@
  */
 
 import { getTier, getTierIcon } from '@shared/coliseum.js';
+import { escapeHtml } from '../../../utils/escapeHtml.js';
 
 /**
  * Render a tier badge with icon and color
@@ -105,7 +106,7 @@ export function renderLeaderboard(context) {
                 <tr class="${isCurrentUser ? 'current-user' : ''}">
                   <td class="coliseum-rank-cell coliseum-rank-${rank <= 3 ? rank : ''}">#${rank}${crownIcon}</td>
                   <td class="coliseum-player-name">
-                    <span class="coliseum-player-name-text">${entry.username}</span>
+                    <span class="coliseum-player-name-text">${escapeHtml(entry.username)}</span>
                     ${renderAchievementBadges(badges)}
                   </td>
                   <td class="coliseum-tier-cell">${renderTierBadge(entry.rating, tierData)}</td>

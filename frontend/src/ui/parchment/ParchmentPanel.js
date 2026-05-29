@@ -40,6 +40,7 @@ import {
   getParchmentInsetShadow,
   getParchmentTextShadow
 } from './ParchmentTheme.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const STYLE_ID = 'parchment-panel-styles';
 
@@ -285,7 +286,7 @@ export class ParchmentPanel {
     if (this.options.title) {
       html += `
         <div class="parchment-panel__header">
-          <h3 class="parchment-panel__title">${this.escapeHtml(this.options.title)}</h3>
+          <h3 class="parchment-panel__title">${escapeHtml(this.options.title)}</h3>
         </div>
       `;
     }
@@ -349,7 +350,7 @@ export class ParchmentPanel {
         this.options.title = title;
         const header = document.createElement('div');
         header.className = 'parchment-panel__header';
-        header.innerHTML = `<h3 class="parchment-panel__title">${this.escapeHtml(title)}</h3>`;
+        header.innerHTML = `<h3 class="parchment-panel__title">${escapeHtml(title)}</h3>`;
         this.element.insertBefore(header, this.contentElement);
         this.headerElement = header;
         this.element.classList.add('parchment-panel--has-header');
@@ -451,18 +452,6 @@ export class ParchmentPanel {
    */
   getHeaderElement() {
     return this.headerElement;
-  }
-
-  /**
-   * Escape HTML to prevent XSS
-   * @param {string} str - String to escape
-   * @returns {string}
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   /**

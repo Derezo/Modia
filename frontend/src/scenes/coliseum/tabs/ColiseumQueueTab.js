@@ -8,6 +8,7 @@ import {
   PARCHMENT_SPACING
 } from '../../../ui/parchment/index.js';
 import { getTier, getTierIcon, getStreakBadge } from '@shared/coliseum.js';
+import { escapeHtml } from '../../../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -225,7 +226,7 @@ function renderQueuePlayerRow(player) {
         <div class="coliseum-queue-player-info">
           <div class="coliseum-queue-player-name-row">
             ${renderCompactTierBadge(player)}
-            <span class="coliseum-queue-player-name">${player.username}</span>
+            <span class="coliseum-queue-player-name">${escapeHtml(player.username)}</span>
             ${streakBadgeHtml}
             ${isCurrentUser ? '<span class="queue-player-you-badge">YOU</span>' : ''}
           </div>
@@ -337,7 +338,7 @@ function renderMatchFound(context) {
 
         <div class="coliseum-opponent-card-body">
           <div class="coliseum-opponent-name-row">
-            <span class="coliseum-opponent-username">${opponent.username || 'Unknown'}</span>
+            <span class="coliseum-opponent-username">${escapeHtml(opponent.username || 'Unknown')}</span>
             <span class="coliseum-opponent-tier-display" style="color: ${opponentTier.color};">
               ${opponentTier.name} ${tierIcon}
             </span>

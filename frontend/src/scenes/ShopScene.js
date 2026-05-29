@@ -12,6 +12,7 @@ import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { Icon } from '../components/Icon.js';
 import { ItemIcon } from '../components/ItemIcon.js';
 import { ItemDataTable } from '../components/ItemDataTable/index.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
@@ -1068,11 +1069,11 @@ export class ShopScene extends Scene {
         ${itemImageHtml}
       </div>
       <div class="detail-header">
-        <div class="detail-name">${item.name}${badgesHtml}</div>
+        <div class="detail-name">${escapeHtml(item.name || '')}${badgesHtml}</div>
         <div class="detail-type">${item.type}${item.equipmentSlot ? ` - ${this.formatSlot(item.equipmentSlot)}` : ''}</div>
       </div>
 
-      ${item.description ? `<div class="detail-desc">${item.description}</div>` : ''}
+      ${item.description ? `<div class="detail-desc">${escapeHtml(item.description || '')}</div>` : ''}
 
       ${statsHtml ? `<div class="detail-stats">${statsHtml}</div>` : ''}
 

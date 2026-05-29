@@ -3,6 +3,7 @@
  */
 
 import { FILTER_OPTIONS } from './itemDataTableColumns.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 /**
  * Renders and manages the filter bar for ItemDataTable
@@ -49,7 +50,7 @@ export class ItemDataTableFilters {
           type="text"
           class="item-data-table-search"
           placeholder="Search items..."
-          value="${this.escapeAttr(this.values.search)}"
+          value="${escapeHtml(this.values.search)}"
           data-filter="search"
         >
       `);
@@ -82,7 +83,7 @@ export class ItemDataTableFilters {
   renderSelect(name, options) {
     const optionsHtml = options.map(opt => {
       const selected = this.values[name] === opt.value ? 'selected' : '';
-      return `<option value="${this.escapeAttr(opt.value)}" ${selected}>${this.escapeHtml(opt.label)}</option>`;
+      return `<option value="${escapeHtml(opt.value)}" ${selected}>${escapeHtml(opt.label)}</option>`;
     }).join('');
 
     return `
@@ -193,27 +194,6 @@ export class ItemDataTableFilters {
     });
   }
 
-  /**
-   * Escape HTML entities
-   * @param {string} str - String to escape
-   * @returns {string} Escaped string
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
-  /**
-   * Escape attribute value
-   * @param {string} str - String to escape
-   * @returns {string} Escaped string
-   */
-  escapeAttr(str) {
-    if (!str) return '';
-    return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-  }
 
   /**
    * Cleanup

@@ -8,7 +8,9 @@ import {
   getAllLimiterStats,
   resetLimiterStats,
   resetAllLimiterStats,
-  isRateLimitingEnabled
+  isRateLimitingEnabled,
+  TEST_BYPASS_HEADER,
+  TEST_BYPASS_SECRET
 } from '../middleware/rateLimiterFactory.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -162,10 +164,6 @@ function createTestContext() {
     }
   };
 }
-
-// Test bypass header for rate limiting - allows integration tests to skip rate limits on dev servers
-const TEST_BYPASS_HEADER = 'x-test-bypass-rate-limit';
-const TEST_BYPASS_SECRET = 'modia-test-bypass-2024';
 
 // Simple HTTP client for testing
 async function request(method, path, body = null, token = null) {

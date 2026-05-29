@@ -8,6 +8,7 @@ import {
   getParchmentGradient
 } from '../../ui/parchment/index.js';
 import { parchmentToast } from '../../ui/parchment/ParchmentToast.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -381,13 +382,13 @@ export class LFGTab {
     return `
       <div class="lfg-post ${isMyPost ? 'my-post' : ''}" data-post-id="${post.id}">
         <div class="lfg-post-header">
-          <div class="lfg-post-title">${this.escapeHtml(post.title)}</div>
+          <div class="lfg-post-title">${escapeHtml(post.title)}</div>
           <div class="lfg-post-meta">
-            by ${this.escapeHtml(post.username)} · Lv.${post.min_level}-${post.max_level}
+            by ${escapeHtml(post.username)} · Lv.${post.min_level}-${post.max_level}
           </div>
         </div>
         ${post.description ? `
-          <div class="lfg-post-description">${this.escapeHtml(post.description)}</div>
+          <div class="lfg-post-description">${escapeHtml(post.description)}</div>
         ` : ''}
         <div class="lfg-post-tags">
           ${roles.map(role => `<span class="lfg-post-tag role">${role}</span>`).join('')}
@@ -592,10 +593,4 @@ export class LFGTab {
     }
   }
 
-  escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 }

@@ -3,6 +3,7 @@
  */
 
 import { formatTime } from '../marketplaceUtils.js';
+import { escapeHtml } from '../../../utils/escapeHtml.js';
 
 /**
  * Render the Trade History tab
@@ -34,7 +35,7 @@ export async function renderHistoryTab(mainContent, sidePanel, context) {
                   <span class="my-order-side ${trade.side}" style="margin-right: 8px; padding: 2px 6px;">
                     ${trade.side.toUpperCase()}
                   </span>
-                  <span style="color: #2d2418; font-family: Georgia, serif;">${trade.itemName}</span>
+                  <span style="color: #2d2418; font-family: Georgia, serif;">${escapeHtml(trade.itemName || '')}</span>
                 </div>
                 <div style="text-align: right;">
                   <div style="color: #2d2418; font-family: Consolas, monospace; font-weight: bold;">${trade.totalGold.toLocaleString()}g (${trade.price.toLocaleString()}g x ${trade.quantity})</div>

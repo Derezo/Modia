@@ -133,6 +133,7 @@ export class StateManager {
           sessionStorage.setItem('modia_auth', oldSaved);
           // Clear old localStorage to prevent future conflicts
           localStorage.removeItem('modia_state');
+          localStorage.removeItem('refreshToken');
           debugLog('state.logStateChanges', 'Migrated auth tokens from localStorage to sessionStorage');
         }
       }

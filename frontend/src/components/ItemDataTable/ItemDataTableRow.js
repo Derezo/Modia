@@ -3,6 +3,7 @@
  */
 
 import { COLUMN_CONFIGS } from './itemDataTableColumns.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 /**
  * Static class for rendering table rows
@@ -99,22 +100,11 @@ export class ItemDataTableRow {
   static renderEmpty(message = 'No items found') {
     return `
       <div class="item-data-table-empty">
-        <span>${ItemDataTableRow.escapeHtml(message)}</span>
+        <span>${escapeHtml(message)}</span>
       </div>
     `;
   }
 
-  /**
-   * Escape HTML entities
-   * @param {string} str - String to escape
-   * @returns {string} Escaped string
-   */
-  static escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 }
 
 export default ItemDataTableRow;

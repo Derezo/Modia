@@ -2,9 +2,39 @@
 node_modules/
 
 # Environment files
-.env
-.env.local
-.env.*.local
+.env*
+!.env.example
+
+# Keys & certs
+*.pem
+*.key
+*.crt
+*.cer
+*.der
+*.p12
+*.pfx
+
+# SSH keys
+id_rsa
+id_rsa.*
+id_ed25519*
+*.ppk
+
+# Cloud / registry credentials
+credentials
+credentials.json
+.npmrc
+*-service-account*.json
+
+# Database dumps
+*.sql.dump
+*.dump
+dump.sql
+*.sqlite
+*.sqlite3
+
+# Deployment config (contains infrastructure details; kept local / in lsd-vault)
+deploy.yaml
 
 # Build outputs
 dist/

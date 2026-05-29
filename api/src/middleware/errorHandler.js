@@ -29,17 +29,25 @@ const errorHandler = (err, req, res, _next) => {
 
   if (err.code === '23505') {
     // PostgreSQL unique violation
+    // SECURITY: Log detail server-side but don't expose schema/values to client
+    logger.warn('errorHandler', 'Unique constraint violation', {
+      path: req.path,
+      detail: err.detail
+    });
     return res.status(409).json({
-      error: 'Resource already exists',
-      details: err.detail
+      error: 'Resource already exists'
     });
   }
 
   if (err.code === '23503') {
     // PostgreSQL foreign key violation
+    // SECURITY: Log detail server-side but don't expose schema/values to client
+    logger.warn('errorHandler', 'Foreign key violation', {
+      path: req.path,
+      detail: err.detail
+    });
     return res.status(400).json({
-      error: 'Invalid reference',
-      details: err.detail
+      error: 'Invalid reference'
     });
   }
 

@@ -17,6 +17,7 @@ import { ParchmentModal } from '../ui/parchment/ParchmentModal.js';
 import ParchmentInput from '../ui/parchment/ParchmentInput.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { GARRISON_CONFIG } from '@shared/constants.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 // Local alias for cleaner access
 const P = PARCHMENT_COLORS;
@@ -742,7 +743,7 @@ export class GarrisonScene extends Scene {
     container.innerHTML = `
       <div class="garrison-header">
         <div class="garrison-title-section">
-          <h2 class="garrison-title">${this.escapeHtml(this.nodeName)}</h2>
+          <h2 class="garrison-title">${escapeHtml(this.nodeName)}</h2>
           <div class="garrison-subtitle">Castle Garrison - Hire Soldiers</div>
         </div>
         <div class="garrison-header-right">
@@ -878,7 +879,7 @@ export class GarrisonScene extends Scene {
 
     // Build badges for traits and skills
     const traitBadges = (recruit.traits || []).map(t =>
-      `<span class="garrison-badge trait ${t.rarity}">${this.escapeHtml(t.name)}</span>`
+      `<span class="garrison-badge trait ${t.rarity}">${escapeHtml(t.name)}</span>`
     ).join('');
 
     const skillBadges = (recruit.skills || []).map(s =>
@@ -889,14 +890,14 @@ export class GarrisonScene extends Scene {
       <div class="garrison-card ${isSelected ? 'selected' : ''}" data-recruit-id="${recruit.id}">
         <div class="garrison-card-header">
           <div class="garrison-portrait">
-            <img src="${portraitUrl}" alt="${this.escapeHtml(recruit.name)}"
+            <img src="${portraitUrl}" alt="${escapeHtml(recruit.name)}"
                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
             <div class="garrison-portrait-fallback" style="display: none; background: ${this.getClassColor(recruit.class)};">
               ${recruit.name.charAt(0)}
             </div>
           </div>
           <div class="garrison-info">
-            <div class="garrison-name">${this.escapeHtml(recruit.name)}</div>
+            <div class="garrison-name">${escapeHtml(recruit.name)}</div>
             <div class="garrison-class-info">Lv.${recruit.level || 1} ${this.capitalize(recruit.race)} ${this.capitalize(recruit.class)}</div>
             <div class="garrison-price ${canAfford ? '' : 'cannot-afford'}">${recruit.price}g</div>
           </div>
@@ -1002,8 +1003,8 @@ export class GarrisonScene extends Scene {
     if (traitsList) {
       traitsList.innerHTML = traits.map(t => `
         <div class="garrison-detail-trait ${t.rarity}">
-          <div class="garrison-trait-name">${this.escapeHtml(t.name)}</div>
-          <div class="garrison-trait-desc">${this.escapeHtml(t.description || 'No description')}</div>
+          <div class="garrison-trait-name">${escapeHtml(t.name)}</div>
+          <div class="garrison-trait-desc">${escapeHtml(t.description || 'No description')}</div>
         </div>
       `).join('');
     }
@@ -1194,12 +1195,6 @@ export class GarrisonScene extends Scene {
     return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
   }
 
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 
   update(_deltaTime) {
     // No per-frame updates needed

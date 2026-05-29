@@ -11,6 +11,7 @@ import {
 } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { Icon } from '../components/Icon.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 const STYLE_ID = 'guild-advancement-styles';
@@ -700,7 +701,7 @@ export class GuildAdvancementScene extends Scene {
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
           <div class="character-info">
-            <div class="character-name">${this.character?.name || 'Unknown'}</div>
+            <div class="character-name">${escapeHtml(this.character?.name || 'Unknown')}</div>
             <div class="character-class">${this.character?.class || 'Unknown'} Lv.${this.character?.level || 1}</div>
           </div>
           <button class="back-btn" id="back-btn">Back to Map</button>

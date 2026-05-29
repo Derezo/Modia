@@ -18,6 +18,7 @@ import {
   getParchmentBorder,
   getParchmentScrollbarCSS
 } from '../ui/parchment/index.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
 import { Icon } from '../components/Icon.js';
 
@@ -755,7 +756,7 @@ export class QuestBoardScene extends Scene {
           <h4 class="first-blood-title">🩸 Today's First Blood Champions</h4>
           <div class="first-blood-winners">
             ${this.firstBloodWinners.map(w =>
-    `<span class="first-blood-winner">${this.escapeHtml(w.character_name)} - ${this.escapeHtml(w.quest_name)}</span>`
+    `<span class="first-blood-winner">${escapeHtml(w.character_name)} - ${escapeHtml(w.quest_name)}</span>`
   ).join('')}
           </div>
         </div>
@@ -972,11 +973,6 @@ export class QuestBoardScene extends Scene {
     this.renderContent();
   }
 
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
 
   update(_deltaTime) {
     // No per-frame updates needed

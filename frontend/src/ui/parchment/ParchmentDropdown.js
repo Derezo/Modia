@@ -26,6 +26,7 @@
  */
 
 import { PARCHMENT_COLORS } from './ParchmentTheme.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const STYLE_ID = 'parchment-dropdown-styles';
 
@@ -80,7 +81,7 @@ export default class ParchmentDropdown {
 
     // Label
     if (this.label) {
-      html += `<label class="parchment-dropdown-label">${this.escapeHtml(this.label)}</label>`;
+      html += `<label class="parchment-dropdown-label">${escapeHtml(this.label)}</label>`;
     }
 
     // Trigger button
@@ -88,7 +89,7 @@ export default class ParchmentDropdown {
       <button type="button" class="parchment-dropdown-trigger${this.disabled ? ' parchment-dropdown-trigger--disabled' : ''}${this.isOpen ? ' parchment-dropdown-trigger--open' : ''}" ${this.disabled ? 'disabled' : ''}>
         <span class="parchment-dropdown-value${!hasSelection ? ' parchment-dropdown-value--placeholder' : ''}">
           ${selectedOption?.icon ? `<span class="parchment-dropdown-value-icon">${selectedOption.icon}</span>` : ''}
-          ${this.escapeHtml(displayValue)}
+          ${escapeHtml(displayValue)}
         </span>
         <span class="parchment-dropdown-chevron${this.isOpen ? ' parchment-dropdown-chevron--open' : ''}">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
@@ -110,9 +111,9 @@ export default class ParchmentDropdown {
       if (isDisabled) optionClasses += ' parchment-dropdown-option--disabled';
 
       html += `
-        <div class="${optionClasses}" data-value="${this.escapeHtml(option.value)}" ${isDisabled ? 'data-disabled="true"' : ''}>
+        <div class="${optionClasses}" data-value="${escapeHtml(option.value)}" ${isDisabled ? 'data-disabled="true"' : ''}>
           ${option.icon ? `<span class="parchment-dropdown-option-icon">${option.icon}</span>` : ''}
-          <span class="parchment-dropdown-option-label">${this.escapeHtml(option.label)}</span>
+          <span class="parchment-dropdown-option-label">${escapeHtml(option.label)}</span>
           ${isSelected ? '<span class="parchment-dropdown-option-check">&#10003;</span>' : ''}
         </div>
       `;
@@ -583,18 +584,6 @@ export default class ParchmentDropdown {
 
     this.updateElement();
     this.rebindInternalEvents();
-  }
-
-  /**
-   * Escape HTML to prevent XSS
-   * @param {string} str
-   * @returns {string}
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   /**

@@ -13,6 +13,7 @@
  */
 
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 /**
  * BattleConfirmationUI - Confirmation dialogs and notifications for battle
@@ -65,17 +66,17 @@ export class BattleConfirmationUI {
     if (unitType === 'player_local' || unitType === 'player_remote' || unitType === 'player') {
       // Players: "Name: Lv. X Race Class"
       if (race && unitClass) {
-        displayText = `${name}: Lv. ${level} ${race} ${unitClass}`;
+        displayText = `${escapeHtml(name)}: Lv. ${level} ${race} ${unitClass}`;
       } else if (unitClass) {
-        displayText = `${name}: Lv. ${level} ${unitClass}`;
+        displayText = `${escapeHtml(name)}: Lv. ${level} ${unitClass}`;
       } else {
-        displayText = `${name}: Lv. ${level}`;
+        displayText = `${escapeHtml(name)}: Lv. ${level}`;
       }
     } else if (unitType === 'enemy') {
       // Enemies: "Name: Lv. X Monster"
-      displayText = `${name}: Lv. ${level} Monster`;
+      displayText = `${escapeHtml(name)}: Lv. ${level} Monster`;
     } else {
-      displayText = `${name}: Lv. ${level}`;
+      displayText = `${escapeHtml(name)}: Lv. ${level}`;
     }
 
     text.textContent = displayText;

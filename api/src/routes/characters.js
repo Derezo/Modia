@@ -3,6 +3,7 @@ import { query } from '../config/database.js';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler, AppError } from '../middleware/errorHandler.js';
 import { RACES, CLASSES, GENDERS, MAX_PARTY_SIZE, calculateStats, STARTING_EXPERIENCE, RACE_BASE_STATS } from '../config/constants.js';
+import { validateCharacterName } from '../utils/nameValidation.js';
 import * as staminaService from '../services/staminaService.js';
 import { discoverNodeAndAdjacent } from '../services/world/discoveryService.js';
 import {
@@ -67,16 +68,15 @@ router.get('/', authenticate, asyncHandler(async (req, res) => {
 
 // POST /api/characters - Create new character
 router.post('/', authenticate, characterCreateLimiter, asyncHandler(async (req, res) => {
-  const { name, race, characterClass, gender = 'other' } = req.body;
+  const { name: rawName, race, characterClass, gender = 'other' } = req.body;
 
   // Validation
-  if (!name || !race || !characterClass) {
+  if (!rawName || !race || !characterClass) {
     throw new AppError('Name, race, and class are required', 400);
   }
 
-  if (name.length < 2 || name.length > 24) {
-    throw new AppError('Character name must be between 2 and 24 characters', 400);
-  }
+  // Validate and sanitize character name (throws AppError on invalid)
+  const name = validateCharacterName(rawName);
 
   if (!Object.values(RACES).includes(race)) {
     throw new AppError(`Invalid race. Must be one of: ${Object.values(RACES).join(', ')}`, 400);
@@ -345,15 +345,14 @@ router.get('/:id/stamina', authenticate, asyncHandler(async (req, res) => {
 // PUT /api/characters/:id - Update character (name only for now)
 router.put('/:id', authenticate, characterUpdateLimiter, asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { name } = req.body;
+  const { name: rawName } = req.body;
 
-  if (!name) {
+  if (!rawName) {
     throw new AppError('Name is required', 400);
   }
 
-  if (name.length < 2 || name.length > 24) {
-    throw new AppError('Character name must be between 2 and 24 characters', 400);
-  }
+  // Validate and sanitize character name (throws AppError on invalid)
+  const name = validateCharacterName(rawName);
 
   const result = await query(
     `UPDATE characters SET name = $1

@@ -33,6 +33,7 @@ import {
   getParchmentBorder
 } from '../../ui/parchment/ParchmentTheme.js';
 import { getAssetPath, getOptimalSize } from '@shared/assetPaths.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const STYLE_ID = 'character-modal-styles';
 
@@ -447,14 +448,14 @@ export class CharacterModal {
         <div class="character-modal-header">
           <div class="character-modal-portrait" style="background: ${classColor};">
             ${portraitUrl
-    ? `<img src="${portraitUrl}" alt="${this.escapeHtml(char.name)}"
+    ? `<img src="${portraitUrl}" alt="${escapeHtml(char.name)}"
                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
              <span class="character-modal-portrait-fallback" style="display: none;">${classIcon}</span>`
     : `<span class="character-modal-portrait-fallback">${classIcon}</span>`}
           </div>
           <div class="character-modal-info">
-            <h3 class="character-modal-name">${this.escapeHtml(char.name)}</h3>
-            <div class="character-modal-class-level">Level ${char.level} ${char.class}</div>
+            <h3 class="character-modal-name">${escapeHtml(char.name)}</h3>
+            <div class="character-modal-class-level">Level ${char.level} ${escapeHtml(char.class)}</div>
             <div class="character-modal-xp-bar">
               <div class="character-modal-xp-fill" style="width: ${xpPercent}%;"></div>
             </div>
@@ -582,7 +583,7 @@ export class CharacterModal {
     return `
       <div class="character-modal-equipment-slot" data-slot="${slot.key}">
         <span class="character-modal-slot-name">${slot.name}</span>
-        <span class="character-modal-slot-item rarity-${item.rarity || 'common'}">${this.escapeHtml(item.name)}</span>
+        <span class="character-modal-slot-item rarity-${item.rarity || 'common'}">${escapeHtml(item.name)}</span>
         ${stats ? `<span class="character-modal-slot-stats">${stats}</span>` : ''}
       </div>
     `;
@@ -647,7 +648,7 @@ export class CharacterModal {
 
     contentEl.innerHTML = branches.map(branch => `
       <div class="character-modal-skill-branch">
-        <div class="character-modal-branch-header">${this.escapeHtml(branch.name)}</div>
+        <div class="character-modal-branch-header">${escapeHtml(branch.name)}</div>
         <div class="character-modal-skills-list">
           ${branch.skills.map(skill => this.renderSkillItem(skill)).join('')}
         </div>
@@ -709,7 +710,7 @@ export class CharacterModal {
     return `
       <div class="character-modal-skill ${lockedClass}" data-skill-id="${skill.id}">
         <span class="character-modal-skill-icon">${skill.icon || '⚔️'}</span>
-        <span class="character-modal-skill-name">${this.escapeHtml(skill.name)}</span>
+        <span class="character-modal-skill-name">${escapeHtml(skill.name)}</span>
         <span class="character-modal-skill-level">${levelText}</span>
       </div>
     `;
@@ -940,17 +941,6 @@ export class CharacterModal {
     }
   }
 
-  /**
-   * Escape HTML
-   * @param {string} str - String to escape
-   * @returns {string}
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
 
   /**
    * Get portrait URL for character

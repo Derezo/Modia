@@ -17,6 +17,7 @@ import {
   getParchmentScrollbarCSS
 } from '../ui/parchment/index.js';
 import { parchmentToast } from '../ui/parchment/ParchmentToast.js';
+import { escapeHtml } from '../utils/escapeHtml.js';
 
 const P = PARCHMENT_COLORS;
 
@@ -783,7 +784,7 @@ export class FishingScene extends Scene {
       <div class="fishing-catch-item ${c.isBigOne ? 'big-one' : ''}">
         <span>
           <span class="fishing-catch-name" style="color: ${RARITY_COLORS[c.rarity] || RARITY_COLORS.common}">
-            ${c.fishName}
+            ${escapeHtml(c.fishName || '')}
           </span>
           ${c.isBigOne ? '<span class="fishing-catch-badge" style="background: gold; color: #333;">BIG ONE</span>' : ''}
         </span>

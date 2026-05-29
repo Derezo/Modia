@@ -3,6 +3,7 @@
  */
 
 import { parchmentToast } from '../../../ui/parchment/ParchmentToast.js';
+import { escapeHtml } from '../../../utils/escapeHtml.js';
 
 /**
  * Render the My Orders tab
@@ -72,7 +73,7 @@ function renderMyOrder(order) {
   return `
     <div class="my-order">
       <div class="my-order-header">
-        <span class="my-order-item">${order.itemName}</span>
+        <span class="my-order-item">${escapeHtml(order.itemName || '')}</span>
         <span class="my-order-side ${order.side}">${order.side.toUpperCase()}</span>
       </div>
       <div class="my-order-info">

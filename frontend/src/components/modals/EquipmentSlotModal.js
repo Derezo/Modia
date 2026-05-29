@@ -42,6 +42,7 @@ import {
   formatAugmentEffect,
   calculateStatChanges
 } from '../../utils/statDisplay.js';
+import { escapeHtml } from '../../utils/escapeHtml.js';
 
 const STYLE_ID = 'equipment-slot-modal-styles';
 
@@ -608,7 +609,7 @@ export class EquipmentSlotModal {
           </div>
           <div class="equipment-slot-card-title">
             <div class="equipment-slot-card-name rarity-${rarity}">
-              ${this.escapeHtml(item.name)}
+              ${escapeHtml(item.name)}
             </div>
             <div class="equipment-slot-card-badges">
               <span class="equipment-slot-card-badge">${rarity}</span>
@@ -682,7 +683,7 @@ export class EquipmentSlotModal {
         <span class="equipment-slot-card-effect-icon">
           ${Icon.html('augments', category, { size: 'sm' }) || ''}
         </span>
-        <span class="equipment-slot-card-effect-text">${this.escapeHtml(effectText)}</span>
+        <span class="equipment-slot-card-effect-text">${escapeHtml(effectText)}</span>
       </div>
     `;
   }
@@ -836,7 +837,7 @@ export class EquipmentSlotModal {
           <div class="equipment-slot-available-icon">${iconHtml}</div>
           <div class="equipment-slot-available-info">
             <div class="equipment-slot-available-name">
-              ${this.escapeHtml(item.name)}
+              ${escapeHtml(item.name)}
             </div>
             ${stats ? `<div class="equipment-slot-available-stats">${stats}</div>` : ''}
           </div>
@@ -990,18 +991,6 @@ export class EquipmentSlotModal {
         btn.textContent = 'Equip Selected';
       }
     }
-  }
-
-  /**
-   * Escape HTML
-   * @param {string} str - String to escape
-   * @returns {string}
-   */
-  escapeHtml(str) {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   /**
