@@ -43,6 +43,28 @@ Issues identified during work but deliberately deferred. When closed, **delete t
 - **Effort:** Low each.
 - **References:** plan `~/.claude/plans/perform-a-full-and-merry-owl.md` (F9–F12).
 
+### Pre-existing test-suite failures unrelated to dependencies (ratelimit + e2e auth)
+
+- **Status:** Open
+- **Surfaced:** 2026-05-29 (during dependency-remediation verification)
+- **Reproducer:**
+  - `api/src/tests/ratelimit/*.test.js` (with `TEST_RATE_LIMITS=true` on both runner and server): 23/32 fail with `expected: 5, actual: 0` — the server isn't blocking requests the tests expect to be rate-limited. Likely a harness/env coupling (in-memory store not shared the way the test assumes, or limits not engaging in this run mode).
+  - `e2e/auth.spec.js --project=chromium`: 5/5 fail at `getByPlaceholder('Username'/'Email')` not visible. Modia's auth UI is Canvas 2D-rendered (per CLAUDE.md), so there are no DOM form elements for Playwright's accessibility selectors to find. The specs are stale/aspirational against the canvas UI.
+- **Why deferred:** Confirmed pre-existing and unrelated — `git diff main..HEAD` is empty for `api/src/middleware/rateLimiter*.js`, `api/src/tests/ratelimit/`, and `e2e/auth.spec.js`. The only runtime dependency this branch changed is bcrypt (auth), verified separately (cross-version hash + 18/18 auth integration). vite/vitest/happy-dom are dev-tooling not imported by the API server; uuid is not imported by `api/src` at all.
+- **Why it matters:** Both suites are red on main, so they provide no regression signal. ratelimit tests need their harness fixed (or documented run procedure); e2e auth specs need rewriting against the canvas UI (or replacing with API-level auth e2e).
+- **Effort:** Medium each.
+- **References:** `api/src/tests/ratelimit/`, `api/src/middleware/rateLimiterFactory.js`, `e2e/auth.spec.js`, CLAUDE.md (Canvas 2D auth scene).
+
+### Stale character-creation integration tests (predate guild-recruitment gate)
+
+- **Status:** Open
+- **Surfaced:** 2026-05-29 (during dependency-remediation verification)
+- **Reproducer:** Run `api/src/tests/integration/characters.integration.test.js` against a seeded DB. 5 tests fail: "create characters of different races/classes" expect 201 but get 400, "reject duplicate character name" expects 409 but gets 400, "delete character successfully" throws a TypeError, and one dependent inventory test fails. The route now gates manual creation: `api/src/routes/characters.js:100` throws `"Cannot create characters manually. Use guild recruitment."` (400) once a user has their starting character. The tests predate that gameplay change and still assume free multi-character creation.
+- **Why deferred:** Confirmed pre-existing and unrelated to the dependency-remediation work — `git diff main..HEAD` for `characters.js` and the test files is empty (byte-identical to main). Fixing stale gameplay tests is out of scope for a security upgrade.
+- **Why it matters:** These 5 failures mask the real signal in the integration suite — a green characters suite would let genuine regressions surface. They should be rewritten against the guild-recruitment flow (or the tests deleted if superseded).
+- **Effort:** Medium. Rewrite character-creation tests to go through guild recruitment (`api/src/routes/clans.js` / recruitment services), or assert the new 400 gate. Fix the DELETE test's TypeError separately.
+- **References:** `api/src/routes/characters.js:94-100` (recruitment gate), `api/src/tests/integration/characters.integration.test.js`, `api/src/tests/integration/inventory.integration.test.js`.
+
 ### No max-length validation on passwords (bcrypt 72-byte silent truncation)
 
 - **Status:** Open
