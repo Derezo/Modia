@@ -42,3 +42,13 @@ Issues identified during work but deliberately deferred. When closed, **delete t
 - **Why deferred:** None is exploitable for the public-repo / server-compromise threat model being closed in this pass; all are incremental hardening.
 - **Effort:** Low each.
 - **References:** plan `~/.claude/plans/perform-a-full-and-merry-owl.md` (F9–F12).
+
+### No max-length validation on passwords (bcrypt 72-byte silent truncation)
+
+- **Status:** Open
+- **Surfaced:** 2026-05-29 (flagged by security-auditor during the bcrypt 5→6 upgrade; pre-existing, not a regression)
+- **Reproducer:** Register with a password longer than 72 UTF-8 bytes. `auth.js:30` enforces only a minimum (`password.length < 8`); there is no maximum. bcrypt silently truncates input at 72 bytes, so bytes beyond 72 are ignored — two distinct long passwords sharing a 72-byte prefix would authenticate interchangeably.
+- **Why deferred:** Not a regression (bcrypt 6 did not change truncation behavior) and out of scope for the dependency-remediation pass. Exploit value is low (requires a >72-byte password and a shared prefix).
+- **Why it matters:** Defense-in-depth + user clarity — silent truncation is surprising and weakens entropy for very long passphrases.
+- **Effort:** Low. Add a max-length check (e.g. reject > 72 bytes, or pre-hash with SHA-256 to bcrypt) alongside the existing min-length gate in `api/src/routes/auth.js:30` and `api/src/services/registrationService.js`.
+- **References:** `api/src/routes/auth.js:15,30` (SALT_ROUNDS=12, min-length), `api/src/services/registrationService.js:22`.

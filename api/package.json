@@ -25,7 +25,7 @@
     "test:coverage:all": "c8 --include='src/**/*.js' --exclude='src/tests/**' --exclude='src/migrations/**' --exclude='src/scripts/**' --reporter=text --reporter=html npm run test:all"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "d3-delaunay": "^6.0.4",
     "dotenv": "^16.3.1",
